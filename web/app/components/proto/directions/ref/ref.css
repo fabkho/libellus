@@ -1,0 +1,19 @@
+/*
+ * The wireframe's own CSS. Every selector starts with
+ * [data-direction='ref'], the attribute Frame.vue puts on the phone screen, so
+ * nothing here reaches another direction or the app. Toggles arrive as
+ * data-<toggle> attributes on the same element.
+ */
+[data-direction='ref'] {
+  --screen-background: #fff;
+  --status-bar-ink: #171717;
+  --home-indicator: rgb(0 0 0 / 0.3);
+
+  font-family: -apple-system, system-ui, sans-serif;
+  color: #171717;
+}
+
+/* The "Notes" toggle: hide the dashed annotations. */
+[data-direction='ref'][data-notes='hide'] .ref-note {
+  display: none;
+}
