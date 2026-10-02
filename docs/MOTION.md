@@ -63,8 +63,9 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
     fades in at the row's end (Home and Library come back into the row once the keyboard is
     down);
   - the page behind blurs and dims (the veil fades in);
-  - the results (the source strip and the list, whatever the slot holds) unroll upwards as the
-    outline's top edge rises, fading in until 70 % of the way;
+  - the results area (whatever the overlay's slot holds: the list, or a single quiet loading
+    hint; there is no source strip) unrolls upwards as the outline's top edge rises, fading in
+    until 70 % of the way;
   - the shadow grows out of the capsule's and fades in.
 
   Closing — Cancel, a tap on the page behind, a swipe down, Escape, or going to another page —
@@ -134,5 +135,5 @@ not touch).
 
 ## Non-motions
 
-No parallax, no bouncing or overshoot, no skeleton shimmer (thumbhashes and the source strip say
-"loading"), no page transitions between tabs, no animated theme change.
+No parallax, no bouncing or overshoot, no skeleton shimmer (thumbhashes and the search palette's
+one quiet loading hint say "loading"), no page transitions between tabs, no animated theme change.
