@@ -56,6 +56,36 @@ pnpm tokens:check                          # fails if a generated file differs f
 `design/generated/Tokens.generated.swift`. Never edit the generated files; CI checks they match. The
 current values are neutral placeholders until the design round (#4/#5).
 
+### Signing in locally
+
+Libellus is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
+
+| What | Value |
+| --- | --- |
+| Invite code | `LIBELLUS-DEV` (1000 uses, never expires; `supabase db reset` puts them back) |
+| Dev member | `dev@libellus.local`, already confirmed |
+
+Sign in as the dev member: type the address, then the six-digit code from the local mailbox
+(http://127.0.0.1:55324). Or sign up with any other address and `LIBELLUS-DEV`. Addresses ending in
+`@libellus.test` belong to the test suites, which delete them.
+
+An invite is spent when the new member proves their address (the code from the mail), not when the
+mail is requested, so a mistyped address costs nothing. Addresses that never prove themselves are
+removed after a day.
+
+#### Creating invite codes
+
+```sh
+scripts/create-invite-code.sh                            # one use, 14 days, a random code like K7QM-X2PA
+scripts/create-invite-code.sh --uses 5 --days 30 --label "Anna and friends"
+scripts/create-invite-code.sh --days 0 --code HELLO-BOOKS   # never expires, a code of your choosing
+```
+
+It prints the code. The script calls `public.create_invite_code` through the REST API with the
+service-role key, which only the owner holds: locally it asks `supabase status`; against a hosted
+project export `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` first. Never put that key in `web/.env`.
+Members cannot read, create or change invite codes (RLS and revoked grants, covered by pgTAP).
+
 ### Local services
 
 Studio at http://127.0.0.1:55323, the local mailbox (sign-in codes) at http://127.0.0.1:55324.
@@ -68,6 +98,7 @@ web/          Nuxt 4 SPA + PWA — the reference app (rules: web/AGENTS.md)
   i18n/locales/ en.json, every string the UI shows
   tests/        Vitest data-layer suite against the local stack
   e2e/          Playwright flows, iPhone viewport in WebKit
+scripts/      create-invite-code.sh, the owner's tool for minting invite codes
 design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests
 docs/         DESIGN.md, MOTION.md (after the design round), parity.md (per-screen behaviour),
