@@ -1,6 +1,15 @@
 {
   "app": {
-    "name": "Libellus"
+    "name": "Libellus",
+    "tagline": "The books you read, kept quietly."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "etAl": "et al."
+  },
+  "rating": {
+    "label": "{value} of 5 stars",
+    "none": "Not rated"
   },
   "auth": {
     "error": {
@@ -18,19 +27,19 @@
   },
   "signIn": {
     "title": "Sign in",
-    "intro": "Enter your email address and we'll send you a six-digit code.",
-    "emailLabel": "Email address",
+    "intro": "We'll email you a six-digit code. No password.",
+    "emailLabel": "Email",
     "emailPlaceholder": "you{'@'}example.com",
     "submit": "Send code",
     "noAccount": "Have an invite code?",
-    "signUpLink": "Create an account",
+    "signUpLink": "Sign up",
     "configMissing": "Missing {key}. Copy web/.env.example to web/.env and fill it in.",
     "configInvalidUrl": "The Supabase URL \"{value}\" is not a valid address."
   },
   "signUp": {
     "title": "Create your account",
-    "intro": "Libellus is invite-only. Enter your email address and your invite code.",
-    "emailLabel": "Email address",
+    "intro": "Libellus is invite-only. Your code comes from whoever invited you.",
+    "emailLabel": "Email",
     "emailPlaceholder": "you{'@'}example.com",
     "inviteLabel": "Invite code",
     "invitePlaceholder": "Your invite code",
@@ -49,7 +58,8 @@
   "shell": {
     "tabsLabel": "Main navigation",
     "avatarLabel": "Account menu",
-    "signedInAs": "Signed in as {email}",
+    "signedInAs": "Signed in as",
+    "darkTheme": "Dark mode",
     "signOut": "Sign out"
   },
   "tabs": {
@@ -59,14 +69,20 @@
   },
   "home": {
     "title": "Home",
-    "empty": "Nothing here yet. The books you are reading will show up here."
+    "today": "{weekday} · {day} {month}",
+    "emptyTitle": "Nothing on the shelf yet",
+    "empty": "Find the book on your nightstand, or the one you want to read next."
   },
   "library": {
     "title": "Library",
-    "empty": "Your library is empty. The books you add will live here."
+    "emptyTitle": "Your library is empty",
+    "empty": "The books you add live here: what you want to read, what you are reading, what you have read."
   },
   "search": {
     "title": "Search",
+    "placeholder": "Title, author or ISBN",
+    "close": "Close search",
+    "clear": "Clear",
     "empty": "Search for a book by title, author or ISBN. It arrives soon."
   }
 }

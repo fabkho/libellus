@@ -1,13 +1,20 @@
 @import 'tailwindcss';
 @import './tokens.generated.css';
 
-/* Latin subset only: keeps the precache small and covers English (and the
-   umlauts German will need). Inter is a neutral placeholder until the design
-   round (#4/#5) picks the type; the family itself is a token, `--font-sans`
-   comes out of tokens.generated.css. */
-@import '@fontsource/inter/latin-400.css';
-@import '@fontsource/inter/latin-500.css';
-@import '@fontsource/inter/latin-600.css';
+/* Latin subset only, and only the weights the design uses: keeps the precache
+   small and covers English (and the umlauts German will need). The families are
+   tokens; `--font-sans|mono|serif` come out of tokens.generated.css.
+   Geist: 300 large figures, 400 text, 500 titles and buttons, 600 sheet titles.
+   Geist Mono: 400 meta lines, 500 eyebrows. Newsreader: 500 book titles,
+   400 italic the wordmark and reviews. */
+@import '@fontsource/geist/latin-300.css';
+@import '@fontsource/geist/latin-400.css';
+@import '@fontsource/geist/latin-500.css';
+@import '@fontsource/geist/latin-600.css';
+@import '@fontsource/geist-mono/latin-400.css';
+@import '@fontsource/geist-mono/latin-500.css';
+@import '@fontsource/newsreader/latin-500.css';
+@import '@fontsource/newsreader/latin-400-italic.css';
 
 /* The notch and the home indicator are the device's, not the design system's:
    one utility for the screen padding so no screen inlines env() itself. */
@@ -18,17 +25,8 @@
   padding-right: calc(env(safe-area-inset-right) + var(--spacing-screen));
 }
 
-@layer base {
-  html {
-    background: var(--color-surface);
-    color: var(--color-ink);
-    font-family: var(--font-sans);
-    -webkit-tap-highlight-color: transparent;
-  }
-}
-
 /* The notch and the home indicator for bars that sit on a screen edge (the
-   header, the tab bar) rather than padding a whole screen. */
+   header, the tab bar, a sheet) rather than padding a whole screen. */
 @utility safe-top {
   padding-top: env(safe-area-inset-top);
 }
@@ -38,4 +36,101 @@
 @utility safe-x {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+/* Floating chrome at the bottom (the tab bar, the search palette): just above
+   the home indicator, or a little off the edge where there is none. */
+@utility float-bottom {
+  bottom: max(calc(env(safe-area-inset-bottom) - var(--spacing-xs)), var(--spacing-ms));
+}
+
+/* Room under a tab's content so its end scrolls clear of the floating tab bar. */
+@utility clear-tab-bar {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--size-tab-bar) + var(--spacing-xxl));
+}
+
+/* D's edge: a half-pixel ring drawn inside the box, so floating chrome and cards
+   have an edge in the dark and on paper without a border taking up layout. It
+   composes with `shadow-*` (Tailwind adds both to box-shadow). */
+@utility edge {
+  --tw-inset-ring-shadow: inset 0 0 0 var(--stroke-hairline) var(--color-hairline-strong);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
+}
+@utility edge-faint {
+  --tw-inset-ring-shadow: inset 0 0 0 var(--stroke-hairline) var(--color-hairline);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
+}
+
+/* Floating glass: the tab bar, the avatar menu, round buttons over covers. */
+@utility glass {
+  background-color: var(--color-glass);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
+  backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
+}
+
+/* Mono figures and dates line up in columns. */
+@utility figures {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* The small uppercase section label (D's eyebrow). */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+  letter-spacing: var(--text-eyebrow--letter-spacing);
+  font-weight: var(--text-eyebrow--font-weight);
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+/* Book titles: serif, optical sizes on. */
+@utility book-title {
+  font-family: var(--font-serif);
+  font-weight: var(--font-weight-medium);
+  font-optical-sizing: auto;
+}
+
+@layer base {
+  html {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing);
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+  }
+
+  :focus-visible {
+    outline: var(--stroke-focus) solid var(--color-accent);
+    outline-offset: var(--stroke-focus);
+  }
+}
+
+/* Reduce Motion: nothing travels. Transitions and animations finish at once, so
+   state still changes (docs/MOTION.md, Reduce Motion). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

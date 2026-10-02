@@ -60,23 +60,16 @@ async function changeEmail() {
 </script>
 
 <template>
-  <main
-    class="screen-inset mx-auto flex min-h-dvh w-full max-w-(--size-max-content) flex-col justify-center gap-xl"
-  >
-    <header class="flex flex-col gap-sm">
-      <p class="text-label font-semibold text-ink-muted">{{ t('app.name') }}</p>
-      <h1 class="text-title font-semibold text-ink" data-testid="verify.title">
-        {{ t('verify.title') }}
-      </h1>
-      <p class="text-body text-ink-muted" data-testid="verify.sentTo">
+  <AuthFrame screen="verify">
+    <div class="flex flex-col gap-sm">
+      <h1 class="eyebrow" data-testid="verify.title">{{ t('verify.title') }}</h1>
+      <p class="text-subhead text-ink-muted" data-testid="verify.sentTo">
         {{ t('verify.sentTo', { email: session.pending?.email ?? '' }) }}
       </p>
-    </header>
+    </div>
 
     <form class="flex flex-col gap-sm" @submit.prevent="submit">
-      <label for="verify-code" class="text-label font-medium text-ink">
-        {{ t('verify.codeLabel') }}
-      </label>
+      <label for="verify-code" class="text-footnote text-ink-faint">{{ t('verify.codeLabel') }}</label>
 
       <CodeInput
         id="verify-code"
@@ -86,34 +79,38 @@ async function changeEmail() {
         data-testid="verify.code"
       />
 
-      <p v-if="session.error" class="text-caption text-error" data-testid="verify.error">
+      <p v-if="session.error" class="text-footnote text-error" data-testid="verify.error">
         {{ t(`auth.error.${session.error}`) }}
       </p>
     </form>
 
     <div class="flex flex-col items-center gap-xs">
-      <button
-        type="button"
+      <UiButton
+        tone="quiet"
+        size="md"
         :disabled="secondsUntilResend > 0 || session.busy"
-        class="min-h-(--size-touch) px-md text-label font-medium text-ink underline disabled:text-ink-faint disabled:no-underline"
         data-testid="verify.resend"
         @click="resend"
       >
-        {{
-          secondsUntilResend > 0
-            ? t('verify.resendIn', { seconds: secondsUntilResend })
-            : t('verify.resend')
-        }}
-      </button>
+        <span class="tabular-nums">
+          {{
+            secondsUntilResend > 0
+              ? t('verify.resendIn', { seconds: secondsUntilResend })
+              : t('verify.resend')
+          }}
+        </span>
+      </UiButton>
+    </div>
 
+    <template #footer>
       <button
         type="button"
-        class="min-h-(--size-touch) px-md text-label font-medium text-ink-muted underline"
+        class="min-h-(--size-touch) px-md text-ink underline decoration-ink-ghost underline-offset-4"
         data-testid="verify.changeEmail"
         @click="changeEmail"
       >
         {{ t('verify.changeEmail') }}
       </button>
-    </div>
-  </main>
+    </template>
+  </AuthFrame>
 </template>
