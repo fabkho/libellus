@@ -87,7 +87,7 @@ const countOf = (source: SearchSource) => results.value.filter((r) => r.source =
 
     <ol v-else class="results">
       <li v-for="result in results" :key="result.id" class="result">
-        <Cover :book="result" :width="state === 'typing' ? 34 : 44" />
+        <Cover :book="result" :width="state === 'typing' ? 30 : 44" />
         <div class="text">
           <span class="title">{{ result.title }}</span>
           <span class="byline">
@@ -105,7 +105,7 @@ const countOf = (source: SearchSource) => results.value.filter((r) => r.source =
       <template v-if="state === 'typing'">
         <li v-for="n in 1" :key="`pending-${n}`" class="result pending">
           <span class="ghost-cover" />
-          <span class="ghost-lines"><span /><span /></span>
+          <span class="ghost-lines"><span /><em class="b-italic">Still asking Open Library…</em></span>
         </li>
       </template>
     </ol>
@@ -255,7 +255,7 @@ const countOf = (source: SearchSource) => results.value.filter((r) => r.source =
 }
 
 .is-typing .result {
-  padding: 8px 0;
+  padding: 6px 0;
 }
 
 .text {
@@ -327,8 +327,8 @@ const countOf = (source: SearchSource) => results.value.filter((r) => r.source =
 }
 
 .ghost-cover {
-  width: 34px;
-  height: 51px;
+  width: 30px;
+  height: 45px;
   background: var(--b-paper-2);
 }
 
@@ -345,8 +345,10 @@ const countOf = (source: SearchSource) => results.value.filter((r) => r.source =
   background: var(--b-paper-2);
 }
 
-.ghost-lines span + span {
-  width: 38%;
+.ghost-lines em {
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--b-ink-3);
 }
 
 .empty {

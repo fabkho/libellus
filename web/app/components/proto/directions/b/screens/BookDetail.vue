@@ -362,7 +362,7 @@ const description = computed(() => book.value.description ?? '')
   font-size: 16px;
   line-height: 24px;
   color: var(--b-ink);
-  hyphens: auto;
+  text-wrap: pretty;
 }
 
 .dropcap {

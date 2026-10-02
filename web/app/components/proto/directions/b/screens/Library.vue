@@ -13,7 +13,7 @@ import Icon from '../kit/Icon.vue'
 import IndexRow from '../kit/IndexRow.vue'
 import Rating from '../kit/Rating.vue'
 import TabBar from '../kit/TabBar.vue'
-import { folio } from '../kit/type'
+import { dayOf, folio } from '../kit/type'
 
 const props = defineProps<{ status: Status }>()
 const proto = useProto()
@@ -101,12 +101,16 @@ const folioLabel = computed(() =>
           </template>
         </template>
         <template v-else-if="status === 'reading'" #aside>
-          <span class="b-italic b-faint small">{{ entry.book.pageCount }} pp.</span>
+          <span class="b-italic b-faint small">day {{ dayOf(latestSession(entry)!.startedOn!, data.today) }}</span>
         </template>
         <template v-else-if="entry.book.source === 'manual'" #aside>
           <span class="b-italic b-faint small">Added by hand</span>
         </template>
       </IndexRow>
+      <p v-if="status === 'reading'" class="endnote">
+        <span class="dinkus" aria-hidden="true"><i /><i /><i /></span>
+        <span class="b-italic b-faint">Two books open. Finish one from Home or from its page.</span>
+      </p>
     </div>
 
     <TabBar active="library" />
@@ -272,6 +276,30 @@ hr {
 
 .list :deep(.row:first-child) {
   border-top: 1px solid var(--b-rule);
+}
+
+.endnote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* Three small asterisks: the printer's mark for the end of a section. */
+.dinkus {
+  display: flex;
+  gap: 14px;
+}
+
+.dinkus i {
+  width: 7px;
+  height: 7px;
+  background: var(--b-accent);
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
 
 .abandoned {

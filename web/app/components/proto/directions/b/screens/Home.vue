@@ -132,7 +132,7 @@ const features = computed(() =>
 .feature {
   display: flex;
   gap: 16px;
-  padding: 12px 0 14px;
+  padding: 10px 0 12px;
 }
 
 .feature + .feature {
@@ -195,7 +195,7 @@ const features = computed(() =>
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 6px 0 8px;
+  padding: 5px 0 7px;
   border-top: 1px solid var(--b-rule-strong);
   border-bottom: 1px solid var(--b-rule-strong);
 }
@@ -220,7 +220,7 @@ const features = computed(() =>
 }
 
 .up-next {
-  padding-top: 16px;
+  padding-top: 14px;
 }
 
 .strip {
@@ -228,7 +228,7 @@ const features = computed(() =>
   align-items: flex-end;
   gap: 14px;
   margin-right: calc(var(--b-margin) * -1);
-  padding-top: 10px;
+  padding-top: 8px;
   overflow: hidden;
 }
 
