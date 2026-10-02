@@ -1,0 +1,136 @@
+/*
+ * Direction d-light — D ("Night Reader") with the lights on: the same design,
+ * only D's Day room, as its own direction for side-by-side comparison. Every
+ * selector starts with [data-direction='d-light'] (the phone screen Frame.vue
+ * renders), so nothing here reaches the shell, another direction or the app.
+ * Toggles arrive as data-glow / data-titles on the same element.
+ */
+
+/* ---- Light: D's Day room as the only theme — the same quiet, on paper ---- */
+[data-direction='d-light'] {
+  --dl-sans: 'Geist', -apple-system, system-ui, sans-serif;
+  --dl-mono: 'Geist Mono', ui-monospace, monospace;
+  --dl-serif: 'Newsreader', Georgia, serif;
+
+  --dl-bg: #f4f0e9;
+  --dl-raised: #fbf9f5;
+  --dl-sheet: #fbf9f5;
+  --dl-stage: #1a1714;
+  --dl-fill: rgb(40 30 20 / 0.05);
+  --dl-fill-2: rgb(40 30 20 / 0.085);
+  --dl-line: rgb(40 30 20 / 0.1);
+  --dl-line-2: rgb(40 30 20 / 0.17);
+  --dl-ink: #1c1915;
+  --dl-ink-2: rgb(28 25 21 / 0.64);
+  --dl-ink-3: rgb(28 25 21 / 0.45);
+  --dl-ink-4: rgb(28 25 21 / 0.2);
+  --dl-on-ink: #f8f5ef;
+  --dl-lamp: #b8782a;
+  --dl-lamp-soft: rgb(184 120 42 / 0.12);
+  --dl-danger: #c2452a;
+  --dl-glass: rgb(251 249 245 / 0.78);
+  --dl-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 14px 34px rgb(60 40 20 / 0.14);
+  --dl-cover-shadow: 0 10px 24px rgb(60 40 20 / 0.22), 0 2px 5px rgb(60 40 20 / 0.18);
+  --dl-glow-k: 0.5;
+  --dl-halo-k: 0.4;
+  --dl-key: #fdfcfa;
+  --dl-key-2: #c9c3bb;
+  --dl-key-ink: #1c1915;
+  --dl-kb: #dcd6ce;
+
+  --screen-background: var(--dl-bg);
+  --status-bar-ink: var(--dl-ink);
+  --home-indicator: rgb(28 25 21 / 0.55);
+}
+
+/* The frame sets its own font and ink on the same element with a scoped
+   class; :not(#d) lifts ours above it without touching the shell. */
+[data-direction='d-light']:not(#d) {
+  font-family: var(--dl-sans);
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--dl-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+/* ---- Glow off: covers stay, the room keeps its own colour ---------------- */
+[data-direction='d-light'][data-glow='off'] .dl-ambient,
+[data-direction='d-light'][data-glow='off'] .dl-halo {
+  display: none;
+}
+
+/* ---- Title face --------------------------------------------------------- */
+[data-direction='d-light'] {
+  --dl-title-font: var(--dl-serif);
+  --dl-title-weight: 500;
+  --dl-title-k: 1.1;
+  --dl-title-tracking: -0.01em;
+}
+
+[data-direction='d-light'][data-titles='sans'] {
+  --dl-title-font: var(--dl-sans);
+  --dl-title-weight: 500;
+  --dl-title-k: 1;
+  --dl-title-tracking: -0.02em;
+}
+
+[data-direction='d-light'] .dl-title {
+  font-family: var(--dl-title-font);
+  font-weight: var(--dl-title-weight);
+  letter-spacing: var(--dl-title-tracking);
+  font-optical-sizing: auto;
+}
+
+/* ---- Shared type helpers ----------------------------------------------- */
+[data-direction='d-light'] .dl-eyebrow {
+  font-family: var(--dl-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dl-ink-3);
+}
+
+[data-direction='d-light'] .dl-mono {
+  font-family: var(--dl-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+[data-direction='d-light'] .dl-num {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-direction='d-light'] .dl-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.15em;
+  margin-left: 1px;
+  vertical-align: -0.2em;
+  border-radius: 1px;
+  background: var(--dl-lamp);
+}
+
+[data-direction='d-light'] .dl-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-direction='d-light'] .dl-clamp-2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Inset grouped rows (forms in sheets), iOS-style, with hairline dividers. */
+[data-direction='d-light'] .dl-group {
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--dl-fill);
+  box-shadow: inset 0 0 0 0.5px var(--dl-line);
+}
