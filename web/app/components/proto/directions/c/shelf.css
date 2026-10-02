@@ -1,0 +1,193 @@
+/*
+ * Direction c — "Shelf". Every selector starts with [data-direction='c'], the
+ * attribute Frame.vue puts on the phone screen, so nothing reaches another
+ * direction or the app. Toggles arrive as data-palette / data-texture / data-view.
+ */
+
+[data-direction='c'] {
+  /* Type */
+  --c-sans: 'Bricolage Grotesque', ui-rounded, system-ui, sans-serif;
+  --c-serif: 'Young Serif', Georgia, serif;
+  --c-mono: 'Courier Prime', 'Courier New', monospace;
+
+  /* Warm wood (default) */
+  --c-paper: #f6eddf;
+  --c-paper-deep: #efe2cd;
+  --c-card: #fffaf2;
+  --c-ink: #2b1d14;
+  --c-ink-soft: #6e5747;
+  --c-muted: #9c8571;
+  --c-line: #e6d6bf;
+  --c-line-strong: #d6c0a1;
+  --c-accent: #e0553a;
+  --c-accent-deep: #b93f28;
+  --c-accent-ink: #fffaf2;
+  --c-mustard: #f2b53e;
+  --c-mustard-soft: #fbe3ae;
+  --c-teal: #2f7a6e;
+  --c-teal-soft: #cfe6dd;
+  --c-plum: #7a4b6e;
+  --c-wood: #c88c50;
+  --c-wood-top: #dba56b;
+  --c-wood-dark: #8e5a2c;
+  --c-wood-shadow: rgb(84 47 16 / 0.35);
+  --c-stamp: #c7362b;
+  --c-stamp-blue: #2d4c97;
+  --c-shadow: 43 29 20;
+  --c-scrim: rgb(43 29 20 / 0.42);
+  --c-key: #fffdf8;
+  --c-keyboard: #d9d0c3;
+  --c-field: #fffdf8;
+  --c-grain-opacity: 0.5;
+
+  --screen-background: var(--c-paper);
+  --status-bar-ink: var(--c-ink);
+  --home-indicator: rgb(43 29 20 / 0.55);
+
+  background: var(--c-paper);
+  font-feature-settings: 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The frame's scoped `.screen` rule sets ink and a system font, and it also
+   lands on each screen's root (Vue scopes a child's root with the parent's
+   id). Repeat the attribute so ours outranks it in every palette. */
+[data-direction='c'][data-direction='c'][data-direction='c'],
+[data-direction='c'][data-direction='c'] .content > * {
+  color: var(--c-ink);
+  font-family: var(--c-sans);
+}
+
+/* Pastel: blush paper, plum ink, lacquered pink shelves. */
+[data-direction='c'][data-palette='pastel'] {
+  --c-paper: #fbf0ee;
+  --c-paper-deep: #f6e2e0;
+  --c-card: #fffbfa;
+  --c-ink: #3b2948;
+  --c-ink-soft: #725f80;
+  --c-muted: #a294ad;
+  --c-line: #eedad9;
+  --c-line-strong: #e0c4c6;
+  --c-accent: #f2705e;
+  --c-accent-deep: #d65645;
+  --c-accent-ink: #fffbfa;
+  --c-mustard: #f7c45c;
+  --c-mustard-soft: #fde9bd;
+  --c-teal: #4d9e8e;
+  --c-teal-soft: #d4eee6;
+  --c-plum: #9a6fb5;
+  --c-wood: #eab3bf;
+  --c-wood-top: #f4ccd4;
+  --c-wood-dark: #c98494;
+  --c-wood-shadow: rgb(150 80 100 / 0.3);
+  --c-stamp: #7b5cc7;
+  --c-stamp-blue: #3f84b8;
+  --c-shadow: 59 41 72;
+  --c-scrim: rgb(59 41 72 / 0.38);
+  --c-key: #fffbfa;
+  --c-keyboard: #eadbdf;
+  --c-field: #fffbfa;
+  --home-indicator: rgb(59 41 72 / 0.5);
+}
+
+/* Ink: a reading lamp at night — navy paper, walnut shelves, cream type. */
+[data-direction='c'][data-palette='ink'] {
+  --c-paper: #1d2130;
+  --c-paper-deep: #171a26;
+  --c-card: #282d3f;
+  --c-ink: #f5ead6;
+  --c-ink-soft: #c2b59f;
+  --c-muted: #8c8577;
+  --c-line: #383e54;
+  --c-line-strong: #4a516a;
+  --c-accent: #ff8a5b;
+  --c-accent-deep: #e8703f;
+  --c-accent-ink: #1d2130;
+  --c-mustard: #f5c158;
+  --c-mustard-soft: #4a4130;
+  --c-teal: #6cc1af;
+  --c-teal-soft: #24413f;
+  --c-plum: #c79ac0;
+  --c-wood: #6b4429;
+  --c-wood-top: #84583a;
+  --c-wood-dark: #3f2717;
+  --c-wood-shadow: rgb(0 0 0 / 0.5);
+  --c-stamp: #ff7b67;
+  --c-stamp-blue: #8fb0ff;
+  --c-shadow: 0 0 0;
+  --c-scrim: rgb(5 6 12 / 0.6);
+  --c-key: #4b5065;
+  --c-keyboard: #2a2e3d;
+  --c-field: #222636;
+  --c-grain-opacity: 0.35;
+  --home-indicator: rgb(245 234 214 / 0.6);
+}
+
+/* ---------------------------------------------------------------------------
+ * Texture: paper grain on the page, grain on the wood, cloth on spines.
+ * Drawn with SVG noise; off = flat colour.
+ * ------------------------------------------------------------------------- */
+
+[data-direction='c'] .c-paper-grain {
+  isolation: isolate;
+}
+
+[data-direction='c'] .c-paper-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--c-grain-opacity);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.33 0 0 0 0 0.2 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+[data-direction='c'][data-palette='ink'] .c-paper-grain::before {
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.85 0 0 0 0 0.75 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+[data-direction='c'][data-texture='off'] .c-paper-grain::before {
+  display: none;
+}
+
+/* Wood grain on shelf planks. */
+[data-direction='c'] .c-wood {
+  background-color: var(--c-wood);
+  background-image:
+    repeating-linear-gradient(
+      178deg,
+      rgb(255 255 255 / 0) 0 3px,
+      rgb(255 235 205 / 0.13) 3px 4px,
+      rgb(80 40 10 / 0) 4px 7px,
+      rgb(80 40 10 / 0.1) 7px 8px
+    ),
+    linear-gradient(90deg, rgb(80 40 10 / 0.08), rgb(255 255 255 / 0.06) 40%, rgb(80 40 10 / 0.1));
+}
+
+[data-direction='c'][data-texture='off'] .c-wood {
+  background-image: none;
+}
+
+/* Cloth weave on spines and placeholder covers. */
+[data-direction='c'] .c-cloth {
+  background-image:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.05) 0 1px, transparent 1px 3px);
+}
+
+[data-direction='c'][data-texture='off'] .c-cloth {
+  background-image: none;
+}
+
+/* Rubber-stamp ink: uneven coverage. */
+[data-direction='c'] .c-ink-grain {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.7 1.72'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.7 1.72'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+[data-direction='c'][data-texture='off'] .c-ink-grain {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
