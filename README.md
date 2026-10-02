@@ -15,7 +15,7 @@ Needs Docker (for the local Supabase stack), Node 24, pnpm and the Supabase CLI.
 supabase start                     # in the repo root: Postgres, Auth, Studio, Mailpit on 553xx
 cd web
 cp .env.example .env               # paste the anon key `supabase start` printed
-pnpm install                       # see the note below if you are on pnpm 11+
+pnpm install
 pnpm dev                           # http://localhost:3020, best in a phone-sized viewport
 ```
 
@@ -23,9 +23,8 @@ The libellus stack has its own project id and ports (55320–55329), so it runs 
 Supabase stacks (Trappist's on 5432x) without touching them. Stop only this one with `supabase stop`
 from the repo root — never `supabase stop --all`.
 
-On pnpm 11 and later, `pnpm install` ends with `ERR_PNPM_IGNORED_BUILDS` for esbuild and leaves an
-untracked `web/pnpm-workspace.yaml` behind. The install is complete; delete that file and never commit
-it (details in `web/AGENTS.md`). CI uses pnpm 10, which only warns.
+Dependency build scripts pnpm 11+ may run (esbuild) are approved in the committed
+`web/pnpm-workspace.yaml`; local and CI both use pnpm 12.
 
 Tests, from `web/` (with the stack running):
 

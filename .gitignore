@@ -7,9 +7,8 @@ node_modules/
 # Claude Code worktrees and local agent state
 .claude/
 
-# pnpm 11+ writes an `allowBuilds` stub here on `pnpm add`; it is never committed
-# (web/AGENTS.md, gotchas).
-web/pnpm-workspace.yaml
+# web/pnpm-workspace.yaml is committed: it approves dependency build scripts
+# for pnpm 11+ (web/AGENTS.md, gotchas). design/ has none to approve.
 design/pnpm-workspace.yaml
 
 # Web — Nuxt build output and Playwright artifacts. `web/dist` is a symlink

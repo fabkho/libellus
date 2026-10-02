@@ -26,8 +26,9 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   multi-row change is one RPC, so a native client calls the same function.
 
 ## UI
-- Mobile first, mobile only: tab bar, bottom sheets, 44px touch targets (`--size-touch`),
-  `env(safe-area-inset-*)` through the `screen-inset` utility. No desktop layouts.
+- Mobile first: tab bar, bottom sheets, 44px touch targets (`--size-touch`), `env(safe-area-inset-*)`
+  through the `screen-inset` utility. Designed for the phone; on wider screens the same layout sits in
+  a centred column and must still look finished. No separate desktop layouts in v1.
 - Colours, spacing, radii, type: only Tailwind utilities from the generated theme (`bg-surface`,
   `px-md`, `rounded-md`, `text-body`, `text-ink-muted`). Never hex values, raw colours or arbitrary
   px in components. Tokens come from `design/tokens.json` (`cd design && pnpm tokens`); never edit
@@ -56,11 +57,11 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 ## Gotchas
 - Tailwind v4 only rescans sources when CSS changes. After adding classes in a component, run
   `touch app/assets/css/main.css` or the new utilities are missing in dev.
-- With pnpm 11+ locally, `pnpm add` and a fresh `pnpm install` stop with `ERR_PNPM_IGNORED_BUILDS`
-  (esbuild) and leave an untracked `pnpm-workspace.yaml` with
-  `allowBuilds: esbuild: set this to true or false`. The packages are installed all the same (esbuild
-  ships its binary as an optional dependency). Delete the file; never commit it. pnpm 12 reads that
-  setting only from this file, not from `package.json`. CI uses pnpm 10, which only warns.
+- pnpm 11+ fails an install on dependency build scripts nobody approved (`ERR_PNPM_IGNORED_BUILDS`).
+  Approvals live in the committed `pnpm-workspace.yaml` (`allowBuilds`; pnpm reads it only there, not
+  from `package.json`). When a new dependency needs one, `pnpm add` writes a stub
+  (`<pkg>: set this to true or false`): decide `true` or `false`, never commit the stub as is.
+  Local and CI both use pnpm 12.
 - Install packages with `pnpm add <pkg>@latest`.
 - The local stack is libellus' own (`project_id = "libellus"`, ports 553xx). Never `supabase stop
   --all` and never reset another project's database.

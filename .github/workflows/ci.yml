@@ -20,11 +20,11 @@ jobs:
         with:
           version: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
 
-      # pnpm 10 on purpose: 11+ fails installs on unapproved build scripts
-      # (esbuild), which the lockfile does not carry. The lockfile format is the same.
+      # Same major as local. Build scripts pnpm may run (esbuild) are approved in
+      # web/pnpm-workspace.yaml, so a frozen install passes on pnpm 11+.
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 12
 
       - uses: actions/setup-node@v4
         with:
@@ -72,7 +72,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 12
 
       - uses: actions/setup-node@v4
         with:
@@ -96,7 +96,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 12
 
       - uses: actions/setup-node@v4
         with:
