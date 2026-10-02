@@ -1,22 +1,39 @@
 <script setup lang="ts">
 // The way in (sign in, sign up, verify): a shelf in the dark with a lamp over
 // it, the wordmark, then the screen's form (default slot) and its way out to
-// the other screen (slot `footer`). The shelf is a wall of cloth-bound
-// Placeholder covers, tilted and veiled: nobody is signed in yet, so there are
-// no real covers to show.
+// the other screen (slot `footer`). The shelf is a wall of real covers (see
+// wall.ts), tilted and veiled; each stands on a cloth-coloured board that
+// shows until its image arrives, or instead of it when the image fails.
+import { WALL_COVERS } from './wall'
+
 defineProps<{ screen: string }>()
 const { t } = useI18n()
 
 // Five columns, four rows; the cloth is picked in a fixed order so the wall
 // never repeats a colour next to itself.
-const WALL = Array.from({ length: 20 }, (_, i) => ((i * 2 + Math.floor(i / 5)) % 6) + 1)
+const WALL = WALL_COVERS.slice(0, 20).map((book, i) => ({
+  ...book,
+  cloth: ((i * 2 + Math.floor(i / 5)) % 6) + 1,
+}))
+const failed = ref(new Set<number>())
 </script>
 
 <template>
   <main class="relative flex min-h-dvh flex-col overflow-hidden">
     <div class="wall" aria-hidden="true">
-      <span v-for="(cloth, i) in WALL" :key="i" class="spine" :style="{ background: `var(--color-cloth${cloth})` }">
+      <span v-for="(book, i) in WALL" :key="book.cover" class="spine" :style="{ background: `var(--color-cloth${book.cloth})` }">
         <span class="rule" />
+        <img
+          v-if="!failed.has(i)"
+          class="cover"
+          :src="book.cover"
+          alt=""
+          width="600"
+          height="900"
+          decoding="async"
+          fetchpriority="low"
+          @error="failed = new Set(failed).add(i)"
+        >
       </span>
     </div>
     <div class="veil" aria-hidden="true" />
@@ -71,6 +88,16 @@ const WALL = Array.from({ length: 20 }, (_, i) => ((i * 2 + Math.floor(i / 5)) %
   inset: var(--spacing-xs);
   border: var(--stroke-hairline) solid color-mix(in srgb, var(--color-cloth-ink) 30%, transparent);
   border-radius: 1px;
+}
+
+/* The real cover over its board; the board shows while it loads or if it fails. */
+.cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 /* The lamp's glow behind the wordmark, and the room closing in below it. */
