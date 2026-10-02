@@ -14,7 +14,30 @@ export default defineNuxtConfig({
   ssr: false,
   devtools: { enabled: true },
 
-  modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt'],
+  modules: [
+    '@pinia/nuxt',
+    '@nuxtjs/i18n',
+    '@vite-pwa/nuxt',
+    // The design playground (`/prototype`, issue #4) is a dev tool: production
+    // builds drop every `/prototype*` route, so nothing imports the page or
+    // `components/proto/` any more and none of it reaches the bundle.
+    (_options, nuxt) => {
+      nuxt.hook('pages:extend', (pages) => {
+        if (nuxt.options.dev) return
+        const strip = (list: typeof pages) => {
+          for (let i = list.length - 1; i >= 0; i--) {
+            const page = list[i]!
+            if (page.path.startsWith('/prototype')) list.splice(i, 1)
+            else if (page.children?.length) strip(page.children)
+          }
+        }
+        strip(pages)
+      })
+    },
+  ],
+  // The playground's components are imported explicitly by the page, never
+  // auto-registered, so the app can't pick one up by accident.
+  components: [{ path: '~/components', ignore: ['proto/**'] }],
   css: ['~/assets/css/main.css'],
   vite: { plugins: [tailwindcss()] },
 

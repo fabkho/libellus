@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 @import './tokens.generated.css';
 
+/* The design playground brings its own Tailwind (components/proto/proto.css)
+   and is stripped from production; its classes stay out of the app's CSS. */
+@source not '../../components/proto';
+@source not '../../pages/prototype.vue';
+
 /* Latin subset only: keeps the precache small and covers English (and the
    umlauts German will need). Inter is a neutral placeholder until the design
    round (#4/#5) picks the type; the family itself is a token, `--font-sans`
