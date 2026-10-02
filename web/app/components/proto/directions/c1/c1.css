@@ -1,0 +1,153 @@
+/*
+ * Direction c1 — "Shelf, calmer". C's bookcase and its little rituals
+ * (spines, bookmark, stamped finish), set in A and D's quieter language:
+ * matte paper, hairlines, a serif for what you read and Inter for what you
+ * tap, one accent, floating glass chrome, light and dark from one set of
+ * tokens. Every selector starts with [data-direction='c1'] (the phone screen
+ * Frame.vue renders). Toggles arrive as data-theme / data-type / data-view.
+ */
+
+/* ---- Light: warm matte paper (A), a little warmer ------------------------ */
+[data-direction='c1'] {
+  --c1-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --c1-serif: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --c1-serif-weight: 500;
+  --c1-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --c1-paper: #f6f2eb;
+  --c1-paper-deep: #eee8de;
+  --c1-card: #fffdf9;
+  --c1-ink: #1e1a16;
+  --c1-ink-soft: #675e54;
+  --c1-muted: #9e9588;
+  --c1-line: #e9e2d7;
+  --c1-line-strong: #dad1c3;
+  --c1-accent: #cf5a2e;
+  --c1-accent-deep: #ad4520;
+  --c1-accent-ink: #fffdf9;
+  --c1-accent-soft: #f7e3d8;
+  --c1-mustard: #e2a634;
+  --c1-mustard-soft: #f5e7c7;
+  --c1-teal: #3b7669;
+  --c1-teal-soft: #dcebe5;
+  --c1-plum: #7a4b6e;
+  --c1-wood: #d9bf9b;
+  --c1-wood-top: #e8d4b6;
+  --c1-wood-dark: #b39168;
+  --c1-wood-shadow: rgb(90 64 30 / 0.18);
+  --c1-stamp: #c2412f;
+  --c1-stamp-blue: #34518f;
+  --c1-shadow: 40 30 15;
+  --c1-scrim: rgb(30 22 14 / 0.34);
+  --c1-key: #fffdf8;
+  --c1-keyboard: #d8d2c8;
+  --c1-field: #fffdf9;
+  --c1-grain-opacity: 0;
+
+  /* Floating chrome (A/D): frosted, a hairline, a soft lift. */
+  --c1-glass: rgb(252 249 244 / 0.8);
+  --c1-glass-filter: blur(16px) saturate(1.25);
+  --c1-glass-hair: rgb(52 40 20 / 0.08);
+  --c1-glass-shadow: 0 8px 24px -6px rgb(40 30 15 / 0.16), 0 1px 3px rgb(40 30 15 / 0.07);
+  --c1-card-shadow: 0 0 0 0.5px rgb(52 40 20 / 0.1), 0 1px 2px rgb(40 30 15 / 0.04), 0 8px 24px -12px rgb(40 30 15 / 0.14);
+
+  --screen-background: var(--c1-paper);
+  --status-bar-ink: var(--c1-ink);
+  --home-indicator: rgb(30 26 22 / 0.32);
+
+  background: var(--c1-paper);
+  font-feature-settings: 'cv11', 'ss01';
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Dark: D's lamp-lit room, same shelves ------------------------------- */
+[data-direction='c1'][data-theme='dark'] {
+  --c1-paper: #13110e;
+  --c1-paper-deep: #0d0b09;
+  --c1-card: #1e1b17;
+  --c1-ink: #eee7dc;
+  --c1-ink-soft: #b4ab9d;
+  --c1-muted: #7f776b;
+  --c1-line: #2b2722;
+  --c1-line-strong: #3b3630;
+  --c1-accent: #ea8355;
+  --c1-accent-deep: #cc6a3f;
+  --c1-accent-ink: #16120e;
+  --c1-accent-soft: #3a2519;
+  --c1-mustard: #efb768;
+  --c1-mustard-soft: #3a2f1f;
+  --c1-teal: #74bba9;
+  --c1-teal-soft: #1f3530;
+  --c1-plum: #c79ac0;
+  --c1-wood: #4e3a2a;
+  --c1-wood-top: #604834;
+  --c1-wood-dark: #33261b;
+  --c1-wood-shadow: rgb(0 0 0 / 0.5);
+  --c1-stamp: #f07a62;
+  --c1-stamp-blue: #8fb0ff;
+  --c1-shadow: 0 0 0;
+  --c1-scrim: rgb(0 0 0 / 0.55);
+  --c1-key: #4b4642;
+  --c1-keyboard: #1e1b19;
+  --c1-field: #1a1713;
+
+  --c1-glass: rgb(30 27 23 / 0.74);
+  --c1-glass-hair: rgb(255 236 210 / 0.09);
+  --c1-glass-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 14px 32px rgb(0 0 0 / 0.5);
+  --c1-card-shadow: 0 0 0 0.5px rgb(255 236 210 / 0.08), 0 10px 28px -12px rgb(0 0 0 / 0.6);
+
+  --home-indicator: rgb(255 246 232 / 0.6);
+}
+
+/* ---- Type toggle: Fraunces (soft) or Newsreader (A and D's serif) -------- */
+[data-direction='c1'][data-type='classic'] {
+  --c1-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --c1-serif-weight: 500;
+}
+
+/* The frame's scoped `.screen` rule sets ink and a system font, and it also
+   lands on each screen's root (Vue scopes a child's root with the parent's
+   id). Repeat the attribute so ours outranks it in every theme. */
+[data-direction='c1'][data-direction='c1'][data-direction='c1'],
+[data-direction='c1'][data-direction='c1'] .content > * {
+  color: var(--c1-ink);
+  font-family: var(--c1-sans);
+}
+
+/* Floating glass: tab bar, round toolbar buttons. */
+[data-direction='c1'] .c1-glass {
+  background: var(--c1-glass);
+  -webkit-backdrop-filter: var(--c1-glass-filter);
+  backdrop-filter: var(--c1-glass-filter);
+  box-shadow:
+    0 0 0 0.5px var(--c1-glass-hair),
+    var(--c1-glass-shadow);
+}
+
+/* ---------------------------------------------------------------------------
+ * Surfaces: flat paper, smooth light wood, a faint cloth on spines, stamp ink
+ * slightly uneven (the one bit of texture left).
+ * ------------------------------------------------------------------------- */
+
+[data-direction='c1'] .c1-paper-grain {
+  isolation: isolate;
+}
+
+/* Wood grain on shelf planks. */
+[data-direction='c1'] .c1-wood {
+  background-color: var(--c1-wood);
+  background-image: linear-gradient(90deg, rgb(80 40 10 / 0.05), rgb(255 255 255 / 0.08) 45%, rgb(80 40 10 / 0.06));
+}
+
+/* Cloth weave on spines and placeholder covers. */
+[data-direction='c1'] .c1-cloth {
+  background-image: linear-gradient(90deg, rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.07) 30%, rgb(0 0 0 / 0) 60%, rgb(0 0 0 / 0.08));
+}
+
+/* Rubber-stamp ink: uneven coverage. */
+[data-direction='c1'] .c1-ink-grain {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.7 1.72'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.7 1.72'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
