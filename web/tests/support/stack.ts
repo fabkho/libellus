@@ -81,6 +81,48 @@ export async function sql<T = Record<string, unknown>>(
   }
 }
 
+type InviteFixture = { maxUses?: number; uses?: number; expiresAt?: Date | null }
+
+/** A fresh code per test, so nothing depends on the seed's stock being unused. */
+export async function createInviteCode({
+  maxUses = 1,
+  uses = 0,
+  expiresAt = null,
+}: InviteFixture = {}): Promise<string> {
+  const code = `VT${RUN_TAG}-${randomUUID().slice(0, 8)}`.toUpperCase()
+  await sql(
+    `insert into public.invite_codes (code, label, max_uses, uses, expires_at)
+     values ($1, 'vitest', $2, $3, $4)`,
+    [code, maxUses, uses, expiresAt],
+  )
+  return code
+}
+
+export async function inviteCodeUses(code: string): Promise<number> {
+  const rows = await sql<{ uses: number }>(
+    'select uses from public.invite_codes where code = $1::citext',
+    [code],
+  )
+  return rows[0]?.uses ?? -1
+}
+
+/** Whether GoTrue has a user on this address, confirmed or not. */
+export async function authUserExists(email: string): Promise<boolean> {
+  return (await sql('select 1 from auth.users where email = $1', [email])).length > 0
+}
+
+/**
+ * Asked over SQL rather than through a client, because the point of the
+ * question is usually that there is nobody signed in to ask it as.
+ */
+export async function accountExists(email: string): Promise<boolean> {
+  const rows = await sql(
+    'select 1 from public.accounts a join auth.users u on u.id = a.id where u.email = $1',
+    [email],
+  )
+  return rows.length > 0
+}
+
 // ---------------------------------------------------------------- mailbox
 
 type MailpitMessage = { ID: string; Created: string }
@@ -95,24 +137,47 @@ async function mailboxFor(email: string): Promise<MailpitMessage[]> {
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+/** How many mails the local mailbox holds for an address. */
+export async function mailCount(email: string): Promise<number> {
+  return (await mailboxFor(email)).length
+}
+
 /**
- * Reads the six-digit code out of the mail the way a member reads it out of
- * their inbox. Delivery is asynchronous, hence the poll.
+ * GoTrue refuses a second mail to the same address inside
+ * `auth.email.max_frequency` (1s locally, supabase/config.toml). Tests that ask
+ * for another code for an address they have just written to wait it out.
  */
-export async function readMailedCode(email: string, timeoutMs = 10_000): Promise<string> {
+export const emailCooldown = () => sleep(1_500)
+
+/**
+ * Reads the six-digit code out of the newest mail to an address the way a
+ * member reads it out of their inbox. Delivery is asynchronous, hence the poll.
+ * Asking for another code for the same address? Pass how many mails the box
+ * should hold by then (`nth`), or the previous mail is read.
+ */
+export async function readMailedCode(email: string, nth = 1, timeoutMs = 10_000): Promise<string> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
-    const [latest] = await mailboxFor(email)
-    if (latest) {
+    const messages = await mailboxFor(email)
+    const [latest] = messages
+    if (latest && messages.length >= nth) {
       const response = await fetch(`${stack.mailUrl}/api/v1/message/${latest.ID}`)
       const body = (await response.json()) as { Text: string }
       const match = body.Text.match(/\b(\d{6})\b/)
-      if (match) return match[1]
+      if (match) return match[1]!
       throw new Error(`No six-digit code in the mail to ${email}: ${body.Text}`)
     }
     await sleep(200)
   }
   throw new Error(`No mail arrived for ${email} within ${timeoutMs}ms`)
+}
+
+/** Anything but the code that was sent, for the mistyped-code case. */
+export function mistype(code: string): string {
+  return code
+    .split('')
+    .map((digit) => String((Number(digit) + 1) % 10))
+    .join('')
 }
 
 // ----------------------------------------------------------------- clients
