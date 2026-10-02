@@ -1,4 +1,5 @@
 import { thumbHashToDataURL } from 'thumbhash'
+import { appleArtwork } from '../data/search'
 
 /**
  * Pure helpers behind the Cover component (components/ui/Cover.vue): the
@@ -88,4 +89,18 @@ export function glowOf(colors: CoverColors | null | undefined): Glow {
   const lift = ({ h, s }: { h: number; s: number }) =>
     hslToRgb(h, Math.min(0.68, Math.max(s * 1.5, 0.08)), 0.52).join(' ')
   return { a: lift(tones[0]!), b: lift(tones[1]!) }
+}
+
+/** The cover widths of `UiCover`'s sizes, as the image size to ask for (2× for sharp edges, 3:2). */
+const COVER_FETCH = { xs: [200, 300], sm: [200, 300], md: [300, 450], lg: [300, 450], xl: [600, 900] } as const
+
+/**
+ * The image to load for a cover shown at `size`. Apple's CDN renders any size
+ * from the stored large URL, so a list row does not download the book page's
+ * image; other sources come as they are.
+ */
+export function coverSrc(url: string | null | undefined, size: keyof typeof COVER_FETCH): string | null {
+  if (!url) return null
+  const [width, height] = COVER_FETCH[size]
+  return /mzstatic\.com\//.test(url) ? appleArtwork(url, width, height) : url
 }
