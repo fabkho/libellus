@@ -89,6 +89,16 @@ const abandoned = (entry: LibraryEntry) => latestSession(entry)?.outcome === 'ab
         </div>
         <Button size="sm" tone="quiet" class="finish">Finish</Button>
       </article>
+
+      <div class="next">
+        <div class="next-head">
+          <span class="d-eyebrow">Start next</span>
+          <span class="d-eyebrow faint">from Want to read</span>
+        </div>
+        <div class="next-row">
+          <Cover v-for="entry in data.upNext.slice(0, 4)" :key="entry.id" :book="entry.book" :width="68" />
+        </div>
+      </div>
     </div>
 
     <div v-else-if="status === 'want_to_read'" class="list">
@@ -396,6 +406,22 @@ const abandoned = (entry: LibraryEntry) => latestSession(entry)?.outcome === 'ab
 .finish {
   position: relative;
   align-self: flex-end;
+}
+
+.next {
+  margin-top: 18px;
+  padding: 0 4px;
+}
+
+.next-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.next-row {
+  display: flex;
+  gap: 14px;
 }
 
 .foot {

@@ -120,7 +120,8 @@ const rating = (entry: LibraryEntry) => latestSession(entry)?.rating ?? null
   box-shadow:
     inset 0 0 0 0.5px var(--d-line-2),
     0 16px 34px rgb(0 0 0 / 0.55);
-  transform: translateY(-14px) scale(1.03);
+  margin: 6px 0;
+  transform: scale(1.035);
 }
 
 .lifted::before,

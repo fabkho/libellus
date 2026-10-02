@@ -40,7 +40,7 @@ const started = (id: string) => latestSession(proto.value.data.entry(id))?.start
           <p class="since d-mono">
             <span>Since {{ formatDate(started(entry.id), 'short') }}</span>
             <span class="sep" />
-            <span>Day {{ daysBetween(started(entry.id)) }}</span>
+            <span>day {{ daysBetween(started(entry.id)) }}</span>
           </p>
           <div class="actions">
             <Button size="sm" tone="quiet"><Icon name="check" :size="15" :stroke="1.8" />Finish</Button>

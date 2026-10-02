@@ -61,7 +61,7 @@ export function glowOf(colors: CoverColors | null | undefined): Glow | null {
     })
     .sort((x, y) => y.score - x.score)
   const lift = ({ h, s }: { h: number; s: number }) =>
-    hslToRgb(h, Math.min(0.62, Math.max(s * 0.9, 0.06)), 0.52).join(' ')
+    hslToRgb(h, Math.min(0.68, Math.max(s * 1.5, 0.08)), 0.52).join(' ')
   return { a: lift(tones[0]!), b: lift(tones[1]!) }
 }
 
