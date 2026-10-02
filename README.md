@@ -53,8 +53,9 @@ pnpm tokens:check                          # fails if a generated file differs f
 ```
 
 `pnpm tokens` writes `web/app/assets/css/tokens.generated.css` (a Tailwind v4 `@theme`) and
-`design/generated/Tokens.generated.swift`. Never edit the generated files; CI checks they match. The
-current values are neutral placeholders until the design round (#4/#5).
+`design/generated/Tokens.generated.swift`, each with a light and a dark theme. Never edit the
+generated files; CI checks they match. The values are direction D "Night Reader" from the design
+round (#4); docs/DESIGN.md says what each token is for.
 
 ### Signing in locally
 
@@ -101,7 +102,7 @@ web/          Nuxt 4 SPA + PWA — the reference app (rules: web/AGENTS.md)
 scripts/      create-invite-code.sh, the owner's tool for minting invite codes
 design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests
-docs/         DESIGN.md, MOTION.md (after the design round), parity.md (per-screen behaviour),
+docs/         DESIGN.md (design guideline), MOTION.md (motion), parity.md (per-screen behaviour),
               agents/ (how agents use the issue tracker)
 SPEC.md       condensed spec; CONTEXT.md the domain glossary
 ```

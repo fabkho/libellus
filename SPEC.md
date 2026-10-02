@@ -75,16 +75,16 @@ Every multi-row library action is one RPC, so a native client calls the same fun
 
 ```
 (auth)   Sign in (email) → Sign up (invite code; unknown email only) → Verify (six-digit code)
-(tabs)   Home | Library | Search          avatar in the header → account, sign out
+(tabs)   Home | Library | Search          avatar in the header → account, theme switch, sign out
          Home    → Currently reading, Up next, "Read in <year>: N"
          Library → Want to read / Currently reading / Finished (+ Not finished filter), Collections
-         Search  → results (Catalogue first, then external)
+         Search  → an overlay over the current page, never a page: results (Catalogue first, then external)
          any book → Book detail (cover, metadata, primary action, reading history, collections)
 (sheets) Add · Finish · Abandon · Manual book · Collection picker
 ```
 
-The visual design is decided in a prototyping round (#4) and ported as the design system (#5); this
-spec fixes structure and behaviour only. Per-screen behaviour lives in [docs/parity.md](docs/parity.md).
+The visual design was decided in a prototyping round (#4: direction D "Night Reader", light and dark)
+and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure and behaviour only. Per-screen behaviour lives in [docs/parity.md](docs/parity.md).
 
 ## 6. Non-functional
 
@@ -160,8 +160,9 @@ Not tested automatically: visual design, component snapshots, live external APIs
 
 ## 10. Design
 
-- `docs/DESIGN.md` and `docs/MOTION.md` — written after the design round (#4/#5). Until then the
-  tokens are neutral placeholders.
+- [docs/DESIGN.md](docs/DESIGN.md) — the design guideline: direction D "Night Reader" (#4), its two
+  themes and the theme rule, token roles, type, components, the runner-up directions.
+- [docs/MOTION.md](docs/MOTION.md) — durations and curves from the tokens, the named motions.
 
 ## 11. Related repos
 

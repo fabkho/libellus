@@ -32,7 +32,13 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - Colours, spacing, radii, type: only Tailwind utilities from the generated theme (`bg-surface`,
   `px-md`, `rounded-md`, `text-body`, `text-ink-muted`). Never hex values, raw colours or arbitrary
   px in components. Tokens come from `design/tokens.json` (`cd design && pnpm tokens`); never edit
-  `tokens.generated.css`.
+  `tokens.generated.css`. Tailwind's default palette, radii, shadows and type scale are switched off.
+- The design system is direction D "Night Reader": `../docs/DESIGN.md` (token roles, type,
+  components, the theme rule) and `../docs/MOTION.md`. Build screens from the base components in
+  `app/components/ui/` (`UiButton`, `UiSheet`, `UiCover`, `UiStars`, `UiRow`, …) and the shell in
+  `app/components/shell/`. Every token has a light and a dark value, so a component never branches
+  on the theme and never uses `dark:` variants. Book titles are `book-title` (serif); dates and
+  figures `figures` (mono).
 - Every interactive element (and every element a test reads) gets `data-testid="<screen>.<element>"`
   (`start.title`, `search.query`, `book.finish`). It is the native accessibility identifier too, so
   name it for what it is, not how it looks.
