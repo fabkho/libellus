@@ -45,20 +45,25 @@ export const stack = {
 export const TEST_DOMAIN = 'libellus.test'
 
 /**
- * The tag of this run, set once in vitest.config.ts so the global setup and
- * every worker agree on it. Fixtures carry it and the teardown removes only
- * what carries it: two runs against one stack (a terminal and an agent, say)
- * never clean up each other's data.
+ * The tag of this run, set once in vitest.config.ts / playwright.config.ts so
+ * the global setup, the teardown and every worker agree on it. Fixtures carry
+ * it and the teardown removes only what carries it: two runs against one stack
+ * (a terminal and an agent, say) never clean up each other's data.
+ *
+ * Read when asked, not when this module loads: the Playwright config imports
+ * this module before it sets the variable, and its teardown runs in that
+ * process, so a value captured at load time would be 'adhoc' there and the
+ * teardown would sweep nothing.
  */
-export const RUN_TAG = process.env.LIBELLUS_TEST_RUN ?? 'adhoc'
+export const runTag = () => process.env.LIBELLUS_TEST_RUN ?? 'adhoc'
 
 /** `<prefix>-<run>-<random>@libellus.test`: unique per test, findable per run. */
 export function uniqueEmail(prefix: string): string {
-  return `${prefix}-${RUN_TAG}-${randomUUID().slice(0, 8)}@${TEST_DOMAIN}`
+  return `${prefix}-${runTag()}-${randomUUID().slice(0, 8)}@${TEST_DOMAIN}`
 }
 
 /** The pattern that matches every address this run handed out. */
-export const runEmailPattern = () => `%-${RUN_TAG}-%@${TEST_DOMAIN}`
+export const runEmailPattern = () => `%-${runTag()}-%@${TEST_DOMAIN}`
 
 /**
  * Catalogue Books a test makes carry this publisher and the run tag in their
@@ -68,7 +73,7 @@ export const runEmailPattern = () => `%-${RUN_TAG}-%@${TEST_DOMAIN}`
 export const TEST_PUBLISHER = TEST_DOMAIN
 
 /** `<title> [<run>]`: a test Book's title, findable per run. */
-export const runTitle = (title: string) => `${title} [${RUN_TAG}]`
+export const runTitle = (title: string) => `${title} [${runTag()}]`
 
 /** A source id no real Apple Book has: 99 and fifteen random digits. */
 export function uniqueAppleId(): string {
@@ -84,7 +89,7 @@ export async function sweepRun() {
   await sql(
     `delete from public.books b where b.publisher = $1 and b.title like $2
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
-    [TEST_PUBLISHER, `% [${RUN_TAG}]`],
+    [TEST_PUBLISHER, `% [${runTag()}]`],
   )
 }
 
@@ -130,7 +135,7 @@ export async function createInviteCode({
   uses = 0,
   expiresAt = null,
 }: InviteFixture = {}): Promise<string> {
-  const code = `VT${RUN_TAG}-${randomUUID().slice(0, 8)}`.toUpperCase()
+  const code = `VT${runTag()}-${randomUUID().slice(0, 8)}`.toUpperCase()
   await sql(
     `insert into public.invite_codes (code, label, max_uses, uses, expires_at)
      values ($1, 'vitest', $2, $3, $4)`,

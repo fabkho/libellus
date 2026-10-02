@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 
 /**
  * Apple's answers, as recorded from the iTunes Search API on 2 Oct 2026
@@ -35,4 +35,15 @@ export function appleAnswer(url: URL): unknown {
 /** A recorded cover (Piranesi, 200 × 300), served for every artwork request in the flows. */
 export function appleCover(): Buffer {
   return readFileSync(new URL('cover.jpg', fixtures))
+}
+
+/** Every Apple id in the recordings: the Books a flow can put into the Catalogue. */
+export function recordedAppleIds(): string[] {
+  const ids = new Set<string>()
+  for (const file of readdirSync(fixtures)) {
+    if (!file.endsWith('.json')) continue
+    const body = JSON.parse(readFileSync(new URL(file, fixtures), 'utf8')) as { results?: { trackId?: number }[] }
+    for (const item of body.results ?? []) if (item.trackId) ids.add(String(item.trackId))
+  }
+  return [...ids]
 }

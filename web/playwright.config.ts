@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 import { stack } from './tests/support/stack'
 
 // Tags every address the flows invent, so the global teardown removes only what
-// this run created (tests/support/stack.ts, RUN_TAG). Set before the workers
+// this run created (tests/support/stack.ts, runTag). Set before the workers
 // start, so they inherit it.
 process.env.LIBELLUS_TEST_RUN ??= `e2e${randomUUID().slice(0, 5)}`
 
