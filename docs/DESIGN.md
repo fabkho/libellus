@@ -149,7 +149,8 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   the right.
 - **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) over a fade
   to the surface. The current tab is full ink with a bolder stroke and a lamp dot; the others are
-  faint. Search is not a page: it opens the search palette.
+  faint. Search is not a page: it opens the search palette, and the capsule itself turns into it
+  and back (MOTION.md, Search morph).
 - **Search palette** (`ShellSearchOverlay`): over the page, which stays put behind it, blurred
   and veiled. The query row is at the bottom (Home and Library at its left, the current one lit;
   Cancel replaces them while the keyboard is up), results go above it with the best match next to
