@@ -41,6 +41,27 @@ const compact = computed(() => props.scale < 0.85)
  * fits the free length, else two lines on a thick spine, else a smaller size.
  */
 const CHAR = 0.63
+/** Splits words into k lines, minimising the longest line (titles are short, brute force is fine). */
+function split(words: string[], k: number): string[] {
+  const join = (w: string[]) => w.join(' ').replace(/- /g, '-')
+  let best: string[] = [join(words)]
+  let bestLen = Infinity
+  const walk = (start: number, left: number, acc: string[]) => {
+    if (left === 1) {
+      const lines = [...acc, join(words.slice(start))]
+      const len = Math.max(...lines.map((l) => l.length))
+      if (len < bestLen) {
+        bestLen = len
+        best = lines
+      }
+      return
+    }
+    for (let i = start + 1; i <= words.length - left + 1; i++) walk(i, left - 1, [...acc, join(words.slice(start, i))])
+  }
+  walk(0, k, [])
+  return best
+}
+
 const fit = computed(() => {
   const title = props.book.title
   const furniture =
@@ -51,22 +72,20 @@ const fit = computed(() => {
     (showAuthor.value && !props.sticker ? surname.value.length * 10 + 6 : 0)
   const avail = height.value - furniture
   const max = Math.min(15, width.value * (compact.value ? 0.42 : 0.46))
-  const one = avail / (title.length * CHAR)
+  const one = Math.min(max, avail / (title.length * CHAR))
+  const floor = compact.value ? 8 : 9
+  if (one >= floor + 1) return { lines: [title], size: one }
   const words = title.split(/(?<=-)|\s+/)
-  if (one >= 11 || width.value < 24 || words.length < 2) return { lines: [title], size: Math.max(9.5, Math.min(max, one)) }
-  let best: [string, string] = [title, '']
-  let bestLen = Infinity
-  for (let i = 1; i < words.length; i++) {
-    const a = words.slice(0, i).join(' ').replace(/- /g, '-')
-    const b = words.slice(i).join(' ').replace(/- /g, '-')
-    const len = Math.max(a.length, b.length)
-    if (len < bestLen) {
-      bestLen = len
-      best = [a, b]
-    }
+  for (const k of [2, 3]) {
+    if (words.length < k || width.value < 11 * k) break
+    const lines = split(words, k)
+    const longest = Math.max(...lines.map((l) => l.length))
+    const size = Math.min(width.value * (k === 2 ? 0.34 : 0.25), 14, avail / (longest * CHAR))
+    if (size >= floor - 0.5) return { lines, size }
   }
-  const size = Math.max(8.5, Math.min(width.value * 0.34, 14, avail / (bestLen * CHAR)))
-  return { lines: best[1] ? best : [title], size }
+  // Too small to read: a tiny spine shows its bands and an emblem instead.
+  if (compact.value && one < floor) return { lines: [] as string[], size: 0 }
+  return { lines: [title], size: Math.max(floor, one) }
 })
 /** Leaning left onto the neighbour: pivot on the foot, stand off so the top just touches. */
 const standOff = computed(() =>
@@ -96,7 +115,8 @@ const standOff = computed(() =>
       <span class="bands top" />
       <span v-if="rating" class="dot">{{ formatRating(rating) }}</span>
       <span v-if="reads > 1" class="reads">{{ reads }}×</span>
-      <span class="title" :style="{ fontSize: `${fit.size}px` }"
+      <span v-if="!fit.lines.length" class="emblem" />
+      <span v-else class="title" :style="{ fontSize: `${fit.size}px` }"
         ><template v-for="(line, i) in fit.lines" :key="i"><br v-if="i" />{{ line }}</template></span
       >
       <span v-if="showAuthor && !sticker" class="author">{{ surname }}</span>
@@ -176,6 +196,15 @@ const standOff = computed(() =>
   white-space: nowrap;
   text-overflow: ellipsis;
   letter-spacing: 0.01em;
+}
+
+.emblem {
+  flex: 1;
+  width: 6px;
+  max-height: 6px;
+  margin: auto 0;
+  border-radius: 50%;
+  background: var(--band);
 }
 
 .author {

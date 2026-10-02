@@ -12,7 +12,7 @@ defineProps<{ title: string; action?: string }>()
     <div class="head">
       <span class="cancel">Cancel</span>
       <span class="title">{{ title }}</span>
-      <span class="action" :class="{ hidden: !action }">{{ action ?? 'Done' }}</span>
+      <span class="action" :class="{ ghosted: !action }">{{ action ?? 'Done' }}</span>
     </div>
     <div class="body"><slot /></div>
   </section>
@@ -69,7 +69,7 @@ defineProps<{ title: string; action?: string }>()
   color: var(--c-accent);
 }
 
-.hidden {
+.ghosted {
   visibility: hidden;
 }
 

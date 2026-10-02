@@ -4,7 +4,7 @@
 import type { Status } from '../../../data'
 import Icon from './Icon.vue'
 
-defineProps<{ status: Status; abandoned?: boolean; short?: boolean }>()
+defineProps<{ status: Status; abandoned?: boolean; short?: boolean; icon?: boolean }>()
 
 const labels: Record<Status, string> = {
   want_to_read: 'Want to read',
@@ -16,9 +16,13 @@ const icons = { want_to_read: 'bookmark', reading: 'open-book', finished: 'stamp
 </script>
 
 <template>
-  <span class="tag" :class="abandoned ? 'abandoned' : status">
-    <Icon :name="abandoned ? 'flag' : icons[status]" :size="13" />
-    {{ abandoned ? 'Not finished' : short ? shortLabels[status] : labels[status] }}
+  <span
+    class="tag"
+    :class="[abandoned ? 'abandoned' : status, { icon }]"
+    :aria-label="abandoned ? 'Not finished' : labels[status]"
+  >
+    <Icon :name="abandoned ? 'flag' : icons[status]" :size="icon ? 15 : 13" />
+    <template v-if="!icon">{{ abandoned ? 'Not finished' : short ? shortLabels[status] : labels[status] }}</template>
   </span>
 </template>
 
@@ -34,6 +38,14 @@ const icons = { want_to_read: 'bookmark', reading: 'open-book', finished: 'stamp
   font-size: 12.5px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.icon {
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 10px;
 }
 
 .want_to_read {
@@ -56,7 +68,15 @@ const icons = { want_to_read: 'bookmark', reading: 'open-book', finished: 'stamp
   color: var(--c-ink-soft);
 }
 
-[data-palette='ink'] .want_to_read {
+[data-palette='ink'] .icon {
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.want_to_read {
   color: var(--c-mustard);
 }
 

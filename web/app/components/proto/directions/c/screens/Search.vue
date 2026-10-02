@@ -43,7 +43,7 @@ const sources = computed(() =>
 </script>
 
 <template>
-  <div class="screen c-paper-grain" :class="state">
+  <div class="screen c-paper-grain" :class="`is-${state}`">
     <header class="head">
       <div v-if="state !== 'typing'" class="title-row">
         <h1>Search</h1>
@@ -135,7 +135,7 @@ h1 {
   line-height: 1.1;
 }
 
-.typing .head {
+.is-typing .head {
   padding-top: calc(var(--safe-top) + 6px);
 }
 

@@ -47,7 +47,14 @@ const moreByAuthor = computed(() => {
     ...found.map((r) => ({ key: r.id, book: r, owned: false })),
   ].slice(0, 4)
 })
-const surname = computed(() => book.value.authors[0]?.split(' ').at(-1) ?? '')
+// Last name, keeping lower-case or short particles: "Le Guin", "van Vogt", "de Bodard".
+const PARTICLES = new Set(['le', 'la', 'de', 'du', 'van', 'von', 'der', 'den', 'di', 'da', 'del', 'st.'])
+const surname = computed(() => {
+  const parts = book.value.authors[0]?.split(' ') ?? []
+  let i = parts.length - 1
+  while (i > 1 && PARTICLES.has(parts[i - 1]!.toLowerCase())) i--
+  return parts.slice(i).join(' ')
+})
 const day = computed(() =>
   latest.value?.startedOn ? daysBetween(latest.value.startedOn, data.value.today) + 1 : null,
 )

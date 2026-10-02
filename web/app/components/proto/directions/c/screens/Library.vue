@@ -3,9 +3,9 @@
 // way into Collections, the Status segments with counts, then the books on
 // shelves. The Shelf toggle picks how they stand:
 //   spines — a bookcase; a typed sticker on each spine carries the date
-//            (added / started / finished), a mustard dot the Rating;
+//            (added / started / finished), a mustard dot the rating;
 //   stacks — piles of books lying down, spine out: a legible list;
-//   covers — face-out on shelves, date and Rating on the shelf edge.
+//   covers — face-out on shelves, date and rating on the shelf edge.
 // Finished adds the *Not finished* filter; the abandoned book leans with a
 // slip in it, the re-read one carries "2×".
 import { computed } from 'vue'
@@ -125,7 +125,7 @@ function dayOf(item: Item) {
     <div v-if="view === 'spines'" class="case">
       <p class="legend">
         <span class="legend-sticker">2<br />OCT</span>{{ legend }}<template v-if="status === 'finished'"
-          >, <span class="legend-dot" />the Rating</template
+          >, <span class="legend-dot" />the rating</template
         >
       </p>
       <Plank

@@ -45,10 +45,17 @@
   --home-indicator: rgb(43 29 20 / 0.55);
 
   background: var(--c-paper);
-  color: var(--c-ink);
-  font-family: var(--c-sans);
   font-feature-settings: 'ss01';
   -webkit-font-smoothing: antialiased;
+}
+
+/* The frame's scoped `.screen` rule sets ink and a system font, and it also
+   lands on each screen's root (Vue scopes a child's root with the parent's
+   id). Repeat the attribute so ours outranks it in every palette. */
+[data-direction='c'][data-direction='c'][data-direction='c'],
+[data-direction='c'][data-direction='c'] .content > * {
+  color: var(--c-ink);
+  font-family: var(--c-sans);
 }
 
 /* Pastel: blush paper, plum ink, lacquered pink shelves. */
