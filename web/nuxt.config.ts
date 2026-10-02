@@ -12,7 +12,9 @@ const surface: string = tokens.color.surface.$value
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-02',
   ssr: false,
-  devtools: { enabled: true },
+  // The devtools badge floats over the tab bar and swallows taps in the
+  // Playwright run, which sets LIBELLUS_E2E (playwright.config.ts).
+  devtools: { enabled: !process.env.LIBELLUS_E2E },
 
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
