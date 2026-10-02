@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+@import './tokens.generated.css';
+
+/* Latin subset only: keeps the precache small and covers English (and the
+   umlauts German will need). Inter is a neutral placeholder until the design
+   round (#4/#5) picks the type; the family itself is a token, `--font-sans`
+   comes out of tokens.generated.css. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+
+/* The notch and the home indicator are the device's, not the design system's:
+   one utility for the screen padding so no screen inlines env() itself. */
+@utility screen-inset {
+  padding-top: calc(env(safe-area-inset-top) + var(--spacing-lg));
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-lg));
+  padding-left: calc(env(safe-area-inset-left) + var(--spacing-screen));
+  padding-right: calc(env(safe-area-inset-right) + var(--spacing-screen));
+}
+
+@layer base {
+  html {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+  }
+}

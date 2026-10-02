@@ -3,3 +3,20 @@ node_modules/
 .env.*
 !.env.example
 .DS_Store
+
+# Claude Code worktrees and local agent state
+.claude/
+
+# pnpm 11+ writes an `allowBuilds` stub here on `pnpm add`; it is never committed
+# (web/AGENTS.md, gotchas).
+web/pnpm-workspace.yaml
+design/pnpm-workspace.yaml
+
+# Web — Nuxt build output and Playwright artifacts. `web/dist` is a symlink
+# that `nuxt generate` creates, so no trailing slash: a slash would only match
+# a directory.
+web/.nuxt/
+web/.output/
+web/dist
+web/test-results/
+web/playwright-report/

@@ -1,0 +1,8 @@
+{
+  "app": {
+    "name": "Libellus"
+  },
+  "start": {
+    "tagline": "Search a book, read it, remember it."
+  }
+}
