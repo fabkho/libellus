@@ -10,7 +10,8 @@ process.env.LIBELLUS_TEST_RUN ??= `e2e${randomUUID().slice(0, 5)}`
 // Its own port, away from the dev server (3020) and the other projects on this
 // machine, and never reused: a run that found something else listening would
 // otherwise test that app instead. A taken port fails loudly at startup.
-const PORT = 4327
+// LIBELLUS_E2E_PORT moves it when two checkouts run their flows side by side.
+const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 
 // User flows on a phone-sized viewport. Together with docs/parity.md these are
 // the behavioural reference for any native port (SPEC.md, Testing).

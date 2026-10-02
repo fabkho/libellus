@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   appleArtwork,
@@ -11,28 +10,14 @@ import {
   type FetchLike,
 } from '@/data/search'
 import { isbn10To13, parseBookKey, parseIsbn } from '@/data/books'
+import { appleAnswer } from './support/apple'
 
 /**
  * The search repository on recorded Apple responses (tests/fixtures/apple,
  * recorded from the iTunes Search API on 2 Oct 2026). The live API is never
- * called: every request goes to `recorded`, which answers from the fixture
- * named after it and remembers what was asked.
+ * called: every request goes to `recorded`, which answers with the recording
+ * (tests/support/apple.ts) and remembers what was asked.
  */
-
-const fixture = (name: string) =>
-  JSON.parse(readFileSync(new URL(`./fixtures/apple/${name}.json`, import.meta.url), 'utf8')) as unknown
-
-/** `search?term=piranesi&country=us` → `search-piranesi-us`, `lookup?id=1&country=us` → `lookup-1-us`. */
-function fixtureName(url: URL): string {
-  const country = url.searchParams.get('country')
-  if (url.pathname === '/search') {
-    const term = url.searchParams.get('term')!.toLowerCase()
-    const name = { piranesi: 'piranesi', 'klara und die sonne': 'klara' }[term] ?? 'nothing'
-    return `search-${name}-${country}`
-  }
-  const isbn = url.searchParams.get('isbn')
-  return isbn ? `lookup-isbn-${isbn}-${country}` : `lookup-${url.searchParams.get('id')}-${country}`
-}
 
 type Recorded = FetchLike & { asked: URL[] }
 
@@ -53,12 +38,7 @@ function recorded(options: { failing?: string[]; hold?: Promise<void> } = {}): R
     if (options.failing?.includes(url.searchParams.get('country')!)) {
       return { ok: false, status: 503, json: async () => ({}) }
     }
-    let body: unknown
-    try {
-      body = fixture(fixtureName(url))
-    } catch {
-      body = { resultCount: 0, results: [] }
-    }
+    const body = appleAnswer(url)
     return { ok: true, status: 200, json: async () => body }
   }) as Recorded
   fetch.asked = asked
