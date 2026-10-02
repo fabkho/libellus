@@ -11,16 +11,28 @@
 //   palette floats right above it. Results read top-down as usual.
 //
 // While typing both lift above the keyboard and the tabs step aside.
+//
+// `behind` toggle — what fills the room between the header and the palette:
+// plain (just the lamp), preview (the best match large, lit by its cover, its
+// row selected in the palette), page (search as an overlay: the Home tab you
+// came from stays behind it, dimmed and blurred), wall (a dim wall of the
+// results' covers fading into the palette).
+//
+// Later (not built yet): a proper morph from the plain tab bar capsule into
+// the palette and back — the capsule widens, Search's icon slides into the
+// query row, Home and Library stay put, the list unrolls upwards.
 import { computed } from 'vue'
 import type { SearchResult, SearchSource, Status } from '../../../data'
 import { formatAuthors } from '../../../data'
 import { useProto } from '../../../contract'
+import Ambient from '../kit/Ambient.vue'
 import Avatar from '../kit/Avatar.vue'
 import Button from '../kit/Button.vue'
 import Cover from '../kit/Cover.vue'
 import Icon from '../kit/Icon.vue'
 import Keyboard from '../kit/Keyboard.vue'
 import TabBar from '../kit/TabBar.vue'
+import Home from './Home.vue'
 
 const props = defineProps<{ state: 'typing' | 'results' | 'empty' }>()
 const proto = useProto()
@@ -57,6 +69,23 @@ const groups = computed(() =>
 const answered = computed(() => groups.value.filter((g) => !g.loading).length)
 const sourceLabel = Object.fromEntries(sources.map((s) => [s.key, s.label])) as Record<SearchSource, string>
 
+const behind = computed(() => proto.value.toggles.behind ?? 'plain')
+
+/** Preview: the best match, or for no results the cover a hand-added book would get. */
+const best = computed(() => results.value[0] ?? null)
+const draftBook = computed(() => ({
+  title: query.value.replace(/\b\w/g, (c) => c.toUpperCase()),
+  authors: [] as string[],
+  coverUrl: null,
+}))
+
+/** Wall: the results' own covers first, the Library's to fill the rows. */
+const wall = computed(() => {
+  const own = results.value.filter((r) => r.coverUrl)
+  const library = proto.value.data.library.map((e) => e.book).filter((b) => b.coverUrl)
+  return [...own, ...library, ...own].slice(0, 24)
+})
+
 const statusLabel: Record<Status, string> = {
   want_to_read: 'Want to read',
   reading: 'Reading',
@@ -65,17 +94,57 @@ const statusLabel: Record<Status, string> = {
 </script>
 
 <template>
-  <div class="page" :class="[`state-${state}`, mode]">
-    <div class="lamp" aria-hidden="true" />
+  <div class="page" :class="[`state-${state}`, mode, `behind-${behind}`]">
+    <div v-if="behind !== 'page'" class="lamp" aria-hidden="true" />
 
-    <header v-if="!typing" class="head">
+    <!-- Behind: the page you came from. -->
+    <div v-if="behind === 'page'" class="back-page" aria-hidden="true">
+      <Home />
+      <div class="back-veil" />
+    </div>
+
+    <!-- Behind: a wall of the results' covers. -->
+    <template v-if="behind === 'wall'">
+      <div class="wall" aria-hidden="true">
+        <Cover v-for="(book, i) in wall" :key="i" :book="book" :width="92" />
+      </div>
+      <div class="wall-veil" aria-hidden="true" />
+    </template>
+
+    <header v-if="!typing && behind !== 'page'" class="head">
       <h1 class="title">Search</h1>
       <Avatar />
     </header>
 
+    <!-- Behind: the best match, large. -->
+    <section v-if="behind === 'preview' && !typing" class="preview" :class="{ none: !best }">
+      <Ambient :colors="best?.coverColors ?? null" />
+      <div class="preview-cover"><Cover :book="best ?? draftBook" :width="best ? 70 : 88" halo /></div>
+      <div class="preview-text">
+        <p class="d-eyebrow">{{ best ? 'Best match' : 'Not in any catalogue' }}</p>
+        <template v-if="best">
+          <p class="d-title preview-title d-truncate">{{ best.title }}</p>
+          <p class="preview-author">{{ formatAuthors(best.authors) }}</p>
+          <p class="preview-meta d-mono">
+            {{ best.year }}<span class="dot" />{{ best.pageCount }} pages<span class="dot" />{{
+              sourceLabel[best.source]
+            }}
+          </p>
+          <span v-if="best.libraryStatus" class="preview-status"
+            ><Icon name="check" :size="14" :stroke="1.8" />{{ statusLabel[best.libraryStatus] }} · in your Library</span
+          >
+          <Button v-else size="sm"><Icon name="plus" :size="15" />Add to Library</Button>
+        </template>
+        <template v-else>
+          <p class="d-title preview-title">Add it yourself</p>
+          <p class="preview-author">It gets a cover like this until you add a photo. Only you can see it.</p>
+        </template>
+      </div>
+    </section>
+
     <section class="palette" :class="{ typing }">
       <div v-if="state !== 'empty'" class="list">
-        <p v-if="state === 'results' && mode === 'dock'" class="hint">Not the edition you hold? Search its ISBN.</p>
+        <p v-if="state === 'results' && mode === 'dock' && behind !== 'preview'" class="hint">Not the edition you hold? Search its ISBN.</p>
         <div v-if="typing && mode === 'dock'" class="hit ghost" aria-hidden="true">
           <span class="ghost-cover" />
           <div class="hit-text">
@@ -84,7 +153,12 @@ const statusLabel: Record<Status, string> = {
           </div>
         </div>
 
-        <div v-for="hit in ordered" :key="hit.id" class="hit">
+        <div
+          v-for="hit in ordered"
+          :key="hit.id"
+          class="hit"
+          :class="{ selected: behind === 'preview' && !typing && hit.id === best?.id }"
+        >
           <Cover :book="hit" :width="38" />
           <div class="hit-text">
             <span class="d-title hit-title d-truncate">{{ hit.title }}</span>
@@ -104,7 +178,7 @@ const statusLabel: Record<Status, string> = {
             <span class="bar" style="width: 38%" />
           </div>
         </div>
-        <p v-if="state === 'results' && mode === 'float'" class="hint">Not the edition you hold? Search its ISBN.</p>
+        <p v-if="state === 'results' && mode === 'float' && behind !== 'preview'" class="hint">Not the edition you hold? Search its ISBN.</p>
       </div>
 
       <div v-else class="empty">
@@ -163,8 +237,123 @@ const statusLabel: Record<Status, string> = {
   pointer-events: none;
 }
 
+.back-page {
+  position: absolute;
+  inset: 0;
+  filter: blur(7px);
+  transform: scale(1.02);
+}
+
+.back-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--d-bg) 55%, transparent);
+}
+
+.wall {
+  position: absolute;
+  top: -30px;
+  left: -60px;
+  display: grid;
+  grid-template-columns: repeat(5, 92px);
+  gap: 14px;
+  opacity: 0.55;
+  transform: rotate(-8deg);
+  transform-origin: 0 0;
+}
+
+.wall-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--d-bg) 88%, transparent) 0%,
+    color-mix(in srgb, var(--d-bg) 55%, transparent) 16%,
+    color-mix(in srgb, var(--d-bg) 30%, transparent) 30%,
+    color-mix(in srgb, var(--d-bg) 85%, transparent) 50%,
+    var(--d-bg) 64%
+  );
+}
+
+.preview {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: calc(var(--safe-top) + 62px) 22px 0;
+}
+
+.preview.none {
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding-top: calc(var(--safe-top) + 78px);
+  text-align: center;
+}
+
+.preview-cover,
+.preview-text {
+  position: relative;
+}
+
+.preview-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.preview.none .preview-text {
+  align-items: center;
+  max-width: 280px;
+}
+
+.preview-title {
+  max-width: 100%;
+  margin-top: 3px;
+  font-size: calc(20px * var(--d-title-k));
+  line-height: 1.15;
+}
+
+.preview-author {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--d-ink-2);
+}
+
+.preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--d-ink-3);
+}
+
+.preview-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--d-ink-2);
+}
+
+.hit.selected {
+  margin: 0 6px;
+  padding-left: 10px;
+  border-radius: 14px;
+  background: var(--d-fill-2);
+}
+
 .head {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;

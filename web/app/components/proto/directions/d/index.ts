@@ -48,6 +48,17 @@ export default defineDirection({
       default: 'palette',
     },
     {
+      key: 'behind',
+      label: 'Behind search',
+      options: [
+        { value: 'plain', label: 'Plain' },
+        { value: 'preview', label: 'Preview' },
+        { value: 'page', label: 'Page behind' },
+        { value: 'wall', label: 'Cover wall' },
+      ],
+      default: 'plain',
+    },
+    {
       key: 'titles',
       label: 'Book titles',
       options: [
