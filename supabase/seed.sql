@@ -1,0 +1,6 @@
+-- Local development seed. Runs on `supabase start` and `supabase db reset`,
+-- never against a hosted project.
+--
+-- Empty on purpose: there are no tables yet. The sign-in ticket (#3) adds the
+-- local invite codes and a ready-made, confirmed dev member here, the way
+-- Trappist's seed does.
