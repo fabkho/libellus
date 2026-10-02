@@ -2,20 +2,26 @@
 // D's tab bar: a small floating capsule of three icons over a fade to the
 // room colour, the content running on underneath. Home and Library are pages;
 // Search is not — it opens the search palette over the page you are on
-// (stores/search.ts). The current tab is full ink with a lamp-coloured dot;
-// the others recede. Labels are for assistive tech (and the tests).
+// (stores/search.ts), and the capsule itself turns into that palette
+// (docs/MOTION.md, Search morph): while it does, this bar stays where it is
+// under the veil and the overlay flies its own Search icon, so this one hides;
+// once the palette is open it has taken the bar's place (useSearchChrome).
+// The current tab is full ink with a lamp-coloured dot; the others recede.
+// Labels are for assistive tech (and the tests). `data-morph` marks what the
+// overlay measures to start from.
 import { useSearchStore } from '~/stores/search'
 
 const { t } = useI18n()
 const route = useRoute()
 const search = useSearchStore()
+const chrome = useSearchChrome()
 
 const PAGES = [
   { key: 'home', to: '/', icon: 'home' },
   { key: 'library', to: '/library', icon: 'library' },
 ] as const
 
-const current = (to: string) => !search.isOpen && route.path === to
+const current = (to: string) => route.path === to
 </script>
 
 <template>
@@ -25,8 +31,9 @@ const current = (to: string) => !search.isOpen && route.path === to
   />
   <nav
     :aria-label="t('shell.tabsLabel')"
-    class="float-bottom glass fixed left-1/2 z-20 flex -translate-x-1/2 rounded-pill px-xs edge shadow-float transition-opacity duration-(--duration-standard) ease-standard"
-    :class="search.isOpen && 'pointer-events-none opacity-0'"
+    class="float-bottom glass fixed left-1/2 z-20 flex -translate-x-1/2 rounded-pill px-xs edge shadow-float"
+    :class="chrome === 'palette' && 'invisible'"
+    data-morph="capsule"
     data-testid="shell.tabs"
   >
     <NuxtLink
@@ -50,7 +57,7 @@ const current = (to: string) => !search.isOpen && route.path === to
       data-testid="shell.tab.search"
       @click="search.open()"
     >
-      <UiIcon name="search" :size="23" />
+      <UiIcon name="search" :size="23" :class="chrome !== 'tabs' && 'invisible'" data-morph="search" />
       <span class="sr-only">{{ t('tabs.search') }}</span>
     </button>
   </nav>

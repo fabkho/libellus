@@ -9,15 +9,38 @@
 // then the slot shows a line saying search is coming.
 //
 // Closed by Cancel, a tap on the page behind, swiping the palette down, Escape,
-// or going to another page. The morph from the capsule into the palette is
-// #21; for now the palette rises and fades in (docs/MOTION.md).
+// or going to another page.
+//
+// Motion (docs/MOTION.md, Search morph): the tab bar's capsule turns into the
+// palette and back. The palette is laid out at its open size from the first
+// frame; what moves is a clip-path that grows from the capsule's outline to the
+// palette's (the results unroll upwards inside it), the Search icon flying from
+// the capsule into the query row, and opacities. Everything runs on one Web
+// Animations timeline per direction, so a close can take over from an opening
+// at whatever point it has reached, and the other way round.
 import { useSearchStore } from '~/stores/search'
 
 const { t } = useI18n()
 const route = useRoute()
 const search = useSearchStore()
+const chrome = useSearchChrome()
 
+const veil = useTemplateRef<HTMLElement>('veil')
+const palette = useTemplateRef<HTMLElement>('palette')
+const shade = useTemplateRef<HTMLElement>('shade')
+const body = useTemplateRef<HTMLElement>('body')
+const plate = useTemplateRef<HTMLElement>('plate')
+const results = useTemplateRef<HTMLElement>('results')
+const lead = useTemplateRef<HTMLElement>('lead')
+const glyph = useTemplateRef<HTMLElement>('glyph')
+const field = useTemplateRef<HTMLElement>('field')
+const trail = useTemplateRef<HTMLElement>('trail')
 const input = useTemplateRef<HTMLInputElement>('input')
+
+/** In the DOM: open, or still morphing back into the tab bar. */
+const rendered = ref(false)
+/** Morphing back: taps fall through to the tab bar, so Search can reopen it midway. */
+const closing = ref(false)
 const typing = ref(false)
 
 const PAGES = [
@@ -26,153 +49,398 @@ const PAGES = [
 ] as const
 
 function close() {
-  input.value?.blur()
   search.close()
+  input.value?.blur()
 }
 
-const { handlers, dragStyle } = useSwipeDown(close)
+// ------------------------------------------------------------ the morph
+
+type Direction = 'open' | 'close'
+
+/**
+ * Where, along the opening (0 = the capsule, 1 = the palette), each part does
+ * its share. Fractions of the morph rather than durations: the morph's length
+ * and curve are tokens, these only say what happens early and what late.
+ */
+const STAGE = {
+  /** The palette's surface has covered the capsule's glass. */
+  plate: 0.35,
+  /** The tabs and Cancel start to fade in, once the surface is there. */
+  row: 0.3,
+  /** The results are fully there. */
+  results: 0.7,
+} as const
+
+let animations: Animation[] = []
+let running: Direction | null = null
+
+/** Where the current animations have got to, as a share of the opening. */
+function shown(): number | null {
+  const first = animations[0]
+  if (!first) return null
+  const progress = first.effect?.getComputedTiming().progress ?? 0
+  return running === 'open' ? progress : 1 - progress
+}
+
+/** Keyframes are written for the opening; the close plays them back to front. */
+function oriented(frames: Keyframe[], direction: Direction): Keyframe[] {
+  if (direction === 'open') return frames
+  return frames.map((frame) => ({ ...frame, offset: 1 - (frame.offset ?? 0) })).reverse()
+}
+
+/** The section's own translation (keyboard, drag), so measurements can leave it out. */
+function lifted(element: HTMLElement): number {
+  const transform = getComputedStyle(element).transform
+  return transform && transform !== 'none' ? new DOMMatrixReadOnly(transform).m42 : 0
+}
+
+/** The keyframes of the whole morph, measured from the tab bar and the palette as laid out now. */
+function morphFrames(): [HTMLElement | null, Keyframe[]][] {
+  const fade = (from: number, to: number, at: number): Keyframe[] => [
+    { opacity: from, offset: 0 },
+    { opacity: from, offset: at },
+    { opacity: to, offset: 1 },
+  ]
+  const veilFrames: Keyframe[] = [
+    { opacity: 0, offset: 0 },
+    { opacity: 1, offset: 1 },
+  ]
+  const capsule = document.querySelector<HTMLElement>('[data-morph="capsule"]')
+  const icon = document.querySelector<HTMLElement>('[data-morph="search"]')
+  const glyphIcon = glyph.value?.querySelector('svg')
+  // No tab bar to grow out of (a layout without one): fade in place.
+  if (!capsule || !icon || !body.value || !palette.value || !glyphIcon) {
+    return [
+      [veil.value, veilFrames],
+      [palette.value, fade(0, 1, 0)],
+    ]
+  }
+
+  const dy = lifted(palette.value)
+  const box = body.value.getBoundingClientRect()
+  const top = box.top - dy
+  const bottom = box.bottom - dy
+  const from = capsule.getBoundingClientRect()
+  const radius = getComputedStyle(body.value).borderTopLeftRadius
+  const clip = (inset: string, round: string) => `inset(${inset} round ${round})`
+
+  // The shadow cannot be clipped to the growing outline (it lies outside it),
+  // so its box is scaled from the capsule's instead and fades in on the way.
+  const outline = {
+    x: from.left + from.width / 2 - (box.left + box.width / 2),
+    y: from.top + from.height / 2 - (top + box.height / 2),
+    scaleX: from.width / box.width,
+    scaleY: from.height / box.height,
+  }
+
+  const start = icon.getBoundingClientRect()
+  const end = glyphIcon.getBoundingClientRect()
+  const travel = {
+    x: start.left + start.width / 2 - (end.left + end.width / 2),
+    y: start.top + start.height / 2 - (end.top - dy + end.height / 2),
+    scale: start.width / end.width,
+  }
+
+  return [
+    [veil.value, veilFrames],
+    [
+      body.value,
+      [
+        {
+          clipPath: clip(
+            `${from.top - top}px ${box.right - from.right}px ${bottom - from.bottom}px ${from.left - box.left}px`,
+            `${from.height / 2}px`,
+          ),
+          offset: 0,
+        },
+        { clipPath: clip('0px 0px 0px 0px', radius), offset: 1 },
+      ],
+    ],
+    [
+      plate.value,
+      [
+        { opacity: 0, offset: 0 },
+        { opacity: 1, offset: STAGE.plate },
+        { opacity: 1, offset: 1 },
+      ],
+    ],
+    [
+      shade.value,
+      [
+        { transform: `translate(${outline.x}px, ${outline.y}px) scale(${outline.scaleX}, ${outline.scaleY})`, opacity: 0, offset: 0 },
+        { transform: 'none', opacity: 1, offset: 1 },
+      ],
+    ],
+    [
+      results.value,
+      [
+        { opacity: 0, offset: 0 },
+        { opacity: 1, offset: STAGE.results },
+        { opacity: 1, offset: 1 },
+      ],
+    ],
+    [lead.value, fade(0, 1, STAGE.row)],
+    // The query comes in behind the Search icon, as if the icon pulled it into the row.
+    [
+      field.value,
+      [
+        { transform: `translate(${travel.x}px, ${travel.y}px)`, opacity: 0, offset: 0 },
+        { opacity: 0, offset: STAGE.row },
+        { transform: 'none', opacity: 1, offset: 1 },
+      ],
+    ],
+    [trail.value, fade(0, 1, STAGE.row)],
+    [
+      glyph.value,
+      [
+        {
+          transform: `translate(${travel.x}px, ${travel.y}px) scale(${travel.scale})`,
+          color: getComputedStyle(icon).color,
+          offset: 0,
+        },
+        { transform: 'none', color: getComputedStyle(glyph.value!).color, offset: 1 },
+      ],
+    ],
+  ]
+}
+
+/** With Reduce Motion: the palette and the veil cross-fade in place; the tab bar stays as it is under them. */
+function fadeFrames(): [HTMLElement | null, Keyframe[]][] {
+  const fade: Keyframe[] = [
+    { opacity: 0, offset: 0 },
+    { opacity: 1, offset: 1 },
+  ]
+  return [
+    [veil.value, fade],
+    [palette.value, fade],
+  ]
+}
+
+/**
+ * Plays the morph towards `direction`, from wherever the screen is now: from
+ * the capsule when opening, from the open palette when closing, or from the
+ * point an interrupted morph had reached. Each start measures afresh (the row
+ * may have changed from tabs to Cancel, the results may have grown).
+ */
+function play(direction: Direction) {
+  const reduced = prefersReducedMotion()
+  const at = shown() ?? (direction === 'open' ? 0 : 1)
+  for (const animation of animations) animation.cancel()
+
+  chrome.value = reduced ? 'tabs' : 'morph'
+  running = direction
+  const duration = reduced ? durationToken('standard') : durationToken(direction === 'open' ? 'overlay' : 'overlay-exit')
+  const easing = easingToken('standard')
+  const timing: KeyframeAnimationOptions = { duration, easing, fill: 'both' }
+  const elapsed = duration * timeAt(easing, direction === 'open' ? at : 1 - at)
+
+  const started: Animation[] = []
+  for (const [element, frames] of reduced ? fadeFrames() : morphFrames()) {
+    if (!element) continue
+    const animation = element.animate(oriented(frames, direction), timing)
+    animation.currentTime = elapsed
+    started.push(animation)
+  }
+  animations = started
+  const first = started[0]
+  if (!first) return settle(direction)
+  first.onfinish = () => {
+    if (animations === started) settle(direction)
+  }
+}
+
+/** The morph is over: hand the chrome to whoever has it now and let go of the animations. */
+function settle(direction: Direction) {
+  for (const animation of animations) animation.cancel()
+  animations = []
+  running = null
+  if (direction === 'open') {
+    chrome.value = 'palette'
+  } else {
+    chrome.value = 'tabs'
+    rendered.value = false
+    closing.value = false
+    typing.value = false
+  }
+}
+
+// ------------------------------------------------------------ keyboard and drag
 
 // While the query has the keyboard the palette sits right above it. iOS lays
 // the keyboard over the page instead of resizing it, so its height is read
-// from the visual viewport.
+// from the visual viewport; in the installed app that happens as the keyboard
+// starts to move, and the palette rides up on the keyboard's own curve.
 const keyboard = ref(0)
 function measureKeyboard() {
   const viewport = window.visualViewport
   keyboard.value = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0
 }
+/** How far up the palette has to go to sit `--spacing-sm` above the keyboard, from where `float-bottom` puts it. */
+const lift = computed(() => {
+  if (!keyboard.value || !palette.value) return 0
+  const resting = Number.parseFloat(getComputedStyle(palette.value).bottom) || 0
+  const gap = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-sm')) || 0
+  return Math.max(0, keyboard.value + gap - resting)
+})
+
+const { handlers, offset, dragging } = useSwipeDown(close)
 const paletteStyle = computed(() => ({
-  ...dragStyle.value,
-  ...(keyboard.value > 0 ? { bottom: `calc(${keyboard.value}px + var(--spacing-sm))` } : {}),
+  transform: offset.value || lift.value ? `translateY(${offset.value - lift.value}px)` : undefined,
+  transition: dragging.value ? 'none' : undefined,
 }))
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') close()
 }
 
+function listen(on: boolean) {
+  const method = on ? 'addEventListener' : 'removeEventListener'
+  window[method]('keydown', onKeydown)
+  window.visualViewport?.[method]('resize', measureKeyboard)
+  window.visualViewport?.[method]('scroll', measureKeyboard)
+}
+
 watch(
   () => search.isOpen,
   async (open) => {
     if (!import.meta.client) return
+    listen(open)
     if (open) {
-      window.addEventListener('keydown', onKeydown)
-      window.visualViewport?.addEventListener('resize', measureKeyboard)
-      window.visualViewport?.addEventListener('scroll', measureKeyboard)
-      // Opened from a tap, so the keyboard may come up with it.
+      closing.value = false
+      rendered.value = true
       await nextTick()
+      if (!search.isOpen) return
+      // Opened from a tap, so the keyboard comes up with it: focus first, in
+      // the same task as the tap, and start the morph from the row as it will
+      // be (Cancel instead of the tabs) — all before the next frame is drawn.
       input.value?.focus({ preventScroll: true })
-    } else {
-      window.removeEventListener('keydown', onKeydown)
-      window.visualViewport?.removeEventListener('resize', measureKeyboard)
-      window.visualViewport?.removeEventListener('scroll', measureKeyboard)
-      typing.value = false
+      await nextTick()
+      if (search.isOpen) play('open')
+    } else if (rendered.value) {
+      closing.value = true
+      input.value?.blur()
       keyboard.value = 0
+      await nextTick()
+      if (!search.isOpen) play('close')
     }
   },
 )
 watch(() => route.path, () => search.isOpen && search.close())
 onUnmounted(() => {
   if (!import.meta.client) return
-  window.removeEventListener('keydown', onKeydown)
-  window.visualViewport?.removeEventListener('resize', measureKeyboard)
-  window.visualViewport?.removeEventListener('scroll', measureKeyboard)
+  listen(false)
+  for (const animation of animations) animation.cancel()
+  chrome.value = 'tabs'
 })
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition name="veil">
+    <template v-if="rendered">
       <button
-        v-if="search.isOpen"
+        ref="veil"
         type="button"
         :aria-label="t('search.close')"
         class="veil fixed inset-0 z-30 bg-veil"
+        :class="closing && 'pointer-events-none'"
         data-testid="search.backdrop"
         @click="close"
       />
-    </Transition>
 
-    <Transition name="palette">
       <section
-        v-if="search.isOpen"
+        ref="palette"
         role="dialog"
         aria-modal="true"
         :aria-label="t('search.title')"
-        class="palette float-bottom fixed inset-x-ms z-40 mx-auto flex max-w-(--size-max-content) flex-col overflow-hidden rounded-xl bg-surface-raised edge shadow-palette"
+        class="palette float-bottom fixed inset-x-ms z-40 mx-auto max-w-(--size-max-content)"
+        :class="closing && 'pointer-events-none'"
         :style="paletteStyle"
         data-testid="search.overlay"
         v-on="handlers"
       >
-        <div class="flex flex-col justify-end">
-          <slot>
-            <p class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="search.empty">
-              {{ t('search.empty') }}
-            </p>
-          </slot>
-        </div>
+        <div ref="shade" class="pointer-events-none absolute inset-0 rounded-xl shadow-palette" aria-hidden="true" />
 
-        <div class="h-(--stroke-hairline) shrink-0 bg-hairline" aria-hidden="true" />
+        <div ref="body" class="relative flex flex-col overflow-hidden rounded-xl">
+          <div ref="plate" class="absolute inset-0 rounded-xl bg-surface-raised edge" aria-hidden="true" />
 
-        <div class="flex h-(--size-query) shrink-0 items-center gap-sm" :class="typing ? 'pr-inset pl-md' : 'pr-inset pl-sm'">
-          <template v-if="!typing">
-            <NuxtLink
-              v-for="tab in PAGES"
-              :key="tab.key"
-              :to="tab.to"
-              class="tab"
-              :class="route.path === tab.to ? 'text-ink' : 'text-ink-faint'"
-              :aria-current="route.path === tab.to ? 'page' : undefined"
-              :data-testid="`search.tab.${tab.key}`"
-            >
-              <UiIcon :name="tab.icon" :bold="route.path === tab.to" />
-              <span class="sr-only">{{ t(`tabs.${tab.key}`) }}</span>
-              <span v-if="route.path === tab.to" class="dot" aria-hidden="true" />
-            </NuxtLink>
-            <span class="mr-xs h-lg w-(--stroke-hairline) shrink-0 bg-hairline-strong" aria-hidden="true" />
-          </template>
+          <div ref="results" class="relative flex flex-col justify-end">
+            <slot>
+              <p class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="search.empty">
+                {{ t('search.empty') }}
+              </p>
+            </slot>
+            <div class="h-(--stroke-hairline) shrink-0 bg-hairline" aria-hidden="true" />
+          </div>
 
-          <UiIcon name="search" :size="19" class="text-accent" />
-          <input
-            ref="input"
-            v-model="search.query"
-            type="search"
-            inputmode="search"
-            enterkeyhint="search"
-            autocomplete="off"
-            autocapitalize="off"
-            autocorrect="off"
-            spellcheck="false"
-            :aria-label="t('search.title')"
-            :placeholder="t('search.placeholder')"
-            class="min-w-0 flex-1 bg-transparent text-callout text-ink caret-accent outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
-            data-testid="search.query"
-            @focus="typing = true"
-            @blur="typing = false"
-          />
-          <button
-            v-if="search.query"
-            type="button"
-            :aria-label="t('search.clear')"
-            class="relative flex size-ml shrink-0 items-center justify-center rounded-pill bg-fill-strong text-ink-muted after:absolute after:-inset-ms after:content-['']"
-            data-testid="search.clear"
-            @pointerdown.prevent
-            @click="search.query = ''"
-          >
-            <UiIcon name="close" :size="13" bold />
-          </button>
-          <span v-if="typing" class="ml-xs h-ml w-(--stroke-hairline) shrink-0 bg-hairline-strong" aria-hidden="true" />
-          <button
-            v-if="typing"
-            type="button"
-            class="min-h-(--size-touch) shrink-0 pl-xs text-body text-ink-muted"
-            data-testid="search.cancel"
-            @pointerdown.prevent
-            @click="close"
-          >
-            {{ t('common.cancel') }}
-          </button>
+          <div class="relative flex h-(--size-query) shrink-0 items-center gap-sm" :class="typing ? 'pr-inset pl-md' : 'pr-inset pl-sm'">
+            <div v-if="!typing" ref="lead" class="flex shrink-0 items-center gap-sm">
+              <NuxtLink
+                v-for="tab in PAGES"
+                :key="tab.key"
+                :to="tab.to"
+                class="tab"
+                :class="route.path === tab.to ? 'text-ink' : 'text-ink-faint'"
+                :aria-current="route.path === tab.to ? 'page' : undefined"
+                :data-testid="`search.tab.${tab.key}`"
+              >
+                <UiIcon :name="tab.icon" :bold="route.path === tab.to" />
+                <span class="sr-only">{{ t(`tabs.${tab.key}`) }}</span>
+                <span v-if="route.path === tab.to" class="dot" aria-hidden="true" />
+              </NuxtLink>
+              <span class="mr-xs h-lg w-(--stroke-hairline) shrink-0 bg-hairline-strong" aria-hidden="true" />
+            </div>
+
+            <span ref="glyph" class="glyph flex shrink-0 text-accent">
+              <UiIcon name="search" :size="19" />
+            </span>
+
+            <div ref="field" class="flex min-w-0 flex-1 items-center gap-sm">
+              <input
+                ref="input"
+                v-model="search.query"
+                type="search"
+                inputmode="search"
+                enterkeyhint="search"
+                autocomplete="off"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                :aria-label="t('search.title')"
+                :placeholder="t('search.placeholder')"
+                class="min-w-0 flex-1 bg-transparent text-callout text-ink caret-accent outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
+                data-testid="search.query"
+                @focus="typing = true"
+                @blur="search.isOpen && (typing = false)"
+              />
+              <button
+                v-if="search.query"
+                type="button"
+                :aria-label="t('search.clear')"
+                class="relative flex size-ml shrink-0 items-center justify-center rounded-pill bg-fill-strong text-ink-muted after:absolute after:-inset-ms after:content-['']"
+                data-testid="search.clear"
+                @pointerdown.prevent
+                @click="search.query = ''"
+              >
+                <UiIcon name="close" :size="13" bold />
+              </button>
+            </div>
+
+            <div v-if="typing" ref="trail" class="flex shrink-0 items-center gap-sm">
+              <span class="ml-xs h-ml w-(--stroke-hairline) shrink-0 bg-hairline-strong" aria-hidden="true" />
+              <button
+                type="button"
+                class="min-h-(--size-touch) shrink-0 pl-xs text-body text-ink-muted"
+                data-testid="search.cancel"
+                @pointerdown.prevent
+                @click="close"
+              >
+                {{ t('common.cancel') }}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
-    </Transition>
+    </template>
   </Teleport>
 </template>
 
@@ -202,35 +470,14 @@ onUnmounted(() => {
   background: var(--color-accent);
 }
 
+/* Follows a drag 1:1 and rides up and down with the keyboard on its curve. */
 .palette {
   touch-action: none;
-  transition: transform var(--duration-overlay) var(--ease-sheet);
+  transition: transform var(--duration-keyboard) var(--ease-keyboard);
 }
 
-.veil-enter-active {
-  transition: opacity var(--duration-overlay) var(--ease-standard);
-}
-.veil-leave-active {
-  transition: opacity var(--duration-overlay-exit) var(--ease-exit);
-}
-.veil-enter-from,
-.veil-leave-to {
-  opacity: 0;
-}
-
-.palette-enter-active {
-  transition:
-    opacity var(--duration-overlay) var(--ease-standard),
-    transform var(--duration-overlay) var(--ease-sheet);
-}
-.palette-leave-active {
-  transition:
-    opacity var(--duration-overlay-exit) var(--ease-exit),
-    transform var(--duration-overlay-exit) var(--ease-exit);
-}
-.palette-enter-from,
-.palette-leave-to {
-  opacity: 0;
-  transform: translateY(var(--spacing-lg)) scale(0.98);
+/* The Search icon flies from the capsule around its own centre. */
+.glyph {
+  transform-origin: center;
 }
 </style>
