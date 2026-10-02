@@ -1,0 +1,157 @@
+/*
+ * Direction a-dark — A ("Books") in dark mode: the same screens, kit and type
+ * on warm near-black paper, as its own direction for side-by-side comparison. Every selector starts with [data-direction='a-dark'], the
+ * attribute Frame.vue puts on the phone screen, so nothing reaches another
+ * direction or the app. Toggles arrive as data-accent / data-glass / data-serif.
+ * Values the kit used to hard-code for light paper now go through --ad-tint,
+ * --ad-paper-rgb and --ad-shade, so this file holds the whole palette.
+ *
+ * Two kinds of surface, never mixed:
+ * - content is matte: warm dark paper, lifted cards, real covers;
+ * - chrome floats as frosted glass (.ad-glass): tab bar, round toolbar buttons,
+ *   the search field, menus. Blur + saturation boost + translucent tint +
+ *   a hairline + a top-light stroke.
+ */
+
+[data-direction='a-dark'] {
+  /* Paper and ink: a warm near-black, never pure black or white. The rgb
+     triplets let the kit build translucent fills, fades and shadows. */
+  --ad-paper-rgb: 22 20 17;
+  --ad-tint: 255 238 214;
+  --ad-shade: 0 0 0;
+  --ad-paper: #161411;
+  --ad-card: #221f1b;
+  --ad-sunk: #0f0e0c;
+  --ad-ink: #f1ebe1;
+  --ad-ink-2: #aaa294;
+  --ad-ink-3: #736c61;
+  --ad-hair: rgb(var(--ad-tint) / 0.1);
+  --ad-fill: rgb(var(--ad-tint) / 0.07);
+  --ad-star: #e8b04a;
+  --ad-star-empty: rgb(var(--ad-tint) / 0.18);
+  --ad-danger: #ec6a5c;
+
+  /* Accent: one colour for the one prominent action per screen. */
+  --ad-accent: #df6c3a;
+  --ad-accent-deep: #c85a2c;
+  --ad-on-accent: #fff;
+  --ad-accent-soft: color-mix(in oklab, var(--ad-accent) 18%, var(--ad-card));
+  --ad-accent-ink: color-mix(in oklab, var(--ad-accent) 70%, white);
+
+  /* Type: serif for titles and things you read, sans for everything you tap. */
+  --ad-serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --ad-serif-tune: -0.012em;
+  --ad-sans: 'Inter', -apple-system, system-ui, sans-serif;
+
+  /* Glass (subtle by default). */
+  --ad-glass-tint: rgb(44 40 35 / 0.72);
+  --ad-glass-filter: blur(16px) saturate(1.25);
+  --ad-glass-light: rgb(255 255 255 / 0.14);
+  --ad-glass-hair: rgb(var(--ad-tint) / 0.08);
+  --ad-glass-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.3);
+  --ad-glass-inner: inset 0 0 0 0 transparent;
+  /* Menus need to be read, not looked through: denser tint. */
+  --ad-menu-tint: rgb(44 40 35 / 0.95);
+
+  /* Matte cards: a hairline and a soft ambient shadow, no glass. */
+  --ad-card-shadow: 0 0 0 0.5px var(--ad-hair), 0 1px 2px rgb(0 0 0 / 0.2), 0 8px 24px -10px rgb(0 0 0 / 0.45);
+
+  /* Frame variables. */
+  --screen-background: var(--ad-paper);
+  --screen-ink: var(--ad-ink);
+  --status-bar-ink: #f1ebe1;
+  --home-indicator: rgb(241 235 225 / 0.45);
+
+  font-family: var(--ad-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  color: var(--ad-ink);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.006em;
+}
+
+/* --- Accent toggle -------------------------------------------------------- */
+
+[data-direction='a-dark'][data-accent='indigo'] {
+  --ad-accent: #7086d6;
+  --ad-accent-deep: #5a6fbf;
+}
+
+[data-direction='a-dark'][data-accent='moss'] {
+  --ad-accent: #6fa883;
+  --ad-accent-deep: #568f6a;
+}
+
+/* --- Serif toggle ---------------------------------------------------------- */
+
+[data-direction='a-dark'][data-serif='newsreader'] {
+  --ad-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --ad-serif-tune: -0.005em;
+}
+
+/* --- Glass ------------------------------------------------------------------ */
+
+[data-direction='a-dark'] .ad-glass {
+  position: relative;
+  background: var(--ad-glass-tint);
+  -webkit-backdrop-filter: var(--ad-glass-filter);
+  backdrop-filter: var(--ad-glass-filter);
+  box-shadow:
+    0 0 0 0.5px var(--ad-glass-hair),
+    var(--ad-glass-shadow),
+    var(--ad-glass-inner);
+}
+
+/* The top-light stroke: a 1px border that fades from white at the top edge. */
+[data-direction='a-dark'] .ad-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--ad-glass-light), rgb(255 255 255 / 0) 58%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+[data-direction='a-dark'][data-glass='off'] {
+  --ad-glass-tint: var(--ad-card);
+  --ad-menu-tint: var(--ad-card);
+  --ad-glass-filter: none;
+  --ad-glass-light: rgb(255 255 255 / 0);
+  --ad-glass-hair: rgb(var(--ad-tint) / 0.1);
+  --ad-glass-shadow: 0 4px 14px -6px rgb(0 0 0 / 0.45);
+}
+
+[data-direction='a-dark'][data-glass='strong'] {
+  --ad-glass-tint: rgb(44 40 35 / 0.42);
+  --ad-menu-tint: rgb(44 40 35 / 0.86);
+  --ad-glass-filter: blur(22px) saturate(1.8) brightness(0.92);
+  --ad-glass-light: rgb(255 255 255 / 0.3);
+  --ad-glass-hair: rgb(var(--ad-tint) / 0.1);
+  --ad-glass-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);
+  --ad-glass-inner: inset 0 -1px 1.5px rgb(255 255 255 / 0.06), inset 0 1.5px 3px rgb(255 255 255 / 0.1);
+}
+
+/* Continuous corners where the browser can draw them (Chromium); round elsewhere. */
+@supports (corner-shape: superellipse(1.6)) {
+  [data-direction='a-dark'] .ad-squircle {
+    corner-shape: superellipse(1.6);
+  }
+}
+
+/* --- Shared type ------------------------------------------------------------ */
+
+[data-direction='a-dark'] .ad-serif {
+  font-family: var(--ad-serif);
+  letter-spacing: var(--ad-serif-tune);
+  font-feature-settings: normal;
+}
+
+[data-direction='a-dark'] .ad-num {
+  font-variant-numeric: tabular-nums;
+}
