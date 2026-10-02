@@ -1,0 +1,149 @@
+/*
+ * Direction a — "Books". Every selector starts with [data-direction='a'], the
+ * attribute Frame.vue puts on the phone screen, so nothing reaches another
+ * direction or the app. Toggles arrive as data-accent / data-glass / data-serif.
+ *
+ * Two kinds of surface, never mixed:
+ * - content is matte: warm paper, white cards, real covers;
+ * - chrome floats as frosted glass (.a-glass): tab bar, round toolbar buttons,
+ *   the search field, menus. Blur + saturation boost + translucent tint +
+ *   a hairline + a top-light stroke.
+ */
+
+[data-direction='a'] {
+  /* Paper and ink: a light warm neutral, never pure white or black. */
+  --a-paper: #f6f3ee;
+  --a-card: #fffefb;
+  --a-sunk: #efebe4;
+  --a-ink: #1d1b18;
+  --a-ink-2: #6c665d;
+  --a-ink-3: #a29b90;
+  --a-hair: rgb(52 40 20 / 0.11);
+  --a-fill: rgb(52 40 20 / 0.06);
+  --a-star: #e0a630;
+  --a-star-empty: rgb(52 40 20 / 0.16);
+  --a-danger: #c8382c;
+
+  /* Accent: one colour for the one prominent action per screen. */
+  --a-accent: #c8582a;
+  --a-accent-deep: #a8441c;
+  --a-on-accent: #fff;
+  --a-accent-soft: color-mix(in oklab, var(--a-accent) 12%, var(--a-card));
+  --a-accent-ink: color-mix(in oklab, var(--a-accent) 82%, black);
+
+  /* Type: serif for titles and things you read, sans for everything you tap. */
+  --a-serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --a-serif-tune: -0.012em;
+  --a-sans: 'Inter', -apple-system, system-ui, sans-serif;
+
+  /* Glass (subtle by default). */
+  --a-glass-tint: rgb(251 249 245 / 0.8);
+  --a-glass-filter: blur(16px) saturate(1.25);
+  --a-glass-light: rgb(255 255 255 / 0.6);
+  --a-glass-hair: rgb(0 0 0 / 0.06);
+  --a-glass-shadow: 0 8px 24px -6px rgb(40 30 15 / 0.16), 0 1px 3px rgb(40 30 15 / 0.08);
+  --a-glass-inner: inset 0 0 0 0 transparent;
+  /* Menus need to be read, not looked through: denser tint. */
+  --a-menu-tint: rgb(251 249 245 / 0.93);
+
+  /* Matte cards: a hairline and a soft ambient shadow, no glass. */
+  --a-card-shadow: 0 0 0 0.5px var(--a-hair), 0 1px 2px rgb(40 30 15 / 0.04), 0 8px 24px -10px rgb(40 30 15 / 0.12);
+
+  /* Frame variables. */
+  --screen-background: var(--a-paper);
+  --status-bar-ink: #1d1b18;
+  --home-indicator: rgb(29 27 24 / 0.32);
+
+  font-family: var(--a-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  color: var(--a-ink);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.006em;
+}
+
+/* --- Accent toggle -------------------------------------------------------- */
+
+[data-direction='a'][data-accent='indigo'] {
+  --a-accent: #3b4f9a;
+  --a-accent-deep: #2c3d7e;
+}
+
+[data-direction='a'][data-accent='moss'] {
+  --a-accent: #3f7451;
+  --a-accent-deep: #2f5c3f;
+}
+
+/* --- Serif toggle ---------------------------------------------------------- */
+
+[data-direction='a'][data-serif='newsreader'] {
+  --a-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --a-serif-tune: -0.005em;
+}
+
+/* --- Glass ------------------------------------------------------------------ */
+
+[data-direction='a'] .a-glass {
+  position: relative;
+  background: var(--a-glass-tint);
+  -webkit-backdrop-filter: var(--a-glass-filter);
+  backdrop-filter: var(--a-glass-filter);
+  box-shadow:
+    0 0 0 0.5px var(--a-glass-hair),
+    var(--a-glass-shadow),
+    var(--a-glass-inner);
+}
+
+/* The top-light stroke: a 1px border that fades from white at the top edge. */
+[data-direction='a'] .a-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--a-glass-light), rgb(255 255 255 / 0) 58%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+[data-direction='a'][data-glass='off'] {
+  --a-glass-tint: var(--a-card);
+  --a-menu-tint: var(--a-card);
+  --a-glass-filter: none;
+  --a-glass-light: rgb(255 255 255 / 0);
+  --a-glass-hair: rgb(52 40 20 / 0.12);
+  --a-glass-shadow: 0 4px 14px -6px rgb(40 30 15 / 0.14);
+}
+
+[data-direction='a'][data-glass='strong'] {
+  --a-glass-tint: rgb(255 253 249 / 0.4);
+  --a-menu-tint: rgb(255 253 249 / 0.78);
+  --a-glass-filter: blur(22px) saturate(1.8) brightness(1.04);
+  --a-glass-light: rgb(255 255 255 / 0.95);
+  --a-glass-hair: rgb(0 0 0 / 0.05);
+  --a-glass-shadow: 0 12px 32px -8px rgb(40 30 15 / 0.22), 0 2px 6px rgb(40 30 15 / 0.08);
+  --a-glass-inner: inset 0 -1px 1.5px rgb(255 255 255 / 0.45), inset 0 1.5px 3px rgb(255 255 255 / 0.5);
+}
+
+/* Continuous corners where the browser can draw them (Chromium); round elsewhere. */
+@supports (corner-shape: superellipse(1.6)) {
+  [data-direction='a'] .a-squircle {
+    corner-shape: superellipse(1.6);
+  }
+}
+
+/* --- Shared type ------------------------------------------------------------ */
+
+[data-direction='a'] .a-serif {
+  font-family: var(--a-serif);
+  letter-spacing: var(--a-serif-tune);
+  font-feature-settings: normal;
+}
+
+[data-direction='a'] .a-num {
+  font-variant-numeric: tabular-nums;
+}
