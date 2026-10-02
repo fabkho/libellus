@@ -1,0 +1,184 @@
+/*
+ * Direction d — "Night Reader". Every selector starts with
+ * [data-direction='d'] (the phone screen Frame.vue renders), so nothing here
+ * reaches the shell, another direction or the app. Toggles arrive as
+ * data-theme / data-glow / data-titles on the same element.
+ */
+
+/* ---- Night (the pitch): a reading lamp in a dark room ------------------- */
+[data-direction='d'] {
+  --d-sans: 'Geist', -apple-system, system-ui, sans-serif;
+  --d-mono: 'Geist Mono', ui-monospace, monospace;
+  --d-serif: 'Newsreader', Georgia, serif;
+
+  --d-bg: #0e0c0a;
+  --d-raised: #171512;
+  --d-sheet: #1b1815;
+  --d-stage: #000;
+  --d-fill: rgb(255 238 214 / 0.055);
+  --d-fill-2: rgb(255 238 214 / 0.1);
+  --d-line: rgb(255 236 210 / 0.085);
+  --d-line-2: rgb(255 236 210 / 0.16);
+  --d-ink: #eee7dc;
+  --d-ink-2: rgb(238 231 220 / 0.64);
+  --d-ink-3: rgb(238 231 220 / 0.42);
+  --d-ink-4: rgb(238 231 220 / 0.2);
+  --d-on-ink: #0e0c0a;
+  --d-lamp: #efb768;
+  --d-lamp-soft: rgb(239 183 104 / 0.14);
+  --d-danger: #ec8063;
+  --d-glass: rgb(28 25 22 / 0.72);
+  --d-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 18px 40px rgb(0 0 0 / 0.5);
+  --d-cover-shadow: 0 10px 28px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.5);
+  --d-glow-k: 1;
+  --d-halo-k: 0.45;
+  --d-key: #4b4642;
+  --d-key-2: #2d2926;
+  --d-key-ink: #f4efe8;
+  --d-kb: #1e1b19;
+
+  --screen-background: var(--d-bg);
+  --status-bar-ink: var(--d-ink);
+  --home-indicator: rgb(255 246 232 / 0.62);
+}
+
+/* The frame sets its own font and ink on the same element with a scoped
+   class; :not(#d) lifts ours above it without touching the shell. */
+[data-direction='d']:not(#d) {
+  font-family: var(--d-sans);
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--d-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+/* ---- Dim: the lamp is on, the room is not quite dark --------------------- */
+[data-direction='d'][data-theme='dim'] {
+  --d-bg: #23201c;
+  --d-raised: #2c2824;
+  --d-sheet: #302c27;
+  --d-stage: #0b0a09;
+  --d-fill: rgb(255 238 214 / 0.07);
+  --d-fill-2: rgb(255 238 214 / 0.12);
+  --d-line: rgb(255 236 210 / 0.1);
+  --d-line-2: rgb(255 236 210 / 0.18);
+  --d-on-ink: #23201c;
+  --d-glass: rgb(48 44 39 / 0.75);
+  --d-cover-shadow: 0 10px 26px rgb(0 0 0 / 0.42), 0 2px 6px rgb(0 0 0 / 0.35);
+  --d-glow-k: 0.8;
+  --d-key: #5a544e;
+  --d-key-2: #3a3530;
+  --d-kb: #2a2622;
+}
+
+/* ---- Day: the same quiet, on paper -------------------------------------- */
+[data-direction='d'][data-theme='day'] {
+  --d-bg: #f4f0e9;
+  --d-raised: #fbf9f5;
+  --d-sheet: #fbf9f5;
+  --d-stage: #1a1714;
+  --d-fill: rgb(40 30 20 / 0.05);
+  --d-fill-2: rgb(40 30 20 / 0.085);
+  --d-line: rgb(40 30 20 / 0.1);
+  --d-line-2: rgb(40 30 20 / 0.17);
+  --d-ink: #1c1915;
+  --d-ink-2: rgb(28 25 21 / 0.64);
+  --d-ink-3: rgb(28 25 21 / 0.45);
+  --d-ink-4: rgb(28 25 21 / 0.2);
+  --d-on-ink: #f8f5ef;
+  --d-lamp: #b8782a;
+  --d-lamp-soft: rgb(184 120 42 / 0.12);
+  --d-danger: #c2452a;
+  --d-glass: rgb(251 249 245 / 0.78);
+  --d-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 14px 34px rgb(60 40 20 / 0.14);
+  --d-cover-shadow: 0 10px 24px rgb(60 40 20 / 0.22), 0 2px 5px rgb(60 40 20 / 0.18);
+  --d-glow-k: 0.5;
+  --d-halo-k: 0.4;
+  --d-key: #fdfcfa;
+  --d-key-2: #c9c3bb;
+  --d-key-ink: #1c1915;
+  --d-kb: #dcd6ce;
+  --home-indicator: rgb(28 25 21 / 0.55);
+}
+
+/* ---- Glow off: covers stay, the room keeps its own colour ---------------- */
+[data-direction='d'][data-glow='off'] .d-ambient,
+[data-direction='d'][data-glow='off'] .d-halo {
+  display: none;
+}
+
+/* ---- Title face --------------------------------------------------------- */
+[data-direction='d'] {
+  --d-title-font: var(--d-serif);
+  --d-title-weight: 500;
+  --d-title-k: 1.1;
+  --d-title-tracking: -0.01em;
+}
+
+[data-direction='d'][data-titles='sans'] {
+  --d-title-font: var(--d-sans);
+  --d-title-weight: 500;
+  --d-title-k: 1;
+  --d-title-tracking: -0.02em;
+}
+
+[data-direction='d'] .d-title {
+  font-family: var(--d-title-font);
+  font-weight: var(--d-title-weight);
+  letter-spacing: var(--d-title-tracking);
+  font-optical-sizing: auto;
+}
+
+/* ---- Shared type helpers ----------------------------------------------- */
+[data-direction='d'] .d-eyebrow {
+  font-family: var(--d-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--d-ink-3);
+}
+
+[data-direction='d'] .d-mono {
+  font-family: var(--d-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+[data-direction='d'] .d-num {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-direction='d'] .d-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.15em;
+  margin-left: 1px;
+  vertical-align: -0.2em;
+  border-radius: 1px;
+  background: var(--d-lamp);
+}
+
+[data-direction='d'] .d-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-direction='d'] .d-clamp-2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Inset grouped rows (forms in sheets), iOS-style, with hairline dividers. */
+[data-direction='d'] .d-group {
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--d-fill);
+  box-shadow: inset 0 0 0 0.5px var(--d-line);
+}
