@@ -25,35 +25,16 @@ export default defineDirection({
   key: 'd',
   title: 'Night Reader',
   summary:
-    'A reading lamp in a dark room. Warm near-black, hairlines and small precise type (Geist, tabular figures) keep the chrome quiet so the covers glow: the book detail and the Currently reading cards take their light from the cover’s own colours. Search is a command palette with each source reporting in; the tab bar is a floating capsule of three icons. Dark is the pitch; Dim and Day show it holds up with the lights on.',
+    'A reading lamp in a dark room. Warm near-black, hairlines and small precise type (Geist, tabular figures) keep the chrome quiet so the covers glow: the book detail and the Currently reading cards take their light from the cover’s own colours. Search is a command palette with each source reporting in; the tab bar is a floating capsule of three icons. Night is the pitch; Day shows it holds up with the lights on.',
   toggles: [
     {
       key: 'theme',
       label: 'Room',
       options: [
         { value: 'night', label: 'Night' },
-        { value: 'dim', label: 'Dim' },
         { value: 'day', label: 'Day' },
       ],
       default: 'night',
-    },
-    {
-      key: 'glow',
-      label: 'Cover glow',
-      options: [
-        { value: 'on', label: 'On' },
-        { value: 'off', label: 'Off' },
-      ],
-      default: 'on',
-    },
-    {
-      key: 'sheet',
-      label: 'Sheet close',
-      options: [
-        { value: 'cancel', label: 'Cancel' },
-        { value: 'x', label: '✕ button' },
-      ],
-      default: 'cancel',
     },
     {
       key: 'search',
@@ -61,6 +42,8 @@ export default defineDirection({
       options: [
         { value: 'palette', label: 'Palette' },
         { value: 'tabbar', label: 'In tab bar' },
+        { value: 'dock', label: 'Palette in bar' },
+        { value: 'float', label: 'Palette above bar' },
       ],
       default: 'palette',
     },

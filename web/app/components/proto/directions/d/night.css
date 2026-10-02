@@ -2,7 +2,7 @@
  * Direction d — "Night Reader". Every selector starts with
  * [data-direction='d'] (the phone screen Frame.vue renders), so nothing here
  * reaches the shell, another direction or the app. Toggles arrive as
- * data-theme / data-glow / data-titles on the same element.
+ * data-theme / data-search / data-titles on the same element.
  */
 
 /* ---- Night (the pitch): a reading lamp in a dark room ------------------- */
@@ -54,25 +54,6 @@
   letter-spacing: -0.005em;
 }
 
-/* ---- Dim: the lamp is on, the room is not quite dark --------------------- */
-[data-direction='d'][data-theme='dim'] {
-  --d-bg: #23201c;
-  --d-raised: #2c2824;
-  --d-sheet: #302c27;
-  --d-stage: #0b0a09;
-  --d-fill: rgb(255 238 214 / 0.07);
-  --d-fill-2: rgb(255 238 214 / 0.12);
-  --d-line: rgb(255 236 210 / 0.1);
-  --d-line-2: rgb(255 236 210 / 0.18);
-  --d-on-ink: #23201c;
-  --d-glass: rgb(48 44 39 / 0.75);
-  --d-cover-shadow: 0 10px 26px rgb(0 0 0 / 0.42), 0 2px 6px rgb(0 0 0 / 0.35);
-  --d-glow-k: 0.8;
-  --d-key: #5a544e;
-  --d-key-2: #3a3530;
-  --d-kb: #2a2622;
-}
-
 /* ---- Day: the same quiet, on paper -------------------------------------- */
 [data-direction='d'][data-theme='day'] {
   --d-bg: #f4f0e9;
@@ -101,12 +82,6 @@
   --d-key-ink: #1c1915;
   --d-kb: #dcd6ce;
   --home-indicator: rgb(28 25 21 / 0.55);
-}
-
-/* ---- Glow off: covers stay, the room keeps its own colour ---------------- */
-[data-direction='d'][data-glow='off'] .d-ambient,
-[data-direction='d'][data-glow='off'] .d-halo {
-  display: none;
 }
 
 /* ---- Title face --------------------------------------------------------- */

@@ -3,7 +3,7 @@
 // stretched (object-fit: cover), sits on a quiet placeholder tone while it
 // loads, and gets a printed-book finish: a faint spine crease on the left and
 // a hairline edge. `halo` puts a blurred copy behind it — the lamp light the
-// cover throws (hidden by the Cover glow toggle). No image → the Placeholder
+// cover throws. No image → the Placeholder
 // cover: cloth-bound, title and author set in type, a thin inset rule.
 import { computed } from 'vue'
 import { formatAuthors } from '../../../data'

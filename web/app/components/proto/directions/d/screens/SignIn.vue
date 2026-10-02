@@ -69,12 +69,6 @@ const wall = computed(() => proto.value.data.library.filter((e) => e.book.coverU
     linear-gradient(to bottom, rgb(14 12 10 / 0.7) 0%, rgb(14 12 10 / 0.2) 11%, rgb(14 12 10 / 0.72) 26%, rgb(14 12 10 / 0.94) 38%, var(--d-bg) 48%);
 }
 
-[data-theme='dim'] .veil {
-  background:
-    radial-gradient(60% 34% at 50% 34%, rgb(239 183 104 / 0.16), transparent 70%),
-    linear-gradient(to bottom, rgb(35 32 28 / 0.7) 0%, rgb(35 32 28 / 0.25) 11%, rgb(35 32 28 / 0.75) 26%, var(--d-bg) 48%);
-}
-
 [data-theme='day'] .veil {
   background:
     radial-gradient(60% 34% at 50% 34%, rgb(255 255 255 / 0.5), transparent 70%),

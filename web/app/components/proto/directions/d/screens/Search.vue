@@ -14,6 +14,7 @@ import Icon from '../kit/Icon.vue'
 import Keyboard from '../kit/Keyboard.vue'
 import TabBar from '../kit/TabBar.vue'
 import SearchBar from './SearchBar.vue'
+import SearchDock from './SearchDock.vue'
 
 const props = defineProps<{ state: 'typing' | 'results' | 'empty' }>()
 const proto = useProto()
@@ -54,8 +55,10 @@ const statusLabel: Record<Status, string> = {
 </script>
 
 <template>
-  <!-- Proposal: the field in the tab bar (search toggle on `tabbar`). -->
+  <!-- Proposals (search toggle): the field in the tab bar, or the palette
+       flipped to the bottom — merged into the bar or floating above it. -->
   <SearchBar v-if="proto.toggles.search === 'tabbar'" :state="state" />
+  <SearchDock v-else-if="proto.toggles.search === 'dock' || proto.toggles.search === 'float'" :state="state" />
   <div v-else class="page">
     <div class="lamp" aria-hidden="true" />
 

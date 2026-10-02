@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The light a cover throws into the room: two soft pools from the cover's own
 // colours, fading into the room colour, with a whisper of grain so the
-// gradient never bands. Absolutely positioned; hidden by the Cover glow toggle.
+// gradient never bands. Absolutely positioned.
 import type { CoverColors } from '../../../data'
 import { glowStyle } from './night'
 
