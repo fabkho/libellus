@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: database rules (pgTAP) and web data layer (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
+
+      # pnpm 10 on purpose: 11+ fails installs on unapproved build scripts
+      # (esbuild), which the lockfile does not carry. The lockfile format is the same.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      # Migrations and seed apply on start; the runner's Docker is what the
+      # local stack runs on too. Ports come from supabase/config.toml (553xx).
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Database rules (pgTAP)
+        run: supabase test db
+
+      - name: Install web
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      # The suite asks `supabase status` itself when these are unset; setting them
+      # here keeps the CI run explicit about which stack it talks to.
+      - name: Point the suite at the stack
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_DB_URL=$DB_URL"
+            echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
+          } >> "$GITHUB_ENV"
+
+      - name: Web data layer (Vitest against the local stack)
+        working-directory: web
+        run: pnpm test
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup
+
+  web-build:
+    name: web builds (nuxt generate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Build
+        working-directory: web
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Service worker and manifest are emitted
+        working-directory: web
+        run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
+
+  tokens:
+    name: design tokens are generated, not hand-edited
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: design/pnpm-lock.yaml
+
+      - name: Generated files match tokens.json
+        working-directory: design
+        run: pnpm install --frozen-lockfile && pnpm tokens:check
+
+  # Not in CI yet: the Playwright smoke (web/e2e). It joins with the core-loop
+  # flow (#16).
