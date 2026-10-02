@@ -43,12 +43,20 @@ test('a new member signs up with the dev invite, lands on Home and signs out', a
   // The tabs lead to their own empty pages, and the session survives a reload.
   await page.getByTestId('shell.tab.library').click()
   await expect(page).toHaveURL(/\/library$/)
+  await expect(page.getByTestId('library.title')).toHaveText(en.library.title)
   await expect(page.getByTestId('library.empty')).toHaveText(en.library.empty)
-  await page.getByTestId('shell.tab.search').click()
-  await expect(page.getByTestId('search.empty')).toHaveText(en.search.empty)
   await page.reload()
-  await expect(page).toHaveURL(/\/search$/)
-  await expect(page.getByTestId('search.title')).toHaveText(en.search.title)
+  await expect(page).toHaveURL(/\/library$/)
+  await expect(page.getByTestId('library.title')).toHaveText(en.library.title)
+
+  // Search never navigates: it opens over the page and closes back onto it.
+  await page.getByTestId('shell.tab.search').click()
+  await expect(page.getByTestId('search.overlay')).toBeVisible()
+  await expect(page.getByTestId('search.empty')).toHaveText(en.search.empty)
+  await expect(page).toHaveURL(/\/library$/)
+  await page.getByTestId('search.cancel').click()
+  await expect(page.getByTestId('search.overlay')).toBeHidden()
+  await expect(page.getByTestId('library.title')).toBeVisible()
 
   // The avatar shows the initials and opens the menu that signs out.
   await expect(page.getByTestId('shell.avatar')).toHaveText('ES') // e2e-signup-… → first letters of the first two words
@@ -123,4 +131,97 @@ test('the dev playground is not behind the sign-in while developing', async ({ p
   // such page on this branch, so what counts is that we are not sent to sign-in.
   await page.goto('/prototype')
   await expect(page).toHaveURL(/\/prototype$/)
+})
+
+/** Signs a fresh member in through the screens, the way the flows above do. */
+async function signedIn(page: import('@playwright/test').Page) {
+  const member = await signUpMember()
+  await emailCooldown()
+  await page.goto('/sign-in')
+  await page.getByTestId('signIn.email').fill(member.email)
+  await page.getByTestId('signIn.submit').click()
+  await expect(page).toHaveURL(/\/verify$/)
+  await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
+  await expect(page.getByTestId('home.title')).toBeVisible()
+  return member
+}
+
+test('the search overlay closes on the page behind it and on a swipe down', async ({ page }) => {
+  await signedIn(page)
+
+  // The empty Home's search prompt opens the same overlay as the Search tab.
+  await page.getByTestId('home.search').click()
+  const overlay = page.getByTestId('search.overlay')
+  await expect(overlay).toBeVisible()
+  await expect(page.getByTestId('search.query')).toBeFocused()
+  await expect(page.getByTestId('search.query')).toHaveAttribute('placeholder', en.search.placeholder)
+
+  // A tap on the blurred page behind closes it, and the page is still Home.
+  await page.getByTestId('search.backdrop').click({ position: { x: 20, y: 120 } })
+  await expect(overlay).toBeHidden()
+  await expect(page).toHaveURL(/\/$/)
+
+  // Swiping the palette down closes it too.
+  await page.getByTestId('shell.tab.search').click()
+  await expect(overlay).toBeVisible()
+  await page.getByTestId('search.query').blur()
+  const box = (await page.getByTestId('search.empty').boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + 4)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, box.y + 160, { steps: 8 })
+  await page.mouse.up()
+  await expect(overlay).toBeHidden()
+
+  // Escape, for a keyboard.
+  await page.getByTestId('shell.tab.search').click()
+  await expect(overlay).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(overlay).toBeHidden()
+})
+
+test('the theme follows the phone until the switch is tapped, then flips and stays', async ({ page }) => {
+  // A dark phone: no preference stored, so the app is dark too.
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await signedIn(page)
+  const html = page.locator('html')
+  await expect(html).not.toHaveAttribute('data-theme')
+  const themeColors = () =>
+    page.locator('meta[name="theme-color"]').evaluateAll((tags) => tags.map((t) => t.getAttribute('content')))
+  const [light, dark] = await themeColors()
+
+  // The switch shows what is showing: Dark, on.
+  await page.getByTestId('shell.avatar').click()
+  const toggle = page.getByTestId('shell.theme')
+  await expect(toggle).toHaveText(en.shell.darkTheme)
+  await expect(toggle).toHaveAttribute('aria-checked', 'true')
+
+  // The first tap stores the opposite of what is showing: Light.
+  await toggle.click()
+  await expect(html).toHaveAttribute('data-theme', 'light')
+  await expect(toggle).toHaveAttribute('aria-checked', 'false')
+  expect(await themeColors()).toEqual([light, light])
+  expect(await page.evaluate(() => localStorage.getItem('libellus-theme'))).toBe('light')
+  // The menu stays open, so the change can be seen and undone.
+  await expect(page.getByTestId('shell.menu')).toBeVisible()
+
+  // Every later tap flips, whatever the phone does.
+  await toggle.click()
+  await expect(html).toHaveAttribute('data-theme', 'dark')
+  await page.emulateMedia({ colorScheme: 'light' })
+  await expect(html).toHaveAttribute('data-theme', 'dark')
+  expect(await themeColors()).toEqual([dark, dark])
+  // …and on every page: moving on does not hand the chrome back to the phone.
+  await page.getByTestId('shell.tab.library').click()
+  await expect(page.getByTestId('library.title')).toBeVisible()
+  expect(await themeColors()).toEqual([dark, dark])
+
+  // Stored on the device: it is on the page again right after a reload, and
+  // signing out keeps it (it is a setting of this phone, not of the member).
+  await page.reload()
+  await expect(html).toHaveAttribute('data-theme', 'dark')
+  await expect.poll(themeColors).toEqual([dark, dark])
+  await page.getByTestId('shell.avatar').click()
+  await page.getByTestId('shell.signOut').click()
+  await expect(page).toHaveURL(/\/sign-in$/)
+  await expect(html).toHaveAttribute('data-theme', 'dark')
 })

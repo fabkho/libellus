@@ -31,10 +31,11 @@ defineExpose({ focus: () => input.value?.focus() })
       <span
         v-for="cell in length"
         :key="cell"
-        class="flex min-h-(--size-touch) flex-1 items-center justify-center rounded-md border bg-surface-raised text-title tabular-nums text-ink"
-        :class="invalid ? 'border-error' : active(cell - 1) ? 'border-accent' : 'border-outline'"
+        class="relative flex h-(--size-query) flex-1 items-center justify-center rounded-md border bg-fill figures text-title text-ink transition-colors duration-(--duration-quick) ease-standard"
+        :class="invalid ? 'border-error' : active(cell - 1) ? 'border-accent bg-accent-soft' : 'border-hairline'"
       >
         {{ digits[cell - 1] }}
+        <span v-if="active(cell - 1)" class="caret absolute h-lg w-(--stroke-focus) rounded-pill bg-accent" />
       </span>
     </div>
 
@@ -58,3 +59,16 @@ defineExpose({ focus: () => input.value?.focus() })
     />
   </div>
 </template>
+
+<style scoped>
+/* The lamp caret in the cell the next digit lands in, blinking like a caret. */
+.caret {
+  animation: blink var(--duration-caret) steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+</style>

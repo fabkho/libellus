@@ -27,80 +27,62 @@ async function submit() {
 </script>
 
 <template>
-  <main
-    class="screen-inset mx-auto flex min-h-dvh w-full max-w-(--size-max-content) flex-col justify-center gap-xl"
-  >
-    <header class="flex flex-col gap-sm">
-      <p class="text-label font-semibold text-ink-muted">{{ t('app.name') }}</p>
-      <h1 class="text-title font-semibold text-ink" data-testid="signUp.title">
-        {{ t('signUp.title') }}
-      </h1>
-      <p class="text-body text-ink-muted">{{ t('signUp.intro') }}</p>
-    </header>
+  <AuthFrame screen="signUp">
+    <h1 class="eyebrow" data-testid="signUp.title">{{ t('signUp.title') }}</h1>
 
     <form class="flex flex-col gap-md" @submit.prevent="submit">
-      <div class="flex flex-col gap-xs">
-        <label for="sign-up-email" class="text-label font-medium text-ink">
-          {{ t('signUp.emailLabel') }}
-        </label>
-        <input
-          id="sign-up-email"
-          v-model="email"
-          type="email"
-          inputmode="email"
-          autocomplete="email"
-          autocapitalize="off"
-          autocorrect="off"
-          spellcheck="false"
-          required
-          :placeholder="t('signUp.emailPlaceholder')"
-          :aria-invalid="emailError ? true : undefined"
-          class="min-h-(--size-touch) rounded-md border border-outline bg-surface-raised px-md text-body text-ink placeholder:text-ink-faint"
-          data-testid="signUp.email"
-        />
-        <p v-if="emailError" class="text-caption text-error" data-testid="signUp.emailError">
-          {{ t(`auth.error.${emailError}`) }}
-        </p>
-      </div>
+      <UiField
+        id="sign-up-email"
+        v-model="email"
+        :label="t('signUp.emailLabel')"
+        :error="emailError ? t(`auth.error.${emailError}`) : null"
+        error-testid="signUp.emailError"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        required
+        :placeholder="t('signUp.emailPlaceholder')"
+        data-testid="signUp.email"
+      />
 
-      <div class="flex flex-col gap-xs">
-        <label for="sign-up-invite" class="text-label font-medium text-ink">
-          {{ t('signUp.inviteLabel') }}
-        </label>
-        <input
-          id="sign-up-invite"
-          v-model="inviteCode"
-          type="text"
-          autocomplete="off"
-          autocapitalize="characters"
-          autocorrect="off"
-          spellcheck="false"
-          enterkeyhint="go"
-          :placeholder="t('signUp.invitePlaceholder')"
-          :aria-invalid="inviteError ? true : undefined"
-          class="min-h-(--size-touch) rounded-md border border-outline bg-surface-raised px-md text-body text-ink placeholder:text-ink-faint"
-          data-testid="signUp.inviteCode"
-        />
-        <p v-if="inviteError" class="text-caption text-error" data-testid="signUp.inviteError">
-          {{ t(`auth.error.${inviteError}`) }}
-        </p>
-      </div>
+      <UiField
+        id="sign-up-invite"
+        v-model="inviteCode"
+        :label="t('signUp.inviteLabel')"
+        :error="inviteError ? t(`auth.error.${inviteError}`) : null"
+        error-testid="signUp.inviteError"
+        type="text"
+        autocomplete="off"
+        autocapitalize="characters"
+        autocorrect="off"
+        spellcheck="false"
+        enterkeyhint="go"
+        :placeholder="t('signUp.invitePlaceholder')"
+        data-testid="signUp.inviteCode"
+      />
 
-      <button
-        type="submit"
-        :disabled="session.busy"
-        class="min-h-(--size-touch) rounded-md bg-accent px-md text-body font-medium text-on-accent disabled:opacity-60"
-        data-testid="signUp.submit"
-      >
+      <UiButton type="submit" block :disabled="session.busy" data-testid="signUp.submit">
         {{ t('signUp.submit') }}
-      </button>
+      </UiButton>
 
-      <p class="text-center text-label text-ink-muted">
-        {{ t('signUp.hasAccount') }}
-        <NuxtLink to="/sign-in" class="font-medium text-ink underline" data-testid="signUp.signIn">
-          {{ t('signUp.signInLink') }}
-        </NuxtLink>
+      <p class="text-center text-caption text-balance text-ink-faint">
+        <UiIcon name="lock" :size="16" class="mr-xs inline-block align-text-bottom" />
+        {{ t('signUp.intro') }}
       </p>
     </form>
-  </main>
+
+    <template #footer>
+      {{ t('signUp.hasAccount') }}
+      <NuxtLink
+        to="/sign-in"
+        class="text-ink underline decoration-ink-ghost underline-offset-4"
+        data-testid="signUp.signIn"
+      >
+        {{ t('signUp.signInLink') }}
+      </NuxtLink>
+    </template>
+  </AuthFrame>
 </template>

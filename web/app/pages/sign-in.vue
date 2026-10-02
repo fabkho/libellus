@@ -27,68 +27,55 @@ async function submit() {
 </script>
 
 <template>
-  <main
-    class="screen-inset mx-auto flex min-h-dvh w-full max-w-(--size-max-content) flex-col justify-center gap-xl"
-  >
-    <header class="flex flex-col gap-sm">
-      <p class="text-label font-semibold text-ink-muted" data-testid="signIn.brand">
-        {{ t('app.name') }}
-      </p>
-      <h1 class="text-title font-semibold text-ink" data-testid="signIn.title">
-        {{ t('signIn.title') }}
-      </h1>
-      <p class="text-body text-ink-muted">{{ t('signIn.intro') }}</p>
-    </header>
+  <AuthFrame screen="signIn">
+    <h1 class="eyebrow" data-testid="signIn.title">{{ t('signIn.title') }}</h1>
 
     <p
       v-if="configProblem"
-      class="rounded-md bg-error-soft p-md text-label text-error"
+      class="rounded-md bg-error-soft p-md text-caption text-error"
       data-testid="signIn.configProblem"
     >
       {{ configProblem }}
     </p>
 
     <form v-else class="flex flex-col gap-md" @submit.prevent="submit">
-      <div class="flex flex-col gap-xs">
-        <label for="sign-in-email" class="text-label font-medium text-ink">
-          {{ t('signIn.emailLabel') }}
-        </label>
-        <input
-          id="sign-in-email"
-          v-model="email"
-          type="email"
-          inputmode="email"
-          autocomplete="email"
-          autocapitalize="off"
-          autocorrect="off"
-          spellcheck="false"
-          enterkeyhint="go"
-          required
-          :placeholder="t('signIn.emailPlaceholder')"
-          :aria-invalid="session.error ? true : undefined"
-          class="min-h-(--size-touch) rounded-md border border-outline bg-surface-raised px-md text-body text-ink placeholder:text-ink-faint"
-          data-testid="signIn.email"
-        />
-        <p v-if="session.error" class="text-caption text-error" data-testid="signIn.error">
-          {{ t(`auth.error.${session.error}`) }}
-        </p>
-      </div>
+      <UiField
+        id="sign-in-email"
+        v-model="email"
+        :label="t('signIn.emailLabel')"
+        :error="session.error ? t(`auth.error.${session.error}`) : null"
+        error-testid="signIn.error"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        enterkeyhint="go"
+        required
+        :placeholder="t('signIn.emailPlaceholder')"
+        data-testid="signIn.email"
+      />
 
-      <button
-        type="submit"
-        :disabled="session.busy"
-        class="min-h-(--size-touch) rounded-md bg-accent px-md text-body font-medium text-on-accent disabled:opacity-60"
-        data-testid="signIn.submit"
-      >
+      <UiButton type="submit" block :disabled="session.busy" data-testid="signIn.submit">
         {{ t('signIn.submit') }}
-      </button>
+      </UiButton>
 
-      <p class="text-center text-label text-ink-muted">
-        {{ t('signIn.noAccount') }}
-        <NuxtLink to="/sign-up" class="font-medium text-ink underline" data-testid="signIn.signUp">
-          {{ t('signIn.signUpLink') }}
-        </NuxtLink>
+      <p class="text-center text-caption text-balance text-ink-faint">
+        <UiIcon name="mail" :size="16" class="mr-xs inline-block align-text-bottom" />
+        {{ t('signIn.intro') }}
       </p>
     </form>
-  </main>
+
+    <template #footer>
+      {{ t('signIn.noAccount') }}
+      <NuxtLink
+        to="/sign-up"
+        class="text-ink underline decoration-ink-ghost underline-offset-4"
+        data-testid="signIn.signUp"
+      >
+        {{ t('signIn.signUpLink') }}
+      </NuxtLink>
+    </template>
+  </AuthFrame>
 </template>

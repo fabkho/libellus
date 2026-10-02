@@ -1,11 +1,12 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'tabs' })
+// Home. Until #8 builds Currently reading, Up next and the year's count, the
+// empty state: the lamp over an empty shelf, and the way to the first book.
+definePageMeta({ layout: 'tabs', screen: 'home', titleSize: 'title', dated: true })
 const { t } = useI18n()
 </script>
 
 <template>
-  <section class="flex flex-col gap-md">
-    <h1 class="text-title font-semibold text-ink" data-testid="home.title">{{ t('home.title') }}</h1>
-    <p class="text-body text-ink-muted" data-testid="home.empty">{{ t('home.empty') }}</p>
-  </section>
+  <UiEmptyState screen="home" :title="t('home.emptyTitle')" :text="t('home.empty')" class="pt-xl">
+    <UiSearchPrompt testid="home.search" />
+  </UiEmptyState>
 </template>
