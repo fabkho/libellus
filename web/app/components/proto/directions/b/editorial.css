@@ -1,0 +1,183 @@
+/*
+ * Direction b — "Editorial". A reading journal set like a literary quarterly:
+ * display serif for headings, a text serif for everything else, letter-spaced
+ * small-caps labels, hairline rules and one accent colour on paper.
+ *
+ * Every selector starts with [data-direction='b'] (the phone screen element
+ * Frame.vue renders); toggles arrive as data-accent / data-display / data-paper
+ * on that same element.
+ *
+ * The grid: 4 px baseline, 24 px side margins, line heights in multiples of 4.
+ */
+
+[data-direction='b'] {
+  /* Paper — warm (default). */
+  --b-paper: #f4efe5;
+  --b-paper-2: #ebe4d5;
+  --b-ink: #1d1a16;
+  --b-ink-2: #5d564c;
+  --b-ink-3: #8e8676;
+  --b-rule: rgb(29 26 22 / 0.18);
+  --b-rule-strong: rgb(29 26 22 / 0.78);
+
+  /* Accent — oxblood (default). */
+  --b-accent: #8b1d24;
+  --b-on-accent: #fbf6ee;
+
+  --b-accent-wash: color-mix(in srgb, var(--b-accent) 8%, var(--b-paper));
+
+  /* Type. */
+  --b-display: 'Instrument Serif', 'Times New Roman', serif;
+  /* Playfair runs much wider than Instrument: display sizes are multiplied by this. */
+  --b-ds: 1;
+  --b-display-tracking: -0.01em;
+  --b-text: 'Newsreader', Georgia, serif;
+
+  --b-margin: 24px;
+
+  --screen-background: var(--b-paper);
+  --status-bar-ink: var(--b-ink);
+  --home-indicator: rgb(29 26 22 / 0.42);
+}
+
+/*
+ * Type and colour on the screen element. The frame's own rule (`.screen`, a
+ * class plus a scoped attribute) sets a system font and #111; `:not(#b)` lifts
+ * this rule above it without touching the shell.
+ */
+[data-direction='b']:not(#b) {
+  background: var(--b-paper);
+  color: var(--b-ink);
+  font-family: var(--b-text);
+  font-size: 16px;
+  line-height: 24px;
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  -webkit-font-smoothing: antialiased;
+  font-optical-sizing: auto;
+}
+
+[data-direction='b'][data-paper='white'] {
+  --b-paper: #fdfcfa;
+  --b-paper-2: #f0efeb;
+  --b-ink: #151515;
+  --b-ink-2: #555555;
+  --b-ink-3: #8b8b8b;
+  --b-rule: rgb(21 21 21 / 0.16);
+  --b-rule-strong: rgb(21 21 21 / 0.8);
+  --home-indicator: rgb(21 21 21 / 0.4);
+}
+
+[data-direction='b'][data-accent='ink'] {
+  --b-accent: #213f86;
+}
+
+[data-direction='b'][data-accent='forest'] {
+  --b-accent: #2b5b3c;
+}
+
+[data-direction='b'][data-display='didone'] {
+  --b-display: 'Playfair Display', 'Didot', serif;
+  --b-ds: 0.8;
+  --b-display-tracking: -0.015em;
+}
+
+/* --------------------------------------------------------------------------
+ * Shared typographic classes (used by every screen of this direction)
+ * ------------------------------------------------------------------------ */
+
+/* Display: titles and screen headings. Size via --size (px number). */
+[data-direction='b'] .b-display {
+  font-family: var(--b-display);
+  font-weight: 400;
+  font-size: calc(var(--size, 40) * var(--b-ds) * 1px);
+  line-height: 1;
+  letter-spacing: var(--b-display-tracking);
+  font-variant-numeric: lining-nums;
+  text-wrap: balance;
+}
+
+[data-direction='b'][data-display='didone'] .b-display {
+  font-weight: 400;
+}
+
+[data-direction='b'] .b-display em,
+[data-direction='b'] .b-display.b-italic {
+  font-style: italic;
+}
+
+/* Small-caps label: uppercase, letter-spaced, a touch heavier. */
+[data-direction='b'] .b-label {
+  font-family: var(--b-text);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+[data-direction='b'] .b-kicker {
+  color: var(--b-accent);
+}
+
+[data-direction='b'] .b-italic {
+  font-style: italic;
+}
+
+[data-direction='b'] .b-muted {
+  color: var(--b-ink-2);
+}
+
+[data-direction='b'] .b-faint {
+  color: var(--b-ink-3);
+}
+
+[data-direction='b'] .b-accent {
+  color: var(--b-accent);
+}
+
+/* Dates and counts in an index: lining, tabular. */
+[data-direction='b'] .b-figures {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Hairline rules. */
+[data-direction='b'] .b-rule {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--b-rule);
+}
+
+[data-direction='b'] .b-rule-ink {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--b-rule-strong);
+}
+
+/* The masthead's double rule: thick over thin. */
+[data-direction='b'] .b-rule-double {
+  height: 5px;
+  border-top: 2px solid var(--b-ink);
+  border-bottom: 1px solid var(--b-ink);
+}
+
+/* Dotted leader between an entry and its folio, like a table of contents. */
+[data-direction='b'] .b-leader {
+  flex: 1 1 auto;
+  min-width: 18px;
+  align-self: flex-end;
+  height: 1px;
+  margin: 0 6px 6px;
+  background-image: radial-gradient(circle, var(--b-ink-3) 0.6px, transparent 0.9px);
+  background-size: 4px 2px;
+  background-repeat: repeat-x;
+  background-position: 0 50%;
+  opacity: 0.9;
+}
+
+/* One line, cut with an ellipsis. */
+[data-direction='b'] .b-clip {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
