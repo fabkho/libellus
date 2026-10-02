@@ -1,0 +1,19 @@
+/*
+ * Tailwind for the design playground only. Imported by pages/prototype.vue, so
+ * it ships with that page and is gone with it in production (the route is
+ * stripped, see nuxt.config.ts; main.css skips these files with `@source not`).
+ *
+ * Tailwind's default theme, not the app's tokens: the playground decides what
+ * the tokens will be. `theme(inline)` writes values straight into the
+ * utilities instead of `:root` variables, so nothing here can override the
+ * app's own `--color-*` / `--font-*` tokens.
+ *
+ * Only scans the playground. After adding a class nobody used before, touch
+ * this file (`touch web/app/components/proto/proto.css`) so the dev server
+ * rebuilds it.
+ */
+@import 'tailwindcss/theme.css' layer(theme) theme(inline);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+
+@source './';
+@source '../../pages/prototype.vue';
