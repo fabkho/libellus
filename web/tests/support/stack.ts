@@ -60,6 +60,47 @@ export function uniqueEmail(prefix: string): string {
 /** The pattern that matches every address this run handed out. */
 export const runEmailPattern = () => `%-${RUN_TAG}-%@${TEST_DOMAIN}`
 
+/**
+ * Catalogue Books a test makes carry this publisher and the run tag in their
+ * title, so the sweep finds them (they do not hang off a member: the Catalogue
+ * is shared) and never touches a real Book.
+ */
+export const TEST_PUBLISHER = TEST_DOMAIN
+
+/** `<title> [<run>]`: a test Book's title, findable per run. */
+export const runTitle = (title: string) => `${title} [${RUN_TAG}]`
+
+/** A source id no real Apple Book has: 99 and fifteen random digits. */
+export function uniqueAppleId(): string {
+  return `99${randomUUID().replace(/\D/g, '').padEnd(15, '0').slice(0, 15)}`
+}
+
+/**
+ * Removes this run's members (their Library entries go with them) and then the
+ * test Books this run put into the Catalogue, now that no Library holds them.
+ */
+export async function sweepRun() {
+  await sql('delete from auth.users where email like $1', [runEmailPattern()])
+  await sql(
+    `delete from public.books b where b.publisher = $1 and b.title like $2
+       and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
+    [TEST_PUBLISHER, `% [${RUN_TAG}]`],
+  )
+}
+
+/** What a crashed run left behind, once it is a day old (no run still going is). */
+export async function sweepAbandonedRuns() {
+  await sql(
+    `delete from auth.users where email like $1 and created_at < now() - interval '1 day'`,
+    [`%@${TEST_DOMAIN}`],
+  )
+  await sql(
+    `delete from public.books b where b.publisher = $1 and b.created_at < now() - interval '1 day'
+       and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
+    [TEST_PUBLISHER],
+  )
+}
+
 // ------------------------------------------------------------------ database
 
 /**
