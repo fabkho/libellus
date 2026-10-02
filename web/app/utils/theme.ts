@@ -72,6 +72,14 @@ export type ThemeDocument = {
 }
 
 /**
+ * The colour of the theme-color tag that answers `prefers-color-scheme: own`:
+ * the chosen theme's, or its own theme's while nothing is chosen.
+ */
+export function themeColorFor(preference: ThemePreference, own: Theme, colors: ThemeColors): string {
+  return colors[preference ?? own]
+}
+
+/**
  * Puts a preference on the page. A chosen theme becomes `data-theme` on <html>,
  * which the generated CSS switches on, and the colour of every theme-color tag
  * (the browser chrome; the status bar of the installed app). No preference
@@ -86,7 +94,7 @@ export function applyPreference(doc: ThemeDocument, preference: ThemePreference,
     const tag = tags[i]!
     const media = tag.getAttribute('media') ?? ''
     const own: Theme = media.includes('dark') ? 'dark' : 'light'
-    tag.setAttribute('content', colors[preference ?? own])
+    tag.setAttribute('content', themeColorFor(preference, own, colors))
   }
 }
 
@@ -96,8 +104,8 @@ export function applyPreference(doc: ThemeDocument, preference: ThemePreference,
  * app boots. It runs before any module loads, so it is a string that repeats
  * readPreference + applyPreference in plain ES5; tests/theme.test.ts runs it
  * against the same cases as the functions above. It runs first thing in
- * <head>, before the theme-color tags are parsed, so the theme store repaints
- * those once the app starts (stores/theme.ts, start).
+ * <head>, before the theme-color tags are parsed; once the app runs, the head
+ * manager keeps those (plugins/theme.client.ts).
  */
 export function themeBootScript(colors: ThemeColors): string {
   return `(function(){try{var p=localStorage.getItem(${JSON.stringify(THEME_KEY)});if(p!=="light"&&p!=="dark")return;var c=${JSON.stringify(colors)};document.documentElement.setAttribute("data-theme",p);var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++)m[i].setAttribute("content",c[p])}catch(e){}})()`

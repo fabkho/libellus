@@ -8,6 +8,7 @@ import {
   readPreference,
   resolveTheme,
   themeBootScript,
+  themeColorFor,
   writePreference,
   type ThemePreference,
 } from '@/utils/theme'
@@ -158,5 +159,14 @@ describe('the boot script, before the first paint', () => {
 
   it('never throws, even without storage', () => {
     expect(() => runInNewContext(themeBootScript(COLORS), { document: fakeDocument() })).not.toThrow()
+  })
+})
+
+describe('the theme-color tags', () => {
+  it('each answers its own appearance until a theme is chosen, then both take it', () => {
+    expect(themeColorFor(null, 'light', COLORS)).toBe(COLORS.light)
+    expect(themeColorFor(null, 'dark', COLORS)).toBe(COLORS.dark)
+    expect(themeColorFor('dark', 'light', COLORS)).toBe(COLORS.dark)
+    expect(themeColorFor('light', 'dark', COLORS)).toBe(COLORS.light)
   })
 })

@@ -19,9 +19,6 @@ export const useThemeStore = defineStore('theme', () => {
   function start() {
     if (!import.meta.client) return
     preference.value = readPreference(window.localStorage)
-    // The boot script runs before the theme-color tags are parsed; repaint them
-    // now that they exist (the attribute on <html> is already right).
-    if (preference.value) applyPreference(document, preference.value, colors)
     const query = window.matchMedia('(prefers-color-scheme: dark)')
     deviceIsDark.value = query.matches
     query.addEventListener('change', (event) => (deviceIsDark.value = event.matches))
@@ -36,5 +33,5 @@ export const useThemeStore = defineStore('theme', () => {
     applyPreference(document, next, colors)
   }
 
-  return { preference, theme, start, toggle }
+  return { preference, theme, colors, start, toggle }
 })
