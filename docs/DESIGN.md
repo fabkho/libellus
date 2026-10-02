@@ -154,7 +154,12 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   and veiled. The query row is at the bottom (Home and Library at its left, the current one lit;
   Cancel replaces them while the keyboard is up), results go above it with the best match next to
   the query. Closed by Cancel, a tap on the page behind, a swipe down or Escape. It sits right
-  above the keyboard. #5 ships it empty; #6/#12 fill its slot (`stores/search.ts` is the hook).
+  above the keyboard. Its slot holds `SearchResults` (#6): one list, never naming where a result
+  came from (one field, one list; at most one quiet loading state), each row a cover, the serif
+  title, the author, the year in mono and a round + (or the Status, if the Book is in the Library).
+- **Pushed screens** (the book page): in the tab layout with `pushed: true`, so the tab pages stay
+  alive underneath; no header, the page draws `UiTopBar` (back) over its cover's light
+  (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
 - **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
   the account address, the Dark mode switch and Sign out.
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
@@ -182,9 +187,12 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiField` | A text field: small label, input-size text, one rule that lights in the accent while focused and turns error-coloured with its error line under it. |
 | `UiEmptyState` | A screen with nothing in it yet: the lamp over an empty shelf, a serif title, a sentence, and (slot) the one way forward. |
 | `UiSearchPrompt` | The search palette at rest inside an empty state; opens the real search overlay. |
+| `UiPressLink` | Every link into a book page (search results, Library rows). Starts on touch-down: preloads the route and emits `press` (start loading the data); a mouse press navigates at once, a finger on its tap, since a touch-down may become a scroll. |
 | `CodeInput` | The six-digit code: one real input, six drawn cells. |
 
-Utilities that go with them: `utils/cover.ts` (`clothOf`, `glowOf`, `thumbhashDataUrl`),
+Utilities that go with them: `utils/cover.ts` (`clothOf`, `glowOf`, `thumbhashDataUrl`, `coverSrc`
+— the image size to load for a cover size, from Apple's stored large URL), `utils/preload.ts`
+(`preloadImage`, the first covers of a list),
 `utils/rating.ts` (`ratingText`, `starFills`), `utils/books.ts` (`formatAuthors`),
 `utils/dates.ts`, all framework-free and tested in `web/tests/cover-and-rating.test.ts`.
 

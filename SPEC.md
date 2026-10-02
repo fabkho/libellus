@@ -52,7 +52,7 @@ custom shelves.
 ## 4. Data model (shape, not final SQL)
 
 - **books** — the Catalogue plus Manual books: title, ordered authors, ISBN-13/10, page count, year,
-  language, publisher, description, cover URL + thumbhash, source (`apple` | `openlibrary` |
+  language, publisher, description, cover URL + thumbhash + two cover colours, source (`apple` | `openlibrary` |
   `manual` | `import`), source identifiers, `owner_id` only for Manual books. Unique on ISBN-13 for
   non-manual books and on source identifiers.
 - **library_entries** — member, book, status (`want_to_read` | `reading` | `finished`), added at.
@@ -78,7 +78,7 @@ Every multi-row library action is one RPC, so a native client calls the same fun
 (tabs)   Home | Library | Search          avatar in the header → account, theme switch, sign out
          Home    → Currently reading, Up next, "Read in <year>: N"
          Library → Want to read / Currently reading / Finished (+ Not finished filter), Collections
-         Search  → an overlay over the current page, never a page: results (Catalogue first, then external)
+         Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
 (sheets) Add · Finish · Abandon · Manual book · Collection picker
 ```
@@ -136,6 +136,8 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
 - **Covers resolved once** on entering the Catalogue (Apple → OpenLibrary → placeholder), stored as
   URL + thumbhash.
 - **Manual books stay private**, never in the Catalogue.
+- **Search sources are invisible** (owner, #6): one field, one merged list; no source names, badges,
+  counts or per-source loading. The source stays internal data on the Catalogue row.
 - **Fable is imported once** by a local script, then dropped.
 
 ## 9. Testing

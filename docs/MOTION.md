@@ -56,6 +56,10 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   With the keyboard up the palette moves to sit right above it.
 - **Cover.** The image fades in over its thumbhash or colour over `standard` once decoded; no
   zoom, no slide.
+- **Search results.** A new answer replaces the list in place, best match at the bottom; while a
+  newer query is on its way the old list dims to 60 % over `standard` instead of emptying. Before
+  the first answer one still ghost row (no shimmer) stands in. The far end of the list fades out
+  under a mask.
 - **Caret.** The lamp caret in the code input blinks in steps over `caret`, like a text caret.
 
 ## Later
@@ -63,8 +67,11 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
 - **Tab bar ↔ search palette morph (#21).** As iOS 26 and Apple Books do it: the capsule widens
   into the palette; the Search icon slides into the query row while Home and Library stay put;
   the result list unrolls upwards. Closing reverses all of it. Until then the crossfade above.
-- **Push to book detail** and back (#6): to be defined with the screen, using `standard` for the
-  push and `exit` for the pop; the cover may travel from the list into the hero.
+- **Push to book detail** and back. #6 ships the book page without a transition: it replaces the
+  page at once (its navigation starts on touch-down and its data is asked for then, so it is
+  usually complete when it appears), and back returns to the kept-alive page at its old scroll
+  position. A push with `standard` and a pop with `exit`, with the cover travelling from the list
+  into the hero, is still open.
 
 ## Reduce Motion
 
