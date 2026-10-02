@@ -2,7 +2,7 @@
  * Direction d — "Night Reader". Every selector starts with
  * [data-direction='d'] (the phone screen Frame.vue renders), so nothing here
  * reaches the shell, another direction or the app. Toggles arrive as
- * data-theme / data-search / data-titles on the same element.
+ * data-theme on the same element.
  */
 
 /* ---- Night (the pitch): a reading lamp in a dark room ------------------- */
@@ -90,13 +90,6 @@
   --d-title-weight: 500;
   --d-title-k: 1.1;
   --d-title-tracking: -0.01em;
-}
-
-[data-direction='d'][data-titles='sans'] {
-  --d-title-font: var(--d-sans);
-  --d-title-weight: 500;
-  --d-title-k: 1;
-  --d-title-tracking: -0.02em;
 }
 
 [data-direction='d'] .d-title {

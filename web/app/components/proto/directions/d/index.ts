@@ -25,7 +25,7 @@ export default defineDirection({
   key: 'd',
   title: 'Night Reader',
   summary:
-    'A reading lamp in a dark room. Warm near-black, hairlines and small precise type (Geist, tabular figures) keep the chrome quiet so the covers glow: the book detail and the Currently reading cards take their light from the cover’s own colours. Search is a command palette with each source reporting in; the tab bar is a floating capsule of three icons. Night is the pitch; Day shows it holds up with the lights on.',
+    'A reading lamp in a dark room. Warm near-black, hairlines and small precise type (Geist, tabular figures) keep the chrome quiet so the covers glow: the book detail and the Currently reading cards take their light from the cover’s own colours. The tab bar is a floating capsule of three icons; Search never leaves the page you are on — the bar grows into an upside-down command palette over it, query under the thumb, each source reporting in, best match nearest the query. Night is the pitch; Day shows it holds up with the lights on.',
   toggles: [
     {
       key: 'theme',
@@ -35,37 +35,6 @@ export default defineDirection({
         { value: 'day', label: 'Day' },
       ],
       default: 'night',
-    },
-    {
-      key: 'search',
-      label: 'Search',
-      options: [
-        { value: 'palette', label: 'Palette' },
-        { value: 'tabbar', label: 'In tab bar' },
-        { value: 'dock', label: 'Palette in bar' },
-        { value: 'float', label: 'Palette above bar' },
-      ],
-      default: 'palette',
-    },
-    {
-      key: 'behind',
-      label: 'Behind search',
-      options: [
-        { value: 'plain', label: 'Plain' },
-        { value: 'preview', label: 'Preview' },
-        { value: 'page', label: 'Page behind' },
-        { value: 'wall', label: 'Cover wall' },
-      ],
-      default: 'plain',
-    },
-    {
-      key: 'titles',
-      label: 'Book titles',
-      options: [
-        { value: 'serif', label: 'Serif' },
-        { value: 'sans', label: 'Sans' },
-      ],
-      default: 'serif',
     },
   ],
   screens: {
