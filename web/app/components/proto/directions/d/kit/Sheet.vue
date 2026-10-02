@@ -1,8 +1,16 @@
 <script setup lang="ts">
 // A bottom sheet the iOS way: the screen underneath (slot `under`) steps back —
 // scaled, dimmed, rounded — and the sheet rises over it with a grabber and a
-// title row (Cancel · title · action).
+// title row (Cancel · title · action). With the `sheet` toggle on `x` the
+// Cancel word becomes a round close button at the left, as in direction a.
+import { computed } from 'vue'
+import { useProto } from '../../../contract'
+import Icon from './Icon.vue'
+
 withDefaults(defineProps<{ title: string; action?: string; cancel?: string }>(), { cancel: 'Cancel' })
+
+const proto = useProto()
+const closeX = computed(() => proto.value.toggles.sheet === 'x')
 </script>
 
 <template>
@@ -11,8 +19,11 @@ withDefaults(defineProps<{ title: string; action?: string; cancel?: string }>(),
     <div class="scrim" />
     <section class="sheet" role="dialog" :aria-label="title">
       <span class="grabber" />
-      <div class="head">
-        <span class="side">{{ cancel }}</span>
+      <div class="head" :class="{ x: closeX }">
+        <span v-if="closeX" class="close" role="button" aria-label="Close"
+          ><Icon name="close" :size="17" :stroke="1.8"
+        /></span>
+        <span v-else class="side">{{ cancel }}</span>
         <span class="title">{{ title }}</span>
         <span class="side end" :class="{ hidden: !action }">{{ action ?? 'Done' }}</span>
       </div>
@@ -74,8 +85,23 @@ withDefaults(defineProps<{ title: string; action?: string; cancel?: string }>(),
   align-items: center;
 }
 
+.head.x {
+  height: 54px;
+}
+
 .side {
   font-size: 15.5px;
+  color: var(--d-ink-2);
+}
+
+.close {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--d-fill-2);
   color: var(--d-ink-2);
 }
 

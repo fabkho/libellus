@@ -47,6 +47,24 @@ export default defineDirection({
       default: 'on',
     },
     {
+      key: 'sheet',
+      label: 'Sheet close',
+      options: [
+        { value: 'cancel', label: 'Cancel' },
+        { value: 'x', label: '✕ button' },
+      ],
+      default: 'cancel',
+    },
+    {
+      key: 'search',
+      label: 'Search',
+      options: [
+        { value: 'palette', label: 'Palette' },
+        { value: 'tabbar', label: 'In tab bar' },
+      ],
+      default: 'palette',
+    },
+    {
       key: 'titles',
       label: 'Book titles',
       options: [
