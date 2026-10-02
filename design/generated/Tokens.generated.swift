@@ -188,8 +188,8 @@ enum Tokens {
     }
 
     enum Easing {
-        static let standard = TimingCurve(x1: 0, y1: 0, x2: 0, y2: 1)
-        static let exit = TimingCurve(x1: 0, y1: 0, x2: 1, y2: 1)
-        static let sheet = TimingCurve(x1: 0, y1: 0.7, x2: 0, y2: 1)
+        static let standard = TimingCurve(x1: 0.2, y1: 0, x2: 0, y2: 1)
+        static let exit = TimingCurve(x1: 0.4, y1: 0, x2: 1, y2: 1)
+        static let sheet = TimingCurve(x1: 0.32, y1: 0.72, x2: 0, y2: 1)
     }
 }

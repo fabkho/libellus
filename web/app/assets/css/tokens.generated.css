@@ -138,9 +138,9 @@
   --text-eyebrow--line-height: 0.75rem;
   --text-eyebrow--letter-spacing: 0.12em;
   --text-eyebrow--font-weight: 500;
-  --ease-standard: cubic-bezier(0, 0, 0, 1);
-  --ease-exit: cubic-bezier(0, 0, 1, 1);
-  --ease-sheet: cubic-bezier(0, 0.7, 0, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 :root {
