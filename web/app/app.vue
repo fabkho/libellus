@@ -6,5 +6,7 @@ useHead({ title: () => t('app.name') })
 </script>
 
 <template>
-  <NuxtPage />
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
 </template>

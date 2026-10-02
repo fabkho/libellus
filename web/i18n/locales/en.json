@@ -2,7 +2,71 @@
   "app": {
     "name": "Libellus"
   },
-  "start": {
-    "tagline": "Search a book, read it, remember it."
+  "auth": {
+    "error": {
+      "invite_required": "Enter your invite code.",
+      "invite_invalid": "We don't recognise that invite code.",
+      "invite_expired": "That invite code has expired.",
+      "invite_exhausted": "That invite code has already been used up.",
+      "invite_gone": "That invite code is no longer valid. Ask for a new one.",
+      "code_invalid": "That code is wrong, has expired or was already used. Request a new one.",
+      "rate_limited": "Too many attempts. Please wait a moment.",
+      "email_invalid": "Enter a valid email address.",
+      "not_configured": "Libellus is missing its backend configuration.",
+      "unknown": "Something went wrong. Please try again."
+    }
+  },
+  "signIn": {
+    "title": "Sign in",
+    "intro": "Enter your email address and we'll send you a six-digit code.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you{'@'}example.com",
+    "submit": "Send code",
+    "noAccount": "Have an invite code?",
+    "signUpLink": "Create an account",
+    "configMissing": "Missing {key}. Copy web/.env.example to web/.env and fill it in.",
+    "configInvalidUrl": "The Supabase URL \"{value}\" is not a valid address."
+  },
+  "signUp": {
+    "title": "Create your account",
+    "intro": "Libellus is invite-only. Enter your email address and your invite code.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you{'@'}example.com",
+    "inviteLabel": "Invite code",
+    "invitePlaceholder": "Your invite code",
+    "submit": "Send code",
+    "hasAccount": "Already a member?",
+    "signInLink": "Sign in"
+  },
+  "verify": {
+    "title": "Check your email",
+    "sentTo": "We sent a six-digit code to {email}.",
+    "codeLabel": "Six-digit code",
+    "resend": "Send a new code",
+    "resendIn": "Send a new code in {seconds}s",
+    "changeEmail": "Use another email"
+  },
+  "shell": {
+    "tabsLabel": "Main navigation",
+    "avatarLabel": "Account menu",
+    "signedInAs": "Signed in as {email}",
+    "signOut": "Sign out"
+  },
+  "tabs": {
+    "home": "Home",
+    "library": "Library",
+    "search": "Search"
+  },
+  "home": {
+    "title": "Home",
+    "empty": "Nothing here yet. The books you are reading will show up here."
+  },
+  "library": {
+    "title": "Library",
+    "empty": "Your library is empty. The books you add will live here."
+  },
+  "search": {
+    "title": "Search",
+    "empty": "Search for a book by title, author or ISBN. It arrives soon."
   }
 }
