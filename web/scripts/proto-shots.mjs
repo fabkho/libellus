@@ -14,7 +14,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { webkit } from '@playwright/test'
+import { chromium, webkit } from '@playwright/test'
 
 const { values: args } = parseArgs({
   options: {
@@ -25,6 +25,8 @@ const { values: args } = parseArgs({
     query: { type: 'string', default: '' },
     'no-vergleich': { type: 'boolean', default: false },
     scale: { type: 'string', default: '2' },
+    // Headless WebKit does not paint backdrop-filter; chromium shows the glass.
+    browser: { type: 'string', default: 'webkit' },
   },
 })
 
@@ -33,7 +35,7 @@ const extra = args.query ? `&${args.query.replace(/^[?&]/, '')}` : ''
 const list = (value) => (value ? value.split(',').map((s) => s.trim()).filter(Boolean) : null)
 
 await mkdir(args.out, { recursive: true })
-const browser = await webkit.launch()
+const browser = await (args.browser === 'chromium' ? chromium : webkit).launch()
 const context = await browser.newContext({
   viewport: { width: 1600, height: 1000 },
   deviceScaleFactor: Number(args.scale),

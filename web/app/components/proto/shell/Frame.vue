@@ -118,8 +118,9 @@ const toggleAttrs = computed(() =>
   transform: translateZ(0);
   isolation: isolate;
   background: var(--screen-background, #fff);
-  color: #111;
-  font: 17px/1.35 -apple-system, system-ui, sans-serif;
+  /* Defaults a direction overrides with --screen-ink / --screen-font on its root. */
+  color: var(--screen-ink, #111);
+  font: var(--screen-font, 17px/1.35 -apple-system, system-ui, sans-serif);
   text-align: left;
 }
 
