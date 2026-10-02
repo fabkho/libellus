@@ -141,6 +141,7 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-keyboard: cubic-bezier(0.1, 0.76, 0.55, 0.9);
 }
 
 :root {
@@ -188,8 +189,9 @@
   --duration-exit: 200ms;
   --duration-sheet: 380ms;
   --duration-sheet-exit: 260ms;
-  --duration-overlay: 280ms;
-  --duration-overlay-exit: 200ms;
+  --duration-overlay: 340ms;
+  --duration-overlay-exit: 240ms;
+  --duration-keyboard: 250ms;
   --duration-caret: 1100ms;
 }
 

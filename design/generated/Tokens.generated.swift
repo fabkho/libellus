@@ -182,8 +182,9 @@ enum Tokens {
         static let exit: TimeInterval = 0.2
         static let sheet: TimeInterval = 0.38
         static let sheetExit: TimeInterval = 0.26
-        static let overlay: TimeInterval = 0.28
-        static let overlayExit: TimeInterval = 0.2
+        static let overlay: TimeInterval = 0.34
+        static let overlayExit: TimeInterval = 0.24
+        static let keyboard: TimeInterval = 0.25
         static let caret: TimeInterval = 1.1
     }
 
@@ -191,5 +192,6 @@ enum Tokens {
         static let standard = TimingCurve(x1: 0.2, y1: 0, x2: 0, y2: 1)
         static let exit = TimingCurve(x1: 0.4, y1: 0, x2: 1, y2: 1)
         static let sheet = TimingCurve(x1: 0.32, y1: 0.72, x2: 0, y2: 1)
+        static let keyboard = TimingCurve(x1: 0.1, y1: 0.76, x2: 0.55, y2: 0.9)
     }
 }
