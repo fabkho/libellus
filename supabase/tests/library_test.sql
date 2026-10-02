@@ -10,7 +10,7 @@
 -- many rows a table holds.
 
 begin;
-select plan(31);
+select plan(32);
 
 create schema if not exists tests;
 
@@ -101,10 +101,13 @@ select throws_ok(
   $$ select public.add_to_library('{"title":"Mine","source":"manual","isbn13":"9780000000002"}') $$,
   '22023', 'book_invalid', 'Manual books do not enter through the Catalogue path');
 select throws_ok(
+  $$ select public.add_to_library('{"title":"Imported","source":"import","apple_id":"990000000007"}') $$,
+  '22023', 'book_invalid', 'nor do imports: only what search finds');
+select throws_ok(
   $$ select public.add_to_library('{"title":"Later","source":"apple","apple_id":"990000000004"}', 'reading') $$,
   '22023', 'status_unsupported', 'adding straight to another status waits for #9');
 select is_empty(
-  $$ select 1 from public.books where apple_id in ('990000000003', '990000000004') $$,
+  $$ select 1 from public.books where apple_id in ('990000000003', '990000000004', '990000000007') $$,
   'and a refused add leaves nothing behind in the Catalogue');
 
 -- --------------------------------------------- the same Book, another member

@@ -74,13 +74,14 @@ comment on table public.books is
   'and import paths), never directly by a member.';
 
 -- One Catalogue Book per edition: by ISBN-13, and by each source identifier.
--- Manual books may repeat an ISBN (two members typing in the same book).
+-- Manual books are outside it: they may repeat an ISBN (two members typing in
+-- the same book) and never block a Catalogue Book.
 create unique index books_catalogue_isbn13 on public.books (isbn13)
   where owner_id is null and isbn13 is not null;
-create unique index books_apple_id on public.books (apple_id)
-  where apple_id is not null;
-create unique index books_openlibrary_edition_key on public.books (openlibrary_edition_key)
-  where openlibrary_edition_key is not null;
+create unique index books_catalogue_apple_id on public.books (apple_id)
+  where owner_id is null and apple_id is not null;
+create unique index books_catalogue_openlibrary_edition_key on public.books (openlibrary_edition_key)
+  where owner_id is null and openlibrary_edition_key is not null;
 create index books_owner on public.books (owner_id) where owner_id is not null;
 
 -- ------------------------------------------------------------ library entries
@@ -136,8 +137,10 @@ create policy library_entries_own on public.library_entries
 -- Refusals, as `raise` messages with stable SQLSTATEs:
 --   not_signed_in        42501  no member behind the call
 --   status_unsupported   22023  a status this version cannot add with yet
---   book_invalid         22023  no title, a manual source, or no key to find it by
+--   book_invalid         22023  no title, not an Apple Books or OpenLibrary snapshot, or no
+--                               key to find it by
 --   already_in_library   23505  the member already has this Book
+--   book_conflict        40001  a concurrent add of the same Book rolled back; try again
 create or replace function public.add_to_library(
   p_book jsonb,
   p_status public.entry_status default 'want_to_read'
@@ -145,7 +148,9 @@ create or replace function public.add_to_library(
 returns public.library_entries
 language plpgsql
 security definer
-set search_path = public, pg_catalog
+-- pg_catalog first: a security-definer body must not pick up a function someone
+-- shadowed in public.
+set search_path = pg_catalog, public
 as $$
 declare
   v_member uuid := auth.uid();
@@ -174,9 +179,11 @@ begin
     '{}'
   );
 
+  -- Only what search finds enters this way: Manual books (#13) and the Fable
+  -- import have their own paths.
   if v_book.title is null
      or v_book.source is null
-     or v_book.source = 'manual'
+     or v_book.source not in ('apple', 'openlibrary')
      or coalesce(v_book.isbn13, v_book.apple_id, v_book.openlibrary_edition_key) is null then
     raise exception 'book_invalid' using errcode = '22023';
   end if;
@@ -195,8 +202,9 @@ begin
   end if;
 
   if v_id is null then
-    -- Two members adding the same new Book at once: the loser's insert does
-    -- nothing and it finds the winner's row instead.
+    -- Two members adding the same new Book at once: the second insert waits for
+    -- the first transaction, then does nothing, and the next statement (a new
+    -- snapshot) finds the winner's row instead.
     insert into public.books (
       title, authors, isbn13, isbn10, page_count, published_year, language, publisher,
       description, cover_url, cover_thumbhash, cover_dominant, cover_secondary, source,
@@ -219,6 +227,10 @@ begin
            or (v_book.openlibrary_edition_key is not null
                and openlibrary_edition_key = v_book.openlibrary_edition_key))
        limit 1;
+    end if;
+    -- Only if the winner rolled back in between; the member can simply retry.
+    if v_id is null then
+      raise exception 'book_conflict' using errcode = '40001';
     end if;
   end if;
 

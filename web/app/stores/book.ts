@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { parseBookKey, type Book, type BookSnapshot } from '~/data/books'
 import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
-import { createSearch } from '~/data/search'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -71,7 +70,7 @@ export const useBookStore = defineStore('book', () => {
 
     // Opened from a link or after a reload: ask the source again.
     try {
-      const source = createSearch({ fetch: (url, init) => fetch(url, init), languages: navigator.languages ?? [] })
+      const source = search.repository()
       const book =
         parsed.kind === 'apple' ? await source.lookupApple(parsed.appleId) : await source.lookupIsbn(parsed.isbn13)
       return { phase: book ? 'ready' : 'missing', book, entry: null, error: null }

@@ -35,16 +35,23 @@ export const useSearchStore = defineStore('search', () => {
   /** The query the shown hits answer. */
   const answered = ref('')
 
-  /** Books seen in results, by page key, so a book page opens without asking again. */
+  /** Books seen in results, by page key, so a book page opens without asking again. The last few hundred. */
   const seen = new Map<string, BookSnapshot>()
+  const SEEN_LIMIT = 300
+  function remember(key: string, book: BookSnapshot) {
+    seen.delete(key)
+    seen.set(key, book)
+    if (seen.size > SEEN_LIMIT) seen.delete(seen.keys().next().value!)
+  }
 
-  let repository: Search | null = null
-  function search(): Search {
-    repository ??= createSearch({
+  let source: Search | null = null
+  /** The search repository, set up for this device's languages (the storefronts follow them). */
+  function repository(): Search {
+    source ??= createSearch({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? navigator.languages ?? [navigator.language] : [],
+      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
     })
-    return repository
+    return source
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -60,18 +67,28 @@ export const useSearchStore = defineStore('search', () => {
     const controller = new AbortController()
     inFlight = controller
     try {
-      const outcome = await search().search(text, { signal: controller.signal })
+      const outcome = await repository().search(text, { signal: controller.signal })
       const found = outcome.results.map((book) => ({ key: bookKey(book), book, entry: null as LibraryEntry | null }))
-      for (const hit of found) seen.set(hit.key, hit.book)
 
-      // Which of them the member already has: shown instead of the + button.
-      const client = backend
+      // Which of them the member already has (shown instead of the + button),
+      // and which are in the Catalogue already: those bring their resolved
+      // thumbhash and colours, so their rows have the blur while loading.
       const appleIds = found.map((hit) => hit.book.appleId).filter((id): id is string => Boolean(id))
-      if (client && appleIds.length) {
-        const statuses = await createLibrary(client).statusesByAppleId(appleIds)
+      if (backend && appleIds.length) {
+        const library = createLibrary(backend)
+        const [statuses, catalogued] = await Promise.all([
+          library.statusesByAppleId(appleIds),
+          library.catalogueByAppleId(appleIds),
+        ])
         if (controller.signal.aborted) return
-        for (const hit of found) hit.entry = (hit.book.appleId && statuses.data?.get(hit.book.appleId)) || null
+        for (const hit of found) {
+          const appleId = hit.book.appleId!
+          hit.entry = statuses.data?.get(appleId) ?? null
+          const book = catalogued.data?.get(appleId)
+          if (book) hit.book = { ...hit.book, coverThumbhash: book.coverThumbhash, coverColors: book.coverColors }
+        }
       }
+      for (const hit of found) remember(hit.key, hit.book)
 
       if (controller.signal.aborted) return
       hits.value = found
@@ -137,5 +154,5 @@ export const useSearchStore = defineStore('search', () => {
     seen.clear()
   }
 
-  return { isOpen, query, hits, phase, answered, open, close, seenBook, markAdded, reset }
+  return { isOpen, query, hits, phase, answered, open, close, seenBook, markAdded, reset, repository }
 })

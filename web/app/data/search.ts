@@ -29,9 +29,12 @@ export type SearchOutcome = { results: BookSnapshot[]; failed: boolean }
 export type Search = {
   /** Rejects with an AbortError when `signal` aborts; the caller drops the query. */
   search: (query: string, options?: { signal?: AbortSignal }) => Promise<SearchOutcome>
-  /** One Apple Book by its track id: a book page opened from a link or after a reload. */
+  /**
+   * One Apple Book by its track id: a book page opened from a link or after a
+   * reload. Null when no storefront has it; rejects when none answered.
+   */
   lookupApple: (appleId: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
-  /** One Apple Book by ISBN-13. */
+  /** One Apple Book by ISBN-13; null or a rejection as `lookupApple`. */
   lookupIsbn: (isbn13: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
 }
 
@@ -210,9 +213,15 @@ export function createSearch(options: { fetch: FetchLike; languages: readonly st
     return dedupe(items.flat().map(snapshotFromApple).filter((book): book is BookSnapshot => book !== null))
   }
 
+  /** A lookup that cannot tell "not there" from "nobody answered" must not say "not there". */
+  async function lookup(params: Record<string, string>, signal?: AbortSignal): Promise<BookSnapshot[]> {
+    const { items, failed } = await everywhere('lookup', params, signal)
+    if (failed) throw new Error('No storefront answered')
+    return books(items)
+  }
+
   async function lookupIsbn(isbn13: string, { signal }: { signal?: AbortSignal } = {}) {
-    const { items } = await everywhere('lookup', { isbn: isbn13 }, signal)
-    const found = books(items)[0]
+    const found = (await lookup({ isbn: isbn13 }, signal))[0]
     return found ? { ...found, isbn13 } : null
   }
 
@@ -238,8 +247,7 @@ export function createSearch(options: { fetch: FetchLike; languages: readonly st
 
     async lookupApple(appleId, { signal } = {}) {
       // Track ids are global, but a storefront only knows the editions it sells.
-      const { items } = await everywhere('lookup', { id: appleId }, signal)
-      return books(items).find((book) => book.appleId === appleId) ?? null
+      return (await lookup({ id: appleId }, signal)).find((book) => book.appleId === appleId) ?? null
     },
 
     lookupIsbn,

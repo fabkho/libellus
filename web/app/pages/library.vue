@@ -8,6 +8,7 @@
 // were, and the list refreshes quietly in the background.
 import type { EntryStatus } from '~/data/library'
 import { useLibraryStore } from '~/stores/library'
+import { useSessionStore } from '~/stores/session'
 
 definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 
@@ -25,6 +26,13 @@ const counts = computed<Record<EntryStatus, number>>(() => ({
 const empty = computed(() => library.loaded && Object.values(counts.value).every((count) => count === 0))
 
 onActivated(() => void library.load())
+// Kept alive, so a member change (the list reset) while it is not showing has
+// to bring it back by itself.
+const session = useSessionStore()
+watch(
+  () => session.member?.id,
+  (member) => member && void library.load(),
+)
 </script>
 
 <template>

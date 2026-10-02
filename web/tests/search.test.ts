@@ -206,6 +206,14 @@ describe('one Book by its id', () => {
     expect(book).toMatchObject({ title: 'Piranesi', appleId: '1504159680' })
   })
 
+  it('is null when no storefront sells it, and an error when none answered', async () => {
+    expect(await createSearch({ fetch: recorded(), languages: ['en-US'] }).lookupApple('1')).toBeNull()
+    const error = await createSearch({ fetch: recorded({ failing: ['us', 'gb'] }), languages: ['en-US'] })
+      .lookupApple('1504159680')
+      .catch((reason: unknown) => reason)
+    expect(error).toBeInstanceOf(Error)
+  })
+
   it('has a page address that reads back', () => {
     expect(parseBookKey('apple-1504159680')).toEqual({ kind: 'apple', appleId: '1504159680' })
     expect(parseBookKey('isbn-9783641264864')).toEqual({ kind: 'isbn', isbn13: '9783641264864' })

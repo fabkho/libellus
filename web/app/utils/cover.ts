@@ -1,4 +1,5 @@
 import { thumbHashToDataURL } from 'thumbhash'
+import type { CoverColors } from '../data/books'
 import { appleArtwork } from '../data/search'
 
 /**
@@ -8,8 +9,8 @@ import { appleArtwork } from '../data/search'
  * them and tests/cover.test.ts pins them.
  */
 
-/** A cover's two precomputed colours, `#rrggbb`, resolved once with the cover (#12). */
-export type CoverColors = { dominant: string; secondary: string }
+/** A cover's two precomputed colours, `#rrggbb`, resolved once with the cover (data/books.ts). */
+export type { CoverColors }
 
 /** The six Placeholder-cover cloths (tokens `color.cloth1…6`). */
 export const CLOTH_COUNT = 6

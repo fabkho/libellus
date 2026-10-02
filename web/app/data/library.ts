@@ -136,6 +136,8 @@ export type Library = {
   catalogueBook: (key: { appleId?: string; isbn13?: string }) => Promise<Result<Book | null>>
   /** The member's statuses for a set of Apple ids, for search results. */
   statusesByAppleId: (appleIds: readonly string[]) => Promise<Result<Map<string, LibraryEntry>>>
+  /** The Catalogue Books among a set of Apple ids (their stored cover, for search results). */
+  catalogueByAppleId: (appleIds: readonly string[]) => Promise<Result<Map<string, Book>>>
 }
 
 export function createLibrary(client: SupabaseClient): Library {
@@ -209,6 +211,20 @@ export function createLibrary(client: SupabaseClient): Library {
         .returns<EntryRow[]>()
       if (error) return { data: null, error: mapLibraryError(error) }
       for (const row of data) if (row.book.apple_id) found.set(row.book.apple_id, entryFromRow(row))
+      return { data: found, error: null }
+    },
+
+    async catalogueByAppleId(appleIds) {
+      const found = new Map<string, Book>()
+      if (!appleIds.length) return { data: found, error: null }
+      const { data, error } = await client
+        .from('books')
+        .select('*')
+        .is('owner_id', null)
+        .in('apple_id', [...appleIds])
+        .returns<BookRow[]>()
+      if (error) return { data: null, error: mapLibraryError(error) }
+      for (const row of data) if (row.apple_id) found.set(row.apple_id, bookFromRow(row))
       return { data: found, error: null }
     },
   }

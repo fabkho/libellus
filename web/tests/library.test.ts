@@ -152,6 +152,20 @@ describe('reading the Catalogue', () => {
     expect(statuses.get(inLibrary.appleId!)?.status).toBe('want_to_read')
     expect(statuses.has(elsewhere)).toBe(false)
   })
+
+  it('gives search the stored cover of results already in the Catalogue', async () => {
+    const ida = await signUpMember()
+    const max = await signUpMember()
+    const catalogued = book()
+    await createLibrary(ida.client).addToLibrary(catalogued)
+
+    const covers = (await createLibrary(max.client).catalogueByAppleId([catalogued.appleId!, uniqueAppleId()])).data!
+    expect([...covers.keys()]).toEqual([catalogued.appleId])
+    expect(covers.get(catalogued.appleId!)).toMatchObject({
+      coverThumbhash: catalogued.coverThumbhash,
+      coverColors: catalogued.coverColors,
+    })
+  })
 })
 
 /** A valid ISBN-13 no Catalogue Book has yet. */
