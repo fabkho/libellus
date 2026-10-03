@@ -111,7 +111,8 @@ function swiftLine(token) {
     case 'duration':
       return `static let ${name}: TimeInterval = ${num(token.$value / 1000)}`
     case 'cubicBezier': {
-      const [x1, y1, x2, y2] = token.$value.map(num)
+      // Not `.map(num)`: map's index would become num's `digits`.
+      const [x1, y1, x2, y2] = token.$value.map((n) => num(n))
       return `static let ${name} = TimingCurve(x1: ${x1}, y1: ${y1}, x2: ${x2}, y2: ${y2})`
     }
     default: {
@@ -200,7 +201,7 @@ function cssDeclarations(token, theme) {
       return lines
     }
     case 'easing':
-      return [[`--ease-${name}`, `cubic-bezier(${value.map(num).join(', ')})`]]
+      return [[`--ease-${name}`, `cubic-bezier(${value.map((n) => num(n)).join(', ')})`]]
     case 'duration':
       return [[`--duration-${name}`, `${value}ms`]]
     case 'opacity':
