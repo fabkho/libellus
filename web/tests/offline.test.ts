@@ -162,6 +162,17 @@ describe("the device's copy of the Library", () => {
     expect(storage.keys()).toEqual(['libellus-theme'])
   })
 
+  it('keeps her name with the member, so an offline start greets her the same (#49)', () => {
+    const storage = browserStorage()
+    const lists = { want_to_read: [], reading: [], finished: [] }
+    saveLibrary(storage, { member: { id: 'm', email: 'm@libellus.test', name: 'Ida' }, lists, readInYear: null })
+    expect(readSavedMember(storage)).toEqual({ id: 'm', email: 'm@libellus.test', name: 'Ida' })
+
+    // Without one (or a copy from before names), no `name` at all.
+    saveLibrary(storage, { member: { id: 'm', email: 'm@libellus.test' }, lists, readInYear: null })
+    expect(readSavedMember(storage)).toEqual({ id: 'm', email: 'm@libellus.test' })
+  })
+
   it('can be forgotten on its own, leaving a pending sign-in alone', () => {
     const storage = browserStorage()
     storage.setItem(`${LOCAL_DATA_PREFIX}pendingSignIn`, '{"email":"a@libellus.test"}')

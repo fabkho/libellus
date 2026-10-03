@@ -23,7 +23,7 @@ const notFinished = computed(() => isNotFinished(props.entry))
 <template>
   <UiPressLink
     :to="`/book/${entry.book.id}`"
-    class="row flex items-center gap-inset py-sm active:bg-fill"
+    class="row flex items-center gap-inset py-sm"
     data-testid="library.entry"
     @press="books.prefetch(entry.book.id)"
   >
@@ -61,6 +61,31 @@ const notFinished = computed(() => isNotFinished(props.entry))
 .dimmed {
   opacity: 0.45;
   filter: grayscale(0.6);
+}
+
+/* Pressed (and, with a mouse, hovered): a fill a little wider than the row,
+   so the cover does not sit on its edge. Drawn behind the row's content. */
+.row {
+  position: relative;
+  isolation: isolate;
+}
+
+.row::after {
+  position: absolute;
+  inset: 0 calc(-1 * var(--spacing-sm));
+  z-index: -1;
+  content: '';
+  border-radius: var(--radius-md);
+}
+
+.row:active::after {
+  background: var(--color-fill-strong);
+}
+
+@media (hover: hover) {
+  .row:hover:not(:active)::after {
+    background: var(--color-fill);
+  }
 }
 
 .row + .row {

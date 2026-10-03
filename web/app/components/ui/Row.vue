@@ -31,7 +31,7 @@ const tag = computed(() => (props.to ? NuxtLink : props.as))
     :to="to"
     :type="as === 'button' && !to ? 'button' : undefined"
     class="ui-row relative flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body"
-    :class="[tone === 'danger' ? 'text-error' : 'text-ink', (as === 'button' || to) && 'active:bg-fill-strong']"
+    :class="[tone === 'danger' ? 'text-error' : 'text-ink', (as === 'button' || to) && 'not-disabled:hover:bg-fill active:bg-fill-strong']"
   >
     <UiIcon v-if="icon" :name="icon" :size="18" :class="tone === 'danger' ? '' : 'text-ink-faint'" />
     <span class="shrink-0" :class="value !== undefined || placeholder ? 'text-ink-muted' : ''">{{ label }}</span>

@@ -1,6 +1,7 @@
 /**
  * Home's header: the date eyebrow and the greeting for the time of day
- * ("Good evening"). `now` refreshes when the app comes back to the front, so a
+ * ("Good evening", or "Good evening, Fabian" once she gave a name in the
+ * avatar menu). `now` refreshes when the app comes back to the front, so a
  * PWA left open overnight does not greet the morning with yesterday's evening.
  */
 export type DayPart = 'morning' | 'afternoon' | 'evening'
@@ -29,6 +30,12 @@ export function useGreeting() {
     })
   }
 
-  const greeting = computed(() => t(`home.greeting.${dayPartOf(now.value)}`))
+  // Auto-imported (no import line), so the data-layer tests can load dayPartOf in plain Node.
+  const session = useSessionStore()
+  const greeting = computed(() => {
+    const part = dayPartOf(now.value)
+    const name = session.member?.name
+    return name ? t(`home.greeting.${part}Named`, { name }) : t(`home.greeting.${part}`)
+  })
   return { now, greeting }
 }

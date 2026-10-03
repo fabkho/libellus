@@ -25,15 +25,28 @@ const segment = ref<EntryStatus>('want_to_read')
 const FILTERS = ['all', 'notFinished'] as const
 const filter = ref<(typeof FILTERS)[number]>('all')
 
-const counts = computed<Record<EntryStatus, number>>(() => ({
-  want_to_read: library.wantToRead.length,
-  reading: library.reading.length,
-  finished: library.finished.length,
+/**
+ * The lists as the screen shows them: held while a sheet is on screen (a
+ * Finish's card stays while the sheet falls away, then collapses) and while
+ * the Library is in the background (a Start on the book page arrives when she
+ * is back), so the change moves where she sees it (`UiListMotion`).
+ */
+const lists = useSettled(() => ({
+  want_to_read: library.wantToRead,
+  reading: library.reading,
+  finished: library.finished,
+  notFinished: library.notFinished,
 }))
 
-const filterCounts = computed(() => ({ all: library.finished.length, notFinished: library.notFinished.length }))
+const counts = computed<Record<EntryStatus, number>>(() => ({
+  want_to_read: lists.value.want_to_read.length,
+  reading: lists.value.reading.length,
+  finished: lists.value.finished.length,
+}))
+
+const filterCounts = computed(() => ({ all: lists.value.finished.length, notFinished: lists.value.notFinished.length }))
 /** What Finished shows: everything, or only the Books that were not finished. */
-const shown = computed(() => (filter.value === 'notFinished' ? library.notFinished : library.finished))
+const shown = computed(() => (filter.value === 'notFinished' ? lists.value.notFinished : lists.value.finished))
 
 /** What Finished shows, by the year of the end date (the list is newest first already). */
 const years = computed(() => {
@@ -46,7 +59,9 @@ const years = computed(() => {
   }
   return groups
 })
-const empty = computed(() => library.loaded && Object.values(counts.value).every((count) => count === 0))
+const empty = computed(
+  () => library.loaded && !library.wantToRead.length && !library.reading.length && !library.finished.length,
+)
 
 onActivated(() => void library.load())
 // Kept alive, so a member change (the list reset) while it is not showing has
@@ -83,23 +98,23 @@ watch(
       </button>
     </div>
 
-    <div v-if="segment === 'want_to_read' && library.wantToRead.length" class="flex flex-col pt-xs" data-testid="library.wantToRead">
-      <LibraryEntryRow v-for="(entry, index) in library.wantToRead" :key="entry.id" :entry="entry" :eager="index < 8" />
-    </div>
+    <UiListMotion v-if="segment === 'want_to_read' && lists.want_to_read.length" class="flex flex-col pt-xs" data-testid="library.wantToRead">
+      <LibraryEntryRow v-for="(entry, index) in lists.want_to_read" :key="entry.id" :entry="entry" :eager="index < 8" />
+    </UiListMotion>
 
-    <div v-else-if="segment === 'reading' && library.reading.length" class="flex flex-col gap-ms pt-md" data-testid="library.reading">
-      <LibraryReadingCard v-for="(entry, index) in library.reading" :key="entry.id" :entry="entry" :eager="index < 4" />
-    </div>
+    <UiListMotion v-else-if="segment === 'reading' && lists.reading.length" class="flex flex-col gap-ms pt-md" data-testid="library.reading">
+      <LibraryReadingCard v-for="(entry, index) in lists.reading" :key="entry.id" :entry="entry" :eager="index < 4" />
+    </UiListMotion>
 
-    <div v-else-if="segment === 'finished' && library.finished.length" class="flex flex-col" data-testid="library.finished">
+    <div v-else-if="segment === 'finished' && lists.finished.length" class="flex flex-col" data-testid="library.finished">
       <div role="group" :aria-label="t('library.filtersLabel')" class="flex gap-sm pt-md">
         <button
           v-for="name in FILTERS"
           :key="name"
           type="button"
           :aria-pressed="filter === name"
-          class="filter inline-flex h-(--size-button-sm) items-center gap-xs rounded-pill px-md text-subhead"
-          :class="filter === name ? 'on bg-ink text-on-ink' : 'edge text-ink-muted'"
+          class="filter relative inline-flex h-(--size-button-sm) items-center gap-xs rounded-pill px-md text-subhead"
+          :class="filter === name ? 'on bg-ink text-on-ink' : 'edge text-ink-muted hover:bg-fill'"
           :data-testid="`library.filter.${name}`"
           @click="filter = name"
         >
@@ -114,11 +129,14 @@ watch(
         <p class="mt-xs text-subhead text-ink-muted">{{ t('library.notFinishedEmpty.text') }}</p>
       </div>
       <section v-for="(group, g) in years" :key="group.year" class="flex flex-col" data-testid="library.year">
-        <h2 class="flex items-center justify-between pt-md pb-xs">
+        <!-- Pinned while its year scrolls by, as iOS lists pin their section headers. -->
+        <h2 class="year sticky z-10 -mx-screen flex items-center justify-between bg-surface px-screen pt-md pb-xs">
           <span class="eyebrow" data-testid="library.yearTitle">{{ group.year || t('library.undated') }}</span>
           <span class="eyebrow text-ink-ghost">{{ group.entries.length }}</span>
         </h2>
-        <LibraryEntryRow v-for="(entry, index) in group.entries" :key="entry.id" :entry="entry" :eager="g === 0 && index < 8" />
+        <UiListMotion class="flex flex-col">
+          <LibraryEntryRow v-for="(entry, index) in group.entries" :key="entry.id" :entry="entry" :eager="g === 0 && index < 8" />
+        </UiListMotion>
       </section>
     </div>
 
@@ -138,6 +156,20 @@ watch(
 </template>
 
 <style scoped>
+/* The drawn pill is 32 px; the touch target stays 44. */
+.filter::after {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
+}
+
+/* A pinned year sits under the status bar, not behind it. */
+.year {
+  top: env(safe-area-inset-top);
+}
+
 /* The chosen filter's count is quieter than its name, as in D. */
 .filter.on .count {
   opacity: 0.55;

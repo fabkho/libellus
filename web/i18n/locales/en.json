@@ -73,6 +73,21 @@
     "darkTheme": "Dark mode",
     "signOut": "Sign out"
   },
+  "account": {
+    "name": "Name",
+    "nameNone": "Add",
+    "nameTitle": "Your name",
+    "nameLabel": "First name",
+    "namePlaceholder": "Optional",
+    "nameHint": "Home greets you by it. Leave it empty for no name.",
+    "save": "Save",
+    "clear": "Remove name",
+    "error": {
+      "offline": "You're offline. Nothing was saved.",
+      "rate_limited": "Too many changes at once. Try again in a moment.",
+      "unknown": "Your name could not be saved. Try again."
+    }
+  },
   "tabs": {
     "home": "Home",
     "library": "Library",
@@ -82,7 +97,10 @@
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
-      "evening": "Good evening"
+      "evening": "Good evening",
+      "morningNamed": "Good morning, {name}",
+      "afternoonNamed": "Good afternoon, {name}",
+      "eveningNamed": "Good evening, {name}"
     },
     "today": "{weekday} · {day} {month}",
     "emptyTitle": "Nothing on the shelf yet",
@@ -429,6 +447,7 @@
     "busy": "Deleting…"
   },
   "bookOptions": {
+    "title": "Options",
     "remove": "Remove from Library"
   },
   "removeEntry": {

@@ -14,3 +14,17 @@ describe('the avatar initials', () => {
     expect(initialsOf(email)).toBe(expected)
   })
 })
+
+describe('the avatar initials with a name', () => {
+  it.each([
+    ['Fabian', 'F'],
+    ['ida tester', 'IT'],
+    ['Anna-Lena Maier', 'AL'],
+    ['  élodie  ', 'É'],
+    ['', 'IT'],
+    [null, 'IT'],
+    ['--', 'IT'],
+  ])('%s → %s (the address is ida.tester@…)', (name, expected) => {
+    expect(initialsOf('ida.tester@example.com', name)).toBe(expected)
+  })
+})

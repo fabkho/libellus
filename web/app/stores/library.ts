@@ -258,7 +258,7 @@ export const useLibraryStore = defineStore('library', () => {
     const member = session.member
     if (!import.meta.client || !member || !loaded.value) return
     saveLibrary(window.localStorage, {
-      member: { id: member.id, email: member.email },
+      member: member.name ? { id: member.id, email: member.email, name: member.name } : { id: member.id, email: member.email },
       lists: { want_to_read: lists.want_to_read, reading: lists.reading, finished: lists.finished },
       readInYear: readInYear.value === null ? null : { year: readInYearOf.value, count: readInYear.value },
     })

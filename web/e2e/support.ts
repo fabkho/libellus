@@ -60,14 +60,33 @@ export async function signedIn(page: Page) {
   return member
 }
 
-/** Where an element is once the sheet it is in has finished rising. */
+/**
+ * Waits until nothing on the page is moving: no sheet rising or sliding away,
+ * no list opening or closing an item's room (both carry `data-moving` until
+ * their transition has ended). Watching an element's box instead is not
+ * enough: a slow runner may paint no frame between two looks, and a sheet
+ * mid-rise then seems to stand still.
+ */
+export async function untilStill(page: Page) {
+  await expect(page.locator('[data-moving]')).toHaveCount(0)
+}
+
+/**
+ * Where an element is once the sheet it is in has finished rising: it is on
+ * the page, nothing is moving (`untilStill`) and its box held still between
+ * two looks (a sheet that opens a moment after the tap has to have started
+ * rising first).
+ */
 export async function settledBox(locator: Locator) {
+  const moving = locator.page().locator('[data-moving]')
   let last = null as Awaited<ReturnType<Locator['boundingBox']>>
   await expect
     .poll(
       async () => {
+        // Nothing moving first, then the box: a box read after that is in place.
+        const calm = (await moving.count()) === 0
         const box = await locator.boundingBox()
-        const still = Boolean(box && last && box.y === last.y)
+        const still = calm && Boolean(box && last && box.y === last.y)
         last = box
         return still
       },

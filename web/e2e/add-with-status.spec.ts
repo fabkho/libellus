@@ -3,7 +3,7 @@ import en from '../i18n/locales/en.json' with { type: 'json' }
 import { addDays, isoDay } from '../app/utils/dates'
 import { ratingX } from '../app/utils/rating'
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { recordedApple, settledBox, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -27,23 +27,6 @@ async function openAddSheet(page: Page) {
   await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
   await page.getByTestId('book.add').click()
   await expect(page.getByTestId('add')).toBeVisible()
-}
-
-/** Where an element is once the sheet it is in has finished rising. */
-async function settledBox(locator: Locator) {
-  let last = null as Awaited<ReturnType<Locator['boundingBox']>>
-  await expect
-    .poll(
-      async () => {
-        const box = await locator.boundingBox()
-        const still = Boolean(box && last && box.y === last.y)
-        last = box
-        return still
-      },
-      { intervals: [100] },
-    )
-    .toBe(true)
-  return last!
 }
 
 /** A finger (here a mouse) pressed on the stars and dragged to `quarters`. */

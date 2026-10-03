@@ -80,6 +80,20 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   new height. In the installed app (and in Safari with its toolbar collapsed) that happens as the
   keyboard starts to rise, so the palette rises with it; with Safari's toolbar expanded WebKit
   reports it only at the end (WebKit bug 265578), and the palette follows after.
+- **A list changes.** Finish, Abandon or Start moves a Book from one list to another: the list on
+  screen holds still until the sheet has fallen away (`useSettled`), then the card or row that
+  leaves fades over `exit` while its room closes over `standard`, so the ones after it slide up and
+  the page shortens as smoothly; one that arrives opens its room and fades in over `standard`
+  (`UiListMotion`). A change made on another screen (a Start on the book page) plays when the list
+  is back on screen. Interruptible: an item reverses from the height it has.
+- **Tally mark.** A finish adds a mark to Home's tally: it fades in at full lamp with its glow and
+  settles to the others' strength over twice `sheet`. Only a mark added to a count already on
+  screen lights up.
+- **Sheet on the keyboard.** A sheet whose field has the iOS keyboard rides up on it like the search
+  palette, over `keyboard` with the `keyboard` curve, and its focused field scrolls into view.
+- **Hover.** With a mouse (only where the device hovers), rows and menu items take the `fill`,
+  pills deepen by it, the lit button lets a little of the room through. No transition beyond the
+  existing ones.
 - **Cover.** The image fades in over its thumbhash or colour over `standard` once decoded; no
   zoom, no slide.
 - **Search results.** A new answer replaces the list in place, best match at the bottom; while a

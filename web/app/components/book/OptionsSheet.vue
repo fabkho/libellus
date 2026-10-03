@@ -28,15 +28,17 @@ const confirming = computed({
   },
 })
 
-// Kept while the sheet and the question slide away, so their titles do not empty mid-exit.
-const title = ref(props.entry?.book.title ?? '')
+// Kept while the sheet and the question slide away, so the book line and the
+// question's title do not empty mid-exit.
+const book = ref(props.entry?.book ?? null)
 watch(
   () => props.entry,
   (entry) => {
-    if (entry) title.value = entry.book.title
+    if (entry) book.value = entry.book
   },
   { immediate: true },
 )
+const title = computed(() => book.value?.title ?? '')
 
 function changeEdition() {
   if (!props.entry) return
@@ -56,8 +58,16 @@ async function remove() {
 </script>
 
 <template>
-  <UiSheet v-model:open="open" :title="title" testid="bookOptions">
+  <UiSheet v-model:open="open" :title="t('bookOptions.title')" testid="bookOptions">
     <div class="pt-xs pb-sm">
+      <UiBookLine
+        v-if="book"
+        :title="book.title"
+        :authors="book.authors"
+        :src="coverSrc(book.coverUrl, 'xs')"
+        :thumbhash="book.coverThumbhash"
+        :colors="book.coverColors"
+      />
       <UiRowGroup>
         <UiRow
           as="button"

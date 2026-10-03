@@ -54,10 +54,12 @@ async function create() {
 }
 
 const input = useTemplateRef<HTMLInputElement>('input')
+// The field is focused in the tap's own task (the microtask after the render,
+// not a timer), so iOS raises the keyboard instead of only lighting the row.
 async function startCreating() {
   creating.value = true
   await nextTick()
-  input.value?.focus()
+  input.value?.focus({ preventScroll: true })
 }
 </script>
 
@@ -83,7 +85,7 @@ async function startCreating() {
           role="checkbox"
           :aria-checked="collections.picked(collection.id)"
           :disabled="!collections.pickerReady || collections.pickerBusy.has(collection.id) || !online"
-          class="option relative flex h-(--size-query) w-full items-center gap-ms px-inset text-left active:bg-fill-strong disabled:opacity-50"
+          class="option relative flex h-(--size-query) w-full items-center gap-ms px-inset text-left enabled:hover:bg-fill active:bg-fill-strong disabled:opacity-50"
           data-testid="picker.collection"
           @click="collections.toggle(collection.id)"
         >
@@ -111,7 +113,7 @@ async function startCreating() {
         <button
           v-if="!creating"
           type="button"
-          class="flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body text-ink-muted active:bg-fill-strong disabled:opacity-50"
+          class="flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body text-ink-muted enabled:hover:bg-fill active:bg-fill-strong disabled:opacity-50"
           :disabled="!online"
           data-testid="picker.new"
           @click="startCreating"

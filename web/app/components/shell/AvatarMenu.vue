@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The avatar in the header and its small menu. There is no profile screen
 // (issue #1, Screens and navigation): the account, the theme switch and
-// signing out live here, and later anything else account-related. Closed by a
+// signing out live here, and later anything else account-related — the first
+// name for Home's greeting is one (the Name row opens its sheet). Closed by a
 // tap anywhere else, Escape, or moving to another page; flipping the theme
 // keeps it open so the member sees the change.
 import { useSessionStore } from '~/stores/session'
@@ -12,7 +13,7 @@ const session = useSessionStore()
 const theme = useThemeStore()
 const route = useRoute()
 
-const initials = computed(() => initialsOf(session.member?.email ?? ''))
+const initials = computed(() => initialsOf(session.member?.email ?? '', session.member?.name))
 const isDark = computed(() => theme.theme === 'dark')
 
 const open = ref(false)
@@ -33,6 +34,13 @@ onUnmounted(() => {
   window.removeEventListener('keydown', closeOnEscape)
 })
 watch(() => route.path, () => (open.value = false))
+
+// The menu closes as the name sheet rises.
+const naming = ref(false)
+function openName() {
+  open.value = false
+  naming.value = true
+}
 
 async function signOut() {
   open.value = false
@@ -72,9 +80,27 @@ async function signOut() {
         <div class="border-t-(length:--stroke-hairline) border-hairline-strong">
           <button
             type="button"
+            role="menuitem"
+            class="flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body text-ink hover:bg-fill active:bg-fill-strong"
+            data-testid="shell.name"
+            @click="openName"
+          >
+            <UiIcon name="pencil" :size="18" class="text-ink-faint" />
+            <span class="shrink-0">{{ t('account.name') }}</span>
+            <span
+              class="min-w-0 flex-1 truncate text-right"
+              :class="session.member?.name ? 'text-ink-muted' : 'text-ink-ghost'"
+              data-testid="shell.nameValue"
+            >
+              {{ session.member?.name ?? t('account.nameNone') }}
+            </span>
+          </button>
+
+          <button
+            type="button"
             role="menuitemcheckbox"
             :aria-checked="isDark"
-            class="flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body text-ink active:bg-fill-strong"
+            class="flex h-(--size-row) w-full items-center gap-ms border-t-(length:--stroke-hairline) border-hairline px-inset text-left text-body text-ink hover:bg-fill active:bg-fill-strong"
             data-testid="shell.theme"
             @click="theme.toggle()"
           >
@@ -92,7 +118,7 @@ async function signOut() {
           <NuxtLink
             to="/import"
             role="menuitem"
-            class="flex h-(--size-row) w-full items-center gap-ms border-t-(length:--stroke-hairline) border-hairline px-inset text-left text-body text-ink active:bg-fill-strong"
+            class="flex h-(--size-row) w-full items-center gap-ms border-t-(length:--stroke-hairline) border-hairline px-inset text-left text-body text-ink hover:bg-fill active:bg-fill-strong"
             data-testid="shell.import"
             @click="open = false"
           >
@@ -103,7 +129,7 @@ async function signOut() {
           <button
             type="button"
             role="menuitem"
-            class="flex h-(--size-row) w-full items-center gap-ms border-t-(length:--stroke-hairline) border-hairline px-inset text-left text-body text-ink active:bg-fill-strong"
+            class="flex h-(--size-row) w-full items-center gap-ms border-t-(length:--stroke-hairline) border-hairline px-inset text-left text-body text-ink hover:bg-fill active:bg-fill-strong"
             data-testid="shell.signOut"
             @click="signOut"
           >
@@ -113,6 +139,8 @@ async function signOut() {
         </div>
       </div>
     </Transition>
+
+    <ShellNameSheet v-model:open="naming" />
   </div>
 </template>
 
