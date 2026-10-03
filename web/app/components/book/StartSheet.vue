@@ -3,7 +3,12 @@
 // the day the read started (today unless the member picks another day, never
 // one in the future), and the one action. While it runs the button says so;
 // a failure stays in the sheet with its reason, and the button tries again.
+// The same sheet reads a closed Book again (#10): "Read again" after a finished
+// read, "Start again" after an abandoned one, with the words of that action.
 import { useReadingStore } from '~/stores/reading'
+
+const TITLE_KEYS = { start: 'start.title', again: 'start.titleAgain', restart: 'start.titleRestart' } as const
+const ACTION_KEYS = { start: 'start.action', again: 'start.actionAgain', restart: 'start.actionRestart' } as const
 
 const { t } = useI18n()
 const reading = useReadingStore()
@@ -17,21 +22,24 @@ const open = computed({
 
 // Kept while the sheet slides away, so it does not empty mid-exit.
 const entry = ref(reading.starting)
+const kind = ref(reading.startKind)
 watch(
   () => reading.starting,
   (value) => {
-    if (value) entry.value = value
+    if (!value) return
+    entry.value = value
+    kind.value = reading.startKind
   },
 )
 
 const today = computed(() => (open.value ? isoDay() : ''))
 const label = computed(() =>
-  reading.startBusy ? t('start.busy') : reading.startError ? t('start.retry') : t('start.action'),
+  reading.startBusy ? t('start.busy') : reading.startError ? t('start.retry') : t(ACTION_KEYS[kind.value]),
 )
 </script>
 
 <template>
-  <UiSheet v-model:open="open" :title="t('start.title')" testid="start">
+  <UiSheet v-model:open="open" :title="t(TITLE_KEYS[kind])" testid="start">
     <template v-if="entry">
       <UiBookLine
         :title="entry.book.title"
@@ -57,7 +65,7 @@ const label = computed(() =>
 
       <div class="mt-lg mb-sm">
         <UiButton block :disabled="reading.startBusy" :aria-busy="reading.startBusy" data-testid="start.submit" @click="reading.confirmStart()">
-          <UiIcon name="arrow" :size="18" bold />{{ label }}
+          <UiIcon :name="kind === 'start' ? 'arrow' : 'repeat'" :size="18" bold />{{ label }}
         </UiButton>
       </div>
     </template>

@@ -107,6 +107,16 @@
         "text": "Every book you finish lands here, with its date and rating."
       }
     },
+    "filtersLabel": "Show",
+    "filter": {
+      "all": "All",
+      "notFinished": "Not finished"
+    },
+    "notFinishedEmpty": {
+      "title": "Nothing set aside",
+      "text": "Books you stop reading are kept here, so you can pick them up again."
+    },
+    "notFinishedOn": "Not finished · {date}",
     "added": "Added {date}",
     "loadError": "Your Library didn't load. Check your connection and try again.",
     "retry": "Try again",
@@ -124,7 +134,9 @@
       "date_in_future": "That day hasn't come yet.",
       "ended_before_started": "That is before you started it. Pick the start day or later.",
       "rating_invalid": "A rating is between a quarter star and five stars.",
-      "review_too_long": "That review is longer than we can keep. Shorten it a little."
+      "review_too_long": "That review is longer than we can keep. Shorten it a little.",
+      "reason_too_long": "That reason is longer than we can keep. Shorten it a little.",
+      "never_read": "You haven't read this book yet. Start reading it first."
     },
     "undated": "No end date"
   },
@@ -148,7 +160,8 @@
   "status": {
     "want_to_read": "Want to read",
     "reading": "Currently reading",
-    "finished": "Finished"
+    "finished": "Finished",
+    "notFinished": "Not finished"
   },
   "book": {
     "title": "Book",
@@ -167,7 +180,10 @@
     "retry": "Try again",
     "since": "Since {date} · day {day}",
     "start": "Start reading",
-    "finish": "Finish"
+    "finish": "Finish",
+    "abandon": "Abandon",
+    "readAgain": "Read again",
+    "startAgain": "Start again"
   },
   "add": {
     "title": "Add to Library",
@@ -207,10 +223,24 @@
       "unknown": "Something went wrong. Please try again."
     }
   },
+  "abandon": {
+    "title": "Abandon reading",
+    "endedOn": "Stopped on",
+    "reason": "Reason",
+    "optional": "optional",
+    "reasonPlaceholder": "Why are you putting it down?",
+    "action": "Abandon",
+    "busy": "Abandoning…",
+    "retry": "Try again"
+  },
   "start": {
     "title": "Start reading",
+    "titleAgain": "Read again",
+    "titleRestart": "Start again",
     "startedOn": "Started on",
     "action": "Start reading",
+    "actionAgain": "Read again",
+    "actionRestart": "Start again",
     "busy": "Starting…",
     "retry": "Try again"
   },
