@@ -38,7 +38,7 @@ from Swift.
 | Design tokens | `design/tokens.json` → Style Dictionary → Tailwind `@theme` CSS and Swift | Never hand-edit generated files; CI checks them |
 | Copy | `@nuxtjs/i18n`, one locale, `web/i18n/locales/en.json` | No hard-coded strings; German and native string catalogues map the keys |
 | Search sources | Own Catalogue (Postgres full-text), Apple Books (iTunes Search), OpenLibrary | Client-side, in parallel; all allow cross-origin reads. Google Books later via an Edge Function |
-| Hosting | Cloudflare Pages, `libellus-3q1.pages.dev` | Preview deploy per pull request |
+| Hosting | Cloudflare Pages, served at `libellus.fabkho.dev` (`libellus-3q1.pages.dev` stays as the Pages host) | Preview deploy per pull request |
 
 ## 3. Domain
 
