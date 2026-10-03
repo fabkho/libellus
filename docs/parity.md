@@ -73,11 +73,11 @@ Flow: `web/e2e/auth.spec.ts` (the code read from Mailpit; a mistyped code; the p
 - [x] Web  - [ ] iOS  - [ ] Android
 
 ### Tab shell  (web: `app/layouts/tabs.vue`, `components/shell/*`; pages `app/pages/{index,library}.vue`)
-Purpose: the signed-in frame: each tab's header with the avatar, the page, the floating tab bar, and the search overlay that opens over all of it. Home and Library show their empty state until their tickets land.
+Purpose: the signed-in frame: each tab's header with the avatar, the page, the floating tab bar, and the search overlay that opens over all of it. Home shows its empty state until #8. A pushed screen (the book page) lives in the same frame without the header (see Book).
 States: content (each tab shows its empty state) · avatar menu closed / open · search overlay closed / open (keyboard up: "typing", or down)
 Actions → result:
 - Tap Home or Library in the tab bar → shows Home (`/`) or Library (`/library`). The current tab is full ink with a lamp dot and its `aria-current="page"`; the others are faint. The header shows the page's title: Home under a date eyebrow (`home.today`, e.g. "Friday · 2 Oct"), Library large on its own.
-- Tap Search in the tab bar, or the search prompt in an empty state → the **search overlay** opens over the current page; **the URL does not change** and the page stays behind it, blurred and veiled. The query field has the keyboard ("typing"): the bottom row is the search icon, the field (placeholder `search.placeholder`), a clear button once something is typed, and **Cancel**. With the keyboard down the row shows Home and Library at its left (the current one lit) instead of Cancel; tapping one goes there and closes the overlay. Above the row is the results slot; until search lands (#6, #12) it shows `search.empty`.
+- Tap Search in the tab bar, or the search prompt in an empty state → the **search overlay** opens over the current page; **the URL does not change** and the page stays behind it, blurred and veiled. The query field has the keyboard ("typing"): the bottom row is the search icon, the field (placeholder `search.placeholder`), a clear button once something is typed, and **Cancel**. With the keyboard down the row shows Home and Library at its left (the current one lit) instead of Cancel; tapping one goes there and closes the overlay. Above the row are the results (see Search).
 - Close the overlay → Cancel (while typing), a tap on the page behind it (`search.backdrop`), swiping the palette down (more than 80 px, or a quick flick), Escape, or going to another page. The query is dropped; the page underneath is as it was.
 - Tap the avatar (the initials of the address: `ida.tester@example.com` → `IT`, `ida@example.com` → `ID`) → opens the **avatar menu** (there is no profile screen): "Signed in as" and the address, the **Dark mode** switch, **Sign out**. It closes on a tap elsewhere, Escape, or changing tab; flipping the theme keeps it open.
 - Dark mode switch → see Theme below. On when dark is showing.
@@ -103,6 +103,66 @@ Flow: `web/e2e/auth.spec.ts` (a dark phone → first tap stores Light → later 
 ### Error codes of the access flow
 The data layer reports stable codes, never sentences (`app/data/auth.ts`, `AuthErrorCode`); the copy lives under `auth.error.<code>`: `invite_required`, `invite_invalid`, `invite_expired`, `invite_exhausted` (Sign up), `invite_gone` (Verify), `code_invalid` (Verify), `rate_limited` (resend), `email_invalid`, `not_configured`, `unknown`.
 
-<!-- Filled as the screens land: Search (#6, #12), Book detail and the
+### Search  (web: `components/search/Results.vue`, `components/search/ResultRow.vue`, `stores/search.ts`, `data/search.ts`)
+Purpose: find a Book from anywhere without leaving the page: the content of the search overlay (Tab shell) above its query row.
+States: idle (query shorter than 2 characters: `search.empty`) · loading (no answer yet: one still ghost row, `search.loading` for assistive tech) · results (best match at the bottom next to the query, weaker ones above it, the far end fading out; `search.hint` at the top) · results dimmed while a newer query is on its way · no results (`search.noResultsTitle`, `search.noResults` with the query, `search.noResultsHint`) · failed (no source answered: `search.failedTitle`, `search.failed`)
+Actions → result:
+- Type → after a 220 ms pause, and only from 2 characters, the query goes out (`createSearch().search`). Every new keystroke aborts the query in flight; an answer only lands for the query it was asked for, so an outdated answer never overwrites a newer one. Clearing or shortening the query below 2 characters goes back to idle.
+- An ISBN (10 or 13 digits, hyphens and spaces allowed, ISBN-10 converted) is looked up as an ISBN instead of searched as text.
+- Results → one list, no duplicates (by source id, then ISBN-13). **Where a result comes from is never shown** (owner decision on #6): no source names, badges, counts or per-source loading; #12 adds the own Catalogue and OpenLibrary behind the same call without a UI change. Each row: cover (`UiCover` sm, a small Apple size; the first six load eagerly and are preloaded when the answer lands; a Book already in the Catalogue brings its stored thumbhash and colours, so it sits on its blur while loading, others on a quiet fill), title (serif), authors, year (mono). A Book already in the member's Library (matched by its Apple id) shows `status.<status>` with a check instead of the +.
+- Tap a row → the book page `/book/<key>` (a Catalogue Book by id, otherwise `apple-<trackId>`); the route change closes the search. The touch-down already asks for the page's data (`UiPressLink`, `book.prefetch`); a mouse press navigates on press, a finger on its tap.
+- Tap + (`search.add`, label `search.add` with the title) → the Add sheet over the search; after adding, the row shows its Status.
+Edge cases: today the only source is Apple Books (iTunes Search API, ebooks, 20 per storefront), asked in two storefronts at once by the device language: German (`de`, `de-*`) → `de` then `us`; anything else → `us` then `gb`; the first storefront's results rank first. One storefront failing leaves the other's results; both failing is the failed state. The list may grow up to the height above the query row (the visual viewport, so it stays above the keyboard) and scrolls; dragging inside the list scrolls rather than swiping the palette away. Closing the search drops the query and the results.
+Copy keys: `search.empty`, `search.loading`, `search.hint`, `search.add`, `search.noResultsTitle`, `search.noResults`, `search.noResultsHint`, `search.failedTitle`, `search.failed`, `status.*`, `common.etAl`
+IDs: `search.empty`, `search.loading`, `search.results`, `search.result`, `search.resultTitle`, `search.resultStatus`, `search.add`, `search.hint`, `search.noResults`, `search.failed`
+Flow: `web/e2e/search-and-add.spec.ts` (Apple answers from the recordings in `web/tests/fixtures/apple`); the repository in `web/tests/search.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
+
+### Book  (web: `app/pages/book/[key].vue`, `stores/book.ts`)
+Purpose: one Book: what it is, and the one action its state asks for.
+Layout: a pushed screen: no tab header; the round back button over the cover's light (`UiAmbient` in the cover's colours), the cover large with its glow, title (serif), authors, the facts in mono eyebrow type (year · pages · publisher, whichever are known), a status line, the action, then About. The tab bar and search stay available.
+States: loading (no Book known yet: a cover-shaped placeholder) · not in the Library (`book.notInLibrary`, primary **Add to Library**) · in the Library (`book.addedOn` with the date, the Status `status.<status>` in place of the action; #7 turns it into Start reading) · missing (`book.missingTitle`, `book.missing`) · error (`book.errorTitle`, `book.error`, Retry)
+Actions → result:
+- Add to Library (`book.add`) → the Add sheet. After the add the page shows the Status without reloading.
+- More (`book.more`, only for a long description) → the whole description; it starts clamped to five lines.
+- Back (`book.back`) → the previous page with its scroll position (the tab pages are kept alive); a page opened from a link with no history goes to Library.
+Edge cases: `/book/<uuid>` is a Catalogue Book (or the member's Manual book): the Book and the member's entry are read. `/book/apple-<id>` (and `/book/isbn-<isbn13>`) is a search result: shown at once from what search found, then checked against the Catalogue (by ISBN-13 first, then the source id, the same order `add_to_library` matches in); if it is there, the Catalogue Book and the member's entry replace it. Opened cold (a link, a reload), the source is asked again (Apple lookup in the device's two storefronts); a Book no storefront has is missing, no storefront answering is the error state with Retry. The source of a Book is never shown. A refresh that fails keeps what is showing.
+Copy keys: `book.back`, `book.pages`, `book.add`, `book.notInLibrary`, `book.addedOn`, `book.about`, `book.more`, `book.loading`, `book.missingTitle`, `book.missing`, `book.errorTitle`, `book.error`, `book.retry`, `status.*`, `common.dayMonth`, `common.etAl`
+IDs: `book.back`, `book.hero`, `book.title`, `book.authors`, `book.facts`, `book.notInLibrary`, `book.added`, `book.add`, `book.status`, `book.about`, `book.description`, `book.more`, `book.loading`, `book.missing`, `book.retry`
+Flow: `web/e2e/search-and-add.spec.ts` (open from search, add, back; open from a link)
+Native: a pushed view in the navigation stack.
+- [x] Web  - [ ] iOS  - [ ] Android
+
+### Add sheet  (web: `components/book/AddSheet.vue`, `stores/library.ts`)
+Purpose: put a Book into the Library with a Status (D's add-sheet).
+Layout: `UiSheet` (Cancel at the top left, title `add.title`), the Book (`UiBookLine`), the eyebrow `add.statusLabel`, the Status choice as radio rows (the chosen one lit in the lamp colour, with what it needs on the right: `add.needs.<status>`), the error if any, the primary **Add to Library** at the bottom.
+States: choosing · busy (`add.busy`, button disabled) · error (`library.error.<code>` under the choice; the sheet stays open)
+Actions → result:
+- Add to Library (`add.submit`) → if the Book is not in the Catalogue yet, its Cover is resolved first: a 100 × 150 copy of the Apple artwork is read (CORS) into a thumbhash and two colours; if that fails or takes over 4 s, the Book goes in without them. Then **one database call**, `add_to_library(p_book, p_status)`: finds the Catalogue Book by ISBN-13 or source id (or adds this snapshot, as the large `…/600x900bb.jpg` artwork URL with the thumbhash and colours; the first snapshot is kept) and creates the entry. The sheet closes; Library, the book page and search show the entry at once.
+- Cancel, the scrim, a swipe down, Escape → closes, nothing is added.
+Edge cases: this slice offers only *Want to read* (`ADDABLE_STATUSES`); #9 adds Currently reading and Finished with their dates below the choice. Adding a Book the member already has fails with `already_in_library`.
+Copy keys: `add.title`, `add.statusLabel`, `add.needs.want_to_read`, `add.action`, `add.busy`, `status.*`, `library.error.*`, `common.cancel`
+IDs: `add`, `add.cancel`, `add.scrim`, `add.status.want_to_read`, `add.error`, `add.submit`
+Flow: `web/e2e/search-and-add.spec.ts` (from the book page and from a result's +); the database rule in `supabase/tests/library_test.sql`, the repository in `web/tests/library.test.ts`
+Native: a sheet.
+- [x] Web  - [ ] iOS  - [ ] Android
+
+### Library  (web: `app/pages/library.vue`, `components/library/EntryRow.vue`)
+Purpose: the member's Books by Status.
+Layout: the tab header (Library), the Status segments with their counts (`library.segment.*`; the chosen one lit with a lamp hairline), then the chosen segment's entries.
+States: loading (first visit, nothing yet) · empty Library (the lamp over the empty shelf: `library.emptyTitle`, `library.empty`, the search prompt) · Want to read (rows: cover, serif title, authors, `library.added` with the date in mono; newest first) · a segment without entries (`library.segmentEmpty.<status>.title|text`) · load error (`library.loadError`, Retry)
+Actions → result:
+- Tap a segment → shows its entries. Currently reading and Finished stay empty until reading sessions land (#7).
+- Tap a row → the book page `/book/<id>`, started on touch-down (`UiPressLink`).
+Edge cases: the page is kept alive: coming back (from a book page, another tab) finds the same segment and scroll position, and the list refreshes in the background. An add elsewhere puts the entry on top at once. Signing out (or another member signing in) forgets the list.
+Copy keys: `library.title`, `library.emptyTitle`, `library.empty`, `library.segmentsLabel`, `library.segment.*`, `library.segmentEmpty.*`, `library.added`, `library.loadError`, `library.retry`, `common.dayMonth`, `common.etAl`
+IDs: `library.title`, `library.emptyTitle`, `library.empty`, `library.search`, `library.segment.want_to_read|reading|finished`, `library.wantToRead`, `library.entry`, `library.entryTitle`, `library.segmentEmpty.<status>`, `library.loadError`, `library.retry`
+Flow: `web/e2e/search-and-add.spec.ts` (empty → two Books, newest first → back keeps the scroll → an empty segment)
+- [x] Web  - [ ] iOS  - [ ] Android
+
+### Error codes of the Library
+`app/data/library.ts`, `LibraryErrorCode`; copy under `library.error.<code>`: `already_in_library` (the member already has this Book), `book_invalid` (no title, not an Apple Books or OpenLibrary snapshot, or nothing to find the Book by again), `status_unsupported` (a Status this version cannot add with yet), `not_signed_in`, `unknown` (also for `book_conflict`, a concurrent add of the same new Book that rolled back: trying again works). The database raises them as the messages of `add_to_library`.
+
+<!-- Filled as the screens land: Search sources (#12), Book detail and the
      Add / Finish / Abandon sheets (#6, #7, #9, #10, #11), Home (#8), Manual book (#13),
      Library and Collections (#14), offline states (#15). #16 completes the set. -->

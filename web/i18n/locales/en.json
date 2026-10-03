@@ -5,7 +5,8 @@
   },
   "common": {
     "cancel": "Cancel",
-    "etAl": "et al."
+    "etAl": "et al.",
+    "dayMonth": "{day} {month}"
   },
   "rating": {
     "label": "{value} of 5 stars",
@@ -76,13 +77,81 @@
   "library": {
     "title": "Library",
     "emptyTitle": "Your library is empty",
-    "empty": "The books you add live here: what you want to read, what you are reading, what you have read."
+    "empty": "The books you add live here: what you want to read, what you are reading, what you have read.",
+    "segmentsLabel": "Status",
+    "segment": {
+      "want_to_read": "Want to read",
+      "reading": "Reading",
+      "finished": "Finished"
+    },
+    "segmentEmpty": {
+      "want_to_read": {
+        "title": "Nothing to read next",
+        "text": "Books you want to read gather here, newest first."
+      },
+      "reading": {
+        "title": "Nothing on the nightstand",
+        "text": "The books you are reading now will be here."
+      },
+      "finished": {
+        "title": "No finished books yet",
+        "text": "Every book you finish lands here, with its date and rating."
+      }
+    },
+    "added": "Added {date}",
+    "loadError": "Your Library didn't load. Check your connection and try again.",
+    "retry": "Try again",
+    "error": {
+      "already_in_library": "This book is already in your Library.",
+      "book_invalid": "This book can't be added: it is missing what we need to keep it.",
+      "status_unsupported": "That status can't be chosen yet.",
+      "not_signed_in": "Sign in again to add books.",
+      "unknown": "Something went wrong. Please try again."
+    }
   },
   "search": {
     "title": "Search",
     "placeholder": "Title, author or ISBN",
     "close": "Close search",
     "clear": "Clear",
-    "empty": "Search for a book by title, author or ISBN. It arrives soon."
+    "empty": "Find a book by its title, author or ISBN.",
+    "loading": "Searching…",
+    "add": "Add {title} to your Library",
+    "noResultsTitle": "No books found",
+    "noResults": "Nothing for “{query}”.",
+    "noResultsHint": "Check the spelling, or search the ISBN of the edition you hold.",
+    "failedTitle": "Search isn't working right now",
+    "failed": "Check your connection and try again.",
+    "hint": "Not the edition you hold? Search its ISBN."
+  },
+  "status": {
+    "want_to_read": "Want to read",
+    "reading": "Currently reading",
+    "finished": "Finished"
+  },
+  "book": {
+    "title": "Book",
+    "back": "Back",
+    "pages": "{count} pages",
+    "add": "Add to Library",
+    "notInLibrary": "Not in your Library yet",
+    "addedOn": "Added {date}",
+    "about": "About",
+    "more": "More",
+    "loading": "Loading the book…",
+    "missingTitle": "Book not found",
+    "missing": "There is no book at this address.",
+    "errorTitle": "This book didn't load",
+    "error": "Check your connection and try again.",
+    "retry": "Try again"
+  },
+  "add": {
+    "title": "Add to Library",
+    "statusLabel": "Status",
+    "needs": {
+      "want_to_read": "No dates"
+    },
+    "action": "Add to Library",
+    "busy": "Adding…"
   }
 }

@@ -6,7 +6,7 @@ const resolve = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
 // One tag per run, decided here because this file is evaluated once, in the
 // process that also runs the global setup and spawns the workers: all of them
-// see the same value (tests/support/stack.ts, RUN_TAG).
+// see the same value (tests/support/stack.ts, runTag).
 process.env.LIBELLUS_TEST_RUN ??= randomUUID().slice(0, 8)
 
 // Data-layer suite against the real local Supabase stack (SPEC.md, Testing).
