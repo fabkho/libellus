@@ -89,6 +89,17 @@ async function signOut() {
             </span>
           </button>
 
+          <NuxtLink
+            to="/import"
+            role="menuitem"
+            class="flex h-(--size-row) w-full items-center gap-ms border-t-(length:--stroke-hairline) border-hairline px-inset text-left text-body text-ink active:bg-fill-strong"
+            data-testid="shell.import"
+            @click="open = false"
+          >
+            <UiIcon name="import" :size="18" class="text-ink-faint" />
+            {{ t('import.menuItem') }}
+          </NuxtLink>
+
           <button
             type="button"
             role="menuitem"
