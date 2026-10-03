@@ -69,7 +69,9 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   - the results area (whatever the overlay's slot holds: the list, or a single quiet loading
     hint; there is no source strip) unrolls upwards as the outline's top edge rises, fading in
     until 70 % of the way;
-  - the shadow grows out of the capsule's and fades in.
+  - the shadow grows out of the capsule's and fades in;
+  - the capsule's Home and Library fade out before the flying icon reaches them, and on the way
+    back return only once it has passed, so the icon never crosses a visible tab.
 
   Closing — Cancel, a tap on the page behind, a swipe down, Escape, or going to another page —
   plays the same keyframes back to front, landing softly on the capsule; the tab bar takes over

@@ -8,7 +8,8 @@
 // once the palette is open it has taken the bar's place (useSearchChrome).
 // The current tab is full ink with a lamp-coloured dot; the others recede.
 // Labels are for assistive tech (and the tests). `data-morph` marks what the
-// overlay measures to start from.
+// overlay measures to start from, and the tabs it keeps out of the Search
+// icon's way.
 import { useSearchStore } from '~/stores/search'
 
 const { t } = useI18n()
@@ -53,6 +54,7 @@ function tapped(event: MouseEvent, to: string) {
     <NuxtLink
       v-for="tab in PAGES"
       :key="tab.key"
+      data-morph="tab"
       :to="tab.to"
       class="tab"
       :class="current(tab.to) ? 'text-ink' : 'text-ink-faint'"
