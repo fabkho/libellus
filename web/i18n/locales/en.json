@@ -78,10 +78,22 @@
     "search": "Search"
   },
   "home": {
-    "title": "Home",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
     "today": "{weekday} · {day} {month}",
     "emptyTitle": "Nothing on the shelf yet",
-    "empty": "Find the book on your nightstand, or the one you want to read next."
+    "empty": "Find the book on your nightstand, or the one you want to read next.",
+    "reading": "Currently reading",
+    "readingEmpty": "Nothing in progress. Start something from Up next, or search for a book.",
+    "upNext": "Up next",
+    "seeAll": "See all {count}",
+    "readIn": "Read in {year}",
+    "readInLabel": "Read in {year}: {count}",
+    "loadError": "Your books could not be loaded.",
+    "retry": "Try again"
   },
   "library": {
     "title": "Library",

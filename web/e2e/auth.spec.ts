@@ -34,7 +34,7 @@ test('a new member signs up with the dev invite, lands on Home and signs out', a
 
   // Signed in: Home, with its empty state and the three tabs.
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByTestId('home.title')).toHaveText(en.home.title)
+  await expect(page.getByTestId('home.title')).toHaveText(new RegExp(`^(${Object.values(en.home.greeting).join('|')})$`))
   await expect(page.getByTestId('home.empty')).toHaveText(en.home.empty)
   await expect(page.getByTestId('shell.tab.home')).toHaveText(en.tabs.home)
   await expect(page.getByTestId('shell.tab.library')).toHaveText(en.tabs.library)

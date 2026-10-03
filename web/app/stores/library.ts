@@ -88,6 +88,30 @@ export const useLibraryStore = defineStore('library', () => {
     loaded.value = true
   }
 
+  // ---------------------------------------------------------- Read in <year>
+
+  /** Sessions finished in `readInYearOf` (Home); null until counted. */
+  const readInYear = ref<number | null>(null)
+  /** The calendar year the count is for: the member's current year when it was asked. */
+  const readInYearOf = ref(Number(isoDay().slice(0, 4)))
+
+  let countAsks = 0
+
+  /** Counts this year's finished sessions (data/library.ts, `readInYear`): one call. */
+  async function loadReadInYear() {
+    const repo = library()
+    if (!repo) return
+    const member = session.member?.id
+    const year = Number(isoDay().slice(0, 4))
+    const ask = ++countAsks
+    const result = await repo.readInYear(year)
+    // Another member, or a newer count asked for meanwhile (a finish): that one wins.
+    if (member !== session.member?.id || ask !== countAsks) return
+    if (result.error) return
+    readInYearOf.value = year
+    readInYear.value = result.data
+  }
+
   /**
    * The member's entries as this device last saw them, by the page keys of
    * their Books (the book store prefers them over a page loaded earlier).
@@ -116,6 +140,9 @@ export const useLibraryStore = defineStore('library', () => {
     lists[entry.status] = sortEntries([entry, ...lists[entry.status]])
     remember(entry, { keys })
     search.markAdded(entry)
+    // A finish adds to the year's count. Only a count Home has shown is kept
+    // current; the next visit counts anyway.
+    if (entry.status === 'finished' && readInYear.value !== null) void loadReadInYear()
   }
 
   // ---------------------------------------------------------------- Add sheet
@@ -184,6 +211,7 @@ export const useLibraryStore = defineStore('library', () => {
     for (const status of STATUSES) lists[status] = []
     loaded.value = false
     loadError.value = null
+    readInYear.value = null
     adding.value = null
     addError.value = null
     entryByKey.clear()
@@ -208,6 +236,9 @@ export const useLibraryStore = defineStore('library', () => {
     loaded,
     loadError,
     load,
+    readInYear,
+    readInYearOf,
+    loadReadInYear,
     entryByKey,
     remember,
     entryChanged,
