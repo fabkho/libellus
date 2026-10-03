@@ -27,8 +27,11 @@ import {
  * 2. Editions of one title by one author merge into one entry; the most recent
  *    edition is kept as the Book (the one the owner pinned in the overrides
  *    first, then the latest publication year, then the latest record).
- * 3. One Reading session per Fable read: `read` → finished, `dnf` → abandoned,
- *    `currently-reading` → open, `want-to-read` → no session. Two records of
+ * 3. One Reading session per Fable read, after the overrides: the `read` shelf
+ *    → finished, `dnf` → abandoned (ending on its DNF date, else its latest
+ *    known day); on any other shelf a read with a start and no finish or DNF
+ *    date is open (Currently reading), and without one there is no session
+ *    (Want to read). Two records of
  *    the same read (same days) are one session; an undated read next to a
  *    dated one of the same book fills its gaps rather than counting twice.
  * 4. Ratings are kept exactly, as integer quarters (4.75 stars → 19).
@@ -133,20 +136,39 @@ export function workKey(book: Pick<ReadingTrackerBook, 'title' | 'author'>): str
   return `${workTitle(book.title)}|${surname(book.author)}`
 }
 
-/** The read one record stands for, or null for a want-to-read record. */
+/**
+ * The read one record stands for, or null when there is none. The overrides
+ * have already applied; then the shelf decides how a read closed: `read` →
+ * finished, `dnf` → abandoned. Any other shelf (`currently-reading`,
+ * `want-to-read`, one the tracker invents later) holds an open read only when
+ * the record has a start and neither a finish nor a DNF date: that is
+ * Currently reading. The tracker itself has no Currently reading shelf.
+ */
 function readOf(record: CorrectedBook, report: ImportReport): ImportSession | null {
-  const outcome = SHELF_OUTCOME[record.shelf ?? '']
+  const session = record.session
+  const closes = SHELF_OUTCOME[record.shelf ?? '']
+  const started = day(session?.startedAt)
+  const open = !closes && Boolean(started) && !session?.finishedAt && !session?.dnfAt
+  const outcome: SessionOutcome | null | undefined = closes ?? (open || record.shelf === 'currently-reading' ? null : undefined)
   if (outcome === undefined) {
     if (record.shelf !== 'want-to-read') {
       report.unmapped.push({ id: record.id, title: record.title, reason: `unknown shelf "${record.shelf}"; imported as Want to read` })
-    } else if (record.session?.finishedAt || record.session?.startedAt) {
-      report.unmapped.push({ id: record.id, title: record.title, reason: 'dates on a Want to read record; left out' })
+    } else if (session?.finishedAt || session?.dnfAt) {
+      report.unmapped.push({ id: record.id, title: record.title, reason: 'an end date on a Want to read record; left out' })
     }
     return null
   }
-  const session = record.session
-  let startedOn = day(session?.startedAt)
-  let endedOn = outcome === 'abandoned' ? day(session?.dnfAt) ?? day(session?.finishedAt) : day(session?.finishedAt)
+  let startedOn = started
+  let endedOn = day(session?.finishedAt)
+  if (outcome === 'abandoned') {
+    // An abandoned read needs the day it ended: the DNF date, else the latest
+    // day the record knows (its finish, else its start). Ruin: on the DNF shelf
+    // with only a start, so it ends the day it started.
+    endedOn = day(session?.dnfAt) ?? day(session?.finishedAt) ?? startedOn
+    if (!session?.dnfAt && endedOn) {
+      report.unmapped.push({ id: record.id, title: record.title, reason: `not finished without a DNF date; ended on ${endedOn}, its latest known day` })
+    }
+  }
   if (outcome === null) {
     endedOn = null
     if (!startedOn) {

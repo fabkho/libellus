@@ -8,6 +8,7 @@ import {
   splitIsbn,
   toIsbn13,
   type Overrides,
+  type ReadingTrackerBook,
 } from '@/data/import/readingTracker'
 
 /**
@@ -136,6 +137,46 @@ describe('mapFableLibrary', () => {
     expect(entryFor(7).sessions).toEqual([
       { key: importKey(id(7)), startedOn: null, endedOn: null, outcome: 'finished', rating: 1, review: null, abandonReason: null },
     ])
+  })
+
+  describe('reads the tracker has no shelf for', () => {
+    // The tracker knows only read, want-to-read and dnf: an open read hides on any of them.
+    const one = (fields: Partial<ReadingTrackerBook>, more: Overrides = {}) =>
+      mapFableLibrary([{ ...records[0]!, id: 'one', title: 'Solo', ...fields }], more).entries[0]!
+    const started = (start: string) => ({ startedAt: `${start}T00:00:00.000Z`, finishedAt: null, rating: null, review: null, dnfAt: null, dnfReason: null })
+
+    it('makes a read with a start and no finish or DNF date on Want to read Currently reading', () => {
+      expect(one({ shelf: 'want-to-read', session: started('2026-02-04') })).toMatchObject({
+        status: 'reading',
+        sessions: [{ key: importKey('one'), startedOn: '2026-02-04', endedOn: null, outcome: null }],
+      })
+      expect(one({ shelf: 'want-to-read', session: null })).toMatchObject({ status: 'want_to_read', sessions: [] })
+    })
+
+    it('keeps a started read on the DNF shelf abandoned, ending on its latest known day', () => {
+      expect(one({ shelf: 'dnf', session: started('2026-02-04') })).toMatchObject({
+        status: 'finished',
+        sessions: [{ startedOn: '2026-02-04', endedOn: '2026-02-04', outcome: 'abandoned' }],
+      })
+    })
+
+    it('keeps a started read on the read shelf finished, without an end date', () => {
+      expect(one({ shelf: 'read', session: started('2026-05-25') })).toMatchObject({
+        status: 'finished',
+        sessions: [{ startedOn: '2026-05-25', endedOn: null, outcome: 'finished' }],
+      })
+    })
+
+    it('lets the overrides decide first: a finish date there closes the read', () => {
+      // On Want to read a finish date proves nothing about a read: left out, and said so.
+      const plan = mapFableLibrary([{ ...records[0]!, id: 'one', shelf: 'want-to-read', session: started('2026-05-25') }], { books: { one: { dateRead: '2026-05-31' } } })
+      expect(plan.entries[0]).toMatchObject({ status: 'want_to_read', sessions: [] })
+      expect(plan.report.unmapped).toEqual([expect.objectContaining({ id: 'one', reason: expect.stringMatching(/end date on a Want to read/) })])
+      expect(one({ shelf: 'read', session: started('2026-05-25') }, { books: { one: { dateRead: '2026-05-31' } } })).toMatchObject({
+        status: 'finished',
+        sessions: [{ startedOn: '2026-05-25', endedOn: '2026-05-31', outcome: 'finished' }],
+      })
+    })
   })
 
   it('reports what it cannot carry over as it was, instead of guessing', () => {
