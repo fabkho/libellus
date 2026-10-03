@@ -173,6 +173,10 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
 - **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
   the account address, the Dark mode switch and Sign out.
+- **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
+  once something has scrolled under it a fixed band of the surface colour (the safe area and
+  `md` more; on a pushed screen down to the top bar's row too) fades and blurs it away — iOS's
+  scroll edge effect, the top mirror of the tab bar's fade. It never takes a tap.
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
   glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
   screen at the bottom.
