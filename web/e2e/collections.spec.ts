@@ -47,6 +47,14 @@ test('a member makes a collection from a book page, orders it, renames and delet
   // In the same call it went into the Library, on Want to read.
   await expect(page.getByTestId('book.status')).toHaveText(en.status.want_to_read)
   await expect(page.getByTestId('book.collection')).toHaveText(['Sci-fi'])
+  // It entered the Catalogue the way the Add sheet puts a Book there: with its thumbhash and colours.
+  const [stored] = await sql<{ cover_thumbhash: string | null; cover_dominant: string | null }>(
+    `select b.cover_thumbhash, b.cover_dominant from public.library_entries e
+       join public.books b on b.id = e.book_id where e.member_id = $1`,
+    [member.id],
+  )
+  expect(stored!.cover_thumbhash).toBeTruthy()
+  expect(stored!.cover_dominant).toMatch(/^#[0-9a-f]{6}$/)
 
   // A second Book joins the same Collection.
   await openResult(page, 'Piranesi: Drawings Colour Plates')

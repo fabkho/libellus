@@ -6,8 +6,12 @@
 import { useCollectionsStore } from '~/stores/collections'
 import { useSessionStore } from '~/stores/session'
 
+// `onlyIfAny`: an empty Library shows the way in only while there are Collections to go to.
+const props = defineProps<{ onlyIfAny?: boolean }>()
+
 const { t } = useI18n()
 const collections = useCollectionsStore()
+const shown = computed(() => !props.onlyIfAny || collections.list.length > 0)
 
 /** The first cover of each of the first three Collections that have one. */
 const fan = computed(() =>
@@ -30,6 +34,7 @@ watch(
 
 <template>
   <NuxtLink
+    v-if="shown"
     to="/collections"
     class="flex h-(--size-query) items-center gap-ms rounded-md bg-fill px-inset edge-faint active:bg-fill-strong"
     data-testid="library.collections"

@@ -80,7 +80,7 @@ async function startCreating() {
           type="button"
           role="checkbox"
           :aria-checked="collections.picked(collection.id)"
-          :disabled="collections.pickerBusy.has(collection.id)"
+          :disabled="!collections.pickerReady || collections.pickerBusy.has(collection.id)"
           class="option relative flex h-(--size-query) w-full items-center gap-ms px-inset text-left active:bg-fill-strong"
           data-testid="picker.collection"
           @click="collections.toggle(collection.id)"

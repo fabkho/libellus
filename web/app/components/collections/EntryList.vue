@@ -37,6 +37,7 @@ function place(index: number): string {
 
 type Drag = {
   index: number
+  entryId: string
   pointerId: number
   /** Where the finger went down, in page coordinates (so scrolling counts). */
   startY: number
@@ -64,9 +65,17 @@ function rowRects() {
 }
 
 function lift(element: HTMLElement, pointerId: number, clientY: number, index: number) {
-  element.setPointerCapture(pointerId)
+  const entry = props.entries[index]
+  if (!entry) return
+  try {
+    element.setPointerCapture(pointerId)
+  } catch {
+    // The pointer is gone already (lifted by a hold whose finger just left): nothing to drag.
+    return
+  }
   drag.value = {
     index,
+    entryId: entry.id,
     pointerId,
     startY: clientY + window.scrollY,
     lastClientY: clientY,
@@ -74,7 +83,7 @@ function lift(element: HTMLElement, pointerId: number, clientY: number, index: n
     target: index,
     dy: 0,
   }
-  announcement.value = t('collection.lifted', { title: props.entries[index]!.book.title })
+  announcement.value = t('collection.lifted', { title: entry.book.title })
   autoScroll()
 }
 
@@ -83,6 +92,8 @@ function onPointerdown(event: PointerEvent, index: number) {
   if (event.button !== 0 || drag.value || settling.value) return
   event.preventDefault()
   event.stopPropagation()
+  swallowClick = false
+  cancelHold()
   lift(event.currentTarget as HTMLElement, event.pointerId, event.clientY, index)
 }
 
@@ -96,6 +107,7 @@ let hold: { timer: number; pointerId: number; x: number; y: number } | null = nu
 let swallowClick = false
 
 function onRowPointerdown(event: PointerEvent, index: number) {
+  swallowClick = false
   if (event.pointerType === 'mouse' || drag.value || settling.value) return
   cancelHold()
   const element = event.currentTarget as HTMLElement
@@ -106,14 +118,16 @@ function onRowPointerdown(event: PointerEvent, index: number) {
     y: clientY,
     timer: window.setTimeout(() => {
       hold = null
-      swallowClick = true
       lift(element, pointerId, clientY, index)
-      navigator.vibrate?.(10)
+      swallowClick = Boolean(drag.value)
+      if (drag.value) navigator.vibrate?.(10)
     }, HOLD_MS),
   }
 }
 
-function onRowPointermove(event: PointerEvent) {
+// Move, up and cancel are heard on the window: a finger that leaves the row
+// (or the hold that never captured it) still ends what it started.
+function onWindowPointermove(event: PointerEvent) {
   if (hold && hold.pointerId === event.pointerId) {
     if (Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > HOLD_SLOP) cancelHold()
     return
@@ -137,10 +151,20 @@ function onRowClick(event: MouseEvent) {
 function onTouchmove(event: TouchEvent) {
   if (drag.value) event.preventDefault()
 }
-onMounted(() => list.value?.addEventListener('touchmove', onTouchmove, { passive: false }))
+onMounted(() => {
+  list.value?.addEventListener('touchmove', onTouchmove, { passive: false })
+  window.addEventListener('pointermove', onWindowPointermove)
+  window.addEventListener('pointerup', onWindowPointerup)
+  window.addEventListener('pointercancel', onWindowPointercancel)
+})
 onBeforeUnmount(() => {
   list.value?.removeEventListener('touchmove', onTouchmove)
+  window.removeEventListener('pointermove', onWindowPointermove)
+  window.removeEventListener('pointerup', onWindowPointerup)
+  window.removeEventListener('pointercancel', onWindowPointercancel)
   cancelHold()
+  cancelAnimationFrame(frame)
+  window.clearTimeout(settleTimer)
 })
 
 function follow(clientY: number) {
@@ -201,13 +225,13 @@ function offsetOf(index: number): number {
   return 0
 }
 
-function onRowPointerup(event: PointerEvent) {
-  cancelHold()
+function onWindowPointerup(event: PointerEvent) {
+  if (hold?.pointerId === event.pointerId) cancelHold()
   onPointerup(event)
 }
 
-function onRowPointercancel(event: PointerEvent) {
-  cancelHold()
+function onWindowPointercancel(event: PointerEvent) {
+  if (hold?.pointerId === event.pointerId) cancelHold()
   onPointercancel(event)
 }
 
@@ -222,7 +246,7 @@ function onPointerup(event: PointerEvent) {
   cancelAnimationFrame(frame)
   settling.value = true
   // Let the row glide into its place, then make the move real.
-  window.setTimeout(() => land(current), durationOf('--duration-quick'))
+  settleTimer = window.setTimeout(() => land(current), durationOf('--duration-quick'))
 }
 
 function onPointercancel(event: PointerEvent) {
@@ -231,17 +255,20 @@ function onPointercancel(event: PointerEvent) {
   cancelAnimationFrame(frame)
   current.target = current.index
   settling.value = true
-  window.setTimeout(() => land(current), durationOf('--duration-quick'))
+  settleTimer = window.setTimeout(() => land(current), durationOf('--duration-quick'))
 }
+
+let settleTimer = 0
 
 function land(current: Drag) {
   still.value = true
-  const { index, target } = current
+  const { index, target, entryId } = current
   drag.value = null
   settling.value = false
   if (target !== index) {
-    collections.move(props.collectionId, index, target)
-    announcement.value = t('collection.moved', { title: props.entries[target]?.book.title ?? '', place: target + 1, count: props.entries.length })
+    const title = props.entries.find((entry) => entry.id === entryId)?.book.title ?? ''
+    collections.move(props.collectionId, entryId, target)
+    announcement.value = t('collection.moved', { title, place: target + 1, count: props.entries.length })
   } else {
     announcement.value = t('collection.dropped')
   }
@@ -254,7 +281,6 @@ function durationOf(token: string): number {
   return value.endsWith('ms') ? Number.parseFloat(value) : Number.parseFloat(value) * 1000 || 0
 }
 
-onBeforeUnmount(() => cancelAnimationFrame(frame))
 
 function rowStyle(index: number) {
   const offset = offsetOf(index)
@@ -277,7 +303,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
   event.preventDefault()
   if (to < 0 || to >= count || to === index || drag.value) return
   const entry = props.entries[index]!
-  collections.move(props.collectionId, index, to)
+  collections.move(props.collectionId, entry.id, to)
   announcement.value = t('collection.moved', { title: entry.book.title, place: to + 1, count })
   // The focus stays with the Book it moved.
   await nextTick()
@@ -302,9 +328,6 @@ async function onKeydown(event: KeyboardEvent, index: number) {
         :data-entry="entry.id"
         data-testid="collection.entry"
         @pointerdown="onRowPointerdown($event, index)"
-        @pointermove="onRowPointermove"
-        @pointerup="onRowPointerup"
-        @pointercancel="onRowPointercancel"
         @click.capture="onRowClick"
         @contextmenu="onContextmenu"
       >

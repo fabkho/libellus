@@ -74,6 +74,8 @@ const CODES = [
 export function mapCollectionError(failure: { message?: string; code?: string }): CollectionErrorCode {
   const message = failure.message ?? ''
   for (const code of CODES) if (message.includes(code)) return code
+  // The API refusing a call outright: no session (any more).
+  if (failure.code === '42501' || failure.code === 'PGRST301') return 'not_signed_in'
   // A snapshot a table constraint refuses (an ISBN in the wrong shape, say).
   if (failure.code === '23514' || failure.code === '22P02') return 'book_invalid'
   return 'unknown'

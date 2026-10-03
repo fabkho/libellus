@@ -60,12 +60,12 @@ watch(
 
 <template>
   <div>
+  <CollectionsLibraryLink v-if="library.loaded" :only-if-any="empty" class="mb-md" />
   <UiEmptyState v-if="empty" screen="library" :title="t('library.emptyTitle')" :text="t('library.empty')" class="pt-xl">
     <UiSearchPrompt testid="library.search" />
   </UiEmptyState>
 
   <div v-else-if="library.loaded">
-    <CollectionsLibraryLink class="mb-md" />
     <div role="tablist" :aria-label="t('library.segmentsLabel')" class="flex gap-ml border-b-(length:--stroke-hairline) border-hairline-strong">
       <button
         v-for="status in SEGMENTS"

@@ -9,7 +9,9 @@ import {
   type Collections,
   type CollectionSummary,
 } from '~/data/collections'
+import { loadPixelsInBrowser, resolveCover } from '~/data/covers'
 import type { LibraryEntry } from '~/data/library'
+import { appleArtwork } from '~/data/search'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -180,7 +182,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   async function addBook(id: string, book: Book | BookSnapshot, key = bookKey(book)): Promise<CollectionResultLike<LibraryEntry>> {
     const collections = repo()
     if (!collections) return { data: null, error: 'unknown' }
-    const result = await collections.addEntry(id, book)
+    const result = await collections.addEntry(id, await withCover(book))
     if (result.error) return result
     const entry = result.data
     memberships.set(entry.id, [...new Set([...(memberships.get(entry.id) ?? []), id])])
@@ -204,6 +206,19 @@ export const useCollectionsStore = defineStore('collections', () => {
     return result
   }
 
+  /**
+   * A search result may enter the Catalogue with this add, and the Catalogue
+   * keeps its first snapshot: its Cover is resolved first, as the Add sheet
+   * does (stores/library.ts, confirmAdd) — thumbhash and colours from a small
+   * copy of the image; without them if that fails.
+   */
+  async function withCover(book: Book | BookSnapshot): Promise<Book | BookSnapshot> {
+    if ('id' in book || !book.coverUrl || book.coverThumbhash) return book
+    // Its own small URL, so no cached non-CORS response of the large image can taint the canvas.
+    const cover = await resolveCover(appleArtwork(book.coverUrl, 100, 150), loadPixelsInBrowser)
+    return cover ? { ...book, coverThumbhash: cover.thumbhash, coverColors: cover.colors } : book
+  }
+
   async function removeEntry(id: string, entryId: string): Promise<CollectionErrorCode | null> {
     const collections = repo()
     if (!collections) return 'unknown'
@@ -223,24 +238,34 @@ export const useCollectionsStore = defineStore('collections', () => {
   // Moves are saved one after another, so the database ends in the last order.
   let saving: Promise<unknown> = Promise.resolve()
 
-  /** Moves the entry at `from` to `to` at once, and saves the new order behind it. */
-  function move(id: string, from: number, to: number) {
+  /**
+   * Moves an entry to place `to` (0-based) at once, and saves the new order
+   * behind it. By the entry's id, so a list that changed under a drag (a
+   * reload after a failed save) never moves the wrong Book.
+   */
+  function move(id: string, entryId: string, to: number) {
     const current = pages.get(id)?.collection
-    if (!current || from === to || to < 0 || to >= current.entries.length) return
+    if (!current) return
+    const from = current.entries.findIndex((entry) => entry.id === entryId)
+    if (from < 0 || from === to || to < 0 || to >= current.entries.length) return
     const entries = [...current.entries]
     const [moved] = entries.splice(from, 1)
     entries.splice(to, 0, moved!)
     setEntries(id, entries)
     reorderError.value = null
     const order = entries.map((e) => e.id)
-    saving = saving.then(async () => {
-      const result = await repo()?.reorder(id, order)
-      if (result?.error) {
-        reorderError.value = result.error
-        await loadCollection(id)
-        await loadList()
-      }
-    })
+    saving = saving
+      .then(async () => {
+        const result = await repo()?.reorder(id, order)
+        if (result?.error) {
+          reorderError.value = result.error
+          await Promise.all([loadCollection(id), loadList()])
+        }
+      })
+      // A save that threw must not stop the ones after it.
+      .catch(() => {
+        reorderError.value = 'unknown'
+      })
   }
 
   // ------------------------------------------------------------------ picker
@@ -261,6 +286,12 @@ export const useCollectionsStore = defineStore('collections', () => {
     picking.value = null
   }
 
+  /** Whether the picker knows which Collections its Book is on (always, for a Book not in the Library). */
+  const pickerReady = computed(() => {
+    const entry = picking.value?.entry
+    return !entry || memberships.has(entry.id)
+  })
+
   /** Whether the picker's Book is on a Collection. */
   function picked(id: string): boolean {
     const entry = picking.value?.entry
@@ -270,7 +301,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   /** Puts the picker's Book on a Collection, or takes it off. */
   async function toggle(id: string) {
     const current = picking.value
-    if (!current || pickerBusy.has(id)) return
+    if (!current || pickerBusy.has(id) || !pickerReady.value) return
     pickerBusy.add(id)
     pickerError.value = null
     try {
@@ -392,6 +423,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     picking,
     pickerBusy,
     pickerError,
+    pickerReady,
     openPicker,
     closePicker,
     picked,
