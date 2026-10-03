@@ -282,7 +282,7 @@ select throws_ok(
   $$ select public.add_manual_book('M no start', array['Nobody'], null, null, 'reading') $$,
   '22023', 'date_invalid', 'Currently reading needs its start date');
 select throws_ok(
-  $$ select public.add_manual_book('M future', array['Nobody'], null, null, 'reading', current_date + 1) $$,
+  $$ select public.add_manual_book('M future', array['Nobody'], null, null, 'reading', current_date + 2) $$,
   '22023', 'date_in_future', 'a start in the future is refused');
 select throws_ok(
   $$ select public.add_manual_book('M rated', array['Nobody'], null, null, 'reading', current_date, null, 4) $$,
@@ -297,7 +297,7 @@ select throws_ok(
   $$ select public.add_manual_book('M backwards', array['Nobody'], null, null, 'finished', current_date - 1, current_date - 2) $$,
   '22023', 'ended_before_started', 'an end before the start is refused');
 select throws_ok(
-  $$ select public.add_manual_book('M tomorrow', array['Nobody'], null, null, 'finished', null, current_date + 1) $$,
+  $$ select public.add_manual_book('M tomorrow', array['Nobody'], null, null, 'finished', null, current_date + 2) $$,
   '22023', 'date_in_future', 'an end in the future is refused');
 select throws_ok(
   $$ select public.add_manual_book('M zero', array['Nobody'], null, null, 'finished', null, current_date, 0) $$,

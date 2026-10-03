@@ -200,7 +200,7 @@ describe('addManualBook with a Status', () => {
     const manual = createManualBooks(member.client)
 
     expect(await manual.addManualBook(typed('Ohne Start'), { status: 'reading' })).toEqual({ data: null, error: 'date_invalid' })
-    expect(await manual.addManualBook(typed('Zukunft'), { status: 'finished', endedOn: addDays(today, 1) })).toEqual({
+    expect(await manual.addManualBook(typed('Zukunft'), { status: 'finished', endedOn: addDays(today, 2) })).toEqual({
       data: null,
       error: 'date_in_future',
     })
