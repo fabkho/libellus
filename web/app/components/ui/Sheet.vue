@@ -55,7 +55,7 @@ onUnmounted(() => import.meta.client && window.removeEventListener('keydown', on
 
 // ------------------------------------------------------------- the keyboard
 
-const keyboard = useKeyboardInset(() => open.value)
+const { inset: keyboard, room } = useKeyboardViewport(() => open.value)
 /** How far the sheet sits up to clear the keyboard (its home-indicator padding may go behind it). */
 const lift = computed(() => {
   if (!keyboard.value || !panel.value) return 0
@@ -89,6 +89,7 @@ const panelStyle = computed(() => {
     transform: y ? `translateY(${y}px)` : undefined,
     transition: dragging.value ? 'none' : undefined,
     '--sheet-lift': `${lift.value}px`,
+    '--sheet-room': room.value === null ? undefined : `${room.value}px`,
   }
 })
 
@@ -190,8 +191,13 @@ function onAfterLeave() {
 
 <style scoped>
 .sheet {
-  /* Never under the status bar; with the keyboard up, never above the screen's top either. */
-  max-height: calc(100dvh - env(safe-area-inset-top) - var(--spacing-xl) - var(--sheet-lift, 0px));
+  /* Never under the status bar; with the keyboard up, never above the screen's
+     top either: no taller than what the keyboard leaves in view (`--sheet-room`),
+     even where Safari has panned down to the focused field and the lift reads 0. */
+  max-height: min(
+    calc(100dvh - env(safe-area-inset-top) - var(--spacing-xl) - var(--sheet-lift, 0px)),
+    calc(var(--sheet-room, 100dvh) - env(safe-area-inset-top) - var(--spacing-xl))
+  );
   transition: transform var(--duration-sheet) var(--ease-sheet);
 }
 

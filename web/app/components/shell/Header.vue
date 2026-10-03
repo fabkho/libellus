@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// The top of a tab, laid out as iOS's Large Title bar: under the safe area a
-// 44 pt controls row holding only the avatar with its menu at the trailing
+// The top of a tab, laid out as iOS's Large Title bar: under the status bar
+// (`bar-top`: at least `barTop` off the top edge, so in a browser tab the row
+// stands clear of the browser's toolbar) a 44 pt controls row holding only the avatar with its menu at the trailing
 // edge, then the title block `bar` (10) below it and `bar` above the page —
 // a mono date eyebrow over the greeting on Home, a large title elsewhere. The
 // pushed screens with a large title (Collections, Import) put theirs on the
@@ -12,7 +13,7 @@ withDefaults(defineProps<{ screen: string; title: string; size?: 'title' | 'larg
 </script>
 
 <template>
-  <header class="safe-top relative z-20 px-screen" data-testid="shell.header">
+  <header class="bar-top relative z-20 px-screen" data-testid="shell.header">
     <div class="flex h-(--size-touch) items-center justify-end">
       <ShellAvatarMenu />
     </div>

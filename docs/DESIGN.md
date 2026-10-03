@@ -127,7 +127,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   code cells), `field` 18 (search field, avatar menu), `lg` 20 (cards), `xl` 24 (search palette),
   `sheet` 30, `pill`.
 - Size: `touch` 44 (smallest target), `maxContent` 480 (the column on wide screens), `tabBar` 62,
-  `tab` 72, `tabIcon` 26, `row` 48, `query` 62 (as tall as the capsule it grows out of), `fade` 138, `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
+  `tab` 72, `tabIcon` 26, `row` 48, `query` 62 (as tall as the capsule it grows out of), `fadeAbove` 64 (the tab bar's fade reaches this far over the capsule, from the screen edge), `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
   `coverXs` 30 · `coverSm` 40 · `coverMd` 72 · `coverLg` 82 · `coverXl` 140, stars 12/16/24 (display) and
   `starInput` 44 (the rating control, one star per fingertip) with its `ratingThumb` 24.
 - Stroke: `hairline` 0.5 (edges), `rule` 1 (a field's underline), `focus` 2, icons 1.5 / 1.7.
@@ -147,8 +147,14 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Phone first.** Every screen is designed at 393 × 852. On a wide screen the same layout sits in
   a centred column of `maxContent` with hairlines left and right; the tab bar and the search
   palette stay centred on it. No desktop layouts.
-- **Safe areas** through utilities only: `screen-inset` (a whole screen), `safe-top`,
-  `safe-bottom`, `safe-x`, `float-bottom` (floating chrome `tabBarDrop` 13 into the home-indicator inset: 21 pt off the screen edge on a Face ID iPhone, as iOS 26 places its tab bar; `ms` off the edge without one) and
+- **Safe areas** through utilities only: `screen-inset` (a whole screen), `bar-top` (a bar's
+  44 pt controls row starts under the status bar, and at least `barTop` 8 off the top edge where the
+  device reports no inset — every browser tab — so it never touches the browser's toolbar; the
+  installed iOS app's 59 pt inset wins there), `safe-bottom`, `safe-x`, `float-bottom` (floating chrome `floatAbove` 16 above the bottom inset, as Material 3 floats its
+  toolbar: Android's navigation fills its inset, so nothing may reach into it — 40 off the edge in
+  Chrome with gesture navigation, 16 above three-button navigation; on iOS only, `tabBarDrop` 13
+  into the home-indicator inset: 21 pt off the screen edge on a Face ID iPhone, as iOS 26 places
+  its tab bar, `ms` off the edge without one) and
   `clear-tab-bar` (room under a tab's content). `main.css` reads the insets once into
   `--safe-area-*`; nothing else uses `env()`.
 - **Tab header** (`ShellHeader`), iOS's Large Title bar: under the safe area a 44 pt controls

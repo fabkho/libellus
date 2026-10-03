@@ -41,7 +41,7 @@ function tapped(event: MouseEvent, to: string) {
 
 <template>
   <div
-    class="pointer-events-none fixed inset-x-0 bottom-0 z-10 h-(--size-fade) bg-linear-to-b from-transparent to-surface to-62%"
+    class="fade pointer-events-none fixed inset-x-0 bottom-0 z-10 bg-linear-to-b from-transparent to-surface to-62%"
     aria-hidden="true"
   />
   <nav
@@ -96,6 +96,11 @@ function tapped(event: MouseEvent, to: string) {
 .tab svg {
   width: var(--size-tab-icon);
   height: var(--size-tab-icon);
+}
+
+/* From the screen edge to `fadeAbove` over the capsule, wherever it floats. */
+.fade {
+  height: calc(var(--float-bottom) + var(--size-tab-bar) + var(--size-fade-above));
 }
 
 /* 6 under the icon (`xs` + `xxs`), less the dot's own `xs`. */

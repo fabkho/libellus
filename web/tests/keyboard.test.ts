@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { keyboardInsetOf, paletteLift, revealDelta, sheetLift } from '@/utils/keyboard'
+import { keyboardInsetOf, keyboardRoomOf, layoutHeightOf, paletteLift, revealDelta, sheetLift } from '@/utils/keyboard'
 
 /**
- * Following the iOS keyboard (composables/useKeyboardInset.ts, UiSheet): how
+ * Following the on-screen keyboard (composables/useKeyboardInset.ts, UiSheet): how
  * much of the window it covers, how far a sheet goes up to sit on it, and how
  * far the sheet's body scrolls to show the focused field.
  */
@@ -23,6 +23,32 @@ describe('the keyboard inset', () => {
   })
 })
 
+// What Chrome 145 on a Pixel 9 emulator (411 × 923, gesture navigation) reported
+// in a browser tab, its toolbar shown: 813 tall without the keyboard; with Gboard
+// up the gesture inset goes and 477 of 789 stay visible (e2e/android/smoke.ts).
+describe('the keyboard inset on Android', () => {
+  it('is the covered part when Chrome lays the keyboard over the page (resizes-visual)', () => {
+    expect(keyboardInsetOf(layoutHeightOf(789, 789), { height: 477, offsetTop: 0 })).toBe(312)
+    // Chrome panned the page up to show a field under the keyboard: the fixed sheet is in view.
+    expect(keyboardInsetOf(layoutHeightOf(789, 789), { height: 477, offsetTop: 312 })).toBe(0)
+  })
+
+  it('still finds the layout viewport where innerHeight follows the visual viewport', () => {
+    expect(layoutHeightOf(477, 789)).toBe(789)
+    expect(keyboardInsetOf(layoutHeightOf(477, 789), { height: 477, offsetTop: 0 })).toBe(312)
+  })
+
+  it('is 0 when Chrome resizes the page to the keyboard (resizes-content): no second lift', () => {
+    expect(keyboardInsetOf(layoutHeightOf(477, 477), { height: 477, offsetTop: 0 })).toBe(0)
+  })
+
+  it('takes the taller height where Safari has collapsed its toolbar', () => {
+    // iPhone 16 Safari: the small viewport (clientHeight) 659, the current one 745.
+    expect(layoutHeightOf(745, 659)).toBe(745)
+    expect(layoutHeightOf(852, 852)).toBe(852)
+  })
+})
+
 describe('a sheet on the keyboard', () => {
   it('goes up by the keyboard, less its home-indicator padding that may go behind it', () => {
     expect(sheetLift(336, 34)).toBe(302)
@@ -32,6 +58,24 @@ describe('a sheet on the keyboard', () => {
   it('stays where it is with the keyboard down', () => {
     expect(sheetLift(0, 34)).toBe(0)
     expect(sheetLift(20, 34)).toBe(0)
+  })
+})
+
+// What Safari on iOS 27 (iPhone 18 Pro simulator, 402 × 874) reported in a tab:
+// 714 tall; the review field in the Finish sheet focused, 384 left in view, and
+// Safari panned the page down by 330 to the field, so the inset reads 0.
+describe('the room a sheet has on the keyboard', () => {
+  it('is what the visual viewport shows, wherever Safari has panned to', () => {
+    expect(keyboardInsetOf(layoutHeightOf(633, 714), { height: 384, offsetTop: 330 })).toBe(0)
+    expect(keyboardRoomOf(layoutHeightOf(633, 714), { height: 384, scale: 1 })).toBe(384)
+    expect(keyboardRoomOf(714, { height: 384.4 })).toBe(384)
+  })
+
+  it('is no limit with the keyboard down, pinch-zoomed, or where Chrome resized the page', () => {
+    expect(keyboardRoomOf(714, { height: 714, scale: 1 })).toBeNull()
+    expect(keyboardRoomOf(714, { height: 357, scale: 2 })).toBeNull()
+    expect(keyboardRoomOf(layoutHeightOf(477, 477), { height: 477, scale: 1 })).toBeNull()
+    expect(keyboardRoomOf(714, null)).toBeNull()
   })
 })
 
