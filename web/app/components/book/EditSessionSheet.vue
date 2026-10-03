@@ -14,6 +14,8 @@ import { useHistoryStore } from '~/stores/history'
 
 const { t } = useI18n()
 const history = useHistoryStore()
+// Saving and deleting write: offline they say so instead (#15).
+const online = useOnline()
 
 const open = computed({
   get: () => history.editing !== null,
@@ -140,12 +142,12 @@ watch(
       </p>
 
       <div class="mt-lg">
-        <UiButton block :disabled="history.editBusy" :aria-busy="history.editBusy" data-testid="editSession.submit" @click="history.confirmEdit()">
+        <UiButton block :disabled="history.editBusy" :offline="!online" :aria-busy="history.editBusy" data-testid="editSession.submit" @click="history.confirmEdit()">
           <UiIcon name="check" :size="18" bold />{{ label }}
         </UiButton>
       </div>
       <div class="mt-sm mb-sm">
-        <UiButton block tone="danger" :disabled="history.editBusy" data-testid="editSession.delete" @click="history.askDelete()">
+        <UiButton block tone="danger" :disabled="history.editBusy" :offline="!online" data-testid="editSession.delete" @click="history.askDelete()">
           {{ t('editSession.delete') }}
         </UiButton>
       </div>
@@ -158,6 +160,7 @@ watch(
     :text="deleteText"
     :action="history.deleteBusy ? t('deleteSession.busy') : t('deleteSession.action')"
     :busy="history.deleteBusy"
+    :offline="!online"
     :error="history.deleteError ? t(`library.error.${history.deleteError}`) : null"
     testid="deleteSession"
     @confirm="history.confirmDelete()"

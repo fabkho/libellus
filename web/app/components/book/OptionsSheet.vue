@@ -15,6 +15,8 @@ const open = defineModel<boolean>('open', { required: true })
 
 const { t } = useI18n()
 const history = useHistoryStore()
+// Removing writes: offline the row and the confirmation say so instead (#15).
+const online = useOnline()
 
 const confirming = computed({
   get: () => history.removing !== null,
@@ -48,7 +50,17 @@ async function remove() {
   <UiSheet v-model:open="open" :title="title" testid="bookOptions">
     <div class="pt-xs pb-sm">
       <UiRowGroup>
-        <UiRow as="button" icon="close" tone="danger" :label="t('bookOptions.remove')" data-testid="bookOptions.remove" @click="ask" />
+        <UiRow
+          as="button"
+          icon="close"
+          tone="danger"
+          :label="t('bookOptions.remove')"
+          :value="online ? undefined : t('common.offline')"
+          :disabled="!online"
+          class="disabled:opacity-50"
+          data-testid="bookOptions.remove"
+          @click="ask"
+        />
       </UiRowGroup>
     </div>
   </UiSheet>
@@ -59,6 +71,7 @@ async function remove() {
     :text="t('removeEntry.text')"
     :action="history.removeBusy ? t('removeEntry.busy') : t('removeEntry.action')"
     :busy="history.removeBusy"
+    :offline="!online"
     :error="history.removeError ? t(`library.error.${history.removeError}`) : null"
     testid="removeEntry"
     @confirm="remove"

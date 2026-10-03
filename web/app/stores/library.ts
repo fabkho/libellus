@@ -168,6 +168,7 @@ export const useLibraryStore = defineStore('library', () => {
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entryId)
     for (const [key, known] of entryByKey) if (known.id === entryId) entryByKey.delete(key)
     search.markRemoved(entryId)
+    save()
     if (readInYear.value !== null) void loadReadInYear()
   }
 

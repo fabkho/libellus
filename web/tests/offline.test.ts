@@ -230,6 +230,15 @@ describe('writes without a connection', () => {
     expect((await library.startReading(added.data!.id, '2026-10-01')).data?.status).toBe('reading')
     online = false
     expect(await library.finish(added.data!.id, { endedOn: '2026-10-02' })).toEqual({ data: null, error: 'offline' })
+
+    // The history's writes (#11) too: editing a read, deleting it, removing the Book.
+    const read = (await library.entry(added.data!.id)).data!.latestSession!
+    const edit = { startedOn: '2026-09-30', endedOn: '', rating: null, review: '', abandonReason: '' }
+    expect(await library.updateSession(added.data!.id, read, edit)).toEqual({ data: null, error: 'offline' })
+    expect(await library.deleteSession(added.data!.id, read.id)).toEqual({ data: null, error: 'offline' })
+    expect(await library.removeFromLibrary(added.data!.id)).toEqual({ data: null, error: 'offline' })
+    const still = (await library.entry(added.data!.id)).data!
+    expect(still.latestSession).toMatchObject({ id: read.id, startedOn: '2026-10-01' })
   })
 })
 

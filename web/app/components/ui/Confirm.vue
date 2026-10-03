@@ -6,12 +6,21 @@
 // Escape — never while the action runs. A refusal stays in the dialog with its
 // reason and the same button tries again. `testid` names the dialog; the
 // action and Cancel get `<testid>.confirm` and `<testid>.cancel`, a refusal
-// `<testid>.error`.
+// `<testid>.error`. `offline` (#15): the action stays, disabled, and says
+// "Offline" (UiButton); Cancel still closes it.
 const open = defineModel<boolean>('open', { required: true })
 
 const props = withDefaults(
-  defineProps<{ title: string; text?: string; action: string; busy?: boolean; error?: string | null; testid: string }>(),
-  { text: undefined, busy: false, error: null },
+  defineProps<{
+    title: string
+    text?: string
+    action: string
+    busy?: boolean
+    error?: string | null
+    offline?: boolean
+    testid: string
+  }>(),
+  { text: undefined, busy: false, error: null, offline: false },
 )
 const emit = defineEmits<{ confirm: [] }>()
 
@@ -70,6 +79,7 @@ const textId = useId()
               block
               tone="danger"
               :disabled="busy"
+              :offline="offline"
               :aria-busy="busy"
               :data-testid="`${testid}.confirm`"
               @click="emit('confirm')"

@@ -11,7 +11,8 @@ import { recordedApple, signedIn } from './support'
  * connection and the app is opened again. Her Library is still there (from
  * the device's copy), every action that writes is disabled and says
  * "Offline", and search finds her own Books with one quiet note. Back online,
- * the actions are back; signing out leaves no copy behind.
+ * the actions are back, a Book removed leaves the copy at once, and signing
+ * out leaves no copy behind.
  *
  * The dev server has no service worker, so this flow plays its part: every
  * file of the app the page loaded online is kept and answers the same address
@@ -151,11 +152,30 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   await expect(page.getByTestId('book.start')).toBeDisabled()
   await expect(page.getByTestId('book.start')).toHaveText(en.common.offline)
   await expect(page.getByTestId('book.addToCollection')).toBeDisabled()
+  // Removing it from the Library (#11) as well.
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.remove')).toBeDisabled()
+  await expect(page.getByTestId('bookOptions.remove')).toContainText(en.common.offline)
+  await page.getByTestId('bookOptions.cancel').click()
+  await expect(page.getByTestId('bookOptions')).toBeHidden()
 
   // Back online: the action is back, without a reload.
   await network.goOnline()
   await expect(page.getByTestId('book.start')).toBeEnabled()
   await expect(page.getByTestId('book.start')).toHaveText(en.book.start)
+
+  // Removed from the Library (#11): the device's copy forgets it at once too.
+  const savedTitles = () =>
+    page.evaluate(() => {
+      const lists = JSON.parse(localStorage.getItem('libellus.library') ?? '{}').data?.lists ?? {}
+      return Object.values(lists).flat().map((entry) => (entry as { book: { title: string } }).book.title).sort()
+    })
+  expect(await savedTitles()).toContain(runTitle('Halls of Tide'))
+  await page.getByTestId('book.options').click()
+  await page.getByTestId('bookOptions.remove').click()
+  await page.getByTestId('removeEntry.confirm').click()
+  await expect(page.getByTestId('book.title')).toBeHidden()
+  await expect.poll(savedTitles).toEqual([runTitle('The Night Lamp'), runTitle('Winter Pages')])
 
   // Signing out leaves no copy of her Library on the device.
   await page.getByTestId('shell.tab.home').click()

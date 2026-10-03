@@ -593,18 +593,21 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async updateSession(entryId, session, edit) {
+      if (!online()) return OFFLINE
       const updated = await client.rpc('update_session', { p_session_id: session.id, ...sessionEditArguments(session, edit) })
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
       return reread(entryId)
     },
 
     async deleteSession(entryId, sessionId) {
+      if (!online()) return OFFLINE
       const deleted = await client.rpc('delete_session', { p_session_id: sessionId })
       if (deleted.error) return { data: null, error: mapLibraryError(deleted.error) }
       return reread(entryId)
     },
 
     async removeFromLibrary(entryId) {
+      if (!online()) return OFFLINE
       const removed = await client.rpc('remove_from_library', { p_entry_id: entryId })
       if (removed.error) return { data: null, error: mapLibraryError(removed.error) }
       return { data: null as null, error: null }
