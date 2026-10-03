@@ -95,7 +95,8 @@ The owner's Fable history comes over once, with `web/scripts/import-fable.ts` (#
 (`~/.reading-tracker/regal-overrides.json`: skips, merges, dates, the edition and language read, pinned
 covers), and maps it (`web/app/data/import/`, pure and tested): editions of one title by one author
 become one entry with the most recent edition as its Book, every Fable read one Reading session
-(finished, abandoned, or open while reading; none on *Want to read*), ratings exact in quarters. Then
+(the `read` shelf finished, `dnf` abandoned, a start with no end on any other shelf Currently
+reading; none on *Want to read*), ratings exact in quarters. Then
 it looks up covers and Catalogue ids (Apple Books by ISBN, then by title in the storefront of the
 language read, then OpenLibrary) and writes as the service role, keyed by the Fable record
 (`import_key`), so a rerun changes nothing that has not changed.

@@ -102,7 +102,7 @@ select throws_ok(
   '22023', 'book_invalid', 'Manual books do not enter through the Catalogue path');
 select throws_ok(
   $$ select public.add_to_library('{"title":"Imported","source":"import","apple_id":"990000000007"}') $$,
-  '22023', 'book_invalid', 'nor do imports: only what search finds');
+  '22023', 'book_invalid', 'nor does an import that matches no Catalogue Book: only the Fable import makes those');
 select throws_ok(
   $$ select public.add_to_library('{"title":"Later","source":"apple","apple_id":"990000000004"}', 'reading') $$,
   '22023', 'date_invalid', 'adding straight to Currently reading needs its start date (add_with_status_test.sql has the rest)');

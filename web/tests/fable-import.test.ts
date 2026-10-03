@@ -227,6 +227,18 @@ describe('writeImport', () => {
     expect(data!.status).toBe('want_to_read')
   })
 
+  it('lets another member add an imported Book that neither Apple nor OpenLibrary knows, as the same Catalogue row', async () => {
+    const imported = (await entryOf(records[3]!.id))!
+    const book = (await createLibrary(member.client).book(imported.book_id)).data!
+    expect(book.source).toBe('import')
+
+    const other = await signUpMember()
+    // What search shows for a Catalogue Book is the row itself, source and all.
+    const { data, error } = await createLibrary(other.client).addToLibrary({ ...book })
+    expect(error).toBeNull()
+    expect(data!.book.id).toBe(imported.book_id)
+  })
+
   it('reads everything and writes nothing on a dry run', async () => {
     const fresh = await signUpMember()
     const result = await writeImport(service, fresh.id, planFor(), { dryRun: true })

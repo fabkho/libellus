@@ -290,9 +290,11 @@ export async function lookupEdition(entry: ImportEntry, deps: CoverLookupDeps): 
  * The Book the import writes: the mapped snapshot with its cover, and its real
  * source. An edition Apple has by its ISBN is an Apple Book (with Apple's id),
  * one only Open Library has an OpenLibrary Book, so a member who later finds it
- * in search adds the same Catalogue Book (add_to_library takes only those two
- * sources). A Book Fable knew without an ISBN takes Apple's edition found by
- * title, ISBN included. Only what neither knows stays `import`.
+ * in search adds the same Catalogue Book. A Book Fable knew without an ISBN
+ * takes Apple's edition found by title, ISBN included. Only what neither knows
+ * as this edition stays `import` (an Apple hit by title for a Book with its own
+ * ISBN is another edition, so it lends a cover, not its id); add_to_library
+ * accepts those as the Catalogue rows they are (20261003114100).
  */
 export function withLookup(entry: ImportEntry, lookup: EditionLookup | null): ImportEntry {
   const book: BookSnapshot = { ...entry.book }

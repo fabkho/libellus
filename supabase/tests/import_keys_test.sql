@@ -6,10 +6,12 @@
 -- `import_key` (`fable:<tracker id>`), so a rerun never doubles anything: one
 -- key per member's Library and one per entry's sessions, null (everything made
 -- in the app) never clashing, and members can neither write the keys nor see
--- another member's. Assertions ask about the rows this test made.
+-- another member's. A Book the import wrote as `import` is still everybody's
+-- Catalogue: another member adds the same row (#17 follow-up). Assertions ask
+-- about the rows this test made.
 
 begin;
-select plan(13);
+select plan(18);
 
 create schema if not exists tests;
 
@@ -112,6 +114,35 @@ select throws_ok(
 select throws_ok(
   format($$ update public.reading_sessions set import_key = null where entry_id = %L $$, :'ida_piranesi'),
   '42501', null, 'nor a session''s');
+
+-- ------------------------------------- imported Books are everybody's Catalogue
+
+-- Max finds Kindred in search: a Catalogue Book the import wrote with source
+-- `import`. Adding it sends that snapshot back to add_to_library.
+select tests.act_as(:'max_id');
+
+select is(
+  (public.add_to_library('{"title":"Kindred","authors":["Octavia E. Butler"],"source":"import","isbn13":"9790000000028"}')).book_id,
+  :'kindred'::uuid,
+  'another member adds an imported Book: the same Catalogue Book, not a copy');
+select is(
+  (select status from public.library_entries where member_id = :'max_id' and book_id = :'kindred'),
+  'want_to_read'::public.entry_status,
+  'on Want to read, like any Book added from search');
+select throws_ok(
+  $$ select public.add_to_library('{"title":"Invented","source":"import","isbn13":"9790000000035"}') $$,
+  '22023', 'book_invalid', 'but an import snapshot that matches no Catalogue Book is refused: only the import makes them');
+
+-- Ida's Manual book with an ISBN stays hers: an import snapshot never reaches it.
+select tests.act_as(:'ida_id');
+select (public.add_manual_book('Private Notes', array['Ida Example'], '9790000000049')).book_id as private_book \gset
+select tests.act_as(:'max_id');
+select throws_ok(
+  $$ select public.add_to_library('{"title":"Private Notes","source":"import","isbn13":"9790000000049"}') $$,
+  '22023', 'book_invalid', 'and a Manual book is never found that way: it stays private');
+select is_empty(
+  format($$ select 1 from public.library_entries where book_id = %L $$, :'private_book'),
+  'so nobody else holds it');
 
 reset role;
 select * from finish();
