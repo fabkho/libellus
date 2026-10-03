@@ -2,11 +2,14 @@
 // What the search palette shows above its query (the overlay's default slot):
 // one list, best match at the bottom next to the query, the weaker ones
 // climbing away from the thumb and fading out at the top. Where a result
-// comes from is never shown (owner decision on #6): one field, one list, and
-// one quiet loading state while an answer is on its way.
+// comes from is never shown (owner decision on #6): one field, one list that
+// fills as the sources answer, and one quiet loading state until the first
+// answer brings something.
 //
 // States: idle (nothing typed yet) · loading (no results yet) · results
-// (dimmed while a newer query is on its way) · no results · failed.
+// (dimmed while a newer query is on its way) · no results · failed (no source
+// could answer, or the device is offline).
+import { parseIsbn } from '~/data/books'
 import { useLibraryStore } from '~/stores/library'
 import { useManualStore } from '~/stores/manual'
 import { useSearchStore } from '~/stores/search'
@@ -38,7 +41,9 @@ const listStyle = computed(() =>
   viewport.value ? { maxHeight: `calc(${viewport.value}px - var(--size-query) - env(safe-area-inset-top) - var(--spacing-xxxl))` } : {},
 )
 
-const stale = computed(() => search.phase === 'loading' && search.hits.length > 0)
+const stale = computed(() => search.outdated)
+/** An ISBN found its edition already: no hint to search one. */
+const isbnQuery = computed(() => parseIsbn(search.answered) !== null)
 const state = computed(() => {
   if (search.phase === 'idle') return 'idle'
   if (search.hits.length) return 'results'
@@ -85,7 +90,9 @@ watch(
         <SearchResultRow :hit="hit" :eager="index < EAGER_COVERS" @add="library.openAdd(hit.book)" />
       </li>
       <!-- Last in a reversed list: at its far end, above the weakest match. -->
-      <li class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.hint">{{ t('search.hint') }}</li>
+      <li v-if="!isbnQuery" class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.hint">
+        {{ t('search.hint') }}
+      </li>
     </ol>
 
     <div v-else-if="state === 'none'" class="px-ml pt-ml pb-md" data-testid="search.noResults">

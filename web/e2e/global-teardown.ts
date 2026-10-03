@@ -1,4 +1,5 @@
 import { recordedAppleIds } from '../tests/support/apple'
+import { recordedOpenLibraryKeys } from '../tests/support/openLibrary'
 import { sql, sweepRun } from '../tests/support/stack'
 
 // Removes the members this run signed up and nothing else (the dev member, other
@@ -9,8 +10,9 @@ import { sql, sweepRun } from '../tests/support/stack'
 export default async function globalTeardown() {
   await sweepRun()
   await sql(
-    `delete from public.books b where b.owner_id is null and b.apple_id = any($1)
+    `delete from public.books b where b.owner_id is null
+       and (b.apple_id = any($1) or b.openlibrary_edition_key = any($2))
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
-    [recordedAppleIds()],
+    [recordedAppleIds(), recordedOpenLibraryKeys()],
   )
 }

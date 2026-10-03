@@ -138,6 +138,10 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
 - **Manual books stay private**, never in the Catalogue.
 - **Search sources are invisible** (owner, #6): one field, one merged list; no source names, badges,
   counts or per-source loading. The source stays internal data on the Catalogue row.
+- **One search row per book** (owner, #12): editions of the same title and first author collapse into
+  one row showing the member's own edition, else the Catalogue's, else the device language's; ranked
+  by how well the query matches title and author, then popularity. A specific edition is one ISBN
+  search away.
 - **Fable is imported once** by a local script, then dropped.
 
 ## 9. Testing

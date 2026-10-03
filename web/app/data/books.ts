@@ -44,13 +44,15 @@ export type Book = BookSnapshot & { id: string; createdAt: string }
 export function bookKey(book: Pick<Book, 'id'> | BookSnapshot): string {
   if ('id' in book) return book.id
   if (book.appleId) return `apple-${book.appleId}`
+  if (book.openLibraryEditionKey) return `ol-${book.openLibraryEditionKey}`
   if (book.isbn13) return `isbn-${book.isbn13}`
-  throw new Error('A Book needs an id, an Apple id or an ISBN to have a page')
+  throw new Error('A Book needs an id, a source id or an ISBN to have a page')
 }
 
 export type BookKey =
   | { kind: 'catalogue'; id: string }
   | { kind: 'apple'; appleId: string }
+  | { kind: 'openlibrary'; editionKey: string }
   | { kind: 'isbn'; isbn13: string }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -60,6 +62,8 @@ export function parseBookKey(key: string): BookKey | null {
   if (UUID.test(key)) return { kind: 'catalogue', id: key.toLowerCase() }
   const apple = /^apple-(\d+)$/.exec(key)
   if (apple) return { kind: 'apple', appleId: apple[1]! }
+  const openLibrary = /^ol-(OL\d+M)$/.exec(key)
+  if (openLibrary) return { kind: 'openlibrary', editionKey: openLibrary[1]! }
   const isbn = /^isbn-(\d{13})$/.exec(key)
   if (isbn && isValidIsbn13(isbn[1]!)) return { kind: 'isbn', isbn13: isbn[1]! }
   return null

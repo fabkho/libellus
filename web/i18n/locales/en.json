@@ -123,7 +123,8 @@
     "failedTitle": "Search isn't working right now",
     "failed": "Check your connection and try again.",
     "hint": "Not the edition you hold? Search its ISBN.",
-    "addManually": "Add manually"
+    "addManually": "Add manually",
+    "otherEdition": "Other edition in your Library"
   },
   "status": {
     "want_to_read": "Want to read",

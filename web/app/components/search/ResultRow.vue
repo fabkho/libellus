@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // One search result: cover, title in the serif, author, year. Tapping it opens
 // the book page (and the route change closes the search); the + opens the Add
-// sheet. A Book already in the Library shows its status instead of the +.
+// sheet. A Book already in the Library shows its status instead of the +; one
+// the member has in another edition says so under the author, and keeps its +.
 import { useBookStore } from '~/stores/book'
 import type { SearchHit } from '~/stores/search'
 
@@ -33,7 +34,18 @@ const authorLine = computed(() => formatAuthors(props.hit.book.authors, t('commo
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
         <span class="book-title truncate text-body" data-testid="search.resultTitle">{{ hit.book.title }}</span>
         <span class="truncate text-caption text-ink-faint">{{ authorLine }}</span>
-        <span v-if="hit.book.year" class="figures text-meta text-ink-faint">{{ hit.book.year }}</span>
+        <span v-if="hit.book.year || hit.otherEdition" class="flex min-w-0 items-center gap-xs text-ink-faint">
+          <span v-if="hit.book.year" class="figures shrink-0 text-meta">{{ hit.book.year }}</span>
+          <span v-if="hit.book.year && hit.otherEdition" class="size-(--spacing-xxs) shrink-0 rounded-pill bg-current" aria-hidden="true" />
+          <span
+            v-if="hit.otherEdition"
+            class="flex min-w-0 items-center gap-xxs text-footnote text-ink-muted"
+            data-testid="search.resultOtherEdition"
+          >
+            <UiIcon name="stack" :size="12" class="shrink-0" />
+            <span class="truncate">{{ t('search.otherEdition') }}</span>
+          </span>
+        </span>
       </span>
     </UiPressLink>
 
@@ -58,3 +70,4 @@ const authorLine = computed(() => formatAuthors(props.hit.book.authors, t('commo
     </button>
   </div>
 </template>
+

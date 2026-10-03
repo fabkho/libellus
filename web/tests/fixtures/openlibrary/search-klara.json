@@ -1,0 +1,43 @@
+{
+  "numFound": 1,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 1,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "Klara und die Sonne",
+  "offset": null,
+  "docs": [
+    {
+      "author_name": [
+        "Oswin Rutz"
+      ],
+      "first_publish_year": 2016,
+      "key": "/works/OL32722186W",
+      "title": "Gott und die Heiligen im unteren Rottal",
+      "editions": {
+        "numFound": 1,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL44540335M",
+            "title": "Gott und die Heiligen im unteren Rottal",
+            "language": [
+              "ger"
+            ],
+            "publisher": [
+              "Landkreis Passau, Kulturreferat"
+            ],
+            "publish_date": [
+              "2016"
+            ],
+            "isbn": [
+              "9783939723547",
+              "3939723541"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
