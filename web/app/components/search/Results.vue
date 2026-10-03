@@ -8,11 +8,13 @@
 // States: idle (nothing typed yet) · loading (no results yet) · results
 // (dimmed while a newer query is on its way) · no results · failed.
 import { useLibraryStore } from '~/stores/library'
+import { useManualStore } from '~/stores/manual'
 import { useSearchStore } from '~/stores/search'
 
 const { t } = useI18n()
 const search = useSearchStore()
 const library = useLibraryStore()
+const manual = useManualStore()
 
 /** How many covers at the bottom of the list (the visible ones) load at once. */
 const EAGER_COVERS = 6
@@ -90,6 +92,9 @@ watch(
       <p class="text-callout font-medium">{{ t('search.noResultsTitle') }}</p>
       <p class="mt-xs text-subhead text-ink-muted">{{ t('search.noResults', { query: search.answered }) }}</p>
       <p class="mt-md text-subhead text-ink-faint">{{ t('search.noResultsHint') }}</p>
+      <UiButton tone="quiet" block class="mt-ml" data-testid="search.addManually" @click="manual.open(search.answered)">
+        <UiIcon name="pencil" :size="17" />{{ t('search.addManually') }}
+      </UiButton>
     </div>
 
     <div v-else class="px-ml pt-ml pb-md" data-testid="search.failed">
