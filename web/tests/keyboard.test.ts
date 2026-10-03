@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { keyboardInsetOf, revealDelta, sheetLift } from '@/utils/keyboard'
+import { keyboardInsetOf, paletteLift, revealDelta, sheetLift } from '@/utils/keyboard'
 
 /**
  * Following the iOS keyboard (composables/useKeyboardInset.ts, UiSheet): how
@@ -52,5 +52,17 @@ describe('revealing the focused field in a sheet', () => {
 
   it('lines a field taller than the body up with its top', () => {
     expect(revealDelta(body, { top: 150, bottom: 600 }, 16)).toBe(34)
+  })
+})
+
+describe('the search palette on the keyboard', () => {
+  it('goes up by the keyboard plus its gap, less where float-bottom already puts it', () => {
+    // 336 keyboard, 12 gap, resting 30 above the bottom edge (safe area 34 - 4).
+    expect(paletteLift(336, 12, 30)).toBe(318)
+  })
+
+  it('stays where it is with the keyboard down, and never goes down', () => {
+    expect(paletteLift(0, 12, 30)).toBe(0)
+    expect(paletteLift(10, 12, 30)).toBe(0)
   })
 })
