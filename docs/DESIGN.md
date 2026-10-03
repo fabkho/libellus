@@ -171,6 +171,8 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Pushed screens** (the book page): in the tab layout with `pushed: true`, so the tab pages stay
   alive underneath; no header, the page draws `UiTopBar` (back) over its cover's light
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
+  The top bar is pinned under the safe area (centred on the column on a wide screen) and the
+  page scrolls under its glass buttons: an installed app has no edge swipe back.
 - **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
   the account address, the Dark mode switch and Sign out.
 - **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
