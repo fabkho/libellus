@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { recordedApple, settledBox, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -82,7 +82,9 @@ test('an ISBN that finds nothing fills the ISBN of the form', async ({ page }) =
   await expect(page.getByTestId('manual.isbn')).toHaveValue('9783161484100')
   await expect(page.getByTestId('manual.title')).toHaveValue('')
 
-  // Cancel leaves the search as it was.
+  // Cancel leaves the search as it was. Once the sheet has finished rising: a
+  // tap on a slow runner's half-risen sheet was the one flake of the CI runs.
+  await settledBox(page.getByTestId('manual.cancel'))
   await page.getByTestId('manual.cancel').click()
   await expect(page.getByTestId('manual')).toBeHidden()
   await expect(page.getByTestId('search.query')).toHaveValue('9783161484100')
