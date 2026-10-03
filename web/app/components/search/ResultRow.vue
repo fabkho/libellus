@@ -12,6 +12,8 @@ defineEmits<{ add: [] }>()
 const { t } = useI18n()
 const book = useBookStore()
 const authorLine = computed(() => formatAuthors(props.hit.book.authors, t('common.etAl')))
+// Adding writes: offline the + stays, disabled, and says why (#15).
+const online = useOnline()
 </script>
 
 <template>
@@ -59,8 +61,9 @@ const authorLine = computed(() => formatAuthors(props.hit.book.authors, t('commo
     <button
       v-else
       type="button"
-      class="flex size-(--size-touch) shrink-0 items-center justify-center text-ink"
-      :aria-label="t('search.add', { title: hit.book.title })"
+      class="flex size-(--size-touch) shrink-0 items-center justify-center text-ink disabled:opacity-50"
+      :disabled="!online"
+      :aria-label="online ? t('search.add', { title: hit.book.title }) : t('common.offline')"
       data-testid="search.add"
       @click="$emit('add')"
     >

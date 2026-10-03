@@ -8,7 +8,8 @@
 //
 // States: idle (nothing typed yet) · loading (no results yet) · results
 // (dimmed while a newer query is on its way) · no results · failed (no source
-// could answer, or the device is offline).
+// could answer). Offline the member's own Library answers instead (#15), and
+// one quiet line says so where the hint would be.
 import { parseIsbn } from '~/data/books'
 import { useLibraryStore } from '~/stores/library'
 import { useManualStore } from '~/stores/manual'
@@ -18,6 +19,7 @@ const { t } = useI18n()
 const search = useSearchStore()
 const library = useLibraryStore()
 const manual = useManualStore()
+const online = useOnline()
 
 /** How many covers at the bottom of the list (the visible ones) load at once. */
 const EAGER_COVERS = 6
@@ -90,16 +92,25 @@ watch(
         <SearchResultRow :hit="hit" :eager="index < EAGER_COVERS" @add="library.openAdd(hit.book)" />
       </li>
       <!-- Last in a reversed list: at its far end, above the weakest match. -->
-      <li v-if="!isbnQuery" class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.hint">
+      <li v-if="search.fromLibrary" class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.offline">
+        {{ t('search.offlineNote') }}
+      </li>
+      <li v-else-if="!isbnQuery" class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.hint">
         {{ t('search.hint') }}
       </li>
     </ol>
+
+    <div v-else-if="state === 'none' && search.fromLibrary" class="px-ml pt-ml pb-md" data-testid="search.noResults">
+      <p class="text-callout font-medium">{{ t('search.noResultsTitle') }}</p>
+      <p class="mt-xs text-subhead text-ink-muted">{{ t('search.offlineNoResults', { query: search.answered }) }}</p>
+      <p class="mt-md text-footnote text-ink-faint" data-testid="search.offline">{{ t('search.offlineNote') }}</p>
+    </div>
 
     <div v-else-if="state === 'none'" class="px-ml pt-ml pb-md" data-testid="search.noResults">
       <p class="text-callout font-medium">{{ t('search.noResultsTitle') }}</p>
       <p class="mt-xs text-subhead text-ink-muted">{{ t('search.noResults', { query: search.answered }) }}</p>
       <p class="mt-md text-subhead text-ink-faint">{{ t('search.noResultsHint') }}</p>
-      <UiButton tone="quiet" block class="mt-ml" data-testid="search.addManually" @click="manual.open(search.answered)">
+      <UiButton tone="quiet" block class="mt-ml" :offline="!online" data-testid="search.addManually" @click="manual.open(search.answered)">
         <UiIcon name="pencil" :size="17" />{{ t('search.addManually') }}
       </UiButton>
     </div>

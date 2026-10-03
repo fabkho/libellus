@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
+import { forgetLibrary, readLibrary, saveLibrary } from '~/data/deviceLibrary'
 import {
   addWithFromDraft,
   checkAddDraft,
@@ -32,6 +33,11 @@ export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read', 'readin
  * when it comes back; an add, a start, a finish, an abandon or a read again moves the entry into its
  * new list at once (`entryChanged`). Signing out (or another member signing
  * in) forgets all of it.
+ *
+ * The device keeps a copy (data/deviceLibrary.ts, issue #15): written after
+ * every load and change, read back when the store is set up, so the app opens
+ * on the last-loaded Library, connection or not. Offline nothing is asked for;
+ * the lists refresh by themselves once the connection is back.
  */
 export const useLibraryStore = defineStore('library', () => {
   const backend = useBackend()
@@ -41,7 +47,8 @@ export const useLibraryStore = defineStore('library', () => {
   let repository: Library | null = null
   function library(): Library | null {
     if (!backend) return null
-    repository ??= createLibrary(backend)
+    // Writes refused offline, before anything is sent (data/library.ts, WriteOptions).
+    repository ??= createLibrary(backend, { online: isOnline })
     return repository
   }
 
@@ -70,6 +77,9 @@ export const useLibraryStore = defineStore('library', () => {
   async function load() {
     const repo = library()
     if (!repo) return
+    // Offline the device's copy is all there is; asking would only fail. (With
+    // no copy it is asked anyway, so the screen can say it did not load.)
+    if (!isOnline() && loaded.value) return
     const member = session.member?.id
     const asked = performance.now()
     const results = await Promise.all(STATUSES.map((status) => repo.entries(status)))
@@ -86,6 +96,7 @@ export const useLibraryStore = defineStore('library', () => {
     STATUSES.forEach((status, i) => (lists[status] = results[i]!.data!))
     for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
     loaded.value = true
+    save()
   }
 
   // ---------------------------------------------------------- Read in <year>
@@ -104,12 +115,14 @@ export const useLibraryStore = defineStore('library', () => {
     const member = session.member?.id
     const year = Number(isoDay().slice(0, 4))
     const ask = ++countAsks
+    if (!isOnline()) return
     const result = await repo.readInYear(year)
     // Another member, or a newer count asked for meanwhile (a finish): that one wins.
     if (member !== session.member?.id || ask !== countAsks) return
     if (result.error) return
     readInYearOf.value = year
     readInYear.value = result.data
+    save()
   }
 
   /**
@@ -140,6 +153,7 @@ export const useLibraryStore = defineStore('library', () => {
     lists[entry.status] = sortEntries([entry, ...lists[entry.status]])
     remember(entry, { keys })
     search.markAdded(entry)
+    save()
     // A finish adds to the year's count. Only a count Home has shown is kept
     // current; the next visit counts anyway.
     if (entry.status === 'finished' && readInYear.value !== null) void loadReadInYear()
@@ -154,6 +168,7 @@ export const useLibraryStore = defineStore('library', () => {
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entryId)
     for (const [key, known] of entryByKey) if (known.id === entryId) entryByKey.delete(key)
     search.markRemoved(entryId)
+    save()
     if (readInYear.value !== null) void loadReadInYear()
   }
 
@@ -219,6 +234,36 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  // ------------------------------------------------------- the device's copy
+
+  /** Writes the Library as it is now, for the next start (data/deviceLibrary.ts). Only once it was loaded. */
+  function save() {
+    const member = session.member
+    if (!import.meta.client || !member || !loaded.value) return
+    saveLibrary(window.localStorage, {
+      member: { id: member.id, email: member.email },
+      lists: { want_to_read: lists.want_to_read, reading: lists.reading, finished: lists.finished },
+      readInYear: readInYear.value === null ? null : { year: readInYearOf.value, count: readInYear.value },
+    })
+  }
+
+  /**
+   * Puts back the Library this device saw last, if it is this member's: the
+   * screens show it at once (no empty first frame, no network needed) and a
+   * load refreshes it behind them.
+   */
+  function restore() {
+    const member = session.member?.id
+    if (!import.meta.client || !member || loaded.value) return
+    const saved = readLibrary(window.localStorage, member)
+    if (!saved) return
+    for (const status of STATUSES) lists[status] = saved.lists[status]
+    for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
+    // Last year's tally is no answer to this year's question.
+    if (saved.readInYear?.year === readInYearOf.value) readInYear.value = saved.readInYear.count
+    loaded.value = true
+  }
+
   function reset() {
     for (const status of STATUSES) lists[status] = []
     loaded.value = false
@@ -230,13 +275,25 @@ export const useLibraryStore = defineStore('library', () => {
     search.reset()
   }
 
-  // Another member, or nobody: nothing of the last one's Library stays.
+  // Another member, or nobody: nothing of the last one's Library stays, on
+  // the screens or on the device. Signing out here clears the device already;
+  // this also covers a session that ended elsewhere.
   watch(
     () => session.member?.id,
     (now, before) => {
-      if (now !== before) reset()
+      if (now === before) return
+      reset()
+      if (before && !now && import.meta.client) forgetLibrary(window.localStorage)
+      restore()
     },
   )
+  restore()
+
+  // Back online: what changed elsewhere meanwhile shows without a tap.
+  const online = useOnline()
+  watch(online, (now) => {
+    if (now && loaded.value) void load()
+  })
 
   return {
     library,

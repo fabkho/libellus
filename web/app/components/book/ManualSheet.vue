@@ -12,6 +12,8 @@ import { useManualStore } from '~/stores/manual'
 
 const { t, te } = useI18n()
 const manual = useManualStore()
+// Adding, starting, finishing writes: offline the action says so instead (#15).
+const online = useOnline()
 const router = useRouter()
 
 const open = computed({
@@ -113,7 +115,7 @@ async function submit() {
       </p>
 
       <div class="mb-sm">
-        <UiButton block type="submit" :disabled="manual.busy" data-testid="manual.submit">
+        <UiButton block type="submit" :disabled="manual.busy" :offline="!online" data-testid="manual.submit">
           <UiIcon name="plus" :size="18" bold />{{ manual.busy ? t('manual.busy') : t('manual.submit') }}
         </UiButton>
       </div>

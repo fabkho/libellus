@@ -42,6 +42,9 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - Every interactive element (and every element a test reads) gets `data-testid="<screen>.<element>"`
   (`start.title`, `search.query`, `book.finish`). It is the native accessibility identifier too, so
   name it for what it is, not how it looks.
+- Offline (#15): every action that writes is disabled and says "Offline" while `useOnline()` is false
+  (`<UiButton :offline="!online">`, or `:disabled` plus `common.offline` on other controls), and its
+  repository refuses it anyway (`{ online: isOnline }`, error `offline`). A new write gets both.
 - All copy goes through the message file `i18n/locales/en.json` (`t('home.empty')` / `$t(...)`):
   labels, errors, placeholders, `aria-label`s, the document title. No hard-coded strings in
   templates or stores. Keys are `<screen>.<thing>`.

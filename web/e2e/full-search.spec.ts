@@ -120,10 +120,13 @@ test('only when every source fails does the member see one note', async ({ page 
   await expect(page.getByTestId('search.result')).toHaveCount(0)
 })
 
-test('offline, search says so at once', async ({ page, context }) => {
+test('offline, search answers from her own Library at once and says so (#15)', async ({ page, context }) => {
   await signedIn(page)
   await context.setOffline(true)
   await searchFor(page, 'Piranesi')
-  await expect(page.getByTestId('search.failed')).toContainText(en.search.failedTitle)
+  // A new member's Library is empty: nothing found there, and no source is asked.
+  await expect(page.getByTestId('search.noResults')).toContainText(en.search.offlineNoResults.replace('{query}', 'Piranesi'))
+  await expect(page.getByTestId('search.offline')).toHaveText(en.search.offlineNote)
+  await expect(page.getByTestId('search.failed')).toBeHidden()
   await context.setOffline(false)
 })

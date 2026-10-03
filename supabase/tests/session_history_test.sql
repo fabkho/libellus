@@ -206,7 +206,7 @@ select throws_ok(
   format($$ select public.update_session(%L, current_date - 8, null, null, 'So far so good.') $$, :'emma_s'),
   '22023', 'session_invalid', 'nor review it');
 select throws_ok(
-  format($$ select public.update_session(%L, current_date + 1, null) $$, :'emma_s'),
+  format($$ select public.update_session(%L, current_date + 2, null) $$, :'emma_s'),
   '22023', 'date_in_future', 'its start cannot be in the future');
 
 -- An abandoned read: dates and the reason.

@@ -1,6 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseIsbn } from './books'
-import { addWithArguments, createLibrary, mapLibraryError, type AddWith, type LibraryEntry, type LibraryErrorCode } from './library'
+import {
+  addWithArguments,
+  createLibrary,
+  mapLibraryError,
+  type AddWith,
+  type LibraryEntry,
+  type LibraryErrorCode,
+  type WriteOptions,
+} from './library'
 
 /**
  * Manual books (issue #1, Manual books): a Book a member typed in by hand. It
@@ -51,9 +59,11 @@ export type ManualBooks = {
   addManualBook: (input: ManualBookInput, options?: AddWith) => Promise<ManualBookResult>
 }
 
-export function createManualBooks(client: SupabaseClient): ManualBooks {
+export function createManualBooks(client: SupabaseClient, { online = () => true }: WriteOptions = {}): ManualBooks {
   return {
     async addManualBook(input, options = {}) {
+      // Offline: refused before anything is sent (WriteOptions, data/library.ts).
+      if (!online()) return { data: null, error: 'offline' }
       const pages = input.pageCount?.trim()
       const added = await client.rpc('add_manual_book', {
         p_title: input.title,

@@ -11,6 +11,8 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const collections = useCollectionsStore()
+// Renaming, deleting and reordering write: offline they say so instead (#15).
+const online = useOnline()
 
 const id = computed(() => String(route.params.id))
 const page = computed(() => collections.page(id.value))
@@ -113,8 +115,27 @@ async function confirmDelete() {
       <div class="pt-xs pb-sm">
         <template v-if="!confirmingDelete">
           <UiRowGroup>
-            <UiRow as="button" icon="pencil" :label="t('collection.rename')" data-testid="collectionOptions.rename" @click="rename" />
-            <UiRow as="button" icon="close" tone="danger" :label="t('collection.delete')" data-testid="collectionOptions.delete" @click="confirmingDelete = true" />
+            <UiRow
+              as="button"
+              icon="pencil"
+              :label="t('collection.rename')"
+              :value="online ? undefined : t('common.offline')"
+              :disabled="!online"
+              class="disabled:opacity-50"
+              data-testid="collectionOptions.rename"
+              @click="rename"
+            />
+            <UiRow
+              as="button"
+              icon="close"
+              tone="danger"
+              :label="t('collection.delete')"
+              :value="online ? undefined : t('common.offline')"
+              :disabled="!online"
+              class="disabled:opacity-50"
+              data-testid="collectionOptions.delete"
+              @click="confirmingDelete = true"
+            />
           </UiRowGroup>
         </template>
         <template v-else>
@@ -124,7 +145,7 @@ async function confirmDelete() {
             {{ t(`collections.error.${deleteError}`) }}
           </p>
           <div class="mt-lg">
-            <UiButton block tone="danger" :disabled="deleting" data-testid="collectionOptions.confirmDelete" @click="confirmDelete">
+            <UiButton block tone="danger" :disabled="deleting" :offline="!online" data-testid="collectionOptions.confirmDelete" @click="confirmDelete">
               {{ deleting ? t('collection.deleting') : t('collection.delete') }}
             </UiButton>
           </div>

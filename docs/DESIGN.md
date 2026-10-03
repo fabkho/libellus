@@ -42,6 +42,11 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
   `<meta name="theme-color">` per `prefers-color-scheme` (the theme's `surface`), a chosen theme
   overwrites both, and `apple-mobile-web-app-status-bar-style` is `default` so iOS tints the status
   bar from it. The manifest's splash colour is the light surface (manifests have no media queries).
+- The app icon is the start of the wordmark, "li" in Newsreader italic in the dark theme's ink, in the
+  night room, the dot of the i the lamp: the accent with its glow. One icon for both themes (an icon
+  is an object on the home screen, like a cover). Drawn from the tokens and the shipped font by
+  `web/scripts/render-icons.mjs` (192 and 512 `any`, a 512 `maskable` with the mark inside the safe
+  zone, the 180 apple-touch-icon, the favicon).
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.
 
@@ -176,9 +181,9 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 
 | Component | When |
 |---|---|
-| `UiButton` | Every button that is a pill. `tone`: `primary` (the one lit action of a screen: ink fill), `secondary` (hairline outline), `quiet` (translucent fill; actions on cards like Finish), `plain` (text only), `danger` (destructive). `size`: `lg` 50 (sheets, forms; usually `block`), `md` 40, `sm` 32 (on cards). `to` makes it a link. The touch target never drops below 44 px. |
+| `UiButton` | Every button that is a pill. `tone`: `primary` (the one lit action of a screen: ink fill), `secondary` (hairline outline), `quiet` (translucent fill; actions on cards like Finish), `plain` (text only), `danger` (destructive). `size`: `lg` 50 (sheets, forms; usually `block`), `md` 40, `sm` 32 (on cards). `to` makes it a link. The touch target never drops below 44 px. `offline` (#15): an action that writes while the device has no connection stays in place, disabled, and reads "Offline" with the offline icon instead of its label. |
 | `UiRoundButton`, `UiTopBar` | Glass round buttons for chrome floating over a cover (back, more) on pushed screens such as book detail. |
-| `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe, pencil, flag, arrow, sun, moon, signOut. Decorative; the control carries the label. New icons are drawn on the same grid. |
+| `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe, pencil, flag, arrow, sun, moon, signOut, offline (a cloud struck through: an action that cannot write now). Decorative; the control carries the label. New icons are drawn on the same grid. |
 | `UiAvatar` | The member's initials (`utils/initials.ts`) in mono in a hairline ring. |
 | `UiCover` | Every cover. 2:3, `object-fit: cover`, token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. |
 | `UiAmbient` | The light a cover throws onto its card (`shape="card"`) or page (`shape="page"`), from the cover's precomputed colours. Currently reading cards, book detail. |

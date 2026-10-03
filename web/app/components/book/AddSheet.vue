@@ -9,6 +9,8 @@ import { useLibraryStore } from '~/stores/library'
 
 const { t } = useI18n()
 const library = useLibraryStore()
+// Adding, starting, finishing writes: offline the action says so instead (#15).
+const online = useOnline()
 
 const open = computed({
   get: () => library.adding !== null,
@@ -49,7 +51,7 @@ async function add() {
       </p>
 
       <div class="mt-lg mb-sm">
-        <UiButton block :disabled="library.addBusy" data-testid="add.submit" @click="add">
+        <UiButton block :disabled="library.addBusy" :offline="!online" data-testid="add.submit" @click="add">
           <UiIcon name="plus" :size="18" bold />{{ library.addBusy ? t('add.busy') : t('add.action') }}
         </UiButton>
       </div>

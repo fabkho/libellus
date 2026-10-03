@@ -25,6 +25,7 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'signOut'
+  | 'offline'
 </script>
 
 <script setup lang="ts">
@@ -95,6 +96,9 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
       <path d="M12 3.5v1.8M12 18.7v1.8M3.5 12h1.8M18.7 12h1.8M6 6l1.3 1.3M16.7 16.7 18 18M6 18l1.3-1.3M16.7 7.3 18 6" />
     </template>
     <template v-else-if="name === 'moon'"><path d="M19 14.6A7.5 7.5 0 0 1 9.4 5 7.5 7.5 0 1 0 19 14.6z" /></template>
+    <template v-else-if="name === 'offline'">
+      <path d="M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 6.8 10.03 4 4 0 0 0 7 18z" /><path d="m4.5 4.5 15 15" />
+    </template>
     <template v-else-if="name === 'signOut'">
       <path d="M13.5 4.5h-7a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h7" /><path d="M10.5 12h9m-3-3 3 3-3 3" />
     </template>

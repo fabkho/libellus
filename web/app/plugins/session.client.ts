@@ -14,6 +14,10 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   const client = useBackend()
   if (!client) return
   createAuth(client).onMemberChange((member) => {
+    // Offline, "nobody" only means an expired token could not be renewed yet:
+    // the member stays in her Library (stores/session.ts, restore). A real end
+    // of the session is told again once the renewal reaches the server.
+    if (!member && !isOnline()) return
     const wasSignedIn = session.status === 'signedIn'
     // The store's own sign-in already adopted this member; nothing to do twice.
     if (member?.id !== session.member?.id) session.adopt(member)

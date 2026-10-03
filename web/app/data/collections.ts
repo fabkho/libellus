@@ -1,6 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
-import { bookFromRow, bookToRow, ENTRY_COLUMNS, entryFromRow, type BookRow, type EntryRow, type LibraryEntry } from './library'
+import {
+  bookFromRow,
+  bookToRow,
+  ENTRY_COLUMNS,
+  entryFromRow,
+  type BookRow,
+  type EntryRow,
+  type LibraryEntry,
+  type WriteOptions,
+} from './library'
 
 /**
  * Collections (issue #1, Library actions → Collections; issue #14): a member's
@@ -52,6 +61,8 @@ export type CollectionErrorCode =
   /** No such Book for this member, or a snapshot that cannot enter the Catalogue. */
   | 'book_invalid'
   | 'not_signed_in'
+  /** The device has no connection: nothing was sent (`WriteOptions`, data/library.ts). */
+  | 'offline'
   | 'unknown'
 
 export type CollectionResult<T> = { data: T; error: null } | { data: null; error: CollectionErrorCode }
@@ -127,7 +138,8 @@ export type Collections = {
   reorder: (collectionId: string, entryIds: readonly string[]) => Promise<CollectionResult<true>>
 }
 
-export function createCollections(client: SupabaseClient): Collections {
+export function createCollections(client: SupabaseClient, { online = () => true }: WriteOptions = {}): Collections {
+  const OFFLINE = { data: null, error: 'offline' } as const
   function summaryOf(row: CollectionRow, count = 0, covers: Book[] = []): CollectionSummary {
     return { id: row.id, name: row.name, position: row.position, createdAt: row.created_at, count, covers }
   }
@@ -189,24 +201,28 @@ export function createCollections(client: SupabaseClient): Collections {
     },
 
     async create(name) {
+      if (!online()) return OFFLINE
       const { data, error } = await client.rpc('create_collection', { p_name: name })
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: summaryOf(data as CollectionRow), error: null }
     },
 
     async rename(id, name) {
+      if (!online()) return OFFLINE
       const { data, error } = await client.rpc('rename_collection', { p_collection: id, p_name: name })
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: summaryOf(data as CollectionRow), error: null }
     },
 
     async delete(id) {
+      if (!online()) return OFFLINE
       const { error } = await client.rpc('delete_collection', { p_collection: id })
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: true, error: null }
     },
 
     async addEntry(collectionId, book) {
+      if (!online()) return OFFLINE
       const p_book = 'id' in book ? { id: book.id } : bookToRow(book)
       const added = await client.rpc('add_to_collection', { p_collection: collectionId, p_book })
       if (added.error) return { data: null, error: mapCollectionError(added.error) }
@@ -222,12 +238,14 @@ export function createCollections(client: SupabaseClient): Collections {
     },
 
     async removeEntry(collectionId, entryId) {
+      if (!online()) return OFFLINE
       const { error } = await client.rpc('remove_from_collection', { p_collection: collectionId, p_entry: entryId })
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: true, error: null }
     },
 
     async reorder(collectionId, entryIds) {
+      if (!online()) return OFFLINE
       const { error } = await client.rpc('reorder_collection', { p_collection: collectionId, p_entries: [...entryIds] })
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: true, error: null }

@@ -13,6 +13,8 @@ const { t } = useI18n()
 const { formatDay, dayOfRead } = useDays()
 const books = useBookStore()
 const reading = useReadingStore()
+// Finishing writes: offline the shortcut says so instead (#15).
+const online = useOnline()
 const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('common.etAl')))
 const since = computed(() => {
   const startedOn = props.entry.latestSession?.startedOn
@@ -48,7 +50,7 @@ const since = computed(() => {
         <span class="figures mt-xs text-meta text-ink-faint" data-testid="library.entrySince">{{ since }}</span>
       </span>
     </UiPressLink>
-    <UiButton tone="quiet" size="sm" class="relative" data-testid="library.finish" @click="reading.openFinish(entry)">
+    <UiButton tone="quiet" size="sm" class="relative" :offline="!online" data-testid="library.finish" @click="reading.openFinish(entry)">
       {{ t('book.finish') }}
     </UiButton>
   </article>

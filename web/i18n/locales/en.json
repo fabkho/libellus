@@ -10,7 +10,8 @@
     "dayMonthYear": "{day} {month} {year}",
     "today": "Today · {date}",
     "yesterday": "Yesterday · {date}",
-    "chooseDay": "Choose a day"
+    "chooseDay": "Choose a day",
+    "offline": "Offline"
   },
   "rating": {
     "label": "{value} of 5 stars",
@@ -149,7 +150,8 @@
       "review_too_long": "That review is longer than we can keep. Shorten it a little.",
       "reason_too_long": "That reason is longer than we can keep. Shorten it a little.",
       "never_read": "You haven't read this book yet. Start reading it first.",
-      "session_not_found": "That read isn't there any more. It may have been deleted on another device."
+      "session_not_found": "That read isn't there any more. It may have been deleted on another device.",
+      "offline": "You're offline. Nothing was saved."
     },
     "undated": "No end date"
   },
@@ -168,7 +170,9 @@
     "failed": "Check your connection and try again.",
     "hint": "Not the edition you hold? Search its ISBN.",
     "addManually": "Add manually",
-    "otherEdition": "Other edition in your Library"
+    "otherEdition": "Other edition in your Library",
+    "offlineNote": "You're offline, so only your Library is searched.",
+    "offlineNoResults": "Nothing in your Library matches “{query}”."
   },
   "status": {
     "want_to_read": "Want to read",
@@ -305,7 +309,8 @@
       "order_mismatch": "The collection changed elsewhere. This is its order now.",
       "book_invalid": "This book can't be added to a collection.",
       "not_signed_in": "Sign in again to change your collections.",
-      "unknown": "Something went wrong. Please try again."
+      "unknown": "Something went wrong. Please try again.",
+      "offline": "You're offline. Nothing was saved."
     }
   },
   "collection": {

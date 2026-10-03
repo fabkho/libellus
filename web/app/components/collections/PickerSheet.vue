@@ -10,6 +10,8 @@ import { useCollectionsStore } from '~/stores/collections'
 
 const { t } = useI18n()
 const collections = useCollectionsStore()
+// Every choice here writes: offline the rows stay, disabled, and say why (#15).
+const online = useOnline()
 
 const open = computed({
   get: () => collections.picking !== null,
@@ -80,8 +82,8 @@ async function startCreating() {
           type="button"
           role="checkbox"
           :aria-checked="collections.picked(collection.id)"
-          :disabled="!collections.pickerReady || collections.pickerBusy.has(collection.id)"
-          class="option relative flex h-(--size-query) w-full items-center gap-ms px-inset text-left active:bg-fill-strong"
+          :disabled="!collections.pickerReady || collections.pickerBusy.has(collection.id) || !online"
+          class="option relative flex h-(--size-query) w-full items-center gap-ms px-inset text-left active:bg-fill-strong disabled:opacity-50"
           data-testid="picker.collection"
           @click="collections.toggle(collection.id)"
         >
@@ -109,11 +111,12 @@ async function startCreating() {
         <button
           v-if="!creating"
           type="button"
-          class="flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body text-ink-muted active:bg-fill-strong"
+          class="flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body text-ink-muted active:bg-fill-strong disabled:opacity-50"
+          :disabled="!online"
           data-testid="picker.new"
           @click="startCreating"
         >
-          <UiIcon name="plus" :size="18" class="text-ink-faint" />{{ t('collections.new') }}
+          <UiIcon :name="online ? 'plus' : 'offline'" :size="18" class="text-ink-faint" />{{ online ? t('collections.new') : t('common.offline') }}
         </button>
         <form v-else class="flex h-(--size-row) items-center gap-ms pl-inset pr-xs focus-within:bg-accent-soft" novalidate @submit.prevent="create">
           <input
@@ -129,7 +132,7 @@ async function startCreating() {
             class="min-w-0 flex-1 bg-transparent text-body text-ink caret-accent outline-none placeholder:text-ink-ghost"
             data-testid="picker.newName"
           />
-          <UiButton type="submit" size="sm" :disabled="createBusy || !newName.trim()" data-testid="picker.create">
+          <UiButton type="submit" size="sm" :disabled="createBusy || !newName.trim()" :offline="!online" data-testid="picker.create">
             {{ t('collections.create') }}
           </UiButton>
         </form>
