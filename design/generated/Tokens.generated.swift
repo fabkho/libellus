@@ -94,6 +94,7 @@ enum Tokens {
         static let xxl: CGFloat = 48
         static let xxxl: CGFloat = 64
         static let screen: CGFloat = 20
+        static let tabBarDrop: CGFloat = 13
     }
 
     enum Radius {
@@ -113,19 +114,20 @@ enum Tokens {
         static let touch: CGFloat = 44
         static let maxContent: CGFloat = 480
         static let avatar: CGFloat = 32
-        static let tab: CGFloat = 62
-        static let tabBar: CGFloat = 52
+        static let tab: CGFloat = 72
+        static let tabBar: CGFloat = 62
+        static let tabIcon: CGFloat = 26
         static let button: CGFloat = 50
         static let buttonMd: CGFloat = 40
         static let buttonSm: CGFloat = 32
         static let row: CGFloat = 48
-        static let query: CGFloat = 56
+        static let query: CGFloat = 62
         static let menu: CGFloat = 272
         static let switch: CGFloat = 40
         static let switchThumb: CGFloat = 20
         static let grabber: CGFloat = 36
         static let emptyArt: CGFloat = 250
-        static let fade: CGFloat = 128
+        static let fade: CGFloat = 138
         static let starSm: CGFloat = 12
         static let star: CGFloat = 16
         static let starLg: CGFloat = 24

@@ -45,7 +45,7 @@ const current = (to: string) => route.path === to
       :aria-current="current(tab.to) ? 'page' : undefined"
       :data-testid="`shell.tab.${tab.key}`"
     >
-      <UiIcon :name="tab.icon" :size="23" :bold="current(tab.to)" />
+      <UiIcon :name="tab.icon" :bold="current(tab.to)" />
       <span class="sr-only">{{ t(`tabs.${tab.key}`) }}</span>
       <span class="dot" :class="current(tab.to) ? 'opacity-100' : 'opacity-0'" aria-hidden="true" />
     </NuxtLink>
@@ -57,13 +57,15 @@ const current = (to: string) => route.path === to
       data-testid="shell.tab.search"
       @click="search.open()"
     >
-      <UiIcon name="search" :size="23" :class="chrome !== 'tabs' && 'invisible'" data-morph="search" />
+      <UiIcon name="search" :class="chrome !== 'tabs' && 'invisible'" data-morph="search" />
       <span class="sr-only">{{ t('tabs.search') }}</span>
     </button>
   </nav>
 </template>
 
 <style scoped>
+/* iOS 26's tab bar, from tokens only (design/tokens.json `tabBar`, `tab`,
+   `tabIcon`): a 62 pt capsule of 72 pt tabs with 26 px icons. */
 .tab {
   position: relative;
   display: flex;
@@ -74,9 +76,15 @@ const current = (to: string) => route.path === to
   transition: color var(--duration-quick) var(--ease-standard);
 }
 
+.tab svg {
+  width: var(--size-tab-icon);
+  height: var(--size-tab-icon);
+}
+
+/* 6 under the icon (`xs` + `xxs`), less the dot's own `xs`. */
 .dot {
   position: absolute;
-  bottom: calc(var(--spacing-xs) + var(--spacing-xxs));
+  bottom: calc((var(--size-tab-bar) - var(--size-tab-icon)) / 2 - var(--spacing-xs) * 2 - var(--spacing-xxs));
   width: var(--spacing-xs);
   height: var(--spacing-xs);
   border-radius: var(--radius-pill);

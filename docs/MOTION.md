@@ -57,7 +57,7 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's
     and its glass becomes the palette's raised surface, which covers it early on;
-  - Search's icon flies from the capsule to the front of the query row (from the tab bar's 23 px
+  - Search's icon flies from the capsule to the front of the query row (from the tab bar's 26 px
     to the row's 19 px, from faint to lamp), pulling the query in behind it; Home and Library stay put in the
     capsule, which stays where it is under the veil until the palette has covered it. Cancel
     fades in at the row's end (Home and Library come back into the row once the keyboard is
