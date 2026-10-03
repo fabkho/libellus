@@ -15,7 +15,10 @@ import { IMPORT_KEY_PREFIX, type ImportEntry, type ImportSession } from '../../a
  *   book, private to them.
  * - Entries by `import_key` (`fable:<tracker id>`); an entry the member already
  *   made in the app for the same Book is adopted rather than doubled. When the
- *   overrides move a record to another edition, its entry moves with it.
+ *   overrides move a record to another edition, its entry moves with it —
+ *   unless the member changed the entry's edition in the app (#41,
+ *   `edition_changed_at`): her choice stands, and the record's Book is neither
+ *   looked up nor made again, so a rerun never moves the entry back.
  * - Sessions by `import_key` within their entry: changed fields are updated,
  *   imported sessions no longer in the plan are deleted, sessions made in the
  *   app (no key) are never touched. The Status follows from the database's
@@ -36,13 +39,24 @@ export interface WriteOptions {
 
 export interface WriteResult {
   books: { created: number; reused: number; coverFilled: number; manual: number }
-  entries: { created: number; adopted: number; moved: number; unchanged: number; stale: string[]; pruned: number }
+  entries: {
+    created: number
+    adopted: number
+    moved: number
+    unchanged: number
+    /** Entries whose edition the member changed in the app (#41): their Book is left as she chose it. */
+    memberEdition: number
+    stale: string[]
+    pruned: number
+  }
   sessions: { created: number; updated: number; unchanged: number; deleted: number }
   problems: { key: string; title: string; problem: string }[]
 }
 
 type BookRef = { id: string; cover_url: string | null; owner_id: string | null }
-type EntryRow = { id: string; book_id: string; import_key: string | null }
+type EntryRow = { id: string; book_id: string; import_key: string | null; edition_changed_at: string | null }
+
+const ENTRY_FIELDS = 'id, book_id, import_key, edition_changed_at'
 type SessionRow = {
   id: string
   import_key: string | null
@@ -102,7 +116,7 @@ export async function writeImport(
   const { dryRun = false, log = () => {} } = options
   const result: WriteResult = {
     books: { created: 0, reused: 0, coverFilled: 0, manual: 0 },
-    entries: { created: 0, adopted: 0, moved: 0, unchanged: 0, stale: [], pruned: 0 },
+    entries: { created: 0, adopted: 0, moved: 0, unchanged: 0, memberEdition: 0, stale: [], pruned: 0 },
     sessions: { created: 0, updated: 0, unchanged: 0, deleted: 0 },
     problems: [],
   }
@@ -190,7 +204,7 @@ export async function writeImport(
         // The overrides moved this record to another edition: the entry follows,
         // unless the member already holds that edition in another entry.
         const clash = check(
-          await client.from('library_entries').select('id, book_id, import_key').eq('member_id', memberId).eq('book_id', bookId),
+          await client.from('library_entries').select(ENTRY_FIELDS).eq('member_id', memberId).eq('book_id', bookId),
           'Finding the entry of the new edition',
         ) as EntryRow[]
         if (clash[0]) {
@@ -208,7 +222,7 @@ export async function writeImport(
     if (bookId) {
       // Already in the Library (added in the app, or another record of the same edition).
       const held = check(
-        await client.from('library_entries').select('id, book_id, import_key').eq('member_id', memberId).eq('book_id', bookId),
+        await client.from('library_entries').select(ENTRY_FIELDS).eq('member_id', memberId).eq('book_id', bookId),
         'Finding the entry by its Book',
       ) as EntryRow[]
       if (held[0]) {
@@ -279,12 +293,20 @@ export async function writeImport(
   for (const [index, entry] of entries.entries()) {
     try {
       const existing = (check(
-        await client.from('library_entries').select('id, book_id, import_key').eq('member_id', memberId).eq('import_key', entry.key),
+        await client.from('library_entries').select(ENTRY_FIELDS).eq('member_id', memberId).eq('import_key', entry.key),
         'Finding the entry',
       ) as EntryRow[])[0] ?? null
-      const bookId = await bookFor(entry, existing)
-      const entryId = await entryFor(entry, bookId, existing)
-      await sessionsFor(entry, entryId)
+      if (existing?.edition_changed_at) {
+        // The member picked this entry's edition in the app (#41): the record's
+        // Book would move it back (or, for a Manual book, make a new one). Only
+        // the reads follow the record.
+        result.entries.memberEdition++
+        await sessionsFor(entry, existing.id)
+      } else {
+        const bookId = await bookFor(entry, existing)
+        const entryId = await entryFor(entry, bookId, existing)
+        await sessionsFor(entry, entryId)
+      }
       log(`${String(index + 1).padStart(3)}/${entries.length} ${entry.book.title}`)
     } catch (error) {
       result.problems.push({ key: entry.key, title: entry.book.title, problem: error instanceof Error ? error.message : String(error) })
@@ -294,7 +316,7 @@ export async function writeImport(
   // Imported entries whose record the plan no longer has (an override now skips it).
   const planned = new Set(entries.map((entry) => entry.key))
   const imported = check(
-    await client.from('library_entries').select('id, book_id, import_key').eq('member_id', memberId).like('import_key', `${IMPORT_KEY_PREFIX}%`),
+    await client.from('library_entries').select(ENTRY_FIELDS).eq('member_id', memberId).like('import_key', `${IMPORT_KEY_PREFIX}%`),
     'Reading the imported entries',
   ) as EntryRow[]
   for (const row of imported) {
