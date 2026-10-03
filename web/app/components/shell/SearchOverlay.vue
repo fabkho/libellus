@@ -325,7 +325,30 @@ watch(
     }
   },
 )
-watch(() => route.path, () => search.isOpen && search.close())
+// Going to another page closes the search, but only a navigation that started
+// while it was open (a result, a tab in the palette). One that started before
+// (a tab tapped just before Search, its page still loading) lands behind the
+// open search instead of closing it the moment it arrives.
+const router = useRouter()
+let openedAt = -Infinity
+let navigationStartedAt = -Infinity
+watch(
+  () => search.isOpen,
+  (open) => {
+    if (open) openedAt = performance.now()
+  },
+  { flush: 'sync' },
+)
+const stopNavigationGuard = router.beforeEach(() => {
+  navigationStartedAt = performance.now()
+})
+onUnmounted(stopNavigationGuard)
+watch(
+  () => route.path,
+  () => {
+    if (search.isOpen && navigationStartedAt >= openedAt) search.close()
+  },
+)
 onUnmounted(() => {
   if (!import.meta.client) return
   listen(false)

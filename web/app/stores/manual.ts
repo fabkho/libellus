@@ -85,8 +85,8 @@ export const useManualStore = defineStore('manual', () => {
         return null
       }
       const entry = result.data
-      library.wantToRead = [entry, ...library.wantToRead.filter((e) => e.id !== entry.id)]
-      library.addedByKey.set(entry.book.id, entry)
+      // Into Want to read at once, and its book page knows it (stores/library.ts).
+      library.entryChanged(entry)
       isOpen.value = false
       search.close()
       return entry
