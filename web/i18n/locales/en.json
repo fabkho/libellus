@@ -119,10 +119,11 @@
     "add": "Add {title} to your Library",
     "noResultsTitle": "No books found",
     "noResults": "Nothing for “{query}”.",
-    "noResultsHint": "Check the spelling, or search the ISBN of the edition you hold.",
+    "noResultsHint": "Check the spelling, or search the ISBN of the edition you hold. Or add it by hand; books you add yourself stay private.",
     "failedTitle": "Search isn't working right now",
     "failed": "Check your connection and try again.",
-    "hint": "Not the edition you hold? Search its ISBN."
+    "hint": "Not the edition you hold? Search its ISBN.",
+    "addManually": "Add manually"
   },
   "status": {
     "want_to_read": "Want to read",
@@ -153,5 +154,34 @@
     },
     "action": "Add to Library",
     "busy": "Adding…"
+  },
+  "manual": {
+    "title": "Add manually",
+    "action": "Add",
+    "coverNote": "Generated cover",
+    "field": {
+      "title": "Title",
+      "author": "Author",
+      "isbn": "ISBN",
+      "pageCount": "Pages"
+    },
+    "optional": "Optional",
+    "private": "Only you can see this book. It stays out of the shared catalogue.",
+    "submit": "Add to Library",
+    "busy": "Adding…",
+    "invalid": {
+      "title": "Give the book a title.",
+      "author": "Give the book an author.",
+      "isbn": "That isn't a valid ISBN. Check the digits, or leave it empty.",
+      "pageCount": "Pages must be a whole number above zero."
+    },
+    "error": {
+      "book_invalid": "This book can't be added: check the title, author and pages.",
+      "isbn_invalid": "That isn't a valid ISBN. Check the digits, or leave it empty.",
+      "already_in_library": "This book is already in your Library.",
+      "status_unsupported": "That status can't be chosen yet.",
+      "not_signed_in": "Sign in again to add books.",
+      "unknown": "Something went wrong. Please try again."
+    }
   }
 }

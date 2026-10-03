@@ -105,7 +105,7 @@ The data layer reports stable codes, never sentences (`app/data/auth.ts`, `AuthE
 
 ### Search  (web: `components/search/Results.vue`, `components/search/ResultRow.vue`, `stores/search.ts`, `data/search.ts`)
 Purpose: find a Book from anywhere without leaving the page: the content of the search overlay (Tab shell) above its query row.
-States: idle (query shorter than 2 characters: `search.empty`) · loading (no answer yet: one still ghost row, `search.loading` for assistive tech) · results (best match at the bottom next to the query, weaker ones above it, the far end fading out; `search.hint` at the top) · results dimmed while a newer query is on its way · no results (`search.noResultsTitle`, `search.noResults` with the query, `search.noResultsHint`) · failed (no source answered: `search.failedTitle`, `search.failed`)
+States: idle (query shorter than 2 characters: `search.empty`) · loading (no answer yet: one still ghost row, `search.loading` for assistive tech) · results (best match at the bottom next to the query, weaker ones above it, the far end fading out; `search.hint` at the top) · results dimmed while a newer query is on its way · no results (`search.noResultsTitle`, `search.noResults` with the query, `search.noResultsHint`, and the way to the manual-book sheet: `search.addManually`) · failed (no source answered: `search.failedTitle`, `search.failed`)
 Actions → result:
 - Type → after a 220 ms pause, and only from 2 characters, the query goes out (`createSearch().search`). Every new keystroke aborts the query in flight; an answer only lands for the query it was asked for, so an outdated answer never overwrites a newer one. Clearing or shortening the query below 2 characters goes back to idle.
 - An ISBN (10 or 13 digits, hyphens and spaces allowed, ISBN-10 converted) is looked up as an ISBN instead of searched as text.
@@ -114,7 +114,7 @@ Actions → result:
 - Tap + (`search.add`, label `search.add` with the title) → the Add sheet over the search; after adding, the row shows its Status.
 Edge cases: today the only source is Apple Books (iTunes Search API, ebooks, 20 per storefront), asked in two storefronts at once by the device language: German (`de`, `de-*`) → `de` then `us`; anything else → `us` then `gb`; the first storefront's results rank first. One storefront failing leaves the other's results; both failing is the failed state. The list may grow up to the height above the query row (the visual viewport, so it stays above the keyboard) and scrolls; dragging inside the list scrolls rather than swiping the palette away. Closing the search drops the query and the results.
 Copy keys: `search.empty`, `search.loading`, `search.hint`, `search.add`, `search.noResultsTitle`, `search.noResults`, `search.noResultsHint`, `search.failedTitle`, `search.failed`, `status.*`, `common.etAl`
-IDs: `search.empty`, `search.loading`, `search.results`, `search.result`, `search.resultTitle`, `search.resultStatus`, `search.add`, `search.hint`, `search.noResults`, `search.failed`
+IDs: `search.addManually`, `search.empty`, `search.loading`, `search.results`, `search.result`, `search.resultTitle`, `search.resultStatus`, `search.add`, `search.hint`, `search.noResults`, `search.failed`
 Flow: `web/e2e/search-and-add.spec.ts` (Apple answers from the recordings in `web/tests/fixtures/apple`); the repository in `web/tests/search.test.ts`
 - [x] Web  - [ ] iOS  - [ ] Android
 
@@ -163,6 +163,24 @@ Flow: `web/e2e/search-and-add.spec.ts` (empty → two Books, newest first → ba
 ### Error codes of the Library
 `app/data/library.ts`, `LibraryErrorCode`; copy under `library.error.<code>`: `already_in_library` (the member already has this Book), `book_invalid` (no title, not an Apple Books or OpenLibrary snapshot, or nothing to find the Book by again), `status_unsupported` (a Status this version cannot add with yet), `not_signed_in`, `unknown` (also for `book_conflict`, a concurrent add of the same new Book that rolled back: trying again works). The database raises them as the messages of `add_to_library`.
 
+### Manual book sheet  (web: `components/book/ManualSheet.vue`, `stores/manual.ts`, `data/manualBooks.ts`, the link in `components/search/Results.vue`)
+Purpose: type a book in by hand when search finds nothing, and track it like any other (D's manual-book). The Book is the member's own: private, never in the Catalogue, never in anybody else's search.
+Layout: `UiSheet` (Cancel at the top left, title `manual.title`, **Add** at the right) over the search. The Placeholder cover as a preview (`UiCover` md, follows the title and author as they are typed; `manual.coverNote`), a group of two rows, Title\* and Author\*, a second group of two optional rows, ISBN and Pages (mono), the reason a field is wrong, the lock line `manual.private`, the primary **Add to Library**. A row is label left, input right-aligned; the row being typed in is lit in the lamp tint.
+Entry: in the search's no-results state, the quiet button `search.addManually` under `search.noResultsHint`. It opens the sheet with what was typed: an ISBN fills ISBN, anything else fills Title.
+States: editing · busy (`manual.busy`, action and button disabled) · a field wrong (its label and text in the error colour, one line `manual.invalid.<field>` under the groups) · error (`manual.error.<code>` in the same place; the sheet stays open)
+Actions → result:
+- Add (`manual.action`, `manual.submit`, or Enter in a field) → the fields are checked first (title and author not blank; ISBN 10 or 13 digits with a matching check digit, hyphens and spaces allowed; pages a whole number above zero) and nothing is sent while one is wrong. Then **one call**, `add_manual_book(title, authors, isbn, page_count, status)`: the Book (`source = manual`, `owner_id` = the member, an ISBN-10 also stored as ISBN-13) and the member's entry on *Want to read*; it returns the entry. The sheet closes, the search closes with its query, and the Book's page opens (`/book/<id>`); the Library lists it on *Want to read*.
+- Cancel (`manual.cancel`), the scrim, Escape or a swipe down → the sheet closes; the search is as it was.
+Placeholder cover: a Manual book has no image, so everywhere it appears (Library rows, the book page, the sheet) `UiCover` draws title and author on a cloth, picked by the title (`clothOf`, six cloths, the same in both themes). The same title always gets the same cloth.
+Edge cases: private by RLS, not by filtering: `books_readable` shows a row with an owner to its owner only, so another member cannot read it, find it by title or ISBN, add it to a Library or open its page (missing), and members never write `books` directly (not even their own Manual books; editing them is not part of v1). Two members typing in the same book each get their own; the Catalogue's unique indexes leave Manual books out. Deleting a member deletes her Manual books. `status` is `want_to_read` only until #9 widens `add_to_library` and `add_manual_book` together.
+Copy keys: `search.addManually`, `manual.title`, `manual.action`, `manual.coverNote`, `manual.field.<title|author|isbn|pageCount>`, `manual.optional`, `manual.private`, `manual.submit`, `manual.busy`, `manual.invalid.<field>`, `manual.error.<code>`, `common.cancel`
+IDs: `search.addManually`, `manual`, `manual.scrim`, `manual.cancel`, `manual.action`, `manual.cover`, `manual.title`, `manual.author`, `manual.isbn`, `manual.pageCount`, `manual.invalid`, `manual.error`, `manual.private`, `manual.submit`
+Flow: `web/e2e/manual-book.spec.ts` (empty search → add manually → required fields and a wrong ISBN → the Book's page → Library with the generated cover; an ISBN query fills the ISBN); the repository in `web/tests/manual-books.test.ts`; the database in `supabase/tests/manual_books_test.sql`
+- [x] Web  - [ ] iOS  - [ ] Android
+
+### Error codes of the manual-book call
+`app/data/manualBooks.ts`, `ManualBookErrorCode` = the Library's codes plus `isbn_invalid`; copy under `manual.error.<code>`. The database raises them as the messages of `add_manual_book`: `book_invalid` (no title, no author, or a page count that is not positive), `isbn_invalid` (not 10 or 13 digits, or the check digit does not add up), `status_unsupported`, `not_signed_in`; `unknown` for the rest.
+
 <!-- Filled as the screens land: Search sources (#12), Book detail and the
-     Add / Finish / Abandon sheets (#6, #7, #9, #10, #11), Home (#8), Manual book (#13),
+     Add / Finish / Abandon sheets (#6, #7, #9, #10, #11), Home (#8),
      Library and Collections (#14), offline states (#15). #16 completes the set. -->
