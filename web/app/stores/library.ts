@@ -145,6 +145,18 @@ export const useLibraryStore = defineStore('library', () => {
     if (entry.status === 'finished' && readInYear.value !== null) void loadReadInYear()
   }
 
+  /**
+   * An entry left the Library (removed here): it leaves its list, and the book
+   * pages that show it and search's results learn it is gone, without a reload.
+   */
+  function entryRemoved(entryId: string) {
+    lastChange = performance.now()
+    for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entryId)
+    for (const [key, known] of entryByKey) if (known.id === entryId) entryByKey.delete(key)
+    search.markRemoved(entryId)
+    if (readInYear.value !== null) void loadReadInYear()
+  }
+
   // ---------------------------------------------------------------- Add sheet
 
   /** The Book the Add sheet is about; null while it is closed. */
@@ -242,6 +254,7 @@ export const useLibraryStore = defineStore('library', () => {
     entryByKey,
     remember,
     entryChanged,
+    entryRemoved,
     adding,
     addDraft,
     addBusy,

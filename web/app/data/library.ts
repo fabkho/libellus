@@ -72,6 +72,8 @@ export type LibraryErrorCode =
   | 'reason_too_long'
   /** Read again: the entry has no read yet; its first read is Start reading. */
   | 'never_read'
+  /** Edit or delete a read: no such read in the member's Library (gone, or never theirs). */
+  | 'session_not_found'
   | 'not_signed_in'
   | 'unknown'
 
@@ -91,6 +93,7 @@ const RAISED_CODES = [
   'review_too_long',
   'reason_too_long',
   'never_read',
+  'session_not_found',
   'not_signed_in',
 ] as const satisfies readonly LibraryErrorCode[]
 
@@ -99,6 +102,78 @@ export const REVIEW_MAX_LENGTH = 10_000
 
 /** The longest reason an abandoned read keeps (the database's limit too). */
 export const ABANDON_REASON_MAX_LENGTH = 1000
+
+/**
+ * What the Edit sheet collects for one read (issue #11): days are `YYYY-MM-DD`
+ * or '' (none); `rating` is quarters, 1–20, or null (unrated); the review and
+ * the abandon reason are text, '' for none. Which of them count follows from the
+ * read's outcome, which an edit never changes (`sessionEditOf`,
+ * `checkSessionEdit`): an open read has its start only, a finished one the
+ * dates, Rating and review, an abandoned one the dates and the reason.
+ */
+export type SessionEdit = {
+  startedOn: string
+  endedOn: string
+  rating: number | null
+  review: string
+  abandonReason: string
+}
+
+/** A read as the Edit sheet starts from it. */
+export function sessionEditOf(session: ReadingSession): SessionEdit {
+  return {
+    startedOn: session.startedOn ?? '',
+    endedOn: session.endedOn ?? '',
+    rating: session.rating,
+    review: session.review ?? '',
+    abandonReason: session.abandonReason ?? '',
+  }
+}
+
+/**
+ * What is wrong with an edit's days, before anything is sent: a malformed day,
+ * one after `today` (the member's own), an end before the start, a closed read
+ * losing the end day it has (a read logged without one may stay without; an
+ * open read needs its start). The database refuses the same, and is the
+ * authority.
+ */
+export function checkSessionEdit(session: ReadingSession, edit: SessionEdit, today: string): LibraryErrorCode | null {
+  const isDay = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day)
+  if (edit.startedOn && !isDay(edit.startedOn)) return 'date_invalid'
+  if (edit.endedOn && !isDay(edit.endedOn)) return 'date_invalid'
+  if (!session.outcome) {
+    if (!edit.startedOn) return 'date_invalid'
+    return edit.startedOn > today ? 'date_in_future' : null
+  }
+  if (!edit.endedOn && session.endedOn) return 'date_invalid'
+  if (edit.startedOn > today || edit.endedOn > today) return 'date_in_future'
+  if (edit.startedOn && edit.endedOn && edit.endedOn < edit.startedOn) return 'ended_before_started'
+  return null
+}
+
+/** An edit as the trailing arguments of `update_session`: only what the read's outcome allows is sent. */
+export function sessionEditArguments(session: ReadingSession, edit: SessionEdit) {
+  return {
+    p_started_on: edit.startedOn || null,
+    p_ended_on: session.outcome ? edit.endedOn || null : null,
+    p_rating: session.outcome === 'finished' ? edit.rating : null,
+    p_review: session.outcome === 'finished' ? edit.review || null : null,
+    p_abandon_reason: session.outcome === 'abandoned' ? edit.abandonReason || null : null,
+  }
+}
+
+/**
+ * A book's reads, newest first: the open one (it is always the latest), then
+ * by the day they ended, then started, then made; reads without a day last.
+ * The order of `latest_session` in the database, for the whole history.
+ */
+export function sortSessions(sessions: readonly ReadingSession[]): ReadingSession[] {
+  return [...sessions].sort((a, b) => {
+    if (!a.outcome !== !b.outcome) return a.outcome ? 1 : -1
+    const byDay = (x: string | null, y: string | null) => (x && y ? y.localeCompare(x) : x ? -1 : y ? 1 : 0)
+    return byDay(a.endedOn, b.endedOn) || byDay(a.startedOn, b.startedOn) || b.createdAt.localeCompare(a.createdAt)
+  })
+}
 /**
  * What an entry is added with (issue #9): its Status and the first read that
  * goes with it. Currently reading needs `startedOn`; Finished needs `endedOn`
@@ -385,6 +460,25 @@ export type Library = {
    * earlier sessions stay. Returns the entry, now Currently reading.
    */
   readAgain: (entryId: string, startedOn: string) => Promise<Result<LibraryEntry>>
+  /** Every read of an entry, newest first (`sortSessions`). */
+  sessions: (entryId: string) => Promise<Result<ReadingSession[]>>
+  /**
+   * Fixes one read (issue #11): its days and, by its outcome, the Rating and
+   * review (finished) or the reason (abandoned), with the rules of creating it.
+   * The edit is the whole read as the sheet shows it (`SessionEdit`); what the
+   * outcome does not allow is left out. Returns the entry as it is now.
+   */
+  updateSession: (entryId: string, session: ReadingSession, edit: SessionEdit) => Promise<Result<LibraryEntry>>
+  /**
+   * Deletes one read. The entry follows what is left: the only read gone
+   * returns it to Want to read. Returns the entry as it is now.
+   */
+  deleteSession: (entryId: string, sessionId: string) => Promise<Result<LibraryEntry>>
+  /**
+   * Removes the entry from the Library with its reads and its places on
+   * Collections (the Collections and the Book stay).
+   */
+  removeFromLibrary: (entryId: string) => Promise<Result<null>>
   /**
    * The member's entries with one status and their latest sessions, newest
    * first: Want to read by when it was added, Currently reading by the start
@@ -472,6 +566,30 @@ export function createLibrary(client: SupabaseClient): Library {
       })
       if (abandoned.error) return { data: null, error: mapLibraryError(abandoned.error) }
       return reread(entryId)
+    },
+
+    async sessions(entryId) {
+      const { data, error } = await client.from('reading_sessions').select('*').eq('entry_id', entryId).returns<SessionRow[]>()
+      if (error) return { data: null, error: mapLibraryError(error) }
+      return { data: sortSessions(data.map(sessionFromRow)), error: null }
+    },
+
+    async updateSession(entryId, session, edit) {
+      const updated = await client.rpc('update_session', { p_session_id: session.id, ...sessionEditArguments(session, edit) })
+      if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
+      return reread(entryId)
+    },
+
+    async deleteSession(entryId, sessionId) {
+      const deleted = await client.rpc('delete_session', { p_session_id: sessionId })
+      if (deleted.error) return { data: null, error: mapLibraryError(deleted.error) }
+      return reread(entryId)
+    },
+
+    async removeFromLibrary(entryId) {
+      const removed = await client.rpc('remove_from_library', { p_entry_id: entryId })
+      if (removed.error) return { data: null, error: mapLibraryError(removed.error) }
+      return { data: null as null, error: null }
     },
 
     async readAgain(entryId, startedOn) {

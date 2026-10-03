@@ -176,6 +176,14 @@ export const useSearchStore = defineStore('search', () => {
     }
   }
 
+  /** After a removal from the Library, the hit is a Book to add again, and no longer an edition she has. */
+  function markRemoved(entryId: string) {
+    if (library) library = library.then((entries) => entries.filter((e) => e.id !== entryId))
+    for (const hit of hits.value) {
+      if (hit.entry?.id === entryId) hit.entry = null
+    }
+  }
+
   /** Signing out forgets what was searched. */
   function reset() {
     cancel()
@@ -187,5 +195,5 @@ export const useSearchStore = defineStore('search', () => {
     library = null
   }
 
-  return { isOpen, query, hits, phase, answered, outdated, open, close, seenBook, markAdded, reset, repository }
+  return { isOpen, query, hits, phase, answered, outdated, open, close, seenBook, markAdded, markRemoved, reset, repository }
 })

@@ -148,7 +148,8 @@
       "rating_invalid": "A rating is between a quarter star and five stars.",
       "review_too_long": "That review is longer than we can keep. Shorten it a little.",
       "reason_too_long": "That reason is longer than we can keep. Shorten it a little.",
-      "never_read": "You haven't read this book yet. Start reading it first."
+      "never_read": "You haven't read this book yet. Start reading it first.",
+      "session_not_found": "That read isn't there any more. It may have been deleted on another device."
     },
     "undated": "No end date"
   },
@@ -195,7 +196,8 @@
     "finish": "Finish",
     "abandon": "Abandon",
     "readAgain": "Read again",
-    "startAgain": "Start again"
+    "startAgain": "Start again",
+    "options": "Book options"
   },
   "add": {
     "title": "Add to Library",
@@ -330,5 +332,62 @@
     "error": "Check your connection and try again.",
     "retry": "Try again",
     "toCollections": "All collections"
+  },
+  "history": {
+    "title": "Reading history",
+    "count": "{count} read | {count} reads",
+    "loadError": "The history didn't load. Check your connection and try again.",
+    "retry": "Try again",
+    "readingNow": "Reading now",
+    "thisRead": "This read",
+    "ordinal": {
+      "first": "First read",
+      "second": "Second read",
+      "third": "Third read",
+      "fourth": "Fourth read",
+      "fifth": "Fifth read"
+    },
+    "nth": "Read {n}",
+    "since": "Since {date}",
+    "range": "{from} – {to}",
+    "startedOn": "Started {date}",
+    "endedOn": "Ended {date}",
+    "undated": "No dates",
+    "days": "Same day | 1 day | {count} days",
+    "edit": "Edit",
+    "editLabel": "Edit {name}"
+  },
+  "editSession": {
+    "title": "Edit read",
+    "startedOn": "Started on",
+    "notSet": "Not set",
+    "clearStarted": "Remove start date",
+    "finishedOn": "Finished on",
+    "stoppedOn": "Stopped on",
+    "review": "Review",
+    "reason": "Reason",
+    "optional": "optional",
+    "reviewPlaceholder": "What stayed with you?",
+    "reasonPlaceholder": "Why did you put it down?",
+    "action": "Save",
+    "busy": "Saving…",
+    "retry": "Try again",
+    "delete": "Delete this read"
+  },
+  "deleteSession": {
+    "title": "Delete this read?",
+    "text": "It is removed for good.",
+    "only": "It is the only one, so the book goes back to Want to read.",
+    "action": "Delete read",
+    "busy": "Deleting…"
+  },
+  "bookOptions": {
+    "remove": "Remove from Library"
+  },
+  "removeEntry": {
+    "title": "Remove “{title}” from your Library?",
+    "text": "Its reads and its places on your collections go with it. The collections stay.",
+    "action": "Remove from Library",
+    "busy": "Removing…"
   }
 }

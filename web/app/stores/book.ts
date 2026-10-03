@@ -115,6 +115,11 @@ export const useBookStore = defineStore('book', () => {
     if (!pages.has(key)) void load(key)
   }
 
+  /** The entry left the Library (removed here): its pages show the Book as one to add again. */
+  function dropEntry(entryId: string) {
+    for (const [key, loaded] of pages) if (loaded.entry?.id === entryId) pages.set(key, { ...loaded, entry: null })
+  }
+
   function reset() {
     pages.clear()
     loading.clear()
@@ -129,5 +134,5 @@ export const useBookStore = defineStore('book', () => {
     },
   )
 
-  return { page, load, prefetch, reset }
+  return { page, load, prefetch, dropEntry, reset }
 })
