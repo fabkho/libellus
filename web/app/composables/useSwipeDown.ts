@@ -22,6 +22,11 @@ export function useSwipeDown(dismiss: () => void) {
   function onPointerdown(event: PointerEvent) {
     const target = event.target as HTMLElement | null
     if (target?.closest('input, textarea, button, a, [data-no-swipe]')) return
+    // Content scrolled down inside the element (a tall sheet): a downward drag
+    // scrolls it back first, as on iOS, and never dismisses mid-scroll.
+    for (let el = target; el && el !== event.currentTarget; el = el.parentElement) {
+      if (el.scrollTop > 0) return
+    }
     start = { y: event.clientY, time: event.timeStamp, id: event.pointerId }
     dragging.value = true
     ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)

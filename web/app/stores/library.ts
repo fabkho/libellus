@@ -50,12 +50,19 @@ export const useLibraryStore = defineStore('library', () => {
 
   const STATUSES: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 
+  /** When this device last changed the Library (`performance.now()`): reads asked for before it are stale. */
+  let lastChange = -Infinity
+
   async function load() {
     const repo = library()
     if (!repo) return
     const member = session.member?.id
+    const asked = performance.now()
     const results = await Promise.all(STATUSES.map((status) => repo.entries(status)))
     if (member !== session.member?.id) return
+    // An add, start or finish landed while the lists were on their way: they
+    // may not have it yet, so ask again rather than show the older state.
+    if (lastChange > asked) return load()
     const failed = results.find((result) => result.error)
     if (failed) {
       loadError.value = failed.error
@@ -63,11 +70,26 @@ export const useLibraryStore = defineStore('library', () => {
     }
     loadError.value = null
     STATUSES.forEach((status, i) => (lists[status] = results[i]!.data!))
+    for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
     loaded.value = true
   }
 
-  /** Entries this visit, by the page keys of the Books they belong to (the book store reads them). */
+  /**
+   * The member's entries as this device last saw them, by the page keys of
+   * their Books (the book store prefers them over a page loaded earlier).
+   */
   const entryByKey = reactive(new Map<string, LibraryEntry>())
+
+  /**
+   * The newest known state of an entry, from a read (`asked`: when that read
+   * was asked for; dropped if this device changed the Library since) or from a
+   * change made here.
+   */
+  function remember(entry: LibraryEntry, { keys = [], asked }: { keys?: string[]; asked?: number } = {}) {
+    if (asked !== undefined && lastChange > asked) return
+    for (const [key, known] of entryByKey) if (known.id === entry.id) entryByKey.set(key, entry)
+    for (const key of [entry.book.id, ...keys]) entryByKey.set(key, entry)
+  }
 
   /**
    * An entry changed on this device (added, started, finished): it moves to
@@ -75,10 +97,10 @@ export const useLibraryStore = defineStore('library', () => {
    * results learn its new state, without a reload.
    */
   function entryChanged(entry: LibraryEntry, ...keys: string[]) {
+    lastChange = performance.now()
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entry.id)
     lists[entry.status] = sortEntries([entry, ...lists[entry.status]])
-    for (const [key, known] of entryByKey) if (known.id === entry.id) entryByKey.set(key, entry)
-    for (const key of [entry.book.id, ...keys]) entryByKey.set(key, entry)
+    remember(entry, { keys })
     search.markAdded(entry)
   }
 
@@ -165,6 +187,7 @@ export const useLibraryStore = defineStore('library', () => {
     loadError,
     load,
     entryByKey,
+    remember,
     entryChanged,
     adding,
     addStatus,

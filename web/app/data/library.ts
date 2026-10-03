@@ -233,8 +233,13 @@ export function mapLibraryError(failure: { message?: string; code?: string }): L
   const message = failure.message ?? ''
   const raised = RAISED_CODES.find((code) => message === code)
   if (raised) return raised
-  // A snapshot a table constraint refuses (an ISBN in the wrong shape, say).
-  if (failure.code === '23514' || failure.code === '22P02') return 'book_invalid'
+  // A snapshot a `books` constraint refuses (an ISBN in the wrong shape, say).
+  // Other tables' checks are the functions' to word; reaching one is a bug.
+  if (failure.code === '23514') return message.includes('"books_') ? 'book_invalid' : 'unknown'
+  // A day that is no day ("2026-02-30").
+  if (failure.code === '22007' || failure.code === '22008') return 'date_invalid'
+  // An entry id that is no id: there is no such entry.
+  if (failure.code === '22P02') return message.includes('uuid') ? 'entry_not_found' : 'book_invalid'
   return 'unknown'
 }
 

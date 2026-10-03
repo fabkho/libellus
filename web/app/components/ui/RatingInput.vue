@@ -14,6 +14,7 @@ const props = defineProps<{ testid: string; disabled?: boolean }>()
 const { t } = useI18n()
 
 const track = useTemplateRef<HTMLElement>('track')
+const hintId = useId()
 
 /** The control's geometry in px, from the tokens it is drawn with. */
 function geometry() {
@@ -132,8 +133,9 @@ function onKeydown(event: KeyboardEvent) {
     <div
       ref="track"
       role="slider"
-      tabindex="0"
+      :tabindex="disabled ? -1 : 0"
       :aria-label="t('rating.title')"
+      :aria-describedby="hintId"
       aria-valuemin="0"
       :aria-valuemax="MAX_QUARTERS / 4"
       :aria-valuenow="value / 4"
@@ -146,6 +148,7 @@ function onKeydown(event: KeyboardEvent) {
       @pointermove="onPointermove"
       @pointerup="onPointerup"
       @pointercancel="onPointercancel"
+      @lostpointercapture="onPointercancel"
       @keydown="onKeydown"
     >
       <span class="block" aria-hidden="true"><UiStars :quarters="model" size="input" :show-value="false" /></span>
@@ -161,7 +164,7 @@ function onKeydown(event: KeyboardEvent) {
         <span class="thumb" :class="!model && 'empty'" :style="position(value)" />
       </span>
     </div>
-    <p class="mt-xs text-footnote text-ink-faint">{{ t('rating.hint') }}</p>
+    <p :id="hintId" class="mt-xs text-footnote text-ink-faint">{{ t('rating.hint') }}</p>
   </div>
 </template>
 
@@ -244,7 +247,7 @@ function onKeydown(event: KeyboardEvent) {
   transform: translate(-50%, -50%);
   transition:
     left var(--duration-quick) var(--ease-standard),
-    opacity var(--duration-quick) var(--ease-standard);
+    background-color var(--duration-quick) var(--ease-standard);
 }
 
 /* Following the finger: no easing behind it. */

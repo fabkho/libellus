@@ -296,8 +296,11 @@ begin
     raise exception 'entry_not_found' using errcode = 'P0002';
   end if;
 
+  -- Locked too: a write that skips the entry (the import, as the service role)
+  -- cannot close it under us; one that did finds it gone here.
   select * into v_session from public.reading_sessions
-   where entry_id = p_entry_id and outcome is null;
+   where entry_id = p_entry_id and outcome is null
+     for update;
   if not found then
     raise exception 'not_reading' using errcode = '22023';
   end if;

@@ -94,12 +94,16 @@ export const useBookStore = defineStore('book', () => {
       const seen = search.seenBook(key)
       pages.set(key, { phase: seen ? 'ready' : 'loading', book: seen, entry: null, error: null })
     }
+    const asked = performance.now()
     const task = resolve(key)
       .then((resolved) => {
         // Keep a page that shows something over a failed refresh.
         const current = pages.get(key)
         if (resolved.phase === 'error' && current?.book) return
         pages.set(key, resolved)
+        // What the database says now (a finish on another device, say) replaces
+        // what this device knew, unless this device changed the entry since.
+        if (resolved.entry) library.remember(resolved.entry, { keys: [key], asked })
       })
       .finally(() => loading.delete(key))
     loading.set(key, task)
