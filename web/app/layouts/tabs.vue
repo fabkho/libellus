@@ -4,7 +4,7 @@
 // layout first; on a wide screen the same layout sits in a centred column.
 //
 // Each tab page names its header in its page meta:
-//   definePageMeta({ layout: 'tabs', screen: 'home', titleSize: 'title', dated: true })
+//   definePageMeta({ layout: 'tabs', screen: 'home', titleSize: 'title', dated: true, greeting: true })
 // `screen` is the test-ID prefix and the copy key (`<screen>.title`).
 // A pushed screen (`pushed: true`, the book page) draws its own top bar over
 // its cover's light instead of the header, edge to edge; the tab bar and
@@ -16,12 +16,15 @@ const route = useRoute()
 const screen = computed(() => String(route.meta.screen ?? 'home'))
 const pushed = computed(() => Boolean(route.meta.pushed))
 const titleSize = computed(() => (route.meta.titleSize === 'title' ? 'title' : 'large'))
-const eyebrow = computed(() => (route.meta.dated ? t('home.today', dateParts(new Date(), locale.value)) : undefined))
+// Home (`greeting: true`) is headed by a greeting for the time of day, not by its name.
+const { now, greeting } = useGreeting()
+const title = computed(() => (route.meta.greeting ? greeting.value : t(`${screen.value}.title`)))
+const eyebrow = computed(() => (route.meta.dated ? t('home.today', dateParts(now.value, locale.value)) : undefined))
 </script>
 
 <template>
   <div class="safe-x mx-auto flex min-h-dvh w-full max-w-(--size-max-content) flex-col sm:border-x-(length:--stroke-hairline) sm:border-hairline">
-    <ShellHeader v-if="!pushed" :screen="screen" :title="t(`${screen}.title`)" :size="titleSize" :eyebrow="eyebrow" />
+    <ShellHeader v-if="!pushed" :screen="screen" :title="title" :size="titleSize" :eyebrow="eyebrow" />
 
     <main class="clear-tab-bar flex-1" :class="!pushed && 'px-screen pt-lg'">
       <slot />

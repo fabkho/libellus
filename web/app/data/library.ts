@@ -391,6 +391,12 @@ export type Library = {
    * date, Finished by the end date (`sortEntries` is the same order).
    */
   entries: (status: EntryStatus) => Promise<Result<LibraryEntry[]>>
+  /**
+   * "Read in <year>" (Home): how many of the member's sessions finished with an
+   * end date in that calendar year. Re-reads count each time; abandoned and
+   * open reads, and finished reads logged without a date, do not. One call.
+   */
+  readInYear: (year: number) => Promise<Result<number>>
   /** One of the member's entries, as it is now. */
   entry: (entryId: string) => Promise<Result<LibraryEntry | null>>
   /** The member's entry for a Book, or null when it is not in the Library. */
@@ -403,6 +409,12 @@ export type Library = {
   statusesByAppleId: (appleIds: readonly string[]) => Promise<Result<Map<string, LibraryEntry>>>
   /** The Catalogue Books among a set of Apple ids (their stored cover, for search results). */
   catalogueByAppleId: (appleIds: readonly string[]) => Promise<Result<Map<string, Book>>>
+}
+
+/** The first and last day of a calendar year, as the days sessions store (`YYYY-MM-DD`). */
+export function yearBounds(year: number): { from: string; to: string } {
+  const y = String(year).padStart(4, '0')
+  return { from: `${y}-01-01`, to: `${y}-12-31` }
 }
 
 export function createLibrary(client: SupabaseClient): Library {
@@ -476,6 +488,19 @@ export function createLibrary(client: SupabaseClient): Library {
       const { data, error } = await query.order('added_at', { ascending: false }).returns<EntryRow[]>()
       if (error) return { data: null, error: mapLibraryError(error) }
       return { data: data.map(entryFromRow), error: null }
+    },
+
+    async readInYear(year) {
+      const { from, to } = yearBounds(year)
+      // RLS shows the member their own sessions only. `head`: the count, no rows.
+      const { count, error } = await client
+        .from('reading_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('outcome', 'finished')
+        .gte('ended_on', from)
+        .lte('ended_on', to)
+      if (error) return { data: null, error: mapLibraryError(error) }
+      return { data: count ?? 0, error: null }
     },
 
     async entryForBook(bookId) {
