@@ -47,6 +47,10 @@ finish with a rating and a review, counted on Home and under Finished). On a pul
 (artifact `playwright-report`; open it with `pnpm exec playwright show-report`). Locally a failure is not
 retried, so a flaky flow is seen.
 
+What a desktop browser cannot show — the system bars, the browser's toolbar, the real keyboard — is
+checked on a real Android emulator running Chrome: `web/e2e/android/smoke.ts`, not part of CI; how to
+set it up and run it is in [`docs/TESTING.md`](docs/TESTING.md).
+
 `pnpm build` (or `pnpm generate`) runs `nuxt generate`; `.output/public` (also linked as `dist`) is
 what Cloudflare Pages serves, service worker and manifest included.
 
