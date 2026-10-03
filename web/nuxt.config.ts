@@ -46,7 +46,7 @@ export default defineNuxtConfig({
         // In the static HTML rather than through <NuxtPwaManifest />: with ssr off
         // that component only adds the link once the app has booted.
         { rel: 'manifest', href: '/manifest.webmanifest' },
-        { rel: 'apple-touch-icon', href: '/icon-180.png' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
         { rel: 'icon', href: '/favicon.ico' },
       ],
     },
@@ -73,13 +73,19 @@ export default defineNuxtConfig({
     locales: [{ code: 'en', language: 'en', file: 'en.json' }],
   },
 
-  // Installable from the home screen; the app shell is precached.
+  // Installable from the home screen, full-screen once opened from there; the
+  // app shell is precached and the covers are cached as they are seen (#15).
+  // The icons are drawn by scripts/render-icons.mjs.
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
+      id: '/',
       name: 'Libellus',
       short_name: 'Libellus',
+      description: 'Your books: what you want to read, what you are reading, what you have read.',
       lang: 'en',
+      start_url: '/',
+      scope: '/',
       display: 'standalone',
       orientation: 'portrait',
       // The manifest has no media queries: the splash and the default chrome
@@ -87,16 +93,40 @@ export default defineNuxtConfig({
       background_color: surface.light,
       theme_color: surface.light,
       icons: [
-        { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
     },
     workbox: {
       navigateFallback: '/',
       // The module's defaults only pick up the build-meta JSON under `nuxt generate`;
-      // the app shell, chunks and fonts have to be listed to be precached.
-      globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
+      // the app shell, chunks and fonts have to be listed to be precached. Only
+      // woff2 (the latin subsets main.css imports), never the woff fallbacks;
+      // the icons the manifest names, not the larger ones nothing loads offline.
+      globPatterns: ['**/*.{js,css,html,woff2}', 'icon-192.png', 'apple-touch-icon.png', 'favicon.ico'],
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html'],
+      runtimeCaching: [
+        {
+          // Covers as an <img> asks for them (no-cors: an opaque answer, which
+          // is fine to keep and show). A cover read with CORS (its thumbhash
+          // while a Book is added) goes to the network, never to an opaque copy
+          // it could not read. Cache first: a cover at an address never changes.
+          urlPattern: ({ request, url }) =>
+            request.destination === 'image' &&
+            request.mode === 'no-cors' &&
+            (/(^|\.)mzstatic\.com$/.test(url.hostname) || url.hostname === 'covers.openlibrary.org'),
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'libellus-covers',
+            // Opaque answers have status 0; keep them, and the real 200s.
+            cacheableResponse: { statuses: [0, 200] },
+            // Bounded: the oldest covers go first, and everything goes before
+            // the browser runs out of room for the rest of the app.
+            expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
+          },
+        },
+      ],
     },
     devOptions: { enabled: false },
   },

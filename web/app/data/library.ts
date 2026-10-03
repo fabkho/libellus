@@ -75,6 +75,8 @@ export type LibraryErrorCode =
   /** Edit or delete a read: no such read in the member's Library (gone, or never theirs). */
   | 'session_not_found'
   | 'not_signed_in'
+  /** The device has no connection: nothing was sent (`WriteOptions`). */
+  | 'offline'
   | 'unknown'
 
 /** Every code the database raises by name, as `LibraryErrorCode`. */
@@ -511,7 +513,19 @@ export function yearBounds(year: number): { from: string; to: string } {
   return { from: `${y}-01-01`, to: `${y}-12-31` }
 }
 
-export function createLibrary(client: SupabaseClient): Library {
+/**
+ * What every repository that writes is set up with (issue #15). `online` says
+ * whether the device has a connection right now; a write while it has none is
+ * refused with `offline` before anything is sent, so nothing ever looks saved
+ * when it was not. This is where an offline queue goes later (SPEC.md, Later):
+ * it would hold the write here instead of refusing it, and no page or store
+ * would change. Left out, the device counts as online (the tests).
+ */
+export type WriteOptions = { online?: () => boolean }
+
+const OFFLINE = { data: null, error: 'offline' } as const
+
+export function createLibrary(client: SupabaseClient, { online = () => true }: WriteOptions = {}): Library {
   async function entry(entryId: string): Promise<Result<LibraryEntry | null>> {
     const { data, error } = await client
       .from('library_entries')
@@ -529,7 +543,8 @@ export function createLibrary(client: SupabaseClient): Library {
     return read.data ? { data: read.data, error: null } : { data: null, error: 'entry_not_found' }
   }
 
-  async function addToLibrary(book: BookSnapshot, options: AddWith = {}) {
+  async function addToLibrary(book: BookSnapshot, options: AddWith = {}): Promise<Result<LibraryEntry>> {
+    if (!online()) return OFFLINE
     const added = await client.rpc('add_to_library', { p_book: bookToRow(book), ...addWithArguments(options) })
     if (added.error) return { data: null, error: mapLibraryError(added.error) }
     // The function returns the entry; the Book comes with it in a second read
@@ -542,12 +557,14 @@ export function createLibrary(client: SupabaseClient): Library {
     entry,
 
     async startReading(entryId, startedOn) {
+      if (!online()) return OFFLINE
       const started = await client.rpc('start_reading', { p_entry_id: entryId, p_started_on: startedOn })
       if (started.error) return { data: null, error: mapLibraryError(started.error) }
       return reread(entryId)
     },
 
     async finish(entryId, { endedOn, rating = null, review = null }) {
+      if (!online()) return OFFLINE
       const finished = await client.rpc('finish_reading', {
         p_entry_id: entryId,
         p_ended_on: endedOn,
@@ -559,6 +576,7 @@ export function createLibrary(client: SupabaseClient): Library {
     },
 
     async abandon(entryId, { endedOn, reason = null }) {
+      if (!online()) return OFFLINE
       const abandoned = await client.rpc('abandon_reading', {
         p_entry_id: entryId,
         p_ended_on: endedOn,
@@ -593,6 +611,7 @@ export function createLibrary(client: SupabaseClient): Library {
     },
 
     async readAgain(entryId, startedOn) {
+      if (!online()) return OFFLINE
       const again = await client.rpc('read_again', { p_entry_id: entryId, p_started_on: startedOn })
       if (again.error) return { data: null, error: mapLibraryError(again.error) }
       return reread(entryId)

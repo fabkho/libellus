@@ -86,7 +86,7 @@ export const useManualStore = defineStore('manual', () => {
     if (error.value) return null
     busy.value = true
     try {
-      repository ??= createManualBooks(backend)
+      repository ??= createManualBooks(backend, { online: isOnline })
       const result = await repository.addManualBook(input, addWithFromDraft(draft))
       if (result.error) {
         error.value = result.error

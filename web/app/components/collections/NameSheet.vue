@@ -10,6 +10,8 @@ const emit = defineEmits<{ saved: [id: string, mode: 'create' | 'rename'] }>()
 
 const { t } = useI18n()
 const collections = useCollectionsStore()
+// Saving writes: offline the action says so instead (#15).
+const online = useOnline()
 
 const open = computed({
   get: () => collections.naming !== null,
@@ -46,8 +48,8 @@ async function save() {
     v-model:open="open"
     :title="t(mode === 'create' ? 'collections.new' : 'collections.rename')"
     testid="collectionName"
-    :action="t(mode === 'create' ? 'collections.create' : 'collections.save')"
-    :action-disabled="collections.nameBusy || !name.trim()"
+    :action="online ? t(mode === 'create' ? 'collections.create' : 'collections.save') : t('common.offline')"
+    :action-disabled="collections.nameBusy || !name.trim() || !online"
     @action="save"
   >
     <form novalidate class="pt-xs pb-lg" @submit.prevent="save">

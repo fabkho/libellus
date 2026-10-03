@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Every way the access flow can fail, as a stable code. The data layer never
@@ -166,6 +166,21 @@ export function createAuth(client: SupabaseClient) {
       const { data } = await client.auth.getSession()
       const user = data.session?.user
       return user?.email ? { id: user.id, email: user.email } : null
+    },
+
+    /**
+     * `currentMember`, and whether the answer is only for want of a server: a
+     * stored session whose access token has expired is renewed first, and
+     * without a connection that fails (after about half a minute of retries).
+     * Then nobody is signed in as far as Supabase can say, yet the session is
+     * still on the device and will be renewed once the connection is back
+     * (issue #15: the app opens offline).
+     */
+    async restoreMember(): Promise<{ member: Member | null; unreachable: boolean }> {
+      const { data, error } = await client.auth.getSession()
+      const user = data.session?.user
+      const member = user?.email ? { id: user.id, email: user.email } : null
+      return { member, unreachable: !member && isAuthRetryableFetchError(error) }
     },
 
     /**

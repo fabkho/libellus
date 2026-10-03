@@ -11,6 +11,8 @@ import { useReadingStore } from '~/stores/reading'
 
 const { t } = useI18n()
 const reading = useReadingStore()
+// Adding, starting, finishing writes: offline the action says so instead (#15).
+const online = useOnline()
 
 const open = computed({
   get: () => reading.finishing !== null,
@@ -80,7 +82,7 @@ const reviewId = useId()
       </p>
 
       <div class="mt-lg mb-sm">
-        <UiButton block :disabled="reading.finishBusy" :aria-busy="reading.finishBusy" data-testid="finish.submit" @click="reading.confirmFinish()">
+        <UiButton block :disabled="reading.finishBusy" :offline="!online" :aria-busy="reading.finishBusy" data-testid="finish.submit" @click="reading.confirmFinish()">
           <UiIcon name="check" :size="18" bold />{{ label }}
         </UiButton>
       </div>

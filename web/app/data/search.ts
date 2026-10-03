@@ -3,7 +3,7 @@ import { createApple } from './apple'
 import type { CatalogueSearch } from './catalogueSearch'
 import { abortError, type FetchLike } from './fetching'
 import type { LibraryEntry } from './library'
-import { mergeResults, SOURCE_ORDER, type Found, type SearchResult, type SourceName } from './merge'
+import { MATCH, matchQuality, mergeResults, SOURCE_ORDER, type Found, type SearchResult, type SourceName } from './merge'
 import { createOpenLibrary } from './openLibrary'
 
 /**
@@ -146,4 +146,25 @@ export function createSearch(options: {
     },
     lookupOpenLibrary: (editionKey, { signal } = {}) => openLibrary.lookupEdition(editionKey, signal),
   }
+}
+
+/**
+ * Search without a connection (issue #15): the member's own Library, the
+ * entries this device last saw, by title and author (every word of the query
+ * beginning a word of the title or an author, as `matchQuality` reads it), or
+ * by ISBN. Best match first, the Library's order among equals. Pure: the
+ * search store hands in the entries.
+ */
+export function searchLibrary(entries: readonly LibraryEntry[], query: string): SearchResult[] {
+  const isbn = parseIsbn(query)
+  const found: { entry: LibraryEntry; score: number; index: number }[] = []
+  entries.forEach((entry, index) => {
+    const score = isbn
+      ? entry.book.isbn13 === isbn ? MATCH.title : 0
+      : matchQuality(query, entry.book)
+    // `someWords` or less: only some of the query's words matched, not a match here.
+    if (score > MATCH.someWords) found.push({ entry, score, index })
+  })
+  found.sort((a, b) => b.score - a.score || a.index - b.index)
+  return found.map(({ entry }) => ({ book: entry.book, entry, otherEdition: false }))
 }

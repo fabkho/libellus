@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { createAuth, type Auth, type AuthErrorCode, type Member } from '~/data/auth'
+import { readSavedMember } from '~/data/deviceLibrary'
 import { clearLocalData } from '~/data/localData'
 
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn'
@@ -107,6 +108,22 @@ export const useSessionStore = defineStore('session', () => {
     const client = auth()
     if (!client) {
       status.value = 'signedOut'
+      return
+    }
+    // Offline, an expired access token cannot be renewed, and Supabase retries
+    // for about half a minute before it says so. The member whose Library this
+    // device holds (data/deviceLibrary.ts) opens it at once instead: offline
+    // nothing can be written anyway. Supabase's answer follows in the
+    // background; only a device that holds no session at all is signed out by
+    // it. A session that ended on the server meanwhile signs out once the
+    // connection is back and the renewal is refused (plugins/session.client.ts).
+    const saved = import.meta.client && !isOnline() ? readSavedMember(window.localStorage) : null
+    if (saved) {
+      adopt(saved)
+      void client.restoreMember().then(({ member, unreachable }) => {
+        if (member) adopt(member)
+        else if (!unreachable) adopt(null)
+      })
       return
     }
     adopt(await client.currentMember())

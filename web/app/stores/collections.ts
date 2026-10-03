@@ -10,6 +10,7 @@ import {
   type CollectionSummary,
 } from '~/data/collections'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
+import { readCollections, saveCollections } from '~/data/deviceLibrary'
 import type { LibraryEntry } from '~/data/library'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
@@ -34,6 +35,10 @@ export type Naming = { mode: 'create' } | { mode: 'rename'; id: string }
  * page), the collection picker and the name sheet. Every change goes through
  * the repository as one call and shows at once; the list refreshes behind it.
  * Signing out (or another member signing in) forgets all of it.
+ *
+ * The device keeps a copy of the list, the Collections opened here and the
+ * memberships it knows (data/deviceLibrary.ts, issue #15), written whenever
+ * they change and read back when the store is set up, so they show offline.
  */
 export const useCollectionsStore = defineStore('collections', () => {
   const backend = useBackend()
@@ -44,7 +49,8 @@ export const useCollectionsStore = defineStore('collections', () => {
   let repository: Collections | null = null
   function repo(): Collections | null {
     if (!backend) return null
-    repository ??= createCollections(backend)
+    // Writes refused offline, before anything is sent (data/library.ts, WriteOptions).
+    repository ??= createCollections(backend, { online: isOnline })
     return repository
   }
 
@@ -65,6 +71,8 @@ export const useCollectionsStore = defineStore('collections', () => {
   async function readList() {
     const collections = repo()
     if (!collections) return
+    // Offline the device's copy stands (with none, it is asked and fails visibly).
+    if (!isOnline() && loaded.value) return
     const member = session.member?.id
     const result = await collections.list()
     if (member !== session.member?.id) return
@@ -93,6 +101,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   async function loadCollection(id: string) {
     const collections = repo()
     if (!collections) return
+    if (!isOnline() && pages.get(id)?.phase === 'ready') return
     if (!pages.has(id)) {
       // Known from the list: its name shows at once while its Books arrive.
       const known = list.value.find((summary) => summary.id === id)
@@ -125,7 +134,7 @@ export const useCollectionsStore = defineStore('collections', () => {
 
   async function loadMemberships(entryId: string) {
     const collections = repo()
-    if (!collections) return
+    if (!collections || !isOnline()) return
     const result = await collections.memberships(entryId)
     if (!result.error) memberships.set(entryId, result.data)
   }
@@ -390,6 +399,42 @@ export const useCollectionsStore = defineStore('collections', () => {
     }
   }
 
+  // ------------------------------------------------------- the device's copy
+
+  /** Writes what is known now, once the list was read (data/deviceLibrary.ts). */
+  function save() {
+    const member = session.member?.id
+    if (!import.meta.client || !member || !loaded.value) return
+    saveCollections(window.localStorage, {
+      memberId: member,
+      list: list.value,
+      collections: [...pages.values()].flatMap((page) => (page.phase === 'ready' && page.collection ? [page.collection] : [])),
+      memberships: Object.fromEntries(memberships),
+    })
+  }
+
+  /** Puts back what this device knew of the member's Collections, if it is hers. */
+  function restore() {
+    const member = session.member?.id
+    if (!import.meta.client || !member || loaded.value) return
+    const saved = readCollections(window.localStorage, member)
+    if (!saved) return
+    list.value = saved.list
+    for (const collection of saved.collections) pages.set(collection.id, { phase: 'ready', collection })
+    for (const [entry, ids] of Object.entries(saved.memberships)) memberships.set(entry, ids)
+    loaded.value = true
+  }
+
+  // Every change lands in the list, a page or a membership; the changes of one
+  // tick are written once, after it (not later: the app may be closed next).
+  watch([list, pages, memberships], save, { deep: true, flush: 'post' })
+
+  // Back online: the list catches up with changes made elsewhere.
+  const online = useOnline()
+  watch(online, (now) => {
+    if (now && loaded.value) void loadList()
+  })
+
   // ------------------------------------------------------------------- reset
 
   function reset() {
@@ -407,9 +452,12 @@ export const useCollectionsStore = defineStore('collections', () => {
   watch(
     () => session.member?.id,
     (now, before) => {
-      if (now !== before) reset()
+      if (now === before) return
+      reset()
+      restore()
     },
   )
+  restore()
 
   return {
     list,

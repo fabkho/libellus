@@ -12,6 +12,8 @@ const ACTION_KEYS = { start: 'start.action', again: 'start.actionAgain', restart
 
 const { t } = useI18n()
 const reading = useReadingStore()
+// Adding, starting, finishing writes: offline the action says so instead (#15).
+const online = useOnline()
 
 const open = computed({
   get: () => reading.starting !== null,
@@ -64,7 +66,7 @@ const label = computed(() =>
       </p>
 
       <div class="mt-lg mb-sm">
-        <UiButton block :disabled="reading.startBusy" :aria-busy="reading.startBusy" data-testid="start.submit" @click="reading.confirmStart()">
+        <UiButton block :disabled="reading.startBusy" :offline="!online" :aria-busy="reading.startBusy" data-testid="start.submit" @click="reading.confirmStart()">
           <UiIcon :name="kind === 'start' ? 'arrow' : 'repeat'" :size="18" bold />{{ label }}
         </UiButton>
       </div>

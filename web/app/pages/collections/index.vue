@@ -10,6 +10,8 @@ definePageMeta({ layout: 'tabs', screen: 'collections', pushed: true })
 const { t } = useI18n()
 const router = useRouter()
 const collections = useCollectionsStore()
+// Making a Collection writes: offline both ways to it say so instead (#15).
+const online = useOnline()
 
 useHead({ title: () => `${t('collections.title')} · ${t('app.name')}` })
 
@@ -26,7 +28,14 @@ function back() {
   <div class="relative min-h-dvh">
     <UiTopBar :back-label="t('collections.back')" back-testid="collections.back" @back="back">
       <template #trailing>
-        <UiRoundButton icon="plus" :label="t('collections.new')" data-testid="collections.newTop" @click="collections.openCreate()" />
+        <UiRoundButton
+          :icon="online ? 'plus' : 'offline'"
+          :label="online ? t('collections.new') : t('common.offline')"
+          :disabled="!online"
+          class="disabled:opacity-50"
+          data-testid="collections.newTop"
+          @click="collections.openCreate()"
+        />
       </template>
     </UiTopBar>
 
@@ -53,9 +62,15 @@ function back() {
         <UiIcon name="chevron" :size="16" class="text-ink-ghost" />
       </NuxtLink>
 
-      <button type="button" class="item flex w-full items-center gap-ml py-ms text-left text-ink-muted" data-testid="collections.new" @click="collections.openCreate()">
-        <span class="new flex shrink-0 items-center justify-center rounded-md text-ink-faint"><UiIcon name="plus" :size="22" /></span>
-        <span class="text-body">{{ t('collections.new') }}</span>
+      <button
+        type="button"
+        class="item flex w-full items-center gap-ml py-ms text-left text-ink-muted disabled:opacity-50"
+        :disabled="!online"
+        data-testid="collections.new"
+        @click="collections.openCreate()"
+      >
+        <span class="new flex shrink-0 items-center justify-center rounded-md text-ink-faint"><UiIcon :name="online ? 'plus' : 'offline'" :size="22" /></span>
+        <span class="text-body">{{ online ? t('collections.new') : t('common.offline') }}</span>
       </button>
     </div>
 
@@ -66,7 +81,7 @@ function back() {
       :text="t('collections.empty')"
       class="pt-lg"
     >
-      <UiButton block data-testid="collections.new" @click="collections.openCreate()">
+      <UiButton block :offline="!online" data-testid="collections.new" @click="collections.openCreate()">
         <UiIcon name="plus" :size="18" bold />{{ t('collections.new') }}
       </UiButton>
     </UiEmptyState>

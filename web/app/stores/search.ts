@@ -3,11 +3,13 @@ import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import type { LibraryEntry } from '~/data/library'
 import { editionKeys, workKey } from '~/data/merge'
+import { useLibraryStore } from '~/stores/library'
 import {
   createSearch,
   isAbort,
   MIN_QUERY_LENGTH,
   SEARCH_DEBOUNCE_MS,
+  searchLibrary,
   type Search,
   type SearchOutcome,
 } from '~/data/search'
@@ -22,7 +24,7 @@ export type SearchHit = { key: string; book: BookSnapshot | Book; entry: Library
 /**
  * idle: nothing to search yet (the query is too short) · loading: a query is
  * waiting out the debounce or some source has not answered yet · done: every
- * source has answered · failed: none could (or the device is offline).
+ * source has answered · failed: none could.
  */
 export type SearchPhase = 'idle' | 'loading' | 'done' | 'failed'
 
@@ -53,6 +55,11 @@ export const useSearchStore = defineStore('search', () => {
   const outdated = computed(
     () => phase.value === 'loading' && hits.value.length > 0 && answered.value !== query.value.trim(),
   )
+  /**
+   * The shown answer came from the member's own Library only, because the
+   * device was offline when it was asked (issue #15): the list says so once.
+   */
+  const fromLibrary = ref(false)
 
   /** Books seen in results, by page key, so a book page opens without asking again. The last few hundred. */
   const seen = new Map<string, BookSnapshot | Book>()
@@ -101,12 +108,17 @@ export const useSearchStore = defineStore('search', () => {
     })
     answered.value = text
     phase.value = outcome.pending ? 'loading' : outcome.failed ? 'failed' : 'done'
+    fromLibrary.value = false
   }
 
   async function run(text: string) {
-    // Offline nothing can answer: say so at once instead of waiting for every source to fail.
-    if (import.meta.client && navigator.onLine === false) {
-      show(text, { results: [], pending: false, failed: true })
+    // Offline no source can answer: the member's own Library does, as this
+    // device last saw it, at once instead of waiting for every source to fail.
+    if (!isOnline()) {
+      const own = useLibraryStore()
+      const entries = [...own.reading, ...own.wantToRead, ...own.finished]
+      show(text, { results: searchLibrary(entries, text), pending: false, failed: false })
+      fromLibrary.value = true
       return
     }
     const controller = new AbortController()
@@ -137,10 +149,21 @@ export const useSearchStore = defineStore('search', () => {
       hits.value = []
       answered.value = ''
       phase.value = 'idle'
+      fromLibrary.value = false
       return
     }
     phase.value = 'loading'
     timer = setTimeout(() => run(text), SEARCH_DEBOUNCE_MS)
+  })
+
+  // The connection came back (or went) with a query showing: ask again, so
+  // the list is the one the device can give now.
+  watch(useOnline(), () => {
+    const text = query.value.trim()
+    if (!isOpen.value || text.length < MIN_QUERY_LENGTH) return
+    cancel()
+    phase.value = 'loading'
+    void run(text)
   })
 
   function open() {
@@ -191,9 +214,10 @@ export const useSearchStore = defineStore('search', () => {
     hits.value = []
     answered.value = ''
     phase.value = 'idle'
+    fromLibrary.value = false
     seen.clear()
     library = null
   }
 
-  return { isOpen, query, hits, phase, answered, outdated, open, close, seenBook, markAdded, markRemoved, reset, repository }
+  return { isOpen, query, hits, phase, answered, outdated, fromLibrary, open, close, seenBook, markAdded, markRemoved, reset, repository }
 })

@@ -5,11 +5,17 @@ export type KeyValueStorage = {
   removeItem: (key: string) => void
 }
 
+/** What a cache on the device reads and writes as well: `window.localStorage` again. */
+export type DeviceStorage = KeyValueStorage & {
+  getItem: (key: string) => string | null
+  setItem: (key: string, value: string) => void
+}
+
 /**
  * Everything Libellus keeps on the device itself starts with this, so signing
  * out can find it without knowing every feature: the pending sign-in address
- * now, the offline library cache later (#15). A feature that caches something
- * names its keys `libellus.<thing>`; nothing else has to change.
+ * and the offline Library (`data/deviceLibrary.ts`, #15). A feature that
+ * caches something names its keys `libellus.<thing>`; nothing else has to change.
  */
 export const LOCAL_DATA_PREFIX = 'libellus.'
 

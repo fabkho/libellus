@@ -17,6 +17,8 @@ const props = defineProps<{ collectionId: string; entries: readonly LibraryEntry
 const { t } = useI18n()
 const collections = useCollectionsStore()
 const books = useBookStore()
+// A move saves the order: offline the rows stay put and the grips say why (#15).
+const online = useOnline()
 
 const hintId = useId()
 
@@ -89,7 +91,7 @@ function lift(element: HTMLElement, pointerId: number, clientY: number, index: n
 
 /** The grip lifts its row at once, for a mouse and a finger alike. */
 function onPointerdown(event: PointerEvent, index: number) {
-  if (event.button !== 0 || drag.value || settling.value) return
+  if (event.button !== 0 || drag.value || settling.value || !online.value) return
   event.preventDefault()
   event.stopPropagation()
   swallowClick = false
@@ -108,7 +110,7 @@ let swallowClick = false
 
 function onRowPointerdown(event: PointerEvent, index: number) {
   swallowClick = false
-  if (event.pointerType === 'mouse' || drag.value || settling.value) return
+  if (event.pointerType === 'mouse' || drag.value || settling.value || !online.value) return
   cancelHold()
   const element = event.currentTarget as HTMLElement
   const { pointerId, clientX, clientY } = event
@@ -292,6 +294,7 @@ function rowStyle(index: number) {
 const announcement = ref('')
 
 async function onKeydown(event: KeyboardEvent, index: number) {
+  if (!online.value) return
   const count = props.entries.length
   const to =
     event.key === 'ArrowUp' ? index - 1
@@ -357,9 +360,10 @@ async function onKeydown(event: KeyboardEvent, index: number) {
         </UiPressLink>
         <button
           type="button"
-          class="grip flex size-(--size-touch) shrink-0 items-center justify-center rounded-pill"
+          class="grip flex size-(--size-touch) shrink-0 items-center justify-center rounded-pill disabled:opacity-50"
           :class="drag?.index === index ? 'text-ink' : 'text-ink-ghost'"
-          :aria-label="t('collection.move', { title: entry.book.title })"
+          :disabled="!online"
+          :aria-label="online ? t('collection.move', { title: entry.book.title }) : t('common.offline')"
           :aria-describedby="hintId"
           data-grip
           data-testid="collection.grip"
