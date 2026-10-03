@@ -64,7 +64,7 @@ const since = computed(() => {
         <!-- The value is the way into the sheet; offline it stays, disabled. -->
         <button
           type="button"
-          class="figures -ml-xs min-h-(--size-touch) truncate px-xs text-meta disabled:opacity-50"
+          class="figures -ml-xs min-h-(--size-touch) min-w-(--size-touch) truncate px-xs text-left text-meta enabled:hover:text-ink disabled:opacity-50"
           :class="progress ? 'text-ink-muted' : 'text-ink-faint'"
           :disabled="!online"
           :aria-label="online ? `${t('book.progress.update')}: ${words.value}` : t('common.offline')"

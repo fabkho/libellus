@@ -41,6 +41,7 @@ const SIZES = {
 
 const classes = computed(() => [
   TONES[props.tone],
+  props.tone === 'primary' ? 'lit' : 'unlit',
   SIZES[props.size],
   props.block ? 'flex w-full' : 'inline-flex',
 ])
@@ -86,5 +87,17 @@ const classes = computed(() => [
 
 .ui-button:disabled {
   opacity: 0.5;
+}
+
+/* With a mouse: the pill deepens by the rows' fill; the lit one, ink already,
+   lets a little of the room through instead. Only where the device hovers, so
+   a tap on a phone never leaves it stuck. */
+@media (hover: hover) {
+  .ui-button.unlit:not(:disabled):hover {
+    background-image: linear-gradient(var(--color-fill), var(--color-fill));
+  }
+  .ui-button.lit:not(:disabled):hover {
+    opacity: 0.9;
+  }
 }
 </style>

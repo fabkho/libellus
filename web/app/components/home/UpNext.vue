@@ -19,7 +19,11 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
   <section data-testid="home.upNext">
     <div class="flex h-(--size-touch) items-center justify-between">
       <h2 class="eyebrow">{{ t('home.upNext') }}</h2>
-      <NuxtLink to="/library" class="figures flex items-center gap-xxs text-footnote text-ink-faint" data-testid="home.seeAll">
+      <NuxtLink
+        to="/library"
+        class="figures -mr-sm flex min-h-(--size-touch) items-center gap-xxs px-sm text-footnote text-ink-faint hover:text-ink-muted"
+        data-testid="home.seeAll"
+      >
         {{ t('home.seeAll', { count: entries.length }) }}
         <UiIcon name="chevron" :size="13" />
       </NuxtLink>

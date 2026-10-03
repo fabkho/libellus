@@ -76,8 +76,8 @@ watch(
           :key="mode"
           type="button"
           :aria-pressed="reading.progressMode === mode"
-          class="inline-flex h-(--size-button-sm) items-center rounded-pill px-md text-subhead"
-          :class="reading.progressMode === mode ? 'bg-ink text-on-ink' : 'edge text-ink-muted'"
+          class="pill relative inline-flex h-(--size-button-sm) items-center rounded-pill px-md text-subhead"
+          :class="reading.progressMode === mode ? 'bg-ink text-on-ink' : 'edge text-ink-muted hover:bg-fill'"
           :data-testid="`progress.mode.${mode}`"
           @click="reading.chooseProgressMode(mode)"
         >
@@ -144,3 +144,14 @@ watch(
     </template>
   </UiSheet>
 </template>
+
+<style scoped>
+/* The drawn pill is 32 px; the touch target stays 44. */
+.pill::after {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
+}
+</style>
