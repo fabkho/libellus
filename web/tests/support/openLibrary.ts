@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 
 /**
  * OpenLibrary's answers, as recorded from its search API on 3 Oct 2026
@@ -30,4 +30,20 @@ export function openLibraryAnswer(url: URL): unknown {
       ? `edition-${edition[1]!.toUpperCase()}`
       : `search-${RECORDED_TERMS[q] ?? 'nothing'}`
   return read(name) ?? { numFound: 0, docs: [] }
+}
+
+/** Every edition key in the recordings: the Books a flow can put into the Catalogue from OpenLibrary. */
+export function recordedOpenLibraryKeys(): string[] {
+  const keys = new Set<string>()
+  for (const file of readdirSync(fixtures)) {
+    if (!file.endsWith('.json')) continue
+    const body = JSON.parse(readFileSync(new URL(file, fixtures), 'utf8')) as {
+      docs?: { cover_edition_key?: string; editions?: { docs?: { key?: string }[] } }[]
+    }
+    for (const doc of body.docs ?? []) {
+      for (const edition of doc.editions?.docs ?? []) if (edition.key) keys.add(edition.key.replace('/books/', ''))
+      if (doc.cover_edition_key) keys.add(doc.cover_edition_key)
+    }
+  }
+  return [...keys]
 }
