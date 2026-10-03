@@ -178,6 +178,20 @@ Flow: `web/e2e/search-and-add.spec.ts` (open from search, add, back; open from a
 Native: a pushed view in the navigation stack.
 - [x] Web  - [ ] iOS  - [ ] Android
 
+### Push to a book and back  (web: `composables/useBookFlight.ts`, `components/shell/BookFlight.vue` in `app/layouts/tabs.vue`, `utils/flight.ts`, `utils/snapshot.ts`, the tap in `components/ui/PressLink.vue`, `data-cover` on the sheet in `components/ui/Cover.vue`)
+Purpose: the motion between a list and a book page (docs/MOTION.md, Push to a book): the tapped cover flies into the book page's hero and back into its row.
+Layout: no screen of its own: two empty fixed layers in the shell (`shell.flightPage` under the chrome: a still copy of the page being left; `shell.flight` over everything but sheets: the flying cover, `shell.flightCover`). Both take no taps and are hidden from assistive technology; while a flight runs the top one carries `data-moving`.
+States: at rest (layers empty) · pushing (cover flying in, book page fading in and rising `md`, the page left fading out; `standard`) · popping (cover flying back, book page fading out and sinking, the list fading in; `exit`, standard curve) · holding (landed, the copy stays over the hero until the hero's own image has faded in) · Reduce Motion (cross-fade only, `standard`, both ways)
+Actions → result:
+- Tap a book's cover or title where its cover shows (Home reading card, Up next, Library row or card, search result, Collection row) → the book page as before (same address, same data on touch-down), with the cover flying from the tapped spot into the hero. A Placeholder cover flies as cloth. The tab bar stays where it is.
+- Back (`book.back`, the browser's back) from a book page opened that way → the page it came from, at exactly its saved scroll (and tab place), the cover flying back into its row. Its row scrolled out of view, a book opened from search, or a list without its row → a cross-fade, no flight. A Back the browser animated itself (`hasUAVisualTransition`, iOS Safari's edge swipe) → no flight. Leaving the book page by a tab or a link → no motion.
+- Back while the cover is still flying in → it turns around from where it is on screen; the same book tapped again while it flies back → it goes in again from there. Any other navigation mid-flight lands the flight at once.
+Edge cases: a book page that has not drawn its hero yet (still loading) → the cover waits for it up to `standard`, then fades where it is. Scroll restoration is the router's (`app/router.options.ts`): the flight applies the router's chosen place one step early and measures there. Import's done-screen covers are not links, so nothing flies there.
+IDs: `shell.flightPage`, `shell.flight`, `shell.flightCover`
+Flow: `web/e2e/book-flight.spec.ts` (Library → book → back: every layer empty, covers shown, scroll restored; Back 100 ms into a push turns the cover around from its on-screen box, with the Web Animations frozen; Home's Up next and a search result fly; back to a closed search cross-fades), `web/tests/flight.test.ts` (the FLIP transform, on-screen, where a turned-around flight starts)
+Native: the platform's zoom transition (iOS 18 `navigationTransition(.zoom(sourceID:in:))` with `matchedTransitionSource` on the cover; Android shared-element transition), interruptible by the back gesture.
+- [x] Web  - [ ] iOS  - [ ] Android
+
 ### Add sheet  (web: `components/book/AddSheet.vue`, `components/book/AddStatusFields.vue`, `stores/library.ts`)
 Purpose: put a Book into the Library with a Status (D's add-sheet).
 Layout: `UiSheet` (Cancel at the top left, title `add.title`), the Book (`UiBookLine`), the status part (below), the error if any, the primary **Add to Library** at the bottom.

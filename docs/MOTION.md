@@ -22,8 +22,8 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 |---|---|---|---|
 | `instant` | 100 | `standard` | Press feedback: a button scales to 0.97 |
 | `quick` | 150 | `standard` | Small state changes: a tab lighting up, the switch, a field's rule, code cells |
-| `standard` | 250 | `standard` | Crossfades, a cover fading in over its thumbhash, the avatar menu opening |
-| `exit` | 200 | `exit` | The avatar menu closing; anything small leaving |
+| `standard` | 250 | `standard` | Crossfades, a cover fading in over its thumbhash, the avatar menu opening, the push to a book |
+| `exit` | 200 | `exit` | The avatar menu closing; anything small leaving; back from a book (on the `standard` curve) |
 | `sheet` | 380 | `sheet` | A sheet rising, its scrim fading in |
 | `sheetExit` | 260 | `exit` | A sheet falling away |
 | `overlay` | 340 | `standard` | The tab bar turning into the search palette, the veil fading in |
@@ -85,6 +85,33 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   new height. In the installed app (and in Safari with its toolbar collapsed) that happens as the
   keyboard starts to rise, so the palette rises with it; with Safari's toolbar expanded WebKit
   reports it only at the end (WebKit bug 265578), and the palette follows after.
+- **Push to a book.** Tapping a book wherever it shows its cover — Home's reading card (its cover or
+  its title) and Up next, a Library row or card, a search result, a Collection's row — flies that
+  cover from where it is on screen into the book page's hero over `standard`. The book page fades in
+  as the page left fades out (one's opacity the other's complement, so the two never both read at
+  full strength), and its content from the hero down rises `md` into place; its pinned top bar and
+  its light (the ambient glow, the cover's own halo) only fade in, they do not fly. The cover in the
+  air is the one that was tapped, showing exactly what it showed (its image, its thumbhash, or the
+  cloth); laid out at the hero's size, it lands on the hero's pixels. If the hero's own image is
+  already drawn (or the hero is a Placeholder with its type), it fades in over the tapped one on the
+  way; if not, the copy stays over the hero until the hero's image has faded in, so the cover never
+  falls back to its thumbhash. A Placeholder flies as cloth and gains its title on the way. The tab
+  bar does not move; the search palette, when the tap was on a result, turns back into the tab bar
+  under the flying cover as it does for any navigation.
+
+  Back — the back button or the browser's — plays it the other way over `exit` (on the `standard`
+  curve, landing softly): the hero flies back into its row, the book page fades out and sinks `md`,
+  and the list fades in exactly where it was (same scroll, same tab place: the flight never moves
+  the page). Only into the page it came from, and only if its row is on screen: a row scrolled away,
+  a book opened from search (the palette is gone), or a list still loading → the cover leaves with
+  its page in a cross-fade. A Back the browser animates itself (iOS Safari's edge swipe) gets no
+  flight on top of its own. Tabs and links from the book page are new places: no flight.
+
+  Interruptible like the search morph: Back tapped while the cover is still flying in turns it
+  around from the point on screen, and the same book tapped again while it flies back sends it in
+  again from there; anything else lands the running flight at once. If the book page has not drawn
+  its hero when the flight starts, the cover waits for it (a frame or so, at most `standard`), then
+  fades where it is.
 - **A list changes.** Finish, Abandon or Start moves a Book from one list to another: the list on
   screen holds still until the sheet has fallen away (`useSettled`), then the card or row that
   leaves fades over `exit` while its room closes over `standard`, so the ones after it slide up and
@@ -106,14 +133,6 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   the first answer one still ghost row (no shimmer) stands in. The far end of the list fades out
   under a mask.
 - **Caret.** The lamp caret in the code input blinks in steps over `caret`, like a text caret.
-
-## Later
-
-- **Push to book detail** and back. #6 ships the book page without a transition: it replaces the
-  page at once (its navigation starts on touch-down and its data is asked for then, so it is
-  usually complete when it appears), and back returns to the kept-alive page at its old scroll
-  position. A push with `standard` and a pop with `exit`, with the cover travelling from the list
-  into the hero, is still open.
 
 ## How the search morph is built
 
@@ -143,14 +162,44 @@ keeps live elements, is interruptible by construction, and runs in every WebKit 
 supports. Why not animating width and height: every frame would lay the palette and its results
 out again, the first thing to drop frames on a phone; `clip-path` repaints the palette only.
 
+## How the push to a book is built
+
+`web/app/composables/useBookFlight.ts` with its two layers in `components/shell/BookFlight.vue`
+(mounted once in the tabs layout), the arithmetic in `web/app/utils/flight.ts` and the page copy in
+`web/app/utils/snapshot.ts`. The router swaps pages at once (the tab pages are kept alive off the
+document), so the page being left is copied while it is still there — in the tap (`UiPressLink`
+hands the flight the link it was tapped on) or, for Back, in the router's `beforeEach` — into a fixed
+layer under the chrome. Only what is on screen is copied in full; everything off screen becomes an
+empty box of its size, so a long Library costs a screenful of nodes. The flight starts when the
+router has drawn the new page and resolves where to scroll it: that place is applied first, the
+boxes are measured there, and the animations start in the same frame, before it is painted. The
+router then scrolls to the same place; its scroll behaviour (`app/router.options.ts`,
+`utils/tabPlaces.ts`) is unchanged.
+
+The flying cover is a copy of the tapped cover's sheet (`[data-cover]` in `UiCover`) in a box laid
+out at the hero's size, drawn at the row's by a FLIP transform (`translate` then `scale`, origin top
+left), so it is moved by `transform` alone and `will-change` lives only on that box while it flies.
+The live covers at both ends hold their place unseen (`data-flight-hidden`) while the copy stands in
+for them. Everything else is `opacity` (the pages) and `translateY` (the rise and the sink).
+
+Each part — the cover's travel, the book page, the list — is a channel whose value says how far
+towards the book page it shows. All of them are Web Animations (`fill: both`) cancelled once landed;
+an interruption reads each channel's value off the screen (`getComputedTiming().progress`) and starts
+the new direction's animation at the time its curve shows the same value (`startAt`, built on
+`timeAt` in `web/app/utils/motion.ts`), exactly as the search morph turns around.
+
+Not the View Transitions API, for the reasons above: a flight turned around mid-air, a page that keeps
+its scroll and its live state, and covers that land on their own pixels need live elements.
+
 ## Reduce Motion
 
 `prefers-reduced-motion: reduce` sets every transition and animation to 1 ms in
 `web/app/assets/css/main.css`, so sheets, menus and the keyboard lift appear and disappear in
 place and the caret stops blinking. Nothing depends on an animation finishing. The search morph
-is the one exception, as iOS does it: nothing travels or grows, the palette and the veil
+is one exception, as iOS does it: nothing travels or grows, the palette and the veil
 cross-fade over the tab bar in place over `standard` (Web Animations, which the CSS rule does
-not touch).
+not touch). The push to a book is the other: no cover flies and nothing rises, the book page and the
+page left cross-fade in place over `standard`, both ways.
 
 ## Non-motions
 
