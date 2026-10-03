@@ -65,6 +65,7 @@ watch(
   </UiEmptyState>
 
   <div v-else-if="library.loaded">
+    <CollectionsLibraryLink class="mb-md" />
     <div role="tablist" :aria-label="t('library.segmentsLabel')" class="flex gap-ml border-b-(length:--stroke-hairline) border-hairline-strong">
       <button
         v-for="status in SEGMENTS"
