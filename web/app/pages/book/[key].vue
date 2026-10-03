@@ -117,6 +117,8 @@ function back() {
         {{ t('book.notInLibrary') }}
       </p>
 
+      <BookProgress v-if="entry?.status === 'reading'" :entry="entry" />
+
       <UiButton v-if="!entry" block :offline="!online" data-testid="book.add" @click="library.openAdd(book)">
         <UiIcon name="plus" :size="18" bold />{{ t('book.add') }}
       </UiButton>

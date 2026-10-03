@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
+import type { ProgressValue } from './progress'
 
 /**
  * The Library actions (issue #1, Library actions): the data-layer contract a
@@ -16,7 +17,9 @@ export type SessionOutcome = 'finished' | 'abandoned'
  * One read of a Library entry (CONTEXT.md: Reading session). Dates are
  * calendar days, `YYYY-MM-DD`, as the member picked them. An open session has
  * no outcome. `rating` is quarter stars, 1–20 (utils/rating.ts), null when
- * unrated.
+ * unrated. The progress is the latest value only (issue #39): a page or a percent,
+ * never both, null while none is set (`progress.ts` words and checks it); a
+ * closed read keeps the last one it had.
  */
 export type ReadingSession = {
   id: string
@@ -26,6 +29,9 @@ export type ReadingSession = {
   rating: number | null
   review: string | null
   abandonReason: string | null
+  progressPage: number | null
+  progressPercent: number | null
+  progressUpdatedAt: string | null
   createdAt: string
 }
 
@@ -58,6 +64,8 @@ export type LibraryErrorCode =
   | 'already_finished'
   /** Finish: there is no open read to end. */
   | 'not_reading'
+  /** Update progress: not exactly one of page and percent, a page outside 0…the page count, a percent outside 0–100. */
+  | 'progress_invalid'
   /** A date the action needs is missing. */
   | 'date_invalid'
   /** A date after today. */
@@ -88,6 +96,7 @@ const RAISED_CODES = [
   'already_reading',
   'already_finished',
   'not_reading',
+  'progress_invalid',
   'date_invalid',
   'date_in_future',
   'ended_before_started',
@@ -302,6 +311,9 @@ export type SessionRow = {
   rating: number | null
   review: string | null
   abandon_reason: string | null
+  progress_page: number | null
+  progress_percent: number | null
+  progress_updated_at: string | null
   created_at: string
 }
 
@@ -366,6 +378,10 @@ export function sessionFromRow(row: SessionRow): ReadingSession {
     rating: row.rating,
     review: row.review,
     abandonReason: row.abandon_reason,
+    // `?? null`: a row from before progress existed (a cached Library) has none.
+    progressPage: row.progress_page ?? null,
+    progressPercent: row.progress_percent ?? null,
+    progressUpdatedAt: row.progress_updated_at ?? null,
     createdAt: row.created_at,
   }
 }
@@ -462,6 +478,13 @@ export type Library = {
    * earlier sessions stay. Returns the entry, now Currently reading.
    */
   readAgain: (entryId: string, startedOn: string) => Promise<Result<LibraryEntry>>
+  /**
+   * Records how far the member is in the open read: a page or a percent,
+   * exactly one (`ProgressValue`); the latest value replaces the one before.
+   * Returns the entry as it is now. Refused with `not_reading` (no open read)
+   * and `progress_invalid` (a page past the page count, a percent over 100).
+   */
+  updateProgress: (entryId: string, progress: ProgressValue) => Promise<Result<LibraryEntry>>
   /** Every read of an entry, newest first (`sortSessions`). */
   sessions: (entryId: string) => Promise<Result<ReadingSession[]>>
   /**
@@ -583,6 +606,17 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
         p_reason: reason,
       })
       if (abandoned.error) return { data: null, error: mapLibraryError(abandoned.error) }
+      return reread(entryId)
+    },
+
+    async updateProgress(entryId, progress) {
+      if (!online()) return OFFLINE
+      const updated = await client.rpc('update_progress', {
+        p_entry_id: entryId,
+        p_page: 'page' in progress ? progress.page : null,
+        p_percent: 'percent' in progress ? progress.percent : null,
+      })
+      if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
       return reread(entryId)
     },
 

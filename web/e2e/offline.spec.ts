@@ -129,6 +129,9 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   await expect(page.getByTestId('home.entryTitle')).toHaveText(runTitle('The Night Lamp'))
   await expect(page.getByTestId('home.finish')).toBeDisabled()
   await expect(page.getByTestId('home.finish')).toHaveText(en.common.offline)
+  // So is the value that opens the Update progress sheet (#39); the Book's progress itself stays shown.
+  await expect(page.getByTestId('home.progress')).toBeDisabled()
+  await expect(page.getByTestId('home.progress')).toHaveAttribute('aria-label', en.common.offline)
 
   // Search answers from her own Library, and says so once.
   await page.getByTestId('shell.tab.search').click()
