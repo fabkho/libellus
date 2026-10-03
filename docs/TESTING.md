@@ -134,17 +134,71 @@ Before `interactive-widget=resizes-content` (#58) Chrome laid the keyboard over 
 `innerHeight` 789, the visual viewport 477 tall, and focusing the Finish sheet's review field panned
 it to `offsetTop` 312, so the keyboard inset read 0 and the sheet's header went off the top.
 
-## iOS (by hand, for now)
+## iOS: the Simulator
 
-The iOS Simulator is not set up on this machine yet. What to check on an iPhone, Safari tab and Home
-Screen app, light and dark:
+There is no iOS smoke script yet; the Simulator is driven by hand (or by an agent) as below. What to
+check, Safari tab and Home Screen app, light and dark: Home, the Library, a book page before and
+after a swipe, the search palette and the Finish sheet's review field with the real keyboard up, the
+name sheet.
 
-- **Home Screen app:** unchanged from before #58 — the tab header's row under the 59 pt status bar,
+- **Safari tab:** the header's avatar and a book page's back button `barTop` (8 pt) below the top of
+  the page, which starts under the status bar, not touching it; the tab bar clear of Safari's
+  floating bottom toolbar (the page ends above it; on iOS the tab bar keeps `max(inset − 13, 12)`);
+  the search palette and a sheet standing on the keyboard, a sheet's header in view. Safari ignores
+  `interactive-widget`, so this is `useKeyboardViewport` following the visual viewport.
+- **Home Screen app** (not yet run in the Simulator): unchanged from before #58 — the tab header's row under the 59 pt status bar,
   the tab bar 21 pt off the bottom edge (`tabBarDrop` into the 34 pt inset), the search palette
   `--spacing-sm` above the keyboard, sheets riding on the keyboard.
-- **Safari tab:** the header's avatar and a book page's back button 8 pt below Safari's top edge
-  (`barTop`), not touching it; the tab bar clear of Safari's bottom toolbar, with the toolbar both
-  expanded and collapsed (the bottom inset is what Safari reports there; on iOS the tab bar keeps
-  `max(inset − 13, 12)`); the search palette and the Finish sheet's review field above the keyboard
-  (Safari ignores `interactive-widget`, so this is still `useKeyboardInset` following the visual
-  viewport).
+
+**Setting it up.** Xcode with an iOS runtime; an iPhone 18 Pro (iOS 27) here. The Simulator shares
+the Mac's network, so the dev server on port 3062 (as above) and the stack on 55321 are its
+`localhost`; there is nothing to reverse:
+
+```sh
+U=<udid from xcrun simctl list devices>
+xcrun simctl boot $U
+xcrun simctl ui $U appearance light   # or dark
+xcrun simctl openurl $U http://localhost:3062/
+xcrun simctl io $U screenshot s.png && sips -s format jpeg -Z 1000 s.png --out s.jpg
+```
+
+Input goes through Orca's emulator (`orca emulator attach $U`, then `tap x y` in normalized
+coordinates, `type`, `gesture`; a swipe is a `begin`, a few `move`s and an `end` on its WebSocket).
+Two traps:
+
+- **No software keyboard.** Typing through `orca emulator type` (or a Mac keyboard) attaches a
+  hardware keyboard to the device, and from then on a focused field shows only Safari's accessory
+  bar — the keyboard the member sees never comes up, and neither does what follows it. This Xcode
+  ships no Simulator.app to untick I/O → Keyboard → Connect Hardware Keyboard in, and rebooting the
+  device does not reset it. CoreSimulator's `-[SimDevice setHardwareKeyboardEnabled:keyboardType:error:]`
+  with `NO` does (a ten-line Objective-C tool, run after any typing). Better: fill fields from the
+  page and keep real taps for focusing.
+- **Orca's helper** loads `SimulatorKit.framework` from `Developer/Library/PrivateFrameworks`; newer
+  Xcodes keep it in `Contents/SharedFrameworks`. A symlink into the helper's `lib/` folder
+  (`~/Library/Application Support/orca/serve-sim-runtime/<version>/lib`) fixes `Library not loaded:
+  @rpath/SimulatorKit.framework`. After rebooting the device, `orca emulator kill` and attach again:
+  the old helper still answers but its taps go nowhere.
+
+To read what Safari reports, the page needs a way to run the probe in `e2e/android/smoke.ts`: Web
+Inspector, or (what this run used) a local dev-only plugin that polls a small server on the Mac for
+a script to run and posts the result back. Map a page point to the screen with one calibration tap
+(the page reads the touch's `clientX/Y`); in a Safari tab the page's (0, 0) is at (0, 62) pt.
+
+## What Safari reports (iOS 27, iPhone 18 Pro simulator, 402 × 874 pt)
+
+Safari tab, light. CSS px.
+
+| | inset top / bottom | `innerHeight` / `clientHeight` | visual viewport | |
+| --- | --- | --- | --- | --- |
+| No keyboard | 0 / 0 | 714 / 714 (`lvh` 754) | 714, offset 0 | tab bar 12 off the page's bottom, which ends above Safari's toolbar |
+| Keyboard, field high on the page (sign-in) | 0 / 0 | 714 / 714 | 384, offset 0 | |
+| Keyboard, search palette | 0 / 0 | 411 / 714 | 411, offset 303 | palette 12 above the keyboard |
+| Keyboard, Finish sheet's review field | 0 / 0 | 633 / 714 | 384, offset 330 | inset reads 0: Safari panned to the field |
+
+The simulator's Safari kept its bottom toolbar expanded after a swipe (`innerHeight` stayed 714).
+`innerHeight` follows the visual viewport only part of the way once the keyboard is up, so
+`layoutHeightOf` takes `clientHeight` there. With a field low on the page Safari pans the visual
+viewport down to it, the keyboard inset reads 0 and the layout viewport's height no longer says how
+much room a sheet has: before the fix in #58 the Finish sheet stood on the keyboard but ran 190 px off
+the top of the screen, its header and Cancel out of reach. `keyboardRoomOf` (the visual viewport's
+height while the keyboard is up) now caps the sheet's height.
