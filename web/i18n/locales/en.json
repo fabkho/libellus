@@ -136,6 +136,7 @@
     "retry": "Try again",
     "error": {
       "already_in_library": "This book is already in your Library.",
+      "edition_in_library": "That edition is already in your Library as another book.",
       "book_invalid": "This book can't be added: it is missing what we need to keep it.",
       "session_invalid": "Those dates, that rating or review don't go with that status.",
       "not_signed_in": "Sign in again to add books.",
@@ -227,6 +228,19 @@
       "busy": "Saving…",
       "retry": "Try again",
       "finishedIt": "Finished it?"
+    },
+    "edition": {
+      "open": "Change edition",
+      "title": "Change edition",
+      "hint": "Pick the edition you hold. Your reads, ratings and collections stay with the book.",
+      "listLabel": "Editions",
+      "current": "Your edition",
+      "loading": "Looking for other editions…",
+      "none": "No other editions found.",
+      "failed": "Other editions didn't load.",
+      "retry": "Try again",
+      "action": "Change",
+      "busy": "Changing…"
     }
   },
   "add": {

@@ -52,6 +52,8 @@ export type LibraryEntry = {
 export type LibraryErrorCode =
   /** The member already has this Book. */
   | 'already_in_library'
+  /** Change edition: the member has that edition already, as another entry. */
+  | 'edition_in_library'
   /** The snapshot cannot enter the Catalogue (no title, no ISBN or source id). */
   | 'book_invalid'
   /** Days, a Rating or a review that do not belong to the Status (dates on Want to read, a Rating on Currently reading …). */
@@ -90,6 +92,7 @@ export type LibraryErrorCode =
 /** Every code the database raises by name, as `LibraryErrorCode`. */
 const RAISED_CODES = [
   'already_in_library',
+  'edition_in_library',
   'book_invalid',
   'session_invalid',
   'entry_not_found',
@@ -485,6 +488,16 @@ export type Library = {
    * and `progress_invalid` (a page past the page count, a percent over 100).
    */
   updateProgress: (entryId: string, progress: ProgressValue) => Promise<Result<LibraryEntry>>
+  /**
+   * Points the entry at another edition (issue #41): the Book is found in the
+   * Catalogue or added with this snapshot, as `addToLibrary` does it (resolve
+   * a new Book's Cover first, like an add), and the entry keeps its reads,
+   * Ratings, reviews and places on Collections; a progress page past the new
+   * edition's last page becomes its last page. Returns the entry with its new
+   * Book. Refused with `edition_in_library` when the member has that edition
+   * as another entry. Picking the edition it already has changes nothing.
+   */
+  changeEdition: (entryId: string, book: BookSnapshot) => Promise<Result<LibraryEntry>>
   /** Every read of an entry, newest first (`sortSessions`). */
   sessions: (entryId: string) => Promise<Result<ReadingSession[]>>
   /**
@@ -617,6 +630,13 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
         p_percent: 'percent' in progress ? progress.percent : null,
       })
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
+      return reread(entryId)
+    },
+
+    async changeEdition(entryId, book) {
+      if (!online()) return OFFLINE
+      const changed = await client.rpc('change_edition', { p_entry_id: entryId, p_book: bookToRow(book) })
+      if (changed.error) return { data: null, error: mapLibraryError(changed.error) }
       return reread(entryId)
     },
 

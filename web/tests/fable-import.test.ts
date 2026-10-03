@@ -11,7 +11,7 @@ import { addDays, isoDay } from '@/utils/dates'
 import { withLookup } from '../scripts/fable/covers'
 import { findMemberId, writeImport } from '../scripts/fable/write'
 import { signUpMember, type TestMember } from './support/member'
-import { runTitle, stack, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
+import { runTitle, sql, stack, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
 /**
  * The Fable import's writes (issue #17) against the local stack, with
@@ -134,6 +134,19 @@ beforeAll(async () => {
   ]
 })
 
+/** The overrides of the second run on: a corrected date, another edition, a skipped record. */
+let movedIsbn: string
+function corrections(): Overrides {
+  movedIsbn ??= testIsbn()
+  return {
+    books: {
+      [records[1]!.id]: { dateRead: addDays(today, -29) }, // a corrected finish date
+      [records[2]!.id]: { isbn13: movedIsbn }, // the edition actually owned
+      [records[4]!.id]: { skip: true }, // not worth keeping after all
+    },
+  }
+}
+
 describe('writeImport', () => {
   it('finds the member by address', async () => {
     expect(await findMemberId(service, member.email.toUpperCase())).toBe(member.id)
@@ -188,14 +201,7 @@ describe('writeImport', () => {
     const wanted = (await entryOf(records[2]!.id))!
     expect((await library.startReading(wanted.id, today)).error).toBeNull()
 
-    const movedIsbn = testIsbn()
-    const result = await writeImport(service, member.id, planFor({
-      books: {
-        [records[1]!.id]: { dateRead: addDays(today, -29) }, // a corrected finish date
-        [records[2]!.id]: { isbn13: movedIsbn }, // the edition actually owned
-        [records[4]!.id]: { skip: true }, // not worth keeping after all
-      },
-    }), { prune: true })
+    const result = await writeImport(service, member.id, planFor(corrections()), { prune: true })
 
     expect(result.problems).toEqual([])
     expect(result.sessions).toMatchObject({ created: 0, updated: 1 })
@@ -212,6 +218,32 @@ describe('writeImport', () => {
     expect(await sessionsOf(moved.id)).toEqual([{ started_on: today, ended_on: null, outcome: null, rating: null, import_key: null }])
 
     expect(await entryOf(records[4]!.id)).toBeNull()
+  })
+
+  it('leaves an entry whose edition the member changed in the app on her edition when run again', async () => {
+    // In the app (#41): the merged entry to another Catalogue edition, the Manual book to a Catalogue one.
+    const library = createLibrary(member.client)
+    const orchard = (await entryOf(records[1]!.id))!
+    const nowhere = (await entryOf(records[6]!.id))!
+    const edition = (title: string): BookSnapshot => ({
+      ...appMade, title: runTitle(title), isbn13: testIsbn(), appleId: uniqueAppleId(), coverUrl: 'https://example.com/new.jpg',
+    })
+    const orchardEdition = (await library.changeEdition(orchard.id, edition('Book 1, the new edition'))).data!
+    const nowhereEdition = (await library.changeEdition(nowhere.id, edition('Nowhere else, found after all'))).data!
+    const sessionsBefore = [await sessionsOf(orchard.id), await sessionsOf(nowhere.id)]
+    const before = await sql<{ id: string }>('select id from public.library_entries where member_id = $1 order by id', [member.id])
+
+    const result = await writeImport(service, member.id, planFor(corrections()), { prune: true })
+
+    expect(result.problems).toEqual([])
+    expect(result.entries).toMatchObject({ created: 0, adopted: 0, moved: 0, memberEdition: 2, pruned: 0 })
+    // No Book made again: not the old edition's, not a second Manual book.
+    expect(result.books).toMatchObject({ created: 0, manual: 0 })
+    expect(result.sessions).toMatchObject({ created: 0, deleted: 0 })
+    expect((await entryOf(records[1]!.id))!.book_id).toBe(orchardEdition.book.id)
+    expect((await entryOf(records[6]!.id))!.book_id).toBe(nowhereEdition.book.id)
+    expect([await sessionsOf(orchard.id), await sessionsOf(nowhere.id)]).toEqual(sessionsBefore)
+    expect(await sql<{ id: string }>('select id from public.library_entries where member_id = $1 order by id', [member.id])).toEqual(before)
   })
 
   it('puts imported Books into the Catalogue the way search finds them: another member adds the same Book', async () => {

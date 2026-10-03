@@ -145,12 +145,66 @@ export function openLibraryLanguage(languages: readonly string[]): string | null
   return primary ? primary[0].toLowerCase() : null
 }
 
+/** One edition of OpenLibrary's work editions list (`/works/<key>/editions.json`). */
+export type OpenLibraryWorkEdition = {
+  key?: string
+  title?: string
+  covers?: number[]
+  isbn_13?: string[]
+  isbn_10?: string[]
+  number_of_pages?: number
+  publish_date?: string
+  publishers?: string[]
+  languages?: { key?: string }[]
+}
+
+/** How many editions of a work are asked for (issue #41); a popular work has hundreds. */
+export const WORK_EDITIONS_LIMIT = 50
+
+/**
+ * One edition of a work's editions list as a Book snapshot (issue #41). The
+ * list names no authors, only their keys: the work's are handed in. Null
+ * without a title or an edition key.
+ */
+export function snapshotFromWorkEdition(
+  edition: OpenLibraryWorkEdition,
+  work: { key: string; authors: readonly string[] },
+): BookSnapshot | null {
+  const editionKey = bareKey(edition.key)
+  const title = cleanTitle(edition.title ?? '')
+  if (!title || !editionKey) return null
+  const isbns = isbnsOf([...(edition.isbn_13 ?? []), ...(edition.isbn_10 ?? [])])
+  const coverId = edition.covers?.find((id) => id > 0)
+  const pages = edition.number_of_pages
+  return {
+    title,
+    authors: [...work.authors],
+    isbn13: isbns.isbn13,
+    isbn10: isbns.isbn10,
+    pageCount: pages && Number.isInteger(pages) && pages > 0 ? pages : null,
+    year: yearOf(edition.publish_date ? [edition.publish_date] : undefined),
+    // `/languages/ger` → `ger`, the code search's editions carry too.
+    language: /\/languages\/([a-z]{3})$/.exec(edition.languages?.[0]?.key ?? '')?.[1] ?? null,
+    publisher: edition.publishers?.[0]?.trim() || null,
+    description: null,
+    coverUrl: coverId ? openLibraryCover(coverId) : null,
+    coverThumbhash: null,
+    coverColors: null,
+    source: 'openlibrary',
+    appleId: null,
+    openLibraryEditionKey: editionKey,
+    openLibraryWorkKey: bareKey(work.key),
+  }
+}
+
 export type OpenLibrarySource = {
   search: (text: string, signal?: AbortSignal) => Promise<Found[]>
   /** The edition with this ISBN-13 (carrying it), if OpenLibrary knows it. */
   lookupIsbn: (isbn13: string, signal?: AbortSignal) => Promise<Found[]>
   /** One edition by its key (`OL61022665M`); null when OpenLibrary does not know it. */
   lookupEdition: (editionKey: string, signal?: AbortSignal) => Promise<BookSnapshot | null>
+  /** The editions of a work (`OL45883W`), as many as `WORK_EDITIONS_LIMIT`, with the work's authors (issue #41). */
+  workEditions: (work: { key: string; authors: readonly string[] }, signal?: AbortSignal) => Promise<BookSnapshot[]>
 }
 
 export function createOpenLibrary(options: { fetch: FetchLike; languages: readonly string[] }): OpenLibrarySource {
@@ -174,6 +228,19 @@ export function createOpenLibrary(options: { fetch: FetchLike; languages: readon
       const found = await ask({ q: `edition_key:${editionKey}`, limit: '1' }, signal)
       const book = found[0]?.book
       return book?.openLibraryEditionKey === editionKey ? book : null
+    },
+    async workEditions(work, signal) {
+      const key = bareKey(work.key)
+      if (!key) return []
+      const body = (await getJson(
+        options.fetch,
+        `${API}/works/${key}/editions.json?${new URLSearchParams({ limit: String(WORK_EDITIONS_LIMIT) })}`,
+        signal,
+      )) as { entries?: OpenLibraryWorkEdition[] }
+      return (Array.isArray(body.entries) ? body.entries : []).flatMap((edition) => {
+        const book = snapshotFromWorkEdition(edition, { key, authors: work.authors })
+        return book ? [book] : []
+      })
     },
   }
 }

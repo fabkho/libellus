@@ -1,0 +1,409 @@
+{
+  "links": {
+    "self": "/works/OL20893680W/editions.json?limit=50",
+    "work": "/works/OL20893680W"
+  },
+  "size": 23,
+  "entries": [
+    {
+      "key": "/books/OL57673802M",
+      "title": "Piranesi",
+      "isbn_13": [
+        "9781635575644"
+      ],
+      "publish_date": "2021",
+      "publishers": [
+        "Bloomsbury Publishing"
+      ]
+    },
+    {
+      "key": "/books/OL57543161M",
+      "title": "Piranesi",
+      "isbn_13": [
+        "9781526681539"
+      ],
+      "number_of_pages": 400,
+      "publish_date": "2024",
+      "publishers": [
+        "Bloomsbury Publishing Plc"
+      ],
+      "languages": [
+        {
+          "key": "/languages/eng"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL61022665M",
+      "title": "Piranesi",
+      "covers": [
+        15155469
+      ],
+      "isbn_13": [
+        "9781526622419"
+      ],
+      "isbn_10": [
+        "1526622416"
+      ],
+      "publish_date": "2020-09-15",
+      "publishers": [
+        "Bloomsbury Publishing"
+      ],
+      "languages": [
+        {
+          "key": "/languages/eng"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL58608380M",
+      "title": "Piranesi",
+      "covers": [
+        15215371
+      ],
+      "isbn_13": [
+        "9781526622440"
+      ],
+      "publish_date": "2020",
+      "publishers": [
+        "Bloomsbury"
+      ]
+    },
+    {
+      "key": "/books/OL57673846M",
+      "title": "Piranesi",
+      "covers": [
+        15248718
+      ],
+      "isbn_13": [
+        "9781635575644"
+      ],
+      "number_of_pages": 272,
+      "publish_date": "2021",
+      "publishers": [
+        "Bloomsbury Publishing"
+      ]
+    },
+    {
+      "key": "/books/OL51561069M",
+      "title": "Piranesi",
+      "covers": [
+        14609166
+      ],
+      "isbn_13": [
+        "9783453321984"
+      ],
+      "number_of_pages": 272,
+      "publish_date": "09.05.2022",
+      "publishers": [
+        "Heyne"
+      ]
+    },
+    {
+      "key": "/books/OL47322902M",
+      "title": "Piranesi",
+      "covers": [
+        13866011
+      ],
+      "isbn_13": [
+        "9786586015317"
+      ],
+      "isbn_10": [
+        "6586015316"
+      ],
+      "publish_date": "November 22, 2021"
+    },
+    {
+      "key": "/books/OL46535148M",
+      "title": "Piranesi",
+      "covers": [
+        13228480
+      ],
+      "isbn_13": [
+        "9788417918484"
+      ],
+      "isbn_10": [
+        "8417918485"
+      ],
+      "number_of_pages": 276,
+      "publish_date": "Sep 13, 2021",
+      "publishers": [
+        "Amsterdam"
+      ],
+      "languages": [
+        {
+          "key": "/languages/eng"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL37069540M",
+      "title": "Piranèse",
+      "isbn_13": [
+        "9782221250242"
+      ],
+      "isbn_10": [
+        "2221250249"
+      ],
+      "number_of_pages": 306,
+      "publish_date": "Oct 07, 2021",
+      "publishers": [
+        "ROBERT LAFFONT"
+      ]
+    },
+    {
+      "key": "/books/OL39864438M",
+      "title": "Piranesi",
+      "covers": [
+        12953670
+      ],
+      "isbn_13": [
+        "9791259670021"
+      ],
+      "number_of_pages": 300,
+      "publish_date": "February 4, 2021",
+      "publishers": [
+        "Fazi Editore"
+      ],
+      "languages": [
+        {
+          "key": "/languages/ita"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL36769135M",
+      "title": "Piranesi",
+      "isbn_13": [
+        "9781526631008"
+      ],
+      "publish_date": "2020",
+      "publishers": [
+        "Bloomsbury Publishing Plc"
+      ],
+      "languages": [
+        {
+          "key": "/languages/eng"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL33884545M",
+      "title": "Piranesi",
+      "covers": [
+        11996540
+      ],
+      "isbn_13": [
+        "9781526622433"
+      ],
+      "isbn_10": [
+        "1526622432"
+      ],
+      "publish_date": "Aug 19, 2021",
+      "publishers": [
+        "BLOOMSBURY"
+      ]
+    },
+    {
+      "key": "/books/OL36128954M",
+      "title": "Piranesi",
+      "covers": [
+        13652251
+      ],
+      "isbn_13": [
+        "9781432895082"
+      ],
+      "number_of_pages": 335,
+      "publish_date": "2022",
+      "publishers": [
+        "Thorndike Press",
+        "Large Print Press"
+      ],
+      "languages": [
+        {
+          "key": "/languages/eng"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL34985598M",
+      "title": "Piranesi",
+      "covers": [
+        15240267,
+        12317539
+      ],
+      "isbn_13": [
+        "9788418363283"
+      ],
+      "isbn_10": [
+        "8418363282"
+      ],
+      "number_of_pages": 272,
+      "publish_date": "2021-12-07",
+      "publishers": [
+        "Salamandra"
+      ],
+      "languages": [
+        {
+          "key": "/languages/spa"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL33926341M",
+      "title": "Piranesi",
+      "covers": [
+        12498884
+      ],
+      "isbn_13": [
+        "9781526622433"
+      ],
+      "isbn_10": [
+        "1526622432"
+      ],
+      "number_of_pages": 245,
+      "publish_date": "2 Sept. 2021",
+      "publishers": [
+        "Bloomsbury Publishing"
+      ]
+    },
+    {
+      "key": "/books/OL33926266M",
+      "title": "Piranesi",
+      "covers": [
+        12013558
+      ],
+      "isbn_13": [
+        "9781526622600"
+      ],
+      "isbn_10": [
+        "1526622602"
+      ]
+    },
+    {
+      "key": "/books/OL33926241M",
+      "title": "Piranesi",
+      "covers": [
+        -1
+      ],
+      "isbn_13": [
+        "9781526625977"
+      ],
+      "isbn_10": [
+        "1526625970"
+      ],
+      "publish_date": "Sep 28, 2020",
+      "publishers": [
+        "Bloomsbury Publishing"
+      ]
+    },
+    {
+      "key": "/books/OL33030582M",
+      "title": "Piranesi",
+      "covers": [
+        11713556
+      ],
+      "isbn_13": [
+        "9781432886578"
+      ],
+      "isbn_10": [
+        "1432886576"
+      ],
+      "number_of_pages": 365,
+      "publish_date": "Apr 28, 2021",
+      "publishers": [
+        "Thorndike Press Large Print"
+      ]
+    },
+    {
+      "key": "/books/OL31833301M",
+      "title": "Piranesi",
+      "covers": [
+        15166481
+      ],
+      "isbn_13": [
+        "9781635577808"
+      ],
+      "isbn_10": [
+        "1635577802"
+      ],
+      "number_of_pages": 272,
+      "publish_date": "Sep 07, 2021",
+      "publishers": [
+        "Bloomsbury Publishing"
+      ]
+    },
+    {
+      "key": "/books/OL31418201M",
+      "title": "Piranesi",
+      "covers": [
+        10517218
+      ],
+      "isbn_13": [
+        "9781635576719"
+      ],
+      "isbn_10": [
+        "1635576717"
+      ],
+      "publish_date": "Sep 15, 2020",
+      "publishers": [
+        "Bloomsbury USA (Limited Issue, Author Signed Hardcover Edition)"
+      ]
+    },
+    {
+      "key": "/books/OL29486417M",
+      "title": "Piranesi",
+      "covers": [
+        13011435
+      ],
+      "isbn_13": [
+        "9781526622426"
+      ],
+      "number_of_pages": 272,
+      "publish_date": "2020",
+      "publishers": [
+        "Bloomsbury Publishing Plc"
+      ],
+      "languages": [
+        {
+          "key": "/languages/eng"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL28439584M",
+      "title": "Piranesi",
+      "isbn_13": [
+        "9781635575637"
+      ],
+      "number_of_pages": 245,
+      "publish_date": "2020",
+      "publishers": [
+        "Berryville, Bloomsbury Publishing"
+      ],
+      "languages": [
+        {
+          "key": "/languages/eng"
+        }
+      ]
+    },
+    {
+      "key": "/books/OL28300471M",
+      "title": "Piranesi",
+      "covers": [
+        10226290
+      ],
+      "isbn_13": [
+        "9781635575637"
+      ],
+      "isbn_10": [
+        "163557563X"
+      ],
+      "number_of_pages": 272,
+      "publish_date": "Sep 15, 2020",
+      "publishers": [
+        "Bloomsbury Publishing"
+      ]
+    }
+  ]
+}
