@@ -22,6 +22,20 @@ const PAGES = [
 ] as const
 
 const current = (to: string) => route.path === to
+
+// Each tab keeps its place (utils/tabPlaces.ts): whatever leaves a tab page —
+// a tab, a book, the search palette — notes how far down it was first, before
+// the next page can change the scroll.
+const router = useRouter()
+const stopRemembering = router.beforeEach((_to, from) => tabPlaces.leave(from.path, window.scrollY))
+onUnmounted(stopRemembering)
+
+/** The tab already showing, tapped again: back to its top, as iOS does. */
+function tapped(event: MouseEvent, to: string) {
+  if (!current(to)) return
+  event.preventDefault()
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
+}
 </script>
 
 <template>
@@ -44,6 +58,7 @@ const current = (to: string) => route.path === to
       :class="current(tab.to) ? 'text-ink' : 'text-ink-faint'"
       :aria-current="current(tab.to) ? 'page' : undefined"
       :data-testid="`shell.tab.${tab.key}`"
+      @click="tapped($event, tab.to)"
     >
       <UiIcon :name="tab.icon" :bold="current(tab.to)" />
       <span class="sr-only">{{ t(`tabs.${tab.key}`) }}</span>

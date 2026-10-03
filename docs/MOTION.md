@@ -45,7 +45,9 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
 - **Press.** Buttons scale to 0.97 over `instant`; no colour flash. Rows darken to `fillStrong`
   while pressed.
 - **Tab.** The new tab's icon goes full ink and its lamp dot fades in over `quick`; the old one
-  recedes. The page itself swaps without a transition (tabs are places, not a sequence).
+  recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
+  place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
+  with Reduce Motion).
 - **Avatar menu.** Opens from its top-right corner: fade plus a 0.96 → 1 scale and a 4 px drop,
   `standard`; closes the same way back, `exit`. Flipping the theme inside it crossfades nothing —
   the colours change at once, the switch's knob slides over `quick`.

@@ -168,6 +168,9 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   above the keyboard. Its slot holds `SearchResults` (#6): one list, never naming where a result
   came from (one field, one list; at most one quiet loading state), each row a cover, the serif
   title, the author, the year in mono and a round + (or the Status, if the Book is in the Library).
+- **Tab places**: each tab keeps its place, as iOS tabs do. Home and Library open where they were
+  left (back and forward use the browser's saved place), and the tab already showing, tapped
+  again, scrolls back to its top.
 - **Pushed screens** (the book page): in the tab layout with `pushed: true`, so the tab pages stay
   alive underneath; no header, the page draws `UiTopBar` (back) over its cover's light
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
