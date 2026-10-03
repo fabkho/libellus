@@ -149,7 +149,8 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   palette stay centred on it. No desktop layouts.
 - **Safe areas** through utilities only: `screen-inset` (a whole screen), `safe-top`,
   `safe-bottom`, `safe-x`, `float-bottom` (floating chrome just above the home indicator) and
-  `clear-tab-bar` (room under a tab's content).
+  `clear-tab-bar` (room under a tab's content). `main.css` reads the insets once into
+  `--safe-area-*`; nothing else uses `env()`.
 - **Tab header** (`ShellHeader`): the page title on the left — under a mono date eyebrow on Home
   ("Friday · 2 Oct", `text-title`), on its own elsewhere (`text-large-title`) — and the avatar on
   the right.
