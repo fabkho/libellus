@@ -87,6 +87,36 @@ service-role key, which only the owner holds: locally it asks `supabase status`;
 project export `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` first. Never put that key in `web/.env`.
 Members cannot read, create or change invite codes (RLS and revoked grants, covered by pgTAP).
 
+#### The Fable import and the dev seed
+
+The owner's Fable history comes over once, with `web/scripts/import-fable.ts` (#17). It reads
+`reading list --json` from the [reading-tracker CLI](https://github.com/fabkho/reading-tracker-cli)
+(`~/code/reading-tracker-cli`, or `READING_TRACKER_CLI`), applies the overrides file Regal reads
+(`~/.reading-tracker/regal-overrides.json`: skips, merges, dates, the edition and language read, pinned
+covers), and maps it (`web/app/data/import/`, pure and tested): editions of one title by one author
+become one entry with the most recent edition as its Book, every Fable read one Reading session
+(finished, abandoned, or open while reading; none on *Want to read*), ratings exact in quarters. Then
+it looks up covers and Catalogue ids (Apple Books by ISBN, then by title in the storefront of the
+language read, then OpenLibrary) and writes as the service role, keyed by the Fable record
+(`import_key`), so a rerun changes nothing that has not changed.
+
+```sh
+cd web
+pnpm seed:dev                                # the dev member dev@libellus.local, local stack
+pnpm import:fable --email you@example.com --dry-run   # what a run would write, nothing written
+pnpm import:fable --help                     # --from, --overrides, --prune, --offline, --target
+```
+
+It asks the network once per Book: lookups are cached in `.data/fable-import/` at the repo root, with
+the last run's report (counts, covers per source, what could not be carried over). `.data/` is ignored
+by git; the real reading history never lands in the repository. `--target local` (the default) always
+writes to the stack `supabase status` reports, whatever `SUPABASE_URL` says; `--target hosted` (#18)
+takes `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and wants the host repeated with `--confirm-host`.
+
+Known gaps: the German National Library's covers are found for German editions but not stored (its
+server answers browsers with a bot page, so they need rehosting first; follow-up issue); Regal's
+Goodreads second opinion on read dates is not part of the import.
+
 ### Local services
 
 Studio at http://127.0.0.1:55323, the local mailbox (sign-in codes) at http://127.0.0.1:55324.
@@ -99,6 +129,7 @@ web/          Nuxt 4 SPA + PWA — the reference app (rules: web/AGENTS.md)
   i18n/locales/ en.json, every string the UI shows
   tests/        Vitest data-layer suite against the local stack
   e2e/          Playwright flows, iPhone viewport in WebKit
+  scripts/      import-fable.ts, the Fable import and dev seed (web/scripts/fable/)
 scripts/      create-invite-code.sh, the owner's tool for minting invite codes
 design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests
