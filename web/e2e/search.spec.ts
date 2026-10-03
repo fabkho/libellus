@@ -107,3 +107,39 @@ test('the morph can be turned around halfway, either way', async ({ page }) => {
   await page.getByTestId('search.cancel').click()
   await expectClosed(page)
 })
+
+test('the palette sits above the keyboard, follows a rotation and drops back when it closes', async ({ page }) => {
+  // Playwright has no keyboard that covers the page: stand in for the visual
+  // viewport iOS reports, its height settable from the test.
+  await page.addInitScript(() => {
+    const fake = Object.assign(new EventTarget(), { height: window.innerHeight, offsetTop: 0 })
+    Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true })
+    ;(window as unknown as { setKeyboard: (px: number) => void }).setKeyboard = (px) => {
+      fake.height = window.innerHeight - px
+      fake.dispatchEvent(new Event('resize'))
+    }
+  })
+  await onLibrary(page)
+  const setKeyboard = (px: number) => page.evaluate((value) => (window as never as { setKeyboard: (px: number) => void }).setKeyboard(value), px)
+  const gapAboveKeyboard = async (keyboard: number) => {
+    const box = (await page.getByTestId('search.overlay').boundingBox())!
+    return Math.round(page.viewportSize()!.height - keyboard - (box.y + box.height))
+  }
+
+  await open(page)
+  const resting = await gapAboveKeyboard(0)
+  const sm = await page.evaluate(() => Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-sm')))
+
+  // Right above the keyboard (`--spacing-sm`), whatever the keyboard's height.
+  await setKeyboard(336)
+  await expect.poll(() => gapAboveKeyboard(336)).toBe(sm)
+  await setKeyboard(250)
+  await expect.poll(() => gapAboveKeyboard(250)).toBe(sm)
+
+  // Closed with the keyboard still reported: the next opening does not start lifted.
+  await page.getByTestId('search.cancel').click()
+  await expectClosed(page)
+  await setKeyboard(0)
+  await open(page)
+  await expect.poll(() => gapAboveKeyboard(0)).toBe(resting)
+})

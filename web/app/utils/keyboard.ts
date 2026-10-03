@@ -1,6 +1,6 @@
 /**
  * The geometry behind following the iOS keyboard (composables/useKeyboardInset.ts,
- * components/ui/Sheet.vue). Pure, so a native port copies it and the tests pin it.
+ * components/ui/Sheet.vue, components/shell/SearchOverlay.vue). Pure, so a native port copies it and the tests pin it.
  */
 
 /**
@@ -38,4 +38,13 @@ export function revealDelta(
   if (above < 0) return above
   if (below > 0) return Math.min(below, above)
   return 0
+}
+
+/**
+ * How far up the search palette goes to sit `gap` above the keyboard, from its
+ * resting `bottom` (what `float-bottom` gives it). Never down, and not at all
+ * with the keyboard down.
+ */
+export function paletteLift(keyboard: number, gap: number, resting: number): number {
+  return keyboard > 0 ? Math.max(0, keyboard + gap - resting) : 0
 }

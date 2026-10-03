@@ -19,6 +19,7 @@
 // Animations timeline per direction, so a close can take over from an opening
 // at whatever point it has reached, and the other way round.
 import { useSearchStore } from '~/stores/search'
+import { paletteLift } from '~/utils/keyboard'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -288,21 +289,18 @@ function settle(direction: Direction) {
 
 // ------------------------------------------------------------ keyboard and drag
 
-// While the query has the keyboard the palette sits right above it. iOS lays
-// the keyboard over the page instead of resizing it, so its height is read
-// from the visual viewport; in the installed app that happens as the keyboard
-// starts to move, and the palette rides up on the keyboard's own curve.
-const keyboard = ref(0)
-function measureKeyboard() {
-  const viewport = window.visualViewport
-  keyboard.value = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0
-}
+// While the query has the keyboard the palette sits right above it. The
+// keyboard's height is the shared inset (composables/useKeyboardInset.ts): in
+// the installed app it is reported as the keyboard starts to move, so the
+// palette rides up on the keyboard's own curve; it reads 0 again once the
+// search closes.
+const keyboard = useKeyboardInset(() => search.isOpen)
 /** How far up the palette has to go to sit `--spacing-sm` above the keyboard, from where `float-bottom` puts it. */
 const lift = computed(() => {
   if (!keyboard.value || !palette.value) return 0
   const resting = Number.parseFloat(getComputedStyle(palette.value).bottom) || 0
   const gap = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-sm')) || 0
-  return Math.max(0, keyboard.value + gap - resting)
+  return paletteLift(keyboard.value, gap, resting)
 })
 
 const { handlers, offset, dragging } = useSwipeDown(close)
@@ -318,8 +316,6 @@ function onKeydown(event: KeyboardEvent) {
 function listen(on: boolean) {
   const method = on ? 'addEventListener' : 'removeEventListener'
   window[method]('keydown', onKeydown)
-  window.visualViewport?.[method]('resize', measureKeyboard)
-  window.visualViewport?.[method]('scroll', measureKeyboard)
 }
 
 watch(
@@ -341,7 +337,6 @@ watch(
     } else if (rendered.value) {
       closing.value = true
       input.value?.blur()
-      keyboard.value = 0
       await nextTick()
       if (!search.isOpen) play('close')
     }
