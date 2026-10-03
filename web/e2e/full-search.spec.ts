@@ -1,7 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
 import { recordedApple, signedIn } from './support'
+import { test } from './fixtures'
 
 /**
  * Full search (#12): the own Catalogue, Apple Books and OpenLibrary behind one
@@ -122,6 +123,8 @@ test('only when every source fails does the member see one note', async ({ page 
 
 test('offline, search answers from her own Library at once and says so (#15)', async ({ page, context }) => {
   await signedIn(page)
+  // Offline already refuses every request; the recordings only keep it from being a live one.
+  await recordedApple(page)
   await context.setOffline(true)
   await searchFor(page, 'Piranesi')
   // A new member's Library is empty: nothing found there, and no source is asked.

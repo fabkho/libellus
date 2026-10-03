@@ -31,13 +31,21 @@ Tests, from `web/` (with the stack running):
 ```sh
 pnpm test                          # Vitest: data layer against the local stack, no mocks
 pnpm exec playwright install webkit # once
-pnpm e2e                           # Playwright: iPhone viewport in WebKit, own server on :4327
+pnpm e2e                           # Playwright: iPhone viewport in WebKit, own server on :4327 (LIBELLUS_E2E_PORT moves it)
 supabase test db                   # pgTAP, from the repo root
 ```
 
 The Vitest suite reads the anon key from `supabase status` unless `SUPABASE_ANON_KEY` is set, reads
 six-digit codes out of Mailpit, and tags its fixtures per run: it only ever deletes what its own run
 created.
+
+The Playwright flows (`web/e2e`) never call a live API: Apple and OpenLibrary answer from the recordings in
+`web/tests/fixtures`, and a fixture fails any test that reaches another host or shows a control without a
+`data-testid`. `e2e/core-loop.spec.ts` is the smoke flow of the whole loop (sign in, search, add, start,
+finish with a rating and a review, counted on Home and under Finished). On a pull request they run as the
+`e2e` CI job against a fresh local stack, with one retry; a failed run uploads the HTML report and traces
+(artifact `playwright-report`; open it with `pnpm exec playwright show-report`). Locally a failure is not
+retried, so a flaky flow is seen.
 
 `pnpm build` (or `pnpm generate`) runs `nuxt generate`; `.output/public` (also linked as `dist`) is
 what Cloudflare Pages serves, service worker and manifest included.
@@ -140,4 +148,4 @@ SPEC.md       condensed spec; CONTEXT.md the domain glossary
 ```
 
 CI (`.github/workflows/ci.yml`) runs on every pull request: pgTAP and the Vitest data layer against a
-local stack, `nuxt generate`, and the generated-tokens check.
+local stack, the Playwright flows in WebKit (its own job), `nuxt generate`, and the generated-tokens check.

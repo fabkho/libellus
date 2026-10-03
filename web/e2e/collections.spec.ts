@@ -1,7 +1,8 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
 import { recordedApple, signedIn } from './support'
+import { test } from './fixtures'
 
 /**
  * Collections (#14): a Book from search goes on a new Collection from its page

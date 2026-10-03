@@ -20,6 +20,7 @@ Rules for a port, if one happens:
 ```
 ### <Screen name>  (web: `app/pages/<path>.vue`)
 Purpose: one sentence.
+Layout: what is on the screen, top to bottom.
 States: loading · empty · content · error · offline (list what exists)
 Actions → result:
 - <action> → <what happens, incl. navigation and what the database is asked to do>
@@ -74,6 +75,7 @@ Flow: `web/e2e/auth.spec.ts` (the code read from Mailpit; a mistyped code; the p
 
 ### Tab shell  (web: `app/layouts/tabs.vue`, `components/shell/*`; pages `app/pages/{index,library}.vue`)
 Purpose: the signed-in frame: each tab's header with the avatar, the page, the floating tab bar, and the search overlay that opens over all of it. Home is described in its own section below. A pushed screen (the book page) lives in the same frame without the header (see Book).
+Layout: a page header on top (`shell.header`: title, or date eyebrow and greeting on Home, and the avatar at the right), the page, and over the page's bottom edge the floating tab bar (`shell.tabs`: Home, Library, Search as a capsule). The search overlay replaces the tab bar with the palette (see Search); the avatar menu is a small popover under the avatar. Wide screens: the same column, centred.
 States: content (each tab shows its empty state) · avatar menu closed / open · search overlay closed / open (keyboard up: "typing", or down)
 Actions → result:
 - Tap Home or Library in the tab bar → shows Home (`/`) or Library (`/library`). The current tab is full ink with a lamp dot and its `aria-current="page"`; the others are faint. The header shows the page's title: Home under a date eyebrow (`home.today`, e.g. "Friday · 2 Oct"), Library large on its own.
@@ -90,6 +92,7 @@ Flow: `web/e2e/auth.spec.ts` (sign up → Home → Library → a reload keeps th
 
 ### Theme  (web: `app/utils/theme.ts`, `app/stores/theme.ts`, the switch in the avatar menu)
 Purpose: light (D's Day) or dark (D's Night). Follows the phone until the member chooses (issue #1, story 70).
+Layout: one switch row, `shell.darkTheme`, in the avatar menu between the address and Sign out; nothing else on screen changes except the colours.
 States: no preference (follows the device, live) · light · dark. The switch shows two states only: on = dark is showing.
 Actions → result:
 - First tap on the switch → stores **the opposite of what is showing**: on a dark phone with no preference, Light. Every later tap flips between Light and Dark. There is no way back to "follow the phone" from the interface.
@@ -106,6 +109,8 @@ The data layer reports stable codes, never sentences (`app/data/auth.ts`, `AuthE
 ### Search  (web: `components/search/Results.vue`, `components/search/ResultRow.vue`, `stores/search.ts`, `data/search.ts`, `data/merge.ts`, `data/apple.ts`, `data/openLibrary.ts`, `data/catalogueSearch.ts`; database: `search_books`)
 Purpose: find a Book from anywhere without leaving the page: the content of the search overlay (Tab shell) above its query row.
 States: idle (query shorter than 2 characters: `search.empty`) · loading (nothing has answered with a result yet: one still ghost row, `search.loading` for assistive tech) · results (best match at the bottom next to the query, weaker ones above it, the far end fading out; `search.hint` at the top, except for an ISBN query) · results growing while slower sources answer (no indicator of its own) · results dimmed while a newer query is on its way · no results (every source answered, none found anything: `search.noResultsTitle`, `search.noResults` with the query, `search.noResultsHint`, and the way to the manual-book sheet: `search.addManually`) · failed (every source failed: `search.failedTitle`, `search.failed`) · offline (#15: her own Library answers, see Offline and install; results with `search.offlineNote` where the hint would be, or `search.noResultsTitle` and `search.offlineNoResults` with the query and the note, never the way to add one by hand)
+Layout: the results fill the palette from the query row upwards, the best match at the bottom, nearest to the thumb; each row is the cover, the serif title, the authors with the year in mono, and at the right the + (or the Status once the Book is in the Library). The idle, loading, no-results and failed states take the same space, centred.
+States: idle (query shorter than 2 characters: `search.empty`) · loading (nothing has answered with a result yet: one still ghost row, `search.loading` for assistive tech) · results (best match at the bottom next to the query, weaker ones above it, the far end fading out; `search.hint` at the top, except for an ISBN query) · results growing while slower sources answer (no indicator of its own) · results dimmed while a newer query is on its way · no results (every source answered, none found anything: `search.noResultsTitle`, `search.noResults` with the query, `search.noResultsHint`, and the way to the manual-book sheet: `search.addManually`) · failed (every source failed, or the device is offline: `search.failedTitle`, `search.failed`)
 Actions → result:
 - Type → after a 220 ms pause, and only from 2 characters, the query goes out to **three sources at once** (`createSearch().search`): the own Catalogue (`search_books`: the beginnings of the words of title and authors, accents and case ignored, `ß` as `ss`; the member's own Manual books included, other members' never), Apple Books (iTunes Search API, ebooks, 20 per storefront, two storefronts) and OpenLibrary (`search.json` with a reduced field list and the device language, 20 works, each as its best edition). Every answer is merged into the list as it arrives. Every new keystroke aborts the query in flight in every source; an answer only lands for the query it was asked for, so an outdated answer never overwrites a newer one. Clearing or shortening the query below 2 characters goes back to idle.
 - An ISBN (10 or 13 digits, hyphens and spaces allowed, ISBN-10 converted) is looked up as an ISBN in every source (Catalogue by `isbn13`, Apple `lookup?isbn=`, OpenLibrary `search.json?isbn=`) instead of searched as text.
@@ -161,6 +166,10 @@ Layout: the eyebrow `add.statusLabel`, the Status as radio rows (the chosen one 
 - *Want to read*: nothing (no dates, no Rating, no review).
 - *Currently reading*: the eyebrow `add.datesLabel` and one date row, **Started on** (`add.startedOn`), today by default.
 - *Finished*: the eyebrow `add.datesLabel` and two date rows, **Started on** (optional; `add.notSet` while empty; **Remove start date**, `add.clearStarted`, appears under the rows once it is set) and **Finished on** (`add.endedOn`, today by default); then the Rating control (the same as the Finish sheet's, optional, quarter stars) and the Review box (`add.review`, `add.optional`, `add.reviewPlaceholder`, at most 10,000 characters).
+Actions → result:
+- Choose a Status (`<prefix>.status.<status>`) → the draft takes that Status and the days it starts with (below); the part that belongs to it fades in.
+- Date rows (`<prefix>.started`, `<prefix>.ended`) → the platform's date picker; **Remove start date** (`<prefix>.clearStarted`) empties the optional start of a Finished read.
+- Rating (`<prefix>.rating`) and Review (`<prefix>.review`) → as in the Finish sheet; both optional.
 States: the draft starts on Want to read with nothing chosen. Choosing a Status gives it the days it starts with (`chooseAddStatus`): Currently reading started today; Finished ended today with no start (a past read often has none). The Rating and review stay when the Status changes and come back if Finished is chosen again; days do not. A day the draft refuses (below) is shown in the error colour on its rows.
 Rules (the database's, `add_first_session`, same as start and finish; the sheet checks days first and the database is the authority): Currently reading needs a start day; Finished needs an end day, may have a start day, a Rating of 1–20 quarters and a review (trimmed; blank is none); no day after the member's today (the database allows today anywhere on Earth); the end is not before the start; dates on Want to read, an end, Rating or review on Currently reading, a Rating or review on Want to read are `session_invalid`.
 Date pickers: the platform's own (an invisible `<input type="date">` over the row); the start's maximum is the end, the end's minimum is the start, the maximum of both is today.
@@ -303,7 +312,7 @@ Actions → result:
 - Back (`collection.back`) → where it came from.
 Edge cases: the order is the database's (`collection_entries.position`); a list that no longer matches what is on the Collection (a Book added or taken off on another device since it was read) is refused as `order_mismatch` and the page reloads. Reduce Motion: nothing glides, the row still moves with the finger. A Collection deleted elsewhere is missing. Not one of hers (another member's id) is missing too: RLS shows nothing.
 Copy keys: `collection.back`, `collection.more`, `collection.count`, `collection.order`, `collection.move`, `collection.moveHint`, `collection.lifted`, `collection.moved`, `collection.dropped`, `collection.reorderError`, `collection.rename`, `collection.delete`, `collection.deleting`, `collection.deleteConfirm`, `collection.deleteKeeps`, `collection.emptyTitle`, `collection.empty`, `collection.missingTitle`, `collection.missing`, `collection.errorTitle`, `collection.error`, `collection.retry`, `collection.toCollections`, `collections.save`, `collections.rename`, `collections.error.*`, `status.*`, `common.etAl`
-IDs: `collection.back`, `collection.more`, `collection.title`, `collection.summary`, `collection.entries`, `collection.entry`, `collection.entryTitle`, `collection.grip`, `collection.announcement`, `collection.reorderError`, `collection.emptyTitle`, `collection.empty`, `collection.search`, `collection.missing`, `collection.retry`, `collection.toCollections`, `collectionOptions`, `collectionOptions.cancel`, `collectionOptions.rename`, `collectionOptions.delete`, `collectionOptions.confirmText`, `collectionOptions.confirmDelete`, `collectionOptions.error`
+IDs: `collection.back`, `collection.more`, `collection.title`, `collection.summary`, `collection.entries`, `collection.entry`, `collection.entryLink` (the link to the Book), `collection.entryTitle`, `collection.grip`, `collection.announcement`, `collection.reorderError`, `collection.emptyTitle`, `collection.empty`, `collection.search`, `collection.missing`, `collection.retry`, `collection.toCollections`, `collectionOptions`, `collectionOptions.cancel`, `collectionOptions.rename`, `collectionOptions.delete`, `collectionOptions.confirmText`, `collectionOptions.confirmDelete`, `collectionOptions.error`
 Flow: `web/e2e/collections.spec.ts` (two Books swap by dragging the grip, kept in the database and after a reload; moved back with the arrow keys; renamed; deleted, the Books stay in the Library). The hold-a-row lift needs a real touch screen and is not in the flow.
 Native: a pushed view; reorder with the platform's list reordering (`onMove` / drag handles) and the accessibility move actions, saved through the same call.
 - [x] Web  - [ ] iOS  - [ ] Android
@@ -405,6 +414,21 @@ Native: a navigation-bar menu with a destructive alert.
 ### Error codes of the history actions
 `app/data/library.ts`, `LibraryErrorCode`; copy under `library.error.<code>`. `update_session`, `delete_session` and `remove_from_library` (#11) raise the codes of the other Library actions (`not_signed_in`, `entry_not_found` for a removal, `date_invalid`, `date_in_future`, `ended_before_started`, `rating_invalid`, `review_too_long`, `reason_too_long`, `session_invalid` for a value that does not belong to the read's outcome) and add `session_not_found` (no such read in the member's Library, another member's read included; gone on another device).
 
-<!-- Filled as the screens land: Book detail and the
-     Add / Finish / Abandon sheets (#6, #7, #9, #10, #11),
-     Library and Collections (#14), offline states (#15). #16 completes the set. -->
+### Core loop (smoke)  (every screen above, in one session; `web/e2e/core-loop.spec.ts`)
+Purpose: the loop Libellus promises, checked as one flow on every pull request: find a Book, read it, rate it, see it counted.
+Flow: the Playwright flow signs a fresh member in through the screens, then:
+1. Sign in (`signIn.email` → `signIn.submit` → `verify.code`, the code read from Mailpit) → Home, the empty state (`home.emptyTitle`).
+2. Search (`shell.tab.search` → `search.query` "Piranesi" → `search.result`) → the book page (`book.title`).
+3. Add (`book.add` → `add.submit`) → `book.status` shows Want to read.
+4. Start (`book.start` → `start.submit`) → `book.status` shows Currently reading.
+5. Finish (`book.finish` → `finish.rating`, four stars → `finish.review` → `finish.submit`) → `book.status` shows Finished with `book.rating`.
+6. Home (`shell.tab.home`) → `home.tallyCount` is 1 under `home.tallyLabel`, `home.readingCard` is gone.
+7. Library (`shell.tab.library` → `library.segment.finished`) → the year (`library.yearTitle`) with the Book (`library.entryTitle`) and its Rating (`library.entryRating`).
+The session stored in the database has the Rating in quarters (16) and the review as typed.
+Test IDs everywhere: **every control a member can reach has a `data-testid` of the form `<screen>.<element>`**. The Playwright fixture (`web/e2e/fixtures.ts`) watches every page of every flow and fails the test on a button, link, field or other control that shows without one.
+No live APIs: Apple, OpenLibrary and their cover CDNs answer from the recordings (`web/tests/fixtures`, wired in `web/e2e/support.ts`); the same fixture refuses a request to any other host and fails the test, so a flow can never call a live service. Supabase is the local stack, fresh in CI; flows never assume what the shared Catalogue holds (they stub `search_books` where an answer from it would change the list).
+In CI (`e2e` job in `.github/workflows/ci.yml`): the pinned Supabase CLI starts the stack, WebKit is installed with its system libraries (the download is cached per Playwright version), `pnpm e2e` runs on an iPhone 15 viewport with two workers and one retry, and on a failure the HTML report and the traces are uploaded as the `playwright-report` artifact.
+Native: Maestro (or XCUITest) flows follow the same seven steps with the same IDs as `accessibilityIdentifier`s.
+- [x] Web  - [ ] iOS  - [ ] Android
+
+<!-- Still to land: offline states (#15) and the Fable import (#17); each adds its own entry. -->

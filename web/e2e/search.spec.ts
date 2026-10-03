@@ -1,7 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode } from '../tests/support/stack'
+import { test } from './fixtures'
 
 /**
  * The search overlay's chrome on a phone (WebKit, iPhone size): the tab bar's

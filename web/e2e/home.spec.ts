@@ -1,7 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { isoDay } from '../app/utils/dates'
 import { recordedApple, signedIn } from './support'
+import { test } from './fixtures'
 
 /**
  * Home (#8): a new member lands on the empty state that leads to Search; a

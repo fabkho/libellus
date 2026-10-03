@@ -1,8 +1,9 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { isoDay } from '../app/utils/dates'
 import { sql } from '../tests/support/stack'
 import { recordedApple, signedIn } from './support'
+import { test } from './fixtures'
 
 /**
  * Giving a book up, and picking a closed one up again (#10): a Book is started,

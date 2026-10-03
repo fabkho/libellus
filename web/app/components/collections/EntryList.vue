@@ -337,6 +337,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
         <UiPressLink
           :to="`/book/${entry.book.id}`"
           class="flex min-w-0 flex-1 items-center gap-ms py-sm"
+          data-testid="collection.entryLink"
           @press="books.prefetch(entry.book.id)"
         >
           <span class="index figures w-(--size-star-lg) shrink-0 text-meta text-ink-faint" aria-hidden="true">{{ place(index) }}</span>

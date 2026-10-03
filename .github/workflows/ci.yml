@@ -108,5 +108,92 @@ jobs:
         working-directory: design
         run: pnpm install --frozen-lockfile && pnpm tokens:check
 
-  # Not in CI yet: the Playwright smoke (web/e2e). It joins with the core-loop
-  # flow (#16).
+  # The user flows (web/e2e): Playwright in WebKit at iPhone size, against the
+  # local stack. Its own job, so a slow browser never holds up the database job
+  # and a red flow is told apart from a red rule. Apple and OpenLibrary answer
+  # from the recordings (web/e2e/support.ts); the fixture in web/e2e/fixtures.ts
+  # fails any test that reaches another host.
+  e2e:
+    name: user flows (Playwright, WebKit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.118.0 # pinned like the database job, and matches local
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      # Only what the flows use: the database, auth, the API, the mail catcher
+      # (the sign-in code is read out of it) and storage. Migrations and seed
+      # (the dev invite) apply on start, onto an empty database.
+      - name: Start Supabase
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,postgres-meta
+
+      - name: Install web
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Point the suite at the stack
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_DB_URL=$DB_URL"
+            echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
+          } >> "$GITHUB_ENV"
+
+      # The browser download is cached per Playwright version; the system
+      # libraries it needs live outside that folder, so they are installed
+      # either way.
+      - name: Playwright version
+        id: playwright
+        working-directory: web
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      # WebKit for the flows; Chromium for e2e/offline.spec.ts, whose offline
+      # reload WebKit's driver cannot serve from a route.
+      - name: Cache the browsers
+        id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install WebKit, Chromium and their system libraries
+        working-directory: web
+        run: |
+          if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
+            pnpm exec playwright install-deps webkit chromium
+          else
+            pnpm exec playwright install --with-deps webkit chromium
+          fi
+
+      - name: User flows
+        working-directory: web
+        run: pnpm e2e
+
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report/
+            web/test-results/
+          retention-days: 14
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup
