@@ -5,10 +5,14 @@
 // A mouse press navigates right away; a finger navigates on the tap (its
 // click), because the same touch-down may turn into a scroll. Modified clicks
 // (open in a new tab) stay the browser's.
+// A link to a book page knows the cover it was tapped on: as it navigates it
+// hands itself to the flight, which flies that cover into the book page's
+// hero (composables/useBookFlight.ts, docs/MOTION.md, Push to a book).
 const props = defineProps<{ to: string }>()
 const emit = defineEmits<{ press: [] }>()
 
 const router = useRouter()
+const { launch } = useBookFlight()
 const href = computed(() => router.resolve(props.to).href)
 
 // Set when a mouse press already navigated, so its click does not do it twice.
@@ -25,7 +29,7 @@ function onPointerdown(event: PointerEvent) {
   void preloadRouteComponents(props.to)
   if (event.pointerType === 'mouse') {
     pressed = true
-    void navigateTo(props.to)
+    go(event.currentTarget)
   }
 }
 
@@ -36,6 +40,11 @@ function onClick(event: MouseEvent) {
     pressed = false
     return
   }
+  go(event.currentTarget)
+}
+
+function go(link: EventTarget | null) {
+  if (link instanceof HTMLElement) launch(link, props.to)
   void navigateTo(props.to)
 }
 </script>
