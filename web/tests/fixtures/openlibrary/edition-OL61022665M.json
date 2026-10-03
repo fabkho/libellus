@@ -1,0 +1,48 @@
+{
+  "numFound": 1,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 1,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "edition_key:OL61022665M",
+  "offset": null,
+  "docs": [
+    {
+      "author_name": [
+        "Susanna Clarke"
+      ],
+      "cover_edition_key": "OL28300471M",
+      "cover_i": 10226290,
+      "first_publish_year": 2020,
+      "key": "/works/OL20893680W",
+      "title": "Piranesi",
+      "ratings_count": 63,
+      "readinglog_count": 496,
+      "editions": {
+        "numFound": 1,
+        "start": 0,
+        "numFoundExact": true,
+        "docs": [
+          {
+            "key": "/books/OL61022665M",
+            "title": "Piranesi",
+            "cover_i": 15155469,
+            "language": [
+              "eng"
+            ],
+            "publisher": [
+              "Bloomsbury Publishing"
+            ],
+            "publish_date": [
+              "2020-09-15"
+            ],
+            "isbn": [
+              "9781526622419",
+              "1526622416"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

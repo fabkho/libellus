@@ -54,9 +54,9 @@ export type BookRow = {
   created_at: string
 }
 
-type EntryRow = { id: string; status: EntryStatus; added_at: string; book: BookRow }
+export type EntryRow = { id: string; status: EntryStatus; added_at: string; book: BookRow }
 
-const ENTRY_COLUMNS = 'id, status, added_at, book:books!inner(*)'
+export const ENTRY_COLUMNS = 'id, status, added_at, book:books!inner(*)'
 
 export function bookFromRow(row: BookRow): Book {
   return {
@@ -105,7 +105,7 @@ export function bookToRow(book: BookSnapshot): Omit<BookRow, 'id' | 'created_at'
   }
 }
 
-function entryFromRow(row: EntryRow): LibraryEntry {
+export function entryFromRow(row: EntryRow): LibraryEntry {
   return { id: row.id, status: row.status, addedAt: row.added_at, book: bookFromRow(row.book) }
 }
 
@@ -133,7 +133,7 @@ export type Library = {
   /** A Book the member can see (the Catalogue, or their own Manual book). */
   book: (id: string) => Promise<Result<Book | null>>
   /** The Catalogue Book for a source id or ISBN-13, if a member has added it before. */
-  catalogueBook: (key: { appleId?: string; isbn13?: string }) => Promise<Result<Book | null>>
+  catalogueBook: (key: { appleId?: string; isbn13?: string; openLibraryEditionKey?: string }) => Promise<Result<Book | null>>
   /** The member's statuses for a set of Apple ids, for search results. */
   statusesByAppleId: (appleIds: readonly string[]) => Promise<Result<Map<string, LibraryEntry>>>
   /** The Catalogue Books among a set of Apple ids (their stored cover, for search results). */
@@ -185,9 +185,13 @@ export function createLibrary(client: SupabaseClient): Library {
       return { data: data ? bookFromRow(data) : null, error: null }
     },
 
-    async catalogueBook({ appleId, isbn13 }) {
-      // In the order add_to_library matches: an ISBN-13 first, then the source id.
-      for (const [column, value] of [['isbn13', isbn13], ['apple_id', appleId]] as const) {
+    async catalogueBook({ appleId, isbn13, openLibraryEditionKey }) {
+      // In the order add_to_library matches: an ISBN-13 first, then the source ids.
+      for (const [column, value] of [
+        ['isbn13', isbn13],
+        ['apple_id', appleId],
+        ['openlibrary_edition_key', openLibraryEditionKey],
+      ] as const) {
         if (!value) continue
         const { data, error } = await client
           .from('books')
