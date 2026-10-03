@@ -17,10 +17,10 @@ export function useDays() {
     }
   }
 
-  /** "3 Oct", or "3 Oct 2025" in another year. */
-  function formatDay(day: string): string {
+  /** "3 Oct", or "3 Oct 2025" in another year (unless the year shows elsewhere: `year: false`). */
+  function formatDay(day: string, { year = true }: { year?: boolean } = {}): string {
     const p = parts(day)
-    return day.slice(0, 4) === isoDay().slice(0, 4) ? t('common.dayMonth', p) : t('common.dayMonthYear', p)
+    return !year || day.slice(0, 4) === isoDay().slice(0, 4) ? t('common.dayMonth', p) : t('common.dayMonthYear', p)
   }
 
   /** "Today · 3 Oct", "Yesterday · 2 Oct", otherwise as `formatDay`. */

@@ -121,18 +121,20 @@ Flow: `web/e2e/full-search.spec.ts` (one list from every source with the Piranes
 Native: the merge and ranking are pure functions (`data/merge.ts`) to port line for line; the Catalogue is the same `search_books` call.
 - [x] Web  - [ ] iOS  - [ ] Android
 
-### Book  (web: `app/pages/book/[key].vue`, `stores/book.ts`)
+### Book  (web: `app/pages/book/[key].vue`, `stores/book.ts`, `stores/reading.ts`)
 Purpose: one Book: what it is, and the one action its state asks for.
 Layout: a pushed screen: no tab header; the round back button over the cover's light (`UiAmbient` in the cover's colours), the cover large with its glow, title (serif), authors, the facts in mono eyebrow type (year · pages · publisher, whichever are known), a status line, the action, then About. The tab bar and search stay available.
-States: loading (no Book known yet: a cover-shaped placeholder) · not in the Library (`book.notInLibrary`, primary **Add to Library**) · in the Library (`book.addedOn` with the date, the Status `status.<status>` in place of the action; #7 turns it into Start reading) · missing (`book.missingTitle`, `book.missing`) · error (`book.errorTitle`, `book.error`, Retry)
+States: loading (no Book known yet: a cover-shaped placeholder) · not in the Library (`book.notInLibrary`, primary **Add to Library**) · Want to read (status line `status.want_to_read` · `book.addedOn` with the day; primary **Start reading**) · Currently reading (status line: a lit lamp dot, `status.reading` · `book.since` "Since 3 Oct · day 4", day 1 being the start day; primary **Finish**) · Finished (status line: the latest finished session's Rating as stars with its value, if rated, `status.finished` · the end day; no action until #10 brings Read again) · missing (`book.missingTitle`, `book.missing`) · error (`book.errorTitle`, `book.error`, Retry)
 Actions → result:
 - Add to Library (`book.add`) → the Add sheet. After the add the page shows the Status without reloading.
+- Start reading (`book.start`) → the Start sheet. After the start the page shows Currently reading and Finish, without reloading.
+- Finish (`book.finish`) → the Finish sheet. After the finish the page shows Finished with the Rating.
 - More (`book.more`, only for a long description) → the whole description; it starts clamped to five lines.
 - Back (`book.back`) → the previous page with its scroll position (the tab pages are kept alive); a page opened from a link with no history goes to Library.
 Edge cases: `/book/<uuid>` is a Catalogue Book (or the member's Manual book): the Book and the member's entry are read. `/book/apple-<id>` (and `/book/isbn-<isbn13>`) is a search result: shown at once from what search found, then checked against the Catalogue (by ISBN-13 first, then the source id, the same order `add_to_library` matches in); if it is there, the Catalogue Book and the member's entry replace it. Opened cold (a link, a reload), the source is asked again (Apple lookup in the device's two storefronts; `/book/ol-<key>` asks OpenLibrary for that edition; `/book/isbn-<isbn13>` asks Apple, then OpenLibrary); a Book no source has is missing, no storefront answering is the error state with Retry. The source of a Book is never shown. A refresh that fails keeps what is showing.
-Copy keys: `book.back`, `book.pages`, `book.add`, `book.notInLibrary`, `book.addedOn`, `book.about`, `book.more`, `book.loading`, `book.missingTitle`, `book.missing`, `book.errorTitle`, `book.error`, `book.retry`, `status.*`, `common.dayMonth`, `common.etAl`
-IDs: `book.back`, `book.hero`, `book.title`, `book.authors`, `book.facts`, `book.notInLibrary`, `book.added`, `book.add`, `book.status`, `book.about`, `book.description`, `book.more`, `book.loading`, `book.missing`, `book.retry`
-Flow: `web/e2e/search-and-add.spec.ts` (open from search, add, back; open from a link)
+Copy keys: `book.back`, `book.pages`, `book.add`, `book.start`, `book.finish`, `book.since`, `book.notInLibrary`, `book.addedOn`, `rating.label`, `book.about`, `book.more`, `book.loading`, `book.missingTitle`, `book.missing`, `book.errorTitle`, `book.error`, `book.retry`, `status.*`, `common.dayMonth`, `common.etAl`
+IDs: `book.back`, `book.hero`, `book.title`, `book.authors`, `book.facts`, `book.notInLibrary`, `book.actions`, `book.state`, `book.status`, `book.since`, `book.rating`, `book.add`, `book.start`, `book.finish`, `book.about`, `book.description`, `book.more`, `book.loading`, `book.missing`, `book.retry`
+Flow: `web/e2e/search-and-add.spec.ts` (open from search, add, back; open from a link), `web/e2e/start-and-finish.spec.ts` (Start reading → Finish → Finished with its Rating)
 Native: a pushed view in the navigation stack.
 - [x] Web  - [ ] iOS  - [ ] Android
 
@@ -150,21 +152,55 @@ Flow: `web/e2e/search-and-add.spec.ts` (from the book page and from a result's +
 Native: a sheet.
 - [x] Web  - [ ] iOS  - [ ] Android
 
-### Library  (web: `app/pages/library.vue`, `components/library/EntryRow.vue`)
+### Start sheet  (web: `components/book/StartSheet.vue`, `stores/reading.ts`)
+Purpose: start the first read of a *Want to read* Book (issue #7; issue #1, story 31).
+Layout: `UiSheet` (Cancel at the top left, title `start.title`), the Book (`UiBookLine`), one grouped row `start.startedOn` with the day in words (`UiDateRow`: "Today · 3 Oct", `common.today|yesterday`, other days `common.dayMonth` or `common.dayMonthYear`) and a chevron, the error if any, the primary **Start reading** at the bottom.
+States: choosing (the day defaults to the member's today, on the device's calendar) · busy (`start.busy`, button disabled) · error (`library.error.<code>` under the row, the day error-coloured for a day problem; the button reads `start.retry` and tries again)
+Actions → result:
+- The day row → the platform's own date picker (an invisible native date input over the row), latest day today.
+- Start reading (`start.submit`) → the day is checked on the device (missing → `date_invalid`, after today → `date_in_future`); then **one database call**, `start_reading(p_entry_id, p_started_on)`, which opens a session; the entry's Status turns to Currently reading in the database. The sheet closes, the book page and the Library show the new state without reloading.
+- Cancel, the scrim, a swipe down, Escape → closes, nothing is started.
+Edge cases: a second device starting the same Book first → `already_reading`; a Book read before → `already_finished` (#10's Read again). The database refuses a day after today in every time zone (`date_in_future`), so a member east of UTC can always start "today".
+Copy keys: `start.title`, `start.startedOn`, `start.action`, `start.busy`, `start.retry`, `common.today`, `common.yesterday`, `common.dayMonth`, `common.dayMonthYear`, `common.chooseDay`, `library.error.*`, `common.cancel`
+IDs: `start`, `start.cancel`, `start.scrim`, `start.date`, `start.error`, `start.submit`
+Flow: `web/e2e/start-and-finish.spec.ts` (start today; a day in the future refused in the sheet; a failed call kept in the sheet and retried); the rules in `supabase/tests/reading_sessions_test.sql`, the repository in `web/tests/reading.test.ts`
+Native: a sheet; the day row opens the platform's date picker.
+- [x] Web  - [ ] iOS  - [ ] Android
+
+### Finish sheet  (web: `components/book/FinishSheet.vue`, `components/ui/RatingInput.vue`, `stores/reading.ts`)
+Purpose: finish the open read with an end day, an optional quarter-star Rating and an optional review (D's finish-sheet; issue #1, stories 32–34).
+Layout: `UiSheet` (Cancel, title `finish.title`), the Book, one grouped row `finish.endedOn` (as in the Start sheet), the rating control, the review box (`finish.review` · `finish.optional`, placeholder `finish.reviewPlaceholder`, serif italic, a lamp ring while focused), the error if any, the primary **Finish**.
+Rating control: the eyebrow `rating.title` with `rating.optional` (or **Clear**, `rating.clear`, once rated) opposite; the value large in the accent with `rating.outOf` ("3.75 / 5"), or `rating.none` until there is one; five 44-pt stars filled to the quarter; under them a rail with 21 notches (0–5 in quarters, whole stars taller, the ones up to the value lit) and a thumb at the value, with a thin guide up into the stars; the hint `rating.hint`.
+States: choosing (end day today, no Rating, empty review) · busy (`finish.busy`, button disabled, the control and the review locked) · error (`library.error.<code>` above the button; the button reads `finish.retry`)
+Actions → result:
+- Drag across the stars → the Rating follows the finger and snaps to the nearest quarter notch (`utils/rating.ts`, `quartersAt`); dragging off the left of the first star empties it. Vertical drags still scroll the sheet, and the sheet never takes a drag on the control for a swipe down.
+- Tap a star → that many whole stars (`wholeStarsAt`). Clear → no Rating.
+- Keyboard / assistive tech: the control is a slider (0–5, `rating.label` as its value text): arrows ±¼, Page Up/Down ±1, Home empties, End is 5.
+- Finish (`finish.submit`) → the day is checked on the device (missing, after today, before the read's start → `ended_before_started`); then **one database call**, `finish_reading(p_entry_id, p_ended_on, p_rating, p_review)`: the open session closes as finished with the day, the Rating in quarters (1–20, 3.75 = 15) and the review trimmed (blank is none). The entry's Status turns to Finished in the database; the sheet closes; the Book moves from Currently reading to Finished in the Library and the book page shows its Rating.
+- Cancel, the scrim, a swipe down, Escape → closes; what was chosen stays for the next time the same Book's sheet opens (until it is finished or another member signs in).
+Edge cases: the review takes at most 10,000 characters (`review_too_long` from the database otherwise). Reading the same Book's sheet on two devices: the second finish gets `not_reading`.
+Copy keys: `finish.title`, `finish.endedOn`, `finish.review`, `finish.optional`, `finish.reviewPlaceholder`, `finish.action`, `finish.busy`, `finish.retry`, `rating.title`, `rating.optional`, `rating.clear`, `rating.outOf`, `rating.none`, `rating.label`, `rating.hint`, `common.today|yesterday|dayMonth|dayMonthYear|chooseDay`, `library.error.*`, `common.cancel`
+IDs: `finish`, `finish.cancel`, `finish.scrim`, `finish.date`, `finish.rating` (the slider), `finish.rating.value`, `finish.rating.clear`, `finish.review`, `finish.error`, `finish.submit`
+Flow: `web/e2e/start-and-finish.spec.ts` (a tap gives 2 stars, a drag 3.75, a review, Finish → Finished; the stored session has 15 quarters); the control's geometry in `web/tests/rating-control-and-days.test.ts`, the repository in `web/tests/reading.test.ts`, the rules in `supabase/tests/reading_sessions_test.sql`
+Native: a sheet; the rating control is a custom control with the same geometry (`ratingX`), haptics on each quarter allowed.
+- [x] Web  - [ ] iOS  - [ ] Android
+
+### Library  (web: `app/pages/library.vue`, `components/library/EntryRow.vue`, `components/library/ReadingCard.vue`)
 Purpose: the member's Books by Status.
 Layout: the tab header (Library), the Status segments with their counts (`library.segment.*`; the chosen one lit with a lamp hairline), then the chosen segment's entries.
-States: loading (first visit, nothing yet) · empty Library (the lamp over the empty shelf: `library.emptyTitle`, `library.empty`, the search prompt) · Want to read (rows: cover, serif title, authors, `library.added` with the date in mono; newest first) · a segment without entries (`library.segmentEmpty.<status>.title|text`) · load error (`library.loadError`, Retry)
+States: loading (first visit, nothing yet) · empty Library (the lamp over the empty shelf: `library.emptyTitle`, `library.empty`, the search prompt) · Want to read (rows: cover, serif title, authors, `library.added` with the date in mono; newest added first) · Currently reading (a card per Book on the raised surface in its cover's light: cover with its glow, serif title, authors, `book.since` "Since 3 Oct · day 4", and a quiet **Finish** on the card; newest start first) · Finished (grouped by the year of the end date, an eyebrow with the year and its count; rows: cover, title, authors, the Rating as small stars with its value or `rating.none`, then the end day; newest end first, entries without an end date last under `library.undated`) · a segment without entries (`library.segmentEmpty.<status>.title|text`) · load error (`library.loadError`, Retry)
 Actions → result:
-- Tap a segment → shows its entries. Currently reading and Finished stay empty until reading sessions land (#7).
+- Tap a segment → shows its entries. The counts are each list's length.
+- Finish on a Currently reading card (`library.finish`) → the Finish sheet over the Library; after it the Book leaves Currently reading and appears in Finished in its place.
 - Tap a row → the book page `/book/<id>`, started on touch-down (`UiPressLink`).
-Edge cases: the page is kept alive: coming back (from a book page, another tab) finds the same segment and scroll position, and the list refreshes in the background. An add elsewhere puts the entry on top at once. Signing out (or another member signing in) forgets the list.
-Copy keys: `library.title`, `library.emptyTitle`, `library.empty`, `library.segmentsLabel`, `library.segment.*`, `library.segmentEmpty.*`, `library.added`, `library.loadError`, `library.retry`, `common.dayMonth`, `common.etAl`
-IDs: `library.title`, `library.emptyTitle`, `library.empty`, `library.search`, `library.segment.want_to_read|reading|finished`, `library.wantToRead`, `library.entry`, `library.entryTitle`, `library.segmentEmpty.<status>`, `library.loadError`, `library.retry`
-Flow: `web/e2e/search-and-add.spec.ts` (empty → two Books, newest first → back keeps the scroll → an empty segment)
+Edge cases: the page is kept alive: coming back (from a book page, another tab) finds the same segment and scroll position, and the list refreshes in the background. An add, start or finish elsewhere moves the entry into its list, in its place, at once (`library.entryChanged`, the same order the database sorts by: `sortEntries`). The three lists load together, each as one request with the entries' latest sessions (`latest_session`). The *Not finished* filter (abandoned reads) comes with #10. Signing out (or another member signing in) forgets the list.
+Copy keys: `library.title`, `library.emptyTitle`, `library.empty`, `library.segmentsLabel`, `library.segment.*`, `library.segmentEmpty.*`, `library.added`, `library.undated`, `book.since`, `book.finish`, `rating.none`, `rating.label`, `library.loadError`, `library.retry`, `common.dayMonth`, `common.dayMonthYear`, `common.etAl`
+IDs: `library.title`, `library.emptyTitle`, `library.empty`, `library.search`, `library.segment.want_to_read|reading|finished`, `library.wantToRead`, `library.reading`, `library.readingCard`, `library.finish`, `library.finished`, `library.year`, `library.yearTitle`, `library.entry`, `library.entryTitle`, `library.entrySince`, `library.entryRating`, `library.entryUnrated`, `library.entryEnded`, `library.segmentEmpty.<status>`, `library.loadError`, `library.retry`
+Flow: `web/e2e/search-and-add.spec.ts` (empty → two Books, newest first → back keeps the scroll → an empty segment), `web/e2e/start-and-finish.spec.ts` (Currently reading card → Finish → Finished under the year with 3.75 stars); the order in `web/tests/reading.test.ts`
 - [x] Web  - [ ] iOS  - [ ] Android
 
 ### Error codes of the Library
-`app/data/library.ts`, `LibraryErrorCode`; copy under `library.error.<code>`: `already_in_library` (the member already has this Book), `book_invalid` (no title, not an Apple Books or OpenLibrary snapshot, or nothing to find the Book by again), `status_unsupported` (a Status this version cannot add with yet), `not_signed_in`, `unknown` (also for `book_conflict`, a concurrent add of the same new Book that rolled back: trying again works). The database raises them as the messages of `add_to_library`.
+`app/data/library.ts`, `LibraryErrorCode`; copy under `library.error.<code>`: `already_in_library` (the member already has this Book), `book_invalid` (no title, not an Apple Books or OpenLibrary snapshot, or nothing to find the Book by again), `status_unsupported` (a Status this version cannot add with yet), `not_signed_in`, `unknown` (also for `book_conflict`, a concurrent add of the same new Book that rolled back: trying again works). The database raises them as the messages of `add_to_library`. The session actions (#7) add `entry_not_found` (no such entry in the member's Library, another member's included), `already_reading` (start: a read is open), `already_finished` (start: read before; Read again is #10), `not_reading` (finish: no open read), `date_invalid` (no day), `date_in_future` (a day after today), `ended_before_started`, `rating_invalid` (outside 1–20 quarters), `review_too_long` (over 10,000 characters); a network failure is `unknown`. The sheets check the day themselves first, so the member hears why before anything is sent; the database is the authority.
 
 ### Manual book sheet  (web: `components/book/ManualSheet.vue`, `stores/manual.ts`, `data/manualBooks.ts`, the link in `components/search/Results.vue`)
 Purpose: type a book in by hand when search finds nothing, and track it like any other (D's manual-book). The Book is the member's own: private, never in the Catalogue, never in anybody else's search.

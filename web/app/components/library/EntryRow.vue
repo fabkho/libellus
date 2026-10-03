@@ -2,7 +2,7 @@
 // One Library entry in a list (D's library-want and library-finished rows):
 // small cover, serif title, author, and a mono meta line — when it was added
 // (Want to read), or its Rating and the day it was finished (Finished; "Not
-// rated" when there is none). Opens the book page from the touch-down
+// rated" when there is none; no year, the list is grouped by it). Opens the book page from the touch-down
 // (UiPressLink).
 import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
@@ -40,7 +40,7 @@ const latest = computed(() => props.entry.latestSession)
         <UiStars v-if="latest?.rating" :quarters="latest.rating" data-testid="library.entryRating" />
         <span v-else class="text-ink-ghost" data-testid="library.entryUnrated">{{ t('rating.none') }}</span>
         <template v-if="latest?.endedOn">
-          <span class="dot" aria-hidden="true" /><span data-testid="library.entryEnded">{{ formatDay(latest.endedOn) }}</span>
+          <span class="dot" aria-hidden="true" /><span data-testid="library.entryEnded">{{ formatDay(latest.endedOn, { year: false }) }}</span>
         </template>
       </span>
       <span v-else class="figures mt-xxs text-meta text-ink-faint">{{ t('library.added', { date: added }) }}</span>
