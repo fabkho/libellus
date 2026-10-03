@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { parseIsbn } from '~/data/books'
-import type { LibraryEntry } from '~/data/library'
+import { addWithFromDraft, checkAddDraft, newAddDraft, type AddDraft, type LibraryEntry } from '~/data/library'
 import {
   createManualBooks,
   validateManualBook,
   type ManualBookErrorCode,
   type ManualBookField,
 } from '~/data/manualBooks'
+import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -29,8 +30,12 @@ export const useManualStore = defineStore('manual', () => {
   const pageCount = ref('')
   /** Fields marked wrong after a try; each clears when its text changes. */
   const invalid = reactive<Partial<Record<ManualBookField, true>>>({})
+  /** The Status and first read she adds the Book with (`AddDraft`), as in the Add sheet. */
+  const draft = reactive<AddDraft>(newAddDraft())
   const busy = ref(false)
   const error = ref<ManualBookErrorCode | null>(null)
+
+  watch(draft, () => (error.value = null))
 
   function open(typed = '') {
     const text = typed.trim()
@@ -39,6 +44,7 @@ export const useManualStore = defineStore('manual', () => {
     author.value = ''
     isbn.value = looksLikeIsbn ? text : ''
     pageCount.value = ''
+    Object.assign(draft, newAddDraft())
     clearInvalid()
     error.value = null
     isOpen.value = true
@@ -75,17 +81,19 @@ export const useManualStore = defineStore('manual', () => {
       Object.assign(invalid, wrong)
       return null
     }
+    // A day the database would refuse is told before anything is sent.
+    error.value = checkAddDraft(draft, isoDay())
+    if (error.value) return null
     busy.value = true
-    error.value = null
     try {
       repository ??= createManualBooks(backend)
-      const result = await repository.addManualBook(input)
+      const result = await repository.addManualBook(input, addWithFromDraft(draft))
       if (result.error) {
         error.value = result.error
         return null
       }
       const entry = result.data
-      // Into Want to read at once, and its book page knows it (stores/library.ts).
+      // Into its list at once, and its book page knows it (stores/library.ts).
       library.entryChanged(entry)
       isOpen.value = false
       search.close()
@@ -103,5 +111,5 @@ export const useManualStore = defineStore('manual', () => {
     },
   )
 
-  return { isOpen, title, author, isbn, pageCount, invalid, busy, error, open, close, submit }
+  return { isOpen, title, author, isbn, pageCount, draft, invalid, busy, error, open, close, submit }
 })

@@ -105,7 +105,7 @@ select throws_ok(
   '22023', 'book_invalid', 'nor do imports: only what search finds');
 select throws_ok(
   $$ select public.add_to_library('{"title":"Later","source":"apple","apple_id":"990000000004"}', 'reading') $$,
-  '22023', 'status_unsupported', 'adding straight to another status waits for #9');
+  '22023', 'date_invalid', 'adding straight to Currently reading needs its start date (add_with_status_test.sql has the rest)');
 select is_empty(
   $$ select 1 from public.books where apple_id in ('990000000003', '990000000004', '990000000007') $$,
   'and a refused add leaves nothing behind in the Catalogue');
