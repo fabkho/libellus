@@ -1,13 +1,15 @@
 <script setup lang="ts">
-// The book page (D's book-new): the cover lights the room. Under it the
-// title, the author, the facts in small mono, then the one action the Book's
-// state asks for — Add to Library for a Book that is not in the Library, its
-// Status once it is (#7 turns that into Start reading) — and what the Book is
+// The book page (D's book-new / book-reading / book-finished): the cover
+// lights the room. Under it the title, the author, the facts in small mono,
+// then the Book's state and the one action it asks for — Add to Library for a
+// Book that is not in the Library, Start reading on Want to read, Finish while
+// it is being read (#10 adds Read again and Abandon) — and what the Book is
 // about. Opened from search (a Catalogue Book by id, or a result that is not
 // in the Catalogue yet by its source id) and from the Library. Where a Book
 // came from is never shown.
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
+import { useReadingStore } from '~/stores/reading'
 
 definePageMeta({ layout: 'tabs', screen: 'book', pushed: true })
 
@@ -16,6 +18,8 @@ const route = useRoute()
 const router = useRouter()
 const books = useBookStore()
 const library = useLibraryStore()
+const reading = useReadingStore()
+const { formatDay, dayOfRead } = useDays()
 
 const key = computed(() => String(route.params.key))
 const page = computed(() => books.page(key.value))
@@ -34,9 +38,16 @@ const facts = computed(() => {
     (fact): fact is string => Boolean(fact),
   )
 })
-const addedOn = computed(() =>
-  entry.value ? t('common.dayMonth', dateParts(new Date(entry.value.addedAt), locale.value)) : '',
-)
+const latest = computed(() => entry.value?.latestSession ?? null)
+/** When the state began: added, started (and which day of the read today is), finished. */
+const since = computed(() => {
+  const e = entry.value
+  if (!e) return ''
+  if (e.status === 'reading' && latest.value?.startedOn)
+    return t('book.since', { date: formatDay(latest.value.startedOn), day: dayOfRead(latest.value.startedOn) })
+  if (e.status === 'finished' && latest.value?.endedOn) return formatDay(latest.value.endedOn)
+  return t('book.addedOn', { date: t('common.dayMonth', dateParts(new Date(e.addedAt), locale.value)) })
+})
 const description = computed(() => book.value?.description ?? '')
 // Long enough to be cut at five lines: then "More" shows the rest.
 const long = computed(() => description.value.length > 320 || description.value.split('\n').length > 5)
@@ -76,28 +87,31 @@ function back() {
       </p>
     </section>
 
-    <div v-if="book" class="relative px-ml">
-      <!-- The Book's state, then the one action it asks for (D's status line and actions). -->
+    <div v-if="book" class="relative px-ml" data-testid="book.actions">
+      <!-- The Book's state (D's status line), then the one action it asks for. -->
       <p
         v-if="entry"
-        class="figures mt-ms mb-md text-center text-meta text-ink-faint"
-        data-testid="book.added"
+        class="mt-ms mb-md flex min-h-(--size-star) flex-wrap items-center justify-center gap-sm text-caption"
+        data-testid="book.state"
       >
-        {{ t('book.addedOn', { date: addedOn }) }}
+        <span v-if="entry.status === 'reading'" class="lamp" aria-hidden="true" />
+        <UiStars v-if="entry.status === 'finished' && latest?.rating" :quarters="latest.rating" size="md" data-testid="book.rating" />
+        <span data-testid="book.status">{{ t(`status.${entry.status}`) }}</span>
+        <span class="dot text-ink-ghost" aria-hidden="true" />
+        <span class="figures text-meta text-ink-faint" data-testid="book.since">{{ since }}</span>
       </p>
       <p v-else class="mt-ms mb-md text-center text-caption text-ink-faint" data-testid="book.notInLibrary">
         {{ t('book.notInLibrary') }}
       </p>
 
-      <div
-        v-if="entry"
-        class="flex h-(--size-button) items-center justify-center gap-sm rounded-pill bg-fill text-body-large font-medium edge-faint"
-        data-testid="book.status"
-      >
-        <UiIcon name="check" :size="18" bold class="text-accent" />{{ t(`status.${entry.status}`) }}
-      </div>
-      <UiButton v-else block data-testid="book.add" @click="library.openAdd(book)">
+      <UiButton v-if="!entry" block data-testid="book.add" @click="library.openAdd(book)">
         <UiIcon name="plus" :size="18" bold />{{ t('book.add') }}
+      </UiButton>
+      <UiButton v-else-if="entry.status === 'want_to_read'" block data-testid="book.start" @click="reading.openStart(entry)">
+        <UiIcon name="arrow" :size="18" bold />{{ t('book.start') }}
+      </UiButton>
+      <UiButton v-else-if="entry.status === 'reading'" block data-testid="book.finish" @click="reading.openFinish(entry)">
+        <UiIcon name="check" :size="18" bold />{{ t('book.finish') }}
       </UiButton>
     </div>
 
@@ -140,6 +154,15 @@ function back() {
   height: var(--spacing-xxs);
   border-radius: var(--radius-pill);
   background: currentColor;
+}
+
+/* D's reading lamp: the lit dot of a Book that is being read. */
+.lamp {
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  box-shadow: 0 0 var(--spacing-ms) var(--spacing-xxs) color-mix(in srgb, var(--color-accent) 50%, transparent);
 }
 
 .clamped {

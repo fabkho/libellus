@@ -6,11 +6,20 @@
   "common": {
     "cancel": "Cancel",
     "etAl": "et al.",
-    "dayMonth": "{day} {month}"
+    "dayMonth": "{day} {month}",
+    "dayMonthYear": "{day} {month} {year}",
+    "today": "Today · {date}",
+    "yesterday": "Yesterday · {date}",
+    "chooseDay": "Choose a day"
   },
   "rating": {
     "label": "{value} of 5 stars",
-    "none": "Not rated"
+    "none": "Not rated",
+    "title": "Rating",
+    "optional": "Optional",
+    "clear": "Clear",
+    "outOf": "/ 5",
+    "hint": "Drag across the stars for quarters, tap for whole stars"
   },
   "auth": {
     "error": {
@@ -106,8 +115,18 @@
       "book_invalid": "This book can't be added: it is missing what we need to keep it.",
       "status_unsupported": "That status can't be chosen yet.",
       "not_signed_in": "Sign in again to add books.",
-      "unknown": "Something went wrong. Please try again."
-    }
+      "unknown": "Something went wrong. Please try again.",
+      "entry_not_found": "This book isn't in your Library any more.",
+      "already_reading": "You are reading this book already.",
+      "already_finished": "You've read this book before.",
+      "not_reading": "You aren't reading this book at the moment.",
+      "date_invalid": "Choose a day.",
+      "date_in_future": "That day hasn't come yet.",
+      "ended_before_started": "That is before you started it. Pick the start day or later.",
+      "rating_invalid": "A rating is between a quarter star and five stars.",
+      "review_too_long": "That review is longer than we can keep. Shorten it a little."
+    },
+    "undated": "No end date"
   },
   "search": {
     "title": "Search",
@@ -145,7 +164,10 @@
     "missing": "There is no book at this address.",
     "errorTitle": "This book didn't load",
     "error": "Check your connection and try again.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "since": "Since {date} · day {day}",
+    "start": "Start reading",
+    "finish": "Finish"
   },
   "add": {
     "title": "Add to Library",
@@ -184,5 +206,22 @@
       "not_signed_in": "Sign in again to add books.",
       "unknown": "Something went wrong. Please try again."
     }
+  },
+  "start": {
+    "title": "Start reading",
+    "startedOn": "Started on",
+    "action": "Start reading",
+    "busy": "Starting…",
+    "retry": "Try again"
+  },
+  "finish": {
+    "title": "Finish reading",
+    "endedOn": "Finished on",
+    "review": "Review",
+    "optional": "optional",
+    "reviewPlaceholder": "What stayed with you?",
+    "action": "Finish",
+    "busy": "Finishing…",
+    "retry": "Try again"
   }
 }

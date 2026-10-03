@@ -1,7 +1,14 @@
 import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
-import { createLibrary, type EntryStatus, type Library, type LibraryEntry, type LibraryErrorCode } from '~/data/library'
+import {
+  createLibrary,
+  sortEntries,
+  type EntryStatus,
+  type Library,
+  type LibraryEntry,
+  type LibraryErrorCode,
+} from '~/data/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 
@@ -12,10 +19,11 @@ import { useSessionStore } from '~/stores/session'
 export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read']
 
 /**
- * The member's Library as the screens show it, and the Add sheet. Lists load
- * when a screen asks and refresh in the background when it comes back; an add
- * goes into the list at once. Signing out (or another member signing in)
- * forgets all of it.
+ * The member's Library as the screens show it, and the Add sheet. The three
+ * Status lists load together when a screen asks and refresh in the background
+ * when it comes back; an add, a start or a finish moves the entry into its
+ * new list at once (`entryChanged`). Signing out (or another member signing
+ * in) forgets all of it.
  */
 export const useLibraryStore = defineStore('library', () => {
   const backend = useBackend()
@@ -29,26 +37,71 @@ export const useLibraryStore = defineStore('library', () => {
     return repository
   }
 
-  // ------------------------------------------------------------ Want to read
+  // ------------------------------------------------------------ the lists
 
-  const wantToRead = ref<LibraryEntry[]>([])
-  /** Whether the list has been loaded once (the empty state waits for it). */
+  /** Each Status's entries, newest first by the list's own day (data/library.ts, `entries`). */
+  const lists = reactive<Record<EntryStatus, LibraryEntry[]>>({ want_to_read: [], reading: [], finished: [] })
+  const wantToRead = computed(() => lists.want_to_read)
+  const reading = computed(() => lists.reading)
+  const finished = computed(() => lists.finished)
+  /** Whether the lists have been loaded once (the empty state waits for it). */
   const loaded = ref(false)
   const loadError = ref<LibraryErrorCode | null>(null)
+
+  const STATUSES: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
+
+  /** When this device last changed the Library (`performance.now()`): reads asked for before it are stale. */
+  let lastChange = -Infinity
 
   async function load() {
     const repo = library()
     if (!repo) return
     const member = session.member?.id
-    const result = await repo.entries('want_to_read')
+    const asked = performance.now()
+    const results = await Promise.all(STATUSES.map((status) => repo.entries(status)))
     if (member !== session.member?.id) return
-    if (result.error) {
-      loadError.value = result.error
+    // An add, start or finish landed while the lists were on their way: they
+    // may not have it yet, so ask again rather than show the older state.
+    if (lastChange > asked) return load()
+    const failed = results.find((result) => result.error)
+    if (failed) {
+      loadError.value = failed.error
       return
     }
     loadError.value = null
-    wantToRead.value = result.data
+    STATUSES.forEach((status, i) => (lists[status] = results[i]!.data!))
+    for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
     loaded.value = true
+  }
+
+  /**
+   * The member's entries as this device last saw them, by the page keys of
+   * their Books (the book store prefers them over a page loaded earlier).
+   */
+  const entryByKey = reactive(new Map<string, LibraryEntry>())
+
+  /**
+   * The newest known state of an entry, from a read (`asked`: when that read
+   * was asked for; dropped if this device changed the Library since) or from a
+   * change made here.
+   */
+  function remember(entry: LibraryEntry, { keys = [], asked }: { keys?: string[]; asked?: number } = {}) {
+    if (asked !== undefined && lastChange > asked) return
+    for (const [key, known] of entryByKey) if (known.id === entry.id) entryByKey.set(key, entry)
+    for (const key of [entry.book.id, ...keys]) entryByKey.set(key, entry)
+  }
+
+  /**
+   * An entry changed on this device (added, started, finished): it moves to
+   * its Status's list in its place, the book pages that show it and search's
+   * results learn its new state, without a reload.
+   */
+  function entryChanged(entry: LibraryEntry, ...keys: string[]) {
+    lastChange = performance.now()
+    for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entry.id)
+    lists[entry.status] = sortEntries([entry, ...lists[entry.status]])
+    remember(entry, { keys })
+    search.markAdded(entry)
   }
 
   // ---------------------------------------------------------------- Add sheet
@@ -58,8 +111,6 @@ export const useLibraryStore = defineStore('library', () => {
   const addStatus = ref<EntryStatus>('want_to_read')
   const addBusy = ref(false)
   const addError = ref<LibraryErrorCode | null>(null)
-  /** Entries added this visit, by the page key of the Book they were added from. */
-  const addedByKey = reactive(new Map<string, LibraryEntry>())
 
   function openAdd(book: BookSnapshot | Book) {
     adding.value = book
@@ -100,10 +151,7 @@ export const useLibraryStore = defineStore('library', () => {
         return null
       }
       const entry = result.data
-      wantToRead.value = [entry, ...wantToRead.value.filter((e) => e.id !== entry.id)]
-      addedByKey.set(bookKey(book), entry)
-      addedByKey.set(entry.book.id, entry)
-      search.markAdded(entry)
+      entryChanged(entry, bookKey(book))
       adding.value = null
       return entry
     } finally {
@@ -112,12 +160,12 @@ export const useLibraryStore = defineStore('library', () => {
   }
 
   function reset() {
-    wantToRead.value = []
+    for (const status of STATUSES) lists[status] = []
     loaded.value = false
     loadError.value = null
     adding.value = null
     addError.value = null
-    addedByKey.clear()
+    entryByKey.clear()
     search.reset()
   }
 
@@ -131,15 +179,20 @@ export const useLibraryStore = defineStore('library', () => {
 
   return {
     library,
+    lists,
     wantToRead,
+    reading,
+    finished,
     loaded,
     loadError,
     load,
+    entryByKey,
+    remember,
+    entryChanged,
     adding,
     addStatus,
     addBusy,
     addError,
-    addedByKey,
     openAdd,
     closeAdd,
     confirmAdd,

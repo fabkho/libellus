@@ -31,11 +31,13 @@ export const useBookStore = defineStore('book', () => {
   const pages = reactive(new Map<string, BookPage>())
   const loading = new Map<string, Promise<void>>()
 
-  /** The page, with the member's entry from an add made since it loaded. */
+  /** The page, with the member's entry as it changed on this device since the page loaded (an add, a start, a finish). */
   function page(key: string): BookPage | null {
     const found = pages.get(key) ?? null
-    const added = library.addedByKey.get(key) ?? (found?.book && 'id' in found.book ? library.addedByKey.get(found.book.id) : undefined)
-    if (found && added) return { ...found, phase: 'ready', book: added.book, entry: added }
+    const known =
+      library.entryByKey.get(key) ??
+      (found?.book && 'id' in found.book ? library.entryByKey.get(found.book.id) : undefined)
+    if (found && known) return { ...found, phase: 'ready', book: known.book, entry: known }
     return found
   }
 
@@ -92,12 +94,16 @@ export const useBookStore = defineStore('book', () => {
       const seen = search.seenBook(key)
       pages.set(key, { phase: seen ? 'ready' : 'loading', book: seen, entry: null, error: null })
     }
+    const asked = performance.now()
     const task = resolve(key)
       .then((resolved) => {
         // Keep a page that shows something over a failed refresh.
         const current = pages.get(key)
         if (resolved.phase === 'error' && current?.book) return
         pages.set(key, resolved)
+        // What the database says now (a finish on another device, say) replaces
+        // what this device knew, unless this device changed the entry since.
+        if (resolved.entry) library.remember(resolved.entry, { keys: [key], asked })
       })
       .finally(() => loading.delete(key))
     loading.set(key, task)

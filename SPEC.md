@@ -56,20 +56,39 @@ custom shelves.
   `manual` | `import`), source identifiers, `owner_id` only for Manual books. Unique on ISBN-13 for
   non-manual books and on source identifiers.
 - **library_entries** — member, book, status (`want_to_read` | `reading` | `finished`), added at.
-  Unique per member and book.
-- **reading_sessions** — entry, started on, ended on, outcome (`finished` | `abandoned`, null while
-  open), rating (integer quarters 1–20), review, abandon reason.
+  Unique per member and book. `status` is a stored column for filtering and sorting, but derived:
+  triggers recompute it from the entry's sessions and overwrite anything written into it.
+- **reading_sessions** (`supabase/migrations/20261003102707_reading_sessions.sql`) — entry (deleted
+  with it), `started_on` and `ended_on` (calendar days, `date`, no time zone), `outcome`
+  (`finished` | `abandoned`, null while the session is open), `rating` (smallint quarters 1–20,
+  null = unrated; 15 = 3.75 stars), `review`, `abandon_reason`, created at. Table checks: an open
+  session has a start and no end, Rating, review or reason; a Rating only on a finished session, an
+  abandon reason only on an abandoned one, a review only on a closed one (non-blank, ≤ 10,000
+  characters); `ended_on >= started_on`. A finished session may have no dates at all (past reads,
+  imports). One open session per entry (partial unique index).
+- **latest session** — `latest_session(library_entries)`, a to-one computed relationship: the open
+  session if there is one, otherwise the one that ended last (`ended_on`, then `started_on`, then
+  created at). It decides the Status and is what lists show and sort by.
 - **collections** (member, name, position) and **collection_entries** (collection, entry, position).
 - **invite_codes**, **accounts** — as in Trappist.
 
 Rules enforced in the database: status derived from sessions (none → *Want to read*, latest open →
-*Currently reading*, latest closed → *Finished*); at most one open session per entry; `ended_on >=
-started_on`, no future dates; deleting an entry deletes its sessions and memberships, deleting a
-collection never deletes entries; adding to a collection creates a *Want to read* entry if needed,
-in the same transaction. RLS: library data only for its member; Catalogue readable by every member,
-written only through the add-to-library action; Manual books only for their owner.
+*Currently reading*, latest closed — finished or abandoned → *Finished*); at most one open session
+per entry; `ended_on >= started_on`; no future dates (a trigger refuses a day later than today in
+the earliest time zone, UTC+14, since the database cannot know the member's; clients hold the member
+to their own today); a Rating only on a finished session; deleting an entry deletes its sessions and
+memberships, deleting a collection never deletes entries; adding to a collection creates a *Want to
+read* entry if needed, in the same transaction. RLS: library data (entries, sessions) only for its
+member, readable but never written directly; Catalogue readable by every member, written only through
+the add-to-library action; Manual books only for their owner. The owner's import (#17) writes as the
+service role and gets the same table rules and the same derived status.
 
-Every multi-row library action is one RPC, so a native client calls the same functions.
+Every library action is one RPC, so a native client calls the same functions. Session actions take
+the entry and the member's calendar day: `start_reading(entry, started_on)`, `finish_reading(entry,
+ended_on, rating?, review?)` (#7); `abandon_reading` and `read_again` (#10), `update_session` and
+`delete_session` (#11) slot in beside them (`finish_reading`, not `finish`: pgTAP owns `finish()`).
+Refusals are stable `raise` messages the client maps to codes (`already_reading`, `not_reading`,
+`date_in_future`, `ended_before_started`, `rating_invalid`, …; listed at the top of the migration).
 
 ## 5. Screens / Navigation
 

@@ -123,7 +123,8 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `sheet` 30, `pill`.
 - Size: `touch` 44 (smallest target), `maxContent` 480 (the column on wide screens), `tabBar` 52,
   `tab` 62, `row` 48, `query` 56, `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
-  `coverXs` 30 · `coverSm` 40 · `coverMd` 72 · `coverLg` 82 · `coverXl` 140, stars 12/16/24.
+  `coverXs` 30 · `coverSm` 40 · `coverMd` 72 · `coverLg` 82 · `coverXl` 140, stars 12/16/24 (display) and
+  `starInput` 44 (the rating control, one star per fingertip) with its `ratingThumb` 24.
 - Stroke: `hairline` 0.5 (edges), `rule` 1 (a field's underline), `focus` 2, icons 1.5 / 1.7.
 
 ### Depth
@@ -181,7 +182,10 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiAvatar` | The member's initials (`utils/initials.ts`) in mono in a hairline ring. |
 | `UiCover` | Every cover. 2:3, `object-fit: cover`, token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. |
 | `UiAmbient` | The light a cover throws onto its card (`shape="card"`) or page (`shape="page"`), from the cover's precomputed colours. Currently reading cards, book detail. |
-| `UiStars` | A Rating, display only: quarter-filled stars plus the exact mono value ("3.75"). `quarters` 1–20 or null (five empty stars, no value). Sizes sm/md/lg. |
+| `UiStars` | A Rating, display only: quarter-filled stars plus the exact mono value ("3.75"). `quarters` 1–20 or null (five empty stars, no value). Sizes sm/md/lg (and `input`, for the rating control). |
+| `UiRatingInput` | Setting a Rating (D's finish sheet): the value large in the accent (or "Not rated"), five `input` stars, a rail of quarter notches with a thumb. Drag snaps to the nearest quarter, a tap sets the whole star, Clear or a drag off the first star empties it. A `slider` for the keyboard (arrows a quarter, Page Up/Down a star, Home/End) and assistive tech. `v-model` quarters or null; `testid` on the slider, `<testid>.clear`, `<testid>.value`. Geometry in `utils/rating.ts` (`ratingX`, `quartersAt`, `wholeStarsAt`). Marked `data-no-swipe`, so a sheet never takes a drag across it for a swipe down. |
+| `UiDateRow` | A day in a `UiRowGroup`: calendar icon, label, the day in words ("Today · 3 Oct", via `useDays`), chevron; an invisible native `<input type="date">` covers the row, so a tap opens the platform's picker. `v-model` `YYYY-MM-DD`; `min`/`max`; `invalid` turns the value error-coloured. |
+| `UiTextArea` | A few lines of the member's own words (a review): a filled box with label and hint, the text in the serif italic, an accent ring while focused, growing with the text. |
 | `UiBookLine` | The book a sheet is about: small cover, serif title, author. First thing in a book's sheet. |
 | `UiRowGroup` + `UiRow` | Grouped rows (forms in sheets, settings-like lists): label, value or placeholder, optional icon, chevron, mono value; `as="button"` or `to` when tappable. |
 | `UiSheet` | Every bottom sheet (Add, Finish, Abandon, Manual book, Collection picker). Grabber, a **text Cancel at the top left**, the title, the action at the right in the accent. Scrim, swipe down, Escape; respects the home indicator. `testid` names it, Cancel and the action are `<testid>.cancel` / `.action`. |

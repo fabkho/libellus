@@ -129,6 +129,8 @@ enum Tokens {
         static let starSm: CGFloat = 12
         static let star: CGFloat = 16
         static let starLg: CGFloat = 24
+        static let starInput: CGFloat = 44
+        static let ratingThumb: CGFloat = 24
         static let coverXs: CGFloat = 30
         static let coverSm: CGFloat = 40
         static let coverMd: CGFloat = 72

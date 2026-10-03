@@ -1,12 +1,15 @@
 <script setup lang="ts">
-// Library (D's library-want): the three Status segments with their counts,
-// then the entries of the chosen one. *Want to read* lists the Books added,
-// newest first; Currently reading and Finished have their own empty states
-// until reading sessions land (#7, #14 brings Collections and the rest). An
-// empty Library shows the lamp over the empty shelf and the way to search.
-// Kept alive: coming back finds the segment and the scroll position as they
-// were, and the list refreshes quietly in the background.
-import type { EntryStatus } from '~/data/library'
+// Library (D's library-want / library-reading / library-finished): the three
+// Status segments with their counts, then the entries of the chosen one.
+// *Want to read* lists the Books added, newest first; *Currently reading*
+// gives each Book a card with its cover's light, since when it is being read
+// and Finish right there, newest start first; *Finished* groups the Books by
+// the year they were finished, newest end first, each with its Rating. (#10
+// adds the Not finished filter, #14 Collections.) An empty Library shows the
+// lamp over the empty shelf and the way to search. Kept alive: coming back
+// finds the segment and the scroll position as they were, and the lists
+// refresh quietly in the background.
+import type { EntryStatus, LibraryEntry } from '~/data/library'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 
@@ -20,9 +23,21 @@ const segment = ref<EntryStatus>('want_to_read')
 
 const counts = computed<Record<EntryStatus, number>>(() => ({
   want_to_read: library.wantToRead.length,
-  reading: 0,
-  finished: 0,
+  reading: library.reading.length,
+  finished: library.finished.length,
 }))
+
+/** Finished, by the year of the end date (the list is newest first already). */
+const years = computed(() => {
+  const groups: { year: string; entries: LibraryEntry[] }[] = []
+  for (const entry of library.finished) {
+    const year = entry.latestSession?.endedOn?.slice(0, 4) ?? ''
+    const group = groups.at(-1)
+    if (group?.year === year) group.entries.push(entry)
+    else groups.push({ year, entries: [entry] })
+  }
+  return groups
+})
 const empty = computed(() => library.loaded && Object.values(counts.value).every((count) => count === 0))
 
 onActivated(() => void library.load())
@@ -61,6 +76,20 @@ watch(
 
     <div v-if="segment === 'want_to_read' && library.wantToRead.length" class="flex flex-col pt-xs" data-testid="library.wantToRead">
       <LibraryEntryRow v-for="(entry, index) in library.wantToRead" :key="entry.id" :entry="entry" :eager="index < 8" />
+    </div>
+
+    <div v-else-if="segment === 'reading' && library.reading.length" class="flex flex-col gap-ms pt-md" data-testid="library.reading">
+      <LibraryReadingCard v-for="(entry, index) in library.reading" :key="entry.id" :entry="entry" :eager="index < 4" />
+    </div>
+
+    <div v-else-if="segment === 'finished' && library.finished.length" class="flex flex-col" data-testid="library.finished">
+      <section v-for="(group, g) in years" :key="group.year" class="flex flex-col" data-testid="library.year">
+        <h2 class="flex items-center justify-between pt-md pb-xs">
+          <span class="eyebrow" data-testid="library.yearTitle">{{ group.year || t('library.undated') }}</span>
+          <span class="eyebrow text-ink-ghost">{{ group.entries.length }}</span>
+        </h2>
+        <LibraryEntryRow v-for="(entry, index) in group.entries" :key="entry.id" :entry="entry" :eager="g === 0 && index < 8" />
+      </section>
     </div>
 
     <div v-else class="px-lg pt-xxl text-center" :data-testid="`library.segmentEmpty.${segment}`">
