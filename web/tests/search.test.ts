@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { isbn10To13, parseBookKey, parseIsbn, type Book, type BookSnapshot } from '@/data/books'
+import { snapshotFromApple } from '@/data/apple'
 import type { CatalogueSearch } from '@/data/catalogueSearch'
 import type { LibraryEntry } from '@/data/library'
-import { matchQuality, MATCH, mergeResults, normalise, workKey, type Found } from '@/data/merge'
+import { isSummary, matchQuality, MATCH, mergeResults, normalise, RANK, rankScore, workKey, type Found } from '@/data/merge'
 import { cleanTitle, OPENLIBRARY_FIELDS, snapshotFromOpenLibrary } from '@/data/openLibrary'
 import {
   appleArtwork,
@@ -201,6 +202,20 @@ describe('searching Apple Books', () => {
     expect(plainText('<b>Bold</b> &amp; &#34;quoted&#34;<br/>\n<br/>\nNext&nbsp;one')).toBe('Bold & "quoted"\n\nNext one')
   })
 
+  it('decodes entities in an Apple title and artist', () => {
+    const item = {
+      trackId: 1,
+      kind: 'ebook',
+      trackName: 'Klara y el Sol &ldquo;Klara and the Sun&rdquo;',
+      artistName: 'Kazuo Ishiguro &amp; Fran&#231;ois Mauriac',
+    }
+    expect(snapshotFromApple(item)).toMatchObject({
+      title: 'Klara y el Sol “Klara and the Sun”',
+      authors: ['Kazuo Ishiguro', 'François Mauriac'],
+    })
+    expect(snapshotFromApple({ trackId: 2, trackName: 'Fifty Shades &#x2013; Darker', artistName: 'E L James' })!.title).toBe('Fifty Shades – Darker')
+  })
+
   it('asks for any cover size from the artwork URL', () => {
     expect(appleArtwork('https://x.test/a/1.jpg/100x100bb.jpg', 200, 300)).toBe('https://x.test/a/1.jpg/200x300bb.jpg')
   })
@@ -392,6 +407,81 @@ describe('ranking', () => {
       ],
     })
     expect(results.map((hit) => hit.book.appleId)).toEqual(['2', '1', '3'])
+  })
+
+  describe('the member\'s own books and exact matches', () => {
+    const hers = catalogueBook({
+      id: 'b-dispossessed',
+      title: 'The Dispossessed: An Ambiguous Utopia',
+      authors: ['Ursula K. Le Guin'],
+      appleId: '600',
+    })
+    const others = [
+      snapshot({ title: 'Dispossessed', authors: ['A. Nobody'], appleId: '1' }),
+      snapshot({ title: 'Dispossessed', authors: ['B. Nobody'], appleId: '2' }),
+      snapshot({ title: 'The Dispossessed: Poems', authors: ['C. Nobody'], appleId: '3' }),
+    ]
+
+    it('puts a Library book first although unrelated books carry the exact title', () => {
+      // Without the Library the exact titles lead; with it, hers is next to the query.
+      const without = mergeResults('dispossessed', { apple: [...others.map((b) => found(b)), found(hers)] })
+      expect(without[0]!.book.appleId).not.toBe('600')
+
+      const results = mergeResults('dispossessed', { apple: [...others.map((b) => found(b)), found(hers)] }, [entry(hers, 'reading')])
+      expect(results[0]!.book.appleId).toBe('600')
+      expect(results[0]!.entry?.status).toBe('reading')
+    })
+
+    it('does the same for a book she holds in another edition', () => {
+      const edition = catalogueBook({ id: 'b-ed', title: 'The Dispossessed', authors: ['Ursula K. Le Guin'], appleId: '700', isbn13: '9780061054884' })
+      const other = snapshot({ title: 'The Dispossessed', authors: ['Ursula K. Le Guin'], appleId: '701', isbn13: '9780060125639' })
+      const results = mergeResults('dispossessed', { apple: [...others.map((b) => found(b)), found(other)] }, [entry(edition)])
+      expect(results[0]!.book.appleId).toBe('701')
+      expect(results[0]!.otherEdition).toBe(true)
+    })
+
+    it('counts a Library book only when the query really matches it', () => {
+      const unrelated = catalogueBook({ id: 'b-un', title: 'Piranesi', authors: ['Susanna Clarke'], appleId: '800' })
+      const results = mergeResults('dispossessed', { apple: others.map((b) => found(b)) }, [entry(unrelated)])
+      expect(results.map((r) => r.book.appleId)).toEqual(['1', '2', '3'])
+      // Only some of the query's words: no lift.
+      expect(rankScore('dispossessed utopia', { title: 'Utopia', authors: [] }, matchQuality('dispossessed utopia', { title: 'Utopia', authors: [] }), true)).toBeLessThan(MATCH.someWords + 1)
+    })
+
+    it('ranks a book named by title and author above an exact title alone', () => {
+      const piranesi = snapshot({ title: 'Piranesi', authors: ['Susanna Clarke'], appleId: '10' })
+      const wrong = snapshot({ title: 'Piranesi Clarke', authors: ['X'], appleId: '11' })
+      const results = mergeResults('piranesi clarke', { apple: [found(wrong), found(piranesi)] })
+      expect(results[0]!.book.appleId).toBe('10')
+      expect(RANK.titleAndAuthor).toBeGreaterThan(MATCH.title - MATCH.titleAndAuthor)
+    })
+
+    it('sinks summaries and study guides: below the book, and the worst ones below even a weak match', () => {
+      const klara = snapshot({ title: 'Klara and the Sun', authors: ['Kazuo Ishiguro'], appleId: '20' })
+      const summary = snapshot({ title: 'Summary of Klara and the Sun by Kazuo Ishiguro', authors: ['Sparkle Reads'], appleId: '21' })
+      const guide = snapshot({ title: 'Klara and the Sun: A Study Guide', authors: ['Sparkle Reads'], appleId: '22' })
+      const partial = snapshot({ title: 'Sun and Moon', authors: ['Someone'], appleId: '23' })
+      const results = mergeResults('klara and the sun', { apple: [found(summary), found(guide), found(partial), found(klara)] })
+      expect(results.map((r) => r.book.appleId)).toEqual(['20', '22', '23', '21'])
+    })
+
+    it('leaves a summary alone when she asked for one or owns the book', () => {
+      const summary = snapshot({ title: 'Summary of Klara and the Sun', authors: ['Sparkle Reads'], appleId: '21' })
+      const klara = snapshot({ title: 'Klara and the Sun', authors: ['Kazuo Ishiguro'], appleId: '20' })
+      const asked = mergeResults('klara summary', { apple: [found(klara), found(summary)] })
+      expect(asked[0]!.book.appleId).toBe('21')
+      const own = catalogueBook({ id: 'b-sum', title: 'Summary of Klara and the Sun', authors: ['Sparkle Reads'], appleId: '21' })
+      const owned = mergeResults('klara and the sun', { apple: [found(klara), found(summary)] }, [entry(own)])
+      expect(owned[0]!.book.appleId).toBe('21')
+    })
+
+    it('knows a summary by its title', () => {
+      expect(isSummary('Summary of Klara and the Sun')).toBe(true)
+      expect(isSummary('Klara and the Sun: Summary & Analysis')).toBe(true)
+      expect(isSummary('SparkNotes: Hamlet')).toBe(true)
+      expect(isSummary('Studying the Sun')).toBe(false)
+      expect(isSummary('Klara and the Sun')).toBe(false)
+    })
   })
 
   it('ranks a German query in German', async () => {
