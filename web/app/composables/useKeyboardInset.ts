@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { keyboardInsetOf, layoutHeightOf } from '~/utils/keyboard'
+import { keyboardInsetOf, keyboardRoomOf, layoutHeightOf } from '~/utils/keyboard'
 
 /**
  * How much of the layout viewport the on-screen keyboard covers, in px (0
@@ -19,11 +19,26 @@ import { keyboardInsetOf, layoutHeightOf } from '~/utils/keyboard'
  * holds no listeners and does not start the next opening lifted.
  */
 export function useKeyboardInset(active: () => boolean): Readonly<Ref<number>> {
+  return useKeyboardViewport(active).inset
+}
+
+/**
+ * The keyboard inset (useKeyboardInset) and, while the keyboard is up, how tall
+ * the part of the page still in view is (`room`, null with it down): what a
+ * sheet must fit in, wherever Safari has panned to (utils/keyboard.ts,
+ * keyboardRoomOf).
+ */
+export function useKeyboardViewport(active: () => boolean): {
+  inset: Readonly<Ref<number>>
+  room: Readonly<Ref<number | null>>
+} {
   const inset = ref(0)
+  const room = ref<number | null>(null)
 
   function measure() {
     const layout = layoutHeightOf(window.innerHeight, document.documentElement.clientHeight)
     inset.value = keyboardInsetOf(layout, window.visualViewport ?? null)
+    room.value = keyboardRoomOf(layout, window.visualViewport ?? null)
   }
 
   function listen(on: boolean) {
@@ -38,12 +53,15 @@ export function useKeyboardInset(active: () => boolean): Readonly<Ref<number>> {
       (isActive) => {
         listen(isActive)
         if (isActive) measure()
-        else inset.value = 0
+        else {
+          inset.value = 0
+          room.value = null
+        }
       },
       { immediate: true },
     )
     onUnmounted(() => listen(false))
   }
 
-  return inset
+  return { inset, room }
 }

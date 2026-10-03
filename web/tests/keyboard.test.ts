@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { keyboardInsetOf, layoutHeightOf, paletteLift, revealDelta, sheetLift } from '@/utils/keyboard'
+import { keyboardInsetOf, keyboardRoomOf, layoutHeightOf, paletteLift, revealDelta, sheetLift } from '@/utils/keyboard'
 
 /**
  * Following the on-screen keyboard (composables/useKeyboardInset.ts, UiSheet): how
@@ -58,6 +58,24 @@ describe('a sheet on the keyboard', () => {
   it('stays where it is with the keyboard down', () => {
     expect(sheetLift(0, 34)).toBe(0)
     expect(sheetLift(20, 34)).toBe(0)
+  })
+})
+
+// What Safari on iOS 27 (iPhone 18 Pro simulator, 402 × 874) reported in a tab:
+// 714 tall; the review field in the Finish sheet focused, 384 left in view, and
+// Safari panned the page down by 330 to the field, so the inset reads 0.
+describe('the room a sheet has on the keyboard', () => {
+  it('is what the visual viewport shows, wherever Safari has panned to', () => {
+    expect(keyboardInsetOf(layoutHeightOf(633, 714), { height: 384, offsetTop: 330 })).toBe(0)
+    expect(keyboardRoomOf(layoutHeightOf(633, 714), { height: 384, scale: 1 })).toBe(384)
+    expect(keyboardRoomOf(714, { height: 384.4 })).toBe(384)
+  })
+
+  it('is no limit with the keyboard down, pinch-zoomed, or where Chrome resized the page', () => {
+    expect(keyboardRoomOf(714, { height: 714, scale: 1 })).toBeNull()
+    expect(keyboardRoomOf(714, { height: 357, scale: 2 })).toBeNull()
+    expect(keyboardRoomOf(layoutHeightOf(477, 477), { height: 477, scale: 1 })).toBeNull()
+    expect(keyboardRoomOf(714, null)).toBeNull()
   })
 })
 

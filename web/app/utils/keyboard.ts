@@ -33,6 +33,23 @@ export function keyboardInsetOf(windowHeight: number, viewport: { height: number
 }
 
 /**
+ * How tall the part of the page the member still sees is while the keyboard is
+ * up (the visual viewport's height), or null with it down or while
+ * pinch-zoomed. Unlike the inset this does not depend on where the browser has
+ * panned to: Safari ignores `interactive-widget` and pans the visual viewport
+ * down to a focused field near the bottom, so the inset can read 0 with the
+ * keyboard up, and a sheet sized to the layout viewport then runs off the top
+ * of the screen. A sheet that never grows past this stays whole.
+ */
+export function keyboardRoomOf(
+  layoutHeight: number,
+  viewport: { height: number; scale?: number } | null,
+): number | null {
+  if (!viewport || Math.abs((viewport.scale ?? 1) - 1) > 0.01) return null
+  return viewport.height < layoutHeight - 1 ? Math.round(viewport.height) : null
+}
+
+/**
  * How far a bottom sheet goes up to sit on the keyboard. The sheet's own
  * bottom padding is for the home indicator, which the keyboard covers too, so
  * that part may go behind it.
