@@ -43,7 +43,8 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
 ## Named motions
 
 - **Press.** Buttons scale to 0.97 over `instant`; no colour flash. Rows darken to `fillStrong`
-  while pressed.
+  while pressed. Safari on iOS applies `:active` only under a touch listener: one passive no-op
+  `touchstart` on the document does it (`plugins/touch-active.client.ts`).
 - **Tab.** The new tab's icon goes full ink and its lamp dot fades in over `quick`; the old one
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
