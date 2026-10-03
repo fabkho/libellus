@@ -1,6 +1,8 @@
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
-import { sql } from '../tests/support/stack'
+import { createLibrary } from '../app/data/library'
+import { addDays, isoDay } from '../app/utils/dates'
+import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { recordedApple, signedIn } from './support'
 import { test } from './fixtures'
 
@@ -132,4 +134,50 @@ test('offline, search answers from her own Library at once and says so (#15)', a
   await expect(page.getByTestId('search.offline')).toHaveText(en.search.offlineNote)
   await expect(page.getByTestId('search.failed')).toBeHidden()
   await context.setOffline(false)
+})
+
+test('her own book sits next to the query, entities read as text, summaries come last (#47)', async ({ page }) => {
+  const member = await signedIn(page)
+  // A word no real book has, so only this flow's books answer.
+  const hers = (await createLibrary(member.client).addToLibrary({
+    title: runTitle('The Zephyrine: An Ambiguous Utopia, a Novel in Several Parts'),
+    authors: ['Ada Example'], isbn13: null, isbn10: null, pageCount: 300, year: 1974, language: 'en', publisher: TEST_PUBLISHER,
+    description: null, coverUrl: null, coverThumbhash: null, coverColors: null,
+    source: 'apple', appleId: uniqueAppleId(), openLibraryEditionKey: null, openLibraryWorkKey: null,
+  }, { status: 'reading', startedOn: addDays(isoDay(), -3) })).data!
+  const item = (trackId: number, trackName: string, artistName: string) => ({
+    kind: 'ebook', trackId, trackName, artistName, releaseDate: '2020-01-01T00:00:00Z',
+    artworkUrl100: `https://is1-ssl.mzstatic.com/image/thumb/Publication/${trackId}.jpg/100x100bb.jpg`,
+  })
+  await page.route('https://itunes.apple.com/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ results: [
+        item(990000000001, 'Summary of Zephyrine by Ada Example', 'Sparkle Reads'),
+        item(990000000002, 'Zephyrine', 'A. Nobody'),
+        item(990000000003, 'Zephyrine &ldquo;The Quoted Edition&rdquo; &amp; More', 'B. Nobody &amp; Co'),
+      ] }),
+    }),
+  )
+  await page.route('https://openlibrary.org/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ docs: [], numFound: 0 }) }),
+  )
+
+  await searchFor(page, 'zephyrine')
+  await expect(page.getByTestId('search.resultTitle')).toHaveCount(4)
+
+  // Hers first (next to the query) although another book carries the exact title; the summary last.
+  const listed = await titles(page)
+  expect(listed[0]).toBe(hers.book.title)
+  expect(listed[3]).toBe('Summary of Zephyrine by Ada Example')
+  // The entities are text: no raw "&ldquo;" anywhere in the list.
+  expect(listed).toContain('Zephyrine “The Quoted Edition” & More')
+  await expect(page.getByTestId('search.overlay')).not.toContainText(/&(?:ldquo|rdquo|amp);/)
+  // A long title takes two lines before it is cut, next to her status.
+  const first = page.getByTestId('search.resultTitle').first()
+  await expect(page.getByTestId('search.resultStatus').first()).toHaveText(en.status.reading)
+  expect(await first.evaluate((el) => getComputedStyle(el).webkitLineClamp)).toBe('2')
+  expect((await first.boundingBox())!.height).toBeGreaterThan(24)
 })

@@ -8,6 +8,8 @@ import {
   languageCode,
   languageName,
   mergeEditions,
+  appendEditions,
+  editionSignature,
   isEditionOf,
   type EditionsOutcome,
 } from '@/data/editions'
@@ -206,12 +208,73 @@ describe('mergeEditions', () => {
     const merged = mergeEditions(current, {
       work: [
         snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL1M', isbn13: '9790000000011', language: 'ger' }),
-        snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL2M', isbn13: '9790000000028', language: 'eng' }),
+        snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL2M', isbn13: '9790000000028', language: 'eng', year: 2021 }),
         snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL3M', isbn13: '9790000000035', language: 'ger', coverUrl: 'https://covers.openlibrary.org/b/id/3-L.jpg' }),
       ],
       apple: [snapshot({ appleId: '4', isbn13: '9790000000042', coverUrl: 'https://is1-ssl.mzstatic.com/x/600x900bb.jpg' })],
     })
     expect(merged.slice(1).map((c) => c.book.isbn13)).toEqual(['9790000000035', '9790000000042', '9790000000028', '9790000000011'])
+  })
+
+  describe('rows that look the same', () => {
+    const look = { language: 'en', year: 2002, pageCount: 387, publisher: 'Harper', coverUrl: 'https://covers.openlibrary.org/b/id/9-L.jpg' }
+
+    it('are one row, the richest of them', () => {
+      const merged = mergeEditions(current, {
+        work: [
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL1M', isbn13: '9790000000011', ...look }),
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL2M', isbn13: '9790000000028', ...look, description: 'A long one.' }),
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL3M', isbn13: '9790000000035', ...look }),
+        ],
+      })
+      expect(merged.map((c) => c.book.isbn13)).toEqual(['9781526622419', '9790000000028'])
+      expect(merged[1]!.book.description).toBe('A long one.')
+    })
+
+    it('keep the Catalogue\'s on a tie, and the earliest place', () => {
+      const catalogued = book({ id: 'c-1', isbn13: '9790000000042', ...look, source: 'openlibrary' })
+      const merged = mergeEditions(current, {
+        work: [
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL9M', isbn13: '9790000000099', language: 'ger' }),
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL1M', isbn13: '9790000000011', ...look }),
+        ],
+        apple: [],
+        catalogue: [catalogued],
+      })
+      const keys = merged.slice(1).map((c) => c.book.isbn13)
+      expect(keys).toContain('9790000000042')
+      expect(keys).not.toContain('9790000000011')
+    })
+
+    it('differ by publisher, ebook and cover, so each of those keeps its row', () => {
+      const merged = mergeEditions(current, {
+        work: [
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL1M', isbn13: '9790000000011', ...look }),
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL2M', isbn13: '9790000000028', ...look, publisher: 'Gollancz' }),
+          snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL3M', isbn13: '9790000000035', ...look, coverUrl: 'https://covers.openlibrary.org/b/id/10-L.jpg' }),
+        ],
+        apple: [snapshot({ appleId: '4', isbn13: '9790000000042', ...look })],
+      })
+      expect(merged).toHaveLength(5)
+    })
+
+    it('are no row at all when they look like the current edition', () => {
+      const same = book({ isbn13: '9781526622419', ...look, source: 'openlibrary' })
+      const merged = mergeEditions(same, {
+        work: [snapshot({ source: 'openlibrary', openLibraryEditionKey: 'OL1M', isbn13: '9790000000011', ...look })],
+      })
+      expect(merged).toHaveLength(1)
+    })
+
+    it('are told by the same signature, whatever the case, accents or language code', () => {
+      const a = snapshot({ title: 'Klára & the Sun', language: 'ger' })
+      const b = snapshot({ title: 'klara and the sun', language: 'de' })
+      expect(editionSignature(a)).toBe(editionSignature(b))
+      expect(editionSignature(snapshot({ source: 'apple' }))).not.toBe(editionSignature(snapshot({ source: 'openlibrary' })))
+      const apple = (host: string) => snapshot({ coverUrl: `https://${host}.mzstatic.com/image/thumb/Publication/v4/1.jpg/600x900bb.jpg` })
+      expect(editionSignature(apple('is1-ssl'))).toBe(editionSignature(apple('is3-ssl')))
+      expect(editionSignature(snapshot({ pageCount: 100 }))).not.toBe(editionSignature(snapshot({ pageCount: 101 })))
+    })
   })
 
   it('never offers a Manual book, and leaves out a find with nothing to know it by', () => {
@@ -220,6 +283,75 @@ describe('mergeEditions', () => {
       apple: [snapshot({ title: 'Piranesi' })],
     })
     expect(merged).toHaveLength(1)
+  })
+})
+
+describe('appendEditions', () => {
+  const current = book({ isbn13: '9781526622419', language: 'en', source: 'import' })
+  const row = (fields: Partial<BookSnapshot>) => ({ book: snapshot({ source: 'openlibrary', language: 'en', ...fields }), current: false })
+  const own = { book: current, current: true }
+
+  it('takes the first merge as it is', () => {
+    const first = [own, row({ isbn13: '9790000000011', year: 2001 })]
+    expect(appendEditions([], first)).toEqual(first)
+  })
+
+  it('keeps what is shown where it is and adds the new rows at the end, in the merge\'s order', () => {
+    const shown = [own, row({ isbn13: '9790000000011', year: 2001 }), row({ isbn13: '9790000000028', year: 2002 })]
+    // A slower source answered with a covered edition the sort would put first.
+    const covered = row({ isbn13: '9790000000035', year: 2003, coverUrl: 'https://covers.openlibrary.org/b/id/3-L.jpg' })
+    const grown = appendEditions(shown, [own, covered, ...shown.slice(1)])
+    expect(grown.map((c) => c.book.isbn13)).toEqual(['9781526622419', '9790000000011', '9790000000028', '9790000000035'])
+    expect(grown.slice(0, 3)).toEqual(shown)
+  })
+
+  it('lets a shown row take what a slower source learned about it, in the same place', () => {
+    const shown = [own, row({ isbn13: null, appleId: '5', source: 'apple', year: 2001 }), row({ isbn13: '9790000000028', year: 2002 })]
+    const learned = row({ isbn13: '9790000000011', appleId: '5', source: 'apple', year: 2001, language: 'en', pageCount: 300 })
+    const grown = appendEditions(shown, [own, learned, shown[2]!])
+    expect(grown).toHaveLength(3)
+    expect(grown[1]!.book).toMatchObject({ appleId: '5', isbn13: '9790000000011', pageCount: 300 })
+    expect(grown[2]).toEqual(shown[2])
+  })
+
+  it('does not add an edition that is shown already or looks the same as a shown one', () => {
+    const shown = [own, row({ isbn13: '9790000000011', year: 2001, openLibraryEditionKey: 'OL1M' })]
+    const lookalike = row({ isbn13: '9790000000099', year: 2001 })
+    expect(appendEditions(shown, [own, shown[1]!, lookalike])).toEqual(shown)
+  })
+
+  it('is what the lookup reports: a slower source never moves a row that was reported', async () => {
+    const reported: (string | null)[][] = []
+    let releaseSlow!: () => void
+    const slow = new Promise<void>((resolve) => (releaseSlow = resolve))
+    const uncovered = book({ isbn13: '9790000000011', language: 'en', year: 2001 })
+    const fetch = (async (input: string) => {
+      const url = new URL(input)
+      // The work's editions come late, with a covered edition the sort alone would put first.
+      if (url.pathname === `/works/${PIRANESI_WORK}/editions.json`) {
+        await slow
+        const entries = [{ key: '/books/OL3M', title: 'Piranesi', isbn_13: ['9788418363283'], covers: [3], languages: [{ key: '/languages/eng' }], publish_date: '2003' }]
+        return { ok: true, status: 200, json: async () => ({ entries }) }
+      }
+      return { ok: true, status: 200, json: async () => ({ results: [], docs: [] }) }
+    }) as FetchLike
+    const editions = createEditions({ fetch, languages: ['en'], catalogue: catalogueOf([uncovered]) })
+    const withWork = book({ isbn13: '9781526622419', language: 'en', source: 'openlibrary', openLibraryWorkKey: PIRANESI_WORK })
+
+    const run = editions.find(withWork, { onUpdate: (outcome) => reported.push(isbns(outcome)) })
+    setTimeout(releaseSlow, 10)
+    const outcome = await run
+
+    expect(reported[0]).toEqual(['9781526622419', '9790000000011'])
+    expect(outcome.candidates[1]!.book).toBe(uncovered)
+    expect(isbns(outcome)).toEqual(['9781526622419', '9790000000011', '9788418363283'])
+    for (const later of reported) expect(later.slice(0, 2)).toEqual(reported[0])
+    // Merged alone, the covered edition would have led.
+    expect(mergeEditions(withWork, { catalogue: [uncovered], work: [outcome.candidates[2]!.book] }).map((c) => c.book.isbn13)).toEqual([
+      '9781526622419',
+      '9788418363283',
+      '9790000000011',
+    ])
   })
 })
 

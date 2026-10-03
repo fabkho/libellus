@@ -144,6 +144,38 @@ export function matchQuality(query: string, book: Pick<BookSnapshot, 'title' | '
   return Math.round(MATCH.someWords * share)
 }
 
+/**
+ * What the member's own books and the exact matches get on top of how well
+ * they match (issue #47, item 16). A Book in her Library, or another edition
+ * of one, whose title and authors hold every word of the query ranks above any
+ * other book, even one that carries the exact title: "dispossessed" finds hers
+ * first. A query naming title and author ("dispossessed le guin") that a book
+ * answers exactly comes next, above an exact title alone. Summaries and study
+ * guides sink below the real matches unless the member has the book or asked
+ * for one. Added to the match quality.
+ */
+export const RANK = {
+  library: 50,
+  titleAndAuthor: 15,
+  summary: -60,
+} as const
+
+const SUMMARY = /\b(?:summary|summaries|study guide|cliffs ?notes|spark ?notes|book review|key takeaways|chapter by chapter)\b/
+
+/** Whether a title is a summary or study guide of another book, as matching reads it. */
+export function isSummary(title: string): boolean {
+  return SUMMARY.test(normalise(title))
+}
+
+/** The score results are ranked by: the match quality, lifted for her own books and exact matches, lowered for summaries. */
+export function rankScore(query: string, book: Pick<BookSnapshot, 'title' | 'authors'>, quality: number, owned: boolean): number {
+  let score = quality
+  if (owned && quality >= MATCH.titleAndAuthorWords) score += RANK.library
+  if (quality === MATCH.titleAndAuthor) score += RANK.titleAndAuthor
+  if (!owned && isSummary(book.title) && !SUMMARY.test(normalise(query))) score += RANK.summary
+  return score
+}
+
 // --------------------------------------------------------------------- merging
 
 type Candidate = {
@@ -183,8 +215,10 @@ function entryFor(book: BookSnapshot | Book, library: readonly LibraryEntry[]): 
  *    edition the member has, else the Catalogue's, else the first one found
  *    (the device language's storefront answers first). Another edition is one
  *    ISBN search away.
- * 4. Ranked by how well the query matches (matchQuality), then Catalogue
- *    first, then popularity, then the order the sources gave.
+ * 4. Ranked by how well the query matches (matchQuality), lifted for the
+ *    member's own books and for exact matches and lowered for summaries and
+ *    study guides (rankScore), then Catalogue first, then popularity, then the
+ *    order the sources gave.
  * 5. Each result knows the member's entry for it, or that she has another edition.
  */
 export function mergeResults(
@@ -235,10 +269,11 @@ export function mergeResults(
       group.find((candidate) => entryFor(candidate.book, library)) ??
       group.find((candidate) => candidate.source === 'catalogue') ??
       group[0]!
+    const quality = Math.max(...group.map((candidate) => matchQuality(query, candidate.book)))
     return {
       work,
       pick,
-      quality: Math.max(...group.map((candidate) => matchQuality(query, candidate.book))),
+      score: rankScore(query, pick.book, quality, owned.has(work)),
       catalogue: group.some((candidate) => candidate.source === 'catalogue'),
       popularity: Math.max(...group.map((candidate) => candidate.popularity)),
       order: group[0]!.order,
@@ -246,7 +281,7 @@ export function mergeResults(
   })
   ranked.sort(
     (a, b) =>
-      b.quality - a.quality ||
+      b.score - a.score ||
       Number(b.catalogue) - Number(a.catalogue) ||
       b.popularity - a.popularity ||
       a.order - b.order,

@@ -22,7 +22,9 @@ import { createOpenLibrary } from './openLibrary'
  * One row per edition: answers are merged by ISBN-13 (an ISBN-10 converted)
  * and source ids, a Catalogue Book winning over what a source says about it.
  * Unlike search, editions of the same title are *not* collapsed: they are the
- * point. Where a candidate came from is never shown. The entry's own Book is
+ * point — but ones that look the same on the sheet are one row (the richest),
+ * and rows stay where they were first shown while sources answer (new ones
+ * are added at the end). Where a candidate came from is never shown. The entry's own Book is
  * the first row, marked current. Framework-free; `fetch` and the Catalogue
  * come in from outside, so the tests answer from recordings.
  */
@@ -145,12 +147,42 @@ function representative(books: readonly (Book | BookSnapshot)[]): Book | BookSna
 }
 
 /**
+ * What a row of the Change edition list shows, as one string: title, authors,
+ * language, year, pages, publisher, whether it is an ebook (Apple's), and the
+ * cover it draws. Two candidates with the same signature look the same on the
+ * sheet, so only one of them is worth a row.
+ */
+export function editionSignature(book: Book | BookSnapshot): string {
+  return [
+    normalise(book.title),
+    book.authors.map(normalise).join('&'),
+    languageCode(book.language) ?? '',
+    book.year ?? '',
+    book.pageCount ?? '',
+    normalise(book.publisher ?? ''),
+    book.source === 'apple' ? 'ebook' : '',
+    // Apple serves one file from several hosts (is1-ssl, is3-ssl, …).
+    book.coverUrl?.replace(/^(https:\/\/is)\d(-ssl\.mzstatic\.com)/, '$1$2') ?? (book.coverThumbhash ? `hash:${book.coverThumbhash}` : ''),
+  ].join('|')
+}
+
+const RICHNESS = ['isbn13', 'isbn10', 'pageCount', 'year', 'language', 'publisher', 'description', 'coverUrl', 'coverThumbhash', 'openLibraryWorkKey'] as const
+
+/** How much a Book knows about its edition: the number of fields that are filled. */
+function richness(book: Book | BookSnapshot): number {
+  return RICHNESS.filter((field) => book[field] != null).length
+}
+
+/**
  * The candidates for an entry's edition change, from each source's answers:
  * the current Book first (marked), then one row per other edition — those
  * with a cover image first (what a member changing edition mostly wants), then
- * those in the current edition's language, then in source order. Manual books
- * (her own, which Catalogue search finds) are never candidates: an entry can
- * only change to a Catalogue edition. Pure; the tests pin it.
+ * those in the current edition's language, then in source order. Candidates
+ * that would look the same on the sheet (`editionSignature`) are one row, the
+ * richest of them, and one that looks like the current edition is no row at
+ * all. Manual books (her own, which Catalogue search finds) are never
+ * candidates: an entry can only change to a Catalogue edition. Pure; the tests
+ * pin it.
  */
 export function mergeEditions(
   current: Book,
@@ -176,10 +208,26 @@ export function mergeEditions(
   }
 
   const language = languageCode(current.language)
-  const others = groups
-    .filter((group) => group !== own)
-    .map((group) => ({ book: representative(group.books), rank: group.rank }))
-    .filter(({ book }) => book.source !== 'manual')
+  // Rows that look the same are one: the one with most to say, the Catalogue's
+  // on a tie, at the earliest rank any of them had.
+  const ownSignature = editionSignature(current)
+  const distinct = new Map<string, { book: Book | BookSnapshot; rank: number }>()
+  for (const group of groups) {
+    if (group === own) continue
+    const book = representative(group.books)
+    if (book.source === 'manual') continue
+    const signature = editionSignature(book)
+    if (signature === ownSignature) continue
+    const kept = distinct.get(signature)
+    if (!kept) {
+      distinct.set(signature, { book, rank: group.rank })
+      continue
+    }
+    const gain = richness(book) - richness(kept.book) || Number('id' in book) - Number('id' in kept.book)
+    distinct.set(signature, { book: gain > 0 ? book : kept.book, rank: Math.min(kept.rank, group.rank) })
+  }
+
+  const others = [...distinct.values()]
     .sort((a, b) => {
       const cover = Number(Boolean(b.book.coverUrl)) - Number(Boolean(a.book.coverUrl))
       if (cover) return cover
@@ -193,6 +241,38 @@ export function mergeEditions(
     .slice(0, EDITIONS_LIMIT)
 
   return [{ book: current, current: true }, ...others.map(({ book }) => ({ book, current: false }))]
+}
+
+/**
+ * The list a member is looking at, updated by a newer merge: every shown row
+ * keeps its place (a tap never lands on another edition because a slower
+ * source answered; the sheet keys rows by position), a row the merge knows
+ * better — a slower source filled in its language or page count — takes the
+ * merge's version of the same edition, and what the merge found that is not
+ * shown yet is added at the end, in the merge's own order. A find that is the
+ * same edition as a shown row (a shared edition key) or looks the same as one
+ * is left out. Pure; the first merge (nothing shown) is taken as it is.
+ */
+export function appendEditions(shown: readonly EditionCandidate[], merged: readonly EditionCandidate[]): EditionCandidate[] {
+  if (!shown.length) return [...merged]
+  const better = merged.filter(({ current }) => !current)
+  const rows = shown.map((row) => {
+    if (row.current) return row
+    const keys = editionKeys(row.book)
+    const update = better.find(({ book }) => editionKeys(book).some((key) => keys.includes(key)))
+    return update ? { book: update.book, current: false } : row
+  })
+  const keys = new Set(rows.flatMap(({ book }) => editionKeys(book)))
+  const signatures = new Set(rows.map(({ book }) => editionSignature(book)))
+  const added = better.filter(({ book }) => {
+    const known = editionKeys(book).some((key) => keys.has(key)) || signatures.has(editionSignature(book))
+    if (!known) {
+      for (const key of editionKeys(book)) keys.add(key)
+      signatures.add(editionSignature(book))
+    }
+    return !known
+  })
+  return [...rows, ...added]
 }
 
 // -------------------------------------------------------------------- lookup
@@ -251,10 +331,14 @@ export function createEditions(options: {
     const answers: Partial<Record<EditionSourceName, (Book | BookSnapshot)[]>> = {}
     const failures = new Set<EditionSourceName>()
 
+    // The rows already reported keep their places; later answers only add to the end.
+    let shown: EditionCandidate[] = []
+
     function outcome(): EditionsOutcome {
       const answered = Object.keys(answers).length + failures.size
+      shown = appendEditions(shown, mergeEditions(book, answers))
       return {
-        candidates: mergeEditions(book, answers),
+        candidates: shown,
         pending: answered < names.length,
         failed: failures.size === names.length,
       }

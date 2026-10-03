@@ -3,6 +3,9 @@
 // the book page (and the route change closes the search); the + opens the Add
 // sheet. A Book already in the Library shows its status instead of the +; one
 // the member has in another edition says so under the author, and keeps its +.
+// The title takes two lines before it is cut, so a long one stays readable next
+// to the status; the row presses to the stronger fill, and a pointer that can
+// hover gets the lighter one across the whole row (Tailwind's `hover:` is `@media (hover: hover)`).
 import { useBookStore } from '~/stores/book'
 import type { SearchHit } from '~/stores/search'
 
@@ -17,10 +20,10 @@ const online = useOnline()
 </script>
 
 <template>
-  <div class="flex min-h-(--size-row) items-center pr-xs">
+  <div class="flex min-h-(--size-row) items-center pr-xs hover:bg-fill">
     <UiPressLink
       :to="`/book/${hit.key}`"
-      class="flex min-w-0 flex-1 items-center gap-ms py-xs pl-md active:bg-fill"
+      class="flex min-w-0 flex-1 items-center gap-ms py-xs pl-md active:bg-fill-strong"
       data-testid="search.result"
       @press="book.prefetch(hit.key)"
     >
@@ -34,7 +37,7 @@ const online = useOnline()
         :eager="eager"
       />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-        <span class="book-title truncate text-body" data-testid="search.resultTitle">{{ hit.book.title }}</span>
+        <span class="book-title line-clamp-2 text-body" data-testid="search.resultTitle">{{ hit.book.title }}</span>
         <span class="truncate text-caption text-ink-faint">{{ authorLine }}</span>
         <span v-if="hit.book.year || hit.otherEdition" class="flex min-w-0 items-center gap-xs text-ink-faint">
           <span v-if="hit.book.year" class="figures shrink-0 text-meta">{{ hit.book.year }}</span>
