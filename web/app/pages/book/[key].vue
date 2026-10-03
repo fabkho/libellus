@@ -57,6 +57,8 @@ const long = computed(() => description.value.length > 320 || description.value.
 const expanded = ref(false)
 watch(key, () => (expanded.value = false))
 
+const optionsOpen = ref(false)
+
 function back() {
   // Back to where the member came from, with its scroll; a page opened from a
   // link has nowhere to go back to, so it goes to the Library.
@@ -68,7 +70,11 @@ function back() {
 <template>
   <div class="relative min-h-dvh">
     <UiAmbient :colors="book?.coverColors ?? null" />
-    <UiTopBar :back-label="t('book.back')" back-testid="book.back" @back="back" />
+    <UiTopBar :back-label="t('book.back')" back-testid="book.back" @back="back">
+      <template v-if="entry" #trailing>
+        <UiRoundButton icon="more" :label="t('book.options')" data-testid="book.options" @click="optionsOpen = true" />
+      </template>
+    </UiTopBar>
 
     <section v-if="book" class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="book.hero">
       <UiCover
@@ -135,6 +141,10 @@ function back() {
     </div>
 
     <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
+
+    <BookHistory v-if="entry" :entry="entry" />
+    <BookEditSessionSheet />
+    <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" @removed="back" />
 
     <section v-if="description" class="relative px-ml pt-xl" data-testid="book.about">
       <h2 class="eyebrow mb-ms">{{ t('book.about') }}</h2>

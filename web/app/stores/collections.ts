@@ -214,6 +214,19 @@ export const useCollectionsStore = defineStore('collections', () => {
     return { ...book, ...cover }
   }
 
+  /**
+   * An entry left the Library (removed here): the database took it off every
+   * Collection, so the pages and counts shown here drop it without a reload.
+   */
+  function entryRemoved(entryId: string) {
+    memberships.delete(entryId)
+    for (const [id, shown] of pages) {
+      const entries = shown.collection?.entries ?? []
+      if (entries.some((e) => e.id === entryId)) setEntries(id, entries.filter((e) => e.id !== entryId))
+    }
+    if (loaded.value) void loadList()
+  }
+
   async function removeEntry(id: string, entryId: string): Promise<CollectionErrorCode | null> {
     const collections = repo()
     if (!collections) return 'unknown'
@@ -432,6 +445,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     openRename,
     closeNaming,
     submitName,
+    entryRemoved,
     reset,
   }
 })
