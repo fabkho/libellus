@@ -1,0 +1,137 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-01T06:00:00Z",
+  "owner": "Demo Reader",
+  "generator": "hand-written fixture (synthetic)",
+  "books": [
+    {
+      "id": "demo-01",
+      "title": "The Time Machine",
+      "authors": ["H. G. Wells"],
+      "isbn13": "9780000000019",
+      "pages": 118,
+      "binding": "Paperback",
+      "yearPublished": 2005,
+      "originalYear": 1895,
+      "status": "currently-reading",
+      "dateStarted": "2026-04-20",
+      "dateAdded": "2026-04-18",
+      "rating": 0,
+      "readCount": 0,
+      "description": "A Victorian inventor travels to the year 802,701 and finds humanity split in two.",
+      "publisher": "Example Classics",
+      "genre": "SCIENCE FICTION",
+      "assets": {
+        "palette": { "background": "#2f4858", "text": "#f5f2eb", "accent": "#b93e2e" },
+        "spineColor": "#2f4858"
+      }
+    },
+    {
+      "id": "demo-02",
+      "title": "Frankenstein",
+      "authors": ["Mary Shelley"],
+      "isbn13": "9780000000026",
+      "isbn10": "0000000027",
+      "pages": 280,
+      "binding": "Hardcover",
+      "yearPublished": 2012,
+      "originalYear": 1818,
+      "status": "read",
+      "dateRead": "2026-03-14",
+      "dateStarted": "2026-02-28",
+      "dateAdded": "2026-02-27",
+      "rating": 4.75,
+      "review": "The creature is the most human character in it.",
+      "reviewHasSpoiler": false,
+      "readCount": 2,
+      "description": "A young scientist builds a living being and then abandons it.",
+      "publisher": "Example Classics",
+      "genre": "HORROR",
+      "quotes": [
+        { "text": "A synthetic line of praise, written for this fixture.", "source": "The Example Review" }
+      ],
+      "assets": {
+        "palette": { "background": "#1f1d1a", "text": "#e9e2d0", "accent": "#8c2f22" },
+        "spineColor": "#1f1d1a"
+      }
+    },
+    {
+      "id": "demo-03",
+      "title": "The Two Towers",
+      "seriesTitle": "The Lord of the Rings, #2",
+      "authors": ["J. R. R. Tolkien"],
+      "isbn13": "9780000000033",
+      "pages": 352,
+      "binding": "Paperback",
+      "yearPublished": 2012,
+      "originalYear": 1954,
+      "status": "read",
+      "dateRead": "2025-11-02",
+      "dateAdded": "2025-10-01",
+      "rating": 4.25,
+      "review": "Gandalf comes back, and the ents march on Isengard.",
+      "reviewHasSpoiler": true,
+      "readCount": 1,
+      "assets": {
+        "palette": { "background": "#3d5a3a", "text": "#f5f2eb", "accent": "#d4b06a" }
+      }
+    },
+    {
+      "id": "demo-04",
+      "title": "Good Omens",
+      "authors": ["Terry Pratchett", "Neil Gaiman"],
+      "isbn13": "9780000000040",
+      "pages": 412,
+      "binding": "Mass Market Paperback",
+      "originalYear": 1990,
+      "status": "read",
+      "dateRead": "2025-07-21",
+      "dateAdded": "2025-07-01",
+      "rating": 3.5,
+      "readCount": 1
+    },
+    {
+      "id": "demo-05",
+      "title": "Moby-Dick",
+      "authors": ["Herman Melville"],
+      "pages": 720,
+      "binding": "Kindle Edition",
+      "originalYear": 1851,
+      "status": "dnf",
+      "dateStarted": "2025-05-03",
+      "dateAdded": "2025-05-01",
+      "rating": 2,
+      "review": "Gave up in the chapter on whale classification.",
+      "readCount": 0
+    },
+    {
+      "id": "demo-06",
+      "title": "Middlemarch",
+      "authors": ["George Eliot"],
+      "pages": 880,
+      "binding": "Paperback",
+      "originalYear": 1871,
+      "status": "to-read",
+      "dateAdded": "2026-01-09"
+    },
+    {
+      "id": "demo-07",
+      "title": "The Odyssey",
+      "authors": ["Homer", "Emily Wilson"],
+      "pages": 592,
+      "binding": "Hardcover",
+      "yearPublished": 2017,
+      "originalYear": -700,
+      "status": "wishlist",
+      "dateAdded": "2026-03-01"
+    },
+    {
+      "id": "demo-08",
+      "title": "Anonymous Pamphlet",
+      "authors": [],
+      "status": "read",
+      "dateRead": "2024-12-24",
+      "rating": 1.25
+    }
+  ]
+}

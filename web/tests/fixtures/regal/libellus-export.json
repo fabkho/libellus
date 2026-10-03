@@ -1,0 +1,113 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-01T06:00:00Z",
+  "owner": "Fabian",
+  "generator": "libellus",
+  "books": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "title": "Dawn",
+      "authors": [
+        "Ada Example"
+      ],
+      "status": "to-read",
+      "dateAdded": "2024-03-02",
+      "assets": {
+        "front": "http://covers.openlibrary.org/b/id/1-L.jpg"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "title": "Parable of the Sower",
+      "authors": [
+        "Ada Example"
+      ],
+      "status": "currently-reading",
+      "pages": 345,
+      "dateStarted": "2024-04-02",
+      "dateAdded": "2024-03-02"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "title": "Kindred",
+      "authors": [
+        "Octavia E. Butler"
+      ],
+      "status": "read",
+      "isbn13": "9780807083697",
+      "isbn10": "0807083690",
+      "pages": 264,
+      "yearPublished": 2003,
+      "dateRead": "2024-02-20",
+      "dateStarted": "2024-02-01",
+      "dateAdded": "2024-03-02",
+      "rating": 4.25,
+      "review": "Relentless.",
+      "readCount": 1,
+      "description": "Dana is pulled back in time.\n\nAgain and again.",
+      "publisher": "Beacon Press",
+      "assets": {
+        "front": "https://is1-ssl.mzstatic.com/image/thumb/kindred/600x900bb.jpg",
+        "palette": {
+          "background": "#1a2b3c",
+          "text": "#f0e0c0",
+          "accent": "#f0e0c0"
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "title": "Ruin",
+      "authors": [
+        "Ada Example"
+      ],
+      "status": "dnf",
+      "dateStarted": "2024-01-05",
+      "dateAdded": "2024-03-02",
+      "review": "Not now."
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "title": "Hyperion",
+      "authors": [
+        "Ada Example"
+      ],
+      "status": "currently-reading",
+      "dateRead": "2023-01-30",
+      "dateStarted": "2024-05-01",
+      "dateAdded": "2024-03-02",
+      "rating": 5,
+      "review": "Better the second time.",
+      "readCount": 2,
+      "assets": {
+        "palette": {
+          "background": "#f5f2eb",
+          "text": "#2c2c2a",
+          "accent": "#2c2c2a"
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "title": "Dune",
+      "authors": [
+        "Ada Example"
+      ],
+      "status": "dnf",
+      "isbn13": "9780441013593",
+      "dateRead": "2020-08-15",
+      "dateStarted": "2024-06-01",
+      "dateAdded": "2024-03-02",
+      "rating": 0.25,
+      "readCount": 1
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "title": "Stoner",
+      "authors": [],
+      "status": "read",
+      "dateAdded": "2024-03-02",
+      "readCount": 1
+    }
+  ]
+}

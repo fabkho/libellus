@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-01T06:00:00Z",
+  "books": [
+    "not a book",
+    {
+      "id": "",
+      "title": "   ",
+      "authors": "Ada Example",
+      "status": "read"
+    },
+    {
+      "id": "bad-fields",
+      "title": "Wrong Values",
+      "seriesTitle": 2,
+      "authors": ["Ada Example", ""],
+      "isbn13": "978-0-00-000001-9",
+      "isbn10": "12345",
+      "pages": 0,
+      "yearPublished": 2012.5,
+      "originalYear": "1818",
+      "status": "",
+      "dateRead": "2026-02-30",
+      "dateStarted": "14.03.2026",
+      "dateAdded": "2026-03-14T10:00:00Z",
+      "rating": 4.3,
+      "review": false,
+      "reviewHasSpoiler": "yes",
+      "readCount": -1,
+      "description": ["a", "list"],
+      "quotes": [{ "text": "", "source": null }, "praise"]
+    },
+    {
+      "id": "too-many-stars",
+      "title": "Rated Six",
+      "authors": [],
+      "status": "read",
+      "rating": 6
+    },
+    {
+      "id": "too-many-stars",
+      "title": "Same Id Again",
+      "authors": [],
+      "status": "read"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-01T08:00:00.000+02:00",
+  "owner": null,
+  "generator": "hand-written fixture (synthetic)",
+  "producerExtra": "unknown top-level fields are ignored",
+  "books": [
+    {
+      "id": "all-01",
+      "title": "Every Field",
+      "seriesTitle": "Fixture Series, #1",
+      "authors": ["Ada Example", "Second Author"],
+      "isbn13": "9790000000001",
+      "isbn10": "000000000X",
+      "pages": 321,
+      "binding": "Hardcover",
+      "yearPublished": 2024,
+      "originalYear": 2023,
+      "status": "read",
+      "dateRead": "2026-02-28",
+      "dateStarted": "2026-02-01",
+      "dateAdded": "2024-02-29",
+      "rating": 5,
+      "review": "A synthetic review.",
+      "reviewHasSpoiler": true,
+      "readCount": 3,
+      "description": "A synthetic blurb.",
+      "publisher": "Example House",
+      "genre": "FICTION",
+      "quotes": [
+        { "text": "Praise one.", "source": "Someone" },
+        { "text": "Praise without a source.", "source": "" }
+      ],
+      "assets": {
+        "front": "all-01/front.webp",
+        "spine": "./all-01/spine.webp",
+        "back": "https://cdn.example.com/all-01/back.webp",
+        "pile": { "front": "all-01/front-pile.webp", "spine": "/root/all-01/spine-pile.webp" },
+        "palette": { "background": "#ABCDEF", "text": "#000000", "accent": "#ff0000" },
+        "spineColor": "#123456",
+        "photoFaces": ["front", "back"],
+        "source": "photo"
+      },
+      "producerExtra": { "ignored": true }
+    },
+    {
+      "id": "all-02",
+      "title": "Every Field Null",
+      "seriesTitle": null,
+      "authors": ["Ada Example"],
+      "isbn13": null,
+      "isbn10": null,
+      "pages": null,
+      "binding": null,
+      "yearPublished": null,
+      "originalYear": null,
+      "status": "to-read",
+      "dateRead": null,
+      "dateStarted": null,
+      "dateAdded": null,
+      "rating": null,
+      "review": null,
+      "reviewHasSpoiler": null,
+      "readCount": null,
+      "description": null,
+      "publisher": null,
+      "genre": null,
+      "quotes": null,
+      "assets": {
+        "front": null,
+        "spine": null,
+        "back": null,
+        "pile": null,
+        "palette": null,
+        "spineColor": null,
+        "photoFaces": null,
+        "source": null
+      }
+    }
+  ]
+}

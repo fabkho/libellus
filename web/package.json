@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "import:fable": "tsx scripts/import-fable.ts",
+    "export:regal": "tsx scripts/export-regal.ts",
     "seed:dev": "tsx scripts/import-fable.ts --email dev@libellus.local --prune"
   },
   "dependencies": {
