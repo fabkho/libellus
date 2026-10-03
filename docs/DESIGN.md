@@ -147,8 +147,10 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Phone first.** Every screen is designed at 393 × 852. On a wide screen the same layout sits in
   a centred column of `maxContent` with hairlines left and right; the tab bar and the search
   palette stay centred on it. No desktop layouts.
-- **Safe areas** through utilities only: `screen-inset` (a whole screen), `safe-top`,
-  `safe-bottom`, `safe-x`, `float-bottom` (floating chrome `tabBarDrop` 13 into the home-indicator inset: 21 pt off the screen edge on a Face ID iPhone, as iOS 26 places its tab bar; `ms` off the edge without one) and
+- **Safe areas** through utilities only: `screen-inset` (a whole screen), `bar-top` (a bar's
+  44 pt controls row starts under the status bar, and at least `barTop` 8 off the top edge where the
+  device reports no inset — every browser tab — so it never touches the browser's toolbar; the
+  installed iOS app's 59 pt inset wins there), `safe-bottom`, `safe-x`, `float-bottom` (floating chrome `tabBarDrop` 13 into the home-indicator inset: 21 pt off the screen edge on a Face ID iPhone, as iOS 26 places its tab bar; `ms` off the edge without one) and
   `clear-tab-bar` (room under a tab's content). `main.css` reads the insets once into
   `--safe-area-*`; nothing else uses `env()`.
 - **Tab header** (`ShellHeader`), iOS's Large Title bar: under the safe area a 44 pt controls

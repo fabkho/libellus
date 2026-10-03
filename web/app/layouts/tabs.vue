@@ -68,11 +68,12 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
 </template>
 
 <style scoped>
-/* The safe area and `md` more (on a pushed screen the top bar's row too):
+/* The bars' top room (`--bar-top`: the status bar, or `barTop` in a browser
+   tab) and `md` more (on a pushed screen the top bar's row too):
    solid room colour behind the status bar's glyphs, fading out below, with the
    page blurred under the fade. */
 .scroll-edge {
-  --edge-solid: var(--safe-area-top);
+  --edge-solid: var(--bar-top);
   height: calc(var(--edge-solid) + var(--spacing-md));
   background: linear-gradient(to bottom, var(--color-surface) calc(var(--edge-solid) * 0.8), transparent);
   -webkit-backdrop-filter: blur(var(--blur-chrome));
@@ -81,6 +82,6 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
   transition: opacity var(--duration-quick) var(--ease-standard);
 }
 .under-bar {
-  --edge-solid: calc(var(--safe-area-top) + var(--size-touch));
+  --edge-solid: calc(var(--bar-top) + var(--size-touch));
 }
 </style>

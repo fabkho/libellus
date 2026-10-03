@@ -25,6 +25,11 @@
   --safe-area-bottom: env(safe-area-inset-bottom);
   --safe-area-left: env(safe-area-inset-left);
   --safe-area-right: env(safe-area-inset-right);
+  /* Where a bar's 44 pt controls row starts: under the status bar where there
+     is one to clear (the iOS Home Screen app, 59 pt), and at least `barTop`
+     off the top edge where the device reports no inset — a browser tab, whose
+     own toolbar the row would otherwise touch. */
+  --bar-top: max(var(--safe-area-top), var(--spacing-bar-top));
   /* Where floating chrome sits: `tabBarDrop` into the home-indicator inset,
      so 21 pt off the screen edge on a Face ID iPhone like iOS 26's tab bar, or
      a little off the edge where there is no indicator. */
@@ -40,9 +45,10 @@
 }
 
 /* The notch and the home indicator for bars that sit on a screen edge (the
-   header, the tab bar, a sheet) rather than padding a whole screen. */
-@utility safe-top {
-  padding-top: var(--safe-area-top);
+   header, the tab bar, a sheet) rather than padding a whole screen. A bar at
+   the top pads to `--bar-top`: the status bar, or `barTop` in a browser tab. */
+@utility bar-top {
+  padding-top: var(--bar-top);
 }
 @utility safe-bottom {
   padding-bottom: var(--safe-area-bottom);
