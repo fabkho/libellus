@@ -134,6 +134,8 @@ function back() {
       </UiButton>
     </div>
 
+    <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
+
     <section v-if="description" class="relative px-ml pt-xl" data-testid="book.about">
       <h2 class="eyebrow mb-ms">{{ t('book.about') }}</h2>
       <p class="text-subhead whitespace-pre-line text-ink-muted" :class="long && !expanded && 'clamped'" data-testid="book.description">

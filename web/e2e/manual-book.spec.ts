@@ -19,6 +19,8 @@ test('a member adds a book by hand when search finds nothing and sees it in the 
   const query = 'qxzvwlmbrt'
 
   await page.getByTestId('shell.tab.library').click()
+  // On the Library before searching: a route change closes the search.
+  await expect(page).toHaveURL(/\/library$/)
   await page.getByTestId('shell.tab.search').click()
   await page.getByTestId('search.query').fill(query)
   await expect(page.getByTestId('search.noResults')).toContainText(en.search.noResultsTitle)

@@ -60,6 +60,7 @@ watch(
 
 <template>
   <div>
+  <CollectionsLibraryLink v-if="library.loaded" :only-if-any="empty" class="mb-md" />
   <UiEmptyState v-if="empty" screen="library" :title="t('library.emptyTitle')" :text="t('library.empty')" class="pt-xl">
     <UiSearchPrompt testid="library.search" />
   </UiEmptyState>
