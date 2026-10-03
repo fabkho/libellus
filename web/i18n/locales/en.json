@@ -138,7 +138,7 @@
     "add": "Add {title} to your Library",
     "noResultsTitle": "No books found",
     "noResults": "Nothing for “{query}”.",
-    "noResultsHint": "Check the spelling, or search the ISBN of the edition you hold.",
+    "noResultsHint": "Check the spelling, or search the ISBN of the edition you hold. Or add it by hand; books you add yourself stay private.",
     "failedTitle": "Search isn't working right now",
     "failed": "Check your connection and try again.",
     "hint": "Not the edition you hold? Search its ISBN.",
