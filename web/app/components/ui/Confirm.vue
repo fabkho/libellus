@@ -30,22 +30,22 @@ function close() {
   if (!props.busy) open.value = false
 }
 
+const scrim = useTemplateRef<HTMLElement>('scrim')
 const panel = useTemplateRef<HTMLElement>('panel')
+// Above everything, a sheet under it included: the rest is out of reach while
+// it asks, and focus goes back to what asked once it closes (useModalLayer).
+const { afterLeave } = useModalLayer(open, { elements: () => [scrim.value, panel.value], initialFocus: () => panel.value })
+
 function onKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
   // Only the dialog closes: a sheet under it keeps its own Escape for later.
   event.stopImmediatePropagation()
   close()
 }
-watch(open, async (isOpen) => {
+watch(open, (isOpen) => {
   if (!import.meta.client) return
-  if (isOpen) {
-    window.addEventListener('keydown', onKeydown, true)
-    await nextTick()
-    panel.value?.focus({ preventScroll: true })
-  } else {
-    window.removeEventListener('keydown', onKeydown, true)
-  }
+  if (isOpen) window.addEventListener('keydown', onKeydown, true)
+  else window.removeEventListener('keydown', onKeydown, true)
 })
 onUnmounted(() => import.meta.client && window.removeEventListener('keydown', onKeydown, true))
 
@@ -56,9 +56,9 @@ const textId = useId()
 <template>
   <Teleport to="body">
     <Transition name="scrim">
-      <div v-if="open" class="fixed inset-0 z-60 bg-scrim" :data-testid="`${testid}.scrim`" @click="close" />
+      <div v-if="open" ref="scrim" class="fixed inset-0 z-60 touch-none bg-scrim" :data-testid="`${testid}.scrim`" @click="close" />
     </Transition>
-    <Transition name="dialog">
+    <Transition name="dialog" @after-leave="afterLeave">
       <section
         v-if="open"
         ref="panel"

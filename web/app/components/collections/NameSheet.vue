@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // The name sheet: a new Collection, or a new name for one. One field with the
-// keyboard up; Create / Save at the top right, like every sheet, and Enter
-// does the same. A name she already uses (in any case) or a blank one is
-// named under the field; the sheet stays open.
+// keyboard up (focused in the tap that opened the sheet, see UiSheet); Create /
+// Save at the top right, like every sheet, and Enter does the same. A name she
+// already uses (in any case) or a blank one is named under the field; the
+// sheet stays open.
 import { NAME_MAX } from '~/data/collections'
 import { useCollectionsStore } from '~/stores/collections'
 
@@ -24,16 +25,10 @@ const open = computed({
 const mode = ref<'create' | 'rename'>('create')
 watch(
   () => collections.naming,
-  async (naming) => {
-    if (!naming) return
-    mode.value = naming.mode
-    await nextTick()
-    // After the sheet took focus for itself: the keyboard comes up in the field.
-    setTimeout(() => input.value?.focus(), 0)
+  (naming) => {
+    if (naming) mode.value = naming.mode
   },
 )
-
-const input = useTemplateRef<HTMLInputElement>('input')
 const name = toRef(collections, 'name')
 
 async function save() {
@@ -56,8 +51,10 @@ async function save() {
       <UiRowGroup>
         <label class="relative flex h-(--size-row) items-center gap-ms px-inset text-body transition-colors duration-(--duration-quick) ease-standard focus-within:bg-accent-soft">
           <span class="shrink-0" :class="collections.nameError ? 'text-error' : 'text-ink-muted'">{{ t('collections.nameLabel') }}</span>
+          <!-- data-autofocus: UiSheet focuses it in the tap that opened the
+               sheet, so iOS raises the keyboard with the sheet. -->
           <input
-            ref="input"
+            data-autofocus
             v-model="name"
             type="text"
             :maxlength="NAME_MAX"
