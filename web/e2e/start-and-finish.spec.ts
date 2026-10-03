@@ -1,9 +1,9 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { isoDay } from '../app/utils/dates'
-import { ratingX } from '../app/utils/rating'
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { test } from './fixtures'
+import { dragRating, recordedApple, settledBox, signedIn } from './support'
 
 /**
  * The heart of the loop (#7): a Book on Want to read is started, finished
@@ -27,34 +27,6 @@ async function addPiranesi(page: Page) {
   await page.getByTestId('book.add').click()
   await page.getByTestId('add.submit').click()
   await expect(page.getByTestId('add')).toBeHidden()
-}
-
-/** Where an element is once the sheet it is in has finished rising. */
-async function settledBox(locator: Locator) {
-  let last = null as Awaited<ReturnType<Locator['boundingBox']>>
-  await expect
-    .poll(
-      async () => {
-        const box = await locator.boundingBox()
-        const still = Boolean(box && last && box.y === last.y)
-        last = box
-        return still
-      },
-      { intervals: [100] },
-    )
-    .toBe(true)
-  return last!
-}
-
-/** A finger (here a mouse) pressed on the stars and dragged to `quarters`. */
-async function dragRating(page: Page, control: Locator, quarters: number) {
-  const box = await settledBox(control)
-  const y = box.y + box.height / 4
-  const [size, gap] = [44, 12]
-  await page.mouse.move(box.x + size / 2, y)
-  await page.mouse.down()
-  for (const q of [4, 8, 12, quarters]) await page.mouse.move(box.x + ratingX(q, size, gap) + 1, y, { steps: 4 })
-  await page.mouse.up()
 }
 
 test('a member starts a book, finishes it with 3.75 stars and a review, and finds it under Finished', async ({ page }) => {

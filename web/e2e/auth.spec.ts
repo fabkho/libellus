@@ -1,7 +1,8 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, mistype, readMailedCode, uniqueEmail } from '../tests/support/stack'
+import { test } from './fixtures'
 
 /**
  * The way in and the tab shell, on a phone, against the real stack: the code is

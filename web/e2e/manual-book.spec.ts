@@ -1,7 +1,8 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
 import { recordedApple, signedIn } from './support'
+import { test } from './fixtures'
 
 /**
  * Manual books (#13): a search that finds nothing links to the manual-book

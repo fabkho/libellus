@@ -1,4 +1,5 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
+import { ratingX } from '../app/utils/rating'
 import { appleAnswer, appleCover } from '../tests/support/apple'
 import { openLibraryAnswer } from '../tests/support/openLibrary'
 import { signUpMember } from '../tests/support/member'
@@ -57,4 +58,32 @@ export async function signedIn(page: Page) {
   await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
   await expect(page.getByTestId('home.title')).toBeVisible()
   return member
+}
+
+/** Where an element is once the sheet it is in has finished rising. */
+export async function settledBox(locator: Locator) {
+  let last = null as Awaited<ReturnType<Locator['boundingBox']>>
+  await expect
+    .poll(
+      async () => {
+        const box = await locator.boundingBox()
+        const still = Boolean(box && last && box.y === last.y)
+        last = box
+        return still
+      },
+      { intervals: [100] },
+    )
+    .toBe(true)
+  return last!
+}
+
+/** A finger (here a mouse) pressed on the stars and dragged to `quarters`. */
+export async function dragRating(page: Page, control: Locator, quarters: number) {
+  const box = await settledBox(control)
+  const y = box.y + box.height / 4
+  const [size, gap] = [44, 12]
+  await page.mouse.move(box.x + size / 2, y)
+  await page.mouse.down()
+  for (const q of [4, 8, 12, quarters]) await page.mouse.move(box.x + ratingX(q, size, gap) + 1, y, { steps: 4 })
+  await page.mouse.up()
 }

@@ -1,9 +1,10 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { addDays, isoDay } from '../app/utils/dates'
 import { ratingX } from '../app/utils/rating'
 import { sql } from '../tests/support/stack'
 import { recordedApple, signedIn } from './support'
+import { test } from './fixtures'
 
 /**
  * Adding with any status (#9): the Add sheet and the manual-book sheet offer
