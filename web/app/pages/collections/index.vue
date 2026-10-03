@@ -39,7 +39,7 @@ function back() {
       </template>
     </UiTopBar>
 
-    <header class="px-screen pt-sm">
+    <header class="px-screen pt-bar">
       <h1 class="text-large-title" data-testid="collections.title">{{ t('collections.title') }}</h1>
       <p class="mt-xs text-subhead text-ink-muted">{{ t('collections.intro') }}</p>
     </header>

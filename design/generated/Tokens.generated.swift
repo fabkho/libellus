@@ -85,6 +85,7 @@ enum Tokens {
         static let xxs: CGFloat = 2
         static let xs: CGFloat = 4
         static let sm: CGFloat = 8
+        static let bar: CGFloat = 10
         static let ms: CGFloat = 12
         static let inset: CGFloat = 14
         static let md: CGFloat = 16

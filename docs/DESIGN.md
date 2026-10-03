@@ -151,9 +151,11 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `safe-bottom`, `safe-x`, `float-bottom` (floating chrome `tabBarDrop` 13 into the home-indicator inset: 21 pt off the screen edge on a Face ID iPhone, as iOS 26 places its tab bar; `ms` off the edge without one) and
   `clear-tab-bar` (room under a tab's content). `main.css` reads the insets once into
   `--safe-area-*`; nothing else uses `env()`.
-- **Tab header** (`ShellHeader`): the page title on the left — under a mono date eyebrow on Home
-  ("Friday · 2 Oct", `text-title`), on its own elsewhere (`text-large-title`) — and the avatar on
-  the right.
+- **Tab header** (`ShellHeader`), iOS's Large Title bar: under the safe area a 44 pt controls
+  row with only the avatar at the trailing edge, then the title block `bar` (10) below it and
+  `bar` above the page — a mono date eyebrow over the greeting on Home ("Friday · 2 Oct",
+  `text-title`), the large title elsewhere (`text-large-title`). Pushed screens with a large
+  title (Collections, a Collection, Import) put it on the same row, `bar` under their top bar.
 - **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) over a fade
   to the surface, at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
   the screen edge. The current tab is full ink with a bolder stroke and a lamp dot; the others are

@@ -73,7 +73,7 @@ async function confirmDelete() {
     </UiTopBar>
 
     <template v-if="collection">
-      <header class="relative px-screen pt-sm">
+      <header class="relative px-screen pt-bar">
         <h1 class="book-title text-large-title text-balance" data-testid="collection.title">{{ collection.name }}</h1>
         <p class="mt-xs text-caption text-ink-muted" data-testid="collection.summary">
 {{ t('collection.count', { count: entries.length }, entries.length) }}
