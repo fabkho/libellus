@@ -10,6 +10,13 @@
 // pair it with `useSettled` so a change waits for the sheet that caused it.
 withDefaults(defineProps<{ tag?: string }>(), { tag: 'div' })
 
+/**
+ * How many items are opening or closing their room. While any is, the list
+ * carries `data-moving`: the page's height is still changing, so whatever needs
+ * it in place (the Playwright flows measuring a scroll position) waits for it.
+ */
+const moving = ref(0)
+
 /** The properties an item's room is made of: closing all of them to 0 takes it out of the list. */
 const ROOM = ['height', 'paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'] as const
 
@@ -31,9 +38,11 @@ const TRANSITION = [
 /** Ends a change once its room has finished moving (or at once, when nothing transitions). */
 function whenSettled(item: HTMLElement, done: () => void) {
   let finished = false
+  moving.value += 1
   const finish = () => {
     if (finished) return
     finished = true
+    moving.value -= 1
     item.removeEventListener('transitionend', onEnd)
     window.clearTimeout(timer)
     done()
@@ -93,6 +102,7 @@ function clean(el: Element) {
     :tag="tag"
     name="list-motion"
     :css="false"
+    :data-moving="moving > 0 || undefined"
     @enter="onEnter"
     @after-enter="clean"
     @leave="onLeave"

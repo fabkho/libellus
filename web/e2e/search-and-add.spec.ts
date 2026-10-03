@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -97,7 +97,10 @@ test('a member finds a book, opens it, adds it and sees it on Want to read', asy
   await expect(page.getByTestId('library.entryTitle').last()).toHaveText('Piranesi')
 
   // Going back keeps the place: the Library is kept alive and its scroll
-  // position restored (a short screen, so two Books scroll).
+  // position restored (a short screen, so two Books scroll). Once the second
+  // Book has opened its room: it comes in after the sheet has left, and a
+  // scroll measured mid-way is not where the page ends.
+  await untilStill(page)
   await page.setViewportSize({ width: 393, height: 360 })
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
   const scrolled = await page.evaluate(() => window.scrollY)

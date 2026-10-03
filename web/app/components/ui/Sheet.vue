@@ -101,6 +101,20 @@ function onScroll() {
 }
 
 const titleId = useId()
+
+// ------------------------------------------------------------------ motion
+
+/**
+ * The panel is still rising (or sliding away): it carries `data-moving` until
+ * its transition has ended, so whatever has to wait for the sheet to be in
+ * place (the Playwright flows tapping a star) can wait for that rather than
+ * guess from where it happens to be.
+ */
+const moving = ref(false)
+function onAfterLeave() {
+  moving.value = false
+  afterLeave()
+}
 </script>
 
 <template>
@@ -108,7 +122,15 @@ const titleId = useId()
     <Transition name="scrim">
       <div v-if="open" ref="scrim" class="fixed inset-0 z-40 touch-none bg-scrim" :data-testid="`${testid}.scrim`" @click="close" />
     </Transition>
-    <Transition name="sheet" @after-leave="afterLeave">
+    <Transition
+      name="sheet"
+      @before-enter="moving = true"
+      @after-enter="moving = false"
+      @enter-cancelled="moving = false"
+      @before-leave="moving = true"
+      @after-leave="onAfterLeave"
+      @leave-cancelled="moving = false"
+    >
       <section
         v-if="open"
         ref="panel"
@@ -120,6 +142,7 @@ const titleId = useId()
         :class="followsKeyboard && 'follows-keyboard'"
         :style="panelStyle"
         :data-testid="testid"
+        :data-moving="moving || undefined"
         v-on="handlers"
         @focusin="onFocusin"
       >
