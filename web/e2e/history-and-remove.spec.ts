@@ -45,6 +45,9 @@ test('a member finishes a book, edits its rating, deletes the read and the book 
   await page.getByTestId('book.start').click()
   await page.getByTestId('start.submit').click()
   await expect(page.getByTestId('start')).toBeHidden()
+  // One counting rule: the history says "day 1" like the status line.
+  await expect(page.getByTestId('book.since')).toContainText('day 1')
+  await expect(page.getByTestId('history.days')).toHaveText(en.history.day.replace('{day}', '1'))
   await page.getByTestId('book.finish').click()
   await page.getByTestId('finish.rating').focus()
   for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight')
@@ -59,7 +62,9 @@ test('a member finishes a book, edits its rating, deletes the read and the book 
   await expect(page.getByTestId('history.session')).toHaveCount(1)
   await expect(page.getByTestId('history.name')).toHaveText(en.history.thisRead)
   await expect(page.getByTestId('history.outcome')).toHaveText(en.status.finished)
+  // Started and finished today: one date, one day.
   await expect(page.getByTestId('history.days')).toHaveText(en.history.days.split(' | ')[0]!)
+  await expect(page.getByTestId('history.dates')).not.toContainText('–')
   await expect(page.getByTestId('history.rating')).toHaveAttribute('aria-label', '2.00 of 5 stars')
   await expect(page.getByTestId('history.review')).toHaveText('A house of tides.')
 

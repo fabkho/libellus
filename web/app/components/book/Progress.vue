@@ -21,7 +21,9 @@ const words = computed(() => text(progress.value, pageCount.value))
 </script>
 
 <template>
-  <div class="mb-md flex flex-col gap-ms" data-testid="book.progress">
+  <!-- The rule and its figures are one group (8 apart); the status line sits 16
+       above it and the action 20 below. -->
+  <div class="mb-ml flex flex-col gap-sm" data-testid="book.progress">
     <UiProgress
       :fraction="progressFraction(progress, pageCount)"
       :label="t('book.progress.label')"

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The book page's Collections (D's book detail): the Collections the Book is
 // on as chips (each opens its Collection), then "Add to collection", which
-// opens the picker. Shown for every Book, also one not in the Library yet:
+// opens the picker. A long name is cut to the chip with an ellipsis (the full
+// name is its `title`). Shown for every Book, also one not in the Library yet:
 // putting it on a Collection adds it to Want to read. Owns its sheet, so the
 // book page only places this row.
 import type { Book, BookSnapshot } from '~/data/books'
@@ -36,10 +37,11 @@ watch(
         v-for="collection in chips"
         :key="collection.id"
         :to="`/collections/${collection.id}`"
-        class="chip inline-flex h-(--size-button-sm) items-center rounded-pill bg-fill px-ms text-caption text-ink edge"
+        :title="collection.name"
+        class="chip inline-flex h-(--size-button-sm) max-w-full min-w-0 items-center rounded-pill bg-fill px-ms text-caption text-ink edge"
         data-testid="book.collection"
       >
-        {{ collection.name }}
+        <span class="truncate whitespace-nowrap">{{ collection.name }}</span>
       </NuxtLink>
       <button
         type="button"

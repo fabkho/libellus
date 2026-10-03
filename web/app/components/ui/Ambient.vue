@@ -3,16 +3,25 @@
 // precomputed colours, fading into the surface, with a whisper of grain so the
 // gradient never bands. Absolutely positioned: put it first inside a card
 // (`shape="card"`) or a page header (`shape="page"`) that is `relative`.
-// Full strength in the dark, half on paper (`--opacity-glow`).
+// Full strength in the dark, half on paper (`--opacity-glow`). A Book whose
+// cover is the Placeholder has no colours worth lighting the room with: `cloth`
+// (the cloth's colour, as CSS) lights it instead, so the page matches what shows.
 import type { CoverColors } from '~/utils/cover'
 
-const props = withDefaults(defineProps<{ colors: CoverColors | null; shape?: 'page' | 'card' }>(), {
+const props = withDefaults(defineProps<{ colors: CoverColors | null; cloth?: string | null; shape?: 'page' | 'card' }>(), {
+  cloth: null,
   shape: 'page',
 })
 
+// Two pool colours as whole colours, so a gradient can take them at any alpha.
 const style = computed(() => {
+  if (props.cloth) {
+    // A cloth is dark: lifted towards white, keeping its hue, so it reads as light.
+    const lit = `color-mix(in srgb, ${props.cloth} 55%, white)`
+    return { '--pool-a': lit, '--pool-b': props.cloth }
+  }
   const glow = glowOf(props.colors)
-  return { '--glow-a': glow.a, '--glow-b': glow.b }
+  return { '--pool-a': `rgb(${glow.a})`, '--pool-b': `rgb(${glow.b})` }
 })
 </script>
 
@@ -33,18 +42,18 @@ const style = computed(() => {
   inset: 0 0 auto;
   height: 600px;
   background:
-    radial-gradient(70% 46% at 50% 26%, rgb(var(--glow-a) / 0.5), transparent 72%),
-    radial-gradient(60% 34% at 92% 4%, rgb(var(--glow-b) / 0.28), transparent 70%),
-    radial-gradient(55% 30% at 6% 10%, rgb(var(--glow-a) / 0.22), transparent 70%),
-    linear-gradient(to bottom, rgb(var(--glow-a) / 0.16), transparent 82%);
+    radial-gradient(70% 46% at 50% 26%, color-mix(in srgb, var(--pool-a) 50%, transparent), transparent 72%),
+    radial-gradient(60% 34% at 92% 4%, color-mix(in srgb, var(--pool-b) 28%, transparent), transparent 70%),
+    radial-gradient(55% 30% at 6% 10%, color-mix(in srgb, var(--pool-a) 22%, transparent), transparent 70%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--pool-a) 16%, transparent), transparent 82%);
 }
 
 .shape-card {
   inset: 0;
   background:
-    radial-gradient(60% 95% at 12% 55%, rgb(var(--glow-a) / 0.6), transparent 72%),
-    radial-gradient(55% 90% at 100% 0%, rgb(var(--glow-b) / 0.22), transparent 72%),
-    linear-gradient(100deg, rgb(var(--glow-a) / 0.22), rgb(var(--glow-a) / 0.04) 80%);
+    radial-gradient(60% 95% at 12% 55%, color-mix(in srgb, var(--pool-a) 60%, transparent), transparent 72%),
+    radial-gradient(55% 90% at 100% 0%, color-mix(in srgb, var(--pool-b) 22%, transparent), transparent 72%),
+    linear-gradient(100deg, color-mix(in srgb, var(--pool-a) 22%, transparent), color-mix(in srgb, var(--pool-a) 4%, transparent) 80%);
 }
 
 .grain {

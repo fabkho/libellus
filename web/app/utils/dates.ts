@@ -39,3 +39,13 @@ export function daysBetween(from: string, to: string): number {
   const [a, b] = [parseDay(from), parseDay(to)].map((d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
   return Math.round((b! - a!) / 86_400_000)
 }
+
+/**
+ * How many days a read spans, counting both ends: begun and ended on one day is
+ * 1 day, begun 3 Oct and ended 5 Oct is 3. The one rule for every number of
+ * days in the app; `to` is today while the read is open (then it is also which
+ * day of the read it is). Never below 1.
+ */
+export function daysSpanned(from: string, to: string): number {
+  return Math.max(daysBetween(from, to), 0) + 1
+}

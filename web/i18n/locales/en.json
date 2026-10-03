@@ -398,7 +398,8 @@
     "startedOn": "Started {date}",
     "endedOn": "Ended {date}",
     "undated": "No dates",
-    "days": "Same day | 1 day | {count} days",
+    "day": "day {day}",
+    "days": "1 day | {count} days",
     "edit": "Edit",
     "editLabel": "Edit {name}"
   },

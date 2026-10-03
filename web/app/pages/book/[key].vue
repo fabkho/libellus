@@ -60,6 +60,29 @@ const long = computed(() => description.value.length > 320 || description.value.
 const expanded = ref(false)
 watch(key, () => (expanded.value = false))
 
+// The title is cut at three lines so the actions stay in view; a tap on it
+// shows all of it (and again folds it). The full title is also its `title`
+// and is in the page for assistive technology, the clamp being only visual.
+const titleEl = ref<HTMLElement | null>(null)
+const titleOpen = ref(false)
+const titleCut = ref(false)
+function measureTitle() {
+  const el = titleEl.value
+  if (el && !titleOpen.value) titleCut.value = el.scrollHeight > el.clientHeight + 1
+}
+watch([key, () => book.value?.title], () => {
+  titleOpen.value = false
+  void nextTick(measureTitle)
+})
+onMounted(() => {
+  measureTitle()
+  void document.fonts?.ready.then(measureTitle)
+})
+
+// Whether the cover shows the Placeholder: then the page's light is its cloth's.
+const coverFallback = ref(false)
+const clothColor = computed(() => (book.value ? `var(--color-cloth${clothOf(book.value.title)})` : null))
+
 const optionsOpen = ref(false)
 
 /** The entry now has another Book (#41): the page moves to its address, in place of this one. */
@@ -77,7 +100,7 @@ function back() {
 
 <template>
   <div class="relative min-h-dvh">
-    <UiAmbient :colors="book?.coverColors ?? null" />
+    <UiAmbient :colors="book?.coverColors ?? null" :cloth="coverFallback ? clothColor : null" />
     <UiTopBar :back-label="t('book.back')" back-testid="book.back" @back="back">
       <template v-if="entry" #trailing>
         <UiRoundButton icon="more" :label="t('book.options')" data-testid="book.options" @click="optionsOpen = true" />
@@ -94,8 +117,18 @@ function back() {
         size="xl"
         glow
         eager
+        @fallback="coverFallback = $event"
       />
-      <h1 class="book-title mt-ml text-headline text-balance" data-testid="book.title">{{ book.title }}</h1>
+      <h1
+        ref="titleEl"
+        class="book-title mt-ml text-headline text-balance"
+        :class="[!titleOpen && 'line-clamp-3', (titleCut || titleOpen) && 'cursor-pointer']"
+        :title="book.title"
+        data-testid="book.title"
+        @click="(titleCut || titleOpen) && ((titleOpen = !titleOpen), nextTick(measureTitle))"
+      >
+        {{ book.title }}
+      </h1>
       <p class="mt-xs text-body text-ink-muted" data-testid="book.authors">{{ authorLine }}</p>
       <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
         <template v-for="(fact, i) in facts" :key="fact">

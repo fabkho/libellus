@@ -1,4 +1,4 @@
-import { daysBetween, isoDay, parseDay } from '~/utils/dates'
+import { daysBetween, daysSpanned, isoDay, parseDay } from '~/utils/dates'
 
 /**
  * Calendar days (`YYYY-MM-DD`, as reading sessions store them) in words, in
@@ -33,7 +33,7 @@ export function useDays() {
 
   /** Which day of a read today is: the start day is day 1. */
   function dayOfRead(startedOn: string): number {
-    return daysBetween(startedOn, isoDay()) + 1
+    return daysSpanned(startedOn, isoDay())
   }
 
   return { formatDay, relativeDay, dayOfRead }
