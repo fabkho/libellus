@@ -9,9 +9,8 @@ import {
   type Collections,
   type CollectionSummary,
 } from '~/data/collections'
-import { loadPixelsInBrowser, resolveCover } from '~/data/covers'
+import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import type { LibraryEntry } from '~/data/library'
-import { appleArtwork } from '~/data/search'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -194,29 +193,25 @@ export const useCollectionsStore = defineStore('collections', () => {
         count: summary.count + 1,
         covers: summary.covers.length < MOSAIC_SIZE ? [...summary.covers, entry.book] : summary.covers,
       }))
-    if (!library.addedByKey.has(entry.book.id)) {
-      // New to the Library (or not seen there this visit): show it everywhere.
-      library.addedByKey.set(key, entry)
-      library.addedByKey.set(entry.book.id, entry)
-      if (!library.wantToRead.some((e) => e.id === entry.id) && entry.status === 'want_to_read') {
-        library.wantToRead = [entry, ...library.wantToRead]
-      }
-      search.markAdded(entry)
-    }
+    // New to the Library, or not: the Library's lists, the book pages and search learn of it at once.
+    library.entryChanged(entry, key)
     return result
   }
 
   /**
    * A search result may enter the Catalogue with this add, and the Catalogue
-   * keeps its first snapshot: its Cover is resolved first, as the Add sheet
-   * does (stores/library.ts, confirmAdd) — thumbhash and colours from a small
-   * copy of the image; without them if that fails.
+   * keeps its first snapshot: its Cover is resolved first, by the same chain
+   * as the Add sheet (stores/library.ts, confirmAdd; data/covers.ts,
+   * resolveBookCover): Apple artwork → Apple by ISBN → OpenLibrary → the
+   * Placeholder cover.
    */
   async function withCover(book: Book | BookSnapshot): Promise<Book | BookSnapshot> {
-    if ('id' in book || !book.coverUrl || book.coverThumbhash) return book
-    // Its own small URL, so no cached non-CORS response of the large image can taint the canvas.
-    const cover = await resolveCover(appleArtwork(book.coverUrl, 100, 150), loadPixelsInBrowser)
-    return cover ? { ...book, coverThumbhash: cover.thumbhash, coverColors: cover.colors } : book
+    if ('id' in book) return book
+    const cover = await resolveBookCover(book, {
+      probe: probeImageInBrowser,
+      lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
+    })
+    return { ...book, ...cover }
   }
 
   async function removeEntry(id: string, entryId: string): Promise<CollectionErrorCode | null> {

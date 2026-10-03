@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
-import { bookFromRow, bookToRow, type BookRow, type EntryStatus, type LibraryEntry } from './library'
+import { bookFromRow, bookToRow, ENTRY_COLUMNS, entryFromRow, type BookRow, type EntryRow, type LibraryEntry } from './library'
 
 /**
  * Collections (issue #1, Library actions → Collections; issue #14): a member's
@@ -93,18 +93,14 @@ export function isValidName(name: string): boolean {
 }
 
 type CollectionRow = { id: string; name: string; position: number; created_at: string }
-type EntryRow = { id: string; status: EntryStatus; added_at: string; book: BookRow }
 type SummaryRow = CollectionRow & {
   count: { count: number }[]
   firsts: { position: number; entry: { book: BookRow } }[]
 }
 type DetailRow = CollectionRow & { entries: { position: number; entry: EntryRow }[] }
 
-const ENTRY = 'id, status, added_at, book:books!inner(*)'
-
-function entryFromRow(row: EntryRow): LibraryEntry {
-  return { id: row.id, status: row.status, addedAt: row.added_at, book: bookFromRow(row.book) }
-}
+// An entry as the Library reads it: its Book and its latest session.
+const ENTRY = ENTRY_COLUMNS
 
 export type Collections = {
   /** The member's Collections in her order, each with its size and first covers. */
