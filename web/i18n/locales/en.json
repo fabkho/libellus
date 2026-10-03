@@ -94,7 +94,8 @@
     "readIn": "Read in {year}",
     "readInLabel": "Read in {year}: {count}",
     "loadError": "Your books could not be loaded.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "progressAdd": "Add progress"
   },
   "library": {
     "title": "Library",
@@ -151,7 +152,8 @@
       "reason_too_long": "That reason is longer than we can keep. Shorten it a little.",
       "never_read": "You haven't read this book yet. Start reading it first.",
       "session_not_found": "That read isn't there any more. It may have been deleted on another device.",
-      "offline": "You're offline. Nothing was saved."
+      "offline": "You're offline. Nothing was saved.",
+      "progress_invalid": "That progress doesn't fit this book."
     },
     "undated": "No end date"
   },
@@ -201,7 +203,31 @@
     "abandon": "Abandon",
     "readAgain": "Read again",
     "startAgain": "Start again",
-    "options": "Book options"
+    "options": "Book options",
+    "progress": {
+      "label": "Reading progress",
+      "none": "Not started yet",
+      "page": "p. {page} of {count}",
+      "pageOnly": "p. {page}",
+      "percent": "{percent} %",
+      "update": "Update progress",
+      "title": "Update progress",
+      "modeLabel": "Count by",
+      "mode": {
+        "page": "Pages",
+        "percent": "Percent"
+      },
+      "pageLabel": "Page (of {count})",
+      "percentLabel": "Percent read",
+      "plusPages": "+{count} pages",
+      "plusPercent": "+{count} %",
+      "reached": "You've reached the end.",
+      "invalid": "Enter a whole number from 0 to {max}.",
+      "action": "Save progress",
+      "busy": "Saving…",
+      "retry": "Try again",
+      "finishedIt": "Finished it?"
+    }
   },
   "add": {
     "title": "Add to Library",

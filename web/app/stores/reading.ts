@@ -1,11 +1,21 @@
 import { defineStore } from 'pinia'
 import { isNotFinished, type LibraryEntry, type LibraryErrorCode } from '~/data/library'
+import {
+  convertProgressField,
+  parseProgress,
+  progressFieldOf,
+  progressMax,
+  progressModeFor,
+  progressOf,
+  progressReachedEnd,
+  type ProgressMode,
+} from '~/data/progress'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 
 /**
- * The Start, Finish and Abandon sheets (issues #7, #10): which entry each is
+ * The Start, Finish, Abandon and Update progress sheets (issues #7, #10, #39): which entry each is
  * about, what the member has chosen so far, and the action's progress. The
  * Start sheet also reads a closed Book again (`startKind`). Each action is one call
  * to the Library repository; on success the entry moves to its new list
@@ -184,7 +194,91 @@ export const useReadingStore = defineStore('reading', () => {
     }
   }
 
+  // ---------------------------------------------------------------- Progress
+
+  /** The entry the Update progress sheet is about; null while it is closed. */
+  const progressing = ref<LibraryEntry | null>(null)
+  /** Whether the field is a page or a percent (pages only for a Book with a page count). */
+  const progressMode = ref<ProgressMode>('percent')
+  /** What the member typed: digits, or '' for nothing yet. */
+  const progressField = ref('')
+  const progressBusy = ref(false)
+  const progressError = ref<LibraryErrorCode | null>(null)
+
+  const progressPageCount = computed(() => progressing.value?.book.pageCount ?? null)
+  /** The most the field takes: the page count in pages, 100 in percent. */
+  const progressLimit = computed(() => progressMax(progressMode.value, progressPageCount.value))
+  /** The field is a number the database takes; null while it is not. */
+  const progressValue = computed(() => parseProgress(progressField.value, progressMode.value, progressPageCount.value).value)
+  /** The field is at the last page (or 100 %): the sheet offers "Finished it?". */
+  const progressAtEnd = computed(() => progressReachedEnd(progressValue.value, progressPageCount.value))
+
+  function openProgress(entry: LibraryEntry) {
+    const current = progressOf(entry.latestSession)
+    progressing.value = entry
+    progressMode.value = progressModeFor(entry.book, current)
+    progressField.value = progressFieldOf(current, progressMode.value)
+    progressError.value = null
+  }
+
+  function closeProgress() {
+    if (!progressBusy.value) progressing.value = null
+  }
+
+  /** Switches between pages and percent, carrying the place in the book over. */
+  function chooseProgressMode(mode: ProgressMode) {
+    if (mode === progressMode.value || !progressPageCount.value) return
+    progressField.value = convertProgressField(progressField.value, mode, progressPageCount.value)
+    progressMode.value = mode
+    progressError.value = null
+  }
+
+  /** The quick buttons: adds to what is typed (nothing typed is 0), never past the limit. */
+  function bumpProgress(by: number) {
+    const typed = Number(progressField.value.trim())
+    const now = Number.isFinite(typed) ? typed : 0
+    progressField.value = String(Math.min(progressLimit.value, now + by))
+    progressError.value = null
+  }
+
+  /** Sends the field as the entry's progress. Returns the entry, or null with `progressError` set. */
+  async function confirmProgress(): Promise<LibraryEntry | null> {
+    const entry = progressing.value
+    const repo = library.library()
+    if (!entry || !repo || progressBusy.value) return null
+    const parsed = parseProgress(progressField.value, progressMode.value, progressPageCount.value)
+    if (!parsed.value) {
+      progressError.value = parsed.error
+      return null
+    }
+    progressBusy.value = true
+    try {
+      const result = await repo.updateProgress(entry.id, parsed.value)
+      if (result.error) {
+        progressError.value = result.error
+        return null
+      }
+      library.entryChanged(result.data)
+      progressing.value = null
+      return result.data
+    } finally {
+      progressBusy.value = false
+    }
+  }
+
+  /**
+   * "Finished it?": the last page is reached, so the progress is saved (a
+   * finished read keeps it) and the Finish sheet takes over from this one.
+   */
+  async function finishFromProgress(): Promise<LibraryEntry | null> {
+    const entry = await confirmProgress()
+    if (entry) openFinish(entry)
+    return entry
+  }
+
   function reset() {
+    progressing.value = null
+    progressError.value = null
     starting.value = null
     finishing.value = null
     abandoning.value = null
@@ -229,6 +323,19 @@ export const useReadingStore = defineStore('reading', () => {
     openAbandon,
     closeAbandon,
     confirmAbandon,
+    progressing,
+    progressMode,
+    progressField,
+    progressBusy,
+    progressError,
+    progressLimit,
+    progressAtEnd,
+    openProgress,
+    closeProgress,
+    chooseProgressMode,
+    bumpProgress,
+    confirmProgress,
+    finishFromProgress,
     reset,
   }
 })
