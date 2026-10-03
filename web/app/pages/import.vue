@@ -67,7 +67,7 @@ const failures = computed<ImportNote[]>(() =>
   <div class="relative min-h-dvh">
     <UiTopBar :back-label="t('import.back')" back-testid="import.back" @back="back" />
 
-    <header class="px-screen pt-sm">
+    <header class="px-screen pt-bar">
       <h1 class="text-large-title" data-testid="import.title">{{ t('import.title') }}</h1>
     </header>
 

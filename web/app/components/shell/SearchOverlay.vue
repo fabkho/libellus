@@ -141,6 +141,27 @@ function morphFrames(): [HTMLElement | null, Keyframe[]][] {
     scale: start.width / end.width,
   }
 
+  // Home and Library stay put in the capsule, but the Search icon flies across
+  // them. They fade out before it reaches them on the way up, and on the way
+  // down come back only once it has passed (the bar takes over at the very
+  // end, MOTION.md): `pass` is how far along the opening the icon's leading
+  // edge reaches the right-hand tab (its centre moves linearly with the offset).
+  const tabs = [...capsule.querySelectorAll<HTMLElement>('[data-morph="tab"]')]
+  const tabsRight = Math.max(...tabs.map((tab) => (tab.querySelector('svg') ?? tab).getBoundingClientRect().right))
+  const startX = start.left + start.width / 2
+  const pass = Math.min(1, Math.max(0, (startX - start.width / 2 - tabsRight) / travel.x))
+  const tabFrames: [HTMLElement, Keyframe[]][] =
+    tabs.length && travel.x > 0
+      ? tabs.map((tab) => [
+          tab,
+          [
+            { opacity: 1, offset: 0 },
+            { opacity: 0, offset: pass },
+            { opacity: 0, offset: 1 },
+          ],
+        ])
+      : []
+
   return [
     [veil.value, veilFrames],
     [
@@ -201,6 +222,7 @@ function morphFrames(): [HTMLElement | null, Keyframe[]][] {
         { transform: 'none', color: getComputedStyle(glyph.value!).color, offset: 1 },
       ],
     ],
+    ...tabFrames,
   ]
 }
 

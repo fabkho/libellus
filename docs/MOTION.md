@@ -43,9 +43,12 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
 ## Named motions
 
 - **Press.** Buttons scale to 0.97 over `instant`; no colour flash. Rows darken to `fillStrong`
-  while pressed.
+  while pressed. Safari on iOS applies `:active` only under a touch listener: one passive no-op
+  `touchstart` on the document does it (`plugins/touch-active.client.ts`).
 - **Tab.** The new tab's icon goes full ink and its lamp dot fades in over `quick`; the old one
-  recedes. The page itself swaps without a transition (tabs are places, not a sequence).
+  recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
+  place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
+  with Reduce Motion).
 - **Avatar menu.** Opens from its top-right corner: fade plus a 0.96 → 1 scale and a 4 px drop,
   `standard`; closes the same way back, `exit`. Flipping the theme inside it crossfades nothing —
   the colours change at once, the switch's knob slides over `quick`.
@@ -57,7 +60,7 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's
     and its glass becomes the palette's raised surface, which covers it early on;
-  - Search's icon flies from the capsule to the front of the query row (from the tab bar's 23 px
+  - Search's icon flies from the capsule to the front of the query row (from the tab bar's 26 px
     to the row's 19 px, from faint to lamp), pulling the query in behind it; Home and Library stay put in the
     capsule, which stays where it is under the veil until the palette has covered it. Cancel
     fades in at the row's end (Home and Library come back into the row once the keyboard is
@@ -66,7 +69,9 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   - the results area (whatever the overlay's slot holds: the list, or a single quiet loading
     hint; there is no source strip) unrolls upwards as the outline's top edge rises, fading in
     until 70 % of the way;
-  - the shadow grows out of the capsule's and fades in.
+  - the shadow grows out of the capsule's and fades in;
+  - the capsule's Home and Library fade out before the flying icon reaches them, and on the way
+    back return only once it has passed, so the icon never crosses a visible tab.
 
   Closing — Cancel, a tap on the page behind, a swipe down, Escape, or going to another page —
   plays the same keyframes back to front, landing softly on the capsule; the tab bar takes over

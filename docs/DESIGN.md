@@ -126,8 +126,8 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - Radius: covers `cover-sm` 2.5 / `cover` 3.5 / `cover-lg` 5 by size, `sm` 8, `md` 14 (groups,
   code cells), `field` 18 (search field, avatar menu), `lg` 20 (cards), `xl` 24 (search palette),
   `sheet` 30, `pill`.
-- Size: `touch` 44 (smallest target), `maxContent` 480 (the column on wide screens), `tabBar` 52,
-  `tab` 62, `row` 48, `query` 56, `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
+- Size: `touch` 44 (smallest target), `maxContent` 480 (the column on wide screens), `tabBar` 62,
+  `tab` 72, `tabIcon` 26, `row` 48, `query` 62 (as tall as the capsule it grows out of), `fade` 138, `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
   `coverXs` 30 · `coverSm` 40 · `coverMd` 72 · `coverLg` 82 · `coverXl` 140, stars 12/16/24 (display) and
   `starInput` 44 (the rating control, one star per fingertip) with its `ratingThumb` 24.
 - Stroke: `hairline` 0.5 (edges), `rule` 1 (a field's underline), `focus` 2, icons 1.5 / 1.7.
@@ -148,13 +148,17 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   a centred column of `maxContent` with hairlines left and right; the tab bar and the search
   palette stay centred on it. No desktop layouts.
 - **Safe areas** through utilities only: `screen-inset` (a whole screen), `safe-top`,
-  `safe-bottom`, `safe-x`, `float-bottom` (floating chrome just above the home indicator) and
-  `clear-tab-bar` (room under a tab's content).
-- **Tab header** (`ShellHeader`): the page title on the left — under a mono date eyebrow on Home
-  ("Friday · 2 Oct", `text-title`), on its own elsewhere (`text-large-title`) — and the avatar on
-  the right.
+  `safe-bottom`, `safe-x`, `float-bottom` (floating chrome `tabBarDrop` 13 into the home-indicator inset: 21 pt off the screen edge on a Face ID iPhone, as iOS 26 places its tab bar; `ms` off the edge without one) and
+  `clear-tab-bar` (room under a tab's content). `main.css` reads the insets once into
+  `--safe-area-*`; nothing else uses `env()`.
+- **Tab header** (`ShellHeader`), iOS's Large Title bar: under the safe area a 44 pt controls
+  row with only the avatar at the trailing edge, then the title block `bar` (10) below it and
+  `bar` above the page — a mono date eyebrow over the greeting on Home ("Friday · 2 Oct",
+  `text-title`), the large title elsewhere (`text-large-title`). Pushed screens with a large
+  title (Collections, a Collection, Import) put it on the same row, `bar` under their top bar.
 - **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) over a fade
-  to the surface. The current tab is full ink with a bolder stroke and a lamp dot; the others are
+  to the surface, at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
+  the screen edge. The current tab is full ink with a bolder stroke and a lamp dot; the others are
   faint. Search is not a page: it opens the search palette, and the capsule itself turns into it
   and back (MOTION.md, Search morph).
 - **Search palette** (`ShellSearchOverlay`): over the page, which stays put behind it, blurred
@@ -164,11 +168,20 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   above the keyboard. Its slot holds `SearchResults` (#6): one list, never naming where a result
   came from (one field, one list; at most one quiet loading state), each row a cover, the serif
   title, the author, the year in mono and a round + (or the Status, if the Book is in the Library).
+- **Tab places**: each tab keeps its place, as iOS tabs do. Home and Library open where they were
+  left (back and forward use the browser's saved place), and the tab already showing, tapped
+  again, scrolls back to its top.
 - **Pushed screens** (the book page): in the tab layout with `pushed: true`, so the tab pages stay
   alive underneath; no header, the page draws `UiTopBar` (back) over its cover's light
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
+  The top bar is pinned under the safe area (centred on the column on a wide screen) and the
+  page scrolls under its glass buttons: an installed app has no edge swipe back.
 - **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
   the account address, the Dark mode switch and Sign out.
+- **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
+  once something has scrolled under it a fixed band of the surface colour (the safe area and
+  `md` more; on a pushed screen down to the top bar's row too) fades and blurs it away — iOS's
+  scroll edge effect, the top mirror of the tab bar's fade. It never takes a tap.
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
   glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
   screen at the bottom.

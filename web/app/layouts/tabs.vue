@@ -10,6 +10,14 @@
 // its cover's light instead of the header, edge to edge; the tab bar and
 // search stay, so search works from every page. Pushed screens live in this
 // layout too, so going to one and back keeps the tab pages alive.
+//
+// The top scroll edge: the installed app draws under a transparent status bar
+// (viewport-fit=cover), so what scrolls up there fades and blurs into the room
+// colour instead of running under the clock — iOS's scroll edge effect, the
+// top mirror of the tab bar's fade. Like iOS's it shows only once something
+// has scrolled under it (a book's light at the top of its page stays clear),
+// and on a pushed screen it reaches under the pinned top bar too. It never
+// takes a tap.
 const { t, locale } = useI18n()
 const route = useRoute()
 
@@ -20,6 +28,14 @@ const titleSize = computed(() => (route.meta.titleSize === 'title' ? 'title' : '
 const { now, greeting } = useGreeting()
 const title = computed(() => (route.meta.greeting ? greeting.value : t(`${screen.value}.title`)))
 const eyebrow = computed(() => (route.meta.dated ? t('home.today', dateParts(now.value, locale.value)) : undefined))
+
+const scrolled = ref(false)
+const measureScroll = () => (scrolled.value = window.scrollY > 0)
+onMounted(() => {
+  measureScroll()
+  window.addEventListener('scroll', measureScroll, { passive: true })
+})
+onUnmounted(() => window.removeEventListener('scroll', measureScroll))
 </script>
 
 <template>
@@ -30,6 +46,12 @@ const eyebrow = computed(() => (route.meta.dated ? t('home.today', dateParts(now
       <slot />
     </main>
 
+    <div
+      class="scroll-edge pointer-events-none fixed inset-x-0 top-0 z-20"
+      :class="[pushed && 'under-bar', scrolled ? 'opacity-100' : 'opacity-0']"
+      aria-hidden="true"
+      data-testid="shell.scrollEdge"
+    />
     <ShellTabBar />
     <ShellSearchOverlay><SearchResults /></ShellSearchOverlay>
     <BookAddSheet />
@@ -40,3 +62,21 @@ const eyebrow = computed(() => (route.meta.dated ? t('home.today', dateParts(now
     <BookAbandonSheet />
   </div>
 </template>
+
+<style scoped>
+/* The safe area and `md` more (on a pushed screen the top bar's row too):
+   solid room colour behind the status bar's glyphs, fading out below, with the
+   page blurred under the fade. */
+.scroll-edge {
+  --edge-solid: var(--safe-area-top);
+  height: calc(var(--edge-solid) + var(--spacing-md));
+  background: linear-gradient(to bottom, var(--color-surface) calc(var(--edge-solid) * 0.8), transparent);
+  -webkit-backdrop-filter: blur(var(--blur-chrome));
+  backdrop-filter: blur(var(--blur-chrome));
+  mask-image: linear-gradient(to bottom, #000 var(--edge-solid), transparent);
+  transition: opacity var(--duration-quick) var(--ease-standard);
+}
+.under-bar {
+  --edge-solid: calc(var(--safe-area-top) + var(--size-touch));
+}
+</style>
