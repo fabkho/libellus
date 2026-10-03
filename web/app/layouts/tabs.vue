@@ -33,5 +33,6 @@ const eyebrow = computed(() => (route.meta.dated ? t('home.today', dateParts(new
     <BookManualSheet />
     <BookStartSheet />
     <BookFinishSheet />
+    <BookAbandonSheet />
   </div>
 </template>

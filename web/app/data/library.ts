@@ -68,6 +68,10 @@ export type LibraryErrorCode =
   | 'rating_invalid'
   /** A review over 10,000 characters. */
   | 'review_too_long'
+  /** Abandon: a reason over 1,000 characters. */
+  | 'reason_too_long'
+  /** Read again: the entry has no read yet; its first read is Start reading. */
+  | 'never_read'
   | 'not_signed_in'
   | 'unknown'
 
@@ -85,11 +89,16 @@ const RAISED_CODES = [
   'ended_before_started',
   'rating_invalid',
   'review_too_long',
+  'reason_too_long',
+  'never_read',
   'not_signed_in',
 ] as const satisfies readonly LibraryErrorCode[]
 
 /** The longest review a session keeps (the database's limit too). */
 export const REVIEW_MAX_LENGTH = 10_000
+
+/** The longest reason an abandoned read keeps (the database's limit too). */
+export const ABANDON_REASON_MAX_LENGTH = 1000
 
 export type Result<T> = { data: T; error: null } | { data: null; error: LibraryErrorCode }
 
@@ -216,6 +225,16 @@ function sortDay(entry: LibraryEntry): string {
 }
 
 /**
+ * Whether an entry belongs under *Not finished*: it is Finished (nothing is open)
+ * and its latest session was abandoned. A read that was abandoned and then
+ * finished, or started again, is not: the latest session decides. The database
+ * has the same question in `latest_session(e).outcome`.
+ */
+export function isNotFinished(entry: LibraryEntry): boolean {
+  return entry.status === 'finished' && entry.latestSession?.outcome === 'abandoned'
+}
+
+/**
  * A status list in the order the database returns it (`entries`), for lists
  * that change on the device: newest first by the list's day, then by when the
  * entry was added. Entries without that day (a read logged with no end date)
@@ -263,6 +282,18 @@ export type Library = {
     entryId: string,
     finished: { endedOn: string; rating?: number | null; review?: string | null },
   ) => Promise<Result<LibraryEntry>>
+  /**
+   * Ends the open read as abandoned on a day, with an optional reason (trimmed;
+   * blank is none). Returns the entry, now Finished, its latest session
+   * abandoned: it is under *Not finished* (`isNotFinished`).
+   */
+  abandon: (entryId: string, abandoned: { endedOn: string; reason?: string | null }) => Promise<Result<LibraryEntry>>
+  /**
+   * Starts the next read of an entry whose latest session is closed: "Read
+   * again" after a finished read, "Start again" after an abandoned one. The
+   * earlier sessions stay. Returns the entry, now Currently reading.
+   */
+  readAgain: (entryId: string, startedOn: string) => Promise<Result<LibraryEntry>>
   /**
    * The member's entries with one status and their latest sessions, newest
    * first: Want to read by when it was added, Currently reading by the start
@@ -327,6 +358,22 @@ export function createLibrary(client: SupabaseClient): Library {
         p_review: review,
       })
       if (finished.error) return { data: null, error: mapLibraryError(finished.error) }
+      return reread(entryId)
+    },
+
+    async abandon(entryId, { endedOn, reason = null }) {
+      const abandoned = await client.rpc('abandon_reading', {
+        p_entry_id: entryId,
+        p_ended_on: endedOn,
+        p_reason: reason,
+      })
+      if (abandoned.error) return { data: null, error: mapLibraryError(abandoned.error) }
+      return reread(entryId)
+    },
+
+    async readAgain(entryId, startedOn) {
+      const again = await client.rpc('read_again', { p_entry_id: entryId, p_started_on: startedOn })
+      if (again.error) return { data: null, error: mapLibraryError(again.error) }
       return reread(entryId)
     },
 

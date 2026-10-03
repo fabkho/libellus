@@ -3,6 +3,7 @@ import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import {
   createLibrary,
+  isNotFinished,
   sortEntries,
   type EntryStatus,
   type Library,
@@ -21,7 +22,7 @@ export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read']
 /**
  * The member's Library as the screens show it, and the Add sheet. The three
  * Status lists load together when a screen asks and refresh in the background
- * when it comes back; an add, a start or a finish moves the entry into its
+ * when it comes back; an add, a start, a finish, an abandon or a read again moves the entry into its
  * new list at once (`entryChanged`). Signing out (or another member signing
  * in) forgets all of it.
  */
@@ -44,6 +45,12 @@ export const useLibraryStore = defineStore('library', () => {
   const wantToRead = computed(() => lists.want_to_read)
   const reading = computed(() => lists.reading)
   const finished = computed(() => lists.finished)
+  /**
+   * *Not finished*, a filter of Finished: the entries whose latest session was
+   * abandoned, in Finished's order. Derived from the list, so it moves with
+   * every start, finish, abandon and read again like the lists do.
+   */
+  const notFinished = computed(() => lists.finished.filter(isNotFinished))
   /** Whether the lists have been loaded once (the empty state waits for it). */
   const loaded = ref(false)
   const loadError = ref<LibraryErrorCode | null>(null)
@@ -183,6 +190,7 @@ export const useLibraryStore = defineStore('library', () => {
     wantToRead,
     reading,
     finished,
+    notFinished,
     loaded,
     loadError,
     load,

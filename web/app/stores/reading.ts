@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
-import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
+import { isNotFinished, type LibraryEntry, type LibraryErrorCode } from '~/data/library'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 
 /**
- * The Start and Finish sheets (issue #7): which entry each is about, what the
- * member has chosen so far, and the action's progress. Each action is one call
+ * The Start, Finish and Abandon sheets (issues #7, #10): which entry each is
+ * about, what the member has chosen so far, and the action's progress. The
+ * Start sheet also reads a closed Book again (`startKind`). Each action is one call
  * to the Library repository; on success the entry moves to its new list
  * (`library.entryChanged`) and the sheet closes, on failure the sheet stays
  * open with the reason and the same button tries again. Dates are the member's
@@ -28,6 +29,17 @@ export const useReadingStore = defineStore('reading', () => {
 
   /** The entry the Start sheet is about; null while it is closed. */
   const starting = ref<LibraryEntry | null>(null)
+  /**
+   * What the Start sheet does for it: the first read (`start`), the next read
+   * of a Book that was finished (`again`) or of one that was abandoned
+   * (`restart`). The same day row and button; only the database call and the
+   * words differ.
+   */
+  const startKind = computed<'start' | 'again' | 'restart'>(() => {
+    const entry = starting.value
+    if (!entry || entry.status !== 'finished') return 'start'
+    return isNotFinished(entry) ? 'restart' : 'again'
+  })
   const startedOn = ref('')
   const startBusy = ref(false)
   const startError = ref<LibraryErrorCode | null>(null)
@@ -42,7 +54,11 @@ export const useReadingStore = defineStore('reading', () => {
     if (!startBusy.value) starting.value = null
   }
 
-  /** Starts the read. Returns the entry, now Currently reading, or null with `startError` set. */
+  /**
+   * Starts the read: `start_reading` for the first one, `read_again` when the
+   * Book has been read before (the database refuses the wrong one). Returns
+   * the entry, now Currently reading, or null with `startError` set.
+   */
   async function confirmStart(): Promise<LibraryEntry | null> {
     const entry = starting.value
     const repo = library.library()
@@ -51,7 +67,10 @@ export const useReadingStore = defineStore('reading', () => {
     if (startError.value) return null
     startBusy.value = true
     try {
-      const result = await repo.startReading(entry.id, startedOn.value)
+      const result =
+        startKind.value === 'start'
+          ? await repo.startReading(entry.id, startedOn.value)
+          : await repo.readAgain(entry.id, startedOn.value)
       if (result.error) {
         startError.value = result.error
         return null
@@ -118,12 +137,62 @@ export const useReadingStore = defineStore('reading', () => {
     }
   }
 
+  // ----------------------------------------------------------------- Abandon
+
+  /** The entry the Abandon sheet is about; null while it is closed. */
+  const abandoning = ref<LibraryEntry | null>(null)
+  const abandonedOn = ref('')
+  const reason = ref('')
+  const abandonBusy = ref(false)
+  const abandonError = ref<LibraryErrorCode | null>(null)
+  /** The entry the choices above were made for: reopening its sheet keeps them. */
+  let abandonDraftFor: string | null = null
+
+  function openAbandon(entry: LibraryEntry) {
+    abandoning.value = entry
+    abandonError.value = null
+    if (abandonDraftFor === entry.id) return
+    abandonDraftFor = entry.id
+    abandonedOn.value = isoDay()
+    reason.value = ''
+  }
+
+  function closeAbandon() {
+    if (!abandonBusy.value) abandoning.value = null
+  }
+
+  /** Abandons the read. Returns the entry, now Finished (not finished), or null with `abandonError` set. */
+  async function confirmAbandon(): Promise<LibraryEntry | null> {
+    const entry = abandoning.value
+    const repo = library.library()
+    if (!entry || !repo || abandonBusy.value) return null
+    abandonError.value = checkDay(abandonedOn.value, { notBefore: entry.latestSession?.startedOn })
+    if (abandonError.value) return null
+    abandonBusy.value = true
+    try {
+      const result = await repo.abandon(entry.id, { endedOn: abandonedOn.value, reason: reason.value })
+      if (result.error) {
+        abandonError.value = result.error
+        return null
+      }
+      library.entryChanged(result.data)
+      abandoning.value = null
+      abandonDraftFor = null
+      return result.data
+    } finally {
+      abandonBusy.value = false
+    }
+  }
+
   function reset() {
     starting.value = null
     finishing.value = null
+    abandoning.value = null
     startError.value = null
     finishError.value = null
+    abandonError.value = null
     draftFor = null
+    abandonDraftFor = null
   }
 
   const session = useSessionStore()
@@ -136,6 +205,7 @@ export const useReadingStore = defineStore('reading', () => {
 
   return {
     starting,
+    startKind,
     startedOn,
     startBusy,
     startError,
@@ -151,6 +221,14 @@ export const useReadingStore = defineStore('reading', () => {
     openFinish,
     closeFinish,
     confirmFinish,
+    abandoning,
+    abandonedOn,
+    reason,
+    abandonBusy,
+    abandonError,
+    openAbandon,
+    closeAbandon,
+    confirmAbandon,
     reset,
   }
 })

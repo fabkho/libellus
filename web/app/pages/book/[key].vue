@@ -3,10 +3,11 @@
 // lights the room. Under it the title, the author, the facts in small mono,
 // then the Book's state and the one action it asks for — Add to Library for a
 // Book that is not in the Library, Start reading on Want to read, Finish while
-// it is being read (#10 adds Read again and Abandon) — and what the Book is
-// about. Opened from search (a Catalogue Book by id, or a result that is not
+// it is being read (with Abandon beside it), Read again on a finished Book and
+// Start again on an abandoned one — and what the Book is about. Opened from search (a Catalogue Book by id, or a result that is not
 // in the Catalogue yet by its source id) and from the Library. Where a Book
 // came from is never shown.
+import { isNotFinished } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
 import { useReadingStore } from '~/stores/reading'
@@ -39,6 +40,8 @@ const facts = computed(() => {
   )
 })
 const latest = computed(() => entry.value?.latestSession ?? null)
+/** Finished because the read was given up, not because the book was done. */
+const notFinished = computed(() => (entry.value ? isNotFinished(entry.value) : false))
 /** When the state began: added, started (and which day of the read today is), finished. */
 const since = computed(() => {
   const e = entry.value
@@ -96,7 +99,8 @@ function back() {
       >
         <span v-if="entry.status === 'reading'" class="lamp" aria-hidden="true" />
         <UiStars v-if="entry.status === 'finished' && latest?.rating" :quarters="latest.rating" size="md" data-testid="book.rating" />
-        <span data-testid="book.status">{{ t(`status.${entry.status}`) }}</span>
+        <UiIcon v-if="notFinished" name="slash" :size="14" class="text-ink-faint" />
+        <span data-testid="book.status">{{ notFinished ? t('status.notFinished') : t(`status.${entry.status}`) }}</span>
         <span class="dot text-ink-ghost" aria-hidden="true" />
         <span class="figures text-meta text-ink-faint" data-testid="book.since">{{ since }}</span>
       </p>
@@ -110,8 +114,23 @@ function back() {
       <UiButton v-else-if="entry.status === 'want_to_read'" block data-testid="book.start" @click="reading.openStart(entry)">
         <UiIcon name="arrow" :size="18" bold />{{ t('book.start') }}
       </UiButton>
-      <UiButton v-else-if="entry.status === 'reading'" block data-testid="book.finish" @click="reading.openFinish(entry)">
-        <UiIcon name="check" :size="18" bold />{{ t('book.finish') }}
+      <div v-else-if="entry.status === 'reading'" class="flex gap-ms">
+        <UiButton class="flex-1" data-testid="book.finish" @click="reading.openFinish(entry)">
+          <UiIcon name="check" :size="18" bold />{{ t('book.finish') }}
+        </UiButton>
+        <UiButton tone="secondary" data-testid="book.abandon" @click="reading.openAbandon(entry)">
+          {{ t('book.abandon') }}
+        </UiButton>
+      </div>
+      <!-- Closed: the next read starts a new session; the earlier ones stay. -->
+      <UiButton
+        v-else
+        tone="quiet"
+        block
+        :data-testid="notFinished ? 'book.startAgain' : 'book.readAgain'"
+        @click="reading.openStart(entry)"
+      >
+        <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
     </div>
 
