@@ -30,10 +30,23 @@
      off the top edge where the device reports no inset — a browser tab, whose
      own toolbar the row would otherwise touch. */
   --bar-top: max(var(--safe-area-top), var(--spacing-bar-top));
-  /* Where floating chrome sits: `tabBarDrop` into the home-indicator inset,
-     so 21 pt off the screen edge on a Face ID iPhone like iOS 26's tab bar, or
-     a little off the edge where there is no indicator. */
-  --float-bottom: max(calc(var(--safe-area-bottom) - var(--spacing-tab-bar-drop)), var(--spacing-ms));
+  /* Where floating chrome (the tab bar, the search palette) sits: `floatAbove`
+     above the system's bottom inset, as Material 3 floats its toolbar. Android's
+     navigation fills its inset (Chrome edge to edge: the gesture handle in a
+     24 px inset; three-button navigation: 0, the page ends above the buttons),
+     so nothing of the capsule may go into it; with no inset at all (a desktop
+     browser, Chrome's keyboard up) that is `floatAbove` off the edge. */
+  --float-bottom: calc(var(--safe-area-bottom) + var(--spacing-float-above));
+}
+
+/* iOS (only WebKit on an iPhone or iPad knows -webkit-touch-callout) draws its
+   home indicator at the very bottom of a 34 pt inset, so there floating chrome
+   sits `tabBarDrop` into the inset: 21 pt off the screen edge on a Face ID
+   iPhone, like iOS 26's tab bar, or `ms` off the edge without an indicator. */
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --float-bottom: max(calc(var(--safe-area-bottom) - var(--spacing-tab-bar-drop)), var(--spacing-ms));
+  }
 }
 
 /* One utility for the screen padding. */
