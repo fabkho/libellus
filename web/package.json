@@ -10,7 +10,9 @@
     "postinstall": "nuxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "import:fable": "tsx scripts/import-fable.ts",
+    "seed:dev": "tsx scripts/import-fable.ts --email dev@libellus.local --prune"
   },
   "dependencies": {
     "@fontsource/geist": "^5.3.0",
@@ -31,7 +33,9 @@
     "@types/pg": "^8.23.1",
     "@vite-pwa/nuxt": "^1.1.1",
     "pg": "^8.23.1",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.3"
   }
