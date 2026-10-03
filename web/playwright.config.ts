@@ -19,7 +19,7 @@ const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 // In CI (the e2e job in .github/workflows/ci.yml) every run starts on an empty
 // database and the dev server compiles on demand, so the run is made patient
 // rather than parallel: two workers fit the runner's two cores next to the
-// stack, a failed test is retried once (locally it fails at once, so a flake is
+// stack (three starved them: taps waited on frames that came too late), a failed test is retried once (locally it fails at once, so a flake is
 // seen), and the first failure leaves a trace, a screenshot and the HTML report
 // to upload.
 const CI = Boolean(process.env.CI)
@@ -30,7 +30,7 @@ export default defineConfig({
   globalTeardown: './e2e/global-teardown.ts',
   forbidOnly: CI,
   retries: CI ? 1 : 0,
-  workers: CI ? 3 : undefined,
+  workers: CI ? 2 : undefined,
   timeout: CI ? 60_000 : 30_000,
   expect: { timeout: CI ? 10_000 : 5_000 },
   reporter: CI ? [['list'], ['github'], ['html', { open: 'never' }]] : 'list',
