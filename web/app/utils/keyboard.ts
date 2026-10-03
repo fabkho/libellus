@@ -1,12 +1,31 @@
 /**
- * The geometry behind following the iOS keyboard (composables/useKeyboardInset.ts,
+ * The geometry behind following the on-screen keyboard (composables/useKeyboardInset.ts,
  * components/ui/Sheet.vue, components/shell/SearchOverlay.vue). Pure, so a native port copies it and the tests pin it.
+ *
+ * Two models meet here. iOS lays the keyboard over the page: the layout viewport
+ * (where `position: fixed` things sit) keeps its height and only the visual
+ * viewport shrinks, so the palette and the sheets lift themselves by what is
+ * covered. Chrome on Android, told `interactive-widget=resizes-content`
+ * (nuxt.config.ts), shrinks the layout viewport itself: nothing is covered, the
+ * inset reads 0 and fixed chrome already stands on the keyboard — no second lift.
  */
+
+/**
+ * The layout viewport's height: the larger of `innerHeight` and the root's
+ * `clientHeight`. Usually they agree; where a browser takes `innerHeight` from
+ * the visual viewport (Chromium does while pinch-zoomed, and has done for the
+ * keyboard), `clientHeight` still is the layout viewport, and where Safari has
+ * collapsed its toolbar `innerHeight` is the taller, current one.
+ */
+export function layoutHeightOf(innerHeight: number, clientHeight: number): number {
+  return Math.max(innerHeight, clientHeight)
+}
 
 /**
  * How much of the window the keyboard covers: the part of the layout viewport
  * the visual viewport neither shows nor has scrolled past. 0 without a visual
- * viewport (or with the keyboard down).
+ * viewport, with the keyboard down, or where the keyboard resized the layout
+ * viewport instead (Chrome on Android with `resizes-content`).
  */
 export function keyboardInsetOf(windowHeight: number, viewport: { height: number; offsetTop: number } | null): number {
   if (!viewport) return 0

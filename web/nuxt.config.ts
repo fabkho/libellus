@@ -25,9 +25,15 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: 'en' },
       meta: [
-        // viewport-fit=cover so the installed app can draw under the notch;
-        // screens pad with env(safe-area-inset-*) through `screen-inset`.
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        // viewport-fit=cover so the installed app can draw under the notch (and
+        // Chrome on Android edge to edge, behind its gesture bar); screens pad
+        // with env(safe-area-inset-*) through the utilities in main.css.
+        // interactive-widget=resizes-content: Chrome on Android shrinks the page
+        // to what the keyboard leaves, so whatever sits at the bottom (the search
+        // palette, a sheet) stands on the keyboard by itself, the way an Android
+        // app's window resizes. Safari ignores it and lays the keyboard over the
+        // page, which useKeyboardInset follows instead.
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content' },
         // One per appearance, so the device decides while no theme is chosen;
         // a chosen theme overwrites both (utils/theme.ts, applyPreference). No
         // `key`: the head manager tells the two apart by `media` and adopts the

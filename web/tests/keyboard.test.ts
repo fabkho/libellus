@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { keyboardInsetOf, paletteLift, revealDelta, sheetLift } from '@/utils/keyboard'
+import { keyboardInsetOf, layoutHeightOf, paletteLift, revealDelta, sheetLift } from '@/utils/keyboard'
 
 /**
- * Following the iOS keyboard (composables/useKeyboardInset.ts, UiSheet): how
+ * Following the on-screen keyboard (composables/useKeyboardInset.ts, UiSheet): how
  * much of the window it covers, how far a sheet goes up to sit on it, and how
  * far the sheet's body scrolls to show the focused field.
  */
@@ -20,6 +20,32 @@ describe('the keyboard inset', () => {
     expect(keyboardInsetOf(852, null)).toBe(0)
     // Pinch-zoomed out past the window: nothing is covered.
     expect(keyboardInsetOf(852, { height: 900, offsetTop: 0 })).toBe(0)
+  })
+})
+
+// What Chrome 145 on a Pixel 9 emulator (411 × 923, gesture navigation) reported
+// in a browser tab, its toolbar shown: 813 tall without the keyboard; with Gboard
+// up the gesture inset goes and 477 of 789 stay visible (e2e/android/smoke.ts).
+describe('the keyboard inset on Android', () => {
+  it('is the covered part when Chrome lays the keyboard over the page (resizes-visual)', () => {
+    expect(keyboardInsetOf(layoutHeightOf(789, 789), { height: 477, offsetTop: 0 })).toBe(312)
+    // Chrome panned the page up to show a field under the keyboard: the fixed sheet is in view.
+    expect(keyboardInsetOf(layoutHeightOf(789, 789), { height: 477, offsetTop: 312 })).toBe(0)
+  })
+
+  it('still finds the layout viewport where innerHeight follows the visual viewport', () => {
+    expect(layoutHeightOf(477, 789)).toBe(789)
+    expect(keyboardInsetOf(layoutHeightOf(477, 789), { height: 477, offsetTop: 0 })).toBe(312)
+  })
+
+  it('is 0 when Chrome resizes the page to the keyboard (resizes-content): no second lift', () => {
+    expect(keyboardInsetOf(layoutHeightOf(477, 477), { height: 477, offsetTop: 0 })).toBe(0)
+  })
+
+  it('takes the taller height where Safari has collapsed its toolbar', () => {
+    // iPhone 16 Safari: the small viewport (clientHeight) 659, the current one 745.
+    expect(layoutHeightOf(745, 659)).toBe(745)
+    expect(layoutHeightOf(852, 852)).toBe(852)
   })
 })
 
