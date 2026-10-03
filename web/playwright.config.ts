@@ -30,7 +30,7 @@ export default defineConfig({
   globalTeardown: './e2e/global-teardown.ts',
   forbidOnly: CI,
   retries: CI ? 1 : 0,
-  workers: CI ? 2 : undefined,
+  workers: CI ? 3 : undefined,
   timeout: CI ? 60_000 : 30_000,
   expect: { timeout: CI ? 10_000 : 5_000 },
   reporter: CI ? [['list'], ['github'], ['html', { open: 'never' }]] : 'list',
