@@ -1,4 +1,4 @@
-import { isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js'
+import { isAuthRetryableFetchError, type SupabaseClient, type User } from '@supabase/supabase-js'
 
 /**
  * Every way the access flow can fail, as a stable code. The data layer never
@@ -38,8 +38,33 @@ export type CodeRequest =
   | { kind: 'unknownEmail' }
   | { kind: 'error'; code: AuthErrorCode }
 
-/** Who is signed in. Only what the app shows; the token never leaves the client. */
-export type Member = { id: string; email: string }
+/**
+ * Who is signed in. Only what the app shows; the token never leaves the client.
+ * `name`: the first name she gave for the greeting (and the avatar), if any.
+ */
+export type Member = { id: string; email: string; name?: string }
+
+/** The longest name the greeting takes. */
+export const MEMBER_NAME_MAX = 40
+
+/**
+ * A name as it is kept: trimmed, inner runs of spaces made one, at most
+ * `MEMBER_NAME_MAX` characters; nothing left means no name.
+ */
+export function cleanName(raw: string | null | undefined): string | null {
+  const name = [...(raw ?? '').trim().replace(/\s+/gu, ' ')].slice(0, MEMBER_NAME_MAX).join('').trim()
+  return name || null
+}
+
+/**
+ * The member a Supabase user is. The name lives in the account's own metadata
+ * (`user_metadata.name`, set by `setName`): one optional field needs no table.
+ */
+export function memberOf(user: User | null | undefined): Member | null {
+  if (!user?.email) return null
+  const name = cleanName(typeof user.user_metadata?.name === 'string' ? user.user_metadata.name : null)
+  return name ? { id: user.id, email: user.email, name } : { id: user.id, email: user.email }
+}
 
 type AuthFailure = { message: string; code?: string }
 
@@ -164,8 +189,7 @@ export function createAuth(client: SupabaseClient) {
     /** The session stored on this device, if any. Read locally; no round trip. */
     async currentMember(): Promise<Member | null> {
       const { data } = await client.auth.getSession()
-      const user = data.session?.user
-      return user?.email ? { id: user.id, email: user.email } : null
+      return memberOf(data.session?.user)
     },
 
     /**
@@ -178,8 +202,7 @@ export function createAuth(client: SupabaseClient) {
      */
     async restoreMember(): Promise<{ member: Member | null; unreachable: boolean }> {
       const { data, error } = await client.auth.getSession()
-      const user = data.session?.user
-      const member = user?.email ? { id: user.id, email: user.email } : null
+      const member = memberOf(data.session?.user)
       return { member, unreachable: !member && isAuthRetryableFetchError(error) }
     },
 
@@ -190,10 +213,24 @@ export function createAuth(client: SupabaseClient) {
      */
     onMemberChange(listener: (member: Member | null) => void): () => void {
       const { data } = client.auth.onAuthStateChange((_event, session) => {
-        const user = session?.user
-        listener(user?.email ? { id: user.id, email: user.email } : null)
+        listener(memberOf(session?.user))
       })
       return () => data.subscription.unsubscribe()
+    },
+
+    /**
+     * Sets the first name the greeting uses, or clears it (null or blank).
+     * Refused offline before anything is sent (`online`), as every write is.
+     * Returns the member as the server now has it.
+     */
+    async setName(
+      name: string | null,
+      { online = () => true }: { online?: () => boolean } = {},
+    ): Promise<{ member: Member | null; error: AuthErrorCode | 'offline' | null }> {
+      if (!online()) return { member: null, error: 'offline' }
+      const { data, error } = await client.auth.updateUser({ data: { name: cleanName(name) } })
+      if (error) return { member: null, error: mapAuthError(error) }
+      return { member: memberOf(data.user), error: null }
     },
 
     /** Ends the session on this device and revokes it on the server. */

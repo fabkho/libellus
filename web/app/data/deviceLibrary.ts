@@ -26,8 +26,11 @@ export const DEVICE_LIBRARY_VERSION = 1
 export const DEVICE_LIBRARY_KEY = `${LOCAL_DATA_PREFIX}library`
 export const DEVICE_COLLECTIONS_KEY = `${LOCAL_DATA_PREFIX}collections`
 
-/** Who the saved Library belongs to: also how the app knows who was signed in when it starts offline. */
-export type SavedMember = { id: string; email: string }
+/**
+ * Who the saved Library belongs to: also how the app knows who was signed in
+ * when it starts offline (with her name, so the greeting does not lose it).
+ */
+export type SavedMember = { id: string; email: string; name?: string }
 
 export type SavedLibrary = {
   member: SavedMember
@@ -107,7 +110,10 @@ export function readLibrary(storage: DeviceStorage, memberId: string): SavedLibr
 /** The member whose Library this device holds: who was signed in, for a start without a connection. */
 export function readSavedMember(storage: DeviceStorage): SavedMember | null {
   const member = read<SavedLibrary>(storage, DEVICE_LIBRARY_KEY)?.member
-  return member?.id && member.email ? { id: member.id, email: member.email } : null
+  if (!member?.id || !member.email) return null
+  return typeof member.name === 'string' && member.name
+    ? { id: member.id, email: member.email, name: member.name }
+    : { id: member.id, email: member.email }
 }
 
 /** Writes the member's Collections. Returns whether the storage took it. */

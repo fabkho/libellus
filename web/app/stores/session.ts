@@ -206,6 +206,38 @@ export const useSessionStore = defineStore('session', () => {
     error.value = null
   }
 
+  // ------------------------------------------------------------- the name
+
+  /** The name sheet's save is on its way. */
+  const nameBusy = ref(false)
+  const nameError = ref<AuthErrorCode | 'offline' | null>(null)
+
+  /**
+   * Sets the first name the greeting and the avatar use, or clears it (blank).
+   * Returns whether it was saved; on a refusal `nameError` says why.
+   */
+  async function setName(name: string): Promise<boolean> {
+    const client = auth()
+    if (!client || nameBusy.value) return false
+    nameBusy.value = true
+    nameError.value = null
+    try {
+      const result = await client.setName(name, { online: isOnline })
+      if (result.error || !result.member) {
+        nameError.value = result.error ?? 'unknown'
+        return false
+      }
+      adopt(result.member)
+      return true
+    } finally {
+      nameBusy.value = false
+    }
+  }
+
+  function clearNameError() {
+    nameError.value = null
+  }
+
   /** Ends the session, then forgets what the device cached about the member. */
   async function signOut() {
     await auth()?.signOut()
@@ -229,6 +261,10 @@ export const useSessionStore = defineStore('session', () => {
     resend,
     changeEmail,
     clearError,
+    nameBusy,
+    nameError,
+    setName,
+    clearNameError,
     signOut,
   }
 })
