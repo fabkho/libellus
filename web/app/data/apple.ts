@@ -1,4 +1,5 @@
 import { isValidIsbn13, type BookSnapshot } from './books'
+import { decodeEntities } from './entities'
 import { abortError, getJson, type FetchLike } from './fetching'
 import type { Found } from './merge'
 
@@ -79,22 +80,15 @@ export function splitAuthors(artistName: string | undefined): string[] {
   return authors
 }
 
-const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
-
 /** Apple's HTML blurb as plain text: paragraphs kept, tags dropped, entities decoded. */
 export function plainText(html: string | undefined): string | null {
   if (!html) return null
-  const text = html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(?:p|div|li|h\d)>/gi, '\n\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, name: string) => {
-      if (name[0] === '#') {
-        const code = name[1] === 'x' || name[1] === 'X' ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1))
-        return Number.isFinite(code) ? String.fromCodePoint(code) : whole
-      }
-      return ENTITIES[name.toLowerCase()] ?? whole
-    })
+  const text = decodeEntities(
+    html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(?:p|div|li|h\d)>/gi, '\n\n')
+      .replace(/<[^>]*>/g, ''),
+  )
     .split('\n')
     .map((line) => line.replace(/[ \t]+/g, ' ').trim())
     .join('\n')
@@ -106,13 +100,13 @@ export function plainText(html: string | undefined): string | null {
 /** One Apple result as a Book snapshot; null for anything that is not a usable ebook. */
 export function snapshotFromApple(item: AppleItem): BookSnapshot | null {
   if (item.kind && item.kind !== 'ebook') return null
-  const title = item.trackName?.trim()
+  const title = decodeEntities(item.trackName ?? '').trim()
   if (!item.trackId || !title) return null
   const artwork = item.artworkUrl100 ?? item.artworkUrl60
   const year = Number(item.releaseDate?.slice(0, 4))
   return {
     title,
-    authors: splitAuthors(item.artistName),
+    authors: splitAuthors(decodeEntities(item.artistName ?? '')),
     isbn13: isbnFromArtwork(artwork),
     isbn10: null,
     pageCount: null,
