@@ -10,7 +10,7 @@ import { useCollectionsStore } from '~/stores/collections'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 
-/** A candidate's identity in the list: its first edition key (a Catalogue id, an ISBN-13, a source id). */
+/** A candidate's identity when picked: its first edition key (a Catalogue id, an ISBN-13, a source id). */
 export function candidateKey(book: Book | BookSnapshot): string {
   return editionKeys(book)[0] ?? book.title
 }
@@ -111,9 +111,19 @@ export const useEditionStore = defineStore('edition', () => {
     error.value = null
   }
 
+  /**
+   * Whether a Book is the picked one. A row keeps its place while a slower
+   * source fills in its details (data/editions.ts, `appendEditions`), which can
+   * add a key in front of the one it was picked by (an ISBN-13 before an Apple
+   * id): the pick follows any of the row's keys.
+   */
+  function isPicked(book: Book | BookSnapshot): boolean {
+    return picked.value !== null && editionKeys(book).includes(picked.value)
+  }
+
   /** The picked candidate, unless it is the edition the entry has. */
   const choice = computed(() => {
-    const found = candidates.value.find((candidate) => candidateKey(candidate.book) === picked.value)
+    const found = candidates.value.find((candidate) => isPicked(candidate.book))
     return found && !found.current ? found : null
   })
 
@@ -162,5 +172,5 @@ export const useEditionStore = defineStore('edition', () => {
     },
   )
 
-  return { changing, candidates, pending, failed, picked, busy, error, choice, open, close, pick, look, confirm, reset }
+  return { changing, candidates, pending, failed, picked, busy, error, choice, isPicked, open, close, pick, look, confirm, reset }
 })

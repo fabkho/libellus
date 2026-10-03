@@ -235,6 +235,7 @@
       "hint": "Pick the edition you hold. Your reads, ratings and collections stay with the book.",
       "listLabel": "Editions",
       "current": "Your edition",
+      "ebook": "ebook",
       "loading": "Looking for other editions…",
       "none": "No other editions found.",
       "failed": "Other editions didn't load.",
