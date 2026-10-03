@@ -5,9 +5,11 @@
 // it), so on a phone a tap opens the native wheel or calendar. `min` and `max`
 // keep impossible days out of the picker where the platform honours them; the
 // sheet checks the day again either way. `v-model` is `YYYY-MM-DD`, or ''
-// when the picker was cleared. The input carries `testid`.
+// when the picker was cleared (`placeholder` says what an empty day means, for
+// a day that is optional). The input carries `testid`.
 const model = defineModel<string>({ required: true })
-withDefaults(defineProps<{ label: string; testid: string; min?: string; max?: string; invalid?: boolean }>(), {
+withDefaults(defineProps<{ label: string; testid: string; min?: string; max?: string; invalid?: boolean; placeholder?: string }>(), {
+  placeholder: undefined,
   min: undefined,
   max: undefined,
   invalid: false,
@@ -30,7 +32,7 @@ function openPicker(event: MouseEvent) {
 <template>
   <UiRow :label="label" icon="calendar" chevron class="active:bg-fill-strong">
     <span class="figures text-caption" :class="invalid ? 'text-error' : model ? 'text-ink' : 'text-ink-ghost'">
-      {{ model ? relativeDay(model) : t('common.chooseDay') }}
+      {{ model ? relativeDay(model) : (placeholder ?? t('common.chooseDay')) }}
     </span>
     <input
       v-model="model"

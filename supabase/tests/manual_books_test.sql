@@ -104,7 +104,7 @@ select throws_ok(
   '22023', 'isbn_invalid', 'and an ISBN-10 whose check digit is wrong');
 select throws_ok(
   $$ select public.add_manual_book('Reading', array['Nobody'], null, null, 'reading') $$,
-  '22023', 'status_unsupported', 'a status this version cannot add with yet is refused');
+  '22023', 'date_invalid', 'adding straight to Currently reading needs its start date (add_with_status_test.sql has the rest)');
 
 select is(
   (select count(*)::integer from public.books where title in ('Bad isbn', 'Zero pages', 'No author')),

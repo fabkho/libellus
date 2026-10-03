@@ -3,12 +3,14 @@
 // search. Title and author required, ISBN and pages optional. The Placeholder
 // cover on top previews what the shelf will show; it follows the title as it is
 // typed. The one action is Add (top right, like every sheet) or the button at
-// the bottom. A wrong field is marked in the error colour with its reason right
-// under the group; a failed call stays in the sheet. After the add the search
-// is over and the Book's page opens.
+// the bottom. Below the fields, the Status to add it with and the dates that
+// go with it (AddStatusFields.vue, shared with the Add sheet). A wrong field
+// is marked in the error colour with its reason right under the group; a
+// failed call stays in the sheet. After the add the search is over and the
+// Book's page opens.
 import { useManualStore } from '~/stores/manual'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const manual = useManualStore()
 const router = useRouter()
 
@@ -40,6 +42,13 @@ const previewAuthors = computed(() => [manual.author.trim() || t('manual.field.a
 const reason = computed(() => {
   for (const field of FIELDS) if (manual.invalid[field.key]) return t(`manual.invalid.${field.key}`)
   return null
+})
+
+/** The call's own reasons are worded here; the Status part's (days, Rating) are the Library's. */
+const errorText = computed(() => {
+  const code = manual.error
+  if (!code) return ''
+  return te(`manual.error.${code}`) ? t(`manual.error.${code}`) : t(`library.error.${code}`)
 })
 
 async function submit() {
@@ -90,8 +99,13 @@ async function submit() {
       </template>
 
       <p v-if="reason" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="manual.invalid">{{ reason }}</p>
-      <p v-else-if="manual.error" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="manual.error">
-        {{ t(`manual.error.${manual.error}`) }}
+
+      <div class="mt-ms">
+        <BookAddStatusFields v-model="manual.draft" testid="manual" :error="manual.error" :busy="manual.busy" />
+      </div>
+
+      <p v-if="!reason && manual.error" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="manual.error">
+        {{ errorText }}
       </p>
 
       <p class="mx-xs mt-ml mb-lg flex items-start gap-sm text-footnote text-ink-faint" data-testid="manual.private">

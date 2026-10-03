@@ -48,8 +48,8 @@ export type LibraryErrorCode =
   | 'already_in_library'
   /** The snapshot cannot enter the Catalogue (no title, no ISBN or source id). */
   | 'book_invalid'
-  /** A status this version cannot add with yet (#9). */
-  | 'status_unsupported'
+  /** Days, a Rating or a review that do not belong to the Status (dates on Want to read, a Rating on Currently reading …). */
+  | 'session_invalid'
   /** No such entry in the member's Library (gone, or never theirs). */
   | 'entry_not_found'
   /** Start: the entry is being read already. */
@@ -79,7 +79,7 @@ export type LibraryErrorCode =
 const RAISED_CODES = [
   'already_in_library',
   'book_invalid',
-  'status_unsupported',
+  'session_invalid',
   'entry_not_found',
   'already_reading',
   'already_finished',
@@ -99,6 +99,96 @@ export const REVIEW_MAX_LENGTH = 10_000
 
 /** The longest reason an abandoned read keeps (the database's limit too). */
 export const ABANDON_REASON_MAX_LENGTH = 1000
+/**
+ * What an entry is added with (issue #9): its Status and the first read that
+ * goes with it. Currently reading needs `startedOn`; Finished needs `endedOn`
+ * (and may have `startedOn`, `rating` in quarters 1–20 and a `review`); Want to
+ * read has none of them. The database refuses what does not fit, with the
+ * codes of start and finish.
+ */
+export type AddWith = {
+  status?: EntryStatus
+  startedOn?: string | null
+  endedOn?: string | null
+  rating?: number | null
+  review?: string | null
+}
+
+/**
+ * What the Add sheets collect before anything is sent: the Status and the
+ * choices that go with it. Days are `YYYY-MM-DD` or '' (not chosen); `rating`
+ * is quarters, 1–20, or null (unrated).
+ */
+export type AddDraft = {
+  status: EntryStatus
+  startedOn: string
+  endedOn: string
+  rating: number | null
+  review: string
+}
+
+/** A new draft: Want to read, nothing else chosen. */
+export function newAddDraft(): AddDraft {
+  return { status: 'want_to_read', startedOn: '', endedOn: '', rating: null, review: '' }
+}
+
+/**
+ * Chooses a Status on a draft and gives it the days that Status starts with:
+ * Currently reading started `today`; Finished ended `today`, with no start
+ * (a past read often has none). The Rating and review stay, so a second
+ * thought does not lose them.
+ */
+export function chooseAddStatus(draft: AddDraft, status: EntryStatus, today: string): void {
+  if (draft.status === status) return
+  draft.status = status
+  draft.startedOn = status === 'reading' ? today : ''
+  draft.endedOn = status === 'finished' ? today : ''
+}
+
+/** What the draft adds the Book with: only the choices that belong to its Status. */
+export function addWithFromDraft(draft: AddDraft): AddWith {
+  if (draft.status === 'reading') return { status: 'reading', startedOn: draft.startedOn }
+  if (draft.status === 'finished') {
+    return {
+      status: 'finished',
+      startedOn: draft.startedOn,
+      endedOn: draft.endedOn,
+      rating: draft.rating,
+      review: draft.review,
+    }
+  }
+  return { status: 'want_to_read' }
+}
+
+/**
+ * What is wrong with the draft's days, before anything is sent: a missing or
+ * malformed day, one after `today` (the member's own), an end before the
+ * start. The database refuses the same, and is the authority.
+ */
+export function checkAddDraft(draft: AddDraft, today: string): LibraryErrorCode | null {
+  const isDay = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day)
+  if (draft.status === 'reading') {
+    if (!isDay(draft.startedOn)) return 'date_invalid'
+    return draft.startedOn > today ? 'date_in_future' : null
+  }
+  if (draft.status === 'finished') {
+    if (!isDay(draft.endedOn) || (draft.startedOn && !isDay(draft.startedOn))) return 'date_invalid'
+    if (draft.endedOn > today || draft.startedOn > today) return 'date_in_future'
+    if (draft.startedOn && draft.endedOn < draft.startedOn) return 'ended_before_started'
+  }
+  return null
+}
+
+/** `AddWith` as the trailing arguments of `add_to_library` and `add_manual_book`. */
+export function addWithArguments({ status = 'want_to_read', startedOn, endedOn, rating, review }: AddWith) {
+  return {
+    p_status: status,
+    p_started_on: startedOn || null,
+    p_ended_on: endedOn || null,
+    p_rating: rating ?? null,
+    p_review: review || null,
+  }
+}
 
 export type Result<T> = { data: T; error: null } | { data: null; error: LibraryErrorCode }
 
@@ -265,9 +355,10 @@ export function mapLibraryError(failure: { message?: string; code?: string }): L
 export type Library = {
   /**
    * Puts a Book into the member's Library: finds or adds the Catalogue Book and
-   * creates the entry, in one call. Fails with `already_in_library` the second time.
+   * creates the entry with its Status and first read (`AddWith`), in one call.
+   * Fails with `already_in_library` the second time.
    */
-  addToLibrary: (book: BookSnapshot, options?: { status?: EntryStatus }) => Promise<Result<LibraryEntry>>
+  addToLibrary: (book: BookSnapshot, options?: AddWith) => Promise<Result<LibraryEntry>>
   /**
    * Starts the first read of a Want to read entry on a day (`YYYY-MM-DD`, the
    * member's today by default in the caller). Returns the entry, now
@@ -332,8 +423,8 @@ export function createLibrary(client: SupabaseClient): Library {
     return read.data ? { data: read.data, error: null } : { data: null, error: 'entry_not_found' }
   }
 
-  async function addToLibrary(book: BookSnapshot, { status = 'want_to_read' }: { status?: EntryStatus } = {}) {
-    const added = await client.rpc('add_to_library', { p_book: bookToRow(book), p_status: status })
+  async function addToLibrary(book: BookSnapshot, options: AddWith = {}) {
+    const added = await client.rpc('add_to_library', { p_book: bookToRow(book), ...addWithArguments(options) })
     if (added.error) return { data: null, error: mapLibraryError(added.error) }
     // The function returns the entry; the Book comes with it in a second read
     // (as the Catalogue holds it, which may be an earlier snapshot than ours).

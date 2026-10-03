@@ -123,7 +123,7 @@
     "error": {
       "already_in_library": "This book is already in your Library.",
       "book_invalid": "This book can't be added: it is missing what we need to keep it.",
-      "status_unsupported": "That status can't be chosen yet.",
+      "session_invalid": "Those dates, that rating or review don't go with that status.",
       "not_signed_in": "Sign in again to add books.",
       "unknown": "Something went wrong. Please try again.",
       "entry_not_found": "This book isn't in your Library any more.",
@@ -189,8 +189,18 @@
     "title": "Add to Library",
     "statusLabel": "Status",
     "needs": {
-      "want_to_read": "No dates"
+      "want_to_read": "No dates",
+      "reading": "Start date",
+      "finished": "Dates, rating"
     },
+    "datesLabel": "Dates",
+    "startedOn": "Started on",
+    "notSet": "Not set",
+    "clearStarted": "Remove start date",
+    "endedOn": "Finished on",
+    "review": "Review",
+    "optional": "optional",
+    "reviewPlaceholder": "What stayed with you?",
     "action": "Add to Library",
     "busy": "Adding…"
   },
@@ -218,7 +228,6 @@
       "book_invalid": "This book can't be added: check the title, author and pages.",
       "isbn_invalid": "That isn't a valid ISBN. Check the digits, or leave it empty.",
       "already_in_library": "This book is already in your Library.",
-      "status_unsupported": "That status can't be chosen yet.",
       "not_signed_in": "Sign in again to add books.",
       "unknown": "Something went wrong. Please try again."
     }

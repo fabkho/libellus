@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseIsbn } from './books'
-import { createLibrary, mapLibraryError, type LibraryEntry, type LibraryErrorCode } from './library'
+import { addWithArguments, createLibrary, mapLibraryError, type AddWith, type LibraryEntry, type LibraryErrorCode } from './library'
 
 /**
  * Manual books (issue #1, Manual books): a Book a member typed in by hand. It
@@ -44,21 +44,23 @@ export function validateManualBook(input: ManualBookInput): Partial<Record<Manua
 
 export type ManualBooks = {
   /**
-   * Makes a Manual book owned by the member and puts it into her Library on
-   * Want to read, in one call. Returns the entry.
+   * Makes a Manual book owned by the member and puts it into her Library, in
+   * one call, with the Status and first read she chose (`AddWith`; Want to read
+   * without). Returns the entry.
    */
-  addManualBook: (input: ManualBookInput) => Promise<ManualBookResult>
+  addManualBook: (input: ManualBookInput, options?: AddWith) => Promise<ManualBookResult>
 }
 
 export function createManualBooks(client: SupabaseClient): ManualBooks {
   return {
-    async addManualBook(input) {
+    async addManualBook(input, options = {}) {
       const pages = input.pageCount?.trim()
       const added = await client.rpc('add_manual_book', {
         p_title: input.title,
         p_authors: [input.author],
         p_isbn: input.isbn?.trim() || null,
         p_page_count: pages ? Number(pages) : null,
+        ...addWithArguments(options),
       })
       if (added.error) {
         if (added.error.message?.includes('isbn_invalid')) return { data: null, error: 'isbn_invalid' }

@@ -2,22 +2,29 @@ import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import {
+  addWithFromDraft,
+  checkAddDraft,
   createLibrary,
   isNotFinished,
+  newAddDraft,
   sortEntries,
+  type AddDraft,
   type EntryStatus,
   type Library,
   type LibraryEntry,
   type LibraryErrorCode,
 } from '~/data/library'
+import { isoDay } from '~/utils/dates'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 
 /**
- * The statuses the Add sheet offers. Only *Want to read* in #6; #9 adds
- * Currently reading and Finished with their dates, here and in the sheet.
+ * The statuses the Add sheets offer, in the order they are listed: a Book can
+ * be added Want to read, Currently reading (with its start date) or Finished
+ * (with its dates, Rating and review), and the entry gets its first read in
+ * the same call.
  */
-export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read']
+export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 
 /**
  * The member's Library as the screens show it, and the Add sheet. The three
@@ -115,13 +122,17 @@ export const useLibraryStore = defineStore('library', () => {
 
   /** The Book the Add sheet is about; null while it is closed. */
   const adding = ref<BookSnapshot | Book | null>(null)
-  const addStatus = ref<EntryStatus>('want_to_read')
+  /** The Status and first read the member is adding the Book with (`AddDraft`). */
+  const addDraft = reactive<AddDraft>(newAddDraft())
   const addBusy = ref(false)
   const addError = ref<LibraryErrorCode | null>(null)
 
+  // A change of mind is a new try: the last refusal no longer applies.
+  watch(addDraft, () => (addError.value = null))
+
   function openAdd(book: BookSnapshot | Book) {
     adding.value = book
-    addStatus.value = 'want_to_read'
+    Object.assign(addDraft, newAddDraft())
     addError.value = null
   }
 
@@ -133,14 +144,17 @@ export const useLibraryStore = defineStore('library', () => {
    * Adds the sheet's Book. A Book that is not in the Catalogue yet gets its
    * Cover resolved first (the first image of the cover chain that will do, with
    * its thumbhash and colours; the Placeholder cover if none will). One
-   * database call does the rest. Returns the entry, or null with `addError` set.
+   * database call does the rest (the entry and, for Currently reading and
+   * Finished, its first read). Returns the entry, or null with `addError` set.
    */
   async function confirmAdd(): Promise<LibraryEntry | null> {
     const book = adding.value
     const repo = library()
     if (!book || !repo || addBusy.value) return null
+    // A day the database would refuse is told before anything is sent (or a cover looked up).
+    addError.value = checkAddDraft(addDraft, isoDay())
+    if (addError.value) return null
     addBusy.value = true
-    addError.value = null
     try {
       let snapshot: BookSnapshot = { ...book }
       if (!('id' in book)) {
@@ -152,7 +166,7 @@ export const useLibraryStore = defineStore('library', () => {
         })
         snapshot = { ...snapshot, ...cover }
       }
-      const result = await repo.addToLibrary(snapshot, { status: addStatus.value })
+      const result = await repo.addToLibrary(snapshot, addWithFromDraft(addDraft))
       if (result.error) {
         addError.value = result.error
         return null
@@ -198,7 +212,7 @@ export const useLibraryStore = defineStore('library', () => {
     remember,
     entryChanged,
     adding,
-    addStatus,
+    addDraft,
     addBusy,
     addError,
     openAdd,
