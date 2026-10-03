@@ -126,6 +126,42 @@ Known gaps: the German National Library's covers are found for German editions b
 server answers browsers with a bot page, so they need rehosting first; follow-up issue); Regal's
 Goodreads second opinion on read dates is not part of the import.
 
+#### Feeding Regal
+
+[Regal](https://github.com/fabkho/regal), the owner's 3D bookshelf on fabkho.dev/books, reads one
+file: a [Regal library file](https://github.com/fabkho/regal/blob/main/docs/library-file.md)
+(version 2). Libellus writes it from a member's Library with `web/scripts/export-regal.ts` (#22),
+read only: one Book per Library entry (the edition's id as its id), the Status from the latest
+Reading session (`read`, `dnf`, `currently-reading`, `to-read`), the date read, Rating and review
+from the last finished read, the read count, ISBN, pages, publisher, blurb, the Cover URL and a
+palette from the Cover's colours. The mapping is `web/app/data/export/regal.ts` (pure, pinned by a
+fixture); the file is checked with Regal's validator, vendored in
+`web/app/data/export/regalLibraryFile.ts` with the Regal commit it came from (run the tests with
+`REGAL_DIR=<regal checkout>` to compare it with Regal's own). Want to read stays out unless
+`--statuses` asks for it. Libellus has no series, binding or Spine art: Regal assets fills what it
+can.
+
+The daily chain, run by the owner's job (hosted Libellus, never `--publish` by hand while testing):
+
+```sh
+# 1. Libellus → library file, keeping the art Regal shows now (hosted, read only)
+cd web
+SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… pnpm export:regal --target hosted --confirm-host <project host> \
+  --email <owner> --owner Fabian --carry-art https://books.fabkho.dev/v2/library.json \
+  --out ../.data/regal/library-v2.json
+# 2. in a Regal checkout: Spines, backs, pile copies and colours, then publish under v2/
+pnpm regal-assets --in <libellus>/.data/regal/library-v2.json --no-ai --no-model --revalidate --publish v2
+```
+
+`--carry-art` takes the file that is published now: every exported Book it has (by ISBN-13, else by
+title and first author's surname, so a Book whose edition changed in Libellus still finds it) keeps
+its published front, Spine, back and colours, so the portfolio's paid AI art survives; a Book it does
+not have gets the Libellus Cover, and Regal draws its Spine and back (or `regal-assets` without
+`--no-ai` makes them). Published art sticks: a matched Book keeps it when its Libellus Cover changes.
+The export is deterministic and is not rewritten when only `generatedAt` would change, so Regal
+assets finds every Book in its cache and uploads nothing on a quiet day. `pnpm export:regal --help`
+lists the options (`--statuses`, `--time-zone`, `--generated-at`).
+
 ### Local services
 
 Studio at http://127.0.0.1:55323, the local mailbox (sign-in codes) at http://127.0.0.1:55324.
@@ -138,7 +174,8 @@ web/          Nuxt 4 SPA + PWA — the reference app (rules: web/AGENTS.md)
   i18n/locales/ en.json, every string the UI shows
   tests/        Vitest data-layer suite against the local stack
   e2e/          Playwright flows, iPhone viewport in WebKit
-  scripts/      import-fable.ts, the Fable import and dev seed (web/scripts/fable/)
+  scripts/      import-fable.ts, the Fable import and dev seed (web/scripts/fable/); export-regal.ts,
+                the Regal library file (web/app/data/export/)
 scripts/      create-invite-code.sh, the owner's tool for minting invite codes
 design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests

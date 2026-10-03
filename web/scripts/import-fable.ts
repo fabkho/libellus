@@ -39,6 +39,7 @@ import { parseReadingTracker, type Overrides } from '../app/data/import/readingT
 import { lookupEdition, lookupKey, withLookup, type EditionLookup } from './fable/covers'
 import { LookupCache, nodeLookupDeps } from './fable/node'
 import { findMemberId, writeImport } from './fable/write'
+import { resolveTarget } from './shared/target'
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 const dataDir = join(repoRoot, '.data', 'fable-import')
@@ -92,33 +93,10 @@ function readOverrides(): { overrides: Overrides; path: string | null } {
 
 // ----------------------------------------------------------------- the target
 
-function target(): { url: string; serviceKey: string; label: string } {
-  if (args.target === 'local') {
-    // Always the stack this checkout runs, whatever SUPABASE_URL says: an
-    // exported hosted URL must never turn a dev seed into a production write.
-    let env: string
-    try {
-      env = execFileSync('supabase', ['status', '-o', 'env'], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
-    } catch {
-      fail('no local stack answering: run `supabase start` in the repo root')
-    }
-    const value = (name: string) => env.match(new RegExp(`^${name}="?([^"\\n]+)"?$`, 'm'))?.[1]
-    const url = value('API_URL')
-    const serviceKey = value('SERVICE_ROLE_KEY')
-    if (!url || !serviceKey) fail('`supabase status` reported no API_URL or SERVICE_ROLE_KEY')
-    if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(url)) fail(`the local stack's URL is not local: ${url}`)
-    return { url, serviceKey, label: `local ${url}` }
-  }
-  if (args.target === 'hosted') {
-    const url = process.env.SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!url || !serviceKey) fail('--target hosted needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY exported')
-    const host = new URL(url).host
-    if (args['confirm-host'] !== host) fail(`--target hosted writes to ${host}; repeat it with --confirm-host ${host}`)
-    return { url, serviceKey, label: `hosted ${host}` }
-  }
-  fail(`unknown --target "${args.target}" (local or hosted)`)
-}
+// Local: always the stack this checkout runs, whatever SUPABASE_URL says, so an
+// exported hosted URL never turns a dev seed into a production write (scripts/shared/target.ts).
+const target = () =>
+  resolveTarget({ target: args.target, confirmHost: args['confirm-host'], repoRoot, action: 'writes to', fail })
 
 // ------------------------------------------------------------------- the run
 

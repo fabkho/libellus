@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-01T06:00:00Z",
+  "books": [
+    { "id": "min-01", "title": "Only the Required Fields", "authors": [], "status": "read" }
+  ]
+}
