@@ -18,6 +18,9 @@
 // has scrolled under it (a book's light at the top of its page stays clear),
 // and on a pushed screen it reaches under the pinned top bar too. It never
 // takes a tap.
+//
+// The header and `main` are the page (`data-flight="page"`): what fades when a
+// cover flies into a book page and back (ShellBookFlight, docs/MOTION.md).
 const { t, locale } = useI18n()
 const route = useRoute()
 
@@ -40,9 +43,9 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
 
 <template>
   <div class="safe-x mx-auto flex min-h-dvh w-full max-w-(--size-max-content) flex-col sm:border-x-(length:--stroke-hairline) sm:border-hairline">
-    <ShellHeader v-if="!pushed" :screen="screen" :title="title" :size="titleSize" :eyebrow="eyebrow" />
+    <ShellHeader v-if="!pushed" :screen="screen" :title="title" :size="titleSize" :eyebrow="eyebrow" data-flight="page" />
 
-    <main class="clear-tab-bar flex-1" :class="!pushed && 'px-screen pt-lg'">
+    <main class="clear-tab-bar flex-1" :class="!pushed && 'px-screen pt-lg'" data-flight="page">
       <slot />
     </main>
 
@@ -52,6 +55,7 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
       aria-hidden="true"
       data-testid="shell.scrollEdge"
     />
+    <ShellBookFlight />
     <ShellTabBar />
     <ShellSearchOverlay><SearchResults /></ShellSearchOverlay>
     <BookAddSheet />

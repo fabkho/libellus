@@ -13,6 +13,8 @@
 // at 30–40 px it is noise, so the cloth, the rule and the mark carry it. The
 // title stays in the accessible name. `fallback` tells the parent when the
 // Placeholder is showing (the page's glow then takes the cloth's colour).
+// The sheet (`data-cover`: image or cloth, without the glow) is what flies
+// between a list and the book page (composables/useBookFlight.ts).
 import type { CoverColors } from '~/utils/cover'
 
 const props = withDefaults(
@@ -90,7 +92,7 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
       <span v-else class="pool" :style="glowStyle" aria-hidden="true" />
     </template>
 
-    <div class="sheet relative size-full overflow-hidden shadow-cover" :class="RADII[size]" :style="underlay">
+    <div class="sheet relative size-full overflow-hidden shadow-cover" :class="RADII[size]" :style="underlay" data-cover>
       <img
         v-if="showImage"
         :src="src!"
