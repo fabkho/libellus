@@ -3,7 +3,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # TEMPORARY: lets the e2e job run on this branch before a pull request exists.
+    branches: [main, fabkho/e2e-ci]
 
 concurrency:
   group: ci-${{ github.ref }}
