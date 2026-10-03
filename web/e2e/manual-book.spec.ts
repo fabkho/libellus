@@ -60,10 +60,10 @@ test('a member adds a book by hand when search finds nothing and sees it in the 
   await page.getByTestId('book.back').click()
   await expect(page).toHaveURL(/\/library$/)
   await expect(page.getByTestId('library.entryTitle')).toHaveText(['Meine Notizen'])
-  // No image: the entry wears the generated cover, title and author on cloth.
+  // No image: the entry wears the generated cover, cloth with its rule and mark (title and author are set in type from `md` up: the book page).
   const cover = page.getByTestId('library.entry').getByRole('img', { name: 'Meine Notizen' })
   await expect(cover).toBeVisible()
-  await expect(cover).toContainText('Ida Beispiel')
+  await expect(cover).not.toContainText('Ida Beispiel')
 
   // It is the member's own Manual book, and in nobody's Catalogue.
   const [stored] = await sql<{ source: string; owner_id: string; isbn13: string; page_count: number }>(

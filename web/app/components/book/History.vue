@@ -3,18 +3,19 @@
 // #11): every read of the Book as a thin thread, newest first. A node for each
 // (lit for the one being read), its name — "First read", "Second read", or
 // "Reading now" — the outcome (Finished, Not finished), the Rating as stars,
-// the days it ran and how many, then its review (or the reason it was put
+// the days it ran and how many (counted inclusively, as everywhere: "day 13"
+// for the read in progress, "13 days" for a finished one, "1 day" for a read
+// that began and ended on one day, which also shows one date), then its review (or the reason it was put
 // down) in the serif. Edit opens the Edit sheet for that read. The block
 // reads the history itself and again whenever the entry changes (a finish,
 // an abandon, a read again, an edit elsewhere on the page).
-import { daysBetween } from '~/utils/dates'
 import type { LibraryEntry, ReadingSession } from '~/data/library'
 import { useHistoryStore } from '~/stores/history'
 
 const props = defineProps<{ entry: LibraryEntry }>()
 
 const { t } = useI18n()
-const { formatDay } = useDays()
+const { formatDay, dayOfRead } = useDays()
 const history = useHistoryStore()
 
 watch(() => props.entry, (entry) => void history.load(entry.id), { immediate: true })
@@ -32,11 +33,12 @@ function name(read: ReadingSession, index: number): string {
   return ordinal ? t(`history.ordinal.${ordinal}`) : t('history.nth', { n })
 }
 
-/** "3 Oct – 10 Oct", "Since 3 Oct" for an open read, whichever day a logged-later read has. */
+/** "3 Oct – 10 Oct", "3 Oct" for a read begun and ended on one day, "Since 3 Oct" for an open read, whichever day a logged-later read has. */
 function dates(read: ReadingSession): string {
   const { startedOn, endedOn } = read
   if (!read.outcome) return startedOn ? t('history.since', { date: formatDay(startedOn) }) : ''
   if (startedOn && endedOn) {
+    if (startedOn === endedOn) return formatDay(endedOn)
     const sameYear = startedOn.slice(0, 4) === endedOn.slice(0, 4)
     return t('history.range', { from: formatDay(startedOn, { year: !sameYear }), to: formatDay(endedOn) })
   }
@@ -45,10 +47,11 @@ function dates(read: ReadingSession): string {
   return t('history.undated')
 }
 
-/** How long the read ran: start to end, or start to today while it is open. Unknown when a day is missing. */
+/** How long the read ran, both ends counted: "day 13" while it is open (as the status line says), "13 days" once closed. Unknown when a day is missing. */
 function days(read: ReadingSession): string {
   if (!read.startedOn || (read.outcome && !read.endedOn)) return ''
-  const count = daysBetween(read.startedOn, read.endedOn ?? isoDay())
+  if (!read.outcome) return t('history.day', { day: dayOfRead(read.startedOn) })
+  const count = daysSpanned(read.startedOn, read.endedOn!)
   return t('history.days', { count }, count)
 }
 
@@ -87,7 +90,7 @@ function outcome(read: ReadingSession): string {
           </p>
           <button
             type="button"
-            class="edit -my-sm -mr-sm flex min-h-(--size-touch) items-center px-sm text-subhead text-ink-muted"
+            class="edit -my-sm -mr-sm flex min-h-(--size-touch) min-w-(--size-touch) items-center justify-end px-sm text-subhead text-ink-muted"
             :aria-label="t('history.editLabel', { name: name(read, index) })"
             data-testid="history.edit"
             @click="history.openEdit(entry, read)"

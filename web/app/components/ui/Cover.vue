@@ -7,7 +7,12 @@
 // dark. `glow` puts the lamp light behind it: a blurred copy of the image, or,
 // until there is one, a pool in the cover's own precomputed colours.
 // No image (or a broken one) → the Placeholder cover: cloth-bound, title and
-// author set in type, a thin inset rule (CONTEXT.md, Placeholder cover).
+// author set in type, a thin inset rule (CONTEXT.md, Placeholder cover). The
+// type is clamped to what fits (a long title steps down in size and ends in an
+// ellipsis, the author in two lines), and under `md` there is no type at all:
+// at 30–40 px it is noise, so the cloth, the rule and the mark carry it. The
+// title stays in the accessible name. `fallback` tells the parent when the
+// Placeholder is showing (the page's glow then takes the cloth's colour).
 import type { CoverColors } from '~/utils/cover'
 
 const props = withDefaults(
@@ -24,6 +29,8 @@ const props = withDefaults(
   }>(),
   { authors: () => [], src: null, thumbhash: null, colors: null, size: 'sm', glow: false, eager: false },
 )
+
+const emit = defineEmits<{ fallback: [value: boolean] }>()
 
 const { t } = useI18n()
 
@@ -48,6 +55,12 @@ watch(
 )
 
 const showImage = computed(() => Boolean(props.src) && !failed.value)
+watch(showImage, (shown) => emit('fallback', !shown), { immediate: true })
+
+/** Under `md` the Placeholder is cloth, rule and mark only. */
+const compact = computed(() => props.size === 'xs' || props.size === 'sm')
+/** A longer title is set smaller (and clamped to more lines), so it fits whole where it can. */
+const titleTier = computed(() => (props.title.length <= 36 ? 'short' : props.title.length <= 70 ? 'medium' : 'long'))
 
 // What shows under the image while it loads. Data, not design: the colours and
 // the thumbhash are the cover's own.
@@ -58,9 +71,12 @@ const underlay = computed(() => {
   return {}
 })
 
+// The pool behind the cover: in the cover's own colours, or in the cloth's
+// while the Placeholder shows (a broken image's colours would light the wrong room).
 const glowStyle = computed(() => {
+  if (!showImage.value) return { '--pool-a': `color-mix(in srgb, ${cloth.value} 55%, white)`, '--pool-b': cloth.value }
   const glow = glowOf(props.colors)
-  return { '--glow-a': glow.a, '--glow-b': glow.b }
+  return { '--pool-a': `rgb(${glow.a})`, '--pool-b': `rgb(${glow.b})` }
 })
 
 const cloth = computed(() => `var(--color-cloth${clothOf(props.title)})`)
@@ -86,11 +102,16 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
         @load="loaded = true"
         @error="failed = true"
       />
-      <div v-else class="cloth" :style="{ background: cloth }" role="img" :aria-label="title">
+      <div v-else class="cloth" :class="compact && 'compact'" :style="{ background: cloth }" role="img" :aria-label="title">
         <span class="rule" />
-        <span class="cloth-title">{{ title }}</span>
-        <span class="mark" />
-        <span class="cloth-author">{{ authorLine }}</span>
+        <template v-if="compact">
+          <span class="mark" />
+        </template>
+        <template v-else>
+          <span class="cloth-title" :class="`tier-${titleTier}`">{{ title }}</span>
+          <span class="mark" />
+          <span v-if="authorLine" class="cloth-author">{{ authorLine }}</span>
+        </template>
       </div>
       <span class="finish" aria-hidden="true" />
     </div>
@@ -120,8 +141,8 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
   position: absolute;
   inset: -12% -24%;
   background:
-    radial-gradient(50% 46% at 50% 52%, rgb(var(--glow-a) / 0.55), transparent 72%),
-    radial-gradient(40% 30% at 80% 20%, rgb(var(--glow-b) / 0.3), transparent 70%);
+    radial-gradient(50% 46% at 50% 52%, color-mix(in srgb, var(--pool-a) 55%, transparent), transparent 72%),
+    radial-gradient(40% 30% at 80% 20%, color-mix(in srgb, var(--pool-b) 30%, transparent), transparent 70%);
   filter: blur(calc(var(--blur-halo) / 2));
   opacity: var(--opacity-halo);
   pointer-events: none;
@@ -156,6 +177,15 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
   color: var(--color-cloth-ink);
 }
 
+/* No type: the mark sits in the middle of the cloth. */
+.cloth.compact {
+  justify-content: center;
+}
+
+.compact .mark {
+  margin: 0;
+}
+
 .rule {
   position: absolute;
   inset: max(3px, 5cqi);
@@ -164,17 +194,36 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 }
 
 .cloth-title {
+  min-width: 0;
+  max-width: 100%;
   margin-top: 18%;
   font-family: var(--font-serif);
   font-size: max(5px, 12.5cqi);
   font-weight: var(--font-weight-medium);
   line-height: 1.12;
-  overflow-wrap: break-word;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+}
+
+/* Heights in cqi: cover 150, minus padding 20, the title's top margin 18, the
+   mark 18 and two author lines 16 leaves 78 for the title: 4 × 14, 6 × 11.8, 8 × 9.5. */
+.tier-medium {
+  font-size: max(5px, 10.5cqi);
+  -webkit-line-clamp: 6;
+}
+
+.tier-long {
+  font-size: max(5px, 8.5cqi);
+  -webkit-line-clamp: 8;
 }
 
 .mark {
   width: max(6px, 14cqi);
   height: var(--stroke-hairline);
+  flex-shrink: 0;
   margin: 9% 0;
   background: color-mix(in srgb, var(--color-cloth-ink) 55%, transparent);
 }
@@ -186,5 +235,12 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.78;
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
 }
 </style>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, daysBetween, isoDay, parseDay } from '@/utils/dates'
+import { addDays, daysBetween, daysSpanned, isoDay, parseDay } from '@/utils/dates'
 import { quartersAt, ratingX, starFills, stepQuarters, wholeStarsAt } from '@/utils/rating'
 
 /**
@@ -56,5 +56,17 @@ describe('calendar days', () => {
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01')
     expect(daysBetween('2026-10-01', '2026-10-01')).toBe(0)
     expect(daysBetween('2026-03-01', '2026-04-01')).toBe(31)
+  })
+
+  it('of a read are counted at both ends: one rule for the status line, the cards and the history', () => {
+    // Begun and ended on one day: 1 day (day 1 while it is open).
+    expect(daysSpanned('2026-10-01', '2026-10-01')).toBe(1)
+    expect(daysSpanned('2026-10-03', '2026-10-05')).toBe(3)
+    expect(daysSpanned('2026-02-27', '2026-03-02')).toBe(4)
+    // Across daylight saving and years.
+    expect(daysSpanned('2026-03-28', '2026-03-30')).toBe(3)
+    expect(daysSpanned('2025-12-31', '2026-01-01')).toBe(2)
+    // An end before its start (clock changes, a logged-later read) is still 1 day.
+    expect(daysSpanned('2026-10-05', '2026-10-03')).toBe(1)
   })
 })
