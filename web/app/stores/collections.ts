@@ -236,6 +236,19 @@ export const useCollectionsStore = defineStore('collections', () => {
     if (loaded.value) void loadList()
   }
 
+  /**
+   * An entry now points at another edition (issue #41, changed here): it stays
+   * on every Collection, so the pages shown here show its new Book in its
+   * place, and the list's covers are read again.
+   */
+  function entryChanged(entry: LibraryEntry) {
+    for (const [id, shown] of pages) {
+      const entries = shown.collection?.entries ?? []
+      if (entries.some((e) => e.id === entry.id)) setEntries(id, entries.map((e) => (e.id === entry.id ? entry : e)))
+    }
+    if (loaded.value) void loadList()
+  }
+
   async function removeEntry(id: string, entryId: string): Promise<CollectionErrorCode | null> {
     const collections = repo()
     if (!collections) return 'unknown'
@@ -494,6 +507,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     closeNaming,
     submitName,
     entryRemoved,
+    entryChanged,
     reset,
   }
 })

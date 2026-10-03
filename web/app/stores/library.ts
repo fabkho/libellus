@@ -160,6 +160,18 @@ export const useLibraryStore = defineStore('library', () => {
   }
 
   /**
+   * An entry now points at another edition (issue #41, changed here): the keys
+   * of the old Book's pages forget it (that Book is not in the Library any
+   * more; the entry is under its new Book's key), search's results learn which
+   * edition she has, and it takes its place in its list as `entryChanged` does.
+   */
+  function editionChanged(entry: LibraryEntry) {
+    for (const [key, known] of entryByKey) if (known.id === entry.id) entryByKey.delete(key)
+    search.markRemoved(entry.id)
+    entryChanged(entry)
+  }
+
+  /**
    * An entry left the Library (removed here): it leaves its list, and the book
    * pages that show it and search's results learn it is gone, without a reload.
    */
@@ -195,6 +207,21 @@ export const useLibraryStore = defineStore('library', () => {
   }
 
   /**
+   * A Book about to enter the Catalogue (an add, a new edition) gets its Cover
+   * resolved first, once: Apple artwork → Apple by ISBN → OpenLibrary by cover
+   * id or ISBN → the Placeholder cover (data/covers.ts, resolveBookCover), with
+   * its thumbhash and colours. A Catalogue Book keeps the Cover it has.
+   */
+  async function withCover(book: BookSnapshot | Book): Promise<BookSnapshot> {
+    if ('id' in book) return { ...book }
+    const cover = await resolveBookCover(book, {
+      probe: probeImageInBrowser,
+      lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
+    })
+    return { ...book, ...cover }
+  }
+
+  /**
    * Adds the sheet's Book. A Book that is not in the Catalogue yet gets its
    * Cover resolved first (the first image of the cover chain that will do, with
    * its thumbhash and colours; the Placeholder cover if none will). One
@@ -210,17 +237,7 @@ export const useLibraryStore = defineStore('library', () => {
     if (addError.value) return null
     addBusy.value = true
     try {
-      let snapshot: BookSnapshot = { ...book }
-      if (!('id' in book)) {
-        // Apple artwork → Apple by ISBN → OpenLibrary by cover id or ISBN →
-        // the Placeholder cover (data/covers.ts, resolveBookCover).
-        const cover = await resolveBookCover(snapshot, {
-          probe: probeImageInBrowser,
-          lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
-        })
-        snapshot = { ...snapshot, ...cover }
-      }
-      const result = await repo.addToLibrary(snapshot, addWithFromDraft(addDraft))
+      const result = await repo.addToLibrary(await withCover(book), addWithFromDraft(addDraft))
       if (result.error) {
         addError.value = result.error
         return null
@@ -311,7 +328,9 @@ export const useLibraryStore = defineStore('library', () => {
     entryByKey,
     remember,
     entryChanged,
+    editionChanged,
     entryRemoved,
+    withCover,
     adding,
     addDraft,
     addBusy,

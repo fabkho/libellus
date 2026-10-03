@@ -7,7 +7,7 @@
 // Start again on an abandoned one — and what the Book is about. Opened from search (a Catalogue Book by id, or a result that is not
 // in the Catalogue yet by its source id) and from the Library. Where a Book
 // came from is never shown.
-import { isNotFinished } from '~/data/library'
+import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
 import { useReadingStore } from '~/stores/reading'
@@ -61,6 +61,11 @@ const expanded = ref(false)
 watch(key, () => (expanded.value = false))
 
 const optionsOpen = ref(false)
+
+/** The entry now has another Book (#41): the page moves to its address, in place of this one. */
+function editionChanged(changed: LibraryEntry) {
+  void router.replace(`/book/${changed.book.id}`)
+}
 
 function back() {
   // Back to where the member came from, with its scroll; a page opened from a
@@ -151,6 +156,7 @@ function back() {
     <BookHistory v-if="entry" :entry="entry" />
     <BookEditSessionSheet />
     <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" @removed="back" />
+    <BookEditionSheet @changed="editionChanged" />
 
     <section v-if="description" class="relative px-ml pt-xl" data-testid="book.about">
       <h2 class="eyebrow mb-ms">{{ t('book.about') }}</h2>
