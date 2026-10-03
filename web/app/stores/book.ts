@@ -55,6 +55,7 @@ export const useBookStore = defineStore('book', () => {
     const seen = search.seenBook(key)
     const catalogued = await repo.catalogueBook({
       appleId: parsed.kind === 'apple' ? parsed.appleId : undefined,
+      openLibraryEditionKey: parsed.kind === 'openlibrary' ? parsed.editionKey : undefined,
       isbn13: parsed.kind === 'isbn' ? parsed.isbn13 : (seen?.isbn13 ?? undefined),
     })
     if (catalogued.error) {
@@ -72,7 +73,11 @@ export const useBookStore = defineStore('book', () => {
     try {
       const source = search.repository()
       const book =
-        parsed.kind === 'apple' ? await source.lookupApple(parsed.appleId) : await source.lookupIsbn(parsed.isbn13)
+        parsed.kind === 'apple'
+          ? await source.lookupApple(parsed.appleId)
+          : parsed.kind === 'openlibrary'
+            ? await source.lookupOpenLibrary(parsed.editionKey)
+            : await source.lookupIsbn(parsed.isbn13)
       return { phase: book ? 'ready' : 'missing', book, entry: null, error: null }
     } catch {
       return { phase: 'error', book: null, entry: null, error: 'unknown' }

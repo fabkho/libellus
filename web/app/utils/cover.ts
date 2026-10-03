@@ -1,6 +1,7 @@
 import { thumbHashToDataURL } from 'thumbhash'
 import type { CoverColors } from '../data/books'
-import { appleArtwork } from '../data/search'
+import { appleArtwork } from '../data/apple'
+import { openLibraryCoverAt } from '../data/openLibrary'
 
 /**
  * Pure helpers behind the Cover component (components/ui/Cover.vue): the
@@ -98,10 +99,12 @@ const COVER_FETCH = { xs: [200, 300], sm: [200, 300], md: [300, 450], lg: [300, 
 /**
  * The image to load for a cover shown at `size`. Apple's CDN renders any size
  * from the stored large URL, so a list row does not download the book page's
- * image; other sources come as they are.
+ * image; OpenLibrary has three sizes (its medium for small covers); other
+ * sources come as they are.
  */
 export function coverSrc(url: string | null | undefined, size: keyof typeof COVER_FETCH): string | null {
   if (!url) return null
   const [width, height] = COVER_FETCH[size]
-  return /mzstatic\.com\//.test(url) ? appleArtwork(url, width, height) : url
+  if (/mzstatic\.com\//.test(url)) return appleArtwork(url, width, height)
+  return openLibraryCoverAt(url, size === 'xs' || size === 'sm' ? 'M' : 'L')
 }

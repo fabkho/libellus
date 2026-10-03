@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
-import { loadPixelsInBrowser, resolveCover } from '~/data/covers'
+import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import { createLibrary, type EntryStatus, type Library, type LibraryEntry, type LibraryErrorCode } from '~/data/library'
-import { appleArtwork } from '~/data/search'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 
@@ -74,9 +73,9 @@ export const useLibraryStore = defineStore('library', () => {
 
   /**
    * Adds the sheet's Book. A Book that is not in the Catalogue yet gets its
-   * Cover resolved first (thumbhash and colours from a small copy of the
-   * image); if that fails it goes in without them. One database call does the
-   * rest. Returns the entry, or null with `addError` set.
+   * Cover resolved first (the first image of the cover chain that will do, with
+   * its thumbhash and colours; the Placeholder cover if none will). One
+   * database call does the rest. Returns the entry, or null with `addError` set.
    */
   async function confirmAdd(): Promise<LibraryEntry | null> {
     const book = adding.value
@@ -85,15 +84,15 @@ export const useLibraryStore = defineStore('library', () => {
     addBusy.value = true
     addError.value = null
     try {
-      const snapshot: BookSnapshot = { ...book }
-      if (!('id' in book) && snapshot.coverUrl && !snapshot.coverThumbhash) {
-        // A small copy, not the one on screen: its own URL, so no cached
-        // non-CORS response of the large image can taint the canvas.
-        const cover = await resolveCover(appleArtwork(snapshot.coverUrl, 100, 150), loadPixelsInBrowser)
-        if (cover) {
-          snapshot.coverThumbhash = cover.thumbhash
-          snapshot.coverColors = cover.colors
-        }
+      let snapshot: BookSnapshot = { ...book }
+      if (!('id' in book)) {
+        // Apple artwork → Apple by ISBN → OpenLibrary by cover id or ISBN →
+        // the Placeholder cover (data/covers.ts, resolveBookCover).
+        const cover = await resolveBookCover(snapshot, {
+          probe: probeImageInBrowser,
+          lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
+        })
+        snapshot = { ...snapshot, ...cover }
       }
       const result = await repo.addToLibrary(snapshot, { status: addStatus.value })
       if (result.error) {

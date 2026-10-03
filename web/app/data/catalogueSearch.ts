@@ -28,10 +28,10 @@ export function createCatalogueSearch(client: SupabaseClient): CatalogueSearch {
       const isbn = parseIsbn(query)
       let request = client.rpc('search_books', { p_query: isbn ?? query, p_limit: CATALOGUE_LIMIT })
       if (signal) request = request.abortSignal(signal)
-      const { data, error } = await request.returns<BookRow[]>()
+      const { data, error } = await request
       if (signal?.aborted) throw abortError()
       if (error) throw new Error(error.message)
-      return data.map((row) => ({ book: bookFromRow(row), source: 'catalogue' as const, popularity: 0 }))
+      return ((data ?? []) as BookRow[]).map((row) => ({ book: bookFromRow(row), source: 'catalogue' as const, popularity: 0 }))
     },
 
     async libraryEntries() {
