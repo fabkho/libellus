@@ -309,43 +309,52 @@ test('a failed save says why and tries again', async ({ page }) => {
   await expect(page.getByTestId('home.progressValue')).toHaveText('p. 50 of 300')
 })
 
-test('offline the wheel still turns, but nothing saves: Save, Finish, Update and Undo say "Offline"', async ({ page }) => {
+test('offline the progress still saves: it waits to sync, Undo works, and it syncs once online (#93)', async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Offline', 300), { status: 'reading', startedOn: isoDay() })
   await page.reload()
 
-  // A save first, so Undo is on offer when the connection goes.
+  // A save online first.
   await page.getByTestId('home.update').click()
   await typeOn(page, 'progress.wheel', 30)
   await page.getByTestId('progress.action').click()
   await expect(page.getByTestId('home.undo')).toBeVisible()
-  await page.context().setOffline(true)
-  await expect(page.getByTestId('home.undo')).toBeDisabled()
-  await expect(page.getByTestId('home.undo')).toHaveText(en.common.offline)
-  await expect(page.getByTestId('home.update')).toBeDisabled({ timeout: 8_000 })
-  await expect(page.getByTestId('home.update')).toHaveText(en.common.offline)
+  await expect(page.getByTestId('home.undo')).toBeHidden({ timeout: 8_000 })
 
-  // The sheet open when the connection went: the wheel turns, Save and Finish say Offline.
-  await page.context().setOffline(false)
+  // Offline the card and the sheet work as before; the save waits to sync and says so.
+  await page.context().setOffline(true)
+  await expect(page.getByTestId('home.update')).toBeEnabled()
   await page.getByTestId('home.update').click()
-  await page.context().setOffline(true)
-  await expect(page.getByTestId('progress.action')).toHaveText(en.common.offline)
-  await expect(page.getByTestId('progress.action')).toBeDisabled()
-  await expect(page.getByTestId('progress.finish')).toHaveText(en.common.offline)
-  await page.getByTestId('progress.plus').click()
-  await expect(page.getByTestId('progress.wheel')).toHaveAttribute('aria-valuenow', '31')
-  await page.getByTestId('progress.cancel').click()
+  await expect(page.getByTestId('progress.action')).toHaveText(en.book.progress.save)
+  await expect(page.getByTestId('progress.finish')).toContainText(en.book.finish)
+  await typeOn(page, 'progress.wheel', 45)
+  await page.getByTestId('progress.action').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 45 of 300')
+  await expect(page.getByTestId('shell.syncLabel')).toHaveText(en.sync.chip.replace('{count}', '1'))
 
-  // The book page's Update progress too; back online, it opens again.
-  await page.context().setOffline(false)
-  await page.getByTestId('home.entry').click()
-  await expect(page.getByTestId('book.updateProgress')).toBeEnabled()
-  await page.context().setOffline(true)
-  await expect(page.getByTestId('book.updateProgress')).toBeDisabled()
-  await expect(page.getByTestId('book.updateProgress')).toHaveText(en.common.offline)
-  await page.context().setOffline(false)
-  await expect(page.getByTestId('book.updateProgress')).toBeEnabled()
+  // Undo, offline too.
+  await page.getByTestId('home.undo').click()
+  await expect(page.getByTestId('home.progressValue')).toHaveText('p. 30 of 300')
+  await expect(page.getByTestId('shell.syncLabel')).toHaveText(en.sync.chip.replace('{count}', '2'))
+
+  // Nothing reached the database yet.
   expect((await sessionOf(member.email))[0]!.progress_page).toBe(30)
+
+  // Back online: both sync, in order; nothing waits any more.
+  await page.context().setOffline(false)
+  await expect(page.getByTestId('shell.sync')).toBeHidden()
+  await expect.poll(async () => (await sessionOf(member.email))[0]!.progress_page).toBe(30)
+  expect(
+    await sql<{ day: string }>(
+      `select d.day::text from public.reading_progress_days d
+         join public.reading_sessions s on s.id = d.session_id
+         join public.library_entries e on e.id = s.entry_id
+         join auth.users u on u.id = e.member_id
+        where u.email = $1 and d.end_page = 45`,
+      [member.email],
+    ),
+  ).toEqual([])
 })
 
 /** Gives the read days of reading before today, as #68 books them (the database takes only a day either side of now). */
