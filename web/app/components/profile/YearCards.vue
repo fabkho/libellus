@@ -13,7 +13,7 @@ const { count } = useFigures()
 <template>
   <section id="years" class="flex flex-col gap-md" data-testid="profile.yearCards">
     <h2 class="eyebrow">{{ t('profile.years.title') }}</h2>
-    <div class="no-bar -mx-screen flex gap-ms overflow-x-auto px-screen pb-md">
+    <div class="scrollbar-none -mx-screen flex gap-ms overflow-x-auto px-screen pb-md">
       <NuxtLink
         v-for="y in years"
         :key="y.year"
@@ -48,12 +48,6 @@ const { count } = useFigures()
 </template>
 
 <style scoped>
-.no-bar {
-  scrollbar-width: none;
-}
-.no-bar::-webkit-scrollbar {
-  display: none;
-}
 .card {
   width: calc(var(--size-cover-xl) * 1.6);
   min-height: calc(var(--size-cover-xl) * 1.2);

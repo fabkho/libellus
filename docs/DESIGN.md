@@ -200,6 +200,11 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
   their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
   and the years either side (they replace the page, so Back is the Profile).
+- **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
+  own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
+  follows the theme, so native parts — the date picker, autofill — do too); Safari, without
+  `scrollbar-color`, gets the same thumb inset from the edge. Rows that scroll sideways (Up next,
+  the Profile's year pills and year cards) show none: `scrollbar-none` (`main.css`).
 - **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
   once something has scrolled under it a thin veil of the surface colour keeps the clock legible:
   solid behind the status bar (the top inset), fading to nothing `ms` below it. No blur, and it
