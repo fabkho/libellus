@@ -107,9 +107,11 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
 
 ## 6. Non-functional
 
-- Offline: precached shell; the last-loaded Library readable offline; writes disabled and labelled
-  "Offline"; search falls back to the Library. Writes are shaped so a queue can be added later inside
-  the repositories.
+- Offline: precached shell; the last-loaded Library readable offline; search falls back to the
+  Library. Writes on rows the member already has wait in an outbox on the device and sync in order
+  once online, at most once each (#93, `sync_write`); the writes that need the connection (search,
+  imports, Goodreads, Change edition, a new Collection, deleting a read, adding a search result) are
+  disabled and labelled "Offline".
 - Speed: ~220 ms debounced search with aborts, thumbhash placeholders, preloaded first covers,
   keep-alive pages, navigation on pointer-down. Covers resolved once, cached by the service worker.
 - Privacy: minimal data, EU region, no trackers. Keys never committed.
