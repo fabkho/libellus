@@ -22,8 +22,8 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 |---|---|---|---|
 | `instant` | 100 | `standard` | Press feedback: a button scales to 0.97 |
 | `quick` | 150 | `standard` | Small state changes: a tab lighting up, the switch, a field's rule, code cells |
-| `standard` | 250 | `standard` | Crossfades, a cover fading in over its thumbhash, the avatar menu opening, the push to a book |
-| `exit` | 200 | `exit` | The avatar menu closing; anything small leaving; back from a book (on the `standard` curve) |
+| `standard` | 250 | `standard` | Crossfades, a cover fading in over its thumbhash, a Profile column growing, the push to a book |
+| `exit` | 200 | `exit` | Anything small leaving; back from a book (on the `standard` curve) |
 | `sheet` | 380 | `sheet` | A sheet rising, its scrim fading in |
 | `sheetExit` | 260 | `exit` | A sheet falling away |
 | `overlay` | 340 | `standard` | The tab bar turning into the search palette, the veil fading in |
@@ -49,9 +49,10 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
   with Reduce Motion).
-- **Avatar menu.** Opens from its top-right corner: fade plus a 0.96 → 1 scale and a 4 px drop,
-  `standard`; closes the same way back, `exit`. Flipping the theme inside it crossfades nothing —
-  the colours change at once, the switch's knob slides over `quick`.
+- **Profile** (#78). The avatar pushes it like a page (no flight: no cover to fly). The year pills
+  change the figures in place; the columns grow or shrink to their new height over `standard`
+  (at once with Reduce Motion). Flipping the theme in the account rows crossfades nothing — the
+  colours change at once, the switch's knob slides over `quick`.
 - **Sheet.** Rises from below the screen edge (`translateY(100%)` → 0) over `sheet` with the
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than

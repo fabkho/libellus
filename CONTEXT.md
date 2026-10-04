@@ -29,3 +29,7 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 - **Up next** — the short row of *Want to read* entries on Home.
 - **Read in <year>** — the count of finished sessions with an end date in the current year,
   re-reads included.
+- **Profile** — the member's page behind the avatar: her reading in figures (by year or all years)
+  and her account. Figures and covers only.
+- **Year in review** — one calendar year of the Profile on a page of its own: its finished reads by
+  month, its favourite, its records.

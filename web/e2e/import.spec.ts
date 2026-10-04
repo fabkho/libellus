@@ -64,10 +64,10 @@ test('a member imports a Goodreads export, sees the books in her Library, and im
     buffer: Buffer.from(`\uFEFF${exportFile({ known: knownTitle, unknown: unknownTitle, own: ownTitle }, isbns)}`),
   }
 
-  // From the avatar menu.
+  // From the Profile's account rows.
   await page.getByTestId('shell.avatar').click()
-  await expect(page.getByTestId('shell.import')).toHaveText(en.import.menuItem)
-  await page.getByTestId('shell.import').click()
+  await expect(page.getByTestId('profile.import')).toHaveText(en.import.menuItem)
+  await page.getByTestId('profile.import').click()
   await expect(page).toHaveURL(/\/import$/)
   await expect(page.getByTestId('import.title')).toHaveText(en.import.title)
   await expect(page.getByTestId('import.empty')).toHaveText(en.import.pickText)
@@ -135,7 +135,7 @@ test('a member imports a Goodreads export, sees the books in her Library, and im
 
   // The same file again: everything is there, nothing to import.
   await page.getByTestId('shell.avatar').click()
-  await page.getByTestId('shell.import').click()
+  await page.getByTestId('profile.import').click()
   await page.getByTestId('import.again').click()
   await page.getByTestId('import.file').setInputFiles(file)
   await expect(page.getByTestId('import.alreadyThere')).toContainText('4')

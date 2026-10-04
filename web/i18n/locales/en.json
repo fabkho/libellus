@@ -68,10 +68,7 @@
   },
   "shell": {
     "tabsLabel": "Main navigation",
-    "avatarLabel": "Account menu",
-    "signedInAs": "Signed in as",
-    "darkTheme": "Dark mode",
-    "signOut": "Sign out"
+    "avatarLabel": "Profile"
   },
   "account": {
     "name": "Name",
@@ -86,6 +83,89 @@
       "offline": "You're offline. Nothing was saved.",
       "rate_limited": "Too many changes at once. Try again in a moment.",
       "unknown": "Your name could not be saved. Try again."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "back": "Back",
+    "since": "Reading here since {date}",
+    "library": "{read} read · {reading} reading · {want} want to read",
+    "yearsLabel": "Year",
+    "all": "All",
+    "figures": {
+      "books": "Books",
+      "pages": "Pages",
+      "average": "Average",
+      "daysABook": "Days a book",
+      "rereads": "{count} read again",
+      "dnf": "{count} DNF",
+      "pagesMissing": "{count} without a count",
+      "pagesPerBook": "{count} a book",
+      "unrated": "{count} not rated yet",
+      "rated": "{count} rated",
+      "usually": "usually, start to finish"
+    },
+    "byMonth": "By month",
+    "byYear": "By year",
+    "inReview": "{year} in review",
+    "columnLabel": "{label}: {count}",
+    "days": {
+      "title": "Reading days",
+      "since": "since {date}",
+      "read": "Days read",
+      "perDay": "Pages a day",
+      "label": "Read on {read} of the last {count} days"
+    },
+    "ratings": {
+      "title": "Ratings",
+      "rated": "{count} rated",
+      "notYet": "{count} not yet",
+      "row": "{star} star: {count} | {star} stars: {count}"
+    },
+    "records": {
+      "title": "Records",
+      "longest": "Longest",
+      "shortest": "Shortest",
+      "quickest": "Quickest",
+      "slowest": "Took its time",
+      "pages": "{count} p.",
+      "days": "{count} day | {count} days"
+    },
+    "authors": {
+      "title": "Authors you return to"
+    },
+    "years": {
+      "title": "Years in review",
+      "books": "{count} book | {count} books",
+      "favourite": "Favourite"
+    },
+    "account": {
+      "title": "Account",
+      "theme": "Dark mode",
+      "signOut": "Sign out"
+    },
+    "empty": {
+      "title": "Your reading gathers here",
+      "text": "Finish a book and it shows up here: its year, its month, its stars."
+    },
+    "loadError": "Your reading could not be loaded.",
+    "offline": "You're offline. Your reading shows once you're back.",
+    "retry": "Try again",
+    "sheet": {
+      "month": "{month} {year}",
+      "stars": "{count} star · {year} | {count} stars · {year}",
+      "allYears": "All years",
+      "readIn": "in a day | in {count} days"
+    },
+    "year": {
+      "eyebrow": "Your year in books",
+      "favourite": "The favourite",
+      "months": "Months",
+      "other": "Other years",
+      "before": "{year}",
+      "after": "{year}",
+      "beforeLabel": "The year before, {year}",
+      "afterLabel": "The year after, {year}"
     }
   },
   "tabs": {

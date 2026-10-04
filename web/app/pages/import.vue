@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Import books (issue #40): a Goodreads library export — or the Goodreads CSV
 // a Fable export extension writes — into the member's Library. Reached from
-// the avatar menu. One line says where the file comes from; then the file is
+// the Profile's account rows (issue #78). One line says where the file comes from; then the file is
 // read on the device and every book's edition looked up (the count runs as
 // they come in), a preview says what would happen (how many per Status, how
 // many matched an edition, which books need a look), *Import N books* writes
@@ -22,7 +22,7 @@ useHead({ title: () => `${t('import.title')} · ${t('app.name')}` })
 
 function back() {
   if (window.history.state?.back) router.back()
-  else void navigateTo('/')
+  else void navigateTo('/profile')
 }
 
 const input = useTemplateRef<HTMLInputElement>('input')
