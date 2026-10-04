@@ -17,6 +17,16 @@ test.beforeEach(async ({ page }) => {
   await recordedApple(page)
 })
 
+/**
+ * The stand-in camera is a canvas stream. Playwright's WebKit for Linux (the CI runner) is built
+ * without media streams, so there the flows that need frames are skipped; the macOS WebKit has them
+ * and Chromium (barcode-scan.spec.ts) runs the same flows in CI.
+ */
+async function needsCanvasStream(page: Page) {
+  const ok = await page.evaluate(() => typeof HTMLCanvasElement.prototype.captureStream === 'function' && typeof MediaStream === 'function')
+  test.skip(!ok, 'this WebKit build has no canvas.captureStream')
+}
+
 async function openScanner(page: Page) {
   await page.getByTestId('shell.tab.search').click()
   await expect(page.getByTestId('search.query')).toBeFocused()
@@ -36,6 +46,7 @@ test('the decoder is fetched when the scanner opens, and reads the book from the
   const decoder = watchDecoder(page)
   await stubScanner(page, { formats: null, picture: FRAME, vibrate: false })
   await signedIn(page)
+  await needsCanvasStream(page)
   await page.getByTestId('shell.tab.search').click()
   await expect(page.getByTestId('search.scan')).toBeVisible()
   expect(decoder).toEqual([])
@@ -52,6 +63,7 @@ test('the decoder is fetched when the scanner opens, and reads the book from the
 test('no torch button: the camera of an iPhone has none to offer', async ({ page }) => {
   await stubScanner(page, { formats: null, vibrate: false, torch: false })
   await signedIn(page)
+  await needsCanvasStream(page)
   await openScanner(page)
   await expect(page.getByTestId('scan.hint')).toBeVisible()
   await expect(page.getByTestId('scan.torch')).toHaveCount(0)
