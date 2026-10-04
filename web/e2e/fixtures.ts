@@ -13,6 +13,22 @@ const isLocal = (url: URL) => ['localhost', '127.0.0.1', '[::1]'].includes(url.h
 // sign-in wall's covers) points at them; they answer the recorded stand-in.
 const isCoverCdn = (url: URL) => /(^|\.)mzstatic\.com$|^covers\.openlibrary\.org$/.test(url.hostname)
 
+/** The `goodreads-rating` edge function on the local stack (supabase/functions/goodreads-rating). */
+export const GOODREADS_FUNCTION = '**/functions/v1/goodreads-rating'
+
+/** An answer of that function, as `route.fulfill` takes it. */
+export function goodreadsAnswer(body: unknown, status = 200) {
+  return {
+    status,
+    contentType: 'application/json',
+    headers: {
+      'access-control-allow-origin': '*',
+      'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+    },
+    body: JSON.stringify(body),
+  }
+}
+
 /**
  * Every control a member can reach carries a `data-testid` (web/AGENTS.md). The
  * page reports each one it ever showed without, from every screen and state
@@ -65,6 +81,10 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
             body: appleCover(),
           }),
       )
+      // The Goodreads line (#69): the function is never reached, so no flow can
+      // make it ask Goodreads. Unknown, unless a spec answers otherwise
+      // (e2e/goodreads.spec.ts).
+      await context.route(GOODREADS_FUNCTION, (route) => route.fulfill(goodreadsAnswer({ status: 'not_found' })))
       await context.route(
         (url) => /^https?:$/.test(url.protocol) && !isLocal(url) && !isCoverCdn(url),
         (route) => {

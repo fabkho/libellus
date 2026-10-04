@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/review_counts.json?isbns=9780061803208",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": "{\"books\":[{\"id\":6388978,\"isbn\":\"0061803200\",\"isbn13\":\"9780061803208\",\"ratings_count\":4506,\"reviews_count\":9042,\"text_reviews_count\":294,\"work_ratings_count\":137875,\"work_reviews_count\":240132,\"work_text_reviews_count\":6116,\"average_rating\":\"4.32\"}]}"
+}

@@ -64,6 +64,22 @@ jobs:
         if: always()
         run: supabase stop --no-backup
 
+  # The goodreads-rating edge function (#69): its parsing, matching, cache and
+  # rate limit, on recorded Goodreads answers (no request leaves the runner).
+  goodreads-function:
+    name: goodreads-rating function (Deno)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Lint, check and test
+        working-directory: supabase/functions/goodreads-rating
+        run: deno lint && deno check *.ts && deno test --allow-read=.
+
   web-build:
     name: web builds (nuxt generate)
     runs-on: ubuntu-latest

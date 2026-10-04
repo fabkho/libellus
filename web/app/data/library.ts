@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
+import { ratingFromRow, type GoodreadsRow } from './goodreads'
 import type { ProgressValue } from './progress'
 
 /**
@@ -308,7 +309,12 @@ export type BookRow = {
   openlibrary_edition_key: string | null
   openlibrary_work_key: string | null
   created_at: string
+  /** The cached Goodreads rating (`goodreads_rating`), when asked for with BOOK_COLUMNS. */
+  goodreads?: GoodreadsRow | null
 }
+
+/** A `books` row with its cached Goodreads rating (issue #69), so a Library kept for offline has it. */
+export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*)'
 
 /** The `reading_sessions` row, as PostgREST returns it. */
 export type SessionRow = {
@@ -336,7 +342,7 @@ export type EntryRow = {
 }
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = 'id, status, added_at, page_count_override, book:books!inner(*), latest:latest_session(*)'
+export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
 
 export function bookFromRow(row: BookRow): Book {
   return {
@@ -359,11 +365,13 @@ export function bookFromRow(row: BookRow): Book {
     appleId: row.apple_id,
     openLibraryEditionKey: row.openlibrary_edition_key,
     openLibraryWorkKey: row.openlibrary_work_key,
+    // Undefined rather than null without one, so a Book reads the same as before it existed.
+    goodreads: ratingFromRow(row.goodreads) ?? undefined,
   }
 }
 
 /** A snapshot as the `p_book` argument of `add_to_library`: the `books` columns by name. */
-export function bookToRow(book: BookSnapshot): Omit<BookRow, 'id' | 'created_at'> {
+export function bookToRow(book: BookSnapshot): Omit<BookRow, 'id' | 'created_at' | 'goodreads'> {
   return {
     title: book.title,
     authors: book.authors,
@@ -733,7 +741,7 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async book(id) {
-      const { data, error } = await client.from('books').select('*').eq('id', id).maybeSingle<BookRow>()
+      const { data, error } = await client.from('books').select(BOOK_COLUMNS).eq('id', id).maybeSingle<BookRow>()
       if (error) return { data: null, error: mapLibraryError(error) }
       return { data: data ? bookFromRow(data) : null, error: null }
     },
@@ -748,7 +756,7 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
         if (!value) continue
         const { data, error } = await client
           .from('books')
-          .select('*')
+          .select(BOOK_COLUMNS)
           .is('owner_id', null)
           .eq(column, value)
           .maybeSingle<BookRow>()

@@ -135,6 +135,8 @@ function back() {
           <span v-if="i" class="dot" aria-hidden="true" />{{ fact }}
         </template>
       </p>
+      <!-- Goodreads' rating, once known (#69). -->
+      <BookGoodreads :book="book" />
     </section>
 
     <div v-if="book" class="relative px-ml" data-testid="book.actions">
