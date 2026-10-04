@@ -73,6 +73,7 @@
   --spacing-xxxl: 64px;
   --spacing-screen: 20px;
   --spacing-tab-bar-drop: 13px;
+  --spacing-grabber: 5px;
   --spacing-float-above: 16px;
   --radius-cover-sm: 2.5px;
   --radius-cover: 3.5px;
@@ -173,6 +174,7 @@
   --size-switch: 40px;
   --size-switch-thumb: 20px;
   --size-grabber: 36px;
+  --size-grabber-height: 5px;
   --size-empty-art: 250px;
   --size-fade-above: 64px;
   --size-star-sm: 12px;

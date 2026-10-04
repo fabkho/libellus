@@ -97,6 +97,7 @@ enum Tokens {
         static let xxxl: CGFloat = 64
         static let screen: CGFloat = 20
         static let tabBarDrop: CGFloat = 13
+        static let grabber: CGFloat = 5
         static let floatAbove: CGFloat = 16
     }
 
@@ -129,6 +130,7 @@ enum Tokens {
         static let switch: CGFloat = 40
         static let switchThumb: CGFloat = 20
         static let grabber: CGFloat = 36
+        static let grabberHeight: CGFloat = 5
         static let emptyArt: CGFloat = 250
         static let fadeAbove: CGFloat = 64
         static let starSm: CGFloat = 12

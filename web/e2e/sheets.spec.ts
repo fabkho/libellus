@@ -118,3 +118,18 @@ test('a long sheet title truncates centred, and a name sheet opens with its fiel
   // Centred on the sheet, give or take a pixel.
   expect(Math.abs(titleBox.x + titleBox.width / 2 - (box.x + box.width / 2))).toBeLessThanOrEqual(1)
 })
+
+test("a sheet's title row sits where iOS 26 puts it: 38 below the top edge, the content 16 under the row", async ({ page }) => {
+  await signedIn(page)
+  await addPiranesi(page)
+  await page.getByTestId('book.options').click()
+  const box = await settledBox(page.getByTestId('bookOptions'))
+  const title = (await page.getByTestId('bookOptions.sheetTitle').boundingBox())!
+  const cancel = (await page.getByTestId('bookOptions.cancel').boundingBox())!
+  // The title and Cancel are centred 38 below the sheet's top edge (16 + 44 / 2).
+  expect(Math.abs(title.y + title.height / 2 - box.y - 38)).toBeLessThanOrEqual(1)
+  expect(Math.abs(cancel.y + cancel.height / 2 - box.y - 38)).toBeLessThanOrEqual(1)
+  // The content starts 16 under the 60-high title row.
+  const first = (await page.getByTestId('bookOptions').locator('header + div > *').first().boundingBox())!
+  expect(Math.round(first.y - box.y)).toBe(60 + 16)
+})
