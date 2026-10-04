@@ -6,7 +6,7 @@
 // dash, nothing to make up for), the favourite, the ratings (a row opens the
 // books rated so), the records, the authors read more than once, and the
 // years either side. Figures and covers, never sentences.
-import { figuresOf, readsInMonth, readsWithStars, yearsOf, type StatsRead } from '~/data/stats'
+import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { useBookStore } from '~/stores/book'
 import { useStatsStore } from '~/stores/stats'
 
@@ -21,7 +21,17 @@ const { count, monthShort } = useFigures()
 
 const year = computed(() => Number(route.params.year))
 useHead({ title: () => `${t('profile.year.eyebrow')} · ${year.value} · ${t('app.name')}` })
-onMounted(() => void stats.load())
+// Loaded each time the page shows: opened afresh, or shown again from the
+// router's cache of pages (then only `onActivated` runs).
+let showing = false
+function show() {
+  if (showing) return
+  showing = true
+  void stats.load()
+}
+onMounted(show)
+onActivated(show)
+onDeactivated(() => (showing = false))
 
 const reads = computed(() => stats.record?.reads ?? [])
 const years = computed(() => yearsOf(reads.value))
@@ -30,12 +40,12 @@ const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m +
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
 
-const stars = ref<{ title: string; reads: StatsRead[] } | null>(null)
-const starsOpen = computed({ get: () => stars.value !== null, set: (open: boolean) => !open && (stars.value = null) })
-const starsShown = ref<{ title: string; reads: StatsRead[] }>({ title: '', reads: [] })
-watch(stars, (now) => now && (starsShown.value = now))
+// A star row's books; open again on Back from a book opened in it.
+const { sheet, shown, open: sheetOpen } = useProfileSheet()
+const sheetTitle = computed(() => (shown.value?.kind === 'stars' ? t('profile.sheet.stars', { count: shown.value.star, year: String(shown.value.year) }, shown.value.star) : ''))
+const sheetReads = computed(() => (shown.value?.kind === 'stars' ? readsWithStars(reads.value, shown.value.year, shown.value.star) : []))
 function pickStars(star: number) {
-  stars.value = { title: t('profile.sheet.stars', { count: star, year: String(year.value) }, star), reads: readsWithStars(reads.value, year.value, star) }
+  sheet.value = { kind: 'stars', year: year.value, star }
 }
 
 // Back to the Profile it came from (or to it, opened from an address).
@@ -137,7 +147,7 @@ function back() {
       <UiButton v-if="stats.loadError !== 'offline'" tone="secondary" size="md" data-testid="yearInReview.retry" @click="stats.load()">{{ t('profile.retry') }}</UiButton>
     </div>
 
-    <ProfileReadsSheet v-model:open="starsOpen" :title="starsShown.title" :reads="starsShown.reads" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :title="sheetTitle" :reads="sheetReads" />
   </div>
 </template>
 

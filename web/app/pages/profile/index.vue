@@ -9,7 +9,7 @@
 // the authors read more than once. The reading days (this year and All) and
 // the years in review do not change with the pills. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
-import { figuresOf, readsInMonth, readsWithStars, readingSinceOf, yearsOf, type StatsRead } from '~/data/stats'
+import { figuresOf, readsInMonth, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useStatsStore } from '~/stores/stats'
 
@@ -21,7 +21,17 @@ const stats = useStatsStore()
 const { monthLong, monthLetter } = useFigures()
 
 useHead({ title: () => `${t('profile.title')} · ${t('app.name')}` })
-onMounted(() => void stats.load())
+// Loaded each time the page shows: opened afresh, or shown again from the
+// router's cache of pages (then only `onActivated` runs).
+let showing = false
+function show() {
+  if (showing) return
+  showing = true
+  void stats.load()
+}
+onMounted(show)
+onActivated(show)
+onDeactivated(() => (showing = false))
 
 const thisYear = Number(isoDay().slice(0, 4))
 const thisMonth = Number(isoDay().slice(5, 7))
@@ -45,23 +55,26 @@ const columns = computed(() =>
 )
 const lit = computed(() => (stats.year === 'all' ? (years.value.includes(thisYear) ? thisYear : null) : stats.year === thisYear ? thisMonth : null))
 
-// The sheet of a month's books or a star row's.
-const sheet = ref<{ title: string; reads: StatsRead[]; withYear: boolean } | null>(null)
-const sheetOpen = computed({ get: () => sheet.value !== null, set: (open: boolean) => !open && (sheet.value = null) })
-const sheetShown = ref<{ title: string; reads: StatsRead[]; withYear: boolean }>({ title: '', reads: [], withYear: false })
-watch(sheet, (now) => now && (sheetShown.value = now))
+// The sheet of a month's books or a star row's; open again on Back from a book opened in it.
+const { sheet, shown, open: sheetOpen } = useProfileSheet()
+const sheetTitle = computed(() => {
+  const s = shown.value
+  if (!s) return ''
+  if (s.kind === 'month') return t('profile.sheet.month', { month: monthLong(s.month), year: s.year })
+  return t('profile.sheet.stars', { count: s.star, year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) }, s.star)
+})
+const sheetReads = computed(() => {
+  const s = shown.value
+  if (!s) return []
+  return s.kind === 'month' ? readsInMonth(reads.value, s.year, s.month) : readsWithStars(reads.value, s.year, s.star)
+})
 
 function pickColumn(key: number) {
   if (stats.year === 'all') return void router.push(`/profile/${key}`)
-  sheet.value = {
-    title: t('profile.sheet.month', { month: monthLong(key), year: stats.year }),
-    reads: readsInMonth(reads.value, stats.year, key),
-    withYear: false,
-  }
+  sheet.value = { kind: 'month', year: stats.year, month: key }
 }
 function pickStars(star: number) {
-  const year = stats.year === 'all' ? t('profile.sheet.allYears') : String(stats.year)
-  sheet.value = { title: t('profile.sheet.stars', { count: star, year }, star), reads: readsWithStars(reads.value, stats.year, star), withYear: stats.year === 'all' }
+  sheet.value = { kind: 'stars', year: stats.year, star }
 }
 
 // The Profile belongs to whatever tab it was opened from: back by history when there is one.
@@ -115,6 +128,6 @@ function back() {
       <ProfileAccount />
     </div>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :title="sheetShown.title" :reads="sheetShown.reads" :with-year="sheetShown.withYear" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.year === 'all'" />
   </div>
 </template>

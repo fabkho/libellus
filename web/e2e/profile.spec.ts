@@ -131,8 +131,25 @@ test('the avatar opens the Profile: the figures of all years and of one, the she
   await expect(page.getByTestId('profileReads.read').getByTestId('profile.readTitle')).toHaveText([runTitle('Dune')])
   await page.getByTestId('profileReads.read').click()
   await expect(page.getByTestId('book.title')).toHaveText(runTitle('Dune'))
+  // Back from the book: the Profile with the sheet it was opened from, open again.
   await page.goBack()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(fill(en.profile.sheet.month, { month: 'May', year: 2025 }))
   await expect(page.getByTestId('profile.year.2025')).toHaveAttribute('aria-pressed', 'true')
+  // The book page's own back does the same, from a star row's sheet; Cancel then closes it for good.
+  await page.getByTestId('profileReads.cancel').click()
+  await expect(page.getByTestId('profileReads')).toBeHidden()
+  await page.getByTestId('profile.stars.5').click()
+  await page.getByTestId('profileReads.read').click()
+  await expect(page.getByTestId('book.title')).toHaveText(runTitle('Piranesi'))
+  await page.getByTestId('book.back').click()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(plural(en.profile.sheet.stars, 5, { year: '2025' }))
+  await page.getByTestId('profileReads.cancel').click()
+  await expect(page.getByTestId('profileReads')).toBeHidden()
+  // Opened afresh (not by Back from its book), the Profile starts without a sheet.
+  await page.getByTestId('profile.back').click()
+  await page.getByTestId('shell.avatar').click()
+  await expect(page.getByTestId('profile.year.2025')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('profileReads')).toBeHidden()
 
   // "2025 in review": its months as covers, the favourite, the year before (in place of this one).
   await page.getByTestId('profile.inReview').click()

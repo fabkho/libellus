@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import type { LibraryErrorCode } from '~/data/library'
 import { createStats, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
+
+/** A sheet of the Profile or a year in review: a month's books, or a star row's. */
+export type ProfileSheet = { kind: 'month'; year: number; month: number } | { kind: 'stars'; year: StatsYear; star: number }
 import { isoDay } from '~/utils/dates'
 import { useSessionStore } from '~/stores/session'
 
@@ -28,6 +31,11 @@ export const useStatsStore = defineStore('stats', () => {
   const loadError = ref<LibraryErrorCode | null>(null)
   /** The year in the pills: All, or a year with a finished read. */
   const year = ref<StatsYear>('all')
+  /**
+   * The sheet that was open when the member opened a book from it, with the
+   * page it was on: Back from the book opens it again (composables/useProfileSheet.ts).
+   */
+  const keptSheet = ref<{ page: string; sheet: ProfileSheet } | null>(null)
 
   async function load() {
     const repo = stats()
@@ -55,6 +63,7 @@ export const useStatsStore = defineStore('stats', () => {
     record.value = null
     loadError.value = null
     year.value = 'all'
+    keptSheet.value = null
   }
 
   watch(
@@ -68,5 +77,5 @@ export const useStatsStore = defineStore('stats', () => {
     if (now && loadError.value === 'offline') void load()
   })
 
-  return { record, loadError, year, load, reset }
+  return { record, loadError, year, keptSheet, load, reset }
 })
