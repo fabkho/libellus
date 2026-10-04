@@ -149,6 +149,8 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
+      // Background Sync wakes the open app to send the outbox (#93, public/sw-sync.js).
+      importScripts: ['/sw-sync.js'],
       // The module's defaults only pick up the build-meta JSON under `nuxt generate`;
       // the app shell, chunks and fonts have to be listed to be precached. Only
       // woff2 (the latin subsets main.css imports), never the woff fallbacks;
