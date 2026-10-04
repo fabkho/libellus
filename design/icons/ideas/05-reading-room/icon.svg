@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>Libellus — The reading room (adaptive, 108 dp canvas, mark inside the 66 dp safe zone)</title>
+<defs>
+  <radialGradient id="abgb" cx="54" cy="56.42" r="62" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#efb768" stop-opacity="0.2"/>
+    <stop offset="0.35" stop-color="#efb768" stop-opacity="0.06999999999999999"/>
+    <stop offset="1" stop-color="#efb768" stop-opacity="0"/>
+  </radialGradient></defs><rect width="108" height="108" fill="#0e0c0a"/><rect width="108" height="108" fill="url(#abgb)"/><g transform="matrix(0.96603 0 0 0.96603 1.83 2.32)"><defs><linearGradient id="afgw" x1="0" y1="27" x2="0" y2="80" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#ffdca0"/><stop offset="0.55" stop-color="#efb768"/><stop offset="1" stop-color="#c98a3e"/></linearGradient></defs>
+      <path d="M35 80L35 46C35 35.5 43.5 27 54 27C64.5 27 73 35.5 73 46L73 80Z" fill="url(#afgw)"/><path d="M61.75 45.50L58.61 46.78L50.86 72.07L40.04 72.07L40.39 70.92L43.52 69.65L50.56 46.76L48.10 45.50L48.47 44.36L62.12 44.36L61.75 45.50M60.66 69.08L58.20 70.27L66.32 61.82L67.92 62.29L62.36 74L61.13 74L59.15 72.07L45.43 72.07L46.41 69.08" fill="#0e0c0a"/></g>
+</svg>

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>Libellus — The reading room (monochrome, alpha only)</title>
+<mask id="ak" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108"><rect width="108" height="108" fill="#fff"/><path fill="#000" transform="matrix(0.96603 0 0 0.96603 1.83 2.32)" d="M61.75 45.50L58.61 46.78L50.86 72.07L40.04 72.07L40.39 70.92L43.52 69.65L50.56 46.76L48.10 45.50L48.47 44.36L62.12 44.36L61.75 45.50M60.66 69.08L58.20 70.27L66.32 61.82L67.92 62.29L62.36 74L61.13 74L59.15 72.07L45.43 72.07L46.41 69.08"/></mask><g mask="url(#ak)"><g transform="matrix(0.96603 0 0 0.96603 1.83 2.32)"><path fill="#000" fill-rule="nonzero" d="M35 80L35 46C35 35.5 43.5 27 54 27C64.5 27 73 35.5 73 46L73 80Z"/></g></g>
+</svg>

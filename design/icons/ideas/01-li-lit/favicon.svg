@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>Libellus — li, lit (favicon)</title>
+<clipPath id="aclip"><rect width="108" height="108" rx="22"/></clipPath><g clip-path="url(#aclip)"><defs>
+  <radialGradient id="abgb" cx="78.93" cy="30.36" r="58" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#efb768" stop-opacity="0.26"/>
+    <stop offset="0.35" stop-color="#efb768" stop-opacity="0.091"/>
+    <stop offset="1" stop-color="#efb768" stop-opacity="0"/>
+  </radialGradient></defs><rect width="108" height="108" fill="#0e0c0a"/><rect width="108" height="108" fill="url(#abgb)"/><g transform="matrix(0.0889 0 0 0.0889 18.4 87.26)"><defs>
+  <radialGradient id="afgg" cx="681" cy="-640" r="336" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#efb768" stop-opacity="0.6"/>
+    <stop offset="0.35" stop-color="#efb768" stop-opacity="0.21"/>
+    <stop offset="1" stop-color="#efb768" stop-opacity="0"/>
+  </radialGradient></defs>
+      <path d="M14.50-68L184-586Q176-597 165.25-607Q154.50-617 142-627Q129.50-637 116-647L125.50-680L386.50-720L408.50-720L184.50-36.50L151-87.50Q184.50-85 211.75-90.50Q239-96 265.50-111.50Q292-127 322-154L345.50-128.50Q301-76 256.75-44.50Q212.50-13 168.50 1Q124.50 15 81.50 15Q33 15 16.75-5Q0.50-25 14.50-68M389.50-68L518.50-404L554-366.50Q522-367.50 496.50-360.50Q471-353.50 446.25-336.25Q421.50-319 391.50-289.50L367-314Q409-368.50 451.50-401.75Q494-435 536-450.25Q578-465.50 619-465.50Q673.50-465.50 689.50-445.25Q705.50-425 689-382L560-38L523-84.50Q555.50-83.50 580.75-90.25Q606-97 630.50-112.50Q655-128 683.50-153.50L707-127.50Q664.50-78 622.25-46.50Q580-15 538.50 0Q497 15 455.50 15Q405 15 388.50-4.75Q372-24.50 389.50-68" fill="#eee7dc"/><circle cx="681" cy="-640" r="336" fill="url(#afgg)"/>
+      <circle cx="681" cy="-640" r="112" fill="#efb768"/></g></g>
+</svg>
