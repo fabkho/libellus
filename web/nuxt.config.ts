@@ -7,6 +7,10 @@ import { themeBootScript, type ThemeColors } from './app/utils/theme'
 const tokens = JSON.parse(readFileSync(new URL('../design/tokens.json', import.meta.url), 'utf8'))
 const surface: ThemeColors = tokens.color.surface.$value
 
+// Appended to every icon URL (?v=): bump it when the icons are redrawn so Chrome
+// and the home-screen launchers refetch them instead of keeping the old ones.
+const iconVersion = 2
+
 // Libellus web — the reference app (SPEC.md). Everything personal sits behind
 // the sign-in, so there is nothing to render on the server: SPA, built to
 // static files for Cloudflare Pages.
@@ -52,8 +56,9 @@ export default defineNuxtConfig({
         // In the static HTML rather than through <NuxtPwaManifest />: with ssr off
         // that component only adds the link once the app has booted.
         { rel: 'manifest', href: '/manifest.webmanifest' },
-        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
-        { rel: 'icon', href: '/favicon.ico' },
+        { rel: 'apple-touch-icon', href: `/apple-touch-icon.png?v=${iconVersion}` },
+        { rel: 'icon', href: `/favicon.svg?v=${iconVersion}`, type: 'image/svg+xml' },
+        { rel: 'icon', href: `/favicon.ico?v=${iconVersion}`, sizes: '32x32 16x16' },
       ],
     },
   },
@@ -81,7 +86,7 @@ export default defineNuxtConfig({
 
   // Installable from the home screen, full-screen once opened from there; the
   // app shell is precached and the covers are cached as they are seen (#15).
-  // The icons are drawn by scripts/render-icons.mjs.
+  // The icons are rendered from design/icons/app/*.svg by scripts/render-icons.mjs.
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -99,9 +104,11 @@ export default defineNuxtConfig({
       background_color: surface.light,
       theme_color: surface.light,
       icons: [
-        { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: `/icon-192.png?v=${iconVersion}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: `/icon-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: `/icon-maskable-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        // Alpha only: the launcher tints it when the member turns themed icons on.
+        { src: `/icon-monochrome-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
       ],
     },
     workbox: {
@@ -110,7 +117,9 @@ export default defineNuxtConfig({
       // the app shell, chunks and fonts have to be listed to be precached. Only
       // woff2 (the latin subsets main.css imports), never the woff fallbacks;
       // the icons the manifest names, not the larger ones nothing loads offline.
-      globPatterns: ['**/*.{js,css,html,woff2}', 'icon-192.png', 'apple-touch-icon.png', 'favicon.ico'],
+      globPatterns: ['**/*.{js,css,html,woff2}', 'icon-192.png', 'apple-touch-icon.png', 'favicon.ico', 'favicon.svg'],
+      // The icon URLs carry ?v= to make browsers refetch a redrawn icon; the precache holds them without it.
+      ignoreURLParametersMatching: [/^v$/],
       globIgnores: ['**/_payload.json', '**/200.html', '**/404.html'],
       runtimeCaching: [
         {

@@ -42,11 +42,13 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
   `<meta name="theme-color">` per `prefers-color-scheme` (the theme's `surface`), a chosen theme
   overwrites both, and `apple-mobile-web-app-status-bar-style` is `default` so iOS tints the status
   bar from it. The manifest's splash colour is the light surface (manifests have no media queries).
-- The app icon is the start of the wordmark, "li" in Newsreader italic in the dark theme's ink, in the
-  night room, the dot of the i the lamp: the accent with its glow. One icon for both themes (an icon
-  is an object on the home screen, like a cover). Drawn from the tokens and the shipped font by
-  `web/scripts/render-icons.mjs` (192 and 512 `any`, a 512 `maskable` with the mark inside the safe
-  zone, the 180 apple-touch-icon, the favicon).
+- The app icon is two bookmark ribbons (the "li" of the wordmark as two ribbons, the dot of the i the
+  lamp: the accent with its glow) in a warm leather-red room (#86). One icon for both themes (an icon
+  is an object on the home screen, like a cover). Sources: `design/icons/app/{icon,monochrome,favicon}.svg`;
+  `web/scripts/render-icons.mjs` renders 192 and 512 `any`, a 512 `maskable` (the mark inside the 66 dp
+  safe zone of the 108 dp canvas; Chrome themes an installed app from it, Chromium 40277264), a 512
+  alpha-only `monochrome` (themed icons), the 180 apple-touch-icon, `favicon.svg` and `favicon.ico`.
+  Icon URLs carry `?v=<iconVersion>` (`nuxt.config.ts`): bump it when the icons change.
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.
 
