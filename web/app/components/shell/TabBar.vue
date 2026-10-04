@@ -10,12 +10,26 @@
 // Labels are for assistive tech (and the tests). `data-morph` marks what the
 // overlay measures to start from, and the tabs it keeps out of the Search
 // icon's way.
+//
+// On a pushed screen (a book, Collections, a Collection, Import) the bar and
+// its fade slide away while the member reads down and come back on a short
+// scroll up, at the top and at the end of the page (useHideOnScroll,
+// docs/MOTION.md, Tab bar away). Never while search, a sheet or a field is in
+// play: search opening snaps it back to its place first, without a transition,
+// so the morph always grows out of the capsule where it rests.
 import { useSearchStore } from '~/stores/search'
 
 const { t } = useI18n()
 const route = useRoute()
 const search = useSearchStore()
 const chrome = useSearchChrome()
+const modal = useModalShown()
+
+const { hidden: away, reveal } = useHideOnScroll(
+  () => Boolean(route.meta.pushed) && !search.isOpen && chrome.value === 'tabs' && !modal.value,
+)
+/** Search is taking the bar over: it is where it rests at once, for the morph to measure. */
+const still = computed(() => search.isOpen || chrome.value !== 'tabs')
 
 const PAGES = [
   { key: 'home', to: '/', icon: 'home' },
@@ -41,15 +55,18 @@ function tapped(event: MouseEvent, to: string) {
 
 <template>
   <div
-    class="fade pointer-events-none fixed inset-x-0 bottom-0 z-10 bg-linear-to-b from-transparent to-surface to-62%"
+    class="fade bar pointer-events-none fixed inset-x-0 bottom-0 z-10 bg-linear-to-b from-transparent to-surface to-62%"
+    :class="[away && 'away', still && 'still']"
     aria-hidden="true"
   />
   <nav
     :aria-label="t('shell.tabsLabel')"
-    class="float-bottom glass fixed left-1/2 z-20 flex -translate-x-1/2 rounded-pill px-xs edge shadow-float"
-    :class="chrome === 'palette' && 'invisible'"
+    class="bar float-bottom glass fixed left-1/2 z-20 flex -translate-x-1/2 rounded-pill px-xs edge shadow-float"
+    :class="[chrome === 'palette' && 'invisible', away && 'away', still && 'still']"
+    :data-away="away || undefined"
     data-morph="capsule"
     data-testid="shell.tabs"
+    @focusin="reveal"
   >
     <NuxtLink
       v-for="tab in PAGES"
@@ -96,6 +113,34 @@ function tapped(event: MouseEvent, to: string) {
 .tab svg {
   width: var(--size-tab-icon);
   height: var(--size-tab-icon);
+}
+
+/* Away and back (docs/MOTION.md, Tab bar away): down past the screen edge and
+   out, transform and opacity only, so nothing is laid out again. Back over
+   `standard`, away over `exit`; the fade travels with the capsule. */
+.bar {
+  transition:
+    transform var(--duration-standard) var(--ease-standard),
+    opacity var(--duration-standard) var(--ease-standard);
+}
+
+.bar.away {
+  pointer-events: none;
+  opacity: 0;
+  transition-duration: var(--duration-exit);
+  transition-timing-function: var(--ease-exit);
+}
+
+nav.away {
+  transform: translateY(calc(100% + var(--float-bottom)));
+}
+
+.fade.away {
+  transform: translateY(100%);
+}
+
+.bar.still {
+  transition: none;
 }
 
 /* From the screen edge to `fadeAbove` over the capsule, wherever it floats. */
