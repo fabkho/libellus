@@ -6,6 +6,7 @@
 // or Clear leaves it empty (a Rating is optional). A slider for assistive
 // tech and the keyboard: arrows step a quarter, Page Up/Down a star, Home
 // clears, End is five stars. `v-model` is the stored quarters, 1–20, or null.
+import { isRatingStep, tick } from '~/utils/haptics'
 import { MAX_QUARTERS, quartersAt, ratingText, ratingX, stepQuarters, wholeStarsAt } from '~/utils/rating'
 
 const model = defineModel<number | null>({ required: true })
@@ -43,7 +44,9 @@ const valueText = computed(() =>
 )
 
 function set(quarters: number) {
-  model.value = quarters > 0 ? quarters : null
+  const next = quarters > 0 ? quarters : null
+  if (isRatingStep(model.value, next)) tick()
+  model.value = next
 }
 
 // A press becomes a drag once the finger has moved; one that never moved is a tap.

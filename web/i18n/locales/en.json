@@ -142,13 +142,13 @@
     "filtersLabel": "Show",
     "filter": {
       "all": "All",
-      "notFinished": "Not finished"
+      "notFinished": "DNF"
     },
     "notFinishedEmpty": {
       "title": "Nothing set aside",
-      "text": "Books you stop reading are kept here, so you can pick them up again."
+      "text": "Books you didn't finish are kept here, so you can pick them up again."
     },
-    "notFinishedOn": "Not finished · {date}",
+    "notFinishedOn": "DNF · {date}",
     "added": "Added {date}",
     "loadError": "Your Library didn't load. Check your connection and try again.",
     "retry": "Try again",
@@ -199,7 +199,7 @@
     "want_to_read": "Want to read",
     "reading": "Currently reading",
     "finished": "Finished",
-    "notFinished": "Not finished"
+    "notFinished": "DNF"
   },
   "book": {
     "title": "Book",
@@ -219,7 +219,7 @@
     "since": "Since {date} · day {day}",
     "start": "Start reading",
     "finish": "Finish",
-    "abandon": "Abandon",
+    "abandon": "DNF",
     "readAgain": "Read again",
     "startAgain": "Start again",
     "options": "Book options",
@@ -310,13 +310,13 @@
     }
   },
   "abandon": {
-    "title": "Abandon reading",
+    "title": "Mark as DNF",
     "endedOn": "Stopped on",
     "reason": "Reason",
     "optional": "optional",
     "reasonPlaceholder": "Why are you putting it down?",
-    "action": "Abandon",
-    "busy": "Abandoning…",
+    "action": "Mark as DNF",
+    "busy": "Marking DNF…",
     "retry": "Try again"
   },
   "start": {
