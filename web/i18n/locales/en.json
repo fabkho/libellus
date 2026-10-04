@@ -269,6 +269,13 @@
       "retry": "Try again",
       "action": "Change",
       "busy": "Changing…"
+    },
+    "goodreads": {
+      "ratingLabel": "Rated {rating} out of 5",
+      "ratings": "{count} rating | {count} ratings",
+      "reviews": "{count} review | {count} reviews",
+      "on": "on {goodreads}",
+      "name": "Goodreads"
     }
   },
   "add": {

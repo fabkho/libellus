@@ -1,3 +1,5 @@
+import type { GoodreadsRating } from './goodreads'
+
 /**
  * The Book as the client sees it (CONTEXT.md: Book, Catalogue, Cover), and the
  * ISBN rules every source shares. Framework-free: the search and library
@@ -34,8 +36,12 @@ export type BookSnapshot = {
   openLibraryWorkKey: string | null
 }
 
-/** A Book in the database: the Catalogue, or a member's Manual book. */
-export type Book = BookSnapshot & { id: string; createdAt: string }
+/**
+ * A Book in the database: the Catalogue, or a member's Manual book. `goodreads`:
+ * the cached Goodreads rating of its ISBN, when the row was loaded with it
+ * (data/goodreads.ts); absent on a copy from before it existed.
+ */
+export type Book = BookSnapshot & { id: string; createdAt: string; goodreads?: GoodreadsRating | null }
 
 /**
  * The address of a Book's page (`/book/<key>`): a Catalogue Book by its id, a
