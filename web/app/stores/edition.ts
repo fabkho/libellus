@@ -52,6 +52,13 @@ export const useEditionStore = defineStore('edition', () => {
   const picked = ref<string | null>(null)
   const busy = ref(false)
   const error = ref<LibraryErrorCode | null>(null)
+  /**
+   * The last change: the Book the entry had, and the entry with its new one.
+   * Set in the same tick as the Library learns it, so a book page showing the
+   * old Book follows its entry in that same render (no frame of the old Book
+   * shown as not in the Library) and animates the change (#61).
+   */
+  const moved = ref<{ from: string; to: LibraryEntry } | null>(null)
 
   let inFlight: AbortController | null = null
 
@@ -145,6 +152,7 @@ export const useEditionStore = defineStore('edition', () => {
         return null
       }
       const changed = result.data
+      moved.value = { from: entry.book.id, to: changed }
       library.editionChanged(changed)
       // The old Book's pages show it as a Book that is not in the Library.
       books.dropEntry(changed.id)
@@ -163,6 +171,7 @@ export const useEditionStore = defineStore('edition', () => {
     candidates.value = []
     picked.value = null
     error.value = null
+    moved.value = null
   }
 
   watch(
@@ -172,5 +181,5 @@ export const useEditionStore = defineStore('edition', () => {
     },
   )
 
-  return { changing, candidates, pending, failed, picked, busy, error, choice, isPicked, open, close, pick, look, confirm, reset }
+  return { changing, candidates, pending, failed, picked, busy, error, moved, choice, isPicked, open, close, pick, look, confirm, reset }
 })

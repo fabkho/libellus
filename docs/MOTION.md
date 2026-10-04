@@ -120,6 +120,17 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   again from there; anything else lands the running flight at once. If the book page has not drawn
   its hero when the flight starts, the cover waits for it (a frame or so, at most `standard`), then
   fades where it is.
+- **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
+  changes to another edition: the old cover, title, author and facts (and what the Book is about)
+  lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
+  image is decoded (at most twice `sheet`, then the new cover shows what it has and fades its image
+  in itself) the old ones fade out as the new ones fade in, over `standard` — the cover cross-fades
+  in place, the 2:3 box being the same — and the light in the room turns from the old cover's
+  colours to the new one's (the colours themselves animate: a fading light would draw its grain on
+  its own). The content below (status, actions, history) is the entry's and does not change; if
+  the new title takes more or fewer lines it slides from where it was to where it is now over
+  `standard`. Interruptible: leaving the page or another change ends it at
+  once, the new edition in place. Reduce Motion: the cross-fade alone, nothing slides.
 - **A list changes.** Finish, Abandon or Start moves a Book from one list to another: the list on
   screen holds still until the sheet has fallen away (`useSettled`), then the card or row that
   leaves fades over `exit` while its room closes over `standard`, so the ones after it slide up and
@@ -206,8 +217,10 @@ its scroll and its live state, and covers that land on their own pixels need liv
 place and the caret stops blinking. Nothing depends on an animation finishing. The search morph
 is one exception, as iOS does it: nothing travels or grows, the palette and the veil
 cross-fade over the tab bar in place over `standard` (Web Animations, which the CSS rule does
-not touch). The push to a book is the other: no cover flies and nothing rises, the book page and the
-page left cross-fade in place over `standard`, both ways.
+not touch). The push to a book is another: no cover flies and nothing rises, the book page and the
+page left cross-fade in place over `standard`, both ways. Change edition is the third: the old
+edition's hero cross-fades into the new one over `standard`, and the content below takes its new
+place at once.
 
 ## Non-motions
 
