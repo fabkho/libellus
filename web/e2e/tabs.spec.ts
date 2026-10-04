@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { signedIn } from './support'
+import { signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -7,15 +7,31 @@ import { test } from './fixtures'
  * Home and Library each open where the member left them, back still returns to
  * where the browser saved, and the tab already showing, tapped again, goes back
  * to its top. A short window makes a new member's empty pages scrollable.
+ *
+ * After every navigation the flow waits until the page has been put in its
+ * place (`untilStill`: the document carries `data-moving` until the router has
+ * scrolled, app/router.options.ts) before it reads or moves the scroll: on a
+ * slow runner the router's scroll can land well after the new page shows, and
+ * a scroll the flow made first would be undone by it.
  */
 
 const scrollY = (page: Page) => page.evaluate(() => Math.round(window.scrollY))
 
-/** Scrolls the page as far down as it goes (and settles); returns where it ended. */
-async function scrollToEnd(page: Page) {
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-  await expect.poll(() => scrollY(page)).toBeGreaterThan(40)
+/** Where the page stands once the router has put it in its place. */
+async function placed(page: Page) {
+  await untilStill(page)
   return scrollY(page)
+}
+
+/** Scrolls the page, once in its place, as far down as it goes; returns where it ended. */
+async function scrollToEnd(page: Page) {
+  await untilStill(page)
+  const end = await page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight)
+    return Math.round(window.scrollY)
+  })
+  expect(end).toBeGreaterThan(40)
+  return end
 }
 
 test('each tab opens where it was left, and the current tab tapped again goes to its top', async ({ page }) => {
@@ -28,13 +44,13 @@ test('each tab opens where it was left, and the current tab tapped again goes to
   // Library has not been scrolled yet: it opens at its top.
   await page.getByTestId('shell.tab.library').click()
   await expect(page.getByTestId('library.title')).toBeVisible()
-  await expect.poll(() => scrollY(page)).toBe(0)
+  expect(await placed(page)).toBe(0)
   const library = await scrollToEnd(page)
 
   // Home again: where it was left.
   await page.getByTestId('shell.tab.home').click()
   await expect(page.getByTestId('home.title')).toBeVisible()
-  await expect.poll(() => scrollY(page)).toBe(home)
+  expect(await placed(page)).toBe(home)
 
   // Home tapped while it is showing: back to the top, still on Home.
   await page.getByTestId('shell.tab.home').click()
@@ -44,10 +60,10 @@ test('each tab opens where it was left, and the current tab tapped again goes to
   // Library: where it was left, even though Home moved since.
   await page.getByTestId('shell.tab.library').click()
   await expect(page.getByTestId('library.title')).toBeVisible()
-  await expect.poll(() => scrollY(page)).toBe(library)
+  expect(await placed(page)).toBe(library)
 
   // Back returns to Home where the browser saved it (its top, after the tap).
   await page.goBack()
   await expect(page.getByTestId('home.title')).toBeVisible()
-  await expect.poll(() => scrollY(page)).toBe(0)
+  expect(await placed(page)).toBe(0)
 })

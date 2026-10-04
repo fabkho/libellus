@@ -63,7 +63,9 @@ export async function signedIn(page: Page) {
 /**
  * Waits until nothing on the page is moving: no sheet rising or sliding away,
  * no list opening or closing an item's room (both carry `data-moving` until
- * their transition has ended). Watching an element's box instead is not
+ * their transition has ended), and no page still on its way to its scroll
+ * place after a navigation (the document carries it until the router has
+ * scrolled, app/router.options.ts). Watching an element's box instead is not
  * enough: a slow runner may paint no frame between two looks, and a sheet
  * mid-rise then seems to stand still.
  */

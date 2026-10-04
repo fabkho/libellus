@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { signedIn } from './support'
+import { signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -74,7 +74,9 @@ test('the top scroll edge is a short unblurred fade under the status bar, and on
   await insets(page, 59, 0)
   expect(await height()).toBe(59 + ms)
 
-  // Scrolled: it shows.
+  // Scrolled: it shows. Once Home is in its place: the router's own scroll,
+  // still on its way after signing in, would put it back at the top.
+  await untilStill(page)
   await page.evaluate(() => {
     document.body.style.minHeight = '300vh'
     window.scrollTo(0, 200)
