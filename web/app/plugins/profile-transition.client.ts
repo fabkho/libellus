@@ -1,4 +1,4 @@
-import type { RouteLocationNormalized, RouterScrollBehavior } from 'vue-router'
+import type { RouteLocationNormalized } from 'vue-router'
 import { prefersReducedMotion } from '~/utils/motion'
 import { tabPlaces } from '~/utils/tabPlaces'
 
@@ -29,8 +29,24 @@ import { tabPlaces } from '~/utils/tabPlaces'
 type Direction = 'push' | 'back'
 
 const PROFILE = '/profile'
-/** The longest the new state may keep the page frozen (a slow first load of the Profile's code). */
+/** The longest the new state may keep the page frozen (a slow first load of the Profile's code): a safety net, not a wait. */
 const LIMIT_MS = 1000
+
+/** What says the new page is in: the Profile's root, or a tab's header. */
+const PROFILE_PAGE = '[data-testid="profile"]'
+const TAB_HEADER = '[data-testid="shell.header"]'
+
+/** Calls `then` once `selector` is in the document: now, or as soon as it is added. */
+function whenIn(selector: string, then: () => void) {
+  if (document.querySelector(selector)) return then()
+  const observer = new MutationObserver(() => {
+    if (!document.querySelector(selector)) return
+    observer.disconnect()
+    then()
+  })
+  observer.observe(document.body, { childList: true, subtree: true })
+  setTimeout(() => observer.disconnect(), LIMIT_MS)
+}
 
 const isTabPage = (route: RouteLocationNormalized) => route.meta.layout === 'tabs' && !route.meta.pushed
 
@@ -55,7 +71,11 @@ export default defineNuxtPlugin((nuxtApp) => {
   /** Lets the running transition capture its new state (null: none waits). */
   let finish: (() => void) | null = null
 
-  router.beforeResolve((to, from) => {
+  // After Nuxt's own `beforeResolve` that lets the browser paint the tap first
+  // (navigation-repaint, registered when the app is ready): a transition pauses
+  // painting until its new state is in, so started earlier, that guard would
+  // wait out its 100 ms fallback on every tap.
+  onNuxtReady(() => router.beforeResolve((to, from) => {
     const animatedByBrowser = browserAnimated
     browserAnimated = false
     const direction = directionOf(to, from)
@@ -85,26 +105,29 @@ export default defineNuxtPlugin((nuxtApp) => {
     void transition.finished.then(done, done)
     // The page swaps only once the old state is on its picture.
     return oldCaptured
-  })
+  }))
 
-  // The new state waits for the page drawn and at its place (the router scrolls there right after, a no-op).
-  const original = router.options.scrollBehavior
-  const scrollBehavior: RouterScrollBehavior = (to, from, saved) => {
-    const result = original ? original(to, from, saved) : false
-    if (finish && directionOf(to, from)) {
-      // Where the router is about to scroll (app/router.options.ts): the Profile's top, or the tab's place.
-      const place = to.path === PROFILE ? { left: 0, top: 0 } : tabPlaces.arrive({ to: to.path, fromShell: true, saved: saved ?? null })
-      nuxtApp.hooks.hookOnce('page:loading:end', () => {
-        window.scrollTo(place.left, place.top)
-        const avatar = document.querySelector<HTMLElement>('[data-testid="shell.avatar"] [data-profile-avatar]')
-        if (avatar) {
-          const box = avatar.getBoundingClientRect()
-          if (box.bottom <= 0 || box.top >= window.innerHeight) avatar.style.setProperty('view-transition-name', 'none')
-        }
-        finish?.()
-      })
-    }
-    return result
-  }
-  router.options.scrollBehavior = scrollBehavior
+  // The new state is taken as soon as the new page is in the document, put at
+  // the place the router is about to scroll it to (it scrolls there itself
+  // afterwards, a no-op). Watched for directly from the navigation's end: the
+  // router's own scroll and Nuxt's page hooks come later, and the page stays
+  // frozen until this is done.
+  router.afterEach((to, from, failure) => {
+    const direction = directionOf(to, from)
+    if (!finish || !direction) return
+    if (failure) return finish()
+    // Where the router will scroll (app/router.options.ts): the Profile's top, or the tab's place
+    // (Back: the place the router saved in the history entry, `state.scroll`).
+    const saved = (window.history.state as { scroll?: { left: number; top: number } | null } | null)?.scroll ?? null
+    const place = direction === 'push' ? { left: 0, top: 0 } : tabPlaces.arrive({ to: to.path, fromShell: true, saved })
+    whenIn(direction === 'push' ? PROFILE_PAGE : TAB_HEADER, () => {
+      window.scrollTo(place.left, place.top)
+      const avatar = document.querySelector<HTMLElement>('[data-testid="shell.avatar"] [data-profile-avatar]')
+      if (avatar) {
+        const box = avatar.getBoundingClientRect()
+        if (box.bottom <= 0 || box.top >= window.innerHeight) avatar.style.setProperty('view-transition-name', 'none')
+      }
+      finish?.()
+    })
+  })
 })
