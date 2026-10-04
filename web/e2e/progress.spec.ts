@@ -92,11 +92,10 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await page.getByTestId('start.submit').click()
   await expect(page.getByTestId('start')).toBeHidden()
 
-  // Currently reading, nothing recorded yet: Update progress opens the sheet on 0, in pages.
-  await expect(page.getByTestId('book.progressBar')).toHaveAttribute('aria-valuetext', en.book.progress.none)
-  await expect(page.getByTestId('book.progressValue')).toHaveText('0')
-  await expect(page.getByTestId('book.progressTotal')).toHaveText(en.book.progress.totalOf.replace('{count}', '480'))
-  await expect(page.getByTestId('book.progressPace')).toHaveText(en.book.progress.figureNone)
+  // Currently reading, nothing recorded yet (#79): only Update progress, which opens the sheet on 0, in pages.
+  await expect(page.getByTestId('book.updateProgress')).toBeVisible()
+  await expect(page.getByTestId('book.progressBar')).toBeHidden()
+  await expect(page.getByTestId('book.progressFigures')).toBeHidden()
   await page.getByTestId('book.updateProgress').click()
   const wheel = page.getByTestId('progress.wheel')
   await expect(page.getByTestId('progress.sheetTitle')).toHaveText(en.book.progress.title)

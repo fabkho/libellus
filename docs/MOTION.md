@@ -56,6 +56,11 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than
   0.5 px/ms, otherwise it settles back (`web/app/composables/useSwipeDown.ts`).
+- **Reveal.** Something that was not there until it had something to say (the book page's figures,
+  chart and reading log before any progress was tracked, `UiReveal`) opens its room and fades in over
+  `standard`, so what sits under it glides down instead of jumping; it closes over `exit`. Clipped only
+  while it moves. With Reduce Motion a short fade over `quick`, no travel. The room carries
+  `data-moving` while it moves.
 - **Search morph.** As iOS 26 and Apple Books do it, the tab bar's capsule turns into the search
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's

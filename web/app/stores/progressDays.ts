@@ -7,7 +7,8 @@ import { useSessionStore } from '~/stores/session'
  * Progress by day of the reads on screen (issue #68): Home's cards and the book
  * page ask for their read's days (`want`), and the asks of one moment go out as
  * one call (`progressDays`). A progress save or Undo asks for its read again
- * (`refresh`). Kept in memory only: offline, a read whose days were never loaded
+ * (`refresh`; `refreshing` says until the answer is in, so the book page can
+ * show what a save changed in one go, #79). Kept in memory only: offline, a read whose days were never loaded
  * has none to show, and the screens fall back to what they showed before #68.
  * Signing out (or another member signing in) forgets them.
  */
@@ -20,12 +21,21 @@ export const useProgressDaysStore = defineStore('progressDays', () => {
   const asked = new Set<string>()
   /** How often each read was asked for: only the answer to the latest ask is kept. */
   const asks = new Map<string, number>()
+  /** Reads whose days were asked for again after a save or Undo and have not come back yet (issue #79). */
+  const refreshing = ref<Record<string, true>>({})
   let queued: Set<string> | null = null
+
+  function settle(ids: string[]) {
+    if (!ids.some((id) => refreshing.value[id])) return
+    const rest = { ...refreshing.value }
+    for (const id of ids) delete rest[id]
+    refreshing.value = rest
+  }
 
   async function flush(ids: string[]) {
     const repo = library.library()
     const member = session.member?.id
-    if (!repo) return
+    if (!repo) return settle(ids)
     const sent = new Map(ids.map((id) => [id, asks.get(id)]))
     const result = await repo.progressDays(ids)
     if (member !== session.member?.id) return
@@ -33,9 +43,10 @@ export const useProgressDaysStore = defineStore('progressDays', () => {
     if (result.error) {
       // Asked again the next time a screen wants them.
       for (const id of current) asked.delete(id)
-      return
+      return settle(current)
     }
     bySession.value = { ...bySession.value, ...Object.fromEntries(current.map((id) => [id, result.data[id] ?? []])) }
+    settle(current)
   }
 
   /** A screen shows this read: its days, unless they are loaded or on the way. */
@@ -56,6 +67,7 @@ export const useProgressDaysStore = defineStore('progressDays', () => {
   function refresh(sessionId: string | null | undefined) {
     if (!sessionId) return
     asked.delete(sessionId)
+    refreshing.value = { ...refreshing.value, [sessionId]: true }
     want(sessionId)
   }
 
@@ -64,10 +76,11 @@ export const useProgressDaysStore = defineStore('progressDays', () => {
     (now, before) => {
       if (now === before) return
       bySession.value = {}
+      refreshing.value = {}
       asked.clear()
       asks.clear()
     },
   )
 
-  return { bySession, want, refresh }
+  return { bySession, refreshing, want, refresh }
 })
