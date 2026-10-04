@@ -41,9 +41,9 @@ test('a member finds a book, opens it, adds it and sees it on Want to read', asy
   const results = page.getByTestId('search.result')
   await expect(results.first()).toBeVisible()
   await expect(page.getByTestId('search.resultTitle').first()).toHaveText('Piranesi')
-  const best = await results.first().boundingBox()
-  const second = await results.nth(1).boundingBox()
-  expect(best!.y).toBeGreaterThan(second!.y)
+  // Both rows read in one look: the list may still re-render between two.
+  const [best, second] = await results.evaluateAll((rows) => rows.slice(0, 2).map((row) => row.getBoundingClientRect().top))
+  expect(best).toBeGreaterThan(second!)
   await expect(page).toHaveURL(/\/library$/)
 
   // Tapping the result opens its book page and closes the search.

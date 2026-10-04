@@ -4,7 +4,7 @@ import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { GOODREADS_FUNCTION, goodreadsAnswer, test } from './fixtures'
-import { recordedApple, signedIn } from './support'
+import { recordedApple, signedIn, untilStill } from './support'
 
 /**
  * Goodreads' rating on the book page (issue #69). The page asks the
@@ -104,10 +104,14 @@ test('the rating fades in under the facts and links to Goodreads; no ISBN, no li
   await expect(link).toHaveText(en.book.goodreads.name)
   await expect(link).toHaveAttribute('href', 'https://www.goodreads.com/book/show/6388978#CommunityReviews')
   await expect(link).toHaveAttribute('target', '_blank')
-  // Under the facts, inside the hero.
+  // Under the facts, inside the hero. Both read in one look, once the page has
+  // arrived: two looks apart, the page rising in moves between them.
   await expect(page.getByTestId('book.hero').getByTestId('book.goodreads')).toBeVisible()
-  const [facts, lineBox] = [(await page.getByTestId('book.facts').boundingBox())!, (await line.boundingBox())!]
-  expect(lineBox.y).toBeGreaterThan(facts.y)
+  await untilStill(page)
+  const [facts, lineTop] = await page.evaluate(() =>
+    ['book.facts', 'book.goodreads'].map((id) => document.querySelector(`[data-testid="${id}"]`)!.getBoundingClientRect().top),
+  )
+  expect(lineTop).toBeGreaterThan(facts!)
 
   // Asked once, by ISBN, with what a title search needs.
   expect(asked).toHaveLength(1)
