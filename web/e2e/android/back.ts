@@ -8,14 +8,14 @@
  * and Back (the sheet closes, the page stays); Edit read and Cancel; the
  * Delete question over the sheet and Back twice; the search and Back; Back
  * once more (the previous book: no entry was left behind). Then the avatar
- * menu on Home and Back. Each step prints where the page is and what is open;
+ * on Home (it opens the Profile) and Back. Each step prints where the page is and what is open;
  * a few take a screenshot of the whole screen.
  *
  *   pnpm tsx e2e/android/back.ts --base http://localhost:3065 --out /tmp/libellus-android --real --gesture
  *
  * `--real` taps with a finger (adb input; otherwise the DevTools protocol),
  * `--gesture` goes back with a swipe in from the left edge (otherwise the Back
- * key), `--menu` runs only the avatar menu.
+ * key), `--menu` runs only the avatar part.
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -89,7 +89,7 @@ const push = (page: Page, path: string) =>
 const state = (page: Page) =>
   page.evaluate(() => ({
     path: location.pathname.replace(/^\/book\/(.{4}).*/, '/book/$1…'),
-    open: [...document.querySelectorAll('[role="dialog"], [data-testid="shell.menu"], [data-testid="search.query"]')]
+    open: [...document.querySelectorAll('[role="dialog"], [data-testid="search.query"]')]
       .map((el) => el.getAttribute('data-testid'))
       .join(','),
   }))
@@ -151,14 +151,14 @@ async function main() {
     await step('back: previous book', '5-previous-book')
   }
 
-  // The avatar menu on Home.
+  // The avatar on Home opens the Profile; Back is Home again.
   await push(page, '/')
   await page.getByTestId('shell.avatar').waitFor()
   await sleep(600)
   await tap('shell.avatar')
-  await step('avatar menu open')
+  await step('profile open')
   back()
-  await step('back: menu closes, still Home')
+  await step('back: Home again')
   await browser.close()
 }
 

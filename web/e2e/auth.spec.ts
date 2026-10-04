@@ -59,11 +59,11 @@ test('a new member signs up with the dev invite, lands on Home and signs out', a
   await expect(page.getByTestId('search.overlay')).toBeHidden()
   await expect(page.getByTestId('library.title')).toBeVisible()
 
-  // The avatar shows the initials and opens the menu that signs out.
+  // The avatar shows the initials and opens the Profile, whose account rows sign out.
   await expect(page.getByTestId('shell.avatar')).toHaveText('ES') // e2e-signup-… → first letters of the first two words
   await page.getByTestId('shell.avatar').click()
-  await expect(page.getByTestId('shell.email')).toContainText(email)
-  await page.getByTestId('shell.signOut').click()
+  await expect(page.getByTestId('profile.email')).toContainText(email)
+  await page.getByTestId('profile.signOut').click()
   await expect(page).toHaveURL(/\/sign-in$/)
 
   // And signed out means signed out: the tabs are behind the code again.
@@ -192,8 +192,8 @@ test('the theme follows the phone until the switch is tapped, then flips and sta
 
   // The switch shows what is showing: Dark, on.
   await page.getByTestId('shell.avatar').click()
-  const toggle = page.getByTestId('shell.theme')
-  await expect(toggle).toHaveText(en.shell.darkTheme)
+  const toggle = page.getByTestId('profile.theme')
+  await expect(toggle).toHaveText(en.profile.account.theme)
   await expect(toggle).toHaveAttribute('aria-checked', 'true')
 
   // The first tap stores the opposite of what is showing: Light.
@@ -202,8 +202,8 @@ test('the theme follows the phone until the switch is tapped, then flips and sta
   await expect(toggle).toHaveAttribute('aria-checked', 'false')
   expect(await themeColors()).toEqual([light, light])
   expect(await page.evaluate(() => localStorage.getItem('libellus-theme'))).toBe('light')
-  // The menu stays open, so the change can be seen and undone.
-  await expect(page.getByTestId('shell.menu')).toBeVisible()
+  // The Profile stays, so the change can be seen and undone.
+  await expect(page.getByTestId('profile.account')).toBeVisible()
 
   // Every later tap flips, whatever the phone does.
   await toggle.click()
@@ -222,7 +222,7 @@ test('the theme follows the phone until the switch is tapped, then flips and sta
   await expect(html).toHaveAttribute('data-theme', 'dark')
   await expect.poll(themeColors).toEqual([dark, dark])
   await page.getByTestId('shell.avatar').click()
-  await page.getByTestId('shell.signOut').click()
+  await page.getByTestId('profile.signOut').click()
   await expect(page).toHaveURL(/\/sign-in$/)
   await expect(html).toHaveAttribute('data-theme', 'dark')
 })

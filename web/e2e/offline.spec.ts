@@ -191,7 +191,7 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   // Signing out leaves no copy of her Library on the device.
   await page.getByTestId('shell.tab.home').click()
   await page.getByTestId('shell.avatar').click()
-  await page.getByTestId('shell.signOut').click()
+  await page.getByTestId('profile.signOut').click()
   await expect(page).toHaveURL(/\/sign-in$/)
   expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('libellus.')))).toEqual([])
 })

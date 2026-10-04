@@ -30,7 +30,7 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
 
 - The stored preference is `null | 'light' | 'dark'` on the device (local storage key
   `libellus-theme`, never in Supabase). `null`, the default, follows the phone's appearance.
-- The switch in the avatar menu shows two states only, Light and Dark ("Dark mode", on or off).
+- The switch in the Profile's account rows shows two states only, Light and Dark ("Dark mode", on or off).
   Its **first tap stores the opposite of what is showing**; every later tap flips. There is no
   "Match the phone" option and no way back to `null` from the interface.
 - The rule is code in `web/app/utils/theme.ts` (framework-free, `web/tests/theme.test.ts`); the
@@ -71,7 +71,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | Role | Utility | Light (Day) | Dark (Night) | Use |
 |---|---|---|---|---|
 | surface | `bg-surface` | `#f4f0e9` | `#0e0c0a` | The room: page background |
-| surfaceRaised | `bg-surface-raised` | `#fbf9f5` | `#171512` | Cards, the search palette, the avatar menu |
+| surfaceRaised | `bg-surface-raised` | `#fbf9f5` | `#171512` | Cards, the search palette, the Profile's hero ring |
 | surfaceSheet | `bg-surface-sheet` | `#fbf9f5` | `#1b1815` | Bottom sheets |
 | surfaceStage | `bg-surface-stage` | `#1a1714` | `#000` | Behind a page that steps back |
 | glass | `glass` utility | paper 78 % | room 72 % | Floating chrome, always blurred |
@@ -126,7 +126,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   margin and gap (`px-screen`, `gap-ms`). Widths and heights take a size token
   (`h-(--size-row)`), never a spacing name.
 - Radius: covers `cover-sm` 2.5 / `cover` 3.5 / `cover-lg` 5 by size, `sm` 8, `md` 14 (groups,
-  code cells), `field` 18 (search field, avatar menu), `lg` 20 (cards), `xl` 24 (search palette),
+  code cells), `field` 18 (search field), `lg` 20 (cards), `xl` 24 (search palette),
   `sheet` 30, `pill`.
 - Size: `touch` 44 (smallest target), `maxContent` 480 (the column on wide screens), `tabBar` 62,
   `tab` 72, `tabIcon` 26, `row` 48, `query` 62 (as tall as the capsule it grows out of), `fadeAbove` 64 (the tab bar's fade reaches this far over the capsule, from the screen edge), `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
@@ -137,10 +137,10 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 ### Depth
 
 - Shadows (`shadow-*`, one value per theme: warm and light on paper, deep in the dark): `raised`,
-  `cover`, `float` (tab bar), `button` (primary), `palette` (search palette, avatar menu), `sheet`.
+  `cover`, `float` (tab bar), `button` (primary), `palette` (search palette), `sheet`.
 - Edges: `edge` (strong hairline ring) and `edge-faint` draw a half-pixel ring inside the box and
   compose with a shadow.
-- Blur: `glass` 22 (tab bar, avatar menu), `chrome` 18 (round buttons), `veil` 7 (the page behind
+- Blur: `glass` 22 (tab bar), `chrome` 18 (round buttons), `veil` 7 (the page behind
   search), `halo` 26 (a cover's halo). Opacity of a cover's light: `--opacity-glow` (1 dark, 0.5
   light), `--opacity-halo`.
 
@@ -184,8 +184,22 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
   The top bar is pinned under the safe area (centred on the column on a wide screen) and the
   page scrolls under its glass buttons: an installed app has no edge swipe back.
-- **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
-  the account address, the Dark mode switch and Sign out.
+- **Profile** (`pages/profile/index.vue`, issue #78; design round #78, direction D): the avatar in
+  every tab's header opens it, a pushed screen lit like a book page (the favourite cover of the
+  year in view). B's hero (the initials in a `coverMd` ring, the name, "Reading here since …",
+  the Library in one mono line), then A's year pills (All first, the default) over the four
+  figures between hairlines, the books by month or by year as columns (the lit one in the lamp
+  colour; a column opens its books in a sheet, or its year), the reading days as a five-week
+  calendar of dots, the ratings as one bar per whole star (a row opens the books rated so), the
+  records, the authors read more than once (a fan of covers and tally marks), the years in review
+  as cards, and the account at the end (address, Name, Dark mode, Import books, Sign out).
+  **Figures and covers, never sentences**: the owner turned down text summaries ("You read on 15
+  of the last 21 days…"). No goals and no streaks: the reading days say which days and how much,
+  never a run to keep.
+- **Year in review** (`pages/profile/[year].vue`): pushed from the Profile, lit by the year's
+  favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
+  their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
+  and the years either side (they replace the page, so Back is the Profile).
 - **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
   once something has scrolled under it a thin veil of the surface colour keeps the clock legible:
   solid behind the status bar (the top inset), fading to nothing `ms` below it. No blur, and it
@@ -258,7 +272,7 @@ in `web/i18n/locales/en.json`.
 
 - No hex values, raw colours or one-off pixel values in components; no Tailwind default palette.
 - No colour for decoration: the accent marks what is lit, the covers bring the rest.
-- No sans-serif book titles, no round ✕ on sheets, no search page, no profile screen.
+- No sans-serif book titles, no round ✕ on sheets, no search page, no text summaries of the reading.
 - No theme-specific components or `dark:` variants: a role has a value per theme.
 - No prototype code: nothing in production imports `components/proto/` (it does not exist on
   `main`).

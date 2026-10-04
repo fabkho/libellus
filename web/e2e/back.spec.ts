@@ -83,7 +83,7 @@ test('Back closes a confirmation first, then the sheet under it', async ({ page 
   await expect(page.getByTestId('home.title')).toBeVisible()
 })
 
-test('Back closes the search and the avatar menu without leaving the page', async ({ page }) => {
+test('Back closes the search without leaving the page, and leaves the Profile', async ({ page }) => {
   await signedIn(page)
   await onPiranesi(page)
   const book = page.url()
@@ -96,10 +96,11 @@ test('Back closes the search and the avatar menu without leaving the page', asyn
 
   await page.goBack()
   await expect(page.getByTestId('home.title')).toBeVisible()
+  // The avatar opens the Profile, a page: Back is Home again.
   await page.getByTestId('shell.avatar').click()
-  await expect(page.getByTestId('shell.menu')).toBeVisible()
+  await expect(page.getByTestId('profile.account')).toBeVisible()
   await page.goBack()
-  await expect(page.getByTestId('shell.menu')).toBeHidden()
+  await expect(page.getByTestId('profile')).toBeHidden()
   await expect(page.getByTestId('home.title')).toBeVisible()
 })
 

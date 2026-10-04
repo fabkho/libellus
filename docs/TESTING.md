@@ -119,7 +119,7 @@ For the three-button run, switch the navigation mode, restart Chrome and run `--
 
 **The system Back** (#62) has its own script, run after `smoke.ts` with the same `--out` (it signs
 nobody up and reuses `member.json`): one book page to another, Edit read and the back gesture, Cancel,
-the Delete question over the sheet, the search, the avatar menu — each step printing where the page
+the Delete question over the sheet, the search, the avatar's Profile — each step printing where the page
 is and what is open. `--real` taps with a finger (adb), `--gesture` swipes in from the left edge
 (without it, the Back key, as with three-button navigation):
 
@@ -128,8 +128,8 @@ pnpm tsx e2e/android/back.ts --base http://localhost:3063 --out /tmp/libellus-an
 ```
 
 A Back gesture starts with a touch the page sees (`pointerdown`, then `pointercancel` once the
-system takes it over), so nothing that Back closes may also close on that touch: the avatar menu
-closes on a tap elsewhere when the finger lifts, not as it lands.
+system takes it over), so nothing that Back closes may also close on that touch (the avatar menu, before #78 replaced it
+with the Profile, closed on a tap elsewhere when the finger lifted, not as it landed).
 
 ## What Chrome reports (Chrome 145, Pixel 9 emulator, Android 17)
 
