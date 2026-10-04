@@ -5,11 +5,14 @@
 // the quarter-star Rating, optional; a review, optional; the one action. While
 // it runs the button says so; a failure stays in the sheet with its reason and
 // the button tries again. Cancelling keeps what was chosen for the next time
-// the same Book's sheet opens.
+// the same Book's sheet opens. Under the Book, how the read went (issue #68):
+// "Read in 12 days · 51 pages a day", from its start to the day it is finished on.
 import { REVIEW_MAX_LENGTH } from '~/data/library'
+import { pageCountOf } from '~/data/progress'
+import { readSummaryOf } from '~/data/progressDays'
 import { useReadingStore } from '~/stores/reading'
 
-const { t } = useI18n()
+const { t, n } = useI18n()
 const reading = useReadingStore()
 // Adding, starting, finishing writes: offline the action says so instead (#15).
 const online = useOnline()
@@ -38,6 +41,19 @@ const label = computed(() =>
   reading.finishBusy ? t('finish.busy') : reading.finishError ? t('finish.retry') : t('finish.action'),
 )
 const reviewId = useId()
+
+const summary = computed(() => {
+  const startedOn = entry.value?.latestSession?.startedOn
+  if (!entry.value || !startedOn || !/^\d{4}-\d{2}-\d{2}$/.test(reading.endedOn)) return null
+  const read = readSummaryOf(startedOn, reading.endedOn, pageCountOf(entry.value))
+  return t('book.progress.readIn', {
+    days: t('book.progress.days', { count: read.days }, read.days),
+    perDay:
+      read.unit === 'page'
+        ? t('book.progress.readPerDayPages', { count: n(read.perDay) }, read.perDay)
+        : t('book.progress.perDayPercent', { count: read.perDay }),
+  })
+})
 </script>
 
 <template>
@@ -50,6 +66,7 @@ const reviewId = useId()
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />
+      <p v-if="summary" class="figures mb-md text-meta text-ink-faint" data-testid="finish.summary">{{ summary }}</p>
 
       <UiRowGroup>
         <UiDateRow

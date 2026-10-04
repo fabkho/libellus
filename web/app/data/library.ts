@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
 import type { ProgressValue } from './progress'
+import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
 
 /**
  * The Library actions (issue #1, Library actions): the data-layer contract a
@@ -504,12 +505,21 @@ export type Library = {
    * is checked against it: `{ pageCount: 520 }` sets it, `{ pageCount: null }` goes back to
    * the edition's, leaving `total` out does not touch it. With a total the value may be
    * `null`: only the total changes and the read keeps its progress.
+   * `day` is the member's own calendar day (`YYYY-MM-DD`, the store sends `isoDay()`): the
+   * value is booked on it in the read's progress by day (issue #68), in the same call.
+   * Left out, the database uses its UTC date; one outside a day of it is `date_invalid`.
    */
   updateProgress: (
     entryId: string,
     progress: ProgressValue | null,
     total?: { pageCount: number | null },
+    day?: string,
   ) => Promise<Result<LibraryEntry>>
+  /**
+   * Progress by day (issue #68) of these reads: for each session id, its days oldest
+   * first (a read without any has an empty list). Only the member's own reads answer.
+   */
+  progressDays: (sessionIds: readonly string[]) => Promise<Result<Record<string, ProgressDay[]>>>
   /**
    * Points the entry at another edition (issue #41): the Book is found in the
    * Catalogue or added with this snapshot, as `addToLibrary` does it (resolve
@@ -645,7 +655,7 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
       return reread(entryId)
     },
 
-    async updateProgress(entryId, progress, total) {
+    async updateProgress(entryId, progress, total, day) {
       if (!online()) return OFFLINE
       const updated = await client.rpc('update_progress', {
         p_entry_id: entryId,
@@ -653,9 +663,24 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
         p_percent: progress && 'percent' in progress ? progress.percent : null,
         p_set_page_count: total !== undefined,
         p_page_count: total?.pageCount ?? null,
+        ...(day ? { p_day: day } : {}),
       })
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
       return reread(entryId)
+    },
+
+    async progressDays(sessionIds) {
+      const days: Record<string, ProgressDay[]> = Object.fromEntries(sessionIds.map((id) => [id, []]))
+      if (!sessionIds.length) return { data: days, error: null }
+      const { data, error } = await client
+        .from('reading_progress_days')
+        .select('session_id, day, start_page, start_percent, end_page, end_percent')
+        .in('session_id', [...sessionIds])
+        .order('day')
+        .returns<ProgressDayRow[]>()
+      if (error) return { data: null, error: mapLibraryError(error) }
+      for (const row of data) days[row.session_id]?.push(dayFromRow(row))
+      return { data: days, error: null }
     },
 
     async changeEdition(entryId, book) {

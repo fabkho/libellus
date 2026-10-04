@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
-import { isoDay } from '../app/utils/dates'
+import { addDays, isoDay } from '../app/utils/dates'
 import { sql, runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { recordedApple, signedIn, untilStill } from './support'
@@ -93,7 +93,10 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await expect(page.getByTestId('start')).toBeHidden()
 
   // Currently reading, nothing recorded yet: Update progress opens the sheet on 0, in pages.
-  await expect(page.getByTestId('book.progressValue')).toHaveText(en.book.progress.none)
+  await expect(page.getByTestId('book.progressBar')).toHaveAttribute('aria-valuetext', en.book.progress.none)
+  await expect(page.getByTestId('book.progressValue')).toHaveText('0')
+  await expect(page.getByTestId('book.progressTotal')).toHaveText(en.book.progress.totalOf.replace('{count}', '480'))
+  await expect(page.getByTestId('book.progressPace')).toHaveText(en.book.progress.figureNone)
   await page.getByTestId('book.updateProgress').click()
   const wheel = page.getByTestId('progress.wheel')
   await expect(page.getByTestId('progress.sheetTitle')).toHaveText(en.book.progress.title)
@@ -123,8 +126,8 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await page.getByTestId('progress.action').click()
   await expect(page.getByTestId('progress')).toBeHidden()
 
-  // The book page shows it: the bar, "p. 120 of 480" and the 25 % it is; stored as a page.
-  await expect(page.getByTestId('book.progressValue')).toHaveText('p. 120 of 480')
+  // The book page shows it: the bar, page 120 of 480 and the 25 % it is; stored as a page.
+  await expect(page.getByTestId('book.progressValue')).toHaveText('120')
   await expect(page.getByTestId('book.progressPercent')).toHaveText('25 %')
   await expect(page.getByTestId('book.progressBar')).toHaveAttribute('aria-valuenow', '25')
   expect(await sessionOf(member.email)).toEqual([{ outcome: null, progress_page: 120, progress_percent: null, page_count_override: null }])
@@ -268,7 +271,8 @@ test('her own total: "of 480" turns the wheel into the pages of her copy, and th
   await expect(page.getByTestId('home.progressBar')).toHaveAttribute('aria-valuenow', '89')
   expect(await sessionOf(member.email)).toEqual([{ outcome: null, progress_page: 500, progress_percent: null, page_count_override: 560 }])
   await page.getByTestId('home.entry').click()
-  await expect(page.getByTestId('book.progressValue')).toHaveText('p. 500 of 560')
+  await expect(page.getByTestId('book.progressValue')).toHaveText('500')
+  await expect(page.getByTestId('book.progressTotal')).toHaveText(en.book.progress.totalOf.replace('{count}', '560'))
 
   // "Edition's 480": the page is cut back to it, then set lower and saved without her total.
   await page.getByTestId('book.updateProgress').click()
@@ -281,7 +285,8 @@ test('her own total: "of 480" turns the wheel into the pages of her copy, and th
   await typeOn(page, 'progress.wheel', 300)
   await page.getByTestId('progress.action').click()
   await expect(page.getByTestId('progress')).toBeHidden()
-  await expect(page.getByTestId('book.progressValue')).toHaveText('p. 300 of 480')
+  await expect(page.getByTestId('book.progressValue')).toHaveText('300')
+  await expect(page.getByTestId('book.progressTotal')).toHaveText(en.book.progress.totalOf.replace('{count}', '480'))
   expect(await sessionOf(member.email)).toEqual([{ outcome: null, progress_page: 300, progress_percent: null, page_count_override: null }])
 })
 
@@ -341,4 +346,104 @@ test('offline the wheel still turns, but nothing saves: Save, Finish, Update and
   await page.context().setOffline(false)
   await expect(page.getByTestId('book.updateProgress')).toBeEnabled()
   expect((await sessionOf(member.email))[0]!.progress_page).toBe(30)
+})
+
+/** Gives the read days of reading before today, as #68 books them (the database takes only a day either side of now). */
+async function history(email: string, steps: [ago: number, amount: number][], kind: 'page' | 'percent' = 'page') {
+  let at = 0
+  for (const [ago, amount] of steps) {
+    const from = at
+    at += amount
+    await sql(
+      `insert into public.reading_progress_days (session_id, day, start_${kind}, end_${kind})
+       select s.id, $2::date, $3, $4
+         from public.reading_sessions s
+         join public.library_entries e on e.id = s.entry_id
+         join auth.users u on u.id = e.member_id
+        where u.email = $1 and s.outcome is null`,
+      [email, addDays(isoDay(), -ago), from, at],
+    )
+  }
+  await sql(
+    `update public.reading_sessions s set progress_${kind} = $2, progress_updated_at = now()
+       from public.library_entries e join auth.users u on u.id = e.member_id
+      where e.id = s.entry_id and u.email = $1 and s.outcome is null`,
+    [email, at],
+  )
+}
+
+test('progress by day: the card\'s sparkline and pace, the book page\'s figures, chart, Last time and log, the Finish summary', async ({ page }) => {
+  const member = await signedIn(page)
+  await createLibrary(member.client).addToLibrary(book('East of Eden', 608), { status: 'reading', startedOn: addDays(isoDay(), -11) })
+  // Twelve days in, 212 pages, yesterday 24 of them.
+  await history(member.email, [[11, 14], [10, 22], [9, 30], [8, 12], [6, 40], [5, 26], [4, 18], [2, 26], [1, 24]])
+  await page.reload()
+
+  // Home: the last two weeks and the pace instead of the since line.
+  await expect(page.getByTestId('home.pace')).toHaveText('18 a day · 22 days')
+  await expect(page.getByTestId('home.entrySince')).toBeHidden()
+  await expect(page.getByTestId('home.spark').locator('.col')).toHaveCount(14)
+  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '0')
+
+  // The sheet says what she read last time; 24 more today.
+  await page.getByTestId('home.update').click()
+  await expect(page.getByTestId('progress.lastTime')).toContainText(`${en.book.progress.dayYesterday} · 24 pages`)
+  await typeOn(page, 'progress.wheel', 236)
+  await page.getByTestId('progress.action').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '24')
+  await expect(page.getByTestId('home.pace')).toHaveText('20 a day · 19 days')
+
+  // Undo takes today's day back too.
+  await page.getByTestId('home.undo').click()
+  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '0')
+  await page.getByTestId('home.update').click()
+  await typeOn(page, 'progress.wheel', 236)
+  await page.getByTestId('progress.action').click()
+  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '24')
+
+  // The book page: four figures, three weeks of bars, Last time, the reading log.
+  await page.getByTestId('home.entry').click()
+  await expect(page.getByTestId('book.progressValue')).toHaveText('236')
+  await expect(page.getByTestId('book.progressTotal')).toHaveText(en.book.progress.totalOf.replace('{count}', '608'))
+  await expect(page.getByTestId('book.progressPercent')).toHaveText('39 %')
+  await expect(page.getByTestId('book.progressPace')).toHaveText('20')
+  await expect(page.getByTestId('book.progressToGo')).toHaveText('19')
+  await expect(page.getByTestId('book.progressChart').locator('.col')).toHaveCount(21)
+  await expect(page.getByTestId('book.lastTime')).toContainText(`${en.book.progress.dayYesterday} · 24 pages`)
+  await expect(page.getByTestId('book.logDay')).toHaveCount(10)
+  await expect(page.getByTestId('book.logDay').first()).toContainText(en.book.progress.dayToday)
+  await expect(page.getByTestId('book.logAmount').first()).toHaveText('+24')
+  await expect(page.getByTestId('book.logEnd').first()).toHaveText('p. 236')
+
+  // Finishing: how the read went.
+  await page.getByTestId('book.finish').click()
+  await expect(page.getByTestId('finish.summary')).toHaveText('Read in 12 days · 51 pages a day')
+  const [days] = await sql<{ count: string }>(
+    `select count(*) from public.reading_progress_days d
+       join public.reading_sessions s on s.id = d.session_id
+       join public.library_entries e on e.id = s.entry_id
+       join auth.users u on u.id = e.member_id
+      where u.email = $1`,
+    [member.email],
+  )
+  expect(Number(days!.count)).toBe(10)
+})
+
+test('a book without a page count: its days in percent', async ({ page }) => {
+  const member = await signedIn(page)
+  await createLibrary(member.client).addToLibrary(book('Small Gods', null), { status: 'reading', startedOn: addDays(isoDay(), -5) })
+  await history(member.email, [[5, 12], [4, 9], [2, 15], [1, 8]], 'percent')
+  await page.reload()
+
+  await expect(page.getByTestId('home.pace')).toHaveText('7 % a day · 8 days')
+  await page.getByTestId('home.entry').click()
+  await expect(page.getByTestId('book.progressValue')).toHaveText('44 %')
+  await expect(page.getByTestId('book.progressTotal')).toHaveText(en.book.progress.figureAddPages)
+  await expect(page.getByTestId('book.progressPercent')).toHaveText('56 %')
+  await expect(page.getByTestId('book.lastTime')).toContainText(`${en.book.progress.dayYesterday} · 8 %`)
+  await expect(page.getByTestId('book.logEnd').first()).toHaveText('44 %')
+  // "Add pages" opens the sheet on the total wheel.
+  await page.getByTestId('book.progressTotal').click()
+  await expect(page.getByTestId('progress.totalWheel')).toBeVisible()
 })
