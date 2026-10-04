@@ -372,18 +372,17 @@ async function history(email: string, steps: [ago: number, amount: number][], ki
   )
 }
 
-test('progress by day: the card\'s sparkline and pace, the book page\'s figures, chart, Last time and log, the Finish summary', async ({ page }) => {
+test('progress by day: the card\'s pace, the book page\'s figures, chart, Last time and log, the Finish summary', async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('East of Eden', 608), { status: 'reading', startedOn: addDays(isoDay(), -11) })
   // Twelve days in, 212 pages, yesterday 24 of them.
   await history(member.email, [[11, 14], [10, 22], [9, 30], [8, 12], [6, 40], [5, 26], [4, 18], [2, 26], [1, 24]])
   await page.reload()
 
-  // Home: the last two weeks and the pace instead of the since line.
+  // Home: the pace instead of the since line, no chart on the card.
   await expect(page.getByTestId('home.pace')).toHaveText('18 a day · 22 days')
   await expect(page.getByTestId('home.entrySince')).toBeHidden()
-  await expect(page.getByTestId('home.spark').locator('.col')).toHaveCount(14)
-  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '0')
+  await expect(page.getByTestId('home.spark')).toHaveCount(0)
 
   // The sheet says what she read last time; 24 more today.
   await page.getByTestId('home.update').click()
@@ -391,16 +390,15 @@ test('progress by day: the card\'s sparkline and pace, the book page\'s figures,
   await typeOn(page, 'progress.wheel', 236)
   await page.getByTestId('progress.action').click()
   await expect(page.getByTestId('progress')).toBeHidden()
-  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '24')
   await expect(page.getByTestId('home.pace')).toHaveText('20 a day · 19 days')
 
   // Undo takes today's day back too.
   await page.getByTestId('home.undo').click()
-  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '0')
+  await expect(page.getByTestId('home.pace')).toHaveText('18 a day · 22 days')
   await page.getByTestId('home.update').click()
   await typeOn(page, 'progress.wheel', 236)
   await page.getByTestId('progress.action').click()
-  await expect(page.getByTestId('home.spark').locator('.col').last()).toHaveAttribute('data-amount', '24')
+  await expect(page.getByTestId('home.pace')).toHaveText('20 a day · 19 days')
 
   // The book page: four figures, three weeks of bars, Last time, the reading log.
   await page.getByTestId('home.entry').click()
@@ -410,6 +408,7 @@ test('progress by day: the card\'s sparkline and pace, the book page\'s figures,
   await expect(page.getByTestId('book.progressPace')).toHaveText('20')
   await expect(page.getByTestId('book.progressToGo')).toHaveText('19')
   await expect(page.getByTestId('book.progressChart').locator('.col')).toHaveCount(21)
+  await expect(page.getByTestId('book.progressChart').locator('.col').last()).toHaveAttribute('data-amount', '24')
   await expect(page.getByTestId('book.lastTime')).toContainText(`${en.book.progress.dayYesterday} · 24 pages`)
   await expect(page.getByTestId('book.logDay')).toHaveCount(10)
   await expect(page.getByTestId('book.logDay').first()).toContainText(en.book.progress.dayToday)
