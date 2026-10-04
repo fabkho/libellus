@@ -366,6 +366,24 @@ describe('merging the sources', () => {
     expect([coverRank(apple), coverRank('https://covers.openlibrary.org/b/id/2-L.jpg'), coverRank(null)]).toEqual([2, 1, 0])
   })
 
+  it('ranks a book with a cover above an equally good match shown as a Placeholder (#63)', () => {
+    const paper = found(
+      snapshot({ title: 'Im Westen nichts Neues', authors: ['A. Student'], source: 'openlibrary', openLibraryEditionKey: 'OL9M', coverUrl: null }),
+      'openlibrary',
+      500,
+    )
+    const novel = found(
+      snapshot({ title: 'Im Westen nichts Neues', authors: ['Erich Maria Remarque'], source: 'openlibrary', openLibraryEditionKey: 'OL8M', coverUrl: 'https://covers.openlibrary.org/b/id/8-L.jpg' }),
+      'openlibrary',
+      3,
+    )
+    const results = mergeResults('im westen nichts neues', { openlibrary: [paper, novel] })
+    expect(results.map((hit) => hit.book.authors[0])).toEqual(['Erich Maria Remarque', 'A. Student'])
+    // A better match still wins without a cover.
+    const exact = mergeResults('im westen nichts neues', { openlibrary: [paper, found({ ...novel.book, title: 'Im Westen nichts Neues und die Folgen' }, 'openlibrary')] })
+    expect(exact[0]!.book.authors[0]).toBe('A. Student')
+  })
+
   it('still shows the edition the member has, or the Catalogue’s, even without a cover', () => {
     const stored = catalogueBook({ id: 'z1', title: 'Der Zauberberg', authors: ['Thomas Mann'], appleId: null, coverUrl: null })
     const results = mergeResults('der zauberberg', {

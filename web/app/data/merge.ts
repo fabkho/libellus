@@ -226,8 +226,10 @@ export function coverRank(url: string | null | undefined): number {
  *    (docs/covers.md). Another edition is one ISBN search away.
  * 4. Ranked by how well the query matches (matchQuality), lifted for the
  *    member's own books and for exact matches and lowered for summaries and
- *    study guides (rankScore), then Catalogue first, then popularity, then the
- *    order the sources gave.
+ *    study guides (rankScore), then Catalogue first, then a book shown with a
+ *    cover before one shown as a Placeholder (mostly self-published papers
+ *    OpenLibrary has no image of), then popularity, then the order the sources
+ *    gave.
  * 5. Each result knows the member's entry for it, or that she has another edition.
  */
 export function mergeResults(
@@ -286,6 +288,7 @@ export function mergeResults(
       pick,
       score: rankScore(query, pick.book, quality, owned.has(work)),
       catalogue: group.some((candidate) => candidate.source === 'catalogue'),
+      covered: Boolean(pick.book.coverUrl),
       popularity: Math.max(...group.map((candidate) => candidate.popularity)),
       order: group[0]!.order,
     }
@@ -294,6 +297,7 @@ export function mergeResults(
     (a, b) =>
       b.score - a.score ||
       Number(b.catalogue) - Number(a.catalogue) ||
+      Number(b.covered) - Number(a.covered) ||
       b.popularity - a.popularity ||
       a.order - b.order,
   )
