@@ -92,9 +92,10 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await page.getByTestId('start.submit').click()
   await expect(page.getByTestId('start')).toBeHidden()
 
-  // Currently reading, nothing recorded yet (#79): only Update progress, which opens the sheet on 0, in pages.
+  // Currently reading, nothing recorded yet (#79, #81): the empty bar and its row with Update progress, which opens the sheet on 0, in pages.
   await expect(page.getByTestId('book.updateProgress')).toBeVisible()
-  await expect(page.getByTestId('book.progressBar')).toBeHidden()
+  await expect(page.getByTestId('book.progressBar')).toBeVisible()
+  await expect(page.getByTestId('book.progressText')).toHaveText('Not started · 480 pages')
   await expect(page.getByTestId('book.progressFigures')).toBeHidden()
   await page.getByTestId('book.updateProgress').click()
   const wheel = page.getByTestId('progress.wheel')
