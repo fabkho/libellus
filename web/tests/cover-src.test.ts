@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { APPLE_BOX, coverSrc, type CoverSize } from '@/utils/cover'
+import { APPLE_BOX, coverFallbacks, coverSrc, isBlankCover, type CoverSize } from '@/utils/cover'
 
 /**
  * The image a cover asks for at each size (issue #63, docs/covers.md): about
- * three times its width on Apple's CDN, OpenLibrary's 'M' for the small ones.
+ * three times its width on Apple's CDN, OpenLibrary's 'M' for the small ones;
+ * what it tries when that fails, and what counts as a blank stand-in.
  */
 
 const APPLE = 'https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bfb35c-53b3-7373-ad0e-561c68761d74/9780593983768.d.jpg/600x900bb.jpg'
@@ -51,5 +52,36 @@ describe('the image a cover asks for', () => {
     expect(coverSrc('https://example.test/cover.png', 'sm')).toBe('https://example.test/cover.png')
     expect(coverSrc(null, 'sm')).toBeNull()
     expect(coverSrc('', 'sm')).toBeNull()
+  })
+})
+
+describe('when a cover’s image fails', () => {
+  it('tries OpenLibrary’s cover of the same edition by ISBN, at the same size, a 404 when it has none', () => {
+    expect(coverFallbacks({ coverUrl: APPLE, isbn13: '9780593983768' }, 'sm')).toEqual([
+      'https://covers.openlibrary.org/b/isbn/9780593983768-M.jpg?default=false',
+    ])
+    expect(coverFallbacks({ coverUrl: OPENLIBRARY, isbn13: '9780593983768' }, 'xl')).toEqual([
+      'https://covers.openlibrary.org/b/isbn/9780593983768-L.jpg?default=false',
+    ])
+  })
+
+  it('tries nothing more without an ISBN, for a Book without an image, or when the image is that very one', () => {
+    expect(coverFallbacks({ coverUrl: APPLE, isbn13: null }, 'sm')).toEqual([])
+    expect(coverFallbacks({ coverUrl: null, isbn13: '9780593983768' }, 'sm')).toEqual([])
+    const byIsbn = 'https://covers.openlibrary.org/b/isbn/9780593983768-L.jpg?default=false'
+    expect(coverFallbacks({ coverUrl: byIsbn, isbn13: '9780593983768' }, 'sm')).toEqual([])
+  })
+})
+
+describe('a blank stand-in', () => {
+  it.each([
+    [1, 1, true], // OpenLibrary's "no cover" GIF
+    [1, 300, true],
+    [15, 22, true],
+    [16, 24, false],
+    [38, 58, false], // OpenLibrary's 'S'
+    [115, 180, false],
+  ])('%i × %i is blank: %s', (width, height, blank) => {
+    expect(isBlankCover(width, height)).toBe(blank)
   })
 })

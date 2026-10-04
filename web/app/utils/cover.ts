@@ -1,7 +1,7 @@
 import { thumbHashToDataURL } from 'thumbhash'
-import type { CoverColors } from '../data/books'
+import type { BookSnapshot, CoverColors } from '../data/books'
 import { appleArtwork } from '../data/apple'
-import { openLibraryCoverAt } from '../data/openLibrary'
+import { openLibraryCoverAt, openLibraryIsbnCover } from '../data/openLibrary'
 
 /**
  * Pure helpers behind the Cover component (components/ui/Cover.vue): the
@@ -125,4 +125,26 @@ export function coverSrc(url: string | null | undefined, size: CoverSize): strin
   const [width, height] = APPLE_BOX[size]
   if (/mzstatic\.com\//.test(url)) return appleArtwork(url, width, height)
   return openLibraryCoverAt(url, OPENLIBRARY_SIZE[size])
+}
+
+/**
+ * The images to try after a cover's own one fails (a 404, a broken file) or
+ * comes back blank (`isBlankCover`), before the Placeholder: OpenLibrary's
+ * cover of the same edition by its ISBN (`default=false`, so a missing one is a
+ * 404, not a blank). Only for a Book that had an image: one without any has
+ * none by ISBN either, almost always (docs/covers.md: 1 of 50), and asking
+ * would only delay its Placeholder.
+ */
+export function coverFallbacks(book: Pick<BookSnapshot, 'coverUrl' | 'isbn13'>, size: CoverSize): string[] {
+  if (!book.coverUrl || !book.isbn13) return []
+  const byIsbn = openLibraryIsbnCover(book.isbn13, OPENLIBRARY_SIZE[size])
+  return coverSrc(book.coverUrl, size) === byIsbn ? [] : [byIsbn]
+}
+
+/** Below this many pixels on a side a loaded image is a source's blank stand-in (OpenLibrary's 1 × 1 GIF), not a cover. */
+export const MIN_SHOWN_SIDE = 16
+
+/** Whether a loaded image (its natural size) is a blank stand-in rather than a cover. */
+export function isBlankCover(width: number, height: number): boolean {
+  return Math.min(width, height) < MIN_SHOWN_SIDE
 }

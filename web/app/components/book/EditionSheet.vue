@@ -88,6 +88,7 @@ async function change() {
           :title="candidate.book.title"
           :authors="candidate.book.authors"
           :src="coverSrc(candidate.book.coverUrl, 'sm')"
+          :fallbacks="coverFallbacks(candidate.book, 'sm')"
           :thumbhash="candidate.book.coverThumbhash"
           :colors="candidate.book.coverColors"
           size="sm"
