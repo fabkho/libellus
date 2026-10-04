@@ -11,8 +11,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const collections = useCollectionsStore()
-// Renaming, deleting and reordering write: offline they say so instead (#15).
-const online = useOnline()
+// Renaming, deleting and reordering work offline too: they wait to sync (#93).
 
 const id = computed(() => String(route.params.id))
 const page = computed(() => collections.page(id.value))
@@ -119,9 +118,6 @@ async function confirmDelete() {
               as="button"
               icon="pencil"
               :label="t('collection.rename')"
-              :value="online ? undefined : t('common.offline')"
-              :disabled="!online"
-              class="disabled:opacity-50"
               data-testid="collectionOptions.rename"
               @click="rename"
             />
@@ -130,9 +126,6 @@ async function confirmDelete() {
               icon="close"
               tone="danger"
               :label="t('collection.delete')"
-              :value="online ? undefined : t('common.offline')"
-              :disabled="!online"
-              class="disabled:opacity-50"
               data-testid="collectionOptions.delete"
               @click="confirmingDelete = true"
             />
@@ -145,7 +138,7 @@ async function confirmDelete() {
             {{ t(`collections.error.${deleteError}`) }}
           </p>
           <div class="mt-lg">
-            <UiButton block tone="danger" :disabled="deleting" :offline="!online" data-testid="collectionOptions.confirmDelete" @click="confirmDelete">
+            <UiButton block tone="danger" :disabled="deleting" data-testid="collectionOptions.confirmDelete" @click="confirmDelete">
               {{ deleting ? t('collection.deleting') : t('collection.delete') }}
             </UiButton>
           </div>

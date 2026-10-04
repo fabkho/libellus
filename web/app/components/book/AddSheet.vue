@@ -9,7 +9,8 @@ import { useLibraryStore } from '~/stores/library'
 
 const { t } = useI18n()
 const library = useLibraryStore()
-// Adding, starting, finishing writes: offline the action says so instead (#15).
+// Adding a Catalogue Book works offline too: it waits to sync (#93). A search
+// result (its Cover still to resolve) or a Manual book says "Offline" (#15).
 const online = useOnline()
 
 const open = computed({
@@ -21,6 +22,7 @@ const open = computed({
 
 // Kept while the sheet slides away, so it does not empty mid-exit.
 const book = ref(library.adding)
+const addOffline = computed(() => !online.value && !(book.value && 'id' in book.value && book.value.source !== 'manual'))
 watch(
   () => library.adding,
   (value) => {
@@ -51,7 +53,7 @@ async function add() {
       </p>
 
       <div class="mt-lg mb-sm">
-        <UiButton block :disabled="library.addBusy" :offline="!online" data-testid="add.submit" @click="add">
+        <UiButton block :disabled="library.addBusy" :offline="addOffline" data-testid="add.submit" @click="add">
           <UiIcon name="plus" :size="18" bold />{{ library.addBusy ? t('add.busy') : t('add.action') }}
         </UiButton>
       </div>

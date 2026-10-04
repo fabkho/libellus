@@ -18,7 +18,8 @@ const open = defineModel<boolean>('open', { required: true })
 const { t } = useI18n()
 const history = useHistoryStore()
 const edition = useEditionStore()
-// Removing writes: offline the row and the confirmation say so instead (#15).
+// Changing the edition looks editions up: offline the row says so instead (#15).
+// Removing works offline too: it waits to sync (#93).
 const online = useOnline()
 
 const confirming = computed({
@@ -84,9 +85,6 @@ async function remove() {
           icon="close"
           tone="danger"
           :label="t('bookOptions.remove')"
-          :value="online ? undefined : t('common.offline')"
-          :disabled="!online"
-          class="disabled:opacity-50"
           data-testid="bookOptions.remove"
           @click="ask"
         />
@@ -100,7 +98,6 @@ async function remove() {
     :text="t('removeEntry.text')"
     :action="history.removeBusy ? t('removeEntry.busy') : t('removeEntry.action')"
     :busy="history.removeBusy"
-    :offline="!online"
     :error="history.removeError ? t(`library.error.${history.removeError}`) : null"
     testid="removeEntry"
     @confirm="remove"

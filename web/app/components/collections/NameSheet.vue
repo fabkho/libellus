@@ -11,7 +11,8 @@ const emit = defineEmits<{ saved: [id: string, mode: 'create' | 'rename'] }>()
 
 const { t } = useI18n()
 const collections = useCollectionsStore()
-// Saving writes: offline the action says so instead (#15).
+// A new name works offline too: it waits to sync (#93). A new Collection needs
+// the connection: offline the action says so instead (#15).
 const online = useOnline()
 
 const open = computed({
@@ -29,6 +30,7 @@ watch(
     if (naming) mode.value = naming.mode
   },
 )
+const createOffline = computed(() => !online.value && mode.value === 'create')
 const name = toRef(collections, 'name')
 
 async function save() {
@@ -43,8 +45,8 @@ async function save() {
     v-model:open="open"
     :title="t(mode === 'create' ? 'collections.new' : 'collections.rename')"
     testid="collectionName"
-    :action="online ? t(mode === 'create' ? 'collections.create' : 'collections.save') : t('common.offline')"
-    :action-disabled="collections.nameBusy || !name.trim() || !online"
+    :action="createOffline ? t('common.offline') : t(mode === 'create' ? 'collections.create' : 'collections.save')"
+    :action-disabled="collections.nameBusy || !name.trim() || createOffline"
     @action="save"
   >
     <form novalidate class="pt-xs pb-lg" @submit.prevent="save">

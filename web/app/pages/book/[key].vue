@@ -23,9 +23,11 @@ const router = useRouter()
 const books = useBookStore()
 const library = useLibraryStore()
 const reading = useReadingStore()
-// Every action here writes: offline it says so instead (#15); Abandon, beside
-// Finish, is only disabled.
+// Starting, finishing, DNF and reading again work offline too: they wait to
+// sync (#93). Adding does for a Book from the Catalogue; a search result (its
+// Cover still to resolve) or a Manual book says "Offline" instead (#15).
 const online = useOnline()
+const addOffline = computed(() => !online.value && !(book.value && 'id' in book.value && book.value.source !== 'manual'))
 const { formatDay, dayOfRead } = useDays()
 
 const edition = useEditionStore()
@@ -194,17 +196,17 @@ function back() {
 
       <BookProgress v-if="entry?.status === 'reading'" :entry="entry" />
 
-      <UiButton v-if="!entry" block :offline="!online" data-testid="book.add" @click="library.openAdd(book)">
+      <UiButton v-if="!entry" block :offline="addOffline" data-testid="book.add" @click="library.openAdd(book)">
         <UiIcon name="plus" :size="18" bold />{{ t('book.add') }}
       </UiButton>
-      <UiButton v-else-if="entry.status === 'want_to_read'" block :offline="!online" data-testid="book.start" @click="reading.openStart(entry)">
+      <UiButton v-else-if="entry.status === 'want_to_read'" block data-testid="book.start" @click="reading.openStart(entry)">
         <UiIcon name="arrow" :size="18" bold />{{ t('book.start') }}
       </UiButton>
       <div v-else-if="entry.status === 'reading'" class="flex gap-ms">
-        <UiButton class="flex-1" :offline="!online" data-testid="book.finish" @click="reading.openFinish(entry)">
+        <UiButton class="flex-1" data-testid="book.finish" @click="reading.openFinish(entry)">
           <UiIcon name="check" :size="18" bold />{{ t('book.finish') }}
         </UiButton>
-        <UiButton tone="secondary" :disabled="!online" data-testid="book.abandon" @click="reading.openAbandon(entry)">
+        <UiButton tone="secondary" data-testid="book.abandon" @click="reading.openAbandon(entry)">
           {{ t('book.abandon') }}
         </UiButton>
       </div>
@@ -213,7 +215,6 @@ function back() {
         v-else
         tone="quiet"
         block
-        :offline="!online"
         :data-testid="notFinished ? 'book.startAgain' : 'book.readAgain'"
         @click="reading.openStart(entry)"
       >
