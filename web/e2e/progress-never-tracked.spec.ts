@@ -14,6 +14,12 @@ import { recordedApple, signedIn, untilStill } from './support'
  * without a day row (set long after the start, or a percent-only book) shows the
  * bar and figures but no chart or log. The rule is `progressShownOf`
  * (data/progressDays.ts, tests/progress-days.test.ts).
+ *
+ * Issue #81: before any progress the page already has the tracked layout's
+ * skeleton, the empty bar and a row with the value in words (the page count) at
+ * the left and Update progress at the right; the first save only changes the
+ * words and the bar's fill and fades the rest in below, so the bar, the row and
+ * the button stay where they are.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -50,12 +56,22 @@ const setValue = (email: string, kind: 'page' | 'percent', value: number) =>
     [email, value],
   )
 
-async function expectOnlyUpdate(page: Page) {
+/** The bar and its row, nothing else (what a read never tracked shows): `words` is the row's text. */
+async function expectNeverTracked(page: Page, words: string) {
   await expect(page.getByTestId('book.updateProgress')).toBeVisible()
-  for (const id of ['book.progressStats', 'book.progressBar', 'book.progressFigures', 'book.progressChart', 'book.lastTime', 'book.readingLog']) {
-    if (id === 'book.lastTime') await expect(page.getByTestId(id)).toHaveText('')
-    else await expect(page.getByTestId(id)).toHaveCount(0)
+  await expect(page.getByTestId('book.progressBar')).toBeVisible()
+  await expect(page.getByTestId('book.progressBar')).toHaveAttribute('aria-valuenow', '0')
+  await expect(page.getByTestId('book.progressText')).toHaveText(words)
+  for (const id of ['book.progressStats', 'book.progressFigures', 'book.progressChart', 'book.lastTime', 'book.readingLog']) {
+    await expect(page.getByTestId(id)).toHaveCount(0)
   }
+}
+
+/** Where the skeleton's parts are on the page (the page is scrolled to the top, so the viewport's box does for it). */
+async function skeleton(page: Page) {
+  const boxes: Record<string, { x: number; y: number; width: number; height: number }> = {}
+  for (const id of ['book.status', 'book.progressBar', 'book.progressText', 'book.updateProgress']) boxes[id] = (await page.getByTestId(id).boundingBox())!
+  return boxes
 }
 
 async function openBook(page: Page) {
@@ -63,17 +79,19 @@ async function openBook(page: Page) {
   await expect(page.getByTestId('book.updateProgress')).toBeVisible()
 }
 
-test('never tracked: only Update progress; the first save brings the figures, chart and log in; Undo takes them back', async ({ page }) => {
+test('never tracked: the empty bar and its row; the first save changes the words and brings the figures, chart and log in below; Undo takes them back', async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: isoDay() })
   await page.reload()
   await openBook(page)
-  await expectOnlyUpdate(page)
+  await expectNeverTracked(page, 'Not started · 480 pages')
+  await untilStill(page)
 
-  // Finish sits right under the button; remember how far it is from the status line (the page may scroll).
+  // Finish sits under the row; remember how far it is from the status line (the page may scroll).
   const gap = async () =>
     (await page.getByTestId('book.finish').boundingBox())!.y - (await page.getByTestId('book.status').boundingBox())!.y
   const before = await gap()
+  const bare = await skeleton(page)
 
   await page.getByTestId('book.updateProgress').click()
   await page.getByTestId('progress.plus').click()
@@ -88,9 +106,14 @@ test('never tracked: only Update progress; the first save brings the figures, ch
   await expect(page.getByTestId('book.progressChart').locator('.col')).toHaveCount(21)
   await expect(page.getByTestId('book.logDay')).toHaveCount(1)
   await expect(page.getByTestId('book.logAmount').first()).toHaveText('+3')
-  // They opened a room: what sat under the button moved down, once, and stayed.
+  await expect(page.getByTestId('book.progressText')).toHaveText('p. 3 of 480')
+  // They opened a room under the row: Finish moved down, once, and stayed; the bar, the row and the button did not move at all.
   await untilStill(page)
   expect(await gap()).toBeGreaterThan(before + 60)
+  const tracked = await skeleton(page)
+  for (const id of ['book.status', 'book.progressBar', 'book.updateProgress']) expect(tracked[id], id).toEqual(bare[id])
+  expect(tracked['book.progressText']!.x).toBe(bare['book.progressText']!.x)
+  expect(tracked['book.progressText']!.y).toBe(bare['book.progressText']!.y)
   await expect(page.getByTestId('book.progressStats')).toHaveCSS('opacity', '1')
   await expect(page.getByTestId('book.progressStats')).not.toHaveAttribute('data-moving')
 
@@ -98,9 +121,7 @@ test('never tracked: only Update progress; the first save brings the figures, ch
   await page.getByTestId('shell.tab.home').click()
   await page.getByTestId('home.undo').click()
   await page.getByTestId('home.entry').click()
-  await expect(page.getByTestId('book.updateProgress')).toBeVisible()
-  await expect(page.getByTestId('book.progressStats')).toHaveCount(0)
-  await expect(page.getByTestId('book.readingLog')).toHaveCount(0)
+  await expectNeverTracked(page, 'Not started · 480 pages')
 })
 
 test('Reduce Motion: the first save still brings everything in, with no travel', async ({ page }) => {
@@ -109,7 +130,7 @@ test('Reduce Motion: the first save still brings everything in, with no travel',
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: isoDay() })
   await page.reload()
   await openBook(page)
-  await expectOnlyUpdate(page)
+  await expectNeverTracked(page, 'Not started · 480 pages')
   await page.getByTestId('book.updateProgress').click()
   await page.getByTestId('progress.plus').click()
   await page.getByTestId('progress.action').click()
@@ -132,7 +153,7 @@ test('a value without a day: the bar and figures, no chart and no log, until a d
   await expect(page.getByTestId('book.progressPace')).toHaveText(en.book.progress.figureNone)
   await expect(page.getByTestId('book.progressChart')).toHaveCount(0)
   await expect(page.getByTestId('book.readingLog')).toHaveCount(0)
-  await expect(page.getByTestId('book.lastTime')).toHaveText('')
+  await expect(page.getByTestId('book.lastTime')).toHaveCount(0)
 
   // The next save books today's day: the chart and the log come in.
   await page.getByTestId('book.updateProgress').click()
@@ -158,11 +179,25 @@ test('a book without a page count, in percent, with a value but no day: the same
   await expect(page.getByTestId('book.readingLog')).toHaveCount(0)
 })
 
-test('a value of 0 is nothing tracked: only Update progress', async ({ page }) => {
+test('a value of 0 is nothing tracked: the empty bar and its row', async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: isoDay() })
   await setValue(member.email, 'page', 0)
   await page.reload()
   await openBook(page)
-  await expectOnlyUpdate(page)
+  await expectNeverTracked(page, 'Not started · 480 pages')
+})
+
+test('a book without a page count, never tracked: the row says so; the first save fills in the percent', async ({ page }) => {
+  const member = await signedIn(page)
+  await createLibrary(member.client).addToLibrary(book('Small Gods', null), { status: 'reading', startedOn: isoDay() })
+  await page.reload()
+  await openBook(page)
+  await expectNeverTracked(page, en.book.progress.notStartedNoCount)
+  await page.getByTestId('book.updateProgress').click()
+  await page.getByTestId('progress.plus').click()
+  await page.getByTestId('progress.action').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+  await expect(page.getByTestId('book.progressText')).toHaveText('1 %')
+  await expect(page.getByTestId('book.progressFigures')).toBeVisible()
 })

@@ -7,12 +7,16 @@
 // Then the last three weeks as bars, today lit, and "Last time · Yesterday · 24
 // pages" with Update progress, which opens the sheet. Nothing here edits by
 // itself. The reading log sits under the book's actions (ProgressLog.vue).
-// Until progress was tracked only Update progress shows (issue #79, the rule is
-// `progressShownOf`); the first save opens the rest in with a fade (UiReveal),
-// and a value without a day yet shows the bar and figures but no chart.
+// The bar and the row under it (the value in words at the left, Update progress
+// at the right) are always there, so a read never tracked has the tracked layout's
+// skeleton (issue #81, after #79): its row says "Not started · 224 pages". The
+// figures, chart and "Last time" open in below the row with a fade (UiReveal, the
+// rule is `progressShownOf`), so the first save moves nothing but the fill and the
+// words; a value without a day yet shows the figures but no chart.
 // Updating writes: offline the buttons say so (#15).
 import type { LibraryEntry } from '~/data/library'
 import { progressFraction, progressOf } from '~/data/progress'
+import { progressStarted } from '~/data/progressDays'
 import { useReadingStore } from '~/stores/reading'
 
 const props = defineProps<{ entry: LibraryEntry }>()
@@ -41,6 +45,12 @@ const words = computed(() => text(progress.value, pageCount.value))
 const pages = computed(() => unit.value === 'page')
 const done = computed(() => Math.round((Math.min(position.value, end.value) / end.value) * 100))
 const own = computed(() => props.entry.pageCountOverride != null)
+const started = computed(() => progressStarted(progress.value))
+// What the row says before anything is tracked (#81): where the read stands and how long the book is.
+const notStarted = computed(() => {
+  if (progress.value && 'percent' in progress.value) return t('book.progress.notStartedPercent')
+  return pageCount.value ? t('book.progress.notStarted', { count: n(pageCount.value) }, pageCount.value) : t('book.progress.notStartedNoCount')
+})
 const chart = computed(() => amounts(21))
 const chartLabel = computed(() =>
   t('book.progress.chartLabel', { count: 21, amount: amountWords(chart.value.reduce((sum, d) => sum + d.amount, 0)) }),
@@ -49,15 +59,23 @@ const chartLabel = computed(() =>
 
 <template>
   <div class="mb-ml" data-testid="book.progress">
-    <UiReveal :show="shown !== 'none'" data-testid="book.progressStats">
-      <div class="flex flex-col gap-md pb-md">
-        <UiProgress
-          :fraction="progressFraction(progress, pageCount)"
-          :label="t('book.progress.label')"
-          :value-text="words.value"
-          data-testid="book.progressBar"
-        />
+    <UiProgress
+      :fraction="progressFraction(progress, pageCount)"
+      :label="t('book.progress.label')"
+      :value-text="words.value"
+      data-testid="book.progressBar"
+    />
+    <div class="flex items-center justify-between gap-ms pt-sm">
+      <p class="figures min-w-0 truncate text-meta" :class="started ? 'text-ink-muted' : 'text-ink-faint'" data-testid="book.progressText">
+        {{ started ? words.value : notStarted }}
+      </p>
+      <UiButton tone="quiet" size="sm" class="shrink-0" :offline="!online" data-testid="book.updateProgress" @click="reading.openProgress(entry)">
+        {{ t('book.progress.update') }}
+      </UiButton>
+    </div>
 
+    <UiReveal :show="shown !== 'none'" data-testid="book.progressStats">
+      <div class="pt-md">
         <dl class="grid grid-cols-4 gap-sm" data-testid="book.progressFigures">
           <div class="flex flex-col gap-xs">
             <dt class="eyebrow">{{ pages ? t('book.progress.figurePage') : t('book.progress.figureRead') }}</dt>
@@ -103,35 +121,23 @@ const chartLabel = computed(() =>
     </UiReveal>
 
     <UiReveal :show="shown === 'days'">
-      <div class="pb-md">
+      <div class="pt-md">
         <ProgressSpark :amounts="chart" size="lg" :label="chartLabel" data-testid="book.progressChart" />
       </div>
     </UiReveal>
 
-    <div class="flex items-center justify-between gap-ms">
-      <p class="line figures min-w-0 truncate text-meta text-ink-faint" :class="{ shown: atEnd || lastTime }" data-testid="book.lastTime">
+    <UiReveal :show="atEnd || !!lastTime">
+      <p class="figures pt-sm text-meta text-ink-faint" data-testid="book.lastTime">
         <span v-if="atEnd" class="text-body text-ink">{{ t('book.progress.atEndLine') }}</span>
         <template v-else-if="lastTime">
           <span class="eyebrow mr-sm">{{ t('book.progress.lastTime') }}</span>{{ t('book.progress.lastTimeLine', { day: dayWords(lastTime.day), amount: amountWords(lastTime.amount) }) }}
         </template>
       </p>
-      <UiButton tone="quiet" size="sm" class="shrink-0" :offline="!online" data-testid="book.updateProgress" @click="reading.openProgress(entry)">
-        {{ t('book.progress.update') }}
-      </UiButton>
-    </div>
+    </UiReveal>
   </div>
 </template>
 
 <style scoped>
-/* "Last time" arrives with the rest (#79): it fades in over `standard`. */
-.line {
-  opacity: 0;
-  transition: opacity var(--duration-standard) var(--ease-standard);
-}
-.line.shown {
-  opacity: 1;
-}
-
 /* "of 608": a dotted underline says it can be changed; 44 pt tall to tap. */
 .total {
   min-height: var(--size-touch);

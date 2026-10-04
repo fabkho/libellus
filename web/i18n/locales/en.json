@@ -225,6 +225,9 @@
     "progress": {
       "label": "Reading progress",
       "none": "Not started yet",
+      "notStarted": "Not started · {count} page | Not started · {count} pages",
+      "notStartedNoCount": "Not started · No page count",
+      "notStartedPercent": "Not started · Counting in percent",
       "page": "p. {page} of {count}",
       "pageOnly": "p. {page}",
       "percent": "{percent} %",
