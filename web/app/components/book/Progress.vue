@@ -7,6 +7,9 @@
 // Then the last three weeks as bars, today lit, and "Last time · Yesterday · 24
 // pages" with Update progress, which opens the sheet. Nothing here edits by
 // itself. The reading log sits under the book's actions (ProgressLog.vue).
+// Until progress was tracked only Update progress shows (issue #79, the rule is
+// `progressShownOf`); the first save opens the rest in with a fade (UiReveal),
+// and a value without a day yet shows the bar and figures but no chart.
 // Updating writes: offline the buttons say so (#15).
 import type { LibraryEntry } from '~/data/library'
 import { progressFraction, progressOf } from '~/data/progress'
@@ -28,6 +31,7 @@ const {
   pace,
   daysLeft,
   lastTime,
+  shown,
   dayWords,
   amountWords,
 } = useReadingDays(() => props.entry)
@@ -44,60 +48,68 @@ const chartLabel = computed(() =>
 </script>
 
 <template>
-  <div class="mb-ml flex flex-col gap-md" data-testid="book.progress">
-    <UiProgress
-      :fraction="progressFraction(progress, pageCount)"
-      :label="t('book.progress.label')"
-      :value-text="words.value"
-      data-testid="book.progressBar"
-    />
+  <div class="mb-ml" data-testid="book.progress">
+    <UiReveal :show="shown !== 'none'" data-testid="book.progressStats">
+      <div class="flex flex-col gap-md pb-md">
+        <UiProgress
+          :fraction="progressFraction(progress, pageCount)"
+          :label="t('book.progress.label')"
+          :value-text="words.value"
+          data-testid="book.progressBar"
+        />
 
-    <dl class="grid grid-cols-4 gap-sm" data-testid="book.progressFigures">
-      <div class="flex flex-col gap-xs">
-        <dt class="eyebrow">{{ pages ? t('book.progress.figurePage') : t('book.progress.figureRead') }}</dt>
-        <dd class="figures text-callout" data-testid="book.progressValue">
-          {{ pages ? n(position) : t('book.progress.percent', { percent: position }) }}
-        </dd>
-        <dd>
-          <button
-            type="button"
-            class="total figures text-meta text-ink-faint enabled:hover:text-ink"
-            :aria-label="pages ? t('book.progress.totalEdit', { count: n(pageCount ?? 0) }) : undefined"
-            :disabled="!online"
-            data-testid="book.progressTotal"
-            @click="reading.openProgress(entry, { total: true })"
-          >
-            {{ pages ? t('book.progress.totalOf', { count: n(pageCount ?? 0) }) : t('book.progress.figureAddPages') }}
-          </button>
-        </dd>
+        <dl class="grid grid-cols-4 gap-sm" data-testid="book.progressFigures">
+          <div class="flex flex-col gap-xs">
+            <dt class="eyebrow">{{ pages ? t('book.progress.figurePage') : t('book.progress.figureRead') }}</dt>
+            <dd class="figures text-callout" data-testid="book.progressValue">
+              {{ pages ? n(position) : t('book.progress.percent', { percent: position }) }}
+            </dd>
+            <dd>
+              <button
+                type="button"
+                class="total figures text-meta text-ink-faint enabled:hover:text-ink"
+                :aria-label="pages ? t('book.progress.totalEdit', { count: n(pageCount ?? 0) }) : undefined"
+                :disabled="!online"
+                data-testid="book.progressTotal"
+                @click="reading.openProgress(entry, { total: true })"
+              >
+                {{ pages ? t('book.progress.totalOf', { count: n(pageCount ?? 0) }) : t('book.progress.figureAddPages') }}
+              </button>
+            </dd>
+          </div>
+          <div class="flex flex-col gap-xs">
+            <dt class="eyebrow">{{ pages ? t('book.progress.figureDone') : t('book.progress.figureLeft') }}</dt>
+            <dd class="figures text-callout" data-testid="book.progressPercent">
+              {{ t('book.progress.percent', { percent: pages ? done : 100 - done }) }}
+            </dd>
+            <dd v-if="own" class="figures text-meta text-ink-faint">{{ t('book.progress.figureOwn') }}</dd>
+          </div>
+          <div class="flex flex-col gap-xs">
+            <dt class="eyebrow">{{ t('book.progress.figureDay') }}</dt>
+            <dd class="figures text-callout" data-testid="book.progressPace">
+              {{ pace ? (pages ? n(pace) : t('book.progress.percent', { percent: pace })) : t('book.progress.figureNone') }}
+            </dd>
+            <dd v-if="pages" class="figures text-meta text-ink-faint">{{ t('book.progress.figurePages') }}</dd>
+          </div>
+          <div class="flex flex-col gap-xs">
+            <dt class="eyebrow">{{ t('book.progress.figureToGo') }}</dt>
+            <dd class="figures text-callout" data-testid="book.progressToGo">
+              {{ daysLeft !== null ? n(daysLeft) : t('book.progress.figureNone') }}
+            </dd>
+            <dd class="figures text-meta text-ink-faint">{{ t('book.progress.figureDaysUnit') }}</dd>
+          </div>
+        </dl>
       </div>
-      <div class="flex flex-col gap-xs">
-        <dt class="eyebrow">{{ pages ? t('book.progress.figureDone') : t('book.progress.figureLeft') }}</dt>
-        <dd class="figures text-callout" data-testid="book.progressPercent">
-          {{ t('book.progress.percent', { percent: pages ? done : 100 - done }) }}
-        </dd>
-        <dd v-if="own" class="figures text-meta text-ink-faint">{{ t('book.progress.figureOwn') }}</dd>
-      </div>
-      <div class="flex flex-col gap-xs">
-        <dt class="eyebrow">{{ t('book.progress.figureDay') }}</dt>
-        <dd class="figures text-callout" data-testid="book.progressPace">
-          {{ pace ? (pages ? n(pace) : t('book.progress.percent', { percent: pace })) : t('book.progress.figureNone') }}
-        </dd>
-        <dd v-if="pages" class="figures text-meta text-ink-faint">{{ t('book.progress.figurePages') }}</dd>
-      </div>
-      <div class="flex flex-col gap-xs">
-        <dt class="eyebrow">{{ t('book.progress.figureToGo') }}</dt>
-        <dd class="figures text-callout" data-testid="book.progressToGo">
-          {{ daysLeft !== null ? n(daysLeft) : t('book.progress.figureNone') }}
-        </dd>
-        <dd class="figures text-meta text-ink-faint">{{ t('book.progress.figureDaysUnit') }}</dd>
-      </div>
-    </dl>
+    </UiReveal>
 
-    <ProgressSpark :amounts="chart" size="lg" :label="chartLabel" data-testid="book.progressChart" />
+    <UiReveal :show="shown === 'days'">
+      <div class="pb-md">
+        <ProgressSpark :amounts="chart" size="lg" :label="chartLabel" data-testid="book.progressChart" />
+      </div>
+    </UiReveal>
 
     <div class="flex items-center justify-between gap-ms">
-      <p class="figures min-w-0 truncate text-meta text-ink-faint" data-testid="book.lastTime">
+      <p class="line figures min-w-0 truncate text-meta text-ink-faint" :class="{ shown: atEnd || lastTime }" data-testid="book.lastTime">
         <span v-if="atEnd" class="text-body text-ink">{{ t('book.progress.atEndLine') }}</span>
         <template v-else-if="lastTime">
           <span class="eyebrow mr-sm">{{ t('book.progress.lastTime') }}</span>{{ t('book.progress.lastTimeLine', { day: dayWords(lastTime.day), amount: amountWords(lastTime.amount) }) }}
@@ -111,6 +123,15 @@ const chartLabel = computed(() =>
 </template>
 
 <style scoped>
+/* "Last time" arrives with the rest (#79): it fades in over `standard`. */
+.line {
+  opacity: 0;
+  transition: opacity var(--duration-standard) var(--ease-standard);
+}
+.line.shown {
+  opacity: 1;
+}
+
 /* "of 608": a dotted underline says it can be changed; 44 pt tall to tap. */
 .total {
   min-height: var(--size-touch);

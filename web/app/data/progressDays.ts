@@ -37,6 +37,32 @@ export function dayFromRow(row: ProgressDayRow): ProgressDay {
   return { day: row.day, start, end }
 }
 
+/** What the book page shows of a read's progress: nothing but the button, the bar and figures, or those with the chart and log too. */
+export type ProgressShown = 'none' | 'value' | 'days'
+
+/** Whether a value says the member got anywhere: a page or percent above 0 (0 is where a read stands before and after an Undo of its first save). */
+export function progressStarted(progress: ProgressValue | null): boolean {
+  if (!progress) return false
+  return ('page' in progress ? progress.page : progress.percent) > 0
+}
+
+/**
+ * What the book page shows for a read in progress (issue #79). **Never tracked**:
+ * no value above 0 on the read *and* no `reading_progress_days` row for it → `'none'`,
+ * only the Update progress button. **A value but no day rows** (a first value set
+ * long after the start books no day, #68; a read from before #68) → `'value'`:
+ * the bar, the four figures (pace and days to go "–") and the button, but no chart
+ * and no log, which have nothing to draw. **Any day row** → `'days'`: everything.
+ * `days` is null until they were loaded: a read with a value then counts as `'days'`
+ * (the page keeps the room its chart will have, as before this rule), one without
+ * stays `'none'`.
+ */
+export function progressShownOf(progress: ProgressValue | null, days: readonly ProgressDay[] | null): ProgressShown {
+  if (days?.length) return 'days'
+  if (!progressStarted(progress)) return 'none'
+  return days === null ? 'days' : 'value'
+}
+
 /** What the read counts in: pages with a page count, else percent. */
 export function unitOf(pageCount: number | null): ProgressMode {
   return pageCount ? 'page' : 'percent'

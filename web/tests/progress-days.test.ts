@@ -7,6 +7,8 @@ import {
   daysLeftOf,
   lastTimeOf,
   paceOf,
+  progressShownOf,
+  progressStarted,
   readingLogOf,
   readSummaryOf,
   valueIn,
@@ -159,5 +161,36 @@ describe('progress by day, worked out', () => {
     expect(readSummaryOf(addDays(today, -11), today, 608)).toEqual({ days: 12, perDay: 51, unit: 'page' })
     expect(readSummaryOf(today, today, 300)).toEqual({ days: 1, perDay: 300, unit: 'page' })
     expect(readSummaryOf(addDays(today, -9), today, null)).toEqual({ days: 10, perDay: 10, unit: 'percent' })
+  })
+})
+
+describe('what the book page shows of a read (issue #79)', () => {
+  const row: ProgressDay = { day: today, start: null, end: { page: 20 } }
+
+  it('shows only the button while nothing was tracked: no value, no day row', () => {
+    expect(progressShownOf(null, [])).toBe('none')
+    // 0 is where a read stands after an Undo of its first save: nothing was read.
+    expect(progressShownOf({ page: 0 }, [])).toBe('none')
+    expect(progressShownOf({ percent: 0 }, [])).toBe('none')
+    expect(progressStarted({ page: 0 })).toBe(false)
+    expect(progressStarted({ percent: 1 })).toBe(true)
+  })
+
+  it('shows the bar and figures, but no chart or log, for a value without a day row', () => {
+    // A first value set long after the start books no day; a percent-only book; a read from before #68.
+    expect(progressShownOf({ page: 212 }, [])).toBe('value')
+    expect(progressShownOf({ percent: 44 }, [])).toBe('value')
+  })
+
+  it('shows everything once a day row exists, whatever the value', () => {
+    expect(progressShownOf({ page: 20 }, [row])).toBe('days')
+    expect(progressShownOf(null, [row])).toBe('days')
+    expect(progressShownOf({ page: 0 }, [row])).toBe('days')
+  })
+
+  it('keeps the chart\'s room for a read with a value whose days are still on their way', () => {
+    expect(progressShownOf({ page: 212 }, null)).toBe('days')
+    expect(progressShownOf(null, null)).toBe('none')
+    expect(progressShownOf({ page: 0 }, null)).toBe('none')
   })
 })
