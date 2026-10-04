@@ -23,7 +23,20 @@ export default defineNuxtConfig({
 
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
-  vite: { plugins: [tailwindcss()] },
+  vite: {
+    plugins: [tailwindcss()],
+    build: {
+      rolldownOptions: {
+        output: {
+          // The barcode decoder (WebAssembly, for browsers without a native BarcodeDetector,
+          // #92) is one chunk with a name of its own, so the service worker can leave it out
+          // of the precache (pwa.workbox.globIgnores) and it is only fetched when the scanner opens.
+          codeSplitting: { groups: [{ name: 'zxing', test: /zxing-wasm/ }] },
+          chunkFileNames: (chunk: { name: string }) => (chunk.name === 'zxing' ? '_nuxt/zxing.[hash].js' : '_nuxt/[hash].js'),
+        },
+      },
+    },
+  },
 
   app: {
     head: {
@@ -158,8 +171,16 @@ export default defineNuxtConfig({
       globPatterns: ['**/*.{js,css,html,woff2}', 'icon-192.png', 'apple-touch-icon.png', 'favicon.ico', 'favicon.svg'],
       // The icon URLs carry ?v= to make browsers refetch a redrawn icon; the precache holds them without it.
       ignoreURLParametersMatching: [/^v$/],
-      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html'],
+      // The barcode decoder (a script chunk and a 0.9 MB module) is not part of the app shell: it is
+      // fetched when the scanner first opens, and kept by the cache below.
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm'],
       runtimeCaching: [
+        {
+          // The barcode decoder, as the scanner asks for it. Cache first: the file's name carries its hash.
+          urlPattern: ({ url }) => /\/_nuxt\/zxing[^/]*\.(js|wasm)$/.test(url.pathname),
+          handler: 'CacheFirst',
+          options: { cacheName: 'libellus-barcode-decoder', expiration: { maxEntries: 4 } },
+        },
         {
           // Covers as an <img> asks for them (no-cors: an opaque answer, which
           // is fine to keep and show). A cover read with CORS (its thumbhash

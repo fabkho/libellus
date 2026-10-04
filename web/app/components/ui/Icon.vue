@@ -28,6 +28,8 @@ export type IconName =
   | 'offline'
   | 'sync'
   | 'import'
+  | 'camera'
+  | 'torch'
 </script>
 
 <script setup lang="ts">
@@ -107,6 +109,11 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     <template v-else-if="name === 'import'">
       <path d="M12 4.5v10m-3.5-3.5 3.5 3.5 3.5-3.5" /><path d="M5 14.5v3.5a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-3.5" />
     </template>
+    <template v-else-if="name === 'camera'">
+      <path d="M4.5 8.5A1.5 1.5 0 0 1 6 7h2l1.3-2h5.4L16 7h2a1.5 1.5 0 0 1 1.5 1.5V17A1.5 1.5 0 0 1 18 18.5H6A1.5 1.5 0 0 1 4.5 17z" />
+      <circle cx="12" cy="12.5" r="3.2" />
+    </template>
+    <template v-else-if="name === 'torch'"><path d="M13.2 3.5 6.5 13.2h4.8l-.5 7.3 6.7-9.7h-4.8z" /></template>
     <template v-else-if="name === 'signOut'">
       <path d="M13.5 4.5h-7a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h7" /><path d="M10.5 12h9m-3-3 3 3-3 3" />
     </template>

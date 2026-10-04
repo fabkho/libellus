@@ -178,6 +178,21 @@ export const useSearchStore = defineStore('search', () => {
     query.value = ''
   }
 
+  /**
+   * The Book an ISBN-13 stands for (a scanned barcode, #92), asked of every
+   * source like a typed ISBN, and remembered like a result so its page opens
+   * at once. Null when nothing has it; a rejection when no source could answer.
+   */
+  async function findByIsbn(isbn13: string, signal?: AbortSignal): Promise<{ key: string; book: BookSnapshot | Book } | null> {
+    const outcome = await repository().search(isbn13, { signal, library: libraryEntries() })
+    if (outcome.failed) throw new Error('search failed')
+    const found = outcome.results.find((r) => r.book.isbn13 === isbn13) ?? outcome.results[0]
+    if (!found) return null
+    const key = bookKey(found.book)
+    remember(key, found.book)
+    return { key, book: found.book }
+  }
+
   /** A Book that appeared in results, for its page (`/book/<key>`). */
   function seenBook(key: string): BookSnapshot | Book | null {
     return seen.get(key) ?? null
@@ -219,5 +234,5 @@ export const useSearchStore = defineStore('search', () => {
     library = null
   }
 
-  return { isOpen, query, hits, phase, answered, outdated, fromLibrary, open, close, seenBook, markAdded, markRemoved, reset, repository }
+  return { isOpen, query, hits, phase, answered, outdated, fromLibrary, open, close, findByIsbn, seenBook, markAdded, markRemoved, reset, repository }
 })
