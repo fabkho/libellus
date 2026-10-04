@@ -32,6 +32,16 @@ test.use({
   launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'] },
 })
 
+// The page goes on loading the app's files up to the flow's last step (the
+// sign-in page, after signing out). A request still in `keepShell`'s hands when
+// the flow ends is cut off as its context closes: `route.fetch` then finds its
+// answer gone ("Response has been disposed") and fails a flow that passed. The
+// routes are dropped before the context closes, and a handler cut off there is
+// no error.
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
+})
+
 /** The service worker's part (see above). Returns how to go offline and back. */
 async function keepShell(page: Page, baseURL: string) {
   const origin = new URL(baseURL).origin
