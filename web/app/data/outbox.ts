@@ -103,6 +103,8 @@ export type Outbox = {
   dismiss: (failureId: string) => Promise<void>
   /** Called after every change of the line or the failures. Returns how to stop. */
   subscribe: (listener: () => void) => () => void
+  /** Stops writing to the storage (signing out deletes it; nothing may bring it back). */
+  close: () => void
 }
 
 const emptyState = (): OutboxState => ({ items: [], failures: [], aliases: {} })
@@ -143,7 +145,9 @@ export function createOutbox({
 
   // One write to the storage at a time, each of the whole state: the last one wins.
   let saving: Promise<void> = Promise.resolve()
+  let closed = false
   function persist(): Promise<void> {
+    if (closed) return saving
     const snapshot: OutboxState = JSON.parse(JSON.stringify(state))
     saving = saving.then(() => storage.write(memberId, snapshot)).catch(() => undefined)
     return saving
@@ -255,6 +259,10 @@ export function createOutbox({
     subscribe(listener) {
       listeners.add(listener)
       return () => listeners.delete(listener)
+    },
+    close() {
+      closed = true
+      listeners.clear()
     },
   }
 }

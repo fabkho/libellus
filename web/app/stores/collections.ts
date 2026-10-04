@@ -15,6 +15,7 @@ import type { LibraryEntry } from '~/data/library'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
+import { useSyncStore } from '~/stores/sync'
 
 /**
  * loading: nothing to show yet · ready: the Collection · missing: not one of
@@ -39,20 +40,30 @@ export type Naming = { mode: 'create' } | { mode: 'rename'; id: string }
  * The device keeps a copy of the list, the Collections opened here and the
  * memberships it knows (data/deviceLibrary.ts, issue #15), written whenever
  * they change and read back when the store is set up, so they show offline.
+ *
+ * Offline a change to a Collection the device holds still happens (issue #93):
+ * it waits in the outbox (stores/sync.ts) and shows at once. While writes wait,
+ * the device's copy stands (a read from the database would not have them yet);
+ * once they have synced everything shown is read again (`refresh`).
  */
 export const useCollectionsStore = defineStore('collections', () => {
   const backend = useBackend()
   const session = useSessionStore()
   const library = useLibraryStore()
   const search = useSearchStore()
+  const sync = useSyncStore()
 
   let repository: Collections | null = null
   function repo(): Collections | null {
     if (!backend) return null
-    // Writes refused offline, before anything is sent (data/library.ts, WriteOptions).
-    repository ??= createCollections(backend, { online: isOnline })
+    // Offline the changes that can wait go into the outbox; making a Collection is
+    // refused before anything is sent (data/library.ts, WriteOptions).
+    repository ??= createCollections(backend, { online: isOnline, queue: sync.queue })
     return repository
   }
+
+  /** Writes wait to sync: what the device shows stands until they have (issue #93). */
+  const waiting = () => sync.pending > 0
 
   // --------------------------------------------------------------------- list
 
@@ -72,7 +83,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     const collections = repo()
     if (!collections) return
     // Offline the device's copy stands (with none, it is asked and fails visibly).
-    if (!isOnline() && loaded.value) return
+    if ((!isOnline() || waiting()) && loaded.value) return
     const member = session.member?.id
     const result = await collections.list()
     if (member !== session.member?.id) return
@@ -101,7 +112,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   async function loadCollection(id: string) {
     const collections = repo()
     if (!collections) return
-    if (!isOnline() && pages.get(id)?.phase === 'ready') return
+    if ((!isOnline() || waiting()) && pages.get(id)?.phase === 'ready') return
     if (!pages.has(id)) {
       // Known from the list: its name shows at once while its Books arrive.
       const known = list.value.find((summary) => summary.id === id)
@@ -134,7 +145,7 @@ export const useCollectionsStore = defineStore('collections', () => {
 
   async function loadMemberships(entryId: string) {
     const collections = repo()
-    if (!collections || !isOnline()) return
+    if (!collections || !isOnline() || (waiting() && memberships.has(entryId))) return
     const result = await collections.memberships(entryId)
     if (!result.error) memberships.set(entryId, result.data)
   }
@@ -442,6 +453,13 @@ export const useCollectionsStore = defineStore('collections', () => {
   // tick are written once, after it (not later: the app may be closed next).
   watch([list, pages, memberships], save, { deep: true, flush: 'post' })
 
+  /** Everything shown, read again: the writes that waited have synced (stores/sync.ts). */
+  function refresh() {
+    void loadList()
+    for (const [id, shown] of pages) if (shown.phase === 'ready') void loadCollection(id)
+    for (const entryId of [...memberships.keys()]) void loadMemberships(entryId)
+  }
+
   // Back online: the list catches up with changes made elsewhere.
   const online = useOnline()
   watch(online, (now) => {
@@ -477,6 +495,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     loaded,
     loadError,
     loadList,
+    refresh,
     page,
     loadCollection,
     memberships,

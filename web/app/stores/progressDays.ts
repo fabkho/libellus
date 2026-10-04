@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { ProgressDay } from '~/data/progressDays'
+import { isLocalId } from '~/data/queuedWrites'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 
@@ -51,7 +52,8 @@ export const useProgressDaysStore = defineStore('progressDays', () => {
 
   /** A screen shows this read: its days, unless they are loaded or on the way. */
   function want(sessionId: string | null | undefined) {
-    if (!sessionId || asked.has(sessionId)) return
+    // A read started offline (issue #93) has no days in the database until it syncs.
+    if (!sessionId || isLocalId(sessionId) || asked.has(sessionId)) return
     asked.add(sessionId)
     asks.set(sessionId, (asks.get(sessionId) ?? 0) + 1)
     if (queued) return void queued.add(sessionId)
@@ -71,6 +73,14 @@ export const useProgressDaysStore = defineStore('progressDays', () => {
     want(sessionId)
   }
 
+  /** Every read on screen, asked for again (writes that waited have synced, issue #93). */
+  function refreshAll() {
+    for (const sessionId of Object.keys(bySession.value)) {
+      asked.delete(sessionId)
+      want(sessionId)
+    }
+  }
+
   watch(
     () => session.member?.id,
     (now, before) => {
@@ -82,5 +92,5 @@ export const useProgressDaysStore = defineStore('progressDays', () => {
     },
   )
 
-  return { bySession, refreshing, want, refresh }
+  return { bySession, refreshing, want, refresh, refreshAll }
 })

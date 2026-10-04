@@ -1,17 +1,21 @@
 import { defineStore } from 'pinia'
 import {
   checkSessionEdit,
+  sessionEditArguments,
   sessionEditOf,
+  sortSessions,
   type LibraryEntry,
   type LibraryErrorCode,
   type ReadingSession,
   type SessionEdit,
 } from '~/data/library'
+import { editedSession } from '~/data/queuedWrites'
 import { isoDay } from '~/utils/dates'
 import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
+import { useSyncStore } from '~/stores/sync'
 
 /** The read the Edit sheet (or the delete question) is about, and the entry it belongs to. */
 export type HistoryTarget = { entry: LibraryEntry; session: ReadingSession }
@@ -32,6 +36,7 @@ export const useHistoryStore = defineStore('history', () => {
   const books = useBookStore()
   const collections = useCollectionsStore()
   const session = useSessionStore()
+  const sync = useSyncStore()
 
   // --------------------------------------------------------------- the reads
 
@@ -44,6 +49,8 @@ export const useHistoryStore = defineStore('history', () => {
   async function load(entryId: string) {
     const repo = library.library()
     if (!repo) return
+    // While writes wait to sync (issue #93) the reads shown stand: the database has not got them yet.
+    if (sync.holds() && sessions.has(entryId)) return
     const member = session.member?.id
     const ask = (asks.get(entryId) ?? 0) + 1
     asks.set(entryId, ask)
@@ -56,6 +63,24 @@ export const useHistoryStore = defineStore('history', () => {
     }
     loadError.value = null
     sessions.set(entryId, result.data)
+  }
+
+  /**
+   * An entry's reads as the book page shows them: as last read, with the entry's
+   * latest read as the device has it now (started, finished or edited offline and
+   * waiting to sync, issue #93). Null until they were read.
+   */
+  function readsOf(entry: LibraryEntry): ReadingSession[] | null {
+    const loaded = sessions.get(entry.id)
+    const latest = entry.latestSession
+    if (!loaded || !latest) return loaded ?? null
+    const known = loaded.some((read) => read.id === latest.id)
+    return sortSessions(known ? loaded.map((read) => (read.id === latest.id ? latest : read)) : [latest, ...loaded])
+  }
+
+  /** The reads on screen, read again (writes that waited have synced). */
+  function refresh() {
+    for (const entryId of [...sessions.keys()]) void load(entryId)
   }
 
   /** The count on Home follows reads that were edited or deleted, not only finished. */
@@ -99,6 +124,10 @@ export const useHistoryStore = defineStore('history', () => {
         return null
       }
       library.entryChanged(result.data)
+      // Shown at once, and kept while it waits to sync (offline, issue #93); online the read below replaces it.
+      const shown = sessions.get(target.entry.id)
+      const edited = editedSession(target.session, sessionEditArguments(target.session, draft))
+      if (shown) sessions.set(target.entry.id, shown.map((read) => (read.id === edited.id ? edited : read)))
       await load(target.entry.id)
       recount()
       editing.value = null
@@ -217,6 +246,8 @@ export const useHistoryStore = defineStore('history', () => {
     sessions,
     loadError,
     load,
+    readsOf,
+    refresh,
     editing,
     draft,
     editBusy,

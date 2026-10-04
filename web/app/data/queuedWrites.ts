@@ -138,6 +138,18 @@ function openSession(entry: LibraryEntry): ReadingSession | null {
   return entry.status === 'reading' && session && !session.outcome ? session : null
 }
 
+/** A read with `update_session`'s arguments applied (the outcome stays; what it does not allow is kept as it was). */
+export function editedSession(session: ReadingSession, args: Record<string, unknown>): ReadingSession {
+  return {
+    ...session,
+    startedOn: text(args.p_started_on),
+    endedOn: session.outcome ? text(args.p_ended_on) : null,
+    rating: session.outcome === 'finished' ? number(args.p_rating) : session.rating,
+    review: session.outcome === 'finished' ? trimmed(args.p_review) : session.review,
+    abandonReason: session.outcome === 'abandoned' ? trimmed(args.p_abandon_reason) : session.abandonReason,
+  }
+}
+
 /**
  * What a write does to the entry, as the database would do it: the entry as it
  * will be, null when it leaves the Library, or the code the database would
@@ -214,17 +226,7 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
       const session = entry.latestSession
       // Another read than the latest: the entry shows nothing of it.
       if (!session || session.id !== args.p_session_id) return entry
-      return {
-        ...entry,
-        latestSession: {
-          ...session,
-          startedOn: text(args.p_started_on),
-          endedOn: session.outcome ? text(args.p_ended_on) : null,
-          rating: session.outcome === 'finished' ? number(args.p_rating) : session.rating,
-          review: session.outcome === 'finished' ? trimmed(args.p_review) : session.review,
-          abandonReason: session.outcome === 'abandoned' ? trimmed(args.p_abandon_reason) : session.abandonReason,
-        },
-      }
+      return { ...entry, latestSession: editedSession(session, args) }
     }
     case 'remove_from_library':
       return null

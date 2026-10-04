@@ -15,9 +15,11 @@ import {
   type LibraryEntry,
   type LibraryErrorCode,
 } from '~/data/library'
+import { applyWrites } from '~/data/queuedWrites'
 import { isoDay } from '~/utils/dates'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
+import { useSyncStore } from '~/stores/sync'
 
 /**
  * The statuses the Add sheets offer, in the order they are listed: a Book can
@@ -38,17 +40,25 @@ export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read', 'readin
  * every load and change, read back when the store is set up, so the app opens
  * on the last-loaded Library, connection or not. Offline nothing is asked for;
  * the lists refresh by themselves once the connection is back.
+ *
+ * Offline the changes still happen (issue #93): they wait in the outbox
+ * (stores/sync.ts) and the entry moves as if the database had answered. Every
+ * load lays the writes still waiting over what the database returned
+ * (`applyWrites`), so a refresh never shows a change undone that is only not
+ * synced yet; once a write is refused, the next load is what undoes it.
  */
 export const useLibraryStore = defineStore('library', () => {
   const backend = useBackend()
   const session = useSessionStore()
   const search = useSearchStore()
+  const sync = useSyncStore()
 
   let repository: Library | null = null
   function library(): Library | null {
     if (!backend) return null
-    // Writes refused offline, before anything is sent (data/library.ts, WriteOptions).
-    repository ??= createLibrary(backend, { online: isOnline })
+    // Offline the writes that can wait go into the outbox; the others are refused
+    // before anything is sent (data/library.ts, WriteOptions).
+    repository ??= createLibrary(backend, { online: isOnline, queue: sync.queue })
     return repository
   }
 
@@ -93,10 +103,47 @@ export const useLibraryStore = defineStore('library', () => {
       return
     }
     loadError.value = null
-    STATUSES.forEach((status, i) => (lists[status] = results[i]!.data!))
+    // The writes still waiting, laid over what the database has (issue #93).
+    const merged = applyWrites(
+      { want_to_read: results[0]!.data!, reading: results[1]!.data!, finished: results[2]!.data! },
+      sync.items,
+    )
+    for (const status of STATUSES) lists[status] = merged[status]
     for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
     loaded.value = true
     save()
+  }
+
+  /**
+   * The writes waiting in the outbox laid over the lists as they are (issue #93):
+   * once the outbox has been read, for a copy the device saved before a write that
+   * waited (the app closed in between). Writes the lists show already change nothing.
+   */
+  function rebase() {
+    if (!loaded.value || !sync.items.length) return
+    const merged = applyWrites({ want_to_read: lists.want_to_read, reading: lists.reading, finished: lists.finished }, sync.items)
+    if (STATUSES.every((status) => merged[status] === lists[status])) return
+    for (const status of STATUSES) lists[status] = merged[status]
+    for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
+    save()
+  }
+
+  /** One of the member's entries as the device shows it (the outbox answers from it). */
+  function entryById(entryId: string): LibraryEntry | null {
+    for (const status of STATUSES) {
+      const found = lists[status].find((entry) => entry.id === entryId)
+      if (found) return found
+    }
+    return null
+  }
+
+  /** The member's entry for a Book as the device shows it. */
+  function entryForBook(bookId: string): LibraryEntry | null {
+    for (const status of STATUSES) {
+      const found = lists[status].find((entry) => entry.book.id === bookId)
+      if (found) return found
+    }
+    return null
   }
 
   // ---------------------------------------------------------- Read in <year>
@@ -322,6 +369,9 @@ export const useLibraryStore = defineStore('library', () => {
     loaded,
     loadError,
     load,
+    rebase,
+    entryById,
+    entryForBook,
     readInYear,
     readInYearOf,
     loadReadInYear,
