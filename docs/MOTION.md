@@ -94,10 +94,18 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   air is the one that was tapped, showing exactly what it showed (its image, its thumbhash, or the
   cloth); laid out at the hero's size, it lands on the hero's pixels. If the hero's own image is
   already drawn (or the hero is a Placeholder with its type), it fades in over the tapped one on the
-  way; if not, the copy stays over the hero until the hero's image has faded in, so the cover never
-  falls back to its thumbhash. A Placeholder flies as cloth and gains its title on the way. The tab
-  bar does not move; the search palette, when the tap was on a result, turns back into the tab bar
-  under the flying cover as it does for any navigation.
+  way; if not, the copy stays on the hero — in its sheet, so it scrolls and fades with the page —
+  until the hero's image is decoded and has faded in, so the cover never falls back to its
+  thumbhash and never shows twice. A cover's image (and the halo made of it) fades in only once it
+  is decoded, and the halo cross-fades with the pool of colour it replaces. A Placeholder flies as
+  cloth and gains its title on the way. The tab bar does not move; the search palette, when the tap
+  was on a result, turns back into the tab bar under the flying cover as it does for any navigation.
+
+  The hand-off is the same on every device, however slow: from the tap until the flight starts, a
+  still copy of the page being left stands in for the live page, so the frame in which the router
+  has drawn the new page but the flight has not started never shows it bare; and the flight's first
+  frame shows where it starts, held still until it is on screen (a busy first frame would otherwise
+  show the cover half way there — on `standard` the first 50 ms are half the travel).
 
   Back — the back button or the browser's — plays it the other way over `exit` (on the `standard`
   curve, landing softly): the hero flies back into its row, the book page fades out and sinks `md`,

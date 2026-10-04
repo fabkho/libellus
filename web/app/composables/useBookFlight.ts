@@ -16,11 +16,17 @@
  *   book page is still in the document. A Back the browser has animated itself
  *   (iOS Safari's edge swipe: `hasUAVisualTransition`) gets no flight on top.
  *   Other ways off a book page (a tab, a link) are new places: no flight.
+ * - From then until the flight starts, the copy of the page being left stands
+ *   in for the live page (`pose`), so the frame in which the router has drawn
+ *   the new page but not resolved its scroll never shows it bare.
  * - The flight starts when the router has drawn the new page and is about to
  *   scroll it to its place (`scrollBehavior` resolving, before that frame is
  *   painted): the scroll is applied first, so every box is measured where it
  *   will be (the router then scrolls to the same place, a no-op). Scroll
- *   restoration (app/router.options.ts, utils/tabPlaces.ts) is untouched.
+ *   restoration (app/router.options.ts, utils/tabPlaces.ts) is untouched. Its
+ *   first frame holds still until it is on screen (`letGo`).
+ * - A cover that lands before the hero's own image is in stays on the hero, in
+ *   its sheet, until that image is decoded and faded in (`hold`).
  * - `ShellBookFlight` (in the tabs layout) holds the two fixed layers: the
  *   leaving page's copy under the chrome, the flying cover over everything
  *   but the sheets.
@@ -54,6 +60,14 @@ const COVER = '[data-cover]'
 /** A cover that is flying: the copy in the air stands in for it. */
 const HIDDEN = 'data-flight-hidden'
 const LAYER = '[data-flight-layer]'
+/** On the root while a flight is about to start: the live page is hidden under the copy of the page being left. */
+const POSE = 'data-flight-pose'
+/**
+ * How long the copy of the page being left may stand in for it before the
+ * navigation has drawn the new page (a slow first load of the page's code):
+ * a safety net, not a motion; after it the live page shows again.
+ */
+const POSE_LIMIT_MS = 1000
 
 interface Layers {
   /** Under the chrome, over the page: the page being left. */
@@ -108,6 +122,8 @@ interface Flight {
   fly: HTMLElement | null
   snapshot: HTMLElement | null
   channels: Record<keyof Channels, Animation[]>
+  /** Animations created since the last frame, held still on their first one (`letGo`). */
+  held: Animation[]
   /** The cover's channel while it has no animation (waiting for the hero, or fading in place). */
   coverValue: number
   /** A push whose hero is not drawn yet: looks again each frame until this time. */
@@ -122,6 +138,8 @@ let router: Router | null = null
 let pending: Departure | null = null
 let running: Flight | null = null
 let releaseHold: (() => void) | null = null
+/** The pose a departure put up (its copy of the page being left, if it added one) and its safety timer. */
+let posed: { root: HTMLElement | null; timer: number } | null = null
 /** The last Back was a swipe the browser already animated (iOS Safari's edge swipe): no flight on top of it. */
 let browserAnimatedBack = false
 /** The history position (vue-router's `history.state.position`) of the page showing. */
@@ -153,10 +171,15 @@ function coverFor(path: string): HTMLElement | null {
   return fallback
 }
 
-/** The cover shows what it will show for good: its image drawn (or the cloth, which has none to wait for). */
+/**
+ * The cover shows what it will show for good: its image drawn (or the cloth,
+ * which has none to wait for). UiCover fades its image in only once it is
+ * decoded, so an image at full opacity is one on screen. Its own image only:
+ * a copy held over it (`hold`) has one too.
+ */
 function shown(cover: Element): boolean {
-  const image = cover.querySelector('img')
-  if (!image) return true
+  const image = cover.querySelector(':scope > img')
+  if (!(image instanceof HTMLImageElement)) return true
   return image.complete && image.naturalWidth > 0 && getComputedStyle(image).opacity === '1'
 }
 
@@ -217,6 +240,9 @@ function play(element: Element, frames: Keyframe[], flight: Flight, channel: key
   const animation = element.animate(oriented(frames, flight.towards), { duration, easing, fill: 'both' })
   animation.currentTime = startAt(value, flight.towards, easing, duration)
   flight.channels[channel].push(animation)
+  // Held on its first frame (`letGo`).
+  animation.playbackRate = 0
+  flight.held.push(animation)
   return animation
 }
 
@@ -272,7 +298,7 @@ export function launch(link: HTMLElement, to: string) {
     path,
     to: router.resolve(to).fullPath,
     from: previous ? channelsOf(previous) : AT_LIST,
-    snapshot: snapshotOf(livePage(), { hide: [cover] }),
+    snapshot: snapshotOf(livePage()),
     cover,
     box: cover ? box(cover) : null,
     copy: cover ? coverCopy(cover) : null,
@@ -283,6 +309,47 @@ export function launch(link: HTMLElement, to: string) {
     previous,
     origin: { page: router.currentRoute.value.fullPath, search },
   }
+  pose(pending)
+}
+
+/**
+ * Until its flight starts, a departure holds the screen as it was: the copy of
+ * the page being left goes up now, whole (its cover too: nothing flies yet),
+ * and the live page under it is hidden. The router draws the new page and only
+ * then resolves its scroll, a frame or more later on a slow device; without
+ * this that frame shows the new page bare, before the flight is in place.
+ * A flight turned around needs none: the one it takes over holds the screen.
+ */
+function pose(departure: Departure) {
+  unpose()
+  if (!layers || departure.previous) return
+  document.documentElement.setAttribute(POSE, '')
+  const snapshot = departure.snapshot
+  if (snapshot) attach(snapshot)
+  posed = { root: snapshot?.root ?? null, timer: window.setTimeout(unpose, POSE_LIMIT_MS) }
+}
+
+/** The live page shows again; a copy the pose put up and no flight took over leaves. */
+function unpose() {
+  document.documentElement.removeAttribute(POSE)
+  if (!posed) return
+  window.clearTimeout(posed.timer)
+  posed.root?.remove()
+  posed = null
+}
+
+/** The copy of the page being left goes into the under layer (once). */
+function attach(snapshot: Snapshot) {
+  if (!layers || snapshot.root.parentElement === layers.under) return
+  snapshot.root.style.willChange = 'opacity'
+  layers.under.appendChild(snapshot.root)
+  snapshot.settle()
+}
+
+/** The copy of an element in the copy of the page left stands aside: a copy of it flies instead. */
+function standAside(snapshot: Snapshot | null, element: Element | null) {
+  const copy = element && snapshot?.copyOf(element)
+  if (copy instanceof HTMLElement || copy instanceof SVGElement) copy.style.visibility = 'hidden'
 }
 
 /** Leaving a book page by Back: noticed while the book page is still there. */
@@ -293,7 +360,7 @@ function leaving(to: RouteLocationNormalized, from: RouteLocationNormalized) {
   const reduced = prefersReducedMotion()
   const previous = takeOver(from.path, 'book')
   const hero = document.querySelector<HTMLElement>(`${HERO} ${COVER}`)
-  const snapshot = snapshotOf(livePage(), { hide: [hero] })
+  const snapshot = snapshotOf(livePage())
   pending = {
     towards: 'list',
     path: from.path,
@@ -310,6 +377,8 @@ function leaving(to: RouteLocationNormalized, from: RouteLocationNormalized) {
     previous,
     origin: previous?.origin ?? origins.get(from.path) ?? null,
   }
+  // A swipe the browser animated has already shown the list: nothing to hold.
+  if (!browserAnimatedBack) pose(pending)
 }
 
 /**
@@ -331,7 +400,6 @@ function isBack(to: RouteLocationNormalized, from: RouteLocationNormalized): boo
  * any other flight lands at once.
  */
 function takeOver(path: string, was: Towards): Flight | null {
-  releaseHold?.()
   const flight = running
   if (!flight) return null
   if (flight.path === path && flight.towards === was) {
@@ -350,6 +418,7 @@ function arrive(to: RouteLocationNormalized, from: RouteLocationNormalized, posi
   } catch (error) {
     // A flight that cannot start must not leave a cover hidden or a page copy on screen.
     pending = null
+    unpose()
     if (running) drop(running)
     console.error(error)
   }
@@ -369,6 +438,7 @@ function start(to: RouteLocationNormalized, from: RouteLocationNormalized, posit
     departure &&
     (departure.towards === 'book' ? to.path === departure.path : from.path === departure.path && to.path !== departure.path)
   if (!departure || !fits || !layers) {
+    unpose()
     if (departure?.previous) land(departure.previous)
     else if (running && current && to.path !== from.path) land(running)
     return
@@ -382,6 +452,8 @@ function start(to: RouteLocationNormalized, from: RouteLocationNormalized, posit
   if (previous) drop(previous)
   if (departure.towards === 'book') push(departure)
   else pop(departure, to)
+  // The flight's first frame is in place (its animations hold the page's opacity now): the pose can go.
+  unpose()
 }
 
 function fresh(departure: Departure): Flight {
@@ -395,6 +467,7 @@ function fresh(departure: Departure): Flight {
     fly: null,
     snapshot: null,
     channels: { cover: [], book: [], list: [] },
+    held: [],
     coverValue: departure.from.cover,
     waitUntil: null,
     risen: false,
@@ -402,12 +475,12 @@ function fresh(departure: Departure): Flight {
   }
 }
 
-/** Shows the page being left, as it was, in the under layer. */
+/** Shows the page being left, as it was, in the under layer (where the pose may have put it already). */
 function showLeaving(flight: Flight, snapshot: Snapshot | null) {
   if (!snapshot || !layers) return
-  snapshot.root.style.willChange = 'opacity'
-  layers.under.appendChild(snapshot.root)
-  snapshot.settle()
+  attach(snapshot)
+  // The flight owns the copy now: the pose leaving does not take it along.
+  if (posed?.root === snapshot.root) posed.root = null
   flight.snapshot = snapshot.root
 }
 
@@ -426,6 +499,7 @@ function push(departure: Departure) {
   if (departure.cover && departure.box && departure.copy && layers) {
     // The tapped cover, if it is still on screen (in the closing search palette), is the one in the air now.
     if (departure.cover.isConnected) hide(flight, departure.cover)
+    standAside(departure.snapshot, departure.cover)
     flight.rowBox = departure.previous?.rowBox ?? departure.box
     flight.fly = flyAt(departure.air?.box ?? departure.box, [departure.copy], null)
     layers.over.appendChild(flight.fly)
@@ -499,6 +573,7 @@ function pop(departure: Departure, to: RouteLocationNormalized) {
 
   if (row && rowBox && onScreen(rowBox, viewport()) && heroBox && layers) {
     hide(flight, row)
+    standAside(snapshot, departure.cover)
     flight.rowBox = rowBox
     flight.heroBox = heroBox
     const copies = [coverCopy(row)]
@@ -511,13 +586,11 @@ function pop(departure: Departure, to: RouteLocationNormalized) {
   } else if (air && layers) {
     // Turned around in the air with nowhere to land: the cover fades where it is, with the page.
     flight.fly = flyAt(air.box, air.copies, null)
+    standAside(snapshot, departure.cover)
     layers.over.appendChild(flight.fly)
     play(flight.fly, [{ opacity: 0 }, { opacity: 1 }], flight, 'cover', from.book, reduced)
-  } else if (snapshot && departure.cover) {
-    // Nowhere to fly to (its row scrolled away, or opened from search): it leaves with its page.
-    const copy = snapshot.copyOf(departure.cover)
-    if (copy instanceof HTMLElement) copy.style.visibility = ''
   }
+  // Otherwise nowhere to fly to (its row scrolled away, or opened from search): it leaves with its page.
   track(flight)
 }
 
@@ -528,6 +601,7 @@ function track(flight: Flight) {
   layers?.over.setAttribute('data-moving', '')
   const step = () => {
     if (running !== flight) return
+    letGo(flight)
     if (flight.waitUntil !== null) {
       const value = channelsOf(flight).cover
       if (!aim(flight, value) && performance.now() > flight.waitUntil) {
@@ -544,6 +618,21 @@ function track(flight: Flight) {
   requestAnimationFrame(step)
 }
 
+/**
+ * A flight's first frame shows where it starts, however long it takes to
+ * draw: its animations are created holding still (`play`) and let go on the
+ * next frame, once that one is on screen. Putting the layers up (the copy of
+ * a whole page, the new page's first layout) makes the first frame a slow one,
+ * and Safari on iOS runs the animations in another process on its own clock:
+ * started at once, the cover would first show up half way there (on the
+ * `standard` curve the first 50 ms are half the travel), and on Back it would
+ * even step backwards on the next frame.
+ */
+function letGo(flight: Flight) {
+  for (const animation of flight.held) animation.playbackRate = 1
+  flight.held = []
+}
+
 /** A flight is over (or is cut short): the live page takes over, pixel for pixel. */
 function land(flight: Flight) {
   const fly = flight.fly
@@ -551,7 +640,7 @@ function land(flight: Flight) {
   flight.fly = null
   drop(flight)
   if (flight.towards === 'book' && flight.origin) remember(flight.path, flight.origin)
-  // The hero's own image is not drawn yet: the copy stays over it until it is (or the page moves).
+  // The hero's own image is not on screen yet: the copy stays on it until it is.
   if (fly && hero && hero.isConnected && !shown(hero)) hold(fly, hero)
   else fly?.remove()
 }
@@ -566,6 +655,7 @@ function remember(path: string, origin: Origin) {
 function drop(flight: Flight) {
   for (const animation of animations(flight)) animation.cancel()
   flight.channels = { cover: [], book: [], list: [] }
+  flight.held = []
   flight.waitUntil = null
   flight.snapshot?.remove()
   flight.fly?.remove()
@@ -577,20 +667,34 @@ function drop(flight: Flight) {
   }
 }
 
+/**
+ * The cover has landed but the hero's own image is not on screen yet (still
+ * loading, or fading in): the copy that flew moves into the hero's sheet, on
+ * top of it, and stays there until the hero's image is decoded and in. In the
+ * page, it scrolls, fades and leaves with the hero, under the chrome like it;
+ * the cover never falls back to its thumbhash, and never shows twice.
+ */
 function hold(fly: HTMLElement, hero: HTMLElement) {
+  const held = document.createElement('div')
+  held.className = 'flight-held'
+  held.dataset.testid = 'shell.flightHeld'
+  held.append(...fly.children)
+  // In the page now: not a cover of its own for anything that looks for one.
+  for (const copy of held.querySelectorAll('[data-cover]')) copy.removeAttribute('data-cover')
+  fly.remove()
+  hero.appendChild(held)
   let frame = 0
   const release = () => {
     cancelAnimationFrame(frame)
-    window.removeEventListener('scroll', release)
-    fly.remove()
+    held.remove()
     if (releaseHold === release) releaseHold = null
   }
   const check = () => {
-    if (!hero.isConnected || shown(hero) || !hero.querySelector('img')) release()
+    if (!hero.isConnected || shown(hero)) release()
     else frame = requestAnimationFrame(check)
   }
+  releaseHold?.()
   releaseHold = release
-  window.addEventListener('scroll', release, { passive: true, once: true })
   frame = requestAnimationFrame(check)
 }
 
@@ -631,6 +735,7 @@ export function installBookFlight(app: Router, mounted: Layers): () => void {
     if (!pending || pending.to !== to.fullPath) return
     const previous = pending.previous
     pending = null
+    unpose()
     if (previous) for (const animation of animations(previous)) animation.play()
   })
   return () => {
@@ -640,6 +745,7 @@ export function installBookFlight(app: Router, mounted: Layers): () => void {
     if (app.options.scrollBehavior === scrollBehavior) app.options.scrollBehavior = original
     if (running) land(running)
     releaseHold?.()
+    unpose()
     pending = null
     layers = null
     router = null
