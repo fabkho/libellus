@@ -57,6 +57,23 @@ test.describe('Safari on an iPhone', () => {
     await expect(hint).toBeVisible()
   })
 
+  // The empty Home is what a new member sees first: with the hint above it, the way to Search
+  // still has to stand clear of the tab bar, on a tall phone and on a small one.
+  for (const size of [
+    { width: 393, height: 852 },
+    { width: 375, height: 667 },
+  ]) {
+    test(`the empty Home keeps its search prompt above the tab bar at ${size.width}×${size.height}`, async ({ page }) => {
+      await page.setViewportSize(size)
+      await signedIn(page, { installHint: true })
+      await expect(page.getByTestId('home.installHint')).toBeVisible()
+      await page.waitForTimeout(500)
+      const prompt = await page.getByTestId('home.search').boundingBox()
+      const tabs = await page.getByTestId('shell.tabs').boundingBox()
+      expect(prompt && tabs && prompt.y + prompt.height <= tabs.y, `prompt ${JSON.stringify(prompt)} vs tab bar ${JSON.stringify(tabs)}`).toBe(true)
+    })
+  }
+
   test('is gone in the installed app', async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(navigator, 'standalone', { value: true }))
     await signedIn(page, { installHint: true })
