@@ -17,6 +17,7 @@ const initials = computed(() => initialsOf(session.member?.email ?? '', session.
     <span
       class="ring figures flex items-center justify-center rounded-pill bg-surface-raised text-title text-ink-muted shadow-cover edge"
       aria-hidden="true"
+      data-profile-avatar
       data-testid="profile.initials"
     >
       {{ initials }}

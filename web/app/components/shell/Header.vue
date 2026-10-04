@@ -27,7 +27,7 @@ const initials = computed(() => initialsOf(session.member?.email ?? '', session.
         class="-mr-sm flex size-(--size-touch) items-center justify-center"
         data-testid="shell.avatar"
       >
-        <UiAvatar :initials="initials" />
+        <UiAvatar :initials="initials" data-profile-avatar />
       </NuxtLink>
     </div>
     <div class="flex min-w-0 flex-col gap-sm py-bar">

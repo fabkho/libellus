@@ -208,6 +208,72 @@
   }
 }
 
+/* Push to the Profile and back (docs/MOTION.md; plugins/profile-transition.client.ts),
+   as the push to a book: while the transition runs, the header's avatar and the
+   Profile's ring are one element that grows or shrinks between them; the Profile
+   fades in as the tab fades out and rises `md` into place (Back: it fades out and
+   sinks); the tab bar does not move and the Profile's pinned top bar only fades.
+   Over `standard` into the Profile, over `exit` (on the `standard` curve) back. */
+html[data-profile-transition] [data-profile-avatar] {
+  view-transition-name: profile-avatar;
+}
+html[data-profile-transition] [data-testid='shell.tabs'] {
+  view-transition-name: tab-bar;
+}
+html[data-profile-transition] [data-top-bar] {
+  view-transition-name: top-bar;
+}
+/* The tab bar is the same capsule before and after: the new one stands, at once. */
+::view-transition-old(tab-bar) {
+  display: none;
+}
+::view-transition-new(tab-bar) {
+  animation: none;
+}
+html[data-profile-transition='push']::view-transition-old(root) {
+  animation-name: page-fade-out;
+}
+html[data-profile-transition='push']::view-transition-new(root) {
+  animation-name: page-fade-in, page-rise;
+}
+html[data-profile-transition='back']::view-transition-old(root) {
+  animation-name: page-fade-out, page-sink;
+}
+html[data-profile-transition='back']::view-transition-new(root) {
+  animation-name: page-fade-in;
+}
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-rise {
+  from {
+    translate: 0 var(--spacing-md);
+  }
+}
+@keyframes page-sink {
+  to {
+    translate: 0 var(--spacing-md);
+  }
+}
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: var(--duration-standard);
+  animation-timing-function: var(--ease-standard);
+}
+html[data-profile-transition='back']::view-transition-group(*),
+html[data-profile-transition='back']::view-transition-old(*),
+html[data-profile-transition='back']::view-transition-new(*) {
+  animation-duration: var(--duration-exit);
+}
+
 /* Reduce Motion: nothing travels. Transitions and animations finish at once, so
    state still changes (docs/MOTION.md, Reduce Motion). */
 @media (prefers-reduced-motion: reduce) {
