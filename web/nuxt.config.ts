@@ -99,10 +99,13 @@ export default defineNuxtConfig({
       scope: '/',
       display: 'standalone',
       orientation: 'portrait',
-      // The manifest has no media queries: the splash and the default chrome
-      // colour are the light theme's, which is the default theme.
-      background_color: surface.light,
-      theme_color: surface.light,
+      // The manifest has no media queries (Chrome on Android doesn't support the
+      // draft's user_preferences), so the splash Android draws while the app
+      // starts takes one colour for everyone: the night room. The ribbons icon
+      // sits on dark red, a light splash flashed white on dark phones, and a dark
+      // splash before the light theme reads as the brand, not a glitch.
+      background_color: surface.dark,
+      theme_color: surface.dark,
       icons: [
         { src: `/icon-192.png?v=${iconVersion}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: `/icon-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
