@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/review_counts.json?isbns=9798991234566",
+  "status": 404,
+  "contentType": "application/json; charset=utf-8",
+  "body": "No books match those ISBNs."
+}

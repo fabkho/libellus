@@ -390,6 +390,12 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# The book page's Goodreads line (issue #69). The function checks the caller
+# itself (a signed-in member, or the service role), so it works with either kind
+# of API key: supabase/functions/goodreads-rating/index.ts.
+[functions.goodreads-rating]
+verify_jwt = false
+
 [analytics]
 # Off, as in Trappist: nothing reads the local logs, and it is one container less.
 enabled = false
