@@ -11,6 +11,9 @@ import type { Ref } from 'vue'
  * the dialog gives the sheet back. Every layer is teleported to `<body>`, so
  * "everything else" is every other child of `<body>` (`#__nuxt` included).
  *
+ * The system Back closes the top-most layer instead of leaving the page, and
+ * a change of page closes them all (`close`, useBackDismiss.ts).
+ *
  * `useModalShown` tells the screens whether any layer is still on screen
  * (open, or on its way out), so they can hold a list change back until the
  * sheet that caused it has gone (`useSettled`).
@@ -65,13 +68,23 @@ function contains(layer: Layer, node: Node | null) {
  * Makes the component a modal layer while `open` is true. `elements` are its
  * scrim and panel (both teleported to `<body>`); `initialFocus` picks what
  * gets focus once it is open (the panel itself, or a field that should have the
- * keyboard at once). Bind `afterLeave` to the panel's `<Transition>`, so the
- * layer counts as shown until it has left.
+ * keyboard at once). `close` is how the layer closes itself: the system Back
+ * and a change of page call it. Bind `afterLeave` to the panel's
+ * `<Transition>`, so the layer counts as shown until it has left.
  */
 export function useModalLayer(
   open: Ref<boolean>,
-  { elements, initialFocus }: { elements: () => (HTMLElement | null | undefined)[]; initialFocus: () => HTMLElement | null | undefined },
+  {
+    elements,
+    initialFocus,
+    close,
+  }: {
+    elements: () => (HTMLElement | null | undefined)[]
+    initialFocus: () => HTMLElement | null | undefined
+    close: () => void
+  },
 ) {
+  useBackDismiss(open, close)
   let layer: Layer | null = null
   let shown = false
 

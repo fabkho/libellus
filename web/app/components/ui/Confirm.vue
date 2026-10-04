@@ -2,8 +2,8 @@
 // A confirmation for something that cannot be taken back (deleting a read,
 // removing a Book from the Library). It rises over a scrim above everything,
 // sheets included: the question in the serif, what is lost beneath it, the
-// destructive action and Cancel. Closed by Cancel, a tap on the scrim or
-// Escape — never while the action runs. A refusal stays in the dialog with its
+// destructive action and Cancel. Closed by Cancel, a tap on the scrim, Escape
+// or the system Back — never while the action runs. A refusal stays in the dialog with its
 // reason and the same button tries again. `testid` names the dialog; the
 // action and Cancel get `<testid>.confirm` and `<testid>.cancel`, a refusal
 // `<testid>.error`. `offline` (#15): the action stays, disabled, and says
@@ -34,7 +34,8 @@ const scrim = useTemplateRef<HTMLElement>('scrim')
 const panel = useTemplateRef<HTMLElement>('panel')
 // Above everything, a sheet under it included: the rest is out of reach while
 // it asks, and focus goes back to what asked once it closes (useModalLayer).
-const { afterLeave } = useModalLayer(open, { elements: () => [scrim.value, panel.value], initialFocus: () => panel.value })
+// Back closes it as Cancel does (never while the action runs).
+const { afterLeave } = useModalLayer(open, { elements: () => [scrim.value, panel.value], initialFocus: () => panel.value, close })
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape') return

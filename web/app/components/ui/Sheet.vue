@@ -2,9 +2,10 @@
 // A bottom sheet the iOS way: it rises over a scrim with a grabber and a title
 // row — a text Cancel at the top left (never a round ✕), the title in the
 // middle, the sheet's one action at the right in the lamp colour. Closed by
-// Cancel, a tap on the scrim, Escape, or swiping it down. Respects the home
-// indicator. `testid` names the sheet; Cancel and the action get
-// `<testid>.cancel` and `<testid>.action`.
+// Cancel, a tap on the scrim, Escape, swiping it down, or the system Back
+// (Android's back gesture: useBackDismiss.ts); any change of page closes it
+// too. Respects the home indicator. `testid` names the sheet; Cancel and the
+// action get `<testid>.cancel` and `<testid>.action`.
 //
 // While it is open the rest of the app is out of reach (`inert`), the page
 // does not scroll under it, and focus is inside it — on the panel, or on the
@@ -36,6 +37,7 @@ const body = useTemplateRef<HTMLElement>('body')
 const { afterLeave } = useModalLayer(open, {
   elements: () => [scrim.value, panel.value],
   initialFocus: () => panel.value?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.value,
+  close,
 })
 
 function onKeydown(event: KeyboardEvent) {
