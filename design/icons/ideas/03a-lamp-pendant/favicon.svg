@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>Libellus — The pendant (favicon)</title>
+<clipPath id="aclip"><rect width="108" height="108" rx="22"/></clipPath><g clip-path="url(#aclip)"><defs>
+  <radialGradient id="abgb" cx="54" cy="65.57" r="56" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#efb768" stop-opacity="0.2"/>
+    <stop offset="0.35" stop-color="#efb768" stop-opacity="0.06999999999999999"/>
+    <stop offset="1" stop-color="#efb768" stop-opacity="0"/>
+  </radialGradient></defs><rect width="108" height="108" fill="#0e0c0a"/><rect width="108" height="108" fill="url(#abgb)"/><g transform="matrix(1.05214 0 0 1.05214 -2.82 4.55)"><defs><linearGradient id="afgc" x1="0" y1="41" x2="0" y2="86" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#fcdba3"/><stop offset="1" stop-color="#efb768"/></linearGradient></defs>
+      <path d="M37 41.5L71 41.5L84.53 80.9L80.83 82.09L77.08 83.12L73.3 84L69.48 84.72L65.63 85.28L61.77 85.68L57.89 85.92L54 86L50.11 85.92L46.23 85.68L42.37 85.28L38.52 84.72L34.7 84L30.92 83.12L27.17 82.09L23.47 80.9Z" fill="url(#afgc)"/>
+      <path d="M52.3 67.28L51.39 66.67L50.47 66.09L49.56 65.54L48.64 65.02L47.73 64.53L46.81 64.08L45.9 63.65L44.98 63.26L44.07 62.9L43.15 62.57L42.24 62.27L41.32 62L40.41 61.77L39.49 61.57L38.58 61.39L37.66 61.25L36.74 61.14L35.83 61.06L34.92 61.02L34 61L34 74.5L34.92 74.52L35.83 74.56L36.74 74.64L37.66 74.75L38.58 74.89L39.49 75.07L40.41 75.27L41.32 75.5L42.24 75.77L43.15 76.07L44.07 76.4L44.98 76.76L45.9 77.15L46.81 77.58L47.73 78.03L48.64 78.52L49.56 79.04L50.47 79.59L51.39 80.17L52.3 80.78ZM55.7 67.28L56.62 66.67L57.53 66.09L58.45 65.54L59.36 65.02L60.28 64.53L61.19 64.08L62.11 63.65L63.02 63.26L63.94 62.9L64.85 62.57L65.77 62.27L66.68 62L67.6 61.77L68.51 61.57L69.43 61.39L70.34 61.25L71.26 61.14L72.17 61.06L73.08 61.02L74 61L74 74.5L73.08 74.52L72.17 74.56L71.26 74.64L70.34 74.75L69.43 74.89L68.51 75.07L67.6 75.27L66.68 75.5L65.77 75.77L64.85 76.07L63.94 76.4L63.02 76.76L62.11 77.15L61.19 77.58L60.28 78.03L59.36 78.52L58.45 79.04L57.53 79.59L56.62 80.17L55.7 80.78Z" fill="#0e0c0a"/>
+      <path d="M52.4 8L55.6 8L55.6 21L52.4 21Z" fill="#eee7dc"/><path d="M31 38C31 26.4 41.3 19 54 19C66.7 19 77 26.4 77 38Z" fill="#eee7dc"/></g></g>
+</svg>

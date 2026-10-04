@@ -1,4 +1,5 @@
-// Five home-screen icon ideas for issue #83, drawn as SVG and laid out on one review page.
+// Home-screen icon ideas for issue #83, drawn as SVG and laid out on two review pages: round 1
+// (five ideas) and round 2 (three variations of the lamp, 03a–03c).
 //
 //   ICON_TOOLS=/path/to/dir-with-opentype.js-and-wawoff2 node design/icons/ideas/build.mjs [page.html]
 //
@@ -12,8 +13,9 @@
 //                   the launcher tints it for themed icons
 //   favicon.svg     the full-bleed square with the mark enlarged for 32 and 16 px
 //
-// and the self-contained review page (inline SVG, CSS and fonts; no requests) to the path given,
-// /tmp/libellus-icons/index.html by default. Colours come from design/tokens.json.
+// and the self-contained review pages (inline SVG, CSS and fonts; no requests): round 1 to the path
+// given, /tmp/libellus-icons/index.html by default, and round 2 to round2.html beside it.
+// Colours come from design/tokens.json.
 //
 // opentype.js and wawoff2 are not dependencies of the repo: install them in a scratch directory
 // (`npm i opentype.js wawoff2`) and point ICON_TOOLS at it. Fonts are read from web/node_modules
@@ -126,6 +128,41 @@ function fit(paths, radius, nudge = [0, 0]) {
   const T = (x, y) => [r2(k * x + tx), r2(k * y + ty)]
   const box = { w: r2(k * (Math.max(...xs) - Math.min(...xs))), h: r2(k * (Math.max(...ys) - Math.min(...ys))) }
   return { k, tx, ty, T, box, transform: `matrix(${Number(k.toFixed(5))} 0 0 ${Number(k.toFixed(5))} ${r2(tx)} ${r2(ty)})` }
+}
+
+const K = 0.5523
+const add = (a, b) => [a[0] + b[0], a[1] + b[1]]
+const mul = (a, s) => [a[0] * s, a[1] * s]
+const pt = (p) => `${r2(p[0])} ${r2(p[1])}`
+/** A closed polygon through the points. */
+const poly = (pts) => `M${pts.map(pt).join('L')}Z`
+/** A bar from p to q, `w` wide, with round ends (cubic arcs, so `sample` can read it). */
+function capsule(p, q, w) {
+  const r = w / 2, len = Math.hypot(q[0] - p[0], q[1] - p[1])
+  const u = [(q[0] - p[0]) / len, (q[1] - p[1]) / len], n = [-u[1], u[0]]
+  const quarter = (c, v1, v2) => `C${pt(add(add(c, mul(v1, r)), mul(v2, K * r)))} ${pt(add(add(c, mul(v2, r)), mul(v1, K * r)))} ${pt(add(c, mul(v2, r)))}`
+  const neg = (v) => mul(v, -1)
+  return `M${pt(add(p, mul(n, r)))}L${pt(add(q, mul(n, r)))}${quarter(q, n, u)}${quarter(q, u, neg(n))}` +
+    `L${pt(add(p, mul(neg(n), r)))}${quarter(p, neg(n), neg(u))}${quarter(p, neg(u), n)}Z`
+}
+/** Maps local points (axis +y) onto the world: origin `o`, local +y pointing along `dir`. */
+function frame(o, dir) {
+  const l = Math.hypot(dir[0], dir[1]), d = [dir[0] / l, dir[1] / l]
+  // local x → (d.y, −d.x), local y → d
+  const T = (x, y) => [o[0] + x * d[1] + y * d[0], o[1] - x * d[0] + y * d[1]]
+  return { T, d: (path) => path.replace(/(-?\d*\.?\d+) (-?\d*\.?\d+)/g, (_, x, y) => pt(T(Number(x), Number(y)))) }
+}
+/**
+ * An open book seen slightly from above: two pages whose top edge rises from the spine to the
+ * outer corners (y = yO + (yS − yO)(1 − d/W)²), `T` thick, `g` apart at the spine. Polylines.
+ */
+function openBook({ cx, yS, yO, W, T, g, n = 20 }) {
+  const top = (d) => yO + (yS - yO) * (1 - d / W) ** 2
+  const page = (side) => {
+    const ds = Array.from({ length: n + 1 }, (_, i) => g / 2 + ((W - g / 2) * i) / n)
+    return poly([...ds.map((d) => [cx + side * d, top(d)]), ...ds.reverse().map((d) => [cx + side * d, top(d) + T])])
+  }
+  return { left: page(-1), right: page(1), top: (x) => top(Math.abs(x - cx)), x0: cx - W, x1: cx + W }
 }
 
 // ---------------------------------------------------------------- the ideas
@@ -291,6 +328,106 @@ const ideas = []
     note: 'A tall, simple tombstone silhouette — like the shield of a password manager, it reads instantly in a themed row and keeps the serif voice through the knocked-out L. The L itself is the weak point: counters cut out of a 48 px shape are 3 px strokes, fine on a phone (3× density) but mushy at 16 px, where the favicon becomes an amber arch with a dark mark. The arch is narrow, so it looks a size smaller than square glyphs next to it.',
   })
 }
+
+// ---------------------------------------------------------------- round 2: three better lamps
+//
+// The owner picked 03 and 04 and asked for a better lamp. Round 1's lamp loses in the themed
+// icon: Chrome themes the maskable (colour) icon, not the monochrome one, and there the fading
+// cone and the cream book on amber become one blur. So every lamp below draws its light as one
+// solid, bright shape and cuts or sets the book off by a gap, never by colour alone.
+
+// 3a — the pendant: round 1's lamp made a sign. A wider dome on a short cord, one solid cone, the
+// open book cut out of the cone where the light lands.
+{
+  const cord = 'M52.4 8L55.6 8L55.6 21L52.4 21Z'
+  const shade = 'M31 38C31 26.4 41.3 19 54 19C66.7 19 77 26.4 77 38Z'
+  // The cone is a slice of the disc round (54, −8): straight sides, the foot an arc.
+  const apex = [54, -8], s = 17 / 49.5, R = 94
+  const a0 = Math.atan(s), arc = Array.from({ length: 17 }, (_, i) => {
+    const a = -a0 + (2 * a0 * i) / 16
+    return [apex[0] - R * Math.sin(a), apex[1] + R * Math.cos(a)]
+  })
+  const cone = poly([[54 - 17, 41.5], [54 + 17, 41.5], ...arc])
+  const book = openBook({ cx: 54, yS: 68.5, yO: 61, W: 20, T: 13.5, g: 3.4 })
+  ideas.push({
+    id: 'pendant', short: 'Pendant', n: '03a', slug: 'lamp-pendant', name: 'The pendant', round: 2,
+    line: 'Round 1’s lamp redrawn as a sign: a wide dome on a short cord, the light one solid cone, the open book cut out of the light where it lands.',
+    mono: [cord, shade, cone], knock: [book.left + book.right], monoSplit: true,
+    radius: 31.5, favRadius: 48,
+    note: 'Round 1 with everything soft taken out. The shade is wider and flatter, so it reads as a lampshade rather than a bell; the light is one solid cone, so Android’s theming of the colour icon keeps the same shape the monochrome icon has; the book is cut out of the light, so it shows by shape, not by colour. A tall, symmetric mark: at 48 px the dome, the 1.6 px gap under it and the cone are clear, and the book is a dark gull-wing split by a 1.6 px spine of light. At 16 px the book closes into a dark band and the mark is simply a lamp — still the right picture.',
+    fg: (u) => `<defs><linearGradient id="${u}c" x1="0" y1="41" x2="0" y2="86" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#fcdba3"/><stop offset="1" stop-color="${C.lamp}"/></linearGradient></defs>
+      <path d="${cone}" fill="url(#${u}c)"/>
+      <path d="${book.left}${book.right}" fill="${C.room}"/>
+      <path d="${cord}" fill="${C.ink}"/><path d="${shade}" fill="${C.ink}"/>`,
+    bg: (u, f) => { const [x, y] = f.T(54, 58); return `<defs>${glow(`${u}b`, x, y, 56, C.lamp, 0.2)}</defs><rect width="108" height="108" fill="${C.room}"/><rect width="108" height="108" fill="url(#${u}b)"/>` },
+  })
+}
+
+// 3b — the desk lamp: a jointed desk lamp in profile, its head tipped towards an open book that
+// lies in its light.
+{
+  const base = 'M18 88C18 81.6 23.8 78.5 30.5 78.5C37.2 78.5 43 81.6 43 88Z'
+  const arm1 = capsule([30.5, 81], [24, 51], 6.4)
+  const arm2 = capsule([24, 51], [52, 30], 6.4)
+  const head = frame([54, 31], [9, 40])
+  const shade = head.d('M-6.5 0C-6.5 -3.59 -3.59 -6.5 0 -6.5C3.59 -6.5 6.5 -3.59 6.5 0C6.5 7 16.5 10 17.5 19.5L-17.5 19.5C-16.5 10 -6.5 7 -6.5 0Z')
+  const book = openBook({ cx: 67, yS: 84, yO: 77.5, W: 20, T: 7.5, g: 2.8 })
+  // The cone: from just below the shade's mouth, its sides spreading, down to 3 above the pages.
+  const gap = 3, y0 = 22.5, hw = (y) => 15 + (y - y0) * 0.24
+  const side = (sgn) => {
+    let y = y0
+    while (y < 120) { const p = head.T(sgn * hw(y), y); if (p[1] >= book.top(p[0]) - gap) return p; y += 0.05 }
+    throw new Error('cone misses the book')
+  }
+  const L = side(-1), Rt = side(1)
+  const [xa, xb] = [L[0], Rt[0]].sort((a, b) => a - b)
+  const footPts = Array.from({ length: 25 }, (_, i) => { const x = xb - ((xb - xa) * i) / 24; return [x, book.top(x) - gap] })
+  const cone = poly([head.T(-hw(y0), y0), head.T(hw(y0), y0), ...(Rt[0] > L[0] ? footPts : footPts.reverse())])
+  ideas.push({
+    id: 'desk', short: 'Desk lamp', n: '03b', slug: 'lamp-desk', name: 'The desk lamp', round: 2,
+    line: 'The lamp seen from the side: a jointed desk lamp bends over and throws its cone on an open book.',
+    mono: [base, arm1, arm2, shade, cone, book.left, book.right], monoSplit: true,
+    radius: 31.5, favRadius: 48, nudge: [0, 1],
+    note: 'The only version with a direction: the lamp leans over the book, which makes it the liveliest and the most “reading” of the three, and the wide, low mark fills the circle best. The cost is parts — base, two arms, head, cone and two pages in a 48 px circle; the arms are 4.4 dp (about 3 px at 48 px), so they hold, but the outline is busier than the solid neighbours. In the themed icon it reads at a glance as a desk lamp; at 16 px the arms thin to hairlines and cone and book merge into one bright wedge. Strongest large (store listing, about page), weakest as a favicon.',
+    fg: (u) => { const [cx0, cy0] = head.T(0, y0), [cx1, cy1] = head.T(0, 52); return `<defs><linearGradient id="${u}c" x1="${r2(cx0)}" y1="${r2(cy0)}" x2="${r2(cx1)}" y2="${r2(cy1)}" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#fcdba3"/><stop offset="1" stop-color="${C.lamp}"/></linearGradient></defs>
+      <path d="${cone}" fill="url(#${u}c)"/>
+      <path d="${book.left}${book.right}" fill="#fbf0db"/>
+      <path d="${base}" fill="${C.ink}"/><path d="${arm1}" fill="${C.ink}"/><path d="${arm2}" fill="${C.ink}"/><path d="${shade}" fill="${C.ink}"/>` },
+    bg: (u, f) => { const [x, y] = f.T(62, 62); return `<defs>${glow(`${u}b`, x, y, 56, C.lamp, 0.2)}</defs><rect width="108" height="108" fill="${C.room}"/><rect width="108" height="108" fill="url(#${u}b)"/>` },
+  })
+}
+
+// 3c — li, under the lamp: the wordmark's l, and an i that is a lamp: the dot a small shade on a cord,
+// the stem the cone of light under it, slanted like the italic.
+{
+  const s = 1000, l = glyph('800-italic', 'l', 0, 0, s)
+  const sk = 0.2 // the italic's slant (dx per unit of height)
+  const ix = advance('800-italic', 'l', s) + 30
+  const cx = ix + 140 // the cone's foot, centre
+  const S = ([x, y]) => [x - y * sk, y] // y is negative upwards, so the top leans right
+  const P = (pts) => poly(pts.map(S))
+  const top = -452, bot = 8, tw = 64, bw = 128
+  const foot = Array.from({ length: 13 }, (_, i) => { const t = i / 12, x = cx + bw - 2 * bw * t; return [x, bot + 26 * Math.sin(Math.PI * t)] })
+  const cone = P([[cx - tw, top], [cx + tw, top], [cx + bw, bot], ...foot.slice(1, -1), [cx - bw, bot]])
+  // the shade: a half-ellipse, rim at −500, 270 wide, 125 tall; then the cord up to the l's height
+  const dome = Array.from({ length: 25 }, (_, i) => { const a = Math.PI * (i / 24); return [cx + 135 * Math.cos(a), -500 - 125 * Math.sin(a)] })
+  const shade = P(dome)
+  const cord = P([[cx - 20, -720], [cx + 20, -720], [cx + 20, -610], [cx - 20, -610]])
+  ideas.push({
+    id: 'lili', short: 'li lamp', n: '03c', slug: 'lamp-li', name: 'li, under the lamp', round: 2,
+    line: 'The wordmark and the lamp in one: the l of “li” in Newsreader ExtraBold italic, the i a hanging lamp — its dot the shade, its stem the slanted cone of light.',
+    mono: [l, cord, shade, cone], monoSplit: true,
+    radius: 31, favRadius: 47.5,
+    note: 'The brand and the lamp in one mark: from afar it is the wordmark’s “li”, close up the i is a lamp on its cord, its light the stem. The heavy l carries the silhouette in the themed circle (as in 01), the amber cone keeps the i bright in colour, and the cord lifts the i to the l’s height. At 48 px the gap between shade and cone is about 2 px and the dome still reads as a shade; the cord is under 2 px and is the first thing to go. At 16 px it is a heavy “li” with an amber i — the most legible of the three and the nearest to today’s icon, so the least to relearn; the lamp is a second reading, not the first.',
+    fg: (u) => `<defs><linearGradient id="${u}c" x1="0" y1="${top}" x2="0" y2="${bot + 26}" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#fcdba3"/><stop offset="1" stop-color="${C.lamp}"/></linearGradient></defs>
+      <path d="${cone}" fill="url(#${u}c)"/>
+      <path d="${l}" fill="${C.ink}"/><path d="${cord}" fill="${C.ink}"/><path d="${shade}" fill="${C.ink}"/>`,
+    bg: (u, f) => { const [x, y] = f.T(...S([cx, -200])); return `<defs>${glow(`${u}b`, x, y, 54, C.lamp, 0.22)}</defs><rect width="108" height="108" fill="${C.room}"/><rect width="108" height="108" fill="url(#${u}b)"/>` },
+  })
+}
 // today has no note; give it one for the page
 ideas[0].note = 'Regular weight at 72 % of the canvas: fine in colour, but Android 16 themes it automatically (we ship no monochrome icon) and the hairline “li” comes out thin and small next to every other app.'
 
@@ -302,10 +439,14 @@ for (const idea of ideas) {
   idea.favFit = fit(idea.mono, idea.favRadius, idea.nudge)
   const rule = idea.monoRule ?? 'nonzero'
   idea.full = (u) => `${idea.bg(`${u}bg`, idea.fit)}<g transform="${idea.fit.transform}">${idea.fg(`${u}fg`, idea.fit)}</g>`
+  // monoSplit: one <path> per shape, so overlapping shapes (an arm over a joint) always unite.
+  const monoPaths = (fill) => idea.monoSplit
+    ? idea.mono.map((d) => `<path fill="${fill}" d="${d}"/>`).join('')
+    : `<path fill="${fill}" fill-rule="${rule}" d="${idea.mono.join('')}"/>`
   idea.monoBody = (u, fill) => idea.knock
     ? `<mask id="${u}k" maskUnits="userSpaceOnUse" x="0" y="0" width="108" height="108"><rect width="108" height="108" fill="#fff"/><path fill="#000" transform="${idea.monoFit.transform}" d="${idea.knock.join('')}"/></mask>` +
-      `<g mask="url(#${u}k)"><g transform="${idea.monoFit.transform}"><path fill="${fill}" fill-rule="${rule}" d="${idea.mono.join('')}"/></g></g>`
-    : `<g transform="${idea.monoFit.transform}"><path fill="${fill}" fill-rule="${rule}" d="${idea.mono.join('')}"/></g>`
+      `<g mask="url(#${u}k)"><g transform="${idea.monoFit.transform}">${monoPaths(fill)}</g></g>`
+    : `<g transform="${idea.monoFit.transform}">${monoPaths(fill)}</g>`
   idea.fav = (u) => `<clipPath id="${u}clip"><rect width="108" height="108" rx="22"/></clipPath><g clip-path="url(#${u}clip)">${idea.bg(`${u}bg`, idea.favFit)}<g transform="${idea.favFit.transform}">${idea.fg(`${u}fg`, idea.favFit)}</g></g>`
 }
 
@@ -367,18 +508,34 @@ const themedTile = (body, scheme, mask = 'circle', size = 48) => tile(`<rect wid
 const ideaMono = (idea) => use(`${idea.id}-mono`)
 const app = (icon, label, cls = '') => `<div class="app ${cls}">${icon}<span>${label}</span></div>`
 
-function themedRow(idea, scheme, mask) {
+function themedRow(idea, scheme, mask, derived = false) {
   const order = ['shield', 'camera', null, 'bulb', 'music']
   return order.map((k) => k
     ? app(themedTile(neighbours[k].svg(themed[scheme].glyph, themed[scheme].tile), scheme, mask), neighbours[k].label)
-    : app(themedTile(ideaMono(idea), scheme, mask), 'Libellus', 'me')).join('')
+    : app(derived ? derivedTile(idea, scheme, mask) : themedTile(ideaMono(idea), scheme, mask), 'Libellus', 'me')).join('')
 }
+
+// Android 16 themes an app that brings no monochrome icon from its colour icon; Chrome's WebAPK
+// passes only the maskable icon (Chromium issue 40277264). Approximation: the icon's luminance,
+// mapped from the theme's tile tone (dark ground) to its glyph tone (light mark), in both schemes.
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+const deriveFilter = (scheme) => {
+  const { tile: t, glyph: g } = themed[scheme]
+  const from = hex(t), to = hex(g)
+  const fn = (c, i) => `<feFunc${c} type="table" tableValues="${r2(from[i])} ${r2(to[i])}"/>`
+  const lum = '0.2126 0.7152 0.0722 0 0'
+  return `<filter id="derive-${scheme}" filterUnits="userSpaceOnUse" x="0" y="0" width="108" height="108" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="${lum} ${lum} ${lum} 0 0 0 1 0"/>
+    <feComponentTransfer>${['R', 'G', 'B'].map(fn).join('')}</feComponentTransfer></filter>`
+}
+const derivedBody = (idea, scheme) => `<g filter="url(#derive-${scheme})">${use(`${idea.id}-full`)}</g>`
+const derivedTile = (idea, scheme, mask = 'circle', size = 48) => tile(derivedBody(idea, scheme), mask, size)
 
 const guides = `<path d="M0 0H108V108H0ZM18 18V90H90V18Z" fill-rule="evenodd" fill="#000" fill-opacity="0.38"/>
   <rect x="18" y="18" width="72" height="72" fill="none" stroke="#fff" stroke-opacity="0.45" stroke-width="0.4" stroke-dasharray="1.6 1.2"/>
   <circle cx="54" cy="54" r="33" fill="none" stroke="#7fd4ff" stroke-opacity="0.8" stroke-width="0.45" stroke-dasharray="1.6 1.2"/>`
 
-function ideaSection(idea) {
+function ideaSection(idea, { derived = false } = {}) {
   const sizeNote = `mark ${idea.fit.box.w}×${idea.fit.box.h} dp`
   return `
 <section class="idea" id="${idea.id}">
@@ -390,7 +547,9 @@ function ideaSection(idea) {
     <figure><svg viewBox="0 0 108 108" width="256" height="256" class="canvas">${use(`${idea.id}-full`)}${guides}</svg>
       <figcaption>Adaptive icon, full 108 dp canvas · <i>dashed square</i> 72 dp visible · <i class="blue">dashed circle</i> 66 dp safe zone · ${sizeNote}</figcaption></figure>
     <figure><svg viewBox="0 0 108 108" width="256" height="256" class="canvas mono-canvas"><rect width="108" height="108" fill="#5d6670"/><g style="color:#fff" fill="#fff">${ideaMono(idea)}</g>${guides}</svg>
-      <figcaption>${idea.today ? 'No monochrome icon ships today: this is roughly what Android 16 derives from the colour icon (as on the owner’s home screen)' : 'Monochrome icon (alpha only; the launcher tints it)'}</figcaption></figure>
+      <figcaption>${idea.today ? 'No monochrome icon ships today: this is roughly what Android 16 derives from the colour icon (as on the owner’s home screen)' : 'Monochrome icon (alpha only; the launcher tints it)'}</figcaption></figure>${derived ? `
+    <figure><svg viewBox="0 0 108 108" width="256" height="256" class="canvas">${derivedBody(idea, 'dark')}${guides}</svg>
+      <figcaption>The colour icon themed by Android (approximation: its luminance mapped onto the dark theme’s two tones). This is what Chrome’s icon turns into today</figcaption></figure>` : ''}
   </div>
 
   <h3>On the home screen · 48 px · circle / squircle / rounded square</h3>
@@ -399,11 +558,12 @@ function ideaSection(idea) {
     <div class="wall wall-dark">${['circle', 'squircle', 'rounded'].map((m) => app(tile(use(`${idea.id}-full`), m), m)).join('')}</div>
   </div>
 
-  <h3>Themed icons (Material You) · next to typical neighbours</h3>
+  <h3>Themed icons (Material You) · next to typical neighbours${derived ? ' · from the colour icon, as Chrome does today' : ''}</h3>
   <div class="walls">
-    <div class="wall wall-light row">${themedRow(idea, 'light', 'squircle')}</div>
-    <div class="wall wall-dark row">${themedRow(idea, 'dark', 'squircle')}</div>
-  </div>
+    <div class="wall wall-light row">${themedRow(idea, 'light', derived ? 'circle' : 'squircle', derived)}</div>
+    <div class="wall wall-dark row">${themedRow(idea, 'dark', derived ? 'circle' : 'squircle', derived)}</div>
+  </div>${derived ? `
+  <h3>Themed icons · from the monochrome icon, should Chrome ever use it</h3>` : ''}
   <div class="walls">
     <div class="wall wall-light row">${themedRow(idea, 'light', 'circle')}</div>
     <div class="wall wall-dark row">${themedRow(idea, 'dark', 'circle')}</div>
@@ -421,15 +581,16 @@ function ideaSection(idea) {
 </section>`
 }
 
-const real = ideas.filter((i) => !i.today)
+const real = ideas.filter((i) => !i.today && !i.round)
 const today = ideas[0]
 
-const sprite = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  ${Object.entries(masks).map(([k, v]) => `<clipPath id="mask-${k}">${v}</clipPath>`).join('')}
-  ${ideas.map((i) => `<symbol id="${i.id}-full" viewBox="0 0 108 108">${i.full(`${i.id}F`)}</symbol>
+const spriteFor = (list, extra = '') => `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  ${Object.entries(masks).map(([k, v]) => `<clipPath id="mask-${k}">${v}</clipPath>`).join('')}${extra}
+  ${list.map((i) => `<symbol id="${i.id}-full" viewBox="0 0 108 108">${i.full(`${i.id}F`)}</symbol>
   <symbol id="${i.id}-mono" viewBox="0 0 108 108">${i.monoBody(`${i.id}M`, 'currentColor')}</symbol>
   <symbol id="${i.id}-fav" viewBox="0 0 108 108">${i.fav(`${i.id}V`)}</symbol>`).join('\n')}
 </defs></svg>`
+const sprite = spriteFor(ideas.filter((i) => !i.round))
 
 const strip = (scheme) => `<div class="wall wall-${scheme} row strip">
   ${app(themedTile(ideaMono(today), scheme, 'squircle'), 'Today', 'today')}
@@ -525,7 +686,7 @@ const page = `<!doctype html>
   </section>
 
   ${ideaSection(today).replace('class="idea"', 'class="idea today"')}
-  ${real.map(ideaSection).join('\n')}
+  ${real.map((i) => ideaSection(i)).join('\n')}
 
   <section class="card">
     <span class="eyebrow">For the build ticket</span>
@@ -541,8 +702,59 @@ const page = `<!doctype html>
 </main>
 </body></html>`
 
+// ---------------------------------------------------------------- round 2: the lamp, three ways
+
+const byId = Object.fromEntries(ideas.map((i) => [i.id, i]))
+const lamps = ideas.filter((i) => i.round === 2)
+const compare = [byId.lamp, ...lamps, byId.ribbons]
+const label = (i) => (i.id === 'lamp' ? '03 Lamp · r1' : `${i.n} ${i.short}`)
+const strip2 = (scheme, kind) => `<div class="wall wall-${scheme} row strip">
+  ${compare.map((i) => app(kind === 'derived' ? derivedTile(i, scheme) : kind === 'mono' ? themedTile(ideaMono(i), scheme, 'circle') : tile(use(`${i.id}-full`), 'circle'), label(i), i.round ? 'me' : '')).join('')}
+</div>`
+
+const page2 = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Libellus · home-screen icon, round 2: the lamp (#83)</title>
+<style>${css}@media (min-width:521px){.strip .app{width:100px}.strip .app span{max-width:104px}}@media (max-width:520px){.strip .app{width:92px}.strip .app span{max-width:92px}}</style></head>
+<body>${spriteFor(compare, deriveFilter('dark') + deriveFilter('light'))}
+<main>
+  <div class="top">
+    <span class="eyebrow">Libellus · issue #83 · round 2</span>
+    <h1>Three better <b>lamps</b></h1>
+    <p class="lede">You picked 03 Under the lamp and 04 Two ribbons. Round 1’s lamp was soft where a home screen needs it hard: its light fades out and its book is cream on amber, told apart by colour alone, so once Android tints the icon the cone fades into the tile and the book barely stands out. Three lamps follow, each with <strong>the light as one solid shape</strong> and the book set off by a gap, not by colour.</p>
+    <button class="theme-toggle" type="button" onclick="var r=document.documentElement;r.dataset.theme=(r.dataset.theme||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'))==='dark'?'light':'dark'">Night / Day</button>
+    <nav class="jump">${lamps.map((i) => `<a href="#${i.id}">${i.n} ${i.name}</a>`).join('')}<a href="index.html">Round 1</a></nav>
+  </div>
+
+  <section class="card">
+    <span class="eyebrow">Side by side · themed by Android from the colour icon (what Chrome does today) · 48 px</span>
+    <div class="walls single">${strip2('dark', 'derived')}${strip2('light', 'derived')}</div>
+    <h3>Full colour · circle mask</h3>
+    <div class="walls single">${strip2('dark', 'full')}${strip2('light', 'full')}</div>
+    <h3>Themed from the monochrome icon (should Chrome ever use it)</h3>
+    <div class="walls single">${strip2('dark', 'mono')}${strip2('light', 'mono')}</div>
+  </section>
+
+  ${lamps.map((i) => ideaSection(i, { derived: true })).join('\n')}
+
+  <section class="card">
+    <span class="eyebrow">Notes</span>
+    <ul class="facts">
+      <li><b>Themed from the colour icon.</b> Chrome hands Android only the maskable icon (Chromium issue 40277264), so the themed icon is made from the colour one. The “from the colour icon” tiles here approximate that: the icon’s brightness mapped onto the theme’s two tones. The real launcher may cut harder; what matters is that every part of each lamp is either dark or clearly bright.</li>
+      <li><b>Safe zone.</b> As in round 1, every mark is placed by code inside the 66 dp circle of the 108 dp canvas, so no launcher mask cuts it.</li>
+      <li><b>Colours.</b> Design D: night room <code>${C.room}</code>, ink <code>${C.ink}</code>, lamp <code>${C.lamp}</code>; the cones run from a paler amber at the shade to <code>${C.lamp}</code>.</li>
+      <li><b>Sources.</b> <code>design/icons/ideas/03a-lamp-pendant</code>, <code>03b-lamp-desk</code>, <code>03c-lamp-li</code>, each with <code>{icon,monochrome,favicon}.svg</code>, drawn by <code>build.mjs</code>, which writes both pages.</li>
+    </ul>
+  </section>
+  <footer>Self-contained page: inline SVG, CSS and fonts; no requests. Themed tints sampled from the owner’s home screen; neighbours are generic stand-ins. <a href="index.html" style="color:inherit">Round 1</a>.</footer>
+</main>
+</body></html>`
+
 const outPage = process.argv[2] ?? '/tmp/libellus-icons/index.html'
+const outPage2 = join(dirname(outPage), 'round2.html')
 mkdirSync(dirname(outPage), { recursive: true })
 writeFileSync(outPage, page)
-for (const i of ideas) console.log(`${i.n} ${i.name.padEnd(18)} mark ${i.fit.box.w}×${i.fit.box.h} dp (k ${i.fit.k.toFixed(4)})`)
-console.log(`Page: ${outPage} (${Math.round(page.length / 1024)} KB)`)
+writeFileSync(outPage2, page2)
+for (const i of ideas) console.log(`${i.n.padEnd(3)} ${i.name.padEnd(20)} mark ${i.fit.box.w}×${i.fit.box.h} dp (k ${i.fit.k.toFixed(4)})`)
+console.log(`Pages: ${outPage} (${Math.round(page.length / 1024)} KB), ${outPage2} (${Math.round(page2.length / 1024)} KB)`)
