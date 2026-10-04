@@ -3,6 +3,7 @@ import type { Book, BookSnapshot } from './books'
 import { ratingFromRow, type GoodreadsRow } from './goodreads'
 import type { ProgressValue } from './progress'
 import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
+import { applyWrite, localId, type QueuedAction, type QueuedWrite, type WriteQueue } from './queuedWrites'
 
 /**
  * The Library actions (issue #1, Library actions): the data-layer contract a
@@ -594,15 +595,48 @@ export function yearBounds(year: number): { from: string; to: string } {
  * What every repository that writes is set up with (issue #15). `online` says
  * whether the device has a connection right now; a write while it has none is
  * refused with `offline` before anything is sent, so nothing ever looks saved
- * when it was not. This is where an offline queue goes later (SPEC.md, Later):
- * it would hold the write here instead of refusing it, and no page or store
- * would change. Left out, the device counts as online (the tests).
+ * when it was not. Left out, the device counts as online (the tests).
+ *
+ * `queue` (issue #93): the outbox. A write that can wait (`queuedWrites.ts`)
+ * goes into it instead whenever it holds writes (offline, or earlier ones not
+ * synced yet), and the answer is the entry as it will be, from the device's
+ * copy; no page or store tells the two apart. A write that cannot wait is still
+ * refused offline. Left out, nothing waits.
  */
-export type WriteOptions = { online?: () => boolean }
+export type WriteOptions = { online?: () => boolean; queue?: WriteQueue }
 
 const OFFLINE = { data: null, error: 'offline' } as const
 
-export function createLibrary(client: SupabaseClient, { online = () => true }: WriteOptions = {}): Library {
+export function createLibrary(client: SupabaseClient, { online = () => true, queue }: WriteOptions = {}): Library {
+  /**
+   * The write into the outbox, if it waits now (`WriteOptions.queue`): the entry
+   * as the database will have it, or the database's refusal at once. Null: it
+   * does not wait, and goes to the database as before.
+   */
+  async function queued(
+    action: QueuedAction,
+    args: Record<string, unknown>,
+    entryId: string,
+    creates?: QueuedWrite['creates'],
+  ): Promise<Result<LibraryEntry | null> | null> {
+    if (!queue?.holds()) return null
+    const known = queue.entry(entryId)
+    // An entry the device does not hold (never loaded here): nothing to show it with.
+    if (!known) return OFFLINE
+    const write: QueuedWrite = { action, args, about: known.book.title, queuedAt: new Date().toISOString(), entryId, creates }
+    const after = applyWrite(known, write)
+    if (typeof after === 'string') return { data: null, error: after }
+    await queue.add(write)
+    return { data: after, error: null }
+  }
+
+  /** `queued` for the writes that answer with the entry. */
+  async function queuedEntry(...input: Parameters<typeof queued>): Promise<Result<LibraryEntry> | null> {
+    const result = await queued(...input)
+    if (!result || result.error) return result as Result<LibraryEntry> | null
+    return result.data ? { data: result.data, error: null } : { data: null, error: 'entry_not_found' }
+  }
+
   async function entry(entryId: string): Promise<Result<LibraryEntry | null>> {
     const { data, error } = await client
       .from('library_entries')
@@ -621,6 +655,26 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
   }
 
   async function addToLibrary(book: BookSnapshot, options: AddWith = {}): Promise<Result<LibraryEntry>> {
+    // A Catalogue Book can wait: the call needs nothing the device does not hold.
+    // A search result (its Cover still to resolve) or a Manual book cannot.
+    if (queue?.holds() && 'id' in book && (book as Book).source !== 'manual') {
+      const known = book as Book
+      if (queue.entryForBook(known.id)) return { data: null, error: 'already_in_library' }
+      const write: QueuedWrite = {
+        action: 'add_to_library',
+        args: { p_book: bookToRow(book), ...addWithArguments(options) },
+        about: known.title,
+        queuedAt: new Date().toISOString(),
+        book: known,
+        creates: { entry_id: localId(), session_id: localId() },
+      }
+      write.entryId = write.creates!.entry_id
+      const after = applyWrite(null, write)
+      if (typeof after === 'string') return { data: null, error: after }
+      if (!after) return { data: null, error: 'unknown' }
+      await queue.add(write)
+      return { data: after, error: null }
+    }
     if (!online()) return OFFLINE
     const added = await client.rpc('add_to_library', { p_book: bookToRow(book), ...addWithArguments(options) })
     if (added.error) return { data: null, error: mapLibraryError(added.error) }
@@ -634,6 +688,10 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     entry,
 
     async startReading(entryId, startedOn) {
+      const waiting = await queuedEntry('start_reading', { p_entry_id: entryId, p_started_on: startedOn }, entryId, {
+        session_id: localId(),
+      })
+      if (waiting) return waiting
       if (!online()) return OFFLINE
       const started = await client.rpc('start_reading', { p_entry_id: entryId, p_started_on: startedOn })
       if (started.error) return { data: null, error: mapLibraryError(started.error) }
@@ -641,6 +699,9 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async finish(entryId, { endedOn, rating = null, review = null }) {
+      const args = { p_entry_id: entryId, p_ended_on: endedOn, p_rating: rating, p_review: review }
+      const waiting = await queuedEntry('finish_reading', args, entryId)
+      if (waiting) return waiting
       if (!online()) return OFFLINE
       const finished = await client.rpc('finish_reading', {
         p_entry_id: entryId,
@@ -653,6 +714,8 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async abandon(entryId, { endedOn, reason = null }) {
+      const waiting = await queuedEntry('abandon_reading', { p_entry_id: entryId, p_ended_on: endedOn, p_reason: reason }, entryId)
+      if (waiting) return waiting
       if (!online()) return OFFLINE
       const abandoned = await client.rpc('abandon_reading', {
         p_entry_id: entryId,
@@ -664,15 +727,18 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async updateProgress(entryId, progress, total, day) {
-      if (!online()) return OFFLINE
-      const updated = await client.rpc('update_progress', {
+      const args = {
         p_entry_id: entryId,
         p_page: progress && 'page' in progress ? progress.page : null,
         p_percent: progress && 'percent' in progress ? progress.percent : null,
         p_set_page_count: total !== undefined,
         p_page_count: total?.pageCount ?? null,
         ...(day ? { p_day: day } : {}),
-      })
+      }
+      const waiting = await queuedEntry('update_progress', args, entryId)
+      if (waiting) return waiting
+      if (!online()) return OFFLINE
+      const updated = await client.rpc('update_progress', args)
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
       return reread(entryId)
     },
@@ -705,8 +771,11 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async updateSession(entryId, session, edit) {
+      const args = { p_session_id: session.id, ...sessionEditArguments(session, edit) }
+      const waiting = await queuedEntry('update_session', args, entryId)
+      if (waiting) return waiting
       if (!online()) return OFFLINE
-      const updated = await client.rpc('update_session', { p_session_id: session.id, ...sessionEditArguments(session, edit) })
+      const updated = await client.rpc('update_session', args)
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
       return reread(entryId)
     },
@@ -719,6 +788,8 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async removeFromLibrary(entryId) {
+      const waiting = await queued('remove_from_library', { p_entry_id: entryId }, entryId)
+      if (waiting) return waiting.error ? waiting : { data: null as null, error: null }
       if (!online()) return OFFLINE
       const removed = await client.rpc('remove_from_library', { p_entry_id: entryId })
       if (removed.error) return { data: null, error: mapLibraryError(removed.error) }
@@ -726,6 +797,10 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
     },
 
     async readAgain(entryId, startedOn) {
+      const waiting = await queuedEntry('read_again', { p_entry_id: entryId, p_started_on: startedOn }, entryId, {
+        session_id: localId(),
+      })
+      if (waiting) return waiting
       if (!online()) return OFFLINE
       const again = await client.rpc('read_again', { p_entry_id: entryId, p_started_on: startedOn })
       if (again.error) return { data: null, error: mapLibraryError(again.error) }

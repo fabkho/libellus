@@ -10,6 +10,7 @@ import {
   type LibraryEntry,
   type WriteOptions,
 } from './library'
+import type { QueuedAction } from './queuedWrites'
 
 /**
  * Collections (issue #1, Library actions → Collections; issue #14): a member's
@@ -138,8 +139,26 @@ export type Collections = {
   reorder: (collectionId: string, entryIds: readonly string[]) => Promise<CollectionResult<true>>
 }
 
-export function createCollections(client: SupabaseClient, { online = () => true }: WriteOptions = {}): Collections {
+export function createCollections(client: SupabaseClient, { online = () => true, queue }: WriteOptions = {}): Collections {
   const OFFLINE = { data: null, error: 'offline' } as const
+
+  /**
+   * The write into the outbox, if writes wait now (issue #93, `WriteOptions.queue`):
+   * a change to a Collection the device holds. True once it waits; `offline` for
+   * a Collection the device does not know; null: it goes to the database as before.
+   */
+  async function queued(
+    action: QueuedAction,
+    collectionId: string,
+    args: Record<string, unknown>,
+    entryId?: string,
+  ): Promise<CollectionResult<CollectionSummary> | null> {
+    if (!queue?.holds()) return null
+    const known = queue.collection(collectionId)
+    if (!known) return OFFLINE
+    await queue.add({ action, args, about: known.name, queuedAt: new Date().toISOString(), entryId })
+    return { data: known, error: null }
+  }
   function summaryOf(row: CollectionRow, count = 0, covers: Book[] = []): CollectionSummary {
     return { id: row.id, name: row.name, position: row.position, createdAt: row.created_at, count, covers }
   }
@@ -208,6 +227,8 @@ export function createCollections(client: SupabaseClient, { online = () => true 
     },
 
     async rename(id, name) {
+      const waiting = await queued('rename_collection', id, { p_collection: id, p_name: name })
+      if (waiting) return waiting.error ? waiting : { data: { ...waiting.data, name: normaliseName(name) }, error: null }
       if (!online()) return OFFLINE
       const { data, error } = await client.rpc('rename_collection', { p_collection: id, p_name: name })
       if (error) return { data: null, error: mapCollectionError(error) }
@@ -215,6 +236,8 @@ export function createCollections(client: SupabaseClient, { online = () => true 
     },
 
     async delete(id) {
+      const waiting = await queued('delete_collection', id, { p_collection: id })
+      if (waiting) return waiting.error ? waiting : { data: true, error: null }
       if (!online()) return OFFLINE
       const { error } = await client.rpc('delete_collection', { p_collection: id })
       if (error) return { data: null, error: mapCollectionError(error) }
@@ -222,8 +245,15 @@ export function createCollections(client: SupabaseClient, { online = () => true 
     },
 
     async addEntry(collectionId, book) {
-      if (!online()) return OFFLINE
       const p_book = 'id' in book ? { id: book.id } : bookToRow(book)
+      if (queue?.holds()) {
+        // Only a Book in the Library can wait: putting one in the Library as well is an add, online.
+        const entry = 'id' in book ? queue.entryForBook(book.id) : null
+        if (!entry) return OFFLINE
+        const waiting = await queued('add_to_collection', collectionId, { p_collection: collectionId, p_book }, entry.id)
+        return waiting!.error ? waiting! : { data: entry, error: null }
+      }
+      if (!online()) return OFFLINE
       const added = await client.rpc('add_to_collection', { p_collection: collectionId, p_book })
       if (added.error) return { data: null, error: mapCollectionError(added.error) }
       // The function returns the entry; the Book comes with it in a second read
@@ -238,6 +268,8 @@ export function createCollections(client: SupabaseClient, { online = () => true 
     },
 
     async removeEntry(collectionId, entryId) {
+      const waiting = await queued('remove_from_collection', collectionId, { p_collection: collectionId, p_entry: entryId }, entryId)
+      if (waiting) return waiting.error ? waiting : { data: true, error: null }
       if (!online()) return OFFLINE
       const { error } = await client.rpc('remove_from_collection', { p_collection: collectionId, p_entry: entryId })
       if (error) return { data: null, error: mapCollectionError(error) }
@@ -245,6 +277,8 @@ export function createCollections(client: SupabaseClient, { online = () => true 
     },
 
     async reorder(collectionId, entryIds) {
+      const waiting = await queued('reorder_collection', collectionId, { p_collection: collectionId, p_entries: [...entryIds] })
+      if (waiting) return waiting.error ? waiting : { data: true, error: null }
       if (!online()) return OFFLINE
       const { error } = await client.rpc('reorder_collection', { p_collection: collectionId, p_entries: [...entryIds] })
       if (error) return { data: null, error: mapCollectionError(error) }
