@@ -131,6 +131,17 @@ A Back gesture starts with a touch the page sees (`pointerdown`, then `pointerca
 system takes it over), so nothing that Back closes may also close on that touch (the avatar menu, before #78 replaced it
 with the Profile, closed on a tap elsewhere when the finger lifted, not as it landed).
 
+**Share target and app shortcuts (#91).** Both need a **WebAPK**: Chrome on Android registers a web app
+as a share target and shows its manifest `shortcuts` on a long-press only once Google's server has minted
+an APK for it. On the emulator without a Google account Chrome's Install (⋮ → Add to home screen →
+Install) pins a Chrome "webapp" launcher shortcut instead: it opens standalone, but Chrome's share sheet
+does not list Libellus and the icon's long-press menu has no shortcuts (App info, Pause app, Widgets,
+Remove). So on the emulator the flows are driven the way Android would start them: through the DevTools
+socket, navigate the installed (standalone) page to `/share?title=&text=&url=` and to the shortcuts'
+addresses (`/?search=1`, `/?progress=1`), and read what Chrome made of the manifest with
+`Page.getAppManifest` (the `share_target`, the three `shortcuts`, no errors) and `Page.getInstallabilityErrors`
+(none). A phone with a Google account shows the real share sheet entry and the long-press shortcuts.
+
 ## What Chrome reports (Chrome 145, Pixel 9 emulator, Android 17)
 
 CSS px. "Keyboard" is Gboard up in the search palette.

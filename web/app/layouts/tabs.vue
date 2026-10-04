@@ -26,6 +26,8 @@
 // cover flies into a book page and back (ShellBookFlight, docs/MOTION.md).
 const { t, locale } = useI18n()
 const route = useRoute()
+// The shortcuts' addresses (`/?search=1`, `/?progress=1`) and a share that found no Book (composables/useLaunch.ts).
+useLaunch()
 
 const screen = computed(() => String(route.meta.screen ?? 'home'))
 const pushed = computed(() => Boolean(route.meta.pushed))

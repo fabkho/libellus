@@ -168,6 +168,10 @@
       "afterLabel": "The year after, {year}"
     }
   },
+  "share": {
+    "title": "Shared with Libellus",
+    "finding": "Finding your book…"
+  },
   "tabs": {
     "home": "Home",
     "library": "Library",
