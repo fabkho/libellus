@@ -42,6 +42,8 @@ watch(
   <HomeEmpty v-if="empty" />
 
   <div v-else-if="library.loaded" class="flex flex-col gap-lg">
+    <HomeInstallHint />
+
     <section data-testid="home.reading">
       <div class="flex h-(--size-touch) items-center justify-between">
         <h2 class="eyebrow">{{ t('home.reading') }}</h2>

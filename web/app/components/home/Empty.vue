@@ -6,7 +6,10 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <UiEmptyState screen="home" :title="t('home.emptyTitle')" :text="t('home.empty')" class="pt-xl">
-    <UiSearchPrompt testid="home.search" />
-  </UiEmptyState>
+  <div class="flex flex-col gap-xl">
+    <HomeInstallHint />
+    <UiEmptyState screen="home" :title="t('home.emptyTitle')" :text="t('home.empty')" class="pt-md">
+      <UiSearchPrompt testid="home.search" />
+    </UiEmptyState>
+  </div>
 </template>

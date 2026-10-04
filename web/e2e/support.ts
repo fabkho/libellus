@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
 import { ratingX } from '../app/utils/rating'
 import { appleAnswer, appleCover } from '../tests/support/apple'
 import { openLibraryAnswer } from '../tests/support/openLibrary'
+import { INSTALL_HINT_KEY } from '../app/utils/installHint'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode } from '../tests/support/stack'
 
@@ -47,8 +48,20 @@ export async function recordedApple(page: Page) {
   )
 }
 
-/** Signs a fresh member in through the screens: address, then the mailed code. */
-export async function signedIn(page: Page) {
+/**
+ * Signs a fresh member in through the screens: address, then the mailed code.
+ *
+ * Every flow runs on an iPhone's Safari, where Home shows the install hint
+ * (issue #94) above what the flow reads and taps. It is dismissed from the
+ * start, the way a member who has been here before has: `installHint: true`
+ * leaves it to the flow that is about it (e2e/install-hint.spec.ts).
+ */
+export async function signedIn(page: Page, { installHint = false }: { installHint?: boolean } = {}) {
+  if (!installHint) {
+    await page.addInitScript((key) => {
+      if (!localStorage.getItem(key)) localStorage.setItem(key, String(Date.now()))
+    }, INSTALL_HINT_KEY)
+  }
   const member = await signUpMember()
   await emailCooldown()
   await page.goto('/sign-in')

@@ -233,7 +233,13 @@
     "readIn": "Read in {year}",
     "readInLabel": "Read in {year}: {count}",
     "loadError": "Your books could not be loaded.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "installHint": {
+      "title": "Keep Libellus on your Home Screen",
+      "text": "Tap Share, then Add to Home Screen. It opens like an app, full screen.",
+      "addToHome": "Add to Home Screen",
+      "dismiss": "Dismiss"
+    }
   },
   "library": {
     "title": "Library",
