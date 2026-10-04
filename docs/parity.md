@@ -195,6 +195,23 @@ Flow: `web/e2e/book-flight.spec.ts` (Library → book → back: every layer empt
 Native: the platform's zoom transition (iOS 18 `navigationTransition(.zoom(sourceID:in:))` with `matchedTransitionSource` on the cover; Android shared-element transition), interruptible by the back gesture.
 - [x] Web  - [ ] iOS  - [ ] Android
 
+### Tab bar away on pushed screens  (web: `composables/useHideOnScroll.ts`, `utils/hideOnScroll.ts`, `components/shell/TabBar.vue`)
+Purpose: on a pushed screen the tab bar steps out of the way while the member reads down and is back the moment she turns around (#82, docs/MOTION.md, Tab bar away). Tab roots (Home, Library) keep it fixed.
+Layout: no screen of its own: the tab bar (`shell.tabs`) and the fade under it slide down past the screen edge and fade out together, and come back the same way; nothing else moves (the page keeps its room under the bar, `clear-tab-bar`). While away the bar carries `data-away` and takes no taps.
+States: shown · away · held (shown and not reading the scroll: search open or morphing, a sheet or confirmation on screen, a field with the keyboard, the router still putting a page in its place) · Reduce Motion (it appears and disappears at once)
+Actions → result:
+- Scroll down on a book page, Collections, a Collection or Import → once the page has gone 10 px (`INTENT_PX`) down from where the scroll last turned, the bar slides away (`exit`). Scroll up 10 px from the turning point → it slides back (`standard`). Movements shorter than that, back and forth, change nothing.
+- At the top of the page (or above it, iOS's rubber band) and within 10 px of its end → shown, whatever the direction.
+- Search opened while the bar is away (a page's search prompt) → the bar is in its resting place at once, without a transition, and the palette grows out of it; after search closes it is showing.
+- A sheet or a confirmation opens → the bar is back (under the scrim) and stays until it has gone; the page then counts afresh.
+- Focus in a field that brings up the keyboard, or keyboard focus moving into the bar → shown.
+- Any change of page (a link, a tab, Back from a book page with the bar away) → shown on the page it lands on; the cover flight runs as before.
+Edge cases: a scroll the member did not make is not read as intent: while the document carries `data-moving` (the router restoring a place) only the turning point follows it, as for any jump longer than a screen in one event. The page's end is measured against the taller of `innerHeight` and the layout viewport, so Chrome on Android, whose toolbar collapses as the page scrolls, still shows the bar at the very end.
+IDs: `shell.tabs` (`data-away` while away)
+Flow: `web/e2e/tab-bar-away.spec.ts` (a tab root keeps it; on a book page a few pixels do nothing, down hides, a short scroll up shows, the end and the top show, Back lands with it shown; search opened while it is away opens from its place and leaves it shown; a sheet brings it back and keeps it), `web/tests/hide-on-scroll.test.ts` (direction, threshold, turning points, top and end, jumps)
+Native: iOS — `UITabBarController`'s `tabBarMinimizeBehavior` / SwiftUI `.tabBarMinimizeBehavior(.onScrollDown)` on pushed views; Android — a `HideBottomViewOnScrollBehavior` (or Compose `BottomAppBarScrollBehavior`) on pushed destinations only.
+- [x] Web  - [ ] iOS  - [ ] Android
+
 ### Add sheet  (web: `components/book/AddSheet.vue`, `components/book/AddStatusFields.vue`, `stores/library.ts`)
 Purpose: put a Book into the Library with a Status (D's add-sheet).
 Layout: `UiSheet` (Cancel at the top left, title `add.title`), the Book (`UiBookLine`), the status part (below), the error if any, the primary **Add to Library** at the bottom.

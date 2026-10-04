@@ -125,6 +125,16 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   again from there; anything else lands the running flight at once. If the book page has not drawn
   its hero when the flight starts, the cover waits for it (a frame or so, at most `standard`), then
   fades where it is.
+- **Tab bar away.** On a pushed screen (a book, Collections, a Collection, Import) the tab bar and
+  the fade under it slide down past the screen edge and fade out while the member scrolls down, and
+  come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
+  by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
+  as intent only once it has gone 10 px in one direction from where it last turned
+  (`utils/hideOnScroll.ts`), and the bar is always there at the top and at the very end of the page.
+  Tab roots keep it fixed. It is never away while search opens, is open or closes, while a sheet or
+  confirmation is on screen, or while a field has the keyboard: search opened with the bar away puts
+  it in its resting place first, with no transition, and the morph grows out of it there. A change
+  of page (Back included) brings it back on the way.
 - **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
   changes to another edition: the old cover, title, author and facts (and what the Book is about)
   lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
@@ -225,7 +235,8 @@ cross-fade over the tab bar in place over `standard` (Web Animations, which the 
 not touch). The push to a book is another: no cover flies and nothing rises, the book page and the
 page left cross-fade in place over `standard`, both ways. Change edition is the third: the old
 edition's hero cross-fades into the new one over `standard`, and the content below takes its new
-place at once.
+place at once. The tab bar away on pushed screens needs nothing of its own: under the CSS rule it
+appears and disappears in place.
 
 ## Non-motions
 
