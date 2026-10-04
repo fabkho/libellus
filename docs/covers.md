@@ -103,15 +103,46 @@ mask on a wrapper). So every row waits a full round trip after it appears, and a
 three of them. Change edition has no mask: its rows lazy-load ahead as they should, and only
 OpenLibrary's latency is left there.
 
-## What follows
+## What changed, and after
 
-1. Rows ask for the size they show: Apple `120x180bb` for `xs`/`sm` (a search row and the Add sheet
-   share one URL), OpenLibrary 'M'.
-2. A cover that fails or comes back blank (a tiny image) falls back to the next source for the same
-   edition (OpenLibrary by ISBN) before the Placeholder.
-3. Merging prefers, among the editions of one book, one whose cover is on Apple's CDN, then any with
-   a cover, so a work OpenLibrary has no cover for does not hide a covered edition.
-4. The first visible rows load at high priority (and are preloaded with it); the rest load once they
-   come within a screen of the list's view, measured by an IntersectionObserver whose root is the
-   list itself (its root margin is honoured under the mask), so the fade stays. Change edition's first
-   rows the same.
+1. Rows ask for the size they show (`APPLE_BOX`, `OPENLIBRARY_SIZE` in `utils/cover.ts`): Apple
+   `120x180bb` for `xs`/`sm` (a search row and the Add sheet share one URL), `240x360bb` for
+   `md`/`lg`, the stored `600x900bb` for the book page; OpenLibrary 'M' up to `md`, 'L' above.
+   Median bytes of a search row's Apple cover: 23 KB → 11 KB; of a Change edition row: 27 KB → 10 KB.
+2. A cover whose image fails or loads smaller than 16 px on a side (`isBlankCover`) falls back to
+   OpenLibrary's cover of the same ISBN (`coverFallbacks`, `default=false`), then the Placeholder.
+   None of the sampled images needed it; it is there for the 404s of withdrawn artwork and
+   OpenLibrary's 1 × 1 GIF.
+3. Merging picks, among the editions of one book, the first with a cover on Apple's CDN, then the
+   first with any cover; among equally good matches a book with a cover ranks above one without.
+   In the sample only 1 of 82 coverless picks had a covered sibling, so the share of rows without any
+   cover stays 11% (65 of 576): those are OpenLibrary works with no image anywhere, mostly
+   self-published student papers on a classic (GRIN, 978-3-640/656/668…). Coverless rows among the
+   first ten of a list: 22 → 19.
+4. The first six covers (the rows above the keyboard) are preloaded and asked for at
+   `fetchpriority="high"`; every other row's cover turns eager once it comes within a list height of
+   the view (`useNearView`, an IntersectionObserver rooted at the list, whose margin holds under the
+   mask). Change edition's first six rows load at once and first.
+
+Time-to-cover, after (same harness, same queries, same 298 rows seen):
+
+| scope | rows seen | with an image | Placeholder | cover before row seen | median wait ms | p90 wait ms | > 1 s | max CLS |
+|---|---|---|---|---|---|---|---|---|
+| der zauberberg | 58 | 48 | 10 | 22 | 273 | 441 | 0 | 0 |
+| fourth wing | 94 | 74 | 20 | 46 | 0 | 542 | 0 | 0 |
+| pride and prejudice | 66 | 64 | 2 | 29 | 249 | 829 | 6 | 0 |
+| im westen nichts neues | 80 | 58 | 22 | 37 | 0 | 431 | 3 | 0 |
+| Apple covers | 176 | 176 | 0 | 92 | 0 | 447 | 0 | 0 |
+| OpenLibrary covers | 68 | 68 | 0 | 42 | 0 | 1676 | 9 | 0 |
+| all | 298 | 244 | 54 (18%) | **134 (55%)** | **0** | **526** | **9** | 0 |
+
+Before → after: covers already there when their row scrolls in 0 → 134 of 244; median wait
+315 → 0 ms; p90 1016 → 526 ms; rows waiting over a second 25 → 9 (Apple 6 → 0). What is left over
+a second is OpenLibrary's redirect chain on a cold cache; only rehosting covers (follow-up to #17)
+would take it away. No layout shift before or after: the cover box is sized before its image.
+The Apple CDN had the old `200x300bb` sizes warm from the diagnosis and the new `120x180bb` ones
+cold, so the after numbers are, if anything, pessimistic.
+
+Not done here: the Android emulator run the issue mentions (the brief asked for Chromium with
+throttling instead); a cover for the rows that have none anywhere (DNB rehosting, or an owner call on
+ranking coverless results lower than equally good matches by more than a tie-break).
