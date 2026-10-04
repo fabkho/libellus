@@ -35,6 +35,9 @@ watch(
   },
 )
 
+// "Last time · Yesterday · 24 pages" (issue #68): the read's last day of reading before today.
+const { lastTime, dayWords, amountWords } = useReadingDays(() => entry.value)
+
 const editingTotal = computed(() => reading.progressEditing === 'total')
 const inPercent = computed(() => reading.progressMode === 'percent')
 const pageCount = computed(() => reading.progressPageCount)
@@ -97,6 +100,11 @@ watch(
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
       />
+
+      <!-- What she read last time, over the wheel. -->
+      <p v-if="!editingTotal && lastTime" class="figures flex min-h-(--size-touch) items-center truncate text-meta text-ink-faint" data-testid="progress.lastTime">
+        <span class="eyebrow mr-sm">{{ t('book.progress.lastTime') }}</span>{{ t('book.progress.lastTimeLine', { day: dayWords(lastTime.day), amount: amountWords(lastTime.amount) }) }}
+      </p>
 
       <!-- The total wheel says what it is for, and the way back to the edition's. -->
       <div v-if="editingTotal" class="flex min-h-(--size-touch) items-center justify-between gap-ms">

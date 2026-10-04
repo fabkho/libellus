@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // A Book being read, on Home (D's home card): large, lit by its cover's light.
-// Cover with its glow, serif title, author, since when and which day of the
-// read it is, a thin progress bar with how far, and a quiet Update that opens
+// Cover with its glow, serif title, author; the last two weeks of reading as a
+// sparkline with the pace beside it ("18 a day · 22 days", issue #68), or, until
+// the read has a day of progress, since when and which day of the read it is;
+// a thin progress bar with how far, and a quiet Update that opens
 // the Update progress sheet (issue #68, design round #65 direction D): nothing
 // on the card edits by itself. Right after a save the line says what changed
 // ("+24") and Update gives way to Undo for 5 s. At the last page the line reads
@@ -27,6 +29,8 @@ const pageCount = computed(() => pageCountOf(props.entry))
 const words = computed(() => text(progress.value, pageCount.value))
 const atEnd = computed(() => progressReachedEnd(progress.value, pageCount.value))
 const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('common.etAl')))
+const readingDays = useReadingDays(() => props.entry)
+const sparkline = computed(() => readingDays.amounts(14))
 const since = computed(() => {
   const startedOn = props.entry.latestSession?.startedOn
   return startedOn ? t('book.since', { date: formatDay(startedOn), day: dayOfRead(startedOn) }) : ''
@@ -64,8 +68,12 @@ const gain = computed(() => {
       <UiPressLink :to="`/book/${entry.book.id}`" class="flex flex-col gap-xs" data-testid="home.entry" @press="books.prefetch(entry.book.id)">
         <span class="book-title line-clamp-2 text-book-title" data-testid="home.entryTitle">{{ entry.book.title }}</span>
         <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>
-        <span class="figures mt-xs text-meta text-ink-faint" data-testid="home.entrySince">{{ since }}</span>
+        <span v-if="!readingDays.hasHistory.value" class="figures mt-xs text-meta text-ink-faint" data-testid="home.entrySince">{{ since }}</span>
       </UiPressLink>
+      <div v-if="readingDays.hasHistory.value" class="mt-sm flex items-end gap-sm" data-testid="home.days">
+        <ProgressSpark :amounts="sparkline" data-testid="home.spark" />
+        <span class="figures truncate text-meta text-ink-faint" data-testid="home.pace">{{ readingDays.paceLine.value ?? since }}</span>
+      </div>
       <div class="mt-auto pt-md">
         <UiProgress
           :fraction="progressFraction(progress, pageCount)"

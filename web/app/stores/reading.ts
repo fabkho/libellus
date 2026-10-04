@@ -18,6 +18,7 @@ import {
 } from '~/data/progress'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
+import { useProgressDaysStore } from '~/stores/progressDays'
 import { useSessionStore } from '~/stores/session'
 
 /** How long Home's card offers Undo after a progress save, ms (issue #68). */
@@ -35,6 +36,7 @@ export const UNDO_MS = 5000
  */
 export const useReadingStore = defineStore('reading', () => {
   const library = useLibraryStore()
+  const progressDays = useProgressDaysStore()
 
   /** What the sheet's own checks find wrong with a day, before asking the database. */
   function checkDay(day: string, { notBefore }: { notBefore?: string | null } = {}): LibraryErrorCode | null {
@@ -239,7 +241,8 @@ export const useReadingStore = defineStore('reading', () => {
     progressReachedEnd(progressValueOf(progressValue.value, progressMode.value), progressPageCount.value),
   )
 
-  function openProgress(entry: LibraryEntry) {
+  /** Opens the sheet on the entry's progress; `total` opens it on her total pages (the book page's "of 608"). */
+  function openProgress(entry: LibraryEntry, { total = false }: { total?: boolean } = {}) {
     const current = progressOf(entry.latestSession)
     progressing.value = entry
     progressTotal.value = entry.pageCountOverride ?? null
@@ -247,6 +250,7 @@ export const useReadingStore = defineStore('reading', () => {
     progressValue.value = progressIn(current, progressMode.value, pageCountOf(entry))
     progressEditing.value = 'progress'
     progressError.value = null
+    if (total) editProgressTotal()
   }
 
   function closeProgress() {
@@ -340,12 +344,13 @@ export const useReadingStore = defineStore('reading', () => {
     progressBusy.value = true
     progressError.value = null
     try {
-      const result = await repo.updateProgress(entry.id, value, totalChanged ? { pageCount: progressTotal.value } : undefined)
+      const result = await repo.updateProgress(entry.id, value, totalChanged ? { pageCount: progressTotal.value } : undefined, isoDay())
       if (result.error) {
         progressError.value = result.error
         return null
       }
       library.entryChanged(result.data)
+      progressDays.refresh(result.data.latestSession?.id)
       progressing.value = null
       forgetUndo()
       progressUndo.value = { entryId: entry.id, before, beforeTotal, totalChanged, after: value, gain: progressGain(before, value, progressPageCount.value) }
@@ -368,9 +373,10 @@ export const useReadingStore = defineStore('reading', () => {
     const back = undo.before ?? progressValueOf(0, 'page' in undo.after ? 'page' : 'percent')
     undoBusy.value = true
     try {
-      const result = await repo.updateProgress(undo.entryId, back, undo.totalChanged ? { pageCount: undo.beforeTotal } : undefined)
+      const result = await repo.updateProgress(undo.entryId, back, undo.totalChanged ? { pageCount: undo.beforeTotal } : undefined, isoDay())
       if (result.error) return null
       library.entryChanged(result.data)
+      progressDays.refresh(result.data.latestSession?.id)
       forgetUndo()
       return result.data
     } finally {

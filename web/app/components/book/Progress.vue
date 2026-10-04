@@ -1,45 +1,109 @@
 <script setup lang="ts">
-// How far the member is in a Book they are reading (issue #39), on the book
-// page: a hairline bar in the lamp colour, the value in tabular figures
-// ("p. 212 of 480 · 44 %", or "45 %" when the Book has no page count) and
-// *Update progress*, which opens the sheet. No progress yet: an empty bar and
-// "Not started yet". Updating writes: offline the button says so (#15).
+// How far the member is in a Book they are reading, on the book page (issues
+// #39, #68; design round #65, direction D): the hairline bar in the lamp
+// colour; four figures: the page "of 608" (the page count that counts, a tap
+// away from her own total, #60) or, without a page count, the percent read
+// with "Add pages"; how much is done (or left); the pace a day; the days to go.
+// Then the last three weeks as bars, today lit, and "Last time · Yesterday · 24
+// pages" with Update progress, which opens the sheet. Nothing here edits by
+// itself. The reading log sits under the book's actions (ProgressLog.vue).
+// Updating writes: offline the buttons say so (#15).
 import type { LibraryEntry } from '~/data/library'
-import { pageCountOf, progressFraction, progressOf } from '~/data/progress'
+import { progressFraction, progressOf } from '~/data/progress'
 import { useReadingStore } from '~/stores/reading'
 
 const props = defineProps<{ entry: LibraryEntry }>()
 
-const { t } = useI18n()
+const { t, n } = useI18n()
 const reading = useReadingStore()
 const online = useOnline()
 const text = useProgressText()
+const {
+  pageCount,
+  unit,
+  position,
+  end,
+  atEnd,
+  amounts,
+  pace,
+  daysLeft,
+  lastTime,
+  dayWords,
+  amountWords,
+} = useReadingDays(() => props.entry)
 
 const progress = computed(() => progressOf(props.entry.latestSession))
-// The member's own total when she set one (#60), else the edition's.
-const pageCount = computed(() => pageCountOf(props.entry))
 const words = computed(() => text(progress.value, pageCount.value))
+const pages = computed(() => unit.value === 'page')
+const done = computed(() => Math.round((Math.min(position.value, end.value) / end.value) * 100))
+const own = computed(() => props.entry.pageCountOverride != null)
+const chart = computed(() => amounts(21))
+const chartLabel = computed(() =>
+  t('book.progress.chartLabel', { count: 21, amount: amountWords(chart.value.reduce((sum, d) => sum + d.amount, 0)) }),
+)
 </script>
 
 <template>
-  <!-- The rule and its figures are one group (8 apart); the status line sits 16
-       above it and the action 20 below. -->
-  <div class="mb-ml flex flex-col gap-sm" data-testid="book.progress">
+  <div class="mb-ml flex flex-col gap-md" data-testid="book.progress">
     <UiProgress
       :fraction="progressFraction(progress, pageCount)"
       :label="t('book.progress.label')"
       :value-text="words.value"
       data-testid="book.progressBar"
     />
+
+    <dl class="grid grid-cols-4 gap-sm" data-testid="book.progressFigures">
+      <div class="flex flex-col gap-xs">
+        <dt class="eyebrow">{{ pages ? t('book.progress.figurePage') : t('book.progress.figureRead') }}</dt>
+        <dd class="figures text-callout" data-testid="book.progressValue">
+          {{ pages ? n(position) : t('book.progress.percent', { percent: position }) }}
+        </dd>
+        <dd>
+          <button
+            type="button"
+            class="total figures text-meta text-ink-faint enabled:hover:text-ink"
+            :aria-label="pages ? t('book.progress.totalEdit', { count: n(pageCount ?? 0) }) : undefined"
+            :disabled="!online"
+            data-testid="book.progressTotal"
+            @click="reading.openProgress(entry, { total: true })"
+          >
+            {{ pages ? t('book.progress.totalOf', { count: n(pageCount ?? 0) }) : t('book.progress.figureAddPages') }}
+          </button>
+        </dd>
+      </div>
+      <div class="flex flex-col gap-xs">
+        <dt class="eyebrow">{{ pages ? t('book.progress.figureDone') : t('book.progress.figureLeft') }}</dt>
+        <dd class="figures text-callout" data-testid="book.progressPercent">
+          {{ t('book.progress.percent', { percent: pages ? done : 100 - done }) }}
+        </dd>
+        <dd v-if="own" class="figures text-meta text-ink-faint">{{ t('book.progress.figureOwn') }}</dd>
+      </div>
+      <div class="flex flex-col gap-xs">
+        <dt class="eyebrow">{{ t('book.progress.figureDay') }}</dt>
+        <dd class="figures text-callout" data-testid="book.progressPace">
+          {{ pace ? (pages ? n(pace) : t('book.progress.percent', { percent: pace })) : t('book.progress.figureNone') }}
+        </dd>
+        <dd v-if="pages" class="figures text-meta text-ink-faint">{{ t('book.progress.figurePages') }}</dd>
+      </div>
+      <div class="flex flex-col gap-xs">
+        <dt class="eyebrow">{{ t('book.progress.figureToGo') }}</dt>
+        <dd class="figures text-callout" data-testid="book.progressToGo">
+          {{ daysLeft !== null ? n(daysLeft) : t('book.progress.figureNone') }}
+        </dd>
+        <dd class="figures text-meta text-ink-faint">{{ t('book.progress.figureDaysUnit') }}</dd>
+      </div>
+    </dl>
+
+    <ProgressSpark :amounts="chart" size="lg" :label="chartLabel" data-testid="book.progressChart" />
+
     <div class="flex items-center justify-between gap-ms">
-      <p class="figures flex items-center gap-sm text-caption" :class="progress ? 'text-ink' : 'text-ink-faint'">
-        <span data-testid="book.progressValue">{{ words.value }}</span>
-        <template v-if="progress && 'page' in progress && words.percent !== null">
-          <span class="dot text-ink-ghost" aria-hidden="true" />
-          <span class="text-ink-faint" data-testid="book.progressPercent">{{ t('book.progress.percent', { percent: words.percent }) }}</span>
+      <p class="figures min-w-0 truncate text-meta text-ink-faint" data-testid="book.lastTime">
+        <span v-if="atEnd" class="text-body text-ink">{{ t('book.progress.atEndLine') }}</span>
+        <template v-else-if="lastTime">
+          <span class="eyebrow mr-sm">{{ t('book.progress.lastTime') }}</span>{{ t('book.progress.lastTimeLine', { day: dayWords(lastTime.day), amount: amountWords(lastTime.amount) }) }}
         </template>
       </p>
-      <UiButton tone="quiet" size="sm" :offline="!online" data-testid="book.updateProgress" @click="reading.openProgress(entry)">
+      <UiButton tone="quiet" size="sm" class="shrink-0" :offline="!online" data-testid="book.updateProgress" @click="reading.openProgress(entry)">
         {{ t('book.progress.update') }}
       </UiButton>
     </div>
@@ -47,10 +111,12 @@ const words = computed(() => text(progress.value, pageCount.value))
 </template>
 
 <style scoped>
-.dot {
-  width: var(--spacing-xxs);
-  height: var(--spacing-xxs);
-  border-radius: var(--radius-pill);
-  background: currentColor;
+/* "of 608": a dotted underline says it can be changed; 44 pt tall to tap. */
+.total {
+  min-height: var(--size-touch);
+  margin-block: calc((var(--size-touch) - 1lh) / -2);
+  text-align: left;
+  text-decoration: underline dotted var(--color-ink-ghost);
+  text-underline-offset: var(--spacing-xs);
 }
 </style>

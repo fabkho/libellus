@@ -186,6 +186,7 @@ function back() {
       </UiButton>
     </div>
 
+    <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
     <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
 
     <BookHistory v-if="entry" :entry="entry" />
