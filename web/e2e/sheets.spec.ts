@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { test } from './fixtures'
-import { recordedApple, settledBox, signedIn } from './support'
+import { goto, recordedApple, settledBox, signedIn } from './support'
 
 /**
  * What every sheet and confirmation does to the rest of the app (issue #49,
@@ -98,7 +98,7 @@ test('a long sheet title truncates centred, and a name sheet opens with its fiel
   await addPiranesi(page)
   const name = 'Summer by the lake, the long ones I keep meaning to start'
 
-  await page.goto('/collections')
+  await goto(page, '/collections')
   await page.getByTestId('collections.new').click()
   // The field has focus as the sheet opens (in the tap, so iOS raises the keyboard).
   await expect(page.getByTestId('collectionName.input')).toBeFocused()

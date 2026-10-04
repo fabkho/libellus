@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn, untilStill } from './support'
+import { goto, recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -125,7 +125,7 @@ test('a search that finds nothing says so', async ({ page }) => {
 
 test('a book page opened from a link asks for the book again', async ({ page }) => {
   await signedIn(page)
-  await page.goto('/book/apple-1504159680')
+  await goto(page, '/book/apple-1504159680')
   await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
   await page.getByTestId('book.back').click()
   await expect(page).toHaveURL(/\/library$/)

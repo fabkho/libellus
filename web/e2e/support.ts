@@ -74,6 +74,21 @@ export async function untilStill(page: Page) {
 }
 
 /**
+ * Opens an address the way a member types it in, once the page she is on has
+ * come to rest: nothing moving (`untilStill`) and no sheet's own history entry
+ * left on top of the page's (composables/useBackDismiss.ts). A sheet that has
+ * just closed steps back off its entry a moment later, and WebKit loses a page
+ * load that starts during that step back: `load` never comes, or its driver
+ * reports an internal error (collections.spec.ts in CI).
+ */
+export async function goto(page: Page, url: string) {
+  await untilStill(page)
+  const layers = () => page.evaluate(() => (history.state as { libellusLayer?: number } | null)?.libellusLayer ?? 0)
+  await expect.poll(layers).toBe(0)
+  await page.goto(url)
+}
+
+/**
  * Where an element is once the sheet it is in has finished rising: it is on
  * the page, nothing is moving (`untilStill`) and its box held still between
  * two looks (a sheet that opens a moment after the tap has to have started

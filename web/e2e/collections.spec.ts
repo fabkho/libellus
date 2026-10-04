@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { goto, recordedApple, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -146,7 +146,7 @@ test('a collection is created from the Collections screen, and a name she alread
   await page.getByTestId('add.submit').click()
   await expect(page.getByTestId('book.status')).toBeVisible()
 
-  await page.goto('/collections')
+  await goto(page, '/collections')
   await expect(page.getByTestId('collections.emptyTitle')).toBeVisible()
   await page.getByTestId('collections.new').click()
   await page.getByTestId('collectionName.input').fill('Favourites')
