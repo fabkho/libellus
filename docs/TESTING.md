@@ -216,3 +216,27 @@ viewport down to it, the keyboard inset reads 0 and the layout viewport's height
 much room a sheet has: before the fix in #58 the Finish sheet stood on the keyboard but ran 190 px off
 the top of the screen, its header and Cancel out of reach. `keyboardRoomOf` (the visual viewport's
 height while the keyboard is up) now caps the sheet's height.
+
+## Reproducing a CI flake (Linux WebKit, two cores)
+
+macOS WebKit does not starve the way the CI runner's Linux WebKit does: frames
+there can come seconds apart, so a router scroll, a rising sheet or a history
+step lands long after the page looks ready. To see a flow fail as it does in
+CI, run the browsers in Playwright's Linux image limited to two cores and let
+the flows connect to it (the dev server and the stack stay on the Mac; the
+container reaches them through the client, `<loopback>`):
+
+```sh
+docker run -d --name pw --cpus=2 -p 3999:3000 --init --ipc=host \
+  mcr.microsoft.com/playwright:v1.63.0-noble \
+  /bin/sh -c "npx -y playwright@1.63.0 run-server --port 3000 --host 0.0.0.0"
+cd web
+PW_TEST_CONNECT_WS_ENDPOINT=ws://127.0.0.1:3999/ PW_TEST_CONNECT_EXPOSE_NETWORK='<loopback>' \
+  CI=1 LIBELLUS_E2E_PORT=4366 pnpm exec playwright test --workers=4 --retries=0
+```
+
+The image's version must match `pnpm exec playwright --version`. A flow waits
+for the app instead of for time: `untilStill` (nothing carries `data-moving`:
+no sheet or list moving, no page on its way to its scroll place), `goto` (an
+address opened once the page is at rest), boxes compared in one `evaluate`
+(e2e/support.ts, e2e/fixtures.ts).

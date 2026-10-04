@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn, untilStill } from './support'
+import { goto, recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -41,9 +41,9 @@ test('a member finds a book, opens it, adds it and sees it on Want to read', asy
   const results = page.getByTestId('search.result')
   await expect(results.first()).toBeVisible()
   await expect(page.getByTestId('search.resultTitle').first()).toHaveText('Piranesi')
-  const best = await results.first().boundingBox()
-  const second = await results.nth(1).boundingBox()
-  expect(best!.y).toBeGreaterThan(second!.y)
+  // Both rows read in one look: the list may still re-render between two.
+  const [best, second] = await results.evaluateAll((rows) => rows.slice(0, 2).map((row) => row.getBoundingClientRect().top))
+  expect(best).toBeGreaterThan(second!)
   await expect(page).toHaveURL(/\/library$/)
 
   // Tapping the result opens its book page and closes the search.
@@ -125,7 +125,7 @@ test('a search that finds nothing says so', async ({ page }) => {
 
 test('a book page opened from a link asks for the book again', async ({ page }) => {
   await signedIn(page)
-  await page.goto('/book/apple-1504159680')
+  await goto(page, '/book/apple-1504159680')
   await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
   await page.getByTestId('book.back').click()
   await expect(page).toHaveURL(/\/library$/)

@@ -1,4 +1,4 @@
-import { expect, test as base } from '@playwright/test'
+import { expect, test as base, type Locator, type Page } from '@playwright/test'
 import { appleCover } from '../tests/support/apple'
 
 /**
@@ -66,7 +66,36 @@ const WATCH_CONTROLS = () => {
   queue()
 }
 
-export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void }>({
+/**
+ * A tap never lands in a sheet that is still rising or sliding away (UiSheet
+ * carries `data-moving` until its transition has ended). Playwright waits for
+ * the target's box to hold still between two frames, but a starved CI runner
+ * paints no frame between two looks: a control mid-rise then seems to stand
+ * still, the tap goes where it was, and the sheet stays open (seen on Add and
+ * Add manually). Every click waits for the sheets to be still first, as a
+ * member's finger meets a sheet that has arrived. Other motion (a cover in
+ * flight, the search morph) is not waited for: some flows tap into it on
+ * purpose. Installed once per worker, on Playwright's own Locator.
+ */
+function tapsWaitForSheets(page: Page) {
+  const locator = Object.getPrototypeOf(page.locator('body')) as Locator & { __waitsForSheets?: true }
+  if (locator.__waitsForSheets) return
+  const click = locator.click
+  locator.click = async function (this: Locator, options) {
+    await expect(this.page().locator('[role=dialog][data-moving]')).toHaveCount(0)
+    return click.call(this, options)
+  }
+  locator.__waitsForSheets = true
+}
+
+export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void }>({
+  stillSheets: [
+    async ({ page }, use) => {
+      tapsWaitForSheets(page)
+      await use()
+    },
+    { auto: true },
+  ],
   noLiveApis: [
     async ({ context }, use) => {
       const reached: string[] = []

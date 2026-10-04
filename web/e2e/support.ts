@@ -63,12 +63,29 @@ export async function signedIn(page: Page) {
 /**
  * Waits until nothing on the page is moving: no sheet rising or sliding away,
  * no list opening or closing an item's room (both carry `data-moving` until
- * their transition has ended). Watching an element's box instead is not
+ * their transition has ended), and no page still on its way to its scroll
+ * place after a navigation (the document carries it until the router has
+ * scrolled, app/router.options.ts). Watching an element's box instead is not
  * enough: a slow runner may paint no frame between two looks, and a sheet
  * mid-rise then seems to stand still.
  */
 export async function untilStill(page: Page) {
   await expect(page.locator('[data-moving]')).toHaveCount(0)
+}
+
+/**
+ * Opens an address the way a member types it in, once the page she is on has
+ * come to rest: nothing moving (`untilStill`) and no sheet's own history entry
+ * left on top of the page's (composables/useBackDismiss.ts). A sheet that has
+ * just closed steps back off its entry a moment later, and WebKit loses a page
+ * load that starts during that step back: `load` never comes, or its driver
+ * reports an internal error (collections.spec.ts in CI).
+ */
+export async function goto(page: Page, url: string) {
+  await untilStill(page)
+  const layers = () => page.evaluate(() => (history.state as { libellusLayer?: number } | null)?.libellusLayer ?? 0)
+  await expect.poll(layers).toBe(0)
+  await page.goto(url)
 }
 
 /**

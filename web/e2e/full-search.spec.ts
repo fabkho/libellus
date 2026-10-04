@@ -42,10 +42,10 @@ test('one list from every source, best match next to the query, sources never sh
   const firstGibbon = listed.findIndex((title) => title.includes('Decline and Fall'))
   const lastTitleMatch = listed.findLastIndex((title) => title.toLowerCase().startsWith('piranesi'))
   expect(firstGibbon).toBeGreaterThan(lastTitleMatch)
-  // The best match sits nearest the query, at the bottom.
-  const best = (await results.first().boundingBox())!
-  const next = (await results.nth(1).boundingBox())!
-  expect(best.y).toBeGreaterThan(next.y)
+  // The best match sits nearest the query, at the bottom. Both rows read in one
+  // look: the list may still re-render between two (each a fresh row).
+  const [best, next] = await results.evaluateAll((rows) => rows.slice(0, 2).map((row) => row.getBoundingClientRect().top))
+  expect(best).toBeGreaterThan(next!)
   // No source is ever named.
   await expect(page.getByTestId('search.overlay')).not.toContainText(/Apple|Open ?Library/)
 

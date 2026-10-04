@@ -6,7 +6,7 @@ import { createLibrary, type LibraryEntry } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { sql, runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { recordedApple, signedIn } from './support'
+import { goto, recordedApple, signedIn } from './support'
 
 /**
  * Changing an edition (#41): a member's finished book has the Placeholder
@@ -64,7 +64,7 @@ test('a member changes the edition of a finished book: the cover changes, its re
   const shelf = (await collections.create(runTitle('Favourites'))).data!
   expect((await collections.addEntry(shelf.id, entry.book)).error).toBeNull()
 
-  await page.goto(`/book/${entry.book.id}`)
+  await goto(page, `/book/${entry.book.id}`)
   await expect(page.getByTestId('book.status')).toHaveText(en.status.finished)
   // The Placeholder cover: no image on the page yet.
   await expect(page.getByTestId('book.hero').locator('img')).toHaveCount(0)
@@ -179,7 +179,7 @@ test('an edition she already has as another book is refused, and the book keeps 
   }))
   expect(other.error).toBeNull()
 
-  await page.goto(`/book/${entry.book.id}`)
+  await goto(page, `/book/${entry.book.id}`)
   await page.getByTestId('book.options').click()
   await page.getByTestId('bookOptions.changeEdition').click()
   const italian = page.getByTestId('edition.candidate').filter({ hasText: 'Italian' })

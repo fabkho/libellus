@@ -4,7 +4,7 @@ import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { isoDay } from '../app/utils/dates'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { goto, recordedApple, signedIn } from './support'
 
 /**
  * Offline (#15): the member loads her Library online, the device loses its
@@ -30,6 +30,16 @@ test.use({
   // network checks would keep it from the local stack on 127.0.0.1. On a phone
   // the app and Supabase are both on the internet.
   launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'] },
+})
+
+// The page goes on loading the app's files up to the flow's last step (the
+// sign-in page, after signing out). A request still in `keepShell`'s hands when
+// the flow ends is cut off as its context closes: `route.fetch` then finds its
+// answer gone ("Response has been disposed") and fails a flow that passed. The
+// routes are dropped before the context closes, and a handler cut off there is
+// no error.
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
 })
 
 /** The service worker's part (see above). Returns how to go offline and back. */
@@ -102,7 +112,7 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   await library.addToLibrary(book('Winter Pages', 'Ilse Varga'), { status: 'finished', endedOn: today, rating: 18 })
 
   // Loaded online once: the Library, and a book page (so its code is on the device too).
-  await page.goto('/library')
+  await goto(page, '/library')
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Halls of Tide'))
   await page.getByTestId('library.entry').click()
   await expect(page.getByTestId('book.start')).toHaveText(en.book.start)
