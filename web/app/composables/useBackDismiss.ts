@@ -3,7 +3,7 @@ import type { RouteLocationNormalized, Router, RouterHistory } from 'vue-router'
 
 /**
  * The system Back closes what is open on top of the page — a sheet, a dialog,
- * the search, the avatar menu — instead of leaving the page (#62): Android's
+ * the search — instead of leaving the page (#62): Android's
  * back gesture and button, the browser's Back, iOS's edge swipe in a Safari
  * tab. Each open layer has a history entry of its own on top of the page's,
  * a copy of the page's entry (same address, same router state) marked with its

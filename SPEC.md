@@ -94,7 +94,7 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
 
 ```
 (auth)   Sign in (email) → Sign up (invite code; unknown email only) → Verify (six-digit code)
-(tabs)   Home | Library | Search          avatar in the header → account, theme switch, sign out
+(tabs)   Home | Library | Search          avatar in the header → Profile (reading in figures, years in review, account)
          Home    → Currently reading, Up next, "Read in <year>: N"
          Library → Want to read / Currently reading / Finished (+ Not finished filter), Collections
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
@@ -139,7 +139,7 @@ Each is a `ready-for-agent` issue linking back to #1.
 | [#18](https://github.com/fabkho/libellus/issues/18) | Go-live | Hosted backend, production deploy, Fabian's account with his history |
 
 After v1, roughly in order: page progress, Goodreads CSV import, German UI, offline write queue,
-edition picker, Regal as a display layer, profile and stats, Google Books via an Edge Function, cover
+edition picker, Regal as a display layer, profile and stats (#78, done), Google Books via an Edge Function, cover
 upload and barcode scanning, quotes and notes, a custom domain, the native decision.
 
 ## 8. Decisions (settled 2026-10-02)

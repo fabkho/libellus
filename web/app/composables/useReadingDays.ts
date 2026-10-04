@@ -5,11 +5,13 @@ import {
   daysLeftOf,
   lastTimeOf,
   paceOf,
+  progressShownOf,
   readingLogOf,
   readSummaryOf,
   unitOf,
   valueIn,
   type DayAmount,
+  type ProgressShown,
 } from '~/data/progressDays'
 import { useProgressDaysStore } from '~/stores/progressDays'
 import { daysBetween, isoDay, parseDay } from '~/utils/dates'
@@ -32,6 +34,8 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
 
   const days = computed(() => (sessionId.value ? (store.bySession[sessionId.value] ?? null) : null))
   const loaded = computed(() => days.value !== null)
+  /** The read's days are being asked for again after a save or Undo. */
+  const refreshing = computed(() => (sessionId.value ? store.refreshing[sessionId.value] === true : false))
   const pageCount = computed(() => {
     const now = entry()
     return now ? pageCountOf(now) : null
@@ -41,6 +45,17 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
   const position = computed(() => valueIn(progressOf(entry()?.latestSession), unit.value, pageCount.value) ?? 0)
   const end = computed(() => pageCount.value ?? 100)
   const atEnd = computed(() => position.value >= end.value)
+
+  /**
+   * What the book page shows of this read (`progressShownOf`). While a save's
+   * answer is on its way it keeps what it showed, so the first save brings the
+   * figures and the chart in one go, not the figures and then the chart.
+   */
+  const shown = ref<ProgressShown>(progressShownOf(progressOf(entry()?.latestSession), days.value))
+  watchEffect(() => {
+    const now = progressShownOf(progressOf(entry()?.latestSession), days.value)
+    if (!refreshing.value) shown.value = now
+  })
 
   const today = () => isoDay()
   const amounts = (count: number): DayAmount[] => dailyAmounts(days.value ?? [], today(), count, pageCount.value)
@@ -85,6 +100,7 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
   return {
     days,
     loaded,
+    shown,
     hasHistory,
     pageCount,
     unit,

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<title>Libellus — Two ribbons (favicon)</title>
+<clipPath id="aclip"><rect width="108" height="108" rx="22"/></clipPath><g clip-path="url(#aclip)"><defs>
+        <linearGradient id="abgc" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5a302c"/><stop offset="1" stop-color="#4a2624"/></linearGradient>
+        
+  <radialGradient id="abgb" cx="72.53" cy="31.76" r="50" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#efb768" stop-opacity="0.22"/>
+    <stop offset="0.35" stop-color="#efb768" stop-opacity="0.077"/>
+    <stop offset="1" stop-color="#efb768" stop-opacity="0"/>
+  </radialGradient></defs>
+      <rect width="108" height="108" fill="url(#abgc)"/><rect width="108" height="108" fill="url(#abgb)"/>
+      <rect y="0" width="108" height="3" fill="#000" fill-opacity="0.18"/><g transform="matrix(1.27099 0 0 1.27099 -11.46 -13.36)"><defs>
+  <radialGradient id="afgg" cx="66.08" cy="35.5" r="20" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#efb768" stop-opacity="0.7"/>
+    <stop offset="0.35" stop-color="#efb768" stop-opacity="0.24499999999999997"/>
+    <stop offset="1" stop-color="#efb768" stop-opacity="0"/>
+  </radialGradient>
+        <linearGradient id="afgr" x1="0" y1="20" x2="0" y2="86" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbf0db"/><stop offset="1" stop-color="#f1e3c8"/></linearGradient></defs>
+      <path d="M40.46 22L52.46 22L41.54 84L36.69 77.5L29.54 84ZM58.06 47L70.06 47L63.54 84L58.69 77.5L51.54 84Z" fill="url(#afgr)"/>
+      <circle cx="66.08" cy="35.5" r="20" fill="url(#afgg)"/>
+      <circle cx="66.08" cy="35.5" r="6.6" fill="#efb768"/></g></g>
+</svg>

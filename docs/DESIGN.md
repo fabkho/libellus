@@ -30,7 +30,7 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
 
 - The stored preference is `null | 'light' | 'dark'` on the device (local storage key
   `libellus-theme`, never in Supabase). `null`, the default, follows the phone's appearance.
-- The switch in the avatar menu shows two states only, Light and Dark ("Dark mode", on or off).
+- The switch in the Profile's account rows shows two states only, Light and Dark ("Dark mode", on or off).
   Its **first tap stores the opposite of what is showing**; every later tap flips. There is no
   "Match the phone" option and no way back to `null` from the interface.
 - The rule is code in `web/app/utils/theme.ts` (framework-free, `web/tests/theme.test.ts`); the
@@ -42,11 +42,13 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
   `<meta name="theme-color">` per `prefers-color-scheme` (the theme's `surface`), a chosen theme
   overwrites both, and `apple-mobile-web-app-status-bar-style` is `default` so iOS tints the status
   bar from it. The manifest's splash colour is the light surface (manifests have no media queries).
-- The app icon is the start of the wordmark, "li" in Newsreader italic in the dark theme's ink, in the
-  night room, the dot of the i the lamp: the accent with its glow. One icon for both themes (an icon
-  is an object on the home screen, like a cover). Drawn from the tokens and the shipped font by
-  `web/scripts/render-icons.mjs` (192 and 512 `any`, a 512 `maskable` with the mark inside the safe
-  zone, the 180 apple-touch-icon, the favicon).
+- The app icon is two bookmark ribbons (the "li" of the wordmark as two ribbons, the dot of the i the
+  lamp: the accent with its glow) in a warm leather-red room (#86). One icon for both themes (an icon
+  is an object on the home screen, like a cover). Sources: `design/icons/app/{icon,monochrome,favicon}.svg`;
+  `web/scripts/render-icons.mjs` renders 192 and 512 `any`, a 512 `maskable` (the mark inside the 66 dp
+  safe zone of the 108 dp canvas; Chrome themes an installed app from it, Chromium 40277264), a 512
+  alpha-only `monochrome` (themed icons), the 180 apple-touch-icon, `favicon.svg` and `favicon.ico`.
+  Icon URLs carry `?v=<iconVersion>` (`nuxt.config.ts`): bump it when the icons change.
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.
 
@@ -69,7 +71,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | Role | Utility | Light (Day) | Dark (Night) | Use |
 |---|---|---|---|---|
 | surface | `bg-surface` | `#f4f0e9` | `#0e0c0a` | The room: page background |
-| surfaceRaised | `bg-surface-raised` | `#fbf9f5` | `#171512` | Cards, the search palette, the avatar menu |
+| surfaceRaised | `bg-surface-raised` | `#fbf9f5` | `#171512` | Cards, the search palette, the Profile's hero ring |
 | surfaceSheet | `bg-surface-sheet` | `#fbf9f5` | `#1b1815` | Bottom sheets |
 | surfaceStage | `bg-surface-stage` | `#1a1714` | `#000` | Behind a page that steps back |
 | glass | `glass` utility | paper 78 % | room 72 % | Floating chrome, always blurred |
@@ -124,7 +126,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   margin and gap (`px-screen`, `gap-ms`). Widths and heights take a size token
   (`h-(--size-row)`), never a spacing name.
 - Radius: covers `cover-sm` 2.5 / `cover` 3.5 / `cover-lg` 5 by size, `sm` 8, `md` 14 (groups,
-  code cells), `field` 18 (search field, avatar menu), `lg` 20 (cards), `xl` 24 (search palette),
+  code cells), `field` 18 (search field), `lg` 20 (cards), `xl` 24 (search palette),
   `sheet` 30, `pill`.
 - Size: `touch` 44 (smallest target), `maxContent` 480 (the column on wide screens), `tabBar` 62,
   `tab` 72, `tabIcon` 26, `row` 48, `query` 62 (as tall as the capsule it grows out of), `fadeAbove` 64 (the tab bar's fade reaches this far over the capsule, from the screen edge), `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
@@ -135,10 +137,10 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 ### Depth
 
 - Shadows (`shadow-*`, one value per theme: warm and light on paper, deep in the dark): `raised`,
-  `cover`, `float` (tab bar), `button` (primary), `palette` (search palette, avatar menu), `sheet`.
+  `cover`, `float` (tab bar), `button` (primary), `palette` (search palette), `sheet`.
 - Edges: `edge` (strong hairline ring) and `edge-faint` draw a half-pixel ring inside the box and
   compose with a shadow.
-- Blur: `glass` 22 (tab bar, avatar menu), `chrome` 18 (round buttons), `veil` 7 (the page behind
+- Blur: `glass` 22 (tab bar), `chrome` 18 (round buttons), `veil` 7 (the page behind
   search), `halo` 26 (a cover's halo). Opacity of a cover's light: `--opacity-glow` (1 dark, 0.5
   light), `--opacity-halo`.
 
@@ -182,8 +184,27 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
   The top bar is pinned under the safe area (centred on the column on a wide screen) and the
   page scrolls under its glass buttons: an installed app has no edge swipe back.
-- **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
-  the account address, the Dark mode switch and Sign out.
+- **Profile** (`pages/profile/index.vue`, issue #78; design round #78, direction D): the avatar in
+  every tab's header opens it, a pushed screen lit like a book page (the favourite cover of the
+  year in view). B's hero (the initials in a `coverMd` ring, the name, "Reading here since …",
+  the Library in one mono line), then A's year pills (All first, the default) over the four
+  figures between hairlines, the books by month or by year as columns (the lit one in the lamp
+  colour; a column opens its books in a sheet, or its year), the reading days as a five-week
+  calendar of dots, the ratings as one bar per whole star (a row opens the books rated so), the
+  records, the authors read more than once (a fan of covers and tally marks), the years in review
+  as cards, and the account at the end (address, Name, Dark mode, Import books, Sign out).
+  **Figures and covers, never sentences**: the owner turned down text summaries ("You read on 15
+  of the last 21 days…"). No goals and no streaks: the reading days say which days and how much,
+  never a run to keep.
+- **Year in review** (`pages/profile/[year].vue`): pushed from the Profile, lit by the year's
+  favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
+  their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
+  and the years either side (they replace the page, so Back is the Profile).
+- **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
+  own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
+  follows the theme, so native parts — the date picker, autofill — do too); Safari, without
+  `scrollbar-color`, gets the same thumb inset from the edge. Rows that scroll sideways (Up next,
+  the Profile's year pills and year cards) show none: `scrollbar-none` (`main.css`).
 - **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
   once something has scrolled under it a thin veil of the surface colour keeps the clock legible:
   solid behind the status bar (the top inset), fading to nothing `ms` below it. No blur, and it
@@ -205,6 +226,7 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiButton` | Every button that is a pill. `tone`: `primary` (the one lit action of a screen: ink fill), `secondary` (hairline outline), `quiet` (translucent fill; actions on cards like Finish), `plain` (text only), `danger` (destructive). `size`: `lg` 50 (sheets, forms; usually `block`), `md` 40, `sm` 32 (on cards). `to` makes it a link. The touch target never drops below 44 px. `offline` (#15): an action that writes while the device has no connection stays in place, disabled, and reads "Offline" with the offline icon instead of its label. |
 | `UiRoundButton`, `UiTopBar` | Glass round buttons for chrome floating over a cover (back, more) on pushed screens such as book detail. |
 | `UiProgress` | How far through a Book (#39): a hairline bar, the lamp colour (`accent`) for what is read on a faint rule (`hairlineStrong`), `stroke.focus` thick, growing over `standard`. `fraction` 0–1; `label` and `valueText` for assistive tech. The words beside it ("p. 212 of 480", "45 %") are the caller's, in `figures`. |
+| `UiReveal` | Something that is not there until it has something to say (#79: the book page's figures, chart and reading log before progress was tracked). `show` opens its room and fades it in over `standard` (the content under it glides, no jump), closes over `exit`; Reduce Motion a short fade. Carries `data-moving` while moving. |
 | `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe, pencil, flag, arrow, sun, moon, signOut, offline (a cloud struck through: an action that cannot write now). Decorative; the control carries the label. New icons are drawn on the same grid. |
 | `UiAvatar` | The member's initials (`utils/initials.ts`) in mono in a hairline ring. |
 | `UiCover` | Every cover. 2:3, `object-fit: cover`, token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. |
@@ -255,7 +277,7 @@ in `web/i18n/locales/en.json`.
 
 - No hex values, raw colours or one-off pixel values in components; no Tailwind default palette.
 - No colour for decoration: the accent marks what is lit, the covers bring the rest.
-- No sans-serif book titles, no round ✕ on sheets, no search page, no profile screen.
+- No sans-serif book titles, no round ✕ on sheets, no search page, no text summaries of the reading.
 - No theme-specific components or `dark:` variants: a role has a value per theme.
 - No prototype code: nothing in production imports `components/proto/` (it does not exist on
   `main`).

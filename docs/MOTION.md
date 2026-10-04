@@ -22,8 +22,8 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 |---|---|---|---|
 | `instant` | 100 | `standard` | Press feedback: a button scales to 0.97 |
 | `quick` | 150 | `standard` | Small state changes: a tab lighting up, the switch, a field's rule, code cells |
-| `standard` | 250 | `standard` | Crossfades, a cover fading in over its thumbhash, the avatar menu opening, the push to a book |
-| `exit` | 200 | `exit` | The avatar menu closing; anything small leaving; back from a book (on the `standard` curve) |
+| `standard` | 250 | `standard` | Crossfades, a cover fading in over its thumbhash, a Profile column growing, the push to a book |
+| `exit` | 200 | `exit` | Anything small leaving; back from a book (on the `standard` curve) |
 | `sheet` | 380 | `sheet` | A sheet rising, its scrim fading in |
 | `sheetExit` | 260 | `exit` | A sheet falling away |
 | `overlay` | 340 | `standard` | The tab bar turning into the search palette, the veil fading in |
@@ -49,13 +49,31 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
   with Reduce Motion).
-- **Avatar menu.** Opens from its top-right corner: fade plus a 0.96 → 1 scale and a 4 px drop,
-  `standard`; closes the same way back, `exit`. Flipping the theme inside it crossfades nothing —
-  the colours change at once, the switch's knob slides over `quick`.
+- **Push to the Profile** (#78). Tapping the avatar in a tab's header grows it into the Profile's
+  ring over `standard`, as a cover flies into a book's hero: the Profile fades in as the tab fades
+  out (one's opacity the other's complement) and rises `md` into place; the tab bar does not move,
+  the Profile's pinned top bar only fades in. Back (the round button or the system's) plays it the
+  other way over `exit` on the `standard` curve: the ring shrinks into the avatar, the Profile fades
+  out and sinks `md`, the tab fades in at its place. Into a tab whose avatar is scrolled out of
+  view, the ring leaves with the Profile instead of flying off the screen. A Back the browser
+  animates itself (iOS Safari's edge swipe) gets nothing on top; Reduce Motion, or a browser
+  without the View Transitions API, just changes the page. Unlike the cover's flight (a FLIP of
+  its own, interruptible), this one is the browser's View Transitions API
+  (`plugins/profile-transition.client.ts`, the names in `main.css`): one ring between two fixed
+  places needs nothing more, and a second Back mid-way simply completes it.
+- **Profile** (#78). The year pills
+  change the figures in place; the columns grow or shrink to their new height over `standard`
+  (at once with Reduce Motion). Flipping the theme in the account rows crossfades nothing — the
+  colours change at once, the switch's knob slides over `quick`.
 - **Sheet.** Rises from below the screen edge (`translateY(100%)` → 0) over `sheet` with the
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than
   0.5 px/ms, otherwise it settles back (`web/app/composables/useSwipeDown.ts`).
+- **Reveal.** Something that was not there until it had something to say (the book page's figures,
+  chart and reading log before any progress was tracked, `UiReveal`) opens its room and fades in over
+  `standard`, so what sits under it glides down instead of jumping; it closes over `exit`. Clipped only
+  while it moves. With Reduce Motion a short fade over `quick`, no travel. The room carries
+  `data-moving` while it moves.
 - **Search morph.** As iOS 26 and Apple Books do it, the tab bar's capsule turns into the search
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's
@@ -120,6 +138,16 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   again from there; anything else lands the running flight at once. If the book page has not drawn
   its hero when the flight starts, the cover waits for it (a frame or so, at most `standard`), then
   fades where it is.
+- **Tab bar away.** On a pushed screen (a book, Collections, a Collection, Import) the tab bar and
+  the fade under it slide down past the screen edge and fade out while the member scrolls down, and
+  come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
+  by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
+  as intent only once it has gone 10 px in one direction from where it last turned
+  (`utils/hideOnScroll.ts`), and the bar is always there at the top and at the very end of the page.
+  Tab roots keep it fixed. It is never away while search opens, is open or closes, while a sheet or
+  confirmation is on screen, or while a field has the keyboard: search opened with the bar away puts
+  it in its resting place first, with no transition, and the morph grows out of it there. A change
+  of page (Back included) brings it back on the way.
 - **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
   changes to another edition: the old cover, title, author and facts (and what the Book is about)
   lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
@@ -220,7 +248,8 @@ cross-fade over the tab bar in place over `standard` (Web Animations, which the 
 not touch). The push to a book is another: no cover flies and nothing rises, the book page and the
 page left cross-fade in place over `standard`, both ways. Change edition is the third: the old
 edition's hero cross-fades into the new one over `standard`, and the content below takes its new
-place at once.
+place at once. The tab bar away on pushed screens needs nothing of its own: under the CSS rule it
+appears and disappears in place.
 
 ## Non-motions
 
