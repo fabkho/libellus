@@ -256,7 +256,8 @@ Edge cases: the review takes at most 10,000 characters (`review_too_long` from t
 Copy keys: `finish.title`, `finish.endedOn`, `finish.review`, `finish.optional`, `finish.reviewPlaceholder`, `finish.action`, `finish.busy`, `finish.retry`, `rating.title`, `rating.optional`, `rating.clear`, `rating.outOf`, `rating.none`, `rating.label`, `rating.hint`, `common.today|yesterday|dayMonth|dayMonthYear|chooseDay`, `library.error.*`, `common.cancel`
 IDs: `finish`, `finish.cancel`, `finish.scrim`, `finish.date`, `finish.rating` (the slider), `finish.rating.value`, `finish.rating.clear`, `finish.review`, `finish.error`, `finish.submit`
 Flow: `web/e2e/start-and-finish.spec.ts` (a tap gives 2 stars, a drag 3.75, a review, Finish → Finished; the stored session has 15 quarters); the control's geometry in `web/tests/rating-control-and-days.test.ts`, the repository in `web/tests/reading.test.ts`, the rules in `supabase/tests/reading_sessions_test.sql`
-Native: a sheet; the rating control is a custom control with the same geometry (`ratingX`), haptics on each quarter allowed.
+Haptics (web: `utils/haptics.ts`, issue #64): one short tick each time the Rating moves to another step (a quarter while dragging, a whole star on a tap, a key press; not when it stays put): `navigator.vibrate(8)` where the browser has it (Android Chrome); on iOS Safari, which has no Vibration API, a hidden `<label><input type=checkbox switch></label>` is clicked inside the gesture (Safari 17.4+); nowhere else (macOS trackpad haptics are not exposed to the web). Reduce Motion does not silence it, a haptic is not motion; system settings do.
+Native: a sheet; the rating control is a custom control with the same geometry (`ratingX`), a system haptic on each quarter (selection feedback), following the system's haptics setting.
 - [x] Web  - [ ] iOS  - [ ] Android
 
 ### DNF sheet  (web: `components/book/AbandonSheet.vue`, `stores/reading.ts`)
