@@ -124,14 +124,12 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Winter Pages'))
   await expect(page.getByTestId('library.entryRating')).toBeVisible()
 
-  // Home, from the same copy: Finish on the card is disabled too.
+  // Home, from the same copy: Update on the card (#68) is disabled too; the Book's progress itself stays shown.
   await page.getByTestId('shell.tab.home').click()
   await expect(page.getByTestId('home.entryTitle')).toHaveText(runTitle('The Night Lamp'))
-  await expect(page.getByTestId('home.finish')).toBeDisabled()
-  await expect(page.getByTestId('home.finish')).toHaveText(en.common.offline)
-  // So is the value that opens the Update progress sheet (#39); the Book's progress itself stays shown.
-  await expect(page.getByTestId('home.progress')).toBeDisabled()
-  await expect(page.getByTestId('home.progress')).toHaveAttribute('aria-label', en.common.offline)
+  await expect(page.getByTestId('home.update')).toBeDisabled()
+  await expect(page.getByTestId('home.update')).toHaveText(en.common.offline)
+  await expect(page.getByTestId('home.progressValue')).toHaveText(en.book.progress.none)
 
   // Search answers from her own Library, and says so once.
   await page.getByTestId('shell.tab.search').click()

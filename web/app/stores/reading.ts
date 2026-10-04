@@ -1,21 +1,27 @@
 import { defineStore } from 'pinia'
 import { isNotFinished, type LibraryEntry, type LibraryErrorCode } from '~/data/library'
 import {
-  convertProgressField,
+  convertProgress,
+  ownTotal,
   pageCountOf,
-  parsePageCount,
-  parseProgress,
-  progressFieldOf,
+  progressGain,
+  progressIn,
   progressMax,
   progressModeFor,
   progressOf,
   progressReachedEnd,
+  progressValueOf,
+  sameProgress,
+  TOTAL_GUESS,
   type ProgressMode,
   type ProgressValue,
 } from '~/data/progress'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
+
+/** How long Home's card offers Undo after a progress save, ms (issue #68). */
+export const UNDO_MS = 5000
 
 /**
  * The Start, Finish, Abandon and Update progress sheets (issues #7, #10, #39): which entry each is
@@ -201,47 +207,45 @@ export const useReadingStore = defineStore('reading', () => {
 
   /** The entry the Update progress sheet is about; null while it is closed. */
   const progressing = ref<LibraryEntry | null>(null)
-  /** Whether the field is a page or a percent (pages only for a Book with a page count). */
+  /** Whether the wheel is a page or a percent (pages only with a page count). */
   const progressMode = ref<ProgressMode>('percent')
-  /** What the member typed: digits, or '' for nothing yet. */
-  const progressField = ref('')
+  /** The wheel's number (issue #68): the page, or the percent. */
+  const progressValue = ref(0)
+  /**
+   * Her own total pages for the entry as the sheet has it (issue #60); null is none,
+   * the edition's page count counts. Changed on the total wheel, sent with the save.
+   */
+  const progressTotal = ref<number | null>(null)
+  /** What the wheel sets: the progress, or (after "of 608") the total pages. */
+  const progressEditing = ref<'progress' | 'total'>('progress')
+  /** The total wheel's number while it is the one showing. */
+  const progressTotalDraft = ref(TOTAL_GUESS)
   const progressBusy = ref(false)
   const progressError = ref<LibraryErrorCode | null>(null)
 
-  /** Her own total pages as typed (issue #60); '' is none, the edition's page count counts. */
-  const progressTotalField = ref('')
-  /** The total field is showing (the "of 480" in the sheet was tapped). */
-  const progressTotalOpen = ref(false)
-  /** The total field holds something that cannot be a page count; shown under it. */
-  const progressTotalError = ref(false)
-
   const progressEditionCount = computed(() => progressing.value?.book.pageCount ?? null)
-  /**
-   * The page count that counts while the sheet is open: the total typed in its field when
-   * that is one, else the edition's. (Not a half-typed or wrong total: that one is only
-   * refused on save, so the field does not flicker the limits while she types.)
-   */
-  const progressPageCount = computed(() => {
-    const entry = progressing.value
-    if (!entry) return null
-    const total = parsePageCount(progressTotalField.value, entry.book.pageCount)
-    return total.error ? pageCountOf(entry) : (total.value ?? entry.book.pageCount)
-  })
-  /** The most the field takes: the page count in pages, 100 in percent. */
+  /** The page count that counts while the sheet is open: her total as set in it, else the edition's. */
+  const progressPageCount = computed(() => progressTotal.value ?? progressEditionCount.value)
+  /** The most the wheel takes: the page count in pages, 100 in percent. */
   const progressLimit = computed(() => progressMax(progressMode.value, progressPageCount.value))
-  /** The field is a number the database takes; null while it is not. */
-  const progressValue = computed(() => parseProgress(progressField.value, progressMode.value, progressPageCount.value).value)
-  /** The field is at the last page (or 100 %): the sheet offers "Finished it?". */
-  const progressAtEnd = computed(() => progressReachedEnd(progressValue.value, progressPageCount.value))
+  /** What is stored for the open read, null while none is. */
+  const progressStored = computed(() => progressOf(progressing.value?.latestSession))
+  /** Where the read is, in the wheel's mode: what the save is measured against. */
+  const progressFrom = computed(() => progressIn(progressStored.value, progressMode.value, progressPageCount.value))
+  /** How far the wheel has moved from it ("+24"). */
+  const progressDelta = computed(() => progressValue.value - progressFrom.value)
+  /** The wheel is at the last page (or 100 %): the sheet says so beside Finish. */
+  const progressAtEnd = computed(() =>
+    progressReachedEnd(progressValueOf(progressValue.value, progressMode.value), progressPageCount.value),
+  )
 
   function openProgress(entry: LibraryEntry) {
     const current = progressOf(entry.latestSession)
     progressing.value = entry
+    progressTotal.value = entry.pageCountOverride ?? null
     progressMode.value = progressModeFor({ pageCount: pageCountOf(entry) }, current)
-    progressField.value = progressFieldOf(current, progressMode.value)
-    progressTotalField.value = entry.pageCountOverride ? String(entry.pageCountOverride) : ''
-    progressTotalOpen.value = false
-    progressTotalError.value = false
+    progressValue.value = progressIn(current, progressMode.value, pageCountOf(entry))
+    progressEditing.value = 'progress'
     progressError.value = null
   }
 
@@ -252,73 +256,100 @@ export const useReadingStore = defineStore('reading', () => {
   /** Switches between pages and percent, carrying the place in the book over. */
   function chooseProgressMode(mode: ProgressMode) {
     if (mode === progressMode.value || (mode === 'page' && !progressPageCount.value)) return
-    progressField.value = convertProgressField(progressField.value, mode, progressPageCount.value)
+    progressValue.value = convertProgress(progressValue.value, mode, progressPageCount.value)
     progressMode.value = mode
     progressError.value = null
   }
 
+  /** "of 608 ✎" (or "Count in pages" without a page count): the wheel sets the total pages instead. */
+  function editProgressTotal() {
+    progressTotalDraft.value = progressPageCount.value ?? TOTAL_GUESS
+    progressEditing.value = 'total'
+    progressError.value = null
+  }
+
   /**
-   * "of 480" in the sheet: shows or hides the total field. Where there is no page count
-   * yet (percent only) it is the way to pages: the sheet switches to them with the field open.
+   * Done on the total wheel: it is her total from now on (the edition's own count is
+   * none), and the wheel counts pages against it. A percent becomes the page it is of
+   * the new total; a page past it becomes its last page. Saved with the progress.
    */
-  function toggleProgressTotal() {
-    if (!progressPageCount.value && progressMode.value === 'percent') {
-      progressMode.value = 'page'
-      progressField.value = ''
-      progressTotalOpen.value = true
-    } else {
-      progressTotalOpen.value = !progressTotalOpen.value
+  function confirmProgressTotal() {
+    const total = progressTotalDraft.value
+    if (progressMode.value === 'percent') progressValue.value = convertProgress(progressValue.value, 'page', total)
+    else progressValue.value = Math.min(progressValue.value, total)
+    progressTotal.value = ownTotal(total, progressEditionCount.value)
+    progressMode.value = 'page'
+    progressEditing.value = 'progress'
+  }
+
+  /**
+   * Back to the edition's page count ("Edition's 592"); a Book without one goes back
+   * to counting in percent ("Use percent"), the page carried over through her total.
+   */
+  function dropProgressTotal() {
+    const edition = progressEditionCount.value
+    if (edition) progressValue.value = Math.min(progressValue.value, edition)
+    else {
+      progressValue.value = progressMode.value === 'page' ? convertProgress(progressValue.value, 'percent', progressPageCount.value) : progressValue.value
+      progressMode.value = 'percent'
     }
-    progressError.value = null
+    progressTotal.value = null
+    progressEditing.value = 'progress'
   }
 
-  /** Back to the edition's page count: the total field is emptied. */
-  function resetProgressTotal() {
-    progressTotalField.value = ''
-    progressError.value = null
+  /** The last save, for a moment (Home's card offers "+24" and Undo). */
+  const progressUndo = ref<{
+    entryId: string
+    /** What was there before: the value (null: none) and her own total. */
+    before: ProgressValue | null
+    beforeTotal: number | null
+    /** The total that was sent with the save, so Undo knows to send the old one back. */
+    totalChanged: boolean
+    after: ProgressValue
+    gain: { amount: number; unit: ProgressMode } | null
+  } | null>(null)
+  const undoBusy = ref(false)
+  let undoTimer: ReturnType<typeof setTimeout> | undefined
+  function forgetUndo() {
+    clearTimeout(undoTimer)
+    progressUndo.value = null
   }
 
-  /** The quick buttons: adds to what is typed (nothing typed is 0), never past the limit. */
-  function bumpProgress(by: number) {
-    const typed = Number(progressField.value.trim())
-    const now = Number.isFinite(typed) ? typed : 0
-    progressField.value = String(Math.min(progressLimit.value, now + by))
-    progressError.value = null
-  }
-
-  /** Sends the field as the entry's progress. Returns the entry, or null with `progressError` set. */
+  /**
+   * Sends the wheel as the entry's progress, with her total when it changed, in one
+   * call. Nothing changed: the sheet just closes. Returns the entry, or null with
+   * `progressError` set.
+   */
   async function confirmProgress(): Promise<LibraryEntry | null> {
     const entry = progressing.value
     const repo = library.library()
     if (!entry || !repo || progressBusy.value) return null
-    // Her own total travels in the same call, so the page is checked against it. Only
-    // in pages (the total is what the page is "of"), and only when it changed.
-    const total = parsePageCount(progressTotalField.value, entry.book.pageCount)
-    if (total.error) {
-      progressTotalOpen.value = true
-      progressTotalError.value = true
+    if (progressEditing.value === 'total') {
+      confirmProgressTotal()
       return null
     }
-    const sendTotal = progressMode.value === 'page' && total.value !== (entry.pageCountOverride ?? null)
-    // The total alone is a save too: with nothing typed the read keeps what it has.
-    let value: ProgressValue | null = null
-    if (!(sendTotal && progressField.value.trim() === '')) {
-      const parsed = parseProgress(progressField.value, progressMode.value, progressPageCount.value)
-      if (!parsed.value) {
-        progressError.value = parsed.error
-        return null
-      }
-      value = parsed.value
+    const value = progressValueOf(progressValue.value, progressMode.value)
+    const before = progressStored.value
+    const beforeTotal = entry.pageCountOverride ?? null
+    const totalChanged = progressTotal.value !== beforeTotal
+    // Nothing new: none stays none at 0, and the same value is not saved again.
+    if (!totalChanged && (sameProgress(before, value) || (!before && progressValue.value === 0))) {
+      progressing.value = null
+      return entry
     }
     progressBusy.value = true
+    progressError.value = null
     try {
-      const result = await repo.updateProgress(entry.id, value, sendTotal ? { pageCount: total.value } : undefined)
+      const result = await repo.updateProgress(entry.id, value, totalChanged ? { pageCount: progressTotal.value } : undefined)
       if (result.error) {
         progressError.value = result.error
         return null
       }
       library.entryChanged(result.data)
       progressing.value = null
+      forgetUndo()
+      progressUndo.value = { entryId: entry.id, before, beforeTotal, totalChanged, after: value, gain: progressGain(before, value, progressPageCount.value) }
+      undoTimer = setTimeout(forgetUndo, UNDO_MS)
       return result.data
     } finally {
       progressBusy.value = false
@@ -326,10 +357,33 @@ export const useReadingStore = defineStore('reading', () => {
   }
 
   /**
-   * "Finished it?": the last page is reached, so the progress is saved (a
-   * finished read keeps it) and the Finish sheet takes over from this one.
+   * Undo on Home's card: the value (and her total, when the save changed it) as they
+   * were, in one call. A read that had none goes back to 0, in the unit it was saved
+   * in: the database keeps a value once there is one. Returns the entry, or null.
+   */
+  async function undoProgress(): Promise<LibraryEntry | null> {
+    const undo = progressUndo.value
+    const repo = library.library()
+    if (!undo || !repo || undoBusy.value) return null
+    const back = undo.before ?? progressValueOf(0, 'page' in undo.after ? 'page' : 'percent')
+    undoBusy.value = true
+    try {
+      const result = await repo.updateProgress(undo.entryId, back, undo.totalChanged ? { pageCount: undo.beforeTotal } : undefined)
+      if (result.error) return null
+      library.entryChanged(result.data)
+      forgetUndo()
+      return result.data
+    } finally {
+      undoBusy.value = false
+    }
+  }
+
+  /**
+   * Finish in the sheet: the progress is saved (a finished read keeps it), then
+   * the Finish sheet takes over from this one.
    */
   async function finishFromProgress(): Promise<LibraryEntry | null> {
+    if (progressEditing.value === 'total') confirmProgressTotal()
     const entry = await confirmProgress()
     if (entry) openFinish(entry)
     return entry
@@ -338,7 +392,7 @@ export const useReadingStore = defineStore('reading', () => {
   function reset() {
     progressing.value = null
     progressError.value = null
-    progressTotalError.value = false
+    forgetUndo()
     starting.value = null
     finishing.value = null
     abandoning.value = null
@@ -385,23 +439,28 @@ export const useReadingStore = defineStore('reading', () => {
     confirmAbandon,
     progressing,
     progressMode,
-    progressField,
+    progressValue,
+    progressTotal,
+    progressEditing,
+    progressTotalDraft,
     progressBusy,
     progressError,
-    progressLimit,
-    progressAtEnd,
-    progressTotalField,
-    progressTotalOpen,
-    progressTotalError,
     progressEditionCount,
     progressPageCount,
-    toggleProgressTotal,
-    resetProgressTotal,
+    progressLimit,
+    progressFrom,
+    progressDelta,
+    progressAtEnd,
     openProgress,
     closeProgress,
     chooseProgressMode,
-    bumpProgress,
+    editProgressTotal,
+    confirmProgressTotal,
+    dropProgressTotal,
     confirmProgress,
+    progressUndo,
+    undoBusy,
+    undoProgress,
     finishFromProgress,
     reset,
   }
