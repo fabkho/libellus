@@ -1,5 +1,5 @@
 import type { Book } from './books'
-import type { LibraryErrorCode, ReadingSession } from './library'
+import type { ReadingSession } from './library'
 
 /**
  * Reading progress (issue #39), the client side of `update_progress`: how far
@@ -65,13 +65,6 @@ export function progressModeFor(book: Pick<Book, 'pageCount'>, current: Progress
   return current && 'percent' in current ? 'percent' : 'page'
 }
 
-/** The sheet's field for a mode, from what is stored: its number, '' for none. */
-export function progressFieldOf(current: ProgressValue | null, mode: ProgressMode): string {
-  if (!current) return ''
-  if (mode === 'page') return 'page' in current ? String(current.page) : ''
-  return 'percent' in current ? String(current.percent) : ''
-}
-
 /** The largest number a mode takes: the page count in pages (any page up to the ceiling without one), 100 in percent. */
 export function progressMax(mode: ProgressMode, pageCount: number | null): number {
   if (mode === 'percent') return 100
@@ -79,45 +72,61 @@ export function progressMax(mode: ProgressMode, pageCount: number | null): numbe
 }
 
 /**
- * What the sheet's total field holds, or why it cannot be one: empty is no total of
- * her own (the edition's counts, `value` null); otherwise whole digits, 1 to the
- * ceiling. A total that repeats the edition's page count is no total either.
+ * A number in one mode as the other (issue #68: the wheel switching Pages | Percent),
+ * so the place in the book carries over: page 240 of 480 is 50 %, and back. Without a
+ * page count there is nothing to convert through: 0.
  */
-export function parsePageCount(
-  field: string,
-  editionCount: number | null = null,
-): { value: number | null; error: null } | { value: null; error: LibraryErrorCode } {
-  const text = field.trim()
-  if (!text) return { value: null, error: null }
-  if (!/^\d{1,5}$/.test(text) || Number(text) < 1 || Number(text) > PAGE_CEILING) return { value: null, error: 'progress_invalid' }
-  const n = Number(text)
-  return { value: n === editionCount ? null : n, error: null }
+export function convertProgress(value: number, to: ProgressMode, pageCount: number | null): number {
+  if (!pageCount) return 0
+  if (to === 'percent') return Math.min(100, Math.round((value / pageCount) * 100))
+  return Math.min(pageCount, Math.round((value / 100) * pageCount))
 }
 
+/** What the wheel starts on in a mode: the stored value, converted when it is the other kind; 0 for none. */
+export function progressIn(current: ProgressValue | null, mode: ProgressMode, pageCount: number | null): number {
+  if (!current) return 0
+  if (mode === 'page') return 'page' in current ? current.page : convertProgress(current.percent, 'page', pageCount)
+  return 'percent' in current ? current.percent : convertProgress(current.page, 'percent', pageCount)
+}
+
+/** The wheel's number as what is recorded. */
+export function progressValueOf(value: number, mode: ProgressMode): ProgressValue {
+  return mode === 'page' ? { page: value } : { percent: value }
+}
+
+/** Whether two values are the same place, recorded the same way. */
+export function sameProgress(a: ProgressValue | null, b: ProgressValue | null): boolean {
+  if (!a || !b) return a === b
+  if ('page' in a) return 'page' in b && a.page === b.page
+  return 'percent' in b && a.percent === b.percent
+}
+
+/** A total the member set, as stored: one that only repeats the edition's page count is none. */
+export function ownTotal(total: number | null, editionCount: number | null): number | null {
+  return total === null || total === editionCount ? null : total
+}
+
+/** Where the total wheel starts for a Book with no page count at all: a common one. */
+export const TOTAL_GUESS = 300
+
 /**
- * What the sheet's field holds as a value, or the reason it cannot be one:
- * whole digits, no more than the mode's maximum. The database refuses the same.
+ * How far a save moved the read (issue #68, "+24" on Home's card next to Undo): in
+ * the unit it was saved in, from where it was (none is 0), the earlier value
+ * converted through the page count when it was the other kind. Null when it did
+ * not move or cannot be told.
  */
-export function parseProgress(
-  field: string,
-  mode: ProgressMode,
+export function progressGain(
+  before: ProgressValue | null,
+  after: ProgressValue,
   pageCount: number | null,
-): { value: ProgressValue; error: null } | { value: null; error: LibraryErrorCode } {
-  const text = field.trim()
-  if (!/^\d{1,9}$/.test(text)) return { value: null, error: 'progress_invalid' }
-  const n = Number(text)
-  if (n > progressMax(mode, pageCount)) return { value: null, error: 'progress_invalid' }
-  return { value: mode === 'page' ? { page: n } : { percent: n }, error: null }
-}
-
-/**
- * The field after switching mode, so the place in the book carries over: a page
- * becomes the percent it is of the page count and back. Empty stays empty.
- */
-export function convertProgressField(field: string, to: ProgressMode, pageCount: number | null): string {
-  const text = field.trim()
-  if (!pageCount || !/^\d+$/.test(text)) return ''
-  const n = Number(text)
-  if (to === 'percent') return String(Math.min(100, Math.round((n / pageCount) * 100)))
-  return String(Math.min(pageCount, Math.round((n / 100) * pageCount)))
+): { amount: number; unit: ProgressMode } | null {
+  const unit: ProgressMode = 'page' in after ? 'page' : 'percent'
+  const to = 'page' in after ? after.page : after.percent
+  let from = 0
+  if (before) {
+    const sameKind = ('page' in before) === (unit === 'page')
+    if (!sameKind && !pageCount) return null
+    from = progressIn(before, unit, pageCount)
+  }
+  return to === from ? null : { amount: to - from, unit }
 }

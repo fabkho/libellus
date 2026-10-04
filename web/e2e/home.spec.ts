@@ -84,8 +84,9 @@ test('a new member starts on the empty Home, reads a book from there and finishe
   await page.getByTestId('shell.tab.home').click()
   await expect(page.getByTestId('home.readingCard')).toHaveCount(1)
 
-  // Finish on the card opens the Finish sheet over Home; finishing counts it.
-  await page.getByTestId('home.finish').click()
+  // Finish from the card (Update, then Finish in the sheet) opens the Finish sheet over Home; finishing counts it.
+  await page.getByTestId('home.update').click()
+  await page.getByTestId('progress.finish').click()
   await expect(page.getByTestId('finish')).toBeVisible()
   await page.getByTestId('finish.submit').click()
   await expect(page.getByTestId('finish')).toBeHidden()

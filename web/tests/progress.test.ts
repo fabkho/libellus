@@ -2,17 +2,20 @@ import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { createLibrary, type LibraryEntry } from '@/data/library'
 import {
-  convertProgressField,
+  convertProgress,
+  ownTotal,
   pageCountOf,
   PAGE_CEILING,
-  parsePageCount,
-  parseProgress,
+  progressGain,
+  progressIn,
   progressMax,
   progressFraction,
   progressModeFor,
   progressOf,
   progressPercentOf,
   progressReachedEnd,
+  progressValueOf,
+  sameProgress,
 } from '@/data/progress'
 import { addDays, isoDay } from '@/utils/dates'
 import { signUpMember } from './support/member'
@@ -316,16 +319,36 @@ describe('progress helpers', () => {
     expect(progressModeFor({ pageCount: null }, null)).toBe('percent')
   })
 
-  it('checks what was typed: whole digits within the limit of the mode', () => {
-    expect(parseProgress(' 120 ', 'page', 480)).toEqual({ value: { page: 120 }, error: null })
-    expect(parseProgress('0', 'page', 480)).toEqual({ value: { page: 0 }, error: null })
-    expect(parseProgress('480', 'page', 480)).toEqual({ value: { page: 480 }, error: null })
-    expect(parseProgress('481', 'page', 480).error).toBe('progress_invalid')
-    expect(parseProgress('45', 'percent', 480)).toEqual({ value: { percent: 45 }, error: null })
-    expect(parseProgress('101', 'percent', 480).error).toBe('progress_invalid')
-    for (const typed of ['', 'abc', '-3', '4.5', '1e3', '12 3']) {
-      expect(parseProgress(typed, 'page', 480).error).toBe('progress_invalid')
-    }
+  it('starts the wheel on the stored value, in its mode, converted when it is the other kind', () => {
+    expect(progressIn(null, 'page', 480)).toBe(0)
+    expect(progressIn({ page: 120 }, 'page', 480)).toBe(120)
+    expect(progressIn({ page: 120 }, 'percent', 480)).toBe(25)
+    expect(progressIn({ percent: 50 }, 'page', 480)).toBe(240)
+    expect(progressIn({ percent: 50 }, 'percent', null)).toBe(50)
+    // A page with nothing to convert through is no percent.
+    expect(progressIn({ page: 120 }, 'percent', null)).toBe(0)
+    expect(progressValueOf(120, 'page')).toEqual({ page: 120 })
+    expect(progressValueOf(45, 'percent')).toEqual({ percent: 45 })
+  })
+
+  it('tells the same place recorded the same way from a change', () => {
+    expect(sameProgress({ page: 3 }, { page: 3 })).toBe(true)
+    expect(sameProgress({ page: 3 }, { page: 4 })).toBe(false)
+    expect(sameProgress({ page: 50 }, { percent: 50 })).toBe(false)
+    expect(sameProgress({ percent: 50 }, { percent: 50 })).toBe(true)
+    expect(sameProgress(null, null)).toBe(true)
+    expect(sameProgress(null, { page: 0 })).toBe(false)
+  })
+
+  it('says how far a save moved the read, in the unit it was saved in', () => {
+    expect(progressGain({ page: 212 }, { page: 236 }, 608)).toEqual({ amount: 24, unit: 'page' })
+    expect(progressGain({ page: 236 }, { page: 230 }, 608)).toEqual({ amount: -6, unit: 'page' })
+    expect(progressGain(null, { page: 40 }, 608)).toEqual({ amount: 40, unit: 'page' })
+    expect(progressGain({ percent: 40 }, { percent: 44 }, null)).toEqual({ amount: 4, unit: 'percent' })
+    // From a percent to a page: through the page count; without one it cannot be told.
+    expect(progressGain({ percent: 50 }, { page: 250 }, 480)).toEqual({ amount: 10, unit: 'page' })
+    expect(progressGain({ page: 50 }, { percent: 60 }, null)).toBeNull()
+    expect(progressGain({ page: 50 }, { page: 50 }, 480)).toBeNull()
   })
 
   it('counts against the member\'s own total when she has one, else the edition\'s', () => {
@@ -346,27 +369,20 @@ describe('progress helpers', () => {
     expect(progressMax('page', 560)).toBe(560)
     expect(progressMax('page', null)).toBe(PAGE_CEILING)
     expect(progressMax('percent', 560)).toBe(100)
-    expect(parseProgress('520', 'page', 560)).toEqual({ value: { page: 520 }, error: null })
-    expect(parseProgress('561', 'page', 560).error).toBe('progress_invalid')
-    expect(parseProgress('700', 'page', null)).toEqual({ value: { page: 700 }, error: null })
   })
 
-  it('checks the total field: empty is none, whole digits 1 to the ceiling, the edition\'s own count is none', () => {
-    expect(parsePageCount('', 480)).toEqual({ value: null, error: null })
-    expect(parsePageCount('   ', 480)).toEqual({ value: null, error: null })
-    expect(parsePageCount(' 560 ', 480)).toEqual({ value: 560, error: null })
-    expect(parsePageCount('480', 480)).toEqual({ value: null, error: null })
-    expect(parsePageCount('480', null)).toEqual({ value: 480, error: null })
-    expect(parsePageCount('99999')).toEqual({ value: 99999, error: null })
-    for (const typed of ['0', '00', '-3', '4.5', 'abc', '100000', '1 2', '123456']) {
-      expect(parsePageCount(typed, 480).error).toBe('progress_invalid')
-    }
+  it('stores a total that only repeats the edition\'s page count as none', () => {
+    expect(ownTotal(560, 480)).toBe(560)
+    expect(ownTotal(480, 480)).toBeNull()
+    expect(ownTotal(480, null)).toBe(480)
+    expect(ownTotal(null, 480)).toBeNull()
   })
 
   it('carries the place over when the mode is switched', () => {
-    expect(convertProgressField('240', 'percent', 480)).toBe('50')
-    expect(convertProgressField('50', 'page', 480)).toBe('240')
-    expect(convertProgressField('', 'percent', 480)).toBe('')
-    expect(convertProgressField('50', 'page', null)).toBe('')
+    expect(convertProgress(240, 'percent', 480)).toBe(50)
+    expect(convertProgress(50, 'page', 480)).toBe(240)
+    expect(convertProgress(480, 'percent', 480)).toBe(100)
+    expect(convertProgress(100, 'page', 480)).toBe(480)
+    expect(convertProgress(50, 'page', null)).toBe(0)
   })
 })

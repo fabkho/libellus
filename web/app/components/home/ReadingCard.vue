@@ -1,32 +1,44 @@
 <script setup lang="ts">
 // A Book being read, on Home (D's home card): large, lit by its cover's light.
 // Cover with its glow, serif title, author, since when and which day of the
-// read it is, a thin progress bar with how far (tapping the value opens the
-// Update progress sheet, #39) and a Finish shortcut that opens the Finish sheet
-// right here.
+// read it is, a thin progress bar with how far, and a quiet Update that opens
+// the Update progress sheet (issue #68, design round #65 direction D): nothing
+// on the card edits by itself. Right after a save the line says what changed
+// ("+24") and Update gives way to Undo for 5 s. At the last page the line reads
+// "The end." and Finish (lit) opens the Finish sheet right here.
 // The cover and the title open the book page from the touch-down.
 import type { LibraryEntry } from '~/data/library'
-import { pageCountOf, progressFraction, progressOf } from '~/data/progress'
+import { pageCountOf, progressFraction, progressOf, progressReachedEnd } from '~/data/progress'
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
 
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean }>()
 
-const { t } = useI18n()
+const { t, n } = useI18n()
 const { formatDay, dayOfRead } = useDays()
 const books = useBookStore()
 const reading = useReadingStore()
-// Finishing writes: offline the shortcut says so instead (#15).
+// Updating and finishing write: offline the buttons say so instead (#15).
 const online = useOnline()
 const text = useProgressText()
 const progress = computed(() => progressOf(props.entry.latestSession))
 // The member's own total when she set one (#60), else the edition's.
 const pageCount = computed(() => pageCountOf(props.entry))
 const words = computed(() => text(progress.value, pageCount.value))
+const atEnd = computed(() => progressReachedEnd(progress.value, pageCount.value))
 const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('common.etAl')))
 const since = computed(() => {
   const startedOn = props.entry.latestSession?.startedOn
   return startedOn ? t('book.since', { date: formatDay(startedOn), day: dayOfRead(startedOn) }) : ''
+})
+
+// This card's last save, while Undo is on offer.
+const undo = computed(() => (reading.progressUndo?.entryId === props.entry.id ? reading.progressUndo : null))
+const gain = computed(() => {
+  const by = undo.value?.gain
+  if (!by) return null
+  const key = by.amount > 0 ? (by.unit === 'page' ? 'gainPages' : 'gainPercent') : by.unit === 'page' ? 'lossPages' : 'lossPercent'
+  return t(`book.progress.${key}`, { count: n(Math.abs(by.amount)) })
 })
 </script>
 
@@ -63,21 +75,32 @@ const since = computed(() => {
         />
       </div>
       <div class="flex items-center justify-between gap-ms pt-xs">
-        <!-- The value is the way into the sheet; offline it stays, disabled. -->
-        <button
-          type="button"
-          class="figures -ml-xs min-h-(--size-touch) min-w-(--size-touch) truncate px-xs text-left text-meta enabled:hover:text-ink disabled:opacity-50"
-          :class="progress ? 'text-ink-muted' : 'text-ink-faint'"
-          :disabled="!online"
-          :aria-label="online ? `${t('book.progress.update')}: ${words.value}` : t('common.offline')"
-          data-testid="home.progress"
-          @click="reading.openProgress(entry)"
-        >
-          {{ progress ? words.value : t('home.progressAdd') }}
-        </button>
-        <UiButton tone="quiet" size="sm" :offline="!online" data-testid="home.finish" @click="reading.openFinish(entry)">
+        <p class="min-w-0 truncate text-meta" data-testid="home.progress">
+          <span v-if="atEnd" class="text-body text-ink" data-testid="home.theEnd">{{ t('book.progress.theEnd') }}</span>
+          <template v-else>
+            <span class="figures" :class="progress ? 'text-ink-muted' : 'text-ink-faint'" data-testid="home.progressValue">{{ words.value }}</span>
+            <span v-if="gain" class="figures text-accent" data-testid="home.progressGain"> · {{ gain }}</span>
+          </template>
+        </p>
+        <UiButton v-if="atEnd" size="sm" :offline="!online" data-testid="home.finish" @click="reading.openFinish(entry)">
           <UiIcon name="check" :size="15" bold />
           {{ t('book.finish') }}
+        </UiButton>
+        <UiButton
+          v-else-if="undo"
+          tone="plain"
+          size="sm"
+          class="-mr-sm"
+          :offline="!online"
+          :disabled="reading.undoBusy"
+          :aria-label="gain ? t('book.progress.undoLabel', { change: gain }) : undefined"
+          data-testid="home.undo"
+          @click="reading.undoProgress()"
+        >
+          {{ t('book.progress.undo') }}
+        </UiButton>
+        <UiButton v-else tone="quiet" size="sm" :offline="!online" data-testid="home.update" @click="reading.openProgress(entry)">
+          {{ t('book.progress.updateShort') }}
         </UiButton>
       </div>
     </div>

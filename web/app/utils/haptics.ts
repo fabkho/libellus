@@ -1,6 +1,7 @@
 /**
  * Haptic ticks for the rating control: one short tick each time the Rating
- * moves to another step (a quarter while dragging, a whole star on a tap).
+ * moves to another step (a quarter while dragging, a whole star on a tap); and
+ * for the progress wheel, one per value (`stepTick`, at the end of this file).
  *
  * - Android Chrome (and other browsers with it): `navigator.vibrate(8)`.
  * - iOS Safari has no Vibration API. Safari 17.4+ plays a haptic when an
@@ -62,5 +63,33 @@ export function tick(): void {
     else if (kind === 'switch') switchLabel().click()
   } catch {
     // A haptic is a nicety; a browser that refuses it is left alone.
+  }
+}
+
+/**
+ * The shortest gap between two value ticks, in ms. A fling of the progress wheel
+ * passes values faster than a motor can tell them apart; closer ticks would blur
+ * into one buzz, so the ones in between are left out.
+ */
+export const STEP_GAP_MS = 40
+
+let lastStep = Number.NEGATIVE_INFINITY
+
+/**
+ * One tick for a value passing the centre of the progress wheel (issue #68), or a
+ * − / + step. Vibration only: on iOS the switch trick plays only inside a tap, never
+ * while a finger drags or a fling runs, so the wheel stays silent there rather than
+ * ticking for some values and not others. Throttled to `STEP_GAP_MS`. `now` is the
+ * event's time stamp (or `performance.now()`); returns whether it ticked.
+ */
+export function stepTick(now: number): boolean {
+  if (now - lastStep < STEP_GAP_MS) return false
+  try {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return false
+    lastStep = now
+    navigator.vibrate(TICK_MS)
+    return true
+  } catch {
+    return false
   }
 }

@@ -1,19 +1,23 @@
 <script setup lang="ts">
-// Update progress (issue #39): opened from the book page and from the value on
-// a Home card. The Book; pages or percent (a toggle when the Book has a page
-// count, percent only without one); the number; +10 and +25 to count on from
-// what is there; the one action. The page count is the member's own when she set
-// one (issue #60, an ebook's pages follow the font size): "of 480" next to the
-// page is the way to edit it, an empty total goes back to the edition's. At the last page (or 100 %) the sheet asks
-// "Finished it?" and opens the Finish sheet, saving the progress first. A
-// refusal stays in the sheet and the button tries again.
+// Update progress (issues #39, #68; design round #65, direction D): opened by
+// Update on Home's card and Update progress on the book page. Save sits in the
+// title row. The Book; the number wheel between − and + (drag or flick it, tap
+// its centre to type; components/progress/Wheel.vue); under it "of 608 ✎", the
+// page count that counts, which turns the same wheel into the member's own total
+// (issue #60: an ebook's pages follow the font size) until Done hands back, with
+// how far the wheel has moved ("+24") and Pages | Percent when the Book has a page
+// count. A Book without one counts in percent, with "Count in pages" to give it
+// one. Last, Finish: the progress is saved and the Finish sheet takes over, for
+// the evening the book ends. A refusal stays in the sheet and Save tries again.
+import { PAGE_CEILING, type ProgressMode } from '~/data/progress'
 import { useReadingStore } from '~/stores/reading'
-import type { ProgressMode } from '~/data/progress'
+import { stepTick } from '~/utils/haptics'
 
-const { t } = useI18n()
+const { t, n } = useI18n()
 const reading = useReadingStore()
-// Saving writes: offline the action says so instead (#15).
+// Saving writes: offline the actions say so instead (#15).
 const online = useOnline()
+const text = useProgressText()
 
 const open = computed({
   get: () => reading.progressing !== null,
@@ -31,50 +35,60 @@ watch(
   },
 )
 
-// The page count that counts: what the total field holds when it is a total, else the edition's.
-const pageCount = computed(() => (reading.progressing ? reading.progressPageCount : (entry.value?.book.pageCount ?? null)))
-const editionCount = computed(() => entry.value?.book.pageCount ?? null)
-const totalId = useId()
-const inPages = computed(() => reading.progressMode === 'page')
-// Opening the total puts the keyboard on it, in the same tap.
-async function toggleTotal() {
-  reading.toggleProgressTotal()
-  await nextTick()
-  if (reading.progressTotalOpen) document.getElementById(totalId)?.focus()
-}
+const editingTotal = computed(() => reading.progressEditing === 'total')
+const inPercent = computed(() => reading.progressMode === 'percent')
+const pageCount = computed(() => reading.progressPageCount)
+const editionCount = computed(() => reading.progressEditionCount)
 const MODES: readonly ProgressMode[] = ['page', 'percent']
-const fieldId = useId()
-const label = computed(() => (inPages.value ? t('book.progress.pageLabel') : t('book.progress.percentLabel')))
-// "Try again" is for a save that failed; a number that does not fit is fixed, not retried.
-const action = computed(() =>
-  reading.progressBusy
-    ? t('book.progress.busy')
-    : reading.progressError && reading.progressError !== 'progress_invalid'
-      ? t('book.progress.retry')
-      : t('book.progress.action'),
-)
-const fieldError = computed(() => {
-  if (!reading.progressError) return null
-  return reading.progressError === 'progress_invalid'
-    ? t('book.progress.invalid', { max: reading.progressLimit })
-    : t(`library.error.${reading.progressError}`)
-})
-// Only the field's own refusal sits under it; any other has its line below.
-const invalid = computed(() => reading.progressError === 'progress_invalid')
 
-// Typing is a new try: the last refusal no longer applies.
-watch(
-  () => reading.progressField,
-  () => (reading.progressError = null),
+const action = computed(() => {
+  if (editingTotal.value) return t('book.progress.done')
+  if (!online.value) return t('common.offline')
+  if (reading.progressBusy) return t('book.progress.busy')
+  return reading.progressError ? t('book.progress.retry') : t('book.progress.save')
+})
+const actionDisabled = computed(() => reading.progressBusy || (!online.value && !editingTotal.value))
+
+// What assistive tech reads for the wheel: the value in words ("p. 212 of 608", "45 %").
+const valueText = computed(() =>
+  text(inPercent.value ? { percent: reading.progressValue } : { page: reading.progressValue }, pageCount.value).value,
 )
+const delta = computed(() => {
+  const by = reading.progressDelta
+  if (!by) return null
+  const key = by > 0 ? (inPercent.value ? 'gainPercent' : 'gainPages') : inPercent.value ? 'lossPercent' : 'lossPages'
+  return t(`book.progress.${key}`, { count: n(Math.abs(by)) })
+})
+
+/** − / +: a step on the wheel that is showing (held, they repeat). */
+function step(by: number) {
+  if (reading.progressBusy) return
+  if (editingTotal.value) {
+    reading.progressTotalDraft = Math.min(Math.max(reading.progressTotalDraft + by, 1), PAGE_CEILING)
+  } else {
+    reading.progressValue = Math.min(Math.max(reading.progressValue + by, 0), reading.progressLimit)
+  }
+  stepTick(performance.now())
+}
+const minus = useHoldRepeat((times) => step(-times))
+const plus = useHoldRepeat((times) => step(times))
+
+// A new number is a new try: the last refusal no longer applies.
 watch(
-  () => reading.progressTotalField,
-  () => (reading.progressTotalError = false),
+  () => [reading.progressValue, reading.progressMode, reading.progressTotal],
+  () => (reading.progressError = null),
 )
 </script>
 
 <template>
-  <UiSheet v-model:open="open" :title="t('book.progress.title')" testid="progress">
+  <UiSheet
+    v-model:open="open"
+    :title="t('book.progress.title')"
+    testid="progress"
+    :action="action"
+    :action-disabled="actionDisabled"
+    @action="reading.confirmProgress()"
+  >
     <template v-if="entry">
       <UiBookLine
         :title="entry.book.title"
@@ -84,148 +98,192 @@ watch(
         :colors="entry.book.coverColors"
       />
 
-      <div v-if="pageCount || inPages" role="group" :aria-label="t('book.progress.modeLabel')" class="mb-md flex gap-sm">
-        <button
-          v-for="mode in MODES"
-          :key="mode"
-          type="button"
-          :aria-pressed="reading.progressMode === mode"
-          class="pill relative inline-flex h-(--size-button-sm) items-center rounded-pill px-md text-subhead"
-          :class="reading.progressMode === mode ? 'bg-ink text-on-ink' : 'edge text-ink-muted hover:bg-fill'"
-          :data-testid="`progress.mode.${mode}`"
-          @click="reading.chooseProgressMode(mode)"
+      <!-- The total wheel says what it is for, and the way back to the edition's. -->
+      <div v-if="editingTotal" class="flex min-h-(--size-touch) items-center justify-between gap-ms">
+        <p class="eyebrow text-accent" data-testid="progress.totalTitle">{{ t('book.progress.totalTitle') }}</p>
+        <UiButton
+          v-if="reading.progressTotal !== null"
+          tone="plain"
+          size="sm"
+          class="-mr-sm"
+          data-testid="progress.totalDrop"
+          @click="reading.dropProgressTotal()"
         >
-          {{ t(`book.progress.mode.${mode}`) }}
-        </button>
+          {{ editionCount ? t('book.progress.totalEdition', { count: n(editionCount) }) : t('book.progress.totalPercent') }}
+        </UiButton>
       </div>
 
-      <div class="flex items-end gap-sm">
+      <div class="flex items-center gap-sm">
+        <button
+          type="button"
+          class="step edge"
+          :aria-label="t('book.progress.less')"
+          :disabled="reading.progressBusy"
+          data-testid="progress.minus"
+          @pointerdown="minus.start"
+          @pointerup="minus.stop"
+          @pointerleave="minus.stop"
+          @pointercancel="minus.stop"
+          @click="minus.once"
+        >
+          <span class="minus" aria-hidden="true" />
+        </button>
         <div class="min-w-0 flex-1">
-          <UiField
-            :id="fieldId"
-            v-model="reading.progressField"
-            :label="label"
-            :error="invalid ? fieldError : null"
-            error-testid="progress.error"
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            enterkeyhint="done"
-            placeholder="0"
-            :maxlength="9"
+          <ProgressWheel
+            v-if="!editingTotal"
+            v-model="reading.progressValue"
+            :max="reading.progressLimit"
+            :suffix="inPercent ? '%' : ''"
+            :label="inPercent ? t('book.progress.percentLabel') : t('book.progress.pageLabel')"
+            :value-text="valueText"
             :disabled="reading.progressBusy"
-            class="figures"
-            data-testid="progress.value"
-            @keydown.enter="reading.confirmProgress()"
+            testid="progress.wheel"
+          />
+          <ProgressWheel
+            v-else
+            v-model="reading.progressTotalDraft"
+            :min="1"
+            :max="PAGE_CEILING"
+            :label="t('book.progress.totalTitle')"
+            testid="progress.totalWheel"
           />
         </div>
-        <!-- "of 480": the page count that counts, and the way to change it. -->
         <button
-          v-if="inPages"
           type="button"
-          class="figures -mr-sm inline-flex min-h-(--size-touch) shrink-0 items-center gap-xs rounded-md px-sm text-ink-muted enabled:hover:text-ink"
-          :aria-expanded="reading.progressTotalOpen"
-          :aria-label="pageCount ? t('book.progress.totalEdit', { count: pageCount }) : t('book.progress.totalAdd')"
+          class="step edge"
+          :aria-label="t('book.progress.more')"
           :disabled="reading.progressBusy"
-          data-testid="progress.total"
-          @click="toggleTotal"
+          data-testid="progress.plus"
+          @pointerdown="plus.start"
+          @pointerup="plus.stop"
+          @pointerleave="plus.stop"
+          @pointercancel="plus.stop"
+          @click="plus.once"
         >
-          <span :class="pageCount ? 'text-input' : 'text-subhead'">{{ pageCount ? t('book.progress.totalOf', { count: pageCount }) : t('book.progress.totalAdd') }}</span>
-          <UiIcon name="pencil" :size="14" />
+          <UiIcon name="plus" :size="18" />
         </button>
       </div>
 
-      <!-- Her own total for this book; empty is the edition's. -->
-      <div v-if="inPages && reading.progressTotalOpen" class="mt-md" data-testid="progress.totalGroup">
-        <UiField
-          :id="totalId"
-          v-model="reading.progressTotalField"
-          :label="t('book.progress.totalLabel')"
-          :error="reading.progressTotalError ? t('book.progress.totalInvalid') : null"
-          error-testid="progress.totalError"
-          type="text"
-          inputmode="numeric"
-          autocomplete="off"
-          enterkeyhint="done"
-          :placeholder="editionCount ? String(editionCount) : '0'"
-          :maxlength="5"
-          :disabled="reading.progressBusy"
-          class="figures"
-          data-testid="progress.totalValue"
-          @keydown.enter="reading.confirmProgress()"
-        />
-        <p class="mt-xs text-footnote text-ink-faint" data-testid="progress.totalHint">
-          {{ editionCount ? t('book.progress.totalHint', { count: editionCount }) : t('book.progress.totalHintNone') }}
-        </p>
-        <UiButton
-          v-if="editionCount && reading.progressTotalField.trim() !== ''"
-          tone="quiet"
-          size="sm"
-          class="mt-sm"
-          :disabled="reading.progressBusy"
-          data-testid="progress.totalReset"
-          @click="reading.resetProgressTotal()"
-        >
-          {{ t('book.progress.totalReset', { count: editionCount }) }}
-        </UiButton>
+      <!-- Under the wheel: of how many (the way to her own total), what this adds, and the unit. -->
+      <div v-if="!editingTotal" class="mt-xs flex min-h-(--size-touch) items-center justify-between gap-sm">
+        <span class="flex min-w-0 items-center gap-sm">
+          <button
+            v-if="!inPercent"
+            type="button"
+            class="total figures text-caption text-ink-muted enabled:hover:text-ink"
+            :aria-label="t('book.progress.totalEdit', { count: n(pageCount ?? 0) })"
+            :disabled="reading.progressBusy"
+            data-testid="progress.total"
+            @click="reading.editProgressTotal()"
+          >
+            {{ t('book.progress.totalOf', { count: n(pageCount ?? 0) }) }}<UiIcon name="pencil" :size="12" class="ml-xs inline text-ink-faint" />
+          </button>
+          <button
+            v-else-if="!pageCount"
+            type="button"
+            class="total text-caption text-ink-muted enabled:hover:text-ink"
+            :disabled="reading.progressBusy"
+            data-testid="progress.total"
+            @click="reading.editProgressTotal()"
+          >
+            {{ t('book.progress.totalCount') }}
+          </button>
+          <span
+            v-if="delta"
+            class="figures truncate text-caption"
+            :class="reading.progressDelta > 0 ? 'text-accent' : 'text-ink-faint'"
+            data-testid="progress.delta"
+          >
+            {{ delta }}
+          </span>
+        </span>
+        <div v-if="pageCount" role="group" :aria-label="t('book.progress.modeLabel')" class="flex shrink-0 gap-xs">
+          <button
+            v-for="mode in MODES"
+            :key="mode"
+            type="button"
+            :aria-pressed="reading.progressMode === mode"
+            class="pill relative inline-flex h-(--size-button-sm) items-center rounded-pill px-ms text-caption"
+            :class="reading.progressMode === mode ? 'bg-ink text-on-ink' : 'edge text-ink-muted hover:bg-fill'"
+            :disabled="reading.progressBusy"
+            :data-testid="`progress.mode.${mode}`"
+            @click="reading.chooseProgressMode(mode)"
+          >
+            {{ t(`book.progress.mode.${mode}`) }}
+          </button>
+        </div>
       </div>
+      <p v-else class="mt-xs min-h-(--size-touch) px-md text-center text-caption text-ink-faint" data-testid="progress.totalHint">
+        {{ t('book.progress.totalHint') }}
+      </p>
 
-      <div class="mt-md flex gap-sm">
-        <UiButton
-          v-for="by in [10, 25]"
-          :key="by"
-          tone="quiet"
-          size="sm"
-          :disabled="reading.progressBusy"
-          :data-testid="`progress.plus${by}`"
-          @click="reading.bumpProgress(by)"
-        >
-          {{ t(reading.progressMode === 'page' ? 'book.progress.plusPages' : 'book.progress.plusPercent', { count: by }) }}
-        </UiButton>
-      </div>
-
-      <!-- No page count at all: percent is all there is, until she gives the book one. -->
-      <UiButton
-        v-if="!inPages && !pageCount"
-        tone="quiet"
-        size="sm"
-        class="mt-md"
-        :disabled="reading.progressBusy"
-        data-testid="progress.total"
-        @click="toggleTotal"
-      >
-        {{ t('book.progress.totalAddPages') }}
-      </UiButton>
-
-      <!-- The last page: the read may be done. Saves the progress, then the Finish sheet. -->
+      <!-- The evening the book ends: save where she is, then the Finish sheet. -->
       <div
-        v-if="reading.progressAtEnd"
-        class="mt-md flex items-center justify-between gap-ms rounded-md bg-fill px-inset py-ms edge-faint"
-        data-testid="progress.reached"
+        v-if="!editingTotal"
+        class="mt-sm flex items-center justify-between gap-ms rounded-md bg-fill px-inset py-ms edge-faint"
+        data-testid="progress.finishRow"
       >
         <span class="flex min-w-0 flex-col gap-xxs">
           <span class="text-body">{{ t('book.progress.finishedIt') }}</span>
-          <span class="text-caption text-ink-faint">{{ t('book.progress.reached') }}</span>
+          <span class="text-caption text-ink-faint" data-testid="progress.finishHint">
+            {{ reading.progressAtEnd ? t('book.progress.reached') : t('book.progress.finishHint') }}
+          </span>
         </span>
-        <UiButton tone="quiet" size="sm" :offline="!online" :disabled="reading.progressBusy" data-testid="progress.finish" @click="reading.finishFromProgress()">
+        <UiButton
+          :tone="reading.progressAtEnd ? 'primary' : 'quiet'"
+          size="sm"
+          :offline="!online"
+          :disabled="reading.progressBusy"
+          data-testid="progress.finish"
+          @click="reading.finishFromProgress()"
+        >
           <UiIcon name="check" :size="14" bold />{{ t('book.finish') }}
         </UiButton>
       </div>
 
-      <p v-if="reading.progressError && !invalid" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="progress.failure">
-        {{ fieldError }}
+      <p v-if="reading.progressError" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="progress.failure">
+        {{ t(`library.error.${reading.progressError}`) }}
       </p>
-
-      <div class="mt-lg mb-sm">
-        <UiButton block :disabled="reading.progressBusy" :offline="!online" :aria-busy="reading.progressBusy" data-testid="progress.submit" @click="reading.confirmProgress()">
-          <UiIcon name="check" :size="18" bold />{{ action }}
-        </UiButton>
-      </div>
+      <div class="h-sm" />
     </template>
   </UiSheet>
 </template>
 
 <style scoped>
+/* − and +: round 44 pt targets on a hairline ring, darker while pressed. */
+.step {
+  display: flex;
+  width: var(--size-touch);
+  height: var(--size-touch);
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  color: var(--color-ink);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.step:active {
+  background: var(--color-fill-strong);
+}
+.step:disabled {
+  color: var(--color-ink-ghost);
+}
+.minus {
+  width: var(--spacing-ms);
+  height: var(--stroke-icon);
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+/* "of 608 ✎": a dotted underline says it can be changed; 44 pt tall to tap. */
+.total {
+  min-height: var(--size-touch);
+  text-align: left;
+  text-decoration: underline dotted var(--color-ink-ghost);
+  text-underline-offset: var(--spacing-xs);
+}
 /* The drawn pill is 32 px; the touch target stays 44. */
 .pill::after {
   position: absolute;
