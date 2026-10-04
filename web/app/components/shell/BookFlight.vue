@@ -32,6 +32,14 @@ onUnmounted(() => uninstall?.())
   display: none;
 }
 
+/* A flight about to start: the copy of the page being left stands in for the
+   live page, which is hidden under it until the flight's own animations take
+   over (in the same frame). Important, so a flight turned around in its
+   place does not show the new page at the opacity it paused at. */
+html[data-flight-pose] [data-flight='page'] {
+  opacity: 0 !important;
+}
+
 /* A cover whose copy is in the air: it holds its place, unseen, until the copy lands on it. */
 [data-flight-hidden] {
   visibility: hidden;
@@ -41,6 +49,13 @@ onUnmounted(() => uninstall?.())
   position: fixed;
   transform-origin: 0 0;
   will-change: transform, opacity;
+}
+
+.flight-held {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 .flight-copy {

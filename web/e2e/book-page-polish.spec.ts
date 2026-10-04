@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { recordedApple, signedIn } from './support'
+import { recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -25,6 +25,10 @@ async function addLongBook(page: Page) {
   await page.getByTestId('search.addManually').click()
   await page.getByTestId('manual.title').fill(TITLE)
   await page.getByTestId('manual.author').fill(AUTHORS)
+  // Add sits in the sheet's title row: tapped while the sheet still rises, a
+  // slow runner can take the box from a frame that was never repainted and tap
+  // where Add no longer is (e2e/support.ts, untilStill).
+  await untilStill(page)
   await page.getByTestId('manual.action').click()
   await expect(page.getByTestId('manual')).toBeHidden()
   await expect(page).toHaveURL(/\/book\/[0-9a-f-]{36}$/)

@@ -9,10 +9,13 @@
 // came from is never shown.
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
+import { useEditionStore } from '~/stores/edition'
 import { useLibraryStore } from '~/stores/library'
 import { useReadingStore } from '~/stores/reading'
+import { bookPageKey, followEdition } from '~/utils/bookPageKey'
 
-definePageMeta({ layout: 'tabs', screen: 'book', pushed: true })
+// One page through a change of edition, though the address changes (utils/bookPageKey.ts).
+definePageMeta({ layout: 'tabs', screen: 'book', pushed: true, key: bookPageKey })
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -25,12 +28,39 @@ const reading = useReadingStore()
 const online = useOnline()
 const { formatDay, dayOfRead } = useDays()
 
-const key = computed(() => String(route.params.key))
+const edition = useEditionStore()
+
+const routeKey = computed(() => String(route.params.key))
+// The entry changed to another edition here (#41): the page follows it in the
+// same render as the Library learns it (never a frame of the old Book shown
+// as not in the Library), until its address catches up (`editionChanged`).
+const followed = ref<string | null>(null)
+const key = computed(() => followed.value ?? routeKey.value)
+watch(routeKey, () => (followed.value = null))
 const page = computed(() => books.page(key.value))
 const book = computed(() => page.value?.book ?? null)
 const entry = computed(() => page.value?.entry ?? null)
 
 watch(key, (value) => books.load(value), { immediate: true })
+
+// Change edition animates (docs/MOTION.md, Change edition): the old hero is
+// copied before the page draws the new Book, then turns into it.
+const pageEl = useTemplateRef<HTMLElement>('pageEl')
+const heroEl = useTemplateRef<HTMLElement>('heroEl')
+const heroWas = useTemplateRef<HTMLElement>('heroWas')
+const pageWas = useTemplateRef<HTMLElement>('pageWas')
+const editionChange = useEditionChange({ page: pageEl, hero: heroEl, heroWas, pageWas })
+watch(
+  () => edition.moved,
+  (move) => {
+    const shown = page.value?.book
+    if (!move || !shown || !('id' in shown) || shown.id !== move.from) return
+    editionChange.capture()
+    followed.value = move.to.book.id
+    void nextTick(editionChange.play)
+  },
+  { flush: 'pre' },
+)
 
 useHead({ title: () => (book.value ? `${book.value.title} · ${t('app.name')}` : t('app.name')) })
 
@@ -85,8 +115,9 @@ const clothColor = computed(() => (book.value ? `var(--color-cloth${clothOf(book
 
 const optionsOpen = ref(false)
 
-/** The entry now has another Book (#41): the page moves to its address, in place of this one. */
+/** The entry now has another Book (#41): the page, showing it already, takes its address in place of the old one. */
 function editionChanged(changed: LibraryEntry) {
+  followEdition(routeKey.value, changed.book.id)
   void router.replace(`/book/${changed.book.id}`)
 }
 
@@ -99,15 +130,17 @@ function back() {
 </script>
 
 <template>
-  <div class="relative min-h-dvh">
+  <div ref="pageEl" class="relative min-h-dvh">
     <UiAmbient :colors="book?.coverColors ?? null" :cloth="coverFallback ? clothColor : null" />
+    <!-- What the old edition was about, over the new text while a change of edition plays. -->
+    <div ref="pageWas" class="pointer-events-none absolute inset-0" aria-hidden="true" inert />
     <UiTopBar :back-label="t('book.back')" back-testid="book.back" @back="back">
       <template v-if="entry" #trailing>
         <UiRoundButton icon="more" :label="t('book.options')" data-testid="book.options" @click="optionsOpen = true" />
       </template>
     </UiTopBar>
 
-    <section v-if="book" class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="book.hero">
+    <section v-if="book" ref="heroEl" class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="book.hero">
       <UiCover
         :title="book.title"
         :authors="book.authors"
@@ -137,6 +170,8 @@ function back() {
       </p>
       <!-- Goodreads' rating, once known (#69). -->
       <BookGoodreads :book="book" />
+      <!-- The old edition, over the new one while a change of edition plays. -->
+      <div ref="heroWas" class="pointer-events-none absolute inset-0" data-edition-was aria-hidden="true" inert />
     </section>
 
     <div v-if="book" class="relative px-ml" data-testid="book.actions">

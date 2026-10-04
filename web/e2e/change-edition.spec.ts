@@ -16,8 +16,9 @@ import { recordedApple, signedIn } from './support'
  * Rating and review and the book's Collection stay. An edition she already
  * has as another book is refused with a clear message. The Library is the real
  * local stack; the entries are made through the repository so the Book has
- * the work key the recordings know. With docs/parity.md this is the
- * behavioural reference for Change edition.
+ * the work key the recordings know. The change animates on the same page: the
+ * old cover lies over the new one and fades out into it (#61). With
+ * docs/parity.md this is the behavioural reference for Change edition.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -90,8 +91,54 @@ test('a member changes the edition of a finished book: the cover changes, its re
   await spanish.click()
   await expect(spanish).toHaveAttribute('aria-checked', 'true')
   await expect(candidates.first()).toHaveAttribute('aria-checked', 'false')
+  // The page stays the same page through the change (marked, to tell), every
+  // frame says what lies over its hero, and the fade laid on the old cover is
+  // kept with what became of it. The fade is told by its animation, not by the
+  // frames drawn during it: on a starved runner a frame can take longer than
+  // `standard`, and the whole fade falls between two of them.
+  await page.getByTestId('book.hero').evaluate((hero) => {
+    hero.setAttribute('data-before-change', '')
+    const seen: string[] = []
+    const fades: { from: unknown; to: unknown; duration: unknown; events: string[] }[] = []
+    Object.assign(window, { __was: seen, __fades: fades })
+    const look = () => {
+      const was = hero.querySelector('[data-edition-was] > *')
+      seen.push(was ? `${was.querySelector('.cloth') ? 'cloth' : 'image'} ${Number(getComputedStyle(was).opacity).toFixed(1)}` : 'none')
+      if (seen.length < 600) requestAnimationFrame(look)
+    }
+    requestAnimationFrame(look)
+    // The old hero is laid in, its fade set on it in the same task: seen before any frame.
+    new MutationObserver((records) => {
+      for (const record of records)
+        for (const node of record.addedNodes)
+          if (node instanceof HTMLElement)
+            for (const animation of node.getAnimations()) {
+              const keyframes = (animation.effect as KeyframeEffect).getKeyframes()
+              const fade = { from: keyframes[0]?.opacity, to: keyframes.at(-1)?.opacity, duration: animation.effect!.getTiming().duration, events: [] as string[] }
+              for (const type of ['finish', 'cancel']) animation.addEventListener(type, () => fade.events.push(type))
+              fades.push(fade)
+            }
+    }).observe(hero.querySelector('[data-edition-was]')!, { childList: true })
+  })
   await page.getByTestId('edition.action').click()
   await expect(page.getByTestId('edition')).toBeHidden()
+  // The old cover (the Placeholder) lies over the new one and fades out into it (docs/MOTION.md, Change edition):
+  // it shows whole while the sheet falls away, then only ever fades, over `standard`, played to its end.
+  await expect(page.locator('[data-edition-was] > *')).toHaveCount(0)
+  await expect(page.getByTestId('book.hero')).toHaveAttribute('data-before-change', '')
+  const { frames, fades, standard } = await page.evaluate(() => ({
+    frames: (window as unknown as { __was: string[] }).__was,
+    fades: (window as unknown as { __fades: unknown[] }).__fades,
+    standard: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--duration-standard')),
+  }))
+  const seen = [...new Set(frames)]
+  expect(seen[0]).toBe('none')
+  expect(seen).toContain('cloth 1.0')
+  expect(seen.every((frame) => frame === 'none' || frame.startsWith('cloth '))).toBe(true)
+  const opacities = frames.filter((frame) => frame !== 'none').map((frame) => Number(frame.split(' ')[1]))
+  expect(opacities).toEqual([...opacities].sort((a, b) => b - a))
+  expect(fades).toEqual([{ from: '1', to: '0', duration: standard, events: expect.arrayContaining(['finish']) }])
+  expect((fades[0] as { events: string[] }).events[0]).toBe('finish')
 
   // The page is the new Book's now, with its cover; the read and the collection are still there.
   const [changed] = await sql<{ book_id: string; isbn13: string; cover_url: string; cover_thumbhash: string | null }>(

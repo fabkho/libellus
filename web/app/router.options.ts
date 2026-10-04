@@ -1,6 +1,8 @@
 import type { RouterConfig } from '@nuxt/schema'
 import { createWebHistory, START_LOCATION } from 'vue-router'
 import { useNuxtApp, useRouter } from '#imports'
+import { bookPageOf } from '~/utils/bookPageKey'
+import { isBookPath } from '~/utils/flight'
 import { tabPlaces } from '~/utils/tabPlaces'
 import { listenForBack } from '~/composables/useBackDismiss'
 
@@ -19,6 +21,9 @@ export default {
   scrollBehavior(to, from, savedPosition) {
     // Same page (a query or hash change): stay put.
     if (to.path === from.path) return false
+    // The same book page, following its entry to another edition (utils/bookPageKey.ts): stays put too.
+    if (isBookPath(to.path) && isBookPath(from.path) && bookPageOf(String(to.params.key)) === bookPageOf(String(from.params.key)))
+      return false
     const place = () =>
       tabPlaces.arrive({ to: to.path, fromShell: from.meta.layout === 'tabs', saved: savedPosition ?? null })
     if (from === START_LOCATION) return place()
