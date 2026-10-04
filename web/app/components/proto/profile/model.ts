@@ -8,7 +8,7 @@ import { BOOKS, DAYS, OVERRIDES, SESSIONS, TODAY, WANT, type StubBook, type Stub
 
 export { TODAY }
 export type { StubBook }
-export type Direction = 'a' | 'b' | 'c'
+export type Direction = 'a' | 'b' | 'd'
 export type Year = number | 'all'
 
 export const MEMBER = { name: 'Fabian', email: 'fabian@libellus.local', initials: 'FK' }

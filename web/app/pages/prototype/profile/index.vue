@@ -58,25 +58,25 @@ const DIRECTIONS = [
     ],
   },
   {
-    key: 'c',
-    name: 'In the Library',
-    where: 'No new screen: the stats fold into the Library; the account stays in the avatar menu.',
-    pitch: 'Finished opens with the years as columns; each year’s pinned header carries its count, pages and average and opens a year sheet; rows say how long a read took and mark a second read. Reading days sit over Currently reading. Home’s tally opens its year.',
+    key: 'd',
+    name: 'A + B',
+    where: 'The avatar opens a pushed Profile page (B), with A’s figures.',
+    pitch: 'B’s hero over A’s year pills and four figures, then every stat of both as figures and covers, no sentences: months (a month opens its books), reading days, ratings and the five-star shelf, records, authors, the years as cards. Each year opens B’s full-screen review, now in figures. The account at the end.',
     links: [
-      { label: 'Finished', to: '/prototype/profile/c' },
-      { label: 'Year sheet', to: '/prototype/profile/c?year=2025' },
-      { label: 'Reading', to: '/prototype/profile/c?segment=reading' },
-      { label: 'Home', to: '/prototype/profile/c?screen=home' },
+      { label: 'Profile', to: '/prototype/profile/d' },
+      { label: 'Year in review', to: '/prototype/profile/d?screen=year&year=2025' },
+      { label: 'All years', to: '/prototype/profile/d?year=all' },
+      { label: 'Home', to: '/prototype/profile/d?screen=home' },
     ],
     good: [
-      'Nothing new to learn or navigate; stats sit next to the books they describe',
-      'Keeps DESIGN.md’s “no profile screen” and the 3-tab capsule',
-      'Smallest build: a sheet, a header, a row line',
+      'Every stat of A and B in one place; figures and covers, nothing to read through',
+      'B’s hero and cover light keep it warm; A’s grid makes it exact',
+      'The year in review is one tap from the months, the year columns and the year cards',
+      'Tab bar and Home unchanged',
     ],
     trade: [
-      'No home for the account if it ever grows (export, delete account, goals)',
-      'No all-time overview beyond the year columns; authors and records only per year',
-      'The Library gets busier for members who never wanted stats',
+      'A long page: the year pills scope most of it, so the order matters',
+      'Dark mode and Sign out take two taps (today one)',
     ],
   },
 ] as const
@@ -88,7 +88,7 @@ const DIRECTIONS = [
       <p class="eyebrow">Design round · #78</p>
       <h1 class="text-large-title">Profile and reading stats</h1>
       <p class="text-subhead text-ink-muted">
-        Three directions for where the account lives and which stats are worth showing, on a stub library shaped like the owner’s: {{ all.books }} finished
+        Directions for where the account lives and which stats are worth showing, on a stub library shaped like the owner’s: {{ all.books }} finished
         reads since 2023 ({{ all.rated }} rated, {{ all.rereads.length }} re-reads, {{ all.abandoned.length }} not finished), {{ wantToRead.length }} want to
         read, three current reads with days of progress. Today is pinned to 4 Oct {{ THIS_YEAR }}. Nothing is saved.
       </p>
@@ -125,9 +125,9 @@ const DIRECTIONS = [
     <section class="mt-lg flex flex-col gap-sm rounded-lg bg-fill p-inset edge-faint">
       <h2 class="eyebrow">Recommendation</h2>
       <p class="text-subhead">
-        <strong class="font-medium">B, Reading life</strong>, with C’s small touches: the avatar opens a Profile page (the account moves there, the tab bar
-        stays at three), and the Library rows learn “in 12 days” and “2nd read”. Take A’s year switch and month bars into B’s year in review for the exact
-        figures. Every stat shown is a query on today’s tables; nothing new to store.
+        <strong class="font-medium">D, A + B</strong>: the owner’s pick of round one (A and B; C is out, B’s sentences too). The avatar opens the
+        Profile page with B’s hero over A’s figures and every stat of both; each year opens its full-screen review. Every stat shown is a query on
+        today’s tables; nothing new to store.
       </p>
     </section>
   </div>

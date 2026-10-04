@@ -61,7 +61,7 @@ function reset() {
         <UiIcon name="stack" :size="15" />
       </NuxtLink>
       <NuxtLink
-        v-for="key in ['a', 'b', 'c']"
+        v-for="key in ['a', 'b', 'd']"
         :key="key"
         :to="{ path: `/prototype/profile/${key}`, query: { theme: protoTheme } }"
         class="figures flex size-(--size-button-sm) items-center justify-center rounded-pill text-meta uppercase"

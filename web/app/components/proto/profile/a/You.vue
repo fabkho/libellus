@@ -16,14 +16,9 @@ import {
   monthLetter,
   monthName,
   monthYear,
-  n,
-  plural,
   readWords,
-  readingDaysSummary,
-  average,
   statsOf,
   wantToRead,
-  weekdayLetter,
   type Year,
 } from '../model'
 
@@ -36,12 +31,6 @@ const thisMonth = Number(TODAY.slice(5, 7)) - 1
 const barLabels = computed(() => (isAll.value ? [...stats.value.perYear].reverse().map((p) => `’${String(p.year).slice(2)}`) : Array.from({ length: 12 }, (_, m) => monthLetter(m))))
 const lit = computed(() => (isAll.value ? stats.value.perYear.length - 1 : props.year === THIS_YEAR ? thisMonth : null))
 
-// Monday-first weeks, ending today: five rows.
-const weekday = (new Date(`${TODAY}T12:00:00`).getDay() + 6) % 7
-const days = readingDaysSummary(28 + weekday + 1)
-const last30 = readingDaysSummary(30)
-const topPages = Math.max(...days.cells.map((c) => c.pages), 1)
-const size = (pages: number) => (pages === 0 ? 1 : pages < topPages / 3 ? 2 : pages < (topPages * 2) / 3 ? 3 : 4)
 
 /** The books of the month the member tapped, in the order she finished them. */
 const monthReads = computed(() =>
@@ -55,14 +44,6 @@ const sheetOpen = computed({
   get: () => props.month !== null,
   set: (open: boolean) => !open && emit('month', null),
 })
-const records = computed(() =>
-  [
-    stats.value.longest && { label: 'Longest', read: stats.value.longest, figure: `${n(stats.value.longest.pages!)} p.` },
-    stats.value.shortest && { label: 'Shortest', read: stats.value.shortest, figure: `${n(stats.value.shortest.pages!)} p.` },
-    stats.value.fastest && { label: 'Quickest', read: stats.value.fastest, figure: plural(stats.value.fastest.days!, 'day') },
-    stats.value.slowest && { label: 'Took its time', read: stats.value.slowest, figure: plural(stats.value.slowest.days!, 'day') },
-  ].filter((r): r is NonNullable<typeof r> => Boolean(r)),
-)
 </script>
 
 <template>
@@ -90,29 +71,7 @@ const records = computed(() =>
       </button>
     </div>
 
-    <!-- The four figures. -->
-    <section class="grid grid-cols-2 border-y-(length:--stroke-hairline) border-hairline-strong" data-testid="a.figures">
-      <div class="flex flex-col gap-xs border-r-(length:--stroke-hairline) border-b-(length:--stroke-hairline) border-hairline py-md pr-md">
-        <span class="eyebrow">Books</span>
-        <span class="text-figure tabular-nums" data-testid="a.books">{{ stats.books }}</span>
-        <span class="figures text-meta text-ink-faint">{{ isAll ? `${(stats.books / ((YEARS.length - 1) * 12 + Number(TODAY.slice(5, 7)) - Number(FIRST_DAY.slice(5, 7)) + 1)).toFixed(1)} a month` : stats.rereads.length ? `${stats.rereads.length} read again` : '\u00a0' }}</span>
-      </div>
-      <div class="flex flex-col gap-xs border-b-(length:--stroke-hairline) border-hairline py-md pl-md">
-        <span class="eyebrow">Pages</span>
-        <span class="text-figure tabular-nums">{{ stats.pages >= 10000 ? `${(stats.pages / 1000).toFixed(1)}k` : n(stats.pages) }}</span>
-        <span class="figures text-meta text-ink-faint">{{ stats.pagesMissing ? `${stats.pagesMissing} without a count` : `${n(Math.round(stats.pages / Math.max(stats.books, 1)))} a book` }}</span>
-      </div>
-      <div class="flex flex-col gap-xs border-r-(length:--stroke-hairline) border-hairline py-md pr-md">
-        <span class="eyebrow">Average</span>
-        <span class="text-figure tabular-nums">{{ average(stats.average) }}</span>
-        <span class="figures text-meta text-ink-faint">{{ stats.unrated ? `${stats.unrated} not rated yet` : `${stats.rated} rated` }}</span>
-      </div>
-      <div class="flex flex-col gap-xs py-md pl-md">
-        <span class="eyebrow">Days a book</span>
-        <span class="text-figure tabular-nums">{{ stats.medianDays ?? '–' }}</span>
-        <span class="figures text-meta text-ink-faint">usually, start to finish</span>
-      </div>
-    </section>
+    <ProtoProfileFigures :stats="stats" />
 
     <section id="months" class="flex flex-col gap-md">
       <div class="flex items-baseline justify-between">
@@ -122,27 +81,7 @@ const records = computed(() =>
       <ProtoProfileBars :values="stats.months" :labels="barLabels" :lit="lit" :pickable="!isAll" tall testid="a.months" @pick="emit('month', $event)" />
     </section>
 
-    <section v-if="year === THIS_YEAR || isAll" id="days" class="flex flex-col gap-md" data-testid="a.days">
-      <div class="flex items-baseline justify-between">
-        <h2 class="eyebrow">Reading days</h2>
-        <span class="figures text-meta text-ink-faint">since {{ dayMonth(days.since) }}</span>
-      </div>
-      <div class="flex gap-lg">
-        <div class="cal grid shrink-0 grid-cols-7 gap-x-sm gap-y-xs">
-          <span v-for="c in days.cells.slice(0, 7)" :key="`h${c.day}`" class="figures text-center text-meta text-ink-ghost">{{ weekdayLetter(c.day) }}</span>
-          <span v-for="c in days.cells" :key="c.day" class="cell" :class="[`s${size(c.pages)}`, c.read && 'read', c.day === TODAY && 'today']" :title="`${dayMonth(c.day)}: ${c.pages} pages`" />
-        </div>
-        <div class="flex min-w-0 flex-col justify-end gap-sm pb-xxs">
-          <p class="text-subhead">
-            <span class="figures text-ink">{{ last30.read }}</span> <span class="text-ink-muted">of the last 30 days</span>
-          </p>
-          <p class="text-subhead">
-            <span class="figures text-ink">{{ last30.perDay }}</span> <span class="text-ink-muted">pages on a day you read</span>
-          </p>
-          <p class="text-caption text-ink-faint">The bigger the dot, the more you read.</p>
-        </div>
-      </div>
-    </section>
+    <ProtoProfileDays v-if="year === THIS_YEAR || isAll" />
 
     <section id="ratings" class="flex flex-col gap-md">
       <div class="flex items-baseline justify-between">
@@ -152,10 +91,7 @@ const records = computed(() =>
       <ProtoProfileStarBars :stats="stats" />
     </section>
 
-    <section id="records" class="flex flex-col" data-testid="a.records">
-      <h2 class="eyebrow mb-xs">Records</h2>
-      <ProtoProfileBookRow v-for="r in records" :key="r.label" :book="r.read.book" :label="r.label" :figure="r.figure" />
-    </section>
+    <ProtoProfileRecords :stats="stats" />
 
     <section v-if="stats.authors.length" id="authors" class="flex flex-col gap-sm" data-testid="a.authors">
       <h2 class="eyebrow">Authors you return to</h2>
@@ -194,34 +130,6 @@ const records = computed(() =>
 </template>
 
 <style scoped>
-.cell {
-  --d: var(--spacing-xs);
-  justify-self: center;
-  align-self: center;
-  width: var(--d);
-  height: var(--d);
-  border-radius: var(--radius-pill);
-  background: var(--color-hairline-strong);
-}
-.cell.read {
-  background: var(--color-ink-muted);
-}
-.cell.s2 {
-  --d: var(--spacing-sm);
-}
-.cell.s3 {
-  --d: var(--spacing-ms);
-}
-.cell.s4 {
-  --d: var(--spacing-md);
-}
-.cell.today {
-  background: var(--color-accent);
-  box-shadow: 0 0 0 var(--stroke-focus) var(--color-accent-soft);
-}
-.cal {
-  grid-auto-rows: var(--spacing-md);
-}
 .ticks {
   display: flex;
   gap: var(--spacing-xs);
