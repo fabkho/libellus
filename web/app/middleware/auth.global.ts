@@ -1,4 +1,5 @@
 import { useSessionStore } from '~/stores/session'
+import { keepShare, peekShare } from '~/utils/pendingShare'
 
 /** The only screens a signed-out member may see. */
 const AUTH_ROUTES = ['/sign-in', '/sign-up', '/verify']
@@ -16,8 +17,18 @@ export default defineNuxtRouteMiddleware((to) => {
   const session = useSessionStore()
   const isAuthRoute = AUTH_ROUTES.includes(to.path)
 
+  // A share (issue #91, pages/share.vue) that came before the sign-in is kept on the device and
+  // opened once the member is in, wherever the sign-in sends her first.
+  const first = (value: unknown) => (Array.isArray(value) ? first(value[0]) : typeof value === 'string' ? value : null)
+
   if (session.status === 'signedIn') {
+    if (import.meta.client && to.path !== '/share' && peekShare(window.localStorage)) return navigateTo('/share', { replace: true })
     return isAuthRoute ? navigateTo('/') : undefined
+  }
+
+  if (to.path === '/share' && import.meta.client) {
+    const shared = { title: first(to.query.title), text: first(to.query.text), url: first(to.query.url) }
+    if (shared.title || shared.text || shared.url) keepShare(window.localStorage, shared)
   }
 
   if (!isAuthRoute) return navigateTo(session.pending ? '/verify' : '/sign-in')

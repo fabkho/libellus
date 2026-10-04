@@ -13,3 +13,10 @@ into `web/public/` (`cd web && node scripts/render-icons.mjs`).
 
 The ribbons are plain paths (no font at runtime). Chrome themes an installed app's icon from the
 maskable one (Chromium issue 40277264), so the ribbons' bold silhouette has to survive the mask.
+
+## Shortcut icons
+
+`shortcuts/{search,progress,library}.svg` are the icons of the manifest's app shortcuts (long-press the
+app icon, #91): the same leather-red room as `icon.svg`, each with its own mark inside the 66 dp safe
+zone, rendered at 96 px to `web/public/shortcut-<name>-96.png` by the same script. Search is a magnifier whose
+lens holds the lamp, Update progress the shorter ribbon with the lamp beside it, Library the two ribbons.

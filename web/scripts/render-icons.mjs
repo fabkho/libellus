@@ -10,12 +10,16 @@
 //   apple-touch-icon.png          180 × 180, opaque; iOS rounds the corners itself
 //   favicon.svg                   favicon.svg as is (rounded corners, the mark enlarged)
 //   favicon.ico                   favicon.svg at 32 and 16 px
+//   shortcut-<name>-96.png        96 px, from design/icons/app/shortcuts/<name>.svg: the manifest's app shortcuts (#91)
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { chromium } from '@playwright/test'
 
 const web = new URL('../', import.meta.url)
 const source = (name) => new URL(`../design/icons/app/${name}.svg`, web)
 const svg = Object.fromEntries(['icon', 'monochrome', 'favicon'].map((name) => [name, readFileSync(source(name), 'utf8')]))
+// The app shortcuts' icons share the app icon's room; each draws its own mark.
+const SHORTCUTS = ['search', 'progress', 'library']
+for (const name of SHORTCUTS) svg[`shortcut-${name}`] = readFileSync(source(`shortcuts/${name}`), 'utf8')
 
 const browser = await chromium.launch()
 const context = await browser.newContext({ deviceScaleFactor: 1 })
@@ -37,6 +41,7 @@ writeFileSync(out('icon-maskable-512.png'), await render('icon', 512))
 writeFileSync(out('icon-monochrome-512.png'), await render('monochrome', 512))
 writeFileSync(out('apple-touch-icon.png'), await render('icon', 180))
 copyFileSync(source('favicon'), out('favicon.svg'))
+for (const name of SHORTCUTS) writeFileSync(out(`shortcut-${name}-96.png`), await render(`shortcut-${name}`, 96))
 
 // favicon.ico: an ICO directory around PNG images (every current browser reads PNG inside ICO).
 const sizes = [32, 16]

@@ -113,6 +113,39 @@ export default defineNuxtConfig({
         // Alpha only: the launcher tints it when the member turns themed icons on.
         { src: `/icon-monochrome-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
       ],
+      // Sharing a link or text to Libellus from another app (issue #91): Goodreads, Amazon, a
+      // browser, a bookstore app. A GET, so no service-worker handling: the app opens at
+      // /share?title=&text=&url= (pages/share.vue), finds the Book and goes to its page.
+      share_target: {
+        action: '/share',
+        method: 'GET',
+        enctype: 'application/x-www-form-urlencoded',
+        params: { title: 'title', text: 'text', url: 'url' },
+      },
+      // Long-press the icon (issue #91). The addresses are read by the shell (composables/useLaunch.ts).
+      shortcuts: [
+        {
+          name: 'Search',
+          short_name: 'Search',
+          description: 'Find a book to add',
+          url: '/?search=1',
+          icons: [{ src: `/shortcut-search-96.png?v=${iconVersion}`, sizes: '96x96', type: 'image/png' }],
+        },
+        {
+          name: 'Update progress',
+          short_name: 'Progress',
+          description: 'Update the book you are reading',
+          url: '/?progress=1',
+          icons: [{ src: `/shortcut-progress-96.png?v=${iconVersion}`, sizes: '96x96', type: 'image/png' }],
+        },
+        {
+          name: 'Library',
+          short_name: 'Library',
+          description: 'Your books',
+          url: '/library',
+          icons: [{ src: `/shortcut-library-96.png?v=${iconVersion}`, sizes: '96x96', type: 'image/png' }],
+        },
+      ],
     },
     workbox: {
       navigateFallback: '/',
