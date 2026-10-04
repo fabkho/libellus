@@ -12,12 +12,14 @@
 // layout too, so going to one and back keeps the tab pages alive.
 //
 // The top scroll edge: the installed app draws under a transparent status bar
-// (viewport-fit=cover), so what scrolls up there fades and blurs into the room
-// colour instead of running under the clock — iOS's scroll edge effect, the
-// top mirror of the tab bar's fade. Like iOS's it shows only once something
-// has scrolled under it (a book's light at the top of its page stays clear),
-// and on a pushed screen it reaches under the pinned top bar too. It never
-// takes a tap.
+// (viewport-fit=cover), so what scrolls up there runs under the clock. A thin
+// veil of the room colour keeps the clock legible: solid behind the status bar,
+// fading out `ms` below it — no blur, and nothing under a pushed screen's top
+// bar (its round buttons stand on their own). Where there is no status bar to
+// clear (a browser tab, the installed Android app: the inset is 0) it is only
+// that short fade at the top edge. It shows only once something has scrolled
+// under it (a book's light at the top of its page stays clear) and never takes
+// a tap (#62: the blurred band reaching under the top bar read too heavy).
 //
 // The header and `main` are the page (`data-flight="page"`): what fades when a
 // cover flies into a book page and back (ShellBookFlight, docs/MOTION.md).
@@ -51,7 +53,7 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
 
     <div
       class="scroll-edge pointer-events-none fixed inset-x-0 top-0 z-20"
-      :class="[pushed && 'under-bar', scrolled ? 'opacity-100' : 'opacity-0']"
+      :class="scrolled ? 'opacity-100' : 'opacity-0'"
       aria-hidden="true"
       data-testid="shell.scrollEdge"
     />
@@ -68,20 +70,16 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
 </template>
 
 <style scoped>
-/* The bars' top room (`--bar-top`: the status bar, or `barTop` in a browser
-   tab) and `md` more (on a pushed screen the top bar's row too):
-   solid room colour behind the status bar's glyphs, fading out below, with the
-   page blurred under the fade. */
+/* Solid room colour behind the status bar's glyphs (the top inset), then a
+   short fade to nothing; the page shows through it unblurred. */
 .scroll-edge {
-  --edge-solid: var(--bar-top);
-  height: calc(var(--edge-solid) + var(--spacing-md));
-  background: linear-gradient(to bottom, var(--color-surface) calc(var(--edge-solid) * 0.8), transparent);
-  -webkit-backdrop-filter: blur(var(--blur-chrome));
-  backdrop-filter: blur(var(--blur-chrome));
-  mask-image: linear-gradient(to bottom, #000 var(--edge-solid), transparent);
+  height: calc(var(--safe-area-top) + var(--spacing-ms));
+  background: linear-gradient(
+    to bottom,
+    var(--color-surface) var(--safe-area-top),
+    color-mix(in srgb, var(--color-surface) 70%, transparent) calc(var(--safe-area-top) + var(--spacing-xs)),
+    transparent
+  );
   transition: opacity var(--duration-quick) var(--ease-standard);
-}
-.under-bar {
-  --edge-solid: calc(var(--bar-top) + var(--size-touch));
 }
 </style>

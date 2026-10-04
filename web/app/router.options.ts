@@ -1,7 +1,8 @@
 import type { RouterConfig } from '@nuxt/schema'
-import { START_LOCATION } from 'vue-router'
+import { createWebHistory, START_LOCATION } from 'vue-router'
 import { useNuxtApp, useRouter } from '#imports'
 import { tabPlaces } from '~/utils/tabPlaces'
+import { listenForBack } from '~/composables/useBackDismiss'
 
 // Where a page opens (Nuxt's own scroll behaviour, plus the tabs' places):
 // back and forward return to where the page was; a tab (Home, Library) opens
@@ -9,6 +10,12 @@ import { tabPlaces } from '~/utils/tabPlaces'
 // writes the place on the way out); any other page opens at the top. Like
 // Nuxt's, it waits until the new page has rendered before it scrolls.
 export default {
+  // Nuxt's own history, with the Back that closes a sheet listening before the
+  // router does (composables/useBackDismiss.ts).
+  history: (base) => {
+    listenForBack()
+    return createWebHistory(base)
+  },
   scrollBehavior(to, from, savedPosition) {
     // Same page (a query or hash change): stay put.
     if (to.path === from.path) return false

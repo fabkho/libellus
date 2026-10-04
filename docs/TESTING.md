@@ -117,6 +117,20 @@ pnpm tsx e2e/android/smoke.ts --base http://localhost:3063 --out /tmp/libellus-a
 For the three-button run, switch the navigation mode, restart Chrome and run `--name buttons-tab`
 (and `buttons-pwa --standalone`) with `--only home,search`.
 
+**The system Back** (#62) has its own script, run after `smoke.ts` with the same `--out` (it signs
+nobody up and reuses `member.json`): one book page to another, Edit read and the back gesture, Cancel,
+the Delete question over the sheet, the search, the avatar menu — each step printing where the page
+is and what is open. `--real` taps with a finger (adb), `--gesture` swipes in from the left edge
+(without it, the Back key, as with three-button navigation):
+
+```sh
+pnpm tsx e2e/android/back.ts --base http://localhost:3063 --out /tmp/libellus-android --real --gesture
+```
+
+A Back gesture starts with a touch the page sees (`pointerdown`, then `pointercancel` once the
+system takes it over), so nothing that Back closes may also close on that touch: the avatar menu
+closes on a tap elsewhere when the finger lifts, not as it lands.
+
 ## What Chrome reports (Chrome 145, Pixel 9 emulator, Android 17)
 
 CSS px. "Keyboard" is Gboard up in the search palette.

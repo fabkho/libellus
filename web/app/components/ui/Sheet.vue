@@ -2,9 +2,10 @@
 // A bottom sheet the iOS way: it rises over a scrim with a grabber and a title
 // row — a text Cancel at the top left (never a round ✕), the title in the
 // middle, the sheet's one action at the right in the lamp colour. Closed by
-// Cancel, a tap on the scrim, Escape, or swiping it down. Respects the home
-// indicator. `testid` names the sheet; Cancel and the action get
-// `<testid>.cancel` and `<testid>.action`.
+// Cancel, a tap on the scrim, Escape, swiping it down, or the system Back
+// (Android's back gesture: useBackDismiss.ts); any change of page closes it
+// too. Respects the home indicator. `testid` names the sheet; Cancel and the
+// action get `<testid>.cancel` and `<testid>.action`.
 //
 // While it is open the rest of the app is out of reach (`inert`), the page
 // does not scroll under it, and focus is inside it — on the panel, or on the
@@ -36,6 +37,7 @@ const body = useTemplateRef<HTMLElement>('body')
 const { afterLeave } = useModalLayer(open, {
   elements: () => [scrim.value, panel.value],
   initialFocus: () => panel.value?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.value,
+  close,
 })
 
 function onKeydown(event: KeyboardEvent) {
@@ -147,13 +149,19 @@ function onAfterLeave() {
         v-on="handlers"
         @focusin="onFocusin"
       >
-        <span class="mx-auto mt-sm h-(--spacing-xs) w-(--size-grabber) shrink-0 touch-none rounded-pill bg-ink-ghost" aria-hidden="true" />
-        <!-- Both sides are as wide as the wider of Cancel and the action (each
-             holds an invisible copy of the other), so the title stays centred
-             and a long one truncates instead of pushing Cancel aside. -->
+        <!-- iOS 26's geometry, measured: the grabber 36 × 5 pt, 5 pt below the
+             top edge; the title row 44 pt high, 16 pt below the top edge (so
+             the title sits 38 pt down), ending 60 pt down. Both sides are as
+             wide as the wider of Cancel and the action (each holds an invisible
+             copy of the other), so the title stays centred and a long one
+             truncates instead of pushing Cancel aside. -->
         <header
-          class="relative grid h-(--size-row) shrink-0 touch-none grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-sm px-ml"
+          class="relative box-content grid h-(--size-touch) shrink-0 touch-none grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-sm px-ml pt-md"
         >
+          <span
+            class="pointer-events-none absolute inset-x-0 top-(--spacing-grabber) mx-auto h-(--size-grabber-height) w-(--size-grabber) rounded-pill bg-ink-ghost"
+            aria-hidden="true"
+          />
           <div class="grid justify-items-start">
             <button
               type="button"
@@ -181,7 +189,9 @@ function onAfterLeave() {
           </div>
           <span class="rule pointer-events-none absolute inset-x-0 bottom-0 h-(--stroke-hairline) bg-hairline-strong" :class="scrolled && 'on'" aria-hidden="true" />
         </header>
-        <div ref="body" class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-ml pb-sm" @scroll.passive="onScroll">
+        <!-- `md` between the title row and the content, and `md` under it above
+             the home indicator / Android's navigation (Material's least). -->
+        <div ref="body" class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-ml pt-md pb-md" @scroll.passive="onScroll">
           <slot />
         </div>
       </section>
@@ -191,12 +201,14 @@ function onAfterLeave() {
 
 <style scoped>
 .sheet {
-  /* Never under the status bar; with the keyboard up, never above the screen's
-     top either: no taller than what the keyboard leaves in view (`--sheet-room`),
-     even where Safari has panned down to the focused field and the lift reads 0. */
+  /* At its tallest it stops `sm` under the status bar (or under `barTop` in a
+     browser tab), as iOS 26's large detent stops just under it; with the
+     keyboard up, never above the screen's top either: no taller than what the
+     keyboard leaves in view (`--sheet-room`), even where Safari has panned down
+     to the focused field and the lift reads 0. */
   max-height: min(
-    calc(100dvh - env(safe-area-inset-top) - var(--spacing-xl) - var(--sheet-lift, 0px)),
-    calc(var(--sheet-room, 100dvh) - env(safe-area-inset-top) - var(--spacing-xl))
+    calc(100dvh - var(--bar-top) - var(--spacing-sm) - var(--sheet-lift, 0px)),
+    calc(var(--sheet-room, 100dvh) - var(--bar-top) - var(--spacing-sm))
   );
   transition: transform var(--duration-sheet) var(--ease-sheet);
 }

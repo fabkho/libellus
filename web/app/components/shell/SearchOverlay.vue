@@ -9,7 +9,8 @@
 // then the slot shows a line saying search is coming.
 //
 // Closed by Cancel, a tap on the page behind, swiping the palette down, Escape,
-// or going to another page.
+// the system Back (Android's back gesture, useBackDismiss.ts), or going to
+// another page.
 //
 // Motion (docs/MOTION.md, Search morph): the tab bar's capsule turns into the
 // palette and back. The palette is laid out at its open size from the first
@@ -53,6 +54,9 @@ function close() {
   search.close()
   input.value?.blur()
 }
+// Back closes it instead of leaving the page. A change of page closes it by
+// its own rule (below), so it is not closed by every one.
+useBackDismiss(() => search.isOpen, close, { keepOnRouteChange: true })
 
 // ------------------------------------------------------------ the morph
 

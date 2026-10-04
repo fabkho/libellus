@@ -3,7 +3,8 @@
 // (issue #1, Screens and navigation): the account, the theme switch and
 // signing out live here, and later anything else account-related — the first
 // name for Home's greeting is one (the Name row opens its sheet). Closed by a
-// tap anywhere else, Escape, or moving to another page; flipping the theme
+// tap anywhere else, Escape, the system Back (useBackDismiss.ts), or moving to
+// another page; flipping the theme
 // keeps it open so the member sees the change.
 import { useSessionStore } from '~/stores/session'
 import { useThemeStore } from '~/stores/theme'
@@ -19,21 +20,38 @@ const isDark = computed(() => theme.theme === 'dark')
 const open = ref(false)
 const root = useTemplateRef<HTMLElement>('root')
 
+// A tap elsewhere closes it once the finger lifts, not as it lands: Android's
+// back gesture starts with a touch the system then takes over (the page gets
+// `pointercancel`, never `pointerup`), and that Back closes the menu itself —
+// closing on the touch as well would spend a second Back on leaving the page.
+let pressedOutside: number | null = null
+function pressOutside(event: PointerEvent) {
+  pressedOutside = root.value && !root.value.contains(event.target as Node) ? event.pointerId : null
+}
 function closeOnOutside(event: PointerEvent) {
-  if (root.value && !root.value.contains(event.target as Node)) open.value = false
+  if (event.pointerId === pressedOutside) open.value = false
+  pressedOutside = null
+}
+function forgetPress() {
+  pressedOutside = null
 }
 function closeOnEscape(event: KeyboardEvent) {
   if (event.key === 'Escape') open.value = false
 }
 onMounted(() => {
-  window.addEventListener('pointerdown', closeOnOutside)
+  window.addEventListener('pointerdown', pressOutside)
+  window.addEventListener('pointerup', closeOnOutside)
+  window.addEventListener('pointercancel', forgetPress)
   window.addEventListener('keydown', closeOnEscape)
 })
 onUnmounted(() => {
-  window.removeEventListener('pointerdown', closeOnOutside)
+  window.removeEventListener('pointerdown', pressOutside)
+  window.removeEventListener('pointerup', closeOnOutside)
+  window.removeEventListener('pointercancel', forgetPress)
   window.removeEventListener('keydown', closeOnEscape)
 })
 watch(() => route.path, () => (open.value = false))
+useBackDismiss(open, () => (open.value = false))
 
 // The menu closes as the name sheet rises.
 const naming = ref(false)

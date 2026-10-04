@@ -185,9 +185,11 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
   the account address, the Dark mode switch and Sign out.
 - **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
-  once something has scrolled under it a fixed band of the surface colour (the safe area and
-  `md` more; on a pushed screen down to the top bar's row too) fades and blurs it away — iOS's
-  scroll edge effect, the top mirror of the tab bar's fade. It never takes a tap.
+  once something has scrolled under it a thin veil of the surface colour keeps the clock legible:
+  solid behind the status bar (the top inset), fading to nothing `ms` below it. No blur, and it
+  does not reach under a pushed screen's top bar; where the inset is 0 (a browser tab, the
+  installed Android app) it is only that 12 px fade at the top edge. It never takes a tap. (#62:
+  the first version — a blurred band down past the top bar's row — read too heavy.)
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
   glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
   screen at the bottom.
@@ -213,7 +215,7 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiTextArea` | A few lines of the member's own words (a review): a filled box with label and hint, the text in the serif italic, an accent ring while focused, growing with the text. |
 | `UiBookLine` | The book a sheet is about: small cover, serif title, author. First thing in a book's sheet. |
 | `UiRowGroup` + `UiRow` | Grouped rows (forms in sheets, settings-like lists): label, value or placeholder, optional icon, chevron, mono value; `as="button"` or `to` when tappable. |
-| `UiSheet` | Every bottom sheet (Add, Finish, Abandon, Manual book, Collection picker). Grabber, a **text Cancel at the top left**, the title centred (a long one truncates, centred), the action at the right in the accent; a hairline under that row once the content scrolls. Scrim, swipe down, Escape; respects the home indicator and rides on the iOS keyboard. While open the rest of the app is `inert` and does not scroll; focus goes in (to a field marked `data-autofocus`, if any) and back to the opener on close (`useModalLayer`). `testid` names it, Cancel and the action are `<testid>.cancel` / `.action`, the title `<testid>.sheetTitle`. |
+| `UiSheet` | Every bottom sheet (Add, Finish, Abandon, Manual book, Collection picker). Grabber, a **text Cancel at the top left**, the title centred (a long one truncates, centred), the action at the right in the accent; a hairline under that row once the content scrolls. Geometry from a measured iOS 26 sheet (#62): grabber 36 × 5 (`size.grabber`, `size.grabberHeight`) 5 below the top edge (`space.grabber`), the title row 44 high starting `md` below the top edge (the title 38 down, the row's end 60 down), `md` to the content and `md` under it above the bottom inset (Material's least over Android's navigation), `ml` side margins like the screens (iOS 16/20 by width, Material 16–24); at its tallest it stops `sm` under the status bar (`--bar-top`). Not taken from iOS 26: the 38 pt corner radius (`sheet` stays 30, near Material's 28) and the floating, 8 pt inset partial-height sheet (Material sheets are attached). Scrim, swipe down, Escape, the system Back; respects the home indicator and rides on the iOS keyboard. While open the rest of the app is `inert` and does not scroll; focus goes in (to a field marked `data-autofocus`, if any) and back to the opener on close (`useModalLayer`). `testid` names it, Cancel and the action are `<testid>.cancel` / `.action`, the title `<testid>.sheetTitle`. |
 | `UiListMotion` | A list whose items come and go in place (Home's cards, the Library's lists): a leaving item fades while its room closes, a new one opens its room and fades in. Pair with `useSettled` so the change waits for the sheet that made it. |
 | `UiField` | A text field: small label, input-size text, one rule that lights in the accent while focused and turns error-coloured with its error line under it. |
 | `UiEmptyState` | A screen with nothing in it yet: the lamp over an empty shelf, a serif title, a sentence, and (slot) the one way forward. |
