@@ -113,10 +113,29 @@ export const useSyncStore = defineStore('sync', () => {
     },
   }
 
-  /** Sends what waits (data/outbox.ts, flush), then shows what the database has. */
-  async function flush(): Promise<void> {
+  let running: Promise<void> | null = null
+
+  /** Sends what waits (data/outbox.ts, flush), then shows what the database has. A flush on its way is joined, not doubled. */
+  function flush(): Promise<void> {
+    if (!outbox || !ready.value || !isOnline()) return Promise.resolve()
+    running ??= run().finally(() => (running = null))
+    return running
+  }
+
+  /**
+   * Sends everything that waits now, pauses or not, and resolves once it is done
+   * (Sign out's "Sync first"). True when nothing waits any more.
+   */
+  async function syncNow(): Promise<boolean> {
+    await flush()
+    outbox?.wake()
+    await flush()
+    return items.value.length === 0
+  }
+
+  async function run(): Promise<void> {
     const box = outbox
-    if (!box || !ready.value || !isOnline() || syncing.value) return
+    if (!box) return
     syncing.value = true
     clearTimeout(retryTimer)
     try {
@@ -189,5 +208,5 @@ export const useSyncStore = defineStore('sync', () => {
     })
   }
 
-  return { items, failures, pending, syncing, ready, sheetOpen, queue, holds, flush, dismiss, close }
+  return { items, failures, pending, syncing, ready, sheetOpen, queue, holds, flush, syncNow, dismiss, close }
 })

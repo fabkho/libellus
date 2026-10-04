@@ -168,6 +168,14 @@
       "books": "{count} book | {count} books",
       "favourite": "Favourite"
     },
+    "signOutUnsynced": {
+      "title": "{count} change has not synced yet | {count} changes have not synced yet",
+      "text": "If you sign out now, it is lost. | If you sign out now, they are lost.",
+      "syncFirst": "Sync first",
+      "syncing": "Syncing…",
+      "signOut": "Sign out anyway",
+      "failed": "Not everything could be synced. Try again, or sign out anyway."
+    },
     "account": {
       "title": "Account",
       "theme": "Dark mode",

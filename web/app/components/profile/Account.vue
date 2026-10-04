@@ -2,8 +2,11 @@
 // The account, at the end of the Profile (issue #78; what the avatar menu held
 // before): the address over grouped rows — Name (its sheet), the Dark mode
 // switch (docs/DESIGN.md, Themes: the first tap stores the opposite of what
-// shows), Import books, Sign out.
+// shows), Import books, Sign out. Signing out deletes the writes still waiting
+// to sync (a shared phone, #93), so with any waiting it asks first: "Sync first"
+// (online: send them, then sign out), "Sign out anyway", Cancel.
 import { useSessionStore } from '~/stores/session'
+import { useSyncStore } from '~/stores/sync'
 import { useThemeStore } from '~/stores/theme'
 
 const { t } = useI18n()
@@ -11,10 +14,45 @@ const session = useSessionStore()
 const theme = useThemeStore()
 const isDark = computed(() => theme.theme === 'dark')
 const naming = ref(false)
+const sync = useSyncStore()
+const online = useOnline()
+
+/** The question before signing out with changes waiting to sync; their number when it was asked. */
+const unsynced = ref(0)
+const asking = computed({
+  get: () => unsynced.value > 0,
+  set: (value) => {
+    if (!value) unsynced.value = 0
+  },
+})
+const syncing = ref(false)
+const syncFailed = ref(false)
+
+function askSignOut() {
+  syncFailed.value = false
+  if (sync.pending) unsynced.value = sync.pending
+  else void signOut()
+}
 
 async function signOut() {
+  unsynced.value = 0
   await session.signOut()
   await navigateTo('/sign-in')
+}
+
+/** "Sync first": the waiting changes go now; once none is left, she is signed out. */
+async function syncFirst() {
+  syncing.value = true
+  syncFailed.value = false
+  try {
+    if (await sync.syncNow()) await signOut()
+    else {
+      syncFailed.value = true
+      unsynced.value = sync.pending
+    }
+  } finally {
+    syncing.value = false
+  }
 }
 </script>
 
@@ -42,9 +80,21 @@ async function signOut() {
         </span>
       </UiRow>
       <UiRow to="/import" icon="import" :label="t('import.menuItem')" chevron data-testid="profile.import" />
-      <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="signOut" />
+      <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
     </UiRowGroup>
     <ShellNameSheet v-model:open="naming" />
+    <UiConfirm
+      v-model:open="asking"
+      :title="t('profile.signOutUnsynced.title', { count: unsynced }, unsynced)"
+      :text="t('profile.signOutUnsynced.text', unsynced)"
+      :alternative="online ? (syncing ? t('profile.signOutUnsynced.syncing') : t('profile.signOutUnsynced.syncFirst')) : undefined"
+      :action="t('profile.signOutUnsynced.signOut')"
+      :busy="syncing"
+      :error="syncFailed ? t('profile.signOutUnsynced.failed') : null"
+      testid="signOutUnsynced"
+      @alternative="syncFirst"
+      @confirm="signOut"
+    />
   </section>
 </template>
 
