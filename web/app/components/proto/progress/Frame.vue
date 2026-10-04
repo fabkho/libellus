@@ -52,7 +52,7 @@ function go(query: Record<string, string | undefined>) {
         <UiIcon name="stack" :size="15" />
       </NuxtLink>
       <NuxtLink
-        v-for="key in ['a', 'b', 'c']"
+        v-for="key in ['a', 'b', 'c', 'd']"
         :key="key"
         :to="{ path: `/prototype/progress/${key}`, query: { screen, theme } }"
         class="figures flex size-(--size-button-sm) items-center justify-center rounded-pill text-meta uppercase"

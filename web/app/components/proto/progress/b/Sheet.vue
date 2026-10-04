@@ -22,7 +22,7 @@ import {
   type ProtoRead,
 } from '../model'
 
-const props = defineProps<{ read: ProtoRead | null; start?: 'total' | 'end' | null }>()
+const props = defineProps<{ read: ProtoRead | null; start?: 'total' | 'end' | null; chart?: boolean }>()
 const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{ saved: [read: ProtoRead, from: number]; finish: [read: ProtoRead] }>()
 
@@ -45,6 +45,11 @@ const last = computed(() => (kept.value ? lastSessionOf(kept.value) : null))
 const lastAmount = computed(() => (last.value ? last.value.to - last.value.from : 0))
 const atEnd = computed(() => editing.value === 'progress' && value.value >= max.value)
 const delta = computed(() => value.value - from.value)
+/** What the wheel adds today, in the read's own unit, for the chart's last bar (Direction D). */
+const pending = computed(() => {
+  if (!kept.value || editing.value !== 'progress' || delta.value <= 0) return 0
+  return inPercent.value && pages.value ? Math.round((delta.value / 100) * maxOf(kept.value)) : delta.value
+})
 
 watch(open, (isOpen) => {
   if (!isOpen || !kept.value) return
@@ -118,6 +123,9 @@ function editionTotal() {
         :thumbhash="kept.book.coverThumbhash"
         :colors="kept.book.coverColors"
       />
+
+      <!-- Direction D: the last two weeks over the wheel; today's bar grows as it turns. -->
+      <ProtoProgressCSpark v-if="chart && editing === 'progress'" class="mb-xs" :read="kept" :days="14" size="lg" :pending="pending" data-testid="d.sheetChart" />
 
       <!-- Last time, or what the wheel is for while it sets the page count. -->
       <div class="flex min-h-(--size-touch) items-center justify-between gap-ms">

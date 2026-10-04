@@ -39,7 +39,7 @@ export type ProtoRead = {
   rating: number | null
 }
 
-export type Direction = 'a' | 'b' | 'c'
+export type Direction = 'a' | 'b' | 'c' | 'd'
 
 // --------------------------------------------------------------------- days
 
@@ -179,7 +179,7 @@ function fresh(): ProtoRead[] {
   ]
 }
 
-const worlds = reactive<Record<Direction, ProtoRead[]>>({ a: fresh(), b: fresh(), c: fresh() })
+const worlds = reactive<Record<Direction, ProtoRead[]>>({ a: fresh(), b: fresh(), c: fresh(), d: fresh() })
 
 export function useProtoReads(direction: Direction) {
   return {

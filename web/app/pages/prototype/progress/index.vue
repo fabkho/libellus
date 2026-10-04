@@ -56,6 +56,22 @@ const DIRECTIONS = [
       'More on every card; quieter readers may not want the streak',
     ],
   },
+  {
+    key: 'd',
+    name: 'Counter + chart',
+    pitch: 'B’s flow with C’s glance: nothing edits until you tap Update; the wheel sheet shows your last two weeks, and today’s bar grows as it turns.',
+    good: [
+      'No accidental edits: every change starts with a tap on Update',
+      'The wheel, − / + and smart steps from B, “of 608” sets your page count',
+      'C’s sparkline, pace and days to go on the card; figures, three weeks and the log on the book page',
+      'The end comes with a summary of the read',
+    ],
+    trade: [
+      'Every update is a sheet (by design)',
+      'The chart needs a progress log per day (a new table and RPC)',
+      'Denser card than today’s',
+    ],
+  },
 ] as const
 
 const buzz = ref('')
@@ -68,12 +84,12 @@ onMounted(() => (buzz.value = { vibrate: 'This browser vibrates: haptics on.', '
       <p class="eyebrow">Design round · #65</p>
       <h1 class="text-large-title">Update progress</h1>
       <p class="text-subhead text-ink-muted">
-        Three directions, all on Home’s card and the book page, with a page count, without one, and an ebook with its own total.
+        Four directions, all on Home’s card and the book page, with a page count, without one, and an ebook with its own total.
         Stub data; nothing is saved. {{ buzz }}
       </p>
     </header>
 
-    <div class="grid gap-lg lg:grid-cols-3">
+    <div class="grid gap-lg lg:grid-cols-4">
       <section v-for="d in DIRECTIONS" :key="d.key" class="flex flex-col gap-md rounded-lg bg-surface-raised p-inset shadow-raised edge-faint" :data-testid="`proto.compare.${d.key}`">
         <div class="flex items-baseline gap-sm">
           <span class="figures text-title text-accent uppercase">{{ d.key }}</span>
@@ -111,9 +127,8 @@ onMounted(() => (buzz.value = { vibrate: 'This browser vibrates: haptics on.', '
     <section class="mt-lg flex flex-col gap-sm rounded-lg bg-fill p-inset edge-faint">
       <h2 class="eyebrow">Recommendation</h2>
       <p class="text-subhead">
-        <strong class="font-medium">A, Scrub</strong>, for Home and the book page, with two things borrowed: the pages-left · about-how-long line
-        (pace from the start day and the page: no new data) and, once progress keeps the value before the last one, B’s one-tap “+N like last
-        time”. C’s day-by-day log is the richest glance but needs a progress history in the database; keep it for later.
+        <strong class="font-medium">D, Counter + chart</strong>: the owner’s pick after the first round (A is out: progress should only change
+        behind a button). Build B’s sheet first; the chart, pace and log come with a per-day progress log in the database.
       </p>
     </section>
   </div>
