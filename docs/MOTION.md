@@ -49,7 +49,19 @@ Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`)
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
   with Reduce Motion).
-- **Profile** (#78). The avatar pushes it like a page (no flight: no cover to fly). The year pills
+- **Push to the Profile** (#78). Tapping the avatar in a tab's header grows it into the Profile's
+  ring over `standard`, as a cover flies into a book's hero: the Profile fades in as the tab fades
+  out (one's opacity the other's complement) and rises `md` into place; the tab bar does not move,
+  the Profile's pinned top bar only fades in. Back (the round button or the system's) plays it the
+  other way over `exit` on the `standard` curve: the ring shrinks into the avatar, the Profile fades
+  out and sinks `md`, the tab fades in at its place. Into a tab whose avatar is scrolled out of
+  view, the ring leaves with the Profile instead of flying off the screen. A Back the browser
+  animates itself (iOS Safari's edge swipe) gets nothing on top; Reduce Motion, or a browser
+  without the View Transitions API, just changes the page. Unlike the cover's flight (a FLIP of
+  its own, interruptible), this one is the browser's View Transitions API
+  (`plugins/profile-transition.client.ts`, the names in `main.css`): one ring between two fixed
+  places needs nothing more, and a second Back mid-way simply completes it.
+- **Profile** (#78). The year pills
   change the figures in place; the columns grow or shrink to their new height over `standard`
   (at once with Reduce Motion). Flipping the theme in the account rows crossfades nothing — the
   colours change at once, the switch's knob slides over `quick`.
