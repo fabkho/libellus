@@ -166,7 +166,7 @@ function readOf(record: CorrectedBook, report: ImportReport): ImportSession | nu
     // with only a start, so it ends the day it started.
     endedOn = day(session?.dnfAt) ?? day(session?.finishedAt) ?? startedOn
     if (!session?.dnfAt && endedOn) {
-      report.unmapped.push({ id: record.id, title: record.title, reason: `not finished without a DNF date; ended on ${endedOn}, its latest known day` })
+      report.unmapped.push({ id: record.id, title: record.title, reason: `DNF without a DNF date; ended on ${endedOn}, its latest known day` })
     }
   }
   if (outcome === null) {
