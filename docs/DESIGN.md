@@ -185,9 +185,11 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Avatar menu** (`ShellAvatarMenu`): no profile screen. A small raised menu under the avatar with
   the account address, the Dark mode switch and Sign out.
 - **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
-  once something has scrolled under it a fixed band of the surface colour (the safe area and
-  `md` more; on a pushed screen down to the top bar's row too) fades and blurs it away — iOS's
-  scroll edge effect, the top mirror of the tab bar's fade. It never takes a tap.
+  once something has scrolled under it a thin veil of the surface colour keeps the clock legible:
+  solid behind the status bar (the top inset), fading to nothing `ms` below it. No blur, and it
+  does not reach under a pushed screen's top bar; where the inset is 0 (a browser tab, the
+  installed Android app) it is only that 12 px fade at the top edge. It never takes a tap. (#62:
+  the first version — a blurred band down past the top bar's row — read too heavy.)
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
   glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
   screen at the bottom.

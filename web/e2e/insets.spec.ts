@@ -57,3 +57,27 @@ test('the header and the tab bar keep clear of the browser and of Android naviga
   await insets(page, 59, 0)
   expect(await paddingTop(page, 'shell.header')).toBe(59)
 })
+
+test('the top scroll edge is a short unblurred fade under the status bar, and only once the page has scrolled', async ({ page }) => {
+  await signedIn(page)
+  const ms = await token(page, '--spacing-ms')
+  const edge = page.getByTestId('shell.scrollEdge')
+  const height = () => edge.evaluate((element) => Math.round(element.getBoundingClientRect().height))
+
+  // At the top of the page it is not there.
+  await expect(edge).toHaveCSS('opacity', '0')
+  await expect(edge).toHaveCSS('backdrop-filter', 'none')
+  // A browser tab (no status bar): only the short fade at the top edge.
+  await insets(page, 0, 0)
+  expect(await height()).toBe(ms)
+  // Under the installed iOS app's status bar: solid behind it, then the same fade.
+  await insets(page, 59, 0)
+  expect(await height()).toBe(59 + ms)
+
+  // Scrolled: it shows.
+  await page.evaluate(() => {
+    document.body.style.minHeight = '300vh'
+    window.scrollTo(0, 200)
+  })
+  await expect(edge).toHaveCSS('opacity', '1')
+})
