@@ -2,7 +2,8 @@
 // The account, at the end of the Profile (issue #78; what the avatar menu held
 // before): the address over grouped rows — Name (its sheet), the Dark mode
 // switch (docs/DESIGN.md, Themes: the first tap stores the opposite of what
-// shows), Import books, Sign out. Signing out deletes the writes still waiting
+// shows), Import books, Install app (Android's Chrome only, once it has offered the
+// install: composables/useInstallHint.ts), Sign out. Signing out deletes the writes still waiting
 // to sync (a shared phone, #93), so with any waiting it asks first: "Sync first"
 // (online: send them, then sign out), "Sign out anyway", Cancel.
 import { useSessionStore } from '~/stores/session'
@@ -33,6 +34,7 @@ function askSignOut() {
   if (sync.pending) unsynced.value = sync.pending
   else void signOut()
 }
+const installApp = useInstallHint()
 
 async function signOut() {
   unsynced.value = 0
@@ -80,6 +82,14 @@ async function syncFirst() {
         </span>
       </UiRow>
       <UiRow to="/import" icon="import" :label="t('import.menuItem')" chevron data-testid="profile.import" />
+      <UiRow
+        v-if="installApp.canInstall.value"
+        as="button"
+        icon="plus"
+        :label="t('profile.account.install')"
+        data-testid="profile.install"
+        @click="installApp.install()"
+      />
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
     </UiRowGroup>
     <ShellNameSheet v-model:open="naming" />

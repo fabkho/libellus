@@ -8,7 +8,7 @@ import { test } from './fixtures'
  * The install hint (#94): iOS has no install prompt, so Home in Safari on an
  * iPhone or iPad says "Share → Add to Home Screen" until Libellus is installed;
  * dismissed, it stays away for a week. Android's Chrome has its own prompt; the
- * avatar menu offers a quiet "Install app" row only once Chrome has fired
+ * Profile's account rows offer a quiet "Install app" row only once Chrome has fired
  * `beforeinstallprompt`. The browsers are stood in by their user agents (the
  * rules themselves are tests/install-hint.test.ts); the real Safari is checked
  * in the iOS Simulator (docs/TESTING.md). With docs/parity.md this is the
@@ -79,11 +79,11 @@ test.describe('Safari on an iPhone', () => {
     await expect(page.getByTestId('home.installHint')).toBeHidden()
   })
 
-  test('shows no install row in the avatar menu (iOS never fires beforeinstallprompt)', async ({ page }) => {
+  test('shows no install row on the Profile (iOS never fires beforeinstallprompt)', async ({ page }) => {
     await signedIn(page, { installHint: true })
     await page.getByTestId('shell.avatar').click()
-    await expect(page.getByTestId('shell.signOut')).toBeVisible()
-    await expect(page.getByTestId('shell.install')).toHaveCount(0)
+    await expect(page.getByTestId('profile.signOut')).toBeVisible()
+    await expect(page.getByTestId('profile.install')).toHaveCount(0)
   })
 })
 
@@ -142,22 +142,20 @@ test.describe('Chrome on Android', () => {
     await expect(page.getByTestId('home.installHint')).toBeHidden()
 
     await page.getByTestId('shell.avatar').click()
-    await expect(page.getByTestId('shell.install')).toHaveText(en.shell.install)
+    await expect(page.getByTestId('profile.install')).toContainText(en.profile.account.install)
 
-    await page.getByTestId('shell.install').click()
-    await expect(page.getByTestId('shell.menu')).toBeHidden()
-    expect(await page.evaluate(() => (window as unknown as { __installPrompts: number }).__installPrompts)).toBe(1)
+    await page.getByTestId('profile.install').click()
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __installPrompts: number }).__installPrompts)).toBe(1)
 
     // Chrome asks once per event: the row is gone until it offers again.
-    await page.getByTestId('shell.avatar').click()
-    await expect(page.getByTestId('shell.signOut')).toBeVisible()
-    await expect(page.getByTestId('shell.install')).toHaveCount(0)
+    await expect(page.getByTestId('profile.signOut')).toBeVisible()
+    await expect(page.getByTestId('profile.install')).toHaveCount(0)
   })
 
   test('shows no install row when Chrome never offers one', async ({ page }) => {
     await signedIn(page, { installHint: true })
     await page.getByTestId('shell.avatar').click()
-    await expect(page.getByTestId('shell.signOut')).toBeVisible()
-    await expect(page.getByTestId('shell.install')).toHaveCount(0)
+    await expect(page.getByTestId('profile.signOut')).toBeVisible()
+    await expect(page.getByTestId('profile.install')).toHaveCount(0)
   })
 })

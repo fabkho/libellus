@@ -179,6 +179,7 @@
     "account": {
       "title": "Account",
       "theme": "Dark mode",
+      "install": "Install app",
       "signOut": "Sign out"
     },
     "empty": {
