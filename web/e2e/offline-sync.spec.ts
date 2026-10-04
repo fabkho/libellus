@@ -152,3 +152,82 @@ test('a change the database refuses on sync is undone and stays as a failure to 
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Lantern Year'))
   await expect(page.getByTestId('shell.sync')).toBeHidden()
 })
+
+/** Saves `page` as the progress of the Book on Home's card. */
+async function saveProgress(page: import('@playwright/test').Page, value: number) {
+  await page.getByTestId('home.update').click()
+  await page.getByTestId('progress.wheel').click()
+  await page.getByTestId('progress.wheelInput').fill(String(value))
+  await page.getByTestId('progress.wheelInput').press('Enter')
+  await page.getByTestId('progress.action').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+}
+
+const outboxDatabases = (page: import('@playwright/test').Page) =>
+  page.evaluate(async () => (await indexedDB.databases()).map((db) => db.name).filter((name) => name === 'libellus'))
+
+test('signing out with changes waiting asks first; offline only "Sign out anyway" is offered, and it drops them', async ({ page, baseURL }) => {
+  await recordedApple(page)
+  const network = await keepShell(page, baseURL!)
+  const member = await signedIn(page)
+  await createLibrary(member.client).addToLibrary(book('Salt Letters'), { status: 'reading', startedOn: isoDay() })
+  // The Profile loaded once online, so it opens offline.
+  await goto(page, '/profile')
+  await expect(page.getByTestId('profile.signOut')).toBeVisible()
+  await goto(page, '/')
+  await expect(page.getByTestId('home.entryTitle')).toHaveText(runTitle('Salt Letters'))
+
+  await network.goOffline()
+  await saveProgress(page, 40)
+  await expect(page.getByTestId('shell.syncLabel')).toHaveText(waiting(1))
+
+  await page.getByTestId('shell.avatar').click()
+  await page.getByTestId('profile.signOut').click()
+  await expect(page.getByTestId('signOutUnsynced.title')).toHaveText(en.profile.signOutUnsynced.title.split(' | ')[0]!.replace('{count}', '1'))
+  await expect(page.getByTestId('signOutUnsynced.text')).toHaveText(en.profile.signOutUnsynced.text.split(' | ')[0]!)
+  // Offline there is nothing to sync with.
+  await expect(page.getByTestId('signOutUnsynced.alternative')).toBeHidden()
+  await expect(page.getByTestId('signOutUnsynced.confirm')).toHaveText(en.profile.signOutUnsynced.signOut)
+  // Cancel keeps her signed in, with the change still waiting.
+  await page.getByTestId('signOutUnsynced.cancel').click()
+  await expect(page.getByTestId('signOutUnsynced')).toBeHidden()
+  await expect(page.getByTestId('profile.signOut')).toBeVisible()
+  expect(await outboxDatabases(page)).toEqual(['libellus'])
+
+  // Sign out anyway: the change is gone with the device's copy, never sent.
+  await page.getByTestId('profile.signOut').click()
+  await page.getByTestId('signOutUnsynced.confirm').click()
+  await expect(page).toHaveURL(/\/sign-in$/)
+  await expect.poll(() => outboxDatabases(page)).toEqual([])
+  await network.goOnline()
+  expect((await readOf(member.email, 'Salt Letters'))[0]!.progress_page).toBeNull()
+})
+
+test('"Sync first" sends the waiting changes, then signs out; if they cannot go, it says so', async ({ page }) => {
+  await recordedApple(page)
+  const member = await signedIn(page)
+  await createLibrary(member.client).addToLibrary(book('Glass Orchard'), { status: 'reading', startedOn: isoDay() })
+  await page.reload()
+  await expect(page.getByTestId('home.entryTitle')).toHaveText(runTitle('Glass Orchard'))
+
+  // The connection is there but the sync call does not get through: the change keeps waiting.
+  await page.route('**/rest/v1/rpc/sync_write', (route) => route.abort('failed'))
+  await page.context().setOffline(true)
+  await saveProgress(page, 72)
+  await page.context().setOffline(false)
+  await expect(page.getByTestId('shell.syncLabel')).toHaveText(waiting(1))
+
+  await page.getByTestId('shell.avatar').click()
+  await page.getByTestId('profile.signOut').click()
+  await expect(page.getByTestId('signOutUnsynced.alternative')).toHaveText(en.profile.signOutUnsynced.syncFirst)
+  await page.getByTestId('signOutUnsynced.alternative').click()
+  await expect(page.getByTestId('signOutUnsynced.error')).toHaveText(en.profile.signOutUnsynced.failed)
+  await expect(page.getByTestId('signOutUnsynced')).toBeVisible()
+  expect((await readOf(member.email, 'Glass Orchard'))[0]!.progress_page).toBeNull()
+
+  // It gets through now: synced, then signed out.
+  await page.unroute('**/rest/v1/rpc/sync_write')
+  await page.getByTestId('signOutUnsynced.alternative').click()
+  await expect(page).toHaveURL(/\/sign-in$/)
+  expect((await readOf(member.email, 'Glass Orchard'))[0]!.progress_page).toBe(72)
+})
