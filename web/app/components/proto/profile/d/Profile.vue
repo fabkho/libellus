@@ -1,15 +1,15 @@
 <script setup lang="ts">
 // Direction D, A + B (the owner's pick of round one): B's place and hero —
 // the avatar pushes a Profile page lit by a cover, the initials ring, the name,
-// the whole reading in one mono line — over A's figures. Then every stat of
+// the Library in one mono line (read · reading · want to read) — over A's figures. Then every stat of
 // both, as figures and covers, never as sentences: A's year pills and four
-// figures, the months (a month opens its books; the year opens its full-screen
-// review), the reading days, the ratings with B's five-star shelf, A's
-// records, the authors (B's covers, A's tallies), B's year cards, A's three
-// small figures, and the account at the end.
-import { FIRST_DAY, MEMBER, THIS_YEAR, TODAY, YEARS, monthLetter, monthYear, n, plural, statsOf, type Year } from '../model'
+// figures (All first), the months (a month opens its books; the year opens its
+// full-screen review), the reading days, the ratings (a row opens the books
+// rated so), A's records, the authors (B's covers, A's tallies), B's year
+// cards, and the account at the end.
+import { FIRST_DAY, MEMBER, THIS_YEAR, TODAY, YEARS, currentReads, monthLetter, monthYear, n, plural, statsOf, wantToRead, type Year } from '../model'
 
-const props = defineProps<{ year: Year; openMonth?: number | null }>()
+const props = defineProps<{ year: Year; openMonth?: number | null; openStar?: number | null }>()
 const emit = defineEmits<{ back: []; year: [year: Year]; review: [year: number] }>()
 
 const stats = computed(() => statsOf(props.year))
@@ -26,15 +26,12 @@ const light = computed(() => (isAll.value ? statsOf(THIS_YEAR) : stats.value).fa
 
 // Local state, not the route (a sheet that writes the route fights its own Back).
 const month = ref<number | null>(props.openMonth ?? null)
+const star = ref<number | null>(props.openStar ?? null)
 function pick(i: number) {
   if (isAll.value) emit('review', columns.value[i]!.year as number)
   else month.value = i
 }
 
-const span = (() => {
-  const months = (THIS_YEAR - Number(FIRST_DAY.slice(0, 4))) * 12 + Number(TODAY.slice(5, 7)) - Number(FIRST_DAY.slice(5, 7))
-  return `${Math.floor(months / 12)} years, ${months % 12} months`
-})()
 </script>
 
 <template>
@@ -48,16 +45,16 @@ const span = (() => {
       <h1 class="mt-md text-title" data-testid="d.name">{{ MEMBER.name }}</h1>
       <p class="mt-xs text-body text-ink-muted">Reading here since {{ monthYear(FIRST_DAY) }}</p>
       <p class="eyebrow mt-sm flex items-center gap-sm">
-        {{ plural(all.books, 'book') }}<span class="dot" aria-hidden="true" />{{ n(all.pages) }} pages<span class="dot" aria-hidden="true" />{{ span }}
+        {{ n(all.books) }} read<span class="dot" aria-hidden="true" />{{ currentReads.length }} reading<span class="dot" aria-hidden="true" />{{ wantToRead.length }} want to read
       </p>
     </section>
 
     <main class="relative flex flex-col gap-xl px-screen pt-xl">
       <!-- A's year pills and figures. -->
       <div class="flex flex-col gap-md">
-        <div role="group" aria-label="Year" class="-mx-screen flex gap-sm overflow-x-auto px-screen">
+        <div role="group" aria-label="Year" class="no-bar -mx-screen flex gap-sm overflow-x-auto px-screen">
           <button
-            v-for="y in [...YEARS, 'all' as const]"
+            v-for="y in ['all' as const, ...YEARS]"
             :key="y"
             type="button"
             :aria-pressed="year === y"
@@ -90,10 +87,8 @@ const span = (() => {
           <h2 class="eyebrow">Ratings</h2>
           <span class="figures text-meta text-ink-faint">{{ stats.rated }} rated<template v-if="stats.unrated"> · {{ stats.unrated }} not yet</template></span>
         </div>
-        <ProtoProfileStarBars :stats="stats" />
+        <ProtoProfileStarBars :stats="stats" pickable @pick="star = $event" />
       </section>
-
-      <ProtoProfileShelf title="Five stars" :reads="stats.fives" testid="d.fives" />
 
       <ProtoProfileRecords :stats="stats" />
 
@@ -102,7 +97,7 @@ const span = (() => {
       <!-- B's year cards, each opening its review. -->
       <section id="years" class="flex flex-col gap-md" data-testid="d.years">
         <h2 class="eyebrow">Years in review</h2>
-        <div class="-mx-screen flex gap-ms overflow-x-auto px-screen pb-md">
+        <div class="no-bar -mx-screen flex gap-ms overflow-x-auto px-screen pb-md">
           <button
             v-for="y in years"
             :key="y.year"
@@ -136,16 +131,22 @@ const span = (() => {
         </div>
       </section>
 
-      <ProtoProfileAlso :stats="stats" />
-
       <ProtoProfileAccount />
     </main>
 
+    <ProtoProfileRatingSheet :year="year" :star="star" @close="star = null" />
     <ProtoProfileMonthSheet :year="year === 'all' ? THIS_YEAR : year" :month="month" @close="month = null" />
   </div>
 </template>
 
 <style scoped>
+/* Sideways rows scroll by touch or trackpad; no scroll bar under them. */
+.no-bar {
+  scrollbar-width: none;
+}
+.no-bar::-webkit-scrollbar {
+  display: none;
+}
 .ring {
   width: var(--size-cover-md);
   height: var(--size-cover-md);

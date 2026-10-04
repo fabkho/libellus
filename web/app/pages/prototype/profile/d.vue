@@ -4,8 +4,8 @@
 // and B as figures and covers (B's sentences are gone), and B's full-screen
 // year in review, reached from the months ("2026 in review"), a year's column
 // under All, or the year cards. Query: `screen=profile|year|home`,
-// `year=2026|…|all` (the profile's year; the review's year on `screen=year`),
-// `month=0–11` (a month's books, on load), `at=<section>`, `theme`, `bare`.
+// `year=all|2026|…` (the profile's year, All by default; the review's year on
+// `screen=year`), `month=0–11` / `star=1–5` (a month's or a rating's books, on load), `at=<section>`, `theme`, `bare`.
 import { THIS_YEAR, type Year } from '~/components/proto/profile/model'
 
 definePageMeta({ layout: false })
@@ -14,7 +14,7 @@ useHead({ title: 'Profile · D A + B' })
 const route = useRoute()
 const router = useRouter()
 const screen = computed(() => (route.query.screen === 'home' ? 'home' : route.query.screen === 'year' ? 'year' : 'profile'))
-const year = computed<Year>(() => (route.query.year === 'all' ? 'all' : Number(route.query.year ?? THIS_YEAR)))
+const year = computed<Year>(() => (route.query.year == null || route.query.year === 'all' ? 'all' : Number(route.query.year)))
 const review = computed(() => (year.value === 'all' ? THIS_YEAR : year.value))
 
 function open(query: Record<string, string | undefined>) {
@@ -37,6 +37,7 @@ function open(query: Record<string, string | undefined>) {
       v-else-if="screen === 'profile'"
       :year="year"
       :open-month="route.query.month == null ? null : Number(route.query.month)"
+      :open-star="route.query.star == null ? null : Number(route.query.star)"
       @back="open({ screen: 'home' })"
       @year="router.replace({ query: { ...route.query, at: undefined, year: String($event) } })"
       @review="open({ screen: 'year', year: String($event) })"

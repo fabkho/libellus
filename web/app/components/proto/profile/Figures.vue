@@ -5,6 +5,13 @@ import { FIRST_DAY, TODAY, YEARS, average, n, type Stats } from './model'
 
 const props = defineProps<{ stats: Stats }>()
 const isAll = computed(() => props.stats.year === 'all')
+/** Under the count: the re-reads and the books not finished (#10's DNF), else the pace. */
+const booksLine = computed(() => {
+  const parts = [props.stats.rereads.length ? `${props.stats.rereads.length} read again` : null, props.stats.abandoned.length ? `${props.stats.abandoned.length} DNF` : null].filter(Boolean)
+  if (parts.length) return parts.join(' · ')
+  if (isAll.value) return `${(props.stats.books / ((YEARS.length - 1) * 12 + Number(TODAY.slice(5, 7)) - Number(FIRST_DAY.slice(5, 7)) + 1)).toFixed(1)} a month`
+  return '\u00a0'
+})
 </script>
 
 <template>
@@ -12,7 +19,7 @@ const isAll = computed(() => props.stats.year === 'all')
     <div class="flex flex-col gap-xs border-r-(length:--stroke-hairline) border-b-(length:--stroke-hairline) border-hairline py-md pr-md">
       <span class="eyebrow">Books</span>
       <span class="text-figure tabular-nums" data-testid="proto.books">{{ stats.books }}</span>
-      <span class="figures text-meta text-ink-faint">{{ isAll ? `${(stats.books / ((YEARS.length - 1) * 12 + Number(TODAY.slice(5, 7)) - Number(FIRST_DAY.slice(5, 7)) + 1)).toFixed(1)} a month` : stats.rereads.length ? `${stats.rereads.length} read again` : '\u00a0' }}</span>
+      <span class="figures truncate text-meta text-ink-faint">{{ booksLine }}</span>
     </div>
     <div class="flex flex-col gap-xs border-b-(length:--stroke-hairline) border-hairline py-md pl-md">
       <span class="eyebrow">Pages</span>

@@ -1,14 +1,15 @@
 <script setup lang="ts">
 // Direction D: a year in review, full screen (B's), in figures instead of
 // sentences: the year large, A's four figures, the books month by month as
-// rows of covers (an empty month is a dash), the favourite lit, the ratings,
-// A's records, the authors, A's small figures, and the years either side.
+// rows of covers (an empty month is a dash), the favourite lit, the ratings
+// (a row opens its books), A's records, the authors, and the years either side.
 import { YEARS, monthShort, statsOf, finishedIn } from '../model'
 
 const props = defineProps<{ year: number }>()
 defineEmits<{ back: []; year: [year: number] }>()
 
 const stats = computed(() => statsOf(props.year))
+const star = ref<number | null>(null)
 const reads = computed(() => finishedIn(props.year).reverse())
 const months = computed(() => Array.from({ length: 12 }, (_, m) => reads.value.filter((r) => Number(r.ended!.slice(5, 7)) === m + 1)))
 const before = computed(() => YEARS.find((y) => y < props.year) ?? null)
@@ -73,14 +74,12 @@ const after = computed(() => [...YEARS].reverse().find((y) => y > props.year) ??
           <h2 class="eyebrow">Ratings</h2>
           <span class="figures text-meta text-ink-faint">{{ stats.rated }} rated<template v-if="stats.unrated"> · {{ stats.unrated }} not yet</template></span>
         </div>
-        <ProtoProfileStarBars :stats="stats" />
+        <ProtoProfileStarBars :stats="stats" pickable @pick="star = $event" />
       </section>
 
       <ProtoProfileRecords :stats="stats" />
 
       <ProtoProfileAuthors :stats="stats" :limit="3" />
-
-      <ProtoProfileAlso :stats="stats" :want="false" />
 
       <nav class="flex items-center justify-between" aria-label="Other years">
         <UiButton v-if="before" tone="plain" size="sm" class="-ml-sm" data-testid="d.yearBefore" @click="$emit('year', before)">
@@ -92,6 +91,7 @@ const after = computed(() => [...YEARS].reverse().find((y) => y > props.year) ??
         </UiButton>
       </nav>
     </main>
+    <ProtoProfileRatingSheet :year="year" :star="star" @close="star = null" />
   </div>
 </template>
 
