@@ -28,7 +28,7 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
         <UiIcon name="chevron" :size="13" />
       </NuxtLink>
     </div>
-    <div class="shelf -mx-screen -mb-lg flex gap-ms overflow-x-auto px-screen pt-sm pb-xl" data-testid="home.upNextRow">
+    <div class="scrollbar-none -mx-screen -mb-lg flex gap-ms overflow-x-auto px-screen pt-sm pb-xl" data-testid="home.upNextRow">
       <UiPressLink
         v-for="(entry, index) in shown"
         :key="entry.id"
@@ -51,13 +51,3 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
     </div>
   </section>
 </template>
-
-<style scoped>
-.shelf {
-  scrollbar-width: none;
-}
-
-.shelf::-webkit-scrollbar {
-  display: none;
-}
-</style>

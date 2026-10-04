@@ -128,7 +128,38 @@
   font-optical-sizing: auto;
 }
 
+/* A row that scrolls sideways by touch or trackpad and shows no bar under it:
+   shelves of covers, the year pills, the year cards. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
+  /* Native parts — scroll bars, the date picker, autofill — in the room's own
+     colours: light by day, dark by night, the phone deciding until she does
+     (docs/DESIGN.md, Themes). */
+  :root {
+    color-scheme: light;
+    /* Scroll bars (where the platform draws them in the page: desktop
+       browsers; phones lay their own over it): a thin ghost-ink thumb on no
+       track, like a hairline that only shows while it is needed. */
+    scrollbar-color: var(--color-ink-ghost) transparent;
+  }
+  [data-theme='dark'] {
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+    }
+  }
+  * {
+    scrollbar-width: thin;
+  }
+
   html {
     background: var(--color-surface);
     color: var(--color-ink);
@@ -154,6 +185,93 @@
     outline: var(--stroke-focus) solid var(--color-accent);
     outline-offset: var(--stroke-focus);
   }
+}
+
+/* Safari has no `scrollbar-color`: the same thin thumb through its own
+   pseudo-elements (inset from the edge, so it reads as a line, not a slab). */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: var(--spacing-ms);
+    height: var(--spacing-ms);
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: var(--spacing-xs) solid transparent;
+    border-radius: var(--radius-pill);
+    background: var(--color-ink-ghost) padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-ink-faint);
+  }
+}
+
+/* Push to the Profile and back (docs/MOTION.md; plugins/profile-transition.client.ts),
+   as the push to a book: while the transition runs, the header's avatar and the
+   Profile's ring are one element that grows or shrinks between them; the Profile
+   fades in as the tab fades out and rises `md` into place (Back: it fades out and
+   sinks); the tab bar does not move and the Profile's pinned top bar only fades.
+   Over `standard` into the Profile, over `exit` (on the `standard` curve) back. */
+html[data-profile-transition] [data-profile-avatar] {
+  view-transition-name: profile-avatar;
+}
+html[data-profile-transition] [data-testid='shell.tabs'] {
+  view-transition-name: tab-bar;
+}
+html[data-profile-transition] [data-top-bar] {
+  view-transition-name: top-bar;
+}
+/* The tab bar is the same capsule before and after: the new one stands, at once. */
+::view-transition-old(tab-bar) {
+  display: none;
+}
+::view-transition-new(tab-bar) {
+  animation: none;
+}
+html[data-profile-transition='push']::view-transition-old(root) {
+  animation-name: page-fade-out;
+}
+html[data-profile-transition='push']::view-transition-new(root) {
+  animation-name: page-fade-in, page-rise;
+}
+html[data-profile-transition='back']::view-transition-old(root) {
+  animation-name: page-fade-out, page-sink;
+}
+html[data-profile-transition='back']::view-transition-new(root) {
+  animation-name: page-fade-in;
+}
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-rise {
+  from {
+    translate: 0 var(--spacing-md);
+  }
+}
+@keyframes page-sink {
+  to {
+    translate: 0 var(--spacing-md);
+  }
+}
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: var(--duration-standard);
+  animation-timing-function: var(--ease-standard);
+}
+html[data-profile-transition='back']::view-transition-group(*),
+html[data-profile-transition='back']::view-transition-old(*),
+html[data-profile-transition='back']::view-transition-new(*) {
+  animation-duration: var(--duration-exit);
 }
 
 /* Reduce Motion: nothing travels. Transitions and animations finish at once, so

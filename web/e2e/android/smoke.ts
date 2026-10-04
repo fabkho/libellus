@@ -335,7 +335,7 @@ async function main() {
   if (wanted('name')) {
     await page.goto(`${args.base}/`)
     await page.getByTestId('shell.avatar').click()
-    await page.getByTestId('shell.name').click()
+    await page.getByTestId('profile.name').click()
     await page.getByTestId('accountName.input').waitFor()
     await sleep(600)
     await tapReal(page, 'accountName.input')

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The name sheet (the avatar menu's Name row): the first name Home greets her
+// The name sheet (the Profile's Name row, components/profile/Account.vue): the first name Home greets her
 // with ("Good evening, Fabian") and the avatar's initials come from. Optional,
 // kept with her account (`setName`, data/auth.ts); one field with the keyboard
 // up (focused in the tap that opened the sheet), Save at the top right and
