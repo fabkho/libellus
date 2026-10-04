@@ -3,7 +3,11 @@ import type { BookSnapshot } from '@/data/books'
 import { createLibrary, type LibraryEntry } from '@/data/library'
 import {
   convertProgressField,
+  pageCountOf,
+  PAGE_CEILING,
+  parsePageCount,
   parseProgress,
+  progressMax,
   progressFraction,
   progressModeFor,
   progressOf,
@@ -152,6 +156,128 @@ describe('updateProgress', () => {
   })
 })
 
+describe('the member\'s own page count (#60)', () => {
+  it('starts with none: the entry carries the edition\'s page count as it was', async () => {
+    const { entry } = await reading('No total yet')
+    expect(entry.pageCountOverride).toBeNull()
+    expect(pageCountOf(entry)).toBe(480)
+  })
+
+  it('sets a total with the page in one call, and takes pages past the edition\'s', async () => {
+    const { library, entry } = await reading('Ebook')
+    expect((await library.updateProgress(entry.id, { page: 500 })).error).toBe('progress_invalid')
+
+    const { data, error } = await library.updateProgress(entry.id, { page: 500 }, { pageCount: 560 })
+
+    expect(error).toBeNull()
+    expect(data).toMatchObject({ pageCountOverride: 560, book: { pageCount: 480 }, latestSession: { progressPage: 500 } })
+    expect(pageCountOf(data!)).toBe(560)
+    // What every list and the entry load carries it too.
+    expect((await library.entry(entry.id)).data!.pageCountOverride).toBe(560)
+    expect((await library.entries('reading')).data!.find((e) => e.id === entry.id)!.pageCountOverride).toBe(560)
+    // Later updates are checked against it without sending it again.
+    expect((await library.updateProgress(entry.id, { page: 560 })).error).toBeNull()
+    expect((await library.updateProgress(entry.id, { page: 561 })).error).toBe('progress_invalid')
+    expect((await library.entry(entry.id)).data!.pageCountOverride).toBe(560)
+  })
+
+  it('goes back to the edition\'s with a null total, and a total equal to it is none', async () => {
+    const { library, entry } = await reading('Back again')
+    await library.updateProgress(entry.id, { page: 100 }, { pageCount: 560 })
+
+    const cleared = await library.updateProgress(entry.id, { page: 100 }, { pageCount: null })
+    expect(cleared.data).toMatchObject({ pageCountOverride: null })
+    expect((await library.updateProgress(entry.id, { page: 481 })).error).toBe('progress_invalid')
+
+    const same = await library.updateProgress(entry.id, { page: 100 }, { pageCount: 480 })
+    expect(same.data).toMatchObject({ pageCountOverride: null })
+  })
+
+  it('changes the total alone, keeping the read\'s progress, or cutting it to a lower total', async () => {
+    const { library, entry } = await reading('Total alone')
+    await library.updateProgress(entry.id, { page: 300 })
+
+    const higher = await library.updateProgress(entry.id, null, { pageCount: 600 })
+    expect(higher.data).toMatchObject({ pageCountOverride: 600, latestSession: { progressPage: 300 } })
+
+    const lower = await library.updateProgress(entry.id, null, { pageCount: 250 })
+    expect(lower.data).toMatchObject({ pageCountOverride: 250, latestSession: { progressPage: 250 } })
+
+    // Nothing to save is still refused.
+    expect((await library.updateProgress(entry.id, null)).error).toBe('progress_invalid')
+  })
+
+  it('refuses a page past the total sent with it, a total out of range, and leaves everything as it was', async () => {
+    const { library, entry } = await reading('Refused')
+    await library.updateProgress(entry.id, { page: 100 }, { pageCount: 560 })
+
+    expect((await library.updateProgress(entry.id, { page: 600 }, { pageCount: 580 })).error).toBe('progress_invalid')
+    for (const pageCount of [0, -4, PAGE_CEILING + 1]) {
+      expect((await library.updateProgress(entry.id, { page: 10 }, { pageCount })).error).toBe('progress_invalid')
+    }
+    const now = (await library.entry(entry.id)).data!
+    expect(now).toMatchObject({ pageCountOverride: 560, latestSession: { progressPage: 100 } })
+  })
+
+  it('gives a Book without a page count one, and counts in pages against it', async () => {
+    const { library, entry } = await reading('No count', null)
+    expect(pageCountOf(entry)).toBeNull()
+
+    const { data, error } = await library.updateProgress(entry.id, { page: 120 }, { pageCount: 250 })
+
+    expect(error).toBeNull()
+    expect(data).toMatchObject({ pageCountOverride: 250, book: { pageCount: null }, latestSession: { progressPage: 120 } })
+    expect(pageCountOf(data!)).toBe(250)
+    expect((await library.updateProgress(entry.id, { page: 251 })).error).toBe('progress_invalid')
+  })
+
+  it('stays with the entry through Finish and Read again, and cuts every read when it goes down', async () => {
+    const { library, entry } = await reading('Every read')
+    await library.updateProgress(entry.id, { page: 540 }, { pageCount: 560 })
+    await library.finish(entry.id, { endedOn: today })
+    const again = await library.readAgain(entry.id, today)
+    expect(again.data).toMatchObject({ pageCountOverride: 560, latestSession: { progressPage: null } })
+    // The new read is measured against the same total.
+    expect((await library.updateProgress(entry.id, { page: 556 })).error).toBeNull()
+
+    await library.updateProgress(entry.id, null, { pageCount: 500 })
+
+    const reads = (await library.sessions(entry.id)).data!
+    expect(reads.map((read) => read.progressPage)).toEqual([500, 500])
+  })
+
+  it('is refused without an open read, for another member\'s entry, and offline', async () => {
+    const { member, library, entry } = await reading('Not yours')
+    const other = await signUpMember()
+    expect((await createLibrary(other.client).updateProgress(entry.id, { page: 10 }, { pageCount: 99 })).error).toBe('entry_not_found')
+    expect((await library.entry(entry.id)).data!.pageCountOverride).toBeNull()
+
+    expect(await createLibrary(member.client, { online: () => false }).updateProgress(entry.id, null, { pageCount: 99 })).toEqual({
+      data: null,
+      error: 'offline',
+    })
+
+    await library.finish(entry.id, { endedOn: today })
+    expect((await library.updateProgress(entry.id, null, { pageCount: 99 })).error).toBe('not_reading')
+  })
+
+  it('is what Change edition clamps against, instead of the new edition\'s page count', async () => {
+    const { library, entry } = await reading('Moves')
+    await library.updateProgress(entry.id, { page: 450 }, { pageCount: 500 })
+
+    const { data } = await library.changeEdition(entry.id, book('Moves (other edition)', 320))
+
+    expect(data).toMatchObject({ pageCountOverride: 500, book: { pageCount: 320 }, latestSession: { progressPage: 450 } })
+    expect(pageCountOf(data!)).toBe(500)
+
+    // Without a total of her own, the new edition's page count cuts, as before.
+    const plain = await reading('Moves plain')
+    await plain.library.updateProgress(plain.entry.id, { page: 450 })
+    const moved = await plain.library.changeEdition(plain.entry.id, book('Moves plain (other edition)', 320))
+    expect(moved.data).toMatchObject({ pageCountOverride: null, latestSession: { progressPage: 320 } })
+  })
+})
+
 describe('progress helpers', () => {
   it('reads a session as a page, a percent or none', () => {
     const none = { progressPage: null, progressPercent: null }
@@ -199,6 +325,41 @@ describe('progress helpers', () => {
     expect(parseProgress('101', 'percent', 480).error).toBe('progress_invalid')
     for (const typed of ['', 'abc', '-3', '4.5', '1e3', '12 3']) {
       expect(parseProgress(typed, 'page', 480).error).toBe('progress_invalid')
+    }
+  })
+
+  it('counts against the member\'s own total when she has one, else the edition\'s', () => {
+    expect(pageCountOf({ book: { pageCount: 480 }, pageCountOverride: 560 })).toBe(560)
+    expect(pageCountOf({ book: { pageCount: 480 }, pageCountOverride: null })).toBe(480)
+    expect(pageCountOf({ book: { pageCount: null }, pageCountOverride: 250 })).toBe(250)
+    expect(pageCountOf({ book: { pageCount: null }, pageCountOverride: null })).toBeNull()
+    // A cached entry from before totals existed has no such field.
+    expect(pageCountOf({ book: { pageCount: 480 } })).toBe(480)
+    // The bar, the percent and the end follow it.
+    expect(progressFraction({ page: 280 }, 560)).toBe(0.5)
+    expect(progressPercentOf({ page: 280 }, 560)).toBe(50)
+    expect(progressReachedEnd({ page: 560 }, 560)).toBe(true)
+    expect(progressModeFor({ pageCount: pageCountOf({ book: { pageCount: null }, pageCountOverride: 250 }) }, null)).toBe('page')
+  })
+
+  it('limits pages to the total, or to the ceiling where there is none', () => {
+    expect(progressMax('page', 560)).toBe(560)
+    expect(progressMax('page', null)).toBe(PAGE_CEILING)
+    expect(progressMax('percent', 560)).toBe(100)
+    expect(parseProgress('520', 'page', 560)).toEqual({ value: { page: 520 }, error: null })
+    expect(parseProgress('561', 'page', 560).error).toBe('progress_invalid')
+    expect(parseProgress('700', 'page', null)).toEqual({ value: { page: 700 }, error: null })
+  })
+
+  it('checks the total field: empty is none, whole digits 1 to the ceiling, the edition\'s own count is none', () => {
+    expect(parsePageCount('', 480)).toEqual({ value: null, error: null })
+    expect(parsePageCount('   ', 480)).toEqual({ value: null, error: null })
+    expect(parsePageCount(' 560 ', 480)).toEqual({ value: 560, error: null })
+    expect(parsePageCount('480', 480)).toEqual({ value: null, error: null })
+    expect(parsePageCount('480', null)).toEqual({ value: 480, error: null })
+    expect(parsePageCount('99999')).toEqual({ value: 99999, error: null })
+    for (const typed of ['0', '00', '-3', '4.5', 'abc', '100000', '1 2', '123456']) {
+      expect(parsePageCount(typed, 480).error).toBe('progress_invalid')
     }
   })
 

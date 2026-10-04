@@ -7,13 +7,25 @@ import type { LibraryErrorCode, ReadingSession } from './library'
  * The database is the authority (`progress_page_fits`); this is what the
  * sheet checks and the book page and Home show, so a native client copies it
  * 1:1.
+ *
+ * The page count that counts (issue #60) is the member's own total for the entry
+ * when she set one (an ebook's pages follow the font size), else the edition's:
+ * `pageCountOf`. Everything below that asks for a `pageCount` is given that one.
  */
+
+/** The most pages a total (or a page, where there is no total) can be: the database's ceiling. */
+export const PAGE_CEILING = 99999
 
 /** What is recorded: a page or a percent, exactly one. */
 export type ProgressValue = { page: number } | { percent: number }
 
 /** Which of the two the Update progress sheet is entering. */
 export type ProgressMode = 'page' | 'percent'
+
+/** The page count that counts for an entry: the member's own total, else the edition's, else null. */
+export function pageCountOf(entry: { book: Pick<Book, 'pageCount'>; pageCountOverride?: number | null }): number | null {
+  return entry.pageCountOverride ?? entry.book.pageCount ?? null
+}
 
 /** How far a read is, as stored: the page or the percent, null while none is set. */
 export function progressOf(session: ReadingSession | null | undefined): ProgressValue | null {
@@ -60,9 +72,26 @@ export function progressFieldOf(current: ProgressValue | null, mode: ProgressMod
   return 'percent' in current ? String(current.percent) : ''
 }
 
-/** The largest number a mode takes for a Book: its page count, or 100. */
+/** The largest number a mode takes: the page count in pages (any page up to the ceiling without one), 100 in percent. */
 export function progressMax(mode: ProgressMode, pageCount: number | null): number {
-  return mode === 'page' && pageCount ? pageCount : 100
+  if (mode === 'percent') return 100
+  return pageCount || PAGE_CEILING
+}
+
+/**
+ * What the sheet's total field holds, or why it cannot be one: empty is no total of
+ * her own (the edition's counts, `value` null); otherwise whole digits, 1 to the
+ * ceiling. A total that repeats the edition's page count is no total either.
+ */
+export function parsePageCount(
+  field: string,
+  editionCount: number | null = null,
+): { value: number | null; error: null } | { value: null; error: LibraryErrorCode } {
+  const text = field.trim()
+  if (!text) return { value: null, error: null }
+  if (!/^\d{1,5}$/.test(text) || Number(text) < 1 || Number(text) > PAGE_CEILING) return { value: null, error: 'progress_invalid' }
+  const n = Number(text)
+  return { value: n === editionCount ? null : n, error: null }
 }
 
 /**

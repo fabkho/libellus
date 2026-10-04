@@ -6,7 +6,7 @@
 // right here.
 // The cover and the title open the book page from the touch-down.
 import type { LibraryEntry } from '~/data/library'
-import { progressFraction, progressOf } from '~/data/progress'
+import { pageCountOf, progressFraction, progressOf } from '~/data/progress'
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
 
@@ -20,7 +20,9 @@ const reading = useReadingStore()
 const online = useOnline()
 const text = useProgressText()
 const progress = computed(() => progressOf(props.entry.latestSession))
-const words = computed(() => text(progress.value, props.entry.book.pageCount))
+// The member's own total when she set one (#60), else the edition's.
+const pageCount = computed(() => pageCountOf(props.entry))
+const words = computed(() => text(progress.value, pageCount.value))
 const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('common.etAl')))
 const since = computed(() => {
   const startedOn = props.entry.latestSession?.startedOn
@@ -54,7 +56,7 @@ const since = computed(() => {
       </UiPressLink>
       <div class="mt-auto pt-md">
         <UiProgress
-          :fraction="progressFraction(progress, entry.book.pageCount)"
+          :fraction="progressFraction(progress, pageCount)"
           :label="t('book.progress.label')"
           :value-text="words.value"
           data-testid="home.progressBar"

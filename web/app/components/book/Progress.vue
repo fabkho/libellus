@@ -5,7 +5,7 @@
 // *Update progress*, which opens the sheet. No progress yet: an empty bar and
 // "Not started yet". Updating writes: offline the button says so (#15).
 import type { LibraryEntry } from '~/data/library'
-import { progressFraction, progressOf } from '~/data/progress'
+import { pageCountOf, progressFraction, progressOf } from '~/data/progress'
 import { useReadingStore } from '~/stores/reading'
 
 const props = defineProps<{ entry: LibraryEntry }>()
@@ -16,7 +16,8 @@ const online = useOnline()
 const text = useProgressText()
 
 const progress = computed(() => progressOf(props.entry.latestSession))
-const pageCount = computed(() => props.entry.book.pageCount)
+// The member's own total when she set one (#60), else the edition's.
+const pageCount = computed(() => pageCountOf(props.entry))
 const words = computed(() => text(progress.value, pageCount.value))
 </script>
 
