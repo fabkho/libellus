@@ -1,7 +1,7 @@
 import { thumbHashToDataURL } from 'thumbhash'
-import type { CoverColors } from '../data/books'
+import type { BookSnapshot, CoverColors } from '../data/books'
 import { appleArtwork } from '../data/apple'
-import { openLibraryCoverAt } from '../data/openLibrary'
+import { openLibraryCoverAt, openLibraryIsbnCover } from '../data/openLibrary'
 
 /**
  * Pure helpers behind the Cover component (components/ui/Cover.vue): the
@@ -93,18 +93,58 @@ export function glowOf(colors: CoverColors | null | undefined): Glow {
   return { a: lift(tones[0]!), b: lift(tones[1]!) }
 }
 
-/** The cover widths of `UiCover`'s sizes, as the image size to ask for (2× for sharp edges, 3:2). */
-const COVER_FETCH = { xs: [200, 300], sm: [200, 300], md: [300, 450], lg: [300, 450], xl: [600, 900] } as const
+/** `UiCover`'s sizes. */
+export type CoverSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+
+/**
+ * The Apple artwork box each size asks for: about 3× the cover's width (tokens
+ * `size.cover.*`: 30, 40, 72, 82, 140 px), so it is sharp at a phone's pixel
+ * ratio and no larger (docs/covers.md: 120x180bb is 11 KB, 200x300bb 25 KB).
+ * Neighbouring sizes share a box, so one download serves both (a search row
+ * and the Add sheet). `xl` is the size a Book's cover is stored at, so the
+ * book page shows the very image the Catalogue keeps.
+ */
+export const APPLE_BOX: Record<CoverSize, readonly [number, number]> = {
+  xs: [120, 180],
+  sm: [120, 180],
+  md: [240, 360],
+  lg: [240, 360],
+  xl: [600, 900],
+}
+
+/** OpenLibrary's size for each: 'M' (180 px wide) up to `md`, 'L' (about 330 px) above. 'S' (38 px) is too small for any. */
+export const OPENLIBRARY_SIZE: Record<CoverSize, 'M' | 'L'> = { xs: 'M', sm: 'M', md: 'M', lg: 'L', xl: 'L' }
 
 /**
  * The image to load for a cover shown at `size`. Apple's CDN renders any size
  * from the stored large URL, so a list row does not download the book page's
- * image; OpenLibrary has three sizes (its medium for small covers); other
- * sources come as they are.
+ * image; OpenLibrary has three sizes; other sources come as they are.
  */
-export function coverSrc(url: string | null | undefined, size: keyof typeof COVER_FETCH): string | null {
+export function coverSrc(url: string | null | undefined, size: CoverSize): string | null {
   if (!url) return null
-  const [width, height] = COVER_FETCH[size]
+  const [width, height] = APPLE_BOX[size]
   if (/mzstatic\.com\//.test(url)) return appleArtwork(url, width, height)
-  return openLibraryCoverAt(url, size === 'xs' || size === 'sm' ? 'M' : 'L')
+  return openLibraryCoverAt(url, OPENLIBRARY_SIZE[size])
+}
+
+/**
+ * The images to try after a cover's own one fails (a 404, a broken file) or
+ * comes back blank (`isBlankCover`), before the Placeholder: OpenLibrary's
+ * cover of the same edition by its ISBN (`default=false`, so a missing one is a
+ * 404, not a blank). Only for a Book that had an image: one without any has
+ * none by ISBN either, almost always (docs/covers.md: 1 of 50), and asking
+ * would only delay its Placeholder.
+ */
+export function coverFallbacks(book: Pick<BookSnapshot, 'coverUrl' | 'isbn13'>, size: CoverSize): string[] {
+  if (!book.coverUrl || !book.isbn13) return []
+  const byIsbn = openLibraryIsbnCover(book.isbn13, OPENLIBRARY_SIZE[size])
+  return coverSrc(book.coverUrl, size) === byIsbn ? [] : [byIsbn]
+}
+
+/** Below this many pixels on a side a loaded image is a source's blank stand-in (OpenLibrary's 1 × 1 GIF), not a cover. */
+export const MIN_SHOWN_SIDE = 16
+
+/** Whether a loaded image (its natural size) is a blank stand-in rather than a cover. */
+export function isBlankCover(width: number, height: number): boolean {
+  return Math.min(width, height) < MIN_SHOWN_SIDE
 }

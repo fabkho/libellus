@@ -205,6 +205,12 @@ function entryFor(book: BookSnapshot | Book, library: readonly LibraryEntry[]): 
   return library.find((entry) => editionKeys(entry.book).some((key) => keys.has(key))) ?? null
 }
 
+/** How good a cover URL is for a list row: 2 on Apple's CDN (fast), 1 anywhere else, 0 for none. */
+export function coverRank(url: string | null | undefined): number {
+  if (!url) return 0
+  return /mzstatic\.com\//.test(url) ? 2 : 1
+}
+
 /**
  * The merged list for a query, best match first.
  *
@@ -213,12 +219,17 @@ function entryFor(book: BookSnapshot | Book, library: readonly LibraryEntry[]): 
  *    id) is kept once; the first keeps its place, the later fills its gaps.
  * 3. The same book (normalised title and first author) is kept once too: the
  *    edition the member has, else the Catalogue's, else the first one found
- *    (the device language's storefront answers first). Another edition is one
- *    ISBN search away.
+ *    with a cover on Apple's CDN, else the first with any cover, else the first
+ *    one found (the device language's storefront answers first). A cover
+ *    counts because a row without one is a Placeholder, and Apple's because
+ *    its CDN answers in one round trip where OpenLibrary's takes up to three
+ *    (docs/covers.md). Another edition is one ISBN search away.
  * 4. Ranked by how well the query matches (matchQuality), lifted for the
  *    member's own books and for exact matches and lowered for summaries and
- *    study guides (rankScore), then Catalogue first, then popularity, then the
- *    order the sources gave.
+ *    study guides (rankScore), then Catalogue first, then a book shown with a
+ *    cover before one shown as a Placeholder (mostly self-published papers
+ *    OpenLibrary has no image of), then popularity, then the order the sources
+ *    gave.
  * 5. Each result knows the member's entry for it, or that she has another edition.
  */
 export function mergeResults(
@@ -268,6 +279,8 @@ export function mergeResults(
     const pick =
       group.find((candidate) => entryFor(candidate.book, library)) ??
       group.find((candidate) => candidate.source === 'catalogue') ??
+      group.find((candidate) => coverRank(candidate.book.coverUrl) === 2) ??
+      group.find((candidate) => coverRank(candidate.book.coverUrl) === 1) ??
       group[0]!
     const quality = Math.max(...group.map((candidate) => matchQuality(query, candidate.book)))
     return {
@@ -275,6 +288,7 @@ export function mergeResults(
       pick,
       score: rankScore(query, pick.book, quality, owned.has(work)),
       catalogue: group.some((candidate) => candidate.source === 'catalogue'),
+      covered: Boolean(pick.book.coverUrl),
       popularity: Math.max(...group.map((candidate) => candidate.popularity)),
       order: group[0]!.order,
     }
@@ -283,6 +297,7 @@ export function mergeResults(
     (a, b) =>
       b.score - a.score ||
       Number(b.catalogue) - Number(a.catalogue) ||
+      Number(b.covered) - Number(a.covered) ||
       b.popularity - a.popularity ||
       a.order - b.order,
   )

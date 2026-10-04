@@ -3,7 +3,7 @@ import { isbn10To13, parseBookKey, parseIsbn, type Book, type BookSnapshot } fro
 import { snapshotFromApple } from '@/data/apple'
 import type { CatalogueSearch } from '@/data/catalogueSearch'
 import type { LibraryEntry } from '@/data/library'
-import { isSummary, matchQuality, MATCH, mergeResults, normalise, RANK, rankScore, workKey, type Found } from '@/data/merge'
+import { coverRank, isSummary, matchQuality, MATCH, mergeResults, normalise, RANK, rankScore, workKey, type Found } from '@/data/merge'
 import { cleanTitle, OPENLIBRARY_FIELDS, snapshotFromOpenLibrary } from '@/data/openLibrary'
 import {
   appleArtwork,
@@ -348,6 +348,49 @@ describe('merging the sources', () => {
     // A misspelt author is another book as far as search can tell.
     expect(results.filter((hit) => workKey(hit.book) === 'piranesi|susanne clarke')).toHaveLength(1)
     expect(new Set(results.map((hit) => workKey(hit.book))).size).toBe(results.length)
+  })
+
+  it('shows the book by an edition with a cover, Apple’s first, when the first one found has none (#63)', () => {
+    const ol = (key: string, coverUrl: string | null) =>
+      found(snapshot({ title: 'Der Zauberberg', authors: ['Thomas Mann'], source: 'openlibrary', openLibraryEditionKey: key, coverUrl }), 'openlibrary')
+    const bare = mergeResults('der zauberberg', { openlibrary: [ol('OL1M', null), ol('OL2M', 'https://covers.openlibrary.org/b/id/2-L.jpg')] })
+    expect(bare).toHaveLength(1)
+    expect(bare[0]!.book.openLibraryEditionKey).toBe('OL2M')
+
+    const apple = 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/cc/x.jpg/600x900bb.jpg'
+    const both = mergeResults('der zauberberg', {
+      apple: [found(snapshot({ title: 'Der Zauberberg', authors: ['Thomas Mann'], appleId: '7', coverUrl: apple }))],
+      openlibrary: [ol('OL1M', null), ol('OL2M', 'https://covers.openlibrary.org/b/id/2-L.jpg')],
+    })
+    expect(both[0]!.book.appleId).toBe('7')
+    expect([coverRank(apple), coverRank('https://covers.openlibrary.org/b/id/2-L.jpg'), coverRank(null)]).toEqual([2, 1, 0])
+  })
+
+  it('ranks a book with a cover above an equally good match shown as a Placeholder (#63)', () => {
+    const paper = found(
+      snapshot({ title: 'Im Westen nichts Neues', authors: ['A. Student'], source: 'openlibrary', openLibraryEditionKey: 'OL9M', coverUrl: null }),
+      'openlibrary',
+      500,
+    )
+    const novel = found(
+      snapshot({ title: 'Im Westen nichts Neues', authors: ['Erich Maria Remarque'], source: 'openlibrary', openLibraryEditionKey: 'OL8M', coverUrl: 'https://covers.openlibrary.org/b/id/8-L.jpg' }),
+      'openlibrary',
+      3,
+    )
+    const results = mergeResults('im westen nichts neues', { openlibrary: [paper, novel] })
+    expect(results.map((hit) => hit.book.authors[0])).toEqual(['Erich Maria Remarque', 'A. Student'])
+    // A better match still wins without a cover.
+    const exact = mergeResults('im westen nichts neues', { openlibrary: [paper, found({ ...novel.book, title: 'Im Westen nichts Neues und die Folgen' }, 'openlibrary')] })
+    expect(exact[0]!.book.authors[0]).toBe('A. Student')
+  })
+
+  it('still shows the edition the member has, or the Catalogue’s, even without a cover', () => {
+    const stored = catalogueBook({ id: 'z1', title: 'Der Zauberberg', authors: ['Thomas Mann'], appleId: null, coverUrl: null })
+    const results = mergeResults('der zauberberg', {
+      catalogue: [found(stored, 'catalogue')],
+      openlibrary: [found(snapshot({ title: 'Der Zauberberg', authors: ['Thomas Mann'], source: 'openlibrary', openLibraryEditionKey: 'OL2M', coverUrl: 'https://covers.openlibrary.org/b/id/2-L.jpg' }), 'openlibrary')],
+    })
+    expect(results[0]!.book).toEqual(stored)
   })
 
   it('compares titles and authors without accents, case or punctuation', () => {

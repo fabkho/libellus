@@ -15,21 +15,27 @@
 // Placeholder is showing (the page's glow then takes the cloth's colour).
 // The sheet (`data-cover`: image or cloth, without the glow) is what flies
 // between a list and the book page (composables/useBookFlight.ts).
-import type { CoverColors } from '~/utils/cover'
+// `fallbacks` are tried in turn when the image fails or comes back blank (a
+// source's 1 × 1 stand-in), before the Placeholder.
+import { isBlankCover, type CoverColors } from '~/utils/cover'
 
 const props = withDefaults(
   defineProps<{
     title: string
     authors?: readonly string[]
     src?: string | null
+    /** The images to try, in order, after `src` fails or is blank. */
+    fallbacks?: readonly string[]
     thumbhash?: string | null
     colors?: CoverColors | null
     size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
     glow?: boolean
     /** For the first covers on screen: load now instead of when scrolled near. */
     eager?: boolean
+    /** For the covers the member sees first: asked for ahead of every other image. */
+    priority?: boolean
   }>(),
-  { authors: () => [], src: null, thumbhash: null, colors: null, size: 'sm', glow: false, eager: false },
+  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false },
 )
 
 const emit = defineEmits<{ fallback: [value: boolean] }>()
@@ -47,16 +53,28 @@ const WIDTHS = {
 const RADII = { xs: 'rounded-cover-sm', sm: 'rounded-cover-sm', md: 'rounded-cover', lg: 'rounded-cover', xl: 'rounded-cover-lg' } as const
 
 const loaded = ref(false)
-const failed = ref(false)
+/** Which image is showing: `src`, then each of `fallbacks` after one that failed or came back blank. */
+const attempt = ref(0)
 watch(
   () => props.src,
   () => {
     loaded.value = false
-    failed.value = false
+    attempt.value = 0
   },
 )
+const current = computed(() => (props.src ? ([props.src, ...props.fallbacks][attempt.value] ?? null) : null))
 
-const showImage = computed(() => Boolean(props.src) && !failed.value)
+function next() {
+  loaded.value = false
+  attempt.value++
+}
+function onLoad(event: Event) {
+  const image = event.target as HTMLImageElement
+  if (isBlankCover(image.naturalWidth, image.naturalHeight)) next()
+  else loaded.value = true
+}
+
+const showImage = computed(() => Boolean(current.value))
 watch(showImage, (shown) => emit('fallback', !shown), { immediate: true })
 
 /** Under `md` the Placeholder is cloth, rule and mark only. */
@@ -88,21 +106,22 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 <template>
   <div class="relative shrink-0 aspect-2/3" :class="WIDTHS[size]">
     <template v-if="glow">
-      <img v-if="showImage && loaded" :src="src!" alt="" class="halo" aria-hidden="true" />
+      <img v-if="showImage && loaded" :src="current!" alt="" class="halo" aria-hidden="true" />
       <span v-else class="pool" :style="glowStyle" aria-hidden="true" />
     </template>
 
     <div class="sheet relative size-full overflow-hidden shadow-cover" :class="RADII[size]" :style="underlay" data-cover>
       <img
         v-if="showImage"
-        :src="src!"
+        :src="current!"
         :alt="title"
         :loading="eager ? 'eager' : 'lazy'"
+        :fetchpriority="priority ? 'high' : undefined"
         decoding="async"
         class="block size-full object-cover transition-opacity duration-(--duration-standard) ease-standard"
         :class="loaded ? 'opacity-100' : 'opacity-0'"
-        @load="loaded = true"
-        @error="failed = true"
+        @load="onLoad"
+        @error="next"
       />
       <div v-else class="cloth" :class="compact && 'compact'" :style="{ background: cloth }" role="img" :aria-label="title">
         <span class="rule" />
