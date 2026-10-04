@@ -53,6 +53,9 @@ function facts(candidate: EditionCandidate): string[] {
   ].filter((fact): fact is string => Boolean(fact))
 }
 
+/** The rows the sheet opens on: their covers load at once and first; the rest lazily, ahead of the scroll. */
+const FIRST_COVERS = 6
+
 const others = computed(() => rows.value.filter((candidate) => !candidate.current).length)
 
 async function change() {
@@ -92,6 +95,8 @@ async function change() {
           :thumbhash="candidate.book.coverThumbhash"
           :colors="candidate.book.coverColors"
           size="sm"
+          :eager="index < FIRST_COVERS"
+          :priority="index < FIRST_COVERS"
         />
         <span class="flex min-w-0 flex-1 flex-col gap-xxs">
           <span class="book-title truncate text-callout text-ink" data-testid="edition.candidateTitle">{{ candidate.book.title }}</span>

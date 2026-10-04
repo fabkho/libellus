@@ -21,8 +21,15 @@ const library = useLibraryStore()
 const manual = useManualStore()
 const online = useOnline()
 
-/** How many covers at the bottom of the list (the visible ones) load at once. */
-const EAGER_COVERS = 6
+/**
+ * How many covers at the bottom of the list (the ones visible above the
+ * keyboard) load at once, ahead of everything else. The rest load once they
+ * come within a list height of the view (useNearView: the list's fade, a
+ * mask, keeps the browser's own lazy loading from looking ahead; issue #63).
+ */
+const FIRST_COVERS = 6
+const list = ref<HTMLElement | null>(null)
+const nearby = useNearView(list)
 
 // The list may grow up to what the screen leaves above the query row; with the
 // keyboard up, the visual viewport is the part above it.
@@ -59,7 +66,7 @@ const state = computed(() => {
 watch(
   () => search.hits,
   (hits) => {
-    for (const hit of hits.slice(0, EAGER_COVERS)) preloadImage(coverSrc(hit.book.coverUrl, 'sm'))
+    for (const hit of hits.slice(0, FIRST_COVERS)) preloadImage(coverSrc(hit.book.coverUrl, 'sm'))
   },
 )
 </script>
@@ -81,6 +88,7 @@ watch(
 
     <ol
       v-else-if="state === 'results'"
+      ref="list"
       class="list flex flex-col-reverse overflow-y-auto overscroll-contain py-xs transition-opacity duration-(--duration-standard) ease-standard"
       :class="stale && 'opacity-60'"
       :style="listStyle"
@@ -88,8 +96,13 @@ watch(
       data-no-swipe
       data-testid="search.results"
     >
-      <li v-for="(hit, index) in search.hits" :key="hit.key">
-        <SearchResultRow :hit="hit" :eager="index < EAGER_COVERS" @add="library.openAdd(hit.book)" />
+      <li v-for="(hit, index) in search.hits" :key="hit.key" :ref="nearby.observe" :data-near-key="hit.key">
+        <SearchResultRow
+          :hit="hit"
+          :eager="index < FIRST_COVERS || nearby.has(hit.key)"
+          :priority="index < FIRST_COVERS"
+          @add="library.openAdd(hit.book)"
+        />
       </li>
       <!-- Last in a reversed list: at its far end, above the weakest match. -->
       <li v-if="search.fromLibrary" class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.offline">

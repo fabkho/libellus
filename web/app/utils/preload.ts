@@ -10,5 +10,7 @@ export function preloadImage(url: string | null | undefined) {
   preloaded.add(url)
   const image = new Image()
   image.decoding = 'async'
+  // What is preloaded is about to show: ahead of the images further down.
+  image.fetchPriority = 'high'
   image.src = url
 }

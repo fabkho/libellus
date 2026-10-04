@@ -32,8 +32,10 @@ const props = withDefaults(
     glow?: boolean
     /** For the first covers on screen: load now instead of when scrolled near. */
     eager?: boolean
+    /** For the covers the member sees first: asked for ahead of every other image. */
+    priority?: boolean
   }>(),
-  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false },
+  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false },
 )
 
 const emit = defineEmits<{ fallback: [value: boolean] }>()
@@ -114,6 +116,7 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
         :src="current!"
         :alt="title"
         :loading="eager ? 'eager' : 'lazy'"
+        :fetchpriority="priority ? 'high' : undefined"
         decoding="async"
         class="block size-full object-cover transition-opacity duration-(--duration-standard) ease-standard"
         :class="loaded ? 'opacity-100' : 'opacity-0'"

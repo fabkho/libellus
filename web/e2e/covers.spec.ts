@@ -31,6 +31,12 @@ async function answer(page: Page, items: ReturnType<typeof item>[]) {
   )
 }
 
+/** A valid ISBN-13 from twelve digits (its check digit added). */
+const isbn = (twelve: string) => {
+  const sum = [...twelve].reduce((total, digit, i) => total + Number(digit) * (i % 2 ? 3 : 1), 0)
+  return `${twelve}${(10 - (sum % 10)) % 10}`
+}
+
 const image = (body: Buffer, contentType = 'image/jpeg') => ({ status: 200, contentType, headers: { 'access-control-allow-origin': '*' }, body })
 const missing = { status: 404, contentType: 'text/plain', body: 'Not found' }
 
@@ -61,4 +67,36 @@ test('a cover that fails or comes back blank falls back to the edition’s cover
   // A 1 × 1 stand-in is no cover, and OpenLibrary has none: the Placeholder.
   await expect(coverOf(page, 'Quillwort Blank').locator('img')).toHaveCount(0)
   await expect(coverOf(page, 'Quillwort Blank').getByRole('img', { name: 'Quillwort Blank' })).toBeVisible()
+})
+
+test('the first covers are asked for first, the rest a list height before they scroll in', async ({ page }) => {
+  await signedIn(page)
+  const items = Array.from({ length: 40 }, (_, i) => item(990000006400 + i, `Quillwort ${String(i + 1).padStart(2, '0')}`, isbn(`978300006${String(i).padStart(3, '0')}`)))
+  await answer(page, items)
+
+  await page.getByTestId('shell.tab.search').click()
+  await page.getByTestId('search.query').fill('quillwort')
+  await expect(page.getByTestId('search.result')).toHaveCount(40)
+  const covers = page.getByTestId('search.result').locator('[data-cover] img')
+
+  // The bottom rows, the ones above the keyboard, go first and at once; the
+  // next ones load before they are seen; the far end waits.
+  for (const i of [0, 5]) {
+    await expect(covers.nth(i)).toHaveAttribute('fetchpriority', 'high')
+    await expect(covers.nth(i)).toHaveAttribute('loading', 'eager')
+  }
+  await expect(covers.nth(6)).not.toHaveAttribute('fetchpriority', 'high')
+  const list = page.getByTestId('search.results')
+  const listBox = (await list.boundingBox())!
+  const nearIndex = await covers.evaluateAll(
+    (images, top) => images.findLastIndex((image) => image.getBoundingClientRect().bottom > top - 200),
+    listBox.y,
+  )
+  expect(nearIndex).toBeGreaterThan(6)
+  await expect(covers.nth(nearIndex)).toHaveAttribute('loading', 'eager')
+  await expect(covers.nth(39)).toHaveAttribute('loading', 'lazy')
+
+  // Scrolled to its far end, the last cover has been asked for too.
+  await list.evaluate((el) => el.scrollTo({ top: -el.scrollHeight }))
+  await expect(covers.nth(39)).toHaveAttribute('loading', 'eager')
 })

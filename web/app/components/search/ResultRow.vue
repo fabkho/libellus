@@ -9,7 +9,7 @@
 import { useBookStore } from '~/stores/book'
 import type { SearchHit } from '~/stores/search'
 
-const props = defineProps<{ hit: SearchHit; eager?: boolean }>()
+const props = defineProps<{ hit: SearchHit; eager?: boolean; priority?: boolean }>()
 defineEmits<{ add: [] }>()
 
 const { t } = useI18n()
@@ -36,6 +36,7 @@ const online = useOnline()
         :colors="hit.book.coverColors"
         size="sm"
         :eager="eager"
+        :priority="priority"
       />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
         <span class="book-title line-clamp-2 text-body" data-testid="search.resultTitle">{{ hit.book.title }}</span>
