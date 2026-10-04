@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { appleCover } from '../tests/support/apple'
 import { sql } from '../tests/support/stack'
 import { recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
@@ -9,7 +10,10 @@ import { test } from './fixtures'
  * hero and back into its row, and the list is where it was. The flows check
  * where each flight ends — the live covers shown, the flight's layers empty,
  * the scroll restored — and, with the Web Animations frozen, that Back tapped
- * mid-flight turns the cover around from where it is on screen.
+ * mid-flight turns the cover around from where it is on screen. The hand-off
+ * (#61) is checked frame by frame: the new page is never drawn bare before
+ * the flight, and a cover that lands before the book page's image stays on
+ * the hero until that image is in.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -212,4 +216,67 @@ test('from Home and from search the cover flies too; back to a closed search it 
   await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
   await thaw(page)
   await expectLanded(page, 4)
+})
+
+test('the hand-off: never a bare frame, and the cover stays on the hero until its image is in', async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 })
+  const member = await signedIn(page)
+  // One Book with a cover and a description long enough to scroll the book page.
+  const [book] = await sql<{ id: string }>(
+    `insert into public.books (title, authors, source, owner_id, cover_url, cover_dominant, description)
+       values ('Flight hand-off', '{"Ursula K. Le Guin"}', 'manual', $1, $2, '#5b6c8f', $3) returning id`,
+    [member.id, COVER, 'The wind blows from the sea. '.repeat(120)],
+  )
+  await sql(`insert into public.library_entries (member_id, book_id, status) values ($1, $2, 'want_to_read')`, [member.id, book!.id])
+  // The book page's image (600×900) is held back until released; the list's (200×300) comes at once.
+  let release = () => {}
+  const released = new Promise<void>((resolve) => (release = resolve))
+  await page.route(/600x900bb\.jpg$/, async (route) => {
+    await released
+    await route.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' }, body: appleCover() })
+  })
+  await page.getByTestId('shell.tab.library').click()
+  const row = page.getByTestId('library.entry').first()
+  await expect(row.locator('[data-cover] img')).toHaveCSS('opacity', '1')
+  await untilStill(page)
+
+  // Every frame from the tap on: where it is, and what of each page shows.
+  await page.evaluate(() => {
+    const frames: { book: boolean; page: number; copy: boolean; flying: boolean }[] = []
+    Object.assign(window, { __frames: frames })
+    const look = () => {
+      frames.push({
+        book: location.pathname.startsWith('/book/'),
+        page: Number(getComputedStyle(document.querySelector('main')!).opacity),
+        copy: document.querySelector('[data-testid="shell.flightPage"]')!.childElementCount > 0,
+        flying: Boolean(document.querySelector('[data-testid="shell.flightCover"]')),
+      })
+      if (frames.length < 120) requestAnimationFrame(look)
+    }
+    requestAnimationFrame(look)
+  })
+  await row.locator('[data-cover]').click()
+  await expect(page.getByTestId('book.title')).toHaveText('Flight hand-off')
+  await expectLanded(page, 1)
+
+  // Until the flight started, the copy of the Library stood in: the book page never showed bare.
+  const frames = await page.evaluate(() => (window as unknown as { __frames: { book: boolean; page: number; copy: boolean; flying: boolean }[] }).__frames)
+  const started = frames.findIndex((frame) => frame.flying)
+  expect(started).toBeGreaterThan(0)
+  expect(frames.slice(0, started).filter((frame) => frame.book && (frame.page > 0 || !frame.copy))).toEqual([])
+
+  // Landed before its image: the copy that flew is on the hero, in its sheet, and stays there through a scroll.
+  const hero = page.getByTestId('book.hero').locator('[data-cover]')
+  await expect(hero.getByTestId('shell.flightHeld')).toBeVisible()
+  await expect(hero.locator(':scope > img')).toHaveCSS('opacity', '0')
+  await page.evaluate(() => window.scrollTo({ top: 120, behavior: 'instant' }))
+  await expect.poll(() => scrollY(page)).toBe(120)
+  await expect(hero.getByTestId('shell.flightHeld')).toBeVisible()
+
+  // The image arrives: decoded and faded in, the copy leaves; the halo has faded in for the pool of colour.
+  release()
+  await expect(hero.locator(':scope > img')).toHaveCSS('opacity', '1')
+  await expect(hero.getByTestId('shell.flightHeld')).toHaveCount(0)
+  await expect(page.getByTestId('book.hero').locator('.pool')).toHaveCSS('opacity', '0')
+  await expect(page.getByTestId('book.hero').locator('.halo')).not.toHaveCSS('opacity', '0')
 })
