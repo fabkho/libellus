@@ -45,6 +45,12 @@ export type LibraryEntry = {
   status: EntryStatus
   addedAt: string
   book: Book
+  /**
+   * The member's own total pages for this entry (issue #60: an ebook's differ from the
+   * edition's), null = the edition's `book.pageCount`. Kept across every read of the entry;
+   * `pageCountOf` (`progress.ts`) is the page count that counts.
+   */
+  pageCountOverride: number | null
   latestSession: ReadingSession | null
 }
 
@@ -320,10 +326,17 @@ export type SessionRow = {
   created_at: string
 }
 
-export type EntryRow = { id: string; status: EntryStatus; added_at: string; book: BookRow; latest: SessionRow | null }
+export type EntryRow = {
+  id: string
+  status: EntryStatus
+  added_at: string
+  page_count_override: number | null
+  book: BookRow
+  latest: SessionRow | null
+}
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = 'id, status, added_at, book:books!inner(*), latest:latest_session(*)'
+export const ENTRY_COLUMNS = 'id, status, added_at, page_count_override, book:books!inner(*), latest:latest_session(*)'
 
 export function bookFromRow(row: BookRow): Book {
   return {
@@ -395,6 +408,7 @@ export function entryFromRow(row: EntryRow): LibraryEntry {
     status: row.status,
     addedAt: row.added_at,
     book: bookFromRow(row.book),
+    pageCountOverride: row.page_count_override ?? null,
     latestSession: row.latest ? sessionFromRow(row.latest) : null,
   }
 }
@@ -486,14 +500,23 @@ export type Library = {
    * exactly one (`ProgressValue`); the latest value replaces the one before.
    * Returns the entry as it is now. Refused with `not_reading` (no open read)
    * and `progress_invalid` (a page past the page count, a percent over 100).
+   * `total` is the member's own page count (issue #60), sent in the same call so the page
+   * is checked against it: `{ pageCount: 520 }` sets it, `{ pageCount: null }` goes back to
+   * the edition's, leaving `total` out does not touch it. With a total the value may be
+   * `null`: only the total changes and the read keeps its progress.
    */
-  updateProgress: (entryId: string, progress: ProgressValue) => Promise<Result<LibraryEntry>>
+  updateProgress: (
+    entryId: string,
+    progress: ProgressValue | null,
+    total?: { pageCount: number | null },
+  ) => Promise<Result<LibraryEntry>>
   /**
    * Points the entry at another edition (issue #41): the Book is found in the
    * Catalogue or added with this snapshot, as `addToLibrary` does it (resolve
    * a new Book's Cover first, like an add), and the entry keeps its reads,
    * Ratings, reviews and places on Collections; a progress page past the new
-   * edition's last page becomes its last page. Returns the entry with its new
+   * edition's last page becomes its last page (the member's own total, when she has set one,
+   * counts instead of the edition's, and stays with the entry). Returns the entry with its new
    * Book. Refused with `edition_in_library` when the member has that edition
    * as another entry. Picking the edition it already has changes nothing.
    */
@@ -622,12 +645,14 @@ export function createLibrary(client: SupabaseClient, { online = () => true }: W
       return reread(entryId)
     },
 
-    async updateProgress(entryId, progress) {
+    async updateProgress(entryId, progress, total) {
       if (!online()) return OFFLINE
       const updated = await client.rpc('update_progress', {
         p_entry_id: entryId,
-        p_page: 'page' in progress ? progress.page : null,
-        p_percent: 'percent' in progress ? progress.percent : null,
+        p_page: progress && 'page' in progress ? progress.page : null,
+        p_percent: progress && 'percent' in progress ? progress.percent : null,
+        p_set_page_count: total !== undefined,
+        p_page_count: total?.pageCount ?? null,
       })
       if (updated.error) return { data: null, error: mapLibraryError(updated.error) }
       return reread(entryId)

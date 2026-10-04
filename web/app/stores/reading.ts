@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { isNotFinished, type LibraryEntry, type LibraryErrorCode } from '~/data/library'
 import {
   convertProgressField,
+  pageCountOf,
+  parsePageCount,
   parseProgress,
   progressFieldOf,
   progressMax,
@@ -9,6 +11,7 @@ import {
   progressOf,
   progressReachedEnd,
   type ProgressMode,
+  type ProgressValue,
 } from '~/data/progress'
 import { isoDay } from '~/utils/dates'
 import { useLibraryStore } from '~/stores/library'
@@ -205,7 +208,25 @@ export const useReadingStore = defineStore('reading', () => {
   const progressBusy = ref(false)
   const progressError = ref<LibraryErrorCode | null>(null)
 
-  const progressPageCount = computed(() => progressing.value?.book.pageCount ?? null)
+  /** Her own total pages as typed (issue #60); '' is none, the edition's page count counts. */
+  const progressTotalField = ref('')
+  /** The total field is showing (the "of 480" in the sheet was tapped). */
+  const progressTotalOpen = ref(false)
+  /** The total field holds something that cannot be a page count; shown under it. */
+  const progressTotalError = ref(false)
+
+  const progressEditionCount = computed(() => progressing.value?.book.pageCount ?? null)
+  /**
+   * The page count that counts while the sheet is open: the total typed in its field when
+   * that is one, else the edition's. (Not a half-typed or wrong total: that one is only
+   * refused on save, so the field does not flicker the limits while she types.)
+   */
+  const progressPageCount = computed(() => {
+    const entry = progressing.value
+    if (!entry) return null
+    const total = parsePageCount(progressTotalField.value, entry.book.pageCount)
+    return total.error ? pageCountOf(entry) : (total.value ?? entry.book.pageCount)
+  })
   /** The most the field takes: the page count in pages, 100 in percent. */
   const progressLimit = computed(() => progressMax(progressMode.value, progressPageCount.value))
   /** The field is a number the database takes; null while it is not. */
@@ -216,8 +237,11 @@ export const useReadingStore = defineStore('reading', () => {
   function openProgress(entry: LibraryEntry) {
     const current = progressOf(entry.latestSession)
     progressing.value = entry
-    progressMode.value = progressModeFor(entry.book, current)
+    progressMode.value = progressModeFor({ pageCount: pageCountOf(entry) }, current)
     progressField.value = progressFieldOf(current, progressMode.value)
+    progressTotalField.value = entry.pageCountOverride ? String(entry.pageCountOverride) : ''
+    progressTotalOpen.value = false
+    progressTotalError.value = false
     progressError.value = null
   }
 
@@ -227,9 +251,30 @@ export const useReadingStore = defineStore('reading', () => {
 
   /** Switches between pages and percent, carrying the place in the book over. */
   function chooseProgressMode(mode: ProgressMode) {
-    if (mode === progressMode.value || !progressPageCount.value) return
+    if (mode === progressMode.value || (mode === 'page' && !progressPageCount.value)) return
     progressField.value = convertProgressField(progressField.value, mode, progressPageCount.value)
     progressMode.value = mode
+    progressError.value = null
+  }
+
+  /**
+   * "of 480" in the sheet: shows or hides the total field. Where there is no page count
+   * yet (percent only) it is the way to pages: the sheet switches to them with the field open.
+   */
+  function toggleProgressTotal() {
+    if (!progressPageCount.value && progressMode.value === 'percent') {
+      progressMode.value = 'page'
+      progressField.value = ''
+      progressTotalOpen.value = true
+    } else {
+      progressTotalOpen.value = !progressTotalOpen.value
+    }
+    progressError.value = null
+  }
+
+  /** Back to the edition's page count: the total field is emptied. */
+  function resetProgressTotal() {
+    progressTotalField.value = ''
     progressError.value = null
   }
 
@@ -246,14 +291,28 @@ export const useReadingStore = defineStore('reading', () => {
     const entry = progressing.value
     const repo = library.library()
     if (!entry || !repo || progressBusy.value) return null
-    const parsed = parseProgress(progressField.value, progressMode.value, progressPageCount.value)
-    if (!parsed.value) {
-      progressError.value = parsed.error
+    // Her own total travels in the same call, so the page is checked against it. Only
+    // in pages (the total is what the page is "of"), and only when it changed.
+    const total = parsePageCount(progressTotalField.value, entry.book.pageCount)
+    if (total.error) {
+      progressTotalOpen.value = true
+      progressTotalError.value = true
       return null
+    }
+    const sendTotal = progressMode.value === 'page' && total.value !== (entry.pageCountOverride ?? null)
+    // The total alone is a save too: with nothing typed the read keeps what it has.
+    let value: ProgressValue | null = null
+    if (!(sendTotal && progressField.value.trim() === '')) {
+      const parsed = parseProgress(progressField.value, progressMode.value, progressPageCount.value)
+      if (!parsed.value) {
+        progressError.value = parsed.error
+        return null
+      }
+      value = parsed.value
     }
     progressBusy.value = true
     try {
-      const result = await repo.updateProgress(entry.id, parsed.value)
+      const result = await repo.updateProgress(entry.id, value, sendTotal ? { pageCount: total.value } : undefined)
       if (result.error) {
         progressError.value = result.error
         return null
@@ -279,6 +338,7 @@ export const useReadingStore = defineStore('reading', () => {
   function reset() {
     progressing.value = null
     progressError.value = null
+    progressTotalError.value = false
     starting.value = null
     finishing.value = null
     abandoning.value = null
@@ -330,6 +390,13 @@ export const useReadingStore = defineStore('reading', () => {
     progressError,
     progressLimit,
     progressAtEnd,
+    progressTotalField,
+    progressTotalOpen,
+    progressTotalError,
+    progressEditionCount,
+    progressPageCount,
+    toggleProgressTotal,
+    resetProgressTotal,
     openProgress,
     closeProgress,
     chooseProgressMode,

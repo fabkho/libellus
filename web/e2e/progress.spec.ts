@@ -213,3 +213,114 @@ test('a failed save says why and tries again', async ({ page }) => {
   await expect(page.getByTestId('progress')).toBeHidden()
   await expect(page.getByTestId('home.progress')).toHaveText('p. 50 of 300')
 })
+
+test('an ebook with its own page count: a page past the edition\'s, "of 480" edited in the sheet, cleared back to the edition\'s', async ({ page }) => {
+  const member = await signedIn(page)
+  const library = createLibrary(member.client)
+  await library.addToLibrary(book('Ebook', 480), { status: 'reading', startedOn: isoDay() })
+  await page.reload()
+  const stored = () =>
+    sql<{ page_count_override: number | null; progress_page: number | null }>(
+      `select e.page_count_override, s.progress_page
+         from public.library_entries e
+         join public.reading_sessions s on s.entry_id = e.id
+         join auth.users u on u.id = e.member_id
+        where u.email = $1`,
+      [member.email],
+    )
+
+  // The edition's total, tappable beside the page; the page past it is refused.
+  await page.getByTestId('home.progress').click()
+  await expect(page.getByTestId('progress.total')).toHaveText(en.book.progress.totalOf.replace('{count}', '480'))
+  await expect(page.getByTestId('progress.totalGroup')).toBeHidden()
+  await page.getByTestId('progress.value').fill('500')
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('progress.error')).toHaveText(en.book.progress.invalid.replace('{max}', '480'))
+
+  // Tapping "of 480" opens the total with the edition's as its placeholder and a hint; her own total fits the page.
+  await page.getByTestId('progress.total').click()
+  await expect(page.getByTestId('progress.totalValue')).toBeFocused()
+  await expect(page.getByTestId('progress.totalValue')).toHaveAttribute('placeholder', '480')
+  await expect(page.getByTestId('progress.totalHint')).toHaveText(en.book.progress.totalHint.replace('{count}', '480'))
+  await expect(page.getByTestId('progress.totalReset')).toBeHidden()
+  await page.getByTestId('progress.totalValue').fill('0')
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('progress.totalError')).toHaveText(en.book.progress.totalInvalid)
+  await page.getByTestId('progress.totalValue').fill('560')
+  await expect(page.getByTestId('progress.totalError')).toBeHidden()
+  await expect(page.getByTestId('progress.total')).toHaveText(en.book.progress.totalOf.replace('{count}', '560'))
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+
+  // Home, the book page and the database all use it.
+  await expect(page.getByTestId('home.progress')).toHaveText('p. 500 of 560')
+  await expect(page.getByTestId('home.progressBar')).toHaveAttribute('aria-valuenow', '89')
+  expect(await stored()).toEqual([{ page_count_override: 560, progress_page: 500 }])
+  await page.getByTestId('home.entry').click()
+  await expect(page.getByTestId('book.progressValue')).toHaveText('p. 500 of 560')
+  await expect(page.getByTestId('book.progressPercent')).toHaveText('89 %')
+  await expect(page.getByTestId('book.progressBar')).toHaveAttribute('aria-valuenow', '89')
+
+  // The sheet opens with her total in place; the last page is hers too.
+  await page.getByTestId('book.updateProgress').click()
+  await expect(page.getByTestId('progress.total')).toHaveText(en.book.progress.totalOf.replace('{count}', '560'))
+  await page.getByTestId('progress.value').fill('559')
+  await expect(page.getByTestId('progress.reached')).toBeHidden()
+  await page.getByTestId('progress.value').fill('560')
+  await expect(page.getByTestId('progress.reached')).toBeVisible()
+
+  // Back to the edition's: the total emptied (or "Use the edition's 480"); a page past 480 is refused again.
+  await page.getByTestId('progress.total').click()
+  await expect(page.getByTestId('progress.totalValue')).toHaveValue('560')
+  await page.getByTestId('progress.totalReset').click()
+  await expect(page.getByTestId('progress.totalValue')).toHaveValue('')
+  await expect(page.getByTestId('progress.total')).toHaveText(en.book.progress.totalOf.replace('{count}', '480'))
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('progress.error')).toHaveText(en.book.progress.invalid.replace('{max}', '480'))
+  await page.getByTestId('progress.value').fill('300')
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+  await expect(page.getByTestId('book.progressValue')).toHaveText('p. 300 of 480')
+  expect(await stored()).toEqual([{ page_count_override: null, progress_page: 300 }])
+})
+
+test('a book without a page count can be given one, and the total can change on its own', async ({ page }) => {
+  const member = await signedIn(page)
+  const library = createLibrary(member.client)
+  const added = await library.addToLibrary(book('Bare ebook', null), { status: 'reading', startedOn: isoDay() })
+  await page.reload()
+
+  await page.getByTestId('home.progress').click()
+  // Percent only, with the way to pages.
+  await expect(page.getByTestId('progress.mode.page')).toBeHidden()
+  await page.getByTestId('progress.total').click()
+  await expect(page.getByTestId('progress.mode.page')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('progress.totalHint')).toHaveText(en.book.progress.totalHintNone)
+  await expect(page.getByTestId('progress.totalReset')).toBeHidden()
+  await page.getByTestId('progress.value').fill('100')
+  await page.getByTestId('progress.totalValue').fill('250')
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+  await expect(page.getByTestId('home.progress')).toHaveText('p. 100 of 250')
+  await expect(page.getByTestId('home.progressBar')).toHaveAttribute('aria-valuenow', '40')
+
+  // The total alone, with the page left as it is; a lower one cuts the page back to it.
+  await page.getByTestId('home.progress').click()
+  await page.getByTestId('progress.total').click()
+  await page.getByTestId('progress.totalValue').fill('320')
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('home.progress')).toHaveText('p. 100 of 320')
+  await page.getByTestId('home.progress').click()
+  await page.getByTestId('progress.total').click()
+  await page.getByTestId('progress.totalValue').fill('80')
+  // The page in the field (100) does not fit 80: said so, nothing saved.
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('progress.error')).toHaveText(en.book.progress.invalid.replace('{max}', '80'))
+  await page.getByTestId('progress.value').fill('')
+  await page.getByTestId('progress.submit').click()
+  await expect(page.getByTestId('home.progress')).toHaveText('p. 80 of 80')
+
+  // Moving to an edition with its own page count keeps her total.
+  const moved = await library.changeEdition(added.data!.id, book('Bare ebook, paper', 300))
+  expect(moved.data).toMatchObject({ pageCountOverride: 80, latestSession: { progressPage: 80 } })
+})
