@@ -68,14 +68,24 @@ function next() {
   loaded.value = false
   attempt.value++
 }
-function onLoad(event: Event) {
-  const image = event.target as HTMLImageElement
-  if (isBlankCover(image.naturalWidth, image.naturalHeight)) next()
-  else loaded.value = true
-}
 
 const showImage = computed(() => Boolean(current.value))
 watch(showImage, (shown) => emit('fallback', !shown), { immediate: true })
+
+// Loaded is not drawn: Safari paints a large image only once it is decoded, so
+// a fade that starts on `load` shows the thumbhash through for its first
+// frames, then the image pops in half way. The fade starts once it is decoded
+// (and the halo, the same image, fades in with it).
+function onLoad(event: Event) {
+  const image = event.target as HTMLImageElement
+  // A blank stand-in (OpenLibrary's 1×1 "no cover") moves on to the next source.
+  if (isBlankCover(image.naturalWidth, image.naturalHeight)) return next()
+  const shown = current.value
+  const reveal = () => {
+    if (current.value === shown) loaded.value = true
+  }
+  image.decode().then(reveal, reveal)
+}
 
 /** Under `md` the Placeholder is cloth, rule and mark only. */
 const compact = computed(() => props.size === 'xs' || props.size === 'sm')
@@ -106,8 +116,8 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 <template>
   <div class="relative shrink-0 aspect-2/3" :class="WIDTHS[size]">
     <template v-if="glow">
-      <img v-if="showImage && loaded" :src="current!" alt="" class="halo" aria-hidden="true" />
-      <span v-else class="pool" :style="glowStyle" aria-hidden="true" />
+      <img v-if="showImage" :src="current!" alt="" class="halo" :class="!loaded && 'out'" :loading="eager ? 'eager' : 'lazy'" aria-hidden="true" />
+      <span class="pool" :class="showImage && loaded && 'out'" :style="glowStyle" aria-hidden="true" />
     </template>
 
     <div class="sheet relative size-full overflow-hidden shadow-cover" :class="RADII[size]" :style="underlay" data-cover>
@@ -148,6 +158,7 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 
 .halo {
   position: absolute;
+  transition: opacity var(--duration-standard) var(--ease-standard);
   inset: 8% -6% -10%;
   width: 112%;
   height: 102%;
@@ -160,6 +171,7 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 
 .pool {
   position: absolute;
+  transition: opacity var(--duration-standard) var(--ease-standard);
   inset: -12% -24%;
   background:
     radial-gradient(50% 46% at 50% 52%, color-mix(in srgb, var(--pool-a) 55%, transparent), transparent 72%),
@@ -167,6 +179,12 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
   filter: blur(calc(var(--blur-halo) / 2));
   opacity: var(--opacity-halo);
   pointer-events: none;
+}
+
+/* The halo fades in with the image it is made of; the pool it replaces fades out. */
+.halo.out,
+.pool.out {
+  opacity: 0;
 }
 
 /* Spine crease and a hairline edge. The crease is light and shadow on the
