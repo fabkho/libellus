@@ -9,9 +9,10 @@
 //
 // While the reading record loads (`columns` null) the chart stands at its
 // height with `placeholders` quiet bars in the loading wave, each rising and
-// falling a little after the one before it; when the counts come, every bar
-// grows from where the wave left it to its own height (docs/MOTION.md,
-// Loading), and the counts and labels arrive over them.
+// falling a little after the one before it, and the labels' line kept empty
+// (only the bars stand in); when the counts come, every bar grows from where
+// the wave left it to its own height (docs/MOTION.md, Loading), and the
+// counts and labels arrive over them.
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 
 const props = withDefaults(
@@ -66,7 +67,7 @@ watch(
           <span />
           <span class="bar waving" :style="{ '--wave': ((i - 1) / placeholders) * 0.8 }" />
         </span>
-        <span class="label skeleton" />
+        <span class="label" />
       </span>
     </template>
     <template v-else>
@@ -134,11 +135,9 @@ watch(
     transform: scaleY(0.5);
   }
 }
-/* Where a label will be: a short mark in the label's line. */
+/* Where a label will be: its line kept, empty (only the bars stand in while loading). */
 .label {
-  width: var(--spacing-ml);
   height: var(--text-meta--line-height);
-  transform: scaleY(0.6);
 }
 .bar.none {
   width: var(--stroke-focus);
