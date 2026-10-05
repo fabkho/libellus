@@ -50,6 +50,9 @@ jobs:
     name: what changed
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists the files of a pull request through the API
     outputs:
       backend: ${{ steps.decide.outputs.backend }}
       e2e: ${{ steps.decide.outputs.e2e }}
