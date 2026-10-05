@@ -226,3 +226,11 @@ test('the theme follows the phone until the switch is tapped, then flips and sta
   await expect(page).toHaveURL(/\/sign-in$/)
   await expect(html).toHaveAttribute('data-theme', 'dark')
 })
+
+test('the way in opens at its address with a trailing slash, as Cloudflare Pages serves it', async ({ page }) => {
+  // Pages redirects /sign-up to /sign-up/: the guard must treat both the same.
+  await page.goto('/sign-up/')
+  await expect(page.getByTestId('signUp.email')).toBeVisible()
+  await page.goto('/sign-in/')
+  await expect(page.getByTestId('signIn.email')).toBeVisible()
+})
