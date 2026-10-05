@@ -3,8 +3,8 @@ import { defineNuxtModule } from 'nuxt/kit'
 
 /**
  * Regal, the owner's 3D shelf (#23), as a Nuxt layer: where it comes from, and
- * how it is kept to the two places that show it (Profile → Your shelf, and the
- * stack in a year in review). Everything else in the app builds, loads and
+ * how it is kept to the places that show it (Profile → Your shelf, its full
+ * Stack, and the row in a year in review). Everything else in the app builds, loads and
  * precaches exactly as without it.
  *
  * Where from, like the portfolio: a local checkout when REGAL_LAYER is set
@@ -16,14 +16,15 @@ import { defineNuxtModule } from 'nuxt/kit'
  * anywhere.
  *
  * What the layer brings, and where it goes:
- * - Its components (`RegalBooksStage`) and composables, auto-imported. Only
- *   `components/shelf/Stage.vue` uses them, and only through an async import
- *   (`LazyShelfStage`), so they, three.js and TresJS end up in one chunk named
- *   `regal` (nuxt.config.ts, codeSplitting) that the entry never imports: the
- *   build fails if it ever does (below).
+ * - Its components (`RegalBooksStage`, `RegalBooksRow`) and composables,
+ *   auto-imported. Only `components/shelf/Stage.vue` and `Row.vue` use them,
+ *   and only through an async import (`LazyShelfStage`, `LazyShelfRow`), so
+ *   they, three.js and TresJS end up in one chunk named `regal`
+ *   (nuxt.config.ts, codeSplitting) that the entry never imports: the build
+ *   fails if it ever does (below).
  * - Its fonts (IBM Plex Mono, Patua One, Antonio): @nuxt/fonts registers them
- *   globally, in the entry stylesheet. Moved out of it: the shelf's stage
- *   imports that stylesheet itself, so the @font-face rules arrive with the
+ *   globally, in the entry stylesheet. Moved out of it: the shelf's stage and
+ *   row import that stylesheet themselves, so the @font-face rules arrive with the
  *   regal chunk, and their files (`/_fonts/`) are fetched when the Spines are
  *   drawn.
  * - Its `public/models/` (the Bookcase, which the Stack-only stage never
@@ -63,10 +64,10 @@ export function regalLayer(): (string | [string, Record<string, unknown>])[] {
 let regalDir: string | null = null
 
 // three.js and what renders it; Regal's components and utilities (its folder);
-// the one Libellus component that uses them, and the fonts' stylesheet it imports. Nothing else in
+// the two Libellus components that use them, and the fonts' stylesheet they import. Nothing else in
 // the app imports these.
 const REGAL_PACKAGES = /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:three|three-stdlib|@tresjs|gsap|@vueuse|@monogrid|troika-[^\\/]+|camera-controls|postprocessing|stats-gl|meshoptimizer|bidi-js|webgl-sdf-generator)[\\/]/
-const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/]Stage\.vue|nuxt-fonts-global\.css/
+const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue|nuxt-fonts-global\.css/
 
 /** Whether a module belongs in the `regal` chunk (nuxt.config.ts, codeSplitting). */
 export function isRegalModule(id: string): boolean {
@@ -74,7 +75,7 @@ export function isRegalModule(id: string): boolean {
   return regalDir !== null && id.startsWith(regalDir)
 }
 
-/** The @nuxt/fonts stylesheet with Regal's global @font-face rules (imported by ShelfStage). */
+/** The @nuxt/fonts stylesheet with Regal's global @font-face rules (imported by ShelfStage and ShelfRow). */
 const FONTS_STYLESHEET = '#build/nuxt-fonts-global.css'
 
 /**
@@ -158,7 +159,7 @@ export const regalContainment = defineNuxtModule({
           const chunk = manifest[id]
           if (!chunk) return
           if (/(^|\/)regal\.[^/]+\.js$/.test(chunk.file)) {
-            throw new Error(`[regal] The app's entry loads the regal chunk up front (${[...path, id].join(' → ')}). Import Regal only through LazyShelfStage.`)
+            throw new Error(`[regal] The app's entry loads the regal chunk up front (${[...path, id].join(' → ')}). Import Regal only through LazyShelfStage or LazyShelfRow.`)
           }
           for (const next of chunk.imports ?? []) walk(next, [...path, id])
         }

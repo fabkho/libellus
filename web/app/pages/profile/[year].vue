@@ -18,7 +18,7 @@ const route = useRoute()
 const router = useRouter()
 const stats = useStatsStore()
 const books = useBookStore()
-// Your shelf (#23): the year's Books as a 3D stack under the months, for the owner only.
+// Your shelf (#23): the year's Books as Regal's 3D row under the months, for the owner only.
 const shelf = useShelfStore()
 const { count, monthShort } = useFigures()
 
@@ -100,7 +100,7 @@ function back() {
         </div>
       </section>
 
-      <ShelfYearStack v-if="shelfBooks.length" :year="year" :books="shelfBooks" />
+      <ShelfYearRow v-if="shelfBooks.length" :year="year" :books="shelfBooks" />
 
       <UiPressLink
         v-if="figures.favourite"

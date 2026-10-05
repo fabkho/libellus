@@ -1,42 +1,48 @@
 <script setup lang="ts">
-// Your shelf on the Profile (#23): the owner's way into her 3D shelf, and only
-// hers (the Profile renders it for the owner alone, stores/shelf.ts). A card
-// like the years in review: a small window onto the night room with the top of
-// the pile in its Spines' colours (ShelfPile), "Your shelf", and how many Books
-// stand on it. Before the library file has come, or when it couldn't, the card
-// is there without its count and the window holds quiet slabs.
+// Your shelf on the Profile (#23): the owner's, and only hers (the Profile
+// renders it for the owner alone, stores/shelf.ts). Like the Profile's other
+// sections: "Your shelf" with how many Books stand on it, and under it a card
+// with the newest of them as Regal's row (ShelfRowCard), up to SHELF_ROW_LIMIT.
+// A Book tapped there breaks out to the whole screen. With more Books than the
+// row holds, Show all opens the whole shelf, the full-screen Stack
+// (/profile/shelf); below that the row is all of it, and nothing links there.
+// Before the library file has come the section is there without its count, and
+// the card holds the stand-in's slabs; when it can't be read, the card says why
+// and tries again (offline: once the connection is back, stores/shelf.ts).
 import { useShelfStore } from '~/stores/shelf'
+
+/** How many of the newest Books the Profile's row holds; more than that, and Show all opens the rest. */
+const SHELF_ROW_LIMIT = 80
 
 const { t } = useI18n()
 const { count } = useFigures()
 const shelf = useShelfStore()
 
 const books = computed(() => shelf.shelf?.books ?? [])
-const label = computed(() => (shelf.shelf ? t('shelf.card.label', { count: count(books.value.length) }, books.value.length) : t('shelf.card.title')))
+const more = computed(() => books.value.length > SHELF_ROW_LIMIT)
 </script>
 
 <template>
-  <NuxtLink
-    to="/profile/shelf"
-    class="relative flex items-center gap-md overflow-hidden rounded-lg bg-surface-raised p-inset shadow-raised edge-faint active:opacity-80"
-    :aria-label="label"
-    data-testid="profile.shelf"
-  >
-    <span data-theme="dark" class="window flex shrink-0 items-end justify-center overflow-hidden rounded-md bg-surface px-ms pb-ms">
-      <ShelfPile :books="books.slice(0, 7)" :settle="false" class="w-full" />
-    </span>
-    <span class="flex min-w-0 flex-1 flex-col gap-xs">
-      <span class="eyebrow">{{ t('shelf.card.title') }}</span>
-      <span v-if="shelf.shelf" class="text-figure tabular-nums" data-testid="profile.shelfCount">{{ count(books.length) }}</span>
-      <span v-if="shelf.shelf" class="figures text-meta text-ink-muted">{{ t('shelf.card.books', books.length) }}</span>
-    </span>
-    <UiIcon name="chevron" :size="15" class="text-ink-ghost" />
-  </NuxtLink>
+  <section id="shelf" :aria-label="t('shelf.card.title')" class="flex flex-col gap-md" data-testid="profile.shelf">
+    <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
+      <h2 class="eyebrow">
+        {{ t('shelf.card.title') }}
+        <span v-if="shelf.shelf" class="figures ml-xs text-ink-ghost" data-testid="profile.shelfCount">{{ count(books.length) }}</span>
+      </h2>
+      <UiButton v-if="more" tone="quiet" size="sm" to="/profile/shelf" :aria-label="t('shelf.card.allLabel', { count: count(books.length) }, books.length)" data-testid="profile.shelfAll">
+        {{ t('shelf.card.all') }}<UiIcon name="chevron" :size="13" />
+      </UiButton>
+    </div>
+    <div
+      v-if="shelf.loadError && !shelf.shelf"
+      class="flex flex-col items-center justify-center gap-md rounded-lg bg-surface-raised px-xl py-xxl text-center shadow-raised edge-faint"
+      data-testid="profile.shelfError"
+    >
+      <p class="text-subhead text-ink-muted">{{ shelf.loadError === 'offline' ? t('shelf.offline') : t('shelf.loadError') }}</p>
+      <UiButton v-if="shelf.loadError !== 'offline'" tone="secondary" size="md" :disabled="shelf.loading" data-testid="profile.shelfRetry" @click="shelf.load()">
+        {{ t('shelf.retry') }}
+      </UiButton>
+    </div>
+    <ShelfRowCard v-else :books="books.slice(0, SHELF_ROW_LIMIT)" :limit="SHELF_ROW_LIMIT" :label="t('shelf.card.rowLabel')" data-testid="profile.shelfRow" />
+  </section>
 </template>
-
-<style scoped>
-.window {
-  width: var(--size-cover-md);
-  height: calc(var(--size-cover-md) * 1.5);
-}
-</style>
