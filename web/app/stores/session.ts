@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { createAuth, type Auth, type AuthErrorCode, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
-import { clearLocalData } from '~/data/localData'
+import { clearLocalData, clearLocalDatabase } from '~/data/localData'
+import { useSyncStore } from '~/stores/sync'
 
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn'
 
@@ -238,10 +239,18 @@ export const useSessionStore = defineStore('session', () => {
     nameError.value = null
   }
 
-  /** Ends the session, then forgets what the device cached about the member. */
+  /**
+   * Ends the session, then forgets what the device cached about the member: her
+   * Library and, in IndexedDB, the writes still waiting to sync (issue #93; the
+   * header's sync chip says how many).
+   */
   async function signOut() {
     await auth()?.signOut()
-    if (import.meta.client) clearLocalData(window.localStorage)
+    if (import.meta.client) {
+      useSyncStore().close()
+      clearLocalData(window.localStorage)
+      if (typeof indexedDB !== 'undefined') await clearLocalDatabase(indexedDB)
+    }
     pending.value = null
     adopt(null)
   }

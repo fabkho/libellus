@@ -13,7 +13,7 @@
 // figures, chart and "Last time" open in below the row with a fade (UiReveal, the
 // rule is `progressShownOf`), so the first save moves nothing but the fill and the
 // words; a value without a day yet shows the figures but no chart.
-// Updating writes: offline the buttons say so (#15).
+// Updating works offline too: it waits to sync (#93).
 import type { LibraryEntry } from '~/data/library'
 import { progressFraction, progressOf } from '~/data/progress'
 import { progressStarted } from '~/data/progressDays'
@@ -23,7 +23,6 @@ const props = defineProps<{ entry: LibraryEntry }>()
 
 const { t, n } = useI18n()
 const reading = useReadingStore()
-const online = useOnline()
 const text = useProgressText()
 const {
   pageCount,
@@ -69,7 +68,7 @@ const chartLabel = computed(() =>
       <p class="figures min-w-0 truncate text-meta" :class="started ? 'text-ink-muted' : 'text-ink-faint'" data-testid="book.progressText">
         {{ started ? words.value : notStarted }}
       </p>
-      <UiButton tone="quiet" size="sm" class="shrink-0" :offline="!online" data-testid="book.updateProgress" @click="reading.openProgress(entry)">
+      <UiButton tone="quiet" size="sm" class="shrink-0" data-testid="book.updateProgress" @click="reading.openProgress(entry)">
         {{ t('book.progress.update') }}
       </UiButton>
     </div>
@@ -87,7 +86,6 @@ const chartLabel = computed(() =>
                 type="button"
                 class="total figures text-meta text-ink-faint enabled:hover:text-ink"
                 :aria-label="pages ? t('book.progress.totalEdit', { count: n(pageCount ?? 0) }) : undefined"
-                :disabled="!online"
                 data-testid="book.progressTotal"
                 @click="reading.openProgress(entry, { total: true })"
               >

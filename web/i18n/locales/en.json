@@ -70,6 +70,35 @@
     "tabsLabel": "Main navigation",
     "avatarLabel": "Profile"
   },
+  "sync": {
+    "chip": "Waiting to sync ({count})",
+    "chipFailed": "Couldn't sync ({count})",
+    "chipLabel": "Changes waiting to sync: {count}. Open the list",
+    "title": "Sync",
+    "waiting": "{count} change made on this device waits for a connection. It syncs by itself once you're online. | {count} changes made on this device wait for a connection. They sync by themselves once you're online.",
+    "syncing": "Syncing {count} change… | Syncing {count} changes…",
+    "pendingTitle": "Waiting",
+    "failedTitle": "Couldn't sync",
+    "failedNote": "Your Library shows what was saved instead.",
+    "failedItem": "Couldn't sync: {action}",
+    "dismissLabel": "Dismiss: {about}",
+    "allSynced": "Everything is synced.",
+    "action": {
+      "add_to_library": "Added to Library",
+      "start_reading": "Started reading",
+      "read_again": "Started again",
+      "finish_reading": "Finished",
+      "abandon_reading": "Did not finish",
+      "update_progress": "Progress",
+      "update_session": "Edited a read",
+      "remove_from_library": "Removed from Library",
+      "add_to_collection": "Put on a collection",
+      "remove_from_collection": "Taken off a collection",
+      "reorder_collection": "New order",
+      "rename_collection": "Renamed",
+      "delete_collection": "Deleted"
+    }
+  },
   "account": {
     "name": "Name",
     "nameNone": "Add",
@@ -138,6 +167,14 @@
       "title": "Years in review",
       "books": "{count} book | {count} books",
       "favourite": "Favourite"
+    },
+    "signOutUnsynced": {
+      "title": "{count} change has not synced yet | {count} changes have not synced yet",
+      "text": "If you sign out now, it is lost. | If you sign out now, they are lost.",
+      "syncFirst": "Sync first",
+      "syncing": "Syncing…",
+      "signOut": "Sign out anyway",
+      "failed": "Not everything could be synced. Try again, or sign out anyway."
     },
     "account": {
       "title": "Account",

@@ -10,7 +10,10 @@ import { useCollectionsStore } from '~/stores/collections'
 
 const { t } = useI18n()
 const collections = useCollectionsStore()
-// Every choice here writes: offline the rows stay, disabled, and say why (#15).
+// Putting a Book from the Library on a Collection, or taking it off, works
+// offline too: it waits to sync (#93). A Book not in the Library yet, and a new
+// Collection, need the connection: offline those rows stay, disabled, and say
+// why (#15).
 const online = useOnline()
 
 const open = computed({
@@ -84,7 +87,7 @@ async function startCreating() {
           type="button"
           role="checkbox"
           :aria-checked="collections.picked(collection.id)"
-          :disabled="!collections.pickerReady || collections.pickerBusy.has(collection.id) || !online"
+          :disabled="!collections.pickerReady || collections.pickerBusy.has(collection.id) || (!online && !picking?.entry)"
           class="option relative flex h-(--size-query) w-full items-center gap-ms px-inset text-left enabled:hover:bg-fill active:bg-fill-strong disabled:opacity-50"
           data-testid="picker.collection"
           @click="collections.toggle(collection.id)"

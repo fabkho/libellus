@@ -20,8 +20,7 @@ const { t, n } = useI18n()
 const { formatDay, dayOfRead } = useDays()
 const books = useBookStore()
 const reading = useReadingStore()
-// Updating and finishing write: offline the buttons say so instead (#15).
-const online = useOnline()
+// Updating and finishing work offline too: they wait to sync (#93).
 const text = useProgressText()
 const progress = computed(() => progressOf(props.entry.latestSession))
 // The member's own total when she set one (#60), else the edition's.
@@ -88,7 +87,7 @@ const gain = computed(() => {
             <span v-if="gain" class="figures text-accent" data-testid="home.progressGain"> · {{ gain }}</span>
           </template>
         </p>
-        <UiButton v-if="atEnd" size="sm" :offline="!online" data-testid="home.finish" @click="reading.openFinish(entry)">
+        <UiButton v-if="atEnd" size="sm" data-testid="home.finish" @click="reading.openFinish(entry)">
           <UiIcon name="check" :size="15" bold />
           {{ t('book.finish') }}
         </UiButton>
@@ -97,7 +96,6 @@ const gain = computed(() => {
           tone="plain"
           size="sm"
           class="-mr-sm"
-          :offline="!online"
           :disabled="reading.undoBusy"
           :aria-label="gain ? t('book.progress.undoLabel', { change: gain }) : undefined"
           data-testid="home.undo"
@@ -105,7 +103,7 @@ const gain = computed(() => {
         >
           {{ t('book.progress.undo') }}
         </UiButton>
-        <UiButton v-else tone="quiet" size="sm" :offline="!online" data-testid="home.update" @click="reading.openProgress(entry)">
+        <UiButton v-else tone="quiet" size="sm" data-testid="home.update" @click="reading.openProgress(entry)">
           {{ t('book.progress.updateShort') }}
         </UiButton>
       </div>

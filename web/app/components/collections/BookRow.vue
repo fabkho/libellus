@@ -13,8 +13,11 @@ const props = defineProps<{ book: Book | BookSnapshot; entry: LibraryEntry | nul
 
 const { t } = useI18n()
 const collections = useCollectionsStore()
-// Putting a Book on a Collection writes: offline the chip says so instead (#15).
+// Putting a Book from the Library on a Collection works offline too: it waits to
+// sync (#93). One that is not in the Library would be added as well, which needs
+// the connection: offline the chip says so instead (#15).
 const online = useOnline()
+const pickOffline = computed(() => !online.value && !props.entry)
 
 const chips = computed(() => collections.collectionsOf(props.entry?.id))
 
@@ -46,11 +49,11 @@ watch(
       <button
         type="button"
         class="chip inline-flex h-(--size-button-sm) items-center gap-xs rounded-pill px-ms text-caption text-ink-muted edge disabled:opacity-50"
-        :disabled="!online"
+        :disabled="pickOffline"
         data-testid="book.addToCollection"
         @click="collections.openPicker(book, entry, bookKey)"
       >
-        <template v-if="online"><UiIcon name="plus" :size="14" bold />{{ t('collections.addTo') }}</template>
+        <template v-if="!pickOffline"><UiIcon name="plus" :size="14" bold />{{ t('collections.addTo') }}</template>
         <template v-else><UiIcon name="offline" :size="14" />{{ t('common.offline') }}</template>
       </button>
     </div>

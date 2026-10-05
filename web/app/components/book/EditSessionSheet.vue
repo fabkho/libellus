@@ -14,7 +14,9 @@ import { useHistoryStore } from '~/stores/history'
 
 const { t } = useI18n()
 const history = useHistoryStore()
-// Saving and deleting write: offline they say so instead (#15).
+// Saving works offline too: it waits to sync (#93). Deleting a read changes
+// which read decides the Status, from reads the device may not all hold:
+// offline it says so instead (#15).
 const online = useOnline()
 
 const open = computed({
@@ -142,7 +144,7 @@ watch(
       </p>
 
       <div class="mt-lg">
-        <UiButton block :disabled="history.editBusy" :offline="!online" :aria-busy="history.editBusy" data-testid="editSession.submit" @click="history.confirmEdit()">
+        <UiButton block :disabled="history.editBusy" :aria-busy="history.editBusy" data-testid="editSession.submit" @click="history.confirmEdit()">
           <UiIcon name="check" :size="18" bold />{{ label }}
         </UiButton>
       </div>

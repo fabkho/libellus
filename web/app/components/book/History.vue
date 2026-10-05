@@ -20,7 +20,8 @@ const history = useHistoryStore()
 
 watch(() => props.entry, (entry) => void history.load(entry.id), { immediate: true })
 
-const reads = computed(() => history.sessions.get(props.entry.id) ?? null)
+// With the latest read as the device has it, synced or still waiting (#93).
+const reads = computed(() => history.readsOf(props.entry))
 
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'] as const
 

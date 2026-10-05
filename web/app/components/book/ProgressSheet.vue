@@ -15,8 +15,7 @@ import { stepTick } from '~/utils/haptics'
 
 const { t, n } = useI18n()
 const reading = useReadingStore()
-// Saving writes: offline the actions say so instead (#15).
-const online = useOnline()
+// Saving works offline too: it waits to sync (#93).
 const text = useProgressText()
 
 const open = computed({
@@ -46,11 +45,10 @@ const MODES: readonly ProgressMode[] = ['page', 'percent']
 
 const action = computed(() => {
   if (editingTotal.value) return t('book.progress.done')
-  if (!online.value) return t('common.offline')
   if (reading.progressBusy) return t('book.progress.busy')
   return reading.progressError ? t('book.progress.retry') : t('book.progress.save')
 })
-const actionDisabled = computed(() => reading.progressBusy || (!online.value && !editingTotal.value))
+const actionDisabled = computed(() => reading.progressBusy)
 
 // What assistive tech reads for the wheel: the value in words ("p. 212 of 608", "45 %").
 const valueText = computed(() =>
@@ -240,7 +238,6 @@ watch(
         <UiButton
           :tone="reading.progressAtEnd ? 'primary' : 'quiet'"
           size="sm"
-          :offline="!online"
           :disabled="reading.progressBusy"
           data-testid="progress.finish"
           @click="reading.finishFromProgress()"

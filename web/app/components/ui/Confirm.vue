@@ -7,7 +7,9 @@
 // reason and the same button tries again. `testid` names the dialog; the
 // action and Cancel get `<testid>.confirm` and `<testid>.cancel`, a refusal
 // `<testid>.error`. `offline` (#15): the action stays, disabled, and says
-// "Offline" (UiButton); Cancel still closes it.
+// "Offline" (UiButton); Cancel still closes it. `alternative`: a safe way out
+// offered above the destructive action (Sign out with changes waiting to sync:
+// "Sync first", #93), `<testid>.alternative`.
 const open = defineModel<boolean>('open', { required: true })
 
 const props = withDefaults(
@@ -18,11 +20,12 @@ const props = withDefaults(
     busy?: boolean
     error?: string | null
     offline?: boolean
+    alternative?: string
     testid: string
   }>(),
-  { text: undefined, busy: false, error: null, offline: false },
+  { text: undefined, busy: false, error: null, offline: false, alternative: undefined },
 )
-const emit = defineEmits<{ confirm: [] }>()
+const emit = defineEmits<{ confirm: []; alternative: [] }>()
 
 const { t } = useI18n()
 
@@ -76,6 +79,16 @@ const textId = useId()
           <p v-if="text" :id="textId" class="mt-sm text-subhead text-ink-muted" :data-testid="`${testid}.text`">{{ text }}</p>
           <p v-if="error" class="mt-ms text-caption text-error" role="alert" :data-testid="`${testid}.error`">{{ error }}</p>
           <div class="mt-lg flex flex-col gap-sm">
+            <UiButton
+              v-if="alternative"
+              block
+              :disabled="busy"
+              :aria-busy="busy"
+              :data-testid="`${testid}.alternative`"
+              @click="emit('alternative')"
+            >
+              {{ alternative }}
+            </UiButton>
             <UiButton
               block
               tone="danger"

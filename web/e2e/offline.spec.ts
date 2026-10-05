@@ -1,18 +1,20 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { isoDay } from '../app/utils/dates'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { keepShell } from './offlineShell'
 import { goto, recordedApple, signedIn } from './support'
 
 /**
  * Offline (#15): the member loads her Library online, the device loses its
  * connection and the app is opened again. Her Library is still there (from
- * the device's copy), every action that writes is disabled and says
- * "Offline", and search finds her own Books with one quiet note. Back online,
- * the actions are back, a Book removed leaves the copy at once, and signing
- * out leaves no copy behind.
+ * the device's copy), the writes that can wait to sync stay available (#93,
+ * offline-sync.spec.ts) while those that need the connection (Change edition)
+ * are disabled and say "Offline", and search finds her own Books with one quiet
+ * note. Back online, a Book removed leaves the copy at once, and signing out
+ * leaves no copy behind.
  *
  * The dev server has no service worker, so this flow plays its part: every
  * file of the app the page loaded online is kept and answers the same address
@@ -42,41 +44,6 @@ test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: 'ignoreErrors' })
 })
 
-/** The service worker's part (see above). Returns how to go offline and back. */
-async function keepShell(page: Page, baseURL: string) {
-  const origin = new URL(baseURL).origin
-  type Kept = { status: number; headers: Record<string, string>; body: Buffer }
-  const shell = new Map<string, Kept>()
-  // Any address opens the app, as the service worker's navigateFallback does.
-  let appPage: Kept | undefined
-  let offline = false
-  await page.route(
-    (url) => url.origin === origin,
-    async (route) => {
-      const request = route.request()
-      if (offline) {
-        const kept = shell.get(request.url()) ?? (request.isNavigationRequest() ? appPage : undefined)
-        return kept ? route.fulfill(kept) : route.abort('internetdisconnected')
-      }
-      const response = await route.fetch()
-      const kept = { status: response.status(), headers: response.headers(), body: await response.body() }
-      if (request.method() === 'GET') shell.set(request.url(), kept)
-      if (request.isNavigationRequest()) appPage = kept
-      await route.fulfill(kept)
-    },
-  )
-  return {
-    async goOffline() {
-      offline = true
-      await page.context().setOffline(true)
-    },
-    async goOnline() {
-      offline = false
-      await page.context().setOffline(false)
-    },
-  }
-}
-
 function book(title: string, author: string): BookSnapshot {
   return {
     title: runTitle(title),
@@ -99,7 +66,7 @@ function book(title: string, author: string): BookSnapshot {
   }
 }
 
-test('the Library opens offline, nothing writes, and search finds her own books', async ({ page, baseURL }) => {
+test('the Library opens offline, online-only actions say so, and search finds her own books', async ({ page, baseURL }) => {
   await recordedApple(page)
   const network = await keepShell(page, baseURL!)
   const member = await signedIn(page)
@@ -128,8 +95,9 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   await expect(page.getByTestId('library.loadError')).toBeHidden()
   await page.getByTestId('library.segment.reading').click()
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('The Night Lamp'))
-  await expect(page.getByTestId('library.finish')).toBeDisabled()
-  await expect(page.getByTestId('library.finish')).toHaveText(en.common.offline)
+  // Finishing can wait to sync (#93): the shortcut stays.
+  await expect(page.getByTestId('library.finish')).toBeEnabled()
+  await expect(page.getByTestId('library.finish')).toHaveText(en.book.finish)
   await page.getByTestId('library.segment.finished').click()
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Winter Pages'))
   await expect(page.getByTestId('library.entryRating')).toBeVisible()
@@ -137,8 +105,8 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   // Home, from the same copy: Update on the card (#68) is disabled too; the Book's progress itself stays shown.
   await page.getByTestId('shell.tab.home').click()
   await expect(page.getByTestId('home.entryTitle')).toHaveText(runTitle('The Night Lamp'))
-  await expect(page.getByTestId('home.update')).toBeDisabled()
-  await expect(page.getByTestId('home.update')).toHaveText(en.common.offline)
+  await expect(page.getByTestId('home.update')).toBeEnabled()
+  await expect(page.getByTestId('home.update')).toHaveText(en.book.progress.updateShort)
   await expect(page.getByTestId('home.progressValue')).toHaveText(en.book.progress.none)
 
   // Search answers from her own Library, and says so once.
@@ -156,24 +124,28 @@ test('the Library opens offline, nothing writes, and search finds her own books'
   await expect(page.getByTestId('search.offline')).toHaveText(en.search.offlineNote)
   await expect(page.getByTestId('search.addManually')).toBeHidden()
 
-  // Her Book's page opens from the device's copy; its action is disabled.
+  // Her Book's page opens from the device's copy; Start reading can wait to sync (#93).
   await page.getByTestId('search.query').fill('halls')
   await page.getByTestId('search.result').click()
   await expect(page.getByTestId('book.title')).toHaveText(runTitle('Halls of Tide'))
-  await expect(page.getByTestId('book.start')).toBeDisabled()
-  await expect(page.getByTestId('book.start')).toHaveText(en.common.offline)
-  await expect(page.getByTestId('book.addToCollection')).toBeDisabled()
+  await expect(page.getByTestId('book.start')).toBeEnabled()
+  await expect(page.getByTestId('book.start')).toHaveText(en.book.start)
+  await expect(page.getByTestId('book.addToCollection')).toBeEnabled()
   // Removing it from the Library (#11) as well.
   await page.getByTestId('book.options').click()
-  await expect(page.getByTestId('bookOptions.remove')).toBeDisabled()
-  await expect(page.getByTestId('bookOptions.remove')).toContainText(en.common.offline)
+  await expect(page.getByTestId('bookOptions.remove')).toBeEnabled()
+  // Change edition looks editions up: it needs the connection.
+  await expect(page.getByTestId('bookOptions.changeEdition')).toBeDisabled()
+  await expect(page.getByTestId('bookOptions.changeEdition')).toContainText(en.common.offline)
   await page.getByTestId('bookOptions.cancel').click()
   await expect(page.getByTestId('bookOptions')).toBeHidden()
 
-  // Back online: the action is back, without a reload.
+  // Back online: Change edition is back, without a reload.
   await network.goOnline()
-  await expect(page.getByTestId('book.start')).toBeEnabled()
-  await expect(page.getByTestId('book.start')).toHaveText(en.book.start)
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.changeEdition')).toBeEnabled()
+  await page.getByTestId('bookOptions.cancel').click()
+  await expect(page.getByTestId('bookOptions')).toBeHidden()
 
   // Removed from the Library (#11): the device's copy forgets it at once too.
   const savedTitles = () =>
