@@ -58,11 +58,18 @@ export const useSyncStore = defineStore('sync', () => {
   let unsubscribe: (() => void) | null = null
   let retryTimer: ReturnType<typeof setTimeout> | undefined
 
+  /** Whether anything answers, asked before a flush sends; a silence counts the device as offline for writes (composables/useOnline.ts). */
+  async function reachable(): Promise<boolean> {
+    const answered = await askBackend()
+    if (!answered) reportNoAnswer()
+    return answered
+  }
+
   function open(memberId: string) {
     close()
     if (!import.meta.client || !backend) return
     const storage = typeof indexedDB === 'undefined' ? memoryOutboxStorage() : indexedDbOutboxStorage(indexedDB)
-    const box = createOutbox({ memberId, storage, send: createSender(backend) })
+    const box = createOutbox({ memberId, storage, send: createSender(backend), reachable })
     outbox = box
     unsubscribe = box.subscribe(() => {
       if (outbox !== box) return

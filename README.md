@@ -43,8 +43,9 @@ The Playwright flows (`web/e2e`) never call a live API: Apple and OpenLibrary an
 `web/tests/fixtures`, and a fixture fails any test that reaches another host or shows a control without a
 `data-testid`. `e2e/core-loop.spec.ts` is the smoke flow of the whole loop (sign in, search, add, start,
 finish with a rating and a review, counted on Home and under Finished). On a pull request they run as the
-`e2e` CI job against a fresh local stack, with one retry; a failed run uploads the HTML report and traces
-(artifact `playwright-report`; open it with `pnpm exec playwright show-report`). Locally a failure is not
+`e2e` CI job against a fresh local stack, with one retry, split into three shards that run side by side; a failed
+run uploads one merged HTML report with the traces (artifact `playwright-report`; open it with
+`pnpm exec playwright show-report`). Locally a failure is not
 retried, so a flaky flow is seen.
 
 What a desktop browser cannot show — the system bars, the browser's toolbar, the real keyboard — is

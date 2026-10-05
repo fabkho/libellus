@@ -90,7 +90,7 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
   /** "22 days". */
   const daysWords = (count: number) => t('book.progress.days', { count }, count)
 
-  /** The card's line beside the sparkline: "18 a day · 22 days", or at the end "12 days · 51 a day". */
+  /** The card's line beside the chart: "18 a day · 22 days", or at the end "12 days · 51 a day". */
   const paceLine = computed(() => {
     if (atEnd.value && sofar.value) return t('book.progress.endLine', { days: daysWords(sofar.value.days), perDay: perDayWords(sofar.value.perDay) })
     if (!pace.value) return null

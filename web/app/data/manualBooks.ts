@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseIsbn } from './books'
+import { isNoAnswer } from './network'
 import {
   addWithArguments,
   createLibrary,
@@ -72,6 +73,8 @@ export function createManualBooks(client: SupabaseClient, { online = () => true 
         p_page_count: pages ? Number(pages) : null,
         ...addWithArguments(options),
       })
+      // No answer at all (data/network.ts): the member is offline as far as writes go.
+      if (isNoAnswer(added)) return { data: null, error: 'offline' }
       if (added.error) {
         if (added.error.message?.includes('isbn_invalid')) return { data: null, error: 'isbn_invalid' }
         return { data: null, error: mapLibraryError(added.error) }

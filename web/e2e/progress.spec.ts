@@ -297,7 +297,8 @@ test('a failed save says why and tries again', async ({ page }) => {
 
   await page.getByTestId('home.update').click()
   await typeOn(page, 'progress.wheel', 50)
-  await page.route('**/rest/v1/rpc/update_progress', (route) => route.abort('failed'))
+  // The server fails (a connection that answers nothing is queued instead: no-answer.spec.ts).
+  await page.route('**/rest/v1/rpc/update_progress', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'The server fell over.' }) }))
   await page.getByTestId('progress.action').click()
   await expect(page.getByTestId('progress.failure')).toHaveText(en.library.error.unknown)
   await expect(page.getByTestId('progress.action')).toHaveText(en.book.progress.retry)

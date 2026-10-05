@@ -10,6 +10,7 @@ import {
   type LibraryEntry,
   type WriteOptions,
 } from './library'
+import { isNoAnswer } from './network'
 import type { QueuedAction } from './queuedWrites'
 
 /**
@@ -152,8 +153,10 @@ export function createCollections(client: SupabaseClient, { online = () => true,
     collectionId: string,
     args: Record<string, unknown>,
     entryId?: string,
+    /** The call to the database got no answer (data/network.ts): the write waits whether or not the device knew. */
+    unanswered = false,
   ): Promise<CollectionResult<CollectionSummary> | null> {
-    if (!queue?.holds()) return null
+    if (!queue || !(unanswered || queue.holds())) return null
     const known = queue.collection(collectionId)
     if (!known) return OFFLINE
     await queue.add({ action, args, about: known.name, queuedAt: new Date().toISOString(), entryId })
@@ -221,7 +224,8 @@ export function createCollections(client: SupabaseClient, { online = () => true,
 
     async create(name) {
       if (!online()) return OFFLINE
-      const { data, error } = await client.rpc('create_collection', { p_name: name })
+      const { data, error, status } = await client.rpc('create_collection', { p_name: name })
+      if (isNoAnswer({ error, status })) return OFFLINE
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: summaryOf(data as CollectionRow), error: null }
     },
@@ -230,7 +234,12 @@ export function createCollections(client: SupabaseClient, { online = () => true,
       const waiting = await queued('rename_collection', id, { p_collection: id, p_name: name })
       if (waiting) return waiting.error ? waiting : { data: { ...waiting.data, name: normaliseName(name) }, error: null }
       if (!online()) return OFFLINE
-      const { data, error } = await client.rpc('rename_collection', { p_collection: id, p_name: name })
+      const { data, error, status } = await client.rpc('rename_collection', { p_collection: id, p_name: name })
+      if (isNoAnswer({ error, status })) {
+        const late = await queued('rename_collection', id, { p_collection: id, p_name: name }, undefined, true)
+        if (!late) return OFFLINE
+        return late.error ? late : { data: { ...late.data, name: normaliseName(name) }, error: null }
+      }
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: summaryOf(data as CollectionRow), error: null }
     },
@@ -239,7 +248,12 @@ export function createCollections(client: SupabaseClient, { online = () => true,
       const waiting = await queued('delete_collection', id, { p_collection: id })
       if (waiting) return waiting.error ? waiting : { data: true, error: null }
       if (!online()) return OFFLINE
-      const { error } = await client.rpc('delete_collection', { p_collection: id })
+      const { error, status } = await client.rpc('delete_collection', { p_collection: id })
+      if (isNoAnswer({ error, status })) {
+        const late = await queued('delete_collection', id, { p_collection: id }, undefined, true)
+        if (!late) return OFFLINE
+        return late.error ? late : { data: true, error: null }
+      }
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: true, error: null }
     },
@@ -255,6 +269,13 @@ export function createCollections(client: SupabaseClient, { online = () => true,
       }
       if (!online()) return OFFLINE
       const added = await client.rpc('add_to_collection', { p_collection: collectionId, p_book })
+      if (isNoAnswer(added)) {
+        // Only a Book in the Library can wait (as above).
+        const entry = 'id' in book ? queue?.entryForBook(book.id) : null
+        const late = entry && (await queued('add_to_collection', collectionId, { p_collection: collectionId, p_book }, entry.id, true))
+        if (!entry || !late) return OFFLINE
+        return late.error ? late : { data: entry, error: null }
+      }
       if (added.error) return { data: null, error: mapCollectionError(added.error) }
       // The function returns the entry; the Book comes with it in a second read
       // (as the Catalogue holds it, which may be an earlier snapshot than ours).
@@ -271,7 +292,12 @@ export function createCollections(client: SupabaseClient, { online = () => true,
       const waiting = await queued('remove_from_collection', collectionId, { p_collection: collectionId, p_entry: entryId }, entryId)
       if (waiting) return waiting.error ? waiting : { data: true, error: null }
       if (!online()) return OFFLINE
-      const { error } = await client.rpc('remove_from_collection', { p_collection: collectionId, p_entry: entryId })
+      const { error, status } = await client.rpc('remove_from_collection', { p_collection: collectionId, p_entry: entryId })
+      if (isNoAnswer({ error, status })) {
+        const late = await queued('remove_from_collection', collectionId, { p_collection: collectionId, p_entry: entryId }, entryId, true)
+        if (!late) return OFFLINE
+        return late.error ? late : { data: true, error: null }
+      }
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: true, error: null }
     },
@@ -280,7 +306,12 @@ export function createCollections(client: SupabaseClient, { online = () => true,
       const waiting = await queued('reorder_collection', collectionId, { p_collection: collectionId, p_entries: [...entryIds] })
       if (waiting) return waiting.error ? waiting : { data: true, error: null }
       if (!online()) return OFFLINE
-      const { error } = await client.rpc('reorder_collection', { p_collection: collectionId, p_entries: [...entryIds] })
+      const { error, status } = await client.rpc('reorder_collection', { p_collection: collectionId, p_entries: [...entryIds] })
+      if (isNoAnswer({ error, status })) {
+        const late = await queued('reorder_collection', collectionId, { p_collection: collectionId, p_entries: [...entryIds] }, undefined, true)
+        if (!late) return OFFLINE
+        return late.error ? late : { data: true, error: null }
+      }
       if (error) return { data: null, error: mapCollectionError(error) }
       return { data: true, error: null }
     },

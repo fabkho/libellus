@@ -210,8 +210,8 @@ test('"Sync first" sends the waiting changes, then signs out; if they cannot go,
   await page.reload()
   await expect(page.getByTestId('home.entryTitle')).toHaveText(runTitle('Glass Orchard'))
 
-  // The connection is there but the sync call does not get through: the change keeps waiting.
-  await page.route('**/rest/v1/rpc/sync_write', (route) => route.abort('failed'))
+  // The connection is there but the server fails the sync call: the change keeps waiting.
+  await page.route('**/rest/v1/rpc/sync_write', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'The server fell over.' }) }))
   await page.context().setOffline(true)
   await saveProgress(page, 72)
   await page.context().setOffline(false)

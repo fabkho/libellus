@@ -19,7 +19,7 @@ import {
 } from './goodreads.ts'
 
 /** Who is asking: the app, by name, with where it lives. */
-export const USER_AGENT = 'Libellus/1.0 (private book tracker; +https://libellus-3q1.pages.dev)'
+export const USER_AGENT = 'Libellus/1.0 (private book tracker; +https://libellus.fabkho.dev)'
 export const MIN_INTERVAL_MS = 1000
 export const REQUEST_TIMEOUT_MS = 3000
 export const MAX_WAIT_MS = 4000

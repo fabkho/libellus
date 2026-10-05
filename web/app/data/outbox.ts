@@ -20,9 +20,14 @@ import { COLLECTION_ACTIONS, isLocalId, uuid, type QueuedAction, type QueuedWrit
  *     …): the write leaves the line and becomes a failure the member can read
  *     and dismiss (`SyncFailure`); the store reads the Library again, which undoes
  *     what the device showed for it. The writes behind it are still sent.
- *   - unreachable (no network after all) or a server error: the line stops there
- *     and is tried again after a pause that doubles each time (`backoff`), in
- *     order. A server error that persists (`GIVE_UP_AFTER` tries) is a failure too.
+ *   - unreachable (no network after all, or no answer within the write timeout,
+ *     data/network.ts) or a server error: the line stops there and is tried again
+ *     after a pause that doubles each time (`backoff`), in order. A server error
+ *     that persists (`GIVE_UP_AFTER` tries) is a failure too.
+ *
+ * Before the first send a flush asks `reachable` (a cheap probe, data/network.ts)
+ * whether anything answers; if not, nothing is sent (no write is held up for its
+ * whole timeout) and the flush is tried again after a pause.
  *
  * Every member has their own line; signing out removes the device's outbox with
  * everything else it keeps (`localData.ts`). Framework-free: the store hands in
@@ -123,11 +128,14 @@ export function createOutbox({
   memberId,
   storage,
   send,
+  reachable,
   now = () => Date.now(),
 }: {
   memberId: string
   storage: OutboxStorage
   send: Send
+  /** Whether anything answers at all, asked before a flush sends. Left out, it is taken for granted. */
+  reachable?: () => Promise<boolean>
   now?: () => number
 }): Outbox {
   let state = emptyState()
@@ -197,9 +205,22 @@ export function createOutbox({
     return failure
   }
 
+  /** Probes in a row that got no answer (for the pause before the next). */
+  let silent = 0
+
   async function run(): Promise<FlushReport> {
     await ready
     const report: FlushReport = { taken: [], refused: [], waiting: 0, retryAt: null }
+    if (state.items.length && reachable) {
+      const answered = await reachable().catch(() => false)
+      if (!answered) {
+        silent += 1
+        report.retryAt = now() + backoff(silent)
+        report.waiting = state.items.length
+        return report
+      }
+      silent = 0
+    }
     while (state.items.length) {
       const item = state.items[0]!
       if (item.retryAt > now()) {
