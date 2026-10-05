@@ -32,16 +32,17 @@ const paddingTop = (page: Page, testid: string) =>
 
 test('the header and the tab bar keep clear of the browser and of Android navigation', async ({ page }) => {
   await signedIn(page)
-  const [barTop, floatAbove, tabBar, fadeAbove] = await Promise.all(
-    ['--spacing-bar-top', '--spacing-float-above', '--size-tab-bar', '--size-fade-above'].map((name) => token(page, name)),
+  const [barTop, floatAbove, tabBar] = await Promise.all(
+    ['--spacing-bar-top', '--spacing-float-above', '--size-tab-bar'].map((name) => token(page, name)),
   )
 
   // A Chrome tab with gesture navigation: no top inset, a 24 px navigation inset.
   await insets(page, 0, 24)
   expect(await paddingTop(page, 'shell.header')).toBe(barTop)
   await expect.poll(() => fromBottom(page, 'shell.tabs')).toBe(24 + floatAbove)
-  const fade = await page.locator('.fade').evaluate((element) => element.getBoundingClientRect().height)
-  expect(Math.round(fade)).toBe(24 + floatAbove + tabBar + fadeAbove)
+  // Its scroll edge is as tall as the capsule and where it floats, no taller.
+  const edge = await page.getByTestId('shell.tabsEdge').evaluate((element) => element.getBoundingClientRect().height)
+  expect(Math.round(edge)).toBe(24 + floatAbove + tabBar)
 
   // The search palette rests where the tab bar was.
   await page.getByTestId('shell.tab.search').click()

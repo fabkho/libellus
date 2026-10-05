@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// D's tab bar: a small floating capsule of three icons over a fade to the
-// room colour, the content running on underneath. Home and Library are pages;
+// D's tab bar: a small floating capsule of three icons over a soft scroll edge
+// (a masked blur of what runs under it, only while something does), the
+// content running on underneath. Home and Library are pages;
 // Search is not — it opens the search palette over the page you are on
 // (stores/search.ts), and the capsule itself turns into that palette
 // (docs/MOTION.md, Search morph): while it does, this bar stays where it is
@@ -12,8 +13,8 @@
 // icon's way.
 //
 // On a pushed screen (a book, Collections, a Collection, Import) the bar and
-// its fade slide away while the member reads down and come back on a short
-// scroll up, at the top and at the end of the page (useHideOnScroll,
+// its scroll edge slide away while the member reads down and come back on a
+// short scroll up, at the top and at the end of the page (useHideOnScroll,
 // docs/MOTION.md, Tab bar away). Never while search, a sheet or a field is in
 // play: search opening snaps it back to its place first, without a transition,
 // so the morph always grows out of the capsule where it rests.
@@ -28,6 +29,8 @@ const modal = useModalShown()
 const { hidden: scrolledAway, reveal } = useHideOnScroll(
   () => Boolean(route.meta.pushed) && !search.isOpen && chrome.value === 'tabs' && !modal.value,
 )
+/** Content runs under the capsule's scroll edge (composables/useContentUnderBar.ts). */
+const under = useContentUnderBar()
 // A screen that fills the room (`immersive`: Your shelf, #23) has the bar away for as long as it shows.
 const away = computed(() => scrolledAway.value || Boolean(route.meta.immersive))
 /** Search is taking the bar over: it is where it rests at once, for the morph to measure. */
@@ -57,9 +60,10 @@ function tapped(event: MouseEvent, to: string) {
 
 <template>
   <div
-    class="fade bar pointer-events-none fixed inset-x-0 bottom-0 z-10 bg-linear-to-b from-transparent to-surface to-62%"
-    :class="[away && 'away', still && 'still']"
+    class="edge-bottom bar pointer-events-none fixed inset-x-0 bottom-0 z-10"
+    :class="[away && 'away', still && 'still', !under && 'empty']"
     aria-hidden="true"
+    data-testid="shell.tabsEdge"
   />
   <nav
     :aria-label="t('shell.tabsLabel')"
@@ -137,7 +141,7 @@ nav.away {
   transform: translateY(calc(100% + var(--float-bottom)));
 }
 
-.fade.away {
+.edge-bottom.away {
   transform: translateY(100%);
 }
 
@@ -145,9 +149,33 @@ nav.away {
   transition: none;
 }
 
-/* From the screen edge to `fadeAbove` over the capsule, wherever it floats. */
-.fade {
-  height: calc(var(--float-bottom) + var(--size-tab-bar) + var(--size-fade-above));
+/* The scroll edge (iOS 26's, Material's toolbar has none): a soft blur of what
+   runs under the capsule, strongest at the screen edge and gone by the capsule's
+   top, with only as much of the room colour in it as legibility needs. It is as
+   tall as the capsule and what lies under it (where it floats, the inset
+   included) and no taller, and it shows only while content runs under it. It
+   takes no tap. Where there is no backdrop blur (an old WebView) a very light,
+   short gradient stands in. */
+.edge-bottom {
+  height: calc(var(--float-bottom) + var(--size-tab-bar));
+  background: linear-gradient(to top, color-mix(in srgb, var(--color-surface) 55%, transparent), transparent);
+  -webkit-backdrop-filter: blur(var(--blur-veil));
+  backdrop-filter: blur(var(--blur-veil));
+  -webkit-mask-image: linear-gradient(to top, black 30%, transparent);
+  mask-image: linear-gradient(to top, black 30%, transparent);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .edge-bottom {
+    background: linear-gradient(to top, color-mix(in srgb, var(--color-surface) 40%, transparent), transparent);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* Nothing runs under it (the page's end, a page that fits): no edge. */
+.edge-bottom.empty {
+  opacity: 0;
 }
 
 /* 6 under the icon (`xs` + `xxs`), less the dot's own `xs`. */

@@ -18,7 +18,7 @@ the components and when to use them. Motion has its own file, [MOTION.md](MOTION
    small uppercase eyebrows, Newsreader for book titles and the wordmark. Titles are serif, always.
 4. **Hairlines, not boxes.** Edges are half-pixel rings and dividers inset under the text; cards
    are a slightly raised surface, not an outline.
-5. **Floating chrome over the content.** The tab bar is a small glass capsule over a fade; search
+5. **Floating chrome over the content.** The tab bar is a small glass capsule over a soft scroll edge; search
    is a palette over the page, never a page; sheets rise over a scrim. The page you were on stays
    where it is.
 6. **Two rooms, one design.** Light and dark are the same screens with two sets of values. Nothing
@@ -129,7 +129,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   code cells), `field` 18 (search field), `lg` 20 (cards), `xl` 24 (search palette),
   `sheet` 30, `pill`.
 - Size: `touch` 44 (smallest target), `maxContent` 480 (the column on wide screens), `tabBar` 62,
-  `tab` 72, `tabIcon` 26, `row` 48, `query` 62 (as tall as the capsule it grows out of), `fadeAbove` 64 (the tab bar's fade reaches this far over the capsule, from the screen edge), `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
+  `tab` 72, `tabIcon` 26, `row` 48, `query` 62 (as tall as the capsule it grows out of), `button` 50/40/32, `avatar` 32, `menu` 272, cover widths
   `coverXs` 30 · `coverSm` 40 · `coverMd` 72 · `coverLg` 82 · `coverXl` 140, stars 12/16/24 (display) and
   `starInput` 44 (the rating control, one star per fingertip) with its `ratingThumb` 24.
 - Stroke: `hairline` 0.5 (edges), `rule` 1 (a field's underline), `focus` 2, icons 1.5 / 1.7.
@@ -174,8 +174,9 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `bar` above the page — a mono date eyebrow over the greeting on Home ("Friday · 2 Oct",
   `text-title`), the large title elsewhere (`text-large-title`). Pushed screens with a large
   title (Collections, a Collection, Import) put it on the same row, `bar` under their top bar.
-- **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) over a fade
-  to the surface, at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
+- **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) over a
+  scroll edge (a soft blur of what runs under it, as tall as the capsule and where it floats,
+  fading out upwards, only while content runs under it; no opaque fade), at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
   the screen edge. The current tab is full ink with a bolder stroke and a lamp dot; the others are
   faint. Search is not a page: it opens the search palette, and the capsule itself turns into it
   and back (MOTION.md, Search morph).
