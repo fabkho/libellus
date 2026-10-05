@@ -300,6 +300,9 @@ function settle(direction: Direction) {
   }
 }
 
+/** Dev only: the picker for the loading ideas (design round); false in every build. */
+const isDev = import.meta.dev
+
 // ------------------------------------------------------------ keyboard and drag
 
 // While the query has the keyboard the palette sits right above it. The
@@ -505,6 +508,8 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+
+      <LazySearchDevPicker v-if="isDev" />
 
       <ShellBarcodeScanner v-if="scanSupported" v-model:open="scanning" />
     </template>

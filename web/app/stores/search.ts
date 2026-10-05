@@ -46,6 +46,8 @@ export const useSearchStore = defineStore('search', () => {
   // Taken while the store is set up (inside Nuxt's context), not later in a timer.
   const backend = useBackend()
   const catalogue = backend ? createCatalogueSearch(backend) : null
+  // Dev only (`?delay=2000`): answers are held back, to see the loading state.
+  const dev = useSearchDev()
 
   const hits = ref<SearchHit[]>([])
   const phase = ref<SearchPhase>('idle')
@@ -123,6 +125,11 @@ export const useSearchStore = defineStore('search', () => {
     }
     const controller = new AbortController()
     inFlight = controller
+    // Dev only: every answer waits for this, in the order they came.
+    const hold =
+      import.meta.dev && dev.delay.value > 0
+        ? new Promise<void>((resolve) => setTimeout(resolve, dev.delay.value))
+        : null
     try {
       const outcome = await repository().search(text, {
         signal: controller.signal,
@@ -130,9 +137,12 @@ export const useSearchStore = defineStore('search', () => {
         // A source's answer shows as soon as there is something to show; an
         // older list stays (dimmed) until then.
         onUpdate: (update) => {
-          if (!controller.signal.aborted && (update.results.length || !update.pending)) show(text, update)
+          if (!update.results.length && update.pending) return
+          if (hold) void hold.then(() => !controller.signal.aborted && show(text, update))
+          else if (!controller.signal.aborted) show(text, update)
         },
       })
+      await hold
       if (!controller.signal.aborted) show(text, outcome)
     } catch (error) {
       if (isAbort(error) || controller.signal.aborted) return

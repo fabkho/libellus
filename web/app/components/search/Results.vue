@@ -14,6 +14,8 @@ import { parseIsbn } from '~/data/books'
 import { useLibraryStore } from '~/stores/library'
 import { useManualStore } from '~/stores/manual'
 import { useSearchStore } from '~/stores/search'
+import { SEARCH_DEBOUNCE_MS } from '~/data/search'
+import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 
 const { t } = useI18n()
 const search = useSearchStore()
@@ -61,6 +63,67 @@ const state = computed(() => {
   return 'none'
 })
 
+// Dev only (design round): which loading idea shows. Outside dev it is always
+// `o`, the single ghost row.
+const devLoading = useSearchDev().loading
+
+// Between loading and results (or back) the palette changes height, and it
+// grows from the query upwards: the room glides to its new height over
+// `standard` instead of jumping, the loading state fading out where it stood
+// and the first rows rising in over it (docs/MOTION.md, Move only what
+// changed). With Reduce Motion the height just changes.
+/**
+ * How long a search waits before it shows a loading state at all: the typing
+ * pause before a query goes out plus `quick`, so an answer that comes straight
+ * back shows no loading, not a flash of it.
+ */
+const loadingWait = ref(SEARCH_DEBOUNCE_MS)
+onMounted(() => (loadingWait.value = SEARCH_DEBOUNCE_MS + durationToken('quick')))
+const root = useTemplateRef<HTMLElement>('root')
+let heightBefore = 0
+let cameFrom: string | null = null
+let gliding: Animation | undefined
+const arriving = ref(false)
+let arrivingTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  state,
+  (_next, previous) => {
+    heightBefore = root.value?.offsetHeight ?? 0
+    cameFrom = previous ?? null
+  },
+  { flush: 'pre' },
+)
+watch(
+  state,
+  (next) => {
+    const el = root.value
+    if (!el || (next !== 'loading' && cameFrom !== 'loading') || prefersReducedMotion()) return
+    if (next === 'results') {
+      arriving.value = true
+      clearTimeout(arrivingTimer)
+      arrivingTimer = setTimeout(() => (arriving.value = false), durationToken('standard') * 3)
+    }
+    const heightAfter = el.offsetHeight
+    gliding?.cancel()
+    if (!heightBefore || heightBefore === heightAfter) return
+    // The loading state opens its room only once it shows itself (see loadingWait).
+    gliding = el.animate(
+      [
+        { height: `${heightBefore}px`, overflow: 'hidden' },
+        { height: `${heightAfter}px`, overflow: 'hidden' },
+      ],
+      {
+        duration: durationToken('standard'),
+        easing: easingToken('standard'),
+        delay: next === 'loading' ? loadingWait.value : 0,
+        fill: 'backwards',
+      },
+    )
+  },
+  { flush: 'post' },
+)
+onBeforeUnmount(() => clearTimeout(arrivingTimer))
+
 // The first covers are asked for as soon as the results land, before the rows
 // render, so they are on their way while the list lays out.
 watch(
@@ -72,31 +135,33 @@ watch(
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-col" aria-live="polite">
+  <div ref="root" class="relative flex min-h-0 flex-col" aria-live="polite">
     <p v-if="state === 'idle'" class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="search.empty">
       {{ t('search.empty') }}
     </p>
 
-    <div v-else-if="state === 'loading'" class="flex items-center gap-ms py-xs pr-ms pl-md" data-testid="search.loading">
-      <span class="ghost-cover shrink-0 rounded-cover-sm bg-fill" aria-hidden="true" />
-      <span class="flex flex-1 flex-col gap-xs" aria-hidden="true">
-        <span class="ghost-line w-3/5 rounded-pill bg-fill" />
-        <span class="ghost-line w-2/5 rounded-pill bg-fill" />
-      </span>
-      <span class="sr-only">{{ t('search.loading') }}</span>
-    </div>
+    <!-- Leaves over the results arriving where it stood (see .loading-leave-active). -->
+    <Transition name="loading">
+      <SearchLoading v-if="state === 'loading'" :variant="devLoading" :query="search.query.trim()" :style="{ '--loading-wait': `${loadingWait}ms` }" />
+    </Transition>
 
     <ol
-      v-else-if="state === 'results'"
+      v-if="state === 'results'"
       ref="list"
       class="list flex flex-col-reverse overflow-y-auto overscroll-contain py-xs transition-opacity duration-(--duration-standard) ease-standard"
-      :class="stale && 'opacity-60'"
+      :class="[stale && 'opacity-60', arriving && 'arriving']"
       :style="listStyle"
       :aria-busy="stale"
       data-no-swipe
       data-testid="search.results"
     >
-      <li v-for="(hit, index) in search.hits" :key="hit.key" :ref="nearby.observe" :data-near-key="hit.key">
+      <li
+        v-for="(hit, index) in search.hits"
+        :key="hit.key"
+        :ref="nearby.observe"
+        :data-near-key="hit.key"
+        :style="index < 5 ? { '--n': index } : undefined"
+      >
         <SearchResultRow
           :hit="hit"
           :eager="index < FIRST_COVERS || nearby.has(hit.key)"
@@ -131,7 +196,7 @@ watch(
       </UiButton>
     </div>
 
-    <div v-else class="px-ml pt-ml pb-md" data-testid="search.failed">
+    <div v-else-if="state === 'failed'" class="px-ml pt-ml pb-md" data-testid="search.failed">
       <p class="text-callout font-medium">{{ t('search.failedTitle') }}</p>
       <p class="mt-xs text-subhead text-ink-muted">{{ t('search.failed') }}</p>
     </div>
@@ -146,13 +211,24 @@ watch(
   mask-image: linear-gradient(to bottom, transparent, black var(--spacing-xxl));
 }
 
-.ghost-cover {
-  width: var(--size-cover-sm);
-  aspect-ratio: 2 / 3;
+/* The loading state leaves over the room the results arrive in, fading, so the first rows rise in where it stood. */
+.loading-leave-active {
+  position: absolute;
+  inset: auto 0 0;
+  transition: opacity var(--duration-exit) var(--ease-exit);
+}
+.loading-leave-to {
+  opacity: 0;
 }
 
-.ghost-line {
-  display: block;
-  height: var(--spacing-sm);
+/* The best matches (the bottom rows) land one after the other; the weaker ones are simply there. */
+.arriving > li[style] {
+  animation: row-arrive var(--duration-standard) var(--ease-standard) calc(var(--n) * var(--duration-instant) * 0.5) both;
+}
+@keyframes row-arrive {
+  from {
+    opacity: 0;
+    translate: 0 var(--spacing-sm);
+  }
 }
 </style>
