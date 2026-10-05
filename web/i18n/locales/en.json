@@ -734,6 +734,12 @@
       "title": "On the shelf",
       "open": "Open",
       "openLabel": "{year} on your shelf, {count} book | {year} on your shelf, {count} books"
+    },
+    "detail": {
+      "showBack": "Show back",
+      "showFront": "Show front",
+      "putBack": "Put back",
+      "goodreads": "Goodreads"
     }
   }
 }
