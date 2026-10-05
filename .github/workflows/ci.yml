@@ -28,19 +28,17 @@ on:
   workflow_dispatch:
 
 # One run per pull request: a push, a force-pushed rebase or a re-run cancels
-# the one before it. A run on main is never cancelled by the next merge, so
-# every commit on main keeps a result.
+# the one before it. A run on main (or a manual one) has its own group per
+# commit, so it is never cancelled or dropped by the next merge and every
+# commit on main keeps a result.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # The web app extends Regal (the owner's shelf, #23; web/regal.config.ts), a private repo Nuxt
-  # downloads with this token (a GitHub token that can read fabkho/regal). Without it `nuxt dev`
-  # and `nuxt generate` stop and say so; the install's `nuxt prepare` goes on without it.
-  GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
-  # Playwright shards on a pull request. Measured on #... : see docs/TESTING.md.
-  # The repository variable E2E_SHARDS overrides it without a commit.
+  # Playwright shards on a pull request: 2 is the trade-off measured in
+  # docs/TESTING.md (CI: what runs when). The repository variable E2E_SHARDS
+  # overrides it without a commit; 1 is the cheapest in minutes.
   DEFAULT_E2E_SHARDS: 2
 
 jobs:
@@ -191,21 +189,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
-      # The Supabase images (a gigabyte or two) are pulled on every start. They
-      # are kept as one tarball per CLI version and config; shard 1 saves it
-      # after a miss, the others only restore. The cache written on main is
-      # readable by every pull request.
-      - name: Restore the Supabase images
-        id: images
-        uses: actions/cache/restore@v4
-        with:
-          path: /tmp/supabase-images.tar
-          key: supabase-images-${{ runner.os }}-${{ env.SUPABASE_CLI }}-${{ hashFiles('supabase/config.toml') }}
-
-      - name: Load the Supabase images
-        if: steps.images.outputs.cache-hit == 'true'
-        run: docker load --quiet --input /tmp/supabase-images.tar
-
       # Only what the flows and the data layer use: the database, auth, the API,
       # the mail catcher (the sign-in code is read out of it) and storage.
       # Migrations and seed (the dev invite) apply on start, onto an empty
@@ -216,26 +199,6 @@ jobs:
       - name: Database rules (pgTAP)
         if: env.RUN_BACKEND == 'true'
         run: supabase test db
-
-      # pg_prove is pulled by the first `supabase test db`, so the tarball is
-      # written after it.
-      - name: Save the Supabase images
-        id: tarball
-        if: matrix.shard == 1 && steps.images.outputs.cache-hit != 'true'
-        continue-on-error: true
-        run: |
-          docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E '/supabase/|^supabase/' \
-            | xargs docker save --output /tmp/supabase-images.tar
-          ls -lh /tmp/supabase-images.tar
-          echo "saved=true" >> "$GITHUB_OUTPUT"
-
-      - name: Save the Supabase images to the cache
-        if: matrix.shard == 1 && steps.images.outputs.cache-hit != 'true' && steps.tarball.outputs.saved == 'true'
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: /tmp/supabase-images.tar
-          key: ${{ steps.images.outputs.cache-primary-key }}
 
       - name: Install web
         working-directory: web
@@ -251,8 +214,6 @@ jobs:
             echo "SUPABASE_ANON_KEY=$ANON_KEY"
             echo "SUPABASE_DB_URL=$DB_URL"
             echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
-            # The shelf's owner is made with a given id, which only the auth admin can do (e2e/shelfOwner.ts).
-            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
       - name: Web data layer (Vitest against the local stack)
@@ -389,14 +350,6 @@ jobs:
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
         working-directory: web
         run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
-
-      # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
-      - name: Regal is built apart and left out of the precache
-        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
-        working-directory: web
-        run: |
-          ls .output/public/_nuxt/regal.*.js
-          ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
 
       - uses: denoland/setup-deno@v2
         if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true'

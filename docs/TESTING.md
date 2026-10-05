@@ -324,3 +324,79 @@ for the app instead of for time: `untilStill` (nothing carries `data-moving`:
 no sheet or list moving, no page on its way to its scroll place), `goto` (an
 address opened once the page is at rest), boxes compared in one `evaluate`
 (e2e/support.ts, e2e/fixtures.ts).
+
+## CI: what runs when
+
+GitHub Actions on the private account has a fixed pool of 3,000 included minutes a month, and every job is
+billed in whole minutes. `.github/workflows/ci.yml` therefore spends them where they buy something.
+
+| Event | What runs |
+| --- | --- |
+| Pull request | Only what the changed paths call for (below). Playwright included. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
+| Push to `main` (a merge) | The cheap checks, never Playwright: the pull request already ran the flows. Database rules (pgTAP) and Vitest when the schema or `web/` changed, `nuxt generate`, the tokens check, the Deno tests. |
+| `workflow_dispatch` | Everything, Playwright included: a manual full run (`gh workflow run CI --ref <branch>`, possible once the workflow is on `main`). |
+| Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
+
+A `what changed` job (about 6 seconds, one billed minute) turns the changed files into the jobs to run
+(`dorny/paths-filter`). Any change under `.github/` runs everything, so CI changes are tested by CI.
+
+| Changed path | Runs |
+| --- | --- |
+| `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the Playwright flows (stack job), plus the web build for `web/**` |
+| `supabase/tests/**`, `supabase/templates/**` | pgTAP and Vitest (stack job, no flows) |
+| `design/**`, `web/app/assets/css/tokens.generated.css` | Tokens check |
+| `supabase/functions/goodreads-rating/**` | Deno lint, check, test of that function |
+| `supabase/functions/regal-export/**`, `web/app/data/export/**` | Deno lint, check, test of that function |
+
+A pull request that touches several of these runs the union. A skipped job is a pass for everything
+downstream and no branch is protected by required checks, so a skip never blocks a merge; the merged
+Playwright report only runs when the `stack` job failed, and copes with a failure before any flow ran.
+
+Jobs, and why they are shaped so:
+
+- **`stack`** boots one local Supabase stack per runner (the database, auth, API, mail catcher and storage;
+  Studio, imgproxy, edge runtime, logs, vector and postgres-meta are left out) and uses it for everything that
+  needs one. Shard 1 runs pgTAP and Vitest first (a red rule says so before the flows start), then every shard
+  runs its slice of the flows (`--shard i/N`, split by test). Before, pgTAP + Vitest was a job of its own that
+  booted a second stack (about 4 billed minutes). On a push to `main` the job is shard 1 alone and stops after Vitest.
+- **`statics`** holds the checks that take seconds (tokens, `nuxt generate`, the two Deno suites) in one job,
+  because each job rounds up to a whole minute: four jobs were four minutes, the one job is one.
+- The pnpm store (`setup-node` cache) and the Playwright browsers (`actions/cache`, per Playwright version) are
+  cached. The system libraries WebKit and Chromium need are installed on every run (about 50 s, they live outside the
+  browser folder). Teardown steps (`supabase stop`) are gone: the runner is thrown away anyway and they cost about 10 s a job.
+- **Supabase images are not cached.** Tried: restoring a `docker save` tarball from `actions/cache` (20 s) and
+  `docker load` (74 s) plus a start of 31 s took about 125 s, against 85 to 90 s for a plain `supabase start` that pulls.
+  Writing it cost 52 s more. Not worth it, removed.
+
+### How many shards
+
+Every shard pays a fixed overhead (runner, install, Supabase boot, browser libraries: about 3 minutes) on top of its
+share of the flows (about 21 minutes in all, two workers per runner). Measured on this pull request, with the whole
+workflow, in billed minutes:
+
+| Shards | Wall time of the slowest job | Billed minutes (stack jobs) | With `what changed` and `statics` |
+| --- | --- | --- | --- |
+| 3 (before, flows only; pgTAP + Vitest was another 4 min job) | about 11 | about 29 | about 37 per pull request |
+| 2 (now) | 17 (shard 1 incl. pgTAP and Vitest; shard 2: 13) | 17 + 13 = 30 (the first run also paid 1 min for an image cache, since dropped) | about 32 |
+| 1 | 26 | 26 | about 28 |
+
+Two shards is the default: one shard saves about 4 minutes a pull request (13 %) for 9 more minutes of waiting.
+If the month runs short, `gh variable set E2E_SHARDS --body 1` switches without a commit (`3` the other way). The
+runner has two cores, so more workers in one shard starve WebKit (see below) and are not an option; larger runners
+are billed at a higher rate and not included in the pool.
+
+### Estimated minutes
+
+| | Before | After |
+| --- | --- | --- |
+| Pull request, web or schema changed | about 37 (3 × 9–11 flows, 4 pgTAP + Vitest, 4 × 1 small jobs) | about 32 (2 shards 30, `what changed`, `statics`) |
+| Pull request, one Deno function or the tokens only | about 37 | 2 to 3 |
+| Merge to `main` (the push after a merge) | about 37 | about 6 (`what changed` 1, pgTAP + Vitest 4, `statics` 1) |
+| Docs only, either event | about 37 | 0 |
+| A pull request pushed to again while it runs | the old run kept going until it was cancelled by the group | the same, now also on every re-run and force-push |
+
+The month that hit 90 % (about 137 runs, roughly two thirds pull requests) would have cost about 60 % of that:
+about 1,500 minutes, with the flows (about 21 minutes of every pull request that touches the app) as the cost that
+remains. The next lever, if it is needed, is the flows themselves: `nuxt dev` compiles each route on demand during
+the run; serving a prebuilt `nuxt generate` output instead would shorten them, at the price of a change to
+`web/playwright.config.ts` and how the flows reach the app.

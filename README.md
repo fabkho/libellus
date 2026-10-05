@@ -43,7 +43,7 @@ The Playwright flows (`web/e2e`) never call a live API: Apple and OpenLibrary an
 `web/tests/fixtures`, and a fixture fails any test that reaches another host or shows a control without a
 `data-testid`. `e2e/core-loop.spec.ts` is the smoke flow of the whole loop (sign in, search, add, start,
 finish with a rating and a review, counted on Home and under Finished). On a pull request they run as the
-`e2e` CI job against a fresh local stack, with one retry, split into three shards that run side by side; a failed
+`e2e` CI job against a fresh local stack, with one retry, split into two shards that run side by side (docs/TESTING.md, "CI: what runs when"); a failed
 run uploads one merged HTML report with the traces (artifact `playwright-report`; open it with
 `pnpm exec playwright show-report`). Locally a failure is not
 retried, so a flaky flow is seen.
@@ -227,5 +227,7 @@ docs/         DESIGN.md (design guideline), MOTION.md (motion), parity.md (per-s
 SPEC.md       condensed spec; CONTEXT.md the domain glossary
 ```
 
-CI (`.github/workflows/ci.yml`) runs on every pull request: pgTAP and the Vitest data layer against a
-local stack, the Playwright flows in WebKit (its own job), `nuxt generate`, and the generated-tokens check.
+CI (`.github/workflows/ci.yml`) runs on pull requests, for the paths they change: pgTAP and the Vitest data layer
+against a local stack, the Playwright flows in WebKit (same job, sharded), `nuxt generate`, and the
+generated-tokens check. A push to `main` runs the cheap checks only, docs-only changes run nothing
+(docs/TESTING.md, "CI: what runs when").
