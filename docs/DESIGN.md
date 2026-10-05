@@ -217,19 +217,23 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   Regal follow the nearest `data-theme`.
   Any Regal component gets the same look with `class="regal-themed" theme="auto"`. The phone's sheet is
   the column's width with `--radius-sheet` corners, like `UiSheet`, and clears the gesture bar
-  (`--safe-area-bottom`). Regal's own frame round the row's card is dropped (the Libellus card is the
-  only edge; no token reaches it alone). The Book broken out on a phone is a quieter cousin of the
-  app's sheets (`ShelfBookSheet`, through Regal's `#detail` slot): UiSheet's grabber and title row
-  (a plain Done at the left puts the Book back, Back cover / Front cover at the right in the lamp
-  colour; no pills), then the title in the book-title style, one mono line of facts (author, day,
-  pages), the blurb in four lines and a trailing Goodreads link. Regal keeps the container.
+  (`--safe-area-bottom`); the row's sheet gets this from Regal's `--regal-sheet-*` tokens (no padding
+  but the bottom inset, no frame, `--radius-sheet`, `surface-sheet`, `shadow-sheet`, the column's
+  width, one grabber: Regal's, at UiSheet's size and colour, which also drags the Book back). Regal's
+  own frame round the row's card is dropped with `--regal-row-border/-radius/-background` (the
+  Libellus card is the only edge), and Regal's round Back is off (`:back-button="false"`). The Book
+  broken out on a phone is a quieter cousin of the app's sheets (`ShelfBookSheet`, through Regal's
+  `#detail` slot): UiSheet's title row (a plain Done at the left puts the Book back, Back cover /
+  Front cover at the right in the lamp colour; no pills), then the title in the book-title style,
+  one mono line of facts (author, day, pages), the blurb in four lines and a trailing Goodreads
+  link. Regal keeps the container.
   The Profile shows it as a section like the others ("Your shelf", the count, a quiet Show all only
   when there are more Books than its row holds) over a raised card filled edge to edge by Regal's
   row (`RegalBooksRow`, `regal-themed` in the app's theme): the Stack turned on its side, the newest
   80 Books standing Spines out, a sheet and the month between months. The year in review has the
   same card with that year's Books. The row scrolls sideways under the finger and never traps the
   page's scroll; a Book tapped breaks out over the whole screen, header and tab bar included, and
-  Back lands it in the row again. While Regal loads, `ShelfPile` stands in: the Books as flat slabs
+  Done, Escape, a tap beside it or the system's Back lands it in the row again. While Regal loads, `ShelfPile` stands in: the Books as flat slabs
   in their Spines' colours, as thick as they are long (a pile on the shelf page, standing in a row
   in the cards), never a spinner or a shimmer.
 - **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their

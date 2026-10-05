@@ -163,7 +163,7 @@ owner (`NUXT_PUBLIC_SHELF_OWNER_ID` = her auth user id, at build time for a stat
 address must reach Mailpit; the run signs her in through the screens unless the tab has her session.
 On the Profile's row and then the year in review's, it swipes the row sideways, swipes up over it
 (the page must scroll), takes a Book out (it breaks out over the whole screen, above the tab bar),
-turns it, puts it back with the system Back (the page stays) and again with Regal's round Back.
+turns it, puts it back with the system Back (the page stays) and again with the sheet's Done (Regal's round Back is off).
 Screenshots `shelf-<step>.jpg` and `shelf.json` (books in the row, the Book that is out, whether it
 broke out, whether the tab bar is on top, the scroll position, the history's length) go to `--out`:
 
