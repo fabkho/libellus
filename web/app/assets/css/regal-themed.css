@@ -57,8 +57,10 @@
 /* The phone's sheet is in <body> on the viewport's bottom edge, as wide as the
    viewport. D's sheets are the column's width (--size-max-content, centred) and
    round at the top only (--radius-sheet), on a wider screen as on a phone. No
-   token says either. */
-.details.details--sheet.stage__details--sheet {
+   token says either. The Stack's sheet and the row's (a Book broken out on a
+   phone); each selector outweighs Regal's own scoped rule. */
+.details.details--sheet.stage__details--sheet,
+.row-card__details.row-card__details--sheet.row-card__details--sheet {
   max-width: var(--size-max-content);
   margin-inline: auto;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
