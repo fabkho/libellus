@@ -215,7 +215,11 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
       }
       const page = number(args.p_page)
       const percent = number(args.p_percent)
-      if (page !== null || percent !== null) {
+      if (args.p_clear === true) {
+        // Back to no progress (Undo of a first save, #104): the value and its stamp go.
+        if (page !== null || percent !== null) return 'progress_invalid'
+        next = { ...next, progressPage: null, progressPercent: null, progressUpdatedAt: null }
+      } else if (page !== null || percent !== null) {
         const count = pageCountOverride ?? entry.book.pageCount
         if (page !== null && count != null && page > count) return 'progress_invalid'
         next = { ...next, progressPage: page, progressPercent: percent, progressUpdatedAt: queuedAt }

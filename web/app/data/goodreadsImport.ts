@@ -4,6 +4,7 @@ import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage } from './covers'
 import { abortError, type FetchLike } from './fetching'
 import { bookFromRow, isSameWork, titleQuery, GOODREADS_KEY_PREFIX, type GoodreadsBook } from './import/goodreads'
+import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
 import { normalise } from './merge'
 import type { Search } from './search'
@@ -202,6 +203,39 @@ export function libraryIndex(entries: readonly LibraryEntry[]): (book: Book | Bo
   }
 }
 
+/**
+ * Her Library, ready to answer "does she have this row's book, under any
+ * edition?" (issue #104): an entry whose Book has the same work title (brackets
+ * and subtitle dropped) and an author with the first author's surname. After
+ * Change edition the entry holds another edition than the file's ISBN finds,
+ * so the Book itself no longer matches (`libraryIndex`). For a finished row
+ * that has an end day, her entry's latest read must not have ended on another
+ * day; an entry without a read, or a read without a day, still matches. The
+ * database applies the same rule (`import_books`), so this only spares the
+ * lookups. Edited dates, or a title she changed, may still import a second
+ * entry: accepted, her own edit.
+ */
+export function libraryTitleIndex(entries: readonly LibraryEntry[]): (row: Pick<GoodreadsBook, 'title' | 'authors' | 'status' | 'session'>) => LibraryEntry | null {
+  const byTitle = new Map<string, LibraryEntry[]>()
+  for (const entry of entries) {
+    const key = workTitle(entry.book.title)
+    if (key) byTitle.set(key, [...(byTitle.get(key) ?? []), entry])
+  }
+  return (row) => {
+    const candidates = byTitle.get(workTitle(row.title))
+    if (!candidates) return null
+    const wanted = surname(row.authors[0])
+    const endedOn = row.status === 'finished' ? row.session?.endedOn : null
+    return (
+      candidates.find((entry) => {
+        if (wanted && !entry.book.authors.some((name) => surname(name) === wanted)) return false
+        const ended = entry.latestSession?.endedOn
+        return !(endedOn && ended && ended !== endedOn)
+      }) ?? null
+    )
+  }
+}
+
 /** The member's entry for one Book, if she has it (`libraryIndex`). */
 export function entryFor(book: Book | BookSnapshot, entries: readonly LibraryEntry[]): LibraryEntry | null {
   return libraryIndex(entries)(book)
@@ -210,7 +244,7 @@ export function entryFor(book: Book | BookSnapshot, entries: readonly LibraryEnt
 // ----------------------------------------------------------------- writing
 
 /** One row as `import_books` takes it. */
-export type ImportRow = Pick<GoodreadsBook, 'key' | 'status' | 'session' | 'addedOn'> & { book: Book | BookSnapshot }
+export type ImportRow = Pick<GoodreadsBook, 'key' | 'status' | 'session' | 'addedOn' | 'title' | 'authors'> & { book: Book | BookSnapshot }
 
 export type RowOutcome = {
   key: string
@@ -220,11 +254,14 @@ export type RowOutcome = {
   error: LibraryErrorCode | 'key_invalid' | null
 }
 
-/** A row as the `import_books` argument: the Book by id when it has one, else its snapshot. */
+/** A row as the `import_books` argument: the Book by id when it has one, else its snapshot, and the file's title and first author. */
 export function importArguments(row: ImportRow) {
   const { book, session } = row
   return {
     key: row.key,
+    // The file's own words, for the book she has under another edition (#104).
+    file_title: row.title,
+    file_author: row.authors[0] ?? null,
     ...('id' in book ? { book_id: book.id } : { book: bookToRow(book) }),
     status: row.status,
     started_on: session?.startedOn ?? null,

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { isNotFinished, type LibraryEntry, type LibraryErrorCode } from '~/data/library'
 import {
   convertProgress,
+  NO_PROGRESS,
   ownTotal,
   pageCountOf,
   progressGain,
@@ -363,14 +364,15 @@ export const useReadingStore = defineStore('reading', () => {
 
   /**
    * Undo on Home's card: the value (and her total, when the save changed it) as they
-   * were, in one call. A read that had none goes back to 0, in the unit it was saved
-   * in: the database keeps a value once there is one. Returns the entry, or null.
+   * were, in one call. A read that had none goes back to none (`NO_PROGRESS`, #104): the
+   * database clears the value. Returns the entry, or null.
    */
   async function undoProgress(): Promise<LibraryEntry | null> {
     const undo = progressUndo.value
     const repo = library.library()
     if (!undo || !repo || undoBusy.value) return null
-    const back = undo.before ?? progressValueOf(0, 'page' in undo.after ? 'page' : 'percent')
+    // A read that had none goes back to none, not to 0 (#104).
+    const back = undo.before ?? NO_PROGRESS
     undoBusy.value = true
     try {
       const result = await repo.updateProgress(undo.entryId, back, undo.totalChanged ? { pageCount: undo.beforeTotal } : undefined, isoDay())

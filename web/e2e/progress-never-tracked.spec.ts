@@ -5,7 +5,7 @@ import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { sql, runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { recordedApple, signedIn, untilStill } from './support'
+import { recordedApple, settledBox, signedIn, untilStill } from './support'
 
 /**
  * The book page before any progress was tracked (issue #79). A read with no value
@@ -122,6 +122,16 @@ test('never tracked: the empty bar and its row; the first save changes the words
   await page.getByTestId('home.undo').click()
   await page.getByTestId('home.entry').click()
   await expectNeverTracked(page, 'Not started · 480 pages')
+  // In the database it is none again, not page 0 (#104).
+  const [stored] = await sql<{ progress_page: number | null; progress_percent: number | null; progress_updated_at: string | null }>(
+    `select s.progress_page, s.progress_percent, s.progress_updated_at
+       from public.reading_sessions s
+       join public.library_entries e on e.id = s.entry_id
+       join auth.users u on u.id = e.member_id
+      where u.email = $1 and s.outcome is null`,
+    [member.email],
+  )
+  expect(stored).toEqual({ progress_page: null, progress_percent: null, progress_updated_at: null })
 })
 
 test('Reduce Motion: the first save still brings everything in, with no travel', async ({ page }) => {
@@ -164,6 +174,30 @@ test('a value without a day: the bar and figures, no chart and no log, until a d
   await expect(page.getByTestId('book.progressChart').locator('.col')).toHaveCount(21)
   await expect(page.getByTestId('book.logDay')).toHaveCount(1)
   await expect(page.getByTestId('book.logAmount').first()).toHaveText('+1')
+})
+
+test('a value without a day holds no room for a chart while the days load: nothing moves when they turn out to be none (#104)', async ({ page }) => {
+  const member = await signedIn(page)
+  await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: addDays(isoDay(), -30) })
+  await setValue(member.email, 'page', 212)
+  // The days come late, as on a slow cold open.
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route('**/rest/v1/reading_progress_days*', async (route) => {
+    await held
+    await route.continue()
+  })
+  await page.reload()
+  await openBook(page)
+  await expect(page.getByTestId('book.progressValue')).toHaveText('212')
+  const before = await settledBox(page.getByTestId('book.finish'))
+  expect(await page.getByTestId('book.progressChart').count()).toBe(0)
+
+  release()
+  await page.waitForResponse((response) => response.url().includes('reading_progress_days'))
+  await expect(page.getByTestId('book.progressChart')).toHaveCount(0)
+  const after = await settledBox(page.getByTestId('book.finish'))
+  expect(after.y).toBe(before.y)
 })
 
 test('a book without a page count, in percent, with a value but no day: the same', async ({ page }) => {

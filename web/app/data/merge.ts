@@ -158,6 +158,14 @@ export const RANK = {
   library: 50,
   titleAndAuthor: 15,
   summary: -60,
+  /**
+   * A result shown without a cover (a Placeholder) drops this far, so it never
+   * outranks a comparable one that has a cover (#104; #63 only broke exact ties):
+   * every neighbouring match tier is within it, so a covered result of the next
+   * tier down still comes first. Exact matches (the title itself, without its
+   * subtitle, or with the author) and the member's own books are exempt.
+   */
+  coverless: -10,
 } as const
 
 const SUMMARY = /\b(?:summary|summaries|study guide|cliffs ?notes|spark ?notes|book review|key takeaways|chapter by chapter)\b/
@@ -167,9 +175,20 @@ export function isSummary(title: string): boolean {
   return SUMMARY.test(normalise(title))
 }
 
-/** The score results are ranked by: the match quality, lifted for her own books and exact matches, lowered for summaries. */
-export function rankScore(query: string, book: Pick<BookSnapshot, 'title' | 'authors'>, quality: number, owned: boolean): number {
+/**
+ * The score results are ranked by: the match quality, lifted for her own books and exact matches, lowered for
+ * summaries and for a result without a cover (`covered` false) unless it is exact or hers.
+ */
+export function rankScore(
+  query: string,
+  book: Pick<BookSnapshot, 'title' | 'authors'>,
+  quality: number,
+  owned: boolean,
+  covered = true,
+): number {
   let score = quality
+  const exact = quality === MATCH.title || quality === MATCH.mainTitle || quality === MATCH.titleAndAuthor
+  if (!covered && !owned && !exact) score += RANK.coverless
   if (owned && quality >= MATCH.titleAndAuthorWords) score += RANK.library
   if (quality === MATCH.titleAndAuthor) score += RANK.titleAndAuthor
   if (!owned && isSummary(book.title) && !SUMMARY.test(normalise(query))) score += RANK.summary
@@ -226,10 +245,12 @@ export function coverRank(url: string | null | undefined): number {
  *    (docs/covers.md). Another edition is one ISBN search away.
  * 4. Ranked by how well the query matches (matchQuality), lifted for the
  *    member's own books and for exact matches and lowered for summaries and
- *    study guides (rankScore), then Catalogue first, then a book shown with a
- *    cover before one shown as a Placeholder (mostly self-published papers
- *    OpenLibrary has no image of), then popularity, then the order the sources
- *    gave.
+ *    study guides and for a book shown as a Placeholder (mostly self-published
+ *    papers OpenLibrary has no image of), which never outranks a comparable
+ *    one with a cover unless it is an exact match or hers (rankScore, #104);
+ *    then, on equal scores, a book shown with a cover before one without, the
+ *    Catalogue's before the others, then popularity, then the order the
+ *    sources gave.
  * 5. Each result knows the member's entry for it, or that she has another edition.
  */
 export function mergeResults(
@@ -286,7 +307,7 @@ export function mergeResults(
     return {
       work,
       pick,
-      score: rankScore(query, pick.book, quality, owned.has(work)),
+      score: rankScore(query, pick.book, quality, owned.has(work), Boolean(pick.book.coverUrl)),
       catalogue: group.some((candidate) => candidate.source === 'catalogue'),
       covered: Boolean(pick.book.coverUrl),
       popularity: Math.max(...group.map((candidate) => candidate.popularity)),
@@ -296,8 +317,8 @@ export function mergeResults(
   ranked.sort(
     (a, b) =>
       b.score - a.score ||
-      Number(b.catalogue) - Number(a.catalogue) ||
       Number(b.covered) - Number(a.covered) ||
+      Number(b.catalogue) - Number(a.catalogue) ||
       b.popularity - a.popularity ||
       a.order - b.order,
   )

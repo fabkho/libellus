@@ -79,6 +79,27 @@ export function languageName(language: string | null | undefined, uiLocale = 'en
   }
 }
 
+/**
+ * What a row of the Change edition list says about an edition, in order:
+ * language, year, pages, "ebook" (Apple's editions), publisher: only the facts
+ * the edition has. An Apple edition has no language of its own (the iTunes
+ * Search API, search and lookup alike, gives ebooks no language field; only an
+ * OpenLibrary record of the same edition can fill it in, `representative`), so
+ * its row simply starts with the year: no dash, no empty slot (#104).
+ */
+export function editionFacts(
+  book: Pick<BookSnapshot, 'language' | 'year' | 'pageCount' | 'publisher' | 'source'>,
+  words: { locale: string; pages: (count: number) => string; ebook: string },
+): string[] {
+  return [
+    languageName(book.language, words.locale),
+    book.year ? String(book.year) : null,
+    book.pageCount ? words.pages(book.pageCount) : null,
+    book.source === 'apple' ? words.ebook : null,
+    book.publisher?.trim() || null,
+  ].filter((fact): fact is string => Boolean(fact))
+}
+
 // ----------------------------------------------------------------- matching
 
 /** What the search for a Book's other editions asks: its title and its first author. */

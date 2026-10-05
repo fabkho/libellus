@@ -9,7 +9,7 @@
 // never shown (an Apple edition says "ebook", which is what it is). `changed` fires with the
 // entry once it points at the new Book, so the page can move to its address.
 import type { EditionCandidate } from '~/data/editions'
-import { languageName } from '~/data/editions'
+import { editionFacts } from '~/data/editions'
 import type { LibraryEntry } from '~/data/library'
 import { useEditionStore } from '~/stores/edition'
 
@@ -41,16 +41,13 @@ const action = computed(() => {
   return edition.busy ? t('book.edition.busy') : t('book.edition.action')
 })
 
-/** Language · year · pages · ebook (Apple's editions) · publisher, whichever the edition has. */
+/** Language · year · pages · ebook (Apple's editions) · publisher, whichever the edition has (Apple's have no language). */
 function facts(candidate: EditionCandidate): string[] {
-  const { book } = candidate
-  return [
-    languageName(book.language, locale.value),
-    book.year ? String(book.year) : null,
-    book.pageCount ? t('book.pages', { count: book.pageCount }) : null,
-    book.source === 'apple' ? t('book.edition.ebook') : null,
-    book.publisher?.trim() || null,
-  ].filter((fact): fact is string => Boolean(fact))
+  return editionFacts(candidate.book, {
+    locale: locale.value,
+    pages: (count) => t('book.pages', { count }),
+    ebook: t('book.edition.ebook'),
+  })
 }
 
 /** The rows the sheet opens on: their covers load at once and first; the rest lazily, ahead of the scroll. */

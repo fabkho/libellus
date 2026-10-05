@@ -384,6 +384,77 @@ describe('merging the sources', () => {
     expect(exact[0]!.book.authors[0]).toBe('A. Student')
   })
 
+  describe('a result without a cover never outranks a comparable one with a cover (#104)', () => {
+    const cover = 'https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/aa/bb/cc/1.jpg/600x900bb.jpg'
+    const apple = (title: string, authors: string[], appleId: string, coverUrl: string | null) =>
+      found(snapshot({ title, authors, appleId, coverUrl }))
+    const titles = (results: ReturnType<typeof mergeResults>) => results.map((hit) => hit.book.title)
+
+    it('puts a covered result of the next match tier above a coverless one', () => {
+      // "Piranesi's Rome" begins with the query as a word; "Piranesis Gift" only as part of one: one tier apart.
+      const bare = apple("Piranesi's Rome", ['A. Writer'], '1', null)
+      const covered = apple('Piranesis Gift', ['B. Writer'], '2', cover)
+      expect(matchQuality('piranesi', bare.book)).toBeGreaterThan(matchQuality('piranesi', covered.book))
+      expect(titles(mergeResults('piranesi', { apple: [bare, covered] }))).toEqual(['Piranesis Gift', "Piranesi's Rome"])
+      // Whichever way the sources listed them.
+      expect(titles(mergeResults('piranesi', { apple: [covered, bare] }))).toEqual(['Piranesis Gift', "Piranesi's Rome"])
+    })
+
+    it('still ranks a coverless result above a covered one that matches much worse', () => {
+      const bare = apple("Piranesi's Rome", ['A. Writer'], '1', null)
+      const weak = apple('Drawings after Piranesi and others', ['B. Writer'], '2', cover)
+      expect(matchQuality('piranesi', weak.book)).toBeLessThan(matchQuality('piranesi', bare.book) - Math.abs(RANK.coverless))
+      expect(titles(mergeResults('piranesi', { apple: [weak, bare] }))).toEqual(["Piranesi's Rome", 'Drawings after Piranesi and others'])
+    })
+
+    it('does not bury an exact match for lacking a cover', () => {
+      const exact = apple('Piranesi', ['A. Writer'], '1', null)
+      const subtitle = apple('Piranesi: The Drawings', ['B. Writer'], '2', null)
+      const partial = apple('Piranesis Gift', ['C. Writer'], '3', cover)
+      const start = apple("Piranesi's Rome", ['D. Writer'], '4', cover)
+      expect(titles(mergeResults('piranesi', { apple: [partial, start, subtitle, exact] }))).toEqual([
+        'Piranesi',
+        'Piranesi: The Drawings',
+        "Piranesi's Rome",
+        'Piranesis Gift',
+      ])
+      // An exact match with a cover goes before one without, as before.
+      const covered = apple('Piranesi', ['B. Writer'], '5', cover)
+      expect(titles(mergeResults('piranesi', { apple: [exact, covered] })).length).toBe(2)
+      expect(mergeResults('piranesi', { apple: [exact, covered] })[0]!.book.authors[0]).toBe('B. Writer')
+    })
+
+    it('keeps the member\'s own book on top, cover or not', () => {
+      const mine = catalogueBook({ id: 'mine', title: "Piranesi's Rome", authors: ['A. Writer'], appleId: null, coverUrl: null })
+      const bare = apple("Piranesi's Rome", ['A. Writer'], '1', null)
+      const other = apple('Piranesi', ['B. Writer'], '2', cover)
+      const start = apple("Piranesi's Notebooks", ['C. Writer'], '3', cover)
+      const results = mergeResults('piranesi', { catalogue: [found(mine, 'catalogue')], apple: [bare, other, start] }, [entry(mine)])
+      expect(titles(results)[0]).toBe("Piranesi's Rome")
+      expect(results[0]!.entry?.id).toBe('entry-mine')
+    })
+
+    it('ranks a covered result above a coverless Catalogue result of the same quality', () => {
+      const stored = catalogueBook({ id: 'c1', title: "Piranesi's Rome", authors: ['A. Writer'], appleId: null, coverUrl: null })
+      const covered = apple("Piranesi's Notebooks", ['B. Writer'], '2', cover)
+      expect(matchQuality('piranesi', stored)).toBe(matchQuality('piranesi', covered.book))
+      expect(titles(mergeResults('piranesi', { catalogue: [found(stored, 'catalogue')], apple: [covered] }))).toEqual([
+        "Piranesi's Notebooks",
+        "Piranesi's Rome",
+      ])
+    })
+
+    it('scores it in rankScore: a drop for a Placeholder, none for an exact match or her own book', () => {
+      const book = { title: 'Piranesi: The Drawings', authors: ['B. Writer'] }
+      expect(rankScore('piranesi', book, MATCH.titleStart, false, false)).toBe(MATCH.titleStart + RANK.coverless)
+      expect(rankScore('piranesi', book, MATCH.titleStart, false, true)).toBe(MATCH.titleStart)
+      expect(rankScore('piranesi', book, MATCH.titleStart, true, false)).toBe(MATCH.titleStart + RANK.library)
+      expect(rankScore('piranesi', book, MATCH.mainTitle, false, false)).toBe(MATCH.mainTitle)
+      expect(rankScore('piranesi', book, MATCH.title, false, false)).toBe(MATCH.title)
+      expect(rankScore('piranesi', book, MATCH.titleAndAuthor, false, false)).toBe(MATCH.titleAndAuthor + RANK.titleAndAuthor)
+    })
+  })
+
   it('still shows the edition the member has, or the Catalogue’s, even without a cover', () => {
     const stored = catalogueBook({ id: 'z1', title: 'Der Zauberberg', authors: ['Thomas Mann'], appleId: null, coverUrl: null })
     const results = mergeResults('der zauberberg', {

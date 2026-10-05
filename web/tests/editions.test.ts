@@ -4,6 +4,7 @@ import type { CatalogueSearch } from '@/data/catalogueSearch'
 import { createCollections } from '@/data/collections'
 import {
   createEditions,
+  editionFacts,
   editionsQuery,
   languageCode,
   languageName,
@@ -16,6 +17,7 @@ import {
 import type { FetchLike } from '@/data/fetching'
 import { createLibrary, type LibraryEntry } from '@/data/library'
 import { createManualBooks } from '@/data/manualBooks'
+import { snapshotFromApple, type AppleItem } from '@/data/apple'
 import { snapshotFromWorkEdition } from '@/data/openLibrary'
 import { addDays, isoDay } from '@/utils/dates'
 import { appleAnswer } from './support/apple'
@@ -111,6 +113,34 @@ describe('languages', () => {
     expect(languageName('spa')).toBe('Spanish')
     expect(languageName('zzz')).toBeNull()
     expect(languageName('')).toBeNull()
+  })
+})
+
+describe('an Apple edition\'s language (#104)', () => {
+  const words = { locale: 'en', pages: (count: number) => `${count} pages`, ebook: 'ebook' }
+
+  it('has none to read: Apple\'s ebook answers carry no language field, so the snapshot has none', () => {
+    const asked: [string, string][] = [['piranesi', 'us'], ['piranesi', 'gb'], ['klara und die sonne', 'de']]
+    const items = asked.flatMap(([term, country]) => {
+      const url = new URL(`https://itunes.apple.com/search?${new URLSearchParams({ term, country })}`)
+      return (appleAnswer(url) as { results: AppleItem[] }).results
+    })
+    expect(items.length).toBeGreaterThan(10)
+    // Whatever Apple sends, none of the keys is a language.
+    expect(new Set(items.flatMap((item) => Object.keys(item)).filter((key) => /lang/i.test(key)))).toEqual(new Set())
+    for (const item of items) expect(snapshotFromApple(item)?.language ?? null).toBeNull()
+  })
+
+  it('leaves the language out of the row\'s facts: it starts with the year, no placeholder', () => {
+    const apple = { language: null, year: 2020, pageCount: null, publisher: null, source: 'apple' as const }
+    expect(editionFacts(apple, words)).toEqual(['2020', 'ebook'])
+    // Whatever is missing is missing: no empty entries, so the row draws no dash or stray separator.
+    expect(editionFacts({ ...apple, year: null }, words)).toEqual(['ebook'])
+    expect(editionFacts({ ...apple, year: null, source: 'openlibrary' }, words)).toEqual([])
+    // An edition OpenLibrary filled in has it, first.
+    expect(editionFacts({ ...apple, language: 'ger', pageCount: 272, publisher: ' Bloomsbury ' }, words)).toEqual([
+      'German', '2020', '272 pages', 'ebook', 'Bloomsbury',
+    ])
   })
 })
 
