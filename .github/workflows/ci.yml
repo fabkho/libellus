@@ -1,30 +1,179 @@
 name: CI
 
+# What runs when (also in docs/TESTING.md, "CI: what runs when"). The private
+# account has a fixed pool of Actions minutes, so the workflow spends them
+# where they buy something:
+#
+#   pull request      the checks the changed paths call for, Playwright included
+#   push to main      the cheap checks only (the merged pull request already ran
+#                     the flows): database rules + Vitest, builds, tokens, Deno
+#   workflow_dispatch everything, Playwright included (a manual full run)
+#
+# Docs-only changes (*.md, docs/**, android/**) start no run at all. A new push
+# to a pull request cancels the run still going for it.
 on:
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'android/**'
+      - 'LICENSE'
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'android/**'
+      - 'LICENSE'
+  workflow_dispatch:
 
+# One run per pull request: a push, a force-pushed rebase or a re-run cancels
+# the one before it. A run on main is never cancelled by the next merge, so
+# every commit on main keeps a result.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# The web app extends Regal (the owner's shelf, #23; web/regal.config.ts), a private repo Nuxt
-# downloads with this token (a GitHub token that can read fabkho/regal). Without it `nuxt dev`
-# and `nuxt generate` stop and say so; the install's `nuxt prepare` goes on without it.
 env:
+  # The web app extends Regal (the owner's shelf, #23; web/regal.config.ts), a private repo Nuxt
+  # downloads with this token (a GitHub token that can read fabkho/regal). Without it `nuxt dev`
+  # and `nuxt generate` stop and say so; the install's `nuxt prepare` goes on without it.
   GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
+  # Playwright shards on a pull request. Measured on #... : see docs/TESTING.md.
+  # The repository variable E2E_SHARDS overrides it without a commit.
+  DEFAULT_E2E_SHARDS: 2
 
 jobs:
-  backend:
-    name: database rules (pgTAP) and web data layer (Vitest)
+  # Decides from the changed paths which jobs run. A skipped job is a pass for
+  # everything downstream; nothing here is a required check.
+  changes:
+    name: what changed
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.decide.outputs.backend }}
+      e2e: ${{ steps.decide.outputs.e2e }}
+      shards: ${{ steps.decide.outputs.shards }}
+      statics: ${{ steps.decide.outputs.statics }}
+      web: ${{ steps.decide.outputs.web }}
+      tokens: ${{ steps.decide.outputs.tokens }}
+      goodreads: ${{ steps.decide.outputs.goodreads }}
+      regal: ${{ steps.decide.outputs.regal }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push'
+
+      # Every filter lists the workflow files: changing CI runs what CI does.
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        with:
+          filters: |
+            ci: &ci
+              - '.github/**'
+            stack: &stack
+              - *ci
+              - 'web/**'
+              - 'supabase/migrations/**'
+              - 'supabase/seed.sql'
+              - 'supabase/config.toml'
+            backend:
+              - *stack
+              - 'supabase/tests/**'
+              - 'supabase/templates/**'
+            web:
+              - *ci
+              - 'web/**'
+            tokens:
+              - *ci
+              - 'design/**'
+              - 'web/app/assets/css/tokens.generated.css'
+            goodreads:
+              - *ci
+              - 'supabase/functions/goodreads-rating/**'
+            regal:
+              - *ci
+              - 'supabase/functions/regal-export/**'
+              - 'web/app/data/export/**'
+
+      - name: Decide
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          FILTER_STACK: ${{ steps.filter.outputs.stack }}
+          FILTER_BACKEND: ${{ steps.filter.outputs.backend }}
+          FILTER_WEB: ${{ steps.filter.outputs.web }}
+          FILTER_TOKENS: ${{ steps.filter.outputs.tokens }}
+          FILTER_GOODREADS: ${{ steps.filter.outputs.goodreads }}
+          FILTER_REGAL: ${{ steps.filter.outputs.regal }}
+          INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
+        run: |
+          all=false
+          [ "$EVENT" = workflow_dispatch ] && all=true
+          on() { if [ "$all" = true ] || [ "$1" = true ]; then echo true; else echo false; fi; }
+
+          backend=$(on "$FILTER_BACKEND")
+          web=$(on "$FILTER_WEB")
+          tokens=$(on "$FILTER_TOKENS")
+          goodreads=$(on "$FILTER_GOODREADS")
+          regal=$(on "$FILTER_REGAL")
+          # Playwright: never on a push to main, only when the app or the schema it runs on changed.
+          e2e=false
+          if [ "$EVENT" != push ]; then e2e=$(on "$FILTER_STACK"); fi
+
+          # One stack job per shard; shard 1 also runs pgTAP and Vitest. With no
+          # flows to run, the stack job is a single backend-only job.
+          shards='[]'
+          if [ "$e2e" = true ]; then
+            shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
+          elif [ "$backend" = true ]; then
+            shards='[1]'
+          fi
+
+          statics=false
+          for v in "$web" "$tokens" "$goodreads" "$regal"; do [ "$v" = true ] && statics=true; done
+
+          {
+            echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
+            echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
+            echo "goodreads=$goodreads"; echo "regal=$regal"
+          } | tee -a "$GITHUB_OUTPUT"
+
+  # Database rules (pgTAP), the web data layer (Vitest) and the user flows
+  # (web/e2e: Playwright in WebKit at iPhone size) on one local stack per
+  # runner, so the Supabase pull, boot and install is paid once per job and
+  # never twice for the same runner. Shard 1 runs pgTAP and Vitest first (cheap,
+  # and a red rule says so before ten minutes of flows); every shard then runs
+  # its slice of the flows (`--shard i/N`, split by test, not by file). On a
+  # push to main only shard 1 exists and stops after Vitest.
+  #
+  # Apple and OpenLibrary answer from the recordings (web/e2e/support.ts); the
+  # fixture in web/e2e/fixtures.ts fails any test that reaches another host.
+  # The shards are independent: every flow makes its own member and tags what it
+  # creates (web/tests/support/stack.ts). A failed shard uploads its blob report;
+  # e2e-report merges them into one HTML report.
+  stack:
+    name: >-
+      ${{ needs.changes.outputs.e2e == 'true' && format('rules, data layer and user flows (shard {0}/{1})', matrix.shard, strategy.job-total)
+      || 'database rules (pgTAP) and web data layer (Vitest)' }}
+    needs: changes
+    if: ${{ needs.changes.outputs.shards != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.changes.outputs.shards) }}
+    env:
+      SUPABASE_CLI: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
+      RUN_BACKEND: ${{ matrix.shard == 1 && needs.changes.outputs.backend == 'true' }}
+      RUN_E2E: ${{ needs.changes.outputs.e2e == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
+          version: ${{ env.SUPABASE_CLI }}
 
       # Same major as local. Build scripts pnpm may run (esbuild) are approved in
       # web/pnpm-workspace.yaml, so a frozen install passes on pnpm 11+.
@@ -32,176 +181,65 @@ jobs:
         with:
           version: 12
 
+      # cache: pnpm keeps the pnpm store between runs.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
-      # Migrations and seed apply on start; the runner's Docker is what the
-      # local stack runs on too. Ports come from supabase/config.toml (553xx).
-      - name: Start Supabase
-        run: supabase start
-
-      - name: Database rules (pgTAP)
-        run: supabase test db
-
-      - name: Install web
-        working-directory: web
-        run: pnpm install --frozen-lockfile
-
-      # The suite asks `supabase status` itself when these are unset; setting them
-      # here keeps the CI run explicit about which stack it talks to.
-      - name: Point the suite at the stack
-        run: |
-          eval "$(supabase status -o env)"
-          {
-            echo "SUPABASE_URL=$API_URL"
-            echo "SUPABASE_ANON_KEY=$ANON_KEY"
-            echo "SUPABASE_DB_URL=$DB_URL"
-            echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
-          } >> "$GITHUB_ENV"
-
-      - name: Web data layer (Vitest against the local stack)
-        working-directory: web
-        run: pnpm test
-
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop --no-backup
-
-  # The goodreads-rating edge function (#69): its parsing, matching, cache and
-  # rate limit, on recorded Goodreads answers (no request leaves the runner).
-  goodreads-function:
-    name: goodreads-rating function (Deno)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: denoland/setup-deno@v2
+      # The Supabase images (a gigabyte or two) are pulled on every start. They
+      # are kept as one tarball per CLI version and config; shard 1 saves it
+      # after a miss, the others only restore. The cache written on main is
+      # readable by every pull request.
+      - name: Restore the Supabase images
+        id: images
+        uses: actions/cache/restore@v4
         with:
-          deno-version: v2.x
+          path: /tmp/supabase-images.tar
+          key: supabase-images-${{ runner.os }}-${{ env.SUPABASE_CLI }}-${{ hashFiles('supabase/config.toml') }}
 
-      - name: Lint, check and test
-        working-directory: supabase/functions/goodreads-rating
-        run: deno lint && deno check *.ts && deno test --allow-read=.
+      - name: Load the Supabase images
+        if: steps.images.outputs.cache-hit == 'true'
+        run: docker load --quiet --input /tmp/supabase-images.tar
 
-  # The regal-export edge function (#110): the owner's Regal library file, on a
-  # synthetic Library and published file (nothing leaves the runner). It imports
-  # the export modules from web/app/data/export, so this also checks they stay
-  # runnable by Deno.
-  regal-export-function:
-    name: regal-export function (Deno)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Lint, check and test
-        working-directory: supabase/functions/regal-export
-        run: deno lint && deno check *.ts && deno task test
-
-  web-build:
-    name: web builds (nuxt generate)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-
-      - name: Build
-        working-directory: web
-        run: pnpm install --frozen-lockfile && pnpm build
-
-      - name: Service worker and manifest are emitted
-        working-directory: web
-        run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
-
-      # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
-      - name: Regal is built apart and left out of the precache
-        working-directory: web
-        run: |
-          ls .output/public/_nuxt/regal.*.js
-          ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
-
-  tokens:
-    name: design tokens are generated, not hand-edited
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: design/pnpm-lock.yaml
-
-      - name: Generated files match tokens.json
-        working-directory: design
-        run: pnpm install --frozen-lockfile && pnpm tokens:check
-
-  # The user flows (web/e2e): Playwright in WebKit at iPhone size, against the
-  # local stack. Its own job, so a slow browser never holds up the database job
-  # and a red flow is told apart from a red rule. Apple and OpenLibrary answer
-  # from the recordings (web/e2e/support.ts); the fixture in web/e2e/fixtures.ts
-  # fails any test that reaches another host.
-  #
-  # Three shards (Playwright's --shard i/3), each on its own runner with its own
-  # fresh stack and the same two workers and one retry as before, so a pull
-  # request waits for a third of the flows. The shards are independent: every flow
-  # makes its own member and tags what it creates (web/tests/support/stack.ts), and
-  # none depends on the order or the neighbours of another (#72). A shard that
-  # fails uploads its blob report; e2e-report merges them into one HTML report.
-  e2e:
-    name: user flows (Playwright, WebKit, shard ${{ matrix.shard }}/3)
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.118.0 # pinned like the database job, and matches local
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-
-      # Only what the flows use: the database, auth, the API, the mail catcher
-      # (the sign-in code is read out of it) and storage. Migrations and seed
-      # (the dev invite) apply on start, onto an empty database.
+      # Only what the flows and the data layer use: the database, auth, the API,
+      # the mail catcher (the sign-in code is read out of it) and storage.
+      # Migrations and seed (the dev invite) apply on start, onto an empty
+      # database. Ports come from supabase/config.toml (553xx).
       - name: Start Supabase
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,postgres-meta
 
+      - name: Database rules (pgTAP)
+        if: env.RUN_BACKEND == 'true'
+        run: supabase test db
+
+      # pg_prove is pulled by the first `supabase test db`, so the tarball is
+      # written after it.
+      - name: Save the Supabase images
+        id: tarball
+        if: matrix.shard == 1 && steps.images.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E '/supabase/|^supabase/' \
+            | xargs docker save --output /tmp/supabase-images.tar
+          ls -lh /tmp/supabase-images.tar
+          echo "saved=true" >> "$GITHUB_OUTPUT"
+
+      - name: Save the Supabase images to the cache
+        if: matrix.shard == 1 && steps.images.outputs.cache-hit != 'true' && steps.tarball.outputs.saved == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/supabase-images.tar
+          key: ${{ steps.images.outputs.cache-primary-key }}
+
       - name: Install web
         working-directory: web
         run: pnpm install --frozen-lockfile
 
+      # The suites ask `supabase status` themselves when these are unset; setting
+      # them keeps the run explicit about which stack it talks to.
       - name: Point the suite at the stack
         run: |
           eval "$(supabase status -o env)"
@@ -214,10 +252,16 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
+      - name: Web data layer (Vitest against the local stack)
+        if: env.RUN_BACKEND == 'true'
+        working-directory: web
+        run: pnpm test
+
       # The browser download is cached per Playwright version; the system
       # libraries it needs live outside that folder, so they are installed
       # either way.
       - name: Playwright version
+        if: env.RUN_E2E == 'true'
         id: playwright
         working-directory: web
         run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
@@ -225,6 +269,7 @@ jobs:
       # WebKit for the flows; Chromium for e2e/offline.spec.ts, whose offline
       # reload WebKit's driver cannot serve from a route.
       - name: Cache the browsers
+        if: env.RUN_E2E == 'true'
         id: browsers
         uses: actions/cache@v4
         with:
@@ -232,6 +277,7 @@ jobs:
           key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
       - name: Install WebKit, Chromium and their system libraries
+        if: env.RUN_E2E == 'true'
         working-directory: web
         run: |
           if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
@@ -241,27 +287,26 @@ jobs:
           fi
 
       - name: User flows
+        if: env.RUN_E2E == 'true'
         working-directory: web
-        run: pnpm e2e --shard=${{ matrix.shard }}/3
+        run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       # The blob report holds the results, screenshots and traces of this shard.
       - name: Upload the blob report
-        if: failure()
+        if: failure() && env.RUN_E2E == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-blob-${{ matrix.shard }}
           path: web/blob-report/
           retention-days: 1
+          if-no-files-found: ignore
 
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop --no-backup
-
-  # One combined report for the three shards, only when one of them failed.
+  # One combined report for the shards, only when one of them failed. A job
+  # that failed before any flow ran has no blob report; then there is nothing to merge.
   e2e-report:
     name: user flows report (merged)
-    needs: e2e
-    if: ${{ !cancelled() && needs.e2e.result == 'failure' }}
+    needs: stack
+    if: ${{ !cancelled() && needs.stack.result == 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -281,18 +326,91 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: web/all-blob-reports
           pattern: playwright-blob-*
           merge-multiple: true
 
       - name: Merge into one HTML report
+        if: hashFiles('web/all-blob-reports/*') != ''
         working-directory: web
         run: pnpm exec playwright merge-reports --reporter=html ./all-blob-reports
 
       - name: Upload the report and traces
+        if: hashFiles('web/playwright-report/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: web/playwright-report/
           retention-days: 14
+
+  # The checks that take seconds each, in one job so the minutes are not rounded
+  # up four times: the design tokens, the web build, and the two edge functions
+  # (their Deno tests run on recorded answers, no request leaves the runner).
+  # Each step runs when its paths changed, even if an earlier one failed.
+  statics:
+    name: tokens, web build and edge functions
+    needs: changes
+    if: ${{ needs.changes.outputs.statics == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            design/pnpm-lock.yaml
+
+      - name: Design tokens are generated, not hand-edited
+        if: ${{ !cancelled() && needs.changes.outputs.tokens == 'true' }}
+        working-directory: design
+        run: pnpm install --frozen-lockfile && pnpm tokens:check
+
+      - name: Web builds (nuxt generate)
+        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
+        working-directory: web
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Service worker and manifest are emitted
+        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
+        working-directory: web
+        run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
+
+      # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
+      - name: Regal is built apart and left out of the precache
+        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
+        working-directory: web
+        run: |
+          ls .output/public/_nuxt/regal.*.js
+          ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
+
+      - uses: denoland/setup-deno@v2
+        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true'
+        with:
+          deno-version: v2.x
+
+      # The goodreads-rating edge function (#69): its parsing, matching, cache and
+      # rate limit, on recorded Goodreads answers.
+      - name: goodreads-rating function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.goodreads == 'true' }}
+        working-directory: supabase/functions/goodreads-rating
+        run: deno lint && deno check *.ts && deno test --allow-read=.
+
+      # The regal-export edge function (#110): the owner's Regal library file, on a
+      # synthetic Library and published file. It imports the export modules from
+      # web/app/data/export, so this also checks they stay runnable by Deno.
+      - name: regal-export function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.regal == 'true' }}
+        working-directory: supabase/functions/regal-export
+        run: deno lint && deno check *.ts && deno task test
