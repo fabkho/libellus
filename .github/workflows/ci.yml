@@ -36,6 +36,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
+  # The web app extends Regal (the owner's shelf, #23; web/regal.config.ts), a private repo Nuxt
+  # downloads with this token (a GitHub token that can read fabkho/regal). Without it `nuxt dev`
+  # and `nuxt generate` stop and say so; the install's `nuxt prepare` goes on without it.
+  GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
   # Playwright shards on a pull request: 2 is the trade-off measured in
   # docs/TESTING.md (CI: what runs when). The repository variable E2E_SHARDS
   # overrides it without a commit; 1 is the cheapest in minutes.
@@ -214,6 +218,8 @@ jobs:
             echo "SUPABASE_ANON_KEY=$ANON_KEY"
             echo "SUPABASE_DB_URL=$DB_URL"
             echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
+            # The shelf's owner is made with a given id, which only the auth admin can do (e2e/shelfOwner.ts).
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
       - name: Web data layer (Vitest against the local stack)
@@ -350,6 +356,14 @@ jobs:
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
         working-directory: web
         run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
+
+      # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
+      - name: Regal is built apart and left out of the precache
+        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
+        working-directory: web
+        run: |
+          ls .output/public/_nuxt/regal.*.js
+          ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
 
       - uses: denoland/setup-deno@v2
         if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true'
