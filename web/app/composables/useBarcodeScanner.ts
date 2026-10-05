@@ -120,12 +120,9 @@ export function useBarcodeScanner(options: {
       return
     }
     video.srcObject = opened
-    try {
-      await video.play()
-    } catch {
-      // Autoplay is allowed for a muted, inline video; a refusal still leaves frames flowing in most browsers.
-    }
-    if (mine !== run) return
+    // Not awaited: `play()` can stay pending for a stream whose first frame is slow, and the loop
+    // only reads a frame once the video has one (`readyState`), so nothing waits on it.
+    video.play().catch(() => undefined)
 
     // The WebAssembly decoder may still have to be fetched: the camera is on, the view says it is working.
     let reader: BarcodeReader

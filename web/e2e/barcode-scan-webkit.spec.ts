@@ -18,13 +18,37 @@ test.beforeEach(async ({ page }) => {
 })
 
 /**
- * The stand-in camera is a canvas stream. Playwright's WebKit for Linux (the CI runner) is built
- * without media streams, so there the flows that need frames are skipped; the macOS WebKit has them
- * and Chromium (barcode-scan.spec.ts) runs the same flows in CI.
+ * The stand-in camera is a canvas stream, and a decoder needs frames out of it. Playwright's WebKit
+ * for Linux (the CI runner's) has `captureStream` but no media backend to play it: a <video> on such a
+ * stream never gets a frame. There the flows that read frames are skipped; macOS WebKit plays it, and
+ * Chromium (barcode-scan.spec.ts) runs the same flows in CI.
  */
-async function needsCanvasStream(page: Page) {
-  const ok = await page.evaluate(() => typeof HTMLCanvasElement.prototype.captureStream === 'function' && typeof MediaStream === 'function')
-  test.skip(!ok, 'this WebKit build has no canvas.captureStream')
+async function needsFrames(page: Page) {
+  const flows = await page.evaluate(async () => {
+    if (typeof HTMLCanvasElement.prototype.captureStream !== 'function') return false
+    const canvas = document.createElement('canvas')
+    canvas.width = 64
+    canvas.height = 48
+    const context = canvas.getContext('2d')!
+    let shade = 0
+    const paint = setInterval(() => {
+      context.fillStyle = `hsl(${(shade += 7)} 40% 40%)`
+      context.fillRect(0, 0, 64, 48)
+    }, 40)
+    const video = document.createElement('video')
+    video.muted = true
+    video.setAttribute('playsinline', '')
+    video.srcObject = canvas.captureStream(25)
+    video.play().catch(() => undefined)
+    let frames = false
+    for (let waited = 0; waited < 3000 && !frames; waited += 100) {
+      frames = video.readyState >= 2
+      if (!frames) await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    clearInterval(paint)
+    return frames
+  })
+  test.skip(!flows, "this WebKit build plays no canvas stream (no frames reach a video)")
 }
 
 async function openScanner(page: Page) {
@@ -46,7 +70,7 @@ test('the decoder is fetched when the scanner opens, and reads the book from the
   const decoder = watchDecoder(page)
   await stubScanner(page, { formats: null, picture: FRAME, vibrate: false })
   await signedIn(page)
-  await needsCanvasStream(page)
+  await needsFrames(page)
   await page.getByTestId('shell.tab.search').click()
   await expect(page.getByTestId('search.scan')).toBeVisible()
   expect(decoder).toEqual([])
@@ -63,7 +87,7 @@ test('the decoder is fetched when the scanner opens, and reads the book from the
 test('no torch button: the camera of an iPhone has none to offer', async ({ page }) => {
   await stubScanner(page, { formats: null, vibrate: false, torch: false })
   await signedIn(page)
-  await needsCanvasStream(page)
+  await needsFrames(page)
   await openScanner(page)
   await expect(page.getByTestId('scan.hint')).toBeVisible()
   await expect(page.getByTestId('scan.torch')).toHaveCount(0)
