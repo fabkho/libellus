@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { LibraryErrorCode } from '~/data/library'
+import { readStats, saveStats } from '~/data/deviceLibrary'
 import { createStats, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
 
 /** A sheet of the Profile or a year in review: a month's books, or a star row's. */
@@ -14,7 +15,14 @@ import { useSessionStore } from '~/stores/session'
  * Profile or a year in review opens, and again each time; a load that fails
  * keeps the last record on screen (offline it is not asked for). Signing out
  * (or another member signing in) forgets all of it. Read only: nothing here
- * writes, so nothing is kept on the device.
+ * writes.
+ *
+ * The device keeps the last record (data/deviceLibrary.ts, `saveStats`),
+ * written after every load and read back when the store is set up, so the
+ * Profile opens with its figures at once and the load that follows only
+ * refreshes them; only the very first visit on a device shows the loading
+ * placeholders (docs/MOTION.md, Loading). Signing out removes it with the rest
+ * of `libellus.`.
  */
 export const useStatsStore = defineStore('stats', () => {
   const backend = useBackend()
@@ -53,6 +61,7 @@ export const useStatsStore = defineStore('stats', () => {
     }
     loadError.value = null
     record.value = result.data
+    if (import.meta.client && member) saveStats(window.localStorage, member, result.data)
     // A year that has no finished read any more (a read deleted) goes back to All.
     if (year.value !== 'all' && !result.data.reads.some((r) => r.outcome === 'finished' && r.endedOn?.startsWith(String(year.value)))) {
       year.value = 'all'
@@ -66,10 +75,22 @@ export const useStatsStore = defineStore('stats', () => {
     keptSheet.value = null
   }
 
+  /** Puts back the record this device saw last, if it is this member's. */
+  function restore() {
+    const member = session.member?.id
+    if (!import.meta.client || !member || record.value) return
+    record.value = readStats(window.localStorage, member)
+  }
+
   watch(
     () => session.member?.id,
-    (now, before) => now !== before && reset(),
+    (now, before) => {
+      if (now === before) return
+      reset()
+      restore()
+    },
   )
+  restore()
 
   // Back online with the Profile waiting on it: load without a tap.
   const online = useOnline()

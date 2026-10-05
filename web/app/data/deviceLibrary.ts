@@ -1,11 +1,12 @@
 import type { Collection, CollectionSummary } from './collections'
 import type { EntryStatus, LibraryEntry } from './library'
 import { LOCAL_DATA_PREFIX, type DeviceStorage } from './localData'
+import type { ReadingRecord } from './stats'
 
 /**
  * The member's Library as this device last saw it (issue #15): the three
- * Status lists with each entry's latest session, the year's tally, and the
- * Collections. Written after every load and every change, read when the app
+ * Status lists with each entry's latest session, the year's tally, the
+ * Collections, and the Profile's reading record. Written after every load and every change, read when the app
  * starts, so it opens on the last-loaded Library without a connection and
  * without a flash of an empty one. Signing out removes it with everything
  * else under `libellus.` (`clearLocalData`).
@@ -25,6 +26,7 @@ import { LOCAL_DATA_PREFIX, type DeviceStorage } from './localData'
 export const DEVICE_LIBRARY_VERSION = 1
 export const DEVICE_LIBRARY_KEY = `${LOCAL_DATA_PREFIX}library`
 export const DEVICE_COLLECTIONS_KEY = `${LOCAL_DATA_PREFIX}collections`
+export const DEVICE_STATS_KEY = `${LOCAL_DATA_PREFIX}stats`
 
 /**
  * Who the saved Library belongs to: also how the app knows who was signed in
@@ -50,6 +52,17 @@ export type SavedCollections = {
   collections: Collection[]
   /** Which Collections each entry is on, by entry id, as far as this device knows. */
   memberships: Record<string, string[]>
+}
+
+/**
+ * The Profile's reading record as the last load saw it (data/stats.ts): read
+ * when the Profile or a year in review opens, so the figures are there at once
+ * and the load that follows only refreshes them.
+ */
+export type SavedStats = {
+  memberId: string
+  savedAt: string
+  record: ReadingRecord
 }
 
 type Envelope<T> = { version: number; data: T }
@@ -132,12 +145,27 @@ export function readCollections(storage: DeviceStorage, memberId: string): Saved
   return { ...saved, memberships: saved.memberships ?? {} }
 }
 
+/** Writes the member's reading record. Returns whether the storage took it. */
+export function saveStats(storage: DeviceStorage, memberId: string, record: ReadingRecord, savedAt = new Date()): boolean {
+  return write<SavedStats>(storage, DEVICE_STATS_KEY, { memberId, savedAt: savedAt.toISOString(), record })
+}
+
+/** The saved reading record, if there is one and it is this member's. */
+export function readStats(storage: DeviceStorage, memberId: string): ReadingRecord | null {
+  const saved = read<SavedStats>(storage, DEVICE_STATS_KEY)
+  if (!saved || saved.memberId !== memberId) return null
+  const { reads, days } = saved.record ?? {}
+  if (!isList(reads) || !isList(days)) return null
+  return saved.record
+}
+
 /**
- * Forgets the saved Library and Collections, and nothing else: for a member
+ * Forgets the saved Library, Collections and reading record, and nothing else: for a member
  * who stopped being signed in without signing out here (the session ended on
  * the server). Signing out clears all of `libellus.` instead.
  */
 export function forgetLibrary(storage: DeviceStorage): void {
   storage.removeItem(DEVICE_LIBRARY_KEY)
   storage.removeItem(DEVICE_COLLECTIONS_KEY)
+  storage.removeItem(DEVICE_STATS_KEY)
 }
