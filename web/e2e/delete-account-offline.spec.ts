@@ -65,8 +65,12 @@ test('offline the row is disabled and says so; a change still waiting is named, 
   await expect(page.getByTestId('profile.delete')).toBeDisabled()
   await expect(page.getByTestId('profile.delete')).toContainText(en.common.offline)
 
-  // Back online, but the sync call does not get through: the change keeps waiting.
-  await page.route('**/rest/v1/rpc/sync_write', (route) => route.abort('failed'))
+  // Back online, but the sync call fails on the server: the change keeps waiting. (An aborted
+  // request is silence, which the app reads as still offline since #105, so the row would stay
+  // disabled; a 500 is an answer that the outbox retries later.)
+  await page.route('**/rest/v1/rpc/sync_write', (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'The server fell over.' }) }),
+  )
   // Back online: the Confirm names the waiting change, and deleting discards it.
   await network.goOnline()
   await expect(page.getByTestId('profile.delete')).toBeEnabled()
