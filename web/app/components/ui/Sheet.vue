@@ -114,8 +114,19 @@ const titleId = useId()
  * guess from where it happens to be.
  */
 const moving = ref(false)
+
+/**
+ * The panel and what is in it stay mounted until the sheet has slid away, and
+ * are only hidden (`v-show`) for the leave: with `v-if`, Vue unmounts the
+ * content at once and keeps just the element for the transition, so a
+ * component with a life of its own (the shelf's 3D row, which frees its canvas
+ * when it unmounts) went blank while the sheet was still on its way down.
+ */
+const rendered = ref(open.value)
+watch(open, (isOpen) => isOpen && (rendered.value = true))
 function onAfterLeave() {
   moving.value = false
+  if (!open.value) rendered.value = false
   afterLeave()
 }
 </script>
@@ -126,7 +137,9 @@ function onAfterLeave() {
       <div v-if="open" ref="scrim" class="fixed inset-0 z-40 touch-none bg-scrim" :data-testid="`${testid}.scrim`" @click="close" />
     </Transition>
     <Transition
+      v-if="rendered"
       name="sheet"
+      appear
       @before-enter="moving = true"
       @after-enter="moving = false"
       @enter-cancelled="moving = false"
@@ -135,7 +148,7 @@ function onAfterLeave() {
       @leave-cancelled="moving = false"
     >
       <section
-        v-if="open"
+        v-show="open"
         ref="panel"
         role="dialog"
         aria-modal="true"

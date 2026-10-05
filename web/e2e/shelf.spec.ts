@@ -360,6 +360,18 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.locator('.row-card__view--out')).toHaveCount(0)
     await expect(sheet).toBeVisible()
 
+    // Cancel: the stack stays drawn while the sheet slides away (its canvas is freed only once the sheet has gone).
+    await page.evaluate(() => {
+      const canvas = document.querySelector('[data-testid="homeTally.shelfRow"] canvas')!
+      ;(window as unknown as { __lost: boolean }).__lost = false
+      canvas.addEventListener('webglcontextlost', () => ((window as unknown as { __lost: boolean }).__lost = true))
+    })
+    await page.getByTestId('homeTally.cancel').click()
+    await expect(sheet).toHaveAttribute('data-moving', 'true')
+    expect(await page.evaluate(() => (window as unknown as { __lost: boolean }).__lost)).toBe(false)
+    await expect(sheet).toBeHidden()
+    await tally.click()
+
     // The link at the end opens the year in review.
     await page.getByTestId('homeTally.yearInReview').click()
     await expect(page).toHaveURL(new RegExp(`/profile/${YEAR}$`))
