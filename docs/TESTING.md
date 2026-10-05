@@ -161,10 +161,11 @@ addresses (`/?search=1`, `/?progress=1`), and read what Chrome made of the manif
 **Your shelf (#23)** has its own script: Regal's 3D Stack under real fingers. The app must know the
 owner (`NUXT_PUBLIC_SHELF_OWNER_ID` = her auth user id, at build time for a static build) and her
 address must reach Mailpit; the run signs her in through the screens unless the tab has her session.
-It opens the shelf from the Profile card, flicks through the pile, takes a Book out, turns it, puts it
-away with the system Back and again with the round Back, then the year in review's stack and its
-Open. Screenshots `shelf-<step>.jpg` and `shelf.json` (books in the Stack, the Book that is out) go
-to `--out`:
+On the Profile's row and then the year in review's, it swipes the row sideways, swipes up over it
+(the page must scroll), takes a Book out (it breaks out over the whole screen, above the tab bar),
+turns it, puts it back with the system Back (the page stays) and again with Regal's round Back.
+Screenshots `shelf-<step>.jpg` and `shelf.json` (books in the row, the Book that is out, whether it
+broke out, whether the tab bar is on top, the scroll position, the history's length) go to `--out`:
 
 ```sh
 pnpm tsx e2e/android/shelf.ts --base http://localhost:3121 --email dev@libellus.local --year 2025
