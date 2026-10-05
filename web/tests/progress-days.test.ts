@@ -188,8 +188,11 @@ describe('what the book page shows of a read (issue #79)', () => {
     expect(progressShownOf({ page: 0 }, [row])).toBe('days')
   })
 
-  it('keeps the chart\'s room for a read with a value whose days are still on their way', () => {
-    expect(progressShownOf({ page: 212 }, null)).toBe('days')
+  it('holds no room for a chart while the days are still on their way (#104)', () => {
+    // Nothing is known yet: the figures show for a read with a value, the chart opens in when days turn up.
+    expect(progressShownOf({ page: 212 }, null)).toBe('value')
+    expect(progressShownOf({ percent: 44 }, null)).toBe('value')
+    expect(progressShownOf({ page: 212 }, [row])).toBe('days')
     expect(progressShownOf(null, null)).toBe('none')
     expect(progressShownOf({ page: 0 }, null)).toBe('none')
   })

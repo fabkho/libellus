@@ -53,14 +53,15 @@ export function progressStarted(progress: ProgressValue | null): boolean {
  * long after the start books no day, #68; a read from before #68) → `'value'`:
  * the bar, the four figures (pace and days to go "–") and the button, but no chart
  * and no log, which have nothing to draw. **Any day row** → `'days'`: everything.
- * `days` is null until they were loaded: a read with a value then counts as `'days'`
- * (the page keeps the room its chart will have, as before this rule), one without
- * stays `'none'`.
+ * `days` is null until they were loaded (a cold open, offline possibly never):
+ * nothing is known about a chart, so none is held (issue #104; #79 held its room
+ * for a read with a value, which collapsed again when the days turned out to be
+ * none). A read with a value then counts as `'value'`, one without stays
+ * `'none'`; the chart and log open in when the days arrive and there are some.
  */
 export function progressShownOf(progress: ProgressValue | null, days: readonly ProgressDay[] | null): ProgressShown {
   if (days?.length) return 'days'
-  if (!progressStarted(progress)) return 'none'
-  return days === null ? 'days' : 'value'
+  return progressStarted(progress) ? 'value' : 'none'
 }
 
 /** What the read counts in: pages with a page count, else percent. */
