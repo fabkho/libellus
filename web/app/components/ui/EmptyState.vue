@@ -1,15 +1,22 @@
 <script setup lang="ts">
 // D's empty state: the reading lamp over an empty shelf in its pool of light,
 // a serif line, a sentence, and (slot) the one way forward. `screen` names the
-// test IDs: `<screen>.emptyTitle`, `<screen>.empty`.
-defineProps<{ screen: string; title: string; text: string }>()
+// test IDs: `<screen>.emptyTitle`, `<screen>.empty`. `compact` is for a screen
+// that needs the room for something else above it (Home's install hint): the
+// lamp is drawn at half its height, and not at all on a short phone, so the
+// one way forward stays above the tab bar.
+defineProps<{ screen: string; title: string; text: string; compact?: boolean }>()
 
 const cone = useId()
 </script>
 
 <template>
   <section class="flex flex-col items-center text-center">
-    <div class="relative flex h-(--size-empty-art) w-full items-end justify-center" aria-hidden="true">
+    <div
+      class="relative flex w-full items-end justify-center"
+      :class="compact ? 'h-[calc(var(--size-empty-art)/2)] [@media(max-height:760px)]:hidden' : 'h-(--size-empty-art)'"
+      aria-hidden="true"
+    >
       <span class="pool" />
       <svg viewBox="0 0 240 250" fill="none" class="relative h-full text-ink-faint">
         <!-- A reading lamp over a shelf: cord, shade, the cone of light, two books and the outline of the next one. -->
