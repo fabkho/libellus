@@ -9,6 +9,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The web app extends Regal (the owner's shelf, #23; web/regal.config.ts), a private repo Nuxt
+# downloads with this token (a GitHub token that can read fabkho/regal). Without it `nuxt dev`
+# and `nuxt generate` stop and say so; the install's `nuxt prepare` goes on without it.
+env:
+  GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
+
 jobs:
   backend:
     name: database rules (pgTAP) and web data layer (Vitest)
@@ -122,6 +128,13 @@ jobs:
         working-directory: web
         run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
 
+      # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
+      - name: Regal is built apart and left out of the precache
+        working-directory: web
+        run: |
+          ls .output/public/_nuxt/regal.*.js
+          ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
+
   tokens:
     name: design tokens are generated, not hand-edited
     runs-on: ubuntu-latest
@@ -197,6 +210,8 @@ jobs:
             echo "SUPABASE_ANON_KEY=$ANON_KEY"
             echo "SUPABASE_DB_URL=$DB_URL"
             echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
+            # The shelf's owner is made with a given id, which only the auth admin can do (e2e/shelfOwner.ts).
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
       # The browser download is cached per Playwright version; the system

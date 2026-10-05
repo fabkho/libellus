@@ -10,6 +10,11 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm test` — Vitest data-layer suite against the local stack. No mocks.
 - `pnpm e2e` — Playwright, iPhone viewport, WebKit, its own server on :4327.
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
+- `dev`, `e2e` and `build` need **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer
+  from the private repo fabkho/regal: `REGAL_LAYER=/path/to/regal-checkout` or `GIGET_AUTH=<a GitHub
+  token that can read it>` (CI and Cloudflare Pages have the secret). Without either they stop and
+  say so; `nuxt prepare` (the postinstall) goes on without it. Regal stays in its own `regal` chunk,
+  loaded only by `LazyShelfStage` and never precached; the build fails if the entry ever imports it.
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.
 

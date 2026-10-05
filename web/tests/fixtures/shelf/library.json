@@ -1,0 +1,97 @@
+{
+  "version": 2,
+  "generatedAt": "2026-10-04T07:00:00Z",
+  "owner": "Shelf Fixture",
+  "generator": "libellus tests (synthetic)",
+  "books": [
+    {
+      "id": "shelf-01",
+      "title": "The Glass Orchard",
+      "authors": ["Mira Holloway"],
+      "isbn13": "9780000000101",
+      "pages": 412,
+      "binding": "Hardcover",
+      "status": "read",
+      "dateRead": "2025-11-20",
+      "dateStarted": "2025-11-02",
+      "rating": 4.5,
+      "readCount": 1,
+      "description": "A synthetic book for the shelf's tests.",
+      "assets": { "palette": { "background": "#2f4a3a", "text": "#f2ede4", "accent": "#d6a85c" }, "spineColor": "#35503f" }
+    },
+    {
+      "id": "shelf-02",
+      "title": "Salt and Lanterns",
+      "authors": ["Teodor Vane"],
+      "pages": 288,
+      "status": "read",
+      "dateRead": "2025-07-03",
+      "rating": 3.75,
+      "readCount": 1,
+      "assets": { "palette": { "background": "#7a3b2e", "text": "#f6efe6", "accent": "#e3c07a" } }
+    },
+    {
+      "id": "shelf-03",
+      "title": "A Map of Quiet Rivers",
+      "authors": ["Hanne Ostrova", "Jules Pell"],
+      "pages": 530,
+      "binding": "Paperback",
+      "status": "read",
+      "dateRead": "2025-07-03",
+      "rating": 5,
+      "readCount": 2
+    },
+    {
+      "id": "shelf-04",
+      "title": "Northern Clockwork",
+      "authors": ["Ilse Brand"],
+      "pages": 196,
+      "status": "read",
+      "dateRead": "2025-01-09",
+      "rating": 4,
+      "readCount": 1,
+      "assets": { "palette": { "background": "#1f2c4d", "text": "#e9e4da", "accent": "#c98f4a" } }
+    },
+    {
+      "id": "shelf-05",
+      "title": "The Long Winter Garden",
+      "authors": ["Pia Morrow"],
+      "pages": 344,
+      "status": "read",
+      "dateRead": "2024-12-30",
+      "rating": 4.25,
+      "readCount": 1,
+      "assets": { "spineColor": "#8a6d3b" }
+    },
+    {
+      "id": "shelf-06",
+      "title": "Ashes of the Lighthouse",
+      "authors": ["Corin Fale"],
+      "pages": 620,
+      "status": "read",
+      "dateRead": "2024-03-14",
+      "rating": 3.5,
+      "readCount": 1
+    },
+    {
+      "id": "shelf-07",
+      "title": "Paper Harbour",
+      "authors": ["Noor Saleh"],
+      "pages": 256,
+      "status": "read",
+      "dateRead": "2026-09-28",
+      "rating": 4.75,
+      "readCount": 1,
+      "assets": { "palette": { "background": "#5b2d4f", "text": "#f1e9f0", "accent": "#e0b25e" } }
+    },
+    {
+      "id": "shelf-08",
+      "title": "Every Lamp in the House",
+      "authors": ["Ada Quill"],
+      "pages": 300,
+      "status": "currently-reading",
+      "dateStarted": "2026-09-30",
+      "readCount": 0
+    }
+  ]
+}

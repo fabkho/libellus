@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { defineConfig, devices } from '@playwright/test'
 import { stack } from './tests/support/stack'
+import { SHELF_OWNER_ID } from './e2e/shelfOwner'
 
 // Tags every address the flows invent, so the global teardown removes only what
 // this run created (tests/support/stack.ts, runTag). Set before the workers
@@ -59,6 +60,8 @@ export default defineConfig({
       LIBELLUS_E2E: '1',
       NUXT_PUBLIC_SUPABASE_URL: stack.url,
       NUXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
+      // Your shelf (#23) is one member's: the flows' owner, made with this id (e2e/shelf.spec.ts).
+      NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
     },
     reuseExistingServer: false,
     timeout: 120_000,

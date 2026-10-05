@@ -199,7 +199,22 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Year in review** (`pages/profile/[year].vue`): pushed from the Profile, lit by the year's
   favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
   their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
-  and the years either side (they replace the page, so Back is the Profile).
+  and the years either side (they replace the page, so Back is the Profile). For the owner only, a
+  window onto Your shelf's night room under the months: that year's Books as Regal's 3D Stack.
+- **Your shelf** (`pages/profile/shelf.vue`, #23; the owner's account only, nothing anywhere for
+  anyone else): Regal's 3D Stack of the published library file, the one the portfolio shows. A
+  pushed screen that fills the column (`immersive`: the tab bar steps away) in the **night room in
+  either theme**: the page carries `data-theme="dark"`, so every token takes its Night value inside
+  it, and the status bar takes the room's colour while it is open. A bookcase is an object in a
+  room, like a cover; the lamp-lit dark lets the Spines carry the colour (principle 2). The round
+  back button and the title pinned, the count beside them in mono, the Stack below, its view
+  reaching up behind the top bar so the pile starts above the middle. Regal's own parts (the card of
+  a Book that is out, the caption, the separators) wear D's tokens: `ShelfStage` maps Regal's
+  paper-ink names onto them (ink, muted, faint, accent, hairline, surface, Geist Mono, Newsreader).
+  The same room is the Profile card's little window (the newest Spines) and the year in review's
+  4:5 window, a picture the page scrolls over (a pile that took the finger would trap the scroll).
+  While Regal loads, `ShelfPile` stands in: the Books as flat slabs in their Spines' colours, as
+  thick as they are long, never a spinner or a shimmer.
 - **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
   own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
   follows the theme, so native parts — the date picker, autofill — do too); Safari, without

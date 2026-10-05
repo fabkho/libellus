@@ -11,6 +11,7 @@
 // what the avatar menu held. Figures and covers, never sentences.
 import { figuresOf, readsInMonth, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
+import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
 
 definePageMeta({ layout: 'tabs', screen: 'profile', pushed: true })
@@ -18,6 +19,8 @@ definePageMeta({ layout: 'tabs', screen: 'profile', pushed: true })
 const { t } = useI18n()
 const router = useRouter()
 const stats = useStatsStore()
+// Your shelf (#23): the owner's card, and nobody else's.
+const shelf = useShelfStore()
 const { monthLong, monthLetter } = useFigures()
 
 useHead({ title: () => `${t('profile.title')} · ${t('app.name')}` })
@@ -28,6 +31,7 @@ function show() {
   if (showing) return
   showing = true
   void stats.load()
+  void shelf.load()
 }
 onMounted(show)
 onActivated(show)
@@ -124,6 +128,8 @@ function back() {
         <p class="text-subhead text-ink-muted">{{ stats.loadError === 'offline' ? t('profile.offline') : t('profile.loadError') }}</p>
         <UiButton v-if="stats.loadError !== 'offline'" tone="secondary" size="md" data-testid="profile.retry" @click="stats.load()">{{ t('profile.retry') }}</UiButton>
       </div>
+
+      <ProfileShelf v-if="shelf.isOwner" />
 
       <ProfileAccount />
     </div>

@@ -36,6 +36,12 @@ export const stack = {
   mailUrl: process.env.MAILPIT_URL ?? 'http://127.0.0.1:55324',
 }
 
+/**
+ * The stack's service-role key, asked for only by the fixtures that need what
+ * no member can do (a member with a given id: the shelf's owner, e2e/shelf.spec.ts).
+ */
+export const serviceRoleKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY ?? localStackValue('SERVICE_ROLE_KEY')
+
 // ------------------------------------------------------------------ fixtures
 
 /**
