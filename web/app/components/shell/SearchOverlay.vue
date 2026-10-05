@@ -51,8 +51,17 @@ const PAGES = [
 ] as const
 
 function close() {
+  scanning.value = false
   search.close()
   input.value?.blur()
+}
+
+// The camera button (#92): only where the browser can read an EAN-13.
+const scanSupported = useBarcodeSupport()
+const scanning = ref(false)
+function openScanner() {
+  input.value?.blur()
+  scanning.value = true
 }
 // Back closes it instead of leaving the page. A change of page closes it by
 // its own rule (below), so it is not closed by every one.
@@ -314,7 +323,8 @@ const paletteStyle = computed(() => ({
 }))
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') close()
+  // With the scanner open, Escape closes only the scanner (its own handler).
+  if (event.key === 'Escape' && !scanning.value) close()
 }
 
 function listen(on: boolean) {
@@ -457,6 +467,17 @@ onUnmounted(() => {
                 @blur="search.isOpen && (typing = false)"
               />
               <button
+                v-if="scanSupported && !search.query"
+                type="button"
+                :aria-label="t('search.scan.open')"
+                class="relative -mr-sm flex size-(--size-touch) shrink-0 items-center justify-center text-ink-muted"
+                data-testid="search.scan"
+                @pointerdown.prevent
+                @click="openScanner"
+              >
+                <UiIcon name="camera" :size="20" />
+              </button>
+              <button
                 v-if="search.query"
                 type="button"
                 :aria-label="t('search.clear')"
@@ -484,6 +505,8 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+
+      <ShellBarcodeScanner v-if="scanSupported" v-model:open="scanning" />
     </template>
   </Teleport>
 </template>

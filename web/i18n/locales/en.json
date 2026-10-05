@@ -320,7 +320,25 @@
     "addManually": "Add manually",
     "otherEdition": "Other edition in your Library",
     "offlineNote": "You're offline, so only your Library is searched.",
-    "offlineNoResults": "Nothing in your Library matches “{query}”."
+    "offlineNoResults": "Nothing in your Library matches “{query}”.",
+    "scan": {
+      "open": "Scan a barcode",
+      "title": "Scan a barcode",
+      "close": "Close scanner",
+      "torchOn": "Turn the light on",
+      "torchOff": "Turn the light off",
+      "hint": "Hold the barcode on the back of the book inside the frame.",
+      "notBook": "That doesn't look like a book's barcode.",
+      "looking": "Looking up {isbn}…",
+      "askingTitle": "Allow the camera",
+      "asking": "Libellus uses the camera only to read a barcode. Nothing is recorded or sent.",
+      "deniedTitle": "Camera access is off",
+      "denied": "Allow the camera for Libellus in your browser's site settings to scan a barcode. You can always search by title or ISBN.",
+      "noneTitle": "No camera found",
+      "none": "Libellus found no camera it can use, or could not load its barcode reader. Search by title or ISBN instead.",
+      "dismiss": "Close",
+      "offline": "You're offline. Only your Library can be searched."
+    }
   },
   "status": {
     "want_to_read": "Want to read",

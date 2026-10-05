@@ -228,6 +228,48 @@ much room a sheet has: before the fix in #58 the Finish sheet stood on the keybo
 the top of the screen, its header and Cancel out of reach. `keyboardRoomOf` (the visual viewport's
 height while the keyboard is up) now caps the sheet's height.
 
+## The barcode scanner (#92)
+
+The scanner needs a camera, which neither Playwright flow nor the Simulator has, so the real devices check
+what they can and a stand-in camera shows the rest. Neither script is part of CI.
+
+**Android** (`e2e/android/scan.ts`, Chrome on the emulator; another worker may be using the emulator, so look
+at what is in front first — the script taps the screen):
+
+```sh
+pnpm tsx e2e/android/scan.ts --base http://localhost:3102 --out /tmp/libellus-92 --serial emulator-5554 --allow
+```
+
+It prints what this Chrome supports (`BarcodeDetector` with `ean_13`: the native reader is the one used here, and
+the script counts the requests for the WebAssembly decoder, which must be none), has Chrome's real detector read a barcode drawn on a
+canvas, then taps through the real thing: the search, the camera button, Chrome's real permission prompt
+(with `--allow` the site's permission is granted over the DevTools protocol afterwards: a prompt answered
+with Back three times is blocked by Chrome for the site, and then only a new origin or cleared site data
+brings it back), the emulator's own camera (`hw.camera.back=emulated`: a moving test scene, no barcode),
+Back closing the scanner; and finally the scanner's whole pipeline on a `getUserMedia` stood in for by a canvas
+stream showing the barcode: the real `<video>`, Chrome's real detector, the vibration tick and the lookup, ending
+on the book page. The emulator's camera cannot be pointed at a book (a `virtualscene` back camera could show a
+poster with a barcode; that needs the AVD changed and restarted).
+
+**iOS** (`e2e/ios/scan-harness.ts`, the Simulator's Safari): the Simulator has no camera. The harness serves
+the static build (`pnpm generate`) on a port, plants a fresh test member's session in localStorage (no code to type)
+and, in the page, stands in for `getUserMedia` with a canvas stream showing a picture of a barcode; the WebAssembly
+decoder, the loop, the lookup and the navigation are the app's own. `?auto=scan` opens the search and taps the
+camera button. Modes in the address: `still` (default), `real` (the Simulator's own `getUserMedia`), `none`, `denied`.
+
+```sh
+pnpm generate
+pnpm tsx e2e/ios/scan-harness.ts --port 3102 &
+xcrun simctl boot 0CB470F8-6238-46B6-89F5-E74065305B2E
+xcrun simctl spawn 0CB470F8-6238-46B6-89F5-E74065305B2E launchctl disable system/com.apple.intelligencetasksd
+xcrun simctl openurl 0CB470F8-6238-46B6-89F5-E74065305B2E 'http://127.0.0.1:3102/?auto=scan'   # the page's log is printed by the harness
+xcrun simctl io 0CB470F8-6238-46B6-89F5-E74065305B2E screenshot /tmp/ios-scan.png
+xcrun simctl shutdown 0CB470F8-6238-46B6-89F5-E74065305B2E
+```
+
+The built app is served by its service worker after the first load, so the harness's script is the one of the
+first load of that origin: use another origin (`localhost` or `127.0.0.1`) after changing the harness.
+
 ## Reproducing a CI flake (Linux WebKit, two cores)
 
 macOS WebKit does not starve the way the CI runner's Linux WebKit does: frames
