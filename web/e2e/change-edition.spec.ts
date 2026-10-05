@@ -4,6 +4,7 @@ import type { BookSnapshot } from '../app/data/books'
 import { createCollections } from '../app/data/collections'
 import { createLibrary, type LibraryEntry } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
+import { appleAnswer } from '../tests/support/apple'
 import { sql, runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { goto, recordedApple, signedIn } from './support'
@@ -191,4 +192,38 @@ test('an edition she already has as another book is refused, and the book keeps 
   await page.getByTestId('edition.cancel').click()
   await expect(page).toHaveURL(new RegExp(`/book/${entry.book.id}$`))
   expect((await library.entry(entry.id)).data!.book.id).toBe(entry.book.id)
+})
+
+test('an Apple edition has no language to show: its row starts with the year, with no dash or empty slot (#104)', async ({ page }) => {
+  // Apple answers the title search from the "Piranesi" recording whatever the title: ebooks, none with a language.
+  await page.route('https://itunes.apple.com/search**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify(appleAnswer(new URL(`https://itunes.apple.com/search?term=piranesi&country=${new URL(route.request().url()).searchParams.get('country')}`))),
+    }),
+  )
+  const member = await signedIn(page)
+  const library = createLibrary(member.client)
+  const entry = (await library.addToLibrary(piranesi({ language: null, openLibraryWorkKey: null }), { status: 'want_to_read' })).data as LibraryEntry
+
+  await goto(page, `/book/${entry.book.id}`)
+  await page.getByTestId('book.options').click()
+  await page.getByTestId('bookOptions.changeEdition').click()
+  await expect(page.getByTestId('edition')).toBeVisible()
+  await expect(page.getByTestId('edition.loading')).toBeHidden()
+
+  const apple = page.getByTestId('edition.candidate').filter({ hasText: en.book.edition.ebook })
+  expect(await apple.count()).toBeGreaterThan(0)
+  const facts = await apple.getByTestId('edition.candidateFacts').evaluateAll((rows) =>
+    rows.map((row) => ({ text: row.textContent ?? '', parts: [...row.querySelectorAll(':scope > span:not([aria-hidden])')].map((part) => part.textContent ?? '') })),
+  )
+  for (const { text, parts } of facts) {
+    // The facts are the edition's own (year, pages, "ebook", publisher): never a dash or an empty part.
+    expect(parts.every((part) => part.trim() !== ''), text).toBe(true)
+    expect(text).not.toMatch(/[–—-]/)
+  }
+  // Rows only Apple knows (OpenLibrary has nothing to fill in) start with the year.
+  expect(facts.filter(({ parts }) => /^\d{4}$/.test(parts[0] ?? '')).length).toBeGreaterThan(0)
 })

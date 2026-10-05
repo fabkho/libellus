@@ -27,7 +27,16 @@ export function storefrontsFor(languages: readonly string[]): [string, string] {
 
 // ------------------------------------------------------------------- Apple data
 
-/** The fields of an iTunes Search API ebook result the app reads. */
+/**
+ * The fields of an iTunes Search API ebook result the app reads. There is no
+ * language among them because there is none to read: an ebook result (search
+ * and lookup alike, checked in #104) carries `artistName`, `genres`, `price`,
+ * `releaseDate`, the artwork and the like, but no `language`/`languageCodesISO2A`
+ * (software results have one, ebooks do not), and a storefront says where a book
+ * is sold, not what it is written in. An Apple edition's `language` stays null
+ * unless OpenLibrary knows the same edition (`representative` in editions.ts),
+ * and then the Change edition row shows no language at all, not a placeholder.
+ */
 export type AppleItem = {
   kind?: string
   trackId?: number
