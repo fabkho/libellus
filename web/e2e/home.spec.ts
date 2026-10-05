@@ -63,6 +63,8 @@ test('a new member starts on the empty Home, reads a book from there and finishe
   await expect(page.getByTestId('home.tallyLabel')).toHaveText(en.home.readIn.replace('{year}', year))
   await expect(page.getByTestId('home.tallyCount')).toHaveText('0')
   await expect(page.getByTestId('home.upNextEntry')).toHaveCount(1)
+  // Nothing read yet: the tally only says so, there is nothing to open.
+  await expect(page.getByTestId('home.tally')).toHaveJSProperty('tagName', 'SECTION')
 
   // Start it from its page: Home shows it under Currently reading, day 1.
   await page.getByTestId('home.upNextEntry').click()
@@ -99,6 +101,14 @@ test('a new member starts on the empty Home, reads a book from there and finishe
     'aria-label',
     en.home.readInLabel.replace('{year}', year).replace('{count}', '1'),
   )
+  // With a Book read this year the tally is a button that opens the year's Books (e2e/shelf.spec.ts has the owner's row).
+  await expect(page.getByTestId('home.tally')).toHaveJSProperty('tagName', 'BUTTON')
+  await page.getByTestId('home.tally').click()
+  await expect(page.getByTestId('homeTally.sheetTitle')).toHaveText(en.home.readIn.replace('{year}', year))
+  await expect(page.getByTestId('homeTally.read')).toHaveCount(1)
+  await expect(page.getByTestId('homeTally.read').getByTestId('profile.readTitle')).toHaveText('Piranesi')
+  await page.getByTestId('homeTally.read').click()
+  await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
 })
 
 test('Want to read lists what is Want to read, newest first, and See all opens the Library', async ({ page }) => {

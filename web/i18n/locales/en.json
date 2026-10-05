@@ -242,6 +242,7 @@
     "seeAll": "See all {count}",
     "readIn": "Read in {year}",
     "readInLabel": "Read in {year}: {count}",
+    "yearInReview": "Year in review",
     "loadError": "Your books could not be loaded.",
     "retry": "Try again",
     "installHint": {

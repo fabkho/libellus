@@ -5,6 +5,10 @@
 // included (data/library.ts, `readInYear`). A new mark (a Finish) lights up
 // in the lamp colour and settles into the row (docs/MOTION.md).
 const props = defineProps<{ year: number; count: number | null }>()
+const emit = defineEmits<{ open: [] }>()
+
+/** Books read this year: the strip opens them (HomeTallySheet). None, or not counted yet: it only says so. */
+const opens = computed(() => Boolean(props.count))
 
 const { t } = useI18n()
 // Only a mark added to a count already shown lights up; the first count to
@@ -18,10 +22,16 @@ watch(
 </script>
 
 <template>
-  <section
-    class="flex items-center justify-between gap-md border-y-(length:--stroke-hairline) border-hairline-strong py-ms"
+  <!-- With Books read this year the whole strip is one tap target; with none there is nothing to open. -->
+  <component
+    :is="opens ? 'button' : 'section'"
+    :type="opens ? 'button' : undefined"
+    :aria-haspopup="opens ? 'dialog' : undefined"
+    class="flex w-full items-center justify-between gap-md border-y-(length:--stroke-hairline) border-hairline-strong py-ms text-left"
+    :class="opens && '-mx-sm px-sm active:bg-fill-strong'"
     :aria-label="count === null ? t('home.readIn', { year }) : t('home.readInLabel', { year, count })"
     data-testid="home.tally"
+    @click="opens && emit('open')"
   >
     <div class="flex min-w-0 flex-col gap-ms">
       <span class="text-body text-ink-muted" data-testid="home.tallyLabel">{{ t('home.readIn', { year }) }}</span>
@@ -29,8 +39,11 @@ watch(
         <span v-for="n in count ?? 0" :key="n" class="tick" :class="{ fifth: n % 5 === 0 }" />
       </TransitionGroup>
     </div>
-    <span class="text-figure text-ink tabular-nums" data-testid="home.tallyCount">{{ count ?? '–' }}</span>
-  </section>
+    <span class="flex shrink-0 items-center gap-xs">
+      <span class="text-figure text-ink tabular-nums" data-testid="home.tallyCount">{{ count ?? '–' }}</span>
+      <UiIcon v-if="opens" name="chevron" :size="15" class="text-ink-ghost" />
+    </span>
+  </component>
 </template>
 
 <style scoped>

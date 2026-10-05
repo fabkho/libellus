@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // Home (D's home / home-empty): what matters now. The Books being read, as
 // large cards lit by their covers, each with a Finish shortcut; the year's
-// tally ("Read in 2026: 3"); and Want to read, a short row from Want to read. A new
-// member with no Books sees the empty state and the way to Search. Kept alive:
-// coming back shows what was there and refreshes quietly behind it.
+// tally ("Read in 2026: 3", which opens that year's Books in a sheet); and
+// Want to read, a short row of covers. A new member with no Books sees the
+// empty state and the way to Search. Kept alive: coming back shows what was
+// there and refreshes quietly behind it.
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 
@@ -19,6 +20,9 @@ const session = useSessionStore()
 const reading = useSettled(() => library.reading)
 const wantToRead = useSettled(() => library.wantToRead)
 const readInYear = useSettled(() => library.readInYear)
+
+// The year's Books, in a sheet: the tally opens it (HomeTallySheet).
+const tallyOpen = ref(false)
 
 const empty = computed(
   () => library.loaded && !library.reading.length && !library.wantToRead.length && !library.finished.length,
@@ -58,9 +62,10 @@ watch(
       </Transition>
     </section>
 
-    <HomeTally :year="library.readInYearOf" :count="readInYear" />
+    <HomeTally :year="library.readInYearOf" :count="readInYear" @open="tallyOpen = true" />
 
     <HomeUpNext v-if="wantToRead.length" :entries="wantToRead" />
+    <HomeTallySheet v-model:open="tallyOpen" :year="library.readInYearOf" />
   </div>
 
   <div v-else-if="library.loadError" class="px-lg pt-xxl text-center" data-testid="home.loadError">

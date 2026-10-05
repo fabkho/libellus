@@ -4,6 +4,7 @@ import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createAuth } from '../app/data/auth'
 import { createLibrary } from '../app/data/library'
+import { isoDay } from '../app/utils/dates'
 import { emailCooldown, mailCount, newClient, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { shelfOwner } from './shelfOwner'
@@ -41,6 +42,15 @@ const MANY = (() => {
     id: `shelf-many-${i}`,
     dateRead: new Date(Date.UTC(2026, 8, 28 - i)).toISOString().slice(0, 10),
   }))
+  return JSON.stringify({ ...file, books })
+})()
+
+/** The current year (Home's tally counts it), and the fixture with nine Books read in it, a month apart: Home's sheet shows that year's. */
+const YEAR = Number(isoDay().slice(0, 4))
+const THIS_YEAR = (() => {
+  const file = JSON.parse(FIXTURE) as { books: Record<string, unknown>[] }
+  const read = file.books.filter((book) => book.status === 'read')
+  const books = Array.from({ length: 9 }, (_, i) => ({ ...read[i % read.length], id: `shelf-year-${i}`, dateRead: `${YEAR}-${String(i + 1).padStart(2, '0')}-12` }))
   return JSON.stringify({ ...file, books })
 })()
 
@@ -99,8 +109,8 @@ async function signInAsOwner(page: Page) {
   return owner
 }
 
-/** One finished read in 2025 in the owner's Library, so 2025 has a year in review. */
-async function finishedIn2025(email: string) {
+/** The owner as a client of the Library (she exists; a code is mailed to her). */
+async function ownerClient(email: string) {
   const client = newClient()
   const auth = createAuth(client)
   await emailCooldown()
@@ -108,12 +118,17 @@ async function finishedIn2025(email: string) {
   await auth.requestCode(email)
   const verified = await auth.verifyCode(email, await readMailedCode(email, before + 1))
   if (verified.error) throw new Error(`Owner sign-in failed: ${verified.error}`)
-  const book: BookSnapshot = {
-    title: runTitle('The Glass Orchard'),
-    authors: ['Mira Holloway'],
+  return client
+}
+
+/** A Book for the Library, found on Apple Books and unique to the run. */
+function snapshot(title: string, author: string, pages: number): BookSnapshot {
+  return {
+    title: runTitle(title),
+    authors: [author],
     isbn13: null,
     isbn10: null,
-    pageCount: 412,
+    pageCount: pages,
     year: 2024,
     language: 'en',
     publisher: TEST_PUBLISHER,
@@ -126,8 +141,23 @@ async function finishedIn2025(email: string) {
     openLibraryEditionKey: null,
     openLibraryWorkKey: null,
   }
-  const entry = (await createLibrary(client).addToLibrary(book)).data!
+}
+
+/** One finished read in 2025 in the owner's Library, so 2025 has a year in review. */
+async function finishedIn2025(email: string) {
+  const client = await ownerClient(email)
+  const entry = (await createLibrary(client).addToLibrary(snapshot('The Glass Orchard', 'Mira Holloway', 412))).data!
   await sql(`insert into public.reading_sessions (entry_id, started_on, ended_on, outcome, rating) values ($1, '2025-11-02', '2025-11-20', 'finished', 18)`, [entry.id])
+}
+
+/** Finished reads in the current year in a member's Library (Home's tally counts them), one per title, the first ending today. */
+async function finishedThisYear(client: Parameters<typeof createLibrary>[0], titles: string[]) {
+  const library = createLibrary(client)
+  for (const [i, title] of titles.entries()) {
+    const entry = (await library.addToLibrary(snapshot(title, 'Mira Holloway', 300))).data!
+    const ended = i === 0 ? isoDay() : `${YEAR}-01-0${i}`
+    await sql(`insert into public.reading_sessions (entry_id, started_on, ended_on, outcome, rating) values ($1, $2, $3, 'finished', 16)`, [entry.id, `${YEAR}-01-01`, ended])
+  }
 }
 
 /** The brightness (0–1) of a computed `rgb(r, g, b)` colour. */
@@ -276,6 +306,73 @@ test.describe('Your shelf, the owner', () => {
     await expect(page).not.toHaveURL(/\/profile\/2025$/)
   })
 
+  test("Home's Read in tally opens the year's Books: her row first, a Book breaks out above the sheet, Back puts it away and then closes the sheet", async ({ page }) => {
+    await libraryFile(page, 200, THIS_YEAR)
+    const owner = await signInAsOwner(page)
+    const titles = [runTitle('Home Tally One'), runTitle('Home Tally Two')]
+    await finishedThisYear(await ownerClient(owner.email), ['Home Tally One', 'Home Tally Two'])
+    await page.reload()
+
+    // The tally is a button now (she has read this year); the sheet is closed.
+    const tally = page.getByTestId('home.tally')
+    await expect(tally).toHaveAttribute('aria-haspopup', 'dialog')
+    await expect(page.getByTestId('homeTally')).toHaveCount(0)
+    await tally.click()
+    const sheet = page.getByTestId('homeTally')
+    await expect(sheet).toBeVisible()
+    await expect(page.getByTestId('homeTally.sheetTitle')).toHaveText(fill(en.home.readIn, { year: YEAR }))
+
+    // Her row of that year's Books on top, then the finished reads, newest first; the link on to the review at the end.
+    const row = shelfRow(page, 'homeTally.shelfRow')
+    await expect(row).toHaveAttribute('data-book-count', '9')
+    await expect(row).toHaveAttribute('aria-label', fill(en.shelf.year.rowLabel, { year: YEAR }))
+    const reads = page.getByTestId('homeTally.read')
+    await expect(reads.getByTestId('profile.readTitle').filter({ hasText: titles[0]! })).toHaveCount(1)
+    await expect(reads.getByTestId('profile.readTitle').filter({ hasText: titles[1]! })).toHaveCount(1)
+    const order = await reads.getByTestId('profile.readTitle').allTextContents()
+    expect(order.indexOf(titles[0]!)).toBeLessThan(order.indexOf(titles[1]!))
+    const rowBox = (await row.boundingBox())!
+    expect(rowBox.y).toBeLessThan((await reads.first().boundingBox())!.y)
+    await expect(page.getByTestId('homeTally.yearInReview')).toHaveText(en.home.yearInReview)
+
+    // A Book taken out breaks out above the sheet (z 50), not under it.
+    await takeOut(page, row)
+    const out = page.locator('body > .row-card__view--out')
+    await expect(out).toHaveCount(1)
+    expect(Number(await out.evaluate((el) => getComputedStyle(el).zIndex))).toBeGreaterThan(
+      Number(await sheet.evaluate((el) => getComputedStyle(el).zIndex)),
+    )
+    const middle = { x: 206, y: 400 }
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-testid="homeTally"]') ?? null, middle)).toBeNull()
+
+    // The system Back puts the Book back and leaves the sheet; the next one closes the sheet. The router never moves.
+    const moves = await countNavigations(page)
+    await page.goBack({ waitUntil: 'commit' })
+    await expect(row).toHaveAttribute('data-picked', '')
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    await expect(sheet).toBeVisible()
+    await page.goBack({ waitUntil: 'commit' })
+    await expect(sheet).toBeHidden()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByTestId('home.title')).toBeVisible()
+    expect(await moves()).toBe(0)
+
+    // Done puts it back too, and the sheet stays until it is closed with its Cancel.
+    await tally.click()
+    await takeOut(page, shelfRow(page, 'homeTally.shelfRow'))
+    await page.getByTestId('shelfRow.putBack').click()
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    await expect(sheet).toBeVisible()
+
+    // A read opens its Book page; the link at the end opens the year in review.
+    await reads.filter({ hasText: titles[0]! }).click()
+    await expect(page.getByTestId('book.title')).toHaveText(titles[0]!)
+    await page.goBack()
+    await page.getByTestId('home.tally').click()
+    await page.getByTestId('homeTally.yearInReview').click()
+    await expect(page).toHaveURL(new RegExp(`/profile/${YEAR}$`))
+  })
+
   // The panel of a Book that is out is in <body>, outside the room: it must still wear the room's
   // theme (`theme="auto"`, regal-themed.css), dark in the room whatever the app's theme is (the app
   // is light here), and follow the room live. Regal's `data-regal-theme` says which it resolved; a
@@ -360,5 +457,31 @@ anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address'
   await expect(page.getByText('404').first()).toBeVisible()
   await expect(page.getByTestId('shelf')).toHaveCount(0)
 
+  expect(asked).toEqual([])
+})
+
+anyone("nobody else's tally opens the shelf: the year's Books without the row, no file, no Regal", async ({ page }) => {
+  const asked: string[] = []
+  const regal = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
+  page.on('request', (request) => {
+    const url = request.url()
+    if (url.startsWith('https://books.fabkho.dev/') || regal.test(new URL(url).pathname)) asked.push(url)
+  })
+  await libraryFile(page, 200, THIS_YEAR)
+  const member = await signedIn(page)
+  const title = runTitle('Home Tally Anyone')
+  await finishedThisYear(member.client, ['Home Tally Anyone'])
+  await page.reload()
+
+  await page.getByTestId('home.tally').click()
+  await expect(page.getByTestId('homeTally')).toBeVisible()
+  await expect(page.getByTestId('homeTally.sheetTitle')).toHaveText(fill(en.home.readIn, { year: YEAR }))
+  await expect(page.getByTestId('homeTally.read').getByTestId('profile.readTitle')).toHaveText([title])
+  await expect(page.getByTestId('homeTally.shelfRow')).toHaveCount(0)
+  await expect(page.getByTestId('homeTally.yearInReview')).toBeVisible()
+
+  // A read still opens its Book, and the link goes on to the review.
+  await page.getByTestId('homeTally.yearInReview').click()
+  await expect(page).toHaveURL(new RegExp(`/profile/${YEAR}$`))
   expect(asked).toEqual([])
 })
