@@ -7,6 +7,7 @@
 // books rated so), the records, the authors read more than once, and the
 // years either side. Figures and covers, never sentences.
 import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
+import { isoDay } from '~/utils/dates'
 import { useBookStore } from '~/stores/book'
 import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
@@ -40,6 +41,22 @@ const reads = computed(() => stats.record?.reads ?? [])
 const years = computed(() => yearsOf(reads.value))
 const figures = computed(() => figuresOf(reads.value, year.value))
 const shelfBooks = computed(() => (shelf.isOwner ? shelf.readIn(year.value) : []))
+// Until the reading record has come (or could not), the page stands in its final shape with
+// placeholders where the figures and covers go, as the Profile does (docs/MOTION.md, Loading):
+// every month with a cover, a favourite, the ratings, records and authors; whatever the year
+// turns out not to have closes smoothly (UiReveal).
+const loading = computed(() => !stats.record && !stats.loadError)
+const arriving = useArrival(() => loading.value)
+const hasYear = computed(() => !!stats.record && figures.value.books > 0)
+const hasRecords = computed(() => !!(figures.value.longest || figures.value.shortest || figures.value.quickest || figures.value.slowest))
+// While loading, the months gone by get a cover's placeholder; the months still to come their dash, as they will be.
+const today = isoDay()
+const monthsGoneBy = computed(() => {
+  const thisYear = Number(today.slice(0, 4))
+  return year.value < thisYear ? 12 : year.value === thisYear ? Number(today.slice(5, 7)) : 0
+})
+// The owner's row: the pile stands in while the library file loads, and closes if the year has no Books in it.
+const shelfShown = computed(() => shelf.isOwner && ((!shelf.shelf && !shelf.loadError) || shelfBooks.value.length > 0))
 const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m + 1, reads: readsInMonth(reads.value, year.value, m + 1) })))
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
@@ -69,64 +86,95 @@ function back() {
       <h1 class="year mt-sm tabular-nums" data-testid="yearInReview.title">{{ year }}</h1>
     </section>
 
-    <div v-if="stats.record && figures.books" class="relative flex flex-col gap-xl px-screen pt-lg">
-      <ProfileFigures :figures="figures" />
+    <UiReveal :show="loading || hasYear">
+      <!-- No gaps between the blocks: each carries the space before it inside its room, so a block that closes takes its space along. -->
+      <div class="relative flex flex-col px-screen pt-lg" :aria-busy="loading || undefined">
+        <ProfileFigures :figures="loading ? null : figures" />
 
-      <ProfileMonthBooks :months="months" />
+        <ProfileMonthBooks class="pt-xl" :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 
-      <ShelfYearRow v-if="shelfBooks.length" :year="year" :books="shelfBooks" />
+        <UiReveal :show="shelfShown">
+          <ShelfYearRow class="pt-xl" :year="year" :books="shelfBooks" />
+        </UiReveal>
 
-      <UiPressLink
-        v-if="figures.favourite"
-        id="favourite"
-        :to="`/book/${figures.favourite.book.id}`"
-        class="relative flex flex-col items-center gap-md overflow-hidden rounded-lg bg-surface-raised px-inset py-lg text-center shadow-raised edge-faint"
-        data-testid="yearInReview.favourite"
-        @press="books.prefetch(figures.favourite.book.id)"
-      >
-        <UiAmbient :colors="figures.favourite.book.coverColors" shape="card" />
-        <span class="eyebrow relative">{{ t('profile.year.favourite') }}</span>
-        <UiCover
-          class="relative"
-          :title="figures.favourite.book.title"
-          :authors="figures.favourite.book.authors"
-          :src="coverSrc(figures.favourite.book.coverUrl, 'lg')"
-          :thumbhash="figures.favourite.book.coverThumbhash"
-          :colors="figures.favourite.book.coverColors"
-          size="lg"
-          glow
-        />
-        <span class="relative flex flex-col items-center gap-xs">
-          <span class="book-title text-book-title" data-testid="yearInReview.favouriteTitle">{{ figures.favourite.book.title }}</span>
-          <span class="text-body text-ink-muted">{{ formatAuthors(figures.favourite.book.authors, t('common.etAl')) }}</span>
-          <UiStars :quarters="figures.favourite.rating" size="md" />
-        </span>
-      </UiPressLink>
+        <UiReveal :show="loading || !!figures.favourite">
+          <div class="pt-xl">
+            <UiPressLink
+              v-if="figures.favourite"
+              id="favourite"
+              :to="`/book/${figures.favourite.book.id}`"
+              class="relative flex flex-col items-center gap-md overflow-hidden rounded-lg bg-surface-raised px-inset py-lg text-center shadow-raised edge-faint"
+              :class="{ arrive: arriving }"
+              data-testid="yearInReview.favourite"
+              @press="books.prefetch(figures.favourite.book.id)"
+            >
+              <UiAmbient :colors="figures.favourite.book.coverColors" shape="card" />
+              <span class="eyebrow relative">{{ t('profile.year.favourite') }}</span>
+              <UiCover
+                class="relative"
+                :title="figures.favourite.book.title"
+                :authors="figures.favourite.book.authors"
+                :src="coverSrc(figures.favourite.book.coverUrl, 'lg')"
+                :thumbhash="figures.favourite.book.coverThumbhash"
+                :colors="figures.favourite.book.coverColors"
+                size="lg"
+                glow
+              />
+              <span class="relative flex flex-col items-center gap-xs">
+                <span class="book-title text-book-title" data-testid="yearInReview.favouriteTitle">{{ figures.favourite.book.title }}</span>
+                <span class="text-body text-ink-muted">{{ formatAuthors(figures.favourite.book.authors, t('common.etAl')) }}</span>
+                <UiStars :quarters="figures.favourite.rating" size="md" />
+              </span>
+            </UiPressLink>
+            <div v-else class="flex flex-col items-center gap-md rounded-lg bg-surface-raised px-inset py-lg shadow-raised edge-faint" aria-hidden="true">
+              <span class="eyebrow">{{ t('profile.year.favourite') }}</span>
+              <span class="favourite-cover skeleton wave" />
+              <span class="flex w-full flex-col items-center gap-xs">
+                <span class="line title-line"><span class="skeleton wave w-1/2" :style="{ '--wave': 0.05 }" /></span>
+                <span class="line body-line"><span class="skeleton wave w-1/3" :style="{ '--wave': 0.1 }" /></span>
+                <span class="line stars-line"><span class="skeleton wave w-1/4" :style="{ '--wave': 0.15 }" /></span>
+              </span>
+            </div>
+          </div>
+        </UiReveal>
 
-      <ProfileRatings v-if="figures.rated" :figures="figures" @pick="pickStars" />
-      <ProfileRecords :figures="figures" />
-      <ProfileAuthors :figures="figures" :limit="3" />
+        <UiReveal :show="loading || figures.rated > 0">
+          <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+        </UiReveal>
+        <UiReveal :show="loading || hasRecords">
+          <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />
+        </UiReveal>
+        <UiReveal :show="loading || figures.authors.length > 0">
+          <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" :limit="3" />
+        </UiReveal>
 
-      <nav class="flex items-center justify-between" :aria-label="t('profile.year.other')">
-        <UiButton v-if="before" tone="plain" size="sm" class="-ml-sm" :to="{ path: `/profile/${before}`, replace: true }" :aria-label="t('profile.year.beforeLabel', { year: before })" data-testid="yearInReview.before">
-          <UiIcon name="back" :size="15" />{{ t('profile.year.before', { year: before }) }}
-        </UiButton>
-        <span v-else />
-        <UiButton v-if="after" tone="plain" size="sm" class="-mr-sm" :to="{ path: `/profile/${after}`, replace: true }" :aria-label="t('profile.year.afterLabel', { year: after })" data-testid="yearInReview.after">
-          {{ t('profile.year.after', { year: after }) }}<UiIcon name="chevron" :size="15" />
-        </UiButton>
-      </nav>
-    </div>
+        <div class="pt-xl">
+          <nav class="flex min-h-(--size-button-sm) items-center justify-between" :aria-label="t('profile.year.other')">
+            <UiButton v-if="before" tone="plain" size="sm" class="-ml-sm" :to="{ path: `/profile/${before}`, replace: true }" :aria-label="t('profile.year.beforeLabel', { year: before })" data-testid="yearInReview.before">
+              <UiIcon name="back" :size="15" />{{ t('profile.year.before', { year: before }) }}
+            </UiButton>
+            <span v-else />
+            <UiButton v-if="after" tone="plain" size="sm" class="-mr-sm" :to="{ path: `/profile/${after}`, replace: true }" :aria-label="t('profile.year.afterLabel', { year: after })" data-testid="yearInReview.after">
+              {{ t('profile.year.after', { year: after }) }}<UiIcon name="chevron" :size="15" />
+            </UiButton>
+          </nav>
+        </div>
+      </div>
+    </UiReveal>
 
-    <div v-else-if="stats.record" class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="yearInReview.empty">
-      <p class="book-title text-callout">{{ t('profile.empty.title') }}</p>
-      <p class="text-subhead text-ink-muted">{{ t('profile.empty.text') }}</p>
-    </div>
+    <UiReveal :show="!!stats.record && !figures.books">
+      <div class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="yearInReview.empty">
+        <p class="book-title text-callout">{{ t('profile.empty.title') }}</p>
+        <p class="text-subhead text-ink-muted">{{ t('profile.empty.text') }}</p>
+      </div>
+    </UiReveal>
 
-    <div v-else-if="stats.loadError" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="yearInReview.loadError">
-      <p class="text-subhead text-ink-muted">{{ stats.loadError === 'offline' ? t('profile.offline') : t('profile.loadError') }}</p>
-      <UiButton v-if="stats.loadError !== 'offline'" tone="secondary" size="md" data-testid="yearInReview.retry" @click="stats.load()">{{ t('profile.retry') }}</UiButton>
-    </div>
+    <UiReveal :show="!stats.record && !!stats.loadError">
+      <div class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="yearInReview.loadError">
+        <p class="text-subhead text-ink-muted">{{ stats.loadError === 'offline' ? t('profile.offline') : t('profile.loadError') }}</p>
+        <UiButton v-if="stats.loadError !== 'offline'" tone="secondary" size="md" data-testid="yearInReview.retry" @click="stats.load()">{{ t('profile.retry') }}</UiButton>
+      </div>
+    </UiReveal>
 
     <ProfileReadsSheet v-model:open="sheetOpen" :title="sheetTitle" :reads="sheetReads" />
   </div>
@@ -138,5 +186,30 @@ function back() {
   line-height: 1;
   font-weight: var(--font-weight-light);
   letter-spacing: var(--text-figure--letter-spacing);
+}
+/* The placeholders while the record loads: the favourite's cover (UiCover `lg`) and its lines
+   at the heights of the text they stand for. */
+.favourite-cover {
+  width: var(--size-cover-lg);
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-cover-lg);
+}
+.line {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+.line > * {
+  height: 62%;
+}
+.title-line {
+  height: var(--text-book-title--line-height);
+}
+.body-line {
+  height: var(--text-body--line-height);
+}
+.stars-line {
+  height: var(--text-caption--line-height);
 }
 </style>

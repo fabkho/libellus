@@ -7,9 +7,12 @@
 // accidental Back swipe at its ends). The picked year scrolls into view.
 import type { StatsYear } from '~/data/stats'
 
-defineProps<{ years: readonly number[] }>()
+// While the reading record loads (`loading`), All stands lit and a few quiet
+// pills in the loading wave hold the years' places (docs/MOTION.md, Loading).
+const props = withDefaults(defineProps<{ years: readonly number[]; loading?: boolean }>(), { loading: false })
 const year = defineModel<StatsYear>({ required: true })
 const { t } = useI18n()
+const arriving = useArrival(() => props.loading)
 
 const row = useTemplateRef<HTMLElement>('row')
 
@@ -42,12 +45,15 @@ watch(year, () => nextTick(() => reveal(prefersReducedMotion() ? 'instant' : 'sm
       type="button"
       :aria-pressed="year === y"
       class="pill figures relative inline-flex h-(--size-button-sm) shrink-0 items-center rounded-pill px-md text-caption"
-      :class="year === y ? 'bg-ink text-on-ink' : 'edge text-ink-muted hover:bg-fill'"
+      :class="[year === y ? 'bg-ink text-on-ink' : 'edge text-ink-muted hover:bg-fill', { arrive: arriving && y !== 'all' }]"
       :data-testid="`profile.year.${y}`"
       @click="year = y"
     >
       {{ y === 'all' ? t('profile.all') : y }}
     </button>
+    <template v-if="loading">
+      <span v-for="i in 4" :key="i" class="waiting skeleton wave h-(--size-button-sm) w-(--spacing-xxxl) shrink-0" :style="{ '--wave': i * 0.12 }" aria-hidden="true" />
+    </template>
   </div>
 </template>
 
@@ -57,6 +63,10 @@ watch(year, () => nextTick(() => reveal(prefersReducedMotion() ? 'instant' : 'sm
   /* Room above and below for the pills' 44 pt touch targets, inside the scroller. */
   padding-block: calc((var(--size-touch) - var(--size-button-sm)) / 2);
   margin-block: calc((var(--size-button-sm) - var(--size-touch)) / 2);
+}
+/* A year's place while they load: a pill of the fill. */
+.waiting {
+  border-radius: var(--radius-pill);
 }
 /* The drawn pill is 32 px; the touch target stays 44. */
 .pill::after {

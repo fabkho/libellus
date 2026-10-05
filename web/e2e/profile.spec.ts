@@ -5,7 +5,7 @@ import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { signedIn } from './support'
+import { signedIn, untilStill } from './support'
 
 /**
  * The Profile (issue #78): the avatar opens it, a pushed screen with the hero
@@ -49,7 +49,7 @@ const fill = (template: string, values: Record<string, string | number>) =>
 const plural = (template: string, count: number, values: Record<string, string | number> = {}) =>
   fill(template.split(' | ')[count === 1 ? 0 : 1]!, { count, ...values })
 
-async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
+async function seed(page: Page, client: Parameters<typeof createLibrary>[0], more: [BookSnapshot, Read[]][] = []) {
   const library = createLibrary(client)
   const add = async (snapshot: BookSnapshot, reads: Read[]) => {
     const entry = (await library.addToLibrary(snapshot)).data!
@@ -77,6 +77,7 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
   await library.startReading(eden.id, addDays(isoDay(), -2))
   const [read] = await sql<{ id: string }>('select id from public.reading_sessions where entry_id = $1', [eden.id])
   await sql('insert into public.reading_progress_days (session_id, day, start_page, end_page) values ($1, $2, 0, 24)', [read!.id, isoDay()])
+  for (const [snapshot, reads] of more) await add(snapshot, reads)
   await page.reload()
 }
 
@@ -180,4 +181,43 @@ test('a member with nothing finished yet sees the empty Profile and her account'
   await expect(page.getByTestId('profile.email')).toHaveText(member.email)
   await expect(page.getByTestId('profile.nameValue')).toHaveText(en.account.nameNone)
   await expect(page.getByTestId('profile.import')).toHaveAttribute('href', '/import')
+})
+
+test('the Profile stands in its final shape while its figures load, and nothing moves when they land', async ({ page }) => {
+  const member = await signedIn(page)
+  // Four authors read more than once (as many as the Profile shows, and as its placeholders guess).
+  await seed(page, member.client, [
+    [book('A Wizard of Earthsea', 'Ursula K. Le Guin', 183), [['2025-01-02', '2025-01-09', 16]]],
+    [book('The Tombs of Atuan', 'Ursula K. Le Guin', 180), [['2025-01-10', '2025-01-20', 15]]],
+    [book('Leviathan Wakes', 'James S. A. Corey', 561), [['2025-03-01', '2025-03-20', 14]]],
+    [book("Caliban's War", 'James S. A. Corey', 595), [['2025-03-21', '2025-04-08', 15]]],
+  ])
+
+  // The reading record is held back until the page has been looked at.
+  let release!: () => void
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route(/\/rest\/v1\/reading_sessions\?.*outcome=not\.is\.null/, async (route) => {
+    await held
+    await route.continue()
+  })
+  await page.getByTestId('shell.avatar').click()
+  await expect(page).toHaveURL(/\/profile$/)
+
+  // Before it comes: the figures' grid and the chart's frame are there, the region busy, no figure in it.
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(1)
+  await expect(page.getByTestId('profile.figures')).toBeVisible()
+  await expect(page.getByTestId('profile.columns')).toBeVisible()
+  await expect(page.getByTestId('profile.days')).toBeVisible()
+  await expect(page.getByTestId('profile.books')).toHaveCount(0)
+  await untilStill(page)
+  const height = () => page.evaluate(() => document.documentElement.scrollHeight)
+  const before = await height()
+
+  // When it lands, the figures arrive in place: the page keeps its height to a few pixels.
+  release()
+  await expect(page.getByTestId('profile.books')).toHaveText('8')
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
+  await expect(page.getByTestId('profile.author')).toHaveCount(4)
+  await untilStill(page)
+  expect(Math.abs((await height()) - before)).toBeLessThanOrEqual(4)
 })

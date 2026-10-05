@@ -182,6 +182,9 @@ test.describe('Your shelf, the owner', () => {
     await expect(section).toBeVisible()
     await expect(section).toContainText(en.shelf.card.title)
     await expect(page.getByTestId('profile.shelfCount')).toHaveText('8')
+    // The card fetches the 3D once it comes near the view (ShelfRowCard), and under her figures
+    // it sits further down than that: she scrolls to it.
+    await section.scrollIntoViewIfNeeded()
     // The row holds all of them: nothing to show beyond it, and nothing links to the full shelf.
     const row = shelfRow(page, 'profile.shelfRow')
     await expect(row).toHaveAttribute('data-book-count', '8')
@@ -246,6 +249,8 @@ test.describe('Your shelf, the owner', () => {
     await finishedIn2025(owner.email)
 
     await page.goto('/profile')
+    // The card fetches the 3D once it comes near the view, below her figures.
+    await page.getByTestId('profile.shelf').scrollIntoViewIfNeeded()
     const row = shelfRow(page, 'profile.shelfRow')
     await expect(row).toHaveAttribute('data-book-count', '8')
     // Regal's canvas has drawn (its focus is on a Book) before the page is looked at.
@@ -288,6 +293,8 @@ test.describe('Your shelf, the owner', () => {
 
     await page.goto('/profile')
     await expect(page.getByTestId('profile.shelfCount')).toHaveText(String(MANY_BOOKS))
+    // The card fetches the 3D once it comes near the view, below her figures.
+    await page.getByTestId('profile.shelf').scrollIntoViewIfNeeded()
     // The row holds the newest 80.
     await expect(shelfRow(page, 'profile.shelfRow')).toHaveAttribute('data-book-count', '80')
     const all = page.getByTestId('profile.shelfAll')

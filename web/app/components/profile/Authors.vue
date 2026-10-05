@@ -1,18 +1,24 @@
 <script setup lang="ts">
 // The authors read more than once (issue #78): a fan of up to three of their
 // covers, the name, a tally mark per read (every fifth followed by a gap, as
-// Home's tally), the count large and the average Rating in mono.
+// Home's tally), the count large and the average Rating in mono. While the
+// reading record loads (`figures` null), `limit` rows of placeholders in the
+// loading wave (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
-withDefaults(defineProps<{ figures: YearFigures; limit?: number }>(), { limit: 4 })
+const props = withDefaults(defineProps<{ figures: YearFigures | null; limit?: number }>(), { limit: 4 })
 const { t } = useI18n()
 const { count, stars } = useFigures()
+const arriving = useArrival(() => !props.figures)
 </script>
 
 <template>
-  <section v-if="figures.authors.length" id="authors" class="flex flex-col gap-xs" data-testid="profile.authors">
+  <section v-if="!figures || figures.authors.length" id="authors" class="flex flex-col gap-xs" data-testid="profile.authors">
     <h2 class="eyebrow mb-xs">{{ t('profile.authors.title') }}</h2>
-    <div v-for="author in figures.authors.slice(0, limit)" :key="author.name" class="flex items-center gap-md py-xs" data-testid="profile.author">
+    <template v-if="!figures">
+      <ProfileRowPlaceholder v-for="i in limit" :key="i" :wave="(i - 1) * 0.15" fan />
+    </template>
+    <div v-for="author in figures?.authors.slice(0, limit) ?? []" :key="author.name" class="flex items-center gap-md py-xs" :class="{ arrive: arriving }" data-testid="profile.author">
       <span class="fan relative flex shrink-0" aria-hidden="true">
         <UiCover
           v-for="(book, i) in author.books.slice(0, 3)"

@@ -7,16 +7,21 @@ import {
   DEVICE_COLLECTIONS_KEY,
   DEVICE_LIBRARY_KEY,
   forgetLibrary,
+  DEVICE_STATS_KEY,
   readCollections,
   readLibrary,
   readSavedMember,
+  readStats,
   saveCollections,
   saveLibrary,
+  saveStats,
 } from '@/data/deviceLibrary'
 import { createLibrary, type EntryStatus } from '@/data/library'
 import { clearLocalData, LOCAL_DATA_PREFIX, type DeviceStorage } from '@/data/localData'
 import { createManualBooks } from '@/data/manualBooks'
 import { searchLibrary } from '@/data/search'
+import { createStats } from '@/data/stats'
+import { isoDay } from '@/utils/dates'
 import { signUpMember } from './support/member'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
@@ -206,6 +211,32 @@ describe("the device's copy of the Library", () => {
     expect(saveLibrary(storage, { member, lists: tooMuch, readInYear: null })).toBe(false)
     // The older copy would be wrong now: there is none.
     expect(readLibrary(storage, 'm')).toBeNull()
+  })
+})
+
+describe("the device's copy of the reading record", () => {
+  it('is what the last load saw, read back for the same member only, and forgotten with the Library', async () => {
+    const { member, storage } = await memberWithLibrary()
+    const record = (await createStats(member.client).record(isoDay())).data!
+    expect(record.reads.map((r) => r.book.title)).toEqual([runTitle('Winter Pages')])
+
+    expect(saveStats(storage, member.id, record)).toBe(true)
+    // What the Profile opens with next time: the same record, figures and Books included.
+    expect(readStats(storage, member.id)).toEqual(record)
+    expect(readStats(storage, 'someone-else')).toBeNull()
+
+    forgetLibrary(storage)
+    expect(storage.getItem(DEVICE_STATS_KEY)).toBeNull()
+  })
+
+  it('is cleared when the member signs out, and ignored when it cannot be read', () => {
+    const storage = browserStorage()
+    saveStats(storage, 'm', { reads: [], wantToRead: 0, reading: 0, days: [], daysSince: null })
+    clearLocalData(storage)
+    expect(readStats(storage, 'm')).toBeNull()
+
+    storage.setItem(DEVICE_STATS_KEY, JSON.stringify({ version: 1, data: { memberId: 'm', record: { reads: 'torn' } } }))
+    expect(readStats(storage, 'm')).toBeNull()
   })
 })
 
