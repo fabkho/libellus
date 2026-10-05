@@ -1,0 +1,65 @@
+/* Libellus' look for what Regal draws around its 3D: the tooltip and the Book
+   detail panel (the card, the phone's sheet). Add the class `regal-themed` to a
+   Regal component (RegalBooksStage …) together with `theme="auto"` and it wears
+   D's tokens in both themes. Imported by the components that use it, never by
+   the entry, so it travels with the `regal` chunk (regal.config.ts).
+
+   Regal's `--regal-*` tokens (its README, Theming) are set to D's roles, so each
+   follows the theme it stands in: `theme="auto"` follows the nearest `data-theme`
+   above the component (the shelf's room is `data-theme="dark"` in either theme),
+   and Regal hands the values it resolved to the parts that live in <body> (the
+   hover label, the sheet). */
+.regal-themed {
+  --regal-surface: var(--color-surface-raised);
+  --regal-surface-raised: var(--color-surface-sheet);
+  --regal-ink: var(--color-ink);
+  --regal-ink-muted: var(--color-ink-muted);
+  --regal-ink-subtle: var(--color-ink-muted);
+  --regal-ink-faint: var(--color-ink-ghost);
+  --regal-accent: var(--color-accent);
+  --regal-accent-hover: var(--color-accent);
+  --regal-hairline: var(--color-star-track);
+  --regal-border: var(--color-hairline-strong);
+  --regal-border-width: 0.5px;
+  --regal-radius: var(--radius-md);
+  --regal-radius-control: var(--radius-pill);
+  --regal-shadow: var(--elevation-raised);
+  --regal-font-body: var(--font-sans);
+  --regal-font-title: var(--font-serif);
+  --regal-size-base: var(--text-caption);
+  --regal-size-title: var(--text-book-title);
+  --regal-size-title-sheet: var(--text-book-title);
+  --regal-size-body: var(--text-caption);
+  --regal-size-small: var(--text-footnote);
+  --regal-size-label: var(--text-eyebrow);
+  --regal-weight-title: var(--font-weight-medium);
+  --regal-weight-label: var(--text-eyebrow--font-weight);
+  --regal-style-title: normal;
+  --regal-label-tracking: var(--text-eyebrow--letter-spacing);
+
+  /* What Regal's own sidebar, filters and notes read (the 3D itself is not
+     themed): paper-ink names, mapped for Regal main, which also reads these
+     for the tooltip and the panel. */
+  --color-bg: var(--color-surface);
+  --color-line: var(--color-hairline);
+  --color-ink-subtle: var(--color-ink-muted);
+  --color-accent-tint: var(--color-accent-soft);
+  --color-accent-light: var(--color-accent);
+  --font-display: var(--font-serif);
+  --text-2xs: var(--text-eyebrow);
+  --text-xs: var(--text-meta);
+  --text-sm: var(--text-footnote);
+  --text-base: var(--text-caption);
+  --text-md: var(--text-subhead);
+  --text-xl: var(--text-callout);
+}
+
+/* The phone's sheet is in <body> on the viewport's bottom edge, as wide as the
+   viewport. D's sheets are the column's width (--size-max-content, centred) and
+   round at the top only (--radius-sheet), on a wider screen as on a phone. No
+   token says either. */
+.details.details--sheet.stage__details--sheet {
+  max-width: var(--size-max-content);
+  margin-inline: auto;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+}

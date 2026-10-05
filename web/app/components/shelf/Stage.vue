@@ -10,9 +10,13 @@
 // per month (Regal's Stack view, which keeps it in the address too); without
 // one the whole Library, a separator per year. Regal's own copy and controls
 // are its own (the card over a picked Book); its colours and type are mapped
-// onto D's tokens below, so it wears the room it stands in. It fills the box
+// onto D's tokens (`regal-themed`, assets/css/regal-themed.css), so it wears the
+// room it stands in. It fills the box
 // it is put in (a positioned one).
 import '#build/nuxt-fonts-global.css'
+// Libellus' look for Regal's tooltip and Book detail panel: the `regal-themed` class
+// (with `theme="auto"`), in a stylesheet of its own so it travels with the regal chunk.
+import '~/assets/css/regal-themed.css'
 
 const props = defineProps<{
   /** Only the Books finished in this year; null for all of them. */
@@ -54,7 +58,7 @@ defineExpose({
 </script>
 
 <template>
-  <RegalBooksStage class="shelf-stage" />
+  <RegalBooksStage class="shelf-stage regal-themed" theme="auto" />
 </template>
 
 <style scoped>
@@ -64,23 +68,5 @@ defineExpose({
   position: absolute;
   inset: 0;
   min-height: 0;
-}
-
-/* Regal's components read paper-ink token names with fallbacks (its README,
-   Styling): the ones D also has (ink, its muted and faint, the accent, the mono
-   and serif families) are D's already; the rest are mapped here. */
-.shelf-stage {
-  --color-bg: var(--color-surface);
-  --color-line: var(--color-hairline);
-  --color-ink-subtle: var(--color-ink-muted);
-  --color-accent-tint: var(--color-accent-soft);
-  --color-accent-light: var(--color-accent);
-  --font-display: var(--font-serif);
-  --text-2xs: var(--text-eyebrow);
-  --text-xs: var(--text-meta);
-  --text-sm: var(--text-footnote);
-  --text-base: var(--text-caption);
-  --text-md: var(--text-subhead);
-  --text-xl: var(--text-callout);
 }
 </style>
