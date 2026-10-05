@@ -9,7 +9,7 @@
 // The 3D is fetched only once the card comes near the view (Regal and
 // three.js are the `regal` chunk, `LazyShelfRow`); until it has drawn, the
 // Books stand in a row of slabs in their Spines' colours (ShelfPile), the
-// newest at the right as the row starts there, or a year's January at the left.
+// newest at the middle as the row starts there, or a year's January at the middle, as the row rests.
 import type { ShelfBook } from '~/data/shelf'
 
 const props = defineProps<{
@@ -23,7 +23,7 @@ const props = defineProps<{
   label: string
 }>()
 
-// The stand-in shows what the row shows first: the newest at the right end, or the year's first at the left.
+// The stand-in shows what the row shows first: the newest, or the year's first, in the card's middle.
 const STAND_IN = 28
 const standIn = computed(() =>
   props.year ? [...props.books].reverse().slice(0, STAND_IN) : props.books.slice(0, STAND_IN).reverse(),
@@ -54,7 +54,7 @@ onBeforeUnmount(() => observer?.disconnect())
     <LazyShelfRow v-if="near" :year="year" :limit="limit" :label="label" class="row-3d" :class="ready && 'ready'" @ready="ready = true" />
     <Transition name="hand-over">
       <!-- Where the row stands its Books: under the months' dates, over the title of the one in focus. -->
-      <div v-if="!ready" class="stand-in pointer-events-none absolute inset-x-0 flex px-inset" :class="year ? 'justify-start' : 'justify-end'">
+      <div v-if="!ready" class="stand-in pointer-events-none absolute inset-x-0 flex" :class="year ? 'justify-start' : 'justify-end'">
         <ShelfPile :books="standIn" :limit="STAND_IN" axis="row" />
       </div>
     </Transition>
@@ -68,6 +68,9 @@ onBeforeUnmount(() => observer?.disconnect())
 .stand-in {
   top: 20%;
   bottom: 18%;
+  /* The row stands the first Book (a year's January, else the newest) in the
+     card's middle, half a slab from the centre, as it does at rest. */
+  padding-inline: calc(50% - var(--spacing-sm));
 }
 .row-3d {
   opacity: 0;
