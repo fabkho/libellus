@@ -163,9 +163,14 @@ test.describe('Your shelf, the owner', () => {
     expect(await row.evaluate((el) => [getComputedStyle(el).borderTopWidth, getComputedStyle(el).borderRadius])).toEqual(['0px', '0px'])
 
     // A Book taken out breaks out over the whole screen, above the header and the tab bar.
+    // (Android's gesture navigation, 24 px, stood in for the device's inset as e2e/insets.spec.ts does.)
+    await page.addStyleTag({ content: ':root { --safe-area-bottom: 24px; }' })
     await takeOut(page, row)
     const out = page.locator('body > .row-card__view--out')
     await expect(out).toHaveCount(1)
+    // The phone's sheet clears the gesture bar: its last line is a whole inset above the padding's base.
+    const sheet = page.locator('body > article.row-card__details--sheet')
+    if (await sheet.count()) expect(Number.parseFloat(await sheet.evaluate((el) => getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(24 + 16)
     expect(Number(await out.evaluate((el) => getComputedStyle(el).zIndex))).toBeGreaterThan(
       Number(await page.getByTestId('shell.tabs').evaluate((el) => getComputedStyle(el).zIndex)),
     )

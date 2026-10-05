@@ -75,3 +75,10 @@
   margin-inline: auto;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
 }
+
+/* The row's sheet sits on the very bottom edge, where Android's gesture bar
+   (and iOS' home indicator) lies over it: its last line (the buttons) clears
+   the inset, as the sheets' do (`safe-bottom`). */
+.row-card__details.row-card__details--sheet.row-card__details--sheet {
+  padding-bottom: calc(1rem + var(--safe-area-bottom));
+}
