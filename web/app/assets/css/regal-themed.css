@@ -54,10 +54,40 @@
   --text-xl: var(--text-callout);
 }
 
-/* The phone's sheet is in <body> on the viewport's bottom edge, as wide as the
-   viewport. D's sheets are the column's width (--size-max-content, centred) and
-   round at the top only (--radius-sheet), on a wider screen as on a phone. No
-   token says either. */
+/* The row fills the Libellus card (ShelfRowCard: raised, rounded, clipped)
+   edge to edge, so Regal's frame around it is one too many: its own tokens
+   drop it, and the card's rounding clips the row; the card's surface shows
+   through. */
+.regal-themed {
+  --regal-row-border: 0;
+  --regal-row-radius: 0;
+  --regal-row-background: transparent;
+
+  /* The row's sheet (a Book broken out on a phone) is Libellus' own inside
+     (ShelfBookSheet: its title row, its padding), so the container is a bare
+     one, as UiSheet's `max-w-(--size-max-content) rounded-t-sheet
+     bg-surface-sheet shadow-sheet safe-bottom`: no padding of Regal's but the
+     bottom inset (Android's gesture bar, iOS' home indicator) under the
+     content, no frame, D's corners, surface and shadow, the column's width. One
+     grabber, Regal's (it also drags the Book back), at UiSheet's size and
+     colour; BookSheet draws none. */
+  --regal-sheet-radius: var(--radius-sheet);
+  --regal-sheet-background: var(--color-surface-sheet);
+  --regal-sheet-border: 0;
+  --regal-sheet-shadow: var(--shadow-sheet);
+  --regal-sheet-padding: 0 0 var(--safe-area-bottom);
+  --regal-sheet-max-width: var(--size-max-content);
+  --regal-sheet-grabber: block;
+  --regal-sheet-grabber-color: var(--color-ink-ghost);
+  --regal-sheet-grabber-width: var(--size-grabber);
+  --regal-sheet-grabber-height: var(--size-grabber-height);
+}
+
+/* The Stack's phone sheet is in <body> on the viewport's bottom edge, as wide as
+   the viewport. D's sheets are the column's width (--size-max-content, centred)
+   and round at the top only (--radius-sheet), on a wider screen as on a phone.
+   No token says either for the Stack (the row's do, above); the selector
+   outweighs Regal's own scoped rule. */
 .details.details--sheet.stage__details--sheet {
   max-width: var(--size-max-content);
   margin-inline: auto;

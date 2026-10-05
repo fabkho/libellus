@@ -200,7 +200,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
   their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
   and the years either side (they replace the page, so Back is the Profile). For the owner only, a
-  window onto Your shelf's night room under the months: that year's Books as Regal's 3D Stack.
+  card under the months with that year's Books as Regal's 3D row, starting at January.
 - **Your shelf** (`pages/profile/shelf.vue`, #23; the owner's account only, nothing anywhere for
   anyone else): Regal's 3D Stack of the published library file, the one the portfolio shows. A
   pushed screen that fills the column (`immersive`: the tab bar steps away) in the **night room in
@@ -210,18 +210,32 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   back button and the title pinned, the count beside them in mono, the Stack below, its view
   reaching up behind the top bar so the pile starts above the middle. Regal's own parts (the tooltip
   and the Book's detail panel, a card, or on a phone a bottom sheet) wear D's tokens in the room's
-  theme: `regal-themed` (`web/app/assets/css/regal-themed.css`, imported by `ShelfStage` so it travels
-  with the `regal` chunk) sets Regal's `--regal-*` tokens to D's roles (surface, raised surface, ink,
-  muted and ghost ink, accent, hairline, the 14 px card radius, the raised shadow, Geist, Newsreader for
-  the title, the eyebrow's tracking), and `theme="auto"` makes Regal follow the nearest `data-theme`.
+  theme: `regal-themed` (`web/app/assets/css/regal-themed.css`, imported by `ShelfStage` and
+  `ShelfRow` so it travels with the `regal` chunk) sets Regal's `--regal-*` tokens to D's roles
+  (surface, raised surface, ink, muted and ghost ink, accent, hairline, the 14 px card radius, the
+  raised shadow, Geist, Newsreader for the title, the eyebrow's tracking), and `theme="auto"` makes
+  Regal follow the nearest `data-theme`.
   Any Regal component gets the same look with `class="regal-themed" theme="auto"`. The phone's sheet is
-  the column's width with `--radius-sheet` corners, like `UiSheet`. Two parts are D's own components
-  through Regal's slots (the meta line in the eyebrow's mono; Show back, Put back and Goodreads as D's
-  pills); the rating stays Regal's stars, which already read as D's.
-  The same room is the Profile card's little window (the newest Spines) and the year in review's
-  4:5 window, a picture the page scrolls over (a pile that took the finger would trap the scroll).
-  While Regal loads, `ShelfPile` stands in: the Books as flat slabs in their Spines' colours, as
-  thick as they are long, never a spinner or a shimmer.
+  the column's width with `--radius-sheet` corners, like `UiSheet`, and clears the gesture bar
+  (`--safe-area-bottom`); the row's sheet gets this from Regal's `--regal-sheet-*` tokens (no padding
+  but the bottom inset, no frame, `--radius-sheet`, `surface-sheet`, `shadow-sheet`, the column's
+  width, one grabber: Regal's, at UiSheet's size and colour, which also drags the Book back). Regal's
+  own frame round the row's card is dropped with `--regal-row-border/-radius/-background` (the
+  Libellus card is the only edge), and Regal's round Back is off (`:back-button="false"`). The Book
+  broken out on a phone is a quieter cousin of the app's sheets (`ShelfBookSheet`, through Regal's
+  `#detail` slot): UiSheet's title row (a plain Done at the left puts the Book back, Back cover /
+  Front cover at the right in the lamp colour; no pills), then the title in the book-title style,
+  one mono line of facts (author, day, pages), the blurb in four lines and a trailing Goodreads
+  link. Regal keeps the container.
+  The Profile shows it as a section like the others ("Your shelf", the count, a quiet Show all only
+  when there are more Books than its row holds) over a raised card filled edge to edge by Regal's
+  row (`RegalBooksRow`, `regal-themed` in the app's theme): the Stack turned on its side, the newest
+  80 Books standing Spines out, a sheet and the month between months. The year in review has the
+  same card with that year's Books. The row scrolls sideways under the finger and never traps the
+  page's scroll; a Book tapped breaks out over the whole screen, header and tab bar included, and
+  Done, Escape, a tap beside it or the system's Back lands it in the row again. While Regal loads, `ShelfPile` stands in: the Books as flat slabs
+  in their Spines' colours, as thick as they are long (a pile on the shelf page, standing in a row
+  in the cards), never a spinner or a shimmer.
 - **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
   own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
   follows the theme, so native parts — the date picker, autofill — do too); Safari, without

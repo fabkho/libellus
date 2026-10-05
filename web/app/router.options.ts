@@ -4,7 +4,7 @@ import { useNuxtApp, useRouter } from '#imports'
 import { bookPageOf } from '~/utils/bookPageKey'
 import { isBookPath } from '~/utils/flight'
 import { tabPlaces, untilReachable, type PageWatch, type ScrollPlace } from '~/utils/tabPlaces'
-import { listenForBack } from '~/composables/useBackDismiss'
+import { keepsForeignLayers, listenForBack } from '~/composables/useBackDismiss'
 
 // Where a page opens (Nuxt's own scroll behaviour, plus the tabs' places):
 // back and forward return to where the page was; a tab (Home, Library) opens
@@ -42,10 +42,11 @@ let landing: { cancel(): void } | null = null
 
 export default {
   // Nuxt's own history, with the Back that closes a sheet listening before the
-  // router does (composables/useBackDismiss.ts).
+  // router does (composables/useBackDismiss.ts), and that lets a Back off another
+  // layer's entry (Regal's row, a Book broken out) pass the router by.
   history: (base) => {
     listenForBack()
-    return createWebHistory(base)
+    return keepsForeignLayers(createWebHistory(base))
   },
   scrollBehavior(to, from, savedPosition) {
     // Same page (a query or hash change): stay put.

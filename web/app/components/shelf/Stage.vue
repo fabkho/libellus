@@ -17,6 +17,7 @@ import '#build/nuxt-fonts-global.css'
 // Libellus' look for Regal's tooltip and Book detail panel: the `regal-themed` class
 // (with `theme="auto"`), in a stylesheet of its own so it travels with the regal chunk.
 import '~/assets/css/regal-themed.css'
+import { goodreadsUrl } from '~/utils/goodreads'
 
 const props = defineProps<{
   /** Only the Books finished in this year; null for all of them. */
@@ -28,13 +29,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-
-/** The Book's Goodreads page (its Id is numeric), or a search for it: what Regal's own link does. */
-function goodreadsUrl(book: { id: string; isbn13: string | null; title: string; author: string | null }) {
-  if (/^\d+$/.test(book.id)) return `https://www.goodreads.com/book/show/${book.id}`
-  const query = book.isbn13 ?? [book.title, book.author].filter(Boolean).join(' ')
-  return `https://www.goodreads.com/search?q=${encodeURIComponent(query)}`
-}
 
 const { set } = useStackView()
 const showYear = (year: number | null) => set({ sort: 'date', minRating: 0, year, group: year ? 'month' : 'year' })

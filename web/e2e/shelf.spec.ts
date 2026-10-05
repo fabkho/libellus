@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createAuth } from '../app/data/auth'
@@ -10,15 +10,17 @@ import { shelfOwner } from './shelfOwner'
 import { signedIn } from './support'
 
 /**
- * Your shelf (#23): Regal's 3D Stack of the owner's published library file,
- * for the owner's account only. She finds it on her Profile (a card with the
- * count), opens it full screen, and finds that year's Books stacked in a year in
- * review, which opens full screen too. A file that can't be read says so and
- * tries again. Anyone else has no card, no stack, no request for the file, and
- * the address is a page that doesn't exist. The library file is the synthetic
- * fixture (tests/fixtures/shelf/library.json, 8 Books, 4 read in 2025), answered
- * for the published address: no flow reaches the real one. With docs/parity.md
- * (Your shelf) this is the behavioural reference.
+ * Your shelf (#23): Regal's 3D shelf of the owner's published library file, for
+ * the owner's account only. She finds her newest Books as Regal's row in a card
+ * on her Profile, and a year's in its review; a Book taken out breaks out over
+ * the whole screen, and the sheet's Done, Escape or the system's Back puts it
+ * back without leaving the page (Regal's round Back is off). Only with more
+ * Books than the row holds does Show all open the whole shelf full screen. A file that can't be read says so and
+ * tries again. Anyone else has no card, no row, no request for the file or for
+ * Regal's code, and the address is a page that doesn't exist. The library file
+ * is the synthetic fixture (tests/fixtures/shelf/library.json, 8 Books, 4 read
+ * in 2025), answered for the published address: no flow reaches the real one.
+ * With docs/parity.md (Your shelf) this is the behavioural reference.
  */
 
 const LIBRARY_SRC = 'https://books.fabkho.dev/v2/library.json'
@@ -29,21 +31,59 @@ const fill = (template: string, values: Record<string, string | number>) => temp
 const plural = (template: string, count: number, values: Record<string, string | number> = {}) =>
   fill(template.split(' | ')[count === 1 ? 0 : 1]!, { count, ...values })
 
-/** The published library file, answered from the fixture (or with `status`), as R2 answers it: with CORS. */
-async function libraryFile(page: Page, status = 200) {
+/** More Books than the Profile's row holds (80): the fixture's, copied, a day apart going back from its newest. */
+const MANY_BOOKS = 85
+const MANY = (() => {
+  const file = JSON.parse(FIXTURE) as { books: Record<string, unknown>[] }
+  const read = file.books.filter((book) => book.status === 'read')
+  const books = Array.from({ length: MANY_BOOKS }, (_, i) => ({
+    ...read[i % read.length],
+    id: `shelf-many-${i}`,
+    dateRead: new Date(Date.UTC(2026, 8, 28 - i)).toISOString().slice(0, 10),
+  }))
+  return JSON.stringify({ ...file, books })
+})()
+
+/** The published library file, answered from the fixture (or `body`, or with `status`), as R2 answers it: with CORS. */
+async function libraryFile(page: Page, status = 200, body = FIXTURE) {
   await page.unroute(LIBRARY_SRC).catch(() => {})
   await page.route(LIBRARY_SRC, (route) =>
     route.fulfill({
       status,
       contentType: 'application/json',
       headers: { 'access-control-allow-origin': '*' },
-      body: status === 200 ? FIXTURE : 'Not found',
+      body: status === 200 ? body : 'Not found',
     }),
   )
 }
 
 /** Regal's Stack inside the shelf: how many Books it lays out. */
 const stackedBooks = (page: Page) => page.getByTestId('shelf.stage').locator('section[data-book-count]')
+
+/** Regal's row in a card (the Profile's, a year in review's): its Books, and the one that is out (`data-picked`). */
+const shelfRow = (page: Page, testId: string) => page.getByTestId(testId).locator('section.row-card')
+
+/** Takes out the Book in the row's focus as the keyboard does (Enter), the same Pick a tap makes. */
+async function takeOut(page: Page, row: Locator) {
+  await row.scrollIntoViewIfNeeded()
+  await expect(row.locator('.row-focus')).toBeAttached({ timeout: 30_000 })
+  await row.locator('.row-card__scroller').focus()
+  await page.keyboard.press('Enter')
+  await expect(row).not.toHaveAttribute('data-picked', '')
+}
+
+/** Counts the router's navigations from now on (a Book put back must not be one). */
+async function countNavigations(page: Page): Promise<() => Promise<number>> {
+  await page.evaluate(() => {
+    const app = (document.querySelector('#__nuxt') as unknown as { __vue_app__: { config: { globalProperties: { $router: import('vue-router').Router } } } }).__vue_app__
+    const counter = window as unknown as { __navigations: number }
+    counter.__navigations = 0
+    app.config.globalProperties.$router.beforeEach(() => {
+      counter.__navigations++
+    })
+  })
+  return () => page.evaluate(() => (window as unknown as { __navigations: number }).__navigations)
+}
 
 /** Signs the owner in through the screens (she exists; a code is mailed to her). */
 async function signInAsOwner(page: Page) {
@@ -103,23 +143,89 @@ test.describe('Your shelf, the owner', () => {
   // One owner (one id) for the whole run: her flows take turns.
   test.describe.configure({ mode: 'serial' })
 
-  test('finds her shelf on the Profile and opens it full screen', async ({ page }) => {
+  test('finds her newest Books as a row on the Profile, takes one out over the whole screen, and the system Back puts it away', async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
 
     await page.goto('/profile')
-    const card = page.getByTestId('profile.shelf')
-    await expect(card).toBeVisible()
-    await expect(card).toContainText(en.shelf.card.title)
+    const section = page.getByTestId('profile.shelf')
+    await expect(section).toBeVisible()
+    await expect(section).toContainText(en.shelf.card.title)
     await expect(page.getByTestId('profile.shelfCount')).toHaveText('8')
-    await expect(card).toHaveAttribute('aria-label', plural(en.shelf.card.label, 8))
+    // The row holds all of them: nothing to show beyond it, and nothing links to the full shelf.
+    const row = shelfRow(page, 'profile.shelfRow')
+    await expect(row).toHaveAttribute('data-book-count', '8')
+    await expect(row).toHaveAttribute('aria-label', en.shelf.card.rowLabel)
+    await expect(page.getByTestId('profile.shelfAll')).toHaveCount(0)
+    await expect(page.locator('a[href^="/profile/shelf"]')).toHaveCount(0)
 
-    await card.click()
+    // The row fills Libellus' card edge to edge: no second frame of Regal's inside it.
+    expect(await row.evaluate((el) => [getComputedStyle(el).borderTopWidth, getComputedStyle(el).borderRadius])).toEqual(['0px', '0px'])
+
+    // A Book taken out breaks out over the whole screen, above the header and the tab bar.
+    // (Android's gesture navigation, 24 px, stood in for the device's inset as e2e/insets.spec.ts does.)
+    await page.addStyleTag({ content: ':root { --safe-area-bottom: 24px; }' })
+    await takeOut(page, row)
+    const out = page.locator('body > .row-card__view--out')
+    await expect(out).toHaveCount(1)
+    // The phone's sheet is Libellus' (Done, the action in the lamp colour, no pills) and clears the gesture bar.
+    const sheet = page.locator('body > article.row-card__details--sheet')
+    if (await sheet.count()) {
+      expect(Number.parseFloat(await sheet.evaluate((el) => getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(24)
+      await expect(page.getByTestId('shelfRow.putBack')).toHaveText(en.shelf.detail.done)
+      // One grabber (Regal's, UiSheet's size), the sheet's own and a bare container: no frame, the app's sheet corners.
+      await expect(page.locator('.row-card__grabber')).toHaveCount(1)
+      const frame = await sheet.evaluate((el) => [getComputedStyle(el).borderTopWidth, getComputedStyle(el).borderTopLeftRadius])
+      expect(frame[0]).toBe('0px')
+      expect(Number.parseFloat(frame[1]!)).toBeGreaterThan(0)
+      await expect(page.getByTestId('shelfRow.flip')).toHaveText(en.shelf.detail.backCover)
+      await page.getByTestId('shelfRow.flip').click()
+      await expect(page.getByTestId('shelfRow.flip')).toHaveText(en.shelf.detail.frontCover)
+    }
+    // Regal's round Back is off: the sheet's Done is the way back.
+    await expect(page.locator('.row-card__back')).toHaveCount(0)
+    expect(Number(await out.evaluate((el) => getComputedStyle(el).zIndex))).toBeGreaterThan(
+      Number(await page.getByTestId('shell.tabs').evaluate((el) => getComputedStyle(el).zIndex)),
+    )
+    const tabs = (await page.getByTestId('shell.tabs').boundingBox())!
+    const onTop = await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.closest('[data-testid="shell.tabs"]') ?? null, [tabs.x + tabs.width / 2, tabs.y + tabs.height / 2])
+    expect(onTop).toBeNull()
+
+    // The system Back puts it back, and the Profile stays: the router never moved, and the tab bar
+    // (away or not, as the page's scroll left it) didn't stir.
+    const tabBar = await page.getByTestId('shell.tabs').getAttribute('data-away')
+    const moves = await countNavigations(page)
+    await page.goBack({ waitUntil: 'commit' })
+    await expect(row).toHaveAttribute('data-picked', '')
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page.getByTestId('profile')).toBeVisible()
+    expect(await page.getByTestId('shell.tabs').getAttribute('data-away')).toBe(tabBar)
+    expect(await moves()).toBe(0)
+
+    // The Book's entry is gone with it: the next Back leaves the Profile.
+    await page.goBack({ waitUntil: 'commit' })
+    await expect(page.getByTestId('home.title')).toBeVisible()
+  })
+
+  test('opens the whole shelf from Show all once it holds more Books than the row', async ({ page }) => {
+    await libraryFile(page, 200, MANY)
+    await signInAsOwner(page)
+
+    await page.goto('/profile')
+    await expect(page.getByTestId('profile.shelfCount')).toHaveText(String(MANY_BOOKS))
+    // The row holds the newest 80.
+    await expect(shelfRow(page, 'profile.shelfRow')).toHaveAttribute('data-book-count', '80')
+    const all = page.getByTestId('profile.shelfAll')
+    await expect(all).toHaveText(en.shelf.card.all)
+    await expect(all).toHaveAttribute('aria-label', plural(en.shelf.card.allLabel, MANY_BOOKS))
+
+    await all.click()
     await expect(page).toHaveURL(/\/profile\/shelf$/)
     await expect(page.getByTestId('shelf')).toBeVisible()
-    await expect(page.getByTestId('shelf.count')).toHaveText(plural(en.shelf.count, 8))
+    await expect(page.getByTestId('shelf.count')).toHaveText(plural(en.shelf.count, MANY_BOOKS))
     // Regal's Stack has the whole file, and the pile it stood in for has gone.
-    await expect(stackedBooks(page)).toHaveAttribute('data-book-count', '8')
+    await expect(stackedBooks(page)).toHaveAttribute('data-book-count', String(MANY_BOOKS))
     await expect(page.getByTestId('shelf.loading')).toHaveCount(0, { timeout: 30_000 })
     // The room is full screen: the tab bar has stepped away.
     await expect(page.getByTestId('shell.tabs')).toHaveAttribute('data-away', 'true')
@@ -129,7 +235,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('shell.tabs')).not.toHaveAttribute('data-away', 'true')
   })
 
-  test("finds a year's Books stacked in its review, and opens them full screen", async ({ page }) => {
+  test("finds a year's Books as a row in its review, and puts a Book back with Done or Escape", async ({ page }) => {
     await libraryFile(page)
     const owner = await signInAsOwner(page)
     await finishedIn2025(owner.email)
@@ -142,15 +248,32 @@ test.describe('Your shelf, the owner', () => {
     // Under the months.
     const months = await page.getByTestId('yearInReview.months').boundingBox()
     expect((await section.boundingBox())!.y).toBeGreaterThan(months!.y)
+    const row = shelfRow(page, 'yearInReview.shelfRow')
+    await expect(row).toHaveAttribute('data-book-count', '4')
+    await expect(row).toHaveAttribute('aria-label', fill(en.shelf.year.rowLabel, { year: 2025 }))
+    // No page of its own: the row is the year's shelf.
+    await expect(page.locator('a[href^="/profile/shelf"]')).toHaveCount(0)
 
-    await page.getByTestId('yearInReview.shelfOpen').click()
-    await expect(page).toHaveURL(/\/profile\/shelf\?year=2025/)
-    await expect(page.getByTestId('shelf.count')).toHaveText(plural(en.shelf.yearCount, 4, { year: 2025 }))
-    await expect(stackedBooks(page)).toHaveAttribute('data-book-count', '4')
-
-    // Back is the year it came from.
-    await page.getByTestId('shelf.back').click()
-    await expect(page).toHaveURL(/\/profile\/2025/)
+    await takeOut(page, row)
+    await expect(page.locator('body > .row-card__view--out')).toHaveCount(1)
+    const moves = await countNavigations(page)
+    // The details are Libellus' (regal-themed): the sheet's Done is the one way back that shows, no round Back.
+    const details = page.locator('body > article.row-card__details')
+    await expect(details).toBeVisible()
+    await expect(page.locator('.row-card__back')).toHaveCount(0)
+    await page.getByTestId('shelfRow.putBack').click()
+    await expect(row).toHaveAttribute('data-picked', '')
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    // The Book is back in the row and can be taken out again; Escape puts it back too.
+    await takeOut(page, row)
+    await expect(page.locator('body > .row-card__view--out')).toHaveCount(1)
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    await expect(page).toHaveURL(/\/profile\/2025$/)
+    expect(await moves()).toBe(0)
+    // Its history entry went with it: Back leaves the year.
+    await page.goBack({ waitUntil: 'commit' })
+    await expect(page).not.toHaveURL(/\/profile\/2025$/)
   })
 
   // The panel of a Book that is out is in <body>, outside the room: it must still wear the room's
@@ -199,23 +322,28 @@ test.describe('Your shelf, the owner', () => {
     await libraryFile(page, 500)
     await signInAsOwner(page)
 
-    await page.goto('/profile/shelf')
-    await expect(page.getByTestId('shelf.error')).toContainText(en.shelf.loadError)
-    await expect(page.getByTestId('shelf.stage')).toHaveCount(0)
+    await page.goto('/profile')
+    await expect(page.getByTestId('profile.shelfError')).toContainText(en.shelf.loadError)
+    await expect(page.getByTestId('profile.shelfRow')).toHaveCount(0)
 
     await libraryFile(page)
-    await page.getByTestId('shelf.retry').click()
-    await expect(page.getByTestId('shelf.error')).toHaveCount(0)
-    await expect(stackedBooks(page)).toHaveAttribute('data-book-count', '8')
+    await page.getByTestId('profile.shelfRetry').click()
+    await expect(page.getByTestId('profile.shelfError')).toHaveCount(0)
+    await expect(shelfRow(page, 'profile.shelfRow')).toHaveAttribute('data-book-count', '8')
   })
 })
 
 // Nuxt's own page for an address that doesn't exist is not a Libellus screen (its link home has no test ID).
 const anyone = test.extend<{ everyControlHasATestId: void }>({ everyControlHasATestId: [async ({}, use) => use(), { auto: true }] })
 
-anyone('nobody else has a shelf: no card, no stack, no file, no address', async ({ page }) => {
+anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address', async ({ page }) => {
   const asked: string[] = []
-  page.on('request', (request) => request.url().startsWith('https://books.fabkho.dev/') && asked.push(request.url()))
+  // The file, and Regal's code: the built `regal` chunk, or (the dev server) its components and the two of Libellus' that import them.
+  const regal = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
+  page.on('request', (request) => {
+    const url = request.url()
+    if (url.startsWith('https://books.fabkho.dev/') || regal.test(new URL(url).pathname)) asked.push(url)
+  })
   await libraryFile(page)
   await signedIn(page)
 

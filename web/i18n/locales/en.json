@@ -727,19 +727,23 @@
     "retry": "Try again",
     "card": {
       "title": "Your shelf",
-      "label": "Your shelf, {count} book | Your shelf, {count} books",
-      "books": "book | books"
+      "rowLabel": "Your shelf, the newest books",
+      "all": "Show all",
+      "allLabel": "Show all {count} book on your shelf | Show all {count} books on your shelf"
     },
     "year": {
       "title": "On the shelf",
-      "open": "Open",
-      "openLabel": "{year} on your shelf, {count} book | {year} on your shelf, {count} books"
+      "rowLabel": "{year} on your shelf"
     },
     "detail": {
       "showBack": "Show back",
       "showFront": "Show front",
       "putBack": "Put back",
-      "goodreads": "Goodreads"
+      "goodreads": "Goodreads",
+      "done": "Done",
+      "backCover": "Back cover",
+      "frontCover": "Front cover",
+      "reading": "Reading now"
     }
   }
 }

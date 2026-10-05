@@ -160,12 +160,14 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   of page (Back included) brings it back on the way. A screen that fills the room (`immersive`:
   Your shelf, #23) has it away for as long as it shows, the same slide.
 - **Your shelf** (#23). The loading pile's slabs settle in one after another, `standard` each, a
-  third of `instant` apart, from `sm` above; then they hold still (no shimmer, no breathing). Once
-  Regal's Stack has the Library and has drawn, it fades in over `standard` and the pile fades out
-  over the same, in place. The 3D itself moves as Regal decides (its scroll and flick, a Book
-  coming out and turning, the pile riffling past the middle, a year's pile sweeping in): Regal's
-  own motion, which honours Reduce Motion itself. A year in review's window moves only that way,
-  and only once it is near the view.
+  third of `instant` apart, from `sm` above (in the cards' row they stand in the same way); then
+  they hold still (no shimmer, no breathing). Once Regal's Stack or row has the Library and has
+  drawn, it fades in over `standard` and the slabs fade out over the same, in place. The 3D itself
+  moves as Regal decides (the Stack's scroll and flick, the row's sideways scroll with the Books
+  tipping towards you as they pass the middle, a Book coming out and turning, a Book breaking out of
+  the row to the middle of the screen and landing back where it was shown): Regal's own motion,
+  which honours Reduce Motion itself. The Profile's and a year in review's cards fetch it only
+  once they are near the view.
 - **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
   changes to another edition: the old cover, title, author and facts (and what the Book is about)
   lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
