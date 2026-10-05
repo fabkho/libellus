@@ -319,7 +319,7 @@
     "close": "Close search",
     "clear": "Clear",
     "empty": "Find a book by its title, author or ISBN.",
-    "loading": "Searching…",
+    "loadingShelves": "Looking through the shelves…",
     "add": "Add {title} to your Library",
     "noResultsTitle": "No books found",
     "noResults": "Nothing for “{query}”.",

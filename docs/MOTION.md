@@ -206,9 +206,18 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
 - **Cover.** The image fades in over its thumbhash or colour over `standard` once decoded; no
   zoom, no slide.
 - **Search results.** A new answer replaces the list in place, best match at the bottom; while a
-  newer query is on its way the old list dims to 60 % over `standard` instead of emptying. Before
-  the first answer one still ghost row (no shimmer) stands in. The far end of the list fades out
-  under a mask.
+  newer query is on its way the old list dims to 60 % over `standard` instead of emptying. The far
+  end of the list fades out under a mask, and the note at that end is padded by the fade's height
+  so it rests below it.
+- **Search loading.** Before the first answer a little book riffles its pages (five, hinged at the
+  spine, flipping over and back) over one quiet line, "Looking through the shelves…", and a
+  lamp-coloured hairline sweeps left to right along the edge above the query. It shows nothing for
+  the typing pause plus `quick` (an answer that comes straight back shows no loading at all), then
+  fades in over `standard`; the loops run on `caret` times a fixed factor, the pages staggered by
+  `instant`. The palette glides to the height it needs over `standard` (it grows from the query
+  upwards, and only once the state shows), the state fades out over `exit` where it stood, and
+  the first five results rise `sm` and fade in over `standard`, 50 ms apart. With Reduce Motion
+  the book rests half fanned, the hairline is not drawn and the height just changes.
 - **Caret.** The lamp caret in the code input blinks in steps over `caret`, like a text caret.
 
 ## How the search morph is built
