@@ -25,8 +25,12 @@
  *   will be (the router then scrolls to the same place, a no-op). Scroll
  *   restoration (app/router.options.ts, utils/tabPlaces.ts) is untouched. Its
  *   first frame holds still until it is on screen (`letGo`).
- * - A cover that lands before the hero's own image is in stays on the hero, in
- *   its sheet, until that image is decoded and faded in (`hold`).
+ * - The tapped cover's image is the row's size: the hero's image is laid over
+ *   it in the air once decoded (`sharpen`; `prepare` starts loading it on the
+ *   press). A cover that lands with it before the hero's own image is in stays
+ *   on the hero, in its sheet, until that image is decoded and faded in
+ *   (`hold`); one that lands without it lands on its thumbhash, and the hero
+ *   fades its image in there.
  * - `ShellBookFlight` (in the tabs layout) holds the two fixed layers: the
  *   leaving page's copy under the chrome, the flying cover over everything
  *   but the sheets.
@@ -51,6 +55,8 @@ import {
 } from '~/utils/flight'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
+import { coverSrc } from '~/utils/cover'
+import { preloadImage } from '~/utils/preload'
 
 /** The parts of the shell that are the page: the tab page's header and `main` (layouts/tabs.vue). */
 const PAGE = '[data-flight="page"]'
@@ -68,6 +74,11 @@ const POSE = 'data-flight-pose'
  * a safety net, not a motion; after it the live page shows again.
  */
 const POSE_LIMIT_MS = 1000
+
+/** How far a row's image may be blown up in the air (past its pixels at the screen's density) before it is gone (`sharpen`). */
+const SOFT_SCALE = 1.15
+/** The stretch of the way (0–1) over which it goes. */
+const SOFT_FADE = 0.15
 
 interface Layers {
   /** Under the chrome, over the page: the page being left. */
@@ -130,6 +141,10 @@ interface Flight {
   waitUntil: number | null
   /** A push's content has started to rise (once its hero is drawn). */
   risen: boolean
+  /** A push: the hero's own (large) image, laid over the tapped cover's in the air (`sharpen`). */
+  sharp: HTMLImageElement | null
+  /** The large image is decoded and showing (or fading in) in the air: the copy may stay on the hero (`hold`). */
+  sharpShown: boolean
   origin: Origin | null
 }
 
@@ -283,6 +298,20 @@ function hide(flight: Flight, cover: HTMLElement | null) {
 }
 
 // ------------------------------------------------------------ starting
+
+/**
+ * A finger (or the mouse) went down on a link to a book page: called by
+ * UiPressLink on the press, before the tap is known to be one. The book page's
+ * cover image (the hero's size, not the row's) starts loading now, so it is
+ * usually in by the time the cover flies and it flies sharp (`sharpen`).
+ */
+export function prepare(link: HTMLElement, to: string) {
+  if (!router || !import.meta.client) return
+  const path = router.resolve(to).path
+  if (!isBookPath(path) || path === router.currentRoute.value.path) return
+  const image = (link.querySelector(COVER) ?? coverFor(path))?.querySelector<HTMLImageElement>(':scope > img')
+  preloadImage(coverSrc(image?.currentSrc || image?.src, 'xl'))
+}
 
 /** A tap on a link to a book page: called by UiPressLink before it navigates. */
 export function launch(link: HTMLElement, to: string) {
@@ -471,6 +500,8 @@ function fresh(departure: Departure): Flight {
     coverValue: departure.from.cover,
     waitUntil: null,
     risen: false,
+    sharp: null,
+    sharpShown: false,
     origin: departure.origin,
   }
 }
@@ -536,8 +567,10 @@ function aim(flight: Flight, value: number): boolean {
   const copies = [...fly.children] as HTMLElement[]
   Object.assign(fly.style, { left: `${heroBox.left}px`, top: `${heroBox.top}px`, width: `${heroBox.width}px`, height: `${heroBox.height}px` })
   for (const copy of copies) copy.style.borderRadius = radius
-  // Its own image already drawn (or a cloth with its type): it fades in over the list's on the way.
-  if (shown(hero)) {
+  const image = hero.querySelector<HTMLImageElement>(':scope > img')
+  if (image) sharpen(flight, image, copies, rowBox, heroBox, value)
+  else {
+    // A Placeholder: the hero's cloth, with its type, fades in over the list's on the way.
     const top = coverCopy(hero)
     top.classList.add('flight-copy')
     top.style.borderRadius = radius
@@ -546,6 +579,59 @@ function aim(flight: Flight, value: number): boolean {
   }
   play(fly, [{ transform: transformFrom(heroBox, rowBox) }, { transform: 'none' }], flight, 'cover', value, false)
   return true
+}
+
+/**
+ * The hero's own image, in the air (docs/MOTION.md, Push to a book). The tapped
+ * cover's image is sized for its row (a list row asks for 120 × 180,
+ * utils/cover.ts), so blown up to the hero it is a blur. The hero's image is
+ * laid over it in the copy that flies, under its finish, as soon as it is
+ * decoded: at once when it is in already (asked for when the finger went
+ * down, `prepare`), or faded in over `quick` when it arrives on the way. Until
+ * then the row's image goes as the cover grows past what it holds sharply,
+ * leaving the thumbhash under it: on a slow network the cover lands on its
+ * thumbhash and the hero's image fades in there, never the small one enlarged.
+ */
+function sharpen(flight: Flight, hero: HTMLImageElement, copies: HTMLElement[], rowBox: Box, heroBox: Box, value: number) {
+  const sheet = copies.at(-1)
+  const src = hero.currentSrc || hero.src
+  if (!sheet || !src) return
+  const sharp = document.createElement('img')
+  sharp.alt = ''
+  sharp.decoding = 'async'
+  Object.assign(sharp.style, { position: 'absolute', inset: '0', display: 'block', width: '100%', height: '100%', objectFit: 'cover' })
+  sharp.src = src
+  // Under the finish (the spine crease and the edge), over the row's image.
+  sheet.insertBefore(sharp, sheet.querySelector(':scope > span[aria-hidden]'))
+  flight.sharp = sharp
+  // In the memory cache already (decoded with the page's image, or preloaded on the press): it is the cover from the first frame.
+  if (sharp.complete && sharp.naturalWidth > 0) {
+    flight.sharpShown = true
+    return
+  }
+  sharp.style.opacity = '0'
+  // The row's image is gone by the time the cover is larger than it holds sharply (at the screen's
+  // density, blown up by a little at most): over the stretch of the way before that.
+  const rows = copies.flatMap((copy) => [...copy.querySelectorAll<HTMLImageElement>(':scope > img')]).filter((image) => image !== sharp)
+  for (const row of rows) {
+    const holds = ((row.naturalWidth || rowBox.width) / (window.devicePixelRatio || 1)) * SOFT_SCALE
+    const gone = Math.min(Math.max((holds - rowBox.width) / Math.max(heroBox.width - rowBox.width, 1), SOFT_FADE), 1)
+    play(
+      row,
+      [{ opacity: 1 }, { opacity: 1, offset: gone - SOFT_FADE }, { opacity: 0, offset: gone }, { opacity: 0 }],
+      flight,
+      'cover',
+      value,
+      false,
+    )
+  }
+  const reveal = () => {
+    if (flight.sharp !== sharp || !sharp.isConnected || !sharp.naturalWidth) return
+    flight.sharpShown = true
+    const fade = sharp.animate([{ opacity: 0 }, { opacity: 1 }], { duration: durationToken('quick'), easing: easingToken('standard'), fill: 'both' })
+    if (running === flight) flight.channels.cover.push(fade)
+  }
+  sharp.decode().then(reveal, () => {})
 }
 
 function pop(departure: Departure, to: RouteLocationNormalized) {
@@ -637,11 +723,16 @@ function letGo(flight: Flight) {
 function land(flight: Flight) {
   const fly = flight.fly
   const hero = flight.towards === 'book' ? flight.hero : null
+  // The hero's image in the air, if it has come in: it stays as shown once the flight's animations end.
+  const sharp = flight.sharpShown ? flight.sharp : null
+  if (sharp) sharp.style.opacity = '1'
   flight.fly = null
   drop(flight)
   if (flight.towards === 'book' && flight.origin) remember(flight.path, flight.origin)
-  // The hero's own image is not on screen yet: the copy stays on it until it is.
-  if (fly && hero && hero.isConnected && !shown(hero)) hold(fly, hero)
+  // The hero's own image is not on screen yet: the copy stays on it until it is, if it shows that
+  // image (or a cloth). Else the copy goes: the hero shows its thumbhash and fades its image in there.
+  const sharpOrCloth = Boolean(sharp) || !fly?.querySelector('img')
+  if (fly && hero && hero.isConnected && !shown(hero) && sharpOrCloth) hold(fly, hero)
   else fly?.remove()
 }
 
@@ -668,11 +759,11 @@ function drop(flight: Flight) {
 }
 
 /**
- * The cover has landed but the hero's own image is not on screen yet (still
- * loading, or fading in): the copy that flew moves into the hero's sheet, on
- * top of it, and stays there until the hero's image is decoded and in. In the
- * page, it scrolls, fades and leaves with the hero, under the chrome like it;
- * the cover never falls back to its thumbhash, and never shows twice.
+ * The cover has landed with the hero's image (or a cloth) but the hero's own
+ * image is not on screen yet (its decode, its fade): the copy that flew moves
+ * into the hero's sheet, on top of it, and stays there until the hero's image
+ * is decoded and in. In the page, it scrolls, fades and leaves with the hero,
+ * under the chrome like it; the cover never shows twice.
  */
 function hold(fly: HTMLElement, hero: HTMLElement) {
   const held = document.createElement('div')
@@ -753,5 +844,5 @@ export function installBookFlight(app: Router, mounted: Layers): () => void {
 }
 
 export function useBookFlight() {
-  return { launch }
+  return { launch, prepare }
 }

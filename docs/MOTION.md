@@ -116,11 +116,15 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   full strength), and its content from the hero down rises `md` into place; its pinned top bar and
   its light (the ambient glow, the cover's own halo) only fade in, they do not fly. The cover in the
   air is the one that was tapped, showing exactly what it showed (its image, its thumbhash, or the
-  cloth); laid out at the hero's size, it lands on the hero's pixels. If the hero's own image is
-  already drawn (or the hero is a Placeholder with its type), it fades in over the tapped one on the
-  way; if not, the copy stays on the hero — in its sheet, so it scrolls and fades with the page —
-  until the hero's image is decoded and has faded in, so the cover never falls back to its
-  thumbhash and never shows twice. A cover's image (and the halo made of it) fades in only once it
+  cloth); laid out at the hero's size, it lands on the hero's pixels. The tapped image is sized for
+  its row, so it is never shown blown up: the hero's own image (asked for when the finger went down)
+  is laid over it in the air as soon as it is decoded — from the first frame when it is in, faded in
+  over `quick` when it arrives on the way — and until then the row's image fades to the thumbhash
+  under it as the cover grows past its own pixels. A Placeholder hero's cloth, with its type, fades
+  in over the tapped cloth on the way. A cover that lands with the hero's image stays on the hero —
+  in its sheet, so it scrolls and fades with the page — until the hero's own image is decoded and
+  has faded in, so it never shows twice; one that lands without it (a slow network) lands on its
+  thumbhash, and the hero's image fades in there. A cover's image (and the halo made of it) fades in only once it
   is decoded, and the halo cross-fades with the pool of colour it replaces. A Placeholder flies as
   cloth and gains its title on the way. The tab bar does not move; the search palette, when the tap
   was on a result, turns back into the tab bar under the flying cover as it does for any navigation.
