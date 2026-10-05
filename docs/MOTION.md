@@ -40,6 +40,12 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 
 Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`).
 
+Code that animates with the Web Animations API reads the durations back from the CSS variables
+(`durationToken`, `utils/motion.ts`) in either unit: the source writes milliseconds, but the built
+stylesheet is minified to the shortest form (`--duration-standard: .25s`). Read as a bare number that
+was a quarter of a millisecond, and every such motion jumped to its end in the built app while the
+dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spec.ts`).
+
 ## Named motions
 
 - **Press.** Buttons scale to 0.97 over `instant`; no colour flash. Rows darken to `fillStrong`
