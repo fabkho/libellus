@@ -90,6 +90,15 @@ async function finishedIn2025(email: string) {
   await sql(`insert into public.reading_sessions (entry_id, started_on, ended_on, outcome, rating) values ($1, '2025-11-02', '2025-11-20', 'finished', 18)`, [entry.id])
 }
 
+/** The brightness (0–1) of a computed `rgb(r, g, b)` colour. */
+function brightness(rgb: string) {
+  const [r, g, b] = (rgb.match(/[\d.]+/g) ?? []).map(Number)
+  return (0.2126 * r! + 0.7152 * g! + 0.0722 * b!) / 255
+}
+
+// Regal's own buttons in the panel (before its theming slots, fabkho/regal#63) carry no test ID.
+const regalOwnControls = test.extend<{ everyControlHasATestId: void }>({ everyControlHasATestId: [async ({}, use) => use(), { auto: true }] })
+
 test.describe('Your shelf, the owner', () => {
   // One owner (one id) for the whole run: her flows take turns.
   test.describe.configure({ mode: 'serial' })
@@ -142,6 +151,48 @@ test.describe('Your shelf, the owner', () => {
     // Back is the year it came from.
     await page.getByTestId('shelf.back').click()
     await expect(page).toHaveURL(/\/profile\/2025/)
+  })
+
+  // The panel of a Book that is out is in <body>, outside the room: it must still wear the room's
+  // theme (`theme="auto"`, regal-themed.css), dark in the room whatever the app's theme is (the app
+  // is light here), and follow the room live. Regal's `data-regal-theme` says which it resolved; a
+  // Regal without theming (its main, until #63) has none and keeps its own look.
+  regalOwnControls('the Book detail panel wears the room, and follows it when it changes', async ({ page }) => {
+    await libraryFile(page)
+    await signInAsOwner(page)
+
+    // `debug=pick`: Regal tells where a Book stands, so the tap lands on one.
+    await page.goto('/profile/shelf?debug=pick')
+    await expect(stackedBooks(page)).toHaveAttribute('data-book-count', '8')
+    await expect(page.getByTestId('shelf.loading')).toHaveCount(0, { timeout: 30_000 })
+    await expect.poll(() => page.evaluate(() => (window as any).__regalPick?.clickableBooks().length ?? 0), { timeout: 30_000 }).toBeGreaterThan(0)
+    const book = await page.evaluate(() => (window as any).__regalPick.clickableBooks()[0] as { x: number; y: number })
+    await page.touchscreen.tap(book.x, book.y)
+
+    const panel = page.locator('article.details')
+    await expect(panel).toBeVisible()
+    const regalThemes = (await panel.getAttribute('data-regal-theme')) !== null
+    test.info().annotations.push({ type: 'regal-theming', description: regalThemes ? 'Regal with theming (#63)' : 'Regal without theming: look not asserted' })
+    if (!regalThemes) return
+
+    const background = () => panel.evaluate((element) => getComputedStyle(element).backgroundColor)
+    await expect(panel).toHaveAttribute('data-regal-theme', 'dark')
+    expect(brightness(await background())).toBeLessThan(0.2)
+    // Libellus' own buttons, not Regal's.
+    await expect(page.getByTestId('shelf.putBack')).toBeVisible()
+
+    // The room's theme flips (the shelf page itself never does; this is the hook Regal watches).
+    const room = page.getByTestId('shelf')
+    await room.evaluate((element) => element.setAttribute('data-theme', 'light'))
+    await expect(panel).toHaveAttribute('data-regal-theme', 'light')
+    expect(brightness(await background())).toBeGreaterThan(0.8)
+    await room.evaluate((element) => element.setAttribute('data-theme', 'dark'))
+    await expect(panel).toHaveAttribute('data-regal-theme', 'dark')
+    expect(brightness(await background())).toBeLessThan(0.2)
+
+    // Put back, with Libellus' button.
+    await page.getByTestId('shelf.putBack').click()
+    await expect(panel).toHaveCount(0)
   })
 
   test('says so when the file cannot be read, and tries again', async ({ page }) => {
