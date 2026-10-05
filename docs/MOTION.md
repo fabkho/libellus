@@ -30,6 +30,7 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 | `overlayExit` | 240 | `standard` | The palette turning back into the tab bar, the veil fading out |
 | `keyboard` | 250 | `keyboard` | The palette riding up and down with the iOS keyboard |
 | `caret` | 1100 | steps | One blink of a drawn caret (the code input) |
+| `wave` | 1600 | `wave` | One swell of the Profile's loading wave, repeating while the record loads |
 
 | Easing | Curve | Character |
 |---|---|---|
@@ -37,6 +38,7 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 | `exit` | `cubic-bezier(0.4, 0, 1, 1)` | Accelerates away |
 | `sheet` | `cubic-bezier(0.32, 0.72, 0, 1)` | The iOS sheet curve |
 | `keyboard` | `cubic-bezier(0.1, 0.76, 0.55, 0.9)` | Close to the iOS keyboard's own spring (curve 7, nominally 0.25 s) |
+| `wave` | `cubic-bezier(0.45, 0, 0.55, 1)` | An even swell up and down, for a loop with no edge to catch the eye |
 
 Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`).
 
@@ -83,6 +85,29 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   entrance of its own; this takes the stagger (40 ms a step, 500 ms budget) from the cascade of
   Regal's pile (`staggerIn`, `utils/stack/shuffle.ts`) and D's `sheet` token for the landing. The
   numbers live in `utils/monthIntro.ts`.
+- **Loading** (the Profile and a year in review). The page stands in its final shape from the
+  first frame, so nothing under it moves when the reading record lands: every section that will
+  be there is there, at its height, its labels and frames real (the eyebrows, All lit, the grid's
+  hairlines, the chart's height, the calendar's weeks up to today — today already lit — the star
+  rows, the year cards) and a quiet placeholder in the `fillStrong` colour (`skeleton`,
+  `main.css`) wherever a figure, a cover or a line of text will be. The placeholders breathe in
+  one slow wave (`wave`: brighter, then back, over `wave` on the `wave` curve), each a little
+  behind the one before, so the wave travels across a row of figures, down the star rows,
+  corner to corner across the calendar; the chart's bars rise and fall in it the same way
+  (`transform` alone). When the record comes, the figures, lines and covers arrive in place:
+  they fade in and rise the last `xs` over `standard` (`arrive`, `useArrival`); each bar grows
+  from where the wave left it to its own height over `standard` (Web Animations from the measured
+  height), the calendar's dots grow and tint into their days, the rating bars fill. A section
+  the record turns out not to have (Reading days without days kept, Ratings with nothing rated,
+  Records, Authors, the year in review's favourite) was guessed present — a member who reads has
+  it — and closes like a `Reveal`, over `exit`, taking its space with it, so the page below
+  glides up instead of jumping. A year in review's month rows hold a cover's placeholder
+  each and, when the record comes, open as in Month rows. Guesses where the record can't be known before it comes: the Profile
+  under All has four years and four authors, a year in review a cover in every month (none in the
+  months still to come). A member whose Library (as this device holds it) has nothing finished
+  gets no placeholders: the empty state opens in once the record says so. The device keeps the
+  last record (`stats` in the device's copy), so only the first visit on a device shows any of
+  this: the next opens with the figures and refreshes them where they stand.
 - **Sheet.** Rises from below the screen edge (`translateY(100%)` → 0) over `sheet` with the
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than
@@ -308,9 +333,12 @@ edition's hero cross-fades into the new one over `standard`, and the content bel
 place at once. The tab bar away does not hide at all: a bar that pops in and out in place
 is more motion than one that stays. The month rows of a year in review do not open: their covers
 stand at rest at once. Your shelf: the pile is there at once and the 3D replaces it
-without a fade.
+without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
+half their wave), and the figures replace them at once.
 
 ## Non-motions
 
-No parallax, no bouncing or overshoot, no skeleton shimmer (thumbhashes and the search palette's
-one quiet loading hint say "loading"), no page transitions between tabs, no animated theme change.
+No parallax, no bouncing or overshoot, no skeleton shimmer elsewhere (thumbhashes and the search
+palette's one quiet loading hint say "loading"; the Profile's loading wave is the one exception, the
+owner's wish, because its figures take a moment to come and the page must not move when they do),
+no page transitions between tabs, no animated theme change.

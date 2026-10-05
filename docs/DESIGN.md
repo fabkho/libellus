@@ -206,12 +206,18 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   as cards, and the account at the end (address, Name, Dark mode, Import books, Sign out).
   **Figures and covers, never sentences**: the owner turned down text summaries ("You read on 15
   of the last 21 days…"). No goals and no streaks: the reading days say which days and how much,
-  never a run to keep.
+  never a run to keep. **Loading**: the whole page is there from the first frame at its final
+  height, the labels and frames real and a quiet placeholder (the `skeleton` utility: a block
+  in `fillStrong`, `radius.sm`, `aria-hidden`) wherever a figure, a cover or a line will be, in a
+  slow wave (`wave`); the region carries `aria-busy` until the record comes. The device keeps the
+  last record, so this shows on a first visit only (MOTION.md, Loading).
 - **Year in review** (`pages/profile/[year].vue`): pushed from the Profile, lit by the year's
   favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
   their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
   and the years either side (they replace the page, so Back is the Profile). For the owner only, a
-  card under the months with that year's Books as Regal's 3D row, starting at January.
+  card under the months with that year's Books as Regal's 3D row, starting at January (its pile
+  standing in while the library file loads). Loads like the Profile: its shape at once, a cover's
+  placeholder in every month gone by.
 - **Your shelf** (`pages/profile/shelf.vue`, #23; the owner's account only, nothing anywhere for
   anyone else): Regal's 3D Stack of the published library file, the one the portfolio shows. A
   pushed screen that fills the column (`immersive`: the tab bar steps away) in the **night room in
