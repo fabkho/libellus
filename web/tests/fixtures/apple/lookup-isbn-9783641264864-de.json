@@ -1,0 +1,35 @@
+{
+ "resultCount": 1,
+ "results": [
+  {
+   "formattedPrice": "9,99 €",
+   "artistIds": [
+    81123103
+   ],
+   "artistId": 81123103,
+   "artistName": "Susanna Clarke",
+   "genres": [
+    "Belletristik und Literatur",
+    "Bücher"
+   ],
+   "price": 9.99,
+   "releaseDate": "2020-10-05T07:00:00Z",
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "EUR",
+   "description": "<b>Der neue Roman der Bestsellerautorin von \"Jonathan Strange &amp; Mr Norrell\"</b><br /><br />Ein riesiges Gebäude, in dem sich endlos Räume aneinanderreihen, verbunden durch ein Labyrinth aus Korridoren und Treppen. An den Wänden stehen Tausende Statuen, das Erdgeschoss besteht aus einem Ozean, bei Flut donnern die Wellen die Treppenhäuser hinauf. In diesem Gebäude lebt Piranesi. Er hat sein Leben der Erforschung des Hauses gewidmet. Und je weiter er sich in die Zimmerfluchten vorwagt, desto näher kommt er der Wahrheit – der Wahrheit über die Welt jenseits des Gebäudes. Und der Wahrheit über sich selbst.",
+   "trackCensoredName": "Piranesi",
+   "artistViewUrl": "https://books.apple.com/de/artist/susanna-clarke/81123103?uo=4",
+   "trackViewUrl": "https://books.apple.com/de/book/piranesi/id1506831259?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8d/3a/b4/8d3ab462-68ce-30ba-a9da-610286c41f49/9783641264864.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8d/3a/b4/8d3ab462-68ce-30ba-a9da-610286c41f49/9783641264864.jpg/100x100bb.jpg",
+   "trackId": 1506831259,
+   "trackName": "Piranesi",
+   "averageUserRating": 4.5,
+   "userRatingCount": 21
+  }
+ ]
+}

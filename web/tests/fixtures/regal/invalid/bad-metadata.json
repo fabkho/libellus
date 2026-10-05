@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-01",
+  "owner": 42,
+  "books": { "id": "not-an-array" }
+}

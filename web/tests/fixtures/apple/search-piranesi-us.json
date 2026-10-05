@@ -1,0 +1,779 @@
+{
+ "resultCount": 24,
+ "results": [
+  {
+   "artistIds": [
+    81123103
+   ],
+   "artistId": 81123103,
+   "releaseDate": "2020-09-15T07:00:00Z",
+   "price": 13.99,
+   "genreIds": [
+    "10049",
+    "38",
+    "9031",
+    "9020",
+    "10044"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "The award-winning, New York Times bestselling fantasy sensation that Madeline Miller called, &#34;a miraculous and luminous feat of storytelling,&#34; Piranesi is an intoxicating, hypnotic novel set in a dreamlike alternative reality from the author of Jonathan Strange &amp; Mr Norrell.<br/>\n<br/>\nPiranesi&#39;s house is no ordinary building: its rooms are infinite, its corridors endless, its walls lined with thousands upon thousands of statues. Within the labyrinth of halls an ocean is imprisoned; and waves thunder up staircases, while rooms are flooded in an instant. But Piranesi is not afraid; he understands the tides as he understands the pattern of the labyrinth itself. He lives to explore the house.<br/>\n<br/>\nThere is one other person in the house-a man called The Other, who visits Piranesi twice a week and asks for help with research into A Great and Secret Knowledge. But as Piranesi explores, evidence emerges of another person, and a terrible truth begins to unravel, revealing a world beyond the one Piranesi has always known.<br/>\n<br/>\n&#34;Spellbinding, strange, and unforgettably original&#34; (Esquire), Piranesi introduces an astonishing new world, an infinite labyrinth, full of startling images and surreal beauty.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke/81123103?uo=4",
+   "formattedPrice": "$13.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id1504159680?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 1504159680,
+   "trackName": "Piranesi",
+   "genres": [
+    "Literary Fiction",
+    "Books",
+    "Fiction & Literature",
+    "Sci-Fi & Fantasy",
+    "Fantasy"
+   ],
+   "artistName": "Susanna Clarke",
+   "averageUserRating": 4.5,
+   "userRatingCount": 1697
+  },
+  {
+   "artistIds": [
+    81123103
+   ],
+   "artistId": 81123103,
+   "releaseDate": "2021-09-16T07:00:00Z",
+   "price": 10.99,
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "<b>Vuelve la autora de <i>Jonathan Strange y el señor Norrell</i> con una novela hipnótica ambientada en una realidad onírica.</b><br /><br />La casa de Piranesi no es un edificio cualquiera: sus habitaciones son monumentales, con paredes llenas de miles de estatuas, y sus pasillos, interminables. Dentro del dédalo de corredores hay un océano aprisionado en el que las olas retumban y las mareas inundan los aposentos. Pero Piranesi no tiene miedo: comprende las embestidas del mar igual que el patrón del laberinto, mientras explora los límites de su mundo y avanza, con la ayuda de un hombre llamado El Otro, en una investigación científica para alcanzar El Gran Conocimiento Secreto.<br /><br /><b>La crítica ha dicho:</b><br />\n   «Una personalísima reinterpretación del mito del laberinto. […] Al amparo de Borges y Escher, Susanna Clarke ha escrito una novela fascinante.»<br /><i>El Correo</i><br /><br />«Susanna Clarke demuestra con su desbordante imaginación que no hacen falta mamotretos de mil páginas para construir un mundo de fantasía épico capaz de inducirte un embriagador sentido de la maravilla.»<br /><i>Generación Reader</i><br /><br />«Nos recuerda el poder de la ficción para llevarnos a otro mundo y ampliar así la comprensión del nuestro. [...] Supera las expectativas en todo.»<br /><i>The Guardian</i><br /><br />«Como un sueño febril: desorientador, fascinante, persistentemente extraño. [...] Se introduce en el subconsciente con acertijos que van mucho más allá de la última página. Brillante y singular.»<br /><i>The Sunday Times</i><br /><br />«Una lectura sutilmente cómica y completamente seductora.»<br /><i>Daily Mail</i><br /><br />«Espectacular. [...] Una segunda novela que roza la perfección.»<br /><i>The Times</i><br /><br />«Una fábula deslumbrante sobre la soledad, la imaginación y la memoria.»<br /><i>The Spectator</i><br /><br />«Bella, extraña, fascinante.»<br /><i>Mail on Sunday</i><br /><br />«¿Por qué no atreverse con el nuevo libro de Susanna Clarke para viajar al subconsciente sin necesidad de tomar nada?»<br /><i>New York Magazine</i><br /><br />«Una lectura adictiva de máxima calidad. [...] Una hazaña sobresaliente.»<br /><i>The Wall Street Journal</i><br /><br />«El ingenio y la imaginación singulares de Clarke siguen intactos. Una historia mucho más comprimida pero no menos cautivadora.»<br /><i>The Boston Globe</i><br /><br />«De una agudeza inmensa.»<br /><i>The Washington Post</i>",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/20/14/64/20146455-e61b-2a75-33b4-af3fe618312b/9788418363290.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/20/14/64/20146455-e61b-2a75-33b4-af3fe618312b/9788418363290.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke/81123103?uo=4",
+   "formattedPrice": "$10.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id1575146619?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 1575146619,
+   "trackName": "Piranesi",
+   "genres": [
+    "Fiction & Literature",
+    "Books"
+   ],
+   "artistName": "Susanna Clarke"
+  },
+  {
+   "artistIds": [
+    1042024862
+   ],
+   "artistId": 1042024862,
+   "releaseDate": "2015-12-29T08:00:00Z",
+   "price": 0.99,
+   "genreIds": [
+    "10002",
+    "38",
+    "9007"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Giovanni Battista Piranesi (1720-1778), Italian engraver and architect, is best known for his etchings of ancient and baroque Rome and grandiose architectural constructions of his own imagination. Throughout most of his adult life Piranesi made etchings of views of the city; not only its antiquities, such as the Pantheon, but also its contemporary masterpieces such as the Capitoline and Piazza Navona. The scenes are animated with tiny, frail, fluttering figures. Long before he died his prints of his adopted city had caught the imagination of much of Europe.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication69/v4/11/e5/7b/11e57b8d-791a-0db7-987a-7b8674fa062a/9788892534438.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication69/v4/11/e5/7b/11e57b8d-791a-0db7-987a-7b8674fa062a/9788892534438.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/maria-peitcheva/1042024862?uo=4",
+   "formattedPrice": "$0.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi-drawings-colour-plates/id1080796080?uo=4",
+   "trackCensoredName": "Piranesi: Drawings Colour Plates",
+   "trackId": 1080796080,
+   "trackName": "Piranesi: Drawings Colour Plates",
+   "genres": [
+    "Art & Architecture",
+    "Books",
+    "Arts & Entertainment"
+   ],
+   "artistName": "Maria Peitcheva"
+  },
+  {
+   "artistIds": [
+    5788345,
+    420039802,
+    2052267
+   ],
+   "artistId": 5788345,
+   "releaseDate": "2013-01-28T08:00:00Z",
+   "price": 15.99,
+   "genreIds": [
+    "10072",
+    "38",
+    "9015"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "<b>This Modern Library eBook edition collects all three volumes of Edward Gibbon’s towering masterpiece of classical history <i>The Decline and Fall of the Roman Empire</i>—complete and unabridged.</b><br /> <b>&#xa0;</b><br /> Edward Gibbon’s magnum opus narrates the history of the Roman Empire from the second century A.D. to its collapse in the west in the fifth century and in the east in the fifteenth century. Alongside the magnificent narrative lies the author’s wit and sweeping irony, exemplified by Gibbon’s famous definition of history as “little more than the register of the crimes, follies and misfortunes of mankind.”<br /> &#xa0;<br /> An epic chronicle of uncommon literary distinction, <i>The Decline and Fall of the Roman Empire</i> is widely considered the greatest work of history ever written. This unabridged eBook bundle of the celebrated text edited by Professor J. B. Bury, considered a classic since it first appeared in 1896, includes Gibbon’s own exhaustive notes, Bury’s original Introduction and index, as well as a modern appraisal of Gibbon in an Introduction from Pulitzer Prize–winning historian Daniel J. Boorstin.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication4/v4/c4/40/d5/c440d594-9a5c-0e75-fbc0-3b6242e2bd91/9780812984835.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication4/v4/c4/40/d5/c440d594-9a5c-0e75-fbc0-3b6242e2bd91/9780812984835.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/edward-gibbon-gian-battista-piranesi-daniel-j-boorstin/5788345?uo=4",
+   "formattedPrice": "$15.99",
+   "trackViewUrl": "https://books.apple.com/us/book/decline-and-fall-of-the-roman-empire/id588213398?uo=4",
+   "trackCensoredName": "Decline and Fall of the Roman Empire: The Modern Library Collection (Complete and Unabridged)",
+   "trackId": 588213398,
+   "trackName": "Decline and Fall of the Roman Empire: The Modern Library Collection (Complete and Unabridged)",
+   "genres": [
+    "Ancient History",
+    "Books",
+    "History"
+   ],
+   "artistName": "Edward Gibbon, Gian Battista Piranesi & Daniel J. Boorstin",
+   "averageUserRating": 4.5,
+   "userRatingCount": 11
+  },
+  {
+   "artistIds": [
+    5788345,
+    2052267,
+    420039802
+   ],
+   "artistId": 5788345,
+   "releaseDate": "1996-01-01T08:00:00Z",
+   "price": 14.99,
+   "genreIds": [
+    "10072",
+    "38",
+    "9015",
+    "10078"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "'It was at Rome, on the 15th of October 1764, as I sat musing amid the ruins of the capitol, while the barefooted friars were singing vespers in the temple of Jupiter, that the idea of writing the decline and fall of the city first started to my mind,' recorded Edward Gibbon with characteristic exactitude. Over a period of some twenty years, the luminous eighteenth-century historian--a precise, dapper, idiosyncratic little gentleman famous for rapping his snuff-box--devoted his considerable genius to writing an epic chronicle of the entire Roman Empire's decline. His single flash of inspiration produced what is arguably the greatest historical work in any language--and surely the most magnificent narrative history ever written in English. 'Gibbon is one of those few who hold as high a place in the history of literature as in the roll of great historians,' noted Professor J.B. Bury, his most celebrated editor.<br /><br />This three-volume Modern Library edition of The Decline and Fall of the Roman Empire--with Gibbon's notes--is edited with a general introduction and index by Bury, along with an introduction by Pulitzer Prize-winning historian Daniel J. Boorstin. The Volumes are illstrated with reproductions of etchings by Gian Battista Piranesi.<br /><br />The first volume contains chapters one through twenty-six of The Decline and fall of the Roman Empire.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/7d/a5/aa/7da5aaa3-20fa-a22e-5f3f-da34c285b83f/9780679641469.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/7d/a5/aa/7da5aaa3-20fa-a22e-5f3f-da34c285b83f/9780679641469.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/edward-gibbon-daniel-j-boorstin-gian-battista-piranesi/5788345?uo=4",
+   "formattedPrice": "$14.99",
+   "trackViewUrl": "https://books.apple.com/us/book/the-decline-and-fall-of-the-roman-empire-volume-i/id420039556?uo=4",
+   "trackCensoredName": "The Decline and Fall of the Roman Empire, Volume I",
+   "trackId": 420039556,
+   "trackName": "The Decline and Fall of the Roman Empire, Volume I",
+   "genres": [
+    "Ancient History",
+    "Books",
+    "History",
+    "Military History"
+   ],
+   "artistName": "Edward Gibbon, Daniel J. Boorstin & Gian Battista Piranesi",
+   "averageUserRating": 4.0,
+   "userRatingCount": 6
+  },
+  {
+   "artistIds": [
+    5788345,
+    420039802
+   ],
+   "artistId": 5788345,
+   "releaseDate": "1996-01-01T08:00:00Z",
+   "price": 14.99,
+   "genreIds": [
+    "10072",
+    "38",
+    "9015",
+    "10078"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "\"I devoured Gibbon,\" wrote Winston Churchill. \"I rode triumphantly through it from end to end and enjoyed it all.\" Gibbon's magnum opus -- which encompasses thirteen hundred years of history, swinging across Europe, North Africa, and Asia -- remains one of the greatest works of history ever written. <br /><br />\"Gibbon is a kind of bridge that connects the ancient with the modern ages,\" noted Thomas Carlyle. \"And how gorgeously does it swing across the gloomy and tumultuous chasm of these barbarous centuries.\" Indeed, Gibbon, the supreme historian of the Enlightenment--the illustrious scholar who envisioned history as a branch of literature--seemed almost predestined to write his monumental account of the Roman Empire's terrible self-destruction. \"I have described the triumph of barbarism and religion,\" wrote the author in the famous epigram that summed up his towering achievement in <i>The Decline and Fall of the Roman Empire</i>. <br /><br />\"Gibbon is not merely a master of the pageant and the story; he is also the critic and the historian of the mind,\" said Virginia Woolf. \"Without his satire, his irreverence, his mixture of sedateness and slyness, of majesty and mobility, and above all that belief in reason which pervades the whole book and gives it unity, an implicit if unspoken message, the <i>Decline and Fall</i> would be the work of another man....We seem as we read him raised above the tumult and the chaos into a clear and rational air.\"<br /><br /> The second volume contains chapters twenty-seven through forty-eight of <i>The Decline and Fall of the Roman Empire</i>.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/89/55/21/895521e1-10a7-c164-252a-453b5d4c2810/9780679641476.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication118/v4/89/55/21/895521e1-10a7-c164-252a-453b5d4c2810/9780679641476.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/edward-gibbon-gian-battista-piranesi/5788345?uo=4",
+   "formattedPrice": "$14.99",
+   "trackViewUrl": "https://books.apple.com/us/book/the-decline-and-fall-of-the-roman-empire-volume-ii/id420267235?uo=4",
+   "trackCensoredName": "The Decline and Fall of the Roman Empire, Volume II",
+   "trackId": 420267235,
+   "trackName": "The Decline and Fall of the Roman Empire, Volume II",
+   "genres": [
+    "Ancient History",
+    "Books",
+    "History",
+    "Military History"
+   ],
+   "artistName": "Edward Gibbon & Gian Battista Piranesi"
+  },
+  {
+   "artistIds": [
+    81123103
+   ],
+   "artistId": 81123103,
+   "releaseDate": "2021-02-04T08:00:00Z",
+   "price": 11.99,
+   "genreIds": [
+    "10049",
+    "38",
+    "9031",
+    "9020",
+    "10044",
+    "10041"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Piranesi vive nella Casa. Forse da sempre. Giorno dopo giorno ne esplora gli infiniti saloni, mentre nei suoi diari tiene traccia di tutte le meraviglie e i misteri che questo mondo labirintico custodisce. I corridoi abbandonati conducono in un vestibolo dopo l’altro, dove sono esposte migliaia di bellissime statue di marmo. Imponenti scalinate in rovina portano invece ai piani dove è troppo rischioso addentrarsi: fitte coltri di nubi nascondono allo sguardo il livello superiore, mentre delle maree imprevedibili che risalgono da chissà quali abissi sommergono i saloni inferiori.<br />Ogni martedì e venerdì Piranesi si incontra con l’Altro per raccontargli le sue ultime scoperte. Quest’uomo enigmatico è l’unica persona con cui parla, perché i pochi che sono stati nella Casa prima di lui sono ora soltanto scheletri che si confondono tra il marmo.<br />Improvvisamente appaiono dei messaggi misteriosi: qualcuno è arrivato nella Casa e sta cercando di mettersi in contatto proprio con Piranesi. Di chi si tratta? Lo studioso spera in un nuovo amico, mentre per l’Altro è solo una terribile minaccia. Piranesi legge e rilegge i suoi diari ma i ricordi non combaciano, il tempo sembra scorrere per conto proprio e l’Altro gli confonde solo le idee con le sue risposte sfuggenti. Piranesi adora la Casa, è la sua divinità protettrice e l’unica realtà di cui ha memoria. È disposto a tutto per proteggerla, ma il mondo che credeva di conoscere nasconde ancora troppi segreti e sta diventando, suo malgrado, pericoloso.<br />Susanna Clarke, autrice fantasy fra le più acclamate, torna in maniera trionfale con un nuovo, inebriante romanzo ambientato in un mondo da sogno intriso di bellezza e poesia.<br /><br /><b>«<i>Piranesi</i> mi ha sbalordita. È un esempio di storytelling miracoloso e luminoso».<br /> Madeline Miller</b><br /><br /><b>«Un avvincente, suggestivo mistero. Questo libro è un tesoro trasportato dal mare su una costa dimenticata, che attende solo di essere scoperto». <br />Erin Morgenstern</b><br /><br /><b>«Che mondo ha creato Susanna Clarke... <i>Piranesi</i> è un puzzle squisito». <br />David Mitchell</b><br /><br /><b>«Ci riporta decisamente a <i>Sogno di una notte di mezza estate</i>, per non parlare de <i>La tempesta</i>. Susanna è una di quegli scrittori che usano gli strumenti della fantasia per parlarci di noi stessi». <br />Neil Gaiman</b><br /><br /><b>«La pubblicazione di <i>Piranesi</i> conferma che Susanna Clarke è fra i più grandi e interessanti scrittori di fantasy degli ultimi cent’anni o più».<br />«Times Literary Supplement»</b>",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/61/7b/71/617b71fe-4226-5656-ad95-f47b6db419e1/9791259670021.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/61/7b/71/617b71fe-4226-5656-ad95-f47b6db419e1/9791259670021.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke/81123103?uo=4",
+   "formattedPrice": "$11.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id1548472132?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 1548472132,
+   "trackName": "Piranesi",
+   "genres": [
+    "Literary Fiction",
+    "Books",
+    "Fiction & Literature",
+    "Sci-Fi & Fantasy",
+    "Fantasy",
+    "Religious Fiction"
+   ],
+   "artistName": "Susanna Clarke"
+  },
+  {
+   "artistIds": [
+    5788345,
+    420039802
+   ],
+   "artistId": 5788345,
+   "releaseDate": "1996-01-01T08:00:00Z",
+   "price": 14.99,
+   "genreIds": [
+    "10072",
+    "38",
+    "9015",
+    "10078"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "\"I set out upon Gibbon's <i>Decline and Fall of the Roman Empire</i> [and] was immediately dominated by both the story and the style,\" recalled Winston Churchill. \"I devoured Gibbon. I rode triumphantly through it from end to end and enjoyed it all....I was not even estranged by his naughty footnotes.\" In the two centuries since its completion, Gibbon's magnum opus--which encompasses some thirteen hundred years as it swings across Europe, North Africa, and Asia--has refused to go the way of many \"classics\" and grow musty on the shelves. \"Gibbon is a landmark and a signpost--a landmark of human achievement: and a signpost because the social convulsions of the Roman Empire as described by him sometimes prefigure and indicate convulsions which shake the whole world today,\" wrote E.M. Forster. Never far below the surface of the magnificent narrative lies the author's wit and sweeping irony, exemplified by Gibbon's famous definition of history as \"little more than the register of the crimes, follies and misfortunes of mankind.\" <br /><br /> The third volume contains chapters forty-nine through seventy-one of <i>The Decline and Fall of the Roman Empire</i>.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/38/65/4b/38654bde-dcd3-48e1-386d-91d6b388f859/9780679641483.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication128/v4/38/65/4b/38654bde-dcd3-48e1-386d-91d6b388f859/9780679641483.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/edward-gibbon-gian-battista-piranesi/5788345?uo=4",
+   "formattedPrice": "$14.99",
+   "trackViewUrl": "https://books.apple.com/us/book/the-decline-and-fall-of-the-roman-empire-volume-iii/id421701253?uo=4",
+   "trackCensoredName": "The Decline and Fall of the Roman Empire, Volume III",
+   "trackId": 421701253,
+   "trackName": "The Decline and Fall of the Roman Empire, Volume III",
+   "genres": [
+    "Ancient History",
+    "Books",
+    "History",
+    "Military History"
+   ],
+   "artistName": "Edward Gibbon & Gian Battista Piranesi"
+  },
+  {
+   "artistIds": [
+    5788345
+   ],
+   "artistId": 5788345,
+   "releaseDate": "2014-09-15T07:00:00Z",
+   "price": 0.99,
+   "genreIds": [
+    "10072",
+    "38",
+    "9015"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "The first volume of Decline and Fall was published in 1776, and by the time the final volume appeared in 1787, Gibbon had produced an exhaustive, million-and-a-half-word account of a 'revolution which shall ever be remembered and is still felt by the nations of the earth'.<br /><br />\nThis panoramic work, covering 13 centuries from 180 A.D. to the fall of Constantinople in 1453, has been described as 'a bridge that carries one from the ancient world to the modern'.<br /><br />\nHere, this masterpiece of the Enlightenment has been cut down to a manageable size, but still covers in detail the tyranny, cowardice and decadence that led to the fall of Rome. Gibbon described history as 'little more than the register of the crimes, follies and misfortunes of mankind', and this book serves as a dazzling, perceptive guide to every civilization before and since.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication115/v4/7c/bf/fd/7cbffdb4-0f90-b0fd-49c9-77e4844bc74c/9781398817449.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication115/v4/7c/bf/fd/7cbffdb4-0f90-b0fd-49c9-77e4844bc74c/9781398817449.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/edward-gibbon/5788345?uo=4",
+   "formattedPrice": "$0.99",
+   "trackViewUrl": "https://books.apple.com/us/book/the-decline-and-fall-of-the-roman-empire/id1586324649?uo=4",
+   "trackCensoredName": "The Decline and Fall of the Roman Empire",
+   "trackId": 1586324649,
+   "trackName": "The Decline and Fall of the Roman Empire",
+   "genres": [
+    "Ancient History",
+    "Books",
+    "History"
+   ],
+   "artistName": "Edward Gibbon"
+  },
+  {
+   "artistIds": [
+    528531598
+   ],
+   "artistId": 528531598,
+   "releaseDate": "2010-05-20T07:00:00Z",
+   "price": 15.99,
+   "genreIds": [
+    "10002",
+    "38",
+    "9007",
+    "9002",
+    "10120"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "The timeless <i>Carceri</i> etchings of Piranesi (1720–1778) represent not only spectacular artistic accomplishments but also unforgettable expressions of psychological truths. Combining the influences of Tiepolo, Bibiena, and Rembrandt, these works of architectural fantasy challenge the boundaries of perception, creating a vast system of visual provocation. Innumerable staircases, immense vaults, and other ambiguous structures are compounded with projecting beams, pulleys, rickety catwalks and gangways, dangling ropes and chains, and the occasional shadowy human figure.<br />This full reproduction in book form of <i>The Prisons,</i> made directly from mint copies of original prints, presents both editions of Piranesi's work, with prints on facing pages for convenient comparison. The first edition (circa 1745) ranks among the most rare and valuable print collections in existence and abounds in a multiplicity of perspectives—an innovation that predates Cubism by two centuries. For the second (1761) edition, Piranesi reworked the plates, adding elaborate details that alter some of them almost beyond recognition. It is in the second, more emotionally challenging renditions that his masterful management of light and shadow is most evident. This edition features an informative Introduction by Philip Hofer, in addition to a Preface by John Howe, a conceptual designer on Peter Jackson's <i>Lord of the Rings</i> film trilogy.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/39/49/33/39493377-d712-63ed-ab38-25a5ad013229/9780486134000.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/39/49/33/39493377-d712-63ed-ab38-25a5ad013229/9780486134000.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/giovanni-battista-piranesi/528531598?uo=4",
+   "formattedPrice": "$15.99",
+   "trackViewUrl": "https://books.apple.com/us/book/the-prisons-le-carceri/id6797748479?uo=4",
+   "trackCensoredName": "The Prisons / Le Carceri",
+   "trackId": 6797748479,
+   "trackName": "The Prisons / Le Carceri",
+   "genres": [
+    "Art & Architecture",
+    "Books",
+    "Arts & Entertainment",
+    "Nonfiction",
+    "Social Science"
+   ],
+   "artistName": "Giovanni Battista Piranesi"
+  },
+  {
+   "artistIds": [
+    991988109
+   ],
+   "artistId": 991988109,
+   "releaseDate": "2015-06-20T07:00:00Z",
+   "price": 2.99,
+   "genreIds": [
+    "10002",
+    "38",
+    "9007"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Giovanni Battista Piranesi (1720-1778), Italian engraver and architect, is best known for his etchings of ancient and baroque Rome and grandiose architectural constructions of his own imagination. Throughout most of his adult life Piranesi made etchings of views of the city; not only its antiquities, such as the Pantheon, but also its contemporary masterpieces such as the Capitoline and Piazza Navona. The scenes are animated with tiny, frail, fluttering figures. Long before he died his prints of his adopted city had caught the imagination of much of Europe. In 1771 Horace Walpole urged his fellow Englishmen to \"study the sublime dreams of Piranesi, who seems to have conceived visions of Rome beyond what it boasted even in the meridian of its splendour. Savage as Salvator Rosa, fierce as Michelangelo, and exuberant as Rubens, he has imagined scenes that would startle geometry, and exhaust the Indies to realize.\"",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication5/v4/6b/0f/0f/6b0f0fcc-dc27-480c-9558-b6f872f89d02/9786051762456.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication5/v4/6b/0f/0f/6b0f0fcc-dc27-480c-9558-b6f872f89d02/9786051762456.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/blagoy-kiroff/991988109?uo=4",
+   "formattedPrice": "$2.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi-157-master-drawings/id1010023615?uo=4",
+   "trackCensoredName": "Piranesi: 157 Master Drawings",
+   "trackId": 1010023615,
+   "trackName": "Piranesi: 157 Master Drawings",
+   "genres": [
+    "Art & Architecture",
+    "Books",
+    "Arts & Entertainment"
+   ],
+   "artistName": "Blagoy Kiroff"
+  },
+  {
+   "artistIds": [
+    14303100
+   ],
+   "artistId": 14303100,
+   "releaseDate": "2023-08-21T07:00:00Z",
+   "price": 4.99,
+   "genreIds": [
+    "10002",
+    "38",
+    "9007",
+    "11234"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "The demand which followed the issue of the first series of small reproductions of Piranesi’s etchings has tempted the Publishers to put forth a further selection. The mine is, indeed, inexhaustible, but all the etchings, though of great individual interest, are not of equal value to architects. For them Piranesi serves two main purposes: the first, a stimulus to the imagination; the second, a store of rich and expressive detail. In this selection, to assist in the first purpose, are included a few of his own architectural designs. These do not, however, in reality exhibit his great imaginative qualities so well as his interpretations of actual buildings. Although Piranesi was careful to see that he was always styled “Venetian Architect,” we have no very reliable evidence that he ever composed a building except on paper, and such paper plans as he published do not suggest great practical qualities. It is in his drawings of the ruins of ancient Rome that he gives us something at once more rare and more valuable than any ordinary architectural achievement. In them he shows us the inherent romance buried deep in Roman construction. Through him we learn the spiritual character of this construction when stripped of all its worldly ornament. It is true that in his drawings the buildings have another sort of decoration—a decoration of trees and foliage. In the eighteenth century the ruins had not yet been cleaned and docketed into museum specimens, but the romance which Piranesi reveals in arch, vault, and dome is something deeper than a mere picturesque contrast with foliage and figures. The romance he shows us is the romance of any enduring monument. It is the monumental quality of Roman construction which makes it akin to the great works of Nature, and the trees and vegetation in Piranesi drawings only help to demonstrate this kinship. The gesticulating figures serve a similar purpose. They are the men of a lesser generation gibbering over the work of ancestors they only half comprehend.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/78/f4/aa/78f4aa18-7bc1-ac83-1f8d-5078063dff6d/9781465680594.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/78/f4/aa/78f4aa18-7bc1-ac83-1f8d-5078063dff6d/9781465680594.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/various-authors/14303100?uo=4",
+   "formattedPrice": "$4.99",
+   "trackViewUrl": "https://books.apple.com/us/book/selected-etchings-by-piranesi/id6462799585?uo=4",
+   "trackCensoredName": "Selected Etchings by Piranesi",
+   "trackId": 6462799585,
+   "trackName": "Selected Etchings by Piranesi",
+   "genres": [
+    "Art & Architecture",
+    "Books",
+    "Arts & Entertainment",
+    "Art History"
+   ],
+   "artistName": "Various Authors"
+  },
+  {
+   "artistIds": [
+    81123103
+   ],
+   "artistId": 81123103,
+   "releaseDate": "2022-08-22T07:00:00Z",
+   "price": 38.99,
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Fra forfatteren av New York Times-bestselgeren Jonathan Strange og herr Norrell kommer en berusende, hypnotiserende ny roman som foregår i en drømmeaktig alternativ virkelighet. Piranesi tar leseren med inn i en fantastisk, ny verden, en uendelig labyrint, full av forbløffende syn og uvirkelig skjønnhet, hjemsøkt av tidevann og skyer. \n<br />\nBritiske Susanna Clarke (f. 1959) ga ut Jonathan Strange &amp; Herr Norrell, en fantasyroman som ble belønnet med Hugo-prisen i 2005, ble utgitt i over 30 land og solgte i over fire millioner eksemplarer på verdensbasis. For Piranesi vant hun Womens Prize for Fiction 2021.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/db/d1/e7/dbd1e7ca-67e1-b4c9-eccf-f5c9a9ce382b/9788284321257_L2_Piranesi_Cover.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/db/d1/e7/dbd1e7ca-67e1-b4c9-eccf-f5c9a9ce382b/9788284321257_L2_Piranesi_Cover.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke/81123103?uo=4",
+   "formattedPrice": "$38.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id6443229841?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 6443229841,
+   "trackName": "Piranesi",
+   "genres": [
+    "Fiction & Literature",
+    "Books"
+   ],
+   "artistName": "Susanna Clarke"
+  },
+  {
+   "artistIds": [
+    1503360254
+   ],
+   "artistId": 1503360254,
+   "releaseDate": "2021-04-07T07:00:00Z",
+   "price": 9.99,
+   "genreIds": [
+    "10037",
+    "38",
+    "9029",
+    "9031",
+    "10049"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Analyzing literature can be hard — we make it easy! This in-depth study guide offers summaries &amp; analyses for all 67 chapters of Piranesi by Susanna Clarke. Get more out of your reading experience and build confidence with study guides proven to: raise students’ grades, save teachers time,  and spark dynamic book discussions. SuperSummary Study Guides are written by experienced educators and literary scholars with advanced degrees in relevant fields. Here's what's inside:\n \nChapter-by-chapter summaries — Refresh your memory of key events and big ideas\nComprehensive literary analysis — Unlock underlying meaning\nExamination of key figures in the text — Follow character arcs from tragedy to triumph\nDiscussion of themes, symbols &amp; motifs — Connect the dots among recurring ideas \nImportant quotes with explanations — Appreciate the meaning behind the words\nEssay &amp; discussion topics — Discover writing prompts and conversation starters\nBook Club Questions — Spark engaging discussions and reflection\n\nWho uses SuperSummary Study Guides:\nStudents: Boost critical thinking skills — and grade averages — while decreasing stress\nEducators: Save hours of prep time and create engaging lessons and assignments\nBook club members: Gain confidence in discussing literary analysis and lead more thoughtful book chats\nAll readers: Better understand (and enjoy) the books you read\n\nWhy customers love SuperSummary Study Guides:\n96% of students report earning a higher grade thanks to our study guides\n98% of educators tell us that SuperSummary study guides save them time\n99% of book club members credit our guides with improving club discussions\n94% of readers say they find everything they need in SuperSummary study guides\n\nWhat SuperSummary customers say:\n“I was taking a very fast paced class. I had to read 5 novels within 5 weeks so the chapter summaries really helped. I ended up getting an A-B on every paper I wrote! I recommend SuperSummary to all my college friends.” — Annabell C., College Student\n\n“I use SuperSummary to supplement my own lesson planning designs. I particularly like the discussion questions/essay questions offered, as well as the summary of events and then interpretation/meaning of a section.” — Adrienne B., Middle School Teacher\n\n“I started a book club and wanted some reference material. SuperSummary helped me lead a productive discussion, get ideas for questions and gain a deeper understanding of the material.” — Laura D., Book Club Member\n\n“I needed a quick clarification of my own understanding of a novel before discussing it with my students. SuperSummary guides are easy to maneuver — everything is labeled and well-organized. — Stella I., High School Teacher\n\n“Subscribing to SuperSummary was the only way to save my grade. SuperSummary helped me get a high grade on my test and complete my summer assignment.” — Dudley L, High School Student",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/09/c4/7a/09c47a5a-cc9c-69d9-00fe-6344068a9224/86d52dba-c838-4036-a5dc-c50499481f29_cover_image.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/09/c4/7a/09c47a5a-cc9c-69d9-00fe-6344068a9224/86d52dba-c838-4036-a5dc-c50499481f29_cover_image.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/supersummary/1503360254?uo=4",
+   "formattedPrice": "$9.99",
+   "trackViewUrl": "https://books.apple.com/us/book/study-guide-piranesi-by-susanna-clarke-supersummary/id6767126728?uo=4",
+   "trackCensoredName": "Study Guide: Piranesi by Susanna Clarke (SuperSummary)",
+   "trackId": 6767126728,
+   "trackName": "Study Guide: Piranesi by Susanna Clarke (SuperSummary)",
+   "genres": [
+    "Education",
+    "Books",
+    "Professional & Technical",
+    "Fiction & Literature",
+    "Literary Fiction"
+   ],
+   "artistName": "SuperSummary"
+  },
+  {
+   "artistIds": [
+    1672865402
+   ],
+   "artistId": 1672865402,
+   "releaseDate": "2023-12-05T04:26:19Z",
+   "price": 2.99,
+   "genreIds": [
+    "10042",
+    "38",
+    "9031"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "With centuries of literature, it's inevitable that some will fall through the cracks. We hunt down public domain works and restore them so they're not lost to the world.\n\nWho are we?  We're Cairn Press.  Our background is in design, publishing, typography, and technology. These skills fuel our mission to create the highest quality Public Domain eBooks available online, at an affordable price. We give them the treatment they deserve; our proprietary process restores books for a better overall user experience in design, readability, and e-reader compatibility.\n\nDiscover a piece of history with this digital edition eBook of Selected etchings by Piranesi, series 2, by C. H. Reilly. Restored with care and true to the original work, this work has been deemed culturally important by scholars and is a fundamental part of our civilization's knowledge base. Pick up your copy today.\n\nGenres: Piranesi, Giovanni Battista, 1720-1778, Etching, Italian",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/84/f7/a8/84f7a8bc-b711-933d-1607-f9e23af098fc/e948db1f-1dba-468a-9b15-6d5595860eba_cover_image.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/84/f7/a8/84f7a8bc-b711-933d-1607-f9e23af098fc/e948db1f-1dba-468a-9b15-6d5595860eba_cover_image.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/c-h-reilly/1672865402?uo=4",
+   "formattedPrice": "$2.99",
+   "trackViewUrl": "https://books.apple.com/us/book/selected-etchings-by-piranesi-series-2/id6473769963?uo=4",
+   "trackCensoredName": "Selected etchings by Piranesi, series 2",
+   "trackId": 6473769963,
+   "trackName": "Selected etchings by Piranesi, series 2",
+   "genres": [
+    "Classics",
+    "Books",
+    "Fiction & Literature"
+   ],
+   "artistName": "C. H. Reilly"
+  },
+  {
+   "artistIds": [
+    1672865402
+   ],
+   "artistId": 1672865402,
+   "releaseDate": "2023-12-10T15:08:33Z",
+   "price": 2.99,
+   "genreIds": [
+    "10042",
+    "38",
+    "9031"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "With centuries of literature, it's inevitable that some will fall through the cracks. We hunt down public domain works and restore them so they're not lost to the world.\n\nWho are we?  We're Cairn Press.  Our background is in design, publishing, typography, and technology. These skills fuel our mission to create the highest quality Public Domain eBooks available online, at an affordable price. We give them the treatment they deserve; our proprietary process restores books for a better overall user experience in design, readability, and e-reader compatibility.\n\nDiscover a piece of history with this digital edition eBook of Selected etchings by Piranesi, series 1., by C. H. Reilly. Restored with care and true to the original work, this work has been deemed culturally important by scholars and is a fundamental part of our civilization's knowledge base. Pick up your copy today.\n\nGenres: Piranesi, Giovanni Battista, 1720-1778, Etching, Italian",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2d/86/5e/2d865eed-12ba-8669-6c32-05a08f4a2379/26b50767-a960-4854-9aa9-24ae88b48cf9_cover_image.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2d/86/5e/2d865eed-12ba-8669-6c32-05a08f4a2379/26b50767-a960-4854-9aa9-24ae88b48cf9_cover_image.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/c-h-reilly/1672865402?uo=4",
+   "formattedPrice": "$2.99",
+   "trackViewUrl": "https://books.apple.com/us/book/selected-etchings-by-piranesi-series-1/id6474095001?uo=4",
+   "trackCensoredName": "Selected etchings by Piranesi, series 1.",
+   "trackId": 6474095001,
+   "trackName": "Selected etchings by Piranesi, series 1.",
+   "genres": [
+    "Classics",
+    "Books",
+    "Fiction & Literature"
+   ],
+   "artistName": "C. H. Reilly"
+  },
+  {
+   "artistIds": [
+    434656009
+   ],
+   "artistId": 434656009,
+   "releaseDate": "2023-01-17T08:00:00Z",
+   "price": 87.99,
+   "genreIds": [
+    "11234",
+    "38",
+    "9007",
+    "9015",
+    "10072",
+    "10002"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Near the end of his life, Giovanni Battista Piranesi (1720-78) created three colossal candelabra mainly from fragments of sculpture excavated near the Villa Hadriana in Tivoli, two of which are now in the Ashmolean Museum, and one in the Louvre. Although they were among the most sought-after and prestigious of his works, and fetched enormous prices during Piranesi's life, they suffered a steep decline in appreciation from the 1820s onwards, and even today they are among the least studied of his works. Piranesi's Candelabra and the Presence of the Past uncovers the intense investment, by artists, patrons, collectors, and the public around the start of the nineteenth century in objects that made Graeco-Roman Antiquity present again. Caroline van Eck's study examines how objects make their makers or viewers feel that they are again in the presence of Antiquity, that not only Antiquity has revived, but that classical statues become alive under their gaze. what it takes to make such objects, and what it costs to own them; and about the ramifications of such intense if not excessive attachments to artefacts. This book considers the three candelabra in depth, providing the biography of these objects, from the excavation of the Roman fragments to their entry into private and public collection. Van Eck considers the context that Piranesi gave them by including them in his Vasi, Candelabri e Cippi (1778), to rethink the processes that led to the development of neoclassicism from the perspective of the objects and objectscapes that came into being in Rome at the end of the eighteenth century.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/17/a8/7b/17a87bd8-28a6-51b4-8878-0d9ab2fed6b5/9780192660572.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/17/a8/7b/17a87bd8-28a6-51b4-8878-0d9ab2fed6b5/9780192660572.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/caroline-van-eck/434656009?uo=4",
+   "formattedPrice": "$87.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesis-candelabra-and-the-presence-of-the-past/id6445493407?uo=4",
+   "trackCensoredName": "Piranesi's Candelabra and the Presence of the Past",
+   "trackId": 6445493407,
+   "trackName": "Piranesi's Candelabra and the Presence of the Past",
+   "genres": [
+    "Art History",
+    "Books",
+    "Arts & Entertainment",
+    "History",
+    "Ancient History",
+    "Art & Architecture"
+   ],
+   "artistName": "Caroline van Eck"
+  },
+  {
+   "artistIds": [
+    495613428,
+    1469848196,
+    30842671,
+    1535830205,
+    1535830476,
+    1535830477,
+    731451341,
+    1575177317
+   ],
+   "artistId": 495613428,
+   "releaseDate": "2019-11-01T07:00:00Z",
+   "price": 18.99,
+   "genreIds": [
+    "10002",
+    "38",
+    "9007"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "ZERO PIRANESI<br/>\nGiovanni Battista Piranesi&#39;s engravings, Campo Marzio dell&#39;antica Roma of 1762, have a peculiar position within the discipline of ar- chitecture. With their dissemination, the folio collection of six etch- ings have till this day nurtured architects&#39; speculations on the city. Since the Enlightenment, they - and in particular the Campo Marzio plan - have fuelled research, discussions and visions for the future of architecture. These engravings are also some of the most beau- tiful documents in Western architectural history.<br/>\n Zero Piranesi, is guest-edited by Peter Trummer. It celebrates Piranesi&#39;s vision of ancient Rome and the disciplinary search of the endless realities within his Campo Marzio plan of Rome. For Trummer, Zero Piranesi suggests an ar- chitectural methodology based on a theory of replacement. With it, Piranesi&#39;s plan of Rome is transformed into an &#34;Object Plan&#34; - a plan where multiple authors&#39; various positions are absorbed. Thus, the &#34;Object Plan&#34; contains a kaleidoscope of ideas which form a crust of architectural speculations accumulated within.<br/>\nZero Piranesi presents the seminal projects of Peter Eisenman and 􏰎􏰉􏰕􏰖􏰉􏰗 􏰘􏰂􏰙􏰚amongst others, Michael Young and Marrikka Trotter. Trummer&#39;s own version of Campo Marzio comprises of drawings and a text that together construct Zero Piranesi.<br/>\nFinally, the journal features the award winning projects of Städel- 􏰃􏰝􏰁􏰈􏰟􏰉 􏰌􏰖􏰝􏰁􏰂􏰇􏰉􏰝􏰇􏰈􏰖􏰉 􏰍􏰟􏰛􏰃􏰃􏰦 􏰌􏰧􏰜 􏰨􏰛􏰃􏰇􏰉􏰖 􏰀􏰁􏰉􏰃􏰂􏰃 􏰩􏰖􏰂􏰪􏰉 􏰠􏰡􏰢􏰫 􏰛􏰚􏰬 􏰠􏰡􏰢􏰭􏰮",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/fa/b9/ca/fab9ca37-a993-9c74-ca0c-c337441f1d53/1032294959.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/fa/b9/ca/fab9ca37-a993-9c74-ca0c-c337441f1d53/1032294959.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/jeffrey-kipnis-stephen-turk-michael-young-giacomo-pala/495613428?uo=4",
+   "formattedPrice": "$18.99",
+   "trackViewUrl": "https://books.apple.com/us/book/zero-piranesi/id1535828998?uo=4",
+   "trackCensoredName": "Zero Piranesi",
+   "trackId": 1535828998,
+   "trackName": "Zero Piranesi",
+   "genres": [
+    "Art & Architecture",
+    "Books",
+    "Arts & Entertainment"
+   ],
+   "artistName": "Jeffrey Kipnis, Stephen Turk, Michael Young, Giacomo Pala, Parsa Khalili, Marrikka Trotter, Peter Eisenman & PeterTrummer"
+  },
+  {
+   "artistIds": [
+    81123103
+   ],
+   "artistId": 81123103,
+   "releaseDate": "2020-10-21T07:00:00Z",
+   "price": 15.99,
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Piranesi woont in het Huis. Misschien heeft hij dat altijd al gedaan.  <br/>\n<br/>\nIn zijn notitieboeken doet hij dag na dag zorgvuldig verslag van de wonderen ervan: het labyrint van zalen, de duizenden standbeelden, de getijden die de trappen op donderen, de wolken die zich in een langzame stoet voortbewegen door de bovenste zalen. <br/>\n<br/>\nOp dinsdag en vrijdag ziet Piranesi zijn vriend, de Ander. Op andere momenten brengt hij de doden offerandes van voedsel en waterlelies. Maar meestal is hij alleen.  <br/>\n<br/>\nBoodschappen beginnen te verschijnen, met krijt geschreven op het plaveisel. Er is een nieuw iemand in het Huis. Wie is het en wat wil diegene? Is het een vriend of veroorzaakt deze persoon chaos en waanzin, zoals de Ander beweert.<br/>\n<br/>\nVerdwenen teksten moeten worden gevonden; geheimen moeten worden blootgelegd. De wereld die Piranesi dacht te kennen wordt vreemd en gevaarlijk. <br/>\n<br/>\nDe Schoonheid van het Huis is onmetelijk; zijn vriendelijkheid oneindig.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/00/f1/22/00f12296-425e-622a-172f-7b6e1f1f00c7/1054537475.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/00/f1/22/00f12296-425e-622a-172f-7b6e1f1f00c7/1054537475.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke/81123103?uo=4",
+   "formattedPrice": "$15.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id1536821558?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 1536821558,
+   "trackName": "Piranesi",
+   "genres": [
+    "Fiction & Literature",
+    "Books"
+   ],
+   "artistName": "Susanna Clarke"
+  },
+  {
+   "artistIds": [
+    1024959827,
+    1024959830
+   ],
+   "artistId": 1024959827,
+   "releaseDate": "1824-01-01T07:00:00Z",
+   "price": 0.0,
+   "genreIds": [
+    "10072",
+    "38",
+    "9015"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Tommaso Piroli offre dans cet ouvrage publié en 1804, 48 gravures à l’eau forte, reproductions de peintures découvertes sur le site d’Herculanum (ou Resina). Chaque planche est accompagnée d’une explication et d’une interprétation mythologique du sujet.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication5/v4/f5/13/44/f5134473-29e7-0ff0-7309-3e3d5fa850f6/coverArt.04d26b.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication5/v4/f5/13/44/f5134473-29e7-0ff0-7309-3e3d5fa850f6/coverArt.04d26b.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/th-piroli-p-piranesi/1024959827?uo=4",
+   "formattedPrice": "Free",
+   "trackViewUrl": "https://books.apple.com/us/book/antiquit%C3%A9s-dherculanum/id510627957?uo=4",
+   "trackCensoredName": "Antiquités d’Herculanum",
+   "trackId": 510627957,
+   "trackName": "Antiquités d’Herculanum",
+   "genres": [
+    "Ancient History",
+    "Books",
+    "History"
+   ],
+   "artistName": "Th. Piroli & P. Piranesi"
+  },
+  {
+   "artistIds": [
+    81123103
+   ],
+   "artistId": 81123103,
+   "releaseDate": "2020-10-05T07:00:00Z",
+   "price": 11.99,
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "<b>Der neue Roman der Bestsellerautorin von \"Jonathan Strange &amp; Mr Norrell\"</b><br /><br />Ein riesiges Gebäude, in dem sich endlos Räume aneinanderreihen, verbunden durch ein Labyrinth aus Korridoren und Treppen. An den Wänden stehen Tausende Statuen, das Erdgeschoss besteht aus einem Ozean, bei Flut donnern die Wellen die Treppenhäuser hinauf. In diesem Gebäude lebt Piranesi. Er hat sein Leben der Erforschung des Hauses gewidmet. Und je weiter er sich in die Zimmerfluchten vorwagt, desto näher kommt er der Wahrheit – der Wahrheit über die Welt jenseits des Gebäudes. Und der Wahrheit über sich selbst.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8d/3a/b4/8d3ab462-68ce-30ba-a9da-610286c41f49/9783641264864.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/8d/3a/b4/8d3ab462-68ce-30ba-a9da-610286c41f49/9783641264864.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke/81123103?uo=4",
+   "formattedPrice": "$11.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id1506831259?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 1506831259,
+   "trackName": "Piranesi",
+   "genres": [
+    "Fiction & Literature",
+    "Books"
+   ],
+   "artistName": "Susanna Clarke"
+  },
+  {
+   "artistIds": [
+    81123103,
+    1114813583
+   ],
+   "artistId": 81123103,
+   "releaseDate": "2021-09-21T07:00:00Z",
+   "price": 17.99,
+   "genreIds": [
+    "10044",
+    "38",
+    "9020"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Tähtifantasia-palkinto 2022.<br /><br />Hypnoottinen ja älykäs fantasiaromaani, joka palkitsee lukijansa moninkertaisesti.<br /><br />Piranesi asuu Talossa, jossa on lukematon määrä huoneita ja käytäviä, joita reunustavat tuhannet patsaat. Vuorovesi yltää portaisiin asti, pilvet liikkuvat yläkerran saleissa. Mutta Piranesia ei pelota: hän tuntee veden liikkeet ja reitit huoneiden välillä. Tiistaisin ja perjantaisin Piranesi näkee ystävänsä, mutta muuten hän on yksin. Kun liidulla piirrettyjä viestejä alkaa ilmestyä lattioihin, Piranesi varmistuu siitä, että Talossa liikkuu myös joku tai jokin muu. Mutta kuka, ja mitä hän haluaa?<br /><br />”Piranesi on häikäisevä tarina yksinäisyydestä, mielikuvituksesta ja muistamisesta” (Spectator).<br /><br />Susanna Clarken (s. 1959, Englanti) vuonna 2005 ilmestynyt esikoisromaani Jonathan Strange &amp; herra Norrell sai useita palkintoja. Vaihtoehtohistorialliseen 1800-luvun Englantiin sijoittuvaa fantasiaromaania myytiin yli miljoona kappaletta. Fanien odotus palkittiin vihdoin, kun Piranesi ilmestyi Englannissa syksyllä 2020 ja sai loistavat arvostelut. Se palkittiin vuoden parhaalle suomeksi julkaistulle fantasiaromaanille myönnettävällä Tähtifantasia-palkinnolla 2022. Clarke asuu Cambridgessa puolisonsa kanssa.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/71/75/31/71753194-2a97-85c1-2914-604584e7434b/9789510473634.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/71/75/31/71753194-2a97-85c1-2914-604584e7434b/9789510473634.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke-helene-b%C3%BCtzow/81123103?uo=4",
+   "formattedPrice": "$17.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id1586137199?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 1586137199,
+   "trackName": "Piranesi",
+   "genres": [
+    "Fantasy",
+    "Books",
+    "Sci-Fi & Fantasy"
+   ],
+   "artistName": "Susanna Clarke & Helene Bützow"
+  },
+  {
+   "artistIds": [
+    1540615313
+   ],
+   "artistId": 1540615313,
+   "releaseDate": "2022-09-01T07:00:00Z",
+   "price": 15.99,
+   "genreIds": [
+    "9031",
+    "38",
+    "9007",
+    "10067",
+    "10043",
+    "9020",
+    "10044"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Opojný, hypnotický román zasadený do&#xa0;alternatívnej snovej reality, predurčený stať sa klasikou fantastiky. Piranesiho dom nie je obyčajná budova. Miestnosti sú neohraničené, chodby nekonečné, steny lemujú tisícky jedinečných sôch. V&#xa0;labyrinte miestností je uväznený oceán. Pri prílive vlny s&#xa0;hukotom dorážajú na schodištia a&#xa0;miestnosti v&#xa0;okamihu zaplaví voda. Piranesi sa však nebojí. Rozumie príboju, a&#xa0;pozná schému labyrintu. Žije, aby svoj dom skúmal. V dome žije ešte jedna osoba – muž označovaný ako Druhý. S Piranesim sa stretáva, aby mu pomohol na ceste za Veľkým a&#xa0;Tajným Poznaním. Piranesi pri bádaní natrafí na dôkazy o&#xa0;existencii ďalšej osoby a&#xa0;postupne odhaľuje desivú pravdu – za svetom, ktorý vždy poznal, existuje iný, ďalší…",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/c0/e8/36/c0e83693-6e27-5e25-6674-7e7ae48b27b0/PKBI359339_359339_cover.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/c0/e8/36/c0e83693-6e27-5e25-6674-7e7ae48b27b0/PKBI359339_359339_cover.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanne-clarke/1540615313?uo=4",
+   "formattedPrice": "$15.99",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id6467121508?uo=4",
+   "trackCensoredName": "Piranesi",
+   "trackId": 6467121508,
+   "trackName": "Piranesi",
+   "genres": [
+    "Fiction & Literature",
+    "Books",
+    "Arts & Entertainment",
+    "Games",
+    "Erotica",
+    "Sci-Fi & Fantasy",
+    "Fantasy"
+   ],
+   "artistName": "Susanne Clarke"
+  },
+  {
+   "artistIds": [
+    1024959827,
+    1024959844
+   ],
+   "artistId": 1024959827,
+   "releaseDate": "1824-01-01T07:00:00Z",
+   "price": 0.0,
+   "genreIds": [
+    "10072",
+    "38",
+    "9015"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Le quatrième volume des antiquités d’Herculanum gravées par Tommaso Piroli constitue le premier tome consacré aux bronzes, bas-reliefs et bustes. Chaque planche de ce volume, publié en 1805, comporte une explication de S-Ph. Chaudé. Ce volume comprend également une table des matières des thèmes et divinités contenus.",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/e7/f6/0a/e7f60a36-829b-8f51-cb77-4f5b913facae/coverArt.065a5f.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/e7/f6/0a/e7f60a36-829b-8f51-cb77-4f5b913facae/coverArt.065a5f.jpg/100x100bb.jpg",
+   "artistViewUrl": "https://books.apple.com/us/artist/th-piroli-f-p-piranesi/1024959827?uo=4",
+   "formattedPrice": "Free",
+   "trackViewUrl": "https://books.apple.com/us/book/antiquit%C3%A9s-dherculanum/id510871780?uo=4",
+   "trackCensoredName": "Antiquités d’Herculanum",
+   "trackId": 510871780,
+   "trackName": "Antiquités d’Herculanum",
+   "genres": [
+    "Ancient History",
+    "Books",
+    "History"
+   ],
+   "artistName": "Th. Piroli & F. P. Piranesi"
+  }
+ ]
+}

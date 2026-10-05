@@ -1,0 +1,30 @@
+{
+  "goodreads": [
+    "~/Exports/goodreads_library_export.csv"
+  ],
+  "books": {
+    "11110009-aaaa-4000-8000-000000000009": {
+      "lang": "de",
+      "isbn13": "978-3-00-000001-0",
+      "title": "Der Fuchs im Schnee",
+      "note": "read in German"
+    },
+    "11110010-aaaa": {
+      "mergeInto": "11110009-aaaa",
+      "note": "US edition, undated"
+    },
+    "11110011-aaaa-4000-8000-000000000011": {
+      "skip": true,
+      "note": "omnibus"
+    },
+    "11110012-aaaa-4000-8000-000000000012": {
+      "dateRead": "2020-05-05",
+      "dateStarted": "2020-04-01",
+      "author": "Gus Specimen",
+      "coverUrl": "https://example.com/pinned.jpg"
+    },
+    "deadbeef": {
+      "skip": true
+    }
+  }
+}

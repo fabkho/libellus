@@ -1,0 +1,12 @@
+{
+  "name": "libellus-design-tokens",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tokens": "node build.mjs",
+    "tokens:check": "node build.mjs --check"
+  },
+  "devDependencies": {
+    "style-dictionary": "^5.5.5"
+  }
+}

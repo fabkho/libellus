@@ -1,0 +1,6 @@
+{
+  "books": [
+    { "id": "rt-1", "title": "A Tracker Entry", "author": "Ada Example", "shelf": "read", "session": null }
+  ],
+  "total": 1
+}

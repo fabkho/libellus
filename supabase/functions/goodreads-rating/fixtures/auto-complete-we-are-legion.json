@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/auto_complete?format=json&q=We%20Are%20Legion%20Taylor",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": "[{\"imageUrl\":\"https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1474344826i/32109569._SY75_.jpg\",\"bookId\":\"32109569\",\"workId\":\"52752877\",\"bookUrl\":\"/book/show/32109569-we-are-legion-we-are-bob\",\"from_search\":true,\"from_srp\":true,\"qid\":\"O3myXGiZwS\",\"rank\":1,\"title\":\"We Are Legion (We Are Bob) (Bobiverse, #1)\",\"bookTitleBare\":\"We Are Legion (We Are Bob)\",\"numPages\":322,\"avgRating\":\"4.24\",\"ratingsCount\":146833,\"author\":{\"id\":12130438,\"name\":\"Dennis E. Taylor\",\"isGoodreadsAuthor\":true,\"profileUrl\":\"https://www.goodreads.com/author/show/12130438.Dennis_E_Taylor\",\"worksListUrl\":\"https://www.goodreads.com/author/list/12130438.Dennis_E_Taylor\"},\"kcrPreviewUrl\":null,\"description\":{\"html\":\"[\\u003ci\\u003eAlternate cover edition for ASIN: B01LWAESYQ\\u003c/i\\u003e]\\u003cbr/\\u003e\\u003cbr/\\u003eBob Johansson has just sold his software company and is looking forward to a life of leisure. There are places to go, books to re…\",\"truncated\":true,\"fullContentUrl\":\"https://www.goodreads.com/book/show/32109569-we-are-legion-we-are-bob\"}}]"
+}

@@ -1,0 +1,5 @@
+# pnpm 11+ only runs dependency build scripts that are approved here (it reads this
+# setting from this file, not from package.json). esbuild ships its binary as an
+# optional dependency; approving it keeps a fresh install from failing.
+allowBuilds:
+  esbuild: true

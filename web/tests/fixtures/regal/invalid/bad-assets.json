@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-01T06:00:00Z",
+  "books": [
+    {
+      "id": "bad-assets",
+      "title": "Broken Assets",
+      "authors": [],
+      "status": "read",
+      "assets": {
+        "front": "data:image/png;base64,AAAA",
+        "spine": "spine art.webp",
+        "back": 7,
+        "pile": { "front": "javascript:alert(1)" },
+        "palette": { "background": "#fff", "text": "#000000" },
+        "spineColor": "red",
+        "photoFaces": ["front", "side"],
+        "source": "scan"
+      }
+    },
+    {
+      "id": "assets-not-object",
+      "title": "Assets As A String",
+      "authors": [],
+      "status": "read",
+      "assets": "front.webp"
+    }
+  ]
+}

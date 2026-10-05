@@ -1,0 +1,27 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Claude Code worktrees and local agent state
+.claude/
+
+# web/pnpm-workspace.yaml is committed: it approves dependency build scripts
+# for pnpm 11+ (web/AGENTS.md, gotchas). design/ has none to approve.
+design/pnpm-workspace.yaml
+
+# Web — Nuxt build output and Playwright artifacts. `web/dist` is a symlink
+# that `nuxt generate` creates, so no trailing slash: a slash would only match
+# a directory.
+web/.nuxt/
+web/.output/
+web/dist
+web/test-results/
+web/playwright-report/
+web/blob-report/
+web/all-blob-reports/
+
+# Local data the scripts write: the Fable import's cover cache and report
+# (web/scripts/import-fable.ts). Real reading history: never committed.
+.data/

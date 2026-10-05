@@ -1,0 +1,287 @@
+@import 'tailwindcss';
+@import './tokens.generated.css';
+
+/* Latin subset only, and only the weights the design uses: keeps the precache
+   small and covers English (and the umlauts German will need). The families are
+   tokens; `--font-sans|mono|serif` come out of tokens.generated.css.
+   Geist: 300 large figures, 400 text, 500 titles and buttons, 600 sheet titles.
+   Geist Mono: 400 meta lines, 500 eyebrows. Newsreader: 500 book titles,
+   400 italic the wordmark and reviews. */
+@import '@fontsource/geist/latin-300.css';
+@import '@fontsource/geist/latin-400.css';
+@import '@fontsource/geist/latin-500.css';
+@import '@fontsource/geist/latin-600.css';
+@import '@fontsource/geist-mono/latin-400.css';
+@import '@fontsource/geist-mono/latin-500.css';
+@import '@fontsource/newsreader/latin-500.css';
+@import '@fontsource/newsreader/latin-400-italic.css';
+
+/* The notch and the home indicator are the device's, not the design system's:
+   read once here, and only the utilities below use them, so no screen inlines
+   env() itself. (A screenshot run stands in a phone's insets by overriding
+   these four.) */
+:root {
+  --safe-area-top: env(safe-area-inset-top);
+  --safe-area-bottom: env(safe-area-inset-bottom);
+  --safe-area-left: env(safe-area-inset-left);
+  --safe-area-right: env(safe-area-inset-right);
+  /* Where a bar's 44 pt controls row starts: under the status bar where there
+     is one to clear (the iOS Home Screen app, 59 pt), and at least `barTop`
+     off the top edge where the device reports no inset — a browser tab, whose
+     own toolbar the row would otherwise touch. */
+  --bar-top: max(var(--safe-area-top), var(--spacing-bar-top));
+  /* Where floating chrome (the tab bar, the search palette) sits: `floatAbove`
+     above the system's bottom inset, as Material 3 floats its toolbar. Android's
+     navigation fills its inset (Chrome edge to edge: the gesture handle in a
+     24 px inset; three-button navigation: 0, the page ends above the buttons),
+     so nothing of the capsule may go into it; with no inset at all (a desktop
+     browser, Chrome's keyboard up) that is `floatAbove` off the edge. */
+  --float-bottom: calc(var(--safe-area-bottom) + var(--spacing-float-above));
+}
+
+/* iOS (only WebKit on an iPhone or iPad knows -webkit-touch-callout) draws its
+   home indicator at the very bottom of a 34 pt inset, so there floating chrome
+   sits `tabBarDrop` into the inset: 21 pt off the screen edge on a Face ID
+   iPhone, like iOS 26's tab bar, or `ms` off the edge without an indicator. */
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --float-bottom: max(calc(var(--safe-area-bottom) - var(--spacing-tab-bar-drop)), var(--spacing-ms));
+  }
+}
+
+/* One utility for the screen padding. */
+@utility screen-inset {
+  padding-top: calc(var(--safe-area-top) + var(--spacing-lg));
+  padding-bottom: calc(var(--safe-area-bottom) + var(--spacing-lg));
+  padding-left: calc(var(--safe-area-left) + var(--spacing-screen));
+  padding-right: calc(var(--safe-area-right) + var(--spacing-screen));
+}
+
+/* The notch and the home indicator for bars that sit on a screen edge (the
+   header, the tab bar, a sheet) rather than padding a whole screen. A bar at
+   the top pads to `--bar-top`: the status bar, or `barTop` in a browser tab. */
+@utility bar-top {
+  padding-top: var(--bar-top);
+}
+@utility safe-bottom {
+  padding-bottom: var(--safe-area-bottom);
+}
+@utility safe-x {
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
+}
+
+/* Floating chrome at the bottom (the tab bar, the search palette). */
+@utility float-bottom {
+  bottom: var(--float-bottom);
+}
+
+/* Room under a tab's content so its end scrolls clear of the floating tab bar:
+   the bar's top edge and `xxl` more. */
+@utility clear-tab-bar {
+  padding-bottom: calc(var(--float-bottom) + var(--size-tab-bar) + var(--spacing-xxl));
+}
+
+/* D's edge: a half-pixel ring drawn inside the box, so floating chrome and cards
+   have an edge in the dark and on paper without a border taking up layout. It
+   composes with `shadow-*` (Tailwind adds both to box-shadow). */
+@utility edge {
+  --tw-inset-ring-shadow: inset 0 0 0 var(--stroke-hairline) var(--color-hairline-strong);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
+}
+@utility edge-faint {
+  --tw-inset-ring-shadow: inset 0 0 0 var(--stroke-hairline) var(--color-hairline);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
+}
+
+/* Floating glass: the tab bar, the avatar menu, round buttons over covers. */
+@utility glass {
+  background-color: var(--color-glass);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
+  backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
+}
+
+/* Mono figures and dates line up in columns. */
+@utility figures {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* The small uppercase section label (D's eyebrow). */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+  letter-spacing: var(--text-eyebrow--letter-spacing);
+  font-weight: var(--text-eyebrow--font-weight);
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+/* Book titles: serif, optical sizes on. */
+@utility book-title {
+  font-family: var(--font-serif);
+  font-weight: var(--font-weight-medium);
+  font-optical-sizing: auto;
+}
+
+/* A row that scrolls sideways by touch or trackpad and shows no bar under it:
+   shelves of covers, the year pills, the year cards. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  /* Native parts — scroll bars, the date picker, autofill — in the room's own
+     colours: light by day, dark by night, the phone deciding until she does
+     (docs/DESIGN.md, Themes). */
+  :root {
+    color-scheme: light;
+    /* Scroll bars (where the platform draws them in the page: desktop
+       browsers; phones lay their own over it): a thin ghost-ink thumb on no
+       track, like a hairline that only shows while it is needed. */
+    scrollbar-color: var(--color-ink-ghost) transparent;
+  }
+  [data-theme='dark'] {
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+    }
+  }
+  * {
+    scrollbar-width: thin;
+  }
+
+  html {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing);
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+  }
+
+  :focus-visible {
+    outline: var(--stroke-focus) solid var(--color-accent);
+    outline-offset: var(--stroke-focus);
+  }
+}
+
+/* Safari has no `scrollbar-color`: the same thin thumb through its own
+   pseudo-elements (inset from the edge, so it reads as a line, not a slab). */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: var(--spacing-ms);
+    height: var(--spacing-ms);
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: var(--spacing-xs) solid transparent;
+    border-radius: var(--radius-pill);
+    background: var(--color-ink-ghost) padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-ink-faint);
+  }
+}
+
+/* Push to the Profile and back (docs/MOTION.md; plugins/profile-transition.client.ts),
+   as the push to a book: while the transition runs, the header's avatar and the
+   Profile's ring are one element that grows or shrinks between them; the Profile
+   fades in as the tab fades out and rises `md` into place (Back: it fades out and
+   sinks); the tab bar does not move and the Profile's pinned top bar only fades.
+   Over `standard` into the Profile, over `exit` (on the `standard` curve) back. */
+html[data-profile-transition] [data-profile-avatar] {
+  view-transition-name: profile-avatar;
+}
+html[data-profile-transition] [data-testid='shell.tabs'] {
+  view-transition-name: tab-bar;
+}
+html[data-profile-transition] [data-top-bar] {
+  view-transition-name: top-bar;
+}
+/* The tab bar is the same capsule before and after: the new one stands, at once. */
+::view-transition-old(tab-bar) {
+  display: none;
+}
+::view-transition-new(tab-bar) {
+  animation: none;
+}
+html[data-profile-transition='push']::view-transition-old(root) {
+  animation-name: page-fade-out;
+}
+html[data-profile-transition='push']::view-transition-new(root) {
+  animation-name: page-fade-in, page-rise;
+}
+html[data-profile-transition='back']::view-transition-old(root) {
+  animation-name: page-fade-out, page-sink;
+}
+html[data-profile-transition='back']::view-transition-new(root) {
+  animation-name: page-fade-in;
+}
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-rise {
+  from {
+    translate: 0 var(--spacing-md);
+  }
+}
+@keyframes page-sink {
+  to {
+    translate: 0 var(--spacing-md);
+  }
+}
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: var(--duration-standard);
+  animation-timing-function: var(--ease-standard);
+}
+html[data-profile-transition='back']::view-transition-group(*),
+html[data-profile-transition='back']::view-transition-old(*),
+html[data-profile-transition='back']::view-transition-new(*) {
+  animation-duration: var(--duration-exit);
+}
+
+/* Reduce Motion: nothing travels. Transitions and animations finish at once, so
+   state still changes (docs/MOTION.md, Reduce Motion). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

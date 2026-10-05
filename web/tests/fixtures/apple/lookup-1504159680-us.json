@@ -1,0 +1,41 @@
+{
+ "resultCount": 1,
+ "results": [
+  {
+   "artistIds": [
+    81123103
+   ],
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/100x100bb.jpg",
+   "trackCensoredName": "Piranesi",
+   "artistViewUrl": "https://books.apple.com/us/artist/susanna-clarke/81123103?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/piranesi/id1504159680?uo=4",
+   "artistId": 81123103,
+   "artistName": "Susanna Clarke",
+   "genres": [
+    "Literary Fiction",
+    "Books",
+    "Fiction & Literature",
+    "Sci-Fi & Fantasy",
+    "Fantasy"
+   ],
+   "price": 13.99,
+   "releaseDate": "2020-09-15T07:00:00Z",
+   "genreIds": [
+    "10049",
+    "38",
+    "9031",
+    "9020",
+    "10044"
+   ],
+   "trackId": 1504159680,
+   "trackName": "Piranesi",
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "The award-winning, New York Times bestselling fantasy sensation that Madeline Miller called, &#34;a miraculous and luminous feat of storytelling,&#34; Piranesi is an intoxicating, hypnotic novel set in a dreamlike alternative reality from the author of Jonathan Strange &amp; Mr Norrell.<br/>\n<br/>\nPiranesi&#39;s house is no ordinary building: its rooms are infinite, its corridors endless, its walls lined with thousands upon thousands of statues. Within the labyrinth of halls an ocean is imprisoned; and waves thunder up staircases, while rooms are flooded in an instant. But Piranesi is not afraid; he understands the tides as he understands the pattern of the labyrinth itself. He lives to explore the house.<br/>\n<br/>\nThere is one other person in the house-a man called The Other, who visits Piranesi twice a week and asks for help with research into A Great and Secret Knowledge. But as Piranesi explores, evidence emerges of another person, and a terrible truth begins to unravel, revealing a world beyond the one Piranesi has always known.<br/>\n<br/>\n&#34;Spellbinding, strange, and unforgettably original&#34; (Esquire), Piranesi introduces an astonishing new world, an infinite labyrinth, full of startling images and surreal beauty.",
+   "formattedPrice": "$13.99",
+   "averageUserRating": 4.5,
+   "userRatingCount": 1697
+  }
+ ]
+}

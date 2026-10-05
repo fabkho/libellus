@@ -1,0 +1,749 @@
+{
+  "app": {
+    "name": "Libellus",
+    "tagline": "The books you read, kept quietly."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "etAl": "et al.",
+    "dayMonth": "{day} {month}",
+    "dayMonthYear": "{day} {month} {year}",
+    "today": "Today · {date}",
+    "yesterday": "Yesterday · {date}",
+    "chooseDay": "Choose a day",
+    "offline": "Offline"
+  },
+  "rating": {
+    "label": "{value} of 5 stars",
+    "none": "Not rated",
+    "title": "Rating",
+    "optional": "Optional",
+    "clear": "Clear",
+    "outOf": "/ 5",
+    "hint": "Drag across the stars for quarters, tap for whole stars"
+  },
+  "auth": {
+    "error": {
+      "invite_required": "Enter your invite code.",
+      "invite_invalid": "We don't recognise that invite code.",
+      "invite_expired": "That invite code has expired.",
+      "invite_exhausted": "That invite code has already been used up.",
+      "invite_gone": "That invite code is no longer valid. Ask for a new one.",
+      "code_invalid": "That code is wrong, has expired or was already used. Request a new one.",
+      "rate_limited": "Too many attempts. Please wait a moment.",
+      "email_invalid": "Enter a valid email address.",
+      "not_configured": "Libellus is missing its backend configuration.",
+      "unknown": "Something went wrong. Please try again."
+    }
+  },
+  "signIn": {
+    "title": "Sign in",
+    "intro": "We'll email you a six-digit code. No password.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you{'@'}example.com",
+    "submit": "Send code",
+    "accountDeleted": "Your account was deleted.",
+    "noAccount": "Have an invite code?",
+    "signUpLink": "Sign up",
+    "configMissing": "Missing {key}. Copy web/.env.example to web/.env and fill it in.",
+    "configInvalidUrl": "The Supabase URL \"{value}\" is not a valid address."
+  },
+  "signUp": {
+    "title": "Create your account",
+    "intro": "Libellus is invite-only. Your code comes from whoever invited you.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you{'@'}example.com",
+    "inviteLabel": "Invite code",
+    "invitePlaceholder": "Your invite code",
+    "submit": "Send code",
+    "hasAccount": "Already a member?",
+    "signInLink": "Sign in"
+  },
+  "verify": {
+    "title": "Check your email",
+    "sentTo": "We sent a six-digit code to {email}.",
+    "codeLabel": "Six-digit code",
+    "resend": "Send a new code",
+    "resendIn": "Send a new code in {seconds}s",
+    "changeEmail": "Use another email"
+  },
+  "shell": {
+    "tabsLabel": "Main navigation",
+    "avatarLabel": "Profile"
+  },
+  "sync": {
+    "chip": "Waiting to sync ({count})",
+    "chipFailed": "Couldn't sync ({count})",
+    "chipLabel": "Changes waiting to sync: {count}. Open the list",
+    "title": "Sync",
+    "waiting": "{count} change made on this device waits for a connection. It syncs by itself once you're online. | {count} changes made on this device wait for a connection. They sync by themselves once you're online.",
+    "syncing": "Syncing {count} change… | Syncing {count} changes…",
+    "pendingTitle": "Waiting",
+    "failedTitle": "Couldn't sync",
+    "failedNote": "Your Library shows what was saved instead.",
+    "failedItem": "Couldn't sync: {action}",
+    "dismissLabel": "Dismiss: {about}",
+    "allSynced": "Everything is synced.",
+    "action": {
+      "add_to_library": "Added to Library",
+      "start_reading": "Started reading",
+      "read_again": "Started again",
+      "finish_reading": "Finished",
+      "abandon_reading": "Did not finish",
+      "update_progress": "Progress",
+      "update_session": "Edited a read",
+      "remove_from_library": "Removed from Library",
+      "add_to_collection": "Put on a collection",
+      "remove_from_collection": "Taken off a collection",
+      "reorder_collection": "New order",
+      "rename_collection": "Renamed",
+      "delete_collection": "Deleted"
+    }
+  },
+  "account": {
+    "name": "Name",
+    "nameNone": "Add",
+    "nameTitle": "Your name",
+    "nameLabel": "First name",
+    "namePlaceholder": "Optional",
+    "nameHint": "Home greets you by it. Leave it empty for no name.",
+    "save": "Save",
+    "clear": "Remove name",
+    "error": {
+      "offline": "You're offline. Nothing was saved.",
+      "rate_limited": "Too many changes at once. Try again in a moment.",
+      "unknown": "Your name could not be saved. Try again."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "back": "Back",
+    "since": "Reading here since {date}",
+    "library": "{read} read · {reading} reading · {want} want to read",
+    "yearsLabel": "Year",
+    "all": "All",
+    "figures": {
+      "books": "Books",
+      "pages": "Pages",
+      "average": "Average",
+      "daysABook": "Days a book",
+      "rereads": "{count} read again",
+      "dnf": "{count} DNF",
+      "pagesMissing": "{count} without a count",
+      "pagesPerBook": "{count} a book",
+      "unrated": "{count} not rated yet",
+      "rated": "{count} rated",
+      "usually": "usually, start to finish"
+    },
+    "byMonth": "By month",
+    "byYear": "By year",
+    "inReview": "{year} in review",
+    "columnLabel": "{label}: {count}",
+    "days": {
+      "title": "Reading days",
+      "since": "since {date}",
+      "read": "Days read",
+      "perDay": "Pages a day",
+      "label": "Read on {read} of the last {count} days"
+    },
+    "ratings": {
+      "title": "Ratings",
+      "rated": "{count} rated",
+      "notYet": "{count} not yet",
+      "row": "{star} star: {count} | {star} stars: {count}"
+    },
+    "records": {
+      "title": "Records",
+      "longest": "Longest",
+      "shortest": "Shortest",
+      "quickest": "Quickest",
+      "slowest": "Took its time",
+      "pages": "{count} p.",
+      "days": "{count} day | {count} days"
+    },
+    "authors": {
+      "title": "Authors you return to"
+    },
+    "years": {
+      "title": "Years in review",
+      "books": "{count} book | {count} books",
+      "favourite": "Favourite"
+    },
+    "signOutUnsynced": {
+      "title": "{count} change has not synced yet | {count} changes have not synced yet",
+      "text": "If you sign out now, it is lost. | If you sign out now, they are lost.",
+      "syncFirst": "Sync first",
+      "syncing": "Syncing…",
+      "signOut": "Sign out anyway",
+      "failed": "Not everything could be synced. Try again, or sign out anyway."
+    },
+    "account": {
+      "title": "Account",
+      "theme": "Dark mode",
+      "install": "Install app",
+      "signOut": "Sign out",
+      "delete": "Delete account"
+    },
+    "deleteAccount": {
+      "title": "Delete your account?",
+      "text": "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and your sign-in. It can't be undone.",
+      "unsynced": "The change that has not synced yet is lost too. | The {count} changes that have not synced yet are lost too.",
+      "action": "Delete account",
+      "failed": "Your account could not be deleted, and nothing was removed. Try again."
+    },
+    "empty": {
+      "title": "Your reading gathers here",
+      "text": "Finish a book and it shows up here: its year, its month, its stars."
+    },
+    "loadError": "Your reading could not be loaded.",
+    "offline": "You're offline. Your reading shows once you're back.",
+    "retry": "Try again",
+    "sheet": {
+      "month": "{month} {year}",
+      "stars": "{count} star · {year} | {count} stars · {year}",
+      "allYears": "All years",
+      "readIn": "in a day | in {count} days"
+    },
+    "year": {
+      "eyebrow": "Your year in books",
+      "favourite": "The favourite",
+      "months": "Months",
+      "other": "Other years",
+      "before": "{year}",
+      "after": "{year}",
+      "beforeLabel": "The year before, {year}",
+      "afterLabel": "The year after, {year}"
+    }
+  },
+  "share": {
+    "title": "Shared with Libellus",
+    "finding": "Finding your book…"
+  },
+  "tabs": {
+    "home": "Home",
+    "library": "Library",
+    "search": "Search"
+  },
+  "home": {
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "morningNamed": "Good morning, {name}",
+      "afternoonNamed": "Good afternoon, {name}",
+      "eveningNamed": "Good evening, {name}"
+    },
+    "today": "{weekday} · {day} {month}",
+    "emptyTitle": "Nothing on the shelf yet",
+    "empty": "Find the book on your nightstand, or the one you want to read next.",
+    "reading": "Currently reading",
+    "readingEmpty": "Nothing in progress. Start something from Up next, or search for a book.",
+    "upNext": "Up next",
+    "seeAll": "See all {count}",
+    "readIn": "Read in {year}",
+    "readInLabel": "Read in {year}: {count}",
+    "loadError": "Your books could not be loaded.",
+    "retry": "Try again",
+    "installHint": {
+      "title": "Keep Libellus on your Home Screen",
+      "text": "Tap Share, then Add to Home Screen. It opens like an app, full screen.",
+      "addToHome": "Add to Home Screen",
+      "dismiss": "Dismiss"
+    }
+  },
+  "library": {
+    "title": "Library",
+    "emptyTitle": "Your library is empty",
+    "empty": "The books you add live here: what you want to read, what you are reading, what you have read.",
+    "segmentsLabel": "Status",
+    "segment": {
+      "want_to_read": "Want to read",
+      "reading": "Reading",
+      "finished": "Finished"
+    },
+    "segmentEmpty": {
+      "want_to_read": {
+        "title": "Nothing to read next",
+        "text": "Books you want to read gather here, newest first."
+      },
+      "reading": {
+        "title": "Nothing on the nightstand",
+        "text": "The books you are reading now will be here."
+      },
+      "finished": {
+        "title": "No finished books yet",
+        "text": "Every book you finish lands here, with its date and rating."
+      }
+    },
+    "filtersLabel": "Show",
+    "filter": {
+      "all": "All",
+      "notFinished": "DNF"
+    },
+    "notFinishedEmpty": {
+      "title": "Nothing set aside",
+      "text": "Books you didn't finish are kept here, so you can pick them up again."
+    },
+    "notFinishedOn": "DNF · {date}",
+    "added": "Added {date}",
+    "loadError": "Your Library didn't load. Check your connection and try again.",
+    "retry": "Try again",
+    "error": {
+      "already_in_library": "This book is already in your Library.",
+      "edition_in_library": "That edition is already in your Library as another book.",
+      "book_invalid": "This book can't be added: it is missing what we need to keep it.",
+      "session_invalid": "Those dates, that rating or review don't go with that status.",
+      "not_signed_in": "Sign in again to add books.",
+      "unknown": "Something went wrong. Please try again.",
+      "entry_not_found": "This book isn't in your Library any more.",
+      "already_reading": "You are reading this book already.",
+      "already_finished": "You've read this book before.",
+      "not_reading": "You aren't reading this book at the moment.",
+      "date_invalid": "Choose a day.",
+      "date_in_future": "That day hasn't come yet.",
+      "ended_before_started": "That is before you started it. Pick the start day or later.",
+      "rating_invalid": "A rating is between a quarter star and five stars.",
+      "review_too_long": "That review is longer than we can keep. Shorten it a little.",
+      "reason_too_long": "That reason is longer than we can keep. Shorten it a little.",
+      "never_read": "You haven't read this book yet. Start reading it first.",
+      "session_not_found": "That read isn't there any more. It may have been deleted on another device.",
+      "offline": "You're offline. Nothing was saved.",
+      "progress_invalid": "That progress doesn't fit this book."
+    },
+    "undated": "No end date"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Title, author or ISBN",
+    "close": "Close search",
+    "clear": "Clear",
+    "empty": "Find a book by its title, author or ISBN.",
+    "loading": "Searching…",
+    "add": "Add {title} to your Library",
+    "noResultsTitle": "No books found",
+    "noResults": "Nothing for “{query}”.",
+    "noResultsHint": "Check the spelling, or search the ISBN of the edition you hold. Or add it by hand; books you add yourself stay private.",
+    "failedTitle": "Search isn't working right now",
+    "failed": "Check your connection and try again.",
+    "hint": "Not the edition you hold? Search its ISBN.",
+    "addManually": "Add manually",
+    "otherEdition": "Other edition in your Library",
+    "offlineNote": "You're offline, so only your Library is searched.",
+    "offlineNoResults": "Nothing in your Library matches “{query}”.",
+    "scan": {
+      "open": "Scan a barcode",
+      "title": "Scan a barcode",
+      "close": "Close scanner",
+      "torchOn": "Turn the light on",
+      "torchOff": "Turn the light off",
+      "hint": "Hold the barcode on the back of the book inside the frame.",
+      "notBook": "That doesn't look like a book's barcode.",
+      "looking": "Looking up {isbn}…",
+      "askingTitle": "Allow the camera",
+      "asking": "Libellus uses the camera only to read a barcode. Nothing is recorded or sent.",
+      "deniedTitle": "Camera access is off",
+      "denied": "Allow the camera for Libellus in your browser's site settings to scan a barcode. You can always search by title or ISBN.",
+      "noneTitle": "No camera found",
+      "none": "Libellus found no camera it can use, or could not load its barcode reader. Search by title or ISBN instead.",
+      "dismiss": "Close",
+      "offline": "You're offline. Only your Library can be searched."
+    }
+  },
+  "status": {
+    "want_to_read": "Want to read",
+    "reading": "Currently reading",
+    "finished": "Finished",
+    "notFinished": "DNF"
+  },
+  "book": {
+    "title": "Book",
+    "back": "Back",
+    "pages": "{count} pages",
+    "add": "Add to Library",
+    "notInLibrary": "Not in your Library yet",
+    "addedOn": "Added {date}",
+    "about": "About",
+    "more": "More",
+    "loading": "Loading the book…",
+    "missingTitle": "Book not found",
+    "missing": "There is no book at this address.",
+    "errorTitle": "This book didn't load",
+    "error": "Check your connection and try again.",
+    "retry": "Try again",
+    "since": "Since {date} · day {day}",
+    "start": "Start reading",
+    "finish": "Finish",
+    "abandon": "DNF",
+    "readAgain": "Read again",
+    "startAgain": "Start again",
+    "options": "Book options",
+    "progress": {
+      "label": "Reading progress",
+      "none": "Not started yet",
+      "notStarted": "Not started · {count} page | Not started · {count} pages",
+      "notStartedNoCount": "Not started · No page count",
+      "notStartedPercent": "Not started · Counting in percent",
+      "page": "p. {page} of {count}",
+      "pageOnly": "p. {page}",
+      "percent": "{percent} %",
+      "update": "Update progress",
+      "updateShort": "Update",
+      "title": "Update progress",
+      "save": "Save",
+      "busy": "Saving…",
+      "retry": "Try again",
+      "done": "Done",
+      "modeLabel": "Count by",
+      "mode": {
+        "page": "Pages",
+        "percent": "Percent"
+      },
+      "pageLabel": "Page",
+      "percentLabel": "Percent read",
+      "wheelHint": "Swipe up or down, or use the arrow keys. Tap the number to type it.",
+      "less": "One less",
+      "more": "One more",
+      "gainPages": "+{count}",
+      "gainPercent": "+{count} %",
+      "lossPages": "−{count}",
+      "lossPercent": "−{count} %",
+      "totalOf": "of {count}",
+      "totalEdit": "Total pages: {count}. Change",
+      "totalCount": "Count in pages",
+      "totalTitle": "Pages in your copy",
+      "totalHint": "Count the pages of your copy, or use your reader's total.",
+      "totalEdition": "Edition's {count}",
+      "totalPercent": "Use percent",
+      "finishedIt": "Finished it?",
+      "reached": "That's the last page.",
+      "finishHint": "Saves your progress first.",
+      "undo": "Undo",
+      "undoLabel": "Undo {change}",
+      "theEnd": "The end.",
+      "perDay": "{count} a day",
+      "perDayPercent": "{count} % a day",
+      "days": "1 day | {count} days",
+      "paceLine": "{perDay} · {days}",
+      "endLine": "{days} · {perDay}",
+      "amountPages": "1 page | {count} pages",
+      "amountPercent": "{count} %",
+      "dayToday": "Today",
+      "dayYesterday": "Yesterday",
+      "lastTime": "Last time",
+      "lastTimeLine": "{day} · {amount}",
+      "atEndLine": "The last page. Finished it?",
+      "figurePage": "Page",
+      "figureRead": "Read",
+      "figureDone": "Done",
+      "figureLeft": "Left",
+      "figureDay": "A day",
+      "figureToGo": "To go",
+      "figurePages": "pages",
+      "figureDaysUnit": "days",
+      "figureOwn": "your copy",
+      "figureNone": "–",
+      "figureAddPages": "Add pages",
+      "chartLabel": "Reading over the last {count} days: {amount} in all",
+      "logTitle": "Reading log",
+      "logEnd": "p. {page}",
+      "readIn": "Read in {days} · {perDay}",
+      "readPerDayPages": "1 page a day | {count} pages a day"
+    },
+    "edition": {
+      "open": "Change edition",
+      "title": "Change edition",
+      "hint": "Pick the edition you hold. Your reads, ratings and collections stay with the book.",
+      "listLabel": "Editions",
+      "current": "Your edition",
+      "ebook": "ebook",
+      "loading": "Looking for other editions…",
+      "none": "No other editions found.",
+      "failed": "Other editions didn't load.",
+      "retry": "Try again",
+      "action": "Change",
+      "busy": "Changing…"
+    },
+    "goodreads": {
+      "ratingLabel": "Rated {rating} out of 5",
+      "ratings": "{count} rating | {count} ratings",
+      "reviews": "{count} review | {count} reviews",
+      "on": "on {goodreads}",
+      "name": "Goodreads"
+    }
+  },
+  "add": {
+    "title": "Add to Library",
+    "statusLabel": "Status",
+    "needs": {
+      "want_to_read": "No dates",
+      "reading": "Start date",
+      "finished": "Dates, rating"
+    },
+    "datesLabel": "Dates",
+    "startedOn": "Started on",
+    "notSet": "Not set",
+    "clearStarted": "Remove start date",
+    "endedOn": "Finished on",
+    "review": "Review",
+    "optional": "optional",
+    "reviewPlaceholder": "What stayed with you?",
+    "action": "Add to Library",
+    "busy": "Adding…"
+  },
+  "manual": {
+    "title": "Add manually",
+    "action": "Add",
+    "coverNote": "Generated cover",
+    "field": {
+      "title": "Title",
+      "author": "Author",
+      "isbn": "ISBN",
+      "pageCount": "Pages"
+    },
+    "optional": "Optional",
+    "private": "Only you can see this book. It stays out of the shared catalogue.",
+    "submit": "Add to Library",
+    "busy": "Adding…",
+    "invalid": {
+      "title": "Give the book a title.",
+      "author": "Give the book an author.",
+      "isbn": "That isn't a valid ISBN. Check the digits, or leave it empty.",
+      "pageCount": "Pages must be a whole number above zero."
+    },
+    "error": {
+      "book_invalid": "This book can't be added: check the title, author and pages.",
+      "isbn_invalid": "That isn't a valid ISBN. Check the digits, or leave it empty.",
+      "already_in_library": "This book is already in your Library.",
+      "not_signed_in": "Sign in again to add books.",
+      "unknown": "Something went wrong. Please try again."
+    }
+  },
+  "abandon": {
+    "title": "Mark as DNF",
+    "endedOn": "Stopped on",
+    "reason": "Reason",
+    "optional": "optional",
+    "reasonPlaceholder": "Why are you putting it down?",
+    "action": "Mark as DNF",
+    "busy": "Marking DNF…",
+    "retry": "Try again"
+  },
+  "start": {
+    "title": "Start reading",
+    "titleAgain": "Read again",
+    "titleRestart": "Start again",
+    "startedOn": "Started on",
+    "action": "Start reading",
+    "actionAgain": "Read again",
+    "actionRestart": "Start again",
+    "busy": "Starting…",
+    "retry": "Try again"
+  },
+  "finish": {
+    "title": "Finish reading",
+    "endedOn": "Finished on",
+    "review": "Review",
+    "optional": "optional",
+    "reviewPlaceholder": "What stayed with you?",
+    "action": "Finish",
+    "busy": "Finishing…",
+    "retry": "Try again"
+  },
+  "collections": {
+    "title": "Collections",
+    "back": "Back",
+    "intro": "Your own shelves. A book can sit on any number of them.",
+    "count": "{count} book | {count} books",
+    "new": "New collection",
+    "rename": "Rename collection",
+    "create": "Create",
+    "save": "Save",
+    "nameLabel": "Name",
+    "namePlaceholder": "Favourites, Sci-fi, Gifts…",
+    "emptyTitle": "No collections yet",
+    "empty": "Group your books your own way: favourites, a genre, gifts for someone.",
+    "loadError": "Your collections didn't load. Check your connection and try again.",
+    "retry": "Try again",
+    "addTo": "Add to collection",
+    "pickerTitle": "Add to collection",
+    "done": "Done",
+    "addsToLibrary": "Not in your Library yet: putting it on a collection adds it to Want to read.",
+    "error": {
+      "name_invalid": "Give the collection a name of up to 80 characters.",
+      "name_taken": "You already have a collection with that name.",
+      "collection_missing": "That collection is gone. It may have been deleted on another device.",
+      "already_in_collection": "This book is already on that collection.",
+      "not_in_collection": "This book isn't on that collection any more.",
+      "order_mismatch": "The collection changed elsewhere. This is its order now.",
+      "book_invalid": "This book can't be added to a collection.",
+      "not_signed_in": "Sign in again to change your collections.",
+      "unknown": "Something went wrong. Please try again.",
+      "offline": "You're offline. Nothing was saved."
+    }
+  },
+  "collection": {
+    "back": "Back",
+    "more": "Collection options",
+    "count": "{count} book | {count} books",
+    "order": "your order",
+    "rename": "Rename",
+    "delete": "Delete collection",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete “{name}”?",
+    "deleteKeeps": "The books on it stay in your Library.",
+    "emptyTitle": "Nothing on this shelf yet",
+    "empty": "Find a book and choose Add to collection on its page.",
+    "move": "Move {title}",
+    "moveHint": "Drag to move it, or use the arrow keys.",
+    "lifted": "{title} lifted.",
+    "moved": "{title} moved to place {place} of {count}.",
+    "dropped": "Order unchanged.",
+    "reorderError": "The new order couldn't be saved. This is the order your collection has.",
+    "missingTitle": "Collection not found",
+    "missing": "It may have been deleted.",
+    "errorTitle": "This collection didn't load",
+    "error": "Check your connection and try again.",
+    "retry": "Try again",
+    "toCollections": "All collections"
+  },
+  "history": {
+    "title": "Reading history",
+    "count": "{count} read | {count} reads",
+    "loadError": "The history didn't load. Check your connection and try again.",
+    "retry": "Try again",
+    "readingNow": "Reading now",
+    "thisRead": "This read",
+    "ordinal": {
+      "first": "First read",
+      "second": "Second read",
+      "third": "Third read",
+      "fourth": "Fourth read",
+      "fifth": "Fifth read"
+    },
+    "nth": "Read {n}",
+    "since": "Since {date}",
+    "range": "{from} – {to}",
+    "startedOn": "Started {date}",
+    "endedOn": "Ended {date}",
+    "undated": "No dates",
+    "day": "day {day}",
+    "days": "1 day | {count} days",
+    "edit": "Edit",
+    "editLabel": "Edit {name}"
+  },
+  "editSession": {
+    "title": "Edit read",
+    "startedOn": "Started on",
+    "notSet": "Not set",
+    "clearStarted": "Remove start date",
+    "finishedOn": "Finished on",
+    "stoppedOn": "Stopped on",
+    "review": "Review",
+    "reason": "Reason",
+    "optional": "optional",
+    "reviewPlaceholder": "What stayed with you?",
+    "reasonPlaceholder": "Why did you put it down?",
+    "action": "Save",
+    "busy": "Saving…",
+    "retry": "Try again",
+    "delete": "Delete this read"
+  },
+  "deleteSession": {
+    "title": "Delete this read?",
+    "text": "It is removed for good.",
+    "only": "It is the only one, so the book goes back to Want to read.",
+    "action": "Delete read",
+    "busy": "Deleting…"
+  },
+  "bookOptions": {
+    "title": "Options",
+    "remove": "Remove from Library"
+  },
+  "removeEntry": {
+    "title": "Remove “{title}” from your Library?",
+    "text": "Its reads and its places on your collections go with it. The collections stay.",
+    "action": "Remove from Library",
+    "busy": "Removing…"
+  },
+  "import": {
+    "title": "Import books",
+    "menuItem": "Import books",
+    "back": "Back",
+    "pickTitle": "Bring your books along",
+    "pickText": "On Goodreads: My Books → Import and export → Export library. From Fable: a Goodreads CSV from a browser extension.",
+    "choose": "Choose CSV file",
+    "reading": "Reading the file…",
+    "matching": "Looking up {done} of {total}",
+    "matchingHint": "Finding each book's edition and cover. You can leave this page; it keeps going.",
+    "stop": "Choose another file",
+    "inFile": "No books in this file | One book in this file | {count} books in this file",
+    "statusLabel": "Books by status",
+    "matched": "Matched to an edition",
+    "fromFile": "Added from the file",
+    "alreadyThere": "Already in your Library",
+    "attention": "Needs a look",
+    "attentionCount": "{count} of them",
+    "note": {
+      "fromFile": "No edition found. Added with what the file says.",
+      "unsure": "Couldn't be looked up. Added with what the file says.",
+      "otherShelf": "On your shelf “{shelf}”. Added as Want to read.",
+      "notFinishedRating": "Rating or review left out: only finished books keep them.",
+      "ratingInvalid": "Rating left out: it isn't 1 to 5 stars.",
+      "dateInvalid": "A date left out: it isn't a day, or it hasn't come yet.",
+      "reviewTooLong": "Review shortened to the 10,000 characters we keep.",
+      "noTitle": "Skipped: it has no title.",
+      "duplicate": "Skipped: it is in the file twice."
+    },
+    "untitled": "A row without a title",
+    "start": "Import {count} book | Import {count} books",
+    "nothingToImport": "Everything in this file is in your Library already.",
+    "importing": "Importing {done} of {total}",
+    "importingHint": "Adding the books and their covers. You can leave this page; it keeps going.",
+    "doneTitle": "Nothing new added | One book added | {count} books added",
+    "doneText": "They're on your shelves now, with the dates and ratings from your file.",
+    "doneNothing": "Your Library already had every book in this file.",
+    "added": "Added",
+    "kept": "Already in your Library",
+    "failed": "Not imported",
+    "notReached": "Not reached",
+    "stopped": "The import stopped: {reason} Import the file again to add the rest; nothing is added twice.",
+    "toLibrary": "Go to Library",
+    "another": "Import another file",
+    "fileError": {
+      "notGoodreads": "That isn't a Goodreads export. Choose the CSV from Export library.",
+      "empty": "There are no books in that file.",
+      "unreadable": "That file couldn't be read.",
+      "unknown": "Something went wrong. Please try again."
+    }
+  },
+  "shelf": {
+    "title": "Your shelf",
+    "back": "Back",
+    "count": "{count} book | {count} books",
+    "yearCount": "{year} · {count} book | {year} · {count} books",
+    "loading": "Bringing out your shelf",
+    "loadError": "Your shelf could not be loaded.",
+    "offline": "You're offline. Your shelf shows once you're back.",
+    "retry": "Try again",
+    "card": {
+      "title": "Your shelf",
+      "rowLabel": "Your shelf, the newest books",
+      "all": "Show all",
+      "allLabel": "Show all {count} book on your shelf | Show all {count} books on your shelf"
+    },
+    "year": {
+      "title": "On the shelf",
+      "rowLabel": "{year} on your shelf"
+    },
+    "detail": {
+      "showBack": "Show back",
+      "showFront": "Show front",
+      "putBack": "Put back",
+      "goodreads": "Goodreads",
+      "done": "Done",
+      "backCover": "Back cover",
+      "frontCover": "Front cover",
+      "reading": "Reading now"
+    }
+  }
+}

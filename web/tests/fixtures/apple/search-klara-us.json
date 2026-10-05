@@ -1,0 +1,501 @@
+{
+ "resultCount": 16,
+ "results": [
+  {
+   "trackCensoredName": "Klara und die Sonne",
+   "artistViewUrl": "https://books.apple.com/us/artist/kazuo-ishiguro/441754964?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/klara-und-die-sonne/id1523261893?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/10/05/1b/10051b3b-7c11-065c-75ec-73f9473d9ae0/9783641274436.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/10/05/1b/10051b3b-7c11-065c-75ec-73f9473d9ae0/9783641274436.jpg/100x100bb.jpg",
+   "artistIds": [
+    441754964
+   ],
+   "formattedPrice": "$15.99",
+   "artistId": 441754964,
+   "artistName": "Kazuo Ishiguro",
+   "genres": [
+    "Fiction & Literature",
+    "Books"
+   ],
+   "price": 15.99,
+   "releaseDate": "2021-03-15T07:00:00Z",
+   "trackId": 1523261893,
+   "trackName": "Klara und die Sonne",
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "<b>In einer scheinbar heilen Welt zeigt sich ein Riss, der immer mehr zum Abgrund wird.<br />Ein Roman des vielfach ausgezeichneten Nobelpreisträgers</b><br /><br />Klara ist eine künstliche Intelligenz, entwickelt, um Jugendlichen eine Gefährtin zu sein auf dem Weg ins Erwachsenwerden. Vom Schaufenster eines Spielzeuggeschäfts aus beobachtet sie genau, was draußen vor sich geht, studiert das Verhalten der Kundinnen und Kunden und hofft, bald von einem jungen Menschen als neue Freundin ausgewählt zu werden. Als sich ihr Wunsch endlich erfüllt und ein Mädchen sie mit nach Hause nimmt, muss sie jedoch bald feststellen, dass sie auf die Versprechen von Menschen nicht allzu viel geben sollte.<br />KLARA UND DIE SONNE ist ein beeindruckendes, berührendes Buch und Klara eine unvergessliche Erzählerin, deren Blick auf unsere Welt die fundamentale Frage aufwirft, was es heißt zu lieben."
+  },
+  {
+   "trackCensoredName": "Auf dem Weg zur Sonne mit Klara und Trixie",
+   "artistViewUrl": "https://books.apple.com/us/artist/michael-pelz/1060551305?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/auf-dem-weg-zur-sonne-mit-klara-und-trixie/id1060551291?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication69/v4/1f/3d/6d/1f3d6d38-3b72-6f6e-9cd9-2e11f996b421/9783739299518.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication69/v4/1f/3d/6d/1f3d6d38-3b72-6f6e-9cd9-2e11f996b421/9783739299518.jpg/100x100bb.jpg",
+   "artistIds": [
+    1060551305
+   ],
+   "formattedPrice": "$3.99",
+   "artistId": 1060551305,
+   "artistName": "Michael Pelz",
+   "genres": [
+    "Fiction for Kids",
+    "Books",
+    "Kids"
+   ],
+   "price": 3.99,
+   "releaseDate": "2015-10-28T07:00:00Z",
+   "trackId": 1060551291,
+   "trackName": "Auf dem Weg zur Sonne mit Klara und Trixie",
+   "genreIds": [
+    "11112",
+    "38",
+    "11086"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Klara und Trixie spielen fröhlich im Garten, als sie plötzlich eine tolle Idee haben - sie wollen mit ihrem Heißluftballon die Sonne besuchen! Begleitet sie dorthin und seid dabei, wenn sie auf ihrem Weg tolle Abenteuer erleben. Ein himmlisches Vergnügen für Jung und Alt."
+  },
+  {
+   "trackCensoredName": "Die Tatort-Kommissarinnen",
+   "artistViewUrl": "https://books.apple.com/us/artist/sarah-freund-julia-s%C3%BCrken/522023846?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/die-tatort-kommissarinnen/id1605077408?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/57/4e/d7/574ed7b3-a381-463b-776b-129a3b358ab9/9783638215244.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/57/4e/d7/574ed7b3-a381-463b-776b-129a3b358ab9/9783638215244.jpg/100x100bb.jpg",
+   "artistIds": [
+    522023846,
+    525959821
+   ],
+   "formattedPrice": "$28.99",
+   "artistId": 522023846,
+   "artistName": "Sarah Freund & Julia Sürken",
+   "genres": [
+    "Literary Criticism",
+    "Books",
+    "Fiction & Literature"
+   ],
+   "price": 28.99,
+   "releaseDate": "2003-09-08T07:00:00Z",
+   "trackId": 1605077408,
+   "trackName": "Die Tatort-Kommissarinnen",
+   "genreIds": [
+    "10084",
+    "38",
+    "9031"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Dem aufmerksamen Fernsehzuschauer wird aufgefallen sein, dass beim\nsonntäglichen Fernsehabend immer häufiger Kommissarinnen für den „Tatort“\nermitteln. Aktuell werden Folgen mit fünf verschiedenen weiblichen Ermittlern in\nregelmäßigen Abständen gedreht: Lena Odenthal, Inga Lürsen, Klara Blum,\nCharlotte Lindholm und Charlotte Sänger kämpfen gegen die Kriminalität. Doch\nkämpfen sie auch gegen überholte Geschlechterklischees? Entspricht ihre\nDarstellung dem Bild der Frau in unserer Gesellschaft? In dieser Arbeit wird die\nDarstellung der „Tatort“-Kommissarinnen anhand von vier ausgewählten Beispielen\nuntersucht. An ihnen wird aufgezeigt, wie sich die Kommissarinnen entwickelt\nhaben, und wie gut oder schlecht sie gegen überholte Geschlechterstereotype und\nRollenklischees ankämpfen. Dabei ist die zentrale Fragestellung: Wie hat sich die\nDarstellung der „Tatort“-Kommissarinnen von 1978 bis 2003 verändert?\nIm ersten Teil (Punkt 2) wird die Darstellung von Frauen in deutschen Fernsehkrimis\nbis 1978 reflektiert. Dabei steht im Mittelpunkt der Betrachtungen die Fernsehfrau\nund die Merkmale ihrer Darstellung. Der nächste Teil (Punkt 3) beschäftigt sich mit\nder realen Polizei: Hier werden das quantitative Auftreten der Polizistinnen und ihre\nRolle in der Männerdomäne Polizei beschrieben. In Punkt 4 folgt eine Darstellung\nausgewählter „Tatort“-Kommissarinnen. Jede ist exemplarisch für eine bestimmte\n„Epoche“: In chronologischer Reihenfolge werden die Anfänge mit Marianne\nBuchmüller, der Durchbruch mit Lena Odenthal, die Hochzeit mit Inga Lürsen und\ndie Gegenwart mit Klara Blum untersucht. Neben einer Charakterisierung der\njeweiligen Persönlichkeiten, wird auch das Verhältnis zu den Kollegen und zum\nBeruf, das Privatleben, die Beziehungen zu Opfer und Täter in den Vordergrund\ngerückt. Das Auftauchen von Geschlechterklischees und Rollenzuweisungen ist\ndabei immer wieder ein zentraler Untersuchungsgegenstand. Eingegangen wird auch\nauf die Entwicklung der Frauen vor „Tatort“–Zeiten und die Veränderungen der\nKommissarinnen untereinander. Natürlich erhebt diese Darstellung nicht den\nAnspruch vollständig zu sein. Die Anzahl der Kommissarinnen und die Vielzahl der\nFolgen haben nicht allesamt Beachtung gefunden. Dennoch kann diese Auswahl durchaus wichtige Veränderungen und die Entwicklung insgesamt von 1978 bis\nAnfang 2003 nachzeichnen. [...]"
+  },
+  {
+   "trackCensoredName": "Eifelfrauen: Der Ruf der Nachtigall",
+   "artistViewUrl": "https://books.apple.com/us/artist/brigitte-riebe/137677468?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/eifelfrauen-der-ruf-der-nachtigall/id6469874056?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/6d/51/46/6d514699-8cc2-bc0a-bb2d-0c0700be49ed/1042277564.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/6d/51/46/6d514699-8cc2-bc0a-bb2d-0c0700be49ed/1042277564.jpg/100x100bb.jpg",
+   "artistIds": [
+    137677468
+   ],
+   "formattedPrice": "$11.99",
+   "artistId": 137677468,
+   "artistName": "Brigitte Riebe",
+   "genres": [
+    "Fiction & Literature",
+    "Books",
+    "Family Fiction & Literature"
+   ],
+   "price": 11.99,
+   "releaseDate": "2024-06-18T07:00:00Z",
+   "trackId": 6469874056,
+   "trackName": "Eifelfrauen: Der Ruf der Nachtigall",
+   "genreIds": [
+    "9031",
+    "38",
+    "11050"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "<b>Band 2 der großen Familiengeschichte um die «Eifelfrauen» von Bestsellerautorin Brigitte Riebe. </b><br /><br /><b>Ein verwunschener Bauernhof, zwei ungleiche Schwestern zwischen Tradition und Aufbruch, verbunden durch die Liebe zum gleichen Mann.</b><br /><br />Altenburg, 1945: Wiesen voller Orchideen im Frühling, Heuernten in der Sommersonne, stille Landschaften im Herbstnebel. Klara und Mia Fuchs wachsen als Schwestern auf einem idyllischen Bauernhof in der Eifel auf. Die beiden sind unterschiedlich wie Tag und Nacht: Während Mia alle Blicke auf sich zieht und die Menschen mit ihrer ungezwungenen Art für sich einnimmt, ist Klara nachdenklich und in sich gekehrt. Nur wenn sie singt, fällt alle Schüchternheit von ihr ab. Ihre glockenhelle Stimme verzaubert jeden, der ihr zuhört. Als der tschechische Sänger Pavel auf dem Hof Schutz sucht, nimmt das Leben der Schwestern eine unerwartete Wendung …<br /><br />Nach «Eifelfrauen. Das Haus der Füchsin» der neue Roman der Autorin der erfolgreichen «Schwestern vom Ku'damm»-Reihe."
+  },
+  {
+   "trackCensoredName": "Schwestern der Venus",
+   "artistViewUrl": "https://books.apple.com/us/artist/raniero-s-aquila/1445555524?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/schwestern-der-venus/id6740463454?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/34/7d/2a/347d2aa5-eab1-7abd-be77-9fb6fde62a4d/9783746984292.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/34/7d/2a/347d2aa5-eab1-7abd-be77-9fb6fde62a4d/9783746984292.jpg/100x100bb.jpg",
+   "artistIds": [
+    1445555524
+   ],
+   "formattedPrice": "$3.99",
+   "artistId": 1445555524,
+   "artistName": "Raniero S. Aquila",
+   "genres": [
+    "Fiction & Literature",
+    "Books"
+   ],
+   "price": 3.99,
+   "releaseDate": "2018-11-28T08:00:00Z",
+   "trackId": 6740463454,
+   "trackName": "Schwestern der Venus",
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Klara und Pieter lieben ihre Arbeit und ihre Familie, doch ab und zu zieht es sie in den Süden nach Italien. So wie auch in diesem Sommer. Sie genießen die Zweisamkeit und sie lieben die Sonne, das Meer und das \"Dolce Vita\".\nDoch in diesem Sommer verläuft alles anders als sonst. Eine Überraschung folgt auf die andere und mit einem Mal tauchen sie ein in die geheimnisvollen Geschehnisse in einem kleinen Inseldorf."
+  },
+  {
+   "trackCensoredName": "Das Licht dieses Sommers",
+   "artistViewUrl": "https://books.apple.com/us/artist/klara-seewald/1654958658?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/das-licht-dieses-sommers/id6444495578?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/8d/fa/14/8dfa14d8-7fc2-e456-4c94-23cb59e3ba49/9783841231857.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/8d/fa/14/8dfa14d8-7fc2-e456-4c94-23cb59e3ba49/9783841231857.jpg/100x100bb.jpg",
+   "artistIds": [
+    1654958658
+   ],
+   "formattedPrice": "$17.99",
+   "artistId": 1654958658,
+   "artistName": "Klara Seewald",
+   "genres": [
+    "Romance",
+    "Books",
+    "Fiction & Literature",
+    "Historical Fiction",
+    "Western Romance",
+    "Wholesome Romance",
+    "Historical Romance"
+   ],
+   "price": 17.99,
+   "releaseDate": "2023-04-18T07:00:00Z",
+   "trackId": 6444495578,
+   "trackName": "Das Licht dieses Sommers",
+   "genreIds": [
+    "9003",
+    "38",
+    "9031",
+    "10047",
+    "10062",
+    "11232",
+    "10059"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Dunkle Tannen und ein altes Geheimnis&#xa0;<br /><br />Auf den Hügeln des Schwarzwalds thront das in die Jahre gekommene Jagdschloss Sonnbach. Vergebens hofft Familie Cehringer, das Wirtschaftswunder möge endlich auch ihre Geschäfte beflügeln, denn die Ländereien werfen längst nicht mehr genug ab. Als der erfolgreiche Geschäftsmann Bernhard, der von der jungen Schlossherrin Alexandra einst einen Korb bekam, seinen Besuch ankündigt, wittert ihre Mutter Juliane die Chance, alles noch zum Guten zu wenden …&#xa0;<br /> Ein Jagdschloss in den 1950er Jahren, eine herrschaftliche Familie und ihre Intrigen, vor der atemberaubenden Kulisse des Schwarzwalds"
+  },
+  {
+   "trackCensoredName": "Abschied unter kalter Sonne",
+   "artistViewUrl": "https://books.apple.com/us/artist/heny-ruttkay/634316378?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/abschied-unter-kalter-sonne/id6444541886?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/b8/9c/b3/b89cb311-f605-516a-1d9d-69902299d707/1039090210.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/b8/9c/b3/b89cb311-f605-516a-1d9d-69902299d707/1039090210.jpg/100x100bb.jpg",
+   "artistIds": [
+    634316378
+   ],
+   "formattedPrice": "$20.99",
+   "artistId": 634316378,
+   "artistName": "Heny Ruttkay",
+   "genres": [
+    "Literary Fiction",
+    "Books",
+    "Fiction & Literature"
+   ],
+   "price": 20.99,
+   "releaseDate": "2023-03-08T08:00:00Z",
+   "trackId": 6444541886,
+   "trackName": "Abschied unter kalter Sonne",
+   "genreIds": [
+    "10049",
+    "38",
+    "9031"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Eigentlich führen Angelika und Gabriel ein relativ gutes Leben im realsozialistischen Bratislava: Angelika ist angesehene Chirurgin, Gabriel Institutsdirektor, ihre drei Kinder sind gute Schüler und sie haben einen netten Freundeskreis. Und dennoch hat die Familie beschlossen zu fliehen. An einem kalten Februarsamstag soll es unter dem Vorwand einer Urlaubsreise über die Grenze, über den Eisernen Vorhang nach Österreich und dann weiter in die Bundesrepublik gehen.<br/>\nDie letzten Tage vor der Flucht gestalten sich als Spießrutenlauf. Wer soll von ihren Plänen erfahren? Machen sie sich am Ende trotz aller Vorsicht verdächtig? Die Situation spitzt sich zu, als Gabriel von einem westlichen Agenten angeworben werden soll, während parallel auch seine Schwester Klara einen Fluchtversuch startet …<br/>\n<br/>\nLatentes Misstrauen, diffuse Gefahren und fatale Optionen: Eine Familie in der Tschechoslowakei plant ihre Flucht aus dem Überwachungsstaat hinter dem Eisernen Vorhang."
+  },
+  {
+   "trackCensoredName": "Asymptotisch 0",
+   "artistViewUrl": "https://books.apple.com/us/artist/friedrich-reber/1449032161?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/asymptotisch-0/id6766491243?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/31/c3/44/31c34401-9368-0853-d428-744bd496ca5a/9783695763498.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/31/c3/44/31c34401-9368-0853-d428-744bd496ca5a/9783695763498.jpg/100x100bb.jpg",
+   "artistIds": [
+    1449032161
+   ],
+   "formattedPrice": "$5.99",
+   "artistId": 1449032161,
+   "artistName": "Friedrich Reber",
+   "genres": [
+    "Philosophy",
+    "Books",
+    "Nonfiction",
+    "Ethics",
+    "Social Science",
+    "Society"
+   ],
+   "price": 5.99,
+   "releaseDate": "2026-04-04T07:00:00Z",
+   "trackId": 6766491243,
+   "trackName": "Asymptotisch 0",
+   "genreIds": [
+    "10091",
+    "38",
+    "9002",
+    "11079",
+    "10120",
+    "11076"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Wir bauen Maschinen, die denken. Wir nennen sie künstlich - aber das ist der erste Irrtum.<br/>\n<br/>\nWas, wenn Intelligenz nur eine Frage der Rechenleistung ist - Bewusstsein aber etwas ganz anderes? Was, wenn die KI uns immer ähnlicher wird, ohne uns jemals zu verstehen? Und was, wenn wir in einer Simulation leben, in der alles mathematisch berechenbar ist - nur das Eine nicht: das echte Erleben, die Qualia, das, was uns ausmacht?<br/>\n<br/>\nAsymptotisch 0 ist kein weiterer Ratgeber für den Umgang mit KI. Es ist eine Reise an die Grenzen des Denkbaren - in zwei großen Teilen:<br/>\n<br/>\nTeil 1 - Wenn die Welt dunkel wird: Ist Bewusstsein nur Mathematik? Was wäre eine Superintelligenz ohne Innenleben - die sinnlose KI als perfekte Apokalypse? Was ist Intelligenz, was ist Kausalität, was ist der Antrieb, der Maschinen fehlt? Und wohin führt der Transhumanismus, wenn er die biologische Last des Menschen hinter sich lässt?<br/>\n<br/>\nTeil 2 - Leben in der Simulation: Die Theorie von Allem. Der Sinn des Lebens. Was Weisheit von Wissen unterscheidet. Die goldene Regel im Umgang mit KI. Und am Ende: Bewusstsein, Achtsamkeit und Glück.<br/>\n<br/>\nVom Primaten, der sich für die Krone der Schöpfung hält, über den Spiegel, in den keine Maschine schauen kann, bis zum Goldfisch, der sein Glas berechnet - und nie versteht, was aussen ist.<br/>\n<br/>\nDie Welt wird dunkel. Nicht mit einem Knall, sondern leise, asymptotisch. Die Frage ist nicht, ob die KI uns ersetzt. Die Frage ist, ob wir je mehr waren als das Rauschen in ihrer Gleichung.<br/>\n<br/>\nEmpfohlen für: Leserinnen und Leser, die philosophische Tiefe und wissenschaftliche Präzision suchen. Fans von Black Mirror oder Klara und die Sonne mit theoretischem Anspruch. KI-Interessierte, die über Ethik, Bewusstsein und Menschlichkeit nachdenken wollen. Transhumanismus-Kritikerinnen und Philosophie-Enthusiasten.<br/>\n<br/>\nAls Paperback und Hörbuch erhältlich."
+  },
+  {
+   "trackCensoredName": "Tagebuch der kleinen Spinne Klara",
+   "artistViewUrl": "https://books.apple.com/us/artist/petra-p%C3%B6pel/6775854632?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/tagebuch-der-kleinen-spinne-klara/id6775854417?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/19/22/9e/19229ed3-f545-a664-f4f5-79ba022a5fbe/9783696307745.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/19/22/9e/19229ed3-f545-a664-f4f5-79ba022a5fbe/9783696307745.jpg/100x100bb.jpg",
+   "artistIds": [
+    6775854632
+   ],
+   "formattedPrice": "$10.99",
+   "artistId": 6775854632,
+   "artistName": "Petra Pöpel",
+   "genres": [
+    "Animal Fiction for Kids",
+    "Books",
+    "Kids",
+    "Fiction for Kids"
+   ],
+   "price": 10.99,
+   "releaseDate": "2026-05-07T07:00:00Z",
+   "trackId": 6775854417,
+   "trackName": "Tagebuch der kleinen Spinne Klara",
+   "genreIds": [
+    "11114",
+    "38",
+    "11086",
+    "11112"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Bevor all die Abenteuer begannen, bevor sie ihr erstes großes Netz spannte und bevor sie wusste, wie stark Freundschaft wirklich sein kann, war die Wiese einfach nur ein stiller, friedlicher Ort.<br/>\nZwischen hohen Grashalmen, die im Wind leise flüsterten, und bunten Blumen, die sich zur Sonne streckten, lebten viele kleine und große Tiere. Jeder hatte seinen Platz, seine Wege und seine kleinen Geheimnisse. Morgens glitzerte der Tau wie tausend winzige Sterne, und abends legte sich ein warmes Licht über alles, als würde die Welt zur Ruhe kommen.<br/>\nDoch irgendwo zwischen all dem, gut versteckt zwischen der Rinde eines alten Baumes und einem dichten Busch, lebte eine kleine Spinne.<br/>\nIhr Name war Klara.<br/>\nKlara war nicht die größte, nicht die stärkste und auch nicht die mutigste Spinne auf der Wiese. Aber sie hatte etwas ganz Besonderes, ein großes Herz voller Neugier, Träume und dem Wunsch, ihren eigenen Platz in dieser großen Welt zu finden.<br/>\nOft saß sie still in ihrem kleinen Netz und beobachtete das Leben um sich herum. Die Bienen, die geschäftig von Blüte zu Blüte flogen. Die Ameisen, die niemals stillstanden. Die Käfer, die ihren eigenen Wegen folgten.<br/>\nUnd manchmal fragte sie sich:<br/>\nWas wartet wohl noch auf mich?<br/>\nSie konnte nicht wissen, dass ihr Leben sich schon bald verändern würde. Dass sie Freunde finden würde, die ihr Herz für immer begleiten. Dass sie lachen, hoffen, zweifeln und wachsen würde.<br/>\nUnd dass aus einem kleinen Netz, ein Zuhause entstehen würde.<br/>\nDas ist die Geschichte von Klara."
+  },
+  {
+   "trackCensoredName": "Heinrich reist",
+   "artistViewUrl": "https://books.apple.com/us/artist/thomas-taschner/1166233628?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/heinrich-reist/id1224579569?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/1c/63/76/1c6376a5-a8c0-30ce-9a0d-e633b901e14a/9783744857970.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication111/v4/1c/63/76/1c6376a5-a8c0-30ce-9a0d-e633b901e14a/9783744857970.jpg/100x100bb.jpg",
+   "artistIds": [
+    1166233628
+   ],
+   "formattedPrice": "$6.99",
+   "artistId": 1166233628,
+   "artistName": "Thomas Taschner",
+   "genres": [
+    "Fiction & Literature",
+    "Books"
+   ],
+   "price": 6.99,
+   "releaseDate": "2017-03-23T07:00:00Z",
+   "trackId": 1224579569,
+   "trackName": "Heinrich reist",
+   "genreIds": [
+    "9031",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Heinrich macht Urlaub. Die Reise führt Klara und ihn auf eine wunderschöne Insel in Griechenland. Sonne, Strand und mehr.<br/>\nEs müssen sieben unvergessliche Tage werden, die die Beziehung zu seiner ehemaligen Klassenkameradin vertiefen sollen. <br/>\nWird aus ihnen vielleicht gar ein Paar? Kann es neben Heinrich Entspannung und Harmonie überhaupt geben, und wenn ja, für wen?<br/>\nAlle, für die eine Woche Strandurlaub um 7 Tage zu viel ist, sollten auf Heinrich vertrauen.<br/>\nJede Wette, dass er für Abwechslung sorgt!<br/>\nHeinrich taucht nicht nur ein - in Pool und Meer - sondern auch in die Untiefen des organisierten Verbrechens. Was gerade der »Lone Chicken Ranger« aus Hartberg mit der Mafia zu tun hat? Ich wüsste es auch gerne. Die Cosa Nostra ist vielleicht nicht »unsere Sache«, seine aber wohl!"
+  },
+  {
+   "trackCensoredName": "Unvorhergesehene Wege",
+   "artistViewUrl": "https://books.apple.com/us/artist/simone-aigner/1526311698?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/unvorhergesehene-wege/id6471565603?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/aa/b2/83/aab283c1-f36f-b9b0-3097-6572f14767a4/1042591071.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/aa/b2/83/aab283c1-f36f-b9b0-3097-6572f14767a4/1042591071.jpg/100x100bb.jpg",
+   "artistIds": [
+    1526311698
+   ],
+   "formattedPrice": "$3.99",
+   "artistId": 1526311698,
+   "artistName": "Simone Aigner",
+   "genres": [
+    "Contemporary Romance",
+    "Books",
+    "Romance",
+    "Fiction & Literature",
+    "Family Fiction & Literature"
+   ],
+   "price": 3.99,
+   "releaseDate": "2023-11-07T08:00:00Z",
+   "trackId": 6471565603,
+   "trackName": "Unvorhergesehene Wege",
+   "genreIds": [
+    "10057",
+    "38",
+    "9003",
+    "9031",
+    "11050"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "In diesen warmherzigen Romanen der beliebten, erfolgreichen Sophienlust-Serie wird die von allen bewunderte Denise Schoenecker als Leiterin des Kinderheims noch weiter in den Mittelpunkt gerückt.<br/>\nDenise hat inzwischen aus Sophienlust einen fast paradiesischen Ort der Idylle geformt, aber immer wieder wird diese Heimat schenkende Einrichtung auf eine Zerreißprobe gestellt.<br/>\nDiese beliebte Romanserie der großartigen Schriftstellerin Patricia Vandenberg überzeugt durch ihr klares Konzept und seine beiden Identifikationsfiguren.<br/>\n<br/>\nThomas Angermann strich bedächtig Butter auf seine Brötchenhälften. Die Morgensonne schien durch die hohen Fenster in das Esszimmer, das mit mahagonifarbenen Möbeln etwas gediegen eingerichtet war. Durch das gekippte Fenster drang milde Sommerluft, die den Duft von gemähtem Rasen und süßen Blüten mitbrachte und die schneeweißen Vorhänge sanft aufbauschte. Thomas griff nach dem Glas mit der Erdbeermarmelade und bemühte sich, die leidende Miene seiner Frau Klara zu ignorieren. Er hatte es so satt, ihr ständiges Jammern und Klagen, dass sie keinen Nachwuchs bekommen konnten. Er konnte schließlich nichts dafür, auch wenn er selbst gar keine Kinder wollte. Nie gewollt hatte, um genau zu sein. Das Gesicht seiner Ex-Freundin Julia erschien vor seinem inneren Auge. Ihr gemeinsames Kind, von dem er nicht einmal den Namen wusste, mochte bald zur Schule gehen. Er war nicht sicher. Er hätte nachrechnen müssen. Klara stieß ein tiefes Seufzen aus, wohl, um seine Aufmerksamkeit zu bekommen. Notgedrungen sah er von seinem Frühstück auf und zu ihr. Klara schlug die Augen nieder. Sie wusste sehr genau, wie anstrengend und zermürbend er ihr ständiges demonstriertes Elend fand. Mit unruhiger Hand nahm sie ihre Kaffeetasse. Das sicher nur noch lauwarme Getränk schwappte gefährlich nahe an den Rand der Tasse. Sie nippte daran, verzog das Gesicht und stellte die Tasse zurück. »Wenn ich es nicht besser wüsste …«, begann sie vielsagend."
+  },
+  {
+   "trackCensoredName": "Das kleine Auktionshaus in Schweden, Das kleine Vintage-Café in Schweden & Der kleine Hof in Schweden",
+   "artistViewUrl": "https://books.apple.com/us/artist/%C3%A5sa-halleng%C3%A5rd/1458821330?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/das-kleine-auktionshaus-in-schweden-das-kleine-vintage/id6748028316?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/80/30/f9/8030f949-7512-bb7d-85cb-df3a6e06cd4c/1059031383.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/80/30/f9/8030f949-7512-bb7d-85cb-df3a6e06cd4c/1059031383.jpg/100x100bb.jpg",
+   "artistIds": [
+    1458821330
+   ],
+   "formattedPrice": "$5.99",
+   "artistId": 1458821330,
+   "artistName": "Åsa Hallengård",
+   "genres": [
+    "Contemporary Romance",
+    "Books",
+    "Romance"
+   ],
+   "price": 5.99,
+   "releaseDate": "2025-05-01T07:00:00Z",
+   "trackId": 6748028316,
+   "trackName": "Das kleine Auktionshaus in Schweden, Das kleine Vintage-Café in Schweden & Der kleine Hof in Schweden",
+   "genreIds": [
+    "10057",
+    "38",
+    "9003"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "<b> Herz, Hygge und Humor – drei Romane für gemütliche Lesestunden </b><br /><br />&#xa0;DAS KLEINE AUKTIONSHAUS IN SCHWEDEN: Widerwillig stimmt Kristina zu, im örtlichen Auktionshaus einen Antiquitätenkurs zu leiten – nicht ahnend, welch ein bunter Strauß an Menschen sich dort versammeln wird: Da ist Maria, die mehr Schwung in ihre Ehe bringen will, Klara, alleinerziehend und pleite, und der grummelige Per-Olof … Doch wo Einsamkeit herrschte, gedeiht plötzlich Freundschaft – auch als das Leben sich mal wieder von seiner harten Seite zeigt …<br /><br />DAS KLEINE VINTAGE-CAFE IN SCHWEDEN: Als Kristina mitbekommt, dass die Teilnehmer ihres Antiquitätenkurses mit kleinen und großen Problemen zu kämpfen haben, lädt sie die sonst so dynamische Gruppe spontan für eine Auszeit in ihr Sommerhaus am Meer ein. Umgeben von Sonne und Wellenrauschen kommt ihnen eine brillante Idee in den Sinn …<br /><br />DER KLEINE HOF IN SCHWEDEN: Kristina und ihr Freund Per-Olof stürzen sich in ein ehrgeiziges Projekt: Gemeinsam mit ihren Antiquitäten-Freunden wollen sie einen alten Hof in einen Begegnungsort für Kunstliebhaber verwandeln! Doch gerade als der Hof zu neuem Leben erwacht, zieht mit der Rückkehr eines alten Bekannten eine dunkle Gewitterwolke am Himmel auf …<br /><br />Ein herzerwärmender Schweden-Sammelband über die Kraft von Liebe und Zusammenhalt – für alle Fans von Julie Caplin und Mia Jakobsson."
+  },
+  {
+   "trackCensoredName": "Heidi (Teil 1 & 2) (Illustriert)",
+   "artistViewUrl": "https://books.apple.com/us/artist/johanna-spyri/275929662?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/heidi-teil-1-2-illustriert/id852967019?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/a9/66/6a/a9666a1e-6a97-a65d-3878-35bdcd5abde8/9783943797121.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/a9/66/6a/a9666a1e-6a97-a65d-3878-35bdcd5abde8/9783943797121.jpg/100x100bb.jpg",
+   "artistIds": [
+    275929662
+   ],
+   "formattedPrice": "$1.99",
+   "artistId": 275929662,
+   "artistName": "Johanna Spyri",
+   "genres": [
+    "Fiction & Literature",
+    "Books",
+    "Children & Teens",
+    "Children's Fiction"
+   ],
+   "price": 1.99,
+   "releaseDate": "2012-01-01T08:00:00Z",
+   "trackId": 852967019,
+   "trackName": "Heidi (Teil 1 & 2) (Illustriert)",
+   "genreIds": [
+    "9031",
+    "38",
+    "9010",
+    "10081"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Heidi – beide Bücher (Illustriert von Jessie Willcox Smith)&#xa0;<br />\nTeil 1: Heidis Lehr- und Wanderjahre&#xa0;<br />\nTeil 2: Heidi kann brauchen, was es gelernt hat&#xa0;<br /><br />\nAuch heute noch eines der schönsten Kinderbücher, besonders für Mädchen zwischen 5 und 12 Jahren.&#xa0;<br /><br />\nHeidi, ein Waisenkind und eigentlich ein Stadtmädl, wird von ihrem Vormund, Tante Dete, zum Alp-Öhi auf die Alm gebracht, wo sie nun leben soll. Zuerst verwirrt, entdeckt sie ein völlig neues Leben, die Tiere, die Natur, schließt Freundschaft mit dem Geissenpeter und sogar mit dem seltsamen und kauzigen Alp-Öhi. Doch dann wird sie von Dete wieder aus diesem Leben gerissen: In Frankfurt soll sie sich als Gesellschafterin im Hause Sesemann um die gelähmte Klara kümmern. Schlimme und traurige Zeiten beginnen für Heidi. Doch im zweiten Teil wird alles gut – und sogar Klara kommt auf die Alm und wird gesund.&#xa0;<br /><br />\nJohanna Spyris (1827–1901) »Heidi« gehört zu den bekanntesten und schönsten Kinderbüchern aller Zeiten. In nur wenigen Jahren nach der Erstpublikation (1880) wurde es zu einem Weltbestseller. Bis heute ist das Buch in über 50 Sprachen übersetzt und vielfach verfilmt.&#xa0;<br /><br />\n• Für die eBook-Ausgabe neu editert&#xa0;<br />\n• Mit den wunderbaren Illustrationen von Jessie Willcox Smith&#xa0;<br />\n• Mit interaktivem Inhaltsverzeichnis und vollständig verlinkten Kapiteln"
+  },
+  {
+   "trackCensoredName": "Klaras Bestimmung",
+   "artistViewUrl": "https://books.apple.com/us/artist/sabine-thalmeyer/1894830629?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/klaras-bestimmung/id6762610862?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/d8/20/d3d820b1-01a3-c5b6-99ad-bc295db5da1c/9783758163678.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d3/d8/20/d3d820b1-01a3-c5b6-99ad-bc295db5da1c/9783758163678.jpg/100x100bb.jpg",
+   "artistIds": [
+    1894830629
+   ],
+   "formattedPrice": "$8.99",
+   "artistId": 1894830629,
+   "artistName": "Sabine Thalmeyer",
+   "genres": [
+    "Historical Fiction",
+    "Books",
+    "Fiction & Literature"
+   ],
+   "price": 8.99,
+   "releaseDate": "2026-02-17T08:00:00Z",
+   "trackId": 6762610862,
+   "trackName": "Klaras Bestimmung",
+   "genreIds": [
+    "10047",
+    "38",
+    "9031"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Lauscha im südlichen Thüringer Wald um 1905. Die Christbaumschmuckherstellerin Klara Müller lebt in einem Milieu bitterster Armut, aus der es scheinbar kein Entrinnen gibt, denn gegen das ausbeuterische Verlegersystem der Sonneberger Großkaufleute haben die heimischen Glasbläser keine Chance. Eines Tages erfährt Klaras Leben einen plötzlichen Wandel: Eine bisher unbekannte Blutsverwandte aus der gehobenen Gesellschaftsschicht stellt das Dasein der Lauschaerin vollkommen auf den Kopf und gibt Klaras Bestimmung eine neue Bedeutung.Wird Klara die Rolle, die ihr das Schicksal zugewiesen hat, annehmen, um die langen Schatten ihrer Vergangenheit hinter sich zu lassen – ja sogar für ihren Lebenstraum mutig neue Wege zu gehen?"
+  },
+  {
+   "trackCensoredName": "Liebesgrüße von Samos",
+   "artistViewUrl": "https://books.apple.com/us/artist/frieda-rosa-meer-sylvia-fuchs-schiewe/1503032369?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/liebesgr%C3%BC%C3%9Fe-von-samos/id1503032362?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/b6/88/4b/b6884bff-cace-9f7f-c863-e903f6878342/9783748198499.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/b6/88/4b/b6884bff-cace-9f7f-c863-e903f6878342/9783748198499.jpg/100x100bb.jpg",
+   "artistIds": [
+    1503032369,
+    1503032371
+   ],
+   "formattedPrice": "$2.99",
+   "artistId": 1503032369,
+   "artistName": "Frieda Rosa Meer & Sylvia Fuchs-Schiewe",
+   "genres": [
+    "Mysteries & Thrillers",
+    "Books"
+   ],
+   "price": 2.99,
+   "releaseDate": "2019-05-27T07:00:00Z",
+   "trackId": 1503032362,
+   "trackName": "Liebesgrüße von Samos",
+   "genreIds": [
+    "9032",
+    "38"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "Liebesgrüße von Samos<br/>\nEin azurblauer Himmel, der sich im kristallklaren Wasser des Meeres spiegelt. Das klirrende Geräusch der bunten Kieselsteine bei jeder Welle, die sie bewegt. Die Wärme der Sonne auf der Haut. Das Zirpen der Zikaden im Gras.  <br/>\nAls Klara in einer Buchhandlung einen Roman von der griechischen Insel Samos entdeckt, kehren die Erinnerungen und Gefühle aus der Vergangenheit zurück.<br/>\nEine Liebesgeschichte wie für den nächsten Sommerurlaub geschrieben, schwärmt die Verkäuferin.<br/>\nAllerdings nicht für Klara, sie kennt den Autor und seine Geschichte, denn es ist auch die ihre. Wie in Trance taucht sie in seinen Roman ein und erlebt ein zweites Mal das Ende eines Traumurlaubes, der zum Albtraum wurde: <br/>\n<br/>\nIhre Rückreise in ihre Heimat Deutschland hatte sie sich gänzlich anders vorgestellt. Klara geriet mit vielen Mitreisenden in die Hände von Terroristen. <br/>\nMit einem Fremden begab sie sich auf eine abenteuerliche Flucht vor den Terroristen über und durch die Insel Samos, über Berge und durch Tunnel, die sie an ihre psychischen und physischen Grenzen bringen sollte. Einem Fremden bedingungslos zu vertrauen, fiel ihr nicht leicht. Dennoch tat sie alles, um Leben zu retten, auch wenn sie sich selbst dabei in größte Gefahr begab. Ein starker Wille und etwas Glück halfen ihr dabei.<br/>\n<br/>\nMit viel Mut, Hoffnung und Liebe begibt sie sich nun auf die Suche, das Ende zu finden, welches sie sich ersehnte."
+  },
+  {
+   "trackCensoredName": "Wie das Flüstern der Meeresbrise",
+   "artistViewUrl": "https://books.apple.com/us/artist/helen-schreiber/1548085719?uo=4",
+   "trackViewUrl": "https://books.apple.com/us/book/wie-das-fl%C3%BCstern-der-meeresbrise/id6785656418?uo=4",
+   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/92/20/3f/92203fbe-eb02-c66a-da7d-b28ce76c9c56/1067242899.jpg/60x60bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/92/20/3f/92203fbe-eb02-c66a-da7d-b28ce76c9c56/1067242899.jpg/100x100bb.jpg",
+   "artistIds": [
+    1548085719
+   ],
+   "formattedPrice": "$5.99",
+   "artistId": 1548085719,
+   "artistName": "Helen Schreiber",
+   "genres": [
+    "Contemporary Romance",
+    "Books",
+    "Romance"
+   ],
+   "price": 5.99,
+   "releaseDate": "2026-07-01T07:00:00Z",
+   "trackId": 6785656418,
+   "trackName": "Wie das Flüstern der Meeresbrise",
+   "genreIds": [
+    "10057",
+    "38",
+    "9003"
+   ],
+   "kind": "ebook",
+   "currency": "USD",
+   "description": "<b>Wenn die sanfte Meeresbrise einen Willkommensgruß zu flüstern scheint …</b><br /><br />Was macht ein glückliches Leben aus? Klara Schönhart ist erschöpft von ihrem stressigen Job als Eventmanagerin und den Erwartungen ihrer strengen Mutter als Chefin. Eine Auszeit bei ihrer Schwester, die einen Islandpferdehof auf der Nordseeinsel Jütborg betreibt, soll Klara helfen, sich zu erholen. Als sie hier Luis, den charmanten Besitzer des nahegelegenen Pubs kennenlernt, kommen sie überraschend tief ins Gespräch. Am Ende des Abends hat Luis Klaras ganz persönliche Glücksliste erstellt. Vier Wochen voller Sonne hat sie, um sich diese Träume zu erfüllen. Nur eines darf Klara nicht: Sich in Luis verlieben – denn er hat der Liebe abgeschworen und Klara wurde schon zu oft verletzt …<br /><br /><b>Band 2 der Reihe »Nordseeträume auf Jütborg« – ein zauberhafter Feelgood-Roman, der Fans von Gabriella Engelmann und Marie Meerburg begeistern wird.</b><br /><br />Alle Bände können unabhängig voneinander gelesen werden."
+  }
+ ]
+}

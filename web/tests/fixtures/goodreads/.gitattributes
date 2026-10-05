@@ -1,0 +1,2 @@
+# Exports as Goodreads writes them: newer ones end lines with CRLF, and the tests read that.
+*.csv -text
