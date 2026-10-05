@@ -20,20 +20,25 @@ const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 // database and the dev server compiles on demand, so the run is made patient
 // rather than parallel: two workers fit the runner's two cores next to the
 // stack (three starved them: taps waited on frames that came too late), a failed test is retried once (locally it fails at once, so a flake is
-// seen), and the first failure leaves a trace, a screenshot and the HTML report
-// to upload.
+// seen), and the first failure leaves a trace and a screenshot. The job runs in
+// three shards (`--shard=i/3`), each writing a blob report that the workflow
+// merges into one HTML report when a shard failed.
 const CI = Boolean(process.env.CI)
 
 export default defineConfig({
   testDir: './e2e',
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
+  // Sharding splits by test rather than by file (a few files hold a third of the flows, so
+  // by file the slowest shard ran twice as long as the fastest); every flow makes its own
+  // member, so none depends on its neighbours.
+  fullyParallel: CI,
   forbidOnly: CI,
   retries: CI ? 1 : 0,
   workers: CI ? 2 : undefined,
   timeout: CI ? 60_000 : 30_000,
   expect: { timeout: CI ? 10_000 : 5_000 },
-  reporter: CI ? [['list'], ['github'], ['html', { open: 'never' }]] : 'list',
+  reporter: CI ? [['list'], ['github'], ['blob']] : 'list',
   use: {
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

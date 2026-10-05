@@ -129,10 +129,21 @@ jobs:
   # and a red flow is told apart from a red rule. Apple and OpenLibrary answer
   # from the recordings (web/e2e/support.ts); the fixture in web/e2e/fixtures.ts
   # fails any test that reaches another host.
+  #
+  # Three shards (Playwright's --shard i/3), each on its own runner with its own
+  # fresh stack and the same two workers and one retry as before, so a pull
+  # request waits for a third of the flows. The shards are independent: every flow
+  # makes its own member and tags what it creates (web/tests/support/stack.ts), and
+  # none depends on the order or the neighbours of another (#72). A shard that
+  # fails uploads its blob report; e2e-report merges them into one HTML report.
   e2e:
-    name: user flows (Playwright, WebKit)
+    name: user flows (Playwright, WebKit, shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
 
@@ -198,18 +209,57 @@ jobs:
 
       - name: User flows
         working-directory: web
-        run: pnpm e2e
+        run: pnpm e2e --shard=${{ matrix.shard }}/3
 
-      - name: Upload the report and traces
+      # The blob report holds the results, screenshots and traces of this shard.
+      - name: Upload the blob report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: |
-            web/playwright-report/
-            web/test-results/
-          retention-days: 14
+          name: playwright-blob-${{ matrix.shard }}
+          path: web/blob-report/
+          retention-days: 1
 
       - name: Stop Supabase
         if: always()
         run: supabase stop --no-backup
+
+  # One combined report for the three shards, only when one of them failed.
+  e2e-report:
+    name: user flows report (merged)
+    needs: e2e
+    if: ${{ !cancelled() && needs.e2e.result == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install web
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: web/all-blob-reports
+          pattern: playwright-blob-*
+          merge-multiple: true
+
+      - name: Merge into one HTML report
+        working-directory: web
+        run: pnpm exec playwright merge-reports --reporter=html ./all-blob-reports
+
+      - name: Upload the report and traces
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 14
