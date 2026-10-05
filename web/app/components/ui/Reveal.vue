@@ -23,7 +23,8 @@ const moving = ref(false)
     @leave-cancelled="moving = false"
   >
     <div v-if="show" class="reveal grid" :data-moving="moving || undefined">
-      <div class="min-h-0">
+      <!-- min-w-0: content wider than the column (a row that scrolls sideways) scrolls inside it, never widens the room. -->
+      <div class="min-h-0 min-w-0">
         <slot />
       </div>
     </div>
