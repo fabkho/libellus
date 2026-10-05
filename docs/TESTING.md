@@ -147,6 +147,16 @@ pnpm tsx e2e/android/flight.ts --base http://localhost:3063 --out /tmp/libellus-
 It writes `<name>-<network>-strip.jpg` (up to ten frames from the tap, the part of the screen the cover
 flies through), `-hero.jpg` (the hero up close, from 250 ms after the tap on) and `-frames.json`.
 
+**The cover's flight back** (closing a Book page) has a script for Chromium on a phone-sized screen (412 × 915, 2.625×
+density, the CPU slowed 4×), no emulator needed: `--network warm` has the row's small image in, `cold` holds it back
+(`--delay`) so the row still shows its thumbhash at the close; `--close back|gesture` taps the page's Back or goes back
+in history; `--theme light|dark`. It writes a strip of the screencast, the flight held still at seven moments
+(`-stills.jpg`), the row 700 ms after the tap (`-landed.png`) and every frame's numbers (`-frames.json`):
+
+```sh
+pnpm tsx e2e/android/flight-return.ts --base http://localhost:3126 --out /tmp/libellus-cover-return --name after --theme dark --network cold
+```
+
 **Share target and app shortcuts (#91).** Both need a **WebAPK**: Chrome on Android registers a web app
 as a share target and shows its manifest `shortcuts` on a long-press only once Google's server has minted
 an APK for it. On the emulator without a Google account Chrome's Install (⋮ → Add to home screen →

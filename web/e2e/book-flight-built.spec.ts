@@ -79,19 +79,23 @@ async function record(page: Page) {
 
 const frames = (page: Page) => page.evaluate(() => (window as unknown as { __frames: Frame[] }).__frames)
 
-/** Signed in with six Books on Want to read, on the Library, the CPU slowed to a phone's. */
-async function library(page: Page) {
+/**
+ * Signed in with six Books on Want to read, on the Library, the CPU slowed to a phone's.
+ * `rowImages`: the rows' small images wait for it (a connection too slow to have brought them yet).
+ */
+async function library(page: Page, rowImages?: Promise<void>) {
   await recordedApple(page)
   // The list asks Apple for its row's size; the flows' recorded cover is larger, so the row gets a real 120 × 180.
-  await page.route(/120x180bb\.jpg$/, (route) =>
-    route.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' }, body: appleRowCover() }),
-  )
+  await page.route(/120x180bb\.jpg$/, async (route) => {
+    await rowImages
+    await route.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' }, body: appleRowCover() })
+  })
   const member = await signedIn(page)
   await shelf(member.id, 6)
   await page.getByTestId('shell.tab.library').tap()
   await expect(page.getByTestId('library.entry')).toHaveCount(6)
   const row = page.getByTestId('library.entry').nth(2)
-  await expect(row.locator('[data-cover] img')).toHaveCSS('opacity', '1')
+  if (!rowImages) await expect(row.locator('[data-cover] img')).toHaveCSS('opacity', '1')
   await untilStill(page)
   await asBuilt(page)
   const cdp = await page.context().newCDPSession(page)
@@ -141,4 +145,85 @@ test('the cover flies sharp: the hero’s image takes over in the air, the row�
   const cover = page.getByTestId('book.hero').locator('[data-cover]')
   await expect(cover.locator(':scope > img')).toHaveCSS('opacity', '1')
   await expect(cover.getByTestId('shell.flightHeld')).toHaveCount(0)
+})
+
+type Return = { width: number; large: number; held: number }
+
+/** From now on, every frame of the cover on its way back: its width and how much of the hero's large image shows (the copy's own opacity counted), and, once it has landed, the copy held on the row. */
+async function recordReturn(page: Page) {
+  await page.evaluate(() => {
+    const frames: Return[] = []
+    Object.assign(window, { __return: frames })
+    let looked = 0
+    const effective = (image: Element, until: Element) => {
+      let opacity = 1
+      for (let at: Element | null = image; at && at !== until.parentElement; at = at.parentElement) opacity *= Number(getComputedStyle(at).opacity)
+      return opacity
+    }
+    const look = () => {
+      const fly = document.querySelector('[data-testid="shell.flightCover"]')
+      const held = document.querySelector('[data-testid="shell.flightHeld"]')
+      const source = fly ?? held
+      if (source) {
+        const large = [...source.querySelectorAll('img')].filter((image) => image.src.endsWith('600x900bb.jpg') && image.complete && image.naturalWidth > 0)
+        frames.push({
+          width: (fly ?? held!).getBoundingClientRect().width,
+          large: Math.max(0, ...large.map((image) => effective(image, source))),
+          held: fly ? 0 : 1,
+        })
+      }
+      if (++looked < 300) requestAnimationFrame(look)
+    }
+    requestAnimationFrame(look)
+  })
+}
+
+const returned = (page: Page) => page.evaluate(() => (window as unknown as { __return: Return[] }).__return)
+
+test('closing a book page, the cover keeps the hero’s large image the whole way back and gives way to the row’s own once it is decoded', async ({ page }) => {
+  const { row, rowCover } = await library(page)
+  await row.locator('[data-cover]').tap()
+  await landed(page)
+  // The book page's own image is in: the cover that flies back is the sharp one.
+  await expect(page.getByTestId('book.hero').locator('[data-cover] > img')).toHaveCSS('opacity', '1')
+  await recordReturn(page)
+  await page.getByTestId('book.back').tap()
+  await expect(page.getByTestId('library.title')).toBeVisible()
+  await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
+  await expect(page.getByTestId('shell.flightHeld')).toHaveCount(0)
+
+  const flown = (await returned(page)).filter((frame) => !frame.held)
+  expect(flown.length).toBeGreaterThanOrEqual(4)
+  // The large image is on the cover at full strength in every frame in the air, down to the row's size:
+  // the row's small image is never what shows, not even half-way (it was cross-faded in over the whole way).
+  expect(flown.filter((frame) => frame.large < 0.99)).toEqual([])
+  expect(Math.min(...flown.map((frame) => frame.width))).toBeLessThan(rowCover.width * 1.1)
+  // Landed: the row's own cover is there, sharp, with nothing of the flight left on it.
+  await expect(row.locator('[data-cover] > img')).toHaveCSS('opacity', '1')
+  await expect(row.locator('[data-cover]')).toHaveCSS('visibility', 'visible')
+})
+
+test('closing a book page opened before its row’s image came, the cover stays on the row, sharp, until that image is in', async ({ page }) => {
+  let release!: () => void
+  const { row } = await library(page, new Promise<void>((resolve) => (release = resolve)))
+  await row.locator('[data-cover]').tap()
+  await landed(page)
+  await expect(page.getByTestId('book.hero').locator('[data-cover] > img')).toHaveCSS('opacity', '1')
+  await recordReturn(page)
+  await page.getByTestId('book.back').tap()
+  await expect(page.getByTestId('library.title')).toBeVisible()
+
+  // Landed on its row, which has only its thumbhash: the large image stays on it, in the row's sheet.
+  const held = row.locator('[data-cover]').getByTestId('shell.flightHeld')
+  await expect(held).toHaveCount(1)
+  await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
+  await expect(row.locator('[data-cover] > img')).toHaveCSS('opacity', '0')
+  const flown = (await returned(page)).filter((frame) => !frame.held)
+  expect(flown.filter((frame) => frame.large < 0.99)).toEqual([])
+  await expect(held).toHaveCSS('opacity', '1')
+
+  // The row's image arrives: decoded and faded in under it, then the copy gives way.
+  release()
+  await expect(row.locator('[data-cover] > img')).toHaveCSS('opacity', '1')
+  await expect(held).toHaveCount(0)
 })
