@@ -183,7 +183,7 @@ test('from Home and from search the cover flies too; back to a closed search it 
   await shelf(member.id, 3)
   await page.reload()
 
-  // Home's Up next.
+  // Home's Want to read.
   const upNext = page.getByTestId('home.upNextEntry').first()
   await expect(upNext).toBeVisible()
   await freeze(page)

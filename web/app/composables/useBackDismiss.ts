@@ -29,6 +29,9 @@ import type { RouteLocationNormalized, Router, RouterHistory } from 'vue-router'
  * Landing on an entry with the router's own place and address is no change of
  * page, so the router is told to let that popstate pass (`pauseListeners`):
  * no navigation from /profile to /profile, no guards, no loading indicator.
+ * The same when the row stands in a sheet (Home's "Read in 2026"): its entry
+ * sits on top of the sheet's, so a Back puts the Book back first and the next
+ * one closes the sheet.
  */
 type Entry = { close: () => void; keepOnRouteChange: boolean }
 
@@ -162,6 +165,13 @@ function onPopState(event: PopStateEvent) {
     // A copy of the router's own entry that another part of the page keeps (Regal's row while a
     // Book is broken out of it): Back off it, or Forward onto it, is no change of page. The router
     // takes note of the entry and lets the popstate pass; the part that pushed it answers it.
+    routerHistory!.pauseListeners()
+    return
+  }
+  if (depth > 0 && level === depth && onRouterEntry(state)) {
+    // The same over an open layer (Regal's row in a sheet): Back off the entry the row keeps on top
+    // of the sheet's lands on the sheet's own. That closes nothing, and is not this module's to
+    // answer: the router lets it pass, the row puts its Book back, and the next Back closes the sheet.
     routerHistory!.pauseListeners()
     return
   }

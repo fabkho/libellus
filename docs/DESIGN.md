@@ -239,7 +239,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
   own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
   follows the theme, so native parts — the date picker, autofill — do too); Safari, without
-  `scrollbar-color`, gets the same thumb inset from the edge. Rows that scroll sideways (Up next,
+  `scrollbar-color`, gets the same thumb inset from the edge. Rows that scroll sideways (Want to read,
   the Profile's year pills and year cards) show none: `scrollbar-none` (`main.css`).
 - **Top scroll edge** (tabs layout): the installed app draws under a transparent status bar, so
   once something has scrolled under it a thin veil of the surface colour keeps the clock legible:

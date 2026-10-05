@@ -26,7 +26,7 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 - **Cover** — a Book's front image, resolved once when the Book enters the Catalogue.
 - **Placeholder cover** — a generated Cover (title and author on a colour surface) when no image
   exists.
-- **Up next** — the short row of *Want to read* entries on Home.
+- **Want to read row** — the short row of *Want to read* entries on Home (it was called "Up next").
 - **Read in <year>** — the count of finished sessions with an end date in the current year,
   re-reads included.
 - **Profile** — the member's page behind the avatar: her reading in figures (by year or all years)

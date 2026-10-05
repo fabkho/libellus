@@ -7,8 +7,8 @@ import { test } from './fixtures'
 /**
  * Home (#8): a new member lands on the empty state that leads to Search; a
  * Book added and started shows under Currently reading with its day; Finish
- * on the card takes it away and the year's tally goes up. Up next lists the
- * Want to read Books and See all leads to the Library. Apple answers from the
+ * on the card takes it away and the year's tally goes up. The Want to read row lists the
+ * Books on it and See all leads to the Library. Apple answers from the
  * recordings (e2e/support.ts); the Library is the real local stack. With
  * docs/parity.md this is the behavioural reference for Home.
  */
@@ -56,13 +56,15 @@ test('a new member starts on the empty Home, reads a book from there and finishe
   await page.getByTestId('add.submit').click()
   await expect(page.getByTestId('add')).toBeHidden()
 
-  // A Book on Want to read is no longer an empty Library: Up next, nothing being read, 0 this year.
+  // A Book on Want to read is no longer an empty Library: Want to read, nothing being read, 0 this year.
   await page.getByTestId('shell.tab.home').click()
   await expect(page.getByTestId('home.emptyTitle')).toBeHidden()
   await expect(page.getByTestId('home.readingEmpty')).toHaveText(en.home.readingEmpty)
   await expect(page.getByTestId('home.tallyLabel')).toHaveText(en.home.readIn.replace('{year}', year))
   await expect(page.getByTestId('home.tallyCount')).toHaveText('0')
   await expect(page.getByTestId('home.upNextEntry')).toHaveCount(1)
+  // Nothing read yet: the tally only says so, there is nothing to open.
+  await expect(page.getByTestId('home.tally')).toHaveJSProperty('tagName', 'SECTION')
 
   // Start it from its page: Home shows it under Currently reading, day 1.
   await page.getByTestId('home.upNextEntry').click()
@@ -99,9 +101,17 @@ test('a new member starts on the empty Home, reads a book from there and finishe
     'aria-label',
     en.home.readInLabel.replace('{year}', year).replace('{count}', '1'),
   )
+  // With a Book read this year the tally is a button that opens the year's Books (e2e/shelf.spec.ts has the owner's row).
+  await expect(page.getByTestId('home.tally')).toHaveJSProperty('tagName', 'BUTTON')
+  await page.getByTestId('home.tally').click()
+  await expect(page.getByTestId('homeTally.sheetTitle')).toHaveText(en.home.readIn.replace('{year}', year))
+  await expect(page.getByTestId('homeTally.read')).toHaveCount(1)
+  await expect(page.getByTestId('homeTally.read').getByTestId('profile.readTitle')).toHaveText('Piranesi')
+  await page.getByTestId('homeTally.read').click()
+  await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
 })
 
-test('Up next lists what is Want to read, newest first, and See all opens the Library', async ({ page }) => {
+test('Want to read lists what is Want to read, newest first, and See all opens the Library', async ({ page }) => {
   await signedIn(page)
   await addFirstResult(page, 'Piranesi', 'Piranesi')
   await addFirstResult(page, 'Klara und die Sonne', 'Klara und die Sonne')
