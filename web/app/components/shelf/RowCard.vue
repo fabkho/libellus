@@ -2,7 +2,7 @@
 // The owner's Books as Regal's row in a card (#23): the Profile's Your shelf
 // (the newest, up to a cap) and a year in review (that year's, from January).
 // Only the owner's screens render it (stores/shelf.ts). A card like the
-// Profile's others; the row fills it edge to edge, scrolls sideways under the
+// Profile's others (`bare`, in a sheet: none of that, it sits on the sheet); the row fills it edge to edge, scrolls sideways under the
 // finger and lets the page scroll on; a Book tapped breaks out to the whole
 // screen (ShelfRow).
 //
@@ -21,6 +21,8 @@ const props = defineProps<{
   limit?: number | null
   /** What the row is, for assistive technology. */
   label: string
+  /** No surface, border or shadow: the row sits on what it stands on (inside a sheet). */
+  bare?: boolean
 }>()
 
 // The stand-in shows what the row shows first: the newest, or the year's first, in the card's middle.
@@ -50,7 +52,7 @@ onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <div ref="frame" class="card relative overflow-hidden rounded-lg bg-surface-raised shadow-raised edge-faint" :data-ready="ready || undefined">
+  <div ref="frame" class="card relative overflow-hidden rounded-lg" :class="!bare && 'bg-surface-raised shadow-raised edge-faint'" :data-ready="ready || undefined">
     <LazyShelfRow v-if="near" :year="year" :limit="limit" :label="label" class="row-3d" :class="ready && 'ready'" @ready="ready = true" />
     <Transition name="hand-over">
       <!-- Where the row stands its Books: under the months' dates, over the title of the one in focus. -->

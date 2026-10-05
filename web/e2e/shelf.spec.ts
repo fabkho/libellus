@@ -306,10 +306,9 @@ test.describe('Your shelf, the owner', () => {
     await expect(page).not.toHaveURL(/\/profile\/2025$/)
   })
 
-  test("Home's Read in tally opens the year's Books: her row first, a Book breaks out above the sheet, Back puts it away and then closes the sheet", async ({ page }) => {
+  test("Home's Read in tally opens the year's Books as her row alone: a Book breaks out above the sheet, Back puts it away and then closes the sheet", async ({ page }) => {
     await libraryFile(page, 200, THIS_YEAR)
     const owner = await signInAsOwner(page)
-    const titles = [runTitle('Home Tally One'), runTitle('Home Tally Two')]
     await finishedThisYear(await ownerClient(owner.email), ['Home Tally One', 'Home Tally Two'])
     await page.reload()
 
@@ -322,17 +321,14 @@ test.describe('Your shelf, the owner', () => {
     await expect(sheet).toBeVisible()
     await expect(page.getByTestId('homeTally.sheetTitle')).toHaveText(fill(en.home.readIn, { year: YEAR }))
 
-    // Her row of that year's Books on top, then the finished reads, newest first; the link on to the review at the end.
+    // Her row of that year's Books and the link on to the review: nothing else, no list of reads, and the card bare.
     const row = shelfRow(page, 'homeTally.shelfRow')
     await expect(row).toHaveAttribute('data-book-count', '9')
     await expect(row).toHaveAttribute('aria-label', fill(en.shelf.year.rowLabel, { year: YEAR }))
-    const reads = page.getByTestId('homeTally.read')
-    await expect(reads.getByTestId('profile.readTitle').filter({ hasText: titles[0]! })).toHaveCount(1)
-    await expect(reads.getByTestId('profile.readTitle').filter({ hasText: titles[1]! })).toHaveCount(1)
-    const order = await reads.getByTestId('profile.readTitle').allTextContents()
-    expect(order.indexOf(titles[0]!)).toBeLessThan(order.indexOf(titles[1]!))
-    const rowBox = (await row.boundingBox())!
-    expect(rowBox.y).toBeLessThan((await reads.first().boundingBox())!.y)
+    await expect(page.getByTestId('homeTally.read')).toHaveCount(0)
+    const card = page.getByTestId('homeTally.shelfRow')
+    expect(await card.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none')
+    expect(await card.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
     await expect(page.getByTestId('homeTally.yearInReview')).toHaveText(en.home.yearInReview)
 
     // A Book taken out breaks out above the sheet (z 50), not under it.
@@ -364,11 +360,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.locator('.row-card__view--out')).toHaveCount(0)
     await expect(sheet).toBeVisible()
 
-    // A read opens its Book page; the link at the end opens the year in review.
-    await reads.filter({ hasText: titles[0]! }).click()
-    await expect(page.getByTestId('book.title')).toHaveText(titles[0]!)
-    await page.goBack()
-    await page.getByTestId('home.tally').click()
+    // The link at the end opens the year in review.
     await page.getByTestId('homeTally.yearInReview').click()
     await expect(page).toHaveURL(new RegExp(`/profile/${YEAR}$`))
   })
