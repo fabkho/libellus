@@ -1,0 +1,9 @@
+# Cloudflare Pages response headers (https://developers.cloudflare.com/pages/configuration/headers/).
+#
+# Digital Asset Links (#90): Android and Chrome fetch this file to trust the Play app
+# (docs/ANDROID.md). It has to come back as JSON, straight, with no redirect; a short cache
+# so a fingerprint added later is seen soon.
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600

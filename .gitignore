@@ -23,3 +23,19 @@ web/playwright-report/
 # Local data the scripts write: the Fable import's cover cache and report
 # (web/scripts/import-fable.ts). Real reading history: never committed.
 .data/
+
+# Android (TWA, #90): Gradle state and build output, and never a signing key.
+# The upload keystore lives in ~/.android-keys/ (docs/ANDROID.md); these
+# patterns catch one copied into the repo by mistake.
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.jks
+*.keystore
+*.p12
+*.pk8
+*.apk
+*.aab
+*.idsig

@@ -180,7 +180,8 @@
       "title": "Account",
       "theme": "Dark mode",
       "install": "Install app",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "privacy": "Privacy"
     },
     "empty": {
       "title": "Your reading gathers here",
@@ -705,6 +706,50 @@
       "empty": "There are no books in that file.",
       "unreadable": "That file couldn't be read.",
       "unknown": "Something went wrong. Please try again."
+    }
+  },
+  "privacy": {
+    "title": "Privacy",
+    "back": "Back",
+    "link": "Privacy",
+    "updated": "Effective 5 October 2026",
+    "intro": "Libellus is a private, free, invite-only book tracker. This policy covers the website libellus.fabkho.dev and the Android app, which is the same app. Fabian Kirchhoff runs Libellus and is responsible for your data (the controller); write to {email}.",
+    "keeps": {
+      "title": "What Libellus keeps",
+      "text": "Your email address, to sign you in, and your first name if you add one. Your reading: the books in your Library, your reading sessions with their dates, your progress (including how far you read each day), your ratings and reviews, and your collections. A Goodreads export you import is read in your browser; the file itself never reaches the server, only the books you import."
+    },
+    "why": {
+      "title": "Why",
+      "text": "To provide the service you signed up for (GDPR Art. 6(1)(b)). Your data is used for nothing else."
+    },
+    "device": {
+      "title": "On your device",
+      "text": "Your sign-in session, a copy of your Library so the app works offline, and changes waiting to be sent while you are offline. No tracking cookies, no analytics, no ads."
+    },
+    "processors": {
+      "title": "Who processes it",
+      "text": "Supabase keeps the database and runs the sign-in, in the EU (Frankfurt). Cloudflare hosts the app and keeps short-lived server logs. Resend sends your sign-in code, in the EU (Ireland)."
+    },
+    "direct": {
+      "title": "What your device asks directly",
+      "text": "When you search, your device sends the search words, and with them its IP address, to Apple's iTunes Search and to Open Library, and loads covers from them. For Goodreads ratings, the server asks Goodreads by ISBN only, with nothing about you."
+    },
+    "public": {
+      "title": "What is public",
+      "text": "Nothing of yours. The owner publishes his own finished books on fabkho.dev/books, from his own account only."
+    },
+    "rights": {
+      "title": "Your rights",
+      "text": "You can ask for access to your data, have it corrected or erased, receive it in a portable form, and object to its processing: write to {email}. You can also complain to the supervisory authority, {authority}."
+    },
+    "authority": "the Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW)",
+    "delete": {
+      "title": "Deleting your account",
+      "text": "You can remove any book or read in the app at any time. To delete your account and everything in it, write to {email} from the address you sign in with; the account and all its data are deleted within 30 days."
+    },
+    "age": {
+      "title": "Age",
+      "text": "Libellus is for people aged 16 and over."
     }
   }
 }
