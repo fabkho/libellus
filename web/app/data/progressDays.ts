@@ -4,7 +4,7 @@ import type { ProgressMode, ProgressValue } from './progress'
  * Progress by day (issue #68, phase 2 of design round #65's direction D): how far
  * each day of a read went, as `update_progress` books it in
  * `reading_progress_days` (where the read was before the day's first update and
- * after its last, on the member's own calendar day). The card's sparkline and
+ * after its last, on the member's own calendar day). The card's chart and
  * pace, the book page's figures, chart and reading log, and "Last time" are all
  * worked out here from those rows, so a native client copies it 1:1.
  *
@@ -102,7 +102,7 @@ function dayBefore(day: string, count: number): string {
   return new Date(Date.UTC(y!, m! - 1, d! - count)).toISOString().slice(0, 10)
 }
 
-/** The last `count` days up to today, oldest first, with what was read on each (the sparkline and the chart). */
+/** The last `count` days up to today, oldest first, with what was read on each (the card's chart and the reading page's). */
 export function dailyAmounts(days: readonly ProgressDay[], today: string, count: number, pageCount: number | null): DayAmount[] {
   const read = new Map(days.map((d) => [d.day, Math.max(0, amountOf(d, pageCount))]))
   return Array.from({ length: count }, (_, i) => {
