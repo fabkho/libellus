@@ -208,9 +208,16 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   it, and the status bar takes the room's colour while it is open. A bookcase is an object in a
   room, like a cover; the lamp-lit dark lets the Spines carry the colour (principle 2). The round
   back button and the title pinned, the count beside them in mono, the Stack below, its view
-  reaching up behind the top bar so the pile starts above the middle. Regal's own parts (the card of
-  a Book that is out, the caption, the separators) wear D's tokens: `ShelfStage` maps Regal's
-  paper-ink names onto them (ink, muted, faint, accent, hairline, surface, Geist Mono, Newsreader).
+  reaching up behind the top bar so the pile starts above the middle. Regal's own parts (the tooltip
+  and the Book's detail panel, a card, or on a phone a bottom sheet) wear D's tokens in the room's
+  theme: `regal-themed` (`web/app/assets/css/regal-themed.css`, imported by `ShelfStage` so it travels
+  with the `regal` chunk) sets Regal's `--regal-*` tokens to D's roles (surface, raised surface, ink,
+  muted and ghost ink, accent, hairline, the 14 px card radius, the raised shadow, Geist, Newsreader for
+  the title, the eyebrow's tracking), and `theme="auto"` makes Regal follow the nearest `data-theme`.
+  Any Regal component gets the same look with `class="regal-themed" theme="auto"`. The phone's sheet is
+  the column's width with `--radius-sheet` corners, like `UiSheet`. Two parts are D's own components
+  through Regal's slots (the meta line in the eyebrow's mono; Show back, Put back and Goodreads as D's
+  pills); the rating stays Regal's stars, which already read as D's.
   The same room is the Profile card's little window (the newest Spines) and the year in review's
   4:5 window, a picture the page scrolls over (a pile that took the finger would trap the scroll).
   While Regal loads, `ShelfPile` stands in: the Books as flat slabs in their Spines' colours, as
