@@ -131,6 +131,22 @@ A Back gesture starts with a touch the page sees (`pointerdown`, then `pointerca
 system takes it over), so nothing that Back closes may also close on that touch (the avatar menu, before #78 replaced it
 with the Profile, closed on a tap elsewhere when the finger lifted, not as it landed).
 
+**The cover's flight** has its own script: a fresh member with four Books on Want to read, a
+real finger (adb) on a Library row, and every frame recorded through the DevTools screencast. Covers are
+a test card answered by the script at the size each request asks for (a row's 120 × 180, the book
+page's 600 × 900), the book page's after a delay standing for the network: `--network warm` (0 ms),
+`normal` (150 ms) or `slow` (1.5 s). It clears the origin's data and bypasses the service worker first,
+so builds can be swapped on one port. Run it against a static build: the dev server serves the motion
+tokens unminified, the build as `.25s` (docs/MOTION.md, Tokens), and only the build shows what a phone
+gets.
+
+```sh
+pnpm tsx e2e/android/flight.ts --base http://localhost:3063 --out /tmp/libellus-flight --name after --network normal
+```
+
+It writes `<name>-<network>-strip.jpg` (up to ten frames from the tap, the part of the screen the cover
+flies through), `-hero.jpg` (the hero up close, from 250 ms after the tap on) and `-frames.json`.
+
 **Share target and app shortcuts (#91).** Both need a **WebAPK**: Chrome on Android registers a web app
 as a share target and shows its manifest `shortcuts` on a long-press only once Google's server has minted
 an APK for it. On the emulator without a Google account Chrome's Install (⋮ → Add to home screen →
