@@ -76,9 +76,17 @@
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
 }
 
-/* The row's sheet sits on the very bottom edge, where Android's gesture bar
-   (and iOS' home indicator) lies over it: its last line (the buttons) clears
-   the inset, as the sheets' do (`safe-bottom`). */
+/* The row's sheet is Libellus' own inside (ShelfBookSheet: its padding, its
+   grabber, its title row), so the container is a bare one, as UiSheet's
+   `rounded-t-sheet bg-surface-sheet shadow-sheet safe-bottom`: no padding of
+   Regal's, no frame, the sheet's shadow, and the bottom inset (Android's
+   gesture bar, iOS' home indicator) under the content. The surface is the
+   sheet's (--regal-surface-raised), the corners are the rule above's. Interim:
+   Regal's sheet tokens (padding, frame, top radius) replace these. */
 .row-card__details.row-card__details--sheet.row-card__details--sheet {
-  padding-bottom: calc(1rem + var(--safe-area-bottom));
+  inset-inline: 0;
+  bottom: 0;
+  padding: 0 0 var(--safe-area-bottom);
+  border: 0;
+  box-shadow: var(--shadow-sheet);
 }

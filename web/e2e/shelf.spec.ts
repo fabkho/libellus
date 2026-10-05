@@ -168,9 +168,15 @@ test.describe('Your shelf, the owner', () => {
     await takeOut(page, row)
     const out = page.locator('body > .row-card__view--out')
     await expect(out).toHaveCount(1)
-    // The phone's sheet clears the gesture bar: its last line is a whole inset above the padding's base.
+    // The phone's sheet is Libellus' (Done, the action in the lamp colour, no pills) and clears the gesture bar.
     const sheet = page.locator('body > article.row-card__details--sheet')
-    if (await sheet.count()) expect(Number.parseFloat(await sheet.evaluate((el) => getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(24 + 16)
+    if (await sheet.count()) {
+      expect(Number.parseFloat(await sheet.evaluate((el) => getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(24)
+      await expect(page.getByTestId('shelfRow.putBack')).toHaveText(en.shelf.detail.done)
+      await expect(page.getByTestId('shelfRow.flip')).toHaveText(en.shelf.detail.backCover)
+      await page.getByTestId('shelfRow.flip').click()
+      await expect(page.getByTestId('shelfRow.flip')).toHaveText(en.shelf.detail.frontCover)
+    }
     expect(Number(await out.evaluate((el) => getComputedStyle(el).zIndex))).toBeGreaterThan(
       Number(await page.getByTestId('shell.tabs').evaluate((el) => getComputedStyle(el).zIndex)),
     )

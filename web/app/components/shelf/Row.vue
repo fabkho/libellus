@@ -17,10 +17,10 @@
 // `regal-themed` maps Regal's `--regal-*` tokens onto D's, and `theme="auto"`
 // follows the nearest `data-theme` (the app's), also for the parts Regal moves
 // to <body> when a Book breaks out. The details' meta line and actions are
-// D's own, as on the shelf page (ShelfStage).
+// D's own (BookSheet, through Regal's `#detail` slot): a quieter cousin of the
+// app's sheets, where the shelf page's Stack (ShelfStage) uses D's pills.
 import '#build/nuxt-fonts-global.css'
 import '~/assets/css/regal-themed.css'
-import { goodreadsUrl } from '~/utils/goodreads'
 
 const props = defineProps<{
   /** Only the Books finished in this year, starting at January; null for the newest of all. */
@@ -35,7 +35,6 @@ const emit = defineEmits<{
   ready: []
 }>()
 
-const { t } = useI18n()
 const { books, error } = useLibrary()
 let told = false
 watch(
@@ -52,17 +51,9 @@ watch(
 
 <template>
   <RegalBooksRow class="shelf-row regal-themed" theme="auto" inspect="viewport" :year="props.year ?? null" :limit="props.limit ?? null" :label="props.label ?? ''">
-    <template #detail-meta="{ meta }">
-      <p class="eyebrow" data-testid="shelfRow.detailMeta">{{ meta.join(' · ') }}</p>
-    </template>
-    <template #detail-actions="{ book, close, flip, face }">
-      <UiButton tone="secondary" size="sm" data-testid="shelfRow.flip" @click="flip">
-        {{ face === 'front' ? t('shelf.detail.showBack') : t('shelf.detail.showFront') }}
-      </UiButton>
-      <UiButton tone="secondary" size="sm" data-testid="shelfRow.putBack" @click="close">{{ t('shelf.detail.putBack') }}</UiButton>
-      <UiButton tone="plain" size="sm" class="ml-auto" :to="goodreadsUrl(book)" target="_blank" rel="noopener" data-testid="shelfRow.goodreads">
-        {{ t('shelf.detail.goodreads') }}
-      </UiButton>
+    <!-- The whole details, Libellus' own (BookSheet): Regal keeps the container, its fade and the Book's gestures. -->
+    <template #detail="{ book, close, flip, face, sheet }">
+      <ShelfBookSheet :book="book" :face="face" :sheet="sheet" @close="close" @flip="flip" />
     </template>
   </RegalBooksRow>
 </template>

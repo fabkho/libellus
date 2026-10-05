@@ -739,7 +739,11 @@
       "showBack": "Show back",
       "showFront": "Show front",
       "putBack": "Put back",
-      "goodreads": "Goodreads"
+      "goodreads": "Goodreads",
+      "done": "Done",
+      "backCover": "Back cover",
+      "frontCover": "Front cover",
+      "reading": "Reading now"
     }
   }
 }
