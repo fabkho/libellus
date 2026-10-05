@@ -6,12 +6,16 @@
 // rows one after another from the top; a row below the fold does it as it
 // scrolls into view, once. Only `transform` and `opacity` move (no layout),
 // the covers stay tappable while it runs, and with Reduce Motion nothing moves.
+// While the reading record loads (`loading`), the months gone by (`goneBy`)
+// hold a cover's skeleton in the loading wave and the months still to come
+// their dash, so the rows stand at their height; the covers then slide in as
+// on opening (docs/MOTION.md, Loading).
 import type { StatsRead } from '~/data/stats'
 import { useBookStore } from '~/stores/book'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import { coverDelay, rowDelay, SLIDE } from '~/utils/monthIntro'
 
-defineProps<{ months: { month: number, reads: StatsRead[] }[] }>()
+const props = withDefaults(defineProps<{ months: { month: number, reads: StatsRead[] }[], loading?: boolean, goneBy?: number }>(), { loading: false, goneBy: 12 })
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -43,9 +47,13 @@ function slideIn(row: Element, delay: number) {
   })
 }
 
-onMounted(() => {
+/** The opening, once: when the page shows its rows, or when they come after the loading skeletons. */
+let opened = false
+function open() {
   const el = root.value
-  if (!el || prefersReducedMotion() || typeof IntersectionObserver === 'undefined') return
+  if (opened || !el) return
+  opened = true
+  if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') return
   const rows = Array.from(el.querySelectorAll('[data-intro-row]'))
   if (!rows.length) return
   rows.forEach(hold)
@@ -58,7 +66,18 @@ onMounted(() => {
     })
   })
   rows.forEach((row) => observer!.observe(row))
+}
+onMounted(() => {
+  if (!props.loading) open()
 })
+// The rows replacing the skeletons are held before they are painted (`post` runs before the frame).
+watch(
+  () => props.loading,
+  (now, before) => {
+    if (before && !now) open()
+  },
+  { flush: 'post' },
+)
 onBeforeUnmount(() => observer?.disconnect())
 </script>
 
@@ -66,7 +85,8 @@ onBeforeUnmount(() => observer?.disconnect())
   <section id="months" ref="root" :aria-label="t('profile.year.months')" class="flex flex-col" data-testid="yearInReview.months">
     <div v-for="m in months" :key="m.month" class="month flex items-center gap-md py-xs" :data-testid="`yearInReview.month.${m.month}`">
       <span class="eyebrow w-(--size-touch) shrink-0">{{ monthShort(m.month) }}</span>
-      <span v-if="m.reads.length" class="relative flex min-w-0 flex-1 flex-wrap gap-xs" data-intro-row>
+      <span v-if="loading && m.month <= goneBy" class="flex flex-1" aria-hidden="true"><span class="cover-skeleton skeleton wave" :style="{ '--wave': (m.month - 1) * 0.06 }" /></span>
+      <span v-else-if="m.reads.length" class="relative flex min-w-0 flex-1 flex-wrap gap-xs" data-intro-row>
         <span v-for="read in m.reads" :key="read.sessionId" class="block" data-intro-cover>
           <UiPressLink :to="`/book/${read.book.id}`" :aria-label="read.book.title" data-testid="yearInReview.read" @press="books.prefetch(read.book.id)">
             <UiCover
@@ -89,5 +109,11 @@ onBeforeUnmount(() => observer?.disconnect())
 <style scoped>
 .month + .month {
   border-top: var(--stroke-hairline) solid var(--color-hairline);
+}
+/* A month's cover while the record loads (UiCover `sm`). */
+.cover-skeleton {
+  width: var(--size-cover-sm);
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-cover-sm);
 }
 </style>

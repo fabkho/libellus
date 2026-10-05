@@ -4,6 +4,8 @@
 // finished that year, from January at the left, a sheet and the month between
 // months, in a card under the months. The row scrolls sideways and lets the
 // page scroll on; a Book tapped breaks out to the whole screen (ShelfRow).
+// Before the library file has come (no Books yet) it stands without its
+// count, the card holding the stand-in's slabs, as the Profile's does.
 import type { ShelfBook } from '~/data/shelf'
 
 defineProps<{ year: number; books: readonly ShelfBook[] }>()
@@ -16,7 +18,7 @@ const { count } = useFigures()
     <div class="flex h-(--size-button-sm) items-center gap-md">
       <h2 class="eyebrow">
         {{ t('shelf.year.title') }}
-        <span class="figures ml-xs text-ink-ghost" data-testid="yearInReview.shelfCount">{{ count(books.length) }}</span>
+        <span v-if="books.length" class="figures ml-xs text-ink-ghost" data-testid="yearInReview.shelfCount">{{ count(books.length) }}</span>
       </h2>
     </div>
     <ShelfRowCard :books="books" :year="year" :label="t('shelf.year.rowLabel', { year })" data-testid="yearInReview.shelfRow" />
