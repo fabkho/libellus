@@ -8,6 +8,13 @@
 // it is leaving reopens from its current height), and with Reduce Motion the
 // list simply changes. The children need keys and must be the list's items;
 // pair it with `useSettled` so a change waits for the sheet that caused it.
+//
+// It never moves items for a list measured off the page. A kept-alive screen
+// in the background is out of the document, where every box is 0,0; one that
+// updates there (any reactive change it shows, whatever it is) would FLIP its
+// items from the corner of the page once it is back on screen. A snapshot
+// taken off the page is marked `data-detached` and moves nothing (the style
+// below); an update that is measured on the page moves as ever.
 withDefaults(defineProps<{ tag?: string }>(), { tag: 'div' })
 
 /**
@@ -26,6 +33,19 @@ function gapAround(item: HTMLElement): { side: 'marginTop' | 'marginBottom'; gap
   if (!parent || (!item.previousElementSibling && !item.nextElementSibling)) return null
   const gap = Number.parseFloat(getComputedStyle(parent).rowGap) || 0
   return gap ? { side: item.previousElementSibling ? 'marginTop' : 'marginBottom', gap } : null
+}
+
+const group = ref<{ $el: Element } | null>(null)
+
+/**
+ * Marks the list when it is rendered off the page. Called from inside the
+ * slot, so it runs in the group's own render, whatever caused it, right before
+ * the group takes the items' positions and long before it reads them again.
+ */
+function offPage(): Record<string, never> {
+  const list = group.value?.$el
+  if (list) list.toggleAttribute('data-detached', !list.isConnected)
+  return {}
 }
 
 const TRANSITION = [
@@ -99,6 +119,7 @@ function clean(el: Element) {
 
 <template>
   <TransitionGroup
+    ref="group"
     :tag="tag"
     name="list-motion"
     :css="false"
@@ -108,13 +129,13 @@ function clean(el: Element) {
     @leave="onLeave"
     @leave-cancelled="clean"
   >
-    <slot />
+    <slot v-bind="offPage()" />
   </TransitionGroup>
 </template>
 
 <!-- Not scoped: the move class lands on the slot's elements, which are the caller's. -->
 <style>
-.list-motion-move {
+:not([data-detached]) > .list-motion-move {
   transition: transform var(--duration-standard) var(--ease-standard);
 }
 </style>

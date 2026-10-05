@@ -191,7 +191,9 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   leaves fades over `exit` while its room closes over `standard`, so the ones after it slide up and
   the page shortens as smoothly; one that arrives opens its room and fades in over `standard`
   (`UiListMotion`). A change made on another screen (a Start on the book page) plays when the list
-  is back on screen. Interruptible: an item reverses from the height it has.
+  is back on screen. Interruptible: an item reverses from the height it has. A list never moves
+  items it measured off the page (a kept-alive tab in the background re-rendering): coming back to a
+  tab shows its list in place (`e2e/library-return.spec.ts`).
 - **Tally mark.** A finish adds a mark to Home's tally: it fades in at full lamp with its glow and
   settles to the others' strength over twice `sheet`. Only a mark added to a count already on
   screen lights up.
