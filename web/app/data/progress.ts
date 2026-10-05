@@ -19,6 +19,13 @@ export const PAGE_CEILING = 99999
 /** What is recorded: a page or a percent, exactly one. */
 export type ProgressValue = { page: number } | { percent: number }
 
+/**
+ * `updateProgress`'s word for "take the read back to no progress" (Undo of a first
+ * save, issue #104): the database clears the value instead of storing 0
+ * (`update_progress(p_clear => true)`).
+ */
+export const NO_PROGRESS = 'none' as const
+
 /** Which of the two the Update progress sheet is entering. */
 export type ProgressMode = 'page' | 'percent'
 

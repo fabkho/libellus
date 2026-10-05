@@ -122,6 +122,16 @@ test('never tracked: the empty bar and its row; the first save changes the words
   await page.getByTestId('home.undo').click()
   await page.getByTestId('home.entry').click()
   await expectNeverTracked(page, 'Not started · 480 pages')
+  // In the database it is none again, not page 0 (#104).
+  const [stored] = await sql<{ progress_page: number | null; progress_percent: number | null; progress_updated_at: string | null }>(
+    `select s.progress_page, s.progress_percent, s.progress_updated_at
+       from public.reading_sessions s
+       join public.library_entries e on e.id = s.entry_id
+       join auth.users u on u.id = e.member_id
+      where u.email = $1 and s.outcome is null`,
+    [member.email],
+  )
+  expect(stored).toEqual({ progress_page: null, progress_percent: null, progress_updated_at: null })
 })
 
 test('Reduce Motion: the first save still brings everything in, with no travel', async ({ page }) => {

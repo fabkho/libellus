@@ -3,6 +3,7 @@ import type { BookSnapshot } from '@/data/books'
 import { createLibrary, type LibraryEntry } from '@/data/library'
 import {
   convertProgress,
+  NO_PROGRESS,
   ownTotal,
   pageCountOf,
   PAGE_CEILING,
@@ -99,6 +100,24 @@ describe('updateProgress', () => {
     const bare = await reading('No page count', null)
     const { data } = await bare.library.updateProgress(bare.entry.id, { percent: 30 })
     expect(data!.latestSession).toMatchObject({ progressPercent: 30, progressPage: null })
+  })
+
+  it('goes back to none with NO_PROGRESS, not to page 0 (Undo of a first save, #104)', async () => {
+    const { library, entry } = await reading('Cleared')
+    await library.updateProgress(entry.id, { page: 120 }, undefined, today)
+
+    const { data, error } = await library.updateProgress(entry.id, NO_PROGRESS, undefined, today)
+
+    expect(error).toBeNull()
+    expect(data!.latestSession).toMatchObject({ progressPage: null, progressPercent: null, progressUpdatedAt: null })
+    expect(progressOf(data!.latestSession)).toBeNull()
+    // The same from a percent, and together with her own total.
+    await library.updateProgress(entry.id, { percent: 30 }, undefined, today)
+    const withTotal = await library.updateProgress(entry.id, NO_PROGRESS, { pageCount: 300 }, today)
+    expect(withTotal.data).toMatchObject({ pageCountOverride: 300, latestSession: { progressPage: null, progressPercent: null } })
+    // Nothing to clear is no error; a later value is a first value again.
+    expect((await library.updateProgress(entry.id, NO_PROGRESS)).error).toBeNull()
+    expect((await library.updateProgress(entry.id, { page: 5 })).data!.latestSession).toMatchObject({ progressPage: 5 })
   })
 
   it('refuses a page past the page count, a percent over 100 and negative numbers', async () => {

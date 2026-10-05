@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
 import { ratingFromRow, type GoodreadsRow } from './goodreads'
-import type { ProgressValue } from './progress'
+import { NO_PROGRESS, type ProgressValue } from './progress'
 import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
 import { isNoAnswer } from './network'
 import { applyWrite, localId, type QueuedAction, type QueuedWrite, type WriteQueue } from './queuedWrites'
@@ -514,14 +514,15 @@ export type Library = {
    * `total` is the member's own page count (issue #60), sent in the same call so the page
    * is checked against it: `{ pageCount: 520 }` sets it, `{ pageCount: null }` goes back to
    * the edition's, leaving `total` out does not touch it. With a total the value may be
-   * `null`: only the total changes and the read keeps its progress.
+   * `null`: only the total changes and the read keeps its progress. `NO_PROGRESS` takes the
+   * read back to no progress at all (Undo of a first save, #104; a total may go with it).
    * `day` is the member's own calendar day (`YYYY-MM-DD`, the store sends `isoDay()`): the
    * value is booked on it in the read's progress by day (issue #68), in the same call.
    * Left out, the database uses its UTC date; one outside a day of it is `date_invalid`.
    */
   updateProgress: (
     entryId: string,
-    progress: ProgressValue | null,
+    progress: ProgressValue | typeof NO_PROGRESS | null,
     total?: { pageCount: number | null },
     day?: string,
   ) => Promise<Result<LibraryEntry>>
@@ -752,11 +753,12 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     async updateProgress(entryId, progress, total, day) {
       const args = {
         p_entry_id: entryId,
-        p_page: progress && 'page' in progress ? progress.page : null,
-        p_percent: progress && 'percent' in progress ? progress.percent : null,
+        p_page: progress && progress !== NO_PROGRESS && 'page' in progress ? progress.page : null,
+        p_percent: progress && progress !== NO_PROGRESS && 'percent' in progress ? progress.percent : null,
         p_set_page_count: total !== undefined,
         p_page_count: total?.pageCount ?? null,
         ...(day ? { p_day: day } : {}),
+        ...(progress === NO_PROGRESS ? { p_clear: true } : {}),
       }
       const waiting = await queuedEntry('update_progress', args, entryId)
       if (waiting) return waiting

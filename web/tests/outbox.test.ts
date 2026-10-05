@@ -11,6 +11,7 @@ import {
   type OutboxItem,
   type Send,
 } from '@/data/outbox'
+import { NO_PROGRESS } from '@/data/progress'
 import { applyWrite, applyWrites, isLocalId, type WriteQueue } from '@/data/queuedWrites'
 import { addDays, isoDay } from '@/utils/dates'
 import { signUpMember, type TestMember } from './support/member'
@@ -117,6 +118,30 @@ describe('a write made offline', () => {
       rating: 16,
       review: 'Dreams.',
       progressPage: 120,
+    })
+  })
+
+  it('syncs the Undo of a first save as a clear: the read goes back to none, not to page 0 (#104)', async () => {
+    const member = await signUpMember()
+    const phone = device(member)
+    const added = phone.keep(await phone.library.addToLibrary(book('The Dispossessed'), { status: 'reading', startedOn: today }))
+    phone.state.offline = true
+    phone.keep(await phone.library.updateProgress(added.data!.id, { page: 50 }, undefined, today))
+    const undone = phone.keep(await phone.library.updateProgress(added.data!.id, NO_PROGRESS, undefined, today))
+    // What the device shows meanwhile: no progress at all.
+    expect(undone.data!.latestSession).toMatchObject({ progressPage: null, progressPercent: null, progressUpdatedAt: null })
+    expect(phone.outbox.items().map((item) => item.args)).toEqual([
+      expect.objectContaining({ p_page: 50 }),
+      expect.objectContaining({ p_page: null, p_percent: null, p_clear: true }),
+    ])
+
+    phone.state.offline = false
+    const report = await phone.outbox.flush()
+    expect(report).toMatchObject({ refused: [], waiting: 0 })
+    expect((await server(member, added.data!.id))?.latestSession).toMatchObject({
+      progressPage: null,
+      progressPercent: null,
+      progressUpdatedAt: null,
     })
   })
 
@@ -384,6 +409,14 @@ describe('applyWrite / applyWrites', () => {
     expect(applyWrite(entry('a', 'reading'), w('update_progress', 'a', { p_page: 301 }))).toBe('progress_invalid')
     expect(applyWrite(entry('a', 'reading'), w('finish_reading', 'a', { p_ended_on: '2026-01-01' }))).toBe('ended_before_started')
     expect(applyWrite(null, w('remove_from_library', 'a'))).toBe('entry_not_found')
+  })
+
+  it('clears the progress when the write says so, and refuses a clear that names a value', () => {
+    const started = applyWrite(entry('a', 'reading'), w('update_progress', 'a', { p_page: 20 })) as LibraryEntry
+    expect(started.latestSession).toMatchObject({ progressPage: 20 })
+    const cleared = applyWrite(started, w('update_progress', 'a', { p_page: null, p_percent: null, p_clear: true }))
+    expect(cleared).toMatchObject({ latestSession: { progressPage: null, progressPercent: null, progressUpdatedAt: null } })
+    expect(applyWrite(started, w('update_progress', 'a', { p_page: 5, p_clear: true }))).toBe('progress_invalid')
   })
 
   it('sets her own total with the progress, and a total that repeats the edition\'s is none', () => {
