@@ -216,7 +216,9 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   raised shadow, Geist, Newsreader for the title, the eyebrow's tracking), and `theme="auto"` makes
   Regal follow the nearest `data-theme`.
   Any Regal component gets the same look with `class="regal-themed" theme="auto"`. The phone's sheet is
-  the column's width with `--radius-sheet` corners, like `UiSheet`. Two parts are D's own components
+  the column's width with `--radius-sheet` corners, like `UiSheet`, and clears the gesture bar (the
+  row's, with `--safe-area-bottom`). Regal's own frame round the row's card is dropped (the Libellus
+  card is the only edge; no token reaches it alone). Two parts are D's own components
   through Regal's slots (the meta line in the eyebrow's mono; Show back, Put back and Goodreads as D's
   pills); the rating stays Regal's stars, which already read as D's.
   The Profile shows it as a section like the others ("Your shelf", the count, a quiet Show all only
