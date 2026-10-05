@@ -18,7 +18,7 @@ the components and when to use them. Motion has its own file, [MOTION.md](MOTION
    small uppercase eyebrows, Newsreader for book titles and the wordmark. Titles are serif, always.
 4. **Hairlines, not boxes.** Edges are half-pixel rings and dividers inset under the text; cards
    are a slightly raised surface, not an outline.
-5. **Floating chrome over the content.** The tab bar is a small glass capsule over a soft scroll edge; search
+5. **Floating chrome over the content.** The tab bar is a small glass capsule with nothing behind it (no fade, no scroll edge); search
    is a palette over the page, never a page; sheets rise over a scrim. The page you were on stays
    where it is.
 6. **Two rooms, one design.** Light and dark are the same screens with two sets of values. Nothing
@@ -174,9 +174,9 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `bar` above the page — a mono date eyebrow over the greeting on Home ("Friday · 2 Oct",
   `text-title`), the large title elsewhere (`text-large-title`). Pushed screens with a large
   title (Collections, a Collection, Import) put it on the same row, `bar` under their top bar.
-- **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) over a
-  scroll edge (a very subtle blur of what runs under it, as tall as the capsule and where it floats,
-  fading out upwards, only while content runs under it; no opaque fade), at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
+- **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) floating
+  over the content with nothing behind it (no fade, no scroll edge: its own glass, edge and shadow
+  set it apart; it slides away on scroll down), at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
   the screen edge. The current tab is full ink with a bolder stroke and a lamp dot; the others are
   faint. Search is not a page: it opens the search palette, and the capsule itself turns into it
   and back (MOTION.md, Search morph).

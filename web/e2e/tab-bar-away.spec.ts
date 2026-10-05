@@ -6,9 +6,8 @@ import { test } from './fixtures'
  * The tab bar on every page (#82, composables/useHideOnScroll.ts): on Home,
  * Library and a book page alike it slides away while the member scrolls down,
  * comes back on a short scroll up, and is there at the end of the page and at
- * the top; its scroll edge (the soft blur behind it) is there only while
- * content runs under it. With Reduce Motion it stays. Search opens from a bar that is away (the bar is back in its
- * place for the morph and stays after closing), a sheet brings it back and
+ * the top. With Reduce Motion it stays. Search opens from a bar that is away
+ * (the bar is back in its place for the morph and stays after closing), a sheet brings it back and
  * keeps it, and Back lands with it showing. Apple answers from the recordings
  * (e2e/support.ts); the Library is the real local stack.
  *
@@ -132,29 +131,21 @@ test('on a book page the tab bar slides away scrolling down and returns scrollin
   await expectShown(page)
 })
 
-test('Home hides the bar the same way, and the scroll edge goes with it and is there only while content runs under it', async ({
-  page,
-}) => {
+test('Home hides the bar the same way, and it is there at the top and at the end of the page', async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 360 })
   await signedIn(page)
   await expect(page.getByTestId('home.title')).toBeVisible()
   await untilStill(page)
-  const edge = page.getByTestId('shell.tabsEdge')
 
-  // At the top of a page with more below: the edge is there.
-  await expect(edge).toHaveCSS('opacity', '1')
+  await expectShown(page)
   await scroll(page, 120)
   await expectAway(page)
-  await expect(edge).toHaveCSS('opacity', '0')
   await scroll(page, -20, 5)
   await expectShown(page)
-  await expect(edge).toHaveCSS('opacity', '1')
-
-  // At the very end the page's own room lies under the bar: nothing runs under the edge.
+  await scroll(page, 60)
+  await expectAway(page)
   await scrollToEnd(page)
   await expectShown(page)
-  await expect(edge).toHaveCSS('opacity', '0')
-  await expect(edge).toHaveCSS('pointer-events', 'none')
 })
 
 test('with Reduce Motion the bar never hides, and focus moving into a bar that is away brings it back', async ({ page }) => {

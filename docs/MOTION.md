@@ -156,7 +156,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   its hero when the flight starts, the cover waits for it (a frame or so, at most `standard`), then
   fades where it is.
 - **Tab bar away.** On every page (Home, Library, the Profile, a book, Collections, a Collection, Import) the tab bar
-  and its scroll edge (the soft blur behind the capsule, drawn only while content runs under it) slide down past the screen edge and fade out while the member scrolls down, and
+  slides down past the screen edge and fade out while the member scrolls down, and
   come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
   by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
   as intent only once it has gone 10 px in one direction from where it last turned
