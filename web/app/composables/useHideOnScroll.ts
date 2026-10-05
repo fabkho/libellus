@@ -3,14 +3,19 @@ import { barAfterScroll, barHeld, barShown, type BarScroll } from '~/utils/hideO
 
 /**
  * Whether the tab bar is out of the way (issue #82, docs/MOTION.md, Tab bar
- * away): on a pushed screen it slides away while the member reads down and
+ * away): on every page it slides away while the member reads down and
  * comes back on a short scroll up, at the top and at the very end of the page
  * (utils/hideOnScroll.ts has the arithmetic).
  *
- * It only ever hides while `active` holds (the caller says when: a pushed
- * screen, no search, no sheet), and it shows at once and starts counting
- * afresh whenever `active` stops holding, the page changes, a field takes the
- * keyboard, or the browser's toolbar comes back (a scroll up Chrome spends on
+ * It only ever hides while `wanted` holds (the caller says when: no search, no
+ * sheet) and Reduce Motion is off: with it on the bar stays where it is, as a
+ * bar that pops in and out in place is more motion, not less. There is no
+ * reliable way to tell on the web that a screen reader is running, so the bar
+ * is kept reachable instead: focus moving into it (`reveal`, which a screen
+ * reader's cursor and Tab both cause) brings it back.
+ *
+ * It shows at once and starts counting afresh whenever it may no longer hide,
+ * the page changes, a field takes the keyboard, or the browser's toolbar comes back (a scroll up Chrome spends on
  * its toolbar). While the router is still putting a page in its place
  * (`data-moving` on the document, app/router.options.ts) the scroll is not the
  * member's: only the anchor follows it, as it does for any jump longer than a
@@ -18,8 +23,11 @@ import { barAfterScroll, barHeld, barShown, type BarScroll } from '~/utils/hideO
  *
  * `reveal` brings it back from outside (focus moving into the bar).
  */
-export function useHideOnScroll(active: () => boolean): { hidden: Readonly<Ref<boolean>>; reveal: () => void } {
+export function useHideOnScroll(wanted: () => boolean): { hidden: Readonly<Ref<boolean>>; reveal: () => void } {
   const route = useRoute()
+  /** Reduce Motion is on: the bar stays. */
+  const reduced = ref(false)
+  const active = () => wanted() && !reduced.value
   // Read on every scroll event, so not reactive; only whether it is away is.
   let state: BarScroll = barShown(0)
   const away = ref(false)
@@ -70,7 +78,12 @@ export function useHideOnScroll(active: () => boolean): { hidden: Readonly<Ref<b
     requestAnimationFrame(() => (editing.value = takesKeyboard(document.activeElement)))
   }
 
+  const motion = import.meta.client ? window.matchMedia('(prefers-reduced-motion: reduce)') : undefined
+  const onMotion = () => (reduced.value = Boolean(motion?.matches))
+
   onMounted(() => {
+    onMotion()
+    motion?.addEventListener('change', onMotion)
     reveal()
     height = window.innerHeight
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -79,6 +92,7 @@ export function useHideOnScroll(active: () => boolean): { hidden: Readonly<Ref<b
     document.addEventListener('focusout', onBlur)
   })
   onUnmounted(() => {
+    motion?.removeEventListener('change', onMotion)
     window.removeEventListener('scroll', onScroll)
     window.removeEventListener('resize', onResize)
     document.removeEventListener('focusin', onFocus)

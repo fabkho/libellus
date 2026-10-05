@@ -132,7 +132,6 @@ enum Tokens {
         static let grabber: CGFloat = 36
         static let grabberHeight: CGFloat = 5
         static let emptyArt: CGFloat = 250
-        static let fadeAbove: CGFloat = 64
         static let starSm: CGFloat = 12
         static let star: CGFloat = 16
         static let starLg: CGFloat = 24

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// D's tab bar: a small floating capsule of three icons over a fade to the
-// room colour, the content running on underneath. Home and Library are pages;
+// D's tab bar: a small floating capsule of three icons, the content running
+// on underneath with nothing behind it (no fade, no scroll edge: the capsule's
+// own glass, edge and shadow set it apart). Home and Library are pages;
 // Search is not — it opens the search palette over the page you are on
 // (stores/search.ts), and the capsule itself turns into that palette
 // (docs/MOTION.md, Search morph): while it does, this bar stays where it is
@@ -11,12 +12,13 @@
 // overlay measures to start from, and the tabs it keeps out of the Search
 // icon's way.
 //
-// On a pushed screen (a book, Collections, a Collection, Import) the bar and
-// its fade slide away while the member reads down and come back on a short
-// scroll up, at the top and at the end of the page (useHideOnScroll,
-// docs/MOTION.md, Tab bar away). Never while search, a sheet or a field is in
-// play: search opening snaps it back to its place first, without a transition,
-// so the morph always grows out of the capsule where it rests.
+// On every page the bar slides away while the member reads
+// down and come back on a short scroll up, at the top and at the end of the
+// page (useHideOnScroll, docs/MOTION.md, Tab bar away). Never while search, a
+// sheet or a field is in play, with Reduce Motion on, nor once focus is in the
+// bar (a screen reader or keyboard reaching it brings it back): search opening
+// snaps it back to its place first, without a transition, so the morph always
+// grows out of the capsule where it rests.
 import { useSearchStore } from '~/stores/search'
 
 const { t } = useI18n()
@@ -25,9 +27,7 @@ const search = useSearchStore()
 const chrome = useSearchChrome()
 const modal = useModalShown()
 
-const { hidden: scrolledAway, reveal } = useHideOnScroll(
-  () => Boolean(route.meta.pushed) && !search.isOpen && chrome.value === 'tabs' && !modal.value,
-)
+const { hidden: scrolledAway, reveal } = useHideOnScroll(() => !search.isOpen && chrome.value === 'tabs' && !modal.value)
 // A screen that fills the room (`immersive`: Your shelf, #23) has the bar away for as long as it shows.
 const away = computed(() => scrolledAway.value || Boolean(route.meta.immersive))
 /** Search is taking the bar over: it is where it rests at once, for the morph to measure. */
@@ -56,11 +56,6 @@ function tapped(event: MouseEvent, to: string) {
 </script>
 
 <template>
-  <div
-    class="fade bar pointer-events-none fixed inset-x-0 bottom-0 z-10 bg-linear-to-b from-transparent to-surface to-62%"
-    :class="[away && 'away', still && 'still']"
-    aria-hidden="true"
-  />
   <nav
     :aria-label="t('shell.tabsLabel')"
     class="bar float-bottom glass fixed left-1/2 z-20 flex -translate-x-1/2 rounded-pill px-xs edge shadow-float"
@@ -119,7 +114,7 @@ function tapped(event: MouseEvent, to: string) {
 
 /* Away and back (docs/MOTION.md, Tab bar away): down past the screen edge and
    out, transform and opacity only, so nothing is laid out again. Back over
-   `standard`, away over `exit`; the fade travels with the capsule. */
+   `standard`, away over `exit`. */
 .bar {
   transition:
     transform var(--duration-standard) var(--ease-standard),
@@ -137,17 +132,8 @@ nav.away {
   transform: translateY(calc(100% + var(--float-bottom)));
 }
 
-.fade.away {
-  transform: translateY(100%);
-}
-
 .bar.still {
   transition: none;
-}
-
-/* From the screen edge to `fadeAbove` over the capsule, wherever it floats. */
-.fade {
-  height: calc(var(--float-bottom) + var(--size-tab-bar) + var(--size-fade-above));
 }
 
 /* 6 under the icon (`xs` + `xxs`), less the dot's own `xs`. */

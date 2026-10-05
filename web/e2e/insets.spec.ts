@@ -8,8 +8,8 @@ import { test } from './fixtures'
  * touching the browser's toolbar; the installed iOS app's status bar inset is
  * larger and wins. Outside iOS the tab bar floats `floatAbove` above the bottom
  * inset — Android's navigation fills it (24 px in Chrome on a Pixel with gesture
- * navigation, e2e/android/smoke.ts) — and its fade and the room under the page
- * follow it. Playwright reports no insets, so the device's are stood in through
+ * navigation, e2e/android/smoke.ts) — and the room under the page
+ * follows it. Playwright reports no insets, so the device's are stood in through
  * the `--safe-area-*` properties main.css reads them into. (The iOS placement,
  * `tabBarDrop` into the home-indicator inset, only applies in WebKit on an
  * iPhone: docs/TESTING.md.)
@@ -32,16 +32,14 @@ const paddingTop = (page: Page, testid: string) =>
 
 test('the header and the tab bar keep clear of the browser and of Android navigation', async ({ page }) => {
   await signedIn(page)
-  const [barTop, floatAbove, tabBar, fadeAbove] = await Promise.all(
-    ['--spacing-bar-top', '--spacing-float-above', '--size-tab-bar', '--size-fade-above'].map((name) => token(page, name)),
+  const [barTop, floatAbove] = await Promise.all(
+    ['--spacing-bar-top', '--spacing-float-above'].map((name) => token(page, name)),
   )
 
   // A Chrome tab with gesture navigation: no top inset, a 24 px navigation inset.
   await insets(page, 0, 24)
   expect(await paddingTop(page, 'shell.header')).toBe(barTop)
   await expect.poll(() => fromBottom(page, 'shell.tabs')).toBe(24 + floatAbove)
-  const fade = await page.locator('.fade').evaluate((element) => element.getBoundingClientRect().height)
-  expect(Math.round(fade)).toBe(24 + floatAbove + tabBar + fadeAbove)
 
   // The search palette rests where the tab bar was.
   await page.getByTestId('shell.tab.search').click()
