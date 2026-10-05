@@ -141,6 +141,8 @@ interface Flight {
   waitUntil: number | null
   /** A push's content has started to rise (once its hero is drawn). */
   risen: boolean
+  /** A pop: the list's live cover the copy lands on (`handOff`). */
+  row: HTMLElement | null
   /** A push: the hero's own (large) image, laid over the tapped cover's in the air (`sharpen`). */
   sharp: HTMLImageElement | null
   /** The large image is decoded and showing (or fading in) in the air: the copy may stay on the hero (`hold`). */
@@ -152,7 +154,7 @@ let layers: Layers | null = null
 let router: Router | null = null
 let pending: Departure | null = null
 let running: Flight | null = null
-let releaseHold: (() => void) | null = null
+let releaseHold: ((gently?: boolean) => void) | null = null
 /** The pose a departure put up (its copy of the page being left, if it added one) and its safety timer. */
 let posed: { root: HTMLElement | null; timer: number } | null = null
 /** The last Back was a swipe the browser already animated (iOS Safari's edge swipe): no flight on top of it. */
@@ -247,7 +249,8 @@ function timing(towards: Towards, reduced: boolean) {
 
 /** Keyframes are written towards the book page; back plays them back to front (as the search morph does). */
 function oriented(frames: Keyframe[], towards: Towards): Keyframe[] {
-  return towards === 'book' ? frames : [...frames].reverse()
+  // Back to front, with each keyframe's place in the animation (`offset`) turned the same way round.
+  return towards === 'book' ? frames : [...frames].reverse().map((frame) => (typeof frame.offset === 'number' ? { ...frame, offset: 1 - frame.offset } : frame))
 }
 
 function play(element: Element, frames: Keyframe[], flight: Flight, channel: keyof Channels, value: number, reduced: boolean) {
@@ -500,6 +503,7 @@ function fresh(departure: Departure): Flight {
     coverValue: departure.from.cover,
     waitUntil: null,
     risen: false,
+    row: null,
     sharp: null,
     sharpShown: false,
     origin: departure.origin,
@@ -582,6 +586,29 @@ function aim(flight: Flight, value: number): boolean {
 }
 
 /**
+ * The row's image (sized for its row) is gone by the time the cover is larger
+ * than it holds sharply (at the screen's density, blown up by a little at
+ * most): over the stretch of the way before that. Written towards the book
+ * page like every channel, so on the way back the image returns as the cover
+ * shrinks to what it holds.
+ */
+function fadeSoft(flight: Flight, copies: HTMLElement[], rowBox: Box, heroBox: Box, value: number, except: HTMLImageElement | null = null) {
+  const rows = copies.flatMap((copy) => [...copy.querySelectorAll<HTMLImageElement>(':scope > img')]).filter((image) => image !== except)
+  for (const row of rows) {
+    const holds = ((row.naturalWidth || rowBox.width) / (window.devicePixelRatio || 1)) * SOFT_SCALE
+    const gone = Math.min(Math.max((holds - rowBox.width) / Math.max(heroBox.width - rowBox.width, 1), SOFT_FADE), 1)
+    play(
+      row,
+      [{ opacity: 1 }, { opacity: 1, offset: gone - SOFT_FADE }, { opacity: 0, offset: gone }, { opacity: 0 }],
+      flight,
+      'cover',
+      value,
+      false,
+    )
+  }
+}
+
+/**
  * The hero's own image, in the air (docs/MOTION.md, Push to a book). The tapped
  * cover's image is sized for its row (a list row asks for 120 × 180,
  * utils/cover.ts), so blown up to the hero it is a blur. The hero's image is
@@ -610,21 +637,7 @@ function sharpen(flight: Flight, hero: HTMLImageElement, copies: HTMLElement[], 
     return
   }
   sharp.style.opacity = '0'
-  // The row's image is gone by the time the cover is larger than it holds sharply (at the screen's
-  // density, blown up by a little at most): over the stretch of the way before that.
-  const rows = copies.flatMap((copy) => [...copy.querySelectorAll<HTMLImageElement>(':scope > img')]).filter((image) => image !== sharp)
-  for (const row of rows) {
-    const holds = ((row.naturalWidth || rowBox.width) / (window.devicePixelRatio || 1)) * SOFT_SCALE
-    const gone = Math.min(Math.max((holds - rowBox.width) / Math.max(heroBox.width - rowBox.width, 1), SOFT_FADE), 1)
-    play(
-      row,
-      [{ opacity: 1 }, { opacity: 1, offset: gone - SOFT_FADE }, { opacity: 0, offset: gone }, { opacity: 0 }],
-      flight,
-      'cover',
-      value,
-      false,
-    )
-  }
+  fadeSoft(flight, copies, rowBox, heroBox, value, sharp)
   const reveal = () => {
     if (flight.sharp !== sharp || !sharp.isConnected || !sharp.naturalWidth) return
     flight.sharpShown = true
@@ -662,12 +675,18 @@ function pop(departure: Departure, to: RouteLocationNormalized) {
     standAside(snapshot, departure.cover)
     flight.rowBox = rowBox
     flight.heroBox = heroBox
-    const copies = [coverCopy(row)]
+    flight.row = row
+    const rowCopy = coverCopy(row)
+    const copies = [rowCopy]
+    // The hero's own image (large) flies the whole way, opaque, and stays until the row has its own
+    // decoded (`handOff`): the list's image is sized for its row, so it is never shown blown up on the way.
     const top = departure.coverShown && departure.copy
     if (top) copies.push(departure.copy!)
     flight.fly = flyAt(heroBox, copies, departure.radius)
     layers.over.appendChild(flight.fly)
-    if (top) play(departure.copy!, [{ opacity: 0 }, { opacity: 1 }], flight, 'cover', from.cover, false)
+    // Without the hero's image (it was not on screen when Back was tapped) the row's image goes to its
+    // thumbhash while the cover is larger than it holds sharply, as it does on the way out.
+    if (!top) fadeSoft(flight, [rowCopy], rowBox, heroBox, from.cover)
     play(flight.fly, [{ transform: transformFrom(heroBox, rowBox) }, { transform: 'none' }], flight, 'cover', from.cover, false)
   } else if (air && layers) {
     // Turned around in the air with nowhere to land: the cover fades where it is, with the page.
@@ -698,7 +717,7 @@ function track(flight: Flight) {
     }
     const all = animations(flight)
     const still = all.some((animation) => animation.playState === 'paused')
-    if (!still && flight.waitUntil === null && all.every((animation) => animation.playState === 'finished')) land(flight)
+    if (!still && flight.waitUntil === null && all.every((animation) => animation.playState === 'finished')) land(flight, true)
     else requestAnimationFrame(step)
   }
   requestAnimationFrame(step)
@@ -719,10 +738,15 @@ function letGo(flight: Flight) {
   flight.held = []
 }
 
-/** A flight is over (or is cut short): the live page takes over, pixel for pixel. */
-function land(flight: Flight) {
+/**
+ * A flight is over (or is cut short): the live page takes over, pixel for
+ * pixel. `ended`: it ran its course (not cut short), so a cover that has
+ * flown back to its row may stay on it until the row's own image is ready.
+ */
+function land(flight: Flight, ended = false) {
   const fly = flight.fly
   const hero = flight.towards === 'book' ? flight.hero : null
+  const row = flight.towards === 'list' && ended ? flight.row : null
   // The hero's image in the air, if it has come in: it stays as shown once the flight's animations end.
   const sharp = flight.sharpShown ? flight.sharp : null
   if (sharp) sharp.style.opacity = '1'
@@ -733,6 +757,9 @@ function land(flight: Flight) {
   // image (or a cloth). Else the copy goes: the hero shows its thumbhash and fades its image in there.
   const sharpOrCloth = Boolean(sharp) || !fly?.querySelector('img')
   if (fly && hero && hero.isConnected && !shown(hero) && sharpOrCloth) hold(fly, hero)
+  // Back into its row: the copy (the hero's large image) stays on the row until the row's own image
+  // is decoded and showing, then gives way to it.
+  else if (fly && row && row.isConnected && fly.querySelector('img')) handOff(fly, row)
   else fly?.remove()
 }
 
@@ -766,6 +793,34 @@ function drop(flight: Flight) {
  * under the chrome like it; the cover never shows twice.
  */
 function hold(fly: HTMLElement, hero: HTMLElement) {
+  keep(fly, hero, () => shown(hero), false)
+}
+
+/**
+ * The cover has flown back to its row (docs/MOTION.md, Push to a book, Back).
+ * The row's image is sized for the row and was off the document while the book
+ * page was open, so it may not be decoded yet (a browser drops what it is not
+ * showing), or not even loaded (a row opened before its image came): handing
+ * the cover to it at once would show its thumbhash, or a blur, for a moment.
+ * The copy that flew, showing the hero's large image at the row's size, moves
+ * into the row's sheet and stays there until the row's own image is decoded and
+ * showing, then fades out over it (`quick`: a frame or two at the same size).
+ */
+function handOff(fly: HTMLElement, row: HTMLElement) {
+  const image = row.querySelector<HTMLImageElement>(':scope > img')
+  // The copy was drawn with the hero's corners; the row's own take over.
+  const radius = getComputedStyle(row).borderRadius
+  for (const copy of fly.children) if (copy instanceof HTMLElement) copy.style.borderRadius = radius
+  let decoded = !image
+  image?.decode().then(
+    () => (decoded = true),
+    () => (decoded = true),
+  )
+  keep(fly, row, () => decoded && shown(row), true)
+}
+
+/** Moves the flown copy into `cover`'s sheet, until `ready`; `fade` lets it go gently instead of at once. */
+function keep(fly: HTMLElement, cover: HTMLElement, ready: () => boolean, fade: boolean) {
   const held = document.createElement('div')
   held.className = 'flight-held'
   held.dataset.testid = 'shell.flightHeld'
@@ -773,15 +828,18 @@ function hold(fly: HTMLElement, hero: HTMLElement) {
   // In the page now: not a cover of its own for anything that looks for one.
   for (const copy of held.querySelectorAll('[data-cover]')) copy.removeAttribute('data-cover')
   fly.remove()
-  hero.appendChild(held)
+  cover.appendChild(held)
   let frame = 0
-  const release = () => {
+  const release = (gently = false) => {
     cancelAnimationFrame(frame)
-    held.remove()
     if (releaseHold === release) releaseHold = null
+    if (!gently) return held.remove()
+    const out = held.animate([{ opacity: 1 }, { opacity: 0 }], { duration: durationToken('quick'), easing: easingToken('standard'), fill: 'both' })
+    out.finished.then(() => held.remove(), () => held.remove())
   }
   const check = () => {
-    if (!hero.isConnected || shown(hero)) release()
+    if (!cover.isConnected) release()
+    else if (ready()) release(fade)
     else frame = requestAnimationFrame(check)
   }
   releaseHold?.()

@@ -138,7 +138,14 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   Back — the back button or the browser's — plays it the other way over `exit` (on the `standard`
   curve, landing softly): the hero flies back into its row, the book page fades out and sinks `md`,
   and the list fades in exactly where it was (same scroll, same tab place: the flight never moves
-  the page). Only into the page it came from, and only if its row is on screen: a row scrolled away,
+  the page). The cover is as sharp on the way back as on the way out: the hero's own image flies the
+  whole way, never cross-faded with the row's small one (blown up on the way it would be a blur), and
+  it hands over to the row only once landed on it: it stays there, in the row's sheet, until the
+  row's own image is decoded and showing (the row was off the document while the book page was open, so a
+  browser may have dropped what it had decoded; a row opened before its image came has only its
+  thumbhash), then fades out over `quick` at the same size. A cover that left without the hero's
+  image on screen flies the row's, which goes to its thumbhash while the cover is larger than it
+  holds sharply, as on the way out. Only into the page it came from, and only if its row is on screen: a row scrolled away,
   a book opened from search (the palette is gone), or a list still loading → the cover leaves with
   its page in a cross-fade. A Back the browser animates itself (iOS Safari's edge swipe) gets no
   flight on top of its own. Tabs and links from the book page are new places: no flight.
@@ -248,6 +255,12 @@ out at the hero's size, drawn at the row's by a FLIP transform (`translate` then
 left), so it is moved by `transform` alone and `will-change` lives only on that box while it flies.
 The live covers at both ends hold their place unseen (`data-flight-hidden`) while the copy stands in
 for them. Everything else is `opacity` (the pages) and `translateY` (the rise and the sink).
+
+On Back the copy carries the hero's own image over the row's (`pop`), opaque for the whole flight. Once
+landed (`land`, only for a flight that ran its course, not one cut short) `handOff` moves it into the
+row's sheet, as `hold` does into the hero, until the row's image is decoded (`decode()`) and showing,
+and then fades it out over `quick`. Back-to-front keyframes keep their `offset`s turned round
+(`oriented`), or `animate` throws.
 
 Each part — the cover's travel, the book page, the list — is a channel whose value says how far
 towards the book page it shows. All of them are Web Animations (`fill: both`) cancelled once landed;
