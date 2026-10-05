@@ -135,10 +135,10 @@ Goodreads second opinion on read dates is not part of the import.
 
 [Regal](https://github.com/fabkho/regal), the owner's 3D bookshelf on fabkho.dev/books, reads one
 file: a [Regal library file](https://github.com/fabkho/regal/blob/main/docs/library-file.md)
-(version 2). Libellus writes it from a member's Library with `web/scripts/export-regal.ts` (#22),
-read only: one Book per Library entry (the edition's id as its id), the Status from the latest
+(version 2). Libellus writes it from a member's Library with `web/scripts/export-regal.ts` (#22)
+and serves the owner's with the edge function `regal-export` (#110), read only: one Book per Library entry (the edition's id as its id), the Status from the latest
 Reading session (`read`, `dnf`, `currently-reading`, `to-read`), the date read, Rating and review
-from the last finished read, the read count, ISBN, pages, publisher, blurb, the Cover URL and a
+from the last finished read, the read count, ISBN, pages (the member's own count where she set one), publisher, blurb, the Cover URL and a
 palette from the Cover's colours. The mapping is `web/app/data/export/regal.ts` (pure, pinned by a
 fixture); the file is checked with Regal's validator, vendored in
 `web/app/data/export/regalLibraryFile.ts` with the Regal commit it came from (run the tests with
@@ -146,16 +146,54 @@ fixture); the file is checked with Regal's validator, vendored in
 `--statuses` asks for it. Libellus has no series, binding or Spine art: Regal assets fills what it
 can.
 
-The daily chain, run by the owner's job (hosted Libellus, never `--publish` by hand while testing):
+The daily chain runs in the cloud (#110), nothing on a Mac:
+
+```
+owner's change ─► trigger (owner only, ≥ 10 min apart) ─► pg_net ─► GitHub repository_dispatch libellus-changed ─┐
+daily 05:00 UTC, or by hand ───────────────────────────────────────────────────────────────────────────────────┼─► fabkho/regal publish-shelf.yml
+publish-shelf.yml: GET /functions/v1/regal-export ─► validate ─► regal-assets --no-ai --no-model --revalidate --publish v2 ─► R2 portfolio-books/v2/
+```
+
+1. **The export endpoint**: the edge function `regal-export` (`supabase/functions/regal-export/`, its
+   README has the details) answers the owner's Library as a library file to
+   `Authorization: Bearer <REGAL_EXPORT_TOKEN>`: the Books read, the art of the published file carried
+   over, the member's own page count (`page_count_override`, #60) where she set one. The same mapping
+   as the script below, imported from `web/app/data/export/` (a closed set of pure modules with
+   `.ts` imports, which Deno runs as they are). Without the published file it answers 502 and nothing
+   is published.
+2. **The trigger** (`supabase/migrations/20261005114229_shelf_publish_dispatch.sql`): a change to
+   the owner's `library_entries` or `reading_sessions` (a read, a Rating, a review, progress) sends
+   fabkho/regal a `repository_dispatch` through pg_net, at most once per ten minutes; a change inside
+   the ten minutes is sent by pg_cron's `shelf-publish` job (every five minutes) once they are up.
+   The owner is the one row of `private.shelf_publish` (no address in SQL); the GitHub token is the
+   Vault secret `github_dispatch_token`. Without either, or without pg_net, it does nothing (the
+   local stack, the tests). A failing dispatch never fails the write.
+3. **The workflow** in Regal (`.github/workflows/publish-shelf.yml`, Regal's README: The daily
+   chain) fetches the file, validates it and runs Regal assets with `.data/regal-assets` cached
+   between runs, so a quiet run uploads nothing.
+
+Configuration, all outside the repo:
+
+| Where | Name | |
+|---|---|---|
+| Function secrets (`supabase secrets set`) | `REGAL_EXPORT_TOKEN` | The shared bearer secret, ≥ 32 characters (`openssl rand -hex 32`). |
+| | `REGAL_OWNER_EMAIL` | The owner's sign-in address. |
+| | `REGAL_OWNER_NAME` | `Fabian`: the file's `owner`, as Regal shows it. |
+| | `REGAL_TIME_ZONE`, `REGAL_STATUSES`, `REGAL_CARRY_ART_URL` | Optional: `Europe/Berlin`, `read`, `https://books.fabkho.dev/v2/library.json`. |
+| Database | `private.shelf_publish.owner_id` | `update private.shelf_publish set owner_id = (select id from auth.users where email = '<owner>');` |
+| Vault | `github_dispatch_token` | A fine-grained GitHub token, fabkho/regal only, Contents read and write: `select vault.create_secret('<token>', 'github_dispatch_token');` |
+| fabkho/regal Actions secrets | `REGAL_EXPORT_TOKEN`, `LIBELLUS_EXPORT_URL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | The same token; `https://<project>.supabase.co/functions/v1/regal-export`; R2 Object Read & Write on `portfolio-books`; the account id. |
+
+By hand, the same file from any stack (read only; never `--publish` by hand while testing):
 
 ```sh
-# 1. Libellus → library file, keeping the art Regal shows now (hosted, read only)
+# 1. Libellus → library file, keeping the art Regal shows now
 cd web
 SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… pnpm export:regal --target hosted --confirm-host <project host> \
-  --email <owner> --owner Fabian --carry-art https://books.fabkho.dev/v2/library.json \
+  --email <owner> --owner Fabian --statuses read --carry-art https://books.fabkho.dev/v2/library.json \
   --out ../.data/regal/library-v2.json
-# 2. in a Regal checkout: Spines, backs, pile copies and colours, then publish under v2/
-pnpm regal-assets --in <libellus>/.data/regal/library-v2.json --no-ai --no-model --revalidate --publish v2
+# 2. in a Regal checkout: Spines, backs, pile copies and colours; --dry-run shows what would be published
+pnpm regal-assets --in <libellus>/.data/regal/library-v2.json --no-ai --no-model --revalidate --dry-run --publish v2
 ```
 
 `--carry-art` takes the file that is published now: every exported Book it has (by ISBN-13, else by
