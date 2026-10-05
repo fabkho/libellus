@@ -9,9 +9,24 @@ function cssVariable(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
-/** `--duration-<name>` in milliseconds (`overlay-exit` → 240). */
+/**
+ * A CSS time (`250ms`, `.25s`) in milliseconds; 0 for anything else. The
+ * tokens are written in milliseconds, but the production build's CSS minifier
+ * (Lightning CSS) rewrites each time in its shortest form, so the shipped
+ * stylesheet says `.25s`: read without its unit that was a quarter of a
+ * millisecond, and every animation timed by a token finished in one frame.
+ */
+export function parseDuration(value: string): number {
+  const match = /^(-?[\d.]+(?:e-?\d+)?)(ms|s)$/i.exec(value.trim())
+  if (!match) return 0
+  const amount = Number.parseFloat(match[1]!)
+  if (!Number.isFinite(amount)) return 0
+  return match[2]!.toLowerCase() === 's' ? amount * 1000 : amount
+}
+
+/** `--duration-<name>` in milliseconds (`overlay-exit` → 240), whichever unit the stylesheet writes it in. */
 export function durationToken(name: string): number {
-  return Number.parseFloat(cssVariable(`--duration-${name}`)) || 0
+  return parseDuration(cssVariable(`--duration-${name}`))
 }
 
 /** `--ease-<name>` as a CSS timing function (`sheet` → `cubic-bezier(0.32, 0.72, 0, 1)`). */

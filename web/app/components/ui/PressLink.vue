@@ -7,12 +7,13 @@
 // (open in a new tab) stay the browser's.
 // A link to a book page knows the cover it was tapped on: as it navigates it
 // hands itself to the flight, which flies that cover into the book page's
-// hero (composables/useBookFlight.ts, docs/MOTION.md, Push to a book).
+// hero (composables/useBookFlight.ts, docs/MOTION.md, Push to a book), and on
+// the press it starts loading that hero's image, so the cover lands sharp.
 const props = defineProps<{ to: string }>()
 const emit = defineEmits<{ press: [] }>()
 
 const router = useRouter()
-const { launch } = useBookFlight()
+const { launch, prepare } = useBookFlight()
 const href = computed(() => router.resolve(props.to).href)
 
 // Set when a mouse press already navigated, so its click does not do it twice.
@@ -27,6 +28,7 @@ function onPointerdown(event: PointerEvent) {
   if (event.button !== 0 || modified(event)) return
   emit('press')
   void preloadRouteComponents(props.to)
+  if (event.currentTarget instanceof HTMLElement) prepare(event.currentTarget, props.to)
   if (event.pointerType === 'mouse') {
     pressed = true
     go(event.currentTarget)

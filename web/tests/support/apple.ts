@@ -37,6 +37,11 @@ export function appleCover(): Buffer {
   return readFileSync(new URL('cover.jpg', fixtures))
 }
 
+/** The same cover at a list row's size (120 × 180, what `coverSrc(…, 'sm')` asks Apple for), for flows about sharpness. */
+export function appleRowCover(): Buffer {
+  return readFileSync(new URL('cover-120x180.jpg', fixtures))
+}
+
 /** Every Apple id in the recordings: the Books a flow can put into the Catalogue. */
 export function recordedAppleIds(): string[] {
   const ids = new Set<string>()
