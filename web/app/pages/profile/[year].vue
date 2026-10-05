@@ -20,7 +20,6 @@ const stats = useStatsStore()
 const books = useBookStore()
 // Your shelf (#23): the year's Books as Regal's 3D row under the months, for the owner only.
 const shelf = useShelfStore()
-const { count, monthShort } = useFigures()
 
 const year = computed(() => Number(route.params.year))
 useHead({ title: () => `${t('profile.year.eyebrow')} · ${year.value} · ${t('app.name')}` })
@@ -73,32 +72,7 @@ function back() {
     <div v-if="stats.record && figures.books" class="relative flex flex-col gap-xl px-screen pt-lg">
       <ProfileFigures :figures="figures" />
 
-      <section id="months" :aria-label="t('profile.year.months')" class="flex flex-col" data-testid="yearInReview.months">
-        <div v-for="m in months" :key="m.month" class="month flex items-center gap-md py-xs" :data-testid="`yearInReview.month.${m.month}`">
-          <span class="eyebrow w-(--size-touch) shrink-0">{{ monthShort(m.month) }}</span>
-          <span v-if="m.reads.length" class="flex min-w-0 flex-1 flex-wrap gap-xs">
-            <UiPressLink
-              v-for="read in m.reads"
-              :key="read.sessionId"
-              :to="`/book/${read.book.id}`"
-              :aria-label="read.book.title"
-              data-testid="yearInReview.read"
-              @press="books.prefetch(read.book.id)"
-            >
-              <UiCover
-                :title="read.book.title"
-                :authors="read.book.authors"
-                :src="coverSrc(read.book.coverUrl, 'sm')"
-                :thumbhash="read.book.coverThumbhash"
-                :colors="read.book.coverColors"
-                size="sm"
-              />
-            </UiPressLink>
-          </span>
-          <span v-else class="flex-1 text-ink-ghost" aria-hidden="true">—</span>
-          <span class="figures w-(--size-button-sm) shrink-0 text-right text-meta" :class="m.reads.length ? 'text-ink-muted' : 'text-ink-ghost'">{{ m.reads.length ? count(m.reads.length) : '' }}</span>
-        </div>
-      </section>
+      <ProfileMonthBooks :months="months" />
 
       <ShelfYearRow v-if="shelfBooks.length" :year="year" :books="shelfBooks" />
 
@@ -164,8 +138,5 @@ function back() {
   line-height: 1;
   font-weight: var(--font-weight-light);
   letter-spacing: var(--text-figure--letter-spacing);
-}
-.month + .month {
-  border-top: var(--stroke-hairline) solid var(--color-hairline);
 }
 </style>

@@ -156,6 +156,8 @@ test('the avatar opens the Profile: the figures of all years and of one, the she
   await expect(page).toHaveURL(/\/profile\/2025$/)
   await expect(page.getByTestId('yearInReview.month.5').getByTestId('yearInReview.read')).toHaveCount(1)
   await expect(page.getByTestId('yearInReview.month.6').getByTestId('yearInReview.read')).toHaveCount(0)
+  // The covers open a little apart and press together (docs/MOTION.md, Month rows): at rest they carry no transform.
+  await expect(page.getByTestId('yearInReview.month.5').locator('[data-intro-cover]')).toHaveCSS('transform', 'none')
   await expect(page.getByTestId('yearInReview.favouriteTitle')).toHaveText(runTitle('Piranesi'))
   await expect(page.getByTestId('yearInReview.after')).toHaveCount(0)
   await page.getByTestId('yearInReview.before').click()
