@@ -8,7 +8,7 @@ import { isoDay } from '../app/utils/dates'
 import { emailCooldown, mailCount, newClient, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { shelfOwner } from './shelfOwner'
-import { signedIn } from './support'
+import { expectNoSideScroll, signedIn } from './support'
 
 /**
  * Your shelf (#23): Regal's 3D shelf of the owner's published library file, for
@@ -236,6 +236,50 @@ test.describe('Your shelf, the owner', () => {
     // The Book's entry is gone with it: the next Back leaves the Profile.
     await page.goBack({ waitUntil: 'commit' })
     await expect(page.getByTestId('home.title')).toBeVisible()
+  })
+
+  test('never moves the page sideways: the Profile with her shelf, a Book out and back, the year, the whole shelf', async ({ page }) => {
+    // As narrow as the narrowest phone in use.
+    await page.setViewportSize({ width: 360, height: 800 })
+    await libraryFile(page)
+    const owner = await signInAsOwner(page)
+    await finishedIn2025(owner.email)
+
+    await page.goto('/profile')
+    const row = shelfRow(page, 'profile.shelfRow')
+    await expect(row).toHaveAttribute('data-book-count', '8')
+    // Regal's canvas has drawn (its focus is on a Book) before the page is looked at.
+    await row.scrollIntoViewIfNeeded()
+    await expect(row.locator('.row-focus')).toBeAttached({ timeout: 30_000 })
+    await expectNoSideScroll(page, 'Profile, shelf row drawn')
+
+    // The row scrolls sideways inside its card; the page stays.
+    const scroller = row.locator('.row-card__scroller')
+    expect(await scroller.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true)
+    await scroller.evaluate((el) => el.scrollTo({ left: 0 }))
+    await expectNoSideScroll(page, 'Profile, shelf row scrolled')
+
+    // A Book taken out over the whole screen, and put back by Done and by the system Back.
+    await takeOut(page, row)
+    await expect(page.locator('body > .row-card__view--out')).toHaveCount(1)
+    await expectNoSideScroll(page, 'Profile, a Book out')
+    await page.getByTestId('shelfRow.putBack').click()
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    await expectNoSideScroll(page, 'Profile, a Book put back with Done')
+    await takeOut(page, row)
+    await page.goBack({ waitUntil: 'commit' })
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    await expect(page).toHaveURL(/\/profile$/)
+    await expectNoSideScroll(page, 'Profile, a Book put back with Back')
+
+    await page.goto('/profile/2025')
+    await expect(shelfRow(page, 'yearInReview.shelfRow')).toHaveAttribute('data-book-count', '4')
+    await expectNoSideScroll(page, 'Year in review with the shelf row')
+
+    await libraryFile(page, 200, MANY)
+    await page.goto('/profile/shelf')
+    await expect(page.getByTestId('shelf.loading')).toHaveCount(0, { timeout: 30_000 })
+    await expectNoSideScroll(page, 'The whole shelf')
   })
 
   test('opens the whole shelf from Show all once it holds more Books than the row', async ({ page }) => {

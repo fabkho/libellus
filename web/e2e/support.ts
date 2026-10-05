@@ -136,3 +136,56 @@ export async function dragRating(page: Page, control: Locator, quarters: number)
   for (const q of [4, 8, 12, quarters]) await page.mouse.move(box.x + ratingX(q, size, gap) + 1, y, { steps: 4 })
   await page.mouse.up()
 }
+
+/**
+ * The page never moves sideways (docs/DESIGN.md, The page does not scroll sideways): the
+ * document is no wider than the viewport, and no element of the page itself sticks out of it.
+ *
+ * `html` and `body` clip the x axis (main.css), so the page cannot be wider whatever is
+ * inside it, and `scrollWidth` alone would stay quiet about an element that is cut off. The
+ * second look finds those: every element whose box leaves the viewport, except where the
+ * box is meant to: inside something that scrolls or clips (the year cards, Regal's row) and
+ * what is fixed to the screen (a sheet's own frame, Regal's out-of-the-row view).
+ */
+export async function expectNoSideScroll(page: Page, where: string) {
+  const found = await page.evaluate(() => {
+    const root = document.documentElement
+    const width = root.clientWidth
+    const clipsAt = (el: Element) => {
+      if (getComputedStyle(el).position === 'fixed') return true
+      for (let parent = el.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+        if (getComputedStyle(parent).overflowX !== 'visible') return true
+      }
+      return false
+    }
+    const outside: string[] = []
+    const name = (el: Element) => {
+      const id = el.getAttribute('data-testid')
+      return `${el.tagName.toLowerCase()}${id ? `[${id}]` : ''}`
+    }
+    for (const el of document.body.querySelectorAll('*')) {
+      const box = el.getBoundingClientRect()
+      if (!box.width && !box.height) continue
+      if (box.right <= width + 0.5 && box.left >= -0.5) continue
+      if (clipsAt(el)) continue
+      outside.push(`${name(el)} ${Math.round(box.left)}…${Math.round(box.right)}`)
+    }
+    // A word wider than its box runs out of it without widening the box: look at the text itself.
+    const words = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    for (let node = words.nextNode(); node; node = words.nextNode()) {
+      const parent = node.parentElement
+      if (!parent || !node.textContent?.trim() || getComputedStyle(parent).overflowX !== 'visible' || clipsAt(parent) || parent.closest('[aria-hidden="true"]')) continue
+      const range = document.createRange()
+      range.selectNodeContents(node)
+      for (const box of range.getClientRects()) {
+        if (box.right <= width + 0.5 && box.left >= -0.5) continue
+        outside.push(`text in ${name(parent)} ${Math.round(box.left)}…${Math.round(box.right)}`)
+        break
+      }
+    }
+    return { scrollWidth: root.scrollWidth, clientWidth: width, scrollX: window.scrollX, outside }
+  })
+  expect.soft(found.scrollWidth, `${where}: the document is wider than the viewport`).toBeLessThanOrEqual(found.clientWidth)
+  expect.soft(found.scrollX, `${where}: the page was moved sideways`).toBe(0)
+  expect.soft(found.outside, `${where}: elements stick out of the viewport`).toEqual([])
+}

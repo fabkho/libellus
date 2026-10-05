@@ -156,7 +156,7 @@ function back() {
       />
       <h1
         ref="titleEl"
-        class="book-title mt-ml text-headline text-balance"
+        class="book-title mt-ml max-w-full text-headline text-balance wrap-anywhere"
         :class="[!titleOpen && 'line-clamp-3', (titleCut || titleOpen) && 'cursor-pointer']"
         :title="book.title"
         data-testid="book.title"
@@ -164,7 +164,7 @@ function back() {
       >
         {{ book.title }}
       </h1>
-      <p class="mt-xs text-body text-ink-muted" data-testid="book.authors">{{ authorLine }}</p>
+      <p class="mt-xs max-w-full text-body text-ink-muted wrap-anywhere" data-testid="book.authors">{{ authorLine }}</p>
       <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
         <template v-for="(fact, i) in facts" :key="fact">
           <span v-if="i" class="dot" aria-hidden="true" />{{ fact }}
@@ -232,7 +232,7 @@ function back() {
 
     <section v-if="description" class="relative px-ml pt-xl" data-testid="book.about">
       <h2 class="eyebrow mb-ms">{{ t('book.about') }}</h2>
-      <p class="text-subhead whitespace-pre-line text-ink-muted" :class="long && !expanded && 'clamped'" data-testid="book.description">
+      <p class="text-subhead whitespace-pre-line text-ink-muted wrap-anywhere" :class="long && !expanded && 'clamped'" data-testid="book.description">
         {{ description }}
       </p>
       <button

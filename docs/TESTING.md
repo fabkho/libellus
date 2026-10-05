@@ -184,6 +184,25 @@ pnpm tsx e2e/android/shelf.ts --base http://localhost:3121 --email dev@libellus.
 The R2 bucket's CORS allows only listed origins: serve the app on an allowed port (3121 is one) and
 let the script reverse it, so the phone's origin is `http://localhost:<port>`.
 
+**The page never moves sideways** (`e2e/android/scroll-x.ts`, not part of CI). On Home, Library, Search,
+the Profile (with the shelf row; the owner as for the shelf above), a Book out and put back by the system Back and by Done, a year in review and the
+whole shelf it writes down whether the document is wider than the viewport (`scrollWidth` against `clientWidth`,
+the scroll position and the visual viewport's offset) and which elements stick out. On the Profile it puts a
+real finger on the page (the heading above the cards) and swipes it left and right: the page must not move.
+Then it swipes the year cards and Regal's row: they must scroll. It exits 1 if the page was wider or moved, or if
+an inner row did not scroll. The published library file is fetched by the script and handed to the page (the
+bucket's CORS allows only listed origins, and a built app's service worker is bypassed so the page's own
+request is the one that is answered). Screenshots `scroll-x-<step>.jpg` and `scroll-x.json` go to `--out`:
+
+```sh
+pnpm tsx e2e/android/scroll-x.ts --base http://localhost:3128 --email dev@libellus.local
+```
+
+Measured (Chrome 145, the emulator, the dev server and a `nuxt generate` build, tab): no screen was wider than
+the viewport, 411.43 CSS px at 2.625 dpr. To see the net work, put a `150vw` element into the Profile and swipe:
+without `overflow-x: clip` on `html` and `body` the document is 617 px wide and the swipe moves the page by
+205 px (`visualViewport.pageLeft`); with it the document stays 411 px and the page does not move.
+
 ## What Chrome reports (Chrome 145, Pixel 9 emulator, Android 17)
 
 CSS px. "Keyboard" is Gboard up in the search palette.

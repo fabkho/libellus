@@ -171,6 +171,22 @@
     text-size-adjust: 100%;
   }
 
+  /* The page never moves sideways: no screen is wider than the phone, and if one
+     ever is, the rest of it is cut off instead of the page becoming a scroller
+     (the track of a horizontal scroll bar at the bottom, a page that slides a little
+     under the finger). `clip`, not `hidden`: `hidden` makes body a scroll container,
+     which ends `position: sticky` for everything under it. On <html> the value goes
+     to the viewport, as `hidden`; vertical scrolling and the pull to refresh stay as
+     they are (only the x axis is named). `overscroll-behavior-x: none` also takes away
+     the browser's own sideways overscroll (history navigation, the glow) at the page's
+     edge, where the year cards, the shelf row and the pills have run out. Those scroll
+     sideways inside themselves as before. */
+  html,
+  body {
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
+
   body {
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);

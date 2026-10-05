@@ -149,6 +149,16 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Phone first.** Every screen is designed at 393 × 852. On a wide screen the same layout sits in
   a centred column of `maxContent` with hairlines left and right; the tab bar and the search
   palette stay centred on it. No desktop layouts.
+- **The page does not scroll sideways.** No screen is wider than the phone, and `html` and `body`
+  clip the x axis (`overflow-x: clip`, never `hidden`, which makes `body` a scroll container and ends
+  `position: sticky`) with `overscroll-behavior-x: none`, so even a screen that is too wide for a moment
+  (a word with no break in it) cannot become a page that slides under the finger, show the track of a
+  horizontal scroll bar at the bottom, or give the browser a sideways overscroll to use. A row that is
+  meant to scroll sideways (the year cards, the pills, Up next, the shelf row) is its own scroller and
+  stays one. Text a member typed or a catalogue sent (a title, an author, a description, a name) can hold
+  a word wider than the screen: where it is not cut with an ellipsis (`truncate`, `line-clamp-*`) it
+  takes `wrap-anywhere`, so its box fits and its word breaks. `expectNoSideScroll` (`web/e2e/support.ts`)
+  checks this on the main screens at 360 px.
 - **Safe areas** through utilities only: `screen-inset` (a whole screen), `bar-top` (a bar's
   44 pt controls row starts under the status bar, and at least `barTop` 8 off the top edge where the
   device reports no inset — every browser tab — so it never touches the browser's toolbar; the
