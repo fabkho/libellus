@@ -90,6 +90,7 @@ async function syncFirst() {
         data-testid="profile.install"
         @click="installApp.install()"
       />
+      <UiRow to="/privacy" icon="lock" :label="t('profile.account.privacy')" chevron data-testid="profile.privacy" />
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
     </UiRowGroup>
     <ShellNameSheet v-model:open="naming" />

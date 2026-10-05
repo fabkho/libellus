@@ -3,6 +3,8 @@ import { keepShare, peekShare } from '~/utils/pendingShare'
 
 /** The only screens a signed-out member may see. */
 const AUTH_ROUTES = ['/sign-in', '/sign-up', '/verify']
+/** Open to anybody, signed in or not: the privacy policy Google Play links to (#90). */
+const PUBLIC_ROUTES = ['/privacy']
 
 /**
  * Everything else is behind the code. Signed-in members have no business on
@@ -13,6 +15,7 @@ const AUTH_ROUTES = ['/sign-in', '/sign-up', '/verify']
 export default defineNuxtRouteMiddleware((to) => {
   // The design playground (a dev-only route tree; production builds strip it).
   if (import.meta.dev && to.path.startsWith('/prototype')) return
+  if (PUBLIC_ROUTES.includes(to.path)) return
 
   const session = useSessionStore()
   const isAuthRoute = AUTH_ROUTES.includes(to.path)

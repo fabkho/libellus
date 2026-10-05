@@ -83,6 +83,9 @@ async function submit() {
       >
         {{ t('signUp.signInLink') }}
       </NuxtLink>
+      <p class="mt-sm text-caption">
+        <NuxtLink to="/privacy" class="underline decoration-ink-ghost underline-offset-4" data-testid="signUp.privacy">{{ t('privacy.link') }}</NuxtLink>
+      </p>
     </template>
   </AuthFrame>
 </template>
