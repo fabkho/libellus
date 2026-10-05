@@ -12,12 +12,13 @@
 // overlay measures to start from, and the tabs it keeps out of the Search
 // icon's way.
 //
-// On a pushed screen (a book, Collections, a Collection, Import) the bar and
-// its scroll edge slide away while the member reads down and come back on a
-// short scroll up, at the top and at the end of the page (useHideOnScroll,
-// docs/MOTION.md, Tab bar away). Never while search, a sheet or a field is in
-// play: search opening snaps it back to its place first, without a transition,
-// so the morph always grows out of the capsule where it rests.
+// On every page the bar and its scroll edge slide away while the member reads
+// down and come back on a short scroll up, at the top and at the end of the
+// page (useHideOnScroll, docs/MOTION.md, Tab bar away). Never while search, a
+// sheet or a field is in play, with Reduce Motion on, nor once focus is in the
+// bar (a screen reader or keyboard reaching it brings it back): search opening
+// snaps it back to its place first, without a transition, so the morph always
+// grows out of the capsule where it rests.
 import { useSearchStore } from '~/stores/search'
 
 const { t } = useI18n()
@@ -26,9 +27,7 @@ const search = useSearchStore()
 const chrome = useSearchChrome()
 const modal = useModalShown()
 
-const { hidden: scrolledAway, reveal } = useHideOnScroll(
-  () => Boolean(route.meta.pushed) && !search.isOpen && chrome.value === 'tabs' && !modal.value,
-)
+const { hidden: scrolledAway, reveal } = useHideOnScroll(() => !search.isOpen && chrome.value === 'tabs' && !modal.value)
 /** Content runs under the capsule's scroll edge (composables/useContentUnderBar.ts). */
 const under = useContentUnderBar()
 // A screen that fills the room (`immersive`: Your shelf, #23) has the bar away for as long as it shows.

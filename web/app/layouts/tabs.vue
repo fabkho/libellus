@@ -8,8 +8,8 @@
 // `screen` is the test-ID prefix and the copy key (`<screen>.title`).
 // A pushed screen (`pushed: true`, the book page) draws its own top bar over
 // its cover's light instead of the header, edge to edge; the tab bar and
-// search stay, so search works from every page (the bar steps away while a
-// pushed screen scrolls down, ShellTabBar / useHideOnScroll). Pushed screens live in this
+// search stay, so search works from every page (the bar steps away while any
+// page scrolls down, ShellTabBar / useHideOnScroll). Pushed screens live in this
 // layout too, so going to one and back keeps the tab pages alive.
 //
 // The top scroll edge: the installed app draws under a transparent status bar
