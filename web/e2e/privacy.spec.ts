@@ -29,6 +29,12 @@ test('a signed-out visitor opens it at its address and reads every section', asy
   await expect(page).toHaveURL(/\/sign-in$/)
 })
 
+test('its address with a trailing slash, as Cloudflare Pages redirects it, opens it too', async ({ page }) => {
+  await page.goto('/privacy/')
+  await expect(page.getByTestId('privacy.title')).toBeVisible()
+  await expect(page).toHaveURL(/\/privacy\/$/)
+})
+
 test('sign-in and sign-up link to it, and back returns there', async ({ page }) => {
   await page.goto('/sign-in')
   await page.getByTestId('signIn.privacy').click()
