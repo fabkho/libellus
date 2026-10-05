@@ -104,11 +104,14 @@ watch(
           @add="library.openAdd(hit.book)"
         />
       </li>
-      <!-- Last in a reversed list: at its far end, above the weakest match. -->
-      <li v-if="search.fromLibrary" class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.offline">
+      <!--
+        Last in a reversed list: at its far end, above the weakest match. The list fades out over its
+        first `xxl` (see .list), so a line here starts below the fade, not under it.
+      -->
+      <li v-if="search.fromLibrary" class="px-md pt-xxl pb-xs text-center text-footnote text-ink-faint" data-testid="search.offline">
         {{ t('search.offlineNote') }}
       </li>
-      <li v-else-if="!isbnQuery" class="px-md pt-sm pb-xs text-center text-footnote text-ink-faint" data-testid="search.hint">
+      <li v-else-if="!isbnQuery" class="px-md pt-xxl pb-xs text-center text-footnote text-ink-faint" data-testid="search.hint">
         {{ t('search.hint') }}
       </li>
     </ol>
@@ -136,7 +139,7 @@ watch(
 </template>
 
 <style scoped>
-/* The far end of the list (the top, the weakest matches) fades out. */
+/* The far end of the list (the top, the weakest matches) fades out, over `xxl`: the note at that end is padded by as much. */
 .list {
   touch-action: pan-y;
   -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--spacing-xxl));
