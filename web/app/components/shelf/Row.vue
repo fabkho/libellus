@@ -72,8 +72,11 @@ watch(
 /* A Book broken out of the row is drawn in a box Regal moves to <body>, over
    the whole screen: above the header and the tab bar (z 20), the search (30,
    40) and a cover's flight (45), under the barcode scanner (80), which never
-   opens over the Profile. Regal carries the token to <body> with the box. */
+   opens over the Profile. Regal carries the token to <body> with the box.
+   A row inside a sheet (z 50; Home's "Read in 2026") has to break out above
+   it: the sheet sets `--shelf-row-z` (55, under a dialog's 60) and the row
+   takes it, as the sheet's content inherits it. */
 .shelf-row {
-  --regal-row-z-index: 50;
+  --regal-row-z-index: var(--shelf-row-z, 50);
 }
 </style>
