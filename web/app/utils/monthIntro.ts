@@ -1,28 +1,24 @@
 /**
- * The month rows of a year in review open with their covers a little apart
- * and press together (docs/MOTION.md, Month rows). The arithmetic, apart from
- * the page so a test can hold it.
+ * The month rows of a year in review open with their covers sliding in from
+ * the right, one after another, as Books pushed onto a shelf (docs/MOTION.md,
+ * Month rows). The numbers, apart from the page so a test can hold them.
  *
  * Regal's row has no entrance of its own. What there is, and what this takes
  * its feel from, is the pile's cascade (`staggerIn`, utils/stack/shuffle.ts): a
- * stagger of at most 40 ms per step inside a 500 ms budget, every Book easing
- * into its place. Here a month row is a step, and the easing and duration are
- * D's own `sheet` token (the long soft landing, 380 ms, next to Regal's 250–450
- * ms settles).
+ * stagger of at most 40 ms per step inside a 500 ms budget. Here a month row is
+ * a step, and so is each cover within it. The easing and duration are D's own
+ * `sheet` token (the long soft landing, 380 ms).
  */
 
 /** Regal's `MAX_STAGGER` and `STAGGER_BUDGET`, in ms. */
 export const MAX_STAGGER = 40
 export const STAGGER_BUDGET = 500
 
-/**
- * How much wider the covers stand at the start: each is shifted right by this
- * share of its distance from the start of the row, so a cover three places in
- * is 0.25 × 3 pitches (about 33 px) from where it will rest and the gap
- * between neighbours grows from 4 px to about 15. Small enough that the row
- * never leaves its column.
- */
-export const SPREAD = 0.25
+/** How far to the right (px) a cover starts from its resting place. */
+export const SLIDE = 56
+
+/** The most a row's covers wait for each other in all (ms), so a long row still lands together. */
+export const COVER_BUDGET = 240
 
 /** The delay of the nth row that starts together: 40 ms a row, 500 ms for all. */
 export function rowDelay(index: number, count: number): number {
@@ -30,11 +26,7 @@ export function rowDelay(index: number, count: number): number {
   return index * step
 }
 
-/**
- * Where each cover starts, as a shift (px) from its resting place. `lefts` are
- * the covers' resting distances from the start of the row, so the first cover
- * of every line, when a row wraps, stays where it is.
- */
-export function startOffsets(lefts: readonly number[], spread = SPREAD): number[] {
-  return lefts.map((left) => Math.round(left * spread * 100) / 100)
+/** The delay of the nth cover of a row: 40 ms a cover, 240 ms for all. */
+export function coverDelay(index: number): number {
+  return Math.min(index * MAX_STAGGER, COVER_BUDGET)
 }

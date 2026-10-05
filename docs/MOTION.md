@@ -72,17 +72,17 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   (at once with Reduce Motion). Flipping the theme in the account rows crossfades nothing — the
   colours change at once, the switch's knob slides over `quick`.
 - **Month rows** (a year in review). The Books of each month are a row of small covers
-  (`ProfileMonthBooks`). When the page opens, each row's covers stand a little apart and press
-  together to their resting gap over `sheet` with the `sheet` curve: every cover starts shifted right
-  by a quarter of its distance from the row's start (a gap of about 15 px against the resting 4) and
-  ends at 0, a `translateX` per cover, no layout. Rows start one after another from the top, 40 ms
-  apart (at most 500 ms in all). A row below the fold waits and does it, once, as it scrolls into
-  view (`IntersectionObserver`). Only the page's first open: a year switched to opens a fresh page
-  and plays it; the page showing again or its data reloading does not. Covers stay tappable
-  throughout. Reduce Motion: no animation, the covers stand at rest. Regal's row has no entrance of
-  its own; this takes the stagger (40 ms a step, 500 ms budget) from the cascade of Regal's pile
-  (`staggerIn`, `utils/stack/shuffle.ts`) and D's `sheet` token for the settle, the long soft landing
-  that Regal's 250–450 ms smoothstep settles are close to. The numbers live in `utils/monthIntro.ts`.
+  (`ProfileMonthBooks`). When the page opens they slide in from the right, one after another, as
+  Books pushed onto a shelf: each cover goes from 56 px to the right of its place and from invisible
+  to 0 and full over `sheet` with the `sheet` curve, the covers of a row 40 ms apart (240 ms at most)
+  and the rows 40 ms apart from the top (500 ms at most). `transform` and `opacity` only, no layout.
+  A row below the fold waits and does it, once, as it scrolls into view (`IntersectionObserver`);
+  rows that come into view together run top to bottom. Only the page's first open: a year switched to
+  opens a fresh page and plays it; the page showing again or its data reloading does not. Covers
+  stay tappable throughout. Reduce Motion: no animation, the covers stand at rest. Regal's row has no
+  entrance of its own; this takes the stagger (40 ms a step, 500 ms budget) from the cascade of
+  Regal's pile (`staggerIn`, `utils/stack/shuffle.ts`) and D's `sheet` token for the landing. The
+  numbers live in `utils/monthIntro.ts`.
 - **Sheet.** Rises from below the screen edge (`translateY(100%)` → 0) over `sheet` with the
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than

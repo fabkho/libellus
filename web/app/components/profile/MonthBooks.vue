@@ -1,15 +1,15 @@
 <script setup lang="ts">
 // A year in review's Books month by month (issue #78): a row of small covers
 // per month with the month's count, an empty month a dash. When the page
-// opens, each row's covers stand a little apart and press together to their
-// resting gap over `sheet` (docs/MOTION.md, Month rows), the rows one after
-// another from the top; a row below the fold does it as it scrolls into view,
-// once. Only `transform` moves (a `translateX` per cover, no layout), the
-// covers stay tappable while it runs, and with Reduce Motion nothing moves.
+// opens, each row's covers slide in from the right, one after another, as
+// Books pushed onto a shelf, over `sheet` (docs/MOTION.md, Month rows), the
+// rows one after another from the top; a row below the fold does it as it
+// scrolls into view, once. Only `transform` and `opacity` move (no layout),
+// the covers stay tappable while it runs, and with Reduce Motion nothing moves.
 import type { StatsRead } from '~/data/stats'
 import { useBookStore } from '~/stores/book'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
-import { rowDelay, startOffsets } from '~/utils/monthIntro'
+import { coverDelay, rowDelay, SLIDE } from '~/utils/monthIntro'
 
 defineProps<{ months: { month: number, reads: StatsRead[] }[] }>()
 
@@ -21,23 +21,24 @@ const root = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 const coversOf = (row: Element) => Array.from(row.querySelectorAll<HTMLElement>('[data-intro-cover]'))
-// A cover's resting distance from the start of its row; transforms do not count.
-const offsetsOf = (covers: HTMLElement[]) => startOffsets(covers.map((cover) => cover.offsetLeft))
 
-/** Stands a row's covers apart, before the first paint, until the row is seen. */
-function spread(row: Element) {
-  const covers = coversOf(row)
-  const offsets = offsetsOf(covers)
-  covers.forEach((cover, i) => (cover.style.transform = `translateX(${offsets[i]}px)`))
+/** Holds a row's covers off to the right, unseen, before the first paint, until the row is seen. */
+function hold(row: Element) {
+  for (const cover of coversOf(row)) {
+    cover.style.opacity = '0'
+    cover.style.transform = `translateX(${SLIDE}px)`
+  }
 }
 
-/** Presses a row's covers together after `delay`. The held start (`backwards`) stands in until then. */
-function close(row: Element, delay: number) {
-  const covers = coversOf(row)
-  const offsets = offsetsOf(covers)
-  const timing = { duration: durationToken('sheet'), easing: easingToken('sheet'), delay, fill: 'backwards' as const }
-  covers.forEach((cover, i) => {
-    cover.animate([{ transform: `translateX(${offsets[i]}px)` }, { transform: 'translateX(0)' }], timing)
+/** Slides a row's covers in after `delay`. The held start (`backwards`) stands in until then. */
+function slideIn(row: Element, delay: number) {
+  const timing = { duration: durationToken('sheet'), easing: easingToken('sheet'), fill: 'backwards' as const }
+  coversOf(row).forEach((cover, i) => {
+    cover.animate(
+      [{ opacity: 0, transform: `translateX(${SLIDE}px)` }, { opacity: 1, transform: 'translateX(0)' }],
+      { ...timing, delay: delay + coverDelay(i) },
+    )
+    cover.style.removeProperty('opacity')
     cover.style.removeProperty('transform')
   })
 }
@@ -47,13 +48,13 @@ onMounted(() => {
   if (!el || prefersReducedMotion() || typeof IntersectionObserver === 'undefined') return
   const rows = Array.from(el.querySelectorAll('[data-intro-row]'))
   if (!rows.length) return
-  rows.forEach(spread)
+  rows.forEach(hold)
   observer = new IntersectionObserver((entries) => {
     // Rows that come into view together run top to bottom; one scrolled to later starts at once.
     const seen = entries.filter((entry) => entry.isIntersecting).sort((a, b) => (a.target.compareDocumentPosition(b.target) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
     seen.forEach((entry, i) => {
       observer?.unobserve(entry.target)
-      close(entry.target, rowDelay(i, seen.length))
+      slideIn(entry.target, rowDelay(i, seen.length))
     })
   })
   rows.forEach((row) => observer!.observe(row))

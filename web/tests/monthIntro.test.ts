@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_STAGGER, rowDelay, SPREAD, startOffsets, STAGGER_BUDGET } from '../app/utils/monthIntro'
+import { COVER_BUDGET, coverDelay, MAX_STAGGER, rowDelay, STAGGER_BUDGET } from '../app/utils/monthIntro'
 
-/** The month rows' opening (utils/monthIntro.ts): a stagger like Regal's pile and a spread from the row's start. */
+/** The month rows' opening (utils/monthIntro.ts): Regal's pile stagger, by row and by cover. */
 describe('rowDelay', () => {
   it('starts the first row at once', () => {
     expect(rowDelay(0, 12)).toBe(0)
@@ -21,16 +21,16 @@ describe('rowDelay', () => {
   })
 })
 
-describe('startOffsets', () => {
-  it('keeps the first cover and moves the others by their distance', () => {
-    expect(startOffsets([0, 44, 88], 0.25)).toEqual([0, 11, 22])
+describe('coverDelay', () => {
+  it('starts the first cover with its row', () => {
+    expect(coverDelay(0)).toBe(0)
   })
 
-  it('spreads by SPREAD unless told otherwise', () => {
-    expect(startOffsets([40])[0]).toBe(40 * SPREAD)
+  it('steps covers by 40 ms', () => {
+    expect(coverDelay(3)).toBe(3 * MAX_STAGGER)
   })
 
-  it('has nothing to spread in an empty row', () => {
-    expect(startOffsets([])).toEqual([])
+  it('keeps a long row within its budget', () => {
+    expect(coverDelay(40)).toBe(COVER_BUDGET)
   })
 })
