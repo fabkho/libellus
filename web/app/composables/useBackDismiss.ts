@@ -22,6 +22,13 @@ import type { RouteLocationNormalized, Router, RouterHistory } from 'vue-router'
  * The router never sees a Back that only closes a layer: this module's
  * `popstate` listener is added before the router's own (`listenForBack`, from
  * router.options.ts), so it runs first and stops it.
+ *
+ * Nor does it see a Back off an entry another part of the page keeps for a
+ * layer of its own: Regal's row (ShelfRow) pushes a copy of the page's entry
+ * while a Book is broken out of it and puts the Book back on its popstate.
+ * Landing on an entry with the router's own place and address is no change of
+ * page, so the router is told to let that popstate pass (`pauseListeners`):
+ * no navigation from /profile to /profile, no guards, no loading indicator.
  */
 type Entry = { close: () => void; keepOnRouteChange: boolean }
 
@@ -50,6 +57,8 @@ let routerTraversalTimer: ReturnType<typeof setTimeout> | undefined
 let waiting: (() => void)[] = []
 let scheduled = false
 let installed: Router | null = null
+/** The router's history (router.options.ts, `keepsForeignLayers`). */
+let routerHistory: RouterHistory | null = null
 let listening = false
 let watchdog: ReturnType<typeof setTimeout> | undefined
 
@@ -149,6 +158,13 @@ function onPopState(event: PopStateEvent) {
     }
     return
   }
+  if (level === 0 && depth === 0 && entries.length === 0 && onRouterEntry(state)) {
+    // A copy of the router's own entry that another part of the page keeps (Regal's row while a
+    // Book is broken out of it): Back off it, or Forward onto it, is no change of page. The router
+    // takes note of the entry and lets the popstate pass; the part that pushed it answers it.
+    routerHistory!.pauseListeners()
+    return
+  }
   if (!onPage || (level === 0 && depth === 0)) {
     // Another page (or the router's own entry): the router takes it, and the page's layers close.
     if (!onPage) base = null
@@ -165,6 +181,28 @@ function onPopState(event: PopStateEvent) {
     for (const entry of entries.slice(level).reverse()) entry.close()
   } else depth = level // Forward onto an entry whose layer is gone: reconcile goes back off it.
   schedule()
+}
+
+/** Whether a popstate lands on an entry with the router's own place in the history and address. */
+function onRouterEntry(state: Record<string, unknown> | null): boolean {
+  const current = routerHistory?.state
+  return (
+    !!routerHistory &&
+    !!current &&
+    typeof state?.position === 'number' &&
+    state.position === current.position &&
+    state.current === routerHistory.location
+  )
+}
+
+/**
+ * The router's history, handed over as router.options.ts creates it, so a Back
+ * off an entry another part of the page keeps (onto the router's own) can pass
+ * the router by (`onRouterEntry`).
+ */
+export function keepsForeignLayers(history: RouterHistory): RouterHistory {
+  routerHistory = history
+  return history
 }
 
 /**
