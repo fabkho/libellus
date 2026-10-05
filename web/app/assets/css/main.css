@@ -137,6 +137,41 @@
   }
 }
 
+/* A figure or a row not loaded yet (the Profile and a year in review while the
+   reading record loads, docs/MOTION.md, Loading): a quiet block in the fill
+   colour where the content will be, at its size. Always `aria-hidden`. */
+@utility skeleton {
+  border-radius: var(--radius-sm);
+  background: var(--color-fill-strong);
+}
+
+/* The loading wave: a placeholder swells brighter and settles again over
+   `wave`, and `--wave` (0–1) is how far behind the first one it swells, so a
+   row of them reads as one wave travelling across. With Reduce Motion it stands still. */
+@utility wave {
+  animation: placeholder-wave var(--duration-wave) var(--ease-wave) calc((var(--wave, 0) - 1) * var(--duration-wave)) infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: none !important;
+  }
+}
+@keyframes placeholder-wave {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* What takes a placeholder's place once its data has come: it fades in and
+   rises the last `xs` into place over `standard` (with Reduce Motion, a swap). */
+@utility arrive {
+  animation: arrive var(--duration-standard) var(--ease-standard) both;
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--spacing-xs));
+  }
+}
+
 @layer base {
   /* Native parts — scroll bars, the date picker, autofill — in the room's own
      colours: light by day, dark by night, the phone deciding until she does
