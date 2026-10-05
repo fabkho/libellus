@@ -1,7 +1,7 @@
 -- The shelf follows the owner's reads (issue #110):
 --   supabase test db
 --
--- A change to the owner's Library (an entry, a read, its progress) sends
+-- A change to the owner's Library the shelf shows (an entry, a read; not its progress) sends
 -- fabkho/regal a `repository_dispatch` through pg_net, at most once per ten
 -- minutes; a change inside the ten minutes is owed and sent by the next
 -- `shelf_publish_dispatch()` after them (pg_cron, every five minutes). Nobody
@@ -14,7 +14,7 @@
 -- transaction, so the ten minutes pass by moving the stored timestamps back.
 
 begin;
-select plan(33);
+select plan(36);
 
 create schema if not exists tests;
 
@@ -148,13 +148,25 @@ select (public.add_to_library('{"title":"Ruin","source":"apple","apple_id":"9900
 reset role;
 select is(tests.sent(), 1, 'more changes in the same moment send nothing more');
 
--- Five minutes on: a change is debounced, and owed.
+-- Five minutes on: progress is not a change the shelf shows (finished books only).
 select tests.later(5);
+select last_changed_at as noted_before from private.shelf_publish \gset
 select tests.act_as(:'owner_id');
 select lives_ok(format($$ select public.update_progress(%L, 40) $$, :'piranesi'), 'five minutes later the owner logs progress');
 reset role;
+select is(tests.sent(), 1, 'which sends nothing');
+select is((select last_changed_at from private.shelf_publish), :'noted_before'::timestamptz,
+  'and notes no change');
+select is(private.shelf_publish_dispatch(), 'up_to_date', 'so nothing is owed');
+
+-- Finishing the book is one: inside the ten minutes it is debounced, and owed.
+select tests.act_as(:'owner_id');
+select lives_ok(format($$ select public.finish_reading(%L, current_date, 18, 'Statues.') $$, :'piranesi'),
+  'the owner finishes the book');
+reset role;
 select is(tests.sent(), 1, 'which is inside the ten minutes: nothing is sent');
-select is(private.shelf_publish_dispatch(), 'debounced', 'the change is owed, not yet due');
+select ok((select last_changed_at from private.shelf_publish) > :'noted_before'::timestamptz, 'but the change is noted');
+select is(private.shelf_publish_dispatch(), 'debounced', 'and owed, not yet due');
 
 -- Ten minutes after the dispatch: the scheduled run sends what is owed, once.
 select tests.later(5);
@@ -162,18 +174,12 @@ select is(private.shelf_publish_dispatch(), 'dispatched', 'ten minutes after the
 select is(tests.sent(), 2, 'one more dispatch');
 select is(private.shelf_publish_dispatch(), 'up_to_date', 'and then nothing is owed');
 
--- Finishing the book, and removing one, are changes too.
-select tests.later(10);
-select tests.act_as(:'owner_id');
-select lives_ok(format($$ select public.finish_reading(%L, current_date, 18, 'Statues.') $$, :'piranesi'),
-  'the owner finishes the book');
-reset role;
-select is(tests.sent(), 3, 'which sends a dispatch once the ten minutes are up');
+-- Removing a book is a change too.
 select tests.later(10);
 select tests.act_as(:'owner_id');
 select lives_ok(format($$ select public.remove_from_library(%L) $$, :'ruin'), 'the owner removes a Book');
 reset role;
-select is(tests.sent(), 4, 'which sends one too');
+select is(tests.sent(), 3, 'which sends a dispatch once the ten minutes are up');
 
 -- --------------------------------------------------------------- never in the way
 

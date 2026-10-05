@@ -162,7 +162,7 @@ publish-shelf.yml: GET /functions/v1/regal-export ─► validate ─► regal-a
    `.ts` imports, which Deno runs as they are). Without the published file it answers 502 and nothing
    is published.
 2. **The trigger** (`supabase/migrations/20261005114229_shelf_publish_dispatch.sql`): a change to
-   the owner's `library_entries` or `reading_sessions` (a read, a Rating, a review, progress) sends
+   the owner's `library_entries` or `reading_sessions` (a read, a Rating, a review; not progress, the shelf shows finished books only) sends
    fabkho/regal a `repository_dispatch` through pg_net, at most once per ten minutes; a change inside
    the ten minutes is sent by pg_cron's `shelf-publish` job (every five minutes) once they are up.
    The owner is the one row of `private.shelf_publish` (no address in SQL); the GitHub token is the

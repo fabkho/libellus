@@ -7,8 +7,9 @@
 -- when the owner's Library changes, so a finished book reaches the portfolio
 -- within minutes instead of the next morning:
 --
---   a change to the owner's library_entries or reading_sessions (reads, Ratings,
---   reviews, progress: progress lives on the session)
+--   a change to what the shelf shows of the owner's library_entries or
+--   reading_sessions (reads, Ratings, reviews; not progress: the shelf shows
+--   finished books only, so logging pages starts no run)
 --     → private.shelf_publish_changed(member)    owner only; notes the change
 --     → private.shelf_publish_dispatch()         at most one dispatch per 10 minutes
 --     → pg_net → POST https://api.github.com/repos/fabkho/regal/dispatches
@@ -195,7 +196,7 @@ $$;
 
 -- ------------------------------------------------------------------ triggers
 
--- library_entries: added, removed, Status or own page count changed.
+-- library_entries: added, removed, or the book or own page count changed.
 create function private.shelf_publish_on_entry()
 returns trigger
 language plpgsql
@@ -217,7 +218,8 @@ begin
 end;
 $$;
 
--- reading_sessions: a read started, finished, abandoned, edited, removed, or its progress.
+-- reading_sessions: a read started, finished, abandoned, edited or removed. Not its
+-- progress (progress_*): the shelf shows finished books only.
 create function private.shelf_publish_on_session()
 returns trigger
 language plpgsql
@@ -250,11 +252,12 @@ revoke all on function private.shelf_publish_on_entry() from public, anon, authe
 revoke all on function private.shelf_publish_on_session() from public, anon, authenticated;
 
 create trigger library_entries_shelf_publish
-  after insert or update or delete on public.library_entries
+  after insert or delete or update of book_id, page_count_override on public.library_entries
   for each row execute function private.shelf_publish_on_entry();
 
 create trigger reading_sessions_shelf_publish
-  after insert or update or delete on public.reading_sessions
+  after insert or delete or update of started_on, ended_on, outcome, rating, review
+  on public.reading_sessions
   for each row execute function private.shelf_publish_on_session();
 
 -- --------------------------------------------------------------- trailing edge
