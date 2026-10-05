@@ -67,9 +67,10 @@ test('a member abandons a book with a reason, finds it under Not finished and st
   await expect(page.getByTestId('abandon.error')).toHaveText(en.library.error.date_in_future)
   await page.getByTestId('abandon.date').fill(today)
 
-  // The connection fails: the sheet stays, says so, and offers to try again.
+  // The server fails (a connection that answers nothing is queued instead: no-answer.spec.ts):
+  // the sheet stays, says so, and offers to try again.
   await page.getByTestId('abandon.reason').fill('The sentences were beautiful, the plot never arrived.')
-  await page.route('**/rest/v1/rpc/abandon_reading', (route) => route.abort('failed'))
+  await page.route('**/rest/v1/rpc/abandon_reading', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'The server fell over.' }) }))
   await page.getByTestId('abandon.submit').click()
   await expect(page.getByTestId('abandon.error')).toHaveText(en.library.error.unknown)
   await expect(page.getByTestId('abandon.submit')).toHaveText(en.abandon.retry)

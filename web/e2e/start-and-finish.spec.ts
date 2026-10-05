@@ -120,8 +120,9 @@ test('a failed start says why and tries again', async ({ page }) => {
   await expect(page.getByTestId('start.error')).toHaveText(en.library.error.date_in_future)
   await page.getByTestId('start.date').fill(isoDay())
 
-  // The connection fails: the sheet stays, says so, and offers to try again.
-  await page.route('**/rest/v1/rpc/start_reading', (route) => route.abort('failed'))
+  // The server fails (a connection that answers nothing is queued instead: no-answer.spec.ts):
+  // the sheet stays, says so, and offers to try again.
+  await page.route('**/rest/v1/rpc/start_reading', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'The server fell over.' }) }))
   await page.getByTestId('start.submit').click()
   await expect(page.getByTestId('start.error')).toHaveText(en.library.error.unknown)
   await expect(page.getByTestId('start.submit')).toHaveText(en.start.retry)
