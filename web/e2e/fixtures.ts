@@ -49,8 +49,8 @@ const WATCH_CONTROLS = () => {
     for (const el of document.querySelectorAll(CONTROLS)) {
       if (seen.has(el) || el.hasAttribute('data-testid')) continue
       if (el.closest('[aria-hidden=true], [hidden], [inert], .nuxt-devtools-frame')) continue
-      // Regal's own controls (the shelf's row: its arrows, its Back and details over the page, #23) are the layer's.
-      if (el.closest('.regal-books-row, .row-card__back, .row-card__details')) continue
+      // Regal's own controls (the shelf's row: its arrows and details over the page, #23) are the layer's.
+      if (el.closest('.regal-books-row, .row-card__details')) continue
       seen.add(el)
       ;(window as unknown as { __untaggedControl(d: string): void }).__untaggedControl(describe(el))
     }

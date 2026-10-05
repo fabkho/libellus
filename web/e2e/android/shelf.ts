@@ -4,7 +4,7 @@
  * fingers (`adb shell input`) on Regal's row in the Profile's card: a swipe
  * sideways through it, a vertical swipe over it that must scroll the page, a
  * tap that breaks a Book out over the whole screen, a tap that turns it, the
- * system Back and the round Back that put it back without leaving the page,
+ * system Back and the sheet's Done that put it back without leaving the page,
  * then the same in the year in review's row. Not part of CI.
  *
  *   pnpm tsx e2e/android/shelf.ts --base http://localhost:3121 --email <the owner's address>
@@ -141,7 +141,7 @@ async function main() {
     console.log(name, JSON.stringify(report[name]))
   }
 
-  /** One card's row under real fingers: sideways, up and down over it, a Book out and turned, both Backs. */
+  /** One card's row under real fingers: sideways, up and down over it, a Book out and turned, the system Back and Done. */
   async function row(prefix: string, testid: string) {
     await page.getByTestId(testid).evaluate((el) => el.scrollIntoView({ block: 'center' }))
     await page.locator(`[data-testid="${testid}"][data-ready]`).waitFor({ timeout: 60_000 })
@@ -181,16 +181,16 @@ async function main() {
     shell('input keyevent KEYCODE_BACK')
     await sleep(2500)
     await step(`${prefix}-system-back`, testid)
-    // Out again, and Regal's round Back.
+    // Out again, and the sheet's Done (Regal's round Back is off).
     origin = await calibrate()
     card = await box()
     tapAt(origin, [card.x + card.width / 2, card.y + card.height / 2])
     await sleep(2500)
     await step(`${prefix}-out-again`, testid)
-    const back = await page.locator('.row-card__back').boundingBox()
-    if (back) tapAt(origin, [back.x + back.width / 2, back.y + back.height / 2])
+    const done = await page.getByTestId('shelfRow.putBack').boundingBox()
+    if (done) tapAt(origin, [done.x + done.width / 2, done.y + done.height / 2])
     await sleep(2500)
-    await step(`${prefix}-round-back`, testid)
+    await step(`${prefix}-done`, testid)
   }
 
   await page.goto(`${args.base}/profile`)

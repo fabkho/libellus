@@ -8,10 +8,12 @@
 // The row scrolls sideways under the finger and lets the page scroll up and
 // down. A Book tapped breaks out: it comes to the middle of the whole screen,
 // its details in Regal's sheet (a phone) or card (wider), over the header and
-// the tab bar (`--regal-row-z-index` below), and lands back in the row on Back
-// (the round button, Escape, a tap beside it, or the system's Back, which
-// Regal answers with a history entry of its own: useBackDismiss keeps the
-// router out of it). It fills the box it is put in (a positioned one).
+// the tab bar (`--regal-row-z-index` below), and lands back in the row on
+// BookSheet's Done, Escape, a tap beside it, a drag of the sheet's grabber or
+// the system's Back, which Regal answers with a history entry of its own
+// (useBackDismiss keeps the router out of it). Regal's round Back is off
+// (`:back-button="false"`): Done is the one way the sheet shows. It fills the
+// box it is put in (a positioned one).
 //
 // It wears the app's theme, light or dark, as the card it stands in does:
 // `regal-themed` maps Regal's `--regal-*` tokens onto D's, and `theme="auto"`
@@ -50,7 +52,7 @@ watch(
 </script>
 
 <template>
-  <RegalBooksRow class="shelf-row regal-themed" theme="auto" inspect="viewport" :year="props.year ?? null" :limit="props.limit ?? null" :label="props.label ?? ''">
+  <RegalBooksRow class="shelf-row regal-themed" theme="auto" inspect="viewport" :year="props.year ?? null" :limit="props.limit ?? null" :label="props.label ?? ''" :back-button="false">
     <!-- The whole details, Libellus' own (BookSheet): Regal keeps the container, its fade and the Book's gestures. -->
     <template #detail="{ book, close, flip, face, sheet }">
       <ShelfBookSheet :book="book" :face="face" :sheet="sheet" @close="close" @flip="flip" />
@@ -66,14 +68,12 @@ watch(
   inset: 0;
   min-height: 0;
 }
-</style>
 
-<style>
 /* A Book broken out of the row is drawn in a box Regal moves to <body>, over
    the whole screen: above the header and the tab bar (z 20), the search (30,
    40) and a cover's flight (45), under the barcode scanner (80), which never
-   opens over the Profile. */
-:root {
+   opens over the Profile. Regal carries the token to <body> with the box. */
+.shelf-row {
   --regal-row-z-index: 50;
 }
 </style>

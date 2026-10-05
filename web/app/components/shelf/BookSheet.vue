@@ -1,13 +1,14 @@
 <script setup lang="ts">
 // What the shelf's row shows of a Book broken out (#23): the content of
 // Regal's detail panel (its `#detail` slot, ShelfRow), built as a quieter
-// cousin of the app's own sheets (UiSheet, as EditionSheet uses it): the
-// grabber, a title row with a plain Done at the left (it puts the Book back)
-// and the one action at the right in the lamp colour (turn the Book over), then
-// the Book's title, one line of facts, its blurb and a trailing Goodreads link.
-// No pills. Regal keeps the container (position, radius, surface, shadow),
-// the fade, and the Book's own gestures (regal-themed.css); the bottom inset
-// is the container's, as UiSheet's `safe-bottom`.
+// cousin of the app's own sheets (UiSheet, as EditionSheet uses it): a title
+// row with a plain Done at the left (it puts the Book back; Regal's round Back
+// is off) and the one action at the right in the lamp colour (turn the Book
+// over), then the Book's title, one line of facts, its blurb and a trailing
+// Goodreads link. No pills. Regal keeps the container (position, corners,
+// surface, shadow, bottom inset), its grabber (the phone's sheet: it stands
+// above this, UiSheet's size and colour, and drags the Book back), the fade,
+// and the Book's own gestures (regal-themed.css).
 import { goodreadsUrl } from '~/utils/goodreads'
 
 const props = defineProps<{
@@ -24,7 +25,7 @@ const props = defineProps<{
   }
   /** Which side of the Book is showing. */
   face: 'front' | 'back'
-  /** The phone's sheet, with its grabber; wider screens get the same content in a card. */
+  /** The phone's sheet (Regal's grabber stands above the title row); wider screens get the same content in a card. */
   sheet: boolean
 }>()
 const emit = defineEmits<{
@@ -51,12 +52,10 @@ const facts = computed(() => {
 <template>
   <div class="relative" data-testid="shelfRow.sheet">
     <!-- UiSheet's title row: 44 pt, Done and the action as wide as each other's copy needs. -->
-    <header class="relative box-content grid h-(--size-touch) grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-sm px-ml pt-md">
-      <span
-        v-if="sheet"
-        class="pointer-events-none absolute inset-x-0 top-(--spacing-grabber) mx-auto h-(--size-grabber-height) w-(--size-grabber) rounded-pill bg-ink-ghost"
-        aria-hidden="true"
-      />
+    <header
+      class="relative box-content grid h-(--size-touch) grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-sm px-ml"
+      :class="sheet ? 'pt-0' : 'pt-md'"
+    >
       <div class="grid justify-items-start">
         <button type="button" class="-ml-sm min-h-(--size-touch) px-sm text-body text-ink-muted hover:text-ink" data-testid="shelfRow.putBack" @click="emit('close')">
           {{ t('shelf.detail.done') }}

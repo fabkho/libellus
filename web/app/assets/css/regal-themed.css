@@ -55,38 +55,41 @@
 }
 
 /* The row fills the Libellus card (ShelfRowCard: raised, rounded, clipped)
-   edge to edge, so Regal's own frame around it is one too many. No token
-   drops the card's frame alone (`--regal-border-width` and `--regal-radius`
-   are also the focus label's and the details'), so it goes here; the card's
-   own rounding clips the row. A Regal follow-up: a token for the card's frame. */
-.regal-themed .row-card.regal-books-row__card {
-  border: 0;
-  border-radius: 0;
+   edge to edge, so Regal's frame around it is one too many: its own tokens
+   drop it, and the card's rounding clips the row; the card's surface shows
+   through. */
+.regal-themed {
+  --regal-row-border: 0;
+  --regal-row-radius: 0;
+  --regal-row-background: transparent;
+
+  /* The row's sheet (a Book broken out on a phone) is Libellus' own inside
+     (ShelfBookSheet: its title row, its padding), so the container is a bare
+     one, as UiSheet's `max-w-(--size-max-content) rounded-t-sheet
+     bg-surface-sheet shadow-sheet safe-bottom`: no padding of Regal's but the
+     bottom inset (Android's gesture bar, iOS' home indicator) under the
+     content, no frame, D's corners, surface and shadow, the column's width. One
+     grabber, Regal's (it also drags the Book back), at UiSheet's size and
+     colour; BookSheet draws none. */
+  --regal-sheet-radius: var(--radius-sheet);
+  --regal-sheet-background: var(--color-surface-sheet);
+  --regal-sheet-border: 0;
+  --regal-sheet-shadow: var(--shadow-sheet);
+  --regal-sheet-padding: 0 0 var(--safe-area-bottom);
+  --regal-sheet-max-width: var(--size-max-content);
+  --regal-sheet-grabber: block;
+  --regal-sheet-grabber-color: var(--color-ink-ghost);
+  --regal-sheet-grabber-width: var(--size-grabber);
+  --regal-sheet-grabber-height: var(--size-grabber-height);
 }
 
-/* The phone's sheet is in <body> on the viewport's bottom edge, as wide as the
-   viewport. D's sheets are the column's width (--size-max-content, centred) and
-   round at the top only (--radius-sheet), on a wider screen as on a phone. No
-   token says either. The Stack's sheet and the row's (a Book broken out on a
-   phone); each selector outweighs Regal's own scoped rule. */
-.details.details--sheet.stage__details--sheet,
-.row-card__details.row-card__details--sheet.row-card__details--sheet {
+/* The Stack's phone sheet is in <body> on the viewport's bottom edge, as wide as
+   the viewport. D's sheets are the column's width (--size-max-content, centred)
+   and round at the top only (--radius-sheet), on a wider screen as on a phone.
+   No token says either for the Stack (the row's do, above); the selector
+   outweighs Regal's own scoped rule. */
+.details.details--sheet.stage__details--sheet {
   max-width: var(--size-max-content);
   margin-inline: auto;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-}
-
-/* The row's sheet is Libellus' own inside (ShelfBookSheet: its padding, its
-   grabber, its title row), so the container is a bare one, as UiSheet's
-   `rounded-t-sheet bg-surface-sheet shadow-sheet safe-bottom`: no padding of
-   Regal's, no frame, the sheet's shadow, and the bottom inset (Android's
-   gesture bar, iOS' home indicator) under the content. The surface is the
-   sheet's (--regal-surface-raised), the corners are the rule above's. Interim:
-   Regal's sheet tokens (padding, frame, top radius) replace these. */
-.row-card__details.row-card__details--sheet.row-card__details--sheet {
-  inset-inline: 0;
-  bottom: 0;
-  padding: 0 0 var(--safe-area-bottom);
-  border: 0;
-  box-shadow: var(--shadow-sheet);
 }

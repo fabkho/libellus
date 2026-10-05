@@ -13,9 +13,9 @@ import { signedIn } from './support'
  * Your shelf (#23): Regal's 3D shelf of the owner's published library file, for
  * the owner's account only. She finds her newest Books as Regal's row in a card
  * on her Profile, and a year's in its review; a Book taken out breaks out over
- * the whole screen, and Back (the system's or the round one) puts it back
- * without leaving the page. Only with more Books than the row holds does Show
- * all open the whole shelf full screen. A file that can't be read says so and
+ * the whole screen, and the sheet's Done, Escape or the system's Back puts it
+ * back without leaving the page (Regal's round Back is off). Only with more
+ * Books than the row holds does Show all open the whole shelf full screen. A file that can't be read says so and
  * tries again. Anyone else has no card, no row, no request for the file or for
  * Regal's code, and the address is a page that doesn't exist. The library file
  * is the synthetic fixture (tests/fixtures/shelf/library.json, 8 Books, 4 read
@@ -143,7 +143,7 @@ test.describe('Your shelf, the owner', () => {
   // One owner (one id) for the whole run: her flows take turns.
   test.describe.configure({ mode: 'serial' })
 
-  test('finds her newest Books as a row on the Profile, takes one out over the whole screen, and Back puts it away', async ({ page }) => {
+  test('finds her newest Books as a row on the Profile, takes one out over the whole screen, and the system Back puts it away', async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
 
@@ -173,10 +173,17 @@ test.describe('Your shelf, the owner', () => {
     if (await sheet.count()) {
       expect(Number.parseFloat(await sheet.evaluate((el) => getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(24)
       await expect(page.getByTestId('shelfRow.putBack')).toHaveText(en.shelf.detail.done)
+      // One grabber (Regal's, UiSheet's size), the sheet's own and a bare container: no frame, the app's sheet corners.
+      await expect(page.locator('.row-card__grabber')).toHaveCount(1)
+      const frame = await sheet.evaluate((el) => [getComputedStyle(el).borderTopWidth, getComputedStyle(el).borderTopLeftRadius])
+      expect(frame[0]).toBe('0px')
+      expect(Number.parseFloat(frame[1]!)).toBeGreaterThan(0)
       await expect(page.getByTestId('shelfRow.flip')).toHaveText(en.shelf.detail.backCover)
       await page.getByTestId('shelfRow.flip').click()
       await expect(page.getByTestId('shelfRow.flip')).toHaveText(en.shelf.detail.frontCover)
     }
+    // Regal's round Back is off: the sheet's Done is the way back.
+    await expect(page.locator('.row-card__back')).toHaveCount(0)
     expect(Number(await out.evaluate((el) => getComputedStyle(el).zIndex))).toBeGreaterThan(
       Number(await page.getByTestId('shell.tabs').evaluate((el) => getComputedStyle(el).zIndex)),
     )
@@ -228,7 +235,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('shell.tabs')).not.toHaveAttribute('data-away', 'true')
   })
 
-  test("finds a year's Books as a row in its review, and puts a Book back with the round Back", async ({ page }) => {
+  test("finds a year's Books as a row in its review, and puts a Book back with Done or Escape", async ({ page }) => {
     await libraryFile(page)
     const owner = await signInAsOwner(page)
     await finishedIn2025(owner.email)
@@ -250,12 +257,17 @@ test.describe('Your shelf, the owner', () => {
     await takeOut(page, row)
     await expect(page.locator('body > .row-card__view--out')).toHaveCount(1)
     const moves = await countNavigations(page)
-    // The details are Libellus' (regal-themed, its pills) where Regal has theming (#63).
+    // The details are Libellus' (regal-themed): the sheet's Done is the one way back that shows, no round Back.
     const details = page.locator('body > article.row-card__details')
     await expect(details).toBeVisible()
-    if ((await details.getAttribute('data-regal-theme')) !== null) await expect(page.getByTestId('shelfRow.putBack')).toBeVisible()
-    await page.locator('.row-card__back').click()
+    await expect(page.locator('.row-card__back')).toHaveCount(0)
+    await page.getByTestId('shelfRow.putBack').click()
     await expect(row).toHaveAttribute('data-picked', '')
+    await expect(page.locator('.row-card__view--out')).toHaveCount(0)
+    // The Book is back in the row and can be taken out again; Escape puts it back too.
+    await takeOut(page, row)
+    await expect(page.locator('body > .row-card__view--out')).toHaveCount(1)
+    await page.keyboard.press('Escape')
     await expect(page.locator('.row-card__view--out')).toHaveCount(0)
     await expect(page).toHaveURL(/\/profile\/2025$/)
     expect(await moves()).toBe(0)
