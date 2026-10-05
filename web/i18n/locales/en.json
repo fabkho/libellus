@@ -42,6 +42,7 @@
     "emailLabel": "Email",
     "emailPlaceholder": "you{'@'}example.com",
     "submit": "Send code",
+    "accountDeleted": "Your account was deleted.",
     "noAccount": "Have an invite code?",
     "signUpLink": "Sign up",
     "configMissing": "Missing {key}. Copy web/.env.example to web/.env and fill it in.",
@@ -180,7 +181,15 @@
       "title": "Account",
       "theme": "Dark mode",
       "install": "Install app",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "delete": "Delete account"
+    },
+    "deleteAccount": {
+      "title": "Delete your account?",
+      "text": "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and your sign-in. It can't be undone.",
+      "unsynced": "The change that has not synced yet is lost too. | The {count} changes that have not synced yet are lost too.",
+      "action": "Delete account",
+      "failed": "Your account could not be deleted, and nothing was removed. Try again."
     },
     "empty": {
       "title": "Your reading gathers here",

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { createAuth, type Auth, type AuthErrorCode, type Member } from '~/data/auth'
+import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
 import { clearLocalData, clearLocalDatabase } from '~/data/localData'
 import { useSyncStore } from '~/stores/sync'
@@ -246,6 +246,11 @@ export const useSessionStore = defineStore('session', () => {
    */
   async function signOut() {
     await auth()?.signOut()
+    await forgetDevice()
+  }
+
+  /** The device forgets the member: the Library's copy, the outbox, the pending address. */
+  async function forgetDevice() {
     if (import.meta.client) {
       useSyncStore().close()
       clearLocalData(window.localStorage)
@@ -253,6 +258,38 @@ export const useSessionStore = defineStore('session', () => {
     }
     pending.value = null
     adopt(null)
+  }
+
+  // ------------------------------------------------------- deleting the account
+
+  /** The delete is on its way. */
+  const deleting = ref(false)
+  /** Shown once on Sign in after the account was deleted here (issue #101). */
+  const accountDeleted = ref(false)
+
+  /**
+   * Deletes the member's account on the server (`createAuth.deleteAccount`),
+   * then does what signing out does: the outbox is discarded with the rest of
+   * what the device cached (the theme stays). Returns why it did not happen,
+   * or null when it did; on a failure nothing was removed anywhere.
+   */
+  async function deleteAccount(): Promise<DeleteAccountError | null> {
+    const client = auth()
+    if (!client || deleting.value) return 'unknown'
+    deleting.value = true
+    try {
+      const result = await client.deleteAccount({ online: isOnline })
+      if (result.error) return result.error
+      await forgetDevice()
+      accountDeleted.value = true
+      return null
+    } finally {
+      deleting.value = false
+    }
+  }
+
+  function clearAccountDeleted() {
+    accountDeleted.value = false
   }
 
   return {
@@ -275,5 +312,9 @@ export const useSessionStore = defineStore('session', () => {
     setName,
     clearNameError,
     signOut,
+    deleting,
+    accountDeleted,
+    deleteAccount,
+    clearAccountDeleted,
   }
 })

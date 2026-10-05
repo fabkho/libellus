@@ -27,6 +27,9 @@ export type AuthErrorCode =
   | 'not_configured'
   | 'unknown'
 
+/** Why deleting the account did not happen: no connection, or anything else the server refused. */
+export type DeleteAccountError = 'offline' | 'unknown'
+
 export type AuthResult = { error: AuthErrorCode | null }
 
 /**
@@ -236,6 +239,22 @@ export function createAuth(client: SupabaseClient) {
     /** Ends the session on this device and revokes it on the server. */
     async signOut(): Promise<void> {
       await client.auth.signOut()
+    },
+
+    /**
+     * Deletes the signed-in member completely (issue #101): `delete_my_account`
+     * removes the sign-in and, by cascade, everything the member owns; shared
+     * Catalogue books, the Goodreads cache and the invite codes stay. Online
+     * only, refused before anything is sent otherwise (`online`). On success the
+     * session is dropped from this device too (`scope: 'local'`: the server has
+     * no session left to revoke). Nothing is removed when it fails.
+     */
+    async deleteAccount({ online = () => true }: { online?: () => boolean } = {}): Promise<{ error: DeleteAccountError | null }> {
+      if (!online()) return { error: 'offline' }
+      const { error, status } = await client.rpc('delete_my_account')
+      if (error) return { error: status ? 'unknown' : 'offline' }
+      await client.auth.signOut({ scope: 'local' })
+      return { error: null }
     },
   }
 }

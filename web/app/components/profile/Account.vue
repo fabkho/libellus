@@ -3,9 +3,13 @@
 // before): the address over grouped rows — Name (its sheet), the Dark mode
 // switch (docs/DESIGN.md, Themes: the first tap stores the opposite of what
 // shows), Import books, Install app (Android's Chrome only, once it has offered the
-// install: composables/useInstallHint.ts), Sign out. Signing out deletes the writes still waiting
+// install: composables/useInstallHint.ts), Sign out, Delete account. Signing out deletes the writes still waiting
 // to sync (a shared phone, #93), so with any waiting it asks first: "Sync first"
 // (online: send them, then sign out), "Sign out anyway", Cancel.
+// Delete account (#101, Play's in-app deletion): online only (the row is disabled
+// and says "Offline"), behind a Confirm that says what goes and that it cannot be
+// undone; writes still waiting to sync are named in it and discarded with the rest.
+// Afterwards she is on Sign in, which says the account was deleted.
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useThemeStore } from '~/stores/theme'
@@ -35,6 +39,28 @@ function askSignOut() {
   else void signOut()
 }
 const installApp = useInstallHint()
+
+/** The Delete account Confirm; the number of unsynced changes when it was asked. */
+const deleting = ref(false)
+const deleteUnsynced = ref(0)
+const deleteFailed = ref(false)
+
+function askDelete() {
+  deleteFailed.value = false
+  deleteUnsynced.value = sync.pending
+  deleting.value = true
+}
+
+async function deleteAccount() {
+  deleteFailed.value = false
+  const error = await session.deleteAccount()
+  if (error) {
+    deleteFailed.value = true
+    return
+  }
+  deleting.value = false
+  await navigateTo('/sign-in')
+}
 
 async function signOut() {
   unsynced.value = 0
@@ -91,6 +117,18 @@ async function syncFirst() {
         @click="installApp.install()"
       />
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
+      <UiRow
+        as="button"
+        icon="trash"
+        tone="danger"
+        :label="t('profile.account.delete')"
+        :disabled="!online"
+        class="disabled:opacity-50"
+        data-testid="profile.delete"
+        @click="askDelete"
+      >
+        <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
+      </UiRow>
     </UiRowGroup>
     <ShellNameSheet v-model:open="naming" />
     <UiConfirm
@@ -104,6 +142,17 @@ async function syncFirst() {
       testid="signOutUnsynced"
       @alternative="syncFirst"
       @confirm="signOut"
+    />
+    <UiConfirm
+      v-model:open="deleting"
+      :title="t('profile.deleteAccount.title')"
+      :text="t('profile.deleteAccount.text') + (deleteUnsynced ? ' ' + t('profile.deleteAccount.unsynced', { count: deleteUnsynced }, deleteUnsynced) : '')"
+      :action="t('profile.deleteAccount.action')"
+      :busy="session.deleting"
+      :offline="!online"
+      :error="deleteFailed ? t('profile.deleteAccount.failed') : null"
+      testid="deleteAccount"
+      @confirm="deleteAccount"
     />
   </section>
 </template>
