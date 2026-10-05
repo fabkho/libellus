@@ -95,7 +95,7 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
 ```
 (auth)   Sign in (email) → Sign up (invite code; unknown email only) → Verify (six-digit code)
 (tabs)   Home | Library | Search          avatar in the header → Profile (reading in figures, years in review, account)
-         Home    → Currently reading, Up next, "Read in <year>: N"
+         Home    → Currently reading, Want to read, "Read in <year>: N"
          Library → Want to read / Currently reading / Finished (+ Not finished filter), Collections
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
@@ -128,7 +128,7 @@ Each is a `ready-for-agent` issue linking back to #1.
 | [#5](https://github.com/fabkho/libellus/issues/5) | Port the picked design | The chosen direction becomes tokens and components |
 | [#6](https://github.com/fabkho/libellus/issues/6) | Tracer | Find a book on Apple Books and put it on *Want to read* |
 | [#7](https://github.com/fabkho/libellus/issues/7) | Start and finish | Start reading; finish with date, quarter-star rating, review |
-| [#8](https://github.com/fabkho/libellus/issues/8) | Home | Currently reading, Up next, "Read in <year>" counter, empty state |
+| [#8](https://github.com/fabkho/libellus/issues/8) | Home | Currently reading, Want to read, "Read in <year>" counter, empty state |
 | [#9](https://github.com/fabkho/libellus/issues/9) | Add with any status | Log past reads directly as *Currently reading* or *Finished* |
 | [#10](https://github.com/fabkho/libellus/issues/10) | Abandon and read again | DNF as a session ending; re-reads as new sessions |
 | [#11](https://github.com/fabkho/libellus/issues/11) | Reading history and removing | Edit/delete sessions, remove from Library |

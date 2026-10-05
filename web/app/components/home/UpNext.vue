@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// "Up next" (D's shelf): a short row of covers from Want to read, newest added
+// "Want to read" on Home (D's shelf; the key and test ids keep their first name, "upNext"): a short row of covers from Want to read, newest added
 // first, with See all leading to the Library. The row scrolls sideways past the
 // screen's edge; each cover opens its book page from the touch-down.
 import type { LibraryEntry } from '~/data/library'

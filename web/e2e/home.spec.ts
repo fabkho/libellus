@@ -7,8 +7,8 @@ import { test } from './fixtures'
 /**
  * Home (#8): a new member lands on the empty state that leads to Search; a
  * Book added and started shows under Currently reading with its day; Finish
- * on the card takes it away and the year's tally goes up. Up next lists the
- * Want to read Books and See all leads to the Library. Apple answers from the
+ * on the card takes it away and the year's tally goes up. The Want to read row lists the
+ * Books on it and See all leads to the Library. Apple answers from the
  * recordings (e2e/support.ts); the Library is the real local stack. With
  * docs/parity.md this is the behavioural reference for Home.
  */
@@ -56,7 +56,7 @@ test('a new member starts on the empty Home, reads a book from there and finishe
   await page.getByTestId('add.submit').click()
   await expect(page.getByTestId('add')).toBeHidden()
 
-  // A Book on Want to read is no longer an empty Library: Up next, nothing being read, 0 this year.
+  // A Book on Want to read is no longer an empty Library: Want to read, nothing being read, 0 this year.
   await page.getByTestId('shell.tab.home').click()
   await expect(page.getByTestId('home.emptyTitle')).toBeHidden()
   await expect(page.getByTestId('home.readingEmpty')).toHaveText(en.home.readingEmpty)
@@ -101,7 +101,7 @@ test('a new member starts on the empty Home, reads a book from there and finishe
   )
 })
 
-test('Up next lists what is Want to read, newest first, and See all opens the Library', async ({ page }) => {
+test('Want to read lists what is Want to read, newest first, and See all opens the Library', async ({ page }) => {
   await signedIn(page)
   await addFirstResult(page, 'Piranesi', 'Piranesi')
   await addFirstResult(page, 'Klara und die Sonne', 'Klara und die Sonne')

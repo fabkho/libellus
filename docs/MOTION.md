@@ -110,7 +110,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   keyboard starts to rise, so the palette rises with it; with Safari's toolbar expanded WebKit
   reports it only at the end (WebKit bug 265578), and the palette follows after.
 - **Push to a book.** Tapping a book wherever it shows its cover — Home's reading card (its cover or
-  its title) and Up next, a Library row or card, a search result, a Collection's row — flies that
+  its title) and Want to read, a Library row or card, a search result, a Collection's row — flies that
   cover from where it is on screen into the book page's hero over `standard`. The book page fades in
   as the page left fades out (one's opacity the other's complement, so the two never both read at
   full strength), and its content from the hero down rises `md` into place; its pinned top bar and

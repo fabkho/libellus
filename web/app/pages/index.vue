@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Home (D's home / home-empty): what matters now. The Books being read, as
 // large cards lit by their covers, each with a Finish shortcut; the year's
-// tally ("Read in 2026: 3"); and Up next, a short row from Want to read. A new
+// tally ("Read in 2026: 3"); and Want to read, a short row from Want to read. A new
 // member with no Books sees the empty state and the way to Search. Kept alive:
 // coming back shows what was there and refreshes quietly behind it.
 import { useLibraryStore } from '~/stores/library'
@@ -13,7 +13,7 @@ const { t } = useI18n()
 const library = useLibraryStore()
 const session = useSessionStore()
 
-// What the cards, the tally and Up next show: held while a sheet is on screen
+// What the cards, the tally and Want to read show: held while a sheet is on screen
 // (a Finish's card stays while the sheet falls away, then collapses) and while
 // Home is in the background (a Start on the book page arrives when she is back).
 const reading = useSettled(() => library.reading)
