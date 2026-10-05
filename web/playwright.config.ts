@@ -22,8 +22,9 @@ const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 // rather than parallel: two workers fit the runner's two cores next to the
 // stack (three starved them: taps waited on frames that came too late), a failed test is retried once (locally it fails at once, so a flake is
 // seen), and the first failure leaves a trace and a screenshot. The job runs in
-// three shards (`--shard=i/3`), each writing a blob report that the workflow
-// merges into one HTML report when a shard failed.
+// shards (`--shard=i/N`, N set in ci.yml and docs/TESTING.md: every shard boots
+// its own stack, so more shards buy wall time with minutes), each writing a blob
+// report that the workflow merges into one HTML report when a shard failed.
 const CI = Boolean(process.env.CI)
 
 export default defineConfig({
