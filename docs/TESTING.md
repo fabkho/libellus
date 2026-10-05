@@ -377,7 +377,7 @@ workflow, in billed minutes:
 | Shards | Wall time of the slowest job | Billed minutes (stack jobs) | With `what changed` and `statics` |
 | --- | --- | --- | --- |
 | 3 (before, flows only; pgTAP + Vitest was another 4 min job) | about 11 | about 29 | about 37 per pull request |
-| 2 (now) | 17 (shard 1 incl. pgTAP and Vitest; shard 2: 13) | 17 + 13 = 30 (the first run also paid 1 min for an image cache, since dropped) | about 32 |
+| 2 (now) | 15 to 17 (shard 1 incl. pgTAP and Vitest: 16; shard 2: 13 to 15, more with a retried flow) | 16 + 15 = 31 in the last full run (the first one: 18 + 13, with 1 min for an image cache, since dropped) | about 33 |
 | 1 | 26 | 26 | about 28 |
 
 Two shards is the default: one shard saves about 4 minutes a pull request (13 %) for 9 more minutes of waiting.
@@ -389,7 +389,7 @@ are billed at a higher rate and not included in the pool.
 
 | | Before | After |
 | --- | --- | --- |
-| Pull request, web or schema changed | about 37 (3 × 9–11 flows, 4 pgTAP + Vitest, 4 × 1 small jobs) | about 32 (2 shards 30, `what changed`, `statics`) |
+| Pull request, web or schema changed | about 37 (3 × 9–11 flows, 4 pgTAP + Vitest, 4 × 1 small jobs) | about 33 (2 shards 31, `what changed`, `statics`) |
 | Pull request, one Deno function or the tokens only | about 37 | 2 to 3 |
 | Merge to `main` (the push after a merge) | about 37 | about 6 (`what changed` 1, pgTAP + Vitest 4, `statics` 1) |
 | Docs only, either event | about 37 | 0 |
