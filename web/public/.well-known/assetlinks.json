@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "dev.fabkho.libellus",
+      "sha256_cert_fingerprints": [
+        "TODO-UPLOAD-KEY-SHA256: printed by android/scripts/create-upload-key.sh (docs/ANDROID.md)",
+        "TODO-PLAY-APP-SIGNING-KEY-SHA256: Play Console, Test and release, App integrity (docs/ANDROID.md)"
+      ]
+    }
+  }
+]
