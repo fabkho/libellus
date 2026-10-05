@@ -715,5 +715,25 @@
       "unreadable": "That file couldn't be read.",
       "unknown": "Something went wrong. Please try again."
     }
+  },
+  "shelf": {
+    "title": "Your shelf",
+    "back": "Back",
+    "count": "{count} book | {count} books",
+    "yearCount": "{year} · {count} book | {year} · {count} books",
+    "loading": "Bringing out your shelf",
+    "loadError": "Your shelf could not be loaded.",
+    "offline": "You're offline. Your shelf shows once you're back.",
+    "retry": "Try again",
+    "card": {
+      "title": "Your shelf",
+      "label": "Your shelf, {count} book | Your shelf, {count} books",
+      "books": "book | books"
+    },
+    "year": {
+      "title": "On the shelf",
+      "open": "Open",
+      "openLabel": "{year} on your shelf, {count} book | {year} on your shelf, {count} books"
+    }
   }
 }

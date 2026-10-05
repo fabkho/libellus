@@ -8,6 +8,7 @@
 // years either side. Figures and covers, never sentences.
 import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { useBookStore } from '~/stores/book'
+import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
 
 definePageMeta({ layout: 'tabs', screen: 'yearInReview', pushed: true, validate: (route) => /^\d{4}$/.test(String(route.params.year)) })
@@ -17,6 +18,8 @@ const route = useRoute()
 const router = useRouter()
 const stats = useStatsStore()
 const books = useBookStore()
+// Your shelf (#23): the year's Books as a 3D stack under the months, for the owner only.
+const shelf = useShelfStore()
 const { count, monthShort } = useFigures()
 
 const year = computed(() => Number(route.params.year))
@@ -28,6 +31,7 @@ function show() {
   if (showing) return
   showing = true
   void stats.load()
+  void shelf.load()
 }
 onMounted(show)
 onActivated(show)
@@ -36,6 +40,7 @@ onDeactivated(() => (showing = false))
 const reads = computed(() => stats.record?.reads ?? [])
 const years = computed(() => yearsOf(reads.value))
 const figures = computed(() => figuresOf(reads.value, year.value))
+const shelfBooks = computed(() => (shelf.isOwner ? shelf.readIn(year.value) : []))
 const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m + 1, reads: readsInMonth(reads.value, year.value, m + 1) })))
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
@@ -94,6 +99,8 @@ function back() {
           <span class="figures w-(--size-button-sm) shrink-0 text-right text-meta" :class="m.reads.length ? 'text-ink-muted' : 'text-ink-ghost'">{{ m.reads.length ? count(m.reads.length) : '' }}</span>
         </div>
       </section>
+
+      <ShelfYearStack v-if="shelfBooks.length" :year="year" :books="shelfBooks" />
 
       <UiPressLink
         v-if="figures.favourite"

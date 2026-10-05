@@ -157,7 +157,15 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   Tab roots keep it fixed. It is never away while search opens, is open or closes, while a sheet or
   confirmation is on screen, or while a field has the keyboard: search opened with the bar away puts
   it in its resting place first, with no transition, and the morph grows out of it there. A change
-  of page (Back included) brings it back on the way.
+  of page (Back included) brings it back on the way. A screen that fills the room (`immersive`:
+  Your shelf, #23) has it away for as long as it shows, the same slide.
+- **Your shelf** (#23). The loading pile's slabs settle in one after another, `standard` each, a
+  third of `instant` apart, from `sm` above; then they hold still (no shimmer, no breathing). Once
+  Regal's Stack has the Library and has drawn, it fades in over `standard` and the pile fades out
+  over the same, in place. The 3D itself moves as Regal decides (its scroll and flick, a Book
+  coming out and turning, the pile riffling past the middle, a year's pile sweeping in): Regal's
+  own motion, which honours Reduce Motion itself. A year in review's window moves only that way,
+  and only once it is near the view.
 - **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
   changes to another edition: the old cover, title, author and facts (and what the Book is about)
   lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
@@ -259,7 +267,8 @@ not touch). The push to a book is another: no cover flies and nothing rises, the
 page left cross-fade in place over `standard`, both ways. Change edition is the third: the old
 edition's hero cross-fades into the new one over `standard`, and the content below takes its new
 place at once. The tab bar away on pushed screens needs nothing of its own: under the CSS rule it
-appears and disappears in place.
+appears and disappears in place. Your shelf: the pile is there at once and the 3D replaces it
+without a fade.
 
 ## Non-motions
 

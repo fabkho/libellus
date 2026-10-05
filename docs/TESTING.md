@@ -158,6 +158,21 @@ addresses (`/?search=1`, `/?progress=1`), and read what Chrome made of the manif
 `Page.getAppManifest` (the `share_target`, the three `shortcuts`, no errors) and `Page.getInstallabilityErrors`
 (none). A phone with a Google account shows the real share sheet entry and the long-press shortcuts.
 
+**Your shelf (#23)** has its own script: Regal's 3D Stack under real fingers. The app must know the
+owner (`NUXT_PUBLIC_SHELF_OWNER_ID` = her auth user id, at build time for a static build) and her
+address must reach Mailpit; the run signs her in through the screens unless the tab has her session.
+It opens the shelf from the Profile card, flicks through the pile, takes a Book out, turns it, puts it
+away with the system Back and again with the round Back, then the year in review's stack and its
+Open. Screenshots `shelf-<step>.jpg` and `shelf.json` (books in the Stack, the Book that is out) go
+to `--out`:
+
+```sh
+pnpm tsx e2e/android/shelf.ts --base http://localhost:3121 --email dev@libellus.local --year 2025
+```
+
+The R2 bucket's CORS allows only listed origins: serve the app on an allowed port (3121 is one) and
+let the script reverse it, so the phone's origin is `http://localhost:<port>`.
+
 ## What Chrome reports (Chrome 145, Pixel 9 emulator, Android 17)
 
 CSS px. "Keyboard" is Gboard up in the search palette.

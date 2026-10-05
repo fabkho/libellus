@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
+import { isRegalModule, regalContainment, regalLayer, REGAL_ASSETS, REGAL_LIBRARY_SRC } from './regal.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
 // colour from the same token source as the CSS: the room's surface, per theme.
@@ -15,13 +16,16 @@ const iconVersion = 2
 // the sign-in, so there is nothing to render on the server: SPA, built to
 // static files for Cloudflare Pages.
 export default defineNuxtConfig({
+  // Regal, the owner's 3D shelf (#23): a Nuxt layer (regal.config.ts says where it comes from and
+  // how it is kept to the shelf's pages).
+  extends: regalLayer(),
   compatibilityDate: '2026-10-02',
   ssr: false,
   // The devtools badge floats over the tab bar and swallows taps in the
   // Playwright run, which sets LIBELLUS_E2E (playwright.config.ts).
   devtools: { enabled: !process.env.LIBELLUS_E2E },
 
-  modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt'],
+  modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment],
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
@@ -31,8 +35,17 @@ export default defineNuxtConfig({
           // The barcode decoder (WebAssembly, for browsers without a native BarcodeDetector,
           // #92) is one chunk with a name of its own, so the service worker can leave it out
           // of the precache (pwa.workbox.globIgnores) and it is only fetched when the scanner opens.
-          codeSplitting: { groups: [{ name: 'zxing', test: /zxing-wasm/ }] },
-          chunkFileNames: (chunk: { name: string }) => (chunk.name === 'zxing' ? '_nuxt/zxing.[hash].js' : '_nuxt/[hash].js'),
+          // Regal (three.js, TresJS, its components; the owner's shelf, #23) likewise: one chunk
+          // named `regal`, only imported by the shelf's async component, left out of the precache.
+          codeSplitting: {
+            groups: [
+              { name: 'zxing', test: /zxing-wasm/ },
+              // Only what the test names: Regal's modules use the app's Vue and Nuxt, which stay where they are.
+              { name: 'regal', test: isRegalModule, includeDependenciesRecursively: false },
+            ],
+          },
+          chunkFileNames: (chunk: { name: string }) =>
+            chunk.name === 'zxing' || chunk.name === 'regal' ? `_nuxt/${chunk.name}.[hash].js` : '_nuxt/[hash].js',
         },
       },
     },
@@ -78,7 +91,15 @@ export default defineNuxtConfig({
 
   // Filled from NUXT_PUBLIC_SUPABASE_URL / NUXT_PUBLIC_SUPABASE_ANON_KEY (.env).
   runtimeConfig: {
-    public: { supabaseUrl: '', supabaseAnonKey: '' },
+    public: {
+      supabaseUrl: '',
+      supabaseAnonKey: '',
+      // The owner's auth user id (NUXT_PUBLIC_SHELF_OWNER_ID): only she sees Your shelf (#23).
+      // Empty: nobody does.
+      shelfOwnerId: '',
+      // Regal's setting (its README): the published library file, the one the portfolio shows.
+      regal: { librarySrc: REGAL_LIBRARY_SRC },
+    },
   },
 
   // The theme store repaints the theme-color tags with these when the member
@@ -173,8 +194,11 @@ export default defineNuxtConfig({
       ignoreURLParametersMatching: [/^v$/],
       // The barcode decoder (a script chunk and a 0.9 MB module) is not part of the app shell: it is
       // fetched when the scanner first opens, and kept by the cache below.
-      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm'],
+      // Nor is Regal (the owner's shelf, #23): its chunk and styles, its fonts and its model are
+      // fetched when the shelf first opens, and kept by the caches below.
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', ...REGAL_ASSETS.globIgnores],
       runtimeCaching: [
+        ...REGAL_ASSETS.runtimeCaching,
         {
           // The barcode decoder, as the scanner asks for it. Cache first: the file's name carries its hash.
           urlPattern: ({ url }) => /\/_nuxt\/zxing[^/]*\.(js|wasm)$/.test(url.pathname),

@@ -25,9 +25,11 @@ const search = useSearchStore()
 const chrome = useSearchChrome()
 const modal = useModalShown()
 
-const { hidden: away, reveal } = useHideOnScroll(
+const { hidden: scrolledAway, reveal } = useHideOnScroll(
   () => Boolean(route.meta.pushed) && !search.isOpen && chrome.value === 'tabs' && !modal.value,
 )
+// A screen that fills the room (`immersive`: Your shelf, #23) has the bar away for as long as it shows.
+const away = computed(() => scrolledAway.value || Boolean(route.meta.immersive))
 /** Search is taking the bar over: it is where it rests at once, for the morph to measure. */
 const still = computed(() => search.isOpen || chrome.value !== 'tabs')
 
