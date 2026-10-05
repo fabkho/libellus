@@ -25,6 +25,7 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'signOut'
+  | 'trash'
   | 'offline'
   | 'sync'
   | 'import'
@@ -114,6 +115,9 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
       <circle cx="12" cy="12.5" r="3.2" />
     </template>
     <template v-else-if="name === 'torch'"><path d="M13.2 3.5 6.5 13.2h4.8l-.5 7.3 6.7-9.7h-4.8z" /></template>
+    <template v-else-if="name === 'trash'">
+      <path d="M5 7h14M9.5 7V5.2a.7.7 0 0 1 .7-.7h3.6a.7.7 0 0 1 .7.7V7" /><path d="M6.8 7l.7 11.3a1.2 1.2 0 0 0 1.2 1.2h6.6a1.2 1.2 0 0 0 1.2-1.2L17.2 7M10 10.5v5.5M14 10.5v5.5" />
+    </template>
     <template v-else-if="name === 'signOut'">
       <path d="M13.5 4.5h-7a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h7" /><path d="M10.5 12h9m-3-3 3 3-3 3" />
     </template>

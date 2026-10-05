@@ -9,6 +9,9 @@ const email = ref('')
 
 onMounted(() => session.clearError())
 
+// "Your account was deleted" (#101): said once, until she asks for a code.
+const deleted = computed(() => session.accountDeleted)
+
 // A build without a usable Supabase config has nothing to sign in to, so the
 // screen says what is missing instead of offering a form that cannot work.
 const config = parseAppConfig(useRuntimeConfig().public)
@@ -20,6 +23,7 @@ const configProblem = computed(() => {
 })
 
 async function submit() {
+  session.clearAccountDeleted()
   const next = await session.submitEmail(email.value)
   if (next === 'verify') await navigateTo('/verify')
   if (next === 'signUp') await navigateTo('/sign-up')
@@ -29,6 +33,10 @@ async function submit() {
 <template>
   <AuthFrame screen="signIn">
     <h1 class="eyebrow" data-testid="signIn.title">{{ t('signIn.title') }}</h1>
+
+    <p v-if="deleted" class="rounded-md bg-fill p-md text-center text-caption text-ink-muted" role="status" data-testid="signIn.deleted">
+      {{ t('signIn.accountDeleted') }}
+    </p>
 
     <p
       v-if="configProblem"
