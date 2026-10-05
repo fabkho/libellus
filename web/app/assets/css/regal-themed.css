@@ -54,6 +54,16 @@
   --text-xl: var(--text-callout);
 }
 
+/* The row fills the Libellus card (ShelfRowCard: raised, rounded, clipped)
+   edge to edge, so Regal's own frame around it is one too many. No token
+   drops the card's frame alone (`--regal-border-width` and `--regal-radius`
+   are also the focus label's and the details'), so it goes here; the card's
+   own rounding clips the row. A Regal follow-up: a token for the card's frame. */
+.regal-themed .row-card.regal-books-row__card {
+  border: 0;
+  border-radius: 0;
+}
+
 /* The phone's sheet is in <body> on the viewport's bottom edge, as wide as the
    viewport. D's sheets are the column's width (--size-max-content, centred) and
    round at the top only (--radius-sheet), on a wider screen as on a phone. No

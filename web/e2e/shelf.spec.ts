@@ -159,6 +159,9 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('profile.shelfAll')).toHaveCount(0)
     await expect(page.locator('a[href^="/profile/shelf"]')).toHaveCount(0)
 
+    // The row fills Libellus' card edge to edge: no second frame of Regal's inside it.
+    expect(await row.evaluate((el) => [getComputedStyle(el).borderTopWidth, getComputedStyle(el).borderRadius])).toEqual(['0px', '0px'])
+
     // A Book taken out breaks out over the whole screen, above the header and the tab bar.
     await takeOut(page, row)
     const out = page.locator('body > .row-card__view--out')
