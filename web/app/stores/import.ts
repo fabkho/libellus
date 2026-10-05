@@ -4,6 +4,7 @@ import { probeImageInBrowser } from '~/data/covers'
 import {
   createGoodreadsImport,
   libraryIndex,
+  libraryTitleIndex,
   importedKeys,
   pacedFetch,
   type Edition,
@@ -83,6 +84,7 @@ export const useImportStore = defineStore('import', () => {
   const version = ref(0)
   let importedBefore = new Set<string>()
   let owned: (book: Edition['book']) => LibraryEntry | null = () => null
+  let ownedUnderAnyEdition: ReturnType<typeof libraryTitleIndex> = () => null
 
   const progress = reactive({ done: 0, total: 0 })
   const outcomes = shallowRef<RowOutcome[]>([])
@@ -122,6 +124,8 @@ export const useImportStore = defineStore('import', () => {
 
   function verdictOf(book: GoodreadsBook, edition: Edition | null): RowVerdict | null {
     if (importedBefore.has(book.key)) return 'imported'
+    // Hers under another edition: nothing to look up (#104).
+    if (ownedUnderAnyEdition(book)) return 'inLibrary'
     if (!edition) return null
     if (owned(edition.book)) return 'inLibrary'
     return matchedEdition(edition) ? 'matched' : 'fromFile'
@@ -169,6 +173,7 @@ export const useImportStore = defineStore('import', () => {
     verdicts.value = []
     importedBefore = new Set()
     owned = () => null
+    ownedUnderAnyEdition = () => null
     progress.done = 0
     progress.total = 0
     outcomes.value = []
@@ -207,12 +212,14 @@ export const useImportStore = defineStore('import', () => {
     }
     importedBefore = keys.data
     owned = libraryIndex(library)
+    ownedUnderAnyEdition = libraryTitleIndex(library)
     books.value = parsed.books
     skipped.value = parsed.skipped
     editions.value = parsed.books.map(() => null)
     verdicts.value = parsed.books.map((book) => verdictOf(book, null))
 
-    const pending = parsed.books.map((book, index) => ({ book, index })).filter(({ book }) => !importedBefore.has(book.key))
+    // Rows decided already (imported before, or hers under another edition) are not looked up.
+    const pending = parsed.books.map((book, index) => ({ book, index })).filter(({ index }) => verdicts.value[index] === null)
     progress.total = pending.length
     progress.done = 0
     phase.value = 'matching'
@@ -254,6 +261,8 @@ export const useImportStore = defineStore('import', () => {
     if (!repo || phase.value !== 'preview') return
     const pending: ImportRow[] = toImport.value.map(({ book, edition }) => ({
       key: book.key,
+      title: book.title,
+      authors: book.authors,
       status: book.status,
       session: book.session,
       addedOn: book.addedOn,

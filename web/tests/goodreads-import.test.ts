@@ -8,6 +8,7 @@ import {
   entryFor,
   findEdition,
   importedKeys,
+  libraryTitleIndex,
   pacedFetch,
   type Edition,
   type ImportRow,
@@ -110,7 +111,15 @@ async function matchAll(importer: ReturnType<typeof createGoodreadsImport>, book
 }
 
 const rowsOf = (books: readonly GoodreadsBook[], editions: readonly Edition[]): ImportRow[] =>
-  books.map((book, index) => ({ key: book.key, status: book.status, session: book.session, addedOn: book.addedOn, book: editions[index]!.book }))
+  books.map((book, index) => ({
+    key: book.key,
+    title: book.title,
+    authors: book.authors,
+    status: book.status,
+    session: book.session,
+    addedOn: book.addedOn,
+    book: editions[index]!.book,
+  }))
 
 describe('importing a Goodreads export', () => {
   it('adds every book with its Status and read, keeps what she has, and adds nothing the second time', async () => {
@@ -211,6 +220,53 @@ describe('importing a Goodreads export', () => {
     const [shared] = await sql<{ books: number }>('select count(*)::int as books from public.books where isbn13 = $1', [isbns.read])
     expect(shared!.books).toBe(1)
     // Max, importing second, found Ida's import Books in the Catalogue by their ISBN.
+  })
+
+  it('counts a book she has under another edition as in her Library (title and first author), not as a second entry', async () => {
+    const member = await signUpMember()
+    const library = createLibrary(member.client)
+    const isbns = { read: uniqueIsbn(), reading: uniqueIsbn(), owned: uniqueIsbn(), wish: uniqueIsbn() }
+    const { books } = parseGoodreads(exportFile(isbns), today)
+    const [harbour, fieldNotes] = books as [GoodreadsBook, GoodreadsBook]
+
+    // Added in the app, read on the same day as the file says, then its edition changed: the file's ISBN finds neither.
+    const mine = await library.addToLibrary(
+      snapshot({ title: runTitle('Harbour Lights'), authors: ['Mira Okafor'], isbn13: uniqueIsbn(), appleId: uniqueAppleId() }),
+      { status: 'finished', endedOn: '2024-03-09' },
+    )
+    expect(mine.error).toBeNull()
+    const other = await library.changeEdition(
+      mine.data!.id,
+      snapshot({ title: `${runTitle('Harbour Lights')}: A Novel`, authors: ['M. Okafor'], isbn13: uniqueIsbn(), appleId: uniqueAppleId() }),
+    )
+    expect(other.error).toBeNull()
+    // A different read of Field Notes: the same title, but another author's.
+    const namesake = await library.addToLibrary(
+      snapshot({ title: runTitle('Field Notes'), authors: ['Someone Else'], isbn13: uniqueIsbn(), appleId: uniqueAppleId() }),
+      { status: 'want_to_read' },
+    )
+    expect(namesake.error).toBeNull()
+
+    const catalogue = createCatalogueSearch(member.client)
+    const entries = await catalogue.libraryEntries()
+    const owned = libraryTitleIndex(entries)
+    expect(owned(harbour)?.id).toBe(mine.data!.id)
+    expect(owned(fieldNotes)).toBeNull()
+    // A finished row whose read ended on another day is another read of it (or another book).
+    const otherDay = { ...harbour, session: { ...harbour.session!, endedOn: '2020-01-01' } }
+    expect(owned(otherDay)).toBeNull()
+    // No end day known, or not a finished row: the title and author are enough.
+    expect(owned({ ...harbour, session: { ...harbour.session!, endedOn: null } })?.id).toBe(mine.data!.id)
+    expect(owned({ ...harbour, status: 'want_to_read', session: null })?.id).toBe(mine.data!.id)
+
+    const importer = createGoodreadsImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
+    const written = await importer.write(rowsOf(books, await matchAll(importer, books)), { onWritten: () => {} })
+    expect(written.error).toBeNull()
+    expect(written.data![0]).toMatchObject({ key: harbour.key, outcome: 'in_library', entryId: mine.data!.id })
+    expect(written.data!.slice(1).map((outcome) => outcome.outcome)).toEqual(['added', 'added', 'added', 'added'])
+    const [counts] = await sql<{ entries: number }>('select count(*)::int as entries from public.library_entries where member_id = $1', [member.id])
+    // Hers (2) and four new ones, not five.
+    expect(counts!.entries).toBe(6)
   })
 
   it('refuses to write while the device is offline', async () => {

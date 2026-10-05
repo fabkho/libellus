@@ -147,3 +147,32 @@ test('a member imports a Goodreads export, sees the books in her Library, and im
   )
   expect(entries).toBe(4)
 })
+
+test('a book she already has under another edition counts as in her Library, not as a second entry (#104)', async ({ page }) => {
+  const member = await signedIn(page)
+  const title = runTitle('Held Elsewhere')
+  // Her Library holds an edition whose ISBN the file does not carry, as after Change edition.
+  const [{ id: bookId }] = await sql<{ id: string }>(
+    'insert into public.books (title, authors, isbn13, source, apple_id, publisher) values ($1, $2, $3, $4, $5, $6) returning id',
+    [`${title}: A Novel`, ['N. Vale'], uniqueIsbn(), 'apple', uniqueAppleId(), TEST_PUBLISHER],
+  )
+  await sql('insert into public.library_entries (member_id, book_id) values ($1, $2)', [member.id, bookId])
+  const header =
+    'Book Id,Title,Author,ISBN,ISBN13,My Rating,Publisher,Number of Pages,Year Published,Date Read,Date Added,Exclusive Shelf,My Review'
+  const file = {
+    name: 'goodreads_library_export.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(`${header}\n951,"${title} (Vale, #1)",Nora Vale,${wrap('')},${wrap(uniqueIsbn())},0,${TEST_PUBLISHER},300,2019,,2025/08/01,to-read,\n`),
+  }
+
+  await page.goto('/import')
+  await page.getByTestId('import.file').setInputFiles(file)
+  await expect(page.getByTestId('import.alreadyThere')).toContainText('1')
+  await expect(page.getByTestId('import.matched')).toContainText('0')
+  await expect(page.getByTestId('import.nothing')).toHaveText(en.import.nothingToImport)
+  const [{ entries }] = await sql<{ entries: number }>(
+    'select count(*)::int as entries from public.library_entries where member_id = $1',
+    [member.id],
+  )
+  expect(entries).toBe(1)
+})

@@ -11,7 +11,7 @@
 -- test made.
 
 begin;
-select plan(29);
+select plan(36);
 
 create schema if not exists tests;
 
@@ -238,6 +238,53 @@ select throws_ok(
 select throws_ok(
   format($$ select public.import_book_for(%L, null, '{"title":"X","authors":["Y"],"source":"manual"}') $$, :'ida_id'),
   '42501', null, 'nor call the Book step on its own (for someone else)');
+
+-- ------------------------------------ a book she has under another edition (#104)
+
+-- Ida's Piranesi (goodreads:1, finished 2024-03-09) stands for any edition of it:
+-- her Library holds the one the file's ISBN did not find (Change edition).
+select tests.act_as(:'ida_id');
+select is(
+  tests.outcomes(public.import_books($$ [
+    {"key": "goodreads:40", "file_title": "Piranesi", "file_author": "Susanna Clarke", "status": "finished",
+     "ended_on": "2024-03-09", "book": {"title": "Piranesi", "authors": ["Susanna Clarke"], "isbn13": "9790000001101", "source": "import"}},
+    {"key": "goodreads:41", "file_title": "Pïranesi (The Series, #1): A Novel", "file_author": "S. Clarke", "status": "want_to_read",
+     "book": {"title": "Piranesi", "authors": ["S. Clarke"], "isbn13": "9790000001102", "source": "import"}}
+  ] $$)),
+  array['in_library', 'in_library'],
+  'the same title and first author''s surname is her book, whatever the edition (accents, brackets and subtitle ignored)');
+select is(
+  (select count(*)::int from public.library_entries where member_id = :'ida_id' and import_key in ('goodreads:40', 'goodreads:41')),
+  0, 'and adds no second entry');
+select is(
+  (select count(*)::int from public.books where isbn13 in ('9790000001101', '9790000001102')),
+  0, 'nor a Book to the Catalogue');
+
+select is(
+  tests.outcomes(public.import_books($$ [
+    {"key": "goodreads:42", "file_title": "Piranesi", "file_author": "Susanna Clarke", "status": "finished",
+     "ended_on": "2020-01-01", "book": {"title": "Piranesi", "authors": ["Susanna Clarke"], "isbn13": "9790000001103", "source": "import"}},
+    {"key": "goodreads:43", "file_title": "Piranesi", "file_author": "Someone Else", "status": "want_to_read",
+     "book": {"title": "Piranesi", "authors": ["Someone Else"], "isbn13": "9790000001104", "source": "import"}},
+    {"key": "goodreads:44", "status": "want_to_read",
+     "book": {"title": "Piranesi", "authors": ["Susanna Clarke"], "isbn13": "9790000001105", "source": "import"}}
+  ] $$)),
+  array['added', 'added', 'added'],
+  'a finished row ending on another day, another author, or a row that says nothing of the file''s title is a new book');
+
+select tests.act_as(:'max_id');
+select is(
+  tests.outcomes(public.import_books($$ [
+    {"key": "goodreads:45", "file_title": "Klara and the Sun", "file_author": "Kazuo Ishiguro", "status": "want_to_read",
+     "book": {"title": "Klara and the Sun", "authors": ["Kazuo Ishiguro"], "isbn13": "9790000001106", "source": "import"}}
+  ] $$)),
+  array['added'], 'another member''s Library does not count (Ida has Klara and the Sun)');
+
+reset role;
+select is(public.work_title_key('The Sun Eater (Book 2): Howling Dark'), 'the sun eater', 'the work title: brackets and subtitle dropped');
+select is(public.author_surname_key('H. G. Wells'), 'wells', 'the surname: the last word, normalised');
+
+select tests.act_as(:'ida_id');
 
 -- ------------------------------------------------------------ dates and time
 
