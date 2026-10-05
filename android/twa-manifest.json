@@ -1,0 +1,79 @@
+{
+  "packageId": "dev.fabkho.libellus",
+  "host": "libellus.fabkho.dev",
+  "name": "Libellus",
+  "launcherName": "Libellus",
+  "display": "standalone",
+  "themeColor": "#0E0C0A",
+  "themeColorDark": "#0E0C0A",
+  "navigationColor": "#F4F0E9",
+  "navigationColorDark": "#0E0C0A",
+  "navigationDividerColor": "#F4F0E9",
+  "navigationDividerColorDark": "#0E0C0A",
+  "backgroundColor": "#0E0C0A",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://libellus.fabkho.dev/icon-512.png?v=2",
+  "maskableIconUrl": "https://libellus.fabkho.dev/icon-maskable-512.png?v=2",
+  "monochromeIconUrl": "https://libellus.fabkho.dev/icon-monochrome-512.png?v=2",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/Users/fabkho/.android-keys/libellus-upload.jks",
+    "alias": "libellus-upload"
+  },
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Search",
+      "shortName": "Search",
+      "url": "https://libellus.fabkho.dev/?search=1",
+      "chosenIconUrl": "https://libellus.fabkho.dev/shortcut-search-96.png?v=2",
+      "chosenMaskableIconUrl": "https://libellus.fabkho.dev/shortcut-search-96.png?v=2"
+    },
+    {
+      "name": "Update progress",
+      "shortName": "Progress",
+      "url": "https://libellus.fabkho.dev/?progress=1",
+      "chosenIconUrl": "https://libellus.fabkho.dev/shortcut-progress-96.png?v=2",
+      "chosenMaskableIconUrl": "https://libellus.fabkho.dev/shortcut-progress-96.png?v=2"
+    },
+    {
+      "name": "Library",
+      "shortName": "Library",
+      "url": "https://libellus.fabkho.dev/library",
+      "chosenIconUrl": "https://libellus.fabkho.dev/shortcut-library-96.png?v=2",
+      "chosenMaskableIconUrl": "https://libellus.fabkho.dev/shortcut-library-96.png?v=2"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://libellus.fabkho.dev/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://libellus.fabkho.dev/",
+  "minSdkVersion": 21,
+  "shareTarget": {
+    "action": "https://libellus.fabkho.dev/share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": []
+}
