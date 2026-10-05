@@ -1,5 +1,3 @@
-import type { CoverColors } from '../books'
-import type { MemberLibraryEntry } from './memberLibrary'
 import {
   LIBRARY_FILE_VERSION,
   type KnownReadingStatus,
@@ -7,7 +5,7 @@ import {
   type LibraryBookAssets,
   type LibraryPalette,
   type RegalLibraryFile,
-} from './regalLibraryFile'
+} from './regalLibraryFile.ts'
 
 /**
  * The Regal export (issue #22): a member's Library as a Regal library file,
@@ -30,6 +28,9 @@ import {
  *   review of its latest read (an abandoned read may have one). `rating` is the
  *   stored quarters (1–20) as stars (0.25–5); unrated is left out (Regal: 0).
  * - `readCount` is the number of finished reads (re-reads included).
+ * - `pages` is the member's own page count for the entry when they set one
+ *   (`pageCountOverride`, issue #60: an ebook's differ from the edition's), else
+ *   the edition's.
  * - `dateAdded` is the day the entry was made, in `timeZone`.
  * - Cover: `assets.front` is the Cover URL (http(s) only), `assets.palette` is
  *   made from the Cover's two precomputed colours (`coverPalette`). The
@@ -58,6 +59,48 @@ export type RegalExportOptions = {
   statuses?: readonly KnownReadingStatus[]
 }
 
+/** A Cover's two precomputed colours, `#rrggbb` (`CoverColors` in `../books.ts`). */
+export type RegalCoverColors = { dominant: string; secondary: string }
+
+/**
+ * One Library entry, as much of it as the export reads. `MemberLibraryEntry`
+ * (`memberLibrary.ts`, the web script's read) is one; so is what the
+ * `regal-export` edge function reads (supabase/functions/regal-export). Spelled
+ * out here instead of imported from the app, so this file, `carryArt.ts` and
+ * `regalLibraryFile.ts` stay a closed set of pure modules (relative imports with
+ * their `.ts` extension, nothing else) that Deno runs as they are.
+ */
+export type RegalExportEntry = {
+  /** When the Book entered the Library (ISO date-time). */
+  addedAt: string
+  /** The member's own total pages for this entry (issue #60), null = the edition's. */
+  pageCountOverride?: number | null
+  book: {
+    id: string
+    title: string
+    authors: string[]
+    isbn13: string | null
+    isbn10: string | null
+    pageCount: number | null
+    year: number | null
+    publisher: string | null
+    description: string | null
+    coverUrl: string | null
+    coverColors: RegalCoverColors | null
+  }
+  /** Newest first (`sortSessions`): the open one, then by the day they ended. */
+  sessions: readonly RegalExportSession[]
+}
+
+export type RegalExportSession = {
+  startedOn: string | null
+  endedOn: string | null
+  outcome: 'finished' | 'abandoned' | null
+  /** Quarter stars, 1–20. */
+  rating: number | null
+  review: string | null
+}
+
 export const REGAL_GENERATOR = 'libellus'
 
 const ISBN13 = /^97[89]\d{10}$/
@@ -65,8 +108,10 @@ const ISBN10 = /^\d{9}[\dX]$/
 const HEX_COLOUR = /^#[\da-f]{6}$/i
 const HTTP_URL = /^https?:\/\/\S+$/i
 
+const positiveInteger = (value: number | null | undefined) => (value && Number.isInteger(value) && value > 0 ? value : null)
+
 /** The Reading status of an entry, from its sessions (newest first). */
-export function regalStatus(sessions: MemberLibraryEntry['sessions']): KnownReadingStatus {
+export function regalStatus(sessions: RegalExportEntry['sessions']): KnownReadingStatus {
   const latest = sessions[0]
   if (!latest) return 'to-read'
   if (!latest.outcome) return 'currently-reading'
@@ -74,7 +119,7 @@ export function regalStatus(sessions: MemberLibraryEntry['sessions']): KnownRead
 }
 
 /** One Library entry as a Book of the library file. */
-export function regalBook(entry: MemberLibraryEntry, { timeZone = 'UTC' }: Pick<RegalExportOptions, 'timeZone'> = {}): LibraryBook {
+export function regalBook(entry: RegalExportEntry, { timeZone = 'UTC' }: Pick<RegalExportOptions, 'timeZone'> = {}): LibraryBook {
   const { book, sessions } = entry
   const latest = sessions[0] ?? null
   const finished = sessions.filter((session) => session.outcome === 'finished')
@@ -92,7 +137,7 @@ export function regalBook(entry: MemberLibraryEntry, { timeZone = 'UTC' }: Pick<
   }
   set('isbn13', book.isbn13 && ISBN13.test(book.isbn13) ? book.isbn13 : null)
   set('isbn10', book.isbn10 && ISBN10.test(book.isbn10) ? book.isbn10 : null)
-  set('pages', book.pageCount && Number.isInteger(book.pageCount) && book.pageCount > 0 ? book.pageCount : null)
+  set('pages', positiveInteger(entry.pageCountOverride) ?? positiveInteger(book.pageCount))
   set('yearPublished', book.year && Number.isInteger(book.year) ? book.year : null)
   set('dateRead', lastFinished?.endedOn)
   set('dateStarted', latest?.startedOn)
@@ -107,7 +152,7 @@ export function regalBook(entry: MemberLibraryEntry, { timeZone = 'UTC' }: Pick<
 }
 
 /** The Cover as `assets`: its URL as the front, its colours as a palette. Null when there is neither. */
-export function regalAssets(coverUrl: string | null, coverColors: CoverColors | null): LibraryBookAssets | null {
+export function regalAssets(coverUrl: string | null, coverColors: RegalCoverColors | null): LibraryBookAssets | null {
   const assets: LibraryBookAssets = {}
   if (coverUrl && HTTP_URL.test(coverUrl.trim())) assets.front = coverUrl.trim()
   if (coverColors && HEX_COLOUR.test(coverColors.dominant) && HEX_COLOUR.test(coverColors.secondary)) {
@@ -117,7 +162,7 @@ export function regalAssets(coverUrl: string | null, coverColors: CoverColors | 
 }
 
 /** The whole Library as a library file. */
-export function exportRegalLibrary(entries: readonly MemberLibraryEntry[], options: RegalExportOptions): RegalLibraryFile {
+export function exportRegalLibrary(entries: readonly RegalExportEntry[], options: RegalExportOptions): RegalLibraryFile {
   const wanted = options.statuses ? new Set<string>(options.statuses) : null
   const books = entries
     .map((entry) => regalBook(entry, options))
@@ -153,7 +198,7 @@ export function dayIn(instant: string, timeZone: string): string | null {
  * text. Regal assets replaces it with one measured from the front's spine
  * edge when it has the image; this is what Regal shows until then.
  */
-export function coverPalette({ dominant, secondary }: CoverColors): LibraryPalette {
+export function coverPalette({ dominant, secondary }: RegalCoverColors): LibraryPalette {
   const background = fromHex(dominant)
   const second = fromHex(secondary)
   const readable = contrast(PAPER, background) >= contrast(INK, background) ? PAPER : INK

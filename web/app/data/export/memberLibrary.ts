@@ -20,12 +20,14 @@ export type MemberLibraryEntry = {
   status: EntryStatus
   /** When the Book entered the Library (ISO date-time). */
   addedAt: string
+  /** The member's own total pages (issue #60), null = the edition's `book.pageCount`. */
+  pageCountOverride: number | null
   book: Book
   /** Newest first: the open one, then by the day they ended. */
   sessions: ReadingSession[]
 }
 
-type ExportRow = { id: string; status: EntryStatus; added_at: string; book: BookRow; sessions: SessionRow[] | null }
+type ExportRow = { id: string; status: EntryStatus; added_at: string; page_count_override: number | null; book: BookRow; sessions: SessionRow[] | null }
 
 const PAGE = 1000
 
@@ -39,7 +41,7 @@ export async function readMemberLibrary(client: SupabaseClient, memberId: string
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await client
       .from('library_entries')
-      .select('id, status, added_at, book:books!inner(*), sessions:reading_sessions(*)')
+      .select('id, status, added_at, page_count_override, book:books!inner(*), sessions:reading_sessions(*)')
       .eq('member_id', memberId)
       .order('id')
       .range(from, from + PAGE - 1)
@@ -50,6 +52,7 @@ export async function readMemberLibrary(client: SupabaseClient, memberId: string
         id: row.id,
         status: row.status,
         addedAt: row.added_at,
+        pageCountOverride: row.page_count_override ?? null,
         book: bookFromRow(row.book),
         sessions: sortSessions((row.sessions ?? []).map(sessionFromRow)),
       })

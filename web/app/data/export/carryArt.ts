@@ -1,4 +1,4 @@
-import type { LibraryBook, LibraryBookAssets, RegalLibraryFile } from './regalLibraryFile'
+import type { LibraryBook, LibraryBookAssets, RegalLibraryFile } from './regalLibraryFile.ts'
 
 /**
  * Carrying published art over (issue #22): the Books Regal already shows keep

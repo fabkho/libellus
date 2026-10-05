@@ -1,0 +1,133 @@
+[
+  {
+    "id": "e0000000-0000-4000-8000-000000000001",
+    "added_at": "2024-03-01T23:30:00Z",
+    "page_count_override": 512,
+    "book": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "title": "  The Left Hand of Darkness ",
+      "authors": ["Ursula K. Le Guin"],
+      "isbn13": "9780441478125",
+      "isbn10": "0441478123",
+      "page_count": 304,
+      "published_year": 1969,
+      "publisher": "Ace Books",
+      "description": "Winter, a planet of ice.",
+      "cover_url": "https://covers.example.test/left-hand.jpg",
+      "cover_dominant": "#1a2b3c",
+      "cover_secondary": "#f0e0d0"
+    },
+    "sessions": [
+      { "started_on": "2020-01-01", "ended_on": "2020-01-20", "outcome": "finished", "rating": 16, "review": "Kemmer.", "created_at": "2020-01-01T10:00:00Z" },
+      { "started_on": "2024-02-01", "ended_on": "2024-02-28", "outcome": "finished", "rating": 19, "review": "Better the second time.", "created_at": "2024-02-01T10:00:00Z" }
+    ]
+  },
+  {
+    "id": "e0000000-0000-4000-8000-000000000002",
+    "added_at": "2024-04-02T08:00:00Z",
+    "page_count_override": null,
+    "book": {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "title": "Golden Son",
+      "authors": ["Pierce Brown"],
+      "isbn13": "9780345539830",
+      "isbn10": null,
+      "page_count": 442,
+      "published_year": 2015,
+      "publisher": null,
+      "description": null,
+      "cover_url": "https://covers.example.test/golden-son.jpg",
+      "cover_dominant": null,
+      "cover_secondary": null
+    },
+    "sessions": [
+      { "started_on": "2024-04-02", "ended_on": "2024-04-30", "outcome": "finished", "rating": null, "review": null, "created_at": "2024-04-02T08:00:00Z" }
+    ]
+  },
+  {
+    "id": "e0000000-0000-4000-8000-000000000003",
+    "added_at": "2024-05-01T12:00:00Z",
+    "page_count_override": 99,
+    "book": {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "title": "Parable of the Sower",
+      "authors": ["Octavia E. Butler"],
+      "isbn13": null,
+      "isbn10": null,
+      "page_count": 345,
+      "published_year": null,
+      "publisher": null,
+      "description": null,
+      "cover_url": null,
+      "cover_dominant": null,
+      "cover_secondary": null
+    },
+    "sessions": [
+      { "started_on": "2024-05-02", "ended_on": null, "outcome": null, "rating": null, "review": null, "created_at": "2024-05-02T08:00:00Z" }
+    ]
+  },
+  {
+    "id": "e0000000-0000-4000-8000-000000000004",
+    "added_at": "2024-06-01T12:00:00Z",
+    "page_count_override": null,
+    "book": {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "title": "Ruin",
+      "authors": ["Someone Else"],
+      "isbn13": null,
+      "isbn10": null,
+      "page_count": null,
+      "published_year": null,
+      "publisher": null,
+      "description": null,
+      "cover_url": null,
+      "cover_dominant": null,
+      "cover_secondary": null
+    },
+    "sessions": [
+      { "started_on": "2024-06-01", "ended_on": "2024-06-03", "outcome": "abandoned", "rating": null, "review": "Not for me.", "created_at": "2024-06-01T08:00:00Z" }
+    ]
+  },
+  {
+    "id": "e0000000-0000-4000-8000-000000000005",
+    "added_at": "2024-07-01T12:00:00Z",
+    "page_count_override": null,
+    "book": {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "title": "The Dispossessed",
+      "authors": ["Ursula K. Le Guin"],
+      "isbn13": null,
+      "isbn10": null,
+      "page_count": 387,
+      "published_year": null,
+      "publisher": null,
+      "description": null,
+      "cover_url": null,
+      "cover_dominant": null,
+      "cover_secondary": null
+    },
+    "sessions": null
+  },
+  {
+    "id": "e0000000-0000-4000-8000-000000000006",
+    "added_at": "2023-12-31T23:30:00Z",
+    "page_count_override": null,
+    "book": {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "title": "Red Rising: Book One",
+      "authors": ["Pierce Brown"],
+      "isbn13": "9780345539809",
+      "isbn10": null,
+      "page_count": 382,
+      "published_year": 2014,
+      "publisher": "Del Rey",
+      "description": null,
+      "cover_url": "https://covers.example.test/red-rising.jpg",
+      "cover_dominant": "#aa0000",
+      "cover_secondary": "#111111"
+    },
+    "sessions": [
+      { "started_on": null, "ended_on": "2023-01-15", "outcome": "finished", "rating": 20, "review": null, "created_at": "2023-12-31T23:30:00Z" }
+    ]
+  }
+]

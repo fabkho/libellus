@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "generatedAt": "2026-10-04T07:22:34.379Z",
+  "owner": "Fabian",
+  "generator": "regal-assets (from libellus)",
+  "books": [
+    {
+      "id": "published-golden-son",
+      "title": "Golden Son",
+      "authors": ["Pierce Brown"],
+      "status": "read",
+      "isbn13": "9780345539830",
+      "assets": {
+        "front": "9780345539830/front.webp",
+        "spine": "9780345539830/spine.webp",
+        "back": "9780345539830/back.webp",
+        "pile": { "front": "9780345539830/front-pile.webp", "spine": "9780345539830/spine-pile.webp" },
+        "palette": { "background": "#171715", "text": "#fcfcfc", "accent": "#465869" },
+        "spineColor": "#334047",
+        "source": "ai"
+      }
+    },
+    {
+      "id": "published-red-rising",
+      "title": "Red Rising (Red Rising Saga, #1)",
+      "authors": ["Pierce Brown"],
+      "status": "read",
+      "isbn13": "9780345539786",
+      "assets": {
+        "front": "https://cdn.example.test/red-rising/front.webp",
+        "spine": "red-rising/spine.webp"
+      }
+    },
+    {
+      "id": "published-gone",
+      "title": "A Book Libellus No Longer Has",
+      "authors": ["Nobody"],
+      "status": "read",
+      "assets": { "front": "gone/front.webp" }
+    }
+  ]
+}
