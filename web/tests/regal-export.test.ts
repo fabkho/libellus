@@ -67,6 +67,7 @@ function entry(n: number, bookFields: Partial<Book>, sessions: ReadingSession[],
     id: `entry-${n}`,
     status: !latest ? 'want_to_read' : latest.outcome ? 'finished' : 'reading',
     addedAt,
+    pageCountOverride: null,
     book: book(n, bookFields),
     sessions,
   }
@@ -201,6 +202,14 @@ describe('regalBook', () => {
     const ruin = regalBook(library().find((e) => e.book.title === 'Ruin')!)
     expect(ruin.assets).toBeUndefined()
   })
+
+  it('takes the member’s own page count over the edition’s (issue #60)', () => {
+    const sower = library().find((e) => e.book.title === 'Parable of the Sower')!
+    expect(regalBook(sower).pages).toBe(345)
+    expect(regalBook({ ...sower, pageCountOverride: 512 }).pages).toBe(512)
+    expect(regalBook({ ...sower, pageCountOverride: null }).pages).toBe(345)
+    expect(regalBook({ ...sower, pageCountOverride: 0 }).pages).toBe(345)
+  })
 })
 
 describe('dayIn', () => {
@@ -275,6 +284,7 @@ describe('readMemberLibrary', () => {
     const entries = await readMemberLibrary(member.client, member.id)
     expect(entries.map((e) => e.id).sort()).toEqual([wanted.data!.id, reread.data!.id].sort())
     const lathe = entries.find((e) => e.id === reread.data!.id)!
+    expect(lathe.pageCountOverride).toBeNull()
     expect(lathe.sessions.map((s) => [s.startedOn, s.outcome])).toEqual([
       ['2024-02-01', null],
       ['2020-01-01', 'finished'],

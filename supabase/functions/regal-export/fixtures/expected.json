@@ -1,0 +1,92 @@
+{
+  "version": 2,
+  "generatedAt": "2026-10-05T06:00:00.000Z",
+  "owner": "Fabian",
+  "generator": "libellus",
+  "books": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "title": "The Left Hand of Darkness",
+      "authors": [
+        "Ursula K. Le Guin"
+      ],
+      "status": "read",
+      "isbn13": "9780441478125",
+      "isbn10": "0441478123",
+      "pages": 512,
+      "yearPublished": 1969,
+      "dateRead": "2024-02-28",
+      "dateStarted": "2024-02-01",
+      "dateAdded": "2024-03-02",
+      "rating": 4.75,
+      "review": "Better the second time.",
+      "readCount": 2,
+      "description": "Winter, a planet of ice.",
+      "publisher": "Ace Books",
+      "assets": {
+        "front": "https://covers.example.test/left-hand.jpg",
+        "palette": {
+          "background": "#1a2b3c",
+          "text": "#f0e0d0",
+          "accent": "#f0e0d0"
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "title": "Golden Son",
+      "authors": [
+        "Pierce Brown"
+      ],
+      "status": "read",
+      "isbn13": "9780345539830",
+      "pages": 442,
+      "yearPublished": 2015,
+      "dateRead": "2024-04-30",
+      "dateStarted": "2024-04-02",
+      "dateAdded": "2024-04-02",
+      "readCount": 1,
+      "assets": {
+        "front": "https://books.example.test/v2/9780345539830/front.webp",
+        "spine": "https://books.example.test/v2/9780345539830/spine.webp",
+        "back": "https://books.example.test/v2/9780345539830/back.webp",
+        "pile": {
+          "front": "https://books.example.test/v2/9780345539830/front-pile.webp",
+          "spine": "https://books.example.test/v2/9780345539830/spine-pile.webp"
+        },
+        "palette": {
+          "background": "#171715",
+          "text": "#fcfcfc",
+          "accent": "#465869"
+        },
+        "spineColor": "#334047",
+        "source": "ai"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "title": "Red Rising: Book One",
+      "authors": [
+        "Pierce Brown"
+      ],
+      "status": "read",
+      "isbn13": "9780345539809",
+      "pages": 382,
+      "yearPublished": 2014,
+      "dateRead": "2023-01-15",
+      "dateAdded": "2024-01-01",
+      "rating": 5,
+      "readCount": 1,
+      "publisher": "Del Rey",
+      "assets": {
+        "front": "https://cdn.example.test/red-rising/front.webp",
+        "palette": {
+          "background": "#aa0000",
+          "text": "#f5f2eb",
+          "accent": "#111111"
+        },
+        "spine": "https://books.example.test/v2/red-rising/spine.webp"
+      }
+    }
+  ]
+}
