@@ -148,25 +148,25 @@ nav.away {
   transition: none;
 }
 
-/* The scroll edge (iOS 26's, Material's toolbar has none): a soft blur of what
-   runs under the capsule, strongest at the screen edge and gone by the capsule's
-   top, with only as much of the room colour in it as legibility needs. It is as
+/* The scroll edge (iOS 26's, Material's toolbar has none): a very subtle
+   blur of what runs under the capsule (half of `blurVeil`), strongest at the screen
+   edge and gone by the capsule's top, with a faint tint of the room colour. It is as
    tall as the capsule and what lies under it (where it floats, the inset
    included) and no taller, and it shows only while content runs under it. It
    takes no tap. Where there is no backdrop blur (an old WebView) a very light,
    short gradient stands in. */
 .edge-bottom {
   height: calc(var(--float-bottom) + var(--size-tab-bar));
-  background: linear-gradient(to top, color-mix(in srgb, var(--color-surface) 55%, transparent), transparent);
-  -webkit-backdrop-filter: blur(var(--blur-veil));
-  backdrop-filter: blur(var(--blur-veil));
-  -webkit-mask-image: linear-gradient(to top, black 30%, transparent);
-  mask-image: linear-gradient(to top, black 30%, transparent);
+  background: linear-gradient(to top, color-mix(in srgb, var(--color-surface) 20%, transparent), transparent);
+  -webkit-backdrop-filter: blur(calc(var(--blur-veil) / 2));
+  backdrop-filter: blur(calc(var(--blur-veil) / 2));
+  -webkit-mask-image: linear-gradient(to top, black 10%, transparent);
+  mask-image: linear-gradient(to top, black 10%, transparent);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .edge-bottom {
-    background: linear-gradient(to top, color-mix(in srgb, var(--color-surface) 40%, transparent), transparent);
+    background: linear-gradient(to top, color-mix(in srgb, var(--color-surface) 15%, transparent), transparent);
     -webkit-mask-image: none;
     mask-image: none;
   }

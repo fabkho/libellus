@@ -175,7 +175,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `text-title`), the large title elsewhere (`text-large-title`). Pushed screens with a large
   title (Collections, a Collection, Import) put it on the same row, `bar` under their top bar.
 - **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) over a
-  scroll edge (a soft blur of what runs under it, as tall as the capsule and where it floats,
+  scroll edge (a very subtle blur of what runs under it, as tall as the capsule and where it floats,
   fading out upwards, only while content runs under it; no opaque fade), at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
   the screen edge. The current tab is full ink with a bolder stroke and a lamp dot; the others are
   faint. Search is not a page: it opens the search palette, and the capsule itself turns into it
