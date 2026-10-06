@@ -1,0 +1,81 @@
+/* The reader's three rooms (#131 phase 2 design round). Light and dark are the
+   app's own values (D's Day and Night, copied from tokens.generated.css so a
+   reader element can take either inside the other theme); sepia is the
+   reader-only third room the owner asked for (2026-10-06): warmer, browner
+   paper and ink, a lamp a step darker so it still reads on it. In production
+   sepia becomes a third value of these roles in design/tokens.json, scoped to
+   the reader; the app's own switch keeps showing two states. */
+
+[data-theme='light'] {
+  color-scheme: light;
+  --color-surface: #f4f0e9;
+  --color-surface-raised: #fbf9f5;
+  --color-surface-sheet: #fbf9f5;
+  --color-surface-stage: #1a1714;
+  --color-glass: rgb(251 249 245 / 0.78);
+  --color-fill: rgb(40 30 20 / 0.05);
+  --color-fill-strong: rgb(40 30 20 / 0.085);
+  --color-hairline: rgb(40 30 20 / 0.1);
+  --color-hairline-strong: rgb(40 30 20 / 0.17);
+  --color-ink: #1c1915;
+  --color-ink-muted: rgb(28 25 21 / 0.64);
+  --color-ink-faint: rgb(28 25 21 / 0.45);
+  --color-ink-ghost: rgb(28 25 21 / 0.2);
+  --color-on-ink: #f8f5ef;
+  --color-accent: #b8782a;
+  --color-accent-soft: rgb(184 120 42 / 0.12);
+  --color-lamp-light: rgb(239 183 104 / 0.16);
+  --color-lamp-glow: rgb(255 255 255 / 0.5);
+  --color-star: #b8782a;
+  --color-star-track: rgb(28 25 21 / 0.2);
+  --color-success: #4f7a3c;
+  --color-error: #c2452a;
+  --color-error-soft: rgb(194 69 42 / 0.1);
+  --color-scrim: rgb(26 20 14 / 0.38);
+  --color-veil: rgb(244 240 233 / 0.55);
+  --elevation-raised: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 14px 34px rgb(60 40 20 / 0.14);
+  --elevation-cover: 0 10px 24px rgb(60 40 20 / 0.22), 0 2px 5px rgb(60 40 20 / 0.18);
+  --elevation-float: 0 12px 30px rgb(60 40 20 / 0.18);
+  --elevation-button: 0 6px 18px rgb(60 40 20 / 0.22);
+  --elevation-palette: 0 -10px 50px rgb(60 40 20 / 0.14), 0 12px 30px rgb(60 40 20 / 0.18);
+  --elevation-sheet: 0 -20px 50px rgb(60 40 20 / 0.16);
+  --opacity-glow: 0.5;
+  --opacity-halo: 0.4;
+}
+
+[data-theme='sepia'] {
+  color-scheme: light;
+  --color-surface: #f1e6d0;
+  --color-surface-raised: #f7eedc;
+  --color-surface-sheet: #f8efde;
+  --color-surface-stage: #1f1710;
+  --color-glass: rgb(247 238 220 / 0.8);
+  --color-fill: rgb(90 60 25 / 0.06);
+  --color-fill-strong: rgb(90 60 25 / 0.1);
+  --color-hairline: rgb(90 60 25 / 0.12);
+  --color-hairline-strong: rgb(90 60 25 / 0.2);
+  --color-ink: #3b2b1c;
+  --color-ink-muted: rgb(59 43 28 / 0.66);
+  --color-ink-faint: rgb(59 43 28 / 0.48);
+  --color-ink-ghost: rgb(59 43 28 / 0.22);
+  --color-on-ink: #f8efde;
+  --color-accent: #a4651c;
+  --color-accent-soft: rgb(164 101 28 / 0.14);
+  --color-lamp-light: rgb(222 160 80 / 0.18);
+  --color-lamp-glow: rgb(255 248 230 / 0.5);
+  --color-star: #a4651c;
+  --color-star-track: rgb(59 43 28 / 0.22);
+  --color-success: #4f7a3c;
+  --color-error: #b8401f;
+  --color-error-soft: rgb(184 64 31 / 0.1);
+  --color-scrim: rgb(40 24 8 / 0.36);
+  --color-veil: rgb(241 230 208 / 0.55);
+  --elevation-raised: inset 0 1px 0 rgb(255 250 235 / 0.6), 0 14px 34px rgb(80 50 15 / 0.16);
+  --elevation-cover: 0 10px 24px rgb(80 50 15 / 0.24), 0 2px 5px rgb(80 50 15 / 0.2);
+  --elevation-float: 0 12px 30px rgb(80 50 15 / 0.2);
+  --elevation-button: 0 6px 18px rgb(80 50 15 / 0.22);
+  --elevation-palette: 0 -10px 50px rgb(80 50 15 / 0.14), 0 12px 30px rgb(80 50 15 / 0.18);
+  --elevation-sheet: 0 -20px 50px rgb(80 50 15 / 0.18);
+  --opacity-glow: 0.5;
+  --opacity-halo: 0.4;
+}
