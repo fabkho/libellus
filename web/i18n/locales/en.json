@@ -98,7 +98,8 @@
       "remove_from_collection": "Taken off a collection",
       "reorder_collection": "New order",
       "rename_collection": "Renamed",
-      "delete_collection": "Deleted"
+      "delete_collection": "Deleted",
+      "save_reader_highlight": "Highlight"
     }
   },
   "account": {
@@ -1066,7 +1067,13 @@
     },
     "contentsSheet": {
       "title": "Contents",
-      "none": "This book has no contents."
+      "none": "This book has no contents.",
+      "otherCopy": {
+        "title": "Highlights from another copy",
+        "note": "Marked in a different file of this book, so they can't be placed on this page.",
+        "remove": "Remove highlight: {text}",
+        "color": "Highlight in {color}"
+      }
     },
     "menu": {
       "label": "Selected words",

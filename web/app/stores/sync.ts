@@ -9,7 +9,7 @@ import {
   type OutboxItem,
   type SyncFailure,
 } from '~/data/outbox'
-import { COLLECTION_ACTIONS, type WriteQueue } from '~/data/queuedWrites'
+import { COLLECTION_ACTIONS, READER_ACTIONS, type WriteQueue } from '~/data/queuedWrites'
 import { useCollectionsStore } from '~/stores/collections'
 import { useHistoryStore } from '~/stores/history'
 import { useLibraryStore } from '~/stores/library'
@@ -165,6 +165,8 @@ export const useSyncStore = defineStore('sync', () => {
   async function settle(report: FlushReport) {
     const library = useLibraryStore()
     const synced = [...report.taken.map((item) => item.action), ...report.refused.map((failure) => failure.action)]
+    // The reader's highlights change nothing the Library, the Collections or the days show.
+    if (synced.every((action) => READER_ACTIONS.has(action))) return
     await library.load()
     if (library.readInYear !== null) void library.loadReadInYear()
     useHistoryStore().refresh()

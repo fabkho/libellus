@@ -306,7 +306,10 @@ export function createSender(client: SupabaseClient): Send {
     if (!error) return { kind: 'taken', result: (data ?? {}) as Record<string, unknown> }
     if (!status) return { kind: 'unreachable' }
     const code = COLLECTION_ACTIONS.has(item.action) ? mapCollectionError(error) : mapLibraryError(error)
-    if (code === 'not_signed_in' || status >= 500 || status === 401 || status === 408 || status === 429) {
+    // A rule the database named (`entry_not_found` is raised as P0002, which PostgREST answers with a 500) is a
+    // refusal however it is answered: sending it again is refused again, and the writes behind it must not wait.
+    const named = code !== 'unknown' && code !== 'not_signed_in' && status >= 500
+    if (!named && (code === 'not_signed_in' || status >= 500 || status === 401 || status === 408 || status === 429)) {
       return { kind: 'failed', code: code === 'not_signed_in' ? 'unknown' : code }
     }
     return { kind: 'refused', code }
