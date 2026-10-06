@@ -3,16 +3,21 @@ import { createCatalogueSearch } from '~/data/catalogueSearch'
 import { probeImageInBrowser } from '~/data/covers'
 import {
   createBookImport,
+  editionChoices,
+  fileEdition,
   libraryIndex,
   libraryTitleIndex,
   importedKeys,
   pacedFetch,
   type BookImport,
   type Edition,
+  type EditionChoice,
   type ImportRow,
   type RowOutcome,
 } from '~/data/bookImport'
+import { appendEditions, createEditions } from '~/data/editions'
 import { decodeExport, NotACsvFileError } from '~/data/import/csv'
+import { editionFit } from '~/data/import/editions'
 import { parseExport } from '~/data/import/detect'
 import {
   countByStatus,
@@ -25,7 +30,9 @@ import {
   type SkippedRow,
 } from '~/data/import/rows'
 import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
+import { editionKeys } from '~/data/merge'
 import { createSearch, isAbort } from '~/data/search'
+import { candidateKey } from '~/stores/edition'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { isoDay } from '~/utils/dates'
@@ -79,13 +86,31 @@ export type Attention = {
   authors: string[]
   /** The edition it will be added as, when one was found: its cover shows what she gets. */
   edition: Edition['book'] | null
+  /** Her edition is hers to choose (Choose edition): matched by title or only from the file. */
+  choose: boolean
+  /** The edition she chose, as it will be written: its language, year and pages show on the row. */
+  held?: Edition['book']
   notes: (
     | ImportProblem
+    | { code: 'chosen' }
+    | { code: 'chosenInLibrary' }
     | { code: 'fromFile' }
     | { code: 'fromFileIsbn' }
     | { code: 'unsure' }
     | { code: 'byTitle'; year: number | null; language: string | null }
   )[]
+}
+
+/** The Choose edition sheet's state: the row it is about, what it offers, and the pick. */
+export type EditionChoosing = {
+  key: string
+  rows: EditionChoice[]
+  /** The edition search has not answered fully yet. */
+  pending: boolean
+  /** Every source of the search failed. */
+  failed: boolean
+  /** The picked row's key (`candidateKey`); the current edition's while nothing else is picked. */
+  picked: string
 }
 
 /** One of her other shelves (Goodreads) or lists (Hardcover), offered as a Collection: how many books are on it, and whether she keeps it. */
@@ -128,6 +153,8 @@ export const useImportStore = defineStore('import', () => {
   const outcomes = shallowRef<RowOutcome[]>([])
   const writeError = ref<LibraryErrorCode | null>(null)
 
+  /** Rows whose edition she chose herself, by index: the match does not touch them again. */
+  const chosen = shallowRef(new Set<number>())
   let repository: BookImport | null = null
   let catalogue: ReturnType<typeof createCatalogueSearch> | null = null
   function importer(): BookImport | null {
@@ -208,8 +235,8 @@ export const useImportStore = defineStore('import', () => {
   /** Rows that were not found or carried over with a change, then the skipped ones, in file order. */
   const attention = computed<Attention[]>(() => {
     const list: Attention[] = []
-    for (const { book, edition, verdict } of rows.value) {
-      if (verdict === 'imported' || verdict === 'inLibrary') continue
+    for (const [index, { book, edition, verdict }] of rows.value.entries()) {
+      if (verdict === 'imported' || verdict === 'inLibrary' || chosen.value.has(index)) continue
       const notes: Attention['notes'] = []
       if (verdict === 'fromFile') {
         notes.push(edition?.unsure ? { code: 'unsure' } : edition?.book.isbn13 ? { code: 'fromFileIsbn' } : { code: 'fromFile' })
@@ -220,10 +247,29 @@ export const useImportStore = defineStore('import', () => {
       }
       notes.push(...book.problems)
       const shown = verdict === 'matched' || edition?.coverFrom ? (edition?.coverFrom ?? edition?.book ?? null) : null
-      if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, notes })
+      const choose = Boolean(edition) && (verdict === 'fromFile' || (verdict === 'matched' && edition?.via === 'title'))
+      if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, choose, notes })
     }
     for (const row of skipped.value) {
-      list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], edition: null, notes: [row.problem] })
+      list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], edition: null, choose: false, notes: [row.problem] })
+    }
+    return list
+  })
+
+  /** Books whose edition she chose herself, in file order: each can be changed again. */
+  const choices = computed<Attention[]>(() => {
+    const list: Attention[] = []
+    for (const [index, { book, edition, verdict }] of rows.value.entries()) {
+      if (!chosen.value.has(index) || !edition) continue
+      list.push({
+        key: book.key,
+        title: book.title,
+        authors: book.authors,
+        edition: edition.coverFrom ?? edition.book,
+        choose: true,
+        held: edition.book,
+        notes: [{ code: verdict === 'inLibrary' ? 'chosenInLibrary' : 'chosen' }, ...book.problems],
+      })
     }
     return list
   })
@@ -233,6 +279,8 @@ export const useImportStore = defineStore('import', () => {
   function reset() {
     lookup?.abort()
     lookup = null
+    stopChoosing()
+    chosen.value = new Set()
     phase.value = 'pick'
     fileName.value = null
     fileError.value = null
@@ -298,6 +346,7 @@ export const useImportStore = defineStore('import', () => {
     books.value = parsed.books
     skipped.value = parsed.skipped
     editions.value = parsed.books.map(() => null)
+    chosen.value = new Set()
     verdicts.value = parsed.books.map((book) => verdictOf(book, null))
 
     // Rows decided already (imported before, or hers under another edition) are not looked up.
@@ -337,10 +386,151 @@ export const useImportStore = defineStore('import', () => {
     phase.value = 'preview'
   }
 
+  // ------------------------------------------------------- choosing an edition
+
+  /** The sheet is about this row; null while it is closed. */
+  const choosing = ref<EditionChoosing | null>(null)
+  let asking: AbortController | null = null
+  let editionSource: ReturnType<typeof createEditions> | null = null
+
+  /** Its own lookup of a work's editions, as the Book page's Change edition has (`data/editions.ts`). */
+  function editionsLookup() {
+    editionSource ??= createEditions({
+      fetch: (url, init) => fetch(url, init),
+      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      catalogue: backend ? (catalogue ??= createCatalogueSearch(backend)) : undefined,
+    })
+    return editionSource
+  }
+
+  function indexOf(key: string): number {
+    return books.value.findIndex((book) => book.key === key)
+  }
+
+  function stopChoosing() {
+    asking?.abort()
+    asking = null
+    choosing.value = null
+  }
+
+  /**
+   * Asks the sources for the row's editions (title and first author, as the
+   * Book page does) once the sheet is open. Their finds are added behind what
+   * the match found, best fit to the row first, and never move a row that is
+   * shown. A lookup of the work needs the network: offline there is none, and
+   * the sheet says so.
+   */
+  async function lookForEditions(index: number) {
+    const book = books.value[index]
+    const edition = editions.value[index]
+    if (!book || !edition || !isOnline()) return
+    asking?.abort()
+    const controller = new AbortController()
+    asking = controller
+    const now = choosing.value
+    if (!now) return
+    now.pending = true
+    now.failed = false
+    const wanted = { ...fileEdition(book).book, openLibraryWorkKey: edition.book.openLibraryWorkKey ?? null, id: '', createdAt: '' }
+    const update = (found: EditionChoice[], pending: boolean, failed: boolean) => {
+      const sheet = choosing.value
+      if (!sheet || asking !== controller) return
+      const fresh = found
+        .filter((choice) => !choice.current)
+        .map((choice, order) => ({ choice, order, fit: editionFit(book, choice.book) }))
+        .sort((a, b) => b.fit - a.fit || a.order - b.order)
+        .map(({ choice }) => choice)
+      const merged = appendEditions(sheet.rows, [...sheet.rows.filter((row) => row.current), ...fresh])
+      // A row keeps its place and what it is (the file's own row).
+      sheet.rows = merged.map((row, at) => (sheet.rows[at]?.file ? { ...row, file: true } : row))
+      sheet.pending = pending
+      sheet.failed = failed
+    }
+    try {
+      const outcome = await editionsLookup().find(wanted, {
+        signal: controller.signal,
+        onUpdate: (found) => update(found.candidates, found.pending, found.failed),
+      })
+      update(outcome.candidates, false, outcome.failed)
+    } catch (thrown) {
+      if (isAbort(thrown)) return
+      if (asking === controller && choosing.value) {
+        choosing.value.pending = false
+        choosing.value.failed = true
+      }
+    }
+  }
+
+  /** Opens the sheet for a row of the preview (only once every row is looked up). */
+  function openChoice(key: string) {
+    if (phase.value !== 'preview') return
+    const index = indexOf(key)
+    const book = books.value[index]
+    const edition = editions.value[index]
+    if (!book || !edition) return
+    stopChoosing()
+    choosing.value = { key, rows: editionChoices(book, edition), pending: false, failed: false, picked: candidateKey(edition.book) }
+    void lookForEditions(index)
+  }
+
+  /** Searches again after a failed search, or once the connection is back. */
+  function retryChoice() {
+    const index = choosing.value ? indexOf(choosing.value.key) : -1
+    if (index >= 0) void lookForEditions(index)
+  }
+
+  function closeChoice() {
+    stopChoosing()
+  }
+
+  /** Whether a Book is the picked one (any of its keys: a row's key can change as a slower source fills it in). */
+  function isPicked(book: Edition['book']): boolean {
+    const sheet = choosing.value
+    if (!sheet) return false
+    const keys = editionKeys(book)
+    // The row as the file has it (a Manual book) has no key but its title, as `candidateKey` says.
+    return (keys.length ? keys : [book.title]).includes(sheet.picked)
+  }
+
+  function pick(choice: EditionChoice) {
+    if (choosing.value) choosing.value.picked = candidateKey(choice.book)
+  }
+
+  /** The row she picked, unless it is the edition the preview has now. */
+  const choice = computed(() => {
+    const found = choosing.value?.rows.find((row) => isPicked(row.book))
+    return found && !found.current ? found : null
+  })
+
+  /**
+   * The picked edition replaces the row's, in the preview only: the row moves
+   * to Matched (or From file, when she keeps it as the file has it) and the
+   * import writes that edition. Nothing is written here.
+   */
+  function confirmChoice() {
+    const sheet = choosing.value
+    const picked = choice.value
+    if (!sheet || !picked) return
+    const index = indexOf(sheet.key)
+    const book = books.value[index]
+    const before = editions.value[index]
+    if (!book || !before) return
+    const alternatives = before.alternatives ?? []
+    const next: Edition = picked.file
+      ? fileEdition(book, alternatives)
+      : { book: picked.book, via: 'title', unsure: false, alternatives }
+    editions.value[index] = next
+    verdicts.value[index] = verdictOf(book, next)
+    chosen.value = new Set(chosen.value).add(index)
+    version.value++
+    stopChoosing()
+  }
+
   /** Writes every row that is not in her Library yet. */
   async function start() {
     const repo = importer()
     if (!repo || phase.value !== 'preview') return
+    stopChoosing()
     const kept = new Set(shelves.value.filter((shelf) => shelf.chosen).map((shelf) => shelf.name.toLowerCase()))
     const chosenShelves = (book: ImportBook) => book.shelves.filter((name) => kept.has(name.toLowerCase()))
     const pending: ImportRow[] = toImport.value.map(({ book, edition }) => ({
@@ -426,6 +616,15 @@ export const useImportStore = defineStore('import', () => {
     shelves,
     toggleShelf,
     attention,
+    choices,
+    choosing,
+    choice,
+    isPicked,
+    pick,
+    openChoice,
+    retryChoice,
+    closeChoice,
+    confirmChoice,
     progress,
     outcomes,
     writeError,

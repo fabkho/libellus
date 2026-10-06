@@ -6,7 +6,7 @@ import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { expectAccessible, recordedApple, signedIn, untilStill } from './support'
+import { expectAccessible, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
 
 /**
  * Accessibility (docs/ACCESSIBILITY.md): axe-core over every main screen and
@@ -242,6 +242,30 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.getByTestId('import.file').setInputFiles({ name: 'notes.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Email\nA,B\n') })
       await expect(page.getByTestId('import.fileError')).toBeVisible()
       await expectAccessible(page, 'Import, how to export and a refused file')
+    })
+
+    test('Import: the preview with a book to choose an edition for, and the Choose edition sheet', async ({ page }) => {
+      await recordedTitleQuery(page)
+      await signedIn(page)
+      await page.goto('/import')
+      const header =
+        'Book Id,Title,Author,ISBN,ISBN13,My Rating,Publisher,Number of Pages,Year Published,Date Read,Date Added,Exclusive Shelf,My Review'
+      await page.getByTestId('import.file').setInputFiles({
+        name: 'goodreads_library_export.csv',
+        mimeType: 'text/csv',
+        buffer: Buffer.from(`${header}\n991,Piranesi,Susanna Clarke,,,0,,,,,2025/06/12,to-read,\n`),
+      })
+      await expect(page.getByTestId('import.start')).toBeVisible({ timeout: 30_000 })
+      await expectAccessible(page, 'Import preview, a book to choose an edition for')
+      await openSheet(page, 'import.attentionList.action', 'edition')
+      await expect(page.getByTestId('edition.loading')).toHaveCount(0, { timeout: 30_000 })
+      await expectAccessible(page, 'Choose edition')
+      await closeSheet(page, 'edition')
+      await page.getByTestId('import.attentionList.action').first().click()
+      await page.getByTestId('edition.candidate').nth(1).click()
+      await page.getByTestId('edition.action').click()
+      await expect(page.getByTestId('import.choices')).toBeVisible()
+      await expectAccessible(page, 'Import preview, her choices')
     })
   })
 }
