@@ -25,6 +25,8 @@ import { expectNoSideScroll, signedIn } from './support'
  */
 
 const LIBRARY_SRC = 'https://books.fabkho.dev/v2/library.json'
+/** Regal's code: the built `regal` chunk, or (the dev server) its components and the two of Libellus' that import them. */
+const REGAL_CODE = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
 const FIXTURE = readFileSync(new URL('../tests/fixtures/shelf/library.json', import.meta.url), 'utf8')
 
 const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]))
@@ -182,8 +184,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(section).toBeVisible()
     await expect(section).toContainText(en.shelf.card.title)
     await expect(page.getByTestId('profile.shelfCount')).toHaveText('8')
-    // The card fetches the 3D once it comes near the view (ShelfRowCard), and under her figures
-    // it sits further down than that: she scrolls to it.
+    // The row mounts as its card comes into view, under her figures: she scrolls to it.
     await section.scrollIntoViewIfNeeded()
     // The row holds all of them: nothing to show beyond it, and nothing links to the full shelf.
     const row = shelfRow(page, 'profile.shelfRow')
@@ -241,6 +242,39 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('home.title')).toBeVisible()
   })
 
+  test('has the row ready before she opens it, and it appears with its intro: no stand-in, no loading step', async ({ page }) => {
+    // Nothing of the old stand-in (the slabs, the fade-over) is ever put on the page.
+    await page.addInitScript(() => {
+      const seen = window as unknown as { __standIn: boolean }
+      seen.__standIn = false
+      new MutationObserver(() => {
+        if (document.querySelector('.pile, .slab, .stand-in, [data-ready]')) seen.__standIn = true
+      }).observe(document, { childList: true, subtree: true, attributes: true })
+    })
+    const asked: string[] = []
+    page.on('request', (request) => {
+      const url = request.url()
+      if (url === LIBRARY_SRC || REGAL_CODE.test(new URL(url).pathname)) asked.push(url)
+    })
+    await libraryFile(page)
+    await signInAsOwner(page)
+
+    // On Home, on idle, the shell warms the row: the library file and Regal's code are asked for
+    // before she has opened anything (preloadRegal, useShelfPreload).
+    await expect.poll(() => asked.some((url) => url === LIBRARY_SRC), { timeout: 30_000 }).toBe(true)
+    await expect.poll(() => asked.some((url) => url !== LIBRARY_SRC), { timeout: 30_000 }).toBe(true)
+
+    // Then the Profile, by its avatar (a navigation inside the app, the warm-up kept): the row is there
+    // at once, no loading in between.
+    await page.getByTestId('shell.avatar').click()
+    await expect(page.getByTestId('profile.shelf')).toBeVisible()
+    await page.getByTestId('profile.shelf').scrollIntoViewIfNeeded()
+    const row = shelfRow(page, 'profile.shelfRow')
+    await expect(row).toHaveAttribute('data-book-count', '8')
+    await expect(row.locator('.row-focus')).toBeAttached({ timeout: 30_000 })
+    expect(await page.evaluate(() => (window as unknown as { __standIn: boolean }).__standIn)).toBe(false)
+  })
+
   test('never moves the page sideways: the Profile with her shelf, a Book out and back, the year, the whole shelf', async ({ page }) => {
     // As narrow as the narrowest phone in use.
     await page.setViewportSize({ width: 360, height: 800 })
@@ -249,7 +283,7 @@ test.describe('Your shelf, the owner', () => {
     await finishedIn2025(owner.email)
 
     await page.goto('/profile')
-    // The card fetches the 3D once it comes near the view, below her figures.
+    // The row mounts as its card comes into view, under her figures: she scrolls to it.
     await page.getByTestId('profile.shelf').scrollIntoViewIfNeeded()
     const row = shelfRow(page, 'profile.shelfRow')
     await expect(row).toHaveAttribute('data-book-count', '8')
@@ -278,6 +312,7 @@ test.describe('Your shelf, the owner', () => {
     await expectNoSideScroll(page, 'Profile, a Book put back with Back')
 
     await page.goto('/profile/2025')
+    await page.getByTestId('yearInReview.shelf').scrollIntoViewIfNeeded()
     await expect(shelfRow(page, 'yearInReview.shelfRow')).toHaveAttribute('data-book-count', '4')
     await expectNoSideScroll(page, 'Year in review with the shelf row')
 
@@ -293,7 +328,7 @@ test.describe('Your shelf, the owner', () => {
 
     await page.goto('/profile')
     await expect(page.getByTestId('profile.shelfCount')).toHaveText(String(MANY_BOOKS))
-    // The card fetches the 3D once it comes near the view, below her figures.
+    // The row mounts as its card comes into view, under her figures: she scrolls to it.
     await page.getByTestId('profile.shelf').scrollIntoViewIfNeeded()
     // The row holds the newest 80.
     await expect(shelfRow(page, 'profile.shelfRow')).toHaveAttribute('data-book-count', '80')
@@ -305,7 +340,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page).toHaveURL(/\/profile\/shelf$/)
     await expect(page.getByTestId('shelf')).toBeVisible()
     await expect(page.getByTestId('shelf.count')).toHaveText(plural(en.shelf.count, MANY_BOOKS))
-    // Regal's Stack has the whole file, and the pile it stood in for has gone.
+    // Regal's Stack has the whole file, and the pile it stood in for (the shelf page's own) has gone.
     await expect(stackedBooks(page)).toHaveAttribute('data-book-count', String(MANY_BOOKS))
     await expect(page.getByTestId('shelf.loading')).toHaveCount(0, { timeout: 30_000 })
     // The room is full screen: the tab bar has stepped away.
@@ -329,6 +364,8 @@ test.describe('Your shelf, the owner', () => {
     // Under the months.
     const months = await page.getByTestId('yearInReview.months').boundingBox()
     expect((await section.boundingBox())!.y).toBeGreaterThan(months!.y)
+    // The row mounts as its card comes into view.
+    await section.scrollIntoViewIfNeeded()
     const row = shelfRow(page, 'yearInReview.shelfRow')
     await expect(row).toHaveAttribute('data-book-count', '4')
     await expect(row).toHaveAttribute('aria-label', fill(en.shelf.year.rowLabel, { year: 2025 }))
@@ -490,14 +527,17 @@ const anyone = test.extend<{ everyControlHasATestId: void }>({ everyControlHasAT
 
 anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address', async ({ page }) => {
   const asked: string[] = []
-  // The file, and Regal's code: the built `regal` chunk, or (the dev server) its components and the two of Libellus' that import them.
-  const regal = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
+  // The file, and Regal's code (REGAL_CODE).
   page.on('request', (request) => {
     const url = request.url()
-    if (url.startsWith('https://books.fabkho.dev/') || regal.test(new URL(url).pathname)) asked.push(url)
+    if (url.startsWith('https://books.fabkho.dev/') || REGAL_CODE.test(new URL(url).pathname)) asked.push(url)
   })
   await libraryFile(page)
   await signedIn(page)
+  // Home is up, and what the owner's shell warms on idle (useShelfPreload) would be asked for by now:
+  // the longest it waits for an idle browser is 3 s.
+  await expect(page.getByTestId('home.title')).toBeVisible()
+  await page.waitForTimeout(3500)
 
   await page.goto('/profile')
   await expect(page.getByTestId('profile.empty')).toBeVisible()
@@ -517,10 +557,9 @@ anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address'
 
 anyone("nobody else's tally opens the shelf: the year's Books without the row, no file, no Regal", async ({ page }) => {
   const asked: string[] = []
-  const regal = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
   page.on('request', (request) => {
     const url = request.url()
-    if (url.startsWith('https://books.fabkho.dev/') || regal.test(new URL(url).pathname)) asked.push(url)
+    if (url.startsWith('https://books.fabkho.dev/') || REGAL_CODE.test(new URL(url).pathname)) asked.push(url)
   })
   await libraryFile(page, 200, THIS_YEAR)
   const member = await signedIn(page)
