@@ -38,7 +38,10 @@ test('an error on the device lands in the error log, without the address query',
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)))
   await page.evaluate(() => (window as unknown as { __libellusErrors: { flush(): Promise<void> } }).__libellusErrors.flush())
 
-  await expect.poll(async () => (await rowsOf(member.id)).map((row) => row.kind).sort(), { timeout: 15_000 }).toEqual([...kinds].sort())
+  // Only the kinds this flow triggers: a poor Web Vital the run itself causes may land too (kind 'vitals').
+  await expect
+    .poll(async () => (await rowsOf(member.id)).map((row) => row.kind).filter((kind) => kind !== 'vitals').sort(), { timeout: 15_000 })
+    .toEqual([...kinds].sort())
   const rows = await rowsOf(member.id)
   for (const kind of ['error', 'unhandledrejection', 'vue', 'outbox', 'shelf']) {
     expect(rows.find((row) => row.kind === kind)?.message).toContain(tags[kind])
