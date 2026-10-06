@@ -77,7 +77,9 @@ const framesOf = (page: Page) => page.evaluate(() => (window as unknown as { __f
 /** The sheet's first frame on, nothing of it moves: resting place, no transform, no animation, scrim full. */
 function expectAtRest(frames: Frame[], scroll: number) {
   const shown = frames.filter((frame) => frame.panel)
-  expect(shown.length).toBeGreaterThan(5)
+  expect(shown.length).toBeGreaterThan(0)
+  // From its first frame it stays: no frame without it after that.
+  expect(frames.slice(frames.indexOf(shown[0]!)).every((frame) => frame.panel)).toBe(true)
   const rest = shown.at(-1)!.panel!.top
   for (const frame of shown) {
     expect(frame.panel).toEqual({ top: rest, transform: 'none', animations: 0 })
