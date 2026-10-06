@@ -115,7 +115,9 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
   disabled and labelled "Offline".
 - Speed: ~220 ms debounced search with aborts, thumbhash placeholders, preloaded first covers,
   keep-alive pages, navigation on pointer-down. Covers resolved once, cached by the service worker.
-- Privacy: minimal data, EU region, no trackers. Keys never committed.
+- Privacy: minimal data, EU region, no trackers. Keys never committed. The profile photo (#156) is
+  made on the device (512 and 128 px, re-encoded without EXIF or GPS) and kept in a private Storage
+  bucket only she can read; the device keeps a copy, deleted on sign-out.
 - Ebook files (#131) stay on the device: a linked EPUB is copied into the browser's own storage
   (OPFS) and its link kept in IndexedDB, per member; nothing about them reaches the server, and
   signing out deletes them.

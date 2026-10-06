@@ -16,6 +16,7 @@
 // (how many need her, else how many are linked), leading to the Ebooks page, where
 // the ebook folder is chosen and scanned. The reader's Classic style is set in the
 // reader's own Aa sheet only.
+import { useAvatarStore } from '~/stores/avatar'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
@@ -23,8 +24,10 @@ import { useLinkTemplatesStore } from '~/stores/linkTemplates'
 import { useOwnerErrorsStore } from '~/stores/ownerErrors'
 import { useThemeStore } from '~/stores/theme'
 
+const emit = defineEmits<{ photo: [] }>()
 const { t } = useI18n()
 const session = useSessionStore()
+const avatar = useAvatarStore()
 const theme = useThemeStore()
 const isDark = computed({
   get: () => theme.theme === 'dark',
@@ -118,6 +121,20 @@ async function syncFirst() {
       <span class="figures truncate text-meta text-ink-faint" :title="session.member?.email" data-testid="profile.email">{{ session.member?.email ?? '' }}</span>
     </div>
     <UiRowGroup>
+      <UiRow
+        as="button"
+        icon="camera"
+        :label="t('photo.row')"
+        chevron
+        :disabled="!online"
+        class="disabled:opacity-50"
+        data-testid="profile.photo"
+        @click="emit('photo')"
+      >
+        <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
+        <UiAvatar v-else-if="avatar.small" :initials="''" :photo="avatar.small" data-testid="profile.photoValue" />
+        <span v-else class="text-ink-faint" data-testid="profile.photoValue">{{ t('photo.rowNone') }}</span>
+      </UiRow>
       <UiRow as="button" icon="pencil" :label="t('account.name')" chevron data-testid="profile.name" @click="naming = true">
         <span :class="session.member?.name ? 'text-ink-muted' : 'text-ink-faint'" data-testid="profile.nameValue">{{ session.member?.name ?? t('account.nameNone') }}</span>
       </UiRow>

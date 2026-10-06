@@ -4,7 +4,10 @@
 // here, and the Library in one mono line — read · reading · want to read.
 // While the reading record loads (`loading`) the two lines under the name
 // are placeholders; the "since" line closes if it turns out to have nothing
-// to say (docs/MOTION.md, Loading).
+// to say (docs/MOTION.md, Loading). The ring shows her photo where she has
+// one (#156), over the initials; tapping it is the way to add or change it
+// (`photo`, components/profile/Photo.vue), disabled offline like every write.
+import { useAvatarStore } from '~/stores/avatar'
 import { useSessionStore } from '~/stores/session'
 
 const props = withDefaults(
@@ -19,24 +22,38 @@ const props = withDefaults(
   }>(),
   { loading: false, expectSince: true },
 )
+const emit = defineEmits<{ photo: [] }>()
 const arriving = useArrival(() => props.loading)
 
 const { t } = useI18n()
 const session = useSessionStore()
 const { count, monthYear } = useFigures()
 const initials = computed(() => initialsOf(session.member?.email ?? '', session.member?.name))
+const avatar = useAvatarStore()
+onMounted(() => void avatar.load())
+const online = useOnline()
 </script>
 
 <template>
   <section class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="profile.hero">
-    <span
-      class="ring figures flex items-center justify-center rounded-pill bg-surface-raised text-title text-ink-muted shadow-cover edge"
-      aria-hidden="true"
-      data-profile-avatar
-      data-testid="profile.initials"
+    <button
+      type="button"
+      class="ring relative flex items-center justify-center rounded-pill disabled:cursor-default"
+      :aria-label="t('photo.avatarLabel')"
+      :disabled="!online"
+      data-testid="profile.avatar"
+      @click="emit('photo')"
     >
-      {{ initials }}
-    </span>
+      <span
+        class="figures relative flex size-full items-center justify-center overflow-hidden rounded-pill bg-surface-raised text-title text-ink-muted shadow-cover"
+        aria-hidden="true"
+        data-profile-avatar
+      >
+        <span data-testid="profile.initials">{{ initials }}</span>
+        <img v-if="avatar.large" :src="avatar.large" alt="" draggable="false" class="absolute inset-0 size-full object-cover" data-testid="profile.avatarPhoto" />
+        <span class="pointer-events-none absolute inset-0 rounded-pill edge" />
+      </span>
+    </button>
     <h1 class="mt-md max-w-full truncate text-title" data-testid="profile.title">{{ session.member?.name ?? session.member?.email ?? '' }}</h1>
     <UiReveal :show="(loading && expectSince) || !!since" class="w-full">
       <p v-if="since" class="mt-xs text-body text-ink-muted" :class="{ arrive: arriving }" data-testid="profile.since">{{ t('profile.since', { date: monthYear(since) }) }}</p>

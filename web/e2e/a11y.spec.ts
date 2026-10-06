@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import sharp from 'sharp'
 import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
@@ -68,6 +69,11 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
   await sql('insert into public.reading_progress_days (session_id, day, start_page, end_page) values ($1, $2, 0, 24)', [read!.id, isoDay()])
   await page.reload()
   await expect(page.getByTestId('home.title')).toBeVisible()
+}
+
+/** A small picture for the photo's sheets. */
+function samplePhoto(): Promise<Buffer> {
+  return sharp({ create: { width: 600, height: 400, channels: 3, background: { r: 180, g: 140, b: 90 } } }).png().toBuffer()
 }
 
 /** Opens a sheet with a tap and waits for it to be in place. */
@@ -210,6 +216,17 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await openSheet(page, 'profile.links', 'links')
       await expectAccessible(page, 'Book links')
       await closeSheet(page, 'links')
+      // The photo (#156): the crop, then the sheet of a saved photo.
+      await page.getByTestId('photo.file').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: await samplePhoto() })
+      await expect(page.getByTestId('photo.picture')).toBeVisible()
+      await untilStill(page)
+      await expectAccessible(page, 'the photo crop')
+      await page.getByTestId('photo.action').click()
+      await expect(page.getByTestId('photo')).toBeHidden()
+      await untilStill(page)
+      await openSheet(page, 'profile.avatar', 'photo')
+      await expectAccessible(page, 'the photo sheet')
+      await closeSheet(page, 'photo')
       await page.goto('/profile/2025')
       await expect(page.getByTestId('yearInReview.title')).toHaveText('2025')
       await expectAccessible(page, 'a year in review')

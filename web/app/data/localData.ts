@@ -23,7 +23,8 @@ export const LOCAL_DATA_PREFIX = 'libellus.'
  * What the device keeps in IndexedDB rather than under `libellus.` keys: one
  * database, `libellus`, with a store per feature (the outbox of writes waiting
  * to sync, `data/outbox.ts`, #93; the ebook files linked to Books and the
- * picked ebook folder, `data/ebooks/`, #131). A feature that needs one adds its
+ * picked ebook folder, `data/ebooks/`, #131; her profile photo, `data/avatar.ts`,
+ * #156). A feature that needs one adds its
  * store to `LOCAL_STORES` and raises `LOCAL_DATABASE_VERSION`; every feature
  * opens the database through `openLocalDatabase`, so they agree on its version.
  */
@@ -37,8 +38,10 @@ export const LOCAL_STORES: Record<string, IDBObjectStoreParameters & { indexes?:
   ebooks: { keyPath: ['memberId', 'id'], indexes: { memberId: 'memberId' } },
   // The picked ebook folder's handle per member (key: the member's id).
   ebookFolders: {},
+  // The member's profile photo, its two files (key: the member's id).
+  avatars: {},
 }
-export const LOCAL_DATABASE_VERSION = 2
+export const LOCAL_DATABASE_VERSION = 3
 
 /**
  * Opens the device's database, creating the stores it lacks. Another tab

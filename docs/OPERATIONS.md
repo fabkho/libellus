@@ -126,12 +126,25 @@ days without a commit (and mails before it does): Actions → Database backup �
 
 | In it | Not in it |
 | --- | --- |
-| `public`: every Library, Book, Reading session, Collection, invite code, Goodreads cache, … (schema and data) | Storage objects (Libellus keeps none: Covers are links) |
+| `public`: every Library, Book, Reading session, Collection, invite code, Goodreads cache, … (schema and data) | Storage objects: the members' profile photos in the bucket `avatars` (#156; Covers are links, not files). See below |
 | `private`: the error log, the shelf's publish state, the error log's salt | Vault secrets (`github_dispatch_token`): encrypted with the project's own key, useless anywhere else |
 | `auth.users` and `auth.identities`: the members and their sign-in records, with their ids, so every row that names a member still does | Sign-in sessions, refresh tokens, one-time codes, MFA challenges, the auth audit log: they belong to the project they came from (members sign in again) |
 | The rest of `auth`'s data (MFA factors, SSO, OAuth clients; all empty here) and its schema, restored only by `--mode full` | Auth settings, SMTP, email templates (dashboard; docs/SELF_HOSTING.md) |
 | `supabase_migrations.schema_migrations`: which migrations the data belongs to | Edge functions and their secrets (`supabase/functions/`, `supabase secrets set`) |
 | | `pg_cron` jobs and `pg_net`'s queue: the migrations schedule the jobs again |
+
+**Profile photos are not in the backup.** They live in Supabase Storage (the private bucket `avatars`,
+created by `supabase/migrations/20261009120000_avatars.sql`), and a database dump holds only the rows
+that describe Storage's files, never the files themselves; the backup leaves the `storage` schema out
+altogether. Copying the files too would need the project's S3 credentials (Storage's S3 protocol) in
+the workflow and a second upload to R2, for photos a member can take again in seconds, so the nightly
+job does not. After a restore every account still names its photo (`accounts.avatar_path`) while the
+new project's bucket is empty: the app finds the file missing and shows the initials (devices that kept
+the photo show it until their next start online), and a member who wants it back picks it again. To
+keep the photos of a project you are leaving, download the bucket first with the CLI linked to the
+old project (`supabase storage cp -r ss:///avatars ./avatars --linked --experimental`) and copy the
+folders back into the new project's `avatars` bucket the same way; the paths stay the same, so the
+restored accounts find their photos again.
 
 ### Setting it up
 
@@ -233,7 +246,7 @@ key, `citext` in `public` and the open trigger functions were, `supabase/tests/l
 
 | Finding | Where | Why it stays |
 |---|---|---|
-| `authenticated_security_definer_function_executable` (0029) | every RPC in `public`: `add_to_library`, `start_reading`, `finish_reading`, `sync_write`, `delete_my_account`, … | Members never write a table directly: every change is one RPC (`web/AGENTS.md`, Architecture), the tables grant members `select` at most, and the RPC is the only way in. It runs as its owner so it can write what the member may not touch herself (the shared Catalogue, the derived Status, the record of synced writes), and it checks everything on its own: the member is `auth.uid()`, never an argument, every row it touches is hers, and its `search_path` is pinned. Switching them to `SECURITY INVOKER` would mean opening the tables to direct writes. |
+| `authenticated_security_definer_function_executable` (0029) | every RPC in `public`: `add_to_library`, `start_reading`, `finish_reading`, `sync_write`, `set_avatar`, `delete_my_account`, … | Members never write a table directly: every change is one RPC (`web/AGENTS.md`, Architecture), the tables grant members `select` at most, and the RPC is the only way in. It runs as its owner so it can write what the member may not touch herself (the shared Catalogue, the derived Status, the record of synced writes), and it checks everything on its own: the member is `auth.uid()`, never an argument, every row it touches is hers, and its `search_path` is pinned. Switching them to `SECURITY INVOKER` would mean opening the tables to direct writes. |
 | `anon_security_definer_function_executable` (0028) | `invite_code_status(text)` | The sign-up screen checks the invite code before anyone has an account, so the caller is signed out by definition. It answers `valid`, `missing`, `invalid`, `expired` or `exhausted` for one code and reveals nothing else; `invite_codes` itself stays closed to the API (RLS on, no policy). |
 | `authenticated_security_definer_function_executable` (0029) | `owner_client_errors(integer)`, `owner_client_error_detail(text)` | The owner reads the error log in the app (Client errors, above). Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line of the function, before any row is read, so executability by `authenticated` opens nothing. They return groups and counts, never another member's id. |
 | the same (0028) | `log_client_error(…)` | The error log (Client errors, above) has to hear from devices that are signed out: the sign-in screens, a deploy's missing chunks. It only appends to `private.client_errors`, scrubs what it is given, and limits signed-out reports harder (per salted address and in total). |
