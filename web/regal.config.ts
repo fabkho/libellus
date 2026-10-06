@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { defineNuxtModule } from 'nuxt/kit'
+import { addVitePlugin, defineNuxtModule } from 'nuxt/kit'
 
 /**
  * Regal, the owner's 3D shelf (#23), as a Nuxt layer: where it comes from, and
@@ -10,7 +10,7 @@ import { defineNuxtModule } from 'nuxt/kit'
  * Opt-in: only a build with LIBELLUS_REGAL=1 has it (the owner's Cloudflare Pages
  * build and CI). Without the flag the app builds and runs as it would for anyone
  * else: no layer, Your shelf's places are empty stand-ins (`ShelfStage`,
- * `ShelfRow` resolve to app/regal/Absent.vue) and nobody is the shelf's owner
+ * `ShelfRow` resolve to app/regal/Absent.vue, the warm-up to app/regal/preload.ts) and nobody is the shelf's owner
  * (`appConfig.regal` is false, stores/shelf.ts).
  *
  * With the flag, where from, like the portfolio: a local checkout when
@@ -95,9 +95,12 @@ let regalDir: string | null = null
 // the app imports these.
 const REGAL_PACKAGES = /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:three|three-stdlib|@tresjs|gsap|@vueuse|@monogrid|troika-[^\\/]+|camera-controls|postprocessing|stats-gl|meshoptimizer|bidi-js|webgl-sdf-generator)[\\/]/
 const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue|nuxt-fonts-global\.css/
+/** The two components themselves, however they are imported (`~/components/shelf/Row.vue`, an absolute path). */
+const SHELF_COMPONENT = /[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue$/
 
 /** Whether a module belongs in the `regal` chunk (nuxt.config.ts, codeSplitting). */
 export function isRegalModule(id: string): boolean {
+  if (!REGAL_ENABLED) return false
   if (REGAL_PACKAGES.test(id) || SHELF_STAGE.test(id)) return true
   return regalDir !== null && id.startsWith(regalDir)
 }
@@ -166,15 +169,21 @@ export const regalContainment = defineNuxtModule({
     })
       regalDir = layer ? layer.cwd.replace(/\/?$/, '/') : null
 
-    // Without Regal the two components that draw it would import what isn't there (its
-    // components, composables and the fonts' stylesheet): they resolve to an empty stand-in.
-    // Nobody reaches them then anyway (appConfig.regal, stores/shelf.ts).
+    // Without Regal, what reaches for it would import what isn't there: the two components that
+    // draw it (Regal's components and composables, the fonts' stylesheet) resolve to an empty
+    // stand-in, and the owner's warm-up (composables/useShelfPreload.ts, `#layers/regal/…`) to one
+    // that does nothing. Nobody reaches either then anyway (appConfig.regal, stores/shelf.ts).
     if (!REGAL_ENABLED) {
       const absent = join(nuxt.options.srcDir, 'regal', 'Absent.vue')
-      nuxt.hook('components:extend', (components) => {
-        for (const component of components) {
-          if (/[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue$/.test(component.filePath)) component.filePath = absent
-        }
+      const noPreload = join(nuxt.options.srcDir, 'regal', 'preload.ts')
+      addVitePlugin({
+        name: 'libellus-without-regal',
+        enforce: 'pre',
+        resolveId(source) {
+          if (/^#layers\/regal\/app\/utils\/preload(\.ts)?$/.test(source)) return noPreload
+          if (SHELF_COMPONENT.test(source)) return absent
+          return null
+        },
       })
     }
 
