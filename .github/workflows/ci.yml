@@ -67,11 +67,11 @@ jobs:
       goodreads: ${{ steps.decide.outputs.goodreads }}
       regal: ${{ steps.decide.outputs.regal }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event_name == 'push'
 
       # Every filter lists the workflow files: changing CI runs what CI does.
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         if: github.event_name != 'workflow_dispatch'
         with:
@@ -177,20 +177,20 @@ jobs:
       RUN_BACKEND: ${{ matrix.shard == 1 && needs.changes.outputs.backend == 'true' }}
       RUN_E2E: ${{ needs.changes.outputs.e2e == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: ${{ env.SUPABASE_CLI }}
 
       # Same major as local. Build scripts pnpm may run (esbuild) are approved in
       # web/pnpm-workspace.yaml, so a frozen install passes on pnpm 11+.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 12
 
       # cache: pnpm keeps the pnpm store between runs.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -254,7 +254,7 @@ jobs:
       - name: Cache the browsers
         if: env.RUN_E2E == 'true'
         id: browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
@@ -277,7 +277,7 @@ jobs:
       # The blob report holds the results, screenshots and traces of this shard.
       - name: Upload the blob report
         if: failure() && env.RUN_E2E == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-blob-${{ matrix.shard }}
           path: web/blob-report/
@@ -292,13 +292,13 @@ jobs:
     if: ${{ !cancelled() && needs.stack.result == 'failure' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 12
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -308,7 +308,7 @@ jobs:
         working-directory: web
         run: pnpm install --frozen-lockfile
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           path: web/all-blob-reports
@@ -322,7 +322,7 @@ jobs:
 
       - name: Upload the report and traces
         if: hashFiles('web/playwright-report/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: web/playwright-report/
@@ -339,14 +339,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
         with:
           version: 12
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
         with:
           node-version: 24
