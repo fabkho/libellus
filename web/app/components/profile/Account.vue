@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The account, at the end of the Profile (issue #78; what the avatar menu held
-// before): the address over grouped rows — Name (its sheet), the Dark mode
+// before): the address over grouped rows — Name (its sheet), Book links (its sheet, #116), the Dark mode
 // switch (docs/DESIGN.md, Themes: the first tap stores the opposite of what
 // shows), Import books, Install app (Android's Chrome only, once it has offered the
 // install: composables/useInstallHint.ts), Sign out, Delete account. Signing out deletes the writes still waiting
@@ -12,6 +12,7 @@
 // Afterwards she is on Sign in, which says the account was deleted.
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
+import { useLinkTemplatesStore } from '~/stores/linkTemplates'
 import { useThemeStore } from '~/stores/theme'
 
 const { t } = useI18n()
@@ -19,6 +20,11 @@ const session = useSessionStore()
 const theme = useThemeStore()
 const isDark = computed(() => theme.theme === 'dark')
 const naming = ref(false)
+// Book links (#116): her own, how many; read when the Profile opens.
+const linking = ref(false)
+const links = useLinkTemplatesStore()
+const linkCount = computed(() => links.own?.length ?? 0)
+onMounted(() => void links.load())
 const sync = useSyncStore()
 const online = useOnline()
 
@@ -94,6 +100,9 @@ async function syncFirst() {
       <UiRow as="button" icon="pencil" :label="t('account.name')" chevron data-testid="profile.name" @click="naming = true">
         <span :class="session.member?.name ? 'text-ink-muted' : 'text-ink-ghost'" data-testid="profile.nameValue">{{ session.member?.name ?? t('account.nameNone') }}</span>
       </UiRow>
+      <UiRow as="button" icon="globe" :label="t('links.row')" chevron data-testid="profile.links" @click="linking = true">
+        <span :class="linkCount ? 'figures text-ink-muted' : 'text-ink-ghost'" data-testid="profile.linksValue">{{ linkCount || t('links.rowNone') }}</span>
+      </UiRow>
       <UiRow
         as="button"
         role="switch"
@@ -131,6 +140,7 @@ async function syncFirst() {
       </UiRow>
     </UiRowGroup>
     <ShellNameSheet v-model:open="naming" />
+    <ProfileLinksSheet v-model:open="linking" />
     <UiConfirm
       v-model:open="asking"
       :title="t('profile.signOutUnsynced.title', { count: unsynced }, unsynced)"

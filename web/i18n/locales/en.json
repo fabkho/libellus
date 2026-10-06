@@ -470,6 +470,12 @@
       "reviews": "{count} review | {count} reviews",
       "on": "on {goodreads}",
       "name": "Goodreads"
+    },
+    "links": {
+      "label": "Links for this book",
+      "more": "More",
+      "less": "Less",
+      "moreLabel": "More links for this book"
     }
   },
   "add": {
@@ -745,6 +751,35 @@
       "backCover": "Back cover",
       "frontCover": "Front cover",
       "reading": "Reading now"
+    }
+  },
+  "links": {
+    "row": "Book links",
+    "rowNone": "None",
+    "title": "Book links",
+    "intro": "Links on every book's page, for you only. The first shows under the book; the others wait behind More.",
+    "placeholders": "In the address, these stand for the book's ISBN, ISBN-10, title and first author:",
+    "first": "Shown on the page",
+    "position": "Link {n}",
+    "labelLabel": "Label",
+    "labelPlaceholder": "Open Library",
+    "urlLabel": "Address",
+    "urlExample": "https://openlibrary.org/isbn/{isbn}",
+    "add": "Add link",
+    "save": "Save",
+    "empty": "No links yet. Add one, for example your library's catalogue.",
+    "up": "Move {label} up",
+    "down": "Move {label} down",
+    "remove": "Remove {label}",
+    "error": {
+      "label_missing": "Give the link a label.",
+      "label_long": "At most {max} characters.",
+      "url_invalid": "An address that starts with https:// or http://, placeholders only after the host.",
+      "url_long": "At most {max} characters.",
+      "placeholder_unknown": "Only the four placeholders above are filled in.",
+      "offline": "You're offline. Nothing was saved.",
+      "link_templates_invalid": "Some links could not be saved. Check them and try again.",
+      "unknown": "Your links could not be saved. Try again."
     }
   }
 }

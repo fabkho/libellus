@@ -104,6 +104,10 @@ export default defineNuxtConfig({
       errorLog: '',
       // Regal's setting (its README): the published library file (NUXT_PUBLIC_REGAL_LIBRARY_SRC).
       regal: { librarySrc: REGAL_LIBRARY_SRC },
+      // Book links every member of this instance sees on a Book's page before her own
+      // (NUXT_PUBLIC_LINK_TEMPLATES, JSON: [{ "label": …, "url": … }]; utils/linkTemplates.ts).
+      // Public like everything here; a member's own links are hers alone (data/linkTemplates.ts).
+      linkTemplates: '',
     },
   },
 
