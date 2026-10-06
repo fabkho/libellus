@@ -692,6 +692,20 @@ export async function openReader(
   engine.onSelect = options.handlers.select
   engine.cover = (await view.book.getCover?.().catch(() => null)) ?? null
 
+  // A link out of the book: foliate opens any `scheme:` href itself, `javascript:` too, in a window of
+  // the app's origin. Only web links leave, in a new tab that cannot reach back (noopener).
+  view.addEventListener('external-link', (event) => {
+    event.preventDefault()
+    const href = (event as CustomEvent<{ href_: string }>).detail.href_
+    let url: URL | null = null
+    try {
+      url = new URL(href)
+    } catch {
+      return
+    }
+    if (url.protocol === 'https:' || url.protocol === 'http:') window.open(url.href, '_blank', 'noopener,noreferrer')
+  })
+
   view.addEventListener('relocate', (event) => {
     const r = view.renderer
     const scrolled = r.getAttribute('flow') === 'scrolled'
