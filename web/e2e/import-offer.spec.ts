@@ -54,14 +54,15 @@ test('a new member finds the import on the empty Home and reaches the Import pag
   await signedIn(page, { importHint: true })
   const card = page.getByTestId('home.importOffer')
 
-  // The empty state, and under it a quiet card: a heading, a line, and a real link.
+  // The empty state, and under it a quiet row: a heading, a line, and the whole row a real link.
   await expect(page.getByTestId('home.emptyTitle')).toHaveText(en.home.emptyTitle)
   await expect(card).toBeVisible()
   await expect(page.getByTestId('home.importOfferTitle')).toHaveText(en.home.importOffer.title)
   await expect(page.getByTestId('home.importOfferTitle')).toHaveJSProperty('tagName', 'H2')
   await expect(page.getByTestId('home.importOfferText')).toHaveText(en.home.importOffer.text)
+  // The whole row is the link.
   const action = page.getByTestId('home.importOfferAction')
-  await expect(action).toHaveText(en.home.importOffer.action)
+  await expect(action).toContainText(en.home.importOffer.title)
   await expect(action).toHaveAttribute('href', '/import')
   // The whole card has no ×: the empty Home has nothing else to hide it for, and no pop-up came.
   await expect(page.getByTestId('home.importOfferDismiss')).toHaveCount(0)
