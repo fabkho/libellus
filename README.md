@@ -101,5 +101,5 @@ Libellus is a personal project; issues are welcome, and pull requests for bugs a
 ([CONTRIBUTING.md](CONTRIBUTING.md)). Please report security problems privately
 ([SECURITY.md](SECURITY.md)).
 
-**License: not chosen yet** ([#116](https://github.com/fabkho/libellus/issues/116)). Until a
-`LICENSE` file is added, the code is visible but no license is granted.
+**License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate, private layer and not part of this
+license; Libellus builds and runs without it.
