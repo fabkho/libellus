@@ -32,23 +32,12 @@ const props = defineProps<{
   /** What the row is, for assistive technology. */
   label?: string
 }>()
-const emit = defineEmits<{
-  /** The Library is in and the row is drawing it (or Regal is showing why it can't). */
-  ready: []
-}>()
 
-const { books, error } = useLibrary()
-let told = false
-watch(
-  [books, error],
-  () => {
-    if (told || (!books.value.length && !error.value)) return
-    told = true
-    // A frame for the canvas to take its size and draw the first Spines.
-    requestAnimationFrame(() => emit('ready'))
-  },
-  { immediate: true, flush: 'post' },
-)
+// The card mounts the row with its screen, so one can be up while the file is still on its way and fail
+// with it (the Profile then says so and offers Try again). Regal keeps that failure for the page, and the
+// row mounted again on the retry would show it instead of asking: forget it, so the new row reads the file afresh.
+const { error } = useLibrary()
+if (error.value) useState<string | null>('regal:library-loaded').value = null
 </script>
 
 <template>

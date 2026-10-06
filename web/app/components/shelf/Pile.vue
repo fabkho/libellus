@@ -2,11 +2,11 @@
 // The shelf before its 3D (#23): the Books as Regal's Stack lays them, flat on
 // top of each other with their Spines out, drawn as plain slabs in each
 // Spine's colour (from the library file), as thick as the Book is long. It
-// stands in while Regal and three.js load: a pile on the shelf page, and
-// standing side by side (`axis="row"`) in the cards that show Regal's row (the
-// Profile, a year in review). Light enough to draw at once: no images, no
-// WebGL. Slabs settle in one after another over `standard`; at once with
-// Reduce Motion. A Book without a colour is a quiet fill.
+// stands in while Regal's Stack and three.js load on the shelf page (the row in
+// the cards has no stand-in: it is warmed ahead and appears with its intro).
+// Light enough to draw at once: no images, no WebGL. Slabs settle in one after
+// another over `standard`; at once with Reduce Motion. A Book without a colour
+// is a quiet fill.
 import type { ShelfBook } from '~/data/shelf'
 
 const props = withDefaults(
@@ -14,10 +14,8 @@ const props = withDefaults(
     books: readonly ShelfBook[]
     limit?: number
     settle?: boolean
-    /** `stack`: flat on top of each other (the Stack); `row`: standing side by side, Spines out (the row). */
-    axis?: 'stack' | 'row'
   }>(),
-  { limit: 18, settle: true, axis: 'stack' },
+  { limit: 18, settle: true },
 )
 
 /** A stable number from 0 to 1 per Book: its slab's width and offset never change between visits. */
@@ -42,7 +40,7 @@ const slabs = computed(() =>
 </script>
 
 <template>
-  <div class="pile flex" :class="[axis === 'row' ? 'row items-end' : 'flex-col items-center', settle && 'settle']" aria-hidden="true">
+  <div class="pile flex flex-col items-center" :class="settle && 'settle'" aria-hidden="true">
     <span
       v-for="slab in slabs"
       :key="slab.id"
@@ -76,26 +74,6 @@ const slabs = computed(() =>
 .settle .slab {
   animation: slab-settle var(--duration-standard) var(--ease-standard) both;
   animation-delay: calc(var(--slab-index) * var(--duration-instant) / 3);
-}
-/* Standing: the Book's length is its height, its thickness its width, all on one line. */
-.row {
-  height: 100%;
-}
-.row .slab {
-  flex-shrink: 0;
-  /* As wide as the row draws a Spine of that thickness in a card. */
-  width: calc((var(--spacing-xs) + var(--spacing-xxs) * var(--slab-thickness)) * 1.6);
-  height: var(--slab-width);
-  translate: none;
-}
-.row.settle .slab {
-  animation-name: slab-stand;
-}
-@keyframes slab-stand {
-  from {
-    opacity: 0;
-    translate: 0 calc(var(--spacing-sm) * -1);
-  }
 }
 @keyframes slab-settle {
   from {

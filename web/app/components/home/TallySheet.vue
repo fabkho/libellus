@@ -2,8 +2,9 @@
 // Home's "Read in 2026", opened: the year's Books in a sheet (ProfileReadsSheet,
 // the Profile's own, with its own test IDs). For the shelf owner alone, the
 // year's Books as Regal's row come first, in a card of the Profile's size
-// (ShelfRowCard, the same lazy `regal` chunk as the Profile's; nobody else
-// renders it, so nobody else fetches it). A Book tapped there breaks out above
+// (ShelfRowCard, the same lazy `regal` chunk as the Profile's, warmed from
+// Home on idle for the owner: useShelfPreload; nobody else renders it, so
+// nobody else fetches it). A Book tapped there breaks out above
 // the sheet (`--shelf-row-z`: the sheet is z 50) and the system's Back puts it
 // back before it closes the sheet. Under the row, for everyone, the year's
 // finished reads, newest first, each opening its book page; at the end a quiet
@@ -47,7 +48,7 @@ watch(
     <template #top>
       <!-- A drag that starts on the row is the row's (and the page's), never the sheet's swipe down. -->
       <div v-if="shelfBooks.length" class="shelf-slot mb-md" data-no-swipe>
-        <ShelfRowCard bare :books="shelfBooks" :year="year" :label="t('shelf.year.rowLabel', { year })" data-testid="homeTally.shelfRow" />
+        <ShelfRowCard bare :year="year" :label="t('shelf.year.rowLabel', { year })" data-testid="homeTally.shelfRow" />
       </div>
     </template>
 
