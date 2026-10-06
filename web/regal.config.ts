@@ -22,6 +22,9 @@ import { defineNuxtModule } from 'nuxt/kit'
  *   they, three.js and TresJS end up in one chunk named `regal`
  *   (nuxt.config.ts, codeSplitting) that the entry never imports: the build
  *   fails if it ever does (below).
+ *   The owner's idle warm-up (composables/useShelfPreload.ts) reaches Regal's
+ *   `preloadRegal` only by a dynamic `import('#layers/regal/…')`, behind
+ *   `shelf.isOwner`, so it too lands in that chunk and nobody else fetches it.
  * - Its fonts (IBM Plex Mono, Patua One, Antonio): @nuxt/fonts registers them
  *   globally, in the entry stylesheet. Moved out of it: the shelf's stage and
  *   row import that stylesheet themselves, so the @font-face rules arrive with the

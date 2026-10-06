@@ -42,6 +42,8 @@ const thisYear = Number(isoDay().slice(0, 4))
 const thisMonth = Number(isoDay().slice(5, 7))
 const reads = computed(() => stats.record?.reads ?? [])
 const years = computed(() => yearsOf(reads.value))
+// A year in review is one tap away (the year in view, or under All the latest): for the owner, its row is warmed on idle.
+useShelfPreload(() => (stats.year === 'all' ? (years.value[0] ?? null) : stats.year))
 const figures = computed(() => figuresOf(reads.value, stats.year))
 const yearFigures = computed(() => years.value.map((y) => figuresOf(reads.value, y)))
 const all = computed(() => figuresOf(reads.value, 'all'))
