@@ -131,7 +131,11 @@ export function readPackage(opf: string, opfPath: string): EpubMetadata {
       const role = (creator.attrs.role ?? refinement(creator.attrs.id, 'role') ?? 'aut').toLowerCase()
       return creator.text && !NOT_AUTHORS.has(role)
     })
-    .map((creator) => displayName(creator.text))
+    .map((creator) => {
+      // The sort name ("Tolstoy, Leo, graf") turned round is the plainest form: Gutenberg writes "graf Leo Tolstoy" as the name.
+      const fileAs = creator.attrs['file-as'] ?? refinement(creator.attrs.id, 'file-as')
+      return fileAs?.includes(',') ? displayName(fileAs) : displayName(creator.text)
+    })
 
   const identifierElements = elements(metadataBlock, 'identifier').filter((id) => id.text)
   const isbns: string[] = []

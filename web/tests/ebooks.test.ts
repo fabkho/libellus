@@ -85,6 +85,13 @@ describe('reading an EPUB', () => {
     expect(read.cover).toEqual(TINY_JPEG)
   })
 
+  it('names an author by the sort name turned round when the file has one ("graf Leo Tolstoy" filed as "Tolstoy, Leo, graf")', () => {
+    const read = readEpub(buildEpub({ version: 3, title: 'Anna Karenina', creators: [{ name: 'graf Leo Tolstoy', role: 'aut', fileAs: 'Tolstoy, Leo, graf' }] }))
+    expect(read.authors).toEqual(['Leo Tolstoy'])
+    const v2 = readEpub(buildEpub({ version: 2, title: 'Frankenstein', creators: [{ name: 'Mary W. Shelley', role: 'aut', fileAs: 'Shelley, Mary Wollstonecraft' }] }))
+    expect(v2.authors).toEqual(['Mary Wollstonecraft Shelley'])
+  })
+
   it('finds the package document wherever the container says, and turns "Stoker, Bram" round', () => {
     const read = readEpub(buildEpub(DRACULA_GUTENBERG3))
     expect(read.title).toBe('Dracula')
