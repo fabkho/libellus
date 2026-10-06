@@ -17,6 +17,11 @@
 // between a list and the book page (composables/useBookFlight.ts).
 // `fallbacks` are tried in turn when the image fails or comes back blank (a
 // source's 1 × 1 stand-in), before the Placeholder.
+// `whole` (an ebook file's own cover, #131: files carry covers of any shape):
+// an image clearly off the book's 2:3 (more than WHOLE_TOLERANCE either way)
+// is shown whole, fitted into the slot (object-fit: contain), on a blurred
+// copy of itself, so the slot is filled in the cover's own colours and no
+// letter of its title is cut off. A cover near 2:3 fills the slot as always.
 import { isBlankCover, type CoverColors } from '~/utils/cover'
 
 const props = withDefaults(
@@ -40,9 +45,14 @@ const props = withDefaults(
      * A cover on its own (Want to read's row) keeps the title as its name.
      */
     decorative?: boolean
+    /** Show an image of another shape whole (fitted, on a blurred copy of itself) instead of cropping it. */
+    whole?: boolean
   }>(),
-  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false, decorative: false },
+  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false, decorative: false, whole: false },
 )
+
+/** How far an image's shape may be from 2:3 (as a share of it) and still fill the slot when `whole`. */
+const WHOLE_TOLERANCE = 0.08
 
 const emit = defineEmits<{ fallback: [value: boolean] }>()
 
@@ -59,12 +69,15 @@ const WIDTHS = {
 const RADII = { xs: 'rounded-cover-sm', sm: 'rounded-cover-sm', md: 'rounded-cover', lg: 'rounded-cover', xl: 'rounded-cover-lg' } as const
 
 const loaded = ref(false)
+/** The showing image is of another shape than 2:3 and `whole`: fitted, not cropped. */
+const fitted = ref(false)
 /** Which image is showing: `src`, then each of `fallbacks` after one that failed or came back blank. */
 const attempt = ref(0)
 watch(
   () => props.src,
   () => {
     loaded.value = false
+    fitted.value = false
     attempt.value = 0
   },
 )
@@ -86,6 +99,7 @@ function onLoad(event: Event) {
   const image = event.target as HTMLImageElement
   // A blank stand-in (OpenLibrary's 1×1 "no cover") moves on to the next source.
   if (isBlankCover(image.naturalWidth, image.naturalHeight)) return next()
+  fitted.value = props.whole && Math.abs(image.naturalWidth / image.naturalHeight / (2 / 3) - 1) > WHOLE_TOLERANCE
   const shown = current.value
   const reveal = () => {
     if (current.value === shown) loaded.value = true
@@ -127,6 +141,8 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
     </template>
 
     <div class="sheet relative size-full overflow-hidden shadow-cover" :class="RADII[size]" :style="underlay" data-cover>
+      <!-- Behind a fitted image only; the fitted image is positioned to paint over it. A cover that fills its slot stays unpositioned, as the flight expects. -->
+      <img v-if="showImage && fitted" :src="current!" alt="" class="backing" :class="loaded ? 'opacity-100' : 'opacity-0'" aria-hidden="true" />
       <img
         v-if="showImage"
         :src="current!"
@@ -134,8 +150,9 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
         :loading="eager ? 'eager' : 'lazy'"
         :fetchpriority="priority ? 'high' : undefined"
         decoding="async"
-        class="block size-full object-cover transition-opacity duration-(--duration-standard) ease-standard"
-        :class="loaded ? 'opacity-100' : 'opacity-0'"
+        class="block size-full transition-opacity duration-(--duration-standard) ease-standard"
+        :class="[loaded ? 'opacity-100' : 'opacity-0', fitted ? 'relative object-contain' : 'object-cover']"
+        :data-fitted="fitted || undefined"
         @load="onLoad"
         @error="next"
       />
@@ -199,6 +216,18 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 .halo.out,
 .pool.out {
   opacity: 0;
+}
+
+/* Behind a cover shown whole: the same image, filling the slot and blurred to its colours. */
+.backing {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(calc(var(--blur-halo) / 4)) saturate(1.2);
+  transform: scale(1.25);
+  transition: opacity var(--duration-standard) var(--ease-standard);
 }
 
 /* Spine crease and a hairline edge. The crease is light and shadow on the
