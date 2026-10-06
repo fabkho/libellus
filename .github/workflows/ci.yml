@@ -308,7 +308,7 @@ jobs:
         working-directory: web
         run: pnpm install --frozen-lockfile
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           path: web/all-blob-reports
