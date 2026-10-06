@@ -50,16 +50,18 @@ const cells = computed(() => {
 </script>
 
 <template>
-  <section class="grid grid-cols-2 border-y-(length:--stroke-hairline) border-hairline-strong" data-testid="profile.figures">
+  <!-- A description list: each figure is a term (Books) with its value and line, so assistive tech
+       reads them in pairs rather than as one run of words and numbers. -->
+  <dl class="grid grid-cols-2 border-y-(length:--stroke-hairline) border-hairline-strong" data-testid="profile.figures">
     <div v-for="(cell, i) in cells" :key="cell.key" class="cell flex min-w-0 flex-col gap-xs border-hairline py-md" :class="cell.edge">
-      <span class="eyebrow">{{ cell.label }}</span>
-      <span v-if="cell.value === null" class="value flex items-center" aria-hidden="true">
+      <dt class="eyebrow">{{ cell.label }}</dt>
+      <dd v-if="cell.value === null" class="value flex items-center" aria-hidden="true">
         <span class="bar skeleton wave" :style="{ '--wave': i * 0.12 }" />
-      </span>
-      <span v-else class="value text-figure tabular-nums" :class="{ arrive: arriving }" :data-testid="`profile.${cell.key}`">{{ cell.value }}</span>
-      <span class="figures truncate text-meta text-ink-faint" :class="{ arrive: arriving }" :data-testid="cell.lineTestid">{{ cell.line }}</span>
+      </dd>
+      <dd v-else class="value text-figure tabular-nums" :class="{ arrive: arriving }" :data-testid="`profile.${cell.key}`">{{ cell.value }}</dd>
+      <dd class="figures truncate text-meta text-ink-faint" :class="{ arrive: arriving }" :data-testid="cell.lineTestid">{{ cell.line }}</dd>
     </div>
-  </section>
+  </dl>
 </template>
 
 <style scoped>

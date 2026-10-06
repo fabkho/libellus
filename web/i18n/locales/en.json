@@ -163,7 +163,9 @@
       "days": "{count} day | {count} days"
     },
     "authors": {
-      "title": "Authors you return to"
+      "title": "Authors you return to",
+      "count": "{count} book | {count} books",
+      "rating": "{rating} stars on average"
     },
     "years": {
       "title": "Years in review",
@@ -216,6 +218,7 @@
       "eyebrow": "Your year in books",
       "favourite": "The favourite",
       "months": "Months",
+      "monthLabel": "{month}: no books | {month}: {count} book | {month}: {count} books",
       "other": "Other years",
       "before": "{year}",
       "after": "{year}",

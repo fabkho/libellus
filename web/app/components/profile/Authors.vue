@@ -18,28 +18,42 @@ const arriving = useArrival(() => !props.figures)
     <template v-if="!figures">
       <ProfileRowPlaceholder v-for="i in limit" :key="i" :wave="(i - 1) * 0.15" fan />
     </template>
-    <div v-for="author in figures?.authors.slice(0, limit) ?? []" :key="author.name" class="flex items-center gap-md py-xs" :class="{ arrive: arriving }" data-testid="profile.author">
-      <span class="fan relative flex shrink-0" aria-hidden="true">
-        <UiCover
-          v-for="(book, i) in author.books.slice(0, 3)"
-          :key="book.id"
-          :style="{ '--i': i }"
-          :title="book.title"
-          :authors="book.authors"
-          :src="coverSrc(book.coverUrl, 'sm')"
-          :thumbhash="book.coverThumbhash"
-          :colors="book.coverColors"
-          size="sm"
-        />
-      </span>
-      <span class="flex min-w-0 flex-1 flex-col gap-xs">
-        <span class="truncate text-body" data-testid="profile.authorName">{{ author.name }}</span>
-        <span class="ticks" aria-hidden="true"><span v-for="i in author.count" :key="i" class="tick" :class="{ fifth: i % 5 === 0 }" /></span>
-      </span>
-      <span class="flex shrink-0 flex-col items-end gap-xxs">
-        <span class="text-title tabular-nums" data-testid="profile.authorCount">{{ count(author.count) }}</span>
-        <span v-if="author.rating !== null" class="figures text-meta text-ink-faint">★ {{ stars(author.rating) }}</span>
-      </span>
+    <div v-else role="list" class="flex flex-col gap-xs">
+      <!-- A list for assistive tech, each author one item: the name, then how many and the rating in
+           words ("9 books, 4.6 stars on average"); the figure and the ★ are drawn for the eye. -->
+      <div
+        v-for="author in figures?.authors.slice(0, limit) ?? []"
+        :key="author.name"
+        role="listitem"
+        class="flex items-center gap-md py-xs"
+        :class="{ arrive: arriving }"
+        data-testid="profile.author"
+      >
+        <span class="fan relative flex shrink-0" aria-hidden="true">
+          <UiCover
+            v-for="(book, i) in author.books.slice(0, 3)"
+            :key="book.id"
+            :style="{ '--i': i }"
+            :title="book.title"
+            :authors="book.authors"
+            :src="coverSrc(book.coverUrl, 'sm')"
+            :thumbhash="book.coverThumbhash"
+            :colors="book.coverColors"
+            size="sm"
+          />
+        </span>
+        <span class="flex min-w-0 flex-1 flex-col gap-xs">
+          <span class="truncate text-body" data-testid="profile.authorName">{{ author.name }}</span>
+          <span class="ticks" aria-hidden="true"><span v-for="i in author.count" :key="i" class="tick" :class="{ fifth: i % 5 === 0 }" /></span>
+        </span>
+        <span class="sr-only">
+          {{ t('profile.authors.count', { count: count(author.count) }, author.count) }}<template v-if="author.rating !== null">{{ t('common.listSeparator') }}{{ t('profile.authors.rating', { rating: stars(author.rating) }) }}</template>
+        </span>
+        <span class="flex shrink-0 flex-col items-end gap-xxs" aria-hidden="true">
+          <span class="text-title tabular-nums" data-testid="profile.authorCount">{{ count(author.count) }}</span>
+          <span v-if="author.rating !== null" class="figures text-meta text-ink-faint">★ {{ stars(author.rating) }}</span>
+        </span>
+      </div>
     </div>
   </section>
 </template>
