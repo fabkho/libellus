@@ -112,6 +112,26 @@ const sheetOpen = computed(
   () =>
     typeOpen.value || tocOpen.value || startOpen.value || finishOpen.value || translateOpen.value || defineOpen.value || searchOpen.value || paletteOpen.value,
 )
+// c's scrubber (ChromePrinted.vue): where the member was when it opened, so one tap takes her back.
+const scrubbing = ref(false)
+const scrubOrigin = ref<{ cfi: string; page: number } | null>(null)
+useBackDismiss(scrubbing, () => (scrubbing.value = false))
+watch(scrubbing, (on) => {
+  scrubOrigin.value = on && loc.value ? { cfi: loc.value.cfi, page: pageAt(loc.value.fraction, props.book.pages) } : null
+})
+const chapterStarts = computed(() =>
+  (engine.value?.toc ?? []).filter((item) => item.depth === 0 && item.fraction !== null).map((item) => ({ fraction: item.fraction!, label: item.label })),
+)
+function onScrub(fraction: number) {
+  endShown.value = false
+  jump(() => engine.value?.goToFraction(Math.min(fraction, 0.9995)))
+}
+function returnToOrigin() {
+  const origin = scrubOrigin.value
+  if (!origin) return
+  jump(() => engine.value?.goTo(origin.cfi))
+}
+
 /** Search: c's capsule morphs into the palette; a's bars (and scroll mode) open the sheet. */
 function openSearch(initial: string) {
   searchInitial.value = initial
@@ -496,6 +516,7 @@ function onKey(event: KeyboardEvent) {
     void turn(-1)
   } else if (event.key === 'Escape') {
     if (menuOpen.value) closeMenu()
+    else if (scrubbing.value) scrubbing.value = false
     else if (chrome.value) chrome.value = false
     else if (endShown.value) endShown.value = false
     else void close()
@@ -810,8 +831,15 @@ function nextChapter() {
     />
     <ChromePrinted
       v-else
+      v-model:scrubbing="scrubbing"
       :shown="chrome && ready"
       :search="paletteChrome"
+      :chapters="chapterStarts"
+      :saved="status === 'reading' && savedPage > 0 ? savedPage / book.pages : null"
+      :origin="scrubOrigin && scrubOrigin.page !== info.page ? scrubOrigin.page : null"
+      :reduce-motion="reduced"
+      @scrub="onScrub"
+      @return-to-origin="returnToOrigin"
       :info="info"
       @back="close"
       @contents="tocOpen = true"
@@ -881,7 +909,7 @@ function nextChapter() {
     <p v-if="failed" class="absolute inset-x-0 top-1/2 px-xl text-center text-subhead text-ink-muted">This book could not be opened. {{ failed }}</p>
 
     <TypeSheet v-model:open="typeOpen" :settings="settings" :wake-note="settings.keepAwake && !isSecureContextNow() ? 'Simulated here: the phone needs HTTPS for it.' : null" />
-    <TocSheet v-model:open="tocOpen" :toc="engine?.toc ?? []" :current="loc?.chapterHref ?? null" :info="info" :book="book" @go="goTo" />
+    <TocSheet v-model:open="tocOpen" :toc="engine?.toc ?? []" :current="loc?.chapterHref ?? null" :info="info" :book="book" @go="goTo" @scrub="(f) => ((tocOpen = false), onScrub(f))" />
     <StartPrompt v-model:open="startOpen" :book="book" @start="onStarted" />
     <FinishPrompt v-model:open="finishOpen" :book="book" @finish="onFinished" />
     <TranslateSheet v-model:open="translateOpen" :text="sheetText" :from="engine?.language ?? 'en'" @define="swapLookup('define')" />

@@ -6,6 +6,7 @@
 // A tap goes there. The back matter (Project Gutenberg's licence) is left out.
 import type { CoverColors } from '~/utils/cover'
 import type { TocItem } from './engine'
+import Scrub from './Scrub.vue'
 import { minutesLeft, type ChromeInfo } from './types'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -15,7 +16,7 @@ const props = defineProps<{
   info: ChromeInfo
   book: { title: string; authors: string[]; cover: string | null; colors: CoverColors | null; thumbhash: string | null }
 }>()
-defineEmits<{ go: [href: string] }>()
+defineEmits<{ go: [href: string]; scrub: [fraction: number] }>()
 
 const currentIndex = computed(() => {
   const exact = props.toc.findIndex((item) => item.href === props.current)
@@ -42,7 +43,8 @@ watch(open, async (isOpen) => {
       <div class="min-w-0 flex-1">
         <p class="book-title truncate text-callout">{{ book.title }}</p>
         <p class="figures mt-xxs text-meta text-ink-faint">p. {{ info.page }} of {{ info.pages }} · {{ Math.round(info.fraction * 100) }} % · {{ minutesLeft(info.minutesBook, 'book') }}</p>
-        <UiProgress class="mt-sm" :fraction="info.fraction" label="Progress" :value-text="`p. ${info.page} of ${info.pages}`" />
+        <!-- The progress line is a slider here too: drag to a page, let go, and the book is there. -->
+        <Scrub class="-my-ms" :fraction="info.fraction" :pages="info.pages" :saved="null" data-no-swipe @scrub="$emit('scrub', $event)" />
       </div>
     </div>
     <ol ref="list" class="-mx-ml" data-testid="readerToc.list">

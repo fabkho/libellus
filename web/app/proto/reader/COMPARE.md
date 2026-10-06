@@ -385,3 +385,20 @@ that both the app's search and the reader use; ≈ 1 day including the e2e of bo
 Strips: `round3/c-search-morph-open-light.jpg` (capsule → palette → results, slowed 5×),
 `round3/c-search-morph-close-pick-light.jpg` (a place picked → palette back into the capsule →
 the page, places outlined), `round3/c-search-palette-dark-sepia.jpg`.
+
+## Round 3, c: the page slider (scrubber)
+Three ways in, one slider:
+1. **Tap "20 % · 76 left" in the capsule** (it says where you are, so it moves you): the capsule grows
+   across the column into a slider (the palette's clip-path morph, `standard`; Reduce Motion: in
+   place). Drag anywhere on the track — the page behind follows the thumb (at most every 140 ms, as
+   a new chapter has to load; the last position always), a glass label over it says "III · p. 62 of
+   96". Ticks mark the chapters, a darker tick the page saved as progress. **"↻ p. 20"** at the left
+   takes you back to where you were when it opened; the check, a tap on the page, Back or Escape put
+   it away (it shrinks back into the capsule). Arrow keys move a page, Page Up/Down ten.
+2. **Press and hold anywhere on the capsule (420 ms) and slide**: the slider opens under the finger
+   and follows it in one gesture — the iOS space-bar-trackpad move; a short buzz on Android; the
+   button under the finger does not fire. Let go and the slider stays open for fine-tuning.
+3. **Contents**: the progress line at the top of the sheet is now the same kind of slider (drag, let go,
+   the sheet closes on that page).
+Scrubbing is looking, not reading: progress waits until you read on from the new place.
+`round3/c-scrubber-light.jpg` (grow, drag, landed, hold-and-slide), `round3/c-scrubber-dark-and-contents-sepia.jpg`.
