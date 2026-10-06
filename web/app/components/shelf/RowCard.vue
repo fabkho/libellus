@@ -13,12 +13,10 @@
 // frame. While nothing is drawn (a first visit with no head start) the card is
 // its plain surface: no slabs, no spinner.
 //
-// The row mounts as the card comes into the view, not with its screen: its
-// intro plays once per mount, and on the Profile the card sits well below the
-// figures, where an intro that played on arrival would be over before she
-// scrolled to it. A screen away it asks for the warm-up again (the same call
-// the shell made on idle, shared with it): a head start for a visit that came
-// straight to the card.
+// The row mounts with its screen, even below the fold: it draws its Spines
+// off screen, and Regal holds its intro until the card is first seen
+// (`intro="visible"`, fabkho/regal#80), so the Books are there the moment she
+// scrolls to them and the intro plays where it is seen.
 import { warmShelfRow } from '~/composables/useShelfPreload'
 
 const props = defineProps<{
@@ -33,37 +31,14 @@ const props = defineProps<{
 }>()
 
 const frame = ref<HTMLElement | null>(null)
-/** The card is in view: the row mounts, and plays its intro where it is seen. */
-const shown = ref(false)
-const observers: IntersectionObserver[] = []
 
-/** Calls `then` once, the first time the card comes within `margin` of the view. */
-function once(margin: string, then: () => void) {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return
-      observer.disconnect()
-      then()
-    },
-    { rootMargin: margin },
-  )
-  observers.push(observer)
-  if (frame.value) observer.observe(frame.value)
-}
-
-onMounted(() => {
-  if (typeof IntersectionObserver === 'undefined') return void (shown.value = true)
-  // A screen away: warm it (shared with the shell's warm-up when that has run).
-  once('100% 0px', () => warmShelfRow(props.year ?? null))
-  // Its top edge in the upper three quarters of the view: the intro is seen.
-  once('0px 0px -25% 0px', () => (shown.value = true))
-})
-onBeforeUnmount(() => observers.forEach((observer) => observer.disconnect()))
+// A head start for a visit that came straight here (shared with the shell's warm-up when that has run).
+onMounted(() => warmShelfRow(props.year ?? null))
 </script>
 
 <template>
   <div ref="frame" class="card relative overflow-hidden rounded-lg" :class="!bare && 'bg-surface-raised shadow-raised edge-faint'">
-    <LazyShelfRow v-if="shown" :year="year" :limit="limit" :label="label" />
+    <LazyShelfRow :year="year" :limit="limit" :label="label" />
   </div>
 </template>
 

@@ -223,8 +223,9 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   plays, the Stack's turned for a row (each Book pops in a little to the right of its place and slides
   home, cascading from the left, the newest last, 0.7 s; the month sheets, dates, focus label and scroll
   bar fade in as they settle), once per mount and not at all with Reduce Motion, where the row simply
-  shows. The row mounts as its card comes into view (its top edge in the upper three quarters of it), so
-  the intro is seen where it plays. The 3D itself moves as Regal decides (the Stack's scroll and flick,
+  shows. The row mounts with its screen and draws its Spines off screen; Regal holds the intro until
+  the card is first seen (`intro="visible"`, regal#80), so the Books are there as she scrolls to them and
+  the intro plays where it is seen. The 3D itself moves as Regal decides (the Stack's scroll and flick,
   the row's sideways scroll with the Books tipping towards you as they pass the middle, a Book coming
   out and turning, a Book breaking out of the row to the middle of the screen and landing back where it
   was shown): Regal's own motion, which honours Reduce Motion itself.

@@ -85,6 +85,8 @@
      card's surface, so the page or the sheet the row sits in (Home's Read in sheet) doesn't show
      through half-faded. Regal's defaults are 0.9 broken out and 0.72 in the card. */
   --regal-veil-opacity: 1;
+  /* The row's title pill sits right over the scroll bar: no shadow there (owner's wish), it reads as a smudge. */
+  --regal-label-shadow: none;
   --regal-veil-opacity-card: 1;
 }
 
