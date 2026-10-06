@@ -230,12 +230,6 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa',
 
 /** Known violations: the rule, where (text the node's selector or its HTML contains), and why it is allowed. */
 export const ALLOWED: { rule: string; where: string; reason: string }[] = [
-  {
-    rule: 'aria-prohibited-attr',
-    where: 'row-card__scroller',
-    reason:
-      "Regal's row (the owner's shelf) names its scroller with aria-label on a div without a role. Regal's DOM, not Libellus': a Regal follow-up (docs/ACCESSIBILITY.md, Known gaps).",
-  },
 ]
 
 const allowed = (rule: string, node: { target: string; html: string }) =>

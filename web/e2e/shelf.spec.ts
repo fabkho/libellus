@@ -75,6 +75,9 @@ async function libraryFile(page: Page, status = 200, body = FIXTURE) {
 /** Regal's Stack inside the shelf: how many Books it lays out. */
 const stackedBooks = (page: Page) => page.getByTestId('shelf.stage').locator('section[data-book-count]')
 
+/** Regal's hidden Book list (`accessible-list`), named by Regal: the row and the Stack share it. */
+const BOOK_LIST = 'Book list'
+
 /** Regal's row in a card (the Profile's, a year in review's): its Books, and the one that is out (`data-picked`). */
 const shelfRow = (page: Page, testId: string) => page.getByTestId(testId).locator('section.row-card')
 
@@ -206,7 +209,7 @@ test.describe('Your shelf, the owner', () => {
     const out = page.locator('body > .row-card__view--out')
     await expect(out).toHaveCount(1)
     // The phone's sheet is Libellus' (Done, the action in the lamp colour, no pills) and clears the gesture bar.
-    const sheet = page.locator('body > article.row-card__details--sheet')
+    const sheet = page.locator('body > [role=dialog].row-card__details--sheet')
     if (await sheet.count()) {
       expect(Number.parseFloat(await sheet.evaluate((el) => getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(24)
       await expect(page.getByTestId('shelfRow.putBack')).toHaveText(en.shelf.detail.done)
@@ -374,12 +377,14 @@ test.describe('Your shelf, the owner', () => {
     await expect(row).toHaveAttribute('aria-label', fill(en.shelf.year.rowLabel, { year: 2025 }))
     // No page of its own: the row is the year's shelf.
     await expect(page.locator('a[href^="/profile/shelf"]')).toHaveCount(0)
+    await expectAccessible(page, "a year's review with her shelf")
 
     await takeOut(page, row)
     await expect(page.locator('body > .row-card__view--out')).toHaveCount(1)
+    await expectAccessible(page, "a year's review, a Book out of the row")
     const moves = await countNavigations(page)
     // The details are Libellus' (regal-themed): the sheet's Done is the one way back that shows, no round Back.
-    const details = page.locator('body > article.row-card__details')
+    const details = page.locator('body > [role=dialog].row-card__details')
     await expect(details).toBeVisible()
     await expect(page.locator('.row-card__back')).toHaveCount(0)
     await page.getByTestId('shelfRow.putBack').click()
@@ -421,11 +426,13 @@ test.describe('Your shelf, the owner', () => {
     expect(await card.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none')
     expect(await card.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
     await expect(page.getByTestId('homeTally.yearInReview')).toHaveText(en.home.yearInReview)
+    await expectAccessible(page, "Home's Read in sheet with her row")
 
     // A Book taken out breaks out above the sheet (z 50), not under it.
     await takeOut(page, row)
     const out = page.locator('body > .row-card__view--out')
     await expect(out).toHaveCount(1)
+    await expectAccessible(page, "Home's Read in sheet, a Book out of the row")
     expect(Number(await out.evaluate((el) => getComputedStyle(el).zIndex))).toBeGreaterThan(
       Number(await sheet.evaluate((el) => getComputedStyle(el).zIndex)),
     )
@@ -484,8 +491,9 @@ test.describe('Your shelf, the owner', () => {
     const book = await page.evaluate(() => (window as any).__regalPick.clickableBooks()[0] as { x: number; y: number })
     await page.touchscreen.tap(book.x, book.y)
 
-    const panel = page.locator('article.details')
+    const panel = page.locator('[role=dialog].details')
     await expect(panel).toBeVisible()
+    await expectAccessible(page, 'the Stack with a Book out')
     const regalThemes = (await panel.getAttribute('data-regal-theme')) !== null
     test.info().annotations.push({ type: 'regal-theming', description: regalThemes ? 'Regal with theming (#63)' : 'Regal without theming: look not asserted' })
     if (!regalThemes) return
@@ -508,6 +516,25 @@ test.describe('Your shelf, the owner', () => {
     // Put back, with Libellus' button.
     await page.getByTestId('shelf.putBack').click()
     await expect(panel).toHaveCount(0)
+  })
+
+  regalOwnControls('takes a Book out from its place in the list with the keyboard, and gives focus back when it is put away', async ({ page }) => {
+    await libraryFile(page)
+    await signInAsOwner(page)
+    await page.goto('/profile')
+    const card = page.getByTestId('profile.shelfRow')
+    await card.scrollIntoViewIfNeeded()
+    await expect(shelfRow(page, 'profile.shelfRow')).toHaveAttribute('data-book-count', '8')
+    const button = card.getByRole('list', { name: BOOK_LIST }).getByRole('button').first()
+    await button.focus()
+    await page.keyboard.press('Enter')
+    // Libellus' sheet fills Regal's `#detail` slot: the dialog is named "{title} details", and focus is inside it.
+    const dialog = page.getByRole('dialog', { name: /details$/ })
+    await expect(dialog).toBeVisible()
+    await expect.poll(() => dialog.evaluate((el) => el.contains(document.activeElement))).toBe(true)
+    await page.getByTestId('shelfRow.putBack').click()
+    await expect(dialog).toHaveCount(0)
+    await expect(button).toBeFocused()
   })
 
   test('says so when the file cannot be read, and tries again', async ({ page }) => {
@@ -534,20 +561,28 @@ test.describe('Your shelf, the owner', () => {
       await page.getByTestId('profile.shelf').scrollIntoViewIfNeeded()
       const row = shelfRow(page, 'profile.shelfRow')
       await expect(row).toHaveAttribute('data-book-count', '8')
-      // Regal's canvas names no Book; the card holds them as a list (ShelfBookList).
-      const list = page.getByTestId('profile.shelfRow').getByRole('list', { name: en.shelf.card.rowLabel })
+      // Regal's canvas names no Book; its own hidden list does (`accessible-list`), one button for each Book.
+      const list = page.getByTestId('profile.shelfRow').getByRole('list', { name: BOOK_LIST })
       await expect(list.getByRole('listitem')).toHaveCount(8)
+      await expect(list.getByRole('button')).toHaveCount(8)
+      // The row's scroller is a region named for what it holds (axe's aria-prohibited-attr is no longer allowed).
+      await expect(row.locator('.row-card__scroller')).toHaveAttribute('role', 'region')
       await expectAccessible(page, `the Profile with her shelf, ${colorScheme}`)
 
       await takeOut(page, row)
       await expect(page.getByTestId('shelfRow.sheet')).toBeVisible()
+      // The Book out is a modal dialog; Libellus' sheet fills Regal's `#detail`, so Regal names it "{title} details".
+      const dialog = page.getByRole('dialog', { name: /details$/ })
+      await expect(dialog).toHaveCount(1)
+      await expect(dialog).toHaveAttribute('aria-modal', 'true')
+      await expect(dialog).toContainText(((await page.getByTestId('shelfRow.title').textContent()) ?? '').trim())
       await expectAccessible(page, `a Book out of the row, ${colorScheme}`)
       await page.keyboard.press('Escape')
       await expect(page.getByTestId('shelfRow.sheet')).toHaveCount(0)
 
       await page.goto('/profile/shelf')
       await expect(page.getByRole('heading', { level: 1, name: en.shelf.title })).toBeVisible()
-      await expect(page.getByTestId('shelf').getByRole('list', { name: en.shelf.title }).getByRole('listitem')).toHaveCount(8)
+      await expect(page.getByTestId('shelf').getByRole('list', { name: BOOK_LIST }).getByRole('listitem')).toHaveCount(8)
       await expectAccessible(page, `the whole shelf, ${colorScheme}`)
     }
   })

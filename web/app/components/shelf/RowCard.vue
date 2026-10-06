@@ -20,8 +20,6 @@
 // the shell made on idle, shared with it): a head start for a visit that came
 // straight to the card.
 import { warmShelfRow } from '~/composables/useShelfPreload'
-import { booksReadIn } from '~/data/shelf'
-import { useShelfStore } from '~/stores/shelf'
 
 const props = defineProps<{
   /** Only this year's Books, the row starting at January. */
@@ -33,14 +31,6 @@ const props = defineProps<{
   /** No surface, border or shadow: the row sits on what it stands on (inside a sheet). */
   bare?: boolean
 }>()
-
-/** The Books the row holds, as a list for assistive tech (ShelfBookList): Regal's canvas does not name them. */
-const shelf = useShelfStore()
-const books = computed(() => {
-  const all = shelf.shelf?.books ?? []
-  const held = props.year ? booksReadIn(all, props.year) : all
-  return props.limit ? held.slice(0, props.limit) : held
-})
 
 const frame = ref<HTMLElement | null>(null)
 /** The card is in view: the row mounts, and plays its intro where it is seen. */
@@ -74,7 +64,6 @@ onBeforeUnmount(() => observers.forEach((observer) => observer.disconnect()))
 <template>
   <div ref="frame" class="card relative overflow-hidden rounded-lg" :class="!bare && 'bg-surface-raised shadow-raised edge-faint'">
     <LazyShelfRow v-if="shown" :year="year" :limit="limit" :label="label" />
-    <ShelfBookList :books="books" :label="label" />
   </div>
 </template>
 
