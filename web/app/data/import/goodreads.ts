@@ -434,38 +434,21 @@ export function countByStatus(books: readonly Pick<GoodreadsBook, 'status'>[]): 
 }
 
 /**
- * What Goodreads knows about a row's exact edition, by its Book Id (#111):
- * asked for rows without an ISBN (data/goodreadsEditions.ts). Every field may
- * be missing; `language` is an ISO 639-1 code.
- */
-export type EditionHint = {
-  isbn13: string | null
-  isbn10: string | null
-  asin: string | null
-  language: string | null
-  pageCount: number | null
-  format: string | null
-  publisher: string | null
-  year: number | null
-}
-
-/**
  * The Book a row stands for when no source knows its edition: an `import`
  * Catalogue Book when it has an ISBN (the Catalogue's key), else the member's
- * own Manual book. What Goodreads said about the edition (`hint`) fills in
- * what the file leaves out. Its cover is resolved later, if there is one to find.
+ * own Manual book. Its cover is resolved later, if there is one to find.
  */
-export function bookFromRow(book: GoodreadsBook, hint?: EditionHint | null): BookSnapshot {
-  const isbn13 = book.isbn13 ?? hint?.isbn13 ?? null
+export function bookFromRow(book: GoodreadsBook): BookSnapshot {
+  const isbn13 = book.isbn13
   return {
     title: book.title,
     authors: book.authors,
     isbn13,
-    isbn10: book.isbn10 ?? (book.isbn13 ? null : (hint?.isbn10 ?? null)),
-    pageCount: book.pageCount ?? hint?.pageCount ?? null,
-    year: book.year ?? hint?.year ?? null,
-    language: hint?.language ?? null,
-    publisher: book.publisher ?? hint?.publisher ?? null,
+    isbn10: book.isbn10,
+    pageCount: book.pageCount,
+    year: book.year,
+    language: null,
+    publisher: book.publisher,
     description: null,
     coverUrl: null,
     coverThumbhash: null,
@@ -494,7 +477,7 @@ export function languageCode(value: string | null | undefined): string | null {
  * The language a title is most likely in, from its little words (`der`, `und`,
  * `the`, `of`) and its letters (`ä`, `ß`): `de`, `en`, or null when it does not
  * say (`Circe`, `Neuromancer`). Only a hint for ranking editions of a work
- * whose row has no language from Goodreads.
+ * whose row says no language.
  */
 export function titleLanguage(title: string): string | null {
   const words = title.toLowerCase().split(/[^\p{L}]+/u)
@@ -510,7 +493,7 @@ export const isEbookBinding = (value: string | null | undefined) => /kindle|e-?b
 
 /**
  * How well an edition found by title fits the row's: the same language (when
- * both are known: Goodreads', else told from the titles) counts most, then
+ * both are known: told from the titles) counts most, then
  * an ebook for a Kindle row, then about the same page count and the same year.
  * Only to rank editions of the same work against each other; ties keep the
  * search's order.
@@ -518,21 +501,20 @@ export const isEbookBinding = (value: string | null | undefined) => /kindle|e-?b
 export function editionFit(
   row: Pick<GoodreadsBook, 'title' | 'pageCount' | 'year' | 'binding'>,
   found: Pick<BookSnapshot, 'title' | 'language' | 'pageCount' | 'year' | 'source'>,
-  hint?: EditionHint | null,
 ): number {
   let fit = 0
-  const wanted = languageCode(hint?.language) ?? titleLanguage(row.title)
+  const wanted = titleLanguage(row.title)
   const theirs = languageCode(found.language) ?? titleLanguage(found.title)
   if (wanted && theirs) fit += wanted === theirs ? 4 : -4
-  const pages = row.pageCount ?? hint?.pageCount ?? null
+  const pages = row.pageCount
   if (pages && found.pageCount) {
     const off = Math.abs(pages - found.pageCount) / pages
     fit += off <= 0.05 ? 2 : off <= 0.15 ? 1 : 0
   }
   // Apple Books sells ebooks: the closest to a Kindle edition there is. Worth
   // more than a print edition's page count, which an ebook never has to match.
-  if (isEbookBinding(row.binding ?? hint?.format) && found.source === 'apple') fit += 3
-  const year = row.year ?? hint?.year ?? null
+  if (isEbookBinding(row.binding) && found.source === 'apple') fit += 3
+  const year = row.year
   if (year && found.year === year) fit += 1
   return fit
 }
@@ -541,13 +523,12 @@ export function editionFit(
 export function pickEdition<T extends { book: Pick<BookSnapshot, 'title' | 'authors' | 'language' | 'pageCount' | 'year' | 'source'> }>(
   row: Pick<GoodreadsBook, 'title' | 'authors' | 'pageCount' | 'year' | 'binding'>,
   results: readonly T[],
-  hint?: EditionHint | null,
 ): T | null {
   let best: T | null = null
   let bestFit = -Infinity
   for (const result of results) {
     if (!isSameWork(row, result.book)) continue
-    const fit = editionFit(row, result.book, hint)
+    const fit = editionFit(row, result.book)
     if (fit > bestFit) {
       best = result
       bestFit = fit

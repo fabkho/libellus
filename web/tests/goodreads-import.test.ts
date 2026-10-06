@@ -395,47 +395,19 @@ describe('findEdition', () => {
     expect(edition).toMatchObject({ via: null, book: { source: 'import', isbn13: '9790000001022', pageCount: 245 }, coverFrom: work })
   })
 
-  it('asks Goodreads about a row without an ISBN, and takes the exact edition its ISBN finds (#111)', async () => {
-    const exact = snapshot({ title: 'Piranesi', authors: ['Susanna Clarke'], isbn13: '9781526622419' })
-    const asked: string[] = []
-    const lookups: Lookups = {
-      catalogue: { search: async () => [] },
-      search: {
-        lookupIsbn: async (isbn) => (isbn === '9781526622419' ? exact : null),
-        search: async () => ({ results: [], pending: false, failed: false }),
-      },
-      goodreads: {
-        edition: async (id) => {
-          asked.push(id)
-          return { isbn13: '9781526622419', isbn10: null, asin: null, language: 'en', pageCount: 245, format: 'Paperback', publisher: null, year: 2020 }
-        },
-      },
-    }
-    expect(await findEdition(row({ goodreadsId: '50202953' }), lookups)).toMatchObject({ via: 'goodreads', book: exact })
-    expect(asked).toEqual(['50202953'])
-    // A row with an ISBN of its own needs nobody's word for it.
-    await findEdition(row({ isbn13: '9781526622419' }), lookups)
-    expect(asked).toEqual(['50202953'])
-  })
-
-  it('without an ISBN from Goodreads, picks the edition in its language and kind among the same work (#111)', async () => {
+  it('without an ISBN, picks among the same work the edition the file itself describes: its Binding and page count (#111)', async () => {
     const found = (overrides: Partial<BookSnapshot>) => ({ book: snapshot({ title: 'Piranesi', authors: ['Susanna Clarke'], ...overrides }), entry: null, otherEdition: false })
     const english = found({ language: 'en', source: 'openlibrary', appleId: null, pageCount: 272 })
     const german = found({ language: 'ger', source: 'openlibrary', appleId: null, pageCount: 288 })
-    const ebook = found({ language: 'de', source: 'apple' })
+    const ebook = found({ language: 'en', source: 'apple' })
     const search: Lookups['search'] = {
       lookupIsbn: async () => null,
       search: async () => ({ results: [english, german, ebook], pending: false, failed: false }),
     }
-    const hint = (language: string, format: string) => ({
-      edition: async () => ({ isbn13: null, isbn10: null, asin: 'B000000000', language, pageCount: 290, format, publisher: null, year: null }),
-    })
-    const lookups = (goodreads: Lookups['goodreads']): Lookups => ({ catalogue: { search: async () => [] }, search, goodreads })
-    expect((await findEdition(row({}), lookups(hint('de', 'Paperback')))).book).toBe(german.book)
-    expect((await findEdition(row({ binding: 'Kindle Edition' }), lookups(hint('de', 'Kindle Edition')))).book).toBe(ebook.book)
-    // Goodreads could not be asked: the search's own order decides.
-    const failing = { edition: async () => Promise.reject(new Error('unavailable')) }
-    expect(await findEdition(row({}), lookups(failing))).toMatchObject({ via: 'title', unsure: false, book: english.book })
+    const lookups: Lookups = { catalogue: { search: async () => [] }, search }
+    expect(await findEdition(row({}), lookups)).toMatchObject({ via: 'title', unsure: false, book: english.book })
+    expect((await findEdition(row({ pageCount: 288 }), lookups)).book).toBe(german.book)
+    expect((await findEdition(row({ binding: 'Kindle Edition' }), lookups)).book).toBe(ebook.book)
   })
 
   it('moves on without a source that does not answer in time, and says the edition is unsure', async () => {
