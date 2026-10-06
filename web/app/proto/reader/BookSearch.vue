@@ -18,6 +18,8 @@
 // bar's Home and Library today, so the prototype carries a faithful copy).
 import { durationToken, easingToken, prefersReducedMotion, timeAt } from '~/utils/motion'
 import { paletteLift } from '~/utils/keyboard'
+import { SEARCH_DEBOUNCE_MS } from '~/data/search'
+import BookLoading from './BookLoading.vue'
 import type { ReaderEngine, SearchHit } from './engine'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -44,10 +46,21 @@ function close() {
 useBackDismiss(open, close)
 
 // ------------------------------------------------------------ the search
+//
+// As the app's search (components/search/Results.vue): the query goes out after
+// the typing pause; nothing shows for that pause and a `quick` more, so a book
+// that answers at once shows no loading at all; until the first places come the
+// riffling book and the lamp hairline say it is looking; a newer query dims the
+// places on screen to 60 % instead of emptying them, and its own replace them
+// when they come; the palette glides to its new height over `standard`, growing
+// up from the query; the first places rise in one after another.
 
 const query = ref('')
 const hits = ref<SearchHit[]>([])
-const progress = ref<number | null>(null)
+/** The book is still being searched (places may still come). */
+const searching = ref(false)
+/** A newer query is on its way: the places on screen belong to the last one. */
+const outdated = ref(false)
 const searched = ref('')
 let run = 0
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -55,37 +68,54 @@ let timer: ReturnType<typeof setTimeout> | undefined
 async function search(q: string) {
   const engine = props.engine
   const id = ++run
-  hits.value = []
-  searched.value = q
+  clearTimeout(timer)
   if (!engine || q.length < 2) {
-    progress.value = null
+    hits.value = []
+    searched.value = ''
+    searching.value = false
+    outdated.value = false
     return
   }
-  progress.value = 0
+  searching.value = true
   engine.clearSearch()
   const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#b8782a'
+  let first = true
   for await (const step of engine.search(q, accent)) {
     if (id !== run) return
-    if ('hits' in step) hits.value = [...hits.value, ...step.hits]
-    else progress.value = step.progress
+    if (!('hits' in step)) continue
+    if (first) {
+      // The first places of the new query take the old ones' place.
+      hits.value = step.hits
+      searched.value = q
+      outdated.value = false
+      first = false
+    } else hits.value = [...hits.value, ...step.hits]
   }
-  if (id === run) progress.value = null
+  if (id !== run) return
+  if (first) {
+    hits.value = []
+    searched.value = q
+    outdated.value = false
+  }
+  searching.value = false
 }
-// The list keeps its foot (the next place, by the query) in view as places come in.
-const listEl = useTemplateRef<HTMLElement>('listEl')
-watch(
-  () => hits.value.length,
-  async () => {
-    await nextTick()
-    if (listEl.value) listEl.value.scrollTop = listEl.value.scrollHeight
-  },
-)
 watch(query, (q) => {
   clearTimeout(timer)
-  timer = setTimeout(() => search(q.trim()), 260)
+  const text = q.trim()
+  if (text.length < 2) return void search('')
+  if (hits.value.length) outdated.value = true
+  timer = setTimeout(() => search(text), SEARCH_DEBOUNCE_MS)
 })
 
-/** The next place after where you are first (it sits by the query), then on; the ones before you after the rule. */
+type State = 'idle' | 'loading' | 'results' | 'none'
+const state = computed<State>(() => {
+  if (query.value.trim().length < 2) return 'idle'
+  if (hits.value.length) return 'results'
+  if (searching.value || outdated.value || searched.value !== query.value.trim()) return 'loading'
+  return 'none'
+})
+
+/** The next place after where you are first (by the query), on to the end; then, after the rule, from the beginning. */
 const ordered = computed(() => {
   const here = props.here
   if (!here) return { ahead: hits.value, behind: [] as SearchHit[] }
@@ -94,6 +124,45 @@ const ordered = computed(() => {
   for (const hit of hits.value) ((props.engine?.compareCfi(hit.cfi, here) ?? 1) >= 0 ? ahead : behind).push(hit)
   return { ahead, behind }
 })
+
+const loadingWait = SEARCH_DEBOUNCE_MS + durationToken('quick')
+const room = useTemplateRef<HTMLElement>('room')
+let heightBefore = 0
+let cameFrom: State | null = null
+let gliding: Animation | undefined
+const arriving = ref(false)
+let arrivingTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  state,
+  (_next, previous) => {
+    heightBefore = room.value?.offsetHeight ?? 0
+    cameFrom = previous ?? null
+  },
+  { flush: 'pre' },
+)
+watch(
+  state,
+  (next) => {
+    const el = room.value
+    if (!el || props.reduceMotion || prefersReducedMotion()) return
+    if (next === 'results' && cameFrom !== 'results') {
+      arriving.value = true
+      clearTimeout(arrivingTimer)
+      arrivingTimer = setTimeout(() => (arriving.value = false), durationToken('standard') * 3)
+    }
+    const heightAfter = el.offsetHeight
+    gliding?.cancel()
+    if (!heightBefore || heightBefore === heightAfter) return
+    gliding = el.animate(
+      [
+        { height: `${heightBefore}px`, overflow: 'hidden' },
+        { height: `${heightAfter}px`, overflow: 'hidden' },
+      ],
+      { duration: durationToken('standard'), easing: easingToken('standard'), delay: next === 'loading' ? loadingWait : 0, fill: 'backwards' },
+    )
+  },
+  { flush: 'post' },
+)
 
 // ------------------------------------------------------------ the morph (SearchOverlay's)
 
@@ -308,6 +377,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown, true)
   for (const animation of animations) animation.cancel()
   clearTimeout(timer)
+  clearTimeout(arrivingTimer)
   run++
 })
 
@@ -343,45 +413,59 @@ function pick(hit: SearchHit) {
       <div ref="body" class="relative flex flex-col overflow-hidden rounded-xl">
         <div ref="plate" class="absolute inset-0 rounded-xl bg-surface-raised edge" aria-hidden="true" />
 
-        <div ref="results" class="relative flex flex-col justify-end" aria-live="polite">
-          <div ref="listEl" class="list overflow-y-auto overscroll-contain" data-testid="bookSearch.results">
-            <p v-if="searched.length < 2" class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="bookSearch.idle">
+        <div ref="results" class="relative flex flex-col justify-end">
+          <div ref="room" class="relative flex min-h-0 flex-col" aria-live="polite" data-testid="bookSearch.results">
+            <p v-if="state === 'idle'" class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="bookSearch.idle">
               Find a word or a name in this book.
             </p>
-            <template v-else>
-              <!-- Furthest at the top, the next place right above the query. -->
-              <template v-if="ordered.behind.length">
+
+            <!-- Leaves over the places arriving where it stood. -->
+            <Transition name="loading">
+              <BookLoading v-if="state === 'loading'" text="Looking through the pages…" :style="{ '--loading-wait': `${loadingWait}ms` }" />
+            </Transition>
+
+            <!-- Reversed, as the app's list: the next place at the bottom by the query, the far end fading out at the top. -->
+            <ol
+              v-if="state === 'results'"
+              class="list flex flex-col-reverse overflow-y-auto overscroll-contain py-xs transition-opacity duration-(--duration-standard) ease-standard"
+              :class="[outdated && 'opacity-60', arriving && 'arriving']"
+              :aria-busy="outdated"
+              data-no-swipe
+            >
+              <li v-for="(hit, i) in ordered.ahead" :key="`a${i}${hit.cfi}`" :style="i < 5 ? { '--n': i } : undefined">
                 <button
-                  v-for="(hit, i) in [...ordered.behind].reverse()"
-                  :key="`b${i}${hit.cfi}`"
                   type="button"
                   class="hit block w-full px-md py-ms text-left hover:bg-fill active:bg-fill-strong"
+                  :data-testid="i === 0 ? 'bookSearch.next' : undefined"
                   @click="pick(hit)"
                 >
+                  <span class="eyebrow block">{{ hit.chapter }}<template v-if="i === 0"> · next</template></span>
+                  <span class="excerpt book-title mt-xxs block text-subhead text-ink-muted">{{ hit.pre }}<mark>{{ hit.match }}</mark>{{ hit.post }}</span>
+                </button>
+              </li>
+              <li v-if="ordered.behind.length" class="eyebrow flex items-center gap-sm px-md pt-sm pb-xs" aria-hidden="true">
+                <span class="h-(--stroke-hairline) flex-1 bg-hairline" />From the beginning<span class="h-(--stroke-hairline) flex-1 bg-hairline" />
+              </li>
+              <li v-for="(hit, i) in ordered.behind" :key="`b${i}${hit.cfi}`" :style="!ordered.ahead.length && i < 5 ? { '--n': i } : undefined">
+                <button type="button" class="hit block w-full px-md py-ms text-left hover:bg-fill active:bg-fill-strong" @click="pick(hit)">
                   <span class="eyebrow block">{{ hit.chapter }}</span>
                   <span class="excerpt book-title mt-xxs block text-subhead text-ink-muted">{{ hit.pre }}<mark>{{ hit.match }}</mark>{{ hit.post }}</span>
                 </button>
-                <p class="eyebrow flex items-center gap-sm px-md pt-sm pb-xs"><span class="h-(--stroke-hairline) flex-1 bg-hairline" />Before where you are<span class="h-(--stroke-hairline) flex-1 bg-hairline" /></p>
-              </template>
-              <button
-                v-for="(hit, i) in [...ordered.ahead].reverse()"
-                :key="`a${i}${hit.cfi}`"
-                type="button"
-                class="hit block w-full px-md py-ms text-left hover:bg-fill active:bg-fill-strong"
-                :data-testid="i === ordered.ahead.length - 1 ? 'bookSearch.next' : undefined"
-                @click="pick(hit)"
-              >
-                <span class="eyebrow block">{{ hit.chapter }}<template v-if="i === ordered.ahead.length - 1"> · next</template></span>
-                <span class="excerpt book-title mt-xxs block text-subhead text-ink-muted">{{ hit.pre }}<mark>{{ hit.match }}</mark>{{ hit.post }}</span>
-              </button>
-              <p class="figures px-md pt-xs pb-sm text-meta text-ink-faint">
-                <template v-if="progress !== null">Looking through the pages… {{ Math.round(progress * 100) }} %<template v-if="hits.length"> · {{ hits.length }} found</template></template>
-                <template v-else-if="!hits.length">Nowhere in this book.</template>
-                <template v-else>{{ hits.length }} {{ hits.length === 1 ? 'place' : 'places' }}</template>
-              </p>
-            </template>
+              </li>
+              <!-- Last in a reversed list: the far end, padded below the fade. -->
+              <li class="figures px-md pt-xxl pb-xs text-center text-meta text-ink-faint" data-testid="bookSearch.count">
+                {{ hits.length }} {{ hits.length === 1 ? 'place' : 'places' }} in this book<template v-if="searching"> so far</template>
+              </li>
+            </ol>
+
+            <div v-else-if="state === 'none'" class="px-ml pt-ml pb-md" data-testid="bookSearch.none">
+              <p class="text-callout font-medium">Nowhere in this book</p>
+              <p class="mt-xs text-subhead text-ink-muted">“{{ searched }}” does not come up in it.</p>
+              <p class="mt-md text-subhead text-ink-faint">Try fewer letters, or another spelling.</p>
+            </div>
           </div>
-          <span v-if="progress !== null" class="sweep" aria-hidden="true" />
+          <!-- Still looking, with places already there: the lamp hairline keeps sweeping above the query. -->
+          <span v-if="state === 'results' && searching" class="sweep" aria-hidden="true" />
           <div class="h-(--stroke-hairline) shrink-0 bg-hairline" aria-hidden="true" />
         </div>
 
@@ -402,7 +486,7 @@ function pick(hit: SearchHit) {
               placeholder="Search in this book"
               class="min-w-0 flex-1 bg-transparent text-callout text-ink caret-accent outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
               data-testid="bookSearch.query"
-              @keydown.enter.prevent="search(query.trim())"
+              @keydown.enter.prevent="(outdated = hits.length > 0), search(query.trim())"
             />
             <button
               v-if="query"
@@ -440,13 +524,15 @@ function pick(hit: SearchHit) {
 .glyph {
   transform-origin: center;
 }
-/* As tall as the room above the query allows (the palette's top stops under the status bar). */
+/* As tall as the room above the query allows (the palette's top stops under the status bar); the far end fades out. */
 .list {
   max-height: calc(100dvh - var(--bar-top) - var(--float-bottom) - var(--size-query) - var(--spacing-xl) - var(--lift, 0px));
   touch-action: pan-y;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--spacing-xxl));
+  mask-image: linear-gradient(to bottom, transparent, black var(--spacing-xxl));
 }
-.hit + .hit {
-  border-top: var(--stroke-hairline) solid var(--color-hairline);
+.list > li + li .hit {
+  border-bottom: var(--stroke-hairline) solid var(--color-hairline);
 }
 .excerpt {
   display: -webkit-box;
@@ -459,22 +545,46 @@ mark {
   background: var(--color-accent-soft);
   border-radius: var(--radius-cover-sm);
 }
-/* The palette's loading hairline (MOTION.md, Search loading): a lamp line sweeping along the edge above the query. */
+/* The loading state leaves over the room the places arrive in, fading, so the first rows rise in where it stood. */
+.loading-leave-active {
+  position: absolute;
+  inset: auto 0 0;
+  transition: opacity var(--duration-exit) var(--ease-exit);
+}
+.loading-leave-to {
+  opacity: 0;
+}
+/* The nearest places (the bottom rows) land one after the other; the others are simply there. */
+.arriving > li[style] {
+  animation: row-arrive var(--duration-standard) var(--ease-standard) calc(var(--n) * var(--duration-instant) * 0.5) both;
+}
+@keyframes row-arrive {
+  from {
+    opacity: 0;
+    translate: 0 var(--spacing-sm);
+  }
+}
+/* The lamp hairline on the divider, while more places may come (Loading.vue's sweep). */
 .sweep {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 30%;
+  inset: auto 0 0;
   height: var(--stroke-rule);
+  overflow: hidden;
+}
+.sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
   background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
-  animation: sweep calc(var(--duration-caret) * 1.2) var(--ease-standard) infinite;
+  animation: sweep calc(var(--duration-caret) * 1.6) var(--ease-standard) infinite;
 }
 @keyframes sweep {
   from {
-    transform: translateX(-100%);
+    translate: -100% 0;
   }
   to {
-    transform: translateX(340%);
+    translate: 250% 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {

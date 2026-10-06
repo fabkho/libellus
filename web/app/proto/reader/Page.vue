@@ -13,6 +13,8 @@ import kafkaEpub from './books/metamorphosis.epub?url'
 import kafkaCover from './books/metamorphosis.jpg?url'
 import Reader from './Reader.vue'
 import ProtoIcon from './ProtoIcon.vue'
+import StyleSheet from './StyleSheet.vue'
+import { readSettings, writeSettings } from './settings'
 import './themes.css'
 
 definePageMeta({ layout: false })
@@ -23,8 +25,8 @@ type BookKey = 'peter' | 'kafka' | 'file'
 type Status = 'want_to_read' | 'reading'
 
 const VARIANTS: { key: Variant; name: string; pitch: string }[] = [
-  { key: 'a', name: 'Quiet pages', pitch: 'Pages, nothing on them but the text. Tap the edges or swipe to turn; tap the middle for a slim top and bottom bar.' },
-  { key: 'c', name: 'Printed page', pitch: 'A printed book: running head and folio in the margins, two pages side by side on a wide screen, a calm fade to turn. Tap the middle for a small capsule.' },
+  { key: 'c', name: 'Printed (default)', pitch: 'A printed book: running head and folio in the margins, two pages side by side on a wide screen, a calm fade to turn. Tap the middle for a small capsule.' },
+  { key: 'a', name: 'Classic', pitch: 'Pages with nothing on them but the text. Tap the middle for a bar at the top and one at the bottom, with the slider.' },
 ]
 
 const BOOKS = {
@@ -36,7 +38,20 @@ const route = useRoute()
 const router = useRouter()
 const q = (name: string) => (typeof route.query[name] === 'string' ? (route.query[name] as string) : null)
 
-const variant = ref<Variant>((['a', 'b', 'c'] as const).find((v) => v === q('v')) ?? 'a')
+// Printed (c) is the default; the member's own choice (Profile or the reader's Aa) is kept with the reader's settings.
+const storedStyle = () => readSettings(window.localStorage).style
+const variant = ref<Variant>((['a', 'b', 'c'] as const).find((v) => v === q('v')) ?? (storedStyle() === 'classic' ? 'a' : 'c'))
+const readerStyle = computed<'printed' | 'classic'>({
+  get: () => (variant.value === 'a' ? 'classic' : 'printed'),
+  set: (style) => (variant.value = style === 'classic' ? 'a' : 'c'),
+})
+watch(variant, (v) => {
+  if (v === 'b') return
+  const settings = readSettings(window.localStorage)
+  settings.style = v === 'a' ? 'classic' : 'printed'
+  writeSettings(window.localStorage, settings)
+})
+const styleOpen = ref(false)
 const bookKey = ref<BookKey>(q('book') === 'kafka' ? 'kafka' : 'peter')
 const status = ref<Status>(q('status') === 'want' ? 'want_to_read' : 'reading')
 const savedPage = ref(Number(q('saved') ?? (status.value === 'reading' ? 0 : 0)) || 0)
@@ -208,6 +223,18 @@ onMounted(() => {
           <ProtoIcon name="read" :size="14" />Ebook · on this device
         </p>
       </div>
+
+      <!-- A stand-in for the Profile's account rows (the real row goes into Profile → Account,
+           components/profile/Account.vue, which phase 1 is changing right now). -->
+      <section class="relative mx-ml mt-xxl" data-testid="proto.profile">
+        <h2 class="eyebrow mb-ms">Profile · Reading <span class="normal-case tracking-normal text-ink-ghost">(stand-in)</span></h2>
+        <UiRowGroup>
+          <UiRow as="button" icon="stack" label="Reader style" chevron data-testid="profile.readerStyle" @click="styleOpen = true">
+            <span class="text-ink-muted" :class="readerStyle === 'printed' && 'book-title italic'">{{ readerStyle === 'printed' ? 'Printed' : 'Classic' }}</span>
+          </UiRow>
+        </UiRowGroup>
+      </section>
+      <StyleSheet v-model:open="styleOpen" v-model:style="readerStyle" />
 
       <!-- The round's switches: not part of the design. -->
       <section class="relative mx-ml mt-xxl mb-xxl rounded-lg bg-fill p-inset edge-faint" data-testid="proto.panel">

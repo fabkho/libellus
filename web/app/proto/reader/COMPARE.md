@@ -430,3 +430,33 @@ same morph, from the bar's own square corners instead of a capsule's round ends;
 contents step back), the magnifier flies in from the top bar's button, everything else as in c.
 The Search sheet is gone; Search from selected words opens the palette in every style.
 `round3/a-search-palette-from-bottom-bar.jpg`, `round3/aa-style-printed-classic.jpg`.
+
+## Round 3, last: the palette searches like the app's; Printed is the default
+**The palette's search now behaves as the app's** (`components/search/Results.vue` and
+`Loading.vue`, copied into `BookSearch.vue` and `BookLoading.vue`):
+- the query goes out after the app's typing pause (`SEARCH_DEBOUNCE_MS`); **nothing shows for that
+  pause and a `quick` more**, so a book that answers at once shows no loading at all;
+- until the first places come: **the little book riffling its pages** over "Looking through the
+  pages…", and the **lamp hairline sweeping** along the divider above the query; while more places
+  may still come, the hairline keeps sweeping under the list ("… places in this book so far");
+- the palette **glides to its new height** over `standard`, growing up from the query, the loading
+  state fading out where it stood, and **the nearest places rise in one after another**
+  (`sm`, `instant` / 2 apart);
+- **a newer query dims the places on screen to 60 %** instead of emptying them; its own replace
+  them when they come;
+- the far end of the list (the top) **fades out** under a mask, the count line padded below the fade;
+  no places: "Nowhere in this book", the query, a hint;
+- Reduce Motion: the book rests half fanned, no hairline, heights just change.
+Measured on War and Peace (1.8 MB, 368 sections) at CPU ×4: the first places of "Natasha" are there
+before the loading state would show; all 1,213 in ≈ 10 s, streaming in; "Borodino" (later in the
+book) shows the loading state for ≈ 2 s, then 108 places. Accents are ignored ("Natasha" finds
+"Natásha"). `round3/search-palette-loading-long-book.jpg`,
+`round3/search-palette-arrival-and-dimming.jpg`. In production, `Loading.vue` takes its line as a
+prop and both searches use it.
+
+**Both styles stay; Printed (c) is the default.** Switch in the reader (Aa → Printed | Classic) or in
+the Profile: a **Reader style** row opens a sheet with the two choices, each with a little drawing
+of its page (`round3/profile-reader-style.jpg`). On the prototype page the Profile row is a
+stand-in under the book: the real row belongs in Profile → Account (`components/profile/Account.vue`),
+which phase 1 is changing right now (its Ebook folder row), so it is not touched here. Both places
+write the same device setting.
