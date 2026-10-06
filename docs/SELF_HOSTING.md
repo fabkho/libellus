@@ -95,8 +95,10 @@ Content-Security-Policy only reports (nothing is blocked) and names `*.supabase.
 on a custom domain needs adding to `connect-src` before you ever enforce it.
 
 **Another static host** works the same: build with `pnpm install && pnpm generate` in `web/`, serve
-`web/.output/public` (also linked as `web/dist`), and answer every unknown path with `200.html` (the
-app shell, it routes in the browser) or `404.html`. The two `NUXT_PUBLIC_*` variables have to be set
+`web/.output/public` (also linked as `web/dist`), and answer every unknown path with `200.html` or
+`index.html` (the app shell, it routes in the browser; status 200, a host that answers with a 404
+shows the same page but a wrong status to link previews and crawlers). The build has no
+`404.html`; Pages' SPA fallback depends on that. The two `NUXT_PUBLIC_*` variables have to be set
 in the build's environment: they are baked into the files.
 
 ## 4. Your address

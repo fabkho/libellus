@@ -89,9 +89,13 @@ export function describeError(value: unknown): { message: string; stack: string 
   return { message: `Non-error value: ${Object.prototype.toString.call(value)}`, stack: null }
 }
 
-/** A chunk of the build that could not be loaded: a deploy replaced it, or the connection broke. */
+/**
+ * A chunk of the build that could not be loaded: a deploy replaced it, or the connection broke.
+ * A chunk that is gone is answered with the app shell (`text/html`, status 200) wherever the host
+ * falls back to the shell; Safari and Firefox then complain about the MIME type, not the request.
+ */
 export function isChunkError(message: string): boolean {
-  return /dynamically imported module|Importing a module script failed|Unable to preload CSS|Loading (CSS )?chunk [\w-]+ failed|error loading dynamically imported module/i.test(
+  return /dynamically imported module|Importing a module script failed|not a valid JavaScript MIME type|disallowed MIME type|Expected a JavaScript(-or-Wasm)? module script|Unable to preload CSS|Loading (CSS )?chunk [\w-]+ failed|error loading dynamically imported module/i.test(
     message,
   )
 }

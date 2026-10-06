@@ -60,6 +60,10 @@ describe('what a report keeps', () => {
     expect(isChunkError('TypeError: Importing a module script failed.')).toBe(true)
     expect(isChunkError('error loading dynamically imported module: https://app.test/_nuxt/a.js')).toBe(true)
     expect(isChunkError('Unable to preload CSS for /_nuxt/a.css')).toBe(true)
+    // The shell answered in the chunk's place (Pages' fallback for an address with no file).
+    expect(isChunkError("'text/html' is not a valid JavaScript MIME type for module script 'https://app.test/_nuxt/a.js'.")).toBe(true)
+    expect(isChunkError('Loading module from “https://app.test/_nuxt/a.js” was blocked because of a disallowed MIME type (“text/html”).')).toBe(true)
+    expect(isChunkError('Failed to load module script: Expected a JavaScript-or-Wasm module script but the server responded with a MIME type of "text/html".')).toBe(true)
     expect(isChunkError('TypeError: x is undefined')).toBe(false)
   })
 
