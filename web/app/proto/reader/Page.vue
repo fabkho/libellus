@@ -166,6 +166,11 @@ function onFinish() {
 const wake = ref('off')
 const openTimings = ref<string | null>(null)
 
+// While the round is edited the dev server hot-swaps the reader's code under an open book: the
+// engine, its listeners and the history entries of the old instance stay behind and the reader
+// stops answering (the owner's phone after a run of edits). Any hot update reloads the page instead.
+if (import.meta.hot) import.meta.hot.on('vite:beforeUpdate', () => window.location.reload())
+
 // Screenshots and links: `?open=1` opens the reader straight away.
 onMounted(() => {
   if (q('open') === '1') void openReader()
