@@ -34,8 +34,14 @@ const props = withDefaults(
     eager?: boolean
     /** For the covers the member sees first: asked for ahead of every other image. */
     priority?: boolean
+    /**
+     * The title is written right beside it, in the same row or link: the cover adds nothing for
+     * assistive tech and is left out (empty alt), so a link does not read "Dune Dune Frank Herbert".
+     * A cover on its own (Want to read's row) keeps the title as its name.
+     */
+    decorative?: boolean
   }>(),
-  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false },
+  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false, decorative: false },
 )
 
 const emit = defineEmits<{ fallback: [value: boolean] }>()
@@ -124,7 +130,7 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
       <img
         v-if="showImage"
         :src="current!"
-        :alt="title"
+        :alt="decorative ? '' : title"
         :loading="eager ? 'eager' : 'lazy'"
         :fetchpriority="priority ? 'high' : undefined"
         decoding="async"
@@ -133,7 +139,15 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
         @load="onLoad"
         @error="next"
       />
-      <div v-else class="cloth" :class="compact && 'compact'" :style="{ background: cloth }" role="img" :aria-label="title">
+      <div
+        v-else
+        class="cloth"
+        :class="compact && 'compact'"
+        :style="{ background: cloth }"
+        :role="decorative ? undefined : 'img'"
+        :aria-label="decorative ? undefined : title"
+        :aria-hidden="decorative || undefined"
+      >
         <span class="rule" />
         <template v-if="compact">
           <span class="mark" />

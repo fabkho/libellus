@@ -65,7 +65,7 @@ async function save() {
             enterkeyhint="done"
             :placeholder="t('collections.namePlaceholder')"
             :aria-invalid="collections.nameError ? true : undefined"
-            class="min-w-0 flex-1 bg-transparent text-right text-ink caret-accent outline-none placeholder:text-ink-ghost"
+            class="min-w-0 flex-1 bg-transparent text-right text-ink caret-accent outline-none placeholder:text-ink-faint"
             data-testid="collectionName.input"
           />
         </label>

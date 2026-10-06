@@ -6,6 +6,7 @@
   "common": {
     "cancel": "Cancel",
     "etAl": "et al.",
+    "listSeparator": ", ",
     "dayMonth": "{day} {month}",
     "dayMonthYear": "{day} {month} {year}",
     "today": "Today · {date}",
@@ -162,7 +163,9 @@
       "days": "{count} day | {count} days"
     },
     "authors": {
-      "title": "Authors you return to"
+      "title": "Authors you return to",
+      "count": "{count} book | {count} books",
+      "rating": "{rating} stars on average"
     },
     "years": {
       "title": "Years in review",
@@ -215,6 +218,7 @@
       "eyebrow": "Your year in books",
       "favourite": "The favourite",
       "months": "Months",
+      "monthLabel": "{month}: no books | {month}: {count} book | {month}: {count} books",
       "other": "Other years",
       "before": "{year}",
       "after": "{year}",
@@ -266,6 +270,7 @@
     "emptyTitle": "Your library is empty",
     "empty": "The books you add live here: what you want to read, what you are reading, what you have read.",
     "segmentsLabel": "Status",
+    "yearHeading": "{year}: {count} book | {year}: {count} books",
     "segment": {
       "want_to_read": "Want to read",
       "reading": "Reading",
@@ -429,6 +434,7 @@
       "finishHint": "Saves your progress first.",
       "undo": "Undo",
       "undoLabel": "Undo {change}",
+      "saved": "Progress saved, {change}. Undo is beside it for a few seconds.",
       "theEnd": "The end.",
       "perDay": "{count} a day",
       "perDayPercent": "{count} % a day",
@@ -751,6 +757,9 @@
   },
   "shelf": {
     "title": "Your shelf",
+    "list": {
+      "read": "read {date}"
+    },
     "back": "Back",
     "count": "{count} book | {count} books",
     "yearCount": "{year} · {count} book | {year} · {count} books",

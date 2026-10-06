@@ -20,7 +20,7 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 
 <template>
   <div class="flex items-center gap-ms pb-inset">
-    <UiCover :title="title" :authors="authors" :src="src" :thumbhash="thumbhash" :colors="colors" size="xs" />
+    <UiCover decorative :title="title" :authors="authors" :src="src" :thumbhash="thumbhash" :colors="colors" size="xs" />
     <div class="flex min-w-0 flex-col gap-xxs">
       <span class="book-title truncate text-callout">{{ title }}</span>
       <span class="truncate text-caption text-ink-faint">{{ authorLine }}</span>

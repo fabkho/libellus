@@ -83,7 +83,7 @@ async function submit() {
           >
             <span class="shrink-0" :class="manual.invalid[field.key] ? 'text-error' : 'text-ink-muted'"
               >{{ t(`manual.field.${field.key}`)
-              }}<span v-if="field.required" class="ml-xxs text-accent" aria-hidden="true">*</span></span
+              }}<span v-if="field.required" class="ml-xxs text-accent-ink" aria-hidden="true">*</span></span
             >
             <input
               v-model="model[field.key].value"
@@ -92,7 +92,7 @@ async function submit() {
               :required="field.required"
               :placeholder="field.required ? undefined : t('manual.optional')"
               :aria-invalid="manual.invalid[field.key] ? true : undefined"
-              class="min-w-0 flex-1 bg-transparent text-right text-ink caret-accent outline-none placeholder:text-ink-ghost"
+              class="min-w-0 flex-1 bg-transparent text-right text-ink caret-accent outline-none placeholder:text-ink-faint"
               :class="[(field.key === 'isbn' || field.key === 'pageCount') && 'figures text-caption', manual.invalid[field.key] && 'text-error']"
               :data-testid="`manual.${field.key}`"
             />

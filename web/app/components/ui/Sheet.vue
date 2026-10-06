@@ -158,7 +158,7 @@ function onAfterLeave() {
 <template>
   <Teleport to="body">
     <Transition name="scrim" :css="!resting">
-      <div v-if="open" ref="scrim" class="fixed inset-0 z-40 touch-none bg-scrim" :data-testid="`${testid}.scrim`" @click="close" />
+      <div v-if="open" ref="scrim" class="fixed inset-0 z-40 touch-none bg-scrim" aria-hidden="true" :data-testid="`${testid}.scrim`" @click="close" />
     </Transition>
     <Transition
       v-if="rendered"
@@ -217,7 +217,7 @@ function onAfterLeave() {
               v-if="action"
               type="button"
               :disabled="actionDisabled"
-              class="col-start-1 row-start-1 -mr-sm min-h-(--size-touch) px-sm text-body font-semibold text-accent disabled:text-ink-ghost"
+              class="col-start-1 row-start-1 -mr-sm min-h-(--size-touch) px-sm text-body font-semibold text-accent-ink disabled:text-ink-ghost"
               :data-testid="`${testid}.action`"
               @click="emit('action')"
             >

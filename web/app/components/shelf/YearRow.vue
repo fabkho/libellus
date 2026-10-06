@@ -18,7 +18,7 @@ const { count } = useFigures()
     <div class="flex h-(--size-button-sm) items-center gap-md">
       <h2 class="eyebrow">
         {{ t('shelf.year.title') }}
-        <span v-if="books.length" class="figures ml-xs text-ink-ghost" data-testid="yearInReview.shelfCount">{{ count(books.length) }}</span>
+        <span v-if="books.length" class="figures ml-xs text-ink-faint" data-testid="yearInReview.shelfCount">{{ count(books.length) }}</span>
       </h2>
     </div>
     <ShelfRowCard :year="year" :label="t('shelf.year.rowLabel', { year })" data-testid="yearInReview.shelfRow" />

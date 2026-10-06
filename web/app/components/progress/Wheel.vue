@@ -12,9 +12,11 @@
 // number that passes the centre where the device vibrates (utils/haptics.ts,
 // `stepTick`, throttled). A tap on the centre types the number instead (the
 // numeric keyboard, Enter or leaving keeps it, Escape does not); a tap above or
-// below steps there. For the keyboard and assistive tech it is a `spinbutton`:
-// arrows ±1 (up is more), Page Up/Down ±10, Home/End the ends, a digit or Enter
-// starts typing.
+// below steps there. For the keyboard and assistive tech it is a vertical
+// `slider` (Android maps it to a SeekBar, which TalkBack adjusts with a swipe up
+// or down and reads with its value text; a `spinbutton` became an edit box that
+// TalkBack could not turn): arrows ±1 (up is more), Page Up/Down ±10, Home/End
+// the ends, a digit or Enter starts typing.
 import { stepTick } from '~/utils/haptics'
 import { prefersReducedMotion } from '~/utils/motion'
 import { FOLLOW_MS, TAP_MS, TAP_SLOP_PX, decayAt, flingTarget, releaseSpeed, rubberBand, tappedRow, valueAt } from '~/utils/wheel'
@@ -272,7 +274,8 @@ function rowStyle(i: number) {
     <div
       ref="drum"
       class="drum relative"
-      role="spinbutton"
+      role="slider"
+      aria-orientation="vertical"
       :tabindex="disabled ? -1 : 0"
       :aria-label="label"
       :aria-valuemin="min"
@@ -340,7 +343,7 @@ function rowStyle(i: number) {
 }
 .drum:focus-visible {
   border-radius: var(--radius-md);
-  outline: var(--stroke-focus) solid var(--color-accent);
+  outline: var(--stroke-focus) solid var(--color-accent-ink);
 }
 /* The centre: a filled band between two hairlines, a little taller than a row. */
 .band {

@@ -60,7 +60,7 @@ watch(
       <div class="flex h-(--size-touch) items-center justify-between">
         <h2 class="eyebrow">{{ t('home.reading') }}</h2>
         <!-- Nothing being read: the count would only say 0 above the line that says so. -->
-        <span v-if="reading.length" class="eyebrow text-ink-ghost" data-testid="home.readingCount">{{ reading.length }}</span>
+        <span v-if="reading.length" class="eyebrow text-ink-faint" data-testid="home.readingCount">{{ reading.length }}</span>
       </div>
       <UiListMotion class="flex flex-col gap-ms">
         <HomeReadingCard v-for="(entry, index) in reading" :key="entry.id" :entry="entry" :eager="index < 3" />

@@ -44,6 +44,23 @@ const counts = computed<Record<EntryStatus, number>>(() => ({
   finished: lists.value.finished.length,
 }))
 
+/**
+ * The segments are tabs (WAI-ARIA's tabs pattern): one stop for Tab, the arrows (and Home, End)
+ * move between them and show the one they land on, and the list under them is its tab panel.
+ */
+const tabIds = useId()
+const tabId = (status: EntryStatus) => `${tabIds}-${status}`
+const panelId = `${tabIds}-panel`
+const tabsEl = useTemplateRef<HTMLElement>('tabs')
+function onTabsKeydown(event: KeyboardEvent) {
+  const at = SEGMENTS.indexOf(segment.value)
+  const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: SEGMENTS.length - 1 }[event.key]
+  if (to === undefined) return
+  event.preventDefault()
+  segment.value = SEGMENTS[(to + SEGMENTS.length) % SEGMENTS.length]!
+  void nextTick(() => tabsEl.value?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus())
+}
+
 const filterCounts = computed(() => ({ all: lists.value.finished.length, notFinished: lists.value.notFinished.length }))
 /** What Finished shows: everything, or only the Books that were not finished. */
 const shown = computed(() => (filter.value === 'notFinished' ? lists.value.notFinished : lists.value.finished))
@@ -81,23 +98,28 @@ watch(
   </UiEmptyState>
 
   <div v-else-if="library.loaded">
-    <div role="tablist" :aria-label="t('library.segmentsLabel')" class="flex gap-ml border-b-(length:--stroke-hairline) border-hairline-strong">
+    <div ref="tabs" role="tablist" :aria-label="t('library.segmentsLabel')" class="flex flex-wrap gap-x-ml border-b-(length:--stroke-hairline) border-hairline-strong">
       <button
         v-for="status in SEGMENTS"
         :key="status"
         type="button"
         role="tab"
+        :id="tabId(status)"
         :aria-selected="segment === status"
-        class="segment relative flex h-(--size-touch) items-center gap-xs text-body"
+        :aria-controls="panelId"
+        :tabindex="segment === status ? 0 : -1"
+        class="segment relative flex h-(--size-touch) items-center gap-xs text-body whitespace-nowrap"
         :class="segment === status ? 'on text-ink' : 'text-ink-faint'"
         :data-testid="`library.segment.${status}`"
         @click="segment = status"
+        @keydown="onTabsKeydown"
       >
         {{ t(`library.segment.${status}`) }}
-        <span class="figures text-caption" :class="segment === status ? 'text-ink-muted' : 'text-ink-ghost'">{{ counts[status] }}</span>
+        <span class="figures text-caption" :class="segment === status ? 'text-ink-muted' : 'text-ink-faint'">{{ counts[status] }}</span>
       </button>
     </div>
 
+    <div :id="panelId" role="tabpanel" :aria-labelledby="tabId(segment)">
     <UiListMotion v-if="segment === 'want_to_read' && lists.want_to_read.length" class="flex flex-col pt-xs" data-testid="library.wantToRead">
       <LibraryEntryRow v-for="(entry, index) in lists.want_to_read" :key="entry.id" :entry="entry" :eager="index < 8" />
     </UiListMotion>
@@ -130,9 +152,13 @@ watch(
       </div>
       <section v-for="(group, g) in years" :key="group.year" class="flex flex-col" data-testid="library.year">
         <!-- Pinned while its year scrolls by, as iOS lists pin their section headers. -->
-        <h2 class="year sticky z-10 -mx-screen flex items-center justify-between bg-surface px-screen pt-md pb-xs">
+        <!-- Named as one phrase: the year and its count side by side read as one number ("202615"). -->
+        <h2
+          class="year sticky z-10 -mx-screen flex items-center justify-between bg-surface px-screen pt-md pb-xs"
+          :aria-label="t('library.yearHeading', { year: group.year || t('library.undated'), count: group.entries.length }, group.entries.length)"
+        >
           <span class="eyebrow" data-testid="library.yearTitle">{{ group.year || t('library.undated') }}</span>
-          <span class="eyebrow text-ink-ghost">{{ group.entries.length }}</span>
+          <span class="eyebrow text-ink-faint">{{ group.entries.length }}</span>
         </h2>
         <UiListMotion class="flex flex-col">
           <LibraryEntryRow v-for="(entry, index) in group.entries" :key="entry.id" :entry="entry" :eager="g === 0 && index < 8" />
@@ -143,6 +169,7 @@ watch(
     <div v-else class="px-lg pt-xxl text-center" :data-testid="`library.segmentEmpty.${segment}`">
       <p class="book-title text-callout">{{ t(`library.segmentEmpty.${segment}.title`) }}</p>
       <p class="mt-xs text-subhead text-ink-muted">{{ t(`library.segmentEmpty.${segment}.text`) }}</p>
+    </div>
     </div>
   </div>
 
@@ -172,7 +199,8 @@ watch(
 
 /* The chosen filter's count is quieter than its name, as in D. */
 .filter.on .count {
-  opacity: 0.55;
+  /* Still 4.5:1 on the ink pill in both themes (0.55 was 4.1:1 by night). */
+  opacity: 0.68;
 }
 
 /* The lit segment: a lamp hairline under it, with a little of its glow. */

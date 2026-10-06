@@ -24,7 +24,7 @@ const ruleClass = computed(() =>
       v-bind="$attrs"
       :aria-invalid="error ? true : undefined"
       :aria-describedby="error ? `${id}-error` : undefined"
-      class="min-h-(--size-touch) w-full border-b-(length:--stroke-rule) bg-transparent pb-xs text-input text-ink caret-accent outline-none transition-colors duration-(--duration-quick) ease-standard placeholder:text-ink-ghost"
+      class="min-h-(--size-touch) w-full border-b-(length:--stroke-rule) bg-transparent pb-xs text-input text-ink caret-accent outline-none transition-colors duration-(--duration-quick) ease-standard placeholder:text-ink-faint"
       :class="ruleClass"
       @focus="focused = true"
       @blur="focused = false"

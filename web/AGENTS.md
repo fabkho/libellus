@@ -47,6 +47,12 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   `app/components/shell/`. Every token has a light and a dark value, so a component never branches
   on the theme and never uses `dark:` variants. Book titles are `book-title` (serif); dates and
   figures `figures` (mono).
+- Accessibility (`../docs/ACCESSIBILITY.md`): WCAG 2.2 AA in both themes. Text only in the text
+  tokens (`ink`, `inkMuted`, `inkFaint`, `accentInk`, `error`; never `inkGhost`), a name from
+  `en.json` on every icon button, a cover `decorative` where its title is beside it, one `h1` a
+  page, a polite status for what comes and goes. A new screen or sheet gets an `expectAccessible`
+  scan in `e2e/a11y.spec.ts`, both themes. `pnpm dev` shows axe's findings in the DevTools' Nuxt
+  a11y tab.
 - Every interactive element (and every element a test reads) gets `data-testid="<screen>.<element>"`
   (`start.title`, `search.query`, `book.finish`). It is the native accessibility identifier too, so
   name it for what it is, not how it looks.

@@ -29,6 +29,7 @@ const notFinished = computed(() => isNotFinished(props.entry))
     @press="books.prefetch(entry.book.id)"
   >
     <UiCover
+      decorative
       :title="entry.book.title"
       :authors="entry.book.authors"
       :src="coverSrc(entry.book.coverUrl, 'sm')"
@@ -50,7 +51,7 @@ const notFinished = computed(() => isNotFinished(props.entry))
       </span>
       <span v-else-if="entry.status === 'finished'" class="figures mt-xxs flex items-center gap-sm text-meta text-ink-faint">
         <UiStars v-if="latest?.rating" :quarters="latest.rating" data-testid="library.entryRating" />
-        <span v-else class="text-ink-ghost" data-testid="library.entryUnrated">{{ t('rating.none') }}</span>
+        <span v-else class="text-ink-faint" data-testid="library.entryUnrated">{{ t('rating.none') }}</span>
         <template v-if="latest?.endedOn">
           <span class="dot" aria-hidden="true" /><span data-testid="library.entryEnded">{{ formatDay(latest.endedOn, { year: false }) }}</span>
         </template>

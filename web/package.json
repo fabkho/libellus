@@ -34,6 +34,9 @@
     "zxing-wasm": "^3.1.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@nuxt/a11y": "1.0.0-alpha.1",
+    "@nuxt/hints": "^1.1.4",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/jsdom": "^30.0.0",

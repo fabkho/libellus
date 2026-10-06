@@ -87,16 +87,17 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | fill / fillStrong | `bg-fill`, `bg-fill-strong` | ink 5 % / 8.5 % | cream 5.5 % / 10 % | Grouped rows, the avatar, code cells / quiet buttons, pressed rows |
 | hairline / hairlineStrong | `border-hairline`, `edge-faint` / `edge` | ink 10 % / 17 % | cream 8.5 % / 16 % | Dividers, card edges / chrome edges, outlines |
 | ink | `text-ink`, `bg-ink` | `#1c1915` | `#eee7dc` | Text, icons, the primary button |
-| inkMuted | `text-ink-muted` | 64 % | 64 % | Secondary text |
-| inkFaint | `text-ink-faint` | 45 % | 42 % | Authors, meta, eyebrows, inactive tabs |
-| inkGhost | `text-ink-ghost` | 20 % | 20 % | Placeholders, chevrons, the grabber |
+| inkMuted | `text-ink-muted` | 74 % | 74 % | Secondary text (a clear step above inkFaint) |
+| inkFaint | `text-ink-faint` | 62 % | 56 % | Authors, meta, eyebrows, inactive tabs, placeholders. The faintest text: ≥ 4.5:1 on every surface |
+| inkGhost | `text-ink-ghost` | 20 % | 20 % | Chevrons, separators, the grabber, disabled text. Never text that is read |
 | onInk | `text-on-ink` | `#f8f5ef` | `#0e0c0a` | Text on the primary button |
-| accent | `text-accent`, `border-accent` | `#b8782a` | `#efb768` | The lamp (sparingly, see principle 2) |
+| accent | `text-accent`, `border-accent` | `#b8782a` | `#efb768` | The lamp (sparingly, see principle 2): dots, rules, carets, stars, large figures |
+| accentInk | `text-accent-ink` | `#845418` | `#efb768` | The lamp as small text (the sheet's action, a lit figure, a lamp-coloured link) and the focus ring: ≥ 4.5:1 by day |
 | accentSoft | `bg-accent-soft` | 12 % | 14 % | Focus halos, the selected cell |
 | lampLight / lampCone / lampGlow | (scoped CSS) | | | The light pool and cone of the empty-state lamp; the glow behind the wordmark |
 | star / starTrack | `text-star`, `text-star-track` | accent / ink 20 % | | Rating stars |
 | success | `text-success` | `#4f7a3c` | `#a3c48e` | Confirmations |
-| error / errorSoft | `text-error`, `bg-error-soft` | `#c2452a` | `#ec8063` | Errors, destructive actions |
+| error / errorSoft | `text-error`, `bg-error-soft` | `#b03a20` | `#ec8063` | Errors, destructive actions |
 | scrim | `bg-scrim` | warm black 38 % | black 50 % | Behind a sheet |
 | veil | `bg-veil` | paper 55 % | room 55 % | Over the blurred page behind the search palette |
 | cloth1–6, clothInk | (Cover) | same in both | | Placeholder covers: a cover is an object, not chrome |
@@ -319,7 +320,7 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiReveal` | Something that is not there until it has something to say (#79: the book page's figures, chart and reading log before progress was tracked). `show` opens its room and fades it in over `standard` (the content under it glides, no jump), closes over `exit`; Reduce Motion a short fade. Carries `data-moving` while moving. |
 | `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe, pencil, flag, arrow, sun, moon, signOut, trash (a bin: deleting the account), offline (a cloud struck through: an action that cannot write now), sync (a cloud with an arrow up: changes waiting to sync, #93), ebook (a reader's screen with lines of a page: an ebook file on this device, #131). Decorative; the control carries the label. New icons are drawn on the same grid. |
 | `UiAvatar` | The member's initials (`utils/initials.ts`) in mono in a hairline ring. |
-| `UiCover` | Every cover. 2:3, `object-fit: cover`, token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. |
+| `UiCover` | Every cover. 2:3, `object-fit: cover`, token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. Its accessible name is the title, unless `decorative`: wherever the title is written beside it (a row, a card, the book page's hero) the cover is left out for assistive tech, so nothing is read twice. |
 | `UiAmbient` | The light a cover throws onto its card (`shape="card"`) or page (`shape="page"`), from the cover's precomputed colours. Currently reading cards, book detail. |
 | `UiStars` | A Rating, display only: quarter-filled stars plus the exact mono value ("3.75"). `quarters` 1–20 or null (five empty stars, no value). Sizes sm/md/lg (and `input`, for the rating control). |
 | `UiRatingInput` | Setting a Rating (D's finish sheet): the value large in the accent (or "Not rated"), five `input` stars, a rail of quarter notches with a thumb. Drag snaps to the nearest quarter, a tap sets the whole star, Clear or a drag off the first star empties it. A `slider` for the keyboard (arrows a quarter, Page Up/Down a star, Home/End) and assistive tech. `v-model` quarters or null; `testid` on the slider, `<testid>.clear`, `<testid>.value`. Geometry in `utils/rating.ts` (`ratingX`, `quartersAt`, `wholeStarsAt`). Marked `data-no-swipe`, so a sheet never takes a drag across it for a swipe down. |
@@ -358,9 +359,11 @@ in `web/i18n/locales/en.json`.
 - 44 px targets everywhere (`--size-touch`), also behind drawn controls smaller than that.
 - Icons are `aria-hidden`; their buttons have labels (`aria-label` from the message file, or
   visually hidden text, as the tabs do).
-- Contrast: body text is `ink` or `inkMuted` on `surface`; `inkFaint` is for secondary meta only,
-  `inkGhost` never for text that must be read.
-- Focus is visible (`:focus-visible` draws a 2 px accent outline).
+- Contrast: every text token reaches WCAG AA (4.5:1) on every surface and on a fill over it, in
+  both themes: `ink`, `inkMuted`, `inkFaint` (the faintest text, also placeholders), `accentInk` (the
+  lamp as small text), `error`. `inkGhost` (1.5:1) is never for text that must be read; `accent`
+  as text only at figure size. The ratios and the rest: [ACCESSIBILITY.md](ACCESSIBILITY.md).
+- Focus is visible (`:focus-visible` draws a 2 px `accentInk` outline).
 - Reduce Motion is honoured (MOTION.md).
 
 ## Don'ts

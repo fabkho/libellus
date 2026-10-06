@@ -42,7 +42,7 @@ const top = computed(() => Math.max(...rows.value.map((b) => b.count), 1))
         <span class="relative h-(--stroke-focus) flex-1 rounded-pill bg-hairline-strong" :class="{ wave: loading }" :style="{ '--wave': i * 0.15 }">
           <span class="fill absolute inset-y-0 left-0 rounded-pill bg-star" :style="{ '--w': row.count / top }" />
         </span>
-        <span class="figures w-(--size-button-sm) text-right text-meta" :class="[row.count ? 'text-ink-muted' : 'text-ink-ghost', { arrive: arriving }]">{{ loading ? '' : count(row.count) }}</span>
+        <span class="figures w-(--size-button-sm) text-right text-meta" :class="[row.count ? 'text-ink-muted' : 'text-ink-faint', { arrive: arriving }]">{{ loading ? '' : count(row.count) }}</span>
       </button>
     </div>
   </section>

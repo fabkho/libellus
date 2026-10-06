@@ -34,6 +34,17 @@ export default defineNuxtConfig({
   devtools: { enabled: !process.env.LIBELLUS_E2E },
 
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment],
+  // Accessibility and hints in Nuxt DevTools (docs/ACCESSIBILITY.md): `nuxt dev` only, never in a
+  // build (both modules also do nothing outside dev, and `$development` keeps them out of the
+  // generate run altogether), and not in the Playwright run, where the DevTools are off and an
+  // axe scan after every tap would only slow WebKit down; e2e/a11y.spec.ts runs axe there instead.
+  $development: {
+    modules: process.env.LIBELLUS_E2E ? [] : ['@nuxt/a11y', '@nuxt/hints'],
+    a11y: { logIssues: true },
+    // A SPA renders nothing on a server: no hydration to compare, no SSR render to find unused
+    // components in. Web vitals, third-party scripts and the HTML check stay on.
+    hints: { features: { hydration: false, lazyLoad: false } },
+  },
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
@@ -69,6 +80,9 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'en' },
+      // The static shell's title, for the moment before the app sets its own from the message file
+      // (app.vue): a page without one is announced by its address.
+      title: 'Libellus',
       meta: [
         // viewport-fit=cover so the installed app can draw under the notch (and
         // Chrome on Android edge to edge, behind its gesture bar); screens pad

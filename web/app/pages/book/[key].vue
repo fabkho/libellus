@@ -108,6 +108,11 @@ function measureTitle() {
   const el = titleEl.value
   if (el && !titleOpen.value) titleCut.value = el.scrollHeight > el.clientHeight + 1
 }
+/** A tap on a cut title shows all of it, or folds it again. Bound only then, so an uncut title is no control. */
+function toggleTitle() {
+  titleOpen.value = !titleOpen.value
+  void nextTick(measureTitle)
+}
 watch([key, () => book.value?.title], () => {
   titleOpen.value = false
   void nextTick(measureTitle)
@@ -159,6 +164,7 @@ function back() {
 
     <section v-if="book" ref="heroEl" class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="book.hero">
       <UiCover
+        decorative
         :title="book.title"
         :authors="book.authors"
         :src="coverSrc(book.coverUrl, 'xl')"
@@ -175,14 +181,17 @@ function back() {
         :class="[!titleOpen && 'line-clamp-3', (titleCut || titleOpen) && 'cursor-pointer']"
         :title="book.title"
         data-testid="book.title"
-        @click="(titleCut || titleOpen) && ((titleOpen = !titleOpen), nextTick(measureTitle))"
+        v-on="titleCut || titleOpen ? { click: toggleTitle } : {}"
       >
         {{ book.title }}
       </h1>
       <p class="mt-xs max-w-full text-body text-ink-muted wrap-anywhere" data-testid="book.authors">{{ authorLine }}</p>
       <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
+        <!-- Drawn with dots between them; assistive tech reads them as one phrase with commas, or they run
+             together ("2012240 pages") or, split up, make TalkBack stop on every piece. -->
+        <span class="sr-only">{{ facts.join(t('common.listSeparator')) }}</span>
         <template v-for="(fact, i) in facts" :key="fact">
-          <span v-if="i" class="dot" aria-hidden="true" />{{ fact }}
+          <span v-if="i" class="dot" aria-hidden="true" /><span aria-hidden="true">{{ fact }}</span>
         </template>
       </p>
       <!-- Goodreads' rating, once known (#69). -->

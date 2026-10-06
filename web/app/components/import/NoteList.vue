@@ -27,6 +27,7 @@ const authorLine = (authors: readonly string[]) => formatAuthors([...authors], t
   <ul class="flex flex-col" :data-testid="testid">
     <li v-for="item in items" :key="item.key" class="row flex items-start gap-inset py-sm" :data-testid="`${testid}.row`">
       <UiCover
+        decorative
         :title="item.title"
         :authors="item.authors"
         :src="coverSrc(item.cover?.url, 'xs')"

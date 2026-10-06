@@ -102,7 +102,7 @@ test('a member starts a book, sets page 120 on the wheel, turns it from Home, un
   await expect(page.getByTestId('progress.sheetTitle')).toHaveText(en.book.progress.title)
   await expect(page.getByTestId('progress.action')).toHaveText(en.book.progress.save)
   await expect(page.getByTestId('progress.mode.page')).toHaveAttribute('aria-pressed', 'true')
-  await expect(wheel).toHaveAttribute('role', 'spinbutton')
+  await expect(wheel).toHaveAttribute('role', 'slider')
   await expect(wheel).toHaveAttribute('aria-valuenow', '0')
   await expect(wheel).toHaveAttribute('aria-valuemax', '480')
   await expect(page.getByTestId('progress.total')).toHaveText(en.book.progress.totalOf.replace('{count}', '480'))

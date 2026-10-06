@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{ months: { month: number, reads: StatsRe
 
 const { t } = useI18n()
 const books = useBookStore()
-const { count, monthShort } = useFigures()
+const { count, monthShort, monthLong } = useFigures()
 
 const root = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
@@ -83,8 +83,17 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <section id="months" ref="root" :aria-label="t('profile.year.months')" class="flex flex-col" data-testid="yearInReview.months">
-    <div v-for="m in months" :key="m.month" class="month flex items-center gap-md py-xs" :data-testid="`yearInReview.month.${m.month}`">
-      <span class="eyebrow w-(--size-touch) shrink-0">{{ monthShort(m.month) }}</span>
+    <!-- A month is a group named with its count ("March: 3 books"); the short name and the figure
+         are drawn for the eye only, or they run into the covers' names. -->
+    <div
+      v-for="m in months"
+      :key="m.month"
+      role="group"
+      :aria-label="t('profile.year.monthLabel', { month: monthLong(m.month), count: m.reads.length }, m.reads.length)"
+      class="month flex items-center gap-md py-xs"
+      :data-testid="`yearInReview.month.${m.month}`"
+    >
+      <span class="eyebrow w-(--size-touch) shrink-0" aria-hidden="true">{{ monthShort(m.month) }}</span>
       <span v-if="loading && m.month <= goneBy" class="flex flex-1" aria-hidden="true"><span class="cover-skeleton skeleton wave" :style="{ '--wave': (m.month - 1) * 0.06 }" /></span>
       <span v-else-if="m.reads.length" class="relative flex min-w-0 flex-1 flex-wrap gap-xs" data-intro-row>
         <span v-for="read in m.reads" :key="read.sessionId" class="block" data-intro-cover>
@@ -101,7 +110,7 @@ onBeforeUnmount(() => observer?.disconnect())
         </span>
       </span>
       <span v-else class="flex-1 text-ink-ghost" aria-hidden="true">—</span>
-      <span class="figures w-(--size-button-sm) shrink-0 text-right text-meta" :class="m.reads.length ? 'text-ink-muted' : 'text-ink-ghost'">{{ m.reads.length ? count(m.reads.length) : '' }}</span>
+      <span class="figures w-(--size-button-sm) shrink-0 text-right text-meta" :class="m.reads.length ? 'text-ink-muted' : 'text-ink-faint'" aria-hidden="true">{{ m.reads.length ? count(m.reads.length) : '' }}</span>
     </div>
   </section>
 </template>

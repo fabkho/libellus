@@ -63,7 +63,7 @@ const facts = computed(() => {
       </div>
       <span />
       <div class="grid justify-items-end">
-        <button type="button" class="-mr-sm min-h-(--size-touch) px-sm text-body font-semibold text-accent" data-testid="shelfRow.flip" @click="emit('flip')">
+        <button type="button" class="-mr-sm min-h-(--size-touch) px-sm text-body font-semibold text-accent-ink" data-testid="shelfRow.flip" @click="emit('flip')">
           {{ face === 'front' ? t('shelf.detail.backCover') : t('shelf.detail.frontCover') }}
         </button>
       </div>
@@ -81,7 +81,7 @@ const facts = computed(() => {
         :href="goodreadsUrl(book)"
         target="_blank"
         rel="noopener"
-        class="self-end text-footnote text-accent"
+        class="self-end text-footnote text-accent-ink"
         data-testid="shelfRow.goodreads"
       >
         {{ t('shelf.detail.goodreads') }}

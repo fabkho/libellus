@@ -18,7 +18,8 @@ defineEmits<{ back: [] }>()
     <header class="bar-top safe-x pointer-events-none fixed inset-x-0 top-0 z-30 mx-auto max-w-(--size-max-content)" data-top-bar>
       <div class="relative flex h-(--size-touch) items-center justify-between px-inset">
         <UiRoundButton class="pointer-events-auto" icon="back" :label="backLabel" :data-testid="backTestid" @click="$emit('back')" />
-        <span v-if="title" class="absolute left-1/2 -translate-x-1/2 truncate text-body font-medium">{{ title }}</span>
+        <!-- A title in the bar is the screen's own (Your shelf): its heading. -->
+        <h1 v-if="title" class="absolute left-1/2 -translate-x-1/2 truncate text-body font-medium">{{ title }}</h1>
         <span class="pointer-events-auto flex gap-sm"><slot name="trailing" /></span>
       </div>
     </header>

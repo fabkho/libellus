@@ -44,6 +44,7 @@ function pick(entry: LibraryEntry) {
             @click="pick(entry)"
           >
             <UiCover
+              decorative
               :title="entry.book.title"
               :authors="entry.book.authors"
               :src="coverSrc(entry.book.coverUrl, 'sm')"

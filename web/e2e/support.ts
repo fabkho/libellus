@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, type Locator, type Page } from '@playwright/test'
 import { ratingX } from '../app/utils/rating'
 import { appleAnswer, appleCover } from '../tests/support/apple'
@@ -197,6 +198,8 @@ export async function expectNoSideScroll(page: Page, where: string) {
       const box = el.getBoundingClientRect()
       if (!box.width && !box.height) continue
       if (box.right <= width + 0.5 && box.left >= -0.5) continue
+      // Visually hidden for assistive tech (`sr-only`, Nuxt's route announcer): a clipped 1 px box.
+      if (box.width <= 1 && box.height <= 1 && getComputedStyle(el).overflow === 'hidden') continue
       if (clipsAt(el)) continue
       outside.push(`${name(el)} ${Math.round(box.left)}…${Math.round(box.right)}`)
     }
@@ -218,4 +221,51 @@ export async function expectNoSideScroll(page: Page, where: string) {
   expect.soft(found.scrollWidth, `${where}: the document is wider than the viewport`).toBeLessThanOrEqual(found.clientWidth)
   expect.soft(found.scrollX, `${where}: the page was moved sideways`).toBe(0)
   expect.soft(found.outside, `${where}: elements stick out of the viewport`).toEqual([])
+}
+
+// ------------------------------------------------------------- accessibility
+
+/** The WCAG 2.2 A and AA rules and axe's best practices. */
+const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa', 'best-practice']
+
+/** Known violations: the rule, where (text the node's selector or its HTML contains), and why it is allowed. */
+export const ALLOWED: { rule: string; where: string; reason: string }[] = [
+  {
+    rule: 'aria-prohibited-attr',
+    where: 'row-card__scroller',
+    reason:
+      "Regal's row (the owner's shelf) names its scroller with aria-label on a div without a role. Regal's DOM, not Libellus': a Regal follow-up (docs/ACCESSIBILITY.md, Known gaps).",
+  },
+]
+
+const allowed = (rule: string, node: { target: string; html: string }) =>
+  ALLOWED.some((a) => a.rule === rule && (node.target.includes(a.where) || node.html.includes(a.where)))
+
+/** Scans the page as it is now (once nothing moves) and fails on a serious or critical violation. */
+export async function expectAccessible(page: Page, where: string) {
+  await untilStill(page)
+  // Lists fade in over `standard` after they have their room; axe reads colours as drawn. Endless
+  // animations (a caret, the loading shimmer) never finish and are not waited for.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => {})),
+    ),
+  )
+  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze()
+  const found = violations.flatMap((v) =>
+    v.nodes
+      .filter((node) => !allowed(v.id, { target: node.target.join(' '), html: node.html }))
+      .map((node) => ({ rule: v.id, impact: v.impact ?? 'minor', target: node.target.join(' '), summary: node.failureSummary ?? '' })),
+  )
+  const blocking = found.filter((v) => v.impact === 'serious' || v.impact === 'critical')
+  const other = found.filter((v) => !blocking.includes(v))
+  if (other.length) console.log(`[a11y] ${where}: ${other.map((v) => `${v.impact} ${v.rule} ${v.target}`).join('; ')}`)
+  // Soft: one scan's findings do not hide the next screen's.
+  expect.soft(
+    blocking.map((v) => `${v.impact} ${v.rule} at ${v.target}: ${v.summary.split('\n').slice(0, 2).join(' ')}`),
+    `serious or critical accessibility violations on ${where}`,
+  ).toEqual([])
 }

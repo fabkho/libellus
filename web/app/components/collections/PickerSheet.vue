@@ -93,6 +93,7 @@ async function startCreating() {
           @click="collections.toggle(collection.id)"
         >
           <UiCover
+            decorative
             v-if="collection.covers[0]"
             :title="collection.covers[0].title"
             :authors="collection.covers[0].authors"
@@ -134,7 +135,7 @@ async function startCreating() {
             enterkeyhint="done"
             :placeholder="t('collections.namePlaceholder')"
             :aria-label="t('collections.nameLabel')"
-            class="min-w-0 flex-1 bg-transparent text-body text-ink caret-accent outline-none placeholder:text-ink-ghost"
+            class="min-w-0 flex-1 bg-transparent text-body text-ink caret-accent outline-none placeholder:text-ink-faint"
             data-testid="picker.newName"
           />
           <UiButton type="submit" size="sm" :disabled="createBusy || !newName.trim()" :offline="!online" data-testid="picker.create">

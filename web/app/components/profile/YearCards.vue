@@ -48,6 +48,7 @@ const arriving = useArrival(() => !props.years)
             <span class="figures text-meta text-ink-muted">{{ t('profile.years.books', { count: count(y.books) }, y.books) }}</span>
           </span>
           <UiCover
+            decorative
             v-if="y.favourite"
             :title="y.favourite.book.title"
             :authors="y.favourite.book.authors"

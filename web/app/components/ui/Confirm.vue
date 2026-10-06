@@ -60,7 +60,7 @@ const textId = useId()
 <template>
   <Teleport to="body">
     <Transition name="scrim">
-      <div v-if="open" ref="scrim" class="fixed inset-0 z-60 touch-none bg-scrim" :data-testid="`${testid}.scrim`" @click="close" />
+      <div v-if="open" ref="scrim" class="fixed inset-0 z-60 touch-none bg-scrim" aria-hidden="true" :data-testid="`${testid}.scrim`" @click="close" />
     </Transition>
     <Transition name="dialog" @after-leave="afterLeave">
       <section

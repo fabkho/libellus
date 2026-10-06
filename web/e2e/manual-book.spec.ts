@@ -61,7 +61,8 @@ test('a member adds a book by hand when search finds nothing and sees it in the 
   await expect(page).toHaveURL(/\/library$/)
   await expect(page.getByTestId('library.entryTitle')).toHaveText(['Meine Notizen'])
   // No image: the entry wears the generated cover, cloth with its rule and mark (title and author are set in type from `md` up: the book page).
-  const cover = page.getByTestId('library.entry').getByRole('img', { name: 'Meine Notizen' })
+  // The row writes the title beside it, so the cover is decorative for assistive tech (UiCover `decorative`).
+  const cover = page.getByTestId('library.entry').locator('.cloth')
   await expect(cover).toBeVisible()
   await expect(cover).not.toContainText('Ida Beispiel')
 

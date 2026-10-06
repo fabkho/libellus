@@ -43,6 +43,14 @@ const gain = computed(() => {
   const key = by.amount > 0 ? (by.unit === 'page' ? 'gainPages' : 'gainPercent') : by.unit === 'page' ? 'lossPages' : 'lossPercent'
   return t(`book.progress.${key}`, { count: n(Math.abs(by.amount)) })
 })
+
+/** What the card's one button does now: Finish at the last page, Undo right after a save, else Update. */
+const action = computed(() => (atEnd.value ? 'finish' : undo.value ? 'undo' : 'update'))
+function act() {
+  if (action.value === 'finish') reading.openFinish(props.entry)
+  else if (action.value === 'undo') void reading.undoProgress()
+  else reading.openProgress(props.entry)
+}
 </script>
 
 <template>
@@ -88,29 +96,27 @@ const gain = computed(() => {
           <span v-if="atEnd" class="text-body text-ink" data-testid="home.theEnd">{{ t('book.progress.theEnd') }}</span>
           <template v-else>
             <span class="figures" :class="progress ? 'text-ink-muted' : 'text-ink-faint'" data-testid="home.progressValue">{{ words.value }}</span>
-            <span v-if="gain" class="figures text-accent" data-testid="home.progressGain"> · {{ gain }}</span>
+            <span v-if="gain" class="figures text-accent-ink" data-testid="home.progressGain"> · {{ gain }}</span>
           </template>
         </p>
-        <UiButton v-if="atEnd" size="sm" data-testid="home.finish" @click="reading.openFinish(entry)">
-          <UiIcon name="check" :size="15" bold />
-          {{ t('book.finish') }}
-        </UiButton>
+        <!-- One button that turns into the next (Update, Undo, Finish) rather than three that take
+             turns: the sheet gives focus back to Update when it closes, and the same element, now
+             Undo, keeps it instead of focus falling to the page. -->
         <UiButton
-          v-else-if="undo"
-          tone="plain"
+          :tone="action === 'finish' ? 'primary' : action === 'undo' ? 'plain' : 'quiet'"
           size="sm"
-          class="-mr-sm"
-          :disabled="reading.undoBusy"
-          :aria-label="gain ? t('book.progress.undoLabel', { change: gain }) : undefined"
-          data-testid="home.undo"
-          @click="reading.undoProgress()"
+          :class="action === 'undo' && '-mr-sm'"
+          :disabled="action === 'undo' && reading.undoBusy"
+          :aria-label="action === 'undo' && gain ? t('book.progress.undoLabel', { change: gain }) : undefined"
+          :data-testid="`home.${action}`"
+          @click="act"
         >
-          {{ t('book.progress.undo') }}
-        </UiButton>
-        <UiButton v-else tone="quiet" size="sm" data-testid="home.update" @click="reading.openProgress(entry)">
-          {{ t('book.progress.updateShort') }}
+          <UiIcon v-if="action === 'finish'" name="check" :size="15" bold />
+          {{ action === 'finish' ? t('book.finish') : action === 'undo' ? t('book.progress.undo') : t('book.progress.updateShort') }}
         </UiButton>
       </div>
+      <!-- Said once a save lands, as a toast would show it: what changed, and that Undo is there. -->
+      <span class="sr-only" role="status">{{ gain ? t('book.progress.saved', { change: gain }) : '' }}</span>
     </div>
   </article>
 </template>

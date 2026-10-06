@@ -83,10 +83,10 @@ watch(
       >
         <!-- A fixed track: the count rides on top of its bar inside it. -->
         <span class="track flex w-full flex-col items-center justify-end gap-xs">
-          <span class="figures text-meta" :class="[column.key === lit ? 'text-accent' : 'text-ink-muted', { arrive: arriving }]">{{ column.count ? count(column.count) : '' }}</span>
+          <span class="figures text-meta" :class="[column.key === lit ? 'text-accent-ink' : 'text-ink-muted', { arrive: arriving }]">{{ column.count ? count(column.count) : '' }}</span>
           <span class="bar" :class="{ lit: column.key === lit, none: !column.count }" :style="{ '--h': column.count / top }" />
         </span>
-        <span class="figures text-meta" :class="[column.key === lit ? 'text-accent' : 'text-ink-faint', { arrive: arriving }]" aria-hidden="true">{{ column.label }}</span>
+        <span class="figures text-meta" :class="[column.key === lit ? 'text-accent-ink' : 'text-ink-faint', { arrive: arriving }]" aria-hidden="true">{{ column.label }}</span>
       </button>
     </template>
   </div>

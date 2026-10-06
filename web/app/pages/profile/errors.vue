@@ -124,7 +124,7 @@ function open(group: OwnerErrorGroup) {
           >
             <span class="flex items-center gap-sm">
               <span class="chip eyebrow rounded-pill bg-fill-strong px-sm py-xxs" data-testid="errors.groupKind">{{ t(`ownerErrors.kind.${group.kind}`) }}</span>
-              <span v-if="isNew(group)" class="eyebrow text-accent" data-testid="errors.groupNew">{{ t('ownerErrors.new') }}</span>
+              <span v-if="isNew(group)" class="eyebrow text-accent-ink" data-testid="errors.groupNew">{{ t('ownerErrors.new') }}</span>
               <span class="figures ml-auto text-body text-ink" data-testid="errors.groupTimes">{{ t('ownerErrors.times', { count: count(group.times) }) }}</span>
               <UiIcon name="chevron" :size="15" bold class="-mr-xs text-ink-ghost" />
             </span>

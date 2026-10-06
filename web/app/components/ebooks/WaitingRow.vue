@@ -18,7 +18,7 @@ const title = computed(() => props.record.metadata.title || t('ebooks.untitled')
 
 <template>
   <li class="flex gap-inset py-sm" data-testid="ebooks.waiting">
-    <UiCover :title="title" :authors="record.metadata.authors" :src="ebooks.coverOf(record)" size="sm" />
+    <UiCover decorative :title="title" :authors="record.metadata.authors" :src="ebooks.coverOf(record)" size="sm" />
     <div class="flex min-w-0 flex-1 flex-col gap-xxs">
       <span class="book-title truncate text-body-large" data-testid="ebooks.waitingTitle">{{ title }}</span>
       <span v-if="record.metadata.authors.length" class="truncate text-caption text-ink-muted">{{ formatAuthors(record.metadata.authors, t('common.etAl')) }}</span>
