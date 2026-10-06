@@ -98,7 +98,7 @@ watch(
   </UiEmptyState>
 
   <div v-else-if="library.loaded">
-    <div ref="tabs" role="tablist" :aria-label="t('library.segmentsLabel')" class="flex gap-ml border-b-(length:--stroke-hairline) border-hairline-strong">
+    <div ref="tabs" role="tablist" :aria-label="t('library.segmentsLabel')" class="flex flex-wrap gap-x-ml border-b-(length:--stroke-hairline) border-hairline-strong">
       <button
         v-for="status in SEGMENTS"
         :key="status"
@@ -108,7 +108,7 @@ watch(
         :aria-selected="segment === status"
         :aria-controls="panelId"
         :tabindex="segment === status ? 0 : -1"
-        class="segment relative flex h-(--size-touch) items-center gap-xs text-body"
+        class="segment relative flex h-(--size-touch) items-center gap-xs text-body whitespace-nowrap"
         :class="segment === status ? 'on text-ink' : 'text-ink-faint'"
         :data-testid="`library.segment.${status}`"
         @click="segment = status"

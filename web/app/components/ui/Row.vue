@@ -30,12 +30,12 @@ const tag = computed(() => (props.to ? NuxtLink : props.as))
     :is="tag"
     :to="to"
     :type="as === 'button' && !to ? 'button' : undefined"
-    class="ui-row relative flex h-(--size-row) w-full items-center gap-ms px-inset text-left text-body"
+    class="ui-row relative flex min-h-(--size-row) w-full items-center gap-ms px-inset text-left text-body"
     :class="[tone === 'danger' ? 'text-error' : 'text-ink', (as === 'button' || to) && 'not-disabled:hover:bg-fill active:bg-fill-strong']"
   >
     <UiIcon v-if="icon" :name="icon" :size="18" :class="tone === 'danger' ? '' : 'text-ink-faint'" />
     <span class="shrink-0" :class="value !== undefined || placeholder ? 'text-ink-muted' : ''">{{ label }}</span>
-    <span class="flex min-w-0 flex-1 items-center justify-end gap-sm truncate text-right" :class="mono && 'figures text-caption'">
+    <span class="flex min-w-0 flex-1 items-center justify-end-safe gap-sm truncate text-right" :class="mono && 'figures text-caption'">
       <slot>
         <template v-if="value">{{ value }}</template>
         <span v-else-if="placeholder" class="text-ink-faint">{{ placeholder }}</span>
