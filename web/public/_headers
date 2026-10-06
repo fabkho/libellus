@@ -1,0 +1,36 @@
+# Cloudflare Pages response headers (https://developers.cloudflare.com/pages/configuration/headers/).
+# The build adds its own rules after these (Nitro's cloudflare-pages-static preset: `/_nuxt/*` and
+# `/_fonts/*` immutable for a year, their names carry a hash). Hosting notes: docs/HOSTING.md.
+
+# Every response. Pages already sends X-Content-Type-Options: nosniff and
+# Referrer-Policy: strict-origin-when-cross-origin; these add the rest.
+# - The camera for the barcode scanner (#92), for Libellus itself only; off: what the app never
+#   asks for. (Vibration is not a policy feature, nothing to allow.)
+# - Never framed: everything personal sits behind the sign-in.
+# - The Content-Security-Policy only reports for now (in the browser console): what the app
+#   loads, from where. Supabase (API, functions, realtime), Apple and Open Library (search,
+#   covers, their thumbhash read with CORS), the owner's shelf (`books.fabkho.dev`, Regal's
+#   textures as blobs), the barcode decoder (WebAssembly), Cloudflare Web Analytics (the
+#   beacon Pages adds to the HTML, docs/HOSTING.md). Covers come from any https host (an
+#   imported Book keeps its own). 'unsafe-inline' for scripts: the theme boot script, the
+#   import map and Nuxt's runtime config are inline, and two of them change with every build.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  X-Frame-Options: DENY
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://books.fabkho.dev https://itunes.apple.com https://openlibrary.org https://covers.openlibrary.org https://*.mzstatic.com https://cloudflareinsights.com; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+# The service worker, the script it imports and the manifest have fixed names: always asked
+# again, so a new deploy reaches installed apps on their next start.
+/sw.js
+  Cache-Control: no-cache
+/sw-sync.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# The Pages address of production (libellus-3q1.pages.dev) stays reachable, without a
+# redirect, but out of search results: libellus.fabkho.dev is the one address. Preview and
+# branch addresses (<id>.libellus-3q1.pages.dev) get noindex from Pages already.
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex

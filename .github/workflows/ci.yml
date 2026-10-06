@@ -352,10 +352,10 @@ jobs:
         working-directory: web
         run: pnpm install --frozen-lockfile && pnpm build
 
-      - name: Service worker and manifest are emitted
+      - name: Service worker, manifest and Pages headers are emitted
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
         working-directory: web
-        run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
+        run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest && grep -q '^/sw.js$' .output/public/_headers
 
       # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
       - name: Regal is built apart and left out of the precache
