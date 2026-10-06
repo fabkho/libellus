@@ -20,7 +20,7 @@ import BookSearch from './BookSearch.vue'
 import { REST, coverCopy, fitBox, poseOf, ratioOf, rectOf } from './flight'
 import { ProgressWriter, QUICK_POLICY, SPEC_POLICY, pageAt } from './progress'
 import { MARGINS, readSettings, writeSettings, type ReaderSettings, type ReaderTheme } from './settings'
-import { runningHead, type ChromeInfo } from './types'
+import type { ChromeInfo } from './types'
 import ChromeQuiet from './ChromeQuiet.vue'
 import ChromeScroll from './ChromeScroll.vue'
 import ChromePrinted from './ChromePrinted.vue'
@@ -321,7 +321,8 @@ const layout = computed<Layout>(() => {
   // The bands above and below the text shrink with the margins (edge to edge: the safe area and a hair);
   // the printed page keeps room for its running head and folio, the scroll for its floating chapter.
   if (mode.value === 'b') return { flow: 'scrolled', animated: false, gap, margin: edge + margins.band + 12, maxColumns: 1, maxInlineSize: margins.measure }
-  if (mode.value === 'c') return { flow: 'paginated', animated: false, gap, margin: edge + Math.max(30, margins.band + 12), maxColumns: 2, maxInlineSize: Math.min(margins.measure, 700) }
+  // c: no running head any more (the title floats in with the capsule), so the top band is a's; the foot keeps room for the folio.
+  if (mode.value === 'c') return { flow: 'paginated', animated: false, gap, margin: edge + Math.max(24, margins.band), maxColumns: 2, maxInlineSize: Math.min(margins.measure, 700) }
   return { flow: 'paginated', animated: !reduced.value, gap, margin: edge + margins.band, maxColumns: 1, maxInlineSize: margins.measure }
 })
 
@@ -557,12 +558,11 @@ function paintMargins() {
       textOverflow: 'ellipsis',
     })
     if (kind === 'head') Object.assign(el.style, { fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '13px', letterSpacing: '0.01em' })
-    else Object.assign(el.style, { fontFamily: 'var(--font-mono)', fontSize: '11px', fontVariantNumeric: 'tabular-nums', paddingTop: '16px' })
+    else Object.assign(el.style, { fontFamily: 'var(--font-mono)', fontSize: '11px', fontVariantNumeric: 'tabular-nums', paddingTop: '8px' })
   }
-  r.heads.forEach((el, i) => {
-    style(el, 'head')
-    const head = runningHead(props.book.title, info.value.chapter)
-    el.textContent = two && i === 0 ? props.book.title : head
+  // The running head is gone (owner, after round 3): the title floats in over the page with the capsule instead.
+  r.heads.forEach((el) => {
+    el.textContent = ''
   })
   r.feet.forEach((el, i) => {
     style(el, 'foot')

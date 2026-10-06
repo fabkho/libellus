@@ -515,3 +515,14 @@ there was nothing to scroll, Next chapter never offered itself, and nothing went
 - while the reader is open the page has no overscroll (`overscroll-behavior: none`), so a pull at a
   chapter's top can never be Chrome's pull-to-refresh.
 `round3/scroll-cover-next-chapter.jpg`.
+
+**c's title (owner, after round 3).** The running head took a band at the top of every page. It is gone:
+while reading, c's page has nothing above the text (the top band is now a's, so the text starts
+higher; the folio stays at the foot). A tap in the middle floats **the title** (serif) and the
+chapter (mono eyebrow) in at the top **together with the capsule**, and the next tap takes both
+away (fade and a small drop, `standard` in, `exit` out). As iOS 26's bars: **no background** — the
+words sit straight over the page, kept legible by a **soft scroll edge effect** under them: the page
+blurred a little in two steps (the stronger blur shorter) and fading out downward, over a light
+tint of the room, only as tall as the title's row. (Kept light on purpose: #62 found a heavy blurred
+band under the app's top edge too much.) `round3/c-floating-title.jpg` (reading | title shown in
+sepia, light, dark).
