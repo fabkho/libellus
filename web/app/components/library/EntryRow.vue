@@ -40,7 +40,7 @@ const notFinished = computed(() => isNotFinished(props.entry))
       :class="notFinished && 'dimmed'"
     />
     <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-      <span class="book-title truncate text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ entry.book.title }}</span>
+      <span class="book-title title-wrap text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ entry.book.title }}</span>
       <span class="flex min-w-0 items-center gap-xs">
         <span class="truncate text-caption" :class="notFinished ? 'text-ink-faint' : 'text-ink-muted'">{{ authorLine }}</span>
         <EbooksMark :entry="entry" testid="library.ebookMark" />

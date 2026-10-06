@@ -63,7 +63,7 @@ const place = computed(() =>
       <div class="mx-auto max-w-(--size-max-content) px-ml pb-xs" data-reader-morph="item">
         <p v-if="info.behind" class="flex items-center justify-between gap-sm pt-sm text-caption text-ink-muted">
           <span>{{ t('reader.behind', { page: info.behind }) }}</span>
-          <button type="button" class="min-h-(--size-touch) font-medium text-accent" data-testid="reader.setHere" @click="$emit('setHere')">
+          <button type="button" class="min-h-(--size-touch) font-medium text-accent-ink" data-testid="reader.setHere" @click="$emit('setHere')">
             {{ t('reader.setHere', { page: info.page !== null ? t('reader.pageOnly', { page: info.page }) : t('reader.percent', { percent: Math.round(info.fraction * 100) }) }) }}
           </button>
         </p>

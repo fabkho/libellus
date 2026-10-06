@@ -53,7 +53,7 @@ function pick(entry: LibraryEntry) {
               size="sm"
             />
             <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-              <span class="book-title truncate text-body-large">{{ entry.book.title }}</span>
+              <span class="book-title title-wrap text-body-large">{{ entry.book.title }}</span>
               <span class="truncate text-caption text-ink-muted">{{ formatAuthors(entry.book.authors, t('common.etAl')) }}</span>
               <span class="figures text-meta text-ink-faint">{{ [entry.book.year, entry.book.publisher].filter(Boolean).join(' · ') }}</span>
             </span>

@@ -37,7 +37,7 @@ const authorLine = (authors: readonly string[]) => formatAuthors([...authors], t
         class="mt-xxs"
       />
       <div class="flex min-w-0 flex-1 flex-col gap-xxs">
-        <span class="book-title truncate text-callout" :data-testid="`${testid}.title`">{{ item.title }}</span>
+        <span class="book-title title-wrap text-callout" :data-testid="`${testid}.title`">{{ item.title }}</span>
         <span v-if="item.authors.length" class="truncate text-caption text-ink-faint">{{ authorLine(item.authors) }}</span>
         <span v-for="(note, index) in item.notes" :key="index" class="text-footnote text-ink-muted" :data-testid="`${testid}.note`">
           {{ note }}

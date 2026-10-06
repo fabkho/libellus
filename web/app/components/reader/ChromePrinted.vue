@@ -286,7 +286,7 @@ function onCapsuleClick(event: MouseEvent) {
         @click="$emit('setHere')"
       >
         {{ t('reader.behind', { page: info.behind }) }}
-        <span class="font-medium text-accent">{{ t('reader.setHere', { page: info.page !== null ? t('reader.pageOnly', { page: info.page }) : t('reader.percent', { percent: Math.round(info.fraction * 100) }) }) }}</span>
+        <span class="font-medium text-accent-ink">{{ t('reader.setHere', { page: info.page !== null ? t('reader.pageOnly', { page: info.page }) : t('reader.percent', { percent: Math.round(info.fraction * 100) }) }) }}</span>
       </button>
       <!-- The search palette grows out of this capsule (BookSearch.vue), as the app's palette grows out of the tab bar. -->
       <!-- While the scrubber is open, its label stands where the progress note would. -->
@@ -334,7 +334,7 @@ function onCapsuleClick(event: MouseEvent) {
         <button
           v-if="origin !== null"
           type="button"
-          class="figures flex min-h-(--size-touch) shrink-0 items-center gap-xxs rounded-pill pr-sm pl-xs text-caption text-accent"
+          class="figures flex min-h-(--size-touch) shrink-0 items-center gap-xxs rounded-pill pr-sm pl-xs text-caption text-accent-ink"
           :aria-label="t('reader.slider.back', { page: origin })"
           data-testid="reader.scrubBack"
           @click="tick(), $emit('returnToOrigin')"

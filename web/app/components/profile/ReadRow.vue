@@ -35,7 +35,7 @@ const nthRead = (n: number) => (ORDINALS[n - 1] ? t(`history.ordinal.${ORDINALS[
     />
     <span class="flex min-w-0 flex-1 flex-col gap-xxs">
       <span v-if="label" class="eyebrow">{{ label }}</span>
-      <span class="book-title truncate text-callout" data-testid="profile.readTitle">{{ read.book.title }}</span>
+      <span class="book-title title-wrap text-callout" data-testid="profile.readTitle">{{ read.book.title }}</span>
       <template v-if="!label">
         <span class="flex min-w-0 items-center gap-sm text-caption text-ink-muted">
           <span class="truncate">{{ formatAuthors(read.book.authors, t('common.etAl')) }}</span>

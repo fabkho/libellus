@@ -54,7 +54,7 @@ watch([open, target, () => props.text], ([isOpen]) => isOpen && run(), { immedia
     <div class="mt-md flex items-center gap-sm text-caption">
       <span class="text-ink-faint">{{ languageName(from) }}</span>
       <UiIcon name="arrow" :size="14" class="text-ink-ghost" />
-      <label class="relative flex items-center gap-xxs font-medium text-accent">
+      <label class="relative flex items-center gap-xxs font-medium text-accent-ink">
         {{ languageName(target) }}<UiIcon name="down" :size="13" />
         <select v-model="target" class="absolute inset-0 opacity-0" :aria-label="t('reader.translate.into')" data-testid="readerTranslate.target">
           <option v-for="l in choices" :key="l.code" :value="l.code">{{ l.name }}</option>
@@ -70,7 +70,7 @@ watch([open, target, () => props.text], ([isOpen]) => isOpen && run(), { immedia
 
     <p class="mt-md mb-xs flex items-center justify-between px-xs text-meta text-ink-faint">
       <span>{{ result ? t(result.provider === 'device' ? 'reader.translate.device' : 'reader.translate.service') : '' }}</span>
-      <button v-if="isDefinable(text)" type="button" class="min-h-(--size-touch) text-caption font-medium text-accent" data-testid="readerTranslate.define" @click="$emit('define')">
+      <button v-if="isDefinable(text)" type="button" class="min-h-(--size-touch) text-caption font-medium text-accent-ink" data-testid="readerTranslate.define" @click="$emit('define')">
         {{ t('reader.translate.define') }}
       </button>
     </p>

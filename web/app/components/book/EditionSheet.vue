@@ -97,7 +97,7 @@ async function change() {
           :priority="index < FIRST_COVERS"
         />
         <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-          <span class="book-title truncate text-callout text-ink" data-testid="edition.candidateTitle">{{ candidate.book.title }}</span>
+          <span class="book-title title-wrap text-callout text-ink" data-testid="edition.candidateTitle">{{ candidate.book.title }}</span>
           <span class="truncate text-caption text-ink-faint">{{ formatAuthors(candidate.book.authors, t('common.etAl')) }}</span>
           <!-- The last fact (the publisher, mostly) is the one that gives way when the row is narrow. -->
           <span v-if="facts(candidate).length" class="figures flex min-w-0 items-center gap-xs text-meta text-ink-faint" data-testid="edition.candidateFacts">

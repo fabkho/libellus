@@ -128,6 +128,26 @@
   font-optical-sizing: auto;
 }
 
+/* A title in a row: one line with an ellipsis, as the rows are drawn. With large text (the root
+   font size scaled up by the phone's text size or the browser's zoom, which leaves the column
+   fewer rem to stand in: 22 rem or less, the 412 px phone from 117 %) it may take two lines
+   before it is cut, so a long title is not lost to "The Left Hand of …". Authors and meta
+   lines stay on one line (docs/ACCESSIBILITY.md, Text size). The row has to let its text
+   column shrink (`min-w-0`) and grow taller (`min-h`, never `h`). */
+@utility title-wrap {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  @media (max-width: 22rem) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* A row that scrolls sideways by touch or trackpad and shows no bar under it:
    shelves of covers, the year pills, the year cards. */
 @utility scrollbar-none {

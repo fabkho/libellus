@@ -54,7 +54,7 @@ watch(open, async (isOpen) => {
     <div class="mb-sm flex items-center gap-ms">
       <UiCover :title="book.title" :authors="book.authors" :src="book.cover" :thumbhash="book.thumbhash" :colors="book.colors" size="sm" />
       <div class="min-w-0 flex-1">
-        <p class="book-title truncate text-callout">{{ book.title }}</p>
+        <p class="book-title title-wrap text-callout">{{ book.title }}</p>
         <p class="figures mt-xxs truncate text-meta text-ink-faint">{{ where }}</p>
         <!-- The progress line is a slider here too. -->
         <Scrub class="-my-xs" :fraction="info.fraction" :pages="info.pages" :saved="null" data-no-swipe @scrub="$emit('scrub', $event)" />
