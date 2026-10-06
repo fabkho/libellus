@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { test } from './fixtures'
-import { signedIn } from './support'
+import { openProfile, signedIn } from './support'
 
 /**
  * The first name for Home's greeting (issue #49, audit item 10): set from the
@@ -21,7 +21,7 @@ test('a member gives Home her first name from the Profile, and takes it back', a
   const initials = await page.getByTestId('shell.avatar').innerText()
 
   // No name yet: the row says so; tapping it opens the sheet with the field focused.
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await expect(page.getByTestId('profile.nameValue')).toHaveText(en.account.nameNone)
   await page.getByTestId('profile.name').click()
   await expect(page.getByTestId('accountName.input')).toBeFocused()
@@ -42,7 +42,7 @@ test('a member gives Home her first name from the Profile, and takes it back', a
   await expect(page.getByTestId('home.title')).toHaveText(named('Ida'))
 
   // Taken back: the row shows it, Remove name clears it.
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await expect(page.getByTestId('profile.nameValue')).toHaveText('Ida')
   await page.getByTestId('profile.name').click()
   await expect(page.getByTestId('accountName.input')).toHaveValue('Ida')

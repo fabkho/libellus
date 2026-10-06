@@ -6,7 +6,7 @@ import { isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { recordedApple, signedIn, untilStill } from './support'
+import { goto, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * The share target and the app shortcuts (#91). Another app shares a link or
@@ -172,14 +172,14 @@ test('a share that arrives signed out waits through the sign-in and then opens t
 
 test('an empty share goes Home', async ({ page }) => {
   await signedIn(page)
-  await page.goto('/share')
+  await goto(page, '/share')
   await expect(page.getByTestId('home.title')).toBeVisible()
   await expect(page).toHaveURL(/\/$/)
 })
 
 test('the Search shortcut opens the palette on Home, and takes itself off the address', async ({ page }) => {
   await signedIn(page)
-  await page.goto('/?search=1')
+  await goto(page, '/?search=1')
   await expect(page.getByTestId('search.overlay')).toBeVisible()
   await expect(page.getByTestId('search.query')).toBeFocused()
   await expect(page).toHaveURL(/\/$/)
@@ -187,7 +187,7 @@ test('the Search shortcut opens the palette on Home, and takes itself off the ad
 
 test('the Update progress shortcut opens the sheet of the book updated last, or stays on Home when nothing is read', async ({ page }) => {
   const member = await signedIn(page)
-  await page.goto('/?progress=1')
+  await goto(page, '/?progress=1')
   await expect(page.getByTestId('home.title')).toBeVisible()
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByTestId('progress')).toBeHidden()
@@ -202,7 +202,7 @@ test('the Update progress shortcut opens the sheet of the book updated last, or 
   await new Promise((resolve) => setTimeout(resolve, 1100))
   expect((await library.updateProgress(older.id, { page: 40 }, undefined, isoDay())).error).toBeNull()
 
-  await page.goto('/?progress=1')
+  await goto(page, '/?progress=1')
   await expect(page.getByTestId('book.title')).toHaveText(older.book.title)
   await expect(page.getByTestId('progress')).toBeVisible()
   await expect(page.getByTestId('progress.wheel')).toHaveAttribute('aria-valuenow', '40')

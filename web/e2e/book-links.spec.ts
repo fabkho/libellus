@@ -5,7 +5,7 @@ import { createLibrary } from '../app/data/library'
 import { createLinkTemplates } from '../app/data/linkTemplates'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { goto, recordedApple, signedIn, untilStill } from './support'
+import { goto, openProfile, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * Book links (issue #116): a member keeps her own ordered list of links in the
@@ -61,7 +61,7 @@ test('she sets her links in the Profile, in her order, and a Book page offers th
   const without = (await library.addToLibrary(book('Unnumbered', null))).data!
 
   // None yet: the row says so, the sheet is empty.
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await expect(page.getByTestId('profile.linksValue')).toHaveText(en.links.rowNone)
   await page.getByTestId('profile.links').click()
   await expect(page.getByTestId('links.empty')).toBeVisible()

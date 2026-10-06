@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto'
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { openProfile, recordedApple, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -65,7 +65,7 @@ test('a member imports a Goodreads export, sees the books in her Library, and im
   }
 
   // From the Profile's account rows.
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await expect(page.getByTestId('profile.import')).toHaveText(en.import.menuItem)
   await page.getByTestId('profile.import').click()
   await expect(page).toHaveURL(/\/import$/)
@@ -134,7 +134,7 @@ test('a member imports a Goodreads export, sees the books in her Library, and im
   ])
 
   // The same file again: everything is there, nothing to import.
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await page.getByTestId('profile.import').click()
   await page.getByTestId('import.again').click()
   await page.getByTestId('import.file').setInputFiles(file)

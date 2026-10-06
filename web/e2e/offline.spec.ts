@@ -5,7 +5,7 @@ import { createLibrary } from '../app/data/library'
 import { isoDay } from '../app/utils/dates'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { keepShell } from './offlineShell'
-import { goto, recordedApple, signedIn } from './support'
+import { goto, openProfile, recordedApple, signedIn } from './support'
 
 /**
  * Offline (#15): the member loads her Library online, the device loses its
@@ -162,7 +162,7 @@ test('the Library opens offline, online-only actions say so, and search finds he
 
   // Signing out leaves no copy of her Library on the device.
   await page.getByTestId('shell.tab.home').click()
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await page.getByTestId('profile.signOut').click()
   await expect(page).toHaveURL(/\/sign-in$/)
   expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('libellus.')))).toEqual([])

@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { INSTALL_HINT_KEY } from '../app/utils/installHint'
-import { signedIn } from './support'
+import { openProfile, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -158,7 +158,7 @@ test.describe('Chrome on Android', () => {
     await expect(page.getByTestId('home.emptyTitle')).toBeVisible()
     await expect(page.getByTestId('home.installHint')).toBeHidden()
 
-    await page.getByTestId('shell.avatar').click()
+    await openProfile(page)
     await expect(page.getByTestId('profile.install')).toContainText(en.profile.account.install)
 
     await page.getByTestId('profile.install').click()
