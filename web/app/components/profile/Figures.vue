@@ -58,13 +58,17 @@ const cells = computed(() => {
       <dd v-if="cell.value === null" class="value flex items-center" aria-hidden="true">
         <span class="bar skeleton wave" :style="{ '--wave': i * 0.12 }" />
       </dd>
-      <dd v-else class="value text-figure tabular-nums" :class="{ arrive: arriving }" :data-testid="`profile.${cell.key}`">{{ cell.value }}</dd>
+      <dd v-else class="value text-figure tabular-nums" :class="{ arrive: arriving }" :style="{ '--chars': String(cell.value).length }" :data-testid="`profile.${cell.key}`">{{ cell.value }}</dd>
       <dd class="figures truncate text-meta text-ink-faint" :class="{ arrive: arriving }" :data-testid="cell.lineTestid">{{ cell.line }}</dd>
     </div>
   </dl>
 </template>
 
 <style scoped>
+/* The cell is the container the figure measures itself against (below). */
+.cell {
+  container-type: inline-size;
+}
 /* A line with nothing to say keeps its height, so the four cells line up. */
 .cell > :last-child {
   min-height: var(--text-meta--line-height);
@@ -72,6 +76,14 @@ const cells = computed(() => {
 /* The figure's line, held by its placeholder too: nothing moves when it lands. */
 .value {
   height: var(--text-figure--line-height);
+}
+/* A figure never outgrows its cell: at the size the design gives it unless the cell is too narrow
+   for its characters (a "29.2K" at 200 % text), when it takes the size that fits, at about 0.62 em
+   a character (three at least, so a lone "7" keeps its size). */
+.cell .value.text-figure {
+  display: flex;
+  align-items: center;
+  font-size: min(var(--text-figure), calc(100cqi / (max(var(--chars, 3), 3) * 0.62)));
 }
 /* About the size of a two- or three-digit figure, its digits' height. */
 .bar {
