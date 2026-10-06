@@ -96,6 +96,7 @@ function back() {
         <div v-if="shelf.shelf" class="lift absolute inset-x-0 bottom-0">
           <LazyShelfStage ref="stage" :year="year" class="room-3d" :class="ready && 'ready'" data-testid="shelf.stage" @ready="ready = true" />
         </div>
+        <ShelfBookList :books="books" :label="t('shelf.title')" />
 
         <Transition name="hand-over">
           <div v-if="!ready && !(shelf.loadError && !shelf.shelf)" class="pointer-events-none absolute inset-0 flex items-center justify-center px-xxl" data-testid="shelf.loading">

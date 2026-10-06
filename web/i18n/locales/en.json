@@ -756,6 +756,9 @@
   },
   "shelf": {
     "title": "Your shelf",
+    "list": {
+      "read": "read {date}"
+    },
     "back": "Back",
     "count": "{count} book | {count} books",
     "yearCount": "{year} · {count} book | {year} · {count} books",
