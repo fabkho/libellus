@@ -23,6 +23,8 @@ const readInYear = useSettled(() => library.readInYear)
 
 // The year's Books, in a sheet: the tally opens it (HomeTallySheet).
 const tallyOpen = ref(false)
+// For the owner, the sheet's row of that year is warmed on idle, so it opens with its Spines drawn.
+useShelfPreload(() => library.readInYearOf)
 
 const empty = computed(
   () => library.loaded && !library.reading.length && !library.wantToRead.length && !library.finished.length,

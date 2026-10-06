@@ -7,12 +7,10 @@
 // row holds, Show all opens the whole shelf, the full-screen Stack
 // (/profile/shelf); below that the row is all of it, and nothing links there.
 // Before the library file has come the section is there without its count, and
-// the card holds the stand-in's slabs; when it can't be read, the card says why
-// and tries again (offline: once the connection is back, stores/shelf.ts).
+// the card its plain surface (the row appears with its intro, nothing loading
+// shows: the shell has warmed it, useShelfPreload); when it can't be read, the
+// card says why and tries again (offline: once the connection is back, stores/shelf.ts).
 import { useShelfStore } from '~/stores/shelf'
-
-/** How many of the newest Books the Profile's row holds; more than that, and Show all opens the rest. */
-const SHELF_ROW_LIMIT = 80
 
 const { t } = useI18n()
 const { count } = useFigures()
@@ -43,6 +41,6 @@ const more = computed(() => books.value.length > SHELF_ROW_LIMIT)
         {{ t('shelf.retry') }}
       </UiButton>
     </div>
-    <ShelfRowCard v-else :books="books.slice(0, SHELF_ROW_LIMIT)" :limit="SHELF_ROW_LIMIT" :label="t('shelf.card.rowLabel')" data-testid="profile.shelfRow" />
+    <ShelfRowCard v-else :limit="SHELF_ROW_LIMIT" :label="t('shelf.card.rowLabel')" data-testid="profile.shelfRow" />
   </section>
 </template>

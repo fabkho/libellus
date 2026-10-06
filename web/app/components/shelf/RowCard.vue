@@ -6,15 +6,22 @@
 // finger and lets the page scroll on; a Book tapped breaks out to the whole
 // screen (ShelfRow).
 //
-// The 3D is fetched only once the card comes near the view (Regal and
-// three.js are the `regal` chunk, `LazyShelfRow`); until it has drawn, the
-// Books stand in a row of slabs in their Spines' colours (ShelfPile), the
-// newest at the middle as the row starts there, or a year's January at the middle, as the row rests.
-import type { ShelfBook } from '~/data/shelf'
+// The card keeps its size (18rem) whatever is in it, so nothing shifts when
+// the row arrives. The row appears with its intro and no loading step of
+// ours: the owner's screens have already warmed Regal's chunk, the library file
+// and the first Spines (useShelfPreload), so it draws its Spines on its first
+// frame. While nothing is drawn (a first visit with no head start) the card is
+// its plain surface: no slabs, no spinner.
+//
+// The row mounts as the card comes into the view, not with its screen: its
+// intro plays once per mount, and on the Profile the card sits well below the
+// figures, where an intro that played on arrival would be over before she
+// scrolled to it. A screen away it asks for the warm-up again (the same call
+// the shell made on idle, shared with it): a head start for a visit that came
+// straight to the card.
+import { warmShelfRow } from '~/composables/useShelfPreload'
 
 const props = defineProps<{
-  /** The Books the row shows, newest first (the stand-in's slabs). */
-  books: readonly ShelfBook[]
   /** Only this year's Books, the row starting at January. */
   year?: number | null
   /** Only the newest this many Books. */
@@ -25,72 +32,43 @@ const props = defineProps<{
   bare?: boolean
 }>()
 
-// The stand-in shows what the row shows first: the newest, or the year's first, in the card's middle.
-const STAND_IN = 28
-const standIn = computed(() =>
-  props.year ? [...props.books].reverse().slice(0, STAND_IN) : props.books.slice(0, STAND_IN).reverse(),
-)
-
-// Near the view (a screen above or below it): time to fetch the 3D.
 const frame = ref<HTMLElement | null>(null)
-const near = ref(false)
-const ready = ref(false)
-let observer: IntersectionObserver | null = null
-onMounted(() => {
-  if (typeof IntersectionObserver === 'undefined') return void (near.value = true)
-  observer = new IntersectionObserver(
+/** The card is in view: the row mounts, and plays its intro where it is seen. */
+const shown = ref(false)
+const observers: IntersectionObserver[] = []
+
+/** Calls `then` once, the first time the card comes within `margin` of the view. */
+function once(margin: string, then: () => void) {
+  const observer = new IntersectionObserver(
     (entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return
-      near.value = true
-      observer?.disconnect()
+      observer.disconnect()
+      then()
     },
-    { rootMargin: '100% 0px' },
+    { rootMargin: margin },
   )
+  observers.push(observer)
   if (frame.value) observer.observe(frame.value)
+}
+
+onMounted(() => {
+  if (typeof IntersectionObserver === 'undefined') return void (shown.value = true)
+  // A screen away: warm it (shared with the shell's warm-up when that has run).
+  once('100% 0px', () => warmShelfRow(props.year ?? null))
+  // Its top edge in the upper three quarters of the view: the intro is seen.
+  once('0px 0px -25% 0px', () => (shown.value = true))
 })
-onBeforeUnmount(() => observer?.disconnect())
+onBeforeUnmount(() => observers.forEach((observer) => observer.disconnect()))
 </script>
 
 <template>
-  <div ref="frame" class="card relative overflow-hidden rounded-lg" :class="!bare && 'bg-surface-raised shadow-raised edge-faint'" :data-ready="ready || undefined">
-    <LazyShelfRow v-if="near" :year="year" :limit="limit" :label="label" class="row-3d" :class="ready && 'ready'" @ready="ready = true" />
-    <Transition name="hand-over">
-      <!-- Where the row stands its Books: under the months' dates, over the title of the one in focus. -->
-      <div v-if="!ready" class="stand-in pointer-events-none absolute inset-x-0 flex" :class="year ? 'justify-start' : 'justify-end'">
-        <ShelfPile :books="standIn" :limit="STAND_IN" axis="row" />
-      </div>
-    </Transition>
+  <div ref="frame" class="card relative overflow-hidden rounded-lg" :class="!bare && 'bg-surface-raised shadow-raised edge-faint'">
+    <LazyShelfRow v-if="shown" :year="year" :limit="limit" :label="label" />
   </div>
 </template>
 
 <style scoped>
 .card {
   height: 18rem;
-}
-.stand-in {
-  top: 20%;
-  bottom: 18%;
-  /* The row stands the first Book (a year's January, else the newest) in the
-     card's middle, half a slab from the centre, as it does at rest. */
-  padding-inline: calc(50% - var(--spacing-sm));
-}
-.row-3d {
-  opacity: 0;
-  transition: opacity var(--duration-standard) var(--ease-standard);
-}
-.row-3d.ready {
-  opacity: 1;
-}
-.hand-over-leave-active {
-  transition: opacity var(--duration-standard) var(--ease-standard);
-}
-.hand-over-leave-to {
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .row-3d,
-  .hand-over-leave-active {
-    transition: none;
-  }
 }
 </style>

@@ -250,9 +250,13 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   80 Books standing Spines out, a sheet and the month between months. The year in review has the
   same card with that year's Books. The row scrolls sideways under the finger and never traps the
   page's scroll; a Book tapped breaks out over the whole screen, header and tab bar included, and
-  Done, Escape, a tap beside it or the system's Back lands it in the row again. While Regal loads, `ShelfPile` stands in: the Books as flat slabs
-  in their Spines' colours, as thick as they are long (a pile on the shelf page, standing in a row
-  in the cards), never a spinner or a shimmer.
+  Done, Escape, a tap beside it or the system's Back lands it in the row again. The row has no loading
+  step of ours: the owner's screens warm it ahead on idle (Regal's `preloadRegal`: the library file,
+  the 3D code, the first Spines), so it appears with Regal's own intro, the Stack's turned on its side;
+  where nothing is drawn yet (a first visit with no head start) the card is its plain surface until the
+  row has its Spines, never slabs, a spinner or a shimmer. Only the shelf page's Stack, which has no
+  intro of its own to wait for, stands in with `ShelfPile`: the Books as flat slabs in their Spines'
+  colours, as thick as they are long.
 - **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
   own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
   follows the theme, so native parts — the date picker, autofill — do too); Safari, without

@@ -28,6 +28,8 @@ const { t, locale } = useI18n()
 const route = useRoute()
 // The shortcuts' addresses (`/?search=1`, `/?progress=1`) and a share that found no Book (composables/useLaunch.ts).
 useLaunch()
+// The owner's shell: her Profile is one tap away, so its shelf row is warmed on idle (nobody else's shell does anything).
+useShelfPreload()
 
 const screen = computed(() => String(route.meta.screen ?? 'home'))
 const pushed = computed(() => Boolean(route.meta.pushed))
