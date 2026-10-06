@@ -6,6 +6,7 @@ export type IconName =
   | 'search'
   | 'back'
   | 'plus'
+  | 'minus'
   | 'more'
   | 'close'
   | 'check'
@@ -77,6 +78,7 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     <template v-else-if="name === 'search'"><circle cx="10.8" cy="10.8" r="6.3" /><path d="m15.5 15.5 4.5 4.5" /></template>
     <template v-else-if="name === 'back'"><path d="M14.5 5.5 8 12l6.5 6.5" /></template>
     <template v-else-if="name === 'plus'"><path d="M12 5.5v13M5.5 12h13" /></template>
+    <template v-else-if="name === 'minus'"><path d="M5.5 12h13" /></template>
     <template v-else-if="name === 'more'">
       <circle cx="5.5" cy="12" r="1.1" fill="currentColor" stroke="none" />
       <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />

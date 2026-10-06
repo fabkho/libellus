@@ -96,6 +96,9 @@ function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: stats.year, star }
 }
 
+// Her photo (#156): the hero's avatar and the Account's Photo row both open it.
+const photo = useTemplateRef<{ start: () => void }>('photo')
+
 // The Profile belongs to whatever tab it was opened from: back by history when there is one.
 function back() {
   if (window.history.state?.back) router.back()
@@ -108,7 +111,7 @@ function back() {
     <UiAmbient :colors="light" />
     <UiTopBar :back-label="t('profile.back')" back-testid="profile.back" @back="back" />
 
-    <ProfileHero :since="since" :read="booksRead" :reading="stats.record?.reading ?? 0" :want="stats.record?.wantToRead ?? 0" :loading="loading" :expect-since="placeholders" />
+    <ProfileHero @photo="photo?.start()" :since="since" :read="booksRead" :reading="stats.record?.reading ?? 0" :want="stats.record?.wantToRead ?? 0" :loading="loading" :expect-since="placeholders" />
 
     <!-- No gaps between the blocks: each carries the space after it inside its room, so a block that closes takes its space along. -->
     <div class="relative flex flex-col px-screen pt-xl">
@@ -163,9 +166,10 @@ function back() {
 
       <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
 
-      <ProfileAccount />
+      <ProfileAccount @photo="photo?.start()" />
     </div>
 
+    <ProfilePhoto ref="photo" />
     <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.year === 'all'" />
   </div>
 </template>

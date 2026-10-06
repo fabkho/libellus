@@ -6,7 +6,9 @@
 // leading one, #93), then the title block `bar` (10) below it and `bar` above the page —
 // a mono date eyebrow over the greeting on Home, a large title elsewhere. The
 // pushed screens with a large title (Collections, Import) put theirs on the
-// same row under their UiTopBar. The title's test ID is `<screen>.title`.
+// same row under their UiTopBar. The title's test ID is `<screen>.title`. The
+// avatar shows her photo (the small copy, #156) where she has one.
+import { useAvatarStore } from '~/stores/avatar'
 import { useSessionStore } from '~/stores/session'
 
 withDefaults(defineProps<{ screen: string; title: string; size?: 'title' | 'large'; eyebrow?: string }>(), {
@@ -17,6 +19,8 @@ withDefaults(defineProps<{ screen: string; title: string; size?: 'title' | 'larg
 const { t } = useI18n()
 const session = useSessionStore()
 const initials = computed(() => initialsOf(session.member?.email ?? '', session.member?.name))
+const avatar = useAvatarStore()
+onMounted(() => void avatar.load())
 </script>
 
 <template>
@@ -29,7 +33,7 @@ const initials = computed(() => initialsOf(session.member?.email ?? '', session.
         class="-mr-sm flex shrink-0 size-(--size-touch) items-center justify-center"
         data-testid="shell.avatar"
       >
-        <UiAvatar :initials="initials" data-profile-avatar />
+        <UiAvatar :initials="initials" :photo="avatar.small" data-profile-avatar />
       </NuxtLink>
     </div>
     <div class="flex min-w-0 flex-col gap-sm py-bar">
