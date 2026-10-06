@@ -32,6 +32,8 @@ const label = computed(() =>
         </span>
       </button>
     </Transition>
+    <!-- The chip comes and goes without a word; this says it (politely) for a screen reader. -->
+    <span class="sr-only" role="status">{{ sync.pending || failed ? label : '' }}</span>
     <ShellSyncSheet />
   </div>
 </template>

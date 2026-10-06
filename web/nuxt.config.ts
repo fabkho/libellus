@@ -80,6 +80,9 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'en' },
+      // The static shell's title, for the moment before the app sets its own from the message file
+      // (app.vue): a page without one is announced by its address.
+      title: 'Libellus',
       meta: [
         // viewport-fit=cover so the installed app can draw under the notch (and
         // Chrome on Android edge to edge, behind its gesture bar); screens pad
