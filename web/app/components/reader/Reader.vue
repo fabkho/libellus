@@ -24,7 +24,7 @@ import { isDefinable } from '~/data/reader/lookup'
 import { ProgressWriter, progressAt } from '~/data/reader/progress'
 import { MARGINS, type ReaderTheme } from '~/data/reader/settings'
 import type { Highlight, HighlightColor } from '~/data/reader/device'
-import { REST, coverCopy, fitBox, poseOf, ratioOf, rectOf } from '~/utils/readerFlight'
+import { REST, fitBox, poseOf, ratioOf, readerCoverCopy, rectOf } from '~/utils/readerFlight'
 import type { ChromeInfo } from '~/utils/readerChrome'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import type { Box, Layout, PageColors, ReaderEngine, Relocation, Selection } from '~/reader/engine'
@@ -613,7 +613,7 @@ async function openFlight(engineReady: Promise<ReaderEngine | null>) {
   }
   const ratio = await ratioOf(hero.src)
   let target = fitBox(pageArea(), ratio)
-  const copy = coverCopy(flyLayer.value!, hero.src, target)
+  const copy = readerCoverCopy(flyLayer.value!, hero.src, target)
   hero.el.style.visibility = 'hidden'
   pageEl.style.opacity = '0'
   const duration = durationToken('sheet')
@@ -669,7 +669,7 @@ async function close() {
   if (layer && pageEl && hero) {
     const ratio = await ratioOf(hero.src)
     const target = coverOnPage() ?? fitBox(pageArea(), ratio)
-    const copy = coverCopy(flyLayer.value!, hero.src, target)
+    const copy = readerCoverCopy(flyLayer.value!, hero.src, target)
     hero.el.style.visibility = 'hidden'
     const easing = easingToken('standard')
     // The page gives way to its cover, which then flies home; the room fades as it goes.

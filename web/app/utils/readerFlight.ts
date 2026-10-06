@@ -38,7 +38,7 @@ export function poseOf(at: Box, look: Box, radius: number): Keyframe {
 export const REST: Keyframe = { transform: 'translate(0px, 0px) scale(1)', clipPath: 'inset(0px 0px round 0px)' }
 
 /** A copy of the cover image laid out at `at` in `layer`. */
-export function coverCopy(layer: HTMLElement, src: string, at: Box): HTMLElement {
+export function readerCoverCopy(layer: HTMLElement, src: string, at: Box): HTMLElement {
   const box = document.createElement('div')
   Object.assign(box.style, {
     position: 'fixed',
