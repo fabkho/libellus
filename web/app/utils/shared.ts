@@ -8,7 +8,13 @@ import { isbn10To13, isValidIsbn10, isValidIsbn13 } from '../data/books'
  * a bookstore app may share only a title or an ISBN. This reads whatever
  * arrived into the one thing the app can act on. Pure: no Vue, no network.
  */
-export type SharedPayload = { title?: string | null; text?: string | null; url?: string | null }
+export type SharedPayload = {
+  title?: string | null
+  text?: string | null
+  url?: string | null
+  /** EPUB files shared to the app (issue #131): the id the service worker kept them under (public/sw-share.js). */
+  ebooks?: string | null
+}
 
 export type SharedBook = {
   /** A valid ISBN-13 found in a link or in the text (an ISBN-10 is converted), else null. */

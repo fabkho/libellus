@@ -223,7 +223,9 @@
   },
   "share": {
     "title": "Shared with Libellus",
-    "finding": "Finding your book…"
+    "finding": "Finding your book…",
+    "taking": "Taking in your ebook…",
+    "takingMany": "Taking in your ebooks… {done} of {total}"
   },
   "tabs": {
     "home": "Home",

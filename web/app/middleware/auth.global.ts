@@ -30,8 +30,9 @@ export default defineNuxtRouteMiddleware((to) => {
   }
 
   if (path === '/share' && import.meta.client) {
-    const shared = { title: first(to.query.title), text: first(to.query.text), url: first(to.query.url) }
-    if (shared.title || shared.text || shared.url) keepShare(window.localStorage, shared)
+    const shared = { title: first(to.query.title), text: first(to.query.text), url: first(to.query.url), ebooks: first(to.query.ebooks) }
+    // Shared ebook files wait in the service worker's cache meanwhile (#131).
+    if (shared.title || shared.text || shared.url || shared.ebooks) keepShare(window.localStorage, shared)
   }
 
   if (!isAuthRoute) return navigateTo(session.pending ? '/verify' : '/sign-in')
