@@ -35,11 +35,35 @@ a change to the project's settings (below) reaches the live site without a commi
   `X-Robots-Tag: noindex` instead (`web/public/_headers`). Preview addresses get `noindex` from
   Pages itself.
 
-An address with no file behind it (`/book/<id>`, `/collections/<id>`, `/profile/<year>`) is
-answered with `404.html`, Nuxt's copy of the app shell, so the page works but its status is 404
-until the service worker serves the shell itself. Pages ignores the `/* /404.html 404` line Nitro
-writes to `_redirects` (rewrites with other codes than 200 are not supported); the 404 comes from
-Pages' own rule for a top-level `404.html`.
+## Deep links
+
+An address with no file behind it (`/book/<id>`, `/collections/<id>`, `/profile/<year>`, any
+unknown path) is answered with `index.html`, the app shell, **status 200**, and the app routes in
+the browser (an unknown path ends on the app's own not-found screen). That is Pages' SPA fallback,
+which Pages uses when the output has no top-level `404.html`, so the build must not have one:
+`nuxt.config.ts` sets `nitro.prerender.ignore: ['/404.html']` (Nuxt adds `/200.html` and
+`/404.html` to every static build; with the file gone Nitro also stops writing its
+`/* /404.html 404` line to `_redirects`, which Pages rejected anyway: rewrites with a code other
+than 200 are not supported). Before this, the shell came as `404.html` with status 404: right in
+the browser, wrong for link previews, crawlers and anything that reads the status.
+
+A file under `/_nuxt/` that is gone (a lazy chunk after a deploy replaced it) must stay a real
+404, not the shell with 200. Pages looks for the closest `404.html` up the path before it falls
+back to the SPA shell, so `web/public/_nuxt/404.html` (a line of text) answers every miss under
+`/_nuxt/` with status 404 and `Cache-Control: no-store`, while the rest of the site keeps the
+SPA fallback. The service worker never precaches it (`globIgnores` has `**/404.html`). Do not
+add a `404.html` anywhere else: a top-level one switches the fallback off again.
+
+A browser that asks for a lazy chunk that is gone gets the error either way (404 or HTML in a
+script's place): Vite's loader fires `vite:preloadError`, Nuxt turns it into `app:chunkError` and
+reloads on the next navigation, and the error log files it as kind `chunk`
+(`app/plugins/error-log.client.ts`; `isChunkError` knows Safari's and Firefox's MIME-type
+wording too, for a host that answers a gone chunk with the shell).
+
+After a change here, check a deployment (preview or production) with
+`curl -s -o /dev/null -w '%{http_code}\n'` on `/book/x` (200), `/nope` (200),
+`/_nuxt/missing.js` (404) and `/sw.js` (200), or locally `pnpm build` with
+`NITRO_PRESET=cloudflare-pages-static`, then `npx wrangler pages dev dist`.
 
 ## Response headers
 

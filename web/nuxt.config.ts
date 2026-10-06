@@ -21,6 +21,14 @@ export default defineNuxtConfig({
   extends: regalLayer(),
   compatibilityDate: '2026-10-02',
   ssr: false,
+  nitro: {
+    // No top-level 404.html: Cloudflare Pages then serves its SPA fallback (index.html, status 200)
+    // for an address with no file behind it (`/book/<id>`, `/profile/<year>`), not the app shell
+    // with a 404 (docs/HOSTING.md, "Deep links"). Nuxt adds /200.html and /404.html to every
+    // static build as fallbacks; the app uses neither, the service worker has its own. A gone file
+    // under /_nuxt/ stays a real 404 through public/_nuxt/404.html (the closest 404 page wins).
+    prerender: { ignore: ['/404.html'] },
+  },
   // The devtools badge floats over the tab bar and swallows taps in the
   // Playwright run, which sets LIBELLUS_E2E (playwright.config.ts).
   devtools: { enabled: !process.env.LIBELLUS_E2E },
