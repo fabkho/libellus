@@ -19,7 +19,6 @@
 import { durationToken, easingToken, prefersReducedMotion, timeAt } from '~/utils/motion'
 import { paletteLift } from '~/utils/keyboard'
 import { SEARCH_DEBOUNCE_MS } from '~/data/search'
-import BookLoading from './BookLoading.vue'
 import type { ReaderEngine, SearchHit } from './engine'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -47,17 +46,19 @@ useBackDismiss(open, close)
 
 // ------------------------------------------------------------ the search
 //
-// As the app's search (components/search/Results.vue): the query goes out after
-// the typing pause; nothing shows for that pause and a `quick` more, so a book
-// that answers at once shows no loading at all; until the first places come the
-// riffling book and the lamp hairline say it is looking; a newer query dims the
-// places on screen to 60 % instead of emptying them, and its own replace them
-// when they come; the palette glides to its new height over `standard`, growing
-// up from the query; the first places rise in one after another.
+// One book answers in well under a second, so there is no loading state (a
+// state that shows for a few frames is a flicker, owner's call after round 3).
+// What says "looking" is only the palette's lamp hairline: it starts sweeping
+// along the divider with the first keystroke, keeps going through the typing
+// pause and the search, and fades out once the answer is there. Places on
+// screen dim to 60 % while a newer query is on its way, and its places replace
+// them in place; no glide, no rows rising in.
 
 const query = ref('')
 const hits = ref<SearchHit[]>([])
-/** The book is still being searched (places may still come). */
+/** Typing pause or search under way: the hairline sweeps. */
+const busy = ref(false)
+/** Still searching the book (places may still come). */
 const searching = ref(false)
 /** A newer query is on its way: the places on screen belong to the last one. */
 const outdated = ref(false)
@@ -72,11 +73,10 @@ async function search(q: string) {
   if (!engine || q.length < 2) {
     hits.value = []
     searched.value = ''
-    searching.value = false
-    outdated.value = false
+    busy.value = searching.value = outdated.value = false
     return
   }
-  searching.value = true
+  busy.value = searching.value = true
   engine.clearSearch()
   const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#b8782a'
   let first = true
@@ -84,7 +84,6 @@ async function search(q: string) {
     if (id !== run) return
     if (!('hits' in step)) continue
     if (first) {
-      // The first places of the new query take the old ones' place.
       hits.value = step.hits
       searched.value = q
       outdated.value = false
@@ -97,22 +96,30 @@ async function search(q: string) {
     searched.value = q
     outdated.value = false
   }
-  searching.value = false
+  busy.value = searching.value = false
 }
 watch(query, (q) => {
   clearTimeout(timer)
   const text = q.trim()
-  if (text.length < 2) return void search('')
-  if (hits.value.length) outdated.value = true
+  if (text.length < 2) {
+    void search('')
+    // One letter: nothing to search yet, but the line answers the keystroke and lets go after the pause.
+    if (text.length === 1) {
+      busy.value = true
+      timer = setTimeout(() => (busy.value = false), SEARCH_DEBOUNCE_MS)
+    }
+    return
+  }
+  // The hairline starts with the keystroke, not when the typing pause is over.
+  busy.value = true
+  if (hits.value.length || searched.value) outdated.value = true
   timer = setTimeout(() => search(text), SEARCH_DEBOUNCE_MS)
 })
 
-type State = 'idle' | 'loading' | 'results' | 'none'
-const state = computed<State>(() => {
-  if (query.value.trim().length < 2) return 'idle'
-  if (hits.value.length) return 'results'
-  if (searching.value || outdated.value || searched.value !== query.value.trim()) return 'loading'
-  return 'none'
+/** What the room shows: the idle line until a query has been answered once, then its places (or none). */
+const state = computed<'idle' | 'results' | 'none'>(() => {
+  if (query.value.trim().length < 2 || !searched.value) return 'idle'
+  return hits.value.length ? 'results' : 'none'
 })
 
 /** The next place after where you are first (by the query), on to the end; then, after the rule, from the beginning. */
@@ -124,45 +131,6 @@ const ordered = computed(() => {
   for (const hit of hits.value) ((props.engine?.compareCfi(hit.cfi, here) ?? 1) >= 0 ? ahead : behind).push(hit)
   return { ahead, behind }
 })
-
-const loadingWait = SEARCH_DEBOUNCE_MS + durationToken('quick')
-const room = useTemplateRef<HTMLElement>('room')
-let heightBefore = 0
-let cameFrom: State | null = null
-let gliding: Animation | undefined
-const arriving = ref(false)
-let arrivingTimer: ReturnType<typeof setTimeout> | undefined
-watch(
-  state,
-  (_next, previous) => {
-    heightBefore = room.value?.offsetHeight ?? 0
-    cameFrom = previous ?? null
-  },
-  { flush: 'pre' },
-)
-watch(
-  state,
-  (next) => {
-    const el = room.value
-    if (!el || props.reduceMotion || prefersReducedMotion()) return
-    if (next === 'results' && cameFrom !== 'results') {
-      arriving.value = true
-      clearTimeout(arrivingTimer)
-      arrivingTimer = setTimeout(() => (arriving.value = false), durationToken('standard') * 3)
-    }
-    const heightAfter = el.offsetHeight
-    gliding?.cancel()
-    if (!heightBefore || heightBefore === heightAfter) return
-    gliding = el.animate(
-      [
-        { height: `${heightBefore}px`, overflow: 'hidden' },
-        { height: `${heightAfter}px`, overflow: 'hidden' },
-      ],
-      { duration: durationToken('standard'), easing: easingToken('standard'), delay: next === 'loading' ? loadingWait : 0, fill: 'backwards' },
-    )
-  },
-  { flush: 'post' },
-)
 
 // ------------------------------------------------------------ the morph (SearchOverlay's)
 
@@ -377,7 +345,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown, true)
   for (const animation of animations) animation.cancel()
   clearTimeout(timer)
-  clearTimeout(arrivingTimer)
   run++
 })
 
@@ -414,25 +381,20 @@ function pick(hit: SearchHit) {
         <div ref="plate" class="absolute inset-0 rounded-xl bg-surface-raised edge" aria-hidden="true" />
 
         <div ref="results" class="relative flex flex-col justify-end">
-          <div ref="room" class="relative flex min-h-0 flex-col" aria-live="polite" data-testid="bookSearch.results">
+          <div class="relative flex min-h-0 flex-col" aria-live="polite" data-testid="bookSearch.results">
             <p v-if="state === 'idle'" class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="bookSearch.idle">
               Find a word or a name in this book.
             </p>
-
-            <!-- Leaves over the places arriving where it stood. -->
-            <Transition name="loading">
-              <BookLoading v-if="state === 'loading'" text="Looking through the pages…" :style="{ '--loading-wait': `${loadingWait}ms` }" />
-            </Transition>
 
             <!-- Reversed, as the app's list: the next place at the bottom by the query, the far end fading out at the top. -->
             <ol
               v-if="state === 'results'"
               class="list flex flex-col-reverse overflow-y-auto overscroll-contain py-xs transition-opacity duration-(--duration-standard) ease-standard"
-              :class="[outdated && 'opacity-60', arriving && 'arriving']"
+              :class="outdated && 'opacity-60'"
               :aria-busy="outdated"
               data-no-swipe
             >
-              <li v-for="(hit, i) in ordered.ahead" :key="`a${i}${hit.cfi}`" :style="i < 5 ? { '--n': i } : undefined">
+              <li v-for="(hit, i) in ordered.ahead" :key="`a${i}${hit.cfi}`">
                 <button
                   type="button"
                   class="hit block w-full px-md py-ms text-left hover:bg-fill active:bg-fill-strong"
@@ -446,7 +408,7 @@ function pick(hit: SearchHit) {
               <li v-if="ordered.behind.length" class="eyebrow flex items-center gap-sm px-md pt-sm pb-xs" aria-hidden="true">
                 <span class="h-(--stroke-hairline) flex-1 bg-hairline" />From the beginning<span class="h-(--stroke-hairline) flex-1 bg-hairline" />
               </li>
-              <li v-for="(hit, i) in ordered.behind" :key="`b${i}${hit.cfi}`" :style="!ordered.ahead.length && i < 5 ? { '--n': i } : undefined">
+              <li v-for="(hit, i) in ordered.behind" :key="`b${i}${hit.cfi}`">
                 <button type="button" class="hit block w-full px-md py-ms text-left hover:bg-fill active:bg-fill-strong" @click="pick(hit)">
                   <span class="eyebrow block">{{ hit.chapter }}</span>
                   <span class="excerpt book-title mt-xxs block text-subhead text-ink-muted">{{ hit.pre }}<mark>{{ hit.match }}</mark>{{ hit.post }}</span>
@@ -458,14 +420,16 @@ function pick(hit: SearchHit) {
               </li>
             </ol>
 
-            <div v-else-if="state === 'none'" class="px-ml pt-ml pb-md" data-testid="bookSearch.none">
+            <div v-else-if="state === 'none'" class="px-ml pt-ml pb-md transition-opacity duration-(--duration-standard) ease-standard" :class="outdated && 'opacity-60'" data-testid="bookSearch.none">
               <p class="text-callout font-medium">Nowhere in this book</p>
               <p class="mt-xs text-subhead text-ink-muted">“{{ searched }}” does not come up in it.</p>
               <p class="mt-md text-subhead text-ink-faint">Try fewer letters, or another spelling.</p>
             </div>
           </div>
-          <!-- Still looking, with places already there: the lamp hairline keeps sweeping above the query. -->
-          <span v-if="state === 'results' && searching" class="sweep" aria-hidden="true" />
+          <!-- Looking (from the first keystroke until the answer is in): the lamp hairline sweeps above the query. -->
+          <Transition name="sweep">
+            <span v-if="busy" class="sweep" aria-hidden="true" data-testid="bookSearch.sweep" />
+          </Transition>
           <div class="h-(--stroke-hairline) shrink-0 bg-hairline" aria-hidden="true" />
         </div>
 
@@ -545,26 +509,17 @@ mark {
   background: var(--color-accent-soft);
   border-radius: var(--radius-cover-sm);
 }
-/* The loading state leaves over the room the places arrive in, fading, so the first rows rise in where it stood. */
-.loading-leave-active {
-  position: absolute;
-  inset: auto 0 0;
-  transition: opacity var(--duration-exit) var(--ease-exit);
+/* The lamp hairline on the divider (the app's search loading sweep), fading in with the first keystroke and out with the answer. */
+.sweep-enter-active {
+  transition: opacity var(--duration-quick) var(--ease-standard);
 }
-.loading-leave-to {
+.sweep-leave-active {
+  transition: opacity var(--duration-sheet-exit) var(--ease-exit);
+}
+.sweep-enter-from,
+.sweep-leave-to {
   opacity: 0;
 }
-/* The nearest places (the bottom rows) land one after the other; the others are simply there. */
-.arriving > li[style] {
-  animation: row-arrive var(--duration-standard) var(--ease-standard) calc(var(--n) * var(--duration-instant) * 0.5) both;
-}
-@keyframes row-arrive {
-  from {
-    opacity: 0;
-    translate: 0 var(--spacing-sm);
-  }
-}
-/* The lamp hairline on the divider, while more places may come (Loading.vue's sweep). */
 .sweep {
   position: absolute;
   inset: auto 0 0;

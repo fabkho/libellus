@@ -465,3 +465,12 @@ write the same device setting.
 it is now a plain **Printed page** toggle at the bottom, under Keep the screen on (on by default;
 off is Classic), with one line under the group saying what each looks like.
 `round3/aa-printed-page-toggle.jpg`.
+
+**Owner, after round 3: the search loading glitched.** One book answers in well under a second, so
+a loading state that waits for the typing pause showed for a few frames — a flicker. Now there is
+**no loading state, no height glide, no rows rising in**: only the palette's **lamp hairline**,
+which starts sweeping along the divider **with the first keystroke**, keeps going through the typing
+pause and the search, and fades out (`sheetExit`) once the answer is there; places on screen still
+**dim to 60 %** while a newer query is on its way and are replaced in place. A single letter (too
+short to search) gets a short sweep that lets go after the pause. `BookLoading.vue` is gone.
+`round3/search-palette-calm.jpg`.
