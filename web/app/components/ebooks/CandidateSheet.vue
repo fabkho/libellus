@@ -4,6 +4,7 @@
 // without its author. The sheet shows the file (its own cover, title and
 // author), then the candidates as rows with their covers; a tap links the
 // file to that Book (one file per Book: one linked before is replaced).
+import { fileAuthors, fileTitle } from '~/data/ebooks/match'
 import type { LibraryEntry } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 
@@ -34,7 +35,7 @@ function pick(entry: LibraryEntry) {
 <template>
   <UiSheet v-model:open="open" :title="t('ebooks.chooseSheet.title')" testid="ebookCandidates">
     <div v-if="record" class="pt-xs pb-sm">
-      <UiBookLine :title="record.metadata.title || record.name" :authors="record.metadata.authors" :src="ebooks.coverOf(record)" />
+      <UiBookLine :title="fileTitle(record.metadata) ?? record.name" :authors="fileAuthors(record.metadata)" :src="ebooks.coverOf(record)" whole />
       <ul class="mt-xs flex flex-col">
         <li v-for="entry in candidates" :key="entry.id">
           <button

@@ -4,6 +4,8 @@ import { createEbooks, memoryEbookRecords, reportOf, type EbookRecord } from '@/
 import { EpubError, decodeXml, displayName, isbnOfIdentifier, readEpub, readPackage } from '@/data/ebooks/epub'
 import { EPUB_READER_VERSION, memberDir, memoryFiles } from '@/data/ebooks/files'
 import { ingestEbook } from '@/data/ebooks/ingest'
+import { EBOOKS_SNAPSHOT_KEY, readEbooksSnapshot, saveEbooksSnapshot } from '@/data/ebooks/snapshot'
+import { memoryStorage } from './support/stack'
 import { cleanTitle, clearlyAnotherBook, fileAuthors, fileTitle, findQuery, mainTitle, matchEbook, sameAuthor, sameTitle } from '@/data/ebooks/match'
 import type { LibraryEntry } from '@/data/library'
 import {
@@ -556,3 +558,20 @@ function fakeFolder(initial: Record<string, Uint8Array>) {
     },
   }
 }
+
+describe('the page as the device last showed it', () => {
+  it('keeps the records, missing copies and the folder without its handle, for one member, never ignored files', () => {
+    const storage = memoryStorage()
+    const record = { id: 'a-1', memberId: 'm1', state: 'linked', name: 'a.epub' } as EbookRecord
+    const ignored = { id: 'b-1', memberId: 'm1', state: 'ignored', name: 'b.epub' } as EbookRecord
+    const folder = { handle: {} as FileSystemDirectoryHandle, name: 'Books', pickedAt: '2026-10-01T00:00:00Z', scannedAt: '2026-10-06T09:00:00Z' }
+    saveEbooksSnapshot(storage, 'm1', { records: [record, ignored], missing: new Set(['a-1']), folder })
+    const snapshot = readEbooksSnapshot(storage, 'm1')!
+    expect(snapshot.records.map((r) => r.id)).toEqual(['a-1'])
+    expect(snapshot.missing).toEqual(['a-1'])
+    expect(snapshot.folder).toEqual({ name: 'Books', pickedAt: '2026-10-01T00:00:00Z', scannedAt: '2026-10-06T09:00:00Z' })
+    expect(readEbooksSnapshot(storage, 'm2')).toBeNull()
+    storage.setItem(EBOOKS_SNAPSHOT_KEY, '{not json')
+    expect(readEbooksSnapshot(storage, 'm1')).toBeNull()
+  })
+})
