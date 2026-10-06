@@ -103,7 +103,9 @@ test('a failing source is silent; another edition in the Library is pointed out'
   await page.route(/\/rest\/v1\/rpc\/search_books/, (route) => route.fulfill({ status: 503, body: '{}' }))
 
   await searchFor(page, 'Piranesi')
-  const clarke = page.getByTestId('search.result').first()
+  // Her own edition first, in its group, whatever the sources found (#131).
+  await expect(page.getByTestId('search.own').getByTestId('search.resultStatus')).toContainText(en.status.want_to_read)
+  const clarke = page.locator('[data-testid="search.results"] > li[data-near-key]').first()
   await expect(clarke).toContainText('Susanna Clarke')
   await expect(clarke.getByTestId('search.resultOtherEdition')).toHaveText(en.search.otherEdition)
   // It is not her edition, so it can still be added.

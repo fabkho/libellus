@@ -6,26 +6,40 @@
 // The title takes two lines before it is cut, so a long one stays readable next
 // to the status; the row presses to the stronger fill, and a pointer that can
 // hover gets the lighter one across the whole row (Tailwind's `hover:` is `@media (hover: hover)`).
+// `linking` (search opened by Find book, #131): the row is a button that picks
+// the result for the ebook file (`pick`) instead of a link to its page: one of
+// her Books links the file to it, another edition of one asks which edition,
+// a new one opens the Add sheet. Its name says so ("Link the ebook to …").
 import { useBookStore } from '~/stores/book'
 import type { SearchHit } from '~/stores/search'
 
-const props = defineProps<{ hit: SearchHit; eager?: boolean; priority?: boolean }>()
-defineEmits<{ add: [] }>()
+const props = defineProps<{ hit: SearchHit; eager?: boolean; priority?: boolean; linking?: boolean }>()
+defineEmits<{ add: []; pick: [] }>()
 
 const { t } = useI18n()
 const book = useBookStore()
 const authorLine = computed(() => formatAuthors(props.hit.book.authors, t('common.etAl')))
 // Adding writes: offline the + stays, disabled, and says why (#15).
 const online = useOnline()
+const PressLink = resolveComponent('UiPressLink')
+/** What a tap on the row does while linking, as its accessible name. */
+const pickLabel = computed(() => {
+  const title = props.hit.book.title
+  if (props.hit.entry) return t('search.linkTo', { title })
+  if (props.hit.otherEdition) return t('search.linkOtherEdition', { title })
+  return t('search.addAndLink', { title })
+})
 </script>
 
 <template>
   <div class="flex min-h-(--size-row) items-center pr-xs hover:bg-fill">
-    <UiPressLink
-      :to="`/book/${hit.key}`"
-      class="flex min-w-0 flex-1 items-center gap-ms py-xs pl-md active:bg-fill-strong"
+    <component
+      :is="linking ? 'button' : PressLink"
+      v-bind="linking ? { type: 'button', 'aria-label': pickLabel } : { to: `/book/${hit.key}` }"
+      class="flex min-w-0 flex-1 items-center gap-ms py-xs pl-md text-left active:bg-fill-strong"
       data-testid="search.result"
       @press="book.prefetch(hit.key)"
+      @click="linking && $emit('pick')"
     >
       <UiCover
         decorative
@@ -55,7 +69,7 @@ const online = useOnline()
           </span>
         </span>
       </span>
-    </UiPressLink>
+    </component>
 
     <span
       v-if="hit.entry"
@@ -69,7 +83,7 @@ const online = useOnline()
       type="button"
       class="flex size-(--size-touch) shrink-0 items-center justify-center text-ink disabled:opacity-50"
       :disabled="!online"
-      :aria-label="online ? t('search.add', { title: hit.book.title }) : t('common.offline')"
+      :aria-label="online ? (linking && hit.otherEdition ? pickLabel : t('search.add', { title: hit.book.title })) : t('common.offline')"
       data-testid="search.add"
       @click="$emit('add')"
     >
@@ -79,4 +93,3 @@ const online = useOnline()
     </button>
   </div>
 </template>
-

@@ -189,7 +189,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       // Apple's Piranesi, not hers: the Catalogue (her own and every other flow's) answers nothing here.
       await page.route(/\/rest\/v1\/rpc\/search_books/, async (route) => route.fulfill({ response: await route.fetch(), body: '[]' }))
       await page.getByTestId('search.query').fill('Piranesi')
-      await page.getByTestId('search.result').first().click()
+      // The first result the sources found, after her own group ("In your Library").
+      await page.locator('[data-testid="search.results"] > li[data-near-key]').first().getByTestId('search.result').click()
       await expect(page.getByTestId('book.add')).toBeVisible()
       await expectAccessible(page, 'a Book not in the Library')
       await openSheet(page, 'book.add', 'add')

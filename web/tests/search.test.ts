@@ -10,6 +10,7 @@ import {
   createSearch,
   isAbort,
   isbnFromArtwork,
+  libraryGroup,
   plainText,
   splitAuthors,
   storefrontsFor,
@@ -814,5 +815,36 @@ describe('one Book by its id', () => {
     })
     expect(parseBookKey('ol-OL20893680W')).toBeNull()
     expect(parseBookKey('nonsense')).toBeNull()
+  })
+})
+
+describe('her own Books first ("In your Library", #131)', () => {
+  const war = entry(catalogueBook({ id: 'b-war', title: 'The Forever War', authors: ['Joe Haldeman', 'John Scalzi'], appleId: null, isbn13: '9781497692350' }), 'finished')
+  const gods = entry(catalogueBook({ id: 'b-gods', title: 'Disquiet Gods : The Sun Eater', authors: ['Christopher Ruocchio'], appleId: null }), 'finished')
+  const arms = entry(catalogueBook({ id: 'b-arms', title: 'Men at Arms', authors: ['Terry Pratchett'], appleId: null }), 'reading')
+  const torturer = entry(catalogueBook({ id: 'b-torturer', title: 'The Shadow of the Torturer', authors: ['Gene Wolfe'], appleId: null }))
+  const library = [war, gods, arms, torturer]
+  const titles = (entries: LibraryEntry[]) => entries.map((e) => e.book.title)
+
+  it('holds the entries the query matches: title, title and author, author, ISBN', () => {
+    expect(titles(libraryGroup(library, 'Men at Arms Terry Pratchett'))).toEqual(['Men at Arms'])
+    expect(titles(libraryGroup(library, 'disquiet gods'))).toEqual(['Disquiet Gods : The Sun Eater'])
+    expect(titles(libraryGroup(library, 'haldeman'))).toEqual(['The Forever War'])
+    expect(titles(libraryGroup(library, '978-1-4976-9235-0'))).toEqual(['The Forever War'])
+    expect(libraryGroup(library, 'dune')).toEqual([])
+    expect(libraryGroup(library, 'd')).toEqual([])
+  })
+
+  it('holds her edition of a book a source found by other words (another edition in her Library)', () => {
+    const other = snapshot({ title: 'The Forever War', authors: ['Joe Haldeman'], appleId: '1' })
+    const results = mergeResults('Der ewige Krieg Joe Haldeman', { apple: [found(other)] }, library)
+    expect(results[0]).toMatchObject({ otherEdition: true })
+    expect(titles(libraryGroup(library, 'Der ewige Krieg Joe Haldeman', results))).toEqual(['The Forever War'])
+    expect(titles(libraryGroup(library, 'Der ewige Krieg Joe Haldeman'))).toEqual([])
+  })
+
+  it('looking for an ebook file\'s Book, holds her books by the file\'s author too', () => {
+    expect(titles(libraryGroup(library, 'Shadow & Claw Gene Wolfe', [], { byAuthor: true }))).toEqual(['The Shadow of the Torturer'])
+    expect(titles(libraryGroup(library, 'Shadow & Claw Gene Wolfe'))).toEqual([])
   })
 })
