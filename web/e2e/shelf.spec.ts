@@ -8,7 +8,7 @@ import { isoDay } from '../app/utils/dates'
 import { emailCooldown, mailCount, newClient, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { shelfOwner } from './shelfOwner'
-import { expectNoSideScroll, signedIn } from './support'
+import { expectAccessible, expectNoSideScroll, signedIn } from './support'
 
 /**
  * Your shelf (#23): Regal's 3D shelf of the owner's published library file, for
@@ -522,6 +522,34 @@ test.describe('Your shelf, the owner', () => {
     await page.getByTestId('profile.shelfRetry').click()
     await expect(page.getByTestId('profile.shelfError')).toHaveCount(0)
     await expect(shelfRow(page, 'profile.shelfRow')).toHaveAttribute('data-book-count', '8')
+  })
+
+  // Regal's controls in the Book's panel carry no test ID (above); axe and the list are what this is about.
+  regalOwnControls('reads as a list of her Books for a screen reader, and its screens pass axe in both themes', async ({ page }) => {
+    await libraryFile(page)
+    await signInAsOwner(page)
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme })
+      await page.goto('/profile')
+      await page.getByTestId('profile.shelf').scrollIntoViewIfNeeded()
+      const row = shelfRow(page, 'profile.shelfRow')
+      await expect(row).toHaveAttribute('data-book-count', '8')
+      // Regal's canvas names no Book; the card holds them as a list (ShelfBookList).
+      const list = page.getByTestId('profile.shelfRow').getByRole('list', { name: en.shelf.card.rowLabel })
+      await expect(list.getByRole('listitem')).toHaveCount(8)
+      await expectAccessible(page, `the Profile with her shelf, ${colorScheme}`)
+
+      await takeOut(page, row)
+      await expect(page.getByTestId('shelfRow.sheet')).toBeVisible()
+      await expectAccessible(page, `a Book out of the row, ${colorScheme}`)
+      await page.keyboard.press('Escape')
+      await expect(page.getByTestId('shelfRow.sheet')).toHaveCount(0)
+
+      await page.goto('/profile/shelf')
+      await expect(page.getByRole('heading', { level: 1, name: en.shelf.title })).toBeVisible()
+      await expect(page.getByTestId('shelf').getByRole('list', { name: en.shelf.title }).getByRole('listitem')).toHaveCount(8)
+      await expectAccessible(page, `the whole shelf, ${colorScheme}`)
+    }
   })
 })
 
