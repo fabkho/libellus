@@ -1,0 +1,133 @@
+name: Database backup
+
+# The hosted Supabase project (Free plan) keeps no backup anyone can download, so
+# this job makes one every night: pg_dump of the data that matters, encrypted with
+# age to the owner's public key while it streams, uploaded to a private R2 bucket,
+# then checked. docs/OPERATIONS.md, "Backups", has what is in it, the setup and
+# the restore.
+#
+# The repository is public, and so is this job's log. Nothing of the database may
+# reach it: the plaintext dump exists only inside the pipe (scripts/backup-db.sh),
+# only the encrypted file touches the disk (the runner's temp folder, removed at
+# the end), nothing is uploaded as an artifact, and the parts of the connection
+# string are masked before anything connects.
+#
+# Without the repository variable BACKUP_AGE_RECIPIENT (a fork, a self-hosted
+# instance that did not set it up) the job is skipped. A failed run is mailed by
+# GitHub to whoever last changed the schedule.
+on:
+  schedule:
+    - cron: '30 2 * * *' # 02:30 UTC, nightly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: dump, encrypt, upload, check
+    if: vars.BACKUP_AGE_RECIPIENT != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The secrets go only to the steps that use them.
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      BUCKET: ${{ vars.BACKUP_R2_BUCKET || 'libellus-backups' }}
+      MIN_BYTES: ${{ vars.BACKUP_MIN_BYTES || '50000' }}
+    steps:
+      - name: Settings are complete
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+        run: |
+          missing=''
+          for v in DATABASE_URL AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY CLOUDFLARE_ACCOUNT_ID; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::BACKUP_AGE_RECIPIENT is set but not:$missing (secrets SUPABASE_DB_URL, R2_BACKUP_ACCESS_KEY_ID, R2_BACKUP_SECRET_ACCESS_KEY; variable CLOUDFLARE_ACCOUNT_ID)."
+            exit 1
+          fi
+
+      # The whole URL is a secret and masked already; its parts are not. The user
+      # name carries the project ref, the host the pooler's region.
+      - name: Mask the connection details
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit, unquote
+          url = urlsplit(os.environ["DATABASE_URL"])
+          parts = [url.username, url.password, url.hostname, os.environ["CLOUDFLARE_ACCOUNT_ID"]]
+          if url.username and "." in url.username:
+              parts.append(url.username.split(".", 1)[1])
+          for p in parts:
+              for v in {p, unquote(p or "")}:
+                  if v and len(v) >= 6 and v != "postgres":
+                      print(f"::add-mask::{v}")
+          PY
+
+      - uses: actions/checkout@v4
+
+      # pg_dump must be at least the server's version; install exactly that one.
+      - name: Server version
+        id: server
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          command -v psql > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client > /dev/null; }
+          num="$(psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c 'show server_version_num')"
+          echo "major=$((num / 10000))" >> "$GITHUB_OUTPUT"
+          echo "Postgres $((num / 10000))"
+
+      - uses: ./.github/actions/postgres-client
+        with:
+          major: ${{ steps.server.outputs.major }}
+
+      - name: Dump and encrypt
+        id: dump
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          file="$RUNNER_TEMP/backup/libellus-$stamp.dump.age"
+          scripts/backup-db.sh --recipient "$AGE_RECIPIENT" --out "$file" --min-bytes "$MIN_BYTES"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "key=db/${stamp:0:4}/${stamp:4:2}/${stamp:6:2}/libellus-$stamp.dump.age" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to R2 and check
+        env:
+          FILE: ${{ steps.dump.outputs.file }}
+          KEY: ${{ steps.dump.outputs.key }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+          # R2 speaks S3: region "auto", and only the checksums R2 asks for.
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          set -euo pipefail
+          endpoint="https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com"
+          aws s3 cp --only-show-errors --endpoint-url "$endpoint" "$FILE" "s3://$BUCKET/$KEY"
+          local_bytes="$(wc -c < "$FILE" | tr -d ' ')"
+          remote_bytes="$(aws s3api head-object --endpoint-url "$endpoint" --bucket "$BUCKET" --key "$KEY" \
+            --query ContentLength --output text)"
+          if [ "$remote_bytes" != "$local_bytes" ]; then
+            echo "::error::The uploaded object has $remote_bytes bytes, the dump $local_bytes."
+            exit 1
+          fi
+          echo "Uploaded $BUCKET/$KEY ($remote_bytes bytes)."
+          echo "Backup \`$KEY\`: $remote_bytes bytes, encrypted with age." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the encrypted dump
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/backup"

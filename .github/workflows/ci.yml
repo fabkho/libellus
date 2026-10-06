@@ -88,6 +88,7 @@ jobs:
               - *stack
               - 'supabase/tests/**'
               - 'supabase/templates/**'
+              - 'scripts/*backup*'
             web:
               - *ci
               - 'web/**'
@@ -228,6 +229,16 @@ jobs:
         if: env.RUN_BACKEND == 'true'
         working-directory: web
         run: pnpm test
+
+      # The nightly backup's chain (.github/workflows/backup.yml) on what the suites
+      # left in the stack: dump, age, restore into a scratch database both ways, rows
+      # compared table by table. Catches a migration that would break a restore.
+      - uses: ./.github/actions/postgres-client
+        if: env.RUN_BACKEND == 'true'
+
+      - name: Backup round trip (scripts/test-backup-roundtrip.sh)
+        if: env.RUN_BACKEND == 'true'
+        run: scripts/test-backup-roundtrip.sh
 
       # The browser download is cached per Playwright version; the system
       # libraries it needs live outside that folder, so they are installed
