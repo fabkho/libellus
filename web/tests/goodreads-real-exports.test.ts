@@ -1,22 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import {
-  countByStatus,
-  decodeExport,
-  editionFit,
-  goodreadsDay,
-  goodreadsRating,
-  isAbandonedShelf,
-  isSameWork,
-  languageCode,
-  NotACsvFileError,
-  NotAGoodreadsExportError,
-  parseGoodreads,
-  pickEdition,
-  readGoodreadsCsv,
-  titleLanguage,
-  type GoodreadsBook,
-} from '@/data/import/goodreads'
+import { decodeExport, NotACsvFileError, readCsv } from '@/data/import/csv'
+import { detectExport } from '@/data/import/detect'
+import { editionFit, isSameWork, languageCode, pickEdition, titleLanguage } from '@/data/import/editions'
+import { parseGoodreads } from '@/data/import/goodreads'
+import { countByStatus, importDay, importRating, isAbandonedShelf, UnknownExportError, type ImportBook } from '@/data/import/rows'
 
 /**
  * The Goodreads import against what real exports carry (#111). The owner's
@@ -34,7 +22,7 @@ import {
 const TODAY = '2026-10-07'
 const text = readFileSync(new URL('./fixtures/goodreads/battle_export.csv', import.meta.url), 'utf8')
 const parsed = parseGoodreads(text, TODAY)
-const byKey = (key: string) => parsed.books.find((book) => book.key === key) as GoodreadsBook
+const byKey = (key: string) => parsed.books.find((book) => book.key === key) as ImportBook
 
 describe('a real export, row by row', () => {
   it('reads every row and counts the Statuses, a did-not-finish book among the finished', () => {
@@ -77,7 +65,7 @@ describe('a real export, row by row', () => {
   it('reads the ISBNs as they come: wrapped, an ISBN-10 with X, none, and one a spreadsheet mangled', () => {
     expect(byKey('goodreads:2001')).toMatchObject({ isbn13: '9790000002104', isbn10: '1900002108' })
     expect(byKey('goodreads:2004')).toMatchObject({ isbn13: '9781900002233', isbn10: '190000223X' })
-    expect(byKey('goodreads:2002')).toMatchObject({ isbn13: null, goodreadsId: '2002', binding: 'Kindle Edition' })
+    expect(byKey('goodreads:2002')).toMatchObject({ isbn13: null, sourceId: '2002', binding: 'Kindle Edition' })
     expect(byKey('goodreads:2009')).toMatchObject({ isbn13: null, problems: [{ code: 'isbnMangled' }] })
   })
 
@@ -116,9 +104,9 @@ describe('files that are not quite a Goodreads export', () => {
   it('names the app another export comes from', () => {
     const app = (head: string) => {
       try {
-        readGoodreadsCsv(`${head}\nx`)
+        detectExport(readCsv(`${head}\nx`).columns)
       } catch (error) {
-        return error instanceof NotAGoodreadsExportError ? error.app : 'other'
+        return error instanceof UnknownExportError ? error.app : 'other'
       }
       return 'read'
     }
@@ -129,8 +117,8 @@ describe('files that are not quite a Goodreads export', () => {
   })
 
   it('takes ratings in halves and decimals to the nearest quarter star, days in their spellings', () => {
-    expect(['5', '3.5', '3,75', '0.1', '0', '', '6', 'x'].map(goodreadsRating)).toEqual([20, 14, 15, 1, null, null, undefined, undefined])
-    expect(['2024/3/9', '2024-03-09', '9.3.2024', '31.02.2024', '03/09/2024'].map((day) => goodreadsDay(day, TODAY))).toEqual([
+    expect(['5', '3.5', '3,75', '0.1', '0', '', '6', 'x'].map(importRating)).toEqual([20, 14, 15, 1, null, null, undefined, undefined])
+    expect(['2024/3/9', '2024-03-09', '9.3.2024', '31.02.2024', '03/09/2024'].map((day) => importDay(day, TODAY))).toEqual([
       '2024-03-09',
       '2024-03-09',
       '2024-03-09',

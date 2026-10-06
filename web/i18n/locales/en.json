@@ -725,13 +725,22 @@
     "menuItem": "Import books",
     "back": "Back",
     "pickTitle": "Bring your books along",
-    "pickText": "On Goodreads: My Books → Import and export → Export library. Your shelves, dates, ratings and reviews come along.",
+    "pickText": "Works with exports from Goodreads and Hardcover. Your shelves, dates, ratings and reviews come along.",
+    "howToTitle": "How to export",
+    "app": {
+      "goodreads": "Goodreads",
+      "hardcover": "Hardcover"
+    },
+    "howTo": {
+      "goodreads": "On goodreads.com: My Books → Import and export → Export library. Download the CSV when the link appears.",
+      "hardcover": "On hardcover.app: Settings → Export your data → CSV export → Generate export. Download the CSV when it's ready."
+    },
     "choose": "Choose CSV file",
     "reading": "Reading the file…",
     "matching": "Looking up {done} of {total}",
     "matchingHint": "Finding each book's edition and cover. You can leave this page; it keeps going.",
     "stop": "Choose another file",
-    "inFile": "No books in this file | One book in this file | {count} books in this file",
+    "inFile": "From {app} · no books | From {app} · one book | From {app} · {count} books",
     "statusLabel": "Books by status",
     "matched": "Matched to an edition",
     "fromFile": "Added from the file",
@@ -741,6 +750,8 @@
     "shelvesTitle": "Your shelves",
     "shelvesText": "Kept as collections in your Library. Untick the ones you don't want.",
     "shelfCount": "{count} book | {count} books",
+    "listsTitle": "Your lists",
+    "listsText": "Kept as collections in your Library. Untick the ones you don't want.",
     "note": {
       "fromFile": "No edition found. Added with what the file says.",
       "unsure": "Couldn't be looked up. Added with what the file says.",
@@ -756,7 +767,10 @@
       "byTitleEdition": "Found by its title: the {edition} edition. Change it on its page if it isn't yours.",
       "isbnMangled": "Its ISBN was turned into a number by a spreadsheet. Found by its title instead.",
       "abandonedRating": "On your did-not-finish shelf: added as not finished, without its rating.",
-      "extraReads": "Read before: one earlier read added, without dates. | Read before: {count} earlier reads added, without dates."
+      "extraReads": "Read before: one earlier read added, without dates. | Read before: {count} earlier reads added, without dates.",
+      "earlierReads": "Read before: one earlier read added, with its dates. | Read before: {count} earlier reads added, with their dates.",
+      "paused": "Paused on Hardcover: added as Currently reading.",
+      "notShelved": "Skipped: it isn't on any of your Hardcover shelves."
     },
     "untitled": "A row without a title",
     "start": "Import {count} book | Import {count} books",
@@ -774,11 +788,12 @@
     "toLibrary": "Go to Library",
     "another": "Import another file",
     "fileError": {
-      "notGoodreads": "That isn't a Goodreads export. Choose the CSV from Export library.",
-      "notCsv": "That isn't a CSV file. On Goodreads, Export library gives you one.",
-      "storygraph": "That's a StoryGraph export. Choose the CSV from Goodreads' Export library instead.",
-      "librarything": "That's a LibraryThing export. Choose the CSV from Goodreads' Export library instead.",
-      "bookshelf": "That's a Bookshelf app export. Choose the CSV from Goodreads' Export library instead.",
+      "notSupported": "That isn't an export Libellus can read. Choose the CSV you exported from Goodreads or Hardcover.",
+      "notCsv": "That isn't a CSV file. Goodreads and Hardcover both export one.",
+      "storygraph": "That's a StoryGraph export, which Libellus can't read yet. Export from Goodreads or Hardcover instead.",
+      "librarything": "That's a LibraryThing export, which Libellus can't read yet. Export from Goodreads or Hardcover instead.",
+      "bookshelf": "That's a Bookshelf app export, which Libellus can't read yet. Export from Goodreads or Hardcover instead.",
+      "missingColumns": "That looks like a {app} export, but it has no {columns} column. Export it again without changing it. | That looks like a {app} export, but it has no {columns} columns. Export it again without changing it.",
       "empty": "There are no books in that file.",
       "unreadable": "That file couldn't be read.",
       "unknown": "Something went wrong. Please try again."

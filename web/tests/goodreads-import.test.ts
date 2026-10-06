@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { createCatalogueSearch } from '@/data/catalogueSearch'
 import {
-  createGoodreadsImport,
+  createBookImport,
   eachLimited,
   entryFor,
   findEdition,
@@ -14,8 +14,9 @@ import {
   type Edition,
   type ImportRow,
   type Lookups,
-} from '@/data/goodreadsImport'
-import { parseGoodreads, type GoodreadsBook } from '@/data/import/goodreads'
+} from '@/data/bookImport'
+import { parseGoodreads } from '@/data/import/goodreads'
+import type { ImportBook } from '@/data/import/rows'
 import { createLibrary } from '@/data/library'
 import { createSearch, type FetchLike } from '@/data/search'
 import { isoDay } from '@/utils/dates'
@@ -105,13 +106,13 @@ function snapshot(overrides: Partial<BookSnapshot>): BookSnapshot {
 }
 
 /** Every edition the importer finds for the rows, in their order. */
-async function matchAll(importer: ReturnType<typeof createGoodreadsImport>, books: readonly GoodreadsBook[]) {
+async function matchAll(importer: ReturnType<typeof createBookImport>, books: readonly ImportBook[]) {
   const editions: Edition[] = []
   await importer.match(books, { onEdition: (index, edition) => void (editions[index] = edition) })
   return editions
 }
 
-const rowsOf = (books: readonly GoodreadsBook[], editions: readonly Edition[]): ImportRow[] =>
+const rowsOf = (books: readonly ImportBook[], editions: readonly Edition[]): ImportRow[] =>
   books.map((book, index) => ({
     key: book.key,
     title: book.title,
@@ -142,7 +143,7 @@ describe('importing a Goodreads export', () => {
 
     const { books } = parseGoodreads(exportFile(isbns), today)
     const catalogue = createCatalogueSearch(member.client)
-    const importer = createGoodreadsImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
+    const importer = createBookImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
 
     const editions = await matchAll(importer, books)
     expect(editions.map((edition) => [edition.via, 'id' in edition.book, edition.book.source])).toEqual([
@@ -219,7 +220,7 @@ describe('importing a Goodreads export', () => {
 
     for (const member of [ida, max]) {
       const catalogue = createCatalogueSearch(member.client)
-      const importer = createGoodreadsImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
+      const importer = createBookImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
       const written = await importer.write(rowsOf(books, await matchAll(importer, books)), { onWritten: () => {} })
       expect(written.data!.every((outcome) => outcome.outcome === 'added')).toBe(true)
     }
@@ -233,7 +234,7 @@ describe('importing a Goodreads export', () => {
     const library = createLibrary(member.client)
     const isbns = { read: uniqueIsbn(), reading: uniqueIsbn(), owned: uniqueIsbn(), wish: uniqueIsbn() }
     const { books } = parseGoodreads(exportFile(isbns), today)
-    const [harbour, fieldNotes] = books as [GoodreadsBook, GoodreadsBook]
+    const [harbour, fieldNotes] = books as [ImportBook, ImportBook]
 
     // Added in the app, read on the same day as the file says, then its edition changed: the file's ISBN finds neither.
     const mine = await library.addToLibrary(
@@ -265,7 +266,7 @@ describe('importing a Goodreads export', () => {
     expect(owned({ ...harbour, session: { ...harbour.session!, endedOn: null } })?.id).toBe(mine.data!.id)
     expect(owned({ ...harbour, status: 'want_to_read', session: null })?.id).toBe(mine.data!.id)
 
-    const importer = createGoodreadsImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
+    const importer = createBookImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
     const written = await importer.write(rowsOf(books, await matchAll(importer, books)), { onWritten: () => {} })
     expect(written.error).toBeNull()
     expect(written.data![0]).toMatchObject({ key: harbour.key, outcome: 'in_library', entryId: mine.data!.id })
@@ -288,7 +289,7 @@ describe('importing a Goodreads export', () => {
       isbn10: null,
     }))
     const catalogue = createCatalogueSearch(member.client)
-    const importer = createGoodreadsImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
+    const importer = createBookImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
     const written = await importer.write(rowsOf(tagged, await matchAll(importer, tagged)), { onWritten: () => {} })
     expect(written.error).toBeNull()
     expect(written.data!.every((outcome) => outcome.outcome === 'added')).toBe(true)
@@ -320,7 +321,7 @@ describe('importing a Goodreads export', () => {
 
   it('refuses to write while the device is offline', async () => {
     const member = await signUpMember()
-    const importer = createGoodreadsImport(member.client, {
+    const importer = createBookImport(member.client, {
       lookups: { catalogue: createCatalogueSearch(member.client), search: nowhere },
       probe: noProbe,
       online: () => false,
@@ -332,9 +333,10 @@ describe('importing a Goodreads export', () => {
 })
 
 describe('findEdition', () => {
-  const row = (overrides: Partial<GoodreadsBook>): GoodreadsBook => ({
+  const row = (overrides: Partial<ImportBook>): ImportBook => ({
+    source: 'goodreads',
     key: 'goodreads:1',
-    goodreadsId: '1',
+    sourceId: '1',
     row: 1,
     title: 'Piranesi',
     series: null,
@@ -345,11 +347,13 @@ describe('findEdition', () => {
     year: null,
     originalYear: null,
     binding: null,
+    language: null,
     publisher: null,
     shelf: 'read',
     shelves: [],
     status: 'finished',
     session: null,
+    earlierReads: [],
     extraReads: 0,
     otherKeys: [],
     addedOn: null,
@@ -437,7 +441,7 @@ describe('findEdition', () => {
       },
     }
     const member = await signUpMember()
-    const importer = createGoodreadsImport(member.client, { lookups: { catalogue: { search: async () => [] }, search: flaky }, probe: noProbe })
+    const importer = createBookImport(member.client, { lookups: { catalogue: { search: async () => [] }, search: flaky }, probe: noProbe })
     const reports: Edition[] = []
     await importer.match([row({ isbn13: '9790000001022' })], { onEdition: (_index, edition) => void reports.push(edition) })
     expect(reports.map((edition) => [edition.via, edition.unsure])).toEqual([

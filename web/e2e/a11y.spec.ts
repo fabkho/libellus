@@ -231,6 +231,18 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByTestId('yearInReview.title')).toHaveText('2025')
       await expectAccessible(page, 'a year in review')
     })
+
+    test('Import: the apps it reads, how to export from each, a refused file', async ({ page }) => {
+      await signedIn(page)
+      await page.goto('/import')
+      await expect(page.getByTestId('import.howTo')).toBeVisible()
+      await expectAccessible(page, 'Import')
+      await page.getByTestId('import.howTo.hardcover').click()
+      await expect(page.getByTestId('import.howTo.hardcover.text')).toBeVisible()
+      await page.getByTestId('import.file').setInputFiles({ name: 'notes.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Email\nA,B\n') })
+      await expect(page.getByTestId('import.fileError')).toBeVisible()
+      await expectAccessible(page, 'Import, how to export and a refused file')
+    })
   })
 }
 

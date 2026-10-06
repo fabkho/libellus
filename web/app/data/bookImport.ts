@@ -3,16 +3,19 @@ import type { Book, BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage } from './covers'
 import { abortError, type FetchLike } from './fetching'
-import { bookFromRow, pickEdition, titleQuery, GOODREADS_KEY_PREFIX, type GoodreadsBook } from './import/goodreads'
+import { SUPPORTED_SOURCES } from './import/detect'
+import { bookFromRow, pickEdition, titleQuery } from './import/editions'
+import type { ImportBook } from './import/rows'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
 import { normalise } from './merge'
 import type { Search } from './search'
 
 /**
- * Importing a Goodreads export in the app (issue #40), after the file is read
- * (data/import/goodreads.ts): finding each book's edition the way search does,
- * and writing the rows.
+ * Importing an export in the app (issues #40, #111), after the file is read
+ * and its app detected (data/import/detect.ts → the normalised rows of
+ * data/import/rows.ts): finding each book's edition the way search does, and
+ * writing the rows. Nothing here knows which app wrote the file.
  *
  * Finding an edition, per row, the first that answers (#111: the exact edition
  * the member shelved, not just the same work):
@@ -20,8 +23,8 @@ import type { Search } from './search'
  *      Apple Books, then OpenLibrary;
  *   2. a title + author search over all three, taking the result of the same
  *      work (`isSameWork`) whose edition fits the row best (`pickEdition`:
- *      language told from the title, page count, Binding, year; all from the
- *      file itself);
+ *      the file's language (else told from the title), page count, format,
+ *      year; all from the file itself, no app's book pages, #155);
  *   3. the file's own fields: an `import` Book keyed by its ISBN, or without
  *      one a Manual book of the member's (`bookFromRow`). A row whose ISBN no
  *      source knows stays that exact edition even when a title search finds
@@ -35,8 +38,8 @@ import type { Search } from './search'
  * Writing: the Cover of each Book that is new to the Catalogue is resolved
  * first (as on add, data/covers.ts), then a few rows go to `import_books` per
  * call (the rules are the database's: supabase/migrations/*_import_books.sql).
- * Each row's key (`goodreads:<Book Id>`) is stored on its entry and session,
- * so the same file twice adds nothing.
+ * Each row's key (`goodreads:<Book Id>`, `hardcover:<Book ID>`) is stored on
+ * its entry and reads, so the same file twice adds nothing.
  *
  * Framework-free: the Supabase client, the search repositories and the image
  * probe come in from outside.
@@ -84,7 +87,7 @@ async function withDeadline<T>(ms: number, outer: AbortSignal | undefined, task:
 }
 
 /** Finds the edition of one row (see the steps above). Rejects only when `signal` aborts. */
-export async function findEdition(row: GoodreadsBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
+export async function findEdition(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
   const timeout = lookups.timeoutMs ?? LOOKUP_TIMEOUT_MS
   let unsure = false
   async function ask<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T | null> {
@@ -232,7 +235,7 @@ export function libraryIndex(entries: readonly LibraryEntry[]): (book: Book | Bo
 export function libraryTitleIndex(
   entries: readonly LibraryEntry[],
   imported: ReadonlyMap<string, string> = new Map(),
-): (row: Pick<GoodreadsBook, 'title' | 'authors' | 'status' | 'session' | 'otherKeys'>) => LibraryEntry | null {
+): (row: Pick<ImportBook, 'title' | 'authors' | 'status' | 'session' | 'otherKeys'>) => LibraryEntry | null {
   const byTitle = new Map<string, LibraryEntry[]>()
   for (const entry of entries) {
     const key = workTitle(entry.book.title)
@@ -267,11 +270,12 @@ export function entryFor(book: Book | BookSnapshot, entries: readonly LibraryEnt
  * Collections she chose for its shelves, and another edition's Book whose
  * cover it takes when its own finds none.
  */
-export type ImportRow = Pick<GoodreadsBook, 'key' | 'status' | 'session' | 'addedOn' | 'title' | 'authors' | 'extraReads' | 'pageCount' | 'otherKeys'> & {
-  book: Book | BookSnapshot
-  collections?: readonly string[]
-  coverFrom?: Book | BookSnapshot | null
-}
+export type ImportRow = Pick<ImportBook, 'key' | 'status' | 'session' | 'addedOn' | 'title' | 'authors' | 'extraReads' | 'pageCount' | 'otherKeys'> &
+  Partial<Pick<ImportBook, 'earlierReads'>> & {
+    book: Book | BookSnapshot
+    collections?: readonly string[]
+    coverFrom?: Book | BookSnapshot | null
+  }
 
 export type RowOutcome = {
   key: string
@@ -299,8 +303,9 @@ export function importArguments(row: ImportRow) {
     review: session?.review ?? null,
     outcome: session?.outcome === 'abandoned' ? 'abandoned' : null,
     added_on: row.addedOn,
-    // Her earlier reads (Read Count), her page count, her shelves (#111).
+    // Her earlier reads (undated: Read Count; dated: several reads), her page count, her shelves (#111).
     extra_reads: row.extraReads,
+    earlier_reads: (row.earlierReads ?? []).map((read) => ({ started_on: read.startedOn, ended_on: read.endedOn })),
     page_count: row.pageCount,
     collections: row.collections ?? [],
   }
@@ -323,15 +328,28 @@ export async function writeRows(client: SupabaseClient, rows: readonly ImportRow
   }
 }
 
-/** Every entry the member imported from Goodreads before: its key → the entry's id. */
+/**
+ * Every entry the member imported from a supported app's export before (any of
+ * them): its key → the entry's id. Asked page by page (the API answers 1,000
+ * rows a request), so a library of any size is known whole.
+ */
 export async function importedKeys(client: SupabaseClient): Promise<Result<Map<string, string>>> {
-  const { data, error } = await client
-    .from('library_entries')
-    .select('id, import_key')
-    .like('import_key', `${GOODREADS_KEY_PREFIX}%`)
-    .returns<{ id: string; import_key: string }[]>()
-  if (error) return { data: null, error: mapLibraryError(error) }
-  return { data: new Map(data.map((row) => [row.import_key, row.id])), error: null }
+  const keys = new Map<string, string>()
+  const page = 1000
+  for (let from = 0; ; from += page) {
+    const { data, error } = await client
+      .from('library_entries')
+      .select('id, import_key')
+      .not('import_key', 'is', null)
+      .order('id')
+      .range(from, from + page - 1)
+      .returns<{ id: string; import_key: string }[]>()
+    if (error) return { data: null, error: mapLibraryError(error) }
+    for (const row of data) {
+      if (SUPPORTED_SOURCES.some((source) => row.import_key.startsWith(`${source}:`))) keys.set(row.import_key, row.id)
+    }
+    if (data.length < page) return { data: keys, error: null }
+  }
 }
 
 /** A Book new to the Catalogue gets its Cover first (as on add); a Book with an id or a Manual book goes as it is. */
@@ -351,10 +369,10 @@ export async function withCover(
   return { ...book, ...(lent.coverUrl ? lent : own) }
 }
 
-export type GoodreadsImport = {
+export type BookImport = {
   /** Finds every row's edition, a few at a time; `onEdition` as each is found. Rejects only when `signal` aborts. */
   match: (
-    rows: readonly GoodreadsBook[],
+    rows: readonly ImportBook[],
     options: { signal?: AbortSignal; onEdition: (index: number, edition: Edition) => void },
   ) => Promise<void>
   /**
@@ -365,10 +383,10 @@ export type GoodreadsImport = {
   write: (rows: readonly ImportRow[], options: { onWritten: (outcomes: RowOutcome[]) => void }) => Promise<Result<RowOutcome[]>>
 }
 
-export function createGoodreadsImport(
+export function createBookImport(
   client: SupabaseClient,
   { lookups, probe, online = () => true }: { lookups: Lookups; probe: ProbeImage } & WriteOptions,
-): GoodreadsImport {
+): BookImport {
   return {
     async match(rows, { signal, onEdition }) {
       const retry: number[] = []

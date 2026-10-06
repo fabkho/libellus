@@ -1,17 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import {
-  bookFromRow,
-  countByStatus,
-  goodreadsDay,
-  goodreadsIsbn,
-  goodreadsKey,
-  isSameWork,
-  NotAGoodreadsExportError,
-  parseGoodreads,
-  titleQuery,
-  type GoodreadsBook,
-} from '@/data/import/goodreads'
+import { bookFromRow, isSameWork, titleQuery } from '@/data/import/editions'
+import { goodreadsKey, parseGoodreads } from '@/data/import/goodreads'
+import { countByStatus, importDay, isbnPair, MissingColumnsError, type ImportBook } from '@/data/import/rows'
 
 /**
  * The pure step of the Goodreads import (#40): a library export → books,
@@ -26,7 +17,7 @@ const fixture = (name: string) => readFileSync(new URL(`./fixtures/goodreads/${n
 const TODAY = '2026-10-03'
 
 const parsed = parseGoodreads(fixture('library_export.csv'), TODAY)
-const byKey = (key: string) => parsed.books.find((book) => book.key === key) as GoodreadsBook
+const byKey = (key: string) => parsed.books.find((book) => book.key === key) as ImportBook
 
 describe('parseGoodreads', () => {
   it('reads every book of a Goodreads export, once', () => {
@@ -128,8 +119,8 @@ describe('parseGoodreads', () => {
   })
 
   it('refuses a file that is not a Goodreads export', () => {
-    expect(() => parseGoodreads('title,author\nPiranesi,Susanna Clarke\n', TODAY)).toThrow(NotAGoodreadsExportError)
-    expect(() => parseGoodreads('', TODAY)).toThrow(NotAGoodreadsExportError)
+    expect(() => parseGoodreads('title,author\nPiranesi,Susanna Clarke\n', TODAY)).toThrow(MissingColumnsError)
+    expect(() => parseGoodreads('', TODAY)).toThrow(MissingColumnsError)
   })
 
   it('needs only Title, Author and Exclusive Shelf', () => {
@@ -168,19 +159,19 @@ describe('parseGoodreads', () => {
 
 describe('the pieces', () => {
   it('reads Goodreads days', () => {
-    expect(goodreadsDay('2024/03/09', TODAY)).toBe('2024-03-09')
-    expect(goodreadsDay('2024-3-9', TODAY)).toBe('2024-03-09')
-    expect(goodreadsDay('', TODAY)).toBeNull()
-    expect(goodreadsDay('2024/02/30', TODAY)).toBe('invalid')
-    expect(goodreadsDay('next week', TODAY)).toBe('invalid')
-    expect(goodreadsDay('2026/10/04', TODAY)).toBe('invalid')
+    expect(importDay('2024/03/09', TODAY)).toBe('2024-03-09')
+    expect(importDay('2024-3-9', TODAY)).toBe('2024-03-09')
+    expect(importDay('', TODAY)).toBeNull()
+    expect(importDay('2024/02/30', TODAY)).toBe('invalid')
+    expect(importDay('next week', TODAY)).toBe('invalid')
+    expect(importDay('2026/10/04', TODAY)).toBe('invalid')
   })
 
   it('unwraps ISBNs, converts an ISBN-10 and drops a wrong check digit', () => {
-    expect(goodreadsIsbn('="9780553283686"', '="0553283685"')).toEqual({ isbn13: '9780553283686', isbn10: '0553283685' })
-    expect(goodreadsIsbn('=""', '="067972477X"')).toEqual({ isbn13: '9780679724773', isbn10: '067972477X' })
-    expect(goodreadsIsbn('=""', '=""')).toEqual({ isbn13: null, isbn10: null })
-    expect(goodreadsIsbn('="9780553283687"', '')).toEqual({ isbn13: null, isbn10: null })
+    expect(isbnPair('="9780553283686"', '="0553283685"')).toEqual({ isbn13: '9780553283686', isbn10: '0553283685' })
+    expect(isbnPair('=""', '="067972477X"')).toEqual({ isbn13: '9780679724773', isbn10: '067972477X' })
+    expect(isbnPair('=""', '=""')).toEqual({ isbn13: null, isbn10: null })
+    expect(isbnPair('="9780553283687"', '')).toEqual({ isbn13: null, isbn10: null })
   })
 
   it('keys a row by its Book Id, else by its ISBN, else by title and author', () => {
