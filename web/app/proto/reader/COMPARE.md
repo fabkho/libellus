@@ -537,3 +537,6 @@ exactly the folio's style** (small Geist Mono, faint, centred in its band), the 
 a's: 22 px edge to edge, 22 narrow, **28 normal**, 38 wide (before: 46 + the inset at both ends). Classic
 and scroll mode lose the doubled inset too. `round3/c-tight-bands-with-insets.jpg` (installed-app insets
 stood in: status bar 36, gesture bar 24; c normal | c edge to edge | a).
+
+**No running head (owner, after round 3).** c shows nothing above the text at all; the top band
+(28 px at Normal, under the status bar) is only air, the folio stays at the foot. `round3/c-no-running-head.jpg`.

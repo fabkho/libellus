@@ -20,7 +20,7 @@ import BookSearch from './BookSearch.vue'
 import { REST, coverCopy, fitBox, poseOf, ratioOf, rectOf } from './flight'
 import { ProgressWriter, QUICK_POLICY, SPEC_POLICY, pageAt } from './progress'
 import { MARGINS, readSettings, writeSettings, type ReaderSettings, type ReaderTheme } from './settings'
-import { runningHead, type ChromeInfo } from './types'
+import type { ChromeInfo } from './types'
 import ChromeQuiet from './ChromeQuiet.vue'
 import ChromeScroll from './ChromeScroll.vue'
 import ChromePrinted from './ChromePrinted.vue'
@@ -542,8 +542,8 @@ function onKey(event: KeyboardEvent) {
 function paintMargins() {
   const r = engine.value?.view.renderer
   if (!r?.heads || !r.feet) return
-  const two = r.heads.length > 1
-  // Running head and folio in one style (owner, after round 3): small mono, faint, centred in their bands.
+  const two = r.feet.length > 1
+  // The folio: small mono, faint, centred in its band.
   const style = (el: HTMLElement) => {
     Object.assign(el.style, {
       display: 'flex',
@@ -562,9 +562,9 @@ function paintMargins() {
       textOverflow: 'ellipsis',
     })
   }
-  r.heads.forEach((el, i) => {
-    style(el)
-    el.textContent = two && i === 0 ? props.book.title : runningHead(props.book.title, info.value.chapter)
+  // No running head (owner, after round 3): the top band is only air above the text; the folio stays at the foot.
+  r.heads.forEach((el) => {
+    el.textContent = ''
   })
   r.feet.forEach((el, i) => {
     style(el)
