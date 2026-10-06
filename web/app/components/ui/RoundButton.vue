@@ -10,7 +10,7 @@ defineProps<{ icon: IconName; label: string }>()
   <button
     type="button"
     :aria-label="label"
-    class="relative flex size-(--size-touch) items-center justify-center text-ink"
+    class="relative flex size-(--size-touch) items-center justify-center text-ink disabled:opacity-50"
   >
     <span class="round flex size-(--size-button-md) items-center justify-center rounded-pill edge">
       <UiIcon :name="icon" :size="20" />

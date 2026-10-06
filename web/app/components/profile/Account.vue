@@ -10,6 +10,8 @@
 // and says "Offline"), behind a Confirm that says what goes and that it cannot be
 // undone; writes still waiting to sync are named in it and discarded with the rest.
 // Afterwards she is on Sign in, which says the account was deleted.
+// Errors (the owner's account only, stores/ownerErrors.ts), after Book links: the client error
+// log's page, with how many groups first appeared in the last 24 hours as a badge.
 // Ebooks on this device (#131), where the browser can keep files: the Ebook folder
 // (Chrome only: its name, a tap picks it; Scan beside it asks for the folder's
 // permission on that tap when Android has forgotten it, scans, and opens the
@@ -19,6 +21,7 @@ import { useEbooksStore } from '~/stores/ebooks'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
+import { useOwnerErrorsStore } from '~/stores/ownerErrors'
 import { useThemeStore } from '~/stores/theme'
 
 const { t } = useI18n()
@@ -31,6 +34,9 @@ const linking = ref(false)
 const links = useLinkTemplatesStore()
 const linkCount = computed(() => links.own?.length ?? 0)
 onMounted(() => void links.load())
+// Errors (the owner's, and nobody else's: the store neither asks nor shows for another member).
+const errors = useOwnerErrorsStore()
+onMounted(() => void errors.load())
 const sync = useSyncStore()
 const online = useOnline()
 
@@ -119,6 +125,16 @@ async function syncFirst() {
       </UiRow>
       <UiRow as="button" icon="globe" :label="t('links.row')" chevron data-testid="profile.links" @click="linking = true">
         <span :class="linkCount ? 'figures text-ink-muted' : 'text-ink-ghost'" data-testid="profile.linksValue">{{ linkCount || t('links.rowNone') }}</span>
+      </UiRow>
+      <UiRow v-if="errors.isOwner" to="/profile/errors" icon="flag" :label="t('ownerErrors.row')" chevron data-testid="profile.errors">
+        <span
+          v-if="errors.fresh"
+          class="figures rounded-pill bg-accent-soft px-sm text-meta text-accent"
+          :aria-label="t('ownerErrors.rowNew', { count: errors.fresh })"
+          data-testid="profile.errorsNew"
+        >{{ errors.fresh }}</span>
+        <span v-else-if="errors.groups?.length" class="figures text-ink-muted" data-testid="profile.errorsValue">{{ errors.groups.length }}</span>
+        <span v-else-if="errors.groups" class="text-ink-ghost" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
       </UiRow>
       <UiRow
         as="button"
