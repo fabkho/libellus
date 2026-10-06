@@ -18,6 +18,7 @@ import { useStatsStore } from '~/stores/stats'
 definePageMeta({ layout: 'tabs', screen: 'profile', pushed: true })
 
 const { t } = useI18n()
+const library = useLibraryStore()
 const router = useRouter()
 const stats = useStatsStore()
 // Your shelf (#23): the owner's card, and nobody else's.
@@ -33,6 +34,8 @@ function show() {
   showing = true
   void stats.load()
   void shelf.load()
+  // The Library tells the page, before the record does, whether anything is finished (below).
+  if (!library.loaded) void library.load()
 }
 onMounted(show)
 onActivated(show)
@@ -53,10 +56,19 @@ const finishedAny = computed(() => all.value.books > 0)
 // Each section that may turn out to have nothing to show is guessed present, the way a member
 // who reads has it, and closes smoothly if it is not (UiReveal). A member whose Library (as
 // this device holds it, stores/library.ts) has nothing finished gets no placeholders: her
-// figures are most likely the empty state, which opens in when the record comes.
-const library = useLibraryStore()
+// figures are the empty state, which stands in the first frame (below), so the account rows
+// under it never move when the record comes. A Library this device has not seen yet (a direct
+// load of the Profile before anything else) is not guessed at: nothing stands under the hero
+// until the Library or the record has answered (`undecided`, a moment), then the page arrives
+// whole, in its final shape, and fades in.
 const loading = computed(() => !stats.record && !stats.loadError)
-const placeholders = computed(() => loading.value && (!library.loaded || library.finished.length > 0))
+const undecided = computed(() => loading.value && !library.loaded)
+const libraryEmpty = computed(() => library.loaded && library.finished.length === 0)
+const placeholders = computed(() => loading.value && !libraryEmpty.value)
+// The empty state: the record's answer once it is in, until then (or offline, when it cannot
+// come) the Library's.
+const emptyShown = computed(() => (stats.record ? !finishedAny.value : libraryEmpty.value && (loading.value || stats.loadError === 'offline')))
+const errorShown = computed(() => !stats.record && !!stats.loadError && !emptyShown.value)
 const hasStats = computed(() => !!stats.record && finishedAny.value)
 const daysShown = computed(() => (stats.year === 'all' || stats.year === thisYear) && !!stats.record?.daysSince)
 const hasRecords = computed(() => !!(figures.value.longest || figures.value.shortest || figures.value.quickest || figures.value.slowest))
@@ -96,14 +108,14 @@ function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: stats.year, star }
 }
 
-// Her photo (#156): the hero's avatar and the Account's Photo row both open it.
-const photo = useTemplateRef<{ start: () => void }>('photo')
-
 // The Profile belongs to whatever tab it was opened from: back by history when there is one.
 function back() {
   if (window.history.state?.back) router.back()
   else void navigateTo('/')
 }
+
+// Her photo (#156): the hero's avatar and the Account's Photo row both open it.
+const photo = useTemplateRef<{ start: () => void }>('photo')
 </script>
 
 <template>
@@ -114,62 +126,79 @@ function back() {
     <ProfileHero @photo="photo?.start()" :since="since" :read="booksRead" :reading="stats.record?.reading ?? 0" :want="stats.record?.wantToRead ?? 0" :loading="loading" :expect-since="placeholders" />
 
     <!-- No gaps between the blocks: each carries the space after it inside its room, so a block that closes takes its space along. -->
-    <div class="relative flex flex-col px-screen pt-xl">
-      <UiReveal :show="placeholders || hasStats">
-        <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
-          <div class="flex flex-col gap-md">
-            <ProfileYearPills v-model="stats.year" :years="years" :loading="loading" />
-            <ProfileFigures :figures="loading ? null : figures" />
-          </div>
-
-          <section id="columns" class="flex flex-col gap-md pt-xl">
-            <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
-              <h2 class="eyebrow">{{ stats.year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-              <UiButton v-if="!loading && stats.year !== 'all'" tone="quiet" size="sm" :to="`/profile/${stats.year}`" data-testid="profile.inReview">
-                {{ t('profile.inReview', { year: stats.year }) }}<UiIcon name="chevron" :size="13" />
-              </UiButton>
+    <Transition name="decided">
+      <div v-if="!undecided" class="relative flex flex-col px-screen pt-xl">
+        <UiReveal :show="placeholders || hasStats">
+          <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
+            <div class="flex flex-col gap-md">
+              <ProfileYearPills v-model="stats.year" :years="years" :loading="loading" />
+              <ProfileFigures :figures="loading ? null : figures" />
             </div>
-            <ProfileColumns :columns="loading ? null : columns" :placeholders="stats.year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
-          </section>
 
-          <UiReveal :show="loading || daysShown">
-            <ProfileDays class="pt-xl" :days="stats.record?.days ?? null" :since="stats.record?.daysSince ?? null" />
-          </UiReveal>
-          <UiReveal :show="loading || figures.rated > 0">
-            <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
-          </UiReveal>
-          <UiReveal :show="loading || hasRecords">
-            <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />
-          </UiReveal>
-          <UiReveal :show="loading || figures.authors.length > 0">
-            <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" />
-          </UiReveal>
-          <ProfileYearCards class="pt-xl" :years="loading ? null : yearFigures" />
-        </div>
-      </UiReveal>
+            <section id="columns" class="flex flex-col gap-md pt-xl">
+              <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
+                <h2 class="eyebrow">{{ stats.year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
+                <UiButton v-if="!loading && stats.year !== 'all'" tone="quiet" size="sm" :to="`/profile/${stats.year}`" data-testid="profile.inReview">
+                  {{ t('profile.inReview', { year: stats.year }) }}<UiIcon name="chevron" :size="13" />
+                </UiButton>
+              </div>
+              <ProfileColumns :columns="loading ? null : columns" :placeholders="stats.year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
+            </section>
 
-      <UiReveal :show="!!stats.record && !finishedAny">
-        <div class="flex flex-col items-center gap-xs py-lg text-center" data-testid="profile.empty">
-          <p class="book-title text-callout">{{ t('profile.empty.title') }}</p>
-          <p class="text-subhead text-ink-muted">{{ t('profile.empty.text') }}</p>
-        </div>
-        <div class="pb-xl" />
-      </UiReveal>
+            <UiReveal :show="loading || daysShown">
+              <ProfileDays class="pt-xl" :days="stats.record?.days ?? null" :since="stats.record?.daysSince ?? null" />
+            </UiReveal>
+            <UiReveal :show="loading || figures.rated > 0">
+              <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+            </UiReveal>
+            <UiReveal :show="loading || hasRecords">
+              <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />
+            </UiReveal>
+            <UiReveal :show="loading || figures.authors.length > 0">
+              <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" />
+            </UiReveal>
+            <ProfileYearCards class="pt-xl" :years="loading ? null : yearFigures" />
+          </div>
+        </UiReveal>
 
-      <UiReveal :show="!stats.record && !!stats.loadError">
-        <div class="flex flex-col items-center gap-md py-lg text-center" data-testid="profile.loadError">
-          <p class="text-subhead text-ink-muted">{{ stats.loadError === 'offline' ? t('profile.offline') : t('profile.loadError') }}</p>
-          <UiButton v-if="stats.loadError !== 'offline'" tone="secondary" size="md" data-testid="profile.retry" @click="stats.load()">{{ t('profile.retry') }}</UiButton>
-        </div>
-        <div class="pb-xl" />
-      </UiReveal>
+        <UiReveal :show="emptyShown">
+          <div class="flex flex-col items-center gap-xs py-lg text-center" data-testid="profile.empty">
+            <p class="book-title text-callout">{{ t('profile.empty.title') }}</p>
+            <p class="text-subhead text-ink-muted">{{ t('profile.empty.text') }}</p>
+          </div>
+          <div class="pb-xl" />
+        </UiReveal>
 
-      <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
+        <UiReveal :show="errorShown">
+          <div class="flex flex-col items-center gap-md py-lg text-center" data-testid="profile.loadError">
+            <p class="text-subhead text-ink-muted">{{ stats.loadError === 'offline' ? t('profile.offline') : t('profile.loadError') }}</p>
+            <UiButton v-if="stats.loadError !== 'offline'" tone="secondary" size="md" data-testid="profile.retry" @click="stats.load()">{{ t('profile.retry') }}</UiButton>
+          </div>
+          <div class="pb-xl" />
+        </UiReveal>
 
-      <ProfileAccount @photo="photo?.start()" />
-    </div>
+        <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
 
-    <ProfilePhoto ref="photo" />
+        <ProfileAccount @photo="photo?.start()" />
+      </div>
+    </Transition>
+
     <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.year === 'all'" />
+    <ProfilePhoto ref="photo" />
   </div>
 </template>
+
+<style scoped>
+/* The page under the hero arrives whole once the Library or the record has answered: opacity only, so nothing moves. */
+.decided-enter-active {
+  transition: opacity var(--duration-standard) var(--ease-standard);
+}
+.decided-enter-from {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .decided-enter-active {
+    transition: opacity var(--duration-quick) linear;
+  }
+}
+</style>

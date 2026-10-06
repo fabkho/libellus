@@ -109,7 +109,13 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   each and, when the record comes, open as in Month rows. Guesses where the record can't be known before it comes: the Profile
   under All has four years and four authors, a year in review a cover in every month (none in the
   months still to come). A member whose Library (as this device holds it) has nothing finished
-  gets no placeholders: the empty state opens in once the record says so. The device keeps the
+  (a new member, or one with only Books to read) gets no placeholders: the empty state is there in
+  the first frame, over the account rows, which therefore never move when the record comes (it
+  closes, like a `Reveal`, only if the record turns out to have finished Books after all). A Library
+  the device has not seen yet (a direct load of the Profile on a fresh device) is not guessed at:
+  the Profile asks for it next to the record, nothing but the hero stands under the name until one of
+  them has answered (a moment), and the page then fades in whole, in the shape it is going to keep
+  (opacity only; `quick` with Reduce Motion). The device keeps the
   last record (`stats` in the device's copy), so only the first visit on a device shows any of
   this: the next opens with the figures and refreshes them where they stand.
 - **Sheet.** Rises from below the screen edge (`translateY(100%)` → 0) over `sheet` with the
