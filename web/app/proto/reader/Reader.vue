@@ -13,8 +13,7 @@ import type { CoverColors } from '~/utils/cover'
 import type { Box } from '~/utils/flight'
 import type { Highlight, Layout, PageColors, ReaderEngine, Relocation, Selection } from './engine'
 import { readHighlights, writeHighlights } from './highlights'
-import { define as lookUp, translate as translateText } from './lookup'
-import SelectionMenu, { type MenuTarget, type Peek } from './SelectionMenu.vue'
+import SelectionMenu, { type MenuTarget } from './SelectionMenu.vue'
 import TranslateSheet from './TranslateSheet.vue'
 import DefineSheet from './DefineSheet.vue'
 import SearchSheet from './SearchSheet.vue'
@@ -41,7 +40,6 @@ const props = defineProps<{
   hero: HTMLElement | null
   quickWrites: boolean
   reduceMotion: boolean | null
-  menu: 'bubble' | 'dock' | 'peek'
   initial: { theme: string | null; flow: string | null; margins: string | null; leading: string | null; size: string | null; chrome: boolean; sheet: string | null; at: number | null; flight: boolean }
 }>()
 
@@ -53,7 +51,6 @@ const emit = defineEmits<{
   cover: [url: string | null, title: string, author: string]
   wake: [state: string]
   timings: [text: string]
-  menu: [design: 'bubble' | 'dock' | 'peek']
 }>()
 
 // ------------------------------------------------------------------ settings
@@ -119,6 +116,32 @@ useBackDismiss(chrome, () => (chrome.value = false))
 // ------------------------------------------------------------------ selected words
 
 const selection = shallowRef<Selection | null>(null)
+/** On a touch screen the reader selects itself (engine.ts, installTouchSelection): no browser bar over the words. */
+const touchScreen = window.matchMedia('(pointer: coarse)').matches
+/** A handle being dragged: the bubble waits until it is let go. */
+const dragging = ref<null | 'start' | 'end'>(null)
+let dragOffset = 0
+
+function onHandleDown(which: 'start' | 'end', event: PointerEvent) {
+  const s = selection.value
+  if (!s) return
+  try {
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+  } catch {
+    // A pointer the browser does not know (a scripted one): the moves still arrive on the handle.
+  }
+  // Probe the line the handle hangs from, not the point under the finger (which is below it).
+  const line = which === 'start' ? s.first : s.last
+  dragOffset = event.clientY - (line.top + line.height / 2)
+  dragging.value = which
+}
+function onHandleMove(event: PointerEvent) {
+  if (!dragging.value) return
+  dragging.value = engine.value?.extendSelection(dragging.value, event.clientX, event.clientY - dragOffset) ?? dragging.value
+}
+function onHandleUp() {
+  dragging.value = null
+}
 const tapped = shallowRef<{ highlight: Highlight; rect: Selection['rect'] } | null>(null)
 const menuOpen = computed(() => Boolean(selection.value || tapped.value))
 useBackDismiss(menuOpen, () => closeMenu())
@@ -128,6 +151,7 @@ const searchInitial = ref('')
 const toast = ref<{ text: string; at: number } | null>(null)
 
 const menuTarget = computed<MenuTarget | null>(() => {
+  if (dragging.value) return null
   if (tapped.value) {
     const { highlight, rect } = tapped.value
     return { text: highlight.text, rect, first: rect, last: rect, color: highlight.color }
@@ -193,11 +217,14 @@ async function onCopy() {
   } catch {
     // No Clipboard API here (plain http on the LAN): the page copies its own selection.
     const doc = (engine.value?.view.renderer as unknown as { getContents: () => { doc: Document }[] }).getContents()[0]?.doc
-    if (selection.value && doc) doc.execCommand('copy')
+    if (selection.value && !selection.value.custom && doc) doc.execCommand('copy')
     else {
+      // The reader's own selection is not the browser's: copy the words through a hidden field (iOS wants a range set on it).
       const area = Object.assign(document.createElement('textarea'), { value: text })
+      area.style.cssText = 'position:fixed;opacity:0;top:0;left:0'
       document.body.append(area)
       area.select()
+      area.setSelectionRange(0, text.length)
       document.execCommand('copy')
       area.remove()
     }
@@ -225,38 +252,6 @@ function goToHit(cfi: string) {
   searchOpen.value = false
   jump(() => engine.value?.goTo(cfi))
 }
-
-// peek: the answer already in the panel (debounced; a passage only up to 300 characters, the free tier counts them).
-const peek = ref<Peek | null>(null)
-let peekTimer: ReturnType<typeof setTimeout> | undefined
-let peekRun = 0
-watch(menuTarget, (target) => {
-  clearTimeout(peekTimer)
-  peek.value = null
-  if (!target || props.menu !== 'peek' || !engine.value) return
-  const lang = engine.value.language
-  const run = ++peekRun
-  const kind = canDefine.value ? 'define' : 'translate'
-  if (kind === 'translate' && target.text.length > 300) return
-  const targetLang = localStorage.getItem('libellus-reader-proto-target') ?? ((navigator.language || 'de').split('-')[0] === lang ? 'de' : (navigator.language || 'de').split('-')[0]!)
-  peek.value = { kind, loading: true, title: kind === 'define' ? target.text : 'Translation', text: null, meta: kind === 'define' ? 'Wiktionary' : `${lang} → ${targetLang}` }
-  peekTimer = setTimeout(async () => {
-    try {
-      if (kind === 'define') {
-        const d = await lookUp(fetch, target.text, lang)
-        if (run !== peekRun) return
-        const first = d?.entries[0]
-        peek.value = { kind, loading: false, title: d?.word ?? target.text, text: first ? first.senses[0]!.definition : null, meta: first?.partOfSpeech ?? 'Wiktionary' }
-      } else {
-        const t = await translateText(fetch, target.text, lang, targetLang)
-        if (run !== peekRun) return
-        peek.value = { kind, loading: false, title: 'Translation', text: t.text, meta: `${lang} → ${targetLang}` }
-      }
-    } catch {
-      if (run === peekRun) peek.value = { ...peek.value!, loading: false, text: null }
-    }
-  }, 450)
-})
 
 // ------------------------------------------------------------------ layout
 
@@ -453,6 +448,7 @@ function jump(go: () => Promise<unknown> | undefined) {
 }
 function onScroll(offset: number, size: number, viewSize: number) {
   if (mode.value !== 'b') return
+  if (selection.value?.custom && !dragging.value) closeMenu()
   chapterFraction.value = viewSize > size ? Math.min(1, offset / (viewSize - size)) : 1
   const index = loc.value?.sectionIndex ?? -1
   if (index !== lastIndex || !ready.value || jumping) {
@@ -675,6 +671,7 @@ onMounted(async () => {
       return module.openReader(host.value!, props.file, {
         handlers: { relocate: onRelocate, tap: (x) => onTap(x), scroll: onScroll, swipe: onSwipe, select: onSelect, highlightTapped: onHighlightTapped },
         highlights: readHighlights<Highlight>(props.book.title),
+        touchSelection: touchScreen,
         layout: layout.value,
         settings,
         colors: colors(),
@@ -690,6 +687,7 @@ onMounted(async () => {
       timings.value = `${(t.bytes / 1e6).toFixed(1)} MB · engine ${Math.round(t.importMs)} ms · book ${Math.round(t.parseMs)} ms · first page ${Math.round(t.firstPageMs)} ms`
       emit('timings', timings.value)
       ;(window as unknown as { __readerTimings?: unknown }).__readerTimings = { ...t }
+      ;(window as unknown as { __readerEngine?: unknown }).__readerEngine = opened // scripted checks (WebKit has no synthetic touches)
       return opened
     })
     .catch((error: unknown) => {
@@ -799,18 +797,45 @@ function nextChapter() {
       @set-here="setHere"
     />
 
+    <!-- The reader's own selection (touch screens): a lamp wash over the words and two handles to stretch it. -->
+    <div v-if="selection?.custom" class="pointer-events-none absolute inset-0 z-20" data-testid="reader.selection">
+      <span
+        v-for="(r, i) in selection.rects"
+        :key="i"
+        class="sel absolute"
+        :style="{ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` }"
+      />
+      <button
+        v-for="which in (['start', 'end'] as const)"
+        :key="which"
+        type="button"
+        class="handle pointer-events-auto absolute flex size-(--size-touch) justify-center"
+        :class="which"
+        :style="
+          which === 'start'
+            ? { left: `${selection.first.left - 22}px`, top: `${selection.first.top - 2}px`, '--stem': `${selection.first.height}px` }
+            : { left: `${selection.last.left + selection.last.width - 22}px`, top: `${selection.last.top - 2}px`, '--stem': `${selection.last.height}px` }
+        "
+        :aria-label="which === 'start' ? 'Move the start of the selection' : 'Move the end of the selection'"
+        :data-testid="`reader.handle.${which}`"
+        @pointerdown="onHandleDown(which, $event)"
+        @pointermove="onHandleMove"
+        @pointerup="onHandleUp"
+        @pointercancel="onHandleUp"
+      >
+        <span class="stem" aria-hidden="true" /><span class="knob" aria-hidden="true" />
+      </button>
+    </div>
+
     <SelectionMenu
-      :design="menu"
       :target="menuTarget"
       :can-define="canDefine"
-      :peek="peek"
       @translate="openLookup('translate')"
       @define="openLookup('define')"
       @copy="onCopy"
       @search="openLookup('search')"
       @color="onColor"
       @remove="onRemove"
-      @more="openLookup($event)"
     />
     <Transition name="toast">
       <p v-if="toast" class="toast figures pointer-events-none fixed inset-x-0 z-40 flex justify-center" role="status">
@@ -832,7 +857,7 @@ function nextChapter() {
 
     <p v-if="failed" class="absolute inset-x-0 top-1/2 px-xl text-center text-subhead text-ink-muted">This book could not be opened. {{ failed }}</p>
 
-    <TypeSheet v-model:open="typeOpen" :menu="menu" :settings="settings" @update:menu="emit('menu', $event)" :wake-note="settings.keepAwake && !isSecureContextNow() ? 'Simulated here: the phone needs HTTPS for it.' : null" />
+    <TypeSheet v-model:open="typeOpen" :settings="settings" :wake-note="settings.keepAwake && !isSecureContextNow() ? 'Simulated here: the phone needs HTTPS for it.' : null" />
     <TocSheet v-model:open="tocOpen" :toc="engine?.toc ?? []" :current="loc?.chapterHref ?? null" :info="info" :book="book" @go="goTo" />
     <StartPrompt v-model:open="startOpen" :book="book" @start="onStarted" />
     <FinishPrompt v-model:open="finishOpen" :book="book" @finish="onFinished" />
@@ -858,6 +883,34 @@ function nextChapter() {
 .toast-leave-to {
   opacity: 0;
 }
+/* The reader's own selection: the lamp's soft wash, and handles like Android's and iOS's, in the lamp colour. */
+.sel {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  border-radius: var(--radius-cover-sm);
+}
+.handle {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.handle .stem {
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--stroke-focus) / 2);
+  width: var(--stroke-focus);
+  height: calc(var(--stem) + var(--spacing-xs));
+  background: var(--color-accent);
+}
+.handle .knob {
+  position: absolute;
+  top: calc(var(--stem) + var(--spacing-xxs));
+  left: calc(50% - var(--spacing-sm));
+  width: var(--spacing-md);
+  height: var(--spacing-md);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  box-shadow: var(--elevation-button);
+}
+
 /* Highlights wash the words: multiplied into paper, softer and plain in the dark. */
 .reader :deep(foliate-view) {
   --overlayer-highlight-opacity: 0.42;

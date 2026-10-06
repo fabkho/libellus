@@ -83,6 +83,10 @@ export interface Selection {
   /** The first and last line's boxes: the menu sits above the first or below the last. */
   first: Box
   last: Box
+  /** Every line's box (drawn by the reader when it does the selecting itself). */
+  rects: Box[]
+  /** Selected by the reader's own long-press and handles (touch screens), not the browser's. */
+  custom: boolean
 }
 
 export interface Highlight {
@@ -201,6 +205,19 @@ export class ReaderEngine {
   highlights: Highlight[] = []
   /** When a highlight was last tapped: that tap is not also a page turn. */
   annotationTappedAt = 0
+  /** Until when a tap is ignored (the end of a long-press that selected a word). */
+  suppressTapUntil = 0
+  /**
+   * On touch screens the reader selects text itself (long-press a word, drag the
+   * handles): the browser's selection is off in the page, so neither Chrome on
+   * Android (Copy · Select all · Web search · Share) nor Safari on iOS (Copy ·
+   * Look Up · Translate · Share) shows its own bar over the words.
+   */
+  touchSelection = false
+  customRange: Range | null = null
+  customDoc: Document | null = null
+  private pressWord: Range | null = null
+  onSelect: ((s: Selection | null) => void) | null = null
   /** The book's language (BCP 47, e.g. "en"), for translating and looking up words. */
   get language(): string {
     const lang = this.view.language?.canonical ?? text(this.view.book.metadata?.language)
@@ -303,7 +320,7 @@ export class ReaderEngine {
 
   setStyles(settings: ReaderSettings, colors: PageColors) {
     const flow = this.view.renderer.getAttribute('flow') === 'scrolled' ? 'scrolled' : 'paginated'
-    this.view.renderer.setStyles(pageCss(settings, colors, flow))
+    this.view.renderer.setStyles(pageCss(settings, colors, flow, this.touchSelection))
   }
 
   highlight(highlight: Highlight) {
@@ -314,7 +331,111 @@ export class ReaderEngine {
     this.highlights = this.highlights.filter((h) => h.cfi !== cfi)
     void this.view.deleteAnnotation({ value: cfi })
   }
+  // ---------------------------------------------------------------- the reader's own selection (touch)
+
+  private caretAt(doc: Document, x: number, y: number): { node: Node; offset: number } | null {
+    const d = doc as Document & { caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null }
+    const p = d.caretPositionFromPoint?.(x, y)
+    if (p) return { node: p.offsetNode, offset: p.offset }
+    const r = doc.caretRangeFromPoint?.(x, y)
+    return r ? { node: r.startContainer, offset: r.startOffset } : null
+  }
+  /** The word under a point (in the page's own coordinates), or null on space and pictures. */
+  private wordAt(doc: Document, x: number, y: number): Range | null {
+    // Only the page on screen: in pages the page's document runs on sideways into the next pages.
+    const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
+    if (frame) {
+      const vx = Math.min(Math.max(frame.left + x, 1), window.innerWidth - 1)
+      const vy = Math.min(Math.max(frame.top + y, 1), window.innerHeight - 1)
+      x = vx - frame.left
+      y = vy - frame.top
+    }
+    const caret = this.caretAt(doc, x, y)
+    if (!caret || caret.node.nodeType !== Node.TEXT_NODE) return null
+    const node = caret.node as Text
+    const segmenter = new Intl.Segmenter(this.language, { granularity: 'word' })
+    for (const seg of segmenter.segment(node.data)) {
+      const end = seg.index + seg.segment.length
+      if (caret.offset >= seg.index && caret.offset <= end && (caret.offset < end || seg.isWordLike)) {
+        if (!seg.isWordLike) return null
+        const range = doc.createRange()
+        range.setStart(node, seg.index)
+        range.setEnd(node, end)
+        return range
+      }
+    }
+    return null
+  }
+  /** Long-press: the word under the finger. */
+  selectWordAt(doc: Document, x: number, y: number): boolean {
+    const word = this.wordAt(doc, x, y)
+    if (!word) return false
+    this.customDoc = doc
+    this.customRange = word
+    this.pressWord = word.cloneRange()
+    this.reportCustom()
+    return true
+  }
+  /** Where a point stands against another: -1 before it, 0 on it, 1 after it. */
+  private order(doc: Document, anchor: [Node, number], node: Node, offset: number): number {
+    const at = doc.createRange()
+    at.setStart(anchor[0], anchor[1])
+    return at.comparePoint(node, offset)
+  }
+  /** The finger moves on after the long-press: from the pressed word to the word under it, either way. */
+  extendFromPress(x: number, y: number) {
+    const doc = this.customDoc
+    const press = this.pressWord
+    if (!doc || !press) return
+    const word = this.wordAt(doc, x, y)
+    if (!word) return
+    const range = doc.createRange()
+    if (this.order(doc, [press.startContainer, press.startOffset], word.startContainer, word.startOffset) >= 0) {
+      range.setStart(press.startContainer, press.startOffset)
+      range.setEnd(word.endContainer, word.endOffset)
+    } else {
+      range.setStart(word.startContainer, word.startOffset)
+      range.setEnd(press.endContainer, press.endOffset)
+    }
+    this.customRange = range
+    this.reportCustom()
+  }
+  /** A handle dragged to a point on screen (viewport coordinates); returns which end it now is (they can cross). */
+  extendSelection(which: 'start' | 'end', vx: number, vy: number): 'start' | 'end' {
+    const doc = this.customDoc
+    const current = this.customRange
+    const frame = doc?.defaultView?.frameElement?.getBoundingClientRect()
+    if (!doc || !current || !frame) return which
+    const word = this.wordAt(doc, vx - frame.left, vy - frame.top)
+    if (!word) return which
+    // The other end stays where it is; the dragged one goes to the word, before or after it.
+    const anchor: [Node, number] = which === 'end' ? [current.startContainer, current.startOffset] : [current.endContainer, current.endOffset]
+    const range = doc.createRange()
+    let now: 'start' | 'end'
+    if (which === 'end' ? this.order(doc, anchor, word.endContainer, word.endOffset) > 0 : this.order(doc, anchor, word.startContainer, word.startOffset) >= 0) {
+      range.setStart(anchor[0], anchor[1])
+      range.setEnd(word.endContainer, word.endOffset)
+      now = 'end'
+    } else {
+      range.setStart(word.startContainer, word.startOffset)
+      range.setEnd(anchor[0], anchor[1])
+      now = 'start'
+    }
+    if (range.collapsed) return which
+    this.customRange = range
+    this.reportCustom()
+    return now
+  }
+  reportCustom() {
+    const range = this.customRange
+    const doc = this.customDoc
+    if (!range || !doc) return this.onSelect?.(null)
+    this.onSelect?.(describeRange(this, doc, range, true))
+  }
+
   clearSelection() {
+    this.customRange = null
+    this.pressWord = null
     const contents = (this.view.renderer as unknown as { getContents: () => { doc: Document }[] }).getContents()
     for (const { doc } of contents) doc.getSelection()?.removeAllRanges()
   }
@@ -358,7 +479,7 @@ function fontFaces() {
  * Colours come in as values (the iframe sees no tokens); the book keeps its
  * own structure (headings, centring, images), its colours give way to the room.
  */
-export function pageCss(settings: ReaderSettings, colors: PageColors, flow: Flow = 'paginated'): string {
+export function pageCss(settings: ReaderSettings, colors: PageColors, flow: Flow = 'paginated', touchSelection = false): string {
   const family = settings.font === 'serif' ? `'Libellus Serif', Georgia, serif` : `'Libellus Sans', system-ui, sans-serif`
   const size = FONT_SIZES[settings.size] ?? 18
   const leading = LEADINGS[settings.leading] ?? 1.55
@@ -416,6 +537,9 @@ hr { border: 0 !important; border-top: 0.5px solid ${colors.hairline} !important
 img { max-width: 100%; height: auto; }
 ${colors.scheme === 'dark' ? 'img:not([src$=".svg"]) { filter: brightness(0.86) contrast(1.05); }' : '/* On paper a picture\'s white is the page\'s own. */ img { mix-blend-mode: multiply; }'}
 pre { white-space: pre-wrap !important; }
+${touchSelection ? `/* The reader selects (long-press, its own handles): no browser selection, no callout, no tap flash. */
+html, body, body * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
+* { -webkit-tap-highlight-color: transparent; }` : ''}
 ${flow === 'paginated' ? `/* A cover page (one picture, no text) fills its page, centred, as a printed cover does. */
 body:has(> div:only-child > svg:only-child), body:has(> div:only-child > img:only-child), body:has(> img:only-child) {
   height: 100vh !important; margin: 0 !important; padding: 0 !important;
@@ -426,6 +550,87 @@ body:has(> div:only-child > img:only-child) img, body:has(> img:only-child) img 
 aside[epub|type~="endnote"], aside[epub|type~="footnote"], aside[epub|type~="note"], aside[epub|type~="rearnote"] { display: none; }
 ::selection { background: color-mix(in srgb, ${colors.accent} 28%, transparent); }
 `
+}
+
+/**
+ * Long-press a word (450 ms, the finger still) to select it, keep the finger
+ * down and move to stretch the selection word by word; the handles do the rest
+ * (Reader.vue). Listens on the page's window in the capture phase, so while the
+ * finger is selecting, foliate's own swipe (on the document) never sees the
+ * moves and the page does not turn. Touch events, caret-from-point and
+ * Intl.Segmenter: the same in Chrome on Android and Safari on iOS.
+ */
+function installTouchSelection(engine: ReaderEngine, doc: Document) {
+  const win = doc.defaultView
+  if (!win) return
+  // The browser's own long-press menus (a picture's "Download image", Safari's callout) stay away too.
+  doc.addEventListener('contextmenu', (e) => e.preventDefault())
+  doc.addEventListener('selectstart', (e) => e.preventDefault())
+  let press: { x: number; y: number; timer: ReturnType<typeof setTimeout> } | null = null
+  let selecting = false
+  const cancel = () => {
+    if (press) clearTimeout(press.timer)
+    press = null
+  }
+  win.addEventListener(
+    'touchstart',
+    (e) => {
+      cancel()
+      const t = e.touches[0]
+      if (e.touches.length !== 1 || !t) return
+      const x = t.clientX
+      const y = t.clientY
+      press = {
+        x,
+        y,
+        timer: setTimeout(() => {
+          press = null
+          if (engine.selectWordAt(doc, x, y)) {
+            selecting = true
+            navigator.vibrate?.(8)
+          }
+        }, 450),
+      }
+    },
+    { capture: true, passive: true },
+  )
+  win.addEventListener(
+    'touchmove',
+    (e) => {
+      const t = e.touches[0]
+      if (!t) return
+      if (selecting) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        engine.extendFromPress(t.clientX, t.clientY)
+        return
+      }
+      if (press && Math.hypot(t.clientX - press.x, t.clientY - press.y) > 10) cancel()
+    },
+    { capture: true, passive: false },
+  )
+  const end = () => {
+    cancel()
+    if (selecting) {
+      selecting = false
+      engine.suppressTapUntil = performance.now() + 500
+      engine.reportCustom()
+    }
+  }
+  win.addEventListener('touchend', end, { capture: true })
+  win.addEventListener('touchcancel', end, { capture: true })
+}
+
+/** A range as the reader's menu needs it: words, place, boxes on screen. */
+function describeRange(engine: ReaderEngine, doc: Document, range: Range, custom: boolean): Selection | null {
+  const words = range.toString().replace(/\s+/g, ' ').trim()
+  if (!words) return null
+  const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
+  const shift = (r: { left: number; top: number; width: number; height: number }) => ({ left: (frame?.left ?? 0) + r.left, top: (frame?.top ?? 0) + r.top, width: r.width, height: r.height })
+  const rects = [...range.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0).map(shift)
+  const index = engine.last?.sectionIndex ?? 0
+  const box = shift(range.getBoundingClientRect())
+  return { text: words, cfi: engine.view.getCFI(index, range), index, rect: box, first: rects[0] ?? box, last: rects.at(-1) ?? box, rects, custom }
 }
 
 /**
@@ -442,6 +647,7 @@ export async function openReader(
     colors: PageColors
     at?: string | number | null
     highlights?: Highlight[]
+    touchSelection?: boolean
     startedAt: number
     importedAt: number
   },
@@ -459,6 +665,8 @@ export async function openReader(
   engine.timings.parseMs = performance.now() - options.importedAt
   engine.prepare()
   engine.highlights = options.highlights ?? []
+  engine.touchSelection = options.touchSelection ?? false
+  engine.onSelect = options.handlers.select
   engine.cover = (await view.book.getCover?.().catch(() => null)) ?? null
 
   view.addEventListener('relocate', (event) => {
@@ -514,35 +722,23 @@ export async function openReader(
       const y = (frame?.top ?? 0) + click.clientY
       // A tap on a highlight opens it instead (the view tells us in its own click listener, which may run after ours).
       setTimeout(() => {
-        if (performance.now() - engine.annotationTappedAt < 300) return
+        if (performance.now() - engine.annotationTappedAt < 300 || performance.now() < engine.suppressTapUntil) return
         options.handlers.tap(x, y)
       })
     })
-    // A selection, once it holds still (Android's handles move it in steps).
-    let selectTimer: ReturnType<typeof setTimeout> | undefined
-    const report = () => {
-      const selection = doc.getSelection()
-      if (!selection || selection.isCollapsed || !selection.rangeCount) return options.handlers.select(null)
-      const range = selection.getRangeAt(0)
-      const words = selection.toString().replace(/\s+/g, ' ').trim()
-      if (!words) return options.handlers.select(null)
-      const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
-      const shift = (r: DOMRect | { left: number; top: number; width: number; height: number }) => ({ left: (frame?.left ?? 0) + r.left, top: (frame?.top ?? 0) + r.top, width: r.width, height: r.height })
-      const rects = [...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0)
-      const index = engine.last?.sectionIndex ?? 0
-      options.handlers.select({
-        text: words,
-        cfi: view.getCFI(index, range),
-        index,
-        rect: shift(range.getBoundingClientRect()),
-        first: shift(rects[0] ?? range.getBoundingClientRect()),
-        last: shift(rects.at(-1) ?? range.getBoundingClientRect()),
+    if (engine.touchSelection) installTouchSelection(engine, doc)
+    else {
+      // With a mouse the browser selects; its selection is reported once it holds still.
+      let selectTimer: ReturnType<typeof setTimeout> | undefined
+      doc.addEventListener('selectionchange', () => {
+        clearTimeout(selectTimer)
+        selectTimer = setTimeout(() => {
+          const selection = doc.getSelection()
+          if (!selection || selection.isCollapsed || !selection.rangeCount) return options.handlers.select(null)
+          options.handlers.select(describeRange(engine, doc, selection.getRangeAt(0), false))
+        }, 220)
       })
     }
-    doc.addEventListener('selectionchange', () => {
-      clearTimeout(selectTimer)
-      selectTimer = setTimeout(report, 220)
-    })
   })
 
   engine.setLayout(options.layout)

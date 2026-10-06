@@ -305,3 +305,45 @@ searching a 3,000-page book in a worker.
 No new engine code: highlights and search are foliate's own (`overlayer.js` was already in the
 engine chunk; `search.js` is its own 1.1 KB gzip chunk, fetched only when the member searches).
 The lookups (`lookup.ts`, the sheets, the menu) are app code of the reader route, a few KB.
+
+---
+
+# Round 3 (owner, 2026-10-06): the bubble only; no browser bar over the words, on Android and iOS
+
+- **Bubble is the only selection menu.** Dock and Peek are gone (code and switches); Round 2's
+  description of them stays above for the record.
+- **The browser's own selection bar never shows.** No web page can keep the browser's text
+  selection and hide its bar (Chrome on Android: Copy · Select all · Web search · Share; Safari on
+  iOS: Copy · Look Up · Translate · Share) — it is system UI. So on touch screens the reader
+  **selects by itself**, as Readest (also built on foliate-js) does: the browser's selection is off in
+  the page (`user-select: none`, `-webkit-touch-callout: none`, no `contextmenu`/`selectstart`),
+  and
+  - **long-press** a word (450 ms, finger still) selects it, with a short buzz on Android;
+  - **keep the finger down and move** to stretch the selection word by word, either way (foliate's
+    swipe never sees these moves, so the page does not turn);
+  - **two lamp-coloured handles** (a stem from the line, a knob under it, 44 px to grab) stretch it
+    afterwards; the bubble waits while a handle moves; the selection is drawn as the lamp's soft wash;
+  - words come from `caretPositionFromPoint` (or WebKit's `caretRangeFromPoint`) and
+    `Intl.Segmenter` in the book's language — both in Chrome on Android and Safari on iOS;
+  - a tap beside it, Back or Escape lets it go; in scroll mode a scroll does too.
+  With a mouse (desktop) the browser selects as usual: there is no bar to hide.
+- **The bubble sits above the words** now (below only when there is no room above), its tail
+  pointing down at them.
+- Copy works without the browser's selection (a hidden field, the way iOS accepts it); on the LAN's
+  plain http the Clipboard API is missing, so that path is the one used on the phone today.
+
+**Checked:** Chromium, phone profile with real touch input (CDP touch events): long-press →
+word, stretch, handle drag, the page does not move, the browser's own selection stays empty,
+bubble above (`round2/touch-select-android-chromium.jpg`, `round2/touch-select-handle-drag.jpg`).
+**WebKit (Safari's engine), iPhone 15 profile:** `-webkit-user-select: none` holds,
+`caretPositionFromPoint` and `Intl.Segmenter` exist, the word/stretch logic, the handles (pointer
+events) and the bubble work, Translate opens its sheet (`round2/touch-select-ios-webkit-sepia.jpg`,
+`round2/translate-sheet-ios-webkit.jpg`). Playwright's WebKit cannot synthesise touches, so the
+long-press itself was driven through the same engine calls the touch listeners make. **Still to
+check on real devices:** the long-press on an iPhone (iOS sometimes starts its own loupe on a long
+press even with selection off — `-webkit-touch-callout: none` normally prevents it) and the feel of
+the handles on the owner's Android phone.
+
+Production note: the reader's own selection needs its own accessibility path (VoiceOver/TalkBack
+users select with the screen reader's text rotor, which does not use touch) — keep the browser's
+selection when a screen reader is detected, or offer "Select text" from the chrome.
