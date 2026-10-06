@@ -388,6 +388,12 @@ export async function openReader(
   })
   view.addEventListener('load', (event) => {
     const { doc } = (event as CustomEvent<{ doc: Document }>).detail
+    // Keys pressed while the page has focus (after a tap into it) reach the reader too: arrows turn, Escape closes.
+    doc.addEventListener('keydown', (key) => {
+      const forwarded = new KeyboardEvent('keydown', { key: key.key, cancelable: true })
+      window.dispatchEvent(forwarded)
+      if (forwarded.defaultPrevented) key.preventDefault()
+    })
     let touchX: number | null = null
     doc.addEventListener('touchstart', (touch) => (touchX = touch.changedTouches[0]?.screenX ?? null), { passive: true })
     doc.addEventListener('touchend', (touch) => {

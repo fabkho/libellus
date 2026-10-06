@@ -70,8 +70,8 @@ const atChapterEnd = computed(() => props.ready && props.info.chapterFraction > 
 <style scoped>
 /* The room's colour behind the status bar and the floating chapter, fading out below it. */
 .edge-veil {
-  height: calc(var(--bar-top) + var(--spacing-xl));
-  background: linear-gradient(var(--color-surface) 60%, transparent);
+  height: calc(var(--bar-top) + var(--spacing-xxl));
+  background: linear-gradient(var(--color-surface) calc(var(--bar-top) + var(--spacing-ml)), transparent);
 }
 .line {
   top: var(--safe-area-top);
