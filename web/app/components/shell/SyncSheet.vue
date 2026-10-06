@@ -36,7 +36,7 @@ function reason(failure: { domain: 'library' | 'collections'; code: string }): s
         <h3 class="eyebrow mt-ml mb-sm px-xs">{{ t('sync.pendingTitle') }}</h3>
         <UiRowGroup>
           <UiRow v-for="item in sync.items" :key="item.id" icon="sync" :label="t(`sync.action.${item.action}`)" data-testid="sync.item">
-            <span class="book-title truncate text-ink" data-testid="sync.itemAbout">{{ item.about }}</span>
+            <span class="book-title title-wrap text-ink" data-testid="sync.itemAbout">{{ item.about }}</span>
           </UiRow>
         </UiRowGroup>
       </template>
@@ -52,7 +52,7 @@ function reason(failure: { domain: 'library' | 'collections'; code: string }): s
             data-testid="sync.failure"
           >
             <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-              <span class="book-title truncate text-body text-ink" data-testid="sync.failureAbout">{{ failure.about }}</span>
+              <span class="book-title title-wrap text-body text-ink" data-testid="sync.failureAbout">{{ failure.about }}</span>
               <span class="text-caption text-error" data-testid="sync.failureText">{{ t('sync.failedItem', { action: t(`sync.action.${failure.action}`) }) }}</span>
               <span class="text-caption text-ink-muted" data-testid="sync.failureReason">{{ reason(failure) }}</span>
             </span>

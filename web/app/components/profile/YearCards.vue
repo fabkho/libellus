@@ -61,7 +61,7 @@ const arriving = useArrival(() => !props.years)
         </span>
         <span v-if="y.favourite" class="relative mt-auto flex flex-col gap-xxs">
           <span class="eyebrow">{{ t('profile.years.favourite') }}</span>
-          <span class="book-title truncate text-callout">{{ y.favourite.book.title }}</span>
+          <span class="book-title title-wrap text-callout">{{ y.favourite.book.title }}</span>
         </span>
       </NuxtLink>
     </div>

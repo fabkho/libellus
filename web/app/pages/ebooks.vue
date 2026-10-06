@@ -148,7 +148,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
                 size="sm"
               />
               <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-                <span class="book-title truncate text-body-large" data-testid="ebooks.linkedTitle">{{ entry?.book.title ?? record.metadata.title ?? record.name }}</span>
+                <span class="book-title title-wrap text-body-large" data-testid="ebooks.linkedTitle">{{ entry?.book.title ?? record.metadata.title ?? record.name }}</span>
                 <span class="figures truncate text-meta text-ink-faint">{{ record.name }}</span>
                 <span v-if="missing" class="flex items-center gap-xs text-meta text-error" data-testid="ebooks.linkedMissing">
                   <UiIcon name="ebook" :size="12" />{{ t('ebooks.missing') }}

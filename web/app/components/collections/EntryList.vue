@@ -350,7 +350,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
             :eager="index < 10"
           />
           <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-            <span class="book-title truncate text-body-large" data-testid="collection.entryTitle">{{ entry.book.title }}</span>
+            <span class="book-title title-wrap text-body-large" data-testid="collection.entryTitle">{{ entry.book.title }}</span>
             <span class="flex min-w-0 items-center gap-sm text-caption text-ink-muted">
               <span class="truncate">{{ authorsOf(entry) }}</span>
               <span class="dot shrink-0" aria-hidden="true" />
