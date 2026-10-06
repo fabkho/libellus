@@ -793,6 +793,53 @@
       "unknown": "Your links could not be saved. Try again."
     }
   },
+  "ownerErrors": {
+    "row": "Errors",
+    "rowNone": "None",
+    "rowNew": "{count} new in the last 24 hours",
+    "title": "Errors",
+    "back": "Back",
+    "intro": "What went wrong on devices in the last 7 days, the same error counted once. Only you can see this.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "filterLabel": "Filter by kind",
+    "all": "All",
+    "kind": {
+      "error": "Error",
+      "unhandledrejection": "Rejection",
+      "vue": "Vue",
+      "chunk": "Chunk",
+      "outbox": "Write",
+      "shelf": "Shelf"
+    },
+    "empty": {
+      "title": "No errors in the last 7 days",
+      "text": "Nothing went wrong on any device. New errors show up here."
+    },
+    "loadError": "The errors didn't load. Check your connection and try again.",
+    "retry": "Try again",
+    "times": "×{count}",
+    "new": "New",
+    "members": "no members | 1 member | {count} members",
+    "detail": {
+      "copy": "Copy",
+      "copied": "Copied",
+      "times": "Times",
+      "firstSeen": "First seen",
+      "lastSeen": "Last seen",
+      "members": "Members",
+      "signedOut": "Signed out",
+      "versions": "Builds",
+      "routes": "Routes",
+      "installed": "Installed · in a tab",
+      "online": "Online · offline",
+      "device": "Device",
+      "stack": "Latest stack",
+      "stackLoading": "Loading the stack…",
+      "stackNone": "That report has no stack.",
+      "stackError": "The stack didn't load. Check your connection and try again."
+    }
+  },
   "ebooks": {
     "title": "Ebooks",
     "back": "Back",

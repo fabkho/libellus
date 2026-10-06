@@ -90,6 +90,7 @@ Configuration, all outside the repo:
 | | `REGAL_OWNER_NAME` | `Fabian`: the file's `owner`, as Regal shows it. |
 | | `REGAL_TIME_ZONE`, `REGAL_STATUSES`, `REGAL_CARRY_ART_URL` | Optional: `Europe/Berlin`, `read`, `https://books.fabkho.dev/v2/library.json`. |
 | Database | `private.shelf_publish.owner_id` | `update private.shelf_publish set owner_id = (select id from auth.users where email = '<owner>');` |
+| Database | `private.instance_owner.owner_id` | `update private.instance_owner set owner_id = (select id from auth.users where email = '<owner>');` Not for Regal: it lets the owner read the client error log in the app (Profile → Errors; [OPERATIONS.md](OPERATIONS.md#client-errors)), together with the web build's `NUXT_PUBLIC_SHELF_OWNER_ID`. |
 | Vault | `github_dispatch_token` | A fine-grained GitHub token, fabkho/regal only, Contents read and write: `select vault.create_secret('<token>', 'github_dispatch_token');` |
 | fabkho/regal Actions secrets | `REGAL_EXPORT_TOKEN`, `LIBELLUS_EXPORT_URL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | The same token; `https://<project>.supabase.co/functions/v1/regal-export`; R2 Object Read & Write on `portfolio-books`; the account id. |
 
