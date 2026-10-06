@@ -17,6 +17,12 @@ export type ProtoIconName =
   | 'plus'
   | 'awake'
   | 'justify'
+  | 'translate'
+  | 'define'
+  | 'copy'
+  | 'search'
+  | 'pages'
+  | 'scroll'
 
 withDefaults(defineProps<{ name: ProtoIconName; size?: number }>(), { size: 22 })
 </script>
@@ -51,5 +57,29 @@ withDefaults(defineProps<{ name: ProtoIconName; size?: number }>(), { size: 22 }
       <path d="M12 8.5v3l2 1.5" />
     </template>
     <path v-else-if="name === 'justify'" d="M5 7h14M5 11h14M5 15h14M5 19h14" />
+    <template v-else-if="name === 'translate'">
+      <path d="M3.5 5.5h9M8 4v1.5M10.5 5.5c-.6 3.4-3 6.3-6.5 7.8M6 8.6c1 1.9 2.7 3.5 4.8 4.4" />
+      <path d="M12.5 20l3.75-9 3.75 9M13.9 16.8h4.7" />
+    </template>
+    <template v-else-if="name === 'define'">
+      <path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5Z" />
+      <path d="M5 17a2.5 2.5 0 0 1 2.5-2.5H18M9 8.5h5" />
+    </template>
+    <template v-else-if="name === 'copy'">
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" />
+      <path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" />
+    </template>
+    <template v-else-if="name === 'search'">
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="m15 15 4.5 4.5" />
+    </template>
+    <template v-else-if="name === 'pages'">
+      <path d="M12 6.5C10.2 5.2 7.6 4.6 4 4.75v13.5c3.6-.15 6.2.45 8 1.75 1.8-1.3 4.4-1.9 8-1.75V4.75c-3.6-.15-6.2.45-8 1.75Z" />
+      <path d="M12 6.5V20" />
+    </template>
+    <template v-else-if="name === 'scroll'">
+      <rect x="6" y="3.5" width="12" height="17" rx="2" />
+      <path d="M9 8h6M9 11h6M9 14h6M9 17h3.5" />
+    </template>
   </svg>
 </template>

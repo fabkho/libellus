@@ -29,6 +29,22 @@ function size(step: number) {
 
 <template>
   <UiSheet v-model:open="open" title="Text" testid="readerType">
+    <!-- Pages or scroll: b lives here now, as a way of reading a and c. -->
+    <div class="seg mb-md flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Layout">
+      <button
+        v-for="f in (['pages', 'scroll'] as const)"
+        :key="f"
+        type="button"
+        role="radio"
+        :aria-checked="settings.flow === f"
+        class="flex flex-1 items-center justify-center gap-sm rounded-sm text-caption text-ink-muted"
+        :class="settings.flow === f && 'on'"
+        :data-testid="`readerType.flow.${f}`"
+        @click="settings.flow = f"
+      >
+        <ProtoIcon :name="f" :size="18" />{{ f === 'pages' ? 'Pages' : 'Scroll' }}
+      </button>
+    </div>
     <div class="grid grid-cols-3 gap-ms" role="radiogroup" aria-label="Room">
       <button
         v-for="room in THEMES"

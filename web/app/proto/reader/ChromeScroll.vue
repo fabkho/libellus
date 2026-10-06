@@ -9,7 +9,7 @@ import ProtoRound from './ProtoRound.vue'
 import { minutesLeft, runningHead, type ChromeInfo } from './types'
 
 const props = defineProps<{ shown: boolean; ready: boolean; info: ChromeInfo; nextLabel: string }>()
-defineEmits<{ back: []; contents: []; type: []; next: []; setHere: [] }>()
+defineEmits<{ back: []; contents: []; type: []; search: []; next: []; setHere: [] }>()
 
 const atChapterEnd = computed(() => props.ready && props.info.chapterFraction > 0.995)
 </script>
@@ -29,10 +29,12 @@ const atChapterEnd = computed(() => props.ready && props.info.chapterFraction > 
     <header v-if="shown" class="bar-top glass fixed inset-x-0 top-0 z-30 border-b-(length:--stroke-hairline) border-hairline" data-testid="reader.top">
       <div class="mx-auto flex h-(--size-touch) max-w-(--size-max-content) items-center gap-xs px-inset">
         <UiRoundButton icon="back" label="Back to the book" data-testid="reader.back" @click="$emit('back')" />
+        <span class="w-(--size-touch) shrink-0" aria-hidden="true" />
         <div class="min-w-0 flex-1 text-center">
           <p class="book-title truncate text-callout">{{ info.chapter ?? info.title }}</p>
           <p class="figures truncate text-meta text-ink-faint">{{ info.title }}</p>
         </div>
+        <ProtoRound label="Search in the book" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
         <ProtoRound label="Contents" data-testid="reader.contents" @click="$emit('contents')"><ProtoIcon name="contents" :size="20" /></ProtoRound>
       </div>
     </header>

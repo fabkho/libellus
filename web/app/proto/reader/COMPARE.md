@@ -207,3 +207,101 @@ markup-heavy books); Fullscreen (hiding Android's status bar) as an option in th
   5× via CDP; turns are a real-time screencast.
 - `measure.txt` — the raw engine numbers; `scripts/` — shoot/strip/measure scripts;
   `dev.sh` — the LAN dev server (port 3127).
+
+---
+
+# Round 2 (owner feedback, 2026-10-06): a + c, scroll as a setting, select → translate / define / copy / search / highlight
+
+**Owner:** likes both **a** and **c**; **b becomes an option** in their settings; selected text needs
+a menu with **Translate, Define, Copy, Search** and **highlighting in fixed colours**, results in a
+bottom sheet like Google Books; variants of the menu welcome. Search was not built yet — a first
+version is in now (below), the rest can follow.
+
+Try it: http://192.168.178.81:3127/prototype/reader?v=a (or `v=c`); on the phone **long-press a
+word** (or drag the handles over a passage). The panel's *Select words: menu* switches the menu
+design; address flag `menu=bubble|dock|peek`. Screenshots: `round2/`.
+
+## Scroll is a setting now
+The Aa sheet starts with **Pages | Scroll**. Scroll gives a and c b's way of reading (one long page
+per chapter, the lamp hairline at the top edge, the chapter floating, bars on scroll-up, *Next
+chapter* at the end); Pages brings back the variant's own pages. The place is kept across the
+switch (foliate changes flow without reloading). `round2/aa-scroll-c-sepia.jpg`,
+`round2/c-scroll-light.jpg`, `round2/c-scroll-chrome-light.jpg`. (`v=b` still opens b directly.)
+
+## The selection menu — three designs, the same actions
+Every design: **Translate · Define · Copy · Search**, then the four highlight colours (**Lamp,
+Sage, Sky, Rose**; fixed, the same in every room) and, on a highlight that was tapped,
+**Remove**. Define is offered for one or two words; a passage goes to Translate.
+
+1. **Bubble** (default) — an ink card by the words with a small tail pointing at them, the actions
+   on top, the colours under a hairline. On a phone it sits **below** the selection, because
+   Android draws its own Copy / Share / Select all bar above it; with a mouse it sits above.
+   Closest to Google Books and Apple Books. `round2/menu-bubble-a-light.jpg`,
+   `round2/menu-bubble-c-dark.jpg`, `round2/highlight-tapped-c-light.jpg`.
+2. **Dock** — the same in a glass bar risen at the bottom edge (like the tab bar), with the
+   selected words quoted on top. Never covers the words or fights Android's toolbar, always under
+   the thumb; one more glance away from the words. `round2/menu-dock-c-sepia.jpg`,
+   `round2/menu-dock-a-dark.jpg`.
+3. **Peek** — Google Books one step further: a low panel at the bottom that **already shows the
+   answer** — a single word's first meaning (with its part of speech), a phrase's translation
+   (with "EN → DE") — and the actions and colours under it; a tap on the answer opens the full
+   sheet. Fastest for language learners; it looks things up on every selection (debounced, phrases
+   only up to 300 characters, because the free translation tier counts characters).
+   `round2/menu-peek-word-a-dark.jpg`, `round2/menu-peek-phrase-a-dark.jpg`,
+   `round2/menu-peek-word-c-light.jpg`.
+
+My pick: **Bubble** as the default, with **Peek's instant answer** as an option for readers in a
+second language. Dock is the safest on Android, but it puts the menu far from the words.
+
+Behaviour in all three: a tap beside the menu, Escape or **Back** close it first (before the
+chrome and the reader); a tap on a highlight opens the same menu for it (change colour or
+remove); highlights are drawn as a soft wash multiplied into the paper (light, sepia) or a plain
+tint in the dark; they are kept per book on the device in the prototype (production: with the
+reader's location, server-side if the owner wants them on other devices too — later issue,
+"highlights/notes export" is a non-goal of #131 v1).
+
+## Translate and Define (bottom sheets)
+- **Translate** sheet: the selected words in the serif italic, "English → **Deutsch** ⌄" (the target
+  is a native select, kept per device; default: the phone's language, or German), the translation
+  in the serif at input size on a quiet fill, and in the smallest type who answered. A word gets a
+  *Define* link, Define a *Translate* link. `round2/translate-sheet-a-light.jpg`.
+- **Define** sheet: the headword in the serif, each part of speech as an eyebrow, senses numbered
+  in mono, an example in the serif italic where there is one, "From Wiktionary · CC BY-SA" at the
+  foot. `round2/define-sheet-c-sepia.jpg`.
+- Offline: both say they need a connection (on-device translation excepted).
+
+## Which translator (free, ideally)
+| Option | Cost | Key | From the app directly? | Quality / notes |
+|---|---|---|---|---|
+| **Chrome's built-in Translator API** | free, on device | no | yes | Private, offline after the model download. **Desktop Chrome 138+ only — Chrome's docs say it does not work on mobile**, so not on the owner's phone today. Use it first where it exists. |
+| **DeepL API Free** | 500,000 characters / month free | yes | **no** (DeepL blocks browser calls: CORS) | Best EN↔DE quality. Its support page now says the Free plan "can no longer be purchased" — check at sign-up that a new free key is still issued. |
+| Azure AI Translator (F0 tier) | free monthly allowance (2 M characters at the time of writing — verify) | yes | possible, but the key would be public | Good quality; key belongs on a server anyway. |
+| Google Cloud Translation | first 500,000 characters / month free, needs a billing account | yes | key would be public | Good quality. |
+| **MyMemory** (used in the prototype) | free; **5,000 characters / day** per device anonymously, 50,000 with an email | **no** | **yes** (CORS) | Fine for words and short phrases, weaker on long passages; 500 bytes per request (the prototype sends sentence by sentence). |
+
+**Recommendation:** a small **Supabase Edge Function `translate`** (the app already runs on
+Supabase) that holds the key in Supabase's secrets — the key never ships in the app — caches
+answers by text and language, and rate-limits per member; behind it **DeepL API Free** if a free
+key can still be had (else Azure's free tier). The app asks the **on-device translator first**
+where the browser has one. Budget: a reader translating 50 passages of 200 characters a day uses
+~300,000 characters a month — inside DeepL's free 500,000 for one member. MyMemory stays as the
+no-account fallback (and is what the prototype uses today, so it works on the phone with no
+setup). **Define:** English **Wiktionary**'s REST definitions — free, no key, CORS, multilingual
+headwords with English senses; its licence (CC BY-SA) needs the credit line the sheet shows.
+Production effort for this part: ≈ 2 days (edge function + secrets + cache + quota handling, the
+sheets in `en.json`, Playwright with recorded answers, offline states).
+
+## Search (first version)
+Search from the selection menu (opens with the words in the field) or from the chrome's
+magnifier (a's and the scroll's top bar, c's capsule): a `UiSheet` with one field, the places
+streaming in chapter by chapter ("Searching… 40 % · 12 found"), each place a line of the book
+with the words lit; a tap goes there and the places stay outlined in the lamp colour on the page.
+foliate's own `search.js` does the matching (locale-aware, accent- and case-insensitive).
+`round2/search-sheet-a-sepia.jpg`, `round2/search-on-page-a-sepia.jpg`. Follow-ups for later:
+next/previous place without reopening the sheet, a result count per chapter, whole-word option,
+searching a 3,000-page book in a worker.
+
+## Engine cost of round 2
+No new engine code: highlights and search are foliate's own (`overlayer.js` was already in the
+engine chunk; `search.js` is its own 1.1 KB gzip chunk, fetched only when the member searches).
+The lookups (`lookup.ts`, the sheets, the menu) are app code of the reader route, a few KB.

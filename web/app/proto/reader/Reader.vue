@@ -11,7 +11,13 @@
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import type { CoverColors } from '~/utils/cover'
 import type { Box } from '~/utils/flight'
-import type { Layout, PageColors, ReaderEngine, Relocation } from './engine'
+import type { Highlight, Layout, PageColors, ReaderEngine, Relocation, Selection } from './engine'
+import { readHighlights, writeHighlights } from './highlights'
+import { define as lookUp, translate as translateText } from './lookup'
+import SelectionMenu, { type MenuTarget, type Peek } from './SelectionMenu.vue'
+import TranslateSheet from './TranslateSheet.vue'
+import DefineSheet from './DefineSheet.vue'
+import SearchSheet from './SearchSheet.vue'
 import { REST, coverCopy, fitBox, poseOf, ratioOf, rectOf } from './flight'
 import { ProgressWriter, QUICK_POLICY, SPEC_POLICY, pageAt } from './progress'
 import { MARGINS, readSettings, writeSettings, type ReaderSettings, type ReaderTheme } from './settings'
@@ -35,7 +41,8 @@ const props = defineProps<{
   hero: HTMLElement | null
   quickWrites: boolean
   reduceMotion: boolean | null
-  initial: { theme: string | null; margins: string | null; leading: string | null; size: string | null; chrome: boolean; sheet: string | null; at: number | null; flight: boolean }
+  menu: 'bubble' | 'dock' | 'peek'
+  initial: { theme: string | null; flow: string | null; margins: string | null; leading: string | null; size: string | null; chrome: boolean; sheet: string | null; at: number | null; flight: boolean }
 }>()
 
 const emit = defineEmits<{
@@ -53,6 +60,7 @@ const emit = defineEmits<{
 const settings = reactive<ReaderSettings>(readSettings(window.localStorage))
 const initialTheme = props.initial.theme
 if (initialTheme === 'light' || initialTheme === 'dark' || initialTheme === 'sepia') settings.theme = initialTheme
+if (props.initial.flow === 'scroll' || props.initial.flow === 'pages') settings.flow = props.initial.flow
 for (const key of ['margins', 'leading', 'size'] as const) {
   const value = props.initial[key]
   if (value !== null && value !== '' && !Number.isNaN(Number(value))) settings[key] = Number(value)
@@ -64,6 +72,15 @@ const appTheme: 'light' | 'dark' = (document.documentElement.dataset.theme as 'l
 const theme = computed<ReaderTheme>(() => settings.theme ?? appTheme)
 
 const reduced = computed(() => props.reduceMotion ?? prefersReducedMotion())
+
+// Scroll is a setting of a and c (the Aa sheet's Pages / Scroll), wearing b's chrome; `v=b` still opens it directly.
+const mode = computed<'a' | 'b' | 'c'>(() => (props.variant === 'b' || settings.flow === 'scroll' ? 'b' : props.variant))
+watch(mode, async (now, before) => {
+  // Changing flow keeps the place; the chrome and the margins follow.
+  chrome.value = false
+  await nextTick()
+  if (before === 'c' || now === 'c') paintMargins()
+})
 
 // ------------------------------------------------------------------ elements
 
@@ -85,13 +102,160 @@ const startOpen = ref(false)
 const finishOpen = ref(false)
 const endShown = ref(false)
 const finishedHere = ref(false)
-const sheetOpen = computed(() => typeOpen.value || tocOpen.value || startOpen.value || finishOpen.value)
+const translateOpen = ref(false)
+const defineOpen = ref(false)
+const searchOpen = ref(false)
+const sheetOpen = computed(
+  () => typeOpen.value || tocOpen.value || startOpen.value || finishOpen.value || translateOpen.value || defineOpen.value || searchOpen.value,
+)
 
 // Back (Android's gesture, the browser's Back): the chrome (or the end page) first, then the reader.
 const open = ref(true)
 useBackDismiss(open, () => void close())
 useBackDismiss(endShown, () => (endShown.value = false))
 useBackDismiss(chrome, () => (chrome.value = false))
+
+// ------------------------------------------------------------------ selected words
+
+const selection = shallowRef<Selection | null>(null)
+const tapped = shallowRef<{ highlight: Highlight; rect: Selection['rect'] } | null>(null)
+const menuOpen = computed(() => Boolean(selection.value || tapped.value))
+useBackDismiss(menuOpen, () => closeMenu())
+let menuClosedAt = 0
+const sheetText = ref('')
+const searchInitial = ref('')
+const toast = ref<{ text: string; at: number } | null>(null)
+
+const menuTarget = computed<MenuTarget | null>(() => {
+  if (tapped.value) {
+    const { highlight, rect } = tapped.value
+    return { text: highlight.text, rect, first: rect, last: rect, color: highlight.color }
+  }
+  const s = selection.value
+  if (!s) return null
+  return { text: s.text, rect: s.rect, first: s.first, last: s.last, color: engine.value?.highlights.find((h) => h.cfi === s.cfi)?.color ?? null }
+})
+/** Define is for a word (or two: "fret saw"); a passage is for Translate. */
+const canDefine = computed(() => {
+  const words = menuTarget.value?.text.split(/\s+/).filter(Boolean) ?? []
+  return words.length > 0 && words.length <= 2 && (menuTarget.value?.text.length ?? 0) <= 40
+})
+
+function onSelect(next: Selection | null) {
+  if (!next) {
+    if (selection.value) menuClosedAt = performance.now()
+    selection.value = null
+    return
+  }
+  tapped.value = null
+  chrome.value = false
+  selection.value = next
+}
+function onHighlightTapped(highlight: Highlight, rect: Selection['rect']) {
+  if (!ready.value || sheetOpen.value) return
+  chrome.value = false
+  selection.value = null
+  tapped.value = { highlight, rect }
+}
+function closeMenu(clear = true) {
+  if (menuOpen.value) menuClosedAt = performance.now()
+  selection.value = null
+  tapped.value = null
+  if (clear) engine.value?.clearSelection()
+}
+
+const highlightsKey = computed(() => props.book.title)
+function saveHighlights() {
+  if (engine.value) writeHighlights(highlightsKey.value, engine.value.highlights)
+}
+function onColor(key: string) {
+  const e = engine.value
+  if (!e) return
+  if (tapped.value) e.highlight({ ...tapped.value.highlight, color: key })
+  else if (selection.value) e.highlight({ cfi: selection.value.cfi, index: selection.value.index, text: selection.value.text, color: key })
+  saveHighlights()
+  closeMenu()
+}
+function onRemove() {
+  if (tapped.value) engine.value?.unhighlight(tapped.value.highlight.cfi)
+  saveHighlights()
+  closeMenu()
+}
+function showToast(text: string) {
+  toast.value = { text, at: Date.now() }
+  setTimeout(() => toast.value?.text === text && (toast.value = null), 1800)
+}
+async function onCopy() {
+  const text = menuTarget.value?.text ?? ''
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    // No Clipboard API here (plain http on the LAN): the page copies its own selection.
+    const doc = (engine.value?.view.renderer as unknown as { getContents: () => { doc: Document }[] }).getContents()[0]?.doc
+    if (selection.value && doc) doc.execCommand('copy')
+    else {
+      const area = Object.assign(document.createElement('textarea'), { value: text })
+      document.body.append(area)
+      area.select()
+      document.execCommand('copy')
+      area.remove()
+    }
+  }
+  closeMenu()
+  showToast('Copied')
+}
+function openLookup(kind: 'translate' | 'define' | 'search') {
+  const text = menuTarget.value?.text ?? ''
+  closeMenu()
+  if (kind === 'search') {
+    searchInitial.value = text
+    searchOpen.value = true
+    return
+  }
+  sheetText.value = text
+  if (kind === 'translate') translateOpen.value = true
+  else defineOpen.value = true
+}
+function swapLookup(kind: 'translate' | 'define') {
+  translateOpen.value = kind === 'translate'
+  defineOpen.value = kind === 'define'
+}
+function goToHit(cfi: string) {
+  searchOpen.value = false
+  jump(() => engine.value?.goTo(cfi))
+}
+
+// peek: the answer already in the panel (debounced; a passage only up to 300 characters, the free tier counts them).
+const peek = ref<Peek | null>(null)
+let peekTimer: ReturnType<typeof setTimeout> | undefined
+let peekRun = 0
+watch(menuTarget, (target) => {
+  clearTimeout(peekTimer)
+  peek.value = null
+  if (!target || props.menu !== 'peek' || !engine.value) return
+  const lang = engine.value.language
+  const run = ++peekRun
+  const kind = canDefine.value ? 'define' : 'translate'
+  if (kind === 'translate' && target.text.length > 300) return
+  const targetLang = localStorage.getItem('libellus-reader-proto-target') ?? ((navigator.language || 'de').split('-')[0] === lang ? 'de' : (navigator.language || 'de').split('-')[0]!)
+  peek.value = { kind, loading: true, title: kind === 'define' ? target.text : 'Translation', text: null, meta: kind === 'define' ? 'Wiktionary' : `${lang} → ${targetLang}` }
+  peekTimer = setTimeout(async () => {
+    try {
+      if (kind === 'define') {
+        const d = await lookUp(fetch, target.text, lang)
+        if (run !== peekRun) return
+        const first = d?.entries[0]
+        peek.value = { kind, loading: false, title: d?.word ?? target.text, text: first ? first.senses[0]!.definition : null, meta: first?.partOfSpeech ?? 'Wiktionary' }
+      } else {
+        const t = await translateText(fetch, target.text, lang, targetLang)
+        if (run !== peekRun) return
+        peek.value = { kind, loading: false, title: 'Translation', text: t.text, meta: `${lang} → ${targetLang}` }
+      }
+    } catch {
+      if (run === peekRun) peek.value = { ...peek.value!, loading: false, text: null }
+    }
+  }, 450)
+})
 
 // ------------------------------------------------------------------ layout
 
@@ -117,8 +281,8 @@ const layout = computed<Layout>(() => {
   const gap = margins.side
   // The bands above and below the text shrink with the margins (edge to edge: the safe area and a hair);
   // the printed page keeps room for its running head and folio, the scroll for its floating chapter.
-  if (props.variant === 'b') return { flow: 'scrolled', animated: false, gap, margin: edge + margins.band + 12, maxColumns: 1, maxInlineSize: margins.measure }
-  if (props.variant === 'c') return { flow: 'paginated', animated: false, gap, margin: edge + Math.max(30, margins.band + 12), maxColumns: 2, maxInlineSize: Math.min(margins.measure, 700) }
+  if (mode.value === 'b') return { flow: 'scrolled', animated: false, gap, margin: edge + margins.band + 12, maxColumns: 1, maxInlineSize: margins.measure }
+  if (mode.value === 'c') return { flow: 'paginated', animated: false, gap, margin: edge + Math.max(30, margins.band + 12), maxColumns: 2, maxInlineSize: Math.min(margins.measure, 700) }
   return { flow: 'paginated', animated: !reduced.value, gap, margin: edge + margins.band, maxColumns: 1, maxInlineSize: margins.measure }
 })
 
@@ -211,9 +375,9 @@ const info = computed<ChromeInfo>(() => {
 let moved = false
 function onRelocate(at: Relocation) {
   loc.value = at
-  if (props.variant !== 'b') chapterFraction.value = at.sectionFraction
+  if (mode.value !== 'b') chapterFraction.value = at.sectionFraction
   if (moved) writer.saw(at.fraction)
-  if (props.variant === 'c') paintMargins()
+  if (mode.value === 'c') paintMargins()
 }
 
 // ------------------------------------------------------------------ turning pages
@@ -233,7 +397,7 @@ async function turn(direction: 1 | -1) {
   turning = true
   moved = true
   try {
-    if (props.variant === 'c' && !reduced.value && host.value) {
+    if (mode.value === 'c' && !reduced.value && host.value) {
       // The printed page lays the next one down: a short dip and a soft return, no slide.
       await host.value.animate([{ opacity: 1 }, { opacity: 0 }], { duration: durationToken('instant'), easing: easingToken('exit'), fill: 'forwards' }).finished
       await (direction === 1 ? e.view.next() : e.view.prev())
@@ -251,11 +415,14 @@ async function turn(direction: 1 | -1) {
 
 function onTap(x: number) {
   if (!ready.value || sheetOpen.value) return
+  // A tap beside a selection or an open highlight puts the menu away, and nothing else.
+  if (menuOpen.value) return closeMenu()
+  if (performance.now() - menuClosedAt < 400) return
   if (chrome.value) {
     chrome.value = false
     return
   }
-  if (props.variant === 'b') {
+  if (mode.value === 'b') {
     chrome.value = true
     return
   }
@@ -267,7 +434,7 @@ function onTap(x: number) {
 
 function onSwipe(direction: 1 | -1) {
   // The paginator turns pages under the finger itself; only past the last page is ours.
-  if (props.variant === 'b' || !ready.value) return
+  if (mode.value === 'b' || !ready.value) return
   moved = true
   if (direction === 1 && loc.value?.atEnd && !endShown.value) endShown.value = true
 }
@@ -284,7 +451,7 @@ function jump(go: () => Promise<unknown> | undefined) {
   void Promise.resolve(go()).finally(() => setTimeout(() => (jumping = false), 400))
 }
 function onScroll(offset: number, size: number, viewSize: number) {
-  if (props.variant !== 'b') return
+  if (mode.value !== 'b') return
   chapterFraction.value = viewSize > size ? Math.min(1, offset / (viewSize - size)) : 1
   const index = loc.value?.sectionIndex ?? -1
   if (index !== lastIndex || !ready.value || jumping) {
@@ -302,14 +469,15 @@ function onScroll(offset: number, size: number, viewSize: number) {
 
 function onKey(event: KeyboardEvent) {
   if (sheetOpen.value || !ready.value) return
-  if (['ArrowRight', 'PageDown', ' '].includes(event.key) && props.variant !== 'b') {
+  if (['ArrowRight', 'PageDown', ' '].includes(event.key) && mode.value !== 'b') {
     event.preventDefault()
     void turn(1)
-  } else if (['ArrowLeft', 'PageUp'].includes(event.key) && props.variant !== 'b') {
+  } else if (['ArrowLeft', 'PageUp'].includes(event.key) && mode.value !== 'b') {
     event.preventDefault()
     void turn(-1)
   } else if (event.key === 'Escape') {
-    if (chrome.value) chrome.value = false
+    if (menuOpen.value) closeMenu()
+    else if (chrome.value) chrome.value = false
     else if (endShown.value) endShown.value = false
     else void close()
   }
@@ -504,7 +672,8 @@ onMounted(async () => {
     .then((module) => {
       importedAt = performance.now()
       return module.openReader(host.value!, props.file, {
-        handlers: { relocate: onRelocate, tap: (x) => onTap(x), scroll: onScroll, swipe: onSwipe },
+        handlers: { relocate: onRelocate, tap: (x) => onTap(x), scroll: onScroll, swipe: onSwipe, select: onSelect, highlightTapped: onHighlightTapped },
+        highlights: readHighlights<Highlight>(props.book.title),
         layout: layout.value,
         settings,
         colors: colors(),
@@ -531,7 +700,7 @@ onMounted(async () => {
   takeOverTheme()
   void applyWake()
   ;(window as unknown as { __readerReady?: boolean }).__readerReady = true
-  if (props.variant === 'c') paintMargins()
+  if (mode.value === 'c') paintMargins()
   if (props.initial.chrome) chrome.value = true
   const sheet = props.initial.sheet
   if (sheet === 'type') typeOpen.value = true
@@ -584,7 +753,7 @@ function nextChapter() {
   <div
     ref="root"
     class="reader fixed inset-0 z-[35] overflow-hidden bg-surface text-ink"
-    :class="`reader-${variant}`"
+    :class="`reader-${mode}`"
     :data-theme="theme"
     data-testid="reader"
     :data-ready="ready || undefined"
@@ -595,17 +764,18 @@ function nextChapter() {
     </div>
 
     <ChromeQuiet
-      v-if="variant === 'a'"
+      v-if="mode === 'a'"
       :shown="chrome && ready"
       :info="info"
       @back="close"
       @contents="tocOpen = true"
       @type="typeOpen = true"
+      @search="(searchInitial = ''), (searchOpen = true)"
       @scrub="goToFraction"
       @set-here="setHere"
     />
     <ChromeScroll
-      v-else-if="variant === 'b'"
+      v-else-if="mode === 'b'"
       :shown="chrome && ready"
       :ready="ready"
       :info="info"
@@ -613,6 +783,7 @@ function nextChapter() {
       @back="close"
       @contents="tocOpen = true"
       @type="typeOpen = true"
+      @search="(searchInitial = ''), (searchOpen = true)"
       @next="nextChapter"
       @set-here="setHere"
     />
@@ -623,10 +794,30 @@ function nextChapter() {
       @back="close"
       @contents="tocOpen = true"
       @type="typeOpen = true"
+      @search="(searchInitial = ''), (searchOpen = true)"
       @set-here="setHere"
     />
 
-    <ProgressNote :note="note" :variant="variant" :chrome="chrome" />
+    <SelectionMenu
+      :design="menu"
+      :target="menuTarget"
+      :can-define="canDefine"
+      :peek="peek"
+      @translate="openLookup('translate')"
+      @define="openLookup('define')"
+      @copy="onCopy"
+      @search="openLookup('search')"
+      @color="onColor"
+      @remove="onRemove"
+      @more="openLookup($event)"
+    />
+    <Transition name="toast">
+      <p v-if="toast" class="toast figures pointer-events-none fixed inset-x-0 z-40 flex justify-center" role="status">
+        <span class="rounded-pill bg-ink px-md py-xs text-meta text-on-ink shadow-float">{{ toast.text }}</span>
+      </p>
+    </Transition>
+
+    <ProgressNote :note="note" :variant="mode" :chrome="chrome" />
 
     <EndOfBook
       :shown="endShown"
@@ -644,10 +835,38 @@ function nextChapter() {
     <TocSheet v-model:open="tocOpen" :toc="engine?.toc ?? []" :current="loc?.chapterHref ?? null" :info="info" :book="book" @go="goTo" />
     <StartPrompt v-model:open="startOpen" :book="book" @start="onStarted" />
     <FinishPrompt v-model:open="finishOpen" :book="book" @finish="onFinished" />
+    <TranslateSheet v-model:open="translateOpen" :text="sheetText" :from="engine?.language ?? 'en'" @define="swapLookup('define')" />
+    <DefineSheet v-model:open="defineOpen" :text="sheetText" :language="engine?.language ?? 'en'" @translate="swapLookup('translate')" />
+    <SearchSheet v-model:open="searchOpen" :engine="engine" :initial="searchInitial" @go="goToHit" />
   </div>
   <!-- Outside the reader's layer, so the cover keeps its opacity while the room fades in and out under it. -->
   <div ref="flyLayer" class="pointer-events-none fixed inset-0 z-[36]" aria-hidden="true" />
 </template>
+
+<style scoped>
+.toast {
+  bottom: calc(var(--float-bottom) + var(--spacing-xxl));
+}
+.toast-enter-active {
+  transition: opacity var(--duration-quick) var(--ease-standard);
+}
+.toast-leave-active {
+  transition: opacity var(--duration-exit) var(--ease-exit);
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+}
+/* Highlights wash the words: multiplied into paper, softer and plain in the dark. */
+.reader :deep(foliate-view) {
+  --overlayer-highlight-opacity: 0.42;
+  --overlayer-highlight-blend-mode: multiply;
+}
+.reader[data-theme='dark'] :deep(foliate-view) {
+  --overlayer-highlight-opacity: 0.3;
+  --overlayer-highlight-blend-mode: normal;
+}
+</style>
 
 <script lang="ts">
 function isSecureContextNow() {

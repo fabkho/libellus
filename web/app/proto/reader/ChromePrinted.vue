@@ -10,7 +10,7 @@ import ProtoRound from './ProtoRound.vue'
 import type { ChromeInfo } from './types'
 
 defineProps<{ shown: boolean; info: ChromeInfo }>()
-defineEmits<{ back: []; contents: []; type: []; setHere: [] }>()
+defineEmits<{ back: []; contents: []; type: []; search: []; setHere: [] }>()
 </script>
 
 <template>
@@ -30,8 +30,9 @@ defineEmits<{ back: []; contents: []; type: []; setHere: [] }>()
       <nav class="capsule glass edge flex h-(--size-tab-bar) items-center gap-xxs rounded-pill px-xs shadow-float">
         <UiRoundButton icon="back" label="Back to the book" data-testid="reader.back" @click="$emit('back')" />
         <button type="button" class="figures min-h-(--size-touch) px-sm text-caption text-ink-muted" data-testid="reader.where" @click="$emit('contents')">
-          {{ Math.round(info.fraction * 100) }} %<span class="text-ink-ghost"> · </span>{{ info.pages - info.page }} pages left
+          {{ Math.round(info.fraction * 100) }} %<span class="text-ink-ghost"> · </span>{{ info.pages - info.page }} left
         </button>
+        <ProtoRound label="Search in the book" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
         <ProtoRound label="Contents" data-testid="reader.contents" @click="$emit('contents')"><ProtoIcon name="contents" :size="20" /></ProtoRound>
         <ProtoRound label="Text and theme" data-testid="reader.type" @click="$emit('type')">
           <span class="book-title text-body-large">A<span class="text-caption">a</span></span>

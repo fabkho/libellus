@@ -13,6 +13,8 @@ import newsreader600 from '@fontsource/newsreader/files/newsreader-latin-600-nor
 import geist400 from '@fontsource/geist/files/geist-latin-400-normal.woff2?url'
 import geist600 from '@fontsource/geist/files/geist-latin-600-normal.woff2?url'
 import './vendor/foliate-js/view.js'
+import { Overlayer } from './vendor/foliate-js/overlayer.js'
+import { HIGHLIGHTS } from './highlights'
 import type { ReaderSettings } from './settings'
 import { FONT_SIZES, LEADINGS } from './settings'
 
@@ -59,6 +61,43 @@ export interface EngineHandlers {
   scroll: (offset: number, size: number, viewSize: number) => void
   /** A horizontal swipe on the page (the paginator turns by itself; this is for past the last page). */
   swipe: (direction: 1 | -1) => void
+  /** Text was selected in the page (or the selection went away: null). */
+  select: (selection: Selection | null) => void
+  /** A highlight was tapped. */
+  highlightTapped: (highlight: Highlight, rect: Box) => void
+}
+
+export interface Box {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+/** What the member selected: its words, its place (a CFI) and where it is on screen. */
+export interface Selection {
+  text: string
+  cfi: string
+  index: number
+  rect: Box
+  /** The first and last line's boxes: the menu sits above the first or below the last. */
+  first: Box
+  last: Box
+}
+
+export interface Highlight {
+  cfi: string
+  color: string
+  text: string
+  index: number
+}
+
+export interface SearchHit {
+  cfi: string
+  pre: string
+  match: string
+  post: string
+  chapter: string
 }
 
 export type Flow = 'paginated' | 'scrolled'
@@ -93,8 +132,14 @@ type FoliateView = HTMLElement & {
   prev: () => Promise<void>
   close: () => void
   getSectionFractions: () => number[]
+  getCFI: (index: number, range: Range) => string
+  addAnnotation: (annotation: { value: string; color?: string }) => Promise<unknown>
+  deleteAnnotation: (annotation: { value: string }) => Promise<unknown>
+  search: (options: { query: string; matchCase?: boolean; matchDiacritics?: boolean; matchWholeWords?: boolean }) => AsyncGenerator<unknown>
+  clearSearch: () => void
+  language?: { canonical?: string }
   book: {
-    metadata?: { title?: unknown; author?: unknown }
+    metadata?: { title?: unknown; author?: unknown; language?: unknown }
     toc?: { label: string; href: string; subitems?: unknown[] }[]
     sections: { id: string; linear?: string; size: number }[]
     getCover?: () => Promise<Blob | null>
@@ -136,6 +181,8 @@ function text(value: unknown): string {
   return String(value)
 }
 
+const colorOf = (key: string) => HIGHLIGHTS.find((h) => h.key === key)?.color ?? key
+
 /** Back matter that is not the book: Project Gutenberg's licence, and similar footers. */
 const BACK_MATTER = /footer|licen[cs]e|colophon|imprint|uncopyright/i
 
@@ -151,6 +198,14 @@ export class ReaderEngine {
   private bodyEndIndex = 0
   private handlers: EngineHandlers
   private sectionFractions: number[] = []
+  highlights: Highlight[] = []
+  /** When a highlight was last tapped: that tap is not also a page turn. */
+  annotationTappedAt = 0
+  /** The book's language (BCP 47, e.g. "en"), for translating and looking up words. */
+  get language(): string {
+    const lang = this.view.language?.canonical ?? text(this.view.book.metadata?.language)
+    return (lang || 'en').split('-')[0]!.toLowerCase()
+  }
 
   constructor(view: FoliateView, handlers: EngineHandlers) {
     this.view = view
@@ -249,6 +304,34 @@ export class ReaderEngine {
   setStyles(settings: ReaderSettings, colors: PageColors) {
     const flow = this.view.renderer.getAttribute('flow') === 'scrolled' ? 'scrolled' : 'paginated'
     this.view.renderer.setStyles(pageCss(settings, colors, flow))
+  }
+
+  highlight(highlight: Highlight) {
+    this.highlights = [...this.highlights.filter((h) => h.cfi !== highlight.cfi), highlight]
+    void this.view.addAnnotation({ value: highlight.cfi, color: colorOf(highlight.color) })
+  }
+  unhighlight(cfi: string) {
+    this.highlights = this.highlights.filter((h) => h.cfi !== cfi)
+    void this.view.deleteAnnotation({ value: cfi })
+  }
+  clearSelection() {
+    const contents = (this.view.renderer as unknown as { getContents: () => { doc: Document }[] }).getContents()
+    for (const { doc } of contents) doc.getSelection()?.removeAllRanges()
+  }
+
+  /** Every place in the book where `query` stands, chapter by chapter as they are searched. */
+  async *search(query: string, color: string): AsyncGenerator<{ progress: number } | { hits: SearchHit[] }> {
+    const found = this.view.search({ query, matchCase: false, matchDiacritics: false, matchWholeWords: false, draw: Overlayer.outline, drawOptions: { color, width: 1.5, radius: 3 } } as never)
+    for await (const result of found) {
+      if (result === 'done') return
+      const r = result as { progress?: number; label?: string; subitems?: { cfi: string; excerpt: { pre: string; match: string; post: string } }[] }
+      if (r.subitems) {
+        yield { hits: r.subitems.map((item) => ({ cfi: item.cfi, ...item.excerpt, chapter: (r.label ?? '').trim() })) }
+      } else if (typeof r.progress === 'number') yield { progress: r.progress }
+    }
+  }
+  clearSearch() {
+    this.view.clearSearch()
   }
 
   destroy() {
@@ -358,6 +441,7 @@ export async function openReader(
     settings: ReaderSettings
     colors: PageColors
     at?: string | number | null
+    highlights?: Highlight[]
     startedAt: number
     importedAt: number
   },
@@ -374,6 +458,7 @@ export async function openReader(
   await view.open(file)
   engine.timings.parseMs = performance.now() - options.importedAt
   engine.prepare()
+  engine.highlights = options.highlights ?? []
   engine.cover = (await view.book.getCover?.().catch(() => null)) ?? null
 
   view.addEventListener('relocate', (event) => {
@@ -381,6 +466,24 @@ export async function openReader(
     const scrolled = r.getAttribute('flow') === 'scrolled'
     const sectionFraction = scrolled ? r.start / Math.max(1, r.viewSize - r.size) : (r.page - 1) / Math.max(1, r.pages - 3)
     engine.onRelocate((event as CustomEvent).detail, { fraction: Math.min(1, Math.max(0, sectionFraction)) })
+  })
+  // Highlights: drawn in the room's way (a soft wash under the words), redrawn when a section loads again.
+  view.addEventListener('draw-annotation', (event) => {
+    const { draw, annotation } = (event as CustomEvent<{ draw: (f: unknown, o: unknown) => void; annotation: { color?: string } }>).detail
+    draw(Overlayer.highlight, { color: annotation.color })
+  })
+  view.addEventListener('create-overlay', (event) => {
+    const { index } = (event as CustomEvent<{ index: number }>).detail
+    for (const h of engine.highlights) if (h.index === index) void view.addAnnotation({ value: h.cfi, color: colorOf(h.color) })
+  })
+  view.addEventListener('show-annotation', (event) => {
+    const { value, range } = (event as CustomEvent<{ value: string; range: Range }>).detail
+    const highlight = engine.highlights.find((h) => h.cfi === value)
+    if (!highlight) return
+    engine.annotationTappedAt = performance.now()
+    const frame = range.startContainer.ownerDocument?.defaultView?.frameElement?.getBoundingClientRect()
+    const r = range.getBoundingClientRect()
+    options.handlers.highlightTapped(highlight, { left: (frame?.left ?? 0) + r.left, top: (frame?.top ?? 0) + r.top, width: r.width, height: r.height })
   })
   view.renderer.addEventListener('scroll', () => {
     const r = view.renderer
@@ -407,7 +510,38 @@ export async function openReader(
       if (target?.closest?.('a[href]')) return
       if (!doc.getSelection()?.isCollapsed) return
       const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
-      options.handlers.tap((frame?.left ?? 0) + click.clientX, (frame?.top ?? 0) + click.clientY)
+      const x = (frame?.left ?? 0) + click.clientX
+      const y = (frame?.top ?? 0) + click.clientY
+      // A tap on a highlight opens it instead (the view tells us in its own click listener, which may run after ours).
+      setTimeout(() => {
+        if (performance.now() - engine.annotationTappedAt < 300) return
+        options.handlers.tap(x, y)
+      })
+    })
+    // A selection, once it holds still (Android's handles move it in steps).
+    let selectTimer: ReturnType<typeof setTimeout> | undefined
+    const report = () => {
+      const selection = doc.getSelection()
+      if (!selection || selection.isCollapsed || !selection.rangeCount) return options.handlers.select(null)
+      const range = selection.getRangeAt(0)
+      const words = selection.toString().replace(/\s+/g, ' ').trim()
+      if (!words) return options.handlers.select(null)
+      const frame = doc.defaultView?.frameElement?.getBoundingClientRect()
+      const shift = (r: DOMRect | { left: number; top: number; width: number; height: number }) => ({ left: (frame?.left ?? 0) + r.left, top: (frame?.top ?? 0) + r.top, width: r.width, height: r.height })
+      const rects = [...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0)
+      const index = engine.last?.sectionIndex ?? 0
+      options.handlers.select({
+        text: words,
+        cfi: view.getCFI(index, range),
+        index,
+        rect: shift(range.getBoundingClientRect()),
+        first: shift(rects[0] ?? range.getBoundingClientRect()),
+        last: shift(rects.at(-1) ?? range.getBoundingClientRect()),
+      })
+    }
+    doc.addEventListener('selectionchange', () => {
+      clearTimeout(selectTimer)
+      selectTimer = setTimeout(report, 220)
     })
   })
 

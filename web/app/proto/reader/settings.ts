@@ -6,6 +6,8 @@
 export type ReaderTheme = 'light' | 'dark' | 'sepia'
 
 export interface ReaderSettings {
+  /** Pages (a, c) or one scrolling page per chapter (b's way). */
+  flow: 'pages' | 'scroll'
   font: 'serif' | 'sans'
   /** Index into FONT_SIZES. */
   size: number
@@ -38,6 +40,7 @@ export const MARGINS = [
 ] as const
 
 export const DEFAULT_SETTINGS: ReaderSettings = {
+  flow: 'pages',
   font: 'serif',
   size: 2,
   leading: 2,

@@ -19,13 +19,18 @@ definePageMeta({ layout: false })
 useHead({ title: 'Reader · Design round' })
 
 type Variant = 'a' | 'b' | 'c'
+type MenuDesign = 'bubble' | 'dock' | 'peek'
 type BookKey = 'peter' | 'kafka' | 'file'
 type Status = 'want_to_read' | 'reading'
 
 const VARIANTS: { key: Variant; name: string; pitch: string }[] = [
   { key: 'a', name: 'Quiet pages', pitch: 'Pages, nothing on them but the text. Tap the edges or swipe to turn; tap the middle for a slim top and bottom bar.' },
-  { key: 'b', name: 'Scroll', pitch: 'One long page per chapter. A hairline at the top edge, the chapter floating over it; scroll up and the bars come back.' },
   { key: 'c', name: 'Printed page', pitch: 'A printed book: running head and folio in the margins, two pages side by side on a wide screen, a calm fade to turn. Tap the middle for a small capsule.' },
+]
+const MENUS: { key: MenuDesign; name: string; pitch: string }[] = [
+  { key: 'bubble', name: 'Bubble', pitch: 'An ink card by the words, under them on a phone (Android puts its own Copy bar above).' },
+  { key: 'dock', name: 'Dock', pitch: 'The same actions in a glass bar at the bottom edge: never on the words, always under the thumb.' },
+  { key: 'peek', name: 'Peek', pitch: 'A low panel that already shows the answer (a word’s meaning, a phrase’s translation), the actions under it.' },
 ]
 
 const BOOKS = {
@@ -42,12 +47,13 @@ const bookKey = ref<BookKey>(q('book') === 'kafka' ? 'kafka' : 'peter')
 const status = ref<Status>(q('status') === 'want' ? 'want_to_read' : 'reading')
 const savedPage = ref(Number(q('saved') ?? (status.value === 'reading' ? 0 : 0)) || 0)
 const quickWrites = ref(q('writes') !== 'spec')
+const menu = ref<MenuDesign>((['bubble', 'dock', 'peek'] as const).find((m) => m === q('menu')) ?? 'bubble')
 const reduceMotion = ref(q('motion') === 'reduce' ? true : null as boolean | null)
 const appTheme = ref<'light' | 'dark' | null>(q('app') === 'dark' ? 'dark' : q('app') === 'light' ? 'light' : null)
 
 // Keep the address in step, so a reload (or a link sent to the phone) opens the same set-up.
-watch([variant, bookKey, status], () => {
-  void router.replace({ query: { ...route.query, v: variant.value, book: bookKey.value === 'file' ? undefined : bookKey.value, status: status.value === 'want_to_read' ? 'want' : 'reading' } })
+watch([variant, bookKey, status, menu], () => {
+  void router.replace({ query: { ...route.query, v: variant.value, menu: menu.value, book: bookKey.value === 'file' ? undefined : bookKey.value, status: status.value === 'want_to_read' ? 'want' : 'reading' } })
 })
 watch(
   appTheme,
@@ -225,6 +231,29 @@ onMounted(() => {
           </button>
         </div>
 
+        <p class="mt-xs px-ms text-caption text-ink-faint">
+          Scroll (b) is now a setting of both: Aa → Pages / Scroll.<template v-if="variant === 'b'"> This link opens b directly.</template>
+        </p>
+
+        <h3 class="eyebrow mt-md mb-xs">Select words: menu</h3>
+        <div class="grid gap-xs">
+          <button
+            v-for="m in MENUS"
+            :key="m.key"
+            type="button"
+            class="rounded-md px-ms py-sm text-left"
+            :class="menu === m.key ? 'bg-surface-raised shadow-raised' : 'hover:bg-fill'"
+            :data-testid="`proto.menu.${m.key}`"
+            @click="menu = m.key"
+          >
+            <span class="flex items-center gap-sm text-body font-medium">
+              {{ m.name }}
+              <span v-if="menu === m.key" class="lamp ml-auto" aria-hidden="true" />
+            </span>
+            <span class="mt-xxs block text-caption text-ink-muted">{{ m.pitch }}</span>
+          </button>
+        </div>
+
         <div class="mt-md grid grid-cols-[auto_1fr] items-center gap-x-md gap-y-sm text-caption">
           <span class="text-ink-faint">Book</span>
           <span class="flex flex-wrap gap-xs">
@@ -276,8 +305,9 @@ onMounted(() => {
       :saved-page="savedPage"
       :hero="heroCover"
       :quick-writes="quickWrites"
+      :menu="menu"
       :reduce-motion="reduceMotion"
-      :initial="{ theme: q('theme'), margins: q('margins'), leading: q('leading'), size: q('size'), chrome: q('chrome') === '1', sheet: q('sheet'), at: q('at') ? Number(q('at')) : null, flight: q('flight') !== '0' }"
+      :initial="{ theme: q('theme'), flow: q('flow'), margins: q('margins'), leading: q('leading'), size: q('size'), chrome: q('chrome') === '1', sheet: q('sheet'), at: q('at') ? Number(q('at')) : null, flight: q('flight') !== '0' }"
       @closed="onClosed"
       @progress="onProgress"
       @start="onStart"
