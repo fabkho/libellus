@@ -347,3 +347,9 @@ the handles on the owner's Android phone.
 Production note: the reader's own selection needs its own accessibility path (VoiceOver/TalkBack
 users select with the screen reader's text rotor, which does not use touch) — keep the browser's
 selection when a screen reader is detected, or offer "Select text" from the chrome.
+
+**Round 3, header:** a's top bar (and the scroll mode's) now follows the book page's `UiTopBar`:
+no bar, no hairline — the round glass buttons float (Back at the left; Search and Contents at the
+right, at the book page's inset), the title in the serif between them, and a short fade of the
+room behind them (solid under the status bar and half the button row, then fading out) keeps the
+title and the clock clear of the words. Scroll mode shows one line ("Metamorphosis · I").

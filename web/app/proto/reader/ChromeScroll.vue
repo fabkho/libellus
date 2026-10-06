@@ -26,16 +26,18 @@ const atChapterEnd = computed(() => props.ready && props.info.chapterFraction > 
   </Transition>
 
   <Transition name="top">
-    <header v-if="shown" class="bar-top glass fixed inset-x-0 top-0 z-30 border-b-(length:--stroke-hairline) border-hairline" data-testid="reader.top">
-      <div class="mx-auto flex h-(--size-touch) max-w-(--size-max-content) items-center gap-xs px-inset">
-        <UiRoundButton icon="back" label="Back to the book" data-testid="reader.back" @click="$emit('back')" />
+    <!-- As on the book page (UiTopBar): round glass buttons floating over the page, no bar; a short fade of
+         the room behind them keeps the title and the clock clear of the words. -->
+    <header v-if="shown" class="pointer-events-none fixed inset-x-0 top-0 z-30" data-testid="reader.top">
+      <div class="top-fade absolute inset-x-0 top-0" aria-hidden="true" />
+      <div class="bar-top safe-x relative mx-auto max-w-(--size-max-content)">
+        <div class="flex h-(--size-touch) items-center gap-xs px-inset">
+        <UiRoundButton class="pointer-events-auto" icon="back" label="Back to the book" data-testid="reader.back" @click="$emit('back')" />
         <span class="w-(--size-touch) shrink-0" aria-hidden="true" />
-        <div class="min-w-0 flex-1 text-center">
-          <p class="book-title truncate text-callout">{{ info.chapter ?? info.title }}</p>
-          <p class="figures truncate text-meta text-ink-faint">{{ info.title }}</p>
+        <p class="book-title min-w-0 flex-1 truncate text-center text-callout">{{ runningHead(info.title, info.chapter) }}</p>
+        <ProtoRound class="pointer-events-auto" label="Search in the book" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
+        <ProtoRound class="pointer-events-auto" label="Contents" data-testid="reader.contents" @click="$emit('contents')"><ProtoIcon name="contents" :size="20" /></ProtoRound>
         </div>
-        <ProtoRound label="Search in the book" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
-        <ProtoRound label="Contents" data-testid="reader.contents" @click="$emit('contents')"><ProtoIcon name="contents" :size="20" /></ProtoRound>
       </div>
     </header>
   </Transition>
@@ -70,6 +72,15 @@ const atChapterEnd = computed(() => props.ready && props.info.chapterFraction > 
 </template>
 
 <style scoped>
+.top-fade {
+  height: calc(var(--bar-top) + var(--size-touch) + var(--spacing-lg));
+  background: linear-gradient(
+    to bottom,
+    var(--color-surface) calc(var(--bar-top) + var(--size-touch) / 2),
+    color-mix(in srgb, var(--color-surface) 88%, transparent) calc(var(--bar-top) + var(--size-touch)),
+    transparent
+  );
+}
 /* The room's colour behind the status bar and the floating chapter, fading out below it. */
 .edge-veil {
   height: calc(var(--bar-top) + var(--spacing-xxl));
@@ -116,7 +127,7 @@ const atChapterEnd = computed(() => props.ready && props.info.chapterFraction > 
 .top-enter-from,
 .top-leave-to {
   opacity: 0;
-  transform: translateY(-100%);
+  transform: translateY(calc(-1 * var(--spacing-sm)));
 }
 .bottom-enter-from,
 .bottom-leave-to {
