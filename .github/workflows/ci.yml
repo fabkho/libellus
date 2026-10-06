@@ -71,7 +71,7 @@ jobs:
         if: github.event_name == 'push'
 
       # Every filter lists the workflow files: changing CI runs what CI does.
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         if: github.event_name != 'workflow_dispatch'
         with:
