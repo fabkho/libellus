@@ -10,7 +10,7 @@
  * script, warm_library.ts); the anon key does not.
  */
 import { createClient } from '@supabase/supabase-js'
-import { createGoodreads } from './client.ts'
+import { createGoodreads, userAgent } from './client.ts'
 import type { GoodreadsAnswer } from './goodreads.ts'
 import { type CachedAnswer, createHandler } from './handler.ts'
 
@@ -72,7 +72,7 @@ const handler = createHandler({
       if (error) throw new Error(error.message)
     },
   },
-  goodreads: createGoodreads({ fetch: (input, init) => fetch(input, init) }),
+  goodreads: createGoodreads({ fetch: (input, init) => fetch(input, init), userAgent: userAgent(Deno.env.get('LIBELLUS_SITE_URL')) }),
   async authorize(request) {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
     if (!token) return false
