@@ -199,7 +199,8 @@ watch(
 
 /* The chosen filter's count is quieter than its name, as in D. */
 .filter.on .count {
-  opacity: 0.55;
+  /* Still 4.5:1 on the ink pill in both themes (0.55 was 4.1:1 by night). */
+  opacity: 0.68;
 }
 
 /* The lit segment: a lamp hairline under it, with a little of its glow. */
