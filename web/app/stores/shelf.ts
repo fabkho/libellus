@@ -37,6 +37,8 @@ export const useShelfStore = defineStore('shelf', () => {
       if (member !== session.member?.id) return
       if (result.error) {
         loadError.value = result.error
+        // Offline is no fault; a file that cannot be had or read is.
+        if (result.error !== 'offline') reportError('shelf', `library file ${result.error}`)
         return
       }
       loadError.value = null

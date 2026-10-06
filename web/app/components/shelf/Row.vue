@@ -38,6 +38,11 @@ const props = defineProps<{
 // row mounted again on the retry would show it instead of asking: forget it, so the new row reads the file afresh.
 const { error } = useLibrary()
 if (error.value) useState<string | null>('regal:library-loaded').value = null
+// Regal could not show the Library (its own read of the file): worth a report, unless offline.
+// The Stack and the row share one Library, so they say it in the same words, counted as one.
+watch(error, (problem) => {
+  if (problem && isOnline()) reportError('shelf', `Regal: ${problem.message}${problem.details[0] ? ` ${problem.details[0]}` : ''}`)
+})
 </script>
 
 <template>
