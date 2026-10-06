@@ -150,6 +150,8 @@ export const useSyncStore = defineStore('sync', () => {
       do {
         report = await box.flush()
         if (box !== outbox) return
+        // A write that will never sync is worth knowing about: the action and the code, never the book.
+        for (const failure of report.refused) reportError('outbox', `${failure.action} refused: ${failure.code}`)
         if (report.taken.length || report.refused.length) await settle(report)
         // A write made while the last one was on its way: its turn now.
       } while (report.retryAt === null && box.items().length > 0 && isOnline())

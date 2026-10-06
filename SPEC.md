@@ -115,6 +115,9 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
 - Speed: ~220 ms debounced search with aborts, thumbhash placeholders, preloaded first covers,
   keep-alive pages, navigation on pointer-down. Covers resolved once, cached by the service worker.
 - Privacy: minimal data, EU region, no trackers. Keys never committed.
+- Errors: what goes wrong on a device (exceptions, refused offline writes, the shelf, missing chunks)
+  goes to the database's own log, no third-party service: technical details only, no content, kept
+  30 days ([docs/OPERATIONS.md](docs/OPERATIONS.md), Client errors).
 
 ## 7. Milestones
 

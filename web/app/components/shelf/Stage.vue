@@ -39,6 +39,11 @@ watch(
 )
 
 const { books, error } = useLibrary()
+// Regal could not show the Library (its own read of the file): worth a report, unless offline.
+// The Stack and the row share one Library, so they say it in the same words, counted as one.
+watch(error, (problem) => {
+  if (problem && isOnline()) reportError('shelf', `Regal: ${problem.message}${problem.details[0] ? ` ${problem.details[0]}` : ''}`)
+})
 const { pickedId, putAway } = useBookPick()
 let told = false
 watch(

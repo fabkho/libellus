@@ -97,6 +97,9 @@ export default defineNuxtConfig({
       // The owner's auth user id (NUXT_PUBLIC_SHELF_OWNER_ID): only she sees Your shelf (#23).
       // Empty: nobody does.
       shelfOwnerId: '',
+      // The client error log (composables/useErrorLog.ts, NUXT_PUBLIC_ERROR_LOG): a build sends
+      // its errors unless 'off'; the dev server prints them and sends only with 'send'.
+      errorLog: '',
       // Regal's setting (its README): the published library file, the one the portfolio shows.
       regal: { librarySrc: REGAL_LIBRARY_SRC },
     },
