@@ -67,21 +67,21 @@ is always visible: `:focus-visible` draws a 2 px `accentInk` outline. The tab ba
 scroll comes back as soon as focus enters it (#125).
 
 **Contrast.** Every text token reaches 4.5:1 on every surface (`surface`, `surfaceRaised`,
-`surfaceSheet`) and on a `fill` over it, in both themes:
+`surfaceSheet`) and on a `fill` over it, in light, dark and the reader's sepia room:
 
-| Token | Light (min–max) | Dark (min–max) | For |
-|---|---|---|---|
-| `ink` | 14.1–16.7 | 12.5–15.9 | Text |
-| `inkMuted` | 6.6–7.3 | 7.5–8.9 | Secondary text |
-| `inkFaint` | 4.5–4.8 | 4.9–5.5 | Meta, eyebrows, inactive tabs, placeholders: the faintest text |
-| `accentInk` | 5.2–6.1 (4.6 on its own `accentSoft` wash over a fill) | 8.5–10.8 | The lamp as small text (the sheet's action, lit figures, the New pill) and the focus ring |
-| `error` | 4.9–5.8 | 5.8–7.3 | Errors, destructive actions |
-| `accent` | 2.9–3.5 | 8.5–10.8 | Dots, rules, carets, stars, figures at large size (3:1) only |
-| `inkGhost` | 1.5 | 1.7–1.8 | Chevrons, separators, the grabber, disabled text: never text that is read |
+| Token | Light (min–max) | Dark (min–max) | Sepia (min–max) | For |
+|---|---|---|---|---|
+| `ink` | 14.1–16.7 | 12.5–15.9 | 10.0–11.9 | Text |
+| `inkMuted` | 6.6–7.3 | 7.5–8.9 | 6.2–7.0 | Secondary text |
+| `inkFaint` | 4.5–4.8 | 4.9–5.5 | 4.6–5.0 | Meta, eyebrows, inactive tabs, placeholders: the faintest text |
+| `accentInk` | 5.2–6.1 (4.6 on its own `accentSoft` wash over a fill) | 8.5–10.8 | 5.2–6.2 | The lamp as small text (the sheet's action, lit figures, the New pill, the reader's Set here and Translate links) and the focus ring |
+| `error` | 4.9–5.8 | 5.8–7.3 | 4.7–5.6 | Errors, destructive actions |
+| `accent` | 2.9–3.5 | 8.5–10.8 | 3.5–4.1 | Dots, rules, carets, stars, figures at large size (3:1) only |
+| `inkGhost` | 1.5 | 1.7–1.8 | 1.5 | Chevrons, separators, the grabber, disabled text: never text that is read |
 
 Meaningful icons use `inkFaint` or stronger (3:1 and more). Opacity on text (a quieted count) is
 checked like a token. `design/tokens.json` carries these values; a new text colour is checked
-against all six backgrounds before it lands.
+against all six backgrounds (three surfaces, bare and under a fill) in each room before it lands.
 
 **Targets.** 44 × 44 pt at least (`--size-touch`); a control drawn smaller (32 pt pills, an 11 px
 link, the search field's clear button) gets the rest from an invisible `::after`. The rows and the
@@ -103,7 +103,8 @@ shimmer stops, the tab bar stays.
 - **The flow**: `cd web && pnpm exec playwright test e2e/a11y.spec.ts` (and, with Regal,
   `LIBELLUS_REGAL=1 REGAL_LAYER=… pnpm exec playwright test e2e/shelf.spec.ts`). It fails on any
   serious or critical axe violation and prints the moderate and minor ones. A new screen or sheet
-  gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), in both themes.
+  gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), in both themes;
+  the reader's, in its three rooms, is `e2e/a11y-reader.spec.ts` (Chromium).
   A violation that cannot be fixed in Libellus goes in `ALLOWED` in `e2e/support.ts` with its reason
   — never a rule switched off for a whole page.
 - **The keyboard and the screen reader** are not covered by axe: the second flow in `a11y.spec.ts`
@@ -121,18 +122,24 @@ shimmer stops, the tab bar stays.
   details" because Libellus' `BookSheet` fills its `#detail` slot) and stars are read as text.
   What is left of Regal's DOM: a Book taken out is a card moved to `<body>`, outside any landmark
   (axe `region`, moderate), and the row's cover-flip is Regal's own.
-- **The reader** (#131, merged during this audit, left alone here): its sepia room's text tokens are
-  below 4.5:1 (`inkMuted` 4.0, `inkFaint` 2.6, `accent` as text 3.5 on the sepia surfaces), and its
-  chrome and sheets (`components/reader/*`) still set text in `inkGhost` and the plain accent; it has
-  no a11y flow yet. `accentInk` already has a sepia value (#7f4d14, 5.2:1) for when it moves over.
+- **The reader** (#131) is scanned in its three rooms (`e2e/a11y-reader.spec.ts`: the page and its
+  chrome, Aa, Contents, search, the selection's bubble, Translate and Define) in the printed style;
+  the Classic style's bars and the scroll style's use the same tokens and are not scanned apart.
+  Not done by hand: VoiceOver or TalkBack through a book (the page text is the book's own markup,
+  inside a frame).
 - **TalkBack by hand.** The emulator pass read the tree TalkBack gets and checked it on every step of
   the core loop, but gestures injected through adb are not taken as TalkBack gestures, so swiping
   through a screen and turning the wheel with TalkBack were not done by a person. Worth one manual
   pass on a phone; VoiceOver on iOS was not tried.
-- **Text at 200 %**: titles, authors and meta lines are cut with an ellipsis at every size (a design
-  choice: rows stay one line); with large text more of them are cut. The full text is in the
-  accessible name. The Profile's figures can overflow their cell (a "29.2K" loses its last
-  character) at 200 %.
+- **Text at 200 %** (the rule is in DESIGN.md, Text size; held by `e2e/large-text.spec.ts`): the
+  Profile's figures scale down to fit their cell, and a Book's title in a row takes a second line from
+  117 % text on a 412 px phone. Authors and meta lines are still cut with an ellipsis (a design choice:
+  one line each; the full text is in the accessible name), and so are a sheet's title between Cancel
+  and its action ("Start rea…" at 200 %), a date row's value ("Today · 6") and the Profile's name;
+  those would need a two-line sheet header and rows that stack. The wrap follows the browser's
+  default font size (Android's text size, a browser's own setting or zoom); iOS Dynamic Type does not
+  change `rem` for a web page, so nothing moves there. On a wide screen the OS text size alone does
+  not narrow the viewport in `rem` enough to trigger it (browser zoom does).
 - **A year in review's covers** are 40 × 60 with a 4 px gap: 44 apart, but each cover's own box is
   40 wide.
 - **Placeholders** are now `inkFaint` (4.5:1); the date row's empty state and the rating's "Optional"

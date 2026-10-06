@@ -59,7 +59,9 @@ the reader puts `data-theme="sepia"` on `<html>` only while a book covers the sc
 then wear it too) and gives the app's own theme back as it closes. A themed token may carry a
 `sepia` value next to `light` and `dark`; `design/build.mjs` writes those into
 `[data-theme='sepia']` (a token without one keeps its light value there). Swift ignores it (the
-native reader comes later).
+native reader comes later). Its text inks meet the same 4.5:1 as the other two rooms (ACCESSIBILITY.md,
+Contrast): `inkMuted` 82 % and `inkFaint` 71 % of its ink, `accentInk` `#7f4d14`, `error` `#a93a1f`;
+the reader's own text in the lamp's colour is `accentInk`, never the plain accent.
 
 How it works in CSS: `design/build.mjs` writes the light values into Tailwind's `@theme` (on
 `:root`) and the dark values into `[data-theme='dark']` and into `@media (prefers-color-scheme:
@@ -170,6 +172,14 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   a word wider than the screen: where it is not cut with an ellipsis (`truncate`, `line-clamp-*`) it
   takes `wrap-anywhere`, so its box fits and its word breaks. `expectNoSideScroll` (`web/e2e/support.ts`)
   checks this on the main screens at 360 px.
+- **Text size.** Type and spacing are in `rem`, so a phone's text size (or the browser's default font
+  size) scales them while the column keeps its width. Rows stay one line as drawn; a Book's **title**
+  in a row is `title-wrap` (`main.css`): one line with an ellipsis, and two where the column has 22 rem
+  or less to stand in (a 412 px phone from about 117 % text). Authors, meta lines and dates stay on
+  one line with an ellipsis; the full text is in the accessible name. A row has `min-h`, never `h`, and
+  its text column `min-w-0`. A large figure (the Profile's) measures itself against its cell
+  (`container-type: inline-size`) and takes the size that fits, never wider than its cell. The rule
+  is held by `web/e2e/large-text.spec.ts` (Chromium with its default font size doubled).
 - **Safe areas** through utilities only: `screen-inset` (a whole screen), `bar-top` (a bar's
   44 pt controls row starts under the status bar, and at least `barTop` 8 off the top edge where the
   device reports no inset — every browser tab — so it never touches the browser's toolbar; the
