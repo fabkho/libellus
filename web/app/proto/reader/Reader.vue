@@ -53,6 +53,7 @@ const emit = defineEmits<{
   cover: [url: string | null, title: string, author: string]
   wake: [state: string]
   timings: [text: string]
+  menu: [design: 'bubble' | 'dock' | 'peek']
 }>()
 
 // ------------------------------------------------------------------ settings
@@ -831,7 +832,7 @@ function nextChapter() {
 
     <p v-if="failed" class="absolute inset-x-0 top-1/2 px-xl text-center text-subhead text-ink-muted">This book could not be opened. {{ failed }}</p>
 
-    <TypeSheet v-model:open="typeOpen" :settings="settings" :wake-note="settings.keepAwake && !isSecureContextNow() ? 'Simulated here: the phone needs HTTPS for it.' : null" />
+    <TypeSheet v-model:open="typeOpen" :menu="menu" :settings="settings" @update:menu="emit('menu', $event)" :wake-note="settings.keepAwake && !isSecureContextNow() ? 'Simulated here: the phone needs HTTPS for it.' : null" />
     <TocSheet v-model:open="tocOpen" :toc="engine?.toc ?? []" :current="loc?.chapterHref ?? null" :info="info" :book="book" @go="goTo" />
     <StartPrompt v-model:open="startOpen" :book="book" @start="onStarted" />
     <FinishPrompt v-model:open="finishOpen" :book="book" @finish="onFinished" />

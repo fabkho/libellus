@@ -10,6 +10,8 @@ import { FONT_SIZES, type ReaderSettings, type ReaderTheme } from './settings'
 
 const open = defineModel<boolean>('open', { required: true })
 const props = defineProps<{ settings: ReaderSettings; wakeNote: string | null }>()
+/** Design round only: which selection menu to try (bubble, dock, peek). */
+const menu = defineModel<'bubble' | 'dock' | 'peek'>('menu', { required: true })
 
 const THEMES: { key: ReaderTheme; label: string }[] = [
   { key: 'light', label: 'Light' },
@@ -149,6 +151,25 @@ function size(step: number) {
         </span>
       </UiRow>
     </UiRowGroup>
+    <!-- Design round only, not part of the design: the selection menu to try. -->
+    <p class="mt-md mb-xs flex items-baseline justify-between px-xs text-caption">
+      <span class="text-ink-muted">Selection menu <span class="text-ink-faint">(prototype)</span></span><span class="text-ink-faint">select words to try it</span>
+    </p>
+    <div class="seg flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Selection menu">
+      <button
+        v-for="m in (['bubble', 'dock', 'peek'] as const)"
+        :key="m"
+        type="button"
+        role="radio"
+        :aria-checked="menu === m"
+        class="flex flex-1 items-center justify-center rounded-sm text-caption text-ink-muted capitalize"
+        :class="menu === m && 'on'"
+        :data-testid="`readerType.menu.${m}`"
+        @click="menu = m"
+      >
+        {{ m }}
+      </button>
+    </div>
     <p class="mt-sm mb-xs px-xs text-caption text-ink-faint">
       {{ settings.keepAwake ? 'While a book is open the screen stays on.' : 'The screen turns off as usual.' }}
       <template v-if="wakeNote"> {{ wakeNote }}</template>

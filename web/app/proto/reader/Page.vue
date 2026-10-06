@@ -53,7 +53,14 @@ const appTheme = ref<'light' | 'dark' | null>(q('app') === 'dark' ? 'dark' : q('
 
 // Keep the address in step, so a reload (or a link sent to the phone) opens the same set-up.
 watch([variant, bookKey, status, menu], () => {
-  void router.replace({ query: { ...route.query, v: variant.value, menu: menu.value, book: bookKey.value === 'file' ? undefined : bookKey.value, status: status.value === 'want_to_read' ? 'want' : 'reading' } })
+  // The address only, quietly: a router navigation would close the reader and its sheets (useBackDismiss).
+  const url = new URL(window.location.href)
+  url.searchParams.set('v', variant.value)
+  url.searchParams.set('menu', menu.value)
+  url.searchParams.set('status', status.value === 'want_to_read' ? 'want' : 'reading')
+  if (bookKey.value === 'file') url.searchParams.delete('book')
+  else url.searchParams.set('book', bookKey.value)
+  window.history.replaceState(window.history.state, '', url)
 })
 watch(
   appTheme,
@@ -315,6 +322,7 @@ onMounted(() => {
       @cover="onCover"
       @wake="wake = $event"
       @timings="openTimings = $event"
+      @menu="menu = $event"
     />
   </div>
 </template>
