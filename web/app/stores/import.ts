@@ -29,6 +29,7 @@ import { createSearch, isAbort } from '~/data/search'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { isoDay } from '~/utils/dates'
+import { writeImportHint } from '~/utils/importHint'
 
 /**
  * pick: no file yet · reading: the file is being read · matching: editions
@@ -371,6 +372,9 @@ export const useImportStore = defineStore('import', () => {
     })
     if (written.error) writeError.value = written.error
     phase.value = 'done'
+    // Home stops offering the import to her (utils/importHint.ts).
+    if (import.meta.client && session.member && outcomes.value.some((outcome) => outcome.outcome === 'added' || outcome.outcome === 'imported'))
+      writeImportHint(window.localStorage, session.member.id, 'imported')
     // The Library shows the new books the next time it is opened.
     void libraryStore.load()
   }

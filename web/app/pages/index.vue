@@ -55,6 +55,7 @@ watch(
 
   <div v-else-if="library.loaded" class="flex flex-col gap-lg">
     <HomeInstallHint />
+    <HomeImportOffer />
 
     <section data-testid="home.reading">
       <div class="flex h-(--size-touch) items-center justify-between">

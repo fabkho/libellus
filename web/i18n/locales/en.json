@@ -288,6 +288,12 @@
       "text": "Tap Share, then Add to Home Screen. It opens like an app, full screen.",
       "addToHome": "Add to Home Screen",
       "dismiss": "Dismiss"
+    },
+    "importOffer": {
+      "title": "Coming from Goodreads or Hardcover?",
+      "text": "Bring your books, ratings and dates along — drop your export here.",
+      "action": "Import books",
+      "dismiss": "Hide the import suggestion"
     }
   },
   "library": {

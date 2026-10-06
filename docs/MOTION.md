@@ -137,6 +137,9 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   `standard`, so what sits under it glides down instead of jumping; it closes over `exit`. Clipped only
   while it moves. With Reduce Motion a short fade over `quick`, no travel. The room carries
   `data-moving` while it moves.
+  Home's small import offer (one to three entries, `HomeImportOffer`) is one: it stands in the first frame when the
+  device's Library says so (no opening, nothing moves when the lists arrive) and closes like a Reveal when
+  the × is tapped, or when the one question about an import on another device says yes.
 - **Search morph.** As iOS 26 and Apple Books do it, the tab bar's capsule turns into the search
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's
