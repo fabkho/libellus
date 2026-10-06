@@ -188,7 +188,8 @@
       "ebooks": "Ebooks",
       "ebooksNeedYou": "{count} needs you | {count} need you",
       "scan": "Scan",
-      "scanning": "Scanning…"
+      "scanning": "Scanning…",
+      "readerClassic": "Classic reader"
     },
     "deleteAccount": {
       "title": "Delete your account?",
@@ -484,7 +485,8 @@
       "more": "More",
       "less": "Less",
       "moreLabel": "More links for this book"
-    }
+    },
+    "read": "Read now"
   },
   "add": {
     "title": "Add to Library",
@@ -902,6 +904,137 @@
       "title": "Another book?",
       "text": "This file says it is “{title}”. Link it to this book anyway?",
       "action": "Link"
+    }
+  },
+  "reader": {
+    "back": "Back to the book",
+    "failed": "This book could not be opened.",
+    "missing": "The copy of this book on this device is gone. Share or scan the file again.",
+    "where": "{percent} % · {left} left",
+    "page": "p. {page} of {count}",
+    "pageOnly": "p. {page}",
+    "percent": "{percent} %",
+    "minutesChapter": "Under a minute left in chapter | {count} min left in chapter | {count} min left in chapter",
+    "minutesBook": "Under a minute left in book | {count} min left in book | {count} min left in book",
+    "hoursBook": "{hours} h {minutes} min left in book",
+    "behind": "Your progress is at {page}.",
+    "setHere": "Set to {page}",
+    "search": "Search in the book",
+    "contents": "Contents",
+    "text": "Text and theme",
+    "nextChapter": "Next chapter",
+    "theEnd": "The end",
+    "slider": {
+      "label": "Go to a page",
+      "page": "Page",
+      "back": "Back to {page}",
+      "done": "Done"
+    },
+    "type": {
+      "title": "Text",
+      "layout": "Layout",
+      "pages": "Pages",
+      "scroll": "Scroll",
+      "room": "Room",
+      "light": "Light",
+      "dark": "Dark",
+      "sepia": "Sepia",
+      "typeface": "Typeface",
+      "serif": "Serif",
+      "sans": "Sans",
+      "smaller": "Smaller text",
+      "larger": "Larger text",
+      "sizeOf": "Text size {size} of {count}",
+      "margins": "Margins",
+      "marginNames": {
+        "0": "Edge to edge",
+        "1": "Narrow",
+        "2": "Normal",
+        "3": "Wide"
+      },
+      "spacing": "Line spacing",
+      "spacingNames": {
+        "0": "Tight",
+        "1": "Snug",
+        "2": "Normal",
+        "3": "Airy"
+      },
+      "justify": "Justify",
+      "awake": "Keep the screen on",
+      "classic": "Classic mode",
+      "awakeOn": "While a book is open the screen stays on.",
+      "awakeOff": "The screen turns off as usual.",
+      "classicOn": "Classic mode: a bar at the top and one at the bottom.",
+      "classicOff": "Turn on Classic mode for a bar at the top and one at the bottom instead of the capsule."
+    },
+    "contentsSheet": {
+      "title": "Contents",
+      "none": "This book has no contents."
+    },
+    "menu": {
+      "label": "Selected words",
+      "translate": "Translate",
+      "define": "Define",
+      "copy": "Copy",
+      "search": "Search",
+      "highlight": "Highlight",
+      "highlightIn": "Highlight in {color}",
+      "remove": "Remove",
+      "colors": {
+        "lamp": "lamp",
+        "sage": "sage",
+        "sky": "sky",
+        "rose": "rose"
+      },
+      "copied": "Copied",
+      "startHandle": "Move the start of the selection",
+      "endHandle": "Move the end of the selection"
+    },
+    "translate": {
+      "title": "Translate",
+      "into": "Translate into",
+      "busy": "Translating…",
+      "device": "Translated on this device",
+      "service": "Machine translation · MyMemory",
+      "define": "Define",
+      "error": {
+        "offline": "Translating needs a connection.",
+        "quota": "The free translations for today are used up.",
+        "failed": "This could not be translated just now."
+      }
+    },
+    "define": {
+      "title": "Define",
+      "busy": "Looking it up…",
+      "none": "No definition found for this word.",
+      "credit": "From Wiktionary · CC BY-SA",
+      "translate": "Translate",
+      "error": {
+        "offline": "Looking words up needs a connection.",
+        "quota": "The dictionary could not be reached just now.",
+        "failed": "The dictionary could not be reached just now."
+      }
+    },
+    "find": {
+      "label": "Search in this book",
+      "close": "Close search",
+      "clear": "Clear",
+      "idle": "Find a word or a name in this book.",
+      "next": "next",
+      "fromStart": "From the beginning",
+      "count": "{count} place in this book | {count} places in this book",
+      "countSoFar": "{count} place in this book so far | {count} places in this book so far",
+      "none": "Nowhere in this book",
+      "noneDetail": "“{query}” does not come up in it.",
+      "noneHint": "Try fewer letters, or another spelling."
+    },
+    "end": {
+      "eyebrow": "The end",
+      "pages": "{count} pages",
+      "finish": "Finish",
+      "back": "Back to the last page",
+      "finished": "Finished",
+      "close": "Close the book"
     }
   }
 }

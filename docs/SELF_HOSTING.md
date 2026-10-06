@@ -163,6 +163,16 @@ and signing out deletes them from the device. The share target needs HTTPS and t
 share arriving before the service worker is installed (no data passes through it). On another host
 that does not run it, such a share is answered with an error and the member shares again.
 
+**The reader** (#131 phase 2) reads those copies in the browser. Two of its features ask outside
+services, and only with the words the member selected and asked about: *Translate* uses the
+browser's own on-device translator where there is one (Chrome) and otherwise MyMemory's free API
+(`api.mymemory.translated.net`, no key, a daily quota per address), and *Define* asks Wiktionary
+(`en.wiktionary.org`). Nothing else of a book leaves the device. The place in each book is kept in
+your Supabase project (`reader_places`: the entry, a position in the file and its fingerprint;
+never any text) so another device opens at the same page; highlights stay on the device. The
+Content-Security-Policy in `web/public/_headers` names both hosts and allows the book's pages as
+`blob:` frames.
+
 **Regal, the 3D shelf** is the owner's private Nuxt layer; a fork builds without it and loses
 nothing else. It needs `LIBELLUS_REGAL=1`, access to the private repository (`GIGET_AUTH`), a
 published library file and the owner's user id (table below). Its data feed (`regal-export`, the

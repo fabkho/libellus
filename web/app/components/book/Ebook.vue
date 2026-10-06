@@ -7,12 +7,14 @@
 // taken in the line says so; a file that is not an EPUB, or no room to keep
 // it, is said here too. A picked file that is clearly another book (its ISBN
 // or title differs) is asked about in a sheet: "Another book?", the file's
-// title and author, Link links it anyway. Read now comes with the reader
-// (phase 2): no button before there is something it opens.
+// title and author, Link links it anyway. Read now is the page's own action
+// while the Book is wanted or being read; on a finished or abandoned Book this
+// line is the way in (`read`: "Ebook · on this device · Read").
 import type { LibraryEntry } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 
-const props = defineProps<{ entry: LibraryEntry }>()
+const props = defineProps<{ entry: LibraryEntry; read?: boolean }>()
+defineEmits<{ read: [] }>()
 
 const { t } = useI18n()
 const ebooks = useEbooksStore()
@@ -55,6 +57,12 @@ watch(
     >
       <UiIcon name="ebook" :size="14" />
       <span>{{ missing ? t('bookEbook.missing') : t('bookEbook.line') }}</span>
+      <template v-if="read && !missing">
+        <span class="text-ink-ghost" aria-hidden="true">·</span>
+        <button type="button" class="relative font-medium text-accent after:absolute after:-inset-ms after:content-['']" data-testid="book.ebookRead" @click="$emit('read')">
+          {{ t('book.read') }}
+        </button>
+      </template>
     </p>
     <p v-if="missing" class="mt-xxs text-center text-meta text-ink-faint" data-testid="book.ebookMissingHint">{{ t('bookEbook.missingHint') }}</p>
   </template>

@@ -271,6 +271,18 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   the first five results rise `sm` and fade in over `standard`, 50 ms apart. With Reduce Motion
   the book rests half fanned, the hairline is not drawn and the height just changes.
 - **Caret.** The lamp caret in the code input blinks in steps over `caret`, like a text caret.
+- **Reader** (#131 phase 2, `components/reader/`). *Read now* flies the book page's cover to where
+  the book's own first page will be (a copy in a fixed layer, `transform` and `clip-path` only,
+  `utils/readerFlight.ts`), the room fades to the reader's own over `standard` beneath it, and the
+  copy hands off to the page; Back flies it home the same way. The printed page turns with a short
+  dip: the page fades out over `instant` (`exit`) and the next one fades in over `standard`, no
+  slide; the classic style slides the page under the finger (foliate-js's own paginator). A turn
+  asked for while the page still settles is made right after, never lost. A tap in the middle
+  floats the capsule (or the classic bars) in over `standard` and out over `exit`; the page
+  slider grows out of the capsule. Search in a book is the app's palette and morph (see *How the
+  search morph is built*), out of the capsule or the bottom bar; its only loading sign is the
+  lamp hairline above the query, from the first keystroke until the answer is in. Sheets are the
+  app's. Android's Back puts the chrome away, then closes the book.
 
 ## How the search morph is built
 
@@ -349,7 +361,9 @@ place at once. The tab bar away does not hide at all: a bar that pops in and out
 is more motion than one that stays. The month rows of a year in review do not open: their covers
 stand at rest at once. Your shelf: the pile is there at once and the 3D replaces it
 without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
-half their wave), and the figures replace them at once.
+half their wave), and the figures replace them at once. The reader: no cover flies (the reader
+cross-fades in and out in place), the printed page turns at once, and its search palette
+cross-fades like the app's.
 
 ## Non-motions
 
