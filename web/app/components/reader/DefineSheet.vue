@@ -62,7 +62,7 @@ watch([open, () => props.text], ([isOpen]) => isOpen && run(), { immediate: true
     </template>
     <p class="mt-lg mb-xs flex items-center justify-between px-xs text-meta text-ink-faint">
       <span>{{ t('reader.define.credit') }}</span>
-      <button type="button" class="min-h-(--size-touch) text-caption font-medium text-accent" data-testid="readerDefine.translate" @click="$emit('translate')">
+      <button type="button" class="min-h-(--size-touch) text-caption font-medium text-accent-ink" data-testid="readerDefine.translate" @click="$emit('translate')">
         {{ t('reader.define.translate') }}
       </button>
     </p>
