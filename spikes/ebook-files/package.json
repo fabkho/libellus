@@ -1,0 +1,15 @@
+{
+  "name": "libellus-ebook-spike",
+  "private": true,
+  "type": "module",
+  "description": "Phase 0 spike for #131: how a PWA reaches the member's ebook files on Android. Not part of the app.",
+  "scripts": {
+    "vendor": "mkdir -p public/vendor && cp node_modules/@zip.js/zip.js/index.min.js public/vendor/zip.min.js && cp node_modules/fflate/esm/browser.js public/vendor/fflate.js",
+    "start": "PORT=${PORT:-3126} node server.mjs"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "^2.23.0",
+    "fflate": "^0.8.2",
+    "playwright-core": "^1.63.0"
+  }
+}
