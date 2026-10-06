@@ -4,11 +4,12 @@ import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage } from './covers'
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
-import { bookFromRow, pickEdition, titleQuery } from './import/editions'
+import { editionSignature } from './editions'
+import { bookFromRow, rankEditions, titleQuery } from './import/editions'
 import type { ImportBook } from './import/rows'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
-import { normalise } from './merge'
+import { editionKeys, normalise } from './merge'
 import type { Search } from './search'
 
 /**
@@ -64,7 +65,17 @@ export type Edition = {
   unsure: boolean
   /** Another edition of the same work, whose cover the file's own Book takes when its ISBN finds none. */
   coverFrom?: Book | BookSnapshot | null
+  /**
+   * The other editions of the row's work its title search found, best fit
+   * first (the order the match was picked in): what the preview offers when
+   * the member chooses another edition herself. Kept only for a row not found
+   * by its ISBN; at most `ALTERNATIVES_KEPT`.
+   */
+  alternatives?: (Book | BookSnapshot)[]
 }
+
+/** Alternatives kept per row (a file can be thousands of rows). */
+export const ALTERNATIVES_KEPT = 20
 
 export type Lookups = {
   catalogue: Pick<CatalogueSearch, 'search'>
@@ -114,12 +125,56 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
 
   const outcome = await ask((s) => lookups.search.search(titleQuery(row), { signal: s }))
   if (outcome?.failed) unsure = true
-  const same = outcome ? pickEdition(row, outcome.results) : null
+  const ranked = outcome ? rankEditions(row, outcome.results).map((result) => result.book) : []
+  const alternatives = ranked.slice(0, ALTERNATIVES_KEPT)
+  const same = ranked[0] ?? null
   const own = bookFromRow(row)
   // An ISBN no source knows is still the edition she shelved: hers, with the work's cover.
-  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: same?.book ?? null }
-  if (same) return { book: same.book, via: 'title', unsure: false }
-  return { book: own, via: null, unsure }
+  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: same, alternatives }
+  if (same) return { book: same, via: 'title', unsure: false, alternatives }
+  return { book: own, via: null, unsure, alternatives }
+}
+
+/**
+ * The row as the file has it, no source's edition (the choice "Keep as in the
+ * file"): the `import` Book of its ISBN or the member's own Manual book, an
+ * ISBN no source knows keeping the best edition's cover, as the match does.
+ */
+export function fileEdition(row: ImportBook, alternatives: readonly (Book | BookSnapshot)[] = []): Edition {
+  const own = bookFromRow(row)
+  return { book: own, via: null, unsure: false, ...(own.isbn13 ? { coverFrom: alternatives[0] ?? null } : {}), alternatives: [...alternatives] }
+}
+
+/** One row of the choice sheet: the edition, whether the preview has it now, and whether it is the file's own. */
+export type EditionChoice = { book: Book | BookSnapshot; current: boolean; file?: boolean }
+
+/**
+ * What a member can choose between for a row at first (before the edition
+ * search adds its finds): the edition the preview has now (marked), the row as
+ * the file has it, then the editions its match found, best fit first. One row
+ * per look: an edition shown already, or one that looks like one, is left out.
+ * The file's own row wears the cover of the edition it borrows (`coverFrom`),
+ * so it shows what she gets. Pure.
+ */
+export function editionChoices(row: ImportBook, edition: Edition): EditionChoice[] {
+  const alternatives = edition.alternatives ?? []
+  const inFile = fileEdition(row, alternatives)
+  const lent = (book: Book | BookSnapshot, from: Book | BookSnapshot | null | undefined): Book | BookSnapshot =>
+    from && !book.coverUrl ? { ...book, coverUrl: from.coverUrl, coverThumbhash: from.coverThumbhash, coverColors: from.coverColors } : book
+  const asFile = edition.via === null
+  const choices: EditionChoice[] = asFile
+    ? [{ book: lent(edition.book, edition.coverFrom), current: true, file: true }]
+    : [{ book: edition.book, current: true }, { book: lent(inFile.book, inFile.coverFrom), current: false, file: true }]
+  const keys = new Set(choices.flatMap(({ book }) => editionKeys(book)))
+  const looks = new Set(choices.map(({ book }) => editionSignature(book)))
+  for (const book of alternatives) {
+    const found = editionKeys(book)
+    if (found.some((key) => keys.has(key)) || looks.has(editionSignature(book))) continue
+    for (const key of found) keys.add(key)
+    looks.add(editionSignature(book))
+    choices.push({ book, current: false })
+  }
+  return choices
 }
 
 /** Runs `task` over `items`, at most `limit` at once, in order of the items. */
