@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { Client as PgClient } from 'pg'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 // Relative rather than through the `@` alias: the Playwright suite will import
 // these helpers too, and it resolves modules without Vitest's alias config.
 import { createSupabaseClient, type SessionStorage } from '../../app/data/createSupabaseClient'
@@ -91,6 +91,7 @@ export function uniqueAppleId(): string {
  * test Books this run put into the Catalogue, now that no Library holds them.
  */
 export async function sweepRun() {
+  await removePhotosOf(`u.email like $1`, [runEmailPattern()])
   await sql('delete from auth.users where email like $1', [runEmailPattern()])
   await sql(
     `delete from public.books b where b.publisher = $1 and b.title like $2
@@ -99,8 +100,26 @@ export async function sweepRun() {
   )
 }
 
+/**
+ * The profile photos (#156) of the members a sweep is about to delete. Storage
+ * files only go through the Storage API (a row deleted in SQL would leave the
+ * file behind), so they are removed with the service-role key first.
+ */
+async function removePhotosOf(where: string, params: unknown[]) {
+  const files = await sql<{ name: string }>(
+    `select o.name from storage.objects o
+       join auth.users u on (storage.foldername(o.name))[1] = u.id::text
+      where o.bucket_id = 'avatars' and ${where}`,
+    params,
+  )
+  if (!files.length) return
+  const admin = createClient(stack.url, serviceRoleKey(), { auth: { persistSession: false, autoRefreshToken: false } })
+  await admin.storage.from('avatars').remove(files.map((f) => f.name))
+}
+
 /** What a crashed run left behind, once it is a day old (no run still going is). */
 export async function sweepAbandonedRuns() {
+  await removePhotosOf(`u.email like $1 and u.created_at < now() - interval '1 day'`, [`%@${TEST_DOMAIN}`])
   await sql(
     `delete from auth.users where email like $1 and created_at < now() - interval '1 day'`,
     [`%@${TEST_DOMAIN}`],

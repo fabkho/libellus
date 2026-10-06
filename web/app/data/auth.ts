@@ -1,4 +1,5 @@
 import { isAuthRetryableFetchError, type SupabaseClient, type User } from '@supabase/supabase-js'
+import { clearAvatarFolder } from './avatar'
 
 /**
  * Every way the access flow can fail, as a stable code. The data layer never
@@ -247,10 +248,21 @@ export function createAuth(client: SupabaseClient) {
      * Catalogue books, the Goodreads cache and the invite codes stay. Online
      * only, refused before anything is sent otherwise (`online`). On success the
      * session is dropped from this device too (`scope: 'local'`: the server has
-     * no session left to revoke). Nothing is removed when it fails.
+     * no session left to revoke). Nothing is removed when it fails, except
+     * perhaps her profile photo (#156): Storage files can only be deleted
+     * through the Storage API, so her folder in `avatars` is emptied first
+     * (the account stops naming a photo before its files go), and the
+     * database refuses the deletion (`photo_remains`) while anything is left.
      */
     async deleteAccount({ online = () => true }: { online?: () => boolean } = {}): Promise<{ error: DeleteAccountError | null }> {
       if (!online()) return { error: 'offline' }
+      const { data } = await client.auth.getSession()
+      const memberId = data.session?.user.id
+      if (memberId) {
+        const unset = await client.rpc('set_avatar', { p_path: null })
+        if (unset.error) return { error: unset.status ? 'unknown' : 'offline' }
+        if (!(await clearAvatarFolder(client, memberId))) return { error: 'unknown' }
+      }
       const { error, status } = await client.rpc('delete_my_account')
       if (error) return { error: status ? 'unknown' : 'offline' }
       await client.auth.signOut({ scope: 'local' })
