@@ -3,7 +3,8 @@
 Libellus is static files on **Cloudflare Pages**, project `libellus`, served at
 https://libellus.fabkho.dev. Supabase (eu-central-1) is the backend; the owner's shelf reads
 its library file from `books.fabkho.dev` (R2 bucket `portfolio-books`, published by Regal's
-workflow, docs/OWNER.md "Feeding Regal"). This page is what is set up outside the repository and
+workflow, docs/OWNER.md "Feeding Regal"). The database is backed up every night into the private R2
+bucket `libellus-backups` (docs/OPERATIONS.md, "Backups"). This page is what is set up outside the repository and
 what the repository decides itself.
 
 ## Builds and deployments

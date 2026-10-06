@@ -1,0 +1,35 @@
+name: Postgres client and age
+description: >-
+  Installs pg_dump, pg_restore and psql of one Postgres major version from the
+  PGDG apt repository, and age, and puts that version's tools first on PATH.
+  Used by the nightly backup (.github/workflows/backup.yml) and CI's backup
+  round trip (scripts/test-backup-roundtrip.sh).
+inputs:
+  major:
+    description: The major version; empty takes db.major_version from supabase/config.toml.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        MAJOR: ${{ inputs.major }}
+      run: |
+        set -euo pipefail
+        major="${MAJOR:-$(sed -n 's/^major_version = \([0-9]*\).*/\1/p' supabase/config.toml)}"
+        [[ "$major" =~ ^[0-9]+$ ]] || { echo "No Postgres major version to install." >&2; exit 1; }
+        # The runner image has no PGDG source; add it unless something already did.
+        if ! grep -rqs apt.postgresql.org /etc/apt/sources.list /etc/apt/sources.list.d/; then
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+        fi
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq --no-install-recommends "postgresql-client-$major" age > /dev/null
+        echo "/usr/lib/postgresql/$major/bin" >> "$GITHUB_PATH"
+        "/usr/lib/postgresql/$major/bin/pg_dump" --version
+        age --version
