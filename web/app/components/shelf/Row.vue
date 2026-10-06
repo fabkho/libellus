@@ -33,11 +33,9 @@ const props = defineProps<{
   label?: string
 }>()
 
-// The card mounts the row with its screen, so one can be up while the file is still on its way and fail
-// with it (the Profile then says so and offers Try again). Regal keeps that failure for the page, and the
-// row mounted again on the retry would show it instead of asking: forget it, so the new row reads the file afresh.
+// A row mounted again after a failed read (the Profile's Try again) reads the file afresh: Regal
+// never keeps a failed load (fabkho/regal#78), so nothing to reset here.
 const { error } = useLibrary()
-if (error.value) useState<string | null>('regal:library-loaded').value = null
 // Regal could not show the Library (its own read of the file): worth a report, unless offline.
 // The Stack and the row share one Library, so they say it in the same words, counted as one.
 watch(error, (problem) => {
