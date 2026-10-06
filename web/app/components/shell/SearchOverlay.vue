@@ -19,8 +19,18 @@
 // the capsule into the query row, and opacities. Everything runs on one Web
 // Animations timeline per direction, so a close can take over from an opening
 // at whatever point it has reached, and the other way round.
+//
+// The room (composables/usePaletteRoom.ts): the palette's boxes are as tall as
+// the palette may grow, from the moment it opens, and the results and the query
+// stand at their bottom. How much of it the content fills is drawn, not laid out:
+// the surface, its shadow and its clip follow `--palette-gap`, the empty room
+// above the content, measured whenever the content changes. A palette that grew
+// with its results moved its boxes upwards with every answer, and the browser
+// counted each answer as a layout shift of the whole palette (CLS 1.0 on the
+// Library, with the shadow as its largest shift).
 import { useSearchStore } from '~/stores/search'
 import { paletteLift } from '~/utils/keyboard'
+import { contentTop, PALETTE_ROOM, ROOM_ATTRIBUTE } from '~/composables/usePaletteRoom'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -38,6 +48,78 @@ const glyph = useTemplateRef<HTMLElement>('glyph')
 const field = useTemplateRef<HTMLElement>('field')
 const trail = useTemplateRef<HTMLElement>('trail')
 const input = useTemplateRef<HTMLInputElement>('input')
+
+// ------------------------------------------------------------ the room
+
+/** The empty room above the content, in px, as last drawn. */
+let gap = 0
+/** The next change of the gap glides (Results asks for it between loading and results), after this many ms. */
+let glideDelay: number | null = null
+let gliding: Animation | null = null
+
+/** Draws the content's height: the gap above it, at once or gliding there. */
+function drawGap(next: number) {
+  const section = palette.value
+  if (!section) return
+  const glide = glideDelay !== null || gliding?.playState === 'running'
+  const delay = glideDelay ?? 0
+  glideDelay = null
+  if (next === gap) return
+  // From where it is drawn now: a glide that is still on its way is taken over.
+  const from = gliding?.playState === 'running' ? getComputedStyle(section).getPropertyValue('--palette-gap').trim() || `${gap}px` : `${gap}px`
+  gliding?.cancel()
+  gliding = null
+  gap = next
+  section.style.setProperty('--palette-gap', `${next}px`)
+  if (!glide || prefersReducedMotion() || running) return
+  gliding = section.animate([{ '--palette-gap': from }, { '--palette-gap': `${next}px` }], {
+    duration: durationToken('standard'),
+    easing: easingToken('standard'),
+    delay,
+    fill: 'backwards',
+  })
+}
+
+/** Measures how much of the room the content fills, and draws it. */
+function measureRoom() {
+  if (!body.value || !results.value) return
+  const box = body.value.getBoundingClientRect()
+  drawGap(Math.max(0, Math.round(contentTop(results.value) - box.top)))
+}
+
+provide(PALETTE_ROOM, {
+  glide(delay = 0) {
+    glideDelay = delay
+  },
+})
+
+// The content changes (results arrive, a state replaces another) or a row changes size: measured
+// again before the frame is drawn (mutations as a microtask, sizes in the frame's resize step).
+let mutations: MutationObserver | null = null
+let sizes: ResizeObserver | null = null
+/** Watches the body and every child of a room, the boxes whose tops make the content's. */
+function watchSizes() {
+  if (!sizes || !body.value || !results.value) return
+  sizes.disconnect()
+  sizes.observe(body.value)
+  const rooms = [results.value, ...results.value.querySelectorAll(`[${ROOM_ATTRIBUTE}]`)]
+  for (const room of rooms) for (const child of room.children) sizes.observe(child)
+}
+watch(results, (element) => {
+  mutations?.disconnect()
+  sizes?.disconnect()
+  mutations = sizes = null
+  if (!element || typeof MutationObserver === 'undefined') return
+  gap = 0
+  sizes = new ResizeObserver(() => measureRoom())
+  mutations = new MutationObserver(() => {
+    watchSizes()
+    measureRoom()
+  })
+  mutations.observe(element, { childList: true, subtree: true, characterData: true })
+  watchSizes()
+  measureRoom()
+})
 
 /** In the DOM: open, or still morphing back into the tab bar. */
 const rendered = ref(false)
@@ -137,14 +219,16 @@ function morphFrames(): [HTMLElement | null, Keyframe[]][] {
   const from = capsule.getBoundingClientRect()
   const radius = getComputedStyle(body.value).borderTopLeftRadius
   const clip = (inset: string, round: string) => `inset(${inset} round ${round})`
+  // The palette as drawn: the room below the gap (the boxes themselves are the whole room).
+  const drawn = { top: top + gap, height: box.height - gap }
 
   // The shadow cannot be clipped to the growing outline (it lies outside it),
   // so its box is scaled from the capsule's instead and fades in on the way.
   const outline = {
     x: from.left + from.width / 2 - (box.left + box.width / 2),
-    y: from.top + from.height / 2 - (top + box.height / 2),
+    y: from.top + from.height / 2 - (drawn.top + drawn.height / 2),
     scaleX: from.width / box.width,
-    scaleY: from.height / box.height,
+    scaleY: from.height / drawn.height,
   }
 
   const start = icon.getBoundingClientRect()
@@ -188,7 +272,7 @@ function morphFrames(): [HTMLElement | null, Keyframe[]][] {
           ),
           offset: 0,
         },
-        { clipPath: clip('0px 0px 0px 0px', radius), offset: 1 },
+        { clipPath: clip(`${gap}px 0px 0px 0px`, radius), offset: 1 },
       ],
     ],
     [
@@ -262,6 +346,10 @@ function play(direction: Direction) {
   const reduced = prefersReducedMotion()
   const at = shown() ?? (direction === 'open' ? 0 : 1)
   for (const animation of animations) animation.cancel()
+  // The morph ends on the content's height as it is now; a glide of it gives way.
+  measureRoom()
+  gliding?.finish()
+  gliding = null
 
   chrome.value = reduced ? 'tabs' : 'morph'
   running = direction
@@ -318,6 +406,9 @@ const lift = computed(() => {
 
 const { handlers, offset, dragging } = useSwipeDown(close)
 const paletteStyle = computed(() => ({
+  // The room's top: as high as the results may reach, which with the keyboard up is as much lower as
+  // the palette is lifted (its bottom stands on the keyboard, its top stays below the status bar).
+  top: `calc(env(safe-area-inset-top) + var(--spacing-xxxl) - var(--float-bottom) + ${lift.value}px)`,
   transform: offset.value || lift.value ? `translateY(${offset.value - lift.value}px)` : undefined,
   transition: dragging.value ? 'none' : undefined,
 }))
@@ -384,6 +475,8 @@ onUnmounted(() => {
   if (!import.meta.client) return
   listen(false)
   for (const animation of animations) animation.cancel()
+  mutations?.disconnect()
+  sizes?.disconnect()
   chrome.value = 'tabs'
 })
 </script>
@@ -406,18 +499,29 @@ onUnmounted(() => {
         role="dialog"
         aria-modal="true"
         :aria-label="t('search.title')"
-        class="palette float-bottom fixed inset-x-ms z-40 mx-auto max-w-(--size-max-content)"
-        :class="closing && 'pointer-events-none'"
+        class="palette float-bottom pointer-events-none fixed inset-x-ms z-40 mx-auto max-w-(--size-max-content)"
         :style="paletteStyle"
         data-testid="search.overlay"
         v-on="handlers"
       >
-        <div ref="shade" class="pointer-events-none absolute inset-0 rounded-xl shadow-palette" aria-hidden="true" />
+        <!-- The room is the whole box; what is drawn of it is the part under the gap (usePaletteRoom.ts). -->
+        <div ref="shade" class="drawn pointer-events-none absolute inset-x-0 top-0 rounded-xl shadow-palette" aria-hidden="true" />
+        <!-- The taps: only where the palette is drawn (above it the veil is tapped), also while the
+             body's clip is still growing out of the capsule. -->
+        <div
+          class="drawn absolute inset-x-0 top-0 rounded-xl"
+          :class="closing ? 'pointer-events-none' : 'pointer-events-auto'"
+          aria-hidden="true"
+        />
 
-        <div ref="body" class="relative flex flex-col overflow-hidden rounded-xl">
-          <div ref="plate" class="absolute inset-0 rounded-xl bg-surface-raised edge" aria-hidden="true" />
+        <div
+          ref="body"
+          class="body relative flex h-full flex-col overflow-hidden rounded-xl"
+          :class="closing ? 'pointer-events-none' : 'pointer-events-auto'"
+        >
+          <div ref="plate" class="drawn absolute inset-x-0 top-0 rounded-xl bg-surface-raised edge" aria-hidden="true" />
 
-          <div ref="results" class="relative flex flex-col justify-end">
+          <div ref="results" class="relative flex min-h-0 flex-1 flex-col justify-end" data-room>
             <slot>
               <p class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="search.empty">
                 {{ t('search.empty') }}
@@ -537,10 +641,33 @@ onUnmounted(() => {
   background: var(--color-accent);
 }
 
-/* Follows a drag 1:1 and rides up and down with the keyboard on its curve. */
+/* Follows a drag 1:1 and rides up and down with the keyboard on its curve (its top with it, so the
+   room's top stays where it is). */
 .palette {
   touch-action: none;
-  transition: transform var(--duration-keyboard) var(--ease-keyboard);
+  transition:
+    transform var(--duration-keyboard) var(--ease-keyboard),
+    top var(--duration-keyboard) var(--ease-keyboard);
+}
+
+/* The empty room above the content (usePaletteRoom.ts): an animatable length, so a glide can move it. */
+@property --palette-gap {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* The surface and its shadow are drawn as tall as the content, under the gap. They are laid out at
+   the room's top and moved down by the gap (a translation, which the browser does not count as a
+   layout shift); placed at the gap itself, they would shift whenever the content changed. */
+.drawn {
+  height: calc(100% - var(--palette-gap));
+  translate: 0 var(--palette-gap);
+}
+
+/* Nothing of the body shows, or takes a tap, above the content. */
+.body {
+  clip-path: inset(var(--palette-gap) 0 0 0 round var(--radius-xl));
 }
 
 /* The Search icon flies from the capsule around its own centre. */

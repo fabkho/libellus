@@ -281,7 +281,9 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   the typing pause plus `quick` (an answer that comes straight back shows no loading at all), then
   fades in over `standard`; the loops run on `caret` times a fixed factor, the pages staggered by
   `instant`. The palette glides to the height it needs over `standard` (it grows from the query
-  upwards, and only once the state shows), the state fades out over `exit` where it stood, and
+  upwards, and only once the state shows; the height is drawn, not laid out: the palette's boxes are
+  as tall as it may grow from the start, so no answer moves them and the browser counts no layout
+  shift, `usePaletteRoom.ts`), the state fades out over `exit` where it stood, and
   the first five results rise `sm` and fade in over `standard`, 50 ms apart. With Reduce Motion
   the book rests half fanned, the hairline is not drawn and the height just changes.
 - **Caret.** The lamp caret in the code input blinks in steps over `caret`, like a text caret.
