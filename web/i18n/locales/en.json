@@ -186,13 +186,8 @@
       "install": "Install app",
       "signOut": "Sign out",
       "delete": "Delete account",
-      "ebookFolder": "Ebook folder",
-      "ebookFolderNone": "Choose",
       "ebooks": "Ebooks",
-      "ebooksNeedYou": "{count} needs you | {count} need you",
-      "scan": "Scan",
-      "scanning": "Scanning…",
-      "readerClassic": "Classic reader"
+      "ebooksNeedYou": "{count} needs you | {count} need you"
     },
     "deleteAccount": {
       "title": "Delete your account?",

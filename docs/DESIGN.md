@@ -224,7 +224,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   colour; a column opens its books in a sheet, or its year), the reading days as a five-week
   calendar of dots, the ratings as one bar per whole star (a row opens the books rated so), the
   records, the authors read more than once (a fan of covers and tally marks), the years in review
-  as cards, and the account at the end (address, Name, Book links, Dark mode, Ebook folder, Ebooks,
+  as cards, and the account at the end (address, Name, Book links, Dark mode, Ebooks,
   Import books, Sign out).
   **Figures and covers, never sentences**: the owner turned down text summaries ("You read on 15
   of the last 21 days…"). No goals and no streaks: the reading days say which days and how much,

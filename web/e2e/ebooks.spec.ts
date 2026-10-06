@@ -338,14 +338,19 @@ test('the ebook folder: picked once, Scan links what fits, Choose book and Find 
   })
   await page.reload()
 
+  // The Profile's account rows lead to the Ebooks page; the folder is chosen and scanned there.
   await goto(page, '/profile')
-  await expect(page.getByTestId('profile.ebookFolder')).toHaveText(en.profile.account.ebookFolderNone)
-  await page.getByTestId('profile.ebookFolder').click()
-  await expect(page.getByTestId('profile.ebookFolder')).toHaveText('Books')
-  // Scan asks for the folder's permission on this tap (Android forgets it with every restart).
-  await page.getByTestId('profile.ebookScan').click()
-
+  await expect(page.getByTestId('profile.ebookFolder')).toHaveCount(0)
+  await expect(page.getByTestId('profile.readerClassic')).toHaveCount(0)
+  await page.getByTestId('profile.ebooks').click()
   await expect(page).toHaveURL(/\/ebooks$/)
+  await expect(page.getByTestId('ebooks.folder')).toContainText(en.ebooks.folder.choose)
+  await expect(page.getByTestId('ebooks.scan')).toHaveCount(0)
+  await page.getByTestId('ebooks.folder').click()
+  await expect(page.getByTestId('ebooks.folderName')).toHaveText('Books')
+  // Scan asks for the folder's permission on this tap (Android forgets it with every restart).
+  await page.getByTestId('ebooks.scan').click()
+
   expect(await page.evaluate(() => (window as unknown as { __folderAsked: { count: number } }).__folderAsked.count)).toBe(1)
   await expect(page.getByTestId('ebooks.reportLine')).toHaveText('3 ebooks · 1 linked · 2 need you')
   await expect(page.getByTestId('ebooks.folderName')).toHaveText('Books')

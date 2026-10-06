@@ -205,10 +205,10 @@ async function main() {
     await screenshot('3-book-linked')
   }
   if (args.step === 'pick') {
-    await page.goto(`${args.base}/profile`)
-    await page.getByTestId('profile.ebookFolder').waitFor()
+    await page.goto(`${args.base}/ebooks`)
+    await page.getByTestId('ebooks.folder').waitFor()
     await sleep(800)
-    await tapReal(page, 'profile.ebookFolder')
+    await tapReal(page, 'ebooks.folder')
     await sleep(2000)
     await screenshot('4-folder-picker')
   }
