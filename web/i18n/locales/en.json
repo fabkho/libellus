@@ -434,6 +434,7 @@
       "finishHint": "Saves your progress first.",
       "undo": "Undo",
       "undoLabel": "Undo {change}",
+      "saved": "Progress saved, {change}. Undo is beside it for a few seconds.",
       "theEnd": "The end.",
       "perDay": "{count} a day",
       "perDayPercent": "{count} % a day",
