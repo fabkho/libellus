@@ -1,6 +1,6 @@
 # Testing on real devices
 
-The everyday suites (README, Tests) run in desktop browsers: pgTAP, Vitest against the local stack,
+The everyday suites (docs/DEVELOPMENT.md, Running it locally) run in desktop browsers: pgTAP, Vitest against the local stack,
 and Playwright on an iPhone-sized viewport in WebKit. A desktop browser has no system bars, no
 browser toolbar, no on-screen keyboard and reports every safe-area inset as 0, so whatever depends on
 those is checked on a real device instead: Chrome on an Android emulator, driven by

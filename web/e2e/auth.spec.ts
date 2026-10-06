@@ -8,7 +8,7 @@ import { test } from './fixtures'
  * The way in and the tab shell, on a phone, against the real stack: the code is
  * read out of Mailpit the way a member reads it out of their inbox. Together
  * with docs/parity.md these flows are the behavioural reference for a native
- * port. The dev invite is the one the seed creates (README, Running it locally).
+ * port. The dev invite is the one the seed creates (docs/DEVELOPMENT.md, Signing in locally).
  */
 const DEV_INVITE = 'LIBELLUS-DEV'
 
