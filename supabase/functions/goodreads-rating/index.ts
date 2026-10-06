@@ -1,6 +1,7 @@
 /**
  * The `goodreads-rating` edge function (issue #69): handler.ts with the real
- * cache (`goodreads_ratings`, written with the service role), the real
+ * caches (`goodreads_ratings` and, for the import's editions, issue #111,
+ * `goodreads_editions` — both written with the service role), the real
  * Goodreads (client.ts: identified, one request a second, three seconds each)
  * and the member check. README.md says how to run and deploy it.
  *
@@ -11,8 +12,9 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { createGoodreads, userAgent } from './client.ts'
+import type { EditionAnswer } from './edition.ts'
 import type { GoodreadsAnswer } from './goodreads.ts'
-import { type CachedAnswer, createHandler } from './handler.ts'
+import { type CachedAnswer, type CachedEdition, createHandler } from './handler.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -60,6 +62,57 @@ function toRow(isbn13: string, answer: GoodreadsAnswer & { checkedAt: string }):
   }
 }
 
+type EditionRow = {
+  goodreads_id: string
+  status: 'found' | 'not_found'
+  title: string | null
+  isbn13: string | null
+  isbn10: string | null
+  asin: string | null
+  language: string | null
+  page_count: number | null
+  format: string | null
+  publisher: string | null
+  published_year: number | null
+  checked_at: string
+}
+
+function fromEditionRow(row: EditionRow): CachedEdition {
+  if (row.status !== 'found') return { status: 'not_found', checkedAt: row.checked_at }
+  return {
+    status: 'found',
+    goodreadsId: row.goodreads_id,
+    title: row.title,
+    isbn13: row.isbn13,
+    isbn10: row.isbn10,
+    asin: row.asin,
+    language: row.language,
+    pageCount: row.page_count,
+    format: row.format,
+    publisher: row.publisher,
+    year: row.published_year,
+    checkedAt: row.checked_at,
+  }
+}
+
+function toEditionRow(goodreadsId: string, edition: EditionAnswer & { checkedAt: string }): EditionRow {
+  const found = edition.status === 'found' ? edition : null
+  return {
+    goodreads_id: goodreadsId,
+    status: edition.status,
+    title: found?.title ?? null,
+    isbn13: found?.isbn13 ?? null,
+    isbn10: found?.isbn10 ?? null,
+    asin: found?.asin ?? null,
+    language: found?.language ?? null,
+    page_count: found?.pageCount ?? null,
+    format: found?.format ?? null,
+    publisher: found?.publisher ?? null,
+    published_year: found?.year ?? null,
+    checked_at: edition.checkedAt,
+  }
+}
+
 const handler = createHandler({
   cache: {
     async get(isbn13) {
@@ -69,6 +122,21 @@ const handler = createHandler({
     },
     async put(isbn13, answer) {
       const { error } = await supabase.from('goodreads_ratings').upsert(toRow(isbn13, answer))
+      if (error) throw new Error(error.message)
+    },
+  },
+  editions: {
+    async get(goodreadsId) {
+      const { data, error } = await supabase
+        .from('goodreads_editions')
+        .select('*')
+        .eq('goodreads_id', goodreadsId)
+        .maybeSingle<EditionRow>()
+      if (error) throw new Error(error.message)
+      return data ? fromEditionRow(data) : null
+    },
+    async put(goodreadsId, edition) {
+      const { error } = await supabase.from('goodreads_editions').upsert(toEditionRow(goodreadsId, edition))
       if (error) throw new Error(error.message)
     },
   },

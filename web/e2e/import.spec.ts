@@ -176,3 +176,66 @@ test('a book she already has under another edition counts as in her Library, not
   )
   expect(entries).toBe(1)
 })
+
+test('what real exports carry: her shelves as Collections, earlier reads, a did-not-finish shelf, two editions of one work (#111)', async ({ page }) => {
+  const member = await signedIn(page)
+  const work = runTitle('Ember Road')
+  const slog = runTitle('A Long Slog')
+  const header =
+    'Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,Publisher,Binding,Number of Pages,' +
+    'Year Published,Original Publication Year,Date Read,Date Added,Bookshelves,Bookshelves with positions,Exclusive Shelf,' +
+    'My Review,Spoiler,Private Notes,Read Count,Owned Copies'
+  const csv = [
+    header,
+    `961,"${work} (Lantern, #1)",Tove Lindqvist,"Lindqvist, Tove",,${wrap('')},${wrap(uniqueIsbn())},5,${TEST_PUBLISHER},Paperback,412,2016,2015,2023/04/02,2022/12/30,"favourites, sci-fi","favourites (#1), sci-fi (#2)",read,,,,2,0`,
+    `962,"${work}: Roman",Tove Lindqvist,"Lindqvist, Tove",Jörg Weiss,${wrap('')},${wrap(uniqueIsbn())},4,${TEST_PUBLISHER},Taschenbuch,520,2018,2015,2024/01/20,2023/12/24,favourites,favourites (#2),read,,,,1,0`,
+    `963,${slog},Bram Oduya,"Oduya, Bram",,${wrap('')},${wrap(uniqueIsbn())},2,${TEST_PUBLISHER},Paperback,610,2020,2020,2024/06/30,2024/05/01,dnf,dnf (#1),dnf,"Not for me.",,,1,0`,
+  ].join('\n')
+
+  await page.goto('/import')
+  // Another app's export, and a spreadsheet, are refused with a word that says which file to choose.
+  await page.getByTestId('import.file').setInputFiles({
+    name: 'storygraph.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Title,Authors,Contributors,ISBN/UID,Format,Read Status,Date Added,Last Date Read,Star Rating\nA,B,,,,read,,,\n'),
+  })
+  await expect(page.getByTestId('import.fileError')).toHaveText(en.import.fileError.storygraph)
+  await page.getByTestId('import.file').setInputFiles({
+    name: 'goodreads_library_export.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]),
+  })
+  await expect(page.getByTestId('import.fileError')).toHaveText(en.import.fileError.notCsv)
+
+  await page.getByTestId('import.file').setInputFiles({ name: 'goodreads_library_export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+  await expect(page.getByTestId('import.count.finished')).toHaveText('3')
+  await expect(page.getByTestId('import.start')).toHaveText('Import 3 books', { timeout: 20_000 })
+  // Her shelves, most books first, all kept until she unticks one.
+  await expect(page.getByTestId('import.shelfName')).toHaveText(['favourites', 'sci-fi'])
+  await expect(page.getByTestId('import.shelf').nth(0)).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByTestId('import.shelf').nth(1)).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('import.shelf').nth(1).click()
+  await expect(page.getByTestId('import.shelf').nth(1)).toHaveAttribute('aria-checked', 'false')
+  await expect(page.getByTestId('import.attentionList.note')).toContainText([
+    en.import.note.extraReads.split(' | ')[0]!,
+    en.import.note.abandonedRating,
+  ])
+
+  await page.getByTestId('import.start').click()
+  await expect(page.getByTestId('import.doneTitle')).toHaveText('3 books added')
+
+  const entries = await sql<{ key: string; finished: number; abandoned: number; shelves: string[] | null }>(
+    `select e.import_key as key,
+            (select count(*)::int from public.reading_sessions s where s.entry_id = e.id and s.outcome = 'finished') as finished,
+            (select count(*)::int from public.reading_sessions s where s.entry_id = e.id and s.outcome = 'abandoned') as abandoned,
+            (select array_agg(c.name) from public.collection_entries ce join public.collections c on c.id = ce.collection_id
+              where ce.entry_id = e.id) as shelves
+       from public.library_entries e where e.member_id = $1 order by e.import_key`,
+    [member.id],
+  )
+  expect(entries).toEqual([
+    { key: 'goodreads:961', finished: 2, abandoned: 0, shelves: ['favourites'] },
+    { key: 'goodreads:962', finished: 1, abandoned: 0, shelves: ['favourites'] },
+    { key: 'goodreads:963', finished: 0, abandoned: 1, shelves: null },
+  ])
+})

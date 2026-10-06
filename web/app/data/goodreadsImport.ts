@@ -3,7 +3,8 @@ import type { Book, BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage } from './covers'
 import { abortError, type FetchLike } from './fetching'
-import { bookFromRow, isSameWork, titleQuery, GOODREADS_KEY_PREFIX, type GoodreadsBook } from './import/goodreads'
+import type { GoodreadsEditions } from './goodreadsEditions'
+import { bookFromRow, pickEdition, titleQuery, GOODREADS_KEY_PREFIX, type EditionHint, type GoodreadsBook } from './import/goodreads'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
 import { normalise } from './merge'
@@ -14,13 +15,20 @@ import type { Search } from './search'
  * (data/import/goodreads.ts): finding each book's edition the way search does,
  * and writing the rows.
  *
- * Finding an edition, per row, the first that answers:
- *   1. the Catalogue by its ISBN (a Book some member added before);
- *   2. Apple Books, then OpenLibrary, by its ISBN (the exact edition);
- *   3. a title + author search over all three, taking only a result of the
- *      same work (`isSameWork`): another edition of the same book;
+ * Finding an edition, per row, the first that answers (#111: the exact edition
+ * the member shelved, not just the same work):
+ *   1. by its ISBN: the Catalogue (a Book some member added before), then
+ *      Apple Books, then OpenLibrary;
+ *   2. without an ISBN, Goodreads by the row's Book Id (`goodreads`, through
+ *      the server): the edition's ISBN, looked up as in 1, else its language,
+ *      page count and kind for step 3;
+ *   3. a title + author search over all three, taking the result of the same
+ *      work (`isSameWork`) whose edition fits the row best (`pickEdition`:
+ *      language, page count, ebook or print, year);
  *   4. the file's own fields: an `import` Book keyed by its ISBN, or without
- *      one a Manual book of the member's (`bookFromRow`).
+ *      one a Manual book of the member's (`bookFromRow`). A row whose ISBN no
+ *      source knows stays that exact edition even when a title search finds
+ *      the work: the work's edition only lends it its cover (`coverFrom`).
  * Rows are looked up a few at a time (`concurrency`), each source call with a
  * deadline, so a slow network slows the import down instead of stopping it; a
  * row nothing was found for is tried once more at the end (a source may have
@@ -33,8 +41,8 @@ import type { Search } from './search'
  * Each row's key (`goodreads:<Book Id>`) is stored on its entry and session,
  * so the same file twice adds nothing.
  *
- * Framework-free: the Supabase client, the search repositories and the image
- * probe come in from outside.
+ * Framework-free: the Supabase client, the search repositories, Goodreads and
+ * the image probe come in from outside.
  */
 
 /** Rows looked up at once. */
@@ -50,15 +58,21 @@ export const LOOKUP_TIMEOUT_MS = 15_000
 export type Edition = {
   /** A Book with an id (the Catalogue, or her own Manual book), a source's snapshot, or the file's own (`via: null`). */
   book: Book | BookSnapshot
-  /** How it was found: by the row's ISBN, by title and author, or not at all. */
-  via: 'isbn' | 'title' | null
+  /** How it was found: by the row's ISBN, by the ISBN Goodreads gave for its Book Id, by title and author, or not at all. */
+  via: 'isbn' | 'goodreads' | 'title' | null
   /** Some lookup could not be asked (no answer in time, or every source failed): a better edition may exist. */
   unsure: boolean
+  /** Another edition of the same work, whose cover the file's own Book takes when its ISBN finds none. */
+  coverFrom?: Book | BookSnapshot | null
+  /** What Goodreads said about the row's edition, when it was asked (rows without an ISBN). */
+  hint?: EditionHint | null
 }
 
 export type Lookups = {
   catalogue: Pick<CatalogueSearch, 'search'>
   search: Pick<Search, 'lookupIsbn' | 'search'>
+  /** What Goodreads knows about an edition by its Book Id; left out where there is no server to ask. */
+  goodreads?: GoodreadsEditions
   timeoutMs?: number
 }
 
@@ -90,21 +104,41 @@ export async function findEdition(row: GoodreadsBook, lookups: Lookups, signal?:
     }
   }
 
-  const isbn = row.isbn13
-  if (isbn) {
+  async function byIsbn(isbn: string): Promise<Book | BookSnapshot | null> {
     const stored = await ask((s) => lookups.catalogue.search(isbn, s))
     const known = stored?.find((found) => found.book.isbn13 === isbn)
-    if (known) return { book: known.book, via: 'isbn', unsure: false }
-    const edition = await ask((s) => lookups.search.lookupIsbn(isbn, { signal: s }))
-    if (edition) return { book: edition, via: 'isbn', unsure: false }
+    if (known) return known.book
+    return ask((s) => lookups.search.lookupIsbn(isbn, { signal: s }))
+  }
+
+  if (row.isbn13) {
+    const exact = await byIsbn(row.isbn13)
+    if (exact) return { book: exact, via: 'isbn', unsure: false }
+  }
+
+  // No ISBN in the file: Goodreads knows the edition behind the Book Id.
+  let hint: EditionHint | null = null
+  if (!row.isbn13 && row.goodreadsId && lookups.goodreads) {
+    try {
+      hint = await lookups.goodreads.edition(row.goodreadsId, signal)
+    } catch {
+      if (signal?.aborted) throw abortError()
+      unsure = true
+    }
+    if (hint?.isbn13) {
+      const exact = await byIsbn(hint.isbn13)
+      if (exact) return { book: exact, via: 'goodreads', unsure: false, hint }
+    }
   }
 
   const outcome = await ask((s) => lookups.search.search(titleQuery(row), { signal: s }))
   if (outcome?.failed) unsure = true
-  const same = outcome?.results.find((result) => isSameWork(row, result.book))
-  if (same) return { book: same.book, via: 'title', unsure: false }
-
-  return { book: bookFromRow(row), via: null, unsure }
+  const same = outcome ? pickEdition(row, outcome.results, hint) : null
+  const own = bookFromRow(row, hint)
+  // An ISBN no source knows is still the edition she shelved: hers, with the work's cover.
+  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: same?.book ?? null, hint }
+  if (same) return { book: same.book, via: 'title', unsure: false, hint }
+  return { book: own, via: null, unsure, hint }
 }
 
 /** Runs `task` over `items`, at most `limit` at once, in order of the items. */
@@ -213,9 +247,14 @@ export function libraryIndex(entries: readonly LibraryEntry[]): (book: Book | Bo
  * day; an entry without a read, or a read without a day, still matches. The
  * database applies the same rule (`import_books`), so this only spares the
  * lookups. Edited dates, or a title she changed, may still import a second
- * entry: accepted, her own edit.
+ * entry: accepted, her own edit. An entry imported from one of the file's
+ * other rows of the work (`otherKeys`, looked up in `imported`: key → entry
+ * id) is another edition she shelved and never matches (#111).
  */
-export function libraryTitleIndex(entries: readonly LibraryEntry[]): (row: Pick<GoodreadsBook, 'title' | 'authors' | 'status' | 'session'>) => LibraryEntry | null {
+export function libraryTitleIndex(
+  entries: readonly LibraryEntry[],
+  imported: ReadonlyMap<string, string> = new Map(),
+): (row: Pick<GoodreadsBook, 'title' | 'authors' | 'status' | 'session' | 'otherKeys'>) => LibraryEntry | null {
   const byTitle = new Map<string, LibraryEntry[]>()
   for (const entry of entries) {
     const key = workTitle(entry.book.title)
@@ -226,8 +265,10 @@ export function libraryTitleIndex(entries: readonly LibraryEntry[]): (row: Pick<
     if (!candidates) return null
     const wanted = surname(row.authors[0])
     const endedOn = row.status === 'finished' ? row.session?.endedOn : null
+    const siblings = new Set((row.otherKeys ?? []).map((key) => imported.get(key)).filter(Boolean))
     return (
       candidates.find((entry) => {
+        if (siblings.has(entry.id)) return false
         if (wanted && !entry.book.authors.some((name) => surname(name) === wanted)) return false
         const ended = entry.latestSession?.endedOn
         return !(endedOn && ended && ended !== endedOn)
@@ -243,8 +284,16 @@ export function entryFor(book: Book | BookSnapshot, entries: readonly LibraryEnt
 
 // ----------------------------------------------------------------- writing
 
-/** One row as `import_books` takes it. */
-export type ImportRow = Pick<GoodreadsBook, 'key' | 'status' | 'session' | 'addedOn' | 'title' | 'authors'> & { book: Book | BookSnapshot }
+/**
+ * One row as `import_books` takes it: the file's row, the Book it found, the
+ * Collections she chose for its shelves, and another edition's Book whose
+ * cover it takes when its own finds none.
+ */
+export type ImportRow = Pick<GoodreadsBook, 'key' | 'status' | 'session' | 'addedOn' | 'title' | 'authors' | 'extraReads' | 'pageCount' | 'otherKeys'> & {
+  book: Book | BookSnapshot
+  collections?: readonly string[]
+  coverFrom?: Book | BookSnapshot | null
+}
 
 export type RowOutcome = {
   key: string
@@ -262,13 +311,20 @@ export function importArguments(row: ImportRow) {
     // The file's own words, for the book she has under another edition (#104).
     file_title: row.title,
     file_author: row.authors[0] ?? null,
+    // The file's other rows of this work: other editions she shelved (#111).
+    other_keys: row.otherKeys,
     ...('id' in book ? { book_id: book.id } : { book: bookToRow(book) }),
     status: row.status,
     started_on: session?.startedOn ?? null,
     ended_on: session?.endedOn ?? null,
     rating: session?.rating ?? null,
     review: session?.review ?? null,
+    outcome: session?.outcome === 'abandoned' ? 'abandoned' : null,
     added_on: row.addedOn,
+    // Her earlier reads (Read Count), her page count, her shelves (#111).
+    extra_reads: row.extraReads,
+    page_count: row.pageCount,
+    collections: row.collections ?? [],
   }
 }
 
@@ -289,21 +345,32 @@ export async function writeRows(client: SupabaseClient, rows: readonly ImportRow
   }
 }
 
-/** The keys of every entry the member imported from Goodreads before. */
-export async function importedKeys(client: SupabaseClient): Promise<Result<Set<string>>> {
+/** Every entry the member imported from Goodreads before: its key → the entry's id. */
+export async function importedKeys(client: SupabaseClient): Promise<Result<Map<string, string>>> {
   const { data, error } = await client
     .from('library_entries')
-    .select('import_key')
+    .select('id, import_key')
     .like('import_key', `${GOODREADS_KEY_PREFIX}%`)
-    .returns<{ import_key: string }[]>()
+    .returns<{ id: string; import_key: string }[]>()
   if (error) return { data: null, error: mapLibraryError(error) }
-  return { data: new Set(data.map((row) => row.import_key)), error: null }
+  return { data: new Map(data.map((row) => [row.import_key, row.id])), error: null }
 }
 
 /** A Book new to the Catalogue gets its Cover first (as on add); a Book with an id or a Manual book goes as it is. */
-export async function withCover(book: Book | BookSnapshot, probe: ProbeImage): Promise<Book | BookSnapshot> {
+export async function withCover(
+  book: Book | BookSnapshot,
+  probe: ProbeImage,
+  coverFrom?: Book | BookSnapshot | null,
+): Promise<Book | BookSnapshot> {
   if ('id' in book || book.source === 'manual') return book
-  return { ...book, ...(await resolveBookCover(book, { probe })) }
+  const own = await resolveBookCover(book, { probe })
+  if (own.coverUrl || !coverFrom) return { ...book, ...own }
+  // Nothing for its own ISBN: the same work's edition lends its cover.
+  const lent =
+    'id' in coverFrom
+      ? { coverUrl: coverFrom.coverUrl, coverThumbhash: coverFrom.coverThumbhash, coverColors: coverFrom.coverColors }
+      : await resolveBookCover(coverFrom, { probe })
+  return { ...book, ...(lent.coverUrl ? lent : own) }
 }
 
 export type GoodreadsImport = {
@@ -353,7 +420,7 @@ export function createGoodreadsImport(
         if (!online()) return { data: null, error: 'offline' }
         const chunk = [...rows.slice(start, start + IMPORT_CHUNK)]
         await eachLimited(chunk, IMPORT_CONCURRENCY, async (row, index) => {
-          chunk[index] = { ...row, book: await withCover(row.book, probe) }
+          chunk[index] = { ...row, book: await withCover(row.book, probe, row.coverFrom) }
         })
         const written = await writeRows(client, chunk)
         if (written.error) return written

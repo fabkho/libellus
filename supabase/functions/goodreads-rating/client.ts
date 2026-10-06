@@ -9,6 +9,7 @@
  * that would have to wait longer than `maxWaitMs` is refused at once
  * (`GoodreadsBusy`) instead of piling up, and the page simply shows no line.
  */
+import { bookPageUrl, type EditionAnswer, parseEdition } from './edition.ts'
 import {
   autoCompleteUrl,
   type AutoCompleteBook,
@@ -29,6 +30,8 @@ export function userAgent(siteUrl?: string | null): string {
 export const USER_AGENT = userAgent()
 export const MIN_INTERVAL_MS = 1000
 export const REQUEST_TIMEOUT_MS = 3000
+/** A book page is ~600 KB of HTML, not a small JSON answer: it gets longer. */
+export const PAGE_TIMEOUT_MS = 8000
 export const MAX_WAIT_MS = 4000
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>
@@ -49,6 +52,8 @@ export class GoodreadsBusy extends Error {
 export type Goodreads = {
   reviewCounts: (isbn13: string) => Promise<GoodreadsAnswer>
   autoComplete: (query: string) => Promise<AutoCompleteBook[]>
+  /** What the edition's own page says about it (issue #111): HTML, not JSON. */
+  bookPage: (goodreadsId: string) => Promise<EditionAnswer>
 }
 
 export function createGoodreads(options: {
@@ -68,16 +73,16 @@ export function createGoodreads(options: {
   /** When the next request may start. */
   let nextStart = 0
 
-  async function get(url: string): Promise<{ status: number; body: string }> {
+  async function get(url: string, accept = 'application/json', ms = timeout): Promise<{ status: number; body: string }> {
     const now = clock.now()
     const start = Math.max(now, nextStart)
     if (start - now > maxWait) throw new GoodreadsBusy()
     nextStart = start + minInterval
     if (start > now) await clock.sleep(start - now)
     const response = await options.fetch(url, {
-      headers: { 'user-agent': agent, accept: 'application/json' },
+      headers: { 'user-agent': agent, accept },
       redirect: 'follow',
-      signal: AbortSignal.timeout(timeout),
+      signal: AbortSignal.timeout(ms),
     })
     return { status: response.status, body: await response.text() }
   }
@@ -90,6 +95,12 @@ export function createGoodreads(options: {
     async autoComplete(query) {
       const { status, body } = await get(autoCompleteUrl(query))
       return parseAutoComplete(status, body)
+    },
+    async bookPage(goodreadsId) {
+      // The book page is a page: asked for as HTML, and followed to the one
+      // with the slug Goodreads redirects to.
+      const { status, body } = await get(bookPageUrl(goodreadsId), 'text/html', Math.max(timeout, PAGE_TIMEOUT_MS))
+      return parseEdition(goodreadsId, status, body)
     },
   }
 }
