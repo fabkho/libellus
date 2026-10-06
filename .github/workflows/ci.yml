@@ -67,7 +67,7 @@ jobs:
       goodreads: ${{ steps.decide.outputs.goodreads }}
       regal: ${{ steps.decide.outputs.regal }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event_name == 'push'
 
       # Every filter lists the workflow files: changing CI runs what CI does.
@@ -177,7 +177,7 @@ jobs:
       RUN_BACKEND: ${{ matrix.shard == 1 && needs.changes.outputs.backend == 'true' }}
       RUN_E2E: ${{ needs.changes.outputs.e2e == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: supabase/setup-cli@v1
         with:
@@ -292,7 +292,7 @@ jobs:
     if: ${{ !cancelled() && needs.stack.result == 'failure' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
@@ -339,7 +339,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
