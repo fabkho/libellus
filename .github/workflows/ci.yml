@@ -277,7 +277,7 @@ jobs:
       # The blob report holds the results, screenshots and traces of this shard.
       - name: Upload the blob report
         if: failure() && env.RUN_E2E == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-blob-${{ matrix.shard }}
           path: web/blob-report/
@@ -322,7 +322,7 @@ jobs:
 
       - name: Upload the report and traces
         if: hashFiles('web/playwright-report/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: web/playwright-report/
