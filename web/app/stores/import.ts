@@ -413,6 +413,10 @@ export const useImportStore = defineStore('import', () => {
     choosing.value = null
   }
 
+  /** The work OpenLibrary files the row under: the edition's own key, else any edition the match found says. */
+  const workKeyOf = (edition: Edition) =>
+    edition.book.openLibraryWorkKey ?? edition.alternatives?.find((book) => book.openLibraryWorkKey)?.openLibraryWorkKey ?? null
+
   /**
    * Asks the sources for the row's editions (title and first author, as the
    * Book page does) once the sheet is open. Their finds are added behind what
@@ -431,7 +435,7 @@ export const useImportStore = defineStore('import', () => {
     if (!now) return
     now.pending = true
     now.failed = false
-    const wanted = { ...fileEdition(book).book, openLibraryWorkKey: edition.book.openLibraryWorkKey ?? null, id: '', createdAt: '' }
+    const wanted = { ...fileEdition(book).book, openLibraryWorkKey: workKeyOf(edition), id: '', createdAt: '' }
     const update = (found: EditionChoice[], pending: boolean, failed: boolean) => {
       const sheet = choosing.value
       if (!sheet || asking !== controller) return
