@@ -264,20 +264,6 @@ function onCapsuleClick(event: MouseEvent) {
 <template>
   <div class="gutter pointer-events-none fixed inset-y-0 left-1/2 z-10" aria-hidden="true" />
 
-  <!-- The title floats in with the capsule (iOS 26's bars: no background, the text straight over the page,
-       kept legible by a soft scroll edge effect — the page blurred a little under it and fading out, lightly
-       tinted with the room). Hidden while reading, like the capsule. -->
-  <Transition name="title">
-    <header v-if="shown" class="title-float pointer-events-none fixed inset-x-0 top-0 z-30" data-testid="reader.title">
-      <div class="edge-effect absolute inset-x-0 top-0" aria-hidden="true">
-        <span class="layer one" /><span class="layer two" />
-      </div>
-      <div class="bar-top relative mx-auto max-w-(--size-max-content) px-xxl text-center">
-        <p class="book-title truncate pt-xs text-callout text-ink">{{ info.title }}</p>
-        <p v-if="info.chapter && info.chapter !== info.title" class="eyebrow mt-xxs truncate">{{ info.chapter }}</p>
-      </div>
-    </header>
-  </Transition>
 
   <Transition name="capsule">
     <div v-if="shown" class="capsule-wrap fixed inset-x-0 z-30 flex flex-col items-center gap-sm" data-testid="reader.capsule">
@@ -401,48 +387,6 @@ function onCapsuleClick(event: MouseEvent) {
 }
 .capsule-wrap {
   bottom: var(--float-bottom);
-}
-/* The soft scroll edge effect behind the floating title: two blurred layers, the stronger one
-   shorter, each fading out downward (a stepped progressive blur), over a light tint of the room. */
-.edge-effect {
-  height: calc(var(--bar-top) + var(--size-tab-bar) + var(--spacing-lg));
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--color-surface) 78%, transparent),
-    color-mix(in srgb, var(--color-surface) 40%, transparent) 60%,
-    transparent
-  );
-}
-.edge-effect .layer {
-  position: absolute;
-  inset: 0;
-}
-.edge-effect .one {
-  -webkit-backdrop-filter: blur(var(--blur-veil));
-  backdrop-filter: blur(var(--blur-veil));
-  -webkit-mask-image: linear-gradient(to bottom, black 45%, transparent);
-  mask-image: linear-gradient(to bottom, black 45%, transparent);
-}
-.edge-effect .two {
-  -webkit-backdrop-filter: blur(calc(var(--blur-veil) * 2));
-  backdrop-filter: blur(calc(var(--blur-veil) * 2));
-  -webkit-mask-image: linear-gradient(to bottom, black 20%, transparent 60%);
-  mask-image: linear-gradient(to bottom, black 20%, transparent 60%);
-}
-.title-enter-active {
-  transition:
-    opacity var(--duration-standard) var(--ease-standard),
-    transform var(--duration-standard) var(--ease-standard);
-}
-.title-leave-active {
-  transition:
-    opacity var(--duration-exit) var(--ease-exit),
-    transform var(--duration-exit) var(--ease-exit);
-}
-.title-enter-from,
-.title-leave-to {
-  opacity: 0;
-  transform: translateY(calc(-1 * var(--spacing-xs)));
 }
 .capsule {
   touch-action: none;

@@ -20,7 +20,7 @@ import BookSearch from './BookSearch.vue'
 import { REST, coverCopy, fitBox, poseOf, ratioOf, rectOf } from './flight'
 import { ProgressWriter, QUICK_POLICY, SPEC_POLICY, pageAt } from './progress'
 import { MARGINS, readSettings, writeSettings, type ReaderSettings, type ReaderTheme } from './settings'
-import type { ChromeInfo } from './types'
+import { runningHead, type ChromeInfo } from './types'
 import ChromeQuiet from './ChromeQuiet.vue'
 import ChromeScroll from './ChromeScroll.vue'
 import ChromePrinted from './ChromePrinted.vue'
@@ -314,16 +314,15 @@ function onResize() {
 
 const layout = computed<Layout>(() => {
   void viewport.width
-  const { top, bottom } = insets()
-  const edge = Math.max(top, bottom)
   const margins = MARGINS[settings.margins] ?? MARGINS[2]
   const gap = margins.side
-  // The bands above and below the text shrink with the margins (edge to edge: the safe area and a hair);
-  // the printed page keeps room for its running head and folio, the scroll for its floating chapter.
-  if (mode.value === 'b') return { flow: 'scrolled', animated: false, gap, margin: edge + margins.band + 12, maxColumns: 1, maxInlineSize: margins.measure }
-  // c: no running head any more (the title floats in with the capsule), so the top band is a's; the foot keeps room for the folio.
-  if (mode.value === 'c') return { flow: 'paginated', animated: false, gap, margin: edge + Math.max(24, margins.band), maxColumns: 2, maxInlineSize: Math.min(margins.measure, 700) }
-  return { flow: 'paginated', animated: !reduced.value, gap, margin: edge + margins.band, maxColumns: 1, maxInlineSize: margins.measure }
+  // The device's insets are the page host's (it starts under the status bar and ends above the gesture
+  // bar), so the bands above and below the text are only the text's own: foliate's margin is one value
+  // for top and bottom, and adding the larger inset to it wasted the status bar's height at both ends.
+  if (mode.value === 'b') return { flow: 'scrolled', animated: false, gap, margin: margins.band + 12, maxColumns: 1, maxInlineSize: margins.measure }
+  // c: the running head and the folio, both small mono, sit centred in the bands (a little less than a's).
+  if (mode.value === 'c') return { flow: 'paginated', animated: false, gap, margin: Math.max(22, margins.band - 6), maxColumns: 2, maxInlineSize: Math.min(margins.measure, 700) }
+  return { flow: 'paginated', animated: !reduced.value, gap, margin: margins.band, maxColumns: 1, maxInlineSize: margins.measure }
 })
 
 function colors(): PageColors {
@@ -544,28 +543,31 @@ function paintMargins() {
   const r = engine.value?.view.renderer
   if (!r?.heads || !r.feet) return
   const two = r.heads.length > 1
-  const style = (el: HTMLElement, kind: 'head' | 'foot') => {
+  // Running head and folio in one style (owner, after round 3): small mono, faint, centred in their bands.
+  const style = (el: HTMLElement) => {
     Object.assign(el.style, {
       display: 'flex',
-      alignItems: kind === 'head' ? 'flex-end' : 'flex-start',
+      alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
-      paddingTop: kind === 'head' ? `${insets().top}px` : '0',
-      paddingBottom: kind === 'head' ? '14px' : '0',
+      padding: '0',
       color: 'var(--color-ink-faint)',
+      fontFamily: 'var(--font-mono)',
+      fontSize: '11px',
+      fontStyle: 'normal',
+      letterSpacing: '0',
+      fontVariantNumeric: 'tabular-nums',
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
     })
-    if (kind === 'head') Object.assign(el.style, { fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '13px', letterSpacing: '0.01em' })
-    else Object.assign(el.style, { fontFamily: 'var(--font-mono)', fontSize: '11px', fontVariantNumeric: 'tabular-nums', paddingTop: '8px' })
   }
-  // The running head is gone (owner, after round 3): the title floats in over the page with the capsule instead.
-  r.heads.forEach((el) => {
-    el.textContent = ''
+  r.heads.forEach((el, i) => {
+    style(el)
+    el.textContent = two && i === 0 ? props.book.title : runningHead(props.book.title, info.value.chapter)
   })
   r.feet.forEach((el, i) => {
-    style(el, 'foot')
+    style(el)
     el.textContent = two && i === 0 ? String(Math.max(1, info.value.page)) : two ? '' : String(Math.max(1, info.value.page))
   })
 }
@@ -574,12 +576,14 @@ function paintMargins() {
 
 /** The page box the cover lands in: the whole page, inside the text's margins. */
 function pageArea(): Box {
-  const { width, height } = viewport
+  const { width } = viewport
+  const { top: insetTop, bottom: insetBottom } = insets()
+  const height = viewport.height - insetTop - insetBottom
   const l = layout.value
-  if (l.flow === 'scrolled') return { left: width * l.gap, top: l.margin, width: width * (1 - 2 * l.gap), height: height - 2 * l.margin }
+  if (l.flow === 'scrolled') return { left: width * l.gap, top: insetTop + l.margin, width: width * (1 - 2 * l.gap), height: height - 2 * l.margin }
   const columns = l.maxColumns === 2 && width > height ? 2 : 1
   const inline = Math.min(width * (1 - 2 * l.gap), l.maxInlineSize * columns)
-  const area = { left: (width - inline) / 2, top: l.margin, width: inline, height: height - 2 * l.margin }
+  const area = { left: (width - inline) / 2, top: insetTop + l.margin, width: inline, height: height - 2 * l.margin }
   return columns === 2 ? { ...area, width: area.width / 2 - (width * l.gap) / 2 } : area
 }
 
@@ -816,7 +820,7 @@ function nextChapter() {
   >
     <span ref="probe" class="pointer-events-none fixed top-0 left-0 bar-top safe-bottom opacity-0" aria-hidden="true" />
     <div ref="page" class="absolute inset-0">
-      <div ref="host" class="absolute inset-0" data-testid="reader.page" />
+      <div ref="host" class="page-host absolute inset-x-0" data-testid="reader.page" />
     </div>
 
     <ChromeQuiet
@@ -946,6 +950,11 @@ function nextChapter() {
 </template>
 
 <style scoped>
+/* The book's page lies between the status bar and the gesture bar; its own bands are only the text's. */
+.page-host {
+  top: var(--safe-area-top);
+  bottom: var(--safe-area-bottom);
+}
 .toast {
   bottom: calc(var(--float-bottom) + var(--spacing-xxl));
 }

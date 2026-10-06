@@ -526,3 +526,14 @@ blurred a little in two steps (the stronger blur shorter) and fading out downwar
 tint of the room, only as tall as the title's row. (Kept light on purpose: #62 found a heavy blurred
 band under the app's top edge too much.) `round3/c-floating-title.jpg` (reading | title shown in
 sepia, light, dark).
+
+**c's top margin (owner, after round 3).** Is 46 px plus the status bar normal? Roughly (Apple Books and
+Kindle keep ≈ 40–60 pt above the text, the status bar included), but ours wasted space: foliate's
+margin is one value for top and bottom, and the reader added the larger device inset to it — the status
+bar's height at the top **and** the bottom. Now the book's page host lies between the status bar and the
+gesture bar (`top: safe-area-top; bottom: safe-area-bottom`), and the bands above and below the text are
+only the text's own. The floating title is gone again: **the running head is back, always visible, in
+exactly the folio's style** (small Geist Mono, faint, centred in its band), the bands a little less than
+a's: 22 px edge to edge, 22 narrow, **28 normal**, 38 wide (before: 46 + the inset at both ends). Classic
+and scroll mode lose the doubled inset too. `round3/c-tight-bands-with-insets.jpg` (installed-app insets
+stood in: status bar 36, gesture bar 24; c normal | c edge to edge | a).
