@@ -207,3 +207,26 @@ docker exec supabase_db_libellus psql -U postgres -c 'drop database libellus_bac
 restores into a scratch database both ways (`--mode full`, and `--mode data` into a database shaped like a
 freshly pushed project) and compares the rows table by table, then checks the guards. CI runs it after
 Vitest on every change to the schema or these scripts (docs/TESTING.md).
+
+## Supabase advisors: what we accept and why
+
+The dashboard's Security Advisor (also `get_advisors` over MCP, or `supabase db advisors`) lists a
+few findings on purpose. They are decisions, not oversights: do not "fix" them without changing the
+decision first. Everything else it reports is a real finding and gets fixed (as the unindexed foreign
+key, `citext` in `public` and the open trigger functions were, `supabase/tests/lints_test.sql` and
+`trigger_functions_test.sql` keep those fixed).
+
+| Finding | Where | Why it stays |
+|---|---|---|
+| `authenticated_security_definer_function_executable` (0029) | every RPC in `public`: `add_to_library`, `start_reading`, `finish_reading`, `sync_write`, `delete_my_account`, … | Members never write a table directly: every change is one RPC (`web/AGENTS.md`, Architecture), the tables grant members `select` at most, and the RPC is the only way in. It runs as its owner so it can write what the member may not touch herself (the shared Catalogue, the derived Status, the record of synced writes), and it checks everything on its own: the member is `auth.uid()`, never an argument, every row it touches is hers, and its `search_path` is pinned. Switching them to `SECURITY INVOKER` would mean opening the tables to direct writes. |
+| `anon_security_definer_function_executable` (0028) | `invite_code_status(text)` | The sign-up screen checks the invite code before anyone has an account, so the caller is signed out by definition. It answers `valid`, `missing`, `invalid`, `expired` or `exhausted` for one code and reveals nothing else; `invite_codes` itself stays closed to the API (RLS on, no policy). |
+| the same (0028) | `log_client_error(…)` | The error log (Client errors, above) has to hear from devices that are signed out: the sign-in screens, a deploy's missing chunks. It only appends to `private.client_errors`, scrubs what it is given, and limits signed-out reports harder (per salted address and in total). |
+| `rls_enabled_no_policy` (0008, INFO) | `public.invite_codes`, `public.synced_writes`, `private.client_errors`, `private.client_error_salt` | RLS on with no policy is "nobody reads or writes this through the API". Only the security-definer functions above use these tables. A policy here would open them. |
+| `auth_leaked_password_protection` | Auth | Members sign in with a code sent by e-mail (OTP); nobody has a password, so there is nothing to check against HaveIBeenPwned. |
+| `auth_insufficient_mfa_options` | Auth | The same: the e-mail code is the only factor and there is no password to put a second factor behind. Revisit if passwords ever come. |
+
+`extension_in_public` (0014) is not on this list: no extension lives in `public`. pg_net was moved
+to `extensions` by `supabase/migrations/20261006094800_pg_net_extensions_schema.sql` (it is not
+relocatable, so it was dropped and created again there; its functions stay in the schema `net`), and
+`lints_test.sql` fails if an extension lands in `public` again. Enable a new extension with
+`create extension … schema extensions`.
