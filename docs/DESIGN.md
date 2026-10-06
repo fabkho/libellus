@@ -92,7 +92,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | inkGhost | `text-ink-ghost` | 20 % | 20 % | Chevrons, separators, the grabber, disabled text. Never text that is read |
 | onInk | `text-on-ink` | `#f8f5ef` | `#0e0c0a` | Text on the primary button |
 | accent | `text-accent`, `border-accent` | `#b8782a` | `#efb768` | The lamp (sparingly, see principle 2): dots, rules, carets, stars, large figures |
-| accentInk | `text-accent-ink` | `#8f5c1c` | `#efb768` | The lamp as small text (the sheet's action, a lit figure, a lamp-coloured link) and the focus ring: ≥ 4.5:1 by day |
+| accentInk | `text-accent-ink` | `#845418` | `#efb768` | The lamp as small text (the sheet's action, a lit figure, a lamp-coloured link) and the focus ring: ≥ 4.5:1 by day |
 | accentSoft | `bg-accent-soft` | 12 % | 14 % | Focus halos, the selected cell |
 | lampLight / lampCone / lampGlow | (scoped CSS) | | | The light pool and cone of the empty-state lamp; the glow behind the wordmark |
 | star / starTrack | `text-star`, `text-star-track` | accent / ink 20 % | | Rating stars |

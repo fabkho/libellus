@@ -139,12 +139,12 @@ async function syncFirst() {
       <UiRow v-if="errors.isOwner" to="/profile/errors" icon="flag" :label="t('ownerErrors.row')" chevron data-testid="profile.errors">
         <span
           v-if="errors.fresh"
-          class="figures rounded-pill bg-accent-soft px-sm text-meta text-accent"
+          class="figures rounded-pill bg-accent-soft px-sm text-meta text-accent-ink"
           :aria-label="t('ownerErrors.rowNew', { count: errors.fresh })"
           data-testid="profile.errorsNew"
         >{{ errors.fresh }}</span>
         <span v-else-if="errors.groups?.length" class="figures text-ink-muted" data-testid="profile.errorsValue">{{ errors.groups.length }}</span>
-        <span v-else-if="errors.groups" class="text-ink-ghost" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
+        <span v-else-if="errors.groups" class="text-ink-faint" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
       <UiRow v-if="ebooks.folderSupported" icon="library" :label="t('profile.account.ebookFolder')" data-testid="profile.ebookFolderRow">

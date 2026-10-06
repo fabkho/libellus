@@ -49,7 +49,7 @@ enum Tokens {
         static let inkGhost = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.1098, green: 0.0980, blue: 0.0824, opacity: 0.2), dark: SwiftUI.Color(.sRGB, red: 0.9333, green: 0.9059, blue: 0.8627, opacity: 0.2))
         static let onInk = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.9725, green: 0.9608, blue: 0.9373, opacity: 1), dark: SwiftUI.Color(.sRGB, red: 0.0549, green: 0.0471, blue: 0.0392, opacity: 1))
         static let accent = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.7216, green: 0.4706, blue: 0.1647, opacity: 1), dark: SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 1))
-        static let accentInk = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.5608, green: 0.3608, blue: 0.1098, opacity: 1), dark: SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 1))
+        static let accentInk = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.5176, green: 0.3294, blue: 0.0941, opacity: 1), dark: SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 1))
         static let accentSoft = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.7216, green: 0.4706, blue: 0.1647, opacity: 0.12), dark: SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 0.14))
         static let lampLight = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 0.16), dark: SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 0.14))
         static let lampCone = SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 0.22)

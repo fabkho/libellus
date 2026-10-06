@@ -74,7 +74,7 @@ scroll comes back as soon as focus enters it (#125).
 | `ink` | 14.1–16.7 | 12.5–15.9 | Text |
 | `inkMuted` | 6.6–7.3 | 7.5–8.9 | Secondary text |
 | `inkFaint` | 4.5–4.8 | 4.9–5.5 | Meta, eyebrows, inactive tabs, placeholders: the faintest text |
-| `accentInk` | 4.5–5.4 | 8.5–10.8 | The lamp as small text (the sheet's action, lit figures) and the focus ring |
+| `accentInk` | 5.2–6.1 (4.6 on its own `accentSoft` wash over a fill) | 8.5–10.8 | The lamp as small text (the sheet's action, lit figures, the New pill) and the focus ring |
 | `error` | 4.9–5.8 | 5.8–7.3 | Errors, destructive actions |
 | `accent` | 2.9–3.5 | 8.5–10.8 | Dots, rules, carets, stars, figures at large size (3:1) only |
 | `inkGhost` | 1.5 | 1.7–1.8 | Chevrons, separators, the grabber, disabled text: never text that is read |
