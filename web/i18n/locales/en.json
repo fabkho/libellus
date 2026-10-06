@@ -266,6 +266,7 @@
     "emptyTitle": "Your library is empty",
     "empty": "The books you add live here: what you want to read, what you are reading, what you have read.",
     "segmentsLabel": "Status",
+    "yearHeading": "{year}: {count} book | {year}: {count} books",
     "segment": {
       "want_to_read": "Want to read",
       "reading": "Reading",
