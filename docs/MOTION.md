@@ -69,6 +69,10 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   its own, interruptible), this one is the browser's View Transitions API
   (`plugins/profile-transition.client.ts`, the names in `main.css`): one ring between two fixed
   places needs nothing more, and a second Back mid-way simply completes it.
+- **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
+  a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
+  simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
+  falls like every sheet.
 - **Profile** (#78). The year pills
   change the figures in place; the columns grow or shrink to their new height over `standard`
   (at once with Reduce Motion). Flipping the theme in the account rows crossfades nothing — the

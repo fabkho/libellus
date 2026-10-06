@@ -38,6 +38,10 @@ Run everything below from the repository's root unless it says otherwise.
    They also enable the extensions they need (`citext`, `unaccent`, `pg_cron`; `pg_net` when it is
    available). `pg_cron` runs two clean-ups: sign-ups that never proved their address (hourly) and
    the record of synced offline writes (daily). Nothing else needs to be switched on.
+   They also create the one **Storage bucket**, `avatars` (private, 256 kB a file, WebP and JPEG),
+   with its policies: a member's profile photo (#156), which only she can read or change. Storage is
+   on in every Supabase project; there is nothing to set up in the dashboard, and the photos are not
+   in the nightly backup ([OPERATIONS.md](OPERATIONS.md#backups)).
    `supabase/seed.sql` (the local dev invite and member) is **not** pushed: it only runs locally.
 3. **Auth settings** (Authentication in the dashboard). Libellus signs in with a six-digit code,
    never a link, so the code stays inside the installed app.
