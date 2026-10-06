@@ -27,6 +27,16 @@ A deploy is atomic and a rollback is one click (Workers & Pages → libellus →
 ⋯ → Rollback). The same commit can be built again with "Retry deployment", which is also how
 a change to the project's settings (below) reaches the live site without a commit.
 
+## The one Pages Function
+
+`web/functions/share.js` (Pages builds `functions/` beside the output by itself; no setting): a share
+to the installed app is a `POST /share` (the manifest's share target, #91 and #131) that the service
+worker answers on the device. Only when it reaches Pages instead (the very first share right after
+installing, before the service worker took over) does the function answer: a 303 to
+`/share?title=&text=&url=`, plus `ebooks=missed` when files were shared, so the app asks for the
+share again. It keeps nothing; a `GET /share` is not handled by it and gets the static page. Every
+other address is static, and only `/share` invokes the function.
+
 ## Addresses
 
 - `libellus.fabkho.dev`: the Pages project's custom domain, a proxied CNAME to

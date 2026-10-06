@@ -154,6 +154,15 @@ files, readable by anyone who loads the site. Put nothing there you would not pu
 Pages project (*Metrics → Web Analytics*); Pages then adds its beacon to every page. Off unless you
 switch it on. `docs/HOSTING.md` describes the owner's setup.
 
+**Ebook files** (#131) need nothing from you: members share EPUBs to the installed app, pick an
+ebook folder or add a file on a Book page, and the app copies each file into the browser's own
+storage on that device and links it to a Book there. **The files never leave the device**: nothing
+is uploaded to your Supabase project or anywhere else, nothing about them is stored on the server,
+and signing out deletes them from the device. The share target needs HTTPS and the installed app
+(Chrome on Android); `web/functions/share.js` is a Cloudflare Pages Function that only redirects a
+share arriving before the service worker is installed (no data passes through it). On another host
+that does not run it, such a share is answered with an error and the member shares again.
+
 **Regal, the 3D shelf** is the owner's private Nuxt layer; a fork builds without it and loses
 nothing else. It needs `LIBELLUS_REGAL=1`, access to the private repository (`GIGET_AUTH`), a
 published library file and the owner's user id (table below). Its data feed (`regal-export`, the
