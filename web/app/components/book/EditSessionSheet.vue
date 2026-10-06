@@ -101,7 +101,7 @@ watch(
       <div v-if="outcome && history.draft.startedOn" class="mt-sm flex justify-end px-xs">
         <button
           type="button"
-          class="min-h-(--size-touch) text-caption text-accent"
+          class="min-h-(--size-touch) text-caption text-accent-ink"
           data-testid="editSession.clearStarted"
           @click="history.draft.startedOn = ''"
         >

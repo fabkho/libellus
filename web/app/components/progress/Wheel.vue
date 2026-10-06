@@ -340,7 +340,7 @@ function rowStyle(i: number) {
 }
 .drum:focus-visible {
   border-radius: var(--radius-md);
-  outline: var(--stroke-focus) solid var(--color-accent);
+  outline: var(--stroke-focus) solid var(--color-accent-ink);
 }
 /* The centre: a filled band between two hairlines, a little taller than a row. */
 .band {

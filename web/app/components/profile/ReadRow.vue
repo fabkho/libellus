@@ -44,7 +44,7 @@ const nthRead = (n: number) => (ORDINALS[n - 1] ? t(`history.ordinal.${ORDINALS[
         </span>
         <span class="figures mt-xxs flex items-center gap-sm overflow-hidden text-meta whitespace-nowrap text-ink-faint">
           <UiStars v-if="read.rating" :quarters="read.rating" />
-          <span v-else class="text-ink-ghost">{{ t('rating.none') }}</span>
+          <span v-else class="text-ink-faint">{{ t('rating.none') }}</span>
           <template v-if="read.endedOn"><span class="dot" aria-hidden="true" />{{ formatDay(read.endedOn, { year: withYear }) }}</template>
           <template v-if="read.days !== null"><span class="dot" aria-hidden="true" />{{ readIn(read) }}</template>
         </span>

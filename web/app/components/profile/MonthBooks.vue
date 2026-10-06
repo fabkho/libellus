@@ -101,7 +101,7 @@ onBeforeUnmount(() => observer?.disconnect())
         </span>
       </span>
       <span v-else class="flex-1 text-ink-ghost" aria-hidden="true">—</span>
-      <span class="figures w-(--size-button-sm) shrink-0 text-right text-meta" :class="m.reads.length ? 'text-ink-muted' : 'text-ink-ghost'">{{ m.reads.length ? count(m.reads.length) : '' }}</span>
+      <span class="figures w-(--size-button-sm) shrink-0 text-right text-meta" :class="m.reads.length ? 'text-ink-muted' : 'text-ink-faint'">{{ m.reads.length ? count(m.reads.length) : '' }}</span>
     </div>
   </section>
 </template>

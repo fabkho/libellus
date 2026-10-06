@@ -94,7 +94,7 @@ watch(
         @click="segment = status"
       >
         {{ t(`library.segment.${status}`) }}
-        <span class="figures text-caption" :class="segment === status ? 'text-ink-muted' : 'text-ink-ghost'">{{ counts[status] }}</span>
+        <span class="figures text-caption" :class="segment === status ? 'text-ink-muted' : 'text-ink-faint'">{{ counts[status] }}</span>
       </button>
     </div>
 
@@ -132,7 +132,7 @@ watch(
         <!-- Pinned while its year scrolls by, as iOS lists pin their section headers. -->
         <h2 class="year sticky z-10 -mx-screen flex items-center justify-between bg-surface px-screen pt-md pb-xs">
           <span class="eyebrow" data-testid="library.yearTitle">{{ group.year || t('library.undated') }}</span>
-          <span class="eyebrow text-ink-ghost">{{ group.entries.length }}</span>
+          <span class="eyebrow text-ink-faint">{{ group.entries.length }}</span>
         </h2>
         <UiListMotion class="flex flex-col">
           <LibraryEntryRow v-for="(entry, index) in group.entries" :key="entry.id" :entry="entry" :eager="g === 0 && index < 8" />

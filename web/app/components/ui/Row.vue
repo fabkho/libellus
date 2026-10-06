@@ -38,7 +38,7 @@ const tag = computed(() => (props.to ? NuxtLink : props.as))
     <span class="flex min-w-0 flex-1 items-center justify-end gap-sm truncate text-right" :class="mono && 'figures text-caption'">
       <slot>
         <template v-if="value">{{ value }}</template>
-        <span v-else-if="placeholder" class="text-ink-ghost">{{ placeholder }}</span>
+        <span v-else-if="placeholder" class="text-ink-faint">{{ placeholder }}</span>
       </slot>
     </span>
     <slot name="trailing" />

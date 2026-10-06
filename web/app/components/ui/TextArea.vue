@@ -38,7 +38,7 @@ onMounted(fit)
       v-model="model"
       v-bind="$attrs"
       rows="2"
-      class="area w-full resize-none bg-transparent font-serif text-callout text-ink italic caret-accent outline-none placeholder:text-ink-ghost"
+      class="area w-full resize-none bg-transparent font-serif text-callout text-ink italic caret-accent outline-none placeholder:text-ink-faint"
       @focus="focused = true"
       @blur="focused = false"
     />

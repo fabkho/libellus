@@ -121,7 +121,7 @@ function onKeydown(event: KeyboardEvent) {
       >
         {{ t('rating.clear') }}
       </button>
-      <span v-else class="eyebrow flex min-h-(--size-touch) items-center text-ink-ghost">{{ t('rating.optional') }}</span>
+      <span v-else class="eyebrow flex min-h-(--size-touch) items-center text-ink-faint">{{ t('rating.optional') }}</span>
     </div>
 
     <!-- The value, large; "Not rated" in its place until there is one. -->
@@ -183,7 +183,7 @@ function onKeydown(event: KeyboardEvent) {
 
 .track:focus-visible {
   border-radius: var(--radius-sm);
-  outline: var(--stroke-focus) solid var(--color-accent);
+  outline: var(--stroke-focus) solid var(--color-accent-ink);
   outline-offset: var(--spacing-xs);
 }
 

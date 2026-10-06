@@ -86,7 +86,7 @@ function choose(status: AddDraft['status']) {
       <div v-if="draft.startedOn" class="mt-sm flex justify-end px-xs">
         <button
           type="button"
-          class="min-h-(--size-touch) text-caption text-accent"
+          class="min-h-(--size-touch) text-caption text-accent-ink"
           :data-testid="`${testid}.clearStarted`"
           @click="draft.startedOn = ''"
         >

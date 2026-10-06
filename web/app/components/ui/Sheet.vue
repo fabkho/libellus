@@ -217,7 +217,7 @@ function onAfterLeave() {
               v-if="action"
               type="button"
               :disabled="actionDisabled"
-              class="col-start-1 row-start-1 -mr-sm min-h-(--size-touch) px-sm text-body font-semibold text-accent disabled:text-ink-ghost"
+              class="col-start-1 row-start-1 -mr-sm min-h-(--size-touch) px-sm text-body font-semibold text-accent-ink disabled:text-ink-ghost"
               :data-testid="`${testid}.action`"
               @click="emit('action')"
             >

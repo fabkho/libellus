@@ -87,16 +87,17 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | fill / fillStrong | `bg-fill`, `bg-fill-strong` | ink 5 % / 8.5 % | cream 5.5 % / 10 % | Grouped rows, the avatar, code cells / quiet buttons, pressed rows |
 | hairline / hairlineStrong | `border-hairline`, `edge-faint` / `edge` | ink 10 % / 17 % | cream 8.5 % / 16 % | Dividers, card edges / chrome edges, outlines |
 | ink | `text-ink`, `bg-ink` | `#1c1915` | `#eee7dc` | Text, icons, the primary button |
-| inkMuted | `text-ink-muted` | 64 % | 64 % | Secondary text |
-| inkFaint | `text-ink-faint` | 45 % | 42 % | Authors, meta, eyebrows, inactive tabs |
-| inkGhost | `text-ink-ghost` | 20 % | 20 % | Placeholders, chevrons, the grabber |
+| inkMuted | `text-ink-muted` | 74 % | 74 % | Secondary text (a clear step above inkFaint) |
+| inkFaint | `text-ink-faint` | 62 % | 56 % | Authors, meta, eyebrows, inactive tabs, placeholders. The faintest text: ≥ 4.5:1 on every surface |
+| inkGhost | `text-ink-ghost` | 20 % | 20 % | Chevrons, separators, the grabber, disabled text. Never text that is read |
 | onInk | `text-on-ink` | `#f8f5ef` | `#0e0c0a` | Text on the primary button |
-| accent | `text-accent`, `border-accent` | `#b8782a` | `#efb768` | The lamp (sparingly, see principle 2) |
+| accent | `text-accent`, `border-accent` | `#b8782a` | `#efb768` | The lamp (sparingly, see principle 2): dots, rules, carets, stars, large figures |
+| accentInk | `text-accent-ink` | `#8f5c1c` | `#efb768` | The lamp as small text (the sheet's action, a lit figure, a lamp-coloured link) and the focus ring: ≥ 4.5:1 by day |
 | accentSoft | `bg-accent-soft` | 12 % | 14 % | Focus halos, the selected cell |
 | lampLight / lampCone / lampGlow | (scoped CSS) | | | The light pool and cone of the empty-state lamp; the glow behind the wordmark |
 | star / starTrack | `text-star`, `text-star-track` | accent / ink 20 % | | Rating stars |
 | success | `text-success` | `#4f7a3c` | `#a3c48e` | Confirmations |
-| error / errorSoft | `text-error`, `bg-error-soft` | `#c2452a` | `#ec8063` | Errors, destructive actions |
+| error / errorSoft | `text-error`, `bg-error-soft` | `#b03a20` | `#ec8063` | Errors, destructive actions |
 | scrim | `bg-scrim` | warm black 38 % | black 50 % | Behind a sheet |
 | veil | `bg-veil` | paper 55 % | room 55 % | Over the blurred page behind the search palette |
 | cloth1–6, clothInk | (Cover) | same in both | | Placeholder covers: a cover is an object, not chrome |
@@ -358,9 +359,11 @@ in `web/i18n/locales/en.json`.
 - 44 px targets everywhere (`--size-touch`), also behind drawn controls smaller than that.
 - Icons are `aria-hidden`; their buttons have labels (`aria-label` from the message file, or
   visually hidden text, as the tabs do).
-- Contrast: body text is `ink` or `inkMuted` on `surface`; `inkFaint` is for secondary meta only,
-  `inkGhost` never for text that must be read.
-- Focus is visible (`:focus-visible` draws a 2 px accent outline).
+- Contrast: every text token reaches WCAG AA (4.5:1) on every surface and on a fill over it, in
+  both themes: `ink`, `inkMuted`, `inkFaint` (the faintest text, also placeholders), `accentInk` (the
+  lamp as small text), `error`. `inkGhost` (1.5:1) is never for text that must be read; `accent`
+  as text only at figure size. The ratios and the rest: [ACCESSIBILITY.md](ACCESSIBILITY.md).
+- Focus is visible (`:focus-visible` draws a 2 px `accentInk` outline).
 - Reduce Motion is honoured (MOTION.md).
 
 ## Don'ts

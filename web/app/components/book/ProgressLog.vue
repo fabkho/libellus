@@ -20,7 +20,7 @@ const rows = computed(() => log.value.slice(0, 14))
       <h2 class="eyebrow mb-ms">{{ t('book.progress.logTitle') }}</h2>
       <UiRowGroup>
         <UiRow v-for="row in rows" :key="row.day" :label="dayWords(row.day)" mono data-testid="book.logDay">
-          <span class="text-accent" data-testid="book.logAmount">
+          <span class="text-accent-ink" data-testid="book.logAmount">
             {{ t(unit === 'page' ? 'book.progress.gainPages' : 'book.progress.gainPercent', { count: n(row.amount) }) }}
           </span>
           <span v-if="row.end !== null" class="text-ink-faint" data-testid="book.logEnd">

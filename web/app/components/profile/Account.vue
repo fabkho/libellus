@@ -131,10 +131,10 @@ async function syncFirst() {
     </div>
     <UiRowGroup>
       <UiRow as="button" icon="pencil" :label="t('account.name')" chevron data-testid="profile.name" @click="naming = true">
-        <span :class="session.member?.name ? 'text-ink-muted' : 'text-ink-ghost'" data-testid="profile.nameValue">{{ session.member?.name ?? t('account.nameNone') }}</span>
+        <span :class="session.member?.name ? 'text-ink-muted' : 'text-ink-faint'" data-testid="profile.nameValue">{{ session.member?.name ?? t('account.nameNone') }}</span>
       </UiRow>
       <UiRow as="button" icon="globe" :label="t('links.row')" chevron data-testid="profile.links" @click="linking = true">
-        <span :class="linkCount ? 'figures text-ink-muted' : 'text-ink-ghost'" data-testid="profile.linksValue">{{ linkCount || t('links.rowNone') }}</span>
+        <span :class="linkCount ? 'figures text-ink-muted' : 'text-ink-faint'" data-testid="profile.linksValue">{{ linkCount || t('links.rowNone') }}</span>
       </UiRow>
       <UiRow v-if="errors.isOwner" to="/profile/errors" icon="flag" :label="t('ownerErrors.row')" chevron data-testid="profile.errors">
         <span
@@ -151,7 +151,7 @@ async function syncFirst() {
         <button
           type="button"
           class="-my-sm min-h-(--size-touch) min-w-0 truncate px-xs"
-          :class="ebooks.folder ? 'figures text-ink-muted' : 'text-ink-ghost'"
+          :class="ebooks.folder ? 'figures text-ink-muted' : 'text-ink-faint'"
           data-testid="profile.ebookFolder"
           @click="ebooks.pickFolder()"
         >

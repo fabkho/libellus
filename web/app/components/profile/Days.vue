@@ -70,7 +70,7 @@ const wave = (i: number) => ((i % 7) + Math.floor(i / 7)) / 12
       <div class="flex min-w-0 flex-1 flex-col justify-end gap-md pb-xxs">
         <div class="flex flex-col gap-xxs">
           <span v-if="loading" class="figure flex items-center" aria-hidden="true"><span class="skeleton wave" :style="{ '--wave': 0.4 }" /></span>
-          <span v-else class="figure text-title tabular-nums" :class="{ arrive: arriving }" data-testid="profile.daysRead">{{ count(summary.read) }}<span class="text-ink-ghost">/{{ summary.count }}</span></span>
+          <span v-else class="figure text-title tabular-nums" :class="{ arrive: arriving }" data-testid="profile.daysRead">{{ count(summary.read) }}<span class="text-ink-faint">/{{ summary.count }}</span></span>
           <span class="eyebrow">{{ t('profile.days.read') }}</span>
         </div>
         <div class="flex flex-col gap-xxs">

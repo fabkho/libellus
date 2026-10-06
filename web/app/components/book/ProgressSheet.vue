@@ -106,7 +106,7 @@ watch(
 
       <!-- The total wheel says what it is for, and the way back to the edition's. -->
       <div v-if="editingTotal" class="flex min-h-(--size-touch) items-center justify-between gap-ms">
-        <p class="eyebrow text-accent" data-testid="progress.totalTitle">{{ t('book.progress.totalTitle') }}</p>
+        <p class="eyebrow text-accent-ink" data-testid="progress.totalTitle">{{ t('book.progress.totalTitle') }}</p>
         <UiButton
           v-if="reading.progressTotal !== null"
           tone="plain"
@@ -197,7 +197,7 @@ watch(
           <span
             v-if="delta"
             class="figures truncate text-caption"
-            :class="reading.progressDelta > 0 ? 'text-accent' : 'text-ink-faint'"
+            :class="reading.progressDelta > 0 ? 'text-accent-ink' : 'text-ink-faint'"
             data-testid="progress.delta"
           >
             {{ delta }}

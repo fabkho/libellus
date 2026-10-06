@@ -88,7 +88,7 @@ const gain = computed(() => {
           <span v-if="atEnd" class="text-body text-ink" data-testid="home.theEnd">{{ t('book.progress.theEnd') }}</span>
           <template v-else>
             <span class="figures" :class="progress ? 'text-ink-muted' : 'text-ink-faint'" data-testid="home.progressValue">{{ words.value }}</span>
-            <span v-if="gain" class="figures text-accent" data-testid="home.progressGain"> · {{ gain }}</span>
+            <span v-if="gain" class="figures text-accent-ink" data-testid="home.progressGain"> · {{ gain }}</span>
           </template>
         </p>
         <UiButton v-if="atEnd" size="sm" data-testid="home.finish" @click="reading.openFinish(entry)">

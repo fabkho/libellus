@@ -119,7 +119,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
       <section v-if="ebooks.waiting.length" data-testid="ebooks.needsYou">
         <div class="flex h-(--size-touch) items-center justify-between">
           <h2 class="eyebrow">{{ t('ebooks.needsYou') }}</h2>
-          <span class="eyebrow text-ink-ghost">{{ ebooks.waiting.length }}</span>
+          <span class="eyebrow text-ink-faint">{{ ebooks.waiting.length }}</span>
         </div>
         <ul class="divide-y divide-hairline">
           <EbooksWaitingRow v-for="record in ebooks.waiting" :key="record.id" :record="record" />
@@ -129,7 +129,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
       <section v-if="linkedRows.length" data-testid="ebooks.linkedSection">
         <div class="flex h-(--size-touch) items-center justify-between">
           <h2 class="eyebrow">{{ t('ebooks.linked') }}</h2>
-          <span class="eyebrow text-ink-ghost">{{ linkedRows.length }}</span>
+          <span class="eyebrow text-ink-faint">{{ linkedRows.length }}</span>
         </div>
         <ul class="flex flex-col">
           <li v-for="{ record, entry, missing } in linkedRows" :key="record.id">

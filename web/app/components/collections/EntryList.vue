@@ -353,7 +353,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
             <span class="flex min-w-0 items-center gap-sm text-caption text-ink-muted">
               <span class="truncate">{{ authorsOf(entry) }}</span>
               <span class="dot shrink-0" aria-hidden="true" />
-              <span class="shrink-0" :class="entry.status === 'reading' ? 'text-accent' : 'text-ink-faint'">{{ t(`status.${entry.status}`) }}</span>
+              <span class="shrink-0" :class="entry.status === 'reading' ? 'text-accent-ink' : 'text-ink-faint'">{{ t(`status.${entry.status}`) }}</span>
             </span>
           </span>
         </UiPressLink>

@@ -31,7 +31,7 @@ function openPicker(event: MouseEvent) {
 
 <template>
   <UiRow :label="label" icon="calendar" chevron class="active:bg-fill-strong">
-    <span class="figures text-caption" :class="invalid ? 'text-error' : model ? 'text-ink' : 'text-ink-ghost'">
+    <span class="figures text-caption" :class="invalid ? 'text-error' : model ? 'text-ink' : 'text-ink-faint'">
       {{ model ? relativeDay(model) : (placeholder ?? t('common.chooseDay')) }}
     </span>
     <input
