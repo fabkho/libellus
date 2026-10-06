@@ -58,7 +58,7 @@ import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
 import { coverSrc } from '~/utils/cover'
 import { preloadImage } from '~/utils/preload'
 
-/** The parts of the shell that are the page: the tab page's header and `main` (layouts/tabs.vue). */
+/** The part of the shell that is the page: `main`, the tab page's header in it (layouts/tabs.vue). */
 const PAGE = '[data-flight="page"]'
 const HERO = '[data-testid="book.hero"]'
 /** A cover's sheet (UiCover): the image or cloth, without its glow. */
