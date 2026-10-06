@@ -37,7 +37,7 @@ function size(step: number) {
         type="button"
         role="radio"
         :aria-checked="settings.flow === f"
-        class="flex flex-1 items-center justify-center gap-sm rounded-sm text-caption text-ink-muted"
+        class="flex flex-1 items-center justify-center gap-sm text-caption text-ink-muted"
         :class="settings.flow === f && 'on'"
         :data-testid="`readerType.flow.${f}`"
         @click="settings.flow = f"
@@ -108,7 +108,7 @@ function size(step: number) {
         role="radio"
         :aria-checked="settings.margins === i"
         :aria-label="MARGIN_NAMES[i]"
-        class="flex flex-1 items-center justify-center rounded-sm text-ink-muted"
+        class="flex flex-1 items-center justify-center text-ink-muted"
         :class="settings.margins === i && 'on'"
         :data-testid="`readerType.margins.${i}`"
         @click="settings.margins = i"
@@ -128,7 +128,7 @@ function size(step: number) {
         role="radio"
         :aria-checked="settings.leading === i"
         :aria-label="LEADING_NAMES[i]"
-        class="flex flex-1 items-center justify-center rounded-sm text-ink-muted"
+        class="flex flex-1 items-center justify-center text-ink-muted"
         :class="settings.leading === i && 'on'"
         :data-testid="`readerType.leading.${i}`"
         @click="settings.leading = i"
@@ -140,32 +140,32 @@ function size(step: number) {
     <UiRowGroup class="mt-md">
       <UiRow as="button" role="switch" :aria-checked="settings.justify" label="Justify" data-testid="readerType.justify" @click="settings.justify = !settings.justify">
         <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.justify ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
-          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised shadow-button" :class="settings.justify && 'on'" />
+          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised" :class="settings.justify && 'on'" />
         </span>
       </UiRow>
       <UiRow as="button" role="switch" :aria-checked="settings.keepAwake" label="Keep the screen on" data-testid="readerType.awake" @click="settings.keepAwake = !settings.keepAwake">
         <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.keepAwake ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
-          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised shadow-button" :class="settings.keepAwake && 'on'" />
+          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised" :class="settings.keepAwake && 'on'" />
         </span>
       </UiRow>
-      <!-- The reader's style, quietly last: on is the printed page (c, the default), off the classic one (a). -->
+      <!-- The reader's style, quietly last: off is the printed page (c, the default), on the classic one (a). -->
       <UiRow
         as="button"
         role="switch"
-        :aria-checked="settings.style === 'printed'"
-        label="Printed page"
-        data-testid="readerType.printed"
-        @click="settings.style = settings.style === 'printed' ? 'classic' : 'printed'"
+        :aria-checked="settings.style === 'classic'"
+        label="Classic mode"
+        data-testid="readerType.classic"
+        @click="settings.style = settings.style === 'classic' ? 'printed' : 'classic'"
       >
-        <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.style === 'printed' ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
-          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised shadow-button" :class="settings.style === 'printed' && 'on'" />
+        <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.style === 'classic' ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
+          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised" :class="settings.style === 'classic' && 'on'" />
         </span>
       </UiRow>
     </UiRowGroup>
     <p class="mt-sm mb-xs px-xs text-caption text-ink-faint">
       {{ settings.keepAwake ? 'While a book is open the screen stays on.' : 'The screen turns off as usual.' }}
       <template v-if="wakeNote"> {{ wakeNote }}</template>
-      {{ settings.style === 'printed' ? 'Printed page: the chapter and page number in the margins, a small capsule.' : 'Classic: a bar at the top and one at the bottom.' }}
+      {{ settings.style === 'classic' ? 'Classic mode: a bar at the top and one at the bottom.' : 'Turn on Classic mode for a bar at the top and one at the bottom instead of the capsule.' }}
     </p>
   </UiSheet>
 </template>
@@ -189,15 +189,30 @@ function size(step: number) {
   width: var(--spacing-xs);
   height: var(--spacing-xs);
 }
+/* Concentric corners: a segment's radius is the group's less the gap around it (md 14 − xxs 2 = 12),
+   so the selected one sits in the group's curve instead of rounding tighter. */
+.seg button {
+  border-radius: calc(var(--radius-md) - var(--spacing-xxs));
+}
+/* The lift is a tight contact shadow and a hairline: the button token's 18 px blur spilled out of the
+   group on paper (it vanishes in the dark, which is why only light showed it). */
 .seg button.on {
   background: var(--color-surface-raised);
   color: var(--color-ink);
-  box-shadow: var(--elevation-button);
+  box-shadow:
+    0 0 0 var(--stroke-hairline) var(--color-hairline),
+    0 var(--stroke-rule) var(--spacing-xxs) color-mix(in srgb, var(--color-ink) 12%, transparent);
 }
 .switch {
   transition: background-color var(--duration-quick) var(--ease-standard);
 }
+/* The knob: a hairline and a tight contact shadow inside the track's own height. `shadow-button`
+   (0 6px 18px) spread far below the 24 px track on paper — the glow under it when off and the
+   corners that looked unrounded when on. */
 .knob {
+  box-shadow:
+    0 0 0 var(--stroke-hairline) color-mix(in srgb, var(--color-ink) 10%, transparent),
+    0 var(--stroke-rule) var(--spacing-xxs) color-mix(in srgb, var(--color-ink) 18%, transparent);
   transition: transform var(--duration-quick) var(--ease-standard);
 }
 .knob.on {

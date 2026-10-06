@@ -474,3 +474,17 @@ pause and the search, and fades out (`sheetExit`) once the answer is there; plac
 **dim to 60 %** while a newer query is on its way and are replaced in place. A single letter (too
 short to search) gets a short sweep that lets go after the pause. `BookLoading.vue` is gone.
 `round3/search-palette-calm.jpg`.
+
+**Owner, after round 3: the Aa sheet's controls, sepia first, "Classic mode".**
+- **Concentric corners:** a selected segment (Pages | Scroll, Margins, Line spacing) has the group's
+  radius less the gap around it, `calc(radius.md − space.xxs)` = 12 inside 14, so it sits in the
+  group's curve. Its lift is a hairline and a tight contact shadow.
+- **Switches:** the knob wore `shadow-button` (0 6 px 18 px), which on paper spread far outside the
+  24 px track — the glow beside it when off and the boxy patch when on (invisible in the dark, which
+  is why only light showed it). Now a hairline and a tight contact shadow inside the track.
+  `round3/aa-switch-before-after.jpg`, `round3/aa-segment-before-after.jpg` (before | after, 4×).
+  Production: the Profile's theme switch (`profile/Account.vue`) has the same knob — one `UiSwitch`
+  for both, with this shadow.
+- **Sepia is the reader's default room, whatever the app's theme**; Light and Dark are a tap away.
+- The style toggle is now **Classic mode** (off by default = Printed; on = the classic bars), with
+  the Profile row saying "Classic mode" too. `round3/aa-sepia-default-classic-mode.jpg`.

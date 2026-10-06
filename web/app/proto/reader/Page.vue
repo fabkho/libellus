@@ -26,7 +26,7 @@ type Status = 'want_to_read' | 'reading'
 
 const VARIANTS: { key: Variant; name: string; pitch: string }[] = [
   { key: 'c', name: 'Printed (default)', pitch: 'A printed book: running head and folio in the margins, two pages side by side on a wide screen, a calm fade to turn. Tap the middle for a small capsule.' },
-  { key: 'a', name: 'Classic', pitch: 'Pages with nothing on them but the text. Tap the middle for a bar at the top and one at the bottom, with the slider.' },
+  { key: 'a', name: 'Classic mode', pitch: 'Pages with nothing on them but the text. Tap the middle for a bar at the top and one at the bottom, with the slider.' },
 ]
 
 const BOOKS = {
@@ -230,7 +230,7 @@ onMounted(() => {
         <h2 class="eyebrow mb-ms">Profile · Reading <span class="normal-case tracking-normal text-ink-ghost">(stand-in)</span></h2>
         <UiRowGroup>
           <UiRow as="button" icon="stack" label="Reader style" chevron data-testid="profile.readerStyle" @click="styleOpen = true">
-            <span class="text-ink-muted" :class="readerStyle === 'printed' && 'book-title italic'">{{ readerStyle === 'printed' ? 'Printed' : 'Classic' }}</span>
+            <span class="text-ink-muted" :class="readerStyle === 'printed' && 'book-title italic'">{{ readerStyle === 'printed' ? 'Printed' : 'Classic mode' }}</span>
           </UiRow>
         </UiRowGroup>
       </section>
@@ -258,7 +258,7 @@ onMounted(() => {
         </div>
 
         <p class="mt-xs px-ms text-caption text-ink-faint">
-          Scroll (b) is now a setting of both: Aa → Pages / Scroll.<template v-if="variant === 'b'"> This link opens b directly.</template>
+          Scroll (b) is a setting of both: Aa → Pages / Scroll. Classic mode: Aa → last toggle.<template v-if="variant === 'b'"> This link opens b directly.</template>
         </p>
 
         <div class="mt-md grid grid-cols-[auto_1fr] items-center gap-x-md gap-y-sm text-caption">

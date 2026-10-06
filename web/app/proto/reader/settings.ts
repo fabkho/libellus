@@ -18,7 +18,7 @@ export interface ReaderSettings {
   /** Index into MARGINS. */
   margins: number
   justify: boolean
-  /** null: the app's own theme (light or dark). */
+  /** The reader's room; sepia by default whatever the app's theme (owner, round 3). null: the app's own. */
   theme: ReaderTheme | null
   keepAwake: boolean
 }
@@ -49,17 +49,17 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
   leading: 2,
   margins: 2,
   justify: true,
-  theme: null,
+  theme: 'sepia',
   keepAwake: true,
 }
 
 const KEY = 'libellus-reader-proto'
-const SETTINGS_VERSION = 2
+const SETTINGS_VERSION = 3
 
 export function readSettings(storage: Pick<Storage, 'getItem'>): ReaderSettings {
   try {
     const raw = JSON.parse(storage.getItem(KEY) ?? 'null') as (Partial<ReaderSettings> & { v?: number }) | null
-    // Settings from before the edge-to-edge and tight steps were added start over.
+    // Settings from before a change of steps or defaults (edge to edge, tight lines, sepia first) start over.
     if (!raw || raw.v !== SETTINGS_VERSION) return { ...DEFAULT_SETTINGS }
     const { v: _v, ...rest } = raw
     return { ...DEFAULT_SETTINGS, ...rest }

@@ -10,7 +10,7 @@ const style = defineModel<'printed' | 'classic'>('style', { required: true })
 
 const CHOICES = [
   { key: 'printed', name: 'Printed', text: 'Like a book: the chapter above the text, the page number below it. Tap the middle for a small capsule.' },
-  { key: 'classic', name: 'Classic', text: 'A bar at the top and one at the bottom when you tap the middle: title, progress, the slider.' },
+  { key: 'classic', name: 'Classic mode', text: 'A bar at the top and one at the bottom when you tap the middle: title, progress, the slider.' },
 ] as const
 </script>
 
@@ -50,7 +50,7 @@ const CHOICES = [
         </span>
       </button>
     </div>
-    <p class="mt-md mb-xs px-xs text-caption text-ink-faint">Also in the reader: Aa → Printed page.</p>
+    <p class="mt-md mb-xs px-xs text-caption text-ink-faint">Also in the reader: Aa → Classic mode.</p>
   </UiSheet>
 </template>
 
