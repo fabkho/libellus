@@ -53,7 +53,8 @@ checked on a real Android emulator running Chrome: `web/e2e/android/smoke.ts`, n
 set it up and run it is in [`docs/TESTING.md`](docs/TESTING.md).
 
 `pnpm build` (or `pnpm generate`) runs `nuxt generate`; `.output/public` (also linked as `dist`) is
-what Cloudflare Pages serves, service worker and manifest included.
+what Cloudflare Pages serves, service worker and manifest included. How Pages builds and serves it,
+its headers and the Web Analytics beacon: [`docs/HOSTING.md`](docs/HOSTING.md).
 
 ### Design tokens
 
@@ -223,7 +224,7 @@ scripts/      create-invite-code.sh, the owner's tool for minting invite codes
 design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests
 docs/         DESIGN.md (design guideline), MOTION.md (motion), parity.md (per-screen behaviour),
-              agents/ (how agents use the issue tracker)
+              HOSTING.md (Cloudflare Pages), agents/ (how agents use the issue tracker)
 SPEC.md       condensed spec; CONTEXT.md the domain glossary
 ```
 
