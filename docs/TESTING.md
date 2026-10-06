@@ -8,6 +8,8 @@ those is checked on a real device instead: Chrome on an Android emulator, driven
 the whole screen (status bar, Chrome's toolbar, the keyboard, the navigation bar) and writes down what
 the browser reports about its viewports and insets next to each one.
 
+The same emulator is where TalkBack is checked (docs/ACCESSIBILITY.md, "Checking a change").
+
 Run it after any change to the safe-area utilities in `main.css` (`--bar-top`, `--float-bottom`), the
 tab bar, the top bars, the sheets, the search palette, `useKeyboardInset` or the viewport meta.
 
