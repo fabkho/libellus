@@ -171,7 +171,9 @@ browser's own on-device translator where there is one (Chrome) and otherwise MyM
 your Supabase project (`reader_places`: the entry, a position in the file and its fingerprint;
 never any text) so another device opens at the same page; highlights stay on the device. The
 Content-Security-Policy in `web/public/_headers` names both hosts and allows the book's pages as
-`blob:` frames.
+`blob:` frames. A book is markup from anywhere: before a page is shown it is sanitized (DOMPurify),
+it carries its own `script-src 'none'` policy, and its frame runs no script where the browser allows
+that (not WebKit), so a crafted EPUB cannot act as the member (`web/app/data/reader/markup.ts`).
 
 **Regal, the 3D shelf** is the owner's private Nuxt layer; a fork builds without it and loses
 nothing else. It needs `LIBELLUS_REGAL=1`, access to the private repository (`GIGET_AUTH`), a

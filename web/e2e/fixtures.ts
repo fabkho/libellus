@@ -33,7 +33,7 @@ export function goodreadsAnswer(body: unknown, status = 200) {
  * Every control a member can reach carries a `data-testid` (web/AGENTS.md). The
  * page reports each one it ever showed without, from every screen and state
  * any flow visits; the test fails on the first of them. The dev playground
- * (/prototype) is not a screen and is skipped.
+ * (/prototype) is not a screen and is skipped, nor is a book's page in the reader.
  */
 const WATCH_CONTROLS = () => {
   const CONTROLS =
@@ -46,6 +46,8 @@ const WATCH_CONTROLS = () => {
   }
   const scan = () => {
     if (location.pathname.startsWith('/prototype')) return
+    // A book's own pages (the reader's blob: frames, #131) are the publisher's markup, not a screen of Libellus.
+    if (location.protocol === 'blob:') return
     for (const el of document.querySelectorAll(CONTROLS)) {
       if (seen.has(el) || el.hasAttribute('data-testid')) continue
       if (el.closest('[aria-hidden=true], [hidden], [inert], .nuxt-devtools-frame')) continue

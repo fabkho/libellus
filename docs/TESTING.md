@@ -202,7 +202,10 @@ selects a word (no system selection bar: the reader selects itself), the handles
 bubble's Translate, Define, Copy, Search and the four highlights; Aa (sizes, margins, spacing,
 Scroll, Classic mode, Light/Dark/Sepia); Contents and the slider; search in the book; Android's
 Back (chrome first, then the book); the screen staying on (needs HTTPS); the end of the book with
-Finish; the place kept: close, open on another device, the same page. The design round's
+Finish; the place kept: close, open on another device, the same page. A book with footnotes,
+pictures and its own fonts reads as before (the sanitizer keeps what a book needs; on iOS the
+frames keep `allow-scripts`, so a tap, a selection and a link in the page are the check that
+WebKit's events still arrive). The design round's
 measurements (first page in 172–256 ms at 4× CPU throttling, the engine 40 KB gzipped, loaded on
 the first Read now) are in issue #131.
 

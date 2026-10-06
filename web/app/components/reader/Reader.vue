@@ -639,15 +639,29 @@ async function openFlight(engineReady: Promise<ReaderEngine | null>) {
 }
 
 let closing = false
+/** Unmounted without Back (signed out, another route): no flight home, but nothing is lost either. */
+let gone = false
+/** What leaving the book always does, once: the progress and the place written at once. */
+let left = false
+function leave() {
+  if (left) return
+  left = true
+  writer.flush()
+  if (loc.value) reader.leavePlace(props.entry.id, { cfi: loc.value.cfi, fraction: loc.value.fraction, fileHash: props.record.hash }, { now: true })
+  releaseWake()
+}
+function destroyEngine() {
+  const e = engine.value
+  engine.value = null
+  e?.destroy()
+}
 async function close() {
   if (closing) return
   closing = true
   open.value = false
   chrome.value = false
   endShown.value = false
-  writer.flush()
-  if (loc.value) reader.leavePlace(props.entry.id, { cfi: loc.value.cfi, fraction: loc.value.fraction, fileHash: props.record.hash }, { now: true })
-  releaseWake()
+  leave()
   const layer = root.value
   const pageEl = page.value
   giveBackTheme()
@@ -669,7 +683,7 @@ async function close() {
   } else if (layer) {
     await layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: durationToken('exit'), easing: easingToken('exit'), fill: 'forwards' }).finished
   }
-  engine.value?.destroy()
+  destroyEngine()
   emit('closed')
 }
 
@@ -740,6 +754,11 @@ onMounted(async () => {
       startedAt: performance.now(),
       importedAt: performance.now(),
     })
+    // Closed (or gone) while the book was still opening: it never shows.
+    if (closing || gone) {
+      opened.destroy()
+      return null
+    }
     engine.value = opened
     if (import.meta.dev) (window as unknown as { __readerEngine?: unknown }).__readerEngine = opened
     return opened
@@ -748,6 +767,8 @@ onMounted(async () => {
     return null
   })
   await openFlight(engineReady)
+  // Back during the opening flight: the room was never taken over, and must not be after close() gave it back.
+  if (closing || gone) return
   ready.value = true
   takeOverTheme()
   void applyWake()
@@ -759,13 +780,15 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  gone = true
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('resize', onResize)
   document.removeEventListener('visibilitychange', onVisibility)
   clearTimeout(toastTimer)
+  leave()
   writer.dispose()
-  releaseWake()
   giveBackTheme()
+  destroyEngine()
 })
 
 // ------------------------------------------------------------------ actions from the chrome and sheets

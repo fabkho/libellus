@@ -32,7 +32,9 @@ export type EpubSpec = {
   /** Text of the one chapter, so two files of the same book can differ. */
   body?: string
   /** Chapters of real text instead of the one (with a contents page, EPUB 3's nav document). */
-  chapters?: { title: string; paragraphs: string[] }[]
+  chapters?: { title: string; paragraphs: string[]; head?: string; markup?: string }[]
+  /** More files in the package (path relative to it), listed in the manifest but not the spine: a crafted book's scripts and styles. */
+  resources?: { id: string; href: string; mediaType: string; content: string }[]
 }
 
 const chapterFiles = (spec: EpubSpec) => (spec.chapters ?? [null]).map((_, i) => ({ id: `chapter${i ? i + 1 : ''}`, href: `text/chapter-${i + 1}.xhtml` }))
@@ -83,6 +85,7 @@ export function packageDocument(spec: EpubSpec): string {
     ${coverItem}
     ${nav}
     ${chapters.map((c) => `<item id="${c.id}" href="${c.href}" media-type="application/xhtml+xml"/>`).join('\n    ')}
+    ${(spec.resources ?? []).map((r) => `<item id="${r.id}" href="${r.href}" media-type="${r.mediaType}"/>`).join('\n    ')}
   </manifest>
   <spine>${chapters.map((c) => `<itemref idref="${c.id}"/>`).join('')}</spine>
 </package>`
@@ -99,12 +102,18 @@ export function buildEpub(spec: EpubSpec): Uint8Array {
     ),
     [opfPath]: strToU8(packageDocument(spec)),
   }
-  const xhtml = (title: string, body: string, ops = '') =>
-    strToU8(`<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"${ops}><head><title>${esc(title)}</title></head><body>${body}</body></html>`)
+  const xhtml = (title: string, body: string, ops = '', head = '') =>
+    strToU8(`<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"${ops}><head><title>${esc(title)}</title>${head}</head><body>${body}</body></html>`)
   if (spec.chapters) {
     const chapters = chapterFiles(spec)
     spec.chapters.forEach((chapter, i) => {
-      files[`${base}${chapters[i]!.href}`] = xhtml(chapter.title, `<h2>${esc(chapter.title)}</h2>${chapter.paragraphs.map((p) => `<p>${esc(p)}</p>`).join('')}`)
+      // `head` and `markup` go in as written (unescaped): a crafted page's own markup.
+      files[`${base}${chapters[i]!.href}`] = xhtml(
+        chapter.title,
+        `<h2>${esc(chapter.title)}</h2>${chapter.paragraphs.map((p) => `<p>${esc(p)}</p>`).join('')}${chapter.markup ?? ''}`,
+        chapter.markup ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : '',
+        chapter.head,
+      )
     })
     if (spec.version === 3)
       files[`${base}nav.xhtml`] = xhtml(
@@ -114,6 +123,7 @@ export function buildEpub(spec: EpubSpec): Uint8Array {
       )
   } else files[`${base}text/chapter-1.xhtml`] = xhtml(spec.title, `<p>${esc(spec.body ?? spec.title)}</p>`)
   if (spec.cover) files[`${base}images/cover.jpg`] = [TINY_JPEG, { level: 0 }]
+  for (const resource of spec.resources ?? []) files[`${base}${resource.href}`] = strToU8(resource.content)
   // A fixed time on every entry, so the same spec always makes the same bytes (the same fingerprint).
   return zipSync(files, { mtime: new Date('2026-01-01T00:00:00Z') })
 }

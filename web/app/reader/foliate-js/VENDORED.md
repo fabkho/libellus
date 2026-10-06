@@ -18,3 +18,7 @@
 1. `view.js`: the PDF branch throws `UnsupportedTypeError` instead of importing `./pdf.js`.
 2. `paginator.js`: `View.render` and `Paginator.render` return while the section's document has
    no body yet (a `ResizeObserver` render during a section load threw in Chromium).
+3. `paginator.js`, `fixed-layout.js`: the page frames' `sandbox` comes from `frame.js` (a Libellus
+   file): foliate's `allow-same-origin allow-scripts` by default, `allow-same-origin` alone where the
+   engine's probe finds that a scriptless frame still gets its events (`reader/engine.ts`,
+   `frameSandbox`; WebKit does not, https://bugs.webkit.org/show_bug.cgi?id=218086).

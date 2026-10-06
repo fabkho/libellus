@@ -6,7 +6,8 @@
  * the entry nor in the precache, and only fetched the first time a book opens.
  *
  * What it adds to foliate: the page's stylesheet from the member's settings and
- * the reader's room; book scripts stripped before a page loads; the body's end
+ * the reader's room; every page sanitized before it loads and shown in a frame
+ * that runs no script where the browser allows it (`data/reader/markup.ts`); the body's end
  * (back matter such as a licence is not part of "the end"); taps, swipes, pulls
  * past a chapter's ends, highlights, search, and on touch screens the reader's
  * own text selection (long-press and handles), so the browser's selection bar
@@ -17,13 +18,15 @@ import newsreader400i from '@fontsource/newsreader/files/newsreader-latin-400-it
 import newsreader600 from '@fontsource/newsreader/files/newsreader-latin-600-normal.woff2?url'
 import geist400 from '@fontsource/geist/files/geist-latin-400-normal.woff2?url'
 import geist600 from '@fontsource/geist/files/geist-latin-600-normal.woff2?url'
-import './foliate-js/view.js'
+import { makeBook, UnsupportedTypeError } from './foliate-js/view.js'
+import { EPUB } from './foliate-js/epub.js'
+import { frame } from './foliate-js/frame.js'
 import { compare as compareCfi } from './foliate-js/epubcfi.js'
 import { Overlayer } from './foliate-js/overlayer.js'
 import type { ReaderSettings } from '~/data/reader/settings'
 import { FONT_SIZES, LEADINGS } from '~/data/reader/settings'
 import type { Highlight } from '~/data/reader/device'
-import { stripScripts } from '~/data/reader/markup'
+import { resourceType, sanitizeResource } from '~/data/reader/markup'
 
 export interface TocItem {
   label: string
@@ -648,6 +651,69 @@ function describeRange(engine: ReaderEngine, doc: Document, range: Range, custom
 }
 
 /**
+ * A book's scripts never run as Libellus. foliate's frames are of the app's
+ * origin (it lays out, selects and listens inside them), so three layers keep
+ * an EPUB from anywhere out of the member's session:
+ * - its script files are never loaded, and every page, SVG and stylesheet is
+ *   sanitized before foliate makes its blob, each (X)HTML page carrying its
+ *   own `script-src 'none'` policy (`sanitizeResource`, data/reader/markup.ts);
+ * - the frames run no script at all where the browser still delivers events to
+ *   a scriptless frame (`frameSandbox`).
+ */
+function guard(target: EventTarget | undefined) {
+  if (!target) throw new UnsupportedTypeError('No way to sanitize this book')
+  target.addEventListener('load', (event) => {
+    const detail = (event as CustomEvent<{ isScript: boolean; allow: unknown }>).detail
+    if (detail.isScript) detail.allow = false
+  })
+  target.addEventListener('data', (event) => {
+    // The type stays a plain string: foliate's paginator reads it right after, to adjust stylesheets.
+    const detail = (event as CustomEvent<{ data: unknown; type: string }>).detail
+    const type = String(detail.type ?? '')
+    detail.type = resourceType(type)
+    detail.data = Promise.resolve(detail.data).then(async (data) => (await sanitizeResource(data, type)).data)
+  })
+}
+
+let sandbox: Promise<string> | null = null
+
+/**
+ * The page frames' sandbox, found out once: `allow-same-origin` alone where a
+ * listener on a scriptless frame's document still fires (Chromium, Firefox), so
+ * no script of a book could run there even past the sanitizer. WebKit fires no
+ * event into such a frame (https://bugs.webkit.org/show_bug.cgi?id=218086), so
+ * there, and if the probe cannot tell, the frames keep `allow-scripts` and rest
+ * on the sanitizer and each page's own `script-src 'none'`.
+ */
+export function frameSandbox(): Promise<string> {
+  sandbox ??= new Promise<string>((resolve) => {
+    const scriptless = 'allow-same-origin'
+    const scripted = 'allow-same-origin allow-scripts'
+    const probe = document.createElement('iframe')
+    probe.setAttribute('sandbox', scriptless)
+    probe.setAttribute('aria-hidden', 'true')
+    probe.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden'
+    const done = (value: string) => {
+      clearTimeout(timer)
+      probe.remove()
+      resolve(value)
+    }
+    const timer = setTimeout(() => done(scripted), 1000)
+    probe.addEventListener('load', () => {
+      const doc = probe.contentDocument
+      if (!doc) return done(scripted)
+      let fired = false
+      doc.addEventListener('libellus-probe', () => (fired = true))
+      doc.dispatchEvent(new Event('libellus-probe'))
+      done(fired ? scriptless : scripted)
+    })
+    probe.srcdoc = '<!DOCTYPE html><title>probe</title>'
+    document.body.append(probe)
+  })
+  return sandbox
+}
+
+/**
  * Opens a book in a new `<foliate-view>` inside `host`. Resolves once the
  * first page is laid out and showing; every number on the way is timed.
  */
@@ -676,18 +742,16 @@ export async function openReader(
   engine.timings.bytes = file.size
   engine.timings.importMs = options.importedAt - options.startedAt
 
-  await view.open(file)
+  frame.sandbox = await frameSandbox()
+  const book = await makeBook(new File([file], 'book.epub', { type: 'application/epub+zip' }))
+  // Only an EPUB opens here (phase 1 links nothing else): MOBI, FB2 and comic books make their pages without the hook below.
+  if (!(book instanceof EPUB)) throw new UnsupportedTypeError('Not an EPUB')
+  guard(book.transformTarget)
+  await view.open(book)
   engine.timings.parseMs = performance.now() - options.importedAt
   engine.prepare()
   engine.highlights = options.highlights ?? []
   if (options.colorOf) engine.colorOf = options.colorOf
-  // A book's scripts never run: foliate's page frames need `allow-scripts` (WebKit), and the app's
-  // CSP allows inline scripts, so every page is stripped of <script> and on… handlers as it loads.
-  view.book.transformTarget?.addEventListener('data', (event) => {
-    const detail = (event as CustomEvent<{ data: unknown; type: string }>).detail
-    if (!/html|xml/.test(detail.type)) return
-    detail.data = Promise.resolve(detail.data).then((data) => (typeof data === 'string' ? stripScripts(data) : data))
-  })
   engine.touchSelection = options.touchSelection ?? false
   engine.onSelect = options.handlers.select
   engine.cover = (await view.book.getCover?.().catch(() => null)) ?? null

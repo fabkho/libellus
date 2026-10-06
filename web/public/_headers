@@ -12,7 +12,7 @@
 #   covers, their thumbhash read with CORS), the owner's shelf (`books.fabkho.dev`, Regal's
 #   textures as blobs), the barcode decoder (WebAssembly), Cloudflare Web Analytics (the
 #   beacon Pages adds to the HTML, docs/HOSTING.md), and for the built-in reader (#131) the
-#   book's pages (blob: frames), MyMemory (Translate) and Wiktionary (Define), asked only with
+#   book's pages (blob: frames, sanitized, each with its own script-src 'none'), MyMemory (Translate) and Wiktionary (Define), asked only with
 #   the words the member selected. Covers come from any https host (an
 #   imported Book keeps its own). 'unsafe-inline' for scripts: the theme boot script, the
 #   import map and Nuxt's runtime config are inline, and two of them change with every build.

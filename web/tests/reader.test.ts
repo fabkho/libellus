@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { openingPlace, readHighlights, readPlace, writeHighlights, writePlace, type Place } from '../app/data/reader/device'
 import { defaultTarget, define, headwordOf, isDefinable, piecesOf, plain, translate, type DeviceTranslator, type Fetch } from '../app/data/reader/lookup'
-import { stripScripts } from '../app/data/reader/markup'
 import { isAhead, progressAt, ProgressWriter, type Timers } from '../app/data/reader/progress'
 import { DEFAULT_SETTINGS, parseSettings, readSettings, READER_SETTINGS_KEY, writeSettings } from '../app/data/reader/settings'
 
@@ -9,7 +8,7 @@ import { DEFAULT_SETTINGS, parseSettings, readSettings, READER_SETTINGS_KEY, wri
  * The built-in reader's data layer (#131, phase 2): its settings, how progress
  * is written, the place and highlights kept on the device, Translate and
  * Define (answers recorded in the shape MyMemory and Wiktionary give, through
- * the injectable `fetch`), and the scripts taken out of a book's pages.
+ * the injectable `fetch`). What a book's pages lose: tests/reader-markup.test.ts.
  */
 
 function memoryStorage() {
@@ -269,14 +268,3 @@ describe('Define', () => {
   })
 })
 
-describe('a book page’s scripts', () => {
-  it('are taken out: script elements and inline handlers, nothing else', () => {
-    const page = `<html><head><script src="x.js"></script><script type="text/javascript">alert(1)</script><script src="y.js"/></head>
-<body onload="steal()"><p class="x" onclick='go()'>One morning</p><img src="a.png" onerror=boom()><p>online, ongoing</p></body></html>`
-    const clean = stripScripts(page)
-    expect(clean).not.toMatch(/script|onload|onclick|onerror|steal|alert|boom/i)
-    expect(clean).toContain('<p class="x">One morning</p>')
-    expect(clean).toContain('<img src="a.png">')
-    expect(clean).toContain('online, ongoing')
-  })
-})
