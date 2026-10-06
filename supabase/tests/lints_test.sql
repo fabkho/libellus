@@ -3,10 +3,12 @@
 --
 -- The foreign key from accounts to invite_codes is indexed, and `citext` lives in
 -- `extensions`, not `public`, while the column that uses it, the lookup that spells
--- it and the unique index on it keep working.
+-- it and the unique index on it keep working. No extension is in `public`: pg_net
+-- moved to `extensions` too, and the net.http_post the shelf dispatch calls is
+-- still there, in its own schema `net`.
 
 begin;
-select plan(8);
+select plan(11);
 
 insert into public.invite_codes (code, label, max_uses) values ('T-Lint-Code', 'lint test', 5);
 
@@ -37,6 +39,19 @@ select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname like 'citext%'),
   0, 'no citext function is left in public');
+
+select is(
+  (select array_agg(extname::text order by extname) from pg_extension
+   where extnamespace = 'public'::regnamespace),
+  null, 'no extension lives in public');
+select ok(
+  not exists (select 1 from pg_extension where extname = 'pg_net')
+  or (select extnamespace::regnamespace::text from pg_extension where extname = 'pg_net') = 'extensions',
+  'pg_net, where it is enabled, lives in the extensions schema');
+select ok(
+  not exists (select 1 from pg_extension where extname = 'pg_net')
+  or to_regprocedure('net.http_post(text, jsonb, jsonb, jsonb, integer)') is not null,
+  'and the shelf dispatch still finds net.http_post');
 
 select * from finish();
 rollback;
