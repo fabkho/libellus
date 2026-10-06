@@ -185,7 +185,7 @@ jobs:
 
       # Same major as local. Build scripts pnpm may run (esbuild) are approved in
       # web/pnpm-workspace.yaml, so a frozen install passes on pnpm 11+.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 12
 
@@ -294,7 +294,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 12
 
@@ -341,7 +341,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
         with:
           version: 12
