@@ -10,11 +10,14 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm test` — Vitest data-layer suite against the local stack. No mocks.
 - `pnpm e2e` — Playwright, iPhone viewport, WebKit, its own server on :4327.
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
-- `dev`, `e2e` and `build` need **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer
-  from the private repo fabkho/regal: `REGAL_LAYER=/path/to/regal-checkout` or `GIGET_AUTH=<a GitHub
-  token that can read it>` (CI and Cloudflare Pages have the secret). Without either they stop and
-  say so; `nuxt prepare` (the postinstall) goes on without it. Regal stays in its own `regal` chunk,
-  loaded only by `LazyShelfStage` and never precached; the build fails if the entry ever imports it.
+- **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo
+  fabkho/regal, is opt-in: `LIBELLUS_REGAL=1` plus `REGAL_LAYER=/path/to/regal-checkout` or
+  `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
+  `NUXT_PUBLIC_REGAL_LIBRARY_SRC` (the published library file). Without the flag `dev`, `e2e` and
+  `build` run without it: `ShelfStage`/`ShelfRow` resolve to `app/regal/Absent.vue`, nobody is the
+  shelf's owner, `e2e/shelf.spec.ts` skips. With it, a missing layer or file stops `dev`/`generate`.
+  Regal stays in its own `regal` chunk, loaded only by `LazyShelfStage` and never precached; the
+  build fails if the entry ever imports it.
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.
 

@@ -31,7 +31,8 @@ definePageMeta({
   pushed: true,
   immersive: true,
   // Runs in the app's entry, before this page's chunk loads: the session and the config only.
-  validate: () => isShelfOwner(useSessionStore().member?.id, useRuntimeConfig().public.shelfOwnerId),
+  // A build without Regal (appConfig.regal, regal.config.ts) has no shelf for anyone.
+  validate: () => useAppConfig().regal === true && isShelfOwner(useSessionStore().member?.id, useRuntimeConfig().public.shelfOwnerId),
 })
 
 const { t } = useI18n()

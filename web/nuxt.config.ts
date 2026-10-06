@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
-import { isRegalModule, regalContainment, regalLayer, REGAL_ASSETS, REGAL_LIBRARY_SRC } from './regal.config'
+import { isRegalModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
 // colour from the same token source as the CSS: the room's surface, per theme.
@@ -16,8 +16,8 @@ const iconVersion = 2
 // the sign-in, so there is nothing to render on the server: SPA, built to
 // static files for Cloudflare Pages.
 export default defineNuxtConfig({
-  // Regal, the owner's 3D shelf (#23): a Nuxt layer (regal.config.ts says where it comes from and
-  // how it is kept to the shelf's pages).
+  // Regal, the owner's 3D shelf (#23): a Nuxt layer, only with LIBELLUS_REGAL=1 (regal.config.ts says
+  // where it comes from and how it is kept to the shelf's pages).
   extends: regalLayer(),
   compatibilityDate: '2026-10-02',
   ssr: false,
@@ -89,18 +89,20 @@ export default defineNuxtConfig({
     },
   },
 
-  // Filled from NUXT_PUBLIC_SUPABASE_URL / NUXT_PUBLIC_SUPABASE_ANON_KEY (.env).
+  // Every value an instance sets for itself, from NUXT_PUBLIC_* env vars at build time (the table in
+  // docs/SELF_HOSTING.md). All of it ends up in the static files: public by nature, never a secret.
   runtimeConfig: {
     public: {
+      // NUXT_PUBLIC_SUPABASE_URL / NUXT_PUBLIC_SUPABASE_ANON_KEY (.env).
       supabaseUrl: '',
       supabaseAnonKey: '',
-      // The owner's auth user id (NUXT_PUBLIC_SHELF_OWNER_ID): only she sees Your shelf (#23).
-      // Empty: nobody does.
+      // The owner's auth user id (NUXT_PUBLIC_SHELF_OWNER_ID): only she sees Your shelf (#23), and only
+      // in a build with Regal. Empty: nobody does.
       shelfOwnerId: '',
       // The client error log (composables/useErrorLog.ts, NUXT_PUBLIC_ERROR_LOG): a build sends
       // its errors unless 'off'; the dev server prints them and sends only with 'send'.
       errorLog: '',
-      // Regal's setting (its README): the published library file, the one the portfolio shows.
+      // Regal's setting (its README): the published library file (NUXT_PUBLIC_REGAL_LIBRARY_SRC).
       regal: { librarySrc: REGAL_LIBRARY_SRC },
     },
   },
@@ -109,6 +111,9 @@ export default defineNuxtConfig({
   // flips the switch (stores/theme.ts).
   appConfig: {
     themeColors: surface,
+    // Whether this build has Regal (LIBELLUS_REGAL=1): fixed at build time, unlike runtimeConfig,
+    // so no env var can point the app at a shelf the build doesn't have (stores/shelf.ts).
+    regal: REGAL_ENABLED,
   },
 
   // One locale and every string in i18n/locales/en.json, so German is a
@@ -199,9 +204,9 @@ export default defineNuxtConfig({
       // fetched when the scanner first opens, and kept by the cache below.
       // Nor is Regal (the owner's shelf, #23): its chunk and styles, its fonts and its model are
       // fetched when the shelf first opens, and kept by the caches below.
-      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', ...REGAL_ASSETS.globIgnores],
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', ...regalAssets().globIgnores],
       runtimeCaching: [
-        ...REGAL_ASSETS.runtimeCaching,
+        ...regalAssets().runtimeCaching,
         {
           // The barcode decoder, as the scanner asks for it. Cache first: the file's name carries its hash.
           urlPattern: ({ url }) => /\/_nuxt\/zxing[^/]*\.(js|wasm)$/.test(url.pathname),

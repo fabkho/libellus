@@ -18,7 +18,10 @@ export const useShelfStore = defineStore('shelf', () => {
   /** The library file (runtimeConfig.public.regal.librarySrc, the one Regal's components show). */
   const src = String((config.regal as { librarySrc?: string } | undefined)?.librarySrc ?? '')
 
-  const isOwner = computed(() => isShelfOwner(session.member?.id, config.shelfOwnerId) && src !== '')
+  // Only in a build with Regal (LIBELLUS_REGAL=1, regal.config.ts): without it there is nothing to draw the shelf.
+  const withRegal = useAppConfig().regal === true
+
+  const isOwner = computed(() => withRegal && isShelfOwner(session.member?.id, config.shelfOwnerId) && src !== '')
 
   let repository: ShelfRepository | null = null
   const shelf = ref<Shelf | null>(null)

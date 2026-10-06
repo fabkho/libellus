@@ -7,6 +7,9 @@ import { createInviteCode, serviceRoleKey, sql, stack, uniqueEmail } from '../te
  */
 export const SHELF_OWNER_ID = '5e1f0000-0000-4000-8000-000000000023'
 
+/** The library file the flows' app shows (NUXT_PUBLIC_REGAL_LIBRARY_SRC); e2e/shelf.spec.ts answers it from a fixture. */
+export const SHELF_LIBRARY_SRC = 'https://books.fabkho.dev/v2/library.json'
+
 /**
  * The owner: a member with that id, as a member is made anywhere else (an
  * invite, a proved address) except that the id is given, which only the auth

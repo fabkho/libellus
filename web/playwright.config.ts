@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { defineConfig, devices } from '@playwright/test'
 import { stack } from './tests/support/stack'
-import { SHELF_OWNER_ID } from './e2e/shelfOwner'
+import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID } from './e2e/shelfOwner'
 
 // Tags every address the flows invent, so the global teardown removes only what
 // this run created (tests/support/stack.ts, runTag). Set before the workers
@@ -63,6 +63,8 @@ export default defineConfig({
       NUXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
       // Your shelf (#23) is one member's: the flows' owner, made with this id (e2e/shelf.spec.ts).
       NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
+      // The library file Regal shows, in a build with it (LIBELLUS_REGAL=1): the address e2e/shelf.spec.ts answers.
+      NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
     },
     reuseExistingServer: false,
     timeout: 120_000,
