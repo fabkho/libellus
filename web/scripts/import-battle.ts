@@ -1,5 +1,5 @@
 /**
- * Measures the Goodreads import (issue #111) against a real export on the
+ * Measures the import (issue #111) against a real Goodreads or Hardcover export on the
  * local stack: a fresh test member, the file through the same repository the
  * import screen uses (live Apple Books, OpenLibrary and the Catalogue), the
  * rows written through `import_books`, the same file again, and what ended up
@@ -21,8 +21,9 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { createAuth } from '../app/data/auth'
 import { createCatalogueSearch } from '../app/data/catalogueSearch'
-import { createGoodreadsImport, pacedFetch, type Edition, type ImportRow, type RowOutcome } from '../app/data/goodreadsImport'
-import { countByStatus, parseGoodreads, type GoodreadsBook } from '../app/data/import/goodreads'
+import { createBookImport, pacedFetch, type Edition, type ImportRow, type RowOutcome } from '../app/data/bookImport'
+import { parseExport } from '../app/data/import/detect'
+import { countByStatus, type ImportBook } from '../app/data/import/rows'
 import { createSearch } from '../app/data/search'
 import { nodeLookupDeps } from './fable/node'
 import { createInviteCode, newClient, readMailedCode, sql, uniqueEmail } from '../tests/support/stack'
@@ -48,7 +49,7 @@ const seconds = (from: number) => Math.round((performance.now() - from) / 100) /
 
 const started = performance.now()
 const text = readFileSync(file, 'utf8')
-const parsed = parseGoodreads(text, today)
+const parsed = parseExport(text, today)
 const problems = new Map<string, number>()
 for (const book of parsed.books) for (const problem of book.problems) problems.set(problem.code, (problems.get(problem.code) ?? 0) + 1)
 for (const row of parsed.skipped) problems.set(`skipped:${row.problem.code}`, (problems.get(`skipped:${row.problem.code}`) ?? 0) + 1)
@@ -69,7 +70,7 @@ if (!member) throw new Error('no session')
 
 const catalogue = createCatalogueSearch(client)
 const liveFetch = pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } })
-const repository = createGoodreadsImport(client, {
+const repository = createBookImport(client, {
   lookups: {
     catalogue,
     search: createSearch({ fetch: liveFetch, languages: ['de-DE', 'en-US'], catalogue }),
@@ -91,6 +92,7 @@ const rows: ImportRow[] = parsed.books.map((book, index) => ({
   status: book.status,
   session: book.session,
   extraReads: book.extraReads,
+  earlierReads: book.earlierReads,
   pageCount: book.pageCount,
   otherKeys: book.otherKeys,
   addedOn: book.addedOn,
@@ -157,7 +159,7 @@ const digits = (value: string | null | undefined) => (value ?? '').replace(/\D/g
 type RowReport = Record<string, unknown>
 const perRow: RowReport[] = []
 const edition = { isbnInFile: 0, exact: 0, exactFromFile: 0, coverLent: 0, otherEditionSameWork: 0, byTitle: 0, byTitleSameIsbn: 0, fromFile: 0, unsure: 0, pagesWithin10: 0, pagesKnown: 0 }
-parsed.books.forEach((book: GoodreadsBook, index) => {
+parsed.books.forEach((book: ImportBook, index) => {
   const found = editions[index]!
   const picked = found.book
   if (book.isbn13) edition.isbnInFile++
@@ -176,7 +178,7 @@ parsed.books.forEach((book: GoodreadsBook, index) => {
   }
   perRow.push({
     row: book.row,
-    file: { title: book.title, authors: book.authors, isbn13: book.isbn13, pages: book.pageCount, year: book.year, shelf: book.shelf, extraReads: book.extraReads, shelves: book.shelves.length },
+    file: { title: book.title, authors: book.authors, isbn13: book.isbn13, pages: book.pageCount, year: book.year, shelf: book.shelf, extraReads: book.extraReads, earlierReads: book.earlierReads.length, shelves: book.shelves.length },
     picked: { title: picked.title, authors: picked.authors, isbn13: picked.isbn13, pages: picked.pageCount, year: picked.year, language: picked.language, source: picked.source, cover: Boolean(picked.coverUrl) },
     via: found.via,
     coverFrom: found.coverFrom ? { title: found.coverFrom.title, isbn13: found.coverFrom.isbn13 } : null,
@@ -193,7 +195,9 @@ const report = {
   books: parsed.books.length,
   skipped: parsed.skipped.length,
   byStatus: shelves,
+  source: parsed.source,
   extraReads: parsed.books.reduce((total, book) => total + book.extraReads, 0),
+  earlierReads: parsed.books.reduce((total, book) => total + book.earlierReads.length, 0),
   shelvesOffered: new Set(parsed.books.flatMap((book) => book.shelves.map((name) => name.toLowerCase()))).size,
   problems: Object.fromEntries(problems),
   edition,

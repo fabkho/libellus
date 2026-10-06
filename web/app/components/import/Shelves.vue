@@ -1,22 +1,25 @@
 <script setup lang="ts">
 // Her other Goodreads shelves (favourites, sci-fi, a custom one like
-// wishlist), offered as Collections before the import (#111): one row each,
+// wishlist) or her Hardcover lists (`kind`), offered as Collections before the
+// import (#111): one row each,
 // with how many of the file's books are on it and D's check, as the Collection
 // picker draws it. All are kept until she unticks one; the import then makes
 // the Collections she has not got yet and puts the books on them.
 import type { OfferedShelf } from '~/stores/import'
 
-defineProps<{ shelves: readonly OfferedShelf[]; disabled?: boolean }>()
+const props = withDefaults(defineProps<{ shelves: readonly OfferedShelf[]; disabled?: boolean; kind?: 'shelves' | 'lists' }>(), { kind: 'shelves' })
 const emit = defineEmits<{ toggle: [name: string] }>()
 
 const { t } = useI18n()
+const title = computed(() => t(props.kind === 'lists' ? 'import.listsTitle' : 'import.shelvesTitle'))
+const text = computed(() => t(props.kind === 'lists' ? 'import.listsText' : 'import.shelvesText'))
 </script>
 
 <template>
   <section data-testid="import.shelves">
-    <h2 class="eyebrow">{{ t('import.shelvesTitle') }}</h2>
-    <p class="mt-xs text-footnote text-ink-muted">{{ t('import.shelvesText') }}</p>
-    <UiRowGroup class="mt-sm" role="group" :aria-label="t('import.shelvesTitle')">
+    <h2 class="eyebrow">{{ title }}</h2>
+    <p class="mt-xs text-footnote text-ink-muted">{{ text }}</p>
+    <UiRowGroup class="mt-sm" role="group" :aria-label="title">
       <button
         v-for="shelf in shelves"
         :key="shelf.name"

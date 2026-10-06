@@ -6,7 +6,8 @@ import { openProfile, recordedApple, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
- * Importing a Goodreads export (#40): from the avatar menu to /import, a file
+ * Importing an export (#40, #111), Goodreads' or Hardcover's, told apart by
+ * its header. Goodreads: from the avatar menu to /import, a file
  * chosen, the preview (books per Status, matched editions, what needs a look),
  * the import and its summary, the books in the Library, and the same file
  * again adding nothing. The file is synthetic, made per run: a book the
@@ -81,12 +82,12 @@ test('a member imports a Goodreads export, sees the books in her Library, and im
 
   // A file that is not an export is refused with a word.
   await page.getByTestId('import.file').setInputFiles({ name: 'notes.csv', mimeType: 'text/csv', buffer: Buffer.from('title,author\nA,B\n') })
-  await expect(page.getByTestId('import.fileError')).toHaveText(en.import.fileError.notGoodreads)
+  await expect(page.getByTestId('import.fileError')).toHaveText(en.import.fileError.notSupported)
 
   // The preview: per Status, what matched, what needs a look.
   await page.getByTestId('import.file').setInputFiles(file)
   await expect(page.getByTestId('import.fileName')).toHaveText(file.name)
-  await expect(page.getByTestId('import.inFile')).toHaveText('4 books in this file')
+  await expect(page.getByTestId('import.inFile')).toHaveText('From Goodreads · 4 books')
   await expect(page.getByTestId('import.count.want_to_read')).toHaveText('2')
   await expect(page.getByTestId('import.count.reading')).toHaveText('1')
   await expect(page.getByTestId('import.count.finished')).toHaveText('1')
@@ -238,4 +239,91 @@ test('what real exports carry: her shelves as Collections, earlier reads, a did-
     { key: 'goodreads:962', finished: 1, abandoned: 0, shelves: ['favourites'] },
     { key: 'goodreads:963', finished: 0, abandoned: 1, shelves: null },
   ])
+})
+
+const HARDCOVER_HEADER =
+  'Title,Author,Series,Status,Privacy,Hardcover Book ID,Hardcover Edition ID,ISBN 10,ISBN 13,ASIN,Media,Country Code,' +
+  'Language Code,Binding,Pages,Duration in Seconds,Publish Date,Publisher,Genres,Moods,Tags,Content Warnings,Lists,' +
+  'Date Added,Date Started,Date Finished,Rating,Review,Review Contains Spoilers,Sponsored Review,Review Date,Review URL,' +
+  'Review Media URL,Private Notes,Owned,Compilation,Review Slate'
+
+test('a Hardcover export is told by its header: her reads with their days, her lists as Collections (#111)', async ({ page }) => {
+  const member = await signedIn(page)
+  const twice = runTitle('Twice Told')
+  const now = runTitle('Read Now')
+  const wish = runTitle('Some Day')
+  // Columns as Hardcover writes them; Date Started / Date Finished hold one day per read.
+  const row = (cells: Record<string, string>) =>
+    HARDCOVER_HEADER.split(',')
+      .map((column) => {
+        const value = cells[column] ?? ''
+        return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+      })
+      .join(',')
+  const csv = [
+    HARDCOVER_HEADER,
+    row({ Title: twice, Author: 'Mira Okafor, Jo Reader (Narrator)', Status: 'Read', 'Hardcover Book ID': '61', 'ISBN 13': uniqueIsbn(),
+      Media: 'Book', Pages: '412', Publisher: TEST_PUBLISHER, Lists: 'Favourites (#1)', Owned: 'true', 'Date Added': '2019-12-30',
+      'Date Started': '2020-01-05,2024-02-20', 'Date Finished': '2020-02-01,2024-03-09', Rating: '4.5', Review: 'Better the second time.' }),
+    row({ Title: now, Author: 'Hanne Soberg', Status: 'Currently Reading', 'Hardcover Book ID': '62', 'ISBN 13': uniqueIsbn(),
+      Publisher: TEST_PUBLISHER, Lists: 'Favourites (#2)', 'Date Added': '2025-07-30', 'Date Started': '2025-08-01' }),
+    row({ Title: wish, Author: 'Ilse Brandt', Status: 'Want to Read', 'Hardcover Book ID': '63', 'ISBN 13': uniqueIsbn(), Publisher: TEST_PUBLISHER }),
+  ].join('\n')
+
+  await page.goto('/import')
+  // The apps it reads, each with how to export from it.
+  await expect(page.getByTestId('import.empty')).toHaveText(en.import.pickText)
+  await expect(page.getByTestId('import.howTo.goodreads')).toHaveText(en.import.app.goodreads)
+  await expect(page.getByTestId('import.howTo.hardcover')).toHaveAttribute('aria-expanded', 'false')
+  await page.getByTestId('import.howTo.hardcover').click()
+  await expect(page.getByTestId('import.howTo.hardcover')).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByTestId('import.howTo.hardcover.text')).toHaveText(en.import.howTo.hardcover)
+
+  // A Hardcover export missing a column it needs says which.
+  await page.getByTestId('import.file').setInputFiles({
+    name: 'hardcover.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(csv.replace(',Status,', ',State,')),
+  })
+  await expect(page.getByTestId('import.fileError')).toHaveText(
+    en.import.fileError.missingColumns.split(' | ')[0]!.replace('{app}', 'Hardcover').replace('{columns}', '“Status”'),
+  )
+
+  await page.getByTestId('import.file').setInputFiles({ name: 'hardcover.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+  await expect(page.getByTestId('import.inFile')).toHaveText('From Hardcover · 3 books')
+  await expect(page.getByTestId('import.count.finished')).toHaveText('1')
+  await expect(page.getByTestId('import.count.reading')).toHaveText('1')
+  await expect(page.getByTestId('import.count.want_to_read')).toHaveText('1')
+  await expect(page.getByTestId('import.start')).toHaveText('Import 3 books', { timeout: 20_000 })
+  // Her lists, and Owned, offered as Collections under Hardcover's word for them.
+  await expect(page.getByTestId('import.shelves').getByRole('heading')).toHaveText(en.import.listsTitle)
+  await expect(page.getByTestId('import.shelfName')).toHaveText(['Favourites', 'Owned'])
+  await expect(page.getByTestId('import.attentionList.note')).toContainText([en.import.note.earlierReads.split(' | ')[0]!])
+
+  await page.getByTestId('import.start').click()
+  await expect(page.getByTestId('import.doneTitle')).toHaveText('3 books added')
+
+  const stored = await sql<{ key: string; status: string; reads: unknown; shelves: string[] | null }>(
+    `select e.import_key as key, e.status,
+            (select json_agg(json_build_object('started', s.started_on, 'ended', s.ended_on, 'rating', s.rating) order by s.created_at)
+               from public.reading_sessions s where s.entry_id = e.id) as reads,
+            (select array_agg(c.name order by c.name) from public.collection_entries ce join public.collections c on c.id = ce.collection_id
+              where ce.entry_id = e.id) as shelves
+       from public.library_entries e where e.member_id = $1 order by e.import_key`,
+    [member.id],
+  )
+  expect(stored).toEqual([
+    { key: 'hardcover:61', status: 'finished', shelves: ['Favourites', 'Owned'], reads: [
+      { started: '2020-01-05', ended: '2020-02-01', rating: null },
+      { started: '2024-02-20', ended: '2024-03-09', rating: 18 },
+    ] },
+    { key: 'hardcover:62', status: 'reading', shelves: ['Favourites'], reads: [{ started: '2025-08-01', ended: null, rating: null }] },
+    { key: 'hardcover:63', status: 'want_to_read', shelves: null, reads: null },
+  ])
+
+  // The same file again adds nothing.
+  await page.getByTestId('import.again').click()
+  await page.getByTestId('import.file').setInputFiles({ name: 'hardcover.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+  await expect(page.getByTestId('import.alreadyThere')).toContainText('3')
+  await expect(page.getByTestId('import.nothing')).toHaveText(en.import.nothingToImport)
 })

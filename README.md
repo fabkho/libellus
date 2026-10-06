@@ -23,8 +23,9 @@ Libellus runs as one small, invite-only instance for its owner and a few friends
 - **Collections**, your own shelves, in your order.
 - **Your reading in figures**: the Profile with books, pages, average rating and pace by year, and
   a year in review per year.
-- **Bring your history**: import a Goodreads library export (CSV); Fable exports through the same
-  format.
+- **Bring your history**: drop a Goodreads or Hardcover export (CSV) and it is told apart by its
+  header; shelves, lists, every read with its days, ratings and reviews come along. Fable exports
+  through the Goodreads format.
 - **Book links**: your own short list of links (a library catalogue, a shop) that every Book's page
   offers, filled with its ISBN, title or author. Kept with your account, visible to nobody else.
 - **Goodreads' community rating** under a Book's facts, looked up server-side and cached (optional).

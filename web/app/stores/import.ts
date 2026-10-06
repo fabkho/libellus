@@ -2,26 +2,28 @@ import { defineStore } from 'pinia'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import { probeImageInBrowser } from '~/data/covers'
 import {
-  createGoodreadsImport,
+  createBookImport,
   libraryIndex,
   libraryTitleIndex,
   importedKeys,
   pacedFetch,
+  type BookImport,
   type Edition,
-  type GoodreadsImport,
   type ImportRow,
   type RowOutcome,
-} from '~/data/goodreadsImport'
+} from '~/data/bookImport'
+import { decodeExport, NotACsvFileError } from '~/data/import/csv'
+import { parseExport } from '~/data/import/detect'
 import {
   countByStatus,
-  decodeExport,
-  NotACsvFileError,
-  NotAGoodreadsExportError,
-  parseGoodreads,
-  type GoodreadsBook,
-  type GoodreadsProblem,
+  MissingColumnsError,
+  UnknownExportError,
+  type ImportBook,
+  type ImportFile,
+  type ImportProblem,
+  type ImportSource,
   type SkippedRow,
-} from '~/data/import/goodreads'
+} from '~/data/import/rows'
 import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
 import { createSearch, isAbort } from '~/data/search'
 import { useLibraryStore } from '~/stores/library'
@@ -37,10 +39,22 @@ export type ImportPhase = 'pick' | 'reading' | 'matching' | 'preview' | 'importi
 
 /**
  * Why a file could not be used. Copy: `import.fileError.<code>`. `notCsv`: a
- * spreadsheet or anything else that is no text table; `storygraph`,
- * `librarything`, `bookshelf`: another app's CSV, told by its header.
+ * spreadsheet or anything else that is no text table; `notSupported`: a CSV
+ * no supported app wrote; `storygraph`, `librarything`, `bookshelf`: another
+ * app's CSV, told by its header, which Libellus does not read yet;
+ * `missingColumns`: a supported app's export without columns its rows need
+ * (`fileErrorDetail` says which app and which columns).
  */
-export type FileError = 'notGoodreads' | 'notCsv' | 'storygraph' | 'librarything' | 'bookshelf' | 'empty' | 'unreadable' | 'unknown'
+export type FileError =
+  | 'notSupported'
+  | 'notCsv'
+  | 'storygraph'
+  | 'librarything'
+  | 'bookshelf'
+  | 'missingColumns'
+  | 'empty'
+  | 'unreadable'
+  | 'unknown'
 
 /**
  * What the preview says about one book of the file:
@@ -52,7 +66,7 @@ export type FileError = 'notGoodreads' | 'notCsv' | 'storygraph' | 'librarything
 export type RowVerdict = 'imported' | 'inLibrary' | 'matched' | 'fromFile'
 
 export type PreviewRow = {
-  book: GoodreadsBook
+  book: ImportBook
   edition: Edition | null
   verdict: RowVerdict | null
 }
@@ -65,7 +79,7 @@ export type Attention = {
   /** The edition it will be added as, when one was found: its cover shows what she gets. */
   edition: Edition['book'] | null
   notes: (
-    | GoodreadsProblem
+    | ImportProblem
     | { code: 'fromFile' }
     | { code: 'fromFileIsbn' }
     | { code: 'unsure' }
@@ -73,15 +87,16 @@ export type Attention = {
   )[]
 }
 
-/** One of her other Goodreads shelves, offered as a Collection: how many books are on it, and whether she keeps it. */
+/** One of her other shelves (Goodreads) or lists (Hardcover), offered as a Collection: how many books are on it, and whether she keeps it. */
 export type OfferedShelf = { name: string; count: number; chosen: boolean }
 
 /**
- * The Goodreads import screen (issue #40): pick a file → preview (counts per
+ * The import screen (issues #40, #111): pick a file from any supported app (told
+ * by its header) → preview (counts per
  * Status, how many matched an edition, what needs a look) → import with
  * progress → summary. The file is read on the device; editions are looked up
  * a few rows at a time and the screen fills in as they come
- * (data/goodreadsImport.ts); the writes are one database call per few rows.
+ * (data/bookImport.ts); the writes are one database call per few rows.
  * Offline, choosing a file and importing are disabled (issue #15).
  */
 export const useImportStore = defineStore('import', () => {
@@ -91,9 +106,13 @@ export const useImportStore = defineStore('import', () => {
   const phase = ref<ImportPhase>('pick')
   const fileName = ref<string | null>(null)
   const fileError = ref<FileError | null>(null)
+  /** For `missingColumns`: the app the file is from and the columns it lacks. */
+  const fileErrorDetail = ref<{ source: ImportSource; columns: string[] } | null>(null)
+  /** The app the file came from, told by its header. */
+  const source = ref<ImportSource | null>(null)
 
   // Rows can be thousands: kept out of deep reactivity, `version` says when they changed.
-  const books = shallowRef<GoodreadsBook[]>([])
+  const books = shallowRef<ImportBook[]>([])
   const skipped = shallowRef<SkippedRow[]>([])
   const editions = shallowRef<(Edition | null)[]>([])
   /** Each row's verdict, decided once when its edition arrives (a file can be thousands of rows). */
@@ -108,12 +127,12 @@ export const useImportStore = defineStore('import', () => {
   const outcomes = shallowRef<RowOutcome[]>([])
   const writeError = ref<LibraryErrorCode | null>(null)
 
-  let repository: GoodreadsImport | null = null
+  let repository: BookImport | null = null
   let catalogue: ReturnType<typeof createCatalogueSearch> | null = null
-  function importer(): GoodreadsImport | null {
+  function importer(): BookImport | null {
     if (!backend) return null
     catalogue ??= createCatalogueSearch(backend)
-    repository ??= createGoodreadsImport(backend, {
+    repository ??= createBookImport(backend, {
       lookups: {
         catalogue,
         search: createSearch({
@@ -140,7 +159,7 @@ export const useImportStore = defineStore('import', () => {
    */
   const matchedEdition = (edition: Edition) => Boolean(edition.via) && edition.book.source !== 'import'
 
-  function verdictOf(book: GoodreadsBook, edition: Edition | null): RowVerdict | null {
+  function verdictOf(book: ImportBook, edition: Edition | null): RowVerdict | null {
     if (importedBefore.has(book.key)) return 'imported'
     // Hers under another edition: nothing to look up (#104).
     if (ownedUnderAnyEdition(book)) return 'inLibrary'
@@ -216,6 +235,8 @@ export const useImportStore = defineStore('import', () => {
     phase.value = 'pick'
     fileName.value = null
     fileError.value = null
+    fileErrorDetail.value = null
+    source.value = null
     books.value = []
     skipped.value = []
     editions.value = []
@@ -239,19 +260,24 @@ export const useImportStore = defineStore('import', () => {
     fileName.value = file.name
     phase.value = 'reading'
 
-    let parsed: ReturnType<typeof parseGoodreads>
+    let parsed: ImportFile
     try {
-      parsed = parseGoodreads(decodeExport(new Uint8Array(await file.arrayBuffer())), isoDay())
+      // Whichever supported app wrote it: told by its header (data/import/detect.ts).
+      parsed = parseExport(decodeExport(new Uint8Array(await file.arrayBuffer())), isoDay())
     } catch (error) {
+      if (error instanceof MissingColumnsError) fileErrorDetail.value = { source: error.source, columns: error.missing }
       fileError.value =
         error instanceof NotACsvFileError
           ? 'notCsv'
-          : error instanceof NotAGoodreadsExportError
-            ? (error.app ?? 'notGoodreads')
-            : 'unreadable'
+          : error instanceof UnknownExportError
+            ? (error.app ?? 'notSupported')
+            : error instanceof MissingColumnsError
+              ? 'missingColumns'
+              : 'unreadable'
       phase.value = 'pick'
       return
     }
+    source.value = parsed.source
     if (!parsed.books.length) {
       fileError.value = 'empty'
       phase.value = 'pick'
@@ -315,7 +341,7 @@ export const useImportStore = defineStore('import', () => {
     const repo = importer()
     if (!repo || phase.value !== 'preview') return
     const kept = new Set(shelves.value.filter((shelf) => shelf.chosen).map((shelf) => shelf.name.toLowerCase()))
-    const chosenShelves = (book: GoodreadsBook) => book.shelves.filter((name) => kept.has(name.toLowerCase()))
+    const chosenShelves = (book: ImportBook) => book.shelves.filter((name) => kept.has(name.toLowerCase()))
     const pending: ImportRow[] = toImport.value.map(({ book, edition }) => ({
       key: book.key,
       title: book.title,
@@ -323,6 +349,7 @@ export const useImportStore = defineStore('import', () => {
       status: book.status,
       session: book.session,
       extraReads: book.extraReads,
+      earlierReads: book.earlierReads,
       pageCount: book.pageCount,
       otherKeys: book.otherKeys,
       addedOn: book.addedOn,
@@ -383,6 +410,8 @@ export const useImportStore = defineStore('import', () => {
     phase,
     fileName,
     fileError,
+    fileErrorDetail,
+    source,
     books,
     rows,
     byStatus,
