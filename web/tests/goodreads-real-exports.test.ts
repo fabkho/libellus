@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { hintFromAnswer } from '@/data/goodreadsEditions'
 import {
   countByStatus,
   decodeExport,
@@ -158,10 +157,10 @@ describe('picking the edition among the same work', () => {
     expect(['2001: A Space Odyssey', 'Der Anschlag', 'Über die Brücke', 'Circe', 'Neuromancer'].map(titleLanguage)).toEqual(['en', 'de', 'de', null, null])
   })
 
-  it('prefers the edition in Goodreads\' language, then its page count, and an ebook for a Kindle row', () => {
-    const hint = { isbn13: null, isbn10: null, asin: null, language: 'de', pageCount: 520, format: 'Taschenbuch', publisher: null, year: 2018 }
-    const results = [book({ language: 'eng', pageCount: 412 }), book({ language: 'ger', pageCount: 300 }), book({ language: 'ger', pageCount: 520 })].map((b) => ({ book: b }))
-    expect(pickEdition({ ...row, pageCount: 520 }, results, hint)).toBe(results[2])
+  it('prefers the edition in the title\'s language, then its page count, and an ebook for a Kindle row', () => {
+    const german = { ...row, title: 'Der Ember Weg', pageCount: 520 }
+    const results = [book({ title: 'Ember Road', language: 'eng', pageCount: 520 }), book({ title: 'Der Ember Weg', language: 'ger', pageCount: 300 }), book({ title: 'Der Ember Weg', language: 'ger', pageCount: 520 })].map((b) => ({ book: b }))
+    expect(pickEdition(german, results)).toBe(results[2])
     expect(editionFit({ ...row, binding: 'Kindle Edition' }, book({ source: 'apple' }))).toBeGreaterThan(editionFit({ ...row, binding: 'Kindle Edition' }, book({ pageCount: 412 })))
     // Nothing to tell them apart: the search's order.
     const plain = [book({}), book({})].map((b) => ({ book: b }))
@@ -171,13 +170,5 @@ describe('picking the edition among the same work', () => {
   it('does not take a translation in another script for the book, whatever its brackets say', () => {
     expect(isSameWork(row, { title: 'Θνητοί Θεοί (Ember Road)', authors: ['Tove Lindqvist'] })).toBe(false)
     expect(isSameWork(row, { title: 'Ember Road (The Lantern Cycle Book 1)', authors: ['T. Lindqvist'] })).toBe(true)
-  })
-
-  it('reads what the server says about an edition', () => {
-    expect(hintFromAnswer({ status: 'not_found', checkedAt: 'x' })).toBeNull()
-    expect(
-      hintFromAnswer({ status: 'found', isbn13: '9790000002104', isbn10: null, asin: ' B0 ', language: 'de', pageCount: 0, format: 'Kindle Edition', publisher: '', year: 2017 }),
-    ).toEqual({ isbn13: '9790000002104', isbn10: null, asin: 'B0', language: 'de', pageCount: null, format: 'Kindle Edition', publisher: null, year: 2017 })
-    expect(() => hintFromAnswer({ error: 'busy' })).toThrow()
   })
 })

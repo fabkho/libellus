@@ -12,7 +12,6 @@ import {
   type ImportRow,
   type RowOutcome,
 } from '~/data/goodreadsImport'
-import { createGoodreadsEditions } from '~/data/goodreadsEditions'
 import {
   countByStatus,
   decodeExport,
@@ -123,8 +122,6 @@ export const useImportStore = defineStore('import', () => {
           languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
           catalogue,
         }),
-        // Rows without an ISBN: Goodreads' own edition by the Book Id, asked server-side (#111).
-        goodreads: createGoodreadsEditions(backend, { online: isOnline }),
       },
       probe: probeImageInBrowser,
       online: isOnline,

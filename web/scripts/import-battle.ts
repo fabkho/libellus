@@ -7,15 +7,11 @@
  * an issue; `--rows <file>` writes the per-row detail (titles included) to a
  * file of your choosing, which stays out of git.
  *
- *   pnpm tsx scripts/import-battle.ts <export.csv> [--rows /tmp/rows.json] [--keep] [--goodreads]
+ *   pnpm tsx scripts/import-battle.ts <export.csv> [--rows /tmp/rows.json] [--keep]
  *
  * Options:
  *   --rows <file>   per-row detail (picked edition vs. the file) as JSON
  *   --keep          keep the test member and her Books (default: removed by id)
- *   --goodreads <how>  ask Goodreads about rows without an ISBN by their Book Id:
- *                   `function`, the `goodreads-rating` function of the local
- *                   stack (`supabase functions serve`), or `direct`, its client
- *                   run here (live, one request a second, nothing cached)
  *
  * Only the local stack: the member is `import-battle-<run>-<random>@libellus.test`
  * and is removed by her id afterwards, with the Catalogue Books her import made
@@ -25,11 +21,9 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { createAuth } from '../app/data/auth'
 import { createCatalogueSearch } from '../app/data/catalogueSearch'
-import { createGoodreadsEditions, hintFromAnswer, type GoodreadsEditions } from '../app/data/goodreadsEditions'
 import { createGoodreadsImport, pacedFetch, type Edition, type ImportRow, type RowOutcome } from '../app/data/goodreadsImport'
-import { countByStatus, isEbookBinding, languageCode, parseGoodreads, titleLanguage, type GoodreadsBook } from '../app/data/import/goodreads'
+import { countByStatus, parseGoodreads, type GoodreadsBook } from '../app/data/import/goodreads'
 import { createSearch } from '../app/data/search'
-import { createGoodreads as createGoodreadsClient } from '../../supabase/functions/goodreads-rating/client.ts'
 import { nodeLookupDeps } from './fable/node'
 import { createInviteCode, newClient, readMailedCode, sql, uniqueEmail } from '../tests/support/stack'
 
@@ -38,7 +32,6 @@ const { values: args, positionals } = parseArgs({
   options: {
     rows: { type: 'string' },
     keep: { type: 'boolean', default: false },
-    goodreads: { type: 'string' },
   },
 })
 const file = positionals[0]
@@ -74,28 +67,12 @@ if (!member) throw new Error('no session')
 
 // ------------------------------------------------------------------ matching
 
-/** The function's client, run here: the same page reading and pace, without the cache. */
-function directGoodreads(): GoodreadsEditions {
-  const goodreads = createGoodreadsClient({ fetch: (url, init) => fetch(url, init), maxWaitMs: 60_000 })
-  let queue: Promise<unknown> = Promise.resolve()
-  return {
-    edition(goodreadsId) {
-      const turn = queue.then(async () => hintFromAnswer(await goodreads.bookPage(goodreadsId)))
-      queue = turn.catch(() => undefined)
-      return turn
-    },
-  }
-}
-const goodreadsLookup =
-  args.goodreads === 'direct' ? directGoodreads() : args.goodreads === 'function' ? createGoodreadsEditions(client) : undefined
-
 const catalogue = createCatalogueSearch(client)
 const liveFetch = pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } })
 const repository = createGoodreadsImport(client, {
   lookups: {
     catalogue,
     search: createSearch({ fetch: liveFetch, languages: ['de-DE', 'en-US'], catalogue }),
-    ...(goodreadsLookup ? { goodreads: goodreadsLookup } : {}),
   },
   probe: nodeLookupDeps().probe,
 })
@@ -179,36 +156,20 @@ const [collections] = await sql<Record<string, number>>(
 const digits = (value: string | null | undefined) => (value ?? '').replace(/\D/g, '')
 type RowReport = Record<string, unknown>
 const perRow: RowReport[] = []
-const truth = { asked: 0, known: 0, languageSame: 0, languageOther: 0, languageUnknown: 0, kindSame: 0, pagesWithin10: 0 }
-const edition = { isbnInFile: 0, goodreadsId: 0, exact: 0, exactFromFile: 0, coverLent: 0, otherEditionSameWork: 0, byTitle: 0, byTitleSameIsbn: 0, fromFile: 0, unsure: 0, byGoodreads: 0, pagesWithin10: 0, pagesKnown: 0 }
+const edition = { isbnInFile: 0, exact: 0, exactFromFile: 0, coverLent: 0, otherEditionSameWork: 0, byTitle: 0, byTitleSameIsbn: 0, fromFile: 0, unsure: 0, pagesWithin10: 0, pagesKnown: 0 }
 parsed.books.forEach((book: GoodreadsBook, index) => {
   const found = editions[index]!
   const picked = found.book
   if (book.isbn13) edition.isbnInFile++
-  if (book.goodreadsId) edition.goodreadsId++
   if (!found.via && book.isbn13 && digits(picked.isbn13) === book.isbn13) edition.exactFromFile++
   if (found.coverFrom) edition.coverLent++
   if (found.unsure) edition.unsure++
   if (!found.via) edition.fromFile++
   if (found.via === 'title') edition.byTitle++
-  if (found.via === 'goodreads') edition.byGoodreads++
   const sameIsbn = Boolean(book.isbn13) && digits(picked.isbn13) === book.isbn13
   if (found.via && sameIsbn) edition.exact++
   if (found.via === 'title' && sameIsbn) edition.byTitleSameIsbn++
   if (found.via && book.isbn13 && !sameIsbn) edition.otherEditionSameWork++
-  // Rows Goodreads was asked about: the picked edition against Goodreads' own.
-  if (found.hint !== undefined) truth.asked++
-  if (found.hint) {
-    truth.known++
-    const wanted = languageCode(found.hint.language)
-    const got = languageCode(picked.language) ?? titleLanguage(picked.title)
-    if (!wanted || !got) truth.languageUnknown++
-    else if (wanted === got) truth.languageSame++
-    else truth.languageOther++
-    if (isEbookBinding(found.hint.format) === (picked.source === 'apple')) truth.kindSame++
-    const pages = found.hint.pageCount ?? book.pageCount
-    if (pages && picked.pageCount && Math.abs(pages - picked.pageCount) <= pages * 0.1) truth.pagesWithin10++
-  }
   if (book.pageCount && picked.pageCount) {
     edition.pagesKnown++
     if (Math.abs(book.pageCount - picked.pageCount) <= book.pageCount * 0.1) edition.pagesWithin10++
@@ -218,7 +179,6 @@ parsed.books.forEach((book: GoodreadsBook, index) => {
     file: { title: book.title, authors: book.authors, isbn13: book.isbn13, pages: book.pageCount, year: book.year, shelf: book.shelf, extraReads: book.extraReads, shelves: book.shelves.length },
     picked: { title: picked.title, authors: picked.authors, isbn13: picked.isbn13, pages: picked.pageCount, year: picked.year, language: picked.language, source: picked.source, cover: Boolean(picked.coverUrl) },
     via: found.via,
-    hint: found.hint ?? null,
     coverFrom: found.coverFrom ? { title: found.coverFrom.title, isbn13: found.coverFrom.isbn13 } : null,
     unsure: found.unsure,
     sameIsbn,
@@ -237,7 +197,6 @@ const report = {
   shelvesOffered: new Set(parsed.books.flatMap((book) => book.shelves.map((name) => name.toLowerCase()))).size,
   problems: Object.fromEntries(problems),
   edition,
-  goodreadsTruth: truth,
   firstImport: tally(written.data),
   firstImportError: written.error,
   reimport: tally(again.data),

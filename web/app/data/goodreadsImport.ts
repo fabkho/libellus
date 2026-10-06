@@ -3,8 +3,7 @@ import type { Book, BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage } from './covers'
 import { abortError, type FetchLike } from './fetching'
-import type { GoodreadsEditions } from './goodreadsEditions'
-import { bookFromRow, pickEdition, titleQuery, GOODREADS_KEY_PREFIX, type EditionHint, type GoodreadsBook } from './import/goodreads'
+import { bookFromRow, pickEdition, titleQuery, GOODREADS_KEY_PREFIX, type GoodreadsBook } from './import/goodreads'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
 import { normalise } from './merge'
@@ -19,20 +18,18 @@ import type { Search } from './search'
  * the member shelved, not just the same work):
  *   1. by its ISBN: the Catalogue (a Book some member added before), then
  *      Apple Books, then OpenLibrary;
- *   2. without an ISBN, Goodreads by the row's Book Id (`goodreads`, through
- *      the server): the edition's ISBN, looked up as in 1, else its language,
- *      page count and kind for step 3;
- *   3. a title + author search over all three, taking the result of the same
+ *   2. a title + author search over all three, taking the result of the same
  *      work (`isSameWork`) whose edition fits the row best (`pickEdition`:
- *      language, page count, ebook or print, year);
- *   4. the file's own fields: an `import` Book keyed by its ISBN, or without
+ *      language told from the title, page count, Binding, year; all from the
+ *      file itself);
+ *   3. the file's own fields: an `import` Book keyed by its ISBN, or without
  *      one a Manual book of the member's (`bookFromRow`). A row whose ISBN no
  *      source knows stays that exact edition even when a title search finds
  *      the work: the work's edition only lends it its cover (`coverFrom`).
  * Rows are looked up a few at a time (`concurrency`), each source call with a
  * deadline, so a slow network slows the import down instead of stopping it; a
  * row nothing was found for is tried once more at the end (a source may have
- * refused a burst or answered too late), then falls back to step 4, and says
+ * refused a burst or answered too late), then falls back to step 3, and says
  * so when a source could not be asked (`unsure`).
  *
  * Writing: the Cover of each Book that is new to the Catalogue is resolved
@@ -41,8 +38,8 @@ import type { Search } from './search'
  * Each row's key (`goodreads:<Book Id>`) is stored on its entry and session,
  * so the same file twice adds nothing.
  *
- * Framework-free: the Supabase client, the search repositories, Goodreads and
- * the image probe come in from outside.
+ * Framework-free: the Supabase client, the search repositories and the image
+ * probe come in from outside.
  */
 
 /** Rows looked up at once. */
@@ -58,21 +55,17 @@ export const LOOKUP_TIMEOUT_MS = 15_000
 export type Edition = {
   /** A Book with an id (the Catalogue, or her own Manual book), a source's snapshot, or the file's own (`via: null`). */
   book: Book | BookSnapshot
-  /** How it was found: by the row's ISBN, by the ISBN Goodreads gave for its Book Id, by title and author, or not at all. */
-  via: 'isbn' | 'goodreads' | 'title' | null
+  /** How it was found: by the row's ISBN, by title and author, or not at all. */
+  via: 'isbn' | 'title' | null
   /** Some lookup could not be asked (no answer in time, or every source failed): a better edition may exist. */
   unsure: boolean
   /** Another edition of the same work, whose cover the file's own Book takes when its ISBN finds none. */
   coverFrom?: Book | BookSnapshot | null
-  /** What Goodreads said about the row's edition, when it was asked (rows without an ISBN). */
-  hint?: EditionHint | null
 }
 
 export type Lookups = {
   catalogue: Pick<CatalogueSearch, 'search'>
   search: Pick<Search, 'lookupIsbn' | 'search'>
-  /** What Goodreads knows about an edition by its Book Id; left out where there is no server to ask. */
-  goodreads?: GoodreadsEditions
   timeoutMs?: number
 }
 
@@ -116,29 +109,14 @@ export async function findEdition(row: GoodreadsBook, lookups: Lookups, signal?:
     if (exact) return { book: exact, via: 'isbn', unsure: false }
   }
 
-  // No ISBN in the file: Goodreads knows the edition behind the Book Id.
-  let hint: EditionHint | null = null
-  if (!row.isbn13 && row.goodreadsId && lookups.goodreads) {
-    try {
-      hint = await lookups.goodreads.edition(row.goodreadsId, signal)
-    } catch {
-      if (signal?.aborted) throw abortError()
-      unsure = true
-    }
-    if (hint?.isbn13) {
-      const exact = await byIsbn(hint.isbn13)
-      if (exact) return { book: exact, via: 'goodreads', unsure: false, hint }
-    }
-  }
-
   const outcome = await ask((s) => lookups.search.search(titleQuery(row), { signal: s }))
   if (outcome?.failed) unsure = true
-  const same = outcome ? pickEdition(row, outcome.results, hint) : null
-  const own = bookFromRow(row, hint)
+  const same = outcome ? pickEdition(row, outcome.results) : null
+  const own = bookFromRow(row)
   // An ISBN no source knows is still the edition she shelved: hers, with the work's cover.
-  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: same?.book ?? null, hint }
-  if (same) return { book: same.book, via: 'title', unsure: false, hint }
-  return { book: own, via: null, unsure, hint }
+  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: same?.book ?? null }
+  if (same) return { book: same.book, via: 'title', unsure: false }
+  return { book: own, via: null, unsure }
 }
 
 /** Runs `task` over `items`, at most `limit` at once, in order of the items. */

@@ -1,6 +1,0 @@
-{
-  "url": "https://www.goodreads.com/book/show/1111111",
-  "status": 200,
-  "contentType": "text/html; charset=utf-8",
-  "body": "<!doctype html>\n<!-- hand-written: a book page that renders other Books but not the one that was asked for -->\n<html><body>\n<script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\": {\"pageProps\": {\"apolloState\": {\"ROOT_QUERY\": {\"__typename\": \"Query\", \"getBookByLegacyId({\\\"legacyId\\\":\\\"1111111\\\"})\": null}, \"Book:kca://book/amzn1.gr.book.v1.StubOne\": {\"__typename\": \"Book\", \"id\": \"kca://book/amzn1.gr.book.v1.StubOne\"}, \"Book:kca://book/amzn1.gr.book.v1.StubTwo\": {\"__typename\": \"Book\", \"id\": \"kca://book/amzn1.gr.book.v1.StubTwo\", \"legacyId\": 34484, \"webUrl\": \"https://www.goodreads.com/book/show/34484\"}}}}}</script>\n</body></html>"
-}

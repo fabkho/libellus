@@ -14,9 +14,6 @@ const NAMES = [
   'auto-complete-we-are-legion',
   'auto-complete-sandman',
   'auto-complete-nothing',
-  'book-page-small-gods',
-  // Hand-written, not recorded: a page that renders other Books than the one asked for.
-  'book-page-no-book',
 ] as const
 export type FixtureName = (typeof NAMES)[number]
 
