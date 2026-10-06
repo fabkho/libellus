@@ -12,8 +12,11 @@ import {
   type ImportRow,
   type RowOutcome,
 } from '~/data/goodreadsImport'
+import { createGoodreadsEditions } from '~/data/goodreadsEditions'
 import {
   countByStatus,
+  decodeExport,
+  NotACsvFileError,
   NotAGoodreadsExportError,
   parseGoodreads,
   type GoodreadsBook,
@@ -33,8 +36,12 @@ import { isoDay } from '~/utils/dates'
  */
 export type ImportPhase = 'pick' | 'reading' | 'matching' | 'preview' | 'importing' | 'done'
 
-/** Why a file could not be used. Copy: `import.fileError.<code>`. */
-export type FileError = 'notGoodreads' | 'empty' | 'unreadable' | 'unknown'
+/**
+ * Why a file could not be used. Copy: `import.fileError.<code>`. `notCsv`: a
+ * spreadsheet or anything else that is no text table; `storygraph`,
+ * `librarything`, `bookshelf`: another app's CSV, told by its header.
+ */
+export type FileError = 'notGoodreads' | 'notCsv' | 'storygraph' | 'librarything' | 'bookshelf' | 'empty' | 'unreadable' | 'unknown'
 
 /**
  * What the preview says about one book of the file:
@@ -51,13 +58,24 @@ export type PreviewRow = {
   verdict: RowVerdict | null
 }
 
-/** A row the member should look at: not found, or carried over with a change, or skipped. */
+/** A row the member should look at: not found, matched by its title, carried over with a change, or skipped. */
 export type Attention = {
   key: string
   title: string
   authors: string[]
-  notes: (GoodreadsProblem | { code: 'fromFile' } | { code: 'unsure' })[]
+  /** The edition it will be added as, when one was found: its cover shows what she gets. */
+  edition: Edition['book'] | null
+  notes: (
+    | GoodreadsProblem
+    | { code: 'fromFile' }
+    | { code: 'fromFileIsbn' }
+    | { code: 'unsure' }
+    | { code: 'byTitle'; year: number | null; language: string | null }
+  )[]
 }
+
+/** One of her other Goodreads shelves, offered as a Collection: how many books are on it, and whether she keeps it. */
+export type OfferedShelf = { name: string; count: number; chosen: boolean }
 
 /**
  * The Goodreads import screen (issue #40): pick a file → preview (counts per
@@ -82,7 +100,8 @@ export const useImportStore = defineStore('import', () => {
   /** Each row's verdict, decided once when its edition arrives (a file can be thousands of rows). */
   const verdicts = shallowRef<(RowVerdict | null)[]>([])
   const version = ref(0)
-  let importedBefore = new Set<string>()
+  /** Rows imported before: key → entry id. */
+  let importedBefore = new Map<string, string>()
   let owned: (book: Edition['book']) => LibraryEntry | null = () => null
   let ownedUnderAnyEdition: ReturnType<typeof libraryTitleIndex> = () => null
 
@@ -104,6 +123,8 @@ export const useImportStore = defineStore('import', () => {
           languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
           catalogue,
         }),
+        // Rows without an ISBN: Goodreads' own edition by the Book Id, asked server-side (#111).
+        goodreads: createGoodreadsEditions(backend, { online: isOnline }),
       },
       probe: probeImageInBrowser,
       online: isOnline,
@@ -143,18 +164,49 @@ export const useImportStore = defineStore('import', () => {
   const alreadyThere = computed(() => count('imported') + count('inLibrary'))
   const toImport = computed(() => rows.value.filter((row) => row.verdict === 'matched' || row.verdict === 'fromFile'))
 
+  /** Her other shelves in the file, most books first: each offered as a Collection, kept unless she says no. */
+  const declined = ref(new Set<string>())
+  const shelves = computed<OfferedShelf[]>(() => {
+    const counts = new Map<string, { name: string; count: number }>()
+    for (const book of books.value) {
+      for (const name of book.shelves) {
+        const key = name.toLowerCase()
+        const shelf = counts.get(key) ?? { name, count: 0 }
+        shelf.count++
+        counts.set(key, shelf)
+      }
+    }
+    return [...counts.values()]
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+      .map((shelf) => ({ ...shelf, chosen: !declined.value.has(shelf.name.toLowerCase()) }))
+  })
+  function toggleShelf(name: string) {
+    const key = name.toLowerCase()
+    const next = new Set(declined.value)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    declined.value = next
+  }
+
   /** Rows that were not found or carried over with a change, then the skipped ones, in file order. */
   const attention = computed<Attention[]>(() => {
     const list: Attention[] = []
     for (const { book, edition, verdict } of rows.value) {
       if (verdict === 'imported' || verdict === 'inLibrary') continue
       const notes: Attention['notes'] = []
-      if (verdict === 'fromFile') notes.push(edition?.unsure ? { code: 'unsure' } : { code: 'fromFile' })
+      if (verdict === 'fromFile') {
+        notes.push(edition?.unsure ? { code: 'unsure' } : edition?.book.isbn13 ? { code: 'fromFileIsbn' } : { code: 'fromFile' })
+      }
+      // Found by title: another edition of the work, which she may want to change after.
+      if (verdict === 'matched' && edition?.via === 'title') {
+        notes.push({ code: 'byTitle', year: edition.book.year, language: edition.book.language })
+      }
       notes.push(...book.problems)
-      if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, notes })
+      const shown = verdict === 'matched' || edition?.coverFrom ? (edition?.coverFrom ?? edition?.book ?? null) : null
+      if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, notes })
     }
     for (const row of skipped.value) {
-      list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], notes: [row.problem] })
+      list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], edition: null, notes: [row.problem] })
     }
     return list
   })
@@ -171,7 +223,8 @@ export const useImportStore = defineStore('import', () => {
     skipped.value = []
     editions.value = []
     verdicts.value = []
-    importedBefore = new Set()
+    importedBefore = new Map()
+    declined.value = new Set()
     owned = () => null
     ownedUnderAnyEdition = () => null
     progress.done = 0
@@ -191,9 +244,14 @@ export const useImportStore = defineStore('import', () => {
 
     let parsed: ReturnType<typeof parseGoodreads>
     try {
-      parsed = parseGoodreads(await file.text(), isoDay())
+      parsed = parseGoodreads(decodeExport(new Uint8Array(await file.arrayBuffer())), isoDay())
     } catch (error) {
-      fileError.value = error instanceof NotAGoodreadsExportError ? 'notGoodreads' : 'unreadable'
+      fileError.value =
+        error instanceof NotACsvFileError
+          ? 'notCsv'
+          : error instanceof NotAGoodreadsExportError
+            ? (error.app ?? 'notGoodreads')
+            : 'unreadable'
       phase.value = 'pick'
       return
     }
@@ -212,7 +270,7 @@ export const useImportStore = defineStore('import', () => {
     }
     importedBefore = keys.data
     owned = libraryIndex(library)
-    ownedUnderAnyEdition = libraryTitleIndex(library)
+    ownedUnderAnyEdition = libraryTitleIndex(library, keys.data)
     books.value = parsed.books
     skipped.value = parsed.skipped
     editions.value = parsed.books.map(() => null)
@@ -259,14 +317,21 @@ export const useImportStore = defineStore('import', () => {
   async function start() {
     const repo = importer()
     if (!repo || phase.value !== 'preview') return
+    const kept = new Set(shelves.value.filter((shelf) => shelf.chosen).map((shelf) => shelf.name.toLowerCase()))
+    const chosenShelves = (book: GoodreadsBook) => book.shelves.filter((name) => kept.has(name.toLowerCase()))
     const pending: ImportRow[] = toImport.value.map(({ book, edition }) => ({
       key: book.key,
       title: book.title,
       authors: book.authors,
       status: book.status,
       session: book.session,
+      extraReads: book.extraReads,
+      pageCount: book.pageCount,
+      otherKeys: book.otherKeys,
       addedOn: book.addedOn,
+      collections: chosenShelves(book),
       book: edition!.book,
+      coverFrom: edition!.coverFrom ?? null,
     }))
     writeError.value = null
     outcomes.value = []
@@ -328,6 +393,8 @@ export const useImportStore = defineStore('import', () => {
     fromFile,
     alreadyThere,
     toImport,
+    shelves,
+    toggleShelf,
     attention,
     progress,
     outcomes,

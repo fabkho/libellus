@@ -1,18 +1,20 @@
 <script setup lang="ts">
-// Import books (issue #40): a Goodreads library export — or the Goodreads CSV
-// a Fable export extension writes — into the member's Library. Reached from
+// Import books (issue #40): a Goodreads library export into the member's
+// Library. Reached from
 // the Profile's account rows (issue #78). One line says where the file comes from; then the file is
 // read on the device and every book's edition looked up (the count runs as
 // they come in), a preview says what would happen (how many per Status, how
-// many matched an edition, which books need a look), *Import N books* writes
+// many matched an edition, her other shelves offered as Collections, which
+// books need a look — with the cover of the edition each will be), *Import N books* writes
 // them with a running count, and a summary leads to the Library. Importing
 // the same file again adds nothing. A pushed screen in the tab layout.
 import type { ImportNote } from '~/components/import/NoteList.vue'
+import { languageCode } from '~/data/import/goodreads'
 import { useImportStore, type Attention } from '~/stores/import'
 
 definePageMeta({ layout: 'tabs', screen: 'import', pushed: true })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const store = useImportStore()
 // Choosing a file looks books up and importing writes: offline neither can (#15).
@@ -40,8 +42,30 @@ function picked(event: Event) {
 const picking = computed(() => store.phase === 'pick' || store.phase === 'reading')
 const fileTitle = computed(() => t('import.inFile', { count: store.books.length }, store.books.length))
 
+/** `de` → "German", in the app's language; null when there is none to name. */
+function languageName(code: string | null): string | null {
+  const short = languageCode(code)
+  if (!short) return null
+  try {
+    return new Intl.DisplayNames([locale.value], { type: 'language' }).of(short) ?? null
+  } catch {
+    return null
+  }
+}
+
 function noteText(note: Attention['notes'][number]): string {
-  return note.code === 'otherShelf' ? t('import.note.otherShelf', { shelf: note.shelf }) : t(`import.note.${note.code}`)
+  switch (note.code) {
+    case 'otherShelf':
+      return t('import.note.otherShelf', { shelf: note.shelf })
+    case 'extraReads':
+      return t('import.note.extraReads', { count: note.count }, note.count)
+    case 'byTitle': {
+      const edition = [note.year, languageName(note.language)].filter(Boolean).join(', ')
+      return edition ? t('import.note.byTitleEdition', { edition }) : t('import.note.byTitle')
+    }
+    default:
+      return t(`import.note.${note.code}`)
+  }
 }
 
 const attention = computed<ImportNote[]>(() =>
@@ -49,6 +73,7 @@ const attention = computed<ImportNote[]>(() =>
     key: item.key,
     title: item.title || t('import.untitled'),
     authors: item.authors,
+    cover: item.edition ? { url: item.edition.coverUrl, thumbhash: item.edition.coverThumbhash, colors: item.edition.coverColors } : null,
     notes: item.notes.map(noteText),
   })),
 )
@@ -142,6 +167,14 @@ const failures = computed<ImportNote[]>(() =>
           <p v-else class="text-subhead text-ink-muted" data-testid="import.nothing">{{ t('import.nothingToImport') }}</p>
           <UiButton block tone="plain" data-testid="import.another" @click="store.reset()">{{ t('import.stop') }}</UiButton>
         </div>
+
+        <ImportShelves
+          v-if="store.shelves.length && store.toImport.length"
+          class="mt-xl"
+          :shelves="store.shelves"
+          :disabled="store.phase === 'importing'"
+          @toggle="store.toggleShelf"
+        />
       </template>
 
       <UiButton v-if="store.phase === 'matching'" block tone="plain" class="mt-md" data-testid="import.cancel" @click="store.reset()">
