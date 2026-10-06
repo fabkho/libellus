@@ -23,6 +23,7 @@
     "@nuxtjs/i18n": "^10.6.0",
     "@pinia/nuxt": "^1.0.2",
     "@supabase/supabase-js": "^2.117.2",
+    "fflate": "^0.8.3",
     "nuxt": "^4.5.2",
     "papaparse": "^5.7.0",
     "pinia": "^4.0.3",
