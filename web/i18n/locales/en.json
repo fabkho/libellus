@@ -897,7 +897,8 @@
       "vue": "Vue",
       "chunk": "Chunk",
       "outbox": "Write",
-      "shelf": "Shelf"
+      "shelf": "Shelf",
+      "vitals": "Vitals"
     },
     "empty": {
       "title": "No errors in the last 7 days",

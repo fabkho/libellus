@@ -3,14 +3,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 /**
  * The client error log: the errors the app meets on a device (an exception, a
  * write that waited offline and was finally refused, the owner's shelf failing to
- * load, a chunk that is gone after a deploy), sent to the database's own log
+ * load, a chunk that is gone after a deploy, a Web Vital that went badly), sent to the database's own log
  * (`log_client_error`, supabase/migrations/…_client_errors.sql) instead of a
  * third-party service. The owner reads them in the dashboard (docs/OPERATIONS.md).
  *
  * Technical details only. A report is a kind, a message and a stack, scrubbed of
  * e-mail addresses, tokens and the query and fragment of every URL, and cut to
  * size; the route is the path, never its query. The callers that report on their
- * own (the outbox, the shelf) name actions and codes, never a book. The database
+ * own (the outbox, the shelf, the vitals) name actions, codes and elements, never a book. The database
  * scrubs and cuts again.
  *
  * `createErrorLog` keeps what waits in a short line on the device (memory, and
@@ -23,7 +23,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * handed in (plugins/error-log.client.ts, the tests).
  */
 
-export const ERROR_KINDS = ['error', 'unhandledrejection', 'vue', 'chunk', 'outbox', 'shelf'] as const
+export const ERROR_KINDS = ['error', 'unhandledrejection', 'vue', 'chunk', 'outbox', 'shelf', 'vitals'] as const
 export type ErrorKind = (typeof ERROR_KINDS)[number]
 
 /** The sizes the database keeps (it cuts too). */

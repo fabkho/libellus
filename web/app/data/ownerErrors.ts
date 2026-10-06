@@ -13,7 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  */
 
 /** The kinds the log knows (log_client_error), in the order the filter lists them. */
-export const ERROR_KINDS = ['error', 'unhandledrejection', 'vue', 'chunk', 'outbox', 'shelf'] as const
+export const ERROR_KINDS = ['error', 'unhandledrejection', 'vue', 'chunk', 'outbox', 'shelf', 'vitals'] as const
 export type OwnerErrorKind = (typeof ERROR_KINDS)[number]
 
 /** One error group: every report of a kind and message in the window. */
