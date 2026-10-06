@@ -254,7 +254,7 @@ jobs:
       - name: Cache the browsers
         if: env.RUN_E2E == 'true'
         id: browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
