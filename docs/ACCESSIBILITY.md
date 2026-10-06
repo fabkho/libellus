@@ -115,13 +115,12 @@ shimmer stops, the tab bar stays.
 
 ## Known gaps
 
-- **Regal's DOM** (the owner's shelf), not Libellus' to change, follow-ups for Regal:
-  the row's scroller has an `aria-label` on a `div` without a role (axe `aria-prohibited-attr`,
-  allowed in `e2e/support.ts`); the row and the Stack name no Book (Libellus adds a hidden list
-  beside them); a Book taken out is a canvas and a card moved to `<body>`, outside any landmark
-  (axe `region`, moderate), and the card is not a dialog that takes focus; the Stack's tooltip reads
-  its stars as "★★★★★ ★★★★★"; the row's cover-flip and its keyboard (Enter takes the Book in focus
-  out) are Regal's own.
+- **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
+  scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
+  each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}
+  details" because Libellus' `BookSheet` fills its `#detail` slot) and stars are read as text.
+  What is left of Regal's DOM: a Book taken out is a card moved to `<body>`, outside any landmark
+  (axe `region`, moderate), and the row's cover-flip is Regal's own.
 - **The reader** (#131, merged during this audit, left alone here): its sepia room's text tokens are
   below 4.5:1 (`inkMuted` 4.0, `inkFaint` 2.6, `accent` as text 3.5 on the sepia surfaces), and its
   chrome and sheets (`components/reader/*`) still set text in `inkGhost` and the plain accent; it has

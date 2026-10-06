@@ -52,7 +52,7 @@ const facts = computed(() => {
 <template>
   <div class="relative" data-testid="shelfRow.sheet">
     <!-- UiSheet's title row: 44 pt, Done and the action as wide as each other's copy needs. -->
-    <header
+    <div
       class="relative box-content grid h-(--size-touch) grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-sm px-ml"
       :class="sheet ? 'pt-0' : 'pt-md'"
     >
@@ -67,7 +67,7 @@ const facts = computed(() => {
           {{ face === 'front' ? t('shelf.detail.backCover') : t('shelf.detail.frontCover') }}
         </button>
       </div>
-    </header>
+    </div>
     <div class="flex flex-col gap-ms px-ml pt-md pb-md">
       <h2 class="book-title text-headline text-balance" data-testid="shelfRow.title">{{ book.title }}</h2>
       <p v-if="facts.length" class="figures flex flex-wrap items-center gap-x-xs text-meta text-ink-faint" data-testid="shelfRow.detailMeta">
