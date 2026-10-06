@@ -122,6 +122,10 @@ shimmer stops, the tab bar stays.
   (axe `region`, moderate), and the card is not a dialog that takes focus; the Stack's tooltip reads
   its stars as "★★★★★ ★★★★★"; the row's cover-flip and its keyboard (Enter takes the Book in focus
   out) are Regal's own.
+- **The reader** (#131, merged during this audit, left alone here): its sepia room's text tokens are
+  below 4.5:1 (`inkMuted` 4.0, `inkFaint` 2.6, `accent` as text 3.5 on the sepia surfaces), and its
+  chrome and sheets (`components/reader/*`) still set text in `inkGhost` and the plain accent; it has
+  no a11y flow yet. `accentInk` already has a sepia value (#7f4d14, 5.2:1) for when it moves over.
 - **TalkBack by hand.** The emulator pass read the tree TalkBack gets and checked it on every step of
   the core loop, but gestures injected through adb are not taken as TalkBack gestures, so swiping
   through a screen and turning the wheel with TalkBack were not done by a person. Worth one manual
