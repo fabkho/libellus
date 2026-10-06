@@ -224,7 +224,8 @@ scripts/      create-invite-code.sh, the owner's tool for minting invite codes
 design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests
 docs/         DESIGN.md (design guideline), MOTION.md (motion), parity.md (per-screen behaviour),
-              HOSTING.md (Cloudflare Pages), agents/ (how agents use the issue tracker)
+              HOSTING.md (Cloudflare Pages), OPERATIONS.md (the client error log and how to read it),
+              agents/ (how agents use the issue tracker)
 SPEC.md       condensed spec; CONTEXT.md the domain glossary
 ```
 
