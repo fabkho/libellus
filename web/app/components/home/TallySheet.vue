@@ -13,11 +13,13 @@
 // whoever has no row, and for the owner while her row is not there: the file
 // has none of that year's Books, or could not be read).
 import { finishedIn } from '~/data/stats'
+import type { SheetRestore } from '~/composables/useSheetRestore'
 import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
 
 const open = defineModel<boolean>('open', { required: true })
-const props = defineProps<{ year: number }>()
+// Back from a Book opened from it: open again as it was left (components/ui/Sheet.vue).
+const props = withDefaults(defineProps<{ year: number; restore?: SheetRestore | null }>(), { restore: null })
 
 const { t } = useI18n()
 const stats = useStatsStore()
@@ -44,7 +46,7 @@ watch(
 </script>
 
 <template>
-  <ProfileReadsSheet v-model:open="open" :title="t('home.readIn', { year })" :reads="showList ? reads : []" testid="homeTally">
+  <ProfileReadsSheet v-model:open="open" :title="t('home.readIn', { year })" :reads="showList ? reads : []" :restore="restore" testid="homeTally">
     <template #top>
       <!-- A drag that starts on the row is the row's (and the page's), never the sheet's swipe down. -->
       <div v-if="shelfBooks.length" class="shelf-slot mb-md" data-no-swipe>

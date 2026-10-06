@@ -13,13 +13,20 @@
 // iOS raises the keyboard with it. Closing gives focus back to what opened it
 // (composables/useModalLayer.ts). With the keyboard up the sheet rides on it
 // and the focused field scrolls into view (composables/useKeyboardInset.ts).
+//
+// A sheet that leads to a Book page comes back when the member returns from
+// that page (composables/useSheetRestore.ts), and `restore` says so: opened
+// with it, the sheet is simply there, as if it had stayed open under the Book
+// page — at its resting place with its scrim, its list scrolled where it was,
+// nothing rising or fading in. A fresh open (no `restore`) still rises.
 import { revealDelta, sheetLift } from '~/utils/keyboard'
+import type { SheetRestore } from '~/composables/useSheetRestore'
 
 const open = defineModel<boolean>('open', { required: true })
 
-withDefaults(
-  defineProps<{ title: string; testid: string; action?: string; actionDisabled?: boolean }>(),
-  { action: undefined, actionDisabled: false },
+const props = withDefaults(
+  defineProps<{ title: string; testid: string; action?: string; actionDisabled?: boolean; restore?: SheetRestore | null }>(),
+  { action: undefined, actionDisabled: false, restore: null },
 )
 const emit = defineEmits<{ action: [] }>()
 
@@ -46,8 +53,11 @@ function onKeydown(event: KeyboardEvent) {
 watch(open, (isOpen) => {
   if (!import.meta.client) return
   if (isOpen) {
-    scrolled.value = false
+    // Coming back (`restore`): the hairline is where the scroll left it, drawn with the sheet.
+    scrolled.value = (props.restore?.scroll ?? 0) > 0
+    resting.value = Boolean(props.restore)
     window.addEventListener('keydown', onKeydown)
+    if (props.restore) void putBack(props.restore.scroll)
   } else {
     followsKeyboard.value = false
     window.removeEventListener('keydown', onKeydown)
@@ -116,6 +126,20 @@ const titleId = useId()
 const moving = ref(false)
 
 /**
+ * The sheet is being put back (`restore`): its enter transitions are off, for
+ * this opening only. Set as it opens, before it is drawn, and cleared once it
+ * is, so the way out is the usual one.
+ */
+const resting = ref(false)
+
+/** Scrolls the body to where it was, once the content is in (before the first frame is painted). */
+async function putBack(scroll: number) {
+  await nextTick()
+  if (body.value) body.value.scrollTop = scroll
+  resting.value = false
+}
+
+/**
  * The panel and what is in it stay mounted until the sheet has slid away, and
  * are only hidden (`v-show`) for the leave: with `v-if`, Vue unmounts the
  * content at once and keeps just the element for the transition, so a
@@ -133,12 +157,13 @@ function onAfterLeave() {
 
 <template>
   <Teleport to="body">
-    <Transition name="scrim">
+    <Transition name="scrim" :css="!resting">
       <div v-if="open" ref="scrim" class="fixed inset-0 z-40 touch-none bg-scrim" :data-testid="`${testid}.scrim`" @click="close" />
     </Transition>
     <Transition
       v-if="rendered"
       name="sheet"
+      :css="!resting"
       appear
       @before-enter="moving = true"
       @after-enter="moving = false"
@@ -204,7 +229,7 @@ function onAfterLeave() {
         </header>
         <!-- `md` between the title row and the content, and `md` under it above
              the home indicator / Android's navigation (Material's least). -->
-        <div ref="body" class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-ml pt-md pb-md" @scroll.passive="onScroll">
+        <div ref="body" data-sheet-body class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-ml pt-md pb-md" @scroll.passive="onScroll">
           <slot />
         </div>
       </section>

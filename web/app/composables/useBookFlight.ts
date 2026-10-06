@@ -66,6 +66,8 @@ const COVER = '[data-cover]'
 /** A cover that is flying: the copy in the air stands in for it. */
 const HIDDEN = 'data-flight-hidden'
 const LAYER = '[data-flight-layer]'
+/** On the flying layer while it flies to a row in a sheet: over the sheet (BookFlight.vue). */
+const OVER_SHEET = 'data-over-sheet'
 /** On the root while a flight is about to start: the live page is hidden under the copy of the page being left. */
 const POSE = 'data-flight-pose'
 /**
@@ -672,6 +674,8 @@ function pop(departure: Departure, to: RouteLocationNormalized) {
 
   if (row && rowBox && onScreen(rowBox, viewport()) && heroBox && layers) {
     hide(flight, row)
+    // Its row is in a sheet that came back with the page (UiSheet's `restore`): the cover flies over it.
+    if (row.closest('[role="dialog"]')) layers.over.setAttribute(OVER_SHEET, '')
     standAside(snapshot, departure.cover)
     flight.rowBox = rowBox
     flight.heroBox = heroBox
@@ -782,6 +786,7 @@ function drop(flight: Flight) {
   if (running === flight) {
     running = null
     layers?.over.removeAttribute('data-moving')
+    layers?.over.removeAttribute(OVER_SHEET)
   }
 }
 

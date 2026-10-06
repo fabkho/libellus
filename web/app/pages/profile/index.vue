@@ -75,7 +75,7 @@ const columns = computed(() =>
 const lit = computed(() => (stats.year === 'all' ? (years.value.includes(thisYear) ? thisYear : null) : stats.year === thisYear ? thisMonth : null))
 
 // The sheet of a month's books or a star row's; open again on Back from a book opened in it.
-const { sheet, shown, open: sheetOpen } = useProfileSheet()
+const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const sheetTitle = computed(() => {
   const s = shown.value
   if (!s) return ''
@@ -166,6 +166,6 @@ function back() {
       <ProfileAccount />
     </div>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.year === 'all'" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.year === 'all'" />
   </div>
 </template>

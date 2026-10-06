@@ -62,7 +62,7 @@ const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
 
 // A star row's books; open again on Back from a book opened in it.
-const { sheet, shown, open: sheetOpen } = useProfileSheet()
+const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const sheetTitle = computed(() => (shown.value?.kind === 'stars' ? t('profile.sheet.stars', { count: shown.value.star, year: String(shown.value.year) }, shown.value.star) : ''))
 const sheetReads = computed(() => (shown.value?.kind === 'stars' ? readsWithStars(reads.value, shown.value.year, shown.value.star) : []))
 function pickStars(star: number) {
@@ -176,7 +176,7 @@ function back() {
       </div>
     </UiReveal>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :title="sheetTitle" :reads="sheetReads" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" />
   </div>
 </template>
 
