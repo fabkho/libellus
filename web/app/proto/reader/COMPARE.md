@@ -353,3 +353,35 @@ no bar, no hairline — the round glass buttons float (Back at the left; Search 
 right, at the book page's inset), the title in the serif between them, and a short fade of the
 room behind them (solid under the status bar and half the button row, then fading out) keeps the
 title and the clock clear of the words. Scroll mode shows one line ("Metamorphosis · I").
+
+## Round 3, c: search is the app's search palette
+In c, the capsule's magnifier opens **the app's search palette** (`BookSearch.vue`) with the
+**same morph as the tab bar → palette**: the palette is laid out at its open size from the first
+frame, a `clip-path` grows from the capsule's outline to the palette's, the magnifier flies from
+the capsule into the query row (the capsule's other buttons step back as the palette passes over
+them), the veil and blur come in over the page, the surface and the results fade in at the same
+stages (`overlay` in, `overlay-exit` out, `standard` curve). One Web Animations timeline per
+direction, so a close turns an opening around wherever it is; Reduce Motion cross-fades in place;
+swipe down, Escape, Back, Cancel or a tap on the veil close it; it rides on the iOS keyboard like
+the app's.
+- The query row is the app's (accent magnifier, field, clear, Cancel), the results above it: **the
+  next place after where you are sits right by the query** ("II · next"), further places above it,
+  then a "Before where you are" rule and the places before you. Each place is a chapter eyebrow
+  and two lines of the book with the words lit; a lamp hairline sweeps above the query while the
+  book is searched, then "25 places".
+- A tap on a place goes there (the places stay outlined in the lamp colour on the page), the
+  palette turns back into the capsule, then the capsule steps away.
+- Search from selected words in c opens the same palette (a fade, as there is no capsule then).
+  a and the scroll mode keep the Search sheet.
+- **Progress no longer moves for look-ups:** a jump by Search, Contents or the scrubber is not
+  reading — progress waits until the member reads on from there (turns a page, scrolls).
+
+**Reuse:** `SearchOverlay.vue` cannot be dropped in as it is — it is wired to the catalogue's
+search store, the tab bar's `[data-morph]` capsule and its Home/Library tabs. The prototype carries
+a faithful copy of its palette and morph (same parts, tokens, keyframes, stages). **Production:**
+extract the palette shell and the morph from `SearchOverlay` into one component (`UiPalette`:
+veil, plate, shade, query row with a slot for its leading part, results slot, `morph from <element>`)
+that both the app's search and the reader use; ≈ 1 day including the e2e of both.
+Strips: `round3/c-search-morph-open-light.jpg` (capsule → palette → results, slowed 5×),
+`round3/c-search-morph-close-pick-light.jpg` (a place picked → palette back into the capsule →
+the page, places outlined), `round3/c-search-palette-dark-sepia.jpg`.

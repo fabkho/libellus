@@ -13,6 +13,7 @@ import newsreader600 from '@fontsource/newsreader/files/newsreader-latin-600-nor
 import geist400 from '@fontsource/geist/files/geist-latin-400-normal.woff2?url'
 import geist600 from '@fontsource/geist/files/geist-latin-600-normal.woff2?url'
 import './vendor/foliate-js/view.js'
+import { compare as compareCfi } from './vendor/foliate-js/epubcfi.js'
 import { Overlayer } from './vendor/foliate-js/overlayer.js'
 import { HIGHLIGHTS } from './highlights'
 import type { ReaderSettings } from './settings'
@@ -453,6 +454,14 @@ export class ReaderEngine {
   }
   clearSearch() {
     this.view.clearSearch()
+  }
+  /** -1, 0 or 1: where one place stands against another. */
+  compareCfi(a: string, b: string): number {
+    try {
+      return compareCfi(a, b)
+    } catch {
+      return 0
+    }
   }
 
   destroy() {

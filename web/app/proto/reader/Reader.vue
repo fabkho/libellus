@@ -17,6 +17,7 @@ import SelectionMenu, { type MenuTarget } from './SelectionMenu.vue'
 import TranslateSheet from './TranslateSheet.vue'
 import DefineSheet from './DefineSheet.vue'
 import SearchSheet from './SearchSheet.vue'
+import BookSearch from './BookSearch.vue'
 import { REST, coverCopy, fitBox, poseOf, ratioOf, rectOf } from './flight'
 import { ProgressWriter, QUICK_POLICY, SPEC_POLICY, pageAt } from './progress'
 import { MARGINS, readSettings, writeSettings, type ReaderSettings, type ReaderTheme } from './settings'
@@ -103,9 +104,30 @@ const finishedHere = ref(false)
 const translateOpen = ref(false)
 const defineOpen = ref(false)
 const searchOpen = ref(false)
+/** c's search: the app's palette, grown out of the capsule (BookSearch.vue). */
+const paletteOpen = ref(false)
+const paletteChrome = ref<'capsule' | 'morph' | 'palette'>('capsule')
+let pickedInPalette = false
 const sheetOpen = computed(
-  () => typeOpen.value || tocOpen.value || startOpen.value || finishOpen.value || translateOpen.value || defineOpen.value || searchOpen.value,
+  () =>
+    typeOpen.value || tocOpen.value || startOpen.value || finishOpen.value || translateOpen.value || defineOpen.value || searchOpen.value || paletteOpen.value,
 )
+/** Search: c's capsule morphs into the palette; a's bars (and scroll mode) open the sheet. */
+function openSearch(initial: string) {
+  searchInitial.value = initial
+  if (mode.value === 'c') {
+    pickedInPalette = false
+    paletteOpen.value = true
+  } else searchOpen.value = true
+}
+function onPaletteGo(cfi: string) {
+  pickedInPalette = true
+  jump(() => engine.value?.goTo(cfi))
+}
+function onPaletteSettled(direction: 'open' | 'close') {
+  // A place picked: once the palette is the capsule again, the chrome steps away and the page is the book's.
+  if (direction === 'close' && pickedInPalette) chrome.value = false
+}
 
 // Back (Android's gesture, the browser's Back): the chrome (or the end page) first, then the reader.
 const open = ref(true)
@@ -236,8 +258,7 @@ function openLookup(kind: 'translate' | 'define' | 'search') {
   const text = menuTarget.value?.text ?? ''
   closeMenu()
   if (kind === 'search') {
-    searchInitial.value = text
-    searchOpen.value = true
+    openSearch(text)
     return
   }
   sheetText.value = text
@@ -443,7 +464,8 @@ let lastIndex = -1
 let jumping = false
 function jump(go: () => Promise<unknown> | undefined) {
   jumping = true
-  moved = true
+  // Looking something up (Contents, Search, the scrubber) is not reading: progress waits until the member reads on from there.
+  moved = false
   void Promise.resolve(go()).finally(() => setTimeout(() => (jumping = false), 400))
 }
 function onScroll(offset: number, size: number, viewSize: number) {
@@ -769,7 +791,7 @@ function nextChapter() {
       @back="close"
       @contents="tocOpen = true"
       @type="typeOpen = true"
-      @search="(searchInitial = ''), (searchOpen = true)"
+      @search="openSearch('')"
       @scrub="goToFraction"
       @set-here="setHere"
     />
@@ -782,18 +804,19 @@ function nextChapter() {
       @back="close"
       @contents="tocOpen = true"
       @type="typeOpen = true"
-      @search="(searchInitial = ''), (searchOpen = true)"
+      @search="openSearch('')"
       @next="nextChapter"
       @set-here="setHere"
     />
     <ChromePrinted
       v-else
       :shown="chrome && ready"
+      :search="paletteChrome"
       :info="info"
       @back="close"
       @contents="tocOpen = true"
       @type="typeOpen = true"
-      @search="(searchInitial = ''), (searchOpen = true)"
+      @search="openSearch('')"
       @set-here="setHere"
     />
 
@@ -864,6 +887,16 @@ function nextChapter() {
     <TranslateSheet v-model:open="translateOpen" :text="sheetText" :from="engine?.language ?? 'en'" @define="swapLookup('define')" />
     <DefineSheet v-model:open="defineOpen" :text="sheetText" :language="engine?.language ?? 'en'" @translate="swapLookup('translate')" />
     <SearchSheet v-model:open="searchOpen" :engine="engine" :initial="searchInitial" @go="goToHit" />
+    <BookSearch
+      v-model:open="paletteOpen"
+      :engine="engine"
+      :initial="searchInitial"
+      :here="loc?.cfi ?? null"
+      :reduce-motion="reduced"
+      @go="onPaletteGo"
+      @chrome="paletteChrome = $event"
+      @settled="onPaletteSettled"
+    />
   </div>
   <!-- Outside the reader's layer, so the cover keeps its opacity while the room fades in and out under it. -->
   <div ref="flyLayer" class="pointer-events-none fixed inset-0 z-[36]" aria-hidden="true" />

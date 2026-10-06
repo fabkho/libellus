@@ -9,7 +9,7 @@ import ProtoIcon from './ProtoIcon.vue'
 import ProtoRound from './ProtoRound.vue'
 import type { ChromeInfo } from './types'
 
-defineProps<{ shown: boolean; info: ChromeInfo }>()
+defineProps<{ shown: boolean; info: ChromeInfo; search: 'capsule' | 'morph' | 'palette' }>()
 defineEmits<{ back: []; contents: []; type: []; search: []; setHere: [] }>()
 </script>
 
@@ -27,14 +27,19 @@ defineEmits<{ back: []; contents: []; type: []; search: []; setHere: [] }>()
       >
         Your progress is at <span class="figures">p. {{ info.behind }}</span> · <span class="font-medium text-accent">Set to p. {{ info.page }}</span>
       </button>
-      <nav class="capsule glass edge flex h-(--size-tab-bar) items-center gap-xxs rounded-pill px-xs shadow-float">
-        <UiRoundButton icon="back" label="Back to the book" data-testid="reader.back" @click="$emit('back')" />
-        <button type="button" class="figures min-h-(--size-touch) px-sm text-caption text-ink-muted" data-testid="reader.where" @click="$emit('contents')">
+      <!-- The search palette grows out of this capsule (BookSearch.vue), as the app's palette grows out of the tab bar. -->
+      <nav
+        class="capsule glass edge flex h-(--size-tab-bar) items-center gap-xxs rounded-pill px-xs shadow-float"
+        :class="search === 'palette' && 'invisible'"
+        data-reader-morph="capsule"
+      >
+        <UiRoundButton data-reader-morph="item" icon="back" label="Back to the book" data-testid="reader.back" @click="$emit('back')" />
+        <button type="button" class="figures min-h-(--size-touch) px-sm text-caption text-ink-muted" data-reader-morph="item" data-testid="reader.where" @click="$emit('contents')">
           {{ Math.round(info.fraction * 100) }} %<span class="text-ink-ghost"> · </span>{{ info.pages - info.page }} left
         </button>
-        <ProtoRound label="Search in the book" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
-        <ProtoRound label="Contents" data-testid="reader.contents" @click="$emit('contents')"><ProtoIcon name="contents" :size="20" /></ProtoRound>
-        <ProtoRound label="Text and theme" data-testid="reader.type" @click="$emit('type')">
+        <ProtoRound label="Search in the book" data-reader-morph="search" :class="search === 'morph' && 'flying'" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
+        <ProtoRound data-reader-morph="item" label="Contents" data-testid="reader.contents" @click="$emit('contents')"><ProtoIcon name="contents" :size="20" /></ProtoRound>
+        <ProtoRound data-reader-morph="item" label="Text and theme" data-testid="reader.type" @click="$emit('type')">
           <span class="book-title text-body-large">A<span class="text-caption">a</span></span>
         </ProtoRound>
       </nav>
@@ -61,6 +66,10 @@ defineEmits<{ back: []; contents: []; type: []; search: []; setHere: [] }>()
   .gutter {
     display: block;
   }
+}
+/* While the palette's own magnifier flies, the capsule's stays hidden (one icon on screen). */
+.flying :deep(svg) {
+  visibility: hidden;
 }
 .capsule-wrap {
   bottom: var(--float-bottom);
