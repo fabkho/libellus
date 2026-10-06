@@ -6,6 +6,10 @@
 //
 // A token that differs between the themes has `{ "light": …, "dark": … }` as its
 // value; every other token is the same in both. Light is the default theme.
+// A themed token may also have a `sepia` value: sepia is the reader's third room
+// (#131), a paper room, so where a token has none it takes its light value there.
+// Only the web has it (the reader's own `[data-theme='sepia']` scope); the Swift
+// output keeps light and dark.
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
@@ -15,7 +19,8 @@ import StyleDictionary from 'style-dictionary'
 const isThemed = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value) && 'light' in value && 'dark' in value
 /** A token's value in one theme. */
-const valueIn = (token, theme) => (isThemed(token.$value) ? token.$value[theme] : token.$value)
+const valueIn = (token, theme) =>
+  isThemed(token.$value) ? (theme === 'sepia' ? (token.$value.sepia ?? token.$value.light) : token.$value[theme]) : token.$value
 
 const kebab = (s) => s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 const camel = (parts) => parts.map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1))).join('')
@@ -223,13 +228,19 @@ StyleDictionary.registerFormat({
     const theme = resetNamespaces.map((ns) => `  --${ns}-*: initial;`)
     const root = ['  color-scheme: light;']
     const dark = ['  color-scheme: dark;']
+    const light = ['  color-scheme: light;']
+    const sepia = ['  color-scheme: light;']
     const line = ([name, value]) => `  ${name}: ${value};`
     for (const token of dictionary.allTokens) {
       const reference = themeReference(token)
       if (reference) theme.push(reference)
       const inTheme = token.path[0] in themeNamespace && !reference
       for (const declaration of cssDeclarations(token, 'light')) (inTheme ? theme : root).push(line(declaration))
-      if (isThemed(token.$value)) dark.push(...cssDeclarations(token, 'dark').map(line))
+      if (isThemed(token.$value)) {
+        dark.push(...cssDeclarations(token, 'dark').map(line))
+        light.push(...cssDeclarations(token, 'light').map(line))
+        sepia.push(...cssDeclarations(token, 'sepia').map(line))
+      }
     }
     const darkBody = dark.join('\n')
     const indented = dark.map((l) => `  ${l}`).join('\n')
@@ -247,6 +258,12 @@ StyleDictionary.registerFormat({
       '',
       '/* Dark, from the device, while no theme has been chosen. */',
       `@media (prefers-color-scheme: dark) {\n  :root:not([data-theme]) {\n${indented}\n  }\n}`,
+      '',
+      '/* Light inside the dark: an element of its own room (the reader in light while the app is dark). */',
+      `[data-theme='light'] {\n${light.join('\n')}\n}`,
+      '',
+      "/* Sepia, the reader's third room (#131): its own values, the light ones where it has none. */",
+      `[data-theme='sepia'] {\n${sepia.join('\n')}\n}`,
       '',
     ].join('\n')
   },
@@ -273,8 +290,8 @@ const tokens = JSON.parse(readFileSync(here('tokens.json'), 'utf8'))
 ;(function validate(node, path) {
   if (node && typeof node === 'object' && '$value' in node) {
     const v = node.$value
-    if (v && typeof v === 'object' && !Array.isArray(v) && ('light' in v || 'dark' in v) && !isThemed(v)) {
-      throw new Error(`${path.join('.')} has a value for only one theme.`)
+    if (v && typeof v === 'object' && !Array.isArray(v) && ('light' in v || 'dark' in v || 'sepia' in v) && !isThemed(v)) {
+      throw new Error(`${path.join('.')} has a value for only one theme (sepia comes with light and dark).`)
     }
     return
   }

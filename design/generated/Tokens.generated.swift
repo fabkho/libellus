@@ -67,6 +67,10 @@ enum Tokens {
         static let cloth5 = SwiftUI.Color(.sRGB, red: 0.1882, green: 0.1608, blue: 0.2471, opacity: 1)
         static let cloth6 = SwiftUI.Color(.sRGB, red: 0.2902, green: 0.1490, blue: 0.1412, opacity: 1)
         static let clothInk = SwiftUI.Color(.sRGB, red: 0.9451, green: 0.8902, blue: 0.7843, opacity: 1)
+        static let highlightLamp = SwiftUI.Color(.sRGB, red: 0.9373, green: 0.7176, blue: 0.4078, opacity: 1)
+        static let highlightSage = SwiftUI.Color(.sRGB, red: 0.6118, green: 0.7725, blue: 0.5412, opacity: 1)
+        static let highlightSky = SwiftUI.Color(.sRGB, red: 0.5608, green: 0.7216, blue: 0.9098, opacity: 1)
+        static let highlightRose = SwiftUI.Color(.sRGB, red: 0.9373, green: 0.6235, blue: 0.6824, opacity: 1)
     }
 
     enum Opacity {
