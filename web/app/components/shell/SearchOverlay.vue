@@ -448,7 +448,7 @@ onUnmounted(() => {
               <UiIcon name="search" :size="19" />
             </span>
 
-            <div ref="field" class="flex min-w-0 flex-1 items-center gap-sm">
+            <div ref="field" class="flex min-w-0 flex-1 items-center gap-sm self-stretch">
               <input
                 ref="input"
                 v-model="search.query"
@@ -461,7 +461,7 @@ onUnmounted(() => {
                 spellcheck="false"
                 :aria-label="t('search.title')"
                 :placeholder="t('search.placeholder')"
-                class="min-w-0 flex-1 bg-transparent text-callout text-ink caret-accent outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
+                class="min-w-0 flex-1 self-stretch bg-transparent text-callout text-ink caret-accent outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
                 data-testid="search.query"
                 @focus="typing = true"
                 @blur="search.isOpen && (typing = false)"
