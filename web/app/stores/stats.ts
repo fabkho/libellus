@@ -40,10 +40,11 @@ export const useStatsStore = defineStore('stats', () => {
   /** The year in the pills: All, or a year with a finished read. */
   const year = ref<StatsYear>('all')
   /**
-   * The sheet that was open when the member opened a book from it, with the
-   * page it was on: Back from the book opens it again (composables/useProfileSheet.ts).
+   * The sheet that was open when the member opened a book from it (what it showed, and how
+   * far its list was scrolled), with the page it was on: Back from the book opens it again
+   * (composables/useSheetRestore.ts).
    */
-  const keptSheet = ref<{ page: string; sheet: ProfileSheet } | null>(null)
+  const keptSheet = ref<{ page: string; sheet: unknown; scroll: number } | null>(null)
 
   async function load() {
     const repo = stats()

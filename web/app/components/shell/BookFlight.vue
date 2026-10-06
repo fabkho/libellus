@@ -5,7 +5,8 @@
 // only while a flight runs.
 // - `under`: the page being left, as a still copy, fading out over the page
 //   coming in and under the chrome (scroll edge, tab bar, search);
-// - `over`: the flying cover, over everything but a sheet.
+// - `over`: the flying cover, over everything but a sheet (except back into a
+//   row of a sheet that came back with its page: then over the sheet).
 const under = useTemplateRef<HTMLElement>('under')
 const over = useTemplateRef<HTMLElement>('over')
 const router = useRouter()
@@ -26,6 +27,10 @@ onUnmounted(() => uninstall?.())
 /* Unscoped: the flight marks covers of other components and fills its layers by hand. */
 .flight-layer {
   contain: layout paint;
+}
+
+.flight-layer[data-over-sheet] {
+  z-index: 55;
 }
 
 .flight-layer:empty {

@@ -23,6 +23,12 @@ const readInYear = useSettled(() => library.readInYear)
 
 // The year's Books, in a sheet: the tally opens it (HomeTallySheet).
 const tallyOpen = ref(false)
+// Back from a Book opened from it, the sheet is open again as it was left (composables/useSheetRestore.ts).
+const { restore: tallyRestore } = useSheetRestore({
+  testid: 'homeTally',
+  sheet: () => tallyOpen.value || null,
+  reopen: () => (tallyOpen.value = true),
+})
 // For the owner, the sheet's row of that year is warmed on idle, so it opens with its Spines drawn.
 useShelfPreload(() => library.readInYearOf)
 
@@ -67,7 +73,7 @@ watch(
     <HomeTally :year="library.readInYearOf" :count="readInYear" @open="tallyOpen = true" />
 
     <HomeUpNext v-if="wantToRead.length" :entries="wantToRead" />
-    <HomeTallySheet v-model:open="tallyOpen" :year="library.readInYearOf" />
+    <HomeTallySheet v-model:open="tallyOpen" :year="library.readInYearOf" :restore="tallyRestore" />
   </div>
 
   <div v-else-if="library.loadError" class="px-lg pt-xxl text-center" data-testid="home.loadError">

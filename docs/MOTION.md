@@ -112,6 +112,16 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than
   0.5 px/ms, otherwise it settles back (`web/app/composables/useSwipeDown.ts`).
+- **A sheet comes back.** A sheet that leads to a Book page (Home's *Read in 2026*, the Profile's and a
+  year in review's rows of Books) is open again when the member returns from that Book by Back (the
+  system's or the page's own), and it comes back as if it had simply stayed open under the Book page:
+  at its resting place, with its scrim full, its list scrolled where it was, and none of the sheet's
+  own motion — nothing rises, the scrim does not fade in, and it is there from the page's first frame
+  (`restore` on `UiSheet`, which turns its enter transitions off for that one opening; the page keeps
+  what was open and puts it back: `composables/useSheetRestore.ts`). What plays is the page's: the
+  cover flies back over the sheet (the flying layer goes above it, `data-over-sheet`) and lands on its
+  row in the sheet. A fresh opening (the tally tapped again) rises as always, and the way out is
+  unchanged. Reduce Motion: as for every sheet, nothing moves either way (`e2e/sheet-restore.spec.ts`).
 - **Reveal.** Something that was not there until it had something to say (the book page's figures,
   chart and reading log before any progress was tracked, `UiReveal`) opens its room and fades in over
   `standard`, so what sits under it glides down instead of jumping; it closes over `exit`. Clipped only
