@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "cloudflare": {
+      "enabled": true
+    },
+    "supabase": {
+      "enabled": true
+    }
+  }
+}
