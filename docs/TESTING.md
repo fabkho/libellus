@@ -396,6 +396,15 @@ no sheet or list moving, no page on its way to its scroll place), `goto` (an
 address opened once the page is at rest), boxes compared in one `evaluate`
 (e2e/support.ts, e2e/fixtures.ts).
 
+Two things a laptop hides and a runner shows (issue #146): the dev server bundles a
+package the first time a page imports it, and the pages open then can be reloaded under
+their flows (`vite.optimizeDeps.include` in `nuxt.config.ts` lists what a later screen reaches first, so
+none is met late; a package that is only imported from a lazy page or a dynamic import
+belongs there), and a page moves under the tap that aims at it. The Profile opens its
+account rows right under the hero and slides them down once the record says there is
+nothing finished: a flow opens it with `openProfile` (the record in, nothing moving) and
+brings the tab bar back with `showTabBar` after scrolling to a control.
+
 ## CI: what runs when
 
 GitHub Actions on the private account has a fixed pool of 3,000 included minutes a month, and every job is

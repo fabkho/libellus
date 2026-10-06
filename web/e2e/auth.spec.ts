@@ -2,6 +2,7 @@ import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, mistype, readMailedCode, uniqueEmail } from '../tests/support/stack'
+import { openProfile, showTabBar, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -46,6 +47,8 @@ test('a new member signs up with the dev invite, lands on Home and signs out', a
   await expect(page).toHaveURL(/\/library$/)
   await expect(page.getByTestId('library.title')).toHaveText(en.library.title)
   await expect(page.getByTestId('library.empty')).toHaveText(en.library.empty)
+  // At rest first: WebKit loses a reload that starts while the tab's page is still arriving (support.ts, goto).
+  await untilStill(page)
   await page.reload()
   await expect(page).toHaveURL(/\/library$/)
   await expect(page.getByTestId('library.title')).toHaveText(en.library.title)
@@ -61,7 +64,7 @@ test('a new member signs up with the dev invite, lands on Home and signs out', a
 
   // The avatar shows the initials and opens the Profile, whose account rows sign out.
   await expect(page.getByTestId('shell.avatar')).toHaveText('ES') // e2e-signup-… → first letters of the first two words
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await expect(page.getByTestId('profile.email')).toContainText(email)
   await page.getByTestId('profile.signOut').click()
   await expect(page).toHaveURL(/\/sign-in$/)
@@ -191,7 +194,7 @@ test('the theme follows the phone until the switch is tapped, then flips and sta
   const [light, dark] = await themeColors()
 
   // The switch shows what is showing: Dark, on.
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   const toggle = page.getByTestId('profile.theme')
   await expect(toggle).toHaveText(en.profile.account.theme)
   await expect(toggle).toHaveAttribute('aria-checked', 'true')
@@ -211,7 +214,9 @@ test('the theme follows the phone until the switch is tapped, then flips and sta
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(html).toHaveAttribute('data-theme', 'dark')
   expect(await themeColors()).toEqual([dark, dark])
-  // …and on every page: moving on does not hand the chrome back to the phone.
+  // …and on every page: moving on does not hand the chrome back to the phone. The bar is
+  // back first, as a member who scrolled down to the switch brings it back before she taps it.
+  await showTabBar(page)
   await page.getByTestId('shell.tab.library').click()
   await expect(page.getByTestId('library.title')).toBeVisible()
   expect(await themeColors()).toEqual([dark, dark])
@@ -221,7 +226,7 @@ test('the theme follows the phone until the switch is tapped, then flips and sta
   await page.reload()
   await expect(html).toHaveAttribute('data-theme', 'dark')
   await expect.poll(themeColors).toEqual([dark, dark])
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await page.getByTestId('profile.signOut').click()
   await expect(page).toHaveURL(/\/sign-in$/)
   await expect(html).toHaveAttribute('data-theme', 'dark')

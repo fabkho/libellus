@@ -5,7 +5,7 @@ import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { keepShell } from './offlineShell'
-import { goto, recordedApple, signedIn } from './support'
+import { goto, openProfile, recordedApple, signedIn } from './support'
 
 /**
  * Save offline, sync later (#93). The member updates her progress without a
@@ -181,7 +181,7 @@ test('signing out with changes waiting asks first; offline only "Sign out anyway
   await saveProgress(page, 40)
   await expect(page.getByTestId('shell.syncLabel')).toHaveText(waiting(1))
 
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await page.getByTestId('profile.signOut').click()
   await expect(page.getByTestId('signOutUnsynced.title')).toHaveText(en.profile.signOutUnsynced.title.split(' | ')[0]!.replace('{count}', '1'))
   await expect(page.getByTestId('signOutUnsynced.text')).toHaveText(en.profile.signOutUnsynced.text.split(' | ')[0]!)
@@ -217,7 +217,7 @@ test('"Sync first" sends the waiting changes, then signs out; if they cannot go,
   await page.context().setOffline(false)
   await expect(page.getByTestId('shell.syncLabel')).toHaveText(waiting(1))
 
-  await page.getByTestId('shell.avatar').click()
+  await openProfile(page)
   await page.getByTestId('profile.signOut').click()
   await expect(page.getByTestId('signOutUnsynced.alternative')).toHaveText(en.profile.signOutUnsynced.syncFirst)
   await page.getByTestId('signOutUnsynced.alternative').click()

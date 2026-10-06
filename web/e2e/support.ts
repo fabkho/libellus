@@ -87,6 +87,36 @@ export async function untilStill(page: Page) {
 }
 
 /**
+ * Opens the Profile from the avatar and waits until it has come to rest, the
+ * way a member waits to read it before she reaches for a row. The page opens
+ * with its account rows right under the hero; once the reading record is in
+ * (`profile.library` is the hero's line for it), a member with nothing finished
+ * gets the empty state, which opens its room above the rows and slides them
+ * ~150 px down over a quarter of a second (UiReveal, `data-moving`). A tap
+ * aimed at a row where it first showed lands on the empty state instead, and a
+ * starved runner that paints no frame between two looks takes that row for
+ * still (the Import row of import.spec.ts, the theme switch of auth.spec.ts).
+ * So: the record in, then nothing moving.
+ */
+export async function openProfile(page: Page) {
+  await page.getByTestId('shell.avatar').click()
+  await expect(page).toHaveURL(/\/profile$/)
+  await expect(page.getByTestId('profile.library')).toBeVisible()
+  await untilStill(page)
+}
+
+/**
+ * Brings the tab bar back the way a member does: up to the top of the page,
+ * where it always shows (composables/useHideOnScroll.ts). A page scrolled down
+ * to a control has it away, and a tap on a tab that is off the screen goes
+ * nowhere ("element is outside of the viewport").
+ */
+export async function showTabBar(page: Page) {
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect(page.getByTestId('shell.tabs')).not.toHaveAttribute('data-away')
+}
+
+/**
  * Opens an address the way a member types it in, once the page she is on has
  * come to rest: nothing moving (`untilStill`) and no sheet's own history entry
  * left on top of the page's (composables/useBackDismiss.ts). A sheet that has
