@@ -4,6 +4,7 @@ import { ratingX } from '../app/utils/rating'
 import { appleAnswer, appleCover } from '../tests/support/apple'
 import { openLibraryAnswer } from '../tests/support/openLibrary'
 import { INSTALL_HINT_KEY } from '../app/utils/installHint'
+import { IMPORT_HINT_KEY } from '../app/utils/importHint'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode } from '../tests/support/stack'
 
@@ -56,14 +57,28 @@ export async function recordedApple(page: Page) {
  * (issue #94) above what the flow reads and taps. It is dismissed from the
  * start, the way a member who has been here before has: `installHint: true`
  * leaves it to the flow that is about it (e2e/install-hint.spec.ts).
+ *
+ * The same goes for Home's offer of the import (a card on the empty Home and over a Library of
+ * a few Books, utils/importHint.ts): the member is marked as one who imported before, so no flow
+ * has it above what it reads and taps. `importHint: true` leaves it to the flow that is
+ * about it (e2e/import-offer.spec.ts).
  */
-export async function signedIn(page: Page, { installHint = false }: { installHint?: boolean } = {}) {
+export async function signedIn(
+  page: Page,
+  { installHint = false, importHint = false }: { installHint?: boolean; importHint?: boolean } = {},
+) {
   if (!installHint) {
     await page.addInitScript((key) => {
       if (!localStorage.getItem(key)) localStorage.setItem(key, String(Date.now()))
     }, INSTALL_HINT_KEY)
   }
   const member = await signUpMember()
+  if (!importHint) {
+    await page.addInitScript(
+      ([key, id]) => localStorage.setItem(key!, JSON.stringify({ ...JSON.parse(localStorage.getItem(key!) ?? '{}'), [id!]: 'imported' })),
+      [IMPORT_HINT_KEY, member.id],
+    )
+  }
   await emailCooldown()
   await page.goto('/sign-in')
   await page.getByTestId('signIn.email').fill(member.email)

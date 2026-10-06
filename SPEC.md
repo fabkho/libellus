@@ -137,7 +137,7 @@ Each is a `ready-for-agent` issue linking back to #1.
 | [#5](https://github.com/fabkho/libellus/issues/5) | Port the picked design | The chosen direction becomes tokens and components |
 | [#6](https://github.com/fabkho/libellus/issues/6) | Tracer | Find a book on Apple Books and put it on *Want to read* |
 | [#7](https://github.com/fabkho/libellus/issues/7) | Start and finish | Start reading; finish with date, quarter-star rating, review |
-| [#8](https://github.com/fabkho/libellus/issues/8) | Home | Currently reading, Want to read, "Read in <year>" counter, empty state |
+| [#8](https://github.com/fabkho/libellus/issues/8) | Home | Currently reading, Want to read, "Read in <year>" counter, empty state (which offers the import to a member coming from Goodreads or Hardcover, and so does a Library of a few books until she imports or dismisses it) |
 | [#9](https://github.com/fabkho/libellus/issues/9) | Add with any status | Log past reads directly as *Currently reading* or *Finished* |
 | [#10](https://github.com/fabkho/libellus/issues/10) | Abandon and read again | DNF as a session ending; re-reads as new sessions |
 | [#11](https://github.com/fabkho/libellus/issues/11) | Reading history and removing | Edit/delete sessions, remove from Library |
