@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { randomInt } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
@@ -117,8 +118,13 @@ const rowsOf = (books: readonly GoodreadsBook[], editions: readonly Edition[]): 
     authors: book.authors,
     status: book.status,
     session: book.session,
+    extraReads: book.extraReads,
+    pageCount: book.pageCount,
+    otherKeys: book.otherKeys,
     addedOn: book.addedOn,
+    collections: book.shelves,
     book: editions[index]!.book,
+    coverFrom: editions[index]!.coverFrom ?? null,
   }))
 
 describe('importing a Goodreads export', () => {
@@ -193,7 +199,7 @@ describe('importing a Goodreads export', () => {
 
     // The same file again: nothing new, whatever the lookups find this time.
     const keys = await importedKeys(member.client)
-    expect([...keys.data!].sort()).toEqual(['goodreads:11', 'goodreads:12', 'goodreads:13', 'goodreads:15'])
+    expect([...keys.data!.keys()].sort()).toEqual(['goodreads:11', 'goodreads:12', 'goodreads:13', 'goodreads:15'])
     const again = await importer.write(rowsOf(books, await matchAll(importer, books)), { onWritten: () => {} })
     expect(again.data!.map((outcome) => outcome.outcome)).toEqual(['imported', 'imported', 'imported', 'in_library', 'imported'])
     const [counts] = await sql<{ entries: number; sessions: number; manual: number }>(
@@ -269,6 +275,49 @@ describe('importing a Goodreads export', () => {
     expect(counts!.entries).toBe(6)
   })
 
+  it('writes what real exports carry: earlier reads, a did-not-finish shelf, shelves as Collections, two editions of one work (#111)', async () => {
+    const member = await signUpMember()
+    // The synthetic export modelled on the owner's (tests/fixtures/goodreads/battle_export.csv), its
+    // titles tagged with this run and its ISBNs unique to it, so the sweep removes what it makes.
+    const { books } = parseGoodreads(readFileSync(new URL('./fixtures/goodreads/battle_export.csv', import.meta.url), 'utf8'), today)
+    const tagged = books.map((book) => ({
+      ...book,
+      title: runTitle(book.title),
+      publisher: TEST_PUBLISHER,
+      isbn13: book.isbn13 ? uniqueIsbn() : null,
+      isbn10: null,
+    }))
+    const catalogue = createCatalogueSearch(member.client)
+    const importer = createGoodreadsImport(member.client, { lookups: { catalogue, search: nowhere }, probe: noProbe })
+    const written = await importer.write(rowsOf(tagged, await matchAll(importer, tagged)), { onWritten: () => {} })
+    expect(written.error).toBeNull()
+    expect(written.data!.every((outcome) => outcome.outcome === 'added')).toBe(true)
+
+    const entries = await sql<{ key: string; status: string; reads: number; abandoned: number; pages: number | null; shelves: string[] | null }>(
+      `select e.import_key as key, e.status::text as status, e.page_count_override as pages,
+              (select count(*)::int from public.reading_sessions s where s.entry_id = e.id and s.outcome = 'finished') as reads,
+              (select count(*)::int from public.reading_sessions s where s.entry_id = e.id and s.outcome = 'abandoned') as abandoned,
+              (select array_agg(c.name order by c.name) from public.collection_entries ce
+                 join public.collections c on c.id = ce.collection_id where ce.entry_id = e.id) as shelves
+         from public.library_entries e where e.member_id = $1`,
+      [member.id],
+    )
+    const entry = (key: string) => entries.find((row) => row.key === key)!
+    expect(entries).toHaveLength(books.length)
+    // Read Count 2: two finished reads; a re-read under way: one earlier finished read.
+    expect(entry('goodreads:2001')).toMatchObject({ status: 'finished', reads: 2, shelves: ['favourites'] })
+    expect(entry('goodreads:2005')).toMatchObject({ status: 'reading', reads: 1 })
+    // The same work read again in German: its own entry.
+    expect(entry('goodreads:2003')).toMatchObject({ status: 'finished', reads: 1 })
+    expect(entry('goodreads:2007')).toMatchObject({ status: 'finished', reads: 0, abandoned: 1 })
+    expect(entry('goodreads:2004').shelves).toEqual(['favourites', 'sci-fi'])
+    expect(entry('goodreads:2006')).toMatchObject({ status: 'want_to_read', shelves: ['wishlist'] })
+    // Her own page count where the Book has none of its own (a Manual book takes the file's).
+    expect(entry('goodreads:2011').pages).toBeNull()
+    const collections = await sql<{ name: string }>('select name from public.collections where member_id = $1 order by position', [member.id])
+    expect(collections.map((row) => row.name).sort()).toEqual(['favourites', 'sci-fi', 'wishlist'])
+  })
+
   it('refuses to write while the device is offline', async () => {
     const member = await signUpMember()
     const importer = createGoodreadsImport(member.client, {
@@ -285,6 +334,7 @@ describe('importing a Goodreads export', () => {
 describe('findEdition', () => {
   const row = (overrides: Partial<GoodreadsBook>): GoodreadsBook => ({
     key: 'goodreads:1',
+    goodreadsId: '1',
     row: 1,
     title: 'Piranesi',
     series: null,
@@ -293,10 +343,15 @@ describe('findEdition', () => {
     isbn10: null,
     pageCount: null,
     year: null,
+    originalYear: null,
+    binding: null,
     publisher: null,
     shelf: 'read',
+    shelves: [],
     status: 'finished',
     session: null,
+    extraReads: 0,
+    otherKeys: [],
     addedOn: null,
     problems: [],
     ...overrides,
@@ -328,6 +383,59 @@ describe('findEdition', () => {
 
     const none = await findEdition(row({ title: 'Jonathan Strange', isbn13: '9790000001022' }), { catalogue: { search: async () => [] }, search })
     expect(none).toMatchObject({ via: null, unsure: false, book: { title: 'Jonathan Strange', source: 'import', isbn13: '9790000001022' } })
+  })
+
+  it('keeps the edition of an ISBN no source knows, and lends it the cover of the work a title search finds (#111)', async () => {
+    const work = snapshot({ title: 'Piranesi', authors: ['Susanna Clarke'], coverUrl: 'https://example.test/piranesi.jpg' })
+    const search: Lookups['search'] = {
+      lookupIsbn: async () => null,
+      search: async () => ({ results: [{ book: work, entry: null, otherEdition: false }], pending: false, failed: false }),
+    }
+    const edition = await findEdition(row({ isbn13: '9790000001022', pageCount: 245 }), { catalogue: { search: async () => [] }, search })
+    expect(edition).toMatchObject({ via: null, book: { source: 'import', isbn13: '9790000001022', pageCount: 245 }, coverFrom: work })
+  })
+
+  it('asks Goodreads about a row without an ISBN, and takes the exact edition its ISBN finds (#111)', async () => {
+    const exact = snapshot({ title: 'Piranesi', authors: ['Susanna Clarke'], isbn13: '9781526622419' })
+    const asked: string[] = []
+    const lookups: Lookups = {
+      catalogue: { search: async () => [] },
+      search: {
+        lookupIsbn: async (isbn) => (isbn === '9781526622419' ? exact : null),
+        search: async () => ({ results: [], pending: false, failed: false }),
+      },
+      goodreads: {
+        edition: async (id) => {
+          asked.push(id)
+          return { isbn13: '9781526622419', isbn10: null, asin: null, language: 'en', pageCount: 245, format: 'Paperback', publisher: null, year: 2020 }
+        },
+      },
+    }
+    expect(await findEdition(row({ goodreadsId: '50202953' }), lookups)).toMatchObject({ via: 'goodreads', book: exact })
+    expect(asked).toEqual(['50202953'])
+    // A row with an ISBN of its own needs nobody's word for it.
+    await findEdition(row({ isbn13: '9781526622419' }), lookups)
+    expect(asked).toEqual(['50202953'])
+  })
+
+  it('without an ISBN from Goodreads, picks the edition in its language and kind among the same work (#111)', async () => {
+    const found = (overrides: Partial<BookSnapshot>) => ({ book: snapshot({ title: 'Piranesi', authors: ['Susanna Clarke'], ...overrides }), entry: null, otherEdition: false })
+    const english = found({ language: 'en', source: 'openlibrary', appleId: null, pageCount: 272 })
+    const german = found({ language: 'ger', source: 'openlibrary', appleId: null, pageCount: 288 })
+    const ebook = found({ language: 'de', source: 'apple' })
+    const search: Lookups['search'] = {
+      lookupIsbn: async () => null,
+      search: async () => ({ results: [english, german, ebook], pending: false, failed: false }),
+    }
+    const hint = (language: string, format: string) => ({
+      edition: async () => ({ isbn13: null, isbn10: null, asin: 'B000000000', language, pageCount: 290, format, publisher: null, year: null }),
+    })
+    const lookups = (goodreads: Lookups['goodreads']): Lookups => ({ catalogue: { search: async () => [] }, search, goodreads })
+    expect((await findEdition(row({}), lookups(hint('de', 'Paperback')))).book).toBe(german.book)
+    expect((await findEdition(row({ binding: 'Kindle Edition' }), lookups(hint('de', 'Kindle Edition')))).book).toBe(ebook.book)
+    // Goodreads could not be asked: the search's own order decides.
+    const failing = { edition: async () => Promise.reject(new Error('unavailable')) }
+    expect(await findEdition(row({}), lookups(failing))).toMatchObject({ via: 'title', unsure: false, book: english.book })
   })
 
   it('moves on without a source that does not answer in time, and says the edition is unsure', async () => {
