@@ -139,6 +139,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
     })
 
     test('a Book in every status, and its sheets', async ({ page }) => {
+      // Eleven scans and four Books: longer than a usual flow, above all on CI's two cores.
+      test.slow()
       await recordedApple(page)
       const member = await signedIn(page)
       await seed(page, member.client)

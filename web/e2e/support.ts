@@ -198,6 +198,8 @@ export async function expectNoSideScroll(page: Page, where: string) {
       const box = el.getBoundingClientRect()
       if (!box.width && !box.height) continue
       if (box.right <= width + 0.5 && box.left >= -0.5) continue
+      // Visually hidden for assistive tech (`sr-only`, Nuxt's route announcer): a clipped 1 px box.
+      if (box.width <= 1 && box.height <= 1 && getComputedStyle(el).overflow === 'hidden') continue
       if (clipsAt(el)) continue
       outside.push(`${name(el)} ${Math.round(box.left)}…${Math.round(box.right)}`)
     }
