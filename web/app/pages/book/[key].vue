@@ -159,6 +159,7 @@ function back() {
 
     <section v-if="book" ref="heroEl" class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="book.hero">
       <UiCover
+        decorative
         :title="book.title"
         :authors="book.authors"
         :src="coverSrc(book.coverUrl, 'xl')"

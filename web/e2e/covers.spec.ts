@@ -66,7 +66,8 @@ test('a cover that fails or comes back blank falls back to the edition’s cover
   await expect.poll(() => broken.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth)).toBeGreaterThan(1)
   // A 1 × 1 stand-in is no cover, and OpenLibrary has none: the Placeholder.
   await expect(coverOf(page, 'Quillwort Blank').locator('img')).toHaveCount(0)
-  await expect(coverOf(page, 'Quillwort Blank').getByRole('img', { name: 'Quillwort Blank' })).toBeVisible()
+  // The row writes the title beside it, so the cover itself is decorative (UiCover `decorative`).
+  await expect(coverOf(page, 'Quillwort Blank').locator('.cloth')).toBeVisible()
 })
 
 test('the first covers are asked for first, the rest a list height before they scroll in', async ({ page }) => {

@@ -340,6 +340,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
         >
           <span class="index figures w-(--size-star-lg) shrink-0 text-meta text-ink-faint" aria-hidden="true">{{ place(index) }}</span>
           <UiCover
+            decorative
             :title="entry.book.title"
             :authors="entry.book.authors"
             :src="coverSrc(entry.book.coverUrl, 'xs')"

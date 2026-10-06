@@ -85,6 +85,7 @@ async function change() {
         @click="edition.pick(candidate)"
       >
         <UiCover
+          decorative
           :title="candidate.book.title"
           :authors="candidate.book.authors"
           :src="coverSrc(candidate.book.coverUrl, 'sm')"

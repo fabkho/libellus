@@ -111,6 +111,7 @@ function back() {
               <UiAmbient :colors="figures.favourite.book.coverColors" shape="card" />
               <span class="eyebrow relative">{{ t('profile.year.favourite') }}</span>
               <UiCover
+                decorative
                 class="relative"
                 :title="figures.favourite.book.title"
                 :authors="figures.favourite.book.authors"

@@ -28,6 +28,7 @@ const online = useOnline()
       @press="book.prefetch(hit.key)"
     >
       <UiCover
+        decorative
         :title="hit.book.title"
         :authors="hit.book.authors"
         :src="coverSrc(hit.book.coverUrl, 'sm')"

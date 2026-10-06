@@ -39,7 +39,8 @@ test('a Placeholder cover, a long title and a long Collection name stay inside t
   await addLongBook(page)
 
   // The hero's Placeholder: the title is cut inside the cover, the author is on it.
-  const hero = page.getByTestId('book.hero').getByRole('img', { name: TITLE })
+  // The title is the heading under it, so the cover is decorative for assistive tech (UiCover `decorative`).
+  const hero = page.getByTestId('book.hero').locator('.cloth')
   await expect(hero).toBeVisible()
   const cover = (await hero.boundingBox())!
   for (const text of [hero.locator('.cloth-title'), hero.locator('.cloth-author')]) {
@@ -77,7 +78,7 @@ test('a Placeholder cover, a long title and a long Collection name stay inside t
 
   // Below `md` a Placeholder has no type: the Library row's cover is cloth, rule and mark.
   await page.getByTestId('shell.tab.library').click()
-  const row = page.getByTestId('library.entry').getByRole('img', { name: TITLE })
+  const row = page.getByTestId('library.entry').locator('.cloth')
   await expect(row).toBeVisible()
   await expect(row.locator('.cloth-title')).toHaveCount(0)
   await expect(row.locator('.cloth-author')).toHaveCount(0)

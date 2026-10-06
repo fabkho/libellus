@@ -139,6 +139,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
               data-testid="ebooks.linkedRow"
             >
               <UiCover
+                decorative
                 :title="entry?.book.title ?? record.metadata.title ?? record.name"
                 :authors="entry?.book.authors ?? record.metadata.authors"
                 :src="entry ? coverSrc(entry.book.coverUrl, 'sm') : ebooks.coverOf(record)"

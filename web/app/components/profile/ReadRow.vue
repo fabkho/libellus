@@ -25,6 +25,7 @@ const nthRead = (n: number) => (ORDINALS[n - 1] ? t(`history.ordinal.${ORDINALS[
 <template>
   <UiPressLink :to="`/book/${read.book.id}`" class="row flex items-center gap-inset py-sm" @press="books.prefetch(read.book.id)">
     <UiCover
+      decorative
       :title="read.book.title"
       :authors="read.book.authors"
       :src="coverSrc(read.book.coverUrl, 'sm')"

@@ -93,6 +93,7 @@ async function startCreating() {
           @click="collections.toggle(collection.id)"
         >
           <UiCover
+            decorative
             v-if="collection.covers[0]"
             :title="collection.covers[0].title"
             :authors="collection.covers[0].authors"
