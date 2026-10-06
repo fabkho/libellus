@@ -3,7 +3,7 @@
 Libellus is static files on **Cloudflare Pages**, project `libellus`, served at
 https://libellus.fabkho.dev. Supabase (eu-central-1) is the backend; the owner's shelf reads
 its library file from `books.fabkho.dev` (R2 bucket `portfolio-books`, published by Regal's
-workflow, README "Feeding Regal"). This page is what is set up outside the repository and
+workflow, docs/OWNER.md "Feeding Regal"). This page is what is set up outside the repository and
 what the repository decides itself.
 
 ## Builds and deployments
@@ -17,7 +17,9 @@ a preview at `<branch>.libellus-3q1.pages.dev` (and `<deployment id>.libellus-3q
 | Build command | `pnpm generate` (`nuxt generate`; on Pages, Nitro picks its `cloudflare-pages-static` preset by itself) |
 | Output directory | `dist` |
 | `NODE_VERSION` | `24` (production and preview) |
-| `GIGET_AUTH` (secret) | A GitHub token that can read fabkho/regal: the Regal layer (`regal.config.ts`). Production and preview. |
+| `LIBELLUS_REGAL` | `1`: build with the Regal layer (`regal.config.ts`; without it the shelf is left out). Production and preview. |
+| `GIGET_AUTH` (secret) | A GitHub token that can read fabkho/regal: where the Regal layer comes from. Production and preview. |
+| `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | `https://books.fabkho.dev/v2/library.json`, the library file the shelf shows (the build stops without it when `LIBELLUS_REGAL=1`). Production and preview. |
 | `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_PUBLIC_SHELF_OWNER_ID` | Production only. Previews have no backend: they show the signed-out screens and cannot sign in, so a branch never touches production data. |
 
 A deploy is atomic and a rollback is one click (Workers & Pages → libellus → Deployments →

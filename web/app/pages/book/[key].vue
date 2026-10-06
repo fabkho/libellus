@@ -172,6 +172,8 @@ function back() {
       </p>
       <!-- Goodreads' rating, once known (#69). -->
       <BookGoodreads :book="book" />
+      <!-- Book links, the instance's and the member's own (#116). -->
+      <BookLinks :book="book" />
       <!-- The old edition, over the new one while a change of edition plays. -->
       <div ref="heroWas" class="pointer-events-none absolute inset-0" data-edition-was aria-hidden="true" inert />
     </section>

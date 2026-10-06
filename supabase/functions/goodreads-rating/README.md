@@ -77,7 +77,10 @@ cd supabase/functions/goodreads-rating && deno run --allow-net --allow-write=fix
    else changes).
 2. Function: `supabase functions deploy goodreads-rating` (reads `verify_jwt = false` from
    `config.toml`; or pass `--no-verify-jwt`).
-3. Secrets: none. The hosted runtime provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+3. Secrets: none needed. The hosted runtime provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+   Optional: `supabase secrets set LIBELLUS_SITE_URL=https://books.example.org`, the instance's
+   address, which the `User-Agent` then names (`Libellus/1.0 (private book tracker; +<address>)`) so
+   Goodreads can see who is asking.
 4. Optional: warm the owner's Library with `warm_library.ts` against the hosted URL and its
    service-role key, or let the book pages fill the cache as they are opened.
 

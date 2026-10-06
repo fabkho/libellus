@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/fabkho/libellus/security/advisories/new
+    about: Privately, please (SECURITY.md).
+  - name: Self-hosting guide
+    url: https://github.com/fabkho/libellus/blob/main/docs/SELF_HOSTING.md
+    about: Setting up your own instance.

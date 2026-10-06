@@ -1,235 +1,105 @@
 # Libellus
 
-A mobile-first book tracker, installable from the home screen: search a book → **Want to read** →
-**Currently reading** → **Finished** with a date, a quarter-star rating and a few words. Built web
-first on Nuxt and Supabase, with the docs that make a later Swift/Kotlin port mechanical.
+A calm, mobile-first book tracker you install from the home screen: search a book → **Want to
+read** → **Currently reading** → **Finished**, with the date, a quarter-star rating and a few words.
+No social feed, no ads, no trackers. Built web first on Nuxt and Supabase, with the docs that make a
+later Swift/Kotlin port mechanical.
 
-Spec: [SPEC.md](SPEC.md) (condensed) and issue [#1](https://github.com/fabkho/libellus/issues/1)
-(full). Domain words: [CONTEXT.md](CONTEXT.md).
+![Libellus on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
 
-## Running it locally
+Libellus runs as one small, invite-only instance for its owner and a few friends
+(libellus.fabkho.dev), and anyone can run their own: [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
 
-Needs Docker (for the local Supabase stack), Node 24, pnpm and the Supabase CLI.
+## What it does
 
-```sh
-supabase start                     # in the repo root: Postgres, Auth, Studio, Mailpit on 553xx
-cd web
-cp .env.example .env               # paste the anon key `supabase start` printed
-pnpm install
-pnpm dev                           # http://localhost:3020, best in a phone-sized viewport
-```
+- **Find a book fast.** One search field asks Apple Books, Open Library and the instance's own
+  Catalogue at once and shows one merged list, one row per book; a barcode scan or an ISBN goes
+  straight to the edition. Where a result came from is never shown. Books with no match can be
+  typed in by hand and stay private.
+- **Every read counts.** Start and finish dates, a rating in quarter stars, a review, re-reads and
+  books you put down (DNF) are all reading sessions of their own, editable afterwards.
+- **Progress** in pages or percent, with a day-by-day chart and a reading log, and your own page
+  count when the edition's is wrong. Change edition keeps the history.
+- **Collections**, your own shelves, in your order.
+- **Your reading in figures**: the Profile with books, pages, average rating and pace by year, and
+  a year in review per year.
+- **Bring your history**: import a Goodreads library export (CSV); Fable exports through the same
+  format.
+- **Book links**: your own short list of links (a library catalogue, a shop) that every Book's page
+  offers, filled with its ISBN, title or author. Kept with your account, visible to nobody else.
+- **Goodreads' community rating** under a Book's facts, looked up server-side and cached (optional).
+- **Works offline**: the Library, Collections and figures are kept on the device; changes made
+  offline wait in an outbox and sync once you are back.
+- **An app, not a website**: installable (PWA), full screen, share a link from another app to open
+  the book, long-press shortcuts, light and dark themes ("Night Reader").
+- **Invite-only accounts** with a six-digit code by email; no passwords. Delete your account from
+  the app.
 
-The libellus stack has its own project id and ports (55320–55329), so it runs next to other local
-Supabase stacks (Trappist's on 5432x) without touching them. Stop only this one with `supabase stop`
-from the repo root — never `supabase stop --all`.
+| Home (light) | Library (light) | Home (dark) | A Book (dark) | Profile (dark) |
+| --- | --- | --- | --- | --- |
+| ![Home in the light theme](docs/images/home-light.jpg) | ![The Library](docs/images/library-light.jpg) | ![Home in the dark theme](docs/images/home-dark.jpg) | ![A Book's page with its Book links](docs/images/book-dark.jpg) | ![The Profile](docs/images/profile-dark.jpg) |
 
-Dependency build scripts pnpm 11+ may run (esbuild) are approved in the committed
-`web/pnpm-workspace.yaml`; local and CI both use pnpm 12.
+## Privacy
 
-Tests, from `web/` (with the stack running):
+- **No trackers, no ads, no third-party code in the app.** The session is the only thing it
+  stores for sign-in; everything else on the device is your own data, kept for offline use and
+  removed when you sign out.
+- **Your data is yours**: row-level security in the database means a member only ever reads her own
+  Library, reviews, Collections and Book links. Delete your account and all of it goes.
+- **Search stays plain**: the browser asks Apple Books and Open Library directly for the words you
+  type, nothing else; the Goodreads rating is looked up by the server, so Goodreads never sees you.
+- An instance may count page loads with a cookieless, identifier-free analytics service (the
+  owner's uses Cloudflare Web Analytics, docs/HOSTING.md). A fresh instance has none.
+- **Errors stay in your own database**: the app reports its own crashes (message, stack, screen,
+  app version; never a Book, note or search) to a table in the instance's Supabase, kept 30 days
+  (docs/OPERATIONS.md). No third-party error service.
 
-```sh
-pnpm test                          # Vitest: data layer against the local stack, no mocks
-pnpm exec playwright install webkit # once
-pnpm e2e                           # Playwright: iPhone viewport in WebKit, own server on :4327 (LIBELLUS_E2E_PORT moves it)
-supabase test db                   # pgTAP, from the repo root
-```
+## Tech stack
 
-The Vitest suite reads the anon key from `supabase status` unless `SUPABASE_ANON_KEY` is set, reads
-six-digit codes out of Mailpit, and tags its fixtures per run: it only ever deletes what its own run
-created.
-
-The Playwright flows (`web/e2e`) never call a live API: Apple and OpenLibrary answer from the recordings in
-`web/tests/fixtures`, and a fixture fails any test that reaches another host or shows a control without a
-`data-testid`. `e2e/core-loop.spec.ts` is the smoke flow of the whole loop (sign in, search, add, start,
-finish with a rating and a review, counted on Home and under Finished). On a pull request they run as the
-`e2e` CI job against a fresh local stack, with one retry, split into two shards that run side by side (docs/TESTING.md, "CI: what runs when"); a failed
-run uploads one merged HTML report with the traces (artifact `playwright-report`; open it with
-`pnpm exec playwright show-report`). Locally a failure is not
-retried, so a flaky flow is seen.
-
-What a desktop browser cannot show — the system bars, the browser's toolbar, the real keyboard — is
-checked on a real Android emulator running Chrome: `web/e2e/android/smoke.ts`, not part of CI; how to
-set it up and run it is in [`docs/TESTING.md`](docs/TESTING.md).
-
-`pnpm build` (or `pnpm generate`) runs `nuxt generate`; `.output/public` (also linked as `dist`) is
-what Cloudflare Pages serves, service worker and manifest included. How Pages builds and serves it,
-its headers and the Web Analytics beacon: [`docs/HOSTING.md`](docs/HOSTING.md).
-
-### Design tokens
-
-`design/tokens.json` is the single source for colours, spacing, radii, type and durations. After
-editing it:
-
-```sh
-cd design && pnpm install && pnpm tokens   # rewrites the generated files
-pnpm tokens:check                          # fails if a generated file differs from tokens.json
-```
-
-`pnpm tokens` writes `web/app/assets/css/tokens.generated.css` (a Tailwind v4 `@theme`) and
-`design/generated/Tokens.generated.swift`, each with a light and a dark theme. Never edit the
-generated files; CI checks they match. The values are direction D "Night Reader" from the design
-round (#4); docs/DESIGN.md says what each token is for.
-
-### Signing in locally
-
-Libellus is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
-
-| What | Value |
+| | |
 | --- | --- |
-| Invite code | `LIBELLUS-DEV` (1000 uses, never expires; `supabase db reset` puts them back) |
-| Dev member | `dev@libellus.local`, already confirmed |
+| App | [Nuxt 4](https://nuxt.com) as a single-page app (`ssr: false`), Vue 3, TypeScript, Pinia, Tailwind CSS v4 on generated design tokens, `@vite-pwa/nuxt` |
+| Backend | [Supabase](https://supabase.com): Postgres with the rules in the database (constraints, triggers, RPC, RLS), Auth (email codes), two Deno edge functions |
+| Hosting | Static files on Cloudflare Pages (any static host works) |
+| Tests | pgTAP for the database, Vitest for the data layer against a real local stack, Playwright flows in WebKit at iPhone size |
 
-Sign in as the dev member: type the address, then the six-digit code from the local mailbox
-(http://127.0.0.1:55324). Or sign up with any other address and `LIBELLUS-DEV`. Addresses ending in
-`@libellus.test` belong to the test suites, which delete them.
+## Quick start (local)
 
-An invite is spent when the new member proves their address (the code from the mail), not when the
-mail is requested, so a mistyped address costs nothing. Addresses that never prove themselves are
-removed after a day.
-
-#### Creating invite codes
+Needs Docker, Node 24, pnpm and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
 
 ```sh
-scripts/create-invite-code.sh                            # one use, 14 days, a random code like K7QM-X2PA
-scripts/create-invite-code.sh --uses 5 --days 30 --label "Anna and friends"
-scripts/create-invite-code.sh --days 0 --code HELLO-BOOKS   # never expires, a code of your choosing
-```
-
-It prints the code. The script calls `public.create_invite_code` through the REST API with the
-service-role key, which only the owner holds: locally it asks `supabase status`; against a hosted
-project export `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` first. Never put that key in `web/.env`.
-Members cannot read, create or change invite codes (RLS and revoked grants, covered by pgTAP).
-
-#### The Fable import and the dev seed
-
-The owner's Fable history comes over once, with `web/scripts/import-fable.ts` (#17). It reads
-`reading list --json` from the [reading-tracker CLI](https://github.com/fabkho/reading-tracker-cli)
-(`~/code/reading-tracker-cli`, or `READING_TRACKER_CLI`), applies the overrides file Regal reads
-(`~/.reading-tracker/regal-overrides.json`: skips, merges, dates, the edition and language read, pinned
-covers), and maps it (`web/app/data/import/`, pure and tested): editions of one title by one author
-become one entry with the most recent edition as its Book, every Fable read one Reading session
-(the `read` shelf finished, `dnf` abandoned, a start with no end on any other shelf Currently
-reading; none on *Want to read*), ratings exact in quarters. Then
-it looks up covers and Catalogue ids (Apple Books by ISBN, then by title in the storefront of the
-language read, then OpenLibrary) and writes as the service role, keyed by the Fable record
-(`import_key`), so a rerun changes nothing that has not changed.
-
-```sh
+git clone https://github.com/fabkho/libellus && cd libellus
+supabase start                 # the local stack on ports 55320–55329: Postgres, Auth, Studio, a mail catcher
 cd web
-pnpm seed:dev                                # the dev member dev@libellus.local, local stack
-pnpm import:fable --email you@example.com --dry-run   # what a run would write, nothing written
-pnpm import:fable --help                     # --from, --overrides, --prune, --offline, --target
+cp .env.example .env           # paste the anon key `supabase start` printed
+pnpm install
+pnpm dev                       # http://localhost:3020, best in a phone-sized viewport
 ```
 
-It asks the network once per Book: lookups are cached in `.data/fable-import/` at the repo root, with
-the last run's report (counts, covers per source, what could not be carried over). `.data/` is ignored
-by git; the real reading history never lands in the repository. `--target local` (the default) always
-writes to the stack `supabase status` reports, whatever `SUPABASE_URL` says; `--target hosted` (#18)
-takes `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and wants the host repeated with `--confirm-host`.
+Sign in as `dev@libellus.local` (the six-digit code lands in the local mailbox at
+http://127.0.0.1:55324), or sign up with any address and the invite code `LIBELLUS-DEV`. Tests,
+design tokens, the layout of the repository and everything else for working on the code:
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-Known gaps: the German National Library's covers are found for German editions but not stored (its
-server answers browsers with a bot page, so they need rehosting first; follow-up issue); Regal's
-Goodreads second opinion on read dates is not part of the import.
+## Documentation
 
-#### Feeding Regal
+| | |
+| --- | --- |
+| [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) | Run your own instance: Supabase, Cloudflare Pages, invites, every setting in one table |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Run, test and change it locally |
+| [docs/HOSTING.md](docs/HOSTING.md) | How the owner's instance is built and served on Cloudflare Pages |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | The client error log and how to read it |
+| [docs/TESTING.md](docs/TESTING.md) | The test suites, CI, and checks on a real Android device |
+| [SPEC.md](SPEC.md), [CONTEXT.md](CONTEXT.md) | The spec sheet and the domain words |
+| [docs/DESIGN.md](docs/DESIGN.md), [docs/MOTION.md](docs/MOTION.md) | The design system ("Night Reader") and its motion |
+| [docs/parity.md](docs/parity.md) | Per-screen behaviour, the reference for a native port |
+| [docs/OWNER.md](docs/OWNER.md) | Tooling only the owner's instance uses (the Fable import, the 3D shelf) |
 
-[Regal](https://github.com/fabkho/regal), the owner's 3D bookshelf on fabkho.dev/books, reads one
-file: a [Regal library file](https://github.com/fabkho/regal/blob/main/docs/library-file.md)
-(version 2). Libellus writes it from a member's Library with `web/scripts/export-regal.ts` (#22)
-and serves the owner's with the edge function `regal-export` (#110), read only: one Book per Library entry (the edition's id as its id), the Status from the latest
-Reading session (`read`, `dnf`, `currently-reading`, `to-read`), the date read, Rating and review
-from the last finished read, the read count, ISBN, pages (the member's own count where she set one), publisher, blurb, the Cover URL and a
-palette from the Cover's colours. The mapping is `web/app/data/export/regal.ts` (pure, pinned by a
-fixture); the file is checked with Regal's validator, vendored in
-`web/app/data/export/regalLibraryFile.ts` with the Regal commit it came from (run the tests with
-`REGAL_DIR=<regal checkout>` to compare it with Regal's own). Want to read stays out unless
-`--statuses` asks for it. Libellus has no series, binding or Spine art: Regal assets fills what it
-can.
+## Contributing, security, license
 
-The daily chain runs in the cloud (#110), nothing on a Mac:
+Libellus is a personal project; issues are welcome, and pull requests for bugs and small things too
+([CONTRIBUTING.md](CONTRIBUTING.md)). Please report security problems privately
+([SECURITY.md](SECURITY.md)).
 
-```
-owner's change ─► trigger (owner only, ≥ 10 min apart) ─► pg_net ─► GitHub repository_dispatch libellus-changed ─┐
-daily 05:00 UTC, or by hand ───────────────────────────────────────────────────────────────────────────────────┼─► fabkho/regal publish-shelf.yml
-publish-shelf.yml: GET /functions/v1/regal-export ─► validate ─► regal-assets --no-ai --no-model --revalidate --publish v2 ─► R2 portfolio-books/v2/
-```
-
-1. **The export endpoint**: the edge function `regal-export` (`supabase/functions/regal-export/`, its
-   README has the details) answers the owner's Library as a library file to
-   `Authorization: Bearer <REGAL_EXPORT_TOKEN>`: the Books read, the art of the published file carried
-   over, the member's own page count (`page_count_override`, #60) where she set one. The same mapping
-   as the script below, imported from `web/app/data/export/` (a closed set of pure modules with
-   `.ts` imports, which Deno runs as they are). Without the published file it answers 502 and nothing
-   is published.
-2. **The trigger** (`supabase/migrations/20261005114229_shelf_publish_dispatch.sql`): a change to
-   the owner's `library_entries` or `reading_sessions` (a read, a Rating, a review; not progress, the shelf shows finished books only) sends
-   fabkho/regal a `repository_dispatch` through pg_net, at most once per ten minutes; a change inside
-   the ten minutes is sent by pg_cron's `shelf-publish` job (every five minutes) once they are up.
-   The owner is the one row of `private.shelf_publish` (no address in SQL); the GitHub token is the
-   Vault secret `github_dispatch_token`. Without either, or without pg_net, it does nothing (the
-   local stack, the tests). A failing dispatch never fails the write.
-3. **The workflow** in Regal (`.github/workflows/publish-shelf.yml`, Regal's README: The daily
-   chain) fetches the file, validates it and runs Regal assets with `.data/regal-assets` cached
-   between runs, so a quiet run uploads nothing.
-
-Configuration, all outside the repo:
-
-| Where | Name | |
-|---|---|---|
-| Function secrets (`supabase secrets set`) | `REGAL_EXPORT_TOKEN` | The shared bearer secret, ≥ 32 characters (`openssl rand -hex 32`). |
-| | `REGAL_OWNER_EMAIL` | The owner's sign-in address. |
-| | `REGAL_OWNER_NAME` | `Fabian`: the file's `owner`, as Regal shows it. |
-| | `REGAL_TIME_ZONE`, `REGAL_STATUSES`, `REGAL_CARRY_ART_URL` | Optional: `Europe/Berlin`, `read`, `https://books.fabkho.dev/v2/library.json`. |
-| Database | `private.shelf_publish.owner_id` | `update private.shelf_publish set owner_id = (select id from auth.users where email = '<owner>');` |
-| Vault | `github_dispatch_token` | A fine-grained GitHub token, fabkho/regal only, Contents read and write: `select vault.create_secret('<token>', 'github_dispatch_token');` |
-| fabkho/regal Actions secrets | `REGAL_EXPORT_TOKEN`, `LIBELLUS_EXPORT_URL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | The same token; `https://<project>.supabase.co/functions/v1/regal-export`; R2 Object Read & Write on `portfolio-books`; the account id. |
-
-By hand, the same file from any stack (read only; never `--publish` by hand while testing):
-
-```sh
-# 1. Libellus → library file, keeping the art Regal shows now
-cd web
-SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… pnpm export:regal --target hosted --confirm-host <project host> \
-  --email <owner> --owner Fabian --statuses read --carry-art https://books.fabkho.dev/v2/library.json \
-  --out ../.data/regal/library-v2.json
-# 2. in a Regal checkout: Spines, backs, pile copies and colours; --dry-run shows what would be published
-pnpm regal-assets --in <libellus>/.data/regal/library-v2.json --no-ai --no-model --revalidate --dry-run --publish v2
-```
-
-`--carry-art` takes the file that is published now: every exported Book it has (by ISBN-13, else by
-title and first author's surname, so a Book whose edition changed in Libellus still finds it) keeps
-its published front, Spine, back and colours, so the portfolio's paid AI art survives; a Book it does
-not have gets the Libellus Cover, and Regal draws its Spine and back (or `regal-assets` without
-`--no-ai` makes them). Published art sticks: a matched Book keeps it when its Libellus Cover changes.
-The export is deterministic and is not rewritten when only `generatedAt` would change, so Regal
-assets finds every Book in its cache and uploads nothing on a quiet day. `pnpm export:regal --help`
-lists the options (`--statuses`, `--time-zone`, `--generated-at`).
-
-### Local services
-
-Studio at http://127.0.0.1:55323, the local mailbox (sign-in codes) at http://127.0.0.1:55324.
-
-## Layout
-
-```
-web/          Nuxt 4 SPA + PWA — the reference app (rules: web/AGENTS.md)
-  app/data/     framework-free repositories and the Supabase client factory
-  i18n/locales/ en.json, every string the UI shows
-  tests/        Vitest data-layer suite against the local stack
-  e2e/          Playwright flows, iPhone viewport in WebKit
-  scripts/      import-fable.ts, the Fable import and dev seed (web/scripts/fable/); export-regal.ts,
-                the Regal library file (web/app/data/export/)
-scripts/      create-invite-code.sh, the owner's tool for minting invite codes
-design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
-supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests
-docs/         DESIGN.md (design guideline), MOTION.md (motion), parity.md (per-screen behaviour),
-              HOSTING.md (Cloudflare Pages), OPERATIONS.md (the client error log and how to read it),
-              agents/ (how agents use the issue tracker)
-SPEC.md       condensed spec; CONTEXT.md the domain glossary
-```
-
-CI (`.github/workflows/ci.yml`) runs on pull requests, for the paths they change: pgTAP and the Vitest data layer
-against a local stack, the Playwright flows in WebKit (same job, sharded), `nuxt generate`, and the
-generated-tokens check. A push to `main` runs the cheap checks only, docs-only changes run nothing
-(docs/TESTING.md, "CI: what runs when").
+**License: not chosen yet** ([#116](https://github.com/fabkho/libellus/issues/116)). Until a
+`LICENSE` file is added, the code is visible but no license is granted.

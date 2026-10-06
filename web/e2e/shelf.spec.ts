@@ -27,6 +27,9 @@ import { expectNoSideScroll, signedIn } from './support'
 const LIBRARY_SRC = 'https://books.fabkho.dev/v2/library.json'
 /** Regal's code: the built `regal` chunk, or (the dev server) its components and the two of Libellus' that import them. */
 const REGAL_CODE = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
+
+// Only a build with Regal has the shelf (LIBELLUS_REGAL=1, web/regal.config.ts; CI sets it).
+test.skip(!/^(1|true)$/i.test(process.env.LIBELLUS_REGAL ?? ''), 'Your shelf needs Regal: LIBELLUS_REGAL=1 and the layer')
 const FIXTURE = readFileSync(new URL('../tests/fixtures/shelf/library.json', import.meta.url), 'utf8')
 
 const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]))

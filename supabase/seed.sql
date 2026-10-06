@@ -3,7 +3,7 @@
 
 -- The invite code for local work: sign up with any address and this code.
 -- Plenty of uses, because every Playwright run spends one; `supabase db reset`
--- puts them back. It is documented in the README.
+-- puts them back. It is documented in docs/DEVELOPMENT.md (Signing in locally).
 insert into public.invite_codes (code, label, max_uses, expires_at) values
   ('LIBELLUS-DEV', 'Local development', 1000, null);
 

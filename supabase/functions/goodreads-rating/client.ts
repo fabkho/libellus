@@ -18,8 +18,15 @@ import {
   reviewCountsUrl,
 } from './goodreads.ts'
 
-/** Who is asking: the app, by name, with where it lives. */
-export const USER_AGENT = 'Libellus/1.0 (private book tracker; +https://libellus.fabkho.dev)'
+/**
+ * Who is asking: the app, by name, with where it lives when the instance says
+ * (the function secret `LIBELLUS_SITE_URL`, index.ts; README.md).
+ */
+export function userAgent(siteUrl?: string | null): string {
+  const site = siteUrl?.trim()
+  return `Libellus/1.0 (private book tracker${site ? `; +${site}` : ''})`
+}
+export const USER_AGENT = userAgent()
 export const MIN_INTERVAL_MS = 1000
 export const REQUEST_TIMEOUT_MS = 3000
 export const MAX_WAIT_MS = 4000
@@ -50,11 +57,14 @@ export function createGoodreads(options: {
   minIntervalMs?: number
   timeoutMs?: number
   maxWaitMs?: number
+  /** The `User-Agent` (`userAgent()`); USER_AGENT when not given. */
+  userAgent?: string
 }): Goodreads {
   const clock = options.clock ?? realClock
   const minInterval = options.minIntervalMs ?? MIN_INTERVAL_MS
   const timeout = options.timeoutMs ?? REQUEST_TIMEOUT_MS
   const maxWait = options.maxWaitMs ?? MAX_WAIT_MS
+  const agent = options.userAgent ?? USER_AGENT
   /** When the next request may start. */
   let nextStart = 0
 
@@ -65,7 +75,7 @@ export function createGoodreads(options: {
     nextStart = start + minInterval
     if (start > now) await clock.sleep(start - now)
     const response = await options.fetch(url, {
-      headers: { 'user-agent': USER_AGENT, accept: 'application/json' },
+      headers: { 'user-agent': agent, accept: 'application/json' },
       redirect: 'follow',
       signal: AbortSignal.timeout(timeout),
     })

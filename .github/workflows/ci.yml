@@ -36,10 +36,12 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # The web app extends Regal (the owner's shelf, #23; web/regal.config.ts), a private repo Nuxt
-  # downloads with this token (a GitHub token that can read fabkho/regal). Without it `nuxt dev`
-  # and `nuxt generate` stop and say so; the install's `nuxt prepare` goes on without it.
+  # The owner's builds extend Regal (her shelf, #23; web/regal.config.ts), a private repo Nuxt
+  # downloads with this token (a GitHub token that can read fabkho/regal), when LIBELLUS_REGAL=1.
+  # Where the secret is missing (a fork, a pull request from one) the app builds without the
+  # shelf and its flows skip, as anyone's would; the statics job also builds that way on purpose.
   GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
+  LIBELLUS_REGAL: ${{ secrets.GIGET_AUTH != '' && '1' || '' }}
   # Playwright shards on a pull request: 2 is the trade-off measured in
   # docs/TESTING.md (CI: what runs when). The repository variable E2E_SHARDS
   # overrides it without a commit; 1 is the cheapest in minutes.
@@ -350,6 +352,9 @@ jobs:
       - name: Web builds (nuxt generate)
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
         working-directory: web
+        env:
+          # Any address does for the build: only the service worker's routes name it.
+          NUXT_PUBLIC_REGAL_LIBRARY_SRC: ${{ vars.REGAL_LIBRARY_SRC || 'https://regal.example/v2/library.json' }}
         run: pnpm install --frozen-lockfile && pnpm build
 
       - name: Service worker, manifest and Pages headers are emitted
@@ -359,11 +364,26 @@ jobs:
 
       # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
       - name: Regal is built apart and left out of the precache
-        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
+        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' && env.LIBELLUS_REGAL == '1' }}
         working-directory: web
         run: |
           ls .output/public/_nuxt/regal.*.js
           ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
+
+      # What a fork builds (docs/SELF_HOSTING.md): no Regal, no GIGET_AUTH. It has to build, and
+      # nothing of the shelf may be left in it. Pull requests only; the build is the cheap part.
+      - name: Web builds without Regal (a fork's build)
+        if: ${{ !cancelled() && needs.changes.outputs.web == 'true' && github.event_name != 'push' }}
+        working-directory: web
+        env:
+          GIGET_AUTH: ''
+          LIBELLUS_REGAL: ''
+          REGAL_LAYER: ''
+        run: |
+          pnpm build
+          test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
+          ! ls .output/public/_nuxt/regal.*.js 2>/dev/null
+          ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@v2
         if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true'
