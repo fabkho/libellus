@@ -1,9 +1,10 @@
+import { readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { createOwnerErrors } from '../app/data/ownerErrors'
 import { emailCooldown, mailCount, readMailedCode, sql } from '../tests/support/stack'
 import { test } from './fixtures'
-import { SHELF_OWNER_ID, shelfOwner } from './shelfOwner'
+import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID, shelfOwner } from './shelfOwner'
 import { signedIn, untilStill } from './support'
 
 /**
@@ -31,8 +32,16 @@ test.afterAll(async () => {
   await sql('update private.instance_owner set owner_id = $1', [namedBefore])
 })
 
-/** Signs the owner in through the screens (she exists; a code is mailed to her). */
+const SHELF_FILE = readFileSync(new URL('../tests/fixtures/shelf/library.json', import.meta.url), 'utf8')
+
+/**
+ * Signs the owner in through the screens (she exists; a code is mailed to her). In a build with
+ * Regal her Profile shows Your shelf, which asks for the published library file: answered from the fixture.
+ */
 async function signInAsOwner(page: Page) {
+  await page.route(SHELF_LIBRARY_SRC, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: SHELF_FILE }),
+  )
   const owner = await shelfOwner()
   await emailCooldown()
   const before = await mailCount(owner.email)
