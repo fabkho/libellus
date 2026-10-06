@@ -2,7 +2,8 @@
 // A Book being read, in the Library (D's library-reading card): few Books
 // are open at once, so each gets room and its cover's light — cover, serif
 // title, author, since when and which day of the read it is — and Finish
-// right on the card. The card opens the book page from the touch-down.
+// right on the card. The card opens the book page from the touch-down. A quiet
+// mark beside the author when its ebook is on this device (#131, EbooksMark).
 import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
@@ -45,7 +46,10 @@ const since = computed(() => {
       />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
         <span class="book-title line-clamp-2 text-callout" data-testid="library.entryTitle">{{ entry.book.title }}</span>
-        <span class="truncate text-caption text-ink-muted">{{ authorLine }}</span>
+        <span class="flex min-w-0 items-center gap-xs">
+          <span class="truncate text-caption text-ink-muted">{{ authorLine }}</span>
+          <EbooksMark :entry="entry" testid="library.ebookMark" />
+        </span>
         <span class="figures mt-xs text-meta text-ink-faint" data-testid="library.entrySince">{{ since }}</span>
       </span>
     </UiPressLink>

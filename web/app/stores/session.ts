@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
-import { clearLocalData, clearLocalDatabase } from '~/data/localData'
+import { clearLocalData, clearLocalDatabase, clearLocalFiles } from '~/data/localData'
 import { useSyncStore } from '~/stores/sync'
 
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn'
@@ -249,12 +249,14 @@ export const useSessionStore = defineStore('session', () => {
     await forgetDevice()
   }
 
-  /** The device forgets the member: the Library's copy, the outbox, the pending address. */
+  /** The device forgets the member: the Library's copy, the outbox, her ebook files, the pending address. */
   async function forgetDevice() {
     if (import.meta.client) {
       useSyncStore().close()
       clearLocalData(window.localStorage)
       if (typeof indexedDB !== 'undefined') await clearLocalDatabase(indexedDB)
+      // The copies of her ebook files (#131), and any shared file not taken in yet.
+      await clearLocalFiles({ storage: navigator.storage, caches: typeof caches === 'undefined' ? null : caches })
     }
     pending.value = null
     adopt(null)

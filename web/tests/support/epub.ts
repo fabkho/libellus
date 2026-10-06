@@ -94,7 +94,8 @@ export function buildEpub(spec: EpubSpec): Uint8Array {
     ),
   }
   if (spec.cover) files[`${base}images/cover.jpg`] = [TINY_JPEG, { level: 0 }]
-  return zipSync(files)
+  // A fixed time on every entry, so the same spec always makes the same bytes (the same fingerprint).
+  return zipSync(files, { mtime: new Date('2026-01-01T00:00:00Z') })
 }
 
 // ------------------------------------------------------------ public-domain books

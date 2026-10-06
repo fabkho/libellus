@@ -415,7 +415,8 @@ export function indexedDbEbookRecords(factory: IDBFactory): EbookRecords {
     async put(record) {
       const db = await open()
       const tx = db.transaction('ebooks', 'readwrite')
-      tx.objectStore('ebooks').put(record)
+      // A plain copy: what the screens hand in may be wrapped (a reactive proxy), which IndexedDB cannot clone.
+      tx.objectStore('ebooks').put(JSON.parse(JSON.stringify(record)))
       await done(tx)
     },
     async remove(memberId, id) {

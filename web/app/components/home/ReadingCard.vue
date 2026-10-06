@@ -8,7 +8,8 @@
 // the card edits by itself. Right after a save the line says what changed
 // ("+24") and Update gives way to Undo for 5 s. At the last page the line reads
 // "The end." and Finish (lit) opens the Finish sheet right here.
-// The cover and the title open the book page from the touch-down.
+// The cover and the title open the book page from the touch-down. A quiet mark
+// beside the author when its ebook is on this device (#131, EbooksMark).
 import type { LibraryEntry } from '~/data/library'
 import { pageCountOf, progressFraction, progressOf, progressReachedEnd } from '~/data/progress'
 import { useBookStore } from '~/stores/book'
@@ -65,7 +66,10 @@ const gain = computed(() => {
     <div class="relative flex min-w-0 flex-1 flex-col pt-xxs">
       <UiPressLink :to="`/book/${entry.book.id}`" class="flex flex-col gap-xs" data-testid="home.entry" @press="books.prefetch(entry.book.id)">
         <span class="book-title line-clamp-2 text-book-title" data-testid="home.entryTitle">{{ entry.book.title }}</span>
-        <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>
+        <span class="flex min-w-0 items-center gap-xs">
+          <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>
+          <EbooksMark :entry="entry" testid="home.ebookMark" />
+        </span>
         <span v-if="!readingDays.hasHistory.value" class="figures mt-xs text-meta text-ink-faint" data-testid="home.entrySince">{{ since }}</span>
       </UiPressLink>
       <div v-if="readingDays.hasHistory.value" class="mt-sm flex items-end gap-sm" data-testid="home.days">

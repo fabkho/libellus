@@ -6,7 +6,8 @@
 // it is being read (with Abandon beside it), Read again on a finished Book and
 // Start again on an abandoned one — and what the Book is about. Opened from search (a Catalogue Book by id, or a result that is not
 // in the Catalogue yet by its source id) and from the Library. Where a Book
-// came from is never shown.
+// came from is never shown. Under the action, when the member has linked an
+// ebook file on this device (#131), one quiet line says so (BookEbook).
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useEditionStore } from '~/stores/edition'
@@ -222,6 +223,8 @@ function back() {
       >
         <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
+      <!-- Its ebook on this device, when one is linked (#131). -->
+      <BookEbook v-if="entry" :entry="entry" />
     </div>
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />

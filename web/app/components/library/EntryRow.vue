@@ -5,7 +5,8 @@
 // rated" when there is none; no year, the list is grouped by it). A Book whose
 // latest read was abandoned is dimmed (D's `dnf` row) and says "Not finished"
 // with the day instead of a Rating (#10). Opens the book page from the
-// touch-down (UiPressLink).
+// touch-down (UiPressLink). A Book whose ebook is on this device has a quiet
+// mark beside its author (#131, EbooksMark).
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 
@@ -39,7 +40,10 @@ const notFinished = computed(() => isNotFinished(props.entry))
     />
     <span class="flex min-w-0 flex-1 flex-col gap-xxs">
       <span class="book-title truncate text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ entry.book.title }}</span>
-      <span class="truncate text-caption" :class="notFinished ? 'text-ink-faint' : 'text-ink-muted'">{{ authorLine }}</span>
+      <span class="flex min-w-0 items-center gap-xs">
+        <span class="truncate text-caption" :class="notFinished ? 'text-ink-faint' : 'text-ink-muted'">{{ authorLine }}</span>
+        <EbooksMark :entry="entry" testid="library.ebookMark" />
+      </span>
       <span v-if="notFinished" class="figures mt-xxs flex items-center gap-xs text-meta text-ink-faint" data-testid="library.entryNotFinished">
         <UiIcon name="slash" :size="11" />
         {{ latest?.endedOn ? t('library.notFinishedOn', { date: formatDay(latest.endedOn, { year: false }) }) : t('status.notFinished') }}
