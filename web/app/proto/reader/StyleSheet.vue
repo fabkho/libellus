@@ -50,7 +50,7 @@ const CHOICES = [
         </span>
       </button>
     </div>
-    <p class="mt-md mb-xs px-xs text-caption text-ink-faint">Also in the reader: Aa → Printed | Classic.</p>
+    <p class="mt-md mb-xs px-xs text-caption text-ink-faint">Also in the reader: Aa → Printed page.</p>
   </UiSheet>
 </template>
 

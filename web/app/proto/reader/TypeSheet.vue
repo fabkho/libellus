@@ -29,22 +29,6 @@ function size(step: number) {
 
 <template>
   <UiSheet v-model:open="open" title="Text" testid="readerType">
-    <!-- The reader's style: the printed page (c) or the classic one (a); then pages or scroll for either. -->
-    <div class="seg mb-sm flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Style">
-      <button
-        v-for="st in (['printed', 'classic'] as const)"
-        :key="st"
-        type="button"
-        role="radio"
-        :aria-checked="settings.style === st"
-        class="flex flex-1 flex-col items-center justify-center rounded-sm text-ink-muted"
-        :class="settings.style === st && 'on'"
-        :data-testid="`readerType.style.${st}`"
-        @click="settings.style = st"
-      >
-        <span class="text-caption" :class="st === 'printed' && 'book-title italic'">{{ st === 'printed' ? 'Printed' : 'Classic' }}</span>
-      </button>
-    </div>
     <!-- Pages or scroll: b lives here now, as a way of reading a and c. -->
     <div class="seg mb-md flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Layout">
       <button
@@ -164,10 +148,24 @@ function size(step: number) {
           <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised shadow-button" :class="settings.keepAwake && 'on'" />
         </span>
       </UiRow>
+      <!-- The reader's style, quietly last: on is the printed page (c, the default), off the classic one (a). -->
+      <UiRow
+        as="button"
+        role="switch"
+        :aria-checked="settings.style === 'printed'"
+        label="Printed page"
+        data-testid="readerType.printed"
+        @click="settings.style = settings.style === 'printed' ? 'classic' : 'printed'"
+      >
+        <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.style === 'printed' ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
+          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised shadow-button" :class="settings.style === 'printed' && 'on'" />
+        </span>
+      </UiRow>
     </UiRowGroup>
     <p class="mt-sm mb-xs px-xs text-caption text-ink-faint">
       {{ settings.keepAwake ? 'While a book is open the screen stays on.' : 'The screen turns off as usual.' }}
       <template v-if="wakeNote"> {{ wakeNote }}</template>
+      {{ settings.style === 'printed' ? 'Printed page: the chapter and page number in the margins, a small capsule.' : 'Classic: a bar at the top and one at the bottom.' }}
     </p>
   </UiSheet>
 </template>

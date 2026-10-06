@@ -454,9 +454,14 @@ book) shows the loading state for ≈ 2 s, then 108 places. Accents are ignored 
 `round3/search-palette-arrival-and-dimming.jpg`. In production, `Loading.vue` takes its line as a
 prop and both searches use it.
 
-**Both styles stay; Printed (c) is the default.** Switch in the reader (Aa → Printed | Classic) or in
+**Both styles stay; Printed (c) is the default.** Switch in the reader (Aa → the **Printed page** toggle, last in the list under Keep the screen on: on = Printed, off = Classic) or in
 the Profile: a **Reader style** row opens a sheet with the two choices, each with a little drawing
 of its page (`round3/profile-reader-style.jpg`). On the prototype page the Profile row is a
 stand-in under the book: the real row belongs in Profile → Account (`components/profile/Account.vue`),
 which phase 1 is changing right now (its Ebook folder row), so it is not touched here. Both places
 write the same device setting.
+
+**Owner, after round 3:** the Printed | Classic switch at the top of the Aa sheet was too prominent —
+it is now a plain **Printed page** toggle at the bottom, under Keep the screen on (on by default;
+off is Classic), with one line under the group saying what each looks like.
+`round3/aa-printed-page-toggle.jpg`.
