@@ -29,7 +29,6 @@ import TocSheet from './TocSheet.vue'
 import StartPrompt from './StartPrompt.vue'
 import FinishPrompt from './FinishPrompt.vue'
 import EndOfBook from './EndOfBook.vue'
-import ProgressNote from './ProgressNote.vue'
 
 const props = defineProps<{
   variant: 'a' | 'b' | 'c'
@@ -388,12 +387,10 @@ const writer = new ProgressWriter({
   pageCount: () => props.book.pages,
   policy: () => (props.quickWrites ? QUICK_POLICY : SPEC_POLICY),
   enabled: () => props.status === 'reading' && !finishedHere.value,
-  write: (written, why) => {
-    emit('progress', written, why)
-    if (why !== 'close') note.value = { page: written, at: Date.now() }
-  },
+  // Saved quietly: no ribbon or line on the page (owner, after round 3 — it was distracting); the
+  // capsule and the bars show where you are, the book page shows the saved page.
+  write: (written, why) => emit('progress', written, why),
 })
-const note = ref<{ page: number; at: number } | null>(null)
 
 const chapterFraction = ref(0)
 const info = computed<ChromeInfo>(() => {
@@ -914,7 +911,6 @@ function nextChapter() {
       </p>
     </Transition>
 
-    <ProgressNote :note="note" :variant="mode" :chrome="chrome" />
 
     <EndOfBook
       :shown="endShown"

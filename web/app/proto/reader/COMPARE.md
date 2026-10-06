@@ -540,3 +540,8 @@ stood in: status bar 36, gesture bar 24; c normal | c edge to edge | a).
 
 **No running head (owner, after round 3).** c shows nothing above the text at all; the top band
 (28 px at Normal, under the status bar) is only air, the folio stays at the foot. `round3/c-no-running-head.jpg`.
+
+**No progress note (owner, after round 3).** The bookmark ribbon (c) and the "p. 13 saved" line (a) that
+showed each time progress was written are gone — distracting. Progress is still written the same way
+(forward only, after a rest on a page, on close); the capsule and the bars say where you are, the book
+page shows the saved page.
