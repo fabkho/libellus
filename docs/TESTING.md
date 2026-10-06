@@ -168,6 +168,33 @@ addresses (`/?search=1`, `/?progress=1`), and read what Chrome made of the manif
 `Page.getAppManifest` (the `share_target`, the three `shortcuts`, no errors) and `Page.getInstallabilityErrors`
 (none). A phone with a Google account shows the real share sheet entry and the long-press shortcuts.
 
+**Ebook files (#131)** have their own script, `e2e/android/ebooks.ts`, one step per run so the system's
+dialogs can be answered in between. Serve a static build (the share target needs the service worker)
+with a few public-domain EPUBs from Project Gutenberg copied into its output under `__fixtures/` (they
+are only served, never committed), install it (⋮ → Add to Home screen → Install → Add to home screen)
+and open it from its icon; for the folder, push some EPUBs into `Download/Books` (one in a subfolder):
+
+```sh
+pnpm generate && mkdir -p .output/public/__fixtures && cp ~/ebooks/pg*.epub .output/public/__fixtures/
+pnpm dlx serve -s .output/public -l 3126 &
+adb shell mkdir -p /sdcard/Download/Books/Classics && adb push pg2701.epub pg345.epub /sdcard/Download/Books/ && adb push pg1399.epub /sdcard/Download/Books/Classics/
+pnpm tsx e2e/android/ebooks.ts --base http://localhost:3126 --out /tmp/libellus-ebook-link --step setup   # a member with four Books
+… --step share1 · --step share3 · --step book · --step pick · --step scan · --step report
+```
+
+`share1`/`share3` POST one and three EPUBs to `/share` from the installed page itself (`multipart/form-data`,
+real `File`s, through the app's service worker, `public/sw-share.js`): the share sheet entry needs a
+WebAPK, as for #91 above, so a phone with a Google account is where the real share sheet is checked.
+`pick` taps *Choose* under Profile → Account → Ebook folder; Android's folder picker opens (the storage
+root and `Download` itself say "Can't use this folder"; open `Download` → `Books` → *Use this folder* →
+*Allow* "Allow Chrome to access folder?" → Chrome's *Allow* "Allow this site to view and copy files? … until
+you close all tabs for this site"). `scan` reloads (the installed app loses the folder's permission with
+every reload and restart, phase 0) and taps *Scan*: Chrome's *Allow* dialog comes on that tap, and after
+*Allow* `report` reads the result. Measured (Chrome 145, the emulator, Pixel 9 AVD, Android 17): one
+24.8 MB EPUB shared and linked in 0.7 s, three EPUBs (0.5–0.8 MB) in 0.5 s, "3 ebooks · 2 linked · 1 needs
+you"; the folder handle read back from IndexedDB after a reload, `queryPermission` `prompt`, one *Allow*
+tap, the scan of `Books` (a file in `Classics/` among them) "3 ebooks · 3 linked".
+
 **Your shelf (#23)** has its own script: Regal's 3D Stack under real fingers. The app must know the
 owner (`NUXT_PUBLIC_SHELF_OWNER_ID` = her auth user id, at build time for a static build) and her
 address must reach Mailpit; the run signs her in through the screens unless the tab has her session.

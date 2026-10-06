@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { mapCollectionError, type CollectionErrorCode } from './collections'
 import { mapLibraryError, type LibraryErrorCode } from './library'
-import { LOCAL_DATABASE } from './localData'
+import { LOCAL_DATABASE, openLocalDatabase } from './localData'
 import { COLLECTION_ACTIONS, isLocalId, uuid, type QueuedAction, type QueuedWrite } from './queuedWrites'
 
 /**
@@ -333,19 +333,8 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
 export function indexedDbOutboxStorage(factory: IDBFactory, name = LOCAL_DATABASE): OutboxStorage {
   let opened: Promise<IDBDatabase> | null = null
   function open(): Promise<IDBDatabase> {
-    opened ??= new Promise<IDBDatabase>((resolve, reject) => {
-      const req = factory.open(name, 1)
-      req.onupgradeneeded = () => req.result.createObjectStore(STORE)
-      req.onsuccess = () => {
-        // Another tab deleting it (signing out there) closes this connection too.
-        req.result.onversionchange = () => {
-          req.result.close()
-          opened = null
-        }
-        resolve(req.result)
-      }
-      req.onerror = () => reject(req.error)
-    }).catch((error) => {
+    // Another tab deleting it (signing out there) closes this connection too.
+    opened ??= openLocalDatabase(factory, { name, onClose: () => (opened = null) }).catch((error) => {
       opened = null
       throw error
     })

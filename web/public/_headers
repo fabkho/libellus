@@ -26,6 +26,8 @@
   Cache-Control: no-cache
 /sw-sync.js
   Cache-Control: no-cache
+/sw-share.js
+  Cache-Control: no-cache
 /manifest.webmanifest
   Cache-Control: no-cache
 

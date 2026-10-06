@@ -182,7 +182,13 @@
       "theme": "Dark mode",
       "install": "Install app",
       "signOut": "Sign out",
-      "delete": "Delete account"
+      "delete": "Delete account",
+      "ebookFolder": "Ebook folder",
+      "ebookFolderNone": "Choose",
+      "ebooks": "Ebooks",
+      "ebooksNeedYou": "{count} needs you | {count} need you",
+      "scan": "Scan",
+      "scanning": "Scanning…"
     },
     "deleteAccount": {
       "title": "Delete your account?",
@@ -217,7 +223,9 @@
   },
   "share": {
     "title": "Shared with Libellus",
-    "finding": "Finding your book…"
+    "finding": "Finding your book…",
+    "taking": "Taking in your ebook…",
+    "takingMany": "Taking in your ebooks… {done} of {total}"
   },
   "tabs": {
     "home": "Home",
@@ -664,7 +672,10 @@
   },
   "bookOptions": {
     "title": "Options",
-    "remove": "Remove from Library"
+    "remove": "Remove from Library",
+    "addEbook": "Add ebook",
+    "replaceEbook": "Replace ebook file",
+    "unlinkEbook": "Unlink ebook"
   },
   "removeEntry": {
     "title": "Remove “{title}” from your Library?",
@@ -780,6 +791,70 @@
       "offline": "You're offline. Nothing was saved.",
       "link_templates_invalid": "Some links could not be saved. Check them and try again.",
       "unknown": "Your links could not be saved. Try again."
+    }
+  },
+  "ebooks": {
+    "title": "Ebooks",
+    "back": "Back",
+    "intro": "EPUB files on this device, linked to the books in your Library. They never leave the device.",
+    "folder": {
+      "label": "Ebook folder",
+      "choose": "Choose",
+      "scan": "Scan",
+      "scanning": "Scanning…",
+      "scanningCount": "Scanning… {done} of {total}",
+      "hint": "Choose a subfolder such as Download/Books: Android does not allow the Download folder itself. Scan finds new EPUBs there and keeps a copy of each on this device.",
+      "error": "Libellus could not read the folder. Tap Scan and allow it, or choose the folder again."
+    },
+    "report": {
+      "share": "Shared",
+      "folder": "Scanned",
+      "total": "{count} ebook | {count} ebooks",
+      "linked": "{count} linked",
+      "needsYou": "{count} needs you | {count} need you",
+      "failed": "{count} isn't an EPUB | {count} aren't EPUBs",
+      "dismiss": "Dismiss"
+    },
+    "missed": "The shared files did not reach Libellus. Share them again.",
+    "needsYou": "Needs you",
+    "linked": "Linked",
+    "couldBe": "Could be one of your books | Could be one of {count} of your books",
+    "noMatch": "Not in your Library yet",
+    "choose": "Choose book",
+    "find": "Find book",
+    "ignore": "Ignore",
+    "missing": "Missing",
+    "missingHint": "The copy on this device is gone. Share the file again or scan the folder to bring it back.",
+    "untitled": "Untitled ebook",
+    "empty": {
+      "title": "No ebooks yet",
+      "text": "Share EPUB files to Libellus, or add one from a book's options."
+    },
+    "footer": "Ebook files stay on this device. Libellus never uploads them, and signing out deletes them here.",
+    "chooseSheet": {
+      "title": "Which book is it?"
+    },
+    "mark": "Ebook on this device",
+    "error": {
+      "not_epub": "That file isn't an EPUB.",
+      "storage": "The ebook could not be kept on this device. Free some space and try again.",
+      "folder": "Libellus could not read the folder. Tap Scan and allow it, or choose the folder again."
+    }
+  },
+  "bookEbook": {
+    "line": "Ebook · on this device",
+    "missing": "Ebook · missing",
+    "missingHint": "Share or scan the file again to bring the copy back.",
+    "adding": "Adding the ebook…",
+    "unlink": {
+      "title": "Remove the ebook from this device?",
+      "text": "The copy of “{name}” on this device is deleted. The book stays in your Library.",
+      "action": "Remove ebook"
+    },
+    "another": {
+      "title": "Another book?",
+      "text": "This file says it is “{title}”. Link it to this book anyway?",
+      "action": "Link"
     }
   }
 }

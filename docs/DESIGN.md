@@ -203,7 +203,8 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   colour; a column opens its books in a sheet, or its year), the reading days as a five-week
   calendar of dots, the ratings as one bar per whole star (a row opens the books rated so), the
   records, the authors read more than once (a fan of covers and tally marks), the years in review
-  as cards, and the account at the end (address, Name, Dark mode, Import books, Sign out).
+  as cards, and the account at the end (address, Name, Book links, Dark mode, Ebook folder, Ebooks,
+  Import books, Sign out).
   **Figures and covers, never sentences**: the owner turned down text summaries ("You read on 15
   of the last 21 days…"). No goals and no streaks: the reading days say which days and how much,
   never a run to keep. **Loading**: the whole page is there from the first frame at its final
@@ -211,6 +212,28 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   in `fillStrong`, `radius.sm`, `aria-hidden`) wherever a figure, a cover or a line will be, in a
   slow wave (`wave`); the region carries `aria-busy` until the record comes. The device keeps the
   last record, so this shows on a first visit only (MOTION.md, Loading).
+- **Ebooks on this device** (`pages/ebooks.vue`, #131): pushed from the Profile's account rows and
+  opened by a share of EPUB files. The large title and one muted sentence (the files never leave the
+  device), then, after a share or a scan, a raised card with an eyebrow (*Shared*, *Scanned*), the
+  result in one plain line ("3 ebooks · 2 linked · 1 needs you", never mono: it is words) and a quiet
+  Dismiss. Where the browser can pick a folder: a row group with *Ebook folder* (the folder's name in
+  mono, or a ghost *Choose*), a secondary *Scan* button under it ("Scanning… 3 of 12" while it runs)
+  and a faint caption that Android does not let it use the Download folder itself. Then *Needs you*
+  (eyebrow and count, like the Library's groups): each waiting file as a row with the file's own cover
+  (or its Placeholder), the serif title and the author as the file says them, the file name in mono,
+  why it waits in faint ink, and small buttons *Choose book* (quiet) / *Find book* / *Ignore*
+  (plain). Then *Linked*: rows with the Book's own cover and title that open the book page; a copy
+  the browser evicted says *Missing* in the error colour. A faint footer says files stay on the
+  device. *Choose book* opens a sheet: the file (`UiBookLine`) over the candidate Books as rows with
+  their covers and facts.
+- **Ebooks on the book page and the cards** (#131): a Book with a linked file has one quiet caption
+  under its action, the `ebook` icon and "Ebook · on this device" in faint ink ("Ebook · missing" in
+  the error colour, with a faint hint under it); no button until the reader exists (phase 2). The
+  options sheet's ebook row (*Add ebook*, *Replace ebook file*) is a native file input laid over the
+  row, so the tap itself opens the picker; *Unlink ebook* asks first (`UiConfirm`). A picked file that
+  is clearly another book asks in a sheet ("Another book?", the file's title and author, *Link*). Library
+  rows and cards and Home's reading cards carry the `ebook` icon at 13 px in faint ink right after the
+  author: a mark, not a badge, and nothing else on the card changes.
 - **Year in review** (`pages/profile/[year].vue`): pushed from the Profile, lit by the year's
   favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
   their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
@@ -284,7 +307,7 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiRoundButton`, `UiTopBar` | Glass round buttons for chrome floating over a cover (back, more) on pushed screens such as book detail. |
 | `UiProgress` | How far through a Book (#39): a hairline bar, the lamp colour (`accent`) for what is read on a faint rule (`hairlineStrong`), `stroke.focus` thick, growing over `standard`. `fraction` 0–1; `label` and `valueText` for assistive tech. The words beside it ("p. 212 of 480", "45 %") are the caller's, in `figures`. |
 | `UiReveal` | Something that is not there until it has something to say (#79: the book page's figures, chart and reading log before progress was tracked). `show` opens its room and fades it in over `standard` (the content under it glides, no jump), closes over `exit`; Reduce Motion a short fade. Carries `data-moving` while moving. |
-| `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe, pencil, flag, arrow, sun, moon, signOut, trash (a bin: deleting the account), offline (a cloud struck through: an action that cannot write now), sync (a cloud with an arrow up: changes waiting to sync, #93). Decorative; the control carries the label. New icons are drawn on the same grid. |
+| `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe, pencil, flag, arrow, sun, moon, signOut, trash (a bin: deleting the account), offline (a cloud struck through: an action that cannot write now), sync (a cloud with an arrow up: changes waiting to sync, #93), ebook (a reader's screen with lines of a page: an ebook file on this device, #131). Decorative; the control carries the label. New icons are drawn on the same grid. |
 | `UiAvatar` | The member's initials (`utils/initials.ts`) in mono in a hairline ring. |
 | `UiCover` | Every cover. 2:3, `object-fit: cover`, token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. |
 | `UiAmbient` | The light a cover throws onto its card (`shape="card"`) or page (`shape="page"`), from the cover's precomputed colours. Currently reading cards, book detail. |

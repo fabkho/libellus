@@ -10,6 +10,12 @@
 // and says "Offline"), behind a Confirm that says what goes and that it cannot be
 // undone; writes still waiting to sync are named in it and discarded with the rest.
 // Afterwards she is on Sign in, which says the account was deleted.
+// Ebooks on this device (#131), where the browser can keep files: the Ebook folder
+// (Chrome only: its name, a tap picks it; Scan beside it asks for the folder's
+// permission on that tap when Android has forgotten it, scans, and opens the
+// ebooks page with what it found), and Ebooks (how many need her, else how many
+// are linked) leading to that page.
+import { useEbooksStore } from '~/stores/ebooks'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
@@ -45,6 +51,17 @@ function askSignOut() {
   else void signOut()
 }
 const installApp = useInstallHint()
+
+const ebooks = useEbooksStore()
+const ebooksValue = computed(() => {
+  const waiting = ebooks.waiting.length
+  if (waiting) return t('profile.account.ebooksNeedYou', { count: waiting }, waiting)
+  return ebooks.linked.length ? String(ebooks.linked.length) : ''
+})
+async function scanEbooks() {
+  if (await ebooks.scan()) await navigateTo('/ebooks')
+  else if (ebooks.error) await navigateTo('/ebooks')
+}
 
 /** The Delete account Confirm; the number of unsynced changes when it was asked. */
 const deleting = ref(false)
@@ -115,6 +132,25 @@ async function syncFirst() {
         <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="isDark ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
           <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised shadow-button" :class="isDark && 'on'" />
         </span>
+      </UiRow>
+      <UiRow v-if="ebooks.folderSupported" icon="library" :label="t('profile.account.ebookFolder')" data-testid="profile.ebookFolderRow">
+        <button
+          type="button"
+          class="-my-sm min-h-(--size-touch) min-w-0 truncate px-xs"
+          :class="ebooks.folder ? 'figures text-ink-muted' : 'text-ink-ghost'"
+          data-testid="profile.ebookFolder"
+          @click="ebooks.pickFolder()"
+        >
+          {{ ebooks.folder?.name ?? t('profile.account.ebookFolderNone') }}
+        </button>
+        <template v-if="ebooks.folder" #trailing>
+          <UiButton tone="quiet" size="sm" class="-mr-xs" :disabled="Boolean(ebooks.busy)" data-testid="profile.ebookScan" @click="scanEbooks">
+            {{ ebooks.busy?.source === 'folder' ? t('profile.account.scanning') : t('profile.account.scan') }}
+          </UiButton>
+        </template>
+      </UiRow>
+      <UiRow v-if="ebooks.supported" to="/ebooks" icon="ebook" :label="t('profile.account.ebooks')" chevron data-testid="profile.ebooks">
+        <span v-if="ebooksValue" :class="ebooks.waiting.length ? 'text-ink' : 'figures text-ink-muted'" data-testid="profile.ebooksValue">{{ ebooksValue }}</span>
       </UiRow>
       <UiRow to="/import" icon="import" :label="t('import.menuItem')" chevron data-testid="profile.import" />
       <UiRow

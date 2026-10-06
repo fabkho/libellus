@@ -31,6 +31,7 @@ export type IconName =
   | 'import'
   | 'camera'
   | 'torch'
+  | 'ebook'
 </script>
 
 <script setup lang="ts">
@@ -117,6 +118,10 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     <template v-else-if="name === 'torch'"><path d="M13.2 3.5 6.5 13.2h4.8l-.5 7.3 6.7-9.7h-4.8z" /></template>
     <template v-else-if="name === 'trash'">
       <path d="M5 7h14M9.5 7V5.2a.7.7 0 0 1 .7-.7h3.6a.7.7 0 0 1 .7.7V7" /><path d="M6.8 7l.7 11.3a1.2 1.2 0 0 0 1.2 1.2h6.6a1.2 1.2 0 0 0 1.2-1.2L17.2 7M10 10.5v5.5M14 10.5v5.5" />
+    </template>
+    <!-- An ebook on the device (#131): a reader's screen with a page of lines. -->
+    <template v-else-if="name === 'ebook'">
+      <rect x="6" y="3.5" width="12" height="17" rx="2" /><path d="M9 8h6M9 11h6M9 14h3.5" />
     </template>
     <template v-else-if="name === 'signOut'">
       <path d="M13.5 4.5h-7a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h7" /><path d="M10.5 12h9m-3-3 3 3-3 3" />

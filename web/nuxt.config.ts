@@ -167,14 +167,23 @@ export default defineNuxtConfig({
         // Alpha only: the launcher tints it when the member turns themed icons on.
         { src: `/icon-monochrome-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
       ],
-      // Sharing a link or text to Libellus from another app (issue #91): Goodreads, Amazon, a
-      // browser, a bookstore app. A GET, so no service-worker handling: the app opens at
-      // /share?title=&text=&url= (pages/share.vue), finds the Book and goes to its page.
+      // Sharing to Libellus from another app. A link or text (issue #91: Goodreads, Amazon, a
+      // browser, a bookstore app) opens the app at /share?title=&text=&url= (pages/share.vue),
+      // which finds the Book and goes to its page. EPUB files, one or many (issue #131: from the
+      // download notification or the file manager), are taken in and linked to Books. A manifest
+      // has one share_target and files make it a multipart POST, so the service worker answers
+      // every share (public/sw-share.js): files are kept on the device for the app to take, text
+      // is redirected to the same GET address as before.
       share_target: {
         action: '/share',
-        method: 'GET',
-        enctype: 'application/x-www-form-urlencoded',
-        params: { title: 'title', text: 'text', url: 'url' },
+        method: 'POST',
+        enctype: 'multipart/form-data',
+        params: {
+          title: 'title',
+          text: 'text',
+          url: 'url',
+          files: [{ name: 'ebooks', accept: ['.epub', 'application/epub+zip'] }],
+        },
       },
       // Long-press the icon (issue #91). The addresses are read by the shell (composables/useLaunch.ts).
       shortcuts: [
@@ -203,8 +212,9 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
-      // Background Sync wakes the open app to send the outbox (#93, public/sw-sync.js).
-      importScripts: ['/sw-sync.js'],
+      // Background Sync wakes the open app to send the outbox (#93, public/sw-sync.js); the share
+      // target's POST is answered by public/sw-share.js (#91, #131).
+      importScripts: ['/sw-sync.js', '/sw-share.js'],
       // The module's defaults only pick up the build-meta JSON under `nuxt generate`;
       // the app shell, chunks and fonts have to be listed to be precached. Only
       // woff2 (the latin subsets main.css imports), never the woff fallbacks;

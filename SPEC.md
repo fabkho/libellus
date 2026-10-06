@@ -95,6 +95,7 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
 ```
 (auth)   Sign in (email) → Sign up (invite code; unknown email only) → Verify (six-digit code)
 (tabs)   Home | Library | Search          avatar in the header → Profile (reading in figures, years in review, account)
+         Profile → Ebooks: EPUB files on this device, linked to Books (#131)
          Home    → Currently reading, Want to read, "Read in <year>: N"
          Library → Want to read / Currently reading / Finished (+ Not finished filter), Collections
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
@@ -115,6 +116,9 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
 - Speed: ~220 ms debounced search with aborts, thumbhash placeholders, preloaded first covers,
   keep-alive pages, navigation on pointer-down. Covers resolved once, cached by the service worker.
 - Privacy: minimal data, EU region, no trackers. Keys never committed.
+- Ebook files (#131) stay on the device: a linked EPUB is copied into the browser's own storage
+  (OPFS) and its link kept in IndexedDB, per member; nothing about them reaches the server, and
+  signing out deletes them.
 - Errors: what goes wrong on a device (exceptions, refused offline writes, the shelf, missing chunks)
   goes to the database's own log, no third-party service: technical details only, no content, kept
   30 days ([docs/OPERATIONS.md](docs/OPERATIONS.md), Client errors).
@@ -167,6 +171,12 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
   by how well the query matches title and author, then popularity. A specific edition is one ISBN
   search away.
 - **Fable is imported once** by a local script, then dropped.
+- **Ebook files are copied, never uploaded** (owner, #131, after the phase 0 spike): each linked EPUB
+  is copied into the origin private file system, so reading it needs no permission and works offline;
+  the picked folder is only for finding files (Android asks for its permission again every session).
+  Files come from the share sheet, the folder (Scan) and Add ebook on a Book page; matching tries the
+  ISBN, then title and first author, and leaves the rest to the member. Libellus never downloads books
+  or names where they come from.
 
 ## 9. Testing
 

@@ -7,7 +7,16 @@
 // `removed` fires once the entry is gone, so the page can leave the Book. The
 // page keeps this mounted when the entry is gone (`entry` is null then), or the
 // event would be lost with the component.
+//
+// The Book's ebook on this device (issue #131): Add ebook (the platform's file
+// picker, an EPUB; it is linked to this Book, after a question when it is clearly
+// another book: components/book/Ebook.vue), or, once one is linked, Replace ebook
+// file and Unlink ebook (behind a Confirm: the copy on this device is deleted,
+// the Book stays). The picker is a native file input laid over the row, so the
+// tap itself opens it (as UiDateRow does with the date picker); the sheet closes
+// once a file is chosen. Offered where the browser can keep files.
 import type { LibraryEntry } from '~/data/library'
+import { useEbooksStore } from '~/stores/ebooks'
 import { useEditionStore } from '~/stores/edition'
 import { useHistoryStore } from '~/stores/history'
 
@@ -56,6 +65,34 @@ function ask() {
 async function remove() {
   if (await history.confirmRemove()) emit('removed')
 }
+
+const ebooks = useEbooksStore()
+const ebook = computed(() => ebooks.linkFor(props.entry))
+// Kept while the question slides away, like the book line above.
+const ebookName = ref('')
+const unlinking = ref(false)
+
+function picked(event: Event) {
+  const field = event.target as HTMLInputElement
+  const file = field.files?.[0]
+  // Emptied at once, so choosing the same file again is a change too.
+  field.value = ''
+  if (!file || !props.entry) return
+  open.value = false
+  void ebooks.addForBook(file, props.entry)
+}
+
+function askUnlink() {
+  if (!ebook.value) return
+  ebookName.value = ebook.value.name
+  open.value = false
+  unlinking.value = true
+}
+
+async function unlink() {
+  if (ebook.value) await ebooks.unlink(ebook.value)
+  unlinking.value = false
+}
 </script>
 
 <template>
@@ -80,6 +117,24 @@ async function remove() {
           data-testid="bookOptions.changeEdition"
           @click="changeEdition"
         />
+        <template v-if="ebooks.supported && entry">
+          <UiRow
+            icon="ebook"
+            :label="ebook ? t('bookOptions.replaceEbook') : t('bookOptions.addEbook')"
+            class="not-disabled:hover:bg-fill active:bg-fill-strong"
+            data-testid="bookOptions.ebookRow"
+          >
+            <input
+              type="file"
+              accept=".epub,application/epub+zip"
+              class="absolute inset-0 size-full cursor-pointer opacity-0"
+              :aria-label="ebook ? t('bookOptions.replaceEbook') : t('bookOptions.addEbook')"
+              :data-testid="ebook ? 'bookOptions.replaceEbook' : 'bookOptions.addEbook'"
+              @change="picked"
+            />
+          </UiRow>
+          <UiRow v-if="ebook" as="button" icon="close" :label="t('bookOptions.unlinkEbook')" data-testid="bookOptions.unlinkEbook" @click="askUnlink" />
+        </template>
         <UiRow
           as="button"
           icon="close"
@@ -101,5 +156,14 @@ async function remove() {
     :error="history.removeError ? t(`library.error.${history.removeError}`) : null"
     testid="removeEntry"
     @confirm="remove"
+  />
+
+  <UiConfirm
+    v-model:open="unlinking"
+    :title="t('bookEbook.unlink.title')"
+    :text="t('bookEbook.unlink.text', { name: ebookName })"
+    :action="t('bookEbook.unlink.action')"
+    testid="unlinkEbook"
+    @confirm="unlink"
   />
 </template>
