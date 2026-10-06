@@ -373,7 +373,7 @@ A `what changed` job (about 6 seconds, one billed minute) turns the changed file
 | Changed path | Runs |
 | --- | --- |
 | `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the Playwright flows (stack job), plus the web build for `web/**` |
-| `supabase/tests/**`, `supabase/templates/**` | pgTAP and Vitest (stack job, no flows) |
+| `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip (stack job, no flows) |
 | `design/**`, `web/app/assets/css/tokens.generated.css` | Tokens check |
 | `supabase/functions/goodreads-rating/**` | Deno lint, check, test of that function |
 | `supabase/functions/regal-export/**`, `web/app/data/export/**` | Deno lint, check, test of that function |
@@ -387,7 +387,9 @@ Jobs, and why they are shaped so:
 - **`stack`** boots one local Supabase stack per runner (the database, auth, API, mail catcher and storage;
   Studio, imgproxy, edge runtime, logs, vector and postgres-meta are left out) and uses it for everything that
   needs one. Shard 1 runs pgTAP and Vitest first (a red rule says so before the flows start), then every shard
-  runs its slice of the flows (`--shard i/N`, split by test). Before, pgTAP + Vitest was a job of its own that
+  runs its slice of the flows (`--shard i/N`, split by test). After Vitest, shard 1 also runs the backup round
+  trip (`scripts/test-backup-roundtrip.sh`, docs/OPERATIONS.md "Backups"): the nightly backup's dump, age and
+  restore on what the suites left in the stack, so a migration that would break a restore turns CI red. Before, pgTAP + Vitest was a job of its own that
   booted a second stack (about 4 billed minutes). On a push to `main` the job is shard 1 alone and stops after Vitest.
 - **`statics`** holds the checks that take seconds (tokens, `nuxt generate`, the two Deno suites) in one job,
   because each job rounds up to a whole minute: four jobs were four minutes, the one job is one.

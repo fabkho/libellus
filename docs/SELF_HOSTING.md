@@ -160,6 +160,13 @@ published library file and the owner's user id (table below). Its data feed (`re
 `shelf_publish` trigger with `pg_net` and a Vault secret) does nothing until configured:
 [OWNER.md](OWNER.md).
 
+**Nightly backups.** Supabase's Free plan keeps no backup you can download.
+`.github/workflows/backup.yml` dumps the database every night, encrypts it with [age](https://age-encryption.org)
+to your public key and uploads it to a private Cloudflare R2 bucket, keeping 35 days; it runs in your
+fork's GitHub Actions once you give it a key, a bucket and the database's address, and is skipped until then
+(scheduled workflows also have to be switched on in a fork's Actions tab). Setting it up, what a backup
+holds and how to restore one into a new project: [OPERATIONS.md, Backups](OPERATIONS.md#backups).
+
 **Android app (Play Store)** as a Trusted Web Activity is planned, not part of the repository yet.
 
 ## Every setting
@@ -188,6 +195,9 @@ Content-Security-Policy in `web/public/_headers` also names the owner's shelf ho
 | Function secrets | `REGAL_EXPORT_TOKEN`, `REGAL_OWNER_EMAIL`, `REGAL_OWNER_NAME`, `REGAL_*` | unset | `regal-export`, owner only ([OWNER.md](OWNER.md)). |
 | Database | `private.shelf_publish.owner_id`, Vault `github_dispatch_token` | empty | The shelf's publish trigger, owner only; does nothing while empty. |
 | Pages project | Custom domain, Web Analytics | none, off | Step 4; Optional pieces. |
+| GitHub Actions secrets | `SUPABASE_DB_URL`, `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY` | unset | Nightly backups: the session pooler's connection string, an R2 token for the bucket. Optional ([OPERATIONS.md](OPERATIONS.md#backups)). |
+| GitHub Actions variables | `BACKUP_AGE_RECIPIENT`, `CLOUDFLARE_ACCOUNT_ID`, `BACKUP_R2_BUCKET`, `BACKUP_MIN_BYTES` | unset (backup skipped), `libellus-backups`, `50000` | Nightly backups: your age public key, where the bucket is. |
+| Restore script | `LIBELLUS_PRODUCTION_REF` | the owner's project ref | The project `scripts/restore-backup.sh` refuses without `--i-know`: set your own. |
 | Source | App name, icons, colours | Libellus, "Night Reader" | Not settings: `web/nuxt.config.ts` (`pwa.manifest`), `web/i18n/locales/en.json` (`app.name`), `design/tokens.json`, `design/icons/`. |
 
 `web/.env.example` lists the web build's variables for local work.
