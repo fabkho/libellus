@@ -1,0 +1,11 @@
+name: Idea
+description: Something Libellus could do. Please read SPEC.md's non-goals first.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you would like to do, and why it matters for keeping track of your reading.
+    validations:
+      required: true
