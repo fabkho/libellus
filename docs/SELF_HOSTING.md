@@ -178,6 +178,31 @@ holds and how to restore one into a new project: [OPERATIONS.md, Backups](OPERAT
 
 **Android app (Play Store)** as a Trusted Web Activity is planned, not part of the repository yet.
 
+### The owner
+
+A few screens belong to the one person who runs the instance, and no one else sees them: today the
+client error log (Profile → Account → Errors, [OPERATIONS.md, Client errors](OPERATIONS.md#client-errors)),
+and Your shelf with Regal. Nothing is on until you name yourself, in two places that have to agree:
+
+1. **The database** knows its owner from one row, `private.instance_owner`, empty after the
+   migrations. In the dashboard's SQL editor, once, after you have signed in:
+
+   ```sql
+   update private.instance_owner
+      set owner_id = (select id from auth.users where email = '<your address>');
+   ```
+
+   This is what protects the data: `owner_client_errors` and `owner_client_error_detail` raise
+   `not_owner` for every other caller, whatever the app shows. It is not `private.shelf_publish.owner_id`
+   (the Regal shelf's publish trigger; an instance may have no shelf and still have an owner), though
+   on the owner's instance both are the same person.
+2. **The web build** shows the screens to the member whose auth user id is `NUXT_PUBLIC_SHELF_OWNER_ID`
+   (her id: `select id from auth.users where email = '<your address>'`). It is public like all built
+   configuration, so it only decides what is shown; set it, build again, and the Errors row appears on
+   your Profile.
+
+Left empty, nobody is the owner: no row, no page, and the database refuses every call.
+
 ## Every setting
 
 Everything that differs between instances. Nothing in the app's code depends on the owner's
@@ -193,7 +218,7 @@ Content-Security-Policy in `web/public/_headers` also names the owner's shelf ho
 | Web build env | `LIBELLUS_REGAL` | unset (off) | `1` builds with the owner's Regal layer. Owner only. |
 | Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal, or a local checkout. Owner only. |
 | Web build env | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | empty | The published library file Regal shows. Required with `LIBELLUS_REGAL=1`. Owner only. |
-| Web build env | `NUXT_PUBLIC_SHELF_OWNER_ID` | empty (nobody) | The auth user id that sees Your shelf, with Regal only. Owner only. |
+| Web build env | `NUXT_PUBLIC_SHELF_OWNER_ID` | empty (nobody) | The auth user id of the instance's owner: sees the Errors row and page, and Your shelf with Regal ([The owner](#the-owner)). Owner only. |
 | Supabase Auth | Site URL, Redirect URLs | `http://127.0.0.1:3020` locally | Your address (step 1.3, 4). |
 | Supabase Auth | Confirm email, Email OTP length | on, 6 | As in `supabase/config.toml` (step 1.3). |
 | Supabase Auth | User sign-ups | on | Leave on; invite codes gate sign-up in the database. |
@@ -202,6 +227,7 @@ Content-Security-Policy in `web/public/_headers` also names the owner's shelf ho
 | Invite codes | `scripts/create-invite-code.sh` | none | Uses, expiry, label, the code itself (step 5). Locally `LIBELLUS-DEV` is seeded. |
 | Function secrets | `LIBELLUS_SITE_URL` | unset | `goodreads-rating`: your address, named in its User-Agent. Optional. |
 | Function secrets | `REGAL_EXPORT_TOKEN`, `REGAL_OWNER_EMAIL`, `REGAL_OWNER_NAME`, `REGAL_*` | unset | `regal-export`, owner only ([OWNER.md](OWNER.md)). |
+| Database | `private.instance_owner.owner_id` | empty (nobody) | Who may read the client error log through `owner_client_errors` ([The owner](#the-owner)). Set once by SQL. |
 | Database | `private.shelf_publish.owner_id`, Vault `github_dispatch_token` | empty | The shelf's publish trigger, owner only; does nothing while empty. |
 | Pages project | Custom domain, Web Analytics | none, off | Step 4; Optional pieces. |
 | GitHub Actions secrets | `SUPABASE_DB_URL`, `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY` | unset | Nightly backups: the session pooler's connection string, an R2 token for the bucket. Optional ([OPERATIONS.md](OPERATIONS.md#backups)). |

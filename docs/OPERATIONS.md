@@ -43,7 +43,22 @@ the schema `private`, which the API does not expose). Rows are deleted after 30 
 
 ### Reading them
 
-In the dashboard's SQL editor (it runs as the owner of the schema). The last 7 days, grouped by what
+**In the app, as the owner:** Profile → Account → **Errors** (the row shows how many error groups first
+appeared in the last 24 hours). It opens the last 7 days grouped by kind and message, newest first: a
+chip with the kind, ×times, the message, when it was last seen and in which build and route; a filter by
+kind; **Refresh** in the top bar. A tap opens the group's latest stack (mono, scrollable, **Copy** puts
+the message, where it happened and the stack on the clipboard) and its figures: first and last seen, how
+many members met it (a number, never who), the builds and routes, installed or in a tab, online or
+offline. Only the instance's owner has it: the database answers `owner_client_errors(p_days)` and
+`owner_client_error_detail(p_message_hash)` (`supabase/migrations/20261007100000_owner_client_errors.sql`)
+only to the member named in `private.instance_owner` and raises `not_owner` for anyone else, signed-out
+callers cannot call them at all, and the app shows the row and the page only for the member named by
+`NUXT_PUBLIC_SHELF_OWNER_ID` and asks for nothing otherwise. Both have to name the owner: see
+[SELF_HOSTING.md, The owner](SELF_HOSTING.md#the-owner). A member who is not the owner has no row, the
+address `/profile/errors` is a 404, and a call to the functions is refused. The functions give the 30 days
+the log keeps at most (`p_days`, 1 to 30, the app asks for 7) and at most 200 groups.
+
+**In the dashboard's SQL editor** (it runs as the owner of the schema; for anything the app does not show) (it runs as the owner of the schema). The last 7 days, grouped by what
 happened and in which build:
 
 ```sql
@@ -220,8 +235,9 @@ key, `citext` in `public` and the open trigger functions were, `supabase/tests/l
 |---|---|---|
 | `authenticated_security_definer_function_executable` (0029) | every RPC in `public`: `add_to_library`, `start_reading`, `finish_reading`, `sync_write`, `delete_my_account`, … | Members never write a table directly: every change is one RPC (`web/AGENTS.md`, Architecture), the tables grant members `select` at most, and the RPC is the only way in. It runs as its owner so it can write what the member may not touch herself (the shared Catalogue, the derived Status, the record of synced writes), and it checks everything on its own: the member is `auth.uid()`, never an argument, every row it touches is hers, and its `search_path` is pinned. Switching them to `SECURITY INVOKER` would mean opening the tables to direct writes. |
 | `anon_security_definer_function_executable` (0028) | `invite_code_status(text)` | The sign-up screen checks the invite code before anyone has an account, so the caller is signed out by definition. It answers `valid`, `missing`, `invalid`, `expired` or `exhausted` for one code and reveals nothing else; `invite_codes` itself stays closed to the API (RLS on, no policy). |
+| `authenticated_security_definer_function_executable` (0029) | `owner_client_errors(integer)`, `owner_client_error_detail(text)` | The owner reads the error log in the app (Client errors, above). Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line of the function, before any row is read, so executability by `authenticated` opens nothing. They return groups and counts, never another member's id. |
 | the same (0028) | `log_client_error(…)` | The error log (Client errors, above) has to hear from devices that are signed out: the sign-in screens, a deploy's missing chunks. It only appends to `private.client_errors`, scrubs what it is given, and limits signed-out reports harder (per salted address and in total). |
-| `rls_enabled_no_policy` (0008, INFO) | `public.invite_codes`, `public.synced_writes`, `private.client_errors`, `private.client_error_salt` | RLS on with no policy is "nobody reads or writes this through the API". Only the security-definer functions above use these tables. A policy here would open them. |
+| `rls_enabled_no_policy` (0008, INFO) | `public.invite_codes`, `public.synced_writes`, `private.client_errors`, `private.client_error_salt`, `private.instance_owner` | RLS on with no policy is "nobody reads or writes this through the API". Only the security-definer functions above use these tables. A policy here would open them. |
 | `auth_leaked_password_protection` | Auth | Members sign in with a code sent by e-mail (OTP); nobody has a password, so there is nothing to check against HaveIBeenPwned. |
 | `auth_insufficient_mfa_options` | Auth | The same: the e-mail code is the only factor and there is no password to put a second factor behind. Revisit if passwords ever come. |
 
