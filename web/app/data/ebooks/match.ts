@@ -35,7 +35,8 @@ function words(text: string): string[] {
 
 /** The title before its subtitle: "Moby Dick; Or, The Whale" → "Moby Dick", "Piranesi: A Novel" → "Piranesi". */
 export function mainTitle(title: string): string {
-  return title.split(/\s*[:;(\[]|\s+[-–—]\s+|\.\s|,\s+or\b/i)[0] ?? title
+  // Not at ". ": a title may begin with one ("Dr. Jekyll and Mr. Hyde", "Dr. No").
+  return title.split(/\s*[:;(\[]|\s+[-–—]\s+|,\s+or\b/i)[0] ?? title
 }
 
 /** The same title as matching reads it: whole, or one's main title the other's (main) title. */

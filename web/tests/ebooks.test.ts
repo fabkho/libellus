@@ -199,6 +199,9 @@ describe('matching a file to a Book', () => {
     expect(sameTitle('Moby Dick; Or, The Whale', 'Moby-Dick')).toBe(true)
     expect(sameTitle('War and Peace', 'War & Peace')).toBe(true)
     expect(sameTitle('Dracula', "Dracula's Guest")).toBe(false)
+    // A title that begins with an abbreviation is not cut there.
+    expect(sameTitle('Dr. Jekyll and Mr. Hyde', 'Dr. No')).toBe(false)
+    expect(clearlyAnotherBook({ title: 'Dr. No', authors: [], isbns: [] }, { title: 'Dr. Jekyll and Mr. Hyde', authors: [], isbn13: null, isbn10: null })).toBe(true)
     expect(sameAuthor('J. R. R. Tolkien', 'Tolkien')).toBe(true)
     expect(sameAuthor('Leo Tolstoy', 'Lev Tolstoy')).toBe(true)
     expect(sameAuthor('Jane Austen', 'Jane Eyre')).toBe(false)
@@ -224,14 +227,18 @@ describe('the files on the device', () => {
   function setup(entries: LibraryEntry[] = []) {
     const files = memoryFiles()
     const records = memoryEbookRecords()
+    const ingested: string[] = []
     const ebooks = createEbooks({
       memberId: MEMBER,
       records,
       files,
-      ingest: (blob) => ingestEbook(blob, { dir: memberDir(MEMBER), files }),
+      ingest: (blob) => {
+        ingested.push((blob as File).name)
+        return ingestEbook(blob, { dir: memberDir(MEMBER), files })
+      },
       now: () => new Date('2026-10-07T10:00:00Z'),
     })
-    return { files, records, ebooks, entries }
+    return { files, records, ebooks, entries, ingested }
   }
 
   it('copies a file once, under its fingerprint, with its cover, and links it', async () => {
@@ -334,10 +341,10 @@ describe('the files on the device', () => {
     expect((await ebooks.list())[0]).toMatchObject({ bookId: 'another-edition', entryId: moby.id })
   })
 
-  it('scans a folder: new files taken in, known ones skipped without reading them, moved ones recognised', async () => {
+  it('scans a folder: new files taken in, known ones skipped without reading them, moved and replaced ones recognised', async () => {
     const moby = entry({ title: 'Moby-Dick', authors: ['Herman Melville'] })
     const anna = entry({ title: 'Anna Karenina', authors: ['Leo Tolstoy'] })
-    const { ebooks } = setup()
+    const { ebooks, ingested } = setup()
     const folder = fakeFolder({
       'Moby Dick.epub': buildEpub(MOBY_DICK_GUTENBERG),
       'Russian/Anna Karenina.epub': buildEpub(ANNA_KARENINA_STANDARD),
@@ -346,18 +353,25 @@ describe('the files on the device', () => {
     })
     const first = await ebooks.scan(folder.handle, [moby, anna])
     expect(first.report).toMatchObject({ total: 3, linked: 2, needsYou: 1, failed: 0 })
-    expect(folder.opened).toEqual(expect.arrayContaining(['Moby Dick.epub', 'Russian/Anna Karenina.epub', 'Horror/Dracula.epub']))
+    expect(ingested).toEqual(expect.arrayContaining(['Moby Dick.epub', 'Anna Karenina.epub', 'Dracula.epub']))
 
-    folder.opened.length = 0
+    ingested.length = 0
     const second = await ebooks.scan(folder.handle, [moby, anna])
     expect(second.report).toMatchObject({ total: 3, linked: 2, needsYou: 1 })
-    expect(folder.opened).toEqual([])
+    expect(ingested).toEqual([])
 
     folder.move('Horror/Dracula.epub', 'Dracula.epub')
     const third = await ebooks.scan(folder.handle, [moby, anna])
     expect(third.report.total).toBe(3)
     expect((await ebooks.list()).find((r) => r.metadata.title === 'Dracula')?.folderPath).toBe('Dracula.epub')
     expect(await ebooks.list()).toHaveLength(3)
+    expect(ingested).toEqual([])
+
+    // Another file saved over the same name is read again.
+    folder.replace('Dracula.epub', buildEpub({ ...DRACULA_GUTENBERG3, body: 'A corrected edition.' }))
+    await ebooks.scan(folder.handle, [moby, anna])
+    expect(ingested).toEqual(['Dracula.epub'])
+    expect(await ebooks.list()).toHaveLength(4)
   })
 })
 
@@ -403,6 +417,9 @@ function fakeFolder(initial: Record<string, Uint8Array>) {
     move(from: string, to: string) {
       files.set(to, files.get(from)!)
       files.delete(from)
+    },
+    replace(path: string, bytes: Uint8Array) {
+      files.set(path, { bytes, lastModified: files.get(path)!.lastModified + 60_000 })
     },
   }
 }

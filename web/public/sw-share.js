@@ -41,13 +41,19 @@ async function receiveShare(request) {
     return Response.redirect(query ? `/share?${query}` : '/share', 303)
   }
   const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-  const cache = await caches.open(SHARED_EBOOKS_CACHE)
-  const meta = []
-  for (const [index, file] of files.entries()) {
-    const type = file.type || 'application/epub+zip'
-    await cache.put(`/__shared/${id}/${index}`, new Response(file, { headers: { 'Content-Type': type } }))
-    meta.push({ index, name: file.name || `shared-${index + 1}.epub`, type, size: file.size, lastModified: file.lastModified })
+  try {
+    const cache = await caches.open(SHARED_EBOOKS_CACHE)
+    const meta = []
+    for (const [index, file] of files.entries()) {
+      const type = file.type || 'application/epub+zip'
+      await cache.put(`/__shared/${id}/${index}`, new Response(file, { headers: { 'Content-Type': type } }))
+      meta.push({ index, name: file.name || `shared-${index + 1}.epub`, type, size: file.size, lastModified: file.lastModified })
+    }
+    // The list last: a share whose files are not all kept is never taken half.
+    await cache.put(`/__shared/${id}/meta`, new Response(JSON.stringify({ id, files: meta }), { headers: { 'Content-Type': 'application/json' } }))
+  } catch {
+    // No room to keep them: the app says the share was missed, so she can try again.
+    return Response.redirect('/share?ebooks=missed', 303)
   }
-  await cache.put(`/__shared/${id}/meta`, new Response(JSON.stringify({ id, files: meta }), { headers: { 'Content-Type': 'application/json' } }))
   return Response.redirect(`/share?ebooks=${id}`, 303)
 }

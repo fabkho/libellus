@@ -104,12 +104,16 @@ export const useEbooksStore = defineStore('ebooks', () => {
     return repository.ebooks
   }
 
-  let loading: Promise<void> | null = null
-  /** Reads the member's records and which copies are gone. */
+  let reads: Promise<void> = Promise.resolve()
+  /**
+   * Reads the member's records and which copies are gone. Reads queue: each
+   * starts after the one before, so one asked for after a change sees it, and
+   * one for the member signed in now is never answered by the last one's.
+   */
   function load(): Promise<void> {
-    const ebooks = repo()
-    if (!ebooks) return Promise.resolve()
-    loading ??= (async () => {
+    const read = async () => {
+      const ebooks = repo()
+      if (!ebooks) return
       const memberId = session.member?.id
       const [list, picked] = await Promise.all([ebooks.list(), ebooks.folder()])
       const gone = await ebooks.missing(list)
@@ -119,8 +123,9 @@ export const useEbooksStore = defineStore('ebooks', () => {
       // A folder that could not be stored stays for the session.
       folder.value = picked ?? folder.value
       loaded.value = true
-    })().finally(() => (loading = null))
-    return loading
+    }
+    reads = reads.then(read, read)
+    return reads
   }
 
   /** The file linked to an entry's Book (through the entry, so a change of edition keeps it). */
@@ -152,8 +157,18 @@ export const useEbooksStore = defineStore('ebooks', () => {
     persist()
   }
 
-  /** Takes in files that arrived together (a share), linking what fits; the report says what happened. */
-  async function addFiles(files: readonly File[], source: ReportSource): Promise<EbookReport | null> {
+  /** Takes in files that arrived together (a share), linking what fits; the report says what happened. One batch at a time. */
+  let batches: Promise<unknown> = Promise.resolve()
+  function addFiles(files: readonly File[], source: ReportSource): Promise<EbookReport | null> {
+    const next = batches.then(
+      () => takeIn(files, source),
+      () => takeIn(files, source),
+    )
+    batches = next
+    return next
+  }
+
+  async function takeIn(files: readonly File[], source: ReportSource): Promise<EbookReport | null> {
     const ebooks = repo()
     if (!ebooks || !files.length) return null
     busy.value = { source, done: 0, total: files.length }
@@ -176,26 +191,28 @@ export const useEbooksStore = defineStore('ebooks', () => {
   /**
    * The share sheet's files, kept by the service worker in Cache Storage until
    * now (public/sw-share.js): every share waiting there is taken in, then
-   * removed from the cache.
+   * removed from the cache. A share that arrives meanwhile stays for the next
+   * time; one that could not be taken in (no member, no storage) stays too.
    */
   async function takeShared(): Promise<EbookReport | null> {
-    if (typeof caches === 'undefined') return null
+    if (typeof caches === 'undefined' || !repo()) return null
     const cache = await caches.open(SHARED_EBOOKS_CACHE)
-    const keys = await cache.keys()
     const files: File[] = []
-    const shares = keys.filter((request) => new URL(request.url).pathname.endsWith('/meta'))
-    for (const metaRequest of shares) {
+    const taken: string[] = []
+    for (const metaRequest of (await cache.keys()).filter((request) => new URL(request.url).pathname.endsWith('/meta'))) {
       const meta = (await (await cache.match(metaRequest))?.json().catch(() => null)) as {
         id: string
         files: { index: number; name: string; type: string; lastModified: number }[]
       } | null
-      for (const item of meta?.files ?? []) {
-        const response = await cache.match(`/__shared/${meta!.id}/${item.index}`)
+      if (!meta) continue
+      for (const item of meta.files) {
+        const response = await cache.match(`/__shared/${meta.id}/${item.index}`)
         if (response) files.push(new File([await response.blob()], item.name, { type: item.type || 'application/epub+zip', lastModified: item.lastModified }))
       }
+      taken.push(metaRequest.url, ...meta.files.map((item) => new URL(`/__shared/${meta.id}/${item.index}`, metaRequest.url).href))
     }
     const done = files.length ? await addFiles(files, 'share') : null
-    for (const request of keys) await cache.delete(request)
+    if (done || !files.length) for (const url of taken) await cache.delete(url)
     return done
   }
 
@@ -302,8 +319,10 @@ export const useEbooksStore = defineStore('ebooks', () => {
     if (name === 'confirmAdd') {
       after(async (entry) => {
         if (!entry) return
-        const record = Date.now() - findingSince < FIND_WINDOW_MS ? finding.value : null
+        const sought = Date.now() - findingSince < FIND_WINDOW_MS ? finding.value : null
         finding.value = null
+        // As it is now: ignored or linked meanwhile, it is not hers to link any more.
+        const record = sought ? (await repo()?.list())?.find((r) => r.id === sought.id && r.state === 'unlinked') : null
         if (record) await link(record, entry as LibraryEntry)
         else if (waiting.value.length) {
           await repo()?.rematch(await entries())

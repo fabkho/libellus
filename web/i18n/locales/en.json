@@ -815,7 +815,7 @@
       "failed": "{count} isn't an EPUB | {count} aren't EPUBs",
       "dismiss": "Dismiss"
     },
-    "missed": "Libellus was still starting when the files arrived, so it could not keep them. Share them again.",
+    "missed": "The shared files did not reach Libellus. Share them again.",
     "needsYou": "Needs you",
     "linked": "Linked",
     "couldBe": "Could be one of your books | Could be one of {count} of your books",

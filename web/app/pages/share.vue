@@ -54,7 +54,11 @@ onMounted(async () => {
   if (shared.ebooks) {
     if (shared.ebooks === 'missed' || !ebooks.supported) return void (await navigateTo({ path: '/ebooks', query: { missed: '1' } }, { replace: true }))
     takingEbooks.value = true
-    await ebooks.takeShared()
+    try {
+      await ebooks.takeShared()
+    } catch {
+      // The files stay in the service worker's cache for the next try; the ebooks page shows what there is.
+    }
     return void (await navigateTo('/ebooks', { replace: true }))
   }
 

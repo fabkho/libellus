@@ -64,6 +64,8 @@ export function openLocalDatabase(factory: IDBFactory, { name = LOCAL_DATABASE, 
       resolve(req.result)
     }
     req.onerror = () => reject(req.error)
+    // Blocked (an upgrade while another tab holds the database): every opener closes its
+    // connection on `versionchange`, so the open goes on as soon as the other tab has.
   })
 }
 

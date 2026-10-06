@@ -152,8 +152,8 @@ export function createEbooks({
   }
 
   /** The record that already knows this copy, updated with what this arrival adds (a folder path, a name). */
-  async function known(taken: Ingested, arrival: Arrival): Promise<EbookRecord | null> {
-    const existing = (await records.list(memberId)).find((record) => record.id === taken.id)
+  async function known(taken: Ingested, arrival: Arrival, all?: readonly EbookRecord[]): Promise<EbookRecord | null> {
+    const existing = (all ?? (await records.list(memberId))).find((record) => record.id === taken.id)
     if (!existing) return null
     const updated: EbookRecord = {
       ...existing,
@@ -199,18 +199,19 @@ export function createEbooks({
   async function add(file: Blob, arrival: Arrival, entries: readonly LibraryEntry[]): Promise<Added> {
     const taken = await take(file)
     if (typeof taken === 'string') return { ok: false, name: arrival.name, error: taken }
-    const existing = await known(taken, arrival)
+    const all = await records.list(memberId)
+    const existing = await known(taken, arrival, all)
     if (existing?.state === 'linked') return { ok: true, record: existing, duplicate: true }
     if (existing?.state === 'ignored') {
-      // Ignored before: the copy taking it in just wrote goes again.
-      await files.remove(taken.path)
+      // Ignored before: the copies taking it in just wrote go again.
+      await removeCopies(taken)
       return { ok: true, record: existing, duplicate: true }
     }
 
     // New, or still waiting: the Library may have the Book by now.
     const record: EbookRecord = { ...(existing ?? fresh(taken, arrival)), candidates: [] }
     const match = matchEbook(taken.metadata, entries)
-    const linkedBooks = new Set((await records.list(memberId)).filter((r) => r.state === 'linked').map((r) => r.bookId))
+    const linkedBooks = new Set(all.filter((r) => r.state === 'linked').map((r) => r.bookId))
     if (match.kind === 'linked' && !linkedBooks.has(match.entry.book.id)) {
       Object.assign(record, { state: 'linked', bookId: match.entry.book.id, entryId: match.entry.id, linkedAt: stamp() })
     } else if (match.kind === 'linked') {
@@ -244,16 +245,20 @@ export function createEbooks({
     return { ok: true, record: await link(existing ?? fresh(taken, arrival), entry), duplicate: Boolean(existing) }
   }
 
+  async function removeCopies(copy: Pick<EbookRecord, 'path' | 'coverPath'>) {
+    await files.remove(copy.path)
+    if (copy.coverPath) await files.remove(copy.coverPath)
+  }
+
   /** Removes the file from the device: its copy, its cover, its record. The Book stays. */
   async function unlink(record: EbookRecord): Promise<void> {
-    await files.remove(record.path)
-    if (record.coverPath) await files.remove(record.coverPath)
+    await removeCopies(record)
     await records.remove(memberId, record.id)
   }
 
-  /** Not a Book of hers: its copy goes, the record stays so the same file is not offered again. */
+  /** Not a Book of hers: its copies go, the record stays so the same file is not offered again. */
   async function ignore(record: EbookRecord): Promise<EbookRecord> {
-    await files.remove(record.path)
+    await removeCopies(record)
     const ignored: EbookRecord = { ...record, state: 'ignored', bookId: null, entryId: null, candidates: [], linkedAt: null }
     await records.put(ignored)
     return ignored
@@ -318,11 +323,13 @@ export function createEbooks({
 
   /**
    * Looks through the picked folder (and its subfolders) for EPUBs and takes in
-   * the ones the device does not have yet. A file whose place in the folder is
-   * known and whose copy is here is not opened at all; one at an unknown place
-   * with the size and last change of a known file is that file, moved; anything
-   * else is read and fingerprinted (`add`), which also finds a known file under
-   * another name and writes an evicted copy again. The caller has the
+   * the ones the device does not have yet. Every file's size and last change are
+   * looked at (`getFile`, without reading it): a file at a known place with the
+   * same size and last change, whose copy is here, is skipped unread; one at
+   * an unknown place with a known file's name, size and last change is that
+   * file, moved; anything else is read and fingerprinted (`add`), which also
+   * finds a known file under another name, takes in a file replaced at the
+   * same place and writes an evicted copy again. The caller has the
    * permission already (a scan asks for it on the member's tap).
    */
   async function scan(
@@ -339,27 +346,24 @@ export function createEbooks({
     let done = 0
     onProgress?.(done, found.length)
     for (const { path, handle } of found) {
-      const atPath = byPath.get(path)
-      if (atPath && !gone.has(atPath.id)) {
-        results.push({ ok: true, record: atPath, duplicate: true })
-      } else {
-        let file: File | null = null
-        try {
-          file = await handle.getFile()
-        } catch {
-          results.push({ ok: false, name: path, error: 'storage' })
-        }
-        if (file) {
-          const moved = before.find(
-            (r) => !gone.has(r.id) && r.size === file!.size && r.lastModified === file!.lastModified && r.name === file!.name,
-          )
-          if (moved) {
-            const updated = { ...moved, folderPath: path }
-            await records.put(updated)
-            results.push({ ok: true, record: updated, duplicate: true })
-          } else {
-            results.push(await add(file, { source: 'folder', name: file.name, lastModified: file.lastModified, folderPath: path }, entries))
-          }
+      let file: File | null = null
+      try {
+        file = await handle.getFile()
+      } catch {
+        results.push({ ok: false, name: path, error: 'storage' })
+      }
+      if (file) {
+        const same = (r: EbookRecord) => !gone.has(r.id) && r.size === file!.size && r.lastModified === file!.lastModified
+        const atPath = byPath.get(path)
+        const moved = atPath && same(atPath) ? null : before.find((r) => same(r) && r.name === file!.name)
+        if (atPath && same(atPath)) {
+          results.push({ ok: true, record: atPath, duplicate: true })
+        } else if (moved) {
+          const updated = { ...moved, folderPath: path }
+          await records.put(updated)
+          results.push({ ok: true, record: updated, duplicate: true })
+        } else {
+          results.push(await add(file, { source: 'folder', name: file.name, lastModified: file.lastModified, folderPath: path }, entries))
         }
       }
       onProgress?.(++done, found.length)
