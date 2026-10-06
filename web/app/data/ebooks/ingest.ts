@@ -1,5 +1,5 @@
 import { readEpub } from './epub'
-import { fileIdOf, FINGERPRINT_BYTES, sha256Hex, type EbookFiles, type Ingested } from './files'
+import { EPUB_READER_VERSION, fileIdOf, FINGERPRINT_BYTES, sha256Hex, type EbookFiles, type Ingested } from './files'
 
 /**
  * Takes one EPUB in: reads its metadata and cover (`readEpub`), fingerprints
@@ -23,5 +23,5 @@ export async function ingestEbook(file: Blob, { dir, files }: { dir: string; fil
     coverPath = `${dir}/${id}.cover`
     if ((await files.size(coverPath)) !== cover.length) await files.write(coverPath, cover)
   }
-  return { id, hash, size: bytes.length, path, coverPath, metadata, wrote }
+  return { id, hash, size: bytes.length, path, coverPath, metadata, reader: EPUB_READER_VERSION, wrote }
 }

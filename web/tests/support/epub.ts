@@ -27,6 +27,8 @@ export type EpubSpec = {
   publisher?: string
   identifiers?: { value: string; scheme?: string; type?: string }[]
   cover?: boolean
+  /** The cover's bytes (a JPEG) instead of the 1 × 1 stand-in: a cover of another shape. */
+  coverImage?: Uint8Array
   /** Where the package document sits (`OEBPS/content.opf`). */
   opfPath?: string
   /** Text of the one chapter, so two files of the same book can differ. */
@@ -61,12 +63,12 @@ export function packageDocument(spec: EpubSpec): string {
         : `<dc:identifier id="id${i}"${id.scheme ? ` opf:scheme="${id.scheme}"` : ''}>${esc(id.value)}</dc:identifier>`,
     )
     .join('\n    ')
-  const coverItem = spec.cover
+  const coverItem = spec.cover || spec.coverImage
     ? v3
       ? '<item id="cover-img" href="images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>'
       : '<item id="coverpage-image" href="images/cover.jpg" media-type="image/jpeg"/>'
     : ''
-  const coverMeta = spec.cover && !v3 ? '<meta name="cover" content="coverpage-image" />' : ''
+  const coverMeta = (spec.cover || spec.coverImage) && !v3 ? '<meta name="cover" content="coverpage-image" />' : ''
   const chapters = chapterFiles(spec)
   const nav = spec.chapters && v3 ? '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>' : ''
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -122,7 +124,7 @@ export function buildEpub(spec: EpubSpec): Uint8Array {
         ' xmlns:epub="http://www.idpf.org/2007/ops"',
       )
   } else files[`${base}text/chapter-1.xhtml`] = xhtml(spec.title, `<p>${esc(spec.body ?? spec.title)}</p>`)
-  if (spec.cover) files[`${base}images/cover.jpg`] = [TINY_JPEG, { level: 0 }]
+  if (spec.cover || spec.coverImage) files[`${base}images/cover.jpg`] = [spec.coverImage ?? TINY_JPEG, { level: 0 }]
   for (const resource of spec.resources ?? []) files[`${base}${resource.href}`] = strToU8(resource.content)
   // A fixed time on every entry, so the same spec always makes the same bytes (the same fingerprint).
   return zipSync(files, { mtime: new Date('2026-01-01T00:00:00Z') })
