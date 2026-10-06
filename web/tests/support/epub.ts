@@ -1,10 +1,12 @@
 import { strToU8, zipSync, type Zippable } from 'fflate'
+import { METAMORPHOSIS_PARTS } from './metamorphosis'
 
 /**
  * Small EPUB files for the tests (issue #131), built in memory with the
  * package documents of public-domain books as Project Gutenberg (EPUB 2) and
  * Standard Ebooks (EPUB 3) write them: the real metadata of the real editions,
- * one short chapter instead of the book. A file "with an ISBN" carries an
+ * one short chapter instead of the book (or, for the reader, a few chapters
+ * of the real text: `chapters`). A file "with an ISBN" carries an
  * invented one (a valid check digit, never a real edition). Nothing is fetched.
  */
 
@@ -29,7 +31,13 @@ export type EpubSpec = {
   opfPath?: string
   /** Text of the one chapter, so two files of the same book can differ. */
   body?: string
+  /** Chapters of real text instead of the one (with a contents page, EPUB 3's nav document). */
+  chapters?: { title: string; paragraphs: string[]; head?: string; markup?: string }[]
+  /** More files in the package (path relative to it), listed in the manifest but not the spine: a crafted book's scripts and styles. */
+  resources?: { id: string; href: string; mediaType: string; content: string }[]
 }
+
+const chapterFiles = (spec: EpubSpec) => (spec.chapters ?? [null]).map((_, i) => ({ id: `chapter${i ? i + 1 : ''}`, href: `text/chapter-${i + 1}.xhtml` }))
 
 const esc = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -59,6 +67,8 @@ export function packageDocument(spec: EpubSpec): string {
       : '<item id="coverpage-image" href="images/cover.jpg" media-type="image/jpeg"/>'
     : ''
   const coverMeta = spec.cover && !v3 ? '<meta name="cover" content="coverpage-image" />' : ''
+  const chapters = chapterFiles(spec)
+  const nav = spec.chapters && v3 ? '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>' : ''
   return `<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="${v3 ? '3.0' : '2.0'}" unique-identifier="id0"${v3 ? '' : ' xmlns:opf="http://www.idpf.org/2007/opf"'}>
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"${v3 ? '' : ' xmlns:opf="http://www.idpf.org/2007/opf"'}>
@@ -73,9 +83,11 @@ export function packageDocument(spec: EpubSpec): string {
   </metadata>
   <manifest>
     ${coverItem}
-    <item id="chapter" href="text/chapter-1.xhtml" media-type="application/xhtml+xml"/>
+    ${nav}
+    ${chapters.map((c) => `<item id="${c.id}" href="${c.href}" media-type="application/xhtml+xml"/>`).join('\n    ')}
+    ${(spec.resources ?? []).map((r) => `<item id="${r.id}" href="${r.href}" media-type="${r.mediaType}"/>`).join('\n    ')}
   </manifest>
-  <spine><itemref idref="chapter"/></spine>
+  <spine>${chapters.map((c) => `<itemref idref="${c.id}"/>`).join('')}</spine>
 </package>`
 }
 
@@ -89,11 +101,29 @@ export function buildEpub(spec: EpubSpec): Uint8Array {
       `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="${opfPath}" media-type="application/oebps-package+xml"/></rootfiles></container>`,
     ),
     [opfPath]: strToU8(packageDocument(spec)),
-    [`${base}text/chapter-1.xhtml`]: strToU8(
-      `<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${esc(spec.title)}</title></head><body><p>${esc(spec.body ?? spec.title)}</p></body></html>`,
-    ),
   }
+  const xhtml = (title: string, body: string, ops = '', head = '') =>
+    strToU8(`<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"${ops}><head><title>${esc(title)}</title>${head}</head><body>${body}</body></html>`)
+  if (spec.chapters) {
+    const chapters = chapterFiles(spec)
+    spec.chapters.forEach((chapter, i) => {
+      // `head` and `markup` go in as written (unescaped): a crafted page's own markup.
+      files[`${base}${chapters[i]!.href}`] = xhtml(
+        chapter.title,
+        `<h2>${esc(chapter.title)}</h2>${chapter.paragraphs.map((p) => `<p>${esc(p)}</p>`).join('')}${chapter.markup ?? ''}`,
+        chapter.markup ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : '',
+        chapter.head,
+      )
+    })
+    if (spec.version === 3)
+      files[`${base}nav.xhtml`] = xhtml(
+        spec.title,
+        `<nav epub:type="toc"><ol>${spec.chapters.map((chapter, i) => `<li><a href="${chapters[i]!.href}">${esc(chapter.title)}</a></li>`).join('')}</ol></nav>`,
+        ' xmlns:epub="http://www.idpf.org/2007/ops"',
+      )
+  } else files[`${base}text/chapter-1.xhtml`] = xhtml(spec.title, `<p>${esc(spec.body ?? spec.title)}</p>`)
   if (spec.cover) files[`${base}images/cover.jpg`] = [TINY_JPEG, { level: 0 }]
+  for (const resource of spec.resources ?? []) files[`${base}${resource.href}`] = strToU8(resource.content)
   // A fixed time on every entry, so the same spec always makes the same bytes (the same fingerprint).
   return zipSync(files, { mtime: new Date('2026-01-01T00:00:00Z') })
 }
@@ -132,6 +162,21 @@ export const DRACULA_GUTENBERG3: EpubSpec = {
   identifiers: [{ value: 'http://www.gutenberg.org/345' }],
   opfPath: '345/content.opf',
   cover: true,
+}
+
+/** Metamorphosis as Project Gutenberg's EPUB 3 writes it (ebook #5200), with the openings of its three parts. */
+export const METAMORPHOSIS_GUTENBERG: EpubSpec = {
+  version: 3,
+  title: 'Metamorphosis',
+  creators: [
+    { name: 'Franz Kafka', role: 'aut', fileAs: 'Kafka, Franz' },
+    { name: 'David Wyllie', role: 'trl', fileAs: 'Wyllie, David' },
+  ],
+  language: 'en',
+  publisher: 'Project Gutenberg',
+  identifiers: [{ value: 'http://www.gutenberg.org/5200' }],
+  cover: true,
+  chapters: METAMORPHOSIS_PARTS,
 }
 
 /** Pride and Prejudice with an invented ISBN-13, as a publisher's EPUB 3 would carry it. */

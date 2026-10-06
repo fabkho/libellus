@@ -341,6 +341,11 @@ export const useEbooksStore = defineStore('ebooks', () => {
 
   // -------------------------------------------------------------------- covers
 
+  /** The linked file itself, for the reader (#131 phase 2); null when the copy is gone. */
+  async function fileOf(record: EbookRecord): Promise<File | null> {
+    return (await repo()?.read(record)) ?? null
+  }
+
   /** Object URLs of the files' own cover images, made once per file. */
   const coverUrls = reactive(new Map<string, string>())
   function coverOf(record: EbookRecord): string | null {
@@ -501,6 +506,7 @@ export const useEbooksStore = defineStore('ebooks', () => {
     choose,
     find,
     coverOf,
+    fileOf,
     pickFolder,
     scan,
     folderGranted,

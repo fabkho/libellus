@@ -195,6 +195,20 @@ every reload and restart, phase 0) and taps *Scan*: Chrome's *Allow* dialog come
 you"; the folder handle read back from IndexedDB after a reload, `queryPermission` `prompt`, one *Allow*
 tap, the scan of `Books` (a file in `Classics/` among them) "3 ebooks · 3 linked".
 
+**The reader (#131 phase 2)** is checked by hand on a phone, as nothing automated holds a finger
+on a page: Read now on a Book with its ebook here (iOS Safari and Chrome on Android); a tap at
+either edge turns, a swipe turns (Classic), a tap in the middle brings the capsule; a long press
+selects a word (no system selection bar: the reader selects itself), the handles stretch it, the
+bubble's Translate, Define, Copy, Search and the four highlights; Aa (sizes, margins, spacing,
+Scroll, Classic mode, Light/Dark/Sepia); Contents and the slider; search in the book; Android's
+Back (chrome first, then the book); the screen staying on (needs HTTPS); the end of the book with
+Finish; the place kept: close, open on another device, the same page. A book with footnotes,
+pictures and its own fonts reads as before (the sanitizer keeps what a book needs; on iOS the
+frames keep `allow-scripts`, so a tap, a selection and a link in the page are the check that
+WebKit's events still arrive). The design round's
+measurements (first page in 172–256 ms at 4× CPU throttling, the engine 40 KB gzipped, loaded on
+the first Read now) are in issue #131.
+
 **Your shelf (#23)** has its own script: Regal's 3D Stack under real fingers. The app must know the
 owner (`NUXT_PUBLIC_SHELF_OWNER_ID` = her auth user id, at build time for a static build) and her
 address must reach Mailpit; the run signs her in through the screens unless the tab has her session.

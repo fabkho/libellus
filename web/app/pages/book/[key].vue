@@ -7,11 +7,16 @@
 // Start again on an abandoned one — and what the Book is about. Opened from search (a Catalogue Book by id, or a result that is not
 // in the Catalogue yet by its source id) and from the Library. Where a Book
 // came from is never shown. Under the action, when the member has linked an
-// ebook file on this device (#131), one quiet line says so (BookEbook).
+// ebook file on this device (#131), one quiet line says so (BookEbook); with
+// the copy there, Read now is the lit action on Want to read and Reading (the
+// rest steps back beside it) and opens the built-in reader over the page, its
+// cover flying from this one (components/reader/Reader.vue).
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useEditionStore } from '~/stores/edition'
+import { useEbooksStore } from '~/stores/ebooks'
 import { useLibraryStore } from '~/stores/library'
+import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
 
@@ -118,6 +123,15 @@ const clothColor = computed(() => (book.value ? `var(--color-cloth${clothOf(book
 
 const optionsOpen = ref(false)
 
+// Read now (#131 phase 2): the linked copy, when it is on this device.
+const ebooks = useEbooksStore()
+const reader = useReaderStore()
+const ebook = computed(() => {
+  const record = ebooks.linkFor(entry.value)
+  return record && !ebooks.missing.has(record.id) ? record : null
+})
+const readerOpen = computed(() => Boolean(entry.value && ebook.value && reader.openEntryId === entry.value.id))
+
 /** The entry now has another Book (#41): the page, showing it already, takes its address in place of the old one. */
 function editionChanged(changed: LibraryEntry) {
   followEdition(routeKey.value, changed.book.id)
@@ -202,6 +216,23 @@ function back() {
       <UiButton v-if="!entry" block :offline="addOffline" data-testid="book.add" @click="library.openAdd(book)">
         <UiIcon name="plus" :size="18" bold />{{ t('book.add') }}
       </UiButton>
+      <!-- With the ebook here, reading it is the action; Start, Finish and Abandon step back beside it. -->
+      <template v-else-if="ebook && (entry.status === 'want_to_read' || entry.status === 'reading')">
+        <UiButton block data-testid="book.read" @click="reader.open(entry)">
+          <UiIcon name="read" :size="18" />{{ t('book.read') }}
+        </UiButton>
+        <UiButton v-if="entry.status === 'want_to_read'" class="mt-sm" tone="quiet" block data-testid="book.start" @click="reading.openStart(entry)">
+          <UiIcon name="arrow" :size="18" />{{ t('book.start') }}
+        </UiButton>
+        <div v-else class="mt-sm flex gap-ms">
+          <UiButton class="flex-1" tone="quiet" data-testid="book.finish" @click="reading.openFinish(entry)">
+            <UiIcon name="check" :size="18" />{{ t('book.finish') }}
+          </UiButton>
+          <UiButton tone="quiet" data-testid="book.abandon" @click="reading.openAbandon(entry)">
+            {{ t('book.abandon') }}
+          </UiButton>
+        </div>
+      </template>
       <UiButton v-else-if="entry.status === 'want_to_read'" block data-testid="book.start" @click="reading.openStart(entry)">
         <UiIcon name="arrow" :size="18" bold />{{ t('book.start') }}
       </UiButton>
@@ -223,8 +254,8 @@ function back() {
       >
         <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
-      <!-- Its ebook on this device, when one is linked (#131). -->
-      <BookEbook v-if="entry" :entry="entry" />
+      <!-- Its ebook on this device, when one is linked (#131); a finished or abandoned Book opens in the reader from here. -->
+      <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="reader.open(entry)" />
     </div>
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
@@ -234,6 +265,8 @@ function back() {
     <BookEditSessionSheet />
     <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" @removed="back" />
     <BookEditionSheet @changed="editionChanged" />
+    <!-- The reader, loaded on its first opening (the engine is its own chunk). -->
+    <LazyReader v-if="readerOpen && entry && ebook" :entry="entry" :record="ebook" :hero="heroEl" @closed="reader.close()" />
 
     <section v-if="description" class="relative px-ml pt-xl" data-testid="book.about">
       <h2 class="eyebrow mb-ms">{{ t('book.about') }}</h2>

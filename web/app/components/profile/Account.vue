@@ -16,8 +16,10 @@
 // (Chrome only: its name, a tap picks it; Scan beside it asks for the folder's
 // permission on that tap when Android has forgotten it, scans, and opens the
 // ebooks page with what it found), and Ebooks (how many need her, else how many
-// are linked) leading to that page.
+// are linked) leading to that page, and Classic reader (the built-in reader's
+// other style, a setting of this device).
 import { useEbooksStore } from '~/stores/ebooks'
+import { useReaderStore } from '~/stores/reader'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
@@ -27,7 +29,10 @@ import { useThemeStore } from '~/stores/theme'
 const { t } = useI18n()
 const session = useSessionStore()
 const theme = useThemeStore()
-const isDark = computed(() => theme.theme === 'dark')
+const isDark = computed({
+  get: () => theme.theme === 'dark',
+  set: (dark: boolean) => dark !== (theme.theme === 'dark') && theme.toggle(),
+})
 const naming = ref(false)
 // Book links (#116): her own, how many; read when the Profile opens.
 const linking = ref(false)
@@ -59,6 +64,11 @@ function askSignOut() {
 const installApp = useInstallHint()
 
 const ebooks = useEbooksStore()
+const reader = useReaderStore()
+const readerClassic = computed({
+  get: () => reader.settings.style === 'classic',
+  set: (on: boolean) => (reader.settings.style = on ? 'classic' : 'printed'),
+})
 const ebooksValue = computed(() => {
   const waiting = ebooks.waiting.length
   if (waiting) return t('profile.account.ebooksNeedYou', { count: waiting }, waiting)
@@ -136,19 +146,7 @@ async function syncFirst() {
         <span v-else-if="errors.groups?.length" class="figures text-ink-muted" data-testid="profile.errorsValue">{{ errors.groups.length }}</span>
         <span v-else-if="errors.groups" class="text-ink-ghost" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
       </UiRow>
-      <UiRow
-        as="button"
-        role="switch"
-        :aria-checked="isDark"
-        :icon="isDark ? 'moon' : 'sun'"
-        :label="t('profile.account.theme')"
-        data-testid="profile.theme"
-        @click="theme.toggle()"
-      >
-        <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="isDark ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
-          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised shadow-button" :class="isDark && 'on'" />
-        </span>
-      </UiRow>
+      <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
       <UiRow v-if="ebooks.folderSupported" icon="library" :label="t('profile.account.ebookFolder')" data-testid="profile.ebookFolderRow">
         <button
           type="button"
@@ -168,6 +166,8 @@ async function syncFirst() {
       <UiRow v-if="ebooks.supported" to="/ebooks" icon="ebook" :label="t('profile.account.ebooks')" chevron data-testid="profile.ebooks">
         <span v-if="ebooksValue" :class="ebooks.waiting.length ? 'text-ink' : 'figures text-ink-muted'" data-testid="profile.ebooksValue">{{ ebooksValue }}</span>
       </UiRow>
+      <!-- The built-in reader's other style (#131 phase 2); the reader's Aa sheet has it too. -->
+      <UiSwitchRow v-if="ebooks.supported" v-model="readerClassic" icon="read" :label="t('profile.account.readerClassic')" testid="profile.readerClassic" />
       <UiRow to="/import" icon="import" :label="t('import.menuItem')" chevron data-testid="profile.import" />
       <UiRow
         v-if="installApp.canInstall.value"
@@ -218,15 +218,3 @@ async function syncFirst() {
     />
   </section>
 </template>
-
-<style scoped>
-.switch {
-  transition: background-color var(--duration-quick) var(--ease-standard);
-}
-.knob {
-  transition: transform var(--duration-quick) var(--ease-standard);
-}
-.knob.on {
-  transform: translateX(calc(var(--size-switch) - var(--size-switch-thumb) - 2 * var(--spacing-xxs)));
-}
-</style>

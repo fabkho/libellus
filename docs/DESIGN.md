@@ -52,6 +52,15 @@ Light is D's *Day*, dark is D's *Night*. There is no third ("Dim") theme.
 - The preference is a setting of the device, not of the member: signing out keeps it, so the way
   in looks the way the member left it.
 
+**Sepia, the reader's room** (#131 phase 2). The built-in reader has a third room, sepia, and opens
+in it by default (light or dark are a tap away in its Aa sheet, kept on the device in
+`libellus-reader`, which signing out keeps too). It is not an app theme: no switch offers it, and
+the reader puts `data-theme="sepia"` on `<html>` only while a book covers the screen (its sheets
+then wear it too) and gives the app's own theme back as it closes. A themed token may carry a
+`sepia` value next to `light` and `dark`; `design/build.mjs` writes those into
+`[data-theme='sepia']` (a token without one keeps its light value there). Swift ignores it (the
+native reader comes later).
+
 How it works in CSS: `design/build.mjs` writes the light values into Tailwind's `@theme` (on
 `:root`) and the dark values into `[data-theme='dark']` and into `@media (prefers-color-scheme:
 dark) { :root:not([data-theme]) }`. Every utility reads the variable, so one class (`bg-surface`,
@@ -91,6 +100,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | scrim | `bg-scrim` | warm black 38 % | black 50 % | Behind a sheet |
 | veil | `bg-veil` | paper 55 % | room 55 % | Over the blurred page behind the search palette |
 | cloth1–6, clothInk | (Cover) | same in both | | Placeholder covers: a cover is an object, not chrome |
+| highlightLamp / Sage / Sky / Rose | `var(--color-highlight-*)` | soft washes | | The reader's four highlight colours (multiplied over the words) |
 
 ### Type
 
