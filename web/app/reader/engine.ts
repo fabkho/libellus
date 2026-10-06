@@ -334,7 +334,8 @@ export class ReaderEngine {
 
   highlight(highlight: Highlight) {
     this.highlights = [...this.highlights.filter((h) => h.cfi !== highlight.cfi), highlight]
-    void this.view.addAnnotation({ value: highlight.cfi, color: this.colorOf(highlight.color) })
+    // A range this copy cannot resolve (a damaged record) is skipped, not an error.
+    void this.view.addAnnotation({ value: highlight.cfi, color: this.colorOf(highlight.color) }).catch(() => undefined)
   }
   unhighlight(cfi: string) {
     this.highlights = this.highlights.filter((h) => h.cfi !== cfi)
@@ -783,7 +784,7 @@ export async function openReader(
   })
   view.addEventListener('create-overlay', (event) => {
     const { index } = (event as CustomEvent<{ index: number }>).detail
-    for (const h of engine.highlights) if (h.index === index) void view.addAnnotation({ value: h.cfi, color: engine.colorOf(h.color) })
+    for (const h of engine.highlights) if (h.index === index) void view.addAnnotation({ value: h.cfi, color: engine.colorOf(h.color) }).catch(() => undefined)
   })
   view.addEventListener('show-annotation', (event) => {
     const { value, range } = (event as CustomEvent<{ value: string; range: Range }>).detail

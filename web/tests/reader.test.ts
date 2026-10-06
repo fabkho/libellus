@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { clearLocalData } from '../app/data/localData'
 import { openingPlace, readHighlights, readPlace, writeHighlights, writePlace, type LocalHighlight, type Place } from '../app/data/reader/device'
 import { defaultTarget, define, headwordOf, isDefinable, piecesOf, plain, translate, type DeviceTranslator, type Fetch } from '../app/data/reader/lookup'
 import { isAhead, progressAt, ProgressWriter, type Timers } from '../app/data/reader/progress'
@@ -184,6 +185,15 @@ describe('the place and highlights on the device', () => {
     expect([...storage.map.keys()].every((key) => key.startsWith('libellus.'))).toBe(true)
     writeHighlights(storage, 'm1', 'e1', [])
     expect(readHighlights(storage, 'm1', 'e1')).toEqual({ kept: [], legacy: [] })
+  })
+
+  it('forgets them on sign-out with everything else the device kept', () => {
+    const storage = memoryStorage()
+    writeHighlights(storage, 'm1', 'e1', [kept()])
+    writeHighlights(storage, 'm1', 'e2', [kept({ text: '', deletedAt: '2026-10-06T11:00:00.000Z' })])
+    expect(clearLocalData(storage)).toEqual(['libellus.reader.highlights.m1.e1', 'libellus.reader.highlights.m1.e2'])
+    expect(readHighlights(storage, 'm1', 'e1')).toEqual({ kept: [], legacy: [] })
+    expect(readHighlights(storage, 'm1', 'e2')).toEqual({ kept: [], legacy: [] })
   })
 
   it('keeps a removed highlight as a tombstone', () => {

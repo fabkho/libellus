@@ -204,7 +204,9 @@ selects a word (no system selection bar: the reader selects itself), the handles
 bubble's Translate, Define, Copy, Search and the four highlights; Aa (sizes, margins, spacing,
 Scroll, Classic mode, Light/Dark/Sepia); Contents and the slider; search in the book; Android's
 Back (chrome first, then the book); the screen staying on (needs HTTPS); the end of the book with
-Finish; the place kept: close, open on another device, the same page. A book with footnotes,
+Finish; the place kept: close, open on another device, the same page; a highlight made on one device
+shows on another with the same file (also one made offline, once back online), and with another copy of
+the book it is listed under *Highlights from another copy* in Contents. A book with footnotes,
 pictures and its own fonts reads as before (the sanitizer keeps what a book needs; on iOS the
 frames keep `allow-scripts`, so a tap, a selection and a link in the page are the check that
 WebKit's events still arrive). The design round's

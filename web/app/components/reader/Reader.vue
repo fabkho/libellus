@@ -524,9 +524,11 @@ function onColor(color: HighlightColor) {
 }
 function onRemove() {
   const e = engine.value
-  if (e && tapped.value) {
-    e.unhighlight(tapped.value.highlight.cfi)
-    reader.removeHighlight(props.entry.id, props.record.hash, tapped.value.highlight.cfi)
+  // A tapped highlight, or words selected over one (the bubble offers Remove for both).
+  const cfi = tapped.value?.highlight.cfi ?? (selection.value && e?.highlights.some((h) => h.cfi === selection.value?.cfi) ? selection.value.cfi : null)
+  if (e && cfi) {
+    e.unhighlight(cfi)
+    reader.removeHighlight(props.entry.id, props.record.hash, cfi)
   }
   closeMenu()
 }

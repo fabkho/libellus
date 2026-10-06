@@ -126,7 +126,7 @@ days without a commit (and mails before it does): Actions → Database backup �
 
 | In it | Not in it |
 | --- | --- |
-| `public`: every Library, Book, Reading session, Collection, invite code, Goodreads cache, … (schema and data) | Storage objects: the members' profile photos in the bucket `avatars` (#156; Covers are links, not files). See below |
+| `public`: every Library, Book, Reading session, Collection, reader place and highlight (the member's own selected words, #131), invite code, Goodreads cache, … (schema and data) | Storage objects: the members' profile photos in the bucket `avatars` (#156; Covers are links, not files). See below |
 | `private`: the error log, the shelf's publish state, the error log's salt | Vault secrets (`github_dispatch_token`): encrypted with the project's own key, useless anywhere else |
 | `auth.users` and `auth.identities`: the members and their sign-in records, with their ids, so every row that names a member still does | Sign-in sessions, refresh tokens, one-time codes, MFA challenges, the auth audit log: they belong to the project they came from (members sign in again) |
 | The rest of `auth`'s data (MFA factors, SSO, OAuth clients; all empty here) and its schema, restored only by `--mode full` | Auth settings, SMTP, email templates (dashboard; docs/SELF_HOSTING.md) |
@@ -145,6 +145,13 @@ keep the photos of a project you are leaving, download the bucket first with the
 old project (`supabase storage cp -r ss:///avatars ./avatars --linked --experimental`) and copy the
 folders back into the new project's `avatars` bucket the same way; the paths stay the same, so the
 restored accounts find their photos again.
+
+The reader's highlights (`public.reader_highlights`, #131) are in the nightly backup like the rest of
+`public`, and so are their words: a member's own selected sentences (at most 1000 characters each), kept
+so a second device shows them. The backup is encrypted to the owner's key before it leaves the runner,
+and a removed highlight is an empty tombstone and a deleted account leaves none (the rows cascade), so
+a later backup holds nothing of either; the 35 days of older ones still do, as they do for every other
+row of a deleted account.
 
 ### Setting it up
 

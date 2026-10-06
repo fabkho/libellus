@@ -173,7 +173,12 @@ browser's own on-device translator where there is one (Chrome) and otherwise MyM
 (`api.mymemory.translated.net`, no key, a daily quota per address), and *Define* asks Wiktionary
 (`en.wiktionary.org`). Nothing else of a book leaves the device. The place in each book is kept in
 your Supabase project (`reader_places`: the entry, a position in the file and its fingerprint;
-never any text) so another device opens at the same page; highlights stay on the device. The
+never any text) so another device opens at the same page. So are the member's **highlights**
+(`reader_highlights`: the entry, the range in the file, its colour, the words she selected cut at
+1000 characters, an optional note and the file's fingerprint; hers alone by RLS, removed with the
+entry or the account): her own reading, so another device with the same file shows them. They are
+the only words of a book that reach your project, only the ones she chose to mark; the book and
+the file never do. A removed highlight stays as an empty tombstone (no words). The
 Content-Security-Policy in `web/public/_headers` names both hosts and allows the book's pages as
 `blob:` frames. A book is markup from anywhere: before a page is shown it is sanitized (DOMPurify),
 it carries its own `script-src 'none'` policy, and its frame runs no script where the browser allows
