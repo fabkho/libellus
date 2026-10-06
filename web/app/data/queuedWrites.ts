@@ -38,6 +38,8 @@ export const QUEUED_ACTIONS = [
   'reorder_collection',
   'rename_collection',
   'delete_collection',
+  // The reader's highlights (#131): one row per call, last write wins, so they wait offline too.
+  'save_reader_highlight',
 ] as const
 
 export type QueuedAction = (typeof QUEUED_ACTIONS)[number]
@@ -50,6 +52,13 @@ export const COLLECTION_ACTIONS: ReadonlySet<QueuedAction> = new Set([
   'rename_collection',
   'delete_collection',
 ])
+
+/**
+ * The reader's own writes (data/readerHighlights.ts): they name no Library entry
+ * to show, so the Library neither lays them over its lists nor reads again when
+ * they sync.
+ */
+export const READER_ACTIONS: ReadonlySet<QueuedAction> = new Set(['save_reader_highlight'])
 
 /**
  * One write as it waits. `args` are exactly the arguments of the online call

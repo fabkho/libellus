@@ -510,19 +510,50 @@ function closeMenu(clear = true) {
 function onColor(color: HighlightColor) {
   const e = engine.value
   if (!e) return
-  if (tapped.value) e.highlight({ ...tapped.value.highlight, color })
-  else if (selection.value) e.highlight({ cfi: selection.value.cfi, index: selection.value.index, text: selection.value.text, color })
-  reader.keepHighlights(props.entry.id, e.highlights)
+  const made: Highlight | null = tapped.value
+    ? { ...tapped.value.highlight, color }
+    : selection.value
+      ? { cfi: selection.value.cfi, index: selection.value.index, text: selection.value.text, color }
+      : null
+  if (made) {
+    e.highlight(made)
+    // Kept on the device at once and sent through the outbox (offline too); another copy of the book gets it from there.
+    reader.saveHighlight(props.entry.id, props.record.hash, made)
+  }
   closeMenu()
 }
 function onRemove() {
   const e = engine.value
-  if (e && tapped.value) {
-    e.unhighlight(tapped.value.highlight.cfi)
-    reader.keepHighlights(props.entry.id, e.highlights)
+  // A tapped highlight, or words selected over one (the bubble offers Remove for both).
+  const cfi = tapped.value?.highlight.cfi ?? (selection.value && e?.highlights.some((h) => h.cfi === selection.value?.cfi) ? selection.value.cfi : null)
+  if (e && cfi) {
+    e.unhighlight(cfi)
+    reader.removeHighlight(props.entry.id, props.record.hash, cfi)
   }
   closeMenu()
 }
+
+/** What the page should draw: this copy's live highlights, from the device's list (which the server's joins). */
+const placedHighlights = computed(() => reader.highlightsFor(props.entry.id, props.record.hash))
+/** Highlights made in another file of this book (the Contents sheet lists them). */
+const otherCopyHighlights = computed(() => reader.highlightsFromAnotherCopy(props.entry.id, props.record.hash))
+/** A highlight that came from another device (or went) while the book is open is drawn (or lifted) in place. */
+function reconcileHighlights() {
+  const e = engine.value
+  if (!e) return
+  const wanted = new Map(placedHighlights.value.map((h) => [h.cfi, h]))
+  for (const h of [...e.highlights]) {
+    if (wanted.has(h.cfi)) continue
+    if (tapped.value?.highlight.cfi === h.cfi) closeMenu()
+    e.unhighlight(h.cfi)
+  }
+  for (const h of wanted.values()) {
+    const have = e.highlights.find((x) => x.cfi === h.cfi)
+    if (!have || have.color !== h.color) e.highlight(h)
+  }
+}
+watch(placedHighlights, reconcileHighlights)
+let stopFollowing: (() => void) | null = null
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 function showToast(text: string) {
   toast.value = text
@@ -649,6 +680,8 @@ function leave() {
   writer.flush()
   if (loc.value) reader.leavePlace(props.entry.id, { cfi: loc.value.cfi, fraction: loc.value.fraction, fileHash: props.record.hash }, { now: true })
   releaseWake()
+  stopFollowing?.()
+  stopFollowing = null
 }
 function destroyEngine() {
   const e = engine.value
@@ -728,7 +761,12 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
   document.addEventListener('visibilitychange', onVisibility)
   const engineReady = (async () => {
-    const [file, at] = await Promise.all([ebooks.fileOf(props.record), reader.openingPlaceFor(props.entry.id, props.record.hash)])
+    const [file, at, highlights] = await Promise.all([
+      ebooks.fileOf(props.record),
+      reader.openingPlaceFor(props.entry.id, props.record.hash),
+      // The device's highlights, joined by the server's when they come in time (and, once any are uploaded, those from before the sync).
+      reader.openHighlights(props.entry.id, props.record.hash),
+    ])
     if (!file) {
       failed.value = 'missing'
       return null
@@ -744,7 +782,7 @@ onMounted(async () => {
         select: onSelect,
         highlightTapped: onHighlightTapped,
       },
-      highlights: reader.highlightsFor(props.entry.id),
+      highlights,
       colorOf: highlightColor,
       touchSelection: touchScreen,
       layout: layout.value,
@@ -760,6 +798,9 @@ onMounted(async () => {
       return null
     }
     engine.value = opened
+    // Highlights that arrived while the book was opening, and then every minute and on coming back.
+    reconcileHighlights()
+    if (!left) stopFollowing = reader.followHighlights(props.entry.id, props.record.hash)
     if (import.meta.dev) (window as unknown as { __readerEngine?: unknown }).__readerEngine = opened
     return opened
   })().catch(() => {
@@ -933,8 +974,10 @@ function nextChapter() {
         :toc="engine?.toc ?? []"
         :current="loc?.chapterHref ?? null"
         :info="info"
+        :other-copy="otherCopyHighlights"
         :book="book"
         @go="goTo"
+        @remove-highlight="(id: string) => reader.removeHighlightById(props.entry.id, id)"
         @scrub="(f: number) => ((contentsOpen = false), onScrub(f))"
       />
       <ReaderTranslateSheet v-model:open="translateOpen" :text="sheetText" :from="engine?.language ?? 'en'" :online="online" @define="swapLookup('define')" />

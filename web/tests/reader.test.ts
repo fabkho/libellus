@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { openingPlace, readHighlights, readPlace, writeHighlights, writePlace, type Place } from '../app/data/reader/device'
+import { clearLocalData } from '../app/data/localData'
+import { openingPlace, readHighlights, readPlace, writeHighlights, writePlace, type LocalHighlight, type Place } from '../app/data/reader/device'
 import { defaultTarget, define, headwordOf, isDefinable, piecesOf, plain, translate, type DeviceTranslator, type Fetch } from '../app/data/reader/lookup'
 import { isAhead, progressAt, ProgressWriter, type Timers } from '../app/data/reader/progress'
 import { DEFAULT_SETTINGS, parseSettings, readSettings, READER_SETTINGS_KEY, writeSettings } from '../app/data/reader/settings'
@@ -157,22 +158,59 @@ describe('the place and highlights on the device', () => {
     expect(openingPlace(null, null, 'a')).toBeNull()
   })
 
+  const kept = (over: Partial<LocalHighlight> = {}): LocalHighlight => ({
+    id: '00000000-0000-4000-8000-000000000001',
+    entryId: 'e1',
+    fileHash: 'a'.repeat(64),
+    cfi: 'epubcfi(/6/4!/4/2,/1:0,/1:5)',
+    index: 1,
+    color: 'sage',
+    text: 'Gregor',
+    note: null,
+    createdAt: '2026-10-06T10:00:00.000Z',
+    updatedAt: '2026-10-06T10:00:00.000Z',
+    deletedAt: null,
+    sent: false,
+    ...over,
+  })
+
   it('keeps them per member and entry, under the prefix signing out clears', () => {
     const storage = memoryStorage()
     writePlace(storage, 'm1', 'e1', place('2026-10-06T10:00:00Z', 'a'))
-    writeHighlights(storage, 'm1', 'e1', [{ cfi: 'epubcfi(/6/4!/4/2,/1:0,/1:5)', color: 'sage', text: 'Gregor', index: 1 }])
+    writeHighlights(storage, 'm1', 'e1', [kept()])
     expect(readPlace(storage, 'm1', 'e1')?.fileHash).toBe('a')
     expect(readPlace(storage, 'm2', 'e1')).toBeNull()
-    expect(readHighlights(storage, 'm1', 'e1')).toHaveLength(1)
+    expect(readHighlights(storage, 'm1', 'e1').kept).toHaveLength(1)
+    expect(readHighlights(storage, 'm2', 'e1')).toEqual({ kept: [], legacy: [] })
     expect([...storage.map.keys()].every((key) => key.startsWith('libellus.'))).toBe(true)
     writeHighlights(storage, 'm1', 'e1', [])
-    expect(readHighlights(storage, 'm1', 'e1')).toEqual([])
+    expect(readHighlights(storage, 'm1', 'e1')).toEqual({ kept: [], legacy: [] })
   })
 
-  it('drops what is not a highlight', () => {
+  it('forgets them on sign-out with everything else the device kept', () => {
     const storage = memoryStorage()
-    storage.setItem('libellus.reader.highlights.m1.e1', JSON.stringify([{ cfi: 'x', color: 'neon', text: 't', index: 0 }, { cfi: 'y', color: 'sky', text: 't', index: 2 }]))
-    expect(readHighlights(storage, 'm1', 'e1').map((h) => h.cfi)).toEqual(['y'])
+    writeHighlights(storage, 'm1', 'e1', [kept()])
+    writeHighlights(storage, 'm1', 'e2', [kept({ text: '', deletedAt: '2026-10-06T11:00:00.000Z' })])
+    expect(clearLocalData(storage)).toEqual(['libellus.reader.highlights.m1.e1', 'libellus.reader.highlights.m1.e2'])
+    expect(readHighlights(storage, 'm1', 'e1')).toEqual({ kept: [], legacy: [] })
+    expect(readHighlights(storage, 'm1', 'e2')).toEqual({ kept: [], legacy: [] })
+  })
+
+  it('keeps a removed highlight as a tombstone', () => {
+    const storage = memoryStorage()
+    writeHighlights(storage, 'm1', 'e1', [kept({ text: '', deletedAt: '2026-10-06T11:00:00.000Z' })])
+    expect(readHighlights(storage, 'm1', 'e1').kept[0]).toMatchObject({ text: '', deletedAt: '2026-10-06T11:00:00.000Z' })
+  })
+
+  it('drops what is not a highlight, and tells the ones from before the sync from the synced', () => {
+    const storage = memoryStorage()
+    storage.setItem(
+      'libellus.reader.highlights.m1.e1',
+      JSON.stringify([{ cfi: 'x', color: 'neon', text: 't', index: 0 }, { cfi: 'y', color: 'sky', text: 't', index: 2 }, kept({ id: 'h-1' })]),
+    )
+    const { kept: synced, legacy } = readHighlights(storage, 'm1', 'e1')
+    expect(legacy).toEqual([{ cfi: 'y', color: 'sky', text: 't', index: 2 }])
+    expect(synced.map((h) => h.id)).toEqual(['h-1'])
   })
 })
 
