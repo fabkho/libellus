@@ -95,22 +95,28 @@ export function editionFit(row: FitRow, found: Pick<BookSnapshot, 'title' | 'lan
   return fit
 }
 
+/**
+ * Of the search's results, the same work's editions best fit first (`editionFit`);
+ * ties keep the search's order. What the import picks from, and what the
+ * preview offers when a member chooses another edition herself.
+ */
+export function rankEditions<T extends { book: Pick<BookSnapshot, 'title' | 'authors' | 'language' | 'pageCount' | 'year' | 'source'> }>(
+  row: FitRow & Pick<ImportBook, 'authors'>,
+  results: readonly T[],
+): T[] {
+  return results
+    .filter((result) => isSameWork(row, result.book))
+    .map((result, order) => ({ result, order, fit: editionFit(row, result.book) }))
+    .sort((a, b) => b.fit - a.fit || a.order - b.order)
+    .map(({ result }) => result)
+}
+
 /** Of the search's results, the same work's edition that fits the row best (`editionFit`); null when none is the same work. */
 export function pickEdition<T extends { book: Pick<BookSnapshot, 'title' | 'authors' | 'language' | 'pageCount' | 'year' | 'source'> }>(
   row: FitRow & Pick<ImportBook, 'authors'>,
   results: readonly T[],
 ): T | null {
-  let best: T | null = null
-  let bestFit = -Infinity
-  for (const result of results) {
-    if (!isSameWork(row, result.book)) continue
-    const fit = editionFit(row, result.book)
-    if (fit > bestFit) {
-      best = result
-      bestFit = fit
-    }
-  }
-  return best
+  return rankEditions(row, results)[0] ?? null
 }
 
 /** What a title search asks: the title (no series) and the first author. */

@@ -8,9 +8,12 @@
 // many matched an edition, her other shelves offered as Collections, which
 // books need a look — with the cover of the edition each will be), *Import N books* writes
 // them with a running count, and a summary leads to the Library. Importing
-// the same file again adds nothing. A pushed screen in the tab layout.
+// the same file again adds nothing. A book matched by its title or only from
+// the file offers Choose edition: the Change edition sheet of the Book page, the
+// pick replacing its edition in the preview only (stores/import.ts). A pushed screen in the tab layout.
 import type { ImportNote } from '~/components/import/NoteList.vue'
 import { SUPPORTED_SOURCES } from '~/data/import/detect'
+import { editionFacts } from '~/data/editions'
 import { languageCode } from '~/data/import/editions'
 import { useImportStore, type Attention } from '~/stores/import'
 
@@ -81,15 +84,25 @@ function noteText(note: Attention['notes'][number]): string {
   }
 }
 
-const attention = computed<ImportNote[]>(() =>
-  store.attention.map((item) => ({
-    key: item.key,
-    title: item.title || t('import.untitled'),
-    authors: item.authors,
-    cover: item.edition ? { url: item.edition.coverUrl, thumbhash: item.edition.coverThumbhash, colors: item.edition.coverColors } : null,
-    notes: item.notes.map(noteText),
-  })),
-)
+/** A book of the preview as a row: its cover, its notes, and, once every book is looked up, the button that opens Choose edition. */
+function listed(items: readonly Attention[], action: string): ImportNote[] {
+  return items.map((item) => {
+    const title = item.title || t('import.untitled')
+    return {
+      key: item.key,
+      title,
+      authors: item.authors,
+      cover: item.edition ? { url: item.edition.coverUrl, thumbhash: item.edition.coverThumbhash, colors: item.edition.coverColors } : null,
+      notes: item.notes.map(noteText),
+      ...(item.held
+        ? { facts: editionFacts(item.held, { locale: locale.value, pages: (count) => t('book.pages', { count }), ebook: t('book.edition.ebook') }) }
+        : {}),
+      ...(item.choose && store.phase === 'preview' ? { action: { label: action, name: t('import.actionFor', { action, title }) } } : {}),
+    }
+  })
+}
+const attention = computed(() => listed(store.attention, t('import.chooseEdition')))
+const choices = computed(() => listed(store.choices, t('import.changeEdition')))
 
 const failures = computed<ImportNote[]>(() =>
   store.failed.map((failure) => ({
@@ -200,8 +213,18 @@ const failures = computed<ImportNote[]>(() =>
         <h2 class="eyebrow mt-xl flex justify-between" data-testid="import.attention">
           <span>{{ t('import.attention') }}</span><span class="figures">{{ attention.length }}</span>
         </h2>
-        <ImportNoteList :items="attention" testid="import.attentionList" class="mt-xs" />
+        <ImportNoteList :items="attention" testid="import.attentionList" class="mt-xs" @act="store.openChoice" />
       </template>
+
+      <!-- Books whose edition she chose herself: the preview has her pick, and she can change it. -->
+      <template v-if="choices.length">
+        <h2 class="eyebrow mt-xl flex justify-between" data-testid="import.choices">
+          <span>{{ t('import.choices') }}</span><span class="figures">{{ choices.length }}</span>
+        </h2>
+        <ImportNoteList :items="choices" testid="import.choicesList" class="mt-xs" @act="store.openChoice" />
+      </template>
+
+      <ImportEditionSheet />
     </section>
 
     <!-- Done: what was added, what was there already, what was not. -->

@@ -51,6 +51,31 @@ export async function recordedApple(page: Page) {
 }
 
 /**
+ * After `recordedApple`: the recordings answer a search for "piranesi" only, and the
+ * import and its Choose edition sheet ask for "<title> <first author>"
+ * ("Piranesi Susanna Clarke"). This points that query at the same recordings, so
+ * a book without an ISBN finds Piranesi's many editions by its title.
+ */
+export async function recordedTitleQuery(page: Page) {
+  const recorded = (url: URL) => {
+    for (const [name, value] of url.searchParams) if (value.trim().toLowerCase() === 'piranesi susanna clarke') url.searchParams.set(name, 'piranesi')
+    return url
+  }
+  for (const [host, answer] of [
+    ['https://itunes.apple.com/**', appleAnswer],
+    ['https://openlibrary.org/**', openLibraryAnswer],
+  ] as const)
+    await page.route(host, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify(answer(recorded(new URL(route.request().url())))),
+      }),
+    )
+}
+
+/**
  * Signs a fresh member in through the screens: address, then the mailed code.
  *
  * Every flow runs on an iPhone's Safari, where Home shows the install hint
