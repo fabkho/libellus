@@ -488,3 +488,18 @@ short to search) gets a short sweep that lets go after the pause. `BookLoading.v
 - **Sepia is the reader's default room, whatever the app's theme**; Light and Dark are a tap away.
 - The style toggle is now **Classic mode** (off by default = Printed; on = the classic bars), with
   the Profile row saying "Classic mode" too. `round3/aa-sepia-default-classic-mode.jpg`.
+
+**Base components (owner, after round 3).** The Aa sheet's choices and switches are now app-wide
+base components in `web/app/components/ui/`, ready for any screen:
+- **`UiSegmented`** — a choice of a few at equal widths (`v-model`, `options: { value, label }[]`,
+  `label`, `testid`; each option's face from the `option` slot, else its label). The chosen one is
+  lit by one raised surface, **positioned absolutely and slid to the chosen option by `transform`**
+  over `standard` (Reduce Motion: there at once), its corners concentric with the group's
+  (`radius.md − space.xxs`); a radiogroup with roving focus — arrow keys move the choice.
+  `round3/ui-segmented-slide.jpg` (Normal → Edge to edge, slowed 5×).
+- **`UiSwitch`** — the switch's picture (track in the lamp when on, the knob's tight shadow).
+- **`UiSwitchRow`** — a setting that is on or off as a row of a `UiRowGroup` (`v-model`, `label`,
+  `icon`, `testid`), the whole row the control (`role="switch"`).
+The Profile's Dark mode row (`profile/Account.vue`) still draws its own switch — phase 1 is changing
+that file, so it moves to `UiSwitchRow` with the reader's PR; the rows for these three belong in
+DESIGN.md's component table then too.

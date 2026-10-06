@@ -19,6 +19,14 @@ const THEMES: { key: ReaderTheme; label: string }[] = [
 const appDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
 const current = computed(() => props.settings.theme ?? (document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && appDark) ? 'dark' : 'light'))
 
+const FLOWS = [
+  { value: 'pages', label: 'Pages' },
+  { value: 'scroll', label: 'Scroll' },
+] as const
+const classic = computed({
+  get: () => props.settings.style === 'classic',
+  set: (on: boolean) => (props.settings.style = on ? 'classic' : 'printed'),
+})
 const MARGIN_NAMES = ['Edge to edge', 'Narrow', 'Normal', 'Wide']
 const LEADING_NAMES = ['Tight', 'Snug', 'Normal', 'Airy']
 
@@ -30,21 +38,11 @@ function size(step: number) {
 <template>
   <UiSheet v-model:open="open" title="Text" testid="readerType">
     <!-- Pages or scroll: b lives here now, as a way of reading a and c. -->
-    <div class="seg mb-md flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Layout">
-      <button
-        v-for="f in (['pages', 'scroll'] as const)"
-        :key="f"
-        type="button"
-        role="radio"
-        :aria-checked="settings.flow === f"
-        class="flex flex-1 items-center justify-center gap-sm text-caption text-ink-muted"
-        :class="settings.flow === f && 'on'"
-        :data-testid="`readerType.flow.${f}`"
-        @click="settings.flow = f"
-      >
-        <ProtoIcon :name="f" :size="18" />{{ f === 'pages' ? 'Pages' : 'Scroll' }}
-      </button>
-    </div>
+    <UiSegmented v-model="settings.flow" class="mb-md" :options="FLOWS" label="Layout" testid="readerType.flow">
+      <template #option="{ option }">
+        <ProtoIcon :name="option.value" :size="18" />{{ option.label }}
+      </template>
+    </UiSegmented>
     <div class="grid grid-cols-3 gap-ms" role="radiogroup" aria-label="Room">
       <button
         v-for="room in THEMES"
@@ -100,67 +98,26 @@ function size(step: number) {
     <p class="mt-md mb-xs flex items-baseline justify-between px-xs text-caption">
       <span class="text-ink-muted">Margins</span><span class="text-ink-faint">{{ MARGIN_NAMES[settings.margins] }}</span>
     </p>
-    <div class="seg flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Margins">
-      <button
-        v-for="i in [0, 1, 2, 3]"
-        :key="i"
-        type="button"
-        role="radio"
-        :aria-checked="settings.margins === i"
-        :aria-label="MARGIN_NAMES[i]"
-        class="flex flex-1 items-center justify-center text-ink-muted"
-        :class="settings.margins === i && 'on'"
-        :data-testid="`readerType.margins.${i}`"
-        @click="settings.margins = i"
-      >
-        <ProtoIcon :name="(`margins${i}` as 'margins0')" :size="20" />
-      </button>
-    </div>
+    <UiSegmented v-model="settings.margins" :options="MARGIN_NAMES.map((label, value) => ({ value, label }))" label="Margins" testid="readerType.margins">
+      <template #option="{ option }">
+        <ProtoIcon :name="(`margins${option.value}` as 'margins0')" :size="20" />
+      </template>
+    </UiSegmented>
 
     <p class="mt-md mb-xs flex items-baseline justify-between px-xs text-caption">
       <span class="text-ink-muted">Line spacing</span><span class="text-ink-faint">{{ LEADING_NAMES[settings.leading] }}</span>
     </p>
-    <div class="seg flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Line spacing">
-      <button
-        v-for="i in [0, 1, 2, 3]"
-        :key="i"
-        type="button"
-        role="radio"
-        :aria-checked="settings.leading === i"
-        :aria-label="LEADING_NAMES[i]"
-        class="flex flex-1 items-center justify-center text-ink-muted"
-        :class="settings.leading === i && 'on'"
-        :data-testid="`readerType.leading.${i}`"
-        @click="settings.leading = i"
-      >
-        <ProtoIcon :name="(`leading${i}` as 'leading0')" :size="20" />
-      </button>
-    </div>
+    <UiSegmented v-model="settings.leading" :options="LEADING_NAMES.map((label, value) => ({ value, label }))" label="Line spacing" testid="readerType.leading">
+      <template #option="{ option }">
+        <ProtoIcon :name="(`leading${option.value}` as 'leading0')" :size="20" />
+      </template>
+    </UiSegmented>
 
     <UiRowGroup class="mt-md">
-      <UiRow as="button" role="switch" :aria-checked="settings.justify" label="Justify" data-testid="readerType.justify" @click="settings.justify = !settings.justify">
-        <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.justify ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
-          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised" :class="settings.justify && 'on'" />
-        </span>
-      </UiRow>
-      <UiRow as="button" role="switch" :aria-checked="settings.keepAwake" label="Keep the screen on" data-testid="readerType.awake" @click="settings.keepAwake = !settings.keepAwake">
-        <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.keepAwake ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
-          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised" :class="settings.keepAwake && 'on'" />
-        </span>
-      </UiRow>
+      <UiSwitchRow v-model="settings.justify" label="Justify" testid="readerType.justify" />
+      <UiSwitchRow v-model="settings.keepAwake" label="Keep the screen on" testid="readerType.awake" />
       <!-- The reader's style, quietly last: off is the printed page (c, the default), on the classic one (a). -->
-      <UiRow
-        as="button"
-        role="switch"
-        :aria-checked="settings.style === 'classic'"
-        label="Classic mode"
-        data-testid="readerType.classic"
-        @click="settings.style = settings.style === 'classic' ? 'printed' : 'classic'"
-      >
-        <span class="switch flex w-(--size-switch) shrink-0 rounded-pill p-xxs" :class="settings.style === 'classic' ? 'bg-accent' : 'bg-fill-strong'" aria-hidden="true">
-          <span class="knob size-(--size-switch-thumb) rounded-pill bg-surface-raised" :class="settings.style === 'classic' && 'on'" />
-        </span>
-      </UiRow>
+      <UiSwitchRow v-model="classic" label="Classic mode" testid="readerType.classic" />
     </UiRowGroup>
     <p class="mt-sm mb-xs px-xs text-caption text-ink-faint">
       {{ settings.keepAwake ? 'While a book is open the screen stays on.' : 'The screen turns off as usual.' }}
@@ -188,34 +145,5 @@ function size(step: number) {
 .step {
   width: var(--spacing-xs);
   height: var(--spacing-xs);
-}
-/* Concentric corners: a segment's radius is the group's less the gap around it (md 14 − xxs 2 = 12),
-   so the selected one sits in the group's curve instead of rounding tighter. */
-.seg button {
-  border-radius: calc(var(--radius-md) - var(--spacing-xxs));
-}
-/* The lift is a tight contact shadow and a hairline: the button token's 18 px blur spilled out of the
-   group on paper (it vanishes in the dark, which is why only light showed it). */
-.seg button.on {
-  background: var(--color-surface-raised);
-  color: var(--color-ink);
-  box-shadow:
-    0 0 0 var(--stroke-hairline) var(--color-hairline),
-    0 var(--stroke-rule) var(--spacing-xxs) color-mix(in srgb, var(--color-ink) 12%, transparent);
-}
-.switch {
-  transition: background-color var(--duration-quick) var(--ease-standard);
-}
-/* The knob: a hairline and a tight contact shadow inside the track's own height. `shadow-button`
-   (0 6px 18px) spread far below the 24 px track on paper — the glow under it when off and the
-   corners that looked unrounded when on. */
-.knob {
-  box-shadow:
-    0 0 0 var(--stroke-hairline) color-mix(in srgb, var(--color-ink) 10%, transparent),
-    0 var(--stroke-rule) var(--spacing-xxs) color-mix(in srgb, var(--color-ink) 18%, transparent);
-  transition: transform var(--duration-quick) var(--ease-standard);
-}
-.knob.on {
-  transform: translateX(calc(var(--size-switch) - var(--size-switch-thumb) - 2 * var(--spacing-xxs)));
 }
 </style>
