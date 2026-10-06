@@ -185,7 +185,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
       // Not in the Library: from a search result, and Add.
       await page.getByTestId('shell.tab.search').click()
-      await page.getByTestId('search.query').fill('Klara')
+      // Apple's Piranesi, not hers: the Catalogue (her own and every other flow's) answers nothing here.
+      await page.route(/\/rest\/v1\/rpc\/search_books/, async (route) => route.fulfill({ response: await route.fetch(), body: '[]' }))
+      await page.getByTestId('search.query').fill('Piranesi')
       await page.getByTestId('search.result').first().click()
       await expect(page.getByTestId('book.add')).toBeVisible()
       await expectAccessible(page, 'a Book not in the Library')
