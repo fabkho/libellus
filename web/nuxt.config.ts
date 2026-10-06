@@ -37,6 +37,13 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
+    // `nuxt dev` bundles a package the first time a page imports it. A package first met while a
+    // member (or a Playwright flow) is already on the page is bundled then: the dev server
+    // re-optimizes, and a page open at that moment can be reloaded under its user, so a tap on
+    // Profile → Import (papaparse) or a sign-in in another tab ends where it started (issue #146).
+    // These are the packages the app reaches only from a later screen or a lazy import; bundled at
+    // start-up, none is met late. Dev only: a build never asks.
+    optimizeDeps: { include: ['@supabase/supabase-js', 'thumbhash', 'fflate', 'papaparse', 'zxing-wasm/reader'] },
     build: {
       rolldownOptions: {
         output: {
