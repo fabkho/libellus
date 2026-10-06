@@ -342,8 +342,8 @@
   --color-hairline: rgb(90 60 25 / 0.12);
   --color-hairline-strong: rgb(90 60 25 / 0.2);
   --color-ink: #3b2b1c;
-  --color-ink-muted: rgb(59 43 28 / 0.66);
-  --color-ink-faint: rgb(59 43 28 / 0.48);
+  --color-ink-muted: rgb(59 43 28 / 0.82);
+  --color-ink-faint: rgb(59 43 28 / 0.71);
   --color-ink-ghost: rgb(59 43 28 / 0.22);
   --color-on-ink: #f8efde;
   --color-accent: #a4651c;
@@ -354,7 +354,7 @@
   --color-star: #a4651c;
   --color-star-track: rgb(59 43 28 / 0.22);
   --color-success: #4f7a3c;
-  --color-error: #b8401f;
+  --color-error: #a93a1f;
   --color-error-soft: rgb(184 64 31 / 0.1);
   --color-scrim: rgb(40 24 8 / 0.36);
   --color-veil: rgb(241 230 208 / 0.55);
