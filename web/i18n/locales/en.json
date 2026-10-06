@@ -6,6 +6,7 @@
   "common": {
     "cancel": "Cancel",
     "etAl": "et al.",
+    "listSeparator": ", ",
     "dayMonth": "{day} {month}",
     "dayMonthYear": "{day} {month} {year}",
     "today": "Today · {date}",

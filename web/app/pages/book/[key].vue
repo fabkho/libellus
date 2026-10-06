@@ -182,8 +182,9 @@ function back() {
       </h1>
       <p class="mt-xs max-w-full text-body text-ink-muted wrap-anywhere" data-testid="book.authors">{{ authorLine }}</p>
       <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
+        <!-- The dot is drawn; assistive tech gets a comma, or the facts run together ("2012240 pages"). -->
         <template v-for="(fact, i) in facts" :key="fact">
-          <span v-if="i" class="dot" aria-hidden="true" />{{ fact }}
+          <span v-if="i" class="dot" aria-hidden="true" /><span v-if="i" class="sr-only">{{ t('common.listSeparator') }}</span><span>{{ fact }}</span>
         </template>
       </p>
       <!-- Goodreads' rating, once known (#69). -->
