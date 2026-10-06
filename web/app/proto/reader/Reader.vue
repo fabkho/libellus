@@ -362,6 +362,8 @@ function takeOverTheme() {
     themeBefore = html.dataset.theme
     metaBefore = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map((m) => m.content)
     html.style.overflow = 'hidden'
+    // No pull-to-refresh or bounce while reading: a pull at a chapter's top is the reader's (previous chapter).
+    html.style.overscrollBehavior = 'none'
   }
   html.dataset.readerOpen = '1'
   html.dataset.theme = theme.value
@@ -375,6 +377,7 @@ function giveBackTheme() {
   if (themeBefore) html.dataset.theme = themeBefore
   else delete html.dataset.theme
   html.style.overflow = ''
+  html.style.overscrollBehavior = ''
   document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta, i) => (meta.content = metaBefore[i] ?? meta.content))
 }
 
@@ -415,6 +418,9 @@ let moved = false
 function onRelocate(at: Relocation) {
   loc.value = at
   if (mode.value !== 'b') chapterFraction.value = at.sectionFraction
+  // A chapter no taller than the screen (the cover, a title page) is read once it shows: its line is full
+  // and Next chapter offers itself (there is nothing to scroll for the scroll to say so).
+  else chapterFraction.value = at.fits ? 1 : at.sectionFraction
   if (moved) writer.saw(at.fraction)
   if (mode.value === 'c') paintMargins()
 }
@@ -469,6 +475,12 @@ function onTap(x: number) {
   if (x < w * 0.3) void turn(-1)
   else if (x > w * 0.7) void turn(1)
   else chrome.value = true
+}
+
+/** Scroll flow: pulled on past a chapter's end (or back past its top): the next (previous) chapter, as reading on. */
+function onOverscroll(direction: 1 | -1) {
+  if (mode.value !== 'b' || !ready.value || sheetOpen.value || menuOpen.value) return
+  void turn(direction)
 }
 
 function onSwipe(direction: 1 | -1) {
@@ -714,7 +726,7 @@ onMounted(async () => {
     .then((module) => {
       importedAt = performance.now()
       return module.openReader(host.value!, props.file, {
-        handlers: { relocate: onRelocate, tap: (x) => onTap(x), scroll: onScroll, swipe: onSwipe, select: onSelect, highlightTapped: onHighlightTapped },
+        handlers: { relocate: onRelocate, tap: (x) => onTap(x), scroll: onScroll, swipe: onSwipe, overscroll: onOverscroll, select: onSelect, highlightTapped: onHighlightTapped },
         highlights: readHighlights<Highlight>(props.book.title),
         touchSelection: touchScreen,
         layout: layout.value,

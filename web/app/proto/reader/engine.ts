@@ -41,6 +41,8 @@ export interface Relocation {
   /** On the last page of the body (or past it). */
   atEnd: boolean
   atStart: boolean
+  /** Scroll flow: the chapter is no taller than the screen (nothing to scroll). */
+  fits: boolean
   reason: string | null
 }
 
@@ -62,6 +64,8 @@ export interface EngineHandlers {
   scroll: (offset: number, size: number, viewSize: number) => void
   /** A horizontal swipe on the page (the paginator turns by itself; this is for past the last page). */
   swipe: (direction: 1 | -1) => void
+  /** Scroll flow: the member pulled on past the end of a chapter (1) or back past its top (-1). */
+  overscroll: (direction: 1 | -1) => void
   /** Text was selected in the page (or the selection went away: null). */
   select: (selection: Selection | null) => void
   /** A highlight was tapped. */
@@ -286,6 +290,7 @@ export class ReaderEngine {
       cfi: detail.cfi,
       atEnd,
       atStart: index === 0 && (renderer.fraction ?? 0) === 0,
+      fits: r.getAttribute('flow') === 'scrolled' && r.viewSize - r.size < 4,
       reason: renderer.reason ?? null,
     }
     this.handlers.relocate(this.last)
@@ -706,6 +711,50 @@ export async function openReader(
     const r = view.renderer
     options.handlers.scroll(r.start, r.size, r.viewSize)
   })
+  // Scroll flow: a chapter is one long page, and foliate stops at its ends. Pulling on past the end
+  // (or back past the top) goes to the next (previous) chapter, so the book flows; a chapter shorter
+  // than the screen (the cover, a title page) is at both ends at once. Listened for on each chapter's
+  // page and on the reader around it: under a short chapter the finger lands outside its page.
+  const atEnd = () => view.renderer.viewSize - view.renderer.end < 4
+  const atTop = () => view.renderer.start < 4
+  const scrolledFlow = () => view.renderer.getAttribute('flow') === 'scrolled'
+  function listenForPulls(target: Document | HTMLElement) {
+    let pullY: number | null = null
+    target.addEventListener('touchstart', (e) => {
+      const touch = e as TouchEvent
+      pullY = touch.touches.length === 1 ? (touch.touches[0]?.clientY ?? null) : null
+    }, { passive: true })
+    target.addEventListener('touchend', (e) => {
+      const y = (e as TouchEvent).changedTouches[0]?.clientY
+      if (pullY !== null && y !== undefined && scrolledFlow() && !engine.customRange) {
+        const dy = y - pullY
+        if (dy < -70 && atEnd()) options.handlers.overscroll(1)
+        else if (dy > 70 && atTop()) options.handlers.overscroll(-1)
+      }
+      pullY = null
+    })
+    let wheel = 0
+    let wheelTimer: ReturnType<typeof setTimeout> | undefined
+    target.addEventListener('wheel', (e) => {
+      const event = e as WheelEvent
+      if (!scrolledFlow()) return
+      const down = event.deltaY > 0
+      if ((down && !atEnd()) || (!down && !atTop())) return void (wheel = 0)
+      wheel += event.deltaY
+      clearTimeout(wheelTimer)
+      wheelTimer = setTimeout(() => (wheel = 0), 400)
+      if (Math.abs(wheel) > 240) {
+        wheel = 0
+        options.handlers.overscroll(down ? 1 : -1)
+      }
+    }, { passive: true })
+  }
+  listenForPulls(view)
+  // A tap beside a short chapter's page (under the cover in scroll flow) is a tap on the page too.
+  view.addEventListener('click', (click) => {
+    if (click.defaultPrevented || !scrolledFlow()) return
+    options.handlers.tap(click.clientX, click.clientY)
+  })
   view.addEventListener('load', (event) => {
     const { doc } = (event as CustomEvent<{ doc: Document }>).detail
     // Keys pressed while the page has focus (after a tap into it) reach the reader too: arrows turn, Escape closes.
@@ -714,6 +763,7 @@ export async function openReader(
       window.dispatchEvent(forwarded)
       if (forwarded.defaultPrevented) key.preventDefault()
     })
+    listenForPulls(doc)
     let touchX: number | null = null
     doc.addEventListener('touchstart', (touch) => (touchX = touch.changedTouches[0]?.screenX ?? null), { passive: true })
     doc.addEventListener('touchend', (touch) => {

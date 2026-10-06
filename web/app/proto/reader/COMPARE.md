@@ -503,3 +503,15 @@ base components in `web/app/components/ui/`, ready for any screen:
 The Profile's Dark mode row (`profile/Account.vue`) still draws its own switch — phase 1 is changing
 that file, so it moves to `UiSwitchRow` with the reader's PR; the rows for these three belong in
 DESIGN.md's component table then too.
+
+**Bug (owner, on the phone): scroll mode stuck on the cover.** In scroll mode each chapter is its own
+scrolling page and foliate stops at its ends; the cover is a "chapter" no taller than the screen, so
+there was nothing to scroll, Next chapter never offered itself, and nothing went on. Fixed:
+- a chapter no taller than the screen counts as read: its top line is full and **Next chapter** shows;
+- **pulling on past the end of a chapter goes to the next one, pulling down at its top to the previous
+  one** (70 px; a mouse wheel past the end does the same), so the book flows in scroll mode;
+- the pull is listened for on the reader around the page too (under a short chapter the finger lands
+  outside the chapter's page — taps there now bring the chrome as well);
+- while the reader is open the page has no overscroll (`overscroll-behavior: none`), so a pull at a
+  chapter's top can never be Chrome's pull-to-refresh.
+`round3/scroll-cover-next-chapter.jpg`.
