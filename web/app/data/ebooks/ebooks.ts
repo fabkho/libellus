@@ -1,7 +1,7 @@
 import type { LibraryEntry } from '../library'
 import { openLocalDatabase } from '../localData'
 import type { EpubMetadata } from './epub'
-import type { EbookFiles, Ingested } from './files'
+import { EPUB_READER_VERSION, type EbookFiles, type Ingested } from './files'
 import { matchEbook } from './match'
 
 /**
@@ -51,10 +51,19 @@ export type EbookRecord = {
   /** Where it was found inside the picked folder (`Fiction/Moby Dick.epub`), null when it came another way. */
   folderPath: string | null
   metadata: EpubMetadata
+  /** The reading `metadata` comes from (`EPUB_READER_VERSION`); absent on records from before there was one (1). */
+  reader?: number
   state: EbookState
   bookId: string | null
   /** The Library entry it was linked through, so it follows a change of edition (the entry keeps its id). */
   entryId: string | null
+  /**
+   * Why an ignored record is: she said Ignore (or kept the other copy of its
+   * Book: `ignored`), or another copy replaced it as its Book's ebook
+   * (`replaced`). Either way the file is known and left alone by every scan
+   * and share. Absent on records from before (`ignored`).
+   */
+  ignoredAs?: 'ignored' | 'replaced'
   /** The Books it could be, when matching found several (or a title without its author). */
   candidates: string[]
   linkedAt: string | null
@@ -162,6 +171,9 @@ export function createEbooks({
       coverPath: taken.coverPath,
       folderPath: arrival.folderPath ?? existing.folderPath,
       lastModified: arrival.source === 'folder' ? arrival.lastModified : existing.lastModified,
+      // Read again now, perhaps by a newer reading of the package document.
+      metadata: taken.metadata,
+      reader: taken.reader,
     }
     await records.put(updated)
     return updated
@@ -180,6 +192,7 @@ export function createEbooks({
       lastModified: arrival.source === 'share' ? null : arrival.lastModified,
       folderPath: arrival.folderPath ?? null,
       metadata: taken.metadata,
+      reader: taken.reader,
       state: 'unlinked',
       bookId: null,
       entryId: null,
@@ -209,9 +222,20 @@ export function createEbooks({
     }
 
     // New, or still waiting: the Library may have the Book by now.
-    const record: EbookRecord = { ...(existing ?? fresh(taken, arrival)), candidates: [] }
-    const match = matchEbook(taken.metadata, entries)
-    const linkedBooks = new Set(all.filter((r) => r.state === 'linked').map((r) => r.bookId))
+    const record = await settle(existing ?? fresh(taken, arrival), entries, all)
+    return { ok: true, record, duplicate: Boolean(existing) }
+  }
+
+  /**
+   * Matches a waiting record against the Library (`matchEbook`) and keeps the
+   * outcome: linked when one Book fits that has no file of its own, else
+   * waiting with the Books it could be (a fit whose Book has a file already is
+   * left to the member as its one candidate).
+   */
+  async function settle(waiting: EbookRecord, entries: readonly LibraryEntry[], all: readonly EbookRecord[]): Promise<EbookRecord> {
+    const record: EbookRecord = { ...waiting, state: 'unlinked', bookId: null, entryId: null, candidates: [] }
+    const match = matchEbook(record.metadata, entries)
+    const linkedBooks = new Set(all.filter((r) => r.state === 'linked' && r.id !== record.id).map((r) => r.bookId))
     if (match.kind === 'linked' && !linkedBooks.has(match.entry.book.id)) {
       Object.assign(record, { state: 'linked', bookId: match.entry.book.id, entryId: match.entry.id, linkedAt: stamp() })
     } else if (match.kind === 'linked') {
@@ -220,7 +244,7 @@ export function createEbooks({
       record.candidates = match.candidates.map((entry) => entry.book.id)
     }
     await records.put(record)
-    return { ok: true, record, duplicate: Boolean(existing) }
+    return record
   }
 
   /**
@@ -230,7 +254,8 @@ export function createEbooks({
    */
   async function link(record: EbookRecord, entry: LibraryEntry): Promise<EbookRecord> {
     for (const other of await records.list(memberId)) {
-      if (other.id !== record.id && other.state === 'linked' && (other.bookId === entry.book.id || other.entryId === entry.id)) await unlink(other)
+      // Replaced: its copy goes, its record stays (ignored), so the next scan does not offer that file again.
+      if (other.id !== record.id && other.state === 'linked' && (other.bookId === entry.book.id || other.entryId === entry.id)) await ignore(other, 'replaced')
     }
     const linked: EbookRecord = { ...record, state: 'linked', bookId: entry.book.id, entryId: entry.id, candidates: [], linkedAt: stamp() }
     await records.put(linked)
@@ -257,9 +282,9 @@ export function createEbooks({
   }
 
   /** Not a Book of hers: its copies go, the record stays so the same file is not offered again. */
-  async function ignore(record: EbookRecord): Promise<EbookRecord> {
+  async function ignore(record: EbookRecord, as: 'ignored' | 'replaced' = 'ignored'): Promise<EbookRecord> {
     await removeCopies(record)
-    const ignored: EbookRecord = { ...record, state: 'ignored', bookId: null, entryId: null, candidates: [], linkedAt: null }
+    const ignored: EbookRecord = { ...record, state: 'ignored', ignoredAs: as, bookId: null, entryId: null, candidates: [], linkedAt: null }
     await records.put(ignored)
     return ignored
   }
@@ -357,7 +382,7 @@ export function createEbooks({
         const atPath = byPath.get(path)
         const moved = atPath && same(atPath) ? null : before.find((r) => same(r) && r.name === file!.name)
         if (atPath && same(atPath)) {
-          results.push({ ok: true, record: atPath, duplicate: true })
+          results.push(await again(atPath, entries))
         } else if (moved) {
           const updated = { ...moved, folderPath: path }
           await records.put(updated)
@@ -373,7 +398,36 @@ export function createEbooks({
     return { report: reportOf(results), results }
   }
 
-  return { list, add, addForBook, link, unlink, ignore, rematch, followEdition, missing, read, cover, folder, setFolder, scan }
+  /**
+   * A known file a scan skips unread: one read by an older reading of the
+   * package document (`EPUB_READER_VERSION`) is read again from its copy, and
+   * a waiting one is matched again, so a fix to reading or matching reaches the
+   * files taken in before it on the next Scan. A linked file stays linked and an
+   * ignored (or replaced) one stays ignored: the record is the file's (its
+   * fingerprint), whatever its name or place; only a link whose entry left the
+   * Library waits again.
+   */
+  async function again(record: EbookRecord, entries: readonly LibraryEntry[]): Promise<Added> {
+    if (record.state === 'ignored') return { ok: true, record, duplicate: true }
+    if ((record.reader ?? 1) < EPUB_READER_VERSION) {
+      const copy = await files.read(record.path)
+      if (copy) {
+        const added = await add(copy, { source: 'folder', name: record.name, lastModified: record.lastModified, folderPath: record.folderPath }, entries)
+        if (added.ok) return { ...added, duplicate: true }
+      }
+    }
+    // Linked to an entry that is not in her Library any more: it waits again (and may fit another).
+    const orphan = record.state === 'linked' && entries.length > 0 && !entries.some((entry) => entry.id === record.entryId || entry.book.id === record.bookId)
+    if (record.state !== 'unlinked' && !orphan) return { ok: true, record, duplicate: true }
+    return { ok: true, record: await settle(record, entries, await records.list(memberId)), duplicate: true }
+  }
+
+  /** Puts a record back as it was (Undo after a link). */
+  async function restore(record: EbookRecord): Promise<void> {
+    await records.put(record)
+  }
+
+  return { list, add, addForBook, link, unlink, ignore, rematch, followEdition, missing, read, cover, folder, setFolder, scan, restore }
 }
 
 /** Every `.epub` in a folder and its subfolders, with its path inside it. */

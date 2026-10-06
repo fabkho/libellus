@@ -186,13 +186,8 @@
       "install": "Install app",
       "signOut": "Sign out",
       "delete": "Delete account",
-      "ebookFolder": "Ebook folder",
-      "ebookFolderNone": "Choose",
       "ebooks": "Ebooks",
-      "ebooksNeedYou": "{count} needs you | {count} need you",
-      "scan": "Scan",
-      "scanning": "Scanning…",
-      "readerClassic": "Classic reader"
+      "ebooksNeedYou": "{count} needs you | {count} need you"
     },
     "deleteAccount": {
       "title": "Delete your account?",
@@ -343,6 +338,10 @@
     "hint": "Not the edition you hold? Search its ISBN.",
     "addManually": "Add manually",
     "otherEdition": "Other edition in your Library",
+    "inLibrary": "In your Library",
+    "linkTo": "Link the ebook to {title}",
+    "linkOtherEdition": "Link the ebook to your edition of {title}",
+    "addAndLink": "Add {title} and link the ebook",
     "offlineNote": "You're offline, so only your Library is searched.",
     "offlineNoResults": "Nothing in your Library matches “{query}”.",
     "scan": {
@@ -869,6 +868,9 @@
       "label": "Ebook folder",
       "choose": "Choose",
       "scan": "Scan",
+      "scanAgain": "Scan again",
+      "scanned": "Scanned {when}",
+      "scanHint": "Added books to your folder? Scan again.",
       "scanning": "Scanning…",
       "scanningCount": "Scanning… {done} of {total}",
       "hint": "Choose a subfolder such as Download/Books: Android does not allow the Download folder itself. Scan finds new EPUBs there and keeps a copy of each on this device.",
@@ -880,6 +882,7 @@
       "total": "{count} ebook | {count} ebooks",
       "linked": "{count} linked",
       "needsYou": "{count} needs you | {count} need you",
+      "copies": "{count} other copy | {count} other copies",
       "failed": "{count} isn't an EPUB | {count} aren't EPUBs",
       "dismiss": "Dismiss"
     },
@@ -902,6 +905,30 @@
     "chooseSheet": {
       "title": "Which book is it?"
     },
+    "editionSheet": {
+      "title": "Which edition?",
+      "hint": "You have another edition of this book. Link the ebook to yours, or switch your Library to the edition found. Your reads, ratings and collections stay with the book.",
+      "mine": "Your edition",
+      "mineAction": "Link to your edition",
+      "found": "Found in search",
+      "foundAction": "Switch to this edition and link",
+      "action": "Link",
+      "busy": "Linking…"
+    },
+    "copySheet": {
+      "title": "{title} already has an ebook",
+      "this": "This file",
+      "current": "Linked",
+      "replace": "Replace with this file",
+      "replaceHint": "The current copy is removed from this device.",
+      "keep": "Keep the current one"
+    },
+    "copies": "Other copies",
+    "copyWhy": "Another copy of a linked book",
+    "replace": "Replace",
+    "keep": "Keep current",
+    "linkedNote": "Linked to {title}",
+    "undo": "Undo",
     "mark": "Ebook on this device",
     "error": {
       "not_epub": "That file isn't an EPUB.",

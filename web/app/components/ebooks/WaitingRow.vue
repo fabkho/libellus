@@ -1,33 +1,48 @@
 <script setup lang="ts">
 // An ebook file that waits for the member (issue #131, *Unlinked ebooks*): its
-// own cover (from the file), its title and author as the file says them, the
-// file's name in mono, and why it waits: several of her Books could be it
+// own cover (from the file, shown whole whatever its shape), its title and
+// author as the file says them (cleaned of a download's leftovers: "(2005)(1)"),
+// the file's name in mono, and why it waits: several of her Books could be it
 // (Choose book opens them in a sheet), or none is in her Library yet (Find book
-// opens search with the title and author typed in; the Book she adds is linked
-// to the file). Ignore deletes the copy and never offers the file again.
+// opens search with the title and author typed in; the Book she picks or adds
+// is linked to the file). Ignore deletes the copy and never offers the file again.
+// `copy`: the file is another copy of a Book that has an ebook already (the
+// page lists these apart, quietly): *Another copy of a linked book*, with
+// Replace (the copy-sheet's question, which says what goes) and Keep current
+// (this file is ignored).
 import type { EbookRecord } from '~/data/ebooks/ebooks'
+import { fileAuthors, fileTitle } from '~/data/ebooks/match'
 import { useEbooksStore } from '~/stores/ebooks'
 
-const props = defineProps<{ record: EbookRecord }>()
+const props = defineProps<{ record: EbookRecord; copy?: boolean }>()
 
 const { t } = useI18n()
 const ebooks = useEbooksStore()
 const candidates = computed(() => ebooks.candidatesOf(props.record).length)
-const title = computed(() => props.record.metadata.title || t('ebooks.untitled'))
+const title = computed(() => fileTitle(props.record.metadata) || t('ebooks.untitled'))
+const authors = computed(() => fileAuthors(props.record.metadata))
 </script>
 
 <template>
-  <li class="flex gap-inset py-sm" data-testid="ebooks.waiting">
-    <UiCover decorative :title="title" :authors="record.metadata.authors" :src="ebooks.coverOf(record)" size="sm" />
+  <li class="flex gap-inset py-sm" :data-testid="copy ? 'ebooks.copy' : 'ebooks.waiting'">
+    <UiCover decorative :title="title" :authors="authors" :src="ebooks.coverOf(record)" size="sm" whole />
     <div class="flex min-w-0 flex-1 flex-col gap-xxs">
-      <span class="book-title title-wrap text-body-large" data-testid="ebooks.waitingTitle">{{ title }}</span>
-      <span v-if="record.metadata.authors.length" class="truncate text-caption text-ink-muted">{{ formatAuthors(record.metadata.authors, t('common.etAl')) }}</span>
+      <span class="book-title title-wrap text-body-large" :class="copy && 'text-ink-muted'" data-testid="ebooks.waitingTitle">{{ title }}</span>
+      <span v-if="authors.length" class="truncate text-caption text-ink-muted">{{ formatAuthors(authors, t('common.etAl')) }}</span>
       <span class="figures truncate text-meta text-ink-faint" data-testid="ebooks.waitingFile">{{ record.name }}</span>
-      <span class="text-meta text-ink-faint" data-testid="ebooks.waitingWhy">{{ candidates ? t('ebooks.couldBe', { count: candidates }, candidates) : t('ebooks.noMatch') }}</span>
+      <span class="text-meta text-ink-faint" data-testid="ebooks.waitingWhy">{{
+        copy ? t('ebooks.copyWhy') : candidates ? t('ebooks.couldBe', { count: candidates }, candidates) : t('ebooks.noMatch')
+      }}</span>
       <div class="-ml-sm mt-xs flex flex-wrap items-center gap-xs">
-        <UiButton v-if="candidates" tone="quiet" size="sm" data-testid="ebooks.choose" @click="ebooks.choose(record)">{{ t('ebooks.choose') }}</UiButton>
-        <UiButton :tone="candidates ? 'plain' : 'quiet'" size="sm" data-testid="ebooks.find" @click="ebooks.find(record)">{{ t('ebooks.find') }}</UiButton>
-        <UiButton tone="plain" size="sm" data-testid="ebooks.ignore" @click="ebooks.ignore(record)">{{ t('ebooks.ignore') }}</UiButton>
+        <template v-if="copy">
+          <UiButton tone="plain" size="sm" data-testid="ebooks.copyReplace" @click="ebooks.askCopy(record)">{{ t('ebooks.replace') }}</UiButton>
+          <UiButton tone="plain" size="sm" data-testid="ebooks.copyKeep" @click="ebooks.ignore(record)">{{ t('ebooks.keep') }}</UiButton>
+        </template>
+        <template v-else>
+          <UiButton v-if="candidates" tone="quiet" size="sm" data-testid="ebooks.choose" @click="ebooks.choose(record)">{{ t('ebooks.choose') }}</UiButton>
+          <UiButton :tone="candidates ? 'plain' : 'quiet'" size="sm" data-testid="ebooks.find" @click="ebooks.find(record)">{{ t('ebooks.find') }}</UiButton>
+          <UiButton tone="plain" size="sm" data-testid="ebooks.ignore" @click="ebooks.ignore(record)">{{ t('ebooks.ignore') }}</UiButton>
+        </template>
       </div>
     </div>
   </li>

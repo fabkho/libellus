@@ -12,9 +12,13 @@ import {
   type Ebooks,
 } from '~/data/ebooks/ebooks'
 import { memberDir, memoryFiles, opfsFiles } from '~/data/ebooks/files'
-import { clearlyAnotherBook, findQuery } from '~/data/ebooks/match'
-import type { LibraryEntry } from '~/data/library'
+import { readEbooksSnapshot, saveEbooksSnapshot } from '~/data/ebooks/snapshot'
+import { clearlyAnotherBook, fileAuthors, fileTitle, findQuery } from '~/data/ebooks/match'
+import type { Book, BookSnapshot } from '~/data/books'
+import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
+import { workKey } from '~/data/merge'
 import { SHARED_EBOOKS_CACHE } from '~/data/localData'
+import { useEditionStore } from '~/stores/edition'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -27,6 +31,22 @@ export type PickQuestion = { file: File; entry: LibraryEntry; title: string | nu
 
 /** How long after Find book an added Book is taken for the file's. */
 const FIND_WINDOW_MS = 15 * 60_000
+
+/** How long the note after a link from search offers Undo. */
+export const LINK_UNDO_MS = 5000
+
+/**
+ * Find book found another edition of a Book in her Library: the file goes to
+ * her edition (the default) or her entry changes to the edition found and the
+ * file goes with it. The sheet asking it (components/ebooks/EditionChoiceSheet.vue).
+ */
+export type EditionChoice = { record: EbookRecord; entry: LibraryEntry; book: Book | BookSnapshot }
+
+/** A link made from search, while its note shows: the Book, and the record as it was before when Undo can put it back. */
+export type LinkUndo = { before: EbookRecord | null; title: string; bookId: string }
+
+/** A file for a Book that has an ebook already: replace that one with it, or keep the one there (the file is ignored). */
+export type CopyQuestion = { record: EbookRecord; entry: LibraryEntry; current: EbookRecord; fromSearch: boolean }
 
 type DirectoryPicker = (options?: { id?: string; mode?: 'read' | 'readwrite' }) => Promise<FileSystemDirectoryHandle>
 type PermissionHandle = FileSystemDirectoryHandle & {
@@ -62,6 +82,18 @@ export const useEbooksStore = defineStore('ebooks', () => {
   const missing = shallowRef<ReadonlySet<string>>(new Set())
   const loaded = ref(false)
   const folder = shallowRef<EbookFolder | null>(null)
+  /**
+   * The records shown come from the device's snapshot (data/ebooks/snapshot.ts)
+   * until IndexedDB answers: the page's first frame is complete, and the read
+   * then reconciles it.
+   */
+  const restored = ref(false)
+  /** The folder as the snapshot remembers it (no handle), until the real one is read. */
+  const rememberedFolder = shallowRef<Pick<EbookFolder, 'name' | 'pickedAt' | 'scannedAt'> | null>(null)
+  /** The folder to show: the picked one, else the remembered one. */
+  const folderShown = computed(() => folder.value ?? (loaded.value ? null : rememberedFolder.value))
+  /** Whether the lists can be shown: read, or restored from the snapshot. */
+  const known = computed(() => loaded.value || restored.value)
   /** A share or a scan is being taken in: how far. */
   const busy = ref<{ source: ReportSource | 'picker'; done: number; total: number } | null>(null)
   /** What the last share or scan did ("3 ebooks · 2 linked · 1 needs you"), until another replaces it. */
@@ -75,6 +107,16 @@ export const useEbooksStore = defineStore('ebooks', () => {
    */
   const finding = shallowRef<EbookRecord | null>(null)
   let findingSince = 0
+  /** The edition question after Find book found another edition of one of her Books. */
+  const editionChoice = shallowRef<EditionChoice | null>(null)
+  /** Why switching the edition for a file failed (it stays unlinked). */
+  const editionError = ref<LibraryErrorCode | null>(null)
+  const editionBusy = ref(false)
+  /** The question about another copy of a Book that has an ebook already. */
+  const copyQuestion = shallowRef<CopyQuestion | null>(null)
+  /** The last link made from search, while Undo is on offer. */
+  const linkUndo = shallowRef<LinkUndo | null>(null)
+  let undoTimer: ReturnType<typeof setTimeout> | undefined
   /** The question for a file picked for a Book that is clearly another book. */
   const question = shallowRef<PickQuestion | null>(null)
   /** Why the last action failed: not an EPUB, no room, or a folder that could not be read. */
@@ -84,6 +126,22 @@ export const useEbooksStore = defineStore('ebooks', () => {
 
   const linked = computed(() => records.value.filter((record) => record.state === 'linked'))
   const waiting = computed(() => records.value.filter((record) => record.state === 'unlinked'))
+  /**
+   * The waiting files that are another copy of a Book with an ebook already
+   * (matching found that one Book, and it has a file): the page shows them
+   * apart and quietly, with Replace and Keep the current one.
+   */
+  const copies = computed(() => waiting.value.filter((record) => copyOf(record) !== null))
+  /** The waiting files that need her to say which Book they are. */
+  const unmatched = computed(() => waiting.value.filter((record) => copyOf(record) === null))
+
+  /** The entry a waiting file is another copy for, and the file linked to it now; null when it is not one. */
+  function copyOf(record: EbookRecord): { entry: LibraryEntry; current: EbookRecord } | null {
+    if (record.state !== 'unlinked' || record.candidates.length !== 1) return null
+    const entry = library.entryForBook(record.candidates[0]!)
+    const current = entry ? linkFor(entry) : null
+    return entry && current && current.id !== record.id ? { entry, current } : null
+  }
 
   let repository: { memberId: string; ebooks: Ebooks } | null = null
   function repo(): Ebooks | null {
@@ -123,6 +181,7 @@ export const useEbooksStore = defineStore('ebooks', () => {
       // A folder that could not be stored stays for the session.
       folder.value = picked ?? folder.value
       loaded.value = true
+      if (memberId && typeof localStorage !== 'undefined') saveEbooksSnapshot(localStorage, memberId, { records: list, missing: gone, folder: folder.value })
     }
     reads = reads.then(read, read)
     return reads
@@ -237,7 +296,7 @@ export const useEbooksStore = defineStore('ebooks', () => {
           return false
         }
         if (metadata && clearlyAnotherBook(metadata, entry.book)) {
-          question.value = { file, entry, title: metadata.title, authors: metadata.authors }
+          question.value = { file, entry, title: fileTitle(metadata), authors: fileAuthors(metadata) }
           return false
         }
       }
@@ -306,12 +365,131 @@ export const useEbooksStore = defineStore('ebooks', () => {
     choosing.value = record
   }
 
-  /** Find book: search opens with the file's title and first author; the Book she adds next is linked to the file. */
+  /**
+   * Find book: search opens with the file's title and first author, linking
+   * (`search.linking`): her own Books come first and a tap links the file to
+   * one (`linkFound`), another edition of one asks which (`chooseEdition`),
+   * and the Book she adds next is linked to the file.
+   */
   function find(record: EbookRecord) {
     finding.value = record
     findingSince = Date.now()
-    search.open()
+    search.open({ linking: true })
     search.query = findQuery(record.metadata, record.name)
+  }
+
+  /** The file being found, as it is now: null when it was linked or ignored meanwhile. */
+  async function sought(): Promise<EbookRecord | null> {
+    const record = finding.value
+    if (!record) return null
+    return (await repo()?.list())?.find((r) => r.id === record.id && r.state === 'unlinked') ?? null
+  }
+
+  /**
+   * Links the file being found to one of her entries (a tap in search's "In
+   * your Library"); search closes, Undo is offered. An entry with an ebook
+   * already asks first (`copyQuestion`): replace it, or keep it.
+   */
+  async function linkFound(entry: LibraryEntry): Promise<boolean> {
+    const record = await sought()
+    if (!record) return false
+    const current = linkFor(entry)
+    if (current && current.id !== record.id) {
+      copyQuestion.value = { record, entry, current, fromSearch: true }
+      return false
+    }
+    await link(record, entry)
+    finding.value = null
+    search.close()
+    offerUndo(record, entry)
+    return true
+  }
+
+  /** Another copy of a linked Book, from its row on the page: the same question as from search. */
+  function askCopy(record: EbookRecord) {
+    const copy = copyOf(record)
+    if (copy) copyQuestion.value = { record, ...copy, fromSearch: false }
+  }
+
+  /** Replace: this file is the Book's ebook now; the one linked before goes from the device (record and copy). */
+  async function replaceCopy() {
+    const asked = copyQuestion.value
+    if (!asked) return
+    copyQuestion.value = null
+    await link(asked.record, asked.entry)
+    if (asked.fromSearch) {
+      finding.value = null
+      search.close()
+    }
+    // The old copy is gone: nothing to undo to, the note only says where it went.
+    offerUndo(null, asked.entry)
+  }
+
+  /** Keep the current one: this file is ignored (its copy deleted, never offered again). */
+  async function keepCurrent() {
+    const asked = copyQuestion.value
+    if (!asked) return
+    copyQuestion.value = null
+    await ignore(asked.record)
+    if (asked.fromSearch) {
+      finding.value = null
+      search.close()
+    }
+  }
+
+  /** Another edition of one of her Books, tapped while finding a file's Book: the sheet asks which edition the file is. */
+  function chooseEdition(book: Book | BookSnapshot, known: readonly LibraryEntry[] = []) {
+    const record = finding.value
+    const work = workKey(book)
+    // Her entry for that book: from what search read (`known`), else as this device has the Library.
+    const entry = [...known, ...library.reading, ...library.wantToRead, ...library.finished].find((e) => workKey(e.book) === work)
+    if (!record || !entry) return
+    editionError.value = null
+    editionChoice.value = { record, entry, book }
+  }
+
+  /**
+   * The answer: `mine` links the file to her edition; `switch` changes her
+   * entry to the edition found first (#41, one call) and links the file to it.
+   */
+  async function settleEdition(answer: 'mine' | 'switch'): Promise<boolean> {
+    const asked = editionChoice.value
+    if (!asked || editionBusy.value) return false
+    editionBusy.value = true
+    editionError.value = null
+    try {
+      let entry = asked.entry
+      if (answer === 'switch') {
+        const edition = useEditionStore()
+        const changed = await edition.changeTo(entry, asked.book)
+        if (!changed) {
+          editionError.value = edition.error ?? 'unknown'
+          return false
+        }
+        entry = changed
+      }
+      editionChoice.value = null
+      return await linkFound(entry)
+    } finally {
+      editionBusy.value = false
+    }
+  }
+
+  function offerUndo(before: EbookRecord | null, entry: LibraryEntry) {
+    clearTimeout(undoTimer)
+    linkUndo.value = { before, title: entry.book.title, bookId: entry.book.id }
+    undoTimer = setTimeout(() => (linkUndo.value = null), LINK_UNDO_MS)
+  }
+
+  /** Undo: the file waits again as it did before the link. */
+  async function undoLink() {
+    const undo = linkUndo.value
+    const ebooks = repo()
+    clearTimeout(undoTimer)
+    linkUndo.value = null
+    if (!undo?.before || !ebooks) return
+    await ebooks.restore(undo.before)
+    await load()
   }
 
   // The Book she added while finding is the file's; any other add may be the Book a waiting file is.
@@ -413,6 +591,8 @@ export const useEbooksStore = defineStore('ebooks', () => {
     try {
       const { report: done } = await ebooks.scan(root, await entries(), (count, total) => (busy.value = { source: 'folder', done: count, total }))
       report.value = { ...done, source: 'folder' }
+      // Kept with the folder by the repository; a folder kept for this session only learns it here.
+      if (folder.value) folder.value = { ...folder.value, scannedAt: new Date().toISOString() }
       await refresh()
       return report.value
     } catch {
@@ -433,14 +613,8 @@ export const useEbooksStore = defineStore('ebooks', () => {
     }
   }
 
-  /**
-   * When the app opens with a picked folder whose permission is still there
-   * (desktop Chrome may keep it; Android never does across a restart), the
-   * folder is scanned without a tap. Never asks.
-   */
-  async function scanIfAllowed() {
-    if (folder.value && (await folderGranted())) await scan()
-  }
+  /** When this app session began: a scan from before it may have missed files added since (the hint on the page). */
+  const openedAt = Date.now()
 
   function clearReport() {
     report.value = null
@@ -450,14 +624,32 @@ export const useEbooksStore = defineStore('ebooks', () => {
     finding.value = null
   }
 
+  /** The page as the device last showed it, at once (data/ebooks/snapshot.ts). */
+  function restore(memberId: string) {
+    if (!supported || typeof localStorage === 'undefined') return
+    const snapshot = readEbooksSnapshot(localStorage, memberId)
+    if (!snapshot) return
+    records.value = snapshot.records
+    missing.value = new Set(snapshot.missing)
+    rememberedFolder.value = snapshot.folder
+    restored.value = true
+  }
+
   function reset() {
     for (const id of [...coverUrls.keys()]) revoke(id)
     records.value = []
     missing.value = new Set()
     folder.value = null
+    rememberedFolder.value = null
+    restored.value = false
     report.value = null
     choosing.value = null
     finding.value = null
+    editionChoice.value = null
+    editionError.value = null
+    copyQuestion.value = null
+    clearTimeout(undoTimer)
+    linkUndo.value = null
     question.value = null
     error.value = null
     pickedFor.value = null
@@ -471,7 +663,11 @@ export const useEbooksStore = defineStore('ebooks', () => {
     (now, before) => {
       if (now === before) return
       reset()
-      if (now) void load().then(scanIfAllowed)
+      // Never a scan unasked (owner, #131): the page hints at Scan again instead.
+      if (now) {
+        restore(now)
+        void load()
+      }
     },
     { immediate: true },
   )
@@ -482,16 +678,29 @@ export const useEbooksStore = defineStore('ebooks', () => {
     records,
     missing,
     loaded,
+    known,
     folder,
+    folderShown,
     busy,
     report,
     choosing,
     finding,
+    editionChoice,
+    copyQuestion,
+    editionError,
+    editionBusy,
+    linkUndo,
     question,
     error,
     pickedFor,
     linked,
     waiting,
+    copies,
+    unmatched,
+    copyOf,
+    askCopy,
+    replaceCopy,
+    keepCurrent,
     load,
     linkFor,
     addFiles,
@@ -505,11 +714,16 @@ export const useEbooksStore = defineStore('ebooks', () => {
     candidatesOf,
     choose,
     find,
+    linkFound,
+    chooseEdition,
+    settleEdition,
+    undoLink,
     coverOf,
     fileOf,
     pickFolder,
     scan,
     folderGranted,
+    openedAt,
     clearReport,
     stopFinding,
     reset,

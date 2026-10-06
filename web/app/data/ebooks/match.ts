@@ -28,6 +28,60 @@ export type EbookMatch =
 
 type Named = Pick<EpubMetadata, 'title' | 'authors'>
 
+/** Invisible characters files carry in their text (format characters: a soft hyphen, zero-width spaces and joiners, the BOM). */
+const INVISIBLE = /\p{Cf}/gu
+
+/**
+ * A name or title as the file means it: composed (NFC: a "u" followed by a
+ * combining diaeresis, as some tools write "ü", is the one letter "ü", so it
+ * renders and matches as one), without invisible characters, one space
+ * between words.
+ */
+export function cleanText(text: string): string {
+  return text.normalize('NFC').replace(INVISIBLE, '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * What a trailing bracket may hold that is not part of the title: a year or a
+ * counter ("(2005)(1)", "[2]"), a series number ("(The Forever War, #1)"), or
+ * what download sites and converters add ("(z-lib.org)", "[Retail]", "(epub)").
+ */
+const TRAILING_JUNK =
+  /\s*[([{]\s*(?:\d{1,4}|(?:1[5-9]|20)\d{2}\b[^)\]}]*|[^()[\]{}]*(?:#|\b(?:book|band|bd\.?|vol\.?|volume|tome|teil)\s*)\s*\d+(?:\.\d+)?|z-?lib(?:\.org)?|libgen(?:\.\w+)?|anna'?s archive|retail|epub ?\d?|e-?book|calibre|kindle|mobi|converted|v ?\d+(?:\.\d+)*|copy)\s*[)\]}]\s*$/i
+
+/**
+ * The title as Libellus shows and matches a file's: `cleanText`, then without
+ * what file names and download sites leave on it — underscores for spaces, a
+ * `.epub` ending, trailing brackets with a year, a counter, a series number or
+ * a site's name ("Harry Potter und der Halbblutprinz (2005)(1)" → "Harry
+ * Potter und der Halbblutprinz"), and an author written in front of it
+ * ("Haldeman, Joe - The Forever War" → "The Forever War"). What is left of a
+ * title that was nothing but that is the title as it was.
+ */
+export function cleanTitle(title: string, authors: readonly string[] = []): string {
+  const original = cleanText(title)
+  let text = original.replace(/_+/g, ' ').replace(/\s+/g, ' ').replace(/\.epub$/i, '').trim()
+  for (;;) {
+    const next = text.replace(TRAILING_JUNK, '').trim()
+    if (next === text) break
+    text = next
+  }
+  // "<author> - <title>", as a file name often is.
+  const dash = /^(.+?)\s+[-–—]\s+(.+)$/.exec(text)
+  if (dash && authors.some((author) => sameAuthor(dash[1]!.replace(/,/g, ' '), author))) text = dash[2]!
+  return text || original
+}
+
+/** The file's title as shown and matched (`cleanTitle`), null when it names none. */
+export function fileTitle(file: Named): string | null {
+  return file.title ? cleanTitle(file.title, file.authors) || null : null
+}
+
+/** The file's authors as shown and matched (`cleanText`). */
+export function fileAuthors(file: Pick<EpubMetadata, 'authors'>): string[] {
+  return file.authors.map(cleanText).filter(Boolean)
+}
+
 function words(text: string): string[] {
   const normal = normalise(text)
   return normal ? normal.split(' ') : []
@@ -35,8 +89,10 @@ function words(text: string): string[] {
 
 /** The title before its subtitle: "Moby Dick; Or, The Whale" → "Moby Dick", "Piranesi: A Novel" → "Piranesi". */
 export function mainTitle(title: string): string {
+  // A series in brackets before the title ("[Sun Eater 06] Disquiet Gods") is not the title.
+  const text = title.replace(/^\s*[[(][^\])]*[\])]\s*/, '') || title
   // Not at ". ": a title may begin with one ("Dr. Jekyll and Mr. Hyde", "Dr. No").
-  return title.split(/\s*[:;(\[]|\s+[-–—]\s+|,\s+or\b/i)[0] ?? title
+  return text.split(/\s*[:;(\[]|\s+[-–—]\s+|,\s+or\b/i)[0] ?? text
 }
 
 /** The same title as matching reads it: whole, or one's main title the other's (main) title. */
@@ -44,10 +100,15 @@ export function sameTitle(a: string, b: string): boolean {
   const fullA = normalise(a)
   const fullB = normalise(b)
   if (!fullA || !fullB) return false
-  if (fullA === fullB) return true
+  // The same letters, spaced differently ("Disquiet Gods" and "Dis quiet Gods": a hyphenation mark read as a break).
+  if (fullA === fullB || fullA.replace(/ /g, '') === fullB.replace(/ /g, '')) return true
   const mainA = normalise(mainTitle(a))
   const mainB = normalise(mainTitle(b))
-  return Boolean(mainA && mainB) && (mainA === mainB || mainA === fullB || fullA === mainB)
+  const compact = (text: string) => text.replace(/ /g, '')
+  return (
+    Boolean(mainA && mainB) &&
+    (mainA === mainB || mainA === fullB || fullA === mainB || compact(mainA) === compact(mainB) || compact(mainA) === compact(fullB) || compact(fullA) === compact(mainB))
+  )
 }
 
 /** Every word of `a` begins a word of `b`. */
@@ -67,7 +128,7 @@ export function sameAuthor(a: string, b: string): boolean {
 /** Whether the file names the Book's first author among its own. */
 export function authorFits(file: Named, book: Pick<Book, 'authors'>): boolean {
   const first = book.authors[0]
-  return Boolean(first) && file.authors.some((author) => sameAuthor(author, first!))
+  return Boolean(first) && fileAuthors(file).some((author) => sameAuthor(author, first!))
 }
 
 /** The ISBNs a Book is known by (its ISBN-13, its ISBN-10 as ISBN-13). */
@@ -82,8 +143,9 @@ export function matchEbook(file: Pick<EpubMetadata, 'title' | 'authors' | 'isbns
     if (byIsbn.length === 1) return { kind: 'linked', entry: byIsbn[0]!, by: 'isbn' }
     if (byIsbn.length > 1) return { kind: 'ambiguous', candidates: byIsbn }
   }
-  if (!file.title) return { kind: 'none' }
-  const titled = entries.filter((entry) => sameTitle(file.title!, entry.book.title))
+  const title = fileTitle(file)
+  if (!title) return { kind: 'none' }
+  const titled = entries.filter((entry) => sameTitle(title, entry.book.title))
   const both = titled.filter((entry) => authorFits(file, entry.book))
   if (both.length === 1) return { kind: 'linked', entry: both[0]!, by: 'title' }
   if (both.length > 1) return { kind: 'ambiguous', candidates: both }
@@ -101,13 +163,15 @@ export function matchEbook(file: Pick<EpubMetadata, 'title' | 'authors' | 'isbns
 export function clearlyAnotherBook(file: Pick<EpubMetadata, 'title' | 'authors' | 'isbns'>, book: Pick<Book, 'title' | 'authors' | 'isbn13' | 'isbn10'>): boolean {
   const own = isbnsOfBook(book)
   if (file.isbns.some((isbn) => own.includes(isbn))) return false
-  if (file.title && sameTitle(file.title, book.title)) return false
+  const title = fileTitle(file)
+  if (title && sameTitle(title, book.title)) return false
   if (file.isbns.length && own.length) return true
-  return Boolean(file.title)
+  return Boolean(title)
 }
 
 /** What search is asked for when the member looks for the file's Book: its title and first author. */
 export function findQuery(file: Pick<EpubMetadata, 'title' | 'authors'>, name: string): string {
-  const title = file.title ? mainTitle(file.title) : name.replace(/\.epub$/i, '').replace(/[_-]+/g, ' ')
-  return [title, file.authors[0] ?? ''].join(' ').trim()
+  const title = fileTitle(file)
+  const text = title ? mainTitle(title) : cleanTitle(name.replace(/[_-]+/g, ' '))
+  return [text, fileAuthors(file)[0] ?? ''].join(' ').trim()
 }

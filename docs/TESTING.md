@@ -187,7 +187,7 @@ pnpm tsx e2e/android/ebooks.ts --base http://localhost:3126 --out /tmp/libellus-
 `share1`/`share3` POST one and three EPUBs to `/share` from the installed page itself (`multipart/form-data`,
 real `File`s, through the app's service worker, `public/sw-share.js`): the share sheet entry needs a
 WebAPK, as for #91 above, so a phone with a Google account is where the real share sheet is checked.
-`pick` taps *Choose* under Profile → Account → Ebook folder; Android's folder picker opens (the storage
+`pick` taps *Choose* in the Ebooks page's Ebook folder row; Android's folder picker opens (the storage
 root and `Download` itself say "Can't use this folder"; open `Download` → `Books` → *Use this folder* →
 *Allow* "Allow Chrome to access folder?" → Chrome's *Allow* "Allow this site to view and copy files? … until
 you close all tabs for this site"). `scan` reloads (the installed app loses the folder's permission with

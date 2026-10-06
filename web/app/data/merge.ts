@@ -34,11 +34,14 @@ const LETTERS: Record<string, string> = { ß: 'ss', ø: 'o', æ: 'ae', œ: 'oe',
 /**
  * Text as matching compares it: accents stripped, lower case, `&` as "and",
  * every run of punctuation and space one space. "Klára & the Sun!" → "klara and the sun".
+ * Invisible format characters (a soft hyphen, a zero-width space or joiner,
+ * a BOM: `\p{Cf}`) are dropped, not read as a space: an ebook's "Dis\u00ADquiet
+ * Gods" is "disquiet gods" (#131).
  */
 export function normalise(text: string): string {
   return text
     .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
+    .replace(/[\p{M}\p{Cf}]/gu, '')
     .toLowerCase()
     .replace(/[ßøæœłđþı]/g, (letter) => LETTERS[letter] ?? letter)
     .replace(/&/g, ' and ')

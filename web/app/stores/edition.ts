@@ -141,12 +141,27 @@ export const useEditionStore = defineStore('edition', () => {
   async function confirm(): Promise<LibraryEntry | null> {
     const entry = changing.value
     const candidate = choice.value
+    if (!entry || !candidate || busy.value) return null
+    const changed = await changeTo(entry, candidate.book)
+    if (changed) {
+      cancel()
+      changing.value = null
+    }
+    return changed
+  }
+
+  /**
+   * Changes an entry to another edition, from this sheet or from elsewhere
+   * (an ebook file linked to the edition found for it, #131). Returns the entry
+   * with its new Book, or null with `error` set.
+   */
+  async function changeTo(entry: LibraryEntry, book: Book | BookSnapshot): Promise<LibraryEntry | null> {
     const repo = library.library()
-    if (!entry || !candidate || !repo || busy.value) return null
+    if (!repo || busy.value) return null
     busy.value = true
     error.value = null
     try {
-      const result = await repo.changeEdition(entry.id, await library.withCover(candidate.book))
+      const result = await repo.changeEdition(entry.id, await library.withCover(book))
       if (result.error) {
         error.value = result.error
         return null
@@ -157,8 +172,6 @@ export const useEditionStore = defineStore('edition', () => {
       // The old Book's pages show it as a Book that is not in the Library.
       books.dropEntry(changed.id)
       collections.entryChanged(changed)
-      cancel()
-      changing.value = null
       return changed
     } finally {
       busy.value = false
@@ -181,5 +194,5 @@ export const useEditionStore = defineStore('edition', () => {
     },
   )
 
-  return { changing, candidates, pending, failed, picked, busy, error, moved, choice, isPicked, open, close, pick, look, confirm, reset }
+  return { changing, candidates, pending, failed, picked, busy, error, moved, choice, isPicked, open, close, pick, look, confirm, changeTo, reset }
 })

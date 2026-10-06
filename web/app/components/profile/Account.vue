@@ -12,14 +12,11 @@
 // Afterwards she is on Sign in, which says the account was deleted.
 // Errors (the owner's account only, stores/ownerErrors.ts), after Book links: the client error
 // log's page, with how many groups first appeared in the last 24 hours as a badge.
-// Ebooks on this device (#131), where the browser can keep files: the Ebook folder
-// (Chrome only: its name, a tap picks it; Scan beside it asks for the folder's
-// permission on that tap when Android has forgotten it, scans, and opens the
-// ebooks page with what it found), and Ebooks (how many need her, else how many
-// are linked) leading to that page, and Classic reader (the built-in reader's
-// other style, a setting of this device).
+// Ebooks on this device (#131), where the browser can keep files: one row, Ebooks
+// (how many need her, else how many are linked), leading to the Ebooks page, where
+// the ebook folder is chosen and scanned. The reader's Classic style is set in the
+// reader's own Aa sheet only.
 import { useEbooksStore } from '~/stores/ebooks'
-import { useReaderStore } from '~/stores/reader'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
@@ -64,20 +61,11 @@ function askSignOut() {
 const installApp = useInstallHint()
 
 const ebooks = useEbooksStore()
-const reader = useReaderStore()
-const readerClassic = computed({
-  get: () => reader.settings.style === 'classic',
-  set: (on: boolean) => (reader.settings.style = on ? 'classic' : 'printed'),
-})
 const ebooksValue = computed(() => {
   const waiting = ebooks.waiting.length
   if (waiting) return t('profile.account.ebooksNeedYou', { count: waiting }, waiting)
   return ebooks.linked.length ? String(ebooks.linked.length) : ''
 })
-async function scanEbooks() {
-  if (await ebooks.scan()) await navigateTo('/ebooks')
-  else if (ebooks.error) await navigateTo('/ebooks')
-}
 
 /** The Delete account Confirm; the number of unsynced changes when it was asked. */
 const deleting = ref(false)
@@ -147,27 +135,9 @@ async function syncFirst() {
         <span v-else-if="errors.groups" class="text-ink-faint" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
-      <UiRow v-if="ebooks.folderSupported" icon="library" :label="t('profile.account.ebookFolder')" data-testid="profile.ebookFolderRow">
-        <button
-          type="button"
-          class="-my-sm min-h-(--size-touch) min-w-0 truncate px-xs"
-          :class="ebooks.folder ? 'figures text-ink-muted' : 'text-ink-faint'"
-          data-testid="profile.ebookFolder"
-          @click="ebooks.pickFolder()"
-        >
-          {{ ebooks.folder?.name ?? t('profile.account.ebookFolderNone') }}
-        </button>
-        <template v-if="ebooks.folder" #trailing>
-          <UiButton tone="quiet" size="sm" class="-mr-xs" :disabled="Boolean(ebooks.busy)" data-testid="profile.ebookScan" @click="scanEbooks">
-            {{ ebooks.busy?.source === 'folder' ? t('profile.account.scanning') : t('profile.account.scan') }}
-          </UiButton>
-        </template>
-      </UiRow>
       <UiRow v-if="ebooks.supported" to="/ebooks" icon="ebook" :label="t('profile.account.ebooks')" chevron data-testid="profile.ebooks">
         <span v-if="ebooksValue" :class="ebooks.waiting.length ? 'text-ink' : 'figures text-ink-muted'" data-testid="profile.ebooksValue">{{ ebooksValue }}</span>
       </UiRow>
-      <!-- The built-in reader's other style (#131 phase 2); the reader's Aa sheet has it too. -->
-      <UiSwitchRow v-if="ebooks.supported" v-model="readerClassic" icon="read" :label="t('profile.account.readerClassic')" testid="profile.readerClassic" />
       <UiRow to="/import" icon="import" :label="t('import.menuItem')" chevron data-testid="profile.import" />
       <UiRow
         v-if="installApp.canInstall.value"

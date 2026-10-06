@@ -10,10 +10,16 @@
 // (dimmed while a newer query is on its way) · no results · failed (no source
 // could answer). Offline the member's own Library answers instead (#15), and
 // one quiet line says so where the hint would be.
+// Her own Books the query is about come first, as a small group "In your
+// Library" next to the query (#131, `search.own`), at once and before any
+// source answers; the results the sources found follow without them. Opened by
+// Find book (`search.linking`), a tap picks a result for the ebook file
+// instead of opening its page (`pick`).
 import { parseIsbn } from '~/data/books'
+import { useEbooksStore } from '~/stores/ebooks'
 import { useLibraryStore } from '~/stores/library'
 import { useManualStore } from '~/stores/manual'
-import { useSearchStore } from '~/stores/search'
+import { useSearchStore, type SearchHit } from '~/stores/search'
 import { SEARCH_DEBOUNCE_MS } from '~/data/search'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 
@@ -21,7 +27,28 @@ const { t } = useI18n()
 const search = useSearchStore()
 const library = useLibraryStore()
 const manual = useManualStore()
+const ebooks = useEbooksStore()
 const online = useOnline()
+
+/**
+ * A tap on a row while linking (Find book, #131): one of her Books links the
+ * file to it, another edition of one asks which edition the file is, a new
+ * Book opens the Add sheet (and is linked once added).
+ */
+function pick(hit: SearchHit) {
+  if (hit.entry) void ebooks.linkFound(hit.entry)
+  else if (hit.otherEdition) ebooks.chooseEdition(hit.book, ownEntries())
+  else library.openAdd(hit.book)
+}
+
+/** Her entries as the group shows them (read when search opened). */
+const ownEntries = () => search.own.map((hit) => hit.entry!)
+
+/** The +: the Add sheet; while linking, another edition of one of her Books asks first (never a second entry unasked). */
+function add(hit: SearchHit) {
+  if (search.linking && hit.otherEdition) ebooks.chooseEdition(hit.book, ownEntries())
+  else library.openAdd(hit.book)
+}
 
 /**
  * How many covers at the bottom of the list (the ones visible above the
@@ -57,7 +84,7 @@ const stale = computed(() => search.outdated)
 const isbnQuery = computed(() => parseIsbn(search.answered) !== null)
 const state = computed(() => {
   if (search.phase === 'idle') return 'idle'
-  if (search.hits.length) return 'results'
+  if (search.hits.length || search.own.length) return 'results'
   if (search.phase === 'loading') return 'loading'
   if (search.phase === 'failed') return 'failed'
   return 'none'
@@ -123,7 +150,7 @@ onBeforeUnmount(() => clearTimeout(arrivingTimer))
 // The first covers are asked for as soon as the results land, before the rows
 // render, so they are on their way while the list lays out.
 watch(
-  () => search.hits,
+  () => [...search.own, ...search.others],
   (hits) => {
     for (const hit of hits.slice(0, FIRST_COVERS)) preloadImage(coverSrc(hit.book.coverUrl, 'sm'))
   },
@@ -151,8 +178,28 @@ watch(
       data-no-swipe
       data-testid="search.results"
     >
+      <!--
+        Her own Books first ("In your Library"), nearest the query: in a reversed list the group is
+        the first item, its best match at its bottom and its label at its top, over the other results.
+      -->
+      <li v-if="search.own.length" class="own" data-testid="search.own">
+        <div class="flex flex-col-reverse">
+          <SearchResultRow
+            v-for="(hit, index) in search.own"
+            :key="hit.key"
+            :hit="hit"
+            :linking="search.linking"
+            eager
+            :priority="index < FIRST_COVERS"
+            data-testid="search.ownResult"
+            @pick="pick(hit)"
+            @add="add(hit)"
+          />
+          <h3 class="eyebrow px-md pt-ms pb-xxs" data-testid="search.ownLabel">{{ t('search.inLibrary') }}</h3>
+        </div>
+      </li>
       <li
-        v-for="(hit, index) in search.hits"
+        v-for="(hit, index) in search.others"
         :key="hit.key"
         :ref="nearby.observe"
         :data-near-key="hit.key"
@@ -160,9 +207,11 @@ watch(
       >
         <SearchResultRow
           :hit="hit"
+          :linking="search.linking"
           :eager="index < FIRST_COVERS || nearby.has(hit.key)"
           :priority="index < FIRST_COVERS"
-          @add="library.openAdd(hit.book)"
+          @pick="pick(hit)"
+          @add="add(hit)"
         />
       </li>
       <!--
@@ -205,6 +254,11 @@ watch(
   touch-action: pan-y;
   -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--spacing-xxl));
   mask-image: linear-gradient(to bottom, transparent, black var(--spacing-xxl));
+}
+
+/* Her own group stands apart from the results above it by a hairline (in a reversed list, above is the end). */
+.own + li[data-near-key] {
+  border-bottom: var(--stroke-hairline) solid var(--color-hairline);
 }
 
 /* The loading state leaves over the room the results arrive in, fading, so the first rows rise in where it stood. */

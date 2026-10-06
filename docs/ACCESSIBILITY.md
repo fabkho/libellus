@@ -11,7 +11,7 @@ the code; Home (Reading card, Want to read row, the Read in tally and its sheet)
 three segments, the filters, Collections); the search palette (resting, typing, results); a Book in
 every status with its options, Start, Finish (the rating), DNF, Update progress (the wheel), Change
 edition and Add sheets, the Goodreads line and the links row; the Profile (figures, chart, reading
-days, ratings, records, authors, year cards, Account, Book links, Ebook folder); a year in review;
+days, ratings, records, authors, year cards, Account, Book links); a year in review;
 the owner's shelf (the Profile's row, a Book taken out, `/profile/shelf`); the sync chip and sheet;
 the tab bar that steps away.
 

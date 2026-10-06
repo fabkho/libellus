@@ -10,8 +10,10 @@ const props = withDefaults(
     src?: string | null
     thumbhash?: string | null
     colors?: CoverColors | null
+    /** An ebook file's own cover: shown whole whatever its shape (UiCover's `whole`). */
+    whole?: boolean
   }>(),
-  { src: null, thumbhash: null, colors: null },
+  { src: null, thumbhash: null, colors: null, whole: false },
 )
 
 const { t } = useI18n()
@@ -20,7 +22,7 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 
 <template>
   <div class="flex items-center gap-ms pb-inset">
-    <UiCover decorative :title="title" :authors="authors" :src="src" :thumbhash="thumbhash" :colors="colors" size="xs" />
+    <UiCover decorative :title="title" :authors="authors" :src="src" :thumbhash="thumbhash" :colors="colors" size="xs" :whole="whole" />
     <div class="flex min-w-0 flex-col gap-xxs">
       <span class="book-title title-wrap text-callout">{{ title }}</span>
       <span class="truncate text-caption text-ink-faint">{{ authorLine }}</span>

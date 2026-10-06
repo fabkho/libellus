@@ -7,6 +7,7 @@ import { useLibraryStore } from '~/stores/library'
 import {
   createSearch,
   isAbort,
+  libraryGroup,
   MIN_QUERY_LENGTH,
   SEARCH_DEBOUNCE_MS,
   searchLibrary,
@@ -49,6 +50,39 @@ export const useSearchStore = defineStore('search', () => {
 
   const hits = ref<SearchHit[]>([])
   const phase = ref<SearchPhase>('idle')
+  /**
+   * Search was opened to find an ebook file's Book (Find book, stores/ebooks.ts):
+   * a tap on one of her own books links the file to it, another edition of one
+   * asks which edition, and a Book she adds is linked to it. Until it closes.
+   */
+  const linking = ref(false)
+
+  /**
+   * Her own Library entries the query is about, the group the list starts with
+   * ("In your Library", `libraryGroup`): from the entries this device has, so
+   * they show at once, before any source answers. Looking for a file's Book,
+   * an entry by the file's author belongs to it too (a translated title).
+   */
+  const own = computed<SearchHit[]>(() => {
+    const text = query.value.trim()
+    if (text.length < MIN_QUERY_LENGTH) return []
+    // The Library as read when search opened (an entry added on another device), else as this device has it.
+    const shelf = useLibraryStore()
+    const entries = ownLibrary.value ?? [...shelf.reading, ...shelf.wantToRead, ...shelf.finished]
+    const results = answered.value === text ? hits.value : []
+    return libraryGroup(entries, text, results, { byAuthor: linking.value }).map((entry) => ({
+      key: bookKey(entry.book),
+      book: entry.book,
+      entry,
+      otherEdition: false,
+    }))
+  })
+
+  /** The results after her own group: what the sources found, without the entries the group shows already. */
+  const others = computed<SearchHit[]>(() => {
+    const shown = new Set(own.value.map((hit) => hit.entry!.id))
+    return hits.value.filter((hit) => !hit.entry || !shown.has(hit.entry.id))
+  })
   /** The query the shown hits answer. */
   const answered = ref('')
   /** The hits shown answer an older query while a newer one is on its way. */
@@ -86,8 +120,21 @@ export const useSearchStore = defineStore('search', () => {
    * may have changed since), kept up to date by adds made from here.
    */
   let library: Promise<LibraryEntry[]> | null = null
+  /** The Library as last read for search (`libraryEntries`), for her own group; null until read. */
+  const ownLibrary = shallowRef<LibraryEntry[] | null>(null)
   function libraryEntries(): Promise<LibraryEntry[]> {
-    library ??= catalogue ? catalogue.libraryEntries().catch(() => ((library = null), [])) : Promise.resolve([])
+    if (!library) {
+      const reading: Promise<LibraryEntry[]> = catalogue
+        ? catalogue.libraryEntries().then(
+            (entries) => {
+              ownLibrary.value = entries
+              return entries
+            },
+            () => ((library = null), []),
+          )
+        : Promise.resolve([])
+      library = reading
+    }
     return library
   }
 
@@ -166,7 +213,8 @@ export const useSearchStore = defineStore('search', () => {
     void run(text)
   })
 
-  function open() {
+  function open({ linking: forFile = false }: { linking?: boolean } = {}) {
+    linking.value = forFile
     isOpen.value = true
     library = null
     void libraryEntries()
@@ -175,6 +223,7 @@ export const useSearchStore = defineStore('search', () => {
   /** Cancel, a tap on the page behind, a swipe down, Escape, or leaving the page. */
   function close() {
     isOpen.value = false
+    linking.value = false
     query.value = ''
   }
 
@@ -202,6 +251,7 @@ export const useSearchStore = defineStore('search', () => {
   function markAdded(entry: LibraryEntry) {
     // Not read yet: the next read finds the entry in the database anyway.
     if (library) library = library.then((entries) => [entry, ...entries.filter((e) => e.id !== entry.id)])
+    if (ownLibrary.value) ownLibrary.value = [entry, ...ownLibrary.value.filter((e) => e.id !== entry.id)]
     const added = new Set(editionKeys(entry.book))
     const work = workKey(entry.book)
     for (const hit of hits.value) {
@@ -217,6 +267,7 @@ export const useSearchStore = defineStore('search', () => {
   /** After a removal from the Library, the hit is a Book to add again, and no longer an edition she has. */
   function markRemoved(entryId: string) {
     if (library) library = library.then((entries) => entries.filter((e) => e.id !== entryId))
+    if (ownLibrary.value) ownLibrary.value = ownLibrary.value.filter((e) => e.id !== entryId)
     for (const hit of hits.value) {
       if (hit.entry?.id === entryId) hit.entry = null
     }
@@ -232,7 +283,8 @@ export const useSearchStore = defineStore('search', () => {
     fromLibrary.value = false
     seen.clear()
     library = null
+    ownLibrary.value = null
   }
 
-  return { isOpen, query, hits, phase, answered, outdated, fromLibrary, open, close, findByIsbn, seenBook, markAdded, markRemoved, reset, repository }
+  return { isOpen, query, hits, own, others, linking, phase, answered, outdated, fromLibrary, open, close, findByIsbn, seenBook, markAdded, markRemoved, reset, repository }
 })

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Book } from '@/data/books'
 import { createEbooks, memoryEbookRecords, reportOf, type EbookRecord } from '@/data/ebooks/ebooks'
-import { EpubError, displayName, isbnOfIdentifier, readEpub, readPackage } from '@/data/ebooks/epub'
-import { memberDir, memoryFiles } from '@/data/ebooks/files'
+import { EpubError, decodeXml, displayName, isbnOfIdentifier, readEpub, readPackage } from '@/data/ebooks/epub'
+import { EPUB_READER_VERSION, memberDir, memoryFiles } from '@/data/ebooks/files'
 import { ingestEbook } from '@/data/ebooks/ingest'
-import { clearlyAnotherBook, findQuery, matchEbook, sameAuthor, sameTitle } from '@/data/ebooks/match'
+import { EBOOKS_SNAPSHOT_KEY, readEbooksSnapshot, saveEbooksSnapshot } from '@/data/ebooks/snapshot'
+import { memoryStorage } from './support/stack'
+import { cleanTitle, clearlyAnotherBook, fileAuthors, fileTitle, findQuery, mainTitle, matchEbook, sameAuthor, sameTitle } from '@/data/ebooks/match'
 import type { LibraryEntry } from '@/data/library'
 import {
   ANNA_KARENINA_STANDARD,
@@ -222,6 +224,65 @@ describe('matching a file to a Book', () => {
   })
 })
 
+describe('titles and text as files write them', () => {
+  it('cleans a title of what file names and download sites leave on it', () => {
+    expect(cleanTitle('Harry Potter und der Halbblutprinz (2005)(1)')).toBe('Harry Potter und der Halbblutprinz')
+    expect(cleanTitle('The Forever War (The Forever War, #1)')).toBe('The Forever War')
+    expect(cleanTitle('Disquiet Gods (Sun Eater Book 6)')).toBe('Disquiet Gods')
+    expect(cleanTitle('Shadow & Claw [Retail] (z-lib.org)')).toBe('Shadow & Claw')
+    expect(cleanTitle('The_Name_of_the_Wind.epub')).toBe('The Name of the Wind')
+    expect(cleanTitle('Haldeman, Joe - The Forever War', ['Joe Haldeman'])).toBe('The Forever War')
+    // What is part of the title stays.
+    expect(cleanTitle('1984')).toBe('1984')
+    expect(cleanTitle('Catch-22')).toBe('Catch-22')
+    expect(cleanTitle('Men at Arms')).toBe('Men at Arms')
+    expect(cleanTitle('Hyperion - The Fall', ['Dan Simmons'])).toBe('Hyperion - The Fall')
+    expect(cleanTitle('(1)')).toBe('(1)')
+  })
+
+  it('composes letters (NFC) and drops invisible characters, for showing and for matching', () => {
+    const decomposed = 'Harry Potter und die Heiligtu\u0308mer des Todes'
+    expect(cleanTitle(decomposed)).toBe('Harry Potter und die Heiligtümer des Todes')
+    expect(cleanTitle(decomposed)).toHaveLength(42)
+    expect(fileTitle({ title: 'Dis\u00ADquiet Gods', authors: [] })).toBe('Disquiet Gods')
+    expect(fileAuthors({ authors: ['Christopher\u200B Ruocchio', 'Jo\u0308rg Fauser'] })).toEqual(['Christopher Ruocchio', 'Jörg Fauser'])
+  })
+
+  it('matches a file whose title has a soft hyphen, a series in brackets or a year, as the Book it is', () => {
+    const gods = entry({ title: 'Disquiet Gods : The Sun Eater', authors: ['Christopher Ruocchio'] })
+    const war = entry({ title: 'The Forever War', authors: ['Joe Haldeman', 'John Scalzi'] })
+    const prinz = entry({ title: 'Harry Potter und der Halbblutprinz', authors: ['J.K. Rowling'] })
+    const library = [gods, war, prinz]
+    const match = (title: string, authors: string[]) => matchEbook({ title, authors, isbns: [] }, library)
+    expect(match('Dis\u00ADquiet Gods', ['Christopher Ruocchio'])).toMatchObject({ kind: 'linked', entry: gods })
+    expect(match('[Sun Eater 06] Disquiet Gods', ['Christopher Ruocchio'])).toMatchObject({ kind: 'linked', entry: gods })
+    expect(match('The For\u200Bever War', ['Joe Haldeman'])).toMatchObject({ kind: 'linked', entry: war })
+    expect(match('Harry Potter und der Halbblutprinz (2005)(1)', ['Joanne K. Rowling'])).toMatchObject({ kind: 'linked', entry: prinz })
+    expect(mainTitle('[Sun Eater 06] Disquiet Gods')).toBe('Disquiet Gods')
+    expect(sameTitle('Dis quiet Gods', 'Disquiet Gods')).toBe(true)
+    expect(findQuery({ title: 'Dis\u00ADquiet Gods (Sun Eater Book 6)', authors: ['Christopher Ruocchio'] }, 'x.epub')).toBe('Disquiet Gods Christopher Ruocchio')
+  })
+
+  it('decodes the package document by its byte order mark or declared encoding, strictly as UTF-8 otherwise', () => {
+    const opf = (title: string, declaration = '<?xml version="1.0" encoding="utf-8"?>') =>
+      `${declaration}<package xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${title}</dc:title></metadata></package>`
+    const title = (text: string) => readPackage(text, 'content.opf').title
+    // Declared Latin-1: "ü" is one byte.
+    const latin1 = Uint8Array.from(opf('Heiligtümer', '<?xml version="1.0" encoding="ISO-8859-1"?>'), (char) => char.charCodeAt(0))
+    expect(title(decodeXml(latin1))).toBe('Heiligtümer')
+    // UTF-16 with its mark.
+    const utf16 = new Uint8Array([0xff, 0xfe, ...new Uint8Array(Uint16Array.from(opf('Heiligtümer', '<?xml version="1.0" encoding="UTF-16"?>'), (char) => char.charCodeAt(0)).buffer)])
+    expect(title(decodeXml(utf16))).toBe('Heiligtümer')
+    // UTF-8 with a decomposed "ü": composed.
+    expect(title(decodeXml(new TextEncoder().encode(opf('Heiligtu\u0308mer'))))).toBe('Heiligtümer')
+    // Undeclared bytes that are not UTF-8 are Windows-1252, not replacement characters.
+    const undeclared = Uint8Array.from(opf('Heiligtümer', '<?xml version="1.0"?>'), (char) => char.charCodeAt(0))
+    expect(title(decodeXml(undeclared))).toBe('Heiligtümer')
+    // A decomposed letter spelled as an entity is composed too.
+    expect(readPackage(opf('Heiligtu&#x308;mer'), 'content.opf').title).toBe('Heiligtümer')
+  })
+})
+
 describe('the files on the device', () => {
   const MEMBER = 'member-1'
   function setup(entries: LibraryEntry[] = []) {
@@ -293,7 +354,17 @@ describe('the files on the device', () => {
     expect(second.record).toMatchObject({ state: 'unlinked', candidates: [moby.book.id] })
     await ebooks.link(second.record, moby)
     const after = await ebooks.list()
-    expect(after.map((r) => [r.id, r.state])).toEqual([[second.record.id, 'linked']])
+    // The replaced file's copy goes; its record stays, ignored as replaced, so a rescan never offers it again.
+    expect(after.map((r) => [r.id, r.state, r.ignoredAs ?? null]).sort()).toEqual(
+      [
+        [first.record.id, 'ignored', 'replaced'],
+        [second.record.id, 'linked', null],
+      ].sort(),
+    )
+    expect(files.saved.has(first.record.path)).toBe(false)
+    // Shared again, the replaced file is counted and left alone.
+    const again = await ebooks.add(file(buildEpub(MOBY_DICK_GUTENBERG)), { source: 'share', name: 'a copy.epub', lastModified: null }, [moby])
+    expect(again).toMatchObject({ ok: true, duplicate: true, record: { state: 'ignored' } })
     expect(files.saved.has(first.record.path)).toBe(false)
   })
 
@@ -373,6 +444,70 @@ describe('the files on the device', () => {
     expect(ingested).toEqual(['Dracula.epub'])
     expect(await ebooks.list()).toHaveLength(4)
   })
+
+  it('keeps what she decided over every rescan: a chosen Book, an Ignore, a replaced copy, a renamed or moved file', async () => {
+    const hyperion = entry({ title: 'Hyperion', authors: ['Dan Simmons'] })
+    const hyperionAgain = entry({ title: 'Hyperion', authors: ['Dan Simmons'], year: 1990 })
+    const moby = entry({ title: 'Moby-Dick', authors: ['Herman Melville'] })
+    const library = [hyperion, hyperionAgain, moby]
+    const { ebooks, records } = setup()
+    const HYPERION = { version: 3 as const, title: 'Hyperion', creators: [{ name: 'Dan Simmons' }] }
+    const folder = fakeFolder({
+      'Hyperion.epub': buildEpub(HYPERION),
+      'Moby Dick.epub': buildEpub(MOBY_DICK_GUTENBERG),
+      'Moby Dick (1).epub': buildEpub({ ...MOBY_DICK_GUTENBERG, body: 'another copy' }),
+      'Dracula.epub': buildEpub(DRACULA_GUTENBERG3),
+    })
+    const first = await ebooks.scan(folder.handle, library)
+    expect(first.report).toMatchObject({ total: 4, linked: 1, needsYou: 3 })
+    const list = await ebooks.list()
+    const byName = (name: string) => list.find((r) => r.name === name)!
+    // Choose book between two editions; Ignore; the second Moby Dick replaces the first.
+    await ebooks.link(byName('Hyperion.epub'), hyperionAgain)
+    await ebooks.ignore(byName('Dracula.epub'))
+    expect(byName('Moby Dick (1).epub')).toMatchObject({ state: 'unlinked', candidates: [moby.book.id] })
+    await ebooks.link(byName('Moby Dick (1).epub'), moby)
+
+    const states = async () => Object.fromEntries((await ebooks.list()).map((r) => [r.name, r.state]))
+    const decided = { 'Hyperion.epub': 'linked', 'Dracula.epub': 'ignored', 'Moby Dick.epub': 'ignored', 'Moby Dick (1).epub': 'linked' }
+    expect(await states()).toEqual(decided)
+
+    const again = await ebooks.scan(folder.handle, library)
+    expect(again.report).toMatchObject({ total: 4, linked: 2, needsYou: 0, ignored: 2 })
+    expect(await states()).toEqual(decided)
+    expect((await ebooks.list()).find((r) => r.name === 'Hyperion.epub')).toMatchObject({ bookId: hyperionAgain.book.id })
+
+    // Renamed and moved, the same bytes: the same files, the same decisions.
+    folder.move('Hyperion.epub', 'Simmons/Hyperion (Cantos 1).epub')
+    folder.move('Dracula.epub', 'Old/dracula-copy.epub')
+    const moved = await ebooks.scan(folder.handle, library)
+    expect(moved.report).toMatchObject({ total: 4, linked: 2, needsYou: 0, ignored: 2 })
+    expect(await ebooks.list()).toHaveLength(4)
+
+    // A record read before the reading was fixed is read again from its copy and matched again; its link stays.
+    const old = (await ebooks.list()).find((r) => r.name === 'Hyperion.epub')!
+    await records.put({ ...old, reader: undefined, metadata: { ...old.metadata, title: 'Hyperion (2011)(1)' } })
+    await ebooks.scan(folder.handle, library)
+    expect((await ebooks.list()).find((r) => r.name === 'Hyperion.epub')).toMatchObject({ state: 'linked', bookId: hyperionAgain.book.id, reader: EPUB_READER_VERSION, metadata: { title: 'Hyperion' } })
+
+    // Her entry left the Library: the file waits again, and fits the other edition now.
+    const without = library.filter((e) => e !== hyperionAgain)
+    await ebooks.scan(folder.handle, without)
+    expect((await ebooks.list()).find((r) => r.name === 'Hyperion.epub')).toMatchObject({ state: 'linked', bookId: hyperion.book.id })
+  })
+
+  it('matches a waiting file again on the next scan, so a fix to matching reaches it', async () => {
+    const gods = entry({ title: 'Disquiet Gods : The Sun Eater', authors: ['Christopher Ruocchio'] })
+    const { ebooks, records } = setup()
+    const folder = fakeFolder({ 'Disquiet Gods.epub': buildEpub({ version: 3, title: 'Disquiet Gods', creators: [{ name: 'Christopher Ruocchio' }] }) })
+    await ebooks.scan(folder.handle, [])
+    const waiting = (await ebooks.list())[0]!
+    expect(waiting.state).toBe('unlinked')
+    // As an older matcher left it: waiting, without candidates.
+    await records.put({ ...waiting, candidates: [] })
+    await ebooks.scan(folder.handle, [gods])
+    expect((await ebooks.list())[0]).toMatchObject({ state: 'linked', bookId: gods.book.id })
+  })
 })
 
 /** A folder handle stand-in: the File System Access calls a scan makes, over files in memory. Records which files were opened. */
@@ -423,3 +558,20 @@ function fakeFolder(initial: Record<string, Uint8Array>) {
     },
   }
 }
+
+describe('the page as the device last showed it', () => {
+  it('keeps the records, missing copies and the folder without its handle, for one member, never ignored files', () => {
+    const storage = memoryStorage()
+    const record = { id: 'a-1', memberId: 'm1', state: 'linked', name: 'a.epub' } as EbookRecord
+    const ignored = { id: 'b-1', memberId: 'm1', state: 'ignored', name: 'b.epub' } as EbookRecord
+    const folder = { handle: {} as FileSystemDirectoryHandle, name: 'Books', pickedAt: '2026-10-01T00:00:00Z', scannedAt: '2026-10-06T09:00:00Z' }
+    saveEbooksSnapshot(storage, 'm1', { records: [record, ignored], missing: new Set(['a-1']), folder })
+    const snapshot = readEbooksSnapshot(storage, 'm1')!
+    expect(snapshot.records.map((r) => r.id)).toEqual(['a-1'])
+    expect(snapshot.missing).toEqual(['a-1'])
+    expect(snapshot.folder).toEqual({ name: 'Books', pickedAt: '2026-10-01T00:00:00Z', scannedAt: '2026-10-06T09:00:00Z' })
+    expect(readEbooksSnapshot(storage, 'm2')).toBeNull()
+    storage.setItem(EBOOKS_SNAPSHOT_KEY, '{not json')
+    expect(readEbooksSnapshot(storage, 'm1')).toBeNull()
+  })
+})

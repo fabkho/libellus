@@ -72,14 +72,17 @@ function clean(xml: string): string {
   return xml.replace(/<!--[\s\S]*?-->/g, '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (_, text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;'))
 }
 
-/** Every element with this local name (any prefix), its attributes and its text with inner tags removed. */
+/** Every element with this local name (any prefix), its attributes and its text with inner tags removed (composed, NFC: an entity may spell a combining mark). */
 function elements(xml: string, localName: string): Element[] {
   const name = localName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const pattern = new RegExp(`<((?:[\\w.-]+:)?${name})(?=[\\s/>])([^>]*?)(?:/>|>([\\s\\S]*?)</\\1\\s*>)`, 'g')
   return [...xml.matchAll(pattern)].map((match) => ({
     name: match[1]!,
     attrs: attributes(match[2] ?? ''),
-    text: decodeEntities((match[3] ?? '').replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim(),
+    text: decodeEntities((match[3] ?? '').replace(/<[^>]*>/g, ''))
+      .normalize('NFC')
+      .replace(/\s+/g, ' ')
+      .trim(),
   }))
 }
 
@@ -185,13 +188,47 @@ export function resolvePath(base: string, href: string): string {
   return out.join('/')
 }
 
-const decoder = new TextDecoder()
+/**
+ * An XML document's text from its bytes (the container and the OPF): a byte
+ * order mark decides (UTF-8, UTF-16), else the encoding the XML declaration
+ * names, else UTF-8 — read strictly, so bytes that are not UTF-8 are read as
+ * Windows-1252 (what Latin-1 files are in practice) rather than turned into
+ * replacement characters. The text is composed (NFC): "u" with a combining
+ * diaeresis is the one letter "ü" everywhere after this.
+ */
+export function decodeXml(bytes: Uint8Array): string {
+  const [a, b, c] = bytes
+  if (a === 0xef && b === 0xbb && c === 0xbf) return utf8(bytes.subarray(3)).normalize('NFC')
+  if (a === 0xff && b === 0xfe) return new TextDecoder('utf-16le').decode(bytes.subarray(2)).normalize('NFC')
+  if (a === 0xfe && b === 0xff) return new TextDecoder('utf-16be').decode(bytes.subarray(2)).normalize('NFC')
+  // UTF-16 without a mark: "<" and a zero byte.
+  if (a === 0x3c && b === 0) return new TextDecoder('utf-16le').decode(bytes).normalize('NFC')
+  if (a === 0 && b === 0x3c) return new TextDecoder('utf-16be').decode(bytes).normalize('NFC')
+  const head = String.fromCharCode(...bytes.subarray(0, 200))
+  const declared = /^\s*<\?xml[^>]*?\bencoding\s*=\s*["']([\w.:-]+)["']/i.exec(head)?.[1]?.toLowerCase()
+  if (declared && !/^utf-?8$/.test(declared)) {
+    try {
+      return new TextDecoder(declared).decode(bytes).normalize('NFC')
+    } catch {
+      // A label the platform does not know: read as UTF-8 below.
+    }
+  }
+  return utf8(bytes).normalize('NFC')
+}
+
+function utf8(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes)
+  }
+}
 
 /** The rootfile the container names, or the first `.opf` in the zip. */
 function packagePath(files: Record<string, Uint8Array>): string | null {
   const container = files['META-INF/container.xml']
   if (container) {
-    const rootfile = elements(clean(decoder.decode(container)), 'rootfile').find(
+    const rootfile = elements(clean(decodeXml(container)), 'rootfile').find(
       (file) => !file.attrs['media-type'] || file.attrs['media-type'] === 'application/oebps-package+xml',
     )
     const path = rootfile?.attrs['full-path']
@@ -213,7 +250,7 @@ export function readEpub(bytes: Uint8Array, { cover = true }: { cover?: boolean 
   }
   const opfPath = packagePath(files)
   if (!opfPath) throw new EpubError('no_package')
-  const metadata = readPackage(decoder.decode(files[opfPath]), opfPath)
+  const metadata = readPackage(decodeXml(files[opfPath]!), opfPath)
   let image: Uint8Array | null = null
   if (cover && metadata.coverPath) {
     try {

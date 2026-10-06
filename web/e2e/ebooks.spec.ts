@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
@@ -5,6 +6,7 @@ import { createLibrary, type LibraryEntry } from '../app/data/library'
 import {
   ANNA_KARENINA_STANDARD,
   DRACULA_GUTENBERG3,
+  METAMORPHOSIS_GUTENBERG,
   MOBY_DICK_GUTENBERG,
   buildEpub,
   prideAndPrejudiceWithIsbn,
@@ -13,7 +15,7 @@ import {
 import type { TestMember } from '../tests/support/member'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { goto, recordedApple, signedIn, untilStill } from './support'
+import { expectAccessible, goto, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * Ebook files on the device, linked to Books (#131, phase 1). Chromium: the
@@ -299,6 +301,11 @@ async function standInFolder(page: Page, files: Record<string, Uint8Array>) {
       showDirectoryPicker: async () => wrap((await (await navigator.storage.getDirectory()).getDirectoryHandle('Books', { create: true })) as unknown as Dir),
     })
   })
+  await putInFolder(page, files)
+}
+
+/** Writes files into the stand-in folder (OPFS `Books/`), as if saved there. */
+async function putInFolder(page: Page, files: Record<string, Uint8Array>) {
   await page.evaluate(
     async (all) => {
       const root = await (await navigator.storage.getDirectory()).getDirectoryHandle('Books', { create: true })
@@ -338,14 +345,19 @@ test('the ebook folder: picked once, Scan links what fits, Choose book and Find 
   })
   await page.reload()
 
+  // The Profile's account rows lead to the Ebooks page; the folder is chosen and scanned there.
   await goto(page, '/profile')
-  await expect(page.getByTestId('profile.ebookFolder')).toHaveText(en.profile.account.ebookFolderNone)
-  await page.getByTestId('profile.ebookFolder').click()
-  await expect(page.getByTestId('profile.ebookFolder')).toHaveText('Books')
-  // Scan asks for the folder's permission on this tap (Android forgets it with every restart).
-  await page.getByTestId('profile.ebookScan').click()
-
+  await expect(page.getByTestId('profile.ebookFolder')).toHaveCount(0)
+  await expect(page.getByTestId('profile.readerClassic')).toHaveCount(0)
+  await page.getByTestId('profile.ebooks').click()
   await expect(page).toHaveURL(/\/ebooks$/)
+  await expect(page.getByTestId('ebooks.folder')).toContainText(en.ebooks.folder.choose)
+  await expect(page.getByTestId('ebooks.scan')).toHaveCount(0)
+  await page.getByTestId('ebooks.folder').click()
+  await expect(page.getByTestId('ebooks.folderName')).toHaveText('Books')
+  // Scan asks for the folder's permission on this tap (Android forgets it with every restart).
+  await page.getByTestId('ebooks.scan').click()
+
   expect(await page.evaluate(() => (window as unknown as { __folderAsked: { count: number } }).__folderAsked.count)).toBe(1)
   await expect(page.getByTestId('ebooks.reportLine')).toHaveText('3 ebooks · 1 linked · 2 need you')
   await expect(page.getByTestId('ebooks.folderName')).toHaveText('Books')
@@ -372,11 +384,222 @@ test('the ebook folder: picked once, Scan links what fits, Choose book and Find 
   await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
   await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(3)
 
-  // A second scan finds nothing new and does not ask again this session.
+  // A second scan finds nothing new and does not ask again this session: Scan again, and when it last ran.
+  await expect(page.getByTestId('ebooks.scan')).toHaveText(en.ebooks.folder.scanAgain)
+  await expect(page.getByTestId('ebooks.scannedAt')).toContainText('Scanned')
   await page.getByTestId('ebooks.scan').click()
   await expect(page.getByTestId('ebooks.reportLine')).toHaveText('3 ebooks · 3 linked')
   expect(await copies(page)).toHaveLength(3)
   expect(await page.evaluate(() => (window as unknown as { __folderAsked: { count: number } }).__folderAsked.count)).toBe(1)
+
+  // What she decided stays decided: the Anna she chose, a file she ignored, a file renamed and moved.
+  await putInFolder(page, { 'Kafka/Metamorphosis.epub': buildEpub(METAMORPHOSIS_GUTENBERG) })
+  await page.getByTestId('ebooks.scan').click()
+  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('4 ebooks · 3 linked · 1 needs you')
+  await page.getByTestId('ebooks.waiting').filter({ hasText: 'Metamorphosis' }).getByTestId('ebooks.ignore').click()
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+  await page.evaluate(async () => {
+    const root = await (await navigator.storage.getDirectory()).getDirectoryHandle('Books')
+    const russian = await root.getDirectoryHandle('Russian')
+    const bytes = await (await (await russian.getFileHandle('Anna Karenina.epub')).getFile()).arrayBuffer()
+    await russian.removeEntry('Anna Karenina.epub')
+    const writable = await (await (await root.getDirectoryHandle('Moved', { create: true })).getFileHandle('anna-k (1).epub', { create: true })).createWritable()
+    await writable.write(bytes)
+    await writable.close()
+  })
+  await page.getByTestId('ebooks.scan').click()
+  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('4 ebooks · 3 linked')
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+  await expect(page.getByTestId('ebooks.linkedRow').filter({ hasText: anna!.book.title })).toHaveCount(1)
+  await page.reload()
+  await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(3)
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
   void moby
   void otherAnna
+})
+
+/** An accessibility scan in the light and the dark room (the theme follows the device here). */
+async function accessibleInBothThemes(page: Page, where: string) {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme })
+    await expectAccessible(page, `${where} (${colorScheme})`)
+  }
+  await page.emulateMedia({ colorScheme: 'light' })
+}
+
+/** An EPUB with only what matching reads: a title and an author (no real book's text). */
+const titled = (title: string, author: string, body = title): EpubSpec => ({ version: 3, title, creators: [{ name: author }], body, cover: true })
+
+/** Scans the stand-in folder from the Ebooks page (choosing it first). */
+async function scanFolder(page: Page, files: Record<string, Uint8Array>) {
+  await standInFolder(page, files)
+  await page.reload()
+  await goto(page, '/ebooks')
+  await page.getByTestId('ebooks.folder').click()
+  await page.getByTestId('ebooks.scan').click()
+  await expect(page.getByTestId('ebooks.reportLine')).toBeVisible()
+}
+
+/** Apple's search answering one ebook for a term (a recording's shape), every other term nothing. */
+async function appleAnswers(page: Page, answers: Record<string, { title: string; author: string; trackId: string }>) {
+  await page.route('https://itunes.apple.com/search**', (route) => {
+    const term = (new URL(route.request().url()).searchParams.get('term') ?? '').toLowerCase()
+    const hit = Object.entries(answers).find(([key]) => term.includes(key.toLowerCase()))?.[1]
+    const results = hit
+      ? [
+          {
+            kind: 'ebook',
+            trackId: Number(hit.trackId),
+            trackName: hit.title,
+            artistName: hit.author,
+            releaseDate: '2023-07-04T07:00:00Z',
+            artworkUrl100: `https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/cc/${hit.trackId}.jpg/100x100bb.jpg`,
+            trackViewUrl: `https://books.apple.com/us/book/id${hit.trackId}`,
+            genres: ['Books', 'Sci-Fi & Fantasy'],
+            userRatingCount: 10,
+          },
+        ]
+      : []
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ resultCount: results.length, results }),
+    })
+  })
+}
+
+test('Find book puts her own Books first: a tap on one links the file at once (Undo puts it back)', async ({ page }) => {
+  const member = await signedIn(page)
+  const [arms] = await shelve(member, [book('Men at Arms', 'Terry Pratchett')])
+  // The file is called by its series, so matching cannot tell it is her Men at Arms.
+  // Its cover is square (a stand-in image): shown whole in the 2:3 slot, not cut at the sides.
+  const square = new Uint8Array(readFileSync(new URL('../tests/fixtures/ebooks/square-cover.jpg', import.meta.url)))
+  await scanFolder(page, { 'Discworld 15.epub': buildEpub({ ...titled('Discworld 15', 'Terry Pratchett'), cover: false, coverImage: square }) })
+  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('1 ebook · 1 needs you')
+  await expect(page.getByTestId('ebooks.waiting').locator('img[data-fitted]')).toHaveCount(1)
+
+  await page.getByTestId('ebooks.waiting').getByTestId('ebooks.find').click()
+  await expect(page.getByTestId('search.query')).toHaveValue('Discworld 15 Terry Pratchett')
+  // "In your Library" first, before (and whatever) the sources answer: her entry with its status.
+  const own = page.getByTestId('search.own')
+  await expect(own.getByTestId('search.ownLabel')).toHaveText(en.search.inLibrary)
+  await expect(own.getByTestId('search.resultTitle')).toHaveText(arms!.book.title)
+  await expect(own.getByTestId('search.resultStatus')).toContainText(en.status.want_to_read)
+  // A tap links the file to it; it does not open the book page.
+  await own.getByTestId('search.result').click()
+  await expect(page.getByTestId('search.query')).toBeHidden()
+  await expect(page).toHaveURL(/\/ebooks$/)
+  await expect(page.getByTestId('ebooks.linkNote')).toContainText(`Linked to ${arms!.book.title}`)
+  await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(1)
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+
+  // Undo: the file waits again, as it did.
+  await page.getByTestId('ebooks.linkUndo').click()
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(1)
+  await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(0)
+
+  // Linked again; the note's title opens the book page.
+  await page.getByTestId('ebooks.waiting').getByTestId('ebooks.find').click()
+  await page.getByTestId('search.own').getByTestId('search.result').click()
+  await page.getByTestId('ebooks.linkNoteBook').click()
+  await expect(page.getByTestId('book.title')).toContainText(arms!.book.title)
+  await expect(page.getByTestId('book.ebook')).toBeVisible()
+})
+
+test('another copy of a Book that has its ebook: Replace or Keep current, from its row and from Find book; Scan again keeps both decisions', async ({ page }) => {
+  const member = await signedIn(page)
+  const [war] = await shelve(member, [book('The Forever War', 'Joe Haldeman')])
+  await scanFolder(page, {
+    'The Forever War.epub': buildEpub(titled(war!.book.title, 'Joe Haldeman')),
+    'The Forever War (1).epub': buildEpub(titled(war!.book.title, 'Joe Haldeman', 'another copy')),
+    'Der ewige Krieg.epub': buildEpub(titled('Der ewige Krieg', 'Joe Haldeman')),
+  })
+  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('3 ebooks · 1 linked · 1 needs you · 1 other copy')
+  // The second copy is apart and quiet, not one more file that needs her.
+  const copy = page.getByTestId('ebooks.copy')
+  await expect(copy).toHaveCount(1)
+  await expect(copy.getByTestId('ebooks.waitingWhy')).toHaveText(en.ebooks.copyWhy)
+  await accessibleInBothThemes(page, 'Ebooks, another copy')
+
+  // Replace: the copy is the Book's ebook now; the one before goes from the device.
+  await copy.getByTestId('ebooks.copyReplace').click()
+  await expect(page.getByTestId('ebookCopy')).toBeVisible()
+  await expect(page.getByTestId('ebookCopy.current')).toHaveText('The Forever War.epub')
+  await accessibleInBothThemes(page, 'the another-copy sheet')
+  await page.getByTestId('ebookCopy.replace').click()
+  await expect(page.getByTestId('ebooks.copy')).toHaveCount(0)
+  await expect(page.getByTestId('ebooks.linkedRow')).toContainText('The Forever War (1).epub')
+
+  // The translated copy: Find book shows her Forever War (by its author); a tap asks, as it has an ebook.
+  await page.getByTestId('ebooks.waiting').getByTestId('ebooks.find').click()
+  await page.getByTestId('search.own').getByTestId('search.result').click()
+  await expect(page.getByTestId('ebookCopy')).toBeVisible()
+  await expect(page.getByTestId('ebookCopy')).toContainText(`${war!.book.title} already has an ebook`)
+  await page.getByTestId('ebookCopy.keep').click()
+  await expect(page.getByTestId('search.query')).toBeHidden()
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+  await expect(page.getByTestId('ebooks.linkedRow')).toContainText('The Forever War (1).epub')
+  expect(await copies(page)).toHaveLength(1)
+
+  // Scan again: neither the replaced copy nor the kept-out one comes back.
+  await page.getByTestId('ebooks.scan').click()
+  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('3 ebooks · 1 linked')
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+  await expect(page.getByTestId('ebooks.copy')).toHaveCount(0)
+  expect(await copies(page)).toHaveLength(1)
+})
+
+test('another edition of her Book: the sheet links the file to her edition, or switches her Library to the one found', async ({ page }) => {
+  const member = await signedIn(page)
+  // Taken in before the Books were in her Library: both wait.
+  await scanFolder(page, {
+    'Disquiet Gods.epub': buildEpub(titled(runTitle('Disquiet Gods'), 'Christopher Ruocchio')),
+    'Howling Dark.epub': buildEpub(titled(runTitle('Howling Dark'), 'Christopher Ruocchio')),
+  })
+  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('2 ebooks · 2 need you')
+  const [gods, dark] = await shelve(member, [book('Disquiet Gods', 'Christopher Ruocchio'), book('Howling Dark', 'Christopher Ruocchio')])
+  // The Catalogue does not bring her editions back (the owner's case); Apple has another edition of each.
+  await page.route('**/rest/v1/rpc/search_books*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  // Apple ids a JSON number holds exactly (as Apple's do), never another run's.
+  const appleId = () => String(900_000_000_000 + Math.floor(Math.random() * 99_999_999_999))
+  const otherGods = appleId()
+  const otherDark = appleId()
+  await appleAnswers(page, {
+    'disquiet gods': { title: gods!.book.title, author: 'Christopher Ruocchio', trackId: otherGods },
+    'howling dark': { title: dark!.book.title, author: 'Christopher Ruocchio', trackId: otherDark },
+  })
+  await page.reload()
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(2)
+
+  // Disquiet Gods: hers first, the other edition marked; a tap on that asks which edition.
+  await page.getByTestId('ebooks.waiting').filter({ hasText: 'Disquiet Gods' }).getByTestId('ebooks.find').click()
+  // Hers first: the title and author she is looking for, then her other book by the same author.
+  await expect(page.getByTestId('search.own').getByTestId('search.resultTitle')).toHaveText([gods!.book.title, dark!.book.title])
+  const other = page.getByTestId('search.result').filter({ has: page.getByTestId('search.resultOtherEdition') })
+  await expect(other).toHaveCount(1)
+  await accessibleInBothThemes(page, 'search, finding an ebook\'s Book')
+  await other.click()
+  await expect(page.getByTestId('ebookEdition')).toBeVisible()
+  await accessibleInBothThemes(page, 'the which-edition sheet')
+  await expect(page.getByTestId('ebookEdition.mine')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('ebookEdition.action').click()
+  await expect(page.getByTestId('ebookEdition')).toBeHidden()
+  await expect(page.getByTestId('ebooks.linkNote')).toContainText(gods!.book.title)
+  await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(1)
+  // Her edition, unchanged: no second entry.
+  expect(await sql('select book_id from public.library_entries where id = $1', [gods!.id])).toEqual([{ book_id: gods!.book.id }])
+
+  // Howling Dark: she switches her Library to the edition found; the file goes with it.
+  await page.getByTestId('ebooks.waiting').getByTestId('ebooks.find').click()
+  await page.getByTestId('search.result').filter({ has: page.getByTestId('search.resultOtherEdition') }).click()
+  await page.getByTestId('ebookEdition.switch').click()
+  await expect(page.getByTestId('ebookEdition.switch')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('ebookEdition.action').click()
+  await expect(page.getByTestId('ebookEdition')).toBeHidden()
+  await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(2)
+  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+  const [entry] = await sql<{ apple_id: string }>('select b.apple_id from public.library_entries e join public.books b on b.id = e.book_id where e.id = $1', [dark!.id])
+  expect(entry!.apple_id).toBe(otherDark)
+  expect(await sql('select 1 from public.library_entries where member_id = $1', [member.id])).toHaveLength(2)
 })

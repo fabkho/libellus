@@ -16,6 +16,13 @@ import type { EpubMetadata } from './epub'
 
 /** How much of a file its fingerprint reads. */
 export const FINGERPRINT_BYTES = 1024 * 1024
+/**
+ * Which reading of the package document a record's metadata comes from. 2:
+ * the text decoded by its byte order mark or XML declaration and composed
+ * (NFC). A scan reads a known file's copy again when its record was read
+ * with an older one, and matches it again (data/ebooks/ebooks.ts, `scan`).
+ */
+export const EPUB_READER_VERSION = 2
 /** The OPFS folder that holds every copy. */
 export const EBOOKS_DIR = 'ebooks'
 
@@ -166,6 +173,8 @@ export type Ingested = {
   /** Its cover image, when the file has one (`ebooks/<member>/<id>.cover`). */
   coverPath: string | null
   metadata: EpubMetadata
+  /** The reading its metadata comes from (`EPUB_READER_VERSION`). */
+  reader: number
   /** Whether the copy was written now (false: it was there already, the same bytes). */
   wrote: boolean
 }

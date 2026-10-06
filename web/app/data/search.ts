@@ -3,7 +3,7 @@ import { createApple } from './apple'
 import type { CatalogueSearch } from './catalogueSearch'
 import { abortError, type FetchLike } from './fetching'
 import type { LibraryEntry } from './library'
-import { MATCH, matchQuality, mergeResults, SOURCE_ORDER, type Found, type SearchResult, type SourceName } from './merge'
+import { isbn13Of, MATCH, matchQuality, mergeResults, normalise, SOURCE_ORDER, workKey, type Found, type SearchResult, type SourceName } from './merge'
 import { createOpenLibrary } from './openLibrary'
 
 /**
@@ -167,4 +167,46 @@ export function searchLibrary(entries: readonly LibraryEntry[], query: string): 
   })
   found.sort((a, b) => b.score - a.score || a.index - b.index)
   return found.map(({ entry }) => ({ book: entry.book, entry, otherEdition: false }))
+}
+
+/**
+ * The member's own Library entries a query is about, for the group at the
+ * front of the results ("In your Library", #131): her books come first,
+ * whatever the sources answer. An entry is in it when
+ *
+ * 1. it matches the query as search reads it (`matchQuality` above
+ *    `someWords`: the title, the title and author, the author — or its ISBN);
+ * 2. a result is another edition of it (the same title and first author,
+ *    `otherEdition`): a source found the book by words her edition does not
+ *    have (another language's title, a subtitle), so it is hers that is meant;
+ * 3. with `byAuthor` (looking for an ebook file's Book: the query is the
+ *    file's title and first author), its first author's surname is a word of
+ *    the query: a translated title still finds her edition by its author.
+ *
+ * Best match first, then (2), then (3), each in the Library's order. Pure.
+ */
+export function libraryGroup(
+  entries: readonly LibraryEntry[],
+  query: string,
+  results: readonly SearchResult[] = [],
+  { byAuthor = false }: { byAuthor?: boolean } = {},
+): LibraryEntry[] {
+  const text = query.trim()
+  if (text.length < MIN_QUERY_LENGTH) return []
+  const isbn = parseIsbn(text)
+  const otherWorks = new Set(results.filter((result) => result.otherEdition).map((result) => workKey(result.book)))
+  const queryWords = new Set(normalise(text).split(' '))
+  const found: { entry: LibraryEntry; rank: number; index: number }[] = []
+  entries.forEach((entry, index) => {
+    const quality = isbn ? (isbn13Of(entry.book) === isbn ? MATCH.title : 0) : matchQuality(text, entry.book)
+    let rank = quality > MATCH.someWords ? quality : 0
+    if (!rank && otherWorks.has(workKey(entry.book))) rank = 2
+    if (!rank && byAuthor && !isbn) {
+      const surname = normalise(entry.book.authors[0] ?? '').split(' ').at(-1) ?? ''
+      if (surname.length > 1 && queryWords.has(surname)) rank = 1
+    }
+    if (rank) found.push({ entry, rank, index })
+  })
+  found.sort((a, b) => b.rank - a.rank || a.index - b.index)
+  return found.map(({ entry }) => entry)
 }
