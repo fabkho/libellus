@@ -89,15 +89,13 @@ export async function untilStill(page: Page) {
 
 /**
  * Opens the Profile from the avatar and waits until it has come to rest, the
- * way a member waits to read it before she reaches for a row. The page opens
- * with its account rows right under the hero; once the reading record is in
- * (`profile.library` is the hero's line for it), a member with nothing finished
- * gets the empty state, which opens its room above the rows and slides them
- * ~150 px down over a quarter of a second (UiReveal, `data-moving`). A tap
- * aimed at a row where it first showed lands on the empty state instead, and a
- * starved runner that paints no frame between two looks takes that row for
- * still (the Import row of import.spec.ts, the theme switch of auth.spec.ts).
- * So: the record in, then nothing moving.
+ * way a member waits to read it before she reaches for a row. The page stands
+ * in its final shape from the first frame (a member with nothing finished has
+ * the empty state over her account rows at once, the Library being on the
+ * device), so the rows no longer slide when the reading record lands
+ * (e2e/profile.spec.ts watches them). Still: the record in (`profile.library`
+ * is the hero's line for it), then nothing moving, so a flow reads the page as
+ * a member does and a Library the device did not have yet has been settled too.
  */
 export async function openProfile(page: Page) {
   await page.getByTestId('shell.avatar').click()

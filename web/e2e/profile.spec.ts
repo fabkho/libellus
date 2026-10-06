@@ -221,3 +221,63 @@ test('the Profile stands in its final shape while its figures load, and nothing 
   await untilStill(page)
   expect(Math.abs((await height()) - before)).toBeLessThanOrEqual(4)
 })
+
+/**
+ * Where the account rows are, in the page's own coordinates, from the call until `stop()`: one look per frame,
+ * so the very first frame the Profile paints is among them. The page itself rises into place with a transform
+ * (the push, docs/MOTION.md), which this does not see; only what moves in the layout does.
+ */
+async function watchAccount(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __account: number[]; __watching: boolean }
+    w.__account = []
+    w.__watching = true
+    const look = () => {
+      const row = document.querySelector('[data-testid="profile.account"]')
+      if (row) w.__account.push(Math.round(row.getBoundingClientRect().top + window.scrollY))
+      if (w.__watching) requestAnimationFrame(look)
+    }
+    requestAnimationFrame(look)
+  })
+  return async () => {
+    const tops = await page.evaluate(() => {
+      const w = window as unknown as { __account: number[]; __watching: boolean }
+      w.__watching = false
+      return w.__account
+    })
+    expect(tops.length).toBeGreaterThan(0)
+    return { first: tops[0]!, spread: Math.max(...tops) - Math.min(...tops) }
+  }
+}
+
+for (const [name, wanted] of [
+  ['nothing in her Library', false],
+  ['only a Book she wants to read', true],
+] as const) {
+  test(`the account rows do not move on the Profile of a member with ${name}`, async ({ page }) => {
+    const member = await signedIn(page)
+    if (wanted) await createLibrary(member.client).addToLibrary(book('Up Next', 'Ursula K. Le Guin', 200))
+    // The Library is on the device (Home loaded it); the record is held back so the first frame is the one looked at.
+    await page.reload()
+    await expect(page.getByTestId('home.title')).toBeVisible()
+    let release!: () => void
+    const held = new Promise<void>((resolve) => (release = resolve))
+    await page.route(/\/rest\/v1\/reading_sessions\?.*outcome=not\.is\.null/, async (route) => {
+      await held
+      await route.continue()
+    })
+    const stop = await watchAccount(page)
+    await page.getByTestId('shell.avatar').click()
+    await expect(page).toHaveURL(/\/profile$/)
+
+    // Before the record: the empty state already stands over the rows, the hero's line still a placeholder.
+    await expect(page.getByTestId('profile.empty')).toBeVisible()
+    await expect(page.getByTestId('profile.library')).toHaveCount(0)
+    await untilStill(page)
+
+    release()
+    await expect(page.getByTestId('profile.library')).toHaveText(fill(en.profile.library, { read: 0, reading: 0, want: wanted ? 1 : 0 }))
+    await untilStill(page)
+    expect((await stop()).spread).toBeLessThanOrEqual(4)
+  })
+}

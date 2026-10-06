@@ -402,10 +402,11 @@ Two things a laptop hides and a runner shows (issue #146): the dev server bundle
 package the first time a page imports it, and the pages open then can be reloaded under
 their flows (`vite.optimizeDeps.include` in `nuxt.config.ts` lists what a later screen reaches first, so
 none is met late; a package that is only imported from a lazy page or a dynamic import
-belongs there), and a page moves under the tap that aims at it. The Profile opens its
-account rows right under the hero and slides them down once the record says there is
-nothing finished: a flow opens it with `openProfile` (the record in, nothing moving) and
-brings the tab bar back with `showTabBar` after scrolling to a control.
+belongs there), and a page moves under the tap that aims at it. A flow opens the Profile
+with `openProfile` (the record in, nothing moving) and brings the tab bar back with `showTabBar`
+after scrolling to a control. The Profile's account rows used to slide ~150 px down once the record
+said there was nothing finished; it now stands in its final shape from the first frame, and
+`e2e/profile.spec.ts` looks at the rows' place on every frame (with the record held back) to keep it so.
 
 ## CI: what runs when
 
