@@ -8,6 +8,7 @@
 import ProtoIcon from './ProtoIcon.vue'
 import ProtoRound from './ProtoRound.vue'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { stepTick, tick } from '~/utils/haptics'
 import type { ChromeInfo } from './types'
 
 const props = defineProps<{
@@ -55,6 +56,7 @@ const clipOf = (outer: DOMRect, inner: DOMRect) =>
   `inset(${inner.top - outer.top}px ${outer.right - inner.right}px ${outer.bottom - inner.bottom}px ${inner.left - outer.left}px round ${inner.height / 2}px)`
 
 async function openScrubber() {
+  tick()
   from = capsule.value?.getBoundingClientRect() ?? null
   scrubbing.value = true
 }
@@ -95,6 +97,61 @@ watch(
   },
 )
 
+// ------------------------------------------------------------ haptics (utils/haptics.ts, as the progress wheel)
+//
+// Dragging: a light tick per detent (each page in a short book; one every
+// 1 % in a long one, so a fast drag is a purr, not a buzz — and never closer
+// than STEP_GAP_MS), a firmer one where a chapter begins, and one at either
+// end. Android vibrates; iOS has no Vibration API: it ticks only in taps
+// (opening the slider, "p. 20"), never while a finger drags, as the wheel.
+let lastDetent: number | null = null
+let lastChapter: number | null = null
+function chapterIndexOf(f: number) {
+  let index = -1
+  props.chapters.forEach((c, i) => {
+    if (c.fraction <= f + 1e-6) index = i
+  })
+  return index
+}
+function feel(f: number, now: number) {
+  const pages = props.info.pages
+  const per = pages <= 200 ? 1 : Math.ceil(pages / 100)
+  const detent = Math.round((f * pages) / per)
+  const chapter = chapterIndexOf(f)
+  if (lastDetent === null) {
+    lastDetent = detent
+    lastChapter = chapter
+    return
+  }
+  if (chapter !== lastChapter) {
+    lastChapter = chapter
+    lastDetent = detent
+    try {
+      navigator.vibrate?.(18)
+    } catch {
+      // as utils/haptics: a nicety
+    }
+    return
+  }
+  if ((f <= 0 || f >= 1) && detent !== lastDetent) {
+    lastDetent = detent
+    try {
+      navigator.vibrate?.(14)
+    } catch {
+      // as above
+    }
+    return
+  }
+  if (detent !== lastDetent) {
+    lastDetent = detent
+    stepTick(now)
+  }
+}
+function resetFeel() {
+  lastDetent = null
+  lastChapter = null
+}
+
 let lastSent = 0
 let trailing: ReturnType<typeof setTimeout> | undefined
 /** The page behind follows the thumb, at most every 140 ms (a new chapter has to load); the last one always. */
@@ -118,17 +175,21 @@ function onTrackDown(event: PointerEvent) {
     // A scripted pointer: the moves still arrive.
   }
   dragging.value = true
+  resetFeel()
   value.value = fractionAt(event.clientX)
+  feel(value.value, event.timeStamp)
   send(false)
 }
 function onTrackMove(event: PointerEvent) {
   if (!dragging.value) return
   value.value = fractionAt(event.clientX)
+  feel(value.value, event.timeStamp)
   send(false)
 }
 function onTrackUp() {
   if (!dragging.value) return
   dragging.value = false
+  resetFeel()
   send(true)
 }
 function onTrackKey(event: KeyboardEvent) {
@@ -137,6 +198,7 @@ function onTrackKey(event: KeyboardEvent) {
   if (!step && !big) return
   event.preventDefault()
   value.value = Math.min(1, Math.max(0, props.info.fraction + (step || big) / props.info.pages))
+  tick()
   send(true)
 }
 
@@ -155,7 +217,8 @@ function onCapsuleDown(event: PointerEvent) {
       hold = null
       holding = true
       swallowClick = true
-      navigator.vibrate?.(8)
+      tick()
+      resetFeel()
       try {
         target.setPointerCapture(event.pointerId)
       } catch {
@@ -171,6 +234,7 @@ function onCapsuleDown(event: PointerEvent) {
 function onCapsuleMove(event: PointerEvent) {
   if (holding) {
     value.value = fractionAt(event.clientX)
+    feel(value.value, event.timeStamp)
     send(false)
     return
   }
@@ -260,7 +324,7 @@ function onCapsuleClick(event: MouseEvent) {
           class="figures flex min-h-(--size-touch) shrink-0 items-center gap-xxs rounded-pill pr-sm pl-xs text-caption text-accent"
           :aria-label="`Back to page ${origin}`"
           data-testid="reader.scrubBack"
-          @click="$emit('returnToOrigin')"
+          @click="tick(), $emit('returnToOrigin')"
         >
           <UiIcon name="repeat" :size="15" />p. {{ origin }}
         </button>

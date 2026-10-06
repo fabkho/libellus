@@ -6,6 +6,8 @@
 export type ReaderTheme = 'light' | 'dark' | 'sepia'
 
 export interface ReaderSettings {
+  /** c, the printed page (running head, folio, the capsule), or a, the classic one (bars top and bottom). */
+  style: 'printed' | 'classic'
   /** Pages (a, c) or one scrolling page per chapter (b's way). */
   flow: 'pages' | 'scroll'
   font: 'serif' | 'sans'
@@ -40,6 +42,7 @@ export const MARGINS = [
 ] as const
 
 export const DEFAULT_SETTINGS: ReaderSettings = {
+  style: 'printed',
   flow: 'pages',
   font: 'serif',
   size: 2,

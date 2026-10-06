@@ -16,7 +16,6 @@ import { readHighlights, writeHighlights } from './highlights'
 import SelectionMenu, { type MenuTarget } from './SelectionMenu.vue'
 import TranslateSheet from './TranslateSheet.vue'
 import DefineSheet from './DefineSheet.vue'
-import SearchSheet from './SearchSheet.vue'
 import BookSearch from './BookSearch.vue'
 import { REST, coverCopy, fitBox, poseOf, ratioOf, rectOf } from './flight'
 import { ProgressWriter, QUICK_POLICY, SPEC_POLICY, pageAt } from './progress'
@@ -52,6 +51,7 @@ const emit = defineEmits<{
   cover: [url: string | null, title: string, author: string]
   wake: [state: string]
   timings: [text: string]
+  variant: [variant: 'a' | 'c']
 }>()
 
 // ------------------------------------------------------------------ settings
@@ -73,7 +73,16 @@ const theme = computed<ReaderTheme>(() => settings.theme ?? appTheme)
 const reduced = computed(() => props.reduceMotion ?? prefersReducedMotion())
 
 // Scroll is a setting of a and c (the Aa sheet's Pages / Scroll), wearing b's chrome; `v=b` still opens it directly.
-const mode = computed<'a' | 'b' | 'c'>(() => (props.variant === 'b' || settings.flow === 'scroll' ? 'b' : props.variant))
+// The style is the member's setting (Aa); the address only picks it when the reader opens (the design round's links).
+if (props.variant === 'a') settings.style = 'classic'
+else if (props.variant === 'c') settings.style = 'printed'
+watch(
+  () => settings.style,
+  (style) => emit('variant', style === 'classic' ? 'a' : 'c'),
+)
+const mode = computed<'a' | 'b' | 'c'>(() =>
+  props.variant === 'b' || settings.flow === 'scroll' ? 'b' : settings.style === 'classic' ? 'a' : 'c',
+)
 watch(mode, async (now, before) => {
   // Changing flow keeps the place; the chrome and the margins follow.
   chrome.value = false
@@ -103,14 +112,13 @@ const endShown = ref(false)
 const finishedHere = ref(false)
 const translateOpen = ref(false)
 const defineOpen = ref(false)
-const searchOpen = ref(false)
 /** c's search: the app's palette, grown out of the capsule (BookSearch.vue). */
 const paletteOpen = ref(false)
 const paletteChrome = ref<'capsule' | 'morph' | 'palette'>('capsule')
 let pickedInPalette = false
 const sheetOpen = computed(
   () =>
-    typeOpen.value || tocOpen.value || startOpen.value || finishOpen.value || translateOpen.value || defineOpen.value || searchOpen.value || paletteOpen.value,
+    typeOpen.value || tocOpen.value || startOpen.value || finishOpen.value || translateOpen.value || defineOpen.value || paletteOpen.value,
 )
 // c's scrubber (ChromePrinted.vue): where the member was when it opened, so one tap takes her back.
 const scrubbing = ref(false)
@@ -132,13 +140,11 @@ function returnToOrigin() {
   jump(() => engine.value?.goTo(origin.cfi))
 }
 
-/** Search: c's capsule morphs into the palette; a's bars (and scroll mode) open the sheet. */
+/** Search is the app's palette everywhere: out of c's capsule, out of a's (and the scroll's) bottom bar. */
 function openSearch(initial: string) {
   searchInitial.value = initial
-  if (mode.value === 'c') {
-    pickedInPalette = false
-    paletteOpen.value = true
-  } else searchOpen.value = true
+  pickedInPalette = false
+  paletteOpen.value = true
 }
 function onPaletteGo(cfi: string) {
   pickedInPalette = true
@@ -288,10 +294,6 @@ function openLookup(kind: 'translate' | 'define' | 'search') {
 function swapLookup(kind: 'translate' | 'define') {
   translateOpen.value = kind === 'translate'
   defineOpen.value = kind === 'define'
-}
-function goToHit(cfi: string) {
-  searchOpen.value = false
-  jump(() => engine.value?.goTo(cfi))
 }
 
 // ------------------------------------------------------------------ layout
@@ -808,6 +810,7 @@ function nextChapter() {
     <ChromeQuiet
       v-if="mode === 'a'"
       :shown="chrome && ready"
+      :search="paletteChrome"
       :info="info"
       @back="close"
       @contents="tocOpen = true"
@@ -819,6 +822,7 @@ function nextChapter() {
     <ChromeScroll
       v-else-if="mode === 'b'"
       :shown="chrome && ready"
+      :search="paletteChrome"
       :ready="ready"
       :info="info"
       :next-label="loc?.atEnd ? 'The end' : 'Next chapter'"
@@ -914,7 +918,6 @@ function nextChapter() {
     <FinishPrompt v-model:open="finishOpen" :book="book" @finish="onFinished" />
     <TranslateSheet v-model:open="translateOpen" :text="sheetText" :from="engine?.language ?? 'en'" @define="swapLookup('define')" />
     <DefineSheet v-model:open="defineOpen" :text="sheetText" :language="engine?.language ?? 'en'" @translate="swapLookup('translate')" />
-    <SearchSheet v-model:open="searchOpen" :engine="engine" :initial="searchInitial" @go="goToHit" />
     <BookSearch
       v-model:open="paletteOpen"
       :engine="engine"

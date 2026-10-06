@@ -29,6 +29,22 @@ function size(step: number) {
 
 <template>
   <UiSheet v-model:open="open" title="Text" testid="readerType">
+    <!-- The reader's style: the printed page (c) or the classic one (a); then pages or scroll for either. -->
+    <div class="seg mb-sm flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Style">
+      <button
+        v-for="st in (['printed', 'classic'] as const)"
+        :key="st"
+        type="button"
+        role="radio"
+        :aria-checked="settings.style === st"
+        class="flex flex-1 flex-col items-center justify-center rounded-sm text-ink-muted"
+        :class="settings.style === st && 'on'"
+        :data-testid="`readerType.style.${st}`"
+        @click="settings.style = st"
+      >
+        <span class="text-caption" :class="st === 'printed' && 'book-title italic'">{{ st === 'printed' ? 'Printed' : 'Classic' }}</span>
+      </button>
+    </div>
     <!-- Pages or scroll: b lives here now, as a way of reading a and c. -->
     <div class="seg mb-md flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" aria-label="Layout">
       <button

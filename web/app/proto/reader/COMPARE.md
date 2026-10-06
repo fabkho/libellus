@@ -402,3 +402,31 @@ Three ways in, one slider:
    the sheet closes on that page).
 Scrubbing is looking, not reading: progress waits until you read on from the new place.
 `round3/c-scrubber-light.jpg` (grow, drag, landed, hold-and-slide), `round3/c-scrubber-dark-and-contents-sepia.jpg`.
+
+## Round 3: haptics on the slider, a as "Classic", a searches in the palette
+
+**Haptics (Vibration API, through the app's `utils/haptics.ts`, as the progress wheel):** dragging c's
+slider gives a light tick per page (in books over 200 pages one per 1 %, never closer than the
+wheel's 40 ms, so a fast drag is a purr, not a buzz), a firmer one where a chapter begins, one at
+either end; opening the slider (tap or hold), "↻ p. 20" and arrow keys tick once. The Contents
+slider and a's bottom slider tick per page too. Android vibrates; iOS has no Vibration API — it
+ticks only on taps (the app's switch trick), never while a finger drags, exactly like the wheel.
+
+**Both styles as a setting:** the Aa sheet now starts with **Printed | Classic** (c | a), then
+Pages | Scroll. Changing it switches the reader live, the place kept.
+Is it hard to keep both? Not much, if the line stays where it is now. **Shared (≈ 85 % of the
+reader):** engine, page CSS, settings, the opening flight, progress, Start/Finish/end page, the
+selection and its bubble, Translate/Define, highlights, the search palette, Contents, the Aa sheet,
+Back, wake lock. **Per style:** the chrome component (`ChromeQuiet` a, ≈ 70 lines; `ChromePrinted` c
+with its slider, ≈ 400), how a page turns (slide vs fade, a few lines), c's running head and folio
+(≈ 30 lines). The contract between them is one `ChromeInfo` and the same events, so a new feature
+lands in the shared layer once; only something that lives *in* the chrome (like the slider) is
+built per style. Cost in production: ≈ 1.5 days more than c alone, plus every reader e2e flow run
+for both styles (parameterised, not duplicated). Recommendation: keep both — **Printed by
+default, Classic as the alternative**.
+
+**a's search is the palette now** (the scroll mode's too): it grows out of a's bottom bar (the
+same morph, from the bar's own square corners instead of a capsule's round ends; the bar's
+contents step back), the magnifier flies in from the top bar's button, everything else as in c.
+The Search sheet is gone; Search from selected words opens the palette in every style.
+`round3/a-search-palette-from-bottom-bar.jpg`, `round3/aa-style-printed-classic.jpg`.

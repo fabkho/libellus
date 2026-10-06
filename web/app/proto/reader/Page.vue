@@ -294,6 +294,7 @@ onMounted(() => {
       @cover="onCover"
       @wake="wake = $event"
       @timings="openTimings = $event"
+      @variant="variant = $event"
     />
   </div>
 </template>

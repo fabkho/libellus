@@ -8,7 +8,7 @@ import ProtoRound from './ProtoRound.vue'
 import Scrub from './Scrub.vue'
 import { minutesLeft, type ChromeInfo } from './types'
 
-defineProps<{ shown: boolean; info: ChromeInfo }>()
+defineProps<{ shown: boolean; info: ChromeInfo; search: 'capsule' | 'morph' | 'palette' }>()
 defineEmits<{ back: []; contents: []; type: []; search: []; scrub: [fraction: number]; setHere: [] }>()
 </script>
 
@@ -23,7 +23,7 @@ defineEmits<{ back: []; contents: []; type: []; search: []; scrub: [fraction: nu
         <UiRoundButton class="pointer-events-auto" icon="back" label="Back to the book" data-testid="reader.back" @click="$emit('back')" />
         <span class="w-(--size-touch) shrink-0" aria-hidden="true" />
         <p class="book-title min-w-0 flex-1 truncate text-center text-callout">{{ info.title }}</p>
-        <ProtoRound class="pointer-events-auto" label="Search in the book" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
+        <ProtoRound class="pointer-events-auto" :class="search === 'morph' && 'flying'" data-reader-morph="search" label="Search in the book" data-testid="reader.search" @click="$emit('search')"><ProtoIcon name="search" :size="19" /></ProtoRound>
         <ProtoRound class="pointer-events-auto" label="Contents" data-testid="reader.contents" @click="$emit('contents')"><ProtoIcon name="contents" :size="20" /></ProtoRound>
         </div>
       </div>
@@ -31,8 +31,8 @@ defineEmits<{ back: []; contents: []; type: []; search: []; scrub: [fraction: nu
   </Transition>
 
   <Transition name="bottom">
-    <footer v-if="shown" class="glass safe-bottom fixed inset-x-0 bottom-0 z-10 border-t-(length:--stroke-hairline) border-hairline" data-testid="reader.bottom">
-      <div class="mx-auto max-w-(--size-max-content) px-ml pb-xs">
+    <footer v-if="shown" :class="search === 'palette' && 'invisible'" data-reader-morph="capsule" class="glass safe-bottom fixed inset-x-0 bottom-0 z-10 border-t-(length:--stroke-hairline) border-hairline" data-testid="reader.bottom">
+      <div class="mx-auto max-w-(--size-max-content) px-ml pb-xs" data-reader-morph="item">
         <p v-if="info.behind" class="flex items-center justify-between gap-sm pt-sm text-caption text-ink-muted">
           <span>Your progress is at <span class="figures">p. {{ info.behind }}</span>.</span>
           <button type="button" class="min-h-(--size-touch) font-medium text-accent" data-testid="reader.setHere" @click="$emit('setHere')">Set to p. {{ info.page }}</button>
@@ -53,6 +53,10 @@ defineEmits<{ back: []; contents: []; type: []; search: []; scrub: [fraction: nu
 </template>
 
 <style scoped>
+/* While the palette's own magnifier flies, this one stays hidden (one icon on screen). */
+.flying :deep(svg) {
+  visibility: hidden;
+}
 .top-fade {
   height: calc(var(--bar-top) + var(--size-touch) + var(--spacing-lg));
   background: linear-gradient(

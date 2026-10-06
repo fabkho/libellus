@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// Search in the book, as the app searches (c's capsule): D's upside-down
+// Search in the book, as the app searches (grown out of c's capsule, or out of
+// a's bottom bar, the magnifier flying in from a's top bar): D's upside-down
 // palette at the bottom, the page behind it blurred and veiled, the query row
 // at the thumb and the places above it — the next one after where you are
 // right by the query, the rest further up, those before you after a "From the
@@ -142,6 +143,8 @@ function morphFrames(): [HTMLElement | null, Keyframe[]][] {
   const bottom = box.bottom - dy
   const from = capsule.getBoundingClientRect()
   const radius = getComputedStyle(body.value).borderTopLeftRadius
+  // A capsule is round at its ends; a bar (a's bottom bar) has its own corners.
+  const fromRadius = Math.min(from.height / 2, Number.parseFloat(getComputedStyle(capsule).borderTopLeftRadius) || 0)
   const clip = (inset: string, round: string) => `inset(${inset} round ${round})`
   const outline = {
     x: from.left + from.width / 2 - (box.left + box.width / 2),
@@ -163,7 +166,7 @@ function morphFrames(): [HTMLElement | null, Keyframe[]][] {
     [
       body.value,
       [
-        { clipPath: clip(`${from.top - top}px ${box.right - from.right}px ${bottom - from.bottom}px ${from.left - box.left}px`, `${from.height / 2}px`), offset: 0 },
+        { clipPath: clip(`${from.top - top}px ${box.right - from.right}px ${bottom - from.bottom}px ${from.left - box.left}px`, `${fromRadius}px`), offset: 0 },
         { clipPath: clip('0px 0px 0px 0px', radius), offset: 1 },
       ],
     ],

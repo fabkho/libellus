@@ -7,17 +7,25 @@
 const props = defineProps<{ fraction: number; pages: number; saved: number | null }>()
 const emit = defineEmits<{ scrub: [fraction: number] }>()
 
+import { stepTick } from '~/utils/haptics'
+
 const STEPS = 1000
+let lastPage: number | null = null
 const dragging = ref<number | null>(null)
 const shown = computed(() => dragging.value ?? props.fraction)
 const pageOf = (f: number) => Math.max(1, Math.round(f * props.pages))
 
 function onInput(event: Event) {
   dragging.value = Number((event.target as HTMLInputElement).value) / STEPS
+  // A light tick per page passed, as the capsule's slider (Android; iOS stays silent while dragging).
+  const page = pageOf(dragging.value)
+  if (lastPage !== null && page !== lastPage) stepTick(event.timeStamp)
+  lastPage = page
 }
 function onChange(event: Event) {
   const value = Number((event.target as HTMLInputElement).value) / STEPS
   dragging.value = null
+  lastPage = null
   emit('scrub', value)
 }
 </script>
