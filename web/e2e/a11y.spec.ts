@@ -138,9 +138,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
         await page.getByTestId(`library.segment.${segment}`).click()
         await expectAccessible(page, `the Library, ${segment}`)
       }
-      await page.getByTestId('library.filter.notFinished').click()
+      await openSheet(page, 'library.view.filter', 'libraryFilter')
+      await page.getByTestId('libraryFilter.status.notFinished').click()
+      await page.getByTestId('libraryFilter.action').click()
+      await expect(page.getByTestId('libraryFilter')).toBeHidden()
+      await untilStill(page)
       await expectAccessible(page, 'the Library, not finished')
-      await page.getByTestId('library.filter.all').click()
+      await page.getByTestId('library.view.clear').click()
+      await untilStill(page)
       // Filter and sort (#169): the pills, the sheets, a filter set (chips, count), nothing matching.
       await openSheet(page, 'library.view.filter', 'libraryFilter')
       await expectAccessible(page, 'the Library, Filter')

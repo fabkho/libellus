@@ -30,6 +30,8 @@ const count = computed(() =>
 /** The words of a chip, which is also what removes it says. */
 function chipLabel({ facet, value }: ActiveFilter): string {
   switch (facet) {
+    case 'status':
+      return t(`library.view.status.${value}`)
     case 'readAs':
       return t(`library.view.readAs.${value}`)
     case 'author':

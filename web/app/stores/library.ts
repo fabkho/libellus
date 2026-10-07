@@ -6,7 +6,6 @@ import {
   addWithFromDraft,
   checkAddDraft,
   createLibrary,
-  isNotFinished,
   newAddDraft,
   sortEntries,
   type AddDraft,
@@ -70,12 +69,6 @@ export const useLibraryStore = defineStore('library', () => {
   const wantToRead = computed(() => lists.want_to_read)
   const reading = computed(() => lists.reading)
   const finished = computed(() => lists.finished)
-  /**
-   * *Not finished*, a filter of Finished: the entries whose latest session was
-   * abandoned, in Finished's order. Derived from the list, so it moves with
-   * every start, finish, abandon and read again like the lists do.
-   */
-  const notFinished = computed(() => lists.finished.filter(isNotFinished))
   /** Whether the lists have been loaded once (the empty state waits for it). */
   const loaded = ref(false)
   const loadError = ref<LibraryErrorCode | null>(null)
@@ -385,7 +378,6 @@ export const useLibraryStore = defineStore('library', () => {
     wantToRead,
     reading,
     finished,
-    notFinished,
     loaded,
     loadError,
     load,

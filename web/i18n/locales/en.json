@@ -322,15 +322,6 @@
         "text": "Every book you finish lands here, with its date and rating."
       }
     },
-    "filtersLabel": "Show",
-    "filter": {
-      "all": "All",
-      "notFinished": "DNF"
-    },
-    "notFinishedEmpty": {
-      "title": "Nothing set aside",
-      "text": "Books you didn't finish are kept here, so you can pick them up again."
-    },
     "notFinishedOn": "DNF · {date}",
     "added": "Added {date}",
     "loadError": "Your Library didn't load. Check your connection and try again.",
@@ -386,7 +377,8 @@
         "rating": "Rating",
         "year": "Year read",
         "pages": "Pages",
-        "genre": "Genre"
+        "genre": "Genre",
+        "status": "Status"
       },
       "readAs": {
         "physical": "Physical",
@@ -447,7 +439,11 @@
           "desc": "Longest first"
         }
       },
-      "genres": {}
+      "genres": {},
+      "status": {
+        "finished": "Finished",
+        "notFinished": "Not finished"
+      }
     }
   },
   "search": {

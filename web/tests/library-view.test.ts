@@ -9,6 +9,7 @@ import {
   listViewFromJson,
   newListView,
   readAsOptions,
+  statusOptions,
   readLibraryViews,
   saveLibraryViews,
   sortLibrary,
@@ -127,6 +128,19 @@ describe('filters', () => {
     expect(titles(arrange(shelf, 'finished', view({ pages: { min: 470, max: 490 } })))).toEqual(['Emma', 'Hyperion'])
     const own = [{ ...entry('Ebook', { pages: 200 }), pageCountOverride: 520 }]
     expect(titles(arrange(own, 'finished', view({ pages: { min: 500, max: null } })))).toEqual(['Ebook'])
+  })
+
+  it('filters Finished by how the latest read ended: finished, or given up (Not finished)', () => {
+    const mixed = [...shelf, entry('Ruin', { latestSession: finished('2026-01-04', null, 'abandoned') })]
+    expect(titles(arrange(mixed, 'finished', view({ status: 'notFinished' })))).toEqual(['Ruin'])
+    expect(titles(arrange(mixed, 'finished', view({ status: 'finished' })))).toEqual(titles(shelf))
+    expect(titles(arrange(mixed, 'finished', view({ status: 'notFinished', pages: { min: 900, max: null } })))).toEqual([])
+    expect(statusOptions(mixed)).toEqual([{ value: 'finished', count: 5 }, { value: 'notFinished', count: 1 }])
+    expect(statusOptions(shelf)).toEqual([{ value: 'finished', count: 5 }])
+    expect(activeFilters('finished', view({ status: 'notFinished' }))).toEqual([{ facet: 'status', value: 'notFinished' }])
+    expect(withoutFilter(view({ status: 'notFinished' }), { facet: 'status', value: 'notFinished' }).status).toBeNull()
+    // Not a Status of the other lists.
+    expect(activeFilters('reading', { ...newListView('reading'), status: 'notFinished' })).toEqual([])
   })
 
   it('combines filters: every one must pass, a facet with several values any of them', () => {
@@ -254,7 +268,7 @@ describe('what the device remembers', () => {
   it('keeps each member\'s choice apart and gives it back as it was saved', () => {
     const storage = memory()
     const ida = readLibraryViews(storage, 'ida')
-    ida.finished = { ...ida.finished, readAs: ['audiobook', 'unset'], authors: ['Jane Austen'], rating: 16, years: ['2026', ''], pages: { min: 100, max: null }, sort: { key: 'rating', dir: 'desc' } }
+    ida.finished = { ...ida.finished, status: 'notFinished', readAs: ['audiobook', 'unset'], authors: ['Jane Austen'], rating: 16, years: ['2026', ''], pages: { min: 100, max: null }, sort: { key: 'rating', dir: 'desc' } }
     saveLibraryViews(storage, 'ida', ida)
     const max = readLibraryViews(storage, 'max')
     max.reading = { ...max.reading, sort: { key: 'title', dir: 'asc' } }

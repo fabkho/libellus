@@ -221,7 +221,7 @@ test('each segment has its own filters and sort, kept on the device by member', 
   expect(stored[member.id].want_to_read.readAs).toEqual(['ebook'])
 })
 
-test('Not finished is still a filter of Finished, and the new filters work inside it', async ({ page }) => {
+test('Not finished is a filter of Finished like the others: no row of its own, and it combines', async ({ page }) => {
   const member = await signedIn(page)
   await shelve(member.id, FINISHED.slice(0, 3))
   const [book] = await sql<{ id: string }>(`insert into public.books (title, authors, source, owner_id, page_count) values ('Ruin', '{"John Gwynne"}', 'manual', $1, 800) returning id`, [member.id])
@@ -229,17 +229,34 @@ test('Not finished is still a filter of Finished, and the new filters work insid
   await sql(`insert into public.reading_sessions (entry_id, started_on, ended_on, outcome) values ($1, '2026-01-01', '2026-01-04', 'abandoned')`, [entry!.id])
   await openLibrary(page)
 
-  await page.getByTestId('library.filter.notFinished').click()
-  await untilStill(page)
-  await expect(page.getByTestId('library.view.count')).toHaveText('1 book')
+  // One row under the segments, whatever the segment: the Filter and Sort pills and the count.
+  const bar = await page.getByTestId('library.view').boundingBox()
+  expect(bar!.height).toBeLessThan(50)
+  await expect(page.getByTestId('library.view.count')).toHaveText('4 books')
+
+  await applyFilter(page, async () => {
+    await expect(page.getByTestId('libraryFilter.status.finished')).toContainText('3')
+    await page.getByTestId('libraryFilter.status.notFinished').click()
+    await expect(page.getByTestId('libraryFilter.count')).toHaveText('1 book')
+  })
+  expect(await titles(page)).toEqual(['Ruin'])
+  await expect(page.getByTestId('library.view.count')).toHaveText('1 of 4 books')
+  await expect(page.getByTestId('library.entryNotFinished')).toHaveCount(1)
+
+  // Combined with the others, inside the sheet.
   await page.getByTestId('library.view.filter').click()
   await page.getByTestId('libraryFilter.pagesMin').fill('900')
   await expect(page.getByTestId('libraryFilter.count')).toHaveText('0 books')
   await page.getByTestId('libraryFilter.clear').click()
-  await expect(page.getByTestId('libraryFilter.count')).toHaveText('1 book')
+  await expect(page.getByTestId('libraryFilter.count')).toHaveText('4 books')
+  await page.getByTestId('libraryFilter.status.finished').click()
+  await expect(page.getByTestId('libraryFilter.count')).toHaveText('3 books')
   await page.getByTestId('libraryFilter.cancel').click()
   await untilStill(page)
-  await page.getByTestId('library.filter.all').click()
+  expect(await titles(page)).toEqual(['Ruin'])
+
+  // The chip takes it off.
+  await page.getByTestId('library.view.chip').click()
   await untilStill(page)
   await expect(page.getByTestId('library.view.count')).toHaveText('4 books')
 })

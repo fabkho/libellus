@@ -133,7 +133,9 @@ test('a change the database refuses on sync is undone and stays as a failure to 
   await network.goOnline()
   await expect(page.getByTestId('shell.syncLabel')).toHaveText(en.sync.chipFailed.replace('{count}', '1'))
   expect((await readOf(member.email, 'Lantern Year'))[0]!.outcome).toBe('abandoned')
-  await page.getByTestId('library.filter.notFinished').click()
+  await page.getByTestId('library.view.filter').click()
+  await page.getByTestId('libraryFilter.status.notFinished').click()
+  await page.getByTestId('libraryFilter.action').click()
   await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Lantern Year'))
 
   await page.getByTestId('shell.sync').click()

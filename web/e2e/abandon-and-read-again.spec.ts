@@ -101,13 +101,15 @@ test('a member abandons a book with a reason, finds it under Not finished and st
   await page.getByTestId('shell.tab.library').click()
   await expect(page.getByTestId('library.segment.finished')).toContainText('1')
   await page.getByTestId('library.segment.finished').click()
-  await expect(page.getByTestId('library.filter.all')).toContainText('1')
-  await expect(page.getByTestId('library.filter.notFinished')).toContainText('1')
+  await expect(page.getByTestId('library.view.count')).toHaveText('1 book')
   await expect(page.getByTestId('library.entryTitle')).toHaveText(['Piranesi'])
   await expect(page.getByTestId('library.entryNotFinished')).toContainText(en.status.notFinished)
   await expect(page.getByTestId('library.entryRating')).toHaveCount(0)
-  await page.getByTestId('library.filter.notFinished').click()
-  await expect(page.getByTestId('library.filter.notFinished')).toHaveAttribute('aria-pressed', 'true')
+  await page.getByTestId('library.view.filter').click()
+  await page.getByTestId('libraryFilter.status.notFinished').click()
+  await page.getByTestId('libraryFilter.action').click()
+  await expect(page.getByTestId('libraryFilter')).toBeHidden()
+  await expect(page.getByTestId('library.view.chip')).toHaveText([en.library.view.status.notFinished])
   await expect(page.getByTestId('library.entryTitle')).toHaveText(['Piranesi'])
 
   // Start again from the book page: the Start sheet in its words, a new session.
@@ -157,12 +159,13 @@ test('a member abandons without a reason, and reads a finished book again', asyn
   // A finished read is no longer under Not finished: the latest session decides.
   await page.getByTestId('shell.tab.library').click()
   await page.getByTestId('library.segment.finished').click()
-  await expect(page.getByTestId('library.filter.all')).toContainText('1')
-  await expect(page.getByTestId('library.filter.notFinished')).toContainText('0')
   await expect(page.getByTestId('library.entryNotFinished')).toHaveCount(0)
-  await page.getByTestId('library.filter.notFinished').click()
-  await expect(page.getByTestId('library.filterEmpty')).toBeVisible()
-  await page.getByTestId('library.filter.all').click()
+  // Not finished is only offered in the Filter sheet while something was given up.
+  await page.getByTestId('library.view.filter').click()
+  await expect(page.getByTestId('libraryFilter')).toBeVisible()
+  await expect(page.getByTestId('libraryFilter.section.status')).toHaveCount(0)
+  await page.getByTestId('libraryFilter.cancel').click()
+  await expect(page.getByTestId('libraryFilter')).toBeHidden()
 
   // Read again: its words, a new session, history kept.
   await page.getByTestId('library.entry').click()

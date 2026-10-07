@@ -13,8 +13,10 @@ import {
   genreOptions,
   readAsOptions,
   RATING_MINIMUMS,
+  statusOptions,
   yearOptions,
   type Facet,
+  type FinishedStatus,
   type GenreLookup,
   type ListView,
   type RatingChoice,
@@ -49,6 +51,7 @@ function withChosen(options: { value: string; count: number }[], chosen: readonl
 }
 
 const facets = computed<Facet[]>(() => FACETS[props.status].filter((facet) => facet !== 'genre' || props.genres))
+const statuses = computed(() => withChosen(statusOptions(props.entries), draft.value.status ? [draft.value.status] : []))
 const readAs = computed(() => withChosen(readAsOptions(props.entries), draft.value.readAs))
 const years = computed(() => withChosen(yearOptions(props.entries), draft.value.years))
 const genreChoices = computed(() => withChosen(genreOptions(props.entries, props.genres), draft.value.genres))
@@ -62,6 +65,7 @@ const authors = computed(() => {
 })
 /** Whether a facet has anything to choose from. */
 function offered(facet: Facet): boolean {
+  if (facet === 'status') return statuses.value.some((o) => o.value === 'notFinished') || draft.value.status !== null
   if (facet === 'readAs') return readAs.value.some((o) => o.value !== 'unset') || draft.value.readAs.length > 0
   if (facet === 'author') return authors.value.total > 1 || draft.value.authors.length > 0
   if (facet === 'year') return years.value.length > 1 || draft.value.years.length > 0
@@ -71,6 +75,9 @@ function offered(facet: Facet): boolean {
 
 function toggle<T extends string>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
+}
+function chooseStatus(value: string) {
+  draft.value = { ...draft.value, status: draft.value.status === value ? null : (value as FinishedStatus) }
 }
 function toggleReadAs(value: string) {
   draft.value = { ...draft.value, readAs: toggle(draft.value.readAs, value as ReadAsChoice) }
@@ -102,6 +109,7 @@ const maxText = computed({ get: () => draft.value.pages.max?.toString() ?? '', s
 
 const anySet = computed(
   () =>
+    draft.value.status !== null ||
     draft.value.readAs.length > 0 ||
     draft.value.authors.length > 0 ||
     draft.value.rating !== null ||
@@ -111,7 +119,7 @@ const anySet = computed(
     draft.value.genres.length > 0,
 )
 function clearAll() {
-  draft.value = { ...draft.value, readAs: [], authors: [], rating: null, years: [], pages: { min: null, max: null }, genres: [] }
+  draft.value = { ...draft.value, status: null, readAs: [], authors: [], rating: null, years: [], pages: { min: null, max: null }, genres: [] }
   query.value = ''
 }
 
@@ -120,6 +128,7 @@ function apply() {
   open.value = false
 }
 
+const statusLabel = (value: string) => t(`library.view.status.${value}`)
 const readAsLabel = (value: string) => t(`library.view.readAs.${value}`)
 const yearLabel = (value: string) => value || t('library.undated')
 const genreLabel = (value: string) => (te(`library.view.genres.${value}`) ? t(`library.view.genres.${value}`) : value)
@@ -138,7 +147,20 @@ const sectionIds = Object.fromEntries(['readAs', 'author', 'rating', 'year', 'pa
         <section v-if="offered(facet)" :aria-labelledby="sectionIds[facet]" :data-testid="`libraryFilter.section.${facet}`">
           <h3 :id="sectionIds[facet]" class="eyebrow mb-sm text-ink-faint">{{ t(`library.view.facet.${facet}`) }}</h3>
 
-          <div v-if="facet === 'readAs'" class="flex flex-wrap gap-sm">
+          <div v-if="facet === 'status'" class="flex flex-wrap gap-sm">
+            <UiPill
+              v-for="option in statuses"
+              :key="option.value"
+              :pressed="draft.status === option.value"
+              :count="option.count"
+              :data-testid="`libraryFilter.status.${option.value}`"
+              @click="chooseStatus(option.value)"
+            >
+              {{ statusLabel(option.value) }}
+            </UiPill>
+          </div>
+
+          <div v-else-if="facet === 'readAs'" class="flex flex-wrap gap-sm">
             <UiPill
               v-for="option in readAs"
               :key="option.value"

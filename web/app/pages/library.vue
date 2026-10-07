@@ -4,11 +4,10 @@
 // *Want to read* lists the Books added, newest first; *Currently reading*
 // gives each Book a card with its cover's light, since when it is being read
 // and Finish right there, newest start first; *Finished* groups the Books by
-// the year they were finished, newest end first, each with its Rating, and a
-// filter: All, or *Not finished* (#10), the Books whose latest read was given
-// up, dimmed among the others. (#14 adds Collections.) Under the segments, each list has
-// its filters and sort (#169: Read as, author, rating, year read, pages; date, rating,
-// title, author, pages), quiet pills with the filters that are set as chips, the count
+// the year they were finished, newest end first, each with its Rating; a Book
+// whose latest read was given up (*Not finished*, #10) is dimmed among the others. (#14 adds
+// Collections.) Under the segments, each list has its filters and sort (#169: Finished or
+// Not finished, Read as, author, rating, year read, pages; date, rating, title, author, pages), quiet pills with the filters that are set as chips, the count
 // and Clear; the last choice is remembered per member on the device. An empty Library shows the
 // lamp over the empty shelf and the way to search. Kept alive: coming back
 // finds the segment and the scroll position as they were, and the lists
@@ -27,9 +26,6 @@ const libraryView = useLibraryViewStore()
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
-/** Finished's filter; kept when the member looks at another segment and comes back. */
-const FILTERS = ['all', 'notFinished'] as const
-const filter = ref<(typeof FILTERS)[number]>('all')
 
 /**
  * The lists as the screen shows them: held while a sheet is on screen (a
@@ -41,7 +37,6 @@ const lists = useSettled(() => ({
   want_to_read: library.wantToRead,
   reading: library.reading,
   finished: library.finished,
-  notFinished: library.notFinished,
 }))
 
 const counts = computed<Record<EntryStatus, number>>(() => ({
@@ -67,10 +62,6 @@ function onTabsKeydown(event: KeyboardEvent) {
   void nextTick(() => tabsEl.value?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus())
 }
 
-const filterCounts = computed(() => ({ all: lists.value.finished.length, notFinished: lists.value.notFinished.length }))
-/** What Finished shows: everything, or only the Books that were not finished. */
-const shown = computed(() => (filter.value === 'notFinished' ? lists.value.notFinished : lists.value.finished))
-
 /**
  * Filters and sort (#169): each list's own, as the screen shows them (held while a sheet is on
  * screen, like the lists, so the change is seen where the member is looking).
@@ -78,8 +69,8 @@ const shown = computed(() => (filter.value === 'notFinished' ? lists.value.notFi
 const views = useSettled(() => ({ ...libraryView.views }))
 const view = computed(() => views.value[segment.value])
 const genres = computed(() => libraryView.genres)
-/** The entries of the chosen segment before the filters and the sort (Finished: after All / DNF). */
-const base = computed<readonly LibraryEntry[]>(() => (segment.value === 'finished' ? shown.value : lists.value[segment.value]))
+/** The entries of the chosen segment before the filters and the sort. */
+const base = computed<readonly LibraryEntry[]>(() => lists.value[segment.value])
 const arranged = computed(() => arrange(base.value, segment.value, view.value, { genres: genres.value }))
 /** The list is empty because of the filters, not because there are no books. */
 const noMatch = computed(() => base.value.length > 0 && arranged.value.length === 0)
@@ -156,27 +147,6 @@ watch(
     </UiListMotion>
 
     <div v-else-if="segment === 'finished' && lists.finished.length" class="flex flex-col" data-testid="library.finished">
-      <div role="group" :aria-label="t('library.filtersLabel')" class="flex gap-sm pt-md">
-        <button
-          v-for="name in FILTERS"
-          :key="name"
-          type="button"
-          :aria-pressed="filter === name"
-          class="filter relative inline-flex h-(--size-button-sm) items-center gap-xs rounded-pill px-md text-subhead"
-          :class="filter === name ? 'on bg-ink text-on-ink' : 'edge text-ink-muted hover:bg-fill'"
-          :data-testid="`library.filter.${name}`"
-          @click="filter = name"
-        >
-          <UiIcon v-if="name === 'notFinished'" name="slash" :size="13" />
-          {{ t(`library.filter.${name}`) }}
-          <span class="count figures text-caption" :class="filter !== name && 'text-ink-faint'">{{ filterCounts[name] }}</span>
-        </button>
-      </div>
-
-      <div v-if="!shown.length" class="px-lg pt-xxl text-center" data-testid="library.filterEmpty">
-        <p class="book-title text-callout">{{ t('library.notFinishedEmpty.title') }}</p>
-        <p class="mt-xs text-subhead text-ink-muted">{{ t('library.notFinishedEmpty.text') }}</p>
-      </div>
       <section v-for="(group, g) in years" :key="group.year ?? 'all'" class="flex flex-col" data-testid="library.year">
         <!-- Pinned while its year scrolls by, as iOS lists pin their section headers. -->
         <!-- Named as one phrase: the year and its count side by side read as one number ("202615"). -->
@@ -220,24 +190,9 @@ watch(
 </template>
 
 <style scoped>
-/* The drawn pill is 32 px; the touch target stays 44. */
-.filter::after {
-  position: absolute;
-  inset: 50% 0 auto;
-  height: var(--size-touch);
-  content: '';
-  transform: translateY(-50%);
-}
-
 /* A pinned year sits under the status bar, not behind it. */
 .year {
   top: env(safe-area-inset-top);
-}
-
-/* The chosen filter's count is quieter than its name, as in D. */
-.filter.on .count {
-  /* Still 4.5:1 on the ink pill in both themes (0.55 was 4.1:1 by night). */
-  opacity: 0.68;
 }
 
 /* The lit segment: a lamp hairline under it, with a little of its glow. */
