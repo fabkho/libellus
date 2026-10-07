@@ -226,6 +226,14 @@ export function parseSearch(body: unknown): OlSearchDoc[] {
 // ------------------------------------------------------------- series text
 
 /**
+ * Publishers' series an edition's `series` often names instead of the story's
+ * ("Modern Library Classics", "Gollancz SF Masterworks", "Ventana abierta 6"):
+ * not a series a reader reads in order.
+ */
+const PUBLISHER_SERIES =
+  /\b(classics?|masterworks|library|bibliothe[ck]|collection|colecci[oó]n|collana|edition|editions|penguin|vintage|gollancz|signet|bantam|everyman|oxford|taschenbuch|heyne|goldmann|fischer|ventana|reclam|folio|pocket|paperbacks?|imprint)\b/i
+
+/**
  * An edition's free-text series as a name and a position:
  * "Discworld ; 15", "Discworld #15", "The Expanse, book 1", "Book of the New
  * Sun (1)", "Discworld (13)", "Harry Potter Bd. 4", "Discworld series".
@@ -248,7 +256,7 @@ export function parseSeriesText(text: string): { name: string; position: number 
     .replace(/[\s,;:#(\-–—]+$/, '')
     .replace(/\s+(series|saga|sequence|cycle|trilogy|reihe)$/i, '')
     .trim()
-  if (!value || /^\d+$/.test(value) || value.length > 200) return null
+  if (!value || /^\d+$/.test(value) || value.length > 200 || PUBLISHER_SERIES.test(value)) return null
   return { name: value, position }
 }
 

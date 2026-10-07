@@ -20,6 +20,10 @@ Deno.test("an edition's series text gives a name and a position", () => {
   assertEquals(parseSeriesText('Murderbot Diaries 2.5'), { name: 'Murderbot Diaries', position: 2.5 })
   assertEquals(parseSeriesText('A Discworld novel'), { name: 'Discworld', position: null })
   assertEquals(parseSeriesText('Discworld series'), { name: 'Discworld', position: null })
+  // A publisher's series is not one a reader reads in order.
+  assertEquals(parseSeriesText('Modern Library Classics'), null)
+  assertEquals(parseSeriesText('Ventana abierta 6'), null)
+  assertEquals(parseSeriesText('SF Masterworks ; 12'), null)
   assertEquals(parseSeriesText('  '), null)
   assertEquals(parseSeriesText('12'), null)
 })

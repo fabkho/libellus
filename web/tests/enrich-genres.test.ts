@@ -56,6 +56,10 @@ describe('mapping one signal', () => {
     expect(genresOfSignal({ source: 'wikidata', id: 'Q24925', value: 'science fiction' })).toEqual(['sci-fi'])
     expect(genresOfSignal({ source: 'wikidata', id: 'Q8261', value: 'novel' })).toEqual([])
     expect(genresOfSignal({ source: 'wikidata', id: 'Q999999999', value: 'gothic horror' })).toEqual(['horror'])
+    // Not romance, not history: kinds of science fiction.
+    expect(genresOfSignal({ source: 'wikidata', id: 'Q999999998', value: 'scientific romance' })).toEqual(['sci-fi'])
+    expect(genresOfSignal({ source: 'wikidata', id: 'Q999999997', value: 'planetary romance' })).toEqual(['sci-fi'])
+    expect(genresOfSignal({ source: 'wikidata', id: 'Q999999996', value: 'alternate history' })).toEqual(['sci-fi'])
   })
 
   it('reads Open Library subjects by keyword, and ignores the noise', () => {
