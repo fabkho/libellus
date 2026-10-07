@@ -8,7 +8,7 @@
 -- a warning). The queue is drained by the `enrich` edge function:
 --
 --   the trigger (and pg_cron's 'enrich-drain', every ten minutes)
---     → private.enrich_kick()          at most one call a minute, only when work is due
+--     → private.enrich_kick()          at most one call in two minutes, only when work is due
 --     → pg_net → POST <function_url>   {"action": "drain"}, Bearer <Vault enrich_token>
 --     → enrich: enrich_claim(n) → Wikidata, Open Library, Apple → enrich_save(payload)
 --
@@ -102,7 +102,9 @@ create table private.enrich_settings (
   id              boolean primary key default true check (id),
   -- The function's address; null = off (nothing is sent; the queue waits).
   function_url    text check (function_url ~ '^https?://'),
-  min_interval    interval not null default interval '1 minute',
+  -- Longer than a drain runs (90 s), so two drains rarely overlap and the
+  -- sources see one polite client, not two.
+  min_interval    interval not null default interval '2 minutes',
   last_kick_at    timestamptz,
   last_request_id bigint
 );
@@ -155,7 +157,8 @@ begin
     return 'debounced';
   end if;
 
-  execute 'select net.http_post(url := $1, body := $2, headers := $3, timeout_milliseconds := 5000)'
+  -- pg_net waits in the background, never in this transaction: long enough for a whole drain.
+  execute 'select net.http_post(url := $1, body := $2, headers := $3, timeout_milliseconds := 120000)'
     into v_request
     using v_settings.function_url,
           jsonb_build_object('action', 'drain'),

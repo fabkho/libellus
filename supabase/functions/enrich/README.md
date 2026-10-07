@@ -22,7 +22,7 @@ POST /functions/v1/enrich
 
 1. A Book enters the Catalogue (add, import, Change edition: any insert of a Catalogue row into `books`):
    the trigger `books_enrich` queues it in `private.enrich_queue` and calls `private.enrich_kick()`, which
-   POSTs `{"action":"drain"}` to the function through pg_net, at most once a minute. The member's write
+   POSTs `{"action":"drain"}` to the function through pg_net, at most once in two minutes. The member's write
    never waits for it and never fails because of it.
 2. pg_cron's `enrich-drain` (every ten minutes) calls the kick again for whatever is still due (a Book
    that failed waits 10, 20, 40 … minutes, at most a day; after six attempts it is recorded as `failed`).

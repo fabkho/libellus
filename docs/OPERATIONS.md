@@ -292,7 +292,7 @@ is deployed in supabase/functions/enrich/README.md.
 | What | Where | When |
 |---|---|---|
 | A Book entering the Catalogue is queued | trigger `books_enrich` → `private.enrich_queue` | every insert of a Catalogue Book (add, import, Change edition) |
-| The function is called to drain the queue | `private.enrich_kick()` → pg_net → `POST …/functions/v1/enrich {"action":"drain"}` | by the trigger (at most once a minute) and pg_cron `enrich-drain` (every ten minutes) |
+| The function is called to drain the queue | `private.enrich_kick()` → pg_net → `POST …/functions/v1/enrich {"action":"drain"}` | by the trigger (at most once in two minutes) and pg_cron `enrich-drain` (every ten minutes) |
 | Books enriched more than 30 days ago are queued again | pg_cron `enrich-refresh` → `public.enrich_refresh(200)` | daily, 04:20 UTC |
 | Stale authors (facts or works older than 30 days) | every drain, up to three | |
 | The one-off backfill | `backfill.ts` from a terminal, or `{"action":"backfill"}` | once, after the migrations |

@@ -11,7 +11,7 @@
 -- members and ask about the rows this test made.
 
 begin;
-select plan(53);
+select plan(59);
 
 create schema if not exists tests;
 
@@ -166,6 +166,34 @@ select is((select openlibrary_key from public.authors where wikidata_id = 'Q9900
   'with both keys');
 select is((select p.name from public.series s join public.series p on p.id = s.parent_id where s.wikidata_id = 'Q990000011'),
   'Discworld', 'a sub-series knows its parent');
+
+-- ---------------------------------------------------- the queue's own rules
+
+select is(private.enrich_kick(), 'off', 'without the function''s address nothing is sent');
+update private.enrich_settings set function_url = 'https://example.test/functions/v1/enrich';
+select is(private.enrich_kick(), 'unavailable', 'nor without its token in the Vault');
+
+select tests.act_as(:'ada_id');
+select (public.add_to_library('{"title":"Thud!","authors":["Terry Pratchett"],"source":"apple","apple_id":"990000016104"}')).book_id
+  as thud \gset
+select (public.add_to_library('{"title":"Snuff","authors":["Terry Pratchett"],"source":"apple","apple_id":"990000016105"}')).book_id
+  as snuff \gset
+reset role;
+update private.enrich_queue set attempts = 1 where book_id = :'thud';
+update private.enrich_queue set attempts = 6 where book_id = :'snuff';
+set local role service_role;
+select public.enrich_failed(:'thud', 'source_unavailable 503 openlibrary.org');
+select public.enrich_failed(:'snuff', 'source_unavailable 503 openlibrary.org');
+reset role;
+select ok((select not_before > now() + interval '9 minutes' from private.enrich_queue where book_id = :'thud'),
+  'a Book whose sources failed waits before it is tried again');
+select is((select status from public.book_enrichment where book_id = :'snuff'), 'failed',
+  'after six attempts it is given up and recorded as failed');
+delete from public.book_enrichment where book_id = :'guards';
+set local role service_role;
+select ok(public.enrich_backfill() >= 1, 'the backfill queues Books never enriched');
+reset role;
+select is(tests.queued(:'guards'), 'backfill', 'among them one whose enrichment was removed');
 
 -- A stub never erases a fetched author.
 set local role service_role;
