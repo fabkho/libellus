@@ -291,7 +291,13 @@ test('Read as: said on the Book page, in its options and when finishing, and the
   await page.getByTestId('book.readAs.audiobook').click()
   await expect.poll(readAs).toBeNull()
 
-  // One row of segments, a radio group: the arrow keys move the choice and set it.
+  // One row of segments, a radio group: the arrow keys move the choice and set it. The row is
+  // disabled while the choice above is being saved (ReadAs.vue's `busy`: another is refused while
+  // one is on its way), and unlike a tap — Playwright waits for a tap to land on an enabled
+  // control, not for `focus()` — a `focus()` into that row lands on nothing, so the key goes to
+  // the page and nothing is chosen. The database answers before the app has taken the answer in
+  // (the poll above watches the row, not the app), so wait for the row to be live again.
+  await expect(page.getByTestId('book.readAs.physical')).toBeEnabled()
   await page.getByTestId('book.readAs.physical').focus()
   await page.keyboard.press('ArrowRight')
   await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-checked', 'true')
