@@ -18,6 +18,8 @@ import { test } from './fixtures'
  * was the largest shift). The palette now keeps its boxes as tall as it may
  * grow and only draws the part its content fills (composables/usePaletteRoom.ts).
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
 test.use({ browserName: 'chromium', viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true })
 

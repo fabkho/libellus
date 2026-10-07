@@ -358,14 +358,15 @@ export async function expectAccessible(page: Page, where: string) {
   await untilStill(page)
   // Lists fade in over `standard` after they have their room; axe reads colours as drawn. Endless
   // animations (a caret, the loading shimmer) never finish and are not waited for.
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
-        .map((a) => a.finished.catch(() => {})),
-    ),
-  )
+  // Until none is left, not only the first lot: under Reduce Motion a transition that declares its
+  // properties takes 1 ms, and a switched theme's colours go down through Regal's panels a level a frame.
+  await page.evaluate(async () => {
+    const running = () => document.getAnimations().filter((a) => a.effect?.getTiming().iterations !== Infinity)
+    for (let round = 0; round < 100 && running().length; round++) {
+      await Promise.all(running().map((a) => a.finished.catch(() => {})))
+      await new Promise(requestAnimationFrame)
+    }
+  })
   const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze()
   const found = violations.flatMap((v) =>
     v.nodes

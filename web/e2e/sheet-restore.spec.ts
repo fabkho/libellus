@@ -15,6 +15,8 @@ import { test } from './fixtures'
  * The first frames are read, not a settled page: every frame from the sheet's
  * first on is recorded (`watch`), and none may show it off its place or moving.
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)

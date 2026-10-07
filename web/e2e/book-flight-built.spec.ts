@@ -17,6 +17,8 @@ import { test } from './fixtures'
  * its row (120 × 180), so the hero's own image takes over in the air and the
  * small one is never shown blown up.
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
 test.use({ browserName: 'chromium', viewport: { width: 393, height: 852 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true })
 

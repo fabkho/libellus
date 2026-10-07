@@ -16,6 +16,8 @@ import { test } from './fixtures'
  * that lands before the book page's image lands on its colour, where that
  * image then fades in (e2e/book-flight-built.spec.ts has the sharp case).
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)

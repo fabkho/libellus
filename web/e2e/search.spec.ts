@@ -9,6 +9,8 @@ import { signedIn } from './support'
  * flows check where each open and close ends up — which of the two has the
  * chrome, where the focus is, which page is behind — not the frames in between.
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
 /** A fresh member, signed in, on Library. */
 async function onLibrary(page: Page) {

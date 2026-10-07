@@ -51,6 +51,11 @@ export default defineConfig({
     ...devices['iPhone 15'],
     // WebKit is closest to Safari on iPhone, where Libellus is mostly used.
     browserName: 'webkit',
+    // Reduce Motion, as a member who turned it on: sheets, morphs and fades are cut to their end
+    // (docs/MOTION.md), so a flow waits for none of them, and Reduce Motion gets the coverage of
+    // every flow. A spec about motion or what is drawn on the way opts back in with
+    // `test.use({ reducedMotion: 'no-preference' })`.
+    reducedMotion: 'reduce',
   },
   webServer: {
     // nuxt itself, not `pnpm dev`: stopping pnpm leaves nuxt running in its own

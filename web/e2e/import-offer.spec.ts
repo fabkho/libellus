@@ -127,6 +127,7 @@ test('no card for a member with a real Library, or one who imported before', asy
 })
 
 test('the card is in the first frame and nothing on Home moves when the lists arrive', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   await signedIn(page, { importHint: true })
   // The device now holds the member's Library (it is empty), so the next start decides from it.
   await expect(page.getByTestId('home.importOffer')).toBeVisible()

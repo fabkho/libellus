@@ -14,6 +14,8 @@ import { test } from './fixtures'
  * Only Finished showed it: its lists live inside the year sections, whose slots the compiler
  * cannot prove stable, so the lists re-rendered with the page.
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)

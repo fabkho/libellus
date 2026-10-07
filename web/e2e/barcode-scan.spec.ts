@@ -297,6 +297,8 @@ test.describe('states', () => {
   })
 
   test('Reduce Motion: the scan line holds still', async ({ page }) => {
+    // It starts with motion (the config has Reduce Motion on), then turns Reduce Motion on.
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
     await stubScanner(page)
     await signedIn(page)
     await openScanner(page)

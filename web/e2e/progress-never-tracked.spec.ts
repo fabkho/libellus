@@ -80,6 +80,8 @@ async function openBook(page: Page) {
 }
 
 test('never tracked: the empty bar and its row; the first save changes the words and brings the figures, chart and log in below; Undo takes them back', async ({ page }) => {
+  // With motion (the config has Reduce Motion on): the figures come in below; the next test is the same without.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: isoDay() })
   await page.reload()

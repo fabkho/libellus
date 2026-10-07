@@ -14,6 +14,8 @@ import { test } from './fixtures'
  * The page is scrolled one step per frame, so every step is a scroll event of
  * its own, as a finger's would be.
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)

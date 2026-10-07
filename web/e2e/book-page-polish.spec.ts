@@ -67,6 +67,8 @@ test('a Placeholder cover, a long title and a long Collection name stay inside t
   await page.getByTestId('picker.new').click()
   await page.getByTestId('picker.newName').fill(COLLECTION)
   await page.getByTestId('picker.create').click()
+  // Done once the new Collection is made and ticked (it is not, a moment after the tap).
+  await expect(page.getByTestId('picker.collection').filter({ hasText: COLLECTION })).toHaveAttribute('aria-checked', 'true')
   await page.getByTestId('picker.action').click()
   await expect(page.getByTestId('picker')).toBeHidden()
   const chip = page.getByTestId('book.collection')
