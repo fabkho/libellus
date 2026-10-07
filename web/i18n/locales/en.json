@@ -513,7 +513,11 @@
       "failed": "Other editions didn't load.",
       "retry": "Try again",
       "action": "Change",
-      "busy": "Changing…"
+      "busy": "Changing…",
+      "save": "Save",
+      "saving": "Saving…",
+      "formatLabel": "Format",
+      "missing": "My edition isn't listed"
     },
     "goodreads": {
       "ratingLabel": "Rated {rating} out of 5",
@@ -529,6 +533,12 @@
       "moreLabel": "More links for this book"
     },
     "read": "Read now",
+    "format": {
+      "hardcover": "Hardcover",
+      "paperback": "Paperback",
+      "ebook": "Ebook",
+      "audiobook": "Audiobook"
+    },
     "formatFact": {
       "hardcover": "hardcover",
       "paperback": "paperback",
@@ -581,6 +591,57 @@
       "already_in_library": "This book is already in your Library.",
       "not_signed_in": "Sign in again to add books.",
       "unknown": "Something went wrong. Please try again."
+    }
+  },
+  "ownEdition": {
+    "title": {
+      "isbn": "Find your edition",
+      "found": "Your edition",
+      "own": "Your own edition"
+    },
+    "isbnHint": "Type the ISBN from the back of your copy or its copyright page, or scan its barcode. We look it up everywhere we search.",
+    "isbnPlaceholder": "978…",
+    "scan": "Scan the barcode",
+    "lookUp": "Look up",
+    "looking": "Looking up…",
+    "lookingFor": "Looking for this ISBN…",
+    "retry": "Try again",
+    "notFound": "No edition with this ISBN is known anywhere we look. You can enter yours.",
+    "failed": "The lookup didn't get an answer. Check your connection and try again.",
+    "offline": "You're offline. Looking up an ISBN needs the network.",
+    "noIsbn": "No ISBN? Enter your edition",
+    "makeOwn": "Enter your edition",
+    "isbnIs": "ISBN {isbn}",
+    "use": "Use",
+    "useLong": "Use this edition",
+    "notThis": "Not my edition",
+    "save": "Save",
+    "saveLong": "Save my edition",
+    "busy": "Saving…",
+    "ownHint": "Same title and author, your copy's details. The cover is generated unless you link an image.",
+    "backToIsbn": "Back to the ISBN",
+    "coverPlaceholder": "https://…",
+    "private": "Only you can see your edition. It stays out of the shared catalogue.",
+    "field": {
+      "format": "Format",
+      "isbn": "ISBN",
+      "year": "Year",
+      "publisher": "Publisher",
+      "pageCount": "Pages",
+      "language": "Language",
+      "coverUrl": "Cover image"
+    },
+    "invalid": {
+      "format": "Say what your edition is: hardcover, paperback, ebook or audiobook.",
+      "isbn": "That isn't a valid ISBN. Check the digits, or leave it empty.",
+      "year": "The year is a year like 2022, not after next year.",
+      "publisher": "That publisher is longer than we can keep.",
+      "pageCount": "Pages must be a whole number above zero.",
+      "coverUrl": "The cover must be a link to an image starting with https://."
+    },
+    "error": {
+      "book_invalid": "Your edition can't be saved like this. Check the format and the details.",
+      "isbn_invalid": "That isn't a valid ISBN. Check the digits, or leave it empty."
     }
   },
   "abandon": {

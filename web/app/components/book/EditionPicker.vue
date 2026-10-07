@@ -9,7 +9,10 @@
 // (ImportEditionSheet: the preview's row takes it). The list grows while the
 // sources answer, new rows only ever added at the end; where an edition came
 // from is never shown (an Apple edition says "ebook", which is what it is).
-import type { Book, BookSnapshot } from '~/data/books'
+// Over the list the host may put more (`top`: the Book page's format of the
+// picked edition); under it, "My edition isn't listed" (`missing`) leads on
+// to finding her edition by its ISBN, or making it herself.
+import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/books'
 import { editionFacts } from '~/data/editions'
 import type { LibraryErrorCode } from '~/data/library'
 
@@ -19,6 +22,8 @@ export type EditionRow = {
   current: boolean
   /** A line under the facts that says what the row is (the import's "As in the file"). */
   note?: string
+  /** The format the row says, when the host knows better than the source (her own word on it). */
+  format?: BookFormat | null
 }
 
 const props = defineProps<{
@@ -43,19 +48,18 @@ const props = defineProps<{
   offline?: string | null
   /** What an empty list says (no other edition). */
   none?: string
+  /** "My edition isn't listed": shown under the list when the host has the step that follows. */
+  missing?: string
 }>()
-const emit = defineEmits<{ pick: [row: EditionRow]; action: []; retry: [] }>()
+const emit = defineEmits<{ pick: [row: EditionRow]; action: []; retry: []; missing: [] }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const { t, locale } = useI18n()
 
 /** Language · year · pages · format · publisher, whichever the edition has (Apple's have no language). */
 function facts(row: EditionRow): string[] {
-  return editionFacts(row.book, {
-    locale: locale.value,
-    pages: (count) => t('book.pages', { count }),
-    format: (format) => t(`book.formatFact.${format}`),
-  })
+  const words = { locale: locale.value, pages: (count: number) => t('book.pages', { count }), format: (format: BookFormat) => t(`book.formatFact.${format}`) }
+  return editionFacts(row.book, words, row.format !== undefined ? row.format : formatOf(row.book))
 }
 
 /** The rows the sheet opens on: their covers load at once and first; the rest lazily, ahead of the scroll. */
@@ -72,6 +76,7 @@ function says(row: EditionRow): string {
 <template>
   <UiSheet v-model:open="open" :title="title" testid="edition" :action="action" :action-disabled="actionDisabled" @action="emit('action')">
     <p class="mx-xs mb-ms text-caption text-ink-faint" data-testid="edition.hint">{{ hint }}</p>
+    <slot name="top" />
 
     <UiRowGroup role="radiogroup" :aria-label="t('book.edition.listLabel')">
       <button
@@ -135,6 +140,10 @@ function says(row: EditionRow): string {
     <p v-else-if="!others" class="mt-ms px-xs text-caption text-ink-faint" data-testid="edition.none">
       {{ none ?? t('book.edition.none') }}
     </p>
+
+    <UiButton v-if="missing" class="mt-ml" tone="secondary" block :disabled="busy" data-testid="edition.missing" @click="emit('missing')">
+      <UiIcon name="search" :size="18" />{{ missing }}
+    </UiButton>
 
     <div class="h-(--spacing-lg)" />
   </UiSheet>
