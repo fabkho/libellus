@@ -169,16 +169,16 @@ select is((select p.name from public.series s join public.series p on p.id = s.p
 
 -- ---------------------------------------------------- the queue's own rules
 
-select is(private.enrich_kick(), 'off', 'without the function''s address nothing is sent');
-update private.enrich_settings set function_url = 'https://example.test/functions/v1/enrich';
-select is(private.enrich_kick(), 'unavailable', 'nor without its token in the Vault');
-
 select tests.act_as(:'ada_id');
 select (public.add_to_library('{"title":"Thud!","authors":["Terry Pratchett"],"source":"apple","apple_id":"990000016104"}')).book_id
   as thud \gset
 select (public.add_to_library('{"title":"Snuff","authors":["Terry Pratchett"],"source":"apple","apple_id":"990000016105"}')).book_id
   as snuff \gset
 reset role;
+
+select is(private.enrich_kick(), 'off', 'without the function''s address nothing is sent');
+update private.enrich_settings set function_url = 'https://example.test/functions/v1/enrich';
+select is(private.enrich_kick(), 'unavailable', 'nor without its token in the Vault');
 update private.enrich_queue set attempts = 1 where book_id = :'thud';
 update private.enrich_queue set attempts = 6 where book_id = :'snuff';
 set local role service_role;
