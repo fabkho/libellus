@@ -11,6 +11,7 @@
 // the copy there, Read now is the lit action on Want to read and Reading (the
 // rest steps back beside it) and opens the built-in reader over the page, its
 // cover flying from this one (components/reader/Reader.vue).
+import { formatOf } from '~/data/books'
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useEditionStore } from '~/stores/edition'
@@ -76,9 +77,14 @@ const authorLine = computed(() => (book.value ? formatAuthors(book.value.authors
 const facts = computed(() => {
   const b = book.value
   if (!b) return []
-  return [b.year ? String(b.year) : null, b.pageCount ? t('book.pages', { count: b.pageCount }) : null, b.publisher].filter(
-    (fact): fact is string => Boolean(fact),
-  )
+  // The format that counts: her own word on her edition, else what its source said.
+  const format = formatOf(b, entry.value?.formatOverride)
+  return [
+    b.year ? String(b.year) : null,
+    b.pageCount ? t('book.pages', { count: b.pageCount }) : null,
+    format ? t(`book.formatFact.${format}`) : null,
+    b.publisher,
+  ].filter((fact): fact is string => Boolean(fact))
 })
 const latest = computed(() => entry.value?.latestSession ?? null)
 /** Finished because the read was given up, not because the book was done. */

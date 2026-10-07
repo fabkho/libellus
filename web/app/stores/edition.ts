@@ -1,13 +1,15 @@
 import { defineStore } from 'pinia'
-import type { Book, BookSnapshot } from '~/data/books'
+import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import { createEditions, type EditionCandidate, type Editions } from '~/data/editions'
 import { isAbort } from '~/data/fetching'
-import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
+import { probeImageInBrowser, resolveOwnCover } from '~/data/covers'
+import type { LibraryEntry, LibraryErrorCode, Result } from '~/data/library'
 import { editionKeys } from '~/data/merge'
 import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 import { useLibraryStore } from '~/stores/library'
+import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 
 /** A candidate's identity when picked: its first edition key (a Catalogue id, an ISBN-13, a source id). */
@@ -30,6 +32,7 @@ export const useEditionStore = defineStore('edition', () => {
   const books = useBookStore()
   const collections = useCollectionsStore()
   const session = useSessionStore()
+  const search = useSearchStore()
 
   let source: Editions | null = null
   function repository(): Editions {
@@ -52,6 +55,12 @@ export const useEditionStore = defineStore('edition', () => {
   const picked = ref<string | null>(null)
   const busy = ref(false)
   const error = ref<LibraryErrorCode | null>(null)
+  /**
+   * The format she says the picked edition is (hardcover, paperback, ebook,
+   * audiobook); null while she has not said, and then the edition's own shows
+   * (`shownFormat`). Picking another edition forgets it.
+   */
+  const format = ref<BookFormat | null>(null)
   /**
    * The last change: the Book the entry had, and the entry with its new one.
    * Set in the same tick as the Library learns it, so a book page showing the
@@ -103,6 +112,7 @@ export const useEditionStore = defineStore('edition', () => {
     candidates.value = [{ book: entry.book, current: true }]
     picked.value = candidateKey(entry.book)
     error.value = null
+    format.value = null
     void look()
   }
 
@@ -114,6 +124,7 @@ export const useEditionStore = defineStore('edition', () => {
 
   function pick(candidate: EditionCandidate) {
     if (busy.value) return
+    if (!isPicked(candidate.book)) format.value = null
     picked.value = candidateKey(candidate.book)
     error.value = null
   }
@@ -135,14 +146,40 @@ export const useEditionStore = defineStore('edition', () => {
   })
 
   /**
-   * Changes the entry to the picked edition. Returns the entry with its new
-   * Book, or null with `error` set (the sheet stays open to try another).
+   * The format the picked edition is, as the sheet shows it: what she said
+   * here, else her word on her own edition (the current one), else what its
+   * source said (`formatOf`). Null when nobody knows.
+   */
+  const shownFormat = computed<BookFormat | null>(() => {
+    if (format.value) return format.value
+    const found = candidates.value.find((candidate) => isPicked(candidate.book))
+    if (!found) return null
+    return formatOf(found.book, found.current ? changing.value?.formatOverride : null)
+  })
+
+  /** She said another format for the edition she has: the sheet's action saves it. */
+  const formatChanged = computed(() => {
+    const entry = changing.value
+    if (!entry || choice.value || !format.value) return false
+    return format.value !== formatOf(entry.book, entry.formatOverride)
+  })
+
+  function chooseFormat(value: BookFormat) {
+    if (busy.value) return
+    format.value = value
+    error.value = null
+  }
+
+  /**
+   * Changes the entry to the picked edition, with the format she said for it;
+   * or, with her own edition picked, saves the format she said. Returns the
+   * entry, or null with `error` set (the sheet stays open to try another).
    */
   async function confirm(): Promise<LibraryEntry | null> {
     const entry = changing.value
     const candidate = choice.value
-    if (!entry || !candidate || busy.value) return null
-    const changed = await changeTo(entry, candidate.book)
+    if (!entry || busy.value || !(candidate || formatChanged.value)) return null
+    const changed = candidate ? await changeTo(entry, candidate.book, format.value) : await setFormat(entry, format.value)
     if (changed) {
       cancel()
       changing.value = null
@@ -151,31 +188,81 @@ export const useEditionStore = defineStore('edition', () => {
   }
 
   /**
-   * Changes an entry to another edition, from this sheet or from elsewhere
-   * (an ebook file linked to the edition found for it, #131). Returns the entry
-   * with its new Book, or null with `error` set.
+   * After the database moved an entry to another Book: the page showing the
+   * old one follows it (`moved`), the Library, the book pages, search and the
+   * Collections learn it. Null with `error` set when it was refused.
    */
-  async function changeTo(entry: LibraryEntry, book: Book | BookSnapshot): Promise<LibraryEntry | null> {
-    const repo = library.library()
-    if (!repo || busy.value) return null
+  function afterMove(entry: LibraryEntry, result: Result<LibraryEntry>): LibraryEntry | null {
+    if (result.error) {
+      error.value = result.error
+      return null
+    }
+    const changed = result.data
+    if (changed.book.id === entry.book.id) {
+      // The edition it had (found again by its ISBN, say): only her format may have changed.
+      library.entryChanged(changed)
+      return changed
+    }
+    moved.value = { from: entry.book.id, to: changed }
+    library.editionChanged(changed)
+    // The old Book's pages show it as a Book that is not in the Library.
+    books.dropEntry(changed.id)
+    collections.entryChanged(changed)
+    return changed
+  }
+
+  async function busyWith(work: () => Promise<LibraryEntry | null>): Promise<LibraryEntry | null> {
+    if (busy.value) return null
     busy.value = true
     error.value = null
     try {
-      const result = await repo.changeEdition(entry.id, await library.withCover(book))
+      return await work()
+    } finally {
+      busy.value = false
+    }
+  }
+
+  /** Her word on the format of the edition the entry has (null: the Book's own). */
+  async function setFormat(entry: LibraryEntry, value: BookFormat | null): Promise<LibraryEntry | null> {
+    const repo = library.library()
+    if (!repo) return null
+    return busyWith(async () => {
+      const result = await repo.setFormat(entry.id, value)
       if (result.error) {
         error.value = result.error
         return null
       }
-      const changed = result.data
-      moved.value = { from: entry.book.id, to: changed }
-      library.editionChanged(changed)
-      // The old Book's pages show it as a Book that is not in the Library.
-      books.dropEntry(changed.id)
-      collections.entryChanged(changed)
-      return changed
-    } finally {
-      busy.value = false
-    }
+      library.entryChanged(result.data)
+      return result.data
+    })
+  }
+
+  /**
+   * "My edition isn't listed", no source knowing it: makes her own edition
+   * (data/ownEdition.ts) and moves the entry to it. Its Cover is the image she
+   * gave, else what her ISBN has at Apple or OpenLibrary (`resolveOwnCover`).
+   */
+  async function useOwn(entry: LibraryEntry, book: BookSnapshot): Promise<LibraryEntry | null> {
+    const repo = library.library()
+    if (!repo) return null
+    return busyWith(async () => {
+      const cover = await resolveOwnCover(book, {
+        probe: probeImageInBrowser,
+        lookupAppleIsbn: (isbn13) => search.repository().lookupAppleIsbn(isbn13),
+      })
+      return afterMove(entry, await repo.useOwnEdition(entry.id, { ...book, ...cover }))
+    })
+  }
+
+  /**
+   * Changes an entry to another edition, from this sheet or from elsewhere
+   * (an ebook file linked to the edition found for it, #131). Returns the entry
+   * with its new Book, or null with `error` set.
+   */
+  async function changeTo(entry: LibraryEntry, book: Book | BookSnapshot, withFormat?: BookFormat | null): Promise<LibraryEntry | null> {
+    const repo = library.library()
+    if (!repo) return null
+    return busyWith(async () => afterMove(entry, await repo.changeEdition(entry.id, await library.withCover(book), withFormat)))
   }
 
   function reset() {
@@ -184,6 +271,7 @@ export const useEditionStore = defineStore('edition', () => {
     candidates.value = []
     picked.value = null
     error.value = null
+    format.value = null
     moved.value = null
   }
 
@@ -194,5 +282,29 @@ export const useEditionStore = defineStore('edition', () => {
     },
   )
 
-  return { changing, candidates, pending, failed, picked, busy, error, moved, choice, isPicked, open, close, pick, look, confirm, changeTo, reset }
+  return {
+    changing,
+    candidates,
+    pending,
+    failed,
+    picked,
+    busy,
+    error,
+    moved,
+    choice,
+    format,
+    shownFormat,
+    formatChanged,
+    isPicked,
+    open,
+    close,
+    pick,
+    chooseFormat,
+    look,
+    confirm,
+    changeTo,
+    setFormat,
+    useOwn,
+    reset,
+  }
 })

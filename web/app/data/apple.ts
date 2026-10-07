@@ -130,6 +130,7 @@ export function snapshotFromApple(item: AppleItem): BookSnapshot | null {
     appleId: String(item.trackId),
     openLibraryEditionKey: null,
     openLibraryWorkKey: null,
+    format: 'ebook',
   }
 }
 

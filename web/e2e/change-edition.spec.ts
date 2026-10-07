@@ -214,7 +214,7 @@ test('an Apple edition has no language to show: its row starts with the year, wi
   await expect(page.getByTestId('edition')).toBeVisible()
   await expect(page.getByTestId('edition.loading')).toBeHidden()
 
-  const apple = page.getByTestId('edition.candidate').filter({ hasText: en.book.edition.ebook })
+  const apple = page.getByTestId('edition.candidate').filter({ hasText: en.book.formatFact.ebook })
   expect(await apple.count()).toBeGreaterThan(0)
   const facts = await apple.getByTestId('edition.candidateFacts').evaluateAll((rows) =>
     rows.map((row) => ({ text: row.textContent ?? '', parts: [...row.querySelectorAll(':scope > span:not([aria-hidden])')].map((part) => part.textContent ?? '') })),

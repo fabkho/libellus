@@ -10,6 +10,10 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 - **Catalogue** — the shared set of Books that Members have added from Apple Books or OpenLibrary.
   Readable by every Member.
 - **Manual book** — a Book a Member typed in by hand. Private to that Member, never in the Catalogue.
+- **Own edition** — a Member's own edition of a Book no source knows (Change edition → "My edition isn't
+  listed"): a Manual book with the Book's title and authors and her copy's details.
+- **Format** — what an edition is: hardcover, paperback, ebook or audiobook. The source's, or the Member's
+  own word on her entry's edition.
 - **Library** — a Member's books.
 - **Library entry** — one Book in one Member's Library.
 - **Status** — the exclusive state of a Library entry: *Want to read*, *Currently reading* or

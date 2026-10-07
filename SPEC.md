@@ -52,10 +52,13 @@ custom shelves.
 ## 4. Data model (shape, not final SQL)
 
 - **books** — the Catalogue plus Manual books: title, ordered authors, ISBN-13/10, page count, year,
-  language, publisher, description, cover URL + thumbhash + two cover colours, source (`apple` | `openlibrary` |
-  `manual` | `import`), source identifiers, `owner_id` only for Manual books. Unique on ISBN-13 for
-  non-manual books and on source identifiers.
-- **library_entries** — member, book, status (`want_to_read` | `reading` | `finished`), added at.
+  language, publisher, description, cover URL + thumbhash + two cover colours, format (`hardcover` |
+  `paperback` | `ebook` | `audiobook`, as the source said it; Apple's are ebooks; null when unknown),
+  source (`apple` | `openlibrary` | `manual` | `import`), source identifiers, `owner_id` only for Manual
+  books. Unique on ISBN-13 for non-manual books and on source identifiers.
+- **library_entries** — member, book, status (`want_to_read` | `reading` | `finished`), added at, and the
+  member's own word on her edition's format (`format_override`, null = the Book's; never written into
+  the shared Book).
   Unique per member and book. `status` is a stored column for filtering and sorting, but derived:
   triggers recompute it from the entry's sessions and overwrite anything written into it.
 - **reading_sessions** (`supabase/migrations/20261003102707_reading_sessions.sql`) — entry (deleted
@@ -100,7 +103,8 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
          Library → Want to read / Currently reading / Finished (+ Not finished filter), Collections
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
-(sheets) Add · Finish · Abandon · Manual book · Collection picker
+(sheets) Add · Finish · Abandon · Manual book · Collection picker · Change edition → My edition isn't listed
+         (find her edition by its ISBN in every source, or make her own: a private Manual book with its format)
 ```
 
 The visual design was decided in a prototyping round (#4: direction D "Night Reader", light and dark)
@@ -165,7 +169,11 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
 - **Invite-gated email-code sign-in**, Trappist 1:1. No social.
 - **Covers resolved once** on entering the Catalogue (Apple → OpenLibrary → placeholder), stored as
   URL + thumbhash.
-- **Manual books stay private**, never in the Catalogue.
+- **Manual books stay private**, never in the Catalogue. So does a member's own edition ("My edition isn't
+  listed": no source knows her copy): it is a Manual book of hers, and the entry moves to it as Change
+  edition moves one, keeping its reads.
+- **Formats are the source's, corrections are hers**: a Catalogue Book keeps the format its source gave;
+  the member's correction lives on her entry and counts first.
 - **Search sources are invisible** (owner, #6): one field, one merged list; no source names, badges,
   counts or per-source loading. The source stays internal data on the Catalogue row.
 - **One search row per book** (owner, #12): editions of the same title and first author collapse into

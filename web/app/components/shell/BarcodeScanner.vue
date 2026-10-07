@@ -17,10 +17,16 @@
 // (useBackDismiss.ts), a change of page, or the app going to the background —
 // and then the camera is off: every track is stopped. Reduce Motion: the scan
 // line holds still.
+//
+// With `pick` (a sheet's ISBN field: Change edition's "My edition isn't
+// listed") the scanner only reads: the ISBN found goes to `pick` and the
+// scanner closes, nothing is looked up. It is then a layer of its own over the
+// sheet (useModalLayer.ts), and Escape closes only the scanner.
 import { tick } from '~/utils/haptics'
 import { useSearchStore } from '~/stores/search'
 
 const open = defineModel<boolean>('open', { required: true })
+const props = defineProps<{ pick?: (isbn13: string) => void }>()
 
 const { t } = useI18n()
 const route = useRoute()
@@ -37,11 +43,19 @@ function close() {
   lookup = null
   open.value = false
 }
-useBackDismiss(() => open.value, close)
+const stage = useTemplateRef<HTMLElement>('stage')
+// Over a sheet it is a layer of its own (the sheet goes inert under it); over the search, part of the search's.
+if (props.pick) useModalLayer(open, { elements: () => [stage.value], initialFocus: () => stage.value, close })
+else useBackDismiss(() => open.value, close)
 
 async function found(isbn13: string) {
   scanner.pause()
   tick()
+  if (props.pick) {
+    close()
+    props.pick(isbn13)
+    return
+  }
   looking.value = isbn13
   lookup = new AbortController()
   const mine = lookup
@@ -87,23 +101,29 @@ function onVisibility() {
   if (document.visibilityState === 'hidden' && open.value) close()
 }
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && open.value) close()
+  if (event.key !== 'Escape' || !open.value) return
+  // Over a sheet, Escape is the scanner's alone (it listens first, in the capture phase).
+  if (props.pick) event.stopImmediatePropagation()
+  close()
 }
 onMounted(() => {
   document.addEventListener('visibilitychange', onVisibility)
-  window.addEventListener('keydown', onKeydown)
+  window.addEventListener('keydown', onKeydown, Boolean(props.pick))
 })
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibility)
-  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('keydown', onKeydown, Boolean(props.pick))
 })
 
 const blocked = computed(() => ['denied', 'none'].includes(scanner.state.value))
 </script>
 
 <template>
+  <Teleport to="body" :disabled="!pick">
   <div
     v-if="open"
+    ref="stage"
+    tabindex="-1"
     data-theme="dark"
     role="dialog"
     aria-modal="true"
@@ -191,6 +211,7 @@ const blocked = computed(() => ['denied', 'none'].includes(scanner.state.value))
       </p>
     </footer>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>

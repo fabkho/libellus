@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Book, BookSnapshot } from './books'
+import type { Book, BookFormat, BookSnapshot } from './books'
 import { ratingFromRow, type GoodreadsRow } from './goodreads'
 import { NO_PROGRESS, type ProgressValue } from './progress'
 import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
@@ -55,6 +55,12 @@ export type LibraryEntry = {
    * `pageCountOf` (`progress.ts`) is the page count that counts.
    */
   pageCountOverride: number | null
+  /**
+   * The member's own word on her edition's format (hardcover, paperback, ebook,
+   * audiobook), null = the Book's (`formatOf` in books.ts gives the one that
+   * counts). Absent on a copy from before it existed.
+   */
+  formatOverride?: BookFormat | null
   latestSession: ReadingSession | null
 }
 
@@ -64,8 +70,10 @@ export type LibraryErrorCode =
   | 'already_in_library'
   /** Change edition: the member has that edition already, as another entry. */
   | 'edition_in_library'
-  /** The snapshot cannot enter the Catalogue (no title, no ISBN or source id). */
+  /** The snapshot cannot enter the Catalogue (no title, no ISBN or source id), or her own edition cannot be stored. */
   | 'book_invalid'
+  /** Her own edition: an ISBN whose check digit does not add up. */
+  | 'isbn_invalid'
   /** Days, a Rating or a review that do not belong to the Status (dates on Want to read, a Rating on Currently reading …). */
   | 'session_invalid'
   /** No such entry in the member's Library (gone, or never theirs). */
@@ -104,6 +112,7 @@ const RAISED_CODES = [
   'already_in_library',
   'edition_in_library',
   'book_invalid',
+  'isbn_invalid',
   'session_invalid',
   'entry_not_found',
   'already_reading',
@@ -311,6 +320,8 @@ export type BookRow = {
   apple_id: string | null
   openlibrary_edition_key: string | null
   openlibrary_work_key: string | null
+  /** Absent on a row from before formats existed (a cached Library). */
+  format?: BookFormat | null
   created_at: string
   /** The cached Goodreads rating (`goodreads_rating`), when asked for with BOOK_COLUMNS. */
   goodreads?: GoodreadsRow | null
@@ -340,12 +351,13 @@ export type EntryRow = {
   status: EntryStatus
   added_at: string
   page_count_override: number | null
+  format_override?: BookFormat | null
   book: BookRow
   latest: SessionRow | null
 }
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
+export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
 
 export function bookFromRow(row: BookRow): Book {
   return {
@@ -368,6 +380,7 @@ export function bookFromRow(row: BookRow): Book {
     appleId: row.apple_id,
     openLibraryEditionKey: row.openlibrary_edition_key,
     openLibraryWorkKey: row.openlibrary_work_key,
+    format: row.format ?? null,
     // Undefined rather than null without one, so a Book reads the same as before it existed.
     goodreads: ratingFromRow(row.goodreads) ?? undefined,
   }
@@ -393,6 +406,7 @@ export function bookToRow(book: BookSnapshot): Omit<BookRow, 'id' | 'created_at'
     apple_id: book.appleId,
     openlibrary_edition_key: book.openLibraryEditionKey,
     openlibrary_work_key: book.openLibraryWorkKey,
+    format: book.format ?? null,
   }
 }
 
@@ -420,6 +434,7 @@ export function entryFromRow(row: EntryRow): LibraryEntry {
     addedAt: row.added_at,
     book: bookFromRow(row.book),
     pageCountOverride: row.page_count_override ?? null,
+    formatOverride: row.format_override ?? null,
     latestSession: row.latest ? sessionFromRow(row.latest) : null,
   }
 }
@@ -540,8 +555,24 @@ export type Library = {
    * counts instead of the edition's, and stays with the entry). Returns the entry with its new
    * Book. Refused with `edition_in_library` when the member has that edition
    * as another entry. Picking the edition it already has changes nothing.
+   * `format`: the member's own word on the new edition's format (left out:
+   * the Book's own); her word on the old edition goes with the old edition.
    */
-  changeEdition: (entryId: string, book: BookSnapshot) => Promise<Result<LibraryEntry>>
+  changeEdition: (entryId: string, book: BookSnapshot, format?: BookFormat | null) => Promise<Result<LibraryEntry>>
+  /**
+   * The member's own word on the format of the edition her entry has (null:
+   * the Book's own). Only hers: the shared Book keeps what its source said.
+   * Needs the connection, like Change edition. Returns the entry.
+   */
+  setFormat: (entryId: string, format: BookFormat | null) => Promise<Result<LibraryEntry>>
+  /**
+   * "My edition isn't listed" with no source knowing it: makes her own edition
+   * from the snapshot (a Manual book, private to her; title and authors blank
+   * take the entry's Book's; `format` is required) and moves the entry to it
+   * as `changeEdition` does. Refused with `book_invalid` (no format, a value
+   * that cannot be stored) or `isbn_invalid`. Returns the entry with its new Book.
+   */
+  useOwnEdition: (entryId: string, book: BookSnapshot) => Promise<Result<LibraryEntry>>
   /** Every read of an entry, newest first (`sortSessions`). */
   sessions: (entryId: string) => Promise<Result<ReadingSession[]>>
   /**
@@ -783,11 +814,31 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       return { data: days, error: null }
     },
 
-    async changeEdition(entryId, book) {
+    async changeEdition(entryId, book, format) {
       if (!online()) return OFFLINE
-      const changed = await client.rpc('change_edition', { p_entry_id: entryId, p_book: bookToRow(book) })
+      const changed = await client.rpc('change_edition', {
+        p_entry_id: entryId,
+        p_book: bookToRow(book),
+        ...(format ? { p_format: format } : {}),
+      })
       if (isNoAnswer(changed)) return OFFLINE
       if (changed.error) return { data: null, error: mapLibraryError(changed.error) }
+      return reread(entryId)
+    },
+
+    async setFormat(entryId, format) {
+      if (!online()) return OFFLINE
+      const set = await client.rpc('set_entry_format', { p_entry_id: entryId, p_format: format })
+      if (isNoAnswer(set)) return OFFLINE
+      if (set.error) return { data: null, error: mapLibraryError(set.error) }
+      return reread(entryId)
+    },
+
+    async useOwnEdition(entryId, book) {
+      if (!online()) return OFFLINE
+      const used = await client.rpc('use_own_edition', { p_entry_id: entryId, p_book: bookToRow(book) })
+      if (isNoAnswer(used)) return OFFLINE
+      if (used.error) return { data: null, error: mapLibraryError(used.error) }
       return reread(entryId)
     },
 

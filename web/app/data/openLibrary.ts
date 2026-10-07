@@ -1,5 +1,5 @@
-import { isbn10To13, isValidIsbn10, isValidIsbn13, type BookSnapshot } from './books'
-import { getJson, type FetchLike } from './fetching'
+import { isbn10To13, isValidIsbn10, isValidIsbn13, type BookFormat, type BookSnapshot } from './books'
+import { abortError, getJson, type FetchLike } from './fetching'
 import type { Found } from './merge'
 
 /**
@@ -100,6 +100,21 @@ function yearOf(dates: string[] | undefined): number | null {
   return null
 }
 
+/**
+ * OpenLibrary's `physical_format` (free text, in any language, mostly empty) as
+ * one of the four formats; null for anything else (a CD-ROM, "Unknown binding").
+ */
+export function formatFromPhysical(physical: string | null | undefined): BookFormat | null {
+  const text = (physical ?? '').trim().toLowerCase()
+  if (!text) return null
+  if (/audio|mp3|cassette|hörbuch|livre audio/.test(text)) return 'audiobook'
+  if (/e-?book|electronic|kindle|epub|digital|e-text/.test(text)) return 'ebook'
+  if (/hard ?(cover|back|bound)|library binding|gebunden|cartonn|relié|cartoné|tapa dura|rilegato/.test(text)) return 'hardcover'
+  if (/paper ?back|soft ?(cover|back)|mass market|trade|pocket|taschenbuch|broschiert|brossura|broché|tapa blanda|rústica|poche|kartoniert/.test(text))
+    return 'paperback'
+  return null
+}
+
 /** The edition's ISBN-13 (an ISBN-10 converted) and ISBN-10, valid ones only. */
 function isbnsOf(list: string[] | undefined): { isbn13: string | null; isbn10: string | null } {
   const compact = (list ?? []).map((isbn) => isbn.replace(/[\s-]/g, '').toUpperCase())
@@ -156,10 +171,17 @@ export type OpenLibraryWorkEdition = {
   publish_date?: string
   publishers?: string[]
   languages?: { key?: string }[]
+  physical_format?: string
 }
 
-/** How many editions of a work are asked for (issue #41); a popular work has hundreds. */
-export const WORK_EDITIONS_LIMIT = 50
+/**
+ * How many editions of a work are asked for in one call (issue #41), and how
+ * many at most over several: a popular work has hundreds, and an edition past
+ * the first page (the owner's 2022 Gollancz *I Am Legend*, 53rd of 55) was
+ * never listed when only the first 50 were asked for.
+ */
+export const WORK_EDITIONS_PAGE = 100
+export const WORK_EDITIONS_LIMIT = 300
 
 /**
  * One edition of a work's editions list as a Book snapshot (issue #41). The
@@ -194,6 +216,28 @@ export function snapshotFromWorkEdition(
     appleId: null,
     openLibraryEditionKey: editionKey,
     openLibraryWorkKey: bareKey(work.key),
+    format: formatFromPhysical(edition.physical_format),
+  }
+}
+
+/** One edition as OpenLibrary keeps it (`/isbn/<isbn>.json`, `/books/<key>.json`): a work edition with its work. */
+export type OpenLibraryEditionRecord = OpenLibraryWorkEdition & { works?: { key?: string }[]; pagination?: string }
+
+/**
+ * An edition record as a Book snapshot. The record names its authors only by
+ * their keys: their names come from the search's answer for the same ISBN
+ * (`lookupIsbnRecord`), or are left empty for the caller to fill. Its page
+ * count is `number_of_pages`, else the first number of `pagination` ("176 p.").
+ */
+export function snapshotFromEditionRecord(record: OpenLibraryEditionRecord, authors: readonly string[] = []): BookSnapshot | null {
+  const work = bareKey(record.works?.[0]?.key) ?? ''
+  const book = snapshotFromWorkEdition(record, { key: work, authors })
+  if (!book) return null
+  const paginated = Number(/\d+/.exec(record.pagination ?? '')?.[0])
+  return {
+    ...book,
+    openLibraryWorkKey: work || null,
+    pageCount: book.pageCount ?? (Number.isInteger(paginated) && paginated > 0 && paginated < 100000 ? paginated : null),
   }
 }
 
@@ -203,7 +247,14 @@ export type OpenLibrarySource = {
   lookupIsbn: (isbn13: string, signal?: AbortSignal) => Promise<Found[]>
   /** One edition by its key (`OL61022665M`); null when OpenLibrary does not know it. */
   lookupEdition: (editionKey: string, signal?: AbortSignal) => Promise<BookSnapshot | null>
-  /** The editions of a work (`OL45883W`), as many as `WORK_EDITIONS_LIMIT`, with the work's authors (issue #41). */
+  /**
+   * The edition with this ISBN-13 as OpenLibrary keeps it (`/isbn/<isbn>.json`:
+   * its page count and format, which the search does not give), with the
+   * authors and work the search names for it. Null when OpenLibrary does not
+   * know the ISBN.
+   */
+  lookupIsbnRecord: (isbn13: string, signal?: AbortSignal) => Promise<BookSnapshot | null>
+  /** The editions of a work (`OL45883W`), page by page up to `WORK_EDITIONS_LIMIT`, with the work's authors (issue #41). */
   workEditions: (work: { key: string; authors: readonly string[] }, signal?: AbortSignal) => Promise<BookSnapshot[]>
 }
 
@@ -229,18 +280,48 @@ export function createOpenLibrary(options: { fetch: FetchLike; languages: readon
       const book = found[0]?.book
       return book?.openLibraryEditionKey === editionKey ? book : null
     },
+    async lookupIsbnRecord(isbn13, signal) {
+      const [record, found] = await Promise.allSettled([
+        options.fetch(`${API}/isbn/${isbn13}.json`, { signal }).then(async (response) => {
+          // Not found is an answer: OpenLibrary does not know the ISBN.
+          if (response.status === 404) return null
+          if (!response.ok) throw new Error(`openlibrary.org answered ${response.status}`)
+          return (await response.json()) as OpenLibraryEditionRecord
+        }),
+        ask({ isbn: isbn13, limit: '1' }, signal, isbn13),
+      ])
+      if (signal?.aborted) throw abortError()
+      if (record.status === 'rejected') throw record.reason
+      const named = found.status === 'fulfilled' ? found.value[0]?.book : undefined
+      const book = record.value ? snapshotFromEditionRecord(record.value, named?.authors ?? []) : null
+      if (!book) return null
+      return {
+        ...book,
+        isbn13,
+        openLibraryWorkKey: book.openLibraryWorkKey ?? named?.openLibraryWorkKey ?? null,
+        language: book.language ?? named?.language ?? null,
+        coverUrl: book.coverUrl ?? named?.coverUrl ?? null,
+      }
+    },
     async workEditions(work, signal) {
       const key = bareKey(work.key)
       if (!key) return []
-      const body = (await getJson(
-        options.fetch,
-        `${API}/works/${key}/editions.json?${new URLSearchParams({ limit: String(WORK_EDITIONS_LIMIT) })}`,
-        signal,
-      )) as { entries?: OpenLibraryWorkEdition[] }
-      return (Array.isArray(body.entries) ? body.entries : []).flatMap((edition) => {
-        const book = snapshotFromWorkEdition(edition, { key, authors: work.authors })
-        return book ? [book] : []
-      })
+      const books: BookSnapshot[] = []
+      for (let offset = 0; offset < WORK_EDITIONS_LIMIT; offset += WORK_EDITIONS_PAGE) {
+        const query = new URLSearchParams({ limit: String(WORK_EDITIONS_PAGE), ...(offset ? { offset: String(offset) } : {}) })
+        const body = (await getJson(options.fetch, `${API}/works/${key}/editions.json?${query}`, signal)) as {
+          entries?: OpenLibraryWorkEdition[]
+          size?: number
+        }
+        const entries = Array.isArray(body.entries) ? body.entries : []
+        for (const edition of entries) {
+          const book = snapshotFromWorkEdition(edition, { key, authors: work.authors })
+          if (book) books.push(book)
+        }
+        // The last page: fewer than asked for, or as many as the work has.
+        if (entries.length < WORK_EDITIONS_PAGE || (typeof body.size === 'number' && offset + entries.length >= body.size)) break
+      }
+      return books
     },
   }
 }

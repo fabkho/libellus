@@ -262,6 +262,28 @@ export async function resolveBookCover(book: BookSnapshot, sources: CoverSources
 }
 
 /**
+ * The Cover of the member's own edition ("My edition isn't listed"): the image
+ * she gave (an https URL) is kept whatever it is, with its thumbhash and
+ * colours when it can be read (most hosts do not allow it: then it shows
+ * without them). Without one, her edition's ISBN may still have a cover at
+ * Apple or OpenLibrary (`resolveBookCover`); else the Placeholder cover.
+ */
+export async function resolveOwnCover(book: BookSnapshot, sources: CoverSources): Promise<ResolvedCover> {
+  const own = book.coverUrl
+  if (!own) return resolveBookCover(book, sources)
+  try {
+    const image = await within(sources.probe(own), sources.budgetMs ?? 6000)
+    if (image !== TIMEOUT && image) {
+      const { thumbhash, colors } = describeCover(image.pixels)
+      return { coverUrl: own, coverThumbhash: thumbhash, coverColors: colors }
+    }
+  } catch {
+    // Not readable from here (no CORS, offline): kept as it is.
+  }
+  return { coverUrl: own, coverThumbhash: null, coverColors: null }
+}
+
+/**
  * The browser's way of reading an image: fetched with CORS (Apple's CDN and
  * OpenLibrary's covers allow it), decoded off the page, drawn no larger than
  * 100 × 100. A bitmap made from a fetched blob never taints the canvas, even

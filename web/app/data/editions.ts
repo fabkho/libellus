@@ -1,9 +1,9 @@
-import type { Book, BookSnapshot } from './books'
+import { formatOf, type Book, type BookFormat, type BookSnapshot } from './books'
 import { createApple } from './apple'
 import type { CatalogueSearch } from './catalogueSearch'
 import { abortError, type FetchLike } from './fetching'
 import { editionKeys, normalise } from './merge'
-import { createOpenLibrary } from './openLibrary'
+import { createOpenLibrary, openLibraryLanguage } from './openLibrary'
 
 /**
  * The editions a Library entry can change to (issue #41): the other editions
@@ -43,7 +43,7 @@ export type EditionSourceName = 'catalogue' | 'work' | 'apple' | 'openlibrary'
 export const EDITION_SOURCE_ORDER: readonly EditionSourceName[] = ['catalogue', 'work', 'apple', 'openlibrary']
 
 /** At most this many editions besides the current one. */
-export const EDITIONS_LIMIT = 40
+export const EDITIONS_LIMIT = 60
 
 // --------------------------------------------------------------- languages
 
@@ -81,21 +81,23 @@ export function languageName(language: string | null | undefined, uiLocale = 'en
 
 /**
  * What a row of the Change edition list says about an edition, in order:
- * language, year, pages, "ebook" (Apple's editions), publisher: only the facts
- * the edition has. An Apple edition has no language of its own (the iTunes
+ * language, year, pages, format (hardcover, paperback, ebook, audiobook: as
+ * its source said it, Apple's editions being ebooks, or as the member said it
+ * for her own, `format`), publisher: only the facts the edition has. An Apple edition has no language of its own (the iTunes
  * Search API, search and lookup alike, gives ebooks no language field; only an
  * OpenLibrary record of the same edition can fill it in, `representative`), so
  * its row simply starts with the year: no dash, no empty slot (#104).
  */
 export function editionFacts(
-  book: Pick<BookSnapshot, 'language' | 'year' | 'pageCount' | 'publisher' | 'source'>,
-  words: { locale: string; pages: (count: number) => string; ebook: string },
+  book: Pick<BookSnapshot, 'language' | 'year' | 'pageCount' | 'publisher' | 'source' | 'format'>,
+  words: { locale: string; pages: (count: number) => string; format: (format: BookFormat) => string },
+  format: BookFormat | null = formatOf(book),
 ): string[] {
   return [
     languageName(book.language, words.locale),
     book.year ? String(book.year) : null,
     book.pageCount ? words.pages(book.pageCount) : null,
-    book.source === 'apple' ? words.ebook : null,
+    format ? words.format(format) : null,
     book.publisher?.trim() || null,
   ].filter((fact): fact is string => Boolean(fact))
 }
@@ -146,7 +148,7 @@ export function isEditionOf(
 // ------------------------------------------------------------------- merging
 
 /** Fields a source's snapshot may lack and another's of the same edition has. */
-const FILLABLE = ['isbn13', 'isbn10', 'pageCount', 'year', 'language', 'publisher', 'description', 'coverUrl', 'openLibraryWorkKey'] as const
+const FILLABLE = ['isbn13', 'isbn10', 'pageCount', 'year', 'language', 'publisher', 'description', 'coverUrl', 'openLibraryWorkKey', 'format'] as const
 
 /**
  * One edition out of everything said about it. A Catalogue Book is what the
@@ -169,8 +171,7 @@ function representative(books: readonly (Book | BookSnapshot)[]): Book | BookSna
 
 /**
  * What a row of the Change edition list shows, as one string: title, authors,
- * language, year, pages, publisher, whether it is an ebook (Apple's), and the
- * cover it draws. Two candidates with the same signature look the same on the
+ * language, year, pages, publisher, its format, and the cover it draws. Two candidates with the same signature look the same on the
  * sheet, so only one of them is worth a row.
  */
 export function editionSignature(book: Book | BookSnapshot): string {
@@ -181,13 +182,13 @@ export function editionSignature(book: Book | BookSnapshot): string {
     book.year ?? '',
     book.pageCount ?? '',
     normalise(book.publisher ?? ''),
-    book.source === 'apple' ? 'ebook' : '',
+    formatOf(book) ?? '',
     // Apple serves one file from several hosts (is1-ssl, is3-ssl, …).
     book.coverUrl?.replace(/^(https:\/\/is)\d(-ssl\.mzstatic\.com)/, '$1$2') ?? (book.coverThumbhash ? `hash:${book.coverThumbhash}` : ''),
   ].join('|')
 }
 
-const RICHNESS = ['isbn13', 'isbn10', 'pageCount', 'year', 'language', 'publisher', 'description', 'coverUrl', 'coverThumbhash', 'openLibraryWorkKey'] as const
+const RICHNESS = ['isbn13', 'isbn10', 'pageCount', 'year', 'language', 'publisher', 'description', 'coverUrl', 'coverThumbhash', 'openLibraryWorkKey', 'format'] as const
 
 /** How much a Book knows about its edition: the number of fields that are filled. */
 function richness(book: Book | BookSnapshot): number {
@@ -198,7 +199,8 @@ function richness(book: Book | BookSnapshot): number {
  * The candidates for an entry's edition change, from each source's answers:
  * the current Book first (marked), then one row per other edition — those
  * with a cover image first (what a member changing edition mostly wants), then
- * those in the current edition's language, then in source order. Candidates
+ * those in the current edition's language (an Apple Book has none: then the
+ * device's, `language`), then in source order. Candidates
  * that would look the same on the sheet (`editionSignature`) are one row, the
  * richest of them, and one that looks like the current edition is no row at
  * all. Manual books (her own, which Catalogue search finds) are never
@@ -208,6 +210,7 @@ function richness(book: Book | BookSnapshot): number {
 export function mergeEditions(
   current: Book,
   answers: Partial<Record<EditionSourceName, readonly (Book | BookSnapshot)[]>>,
+  deviceLanguage: string | null = null,
 ): EditionCandidate[] {
   type Group = { books: (Book | BookSnapshot)[]; keys: Set<string>; rank: number }
   const own: Group = { books: [current], keys: new Set(editionKeys(current)), rank: -1 }
@@ -228,7 +231,7 @@ export function mergeEditions(
     }
   }
 
-  const language = languageCode(current.language)
+  const language = languageCode(current.language) ?? languageCode(deviceLanguage)
   // Rows that look the same are one: the one with most to say, the Catalogue's
   // on a tie, at the earliest rank any of them had.
   const ownSignature = editionSignature(current)
@@ -296,6 +299,51 @@ export function appendEditions(shown: readonly EditionCandidate[], merged: reado
   return [...rows, ...added]
 }
 
+// ------------------------------------------------------------ by its ISBN
+
+/** Where an edition found by its ISBN came from; internal. */
+export type IsbnSourceName = 'catalogue' | 'apple' | 'openlibrary'
+
+/**
+ * What a lookup by ISBN found ("My edition isn't listed"). `edition`: the
+ * edition, null when no source knows the ISBN. `failed`: nothing found and
+ * neither Apple nor OpenLibrary answered, so "not found" cannot be told.
+ */
+export type IsbnOutcome = { edition: Book | BookSnapshot | null; failed: boolean }
+
+/** What OpenLibrary's edition leaves to Apple's for the same ISBN: never its format (Apple's is its ebook). */
+const ISBN_FILLABLE = ['isbn10', 'pageCount', 'year', 'language', 'publisher', 'description', 'coverUrl'] as const
+
+/**
+ * The edition with an ISBN-13, out of every source's answer for it. The
+ * Catalogue's Book wins (it is what the entry will point at; never a Manual
+ * book). Otherwise OpenLibrary's edition leads: it is the record of the printed
+ * edition the ISBN names, with its page count and format, where Apple's lookup
+ * may answer with the ebook of the same book; Apple's fills in what it lacks
+ * (a sharper cover, a description), but not the format. Apple's edition alone
+ * is what it is, an ebook. Without authors of its own the edition takes the
+ * stored Book's (the same book in another edition). Pure; the tests pin it.
+ */
+export function isbnEdition(
+  current: Pick<BookSnapshot, 'authors'>,
+  isbn13: string,
+  answers: Partial<Record<IsbnSourceName, readonly (Book | BookSnapshot)[]>>,
+): Book | BookSnapshot | null {
+  const catalogued = (answers.catalogue ?? []).find(
+    (book): book is Book => 'id' in book && book.source !== 'manual' && book.isbn13 === isbn13,
+  )
+  if (catalogued) return catalogued
+  const apple = answers.apple?.[0]
+  const openLibrary = answers.openlibrary?.[0]
+  const lead = openLibrary ?? apple
+  if (!lead) return null
+  const found: BookSnapshot = { ...lead, isbn13 }
+  if (openLibrary && apple)
+    for (const field of ISBN_FILLABLE) if (found[field] == null && apple[field] != null) (found[field] as unknown) = apple[field]
+  if (!found.authors.length) found.authors = [...current.authors]
+  return found
+}
+
 // -------------------------------------------------------------------- lookup
 
 export type EditionsOptions = {
@@ -310,6 +358,12 @@ export type Editions = {
    * Rejects with an AbortError when `signal` aborts; no update is reported after that.
    */
   find: (book: Book, options?: EditionsOptions) => Promise<EditionsOutcome>
+  /**
+   * The edition with this ISBN-13, asked of every source at once (the own
+   * Catalogue, Apple's lookup, OpenLibrary's edition record): `isbnEdition`.
+   * Rejects with an AbortError when `signal` aborts.
+   */
+  lookupIsbn: (book: Pick<BookSnapshot, 'authors'>, isbn13: string, options?: { signal?: AbortSignal }) => Promise<IsbnOutcome>
 }
 
 export function createEditions(options: {
@@ -357,7 +411,7 @@ export function createEditions(options: {
 
     function outcome(): EditionsOutcome {
       const answered = Object.keys(answers).length + failures.size
-      shown = appendEditions(shown, mergeEditions(book, answers))
+      shown = appendEditions(shown, mergeEditions(book, answers, openLibraryLanguage(options.languages)))
       return {
         candidates: shown,
         pending: answered < names.length,
@@ -379,5 +433,27 @@ export function createEditions(options: {
     return outcome()
   }
 
-  return { find }
+  async function lookupIsbn(
+    book: Pick<BookSnapshot, 'authors'>,
+    isbn13: string,
+    { signal }: { signal?: AbortSignal } = {},
+  ): Promise<IsbnOutcome> {
+    const catalogue = options.catalogue
+    const asked: [IsbnSourceName, Promise<(Book | BookSnapshot)[]>][] = [
+      ...(catalogue ? [['catalogue', catalogue.search(isbn13, signal).then((found) => found.map((hit) => hit.book))] as [IsbnSourceName, Promise<(Book | BookSnapshot)[]>]] : []),
+      ['apple', apple.lookupIsbn(isbn13, signal).then((found) => found.map((hit) => hit.book))],
+      ['openlibrary', openLibrary.lookupIsbnRecord(isbn13, signal).then((book) => (book ? [book] : []))],
+    ]
+    const settled = await Promise.allSettled(asked.map(([, answer]) => answer))
+    if (signal?.aborted) throw abortError()
+    const answers: Partial<Record<IsbnSourceName, (Book | BookSnapshot)[]>> = {}
+    settled.forEach((result, index) => {
+      if (result.status === 'fulfilled') answers[asked[index]![0]] = result.value
+    })
+    const edition = isbnEdition(book, isbn13, answers)
+    // Nothing found while neither Apple nor OpenLibrary answered: whether they know it cannot be told.
+    return { edition, failed: !edition && !answers.apple && !answers.openlibrary }
+  }
+
+  return { find, lookupIsbn }
 }

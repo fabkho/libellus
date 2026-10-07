@@ -95,7 +95,7 @@ function listed(items: readonly Attention[], action: string): ImportNote[] {
       cover: item.edition ? { url: item.edition.coverUrl, thumbhash: item.edition.coverThumbhash, colors: item.edition.coverColors } : null,
       notes: item.notes.map(noteText),
       ...(item.held
-        ? { facts: editionFacts(item.held, { locale: locale.value, pages: (count) => t('book.pages', { count }), ebook: t('book.edition.ebook') }) }
+        ? { facts: editionFacts(item.held, { locale: locale.value, pages: (count) => t('book.pages', { count }), format: (format) => t(`book.formatFact.${format}`) }) }
         : {}),
       ...(item.choose && store.phase === 'preview' ? { action: { label: action, name: t('import.actionFor', { action, title }) } } : {}),
     }
