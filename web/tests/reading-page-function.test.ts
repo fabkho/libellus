@@ -168,10 +168,53 @@ describe('the page behind a link', () => {
     expect(html).not.toContain('og:image')
   })
 
-  it('leaves everything else under /r/ to the static site', async () => {
-    const response = await onRequest(context('/r/not-a-token'))
-    expect(response.status).toBe(200)
-    expect(await response.text()).toBe(SHELL)
+  it('is a 404 for an address under /r/ that is not shaped like a token', async () => {
+    for (const path of ['/r/not-a-token', '/r/doesnotexist123', '/r/', '/r/AAAAAAAAAAAAAAAAAAAAAA/book/nope', '/r/x/y/z']) {
+      const response = await onRequest(context(path))
+      expect(response.status, path).toBe(404)
+      const html = await response.text()
+      // The shell all the same, so the app says there is no such page.
+      expect(html).toContain('<div id="__nuxt">')
+      expect(html).toContain('<title>Not found · Libellus</title>')
+      expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    }
+    // Also where there is no backend: the shape alone says it.
+    const preview = await onRequest(context('/r/doesnotexist123', { env: { NUXT_PUBLIC_SUPABASE_URL: '', NUXT_PUBLIC_SUPABASE_ANON_KEY: '' } }))
+    expect(preview.status).toBe(404)
+    const image = await onRequest(context('/r/doesnotexist123/og.png'))
+    expect(image.status).toBe(404)
+    expect(image.headers.get('content-type')).not.toContain('html')
+  })
+
+  it('is a 404 for a token shaped right that nobody owns, page and card', async () => {
+    const unknown = 'AAAAAAAAAAAAAAAAAAAAAA'
+    const page = await onRequest(context(`/r/${unknown}`))
+    expect(page.status).toBe(404)
+    const card = await onRequest(context(`/r/${unknown}/book/00000000-0000-4000-8000-000000000000`))
+    expect(card.status).toBe(404)
+    expect((await card.text()).includes('og:image')).toBe(false)
+  })
+
+  it('keeps the shell with a 200 when the database cannot be asked, so the app retries', async () => {
+    const { token, bookId } = await sharedPage()
+    const real = globalThis.fetch
+    for (const outage of [
+      () => Promise.resolve(new Response('upstream down', { status: 503 })),
+      () => Promise.resolve(new Response('{"message":"bad gateway"}', { status: 502 })),
+      () => Promise.reject(new TypeError('network down')),
+    ]) {
+      vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+        return url.includes('/rest/v1/rpc/') ? outage() : real(input as RequestInfo, init)
+      })
+      for (const path of [`/r/${token}`, `/r/${token}/book/${bookId}`]) {
+        const response = await onRequest(context(path))
+        expect(response.status, path).toBe(200)
+        const html = await response.text()
+        expect(html).toContain('<title>Libellus</title>')
+        expect(html).not.toContain('og:image')
+      }
+    }
   })
 
   it('serves the shell untouched where there is no backend (a preview deployment)', async () => {

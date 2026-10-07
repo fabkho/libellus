@@ -46,8 +46,11 @@ export async function onRequest(context) {
   const { request, env, next } = context
   const url = new URL(request.url)
   const match = url.pathname.match(ADDRESS)
-  // Anything else under /r/ is not ours: the static answer (the SPA fallback) stands.
-  if (!match) return next()
+  // Anything else under /r/ leads nowhere either: a token is 22 characters, so an address that is
+  // not shaped like one cannot be a page. No database is asked; the answer is the same 404 as for
+  // a link that was renewed (the shell for the app's "no such page" screen, nothing for a picture).
+  // Not a static 200: the SPA fallback would tell a crawler and a link checker that the page exists.
+  if (!match) return await onNoSuchAddress(context, url)
 
   const [, token, book, image] = match
   const supabaseUrl = (env.NUXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '')
@@ -62,6 +65,13 @@ export async function onRequest(context) {
   const shell = await appShell(context)
   const head = data === undefined ? '' : data === null ? notFoundTags() : tagsFor(data, { url, token, book, payload: await version(data) })
   return html(shell, inject(await shell.text(), head, titleFor(data, book)), data === null ? 404 : 200)
+}
+
+/** `/r/<anything that is not a token>`: a 404, with the shell unless a picture was asked for. */
+async function onNoSuchAddress(context, url) {
+  if (/\/og\.png\/?$/i.test(url.pathname)) return new Response('Not found', { status: 404, headers: noIndex() })
+  const shell = await appShell(context)
+  return html(shell, inject(await shell.text(), notFoundTags(), titleFor(null)), 404)
 }
 
 // ------------------------------------------------------------------------------------ the image
@@ -141,8 +151,13 @@ async function readPage(backend, token, book) {
       },
       body: JSON.stringify(args),
     })
+    // Not OK (a 5xx, a rejected key, a gone function): the database could not be asked, which is
+    // not the same as "no such page", so the caller keeps the plain shell and the app retries.
     if (!response.ok) return undefined
-    return (await response.json()) ?? null
+    // An unknown token is a 200 with `null` (the functions return null, they never raise); an
+    // empty body (204) says the same.
+    const body = await response.text()
+    return body.trim() ? ((JSON.parse(body) ?? null)) : null
   } catch {
     return undefined
   }
