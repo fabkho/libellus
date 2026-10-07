@@ -195,15 +195,20 @@ export async function signedInAs(page: Page, email: string) {
 }
 
 /**
- * Waits until nothing on the page is moving: no sheet rising or sliding away,
- * no list opening or closing an item's room (both carry `data-moving` until
- * their transition has ended), and no page still on its way to its scroll
- * place after a navigation (the document carries it until the router has
- * scrolled, app/router.options.ts). Watching an element's box instead is not
- * enough: a slow runner may paint no frame between two looks, and a sheet
- * mid-rise then seems to stand still.
+ * Waits until the page is up and nothing on it is moving. Up first: a document that
+ * is still starting has nothing moving either, and a flow that reads it then reads the
+ * HTML the build serves, not a screen (`#__nuxt` is empty until the app has rendered
+ * its first page; an address opened from such a page is lost — `goto`).
+ *
+ * Then nothing moving: no sheet rising or sliding away, no list opening or closing an
+ * item's room (both carry `data-moving` until their transition has ended), and no page
+ * still on its way to its scroll place after a navigation (the document carries it
+ * until the router has scrolled, app/router.options.ts). Watching an element's box
+ * instead is not enough: a slow runner may paint no frame between two looks, and a
+ * sheet mid-rise then seems to stand still.
  */
 export async function untilStill(page: Page) {
+  await expect(page.locator('#__nuxt > *')).not.toHaveCount(0)
   await expect(page.locator('[data-moving]')).toHaveCount(0)
 }
 
@@ -237,12 +242,22 @@ export async function showTabBar(page: Page) {
 }
 
 /**
- * Opens an address the way a member types it in, once the page she is on has
- * come to rest: nothing moving (`untilStill`) and no sheet's own history entry
- * left on top of the page's (composables/useBackDismiss.ts). A sheet that has
- * just closed steps back off its entry a moment later, and WebKit loses a page
- * load that starts during that step back: `load` never comes, or its driver
- * reports an internal error (collections.spec.ts in CI).
+ * Opens an address the way a member types it in, once the page she is on has come
+ * to rest: the app up and nothing moving (`untilStill`), and no sheet's own history
+ * entry left on top of the page's (composables/useBackDismiss.ts). A sheet that has
+ * just closed steps back off its entry a moment later, and WebKit loses a page load
+ * that starts during that step back: `load` never comes, or its driver reports an
+ * internal error (collections.spec.ts in CI).
+ *
+ * A page that is still fetching its own code loses one the same way, and the two
+ * loads then cancel each other: the load cancels the chunk the app is importing, and
+ * Nuxt cannot tell a cancelled import from a chunk a deploy replaced (app:chunkError
+ * → nuxt:chunk-reload), so it reloads the page it is on while the member is leaving
+ * it — WebKit reports `Frame load interrupted` or an internal error, or `load` never
+ * comes. That is what made import.spec.ts, import-edition.spec.ts, no-side-scroll
+ * and shelf.spec.ts flaky on main (a `page.goto` a moment after the one before it),
+ * and why `untilStill` waits for the app: a load from here is a load from a page
+ * that is done.
  */
 export async function goto(page: Page, url: string) {
   await untilStill(page)

@@ -15,8 +15,17 @@ import { test } from './fixtures'
  * iPhone: docs/TESTING.md.)
  */
 
+/**
+ * Stands the device's insets in, and waits until the app reads them. WebKit takes an
+ * inserted stylesheet into the cascade at its next style update, not with the insertion,
+ * so a box or a token read in the same turn can still be the one before it: on main a
+ * run read the 12 px fade where 59 + 12 was expected, and the same read a moment later
+ * had it. Not a wait for time, but for the value the app reads.
+ */
 async function insets(page: Page, top: number, bottom: number) {
   await page.addStyleTag({ content: `:root { --safe-area-top: ${top}px; --safe-area-bottom: ${bottom}px; }` })
+  await expect.poll(() => token(page, '--safe-area-top')).toBe(top)
+  await expect.poll(() => token(page, '--safe-area-bottom')).toBe(bottom)
 }
 
 const token = (page: Page, name: string) =>

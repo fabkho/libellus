@@ -7,7 +7,7 @@ import { isoDay } from '../app/utils/dates'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { shelfOwner } from './shelfOwner'
-import { expectAccessible, expectNoSideScroll, signedIn, signedInAs, signedInClient } from './support'
+import { expectAccessible, expectNoSideScroll, goto, signedIn, signedInAs, signedInClient } from './support'
 
 /**
  * Your shelf (#23): Regal's 3D shelf of the owner's published library file, for
@@ -595,16 +595,16 @@ anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address'
   await expect(page.getByTestId('home.title')).toBeVisible()
   await page.waitForTimeout(3500)
 
-  await page.goto('/profile')
+  await goto(page, '/profile')
   await expect(page.getByTestId('profile.empty')).toBeVisible()
   await expect(page.getByTestId('profile.shelf')).toHaveCount(0)
 
-  await page.goto('/profile/2025')
+  await goto(page, '/profile/2025')
   await expect(page.getByTestId('yearInReview')).toBeVisible()
   await expect(page.getByTestId('yearInReview.shelf')).toHaveCount(0)
 
   // The address is a page that doesn't exist, like any other unknown one.
-  await page.goto('/profile/shelf')
+  await goto(page, '/profile/shelf')
   await expect(page.getByText('404').first()).toBeVisible()
   await expect(page.getByTestId('shelf')).toHaveCount(0)
 

@@ -52,12 +52,12 @@ test('no main screen is wider than a 360 px phone, and the page keeps still unde
   const shelf = (await collections.create(`A${WORD}Z`)).data!
   await collections.addEntry(shelf.id, { id: reading.book.id })
 
-  await page.goto('/')
+  await goto(page, '/')
   await expect(page.getByTestId('home.title')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Home')
 
-  await page.goto('/library')
+  await goto(page, '/library')
   await expect(page.getByTestId('library.segment.reading')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Library')
@@ -65,15 +65,15 @@ test('no main screen is wider than a 360 px phone, and the page keeps still unde
   await untilStill(page)
   await expectNoSideScroll(page, 'Library, Finished')
 
-  await page.goto('/collections')
+  await goto(page, '/collections')
   await expect(page.getByTestId('collections.list')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Collections')
-  await page.goto(`/collections/${shelf.id}`)
+  await goto(page, `/collections/${shelf.id}`)
   await untilStill(page)
   await expectNoSideScroll(page, 'A collection')
 
-  // At rest first (support.ts, goto): a load that starts while the page is still arriving is lost.
+  // Back to Home through the same helper: an address opened before the page is done is a lost load (support.ts).
   await goto(page, '/')
   await page.getByTestId('shell.tab.search').click()
   await page.getByTestId('search.query').fill('Piranesi')
@@ -82,7 +82,7 @@ test('no main screen is wider than a 360 px phone, and the page keeps still unde
   await expectNoSideScroll(page, 'Search, open')
   await page.keyboard.press('Escape')
 
-  await page.goto(`/book/${reading.book.id}`)
+  await goto(page, `/book/${reading.book.id}`)
   await expect(page.getByTestId('book.title')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Book page')
@@ -90,12 +90,16 @@ test('no main screen is wider than a 360 px phone, and the page keeps still unde
   await untilStill(page)
   await expectNoSideScroll(page, 'Book page, Finish sheet open')
 
+  // The Finish sheet stays open, so `goto` would wait for an entry that is not coming off: a load
+  // replaces the whole document. At rest first all the same (`untilStill`): an address opened
+  // before the app is up is a lost load (support.ts, goto).
+  await untilStill(page)
   await page.goto(`/book/${read.book.id}`)
   await expect(page.getByTestId('book.title')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Book page, finished, with a review')
 
-  await page.goto('/profile')
+  await goto(page, '/profile')
   await expect(page.getByTestId('profile.yearCards')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Profile')
@@ -105,13 +109,13 @@ test('no main screen is wider than a 360 px phone, and the page keeps still unde
   await expectNoSideScroll(page, 'Profile, a sheet open')
   await page.keyboard.press('Escape')
 
-  await page.goto(`/profile/${year}`)
+  await goto(page, `/profile/${year}`)
   await expect(page.getByTestId('yearInReview.months')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Year in review')
 
   // The year cards are wider than the screen and scroll sideways inside themselves; the page stays.
-  await page.goto('/profile')
+  await goto(page, '/profile')
   const cards = page.getByTestId('profile.yearCards').locator('div.overflow-x-auto')
   await expect(cards).toBeVisible()
   await cards.scrollIntoViewIfNeeded()
