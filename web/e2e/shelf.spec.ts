@@ -223,7 +223,7 @@ test.describe('Your shelf, the owner', () => {
     await page.goBack({ waitUntil: 'commit' })
     await expect(row).toHaveAttribute('data-picked', '')
     await expect(page.locator('.row-card__view--out')).toHaveCount(0)
-    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page).toHaveURL(/\/profile\/?$/)
     await expect(page.getByTestId('profile')).toBeVisible()
     expect(await page.getByTestId('shell.tabs').getAttribute('data-away')).toBe(tabBar)
     expect(await moves()).toBe(0)
@@ -299,7 +299,7 @@ test.describe('Your shelf, the owner', () => {
     await takeOut(page, row)
     await page.goBack({ waitUntil: 'commit' })
     await expect(page.locator('.row-card__view--out')).toHaveCount(0)
-    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page).toHaveURL(/\/profile\/?$/)
     await expectNoSideScroll(page, 'Profile, a Book put back with Back')
 
     await page.goto('/profile/2025')
@@ -328,7 +328,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(all).toHaveAttribute('aria-label', plural(en.shelf.card.allLabel, MANY_BOOKS))
 
     await all.click()
-    await expect(page).toHaveURL(/\/profile\/shelf$/)
+    await expect(page).toHaveURL(/\/profile\/shelf\/?$/)
     await expect(page.getByTestId('shelf')).toBeVisible()
     await expect(page.getByTestId('shelf.count')).toHaveText(plural(en.shelf.count, MANY_BOOKS))
     // Regal's Stack has the whole file, and the pile it stood in for (the shelf page's own) has gone.
@@ -338,7 +338,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('shell.tabs')).toHaveAttribute('data-away', 'true')
 
     await page.getByTestId('shelf.back').click()
-    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page).toHaveURL(/\/profile\/?$/)
     await expect(page.getByTestId('shell.tabs')).not.toHaveAttribute('data-away', 'true')
   })
 

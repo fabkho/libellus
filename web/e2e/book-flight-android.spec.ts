@@ -8,14 +8,16 @@ import { test } from './fixtures'
 /**
  * The cover's flight into the book page (docs/MOTION.md, Push to a book) as
  * the member gets it: Chrome on an Android phone, a finger on a Library row,
- * the built app. The flows run on the dev server, which serves the motion
- * tokens as written (`250ms`); the built app's minified stylesheet says
- * `.25s`, and read without its unit that made every flight a quarter of a
- * millisecond long — the book page snapped in. So the tokens are put on the
- * page as the build ships them, and the flying cover is measured frame by
+ * the built app (every flow runs on the build, e2e/serve.mjs). Its minified
+ * stylesheet writes the motion tokens in seconds (`.25s`, not `250ms`); read
+ * without its unit that once made every flight a quarter of a millisecond
+ * long, and the book page snapped in. So the flying cover is measured frame by
  * frame on a throttled CPU. And it flies sharp: the list's image is sized for
  * its row (120 × 180), so the hero's own image takes over in the air and the
  * small one is never shown blown up.
+ *
+ * (Formerly book-flight-built.spec.ts, which put the build's tokens on the dev
+ * server's page; with the flows on the build that is what they get anyway.)
  */
 // What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
 test.use({ reducedMotion: 'no-preference' })
@@ -24,15 +26,21 @@ test.use({ browserName: 'chromium', viewport: { width: 393, height: 852 }, devic
 
 const COVER = 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/t5/flight/cover.jpg/600x900bb.jpg'
 
-/** The motion tokens as the production build writes them: every time in seconds, in its shortest form (`.25s`). */
+/**
+ * The motion tokens as the production build writes them: every time in seconds, in its shortest
+ * form (`.25s`). The build serves them so; on the dev server (LIBELLUS_E2E_DEV=1) they are put on
+ * the page that way.
+ */
 async function asBuilt(page: Page) {
-  const tokens = JSON.parse(readFileSync(new URL('../../design/tokens.json', import.meta.url), 'utf8'))
-  const durations = Object.entries(tokens.duration as Record<string, { $value?: number }>)
-    .filter(([, token]) => typeof token.$value === 'number')
-    .map(([name, token]) => [`--duration-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`, `${token.$value! / 1000}s`.replace(/^0\./, '.')])
-  await page.evaluate((all) => {
-    for (const [name, value] of all) document.documentElement.style.setProperty(name!, value!)
-  }, durations)
+  if (process.env.LIBELLUS_E2E_DEV) {
+    const tokens = JSON.parse(readFileSync(new URL('../../design/tokens.json', import.meta.url), 'utf8'))
+    const durations = Object.entries(tokens.duration as Record<string, { $value?: number }>)
+      .filter(([, token]) => typeof token.$value === 'number')
+      .map(([name, token]) => [`--duration-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`, `${token.$value! / 1000}s`.replace(/^0\./, '.')])
+    await page.evaluate((all) => {
+      for (const [name, value] of all) document.documentElement.style.setProperty(name!, value!)
+    }, durations)
+  }
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--duration-standard').trim())).toBe('.25s')
 }
 

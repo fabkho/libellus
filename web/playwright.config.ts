@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { availableParallelism } from 'node:os'
 import { defineConfig, devices } from '@playwright/test'
-import { stack } from './tests/support/stack'
-import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID } from './e2e/shelfOwner'
+import { appEnv } from './e2e/appEnv'
 
 // Tags every address the flows invent, so the global teardown removes only what
 // this run created (tests/support/stack.ts, runTag). Set before the workers
@@ -28,6 +27,7 @@ const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 // in ci.yml and docs/TESTING.md: every shard boots its own stack), each writing
 // a blob report that the workflow merges into one HTML report when a shard failed.
 const CI = Boolean(process.env.CI)
+const DEV = Boolean(process.env.LIBELLUS_E2E_DEV)
 const CI_WORKERS = Number(process.env.E2E_WORKERS) || (availableParallelism() >= 4 ? 3 : 2)
 
 export default defineConfig({
@@ -56,24 +56,23 @@ export default defineConfig({
     // every flow. A spec about motion or what is drawn on the way opts back in with
     // `test.use({ reducedMotion: 'no-preference' })`.
     reducedMotion: 'reduce',
+    // An installed app's service worker answers from its precache; here every flow talks to the
+    // server, so what it reads is what the build serves. A spec about the worker allows it.
+    serviceWorkers: 'block',
   },
   webServer: {
-    // nuxt itself, not `pnpm dev`: stopping pnpm leaves nuxt running in its own
-    // process group, holding the port, and the run never exits.
-    command: `./node_modules/.bin/nuxt dev --port ${PORT}`,
+    // The app as it ships (docs/HOSTING.md): `nuxt generate` with the flows' configuration
+    // (e2e/build.ts, skipped with LIBELLUS_E2E_PREBUILT=1 when CI built it already), served the
+    // way Cloudflare Pages serves it (e2e/serve.mjs: `_headers`, the SPA fallback, the Pages
+    // Functions). LIBELLUS_E2E_DEV=1 runs the flows on `nuxt dev` instead, to debug one with the
+    // dev server's source maps and reloads; nuxt itself then, not `pnpm dev`: stopping pnpm
+    // leaves nuxt running in its own process group, holding the port, and the run never exits.
+    command: DEV
+      ? `./node_modules/.bin/nuxt dev --port ${PORT}`
+      : `${process.env.LIBELLUS_E2E_PREBUILT ? '' : './node_modules/.bin/tsx e2e/build.ts && '}node e2e/serve.mjs ${PORT}`,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
     url: `http://localhost:${PORT}`,
-    // The app talks to whichever stack this checkout started; the anon key is
-    // asked of `supabase status`, never read from a file.
-    env: {
-      LIBELLUS_E2E: '1',
-      NUXT_PUBLIC_SUPABASE_URL: stack.url,
-      NUXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
-      // Your shelf (#23) is one member's: the flows' owner, made with this id (e2e/shelf.spec.ts).
-      NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
-      // The library file Regal shows, in a build with it (LIBELLUS_REGAL=1): the address e2e/shelf.spec.ts answers.
-      NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
-    },
+    env: appEnv(),
     reuseExistingServer: false,
     timeout: 120_000,
   },

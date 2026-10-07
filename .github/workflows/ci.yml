@@ -224,10 +224,11 @@ jobs:
       - name: Backup round trip (scripts/test-backup-roundtrip.sh)
         run: scripts/test-backup-roundtrip.sh
 
-  # The user flows (web/e2e: Playwright in WebKit at iPhone size), one local
+  # The user flows (web/e2e: Playwright in WebKit at iPhone size) on the static
+  # build, served as Cloudflare Pages serves it (web/e2e/serve.mjs), one local
   # stack per shard (`--shard i/N`, split by test, not by file). Supabase starts
-  # in the background as in `backend`, while pnpm installs and the browsers'
-  # system libraries come in.
+  # in the background as in `backend`, while pnpm installs, the browsers' system
+  # libraries come in and the app is built.
   #
   # Apple and OpenLibrary answer from the recordings (web/e2e/support.ts); the
   # fixture in web/e2e/fixtures.ts fails any test that reaches another host.
@@ -246,6 +247,8 @@ jobs:
         shard: ${{ fromJSON(needs.changes.outputs.shards) }}
     env:
       SUPABASE_CLI: 2.118.0 # pinned like `backend`
+      # Built in its own step above (web/playwright.config.ts would build it otherwise).
+      LIBELLUS_E2E_PREBUILT: '1'
     steps:
       - uses: actions/checkout@v7
 
@@ -295,6 +298,14 @@ jobs:
           else
             pnpm exec playwright install --with-deps webkit chromium
           fi
+
+      # The app the flows run on, as it ships: `nuxt generate` with the flows'
+      # configuration (web/e2e/build.ts), while the stack is still starting. It
+      # needs nothing of the stack: web/e2e/serve.mjs puts its address and key
+      # into the pages it serves.
+      - name: Build the app for the flows
+        working-directory: web
+        run: pnpm e2e:build
 
       - name: Wait for Supabase
         timeout-minutes: 8

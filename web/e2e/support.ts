@@ -219,7 +219,8 @@ export async function untilStill(page: Page) {
  */
 export async function openProfile(page: Page) {
   await page.getByTestId('shell.avatar').click()
-  await expect(page).toHaveURL(/\/profile$/)
+  // A tap before the app took the page over is a plain link: Pages answers it with the slash.
+  await expect(page).toHaveURL(/\/profile\/?$/)
   await expect(page.getByTestId('profile.library')).toBeVisible()
   await untilStill(page)
 }

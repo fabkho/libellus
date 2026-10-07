@@ -87,7 +87,8 @@ export default defineNuxtPlugin({
     // What waited from before (the reload after a missing chunk, a start offline).
     nuxtApp.hook('app:mounted', flush)
 
-    if (import.meta.dev) {
+    // The dev server's triggers, and the Playwright flows' build's (e2e/error-log.spec.ts).
+    if (import.meta.dev || __LIBELLUS_E2E__) {
       const trigger = (kind: ErrorKind): string => {
         const tag = `Dev trigger: ${kind} ${Math.random().toString(36).slice(2, 8)}`
         if (kind === 'error') {

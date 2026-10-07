@@ -66,7 +66,7 @@ test('the owner sees an error on purpose in the log: grouped, filtered, its stac
   await expect(page.getByTestId('profile.errorsNew')).toBeVisible()
   expect(Number(await page.getByTestId('profile.errorsNew').textContent())).toBeGreaterThanOrEqual(2)
   await page.getByTestId('profile.errors').click()
-  await expect(page).toHaveURL(/\/profile\/errors$/)
+  await expect(page).toHaveURL(/\/profile\/errors\/?$/)
   await expect(page.getByTestId('errors.title')).toHaveText(en.ownerErrors.title)
 
   const group = (message: string) => page.getByTestId('errors.group').filter({ hasText: message })
@@ -88,7 +88,8 @@ test('the owner sees an error on purpose in the log: grouped, filtered, its stac
   await group(boom).click()
   await expect(page.getByTestId('errorDetail.sheetTitle')).toHaveText(en.ownerErrors.kind.error)
   await expect(page.getByTestId('errorDetail.message')).toHaveText(boom)
-  await expect(page.getByTestId('errorDetail.stack')).toContainText('error-log.client.ts')
+  // Where it was thrown: the source file on the dev server, the built chunk in a build.
+  await expect(page.getByTestId('errorDetail.stack')).toContainText(/error-log\.client\.ts|\/_nuxt\/[\w-]+\.js/)
   await expect(page.getByTestId('errorDetail.members')).toContainText('1')
   await untilStill(page)
   await page.getByTestId('errorDetail.action').click()

@@ -4,7 +4,7 @@ import { createLibrary } from '../app/data/library'
 import type { BookSnapshot } from '../app/data/books'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { expectNoSideScroll, recordedApple, signedIn, untilStill } from './support'
+import { expectNoSideScroll, goto, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * The page never scrolls or bounces sideways (docs/DESIGN.md, The page does not scroll
@@ -73,7 +73,8 @@ test('no main screen is wider than a 360 px phone, and the page keeps still unde
   await untilStill(page)
   await expectNoSideScroll(page, 'A collection')
 
-  await page.goto('/')
+  // At rest first (support.ts, goto): a load that starts while the page is still arriving is lost.
+  await goto(page, '/')
   await page.getByTestId('shell.tab.search').click()
   await page.getByTestId('search.query').fill('Piranesi')
   await expect(page.getByTestId('search.result').first()).toBeVisible()

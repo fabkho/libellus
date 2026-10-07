@@ -8,7 +8,8 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm dev` — http://localhost:3020. Needs `.env` (copy `.env.example`) and `supabase start` in the
   repo root (the libellus stack, ports 553xx).
 - `pnpm test` — Vitest data-layer suite against the local stack. No mocks.
-- `pnpm e2e` — Playwright, iPhone viewport, WebKit, its own server on :4327.
+- `pnpm e2e` — Playwright, iPhone viewport, WebKit, Reduce Motion on, on the static build served
+  like Pages (`e2e/build.ts` + `e2e/serve.mjs`, :4327). `LIBELLUS_E2E_DEV=1` runs it on `nuxt dev`.
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo
   fabkho/regal, is opt-in: `LIBELLUS_REGAL=1` plus `REGAL_LAYER=/path/to/regal-checkout` or

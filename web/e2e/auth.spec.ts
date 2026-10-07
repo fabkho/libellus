@@ -50,14 +50,15 @@ test('a new member signs up with the dev invite, lands on Home and signs out', a
   // At rest first: WebKit loses a reload that starts while the tab's page is still arriving (support.ts, goto).
   await untilStill(page)
   await page.reload()
-  await expect(page).toHaveURL(/\/library$/)
+  // Loaded at its address, Pages answers a folder's page at it with the slash (e2e/serve.mjs).
+  await expect(page).toHaveURL(/\/library\/?$/)
   await expect(page.getByTestId('library.title')).toHaveText(en.library.title)
 
   // Search never navigates: it opens over the page and closes back onto it.
   await page.getByTestId('shell.tab.search').click()
   await expect(page.getByTestId('search.overlay')).toBeVisible()
   await expect(page.getByTestId('search.empty')).toHaveText(en.search.empty)
-  await expect(page).toHaveURL(/\/library$/)
+  await expect(page).toHaveURL(/\/library\/?$/)
   await page.getByTestId('search.cancel').click()
   await expect(page.getByTestId('search.overlay')).toBeHidden()
   await expect(page.getByTestId('library.title')).toBeVisible()
@@ -81,7 +82,8 @@ test('an invite code that does not work is refused under its field', async ({ pa
   await page.getByTestId('signUp.submit').click()
 
   await expect(page.getByTestId('signUp.inviteError')).toHaveText(en.auth.error.invite_invalid)
-  await expect(page).toHaveURL(/\/sign-up$/)
+  // Opened at its address: Pages adds the folder's slash (e2e/serve.mjs).
+  await expect(page).toHaveURL(/\/sign-up\/?$/)
 })
 
 test('a mistyped code is refused and the field is cleared for another go', async ({ page }) => {
@@ -130,6 +132,7 @@ test('the pending address survives the app being relaunched', async ({ page }) =
 })
 
 test('the dev playground is not behind the sign-in while developing', async ({ page }) => {
+  test.skip(!process.env.LIBELLUS_E2E_DEV, 'The playground is the dev server\'s (LIBELLUS_E2E_DEV=1); a build has none.')
   // A design playground lives under /prototype on its own branch and is stripped
   // from production builds; the guard lets it through in dev only. There is no
   // such page on this branch, so what counts is that we are not sent to sign-in.

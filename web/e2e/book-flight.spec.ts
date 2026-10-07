@@ -14,7 +14,7 @@ import { test } from './fixtures'
  * (#61) is checked frame by frame: the new page is never drawn bare before
  * the flight, the list's small image is never shown blown up, and a cover
  * that lands before the book page's image lands on its colour, where that
- * image then fades in (e2e/book-flight-built.spec.ts has the sharp case).
+ * image then fades in (e2e/book-flight-android.spec.ts has the sharp case).
  */
 // What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
 test.use({ reducedMotion: 'no-preference' })
