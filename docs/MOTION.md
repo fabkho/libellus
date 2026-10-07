@@ -75,6 +75,10 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   `utils/viewTransition.ts`): the same pixels, run by the compositor. The loading wave holds still
   until it has landed, and the reading record that comes in meanwhile is applied after it
   (`afterTransition`), so the page is not set up again under the moving ring.
+  The named element (`data-profile-avatar`) is the whole avatar, the ring, the shadow, the photo and
+  the initials: in the hero it is the button that draws the ring, not the disc inside it, so the
+  ring flies with the photo instead of standing at its place from the first frame
+  (`e2e/avatar-flight.spec.ts`).
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
