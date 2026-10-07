@@ -179,6 +179,9 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
 
         <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
 
+        <!-- Share (#171): her public reading page, off until she turns it on. -->
+        <ProfileSharing class="mb-xl" />
+
         <ProfileAccount @photo="photo?.start()" />
       </div>
     </Transition>

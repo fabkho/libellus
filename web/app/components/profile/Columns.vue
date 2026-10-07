@@ -22,8 +22,10 @@ const props = withDefaults(
     testid: string
     /** How many bars the loading wave has: the guess at how many columns will come. */
     placeholders?: number
+    /** Only the chart, nothing to open (a reading page, #171): each column a labelled figure, not a button. */
+    still?: boolean
   }>(),
-  { lit: null, placeholders: 12 },
+  { lit: null, placeholders: 12, still: false },
 )
 defineEmits<{ pick: [key: number] }>()
 const { t } = useI18n()
@@ -71,15 +73,17 @@ watch(
       </span>
     </template>
     <template v-else>
-      <button
+      <component
+        :is="still ? 'div' : 'button'"
         v-for="column in columns"
         :key="column.key"
-        type="button"
+        :type="still ? undefined : 'button'"
+        :role="still ? 'img' : undefined"
         class="column flex min-w-0 flex-1 flex-col items-center gap-xs rounded-sm py-xxs"
-        :disabled="!column.count"
+        :disabled="still ? undefined : !column.count"
         :aria-label="t('profile.columnLabel', { label: column.name, count: count(column.count) })"
         :data-testid="`${testid}.${column.key}`"
-        @click="$emit('pick', column.key)"
+        @click="!still && $emit('pick', column.key)"
       >
         <!-- A fixed track: the count rides on top of its bar inside it. -->
         <span class="track flex w-full flex-col items-center justify-end gap-xs">
@@ -87,7 +91,7 @@ watch(
           <span class="bar" :class="{ lit: column.key === lit, none: !column.count }" :style="{ '--h': column.count / top }" />
         </span>
         <span class="figures text-meta" :class="[column.key === lit ? 'text-accent-ink' : 'text-ink-faint', { arrive: arriving }]" aria-hidden="true">{{ column.label }}</span>
-      </button>
+      </component>
     </template>
   </div>
 </template>

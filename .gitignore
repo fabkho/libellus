@@ -19,6 +19,8 @@ web/.output/
 web/dist
 web/test-results/
 web/playwright-report/
+# `npx wrangler pages dev dist` keeps its local state here (docs/HOSTING.md).
+web/.wrangler/
 web/blob-report/
 web/all-blob-reports/
 

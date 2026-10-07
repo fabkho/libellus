@@ -142,6 +142,18 @@ supabase secrets set LIBELLUS_SITE_URL=https://<your address>    # optional: nam
 Without it the line simply never shows. Deploy functions by name: `supabase functions deploy` alone
 would also deploy `regal-export`, which only the owner's instance uses.
 
+**Link previews of a shared reading page.** A member can turn on a public reading page and hand out
+its link (#171). The page and its Book cards work without anything extra; what the `reading-page-og`
+edge function adds is the picture a chat app shows beside the link
+(`supabase/functions/reading-page-og/README.md`):
+
+```sh
+supabase functions deploy reading-page-og                         # verify_jwt = false, fonts bundled: both from supabase/config.toml
+```
+
+No secrets: the runtime provides `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Without it the preview
+falls back to the Book's cover or the app icon.
+
 **Book links for everyone.** Each member keeps her own Book links in the Profile (stored in the
 database, private to her). An instance can add links every member sees first, built into the app:
 
@@ -264,7 +276,8 @@ Pull the new commits into your fork. Then, in this order:
 
 1. `supabase db push`: new migrations first. They only ever add (new tables, columns, functions)
    or change functions, so the running app keeps working with the new schema.
-2. `supabase functions deploy goodreads-rating`, when `supabase/functions/goodreads-rating/` changed.
+2. `supabase functions deploy goodreads-rating`, when `supabase/functions/goodreads-rating/` changed;
+   `supabase functions deploy reading-page-og` for `supabase/functions/reading-page-og/`.
 3. Push to your production branch: Pages builds and deploys the app. Installed apps pick up the new
    version on their next start (the service worker updates itself).
 

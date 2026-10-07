@@ -27,15 +27,69 @@ A deploy is atomic and a rollback is one click (Workers & Pages → libellus →
 ⋯ → Rollback). The same commit can be built again with "Retry deployment", which is also how
 a change to the project's settings (below) reaches the live site without a commit.
 
-## The one Pages Function
+## The two Pages Functions
 
-`web/functions/share.js` (Pages builds `functions/` beside the output by itself; no setting): a share
-to the installed app is a `POST /share` (the manifest's share target, #91 and #131) that the service
-worker answers on the device. Only when it reaches Pages instead (the very first share right after
-installing, before the service worker took over) does the function answer: a 303 to
-`/share?title=&text=&url=`, plus `ebooks=missed` when files were shared, so the app asks for the
-share again. It keeps nothing; a `GET /share` is not handled by it and gets the static page. Every
-other address is static, and only `/share` invokes the function.
+Pages builds `web/functions/` beside the output by itself (no setting), and generates the
+`_routes.json` that decides which addresses invoke a Function from the files it finds there: with
+the two below, `include` is `["/share", "/r/*"]` and everything else stays a free static request.
+Nitro's `cloudflare-pages-static` preset writes no `_routes.json` of its own, so nothing overrides
+that (checked with `npx wrangler pages functions build --output-routes-path`).
+
+**`web/functions/share.js`** — a share to the installed app is a `POST /share` (the manifest's share
+target, #91 and #131) that the service worker answers on the device. Only when it reaches Pages
+instead (the very first share right after installing, before the service worker took over) does the
+function answer: a 303 to `/share?title=&text=&url=`, plus `ebooks=missed` when files were shared,
+so the app asks for the share again. It keeps nothing; a `GET /share` is not handled by it and gets
+the static page.
+
+**`web/functions/r/[[path]].js`** — the link previews of a shared reading page (#171). The app
+renders `/r/<token>` and `/r/<token>/book/<id>` in the browser, which is enough for a visitor but
+not for the crawlers that make a preview of a pasted link (WhatsApp, Signal, iMessage, Mastodon,
+Slack): they read the HTML and run no JavaScript. So the function answers those two addresses with
+the same app shell (`ASSETS.fetch('/')`) and writes into its `<head>`, by string replacement: the
+title, `og:title`, `og:description` (what she is reading, her year, her Rating, an excerpt of a
+review she shared), `og:url`, `og:image` and its size, `twitter:card`, and `noindex, nofollow`.
+
+- It reads what it says from the two public database functions `public_reading_page` and
+  `public_book_card` with the **anon key** — exactly what the app reads — out of
+  `NUXT_PUBLIC_SUPABASE_URL` and `NUXT_PUBLIC_SUPABASE_ANON_KEY` (production only; a preview
+  deployment has neither, so the shell goes out untouched). `null` from the database (the page is
+  off, the link was renewed, the Book is not published) is a **404**, with the shell all the same,
+  so the app shows its own "no such page" screen.
+- `/r/<token>/og.png` and `/r/<token>/book/<id>/og.png` are the picture. The token is checked
+  against the database first, so a renewed link stops serving its image at once; then the image
+  comes from the `reading-page-og` edge function (below) and is kept in `caches.default` under an
+  address that carries a short hash of the published data (`?v=…`), so a changed page gets a new
+  one. A day of `max-age`, `immutable`. While the renderer is not deployed or fails, the preview
+  falls back to the Book's own cover (a card) or `/icon-512.png`.
+- Headers: `X-Robots-Tag: noindex, nofollow` — a link she hands out is never a search result — and
+  `Cache-Control: no-store` on the HTML: it is one member's page, and she can switch it off between
+  two views of the same address, so neither a CDN nor the service worker may keep it.
+- `web/public/_headers` does **not** reach a Function's response in production (Cloudflare's
+  documentation says so for every rule in the file, and `ASSETS.fetch` hands back the asset without
+  them too); `npx wrangler pages dev` does apply them locally, which hides it. The function
+  therefore sets the headers of the `/*` rule itself (the Content-Security-Policy-Report-Only
+  included) where the shell's response does not already carry them (`SITE_HEADERS` in the file;
+  keep it in step with `_headers`).
+- Web Analytics: Pages adds its beacon to the Function's HTML as to any other page (checked on
+  the pull request's preview, `curl -s <deployment>/r/<token> | grep cloudflareinsights`), so a
+  visit to a reading page is counted like any page load, without cookies.
+
+Everything else stays static, and only `/share` and `/r/*` invoke a Function.
+
+## The reading page's Open Graph image
+
+`supabase/functions/reading-page-og/` (its README has the details) draws the 1200×630 PNG behind
+`…/og.png`: satori lays the image out, resvg rasterises it, the fonts are latin subsets bundled
+with the function, and the covers are fetched with a short timeout. It asks the same two public
+database functions with the anon key and answers 404 for a token that leads nowhere.
+
+It is a Supabase edge function and not the Pages Function in front of it because a render costs
+about a hundred milliseconds of CPU: Pages Functions on the Workers free plan get roughly ten
+milliseconds per request, while a Supabase edge function may take two seconds. The stack already
+runs Deno edge functions with their Deno tests in CI, and with the image cached at the edge for a
+day the render happens once per link and version. It is deployed by hand like the others:
+`supabase functions deploy reading-page-og` (docs/OPERATIONS.md, docs/SELF_HOSTING.md).
 
 ## Addresses
 
@@ -71,10 +125,14 @@ reloads on the next navigation, and the error log files it as kind `chunk`
 (`app/plugins/error-log.client.ts`; `isChunkError` knows Safari's and Firefox's MIME-type
 wording too, for a host that answers a gone chunk with the shell).
 
+`/r/<token>` is the one address that answers 404 on purpose while still sending the shell: the
+Function above says so when the link leads nowhere, and the app shows its not-found screen.
+
 After a change here, check a deployment (preview or production) with
 `curl -s -o /dev/null -w '%{http_code}\n'` on `/book/x` (200), `/nope` (200),
 `/_nuxt/missing.js` (404) and `/sw.js` (200), or locally `pnpm build` with
-`NITRO_PRESET=cloudflare-pages-static`, then `npx wrangler pages dev dist`.
+`NITRO_PRESET=cloudflare-pages-static`, then `npx wrangler pages dev dist`. With the reading page's
+Function, also `/r/<22 characters nobody owns>` (404) and `/r/nonsense` (200, static).
 
 ## Response headers
 
@@ -90,6 +148,11 @@ On top of Pages' defaults (`X-Content-Type-Options: nosniff`,
   `connect-src` first. To enforce it, rename the header once a while of real use reports
   nothing.
 - `Cache-Control: no-cache` on `sw.js`, `sw-sync.js` and `manifest.webmanifest`.
+
+These rules reach **static answers only**: a Pages Function's response goes out as the Function
+wrote it, so `web/functions/r/[[path]].js` sets them itself (above). `npx wrangler pages dev` does
+apply `_headers` to a Function's response, so the gap only shows in production — a header added to
+the `/*` rule has to be added to the Function too.
 
 To check a change before it ships, build with `CF_PAGES=1 pnpm generate` (writes `dist/` with the
 merged `_headers`) and serve it with `npx wrangler pages dev dist`, which applies `_headers` the

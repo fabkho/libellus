@@ -872,7 +872,8 @@
     "remove": "Remove from Library",
     "addEbook": "Add ebook",
     "replaceEbook": "Replace ebook file",
-    "unlinkEbook": "Unlink ebook"
+    "unlinkEbook": "Unlink ebook",
+    "share": "Share"
   },
   "removeEntry": {
     "title": "Remove “{title}” from your Library?",
@@ -1318,5 +1319,94 @@
     "audiobook": "Audiobook",
     "offline": "Offline",
     "fromEdition": "From the edition"
+  },
+  "sharing": {
+    "title": "Share",
+    "row": "Reading page",
+    "rowOn": "On",
+    "rowOff": "Off",
+    "switch": "Reading page",
+    "about": "A page of what you read, for friends: anyone with its link can open it, without signing in. Nobody finds it without the link.",
+    "never": "Never on it: your email address, notes, highlights, or a review you didn’t share.",
+    "link": "Your link",
+    "share": "Share link",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "open": "Open page",
+    "renew": "New link",
+    "renewConfirm": {
+      "title": "Make a new link?",
+      "text": "Your current link stops working at once. Anyone who should still see your page needs the new one.",
+      "action": "New link"
+    },
+    "sections": {
+      "title": "On the page",
+      "reading": "Currently reading",
+      "year": "This year",
+      "favourites": "Favourites",
+      "finished": "Recently finished",
+      "shelf": "Your shelf"
+    },
+    "reviews": "A review shows only where you chose it: Share on the book’s page, then Include my review.",
+    "loadError": "Your sharing settings could not be loaded.",
+    "retry": "Try again",
+    "error": {
+      "offline": "You’re offline. Try again once you’re back.",
+      "reading_page_off": "Your reading page is off.",
+      "entry_not_found": "This book isn’t in your Library.",
+      "reading_page_sections_invalid": "That didn’t work. Try again.",
+      "not_signed_in": "You’re signed out. Sign in and try again.",
+      "unknown": "That didn’t work. Try again."
+    },
+    "book": {
+      "title": "Share book",
+      "off": "A shared book lives under your reading page’s link, and your reading page is off.",
+      "turnOn": "Turn on reading page",
+      "review": "Include my review",
+      "reviewNote": "Your review shows on the card and on your reading page.",
+      "share": "Share",
+      "copy": "Copy link",
+      "copied": "Link copied"
+    }
+  },
+  "readingPage": {
+    "title": "{name}’s reading",
+    "titleNone": "A reading page",
+    "reading": "Currently reading",
+    "year": "{year} so far",
+    "favourites": "Favourites",
+    "finished": "Recently finished",
+    "shelf": "{name}’s shelf",
+    "shelfNone": "The shelf",
+    "shelfRowLabel": "{name}’s shelf, the newest books",
+    "shelfRowLabelNone": "The shelf, the newest books",
+    "nothing": "Nothing to show here yet.",
+    "loading": "Opening the page",
+    "missing": {
+      "title": "This page isn’t here",
+      "text": "The link may be an old one. Ask whoever sent it for a new one."
+    },
+    "offline": "You’re offline. The page shows once you’re back.",
+    "error": "The page could not be loaded.",
+    "retry": "Try again",
+    "footer": {
+      "tagline": "Libellus — track what you read",
+      "invite": "Ask for an invite",
+      "inviteText": "Libellus is invite-only. Ask {name} for an invite code, then sign up with it.",
+      "inviteTextNone": "Libellus is invite-only. Ask whoever sent you this link for an invite code, then sign up with it.",
+      "signUp": "Sign up with a code"
+    },
+    "card": {
+      "back": "{name}’s reading",
+      "backNone": "The whole page",
+      "reading": "Reading now",
+      "want": "Wants to read",
+      "finished": "Finished {date}",
+      "finishedUndated": "Finished",
+      "rating": "{name}’s rating",
+      "ratingNone": "Rating",
+      "review": "{name}’s review",
+      "reviewNone": "Review"
+    }
   }
 }

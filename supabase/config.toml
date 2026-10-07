@@ -402,6 +402,16 @@ verify_jwt = false
 [functions.regal-export]
 verify_jwt = false
 
+# The link-preview image of a reading page (issue #171). Its caller is a crawler
+# that has no key at all (WhatsApp, Signal, Mastodon, by way of the Pages Function
+# web/functions/r/[[path]].js): the token in the address is what opens a page, and
+# the public database functions decide whether it still does. The fonts are read
+# off the disk at runtime, so they have to travel with the deployed bundle:
+# supabase/functions/reading-page-og/README.md.
+[functions.reading-page-og]
+verify_jwt = false
+static_files = ["./functions/reading-page-og/fonts/*.ttf"]
+
 [analytics]
 # Off, as in Trappist: nothing reads the local logs, and it is one container less.
 enabled = false

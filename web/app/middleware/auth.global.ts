@@ -1,5 +1,6 @@
 import { useSessionStore } from '~/stores/session'
 import { keepShare, peekShare } from '~/utils/pendingShare'
+import { isPublicPath } from '~/utils/publicPath'
 
 /** The only screens a signed-out member may see. */
 const AUTH_ROUTES = ['/sign-in', '/sign-up', '/verify']
@@ -16,6 +17,8 @@ export default defineNuxtRouteMiddleware((to) => {
   // Cloudflare Pages serves each generated route as a folder and redirects `/sign-up` to
   // `/sign-up/`, so a page opened at its address arrives with the slash: compare without it.
   const path = to.path.length > 1 ? to.path.replace(/\/+$/, '') : to.path
+  // A member's reading page and its Book cards (#171) are for anyone with the link, signed in or not.
+  if (isPublicPath(path)) return
 
   const session = useSessionStore()
   const isAuthRoute = AUTH_ROUTES.includes(path)
