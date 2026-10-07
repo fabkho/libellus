@@ -3,6 +3,7 @@ import type { BookSnapshot } from '@/data/books'
 import { createLibrary } from '@/data/library'
 import { bookCardPath, createReadingPages, readingPagePath, READING_PAGE_TOKEN } from '@/data/readingPage'
 import { isoDay } from '@/utils/dates'
+import { copyLink, shareLink } from '@/utils/shareLink'
 import { signUpMember } from './support/member'
 import { newClient, runTitle, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
@@ -124,5 +125,26 @@ describe('a Book card', () => {
     const offline = createReadingPages(member.client, { online: () => false })
     expect((await offline.setOn(true)).error).toBe('offline')
     expect((await offline.shareBook(wanted.book.id, true)).error).toBe('offline')
+  })
+})
+
+describe('handing a link over', () => {
+  const link = { url: 'https://libellus.example/r/AAAAAAAAAAAAAAAAAAAAAA', title: 'A page' }
+
+  it('opens the share sheet where there is one', async () => {
+    const shared: unknown[] = []
+    expect(await shareLink(link, { share: async (data) => void shared.push(data) })).toBe('shared')
+    expect(shared).toEqual([link])
+  })
+
+  it('is nothing more when the sheet is dismissed, and the clipboard when it cannot open', async () => {
+    const copied: string[] = []
+    const clipboard = { writeText: async (text: string) => void copied.push(text) }
+    const abort = Object.assign(new Error('dismissed'), { name: 'AbortError' })
+    expect(await shareLink(link, { share: () => Promise.reject(abort), clipboard })).toBe('cancelled')
+    expect(await shareLink(link, { share: () => Promise.reject(new Error('NotAllowedError')), clipboard })).toBe('copied')
+    expect(await shareLink(link, { clipboard })).toBe('copied')
+    expect(copied).toEqual([link.url, link.url])
+    expect(await copyLink(link.url, {})).toBe('failed')
   })
 })
