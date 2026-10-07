@@ -59,16 +59,21 @@ const THIS_YEAR = (() => {
 })()
 
 /** The published library file, answered from the fixture (or `body`, or with `status`), as R2 answers it: with CORS. */
+const answering = new WeakMap<Page, Parameters<Page['route']>[1]>()
 async function libraryFile(page: Page, status = 200, body = FIXTURE) {
-  await page.unroute(LIBRARY_SRC).catch(() => {})
-  await page.route(LIBRARY_SRC, (route) =>
+  const answer: Parameters<Page['route']>[1] = (route) =>
     route.fulfill({
       status,
       contentType: 'application/json',
       headers: { 'access-control-allow-origin': '*' },
       body: status === 200 ? body : 'Not found',
-    }),
-  )
+    })
+  // The new answer first, then the old one off: a request in between is still answered
+  // (the newest route wins), never let through to the live address.
+  await page.route(LIBRARY_SRC, answer)
+  const before = answering.get(page)
+  if (before) await page.unroute(LIBRARY_SRC, before).catch(() => {})
+  answering.set(page, answer)
 }
 
 /** Regal's Stack inside the shelf: how many Books it lays out. */
