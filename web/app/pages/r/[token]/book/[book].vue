@@ -3,7 +3,7 @@
 // with its link, signed in or not. The cover large in its own light, the
 // title and authors, where she is with it (reading now, wants to read,
 // finished on a day), her Rating, and her review when she shared it. Above it
-// a way to her whole page; under it the quiet invite. A dead link, or a Book
+// a way to her whole page; under it the waitlist form. A dead link, or a Book
 // her page neither shows nor shares, is "This page isn't here" (and a 404 from
 // the Pages Function in front, web/functions/r/[[path]].js). Its link preview
 // (the title, her stars, the cover) is the Open Graph image the same Function
@@ -94,7 +94,7 @@ const status = computed(() => {
         </figure>
       </article>
 
-      <ReadingFooter v-if="store.cardState !== 'loading'" :name="name" class="mt-auto" />
+      <ReadingFooter v-if="store.cardState !== 'loading'" :token="token" class="mt-auto" />
     </div>
   </main>
 </template>

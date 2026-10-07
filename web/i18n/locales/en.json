@@ -1398,10 +1398,23 @@
     "retry": "Try again",
     "footer": {
       "tagline": "Libellus — track what you read",
-      "invite": "Ask for an invite",
-      "inviteText": "Libellus is invite-only. Ask {name} for an invite code, then sign up with it.",
-      "inviteTextNone": "Libellus is invite-only. Ask whoever sent you this link for an invite code, then sign up with it.",
-      "signUp": "Sign up with a code"
+      "signUp": "Have an invite code? Sign up"
+    },
+    "waitlist": {
+      "title": "Want in?",
+      "text": "Libellus is invite-only for now. Leave your email and we’ll send you an invite when there’s room.",
+      "email": "Your email",
+      "placeholder": "you{'@'}example.com",
+      "honeypot": "Leave this field empty",
+      "join": "Join the waitlist",
+      "joining": "Joining…",
+      "retry": "Try again",
+      "consent": "We’ll only use it to send you an invite; ask us to delete it any time.",
+      "invalid": "That doesn’t look like an email address.",
+      "rateLimited": "Too many tries just now. Please try again in a while.",
+      "error": "You could not be added. Try again.",
+      "doneTitle": "You’re on the list",
+      "doneText": "We’ll send an invite to your email when there’s room."
     },
     "card": {
       "back": "{name}’s reading",

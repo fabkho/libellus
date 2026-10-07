@@ -7,7 +7,7 @@ import { createLibrary } from '../app/data/library'
 import { createReadingPages } from '../app/data/readingPage'
 import { isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
-import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { resetWaitlistLimits, runTitle, sql, TEST_PUBLISHER, uniqueAppleId, uniqueEmail } from '../tests/support/stack'
 import { test } from './fixtures'
 import { SHELF_LIBRARY_SRC, shelfOwner } from './shelfOwner'
 import { expectAccessible, expectNoSideScroll, signedIn, untilStill } from './support'
@@ -72,7 +72,7 @@ async function expectAccessibleBoth(page: Page, where: string) {
 }
 
 test.describe('a reading page, signed out', () => {
-  test('shows what she turned on, opens a Book card, and asks her for an invite', async ({ page }) => {
+  test('shows what she turned on and opens a Book card', async ({ page }) => {
     const { token, reading, loved, fine } = await adaWithAPage()
     await page.goto(`/r/${token}`)
 
@@ -92,10 +92,9 @@ test.describe('a reading page, signed out', () => {
     await expectNoSideScroll(page, 'reading page')
     await expectAccessibleBoth(page, 'reading page')
 
-    // The footer: no form, no address; how to get in.
-    await expect(page.getByTestId('readingPage.inviteText')).toBeHidden()
-    await page.getByTestId('readingPage.invite').click()
-    await expect(page.getByTestId('readingPage.inviteText')).toContainText(fill(en.readingPage.footer.inviteText, { name: 'Ada' }))
+    // The footer: the waitlist form, and a way in for whoever has a code.
+    await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
+    await expect(page.getByTestId('readingPage.signUp')).toHaveText(en.readingPage.footer.signUp)
 
     await page.getByTestId('readingPage.finishedBook').filter({ hasText: loved.book.title }).click()
     await expect(page).toHaveURL(new RegExp(`/r/${token}/book/${loved.book.id}$`))
@@ -156,6 +155,78 @@ test.describe('a reading page, signed out', () => {
         expect(box.right).toBe(width)
       }
     }
+  })
+})
+
+test.describe('the waitlist on a reading page, signed out', () => {
+  test.beforeEach(resetWaitlistLimits)
+
+  test('takes an address, thanks the same for it again, refuses what is not one, and keeps no account', async ({ page }) => {
+    const { token, loved } = await adaWithAPage()
+    const address = uniqueEmail('wl-flow')
+    await page.goto(`/r/${token}`)
+    const form = page.getByTestId('readingPage.waitlistForm')
+    await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
+    await expect(page.getByTestId('readingPage.waitlistConsent')).toHaveText(en.readingPage.waitlist.consent)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toHaveText(en.readingPage.waitlist.join)
+    // The honeypot is out of reach for a person.
+    await expect(page.getByTestId('readingPage.waitlistWebsite')).toHaveAttribute('tabindex', '-1')
+
+    // Not an address: said under the field, nothing is sent.
+    await page.getByTestId('readingPage.waitlistEmail').fill('not-an-address')
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistInvalid')).toHaveText(en.readingPage.waitlist.invalid)
+    await expect(page.getByTestId('readingPage.waitlistEmail')).toHaveAttribute('aria-invalid', 'true')
+    expect(await sql('select 1 from private.waitlist where email::text like $1', ['%not-an-address%'])).toHaveLength(0)
+    await expectAccessibleBoth(page, 'waitlist form with an error')
+
+    // An address: "You're on the list", and the form is gone.
+    await page.getByTestId('readingPage.waitlistEmail').fill(` ${address.toUpperCase()} `)
+    await page.getByTestId('readingPage.waitlistEmail').press('Enter')
+    await expect(page.getByTestId('readingPage.waitlistDone')).toContainText(en.readingPage.waitlist.doneTitle)
+    await expect(form).toHaveCount(0)
+    await expectAccessibleBoth(page, 'waitlist, joined')
+    const rows = await sql<{ source: string; consent_text_version: string; invited_at: string | null; member: string | null }>(
+      'select source, consent_text_version, invited_at, source_member_id::text as member from private.waitlist where email::text = $1',
+      [address],
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ source: 'reading_page', invited_at: null })
+    expect(rows[0]!.member).not.toBeNull()
+    // No account was made.
+    expect(await sql('select 1 from auth.users where email = $1', [address])).toHaveLength(0)
+
+    // The same address again, from the Book card's footer: the same thanks, still one entry.
+    await page.goto(`/r/${token}/book/${loved.book.id}`)
+    await page.getByTestId('readingPage.waitlistEmail').fill(address)
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistDone')).toContainText(en.readingPage.waitlist.doneTitle)
+    expect(await sql('select 1 from private.waitlist where email::text = $1', [address])).toHaveLength(1)
+    // Signed out, nothing sent her to sign in.
+    await expect(page).toHaveURL(new RegExp(`/r/${token}/book/`))
+  })
+
+  test('says it when the database refuses (too many tries) and when the device is offline', async ({ page, context }) => {
+    const { token } = await adaWithAPage()
+    await page.goto(`/r/${token}`)
+
+    // Everybody together may leave 100 in the hour (and one device 5): the 100 are made.
+    await sql('insert into private.waitlist_joins (caller_key) select $1 || g from generate_series(1, 100) g', ['crowd-'])
+    await page.getByTestId('readingPage.waitlistEmail').fill(uniqueEmail('wl-limit'))
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistError')).toHaveText(en.readingPage.waitlist.rateLimited)
+    await expectAccessibleBoth(page, 'waitlist form, refused')
+    await resetWaitlistLimits()
+
+    // Offline: the button says so and nothing is sent.
+    await context.setOffline(true)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toContainText(en.common.offline)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toBeDisabled()
+    await context.setOffline(false)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toHaveText(en.readingPage.waitlist.join)
+    await page.getByTestId('readingPage.waitlistEmail').fill(uniqueEmail('wl-back'))
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistDone')).toBeVisible()
   })
 })
 
