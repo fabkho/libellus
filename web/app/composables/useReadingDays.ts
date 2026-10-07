@@ -15,6 +15,7 @@ import {
 } from '~/data/progressDays'
 import { useProgressDaysStore } from '~/stores/progressDays'
 import { daysBetween, isoDay, parseDay } from '~/utils/dates'
+import { dateFormat } from '~/utils/intl'
 
 /**
  * A read's progress by day for a screen (issue #68): asks for the days of the
@@ -78,7 +79,7 @@ export function useReadingDays(entry: () => LibraryEntry | null) {
     const ago = daysBetween(day, today())
     if (ago === 0) return t('book.progress.dayToday')
     if (ago === 1) return t('book.progress.dayYesterday')
-    if (ago > 1 && ago < 7) return new Intl.DateTimeFormat(locale.value, { weekday: 'short' }).format(parseDay(day))
+    if (ago > 1 && ago < 7) return dateFormat(locale.value, { weekday: 'short' }).format(parseDay(day))
     return formatDay(day)
   }
   /** "24 pages", "5 %". */
