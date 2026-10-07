@@ -97,6 +97,8 @@ export function uniqueAppleId(): string {
 export async function sweepRun() {
   await removePhotosOf(`u.email like $1`, [runEmailPattern()])
   await sql('delete from auth.users where email like $1', [runEmailPattern()])
+  // Addresses the flows left on the waitlist (#171), and the limits they counted against.
+  await sql('delete from private.waitlist where email::text like $1', [runEmailPattern()])
   await sql(
     `delete from public.books b where b.publisher = $1 and b.title like $2
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
@@ -121,6 +123,12 @@ async function removePhotosOf(where: string, params: unknown[]) {
   await admin.storage.from('avatars').remove(files.map((f) => f.name))
 }
 
+/**
+ * Forgets what the waitlist's limits counted (#171: 5 new entries an hour per caller, and every test and flow
+ * here calls from the same address), so a flow starts with its full allowance.
+ */
+export const resetWaitlistLimits = () => sql('delete from private.waitlist_joins')
+
 /** What a crashed run left behind, once it is a day old (no run still going is). */
 export async function sweepAbandonedRuns() {
   await removePhotosOf(`u.email like $1 and u.created_at < now() - interval '1 day'`, [`%@${TEST_DOMAIN}`])
@@ -128,6 +136,7 @@ export async function sweepAbandonedRuns() {
     `delete from auth.users where email like $1 and created_at < now() - interval '1 day'`,
     [`%@${TEST_DOMAIN}`],
   )
+  await sql(`delete from private.waitlist where email::text like $1 and created_at < now() - interval '1 day'`, [`%@${TEST_DOMAIN}`])
   await sql(
     `delete from public.books b where b.publisher = $1 and b.created_at < now() - interval '1 day'
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
