@@ -16,6 +16,7 @@ import {
   type LibraryErrorCode,
 } from '~/data/library'
 import { applyWrites } from '~/data/queuedWrites'
+import type { ReadAs } from '~/data/readAs'
 import { isoDay } from '~/utils/dates'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -231,6 +232,25 @@ export const useLibraryStore = defineStore('library', () => {
     if (readInYear.value !== null) void loadReadInYear()
   }
 
+  // ---------------------------------------------------------------- Read as
+
+  /**
+   * Says how the member read the entry (issue #169); null takes her word back, the
+   * edition's format is the default again. Needs the connection (the repository refuses
+   * it offline). Only her word is taken from the answer: a finish or a start still
+   * waiting in the outbox is not in the database's entry yet, and the device's own copy
+   * must not go back to before it. Returns the entry, or null with the code.
+   */
+  async function setReadAs(entry: LibraryEntry, readAs: ReadAs | null): Promise<{ entry: LibraryEntry } | { error: LibraryErrorCode }> {
+    const repo = library()
+    if (!repo) return { error: 'unknown' }
+    const result = await repo.setReadAs(entry.id, readAs)
+    if (result.error) return { error: result.error }
+    const changed = { ...(entryById(entry.id) ?? entry), readAs: result.data.readAs ?? null }
+    entryChanged(changed)
+    return { entry: changed }
+  }
+
   // ---------------------------------------------------------------- Add sheet
 
   /** The Book the Add sheet is about; null while it is closed. */
@@ -380,6 +400,7 @@ export const useLibraryStore = defineStore('library', () => {
     entryChanged,
     editionChanged,
     entryRemoved,
+    setReadAs,
     withCover,
     adding,
     addDraft,

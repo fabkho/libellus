@@ -6,18 +6,24 @@
 // and Finish right there, newest start first; *Finished* groups the Books by
 // the year they were finished, newest end first, each with its Rating, and a
 // filter: All, or *Not finished* (#10), the Books whose latest read was given
-// up, dimmed among the others. (#14 adds Collections.) An empty Library shows the
+// up, dimmed among the others. (#14 adds Collections.) Under the segments, each list has
+// its filters and sort (#169: Read as, author, rating, year read, pages; date, rating,
+// title, author, pages), quiet pills with the filters that are set as chips, the count
+// and Clear; the last choice is remembered per member on the device. An empty Library shows the
 // lamp over the empty shelf and the way to search. Kept alive: coming back
 // finds the segment and the scroll position as they were, and the lists
 // refresh quietly in the background.
 import type { EntryStatus, LibraryEntry } from '~/data/library'
+import { arrange, sortFor } from '~/data/libraryView'
 import { useLibraryStore } from '~/stores/library'
+import { useLibraryViewStore } from '~/stores/libraryView'
 import { useSessionStore } from '~/stores/session'
 
 definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 
 const { t } = useI18n()
 const library = useLibraryStore()
+const libraryView = useLibraryViewStore()
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
@@ -65,10 +71,28 @@ const filterCounts = computed(() => ({ all: lists.value.finished.length, notFini
 /** What Finished shows: everything, or only the Books that were not finished. */
 const shown = computed(() => (filter.value === 'notFinished' ? lists.value.notFinished : lists.value.finished))
 
-/** What Finished shows, by the year of the end date (the list is newest first already). */
+/**
+ * Filters and sort (#169): each list's own, as the screen shows them (held while a sheet is on
+ * screen, like the lists, so the change is seen where the member is looking).
+ */
+const views = useSettled(() => ({ ...libraryView.views }))
+const view = computed(() => views.value[segment.value])
+const genres = computed(() => libraryView.genres)
+/** The entries of the chosen segment before the filters and the sort (Finished: after All / DNF). */
+const base = computed<readonly LibraryEntry[]>(() => (segment.value === 'finished' ? shown.value : lists.value[segment.value]))
+const arranged = computed(() => arrange(base.value, segment.value, view.value, { genres: genres.value }))
+/** The list is empty because of the filters, not because there are no books. */
+const noMatch = computed(() => base.value.length > 0 && arranged.value.length === 0)
+
+/**
+ * What Finished shows, by the year of the end date (the list is newest first already). Another
+ * order than by the date read is one list without years.
+ */
 const years = computed(() => {
-  const groups: { year: string; entries: LibraryEntry[] }[] = []
-  for (const entry of shown.value) {
+  if (!arranged.value.length) return []
+  if (sortFor('finished', view.value.sort).key !== 'dateRead') return [{ year: null, entries: [...arranged.value] }]
+  const groups: { year: string | null; entries: LibraryEntry[] }[] = []
+  for (const entry of arranged.value) {
     const year = entry.latestSession?.endedOn?.slice(0, 4) ?? ''
     const group = groups.at(-1)
     if (group?.year === year) group.entries.push(entry)
@@ -120,12 +144,15 @@ watch(
     </div>
 
     <div :id="panelId" role="tabpanel" :aria-labelledby="tabId(segment)">
+    <!-- Filters and sort of the chosen list (#169), whatever there is to filter. -->
+    <LibraryViewBar v-if="base.length" :status="segment" :view="view" :entries="base" :shown="arranged.length" :genres="genres" />
+
     <UiListMotion v-if="segment === 'want_to_read' && lists.want_to_read.length" class="flex flex-col pt-xs" data-testid="library.wantToRead">
-      <LibraryEntryRow v-for="(entry, index) in lists.want_to_read" :key="entry.id" :entry="entry" :eager="index < 8" />
+      <LibraryEntryRow v-for="(entry, index) in arranged" :key="entry.id" :entry="entry" :eager="index < 8" />
     </UiListMotion>
 
     <UiListMotion v-else-if="segment === 'reading' && lists.reading.length" class="flex flex-col gap-ms pt-md" data-testid="library.reading">
-      <LibraryReadingCard v-for="(entry, index) in lists.reading" :key="entry.id" :entry="entry" :eager="index < 4" />
+      <LibraryReadingCard v-for="(entry, index) in arranged" :key="entry.id" :entry="entry" :eager="index < 4" />
     </UiListMotion>
 
     <div v-else-if="segment === 'finished' && lists.finished.length" class="flex flex-col" data-testid="library.finished">
@@ -150,10 +177,11 @@ watch(
         <p class="book-title text-callout">{{ t('library.notFinishedEmpty.title') }}</p>
         <p class="mt-xs text-subhead text-ink-muted">{{ t('library.notFinishedEmpty.text') }}</p>
       </div>
-      <section v-for="(group, g) in years" :key="group.year" class="flex flex-col" data-testid="library.year">
+      <section v-for="(group, g) in years" :key="group.year ?? 'all'" class="flex flex-col" data-testid="library.year">
         <!-- Pinned while its year scrolls by, as iOS lists pin their section headers. -->
         <!-- Named as one phrase: the year and its count side by side read as one number ("202615"). -->
         <h2
+          v-if="group.year !== null"
           class="year sticky z-10 -mx-screen flex items-center justify-between bg-surface px-screen pt-md pb-xs"
           :aria-label="t('library.yearHeading', { year: group.year || t('library.undated'), count: group.entries.length }, group.entries.length)"
         >
@@ -169,6 +197,15 @@ watch(
     <div v-else class="px-lg pt-xxl text-center" :data-testid="`library.segmentEmpty.${segment}`">
       <p class="book-title text-callout">{{ t(`library.segmentEmpty.${segment}.title`) }}</p>
       <p class="mt-xs text-subhead text-ink-muted">{{ t(`library.segmentEmpty.${segment}.text`) }}</p>
+    </div>
+
+    <!-- The filters leave nothing: not an empty list, a way out. -->
+    <div v-if="noMatch" class="px-lg pt-xxl text-center" data-testid="library.viewEmpty">
+      <p class="book-title text-callout">{{ t('library.view.empty.title') }}</p>
+      <p class="mt-xs text-subhead text-ink-muted">{{ t('library.view.empty.text') }}</p>
+      <UiButton tone="secondary" size="md" class="mt-md" data-testid="library.viewEmpty.clear" @click="libraryView.clear(segment)">
+        {{ t('library.view.empty.clear') }}
+      </UiButton>
     </div>
     </div>
   </div>

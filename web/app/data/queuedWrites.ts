@@ -185,7 +185,7 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
               review: trimmed(args.p_review),
             })
           : null
-    return { id: write.creates.entry_id, status, addedAt: queuedAt, book: write.book, pageCountOverride: null, latestSession }
+    return { id: write.creates.entry_id, status, addedAt: queuedAt, book: write.book, pageCountOverride: null, readAs: null, latestSession }
   }
   if (!entry) return 'entry_not_found'
 

@@ -356,9 +356,99 @@
       "session_not_found": "That read isn't there any more. It may have been deleted on another device.",
       "offline": "You're offline. Nothing was saved.",
       "progress_invalid": "That progress doesn't fit this book.",
-      "isbn_invalid": "That ISBN isn't right. Check its digits."
+      "isbn_invalid": "That ISBN isn't right. Check its digits.",
+      "read_as_invalid": "That isn't a way of reading a book."
     },
-    "undated": "No end date"
+    "undated": "No end date",
+    "view": {
+      "label": "Filter and sort",
+      "filter": "Filter",
+      "sort": "Sort",
+      "sortBy": "Sort: {sort}",
+      "count": "{count} book | {count} books",
+      "countOf": "{shown} of {total} books",
+      "clear": "Clear",
+      "clearAll": "Clear all",
+      "chipsLabel": "Active filters",
+      "removeChip": "Remove filter: {name}",
+      "apply": "Apply",
+      "showCount": "{count} book | {count} books",
+      "sheetTitle": "Filter",
+      "sortTitle": "Sort by",
+      "empty": {
+        "title": "Nothing matches",
+        "text": "No book here fits all of these filters.",
+        "clear": "Clear filters"
+      },
+      "facet": {
+        "readAs": "Read as",
+        "author": "Author",
+        "rating": "Rating",
+        "year": "Year read",
+        "pages": "Pages",
+        "genre": "Genre"
+      },
+      "readAs": {
+        "physical": "Physical",
+        "ebook": "Ebook",
+        "audiobook": "Audiobook",
+        "unset": "Not set"
+      },
+      "rating": {
+        "top": "5 stars",
+        "min": "{stars} stars and up",
+        "unrated": "Not rated"
+      },
+      "pages": {
+        "min": "From",
+        "max": "To",
+        "minPlaceholder": "Min",
+        "maxPlaceholder": "Max",
+        "chip": "{min}–{max} pages",
+        "chipMin": "{min}+ pages",
+        "chipMax": "Up to {max} pages"
+      },
+      "author": {
+        "search": "Find an author",
+        "none": "No author matches"
+      },
+      "sortKey": {
+        "dateRead": "Date read",
+        "dateStarted": "Date started",
+        "dateAdded": "Date added",
+        "rating": "Rating",
+        "title": "Title",
+        "author": "Author",
+        "pages": "Pages"
+      },
+      "sortDir": {
+        "dateRead": {
+          "asc": "Oldest first",
+          "desc": "Newest first"
+        },
+        "dateAdded": {
+          "asc": "Oldest first",
+          "desc": "Newest first"
+        },
+        "rating": {
+          "asc": "Lowest first",
+          "desc": "Highest first"
+        },
+        "title": {
+          "asc": "A to Z",
+          "desc": "Z to A"
+        },
+        "author": {
+          "asc": "A to Z",
+          "desc": "Z to A"
+        },
+        "pages": {
+          "asc": "Shortest first",
+          "desc": "Longest first"
+        }
+      },
+      "genres": {}
+    }
   },
   "search": {
     "title": "Search",
@@ -1223,5 +1313,14 @@
       "finished": "Finished",
       "close": "Close the book"
     }
+  },
+  "readAs": {
+    "label": "Read as",
+    "hint": "How you read it",
+    "physical": "Physical",
+    "ebook": "Ebook",
+    "audiobook": "Audiobook",
+    "offline": "Offline",
+    "fromEdition": "From the edition"
   }
 }
