@@ -2,6 +2,7 @@ import type { Collection, CollectionSummary } from './collections'
 import type { EntryStatus, LibraryEntry } from './library'
 import { LOCAL_DATA_PREFIX, type DeviceStorage } from './localData'
 import type { ReadingRecord } from './stats'
+import { DEVICE_ENRICH_KEY } from './enrich/device'
 
 /**
  * The member's Library as this device last saw it (issue #15): the three
@@ -160,7 +161,8 @@ export function readStats(storage: DeviceStorage, memberId: string): ReadingReco
 }
 
 /**
- * Forgets the saved Library, Collections and reading record, and nothing else: for a member
+ * Forgets the saved Library, Collections, reading record and author pages and series
+ * (data/enrich/device.ts), and nothing else: for a member
  * who stopped being signed in without signing out here (the session ended on
  * the server). Signing out clears all of `libellus.` instead.
  */
@@ -168,4 +170,5 @@ export function forgetLibrary(storage: DeviceStorage): void {
   storage.removeItem(DEVICE_LIBRARY_KEY)
   storage.removeItem(DEVICE_COLLECTIONS_KEY)
   storage.removeItem(DEVICE_STATS_KEY)
+  storage.removeItem(DEVICE_ENRICH_KEY)
 }
