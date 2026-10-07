@@ -71,9 +71,9 @@ review she shared), `og:url`, `og:image` and its size, `twitter:card`, and `noin
   therefore sets the headers of the `/*` rule itself (the Content-Security-Policy-Report-Only
   included) where the shell's response does not already carry them (`SITE_HEADERS` in the file;
   keep it in step with `_headers`).
-- Web Analytics: Pages adds its beacon to HTML it serves; whether that reaches a Function's
-  answer too is to be checked on the first deployment (`curl -s <deployment>/r/<token> | grep
-  cloudflareinsights`). Without it a visit to a reading page is not counted; nothing else changes.
+- Web Analytics: Pages adds its beacon to the Function's HTML as to any other page (checked on
+  the pull request's preview, `curl -s <deployment>/r/<token> | grep cloudflareinsights`), so a
+  visit to a reading page is counted like any page load, without cookies.
 
 Everything else stays static, and only `/share` and `/r/*` invoke a Function.
 
