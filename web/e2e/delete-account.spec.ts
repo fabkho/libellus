@@ -47,12 +47,16 @@ test('a member deletes her account: gone from the database and the device, the a
     )
   expect(Number((await owned())[0]!.n)).toBe(2)
 
-  // The Profile: the row ends the account section, in the danger colour.
+  // The Profile: the row ends the account rows, in the danger colour (only the quiet
+  // Version · What's new line sits under them, and it is not a row).
   await page.getByTestId('book.back').click()
   await page.getByTestId('shell.avatar').click()
   await expect(page.getByTestId('profile.delete')).toHaveText(en.profile.account.delete)
   await expect(page.getByTestId('profile.delete')).toBeEnabled()
-  const rows = await page.getByTestId('profile.account').locator('[data-testid^="profile."][type="button"], a[data-testid^="profile."]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')))
+  const rows = await page
+    .getByTestId('profile.account')
+    .locator('[data-testid^="profile."][type="button"]:not([data-testid="profile.whatsNew"]), a[data-testid^="profile."]')
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')))
   expect(rows.at(-1)).toBe('profile.delete')
 
   // The Confirm says what goes and that it cannot be undone; Cancel changes nothing.

@@ -224,7 +224,9 @@
       "signOut": "Sign out",
       "delete": "Delete account",
       "ebooks": "Ebooks",
-      "ebooksNeedYou": "{count} needs you | {count} need you"
+      "ebooksNeedYou": "{count} needs you | {count} need you",
+      "version": "Version {version}",
+      "whatsNew": "What's new"
     },
     "deleteAccount": {
       "title": "Delete your account?",
@@ -1413,6 +1415,18 @@
       "ratingNone": "Rating",
       "review": "{name}’s review",
       "reviewNone": "Review"
+    }
+  },
+  "whatsNew": {
+    "title": "What's new in {version}",
+    "version": "Version {version}",
+    "done": "Done",
+    "none": "Fixes and small improvements.",
+    "section": {
+      "breaking": "Changed",
+      "features": "New",
+      "performance": "Faster",
+      "fixes": "Fixed"
     }
   }
 }

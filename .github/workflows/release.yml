@@ -1,0 +1,284 @@
+name: Release
+
+# Versioned releases (docs/OPERATIONS.md, "Releases"). Merging into `main` changes
+# nothing that members see; a release does:
+#
+#   1. release-please (every push to main) keeps one pull request open,
+#      "chore(main): release x.y.z", with CHANGELOG.md and version.txt written from
+#      the conventional commits merged since the last release.
+#   2. The owner merges that pull request. The push it makes runs release-please
+#      again, which tags vX.Y.Z and creates the GitHub release.
+#   3. `deploy` (same run, in the `production` environment) then pushes the
+#      database migrations, deploys every edge function and moves the branch
+#      `production` to the tag. Cloudflare Pages builds `production` as the live
+#      site (docs/HOSTING.md), so the web app follows last, on a backend that
+#      already has what it needs.
+#
+# Why one workflow and not `on: release`: a release created with the run's own
+# GITHUB_TOKEN starts no other workflow, so a second workflow would never hear
+# of it. The deploy job runs in the same run instead, right after the release.
+#
+# Run it by hand (Actions → Release → Run workflow, from `main`, or
+# `gh workflow run release.yml -f tag=v1.2.3`) to deploy an existing tag again:
+# a retry after a failure, or a rollback to an older release (then with
+# `migrations` off: migrations only go forward, see docs/OPERATIONS.md).
+#
+# Never on pull requests, never in a fork: both jobs check the repository.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to deploy, e.g. v1.2.3'
+        required: true
+        type: string
+      migrations:
+        description: 'Push the database migrations first (turn off for a rollback to an older release)'
+        required: true
+        type: boolean
+        default: true
+
+# Nothing by default; each job asks for what it needs.
+permissions: {}
+
+jobs:
+  release-please:
+    name: release pull request and tag
+    if: github.event_name == 'push' && github.repository == 'fabkho/libellus'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # One at a time and never cancelled: a run cut off between creating the release
+    # and handing it to `deploy` would leave a release that nothing deployed.
+    concurrency:
+      group: release-please
+      cancel-in-progress: false
+    permissions:
+      contents: write # the release commit's tag and the GitHub release
+      pull-requests: write # the release pull request
+      issues: write # its `autorelease: pending` / `tagged` labels
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      # release-please-config.json and .release-please-manifest.json say what to release.
+      - uses: googleapis/release-please-action@v5
+        id: release
+
+  deploy:
+    name: deploy ${{ inputs.tag || needs.release-please.outputs.tag_name }} to production
+    needs: release-please
+    # `release-please` is skipped on a manual run; !cancelled() lets this job run anyway.
+    if: >-
+      ${{ !cancelled() && github.repository == 'fabkho/libellus' && (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true')
+      ) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The environment's secrets are readable by this job only (docs/OPERATIONS.md,
+    # "Releases": what to set up). Its deployment branch rule should allow `main` only.
+    environment:
+      name: production
+      url: https://libellus.fabkho.dev
+    # One deploy at a time; a newer one waiting replaces an older one waiting.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    # The run's own token only reads. The branch `production` is moved with the
+    # environment's deploy key: GitHub refuses a GITHUB_TOKEN push that brings
+    # changed workflow files to a branch, and most releases do.
+    permissions:
+      contents: read
+    env:
+      SUPABASE_CLI: 2.118.0 # pinned like ci.yml
+      EVENT: ${{ github.event_name }}
+      INPUT_TAG: ${{ inputs.tag }}
+      INPUT_MIGRATIONS: ${{ inputs.migrations }}
+      RELEASED_TAG: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Which release
+        id: which
+        env:
+          HAS_DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_KEY != '' }}
+          HAS_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = workflow_dispatch ]; then
+            tag="$INPUT_TAG"; migrations="$INPUT_MIGRATIONS"
+          else
+            tag="$RELEASED_TAG"; migrations=true
+          fi
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$tag' is not a release tag (vX.Y.Z)."
+            exit 1
+          fi
+          missing=()
+          [ "$HAS_DEPLOY_KEY" = true ] || missing+=('secret PRODUCTION_DEPLOY_KEY')
+          [ "$HAS_ACCESS_TOKEN" = true ] || missing+=('secret SUPABASE_ACCESS_TOKEN')
+          [ -n "$PROJECT_REF" ] || missing+=('variable SUPABASE_PROJECT_REF')
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::The environment 'production' lacks: ${missing[*]} (docs/OPERATIONS.md, \"Releases\")."
+            exit 1
+          fi
+          echo "Deploying $tag (migrations: $migrations)"
+          { echo "tag=$tag"; echo "migrations=$migrations"; } >> "$GITHUB_OUTPUT"
+
+      # The whole history (cheap: a few thousand commits) so the tag can be checked
+      # against `main` and `production`. The deploy key is kept for the push below.
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.which.outputs.tag }}
+          fetch-depth: 0
+          ssh-key: ${{ secrets.PRODUCTION_DEPLOY_KEY }}
+
+      # Before anything is deployed: the tag must be on `main`, and `production`
+      # may only go forward, unless this is a manual run (a rollback).
+      - name: Check the tag against main and production
+        id: branch
+        env:
+          TAG: ${{ steps.which.outputs.tag }}
+        run: |
+          set -euo pipefail
+          target="$(git rev-parse "$TAG^{commit}")"
+          if ! git merge-base --is-ancestor "$target" origin/main; then
+            echo "::error::$TAG ($target) is not on main."
+            exit 1
+          fi
+          current="$(git rev-parse -q --verify 'refs/remotes/origin/production^{commit}' || true)"
+          if [ -z "$current" ]; then
+            move=create
+          elif [ "$current" = "$target" ]; then
+            move=none
+          elif git merge-base --is-ancestor "$current" "$target"; then
+            move=forward
+          elif [ "$EVENT" = workflow_dispatch ]; then
+            move=rollback
+          else
+            echo "::error::production ($current) has commits $TAG does not; only a manual run may move it back."
+            exit 1
+          fi
+          echo "production: ${current:-none} → $target ($move)"
+          { echo "target=$target"; echo "current=$current"; echo "move=$move"; } >> "$GITHUB_OUTPUT"
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ env.SUPABASE_CLI }}
+
+      # Only the access token is needed: the CLI logs in to the database with a
+      # temporary role it creates through the Management API, over the IPv4 pooler
+      # (runners have no IPv6). The secret SUPABASE_DB_PASSWORD is optional; when it
+      # is set the CLI uses it instead (exported only then: an empty one would be tried).
+      - name: Link the hosted project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "$PROJECT_REF"
+
+      # Fails here, before anything changed, when the database has a migration the tag
+      # does not (an older tag: run it with migrations off) or one cannot be read.
+      - name: Migrations (dry run)
+        id: dryrun
+        if: steps.which.outputs.migrations == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -z "$DB_PASSWORD" ] || export SUPABASE_DB_PASSWORD="$DB_PASSWORD"
+          supabase db push --linked --include-all --dry-run 2>&1 | tee "$RUNNER_TEMP/db-dry-run.txt"
+
+      - name: Migrations
+        id: migrate
+        if: steps.which.outputs.migrations == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -z "$DB_PASSWORD" ] || export SUPABASE_DB_PASSWORD="$DB_PASSWORD"
+          supabase db push --linked --include-all --yes
+
+      # Every function under supabase/functions (not `_shared`-style folders), each
+      # with its own settings from config.toml ([functions.<name>]: verify_jwt,
+      # entrypoint, import_map, static_files). Bundled by the API, no Docker. The
+      # functions' secrets (`supabase secrets set`) stay as they are.
+      - name: Edge functions
+        id: functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          deployed=()
+          for dir in supabase/functions/*/; do
+            name="$(basename "$dir")"
+            case "$name" in _*|.*) continue ;; esac
+            echo "::group::$name"
+            supabase functions deploy "$name" --use-api
+            echo "::endgroup::"
+            deployed+=("$name")
+          done
+          echo "names=${deployed[*]}" >> "$GITHUB_OUTPUT"
+
+      # Last: Cloudflare Pages builds the branch `production` as the live site.
+      - name: Move production to the tag
+        id: move
+        env:
+          TAG: ${{ steps.which.outputs.tag }}
+          TARGET: ${{ steps.branch.outputs.target }}
+          CURRENT: ${{ steps.branch.outputs.current }}
+          MOVE: ${{ steps.branch.outputs.move }}
+        run: |
+          set -euo pipefail
+          case "$MOVE" in
+            none) echo "production is already at $TAG." ;;
+            create | forward) git push origin "$TARGET:refs/heads/production" ;;
+            rollback) git push --force-with-lease="refs/heads/production:$CURRENT" origin "$TARGET:refs/heads/production" ;;
+          esac
+
+      - name: Summary
+        if: ${{ !cancelled() && steps.which.outcome == 'success' }}
+        env:
+          TAG: ${{ steps.which.outputs.tag }}
+          MIGRATIONS: ${{ steps.which.outputs.migrations }}
+          MIGRATE: ${{ steps.migrate.outcome }}
+          FUNCTIONS: ${{ steps.functions.outputs.names }}
+          FUNCTIONS_OUTCOME: ${{ steps.functions.outcome }}
+          TARGET: ${{ steps.branch.outputs.target }}
+          MOVE: ${{ steps.branch.outputs.move }}
+          MOVED: ${{ steps.move.outcome }}
+          REPO: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -uo pipefail
+          # shellcheck disable=SC2016 # the backticks are Markdown
+          list() { sed '/^$/d; s/^/- `/; s/$/`/'; }
+          {
+            echo "## $TAG"
+            echo
+            echo "[Release notes]($REPO/releases/tag/$TAG)"
+            echo
+            echo "### Migrations"
+            if [ "$MIGRATIONS" != true ]; then
+              echo 'Skipped: a manual run with migrations off.'
+            elif [ "$MIGRATE" != success ]; then
+              echo "Not applied (${MIGRATE:-not reached}); see the log. Pending, per the dry run:"
+              grep -oE '[0-9]{14}_[A-Za-z0-9_.-]+[.]sql' "$RUNNER_TEMP/db-dry-run.txt" 2>/dev/null | sort -u | list
+            else
+              applied="$(grep -oE '[0-9]{14}_[A-Za-z0-9_.-]+[.]sql' "$RUNNER_TEMP/db-dry-run.txt" | sort -u)"
+              if [ -n "$applied" ]; then list <<< "$applied"; else echo 'None: the database was up to date.'; fi
+            fi
+            echo
+            echo "### Edge functions"
+            if [ "$FUNCTIONS_OUTCOME" = success ]; then tr ' ' '\n' <<< "$FUNCTIONS" | list
+            else echo "Not deployed (${FUNCTIONS_OUTCOME:-not reached}); see the log."; fi
+            echo
+            echo "### Web app"
+            if [ "$MOVED" = success ]; then
+              echo "Branch \`production\` is at \`${TARGET:0:7}\` ($MOVE). Cloudflare Pages builds it now: its check on"
+              echo "[the commit]($REPO/commit/$TARGET) links the deployment (also Workers & Pages → libellus → Deployments)."
+              echo "Live at https://libellus.fabkho.dev once the build is done."
+            else
+              echo "Branch \`production\` not moved (${MOVED:-not reached}): the live site is unchanged."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

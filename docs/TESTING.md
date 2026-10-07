@@ -440,6 +440,7 @@ billed in whole minutes. `.github/workflows/ci.yml` therefore spends them where 
 | Push to `main` (a merge) | The cheap checks, never Playwright: the pull request already ran the flows. Database rules (pgTAP) and Vitest when the schema or `web/` changed, `nuxt generate`, the tokens check, the Deno tests. |
 | `workflow_dispatch` | Everything, Playwright included: a manual full run (`gh workflow run CI --ref <branch>`, possible once the workflow is on `main`). |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
+| The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No run at all: every commit in the release already passed. `release.yml` runs instead (release-please on every push to `main`, under a minute; the deploy only for a release, docs/OPERATIONS.md "Releases"). |
 
 A `what changed` job (about 6 seconds, one billed minute) turns the changed files into the jobs to run
 (`dorny/paths-filter`). Any change under `.github/` runs everything, so CI changes are tested by CI.
