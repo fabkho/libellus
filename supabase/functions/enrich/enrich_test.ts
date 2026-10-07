@@ -8,18 +8,19 @@
 import { assert, assertEquals } from '@std/assert'
 import { appleGenres, enrichBook, type Payload } from './enrich.ts'
 import { createHttp } from './http.ts'
-import { LANGUAGES, type ScenarioName, SCENARIOS } from './scenarios.ts'
+import { AUTHORS_FRESH, LANGUAGES, type ScenarioName, SCENARIOS } from './scenarios.ts'
 import { createSources } from './sources.ts'
 import { fakeClock, recordedFetch } from './test_support.ts'
 
 async function run(name: ScenarioName, fresh = false): Promise<{ payload: Payload; asked: string[] }> {
+  const authorsFresh = fresh || AUTHORS_FRESH.includes(name)
   const recorded = recordedFetch([name])
   const sources = createSources(createHttp({ fetch: recorded.fetch, userAgent: 'test', clock: fakeClock().clock }), LANGUAGES)
   const book = SCENARIOS[name]
   const apple = await appleGenres([book], sources)
   const payload = await enrichBook(book, {
     sources,
-    authorFresh: () => Promise.resolve(fresh),
+    authorFresh: () => Promise.resolve(authorsFresh),
     seriesFresh: () => Promise.resolve(fresh),
   }, apple.get(book.id) ?? [])
   return { payload, asked: recorded.asked.map((a) => a.url) }
@@ -83,6 +84,16 @@ Deno.test('Haldeman, The Forever War: the introducer credited by the edition is 
   assertEquals(book.genres.map((g) => g.genre), ['sci-fi'])
   const forever = payload.works.filter((w) => w.series?.some((s) => s.series.wikidata === 'Q7734811'))
   assert(forever.some((w) => w.title === 'Forever Peace'))
+})
+
+Deno.test('Rowling, a German edition: the work found, a series item without an English or German label named after Open Library\'s', async () => {
+  const { payload } = await run('rowling-feuerkelch')
+  const book = payload.book!
+  assertEquals(book.work?.wikidata, 'Q46751')
+  assertEquals(book.work?.series?.map((s) => [s.series.name, s.position]), [['Harry Potter', 4]])
+  assertEquals(book.authors.map((a) => [a.position, a.author.wikidata]), [[1, 'Q34660']])
+  assert(book.genres.some((g) => g.genre === 'fantasy'))
+  assertEquals(payload.authors, [])
 })
 
 Deno.test('a Book nobody knows: not found, its first author by name only, no genres', async () => {

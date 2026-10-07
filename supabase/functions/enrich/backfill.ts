@@ -11,7 +11,8 @@
  *
  * Live calls, politely spaced (http.ts): about five seconds a Book, more for
  * an author met the first time. `--no-queue` drains only what is queued;
- * `--report` only reports.
+ * `--report` only reports; `--remap` first applies the current genre mapping to
+ * every Book an older one computed (no source asked).
  */
 import { createClient } from '@supabase/supabase-js'
 import { createHandler } from './handler.ts'
@@ -26,6 +27,7 @@ const args = Deno.args.filter((a) => !a.startsWith('--'))
 const email = args[0] ?? null
 const queue = !Deno.args.includes('--no-queue')
 const reportOnly = Deno.args.includes('--report')
+const remap = Deno.args.includes('--remap')
 
 const supabase = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
 const store = createSupabaseStore(supabase)
@@ -45,6 +47,7 @@ async function call(body: unknown) {
   return await response.json()
 }
 
+if (remap) console.log('remapped', await call({ action: 'remap' }))
 if (!reportOnly) {
   if (queue) console.log('queued', await call({ action: 'backfill' }))
   for (;;) {

@@ -95,7 +95,7 @@ resumable: stop it any time and run it again) and the coverage report for one me
 cd supabase/functions/enrich
 SUPABASE_URL=http://127.0.0.1:55321 SUPABASE_SERVICE_ROLE_KEY=<from supabase status> \
   deno run --allow-net --allow-env --allow-read=.,../../../web/app/data/enrich backfill.ts dev@libellus.local
-# --no-queue: only drain what is queued · --report: only report
+# --no-queue: only drain what is queued · --report: only report · --remap: apply a new genre mapping first
 ```
 
 Renew the recordings (rarely):

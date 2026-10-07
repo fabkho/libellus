@@ -256,6 +256,19 @@ export async function enrichBook(
     const stale: string[] = []
     for (const place of work.series) if (!(await ctx.seriesFresh(place.series))) stale.push(place.series)
     const facts = new Map((await sources.wdSeries(stale)).map((s) => [s.qid, s]))
+    // An item without a label in the languages asked for (it happens: Harry Potter's series lost its
+    // English and German labels in October 2026) is named after Open Library's series when it is the
+    // work's only one, else after a label in any language.
+    for (const qid of stale.filter((q) => !facts.get(q)?.name)) {
+      const known = facts.get(qid)
+      let name: string | null = null
+      if (work.series.length === 1) {
+        name = (olWork?.series[0] ? await sources.olSeriesName(olWork.series[0].key) : null) ??
+          edition?.seriesText.map((text) => ol.parseSeriesText(text)?.name).find(Boolean) ?? null
+      }
+      name ??= known?.otherName ?? null
+      if (name) facts.set(qid, { qid, name, otherName: null, parent: known?.parent ?? null })
+    }
     for (const place of work.series) {
       series.push({ series: seriesPayload(place.series, facts.get(place.series)), position: place.position, source: 'wikidata' })
     }

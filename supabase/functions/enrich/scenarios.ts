@@ -46,6 +46,20 @@ export const SCENARIOS = {
     openlibrary_edition_key: null,
     openlibrary_work_key: 'OL271163W',
   },
+  // J.K. Rowling, Harry Potter und der Feuerkelch (a German edition, Open Library): Wikidata's
+  // series item had lost every label when this was recorded, so the series is named after Open
+  // Library's. The author counts as fetched already (keeps the recording small).
+  'rowling-feuerkelch': {
+    id: '00000000-0000-4000-8000-000000000005',
+    title: 'Harry Potter und der Feuerkelch',
+    authors: ['J.K. Rowling'],
+    isbn13: '9783551354044',
+    isbn10: null,
+    language: 'de',
+    apple_id: null,
+    openlibrary_edition_key: null,
+    openlibrary_work_key: 'OL82560W',
+  },
   // Nobody knows it: no ISBN, no key, a title and author no source has.
   'no-data': {
     id: '00000000-0000-4000-8000-000000000004',
@@ -61,4 +75,6 @@ export const SCENARIOS = {
 } satisfies Record<string, BookRow>
 
 export type ScenarioName = keyof typeof SCENARIOS
+/** Scenarios whose authors count as fetched within 30 days: only the Book is asked about. */
+export const AUTHORS_FRESH: readonly ScenarioName[] = ['rowling-feuerkelch']
 export const LANGUAGES = ['en', 'de'] as const

@@ -378,10 +378,11 @@ export function seriesQuery(seriesQids: readonly string[], languages: readonly s
     .map((lang) => `OPTIONAL { ?parent rdfs:label ?pl_${lang} FILTER(LANG(?pl_${lang}) = "${lang}") }`)
     .join(' ')
   const parentVars = languages.map((lang) => `(SAMPLE(?pl_${lang}) AS ?parent_${lang})`).join(' ')
-  return `SELECT ?s ${labelVars} (SAMPLE(?parent) AS ?parentItem) ${parentVars}
+  return `SELECT ?s ${labelVars} (SAMPLE(?l_any) AS ?label_any) (SAMPLE(?parent) AS ?parentItem) ${parentVars}
 WHERE {
   VALUES ?s { ${[...seriesQids].sort().map((q) => `wd:${q}`).join(' ')} }
   ${labelPatterns}
+  OPTIONAL { ?s rdfs:label ?l_any }
   OPTIONAL { ?s wdt:P179 ?parent . ${parentLabels} }
 } GROUP BY ?s`
 }
@@ -441,7 +442,10 @@ export function parseWorks(body: unknown, languages: readonly string[]): ListedW
 
 export type SeriesFacts = {
   qid: string
+  /** In one of the languages asked for. */
   name: string | null
+  /** In any other language: the last resort. */
+  otherName: string | null
   parent: { qid: string; name: string | null } | null
 }
 
@@ -455,6 +459,7 @@ export function parseSeries(body: unknown, languages: readonly string[]): Series
       return {
         qid,
         name,
+        otherName: row.label_any?.value?.trim() || null,
         parent: isQid(parentQid) && parentQid !== qid
           ? { qid: parentQid, name: languages.map((lang) => row[`parent_${lang}`]?.value?.trim()).find(Boolean) ?? null }
           : null,

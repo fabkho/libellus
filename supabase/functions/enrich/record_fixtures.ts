@@ -10,7 +10,7 @@
  */
 import { appleGenres, enrichBook } from './enrich.ts'
 import { createHttp, type FetchLike, userAgent } from './http.ts'
-import { LANGUAGES, type ScenarioName, SCENARIOS } from './scenarios.ts'
+import { AUTHORS_FRESH, LANGUAGES, type ScenarioName, SCENARIOS } from './scenarios.ts'
 import { createSources } from './sources.ts'
 import type { Recorded } from './test_support.ts'
 
@@ -31,7 +31,8 @@ for (const [name, book] of Object.entries(SCENARIOS) as [ScenarioName, (typeof S
   }
   const sources = createSources(createHttp({ fetch: recordingFetch, userAgent: userAgent(null, null) }), LANGUAGES)
   const apple = await appleGenres([book], sources)
-  await enrichBook(book, { sources, authorFresh: () => Promise.resolve(false), seriesFresh: () => Promise.resolve(false) }, apple.get(book.id) ?? [])
+  const authorFresh = () => Promise.resolve(AUTHORS_FRESH.includes(name))
+  await enrichBook(book, { sources, authorFresh, seriesFresh: () => Promise.resolve(false) }, apple.get(book.id) ?? [])
   const file = new URL(`./fixtures/${name}.json`, import.meta.url)
   await Deno.writeTextFile(file, `${JSON.stringify({ recordedAt: new Date().toISOString(), answers }, null, 1)}\n`)
   console.log(name, answers.length, 'answers', Math.round(JSON.stringify(answers).length / 1024), 'KB')
