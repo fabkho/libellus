@@ -46,7 +46,7 @@ function chipLabel({ facet, value }: ActiveFilter): string {
       return min !== null ? t('library.view.pages.chipMin', { min: n(min) }) : t('library.view.pages.chipMax', { max: n(max ?? 0) })
     }
     case 'genre':
-      return t(`library.view.genres.${value}`)
+      return t(`genre.${value}`)
   }
 }
 </script>

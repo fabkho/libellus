@@ -30,16 +30,27 @@ export const useLibraryViewStore = defineStore('libraryView', () => {
   let owner: string | null = null
 
   /**
-   * The genre filter's seam (issue #168): how a Book's genres are looked up. Until the
-   * Catalogue has genres nothing provides one, and the filter stays out of sight: no
-   * facet in the sheet, no chip. When `book_genres(book)` exists, its store calls
-   * `provideGenres` with a lookup over the genres it holds (and the filter's labels are
-   * `library.view.genres.<id>` in en.json, one per canonical genre).
-   * TODO(#168): call `provideGenres` from the genres store once W1's `book_genres` lands.
+   * The genre filter's seam (issue #168): how a Book's genres are looked up. The genres store
+   * (stores/genres.ts) provides it as soon as it holds some (the device keeps them), and takes
+   * it back on sign-out. While nothing provides one, the filter stays out of sight: no facet in
+   * the sheet, no chip, and a genre filter that was set filters nothing.
    */
   const genres = shallowRef<GenreLookup | null>(null)
   function provideGenres(lookup: GenreLookup | null) {
     genres.value = lookup
+  }
+
+  /** The list the Library should open on, set by a screen that sends her to it (`showGenre`) and taken by the Library. */
+  const focus = ref<EntryStatus | null>(null)
+
+  /**
+   * Looks at one genre in a list (the Profile's figures, #168): that list with every other
+   * filter off (its sort stays), the genre set, and the year it was read in when there is one.
+   * The Library opens on it.
+   */
+  function showGenre(status: EntryStatus, genre: string, year: string | null = null) {
+    set(status, { ...withoutFilters(views[status]), genres: [genre], years: year ? [year] : [] })
+    focus.value = status
   }
 
   function restore() {
@@ -77,5 +88,5 @@ export const useLibraryViewStore = defineStore('libraryView', () => {
   )
   restore()
 
-  return { views, genres, provideGenres, set, setSort, remove, clear, restore }
+  return { views, genres, focus, provideGenres, showGenre, set, setSort, remove, clear, restore }
 })
