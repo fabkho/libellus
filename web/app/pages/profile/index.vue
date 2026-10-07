@@ -5,13 +5,16 @@
 // year's under All). Under the hero, the year pills (All first, the default)
 // and everything they scope: the four figures, the books by year (All; a year
 // opens its review) or by month (a month opens its books, "<year> in review"
-// the year), the ratings (a row opens the books rated so), the records and
-// the authors read more than once. The reading days (this year and All) and
+// the year), the ratings (a row opens the books rated so), the genres (a row opens the
+// Library filtered by it, #168), the records and the authors read more than once. The reading days (this year and All) and
 // the years in review do not change with the pills. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
+import { genreFiguresOf } from '~/data/enrich/genreFigures'
 import { figuresOf, readsInMonth, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
+import { useGenresStore } from '~/stores/genres'
 import { useLibraryStore } from '~/stores/library'
+import { useLibraryViewStore } from '~/stores/libraryView'
 import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
 
@@ -21,6 +24,8 @@ const { t } = useI18n()
 const library = useLibraryStore()
 const router = useRouter()
 const stats = useStatsStore()
+const bookGenres = useGenresStore()
+const libraryView = useLibraryViewStore()
 // Your shelf (#23): the owner's card, and nobody else's.
 const shelf = useShelfStore()
 const { monthLong, monthLetter } = useFigures()
@@ -33,6 +38,7 @@ function show() {
   if (showing) return
   showing = true
   void stats.load()
+  void bookGenres.load()
   void shelf.load()
   // The Library tells the page, before the record does, whether anything is finished (below).
   if (!library.loaded) void library.load()
@@ -48,6 +54,10 @@ const years = computed(() => yearsOf(reads.value))
 // A year in review is one tap away (the year in view, or under All the latest): for the owner, its row is warmed on idle.
 useShelfPreload(() => (stats.year === 'all' ? (years.value[0] ?? null) : stats.year))
 const figures = computed(() => figuresOf(reads.value, stats.year))
+// Its placeholders stand in only for a Library known to have genres (the device keeps them), so one without
+// any (a new account) keeps its height when the record lands; a first visit opens the block when they come.
+const genresShown = computed(() => (loading.value ? bookGenres.loaded && bookGenres.any : genreFigures.value.genres.length > 0))
+const genreFigures = computed(() => genreFiguresOf(reads.value, stats.year, bookGenres.ofEntry))
 const yearFigures = computed(() => years.value.map((y) => figuresOf(reads.value, y)))
 const all = computed(() => figuresOf(reads.value, 'all'))
 const finishedAny = computed(() => all.value.books > 0)
@@ -107,6 +117,11 @@ function pickColumn(key: number) {
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: stats.year, star }
 }
+// A genre's row opens the Library's Finished list filtered by it (and by the year in view).
+function pickGenre(genre: string) {
+  libraryView.showGenre('finished', genre, stats.year === 'all' ? null : String(stats.year))
+  void navigateTo('/library')
+}
 
 // The Profile belongs to whatever tab it was opened from: back by history when there is one.
 function back() {
@@ -150,6 +165,9 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
             </UiReveal>
             <UiReveal :show="loading || figures.rated > 0">
               <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+            </UiReveal>
+            <UiReveal :show="genresShown">
+              <ProfileGenres class="pt-xl" :figures="loading ? null : genreFigures" @pick="pickGenre" />
             </UiReveal>
             <UiReveal :show="loading || hasRecords">
               <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />

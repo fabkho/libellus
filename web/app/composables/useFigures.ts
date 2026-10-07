@@ -11,6 +11,8 @@ export function useFigures() {
   const { t, locale } = useI18n()
 
   const count = (value: number) => new Intl.NumberFormat(locale.value).format(value)
+  /** A share (0–1) as a whole percent, "40%" in the app's locale. */
+  const percent = (share: number) => new Intl.NumberFormat(locale.value, { style: 'percent', maximumFractionDigits: 0 }).format(share)
   /** Five figures and up compact, so a figure keeps to its cell. */
   const large = (value: number) =>
     value < 10_000 ? count(value) : new Intl.NumberFormat(locale.value, { notation: 'compact', maximumFractionDigits: 1 }).format(value)
@@ -29,5 +31,5 @@ export function useFigures() {
   /** "in a day", "in 12 days"; nothing without both dates. */
   const readIn = (read: Pick<StatsRead, 'days'>) => (read.days === null ? '' : t('profile.sheet.readIn', { count: read.days }, read.days))
 
-  return { count, large, stars, monthLong, monthShort, monthLetter, monthYear, weekdayLetter, readIn }
+  return { count, large, percent, stars, monthLong, monthShort, monthLetter, monthYear, weekdayLetter, readIn }
 }
