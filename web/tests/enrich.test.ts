@@ -163,11 +163,17 @@ describe('series', () => {
 
 describe('the author page', () => {
   it('has the hero with its credits, the works grouped, her statuses', async () => {
-    const { member, two } = await reader()
+    const { member, one, two } = await reader()
     const authors = createAuthors(member.client)
     expect((await authors.forBook(two.book.id)).data).toEqual([
       { position: 1, name: 'Ann Leckie-Test', authorId: expect.any(String), key: AUTHOR },
     ])
+    const linked = { position: 1, name: 'Ann Leckie-Test', authorId: expect.any(String), key: AUTHOR }
+    expect((await authors.forBooks([two.book.id, one.book.id, two.book.id, crypto.randomUUID()])).data).toEqual({
+      [two.book.id]: [linked],
+      [one.book.id]: [linked],
+    })
+    expect(await authors.forBooks([])).toEqual({ data: {}, error: null })
     const page = (await authors.page(AUTHOR)).data!
     expect(page.author).toMatchObject({
       key: AUTHOR,

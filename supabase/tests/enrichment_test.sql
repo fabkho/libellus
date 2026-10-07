@@ -11,7 +11,7 @@
 -- members and ask about the rows this test made.
 
 begin;
-select plan(59);
+select plan(60);
 
 create schema if not exists tests;
 
@@ -211,6 +211,10 @@ select results_eq(
   format($$select credit_position, name, author_key from public.book_authors_of(%L)$$, :'guards'),
   $$values (1::smallint, 'Terry Pratchett', 'Q990000001')$$,
   'a Book''s linked author, with the key their page opens by');
+select results_eq(
+  format($$select book_id, credit_position, author_key from public.book_authors_for(array[%L, gen_random_uuid()]::uuid[])$$, :'guards'),
+  format($$values (%L::uuid, 1::smallint, 'Q990000001')$$, :'guards'),
+  'many Books'' linked authors at once, per Book, for a list''s rows');
 
 select is(public.author_page('Q990000001') -> 'author' ->> 'name', 'Terry Pratchett', 'the author page by Wikidata item');
 select is(public.author_page('OL990001A') -> 'author' ->> 'key', 'Q990000001', 'by Open Library id, the same page');
