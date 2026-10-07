@@ -263,9 +263,9 @@ jobs:
               echo 'Skipped: a manual run with migrations off.'
             elif [ "$MIGRATE" != success ]; then
               echo "Not applied (${MIGRATE:-not reached}); see the log. Pending, per the dry run:"
-              grep -oE '[0-9]{14}_[A-Za-z0-9_.-]+[.]sql' "$RUNNER_TEMP/db-dry-run.txt" 2>/dev/null | sort -u | list
+              { grep -oE '[0-9]{14}_[A-Za-z0-9_.-]+[.]sql' "$RUNNER_TEMP/db-dry-run.txt" 2>/dev/null || true; } | sort -u | list
             else
-              applied="$(grep -oE '[0-9]{14}_[A-Za-z0-9_.-]+[.]sql' "$RUNNER_TEMP/db-dry-run.txt" | sort -u)"
+              applied="$({ grep -oE '[0-9]{14}_[A-Za-z0-9_.-]+[.]sql' "$RUNNER_TEMP/db-dry-run.txt" 2>/dev/null || true; } | sort -u)"
               if [ -n "$applied" ]; then list <<< "$applied"; else echo 'None: the database was up to date.'; fi
             fi
             echo
