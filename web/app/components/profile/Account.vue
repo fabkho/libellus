@@ -162,7 +162,9 @@ async function syncFirst() {
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
       <UiRow v-if="errors.isOwner" icon="stack" :label="t('profile.account.glass')">
-        <UiSegmented v-model="glassLevel" compact class="flex-1" :options="glassOptions" :label="t('profile.account.glass')" testid="profile.glass" />
+        <template #trailing>
+          <UiSegmented v-model="glassLevel" compact :options="glassOptions" :label="t('profile.account.glass')" testid="profile.glass" />
+        </template>
       </UiRow>
       <UiRow v-if="ebooks.supported" to="/ebooks" icon="ebook" :label="t('profile.account.ebooks')" chevron data-testid="profile.ebooks">
         <span v-if="ebooksValue" :class="ebooks.waiting.length ? 'text-ink' : 'figures text-ink-muted'" data-testid="profile.ebooksValue">{{ ebooksValue }}</span>

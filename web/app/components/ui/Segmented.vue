@@ -9,8 +9,10 @@
 // A radiogroup: each option is a radio, arrow keys move the choice (and the
 // focus) as the platform's own segmented controls do. Each option's face comes
 // from the `option` slot ({ option, selected }); without it, its label.
-// `testid` names the group; each option is `<testid>.<value>`. `compact` makes it a
-// round button's height (40), to sit at the right of a row (the Profile's Glass).
+// `testid` names the group; each option is `<testid>.<value>`.
+// `compact`: the small one that sits at the right of a row (the Profile's Glass): a
+// pill's height (32), the footnote size, `sm` corners, as wide as its longest
+// option times the count (still equal widths), each option's touch target 44 high.
 export interface SegmentedOption<V> {
   value: V
   /** What assistive tech says, and the face without a slot. */
@@ -36,8 +38,8 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <div
-    class="segmented relative flex rounded-md bg-fill p-xxs edge-faint"
-    :class="compact ? 'h-(--size-button-md)' : 'h-(--size-row)'"
+    class="segmented relative bg-fill p-xxs edge-faint"
+    :class="compact ? 'compact inline-grid h-(--size-button-sm) shrink-0 auto-cols-fr grid-flow-col rounded-sm' : 'flex h-(--size-row) rounded-md'"
     role="radiogroup"
     :aria-label="label"
     :data-testid="testid"
@@ -54,8 +56,8 @@ function onKeydown(event: KeyboardEvent) {
       :aria-checked="i === index"
       :aria-label="$slots.option ? option.label : undefined"
       :tabindex="i === index ? 0 : -1"
-      class="option relative flex flex-1 items-center justify-center gap-sm text-caption"
-      :class="i === index ? 'text-ink' : 'text-ink-muted'"
+      class="option relative flex flex-1 items-center justify-center gap-sm"
+      :class="[compact ? 'px-ms text-footnote' : 'text-caption', i === index ? 'text-ink' : 'text-ink-muted']"
       :data-testid="testid ? `${testid}.${option.value}` : undefined"
       @click="model = option.value"
     >
@@ -65,10 +67,22 @@ function onKeydown(event: KeyboardEvent) {
 </template>
 
 <style scoped>
-/* Concentric with the group: md (14) less the xxs (2) gap around it. */
+/* Concentric with the group: md (14) less the xxs (2) gap around it (compact: sm, 8). */
 .option,
 .indicator {
   border-radius: calc(var(--radius-md) - var(--spacing-xxs));
+}
+.compact .option,
+.compact .indicator {
+  border-radius: calc(var(--radius-sm) - var(--spacing-xxs));
+}
+/* The compact one is drawn 32 high; each option's touch target stays 44. */
+.compact .option::after {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
 }
 .option {
   transition: color var(--duration-quick) var(--ease-standard);
