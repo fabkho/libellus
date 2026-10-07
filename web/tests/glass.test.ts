@@ -27,15 +27,22 @@ function fakeDocument() {
 
 describe('glass level', () => {
   it('is the design’s glass unless a known level is stored', () => {
-    expect(parseGlass(null)).toBe('full')
-    expect(parseGlass('blurry')).toBe('full')
-    expect(parseGlass('light')).toBe('light')
+    expect(parseGlass(null)).toBe('strong')
+    expect(parseGlass('blurry')).toBe('strong')
+    expect(parseGlass('strong')).toBe('strong')
+    expect(parseGlass('medium')).toBe('medium')
     expect(parseGlass('off')).toBe('off')
+  })
+
+  it('reads the first version’s names as their new levels', () => {
+    expect(parseGlass('full')).toBe('strong')
+    expect(parseGlass('light')).toBe('medium')
+    expect(readGlass(memoryStorage({ [GLASS_KEY]: 'light' }))).toBe('medium')
   })
 
   it('reads back what was written, under a key sign-out keeps', () => {
     const storage = memoryStorage()
-    expect(readGlass(storage)).toBe('full')
+    expect(readGlass(storage)).toBe('strong')
     writeGlass(storage, 'off')
     expect(storage.items.get(GLASS_KEY)).toBe('off')
     expect(readGlass(storage)).toBe('off')
@@ -51,17 +58,17 @@ describe('glass level', () => {
         throw new Error('blocked')
       },
     }
-    expect(readGlass(broken)).toBe('full')
-    expect(() => writeGlass(broken, 'light')).not.toThrow()
+    expect(readGlass(broken)).toBe('strong')
+    expect(() => writeGlass(broken, 'medium')).not.toThrow()
   })
 
   it('marks the page only for a level that is not the design’s', () => {
     const doc = fakeDocument()
-    applyGlass(doc, 'light')
-    expect(doc.attributes.get('data-glass')).toBe('light')
+    applyGlass(doc, 'medium')
+    expect(doc.attributes.get('data-glass')).toBe('medium')
     applyGlass(doc, 'off')
     expect(doc.attributes.get('data-glass')).toBe('off')
-    applyGlass(doc, 'full')
+    applyGlass(doc, 'strong')
     expect(doc.attributes.has('data-glass')).toBe(false)
   })
 })

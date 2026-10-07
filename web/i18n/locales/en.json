@@ -216,8 +216,8 @@
       "theme": "Dark mode",
       "glass": "Glass",
       "glassLevel": {
-        "full": "Full",
-        "light": "Light",
+        "strong": "Strong",
+        "medium": "Medium",
         "off": "Off"
       },
       "install": "Install app",

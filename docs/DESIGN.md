@@ -85,7 +85,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | surfaceRaised | `bg-surface-raised` | `#fbf9f5` | `#171512` | Cards, the search palette, the Profile's hero ring |
 | surfaceSheet | `bg-surface-sheet` | `#fbf9f5` | `#1b1815` | Bottom sheets |
 | surfaceStage | `bg-surface-stage` | `#1a1714` | `#000` | Behind a page that steps back |
-| glass | `glass` utility | paper 78 % | room 72 % | Floating chrome, always blurred |
+| glass | `glass` utility | paper 78 % | room 72 % | Floating chrome, blurred (the owner's Glass setting: Strong is this; Medium thins the blur and firms the tint; Off is solid `surfaceSheet`) |
 | fill / fillStrong | `bg-fill`, `bg-fill-strong` | ink 5 % / 8.5 % | cream 5.5 % / 10 % | Grouped rows, the avatar, code cells / quiet buttons, pressed rows |
 | hairline / hairlineStrong | `border-hairline`, `edge-faint` / `edge` | ink 10 % / 17 % | cream 8.5 % / 16 % | Dividers, card edges / chrome edges, outlines |
 | ink | `text-ink`, `bg-ink` | `#1c1915` | `#eee7dc` | Text, icons, the primary button |
@@ -101,7 +101,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | success | `text-success` | `#4f7a3c` | `#a3c48e` | Confirmations |
 | error / errorSoft | `text-error`, `bg-error-soft` | `#b03a20` | `#ec8063` | Errors, destructive actions |
 | scrim | `bg-scrim` | warm black 38 % | black 50 % | Behind a sheet |
-| veil | `bg-veil` | paper 55 % | room 55 % | Over the blurred page behind the search palette |
+| veil | `veil-tint` | paper 55 % | room 55 % | Over the blurred page behind the search palette (solid `surface` with Glass off) |
 | cloth1–6, clothInk | (Cover) | same in both | | Placeholder covers: a cover is an object, not chrome |
 | highlightLamp / Sage / Sky / Rose | `var(--color-highlight-*)` | soft washes | | The reader's four highlight colours (multiplied over the words) |
 

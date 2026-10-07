@@ -9,7 +9,7 @@ import { signUpMember } from '../tests/support/member'
 import { sql, uniqueEmail, visitorClient } from '../tests/support/stack'
 import { test } from './fixtures'
 import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID, shelfOwner } from './shelfOwner'
-import { expectAccessible, signedIn, signedInAs, untilStill } from './support'
+import { expectAccessible, openProfile, signedIn, signedInAs, untilStill } from './support'
 
 /**
  * The owner reads the client error log in the app (docs/OPERATIONS.md, Client
@@ -110,6 +110,34 @@ test('the owner sees an error on purpose in the log: grouped, filtered, its stac
   await page.getByTestId('errors.refresh').click()
   await asked
   await expect(group(boom)).toBeVisible()
+})
+
+test('the owner picks how glassy the chrome is: Strong is the design, Medium and Off are kept on the device, an old Light reads as Medium', async ({ page }) => {
+  await signInAsOwner(page)
+  await openProfile(page)
+  const html = page.locator('html')
+  await expect(page.getByTestId('profile.glass.strong')).toHaveAttribute('aria-checked', 'true')
+  await expect(html).not.toHaveAttribute('data-glass')
+
+  const glass = (el: string) => page.getByTestId('shell.tabs').evaluate((node, prop) => getComputedStyle(node).getPropertyValue(prop), el)
+  await page.getByTestId('profile.glass.medium').click()
+  await expect(html).toHaveAttribute('data-glass', 'medium')
+  await expect.poll(() => glass('backdrop-filter')).toContain('blur(11px)')
+  // Off: nothing shows through (an opaque tint: no alpha in its colour) and nothing blurs.
+  await page.getByTestId('profile.glass.off').click()
+  await expect(html).toHaveAttribute('data-glass', 'off')
+  await expect.poll(() => glass('backdrop-filter')).toBe('none')
+  expect(await page.getByTestId('shell.tabs').evaluate((node) => getComputedStyle(node).backgroundColor)).not.toContain('/')
+
+  // Kept through a reload; the first version's names read as the new levels.
+  await page.reload()
+  await expect(html).toHaveAttribute('data-glass', 'off')
+  await page.evaluate(() => localStorage.setItem('libellus-glass', 'light'))
+  await page.reload()
+  await expect(html).toHaveAttribute('data-glass', 'medium')
+  await expect(page.getByTestId('profile.glass.medium')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('profile.glass.strong').click()
+  await expect(html).not.toHaveAttribute('data-glass')
 })
 
 test('nothing in the last 7 days: the empty state', async ({ page }) => {

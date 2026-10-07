@@ -19,9 +19,9 @@
 // the ebook folder is chosen and scanned. The reader's Classic style is set in the
 // reader's own Aa sheet only. Under the rows: Version x.y.z · What's new, which opens
 // the release's notes (composables/useWhatsNew.ts).
-// Glass (the owner's account only, stores/glass.ts), under Dark mode: how much the floating
-// chrome blurs on this device — Full, Light (half the radius), Off, a segmented choice in the
-// row — to compare on a phone.
+// Glass (the owner's account only, stores/glass.ts), under Dark mode: how glassy the floating
+// chrome is on this device — Strong, Medium, Off (no transparency at all), a segmented choice in
+// the row — to compare on a phone.
 import { useAvatarStore } from '~/stores/avatar'
 import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
