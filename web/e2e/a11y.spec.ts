@@ -171,7 +171,20 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByTestId('edition')).toBeVisible()
       await expect(page.getByTestId('edition.loading')).toHaveCount(0)
       await expectAccessible(page, 'Change edition')
-      await closeSheet(page, 'edition')
+      // My edition isn't listed: the ISBN, nothing found, her own edition's form with a wrong field.
+      await page.getByTestId('edition.missing').click()
+      await expect(page.getByTestId('ownEdition')).toBeVisible()
+      await untilStill(page)
+      await expectAccessible(page, "My edition isn't listed")
+      await page.getByTestId('ownEdition.isbn').fill('979-0-000042-01-8')
+      await page.getByTestId('ownEdition.lookUp').click()
+      await expect(page.getByTestId('ownEdition.notFound')).toBeVisible()
+      await expectAccessible(page, "My edition isn't listed, nothing found")
+      await page.getByTestId('ownEdition.startOwn').click()
+      await page.getByTestId('ownEdition.submit').click()
+      await expect(page.getByTestId('ownEdition.invalid')).toBeVisible()
+      await expectAccessible(page, 'her own edition')
+      await closeSheet(page, 'ownEdition')
 
       // Wanted: Start.
       await page.getByTestId('shell.tab.library').click()

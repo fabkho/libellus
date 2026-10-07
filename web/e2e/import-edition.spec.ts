@@ -173,3 +173,36 @@ test('"As in the file" keeps what the file says, a choice can be changed again, 
     { title: ownTitle, source: 'import', mine: false },
   ])
 })
+
+test('a book no source knows by its ISBN becomes her own edition in the preview, and the import makes it', async ({ page }) => {
+  const member = await signedIn(page)
+  const ownTitle = runTitle('Harbour Lights')
+  await preview(page, ownTitle)
+
+  // The book only the file knows: Choose edition, then My edition isn't listed.
+  await page.getByTestId('import.attentionList.row').nth(1).getByTestId('import.attentionList.action').click()
+  await expect(page.getByTestId('edition')).toBeVisible()
+  await page.getByTestId('edition.missing').click()
+  await expect(page.getByTestId('edition')).toBeHidden()
+  await expect(page.getByTestId('ownEdition')).toBeVisible()
+  await page.getByTestId('ownEdition.isbn').fill(uniqueIsbn())
+  await page.getByTestId('ownEdition.lookUp').click()
+  await expect(page.getByTestId('ownEdition.notFound')).toBeVisible()
+  await page.getByTestId('ownEdition.startOwn').click()
+  await page.getByTestId('ownEdition.format.audiobook').click()
+  await page.getByTestId('ownEdition.year').fill('2021')
+  await page.getByTestId('ownEdition.submit').click()
+  await expect(page.getByTestId('ownEdition')).toBeHidden()
+
+  // Only the preview changed; the import makes her own edition, an audiobook.
+  await expect(page.getByTestId('import.choicesList.title')).toHaveText([ownTitle])
+  await page.getByTestId('import.start').click()
+  await expect(page.getByTestId('import.doneTitle')).toHaveText('2 books added')
+  const [own] = await sql<{ format: string; year: number; mine: boolean }>(
+    `select b.format::text as format, b.published_year as year, b.owner_id = $1 as mine
+       from public.library_entries e join public.books b on b.id = e.book_id
+      where e.member_id = $1 and b.title = $2`,
+    [member.id, ownTitle],
+  )
+  expect(own).toEqual({ format: 'audiobook', year: 2021, mine: true })
+})
