@@ -8,7 +8,8 @@ import { createReadingPages } from '../app/data/readingPage'
 import { isoDay } from '../app/utils/dates'
 import { appleCover } from '../tests/support/apple'
 import { signUpMember } from '../tests/support/member'
-import { resetWaitlistLimits, runTitle, sql, TEST_PUBLISHER, uniqueAppleId, uniqueEmail } from '../tests/support/stack'
+import { createWaitlist } from '../app/data/waitlist'
+import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId, uniqueEmail, visitorAddress, visitorClient } from '../tests/support/stack'
 import { test } from './fixtures'
 import { SHELF_LIBRARY_SRC, shelfOwner } from './shelfOwner'
 import { expectAccessible, expectNoSideScroll, signedIn, untilStill } from './support'
@@ -319,11 +320,17 @@ test.describe('a cover flies to its Book card and back', () => {
 })
 
 test.describe('the waitlist on a reading page, signed out', () => {
-  test.beforeEach(resetWaitlistLimits)
+  // The limits count a caller by the address its request came from, and every flow here calls from the same
+  // machine: each flow's browser calls as an address of its own (what Cloudflare would set in front of the API).
+  const visitingAs = async (page: Page, address = visitorAddress()) => {
+    await page.route('**/rest/v1/rpc/join_waitlist', (route) => route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': address } }))
+    return address
+  }
 
   test('takes an address, thanks the same for it again, refuses what is not one, and keeps no account', async ({ page }) => {
     const { token, loved } = await adaWithAPage()
     const address = uniqueEmail('wl-flow')
+    await visitingAs(page)
     await page.goto(`/r/${token}`)
     const form = page.getByTestId('readingPage.waitlistForm')
     await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
@@ -368,15 +375,16 @@ test.describe('the waitlist on a reading page, signed out', () => {
 
   test('says it when the database refuses (too many tries) and when the device is offline', async ({ page, context }) => {
     const { token } = await adaWithAPage()
+    // This visitor has already left five addresses in the hour: the sixth, from the page, is refused in words.
+    const address = await visitingAs(page)
+    const earlier = createWaitlist(visitorClient(address))
+    for (let i = 0; i < 5; i++) await earlier.join(uniqueEmail(`wl-earlier${i}`), token)
     await page.goto(`/r/${token}`)
-
-    // Everybody together may leave 100 in the hour (and one device 5): the 100 are made.
-    await sql('insert into private.waitlist_joins (caller_key) select $1 || g from generate_series(1, 100) g', ['crowd-'])
     await page.getByTestId('readingPage.waitlistEmail').fill(uniqueEmail('wl-limit'))
     await page.getByTestId('readingPage.waitlistJoin').click()
     await expect(page.getByTestId('readingPage.waitlistError')).toHaveText(en.readingPage.waitlist.rateLimited)
+    expect(await sql('select 1 from private.waitlist where email::text like $1', ['wl-limit-%'])).toHaveLength(0)
     await expectAccessibleBoth(page, 'waitlist form, refused')
-    await resetWaitlistLimits()
 
     // Offline: the button says so and nothing is sent.
     await context.setOffline(true)
@@ -384,6 +392,10 @@ test.describe('the waitlist on a reading page, signed out', () => {
     await expect(page.getByTestId('readingPage.waitlistJoin')).toBeDisabled()
     await context.setOffline(false)
     await expect(page.getByTestId('readingPage.waitlistJoin')).toHaveText(en.readingPage.waitlist.join)
+
+    // Another visitor, another allowance: this device, as another address, gets in.
+    await page.unroute('**/rest/v1/rpc/join_waitlist')
+    await visitingAs(page)
     await page.getByTestId('readingPage.waitlistEmail').fill(uniqueEmail('wl-back'))
     await page.getByTestId('readingPage.waitlistJoin').click()
     await expect(page.getByTestId('readingPage.waitlistDone')).toBeVisible()

@@ -123,12 +123,6 @@ async function removePhotosOf(where: string, params: unknown[]) {
   await admin.storage.from('avatars').remove(files.map((f) => f.name))
 }
 
-/**
- * Forgets what the waitlist's limits counted (#171: 5 new entries an hour per caller, and every test and flow
- * here calls from the same address), so a flow starts with its full allowance.
- */
-export const resetWaitlistLimits = () => sql('delete from private.waitlist_joins')
-
 /** What a crashed run left behind, once it is a day old (no run still going is). */
 export async function sweepAbandonedRuns() {
   await removePhotosOf(`u.email like $1 and u.created_at < now() - interval '1 day'`, [`%@${TEST_DOMAIN}`])
@@ -278,6 +272,23 @@ export function memoryStorage(): SessionStorage {
       items.delete(key)
     },
   }
+}
+
+/**
+ * A signed-out visitor at an address of her own. The waitlist limits a caller by the address its request
+ * came from (5 new entries an hour, supabase/migrations/20261011040000_waitlist.sql), and every test here
+ * calls from the same machine, so each one invents an address (`cf-connecting-ip`, the header Cloudflare
+ * sets in front of the real API) and never meets another's allowance.
+ */
+export function visitorAddress(): string {
+  return `visitor-${randomUUID()}`
+}
+
+export function visitorClient(address: string = visitorAddress()): SupabaseClient {
+  return createClient(stack.url, stack.anonKey, {
+    global: { headers: { 'cf-connecting-ip': address } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 }
 
 /** The app's client, configured exactly as the app configures it. */

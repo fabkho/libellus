@@ -1,9 +1,9 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createWaitlist, emailsText, entryFromRow, looksLikeEmail, waiting, type WaitlistEntry } from '@/data/waitlist'
 import { createAuth } from '@/data/auth'
 import { createReadingPages } from '@/data/readingPage'
 import { signUpMember, type TestMember } from './support/member'
-import { newClient, resetWaitlistLimits, sql, uniqueEmail } from './support/stack'
+import { newClient, sql, uniqueEmail, visitorClient } from './support/stack'
 
 /**
  * The waitlist on a reading page (issue #171): the pure part (the address check the form makes before it
@@ -65,12 +65,11 @@ describe('the repository', () => {
   })
   afterAll(async () => {
     await sql('update private.instance_owner set owner_id = $1', [before])
-    await resetWaitlistLimits()
   })
-  beforeEach(resetWaitlistLimits)
 
   const name = (id: string | null) => sql('update private.instance_owner set owner_id = $1', [id])
-  const visitor = () => createWaitlist(newClient())
+  // A signed-out visitor, at an address of her own (tests/support/stack.ts, visitorClient).
+  const visitor = () => createWaitlist(visitorClient())
 
   it('lets a signed-out visitor join from a page, and shows the owner whose page it was', async () => {
     await name(owner.id)

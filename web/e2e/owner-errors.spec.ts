@@ -6,7 +6,7 @@ import { createOwnerErrors } from '../app/data/ownerErrors'
 import { createReadingPages } from '../app/data/readingPage'
 import { createWaitlist } from '../app/data/waitlist'
 import { signUpMember } from '../tests/support/member'
-import { newClient, resetWaitlistLimits, sql, uniqueEmail } from '../tests/support/stack'
+import { sql, uniqueEmail, visitorClient } from '../tests/support/stack'
 import { test } from './fixtures'
 import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID, shelfOwner } from './shelfOwner'
 import { expectAccessible, signedIn, signedInAs, untilStill } from './support'
@@ -166,14 +166,12 @@ anyone('nobody else has the log: no row, no address, no request, and the databas
 
 // ------------------------------------------------------------------ the waitlist (#171)
 
-test.beforeEach(resetWaitlistLimits)
-
 /** A member named Ada with her page on, and what a visitor of it leaves on the waitlist. */
 async function visitors(addresses: string[]) {
   const ada = await signUpMember()
   await createAuth(ada.client).setName('Ada')
   const token = (await createReadingPages(ada.client).setOn(true)).data!.token!
-  for (const address of addresses) await createWaitlist(newClient()).join(address, token)
+  for (const address of addresses) await createWaitlist(visitorClient()).join(address, token)
 }
 
 async function expectAccessibleBoth(page: Page, where: string) {
