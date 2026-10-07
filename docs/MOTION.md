@@ -79,6 +79,19 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   the initials: in the hero it is the button that draws the ring, not the disc inside it, so the
   ring flies with the photo instead of standing at its place from the first frame
   (`e2e/avatar-flight.spec.ts`).
+- **Push to an author** (#167). Tapping an author (the Book page's author line, a list row's author)
+  moves the page as the push to the Profile does, without a ring and with its wave held still the
+  same way: the author's page fades in as the
+  page left fades out and rises `md` into place over `standard`; the tab bar stands and the round back
+  button only fades. Back (the round button or the system's) plays it the other way over `exit` on the
+  `standard` curve, the page sinking `md`. A work tapped on the author's page flies its cover into the
+  Book's page like any push to a book, and Back from there flies it home. The View Transitions API
+  (`plugins/author-transition.client.ts`, `data-push-transition` in `main.css`); nothing with Reduce
+  Motion, on a Back the browser animates itself, or without the API. The first opening of an author
+  on a device stands in placeholders of its shape (the hero's ring and lines, four rows) in the
+  Profile's wave, and the page replaces them whole when it comes, so nothing on it moves; opened again,
+  it is there from the device's copy. A Book's series line, the first time, opens its room like a
+  `Reveal` (Goodreads' line does the same); after that it is there in the first frame.
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
