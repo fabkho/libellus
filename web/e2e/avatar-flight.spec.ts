@@ -12,6 +12,8 @@ import { signedIn, untilStill } from './support'
  * still on its way. In Chromium, where the transition's frames can be paused
  * and looked at.
  */
+// What moves is the subject here: the View Transition plays, which the config's Reduce Motion cuts.
+test.use({ reducedMotion: 'no-preference' })
 test.use({ browserName: 'chromium', viewport: { width: 412, height: 915 } })
 
 /** The elements in `scope` that draw a box-shadow (the ring, the shadow, the hairline) outside the element that carries the name. */
