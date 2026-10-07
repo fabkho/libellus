@@ -1,6 +1,7 @@
 import type { RouteLocationNormalized } from 'vue-router'
 import { prefersReducedMotion } from '~/utils/motion'
 import { tabPlaces } from '~/utils/tabPlaces'
+import { holdWhileTransitioning, scaleInsteadOfResize } from '~/utils/viewTransition'
 
 /**
  * Push to the Profile and back (docs/MOTION.md, Push to the Profile; issue
@@ -25,6 +26,11 @@ import { tabPlaces } from '~/utils/tabPlaces'
  * - No transition with Reduce Motion, in a browser without the API (it just
  *   navigates), or on a Back the browser has animated itself (iOS Safari's edge
  *   swipe: `hasUAVisualTransition`).
+ * - Light on a phone's main thread: once it starts, the groups move and scale by
+ *   `transform` alone (the browser's own keyframes resize them, layout on every
+ *   frame; `scaleInsteadOfResize`), and while it runs, the stores hold answers
+ *   that come in until it has landed (`afterTransition`, utils/viewTransition.ts),
+ *   so the page under it is not set up again mid-flight.
  */
 type Direction = 'push' | 'back'
 
@@ -100,8 +106,14 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (root.dataset.profileTransition === direction) delete root.dataset.profileTransition
       for (const el of document.querySelectorAll<HTMLElement>('[data-profile-avatar]')) el.style.removeProperty('view-transition-name')
     }
+    holdWhileTransitioning(transition.finished)
     // Skipped (another took over) is not an error here: the page has changed all the same.
-    transition.ready.catch(() => {})
+    transition.ready.then(() => {
+      for (const animation of root.getAnimations({ subtree: true })) {
+        const effect = animation.effect
+        if (effect instanceof KeyframeEffect && effect.pseudoElement?.startsWith('::view-transition-group(')) scaleInsteadOfResize(effect)
+      }
+    }, () => {})
     void transition.finished.then(done, done)
     // The page swaps only once the old state is on its picture.
     return oldCaptured

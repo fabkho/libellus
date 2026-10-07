@@ -339,6 +339,17 @@ html[data-profile-transition='back']::view-transition-new(root) {
   animation-duration: var(--duration-standard);
   animation-timing-function: var(--ease-standard);
 }
+/* The groups move and scale by transform alone, from their top left corner
+   (scaleInsteadOfResize, utils/viewTransition.ts). */
+html[data-profile-transition]::view-transition-group(*) {
+  transform-origin: 0 0;
+}
+/* The Profile's loading wave holds still while the page arrives under the
+   transition, and swells on once it has landed: dozens of placeholders each
+   animating are each a layer of their own for the transition to carry. */
+html[data-profile-transition] .wave {
+  animation-play-state: paused;
+}
 html[data-profile-transition='back']::view-transition-group(*),
 html[data-profile-transition='back']::view-transition-old(*),
 html[data-profile-transition='back']::view-transition-new(*) {
