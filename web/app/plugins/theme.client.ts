@@ -1,3 +1,4 @@
+import { useGlassStore } from '~/stores/glass'
 import { useThemeStore } from '~/stores/theme'
 
 /**
@@ -5,10 +6,12 @@ import { useThemeStore } from '~/stores/theme'
  * at boot. The head manager owns the theme-color tags (nuxt.config.ts declares
  * them for the static HTML), so their colour is declared here from the store:
  * the chosen theme's surface on both, or each its own while nothing is chosen.
+ * The glass level (the owner's setting, utils/glass.ts) goes on the page here too.
  */
 export default defineNuxtPlugin(() => {
   const theme = useThemeStore()
   theme.start()
+  useGlassStore().start()
   useHead({
     meta: [
       {

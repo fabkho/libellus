@@ -480,8 +480,8 @@ function pick(hit: SearchHit) {
 
 <style scoped>
 .veil {
-  -webkit-backdrop-filter: blur(var(--blur-veil));
-  backdrop-filter: blur(var(--blur-veil));
+  -webkit-backdrop-filter: blur(calc(var(--blur-veil) * var(--glass-scale, 1)));
+  backdrop-filter: blur(calc(var(--blur-veil) * var(--glass-scale, 1)));
 }
 .palette {
   touch-action: none;

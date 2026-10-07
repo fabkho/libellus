@@ -99,8 +99,22 @@
 /* Floating glass: the tab bar, the avatar menu, round buttons over covers. */
 @utility glass {
   background-color: var(--color-glass);
-  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
-  backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
+  -webkit-backdrop-filter: blur(calc(var(--blur-glass) * var(--glass-scale, 1))) saturate(1.6);
+  backdrop-filter: blur(calc(var(--blur-glass) * var(--glass-scale, 1))) saturate(1.6);
+}
+
+/* The owner's Glass setting (Profile → Account, utils/glass.ts): every backdrop blur (the glass,
+   the round buttons, the search veil) at half its radius, or none at all. The tints stay. A
+   backdrop blur is redrawn every frame something moves behind it, so this is for comparing on a
+   phone what it costs; with neither attribute the design's own radii hold. */
+html[data-glass='light'] {
+  --glass-scale: 0.5;
+}
+html[data-glass='off'] *,
+html[data-glass='off'] *::before,
+html[data-glass='off'] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 /* Mono figures and dates line up in columns. */
