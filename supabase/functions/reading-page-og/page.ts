@@ -56,7 +56,7 @@ export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 /** Her name on the image, or the page without one. "Ada's reading". */
 export function pageTitle(name: string | null | undefined): string {
   const trimmed = (name ?? '').trim()
-  return trimmed ? `${trimmed}'s reading` : 'A reading page'
+  return trimmed ? `${trimmed}’s reading` : 'A reading page'
 }
 
 /**

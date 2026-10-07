@@ -38,6 +38,8 @@ const SITE_HEADERS = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Content-Security-Policy-Report-Only':
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://books.fabkho.dev https://itunes.apple.com https://openlibrary.org https://covers.openlibrary.org https://*.mzstatic.com https://cloudflareinsights.com https://api.mymemory.translated.net https://en.wiktionary.org; frame-src 'self' blob:; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
 }
 
 export async function onRequest(context) {
@@ -212,7 +214,7 @@ function ogTitle(data, book) {
     return author ? `${data.book.title} by ${author}` : String(data?.book?.title ?? 'A book')
   }
   const name = firstName(data)
-  return name ? `${name}'s reading` : 'A reading page'
+  return name ? `${name}’s reading` : 'A reading page'
 }
 
 /** The browser tab's title, and what a plain link list shows. */
@@ -270,12 +272,13 @@ function inject(shellHtml, tags, title) {
   let out = shellHtml
   let head = tags
   if (title) {
-    const titled = out.replace(/<title[^>]*>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)
+    const titled = out.replace(/<title[^>]*>[\s\S]*?<\/title>/i, () => `<title>${escapeHtml(title)}</title>`)
     if (titled === out) head += `<title>${escapeHtml(title)}</title>`
     else out = titled
   }
   if (!head) return out
-  return out.includes('</head>') ? out.replace('</head>', `${head}</head>`) : head + out
+  // A function, not a string: `$&` or `$'` in a title must stay text, not a replacement pattern.
+  return out.includes('</head>') ? out.replace('</head>', () => `${head}</head>`) : head + out
 }
 
 /** The shell's own headers, plus what this address decides on top of them. */

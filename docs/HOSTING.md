@@ -68,8 +68,12 @@ review she shared), `og:url`, `og:image` and its size, `twitter:card`, and `noin
 - `web/public/_headers` does **not** reach a Function's response in production (Cloudflare's
   documentation says so for every rule in the file, and `ASSETS.fetch` hands back the asset without
   them too); `npx wrangler pages dev` does apply them locally, which hides it. The function
-  therefore sets the security headers of the `/*` rule itself where the shell's response does not
-  already carry them (`SITE_HEADERS` in the file; keep it in step with `_headers`).
+  therefore sets the headers of the `/*` rule itself (the Content-Security-Policy-Report-Only
+  included) where the shell's response does not already carry them (`SITE_HEADERS` in the file;
+  keep it in step with `_headers`).
+- Web Analytics: Pages adds its beacon to HTML it serves; whether that reaches a Function's
+  answer too is to be checked on the first deployment (`curl -s <deployment>/r/<token> | grep
+  cloudflareinsights`). Without it a visit to a reading page is not counted; nothing else changes.
 
 Everything else stays static, and only `/share` and `/r/*` invoke a Function.
 

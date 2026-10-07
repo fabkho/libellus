@@ -125,8 +125,8 @@ describe('the page behind a link', () => {
     const html = await response.text()
 
     expect(response.status).toBe(200)
-    expect(html).toContain('<meta property="og:title" content="Ada&#39;s reading">')
-    expect(html).toContain(`<title>Ada&#39;s reading · Libellus</title>`)
+    expect(html).toContain('<meta property="og:title" content="Ada’s reading">')
+    expect(html).toContain(`<title>Ada’s reading · Libellus</title>`)
     // What she is reading, then her year: both out of what the page publishes.
     expect(html).toMatch(
       new RegExp(`<meta property="og:description" content="Reading ${escapeForRegExp(readingTitle)} · 1 book in ${new Date().getFullYear()}">`),

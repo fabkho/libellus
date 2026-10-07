@@ -299,7 +299,7 @@ export async function renderCard(card: PublicBookCard, deps: RenderDeps = {}): P
       children: [
         el('div', {
           style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-          children: [wordmark(32), eyebrow(name ? `${name}'s reading` : 'A reading page', 18)],
+          children: [wordmark(32), eyebrow(name ? `${name}’s reading` : 'A reading page', 18)],
         }),
         el('div', {
           style: { display: 'flex', alignItems: 'center', gap: 56, marginTop: 'auto', marginBottom: 'auto' },

@@ -10,8 +10,8 @@ import { readFixture } from './test_support.ts'
 const page = () => readFixture('page.json') as PublicReadingPage
 
 Deno.test('the title is hers, or the page without a name', () => {
-  assertEquals(pageTitle('Ada'), "Ada's reading")
-  assertEquals(pageTitle('  Ada  '), "Ada's reading")
+  assertEquals(pageTitle('Ada'), "Ada’s reading")
+  assertEquals(pageTitle('  Ada  '), "Ada’s reading")
   assertEquals(pageTitle(null), 'A reading page')
   assertEquals(pageTitle('   '), 'A reading page')
 })
