@@ -114,7 +114,7 @@ export type ActiveFilter = { facet: Facet; value: string }
 export function activeFilters(status: EntryStatus, view: ListView, { genres = false }: { genres?: boolean } = {}): ActiveFilter[] {
   const active: ActiveFilter[] = []
   for (const facet of FACETS[status]) {
-    if (facet === 'status' && view.status !== null) active.push({ facet, value: view.status })
+    if (facet === 'status' && view.status != null) active.push({ facet, value: view.status })
     if (facet === 'readAs') active.push(...view.readAs.map((value) => ({ facet, value })))
     if (facet === 'author') active.push(...view.authors.map((value) => ({ facet, value })))
     if (facet === 'rating' && view.rating !== null) active.push({ facet, value: String(view.rating) })
@@ -164,7 +164,7 @@ export const yearReadOf = (entry: LibraryEntry) => entry.latestSession?.endedOn?
 /** Whether the entry passes every filter of the view that applies to the Status. */
 export function matches(entry: LibraryEntry, status: EntryStatus, view: ListView, { genres = null }: MatchOptions = {}): boolean {
   const facets = FACETS[status]
-  if (facets.includes('status') && view.status !== null && isNotFinished(entry) !== (view.status === 'notFinished')) return false
+  if (facets.includes('status') && view.status != null && isNotFinished(entry) !== (view.status === 'notFinished')) return false
   if (facets.includes('readAs') && view.readAs.length && !view.readAs.includes(readAsOf(entry) ?? 'unset')) return false
   if (facets.includes('author') && view.authors.length && !entry.book.authors.some((a) => view.authors.includes(a))) return false
   if (facets.includes('rating') && view.rating !== null) {
