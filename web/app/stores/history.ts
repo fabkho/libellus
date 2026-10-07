@@ -44,9 +44,24 @@ export const useHistoryStore = defineStore('history', () => {
   const sessions = reactive(new Map<string, ReadingSession[]>())
   const loadError = ref<LibraryErrorCode | null>(null)
   const asks = new Map<string, number>()
+  /** The reads of each entry being asked for now. */
+  const asking = new Map<string, Promise<void>>()
 
-  /** Reads an entry's history (again). Only the latest ask lands, so an older answer never overwrites a newer one. */
-  async function load(entryId: string) {
+  /**
+   * Reads an entry's history (again). Only the latest ask lands, so an older
+   * answer never overwrites a newer one. `share`: an ask already on its way
+   * will do (the book page showing the entry, which changes as the page's own
+   * answer comes in); a change made here always asks anew.
+   */
+  function load(entryId: string, { share = false }: { share?: boolean } = {}): Promise<void> {
+    const running = share ? asking.get(entryId) : undefined
+    if (running) return running
+    const task = read(entryId).finally(() => asking.get(entryId) === task && asking.delete(entryId))
+    asking.set(entryId, task)
+    return task
+  }
+
+  async function read(entryId: string) {
     const repo = library.library()
     if (!repo) return
     // While writes wait to sync (issue #93) the reads shown stand: the database has not got them yet.
@@ -226,6 +241,7 @@ export const useHistoryStore = defineStore('history', () => {
   function reset() {
     sessions.clear()
     asks.clear()
+    asking.clear()
     loadError.value = null
     editing.value = null
     deleting.value = null

@@ -86,6 +86,12 @@ export const useBookStore = defineStore('book', () => {
     }
   }
 
+  /**
+   * How long an answer just in stands for a new ask (ms): the press's prefetch
+   * usually lands before the page asks for itself, and the two are one request.
+   */
+  const JUST_LOADED = 2000
+
   /** Asks for a page (again). Shows what search knew while the rest arrives. */
   function load(key: string): Promise<void> {
     const running = loading.get(key)
@@ -95,17 +101,24 @@ export const useBookStore = defineStore('book', () => {
       pages.set(key, { phase: seen ? 'ready' : 'loading', book: seen, entry: null, error: null })
     }
     const asked = performance.now()
-    const task = resolve(key)
+    let answered = false
+    const task: Promise<void> = resolve(key)
       .then((resolved) => {
         // Keep a page that shows something over a failed refresh.
         const current = pages.get(key)
         if (resolved.phase === 'error' && current?.book) return
         pages.set(key, resolved)
+        answered = resolved.phase !== 'error'
         // What the database says now (a finish on another device, say) replaces
         // what this device knew, unless this device changed the entry since.
         if (resolved.entry) library.remember(resolved.entry, { keys: [key], asked })
       })
-      .finally(() => loading.delete(key))
+      .finally(() => {
+        // A failure is asked again at once (Retry); an answer stands for a moment.
+        const forget = () => loading.get(key) === task && loading.delete(key)
+        if (answered) setTimeout(forget, JUST_LOADED)
+        else forget()
+      })
     loading.set(key, task)
     return task
   }
