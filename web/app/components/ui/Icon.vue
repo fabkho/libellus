@@ -33,6 +33,10 @@ export type IconName =
   | 'camera'
   | 'torch'
   | 'ebook'
+  | 'hardcover'
+  | 'paperback'
+  | 'audiobook'
+  | 'tablet'
   | 'read'
   | 'contents'
   | 'translate'
@@ -137,6 +141,22 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     <!-- An ebook on the device (#131): a reader's screen with a page of lines. -->
     <template v-else-if="name === 'ebook'">
       <rect x="6" y="3.5" width="12" height="17" rx="2" /><path d="M9 8h6M9 11h6M9 14h3.5" />
+    </template>
+    <!-- Formats of an edition. Hardcover: a closed book, the board's spine side rounded, its page block under the cover. -->
+    <template v-else-if="name === 'hardcover'">
+      <path d="M8 3.5h10.5v14H8A2 2 0 0 0 6 19.5V5.5a2 2 0 0 1 2-2Z" /><path d="M6 19.5a2 2 0 0 0 2 2h10.5v-4M10.5 7.5h5" />
+    </template>
+    <!-- Paperback: a slim soft cover, creased at the spine, no page block. -->
+    <template v-else-if="name === 'paperback'">
+      <path d="M7.5 3.5h9A1.5 1.5 0 0 1 18 5v14a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1.5-1.5Z" /><path d="M9.5 3.5v17M12.5 8h3" />
+    </template>
+    <!-- Ebook as a format: a reader with its page of text and home bar (the reader's `ebook` has no home bar). -->
+    <template v-else-if="name === 'tablet'">
+      <rect x="5" y="3" width="14" height="18" rx="2.5" /><path d="M8.5 7.5h7M8.5 10.5h7M8.5 13.5h4M10.5 17.5h3" />
+    </template>
+    <!-- Audiobook: headphones. -->
+    <template v-else-if="name === 'audiobook'">
+      <path d="M5 15v-3a7 7 0 0 1 14 0v3" /><rect x="4.5" y="14" width="4" height="6" rx="1.6" /><rect x="15.5" y="14" width="4" height="6" rx="1.6" />
     </template>
     <!-- The reader (#131 phase 2). An open book: Read now, the pages layout. -->
     <template v-else-if="name === 'read'">
