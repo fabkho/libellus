@@ -1,8 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
-import { signUpMember } from '../tests/support/member'
-import { emailCooldown, readMailedCode } from '../tests/support/stack'
 import { test } from './fixtures'
+import { signedIn } from './support'
 
 /**
  * The search overlay's chrome on a phone (WebKit, iPhone size): the tab bar's
@@ -11,16 +10,9 @@ import { test } from './fixtures'
  * chrome, where the focus is, which page is behind — not the frames in between.
  */
 
-/** Signs a fresh member in through the screens and lands on Library. */
+/** A fresh member, signed in, on Library. */
 async function onLibrary(page: Page) {
-  const member = await signUpMember()
-  await emailCooldown()
-  await page.goto('/sign-in')
-  await page.getByTestId('signIn.email').fill(member.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
-  await expect(page.getByTestId('home.title')).toBeVisible()
+  await signedIn(page)
   await page.getByTestId('shell.tab.library').click()
   await expect(page.getByTestId('library.title')).toBeVisible()
 }

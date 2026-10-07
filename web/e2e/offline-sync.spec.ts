@@ -171,7 +171,9 @@ const outboxDatabases = (page: import('@playwright/test').Page) =>
 test('signing out with changes waiting asks first; offline only "Sign out anyway" is offered, and it drops them', async ({ page, baseURL }) => {
   await recordedApple(page)
   const network = await keepShell(page, baseURL!)
-  const member = await signedIn(page)
+  // Through the screens: the sign-in page's code is then among the files kept, and it is where
+  // signing out offline lands (an installed app has it from its service worker's precache).
+  const member = await signedIn(page, { throughTheScreens: true })
   await createLibrary(member.client).addToLibrary(book('Salt Letters'), { status: 'reading', startedOn: isoDay() })
   // The Profile loaded once online, so it opens offline.
   await goto(page, '/profile')

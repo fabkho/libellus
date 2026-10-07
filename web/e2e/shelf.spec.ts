@@ -2,13 +2,12 @@ import { readFileSync } from 'node:fs'
 import { expect, type Locator, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
-import { createAuth } from '../app/data/auth'
 import { createLibrary } from '../app/data/library'
 import { isoDay } from '../app/utils/dates'
-import { emailCooldown, mailCount, newClient, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { shelfOwner } from './shelfOwner'
-import { expectAccessible, expectNoSideScroll, signedIn } from './support'
+import { expectAccessible, expectNoSideScroll, signedIn, signedInAs, signedInClient } from './support'
 
 /**
  * Your shelf (#23): Regal's 3D shelf of the owner's published library file, for
@@ -103,30 +102,16 @@ async function countNavigations(page: Page): Promise<() => Promise<number>> {
   return () => page.evaluate(() => (window as unknown as { __navigations: number }).__navigations)
 }
 
-/** Signs the owner in through the screens (she exists; a code is mailed to her). */
+/** Signs the owner in (she exists): her session, handed to the page (e2e/support.ts, signedInAs). */
 async function signInAsOwner(page: Page) {
   const owner = await shelfOwner()
-  await emailCooldown()
-  const before = await mailCount(owner.email)
-  await page.goto('/sign-in')
-  await page.getByTestId('signIn.email').fill(owner.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(owner.email, before + 1))
-  await expect(page.getByTestId('home.title')).toBeVisible()
+  await signedInAs(page, owner.email)
   return owner
 }
 
-/** The owner as a client of the Library (she exists; a code is mailed to her). */
+/** The owner as a client of the Library (she exists; signed in on a client of its own). */
 async function ownerClient(email: string) {
-  const client = newClient()
-  const auth = createAuth(client)
-  await emailCooldown()
-  const before = await mailCount(email)
-  await auth.requestCode(email)
-  const verified = await auth.verifyCode(email, await readMailedCode(email, before + 1))
-  if (verified.error) throw new Error(`Owner sign-in failed: ${verified.error}`)
-  return client
+  return (await signedInClient(email)).client
 }
 
 /** A Book for the Library, found on Apple Books and unique to the run. */
