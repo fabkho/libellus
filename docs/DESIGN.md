@@ -363,6 +363,8 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiEmptyState` | A screen with nothing in it yet: the lamp over an empty shelf, a serif title, a sentence, and (slot) the one way forward. |
 | `UiSearchPrompt` | The search palette at rest inside an empty state; opens the real search overlay. |
 | `UiPressLink` | Every link into a book page (search results, Library rows). Starts on touch-down: preloads the route and emits `press` (start loading the data); a mouse press navigates at once, a finger on its tap, since a touch-down may become a scroll. |
+| `UiIconSegments` | A choice of a few as one row of icon segments (the control of variant D): a radio group, each segment named by its full label, arrow keys move it; the chosen segment widens and unfolds its name beside the icon, the others stay icons. Used by `BookFormatChoice` and `BookReadAs`. |
+| `BookReadAs` | How she read a Book (Book page, options and Finish sheets): the eyebrow over a `UiIconSegments` row of three — physical (a book), ebook (a reader), audiobook (headphones). The lit one is hers, or the edition's format as the default. |
 | `BookFormatChoice` | An edition's format (Change edition, "My edition isn't listed"): one row of four icon segments (hardcover, paperback, a reader for ebook, headphones) in the reader's Margins / Line spacing style — a radio group, each segment named by its format, arrow keys move it. The chosen segment widens and unfolds its name beside the icon (a grid column `0fr → 1fr` and a fade over `standard`); the others stay icons. None lit while the format is unknown. |
 | `CodeInput` | The six-digit code: one real input, six drawn cells. |
 

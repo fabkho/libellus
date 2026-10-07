@@ -1,12 +1,13 @@
 <script setup lang="ts">
-// Read as (issue #169): how the member read this Book, physical, ebook or audiobook. Three quiet
-// pills under the Book's state, on the Book page, in the options sheet and in the Finish sheet
+// Read as (issue #169): how the member read this Book, physical, ebook or audiobook. One row of
+// three icon segments (UiIconSegments, as the edition's format row) under the Book's state, on the Book page, in the options sheet and in the Finish sheet
 // (which passes `model` instead of `entry`: its choice is sent with the finish). It is hers, not
 // the edition's: where she has not said, the edition's format is lit as the default
-// (`readAsOf`), and tapping the lit pill of her own word takes it back. Setting it needs the
-// connection (the pills are disabled and say Offline otherwise).
+// (`readAsOf`), and tapping the lit segment of her own word takes it back. Setting it needs the
+// connection (the segments are disabled and say Offline otherwise).
 import { readAsOf, READ_AS, type ReadAs } from '~/data/readAs'
 import type { LibraryEntry } from '~/data/library'
+import type { IconSegment } from '~/components/ui/IconSegments.vue'
 import { useLibraryStore } from '~/stores/library'
 
 const props = defineProps<{ entry: LibraryEntry; testid: string }>()
@@ -22,6 +23,10 @@ const shown = computed(() => own.value ?? readAsOf({ ...props.entry, readAs: nul
 const busy = ref(false)
 const error = ref<string | null>(null)
 const groupId = useId()
+
+/** Paper is drawn as a book, an ebook as a reader, an audiobook as headphones (the edition format's icons). */
+const ICONS = { physical: 'paperback', ebook: 'tablet', audiobook: 'audiobook' } as const
+const options = computed<IconSegment<ReadAs>[]>(() => READ_AS.map((value) => ({ value, label: t(`readAs.${value}`), icon: ICONS[value] })))
 
 async function choose(value: ReadAs) {
   if (busy.value) return
@@ -44,21 +49,17 @@ async function choose(value: ReadAs) {
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-xs" :data-testid="testid">
+  <div class="flex flex-col items-center gap-xs">
     <span :id="groupId" class="eyebrow text-ink-faint">{{ t('readAs.label') }}</span>
-    <div role="group" :aria-labelledby="groupId" class="flex flex-wrap justify-center gap-sm">
-      <UiPill
-        v-for="value in READ_AS"
-        :key="value"
-        :pressed="shown === value"
-        :disabled="(model === undefined && !online) || busy"
-        class="disabled:opacity-50"
-        :data-testid="`${testid}.${value}`"
-        @click="choose(value)"
-      >
-        {{ t(`readAs.${value}`) }}
-      </UiPill>
-    </div>
+    <UiIconSegments
+      class="w-full"
+      :options="options"
+      :value="shown"
+      :labelledby="groupId"
+      :disabled="(model === undefined && !online) || busy"
+      :testid="testid"
+      @choose="choose"
+    />
     <p v-if="model === undefined && !online" class="text-footnote text-ink-faint" :data-testid="`${testid}.offline`">{{ t('readAs.offline') }}</p>
     <p v-if="error" class="text-footnote text-error" role="status" :data-testid="`${testid}.error`">{{ t(`library.error.${error}`) }}</p>
   </div>

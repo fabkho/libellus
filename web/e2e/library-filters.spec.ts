@@ -279,16 +279,24 @@ test('Read as: said on the Book page, in its options and when finishing, and the
   await page.getByTestId('library.readingCard').first().click()
   await expect(page.getByTestId('book.title')).toHaveText('Hyperion')
 
-  // Nothing said: no pill lit. Ebook is hers once tapped, and tapping it again takes it back.
+  // Nothing said: no segment lit. Ebook is hers once tapped, and tapping it again takes it back.
   for (const way of ['physical', 'ebook', 'audiobook'])
-    await expect(page.getByTestId(`book.readAs.${way}`)).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByTestId(`book.readAs.${way}`)).toHaveAttribute('aria-checked', 'false')
   await page.getByTestId('book.readAs.ebook').click()
-  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-checked', 'true')
   await expect.poll(readAs).toBe('ebook')
   await page.getByTestId('book.readAs.audiobook').click()
-  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-checked', 'false')
   await expect.poll(readAs).toBe('audiobook')
   await page.getByTestId('book.readAs.audiobook').click()
+  await expect.poll(readAs).toBeNull()
+
+  // One row of segments, a radio group: the arrow keys move the choice and set it.
+  await page.getByTestId('book.readAs.physical').focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-checked', 'true')
+  await expect.poll(readAs).toBe('ebook')
+  await page.getByTestId('book.readAs.ebook').click()
   await expect.poll(readAs).toBeNull()
 
   // The options sheet says the same, and sets it too.
@@ -296,8 +304,8 @@ test('Read as: said on the Book page, in its options and when finishing, and the
   await expect(page.getByTestId('bookOptions')).toBeVisible()
   await untilStill(page)
   await page.getByTestId('bookOptions.readAs.physical').click()
-  await expect(page.getByTestId('bookOptions.readAs.physical')).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByTestId('book.readAs.physical')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('bookOptions.readAs.physical')).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByTestId('book.readAs.physical')).toHaveAttribute('aria-checked', 'true')
   await expect.poll(readAs).toBe('physical')
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('bookOptions')).toBeHidden()
@@ -307,17 +315,17 @@ test('Read as: said on the Book page, in its options and when finishing, and the
   await page.getByTestId('book.finish').click()
   await expect(page.getByTestId('finish')).toBeVisible()
   await untilStill(page)
-  await expect(page.getByTestId('finish.readAs.physical')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('finish.readAs.physical')).toHaveAttribute('aria-checked', 'true')
   await page.getByTestId('finish.readAs.audiobook').click()
-  await expect(page.getByTestId('finish.readAs.audiobook')).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByTestId('finish.readAs.physical')).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByTestId('finish.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByTestId('finish.readAs.physical')).toHaveAttribute('aria-checked', 'false')
   // Nothing is saved until she finishes.
   expect(await readAs()).toBe('physical')
   await page.getByTestId('finish.submit').click()
   await expect(page.getByTestId('finish')).toBeHidden()
   await expect(page.getByTestId('book.status')).toHaveText(en.status.finished)
   await expect.poll(readAs).toBe('audiobook')
-  await expect(page.getByTestId('book.readAs.audiobook')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('book.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
 
   // The Library's Read as filter finds it.
   await page.getByTestId('shell.tab.library').click()
