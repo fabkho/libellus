@@ -16,8 +16,8 @@
 // (how many need her, else how many are linked), leading to the Ebooks page, where
 // the ebook folder is chosen and scanned. The reader's Classic style is set in the
 // reader's own Aa sheet only.
-// Glass (the owner's account only, stores/glass.ts), under the rows: how much the floating
-// chrome blurs on this device — Full, Light (half the radius), Off — to compare on a phone.
+// Glass (the owner's account only, stores/glass.ts), under Dark mode: how much the floating
+// chrome blurs on this device; a tap steps Full → Light (half the radius) → Off, to compare on a phone.
 import { useAvatarStore } from '~/stores/avatar'
 import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
@@ -26,7 +26,7 @@ import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
 import { useOwnerErrorsStore } from '~/stores/ownerErrors'
 import { useThemeStore } from '~/stores/theme'
-import { GLASS_LEVELS, type GlassLevel } from '~/utils/glass'
+import { GLASS_LEVELS } from '~/utils/glass'
 
 const emit = defineEmits<{ photo: [] }>()
 const { t } = useI18n()
@@ -48,8 +48,10 @@ const errors = useOwnerErrorsStore()
 onMounted(() => void errors.load())
 // Glass: the owner's, like Errors.
 const glass = useGlassStore()
-const glassLevel = computed({ get: () => glass.level, set: (level: GlassLevel) => glass.set(level) })
-const glassOptions = computed(() => GLASS_LEVELS.map((value) => ({ value, label: t(`profile.account.glassLevel.${value}`) })))
+/** A tap moves to the next level: Full → Light → Off → Full. */
+function nextGlass() {
+  glass.set(GLASS_LEVELS[(GLASS_LEVELS.indexOf(glass.level) + 1) % GLASS_LEVELS.length]!)
+}
 const sync = useSyncStore()
 const online = useOnline()
 
@@ -160,6 +162,9 @@ async function syncFirst() {
         <span v-else-if="errors.groups" class="text-ink-faint" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
+      <UiRow v-if="errors.isOwner" as="button" icon="stack" :label="t('profile.account.glass')" data-testid="profile.glass" @click="nextGlass">
+        <span class="text-ink-muted" data-testid="profile.glassValue">{{ t(`profile.account.glassLevel.${glass.level}`) }}</span>
+      </UiRow>
       <UiRow v-if="ebooks.supported" to="/ebooks" icon="ebook" :label="t('profile.account.ebooks')" chevron data-testid="profile.ebooks">
         <span v-if="ebooksValue" :class="ebooks.waiting.length ? 'text-ink' : 'figures text-ink-muted'" data-testid="profile.ebooksValue">{{ ebooksValue }}</span>
       </UiRow>
@@ -186,10 +191,6 @@ async function syncFirst() {
         <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
       </UiRow>
     </UiRowGroup>
-    <div v-if="errors.isOwner" class="mt-sm flex flex-col gap-xs">
-      <p class="px-inset text-caption text-ink-muted">{{ t('profile.account.glass') }}</p>
-      <UiSegmented v-model="glassLevel" :options="glassOptions" :label="t('profile.account.glass')" testid="profile.glass" />
-    </div>
     <ShellNameSheet v-model:open="naming" />
     <ProfileLinksSheet v-model:open="linking" />
     <UiConfirm
