@@ -1,5 +1,6 @@
 import type { StatsRead } from '~/data/stats'
 import { parseDay } from '~/utils/dates'
+import { dateFormat, numberFormat } from '~/utils/intl'
 
 /**
  * The Profile's figures in words and numbers, in the app's locale (issue #78):
@@ -10,23 +11,23 @@ import { parseDay } from '~/utils/dates'
 export function useFigures() {
   const { t, locale } = useI18n()
 
-  const count = (value: number) => new Intl.NumberFormat(locale.value).format(value)
+  const count = (value: number) => numberFormat(locale.value).format(value)
   /** A share (0–1) as a whole percent, "40%" in the app's locale. */
-  const percent = (share: number) => new Intl.NumberFormat(locale.value, { style: 'percent', maximumFractionDigits: 0 }).format(share)
+  const percent = (share: number) => numberFormat(locale.value, { style: 'percent', maximumFractionDigits: 0 }).format(share)
   /** Five figures and up compact, so a figure keeps to its cell. */
   const large = (value: number) =>
-    value < 10_000 ? count(value) : new Intl.NumberFormat(locale.value, { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+    value < 10_000 ? count(value) : numberFormat(locale.value, { notation: 'compact', maximumFractionDigits: 1 }).format(value)
   /** A mean Rating in quarters, as stars to one decimal; a dash with nothing rated. */
   const stars = (quarters: number | null) =>
-    quarters === null ? '–' : new Intl.NumberFormat(locale.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(quarters / 4)
+    quarters === null ? '–' : numberFormat(locale.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(quarters / 4)
 
   const monthDate = (month: number) => new Date(2000, month - 1, 1)
   /** `month` 1–12. */
-  const monthLong = (month: number) => new Intl.DateTimeFormat(locale.value, { month: 'long' }).format(monthDate(month))
-  const monthShort = (month: number) => new Intl.DateTimeFormat(locale.value, { month: 'short' }).format(monthDate(month))
-  const monthLetter = (month: number) => new Intl.DateTimeFormat(locale.value, { month: 'narrow' }).format(monthDate(month))
-  const monthYear = (day: string) => new Intl.DateTimeFormat(locale.value, { month: 'long', year: 'numeric' }).format(parseDay(day))
-  const weekdayLetter = (day: string) => new Intl.DateTimeFormat(locale.value, { weekday: 'narrow' }).format(parseDay(day))
+  const monthLong = (month: number) => dateFormat(locale.value, { month: 'long' }).format(monthDate(month))
+  const monthShort = (month: number) => dateFormat(locale.value, { month: 'short' }).format(monthDate(month))
+  const monthLetter = (month: number) => dateFormat(locale.value, { month: 'narrow' }).format(monthDate(month))
+  const monthYear = (day: string) => dateFormat(locale.value, { month: 'long', year: 'numeric' }).format(parseDay(day))
+  const weekdayLetter = (day: string) => dateFormat(locale.value, { weekday: 'narrow' }).format(parseDay(day))
 
   /** "in a day", "in 12 days"; nothing without both dates. */
   const readIn = (read: Pick<StatsRead, 'days'>) => (read.days === null ? '' : t('profile.sheet.readIn', { count: read.days }, read.days))

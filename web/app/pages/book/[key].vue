@@ -20,6 +20,7 @@ import { useLibraryStore } from '~/stores/library'
 import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
+import { afterMotion } from '~/utils/motion'
 
 // One page through a change of edition, though the address changes (utils/bookPageKey.ts).
 definePageMeta({ layout: 'tabs', screen: 'book', pushed: true, key: bookPageKey })
@@ -120,13 +121,16 @@ function toggleTitle() {
   titleOpen.value = !titleOpen.value
   void nextTick(measureTitle)
 }
+// Measured once the cover has landed (`afterMotion`): it lays out the whole page, which in the tap's
+// task held up the flight's start. Being cut only makes the title a control, so nothing moves meanwhile.
+const measureTitleLater = () => void afterMotion().then(measureTitle)
 watch([key, () => book.value?.title], () => {
   titleOpen.value = false
-  void nextTick(measureTitle)
+  void nextTick(measureTitleLater)
 })
 onMounted(() => {
-  measureTitle()
-  void document.fonts?.ready.then(measureTitle)
+  measureTitleLater()
+  void document.fonts?.ready.then(measureTitleLater)
 })
 
 // Whether the cover shows the Placeholder: then the page's light is its cloth's.

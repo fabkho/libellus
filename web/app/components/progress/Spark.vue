@@ -7,6 +7,7 @@
 // (the pace beside it says it in words); on the book page an image with `label`.
 import type { DayAmount } from '~/data/progressDays'
 import { parseDay } from '~/utils/dates'
+import { dateFormat } from '~/utils/intl'
 
 const props = withDefaults(defineProps<{ amounts: readonly DayAmount[]; size?: 'sm' | 'lg'; label?: string }>(), {
   size: 'sm',
@@ -17,7 +18,7 @@ const { locale } = useI18n()
 
 const bars = computed(() => {
   const top = Math.max(...props.amounts.map((a) => a.amount), 1)
-  const letter = new Intl.DateTimeFormat(locale.value, { weekday: 'narrow' })
+  const letter = dateFormat(locale.value, { weekday: 'narrow' })
   return props.amounts.map((a, i) => ({
     ...a,
     today: i === props.amounts.length - 1,

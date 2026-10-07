@@ -18,7 +18,7 @@ const { t } = useI18n()
 const { formatDay, dayOfRead } = useDays()
 const history = useHistoryStore()
 
-watch(() => props.entry, (entry) => void history.load(entry.id), { immediate: true })
+watch(() => props.entry, (entry) => void history.load(entry.id, { share: true }), { immediate: true })
 
 // With the latest read as the device has it, synced or still waiting (#93).
 const reads = computed(() => history.readsOf(props.entry))

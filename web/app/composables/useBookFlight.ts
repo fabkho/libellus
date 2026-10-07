@@ -53,7 +53,7 @@ import {
   type Channels,
   type Towards,
 } from '~/utils/flight'
-import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { addMover, durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
 import { coverSrc } from '~/utils/cover'
 import { preloadImage } from '~/utils/preload'
@@ -164,6 +164,8 @@ let posed: { root: HTMLElement | null; timer: number } | null = null
 let browserAnimatedBack = false
 /** The history position (vue-router's `history.state.position`) of the page showing. */
 let entryPosition: number | null = null
+// Work that can wait waits for a flight: from the tap until the copy has handed over to its row or hero (`afterMotion`).
+addMover(() => Boolean(pending || running || releaseHold))
 /** How many books' origins are remembered (the last ones pushed). */
 const ORIGINS_KEPT = 50
 const origins = new Map<string, Origin>()

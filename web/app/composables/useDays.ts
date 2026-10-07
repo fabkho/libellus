@@ -1,4 +1,5 @@
 import { daysBetween, daysSpanned, isoDay, parseDay } from '~/utils/dates'
+import { dateFormat } from '~/utils/intl'
 
 /**
  * Calendar days (`YYYY-MM-DD`, as reading sessions store them) in words, in
@@ -11,8 +12,8 @@ export function useDays() {
   function parts(day: string) {
     const date = parseDay(day)
     return {
-      day: new Intl.DateTimeFormat(locale.value, { day: 'numeric' }).format(date),
-      month: new Intl.DateTimeFormat(locale.value, { month: 'short' }).format(date),
+      day: dateFormat(locale.value, { day: 'numeric' }).format(date),
+      month: dateFormat(locale.value, { month: 'short' }).format(date),
       year: String(date.getFullYear()),
     }
   }

@@ -9,6 +9,7 @@
 import type { Book, BookSnapshot } from '~/data/books'
 import { goodreadsIsbn, goodreadsUrl, showsRating } from '~/data/goodreads'
 import { useGoodreadsStore } from '~/stores/goodreads'
+import { numberFormat } from '~/utils/intl'
 
 const props = defineProps<{ book: Book | BookSnapshot }>()
 
@@ -23,7 +24,7 @@ const rating = computed(() => {
 // After the page has rendered, so the line never holds the page up.
 onMounted(() => watch(() => goodreadsIsbn(props.book), () => void goodreads.load(props.book), { immediate: true }))
 
-const compact = computed(() => new Intl.NumberFormat(locale.value, { notation: 'compact', maximumFractionDigits: 1 }))
+const compact = computed(() => numberFormat(locale.value, { notation: 'compact', maximumFractionDigits: 1 }))
 /** "138K ratings", then "6.1K reviews" when Goodreads said; the last one ends "on Goodreads". */
 const counts = computed(() => {
   const r = rating.value
@@ -36,7 +37,7 @@ const counts = computed(() => {
 })
 const average = computed(() =>
   rating.value
-    ? new Intl.NumberFormat(locale.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(rating.value.rating)
+    ? numberFormat(locale.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(rating.value.rating)
     : '',
 )
 </script>

@@ -63,3 +63,42 @@ export function timeAt(easing: string, progress: number): number {
   }
   return bezier(x1, x2, (low + high) / 2)
 }
+
+// ------------------------------------------------------ waiting for motion
+
+/** Things that move on their own clock (the cover's flight, the Profile's View Transition): each says whether it is moving now. */
+const movers = new Set<() => boolean>()
+/** The longest `afterMotion` waits (ms): a flight that never seems to end (a hero's image that never decodes) does not hold work back for good. */
+const MOTION_PATIENCE = 1500
+
+/** Registers something that moves (`afterMotion` waits for it); returns what unregisters it. */
+export function addMover(moving: () => boolean): () => void {
+  movers.add(moving)
+  return () => movers.delete(moving)
+}
+
+/** Whether anything is moving now: a registered mover, or a page waiting to be placed (`data-moving` on the document, app/router.options.ts). */
+export function moving(): boolean {
+  if (typeof document !== 'undefined' && document.documentElement.hasAttribute('data-moving')) return true
+  for (const mover of movers) if (mover()) return true
+  return false
+}
+
+/**
+ * Resolves once nothing moves (at once when nothing does), in a task of its
+ * own after that frame. Main-thread work that can wait (a refreshed list
+ * applied, a measurement) waits for it, so it does not land on a frame of the
+ * cover's flight, its hand-off or a View Transition, which on a phone shows as
+ * a hitch.
+ */
+export function afterMotion(): Promise<void> {
+  if (typeof requestAnimationFrame !== 'function' || !moving()) return Promise.resolve()
+  const since = performance.now()
+  return new Promise((resolve) => {
+    const check = () => {
+      if (moving() && performance.now() - since < MOTION_PATIENCE) requestAnimationFrame(check)
+      else setTimeout(resolve, 0)
+    }
+    requestAnimationFrame(check)
+  })
+}

@@ -1,20 +1,6 @@
 import { toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { useShelfStore } from '~/stores/shelf'
-
-/** The longest a warm-up waits for the browser to be idle (ms): a busy page still gets it, a little later. */
-const IDLE_TIMEOUT = 3000
-/** Where there is no `requestIdleCallback` (Safari): a short while after the screen is up (ms). */
-const IDLE_FALLBACK = 1200
-
-/** Runs `run` when the browser has nothing better to do; returns what cancels it. */
-function onIdle(run: () => void): () => void {
-  if (typeof requestIdleCallback === 'function') {
-    const id = requestIdleCallback(run, { timeout: IDLE_TIMEOUT })
-    return () => cancelIdleCallback(id)
-  }
-  const id = setTimeout(run, IDLE_FALLBACK)
-  return () => clearTimeout(id)
-}
+import { onIdle } from '~/utils/idle'
 
 /** Warm-ups go one after the other, so a screen asking for two rows (the Profile's and a year's) does not draw both at once on a phone. */
 let queue: Promise<void> = Promise.resolve()

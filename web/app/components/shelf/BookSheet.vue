@@ -10,6 +10,7 @@
 // above this, UiSheet's size and colour, and drags the Book back), the fade,
 // and the Book's own gestures (regal-themed.css).
 import { goodreadsUrl } from '~/utils/goodreads'
+import { dateFormat } from '~/utils/intl'
 
 const props = defineProps<{
   /** The picked Book, as Regal's library file normalizes it. */
@@ -41,7 +42,7 @@ const { t, locale } = useI18n()
 const facts = computed(() => {
   const { author, dateRead, status, pages } = props.book
   const read = dateRead
-    ? new Intl.DateTimeFormat(locale.value, { day: 'numeric', month: 'short', year: 'numeric' }).format(parseDay(dateRead))
+    ? dateFormat(locale.value, { day: 'numeric', month: 'short', year: 'numeric' }).format(parseDay(dateRead))
     : status === 'currently-reading'
       ? t('shelf.detail.reading')
       : null

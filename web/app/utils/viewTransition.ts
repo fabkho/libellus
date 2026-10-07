@@ -3,7 +3,10 @@
  * back, plugins/profile-transition.client.ts). Framework-free.
  */
 
+import { addMover } from './motion'
+
 let running: Promise<void> | null = null
+addMover(() => running !== null)
 
 /** Marks a transition as running until `finished` settles (skipped counts as settled). */
 export function holdWhileTransitioning(finished: Promise<unknown>): void {
