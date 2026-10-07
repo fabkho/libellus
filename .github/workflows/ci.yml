@@ -1,13 +1,16 @@
 name: CI
 
-# What runs when (also in docs/TESTING.md, "CI: what runs when"). The private
-# account has a fixed pool of Actions minutes, so the workflow spends them
-# where they buy something:
+# What runs when (also in docs/TESTING.md, "CI: what runs when"):
 #
-#   pull request      the checks the changed paths call for, Playwright included
-#   push to main      the cheap checks only (the merged pull request already ran
-#                     the flows): database rules + Vitest, builds, tokens, Deno
-#   workflow_dispatch everything, Playwright included (a manual full run)
+#   pull request      the checks the changed paths call for, and the core user
+#                     flows (Playwright, without the ones tagged @full)
+#   PR label full-e2e the same with every flow, @full included (adding the label
+#                     starts the run; the run of every later push keeps it)
+#   push to main      every flow, @full included, and the checks the changed
+#                     paths call for. A release deploys only a commit whose run
+#                     here is green (release.yml, scripts/release-e2e-gate.sh)
+#   nightly (cron)    everything on main: every flow and every check
+#   workflow_dispatch everything, every flow (a manual full run)
 #
 # Docs-only changes (*.md, docs/**, android/**) start no run at all, and neither
 # does a release pull request ("chore(main): release x.y.z", release.yml): it only
@@ -15,6 +18,8 @@ name: CI
 # it already passed here. A new push to a pull request cancels the run still going for it.
 on:
   pull_request:
+    # `labeled`: adding full-e2e starts a full run (any other label starts nothing, see `changes`).
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
@@ -31,14 +36,17 @@ on:
       - 'LICENSE'
       - 'version.txt'
       - '.release-please-manifest.json'
+  schedule:
+    - cron: '23 3 * * *' # nightly, on main
   workflow_dispatch:
 
 # One run per pull request: a push, a force-pushed rebase or a re-run cancels
 # the one before it. A run on main (or a manual one) has its own group per
 # commit, so it is never cancelled or dropped by the next merge and every
-# commit on main keeps a result.
+# commit on main keeps a result. A label other than full-e2e gets a group of its
+# own, so labelling a pull request never cancels its run.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-e2e' && format('-label-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -58,6 +66,8 @@ jobs:
   # everything downstream; nothing here is a required check.
   changes:
     name: what changed
+    # A label other than full-e2e changes nothing to check.
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-e2e'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -66,6 +76,7 @@ jobs:
     outputs:
       backend: ${{ steps.decide.outputs.backend }}
       e2e: ${{ steps.decide.outputs.e2e }}
+      e2e_filter: ${{ steps.decide.outputs.e2e_filter }}
       shards: ${{ steps.decide.outputs.shards }}
       statics: ${{ steps.decide.outputs.statics }}
       web: ${{ steps.decide.outputs.web }}
@@ -81,7 +92,7 @@ jobs:
       # Every filter lists the workflow files: changing CI runs what CI does.
       - uses: dorny/paths-filter@v4
         id: filter
-        if: github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'workflow_dispatch' && github.event_name != 'schedule'
         with:
           filters: |
             ci: &ci
@@ -123,6 +134,7 @@ jobs:
         id: decide
         env:
           EVENT: ${{ github.event_name }}
+          FULL_E2E_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-e2e') }}
           FILTER_STACK: ${{ steps.filter.outputs.stack }}
           FILTER_BACKEND: ${{ steps.filter.outputs.backend }}
           FILTER_WEB: ${{ steps.filter.outputs.web }}
@@ -134,7 +146,7 @@ jobs:
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
         run: |
           all=false
-          [ "$EVENT" = workflow_dispatch ] && all=true
+          if [ "$EVENT" = workflow_dispatch ] || [ "$EVENT" = schedule ]; then all=true; fi
           on() { if [ "$all" = true ] || [ "$1" = true ]; then echo true; else echo false; fi; }
 
           backend=$(on "$FILTER_BACKEND")
@@ -144,9 +156,14 @@ jobs:
           regal=$(on "$FILTER_REGAL")
           og=$(on "$FILTER_OG")
           enrich=$(on "$FILTER_ENRICH")
-          # Playwright: never on a push to main, only when the app or the schema it runs on changed.
-          e2e=false
-          if [ "$EVENT" != push ]; then e2e=$(on "$FILTER_STACK"); fi
+          # Playwright: on a pull request when the app or the schema it runs on changed;
+          # on main (push, nightly, by hand) always, so every run there says whether the
+          # whole suite passes (what a release waits for).
+          if [ "$EVENT" = pull_request ]; then e2e=$(on "$FILTER_STACK"); else e2e=true; fi
+          # The core flows on a pull request; every flow, @full included, on main, on a
+          # pull request labelled full-e2e and by hand.
+          e2e_filter=''
+          if [ "$EVENT" = pull_request ] && [ "$FULL_E2E_LABEL" != true ]; then e2e_filter='--grep-invert @full'; fi
 
           # One e2e job per shard.
           shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
@@ -155,7 +172,7 @@ jobs:
           for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich"; do [ "$v" = true ] && statics=true; done
 
           {
-            echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
+            echo "backend=$backend"; echo "e2e=$e2e"; echo "e2e_filter=$e2e_filter"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
             echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"
           } | tee -a "$GITHUB_OUTPUT"
@@ -236,7 +253,7 @@ jobs:
   # creates (web/tests/support/stack.ts). A failed shard uploads its blob report;
   # e2e-report merges them into one HTML report.
   e2e:
-    name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }}${{ needs.changes.outputs.e2e_filter == '' && ', all' || ', core' }})
     needs: changes
     if: ${{ needs.changes.outputs.e2e == 'true' }}
     runs-on: ubuntu-latest
@@ -332,7 +349,12 @@ jobs:
       # lightest shard. Every shard computes the same split.
       - name: Pick this shard's flows
         working-directory: web
-        run: pnpm exec tsx e2e/shard.ts list ${{ matrix.shard }}/${{ strategy.job-total }} > "$RUNNER_TEMP/flows.txt"
+        env:
+          FILTER: ${{ needs.changes.outputs.e2e_filter }}
+        # FILTER holds Playwright's options (the core suite's --grep-invert @full), split into words.
+        run: |
+          read -ra filter <<< "$FILTER"
+          pnpm exec tsx e2e/shard.ts list ${{ matrix.shard }}/${{ strategy.job-total }} "${filter[@]}" > "$RUNNER_TEMP/flows.txt"
 
       - name: User flows
         working-directory: web

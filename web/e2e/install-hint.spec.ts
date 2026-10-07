@@ -63,7 +63,7 @@ test.describe('Safari on an iPhone', () => {
     { width: 393, height: 852 },
     { width: 375, height: 667 },
   ]) {
-    test(`the empty Home keeps its search prompt above the tab bar at ${size.width}×${size.height}`, async ({ page }) => {
+    test(`the empty Home keeps its search prompt above the tab bar at ${size.width}×${size.height}`, { tag: '@full' }, async ({ page }) => {
       await page.setViewportSize(size)
       await signedIn(page, { installHint: true })
       await expect(page.getByTestId('home.installHint')).toBeVisible()
@@ -74,14 +74,14 @@ test.describe('Safari on an iPhone', () => {
     })
   }
 
-  test('is gone in the installed app', async ({ page }) => {
+  test('is gone in the installed app', { tag: '@full' }, async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(navigator, 'standalone', { value: true }))
     await signedIn(page, { installHint: true })
     await expect(page.getByTestId('home.emptyTitle')).toBeVisible()
     await expect(page.getByTestId('home.installHint')).toBeHidden()
   })
 
-  test('is gone when the display mode is standalone', async ({ page }) => {
+  test('is gone when the display mode is standalone', { tag: '@full' }, async ({ page }) => {
     await page.addInitScript(() => {
       const matchMedia = window.matchMedia.bind(window)
       window.matchMedia = (query: string) => {
@@ -96,7 +96,7 @@ test.describe('Safari on an iPhone', () => {
     await expect(page.getByTestId('home.installHint')).toBeHidden()
   })
 
-  test('shows no install row on the Profile (iOS never fires beforeinstallprompt)', async ({ page }) => {
+  test('shows no install row on the Profile (iOS never fires beforeinstallprompt)', { tag: '@full' }, async ({ page }) => {
     await signedIn(page, { installHint: true })
     await page.getByTestId('shell.avatar').click()
     await expect(page.getByTestId('profile.signOut')).toBeVisible()
@@ -104,7 +104,7 @@ test.describe('Safari on an iPhone', () => {
   })
 })
 
-test.describe('Safari on an iPad that asks for the desktop site', () => {
+test.describe('Safari on an iPad that asks for the desktop site', { tag: '@full' }, () => {
   test.use({ userAgent: IPADOS_DESKTOP })
 
   test('is told apart from a Mac by its touch screen', async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe('Safari on an iPad that asks for the desktop site', () => {
   })
 })
 
-test.describe('Chrome on an iPhone', () => {
+test.describe('Chrome on an iPhone', { tag: '@full' }, () => {
   test.use({ userAgent: IPHONE_CHROME })
 
   test('shows no hint: its Share menu is not Safari\'s', async ({ page }) => {
@@ -169,7 +169,7 @@ test.describe('Chrome on Android', () => {
     await expect(page.getByTestId('profile.install')).toHaveCount(0)
   })
 
-  test('shows no install row when Chrome never offers one', async ({ page }) => {
+  test('shows no install row when Chrome never offers one', { tag: '@full' }, async ({ page }) => {
     await signedIn(page, { installHint: true })
     await page.getByTestId('shell.avatar').click()
     await expect(page.getByTestId('profile.signOut')).toBeVisible()

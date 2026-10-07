@@ -126,7 +126,7 @@ const sheets = [
 
 for (const sheet of sheets) {
   for (const way of ['system', 'page'] as const) {
-    test(`${sheet.name}: Back from a Book (${way} Back) finds it open where it was, with no rise and no fade`, async ({ page }) => {
+    test(`${sheet.name}: Back from a Book (${way} Back) finds it open where it was, with no rise and no fade`, { tag: '@full' }, async ({ page }) => {
       const member = await signedIn(page)
       await shelve(member.id, 14)
       // Home loaded before the Books were there.

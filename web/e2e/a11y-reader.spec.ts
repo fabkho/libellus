@@ -57,7 +57,7 @@ async function recordedLookups(page: Page) {
  * room is the reader's own setting (sepia by default), so the app's theme stays light; Chromium,
  * as the ebook is kept in the origin private file system (e2e/reader.spec.ts).
  */
-test.describe('accessibility, the reader', () => {
+test.describe('accessibility, the reader', { tag: '@full' }, () => {
   test.use({ viewport: { width: 412, height: 915 } })
 
   for (const room of ['sepia', 'light', 'dark'] as const) {

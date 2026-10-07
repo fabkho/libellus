@@ -91,7 +91,7 @@ test('a link with an ISBN goes straight to the book, and Back does not land on t
   await expect(page).not.toHaveURL(/\/book\//)
 })
 
-test('an Amazon /dp/ link carries the ISBN-10, and so does a /gp/product/ link', async ({ page }) => {
+test('an Amazon /dp/ link carries the ISBN-10, and so does a /gp/product/ link', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   // 978…: the only ones that have an ISBN-10. The Catalogue keeps the first Book it was given for an ISBN, so the page is the entry's.
   const isbn = '9780306406157'
@@ -106,7 +106,7 @@ test('an Amazon /dp/ link carries the ISBN-10, and so does a /gp/product/ link',
   await expect(page).toHaveURL(new RegExp(`/book/${added.book.id}$`))
 })
 
-test('a Goodreads link finds the Book the Goodreads cache knows by its id', async ({ page }) => {
+test('a Goodreads link finds the Book the Goodreads cache knows by its id', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const isbn = await unusedIsbn13()
   const added = (await createLibrary(member.client).addToLibrary(book('Shared Goodreads', isbn), { status: 'reading', startedOn: isoDay() })).data!
@@ -144,7 +144,7 @@ test('shared title text opens the search palette with the words typed in', async
   await expect(page).not.toHaveURL(/\/share/)
 })
 
-test('a link to an ISBN no source knows opens the search palette with the shared words', async ({ page }) => {
+test('a link to an ISBN no source knows opens the search palette with the shared words', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   const isbn = await unusedIsbn13()
   await receive(page, { title: 'A Book Nobody Lists', url: `https://bookshop.example/p?isbn=${isbn}` })
@@ -170,14 +170,14 @@ test('a share that arrives signed out waits through the sign-in and then opens t
   await expect(page).toHaveURL(new RegExp(`/book/${added.book.id}$`))
 })
 
-test('an empty share goes Home', async ({ page }) => {
+test('an empty share goes Home', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   await goto(page, '/share')
   await expect(page.getByTestId('home.title')).toBeVisible()
   await expect(page).toHaveURL(/\/$/)
 })
 
-test('the Search shortcut opens the palette on Home, and takes itself off the address', async ({ page }) => {
+test('the Search shortcut opens the palette on Home, and takes itself off the address', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   await goto(page, '/?search=1')
   await expect(page.getByTestId('search.overlay')).toBeVisible()
@@ -185,7 +185,7 @@ test('the Search shortcut opens the palette on Home, and takes itself off the ad
   await expect(page).toHaveURL(/\/$/)
 })
 
-test('the Update progress shortcut opens the sheet of the book updated last, or stays on Home when nothing is read', async ({ page }) => {
+test('the Update progress shortcut opens the sheet of the book updated last, or stays on Home when nothing is read', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   await goto(page, '/?progress=1')
   await expect(page.getByTestId('home.title')).toBeVisible()

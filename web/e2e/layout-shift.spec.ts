@@ -109,7 +109,7 @@ test.beforeEach(async ({ page }) => {
   await recordedApple(page)
 })
 
-test('the Library opens in place: a reload and a return from a book shift nothing', async ({ page }) => {
+test('the Library opens in place: a reload and a return from a book shift nothing', { tag: '@full' }, async ({ page }) => {
   await onLibrary(page)
 
   // A reload (a start into the Library): the first frame is the final layout.
@@ -145,7 +145,7 @@ test('the Library opens in place: a reload and a return from a book shift nothin
   expect(await page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(600)
 })
 
-test('the Library with filters and a sort set opens in place, and setting them shifts nothing', async ({ page }) => {
+test('the Library with filters and a sort set opens in place, and setting them shifts nothing', { tag: '@full' }, async ({ page }) => {
   await recordShifts(page)
   const member = await signedIn(page)
   await shelve(member.id)
@@ -205,7 +205,7 @@ test('the Library with filters and a sort set opens in place, and setting them s
   expect(await takeCls(page)).toBeLessThan(STABLE)
 })
 
-test('search over the Library: answers that arrive grow the palette without shifting it', async ({ page }) => {
+test('search over the Library: answers that arrive grow the palette without shifting it', { tag: '@full' }, async ({ page }) => {
   // Apple answers a little later, as over a phone's connection: well after the last keystroke, where
   // nothing excuses a shift. The Catalogue (shared by every run on this stack) and OpenLibrary find
   // nothing, so Apple's answer only adds to her own group: a later source re-ranking a list that is

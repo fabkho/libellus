@@ -38,7 +38,7 @@ const book = (title: string, authors: string[]): BookSnapshot => ({
   openLibraryWorkKey: null,
 })
 
-test('no main screen is wider than a 360 px phone, and the page keeps still under something that is', async ({ page }) => {
+test('no main screen is wider than a 360 px phone, and the page keeps still under something that is', { tag: '@full' }, async ({ page }) => {
   await recordedApple(page)
   const member = await signedIn(page)
   // A Library with every kind of row, one with a title that is a single long word.

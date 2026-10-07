@@ -149,7 +149,7 @@ test('Add ebook links a picked EPUB to the Book; the Library marks it; Unlink de
   expect(await copies(page)).toEqual([])
 })
 
-test('a picked file that is clearly another book is asked about; Link links it anyway', async ({ page }) => {
+test('a picked file that is clearly another book is asked about; Link links it anyway', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [moby] = await shelve(member, [book('Moby-Dick', 'Herman Melville')])
 
@@ -170,7 +170,7 @@ test('a picked file that is clearly another book is asked about; Link links it a
   await expect(page.getByTestId('book.ebook')).toHaveText(en.bookEbook.line)
 })
 
-test('a copy the browser evicted shows as missing until the same file comes back', async ({ page }) => {
+test('a copy the browser evicted shows as missing until the same file comes back', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [moby] = await shelve(member, [book('Moby-Dick', 'Herman Melville')])
   await openBook(page, moby!)
@@ -331,7 +331,7 @@ async function putInFolder(page: Page, files: Record<string, Uint8Array>) {
   )
 }
 
-test('the ebook folder: picked once, Scan links what fits, Choose book and Find book settle the rest', async ({ page }) => {
+test('the ebook folder: picked once, Scan links what fits, Choose book and Find book settle the rest', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [moby, anna, otherAnna] = await shelve(member, [
     book('Moby-Dick', 'Herman Melville'),
@@ -478,7 +478,7 @@ async function appleAnswers(page: Page, answers: Record<string, { title: string;
   })
 }
 
-test('Find book puts her own Books first: a tap on one links the file at once (Undo puts it back)', async ({ page }) => {
+test('Find book puts her own Books first: a tap on one links the file at once (Undo puts it back)', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [arms] = await shelve(member, [book('Men at Arms', 'Terry Pratchett')])
   // The file is called by its series, so matching cannot tell it is her Men at Arms.
@@ -516,7 +516,7 @@ test('Find book puts her own Books first: a tap on one links the file at once (U
   await expect(page.getByTestId('book.ebook')).toBeVisible()
 })
 
-test('another copy of a Book that has its ebook: Replace or Keep current, from its row and from Find book; Scan again keeps both decisions', async ({ page }) => {
+test('another copy of a Book that has its ebook: Replace or Keep current, from its row and from Find book; Scan again keeps both decisions', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [war] = await shelve(member, [book('The Forever War', 'Joe Haldeman')])
   await scanFolder(page, {
@@ -559,7 +559,7 @@ test('another copy of a Book that has its ebook: Replace or Keep current, from i
   expect(await copies(page)).toHaveLength(1)
 })
 
-test('another edition of her Book: the sheet links the file to her edition, or switches her Library to the one found', async ({ page }) => {
+test('another edition of her Book: the sheet links the file to her edition, or switches her Library to the one found', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   // Taken in before the Books were in her Library: both wait.
   await scanFolder(page, {

@@ -82,7 +82,7 @@ for (const [segment, list] of [
   ['finished', 'library.finished'],
   ['want_to_read', 'library.wantToRead'],
 ] as const) {
-  test(`the ${segment} list is there in place when the member comes back to the Library`, async ({ page }) => {
+  test(`the ${segment} list is there in place when the member comes back to the Library`, { tag: '@full' }, async ({ page }) => {
     const member = await signedIn(page)
     await shelve(member.id)
     await page.getByTestId('shell.tab.library').click()

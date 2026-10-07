@@ -41,7 +41,7 @@ async function expectClosed(page: Page) {
   await expect(page.getByTestId('library.title')).toBeVisible()
 }
 
-test('the tab bar turns into the search palette and back, by every way out', async ({ page }) => {
+test('the tab bar turns into the search palette and back, by every way out', { tag: '@full' }, async ({ page }) => {
   await onLibrary(page)
 
   // Cancel.
@@ -83,7 +83,7 @@ test('the tab bar turns into the search palette and back, by every way out', asy
   await expectClosed(page)
 })
 
-test('the morph can be turned around halfway, either way', async ({ page }) => {
+test('the morph can be turned around halfway, either way', { tag: '@full' }, async ({ page }) => {
   await onLibrary(page)
 
   // Closed while still opening: it goes back into the tab bar.
@@ -102,7 +102,7 @@ test('the morph can be turned around halfway, either way', async ({ page }) => {
   await expectClosed(page)
 })
 
-test('the palette sits above the keyboard, follows a rotation and drops back when it closes', async ({ page }) => {
+test('the palette sits above the keyboard, follows a rotation and drops back when it closes', { tag: '@full' }, async ({ page }) => {
   // Playwright has no keyboard that covers the page: stand in for the visual
   // viewport iOS reports, its height settable from the test.
   await page.addInitScript(() => {

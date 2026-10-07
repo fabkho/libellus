@@ -73,7 +73,7 @@ async function openPiranesi(page: Page) {
   await untilStill(page)
 }
 
-test('on a book page the tab bar slides away scrolling down and returns scrolling up, at the end and at the top', async ({
+test('on a book page the tab bar slides away scrolling down and returns scrolling up, at the end and at the top', { tag: '@full' }, async ({
   page,
 }) => {
   // A short window: the book page scrolls a good way past a screen.
@@ -133,7 +133,7 @@ test('on a book page the tab bar slides away scrolling down and returns scrollin
   await expectShown(page)
 })
 
-test('Home hides the bar the same way, and it is there at the top and at the end of the page', async ({ page }) => {
+test('Home hides the bar the same way, and it is there at the top and at the end of the page', { tag: '@full' }, async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 360 })
   await signedIn(page)
   await expect(page.getByTestId('home.title')).toBeVisible()
@@ -150,7 +150,7 @@ test('Home hides the bar the same way, and it is there at the top and at the end
   await expectShown(page)
 })
 
-test('with Reduce Motion the bar never hides, and focus moving into a bar that is away brings it back', async ({ page }) => {
+test('with Reduce Motion the bar never hides, and focus moving into a bar that is away brings it back', { tag: '@full' }, async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 360 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await signedIn(page)
@@ -169,7 +169,7 @@ test('with Reduce Motion the bar never hides, and focus moving into a bar that i
   await expectShown(page)
 })
 
-test('search opens from a tab bar that is away, and the bar is back after it closes; a sheet keeps it', async ({ page }) => {
+test('search opens from a tab bar that is away, and the bar is back after it closes; a sheet keeps it', { tag: '@full' }, async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 360 })
   await signedIn(page)
   await openPiranesi(page)

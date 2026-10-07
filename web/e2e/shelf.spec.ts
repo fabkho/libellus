@@ -233,7 +233,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('home.title')).toBeVisible()
   })
 
-  test('has the row ready before she opens it, and it appears with its intro: no stand-in, no loading step', async ({ page }) => {
+  test('has the row ready before she opens it, and it appears with its intro: no stand-in, no loading step', { tag: '@full' }, async ({ page }) => {
     // Nothing of the old stand-in (the slabs, the fade-over) is ever put on the page.
     await page.addInitScript(() => {
       const seen = window as unknown as { __standIn: boolean }
@@ -266,7 +266,7 @@ test.describe('Your shelf, the owner', () => {
     expect(await page.evaluate(() => (window as unknown as { __standIn: boolean }).__standIn)).toBe(false)
   })
 
-  test('never moves the page sideways: the Profile with her shelf, a Book out and back, the year, the whole shelf', async ({ page }) => {
+  test('never moves the page sideways: the Profile with her shelf, a Book out and back, the year, the whole shelf', { tag: '@full' }, async ({ page }) => {
     // As narrow as the narrowest phone in use.
     await page.setViewportSize({ width: 360, height: 800 })
     await libraryFile(page)
@@ -313,7 +313,7 @@ test.describe('Your shelf, the owner', () => {
     await expectNoSideScroll(page, 'The whole shelf')
   })
 
-  test('opens the whole shelf from Show all once it holds more Books than the row', async ({ page }) => {
+  test('opens the whole shelf from Show all once it holds more Books than the row', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page, 200, MANY)
     await signInAsOwner(page)
 
@@ -342,7 +342,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('shell.tabs')).not.toHaveAttribute('data-away', 'true')
   })
 
-  test("finds a year's Books as a row in its review, and puts a Book back with Done or Escape", async ({ page }) => {
+  test("finds a year's Books as a row in its review, and puts a Book back with Done or Escape", { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     const owner = await signInAsOwner(page)
     await finishedIn2025(owner.email)
@@ -387,7 +387,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page).not.toHaveURL(/\/profile\/2025$/)
   })
 
-  test("Home's Read in tally opens the year's Books as her row alone: a Book breaks out above the sheet, Back puts it away and then closes the sheet", async ({ page }) => {
+  test("Home's Read in tally opens the year's Books as her row alone: a Book breaks out above the sheet, Back puts it away and then closes the sheet", { tag: '@full' }, async ({ page }) => {
     await libraryFile(page, 200, THIS_YEAR)
     const owner = await signInAsOwner(page)
     await finishedThisYear(await ownerClient(owner.email), ['Home Tally One', 'Home Tally Two'])
@@ -464,7 +464,7 @@ test.describe('Your shelf, the owner', () => {
   // theme (`theme="auto"`, regal-themed.css), dark in the room whatever the app's theme is (the app
   // is light here), and follow the room live. Regal's `data-regal-theme` says which it resolved; a
   // Regal without theming (its main, until #63) has none and keeps its own look.
-  regalOwnControls('the Book detail panel wears the room, and follows it when it changes', async ({ page }) => {
+  regalOwnControls('the Book detail panel wears the room, and follows it when it changes', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
 
@@ -503,7 +503,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(panel).toHaveCount(0)
   })
 
-  regalOwnControls('takes a Book out from its place in the list with the keyboard, and gives focus back when it is put away', async ({ page }) => {
+  regalOwnControls('takes a Book out from its place in the list with the keyboard, and gives focus back when it is put away', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
     await page.goto('/profile')
@@ -522,7 +522,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(button).toBeFocused()
   })
 
-  test('says so when the file cannot be read, and tries again', async ({ page }) => {
+  test('says so when the file cannot be read, and tries again', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page, 500)
     await signInAsOwner(page)
 
@@ -537,7 +537,7 @@ test.describe('Your shelf, the owner', () => {
   })
 
   // Regal's controls in the Book's panel carry no test ID (above); axe and the list are what this is about.
-  regalOwnControls('reads as a list of her Books for a screen reader, and its screens pass axe in both themes', async ({ page }) => {
+  regalOwnControls('reads as a list of her Books for a screen reader, and its screens pass axe in both themes', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
     for (const colorScheme of ['light', 'dark'] as const) {
@@ -606,7 +606,7 @@ anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address'
   expect(asked).toEqual([])
 })
 
-anyone("nobody else's tally opens the shelf: the year's Books without the row, no file, no Regal", async ({ page }) => {
+anyone("nobody else's tally opens the shelf: the year's Books without the row, no file, no Regal", { tag: '@full' }, async ({ page }) => {
   const asked: string[] = []
   page.on('request', (request) => {
     const url = request.url()

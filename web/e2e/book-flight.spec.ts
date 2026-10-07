@@ -98,7 +98,7 @@ async function thaw(page: Page) {
   })
 }
 
-test('a cover flies into its book page and back into its row, and the Library is where it was', async ({ page }) => {
+test('a cover flies into its book page and back into its row, and the Library is where it was', { tag: '@full' }, async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 })
   const member = await signedIn(page)
   await shelf(member.id, 14)
@@ -134,7 +134,7 @@ test('a cover flies into its book page and back into its row, and the Library is
   await expect(row.locator('[data-cover]')).toBeVisible()
 })
 
-test('Back tapped mid-flight turns the cover around from where it is', async ({ page }) => {
+test('Back tapped mid-flight turns the cover around from where it is', { tag: '@full' }, async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 })
   const member = await signedIn(page)
   await shelf(member.id, 6)
@@ -180,7 +180,7 @@ test('Back tapped mid-flight turns the cover around from where it is', async ({ 
   expect(await scrollY(page)).toBe(0)
 })
 
-test('from Home and from search the cover flies too; back to a closed search it cross-fades', async ({ page }) => {
+test('from Home and from search the cover flies too; back to a closed search it cross-fades', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   await shelf(member.id, 3)
   await page.reload()
@@ -221,7 +221,7 @@ test('from Home and from search the cover flies too; back to a closed search it 
   await expectLanded(page, 4)
 })
 
-test('the hand-off: never a bare frame, and a cover whose image is late lands on its thumbhash and fades it in there', async ({ page }) => {
+test('the hand-off: never a bare frame, and a cover whose image is late lands on its thumbhash and fades it in there', { tag: '@full' }, async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 })
   const member = await signedIn(page)
   // One Book with a cover and a description long enough to scroll the book page.

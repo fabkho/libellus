@@ -31,7 +31,7 @@ test.beforeEach(async ({ page }) => {
   await recordedApple(page)
 })
 
-test.describe('where the button shows', () => {
+test.describe('where the button shows', { tag: '@full' }, () => {
   test('hidden without a camera API', async ({ page }) => {
     await stubScanner(page, { noCamera: true })
     await signedIn(page)
@@ -62,7 +62,7 @@ test.describe('where the button shows', () => {
   })
 })
 
-test.describe('the reader', () => {
+test.describe('the reader', { tag: '@full' }, () => {
   test('native where the browser can read EAN-13: the decoder is never fetched', async ({ page }) => {
     const decoder = watchDecoder(page)
     await stubScanner(page)
@@ -140,7 +140,7 @@ test('a barcode found opens the book page, ticks, and switches the camera off', 
   expect(await probe(page, '__running')).toBe(0)
 })
 
-test('an ISBN-10 on the label finds the same book', async ({ page }) => {
+test('an ISBN-10 on the label finds the same book', { tag: '@full' }, async ({ page }) => {
   await stubScanner(page)
   await signedIn(page)
   await openScanner(page)
@@ -150,7 +150,7 @@ test('an ISBN-10 on the label finds the same book', async ({ page }) => {
   await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
 })
 
-test('a book nothing knows opens the search with its ISBN', async ({ page }) => {
+test('a book nothing knows opens the search with its ISBN', { tag: '@full' }, async ({ page }) => {
   await stubScanner(page)
   await signedIn(page)
   await openScanner(page)
@@ -173,7 +173,7 @@ test('a code that is not a book is told so, and scanning goes on', async ({ page
   await expect(page).toHaveURL(/\/book\//)
 })
 
-test('the light, where the camera has one', async ({ page }) => {
+test('the light, where the camera has one', { tag: '@full' }, async ({ page }) => {
   await stubScanner(page)
   await signedIn(page)
   await openScanner(page)
@@ -187,7 +187,7 @@ test('the light, where the camera has one', async ({ page }) => {
   await expect(torch).toHaveAttribute('aria-pressed', 'false')
 })
 
-test.describe('closing', () => {
+test.describe('closing', { tag: '@full' }, () => {
   test('✕ closes the scanner, not the search; the camera is off', async ({ page }) => {
     await stubScanner(page)
     await signedIn(page)
@@ -257,7 +257,7 @@ test.describe('states', () => {
     await expect(page.getByTestId('search.overlay')).toBeVisible()
   })
 
-  test('no camera: says so', async ({ page }) => {
+  test('no camera: says so', { tag: '@full' }, async ({ page }) => {
     await stubScanner(page, { camera: 'none' })
     await signedIn(page)
     await openScanner(page)
@@ -267,7 +267,7 @@ test.describe('states', () => {
     await expect(page.getByTestId('scan.overlay')).toHaveCount(0)
   })
 
-  test('while the permission prompt is up, and closed before it is answered', async ({ page }) => {
+  test('while the permission prompt is up, and closed before it is answered', { tag: '@full' }, async ({ page }) => {
     await stubScanner(page)
     await page.addInitScript(() => {
       const ask = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
@@ -283,7 +283,7 @@ test.describe('states', () => {
     await expect.poll(() => probe(page, '__running')).toBe(0)
   })
 
-  test('offline: a note, and the ISBN goes to the search of her own Library', async ({ page, context }) => {
+  test('offline: a note, and the ISBN goes to the search of her own Library', { tag: '@full' }, async ({ page, context }) => {
     await stubScanner(page)
     await signedIn(page)
     await openScanner(page)
@@ -296,7 +296,7 @@ test.describe('states', () => {
     await context.setOffline(false)
   })
 
-  test('Reduce Motion: the scan line holds still', async ({ page }) => {
+  test('Reduce Motion: the scan line holds still', { tag: '@full' }, async ({ page }) => {
     // It starts with motion (the config has Reduce Motion on), then turns Reduce Motion on.
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await stubScanner(page)

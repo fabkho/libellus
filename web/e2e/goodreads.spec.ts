@@ -125,7 +125,7 @@ test('the rating fades in under the facts and links to Goodreads; no ISBN, no li
   expect(asked).toHaveLength(1)
 })
 
-test('unknown to Goodreads, failing, or without ratings: no line', async ({ page }) => {
+test('unknown to Goodreads, failing, or without ratings: no line', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const library = createLibrary(member.client)
   const titles = ['Unknown', 'Failing', 'Unrated']
@@ -150,7 +150,7 @@ test('unknown to Goodreads, failing, or without ratings: no line', async ({ page
   }
 })
 
-test('a rating the Library carries shows without the function, offline too', async ({ page }) => {
+test('a rating the Library carries shows without the function, offline too', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const isbn13 = await unusedIsbn13()
   cached.push(isbn13)

@@ -34,7 +34,7 @@ async function addLongBook(page: Page) {
   await expect(page).toHaveURL(/\/book\/[0-9a-f-]{36}$/)
 }
 
-test('a Placeholder cover, a long title and a long Collection name stay inside their boxes', async ({ page }) => {
+test('a Placeholder cover, a long title and a long Collection name stay inside their boxes', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   await addLongBook(page)
 

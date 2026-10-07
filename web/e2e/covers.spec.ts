@@ -48,7 +48,7 @@ test.beforeEach(async ({ page }) => {
   await recordedApple(page)
 })
 
-test('a cover that fails or comes back blank falls back to the edition’s cover by ISBN, then the Placeholder', async ({ page }) => {
+test('a cover that fails or comes back blank falls back to the edition’s cover by ISBN, then the Placeholder', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   await answer(page, [item(990000006301, 'Quillwort Broken', '9783150160671'), item(990000006302, 'Quillwort Blank', '9780593983768')])
   await page.route(/^https:\/\/is\d-ssl\.mzstatic\.com\/.*\/990000006301\//, (route) => route.fulfill(missing))
@@ -70,7 +70,7 @@ test('a cover that fails or comes back blank falls back to the edition’s cover
   await expect(coverOf(page, 'Quillwort Blank').locator('.cloth')).toBeVisible()
 })
 
-test('the first covers are asked for first, the rest a list height before they scroll in', async ({ page }) => {
+test('the first covers are asked for first, the rest a list height before they scroll in', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   const items = Array.from({ length: 40 }, (_, i) => item(990000006400 + i, `Quillwort ${String(i + 1).padStart(2, '0')}`, isbn(`978300006${String(i).padStart(3, '0')}`)))
   await answer(page, items)

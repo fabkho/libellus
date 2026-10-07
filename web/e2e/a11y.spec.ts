@@ -96,7 +96,7 @@ async function closeSheet(page: Page, sheet: string) {
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test.describe(`accessibility, ${colorScheme}`, () => {
+  test.describe(`accessibility, ${colorScheme}`, { tag: '@full' }, () => {
     test.use({ colorScheme, viewport: { width: 412, height: 915 } })
 
     test('the way in: sign in, sign up, the code', async ({ page }) => {
@@ -330,7 +330,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
  * them), a sheet takes focus, keeps it and gives it back on Escape, and saving progress on
  * Home's card leaves focus on the card's button, now Undo, with the save said in a status.
  */
-test.describe('accessibility, the keyboard', () => {
+test.describe('accessibility, the keyboard', { tag: '@full' }, () => {
   test.use({ viewport: { width: 412, height: 915 } })
 
   test('the Library segments are tabs, a sheet keeps and returns focus, a save keeps focus on its card', async ({ page }) => {

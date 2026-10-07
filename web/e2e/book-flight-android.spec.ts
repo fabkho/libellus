@@ -119,7 +119,7 @@ async function landed(page: Page) {
   await expect(page.getByTestId('shell.flightPage')).toBeEmpty()
 }
 
-test('in the built app, a Library row’s cover flies into the book page over frames, not in one', async ({ page }) => {
+test('in the built app, a Library row’s cover flies into the book page over frames, not in one', { tag: '@full' }, async ({ page }) => {
   const { row, rowCover } = await library(page)
   await record(page)
   await row.locator('[data-cover]').tap()
@@ -137,7 +137,7 @@ test('in the built app, a Library row’s cover flies into the book page over fr
   }
 })
 
-test('the cover flies sharp: the hero’s image takes over in the air, the row’s small one is never blown up', async ({ page }) => {
+test('the cover flies sharp: the hero’s image takes over in the air, the row’s small one is never blown up', { tag: '@full' }, async ({ page }) => {
   const { row, rowCover } = await library(page)
   await record(page)
   await row.locator('[data-cover]').tap()
@@ -190,7 +190,7 @@ async function recordReturn(page: Page) {
 
 const returned = (page: Page) => page.evaluate(() => (window as unknown as { __return: Return[] }).__return)
 
-test('closing a book page, the cover keeps the hero’s large image the whole way back and gives way to the row’s own once it is decoded', async ({ page }) => {
+test('closing a book page, the cover keeps the hero’s large image the whole way back and gives way to the row’s own once it is decoded', { tag: '@full' }, async ({ page }) => {
   const { row, rowCover } = await library(page)
   await row.locator('[data-cover]').tap()
   await landed(page)
@@ -213,7 +213,7 @@ test('closing a book page, the cover keeps the hero’s large image the whole wa
   await expect(row.locator('[data-cover]')).toHaveCSS('visibility', 'visible')
 })
 
-test('closing a book page opened before its row’s image came, the cover stays on the row, sharp, until that image is in', async ({ page }) => {
+test('closing a book page opened before its row’s image came, the cover stays on the row, sharp, until that image is in', { tag: '@full' }, async ({ page }) => {
   let release!: () => void
   const { row } = await library(page, new Promise<void>((resolve) => (release = resolve)))
   await row.locator('[data-cover]').tap()

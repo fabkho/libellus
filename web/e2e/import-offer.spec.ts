@@ -77,7 +77,7 @@ test('a new member finds the import on the empty Home and reaches the Import pag
   await expect(page.getByTestId('import.title')).toHaveText(en.import.title)
 })
 
-test('over a few entries a smaller card offers it, and a dismissal is remembered on the device', async ({ page }) => {
+test('over a few entries a smaller card offers it, and a dismissal is remembered on the device', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page, { importHint: true })
   await addBooks(page, member, 2)
   const card = page.getByTestId('home.importOffer')
@@ -102,7 +102,7 @@ test('over a few entries a smaller card offers it, and a dismissal is remembered
   await expect(card).toBeHidden()
 })
 
-test('no card for a member with a real Library, or one who imported before', async ({ page }) => {
+test('no card for a member with a real Library, or one who imported before', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page, { importHint: true })
   const entries = await addBooks(page, member, 4)
   await expect(page.getByTestId('home.reading')).toBeVisible()
@@ -126,7 +126,7 @@ test('no card for a member with a real Library, or one who imported before', asy
   await expect(page.getByTestId('home.importOffer')).toHaveCount(0)
 })
 
-test('the card is in the first frame and nothing on Home moves when the lists arrive', async ({ page }) => {
+test('the card is in the first frame and nothing on Home moves when the lists arrive', { tag: '@full' }, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await signedIn(page, { importHint: true })
   // The device now holds the member's Library (it is empty), so the next start decides from it.
@@ -159,7 +159,7 @@ test('the card is in the first frame and nothing on Home moves when the lists ar
   expect(new Set(shown.map((frame) => frame.search)).size).toBe(1)
 })
 
-test('with Reduce Motion the small card still closes, without travel', async ({ page }) => {
+test('with Reduce Motion the small card still closes, without travel', { tag: '@full' }, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const member = await signedIn(page, { importHint: true })
   await addBooks(page, member, 1)
@@ -170,7 +170,7 @@ test('with Reduce Motion the small card still closes, without travel', async ({ 
 })
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test(`the offer is accessible, ${colorScheme}`, async ({ page }) => {
+  test(`the offer is accessible, ${colorScheme}`, { tag: '@full' }, async ({ page }) => {
     await page.emulateMedia({ colorScheme })
     const member = await signedIn(page, { importHint: true })
     await expect(page.getByTestId('home.importOffer')).toBeVisible()
