@@ -117,7 +117,7 @@ describe('languages', () => {
 })
 
 describe('an Apple edition\'s language (#104)', () => {
-  const words = { locale: 'en', pages: (count: number) => `${count} pages`, ebook: 'ebook' }
+  const words = { locale: 'en', pages: (count: number) => `${count} pages`, format: (format: string) => format }
 
   it('has none to read: Apple\'s ebook answers carry no language field, so the snapshot has none', () => {
     const asked: [string, string][] = [['piranesi', 'us'], ['piranesi', 'gb'], ['klara und die sonne', 'de']]
@@ -141,6 +141,10 @@ describe('an Apple edition\'s language (#104)', () => {
     expect(editionFacts({ ...apple, language: 'ger', pageCount: 272, publisher: ' Bloomsbury ' }, words)).toEqual([
       'German', '2020', '272 pages', 'ebook', 'Bloomsbury',
     ])
+    // The format is the source's (an OpenLibrary paperback), or what the member said for hers.
+    const paperback = { ...apple, source: 'openlibrary' as const, format: 'paperback' as const }
+    expect(editionFacts(paperback, words)).toEqual(['2020', 'paperback'])
+    expect(editionFacts(paperback, words, 'hardcover')).toEqual(['2020', 'hardcover'])
   })
 })
 

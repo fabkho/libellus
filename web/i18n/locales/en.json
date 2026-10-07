@@ -355,7 +355,8 @@
       "never_read": "You haven't read this book yet. Start reading it first.",
       "session_not_found": "That read isn't there any more. It may have been deleted on another device.",
       "offline": "You're offline. Nothing was saved.",
-      "progress_invalid": "That progress doesn't fit this book."
+      "progress_invalid": "That progress doesn't fit this book.",
+      "isbn_invalid": "That ISBN isn't right. Check its digits."
     },
     "undated": "No end date"
   },
@@ -507,7 +508,6 @@
       "hint": "Pick the edition you hold. Your reads, ratings and collections stay with the book.",
       "listLabel": "Editions",
       "current": "Your edition",
-      "ebook": "ebook",
       "loading": "Looking for other editions…",
       "none": "No other editions found.",
       "failed": "Other editions didn't load.",
@@ -528,7 +528,13 @@
       "less": "Less",
       "moreLabel": "More links for this book"
     },
-    "read": "Read now"
+    "read": "Read now",
+    "formatFact": {
+      "hardcover": "hardcover",
+      "paperback": "paperback",
+      "ebook": "ebook",
+      "audiobook": "audiobook"
+    }
   },
   "add": {
     "title": "Add to Library",

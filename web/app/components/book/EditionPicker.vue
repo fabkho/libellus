@@ -49,12 +49,12 @@ const open = defineModel<boolean>('open', { required: true })
 
 const { t, locale } = useI18n()
 
-/** Language · year · pages · ebook (Apple's editions) · publisher, whichever the edition has (Apple's have no language). */
+/** Language · year · pages · format · publisher, whichever the edition has (Apple's have no language). */
 function facts(row: EditionRow): string[] {
   return editionFacts(row.book, {
     locale: locale.value,
     pages: (count) => t('book.pages', { count }),
-    ebook: t('book.edition.ebook'),
+    format: (format) => t(`book.formatFact.${format}`),
   })
 }
 

@@ -8,6 +8,10 @@ import type { GoodreadsRating } from './goodreads'
 
 export type BookSource = 'apple' | 'openlibrary' | 'manual' | 'import'
 
+/** What an edition is, as the database names it (`book_format`). */
+export type BookFormat = 'hardcover' | 'paperback' | 'ebook' | 'audiobook'
+export const BOOK_FORMATS: readonly BookFormat[] = ['hardcover', 'paperback', 'ebook', 'audiobook']
+
 /** A cover's two precomputed colours, `#rrggbb` (components/ui/Cover.vue, Ambient.vue). */
 export type CoverColors = { dominant: string; secondary: string }
 
@@ -34,6 +38,11 @@ export type BookSnapshot = {
   appleId: string | null
   openLibraryEditionKey: string | null
   openLibraryWorkKey: string | null
+  /**
+   * Hardcover, paperback, ebook or audiobook, as the source said it; null or
+   * absent when it did not (OpenLibrary's `physical_format` mostly is empty).
+   */
+  format?: BookFormat | null
 }
 
 /**
@@ -42,6 +51,15 @@ export type BookSnapshot = {
  * (data/goodreads.ts); absent on a copy from before it existed.
  */
 export type Book = BookSnapshot & { id: string; createdAt: string; goodreads?: GoodreadsRating | null }
+
+/**
+ * The format that counts for a Book: the member's own word on her entry's
+ * (`override`) when she gave one, else what the source said; an Apple edition
+ * without one is an ebook (Apple sells nothing else). Null when nobody knows.
+ */
+export function formatOf(book: Pick<BookSnapshot, 'format' | 'source'>, override?: BookFormat | null): BookFormat | null {
+  return override ?? book.format ?? (book.source === 'apple' ? 'ebook' : null)
+}
 
 /**
  * The address of a Book's page (`/book/<key>`): a Catalogue Book by its id, a
@@ -103,8 +121,17 @@ export function isbn10To13(isbn10: string): string {
  * converted. Null when it is not a valid ISBN, so the caller searches the text.
  */
 export function parseIsbn(input: string): string | null {
+  return isbnParts(input)?.isbn13 ?? null
+}
+
+/**
+ * What a member typed, read as an ISBN, both ways it is stored: the ISBN-13
+ * (an ISBN-10 converted) and the ISBN-10 she typed, if she typed one. Null when
+ * it is not a valid ISBN (wrong length, a check digit that does not add up).
+ */
+export function isbnParts(input: string): { isbn13: string; isbn10: string | null } | null {
   const compact = input.replace(/[\s-]/g, '').toUpperCase()
-  if (isValidIsbn13(compact)) return compact
-  if (isValidIsbn10(compact)) return isbn10To13(compact)
+  if (isValidIsbn13(compact)) return { isbn13: compact, isbn10: null }
+  if (isValidIsbn10(compact)) return { isbn13: isbn10To13(compact), isbn10: compact }
   return null
 }

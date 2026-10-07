@@ -36,7 +36,7 @@ watch(
 )
 
 function facts(book: Book | BookSnapshot): string[] {
-  return editionFacts(book, { locale: locale.value, pages: (count) => t('book.pages', { count }), ebook: t('book.edition.ebook') })
+  return editionFacts(book, { locale: locale.value, pages: (count) => t('book.pages', { count }), format: (format) => t(`book.formatFact.${format}`) })
 }
 
 const rows = computed(() => {

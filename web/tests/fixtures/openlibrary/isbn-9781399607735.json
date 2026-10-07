@@ -1,0 +1,48 @@
+{
+    "numFound": 1,
+    "start": 0,
+    "numFoundExact": true,
+    "num_found": 1,
+    "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+    "q": "",
+    "offset": null,
+    "docs": [
+        {
+            "author_name": [
+                "Richard Matheson"
+            ],
+            "cover_edition_key": "OL9002737M",
+            "cover_i": 911109,
+            "first_publish_year": 1954,
+            "key": "/works/OL11374287W",
+            "title": "I am Legend",
+            "ratings_count": 24,
+            "readinglog_count": 198,
+            "editions": {
+                "numFound": 1,
+                "start": 0,
+                "numFoundExact": true,
+                "docs": [
+                    {
+                        "key": "/books/OL37999305M",
+                        "title": "I Am Legend",
+                        "cover_i": 14805160,
+                        "language": [
+                            "eng"
+                        ],
+                        "publisher": [
+                            "Orion Publishing Group, Limited"
+                        ],
+                        "publish_date": [
+                            "2022"
+                        ],
+                        "isbn": [
+                            "9781399607735",
+                            "1399607731"
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

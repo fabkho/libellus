@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
+import type { Book, BookSnapshot } from '~/data/books'
 import { probeImageInBrowser } from '~/data/covers'
 import {
   createBookImport,
@@ -477,6 +478,13 @@ export const useImportStore = defineStore('import', () => {
     void lookForEditions(index)
   }
 
+  /** The row the sheet is about, as the file has it (its title, authors, language): what "My edition isn't listed" starts from. */
+  const choosingBook = computed<BookSnapshot | null>(() => {
+    const index = choosing.value ? indexOf(choosing.value.key) : -1
+    const book = books.value[index]
+    return book ? fileEdition(book).book : null
+  })
+
   /** Searches again after a failed search, or once the connection is back. */
   function retryChoice() {
     const index = choosing.value ? indexOf(choosing.value.key) : -1
@@ -515,14 +523,21 @@ export const useImportStore = defineStore('import', () => {
     const sheet = choosing.value
     const picked = choice.value
     if (!sheet || !picked) return
-    const index = indexOf(sheet.key)
+    useEdition(sheet.key, picked.file ? null : picked.book)
+  }
+
+  /**
+   * A row takes an edition, in the preview only: the one picked in the sheet,
+   * the one found by its ISBN or the one she made herself ("My edition isn't
+   * listed"), or, with `null`, the row as the file has it. Nothing is written.
+   */
+  function useEdition(key: string, picked: Book | BookSnapshot | null) {
+    const index = indexOf(key)
     const book = books.value[index]
     const before = editions.value[index]
     if (!book || !before) return
     const alternatives = before.alternatives ?? []
-    const next: Edition = picked.file
-      ? fileEdition(book, alternatives)
-      : { book: picked.book, via: 'title', unsure: false, alternatives }
+    const next: Edition = picked ? { book: picked, via: 'title', unsure: false, alternatives } : fileEdition(book, alternatives)
     editions.value[index] = next
     verdicts.value[index] = verdictOf(book, next)
     chosen.value = new Set(chosen.value).add(index)
@@ -629,6 +644,8 @@ export const useImportStore = defineStore('import', () => {
     retryChoice,
     closeChoice,
     confirmChoice,
+    useEdition,
+    choosingBook,
     progress,
     outcomes,
     writeError,

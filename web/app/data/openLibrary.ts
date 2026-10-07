@@ -1,5 +1,5 @@
-import { isbn10To13, isValidIsbn10, isValidIsbn13, type BookSnapshot } from './books'
-import { getJson, type FetchLike } from './fetching'
+import { isbn10To13, isValidIsbn10, isValidIsbn13, type BookFormat, type BookSnapshot } from './books'
+import { abortError, getJson, type FetchLike } from './fetching'
 import type { Found } from './merge'
 
 /**
@@ -100,6 +100,21 @@ function yearOf(dates: string[] | undefined): number | null {
   return null
 }
 
+/**
+ * OpenLibrary's `physical_format` (free text, in any language, mostly empty) as
+ * one of the four formats; null for anything else (a CD-ROM, "Unknown binding").
+ */
+export function formatFromPhysical(physical: string | null | undefined): BookFormat | null {
+  const text = (physical ?? '').trim().toLowerCase()
+  if (!text) return null
+  if (/audio|mp3|cassette|hörbuch|livre audio/.test(text)) return 'audiobook'
+  if (/e-?book|electronic|kindle|epub|digital|e-text/.test(text)) return 'ebook'
+  if (/hard ?(cover|back|bound)|library binding|gebunden|cartonn|relié|cartoné|tapa dura|rilegato/.test(text)) return 'hardcover'
+  if (/paper ?back|soft ?(cover|back)|mass market|trade|pocket|taschenbuch|broschiert|brossura|broché|tapa blanda|rústica|poche|kartoniert/.test(text))
+    return 'paperback'
+  return null
+}
+
 /** The edition's ISBN-13 (an ISBN-10 converted) and ISBN-10, valid ones only. */
 function isbnsOf(list: string[] | undefined): { isbn13: string | null; isbn10: string | null } {
   const compact = (list ?? []).map((isbn) => isbn.replace(/[\s-]/g, '').toUpperCase())
@@ -156,6 +171,7 @@ export type OpenLibraryWorkEdition = {
   publish_date?: string
   publishers?: string[]
   languages?: { key?: string }[]
+  physical_format?: string
 }
 
 /**
@@ -200,6 +216,28 @@ export function snapshotFromWorkEdition(
     appleId: null,
     openLibraryEditionKey: editionKey,
     openLibraryWorkKey: bareKey(work.key),
+    format: formatFromPhysical(edition.physical_format),
+  }
+}
+
+/** One edition as OpenLibrary keeps it (`/isbn/<isbn>.json`, `/books/<key>.json`): a work edition with its work. */
+export type OpenLibraryEditionRecord = OpenLibraryWorkEdition & { works?: { key?: string }[]; pagination?: string }
+
+/**
+ * An edition record as a Book snapshot. The record names its authors only by
+ * their keys: their names come from the search's answer for the same ISBN
+ * (`lookupIsbnRecord`), or are left empty for the caller to fill. Its page
+ * count is `number_of_pages`, else the first number of `pagination` ("176 p.").
+ */
+export function snapshotFromEditionRecord(record: OpenLibraryEditionRecord, authors: readonly string[] = []): BookSnapshot | null {
+  const work = bareKey(record.works?.[0]?.key) ?? ''
+  const book = snapshotFromWorkEdition(record, { key: work, authors })
+  if (!book) return null
+  const paginated = Number(/\d+/.exec(record.pagination ?? '')?.[0])
+  return {
+    ...book,
+    openLibraryWorkKey: work || null,
+    pageCount: book.pageCount ?? (Number.isInteger(paginated) && paginated > 0 && paginated < 100000 ? paginated : null),
   }
 }
 
@@ -209,6 +247,13 @@ export type OpenLibrarySource = {
   lookupIsbn: (isbn13: string, signal?: AbortSignal) => Promise<Found[]>
   /** One edition by its key (`OL61022665M`); null when OpenLibrary does not know it. */
   lookupEdition: (editionKey: string, signal?: AbortSignal) => Promise<BookSnapshot | null>
+  /**
+   * The edition with this ISBN-13 as OpenLibrary keeps it (`/isbn/<isbn>.json`:
+   * its page count and format, which the search does not give), with the
+   * authors and work the search names for it. Null when OpenLibrary does not
+   * know the ISBN.
+   */
+  lookupIsbnRecord: (isbn13: string, signal?: AbortSignal) => Promise<BookSnapshot | null>
   /** The editions of a work (`OL45883W`), page by page up to `WORK_EDITIONS_LIMIT`, with the work's authors (issue #41). */
   workEditions: (work: { key: string; authors: readonly string[] }, signal?: AbortSignal) => Promise<BookSnapshot[]>
 }
@@ -234,6 +279,29 @@ export function createOpenLibrary(options: { fetch: FetchLike; languages: readon
       const found = await ask({ q: `edition_key:${editionKey}`, limit: '1' }, signal)
       const book = found[0]?.book
       return book?.openLibraryEditionKey === editionKey ? book : null
+    },
+    async lookupIsbnRecord(isbn13, signal) {
+      const [record, found] = await Promise.allSettled([
+        options.fetch(`${API}/isbn/${isbn13}.json`, { signal }).then(async (response) => {
+          // Not found is an answer: OpenLibrary does not know the ISBN.
+          if (response.status === 404) return null
+          if (!response.ok) throw new Error(`openlibrary.org answered ${response.status}`)
+          return (await response.json()) as OpenLibraryEditionRecord
+        }),
+        ask({ isbn: isbn13, limit: '1' }, signal, isbn13),
+      ])
+      if (signal?.aborted) throw abortError()
+      if (record.status === 'rejected') throw record.reason
+      const named = found.status === 'fulfilled' ? found.value[0]?.book : undefined
+      const book = record.value ? snapshotFromEditionRecord(record.value, named?.authors ?? []) : null
+      if (!book) return null
+      return {
+        ...book,
+        isbn13,
+        openLibraryWorkKey: book.openLibraryWorkKey ?? named?.openLibraryWorkKey ?? null,
+        language: book.language ?? named?.language ?? null,
+        coverUrl: book.coverUrl ?? named?.coverUrl ?? null,
+      }
     },
     async workEditions(work, signal) {
       const key = bareKey(work.key)

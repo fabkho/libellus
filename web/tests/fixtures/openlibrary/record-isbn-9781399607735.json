@@ -1,0 +1,25 @@
+{
+  "key": "/books/OL37999305M",
+  "title": "I Am Legend",
+  "covers": [
+    14805160
+  ],
+  "isbn_13": [
+    "9781399607735"
+  ],
+  "pagination": "176",
+  "publish_date": "2022",
+  "publishers": [
+    "Orion Publishing Group, Limited"
+  ],
+  "languages": [
+    {
+      "key": "/languages/eng"
+    }
+  ],
+  "works": [
+    {
+      "key": "/works/OL11374287W"
+    }
+  ]
+}
