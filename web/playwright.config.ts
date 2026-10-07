@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { availableParallelism } from 'node:os'
 import { defineConfig, devices } from '@playwright/test'
 import { stack } from './tests/support/stack'
 import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID } from './e2e/shelfOwner'
@@ -18,14 +19,16 @@ const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 // the behavioural reference for any native port (SPEC.md, Testing).
 //
 // In CI (the e2e job in .github/workflows/ci.yml) every run starts on an empty
-// database and the dev server compiles on demand, so the run is made patient
-// rather than parallel: two workers fit the runner's two cores next to the
-// stack (three starved them: taps waited on frames that came too late), a failed test is retried once (locally it fails at once, so a flake is
-// seen), and the first failure leaves a trace and a screenshot. The job runs in
-// shards (`--shard=i/N`, N set in ci.yml and docs/TESTING.md: every shard boots
-// its own stack, so more shards buy wall time with minutes), each writing a blob
-// report that the workflow merges into one HTML report when a shard failed.
+// database. Workers follow the runner's cores: the public repository's
+// ubuntu-latest has four, which hold three workers next to the stack; on two
+// cores three workers starved WebKit (taps waited on frames that came too late,
+// #151), so two there. E2E_WORKERS overrides either. A failed test is retried
+// once (locally it fails at once, so a flake is seen), and the first failure
+// leaves a trace and a screenshot. The job runs in shards (`--shard=i/N`, N set
+// in ci.yml and docs/TESTING.md: every shard boots its own stack), each writing
+// a blob report that the workflow merges into one HTML report when a shard failed.
 const CI = Boolean(process.env.CI)
+const CI_WORKERS = Number(process.env.E2E_WORKERS) || (availableParallelism() >= 4 ? 3 : 2)
 
 export default defineConfig({
   testDir: './e2e',
@@ -37,7 +40,7 @@ export default defineConfig({
   fullyParallel: CI,
   forbidOnly: CI,
   retries: CI ? 1 : 0,
-  workers: CI ? 2 : undefined,
+  workers: CI ? CI_WORKERS : undefined,
   timeout: CI ? 60_000 : 30_000,
   expect: { timeout: CI ? 10_000 : 5_000 },
   reporter: CI ? [['list'], ['github'], ['blob']] : 'list',

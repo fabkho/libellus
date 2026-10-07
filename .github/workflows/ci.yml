@@ -148,14 +148,8 @@ jobs:
           e2e=false
           if [ "$EVENT" != push ]; then e2e=$(on "$FILTER_STACK"); fi
 
-          # One stack job per shard; shard 1 also runs pgTAP and Vitest. With no
-          # flows to run, the stack job is a single backend-only job.
-          shards='[]'
-          if [ "$e2e" = true ]; then
-            shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
-          elif [ "$backend" = true ]; then
-            shards='[1]'
-          fi
+          # One e2e job per shard.
+          shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
 
           statics=false
           for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich"; do [ "$v" = true ] && statics=true; done
@@ -166,41 +160,33 @@ jobs:
             echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"
           } | tee -a "$GITHUB_OUTPUT"
 
-  # Database rules (pgTAP), the web data layer (Vitest) and the user flows
-  # (web/e2e: Playwright in WebKit at iPhone size) on one local stack per
-  # runner, so the Supabase pull, boot and install is paid once per job and
-  # never twice for the same runner. Shard 1 runs pgTAP and Vitest first (cheap,
-  # and a red rule says so before ten minutes of flows); every shard then runs
-  # its slice of the flows (`--shard i/N`, split by test, not by file). On a
-  # push to main only shard 1 exists and stops after Vitest.
+  # Database rules (pgTAP), the web data layer (Vitest) and the backup round trip
+  # on a local stack of their own, beside the flows rather than in front of them:
+  # a red rule still says so within a few minutes, and no shard waits for it.
   #
-  # Apple and OpenLibrary answer from the recordings (web/e2e/support.ts); the
-  # fixture in web/e2e/fixtures.ts fails any test that reaches another host.
-  # The shards are independent: every flow makes its own member and tags what it
-  # creates (web/tests/support/stack.ts). A failed shard uploads its blob report;
-  # e2e-report merges them into one HTML report.
-  stack:
-    name: >-
-      ${{ needs.changes.outputs.e2e == 'true' && format('rules, data layer and user flows (shard {0}/{1})', matrix.shard, strategy.job-total)
-      || 'database rules (pgTAP) and web data layer (Vitest)' }}
+  # Supabase starts in the background while pnpm installs (both are network
+  # bound, neither needs the other); `Wait for Supabase` joins them. Only what
+  # the suites use is started: the database, auth, the API, the mail catcher
+  # (the sign-in code is read out of it) and storage. Migrations and seed (the
+  # dev invite) apply on start, onto an empty database. Ports come from
+  # supabase/config.toml (553xx).
+  backend:
+    name: database rules (pgTAP), data layer (Vitest) and backup
     needs: changes
-    if: ${{ needs.changes.outputs.shards != '[]' }}
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: ${{ fromJSON(needs.changes.outputs.shards) }}
+    timeout-minutes: 20
     env:
       SUPABASE_CLI: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
-      RUN_BACKEND: ${{ matrix.shard == 1 && needs.changes.outputs.backend == 'true' }}
-      RUN_E2E: ${{ needs.changes.outputs.e2e == 'true' }}
     steps:
       - uses: actions/checkout@v7
 
       - uses: supabase/setup-cli@v3
         with:
           version: ${{ env.SUPABASE_CLI }}
+
+      - name: Start Supabase (in the background)
+        run: scripts/ci-supabase.sh start
 
       # Same major as local. Build scripts pnpm may run (esbuild) are approved in
       # web/pnpm-workspace.yaml, so a frozen install passes on pnpm 11+.
@@ -215,20 +201,104 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
-      # Only what the flows and the data layer use: the database, auth, the API,
-      # the mail catcher (the sign-in code is read out of it) and storage.
-      # Migrations and seed (the dev invite) apply on start, onto an empty
-      # database. Ports come from supabase/config.toml (553xx).
-      - name: Start Supabase
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,postgres-meta
+      - name: Install web
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for Supabase
+        timeout-minutes: 8
+        run: scripts/ci-supabase.sh wait
 
       - name: Database rules (pgTAP)
-        if: env.RUN_BACKEND == 'true'
         run: supabase test db
+
+      - name: Web data layer (Vitest against the local stack)
+        working-directory: web
+        run: pnpm test
+
+      # The nightly backup's chain (.github/workflows/backup.yml) on what the suites
+      # left in the stack: dump, age, restore into a scratch database both ways, rows
+      # compared table by table. Catches a migration that would break a restore.
+      - uses: ./.github/actions/postgres-client
+
+      - name: Backup round trip (scripts/test-backup-roundtrip.sh)
+        run: scripts/test-backup-roundtrip.sh
+
+  # The user flows (web/e2e: Playwright in WebKit at iPhone size), one local
+  # stack per shard (`--shard i/N`, split by test, not by file). Supabase starts
+  # in the background as in `backend`, while pnpm installs and the browsers'
+  # system libraries come in.
+  #
+  # Apple and OpenLibrary answer from the recordings (web/e2e/support.ts); the
+  # fixture in web/e2e/fixtures.ts fails any test that reaches another host.
+  # The shards are independent: every flow makes its own member and tags what it
+  # creates (web/tests/support/stack.ts). A failed shard uploads its blob report;
+  # e2e-report merges them into one HTML report.
+  e2e:
+    name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: changes
+    if: ${{ needs.changes.outputs.e2e == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.changes.outputs.shards) }}
+    env:
+      SUPABASE_CLI: 2.118.0 # pinned like `backend`
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ env.SUPABASE_CLI }}
+
+      - name: Start Supabase (in the background)
+        run: scripts/ci-supabase.sh start
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
 
       - name: Install web
         working-directory: web
         run: pnpm install --frozen-lockfile
+
+      # The browser download is cached per Playwright version; the system
+      # libraries it needs live outside that folder, so they are installed
+      # either way.
+      - name: Playwright version
+        id: playwright
+        working-directory: web
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      # WebKit for the flows; Chromium for the specs that need it (offline
+      # reloads, layout shifts).
+      - name: Cache the browsers
+        id: browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install WebKit, Chromium and their system libraries
+        working-directory: web
+        run: |
+          if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
+            pnpm exec playwright install-deps webkit chromium
+          else
+            pnpm exec playwright install --with-deps webkit chromium
+          fi
+
+      - name: Wait for Supabase
+        timeout-minutes: 8
+        run: scripts/ci-supabase.sh wait
 
       # The suites ask `supabase status` themselves when these are unset; setting
       # them keeps the run explicit about which stack it talks to.
@@ -243,59 +313,16 @@ jobs:
             # The shelf's owner is made with a given id, which only the auth admin can do (e2e/shelfOwner.ts).
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
-
-      - name: Web data layer (Vitest against the local stack)
-        if: env.RUN_BACKEND == 'true'
-        working-directory: web
-        run: pnpm test
-
-      # The nightly backup's chain (.github/workflows/backup.yml) on what the suites
-      # left in the stack: dump, age, restore into a scratch database both ways, rows
-      # compared table by table. Catches a migration that would break a restore.
-      - uses: ./.github/actions/postgres-client
-        if: env.RUN_BACKEND == 'true'
-
-      - name: Backup round trip (scripts/test-backup-roundtrip.sh)
-        if: env.RUN_BACKEND == 'true'
-        run: scripts/test-backup-roundtrip.sh
-
-      # The browser download is cached per Playwright version; the system
-      # libraries it needs live outside that folder, so they are installed
-      # either way.
-      - name: Playwright version
-        if: env.RUN_E2E == 'true'
-        id: playwright
-        working-directory: web
-        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-
-      # WebKit for the flows; Chromium for e2e/offline.spec.ts, whose offline
-      # reload WebKit's driver cannot serve from a route.
-      - name: Cache the browsers
-        if: env.RUN_E2E == 'true'
-        id: browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-
-      - name: Install WebKit, Chromium and their system libraries
-        if: env.RUN_E2E == 'true'
-        working-directory: web
-        run: |
-          if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
-            pnpm exec playwright install-deps webkit chromium
-          else
-            pnpm exec playwright install --with-deps webkit chromium
-          fi
+          # playwright.config.ts picks its workers from the cores it finds (3 from 4 up).
+          echo "cores: $(nproc)"
 
       - name: User flows
-        if: env.RUN_E2E == 'true'
         working-directory: web
         run: pnpm e2e --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       # The blob report holds the results, screenshots and traces of this shard.
       - name: Upload the blob report
-        if: failure() && env.RUN_E2E == 'true'
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-blob-${{ matrix.shard }}
@@ -307,8 +334,8 @@ jobs:
   # that failed before any flow ran has no blob report; then there is nothing to merge.
   e2e-report:
     name: user flows report (merged)
-    needs: stack
-    if: ${{ !cancelled() && needs.stack.result == 'failure' }}
+    needs: e2e
+    if: ${{ !cancelled() && needs.e2e.result == 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
