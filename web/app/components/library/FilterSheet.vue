@@ -212,9 +212,9 @@ const sectionIds = Object.fromEntries(['readAs', 'author', 'rating', 'year', 'pa
               :id="minId"
               v-model="minText"
               :label="t('library.view.pages.min')"
-              type="number"
               inputmode="numeric"
-              min="0"
+              pattern="[0-9]*"
+              autocomplete="off"
               :placeholder="t('library.view.pages.minPlaceholder')"
               data-testid="libraryFilter.pagesMin"
             />
@@ -222,9 +222,9 @@ const sectionIds = Object.fromEntries(['readAs', 'author', 'rating', 'year', 'pa
               :id="maxId"
               v-model="maxText"
               :label="t('library.view.pages.max')"
-              type="number"
               inputmode="numeric"
-              min="0"
+              pattern="[0-9]*"
+              autocomplete="off"
               :placeholder="t('library.view.pages.maxPlaceholder')"
               data-testid="libraryFilter.pagesMax"
             />
