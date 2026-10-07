@@ -15,6 +15,7 @@ import {
   type LibraryErrorCode,
 } from '~/data/library'
 import { applyWrites } from '~/data/queuedWrites'
+import { reuseEntries } from '~/data/reuseEntries'
 import type { ReadAs } from '~/data/readAs'
 import { isoDay } from '~/utils/dates'
 import { onIdle } from '~/utils/idle'
@@ -66,8 +67,13 @@ export const useLibraryStore = defineStore('library', () => {
 
   // ------------------------------------------------------------ the lists
 
-  /** Each Status's entries, newest first by the list's own day (data/library.ts, `entries`). */
-  const lists = reactive<Record<EntryStatus, LibraryEntry[]>>({ want_to_read: [], reading: [], finished: [] })
+  /**
+   * Each Status's entries, newest first by the list's own day (data/library.ts, `entries`).
+   * Shallow: a list is replaced, never changed in place, and so is an entry, so the
+   * entries stay plain objects (no proxy for each of a few hundred Books and their
+   * fields) and a refresh keeps the ones that did not change (`reuseEntries`).
+   */
+  const lists = shallowReactive<Record<EntryStatus, LibraryEntry[]>>({ want_to_read: [], reading: [], finished: [] })
   const wantToRead = computed(() => lists.want_to_read)
   const reading = computed(() => lists.reading)
   const finished = computed(() => lists.finished)
@@ -118,11 +124,19 @@ export const useLibraryStore = defineStore('library', () => {
       { want_to_read: results[0]!.data!, reading: results[1]!.data!, finished: results[2]!.data! },
       sync.items,
     )
-    for (const status of STATUSES) lists[status] = merged[status]
-    for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
+    // What did not change stays the object it was, and a list that did not change the
+    // list it was: the screens re-render only what changed, nothing on most refreshes.
+    let changed = !loaded.value
+    for (const status of STATUSES) {
+      const next = reuseEntries(lists[status], merged[status])
+      if (next === lists[status]) continue
+      lists[status] = next
+      changed = true
+    }
+    for (const entry of STATUSES.flatMap((status) => lists[status])) if (entryByKey.get(entry.book.id) !== entry) remember(entry)
     loaded.value = true
     loadedAt = asked
-    save()
+    if (changed) save()
   }
 
   /**
@@ -187,7 +201,7 @@ export const useLibraryStore = defineStore('library', () => {
    * The member's entries as this device last saw them, by the page keys of
    * their Books (the book store prefers them over a page loaded earlier).
    */
-  const entryByKey = reactive(new Map<string, LibraryEntry>())
+  const entryByKey = shallowReactive(new Map<string, LibraryEntry>())
 
   /**
    * The newest known state of an entry, from a read (`asked`: when that read
