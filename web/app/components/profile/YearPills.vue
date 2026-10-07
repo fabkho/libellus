@@ -27,7 +27,9 @@ function reveal(behavior: ScrollBehavior) {
   if (left - margin < el.scrollLeft) el.scrollTo({ left: left - margin, behavior })
   else if (left + pill.offsetWidth + margin > el.scrollLeft + el.clientWidth) el.scrollTo({ left: left + pill.offsetWidth + margin - el.clientWidth, behavior })
 }
-onMounted(() => reveal('instant'))
+// All is the first pill and the row opens at its start: only another year needs measuring (which
+// lays the page out, in the push's frozen frame).
+onMounted(() => year.value !== 'all' && reveal('instant'))
 watch(year, () => nextTick(() => reveal(prefersReducedMotion() ? 'instant' : 'smooth')))
 </script>
 

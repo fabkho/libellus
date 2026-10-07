@@ -6,6 +6,7 @@ import { createStats, type ReadingRecord, type Stats, type StatsYear } from '~/d
 /** A sheet of the Profile or a year in review: a month's books, or a star row's. */
 export type ProfileSheet = { kind: 'month'; year: number; month: number } | { kind: 'stars'; year: StatsYear; star: number }
 import { isoDay } from '~/utils/dates'
+import { afterTransition } from '~/utils/viewTransition'
 import { useSessionStore } from '~/stores/session'
 
 /**
@@ -55,13 +56,16 @@ export const useStatsStore = defineStore('stats', () => {
     }
     const member = session.member?.id
     const result = await repo.record(isoDay())
+    // The push to the Profile may still be playing: the answer lands once it has (utils/viewTransition.ts).
+    await afterTransition()
     if (member !== session.member?.id) return
     if (result.error) {
       loadError.value = result.error
       return
     }
     loadError.value = null
-    record.value = result.data
+    // The same record as the one showing (the device's copy, or the last load) changes nothing on the page.
+    if (!record.value || JSON.stringify(toRaw(record.value)) !== JSON.stringify(result.data)) record.value = result.data
     if (import.meta.client && member) saveStats(window.localStorage, member, result.data)
     // A year that has no finished read any more (a read deleted) goes back to All.
     if (year.value !== 'all' && !result.data.reads.some((r) => r.outcome === 'finished' && r.endedOn?.startsWith(String(year.value)))) {

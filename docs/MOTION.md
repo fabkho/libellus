@@ -68,7 +68,13 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   without the View Transitions API, just changes the page. Unlike the cover's flight (a FLIP of
   its own, interruptible), this one is the browser's View Transitions API
   (`plugins/profile-transition.client.ts`, the names in `main.css`): one ring between two fixed
-  places needs nothing more, and a second Back mid-way simply completes it.
+  places needs nothing more, and a second Back mid-way simply completes it. Kept light for a phone:
+  the browser's own keyframes grow the ring by `width` and `height` (layout on the main thread every
+  frame, while the Profile is being set up), so once the transition starts they are rewritten to
+  `transform` alone, the group at its end size and scaled from the start (`scaleInsteadOfResize`,
+  `utils/viewTransition.ts`): the same pixels, run by the compositor. The loading wave holds still
+  until it has landed, and the reading record that comes in meanwhile is applied after it
+  (`afterTransition`), so the page is not set up again under the moving ring.
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
