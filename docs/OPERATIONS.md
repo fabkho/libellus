@@ -255,7 +255,8 @@ object from the dashboard and pass the file.
    project's migrations seed (the shelf's publish state, the error log's salt) are replaced by the
    backup's. It ends with the rows per table.
 3. Set up what a backup does not hold: the Vault secret `github_dispatch_token` (docs/OWNER.md), the edge
-   functions and their secrets (`supabase functions deploy goodreads-rating regal-export`, `supabase secrets set …`).
+   functions and their secrets (`supabase functions deploy goodreads-rating regal-export reading-page-og`,
+   `supabase secrets set …`).
 4. Point everything at the new project: the Pages project's `NUXT_PUBLIC_SUPABASE_URL` and
    `NUXT_PUBLIC_SUPABASE_ANON_KEY`, then retry the production deployment (docs/HOSTING.md); this
    repository's `SUPABASE_DB_URL`; whatever names the old project in docs/OWNER.md (Regal's workflow).
