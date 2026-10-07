@@ -16,12 +16,16 @@
 // tap itself opens it (as UiDateRow does with the date picker); the sheet closes
 // once a file is chosen. Offered where the browser can keep files.
 //
+// Series (issue #167): her correction of the Book's series and place in it
+// (components/series/EditSheet.vue), for a Book with no series line to tap.
+//
 // Share (issue #171): the Book's card on her reading page, in its own sheet
 // (SharingBookSheet: with or without her review, the link to share or copy).
 import type { LibraryEntry } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useEditionStore } from '~/stores/edition'
 import { useHistoryStore } from '~/stores/history'
+import { useSeriesStore } from '~/stores/series'
 
 const props = defineProps<{ entry: LibraryEntry | null }>()
 const emit = defineEmits<{ removed: [] }>()
@@ -64,6 +68,13 @@ function changeEdition() {
   if (!props.entry) return
   open.value = false
   edition.open(props.entry)
+}
+
+const series = useSeriesStore()
+function editSeries() {
+  if (!props.entry) return
+  open.value = false
+  series.openEdit(props.entry.id, props.entry.book.id)
 }
 
 function ask() {
@@ -129,6 +140,8 @@ async function unlink() {
           data-testid="bookOptions.changeEdition"
           @click="changeEdition"
         />
+        <!-- Her correction of the Book's series (#167): the edit sheet lives with the page's series line. -->
+        <UiRow v-if="entry" as="button" icon="pencil" :label="t('series.optionsRow')" data-testid="bookOptions.series" @click="editSeries" />
         <template v-if="ebooks.supported && entry">
           <UiRow
             icon="ebook"
