@@ -16,13 +16,18 @@
 // (how many need her, else how many are linked), leading to the Ebooks page, where
 // the ebook folder is chosen and scanned. The reader's Classic style is set in the
 // reader's own Aa sheet only.
+// Glass (the owner's account only, stores/glass.ts), under Dark mode: how much the floating
+// chrome blurs on this device — Full, Light (half the radius), Off, a segmented choice in the
+// row — to compare on a phone.
 import { useAvatarStore } from '~/stores/avatar'
+import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
 import { useOwnerErrorsStore } from '~/stores/ownerErrors'
 import { useThemeStore } from '~/stores/theme'
+import { GLASS_LEVELS, type GlassLevel } from '~/utils/glass'
 
 const emit = defineEmits<{ photo: [] }>()
 const { t } = useI18n()
@@ -42,6 +47,10 @@ onMounted(() => void links.load())
 // Errors (the owner's, and nobody else's: the store neither asks nor shows for another member).
 const errors = useOwnerErrorsStore()
 onMounted(() => void errors.load())
+// Glass: the owner's, like Errors.
+const glass = useGlassStore()
+const glassLevel = computed({ get: () => glass.level, set: (level: GlassLevel) => glass.set(level) })
+const glassOptions = computed(() => GLASS_LEVELS.map((value) => ({ value, label: t(`profile.account.glassLevel.${value}`) })))
 const sync = useSyncStore()
 const online = useOnline()
 
@@ -152,6 +161,11 @@ async function syncFirst() {
         <span v-else-if="errors.groups" class="text-ink-faint" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
+      <UiRow v-if="errors.isOwner" icon="stack" :label="t('profile.account.glass')">
+        <template #trailing>
+          <UiSegmented v-model="glassLevel" compact :options="glassOptions" :label="t('profile.account.glass')" testid="profile.glass" />
+        </template>
+      </UiRow>
       <UiRow v-if="ebooks.supported" to="/ebooks" icon="ebook" :label="t('profile.account.ebooks')" chevron data-testid="profile.ebooks">
         <span v-if="ebooksValue" :class="ebooks.waiting.length ? 'text-ink' : 'figures text-ink-muted'" data-testid="profile.ebooksValue">{{ ebooksValue }}</span>
       </UiRow>

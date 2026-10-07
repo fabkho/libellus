@@ -618,8 +618,8 @@ onUnmounted(() => {
 <style scoped>
 /* The page stays put behind the palette, blurred and veiled. */
 .veil {
-  -webkit-backdrop-filter: blur(var(--blur-veil));
-  backdrop-filter: blur(var(--blur-veil));
+  -webkit-backdrop-filter: blur(calc(var(--blur-veil) * var(--glass-scale, 1)));
+  backdrop-filter: blur(calc(var(--blur-veil) * var(--glass-scale, 1)));
 }
 
 .tab {
