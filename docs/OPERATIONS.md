@@ -254,9 +254,11 @@ object from the dashboard and pass the file.
    the `postgres` role): the sign-up trigger does not run again for restored members, and the rows a fresh
    project's migrations seed (the shelf's publish state, the error log's salt) are replaced by the
    backup's. It ends with the rows per table.
-3. Set up what a backup does not hold: the Vault secret `github_dispatch_token` (docs/OWNER.md), the edge
-   functions and their secrets (`supabase functions deploy goodreads-rating regal-export reading-page-og`,
-   `supabase secrets set …`).
+3. Set up what a backup does not hold: the Vault secrets `github_dispatch_token` (docs/OWNER.md) and
+   `enrich_token` (Enrichment, below), the edge functions and their secrets
+   (`supabase functions deploy goodreads-rating regal-export reading-page-og enrich`, `supabase secrets set …`), and the
+   enrich function's address in `private.enrich_settings` (restored with `private`, but it names the old
+   project: point it at the new one).
 4. Point everything at the new project: the Pages project's `NUXT_PUBLIC_SUPABASE_URL` and
    `NUXT_PUBLIC_SUPABASE_ANON_KEY`, then retry the production deployment (docs/HOSTING.md); this
    repository's `SUPABASE_DB_URL`; whatever names the old project in docs/OWNER.md (Regal's workflow).
@@ -279,6 +281,47 @@ docker exec supabase_db_libellus psql -U postgres -c 'drop database libellus_bac
 restores into a scratch database both ways (`--mode full`, and `--mode data` into a database shaped like a
 freshly pushed project) and compares the rows table by table, then checks the guards. CI runs it after
 Vitest on every change to the schema or these scripts (docs/TESTING.md).
+
+## Enrichment: authors, series and genres
+
+The author pages, series and genres (#166–#168) come from the `enrich` edge function, which asks
+Wikidata, Open Library, Wikipedia, Wikimedia Commons and Apple server-side and caches the answers in the
+database. What phase 2's screens read is in docs/ENRICHMENT.md; how the function works, runs locally and
+is deployed in supabase/functions/enrich/README.md.
+
+| What | Where | When |
+|---|---|---|
+| A Book entering the Catalogue is queued | trigger `books_enrich` → `private.enrich_queue` | every insert of a Catalogue Book (add, import, Change edition) |
+| The function is called to drain the queue | `private.enrich_kick()` → pg_net → `POST …/functions/v1/enrich {"action":"drain"}` | by the trigger (at most once a minute) and pg_cron `enrich-drain` (every ten minutes) |
+| Books enriched more than 30 days ago are queued again | pg_cron `enrich-refresh` → `public.enrich_refresh(200)` | daily, 04:20 UTC |
+| Stale authors (facts or works older than 30 days) | every drain, up to three | |
+| The one-off backfill | `backfill.ts` from a terminal, or `{"action":"backfill"}` | once, after the migrations |
+
+**Secrets.** The function secret `ENRICH_TOKEN` (`supabase secrets set ENRICH_TOKEN=…`) and the same value
+as the Vault secret `enrich_token`, which the kick sends as its bearer token; the function's address in
+`private.enrich_settings.function_url` (null = off: nothing is sent, the queue waits). Optional function
+secrets: `LIBELLUS_SITE_URL`, `ENRICH_CONTACT` (named in the User-Agent the sources see, as the Wikimedia
+User-Agent policy asks), `ENRICH_LANGUAGES` (`en,de`).
+
+**Is it working?** In the SQL editor: `select public.enrich_status()` (queued, due, enriched, not found,
+failed); `select reason, attempts, not_before, last_error from private.enrich_queue order by attempts desc
+limit 20` (what keeps failing, and why); `select status, sources, enriched_at from public.book_enrichment
+order by enriched_at desc limit 20`; the kick's last call in `private.enrich_settings` (`last_kick_at`,
+`last_request_id` → `net._http_response`). The function's own log is in the dashboard (Edge Functions →
+enrich → Logs): a source that failed says `source_unavailable <status> <host>`.
+
+**When a source is down** nothing breaks: the Book goes back into the queue and is tried again after
+10, 20, 40 … minutes (at most a day); after six attempts it is recorded as `failed` and the daily refresh
+tries it again after 30 days. Members see what is cached, or nothing for a Book never enriched. To retry
+everything that failed at once: `delete from public.book_enrichment where status = 'failed'; select
+public.enrich_backfill();`.
+
+**A new genre mapping** (`GENRE_MAP_VERSION` raised in web/app/data/enrich/genres.ts): deploy the
+function, then `{"action":"remap"}` with the service-role key or `ENRICH_TOKEN`: every Book's genres are
+recomputed from its stored signals, no source is asked. Members' own genres are never touched.
+
+**In the backup**: everything (`public` and `private`), the queue included; not the Vault secret
+`enrich_token` (set it again after a restore, Restoring above).
 
 ## Supabase advisors: what we accept and why
 
