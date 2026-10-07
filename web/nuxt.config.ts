@@ -1,12 +1,25 @@
 import { readFileSync } from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
+import { releaseNotes } from './app/utils/changelog'
 import { isRegalModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
 // colour from the same token source as the CSS: the room's surface, per theme.
 const tokens = JSON.parse(readFileSync(new URL('../design/tokens.json', import.meta.url), 'utf8'))
 const surface: ThemeColors = tokens.color.surface.$value
+
+// What's new (docs/OPERATIONS.md, "Releases"): this build's release, from version.txt and its part
+// of CHANGELOG.md at the repository root (release-please writes both). Read once, at build time;
+// only that release's notes end up in the app. A missing file (a fork that removed them) is no release.
+const rootFile = (name: string) => {
+  try {
+    return readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
+  } catch {
+    return ''
+  }
+}
+const release = releaseNotes(rootFile('CHANGELOG.md'), rootFile('version.txt'))
 
 // Appended to every icon URL (?v=): bump it when the icons are redrawn so Chrome
 // and the home-screen launchers refetch them instead of keeping the old ones.
@@ -147,6 +160,8 @@ export default defineNuxtConfig({
     // Whether this build has Regal (LIBELLUS_REGAL=1): fixed at build time, unlike runtimeConfig,
     // so no env var can point the app at a shelf the build doesn't have (stores/shelf.ts).
     regal: REGAL_ENABLED,
+    // The release this build is and its notes for members (utils/changelog.ts, composables/useWhatsNew.ts).
+    release,
   },
 
   // One locale and every string in i18n/locales/en.json, so German is a

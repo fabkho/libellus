@@ -30,6 +30,12 @@ const route = useRoute()
 useLaunch()
 // The owner's shell: her Profile is one tap away, so its shelf row is warmed on idle (nobody else's shell does anything).
 useShelfPreload()
+// What's new after an update, once per device (composables/useWhatsNew.ts). Not over a shortcut or a
+// share the app was opened with (`/?search=1`, …): those asked for something else first.
+const whatsNew = useWhatsNew()
+onMounted(() => {
+  if (Object.keys(route.query).length === 0) whatsNew.check()
+})
 
 const screen = computed(() => String(route.meta.screen ?? 'home'))
 const pushed = computed(() => Boolean(route.meta.pushed))
@@ -74,6 +80,7 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
     <BookFinishSheet />
     <BookProgressSheet />
     <BookAbandonSheet />
+    <ShellWhatsNewSheet />
   </div>
 </template>
 

@@ -256,6 +256,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await openSheet(page, 'profile.links', 'links')
       await expectAccessible(page, 'Book links')
       await closeSheet(page, 'links')
+      await openSheet(page, 'profile.whatsNew', 'whatsNew')
+      await expectAccessible(page, "What's new")
+      await closeSheet(page, 'whatsNew')
       // The photo (#156): the crop, then the sheet of a saved photo.
       await page.getByTestId('photo.file').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: await samplePhoto() })
       await expect(page.getByTestId('photo.picture')).toBeVisible()

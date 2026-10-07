@@ -15,7 +15,8 @@
 // Ebooks on this device (#131), where the browser can keep files: one row, Ebooks
 // (how many need her, else how many are linked), leading to the Ebooks page, where
 // the ebook folder is chosen and scanned. The reader's Classic style is set in the
-// reader's own Aa sheet only.
+// reader's own Aa sheet only. Under the rows: Version x.y.z · What's new, which opens
+// the release's notes (composables/useWhatsNew.ts).
 // Glass (the owner's account only, stores/glass.ts), under Dark mode: how much the floating
 // chrome blurs on this device — Full, Light (half the radius), Off, a segmented choice in the
 // row — to compare on a phone.
@@ -121,6 +122,9 @@ async function syncFirst() {
     syncing.value = false
   }
 }
+
+// Under the rows, quietly: which release this is, and its notes (the What's new sheet, layouts/tabs.vue).
+const whatsNew = useWhatsNew()
 </script>
 
 <template>
@@ -192,6 +196,15 @@ async function syncFirst() {
         <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
       </UiRow>
     </UiRowGroup>
+    <button
+      v-if="whatsNew.notes.version"
+      type="button"
+      class="figures mx-auto min-h-(--size-touch) px-sm text-caption text-ink-faint hover:text-ink-muted"
+      data-testid="profile.whatsNew"
+      @click="whatsNew.show()"
+    >
+      {{ t('profile.account.version', { version: whatsNew.notes.version }) }} · <span class="text-accent-ink">{{ t('profile.account.whatsNew') }}</span>
+    </button>
     <ShellNameSheet v-model:open="naming" />
     <ProfileLinksSheet v-model:open="linking" />
     <UiConfirm
