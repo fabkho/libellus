@@ -17,6 +17,8 @@ import {
 import { applyWrites } from '~/data/queuedWrites'
 import type { ReadAs } from '~/data/readAs'
 import { isoDay } from '~/utils/dates'
+import { onIdle } from '~/utils/idle'
+import { afterMotion } from '~/utils/motion'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
@@ -77,7 +79,15 @@ export const useLibraryStore = defineStore('library', () => {
 
   /** When this device last changed the Library (`performance.now()`): reads asked for before it are stale. */
   let lastChange = -Infinity
+  /** When the lists showing were asked for (`performance.now()`), by the last load that landed. */
+  let loadedAt = -Infinity
 
+  /**
+   * Asks for the three lists and shows them. While something moves (the cover
+   * flying back into its row, the Profile's View Transition) the answer waits
+   * for it to end before it is applied, so re-rendering the lists does not
+   * land on a frame of it; the first load is applied at once.
+   */
   async function load() {
     const repo = library()
     if (!repo) return
@@ -96,6 +106,12 @@ export const useLibraryStore = defineStore('library', () => {
       loadError.value = failed.error
       return
     }
+    if (loaded.value) {
+      await afterMotion()
+      // Another member meanwhile, or a newer answer already shown.
+      if (member !== session.member?.id || asked < loadedAt) return
+      if (lastChange > asked) return load()
+    }
     loadError.value = null
     // The writes still waiting, laid over what the database has (issue #93).
     const merged = applyWrites(
@@ -105,6 +121,7 @@ export const useLibraryStore = defineStore('library', () => {
     for (const status of STATUSES) lists[status] = merged[status]
     for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
     loaded.value = true
+    loadedAt = asked
     save()
   }
 
@@ -313,8 +330,36 @@ export const useLibraryStore = defineStore('library', () => {
 
   // ------------------------------------------------------- the device's copy
 
-  /** Writes the Library as it is now, for the next start (data/deviceLibrary.ts). Only once it was loaded. */
+  /** Cancels the write waiting for an idle moment, if there is one. */
+  let saving: (() => void) | null = null
+
+  /**
+   * Writes the Library for the next start (data/deviceLibrary.ts) once the
+   * browser is idle: the copy is a few hundred KB of JSON, too long a write for
+   * the frame a change or a load lands in. The page going away writes it at once.
+   */
   function save() {
+    if (!import.meta.client) return
+    saving?.()
+    saving = onIdle(
+      () => {
+        saving = null
+        write()
+      },
+      { timeout: 2000, fallback: 500 },
+    )
+  }
+
+  /** The waiting write, now (the page is hidden or going away). */
+  function flushSave() {
+    if (!saving) return
+    saving()
+    saving = null
+    write()
+  }
+
+  /** Writes the Library as it is now. Only once it was loaded. */
+  function write() {
     const member = session.member
     if (!import.meta.client || !member || !loaded.value) return
     saveLibrary(window.localStorage, {
@@ -342,6 +387,9 @@ export const useLibraryStore = defineStore('library', () => {
   }
 
   function reset() {
+    saving?.()
+    saving = null
+    loadedAt = -Infinity
     for (const status of STATUSES) lists[status] = []
     loaded.value = false
     loadError.value = null
@@ -371,6 +419,14 @@ export const useLibraryStore = defineStore('library', () => {
   watch(online, (now) => {
     if (now && loaded.value) void load()
   })
+
+  // The device's copy waiting for an idle moment is written before the app is put away.
+  if (import.meta.client) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushSave()
+    })
+    window.addEventListener('pagehide', flushSave)
+  }
 
   return {
     library,
