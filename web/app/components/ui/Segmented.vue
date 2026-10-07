@@ -20,10 +20,7 @@ const model = defineModel<T>({ required: true })
 const props = defineProps<{ options: readonly SegmentedOption<T>[]; label: string; testid?: string }>()
 defineSlots<{ option?: (props: { option: SegmentedOption<T>; selected: boolean }) => unknown }>()
 
-const found = computed(() => props.options.findIndex((o) => o.value === model.value))
-// A value no option has (a format nobody knows yet): nothing is lit.
-const lit = computed(() => found.value >= 0)
-const index = computed(() => Math.max(0, found.value))
+const index = computed(() => Math.max(0, props.options.findIndex((o) => o.value === model.value)))
 const buttons = useTemplateRef<HTMLButtonElement[]>('buttons')
 
 function onKeydown(event: KeyboardEvent) {
@@ -45,18 +42,18 @@ function onKeydown(event: KeyboardEvent) {
     :style="{ '--count': options.length, '--index': index }"
     @keydown="onKeydown"
   >
-    <span v-show="lit" class="indicator pointer-events-none absolute" aria-hidden="true" />
+    <span class="indicator pointer-events-none absolute" aria-hidden="true" />
     <button
       v-for="(option, i) in options"
       :key="String(option.value)"
       ref="buttons"
       type="button"
       role="radio"
-      :aria-checked="lit && i === index"
+      :aria-checked="i === index"
       :aria-label="$slots.option ? option.label : undefined"
       :tabindex="i === index ? 0 : -1"
       class="option relative flex flex-1 items-center justify-center gap-sm text-caption"
-      :class="lit && i === index ? 'text-ink' : 'text-ink-muted'"
+      :class="i === index ? 'text-ink' : 'text-ink-muted'"
       :data-testid="testid ? `${testid}.${option.value}` : undefined"
       @click="model = option.value"
     >
