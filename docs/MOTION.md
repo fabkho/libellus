@@ -199,6 +199,14 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   cloth and gains its title on the way. The tab bar does not move; the search palette, when the tap
   was on a result, turns back into the tab bar under the flying cover as it does for any navigation.
 
+  The same flight serves the public reading page (#171): a cover tapped in its rows (Currently reading,
+  Favourites, the shelf, Recently finished) flies into the hero of that Book's card (`/r/<token>/book/<id>`),
+  the card's content below it rising in, and Back — the card's link to her page, or the browser's — flies
+  it back into its row with the page as it was (scroll included); a card opened from a link has no page
+  behind it and goes to the page without a flight. Both pages sit in the `reading` layout, which holds
+  the flight's two layers, so they stay installed while one page replaces the other. The hero is marked
+  `data-flight="hero"` (the book page's too), the page `data-flight="page"`.
+
   The hand-off is the same on every device, however slow: from the tap until the flight starts, a
   still copy of the page being left stands in for the live page, so the frame in which the router
   has drawn the new page but the flight has not started never shows it bare; and the flight's first

@@ -15,7 +15,7 @@
 import { yearFigures } from '~/data/readingPage'
 import { useReadingPageStore } from '~/stores/readingPage'
 
-definePageMeta({ screen: 'readingPage' })
+definePageMeta({ layout: 'reading', screen: 'readingPage' })
 
 const { t } = useI18n()
 const route = useRoute()
@@ -56,7 +56,7 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
 </script>
 
 <template>
-  <main class="relative mx-auto min-h-dvh w-full max-w-(--size-max-content) safe-x" data-testid="readingPage">
+  <main class="relative mx-auto min-h-dvh w-full max-w-(--size-max-content) safe-x" data-flight="page" data-testid="readingPage">
     <UiAmbient :colors="light" />
     <div class="screen-inset relative flex min-h-dvh flex-col px-screen">
       <p class="pt-lg font-serif text-callout lowercase italic text-ink-muted">{{ t('app.name') }}</p>

@@ -168,7 +168,7 @@ function back() {
       </template>
     </UiTopBar>
 
-    <section v-if="book" ref="heroEl" class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="book.hero">
+    <section v-if="book" ref="heroEl" class="relative flex flex-col items-center px-xl pt-sm text-center" data-flight="hero" data-testid="book.hero">
       <UiCover
         decorative
         :title="book.title"

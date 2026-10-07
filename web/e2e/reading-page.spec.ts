@@ -6,6 +6,7 @@ import { createAuth } from '../app/data/auth'
 import { createLibrary } from '../app/data/library'
 import { createReadingPages } from '../app/data/readingPage'
 import { isoDay } from '../app/utils/dates'
+import { appleCover } from '../tests/support/apple'
 import { signUpMember } from '../tests/support/member'
 import { resetWaitlistLimits, runTitle, sql, TEST_PUBLISHER, uniqueAppleId, uniqueEmail } from '../tests/support/stack'
 import { test } from './fixtures'
@@ -155,6 +156,165 @@ test.describe('a reading page, signed out', () => {
         expect(box.right).toBe(width)
       }
     }
+  })
+})
+
+test.describe('a cover flies to its Book card and back', () => {
+  // The flight is the app's (docs/MOTION.md, Push to a book): every animation it starts can be held still
+  // (`__flight.frozen`), and each flight fades the copy of the page it left (`started`).
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const flight = { frozen: false, started: 0 }
+      Object.assign(window, { __flight: flight })
+      const animate = Element.prototype.animate
+      Element.prototype.animate = function (this: Element, ...args: Parameters<Element['animate']>) {
+        const animation = animate.apply(this, args)
+        if (flight.frozen) animation.pause()
+        if (this.parentElement?.dataset.testid === 'shell.flightPage') flight.started++
+        return animation
+      }
+    })
+    await page.route(/^https:\/\/is\d-ssl\.mzstatic\.com\//, (route) =>
+      route.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' }, body: appleCover() }),
+    )
+  })
+
+  type Flight = { frozen: boolean; started: number }
+  const started = (page: Page) => page.evaluate(() => (window as unknown as { __flight: Flight }).__flight.started)
+  const freeze = (page: Page) => page.evaluate(() => ((window as unknown as { __flight: Flight }).__flight.frozen = true))
+  const freezeAt = (page: Page, ms: number) =>
+    page.evaluate((at) => {
+      for (const animation of document.getAnimations())
+        if (!(animation instanceof CSSTransition) && !(animation instanceof CSSAnimation)) animation.currentTime = at
+    }, ms)
+  const thaw = (page: Page) =>
+    page.evaluate(() => {
+      ;(window as unknown as { __flight: Flight }).__flight.frozen = false
+      for (const animation of document.getAnimations()) if (animation.playState === 'paused') animation.play()
+    })
+  /** The `count`th flight has started and is over: nothing in its layers, no cover left hidden, nothing animating on the page. */
+  async function expectLanded(page: Page, count: number) {
+    await expect.poll(() => started(page)).toBe(count)
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
+    await expect(page.locator('[data-flight-hidden]')).toHaveCount(0)
+    await expect(page.locator('[data-moving]')).toHaveCount(0)
+    await expect(page.getByTestId('shell.flightPage')).toBeEmpty()
+    expect(
+      await page.evaluate(() =>
+        document
+          .querySelector('main')!
+          .getAnimations()
+          .map((a) => `${a.constructor.name} ${a.playState} ${(a as CSSTransition).transitionProperty ?? ''}`),
+      ),
+    ).toEqual([])
+  }
+
+  async function adaWithCovers() {
+    const ada = await signUpMember()
+    await createAuth(ada.client).setName('Ada')
+    const library = createLibrary(ada.client)
+    const today = isoDay()
+    for (const title of ['Flown A', 'Flown B', 'Flown C', 'Flown D', 'Flown E', 'Flown F']) {
+      const snapshot = { ...book(title), coverUrl: `https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/t5/flight/${title.replace(/ /g, '')}.jpg/600x900bb.jpg` }
+      await library.addToLibrary(snapshot, { status: 'finished', startedOn: today, endedOn: today, rating: 19 })
+    }
+    return (await createReadingPages(ada.client).setOn(true)).data!.token!
+  }
+
+  test('the tapped cover flies into the card\'s hero, Back flies it into its row, and the page is where it was', async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const token = await adaWithCovers()
+    await page.goto(`/r/${token}`)
+    const row = page.getByTestId('readingPage.favouritesRow.book').nth(1)
+    await expect(row).toBeVisible()
+    await page.evaluate(() => window.scrollTo(0, 120))
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(0)
+    const scrolled = await page.evaluate(() => Math.round(window.scrollY))
+    const title = (await row.locator('.book-title').textContent())!
+    const rowCover = (await row.locator('[data-cover]').boundingBox())!
+
+    // Frozen 100 ms into the push: the cover is in the air, on its way from its row to the hero, and it is animating.
+    await freeze(page)
+    await page.mouse.click(rowCover.x + rowCover.width / 2, rowCover.y + rowCover.height / 2)
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+    const flying = page.getByTestId('shell.flightCover')
+    await expect.poll(() => flying.evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0)
+    await freezeAt(page, 100)
+    const hero = (await page.getByTestId('bookCard.hero').locator('[data-cover]').boundingBox())!
+    const mid = (await flying.boundingBox())!
+    expect(mid.width).toBeGreaterThan(rowCover.width)
+    expect(mid.width).toBeLessThan(hero.width)
+    expect(mid.y).toBeLessThan(rowCover.y - 1)
+    expect(mid.y).toBeGreaterThan(hero.y + 1)
+    // The page, copied, fades out as the card fades in: both partly there.
+    const [leaving, arriving] = await page.evaluate(() => [
+      Number(getComputedStyle(document.querySelector('[data-testid="shell.flightPage"]')!.firstElementChild!).opacity),
+      Number(getComputedStyle(document.querySelector('main')!).opacity),
+    ])
+    expect(leaving).toBeGreaterThan(0.05)
+    expect(leaving).toBeLessThan(0.95)
+    expect(arriving).toBeCloseTo(1 - leaving, 2)
+
+    await thaw(page)
+    await expect(page).toHaveURL(new RegExp(`/r/${token}/book/`))
+    await expect(page.getByTestId('bookCard.title')).toHaveText(title)
+    await expectLanded(page, 1)
+    // The hero is the live one; her review is hers until she shares it.
+    await expect(page.getByTestId('bookCard.hero').locator('[data-cover]')).toBeVisible()
+    await expect(page.getByTestId('bookCard.review')).toHaveCount(0)
+    await expectAccessibleBoth(page, 'Book card after the flight')
+
+    // Back (her page's link): the cover flies into its row; the page is as it was.
+    await page.getByTestId('bookCard.page').click()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expectLanded(page, 2)
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(scrolled)
+    expect((await row.locator('[data-cover]').boundingBox())!.y).toBeCloseTo(rowCover.y, 0)
+    await expect(row.locator('[data-cover]')).toBeVisible()
+
+    // The browser's own Back does the same.
+    await row.click()
+    await expect(page.getByTestId('bookCard.title')).toBeVisible()
+    await expectLanded(page, 3)
+    await page.goBack()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expectLanded(page, 4)
+    await expect(row.locator('[data-cover]')).toBeVisible()
+  })
+
+  test('Back tapped mid-flight turns the cover around from where it is; a card opened from a link just goes to the page', async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const token = await adaWithCovers()
+    await page.goto(`/r/${token}`)
+    const row = page.getByTestId('readingPage.favouritesRow.book').nth(2)
+    await expect(row).toBeVisible()
+    const rowCover = (await row.locator('[data-cover]').boundingBox())!
+
+    await freeze(page)
+    await row.click()
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+    await expect.poll(() => page.getByTestId('shell.flightCover').evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0)
+    await freezeAt(page, 100)
+    const mid = (await page.getByTestId('shell.flightCover').boundingBox())!
+    expect(mid.width).toBeGreaterThan(rowCover.width)
+
+    await page.getByTestId('bookCard.page').click()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expect(row.locator('[data-cover][data-flight-hidden]')).toHaveCount(1)
+    const turned = (await page.getByTestId('shell.flightCover').boundingBox())!
+    expect(Math.abs(turned.x - mid.x)).toBeLessThan(1.5)
+    expect(Math.abs(turned.y - mid.y)).toBeLessThan(1.5)
+    expect(Math.abs(turned.width - mid.width)).toBeLessThan(1.5)
+    await thaw(page)
+    await expectLanded(page, 2)
+
+    // Opened from a link, the card has no page behind it: its link goes there like any address, with no flight.
+    const href = await row.getAttribute('href')
+    await page.goto(href!)
+    await expect(page.getByTestId('bookCard.title')).toBeVisible()
+    await page.getByTestId('bookCard.page').click()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
   })
 })
 

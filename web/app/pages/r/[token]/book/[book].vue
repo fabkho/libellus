@@ -11,11 +11,12 @@
 import { readingPagePath } from '~/data/readingPage'
 import { useReadingPageStore } from '~/stores/readingPage'
 
-definePageMeta({ screen: 'bookCard' })
+definePageMeta({ layout: 'reading', screen: 'bookCard' })
 
 const { t } = useI18n()
 const route = useRoute()
 const store = useReadingPageStore()
+const router = useRouter()
 const { formatDay } = useDays()
 
 const token = computed(() => String(route.params.token ?? ''))
@@ -32,6 +33,19 @@ useHead({
   meta: [{ name: 'robots', content: 'noindex, nofollow' }],
 })
 
+/**
+ * Back to her page. Where the card was opened from it, that is the browser's Back, so the cover flies
+ * back into its row and the page is as it was (composables/useBookFlight.ts); a card opened from a link
+ * has no page behind it, and goes to the page as to any address. (A modified click stays the browser's.)
+ */
+function back(event: MouseEvent) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  const before = window.history.state?.back
+  if (typeof before === 'string' && router.resolve(before).path === readingPagePath(token.value)) router.back()
+  else void navigateTo(readingPagePath(token.value))
+}
+
 const status = computed(() => {
   const c = card.value
   if (!c) return ''
@@ -42,12 +56,17 @@ const status = computed(() => {
 </script>
 
 <template>
-  <main class="relative mx-auto min-h-dvh w-full max-w-(--size-max-content) safe-x" data-testid="bookCard">
+  <main class="relative mx-auto min-h-dvh w-full max-w-(--size-max-content) safe-x" data-flight="page" data-testid="bookCard">
     <UiAmbient :colors="card?.book.coverColors ?? null" />
     <div class="screen-inset relative flex min-h-dvh flex-col px-screen">
-      <NuxtLink :to="readingPagePath(token)" class="-ml-sm inline-flex min-h-(--size-touch) items-center gap-xs self-start px-sm text-subhead text-ink-muted" data-testid="bookCard.page">
+      <a
+        :href="router.resolve(readingPagePath(token)).href"
+        class="-ml-sm inline-flex min-h-(--size-touch) items-center gap-xs self-start px-sm text-subhead text-ink-muted"
+        data-testid="bookCard.page"
+        @click="back"
+      >
         <UiIcon name="back" :size="18" />{{ name ? t('readingPage.card.back', { name }) : t('readingPage.card.backNone') }}
-      </NuxtLink>
+      </a>
 
       <div v-if="store.cardState === 'loading'" class="flex flex-1 items-center justify-center" role="status" data-testid="bookCard.loading">
         <p class="text-subhead text-ink-muted">{{ t('readingPage.loading') }}</p>
@@ -64,35 +83,38 @@ const status = computed(() => {
         <UiButton v-if="store.cardState === 'error'" tone="secondary" size="md" data-testid="bookCard.retry" @click="store.loadCard(token, bookId)">{{ t('readingPage.retry') }}</UiButton>
       </div>
 
-      <article v-else-if="card" class="flex flex-col items-center gap-lg pt-lg text-center">
-        <UiCover
-          decorative
-          eager
-          priority
-          glow
-          :title="card.book.title"
-          :authors="card.book.authors"
-          :src="coverSrc(card.book.coverUrl, 'xl')"
-          :thumbhash="card.book.coverThumbhash"
-          :colors="card.book.coverColors"
-          size="xl"
-        />
-        <div class="flex flex-col gap-xs">
-          <h1 class="book-title text-title text-balance" data-testid="bookCard.title">{{ card.book.title }}</h1>
-          <p v-if="authors" class="text-body text-ink-muted" data-testid="bookCard.authors">{{ authors }}</p>
-          <p class="figures text-meta text-ink-faint" data-testid="bookCard.status">{{ status }}</p>
-        </div>
+      <!-- The hero, as the book page's: the cover that was tapped flies here (data-flight="hero"), and what follows it rises in. -->
+      <template v-else-if="card">
+        <section class="flex flex-col items-center gap-lg pt-lg text-center" data-flight="hero" data-testid="bookCard.hero">
+          <UiCover
+            decorative
+            eager
+            priority
+            glow
+            :title="card.book.title"
+            :authors="card.book.authors"
+            :src="coverSrc(card.book.coverUrl, 'xl')"
+            :thumbhash="card.book.coverThumbhash"
+            :colors="card.book.coverColors"
+            size="xl"
+          />
+          <div class="flex flex-col gap-xs">
+            <h1 class="book-title text-title text-balance" data-testid="bookCard.title">{{ card.book.title }}</h1>
+            <p v-if="authors" class="text-body text-ink-muted" data-testid="bookCard.authors">{{ authors }}</p>
+            <p class="figures text-meta text-ink-faint" data-testid="bookCard.status">{{ status }}</p>
+          </div>
+        </section>
 
-        <div v-if="card.rating" class="flex flex-col items-center gap-xs" data-testid="bookCard.rating">
+        <div v-if="card.rating" class="mt-lg flex flex-col items-center gap-xs text-center" data-testid="bookCard.rating">
           <p class="eyebrow">{{ name ? t('readingPage.card.rating', { name }) : t('readingPage.card.ratingNone') }}</p>
           <UiStars :quarters="card.rating" size="lg" />
         </div>
 
-        <figure v-if="card.review" class="flex w-full flex-col gap-sm text-left" data-testid="bookCard.review">
+        <figure v-if="card.review" class="mt-lg flex w-full flex-col gap-sm text-left" data-testid="bookCard.review">
           <figcaption class="eyebrow">{{ name ? t('readingPage.card.review', { name }) : t('readingPage.card.reviewNone') }}</figcaption>
           <blockquote class="text-body whitespace-pre-line text-ink">{{ card.review }}</blockquote>
         </figure>
-      </article>
+      </template>
 
       <ReadingFooter v-if="store.cardState !== 'loading'" :token="token" class="mt-auto" />
     </div>
