@@ -55,7 +55,14 @@ review she shared), `og:url`, `og:image` and its size, `twitter:card`, and `noin
   `NUXT_PUBLIC_SUPABASE_URL` and `NUXT_PUBLIC_SUPABASE_ANON_KEY` (production only; a preview
   deployment has neither, so the shell goes out untouched). `null` from the database (the page is
   off, the link was renewed, the Book is not published) is a **404**, with the shell all the same,
-  so the app shows its own "no such page" screen.
+  so the app shows its own "no such page" screen. The two functions never raise for an unknown
+  token, they answer `200` with `null`, so that is the only "no such page" the database gives.
+  Anything else it answers (a 5xx, a rejected key) or a network error means it could not be asked,
+  which is **not** a 404: the plain shell goes out with 200 and the app asks again in the browser.
+- Any address under `/r/` that is not shaped like a token (22 characters of `A-Za-z0-9_-`, then
+  optionally `/book/<uuid>`), such as `/r/nonsense`, is a 404 with the shell too, and a plain 404
+  for an `…/og.png`, without asking the database: the SPA fallback must not tell a crawler that a
+  page which cannot exist is there.
 - `/r/<token>/og.png` and `/r/<token>/book/<id>/og.png` are the picture. The token is checked
   against the database first, so a renewed link stops serving its image at once; then the image
   comes from the `reading-page-og` edge function (below) and is kept in `caches.default` under an
@@ -132,7 +139,7 @@ After a change here, check a deployment (preview or production) with
 `curl -s -o /dev/null -w '%{http_code}\n'` on `/book/x` (200), `/nope` (200),
 `/_nuxt/missing.js` (404) and `/sw.js` (200), or locally `pnpm build` with
 `NITRO_PRESET=cloudflare-pages-static`, then `npx wrangler pages dev dist`. With the reading page's
-Function, also `/r/<22 characters nobody owns>` (404) and `/r/nonsense` (200, static).
+Function, also `/r/<22 characters nobody owns>` (404) and `/r/nonsense` (404, the shell).
 
 ## Response headers
 
