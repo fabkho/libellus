@@ -16,7 +16,8 @@ import { expectAccessible, recordedApple, recordedTitleQuery, signedIn, untilSti
  * shows them while developing). The scan is `expectAccessible` (e2e/support.ts);
  * a violation that is known and cannot be fixed here goes in its ALLOWED with the
  * reason, never by turning a rule off for a whole screen. Your shelf's screens
- * are scanned in e2e/shelf.spec.ts, where the owner's flows take turns. The reader
+ * are scanned in e2e/shelf.spec.ts, where the owner's flows take turns; the reading page,
+ * its Book cards and their sheets (#171) in e2e/reading-page.spec.ts. The reader
  * (#131) is scanned in each of its three rooms in e2e/a11y-reader.spec.ts (Chromium).
  */
 
