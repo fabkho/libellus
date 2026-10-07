@@ -42,12 +42,12 @@ const online = useOnline()
       :aria-label="t('photo.avatarLabel')"
       :disabled="!online"
       data-testid="profile.avatar"
+      data-profile-avatar
       @click="emit('photo')"
     >
       <span
         class="figures relative flex size-full items-center justify-center overflow-hidden rounded-pill bg-surface-raised text-title text-ink-muted shadow-cover"
         aria-hidden="true"
-        data-profile-avatar
       >
         <span data-testid="profile.initials">{{ initials }}</span>
         <img v-if="avatar.large" :src="avatar.large" alt="" draggable="false" class="absolute inset-0 size-full object-cover" data-testid="profile.avatarPhoto" />
