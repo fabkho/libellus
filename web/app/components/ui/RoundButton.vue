@@ -21,7 +21,7 @@ defineProps<{ icon?: IconName; label: string }>()
 
 <style scoped>
 .round {
-  background-color: var(--color-glass);
+  background-color: color-mix(in srgb, var(--color-surface-sheet) var(--glass-solid, 0%), var(--color-glass));
   -webkit-backdrop-filter: blur(calc(var(--blur-chrome) * var(--glass-scale, 1)));
   backdrop-filter: blur(calc(var(--blur-chrome) * var(--glass-scale, 1)));
 }

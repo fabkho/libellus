@@ -362,7 +362,7 @@ function pick(hit: SearchHit) {
       ref="veil"
       type="button"
       :aria-label="t('reader.find.close')"
-      class="veil fixed inset-0 z-30 bg-veil"
+      class="veil fixed inset-0 z-30 veil-tint"
       :class="closing && 'pointer-events-none'"
       data-testid="readerSearch.backdrop"
       @click="close"

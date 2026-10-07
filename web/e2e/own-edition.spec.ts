@@ -73,6 +73,11 @@ test('her edition is found by its ISBN, said to be a paperback, and used', async
   await expect(page.getByTestId('book.facts')).toContainText(en.book.formatFact.ebook)
   await openMissing(page)
 
+  // Look up is the button under the field, once: the header holds the title and Cancel alone.
+  await expect(page.getByTestId('ownEdition.sheetTitle')).toHaveText(en.ownEdition.title.isbn)
+  await expect(page.getByTestId('ownEdition.action')).toHaveCount(0)
+  await expect(page.getByText(en.ownEdition.lookUp, { exact: true })).toHaveCount(1)
+
   // Not an ISBN: the check digit is off.
   await page.getByTestId('ownEdition.isbn').fill('978-1-399-60773-6')
   await page.getByTestId('ownEdition.lookUp').click()

@@ -19,7 +19,7 @@
   --color-surface-raised: #fbf9f5;
   --color-surface-sheet: #fbf9f5;
   --color-surface-stage: #1a1714;
-  --color-glass: rgb(251 249 245 / 0.78);
+  --color-glass: rgb(251 249 245 / 0.62);
   --color-fill: rgb(40 30 20 / 0.05);
   --color-fill-strong: rgb(40 30 20 / 0.085);
   --color-hairline: rgb(40 30 20 / 0.1);
@@ -59,8 +59,8 @@
   --shadow-button: var(--elevation-button);
   --shadow-palette: var(--elevation-palette);
   --shadow-sheet: var(--elevation-sheet);
-  --blur-glass: 22px;
-  --blur-chrome: 18px;
+  --blur-glass: 30px;
+  --blur-chrome: 24px;
   --blur-veil: 7px;
   --blur-halo: 26px;
   --spacing-xxs: 2px;
@@ -217,7 +217,7 @@
   --color-surface-raised: #171512;
   --color-surface-sheet: #1b1815;
   --color-surface-stage: #000000;
-  --color-glass: rgb(28 25 22 / 0.72);
+  --color-glass: rgb(28 25 22 / 0.58);
   --color-fill: rgb(255 238 214 / 0.055);
   --color-fill-strong: rgb(255 238 214 / 0.1);
   --color-hairline: rgb(255 236 210 / 0.085);
@@ -257,7 +257,7 @@
     --color-surface-raised: #171512;
     --color-surface-sheet: #1b1815;
     --color-surface-stage: #000000;
-    --color-glass: rgb(28 25 22 / 0.72);
+    --color-glass: rgb(28 25 22 / 0.58);
     --color-fill: rgb(255 238 214 / 0.055);
     --color-fill-strong: rgb(255 238 214 / 0.1);
     --color-hairline: rgb(255 236 210 / 0.085);
@@ -297,7 +297,7 @@
   --color-surface-raised: #fbf9f5;
   --color-surface-sheet: #fbf9f5;
   --color-surface-stage: #1a1714;
-  --color-glass: rgb(251 249 245 / 0.78);
+  --color-glass: rgb(251 249 245 / 0.62);
   --color-fill: rgb(40 30 20 / 0.05);
   --color-fill-strong: rgb(40 30 20 / 0.085);
   --color-hairline: rgb(40 30 20 / 0.1);
@@ -336,7 +336,7 @@
   --color-surface-raised: #f7eedc;
   --color-surface-sheet: #f8efde;
   --color-surface-stage: #1f1710;
-  --color-glass: rgb(247 238 220 / 0.8);
+  --color-glass: rgb(247 238 220 / 0.64);
   --color-fill: rgb(90 60 25 / 0.06);
   --color-fill-strong: rgb(90 60 25 / 0.1);
   --color-hairline: rgb(90 60 25 / 0.12);

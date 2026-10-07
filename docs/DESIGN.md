@@ -85,7 +85,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | surfaceRaised | `bg-surface-raised` | `#fbf9f5` | `#171512` | Cards, the search palette, the Profile's hero ring |
 | surfaceSheet | `bg-surface-sheet` | `#fbf9f5` | `#1b1815` | Bottom sheets |
 | surfaceStage | `bg-surface-stage` | `#1a1714` | `#000` | Behind a page that steps back |
-| glass | `glass` utility | paper 78 % | room 72 % | Floating chrome, always blurred |
+| glass | `glass` utility | paper 62 % | room 58 % | Floating chrome, blurred (the owner's Glass setting: Strong is this; Medium thins the blur and firms the tint; Off is solid `surfaceSheet`) |
 | fill / fillStrong | `bg-fill`, `bg-fill-strong` | ink 5 % / 8.5 % | cream 5.5 % / 10 % | Grouped rows, the avatar, code cells / quiet buttons, pressed rows |
 | hairline / hairlineStrong | `border-hairline`, `edge-faint` / `edge` | ink 10 % / 17 % | cream 8.5 % / 16 % | Dividers, card edges / chrome edges, outlines |
 | ink | `text-ink`, `bg-ink` | `#1c1915` | `#eee7dc` | Text, icons, the primary button |
@@ -101,7 +101,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | success | `text-success` | `#4f7a3c` | `#a3c48e` | Confirmations |
 | error / errorSoft | `text-error`, `bg-error-soft` | `#b03a20` | `#ec8063` | Errors, destructive actions |
 | scrim | `bg-scrim` | warm black 38 % | black 50 % | Behind a sheet |
-| veil | `bg-veil` | paper 55 % | room 55 % | Over the blurred page behind the search palette |
+| veil | `veil-tint` | paper 55 % | room 55 % | Over the blurred page behind the search palette (solid `surface` with Glass off) |
 | cloth1–6, clothInk | (Cover) | same in both | | Placeholder covers: a cover is an object, not chrome |
 | highlightLamp / Sage / Sky / Rose | `var(--color-highlight-*)` | soft washes | | The reader's four highlight colours (multiplied over the words) |
 
@@ -153,7 +153,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `cover`, `float` (tab bar), `button` (primary), `palette` (search palette), `sheet`.
 - Edges: `edge` (strong hairline ring) and `edge-faint` draw a half-pixel ring inside the box and
   compose with a shadow.
-- Blur: `glass` 22 (tab bar), `chrome` 18 (round buttons), `veil` 7 (the page behind
+- Blur: `glass` 30 (tab bar), `chrome` 24 (round buttons), `veil` 7 (the page behind
   search), `halo` 26 (a cover's halo). Opacity of a cover's light: `--opacity-glow` (1 dark, 0.5
   light), `--opacity-halo`.
 
@@ -363,6 +363,8 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiEmptyState` | A screen with nothing in it yet: the lamp over an empty shelf, a serif title, a sentence, and (slot) the one way forward. |
 | `UiSearchPrompt` | The search palette at rest inside an empty state; opens the real search overlay. |
 | `UiPressLink` | Every link into a book page (search results, Library rows). Starts on touch-down: preloads the route and emits `press` (start loading the data); a mouse press navigates at once, a finger on its tap, since a touch-down may become a scroll. |
+| `UiIconSegments` | A choice of a few as one row of icon segments (the control of variant D): a radio group, each segment named by its full label, arrow keys move it; the chosen segment widens and unfolds its name beside the icon, the others stay icons. Used by `BookFormatChoice` and `BookReadAs`. |
+| `BookReadAs` | How she read a Book (Book page, options and Finish sheets): the eyebrow over a `UiIconSegments` row of three — physical (a book), ebook (a reader), audiobook (headphones). The lit one is hers, or the edition's format as the default. |
 | `BookFormatChoice` | An edition's format (Change edition, "My edition isn't listed"): one row of four icon segments (hardcover, paperback, a reader for ebook, headphones) in the reader's Margins / Line spacing style — a radio group, each segment named by its format, arrow keys move it. The chosen segment widens and unfolds its name beside the icon (a grid column `0fr → 1fr` and a fade over `standard`); the others stay icons. None lit while the format is unknown. |
 | `CodeInput` | The six-digit code: one real input, six drawn cells. |
 

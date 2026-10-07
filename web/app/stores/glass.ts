@@ -7,7 +7,7 @@ import { applyGlass, readGlass, writeGlass, type GlassLevel } from '~/utils/glas
  * a change is stored and shown at once.
  */
 export const useGlassStore = defineStore('glass', () => {
-  const level = ref<GlassLevel>('full')
+  const level = ref<GlassLevel>('strong')
 
   /** Run once at boot: reads the stored level and puts it on the page. */
   function start() {

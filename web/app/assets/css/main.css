@@ -96,19 +96,34 @@
     var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
 }
 
-/* Floating glass: the tab bar, the avatar menu, round buttons over covers. */
+/* Floating glass: the tab bar, the avatar menu, round buttons over covers. The tint is the
+   design's `glass` (a heavy, see-through tint), mixed toward the room's own solid sheet colour by
+   the owner's Glass setting (`--glass-solid`: 0 % in the design, 100 % with Glass off). Mixed where it is used, so a
+   reader's sepia or light room inside a dark app mixes with its own colours. */
 @utility glass {
-  background-color: var(--color-glass);
+  background-color: color-mix(in srgb, var(--color-surface-sheet) var(--glass-solid, 0%), var(--color-glass));
   -webkit-backdrop-filter: blur(calc(var(--blur-glass) * var(--glass-scale, 1))) saturate(1.6);
   backdrop-filter: blur(calc(var(--blur-glass) * var(--glass-scale, 1))) saturate(1.6);
 }
 
-/* The owner's Glass setting (Profile → Account, utils/glass.ts): every backdrop blur (the glass,
-   the round buttons, the search veil) at half its radius, or none at all. The tints stay. A
-   backdrop blur is redrawn every frame something moves behind it, so this is for comparing on a
-   phone what it costs; with neither attribute the design's own radii hold. */
-html[data-glass='light'] {
+/* The veil over the page behind the search palette; solid in the room's colour with Glass off. */
+@utility veil-tint {
+  background-color: color-mix(in srgb, var(--color-surface) var(--veil-solid, 0%), var(--color-veil));
+}
+
+/* The owner's Glass setting (Profile → Account, utils/glass.ts). Strong (no attribute) is the
+   design: its blur radii and tints. Medium halves every blur radius and takes the tints more than
+   halfway to solid. Off takes the tints all the way to solid in the room's colour and removes every
+   backdrop blur, so nothing shows through. A backdrop blur is redrawn every frame something moves
+   behind it, so this is also what the blur costs on a phone. */
+html[data-glass='medium'] {
   --glass-scale: 0.5;
+  --glass-solid: 55%;
+  --veil-solid: 45%;
+}
+html[data-glass='off'] {
+  --glass-solid: 100%;
+  --veil-solid: 100%;
 }
 html[data-glass='off'] *,
 html[data-glass='off'] *::before,
