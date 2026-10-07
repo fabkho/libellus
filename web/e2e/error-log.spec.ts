@@ -49,10 +49,12 @@ test('an error on the device lands in the error log, without the address query',
   // The missing chunk is the browser's own words, whichever way it arrived.
   expect(rows.find((row) => row.kind === 'chunk')?.message).toMatch(/import|module/i)
   for (const row of rows) {
+    // Every row keeps the address query out, a vitals row the run caused (on sign-in, say) included.
+    expect(`${row.message} ${row.stack ?? ''}`).not.toContain('secret')
+    if (row.kind === 'vitals') continue
     expect(row.route).toBe('/library')
     expect(row.online).toBe(true)
     expect(row.app_version).toBeTruthy()
     expect(row.user_agent).toMatch(/Safari|WebKit/)
-    expect(`${row.message} ${row.stack ?? ''}`).not.toContain('secret')
   }
 })
