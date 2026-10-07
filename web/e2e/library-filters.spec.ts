@@ -87,7 +87,14 @@ test('a member filters and sorts what she has finished, and the Library remember
   // Read as: physical. The sheet counts what it would leave before anything is applied.
   await page.getByTestId('library.view.filter').click()
   await expect(page.getByTestId('libraryFilter.count')).toHaveText('5 books')
+  // Clear all is there from the start, out of reach and unseen: choosing the first filter moves nothing.
+  const clear = page.getByTestId('libraryFilter.clear')
+  await expect(clear.locator('..')).toHaveAttribute('inert', '')
+  await untilStill(page)
+  const before = await page.getByTestId('libraryFilter.section.readAs').boundingBox()
   await page.getByTestId('libraryFilter.readAs.physical').click()
+  await expect(clear.locator('..')).not.toHaveAttribute('inert', '')
+  expect((await page.getByTestId('libraryFilter.section.readAs').boundingBox())!.y).toBe(before!.y)
   await expect(page.getByTestId('libraryFilter.readAs.physical')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('libraryFilter.count')).toHaveText('2 books')
   expect(await titles(page)).toEqual(['Dune', 'Emma', 'Hyperion', 'Piranesi', 'Earthsea'])

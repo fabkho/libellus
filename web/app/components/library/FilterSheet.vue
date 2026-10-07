@@ -138,9 +138,13 @@ const sectionIds = Object.fromEntries(['readAs', 'author', 'rating', 'year', 'pa
 <template>
   <UiSheet v-model:open="open" :title="t('library.view.sheetTitle')" :action="t('library.view.apply')" testid="libraryFilter" @action="apply">
     <div class="flex flex-col gap-lg pb-sm">
-      <div class="flex items-baseline justify-between">
+      <!-- As tall as the button, which is always there: it fades in rather than pushing the sections down. -->
+      <div class="flex h-(--size-button-md) items-center justify-between">
         <p class="figures text-caption text-ink-muted" role="status" data-testid="libraryFilter.count">{{ t('library.view.showCount', { count: n(left) }, left) }}</p>
-        <UiButton v-if="anySet" tone="plain" size="md" data-testid="libraryFilter.clear" @click="clearAll">{{ t('library.view.clearAll') }}</UiButton>
+        <!-- `inert` while there is nothing to clear: out of reach and out of the accessibility tree, not just invisible. -->
+        <span class="transition-opacity duration-(--duration-quick) ease-standard" :class="!anySet && 'opacity-0'" :inert="!anySet">
+          <UiButton tone="plain" size="md" data-testid="libraryFilter.clear" @click="clearAll">{{ t('library.view.clearAll') }}</UiButton>
+        </span>
       </div>
 
       <template v-for="facet in facets" :key="facet">
