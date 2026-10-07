@@ -6,8 +6,12 @@
 // latest read was abandoned is dimmed (D's `dnf` row) and says "Not finished"
 // with the day instead of a Rating (#10). Opens the book page from the
 // touch-down (UiPressLink). A Book whose ebook is on this device has a quiet
-// mark beside its author (#131, EbooksMark).
+// mark beside its author (#131, EbooksMark). Where the Book has a linked
+// author (#167) the name is underlined like a link and a tap on it (the name
+// itself, not the row's width) opens the author's page (UiPressLink's
+// `data-press-to`); the rest of the row opens the Book.
 import { isNotFinished, type LibraryEntry } from '~/data/library'
+import { useAuthorsStore } from '~/stores/authors'
 import { useBookStore } from '~/stores/book'
 
 const props = defineProps<{ entry: LibraryEntry; eager?: boolean }>()
@@ -19,6 +23,9 @@ const authorLine = computed(() => formatAuthors(props.entry.book.authors, t('com
 const added = computed(() => t('common.dayMonth', dateParts(new Date(props.entry.addedAt), locale.value)))
 const latest = computed(() => props.entry.latestSession)
 const notFinished = computed(() => isNotFinished(props.entry))
+const authors = useAuthorsStore()
+onMounted(() => authors.want(props.entry.book.id))
+const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id)))
 </script>
 
 <template>
@@ -42,7 +49,12 @@ const notFinished = computed(() => isNotFinished(props.entry))
     <span class="flex min-w-0 flex-1 flex-col gap-xxs">
       <span class="book-title title-wrap text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ entry.book.title }}</span>
       <span class="flex min-w-0 items-center gap-xs">
-        <span class="truncate text-caption" :class="notFinished ? 'text-ink-faint' : 'text-ink-muted'">{{ authorLine }}</span>
+        <span
+          class="truncate text-caption"
+          :class="[notFinished ? 'text-ink-faint' : 'text-ink-muted', authorKey && 'underline decoration-hairline-strong underline-offset-2']"
+          :data-press-to="authorKey ? `/author/${authorKey}` : undefined"
+          data-testid="library.entryAuthor"
+        >{{ authorLine }}</span>
         <EbooksMark :entry="entry" testid="library.ebookMark" />
       </span>
       <span v-if="notFinished" class="figures mt-xxs flex items-center gap-xs text-meta text-ink-faint" data-testid="library.entryNotFinished">
