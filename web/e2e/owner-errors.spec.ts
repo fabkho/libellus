@@ -122,7 +122,7 @@ test('the owner picks how glassy the chrome is: Strong is the design, Medium and
   const glass = (el: string) => page.getByTestId('shell.tabs').evaluate((node, prop) => getComputedStyle(node).getPropertyValue(prop), el)
   await page.getByTestId('profile.glass.medium').click()
   await expect(html).toHaveAttribute('data-glass', 'medium')
-  await expect.poll(() => glass('backdrop-filter')).toContain('blur(11px)')
+  await expect.poll(() => glass('backdrop-filter')).toContain('blur(15px)')
   // Off: nothing shows through (an opaque tint: no alpha in its colour) and nothing blurs.
   await page.getByTestId('profile.glass.off').click()
   await expect(html).toHaveAttribute('data-glass', 'off')

@@ -38,7 +38,7 @@ enum Tokens {
         static let surfaceRaised = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.9843, green: 0.9765, blue: 0.9608, opacity: 1), dark: SwiftUI.Color(.sRGB, red: 0.0902, green: 0.0824, blue: 0.0706, opacity: 1))
         static let surfaceSheet = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.9843, green: 0.9765, blue: 0.9608, opacity: 1), dark: SwiftUI.Color(.sRGB, red: 0.1059, green: 0.0941, blue: 0.0824, opacity: 1))
         static let surfaceStage = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.1020, green: 0.0902, blue: 0.0784, opacity: 1), dark: SwiftUI.Color(.sRGB, red: 0.0000, green: 0.0000, blue: 0.0000, opacity: 1))
-        static let glass = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.9843, green: 0.9765, blue: 0.9608, opacity: 0.78), dark: SwiftUI.Color(.sRGB, red: 0.1098, green: 0.0980, blue: 0.0863, opacity: 0.72))
+        static let glass = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.9843, green: 0.9765, blue: 0.9608, opacity: 0.62), dark: SwiftUI.Color(.sRGB, red: 0.1098, green: 0.0980, blue: 0.0863, opacity: 0.58))
         static let fill = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.1569, green: 0.1176, blue: 0.0784, opacity: 0.05), dark: SwiftUI.Color(.sRGB, red: 1.0000, green: 0.9333, blue: 0.8392, opacity: 0.055))
         static let fillStrong = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.1569, green: 0.1176, blue: 0.0784, opacity: 0.085), dark: SwiftUI.Color(.sRGB, red: 1.0000, green: 0.9333, blue: 0.8392, opacity: 0.1))
         static let hairline = SwiftUI.Color(light: SwiftUI.Color(.sRGB, red: 0.1569, green: 0.1176, blue: 0.0784, opacity: 0.1), dark: SwiftUI.Color(.sRGB, red: 1.0000, green: 0.9255, blue: 0.8235, opacity: 0.085))
@@ -80,8 +80,8 @@ enum Tokens {
     }
 
     enum Blur {
-        static let glass: CGFloat = 22
-        static let chrome: CGFloat = 18
+        static let glass: CGFloat = 30
+        static let chrome: CGFloat = 24
         static let veil: CGFloat = 7
         static let halo: CGFloat = 26
     }

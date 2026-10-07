@@ -8,7 +8,7 @@
  *
  * - `strong`, the default: the design's glass (design/tokens.json, `blur.*` and
  *   the tints) — heavy blur, the page showing through.
- * - `medium`: half the blur radii and a tint about halfway to solid.
+ * - `medium`: half the blur radii and a tint a good way to solid (still a little see-through).
  * - `off`: no transparency at all — the surfaces are solid in the room's colour,
  *   with no backdrop blur.
  *

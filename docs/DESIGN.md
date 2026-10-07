@@ -85,7 +85,7 @@ palette, radii, shadows, type scale and easings are switched off, so only tokens
 | surfaceRaised | `bg-surface-raised` | `#fbf9f5` | `#171512` | Cards, the search palette, the Profile's hero ring |
 | surfaceSheet | `bg-surface-sheet` | `#fbf9f5` | `#1b1815` | Bottom sheets |
 | surfaceStage | `bg-surface-stage` | `#1a1714` | `#000` | Behind a page that steps back |
-| glass | `glass` utility | paper 78 % | room 72 % | Floating chrome, blurred (the owner's Glass setting: Strong is this; Medium thins the blur and firms the tint; Off is solid `surfaceSheet`) |
+| glass | `glass` utility | paper 62 % | room 58 % | Floating chrome, blurred (the owner's Glass setting: Strong is this; Medium thins the blur and firms the tint; Off is solid `surfaceSheet`) |
 | fill / fillStrong | `bg-fill`, `bg-fill-strong` | ink 5 % / 8.5 % | cream 5.5 % / 10 % | Grouped rows, the avatar, code cells / quiet buttons, pressed rows |
 | hairline / hairlineStrong | `border-hairline`, `edge-faint` / `edge` | ink 10 % / 17 % | cream 8.5 % / 16 % | Dividers, card edges / chrome edges, outlines |
 | ink | `text-ink`, `bg-ink` | `#1c1915` | `#eee7dc` | Text, icons, the primary button |
@@ -153,7 +153,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `cover`, `float` (tab bar), `button` (primary), `palette` (search palette), `sheet`.
 - Edges: `edge` (strong hairline ring) and `edge-faint` draw a half-pixel ring inside the box and
   compose with a shadow.
-- Blur: `glass` 22 (tab bar), `chrome` 18 (round buttons), `veil` 7 (the page behind
+- Blur: `glass` 30 (tab bar), `chrome` 24 (round buttons), `veil` 7 (the page behind
   search), `halo` 26 (a cover's halo). Opacity of a cover's light: `--opacity-glow` (1 dark, 0.5
   light), `--opacity-halo`.
 
