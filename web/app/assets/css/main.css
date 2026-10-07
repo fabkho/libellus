@@ -298,14 +298,16 @@ html[data-glass='off'] *::after {
    Profile's ring are one element that grows or shrinks between them; the Profile
    fades in as the tab fades out and rises `md` into place (Back: it fades out and
    sinks); the tab bar does not move and the Profile's pinned top bar only fades.
-   Over `standard` into the Profile, over `exit` (on the `standard` curve) back. */
+   Over `standard` into the Profile, over `exit` (on the `standard` curve) back.
+   The push to an author's page and back (plugins/author-transition.client.ts,
+   `data-push-transition`, #167) moves the page the same way, with no ring. */
 html[data-profile-transition] [data-profile-avatar] {
   view-transition-name: profile-avatar;
 }
-html[data-profile-transition] [data-testid='shell.tabs'] {
+html:is([data-profile-transition], [data-push-transition]) [data-testid='shell.tabs'] {
   view-transition-name: tab-bar;
 }
-html[data-profile-transition] [data-top-bar] {
+html:is([data-profile-transition], [data-push-transition]) [data-top-bar] {
   view-transition-name: top-bar;
 }
 /* The tab bar is the same capsule before and after: the new one stands, at once. */
@@ -315,16 +317,16 @@ html[data-profile-transition] [data-top-bar] {
 ::view-transition-new(tab-bar) {
   animation: none;
 }
-html[data-profile-transition='push']::view-transition-old(root) {
+html:is([data-profile-transition='push'], [data-push-transition='push'])::view-transition-old(root) {
   animation-name: page-fade-out;
 }
-html[data-profile-transition='push']::view-transition-new(root) {
+html:is([data-profile-transition='push'], [data-push-transition='push'])::view-transition-new(root) {
   animation-name: page-fade-in, page-rise;
 }
-html[data-profile-transition='back']::view-transition-old(root) {
+html:is([data-profile-transition='back'], [data-push-transition='back'])::view-transition-old(root) {
   animation-name: page-fade-out, page-sink;
 }
-html[data-profile-transition='back']::view-transition-new(root) {
+html:is([data-profile-transition='back'], [data-push-transition='back'])::view-transition-new(root) {
   animation-name: page-fade-in;
 }
 @keyframes page-fade-in {
@@ -358,15 +360,15 @@ html[data-profile-transition='back']::view-transition-new(root) {
 html[data-profile-transition]::view-transition-group(*) {
   transform-origin: 0 0;
 }
-/* The Profile's loading wave holds still while the page arrives under the
+/* The loading wave (the Profile's, an author page's) holds still while the page arrives under the
    transition, and swells on once it has landed: dozens of placeholders each
    animating are each a layer of their own for the transition to carry. */
-html[data-profile-transition] .wave {
+html:is([data-profile-transition], [data-push-transition]) .wave {
   animation-play-state: paused;
 }
-html[data-profile-transition='back']::view-transition-group(*),
-html[data-profile-transition='back']::view-transition-old(*),
-html[data-profile-transition='back']::view-transition-new(*) {
+html:is([data-profile-transition='back'], [data-push-transition='back'])::view-transition-group(*),
+html:is([data-profile-transition='back'], [data-push-transition='back'])::view-transition-old(*),
+html:is([data-profile-transition='back'], [data-push-transition='back'])::view-transition-new(*) {
   animation-duration: var(--duration-exit);
 }
 
