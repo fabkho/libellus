@@ -517,6 +517,8 @@
       "save": "Save",
       "saving": "Saving…",
       "formatLabel": "Format",
+      "formatNone": "Choose a format",
+      "formatChoose": "Choose",
       "missing": "My edition isn't listed"
     },
     "goodreads": {
@@ -538,6 +540,12 @@
       "paperback": "Paperback",
       "ebook": "Ebook",
       "audiobook": "Audiobook"
+    },
+    "formatShort": {
+      "hardcover": "Hardcover",
+      "paperback": "Paperback",
+      "ebook": "Ebook",
+      "audiobook": "Audio"
     },
     "formatFact": {
       "hardcover": "hardcover",
