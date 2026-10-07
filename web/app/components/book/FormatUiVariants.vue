@@ -2,6 +2,7 @@
 // DESIGN ROUND (proto/format-pills), dev only: three one-row looks for the format choice.
 //   a  icon segments (the reader's Margins row), the chosen format's name as a caption
 //   b  text segments (Hardcover · Paperback · Ebook · Audio)
+//   d  a, but the chosen segment opens to show its name beside the icon; the others stay icons
 //   c  a compact "Format  ▭ Paperback ⌄" row that opens a small menu
 // Same contract as FormatChoice: a radio group, a tap says `choose`, `testid.<format>` per option.
 import { BOOK_FORMATS, type BookFormat } from '~/data/books'
@@ -33,6 +34,18 @@ const model = computed({
 })
 const segments = computed(() => options.value as { value: BookFormat | ''; label: string }[])
 const name = computed(() => (props.value ? t(`book.format.${props.value}`) : t('book.edition.formatNone')))
+
+// d: the row of icons, the chosen one carrying its name
+const stops = useTemplateRef<HTMLButtonElement[]>('stops')
+function onStopKey(event: KeyboardEvent) {
+  const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0
+  if (!step || props.disabled) return
+  event.preventDefault()
+  const at = Math.max(0, BOOK_FORMATS.findIndex((f) => f === props.value))
+  const next = (at + step + BOOK_FORMATS.length) % BOOK_FORMATS.length
+  emit('choose', BOOK_FORMATS[next]!)
+  stops.value?.[next]?.focus()
+}
 
 // c: the menu
 const menuOpen = ref(false)
@@ -78,7 +91,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
 
 <template>
   <!-- a, b -->
-  <div v-if="variant !== 'c'" :class="disabled && 'pointer-events-none opacity-50'" :aria-disabled="disabled || undefined">
+  <div v-if="variant === 'a' || variant === 'b'" :class="disabled && 'pointer-events-none opacity-50'" :aria-disabled="disabled || undefined">
     <p :id="labelId" class="eyebrow mx-xs mb-ms" :class="invalid && 'text-error'">
       {{ label }}<span v-if="required" class="ml-xxs text-accent-ink" aria-hidden="true">*</span>
     </p>
@@ -97,6 +110,32 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
     >
       {{ name }}
     </p>
+  </div>
+
+  <!-- d -->
+  <div v-else-if="variant === 'd'" :class="disabled && 'pointer-events-none opacity-50'" :aria-disabled="disabled || undefined">
+    <p :id="labelId" class="eyebrow mx-xs mb-ms" :class="invalid && 'text-error'">
+      {{ label }}<span v-if="required" class="ml-xxs text-accent-ink" aria-hidden="true">*</span>
+    </p>
+    <div class="unfold flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint" role="radiogroup" :aria-labelledby="labelId" :aria-required="required ? true : undefined" :aria-invalid="invalid ? true : undefined" :data-testid="testid" @keydown="onStopKey">
+      <button
+        v-for="option in options"
+        :key="option.value"
+        ref="stops"
+        type="button"
+        role="radio"
+        :aria-checked="value === option.value"
+        :aria-label="option.label"
+        :tabindex="value === option.value || (!value && option.value === BOOK_FORMATS[0]) ? 0 : -1"
+        class="stop flex min-w-0 items-center justify-center text-caption"
+        :class="value === option.value ? 'on text-ink' : 'text-ink-muted'"
+        :data-testid="`${testid}.${option.value}`"
+        @click="emit('choose', option.value)"
+      >
+        <UiIcon :name="icon(option.value)" :size="20" />
+        <span class="name grid" aria-hidden="true"><span class="min-w-0 overflow-hidden whitespace-nowrap"><span class="gap">{{ option.label }}</span></span></span>
+      </button>
+    </div>
   </div>
 
   <!-- c -->
@@ -149,6 +188,47 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
 </template>
 
 <style scoped>
+/* d: the chosen stop grows to make room, its name unfolds beside the icon (a grid column 0fr -> 1fr,
+   so the width is animated without measuring) and fades in; the raised surface is each stop's own,
+   fading with the growth. Concentric with the group: md less the xxs gap. */
+.stop {
+  flex: 1 1 0;
+  border-radius: calc(var(--radius-md) - var(--spacing-xxs));
+  background: transparent;
+  transition:
+    flex-grow var(--duration-standard) var(--ease-standard),
+    background-color var(--duration-standard) var(--ease-standard),
+    box-shadow var(--duration-standard) var(--ease-standard),
+    color var(--duration-quick) var(--ease-standard);
+}
+.stop.on {
+  flex-grow: 2.3;
+  background: var(--color-surface-raised);
+  box-shadow:
+    0 0 0 var(--stroke-hairline) var(--color-hairline),
+    0 var(--stroke-rule) var(--spacing-xxs) color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
+.stop:focus-visible {
+  outline: var(--stroke-focus) solid var(--color-accent);
+  outline-offset: calc(-1 * var(--stroke-focus));
+}
+.name {
+  grid-template-columns: 0fr;
+  opacity: 0;
+  padding-left: 0;
+  transition:
+    grid-template-columns var(--duration-standard) var(--ease-standard),
+    opacity var(--duration-standard) var(--ease-standard);
+}
+.gap {
+  display: block;
+  padding-left: var(--spacing-xs);
+}
+.stop.on .name {
+  grid-template-columns: 1fr;
+  opacity: 1;
+}
+
 .trigger:focus-visible,
 .item:focus-visible {
   outline: var(--stroke-focus) solid var(--color-accent);

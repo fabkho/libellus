@@ -1,8 +1,8 @@
 // DESIGN ROUND (proto/format-pills), dev only: which look the format choice wears.
-// `?formatUi=a|b|c` picks one; anything else is today's four pills. Only read behind
+// `?formatUi=a|b|c|d` picks one; anything else is today's four pills. Only read behind
 // `import.meta.dev` (components/book/FormatChoice.vue), so builds never carry it.
-export type FormatUi = 'pills' | 'a' | 'b' | 'c'
-const UIS: readonly FormatUi[] = ['pills', 'a', 'b', 'c']
+export type FormatUi = 'pills' | 'a' | 'b' | 'c' | 'd'
+const UIS: readonly FormatUi[] = ['pills', 'a', 'b', 'c', 'd']
 
 export function useFormatUi() {
   const route = useRoute()
