@@ -267,6 +267,10 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spe
   is back on screen. Interruptible: an item reverses from the height it has. A list never moves
   items it measured off the page (a kept-alive tab in the background re-rendering): coming back to a
   tab shows its list in place (`e2e/library-return.spec.ts`).
+  The lists' quiet refresh when a tab comes back waits for whatever is moving (the cover flying back
+  into its row and handing over, the Profile's View Transition: `afterMotion`, `utils/motion.ts`)
+  before it is applied, and an entry that did not change stays the same object, so a refresh
+  that changed nothing re-renders nothing (`reuseEntries`).
 - **Tally mark.** A finish adds a mark to Home's tally: it fades in at full lamp with its glow and
   settles to the others' strength over twice `sheet`. Only a mark added to a count already on
   screen lights up.
