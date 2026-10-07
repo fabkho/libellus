@@ -9,7 +9,8 @@
 // A radiogroup: each option is a radio, arrow keys move the choice (and the
 // focus) as the platform's own segmented controls do. Each option's face comes
 // from the `option` slot ({ option, selected }); without it, its label.
-// `testid` names the group; each option is `<testid>.<value>`.
+// `testid` names the group; each option is `<testid>.<value>`. `compact` makes it a
+// round button's height (40), to sit at the right of a row (the Profile's Glass).
 export interface SegmentedOption<V> {
   value: V
   /** What assistive tech says, and the face without a slot. */
@@ -17,7 +18,7 @@ export interface SegmentedOption<V> {
 }
 
 const model = defineModel<T>({ required: true })
-const props = defineProps<{ options: readonly SegmentedOption<T>[]; label: string; testid?: string }>()
+const props = defineProps<{ options: readonly SegmentedOption<T>[]; label: string; testid?: string; compact?: boolean }>()
 defineSlots<{ option?: (props: { option: SegmentedOption<T>; selected: boolean }) => unknown }>()
 
 const index = computed(() => Math.max(0, props.options.findIndex((o) => o.value === model.value)))
@@ -35,7 +36,8 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <div
-    class="segmented relative flex h-(--size-row) rounded-md bg-fill p-xxs edge-faint"
+    class="segmented relative flex rounded-md bg-fill p-xxs edge-faint"
+    :class="compact ? 'h-(--size-button-md)' : 'h-(--size-row)'"
     role="radiogroup"
     :aria-label="label"
     :data-testid="testid"
