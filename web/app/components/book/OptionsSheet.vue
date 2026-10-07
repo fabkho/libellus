@@ -15,6 +15,9 @@
 // the Book stays). The picker is a native file input laid over the row, so the
 // tap itself opens it (as UiDateRow does with the date picker); the sheet closes
 // once a file is chosen. Offered where the browser can keep files.
+//
+// Share (issue #171): the Book's card on her reading page, in its own sheet
+// (SharingBookSheet: with or without her review, the link to share or copy).
 import type { LibraryEntry } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useEditionStore } from '~/stores/edition'
@@ -49,6 +52,13 @@ watch(
   { immediate: true },
 )
 const title = computed(() => book.value?.title ?? '')
+
+const sharing = ref(false)
+function share() {
+  if (!props.entry) return
+  open.value = false
+  sharing.value = true
+}
 
 function changeEdition() {
   if (!props.entry) return
@@ -108,6 +118,7 @@ async function unlink() {
       />
       <BookReadAs v-if="entry" :entry="entry" testid="bookOptions.readAs" class="mb-md" />
       <UiRowGroup>
+        <UiRow v-if="entry" as="button" icon="share" :label="t('bookOptions.share')" data-testid="bookOptions.share" @click="share" />
         <UiRow
           as="button"
           icon="stack"
@@ -147,6 +158,8 @@ async function unlink() {
       </UiRowGroup>
     </div>
   </UiSheet>
+
+  <SharingBookSheet v-model:open="sharing" :entry="entry" />
 
   <UiConfirm
     v-model:open="confirming"

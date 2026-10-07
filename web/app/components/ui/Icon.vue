@@ -42,6 +42,7 @@ export type IconName =
   | 'translate'
   | 'define'
   | 'copy'
+  | 'share'
   | 'leading0'
   | 'leading1'
   | 'leading2'
@@ -177,6 +178,8 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     <template v-else-if="name === 'define'">
       <path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5Z" /><path d="M5 17a2.5 2.5 0 0 1 2.5-2.5H18M9 8.5h5" />
     </template>
+    <!-- The platform's share mark: a tray with an arrow leaving it (sharing a reading page or a Book card, #171). -->
+    <template v-else-if="name === 'share'"><path d="M12 14.5v-11M8.5 7 12 3.5 15.5 7" /><path d="M9 10H6.5v10h11V10H15" /></template>
     <template v-else-if="name === 'copy'">
       <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" />
     </template>
