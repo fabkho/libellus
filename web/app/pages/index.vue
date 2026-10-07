@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Home (D's home / home-empty): what matters now. The Books being read, as
 // large cards lit by their covers, each with a Finish shortcut; the year's
-// tally ("Read in 2026: 3", which opens that year's Books in a sheet); and
-// Want to read, a short row of covers. A new member with no Books sees the
+// tally ("Read in 2026: 3", which opens that year's Books in a sheet);
+// Want to read, a short row of covers; and, when there is one, the next Book
+// in a series she has been reading (#167). A new member with no Books sees the
 // empty state and the way to Search. Kept alive: coming back shows what was
 // there and refreshes quietly behind it.
 import { useLibraryStore } from '~/stores/library'
@@ -74,6 +75,8 @@ watch(
     <HomeTally :year="library.readInYearOf" :count="readInYear" @open="tallyOpen = true" />
 
     <HomeUpNext v-if="wantToRead.length" :entries="wantToRead" />
+    <!-- Last, so its coming (after the lists) moves nothing under it (#167). -->
+    <HomeNextInSeries />
     <HomeTallySheet v-model:open="tallyOpen" :year="library.readInYearOf" :restore="tallyRestore" />
   </div>
 
