@@ -1,5 +1,54 @@
 # Changelog
 
+## [1.2.0](https://github.com/fabkho/libellus/compare/v1.1.0...v1.2.0) (2026-10-07)
+
+
+### Features
+
+* a waitlist on the reading page instead of "Ask for an invite", the owner's list, the cover flight and a Favourites inset fix ([0adbe00](https://github.com/fabkho/libellus/commit/0adbe0018a4c1b48d1db0a07f6be8dc809aaa12f))
+* **book:** show Read as as one row of icon segments like the format row ([ff78a2d](https://github.com/fabkho/libellus/commit/ff78a2dedc548013f05c66d38c39baa1cbfcfe55))
+* **db:** add the waitlist for visitors of a reading page ([932cae7](https://github.com/fabkho/libellus/commit/932cae75de315cd7ed1ed1ff33e56b7837cc88fa))
+* **db:** give a list's rows their linked authors in one call ([4b2bc2b](https://github.com/fabkho/libellus/commit/4b2bc2b616098515eee6e5eb9fa0eb5865b8919e))
+* genres in the app (chips, editor, Library filter, Profile figures) ([b224303](https://github.com/fabkho/libellus/commit/b2243036ff99de79398d2289cf68035da376fe73))
+* **web:** "Next in your series" on Home ([588a29a](https://github.com/fabkho/libellus/commit/588a29af6904eb9748f2896830abc1bdff8d7e89))
+* **web:** add Profile → Account → Waitlist for the instance owner ([e9f628c](https://github.com/fabkho/libellus/commit/e9f628ca0dee58329795e3680788bfb77bdef4ee))
+* **web:** add the waitlist repository, its store and data-layer tests ([171e1ff](https://github.com/fabkho/libellus/commit/171e1ff70ff657733076146543688de9e5e68ef7))
+* **web:** author pages and series ([#167](https://github.com/fabkho/libellus/issues/167)) ([17a7321](https://github.com/fabkho/libellus/commit/17a732121305cbb40e01e0f492d27eb08aedf229))
+* **web:** fly a tapped cover into its Book card on the public reading page ([be8a14a](https://github.com/fabkho/libellus/commit/be8a14a6ccb866512d2f00238b8c65ea99704524))
+* **web:** name the author page's genres with the canonical labels ([f4bf504](https://github.com/fabkho/libellus/commit/f4bf5049c1ef298dd39438039768fb0787c5f578))
+* **web:** open an author's page from the Book page and from Library rows ([9392dfc](https://github.com/fabkho/libellus/commit/9392dfc735995e3ab3a3a336dadb1b97889f2b07))
+* **web:** replace "Ask for an invite" with a waitlist form on the reading page ([48a157c](https://github.com/fabkho/libellus/commit/48a157ccf6ef6fc47daf378b541a1dde047d83a4))
+* **web:** stores for author pages and series, kept on the device ([04ed876](https://github.com/fabkho/libellus/commit/04ed876543b2ffcd0ee8a7dd7df5026e25430c50))
+* **web:** the author page ([668e8ea](https://github.com/fabkho/libellus/commit/668e8ea10c9096b545e71d8906bdd3dfdc220d2f))
+* **web:** the series line, the series sheet and her correction on the Book page ([7133ceb](https://github.com/fabkho/libellus/commit/7133ceba80353f95196fd4aa01e008058b2d614d))
+
+
+### Fixes
+
+* **a11y:** reach What's new's notes by keyboard and scan the Profile only once it has faded in ([a1b84d4](https://github.com/fabkho/libellus/commit/a1b84d4b210f9d0fa9148317d0ed42a840108303))
+* **a11y:** What's new notes reachable by keyboard, Profile scanned only once settled ([effe7ab](https://github.com/fabkho/libellus/commit/effe7abccb779821ead089e6b88deb5cc74cafc1))
+* **edition:** keep Look up only as the button in Find your edition ([3a1a7b8](https://github.com/fabkho/libellus/commit/3a1a7b8895b3b8536c77522439828e83a447ca09))
+* **enrich:** name works in her language, else English, never another language by default ([44e7b2d](https://github.com/fabkho/libellus/commit/44e7b2d6489df1857c3ed3da44a8ab00cca9648d))
+* **glass:** make Off mean no transparency, and rename the levels Strong, Medium, Off ([598443d](https://github.com/fabkho/libellus/commit/598443dd2cd5f6103d78f7af785b4bef386e768a))
+* **glass:** make Strong heavier and Medium clearly in between ([7855ae2](https://github.com/fabkho/libellus/commit/7855ae2ea630a86d08d99508c5ce6eea91515771))
+* **profile:** fly the avatar's ring with its photo ([ea4a0e2](https://github.com/fabkho/libellus/commit/ea4a0e2419e87b11181fe1f6761c38361245666c))
+* **profile:** fly the avatar's ring with its photo ([8c21e8f](https://github.com/fabkho/libellus/commit/8c21e8f5a5eb76df3510b61e0f1f937495afdd2d))
+* **release:** let the summary say 'none' when no migration was pending ([5d44433](https://github.com/fabkho/libellus/commit/5d44433c9e21f47ec84ffafcb808fa07d2aff6fb))
+* **release:** summary step fails when no migration was pending ([b563b8e](https://github.com/fabkho/libellus/commit/b563b8eb0ee20c79e0d2f18f54878ee717b47910))
+* **web:** keep the reading page's cover rows inside the side padding ([465a121](https://github.com/fabkho/libellus/commit/465a121f02d7578b8b4ac461331f356f1c987de0))
+* **web:** let the reader's book pages load their stylesheets under the site's policy ([8680430](https://github.com/fabkho/libellus/commit/868043010078992f5be1b7485d99fa9acd88da20))
+* **web:** under Reduce Motion, only what has a transition takes the 1 ms one ([b5912df](https://github.com/fabkho/libellus/commit/b5912df3098367492374148c5eb263a9e172b407))
+
+
+### Performance
+
+* **book:** measure whether the title is cut once the cover has landed ([5c61020](https://github.com/fabkho/libellus/commit/5c61020d03489a33023e848b7f173bf38820e543))
+* **book:** send a book page's requests once per open ([45ca8f1](https://github.com/fabkho/libellus/commit/45ca8f1224b3ec0322f0d450e85e1c65234ddbd1))
+* **dates:** build each Intl formatter once per locale and options ([0a70c78](https://github.com/fabkho/libellus/commit/0a70c7841433ad8cbd1e683f864d287665f9182e))
+* **library:** apply a refreshed Library once motion has settled, and save it on idle ([960cdb9](https://github.com/fabkho/libellus/commit/960cdb9e7fa44c91c6172d4303e879a43bcfb1d2))
+* **library:** keep unchanged entries across a refresh and hold the lists shallowly ([96562eb](https://github.com/fabkho/libellus/commit/96562eb7c68e186244b0d7c63b51a621b6c63214))
+* the remaining quick wins and structural sharing in the library store ([eae9d12](https://github.com/fabkho/libellus/commit/eae9d12fe6ecb527ca6d5271511ffe2b72e6eabc))
+
 ## [1.1.0](https://github.com/fabkho/libellus/compare/v1.0.0...v1.1.0) (2026-10-07)
 
 
