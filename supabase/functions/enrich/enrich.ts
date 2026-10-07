@@ -187,6 +187,9 @@ export async function enrichBook(
   if (book.openlibrary_edition_key) edition = await sources.olEdition(book.openlibrary_edition_key)
   else if (book.isbn13) edition = await sources.olEditionByIsbn(book.isbn13)
   else if (book.isbn10) edition = await sources.olEditionByIsbn(book.isbn10)
+  // Open Library files an ISBN under the wrong book now and then (Dune Messiah's ebook under
+  // Dune): an edition found by ISBN counts only when its title is the Book's.
+  if (edition && !book.openlibrary_edition_key && edition.title && !titlesMatch(edition.title, book.title)) edition = null
 
   const workKey = book.openlibrary_work_key ?? edition?.workKey ?? null
   if (workKey) {
@@ -237,8 +240,11 @@ export async function enrichBook(
         if (!parent) continue
         facts = wd.parseWork(parent, sources.languages)
       }
-      if (titleSearched && !titlesMatch(facts.title, book.title) &&
-          !Object.values(facts.titles).some((t) => titlesMatch(t, book.title))) continue
+      // The item must be this Book's work: its title (in any language asked) is the Book's or Open
+      // Library's work's. Links between the sources are sometimes wrong (Open Library linked Dune
+      // Messiah to Dune's item).
+      const names = [facts.title, ...Object.values(facts.titles)]
+      if (!names.some((t) => titlesMatch(t, book.title) || (!titleSearched && titlesMatch(t, olWork?.title)))) continue
       work = facts
       if (!matchedBy) matchedBy = 'title'
       break

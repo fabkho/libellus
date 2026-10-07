@@ -70,6 +70,7 @@ export const authorPhotoUrl = (photoId: number) => `${COVERS}/a/id/${photoId}-L.
 
 export type OlEdition = {
   key: string | null
+  title: string | null
   workKey: string | null
   authorKeys: string[]
   /** The edition's free-text series ("Discworld ; 15"), as given. */
@@ -80,6 +81,7 @@ export type OlEdition = {
 export function parseEdition(body: unknown): OlEdition | null {
   const edition = body as {
     key?: string
+    title?: string
     works?: { key?: string }[]
     authors?: { key?: string }[]
     series?: unknown
@@ -88,6 +90,7 @@ export function parseEdition(body: unknown): OlEdition | null {
   if (!edition || typeof edition !== 'object') return null
   return {
     key: editionKey(edition.key),
+    title: typeof edition.title === 'string' ? edition.title.trim() : null,
     workKey: workKey(edition.works?.[0]?.key),
     authorKeys: (edition.authors ?? []).map((a) => authorKey(a.key)).filter((k): k is string => k !== null),
     seriesText: strings(edition.series),

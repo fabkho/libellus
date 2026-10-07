@@ -345,7 +345,7 @@ as $$
     'workId', w.id,
     'wikidataId', w.wikidata_id,
     'openLibraryKey', w.openlibrary_key,
-    'title', coalesce(mine.title, w.editions -> p_language ->> 'title', w.titles ->> p_language, w.title),
+    'title', coalesce(mine.title, w.titles ->> p_language, w.editions -> p_language ->> 'title', w.title),
     'year', w.first_year,
     'kind', w.kind,
     'position', p_position,
