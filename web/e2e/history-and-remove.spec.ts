@@ -129,6 +129,8 @@ test('a member removes a book that is on a collection: it is gone from the Libra
   await page.getByTestId('picker.new').click()
   await page.getByTestId('picker.newName').fill('Houses')
   await page.getByTestId('picker.create').click()
+  // Done once the new Collection is made and ticked (it is not, a moment after the tap).
+  await expect(page.getByTestId('picker.collection').filter({ hasText: 'Houses' })).toHaveAttribute('aria-checked', 'true')
   await page.getByTestId('picker.action').click()
   await expect(page.getByTestId('book.collection')).toHaveText(['Houses'])
   await expect(page.getByTestId('history.session')).toHaveCount(1)

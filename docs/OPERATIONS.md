@@ -26,15 +26,22 @@ writes the version and the notes from the conventional commits (CONTRIBUTING.md)
    version, a commit with a `Release-As: 2.0.0` footer does it.
 3. The push of that merge runs the workflow again. Its first job tags `vX.Y.Z` and creates the GitHub
    release. Its second job, **deploy**, in the GitHub environment `production`:
-   1. links the hosted project (`SUPABASE_PROJECT_REF`), prints `supabase db push --linked --include-all
+   1. checks that **the full suite passed on `main`** for the release: main's latest CI run for the
+      tagged commit, or for its nearest ancestor with a run (the release commit itself starts none),
+      must be green with its user flows run (`scripts/release-e2e-gate.sh`). Pull requests run only the
+      core flows; every CI run on `main` runs all of them, the `@full` ones included (docs/TESTING.md,
+      "CI: what runs when"). A run still going is waited for (up to 15 minutes). Red, or none: the
+      deploy stops before anything changed, and says which run to look at. Fix `main` (or re-run a
+      flaky run), then deploy the tag by hand (below).
+   2. links the hosted project (`SUPABASE_PROJECT_REF`), prints `supabase db push --linked --include-all
       --dry-run` (the migrations it is about to apply), then applies them. A failure stops here: nothing
       else changes.
-   2. deploys every function under `supabase/functions/` (`supabase functions deploy <name> --use-api`;
+   3. deploys every function under `supabase/functions/` (`supabase functions deploy <name> --use-api`;
       each function's `[functions.<name>]` settings in `supabase/config.toml` apply: `verify_jwt`,
       `entrypoint`, `import_map`, `static_files`). Their secrets (`supabase secrets set`) are not touched.
-   3. moves the branch **`production`** to the tag. Cloudflare Pages builds `production` as the live site
+   4. moves the branch **`production`** to the tag. Cloudflare Pages builds `production` as the live site
       (docs/HOSTING.md); the deployment shows as the Cloudflare Pages check on the tagged commit.
-   4. writes a summary on the run: the migrations applied, the functions deployed, where `production`
+   5. writes a summary on the run: the migrations applied, the functions deployed, where `production`
       now points and where to watch the Pages build.
 
 The database goes first because the web app is built for the schema it ships with, and the schema
@@ -79,7 +86,9 @@ gh workflow run release.yml -f tag=v1.4.0                       # deploy v1.4.0 
 gh workflow run release.yml -f tag=v1.3.2 -f migrations=false   # roll back to v1.3.2
 ```
 
-The run checks that the tag is on `main`, then does the same steps. A **retry** after a failed run
+The run checks that the tag is on `main` and that its full suite passed there, then does the same
+steps. A rollback to a release older than that check (its runs on `main` ran no user flows) needs
+`-f skip_e2e_gate=true`. A **retry** after a failed run
 picks up where it failed: the migrations already applied are no longer pending, the functions are
 deployed again, and `production` moves forward or is left where it is.
 

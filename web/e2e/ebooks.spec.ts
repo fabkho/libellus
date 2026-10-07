@@ -149,7 +149,7 @@ test('Add ebook links a picked EPUB to the Book; the Library marks it; Unlink de
   expect(await copies(page)).toEqual([])
 })
 
-test('a picked file that is clearly another book is asked about; Link links it anyway', async ({ page }) => {
+test('a picked file that is clearly another book is asked about; Link links it anyway', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [moby] = await shelve(member, [book('Moby-Dick', 'Herman Melville')])
 
@@ -170,7 +170,7 @@ test('a picked file that is clearly another book is asked about; Link links it a
   await expect(page.getByTestId('book.ebook')).toHaveText(en.bookEbook.line)
 })
 
-test('a copy the browser evicted shows as missing until the same file comes back', async ({ page }) => {
+test('a copy the browser evicted shows as missing until the same file comes back', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [moby] = await shelve(member, [book('Moby-Dick', 'Herman Melville')])
   await openBook(page, moby!)
@@ -194,10 +194,14 @@ test('a copy the browser evicted shows as missing until the same file comes back
   await expect(page.getByTestId('book.ebook')).not.toHaveAttribute('data-missing')
 })
 
-/** The share target's service worker (public/sw-share.js), as the built app imports it. */
+/**
+ * The share target's service worker: the built app's own (sw.js, which imports public/sw-share.js),
+ * once it is there; on the dev server, which has none, sw-share.js by itself.
+ */
 async function withShareWorker(page: Page) {
   await page.evaluate(async () => {
-    await navigator.serviceWorker.register('/sw-share.js')
+    const own = await Promise.race([navigator.serviceWorker.ready, new Promise<null>((resolve) => setTimeout(() => resolve(null), 5_000))])
+    if (!own) await navigator.serviceWorker.register('/sw-share.js')
     await navigator.serviceWorker.ready
   })
 }
@@ -221,53 +225,58 @@ async function share(page: Page, fields: Record<string, string>, files: ReturnTy
   await page.evaluate(() => (document.getElementById('share-sheet') as HTMLFormElement).submit())
 }
 
-test('three shared EPUBs are taken in: two linked, one waits; Ignore never offers it again', async ({ page }) => {
-  const member = await signedIn(page)
-  const isbn = await unusedIsbn13()
-  const [moby, pride] = await shelve(member, [book('Moby-Dick', 'Herman Melville'), book('Pride and Prejudice', 'Jane Austen', isbn)])
-  await withShareWorker(page)
+// The share target is answered by the service worker (playwright.config.ts blocks them elsewhere).
+test.describe('shared to the installed app', () => {
+  test.use({ serviceWorkers: 'allow' })
 
-  await share(page, {}, [
-    epub('pg2701.epub', MOBY_DICK_GUTENBERG),
-    epub('pride.epub', prideAndPrejudiceWithIsbn(isbn)),
-    epub('pg345.epub', DRACULA_GUTENBERG3),
-  ])
+  test('three shared EPUBs are taken in: two linked, one waits; Ignore never offers it again', async ({ page }) => {
+    const member = await signedIn(page)
+    const isbn = await unusedIsbn13()
+    const [moby, pride] = await shelve(member, [book('Moby-Dick', 'Herman Melville'), book('Pride and Prejudice', 'Jane Austen', isbn)])
+    await withShareWorker(page)
 
-  await expect(page).toHaveURL(/\/ebooks$/)
-  await expect(page.getByTestId('ebooks.report')).toContainText(en.ebooks.report.share)
-  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('3 ebooks · 2 linked · 1 needs you')
-  await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(2)
-  const waiting = page.getByTestId('ebooks.waiting')
-  await expect(waiting).toHaveCount(1)
-  await expect(waiting.getByTestId('ebooks.waitingTitle')).toHaveText('Dracula')
-  await expect(waiting.getByTestId('ebooks.waitingWhy')).toHaveText(en.ebooks.noMatch)
-  expect(await copies(page)).toHaveLength(3)
-  // The service worker's cache is emptied once the app has taken them.
-  expect(await page.evaluate(async () => (await (await caches.open('libellus-shared-ebooks')).keys()).length)).toBe(0)
+    await share(page, {}, [
+      epub('pg2701.epub', MOBY_DICK_GUTENBERG),
+      epub('pride.epub', prideAndPrejudiceWithIsbn(isbn)),
+      epub('pg345.epub', DRACULA_GUTENBERG3),
+    ])
 
-  // Linked by the ISBN, and by title and author.
-  await openBook(page, pride!)
-  await expect(page.getByTestId('book.ebook')).toHaveText(en.bookEbook.line)
-  await openBook(page, moby!)
-  await expect(page.getByTestId('book.ebook')).toHaveText(en.bookEbook.line)
+    await expect(page).toHaveURL(/\/ebooks\/?$/)
+    await expect(page.getByTestId('ebooks.report')).toContainText(en.ebooks.report.share)
+    await expect(page.getByTestId('ebooks.reportLine')).toHaveText('3 ebooks · 2 linked · 1 needs you')
+    await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(2)
+    const waiting = page.getByTestId('ebooks.waiting')
+    await expect(waiting).toHaveCount(1)
+    await expect(waiting.getByTestId('ebooks.waitingTitle')).toHaveText('Dracula')
+    await expect(waiting.getByTestId('ebooks.waitingWhy')).toHaveText(en.ebooks.noMatch)
+    expect(await copies(page)).toHaveLength(3)
+    // The service worker's cache is emptied once the app has taken them.
+    expect(await page.evaluate(async () => (await (await caches.open('libellus-shared-ebooks')).keys()).length)).toBe(0)
 
-  // Not hers: ignored, the copy goes, and sharing it again leaves it ignored.
-  await goto(page, '/ebooks')
-  await page.getByTestId('ebooks.ignore').click()
-  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
-  expect(await copies(page)).toHaveLength(2)
-  await share(page, {}, [epub('pg345.epub', DRACULA_GUTENBERG3)])
-  await expect(page.getByTestId('ebooks.reportLine')).toHaveText('1 ebook')
-  await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
-})
+    // Linked by the ISBN, and by title and author.
+    await openBook(page, pride!)
+    await expect(page.getByTestId('book.ebook')).toHaveText(en.bookEbook.line)
+    await openBook(page, moby!)
+    await expect(page.getByTestId('book.ebook')).toHaveText(en.bookEbook.line)
 
-test('a text share POSTed to the share target still finds the book as #91 did', async ({ page }) => {
-  await signedIn(page)
-  await withShareWorker(page)
-  await share(page, { title: 'Piranesi', text: 'Piranesi by Susanna Clarke' })
-  // No ISBN, no Goodreads link: the search palette, with the words typed in.
-  await expect(page.getByTestId('search.query')).toHaveValue(/Piranesi/)
-  await expect(page).not.toHaveURL(/\/share/)
+    // Not hers: ignored, the copy goes, and sharing it again leaves it ignored.
+    await goto(page, '/ebooks')
+    await page.getByTestId('ebooks.ignore').click()
+    await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+    expect(await copies(page)).toHaveLength(2)
+    await share(page, {}, [epub('pg345.epub', DRACULA_GUTENBERG3)])
+    await expect(page.getByTestId('ebooks.reportLine')).toHaveText('1 ebook')
+    await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
+  })
+
+  test('a text share POSTed to the share target still finds the book as #91 did', async ({ page }) => {
+    await signedIn(page)
+    await withShareWorker(page)
+    await share(page, { title: 'Piranesi', text: 'Piranesi by Susanna Clarke' })
+    // No ISBN, no Goodreads link: the search palette, with the words typed in.
+    await expect(page.getByTestId('search.query')).toHaveValue(/Piranesi/)
+    await expect(page).not.toHaveURL(/\/share/)
+  })
 })
 
 /**
@@ -322,7 +331,7 @@ async function putInFolder(page: Page, files: Record<string, Uint8Array>) {
   )
 }
 
-test('the ebook folder: picked once, Scan links what fits, Choose book and Find book settle the rest', async ({ page }) => {
+test('the ebook folder: picked once, Scan links what fits, Choose book and Find book settle the rest', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [moby, anna, otherAnna] = await shelve(member, [
     book('Moby-Dick', 'Herman Melville'),
@@ -350,7 +359,7 @@ test('the ebook folder: picked once, Scan links what fits, Choose book and Find 
   await expect(page.getByTestId('profile.ebookFolder')).toHaveCount(0)
   await expect(page.getByTestId('profile.readerClassic')).toHaveCount(0)
   await page.getByTestId('profile.ebooks').click()
-  await expect(page).toHaveURL(/\/ebooks$/)
+  await expect(page).toHaveURL(/\/ebooks\/?$/)
   await expect(page.getByTestId('ebooks.folder')).toContainText(en.ebooks.folder.choose)
   await expect(page.getByTestId('ebooks.scan')).toHaveCount(0)
   await page.getByTestId('ebooks.folder').click()
@@ -469,7 +478,7 @@ async function appleAnswers(page: Page, answers: Record<string, { title: string;
   })
 }
 
-test('Find book puts her own Books first: a tap on one links the file at once (Undo puts it back)', async ({ page }) => {
+test('Find book puts her own Books first: a tap on one links the file at once (Undo puts it back)', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [arms] = await shelve(member, [book('Men at Arms', 'Terry Pratchett')])
   // The file is called by its series, so matching cannot tell it is her Men at Arms.
@@ -489,7 +498,7 @@ test('Find book puts her own Books first: a tap on one links the file at once (U
   // A tap links the file to it; it does not open the book page.
   await own.getByTestId('search.result').click()
   await expect(page.getByTestId('search.query')).toBeHidden()
-  await expect(page).toHaveURL(/\/ebooks$/)
+  await expect(page).toHaveURL(/\/ebooks\/?$/)
   await expect(page.getByTestId('ebooks.linkNote')).toContainText(`Linked to ${arms!.book.title}`)
   await expect(page.getByTestId('ebooks.linkedRow')).toHaveCount(1)
   await expect(page.getByTestId('ebooks.waiting')).toHaveCount(0)
@@ -507,7 +516,7 @@ test('Find book puts her own Books first: a tap on one links the file at once (U
   await expect(page.getByTestId('book.ebook')).toBeVisible()
 })
 
-test('another copy of a Book that has its ebook: Replace or Keep current, from its row and from Find book; Scan again keeps both decisions', async ({ page }) => {
+test('another copy of a Book that has its ebook: Replace or Keep current, from its row and from Find book; Scan again keeps both decisions', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   const [war] = await shelve(member, [book('The Forever War', 'Joe Haldeman')])
   await scanFolder(page, {
@@ -550,7 +559,7 @@ test('another copy of a Book that has its ebook: Replace or Keep current, from i
   expect(await copies(page)).toHaveLength(1)
 })
 
-test('another edition of her Book: the sheet links the file to her edition, or switches her Library to the one found', async ({ page }) => {
+test('another edition of her Book: the sheet links the file to her edition, or switches her Library to the one found', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   // Taken in before the Books were in her Library: both wait.
   await scanFolder(page, {

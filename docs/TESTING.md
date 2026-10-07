@@ -395,22 +395,22 @@ an init script, `new PerformanceObserver(…).observe({ type: 'layout-shift', bu
 remember that a shift within 500 ms of a tap or a key does not count (`hadRecentInput`), while a
 scroll, a source answering or the system Back excuse nothing.
 
-## Reproducing a CI flake (Linux WebKit, two cores)
+## Reproducing a CI flake (Linux WebKit, few cores)
 
 macOS WebKit does not starve the way the CI runner's Linux WebKit does: frames
 there can come seconds apart, so a router scroll, a rising sheet or a history
 step lands long after the page looks ready. To see a flow fail as it does in
-CI, run the browsers in Playwright's Linux image limited to two cores and let
-the flows connect to it (the dev server and the stack stay on the Mac; the
-container reaches them through the client, `<loopback>`):
+CI, run the browsers in Playwright's Linux image limited to the runner's four
+cores and let the flows connect to it (the app's server and the stack stay on
+the Mac; the container reaches them through the client, `<loopback>`):
 
 ```sh
-docker run -d --name pw --cpus=2 -p 3999:3000 --init --ipc=host \
+docker run -d --name pw --cpus=4 -p 3999:3000 --init --ipc=host \
   mcr.microsoft.com/playwright:v1.63.0-noble \
   /bin/sh -c "npx -y playwright@1.63.0 run-server --port 3000 --host 0.0.0.0"
 cd web
 PW_TEST_CONNECT_WS_ENDPOINT=ws://127.0.0.1:3999/ PW_TEST_CONNECT_EXPOSE_NETWORK='<loopback>' \
-  CI=1 LIBELLUS_E2E_PORT=4366 pnpm exec playwright test --workers=4 --retries=0
+  CI=1 LIBELLUS_E2E_PORT=4366 pnpm exec playwright test --workers=3 --retries=0
 ```
 
 The image's version must match `pnpm exec playwright --version`. A flow waits
@@ -431,79 +431,120 @@ said there was nothing finished; it now stands in its final shape from the first
 
 ## CI: what runs when
 
-GitHub Actions on the private account has a fixed pool of 3,000 included minutes a month, and every job is
-billed in whole minutes. `.github/workflows/ci.yml` therefore spends them where they buy something.
+`.github/workflows/ci.yml`. The repository is public, so Actions minutes are free and runners have four
+cores; what the workflow optimises is the wait for a pull request's result.
 
 | Event | What runs |
 | --- | --- |
-| Pull request | Only what the changed paths call for (below). Playwright included. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
-| Push to `main` (a merge) | The cheap checks, never Playwright: the pull request already ran the flows. Database rules (pgTAP) and Vitest when the schema or `web/` changed, `nuxt generate`, the tokens check, the Deno tests. |
-| `workflow_dispatch` | Everything, Playwright included: a manual full run (`gh workflow run CI --ref <branch>`, possible once the workflow is on `main`). |
+| Pull request | What the changed paths call for (below), and of the Playwright flows **the core suite**: every flow not tagged `@full`. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
+| Pull request with the label **`full-e2e`** | The same with **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
+| Push to `main` (a merge) | **Every flow**, `@full` included, and the checks the changed paths call for. A regression in an `@full` flow is found here, minutes after the merge, instead of on the pull request. |
+| Nightly (`schedule`, 03:23 UTC, on `main`) | Everything: every flow and every check. |
+| `workflow_dispatch` | Everything (`gh workflow run CI --ref <branch>`). |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
-| The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No run at all: every commit in the release already passed. `release.yml` runs instead (release-please on every push to `main`, under a minute; the deploy only for a release, docs/OPERATIONS.md "Releases"). |
+| The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No run at all. `release.yml` runs instead, and **its deploy waits for main's latest full run** (below). |
 
-A `what changed` job (about 6 seconds, one billed minute) turns the changed files into the jobs to run
-(`dorny/paths-filter`). Any change under `.github/` runs everything, so CI changes are tested by CI.
+A `what changed` job (about 5 seconds) turns the changed files into the jobs to run (`dorny/paths-filter`).
+Any change under `.github/` runs everything, so CI changes are tested by CI.
 
 | Changed path | Runs |
 | --- | --- |
-| `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the Playwright flows (stack job), plus the web build for `web/**` |
-| `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip (stack job, no flows) |
+| `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), the user flows (`e2e`), plus the web build for `web/**` |
+| `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip |
 | `design/**`, `web/app/assets/css/tokens.generated.css` | Tokens check |
-| `supabase/functions/goodreads-rating/**` | Deno lint, check, test of that function |
-| `supabase/functions/regal-export/**`, `web/app/data/export/**` | Deno lint, check, test of that function |
+| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich) | Deno lint, check, test of that function |
 
-A pull request that touches several of these runs the union. A skipped job is a pass for everything
-downstream and no branch is protected by required checks, so a skip never blocks a merge; the merged
-Playwright report only runs when the `stack` job failed, and copes with a failure before any flow ran.
+On `main` the flows run whatever changed (every run there must say whether the whole suite passes). A
+pull request that touches several of these runs the union. A skipped job is a pass for everything
+downstream, and no branch is protected by required checks, so a skip never blocks a merge.
+
+**Releases wait for the full suite.** `release.yml`'s deploy first runs `scripts/release-e2e-gate.sh`:
+it takes main's latest full CI run (a push, the nightly run or a manual one) for the release's commit, or
+for its nearest ancestor with a run (the release commit itself starts none), waits for it if it is still
+going, and stops the release with a message naming the run unless it passed with its flows run
+(docs/OPERATIONS.md, "Releases").
 
 Jobs, and why they are shaped so:
 
-- **`stack`** boots one local Supabase stack per runner (the database, auth, API, mail catcher and storage;
-  Studio, imgproxy, edge runtime, logs, vector and postgres-meta are left out) and uses it for everything that
-  needs one. Shard 1 runs pgTAP and Vitest first (a red rule says so before the flows start), then every shard
-  runs its slice of the flows (`--shard i/N`, split by test). After Vitest, shard 1 also runs the backup round
-  trip (`scripts/test-backup-roundtrip.sh`, docs/OPERATIONS.md "Backups"): the nightly backup's dump, age and
-  restore on what the suites left in the stack, so a migration that would break a restore turns CI red. Before, pgTAP + Vitest was a job of its own that
-  booted a second stack (about 4 billed minutes). On a push to `main` the job is shard 1 alone and stops after Vitest.
-- **`statics`** holds the checks that take seconds (tokens, `nuxt generate`, the two Deno suites) in one job,
-  because each job rounds up to a whole minute: four jobs were four minutes, the one job is one.
-- The pnpm store (`setup-node` cache) and the Playwright browsers (`actions/cache`, per Playwright version) are
-  cached. The system libraries WebKit and Chromium need are installed on every run (about 50 s, they live outside the
-  browser folder). Teardown steps (`supabase stop`) are gone: the runner is thrown away anyway and they cost about 10 s a job.
-- **Supabase images are not cached.** Tried: restoring a `docker save` tarball from `actions/cache` (20 s) and
-  `docker load` (74 s) plus a start of 31 s took about 125 s, against 85 to 90 s for a plain `supabase start` that pulls.
-  Writing it cost 52 s more. Not worth it, removed.
+- **`backend`**: pgTAP, Vitest against the stack, and the backup round trip
+  (`scripts/test-backup-roundtrip.sh`, docs/OPERATIONS.md "Backups"), on a stack of its own, beside the
+  flows rather than in front of them.
+- **`e2e`**, four shards: the flows (`web/e2e`) on the static build, each shard with its own stack.
+- **`statics`**: the checks that take seconds (tokens, `nuxt generate` with and without Regal, the Deno
+  suites) in one job.
+- **`e2e-report`**: when a shard failed, one HTML report merged from the shards' blob reports, with the
+  traces (artifact `playwright-report`).
+
+Every job that needs the local stack starts it **in the background** (`scripts/ci-supabase.sh start`,
+without Studio, imgproxy, the edge runtime, logs, vector, postgres-meta, realtime and the pooler: nothing
+uses them) and joins it (`… wait`) once pnpm has installed, the browsers' system libraries are in and the
+app is built: by then it is up. The pnpm store and the Playwright browsers are cached. **Supabase images
+are not cached**: restoring a `docker save` tarball and `docker load` took longer than the pull (about
+125 s against 85 to 90 s), so that was dropped.
+
+### What makes the flows fast
+
+- **They run on the static build**, as members get it: `web/e2e/build.ts` (`nuxt generate` with the flows'
+  configuration, into `.output-e2e`), served by `web/e2e/serve.mjs` the way Cloudflare Pages serves it
+  (`_headers`, `_redirects`, a folder's page with the trailing slash, the nearest `404.html`, else the SPA
+  fallback, and the Pages Functions in `web/functions`). The build needs nothing of the stack, so CI makes
+  it while Supabase starts. `LIBELLUS_E2E_DEV=1` runs the flows on `nuxt dev` instead.
+- **A flow is handed its session.** `signedIn()` signs the member up through the API and puts the session
+  into the page's storage before the app boots; the sign-in screens are tested where they are the subject
+  (`auth.spec.ts`, a11y's way in, the share that waits through the sign-in, `core-loop`).
+- **Reduce Motion is on** (`reducedMotion: 'reduce'` in `playwright.config.ts`), so no flow waits for a
+  sheet or a morph. What is about motion opts back in with `test.use({ reducedMotion: 'no-preference' })`.
+- **Workers follow the cores**: three on the runner's four (two on two cores, where three starved WebKit,
+  #151). `E2E_WORKERS` overrides it.
+
+### The `@full` flows
+
+Tagged `@full` (`{ tag: '@full' }` on the test or its `describe`), about 45 % of the flows' time: the axe
+scans (`a11y`, `a11y-reader`, the import card's and the shelf's), the motion and visual specs
+(`book-flight`, `book-flight-android`, `layout-shift`, `library-return`'s frame watch, `sheet-restore`,
+`tab-bar-away`, the search morph, the Profile's frame watches, `no-side-scroll`, `insets`, `large-text`,
+`book-page-polish`), the shelf beyond the owner's row, and the long permutation lists whose rules Vitest
+holds (most of `barcode-scan`, `install-hint`, `share`, `import-offer`, `progress-never-tracked`, `ebooks`;
+`covers`, two of `goodreads`). A new flow is core unless it is one of those kinds.
+
+```sh
+cd web
+pnpm e2e                          # every flow, as on main
+pnpm e2e --grep-invert @full      # the core suite, as on a pull request
+pnpm e2e --grep @full             # only the @full flows
+gh pr edit <n> --add-label full-e2e   # every flow on a pull request's CI
+```
 
 ### How many shards
 
-Every shard pays a fixed overhead (runner, install, Supabase boot, browser libraries: about 3 minutes) on top of its
-share of the flows (about 21 minutes in all, two workers per runner). Measured on this pull request, with the whole
-workflow, in billed minutes:
+Four, each about as long as the others: `web/e2e/shard.ts` weighs every flow by what it took in CI
+(`web/e2e/durations.json`) and hands the heaviest first to the lightest shard (a file in serial mode stays
+whole; a flow not measured yet weighs the median), separately for the core suite and the full one.
+Playwright's own `--shard` splits by test count in file order, which once gave one shard 12.9 minutes of
+flows and the other 9.1. Refresh the weights now and then from a full run on `main`:
 
-| Shards | Wall time of the slowest job | Billed minutes (stack jobs) | With `what changed` and `statics` |
-| --- | --- | --- | --- |
-| 3 (before, flows only; pgTAP + Vitest was another 4 min job) | about 11 | about 29 | about 37 per pull request |
-| 2 (now) | 15 to 17 (shard 1 incl. pgTAP and Vitest: 16; shard 2: 13 to 15, more with a retried flow) | 16 + 15 = 31 in the last full run (the first one: 18 + 13, with 1 min for an image cache, since dropped) | about 33 |
-| 1 | 26 | 26 | about 28 |
+```sh
+cd web && pnpm exec tsx e2e/shard.ts record <run id> && git add e2e/durations.json
+```
 
-Two shards is the default: one shard saves about 4 minutes a pull request (13 %) for 9 more minutes of waiting.
-If the month runs short, `gh variable set E2E_SHARDS --body 1` switches without a commit (`3` the other way). The
-runner has two cores, so more workers in one shard starve WebKit (see below) and are not an option; larger runners
-are billed at a higher rate and not included in the pool.
+Each shard costs its setup (about a minute and a half, most of it the browsers' system libraries and the
+build, with the stack starting behind them) on top of its share of the flows; past four, setup is most of
+a shard. The repository variable `E2E_SHARDS` changes the number without a commit.
 
-### Estimated minutes
+### Measured
 
-| | Before | After |
+Wall time of the run and its slowest jobs, from the jobs API (October 2026; runs 37606141210, 37601341246,
+37607066496 before, 37623156029, 37625498536, 37624494494, 37625511464 after):
+
+| Run | Before (2 shards, `nuxt dev`, UI sign-in, motion on) | After |
 | --- | --- | --- |
-| Pull request, web or schema changed | about 37 (3 × 9–11 flows, 4 pgTAP + Vitest, 4 × 1 small jobs) | about 33 (2 shards 31, `what changed`, `statics`) |
-| Pull request, one Deno function or the tokens only | about 37 | 2 to 3 |
-| Merge to `main` (the push after a merge) | about 37 | about 6 (`what changed` 1, pgTAP + Vitest 4, `statics` 1) |
-| Docs only, either event | about 37 | 0 |
-| A pull request pushed to again while it runs | the old run kept going until it was cancelled by the group | the same, now also on every re-run and force-push |
+| Pull request, app changed: run | 14.6–16.2 min | **4.3–4.6 min** (core suite) |
+| … the slowest flows job | 15.3 min (shard 2, 684–779 s of flows) | 4.1–4.4 min (100–137 s of flows a shard) |
+| … backend (pgTAP, Vitest, backup) | inside shard 1 | 3.9–4.2 min, beside the flows |
+| … billed minutes (jobs rounded up) | about 32 | about 27 |
+| Push to `main`: run | 4.0 min (no flows) | **about 6.5 min** (every flow, 4 shards of 157–252 s) |
+| … billed minutes | about 6 | about 32 |
 
-The month that hit 90 % (about 137 runs, roughly two thirds pull requests) would have cost about 60 % of that:
-about 1,500 minutes, with the flows (about 21 minutes of every pull request that touches the app) as the cost that
-remains. The next lever, if it is needed, is the flows themselves: `nuxt dev` compiles each route on demand during
-the run; serving a prebuilt `nuxt generate` output instead would shorten them, at the price of a change to
-`web/playwright.config.ts` and how the flows reach the app.
+The flows' own time fell from about 2,650 test-seconds (CI, two workers) to about 2,130 for the whole
+suite on three workers, of which the core suite is about 1,200. Locally (6 workers) the whole suite went
+from 4.3 minutes on `nuxt dev` to 1.7 on the build.

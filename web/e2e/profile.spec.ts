@@ -183,7 +183,8 @@ test('a member with nothing finished yet sees the empty Profile and her account'
   await expect(page.getByTestId('profile.import')).toHaveAttribute('href', '/import')
 })
 
-test('the Profile stands in its final shape while its figures load, and nothing moves when they land', async ({ page }) => {
+test('the Profile stands in its final shape while its figures load, and nothing moves when they land', { tag: '@full' }, async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   const member = await signedIn(page)
   // Four authors read more than once (as many as the Profile shows, and as its placeholders guess).
   await seed(page, member.client, [
@@ -254,7 +255,8 @@ for (const [name, wanted] of [
   ['nothing in her Library', false],
   ['only a Book she wants to read', true],
 ] as const) {
-  test(`the account rows do not move on the Profile of a member with ${name}`, async ({ page }) => {
+  test(`the account rows do not move on the Profile of a member with ${name}`, { tag: '@full' }, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
     const member = await signedIn(page)
     if (wanted) await createLibrary(member.client).addToLibrary(book('Up Next', 'Ursula K. Le Guin', 200))
     // The Library is on the device (Home loaded it); the record is held back so the first frame is the one looked at.

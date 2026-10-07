@@ -30,7 +30,7 @@ const fromBottom = async (page: Page, testid: string) => {
 const paddingTop = (page: Page, testid: string) =>
   page.getByTestId(testid).evaluate((element) => Number.parseFloat(getComputedStyle(element).paddingTop))
 
-test('the header and the tab bar keep clear of the browser and of Android navigation', async ({ page }) => {
+test('the header and the tab bar keep clear of the browser and of Android navigation', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   const [barTop, floatAbove] = await Promise.all(
     ['--spacing-bar-top', '--spacing-float-above'].map((name) => token(page, name)),
@@ -56,7 +56,7 @@ test('the header and the tab bar keep clear of the browser and of Android naviga
   expect(await paddingTop(page, 'shell.header')).toBe(59)
 })
 
-test('the top scroll edge is a short unblurred fade under the status bar, and only once the page has scrolled', async ({ page }) => {
+test('the top scroll edge is a short unblurred fade under the status bar, and only once the page has scrolled', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   const ms = await token(page, '--spacing-ms')
   const edge = page.getByTestId('shell.scrollEdge')

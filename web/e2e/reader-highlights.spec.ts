@@ -2,11 +2,11 @@ import { expect, type Browser, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { METAMORPHOSIS_GUTENBERG, type EpubSpec } from '../tests/support/epub'
 import type { TestMember } from '../tests/support/member'
-import { emailCooldown, readMailedCode, sql } from '../tests/support/stack'
+import { sql } from '../tests/support/stack'
 import { test } from './fixtures'
 import { openReader, shelve, withEbook } from './readerSupport'
 import { INSTALL_HINT_KEY } from '../app/utils/installHint'
-import { expectAccessible, recordedApple, signedIn, untilStill } from './support'
+import { expectAccessible, recordedApple, signedIn, signedInAs, untilStill } from './support'
 
 /**
  * The reader's highlights are kept on the server, not only on the device (#131).
@@ -56,7 +56,7 @@ async function selectWord(page: Page) {
 const drawn = (page: Page) =>
   page.evaluate(() => (window as unknown as { __readerEngine?: { highlights: { color: string; text: string }[] } }).__readerEngine?.highlights ?? [])
 
-/** Another phone: its own storage, the same member signed in with a mailed code, the same ebook linked. */
+/** Another phone: its own storage, the same member signed in there with a code of its own, the same ebook linked. */
 async function otherPhone(browser: Browser, page: Page, member: TestMember, entry: Parameters<typeof withEbook>[1], spec: EpubSpec = METAMORPHOSIS_GUTENBERG) {
   const context = await browser.newContext({
     baseURL: String(test.info().project.use.baseURL),
@@ -67,13 +67,7 @@ async function otherPhone(browser: Browser, page: Page, member: TestMember, entr
   const phone = await context.newPage()
   await recordedApple(phone)
   await phone.addInitScript((key) => localStorage.setItem(key, String(Date.now())), INSTALL_HINT_KEY)
-  await emailCooldown()
-  await phone.goto('/sign-in')
-  await phone.getByTestId('signIn.email').fill(member.email)
-  await phone.getByTestId('signIn.submit').click()
-  await expect(phone).toHaveURL(/\/verify$/)
-  await phone.getByTestId('verify.code').fill(await readMailedCode(member.email, 3))
-  await expect(phone.getByTestId('home.title')).toBeVisible()
+  await signedInAs(phone, member.email)
   await withEbook(phone, entry, spec)
   return { phone, context }
 }

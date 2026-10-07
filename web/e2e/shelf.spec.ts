@@ -2,13 +2,12 @@ import { readFileSync } from 'node:fs'
 import { expect, type Locator, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
-import { createAuth } from '../app/data/auth'
 import { createLibrary } from '../app/data/library'
 import { isoDay } from '../app/utils/dates'
-import { emailCooldown, mailCount, newClient, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
 import { shelfOwner } from './shelfOwner'
-import { expectAccessible, expectNoSideScroll, signedIn } from './support'
+import { expectAccessible, expectNoSideScroll, signedIn, signedInAs, signedInClient } from './support'
 
 /**
  * Your shelf (#23): Regal's 3D shelf of the owner's published library file, for
@@ -60,16 +59,21 @@ const THIS_YEAR = (() => {
 })()
 
 /** The published library file, answered from the fixture (or `body`, or with `status`), as R2 answers it: with CORS. */
+const answering = new WeakMap<Page, Parameters<Page['route']>[1]>()
 async function libraryFile(page: Page, status = 200, body = FIXTURE) {
-  await page.unroute(LIBRARY_SRC).catch(() => {})
-  await page.route(LIBRARY_SRC, (route) =>
+  const answer: Parameters<Page['route']>[1] = (route) =>
     route.fulfill({
       status,
       contentType: 'application/json',
       headers: { 'access-control-allow-origin': '*' },
       body: status === 200 ? body : 'Not found',
-    }),
-  )
+    })
+  // The new answer first, then the old one off: a request in between is still answered
+  // (the newest route wins), never let through to the live address.
+  await page.route(LIBRARY_SRC, answer)
+  const before = answering.get(page)
+  if (before) await page.unroute(LIBRARY_SRC, before).catch(() => {})
+  answering.set(page, answer)
 }
 
 /** Regal's Stack inside the shelf: how many Books it lays out. */
@@ -103,30 +107,16 @@ async function countNavigations(page: Page): Promise<() => Promise<number>> {
   return () => page.evaluate(() => (window as unknown as { __navigations: number }).__navigations)
 }
 
-/** Signs the owner in through the screens (she exists; a code is mailed to her). */
+/** Signs the owner in (she exists): her session, handed to the page (e2e/support.ts, signedInAs). */
 async function signInAsOwner(page: Page) {
   const owner = await shelfOwner()
-  await emailCooldown()
-  const before = await mailCount(owner.email)
-  await page.goto('/sign-in')
-  await page.getByTestId('signIn.email').fill(owner.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(owner.email, before + 1))
-  await expect(page.getByTestId('home.title')).toBeVisible()
+  await signedInAs(page, owner.email)
   return owner
 }
 
-/** The owner as a client of the Library (she exists; a code is mailed to her). */
+/** The owner as a client of the Library (she exists; signed in on a client of its own). */
 async function ownerClient(email: string) {
-  const client = newClient()
-  const auth = createAuth(client)
-  await emailCooldown()
-  const before = await mailCount(email)
-  await auth.requestCode(email)
-  const verified = await auth.verifyCode(email, await readMailedCode(email, before + 1))
-  if (verified.error) throw new Error(`Owner sign-in failed: ${verified.error}`)
-  return client
+  return (await signedInClient(email)).client
 }
 
 /** A Book for the Library, found on Apple Books and unique to the run. */
@@ -238,7 +228,7 @@ test.describe('Your shelf, the owner', () => {
     await page.goBack({ waitUntil: 'commit' })
     await expect(row).toHaveAttribute('data-picked', '')
     await expect(page.locator('.row-card__view--out')).toHaveCount(0)
-    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page).toHaveURL(/\/profile\/?$/)
     await expect(page.getByTestId('profile')).toBeVisible()
     expect(await page.getByTestId('shell.tabs').getAttribute('data-away')).toBe(tabBar)
     expect(await moves()).toBe(0)
@@ -248,7 +238,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('home.title')).toBeVisible()
   })
 
-  test('has the row ready before she opens it, and it appears with its intro: no stand-in, no loading step', async ({ page }) => {
+  test('has the row ready before she opens it, and it appears with its intro: no stand-in, no loading step', { tag: '@full' }, async ({ page }) => {
     // Nothing of the old stand-in (the slabs, the fade-over) is ever put on the page.
     await page.addInitScript(() => {
       const seen = window as unknown as { __standIn: boolean }
@@ -281,7 +271,7 @@ test.describe('Your shelf, the owner', () => {
     expect(await page.evaluate(() => (window as unknown as { __standIn: boolean }).__standIn)).toBe(false)
   })
 
-  test('never moves the page sideways: the Profile with her shelf, a Book out and back, the year, the whole shelf', async ({ page }) => {
+  test('never moves the page sideways: the Profile with her shelf, a Book out and back, the year, the whole shelf', { tag: '@full' }, async ({ page }) => {
     // As narrow as the narrowest phone in use.
     await page.setViewportSize({ width: 360, height: 800 })
     await libraryFile(page)
@@ -314,7 +304,7 @@ test.describe('Your shelf, the owner', () => {
     await takeOut(page, row)
     await page.goBack({ waitUntil: 'commit' })
     await expect(page.locator('.row-card__view--out')).toHaveCount(0)
-    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page).toHaveURL(/\/profile\/?$/)
     await expectNoSideScroll(page, 'Profile, a Book put back with Back')
 
     await page.goto('/profile/2025')
@@ -328,7 +318,7 @@ test.describe('Your shelf, the owner', () => {
     await expectNoSideScroll(page, 'The whole shelf')
   })
 
-  test('opens the whole shelf from Show all once it holds more Books than the row', async ({ page }) => {
+  test('opens the whole shelf from Show all once it holds more Books than the row', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page, 200, MANY)
     await signInAsOwner(page)
 
@@ -343,7 +333,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(all).toHaveAttribute('aria-label', plural(en.shelf.card.allLabel, MANY_BOOKS))
 
     await all.click()
-    await expect(page).toHaveURL(/\/profile\/shelf$/)
+    await expect(page).toHaveURL(/\/profile\/shelf\/?$/)
     await expect(page.getByTestId('shelf')).toBeVisible()
     await expect(page.getByTestId('shelf.count')).toHaveText(plural(en.shelf.count, MANY_BOOKS))
     // Regal's Stack has the whole file, and the pile it stood in for (the shelf page's own) has gone.
@@ -353,11 +343,11 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('shell.tabs')).toHaveAttribute('data-away', 'true')
 
     await page.getByTestId('shelf.back').click()
-    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page).toHaveURL(/\/profile\/?$/)
     await expect(page.getByTestId('shell.tabs')).not.toHaveAttribute('data-away', 'true')
   })
 
-  test("finds a year's Books as a row in its review, and puts a Book back with Done or Escape", async ({ page }) => {
+  test("finds a year's Books as a row in its review, and puts a Book back with Done or Escape", { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     const owner = await signInAsOwner(page)
     await finishedIn2025(owner.email)
@@ -402,7 +392,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page).not.toHaveURL(/\/profile\/2025$/)
   })
 
-  test("Home's Read in tally opens the year's Books as her row alone: a Book breaks out above the sheet, Back puts it away and then closes the sheet", async ({ page }) => {
+  test("Home's Read in tally opens the year's Books as her row alone: a Book breaks out above the sheet, Back puts it away and then closes the sheet", { tag: '@full' }, async ({ page }) => {
     await libraryFile(page, 200, THIS_YEAR)
     const owner = await signInAsOwner(page)
     await finishedThisYear(await ownerClient(owner.email), ['Home Tally One', 'Home Tally Two'])
@@ -479,7 +469,7 @@ test.describe('Your shelf, the owner', () => {
   // theme (`theme="auto"`, regal-themed.css), dark in the room whatever the app's theme is (the app
   // is light here), and follow the room live. Regal's `data-regal-theme` says which it resolved; a
   // Regal without theming (its main, until #63) has none and keeps its own look.
-  regalOwnControls('the Book detail panel wears the room, and follows it when it changes', async ({ page }) => {
+  regalOwnControls('the Book detail panel wears the room, and follows it when it changes', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
 
@@ -518,7 +508,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(panel).toHaveCount(0)
   })
 
-  regalOwnControls('takes a Book out from its place in the list with the keyboard, and gives focus back when it is put away', async ({ page }) => {
+  regalOwnControls('takes a Book out from its place in the list with the keyboard, and gives focus back when it is put away', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
     await page.goto('/profile')
@@ -537,7 +527,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(button).toBeFocused()
   })
 
-  test('says so when the file cannot be read, and tries again', async ({ page }) => {
+  test('says so when the file cannot be read, and tries again', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page, 500)
     await signInAsOwner(page)
 
@@ -552,7 +542,7 @@ test.describe('Your shelf, the owner', () => {
   })
 
   // Regal's controls in the Book's panel carry no test ID (above); axe and the list are what this is about.
-  regalOwnControls('reads as a list of her Books for a screen reader, and its screens pass axe in both themes', async ({ page }) => {
+  regalOwnControls('reads as a list of her Books for a screen reader, and its screens pass axe in both themes', { tag: '@full' }, async ({ page }) => {
     await libraryFile(page)
     await signInAsOwner(page)
     for (const colorScheme of ['light', 'dark'] as const) {
@@ -621,7 +611,7 @@ anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address'
   expect(asked).toEqual([])
 })
 
-anyone("nobody else's tally opens the shelf: the year's Books without the row, no file, no Regal", async ({ page }) => {
+anyone("nobody else's tally opens the shelf: the year's Books without the row, no file, no Regal", { tag: '@full' }, async ({ page }) => {
   const asked: string[] = []
   page.on('request', (request) => {
     const url = request.url()

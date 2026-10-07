@@ -34,7 +34,7 @@ async function addLongBook(page: Page) {
   await expect(page).toHaveURL(/\/book\/[0-9a-f-]{36}$/)
 }
 
-test('a Placeholder cover, a long title and a long Collection name stay inside their boxes', async ({ page }) => {
+test('a Placeholder cover, a long title and a long Collection name stay inside their boxes', { tag: '@full' }, async ({ page }) => {
   await signedIn(page)
   await addLongBook(page)
 
@@ -67,6 +67,8 @@ test('a Placeholder cover, a long title and a long Collection name stay inside t
   await page.getByTestId('picker.new').click()
   await page.getByTestId('picker.newName').fill(COLLECTION)
   await page.getByTestId('picker.create').click()
+  // Done once the new Collection is made and ticked (it is not, a moment after the tap).
+  await expect(page.getByTestId('picker.collection').filter({ hasText: COLLECTION })).toHaveAttribute('aria-checked', 'true')
   await page.getByTestId('picker.action').click()
   await expect(page.getByTestId('picker')).toBeHidden()
   const chip = page.getByTestId('book.collection')

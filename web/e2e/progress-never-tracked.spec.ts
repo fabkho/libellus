@@ -80,6 +80,8 @@ async function openBook(page: Page) {
 }
 
 test('never tracked: the empty bar and its row; the first save changes the words and brings the figures, chart and log in below; Undo takes them back', async ({ page }) => {
+  // With motion (the config has Reduce Motion on): the figures come in below; the next test is the same without.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: isoDay() })
   await page.reload()
@@ -134,7 +136,7 @@ test('never tracked: the empty bar and its row; the first save changes the words
   expect(stored).toEqual({ progress_page: null, progress_percent: null, progress_updated_at: null })
 })
 
-test('Reduce Motion: the first save still brings everything in, with no travel', async ({ page }) => {
+test('Reduce Motion: the first save still brings everything in, with no travel', { tag: '@full' }, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: isoDay() })
@@ -150,7 +152,7 @@ test('Reduce Motion: the first save still brings everything in, with no travel',
   await expect(page.getByTestId('book.readingLog')).toBeVisible()
 })
 
-test('a value without a day: the bar and figures, no chart and no log, until a day is booked', async ({ page }) => {
+test('a value without a day: the bar and figures, no chart and no log, until a day is booked', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   // Begun a month ago, first value set today: #68 books no day for it.
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: addDays(isoDay(), -30) })
@@ -176,7 +178,7 @@ test('a value without a day: the bar and figures, no chart and no log, until a d
   await expect(page.getByTestId('book.logAmount').first()).toHaveText('+1')
 })
 
-test('a value without a day holds no room for a chart while the days load: nothing moves when they turn out to be none (#104)', async ({ page }) => {
+test('a value without a day holds no room for a chart while the days load: nothing moves when they turn out to be none (#104)', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: addDays(isoDay(), -30) })
   await setValue(member.email, 'page', 212)
@@ -200,7 +202,7 @@ test('a value without a day holds no room for a chart while the days load: nothi
   expect(after.y).toBe(before.y)
 })
 
-test('a book without a page count, in percent, with a value but no day: the same', async ({ page }) => {
+test('a book without a page count, in percent, with a value but no day: the same', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Small Gods', null), { status: 'reading', startedOn: addDays(isoDay(), -30) })
   await setValue(member.email, 'percent', 44)
@@ -213,7 +215,7 @@ test('a book without a page count, in percent, with a value but no day: the same
   await expect(page.getByTestId('book.readingLog')).toHaveCount(0)
 })
 
-test('a value of 0 is nothing tracked: the empty bar and its row', async ({ page }) => {
+test('a value of 0 is nothing tracked: the empty bar and its row', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Piranesi', 480), { status: 'reading', startedOn: isoDay() })
   await setValue(member.email, 'page', 0)
@@ -222,7 +224,7 @@ test('a value of 0 is nothing tracked: the empty bar and its row', async ({ page
   await expectNeverTracked(page, 'Not started · 480 pages')
 })
 
-test('a book without a page count, never tracked: the row says so; the first save fills in the percent', async ({ page }) => {
+test('a book without a page count, never tracked: the row says so; the first save fills in the percent', { tag: '@full' }, async ({ page }) => {
   const member = await signedIn(page)
   await createLibrary(member.client).addToLibrary(book('Small Gods', null), { status: 'reading', startedOn: isoDay() })
   await page.reload()

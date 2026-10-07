@@ -1,8 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
-import { signUpMember } from '../tests/support/member'
-import { emailCooldown, readMailedCode } from '../tests/support/stack'
 import { test } from './fixtures'
+import { signedIn } from './support'
 
 /**
  * The search overlay's chrome on a phone (WebKit, iPhone size): the tab bar's
@@ -10,17 +9,12 @@ import { test } from './fixtures'
  * flows check where each open and close ends up — which of the two has the
  * chrome, where the focus is, which page is behind — not the frames in between.
  */
+// What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
+test.use({ reducedMotion: 'no-preference' })
 
-/** Signs a fresh member in through the screens and lands on Library. */
+/** A fresh member, signed in, on Library. */
 async function onLibrary(page: Page) {
-  const member = await signUpMember()
-  await emailCooldown()
-  await page.goto('/sign-in')
-  await page.getByTestId('signIn.email').fill(member.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
-  await expect(page.getByTestId('home.title')).toBeVisible()
+  await signedIn(page)
   await page.getByTestId('shell.tab.library').click()
   await expect(page.getByTestId('library.title')).toBeVisible()
 }
@@ -47,7 +41,7 @@ async function expectClosed(page: Page) {
   await expect(page.getByTestId('library.title')).toBeVisible()
 }
 
-test('the tab bar turns into the search palette and back, by every way out', async ({ page }) => {
+test('the tab bar turns into the search palette and back, by every way out', { tag: '@full' }, async ({ page }) => {
   await onLibrary(page)
 
   // Cancel.
@@ -89,7 +83,7 @@ test('the tab bar turns into the search palette and back, by every way out', asy
   await expectClosed(page)
 })
 
-test('the morph can be turned around halfway, either way', async ({ page }) => {
+test('the morph can be turned around halfway, either way', { tag: '@full' }, async ({ page }) => {
   await onLibrary(page)
 
   // Closed while still opening: it goes back into the tab bar.
@@ -108,7 +102,7 @@ test('the morph can be turned around halfway, either way', async ({ page }) => {
   await expectClosed(page)
 })
 
-test('the palette sits above the keyboard, follows a rotation and drops back when it closes', async ({ page }) => {
+test('the palette sits above the keyboard, follows a rotation and drops back when it closes', { tag: '@full' }, async ({ page }) => {
   // Playwright has no keyboard that covers the page: stand in for the visual
   // viewport iOS reports, its height settable from the test.
   await page.addInitScript(() => {

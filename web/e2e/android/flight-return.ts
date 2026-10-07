@@ -2,7 +2,7 @@
  * The cover's flight back into its row (closing a Book page) in Chromium on a
  * phone-sized screen (412 × 915, Android's density), the CPU slowed, recorded
  * frame by frame through the DevTools screencast. Not part of CI; the flows
- * that are (e2e/book-flight-built.spec.ts) assert the same thing in numbers.
+ * that are (e2e/book-flight-android.spec.ts) assert the same thing in numbers.
  *
  *   pnpm tsx e2e/android/flight-return.ts --base http://localhost:3126 --name after --theme dark --network warm
  *

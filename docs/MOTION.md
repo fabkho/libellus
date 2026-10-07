@@ -46,7 +46,7 @@ Code that animates with the Web Animations API reads the durations back from the
 (`durationToken`, `utils/motion.ts`) in either unit: the source writes milliseconds, but the built
 stylesheet is minified to the shortest form (`--duration-standard: .25s`). Read as a bare number that
 was a quarter of a millisecond, and every such motion jumped to its end in the built app while the
-dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-built.spec.ts`).
+dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.spec.ts`).
 
 ## Named motions
 

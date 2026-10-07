@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, type Locator, type Page } from '@playwright/test'
 import { ratingX } from '../app/utils/rating'
@@ -5,8 +6,9 @@ import { appleAnswer, appleCover } from '../tests/support/apple'
 import { openLibraryAnswer } from '../tests/support/openLibrary'
 import { INSTALL_HINT_KEY } from '../app/utils/installHint'
 import { IMPORT_HINT_KEY } from '../app/utils/importHint'
+import { createAuth } from '../app/data/auth'
 import { signUpMember } from '../tests/support/member'
-import { emailCooldown, readMailedCode } from '../tests/support/stack'
+import { emailCooldown, newClient, readMailedCode, serviceRoleKey, stack } from '../tests/support/stack'
 
 /**
  * Answers every source behind search from the recordings: Apple
@@ -75,8 +77,44 @@ export async function recordedTitleQuery(page: Page) {
     )
 }
 
+/** What supabase-js keeps of a session (`sb-<host>-auth-token`), kept in memory on the test's side. */
+export function sessionStorageInMemory() {
+  const kept = new Map<string, string>()
+  return {
+    kept,
+    storage: {
+      getItem: (key: string) => kept.get(key) ?? null,
+      setItem: (key: string, value: string) => void kept.set(key, value),
+      removeItem: (key: string) => void kept.delete(key),
+    },
+  }
+}
+
 /**
- * Signs a fresh member in through the screens: address, then the mailed code.
+ * Hands a session made through the API (`signUpMember`, `signedInClient`) to the page: the
+ * entries supabase-js wrote are put into its localStorage before the app boots, so the app
+ * starts signed in, the way it does for a member who signed in before. Once per tab (a flag in
+ * sessionStorage): a sign-out in the flow sticks, and a second call for someone else (the next
+ * member on the same page) puts theirs in on the next load.
+ */
+export async function handSession(page: Page, kept: Map<string, string>) {
+  await page.addInitScript(
+    ([flag, entries]) => {
+      if (sessionStorage.getItem(flag)) return
+      sessionStorage.setItem(flag, '1')
+      for (const [key, value] of entries) localStorage.setItem(key, value)
+    },
+    [`libellus-e2e:session-${randomUUID()}`, [...kept]] as const,
+  )
+}
+
+/**
+ * A fresh member, signed in. The sign-in itself is e2e/auth.spec.ts's (and a11y's, and
+ * core-loop's, with `throughTheScreens`): here the member signs up through the API (an invite, a
+ * mailed code, the code typed back) and the page is handed that session (`handSession`), so a
+ * flow starts on Home without the sign-in screens, a second mail and a wait for the mail's cooldown. The test's client keeps the same session for
+ * the setup it does through the API; it never refreshes it in a flow's minute (the token lives
+ * an hour), so the page's refresh token stays the one in use.
  *
  * Every flow runs on an iPhone's Safari, where Home shows the install hint
  * (issue #94) above what the flow reads and taps. It is dismissed from the
@@ -90,28 +128,70 @@ export async function recordedTitleQuery(page: Page) {
  */
 export async function signedIn(
   page: Page,
-  { installHint = false, importHint = false }: { installHint?: boolean; importHint?: boolean } = {},
+  {
+    installHint = false,
+    importHint = false,
+    throughTheScreens = false,
+  }: { installHint?: boolean; importHint?: boolean; throughTheScreens?: boolean } = {},
 ) {
   if (!installHint) {
     await page.addInitScript((key) => {
       if (!localStorage.getItem(key)) localStorage.setItem(key, String(Date.now()))
     }, INSTALL_HINT_KEY)
   }
-  const member = await signUpMember()
+  const { kept, storage } = sessionStorageInMemory()
+  const member = await signUpMember(storage)
+  if (!throughTheScreens) await handSession(page, kept)
   if (!importHint) {
     await page.addInitScript(
       ([key, id]) => localStorage.setItem(key!, JSON.stringify({ ...JSON.parse(localStorage.getItem(key!) ?? '{}'), [id!]: 'imported' })),
       [IMPORT_HINT_KEY, member.id],
     )
   }
-  await emailCooldown()
-  await page.goto('/sign-in')
-  await page.getByTestId('signIn.email').fill(member.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
+  if (throughTheScreens) {
+    await emailCooldown()
+    await page.goto('/sign-in')
+    await page.getByTestId('signIn.email').fill(member.email)
+    await page.getByTestId('signIn.submit').click()
+    await expect(page).toHaveURL(/\/verify$/)
+    await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
+  } else {
+    await page.goto('/')
+  }
   await expect(page.getByTestId('home.title')).toBeVisible()
   return member
+}
+
+/**
+ * Someone who exists signs in once more, on a client of its own (another device): the auth
+ * server's admin makes the code (no mail, so no mail's cooldown and no other flow's code read by
+ * mistake) and it is typed back the way the app does. Its session can be handed to a page
+ * (`handSession`, or `signedInAs`).
+ */
+export async function signedInClient(email: string) {
+  const key = serviceRoleKey()
+  const response = await fetch(`${stack.url}/auth/v1/admin/generate_link`, {
+    method: 'POST',
+    headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'magiclink', email }),
+  })
+  const link = (await response.json()) as { email_otp?: string; properties?: { email_otp?: string }; msg?: string }
+  const code = link.email_otp ?? link.properties?.email_otp
+  if (!response.ok || !code) throw new Error(`No sign-in code for ${email}: ${response.status} ${JSON.stringify(link)}`)
+  const { kept, storage } = sessionStorageInMemory()
+  const client = newClient(storage)
+  const verified = await createAuth(client).verifyCode(email, code)
+  if (verified.error) throw new Error(`Sign-in of ${email} failed: ${verified.error}`)
+  return { client, kept }
+}
+
+/** Someone who exists (the shelf's owner, a member on another device), signed in on this page, on Home. */
+export async function signedInAs(page: Page, email: string) {
+  const { client, kept } = await signedInClient(email)
+  await handSession(page, kept)
+  await page.goto('/')
+  await expect(page.getByTestId('home.title')).toBeVisible()
+  return client
 }
 
 /**
@@ -139,7 +219,8 @@ export async function untilStill(page: Page) {
  */
 export async function openProfile(page: Page) {
   await page.getByTestId('shell.avatar').click()
-  await expect(page).toHaveURL(/\/profile$/)
+  // A tap before the app took the page over is a plain link: Pages answers it with the slash.
+  await expect(page).toHaveURL(/\/profile\/?$/)
   await expect(page.getByTestId('profile.library')).toBeVisible()
   await untilStill(page)
 }
@@ -278,14 +359,15 @@ export async function expectAccessible(page: Page, where: string) {
   await untilStill(page)
   // Lists fade in over `standard` after they have their room; axe reads colours as drawn. Endless
   // animations (a caret, the loading shimmer) never finish and are not waited for.
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
-        .map((a) => a.finished.catch(() => {})),
-    ),
-  )
+  // Until none is left, not only the first lot: under Reduce Motion a transition that declares its
+  // properties takes 1 ms, and a switched theme's colours go down through Regal's panels a level a frame.
+  await page.evaluate(async () => {
+    const running = () => document.getAnimations().filter((a) => a.effect?.getTiming().iterations !== Infinity)
+    for (let round = 0; round < 100 && running().length; round++) {
+      await Promise.all(running().map((a) => a.finished.catch(() => {})))
+      await new Promise(requestAnimationFrame)
+    }
+  })
   const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze()
   const found = violations.flatMap((v) =>
     v.nodes

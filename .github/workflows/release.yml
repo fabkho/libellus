@@ -8,7 +8,9 @@ name: Release
 #      the conventional commits merged since the last release.
 #   2. The owner merges that pull request. The push it makes runs release-please
 #      again, which tags vX.Y.Z and creates the GitHub release.
-#   3. `deploy` (same run, in the `production` environment) then pushes the
+#   3. `deploy` (same run, in the `production` environment) checks that main's
+#      latest full CI run for the release (every user flow, @full included) is
+#      green, waiting for one still going (scripts/release-e2e-gate.sh), then pushes the
 #      database migrations, deploys every edge function and moves the branch
 #      `production` to the tag. Cloudflare Pages builds `production` as the live
 #      site (docs/HOSTING.md), so the web app follows last, on a backend that
@@ -38,6 +40,11 @@ on:
         required: true
         type: boolean
         default: true
+      skip_e2e_gate:
+        description: 'Deploy without a green full CI run on main for the tag (only for a rollback to a release older than that check)'
+        required: false
+        type: boolean
+        default: false
 
 # Nothing by default; each job asks for what it needs.
 permissions: {}
@@ -75,7 +82,7 @@ jobs:
         (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true')
       ) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35 # 15 of them for CI on main to finish, if it is still going
     # The environment's secrets are readable by this job only (docs/OPERATIONS.md,
     # "Releases": what to set up). Its deployment branch rule should allow `main` only.
     environment:
@@ -90,6 +97,7 @@ jobs:
     # changed workflow files to a branch, and most releases do.
     permissions:
       contents: read
+      actions: read # the CI runs on main the release waits for (scripts/release-e2e-gate.sh)
     env:
       SUPABASE_CLI: 2.118.0 # pinned like ci.yml
       EVENT: ${{ github.event_name }}
@@ -161,6 +169,17 @@ jobs:
           fi
           echo "production: ${current:-none} → $target ($move)"
           { echo "target=$target"; echo "current=$current"; echo "move=$move"; } >> "$GITHUB_OUTPUT"
+
+      # Before anything is deployed: main's latest full CI run (every user flow, @full
+      # included: pull requests run only the core ones) for the tag's commit, or for its
+      # nearest ancestor with a run, must be green. A run still going is waited for.
+      - name: The full suite passed on main
+        if: ${{ !inputs.skip_e2e_gate }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ steps.branch.outputs.target }}
+          WAIT_SECONDS: 900 # CI on main takes under ten minutes
+        run: scripts/release-e2e-gate.sh "$TARGET"
 
       - uses: supabase/setup-cli@v3
         with:

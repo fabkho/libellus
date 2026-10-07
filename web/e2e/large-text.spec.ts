@@ -56,7 +56,7 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
 
 test.use({ browserName: 'chromium', viewport: { width: 412, height: 915 }, launchOptions: { args: ['--blink-settings=defaultFontSize=32'] } })
 
-test('a long figure stays in its cell; a title takes a second line, its author does not', async ({ page }) => {
+test('a long figure stays in its cell; a title takes a second line, its author does not', { tag: '@full' }, async ({ page }) => {
   await recordedApple(page)
   const member = await signedIn(page)
   await seed(page, member.client)

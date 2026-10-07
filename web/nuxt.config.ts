@@ -41,6 +41,9 @@ export default defineNuxtConfig({
     // static build as fallbacks; the app uses neither, the service worker has its own. A gone file
     // under /_nuxt/ stays a real 404 through public/_nuxt/404.html (the closest 404 page wins).
     prerender: { ignore: ['/404.html'] },
+    // The Playwright flows' build (LIBELLUS_E2E=1, e2e/build.ts) goes beside the real one, never
+    // over it: it talks to the local stack and keeps the test hooks (__LIBELLUS_E2E__ below).
+    ...(process.env.LIBELLUS_E2E ? { output: { dir: '.output-e2e' } } : {}),
   },
   // The devtools badge floats over the tab bar and swallows taps in the
   // Playwright run, which sets LIBELLUS_E2E (playwright.config.ts).
@@ -61,6 +64,10 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
+    // The Playwright flows' build (e2e/build.ts): the hooks they need that are otherwise the dev
+    // server's (the error log's triggers, the reader's engine on window). False in every other
+    // build, where the code behind it is dropped.
+    define: { __LIBELLUS_E2E__: JSON.stringify(Boolean(process.env.LIBELLUS_E2E)) },
     // `nuxt dev` bundles a package the first time a page imports it. A package first met while a
     // member (or a Playwright flow) is already on the page is bundled then: the dev server
     // re-optimizes, and a page open at that moment can be reloaded under its user, so a tap on

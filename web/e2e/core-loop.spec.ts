@@ -27,7 +27,8 @@ test.beforeEach(async ({ page }) => {
 test('sign in, search, add, start, finish with a rating and a review: counted on Home and under Finished', async ({
   page,
 }) => {
-  const member = await signedIn(page)
+  // Through the sign-in screens, as a member does (every other flow is handed its session).
+  const member = await signedIn(page, { throughTheScreens: true })
   const year = isoDay().slice(0, 4)
 
   // Nothing read yet this year.

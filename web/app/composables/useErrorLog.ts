@@ -13,15 +13,16 @@ export const ERROR_LOG_KEY = 'libellus.errorLog'
 /**
  * Development only: `localStorage['libellus-dev:error-log'] = 'send'` makes this
  * dev server send its reports to the stack, like a production build (the flow
- * e2e/error-log.spec.ts sets it). Never cleared by signing out, never read in a build.
+ * e2e/error-log.spec.ts sets it). Never cleared by signing out, never read in a build
+ * other than the Playwright flows' (`__LIBELLUS_E2E__`), which behaves as the dev server.
  */
 export const ERROR_LOG_DEV_KEY = 'libellus-dev:error-log'
 
 let log: ErrorLog | null = null
 
-/** Whether reports go to the database: a build unless NUXT_PUBLIC_ERROR_LOG=off; development only when asked. */
+/** Whether reports go to the database: a build unless NUXT_PUBLIC_ERROR_LOG=off; development (and the flows' build) only when asked. */
 function sends(setting: string): boolean {
-  if (!import.meta.dev) return setting !== 'off'
+  if (!import.meta.dev && !__LIBELLUS_E2E__) return setting !== 'off'
   if (setting === 'send') return true
   try {
     return localStorage.getItem(ERROR_LOG_DEV_KEY) === 'send'
@@ -55,7 +56,7 @@ export function useErrorLog(): ErrorLog {
     online: isOnline,
     route: () => window.location.pathname,
     context: () => ({ appVersion, userAgent, standalone: standalone() }),
-    onReport: import.meta.dev ? (report) => console.warn(`[error log] ${client ? 'sending' : 'not sent'}:`, report) : undefined,
+    onReport: import.meta.dev || __LIBELLUS_E2E__ ? (report) => console.warn(`[error log] ${client ? 'sending' : 'not sent'}:`, report) : undefined,
   })
   return log
 }

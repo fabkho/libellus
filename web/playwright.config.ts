@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
+import { availableParallelism } from 'node:os'
 import { defineConfig, devices } from '@playwright/test'
-import { stack } from './tests/support/stack'
-import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID } from './e2e/shelfOwner'
+import { appEnv } from './e2e/appEnv'
 
 // Tags every address the flows invent, so the global teardown removes only what
 // this run created (tests/support/stack.ts, runTag). Set before the workers
@@ -18,14 +18,17 @@ const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 // the behavioural reference for any native port (SPEC.md, Testing).
 //
 // In CI (the e2e job in .github/workflows/ci.yml) every run starts on an empty
-// database and the dev server compiles on demand, so the run is made patient
-// rather than parallel: two workers fit the runner's two cores next to the
-// stack (three starved them: taps waited on frames that came too late), a failed test is retried once (locally it fails at once, so a flake is
-// seen), and the first failure leaves a trace and a screenshot. The job runs in
-// shards (`--shard=i/N`, N set in ci.yml and docs/TESTING.md: every shard boots
-// its own stack, so more shards buy wall time with minutes), each writing a blob
-// report that the workflow merges into one HTML report when a shard failed.
+// database. Workers follow the runner's cores: the public repository's
+// ubuntu-latest has four, which hold three workers next to the stack; on two
+// cores three workers starved WebKit (taps waited on frames that came too late,
+// #151), so two there. E2E_WORKERS overrides either. A failed test is retried
+// once (locally it fails at once, so a flake is seen), and the first failure
+// leaves a trace and a screenshot. The job runs in shards (`--shard=i/N`, N set
+// in ci.yml and docs/TESTING.md: every shard boots its own stack), each writing
+// a blob report that the workflow merges into one HTML report when a shard failed.
 const CI = Boolean(process.env.CI)
+const DEV = Boolean(process.env.LIBELLUS_E2E_DEV)
+const CI_WORKERS = Number(process.env.E2E_WORKERS) || (availableParallelism() >= 4 ? 3 : 2)
 
 export default defineConfig({
   testDir: './e2e',
@@ -37,7 +40,7 @@ export default defineConfig({
   fullyParallel: CI,
   forbidOnly: CI,
   retries: CI ? 1 : 0,
-  workers: CI ? 2 : undefined,
+  workers: CI ? CI_WORKERS : undefined,
   timeout: CI ? 60_000 : 30_000,
   expect: { timeout: CI ? 10_000 : 5_000 },
   reporter: CI ? [['list'], ['github'], ['blob']] : 'list',
@@ -48,24 +51,28 @@ export default defineConfig({
     ...devices['iPhone 15'],
     // WebKit is closest to Safari on iPhone, where Libellus is mostly used.
     browserName: 'webkit',
+    // Reduce Motion, as a member who turned it on: sheets, morphs and fades are cut to their end
+    // (docs/MOTION.md), so a flow waits for none of them, and Reduce Motion gets the coverage of
+    // every flow. A spec about motion or what is drawn on the way opts back in with
+    // `test.use({ reducedMotion: 'no-preference' })`.
+    reducedMotion: 'reduce',
+    // An installed app's service worker answers from its precache; here every flow talks to the
+    // server, so what it reads is what the build serves. A spec about the worker allows it.
+    serviceWorkers: 'block',
   },
   webServer: {
-    // nuxt itself, not `pnpm dev`: stopping pnpm leaves nuxt running in its own
-    // process group, holding the port, and the run never exits.
-    command: `./node_modules/.bin/nuxt dev --port ${PORT}`,
+    // The app as it ships (docs/HOSTING.md): `nuxt generate` with the flows' configuration
+    // (e2e/build.ts, skipped with LIBELLUS_E2E_PREBUILT=1 when CI built it already), served the
+    // way Cloudflare Pages serves it (e2e/serve.mjs: `_headers`, the SPA fallback, the Pages
+    // Functions). LIBELLUS_E2E_DEV=1 runs the flows on `nuxt dev` instead, to debug one with the
+    // dev server's source maps and reloads; nuxt itself then, not `pnpm dev`: stopping pnpm
+    // leaves nuxt running in its own process group, holding the port, and the run never exits.
+    command: DEV
+      ? `./node_modules/.bin/nuxt dev --port ${PORT}`
+      : `${process.env.LIBELLUS_E2E_PREBUILT ? '' : './node_modules/.bin/tsx e2e/build.ts && '}node e2e/serve.mjs ${PORT}`,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
     url: `http://localhost:${PORT}`,
-    // The app talks to whichever stack this checkout started; the anon key is
-    // asked of `supabase status`, never read from a file.
-    env: {
-      LIBELLUS_E2E: '1',
-      NUXT_PUBLIC_SUPABASE_URL: stack.url,
-      NUXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
-      // Your shelf (#23) is one member's: the flows' owner, made with this id (e2e/shelf.spec.ts).
-      NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
-      // The library file Regal shows, in a build with it (LIBELLUS_REGAL=1): the address e2e/shelf.spec.ts answers.
-      NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
-    },
+    env: appEnv(),
     reuseExistingServer: false,
     timeout: 120_000,
   },

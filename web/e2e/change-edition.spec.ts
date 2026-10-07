@@ -130,7 +130,8 @@ test('a member changes the edition of a finished book: the cover changes, its re
   const { frames, fades, standard } = await page.evaluate(() => ({
     frames: (window as unknown as { __was: string[] }).__was,
     fades: (window as unknown as { __fades: unknown[] }).__fades,
-    standard: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--duration-standard')),
+    // In ms: the dev server writes the token as `250ms`, the build as `.25s`.
+    standard: ((value) => parseFloat(value) * (/ms$/.test(value) ? 1 : 1000))(getComputedStyle(document.documentElement).getPropertyValue('--duration-standard').trim()),
   }))
   const seen = [...new Set(frames)]
   expect(seen[0]).toBe('none')

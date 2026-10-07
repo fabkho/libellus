@@ -52,7 +52,8 @@ test('an error on the device lands in the error log, without the address query',
     // Every row keeps the address query out, a vitals row the run caused (on sign-in, say) included.
     expect(`${row.message} ${row.stack ?? ''}`).not.toContain('secret')
     if (row.kind === 'vitals') continue
-    expect(row.route).toBe('/library')
+    // Opened at its address: Pages adds the folder's slash (e2e/serve.mjs).
+    expect(row.route).toMatch(/^\/library\/?$/)
     expect(row.online).toBe(true)
     expect(row.app_version).toBeTruthy()
     expect(row.user_agent).toMatch(/Safari|WebKit/)

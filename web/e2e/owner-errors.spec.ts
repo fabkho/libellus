@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { createOwnerErrors } from '../app/data/ownerErrors'
-import { emailCooldown, mailCount, readMailedCode, sql } from '../tests/support/stack'
+import { sql } from '../tests/support/stack'
 import { test } from './fixtures'
 import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID, shelfOwner } from './shelfOwner'
-import { signedIn, untilStill } from './support'
+import { signedIn, signedInAs, untilStill } from './support'
 
 /**
  * The owner reads the client error log in the app (docs/OPERATIONS.md, Client
@@ -35,7 +35,7 @@ test.afterAll(async () => {
 const SHELF_FILE = readFileSync(new URL('../tests/fixtures/shelf/library.json', import.meta.url), 'utf8')
 
 /**
- * Signs the owner in through the screens (she exists; a code is mailed to her). In a build with
+ * Signs the owner in (she exists; her session handed to the page, e2e/support.ts). In a build with
  * Regal her Profile shows Your shelf, which asks for the published library file: answered from the fixture.
  */
 async function signInAsOwner(page: Page) {
@@ -43,14 +43,7 @@ async function signInAsOwner(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: SHELF_FILE }),
   )
   const owner = await shelfOwner()
-  await emailCooldown()
-  const before = await mailCount(owner.email)
-  await page.goto('/sign-in')
-  await page.getByTestId('signIn.email').fill(owner.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(owner.email, before + 1))
-  await expect(page.getByTestId('home.title')).toBeVisible()
+  await signedInAs(page, owner.email)
   return owner
 }
 
@@ -73,7 +66,7 @@ test('the owner sees an error on purpose in the log: grouped, filtered, its stac
   await expect(page.getByTestId('profile.errorsNew')).toBeVisible()
   expect(Number(await page.getByTestId('profile.errorsNew').textContent())).toBeGreaterThanOrEqual(2)
   await page.getByTestId('profile.errors').click()
-  await expect(page).toHaveURL(/\/profile\/errors$/)
+  await expect(page).toHaveURL(/\/profile\/errors\/?$/)
   await expect(page.getByTestId('errors.title')).toHaveText(en.ownerErrors.title)
 
   const group = (message: string) => page.getByTestId('errors.group').filter({ hasText: message })
@@ -95,7 +88,8 @@ test('the owner sees an error on purpose in the log: grouped, filtered, its stac
   await group(boom).click()
   await expect(page.getByTestId('errorDetail.sheetTitle')).toHaveText(en.ownerErrors.kind.error)
   await expect(page.getByTestId('errorDetail.message')).toHaveText(boom)
-  await expect(page.getByTestId('errorDetail.stack')).toContainText('error-log.client.ts')
+  // Where it was thrown: the source file on the dev server, the built chunk in a build.
+  await expect(page.getByTestId('errorDetail.stack')).toContainText(/error-log\.client\.ts|\/_nuxt\/[\w-]+\.js/)
   await expect(page.getByTestId('errorDetail.members')).toContainText('1')
   await untilStill(page)
   await page.getByTestId('errorDetail.action').click()

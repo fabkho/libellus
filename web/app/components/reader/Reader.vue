@@ -801,7 +801,7 @@ onMounted(async () => {
     // Highlights that arrived while the book was opening, and then every minute and on coming back.
     reconcileHighlights()
     if (!left) stopFollowing = reader.followHighlights(props.entry.id, props.record.hash)
-    if (import.meta.dev) (window as unknown as { __readerEngine?: unknown }).__readerEngine = opened
+    if (import.meta.dev || __LIBELLUS_E2E__) (window as unknown as { __readerEngine?: unknown }).__readerEngine = opened
     return opened
   })().catch(() => {
     failed.value = failed.value ?? 'failed'

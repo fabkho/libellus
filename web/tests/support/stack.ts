@@ -29,9 +29,13 @@ function localStackValue(name: string): string {
  * supabase/config.toml (553xx, so Trappist's stack on 543xx can run alongside);
  * CI sets them from `supabase status -o env`.
  */
+let anonKey: string | undefined
 export const stack = {
   url: process.env.SUPABASE_URL ?? 'http://127.0.0.1:55321',
-  anonKey: process.env.SUPABASE_ANON_KEY ?? localStackValue('ANON_KEY'),
+  // Asked when first read, so a module that only imports this (e2e/build.ts) needs no stack up.
+  get anonKey(): string {
+    return (anonKey ??= process.env.SUPABASE_ANON_KEY ?? localStackValue('ANON_KEY'))
+  },
   dbUrl: process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:55322/postgres',
   mailUrl: process.env.MAILPIT_URL ?? 'http://127.0.0.1:55324',
 }

@@ -12,7 +12,8 @@
 #   covers, their thumbhash read with CORS), the owner's shelf (`books.fabkho.dev`, Regal's
 #   textures as blobs), the barcode decoder (WebAssembly), Cloudflare Web Analytics (the
 #   beacon Pages adds to the HTML, docs/HOSTING.md), and for the built-in reader (#131) the
-#   book's pages (blob: frames, sanitized, each with its own script-src 'none'), MyMemory (Translate) and Wiktionary (Define), asked only with
+#   book's pages (blob: frames, sanitized, each with its own script-src 'none'; they inherit this
+#   policy too, so their stylesheets, blobs as well, need style-src blob:), MyMemory (Translate) and Wiktionary (Define), asked only with
 #   the words the member selected. Covers come from any https host (an
 #   imported Book keeps its own). 'unsafe-inline' for scripts: the theme boot script, the
 #   import map and Nuxt's runtime config are inline, and two of them change with every build.
@@ -20,7 +21,7 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
   X-Frame-Options: DENY
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://books.fabkho.dev https://itunes.apple.com https://openlibrary.org https://covers.openlibrary.org https://*.mzstatic.com https://cloudflareinsights.com https://api.mymemory.translated.net https://en.wiktionary.org; frame-src 'self' blob:; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://books.fabkho.dev https://itunes.apple.com https://openlibrary.org https://covers.openlibrary.org https://*.mzstatic.com https://cloudflareinsights.com https://api.mymemory.translated.net https://en.wiktionary.org; frame-src 'self' blob:; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 
 # The service worker, the script it imports and the manifest have fixed names: always asked
 # again, so a new deploy reaches installed apps on their next start.
