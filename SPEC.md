@@ -18,8 +18,10 @@ is issue [#1](https://github.com/fabkho/libellus/issues/1). The words used here 
 - Replace Fable: import its history once, then delete it.
 - Built so a later Swift/Kotlin port is mechanical (the Trappist strategy).
 
-Non-goals (v1): social features (friends, feed, sharing), a work/edition hierarchy, fuzzy dates, a
+Non-goals (v1): social features (friends, feed, likes, follows), a work/edition hierarchy, fuzzy dates, a
 "Paused" state, open sign-up, Sign in with Apple/Google, page progress, German UI, desktop layouts.
+Sharing came later, without the social network (#171, below): a public reading page and Book cards
+behind a link the member hands out herself.
 
 ## 2. Platform & Stack
 
@@ -75,6 +77,12 @@ custom shelves.
   session if there is one, otherwise the one that ended last (`ended_on`, then `started_on`, then
   created at). It decides the Status and is what lists show and sort by.
 - **collections** (member, name, position) and **collection_entries** (collection, entry, position).
+- **reading_pages** (#171) — member, `token` (22 characters of base64url, null = off), one switch per
+  section (`show_reading`, `show_year`, `show_favourites`, `show_finished`, `show_shelf`); and
+  **reading_page_books** — member, Book, `review` (her review goes with its card). Read by their
+  member; written only by `set_reading_page`, `renew_reading_page_link`, `set_reading_page_sections`,
+  `share_book_card`, `unshare_book_card`; read by anyone only through `public_reading_page(token)` and
+  `public_book_card(token, book)`, which return the published sections and nothing else.
 - **invite_codes**, **accounts** — as in Trappist.
 
 Rules enforced in the database: status derived from sessions (none → *Want to read*, latest open →
@@ -105,6 +113,8 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
          Library → Want to read / Currently reading / Finished (+ Not finished filter), Collections
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
+         Profile → Share: her reading page (on/off, its link, its sections); Book → ⋯ → Share: its card
+(public) /r/<token> her reading page · /r/<token>/book/<id> a Book card — anyone with the link, no sign-in
 (sheets) Add · Finish · Abandon · Manual book · Collection picker · Change edition → My edition isn't listed
          (find her edition by its ISBN in every source, or make her own: a private Manual book with its format)
 ```
@@ -124,6 +134,13 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
 - Privacy: minimal data, EU region, no trackers. Keys never committed. The profile photo (#156) is
   made on the device (512 and 128 px, re-encoded without EXIF or GPS) and kept in a private Storage
   bucket only she can read; the device keeps a copy, deleted on sign-out.
+- Sharing (#171) is off until she turns it on, and only what she chose leaves the database: her
+  first name, the sections she switched on (the Books she is reading, this year's counts, her
+  favourites, what she finished with its Ratings, her shelf) and the reviews she shared one by one.
+  Never her address, id, notes, highlights, progress or an unshared review. The link is 128 random
+  bits, out of search engines (`noindex`), and a new link or turning it off kills every copy at
+  once; the page, its cards and their link-preview images are made on demand from the same
+  database function, and Cloudflare Web Analytics counts their loads without cookies.
 - Ebook files (#131) stay on the device: a linked EPUB is copied into the browser's own storage
   (OPFS) and its link kept in IndexedDB, per member; nothing about them reaches the server, and
   signing out deletes them.
@@ -169,6 +186,12 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
 - **Quarter-star ratings**, stored as integer quarters 1–20, optional.
 - **English UI**, every string in the message file from day one.
 - **Invite-gated email-code sign-in**, Trappist 1:1. No social.
+- **Sharing is a link, not a network** (owner, #166/#171): one public reading page per member, off by
+  default, at an unguessable link she can renew or turn off; Book cards under it; no accounts, likes or
+  follows. A visitor who wants in asks the member for an invite code. The owner's page shows Regal's
+  3D shelf from the published library file; anyone else's a row of covers (Regal's assets are made
+  for the owner's Library only). Link previews come from Open Graph images rendered by a Supabase edge
+  function and cached by the Pages Function in front of `/r/*` (docs/HOSTING.md).
 - **Covers resolved once** on entering the Catalogue (Apple → OpenLibrary → placeholder), stored as
   URL + thumbhash.
 - **Manual books stay private**, never in the Catalogue. So does a member's own edition ("My edition isn't

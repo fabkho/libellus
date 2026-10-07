@@ -47,6 +47,9 @@ Libellus runs as one small, invite-only instance for its owner and a few friends
   removed when you sign out.
 - **Your data is yours**: row-level security in the database means a member only ever reads her own
   Library, reviews, Collections and Book links. Delete your account and all of it goes.
+- **Sharing is opt-in**: a member's reading page is off until she turns it on, shows only the
+  sections she picks (never her email, notes, highlights or a review she didn't share), sits at an
+  unguessable link out of search engines, and dies at once when she makes a new link or turns it off.
 - **Search stays plain**: the browser asks Apple Books and Open Library directly for the words you
   type, nothing else; the Goodreads rating is looked up by the server, so Goodreads never sees you.
 - An instance may count page loads with a cookieless, identifier-free analytics service (the
