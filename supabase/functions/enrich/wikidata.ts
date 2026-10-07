@@ -42,7 +42,7 @@ export function entitiesUrl(ids: readonly string[], props: readonly string[], la
     action: 'wbgetentities',
     ids: [...ids].sort().join('|'),
     props: props.join('|'),
-    languages: languages.join('|'),
+    languages: withMul(languages).join('|'),
     format: 'json',
     formatversion: '2',
   })
@@ -139,11 +139,41 @@ export function parseOrdinal(value: unknown): number | null {
   return Number(text)
 }
 
-export function label(entity: Entity, languages: readonly string[]): string | null {
-  for (const lang of languages) {
-    const value = entity.labels?.[lang]?.value?.trim()
+/**
+ * Wikidata's default label for every language (`mul`, "multiple languages"): since 2024 an item
+ * may carry its name there instead of in English (Unseen Academicals has no `en` label any more,
+ * only `mul`, beside `de` "Der Club der unsichtbaren Gelehrten"). It is asked for with the
+ * languages and stands in for English, never for another language's own label.
+ */
+export const MUL = 'mul'
+
+/** The languages a query asks labels in: the ones configured, then `mul`. */
+export function withMul(languages: readonly string[]): string[] {
+  return [...new Set([...languages, MUL])]
+}
+
+/**
+ * The order a default title or name is picked in: the first language, English, the default label
+ * (`mul`), then the other languages. So a German-first deployment still names a work in German
+ * where it can, and an English one never takes another language's label over the default.
+ */
+export function titleOrder(languages: readonly string[]): string[] {
+  const [first, ...rest] = languages
+  return [...new Set([...(first ? [first] : []), ...(languages.includes('en') ? ['en'] : []), MUL, ...rest])]
+}
+
+/** The first label in `titleOrder`, from `get(language)`. */
+export function pickLabel(get: (language: string) => string | null | undefined, languages: readonly string[]): string | null {
+  for (const lang of titleOrder(languages)) {
+    const value = get(lang)?.trim()
     if (value) return value
   }
+  return null
+}
+
+export function label(entity: Entity, languages: readonly string[]): string | null {
+  const picked = pickLabel((lang) => entity.labels?.[lang]?.value, languages)
+  if (picked) return picked
   const any = Object.values(entity.labels ?? {}).find((l) => l.value?.trim())
   return any?.value?.trim() ?? null
 }
@@ -287,11 +317,14 @@ export type AuthorFacts = {
  * dates with their precision, Open Library ids, Wikipedia articles.
  */
 export function authorQuery(qid: string, languages: readonly string[]): string {
-  const vars = languages.map((l) => `(SAMPLE(?l_${l}) AS ?label_${l}) (SAMPLE(?a_${l}) AS ?article_${l})`).join(' ')
-  const patterns = languages
-    .map((l) => `OPTIONAL { ?item rdfs:label ?l_${l} FILTER(LANG(?l_${l}) = "${l}") }
-  OPTIONAL { ?a_${l} schema:about ?item; schema:isPartOf <https://${l}.wikipedia.org/> }`)
-    .join('\n  ')
+  const vars = [
+    ...withMul(languages).map((l) => `(SAMPLE(?l_${l}) AS ?label_${l})`),
+    ...languages.map((l) => `(SAMPLE(?a_${l}) AS ?article_${l})`),
+  ].join(' ')
+  const patterns = [
+    ...withMul(languages).map((l) => `OPTIONAL { ?item rdfs:label ?l_${l} FILTER(LANG(?l_${l}) = "${l}") }`),
+    ...languages.map((l) => `OPTIONAL { ?a_${l} schema:about ?item; schema:isPartOf <https://${l}.wikipedia.org/> }`),
+  ].join('\n  ')
   return `SELECT ?item ${vars} (SAMPLE(?img) AS ?image)
   (SAMPLE(?b) AS ?birth) (SAMPLE(?bp) AS ?birthPrecision) (SAMPLE(?d) AS ?death) (SAMPLE(?dp) AS ?deathPrecision)
   (GROUP_CONCAT(DISTINCT ?ol; separator=" ") AS ?ols)
@@ -320,7 +353,7 @@ export function parseAuthorFacts(body: unknown, languages: readonly string[]): A
     value ? parseTime({ time: `+${value.replace(/^\+/, '')}`, precision: Number(precision) }) : null
   return {
     qid,
-    name: languages.map((l) => row[`label_${l}`]?.value?.trim()).find(Boolean) ?? null,
+    name: pickLabel((l) => row[`label_${l}`]?.value, languages),
     birth: date(row.birth?.value, row.birthPrecision?.value),
     death: date(row.death?.value, row.deathPrecision?.value),
     image: image ? decodeURIComponent(image) : null,
@@ -342,8 +375,8 @@ export function seriesWorksQuery(seriesQids: readonly string[], languages: reado
 }
 
 function worksQuery(pattern: string, languages: readonly string[]): string {
-  const labelVars = languages.map((lang) => `(SAMPLE(?l_${lang}) AS ?label_${lang})`).join(' ')
-  const labelPatterns = languages
+  const labelVars = withMul(languages).map((lang) => `(SAMPLE(?l_${lang}) AS ?label_${lang})`).join(' ')
+  const labelPatterns = withMul(languages)
     .map((lang) => `OPTIONAL { ?work rdfs:label ?l_${lang} FILTER(LANG(?l_${lang}) = "${lang}") }`)
     .join(' ')
   return `SELECT ?work ${labelVars} (MIN(?date) AS ?published)
@@ -370,14 +403,14 @@ WHERE {
 
 /** Names of series items, in the languages, and the series each is part of. */
 export function seriesQuery(seriesQids: readonly string[], languages: readonly string[]): string {
-  const labelVars = languages.map((lang) => `(SAMPLE(?l_${lang}) AS ?label_${lang})`).join(' ')
-  const labelPatterns = languages
+  const labelVars = withMul(languages).map((lang) => `(SAMPLE(?l_${lang}) AS ?label_${lang})`).join(' ')
+  const labelPatterns = withMul(languages)
     .map((lang) => `OPTIONAL { ?s rdfs:label ?l_${lang} FILTER(LANG(?l_${lang}) = "${lang}") }`)
     .join(' ')
-  const parentLabels = languages
+  const parentLabels = withMul(languages)
     .map((lang) => `OPTIONAL { ?parent rdfs:label ?pl_${lang} FILTER(LANG(?pl_${lang}) = "${lang}") }`)
     .join(' ')
-  const parentVars = languages.map((lang) => `(SAMPLE(?pl_${lang}) AS ?parent_${lang})`).join(' ')
+  const parentVars = withMul(languages).map((lang) => `(SAMPLE(?pl_${lang}) AS ?parent_${lang})`).join(' ')
   return `SELECT ?s ${labelVars} (SAMPLE(?l_any) AS ?label_any) (SAMPLE(?parent) AS ?parentItem) ${parentVars}
 WHERE {
   VALUES ?s { ${[...seriesQids].sort().map((q) => `wd:${q}`).join(' ')} }
@@ -411,7 +444,7 @@ export function parseWorks(body: unknown, languages: readonly string[]): ListedW
       const value = row[`label_${lang}`]?.value?.trim()
       if (value) titles[lang] = value
     }
-    const title = languages.map((lang) => titles[lang]).find(Boolean) ?? null
+    const title = pickLabel((lang) => row[`label_${lang}`]?.value, languages)
     const types = words(row.types?.value).filter(isQid)
     if (!title || types.some((t) => SERIES_TYPES.has(t) || EDITION_TYPES.has(t))) continue
     const forms = words(row.forms?.value).filter(isQid)
@@ -442,7 +475,7 @@ export function parseWorks(body: unknown, languages: readonly string[]): ListedW
 
 export type SeriesFacts = {
   qid: string
-  /** In one of the languages asked for. */
+  /** In one of the languages asked for, or Wikidata's default label (`mul`). */
   name: string | null
   /** In any other language: the last resort. */
   otherName: string | null
@@ -454,14 +487,14 @@ export function parseSeries(body: unknown, languages: readonly string[]): Series
     .map((row) => {
       const qid = row.s?.value?.split('/').pop()
       if (!isQid(qid)) return null
-      const name = languages.map((lang) => row[`label_${lang}`]?.value?.trim()).find(Boolean) ?? null
+      const name = pickLabel((lang) => row[`label_${lang}`]?.value, languages)
       const parentQid = row.parentItem?.value?.split('/').pop()
       return {
         qid,
         name,
         otherName: row.label_any?.value?.trim() || null,
         parent: isQid(parentQid) && parentQid !== qid
-          ? { qid: parentQid, name: languages.map((lang) => row[`parent_${lang}`]?.value?.trim()).find(Boolean) ?? null }
+          ? { qid: parentQid, name: pickLabel((lang) => row[`parent_${lang}`]?.value, languages) }
           : null,
       }
     })

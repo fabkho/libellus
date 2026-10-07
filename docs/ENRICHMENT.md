@@ -74,8 +74,11 @@ WorkCard = {
 }
 ```
 
-Works are deduplicated per work; titles and covers come in the asked language where the work has an
-edition in it, her own edition's where she has one. A work in a sub-series is listed there and not again
+Works are deduplicated per work; a title is her own edition's where she has one, else in the asked
+language (the work's title or its edition's), else in English, else the work's own; covers and the edition
+to add follow the same languages. The work's own title is picked English first, then Wikidata's default
+label `mul` (items increasingly keep a name shared by many languages there instead of in English: Unseen
+Academicals has only `mul` and `de`), then any other language. A work in a sub-series is listed there and not again
 in its parent (Discworld lists the books in none of its sub-series; City Watch lists its own). Her own
 Books of the author whose work no source knows are listed under `other`.
 

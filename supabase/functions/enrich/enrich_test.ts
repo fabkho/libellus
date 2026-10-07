@@ -59,6 +59,18 @@ Deno.test('Pratchett, Small Gods: found by ISBN, Discworld 13, fantasy, the auth
   assertEquals(feetOfClay.series?.length, 2)
   // No short stories and no series items among the works.
   assert(payload.works.every((w) => w.kind !== 'short-story'))
+  // Unseen Academicals has no English label on Wikidata, only the default one (`mul`) beside the
+  // German: it is named in English, the German stays the German title, and Open Library's work is
+  // found by that English title (its cover, its English edition to add).
+  const unseen = payload.works.filter((w) => w.wikidata === 'Q2669617')
+  assert(unseen.length > 0)
+  for (const work of unseen) {
+    assertEquals(work.title, 'Unseen Academicals')
+    assertEquals(work.titles, { de: 'Der Club der unsichtbaren Gelehrten' })
+  }
+  const listed = unseen.find((w) => w.editions)!
+  assertEquals(listed.editions?.en?.title, 'Unseen Academicals')
+  assert(listed.editions?.en?.isbn13 && listed.coverUrl, 'an English edition to add, and a cover')
 })
 
 Deno.test('Le Guin, A Wizard of Earthsea: by its Open Library key; Earthsea 1; standalones on her page', async () => {

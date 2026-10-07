@@ -61,7 +61,7 @@ export type Enriched = {
   mort: { isbn13: string; title: string }
 }
 
-type Work = { key: string; title: string; year: number; kind: string; series?: { key: string; position: number }[]; isbn13?: string; genres?: string[] }
+type Work = { key: string; title: string; titles?: Record<string, string>; year: number; kind: string; series?: { key: string; position: number }[]; isbn13?: string; genres?: string[] }
 
 /**
  * Stores the three authors with their works and series, and gives the member
@@ -97,7 +97,8 @@ export async function enrichedLibrary(client: SupabaseClient): Promise<Enriched>
     menAtArms: w('Men at Arms', 1993, 'novel', [[series.discworld, 15], [series.cityWatch, 2]], { genres: ['fantasy'] }),
     feetOfClay: w('Feet of Clay', 1996, 'novel', [[series.discworld, 19], [series.cityWatch, 3]], { genres: ['fantasy', 'crime'] }),
     mort: w('Mort', 1987, 'novel', [[series.discworld, 4]], { isbn13: mortIsbn, genres: ['fantasy'] }),
-    smallGods: w('Small Gods', 1992, 'novel', [[series.discworld, 13]], { genres: ['fantasy'] }),
+    // Named in English only by Wikidata's default label (`mul`): its own title, with the German beside it.
+    smallGods: w('Small Gods', 1992, 'novel', [[series.discworld, 13]], { genres: ['fantasy'], titles: { de: 'Einfach göttlich' } }),
     slip: w('A Slip of the Keyboard', 2014, 'nonfiction', [], { genres: ['essays'] }),
     wizard: w('A Wizard of Earthsea', 1968, 'novel', [[series.earthsea, 1]], { genres: ['fantasy', 'ya'] }),
     tombs: w('The Tombs of Atuan', 1970, 'novel', [[series.earthsea, 2]], { isbn13: tombsIsbn, genres: ['fantasy'] }),
@@ -114,6 +115,7 @@ export async function enrichedLibrary(client: SupabaseClient): Promise<Enriched>
   const workPayload = (work: Work, author: string) => ({
     wikidata: work.key,
     title: work.title,
+    ...(work.titles ? { titles: work.titles } : {}),
     year: work.year,
     kind: work.kind,
     genres: work.genres ?? [],

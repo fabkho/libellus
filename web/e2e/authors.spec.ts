@@ -69,6 +69,18 @@ test('the Book page\'s author opens her page: hero, credits, works in reading or
   await expect(discworld.getByTestId('author.groupTitle')).toHaveText(data.names.discworld)
   await expect(discworld.getByTestId('author.workTitle')).toHaveText(['Mort', 'Small Gods'])
   await expect(page.getByTestId('author.other').getByTestId('author.workTitle')).toHaveText(['A Slip of the Keyboard'])
+  // Small Gods has no edition to add: Find opens the search with its title and author instead.
+  const smallGods = discworld.getByTestId('author.work').nth(1)
+  await expect(smallGods.getByTestId('author.workWant')).toHaveCount(0)
+  await expect(smallGods.getByTestId('author.workFind')).toHaveText(en.author.find)
+  // The search asks the sources; here they know nothing.
+  await page.route(/^https:\/\/(itunes\.apple\.com|openlibrary\.org)\//, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"resultCount":0,"results":[],"numFound":0,"docs":[]}' }),
+  )
+  await smallGods.getByTestId('author.workFind').click()
+  await expect(page.getByTestId('search.query')).toHaveValue(`Small Gods ${data.names.pratchett}`)
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('search.query')).toBeHidden()
 
   // "+ Want to read" on Mort: the Add sheet, on Want to read, then her status in its place.
   const mort = discworld.getByTestId('author.work').first()

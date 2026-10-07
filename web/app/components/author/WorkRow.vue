@@ -5,12 +5,15 @@
 // have, "+ Want to read", which opens the Add sheet on the edition in her
 // language (Want to read chosen). The row opens the Book's page from the
 // touch-down, its cover flying into the hero; a work with no edition to open
-// is a plain row. Her status follows what this device knows of her Library, so
-// a Start or an add elsewhere shows here at once.
+// is a plain row, and where it has no edition we could add, "Find" opens the
+// search with its title (and author), as a scanned book nothing knows does, so
+// she can add the edition search finds. Her status follows what this device
+// knows of her Library, so a Start or an add elsewhere shows here at once.
 import { isNotFinished } from '~/data/library'
 import type { WorkCard } from '~/data/enrich'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
+import { useSearchStore } from '~/stores/search'
 
 const props = withDefaults(defineProps<{
   work: WorkCard
@@ -22,7 +25,9 @@ const props = withDefaults(defineProps<{
   eager?: boolean
   /** Whether the mono line shows the year (Home's row says only where the Book stands). */
   year?: boolean
-}>(), { place: null, year: true })
+  /** The author's name, for the search "Find" opens. */
+  author?: string | null
+}>(), { place: null, year: true, author: null })
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -43,6 +48,13 @@ const status = computed(() => live.value?.status ?? props.work.entry?.status ?? 
 const rating = computed(() => (live.value ? (live.value.latestSession?.rating ?? null) : (props.work.entry?.rating ?? null)))
 const notFinished = computed(() => (live.value ? isNotFinished(live.value) : false))
 const meta = computed(() => [props.place, props.year && props.work.year ? String(props.work.year) : null].filter(Boolean).join(' · '))
+
+// "Find": no edition to add, so the search looks for one (the palette opens over the page).
+const search = useSearchStore()
+function find() {
+  search.open()
+  search.query = [props.work.title, props.author].filter(Boolean).join(' ')
+}
 
 // "+ Want to read": the edition's Book (the Catalogue's, else what a source says of it), then the Add sheet.
 const opening = ref(false)
@@ -109,6 +121,18 @@ async function want() {
       @click="want"
     >
       <template v-if="online"><UiIcon name="plus" :size="14" bold />{{ t('author.want') }}</template>
+      <template v-else><UiIcon name="offline" :size="14" />{{ t('common.offline') }}</template>
+    </button>
+    <button
+      v-else
+      type="button"
+      class="want relative inline-flex h-(--size-button-sm) shrink-0 items-center gap-xxs rounded-pill pr-ms pl-sm text-footnote text-ink-muted edge disabled:opacity-50"
+      :disabled="!online"
+      :aria-label="online ? t('author.findLabel', { title: work.title }) : t('common.offline')"
+      :data-testid="`${testid}Find`"
+      @click="find"
+    >
+      <template v-if="online"><UiIcon name="search" :size="14" bold />{{ t('author.find') }}</template>
       <template v-else><UiIcon name="offline" :size="14" />{{ t('common.offline') }}</template>
     </button>
   </li>

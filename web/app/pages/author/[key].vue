@@ -86,6 +86,7 @@ function back() {
               :work="work"
               :place="placeOf(group, work)"
               testid="author.work"
+              :author="author?.name"
               :eager="index < 4"
             />
           </component>

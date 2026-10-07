@@ -1537,6 +1537,8 @@
     "reading": "Reading",
     "want": "Want to read",
     "wantLabel": "Add {title} to Want to read",
+    "find": "Find",
+    "findLabel": "Find {title} in search to add it",
     "missingTitle": "No page for this author",
     "missing": "We don’t know this author yet. Their page comes once one of their books has been looked up.",
     "offlineTitle": "You’re offline",
