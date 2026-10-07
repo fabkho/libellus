@@ -10,7 +10,7 @@
 -- through their JWT claims; assertions ask about the rows this test made.
 
 begin;
-select plan(40);
+select plan(44);
 
 create schema if not exists tests;
 
@@ -194,6 +194,34 @@ select results_eq(
   $$ values ('I Am Legend', array['Richard Matheson'], 'ebook', null::public.book_format) $$,
   'takes the title and author of the edition it replaces, and her word on the old one is gone');
 select ok(not tests.book_exists(:'own_id'), 'her first own edition, used by nothing, is deleted');
+
+-- ------------------------------------------------------------- the import
+
+-- Choose edition in the import: an edition a source found with its format, and
+-- her own edition with its format, language and cover.
+select results_eq(
+  $$ select outcome from jsonb_to_recordset(public.import_books('[
+    {"key": "goodreads:own-1", "book": {"title": "Hell House", "authors": ["Richard Matheson"], "source": "openlibrary",
+     "openlibrary_edition_key": "OL990004204M", "isbn13": "9790000042049", "format": "hardcover"}, "status": "want_to_read"},
+    {"key": "goodreads:own-2", "book": {"title": "The Shrinking Man", "authors": ["Richard Matheson"], "source": "manual",
+     "format": "audiobook", "language": "EN", "cover_url": "https://example.com/shrinking.jpg", "published_year": 2017},
+     "status": "want_to_read"}
+  ]')) as t(outcome text) $$,
+  $$ values ('added'), ('added') $$,
+  'the import writes an edition with its format and her own edition');
+select is((select format::text from public.books where openlibrary_edition_key = 'OL990004204M'), 'hardcover',
+  'a Catalogue Book keeps the format its source said');
+select results_eq(
+  $$ select format::text, language, cover_url, owner_id = auth.uid() from public.books where title = 'The Shrinking Man' $$,
+  $$ values ('audiobook', 'en', 'https://example.com/shrinking.jpg', true) $$,
+  'her own edition keeps its format, language and cover, and is hers');
+select results_eq(
+  $$ select outcome, error from jsonb_to_recordset(public.import_books('[
+    {"key": "goodreads:own-3", "book": {"title": "Duel", "authors": ["Richard Matheson"], "source": "manual",
+     "cover_url": "ftp://example.com/duel.jpg"}, "status": "want_to_read"}
+  ]')) as t(outcome text, error text) $$,
+  $$ values ('failed', 'book_invalid') $$,
+  'a cover that is not https is refused');
 
 select * from finish();
 rollback;
