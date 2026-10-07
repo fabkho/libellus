@@ -209,6 +209,13 @@ fork's GitHub Actions once you give it a key, a bucket and the database's addres
 (scheduled workflows also have to be switched on in a fork's Actions tab). Setting it up, what a backup
 holds and how to restore one into a new project: [OPERATIONS.md, Backups](OPERATIONS.md#backups).
 
+**Releases.** The owner's instance ships through versioned releases (`.github/workflows/release.yml`,
+[OPERATIONS.md, Releases](OPERATIONS.md#releases)): Pages builds a `production` branch the workflow
+moves. The workflow only runs in `fabkho/libellus`, so a fork does nothing of it: Pages builds your
+production branch on every push, you push migrations and functions yourself (above), and the app's
+version and What's new come from the `version.txt` and `CHANGELOG.md` you build with. To use it in your
+fork, change the repository it checks and set up the environment it describes.
+
 **Android app (Play Store)** as a Trusted Web Activity is planned, not part of the repository yet.
 
 ### The owner

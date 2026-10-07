@@ -9,13 +9,22 @@ what the repository decides itself.
 
 ## Builds and deployments
 
-Pages builds from GitHub (fabkho/libellus): a push to `main` is production, every other branch
-a preview at `<branch>.libellus-3q1.pages.dev` (and `<deployment id>.libellus-3q1.pages.dev`).
+Pages builds from GitHub (fabkho/libellus). Its **production branch is `production`**, which only the
+release workflow moves: merging the release pull request tags `vX.Y.Z`, pushes the migrations and the
+edge functions, then points `production` at the tag (docs/OPERATIONS.md, "Releases"; a manual run of
+the workflow deploys an older tag again, which is the rollback). Every other branch, `main` included,
+is a preview at `<branch>.libellus-3q1.pages.dev` (and `<deployment id>.libellus-3q1.pages.dev`):
+`main.libellus-3q1.pages.dev` is what the next release will be (signed out only, like every preview:
+the Supabase variables below are set for production alone).
+
+Until the one-time switch (Settings → Builds → Branch control → Production branch: `production`,
+after the branch exists; docs/OPERATIONS.md, "The first release") a push to `main` is still production.
 
 | Setting | Value |
 | --- | --- |
+| Production branch | `production` (moved by `.github/workflows/release.yml` only) |
 | Root directory | `web` |
-| Build command | `pnpm generate` (`nuxt generate`; on Pages, Nitro picks its `cloudflare-pages-static` preset by itself) |
+| Build command | `pnpm generate` (`nuxt generate`; on Pages, Nitro picks its `cloudflare-pages-static` preset by itself). It reads `../version.txt` and `../CHANGELOG.md` for the app's version and What's new. |
 | Output directory | `dist` |
 | `NODE_VERSION` | `24` (production and preview) |
 | `LIBELLUS_REGAL` | `1`: build with the Regal layer (`regal.config.ts`; without it the shelf is left out). Production and preview. |
@@ -24,7 +33,8 @@ a preview at `<branch>.libellus-3q1.pages.dev` (and `<deployment id>.libellus-3q
 | `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_PUBLIC_SHELF_OWNER_ID` | Production only. Previews have no backend: they show the signed-out screens and cannot sign in, so a branch never touches production data. |
 
 A deploy is atomic and a rollback is one click (Workers & Pages → libellus → Deployments →
-⋯ → Rollback). The same commit can be built again with "Retry deployment", which is also how
+⋯ → Rollback); the next release replaces it. The release workflow's own rollback (an older tag,
+with its edge functions) is in docs/OPERATIONS.md, "Releases". The same commit can be built again with "Retry deployment", which is also how
 a change to the project's settings (below) reaches the live site without a commit.
 
 ## The two Pages Functions

@@ -1,7 +1,114 @@
 # Operations
 
-Looking after the running app: what to read where, when something went wrong on a member's device, and
-the nightly backup of the database.
+Looking after the running app: how a release reaches production, what to read where, when something
+went wrong on a member's device, and the nightly backup of the database.
+
+## Releases
+
+Merging a pull request into `main` changes nothing members see. Production moves only with a
+**release**: a version (`vX.Y.Z`, semantic), its notes in `CHANGELOG.md`, and one workflow run that
+brings the database, the edge functions and the web app to it, in that order.
+`.github/workflows/release.yml` does it; [release-please](https://github.com/googleapis/release-please)
+writes the version and the notes from the conventional commits (CONTRIBUTING.md).
+
+### How to release
+
+1. Merge pull requests into `main` as before. On every push to `main`, release-please updates one open
+   pull request, **"chore(main): release x.y.z"**: `CHANGELOG.md` with a section for the next version,
+   `version.txt` and `.release-please-manifest.json`. The version follows the commits since the last
+   release: a `fix:` or `perf:` is a patch, a `feat:` a minor, a `!` or `BREAKING CHANGE:` footer a major.
+   The notes list *Features*, *Fixes*, *Performance* and *Reverts*; `docs`, `test`, `ci`, `build`,
+   `refactor`, `style` and `chore` commits are left out (`release-please-config.json`).
+2. When `main` is in a state to ship, read the release pull request (it is the release notes and the
+   What's new members will see, below) and **merge it**. Release-please rewrites it on every push to
+   `main`, so a hand edit to its branch only lasts until the next merge: edit, then merge. A line in
+   the notes is the commit's subject, so the way to better notes is a better subject. To force a
+   version, a commit with a `Release-As: 2.0.0` footer does it.
+3. The push of that merge runs the workflow again. Its first job tags `vX.Y.Z` and creates the GitHub
+   release. Its second job, **deploy**, in the GitHub environment `production`:
+   1. links the hosted project (`SUPABASE_PROJECT_REF`), prints `supabase db push --linked --include-all
+      --dry-run` (the migrations it is about to apply), then applies them. A failure stops here: nothing
+      else changes.
+   2. deploys every function under `supabase/functions/` (`supabase functions deploy <name> --use-api`;
+      each function's `[functions.<name>]` settings in `supabase/config.toml` apply: `verify_jwt`,
+      `entrypoint`, `import_map`, `static_files`). Their secrets (`supabase secrets set`) are not touched.
+   3. moves the branch **`production`** to the tag. Cloudflare Pages builds `production` as the live site
+      (docs/HOSTING.md); the deployment shows as the Cloudflare Pages check on the tagged commit.
+   4. writes a summary on the run: the migrations applied, the functions deployed, where `production`
+      now points and where to watch the Pages build.
+
+The database goes first because the web app is built for the schema it ships with, and the schema
+is changed in steps the running app survives (a column is added before the app reads it, dropped
+only a release after the app stopped). The site follows last, a few minutes after the run, once
+Pages has built it.
+
+The release pull request runs no CI (`ci.yml` ignores `CHANGELOG.md`, `version.txt` and the manifest;
+every commit in it passed on its own pull request and on `main`). It is opened with the workflow's own
+`GITHUB_TOKEN`, and pull requests opened that way start no workflows anyway.
+
+**What's new.** Each build embeds its version (`version.txt`) and its section of `CHANGELOG.md`
+(`web/app/utils/changelog.ts`): after an update with something new, the app shows a small "What's new
+in 1.9" sheet once on each device, and Profile → Account → "Version 1.9.0 · What's new" opens it any
+time (docs/parity.md, "What's new"). The lines are the commit subjects without their `type(scope):`,
+so a `feat:` subject is written for members.
+
+### What it needs (set up once)
+
+In the repository's settings (the workflow does not change them):
+
+| Where | What |
+| --- | --- |
+| Settings → Actions → General → Workflow permissions | **Allow GitHub Actions to create and approve pull requests** on, so release-please can open its pull request. |
+| Settings → Environments → **`production`** | Deployment branches and tags: **Selected branches and tags → `main`** (a manual run from another branch is refused). No reviewers needed: merging the release pull request is the approval. |
+| `production` → environment secret `SUPABASE_ACCESS_TOKEN` | A Supabase personal access token of an account that can manage the project (dashboard → Account → Access Tokens). The CLI uses it for the Management API and to log in to the database with a temporary role, so no database password is needed. |
+| `production` → environment secret `SUPABASE_DB_PASSWORD` (optional) | The database password, only if the temporary role ever fails; the CLI then uses it instead. |
+| `production` → environment variable `SUPABASE_PROJECT_REF` | `ltedflcewdcqtqzcjeyr` |
+| `production` → environment secret `PRODUCTION_DEPLOY_KEY` | The private half of an SSH key whose public half is a **deploy key with write access** (Settings → Deploy keys). It moves the branch `production`: the run's own `GITHUB_TOKEN` stays read-only, and GitHub refuses a `GITHUB_TOKEN` push that brings changed workflow files to a branch. `ssh-keygen -t ed25519 -N '' -C 'libellus production' -f prod-deploy-key`. |
+| Cloudflare Pages → libellus → Settings → Builds → Branch control | **Production branch: `production`**. Previews stay on for every other branch, `main` included (`main.libellus-3q1.pages.dev`). |
+
+Only the deploy job reads the environment's secrets; the release-please job has
+`contents`/`pull-requests`/`issues: write` and nothing else, and both jobs only run in
+`fabkho/libellus` (never in a fork, never on a pull request). One deploy runs at a time.
+
+### Deploying a tag by hand: retry and rollback
+
+Actions → Release → **Run workflow** (from `main`), or:
+
+```sh
+gh workflow run release.yml -f tag=v1.4.0                       # deploy v1.4.0 again (a retry)
+gh workflow run release.yml -f tag=v1.3.2 -f migrations=false   # roll back to v1.3.2
+```
+
+The run checks that the tag is on `main`, then does the same steps. A **retry** after a failed run
+picks up where it failed: the migrations already applied are no longer pending, the functions are
+deployed again, and `production` moves forward or is left where it is.
+
+A **rollback** deploys the older tag's edge functions and moves `production` back to it (a manual run
+may move it backwards; a release never does), so Pages builds the older web app. **Migrations only go
+forward**: there is no down migration. Run a rollback with `migrations` off. With it on, the dry run
+fails before anything changes when the database has migrations the older tag does not know. The older
+app then runs on the newer schema, which works as long as migrations are additive (above). When a
+migration itself was the mistake, write a new one that undoes it and release that (a `fix:` patch
+release), rather than rolling back.
+
+For the web app alone there is also Pages' one-click rollback (Workers & Pages → libellus →
+Deployments → ⋯ → Rollback, docs/HOSTING.md); the next release's push to `production` replaces it.
+
+### The first release
+
+Versioning starts at **1.0.0**: `main` as it was when releases began (`bootstrap-sha` in
+`release-please-config.json`, the `1.0.0` entry in `CHANGELOG.md`). Once this is merged:
+
+1. Set up the environment, the secrets, the variable and the deploy key (table above), and allow
+   Actions to create pull requests.
+2. Create the branch `production` at what is live now, the head of `main`:
+   `git push origin origin/main:refs/heads/production` (optionally also tag it: `gh release create v1.0.0
+   --target <that commit> --notes 'The first versioned release.'`).
+3. Switch the Pages project's production branch to `production` (table above). From then on a merge
+   into `main` builds only a preview.
+4. Release-please opened "chore(main): release 1.1.0" when this was merged (if the pull request
+   permission was not on yet, that run failed: re-run it, or wait for the next push to `main`).
+   Merging it is the first release through the workflow.
 
 ## Client errors
 
