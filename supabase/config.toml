@@ -412,6 +412,13 @@ verify_jwt = false
 verify_jwt = false
 static_files = ["./functions/reading-page-og/fonts/*.ttf"]
 
+# Authors, series and genres (issues #166-#168). The function checks the caller
+# itself (the service-role key, the shared secret ENRICH_TOKEN that pg_cron's
+# call sends, or a signed-in member for single Books and authors):
+# supabase/functions/enrich/README.md.
+[functions.enrich]
+verify_jwt = false
+
 [analytics]
 # Off, as in Trappist: nothing reads the local logs, and it is one container less.
 enabled = false
