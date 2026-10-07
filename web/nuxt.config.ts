@@ -303,6 +303,18 @@ export default defineNuxtConfig({
             expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
           },
         },
+        {
+          // Authors' portraits on their pages (#167, Wikimedia Commons' thumbnails), kept like covers
+          // so a page opened before shows its portrait offline too. Fewer: one per author page.
+          urlPattern: ({ request, url }) =>
+            request.destination === 'image' && request.mode === 'no-cors' && /^(upload|thumb)\.wikimedia\.org$/.test(url.hostname),
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'libellus-portraits',
+            cacheableResponse: { statuses: [0, 200] },
+            expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
+          },
+        },
       ],
     },
     devOptions: { enabled: false },

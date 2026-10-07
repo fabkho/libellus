@@ -73,7 +73,8 @@ watch(
 
 useHead({ title: () => (book.value ? `${book.value.title} · ${t('app.name')}` : t('app.name')) })
 
-const authorLine = computed(() => (book.value ? formatAuthors(book.value.authors, t('common.etAl')) : ''))
+/** The Book's id in the Catalogue (none yet for a search result): what its authors and series are asked by. */
+const catalogueId = computed(() => (book.value && 'id' in book.value ? book.value.id : null))
 const facts = computed(() => {
   const b = book.value
   if (!b) return []
@@ -191,7 +192,9 @@ function back() {
       >
         {{ book.title }}
       </h1>
-      <p class="mt-xs max-w-full text-body text-ink-muted wrap-anywhere" data-testid="book.authors">{{ authorLine }}</p>
+      <!-- The author line, each linked author a link to her page, and the series line under it (#167). -->
+      <AuthorLine class="mt-xs max-w-full" :names="book.authors" :book-id="catalogueId" />
+      <SeriesLine :book-id="catalogueId" :entry="entry" />
       <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
         <!-- Drawn with dots between them; assistive tech reads them as one phrase with commas, or they run
              together ("2012240 pages") or, split up, make TalkBack stop on every piece. -->

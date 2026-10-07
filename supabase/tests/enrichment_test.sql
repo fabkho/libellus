@@ -11,7 +11,7 @@
 -- members and ask about the rows this test made.
 
 begin;
-select plan(59);
+select plan(64);
 
 create schema if not exists tests;
 
@@ -211,6 +211,10 @@ select results_eq(
   format($$select credit_position, name, author_key from public.book_authors_of(%L)$$, :'guards'),
   $$values (1::smallint, 'Terry Pratchett', 'Q990000001')$$,
   'a Book''s linked author, with the key their page opens by');
+select results_eq(
+  format($$select book_id, credit_position, author_key from public.book_authors_for(array[%L, gen_random_uuid()]::uuid[])$$, :'guards'),
+  format($$values (%L::uuid, 1::smallint, 'Q990000001')$$, :'guards'),
+  'many Books'' linked authors at once, per Book, for a list''s rows');
 
 select is(public.author_page('Q990000001') -> 'author' ->> 'name', 'Terry Pratchett', 'the author page by Wikidata item');
 select is(public.author_page('OL990001A') -> 'author' ->> 'key', 'Q990000001', 'by Open Library id, the same page');
@@ -303,6 +307,25 @@ select is((public.reset_entry_series(:'guards_entry_id') -> 'series' -> 0 ->> 'n
 select tests.act_as(:'ben_id');
 select is((select count(*)::int from public.series where name = 'The Ada Cycle'), 0,
   'another member does not see the series she named');
+
+-- A work's title in her language, else English, else its own (Unseen Academicals: no English
+-- label, only Wikidata's default one, which the function makes the work's own title).
+reset role;
+set local role service_role;
+select public.enrich_save('{"works":[
+  {"wikidata":"Q990000090","title":"Unseen Academicals","titles":{"de":"Der Club der unsichtbaren Gelehrten"}},
+  {"wikidata":"Q990000091","title":"Einfach göttlich","titles":{"de":"Einfach göttlich"},
+   "editions":{"en":{"title":"Small Gods","isbn13":"9780552152976","openlibrary_edition_key":null,"cover_url":"https://covers.openlibrary.org/b/id/1-L.jpg"}}}]}');
+reset role;
+select tests.act_as(:'ben_id');
+select is(public.work_card((select id from public.works where wikidata_id = 'Q990000090'), 'en') ->> 'title',
+  'Unseen Academicals', 'no English title: the work''s own (English first, then Wikidata''s default label)');
+select is(public.work_card((select id from public.works where wikidata_id = 'Q990000090'), 'de') ->> 'title',
+  'Der Club der unsichtbaren Gelehrten', 'her language''s title first');
+select is(public.work_card((select id from public.works where wikidata_id = 'Q990000091'), 'fr') ->> 'title',
+  'Small Gods', 'no title in her language: the English edition''s before the work''s own');
+select is(public.work_card((select id from public.works where wikidata_id = 'Q990000091'), 'fr') -> 'edition' ->> 'isbn13',
+  '9780552152976', 'and the English edition is the one Want to read adds');
 
 reset role;
 select * from finish();

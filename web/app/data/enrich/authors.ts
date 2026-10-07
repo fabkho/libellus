@@ -62,6 +62,8 @@ export type AuthorsRepository = {
   page: (key: string, language?: string) => Promise<EnrichResult<AuthorPage | null>>
   /** A Book's linked authors in credit order (translators and introducers are not linked). */
   forBook: (bookId: string) => Promise<EnrichResult<BookAuthor[]>>
+  /** Many Books' linked authors at once (a list's rows), by Book id; a Book with none is left out. */
+  forBooks: (bookIds: readonly string[]) => Promise<EnrichResult<Record<string, BookAuthor[]>>>
   /** Asks the enrich function to fetch the author again if the cache is stale. Answers whether it did. */
   refresh: (key: string) => Promise<EnrichResult<boolean>>
 }
@@ -103,6 +105,17 @@ export function createAuthors(
         data: rows.map((r) => ({ position: r.credit_position, name: r.name, authorId: r.author_id, key: r.author_key })),
         error: null,
       }
+    },
+
+    async forBooks(bookIds) {
+      if (!bookIds.length) return { data: {}, error: null }
+      const { data, error } = await client.rpc('book_authors_for', { p_books: [...new Set(bookIds)] })
+      if (error) return { data: null, error: mapError(error) }
+      const rows = (data ?? []) as { book_id: string; credit_position: number; name: string; author_id: string; author_key: string }[]
+      const byBook: Record<string, BookAuthor[]> = {}
+      for (const r of rows) (byBook[r.book_id] ??= []).push({ position: r.credit_position, name: r.name, authorId: r.author_id, key: r.author_key })
+      for (const list of Object.values(byBook)) list.sort((a, b) => a.position - b.position)
+      return { data: byBook, error: null }
     },
 
     async refresh(key) {

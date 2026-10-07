@@ -496,7 +496,7 @@ export async function enrichAuthor(ref: AuthorRef, ctx: EnrichContext): Promise<
 
   for (const work of listed.slice(0, MAX_AUTHOR_WORKS)) {
     const doc = work.openLibraryIds.map((key) => primary.get(key)).find(Boolean) ??
-      [...primary.values()].find((d) => !claimed.has(d.key) && titlesMatch(d.title, work.title))
+      [...primary.values()].find((d) => !claimed.has(d.key) && [work.title, ...Object.values(work.titles)].some((t) => titlesMatch(d.title, t)))
     if (doc) claimed.add(doc.key)
     payload.works.push({
       ...listedWorkPayload(work, seriesFacts),

@@ -43,6 +43,7 @@ offline with `offline`), tested in `web/tests/enrich.test.ts`.
 |---|---|---|
 | `page(key, language?)` | `author_page(p_author, p_language)` | `AuthorPage` or null |
 | `forBook(bookId)` | `book_authors_of(p_book)` | `[{ position, name, authorId, key }]`, credit order |
+| `forBooks(bookIds)` | `book_authors_for(p_books)` | the same for many Books at once, by Book id (a list's rows) |
 | `refresh(key)` | `enrich` function, `{"action":"author"}` | whether it fetched again (only when stale) |
 
 The author page is opened by any of the author's keys: a Wikidata item (`/author/Q46248`), an Open
@@ -73,8 +74,11 @@ WorkCard = {
 }
 ```
 
-Works are deduplicated per work; titles and covers come in the asked language where the work has an
-edition in it, her own edition's where she has one. A work in a sub-series is listed there and not again
+Works are deduplicated per work; a title is her own edition's where she has one, else in the asked
+language (the work's title or its edition's), else in English, else the work's own; covers and the edition
+to add follow the same languages. The work's own title is picked English first, then Wikidata's default
+label `mul` (items increasingly keep a name shared by many languages there instead of in English: Unseen
+Academicals has only `mul` and `de`), then any other language. A work in a sub-series is listed there and not again
 in its parent (Discworld lists the books in none of its sub-series; City Watch lists its own). Her own
 Books of the author whose work no source knows are listed under `other`.
 
@@ -125,9 +129,14 @@ series correction), `series_not_found`, `not_signed_in`, `offline`, `unknown`.
 readable by every member and written only by the service role; her corrections only by her, through
 the functions above. A series a member named is visible to her only.
 
+## The screens (#167, phase 2)
+
+The author pages (`/author/<key>`), the Book page's author links and series line, the series sheet and
+her correction, and Home's "Next in your series" are described in docs/parity.md (Author page; Series
+line, series sheet and correction; Next in your series). What they read last is kept on the device under
+`libellus.enrich` (`data/enrich/device.ts`), so they open offline. The genre screens are described in
+docs/parity.md, *Genres*; the author page's genre chips use the same labels (`genre.<id>`).
+
 ## Not yet
 
-- The screens of #167 (/author/<key>, the series line and sheet, Home's row). The genre screens (chips and
-  editor on the Book page, the Library's genre filter, the Profile's figures and the year in review) are
-  in the app: docs/parity.md, *Genres*.
 - The outbox does not carry the corrections yet (`sync_write`): they need a connection.

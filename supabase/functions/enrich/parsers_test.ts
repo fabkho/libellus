@@ -8,7 +8,7 @@ import { assertEquals } from '@std/assert'
 import { DEFAULT_CONTACT, userAgent } from './http.ts'
 import { namesMatch, titlesMatch } from './match.ts'
 import { parseSeriesText } from './openlibrary.ts'
-import { kindOf, parseOrdinal, parseTime } from './wikidata.ts'
+import { kindOf, label, labels, parseOrdinal, parseSeries, parseTime, parseWorks, titleOrder } from './wikidata.ts'
 import { parseImageInfo, plainText } from './wikimedia.ts'
 
 Deno.test("an edition's series text gives a name and a position", () => {
@@ -100,4 +100,27 @@ Deno.test('the User-Agent names the app, the instance and a contact (Wikimedia p
     userAgent('https://books.example.org', 'owner@example.org'),
     'Libellus/1.0 (private book tracker; +https://books.example.org; owner@example.org) enrich',
   )
+})
+
+Deno.test('a title in the first language, then English, then the default label (mul), then the others', () => {
+  assertEquals(titleOrder(['en', 'de']), ['en', 'mul', 'de'])
+  assertEquals(titleOrder(['de', 'en']), ['de', 'en', 'mul'])
+  assertEquals(titleOrder(['de']), ['de', 'mul'])
+  const unseen = { id: 'Q2669617', labels: { de: { value: 'Der Club der unsichtbaren Gelehrten' }, mul: { value: 'Unseen Academicals' } } }
+  assertEquals(label(unseen, ['en', 'de']), 'Unseen Academicals')
+  assertEquals(label(unseen, ['de', 'en']), 'Der Club der unsichtbaren Gelehrten')
+  // The default label never stands in for a language's own title.
+  assertEquals(labels(unseen, ['en', 'de']), { de: 'Der Club der unsichtbaren Gelehrten' })
+  // Only some other language: the last resort.
+  assertEquals(label({ id: 'Q1', labels: { fr: { value: 'Allez les mages !' } } }, ['en', 'de']), 'Allez les mages !')
+
+  const row = (labels: Record<string, string>) => ({
+    work: { value: 'http://www.wikidata.org/entity/Q2669617' },
+    types: { value: 'Q7725634' },
+    ...Object.fromEntries(Object.entries(labels).map(([lang, value]) => [`label_${lang}`, { value }])),
+  })
+  const works = parseWorks({ results: { bindings: [row({ de: 'Der Club der unsichtbaren Gelehrten', mul: 'Unseen Academicals' })] } }, ['en', 'de'])
+  assertEquals(works.map((w) => [w.title, w.titles]), [['Unseen Academicals', { de: 'Der Club der unsichtbaren Gelehrten' }]])
+  const series = parseSeries({ results: { bindings: [{ s: { value: 'http://www.wikidata.org/entity/Q54875383' }, label_de: { value: 'Die Zauberer' }, label_mul: { value: 'Unseen University' } }] } }, ['en', 'de'])
+  assertEquals(series[0]?.name, 'Unseen University')
 })
