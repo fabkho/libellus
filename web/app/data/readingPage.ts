@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CoverColors } from './books'
+import type { YearFigures } from './stats'
 
 /**
  * Share with friends (issue #171): a member's public reading page and her Book
@@ -101,6 +102,34 @@ export function readingPagePath(token: string): string {
 /** A Book card's address on this origin. */
 export function bookCardPath(token: string, bookId: string): string {
   return `/r/${token}/book/${bookId}`
+}
+
+/**
+ * This year's figures in the Profile's shape (stats.ts), so the page draws them with the Profile's
+ * figures and month row: what the page has no data for (the records, the authors, abandoned
+ * reads) stays empty, and nothing reads it.
+ */
+export function yearFigures(year: PublicYear): YearFigures {
+  return {
+    year: year.year,
+    books: year.books,
+    pages: year.pages,
+    pagesMissing: year.pagesMissing,
+    rated: year.rated,
+    unrated: year.unrated,
+    average: year.average,
+    byStar: [],
+    columns: year.months.map((count, i) => ({ key: i + 1, count })),
+    medianDays: year.medianDays,
+    quickest: null,
+    slowest: null,
+    longest: null,
+    shortest: null,
+    rereads: year.rereads,
+    abandoned: 0,
+    authors: [],
+    favourite: null,
+  }
 }
 
 // ------------------------------------------------------------------ the rows
