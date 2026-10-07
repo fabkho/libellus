@@ -15,6 +15,7 @@
 import type { EntryStatus, LibraryEntry } from '~/data/library'
 import { arrange, sortFor } from '~/data/libraryView'
 import { useLibraryStore } from '~/stores/library'
+import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useSessionStore } from '~/stores/session'
 
@@ -23,6 +24,8 @@ definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 const { t } = useI18n()
 const library = useLibraryStore()
 const libraryView = useLibraryViewStore()
+// The genre filter's lookup (#168): provided to the view store by the genres store, which the device fills at once.
+const bookGenres = useGenresStore()
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
@@ -95,13 +98,25 @@ const empty = computed(
   () => library.loaded && !library.wantToRead.length && !library.reading.length && !library.finished.length,
 )
 
-onActivated(() => void library.load())
+onActivated(() => {
+  void library.load()
+  void bookGenres.load()
+  // Sent here to look at one list (the Profile's genres, #168): that segment, as filtered.
+  if (libraryView.focus) {
+    segment.value = libraryView.focus
+    libraryView.focus = null
+  }
+})
 // Kept alive, so a member change (the list reset) while it is not showing has
 // to bring it back by itself.
 const session = useSessionStore()
 watch(
   () => session.member?.id,
-  (member) => member && void library.load(),
+  (member) => {
+    if (!member) return
+    void library.load()
+    void bookGenres.load()
+  },
 )
 </script>
 

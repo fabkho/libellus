@@ -58,10 +58,15 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
     }
     return entry
   }
-  await add(book('Dune', 'Frank Herbert', 896), [['2025-04-12', '2025-05-17', 16]])
+  // Their genres (#168): the chips on the Book page, the sheet, the Library's filter and the Profile's rows.
+  const genred = async (entry: { book: { id: string } }, ...genres: string[]) => {
+    for (const [rank, genre] of genres.entries())
+      await sql(`insert into public.book_genres (book_id, genre_id, rank, source, confidence, map_version) values ($1, $2, $3, 'wikidata', 1, 1)`, [entry.book.id, genre, rank + 1])
+  }
+  await genred(await add(book('Dune', 'Frank Herbert', 896), [['2025-04-12', '2025-05-17', 16]]), 'sci-fi', 'fantasy')
   // Read this year: Home's tally counts it and opens its sheet.
-  await add(book('The Dispossessed', 'Ursula K. Le Guin', 387), [[addDays(isoDay(), -9), addDays(isoDay(), -3), 18]])
-  await add(book('Piranesi', 'Susanna Clarke', 272), [['2024-11-27', '2024-12-29', null]])
+  await genred(await add(book('The Dispossessed', 'Ursula K. Le Guin', 387), [[addDays(isoDay(), -9), addDays(isoDay(), -3), 18]]), 'sci-fi', 'literary')
+  await genred(await add(book('Piranesi', 'Susanna Clarke', 272), [['2024-11-27', '2024-12-29', null]]), 'fantasy')
   await add(book('Ruin', 'John Gwynne', 800), [['2025-02-04', '2025-02-04', null, 'abandoned']])
   await add(book('Up Next', 'Ursula K. Le Guin', 200), [])
   const eden = await add(book('East of Eden', 'John Steinbeck', 608), [])
@@ -229,6 +234,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await page.getByTestId('library.entry').first().click()
       await expect(page.getByTestId('book.title')).toBeVisible()
       await expectAccessible(page, 'a finished Book')
+      await expect(page.getByTestId('book.genre').first()).toBeVisible()
+      await openSheet(page, 'book.genresEdit', 'genreSheet')
+      await expectAccessible(page, 'the genres sheet')
+      await closeSheet(page, 'genreSheet')
 
       // Not in the Library: from a search result, and Add.
       await page.getByTestId('shell.tab.search').click()

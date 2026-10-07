@@ -447,7 +447,6 @@
           "desc": "Longest first"
         }
       },
-      "genres": {},
       "status": {
         "finished": "Finished",
         "notFinished": "Not finished"
@@ -1427,6 +1426,51 @@
       "features": "New",
       "performance": "Faster",
       "fixes": "Fixed"
+    }
+  },
+  "genre": {
+    "sci-fi": "Science fiction",
+    "fantasy": "Fantasy",
+    "horror": "Horror",
+    "crime": "Crime & mystery",
+    "thriller": "Thriller",
+    "romance": "Romance",
+    "literary": "Literary fiction",
+    "historical": "Historical fiction",
+    "classics": "Classics",
+    "ya": "Young adult",
+    "graphic": "Graphic novels & comics",
+    "poetry": "Poetry",
+    "short-stories": "Short stories",
+    "nonfiction": "Non-fiction",
+    "biography": "Biography & memoir",
+    "history": "History",
+    "science": "Science",
+    "philosophy": "Philosophy",
+    "self-help": "Self-help",
+    "essays": "Essays",
+    "book": {
+      "label": "Genres",
+      "edit": "Edit",
+      "editLabel": "Edit genres",
+      "add": "Add genres"
+    },
+    "sheet": {
+      "title": "Genres",
+      "hint": "Up to three, the main one first.",
+      "chosen": "{count} of {max} chosen",
+      "save": "Save",
+      "saving": "Saving…",
+      "retry": "Try again",
+      "reset": "Back to suggested",
+      "resetting": "Going back…",
+      "error": "Your genres were not saved. Try again."
+    },
+    "stats": {
+      "title": "Genres",
+      "placed": "Of {count} book | Of {count} books",
+      "without": "{count} without a genre",
+      "row": "{genre}: {percent} of your books, {count} book | {genre}: {percent} of your books, {count} books"
     }
   }
 }

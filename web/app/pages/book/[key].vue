@@ -200,6 +200,8 @@ function back() {
           <span v-if="i" class="dot" aria-hidden="true" /><span aria-hidden="true">{{ fact }}</span>
         </template>
       </p>
+      <!-- Its genres, up to three, and the way to set them (#168). -->
+      <BookGenres :book="book" :entry="entry" />
       <!-- Goodreads' rating, once known (#69). -->
       <BookGoodreads :book="book" />
       <!-- Book links, the instance's and the member's own (#116). -->

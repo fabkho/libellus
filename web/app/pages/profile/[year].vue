@@ -4,11 +4,14 @@
 // year's favourite cover. The year large, its four figures, its books month
 // by month as rows of covers with the month's count (an empty month is a
 // dash, nothing to make up for), the favourite, the ratings (a row opens the
-// books rated so), the records, the authors read more than once, and the
+// books rated so), the genres (a row opens the Library filtered by it and the year), the records, the authors read more than once, and the
 // years either side. Figures and covers, never sentences.
+import { genreFiguresOf } from '~/data/enrich/genreFigures'
 import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useBookStore } from '~/stores/book'
+import { useGenresStore } from '~/stores/genres'
+import { useLibraryViewStore } from '~/stores/libraryView'
 import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
 
@@ -18,6 +21,8 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const stats = useStatsStore()
+const bookGenres = useGenresStore()
+const libraryView = useLibraryViewStore()
 const books = useBookStore()
 // Your shelf (#23): the year's Books as Regal's 3D row under the months, for the owner only.
 const shelf = useShelfStore()
@@ -31,6 +36,7 @@ function show() {
   if (showing) return
   showing = true
   void stats.load()
+  void bookGenres.load()
   void shelf.load()
 }
 onMounted(show)
@@ -40,6 +46,10 @@ onDeactivated(() => (showing = false))
 const reads = computed(() => stats.record?.reads ?? [])
 const years = computed(() => yearsOf(reads.value))
 const figures = computed(() => figuresOf(reads.value, year.value))
+// Its placeholders stand in only for a Library known to have genres (the device keeps them), so one without
+// any (a new account) keeps its height when the record lands; a first visit opens the block when they come.
+const genresShown = computed(() => (loading.value ? bookGenres.loaded && bookGenres.any : genreFigures.value.genres.length > 0))
+const genreFigures = computed(() => genreFiguresOf(reads.value, year.value, bookGenres.ofEntry))
 const shelfBooks = computed(() => (shelf.isOwner ? shelf.readIn(year.value) : []))
 // Until the reading record has come (or could not), the page stands in its final shape with
 // placeholders where the figures and covers go, as the Profile does (docs/MOTION.md, Loading):
@@ -67,6 +77,12 @@ const sheetTitle = computed(() => (shown.value?.kind === 'stars' ? t('profile.sh
 const sheetReads = computed(() => (shown.value?.kind === 'stars' ? readsWithStars(reads.value, shown.value.year, shown.value.star) : []))
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
+}
+
+// A genre's row opens the Library's Finished list filtered by it and by this year (#168).
+function pickGenre(genre: string) {
+  libraryView.showGenre('finished', genre, String(year.value))
+  void navigateTo('/library')
 }
 
 // Back to the Profile it came from (or to it, opened from an address).
@@ -141,6 +157,9 @@ function back() {
 
         <UiReveal :show="loading || figures.rated > 0">
           <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+        </UiReveal>
+        <UiReveal :show="genresShown">
+          <ProfileGenres class="pt-xl" :figures="loading ? null : genreFigures" :limit="3" @pick="pickGenre" />
         </UiReveal>
         <UiReveal :show="loading || hasRecords">
           <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />

@@ -131,7 +131,7 @@ function apply() {
 const statusLabel = (value: string) => t(`library.view.status.${value}`)
 const readAsLabel = (value: string) => t(`library.view.readAs.${value}`)
 const yearLabel = (value: string) => value || t('library.undated')
-const genreLabel = (value: string) => (te(`library.view.genres.${value}`) ? t(`library.view.genres.${value}`) : value)
+const genreLabel = (value: string) => (te(`genre.${value}`) ? t(`genre.${value}`) : value)
 const sectionIds = Object.fromEntries(['readAs', 'author', 'rating', 'year', 'pages', 'genre'].map((facet) => [facet, useId()]))
 </script>
 

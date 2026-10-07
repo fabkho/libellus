@@ -19,7 +19,7 @@ the UI offers it for them: the corrections are per Library entry).
 ## The canonical genres
 
 `web/app/data/enrich/genres.ts` (also the `genres` table): twenty stable ids, the i18n keys of their
-labels will be `genre.<id>`:
+labels are `genre.<id>` (en.json):
 
 `sci-fi` `fantasy` `horror` `crime` `thriller` `romance` `literary` `historical` `classics` `ya` `graphic`
 `poetry` `short-stories` `nonfiction` `biography` `history` `science` `philosophy` `self-help` `essays`
@@ -127,7 +127,7 @@ the functions above. A series a member named is visible to her only.
 
 ## Not yet
 
-- The screens (phase 2): /author/<key>, the series line and sheet, Home's row, genre chips and editors,
-  the Library's genre filter (#169), the Profile's genre figures.
+- The screens of #167 (/author/<key>, the series line and sheet, Home's row). The genre screens (chips and
+  editor on the Book page, the Library's genre filter, the Profile's figures and the year in review) are
+  in the app: docs/parity.md, *Genres*.
 - The outbox does not carry the corrections yet (`sync_write`): they need a connection.
-- Genre labels in `i18n/locales/en.json` (`genre.<id>`) come with the first screen that shows one.
