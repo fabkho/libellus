@@ -11,7 +11,7 @@ import type { GenreId } from '~/data/enrich'
 
 const props = defineProps<{ author: AuthorHero | null; genres: readonly GenreId[]; arriving?: boolean }>()
 
-const { t, te } = useI18n()
+const { t } = useI18n()
 
 const initials = computed(() => (props.author ? authorInitials(props.author.name) : ''))
 const span = computed(() => (props.author ? lifeSpan(props.author.born, props.author.died) : null))
@@ -22,7 +22,6 @@ const dates = computed(() => {
   if (s.kind === 'born') return t('author.born', { year: s.born })
   return t('author.died', { year: s.died })
 })
-const genreLabel = (id: string) => (te(`genre.${id}`) ? t(`genre.${id}`) : genreFallback(id))
 
 const photoShown = ref(false)
 watch(
@@ -58,7 +57,7 @@ const expanded = ref(false)
       <p v-if="dates" class="eyebrow mt-xs" :class="{ arrive: arriving }" data-testid="author.dates">{{ dates }}</p>
       <ul v-if="genres.length" class="mt-ms flex flex-wrap justify-center gap-xs" :aria-label="t('author.genres')" :class="{ arrive: arriving }" data-testid="author.genres">
         <li v-for="genre in genres" :key="genre" class="inline-flex h-(--size-button-sm) items-center rounded-pill bg-fill px-ms text-caption text-ink-muted edge" data-testid="author.genre">
-          {{ genreLabel(genre) }}
+          {{ t(`genre.${genre}`) }}
         </li>
       </ul>
       <div v-if="summary" class="mt-ml w-full text-left" :class="{ arrive: arriving }">

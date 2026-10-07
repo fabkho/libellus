@@ -45,7 +45,7 @@ test('the Book page\'s author opens her page: hero, credits, works in reading or
   await expect(page.getByTestId('author.name')).toHaveText(data.names.pratchett)
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(data.names.pratchett)
   await expect(page.getByTestId('author.dates')).toHaveText(fill(en.author.lived, { born: 1948, died: 2015 }))
-  await expect(page.getByTestId('author.genre').first()).toBeVisible()
+  await expect(page.getByTestId('author.genre').first()).toHaveText(en.genre.fantasy)
   await expect(page.getByTestId('author.summary')).toContainText('Discworld series')
   await expect(page.getByTestId('author.wikipedia')).toHaveText(en.author.fromWikipedia)
   await expect(page.getByTestId('author.wikipedia')).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Terry_Pratchett')

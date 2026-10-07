@@ -120,11 +120,6 @@ export function rowAuthorKey(linked: readonly BookAuthor[] | undefined): string 
   return [...linked].sort((a, b) => a.position - b.position)[0]!.key
 }
 
-/** A genre id as a label where no translation is there yet: "sci-fi" → "Sci-fi", "short-stories" → "Short stories". */
-export function genreFallback(id: string): string {
-  const words = id.replace(/-/g, ' ')
-  return id === 'sci-fi' ? 'Sci-fi' : id === 'ya' ? 'YA' : words.charAt(0).toUpperCase() + words.slice(1)
-}
 
 /** An author's initials for the portrait's ring: the first and the last name ("Ursula K. Le Guin" → "UG"). */
 export function authorInitials(name: string): string {

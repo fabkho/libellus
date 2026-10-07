@@ -5,7 +5,6 @@ import { DEVICE_ENRICH_KEY, emptyCopy, readEnrichCopy, remembered, saveEnrichCop
 import {
   authorInitials,
   authorParts,
-  genreFallback,
   lifeSpan,
   parsePosition,
   positionText,
@@ -52,11 +51,6 @@ describe('the hero', () => {
     expect(authorInitials('')).toBe('?')
   })
 
-  it('names a genre before its translation is there', () => {
-    expect(genreFallback('sci-fi')).toBe('Sci-fi')
-    expect(genreFallback('short-stories')).toBe('Short stories')
-    expect(genreFallback('ya')).toBe('YA')
-  })
 })
 
 describe('the series line', () => {
