@@ -233,6 +233,12 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
+      // A member's public reading page and its Book cards (#171) always come from the network: the
+      // Pages Function in front of them (functions/r/[[path]].js) puts the link preview's tags into
+      // the shell and answers a dead link with a 404, which the precached shell would hide. Nothing
+      // caches those answers either (no runtime route takes documents), so the shell this device
+      // keeps for the app is never one carrying somebody's page.
+      navigateFallbackDenylist: [/^\/r(\/|$)/],
       // Background Sync wakes the open app to send the outbox (#93, public/sw-sync.js); the share
       // target's POST is answered by public/sw-share.js (#91, #131).
       importScripts: ['/sw-sync.js', '/sw-share.js'],
