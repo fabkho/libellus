@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto'
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
-import { openProfile, recordedApple, signedIn } from './support'
+import { goto, openProfile, recordedApple, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -166,7 +166,7 @@ test('a book she already has under another edition counts as in her Library, not
     buffer: Buffer.from(`${header}\n951,"${title} (Vale, #1)",Nora Vale,${wrap('')},${wrap(uniqueIsbn())},0,${TEST_PUBLISHER},300,2019,,2025/08/01,to-read,\n`),
   }
 
-  await page.goto('/import')
+  await goto(page, '/import')
   await page.getByTestId('import.file').setInputFiles(file)
   await expect(page.getByTestId('import.alreadyThere')).toContainText('1')
   await expect(page.getByTestId('import.matched')).toContainText('0')
@@ -193,7 +193,7 @@ test('what real exports carry: her shelves as Collections, earlier reads, a did-
     `963,${slog},Bram Oduya,"Oduya, Bram",,${wrap('')},${wrap(uniqueIsbn())},2,${TEST_PUBLISHER},Paperback,610,2020,2020,2024/06/30,2024/05/01,dnf,dnf (#1),dnf,"Not for me.",,,1,0`,
   ].join('\n')
 
-  await page.goto('/import')
+  await goto(page, '/import')
   // Another app's export, and a spreadsheet, are refused with a word that says which file to choose.
   await page.getByTestId('import.file').setInputFiles({
     name: 'storygraph.csv',
@@ -270,7 +270,7 @@ test('a Hardcover export is told by its header: her reads with their days, her l
     row({ Title: wish, Author: 'Ilse Brandt', Status: 'Want to Read', 'Hardcover Book ID': '63', 'ISBN 13': uniqueIsbn(), Publisher: TEST_PUBLISHER }),
   ].join('\n')
 
-  await page.goto('/import')
+  await goto(page, '/import')
   // The apps it reads, each with how to export from it.
   await expect(page.getByTestId('import.empty')).toHaveText(en.import.pickText)
   await expect(page.getByTestId('import.howTo.goodreads')).toHaveText(en.import.app.goodreads)

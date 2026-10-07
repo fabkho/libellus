@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto'
 import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { runTitle, sql, TEST_PUBLISHER } from '../tests/support/stack'
-import { recordedApple, recordedTitleQuery, signedIn } from './support'
+import { goto, recordedApple, recordedTitleQuery, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -49,7 +49,7 @@ function file(ownTitle: string) {
 
 /** Opens the preview with Piranesi (matched by title) first under "Needs a look". */
 async function preview(page: Page, ownTitle: string) {
-  await page.goto('/import')
+  await goto(page, '/import')
   await page.getByTestId('import.file').setInputFiles(file(ownTitle))
   await expect(page.getByTestId('import.start')).toHaveText('Import 2 books', { timeout: 30_000 })
   await expect(page.getByTestId('import.attentionList.title')).toHaveText(['Piranesi', ownTitle])
