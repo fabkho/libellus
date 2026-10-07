@@ -329,8 +329,10 @@ $$;
 
 -- An author by its keys: the row with its Wikidata item, else its Open Library
 -- id, else (no row has either) a name-only row of that name, which is then
--- given the keys. Fields given replace the stored ones; fields not given are
--- kept (a stub from a work's credits never erases a fetched author).
+-- given the keys. A name alone (an author no source knew for this Book) finds
+-- the author of that name whom a source did know, if there is one, so the
+-- Book still links to the real author page. Fields given replace the stored
+-- ones; fields not given are kept (a stub never erases a fetched author).
 create function private.enrich_author(p jsonb)
 returns uuid
 language plpgsql
@@ -351,7 +353,10 @@ begin
   end if;
   if v_id is null and v_name is not null then
     select id into v_id from public.authors
-     where lower(name) = lower(v_name) and wikidata_id is null and openlibrary_key is null;
+     where lower(name) = lower(v_name)
+       and ((wikidata_id is null and openlibrary_key is null) or (v_wd is null and v_ol is null))
+     order by wikidata_id is null, fetched_at is null, openlibrary_key is null, created_at
+     limit 1;
   end if;
 
   if v_id is null then

@@ -437,6 +437,9 @@ export async function enrichAuthor(ref: AuthorRef, ctx: EnrichContext): Promise<
   const olAuthor = ref.openlibrary ? await sources.olAuthor(ref.openlibrary) : null
   let qid = ref.wikidata ?? olAuthor?.wikidata ?? null
   if (!qid && ref.openlibrary) qid = (await sources.wdSearch(`haswbstatement:P648=${ref.openlibrary}`, 1))[0] ?? null
+  // Open Library keeps duplicate records of some authors, and Wikidata links only one of them:
+  // the person by name (a human whose label matches) then.
+  if (!qid) qid = await findPersonQid(sources, olAuthor?.name ?? ref.name)
   const facts = qid ? await sources.wdAuthor(qid) : null
   if (!facts) qid = null
   const openlibrary = ref.openlibrary ?? facts?.openLibraryIds[0] ?? null
