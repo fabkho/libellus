@@ -67,6 +67,7 @@ jobs:
       goodreads: ${{ steps.decide.outputs.goodreads }}
       regal: ${{ steps.decide.outputs.regal }}
       og: ${{ steps.decide.outputs.og }}
+      enrich: ${{ steps.decide.outputs.enrich }}
     steps:
       - uses: actions/checkout@v7
         if: github.event_name == 'push'
@@ -107,6 +108,10 @@ jobs:
             og:
               - *ci
               - 'supabase/functions/reading-page-og/**'
+            enrich:
+              - *ci
+              - 'supabase/functions/enrich/**'
+              - 'web/app/data/enrich/genres.ts'
 
       - name: Decide
         id: decide
@@ -119,6 +124,7 @@ jobs:
           FILTER_GOODREADS: ${{ steps.filter.outputs.goodreads }}
           FILTER_REGAL: ${{ steps.filter.outputs.regal }}
           FILTER_OG: ${{ steps.filter.outputs.og }}
+          FILTER_ENRICH: ${{ steps.filter.outputs.enrich }}
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
         run: |
           all=false
@@ -131,6 +137,7 @@ jobs:
           goodreads=$(on "$FILTER_GOODREADS")
           regal=$(on "$FILTER_REGAL")
           og=$(on "$FILTER_OG")
+          enrich=$(on "$FILTER_ENRICH")
           # Playwright: never on a push to main, only when the app or the schema it runs on changed.
           e2e=false
           if [ "$EVENT" != push ]; then e2e=$(on "$FILTER_STACK"); fi
@@ -145,12 +152,12 @@ jobs:
           fi
 
           statics=false
-          for v in "$web" "$tokens" "$goodreads" "$regal" "$og"; do [ "$v" = true ] && statics=true; done
+          for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich"; do [ "$v" = true ] && statics=true; done
 
           {
             echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
-            echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"
+            echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"
           } | tee -a "$GITHUB_OUTPUT"
 
   # Database rules (pgTAP), the web data layer (Vitest) and the user flows
@@ -403,7 +410,7 @@ jobs:
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@v2
-        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true'
+        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true'
         with:
           deno-version: v2.x
 
@@ -428,4 +435,12 @@ jobs:
       - name: reading-page-og function (Deno lint, check, test)
         if: ${{ !cancelled() && needs.changes.outputs.og == 'true' }}
         working-directory: supabase/functions/reading-page-og
+        run: deno lint && deno check *.ts && deno task test
+
+      # The enrich edge function (#166-#168): authors, series and genres from
+      # recorded Wikidata, Open Library, Wikipedia, Commons and Apple answers. It
+      # imports the genre mapping from web/app/data/enrich/genres.ts.
+      - name: enrich function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.enrich == 'true' }}
+        working-directory: supabase/functions/enrich
         run: deno lint && deno check *.ts && deno task test
