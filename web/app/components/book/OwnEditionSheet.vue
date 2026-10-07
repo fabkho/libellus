@@ -13,7 +13,8 @@
 //   a cover (an https link to an image) under a preview of the cover; "Save".
 //   Its title and author are the book's. Only she sees it.
 //
-// The action at the top right is the step's (Look up · Use · Save), as is the
+// The action at the top right is the step's (Use · Save; the ISBN step has none: its
+// Look up is the button under the field, not repeated in the header), as is the
 // button at the bottom. Writes need the connection on the Book page (#15);
 // the import writes nothing here. `changed` fires with the entry once it has
 // the new edition (the Book page moves to its address).
@@ -44,7 +45,8 @@ const isbnId = useId()
 
 const title = computed(() => t(`ownEdition.title.${own.step}`))
 const action = computed(() => {
-  if (own.step === 'isbn') return online.value ? (own.looking ? t('ownEdition.looking') : t('ownEdition.lookUp')) : t('common.offline')
+  // The ISBN step's action is the Look up button under the field; the header keeps its title alone.
+  if (own.step === 'isbn') return undefined
   if (writes.value && !online.value) return t('common.offline')
   if (own.busy) return t('ownEdition.busy')
   return own.step === 'found' ? t('ownEdition.use') : t('ownEdition.save')
