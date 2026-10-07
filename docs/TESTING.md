@@ -376,6 +376,25 @@ xcrun simctl shutdown 0CB470F8-6238-46B6-89F5-E74065305B2E
 The built app is served by its service worker after the first load, so the harness's script is the one of the
 first load of that origin: use another origin (`localhost` or `127.0.0.1`) after changing the harness.
 
+## Layout shift (CLS)
+
+Only Chromium counts layout shifts (the Layout Instability API; WebKit has none), so the flows that
+watch them run there: `e2e/layout-shift.spec.ts` puts a Library of 60 Books on a member and, on a phone
+(412 × 915, the CPU slowed 4×), sums the shifts nobody's input explains the way web-vitals does
+(session windows, the largest one): a reload of the Library, its segments, a Book and back with the
+system Back, and search over the Library with Apple answering 800 ms after the last keystroke. Each
+must stay under 0.05.
+
+The field has the final word. Cloudflare Web Analytics lists the element behind a page's CLS
+(`cumulativeLayoutShiftElement` in the GraphQL dataset `rumWebVitalsEventsAdaptiveGroups`, or Web
+Analytics → Core Web Vitals → the debug view); the app's own `vitals` rows name the culprit of every
+poor value (docs/OPERATIONS.md, Web Vitals). The Library's 1.0 there was the search palette's shadow
+(`div.shadow-palette`): the palette grew upwards with each answer. To look at a scenario by hand,
+record `layout-shift` entries with their `sources` (the nodes and their boxes before and after) from
+an init script, `new PerformanceObserver(…).observe({ type: 'layout-shift', buffered: true })`, and
+remember that a shift within 500 ms of a tap or a key does not count (`hadRecentInput`), while a
+scroll, a source answering or the system Back excuse nothing.
+
 ## Reproducing a CI flake (Linux WebKit, two cores)
 
 macOS WebKit does not starve the way the CI runner's Linux WebKit does: frames

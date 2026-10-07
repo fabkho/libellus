@@ -72,6 +72,30 @@ describe('the groups', () => {
     expect(ofKind(all, 'shelf')).toEqual([])
   })
 
+  it('know the Web Vitals that went badly as a kind of their own, listed last', () => {
+    const row = groupFromRow({
+      message_hash: 'v',
+      kind: 'vitals',
+      message: 'CLS 1.00 on /library',
+      times: 3,
+      first_seen: '2026-10-07T08:00:00Z',
+      last_seen: '2026-10-07T09:30:00Z',
+      app_versions: ['b1'],
+      routes: ['/library'],
+      standalone_times: 3,
+      browser_times: 0,
+      online_times: 3,
+      offline_times: 0,
+      members: 1,
+      signed_out_times: 0,
+    })
+    expect(row.kind).toBe('vitals')
+    expect(kindsOf([row, group({ kind: 'chunk', hash: 'c' })])).toEqual([
+      { kind: 'chunk', groups: 1 },
+      { kind: 'vitals', groups: 1 },
+    ])
+  })
+
   it('are new when first seen in the last 24 hours', () => {
     const now = Date.parse('2026-10-07T12:00:00Z')
     const fresh = group({ hash: 'new', firstSeen: new Date('2026-10-07T00:00:00Z') })

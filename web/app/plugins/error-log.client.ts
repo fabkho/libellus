@@ -20,8 +20,9 @@ import { reportError, useErrorLog } from '~/composables/useErrorLog'
  *
  * Any error whose message says a chunk could not be loaded is a `chunk`, however
  * it arrived. One error reaching two of these (a component's error Vue also
- * rethrows in development) is reported once. The outbox and the shelf report on
- * their own (stores/sync.ts, stores/shelf.ts, components/shelf).
+ * rethrows in development) is reported once. The outbox, the shelf and the Web
+ * Vitals report on their own (stores/sync.ts, stores/shelf.ts, components/shelf,
+ * plugins/vitals.client.ts).
  *
  * The line is sent a moment after a report, when the connection comes back,
  * when the app goes to the background and after a start. Nothing here throws:

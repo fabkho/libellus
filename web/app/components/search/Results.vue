@@ -60,24 +60,10 @@ const FIRST_COVERS = 6
 const list = ref<HTMLElement | null>(null)
 const nearby = useNearView(list)
 
-// The list may grow up to what the screen leaves above the query row; with the
-// keyboard up, the visual viewport is the part above it.
-const viewport = ref<number | null>(null)
-function measure() {
-  viewport.value = window.visualViewport?.height ?? window.innerHeight
-}
-onMounted(() => {
-  measure()
-  window.visualViewport?.addEventListener('resize', measure)
-  window.addEventListener('resize', measure)
-})
-onBeforeUnmount(() => {
-  window.visualViewport?.removeEventListener('resize', measure)
-  window.removeEventListener('resize', measure)
-})
-const listStyle = computed(() =>
-  viewport.value ? { maxHeight: `calc(${viewport.value}px - var(--size-query) - env(safe-area-inset-top) - var(--spacing-xxxl))` } : {},
-)
+// The palette's room (composables/usePaletteRoom.ts): this fills it and stands its content at its
+// bottom, the list too (it scrolls once its rows reach the room's top). The palette draws how much
+// of the room the content fills, and glides to it when asked (below).
+const room = usePaletteRoom()
 
 const stale = computed(() => search.outdated)
 /** An ISBN found its edition already: no hint to search one. */
@@ -102,16 +88,12 @@ const state = computed(() => {
  */
 const loadingWait = ref(SEARCH_DEBOUNCE_MS)
 onMounted(() => (loadingWait.value = SEARCH_DEBOUNCE_MS + durationToken('quick')))
-const root = useTemplateRef<HTMLElement>('root')
-let heightBefore = 0
 let cameFrom: string | null = null
-let gliding: Animation | undefined
 const arriving = ref(false)
 let arrivingTimer: ReturnType<typeof setTimeout> | undefined
 watch(
   state,
   (_next, previous) => {
-    heightBefore = root.value?.offsetHeight ?? 0
     cameFrom = previous ?? null
   },
   { flush: 'pre' },
@@ -119,29 +101,15 @@ watch(
 watch(
   state,
   (next) => {
-    const el = root.value
-    if (!el || (next !== 'loading' && cameFrom !== 'loading') || prefersReducedMotion()) return
+    if ((next !== 'loading' && cameFrom !== 'loading') || prefersReducedMotion()) return
     if (next === 'results') {
       arriving.value = true
       clearTimeout(arrivingTimer)
       arrivingTimer = setTimeout(() => (arriving.value = false), durationToken('standard') * 3)
     }
-    const heightAfter = el.offsetHeight
-    gliding?.cancel()
-    if (!heightBefore || heightBefore === heightAfter) return
-    // The loading state opens its room only once it shows itself (see loadingWait).
-    gliding = el.animate(
-      [
-        { height: `${heightBefore}px`, overflow: 'hidden' },
-        { height: `${heightAfter}px`, overflow: 'hidden' },
-      ],
-      {
-        duration: durationToken('standard'),
-        easing: easingToken('standard'),
-        delay: next === 'loading' ? loadingWait.value : 0,
-        fill: 'backwards',
-      },
-    )
+    // The loading state opens its room only once it shows itself (see loadingWait). The palette
+    // measures the new content right after this (its mutation observer) and glides to it.
+    room?.glide(next === 'loading' ? loadingWait.value : 0)
   },
   { flush: 'post' },
 )
@@ -158,7 +126,8 @@ watch(
 </script>
 
 <template>
-  <div ref="root" class="relative flex min-h-0 flex-col" aria-live="polite">
+  <!-- Fills the palette's room, its content at the bottom (usePaletteRoom.ts): an answer never moves what is on screen. -->
+  <div class="relative flex min-h-0 flex-1 flex-col justify-end" aria-live="polite" data-room>
     <p v-if="state === 'idle'" class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="search.empty">
       {{ t('search.empty') }}
     </p>
@@ -171,9 +140,9 @@ watch(
     <ol
       v-if="state === 'results'"
       ref="list"
-      class="list flex flex-col-reverse overflow-y-auto overscroll-contain py-xs transition-opacity duration-(--duration-standard) ease-standard"
+      class="list flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain py-xs transition-opacity duration-(--duration-standard) ease-standard"
       :class="[stale && 'opacity-60', arriving && 'arriving']"
-      :style="listStyle"
+      data-room
       :aria-busy="stale"
       data-no-swipe
       data-testid="search.results"

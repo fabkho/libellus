@@ -38,7 +38,10 @@ test('an error on the device lands in the error log, without the address query',
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)))
   await page.evaluate(() => (window as unknown as { __libellusErrors: { flush(): Promise<void> } }).__libellusErrors.flush())
 
-  await expect.poll(async () => (await rowsOf(member.id)).map((row) => row.kind).sort(), { timeout: 15_000 }).toEqual([...kinds].sort())
+  // Only the kinds this flow triggers: a poor Web Vital the run itself causes may land too (kind 'vitals').
+  await expect
+    .poll(async () => (await rowsOf(member.id)).map((row) => row.kind).filter((kind) => kind !== 'vitals').sort(), { timeout: 15_000 })
+    .toEqual([...kinds].sort())
   const rows = await rowsOf(member.id)
   for (const kind of ['error', 'unhandledrejection', 'vue', 'outbox', 'shelf']) {
     expect(rows.find((row) => row.kind === kind)?.message).toContain(tags[kind])
@@ -46,10 +49,12 @@ test('an error on the device lands in the error log, without the address query',
   // The missing chunk is the browser's own words, whichever way it arrived.
   expect(rows.find((row) => row.kind === 'chunk')?.message).toMatch(/import|module/i)
   for (const row of rows) {
+    // Every row keeps the address query out, a vitals row the run caused (on sign-in, say) included.
+    expect(`${row.message} ${row.stack ?? ''}`).not.toContain('secret')
+    if (row.kind === 'vitals') continue
     expect(row.route).toBe('/library')
     expect(row.online).toBe(true)
     expect(row.app_version).toBeTruthy()
     expect(row.user_agent).toMatch(/Safari|WebKit/)
-    expect(`${row.message} ${row.stack ?? ''}`).not.toContain('secret')
   }
 })

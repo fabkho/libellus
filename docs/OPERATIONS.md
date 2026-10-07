@@ -16,6 +16,7 @@ database's own small log, no third-party service:
 | `chunk` | a chunk of the build that could not be loaded, usually after a deploy (`app:chunkError`, or any error saying so) | the same |
 | `outbox` | a write that waited offline and was refused when it synced: `<action> refused: <code>` | `web/app/stores/sync.ts` |
 | `shelf` | the owner's shelf: the library file could not be fetched or read (`library file unreachable` / `invalid`), or Regal could not show it (`Regal: …`) | `web/app/stores/shelf.ts`, `web/app/components/shelf/` |
+| `vitals` | a Core Web Vital that went badly on a device, with its culprit: `CLS 0.42 on /library`, `INP 410 ms on /book/:key`, `LCP 4.8 s on /` (Web Vitals, below) | `web/app/plugins/vitals.client.ts`, `web/app/data/vitals.ts` |
 
 How it works: `web/app/data/errorLog.ts` keeps a short line of reports on the device (in memory and in
 `localStorage`, so a reload after a missing chunk keeps it), folds the same error into one report with a
@@ -40,6 +41,41 @@ on that row; a member adds at most 30 rows an hour, one signed-out address 10, a
 together 100; the rest is dropped quietly. Members can neither read nor delete the rows (the table is in
 the schema `private`, which the API does not expose). Rows are deleted after 30 days by pg_cron's
 `purge-client-errors` (daily, 03:45 UTC); a member's rows go with her account.
+
+### Web Vitals (`vitals`)
+
+The app measures the three Core Web Vitals on every device with Google's `web-vitals` library (its
+attribution build) and reports a value only when it is **poor**: Cumulative Layout Shift above 0.25,
+Interaction to Next Paint above 300 ms, Largest Contentful Paint above 4 s (`POOR_CLS`, `POOR_INP`,
+`POOR_LCP` in `web/app/data/vitals.ts`). Good and middling values are not sent; Cloudflare Web
+Analytics (the site's RUM) has the distribution of all of them, these rows say *which screen and which
+element*. The library is fetched once the app is idle, in chunks of its own (about 7 kB compressed together), never
+on the way to the first screen; its observers read what the browser buffered, so a shift during the
+start counts too. Where the browser tells soft navigations apart (Chrome 151 and newer) each route the
+member went to is measured on its own, like Cloudflare does; elsewhere a metric covers the page's
+whole life and is reported when it goes to the background.
+
+A row's **message** is the metric, its value and the route's pattern (`/book/:key`, never a Book's id)
+where the culprit happened: the largest shift, the slowest interaction, the largest paint. Each metric
+is reported at most once per navigation. Its **stack** holds the culprit instead of a stack, a line
+each:
+
+- **CLS**: `largest shift:` the element that moved most, `its score:`, `from:` and `to:` its box before
+  and after (x, y, width, height in CSS pixels), `at:` when (ms since the page loaded), `load state:`.
+- **INP**: `target:` the element of the slowest interaction, `type:` pointer or keyboard and its events,
+  how its time divided into `input delay`, `processing` (the event handlers) and `presentation` (until
+  the next frame), the `longest script` that ran meanwhile (its invoker and chunk) and the load state.
+- **LCP**: `element:` the largest element painted, `resource:` what it waited for (the app's own file by
+  its path, anything elsewhere by its host only: a cover's address names its Book), and the four parts
+  of its time (first byte, resource delay, resource load, render delay).
+
+Elements are named by tag, up to four plain class names and the nearest `data-testid` (where the name
+stops: `section[search.overlay]>div.drawn.pointer-events-none.absolute.inset-x-0`), never by their text.
+The error log folds, scrubs, limits and sends these rows like any other; the build is the row's
+`app_version`. A `CLS … on /library` whose `largest shift` is a box of the palette (`search.overlay`)
+was the search palette growing with its results before it kept its room; any other element is a
+screen whose layout changes after its first frame, which is worth a look. `vitals` rows on a dev
+server only print, like every report (above).
 
 ### Reading them
 

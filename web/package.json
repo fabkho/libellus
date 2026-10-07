@@ -31,6 +31,7 @@
     "thumbhash": "^0.1.1",
     "vue": "^3.5.43",
     "vue-router": "^5.3.1",
+    "web-vitals": "^6.2.3",
     "zxing-wasm": "^3.1.4"
   },
   "devDependencies": {

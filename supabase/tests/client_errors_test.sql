@@ -13,7 +13,7 @@
 -- this test made, never about how many rows the table holds.
 
 begin;
-select plan(49);
+select plan(50);
 
 create schema if not exists tests;
 
@@ -89,6 +89,10 @@ select is(public.log_client_error('vue', 'T-ERRLOG boom', 'at f (https://app.tes
 
 select is(public.log_client_error('outbox', 'T-ERRLOG start_reading refused: not_reading'), 'logged',
           'a report without a stack, route or device details is taken');
+
+select is(public.log_client_error('vitals', 'T-ERRLOG CLS 0.42 on /library',
+                                  e'largest shift: section[search.overlay]>div.drawn\nfrom: x 12 y 686 w 388 h 230', '/library'),
+          'logged', 'a poor Web Vital is taken, its culprit where a stack would be');
 
 select throws_ok($$select public.log_client_error('nonsense', 'T-ERRLOG x')$$, '22023', 'kind_invalid',
                  'an unknown kind is refused');
