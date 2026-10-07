@@ -7,7 +7,9 @@ import { readdirSync, readFileSync } from 'node:fs'
  * openlibrary.org from here, so no automated test ever calls the live API.
  * Queries without a recording get an empty answer. A work's editions list
  * (`/works/<key>/editions.json`, issue #41) answers from `editions-<key>.json`,
- * recorded the same day and trimmed to the fields the app reads.
+ * recorded the same day and trimmed to the fields the app reads, a page at a
+ * time as `limit` and `offset` ask (as OpenLibrary does). *I Am Legend*'s 55
+ * editions were recorded on 7 Oct 2026.
  */
 const RECORDED_TERMS: Record<string, string> = { piranesi: 'piranesi', 'klara und die sonne': 'klara' }
 
@@ -24,7 +26,12 @@ function read(name: string): unknown | null {
 /** The recorded answer to a request to OpenLibrary's search API. */
 export function openLibraryAnswer(url: URL): unknown {
   const work = /^\/works\/(OL\d+W)\/editions\.json$/.exec(url.pathname)
-  if (work) return read(`editions-${work[1]}`) ?? { size: 0, entries: [] }
+  if (work) {
+    const all = (read(`editions-${work[1]}`) ?? { size: 0, entries: [] }) as { size: number; entries: unknown[] }
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    const limit = Number(url.searchParams.get('limit') ?? 50)
+    return { ...all, entries: all.entries.slice(offset, offset + limit) }
+  }
   const isbn = url.searchParams.get('isbn')
   const q = (url.searchParams.get('q') ?? '').trim().toLowerCase()
   const edition = /^edition_key:(ol\d+m)$/.exec(q)

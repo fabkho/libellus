@@ -158,8 +158,14 @@ export type OpenLibraryWorkEdition = {
   languages?: { key?: string }[]
 }
 
-/** How many editions of a work are asked for (issue #41); a popular work has hundreds. */
-export const WORK_EDITIONS_LIMIT = 50
+/**
+ * How many editions of a work are asked for in one call (issue #41), and how
+ * many at most over several: a popular work has hundreds, and an edition past
+ * the first page (the owner's 2022 Gollancz *I Am Legend*, 53rd of 55) was
+ * never listed when only the first 50 were asked for.
+ */
+export const WORK_EDITIONS_PAGE = 100
+export const WORK_EDITIONS_LIMIT = 300
 
 /**
  * One edition of a work's editions list as a Book snapshot (issue #41). The
@@ -203,7 +209,7 @@ export type OpenLibrarySource = {
   lookupIsbn: (isbn13: string, signal?: AbortSignal) => Promise<Found[]>
   /** One edition by its key (`OL61022665M`); null when OpenLibrary does not know it. */
   lookupEdition: (editionKey: string, signal?: AbortSignal) => Promise<BookSnapshot | null>
-  /** The editions of a work (`OL45883W`), as many as `WORK_EDITIONS_LIMIT`, with the work's authors (issue #41). */
+  /** The editions of a work (`OL45883W`), page by page up to `WORK_EDITIONS_LIMIT`, with the work's authors (issue #41). */
   workEditions: (work: { key: string; authors: readonly string[] }, signal?: AbortSignal) => Promise<BookSnapshot[]>
 }
 
@@ -232,15 +238,22 @@ export function createOpenLibrary(options: { fetch: FetchLike; languages: readon
     async workEditions(work, signal) {
       const key = bareKey(work.key)
       if (!key) return []
-      const body = (await getJson(
-        options.fetch,
-        `${API}/works/${key}/editions.json?${new URLSearchParams({ limit: String(WORK_EDITIONS_LIMIT) })}`,
-        signal,
-      )) as { entries?: OpenLibraryWorkEdition[] }
-      return (Array.isArray(body.entries) ? body.entries : []).flatMap((edition) => {
-        const book = snapshotFromWorkEdition(edition, { key, authors: work.authors })
-        return book ? [book] : []
-      })
+      const books: BookSnapshot[] = []
+      for (let offset = 0; offset < WORK_EDITIONS_LIMIT; offset += WORK_EDITIONS_PAGE) {
+        const query = new URLSearchParams({ limit: String(WORK_EDITIONS_PAGE), ...(offset ? { offset: String(offset) } : {}) })
+        const body = (await getJson(options.fetch, `${API}/works/${key}/editions.json?${query}`, signal)) as {
+          entries?: OpenLibraryWorkEdition[]
+          size?: number
+        }
+        const entries = Array.isArray(body.entries) ? body.entries : []
+        for (const edition of entries) {
+          const book = snapshotFromWorkEdition(edition, { key, authors: work.authors })
+          if (book) books.push(book)
+        }
+        // The last page: fewer than asked for, or as many as the work has.
+        if (entries.length < WORK_EDITIONS_PAGE || (typeof body.size === 'number' && offset + entries.length >= body.size)) break
+      }
+      return books
     },
   }
 }

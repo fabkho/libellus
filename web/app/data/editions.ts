@@ -3,7 +3,7 @@ import { createApple } from './apple'
 import type { CatalogueSearch } from './catalogueSearch'
 import { abortError, type FetchLike } from './fetching'
 import { editionKeys, normalise } from './merge'
-import { createOpenLibrary } from './openLibrary'
+import { createOpenLibrary, openLibraryLanguage } from './openLibrary'
 
 /**
  * The editions a Library entry can change to (issue #41): the other editions
@@ -43,7 +43,7 @@ export type EditionSourceName = 'catalogue' | 'work' | 'apple' | 'openlibrary'
 export const EDITION_SOURCE_ORDER: readonly EditionSourceName[] = ['catalogue', 'work', 'apple', 'openlibrary']
 
 /** At most this many editions besides the current one. */
-export const EDITIONS_LIMIT = 40
+export const EDITIONS_LIMIT = 60
 
 // --------------------------------------------------------------- languages
 
@@ -198,7 +198,8 @@ function richness(book: Book | BookSnapshot): number {
  * The candidates for an entry's edition change, from each source's answers:
  * the current Book first (marked), then one row per other edition — those
  * with a cover image first (what a member changing edition mostly wants), then
- * those in the current edition's language, then in source order. Candidates
+ * those in the current edition's language (an Apple Book has none: then the
+ * device's, `language`), then in source order. Candidates
  * that would look the same on the sheet (`editionSignature`) are one row, the
  * richest of them, and one that looks like the current edition is no row at
  * all. Manual books (her own, which Catalogue search finds) are never
@@ -208,6 +209,7 @@ function richness(book: Book | BookSnapshot): number {
 export function mergeEditions(
   current: Book,
   answers: Partial<Record<EditionSourceName, readonly (Book | BookSnapshot)[]>>,
+  deviceLanguage: string | null = null,
 ): EditionCandidate[] {
   type Group = { books: (Book | BookSnapshot)[]; keys: Set<string>; rank: number }
   const own: Group = { books: [current], keys: new Set(editionKeys(current)), rank: -1 }
@@ -228,7 +230,7 @@ export function mergeEditions(
     }
   }
 
-  const language = languageCode(current.language)
+  const language = languageCode(current.language) ?? languageCode(deviceLanguage)
   // Rows that look the same are one: the one with most to say, the Catalogue's
   // on a tie, at the earliest rank any of them had.
   const ownSignature = editionSignature(current)
@@ -357,7 +359,7 @@ export function createEditions(options: {
 
     function outcome(): EditionsOutcome {
       const answered = Object.keys(answers).length + failures.size
-      shown = appendEditions(shown, mergeEditions(book, answers))
+      shown = appendEditions(shown, mergeEditions(book, answers, openLibraryLanguage(options.languages)))
       return {
         candidates: shown,
         pending: answered < names.length,
