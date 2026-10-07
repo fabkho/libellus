@@ -101,3 +101,38 @@ for (const [segment, list] of [
     await expect(page.locator('[data-moving]')).toHaveCount(0)
   })
 }
+
+for (const back of ['page Back', 'system Back'] as const) {
+  test(`with Reduce Motion, Back from a Book (${back}) finds the Library where it was left, scrolled to its end right after the screen changed`, async ({ page }) => {
+    // Reduce Motion cut every transition to 1 ms, and gave one to every property of every element
+    // (main.css): the page's height trailed a change of the viewport by a few frames, a Library
+    // scrolled to its end in that moment was taller than it would be, and Back came back short.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    // A tall screen first: the shell is at least as tall as the screen, so the Library is too.
+    await page.setViewportSize({ width: 393, height: 900 })
+    const member = await signedIn(page)
+    await shelve(member.id)
+    await page.getByTestId('shell.tab.library').click()
+    await page.getByTestId('library.segment.want_to_read').click()
+    await expect(page.getByTestId('library.entry')).toHaveCount(3)
+    await untilStill(page)
+
+    // The screen turns short (a rotation), and the member goes straight to the end of the list.
+    await page.setViewportSize({ width: 393, height: 360 })
+    const scrolled = await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight)
+      return window.scrollY
+    })
+    expect(scrolled).toBeGreaterThan(0)
+    // Where it ends is where it stays: nothing was still on its way.
+    await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled)
+
+    await page.getByTestId('library.entry').last().click()
+    await expect(page.getByTestId('book.title')).toBeVisible()
+    if (back === 'page Back') await page.getByTestId('book.back').click()
+    else await page.goBack()
+    await expect(page).toHaveURL(/\/library$/)
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrolled)
+  })
+}

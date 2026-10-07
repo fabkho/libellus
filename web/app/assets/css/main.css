@@ -381,3 +381,19 @@ html[data-profile-transition='back']::view-transition-new(*) {
     transition-duration: 1ms !important;
   }
 }
+/* ... and only what has a transition gets the 1 ms one. `transition-property` starts as `all`, so
+   the rule above gave every element a transition of every property: a change of theme then
+   washed down the tree a level a frame (a child's inherited colour starts when its parent's
+   ends), and the page's height trailed a change of the viewport by as many frames. A Library
+   scrolled to its end in that moment was taller than it would be, and Back from a Book came
+   back short of the place. In the base layer, so every transition a component declares (any
+   layer above, its own styles, an inline style) keeps its properties. */
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-property: none;
+    }
+  }
+}
