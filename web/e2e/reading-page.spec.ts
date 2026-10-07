@@ -163,6 +163,9 @@ test.describe('a reading page, signed out', () => {
 test.describe('a cover flies to its Book card and back', () => {
   // The flight is the app's (docs/MOTION.md, Push to a book): every animation it starts can be held still
   // (`__flight.frozen`), and each flight fades the copy of the page it left (`started`).
+  // What moves is the subject here: the config's Reduce Motion cuts the flight to its ends (a cross-fade,
+  // no cover in the air), so these flows run with it off, as the other motion specs do.
+  test.use({ reducedMotion: 'no-preference' })
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       const flight = { frozen: false, started: 0 }
