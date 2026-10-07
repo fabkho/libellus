@@ -22,7 +22,7 @@ const size = computed(() => (props.compact ? 'md' : 'lg'))
 </script>
 
 <template>
-  <ul class="scrollbar-none -mx-screen flex snap-x gap-ms overflow-x-auto px-screen pb-xs" :data-testid="testid">
+  <ul class="scrollbar-none -mx-screen flex snap-x scroll-px-screen gap-ms overflow-x-auto px-screen pb-xs" :data-testid="testid">
     <li v-for="item in items" :key="item.book.id" class="shrink-0 snap-start" :class="compact ? 'w-(--size-cover-md)' : 'w-(--size-cover-lg)'">
       <NuxtLink :to="bookCardPath(token, item.book.id)" class="cover-link flex flex-col gap-xs rounded-cover" :data-testid="`${testid}.book`">
         <UiCover

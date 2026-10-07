@@ -130,6 +130,33 @@ test.describe('a reading page, signed out', () => {
     // Signed out, nothing sent her to sign in.
     await expect(page).toHaveURL(new RegExp(`/r/${renewed}$`))
   })
+
+  test('rows that scroll sideways start inside the page\'s side padding, not flush against the screen edge', async ({ page }) => {
+    const ada = await signUpMember()
+    const library = createLibrary(ada.client)
+    const today = isoDay()
+    for (const title of ['Loved A', 'Loved B', 'Loved C', 'Loved D', 'Loved E', 'Loved F'])
+      await library.addToLibrary(book(title), { status: 'finished', startedOn: today, endedOn: today, rating: 19 })
+    const token = (await createReadingPages(ada.client).setOn(true)).data!.token!
+
+    for (const width of [360, 412]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(`/r/${token}`)
+      for (const row of ['readingPage.favouritesRow', 'readingPage.shelfCovers']) {
+        const list = page.getByTestId(row)
+        await expect(list).toBeVisible()
+        // It does scroll sideways, and it rests at its start with the leading inset (a snap point without scroll-padding scrolled it 20 px in).
+        expect(await list.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true)
+        await expect.poll(() => list.evaluate((el) => el.scrollLeft), { message: `${row} at ${width}` }).toBe(0)
+        const first = await list.locator('li').first().evaluate((el) => el.getBoundingClientRect().left)
+        expect(first, `${row} at ${width}`).toBeGreaterThanOrEqual(16)
+        // The row still runs to the screen's right edge.
+        const box = await list.evaluate((el) => ({ left: el.getBoundingClientRect().left, right: el.getBoundingClientRect().right }))
+        expect(box.left).toBe(0)
+        expect(box.right).toBe(width)
+      }
+    }
+  })
 })
 
 test.describe('her side', () => {
