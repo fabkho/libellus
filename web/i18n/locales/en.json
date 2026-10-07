@@ -1041,6 +1041,37 @@
       "unknown": "Your links could not be saved. Try again."
     }
   },
+  "waitlist": {
+    "row": "Waitlist",
+    "rowNone": "Nobody",
+    "rowValue": "{count} waiting",
+    "title": "Waitlist",
+    "back": "Back",
+    "intro": "People who asked for an invite on a reading page. Nothing is sent from here: copy the addresses, invite them yourself and mark them. Only you can see this.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "summary": "{waiting} waiting · {invited} invited",
+    "copy": "Copy waiting emails",
+    "copied": "Copied",
+    "fromMember": "from {name}’s page",
+    "fromPage": "from a reading page",
+    "markInvited": "Mark invited",
+    "invitedDone": "Invited",
+    "delete": "Delete {email}",
+    "confirm": {
+      "title": "Delete {email}?",
+      "text": "The address is removed from the list for good. Use this when someone asks to be forgotten.",
+      "action": "Delete"
+    },
+    "empty": {
+      "title": "Nobody on the list",
+      "text": "When someone asks for an invite on a reading page, their address shows here."
+    },
+    "loadError": "The waitlist could not be loaded.",
+    "writeError": "That could not be saved. Try again.",
+    "offline": "You’re offline. This works once you’re back.",
+    "retry": "Try again"
+  },
   "ownerErrors": {
     "row": "Errors",
     "rowNone": "None",
