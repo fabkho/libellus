@@ -6,7 +6,7 @@ import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { expectAccessible, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
+import { expectAccessible, openProfile, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
 
 /**
  * Accessibility (docs/ACCESSIBILITY.md): axe-core over every main screen and
@@ -255,8 +255,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     test('the Profile, its sheets and a year in review', async ({ page }) => {
       const member = await signedIn(page)
       await seed(page, member.client)
-      await page.getByTestId('shell.avatar').click()
-      await expect(page.getByTestId('profile.title')).toBeVisible()
+      // Until the reading record is in and has come to rest: its figures and lines fade in over `standard`
+      // (`arrive`), and a scan that starts before them reads colours half way (#7c7872 for inkFaint).
+      await openProfile(page)
       await expect(page.getByTestId('profile.figures')).toBeVisible()
       await expectAccessible(page, 'the Profile')
       await openSheet(page, 'profile.stars.4', 'profileReads')
@@ -281,6 +282,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await closeSheet(page, 'photo')
       await page.goto('/profile/2025')
       await expect(page.getByTestId('yearInReview.title')).toHaveText('2025')
+      // Her favourite is the record's: in once the year has arrived, and the page has come to rest.
+      await expect(page.getByTestId('yearInReview.favouriteTitle')).toBeVisible()
       await expectAccessible(page, 'a year in review')
     })
 

@@ -66,6 +66,11 @@ Back close it. The scrim is `aria-hidden` (Cancel is the named way out). A contr
 another (Update → Undo → Finish on Home's card) is one element, so focus survives the change. Focus
 is always visible: `:focus-visible` draws a 2 px `accentInk` outline. The tab bar that steps away on
 scroll comes back as soon as focus enters it (#125).
+A sheet whose body is only text (What's new) makes that text one Tab stop (`tabindex="0"`, a named
+`region`): once it outgrows the sheet it scrolls, and a scroll region the keyboard cannot reach is axe's
+`scrollable-region-focusable`. Whatever fades in over `standard` carries `data-moving` while it does
+(sheets, `UiReveal`, the Profile's page under its hero), so a flow waits for it (`untilStill`) and a
+scan never reads half-faded colours.
 
 **Contrast.** Every text token reaches 4.5:1 on every surface (`surface`, `surfaceRaised`,
 `surfaceSheet`) and on a `fill` over it, in light, dark and the reader's sepia room:
