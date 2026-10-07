@@ -106,6 +106,7 @@ async function unlink() {
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
       />
+      <BookReadAs v-if="entry" :entry="entry" testid="bookOptions.readAs" class="mb-md" />
       <UiRowGroup>
         <UiRow
           as="button"

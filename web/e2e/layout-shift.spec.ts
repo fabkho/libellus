@@ -143,6 +143,66 @@ test('the Library opens in place: a reload and a return from a book shift nothin
   expect(await page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(600)
 })
 
+test('the Library with filters and a sort set opens in place, and setting them shifts nothing', async ({ page }) => {
+  await recordShifts(page)
+  const member = await signedIn(page)
+  await shelve(member.id)
+  // Half of what she wants to read is an ebook: a filter with something to leave out.
+  await sql(
+    `update public.library_entries set read_as = 'ebook'
+      where id in (select id from public.library_entries where member_id = $1 and status = 'want_to_read' order by added_at desc limit 15)`,
+    [member.id],
+  )
+  await page.getByTestId('shell.tab.library').click()
+  await expect(page.getByTestId('library.entry')).toHaveCount(30)
+  await untilStill(page)
+  await slowCpu(page)
+  await takeCls(page)
+
+  // Setting a filter and a sort: her taps explain what moves, and nothing else moves.
+  await page.getByTestId('library.view.filter').click()
+  await page.getByTestId('libraryFilter.readAs.ebook').click()
+  await page.getByTestId('libraryFilter.action').click()
+  await untilStill(page)
+  await expect(page.getByTestId('library.entry')).toHaveCount(15)
+  await page.getByTestId('library.segment.finished').click()
+  await untilStill(page)
+  await page.getByTestId('library.view.filter').click()
+  await page.getByTestId('libraryFilter.year').filter({ hasText: '2026' }).click()
+  await page.getByTestId('libraryFilter.action').click()
+  await untilStill(page)
+  await page.getByTestId('library.view.sort').click()
+  await page.getByTestId('librarySort.title').click()
+  await untilStill(page)
+  await page.waitForTimeout(800)
+  expect(await takeCls(page)).toBeLessThan(STABLE)
+
+  // A reload: the device remembers both, so the first frame is the filtered, sorted Library.
+  await page.reload()
+  await expect(page.getByTestId('library.entry')).toHaveCount(15)
+  await expect(page.getByTestId('library.view.chip')).toHaveCount(1)
+  await untilStill(page)
+  await page.waitForTimeout(1500)
+  expect(await takeCls(page)).toBeLessThan(STABLE)
+
+  // Finished, filtered and sorted; into a book and back with the system Back: nothing moves on its own.
+  await page.getByTestId('library.segment.finished').click()
+  await untilStill(page)
+  await expect(page.getByTestId('library.view.chip')).toHaveCount(1)
+  await page.waitForTimeout(800)
+  await takeCls(page)
+  await page.getByTestId('library.entry').nth(3).click()
+  await expect(page.getByTestId('book.hero')).toBeVisible()
+  await untilStill(page)
+  await page.waitForTimeout(800)
+  await takeCls(page)
+  await page.goBack()
+  await expect(page.getByTestId('library.title')).toBeVisible()
+  await untilStill(page)
+  await page.waitForTimeout(1500)
+  expect(await takeCls(page)).toBeLessThan(STABLE)
+})
+
 test('search over the Library: answers that arrive grow the palette without shifting it', async ({ page }) => {
   // Apple answers a little later, as over a phone's connection: well after the last keystroke, where
   // nothing excuses a shift. The Catalogue (shared by every run on this stack) and OpenLibrary find

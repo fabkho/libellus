@@ -23,6 +23,8 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 - **Abandoned** (DNF) — a session that ended without finishing. Shown under a *Not finished* filter,
   not a Status of its own.
 - **Read again** — starting a new Reading session on a *Finished* entry; earlier sessions are kept.
+- **Read as** — how a Member read a Library entry: *physical*, *ebook* or *audiobook* (or not said).
+  Hers, not the edition's; where she has not said, the edition's format is the default.
 - **Rating** — quarter stars from 0.25 to 5, per finished session. Optional.
 - **Review** — optional text on a closed session.
 - **Collection** — a Member's custom shelf. Non-exclusive: an entry can be in any number of

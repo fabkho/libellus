@@ -225,6 +225,8 @@ function back() {
       <p v-else class="mt-ms mb-md text-center text-caption text-ink-faint" data-testid="book.notInLibrary">
         {{ t('book.notInLibrary') }}
       </p>
+      <!-- How she read it (#169): hers, not the edition's. -->
+      <BookReadAs v-if="entry" :entry="entry" testid="book.readAs" class="mb-md" />
 
       <BookProgress v-if="entry?.status === 'reading'" :entry="entry" />
 

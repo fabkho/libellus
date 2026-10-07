@@ -61,6 +61,8 @@ custom shelves.
   the shared Book).
   Unique per member and book. `status` is a stored column for filtering and sorting, but derived:
   triggers recompute it from the entry's sessions and overwrite anything written into it.
+  `read_as` (`physical` | `ebook` | `audiobook`, null = not said; #169) is how the member read it:
+  hers, not the edition's, written only through `set_read_as`, kept across every read of the entry.
 - **reading_sessions** (`supabase/migrations/20261003102707_reading_sessions.sql`) — entry (deleted
   with it), `started_on` and `ended_on` (calendar days, `date`, no time zone), `outcome`
   (`finished` | `abandoned`, null while the session is open), `rating` (smallint quarters 1–20,
@@ -180,6 +182,15 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
   one row showing the member's own edition, else the Catalogue's, else the device language's; ranked
   by how well the query matches title and author, then popularity. A specific edition is one ISBN
   search away.
+- **Library filters and sort are the client's** (owner, #166/#169): the lists are loaded anyway, so
+  filtering (Read as, author, rating, year read, page range; genre once #168 has genres) and sorting
+  (date read or started, date added, rating, title, author, pages) are pure functions over them
+  (`data/libraryView.ts`), each Status list with its own choice, remembered per member on the device
+  (outside the `libellus.` prefix signing out clears, like the import hint). Genre is a pluggable
+  facet that stays hidden until the store has a genre lookup.
+- **"Read as" is the member's own word, not the edition's** (owner, #166): picking an ebook edition
+  for its cover must not claim she read an ebook. The edition's format is only the default for an
+  unset entry (`readAsOf`), never stored on her behalf.
 - **Fable is imported once** by a local script, then dropped.
 - **Ebook files are copied, never uploaded** (owner, #131, after the phase 0 spike): each linked EPUB
   is copied into the origin private file system, so reading it needs no permission and works offline;

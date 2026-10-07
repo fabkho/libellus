@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookFormat, BookSnapshot } from './books'
+import type { ReadAs } from './readAs'
 import { ratingFromRow, type GoodreadsRow } from './goodreads'
 import { NO_PROGRESS, type ProgressValue } from './progress'
 import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
@@ -61,6 +62,12 @@ export type LibraryEntry = {
    * counts). Absent on a copy from before it existed.
    */
   formatOverride?: BookFormat | null
+  /**
+   * How the member read it (issue #169): physical, ebook or audiobook, null = not said
+   * (`readAsOf` in `readAs.ts` gives the one that counts: the edition's format is the
+   * default). Absent on a copy from before it existed.
+   */
+  readAs?: ReadAs | null
   latestSession: ReadingSession | null
 }
 
@@ -100,6 +107,8 @@ export type LibraryErrorCode =
   | 'reason_too_long'
   /** Read again: the entry has no read yet; its first read is Start reading. */
   | 'never_read'
+  /** Read as: a word other than physical, ebook or audiobook. */
+  | 'read_as_invalid'
   /** Edit or delete a read: no such read in the member's Library (gone, or never theirs). */
   | 'session_not_found'
   | 'not_signed_in'
@@ -126,6 +135,7 @@ const RAISED_CODES = [
   'review_too_long',
   'reason_too_long',
   'never_read',
+  'read_as_invalid',
   'session_not_found',
   'not_signed_in',
 ] as const satisfies readonly LibraryErrorCode[]
@@ -352,12 +362,14 @@ export type EntryRow = {
   added_at: string
   page_count_override: number | null
   format_override?: BookFormat | null
+  /** Absent on a row from before Read as existed (a cached Library). */
+  read_as?: ReadAs | null
   book: BookRow
   latest: SessionRow | null
 }
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
+export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
 
 export function bookFromRow(row: BookRow): Book {
   return {
@@ -435,6 +447,7 @@ export function entryFromRow(row: EntryRow): LibraryEntry {
     book: bookFromRow(row.book),
     pageCountOverride: row.page_count_override ?? null,
     formatOverride: row.format_override ?? null,
+    readAs: row.read_as ?? null,
     latestSession: row.latest ? sessionFromRow(row.latest) : null,
   }
 }
@@ -587,6 +600,12 @@ export type Library = {
    * returns it to Want to read. Returns the entry as it is now.
    */
   deleteSession: (entryId: string, sessionId: string) => Promise<Result<LibraryEntry>>
+  /**
+   * Sets how the member read the entry (issue #169): physical, ebook or audiobook; null takes
+   * her word back (the edition's format is the default again, `readAsOf`). Needs the
+   * connection, like Change edition. Returns the entry. Refused with `read_as_invalid`.
+   */
+  setReadAs: (entryId: string, readAs: ReadAs | null) => Promise<Result<LibraryEntry>>
   /**
    * Removes the entry from the Library with its reads and its places on
    * Collections (the Collections and the Book stay).
@@ -864,6 +883,14 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       const deleted = await client.rpc('delete_session', { p_session_id: sessionId })
       if (isNoAnswer(deleted)) return OFFLINE
       if (deleted.error) return { data: null, error: mapLibraryError(deleted.error) }
+      return reread(entryId)
+    },
+
+    async setReadAs(entryId, readAs) {
+      if (!online()) return OFFLINE
+      const set = await client.rpc('set_read_as', { p_entry_id: entryId, p_read_as: readAs })
+      if (isNoAnswer(set)) return OFFLINE
+      if (set.error) return { data: null, error: mapLibraryError(set.error) }
       return reread(entryId)
     },
 
