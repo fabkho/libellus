@@ -73,6 +73,9 @@ const finishedAny = computed(() => all.value.books > 0)
 // whole, in its final shape, and fades in.
 const loading = computed(() => !stats.record && !stats.loadError)
 const undecided = computed(() => loading.value && !library.loaded)
+// The page fading in carries `data-moving` while it does, like a sheet rising and UiReveal: a flow waits for
+// it (`untilStill`) and an accessibility scan never reads its colours half way.
+const arriving = ref(false)
 const libraryEmpty = computed(() => library.loaded && library.finished.length === 0)
 const placeholders = computed(() => loading.value && !libraryEmpty.value)
 // The empty state: the record's answer once it is in, until then (or offline, when it cannot
@@ -141,8 +144,8 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
     <ProfileHero @photo="photo?.start()" :since="since" :read="booksRead" :reading="stats.record?.reading ?? 0" :want="stats.record?.wantToRead ?? 0" :loading="loading" :expect-since="placeholders" />
 
     <!-- No gaps between the blocks: each carries the space after it inside its room, so a block that closes takes its space along. -->
-    <Transition name="decided">
-      <div v-if="!undecided" class="relative flex flex-col px-screen pt-xl">
+    <Transition name="decided" @before-enter="arriving = true" @after-enter="arriving = false" @enter-cancelled="arriving = false">
+      <div v-if="!undecided" class="relative flex flex-col px-screen pt-xl" :data-moving="arriving || undefined">
         <UiReveal :show="placeholders || hasStats">
           <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
             <div class="flex flex-col gap-md">

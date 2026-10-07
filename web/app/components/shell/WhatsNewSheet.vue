@@ -9,7 +9,10 @@ const { notes, minor, open } = useWhatsNew()
 
 <template>
   <UiSheet v-model:open="open" :title="t('whatsNew.title', { version: minor })" :action="t('whatsNew.done')" testid="whatsNew" @action="open = false">
-    <div class="pb-lg">
+    <!-- Plain text with nothing to press: once the release's notes outgrow the sheet, its body scrolls, and
+         a scroll region a keyboard cannot reach is an axe `scrollable-region-focusable` violation. A Tab
+         stop in the text lets the arrow keys scroll it. -->
+    <div class="pb-lg" role="region" tabindex="0" :aria-label="t('whatsNew.title', { version: minor })" data-testid="whatsNew.notes">
       <p class="figures px-xs text-caption text-ink-faint" data-testid="whatsNew.version">{{ t('whatsNew.version', { version: notes.version }) }}</p>
       <section v-for="section in notes.sections" :key="section.kind" class="mt-ml" :data-testid="`whatsNew.section.${section.kind}`">
         <h3 class="eyebrow mb-sm px-xs">{{ t(`whatsNew.section.${section.kind}`) }}</h3>
