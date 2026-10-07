@@ -6,8 +6,10 @@ import { createAuth } from '../app/data/auth'
 import { createLibrary } from '../app/data/library'
 import { createReadingPages } from '../app/data/readingPage'
 import { isoDay } from '../app/utils/dates'
+import { appleCover } from '../tests/support/apple'
 import { signUpMember } from '../tests/support/member'
-import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { createWaitlist } from '../app/data/waitlist'
+import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId, uniqueEmail, visitorAddress, visitorClient } from '../tests/support/stack'
 import { test } from './fixtures'
 import { SHELF_LIBRARY_SRC, shelfOwner } from './shelfOwner'
 import { expectAccessible, expectNoSideScroll, signedIn, untilStill } from './support'
@@ -72,7 +74,7 @@ async function expectAccessibleBoth(page: Page, where: string) {
 }
 
 test.describe('a reading page, signed out', () => {
-  test('shows what she turned on, opens a Book card, and asks her for an invite', async ({ page }) => {
+  test('shows what she turned on and opens a Book card', async ({ page }) => {
     const { token, reading, loved, fine } = await adaWithAPage()
     await page.goto(`/r/${token}`)
 
@@ -92,10 +94,9 @@ test.describe('a reading page, signed out', () => {
     await expectNoSideScroll(page, 'reading page')
     await expectAccessibleBoth(page, 'reading page')
 
-    // The footer: no form, no address; how to get in.
-    await expect(page.getByTestId('readingPage.inviteText')).toBeHidden()
-    await page.getByTestId('readingPage.invite').click()
-    await expect(page.getByTestId('readingPage.inviteText')).toContainText(fill(en.readingPage.footer.inviteText, { name: 'Ada' }))
+    // The footer: the waitlist form, and a way in for whoever has a code.
+    await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
+    await expect(page.getByTestId('readingPage.signUp')).toHaveText(en.readingPage.footer.signUp)
 
     await page.getByTestId('readingPage.finishedBook').filter({ hasText: loved.book.title }).click()
     await expect(page).toHaveURL(new RegExp(`/r/${token}/book/${loved.book.id}$`))
@@ -129,6 +130,275 @@ test.describe('a reading page, signed out', () => {
     await expect(page.getByTestId('readingPage.missing')).toBeVisible()
     // Signed out, nothing sent her to sign in.
     await expect(page).toHaveURL(new RegExp(`/r/${renewed}$`))
+  })
+
+  test('rows that scroll sideways start inside the page\'s side padding, not flush against the screen edge', async ({ page }) => {
+    const ada = await signUpMember()
+    const library = createLibrary(ada.client)
+    const today = isoDay()
+    for (const title of ['Loved A', 'Loved B', 'Loved C', 'Loved D', 'Loved E', 'Loved F'])
+      await library.addToLibrary(book(title), { status: 'finished', startedOn: today, endedOn: today, rating: 19 })
+    const token = (await createReadingPages(ada.client).setOn(true)).data!.token!
+
+    for (const width of [360, 412]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(`/r/${token}`)
+      for (const row of ['readingPage.favouritesRow', 'readingPage.shelfCovers']) {
+        const list = page.getByTestId(row)
+        await expect(list).toBeVisible()
+        // It does scroll sideways, and it rests at its start with the leading inset (a snap point without scroll-padding scrolled it 20 px in).
+        expect(await list.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true)
+        await expect.poll(() => list.evaluate((el) => el.scrollLeft), { message: `${row} at ${width}` }).toBe(0)
+        const first = await list.locator('li').first().evaluate((el) => el.getBoundingClientRect().left)
+        expect(first, `${row} at ${width}`).toBeGreaterThanOrEqual(16)
+        // The row still runs to the screen's right edge.
+        const box = await list.evaluate((el) => ({ left: el.getBoundingClientRect().left, right: el.getBoundingClientRect().right }))
+        expect(box.left).toBe(0)
+        expect(box.right).toBe(width)
+      }
+    }
+  })
+})
+
+test.describe('a cover flies to its Book card and back', () => {
+  // The flight is the app's (docs/MOTION.md, Push to a book): every animation it starts can be held still
+  // (`__flight.frozen`), and each flight fades the copy of the page it left (`started`).
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const flight = { frozen: false, started: 0 }
+      Object.assign(window, { __flight: flight })
+      const animate = Element.prototype.animate
+      Element.prototype.animate = function (this: Element, ...args: Parameters<Element['animate']>) {
+        const animation = animate.apply(this, args)
+        if (flight.frozen) animation.pause()
+        if (this.parentElement?.dataset.testid === 'shell.flightPage') flight.started++
+        return animation
+      }
+    })
+    await page.route(/^https:\/\/is\d-ssl\.mzstatic\.com\//, (route) =>
+      route.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' }, body: appleCover() }),
+    )
+  })
+
+  type Flight = { frozen: boolean; started: number }
+  const started = (page: Page) => page.evaluate(() => (window as unknown as { __flight: Flight }).__flight.started)
+  const freeze = (page: Page) => page.evaluate(() => ((window as unknown as { __flight: Flight }).__flight.frozen = true))
+  const freezeAt = (page: Page, ms: number) =>
+    page.evaluate((at) => {
+      for (const animation of document.getAnimations())
+        if (!(animation instanceof CSSTransition) && !(animation instanceof CSSAnimation)) animation.currentTime = at
+    }, ms)
+  const thaw = (page: Page) =>
+    page.evaluate(() => {
+      ;(window as unknown as { __flight: Flight }).__flight.frozen = false
+      for (const animation of document.getAnimations()) if (animation.playState === 'paused') animation.play()
+    })
+  /** The `count`th flight has started and is over: nothing in its layers, no cover left hidden, nothing animating on the page. */
+  async function expectLanded(page: Page, count: number) {
+    await expect.poll(() => started(page)).toBe(count)
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
+    await expect(page.locator('[data-flight-hidden]')).toHaveCount(0)
+    await expect(page.locator('[data-moving]')).toHaveCount(0)
+    await expect(page.getByTestId('shell.flightPage')).toBeEmpty()
+    expect(
+      await page.evaluate(() =>
+        document
+          .querySelector('main')!
+          .getAnimations()
+          .map((a) => `${a.constructor.name} ${a.playState} ${(a as CSSTransition).transitionProperty ?? ''}`),
+      ),
+    ).toEqual([])
+  }
+
+  async function adaWithCovers() {
+    const ada = await signUpMember()
+    await createAuth(ada.client).setName('Ada')
+    const library = createLibrary(ada.client)
+    const today = isoDay()
+    for (const title of ['Flown A', 'Flown B', 'Flown C', 'Flown D', 'Flown E', 'Flown F']) {
+      const snapshot = { ...book(title), coverUrl: `https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/t5/flight/${title.replace(/ /g, '')}.jpg/600x900bb.jpg` }
+      await library.addToLibrary(snapshot, { status: 'finished', startedOn: today, endedOn: today, rating: 19 })
+    }
+    return (await createReadingPages(ada.client).setOn(true)).data!.token!
+  }
+
+  test('the tapped cover flies into the card\'s hero, Back flies it into its row, and the page is where it was', async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const token = await adaWithCovers()
+    await page.goto(`/r/${token}`)
+    const row = page.getByTestId('readingPage.favouritesRow.book').nth(1)
+    await expect(row).toBeVisible()
+    await page.evaluate(() => window.scrollTo(0, 120))
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(0)
+    const scrolled = await page.evaluate(() => Math.round(window.scrollY))
+    const title = (await row.locator('.book-title').textContent())!
+    const rowCover = (await row.locator('[data-cover]').boundingBox())!
+
+    // Frozen 100 ms into the push: the cover is in the air, on its way from its row to the hero, and it is animating.
+    await freeze(page)
+    await page.mouse.click(rowCover.x + rowCover.width / 2, rowCover.y + rowCover.height / 2)
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+    const flying = page.getByTestId('shell.flightCover')
+    await expect.poll(() => flying.evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0)
+    await freezeAt(page, 100)
+    const hero = (await page.getByTestId('bookCard.hero').locator('[data-cover]').boundingBox())!
+    const mid = (await flying.boundingBox())!
+    expect(mid.width).toBeGreaterThan(rowCover.width)
+    expect(mid.width).toBeLessThan(hero.width)
+    expect(mid.y).toBeLessThan(rowCover.y - 1)
+    expect(mid.y).toBeGreaterThan(hero.y + 1)
+    // The page, copied, fades out as the card fades in: both partly there.
+    const [leaving, arriving] = await page.evaluate(() => [
+      Number(getComputedStyle(document.querySelector('[data-testid="shell.flightPage"]')!.firstElementChild!).opacity),
+      Number(getComputedStyle(document.querySelector('main')!).opacity),
+    ])
+    expect(leaving).toBeGreaterThan(0.05)
+    expect(leaving).toBeLessThan(0.95)
+    expect(arriving).toBeCloseTo(1 - leaving, 2)
+
+    await thaw(page)
+    await expect(page).toHaveURL(new RegExp(`/r/${token}/book/`))
+    await expect(page.getByTestId('bookCard.title')).toHaveText(title)
+    await expectLanded(page, 1)
+    // The hero is the live one; her review is hers until she shares it.
+    await expect(page.getByTestId('bookCard.hero').locator('[data-cover]')).toBeVisible()
+    await expect(page.getByTestId('bookCard.review')).toHaveCount(0)
+    await expectAccessibleBoth(page, 'Book card after the flight')
+
+    // Back (her page's link): the cover flies into its row; the page is as it was.
+    await page.getByTestId('bookCard.page').click()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expectLanded(page, 2)
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(scrolled)
+    expect((await row.locator('[data-cover]').boundingBox())!.y).toBeCloseTo(rowCover.y, 0)
+    await expect(row.locator('[data-cover]')).toBeVisible()
+
+    // The browser's own Back does the same.
+    await row.click()
+    await expect(page.getByTestId('bookCard.title')).toBeVisible()
+    await expectLanded(page, 3)
+    await page.goBack()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expectLanded(page, 4)
+    await expect(row.locator('[data-cover]')).toBeVisible()
+  })
+
+  test('Back tapped mid-flight turns the cover around from where it is; a card opened from a link just goes to the page', async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const token = await adaWithCovers()
+    await page.goto(`/r/${token}`)
+    const row = page.getByTestId('readingPage.favouritesRow.book').nth(2)
+    await expect(row).toBeVisible()
+    const rowCover = (await row.locator('[data-cover]').boundingBox())!
+
+    await freeze(page)
+    await row.click()
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+    await expect.poll(() => page.getByTestId('shell.flightCover').evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0)
+    await freezeAt(page, 100)
+    const mid = (await page.getByTestId('shell.flightCover').boundingBox())!
+    expect(mid.width).toBeGreaterThan(rowCover.width)
+
+    await page.getByTestId('bookCard.page').click()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expect(row.locator('[data-cover][data-flight-hidden]')).toHaveCount(1)
+    const turned = (await page.getByTestId('shell.flightCover').boundingBox())!
+    expect(Math.abs(turned.x - mid.x)).toBeLessThan(1.5)
+    expect(Math.abs(turned.y - mid.y)).toBeLessThan(1.5)
+    expect(Math.abs(turned.width - mid.width)).toBeLessThan(1.5)
+    await thaw(page)
+    await expectLanded(page, 2)
+
+    // Opened from a link, the card has no page behind it: its link goes there like any address, with no flight.
+    const href = await row.getAttribute('href')
+    await page.goto(href!)
+    await expect(page.getByTestId('bookCard.title')).toBeVisible()
+    await page.getByTestId('bookCard.page').click()
+    await expect(page.getByTestId('readingPage.title')).toBeVisible()
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
+  })
+})
+
+test.describe('the waitlist on a reading page, signed out', () => {
+  // The limits count a caller by the address its request came from, and every flow here calls from the same
+  // machine: each flow's browser calls as an address of its own (what Cloudflare would set in front of the API).
+  const visitingAs = async (page: Page, address = visitorAddress()) => {
+    await page.route('**/rest/v1/rpc/join_waitlist', (route) => route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': address } }))
+    return address
+  }
+
+  test('takes an address, thanks the same for it again, refuses what is not one, and keeps no account', async ({ page }) => {
+    const { token, loved } = await adaWithAPage()
+    const address = uniqueEmail('wl-flow')
+    await visitingAs(page)
+    await page.goto(`/r/${token}`)
+    const form = page.getByTestId('readingPage.waitlistForm')
+    await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
+    await expect(page.getByTestId('readingPage.waitlistConsent')).toHaveText(en.readingPage.waitlist.consent)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toHaveText(en.readingPage.waitlist.join)
+    // The honeypot is out of reach for a person.
+    await expect(page.getByTestId('readingPage.waitlistWebsite')).toHaveAttribute('tabindex', '-1')
+
+    // Not an address: said under the field, nothing is sent.
+    await page.getByTestId('readingPage.waitlistEmail').fill('not-an-address')
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistInvalid')).toHaveText(en.readingPage.waitlist.invalid)
+    await expect(page.getByTestId('readingPage.waitlistEmail')).toHaveAttribute('aria-invalid', 'true')
+    expect(await sql('select 1 from private.waitlist where email::text like $1', ['%not-an-address%'])).toHaveLength(0)
+    await expectAccessibleBoth(page, 'waitlist form with an error')
+
+    // An address: "You're on the list", and the form is gone.
+    await page.getByTestId('readingPage.waitlistEmail').fill(` ${address.toUpperCase()} `)
+    await page.getByTestId('readingPage.waitlistEmail').press('Enter')
+    await expect(page.getByTestId('readingPage.waitlistDone')).toContainText(en.readingPage.waitlist.doneTitle)
+    await expect(form).toHaveCount(0)
+    await expectAccessibleBoth(page, 'waitlist, joined')
+    const rows = await sql<{ source: string; consent_text_version: string; invited_at: string | null; member: string | null }>(
+      'select source, consent_text_version, invited_at, source_member_id::text as member from private.waitlist where email::text = $1',
+      [address],
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ source: 'reading_page', invited_at: null })
+    expect(rows[0]!.member).not.toBeNull()
+    // No account was made.
+    expect(await sql('select 1 from auth.users where email = $1', [address])).toHaveLength(0)
+
+    // The same address again, from the Book card's footer: the same thanks, still one entry.
+    await page.goto(`/r/${token}/book/${loved.book.id}`)
+    await page.getByTestId('readingPage.waitlistEmail').fill(address)
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistDone')).toContainText(en.readingPage.waitlist.doneTitle)
+    expect(await sql('select 1 from private.waitlist where email::text = $1', [address])).toHaveLength(1)
+    // Signed out, nothing sent her to sign in.
+    await expect(page).toHaveURL(new RegExp(`/r/${token}/book/`))
+  })
+
+  test('says it when the database refuses (too many tries) and when the device is offline', async ({ page, context }) => {
+    const { token } = await adaWithAPage()
+    // This visitor has already left five addresses in the hour: the sixth, from the page, is refused in words.
+    const address = await visitingAs(page)
+    const earlier = createWaitlist(visitorClient(address))
+    for (let i = 0; i < 5; i++) await earlier.join(uniqueEmail(`wl-earlier${i}`), token)
+    await page.goto(`/r/${token}`)
+    await page.getByTestId('readingPage.waitlistEmail').fill(uniqueEmail('wl-limit'))
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistError')).toHaveText(en.readingPage.waitlist.rateLimited)
+    expect(await sql('select 1 from private.waitlist where email::text like $1', ['wl-limit-%'])).toHaveLength(0)
+    await expectAccessibleBoth(page, 'waitlist form, refused')
+
+    // Offline: the button says so and nothing is sent.
+    await context.setOffline(true)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toContainText(en.common.offline)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toBeDisabled()
+    await context.setOffline(false)
+    await expect(page.getByTestId('readingPage.waitlistJoin')).toHaveText(en.readingPage.waitlist.join)
+
+    // Another visitor, another allowance: this device, as another address, gets in.
+    await page.unroute('**/rest/v1/rpc/join_waitlist')
+    await visitingAs(page)
+    await page.getByTestId('readingPage.waitlistEmail').fill(uniqueEmail('wl-back'))
+    await page.getByTestId('readingPage.waitlistJoin').click()
+    await expect(page.getByTestId('readingPage.waitlistDone')).toBeVisible()
   })
 })
 

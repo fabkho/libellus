@@ -97,7 +97,7 @@ select tests.report((select bo from ids), 'outbox', 'T-OWNERR finish_reading ref
                     'build-2', '/book/x', true, false);
 -- Seen first 20 days ago, again today: old, not new. Another only 20 days ago: out of the week.
 select tests.report((select ada from ids), 'chunk', 'T-OWNERR old friend', interval '20 days', 1, 'build-0', '/', true, true);
-select tests.report((select ada from ids), 'chunk', 'T-OWNERR old friend', interval '1 hour', 1, 'build-2', '/', true, true);
+select tests.report((select ada from ids), 'chunk', 'T-OWNERR old friend', interval '45 minutes', 1, 'build-2', '/', true, true);
 select tests.report((select ada from ids), 'vue', 'T-OWNERR long gone', interval '20 days', 3, 'build-0', '/', true, true);
 
 -- ---------------------------------------------------------------- not the owner

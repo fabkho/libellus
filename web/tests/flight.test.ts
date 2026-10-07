@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AT_BOOK, AT_LIST, isBookPath, lerpBox, onScreen, startAt, transformFrom, valueOf } from '../app/utils/flight'
+import { AT_BOOK, AT_LIST, isBookPath, isCardPath, isFlightPath, lerpBox, onScreen, startAt, transformFrom, valueOf } from '../app/utils/flight'
 import { timeAt } from '../app/utils/motion'
 
 /**
@@ -103,6 +103,19 @@ describe('book pages', () => {
     expect(isBookPath('/library')).toBe(false)
     expect(isBookPath('/book/')).toBe(false)
     expect(isBookPath('/book/a/b')).toBe(false)
+  })
+
+  it('knows a public Book card by its address, which a cover flies to as it does to a book page', () => {
+    expect(isCardPath('/r/Zq1b2c3d4e5f6g7h8i9j0k/book/2f1c6a0e-9b1d-4c55-8f7b-3f1e2d6c9a10')).toBe(true)
+    expect(isCardPath('/r/Zq1b2c3d4e5f6g7h8i9j0k')).toBe(false)
+    expect(isCardPath('/r/Zq1b2c3d4e5f6g7h8i9j0k/book/')).toBe(false)
+    expect(isCardPath('/r/a/book/b/c')).toBe(false)
+    expect(isCardPath('/book/2f1c6a0e')).toBe(false)
+    expect(isBookPath('/r/Zq1b2c3d4e5f6g7h8i9j0k/book/2f1c6a0e')).toBe(false)
+    expect(isFlightPath('/book/apple:123')).toBe(true)
+    expect(isFlightPath('/r/Zq1b2c3d4e5f6g7h8i9j0k/book/2f1c6a0e')).toBe(true)
+    expect(isFlightPath('/r/Zq1b2c3d4e5f6g7h8i9j0k')).toBe(false)
+    expect(isFlightPath('/library')).toBe(false)
   })
 })
 

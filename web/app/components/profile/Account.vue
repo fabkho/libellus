@@ -12,6 +12,8 @@
 // Afterwards she is on Sign in, which says the account was deleted.
 // Errors (the owner's account only, stores/ownerErrors.ts), after Book links: the client error
 // log's page, with how many groups first appeared in the last 24 hours as a badge.
+// Waitlist (the owner's account only, stores/waitlist.ts), after Errors: the people who asked for an invite
+// on a reading page (#171), with how many still wait as its value.
 // Ebooks on this device (#131), where the browser can keep files: one row, Ebooks
 // (how many need her, else how many are linked), leading to the Ebooks page, where
 // the ebook folder is chosen and scanned. The reader's Classic style is set in the
@@ -27,6 +29,7 @@ import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
 import { useOwnerErrorsStore } from '~/stores/ownerErrors'
+import { useWaitlistStore } from '~/stores/waitlist'
 import { useThemeStore } from '~/stores/theme'
 import { GLASS_LEVELS, type GlassLevel } from '~/utils/glass'
 
@@ -48,6 +51,9 @@ onMounted(() => void links.load())
 // Errors (the owner's, and nobody else's: the store neither asks nor shows for another member).
 const errors = useOwnerErrorsStore()
 onMounted(() => void errors.load())
+// Waitlist (#171): the owner's too, with the same guard.
+const waitlist = useWaitlistStore()
+onMounted(() => void waitlist.load())
 // Glass: the owner's, like Errors.
 const glass = useGlassStore()
 const glassLevel = computed({ get: () => glass.level, set: (level: GlassLevel) => glass.set(level) })
@@ -163,6 +169,10 @@ const whatsNew = useWhatsNew()
         >{{ errors.fresh }}</span>
         <span v-else-if="errors.groups?.length" class="figures text-ink-muted" data-testid="profile.errorsValue">{{ errors.groups.length }}</span>
         <span v-else-if="errors.groups" class="text-ink-faint" data-testid="profile.errorsValue">{{ t('ownerErrors.rowNone') }}</span>
+      </UiRow>
+      <UiRow v-if="waitlist.isOwner" to="/profile/waitlist" icon="mail" :label="t('waitlist.row')" chevron data-testid="profile.waitlist">
+        <span v-if="waitlist.waitingCount" class="figures text-ink-muted" data-testid="profile.waitlistValue">{{ t('waitlist.rowValue', { count: waitlist.waitingCount }) }}</span>
+        <span v-else-if="waitlist.waitingCount !== null" class="text-ink-faint" data-testid="profile.waitlistValue">{{ t('waitlist.rowNone') }}</span>
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
       <UiRow v-if="errors.isOwner" icon="stack" :label="t('profile.account.glass')">

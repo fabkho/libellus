@@ -44,7 +44,7 @@ import {
   AT_BOOK,
   AT_LIST,
   boxOf,
-  isBookPath,
+  isFlightPath,
   onScreen,
   startAt,
   transformFrom,
@@ -58,9 +58,10 @@ import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
 import { coverSrc } from '~/utils/cover'
 import { preloadImage } from '~/utils/preload'
 
-/** The part of the shell that is the page: `main`, the tab page's header in it (layouts/tabs.vue). */
+/** The part of the shell that is the page: `main`, the tab page's header in it (layouts/tabs.vue; a public reading page's own, layouts/reading.vue). */
 const PAGE = '[data-flight="page"]'
-const HERO = '[data-testid="book.hero"]'
+/** The hero of a book page or of a public Book card: the cover large, with the content that rises in after it. */
+const HERO = '[data-flight="hero"]'
 /** A cover's sheet (UiCover): the image or cloth, without its glow. */
 const COVER = '[data-cover]'
 /** A cover that is flying: the copy in the air stands in for it. */
@@ -313,7 +314,7 @@ function hide(flight: Flight, cover: HTMLElement | null) {
 export function prepare(link: HTMLElement, to: string) {
   if (!router || !import.meta.client) return
   const path = router.resolve(to).path
-  if (!isBookPath(path) || path === router.currentRoute.value.path) return
+  if (!isFlightPath(path) || path === router.currentRoute.value.path) return
   const image = (link.querySelector(COVER) ?? coverFor(path))?.querySelector<HTMLImageElement>(':scope > img')
   preloadImage(coverSrc(image?.currentSrc || image?.src, 'xl'))
 }
@@ -322,7 +323,7 @@ export function prepare(link: HTMLElement, to: string) {
 export function launch(link: HTMLElement, to: string) {
   if (!layers || !router || !import.meta.client) return
   const path = router.resolve(to).path
-  if (!isBookPath(path) || path === router.currentRoute.value.path) return
+  if (!isFlightPath(path) || path === router.currentRoute.value.path) return
   const reduced = prefersReducedMotion()
   const previous = takeOver(path, 'list')
   const cover = reduced ? null : (link.querySelector<HTMLElement>(COVER) ?? coverFor(path))
@@ -388,7 +389,7 @@ function standAside(snapshot: Snapshot | null, element: Element | null) {
 
 /** Leaving a book page by Back: noticed while the book page is still there. */
 function leaving(to: RouteLocationNormalized, from: RouteLocationNormalized) {
-  if (pending || !isBookPath(from.path) || to.path === from.path) return
+  if (pending || !isFlightPath(from.path) || to.path === from.path) return
   // Only Back reverses the push; a tab or a link from the book page is a new place (no motion).
   if (!isBack(to, from)) return
   const reduced = prefersReducedMotion()

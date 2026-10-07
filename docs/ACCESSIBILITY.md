@@ -20,7 +20,8 @@ How:
 - **axe-core** (WCAG 2.2 A/AA and best practices) through Playwright on every one of those screens
   and sheets, both themes. Now a flow: `web/e2e/a11y.spec.ts` (and the shelf's in
   `web/e2e/shelf.spec.ts`; the public reading page, its Book cards, a dead link, the Share sheet and
-  the Book's Share sheet (#171) in `web/e2e/reading-page.spec.ts`).
+  the Book's Share sheet (#171) in `web/e2e/reading-page.spec.ts`, with the waitlist form in its states; the
+  owner's Waitlist in `web/e2e/owner-errors.spec.ts`).
 - **The accessibility tree**: Playwright's ARIA snapshot of each screen, and on the Android emulator
   (`libellus-pixel`, Chrome) the node tree TalkBack reads (`uiautomator dump` with TalkBack on), through
   the core loop: search → Book → Add → Start → Update progress (the wheel) → Finish with a rating →
@@ -132,7 +133,12 @@ shimmer stops, the tab bar stays.
   browser: one `h1` (her name, or "This page isn't here"), each section a `section` named by its
   `h2`, every cover row a list of links (a cover with its title beside it is decorative; a shelf's
   covers alone carry the title), the month row as labelled figures rather than buttons there is
-  nothing to open, the invite as a disclosure button (`aria-expanded`), the viewer's own theme.
+  nothing to open, the viewer's own theme. Its waitlist form is a `section` named by its `h2` with a
+  real `<label>` on the field (autocomplete `email`, the email keyboard), an address that is not one said
+  under the field (`aria-invalid` and `aria-describedby`), a refusal as `role=alert`, "You're on the list"
+  as a polite status that takes the form's place, and a honeypot field hidden from assistive tech and out
+  of the tab order. The owner's Waitlist page names every trash button with the address it deletes and
+  asks before deleting (`web/e2e/owner-errors.spec.ts`, both themes).
 - **The reader** (#131) is scanned in its three rooms (`e2e/a11y-reader.spec.ts`: the page and its
   chrome, Aa, Contents, search, the selection's bubble, Translate and Define) in the printed style;
   the Classic style's bars and the scroll style's use the same tokens and are not scanned apart.

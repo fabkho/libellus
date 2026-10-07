@@ -83,6 +83,16 @@ custom shelves.
   member; written only by `set_reading_page`, `renew_reading_page_link`, `set_reading_page_sections`,
   `share_book_card`, `unshare_book_card`; read by anyone only through `public_reading_page(token)` and
   `public_book_card(token, book)`, which return the published sections and nothing else.
+- **waitlist** (#171, `private`, no API role can read it) — address (`citext`, unique, trimmed), when
+  she joined, `source` (`reading_page`) and the member whose page it was (found from the token on the
+  server; the token itself is never stored; null once that member's account is gone), the version of the
+  consent wording she saw, `invited_at` and a note; and **waitlist_joins**, the hourly limits (a salted
+  hash of the caller's address and a time, no address, forgotten after a day). Written only by
+  `join_waitlist(email, token, website)` — granted to `anon`: address checked (`email_invalid`), 5 new
+  entries an hour per caller and 100 in all (`rate_limited`), the same address again answers the same,
+  a filled honeypot (`website`) answers the same and stores nothing — and read, marked invited and
+  deleted only through `owner_waitlist`, `owner_waitlist_set_invited`, `owner_waitlist_delete`, which
+  raise `not_owner` for anyone but the member named in `private.instance_owner`.
 - **invite_codes**, **accounts** — as in Trappist.
 
 Rules enforced in the database: status derived from sessions (none → *Want to read*, latest open →
@@ -114,7 +124,9 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
          Profile → Share: her reading page (on/off, its link, its sections); Book → ⋯ → Share: its card
-(public) /r/<token> her reading page · /r/<token>/book/<id> a Book card — anyone with the link, no sign-in
+(public) /r/<token> her reading page · /r/<token>/book/<id> a Book card — anyone with the link, no sign-in;
+         both end in the waitlist form
+         Profile → Account → Waitlist (the owner's account only): who asked for an invite
 (sheets) Add · Finish · Abandon · Manual book · Collection picker · Change edition → My edition isn't listed
          (find her edition by its ISBN in every source, or make her own: a private Manual book with its format)
 ```
@@ -141,6 +153,10 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
   bits, out of search engines (`noindex`), and a new link or turning it off kills every copy at
   once; the page, its cards and their link-preview images are made on demand from the same
   database function, and Cloudflare Web Analytics counts their loads without cookies.
+- The waitlist (#171) keeps only an address a person typed into the form on a reading page, when, the
+  member whose page it was (never the link), the wording she saw and whether she was invited. Nobody
+  but the instance's owner reads it, no e-mail is sent from it, and any entry is deleted on request. The
+  limits that keep bots out count a salted hash of the caller's address for a day, never the address.
 - Ebook files (#131) stay on the device: a linked EPUB is copied into the browser's own storage
   (OPFS) and its link kept in IndexedDB, per member; nothing about them reaches the server, and
   signing out deletes them.
@@ -188,7 +204,8 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
 - **Invite-gated email-code sign-in**, Trappist 1:1. No social.
 - **Sharing is a link, not a network** (owner, #166/#171): one public reading page per member, off by
   default, at an unguessable link she can renew or turn off; Book cards under it; no accounts, likes or
-  follows. A visitor who wants in asks the member for an invite code. The owner's page shows Regal's
+  follows. A visitor who wants in leaves her address on the **waitlist** at the end of the page (no
+  account is made, nothing is mailed; the owner reads the list in the app and invites by hand). The owner's page shows Regal's
   3D shelf from the published library file; anyone else's a row of covers (Regal's assets are made
   for the owner's Library only). Link previews come from Open Graph images rendered by a Supabase edge
   function and cached by the Pages Function in front of `/r/*` (docs/HOSTING.md).

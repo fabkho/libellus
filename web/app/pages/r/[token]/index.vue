@@ -11,11 +11,11 @@
 // made, never was) is "This page isn't here", and the Pages Function in front
 // answers it with a 404 too (web/functions/r/[[path]].js). No sign-in, no tab
 // bar, the viewer's own light or dark (the theme rule: her stored choice, else
-// the device's), out of search engines, and a quiet way to ask for an invite.
+// the device's), out of search engines, and at its end the waitlist form.
 import { yearFigures } from '~/data/readingPage'
 import { useReadingPageStore } from '~/stores/readingPage'
 
-definePageMeta({ screen: 'readingPage' })
+definePageMeta({ layout: 'reading', screen: 'readingPage' })
 
 const { t } = useI18n()
 const route = useRoute()
@@ -56,7 +56,7 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
 </script>
 
 <template>
-  <main class="relative mx-auto min-h-dvh w-full max-w-(--size-max-content) safe-x" data-testid="readingPage">
+  <main class="relative mx-auto min-h-dvh w-full max-w-(--size-max-content) safe-x" data-flight="page" data-testid="readingPage">
     <UiAmbient :colors="light" />
     <div class="screen-inset relative flex min-h-dvh flex-col px-screen">
       <p class="pt-lg font-serif text-callout lowercase italic text-ink-muted">{{ t('app.name') }}</p>
@@ -116,7 +116,7 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
         </div>
       </template>
 
-      <ReadingFooter v-if="store.pageState !== 'loading'" :name="name" class="mt-auto" />
+      <ReadingFooter v-if="store.pageState !== 'loading'" :token="token" class="mt-auto" />
     </div>
   </main>
 </template>

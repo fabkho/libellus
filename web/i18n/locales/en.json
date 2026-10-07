@@ -1041,6 +1041,37 @@
       "unknown": "Your links could not be saved. Try again."
     }
   },
+  "waitlist": {
+    "row": "Waitlist",
+    "rowNone": "Nobody",
+    "rowValue": "{count} waiting",
+    "title": "Waitlist",
+    "back": "Back",
+    "intro": "People who asked for an invite on a reading page. Nothing is sent from here: copy the addresses, invite them yourself and mark them. Only you can see this.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "summary": "{waiting} waiting · {invited} invited",
+    "copy": "Copy waiting emails",
+    "copied": "Copied",
+    "fromMember": "from {name}’s page",
+    "fromPage": "from a reading page",
+    "markInvited": "Mark invited",
+    "invitedDone": "Invited",
+    "delete": "Delete {email}",
+    "confirm": {
+      "title": "Delete {email}?",
+      "text": "The address is removed from the list for good. Use this when someone asks to be forgotten.",
+      "action": "Delete"
+    },
+    "empty": {
+      "title": "Nobody on the list",
+      "text": "When someone asks for an invite on a reading page, their address shows here."
+    },
+    "loadError": "The waitlist could not be loaded.",
+    "writeError": "That could not be saved. Try again.",
+    "offline": "You’re offline. This works once you’re back.",
+    "retry": "Try again"
+  },
   "ownerErrors": {
     "row": "Errors",
     "rowNone": "None",
@@ -1398,10 +1429,23 @@
     "retry": "Try again",
     "footer": {
       "tagline": "Libellus — track what you read",
-      "invite": "Ask for an invite",
-      "inviteText": "Libellus is invite-only. Ask {name} for an invite code, then sign up with it.",
-      "inviteTextNone": "Libellus is invite-only. Ask whoever sent you this link for an invite code, then sign up with it.",
-      "signUp": "Sign up with a code"
+      "signUp": "Have an invite code? Sign up"
+    },
+    "waitlist": {
+      "title": "Want in?",
+      "text": "Libellus is invite-only for now. Leave your email and we’ll send you an invite when there’s room.",
+      "email": "Your email",
+      "placeholder": "you{'@'}example.com",
+      "honeypot": "Leave this field empty",
+      "join": "Join the waitlist",
+      "joining": "Joining…",
+      "retry": "Try again",
+      "consent": "We’ll only use it to send you an invite; ask us to delete it any time.",
+      "invalid": "That doesn’t look like an email address.",
+      "rateLimited": "Too many tries just now. Please try again in a while.",
+      "error": "You could not be added. Try again.",
+      "doneTitle": "You’re on the list",
+      "doneText": "We’ll send an invite to your email when there’s room."
     },
     "card": {
       "back": "{name}’s reading",

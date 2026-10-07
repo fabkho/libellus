@@ -97,6 +97,8 @@ export function uniqueAppleId(): string {
 export async function sweepRun() {
   await removePhotosOf(`u.email like $1`, [runEmailPattern()])
   await sql('delete from auth.users where email like $1', [runEmailPattern()])
+  // Addresses the flows left on the waitlist (#171), and the limits they counted against.
+  await sql('delete from private.waitlist where email::text like $1', [runEmailPattern()])
   await sql(
     `delete from public.books b where b.publisher = $1 and b.title like $2
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
@@ -128,6 +130,7 @@ export async function sweepAbandonedRuns() {
     `delete from auth.users where email like $1 and created_at < now() - interval '1 day'`,
     [`%@${TEST_DOMAIN}`],
   )
+  await sql(`delete from private.waitlist where email::text like $1 and created_at < now() - interval '1 day'`, [`%@${TEST_DOMAIN}`])
   await sql(
     `delete from public.books b where b.publisher = $1 and b.created_at < now() - interval '1 day'
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
@@ -269,6 +272,23 @@ export function memoryStorage(): SessionStorage {
       items.delete(key)
     },
   }
+}
+
+/**
+ * A signed-out visitor at an address of her own. The waitlist limits a caller by the address its request
+ * came from (5 new entries an hour, supabase/migrations/20261011040000_waitlist.sql), and every test here
+ * calls from the same machine, so each one invents an address (`cf-connecting-ip`, the header Cloudflare
+ * sets in front of the real API) and never meets another's allowance.
+ */
+export function visitorAddress(): string {
+  return `visitor-${randomUUID()}`
+}
+
+export function visitorClient(address: string = visitorAddress()): SupabaseClient {
+  return createClient(stack.url, stack.anonKey, {
+    global: { headers: { 'cf-connecting-ip': address } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 }
 
 /** The app's client, configured exactly as the app configures it. */

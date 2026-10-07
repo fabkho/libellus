@@ -24,6 +24,16 @@ export function isBookPath(path: string): boolean {
   return /^\/book\/[^/]+$/.test(path)
 }
 
+/** A public Book card's address (`/r/<token>/book/<id>`, issue #171): a cover flies to its hero as it does to a book page. */
+export function isCardPath(path: string): boolean {
+  return /^\/r\/[^/]+\/book\/[^/]+$/.test(path)
+}
+
+/** Where a cover flies to: a book page or a public Book card. */
+export function isFlightPath(path: string): boolean {
+  return isBookPath(path) || isCardPath(path)
+}
+
 /**
  * The transform (with `transform-origin: 0 0`) that draws an element laid out
  * at `at` over `look` instead: the "invert" of a FLIP. Translate, then scale,

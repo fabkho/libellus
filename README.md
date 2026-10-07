@@ -50,6 +50,9 @@ Libellus runs as one small, invite-only instance for its owner and a few friends
 - **Sharing is opt-in**: a member's reading page is off until she turns it on, shows only the
   sections she picks (never her email, notes, highlights or a review she didn't share), sits at an
   unguessable link out of search engines, and dies at once when she makes a new link or turns it off.
+- **The waitlist is the only address a visitor can leave**: a reading page ends in a small form
+  ("Libellus is invite-only for now"); the address is kept only to send an invite, readable only by the
+  instance's owner and deleted on request. No account is made from the page.
 - **Search stays plain**: the browser asks Apple Books and Open Library directly for the words you
   type, nothing else; the Goodreads rating is looked up by the server, so Goodreads never sees you.
 - An instance may count page loads with a cookieless, identifier-free analytics service (the

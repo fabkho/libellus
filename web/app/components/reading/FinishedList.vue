@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Recently finished on a reading page (issue #171): Library's row (small
 // cover, serif title, author), her Rating and the day she finished, and her
-// review under it where she shared it. Each row opens the Book's card.
+// review under it where she shared it. Each row opens the Book's card, its cover flying there (UiPressLink).
 import { bookCardPath, type PublicReadingPage } from '~/data/readingPage'
 
 defineProps<{ items: NonNullable<PublicReadingPage['finished']>; token: string }>()
@@ -13,7 +13,7 @@ const { formatDay } = useDays()
 <template>
   <ul class="flex flex-col" data-testid="readingPage.finished">
     <li v-for="item in items" :key="item.book.id">
-      <NuxtLink :to="bookCardPath(token, item.book.id)" class="row flex items-start gap-inset py-sm" data-testid="readingPage.finishedBook">
+      <UiPressLink :to="bookCardPath(token, item.book.id)" class="row flex items-start gap-inset py-sm" data-testid="readingPage.finishedBook">
         <UiCover
           decorative
           :title="item.book.title"
@@ -32,7 +32,7 @@ const { formatDay } = useDays()
           </span>
           <span v-if="item.review" class="mt-xs line-clamp-4 text-subhead text-ink-muted" data-testid="readingPage.review">{{ item.review }}</span>
         </span>
-      </NuxtLink>
+      </UiPressLink>
     </li>
   </ul>
 </template>
