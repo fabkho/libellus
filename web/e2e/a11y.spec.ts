@@ -5,6 +5,7 @@ import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { enrichedLibrary, forgetEnriched } from './enriched'
 import { test } from './fixtures'
 import { expectAccessible, openProfile, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
 
@@ -250,6 +251,31 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page, 'a Book not in the Library')
       await openSheet(page, 'book.add', 'add')
       await expectAccessible(page, 'Add')
+    })
+
+    test('an author\'s page, a series and its correction, Home\'s next in series', async ({ page }) => {
+      const member = await signedIn(page)
+      const data = await enrichedLibrary(member.client)
+      try {
+        await page.goto(`/author/${data.authors.pratchett}`)
+        await expect(page.getByTestId('author.name')).toBeVisible()
+        await expectAccessible(page, "an author's page")
+        await page.goto(`/book/${data.entries.feetOfClay.book.id}`)
+        await expect(page.getByTestId('book.series')).toBeVisible()
+        await expectAccessible(page, 'a Book in a series')
+        await openSheet(page, 'book.series', 'series')
+        await expectAccessible(page, 'the series sheet')
+        await page.getByTestId('series.correct').click()
+        await expect(page.getByTestId('seriesEdit')).toBeVisible()
+        await untilStill(page)
+        await expectAccessible(page, 'correcting a series')
+        await closeSheet(page, 'seriesEdit')
+        await page.goto('/')
+        await expect(page.getByTestId('home.nextInSeries')).toBeVisible()
+        await expectAccessible(page, "Home with the next in a series")
+      } finally {
+        await forgetEnriched(data.ids)
+      }
     })
 
     test('the Profile, its sheets and a year in review', async ({ page }) => {
