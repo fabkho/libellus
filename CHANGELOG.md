@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.5.0](https://github.com/fabkho/libellus/compare/v1.4.0...v1.5.0) (2026-10-08)
+
+
+### Features
+
+* **book:** a calmer action area — one action per state, Finish and DNF in Update progress ([db532bb](https://github.com/fabkho/libellus/commit/db532bbd3827f573ec0e931e7cd6b49274087a48))
+* **reader:** say what the Justify switch does ([a91aa02](https://github.com/fabkho/libellus/commit/a91aa021ce7da9f2ac10e9e6ad252b12e74818f5))
+
+
+### Fixes
+
+* **flight:** land on a Book page still loading, fly back into the tapped cover, no flash when turned around ([1af7026](https://github.com/fabkho/libellus/commit/1af702647a164d8958e8e2068f81646dff49d1c8))
+* **tabbar:** do not hide the bar on a page only a little longer than the screen ([9fe6b66](https://github.com/fabkho/libellus/commit/9fe6b667374d96bc64c4421254323ee0932e0375))
+* **tabbar:** keep the bar on a page only a little longer than the screen ([80b2c79](https://github.com/fabkho/libellus/commit/80b2c7911137b4af94a8c4fbbd9eb7f899dcf8af))
+
 ## [1.4.0](https://github.com/fabkho/libellus/compare/v1.3.0...v1.4.0) (2026-10-08)
 
 
