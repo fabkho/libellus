@@ -4,8 +4,10 @@
 // (light, dark, sepia: each swatch drawn in its own room's tokens); the app's
 // two families (Newsreader, Geist); seven sizes; four margins (down to edge to
 // edge, the most text a screen holds at a readable size); four line spacings;
-// then the switches: justify, keep the screen on, and last, quietly, Classic
-// mode (the other style; the Profile has it too). Kept on this device.
+// then the switches: justify (one switch for the even edges and the split
+// words, with a line under it saying which it is now), keep the screen on, and
+// last, quietly, Classic mode (the other style; the Profile has it too). Kept
+// on this device.
 import { FONT_SIZES, LEADINGS, MARGINS, type ReaderSettings, type ReaderTheme } from '~/data/reader/settings'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -127,6 +129,12 @@ function size(step: number) {
 
     <UiRowGroup class="mt-md">
       <UiSwitchRow v-model="settings.justify" :label="t('reader.type.justify')" testid="readerType.justify" />
+    </UiRowGroup>
+    <p class="mt-sm mb-xs px-xs text-caption text-ink-faint" data-testid="readerType.justifyHint">
+      {{ settings.justify ? t('reader.type.justifyOn') : t('reader.type.justifyOff') }}
+    </p>
+
+    <UiRowGroup class="mt-md">
       <UiSwitchRow v-model="settings.keepAwake" :label="t('reader.type.awake')" testid="readerType.awake" />
       <UiSwitchRow v-model="classic" :label="t('reader.type.classic')" testid="readerType.classic" />
     </UiRowGroup>

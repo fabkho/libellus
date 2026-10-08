@@ -106,6 +106,39 @@ test('Aa: Classic mode switches the style and stays; Contents goes to a part', a
   await expect(reader).toHaveAttribute('data-chapter', '2')
 })
 
+test('Aa: Justify says what it does, and sets the text and its hyphenation inside the book', async ({ page }) => {
+  const member = await signedIn(page)
+  const entry = await shelve(member, 'Metamorphosis', 'reading')
+  await withEbook(page, entry)
+
+  const reader = await openReader(page)
+  // What the book's own paragraph is set with, read inside its frame.
+  const setting = async () => {
+    for (const frame of page.frames()) {
+      const p = frame.locator('p', { hasText: 'Gregor Samsa' }).first()
+      if (frame.url().startsWith('blob:') && (await p.count())) {
+        return p.evaluate((el) => {
+          const style = getComputedStyle(el)
+          return { align: style.textAlign, hyphens: style.hyphens }
+        })
+      }
+    }
+    return null
+  }
+  await expect.poll(setting).toEqual({ align: 'justify', hyphens: 'auto' })
+
+  await reader.getByTestId('reader.page').click({ position: { x: 195, y: 400 } })
+  await page.getByTestId('reader.type').click()
+  await expect(page.getByTestId('readerType')).toBeVisible()
+  await expect(page.getByTestId('readerType.justify')).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByTestId('readerType.justifyHint')).toHaveText(en.reader.type.justifyOn)
+
+  await page.getByTestId('readerType.justify').click()
+  await expect(page.getByTestId('readerType.justify')).toHaveAttribute('aria-checked', 'false')
+  await expect(page.getByTestId('readerType.justifyHint')).toHaveText(en.reader.type.justifyOff)
+  await expect.poll(setting).toEqual({ align: 'start', hyphens: 'manual' })
+})
+
 test('A Want to read Book: Read now opens the book and asks to start reading', async ({ page }) => {
   const member = await signedIn(page)
   const entry = await shelve(member, 'Metamorphosis', 'want_to_read')
