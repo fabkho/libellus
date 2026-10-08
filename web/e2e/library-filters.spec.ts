@@ -268,7 +268,7 @@ test('Not finished is a filter of Finished like the others: no row of its own, a
   await expect(page.getByTestId('library.view.count')).toHaveText('4 books')
 })
 
-test('Read as: said on the Book page, in its options and when finishing, and the Library filters by it', async ({ page }) => {
+test('Read as: said in the Book\'s options and when finishing, and the Library filters by it', async ({ page }) => {
   const member = await signedIn(page)
   const today = isoDay()
   await shelve(member.id, [{ title: 'Hyperion', author: 'Dan Simmons', pages: 482, ended: today, rating: null, readAs: null }], 'reading')
@@ -279,16 +279,22 @@ test('Read as: said on the Book page, in its options and when finishing, and the
   await page.getByTestId('library.readingCard').first().click()
   await expect(page.getByTestId('book.title')).toHaveText('Hyperion')
 
+  // The page itself does not carry it; the options sheet does.
+  await expect(page.getByTestId('book.readAs')).toHaveCount(0)
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions')).toBeVisible()
+  await untilStill(page)
+
   // Nothing said: no segment lit. Ebook is hers once tapped, and tapping it again takes it back.
   for (const way of ['physical', 'ebook', 'audiobook'])
-    await expect(page.getByTestId(`book.readAs.${way}`)).toHaveAttribute('aria-checked', 'false')
-  await page.getByTestId('book.readAs.ebook').click()
-  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByTestId(`bookOptions.readAs.${way}`)).toHaveAttribute('aria-checked', 'false')
+  await page.getByTestId('bookOptions.readAs.ebook').click()
+  await expect(page.getByTestId('bookOptions.readAs.ebook')).toHaveAttribute('aria-checked', 'true')
   await expect.poll(readAs).toBe('ebook')
-  await page.getByTestId('book.readAs.audiobook').click()
-  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-checked', 'false')
+  await page.getByTestId('bookOptions.readAs.audiobook').click()
+  await expect(page.getByTestId('bookOptions.readAs.ebook')).toHaveAttribute('aria-checked', 'false')
   await expect.poll(readAs).toBe('audiobook')
-  await page.getByTestId('book.readAs.audiobook').click()
+  await page.getByTestId('bookOptions.readAs.audiobook').click()
   await expect.poll(readAs).toBeNull()
 
   // One row of segments, a radio group: the arrow keys move the choice and set it. The row is
@@ -297,21 +303,16 @@ test('Read as: said on the Book page, in its options and when finishing, and the
   // control, not for `focus()` — a `focus()` into that row lands on nothing, so the key goes to
   // the page and nothing is chosen. The database answers before the app has taken the answer in
   // (the poll above watches the row, not the app), so wait for the row to be live again.
-  await expect(page.getByTestId('book.readAs.physical')).toBeEnabled()
-  await page.getByTestId('book.readAs.physical').focus()
+  await expect(page.getByTestId('bookOptions.readAs.physical')).toBeEnabled()
+  await page.getByTestId('bookOptions.readAs.physical').focus()
   await page.keyboard.press('ArrowRight')
-  await expect(page.getByTestId('book.readAs.ebook')).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByTestId('bookOptions.readAs.ebook')).toHaveAttribute('aria-checked', 'true')
   await expect.poll(readAs).toBe('ebook')
-  await page.getByTestId('book.readAs.ebook').click()
+  await page.getByTestId('bookOptions.readAs.ebook').click()
   await expect.poll(readAs).toBeNull()
 
-  // The options sheet says the same, and sets it too.
-  await page.getByTestId('book.options').click()
-  await expect(page.getByTestId('bookOptions')).toBeVisible()
-  await untilStill(page)
   await page.getByTestId('bookOptions.readAs.physical').click()
   await expect(page.getByTestId('bookOptions.readAs.physical')).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByTestId('book.readAs.physical')).toHaveAttribute('aria-checked', 'true')
   await expect.poll(readAs).toBe('physical')
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('bookOptions')).toBeHidden()
@@ -331,7 +332,11 @@ test('Read as: said on the Book page, in its options and when finishing, and the
   await expect(page.getByTestId('finish')).toBeHidden()
   await expect(page.getByTestId('book.status')).toHaveText(en.status.finished)
   await expect.poll(readAs).toBe('audiobook')
-  await expect(page.getByTestId('book.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
+  await untilStill(page)
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('bookOptions')).toBeHidden()
 
   // The Library's Read as filter finds it.
   await page.getByTestId('shell.tab.library').click()
@@ -347,10 +352,12 @@ test('Read as is the member\'s own, not the edition\'s: a format alone lights no
   await shelve(member.id, FINISHED.slice(3, 4), 'want_to_read')
   await page.getByTestId('shell.tab.library').click()
   await page.getByTestId('library.entry').first().click()
-  await expect(page.getByTestId('book.readAs')).toBeVisible()
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.readAs')).toBeVisible()
+  await untilStill(page)
   await page.context().setOffline(true)
-  await expect(page.getByTestId('book.readAs.offline')).toHaveText(en.readAs.offline)
-  await expect(page.getByTestId('book.readAs.ebook')).toBeDisabled()
+  await expect(page.getByTestId('bookOptions.readAs.offline')).toHaveText(en.readAs.offline)
+  await expect(page.getByTestId('bookOptions.readAs.ebook')).toBeDisabled()
   await page.context().setOffline(false)
-  await expect(page.getByTestId('book.readAs.ebook')).toBeEnabled()
+  await expect(page.getByTestId('bookOptions.readAs.ebook')).toBeEnabled()
 })

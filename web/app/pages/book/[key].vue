@@ -10,7 +10,8 @@
 // ebook file on this device (#131), one quiet line says so (BookEbook); with
 // the copy there, Read now is the lit action on Want to read and Reading (the
 // rest steps back beside it) and opens the built-in reader over the page, its
-// cover flying from this one (components/reader/Reader.vue).
+// cover flying from this one (components/reader/Reader.vue). How she read it
+// (Read as, #169) is set in the options sheet.
 import { formatOf } from '~/data/books'
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
@@ -234,9 +235,6 @@ function back() {
       <p v-else class="mt-ms mb-md text-center text-caption text-ink-faint" data-testid="book.notInLibrary">
         {{ t('book.notInLibrary') }}
       </p>
-      <!-- How she read it (#169): hers, not the edition's. -->
-      <BookReadAs v-if="entry" :entry="entry" testid="book.readAs" class="mb-md" />
-
       <BookProgress v-if="entry?.status === 'reading'" :entry="entry" />
 
       <UiButton v-if="!entry" block :offline="addOffline" data-testid="book.add" @click="library.openAdd(book)">
