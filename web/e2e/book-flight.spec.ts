@@ -15,6 +15,9 @@ import { test } from './fixtures'
  * the flight, the list's small image is never shown blown up, and a cover
  * that lands before the book page's image lands on its colour, where that
  * image then fades in (e2e/book-flight-android.spec.ts has the sharp case).
+ * And what used to go wrong (docs/MOTION.md, What can go wrong): a flight
+ * turned around never shows the live page with its cover beside the flying
+ * one.
  */
 // What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
 test.use({ reducedMotion: 'no-preference' })
@@ -298,4 +301,63 @@ test('the hand-off: never a bare frame, and a cover whose image is late lands on
   await expect(hero.locator(':scope > img')).toHaveCSS('opacity', '1')
   await expect(page.getByTestId('book.hero').locator('.pool')).toHaveCSS('opacity', '0')
   await expect(page.getByTestId('book.hero').locator('.halo')).not.toHaveCSS('opacity', '0')
+})
+
+/**
+ * From now on, every frame: whether a cover flies while a live cover of the Book at `href` shows
+ * on the live page (its row, or on its own page the hero), the two at once; and the widest the
+ * flying cover was.
+ */
+async function watchFrames(page: Page, href: string) {
+  await page.evaluate((href) => {
+    const seen = { doubles: [] as string[], widest: 0, frames: 0 }
+    Object.assign(window, { __seen: seen })
+    const look = () => {
+      seen.frames++
+      const fly = document.querySelector('[data-testid="shell.flightCover"]')
+      const main = document.querySelector('main')!
+      if (fly) {
+        seen.widest = Math.max(seen.widest, fly.getBoundingClientRect().width)
+        const live = [
+          ...main.querySelectorAll(`a[href="${href}"] [data-cover]`),
+          ...(location.pathname === href ? main.querySelectorAll('[data-flight="hero"] [data-cover]') : []),
+        ].filter((cover) => getComputedStyle(cover).visibility !== 'hidden')
+        if (live.length && Number(getComputedStyle(main).opacity) > 0.01)
+          seen.doubles.push(`frame ${seen.frames} on ${location.pathname}: page at ${getComputedStyle(main).opacity}`)
+      }
+      if (seen.frames < 600) requestAnimationFrame(look)
+    }
+    requestAnimationFrame(look)
+  }, href)
+}
+
+const seen = (page: Page) => page.evaluate(() => (window as unknown as { __seen: { doubles: string[]; widest: number } }).__seen)
+
+test('turned around mid-flight, the page in between never shows the live cover beside the flying one', { tag: '@full' }, async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 })
+  const member = await signedIn(page)
+  await shelf(member.id, 6)
+  await page.getByTestId('shell.tab.library').click()
+  const row = page.getByTestId('library.entry').nth(2)
+  await expect(row.locator('[data-cover]')).toBeVisible()
+  await untilStill(page)
+  await watchFrames(page, (await row.getAttribute('href'))!)
+
+  // In, Back while it flies in, and the same Book again while it flies back: each held mid-air.
+  await freeze(page)
+  await row.click()
+  await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+  await freezeAt(page, 100)
+  await page.getByTestId('book.back').click()
+  await expect(page.getByTestId('library.title')).toBeVisible()
+  await expect(row.locator('[data-cover][data-flight-hidden]')).toHaveCount(1)
+  await freezeAt(page, 80)
+  await row.click()
+  await expect(page.getByTestId('book.title')).toBeVisible()
+  await expect(page.getByTestId('book.hero').locator('[data-cover][data-flight-hidden]')).toHaveCount(1)
+  await thaw(page)
+  await expectLanded(page, 3)
+  // While the router drew each new page and before its flight took over, the page stood in its
+  // copy (the pose), at the strength the flight showed it: never the live page with the cover on it.
+  expect((await seen(page)).doubles).toEqual([])
 })

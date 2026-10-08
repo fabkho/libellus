@@ -355,14 +355,27 @@ export function launch(link: HTMLElement, to: string) {
  * and the live page under it is hidden. The router draws the new page and only
  * then resolves its scroll, a frame or more later on a slow device; without
  * this that frame shows the new page bare, before the flight is in place.
- * A flight turned around needs none: the one it takes over holds the screen.
+ * A flight turned around poses too, the copy at the strength the screen shows
+ * that page (the one being turned around holds the rest of the screen, paused):
+ * else the live page, which the router has already swapped, would show for
+ * those frames at the strength the other page had, its own cover on it beside
+ * the one in the air.
  */
 function pose(departure: Departure) {
   unpose()
-  if (!layers || departure.previous) return
+  if (!layers) return
   document.documentElement.setAttribute(POSE, '')
   const snapshot = departure.snapshot
-  if (snapshot) attach(snapshot)
+  if (snapshot) {
+    attach(snapshot)
+    if (departure.previous) {
+      const { book, list } = departure.from
+      // The channels' keyframes (`push`, `pop`): the list's copy fades out with the list, the book page's in with the book page.
+      snapshot.root.style.opacity = String(departure.towards === 'book' ? 1 - list : book)
+      const sunk = rise() * (1 - book)
+      for (const sink of departure.sinks) if (sink instanceof HTMLElement) sink.style.transform = `translateY(${sunk}px)`
+    }
+  }
   posed = { root: snapshot?.root ?? null, timer: window.setTimeout(unpose, POSE_LIMIT_MS) }
 }
 
