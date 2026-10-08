@@ -1,7 +1,8 @@
 # Operations
 
-Looking after the running app: how a release reaches production, what to read where, when something
-went wrong on a member's device, and the nightly backup of the database.
+Looking after the running app: how a release reaches production, who the owner is and what only the
+owner may read, what to read where when something went wrong on a member's device, and the nightly
+backup of the database.
 
 ## Releases
 
@@ -119,6 +120,35 @@ Versioning starts at **1.0.0**: `main` as it was when releases began (`bootstrap
    permission was not on yet, that run failed: re-run it, or wait for the next push to `main`).
    Merging it is the first release through the workflow.
 
+## The owner
+
+One person runs the instance, the owner, and only the owner sees a few screens: today the
+client error log (Profile → Account → Errors, [Client errors](#client-errors)), the waitlist
+(Profile → Account → Waitlist, [Waitlist](#waitlist)) and Your shelf with Regal. No other member may
+read the error log or the waitlist, whatever the app shows: the database refuses them. Nothing is on
+until the owner is named, once, in two places that have to agree:
+
+1. **The database** knows its owner from one row, `private.instance_owner`, empty after the
+   migrations. In the dashboard's SQL editor, once, after the owner has signed in:
+
+   ```sql
+   update private.instance_owner
+      set owner_id = (select id from auth.users where email = '<the owner's address>');
+   ```
+
+   This is what protects the data: `owner_client_errors`, `owner_client_error_detail` and the
+   `owner_waitlist*` functions raise `not_owner` for every other caller, whatever the app shows. It is
+   not `private.shelf_publish.owner_id` (the Regal shelf's publish trigger; the shelf can be off and
+   the owner still named), though on this instance both are the same person.
+2. **The web build** shows the screens to the member whose auth user id is `NUXT_PUBLIC_SHELF_OWNER_ID`
+   (her id: `select id from auth.users where email = '<the owner's address>'`). It is public like all
+   built configuration, so it only decides what is shown; set it on the Pages project, build again, and
+   the Errors row appears on the owner's Profile.
+
+Left empty, nobody is the owner: no row, no page, and the database refuses every call. The same holds
+for a restored project until the first step is done again (it is in the backup with `private`, but check
+that `private.instance_owner` names the right member).
+
 ## Client errors
 
 Server-side errors are in the Supabase dashboard's logs. What goes wrong in the browser is kept in the
@@ -206,7 +236,7 @@ offline. Only the instance's owner has it: the database answers `owner_client_er
 only to the member named in `private.instance_owner` and raises `not_owner` for anyone else, signed-out
 callers cannot call them at all, and the app shows the row and the page only for the member named by
 `NUXT_PUBLIC_SHELF_OWNER_ID` and asks for nothing otherwise. Both have to name the owner: see
-[SETUP.md, The owner](SETUP.md#the-owner). A member who is not the owner has no row, the
+[The owner](#the-owner). A member who is not the owner has no row, the
 address `/profile/errors` is a 404, and a call to the functions is refused. The functions give the 30 days
 the log keeps at most (`p_days`, 1 to 30, the app asks for 7) and at most 200 groups.
 
@@ -262,7 +292,7 @@ only by `join_waitlist` (granted to `anon`: checked, limited to 5 new entries an
 **Profile → Account → Waitlist** shows who waits (newest first, from whose page), **Copy waiting emails**
 puts the addresses still waiting on the clipboard, comma-separated for a Bcc field, **Invite**, **Mark
 invited** and **Delete** (a request to be forgotten) work on one entry. Same owner as for Errors
-([SETUP.md, The owner](SETUP.md#the-owner)).
+([The owner](#the-owner)).
 
 **Invite** (after a Confirm) asks the `waitlist-invite` edge function with the owner's session: the
 database gives the entry a one-use invite code valid 14 days (`owner_waitlist_prepare_invite`; the entry
