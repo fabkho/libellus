@@ -140,6 +140,10 @@ test('Back tapped mid-flight turns the cover around from where it is', { tag: '@
   await shelf(member.id, 6)
   await page.getByTestId('shell.tab.library').click()
   const row = page.getByTestId('library.entry').nth(2)
+  await expect(row).toBeVisible()
+  // The Library at its place first: measured while it still moves there, the row and the scroll are stale.
+  await untilStill(page)
+  const place = await scrollY(page)
   const rowCover = (await row.locator('[data-cover]').boundingBox())!
 
   // Frozen 100 ms into the push: the cover is on its way, between its row and the hero.
@@ -177,7 +181,7 @@ test('Back tapped mid-flight turns the cover around from where it is', { tag: '@
   await thaw(page)
   await expectLanded(page, 2)
   await expect(row.locator('[data-cover]')).toBeVisible()
-  expect(await scrollY(page)).toBe(0)
+  expect(await scrollY(page)).toBe(place)
 })
 
 test('from Home and from search the cover flies too; back to a closed search it cross-fades', { tag: '@full' }, async ({ page }) => {
