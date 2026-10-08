@@ -1,5 +1,5 @@
 // The sign-in code: Supabase's "Magic Link" and "Confirm signup" templates, one body for both
-// (docs/SELF_HOSTING.md, step 1.3). The member types the six digits into the app; there is no link,
+// (docs/SETUP.md, step 1.3). The member types the six digits into the app; there is no link,
 // so there is no {{ .ConfirmationURL }} and no button. The subject, `Your Libellus sign-in code`,
 // lives in config.toml and the dashboard, not here.
 

@@ -25,7 +25,7 @@ name: Release
 # a retry after a failure, or a rollback to an older release (then with
 # `migrations` off: migrations only go forward, see docs/OPERATIONS.md).
 #
-# Never on pull requests, never in a fork: both jobs check the repository.
+# Never on pull requests: both jobs check the repository.
 on:
   push:
     branches: [main]

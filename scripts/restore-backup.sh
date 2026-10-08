@@ -28,7 +28,7 @@
 # on exit. Needs age, and pg_restore and psql of the backup's major version or newer.
 set -euo pipefail
 
-# The owner's hosted project. A self-hoster sets her own.
+# The owner's hosted project. LIBELLUS_PRODUCTION_REF names a different one (after the project was replaced).
 PRODUCTION_REF="${LIBELLUS_PRODUCTION_REF:-ltedflcewdcqtqzcjeyr}"
 
 identity=''

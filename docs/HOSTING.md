@@ -106,7 +106,7 @@ about a hundred milliseconds of CPU: Pages Functions on the Workers free plan ge
 milliseconds per request, while a Supabase edge function may take two seconds. The stack already
 runs Deno edge functions with their Deno tests in CI, and with the image cached at the edge for a
 day the render happens once per link and version. It is deployed by hand like the others:
-`supabase functions deploy reading-page-og` (docs/OPERATIONS.md, docs/SELF_HOSTING.md).
+`supabase functions deploy reading-page-og` (docs/OPERATIONS.md, docs/SETUP.md).
 
 ## Addresses
 

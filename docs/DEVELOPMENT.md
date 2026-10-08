@@ -1,7 +1,7 @@
 # Developing Libellus
 
-How to run, test and change Libellus on your machine. What it is and how to host your own:
-[README](../README.md) and [SELF_HOSTING.md](SELF_HOSTING.md). Rules for code changes:
+How to run, test and change Libellus on your machine. What it is and how the owner's instance is set
+up: [README](../README.md) and [SETUP.md](SETUP.md). Rules for code changes:
 [web/AGENTS.md](../web/AGENTS.md); domain words: [CONTEXT.md](../CONTEXT.md).
 
 ## Running it locally
@@ -184,7 +184,7 @@ scripts/      create-invite-code.sh, the operator's tool for minting invite code
 design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift); emails/ + emails.mjs, the mail shell and
               the generated supabase/templates
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests, edge functions
-docs/         SELF_HOSTING.md, DEVELOPMENT.md (this), TESTING.md, DESIGN.md (design guideline),
+docs/         SETUP.md, DEVELOPMENT.md (this), TESTING.md, DESIGN.md (design guideline),
               MOTION.md (motion), parity.md (per-screen behaviour), covers.md, OWNER.md (the owner's
               instance only), agents/ (how agents use the issue tracker)
 SPEC.md       condensed spec; CONTEXT.md the domain glossary

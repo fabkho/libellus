@@ -5,7 +5,7 @@
 //
 // Same idea as build.mjs: the colours in a mail are never typed by hand. They come from tokens.json
 // through emails/shell.mjs, and the output is committed because Supabase reads it from a path
-// (supabase/config.toml) and the hosted dashboard gets it pasted (docs/SELF_HOSTING.md, step 1.3).
+// (supabase/config.toml) and the hosted dashboard gets it pasted (docs/SETUP.md, step 1.3).
 // A new email: a file in emails/ that exports `output` and `build(kit)`, then list it below. A mail an
 // edge function sends (invite.mjs) says `format = 'module'` and exports `text()` as well: its output is
 // an ES module with `html` and `text` as strings, which the function imports (Deno and Node alike).

@@ -7,8 +7,8 @@ hear back as soon as the owner has looked at it. Please give a fix the time it n
 publish anything.
 
 In scope: this repository's code and its database rules (row-level security, the functions in
-`supabase/migrations/`, the edge functions). A self-hosted instance's own configuration (its Supabase
-project, keys, SMTP, hosting) is its operator's.
+`supabase/migrations/`, the edge functions), and the configuration of the one instance (its Supabase
+project, keys, SMTP, hosting), which the owner runs.
 
 Please don't test against libellus.fabkho.dev or other people's data: a local stack
 (docs/DEVELOPMENT.md) has everything the hosted one has.

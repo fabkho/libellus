@@ -12,8 +12,8 @@ name: Database backup
 # runner's temp folder, removed at the end), nothing is uploaded as an artifact, and the
 # parts of the connection string are masked before anything connects.
 #
-# Without the repository variable BACKUP_AGE_RECIPIENT (a fork, a self-hosted
-# instance that did not set it up) the job is skipped. A failed run is mailed by
+# Without the repository variable BACKUP_AGE_RECIPIENT (backups not set up yet,
+# docs/OPERATIONS.md) the job is skipped. A failed run is mailed by
 # GitHub to whoever last changed the schedule.
 on:
   schedule:
