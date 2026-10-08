@@ -204,6 +204,9 @@ jobs:
     timeout-minutes: 20
     env:
       SUPABASE_CLI: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
+      # The stack's images come from GitHub's registry, not the CLI's default (public.ecr.aws),
+      # which throttled parallel pulls ("toomanyrequests: Rate exceeded"). See docs/TESTING.md.
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v7
 
@@ -273,6 +276,7 @@ jobs:
         shard: ${{ fromJSON(needs.changes.outputs.shards) }}
     env:
       SUPABASE_CLI: 2.118.0 # pinned like `backend`
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io # as in `backend`
       # Built in its own step above (web/playwright.config.ts would build it otherwise).
       LIBELLUS_E2E_PREBUILT: '1'
     steps:

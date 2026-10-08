@@ -486,6 +486,9 @@ uses them) and joins it (`… wait`) once pnpm has installed, the browsers' syst
 app is built: by then it is up. The pnpm store and the Playwright browsers are cached. **Supabase images
 are not cached**: restoring a `docker save` tarball and `docker load` took longer than the pull (about
 125 s against 85 to 90 s), so that was dropped.
+The images are pulled from `ghcr.io` (`SUPABASE_INTERNAL_IMAGE_REGISTRY` in the `backend` and `e2e` jobs) because the
+CLI's default, `public.ecr.aws`, throttled the parallel pulls of the shards (`toomanyrequests: Rate exceeded`);
+`supabase start took N s` in each job's log shows what the start costs.
 
 ### What makes the flows fast
 

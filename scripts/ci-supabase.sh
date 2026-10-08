@@ -38,12 +38,14 @@ case "${1:-}" in
     # A start can fail on the runner for reasons of the moment (the registry's rate limit, a
     # port the Docker proxy has not let go of yet): once more from clean before giving up.
     code=1
+    started=$SECONDS
     for attempt in 1 2; do
       if supabase start -x "$EXCLUDE"; then code=0; break; fi
       echo "supabase start failed (attempt $attempt)"
       supabase stop --no-backup || true
       sleep 5
     done
+    echo "supabase start took $((SECONDS - started)) s"
     # The status file appears whole (mv), never half written.
     echo "$code" > "$status.tmp"
     mv "$status.tmp" "$status"
