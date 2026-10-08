@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import { appleCover, appleRowCover } from '../tests/support/apple'
 import { sql } from '../tests/support/stack'
+import { enrichedLibrary, forgetEnriched } from './enriched'
 import { recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
@@ -17,7 +18,7 @@ import { test } from './fixtures'
  * image then fades in (e2e/book-flight-android.spec.ts has the sharp case).
  * And what used to go wrong (docs/MOTION.md, What can go wrong): a flight
  * turned around never shows the live page with its cover beside the flying
- * one.
+ * one; with the same Book twice on Home, Back flies into the one tapped.
  */
 // What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
 test.use({ reducedMotion: 'no-preference' })
@@ -360,4 +361,41 @@ test('turned around mid-flight, the page in between never shows the live cover b
   // While the router drew each new page and before its flight took over, the page stood in its
   // copy (the pose), at the strength the flight showed it: never the live page with the cover on it.
   expect((await seen(page)).doubles).toEqual([])
+})
+
+test.describe('with series and authors', () => {
+  const stored: string[] = []
+  test.afterAll(async () => {
+    await forgetEnriched(stored)
+  })
+
+  test('the same Book twice on Home: Back flies its cover into the one it was tapped on', { tag: '@full' }, async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const member = await signedIn(page)
+    const data = await enrichedLibrary(member.client)
+    stored.push(...data.ids)
+    await page.reload()
+    // Feet of Clay is on Want to read and the next Book of her City Watch: on Home twice.
+    const href = `/book/${data.entries.feetOfClay.book.id}`
+    const series = page.getByTestId('home.nextInSeries').locator(`a[href="${href}"]`)
+    const upNext = page.getByTestId('home.upNextEntry').and(page.locator(`[href="${href}"]`))
+    await expect(series).toBeVisible()
+    await expect(upNext).toBeVisible()
+    await series.scrollIntoViewIfNeeded()
+    await untilStill(page)
+
+    await series.locator('[data-cover]').click()
+    await expect(page.getByTestId('book.hero')).toBeVisible()
+    await expectLanded(page, 1)
+
+    // Back, held mid-air: the series row's cover waits for it, Want to read's stays as it is.
+    await freeze(page)
+    await page.getByTestId('book.back').click()
+    await expect(page.getByTestId('home.title')).toBeVisible()
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+    await expect(series.locator('[data-cover]')).toHaveAttribute('data-flight-hidden')
+    await expect(upNext.locator('[data-cover]')).not.toHaveAttribute('data-flight-hidden')
+    await thaw(page)
+    await expectLanded(page, 2)
+  })
 })

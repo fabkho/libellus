@@ -31,6 +31,8 @@
  *   on the hero, in its sheet, until that image is decoded and faded in
  *   (`hold`); one that lands without it lands on its thumbhash, and the hero
  *   fades its image in there.
+ * - Back flies into the very cover the push left from (`Origin.cover`), not
+ *   another cover of the same Book on the page; a cover off screen never flies.
  * - `ShellBookFlight` (in the tabs layout) holds the two fixed layers: the
  *   leaving page's copy under the chrome, the flying cover over everything
  *   but the sheets.
@@ -122,6 +124,12 @@ interface Origin {
   page: string
   /** Opened from the search palette, which is gone when Back is tapped. */
   search: boolean
+  /**
+   * The cover that was tapped: Back flies into this one, not into another cover of the same Book on
+   * the page (Home shows a Book on Want to read and as the next of a series). Weak: the tab page
+   * that holds it is kept alive, but a page that was left for good lets it go.
+   */
+  cover: WeakRef<HTMLElement> | null
 }
 
 interface Flight {
@@ -178,19 +186,37 @@ const inLayer = (element: Element) => Boolean(element.closest(LAYER))
 /** The page as it is in the document now (never a copy of one in the flight's layers). */
 const livePage = () => [...document.querySelectorAll<HTMLElement>(PAGE)].filter((element) => !inLayer(element))
 
-/** The cover of a link to `path` on screen now (a Home card's title shares its card's cover). */
-function coverFor(path: string): HTMLElement | null {
+/**
+ * The cover of a link to `path` on screen now (a Home card's title shares its card's cover). Only
+ * one on screen: a cover never flies from or to a place the member cannot see. With more than one
+ * there (the same Book twice on a page), the one nearest `near` (the link that was tapped), else the first.
+ */
+function coverFor(path: string, near: Box | null = null): HTMLElement | null {
   const href = router?.resolve(path).href ?? path
-  let fallback: HTMLElement | null = null
+  const centre = (at: Box) => [at.left + at.width / 2, at.top + at.height / 2] as const
+  let found: HTMLElement | null = null
+  let nearest = Infinity
   for (const link of document.querySelectorAll('a[href]')) {
     if (link.getAttribute('href') !== href || inLayer(link)) continue
     const cover = link.querySelector<HTMLElement>(COVER)
     if (!cover) continue
     const at = box(cover)
-    if (onScreen(at, viewport())) return cover
-    if (at.width) fallback ??= cover
+    if (!onScreen(at, viewport())) continue
+    if (!near) return cover
+    const [x, y] = centre(at)
+    const [nx, ny] = centre(near)
+    const distance = Math.hypot(x - nx, y - ny)
+    if (distance < nearest) [found, nearest] = [cover, distance]
   }
-  return fallback
+  return found
+}
+
+/** The cover a push left from, if it is still a cover of a link to `path` on screen now (`Origin.cover`). */
+function tappedCover(origin: Origin | null, path: string): HTMLElement | null {
+  const cover = origin?.cover?.deref()
+  const href = router?.resolve(path).href ?? path
+  if (!cover?.isConnected || inLayer(cover) || cover.closest('a[href]')?.getAttribute('href') !== href) return null
+  return onScreen(box(cover), viewport()) ? cover : null
 }
 
 /**
@@ -317,8 +343,18 @@ export function prepare(link: HTMLElement, to: string) {
   if (!router || !import.meta.client) return
   const path = router.resolve(to).path
   if (!isFlightPath(path) || path === router.currentRoute.value.path) return
-  const image = (link.querySelector(COVER) ?? coverFor(path))?.querySelector<HTMLImageElement>(':scope > img')
-  preloadImage(coverSrc(image?.currentSrc || image?.src, 'xl'))
+  preloadImage(sharpSrcOf(tappedOn(link, path)))
+}
+
+/** The cover a tap on `link` flies: its own, else the nearest cover of the same Book on screen (a Home card's title). */
+function tappedOn(link: HTMLElement, path: string): HTMLElement | null {
+  return link.querySelector<HTMLElement>(COVER) ?? coverFor(path, box(link))
+}
+
+/** The address of the hero's (large) image of the Book whose cover this is: its own image, at the hero's size. */
+function sharpSrcOf(cover: Element | null): string | null {
+  const image = cover?.querySelector<HTMLImageElement>(':scope > img')
+  return coverSrc(image?.currentSrc || image?.src, 'xl')
 }
 
 /** A tap on a link to a book page: called by UiPressLink before it navigates. */
@@ -328,7 +364,7 @@ export function launch(link: HTMLElement, to: string) {
   if (!isFlightPath(path) || path === router.currentRoute.value.path) return
   const reduced = prefersReducedMotion()
   const previous = takeOver(path, 'list')
-  const cover = reduced ? null : (link.querySelector<HTMLElement>(COVER) ?? coverFor(path))
+  const cover = reduced ? null : tappedOn(link, path)
   const search = Boolean(link.closest('[data-testid="search.overlay"]'))
   pending = {
     towards: 'book',
@@ -344,7 +380,7 @@ export function launch(link: HTMLElement, to: string) {
     air: airOf(previous),
     sinks: [],
     previous,
-    origin: { page: router.currentRoute.value.fullPath, search },
+    origin: { page: router.currentRoute.value.fullPath, search, cover: cover ? new WeakRef(cover) : null },
   }
   pose(pending)
 }
@@ -680,10 +716,11 @@ function pop(departure: Departure, to: RouteLocationNormalized) {
   for (const page of livePage())
     play(page, [{ opacity: 1 }, { opacity: 0 }], flight, 'list', from.list, reduced)
 
-  // Back into the list only where it came from, and only if its row is on screen.
+  // Back into the list only where it came from, and only if its row is on screen: the cover it left
+  // from, even where the same Book shows twice (Want to read and the next of a series, on Home).
   const origin = departure.origin
   const back = !origin || (!origin.search && origin.page === to.fullPath)
-  const row = !reduced && back ? coverFor(departure.path) : null
+  const row = !reduced && back ? (tappedCover(origin, departure.path) ?? coverFor(departure.path)) : null
   const rowBox = row ? box(row) : null
   const heroBox = departure.box
   const air = departure.air
