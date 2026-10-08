@@ -177,7 +177,9 @@
       "since": "since {date}",
       "read": "Days read",
       "perDay": "Pages a day",
-      "label": "Read on {read} of the last {count} days"
+      "label": "Read on {read} of the last {count} days",
+      "dayRead": "{date}, {count} page | {date}, {count} pages",
+      "dayReadNoPages": "{date}, read"
     },
     "ratings": {
       "title": "Ratings",
@@ -248,7 +250,8 @@
       "stars": "{count} star · {year} | {count} stars · {year}",
       "allYears": "All years",
       "readIn": "in a day | in {count} days",
-      "pagesMissing": "Books without a page count"
+      "pagesMissing": "Books without a page count",
+      "day": "{weekday} {date}"
     },
     "year": {
       "eyebrow": "Your year in books",
