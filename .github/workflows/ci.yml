@@ -3,22 +3,22 @@ name: CI
 # What runs when (also in docs/TESTING.md, "CI: what runs when"):
 #
 #   pull request      the checks the changed paths call for. No user flows: the
-#                     flows are where the minutes go, and a broken one is caught
-#                     on main, minutes after the merge, where a release reads it
+#                     flows are where the minutes go
 #   PR label full-e2e the same checks, and every flow, @full included (adding the
 #                     label starts the run; the run of every later push keeps it)
-#   push to main      every flow, @full included, and the checks the changed
-#                     paths call for. A release deploys only a commit whose run
-#                     here is green (release.yml, scripts/release-e2e-gate.sh)
-#                     (no nightly run: every merge to main already runs the whole
-#                     suite, and a full run a day would be about 900 of the private
-#                     account's included Actions minutes a month)
+#   push to main      the checks the changed paths call for, and no flows: the
+#                     flows run once per release, in the release's own run, before
+#                     anything is deployed (release.yml, `flows`)
 #   workflow_dispatch everything, every flow (a manual full run)
+#
+# The flows are the one reusable workflow e2e.yml, called from here and from
+# release.yml. They are ~20 billed minutes on the private repository's two-core
+# runners, which is why only a release (and a label or a manual run) pays them.
 #
 # Docs-only changes (*.md, docs/**, android/**) start no run at all, and neither
 # does a release pull request ("chore(main): release x.y.z", release.yml): it only
-# changes CHANGELOG.md, version.txt and the release manifest, after every commit in
-# it already passed here. A new push to a pull request cancels the run still going for it.
+# changes CHANGELOG.md, version.txt and the release manifest. A new push to a pull
+# request cancels the run still going for it.
 on:
   pull_request:
     # `labeled`: adding full-e2e starts a full run (any other label starts nothing, see `changes`).
@@ -57,9 +57,10 @@ env:
   # shelf and its flows skip; the statics job also builds that way on purpose.
   GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
   LIBELLUS_REGAL: ${{ secrets.GIGET_AUTH != '' && '1' || '' }}
-  # Playwright shards: 4, each about as long as the others (web/e2e/shard.ts, from
-  # the durations CI measured), as weighed in docs/TESTING.md ("How many shards").
-  # The repository variable E2E_SHARDS overrides it without a commit.
+  # Playwright shards of a `full-e2e` or manual run: 4, each about as long as the others
+  # (web/e2e/shard.ts, from the durations CI measured), as weighed in docs/TESTING.md
+  # ("How many shards"). The repository variable E2E_SHARDS overrides it without a commit.
+  # A release runs one shard (release.yml).
   DEFAULT_E2E_SHARDS: 4
 
 jobs:
@@ -164,13 +165,12 @@ jobs:
           og=$(on "$FILTER_OG")
           enrich=$(on "$FILTER_ENRICH")
           invite=$(on "$FILTER_INVITE")
-          # Playwright: never on an ordinary pull request (docs/TESTING.md, "CI: what
-          # runs when"). The flows are where the minutes go, and a broken one is caught
-          # on main, minutes after the merge, where a release reads the result. They run
-          # on main (a push or by hand) and on a pull request labelled `full-e2e` —
-          # every flow, @full included, in both.
-          e2e=true
-          if [ "$EVENT" = pull_request ] && [ "$FULL_E2E_LABEL" != true ]; then e2e=false; fi
+          # Playwright: only by hand and on a pull request labelled `full-e2e` (docs/TESTING.md,
+          # "CI: what runs when"). The flows are where the minutes go: a push to main does not
+          # run them either, a release does (release.yml). Every flow, @full included.
+          e2e=false
+          if [ "$EVENT" = workflow_dispatch ]; then e2e=true; fi
+          if [ "$EVENT" = pull_request ] && [ "$FULL_E2E_LABEL" = true ]; then e2e=true; fi
 
           # One e2e job per shard.
           shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
@@ -251,176 +251,20 @@ jobs:
       - name: Backup round trip (scripts/test-backup-roundtrip.sh)
         run: scripts/test-backup-roundtrip.sh
 
-  # The user flows (web/e2e: Playwright in WebKit at iPhone size) on the static
-  # build, served as Cloudflare Pages serves it (web/e2e/serve.mjs), one local
-  # stack per shard (`--shard i/N`, split by test, not by file). Supabase starts
-  # in the background as in `backend`, while pnpm installs, the browsers' system
-  # libraries come in and the app is built.
-  #
-  # Apple and OpenLibrary answer from the recordings (web/e2e/support.ts); the
-  # fixture in web/e2e/fixtures.ts fails any test that reaches another host.
-  # The shards are independent: every flow makes its own member and tags what it
-  # creates (web/tests/support/stack.ts). A failed shard uploads its blob report;
-  # e2e-report merges them into one HTML report.
+  # The user flows (web/e2e: Playwright in WebKit at iPhone size), whole jobs shared
+  # with release.yml: .github/workflows/e2e.yml has the steps, the shard matrix and
+  # the merged report. Here only for a pull request labelled `full-e2e` and a manual
+  # run; a release runs them in its own run (release.yml, `flows`).
   e2e:
-    name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    name: user flows
     needs: changes
     if: ${{ needs.changes.outputs.e2e == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: ${{ fromJSON(needs.changes.outputs.shards) }}
-    env:
-      SUPABASE_CLI: 2.118.0 # pinned like `backend`
-      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io # as in `backend`
-      # Built in its own step above (web/playwright.config.ts would build it otherwise).
-      LIBELLUS_E2E_PREBUILT: '1'
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: supabase/setup-cli@v3
-        with:
-          version: ${{ env.SUPABASE_CLI }}
-
-      - name: Start Supabase (in the background)
-        run: scripts/ci-supabase.sh start
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 12
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-
-      - name: Install web
-        working-directory: web
-        run: pnpm install --frozen-lockfile
-
-      # The browser download is cached per Playwright version; the system
-      # libraries it needs live outside that folder, so they are installed
-      # either way.
-      - name: Playwright version
-        id: playwright
-        working-directory: web
-        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-
-      # WebKit for the flows; Chromium for the specs that need it (offline
-      # reloads, layout shifts).
-      - name: Cache the browsers
-        id: browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-
-      - name: Install WebKit, Chromium and their system libraries
-        working-directory: web
-        run: |
-          if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
-            pnpm exec playwright install-deps webkit chromium
-          else
-            pnpm exec playwright install --with-deps webkit chromium
-          fi
-
-      # The app the flows run on, as it ships: `nuxt generate` with the flows'
-      # configuration (web/e2e/build.ts), while the stack is still starting. It
-      # needs nothing of the stack: web/e2e/serve.mjs puts its address and key
-      # into the pages it serves.
-      - name: Build the app for the flows
-        working-directory: web
-        run: pnpm e2e:build
-
-      - name: Wait for Supabase
-        timeout-minutes: 8
-        run: scripts/ci-supabase.sh wait
-
-      # The suites ask `supabase status` themselves when these are unset; setting
-      # them keeps the run explicit about which stack it talks to.
-      - name: Point the suite at the stack
-        run: |
-          eval "$(supabase status -o env)"
-          {
-            echo "SUPABASE_URL=$API_URL"
-            echo "SUPABASE_ANON_KEY=$ANON_KEY"
-            echo "SUPABASE_DB_URL=$DB_URL"
-            echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
-            # The shelf's owner is made with a given id, which only the auth admin can do (e2e/shelfOwner.ts).
-            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
-          } >> "$GITHUB_ENV"
-          # playwright.config.ts picks its workers from the cores it finds (3 from 4 up).
-          echo "cores: $(nproc)"
-
-      # Not Playwright's --shard (by test count, in file order): the flows weighed by
-      # what each took in CI (web/e2e/durations.json), the heaviest first to the
-      # lightest shard. Every shard computes the same split.
-      - name: Pick this shard's flows
-        working-directory: web
-        # Every flow: the core suite a pull request used to run is gone (below).
-        run: |
-          pnpm exec tsx e2e/shard.ts list ${{ matrix.shard }}/${{ strategy.job-total }} > "$RUNNER_TEMP/flows.txt"
-
-      - name: User flows
-        working-directory: web
-        run: pnpm e2e --test-list "$RUNNER_TEMP/flows.txt" --pass-with-no-tests
-
-      # The blob report holds the results, screenshots and traces of this shard.
-      - name: Upload the blob report
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-blob-${{ matrix.shard }}
-          path: web/blob-report/
-          retention-days: 1
-          if-no-files-found: ignore
-
-  # One combined report for the shards, only when one of them failed. A job
-  # that failed before any flow ran has no blob report; then there is nothing to merge.
-  e2e-report:
-    name: user flows report (merged)
-    needs: e2e
-    if: ${{ !cancelled() && needs.e2e.result == 'failure' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 12
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-
-      - name: Install web
-        working-directory: web
-        run: pnpm install --frozen-lockfile
-
-      - uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          path: web/all-blob-reports
-          pattern: playwright-blob-*
-          merge-multiple: true
-
-      - name: Merge into one HTML report
-        if: hashFiles('web/all-blob-reports/*') != ''
-        working-directory: web
-        run: pnpm exec playwright merge-reports --reporter=html ./all-blob-reports
-
-      - name: Upload the report and traces
-        if: hashFiles('web/playwright-report/**') != ''
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: web/playwright-report/
-          retention-days: 14
+    permissions:
+      contents: read
+    uses: ./.github/workflows/e2e.yml
+    with:
+      shards: ${{ needs.changes.outputs.shards }}
+    secrets: inherit
 
   # The checks that take seconds each, in one job so the minutes are not rounded
   # up four times: the design tokens, the web build, and the two edge functions

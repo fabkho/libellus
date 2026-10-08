@@ -1,0 +1,235 @@
+name: User flows
+
+# The Playwright flows (web/e2e), as a reusable workflow: one place for the steps,
+# two callers (docs/TESTING.md, "CI: what runs when").
+#
+#   release.yml   the `flows` job of a release run, against the release's tag,
+#                 before anything is deployed (one shard: setup is paid once)
+#   ci.yml        a pull request labelled `full-e2e`, and a manual run (every flow)
+#
+# Why a reusable workflow and not a composite action: the unit that is shared is
+# whole jobs (the shard matrix, the stack, the report that merges the shards), and
+# a workflow carries those; an action would hold only the steps, and each caller
+# would keep the runner, the matrix, the timeout and the report job, twice.
+#
+# `permissions` of a called workflow can only narrow the caller's: the caller job
+# has to grant `contents: read` (release.yml's top level grants nothing).
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'What to check out and test: a tag, a branch or a commit. Empty: the calling run''s own.'
+        required: false
+        type: string
+        default: ''
+      shards:
+        description: 'The shards to run, as a JSON list: [1] for one job, [1,2,3,4] for four'
+        required: false
+        type: string
+        default: '[1]'
+    secrets:
+      GIGET_AUTH:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  # The owner's builds extend Regal (her shelf, #23; web/regal.config.ts), a private repo Nuxt
+  # downloads with this token (a GitHub token that can read fabkho/regal), when LIBELLUS_REGAL=1.
+  # Where the secret is missing (a run with no access to it) the app builds without the
+  # shelf and its flows skip.
+  GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
+  LIBELLUS_REGAL: ${{ secrets.GIGET_AUTH != '' && '1' || '' }}
+
+jobs:
+  # The user flows (web/e2e: Playwright in WebKit at iPhone size) on the static
+  # build, served as Cloudflare Pages serves it (web/e2e/serve.mjs), one local
+  # stack per shard (`--shard i/N`, split by test, not by file). Supabase starts
+  # in the background as in `backend`, while pnpm installs, the browsers' system
+  # libraries come in and the app is built.
+  #
+  # Apple and OpenLibrary answer from the recordings (web/e2e/support.ts); the
+  # fixture in web/e2e/fixtures.ts fails any test that reaches another host.
+  # The shards are independent: every flow makes its own member and tags what it
+  # creates (web/tests/support/stack.ts). A failed shard uploads its blob report;
+  # e2e-report merges them into one HTML report.
+  e2e:
+    name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(inputs.shards) }}
+    env:
+      SUPABASE_CLI: 2.118.0 # pinned like ci.yml and release.yml
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io # as in ci.yml's `backend` (docs/TESTING.md)
+      # Built in its own step above (web/playwright.config.ts would build it otherwise).
+      LIBELLUS_E2E_PREBUILT: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      # Before the images, the browsers and node_modules take their share: a standard
+      # runner has little disk, and one job running every flow filled it (ENOSPC,
+      # docs/TESTING.md, "Disk"). The sampler writes a line every two minutes for the
+      # reports below.
+      - name: Free disk the job does not need
+        run: scripts/ci-disk.sh free
+
+      - name: Sample the disk (in the background)
+        run: scripts/ci-disk.sh sample
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ env.SUPABASE_CLI }}
+
+      - name: Start Supabase (in the background)
+        run: scripts/ci-supabase.sh start
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install web
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      # The browser download is cached per Playwright version; the system
+      # libraries it needs live outside that folder, so they are installed
+      # either way.
+      - name: Playwright version
+        id: playwright
+        working-directory: web
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      # WebKit for the flows; Chromium for the specs that need it (offline
+      # reloads, layout shifts).
+      - name: Cache the browsers
+        id: browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install WebKit, Chromium and their system libraries
+        working-directory: web
+        run: |
+          if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
+            pnpm exec playwright install-deps webkit chromium
+          else
+            pnpm exec playwright install --with-deps webkit chromium
+          fi
+
+      # The app the flows run on, as it ships: `nuxt generate` with the flows'
+      # configuration (web/e2e/build.ts), while the stack is still starting. It
+      # needs nothing of the stack: web/e2e/serve.mjs puts its address and key
+      # into the pages it serves.
+      - name: Build the app for the flows
+        working-directory: web
+        run: pnpm e2e:build
+
+      - name: Wait for Supabase
+        timeout-minutes: 8
+        run: scripts/ci-supabase.sh wait
+
+      # Everything the flows need is on the disk by now: what is left is their room.
+      - name: Disk with the stack, the browsers and the build in place
+        run: scripts/ci-disk.sh report
+
+      # The suites ask `supabase status` themselves when these are unset; setting
+      # them keeps the run explicit about which stack it talks to.
+      - name: Point the suite at the stack
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_DB_URL=$DB_URL"
+            echo "MAILPIT_URL=${MAILPIT_URL:-$INBUCKET_URL}"
+            # The shelf's owner is made with a given id, which only the auth admin can do (e2e/shelfOwner.ts).
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+          # playwright.config.ts picks its workers from the cores it finds (3 from 4 up).
+          echo "cores: $(nproc)"
+
+      # Not Playwright's --shard (by test count, in file order): the flows weighed by
+      # what each took in CI (web/e2e/durations.json), the heaviest first to the
+      # lightest shard. Every shard computes the same split.
+      - name: Pick this shard's flows
+        working-directory: web
+        # Every flow: the core suite a pull request used to run is gone (below).
+        run: |
+          pnpm exec tsx e2e/shard.ts list ${{ matrix.shard }}/${{ strategy.job-total }} > "$RUNNER_TEMP/flows.txt"
+
+      - name: User flows
+        working-directory: web
+        run: pnpm e2e --test-list "$RUNNER_TEMP/flows.txt" --pass-with-no-tests
+
+      - name: Disk after the flows
+        if: ${{ !cancelled() }}
+        run: scripts/ci-disk.sh report
+
+      # The blob report holds the results, screenshots and traces of this shard.
+      - name: Upload the blob report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-blob-${{ matrix.shard }}
+          path: web/blob-report/
+          retention-days: 1
+          if-no-files-found: ignore
+
+  # One combined report for the shards, only when one of them failed. A job
+  # that failed before any flow ran has no blob report; then there is nothing to merge.
+  e2e-report:
+    name: user flows report (merged)
+    needs: e2e
+    if: ${{ !cancelled() && needs.e2e.result == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install web
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          path: web/all-blob-reports
+          pattern: playwright-blob-*
+          merge-multiple: true
+
+      - name: Merge into one HTML report
+        if: hashFiles('web/all-blob-reports/*') != ''
+        working-directory: web
+        run: pnpm exec playwright merge-reports --reporter=html ./all-blob-reports
+
+      - name: Upload the report and traces
+        if: hashFiles('web/playwright-report/**') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 14
