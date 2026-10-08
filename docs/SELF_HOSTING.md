@@ -163,7 +163,9 @@ falls back to the Book's cover or the app icon.
 **Invites from the waitlist.** A reading page's visitors can leave their address; you read them in
 Profile → Account → Waitlist ([The owner](#the-owner)). Its **Invite** button asks the `waitlist-invite`
 edge function, which gets the entry a one-use code, mails it over SMTP and marks the entry invited
-(`supabase/functions/waitlist-invite/README.md`). Any SMTP service works (the one from step 2 will do);
+(`supabase/functions/waitlist-invite/README.md`). The mail is designed like the sign-in code's (the
+same generated shell, light and dark, docs/DEVELOPMENT.md "Emails") and travels with the function:
+nothing to paste in a dashboard. Any SMTP service works (the one from step 2 will do);
 hosted Supabase blocks outgoing ports 25 and 587, so use 465 or your provider's alternative port:
 
 ```sh

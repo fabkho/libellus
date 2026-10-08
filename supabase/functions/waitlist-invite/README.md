@@ -23,9 +23,11 @@ Authorization: Bearer <the owner's access token>   (the app's functions.invoke s
    the function). The database decides: anyone but the instance's owner gets `not_owner` (403).
    The answer is the address and a one-use code valid 14 days: the entry's own code while it is
    unused and unexpired, otherwise a new one (label `waitlist`, never the address).
-3. It sends the mail (`mail.ts`: short plain text and a minimal HTML twin, no tracking pixel, no
-   remote image, no unsubscribe link: a one-off transactional mail she asked for; the wording she
-   agreed to, consent text `2026-10`, says the address is only used "to send you an invite").
+3. It sends the mail: Libellus' designed mail (the sign-in code's shell: wordmark, card, the code
+   in the same code cell, the expiry, how to use it, a Sign up button when `LIBELLUS_SITE_URL` is set;
+   light and dark) with a plain-text part of the same words. No tracking pixel, no remote asset, no
+   unsubscribe link: a one-off transactional mail she asked for; the wording she agreed to, consent
+   text `2026-10`, says the address is only used "to send you an invite".
 4. Only after the mail went out does it call `owner_waitlist_set_invited([id], true)`.
 
 Without the SMTP secrets, or when the send fails, the entry stays **waiting** and the code still
@@ -42,11 +44,28 @@ No log line carries the address or the code: a failed send logs its kind only (`
 | `SMTP_USER`, `SMTP_PASS` | yes | The SMTP credentials |
 | `SMTP_FROM` | yes | The sender address, e.g. `invites@example.com` (a domain the service may send for) |
 | `SMTP_FROM_NAME` | no | The sender's name, e.g. `Libellus` |
-| `LIBELLUS_SITE_URL` | no | Your app's address; the mail links to `<it>/sign-up`. Unset: the mail says to open Libellus and choose Sign up with a code. |
+| `LIBELLUS_SITE_URL` | no | Your app's address; the mail's Sign up button links to `<it>/sign-up`. Unset: the mail has no link, only how to sign up with a code. |
 
 Any of the five required ones missing counts as "mail not configured": the Invite button still
 mints and shows the code. The SMTP client is nodemailer, pinned in `deno.json`, behind the
 `Mailer` interface (`smtp.ts`), so the tests inject a fake and never load it.
+
+## The mail's design
+
+`invite_mail.generated.mjs` is generated, never edited: `design/emails/invite.mjs` says what the
+mail holds (its copy, the code cell, the button, the plain-text part) and `design/emails/shell.mjs`
+how every Libellus mail looks, with every colour and size from `design/tokens.json`. The module holds
+both parts as strings with placeholders (`{{ .Code }}`, `{{ .ExpiresOn }}`, `{{ .SignUpUrl }}`) and
+the link's block (`<!--[link]-->…<!--[/link]-->`); `mail.ts` fills them at send time, HTML-escaped,
+and drops the block without a site URL. To change it:
+
+```sh
+cd design && pnpm emails          # rewrites invite_mail.generated.mjs (and the sign-in template)
+cd ../web && pnpm email:preview   # web/.email-preview/invite-*.png: phone and desktop, light and dark, with and without the link
+```
+
+CI fails when the generated file differs from the design (`pnpm emails:check`), and the build checks
+the mail's contrast, size and that it loads nothing (docs/DEVELOPMENT.md, "Emails").
 
 ## Local
 

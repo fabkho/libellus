@@ -113,7 +113,17 @@ rendering and its `prefers-color-scheme: dark`, the way Apple Mail applies it; G
 own engines are not here (Mailpit's *Checks* tab, at http://127.0.0.1:55324, scores a received mail
 against the clients' CSS support).
 
-**A second email** (an invite, say) reuses the shell: add `design/emails/<name>.mjs` exporting
+**The waitlist invite** (`design/emails/invite.mjs`) is the second mail on the shell. The
+`waitlist-invite` edge function sends it, not Supabase Auth, so it says `format = 'module'`: the
+generator writes `supabase/functions/waitlist-invite/invite_mail.generated.mjs` (the HTML and a
+plain-text part, `text()`, as strings) for the function to import, with its own placeholders
+(`{{ .Code }}`, `{{ .ExpiresOn }}`, `{{ .SignUpUrl }}`) that the function fills in, HTML-escaped, and
+an optional block (`<!--[link]-->…<!--[/link]-->`, the Sign up button) it drops without a site URL.
+Its code is nine characters with a dash, so it passes `kit.code` a smaller size to stay on one line at
+phone width; `kit.button` is the app's primary button as a link. The preview shows it with and without
+the link.
+
+**Another email** reuses the shell the same way: add `design/emails/<name>.mjs` exporting
 `output` (where the file goes), `build(kit)` (`kit.render({ title, preheader, content, footer })`,
 with `kit.eyebrow`, `kit.paragraph`, `kit.code` for the card's inside, and `kit.x(paintClasses, css)`
 for anything of your own: a paint class is a colour role, inlined for light and overridden in the
