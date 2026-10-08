@@ -431,18 +431,23 @@ said there was nothing finished; it now stands in its final shape from the first
 
 ## CI: what runs when
 
-`.github/workflows/ci.yml`. The repository is public, so Actions minutes are free and runners have four
-cores; what the workflow optimises is the wait for a pull request's result.
+`.github/workflows/ci.yml`. The repository is private, so every job is billed from the account's included
+Actions minutes — 2,000 a month on Free, 3,000 with Pro, shared with the other private repositories — and a
+standard runner has two cores where a public repository's has four. The workflow weighs the minutes as much
+as the wait for a pull request's result; the numbers below were measured on the four-core public runner.
 
 | Event | What runs |
 | --- | --- |
 | Pull request | What the changed paths call for (below), and of the Playwright flows **the core suite**: every flow not tagged `@full`. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
 | Pull request with the label **`full-e2e`** | The same with **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
 | Push to `main` (a merge) | **Every flow**, `@full` included, and the checks the changed paths call for. A regression in an `@full` flow is found here, minutes after the merge, instead of on the pull request. |
-| Nightly (`schedule`, 03:23 UTC, on `main`) | Everything: every flow and every check. |
 | `workflow_dispatch` | Everything (`gh workflow run CI --ref <branch>`). |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
 | The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No run at all. `release.yml` runs instead, and **its deploy waits for main's latest full run** (below). |
+
+There is no nightly run: every merge to `main` already runs the whole suite, and a full run a day would be
+some 900 of the account's included minutes a month — about twice what every other private repository draws
+together.
 
 A `what changed` job (about 5 seconds) turns the changed files into the jobs to run (`dorny/paths-filter`).
 Any change under `.github/` runs everything, so CI changes are tested by CI.
@@ -459,7 +464,7 @@ pull request that touches several of these runs the union. A skipped job is a pa
 downstream, and no branch is protected by required checks, so a skip never blocks a merge.
 
 **Releases wait for the full suite.** `release.yml`'s deploy first runs `scripts/release-e2e-gate.sh`:
-it takes main's latest full CI run (a push, the nightly run or a manual one) for the release's commit, or
+it takes main's latest full CI run (a push or a manual one) for the release's commit, or
 for its nearest ancestor with a run (the release commit itself starts none), waits for it if it is still
 going, and stops the release with a message naming the run unless it passed with its flows run
 (docs/OPERATIONS.md, "Releases").

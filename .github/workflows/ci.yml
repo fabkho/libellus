@@ -9,7 +9,9 @@ name: CI
 #   push to main      every flow, @full included, and the checks the changed
 #                     paths call for. A release deploys only a commit whose run
 #                     here is green (release.yml, scripts/release-e2e-gate.sh)
-#   nightly (cron)    everything on main: every flow and every check
+#                     (no nightly run: every merge to main already runs the whole
+#                     suite, and a full run a day would be about 900 of the private
+#                     account's included Actions minutes a month)
 #   workflow_dispatch everything, every flow (a manual full run)
 #
 # Docs-only changes (*.md, docs/**, android/**) start no run at all, and neither
@@ -36,8 +38,6 @@ on:
       - 'LICENSE'
       - 'version.txt'
       - '.release-please-manifest.json'
-  schedule:
-    - cron: '23 3 * * *' # nightly, on main
   workflow_dispatch:
 
 # One run per pull request: a push, a force-pushed rebase or a re-run cancels
@@ -92,7 +92,7 @@ jobs:
       # Every filter lists the workflow files: changing CI runs what CI does.
       - uses: dorny/paths-filter@v4
         id: filter
-        if: github.event_name != 'workflow_dispatch' && github.event_name != 'schedule'
+        if: github.event_name != 'workflow_dispatch'
         with:
           filters: |
             ci: &ci
@@ -146,7 +146,7 @@ jobs:
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
         run: |
           all=false
-          if [ "$EVENT" = workflow_dispatch ] || [ "$EVENT" = schedule ]; then all=true; fi
+          if [ "$EVENT" = workflow_dispatch ]; then all=true; fi
           on() { if [ "$all" = true ] || [ "$1" = true ]; then echo true; else echo false; fi; }
 
           backend=$(on "$FILTER_BACKEND")
@@ -157,7 +157,7 @@ jobs:
           og=$(on "$FILTER_OG")
           enrich=$(on "$FILTER_ENRICH")
           # Playwright: on a pull request when the app or the schema it runs on changed;
-          # on main (push, nightly, by hand) always, so every run there says whether the
+          # on main (a push, by hand) always, so every run there says whether the
           # whole suite passes (what a release waits for).
           if [ "$EVENT" = pull_request ]; then e2e=$(on "$FILTER_STACK"); else e2e=true; fi
           # The core flows on a pull request; every flow, @full included, on main, on a

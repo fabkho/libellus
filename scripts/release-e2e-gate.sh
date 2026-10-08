@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # A release ships only a commit whose full suite is green (docs/TESTING.md, "CI: what runs
-# when"). Pull requests run the core flows; every run of CI on `main` (a push, the nightly run,
-# a manual one) runs all of them, the `@full` flows included. This finds main's latest such run
+# when"). Pull requests run the core flows; every run of CI on `main` (a push, a manual one)
+# runs all of them, the `@full` flows included. This finds main's latest such run
 # for the release's commit, or for its nearest first-parent ancestor that has one (the release
 # commit itself only changes CHANGELOG.md and version.txt, which start no CI run), and fails
 # unless it passed and its flows ran. A run still going is waited for (up to WAIT_SECONDS).
@@ -16,7 +16,8 @@ repo="${GITHUB_REPOSITORY:-fabkho/libellus}"
 wait_seconds="${WAIT_SECONDS:-1800}"
 server="${GITHUB_SERVER_URL:-https://github.com}"
 
-# The runs of CI on main for one commit that run the whole suite, newest first.
+# The runs of CI on main for one commit that run the whole suite, newest first. A
+# `schedule` run would count too: a nightly is what it was, should one come back.
 full_runs() {
   gh api "repos/$repo/actions/workflows/ci.yml/runs?branch=main&head_sha=$1&per_page=30" \
     --jq '[.workflow_runs[] | select(.event == "push" or .event == "schedule" or .event == "workflow_dispatch")] | sort_by(.created_at) | reverse'
