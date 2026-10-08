@@ -68,6 +68,8 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
   // Read this year: Home's tally counts it and opens its sheet.
   await genred(await add(book('The Dispossessed', 'Ursula K. Le Guin', 387), [[addDays(isoDay(), -9), addDays(isoDay(), -3), 18]]), 'sci-fi', 'literary')
   await genred(await add(book('Piranesi', 'Susanna Clarke', 272), [['2024-11-27', '2024-12-29', null]]), 'fantasy')
+  // A finished read whose Book has no page count: the Pages card's "N without a count" line opens it.
+  await add(book('The Lathe of Heaven', 'Ursula K. Le Guin', null), [['2024-03-02', '2024-03-20', null]])
   await add(book('Ruin', 'John Gwynne', 800), [['2025-02-04', '2025-02-04', null, 'abandoned']])
   await add(book('Up Next', 'Ursula K. Le Guin', 200), [])
   const eden = await add(book('East of Eden', 'John Steinbeck', 608), [])
@@ -288,6 +290,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page, 'the Profile')
       await openSheet(page, 'profile.stars.4', 'profileReads')
       await expectAccessible(page, "the Profile's reads sheet")
+      await closeSheet(page, 'profileReads')
+      await openSheet(page, 'profile.pagesMissing', 'profileReads')
+      await expectAccessible(page, "the Profile's reads without a page count")
       await closeSheet(page, 'profileReads')
       await openSheet(page, 'profile.links', 'links')
       await expectAccessible(page, 'Book links')
