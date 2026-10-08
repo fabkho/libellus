@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/fabkho/libellus/compare/v1.5.0...v1.5.1) (2026-10-08)
+
+
+### Fixes
+
+* **e2e:** read the cover's flight time off its animation, not off sampled frames ([5f7b838](https://github.com/fabkho/libellus/commit/5f7b8383c1dc9571fae8579ab07dbd8b321181b7))
+* **e2e:** read the cover's flight time off its animation, not off sampled frames ([27b1401](https://github.com/fabkho/libellus/commit/27b1401ea35b0638a1d7da82eecc8508ee7c3366))
+
 ## [1.5.0](https://github.com/fabkho/libellus/compare/v1.4.0...v1.5.0) (2026-10-08)
 
 
