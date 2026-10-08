@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { isoDay } from '../app/utils/dates'
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn, untilStill } from './support'
+import { endFromBook, recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -319,9 +319,7 @@ test('Read as: said in the Book\'s options and when finishing, and the Library f
   await untilStill(page)
 
   // Finishing says it with the finish: it starts from what she said, and changing it goes along.
-  await page.getByTestId('book.finish').click()
-  await expect(page.getByTestId('finish')).toBeVisible()
-  await untilStill(page)
+  await endFromBook(page, 'finish')
   await expect(page.getByTestId('finish.readAs.physical')).toHaveAttribute('aria-checked', 'true')
   await page.getByTestId('finish.readAs.audiobook').click()
   await expect(page.getByTestId('finish.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')

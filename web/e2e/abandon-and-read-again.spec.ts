@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { isoDay } from '../app/utils/dates'
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { endFromBook, recordedApple, signedIn } from './support'
 import { test } from './fixtures'
 
 /**
@@ -11,7 +11,8 @@ import { test } from './fixtures'
  * again and read once more; a finished Book is read again with its history
  * kept. Apple answers from the recordings; the Library is the real local
  * stack. With docs/parity.md this is the behavioural reference for the Abandon
- * sheet, the book page's Abandon / Read again / Start again, and the Not
+ * sheet, DNF in the Update progress sheet (the book page carries no Finish or
+ * DNF of its own), the book page's Read again / Start again, and the Not
  * finished filter.
  */
 
@@ -35,8 +36,9 @@ async function startPiranesi(page: Page) {
 }
 
 const sessionsOf = (email: string) =>
-  sql<{ outcome: string | null; started_on: string; ended_on: string | null; abandon_reason: string | null }>(
-    `select s.outcome::text, s.started_on::text, s.ended_on::text, s.abandon_reason
+  sql<{ outcome: string | null; started_on: string; ended_on: string | null; abandon_reason: string | null; progress: number | null }>(
+    `select s.outcome::text, s.started_on::text, s.ended_on::text, s.abandon_reason,
+            coalesce(s.progress_page, s.progress_percent)::int as progress
        from public.reading_sessions s
        join public.library_entries e on e.id = s.entry_id
        join auth.users u on u.id = e.member_id
@@ -50,9 +52,14 @@ test('a member abandons a book with a reason, finds it under Not finished and st
   const today = isoDay()
   await startPiranesi(page)
 
-  // Currently reading: Finish, and Abandon beside it.
-  await expect(page.getByTestId('book.finish')).toBeVisible()
-  await page.getByTestId('book.abandon').click()
+  // Currently reading: the page has Update progress, and DNF is in its sheet, under Finish. Where
+  // she put it down is saved first (the read keeps it), then the DNF sheet takes over.
+  await expect(page.getByTestId('book.updateProgress')).toBeVisible()
+  await page.getByTestId('book.updateProgress').click()
+  await expect(page.getByTestId('progress.abandonHint')).toHaveText(en.book.progress.abandonHint)
+  for (let i = 0; i < 3; i++) await page.getByTestId('progress.plus').click()
+  await page.getByTestId('progress.abandon').click()
+  await expect(page.getByTestId('progress')).toBeHidden()
 
   // The Abandon sheet: today, no reason yet.
   await expect(page.getByTestId('abandon')).toBeVisible()
@@ -80,20 +87,20 @@ test('a member abandons a book with a reason, finds it under Not finished and st
   await page.getByTestId('abandon.submit').click()
   await expect(page.getByTestId('abandon')).toBeHidden()
 
-  // Finished, but not finished: no rating, the day, and Start again instead of Finish.
+  // Finished, but not finished: no rating, the day, and Start again instead of Update progress.
   await expect(page.getByTestId('book.status')).toHaveText(en.status.notFinished)
-  await expect(page.getByTestId('book.finish')).toBeHidden()
-  await expect(page.getByTestId('book.abandon')).toBeHidden()
+  await expect(page.getByTestId('book.updateProgress')).toBeHidden()
   await expect(page.getByTestId('book.readAgain')).toBeHidden()
   await expect(page.getByTestId('book.startAgain')).toHaveText(en.book.startAgain)
 
-  // Stored as one abandoned session with the reason as typed.
+  // Stored as one abandoned session with the reason as typed and where it was put down (3: pages, or percent without a page count).
   expect(await sessionsOf(member.email)).toEqual([
     {
       outcome: 'abandoned',
       started_on: today,
       ended_on: today,
       abandon_reason: 'The sentences were beautiful, the plot never arrived.',
+      progress: 3,
     },
   ])
 
@@ -123,7 +130,7 @@ test('a member abandons a book with a reason, finds it under Not finished and st
   await expect(page.getByTestId('book.status')).toHaveText(en.status.reading)
   await expect(page.getByTestId('book.since')).toContainText('day 1')
   await expect(page.getByTestId('book.startAgain')).toBeHidden()
-  await expect(page.getByTestId('book.finish')).toBeVisible()
+  await expect(page.getByTestId('book.updateProgress')).toBeVisible()
 
   // Reading again: it left Finished and Not finished, and sits under Currently reading.
   expect((await sessionsOf(member.email)).map((s) => s.outcome)).toEqual(['abandoned', null])
@@ -139,18 +146,18 @@ test('a member abandons without a reason, and reads a finished book again', asyn
   const today = isoDay()
   await startPiranesi(page)
 
-  // No reason typed: the reason is optional.
-  await page.getByTestId('book.abandon').click()
+  // No reason typed: the reason is optional. The wheel left alone: nothing is saved before it.
+  await endFromBook(page, 'abandon')
   await page.getByTestId('abandon.submit').click()
   await expect(page.getByTestId('abandon')).toBeHidden()
   await expect(page.getByTestId('book.status')).toHaveText(en.status.notFinished)
-  expect((await sessionsOf(member.email)).map((s) => s.abandon_reason)).toEqual([null])
+  expect((await sessionsOf(member.email)).map((s) => [s.abandon_reason, s.progress])).toEqual([[null, null]])
 
   // Start again, then finish it this time: Finished, with Read again.
   await page.getByTestId('book.startAgain').click()
   await page.getByTestId('start.submit').click()
   await expect(page.getByTestId('start')).toBeHidden()
-  await page.getByTestId('book.finish').click()
+  await endFromBook(page, 'finish')
   await page.getByTestId('finish.submit').click()
   await expect(page.getByTestId('finish')).toBeHidden()
   await expect(page.getByTestId('book.status')).toHaveText(en.status.finished)

@@ -4,7 +4,7 @@ import { createLibrary } from '../app/data/library'
 import type { BookSnapshot } from '../app/data/books'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { expectNoSideScroll, goto, recordedApple, signedIn, untilStill } from './support'
+import { endFromBook, expectNoSideScroll, goto, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * The page never scrolls or bounces sideways (docs/DESIGN.md, The page does not scroll
@@ -86,7 +86,12 @@ test('no main screen is wider than a 360 px phone, and the page keeps still unde
   await expect(page.getByTestId('book.title')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Book page')
-  await page.getByTestId('book.finish').click()
+  await page.getByTestId('book.updateProgress').click()
+  await expect(page.getByTestId('progress')).toBeVisible()
+  await untilStill(page)
+  await expectNoSideScroll(page, 'Book page, Update progress open')
+  await page.getByTestId('progress.finish').click()
+  await expect(page.getByTestId('finish')).toBeVisible()
   await untilStill(page)
   await expectNoSideScroll(page, 'Book page, Finish sheet open')
 

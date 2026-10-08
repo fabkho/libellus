@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { isoDay } from '../app/utils/dates'
 import { sql } from '../tests/support/stack'
-import { recordedApple, signedIn } from './support'
+import { endFromBook, recordedApple, signedIn } from './support'
 
 /**
  * Reading history and removing (#11): a Book is finished and its read shows in
@@ -48,7 +48,7 @@ test('a member finishes a book, edits its rating, deletes the read and the book 
   // One counting rule: the history says "day 1" like the status line.
   await expect(page.getByTestId('book.since')).toContainText('day 1')
   await expect(page.getByTestId('history.days')).toHaveText(en.history.day.replace('{day}', '1'))
-  await page.getByTestId('book.finish').click()
+  await endFromBook(page, 'finish')
   await page.getByTestId('finish.rating').focus()
   for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight')
   await expect(page.getByTestId('finish.rating')).toHaveAttribute('aria-valuenow', '2')

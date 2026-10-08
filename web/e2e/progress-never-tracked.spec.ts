@@ -16,10 +16,10 @@ import { recordedApple, settledBox, signedIn, untilStill } from './support'
  * (data/progressDays.ts, tests/progress-days.test.ts).
  *
  * Issue #81: before any progress the page already has the tracked layout's
- * skeleton, the empty bar and a row with the value in words (the page count) at
- * the left and Update progress at the right; the first save only changes the
- * words and the bar's fill and fades the rest in below, so the bar, the row and
- * the button stay where they are.
+ * skeleton, the empty bar and a line with the value in words (the page count);
+ * the first save only changes the words and the bar's fill and fades the rest in
+ * below, so the bar and the line stay where they are, and Update progress (the
+ * page's one action, under the block) glides down.
  */
 
 test.beforeEach(async ({ page }) => {
@@ -56,7 +56,7 @@ const setValue = (email: string, kind: 'page' | 'percent', value: number) =>
     [email, value],
   )
 
-/** The bar and its row, nothing else (what a read never tracked shows): `words` is the row's text. */
+/** The bar and its line, then the action, nothing else (what a read never tracked shows): `words` is the line's text. */
 async function expectNeverTracked(page: Page, words: string) {
   await expect(page.getByTestId('book.updateProgress')).toBeVisible()
   await expect(page.getByTestId('book.progressBar')).toBeVisible()
@@ -70,7 +70,7 @@ async function expectNeverTracked(page: Page, words: string) {
 /** Where the skeleton's parts are on the page (the page is scrolled to the top, so the viewport's box does for it). */
 async function skeleton(page: Page) {
   const boxes: Record<string, { x: number; y: number; width: number; height: number }> = {}
-  for (const id of ['book.status', 'book.progressBar', 'book.progressText', 'book.updateProgress']) boxes[id] = (await page.getByTestId(id).boundingBox())!
+  for (const id of ['book.status', 'book.progressBar', 'book.progressText']) boxes[id] = (await page.getByTestId(id).boundingBox())!
   return boxes
 }
 
@@ -89,9 +89,9 @@ test('never tracked: the empty bar and its row; the first save changes the words
   await expectNeverTracked(page, 'Not started · 480 pages')
   await untilStill(page)
 
-  // Finish sits under the row; remember how far it is from the status line (the page may scroll).
+  // Update progress sits under the line; remember how far it is from the status line (the page may scroll).
   const gap = async () =>
-    (await page.getByTestId('book.finish').boundingBox())!.y - (await page.getByTestId('book.status').boundingBox())!.y
+    (await page.getByTestId('book.updateProgress').boundingBox())!.y - (await page.getByTestId('book.status').boundingBox())!.y
   const before = await gap()
   const bare = await skeleton(page)
 
@@ -109,11 +109,11 @@ test('never tracked: the empty bar and its row; the first save changes the words
   await expect(page.getByTestId('book.logDay')).toHaveCount(1)
   await expect(page.getByTestId('book.logAmount').first()).toHaveText('+3')
   await expect(page.getByTestId('book.progressText')).toHaveText('p. 3 of 480')
-  // They opened a room under the row: Finish moved down, once, and stayed; the bar, the row and the button did not move at all.
+  // They opened a room under the line: Update progress moved down, once, and stayed; the bar and the line did not move at all.
   await untilStill(page)
   expect(await gap()).toBeGreaterThan(before + 60)
   const tracked = await skeleton(page)
-  for (const id of ['book.status', 'book.progressBar', 'book.updateProgress']) expect(tracked[id], id).toEqual(bare[id])
+  for (const id of ['book.status', 'book.progressBar']) expect(tracked[id], id).toEqual(bare[id])
   expect(tracked['book.progressText']!.x).toBe(bare['book.progressText']!.x)
   expect(tracked['book.progressText']!.y).toBe(bare['book.progressText']!.y)
   await expect(page.getByTestId('book.progressStats')).toHaveCSS('opacity', '1')
@@ -192,13 +192,13 @@ test('a value without a day holds no room for a chart while the days load: nothi
   await page.reload()
   await openBook(page)
   await expect(page.getByTestId('book.progressValue')).toHaveText('212')
-  const before = await settledBox(page.getByTestId('book.finish'))
+  const before = await settledBox(page.getByTestId('book.updateProgress'))
   expect(await page.getByTestId('book.progressChart').count()).toBe(0)
 
   release()
   await page.waitForResponse((response) => response.url().includes('reading_progress_days'))
   await expect(page.getByTestId('book.progressChart')).toHaveCount(0)
-  const after = await settledBox(page.getByTestId('book.finish'))
+  const after = await settledBox(page.getByTestId('book.updateProgress'))
   expect(after.y).toBe(before.y)
 })
 

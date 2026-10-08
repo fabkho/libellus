@@ -3,7 +3,7 @@ import en from '../i18n/locales/en.json' with { type: 'json' }
 import { isoDay } from '../app/utils/dates'
 import { sql } from '../tests/support/stack'
 import { test } from './fixtures'
-import { recordedApple, settledBox, signedIn } from './support'
+import { endFromBook, recordedApple, settledBox, signedIn } from './support'
 
 /**
  * The smoke flow of the whole loop Libellus promises (#16), start to end in one
@@ -43,11 +43,11 @@ test('sign in, search, add, start, finish with a rating and a review: counted on
   await page.getByTestId('add.submit').click()
   await expect(page.getByTestId('book.status')).toHaveText(en.status.want_to_read)
 
-  // Start reading, then Finish with four stars and a review.
+  // Start reading, then Finish (in Update progress) with four stars and a review.
   await page.getByTestId('book.start').click()
   await page.getByTestId('start.submit').click()
   await expect(page.getByTestId('book.status')).toHaveText(en.status.reading)
-  await page.getByTestId('book.finish').click()
+  await endFromBook(page, 'finish')
   const rating = page.getByTestId('finish.rating')
   const box = await settledBox(rating)
   // A tap on the fourth star: whole stars, 44 wide with 12 between.

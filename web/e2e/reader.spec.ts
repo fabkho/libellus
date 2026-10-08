@@ -46,9 +46,9 @@ test('Read now opens the reader; a page turned is progress, written on closing, 
   const entry = await shelve(member, 'Metamorphosis', 'reading')
   await withEbook(page, entry)
 
-  // With the ebook here, Read now is the action and Finish steps back beside Abandon.
+  // With the ebook here, Read now is the action and Update progress steps back under it.
   await expect(page.getByTestId('book.read')).toHaveText(en.book.read)
-  await expect(page.getByTestId('book.finish')).toBeVisible()
+  await expect(page.getByTestId('book.updateProgress')).toHaveText(en.book.progress.update)
 
   const reader = await openReader(page)
   // The printed page in sepia, by default.

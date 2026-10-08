@@ -5,7 +5,7 @@ import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { sql, runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { recordedApple, signedIn, untilStill } from './support'
+import { endFromBook, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * Reading progress (#39, #60; the Update progress sheet of #68, direction D): a
@@ -425,8 +425,8 @@ test('progress by day: the card\'s pace, the book page\'s figures, chart, Last t
   await expect(page.getByTestId('book.logAmount').first()).toHaveText('+24')
   await expect(page.getByTestId('book.logEnd').first()).toHaveText('p. 236')
 
-  // Finishing: how the read went.
-  await page.getByTestId('book.finish').click()
+  // Finishing (in Update progress): how the read went.
+  await endFromBook(page, 'finish')
   await expect(page.getByTestId('finish.summary')).toHaveText('Read in 12 days · 51 pages a day')
   const [days] = await sql<{ count: string }>(
     `select count(*) from public.reading_progress_days d

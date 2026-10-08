@@ -229,6 +229,13 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
   The top bar is pinned under the safe area (centred on the column on a wide screen) and the
   page scrolls under its glass buttons: an installed app has no edge swipe back.
+- **The book page's action** (owner): one full-width pill per state, always where the eye left
+  it: under the status line, or under the progress block while reading. The lit one is what the
+  state asks for (*Add to Library*, *Start reading*, *Update progress* with the bookmark); with the
+  ebook here *Read now* is lit and the other steps back, quiet, under it; a closed read's *Read
+  again* / *Start again* is quiet, since nothing is asked of it. Ending a read is not on the page:
+  *Finish* and, under it, *DNF* are two grouped rows at the foot of the Update progress sheet (the
+  buttons quiet and one width, Finish lit at the last page). *Read as* is in the options sheet.
 - **Profile** (`pages/profile/index.vue`, issue #78; design round #78, direction D): the avatar in
   every tab's header opens it, a pushed screen lit like a book page (the favourite cover of the
   year in view). B's hero (the initials in a `coverMd` ring, the name, "Reading here since …",

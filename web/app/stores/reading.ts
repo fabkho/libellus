@@ -403,6 +403,18 @@ export const useReadingStore = defineStore('reading', () => {
     return entry
   }
 
+  /**
+   * DNF in the sheet, Finish's twin: the progress is saved the same way (an abandoned
+   * read keeps it too: where she put it down), then the DNF sheet takes over, and the
+   * read ends there exactly as it always has (`confirmAbandon`).
+   */
+  async function abandonFromProgress(): Promise<LibraryEntry | null> {
+    if (progressEditing.value === 'total') confirmProgressTotal()
+    const entry = await confirmProgress()
+    if (entry) openAbandon(entry)
+    return entry
+  }
+
   function reset() {
     progressing.value = null
     progressError.value = null
@@ -477,6 +489,7 @@ export const useReadingStore = defineStore('reading', () => {
     undoBusy,
     undoProgress,
     finishFromProgress,
+    abandonFromProgress,
     reset,
   }
 })
