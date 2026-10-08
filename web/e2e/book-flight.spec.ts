@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import { appleCover, appleRowCover } from '../tests/support/apple'
 import { sql } from '../tests/support/stack'
+import { enrichedLibrary, forgetEnriched } from './enriched'
 import { recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
@@ -15,6 +16,11 @@ import { test } from './fixtures'
  * the flight, the list's small image is never shown blown up, and a cover
  * that lands before the book page's image lands on its colour, where that
  * image then fades in (e2e/book-flight-android.spec.ts has the sharp case).
+ * And what used to go wrong (docs/MOTION.md, What can go wrong): a flight
+ * turned around never shows the live page with its cover beside the flying
+ * one; with the same Book twice on Home, Back flies into the one tapped; a
+ * Book page still loading gets the cover all the same, waiting on the
+ * stand-in until the hero is drawn there.
  */
 // What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
 test.use({ reducedMotion: 'no-preference' })
@@ -140,6 +146,10 @@ test('Back tapped mid-flight turns the cover around from where it is', { tag: '@
   await shelf(member.id, 6)
   await page.getByTestId('shell.tab.library').click()
   const row = page.getByTestId('library.entry').nth(2)
+  await expect(row).toBeVisible()
+  // The Library at its place first: measured while it still moves there, the row and the scroll are stale.
+  await untilStill(page)
+  const place = await scrollY(page)
   const rowCover = (await row.locator('[data-cover]').boundingBox())!
 
   // Frozen 100 ms into the push: the cover is on its way, between its row and the hero.
@@ -177,7 +187,7 @@ test('Back tapped mid-flight turns the cover around from where it is', { tag: '@
   await thaw(page)
   await expectLanded(page, 2)
   await expect(row.locator('[data-cover]')).toBeVisible()
-  expect(await scrollY(page)).toBe(0)
+  expect(await scrollY(page)).toBe(place)
 })
 
 test('from Home and from search the cover flies too; back to a closed search it cross-fades', { tag: '@full' }, async ({ page }) => {
@@ -294,4 +304,154 @@ test('the hand-off: never a bare frame, and a cover whose image is late lands on
   await expect(hero.locator(':scope > img')).toHaveCSS('opacity', '1')
   await expect(page.getByTestId('book.hero').locator('.pool')).toHaveCSS('opacity', '0')
   await expect(page.getByTestId('book.hero').locator('.halo')).not.toHaveCSS('opacity', '0')
+})
+
+/**
+ * From now on, every frame: whether a cover flies while a live cover of the Book at `href` shows
+ * on the live page (its row, or on its own page the hero), the two at once; and the widest the
+ * flying cover was.
+ */
+async function watchFrames(page: Page, href: string) {
+  await page.evaluate((href) => {
+    const seen = { doubles: [] as string[], widest: 0, frames: 0 }
+    Object.assign(window, { __seen: seen })
+    const look = () => {
+      seen.frames++
+      const fly = document.querySelector('[data-testid="shell.flightCover"]')
+      const main = document.querySelector('main')!
+      if (fly) {
+        seen.widest = Math.max(seen.widest, fly.getBoundingClientRect().width)
+        const live = [
+          ...main.querySelectorAll(`a[href="${href}"] [data-cover]`),
+          ...(location.pathname === href ? main.querySelectorAll('[data-flight="hero"] [data-cover]') : []),
+        ].filter((cover) => getComputedStyle(cover).visibility !== 'hidden')
+        if (live.length && Number(getComputedStyle(main).opacity) > 0.01)
+          seen.doubles.push(`frame ${seen.frames} on ${location.pathname}: page at ${getComputedStyle(main).opacity}`)
+      }
+      if (seen.frames < 600) requestAnimationFrame(look)
+    }
+    requestAnimationFrame(look)
+  }, href)
+}
+
+const seen = (page: Page) => page.evaluate(() => (window as unknown as { __seen: { doubles: string[]; widest: number } }).__seen)
+
+test('turned around mid-flight, the page in between never shows the live cover beside the flying one', { tag: '@full' }, async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 })
+  const member = await signedIn(page)
+  await shelf(member.id, 6)
+  await page.getByTestId('shell.tab.library').click()
+  const row = page.getByTestId('library.entry').nth(2)
+  await expect(row.locator('[data-cover]')).toBeVisible()
+  await untilStill(page)
+  await watchFrames(page, (await row.getAttribute('href'))!)
+
+  // In, Back while it flies in, and the same Book again while it flies back: each held mid-air.
+  await freeze(page)
+  await row.click()
+  await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+  await freezeAt(page, 100)
+  await page.getByTestId('book.back').click()
+  await expect(page.getByTestId('library.title')).toBeVisible()
+  await expect(row.locator('[data-cover][data-flight-hidden]')).toHaveCount(1)
+  await freezeAt(page, 80)
+  await row.click()
+  await expect(page.getByTestId('book.title')).toBeVisible()
+  await expect(page.getByTestId('book.hero').locator('[data-cover][data-flight-hidden]')).toHaveCount(1)
+  await thaw(page)
+  await expectLanded(page, 3)
+  // While the router drew each new page and before its flight took over, the page stood in its
+  // copy (the pose), at the strength the flight showed it: never the live page with the cover on it.
+  expect((await seen(page)).doubles).toEqual([])
+})
+
+test.describe('with series and authors', () => {
+  const stored: string[] = []
+  test.afterAll(async () => {
+    await forgetEnriched(stored)
+  })
+
+  test('the same Book twice on Home: Back flies its cover into the one it was tapped on', { tag: '@full' }, async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const member = await signedIn(page)
+    const data = await enrichedLibrary(member.client)
+    stored.push(...data.ids)
+    await page.reload()
+    // Feet of Clay is on Want to read and the next Book of her City Watch: on Home twice.
+    const href = `/book/${data.entries.feetOfClay.book.id}`
+    const series = page.getByTestId('home.nextInSeries').locator(`a[href="${href}"]`)
+    const upNext = page.getByTestId('home.upNextEntry').and(page.locator(`[href="${href}"]`))
+    await expect(series).toBeVisible()
+    await expect(upNext).toBeVisible()
+    await series.scrollIntoViewIfNeeded()
+    await untilStill(page)
+
+    await series.locator('[data-cover]').click()
+    await expect(page.getByTestId('book.hero')).toBeVisible()
+    await expectLanded(page, 1)
+
+    // Back, held mid-air: the series row's cover waits for it, Want to read's stays as it is.
+    await freeze(page)
+    await page.getByTestId('book.back').click()
+    await expect(page.getByTestId('home.title')).toBeVisible()
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(1)
+    await expect(series.locator('[data-cover]')).toHaveAttribute('data-flight-hidden')
+    await expect(upNext.locator('[data-cover]')).not.toHaveAttribute('data-flight-hidden')
+    await thaw(page)
+    await expectLanded(page, 2)
+  })
+
+  test('a Book page still loading: the cover flies to its place and waits there for the hero; a missing Book lets it go', { tag: '@full' }, async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const member = await signedIn(page)
+    const data = await enrichedLibrary(member.client)
+    stored.push(...data.ids)
+    // Mort is in the Catalogue, not in her Library: its page asks the Catalogue by its ISBN, and every
+    // such answer is held back until let go (`release`), so the page is still loading when the cover lands.
+    let release = () => {}
+    const hold = () => new Promise<void>((resolve) => (release = resolve))
+    let released = hold()
+    await page.route(/\/rest\/v1\/books\?.*isbn13=eq\./, async (route) => {
+      await released
+      await route.fallback()
+    })
+    await page.goto(`/author/${data.authors.pratchett}`)
+    const mort = page.getByTestId('author.work').filter({ has: page.getByText('Mort', { exact: true }) })
+    await expect(mort).toBeVisible()
+    await mort.scrollIntoViewIfNeeded()
+    await untilStill(page)
+    await watchFrames(page, `/book/isbn-${data.mort.isbn13}`)
+
+    await mort.getByTestId('author.workLink').click()
+    // The page is still loading: the cover flew all the way, and stays on the hero's place.
+    const waiting = page.getByTestId('book.loading').getByTestId('shell.flightHeld')
+    await expect(waiting).toHaveCount(1)
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
+    expect((await seen(page)).widest).toBeGreaterThan(130)
+    const place = (await waiting.boundingBox())!
+
+    // The Book comes: the hero takes over where the cover waited, and nothing of the flight is left.
+    release()
+    await expect(page.getByTestId('book.title')).toHaveText(data.mort.title)
+    const hero = (await page.getByTestId('book.hero').locator('[data-cover]').boundingBox())!
+    for (const side of ['x', 'y', 'width', 'height'] as const) expect(hero[side]).toBeCloseTo(place[side], 0)
+    await expectLanded(page, 1)
+    expect((await seen(page)).doubles).toEqual([])
+
+    // A Book no source knows (Forever Free, the next of her Forever War): the cover flies, finds no hero, and goes.
+    released = hold()
+    await page.goto('/')
+    const free = page.getByTestId('home.next').filter({ hasText: 'Forever Free' })
+    await expect(free).toBeVisible()
+    await free.scrollIntoViewIfNeeded()
+    await untilStill(page)
+    await watchFrames(page, (await free.locator('a').first().getAttribute('href'))!)
+    await free.locator('[data-cover]').click()
+    await expect(page.getByTestId('book.loading').getByTestId('shell.flightHeld')).toHaveCount(1)
+    release()
+    await expect(page.getByTestId('book.missing')).toBeVisible()
+    // (A new page load: the flights are counted afresh.)
+    await expectLanded(page, 1)
+    expect((await seen(page)).widest).toBeGreaterThan(130)
+  })
 })

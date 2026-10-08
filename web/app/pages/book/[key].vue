@@ -311,7 +311,8 @@ function back() {
     </section>
 
     <div v-if="!book && page?.phase !== 'missing' && page?.phase !== 'error'" class="relative flex flex-col items-center px-xl pt-sm" data-testid="book.loading">
-      <span class="placeholder rounded-cover-lg bg-fill" aria-hidden="true" />
+      <!-- At the hero cover's place and size: a cover flying in lands here and waits for the hero (composables/useBookFlight.ts). -->
+      <span class="placeholder relative rounded-cover-lg bg-fill" aria-hidden="true" data-flight-stand-in />
       <span class="sr-only">{{ t('book.loading') }}</span>
     </div>
 

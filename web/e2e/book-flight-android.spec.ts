@@ -14,7 +14,9 @@ import { test } from './fixtures'
  * long, and the book page snapped in. So the flying cover is measured frame by
  * frame on a throttled CPU. And it flies sharp: the list's image is sized for
  * its row (120 × 180), so the hero's own image takes over in the air and the
- * small one is never shown blown up.
+ * small one is never shown blown up. And it runs on the compositor (transform
+ * and opacity only): the main thread held busy mid-flight, the cover keeps
+ * moving on screen (docs/MOTION.md, How the push to a book is built).
  *
  * (Formerly book-flight-built.spec.ts, which put the build's tokens on the dev
  * server's page; with the flows on the build that is what they get anyway.)
@@ -236,4 +238,61 @@ test('closing a book page opened before its row’s image came, the cover stays 
   release()
   await expect(row.locator('[data-cover] > img')).toHaveCSS('opacity', '1')
   await expect(held).toHaveCount(0)
+})
+
+test('the flight runs on the compositor: a main thread busy mid-flight does not stop the cover', { tag: '@full' }, async ({ page }) => {
+  const { row } = await library(page)
+  // Two frames into the flight the page's own work takes the main thread for 200 ms (a list
+  // rendering, a store answering): transform and opacity alone, the compositor keeps drawing it.
+  await page.evaluate(() => {
+    const watch = () => {
+      if (!document.querySelector('[data-testid="shell.flightCover"]')) return void requestAnimationFrame(watch)
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const busy = { from: performance.timeOrigin + performance.now(), to: 0 }
+          const end = performance.now() + 200
+          while (performance.now() < end) {}
+          busy.to = performance.timeOrigin + performance.now()
+          Object.assign(window, { __busy: busy })
+        }),
+      )
+    }
+    requestAnimationFrame(watch)
+  })
+  // What the screen shows, frame by frame, as the compositor hands it out (no main thread needed).
+  const cdp = await page.context().newCDPSession(page)
+  const shown: { at: number; data: string }[] = []
+  cdp.on('Page.screencastFrame', (frame) => {
+    shown.push({ at: (frame.metadata.timestamp ?? 0) * 1000, data: frame.data })
+    void cdp.send('Page.screencastFrameAck', { sessionId: frame.sessionId }).catch(() => {})
+  })
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 40 })
+  await row.locator('[data-cover]').tap()
+  await landed(page)
+  await cdp.send('Page.stopScreencast')
+  const busy = await page.evaluate(() => (window as unknown as { __busy: { from: number; to: number } }).__busy)
+  const during = shown.filter((frame) => frame.at >= busy.from && frame.at <= busy.to)
+  // Where the cover is in each of those frames: the top of its dark blue, read off a canvas. It keeps
+  // rising (with an animation the main thread drives, it stands still for the whole 200 ms).
+  const tops = await page.evaluate(async (images) => {
+    const out: number[] = []
+    for (const data of images) {
+      const image = new Image()
+      image.src = `data:image/jpeg;base64,${data}`
+      await image.decode()
+      const canvas = new OffscreenCanvas(image.width, image.height)
+      const g = canvas.getContext('2d')!
+      g.drawImage(image, 0, 0)
+      const px = g.getImageData(0, 0, image.width, image.height).data
+      let top = -1
+      for (let y = 0; y < image.height && top < 0; y += 2)
+        for (let x = 0; x < image.width; x += 2) {
+          const i = (y * image.width + x) * 4
+          if (px[i + 2]! > 90 && px[i]! < 70 && px[i + 1]! < 80 && px[i + 2]! - px[i]! > 50) { top = y; break }
+        }
+      out.push(top)
+    }
+    return out
+  }, during.map((frame) => frame.data))
+  expect(new Set(tops).size).toBeGreaterThanOrEqual(3)
 })
