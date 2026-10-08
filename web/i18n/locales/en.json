@@ -1290,6 +1290,8 @@
         "3": "Airy"
       },
       "justify": "Justify",
+      "justifyOn": "Justified: even edges on both sides, with long words split at the end of a line.",
+      "justifyOff": "Not justified: lines end where the words do, and no word is split.",
       "awake": "Keep the screen on",
       "classic": "Classic mode",
       "awakeOn": "While a book is open the screen stays on.",
