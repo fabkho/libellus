@@ -1,9 +1,12 @@
 /**
  * "Read as" (issue #169, shared decisions in #166): how the member read a Book,
  * on paper, as an ebook or as an audiobook. It is hers, not the edition's:
- * picking an ebook edition for its cover must not claim she read an ebook. One
- * value per library entry (`library_entries.read_as`), null while she has not
- * said; the Library's Read as filter and the stats use it.
+ * an edition does not say how she read it, so a word she never said stays
+ * unsaid. One value per library entry (`library_entries.read_as`), null while
+ * she has not said; the Library's Read as filter and the stats use it. Changing
+ * edition presets a word she had from the new edition's format when that is
+ * read another way (`move_entry_to`, the database's); the format default below
+ * is for the word she never said.
  *
  * Not to be confused with an edition's *format* (hardcover, paperback, ebook,
  * audiobook: PR #165's `book_format`), which says what the edition is. Where an

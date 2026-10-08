@@ -230,7 +230,10 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
   facet that stays hidden until the store has a genre lookup.
 - **"Read as" is the member's own word, not the edition's** (owner, #166): picking an ebook edition
   for its cover must not claim she read an ebook. The edition's format is only the default for an
-  unset entry (`readAsOf`), never stored on her behalf.
+  unset entry (`readAsOf`), never stored on her behalf. Changing edition re-presets a word she had
+  said, though: when the new edition is read another way than the old one (paper → ebook), her word
+  follows it, in the same transaction as the move; a word she never said stays unsaid, an unknown
+  format and a move between editions read the same way leave it.
 - **Fable is imported once** by a local script, then dropped.
 - **Ebook files are copied, never uploaded** (owner, #131, after the phase 0 spike): each linked EPUB
   is copied into the origin private file system, so reading it needs no permission and works offline;

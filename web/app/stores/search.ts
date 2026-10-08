@@ -271,6 +271,13 @@ export const useSearchStore = defineStore('search', () => {
     for (const hit of hits.value) {
       if (hit.entry?.id === entryId) hit.entry = null
     }
+    // The other editions of the Book that said she has one: only while another of its editions is still hers.
+    const own = ownLibrary.value
+    if (!own) return
+    const works = new Set(own.map((entry) => workKey(entry.book)))
+    for (const hit of hits.value) {
+      if (!hit.entry && hit.otherEdition && !works.has(workKey(hit.book))) hit.otherEdition = false
+    }
   }
 
   /** Signing out forgets what was searched. */

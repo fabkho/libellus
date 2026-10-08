@@ -8,8 +8,10 @@ import {
   readingDaysSummary,
   readingSinceOf,
   readsInMonth,
+  readsWithoutPages,
   readsWithStars,
   starOf,
+  type StatsRead,
   yearsOf,
 } from '@/data/stats'
 import { addDays, isoDay } from '@/utils/dates'
@@ -73,7 +75,39 @@ describe('starOf', () => {
     expect([20, 19, 16, 15, 4, 3, 1].map(starOf)).toEqual([5, 4, 4, 3, 1, 1, 1])
   })
 })
+/** A closed read as the figures take them, without a database: `pages` is what her own total comes to. */
+function statsRead(title: string, ended: string | null, pages: number | null, { outcome = 'finished' as const, nth = 1 } = {}): StatsRead {
+  return {
+    sessionId: title,
+    entryId: title,
+    book: { ...book(title, { pages }), id: title, createdAt: '2026-01-01T00:00:00.000Z' },
+    startedOn: null,
+    endedOn: ended,
+    outcome,
+    rating: null,
+    pages,
+    days: null,
+    nth,
+  }
+}
 
+describe('readsWithoutPages', () => {
+  it('is the finished reads whose Book has no page count, newest end first', () => {
+    // Oldest end first, as the record hands them over.
+    const reads = [
+      statsRead('Answered', '2024-12-05', null),
+      statsRead('Uncounted', '2025-02-01', null),
+      statsRead('Paged', '2025-03-02', 300),
+      statsRead('Unnumbered again', '2025-04-09', null, { nth: 2 }),
+      statsRead('Abandoned', '2025-05-01', null, { outcome: 'abandoned' }),
+      statsRead('No end date', null, null),
+    ]
+    // A year: only its finished reads, a re-read included and an abandoned one never.
+    expect(readsWithoutPages(reads, 2025).map((r) => r.sessionId)).toEqual(['Unnumbered again', 'Uncounted'])
+    // All (the default): every finished one, a read logged without an end date counting here alone.
+    expect(readsWithoutPages(reads).map((r) => r.sessionId)).toEqual(['No end date', 'Unnumbered again', 'Uncounted', 'Answered'])
+  })
+})
 describe('the record', () => {
   it('is empty for a member who has read nothing yet', async () => {
     const { stats, add } = await member()
@@ -150,6 +184,9 @@ describe('the record', () => {
     const all = figuresOf(record.reads, 'all')
     expect(all.books).toBe(5)
     expect(all.pagesMissing).toBe(1) // Small Gods has no page count
+    // What the Pages card's line opens: the very reads the figure counts (a year's, or all of them).
+    expect(readsWithoutPages(record.reads, 'all').map((r) => r.book.title)).toEqual([runTitle('Small Gods')])
+    expect(readsWithoutPages(record.reads, 2025)).toEqual([])
     expect(all.columns).toEqual([
       { key: 2024, count: 2 },
       { key: 2025, count: 3 },
