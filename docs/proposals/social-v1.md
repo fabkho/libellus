@@ -148,7 +148,7 @@ already shows them (`private.reading_page_reads` joins `books` without an owner 
 
 - **Database** (one migration, pgTAP): `social_settings` (`private` default true, the seven
   switches, `follow_token`), `follows` (`accepted_at` null = a request), `blocks`,
-  `library_entries.hidden`, `activity` with its triggers (deferred on entry insert), the quiet flag
+  `library_entries.hidden`, `activity` with its triggers, the quiet flag
   in `import_books` / `import_book_for`, `feed()`, `member_profile()`, `member_reading_record()`
   (rows in `SESSION_COLUMNS`' shape, so `data/stats.ts` computes her figures unchanged),
   `follow_target(token)`, `follow()`, `answer_request()`, `unfollow()`, `remove_follower()`,
