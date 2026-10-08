@@ -1,11 +1,13 @@
 import { expect, type Page } from '@playwright/test'
 import sharp from 'sharp'
+import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { enrichedLibrary, forgetEnriched } from './enriched'
+import { startedSeries } from './started'
 import { test } from './fixtures'
 import { expectAccessible, openProfile, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
 
@@ -68,6 +70,8 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
   // Read this year: Home's tally counts it and opens its sheet.
   await genred(await add(book('The Dispossessed', 'Ursula K. Le Guin', 387), [[addDays(isoDay(), -9), addDays(isoDay(), -3), 18]]), 'sci-fi', 'literary')
   await genred(await add(book('Piranesi', 'Susanna Clarke', 272), [['2024-11-27', '2024-12-29', null]]), 'fantasy')
+  // A finished read whose Book has no page count: the Pages card's "N without a count" line opens it.
+  await add(book('The Lathe of Heaven', 'Ursula K. Le Guin', null), [['2024-03-02', '2024-03-20', null]])
   await add(book('Ruin', 'John Gwynne', 800), [['2025-02-04', '2025-02-04', null, 'abandoned']])
   await add(book('Up Next', 'Ursula K. Le Guin', 200), [])
   const eden = await add(book('East of Eden', 'John Steinbeck', 608), [])
@@ -278,6 +282,30 @@ for (const colorScheme of ['light', 'dark'] as const) {
       }
     })
 
+    test("Home's next in your series: the section, its sheet and a Want to read added", async ({ page }) => {
+      const member = await signedIn(page)
+      const data = await startedSeries(member.client, 6)
+      try {
+        await page.goto('/')
+        await expect(page.getByTestId('home.nextMore')).toBeVisible()
+        await untilStill(page)
+        await expectAccessible(page, 'Home with five series started and See more')
+        await openSheet(page, 'home.nextMore', 'homeSeries')
+        await expectAccessible(page, "Home's series sheet")
+        await page.getByTestId('homeSeries.rowWant').last().click()
+        await expect(page.getByTestId('add')).toBeVisible()
+        await untilStill(page)
+        await page.getByTestId('add.submit').click()
+        await expect(page.getByTestId('add')).toBeHidden()
+        await expect(page.getByTestId('homeSeries.rowStatus')).toHaveText(en.status.want_to_read)
+        await untilStill(page)
+        await expectAccessible(page, "the series sheet with a Want to read added")
+        await closeSheet(page, 'homeSeries')
+      } finally {
+        await forgetEnriched(data.ids)
+      }
+    })
+
     test('the Profile, its sheets and a year in review', async ({ page }) => {
       const member = await signedIn(page)
       await seed(page, member.client)
@@ -288,6 +316,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page, 'the Profile')
       await openSheet(page, 'profile.stars.4', 'profileReads')
       await expectAccessible(page, "the Profile's reads sheet")
+      await closeSheet(page, 'profileReads')
+      await openSheet(page, 'profile.pagesMissing', 'profileReads')
+      await expectAccessible(page, "the Profile's reads without a page count")
       await closeSheet(page, 'profileReads')
       await openSheet(page, 'profile.links', 'links')
       await expectAccessible(page, 'Book links')

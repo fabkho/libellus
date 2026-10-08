@@ -97,44 +97,52 @@ async function want() {
       </span>
     </component>
 
-    <span v-if="status" class="flex shrink-0 items-center gap-xs text-footnote text-ink-faint" :data-testid="`${testid}Status`">
-      <template v-if="status === 'finished' && !notFinished">
-        <UiIcon name="check" :size="13" bold class="text-ink-muted" />
-        <span class="sr-only">{{ t('status.finished') }}</span>
-        <UiStars v-if="rating" :quarters="rating" :show-value="false" />
-      </template>
-      <template v-else-if="notFinished">
-        <UiIcon name="slash" :size="12" />{{ t('status.notFinished') }}
-      </template>
-      <template v-else-if="status === 'reading'">
-        <span class="lamp" aria-hidden="true" />{{ t('author.reading') }}
-      </template>
-      <template v-else>{{ t('status.want_to_read') }}</template>
-    </span>
-    <button
-      v-else-if="key"
-      type="button"
-      class="want relative inline-flex h-(--size-button-sm) shrink-0 items-center gap-xxs rounded-pill pr-ms pl-sm text-footnote text-ink-muted edge disabled:opacity-50"
-      :disabled="!online || opening"
-      :aria-label="online ? t('author.wantLabel', { title: work.title }) : t('common.offline')"
-      :data-testid="`${testid}Want`"
-      @click="want"
-    >
-      <template v-if="online"><UiIcon name="plus" :size="14" bold />{{ t('author.want') }}</template>
-      <template v-else><UiIcon name="offline" :size="14" />{{ t('common.offline') }}</template>
-    </button>
-    <button
-      v-else
-      type="button"
-      class="want relative inline-flex h-(--size-button-sm) shrink-0 items-center gap-xxs rounded-pill pr-ms pl-sm text-footnote text-ink-muted edge disabled:opacity-50"
-      :disabled="!online"
-      :aria-label="online ? t('author.findLabel', { title: work.title }) : t('common.offline')"
-      :data-testid="`${testid}Find`"
-      @click="find"
-    >
-      <template v-if="online"><UiIcon name="search" :size="14" bold />{{ t('author.find') }}</template>
-      <template v-else><UiIcon name="offline" :size="14" />{{ t('common.offline') }}</template>
-    </button>
+    <!-- Her status and the way to add the work share one cell, so neither moves the row; when one takes the
+         other's place (a Want to read just added) the button fades away and the status arrives in its stead. -->
+    <div class="state grid shrink-0 justify-items-end">
+      <Transition name="state">
+        <span v-if="status" key="status" class="status col-start-1 row-start-1 flex items-center gap-xs text-footnote text-ink-faint" :data-testid="`${testid}Status`">
+          <template v-if="status === 'finished' && !notFinished">
+            <UiIcon name="check" :size="13" bold class="text-ink-muted" />
+            <span class="sr-only">{{ t('status.finished') }}</span>
+            <UiStars v-if="rating" :quarters="rating" :show-value="false" />
+          </template>
+          <template v-else-if="notFinished">
+            <UiIcon name="slash" :size="12" />{{ t('status.notFinished') }}
+          </template>
+          <template v-else-if="status === 'reading'">
+            <span class="lamp" aria-hidden="true" />{{ t('author.reading') }}
+          </template>
+          <template v-else>{{ t('status.want_to_read') }}</template>
+        </span>
+        <button
+          v-else-if="key"
+          key="want"
+          type="button"
+          class="want col-start-1 row-start-1 relative inline-flex h-(--size-button-sm) shrink-0 items-center gap-xxs rounded-pill pr-ms pl-sm text-footnote text-ink-muted edge disabled:opacity-50"
+          :disabled="!online || opening"
+          :aria-label="online ? t('author.wantLabel', { title: work.title }) : t('common.offline')"
+          :data-testid="`${testid}Want`"
+          @click="want"
+        >
+          <template v-if="online"><UiIcon name="plus" :size="14" bold />{{ t('author.want') }}</template>
+          <template v-else><UiIcon name="offline" :size="14" />{{ t('common.offline') }}</template>
+        </button>
+        <button
+          v-else
+          key="find"
+          type="button"
+          class="want col-start-1 row-start-1 relative inline-flex h-(--size-button-sm) shrink-0 items-center gap-xxs rounded-pill pr-ms pl-sm text-footnote text-ink-muted edge disabled:opacity-50"
+          :disabled="!online"
+          :aria-label="online ? t('author.findLabel', { title: work.title }) : t('common.offline')"
+          :data-testid="`${testid}Find`"
+          @click="find"
+        >
+          <template v-if="online"><UiIcon name="search" :size="14" bold />{{ t('author.find') }}</template>
+          <template v-else><UiIcon name="offline" :size="14" />{{ t('common.offline') }}</template>
+        </button>
+      </Transition>
+    </div>
   </li>
 </template>
 
@@ -170,5 +178,41 @@ async function want() {
   height: var(--size-touch);
   content: '';
   transform: translateY(-50%);
+}
+
+/* A Want to read just added (or a Start from another screen): the button fades away over `exit`, and her status
+   arrives in its place once the Add sheet has fallen away (`sheet-exit`): it rises the last `xs` and lights in the
+   accent, then settles to its quiet colour, as the tally's new mark does (docs/MOTION.md, "Want to read, added in a row"). */
+.state-leave-active {
+  pointer-events: none;
+  transition:
+    opacity var(--duration-exit) var(--ease-exit),
+    transform var(--duration-exit) var(--ease-exit);
+}
+.state-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.state-enter-active {
+  animation: state-arrive calc(2 * var(--duration-sheet)) var(--ease-standard) var(--duration-sheet-exit) both;
+}
+
+@keyframes state-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--spacing-xs));
+    color: var(--color-accent-ink);
+  }
+  35% {
+    opacity: 1;
+    transform: none;
+    color: var(--color-accent-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-enter-active {
+    animation-delay: 0s;
+  }
 }
 </style>

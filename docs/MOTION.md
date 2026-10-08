@@ -299,6 +299,14 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
 - **Tally mark.** A finish adds a mark to Home's tally: it fades in at full lamp with its glow and
   settles to the others' strength over twice `sheet`. Only a mark added to a count already on
   screen lights up.
+- **Want to read, added in a row.** A row that offers a work (Home's *Next in your series*, its sheet,
+  the author page, the series sheet) has a pill, + Want to read; when the Add sheet is confirmed her status
+  takes its place. The two share one grid cell, so the row keeps its height: the pill fades away over
+  `exit` (to 0.97), and once the Add sheet has fallen away (an animation delay of `sheetExit`) the status
+  fades in and rises the last `xs` over twice `sheet` on the `standard` curve, in the accent colour
+  (`accentInk`) that settles to its quiet one, as the tally's new mark lights and settles. Only a change on
+  screen plays; a row drawn with the status in it just has it. Reduce Motion: no delay, the status is there
+  at once (`e2e/home-series.spec.ts`).
 - **Sheet on the keyboard.** A sheet whose field has the iOS keyboard rides up on it like the search
   palette, over `keyboard` with the `keyboard` curve, and its focused field scrolls into view.
 - **Hover.** With a mouse (only where the device hovers), rows and menu items take the `fill`,

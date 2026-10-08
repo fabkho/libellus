@@ -87,7 +87,7 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
 
           <section v-if="year" aria-labelledby="reading-year" class="flex flex-col gap-md" data-testid="readingPage.year">
             <h2 id="reading-year" class="eyebrow">{{ t('readingPage.year', { year: year.year }) }}</h2>
-            <ProfileFigures :figures="year" />
+            <ProfileFigures still :figures="year" />
             <ProfileColumns still :columns="columns" :lit="year.year === thisYear ? thisMonth : null" testid="readingPage.months" />
           </section>
 

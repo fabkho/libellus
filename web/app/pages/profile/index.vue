@@ -3,14 +3,15 @@
 // over A's figures). The avatar in every tab's header opens it, pushed like a
 // book page and lit by a cover: the favourite of the year in view (this
 // year's under All). Under the hero, the year pills (All first, the default)
-// and everything they scope: the four figures, the books by year (All; a year
+// and everything they scope: the four figures (the Pages line opens the reads
+// without a page count), the books by year (All; a year
 // opens its review) or by month (a month opens its books, "<year> in review"
 // the year), the ratings (a row opens the books rated so), the genres (a row opens the
 // Library filtered by it, #168), the records and the authors read more than once. The reading days (this year and All) and
 // the years in review do not change with the pills. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
-import { figuresOf, readsInMonth, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
+import { figuresOf, readsInMonth, readsWithoutPages, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryStore } from '~/stores/library'
@@ -99,18 +100,21 @@ const columns = computed(() =>
 )
 const lit = computed(() => (stats.year === 'all' ? (years.value.includes(thisYear) ? thisYear : null) : stats.year === thisYear ? thisMonth : null))
 
-// The sheet of a month's books or a star row's; open again on Back from a book opened in it.
+// The sheet of a month's books, a star row's, or the reads without a page count; open again on Back from a book
+// opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const sheetTitle = computed(() => {
   const s = shown.value
   if (!s) return ''
   if (s.kind === 'month') return t('profile.sheet.month', { month: monthLong(s.month), year: s.year })
+  if (s.kind === 'pagesMissing') return t('profile.sheet.pagesMissing')
   return t('profile.sheet.stars', { count: s.star, year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) }, s.star)
 })
 const sheetReads = computed(() => {
   const s = shown.value
   if (!s) return []
-  return s.kind === 'month' ? readsInMonth(reads.value, s.year, s.month) : readsWithStars(reads.value, s.year, s.star)
+  if (s.kind === 'month') return readsInMonth(reads.value, s.year, s.month)
+  return s.kind === 'pagesMissing' ? readsWithoutPages(reads.value, s.year) : readsWithStars(reads.value, s.year, s.star)
 })
 
 function pickColumn(key: number) {
@@ -119,6 +123,11 @@ function pickColumn(key: number) {
 }
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: stats.year, star }
+}
+// The Pages line: the reads of the year in view whose Book has no page count (a row opens its book page, where
+// the count can be set).
+function pickPagesMissing() {
+  sheet.value = { kind: 'pagesMissing', year: stats.year }
 }
 // A genre's row opens the Library's Finished list filtered by it (and by the year in view).
 function pickGenre(genre: string) {
@@ -150,7 +159,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
           <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
             <div class="flex flex-col gap-md">
               <ProfileYearPills v-model="stats.year" :years="years" :loading="loading" />
-              <ProfileFigures :figures="loading ? null : figures" />
+              <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" />
             </div>
 
             <section id="columns" class="flex flex-col gap-md pt-xl">

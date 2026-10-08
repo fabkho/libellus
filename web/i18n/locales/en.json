@@ -162,6 +162,7 @@
       "rereads": "{count} read again",
       "dnf": "{count} DNF",
       "pagesMissing": "{count} without a count",
+      "pagesMissingOpen": "{count} without a count: show the books",
       "pagesPerBook": "{count} a book",
       "unrated": "{count} not rated yet",
       "rated": "{count} rated",
@@ -246,7 +247,8 @@
       "month": "{month} {year}",
       "stars": "{count} star · {year} | {count} stars · {year}",
       "allYears": "All years",
-      "readIn": "in a day | in {count} days"
+      "readIn": "in a day | in {count} days",
+      "pagesMissing": "Books without a page count"
     },
     "year": {
       "eyebrow": "Your year in books",
@@ -1582,6 +1584,10 @@
     "suggested": "Use the suggested series",
     "next": "Next in your series",
     "nextPlace": "Book {n} · {name}",
+    "nextPlaceOf": "Book {n} of {count} · {name}",
+    "seeMore": "See more",
+    "seeMoreLabel": "See all {count} series you have started",
+    "started": "Series you have started",
     "error": {
       "position": "Write the book’s number as 2 or 2.5.",
       "entry_not_found": "This book isn’t in your Library any more.",

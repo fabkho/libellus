@@ -171,7 +171,42 @@ test('the avatar opens the Profile: the figures of all years and of one, the she
   await page.getByTestId('profile.back').click()
   await expect(page.getByTestId('home.title')).toBeVisible()
 })
+/**
+ * The Pages figure's line, where it reads "N without a count": a finished read whose
+ * Book has no page count, on top of the seed's (every one of which has a count).
+ */
+test('the Pages card opens the books without a page count', async ({ page }) => {
+  const member = await signedIn(page)
+  await seed(page, member.client, [[book('Noumenon', 'Marina J. Lostetter', null), [['2025-01-02', '2025-01-20', 16]]]])
+  await page.getByTestId('shell.avatar').click()
+  await expect(page).toHaveURL(/\/profile$/)
 
+  // Under All the line is a button that says what it opens, and it opens the one read without a count.
+  const line = page.getByTestId('profile.pagesMissing')
+  await expect(line).toHaveText(fill(en.profile.figures.pagesMissing, { count: 1 }))
+  await expect(line).toHaveAttribute('aria-label', fill(en.profile.figures.pagesMissingOpen, { count: 1 }))
+  await line.click()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(en.profile.sheet.pagesMissing)
+  await expect(page.getByTestId('profileReads.read').getByTestId('profile.readTitle')).toHaveText([runTitle('Noumenon')])
+  // Its row opens the book page, where the page count can be set (#60), and Back from there is the sheet again.
+  await page.getByTestId('profileReads.read').click()
+  await expect(page.getByTestId('book.title')).toHaveText(runTitle('Noumenon'))
+  await page.getByTestId('book.back').click()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(en.profile.sheet.pagesMissing)
+  await page.getByTestId('profileReads.cancel').click()
+  await expect(page.getByTestId('profileReads')).toBeHidden()
+
+  // 2025, the year it was read in: the line is the button, and the sheet is that year's.
+  await page.getByTestId('profile.year.2025').click()
+  await expect(page.getByTestId('profile.pagesMissing')).toHaveText(fill(en.profile.figures.pagesMissing, { count: 1 }))
+  await page.getByTestId('profile.pagesMissing').click()
+  await expect(page.getByTestId('profileReads.read').getByTestId('profile.readTitle')).toHaveText([runTitle('Noumenon')])
+  await page.getByTestId('profileReads.cancel').click()
+
+  // 2024: every read of the year has a count, so the line is plain text and nothing opens from it.
+  await page.getByTestId('profile.year.2024').click()
+  await expect(page.getByTestId('profile.pagesMissing')).toHaveCount(0)
+})
 test('a member with nothing finished yet sees the empty Profile and her account', async ({ page }) => {
   const member = await signedIn(page)
   await page.getByTestId('shell.avatar').click()
