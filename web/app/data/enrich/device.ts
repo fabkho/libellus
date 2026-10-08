@@ -1,6 +1,6 @@
 import { LOCAL_DATA_PREFIX, type DeviceStorage } from '../localData'
 import type { AuthorPage, BookAuthor } from './authors'
-import type { BookSeries, NextInSeries, SeriesInfo } from './series'
+import type { BookSeries, StartedSeries, SeriesInfo } from './series'
 
 /**
  * What the author pages and the series (issue #167) last showed on this
@@ -18,7 +18,7 @@ import type { BookSeries, NextInSeries, SeriesInfo } from './series'
 
 export const DEVICE_ENRICH_KEY = `${LOCAL_DATA_PREFIX}enrich`
 /** Bumped when the shape changes: an older copy is then ignored, never misread. */
-export const DEVICE_ENRICH_VERSION = 1
+export const DEVICE_ENRICH_VERSION = 2
 
 export const LIMITS = { authors: 12, bookSeries: 120, series: 30 } as const
 
@@ -32,12 +32,12 @@ export type EnrichCopy = {
   series: Record<string, SeriesInfo>
   /** The linked authors of Books, by Book id (her Library's and the pages she opened). */
   bookAuthors: Record<string, BookAuthor[]>
-  /** Home's "Next in your series", as last asked. */
-  next: NextInSeries[] | null
+  /** Home's "Next in your series": the series she has started, as last asked. */
+  started: StartedSeries[] | null
 }
 
 export function emptyCopy(memberId: string): EnrichCopy {
-  return { memberId, authors: {}, bookSeries: {}, series: {}, bookAuthors: {}, next: null }
+  return { memberId, authors: {}, bookSeries: {}, series: {}, bookAuthors: {}, started: null }
 }
 
 /** The saved copy, if there is one and it is this member's; else an empty one. */

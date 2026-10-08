@@ -91,10 +91,16 @@ Books of the author whose work no source knows are listed under `other`.
 |---|---|---|
 | `forBook(bookId, language?)` | `book_series_info(p_book, p_language)` | `{ overridden, series: BookSeriesPlace[] }` |
 | `series(seriesId, language?)` | `series_works(p_series, p_language)` | one series in order (the series sheet) |
-| `next(limit?, language?)` | `next_in_series(p_limit, p_language)` | Home's row: `[{ series, finished, next: WorkCard }]` |
+| `started(limit?, language?)` | `started_series(p_limit, p_language)` | Home's row: the series she has started and not finished, latest activity first: `[{ series, finished, count?, activeOn?, next: WorkCard }]` (`next_in_series` stays in the database for installed apps still on the older shape) |
 | `set(entryId, { name, position })` / `set(entryId, { seriesId, position })` | `set_entry_series` | her correction, then `forBook` |
 | `clear(entryId)` | `set_entry_series(…, null, null, null)` | "in no series" |
 | `reset(entryId)` | `reset_entry_series(p_entry)` | back to the computed series |
+
+`started_series` reads every work that is at least in progress. A series is started when one of its works is
+currently reading or finished (Want to read, or a work given up on, alone does not start it) and listed while one
+of its works is open (not finished, not read now, not given up on); the next open work comes with her status of it.
+`count` is the Catalogue's whole-numbered positions: the total is whatever the Catalogue knows, so a series whose
+every known work is finished is complete however many more may exist.
 
 `BookSeriesPlace` is a series (`id, name, parentId?, parentName?, source, count, works`) with the Book's
 `position` (decimals allowed: 0.5, 2.5) and where the membership comes from (`membership`: `member`,

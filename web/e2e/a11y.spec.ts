@@ -1,11 +1,13 @@
 import { expect, type Page } from '@playwright/test'
 import sharp from 'sharp'
+import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { enrichedLibrary, forgetEnriched } from './enriched'
+import { startedSeries } from './started'
 import { test } from './fixtures'
 import { expectAccessible, openProfile, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
 
@@ -275,6 +277,30 @@ for (const colorScheme of ['light', 'dark'] as const) {
         await page.goto('/')
         await expect(page.getByTestId('home.nextInSeries')).toBeVisible()
         await expectAccessible(page, "Home with the next in a series")
+      } finally {
+        await forgetEnriched(data.ids)
+      }
+    })
+
+    test("Home's next in your series: the section, its sheet and a Want to read added", async ({ page }) => {
+      const member = await signedIn(page)
+      const data = await startedSeries(member.client, 6)
+      try {
+        await page.goto('/')
+        await expect(page.getByTestId('home.nextMore')).toBeVisible()
+        await untilStill(page)
+        await expectAccessible(page, 'Home with five series started and See more')
+        await openSheet(page, 'home.nextMore', 'homeSeries')
+        await expectAccessible(page, "Home's series sheet")
+        await page.getByTestId('homeSeries.rowWant').last().click()
+        await expect(page.getByTestId('add')).toBeVisible()
+        await untilStill(page)
+        await page.getByTestId('add.submit').click()
+        await expect(page.getByTestId('add')).toBeHidden()
+        await expect(page.getByTestId('homeSeries.rowStatus')).toHaveText(en.status.want_to_read)
+        await untilStill(page)
+        await expectAccessible(page, "the series sheet with a Want to read added")
+        await closeSheet(page, 'homeSeries')
       } finally {
         await forgetEnriched(data.ids)
       }
