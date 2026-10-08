@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.3.0](https://github.com/fabkho/libellus/compare/v1.2.0...v1.3.0) (2026-10-08)
+
+
+### Features
+
+* **email:** a mail an edge function sends can be generated from the shell ([0a509c6](https://github.com/fabkho/libellus/commit/0a509c665014e055ddd0941db789ddab49201e41))
+* **email:** design the sign-in code mail in the app's look ([ea99e78](https://github.com/fabkho/libellus/commit/ea99e7822cd735a66c8e05ee3050b4ad2d4778b7))
+* **email:** generate the sign-in mail from the design tokens ([4047185](https://github.com/fabkho/libellus/commit/404718569ef03f1bddf01da6dd09cd34d98eaab1))
+* **email:** preview the mail light and dark with Playwright ([3b8073e](https://github.com/fabkho/libellus/commit/3b8073e311e2a4aefcf65c368e91049ac1ba2396))
+* **waitlist:** an Invite button on the owner's Waitlist ([2a0bc4a](https://github.com/fabkho/libellus/commit/2a0bc4a0daba6c6329bef904445e6c18ecd1f41c))
+* **waitlist:** an Invite button that mails a waitlist entry its code ([429ab19](https://github.com/fabkho/libellus/commit/429ab1962b0be07f1dde834fc239c192bd60cbfe))
+* **waitlist:** an invite code per waitlist entry for the owner ([114f0e9](https://github.com/fabkho/libellus/commit/114f0e9e88f1224ec78af760f43be51ec5124535))
+* **waitlist:** invite an entry from the data layer ([80bfe66](https://github.com/fabkho/libellus/commit/80bfe668c78f65af449cba5c715b6f770eadad6f))
+* **waitlist:** the invite mail in Libellus' design ([f84f2a0](https://github.com/fabkho/libellus/commit/f84f2a097d18ca1d3cf1c580a3583564a9ba764a))
+* **waitlist:** the waitlist-invite edge function mails an entry its code ([eac589b](https://github.com/fabkho/libellus/commit/eac589bbd95fb0d5809bf4338d4b7f420c4f060f))
+
+
+### Fixes
+
+* **e2e:** keep Home's greeting out of the avatar flight's ring probe ([28121cd](https://github.com/fabkho/libellus/commit/28121cdff13e7d9f014f4120a206de0d2c647a0f))
+* **e2e:** keep Home's greeting out of the avatar flight's ring probe ([a8611be](https://github.com/fabkho/libellus/commit/a8611beb1a948b8d7fc34277cf81e175b34eebd9))
+* **e2e:** open an address only from a page the app has finished starting ([a50e28e](https://github.com/fabkho/libellus/commit/a50e28e89fe26bd1a0d4acf49382dce8435ac454))
+
 ## [1.2.0](https://github.com/fabkho/libellus/compare/v1.1.0...v1.2.0) (2026-10-07)
 
 
