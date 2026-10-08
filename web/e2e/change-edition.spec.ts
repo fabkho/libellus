@@ -278,7 +278,9 @@ test('the format row says what it does, shows its effect at once and goes along 
 
   // The format she said is the one saved with the new edition, and her Read as follows it.
   await expect(page.getByTestId('book.facts')).toContainText(en.book.formatFact.audiobook)
-  await expect(page.getByTestId('book.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
+  // Read as is in the Book's options sheet (#211), and it followed the format she said.
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
   const [saved] = await sql<{ format_override: string | null; read_as: string | null; format: string | null }>(
     `select e.format_override, e.read_as, b.format from public.library_entries e join public.books b on b.id = e.book_id where e.id = $1`,
     [entry.id],
@@ -300,7 +302,8 @@ test('a format she does not change is not said: the action stays Change, and her
   await expect(page.getByTestId('edition')).toBeHidden()
 
   await expect(page.getByTestId('book.facts')).toContainText('272 pages')
-  await expect(page.getByTestId('book.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
   const [saved] = await sql<{ format_override: string | null; read_as: string | null }>(
     `select format_override, read_as from public.library_entries where id = $1`,
     [entry.id],
@@ -321,11 +324,12 @@ test('an edition read another way presets Read as, and her own edition\'s format
   await page.getByTestId('edition.action').click()
   await expect(page.getByTestId('edition')).toBeHidden()
   await expect(page.getByTestId('book.facts')).toContainText(en.book.formatFact.hardcover)
-  // Paper now: the ebook word gave way to the new edition's.
-  await expect(page.getByTestId('book.readAs.physical')).toHaveAttribute('aria-checked', 'true')
+  // Paper now: the ebook word gave way to the new edition's — in the options sheet (#211).
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.readAs.physical')).toHaveAttribute('aria-checked', 'true')
 
   // With her own edition picked the action is Save, and saving a format leaves Read as to her.
-  await page.getByTestId('book.options').click()
+  // The sheet it was opened from is already up: it makes way for the change.
   await page.getByTestId('bookOptions.changeEdition').click()
   await expect(page.getByTestId('edition.action')).toBeDisabled()
   await page.getByTestId('edition.format.paperback').click()
@@ -334,7 +338,8 @@ test('an edition read another way presets Read as, and her own edition\'s format
   await page.getByTestId('edition.action').click()
   await expect(page.getByTestId('edition')).toBeHidden()
   await expect(page.getByTestId('book.facts')).toContainText(en.book.formatFact.paperback)
-  await expect(page.getByTestId('book.readAs.physical')).toHaveAttribute('aria-checked', 'true')
+  await page.getByTestId('book.options').click()
+  await expect(page.getByTestId('bookOptions.readAs.physical')).toHaveAttribute('aria-checked', 'true')
 })
 
 test.describe('the list of editions moves in', () => {
@@ -347,22 +352,52 @@ test.describe('the list of editions moves in', () => {
     await goto(page, `/book/${entry.book.id}`)
     await page.getByTestId('book.options').click()
 
-    // Every frame from the tap on: where the first row sits under the hint, and how opaque the
-    // rows after it are (a row that pops in is never seen below 1).
+    // Every frame from the tap on: where the first row sits in its list. And, for every row that
+    // arrives, the animation it carries — its room opening and its fade — read from the
+    // animation itself: a frame drawn while one runs may never come on a starved runner, and a
+    // whole `standard` fade then falls between two frames (docs/MOTION.md, as above).
     await page.evaluate(() => {
-      const frames: { first: number | null; others: number[]; rows: number }[] = []
-      Object.assign(window, { __editionFrames: frames })
+      type Done = { from: unknown; to: unknown; duration: unknown; events: string[] }
+      // `place`: where the first row sits in its list — not under the hint, whose own box can
+      // change under it (a late font), which says nothing about the row.
+      const frames: { place: number | null; rows: number }[] = []
+      const arriving: { index: number; room: Done; fade: Done }[] = []
+      Object.assign(window, { __editionFrames: frames, __editionArriving: arriving })
+
+      /** What a transition of one property does, and how it ends (`null` when it does not run). */
+      const transition = (row: HTMLElement, property: string): Done | null => {
+        const animation = row.getAnimations().find((one) => (one as CSSTransition).transitionProperty === property)
+        if (!animation) return null
+        const keyframes = (animation.effect as KeyframeEffect).getKeyframes() as Record<string, string>[]
+        const events: string[] = []
+        for (const type of ['finish', 'cancel']) animation.addEventListener(type, () => events.push(type))
+        return { from: keyframes[0]?.[property], to: keyframes.at(-1)?.[property], duration: animation.effect!.getTiming().duration, events }
+      }
+
       const look = () => {
         const rows = [...document.querySelectorAll<HTMLElement>('[data-testid="edition.candidate"]')]
-        const hint = document.querySelector('[data-testid="edition.hint"]')
+        const list = rows[0]?.parentElement
         frames.push({
-          first: rows[0] && hint ? Math.round((rows[0].getBoundingClientRect().top - hint.getBoundingClientRect().bottom) * 10) / 10 : null,
-          others: rows.slice(1).map((row) => Number(getComputedStyle(row).opacity)),
+          place: rows[0] && list ? Math.round((rows[0].getBoundingClientRect().top - list.getBoundingClientRect().top) * 10) / 10 : null,
           rows: rows.length,
         })
         if (frames.length < 900) requestAnimationFrame(look)
       }
       requestAnimationFrame(look)
+
+      // Index 0 is the current edition: it comes with the sheet and animates nothing in, so only
+      // the rows that arrive under it are read. Page copies are made off the document, so only
+      // what is connected counts.
+      new MutationObserver((records) => {
+        for (const record of records)
+          for (const node of record.addedNodes)
+            if (node instanceof HTMLElement && node.isConnected && node.dataset.testid === 'edition.candidate') {
+              const index = [...document.querySelectorAll('[data-testid="edition.candidate"]')].indexOf(node)
+              const room = transition(node, 'height')
+              const fade = transition(node, 'opacity')
+              if (index > 0 && room && fade) arriving.push({ index, room, fade })
+            }
+      }).observe(document.body, { childList: true, subtree: true })
     })
     await page.getByTestId('bookOptions.changeEdition').click()
     await expect(page.getByTestId('edition.loading')).toBeVisible()
@@ -371,18 +406,29 @@ test.describe('the list of editions moves in', () => {
     // Let the last room settle (the list says it is moving while one does).
     await expect(page.getByTestId('edition').locator('[data-moving]')).toHaveCount(0)
 
-    const frames = await page.evaluate(() => (window as unknown as { __editionFrames: { first: number | null; others: number[]; rows: number }[] }).__editionFrames)
-    // The current row never moved under the hint once the others began to arrive (the sheet
-    // rising carries both; what came before is the sheet's own layout settling).
-    const arriving = frames.findIndex((frame) => frame.rows > 1)
-    expect(arriving).toBeGreaterThan(-1)
-    const firsts = new Set(frames.slice(arriving).map((frame) => frame.first).filter((value) => value !== null))
-    expect([...firsts]).toHaveLength(1)
-    // The ones that came after it faded in: partly drawn on the way, never before they had their room.
-    const opacities = frames.flatMap((frame) => frame.others)
-    expect(opacities.some((opacity) => opacity > 0 && opacity < 1)).toBe(true)
-    expect(opacities.at(-1)).toBe(1)
-    // The rows were not added all in one frame to a list already full.
-    expect(frames.some((frame) => frame.rows > 1 && frame.others.some((opacity) => opacity < 1))).toBe(true)
+    const { frames, arriving, standard } = await page.evaluate(() => ({
+      frames: (window as unknown as { __editionFrames: { place: number | null; rows: number }[] }).__editionFrames,
+      arriving: (window as unknown as { __editionArriving: { index: number; room: { from: unknown; to: unknown; duration: unknown; events: string[] }; fade: { from: unknown; to: unknown; duration: unknown; events: string[] } }[] }).__editionArriving,
+      // In ms: the dev server writes the token as `250ms`, the build as `.25s`.
+      standard: ((value) => parseFloat(value) * (/ms$/.test(value) ? 1 : 1000))(getComputedStyle(document.documentElement).getPropertyValue('--duration-standard').trim()),
+    }))
+    // The current row never moved in its list once the others began to arrive; what came before
+    // is the sheet's own layout settling. A rect read while the sheet rides up comes back
+    // rounded, so a sub-pixel spread is not a move.
+    const arrived = frames.findIndex((frame) => frame.rows > 1)
+    expect(arrived).toBeGreaterThan(-1)
+    const places = frames.slice(arrived).map((frame) => frame.place).filter((value): value is number => value !== null)
+    expect(places.length).toBeGreaterThan(0)
+    expect(Math.max(...places) - Math.min(...places)).toBeLessThan(1)
+    // Every other row arrived opening its room and fading in over `standard`, played to its
+    // end: one arrival per row the sheet ended with, after the current one, in its place.
+    expect(arriving).toHaveLength((await page.getByTestId('edition.candidate').count()) - 1)
+    expect(arriving.map((row) => row.index)).toEqual(arriving.map((_, index) => index + 1))
+    for (const row of arriving) {
+      expect(row.room).toEqual({ from: '0px', to: expect.stringMatching(/^\d+(\.\d+)?px$/), duration: standard, events: expect.arrayContaining(['finish']) })
+      expect(row.fade).toEqual({ from: '0', to: '1', duration: standard, events: expect.arrayContaining(['finish']) })
+      expect([...row.room.events, ...row.fade.events]).not.toContain('cancel')
+    }
+    await expect(page.getByTestId('edition.candidate').last()).toHaveCSS('opacity', '1')
   })
 })
