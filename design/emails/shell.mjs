@@ -54,6 +54,7 @@ export function createKit(tokens) {
           'muted-page': flatten(color('inkMuted', scheme), page),
           'faint-page': flatten(color('inkFaint', scheme), page),
           accent: color('accent', scheme),
+          'on-ink': color('onInk', scheme),
         },
       ]
     }),
@@ -67,6 +68,9 @@ export function createKit(tokens) {
     // The code is read off the lamp-tinted fill, not the card.
     const onFill = contrast(palette[scheme].ink, palette[scheme].fill)
     if (onFill < 4.5) throw new Error(`Email code on its fill is ${onFill.toFixed(2)}:1 in ${scheme}; it needs 4.5:1.`)
+    // The button's label is read off the ink fill (the app's primary button).
+    const onInk = contrast(palette[scheme]['on-ink'], palette[scheme].ink)
+    if (onInk < 4.5) throw new Error(`Email button label on ink is ${onInk.toFixed(2)}:1 in ${scheme}; it needs 4.5:1.`)
   }
 
   // ---- paint: a class carries one colour role; the light value is inlined, the dark one is in <style>
@@ -76,7 +80,9 @@ export function createKit(tokens) {
     'bg-fill': ['background-color', 'fill'],
     'bc-hair': ['border-color', 'hair'],
     'bg-accent': ['background-color', 'accent'],
+    'bg-ink': ['background-color', 'ink'],
     'c-ink': ['color', 'ink'],
+    'c-on-ink': ['color', 'on-ink'],
     'c-muted': ['color', 'muted'],
     'c-faint': ['color', 'faint'],
     'c-muted-page': ['color', 'muted-page'],
@@ -132,11 +138,10 @@ export function createKit(tokens) {
    * A code the member copies by hand: the app's code cell (a fill, a hairline ring, `md` corners, mono
    * figures) with the lamp's short rule under it, where the app marks the cell being typed into. One piece of
    * text, not six cells, so it selects with a triple tap and reads as one number. `text` is the code
-   * or the Go-template variable that stands for it.
+   * or the template variable that stands for it. `size` and `tracking` (px) default to the six digits;
+   * a longer code (an invite's `K7QM-X2PA`) passes smaller ones so it still fits a phone on one line.
    */
-  const code = (text) => {
-    const size = 36
-    const tracking = 9
+  const code = (text, { size = 36, tracking = 9 } = {}) => {
     return (
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate"><tr>` +
       `<td align="center" ${x('bg-fill bc-hair', `border:1px solid;border-radius:${px(radius('md'))};padding:${px(space('lg'))} ${px(space('ms'))}`)}>` +
@@ -144,6 +149,22 @@ export function createKit(tokens) {
       `<div ${x('c-ink', `margin:0;font-family:${families.mono};font-size:${px(size)};line-height:${px(size + 8)};font-weight:500;letter-spacing:${px(tracking)};padding-left:${px(tracking)};white-space:nowrap;-webkit-user-select:all;user-select:all`)}>${text}</div>` +
       // The lamp rule: the focused field's 2 px line, short and centred under the digits.
       `<div ${x('bg-accent', `width:${px(size)};height:${px(tokens.stroke.focus.$value)};line-height:${px(tokens.stroke.focus.$value)};font-size:1px;margin:${px(space('ms'))} auto 0;border-radius:${px(radius('pill'))}`)}>&nbsp;</div>` +
+      `</td></tr></table>`
+    )
+  }
+
+  /**
+   * A link that looks like the app's primary button: the ink pill, full width, the label in on-ink.
+   * A table cell carries the fill so clients that drop padding on links (Outlook) still draw the
+   * button; the whole pill is the link everywhere else. `href` is escaped by whoever fills it in.
+   */
+  const button = (href, label) => {
+    const height = tokens.size.button.$value
+    const pill = `border-radius:${px(radius('pill'))}`
+    return (
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate"><tr>` +
+      `<td align="center" ${x('bg-ink', pill)}>` +
+      `<a href="${href}" ${x('c-on-ink', `display:block;${type('bodyLarge')};line-height:${px(height)};font-weight:500;text-align:center;text-decoration:none;${pill}`)}>${label}</a>` +
       `</td></tr></table>`
     )
   }
@@ -219,5 +240,5 @@ export function createKit(tokens) {
     ].join('\n')
   }
 
-  return { x, px, type, space, radius, eyebrow, paragraph, code, render, palette }
+  return { x, px, type, space, radius, eyebrow, paragraph, code, button, render, palette }
 }
