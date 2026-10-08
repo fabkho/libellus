@@ -169,34 +169,100 @@ already shows them (`private.reading_page_reads` joins `books` without an owner 
   privacy), CONTEXT.md (Follower, Follow request, Private account, Public account, Follow link,
   Circle, Hidden from followers; Manual book), README's intro and *What it does* (its Privacy section
   is #212's), parity.md entries for every screen above.
-- **Tests**: pgTAP as four real members (private, public, follower, stranger), Vitest for the
-  repositories and batching, Playwright for the link → request → accept → feed → profile flow, the
-  public follow, block, hide, offline labels, and the a11y scans of every new screen and sheet in
-  both themes.
+- **Tests** (end-to-end only where it is critical, decided 8 October 2026): pgTAP as four real members
+  (private, public, follower, stranger) for every rule of who sees what; Vitest for the repositories,
+  the batching and the figures; **one** Playwright flow for the whole loop with two members (link →
+  ask → accept → a finish in the feed → her profile → hide → gone → block); one accessibility scan
+  of the new screens in one theme, tagged `@full`.
 
 ### Build order
 
-| Slice | What | Model tier |
-|---|---|---|
-| 1 | The database: everything in F's first bullet, with pgTAP | heavy (Opus 5.5) |
-| 2 | Privacy and following: E, A, B (settings sheet, follow link page, People, requests, ⋯, block) | advanced (Sonnet 5.5) |
-| 3 | The feed: C (Home's *Your circle*, the feed page, batches, offline) | heavy (Opus 5.5): the design-heavy part |
-| 4 | Profiles: D (her profile and year in review on the Profile's blocks) | advanced (Sonnet 5.5) |
+Tasks, models, order and checks: [social-v1-plan.md](social-v1-plan.md).
 
-## Version 2: proposed
+## Version 2
 
-In the order I would build them. Nothing here is decided.
+The owner's answers to the proposed list (8 October 2026): yes to 1, 3, 4, 7 and 8; likes instead of
+*Want to read too* (2); *Send a book* maybe (5); people found through reviews on a Book's page (6);
+and a new idea, GIFs and stickers in reviews. Not scheduled yet: version 1 comes first.
 
-| # | Feature | Why now | Effort |
+| # | Feature | Status | Effort |
 |---|---|---|---|
-| 1 | **Spoiler-safe reviews.** "Contains spoilers" on the Finish and Edit read sheets; followers who have not finished the Book see it folded behind *Show anyway*. | Reviews are on by default in version 1, so the next friend to read the Book meets them. Small enough to pull into version 1 if that worries you. | S |
-| 2 | **Want to read too.** One quiet button on a feed entry and a profile's Books: puts the Book on your Want to read and tells her once, in her *Your circle* ("Ida wants to read this too"). | The reaction a reading app needs instead of likes: it ends in a Book on a shelf. | S |
-| 3 | **Your circle on a Book's page.** "Anna ★4.5 · Ben is reading it", under the Goodreads line, matched by work so other editions count. | The Book page is where she decides; a friend's stars beat a stranger's average. | S–M |
-| 4 | **You both read.** On a profile and her year in review: the Books you both finished, both your stars side by side. No totals. | Uses the same work matching as #3. | S |
-| 5 | **Send a book.** Book ⋯ → *Send to…* a follower, with a note. It lands in a *For you* row on Home, not in the feed; one tap puts it on Want to read. | Recommendations between two people, the way it happens anyway, only kept. | M |
-| 6 | **More ways to find people.** *Ask to follow* in the footer of a reading page for signed-in visitors; *Ask by email* (the same answer whether or not the address is a member); the owner's waitlist invite carrying the follow request of the member whose page it came from. | Decision 2 said "later". | M |
-| 7 | **Reading the same book now.** The small photos of followed members who have the same work open, on your Home card. | A free by-product of #3. | S |
-| 8 | **Friends' Want to read on yours.** A tiny photo on Books a followed member also wants to read. | Prepares buddy reads. | S |
+| 1 | **Spoiler-safe reviews.** "Contains spoilers" on the Finish and Edit read sheets; followers who have not finished the Book see the review folded behind *Show anyway*. | yes | S |
+| 2 | **Likes.** A heart on a feed entry (a finish, a review) and on a review wherever it shows. See *Likes* below for how they stay calm. | yes, instead of *Want to read too* | S–M |
+| 3 | **Readers on a Book's page.** A *Readers* section under the Goodreads line: the people you follow who read it, with their stars, status and review, matched by work so other editions count. Grows into 6. | yes | M |
+| 4 | **You both read.** On a profile and her year in review: the Books you both finished, both your stars side by side. No totals. | yes | S |
+| 5 | **Send a book.** Book ⋯ → *Send to…* a follower, with a note; a *For you* row on Home, not in the feed. | maybe | M |
+| 6 | **Finding people through their reviews.** See *Finding people* below. | yes, the Book page's reviews first | M |
+| 7 | **Reading the same book now.** Small photos of followed members who have the same work open, on your Home card. | yes | S |
+| 8 | **Friends' Want to read on yours.** A tiny photo on Books a followed member also wants to read. | yes | S |
+| 9 | **GIFs and stickers in reviews** (KLIPY). See *GIFs and stickers* below. | new idea | M |
+
+### Likes
+
+Likes replace *Want to read too*. To keep them from becoming a score:
+
+- **Who, not how many.** Under an entry: "Liked by Anna and Ben" (people you know, by name), never a
+  number. In a large circle the line stops at two names and "others".
+- **She hears once.** The author gets one quiet row in her *Your circle* ("Anna liked your review of
+  Piranesi"), no notification and no badge.
+- **Private stays private.** A like is visible only to people who can see the entry, and goes when the
+  entry goes (a hidden Book, a removed follower, a block).
+- **One kind.** A heart, no reactions palette.
+- Data: `likes(member, activity)` (or `session` for a review on a Book page), unique per pair, read only
+  through the feed and profile functions that already check who may see what.
+
+Open: should liking a finish also offer *Add to Want to read* in the same tap (a long-press)? It keeps
+what 2 was meant to do.
+
+### Finding people (6)
+
+Starting point: the Book page's *Readers* section (3) becomes the place to discover readers, not only
+to see friends:
+
+1. **Reviews from members you don't follow yet**, on a Book's page, below your circle's: only from
+   **public** accounts with reviews switched on, one line each with photo, name, stars and the review
+   folded. Tapping the name opens her profile with **Follow**. Private accounts never appear to
+   strangers. This is the main new way in, and it fits the app: people meet over a book they both read.
+2. **A follow QR code.** Your follow link as a QR code in the follow link sheet: one scan in person (a
+   book club, a reading retreat) instead of sending a link.
+3. **Ask to follow from a reading page** for signed-in visitors (from the earlier list).
+4. **The waitlist invite carries a follow request** from the member whose page the newcomer came from.
+
+Left out: search by name, a directory, suggestions ("people you may know"): they show who is a member
+to everyone.
+
+### GIFs and stickers in reviews (9)
+
+[KLIPY](https://docs.klipy.com/getting-started) is a GIF, sticker, clip and meme API with a Tenor-compatible
+set of endpoints for apps moving off Tenor: search, trending, categories, per-user recents, content
+ratings. Free, paid for by ads it can mix into results. What that means here:
+
+- **Ads: only if asked for.** Ads come back in Trending, Search and Recent when the request carries the
+  ad parameters (`customer_id` and the `ad-min/max-width/height` sizes, plus device fields up to the
+  advertising id). Libellus sends none of them: no ads, and no device data leaves.
+- **Attribution is required**: KLIPY's brand visible in the picker (their guideline: "Search KLIPY" as the
+  field's placeholder, a "Powered by KLIPY" mark) and any credit their results carry. A small line in
+  the picker, nothing in the review itself.
+- **Content filter**: `ContentFilter` defaults to *off*; it would be set to the strictest level, fixed
+  in the server.
+- **Privacy**: the README promises no third-party code and that search goes out plain. So the picker's
+  searches go through a small edge function (like `goodreads-rating`), with the key on the server and
+  no member id sent; the device never talks to KLIPY for search. The chosen GIF is shown from KLIPY's
+  media address, which every follower's device then loads: either accepted and named in the Privacy
+  section and the sub-processor list (#212), or the media proxied or copied too. Whether copying is
+  allowed under their API terms is to be checked; their terms forbid misrepresenting the origin.
+- **Editor: no Tiptap.** Reviews stay plain text (the database's `review` column, the outbox's
+  arguments, a native port's `TextField` all stay as they are). A review gets up to two attachments
+  (`review_media`: session, KLIPY id, kind, address, width, height, its credit), chosen in a sheet from
+  a GIF button next to the review box and shown under the text. A rich-text editor would be needed for
+  GIFs *inside* sentences or styled text; neither is worth an editor dependency and a new review format.
+- **With spoilers (1)**: the spoiler fold covers the review's text and its GIFs together. Inline spoiler
+  spans (`||the twist||`, as Discord writes them) would work in plain text too, if wanted later.
+- **On the public reading page**: GIFs of a shared review would show to anyone with the link, so they
+  follow the review's own sharing switch.
+
+Effort M: the edge function, the picker sheet, the attachment table and its RLS, the display in the
+feed, profile and Book page, the Privacy text.
 
 After version 2: reading together (buddy reads with progress and page-pinned notes), *Our year*
 for the circle in December, shared Collections, a weekly letter by email, *Ask my circle*, and the
