@@ -3,9 +3,10 @@ import { barAfterScroll, barHeld, barShown, type BarScroll } from '~/utils/hideO
 
 /**
  * Whether the tab bar is out of the way (issue #82, docs/MOTION.md, Tab bar
- * away): on every page it slides away while the member reads down and
- * comes back on a short scroll up, at the top and at the very end of the page
- * (utils/hideOnScroll.ts has the arithmetic).
+ * away): on a page long enough to be worth it it slides away while the member
+ * reads down and comes back on a short scroll up, at the top and at the very
+ * end of the page — a page only a little longer than the screen keeps it
+ * (utils/hideOnScroll.ts has the arithmetic, `MIN_END_PX`).
  *
  * It only ever hides while `wanted` holds (the caller says when: no search, no
  * sheet) and Reduce Motion is off: with it on the bar stays where it is, as a
