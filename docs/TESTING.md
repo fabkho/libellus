@@ -438,8 +438,8 @@ as the wait for a pull request's result; the numbers below were measured on the 
 
 | Event | What runs |
 | --- | --- |
-| Pull request | What the changed paths call for (below), and of the Playwright flows **the core suite**: every flow not tagged `@full`. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
-| Pull request with the label **`full-e2e`** | The same with **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
+| Pull request | What the changed paths call for (below). **No Playwright flows**: the flows are where the minutes go, and a broken one is caught on `main`, minutes after the merge, where a release reads the result. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
+| Pull request with the label **`full-e2e`** | Those checks, and **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
 | Push to `main` (a merge) | **Every flow**, `@full` included, and the checks the changed paths call for. A regression in an `@full` flow is found here, minutes after the merge, instead of on the pull request. |
 | `workflow_dispatch` | Everything (`gh workflow run CI --ref <branch>`). |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
@@ -454,7 +454,7 @@ Any change under `.github/` runs everything, so CI changes are tested by CI.
 
 | Changed path | Runs |
 | --- | --- |
-| `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), the user flows (`e2e`), plus the web build for `web/**` |
+| `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), plus the web build for `web/**` |
 | `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip |
 | `design/**`, `web/app/assets/css/tokens.generated.css`, `supabase/templates/**` | Tokens check and emails check (the generated mail is current) |
 | `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite) | Deno lint, check, test of that function |
@@ -513,21 +513,23 @@ scans (`a11y`, `a11y-reader`, the import card's and the shelf's), the motion and
 `tab-bar-away`, the search morph, the Profile's frame watches, `no-side-scroll`, `insets`, `large-text`,
 `book-page-polish`), the shelf beyond the owner's row, and the long permutation lists whose rules Vitest
 holds (most of `barcode-scan`, `install-hint`, `share`, `import-offer`, `progress-never-tracked`, `ebooks`;
-`covers`, two of `goodreads`). A new flow is core unless it is one of those kinds.
+`covers`, two of `goodreads`). A new flow is core unless it is one of those kinds. Nothing in CI runs the
+core suite alone any more (the flows left pull requests, above): the tag is what to exclude for a quick
+local pass.
 
 ```sh
 cd web
-pnpm e2e                          # every flow, as on main
-pnpm e2e --grep-invert @full      # the core suite, as on a pull request
+pnpm e2e                          # every flow, what a release waits for on main
+pnpm e2e --grep-invert @full      # without the @full flows, for a quick local pass
 pnpm e2e --grep @full             # only the @full flows
-gh pr edit <n> --add-label full-e2e   # every flow on a pull request's CI
+gh pr edit <n> --add-label full-e2e   # every flow on that pull request's CI
 ```
 
 ### How many shards
 
 Four, each about as long as the others: `web/e2e/shard.ts` weighs every flow by what it took in CI
 (`web/e2e/durations.json`) and hands the heaviest first to the lightest shard (a file in serial mode stays
-whole; a flow not measured yet weighs the median), separately for the core suite and the full one.
+whole; a flow not measured yet weighs the median).
 Playwright's own `--shard` splits by test count in file order, which once gave one shard 12.9 minutes of
 flows and the other 9.1. Refresh the weights now and then from a full run on `main`:
 
