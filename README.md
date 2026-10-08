@@ -42,24 +42,44 @@ Libellus runs as one private, invite-only instance for its owner and a few frien
 
 ## Privacy
 
+One operator, the owner, runs the one instance (libellus.fabkho.dev). This is what that instance
+does with your data.
+
 - **No trackers, no ads, no third-party code in the app.** The session is the only thing it
   stores for sign-in; everything else on the device is your own data, kept for offline use and
   removed when you sign out.
+- **Page loads are counted, nothing more.** This instance uses Cloudflare Web Analytics, which is
+  cookieless and stores no identifier on your device (docs/HOSTING.md).
 - **Your data is yours**: row-level security in the database means a member only ever reads her own
-  Library, reviews, Collections and Book links. Delete your account and all of it goes.
+  Library, reviews, Collections and Book links.
+- **Delete is in the app**: Profile → Account → Delete account removes your account and everything
+  of yours (Library, reading sessions, ratings, reviews, Collections, name, photo, sign-in) from the
+  database at once. The encrypted nightly backups below forget it when they expire, within 35 days.
+  An export of your data is planned; until it exists, the app only imports (Goodreads, Hardcover).
 - **Sharing is opt-in**: a member's reading page is off until she turns it on, shows only the
   sections she picks (never her email, notes, highlights or a review she didn't share), sits at an
   unguessable link out of search engines, and dies at once when she makes a new link or turns it off.
 - **The waitlist is the only address a visitor can leave**: a reading page ends in a small form
-  ("Libellus is invite-only for now"); the address is kept only to send an invite, readable only by the
-  instance's owner and deleted on request. No account is made from the page.
+  ("Libellus is invite-only for now"); the address is kept only to send an invite, readable only by
+  the owner and deleted on request. No account is made from the page.
 - **Search stays plain**: the browser asks Apple Books and Open Library directly for the words you
   type, nothing else; the Goodreads rating is looked up by the server, so Goodreads never sees you.
-- An instance may count page loads with a cookieless, identifier-free analytics service (the
-  owner's uses Cloudflare Web Analytics, docs/HOSTING.md). A fresh instance has none.
-- **Errors stay in your own database**: the app reports its own crashes (message, stack, screen,
-  app version; never a Book, note or search) to a table in the instance's Supabase, kept 30 days
-  (docs/OPERATIONS.md). No third-party error service.
+- **The reader asks outside services only for the words you select**: *Translate* (the browser's own
+  translator where there is one, otherwise MyMemory) and *Define* (Wiktionary). The book itself never
+  leaves your device.
+- **Errors stay in this instance's database**: the app reports its own crashes (message, stack,
+  screen, app version; never a Book, note or search) to a table in its Supabase (`eu-central-1`),
+  kept 30 days, readable only by the owner (docs/OPERATIONS.md). No third-party error service.
+
+**Where your data lives.** These are the services that store or process it for the owner:
+
+| Service | What it holds or does |
+| --- | --- |
+| [Supabase](https://supabase.com), region `eu-central-1` | The database (Postgres), sign-in (Auth), profile photos (Storage) and the edge functions: everything you save, your email address, the waitlist and the error log |
+| [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app's static files and the link previews of a shared reading page; Cloudflare Web Analytics counts page loads from there |
+| [Cloudflare R2](https://developers.cloudflare.com/r2/) | A private bucket with the nightly database backup, encrypted before it is uploaded with a key only the owner holds; each file is deleted after 35 days (docs/OPERATIONS.md, "Backups") |
+| An email provider (SMTP) | Sends the six-digit sign-in codes and the waitlist invites, so it sees the address it mails |
+| [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump while it streams and keeps no artifact or log of it |
 
 ## Tech stack
 
