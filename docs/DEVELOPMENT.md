@@ -1,7 +1,7 @@
 # Developing Libellus
 
-How to run, test and change Libellus on your machine. What it is and how to host your own:
-[README](../README.md) and [SETUP.md](SETUP.md). Rules for code changes:
+How to run, test and change Libellus on your machine. What it is and how the owner's instance is set
+up: [README](../README.md) and [SETUP.md](SETUP.md). Rules for code changes:
 [web/AGENTS.md](../web/AGENTS.md); domain words: [CONTEXT.md](../CONTEXT.md).
 
 ## Running it locally

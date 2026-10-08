@@ -2,7 +2,7 @@
 
 Tooling that only the owner's instance (libellus.fabkho.dev) uses: bringing the owner's Fable
 history over once, and publishing the owner's Library to Regal, the 3D bookshelf on
-fabkho.dev/books. Nothing here is needed to run or host Libellus; a fork can ignore this page and
+fabkho.dev/books. Nothing here is needed to run Libellus; anyone not working on these two can ignore this page and
 the files it names (`web/scripts/import-fable.ts`, `web/scripts/fable/`,
 `web/app/data/import/{fable,readingTracker}.ts` for Fable;
 `web/scripts/export-regal.ts`, `web/app/data/export/`, `supabase/functions/regal-export/` and the

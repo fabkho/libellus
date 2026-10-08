@@ -76,7 +76,7 @@ In the repository's settings (the workflow does not change them):
 
 Only the deploy job reads the environment's secrets; the release-please job has
 `contents`/`pull-requests`/`issues: write` and nothing else, and both jobs only run in
-`fabkho/libellus` (never in a fork, never on a pull request). One deploy runs at a time.
+`fabkho/libellus` (never on a pull request). One deploy runs at a time.
 
 ### Deploying a tag by hand: retry and rollback
 
@@ -371,7 +371,7 @@ row of a deleted account.
 
 ### Setting it up
 
-Once, by the owner (a self-hosted instance the same way, with its own names):
+Once, by the owner:
 
 1. **The age key.** `age-keygen -o libellus-backup.key` writes the key file. Its line
    `# public key: age1…` is the **recipient** (also `age-keygen -y libellus-backup.key`); the line
