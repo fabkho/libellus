@@ -117,6 +117,7 @@ jobs:
               - 'design/**'
               - 'web/app/assets/css/tokens.generated.css'
               - 'supabase/templates/**'
+              - 'supabase/functions/waitlist-invite/invite_mail.generated.mjs'
             goodreads:
               - *ci
               - 'supabase/functions/goodreads-rating/**'
@@ -134,6 +135,7 @@ jobs:
             invite:
               - *ci
               - 'supabase/functions/waitlist-invite/**'
+              - 'design/emails/**'
 
       - name: Decide
         id: decide

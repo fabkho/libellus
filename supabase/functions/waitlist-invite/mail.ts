@@ -1,10 +1,16 @@
 /**
- * The invite mail (issue #171): what someone on the waitlist gets when the owner taps Invite. Short,
- * English, plain text with a minimal HTML twin: why she gets it (she asked for an invite on a reading
- * page), the code, until when it works and how to use it. No tracking pixel, no remote image, no
- * unsubscribe link: it is one transactional mail she asked for, and the wording she agreed to
- * (consent text '2026-10') says the address is used "only to send you an invite".
+ * The invite mail (issue #171): what someone on the waitlist gets when the owner taps Invite. Its
+ * design is Libellus' mail shell (wordmark, card, the code cell, light and dark from the tokens),
+ * generated from design/emails/invite.mjs into `invite_mail.generated.mjs`: never edit that file or
+ * write HTML here; change the design source and run `pnpm emails` in design/ (docs/DEVELOPMENT.md,
+ * "Emails"). This module only fills the template's placeholders with the runtime values, HTML-escaped
+ * in the HTML part, and drops the sign-up link's block when the instance has no `LIBELLUS_SITE_URL`.
+ *
+ * No tracking pixel, no remote asset, no unsubscribe link: it is one transactional mail she asked for,
+ * and the wording she agreed to (consent text '2026-10') says the address is used "only to send you an
+ * invite". The plain-text part says the same.
  */
+import { html as HTML_TEMPLATE, text as TEXT_TEMPLATE } from './invite_mail.generated.mjs'
 
 /** One mail as the mailer sends it. */
 export type Mail = {
@@ -37,54 +43,46 @@ export function signUpUrl(siteUrl: string | null | undefined): string | null {
   }
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 }
 
+/**
+ * A generated template with its `{{ .Name }}` placeholders filled from `values` (each passed through
+ * `escape`) and each `<!--[block]-->…<!--[/block]-->` kept (markers removed) or dropped whole. Throws
+ * when a placeholder is left, so a mail never goes out with `{{ … }}` in it.
+ */
+export function fillTemplate(
+  template: string,
+  values: Record<string, string>,
+  { blocks = {}, escape = (value: string) => value }: { blocks?: Record<string, boolean>; escape?: (value: string) => string } = {},
+): string {
+  let out = template
+  for (const [name, keep] of Object.entries(blocks)) {
+    const open = `<!--[${name}]-->`
+    const close = `<!--[/${name}]-->`
+    out = keep
+      ? out.replaceAll(`${open}\n`, '').replaceAll(`${close}\n`, '').replaceAll(open, '').replaceAll(close, '')
+      : out.replace(new RegExp(`${open.replace(/[[\]]/g, '\\$&')}[\\s\\S]*?${close.replace(/[[\]/]/g, '\\$&')}\\n?`, 'g'), '')
+  }
+  for (const placeholder of out.match(/\{\{[^}]*\}\}/g) ?? []) {
+    const name = /^\{\{ \.(\w+) \}\}$/.exec(placeholder)?.[1]
+    if (!name || !(name in values)) throw new Error(`invite mail: no value for ${placeholder}`)
+  }
+  // One pass over the placeholders, so a value that itself reads like one is never filled again.
+  return out.replace(/\{\{ \.(\w+) \}\}/g, (_, name: string) => escape(values[name]))
+}
+
 export function inviteMail({ to, code, expiresAt, siteUrl }: { to: string; code: string; expiresAt: string; siteUrl: string | null }): Mail {
-  const until = expiryDate(expiresAt)
   const link = signUpUrl(siteUrl)
-
-  const how = link
-    ? `Sign up with a code at ${link}, using this email address and the code.`
-    : 'Open Libellus and choose Sign up with a code ("Have an invite code? Sign up"), then enter this email address and the code.'
-
-  const text = [
-    'Hello,',
-    '',
-    'You asked for an invite to Libellus on a reading page. Here it is.',
-    '',
-    `Your invite code: ${code}`,
-    `It works once, until ${until}.`,
-    '',
-    how,
-    '',
-    'We used your address only to send you this invite.',
-    '',
-    'Libellus',
-    '',
-  ].join('\n')
-
-  const htmlHow = link
-    ? `<a href="${escapeHtml(link)}">Sign up with a code</a>, using this email address and the code.`
-    : 'Open Libellus and choose <strong>Sign up with a code</strong> (“Have an invite code? Sign up”), then enter this email address and the code.'
-
-  const html = [
-    '<!DOCTYPE html>',
-    '<html lang="en"><head><meta charset="utf-8"><title>Your Libellus invite</title></head>',
-    '<body style="font-family: -apple-system, system-ui, sans-serif; line-height: 1.5;">',
-    '<p>Hello,</p>',
-    '<p>You asked for an invite to Libellus on a reading page. Here it is.</p>',
-    `<p>Your invite code:<br><strong style="font-family: ui-monospace, Menlo, monospace; font-size: 1.25em; letter-spacing: 0.05em;">${escapeHtml(code)}</strong></p>`,
-    `<p>It works once, until ${escapeHtml(until)}.</p>`,
-    `<p>${htmlHow}</p>`,
-    '<p>We used your address only to send you this invite.</p>',
-    '<p>Libellus</p>',
-    '</body></html>',
-    '',
-  ].join('\n')
-
-  return { to, subject: SUBJECT, text, html }
+  const values = { Code: code, ExpiresOn: expiryDate(expiresAt), SignUpUrl: link ?? '' }
+  const blocks = { link: link !== null }
+  return {
+    to,
+    subject: SUBJECT,
+    html: fillTemplate(HTML_TEMPLATE, values, { blocks, escape: escapeHtml }),
+    text: fillTemplate(TEXT_TEMPLATE, values, { blocks }),
+  }
 }
 
 // ------------------------------------------------------------------ sending
