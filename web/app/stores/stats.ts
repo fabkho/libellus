@@ -3,11 +3,12 @@ import type { LibraryErrorCode } from '~/data/library'
 import { readStats, saveStats } from '~/data/deviceLibrary'
 import { createStats, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
 
-/** A sheet of the Profile or a year in review: a month's books, a star row's, or the reads without a page count. */
+/** A sheet of the Profile or a year in review: a month's books, a star row's, the reads without a page count, or a day's. */
 export type ProfileSheet =
   | { kind: 'month'; year: number; month: number }
   | { kind: 'stars'; year: StatsYear; star: number }
   | { kind: 'pagesMissing'; year: StatsYear }
+  | { kind: 'day'; day: string }
 import { isoDay } from '~/utils/dates'
 import { afterTransition } from '~/utils/viewTransition'
 import { useSessionStore } from '~/stores/session'

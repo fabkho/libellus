@@ -2,10 +2,11 @@ name: CI
 
 # What runs when (also in docs/TESTING.md, "CI: what runs when"):
 #
-#   pull request      the checks the changed paths call for, and the core user
-#                     flows (Playwright, without the ones tagged @full)
-#   PR label full-e2e the same with every flow, @full included (adding the label
-#                     starts the run; the run of every later push keeps it)
+#   pull request      the checks the changed paths call for. No user flows: the
+#                     flows are where the minutes go, and a broken one is caught
+#                     on main, minutes after the merge, where a release reads it
+#   PR label full-e2e the same checks, and every flow, @full included (adding the
+#                     label starts the run; the run of every later push keeps it)
 #   push to main      every flow, @full included, and the checks the changed
 #                     paths call for. A release deploys only a commit whose run
 #                     here is green (release.yml, scripts/release-e2e-gate.sh)
@@ -76,7 +77,6 @@ jobs:
     outputs:
       backend: ${{ steps.decide.outputs.backend }}
       e2e: ${{ steps.decide.outputs.e2e }}
-      e2e_filter: ${{ steps.decide.outputs.e2e_filter }}
       shards: ${{ steps.decide.outputs.shards }}
       statics: ${{ steps.decide.outputs.statics }}
       web: ${{ steps.decide.outputs.web }}
@@ -142,7 +142,6 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           FULL_E2E_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-e2e') }}
-          FILTER_STACK: ${{ steps.filter.outputs.stack }}
           FILTER_BACKEND: ${{ steps.filter.outputs.backend }}
           FILTER_WEB: ${{ steps.filter.outputs.web }}
           FILTER_TOKENS: ${{ steps.filter.outputs.tokens }}
@@ -165,14 +164,13 @@ jobs:
           og=$(on "$FILTER_OG")
           enrich=$(on "$FILTER_ENRICH")
           invite=$(on "$FILTER_INVITE")
-          # Playwright: on a pull request when the app or the schema it runs on changed;
-          # on main (a push, by hand) always, so every run there says whether the
-          # whole suite passes (what a release waits for).
-          if [ "$EVENT" = pull_request ]; then e2e=$(on "$FILTER_STACK"); else e2e=true; fi
-          # The core flows on a pull request; every flow, @full included, on main, on a
-          # pull request labelled full-e2e and by hand.
-          e2e_filter=''
-          if [ "$EVENT" = pull_request ] && [ "$FULL_E2E_LABEL" != true ]; then e2e_filter='--grep-invert @full'; fi
+          # Playwright: never on an ordinary pull request (docs/TESTING.md, "CI: what
+          # runs when"). The flows are where the minutes go, and a broken one is caught
+          # on main, minutes after the merge, where a release reads the result. They run
+          # on main (a push or by hand) and on a pull request labelled `full-e2e` —
+          # every flow, @full included, in both.
+          e2e=true
+          if [ "$EVENT" = pull_request ] && [ "$FULL_E2E_LABEL" != true ]; then e2e=false; fi
 
           # One e2e job per shard.
           shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
@@ -181,7 +179,7 @@ jobs:
           for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich" "$invite"; do [ "$v" = true ] && statics=true; done
 
           {
-            echo "backend=$backend"; echo "e2e=$e2e"; echo "e2e_filter=$e2e_filter"; echo "shards=$shards"
+            echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
             echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"
           } | tee -a "$GITHUB_OUTPUT"
@@ -204,6 +202,9 @@ jobs:
     timeout-minutes: 20
     env:
       SUPABASE_CLI: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
+      # The stack's images come from GitHub's registry, not the CLI's default (public.ecr.aws),
+      # which throttled parallel pulls ("toomanyrequests: Rate exceeded"). See docs/TESTING.md.
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v7
 
@@ -262,7 +263,7 @@ jobs:
   # creates (web/tests/support/stack.ts). A failed shard uploads its blob report;
   # e2e-report merges them into one HTML report.
   e2e:
-    name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }}${{ needs.changes.outputs.e2e_filter == '' && ', all' || ', core' }})
+    name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
     needs: changes
     if: ${{ needs.changes.outputs.e2e == 'true' }}
     runs-on: ubuntu-latest
@@ -273,6 +274,7 @@ jobs:
         shard: ${{ fromJSON(needs.changes.outputs.shards) }}
     env:
       SUPABASE_CLI: 2.118.0 # pinned like `backend`
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io # as in `backend`
       # Built in its own step above (web/playwright.config.ts would build it otherwise).
       LIBELLUS_E2E_PREBUILT: '1'
     steps:
@@ -358,12 +360,9 @@ jobs:
       # lightest shard. Every shard computes the same split.
       - name: Pick this shard's flows
         working-directory: web
-        env:
-          FILTER: ${{ needs.changes.outputs.e2e_filter }}
-        # FILTER holds Playwright's options (the core suite's --grep-invert @full), split into words.
+        # Every flow: the core suite a pull request used to run is gone (below).
         run: |
-          read -ra filter <<< "$FILTER"
-          pnpm exec tsx e2e/shard.ts list ${{ matrix.shard }}/${{ strategy.job-total }} "${filter[@]}" > "$RUNNER_TEMP/flows.txt"
+          pnpm exec tsx e2e/shard.ts list ${{ matrix.shard }}/${{ strategy.job-total }} > "$RUNNER_TEMP/flows.txt"
 
       - name: User flows
         working-directory: web

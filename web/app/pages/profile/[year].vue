@@ -82,7 +82,8 @@ const sheetTitle = computed(() => {
 const sheetReads = computed(() => {
   const s = shown.value
   if (!s) return []
-  return s.kind === 'stars' ? readsWithStars(reads.value, s.year, s.star) : readsWithoutPages(reads.value, s.year)
+  if (s.kind === 'stars') return readsWithStars(reads.value, s.year, s.star)
+  return s.kind === 'pagesMissing' ? readsWithoutPages(reads.value, s.year) : []
 })
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }

@@ -178,7 +178,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET: ${{ steps.branch.outputs.target }}
-          WAIT_SECONDS: 900 # CI on main takes under ten minutes
+          WAIT_SECONDS: 1500 # a full run on main takes about 20 minutes on one shard
         run: scripts/release-e2e-gate.sh "$TARGET"
 
       - uses: supabase/setup-cli@v3
