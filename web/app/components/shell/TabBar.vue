@@ -12,9 +12,10 @@
 // overlay measures to start from, and the tabs it keeps out of the Search
 // icon's way.
 //
-// On every page the bar slides away while the member reads
-// down and come back on a short scroll up, at the top and at the end of the
-// page (useHideOnScroll, docs/MOTION.md, Tab bar away). Never while search, a
+// On a page long enough to be worth it the bar slides away while the member
+// reads down and comes back on a short scroll up, at the top and at the end of
+// the page; a page only a little longer than the screen keeps it (useHideOnScroll,
+// docs/MOTION.md, Tab bar away). Never while search, a
 // sheet or a field is in play, with Reduce Motion on, nor once focus is in the
 // bar (a screen reader or keyboard reaching it brings it back): search opening
 // snaps it back to its place first, without a transition, so the morph always

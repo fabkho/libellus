@@ -256,6 +256,8 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
   as intent only once it has gone 10 px in one direction from where it last turned
   (`utils/hideOnScroll.ts`), and the bar is always there at the top and at the very end of the page.
+  It only makes way where there is something to read for it: a page that scrolls less than `MIN_END_PX`
+  (640, about one screen of the phone) past the fold keeps it, however far down she is (#205).
   It is never away while search opens, is open or closes, while a sheet or
   confirmation is on screen, while a field has the keyboard, or with Reduce Motion on, and focus
   moving into it (a screen reader's, a keyboard's) brings it back: search opened with the bar away puts
