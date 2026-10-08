@@ -1582,6 +1582,10 @@
     "suggested": "Use the suggested series",
     "next": "Next in your series",
     "nextPlace": "Book {n} · {name}",
+    "nextPlaceOf": "Book {n} of {count} · {name}",
+    "seeMore": "See more",
+    "seeMoreLabel": "See all {count} series you have started",
+    "started": "Series you have started",
     "error": {
       "position": "Write the book’s number as 2 or 2.5.",
       "entry_not_found": "This book isn’t in your Library any more.",
