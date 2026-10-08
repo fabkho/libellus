@@ -110,6 +110,40 @@ describe('readsWithoutPages', () => {
     expect(readsWithoutPages(reads).map((r) => r.sessionId)).toEqual(['No end date', 'Unnumbered again', 'Uncounted', 'Answered'])
   })
 })
+describe('figuresOf, from reads alone', () => {
+  const read = (title: string, ended: string, over: Partial<StatsRead> = {}): StatsRead => ({ ...statsRead(title, ended, 300), ...over })
+
+  it('takes the median of the days a read took: the middle one, or the middle two\'s mean, rounded', () => {
+    const days = (...taken: number[]) => taken.map((d, i) => read(`Read ${i}`, '2025-06-01', { days: d }))
+    expect(figuresOf(days(10, 36, 63), 2025).medianDays).toBe(36)
+    // Four reads of 10, 33, 36 and 63 days: the middle two are 33 and 36, their mean 34.5 rounds up.
+    expect(figuresOf(days(63, 10, 36, 33), 2025).medianDays).toBe(35)
+    expect(figuresOf(days(7, 8), 2025).medianDays).toBe(8)
+    expect(figuresOf(days(4), 2025).medianDays).toBe(4)
+    // A read with no start date has no days, and a year without any has no median.
+    expect(figuresOf([read('Undated', '2025-06-01')], 2025).medianDays).toBeNull()
+    expect(figuresOf([], 2025).medianDays).toBeNull()
+  })
+
+  it('averages the ratings it has and counts the reads without one, a year at a time and all of them', () => {
+    const reads = [
+      read('Rated 2024', '2024-05-01', { rating: 20 }),
+      read('Rated 2025', '2025-05-01', { rating: 16 }),
+      read('Also 2025', '2025-06-01', { rating: 19 }),
+      read('Unrated 2025', '2025-07-01'),
+      read('No pages 2025', '2025-08-01', { pages: null, rating: 12 }),
+    ]
+    const y2025 = figuresOf(reads, 2025)
+    expect(y2025).toMatchObject({ books: 4, rated: 3, unrated: 1, pagesMissing: 1, pages: 900 })
+    expect(y2025.average).toBeCloseTo((16 + 19 + 12) / 3)
+    const all = figuresOf(reads, 'all')
+    expect(all).toMatchObject({ books: 5, rated: 4, unrated: 1, pagesMissing: 1 })
+    expect(all.average).toBeCloseTo((20 + 16 + 19 + 12) / 4)
+    // Nothing rated: no average rather than zero stars.
+    expect(figuresOf([read('Unrated', '2025-01-01')], 2025).average).toBeNull()
+  })
+})
+
 /** A day of the calendar as the record has it, naming the titles it was read in. */
 function readingDay(day: string, read: boolean, ...titles: string[]): ReadingDay {
   return { day, read, pages: read ? 10 : 0, reads: titles.map((title) => statsRead(title, null, 100)) }
