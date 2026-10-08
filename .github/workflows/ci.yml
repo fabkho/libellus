@@ -115,6 +115,7 @@ jobs:
               - *ci
               - 'design/**'
               - 'web/app/assets/css/tokens.generated.css'
+              - 'supabase/templates/**'
             goodreads:
               - *ci
               - 'supabase/functions/goodreads-rating/**'
@@ -445,6 +446,11 @@ jobs:
         if: ${{ !cancelled() && needs.changes.outputs.tokens == 'true' }}
         working-directory: design
         run: pnpm install --frozen-lockfile && pnpm tokens:check
+
+      - name: Email templates are generated, not hand-edited
+        if: ${{ !cancelled() && needs.changes.outputs.tokens == 'true' }}
+        working-directory: design
+        run: pnpm install --frozen-lockfile && pnpm emails:check
 
       - name: Web builds (nuxt generate)
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
