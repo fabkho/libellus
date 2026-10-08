@@ -182,7 +182,7 @@ test('the series line opens the series; she corrects it, says it is in no series
   await expect(line).toHaveText(`${fill(en.series.bookOf, { n: 3, count: 3 })} · ${data.names.cityWatch}`)
 })
 
-test('Home shows the next Book of her series; a Library row\'s author opens the author\'s page', async ({ page }) => {
+test('Home shows the next Book of the series she started; a Library row\'s author opens the author\'s page', async ({ page }) => {
   const data = await enriched(page)
   await page.goto('/')
   const next = page.getByTestId('home.nextInSeries')
@@ -190,9 +190,9 @@ test('Home shows the next Book of her series; a Library row\'s author opens the 
   // Most recent finish first: Haldeman (August), Le Guin (July), Pratchett's City Watch (June).
   await expect(next.getByTestId('home.nextTitle')).toHaveText(['Forever Free', 'The Tombs of Atuan', runTitle('Feet of Clay')])
   await expect(next.getByTestId('home.nextMeta')).toHaveText([
-    fill(en.series.nextPlace, { n: 2, name: data.names.foreverWar }),
-    fill(en.series.nextPlace, { n: 2, name: data.names.earthsea }),
-    fill(en.series.nextPlace, { n: 3, name: data.names.cityWatch }),
+    fill(en.series.nextPlaceOf, { n: 2, count: 2, name: data.names.foreverWar }),
+    fill(en.series.nextPlaceOf, { n: 2, count: 3, name: data.names.earthsea }),
+    fill(en.series.nextPlaceOf, { n: 3, count: 3, name: data.names.cityWatch }),
   ])
   await expect(next.getByTestId('home.next').nth(2).getByTestId('home.nextStatus')).toHaveText(en.status.want_to_read)
   await expect(next.getByTestId('home.next').first().getByTestId('home.nextWant')).toBeVisible()

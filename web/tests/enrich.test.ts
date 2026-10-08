@@ -10,7 +10,7 @@ import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
  * The enrichment data layer (issues #166–#168) against the local stack, as
  * real signed-in members: a Book's genres (computed, hers, reset), its series
  * (the most specific first, her correction by name, "in no series", reset),
- * Home's next in series, the author page with her statuses, a Book's linked
+ * Home's started series, the author page with her statuses, a Book's linked
  * authors; writes refused offline before anything is sent.
  *
  * What the `enrich` edge function would store is stored the same way here, by
@@ -139,12 +139,32 @@ describe('series', () => {
     expect(breq.works[2]!.edition?.isbn13).toBe('9780316246682')
   })
 
-  it('next in her series: the one after the last she finished, named by the sub-series', async () => {
+  it('started series: the one she finished, its next open work named by the sub-series, with her status of it', async () => {
     const { member } = await reader()
-    const next = (await createSeries(member.client).next()).data!
-    expect(next.map((n) => [n.series.name, n.finished.position, n.next.title, n.next.entry?.status])).toEqual([
-      [runTitle('Breq'), 1, runTitle('Ancillary Sword'), 'want_to_read'],
+    const started = (await createSeries(member.client).started()).data!
+    expect(started.map((s) => [s.series.name, s.finished, s.count, s.activeOn, s.next.title, s.next.position, s.next.entry?.status])).toEqual([
+      [runTitle('Breq'), 1, 3, '2026-09-01', runTitle('Ancillary Sword'), 2, 'want_to_read'],
     ])
+  })
+
+  it('a series is started by reading its first book, and Want to read alone does not start it', async () => {
+    const reading = await signUpMember()
+    const library = createLibrary(reading.client)
+    const one = (await library.addToLibrary(book('Ancillary Justice'), { status: 'reading', startedOn: '2026-09-05' })).data!
+    await enrich(one.book.id, WORKS.one, 'Ancillary Justice', inSeries(1, 1), ['sci-fi'])
+    expect((await createSeries(reading.client).started()).data!.map((s) => [s.series.name, s.finished, s.activeOn, s.next.title, s.next.entry?.status ?? null]))
+      .toEqual([[runTitle('Breq'), 0, '2026-09-05', 'Ancillary Sword', null]])
+
+    const wanting = await signUpMember()
+    const wanted = (await createLibrary(wanting.client).addToLibrary(book('Ancillary Justice'))).data!
+    await enrich(wanted.book.id, WORKS.one, 'Ancillary Justice', inSeries(1, 1), ['sci-fi'])
+    expect(await createSeries(wanting.client).started()).toEqual({ data: [], error: null })
+  })
+
+  it('is hers alone', async () => {
+    await reader()
+    const other = await signUpMember()
+    expect(await createSeries(other.client).started()).toEqual({ data: [], error: null })
   })
 
   it('she corrects a series by name, says "in no series", and resets; offline nothing is sent', async () => {

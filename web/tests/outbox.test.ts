@@ -61,6 +61,7 @@ function device(member: TestMember, { send, storage = memoryOutboxStorage() }: {
   const state = { offline: false }
   const outbox = createOutbox({ memberId: member.id, storage, send: send ?? createSender(member.client) })
   const queue: WriteQueue = {
+    open: () => true,
     holds: () => state.offline || outbox.items().length > 0,
     entry: (id) => copy.get(id) ?? null,
     entryForBook: (bookId) => [...copy.values()].find((entry) => entry.book.id === bookId) ?? null,

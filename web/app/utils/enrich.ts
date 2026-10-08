@@ -1,5 +1,5 @@
 import type { BookAuthor, LifeDate } from '~/data/enrich/authors'
-import type { BookSeriesPlace, NextInSeries } from '~/data/enrich/series'
+import type { BookSeriesPlace, StartedSeries } from '~/data/enrich/series'
 import type { WorkCard } from '~/data/enrich/works'
 
 /**
@@ -64,13 +64,30 @@ export function workCover(work: Pick<WorkCard, 'coverUrl' | 'edition'>): string 
   return work.coverUrl ?? work.edition?.cover_url ?? null
 }
 
+/** How many series Home's "Next in your series" lists; the rest are in its sheet. */
+export const HOME_SERIES = 5
+
 /**
- * Home's "Next in your series": the next work she has not started. One she is
- * reading already is on Home as a card, so it is left out here; a series whose
- * next work cannot be opened (no Book of hers, no edition to add) too.
+ * Home's "Next in your series": the series she has started (the database's
+ * `started_series`: a work she reads or finished, still one open), the latest
+ * activity first. One whose next work cannot be opened (no Book of hers, no
+ * edition to add) is left out, as there is nothing to do with it. `shown` are
+ * the first `limit`; `all` is what the sheet lists, and it only has a way in
+ * when there are more than `limit`.
  */
-export function upNextInSeries(items: readonly NextInSeries[], limit = 3): NextInSeries[] {
-  return items.filter((item) => item.next.entry?.status !== 'reading' && item.next.entry?.status !== 'finished' && workBookKey(item.next)).slice(0, limit)
+export function startedOnHome(items: readonly StartedSeries[], limit = HOME_SERIES): { shown: StartedSeries[]; all: StartedSeries[]; more: boolean } {
+  const all = items.filter((item) => workBookKey(item.next))
+  return { shown: all.slice(0, limit), all, more: all.length > limit }
+}
+
+/**
+ * Where the next work stands in its series, as a row says it: "Book 3 of 10"
+ * (a whole-numbered place within the count), "Book 2.5" (a novella, or a place
+ * past the count), or none when the series gives no place.
+ */
+export function nextPlace(item: Pick<StartedSeries, 'series' | 'count' | 'next'>): { n: string; count: number | null } | null {
+  const line = seriesLine({ name: item.series.name, position: item.next.position ?? null, count: item.count ?? 0 })
+  return line?.position ? { n: line.position, count: line.count } : null
 }
 
 /** Names compared the way people write them: case, accents, dots and spacing aside. */

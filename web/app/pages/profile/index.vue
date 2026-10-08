@@ -3,14 +3,15 @@
 // over A's figures). The avatar in every tab's header opens it, pushed like a
 // book page and lit by a cover: the favourite of the year in view (this
 // year's under All). Under the hero, the year pills (All first, the default)
-// and everything they scope: the four figures, the books by year (All; a year
+// and everything they scope: the four figures (the Pages line opens the reads
+// without a page count), the books by year (All; a year
 // opens its review) or by month (a month opens its books, "<year> in review"
 // the year), the ratings (a row opens the books rated so), the genres (a row opens the
 // Library filtered by it, #168), the records and the authors read more than once. The reading days (this year and All) and
 // the years in review do not change with the pills. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
-import { figuresOf, readsInMonth, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
+import { figuresOf, readsInMonth, readsOnDay, readsWithoutPages, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryStore } from '~/stores/library'
@@ -28,7 +29,7 @@ const bookGenres = useGenresStore()
 const libraryView = useLibraryViewStore()
 // Your shelf (#23): the owner's card, and nobody else's.
 const shelf = useShelfStore()
-const { monthLong, monthLetter } = useFigures()
+const { monthLong, monthLetter, dayTitle } = useFigures()
 
 useHead({ title: () => `${t('profile.title')} · ${t('app.name')}` })
 // Loaded each time the page shows: opened afresh, or shown again from the
@@ -99,26 +100,40 @@ const columns = computed(() =>
 )
 const lit = computed(() => (stats.year === 'all' ? (years.value.includes(thisYear) ? thisYear : null) : stats.year === thisYear ? thisMonth : null))
 
-// The sheet of a month's books or a star row's; open again on Back from a book opened in it.
+// The sheet of a month's books, a star row's, the reads without a page count, or a day's; open again on Back from a book
+// opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const sheetTitle = computed(() => {
   const s = shown.value
   if (!s) return ''
   if (s.kind === 'month') return t('profile.sheet.month', { month: monthLong(s.month), year: s.year })
+  if (s.kind === 'pagesMissing') return t('profile.sheet.pagesMissing')
+  if (s.kind === 'day') return dayTitle(s.day)
   return t('profile.sheet.stars', { count: s.star, year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) }, s.star)
 })
 const sheetReads = computed(() => {
   const s = shown.value
   if (!s) return []
-  return s.kind === 'month' ? readsInMonth(reads.value, s.year, s.month) : readsWithStars(reads.value, s.year, s.star)
+  if (s.kind === 'month') return readsInMonth(reads.value, s.year, s.month)
+  if (s.kind === 'day') return readsOnDay(stats.record?.days ?? [], s.day)
+  return s.kind === 'pagesMissing' ? readsWithoutPages(reads.value, s.year) : readsWithStars(reads.value, s.year, s.star)
 })
 
 function pickColumn(key: number) {
   if (stats.year === 'all') return void router.push(`/profile/${key}`)
   sheet.value = { kind: 'month', year: stats.year, month: key }
 }
+// A day of the reading days that was read: the reads it was read in (the very ones its dot stands for).
+function pickDay(day: string) {
+  sheet.value = { kind: 'day', day }
+}
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: stats.year, star }
+}
+// The Pages line: the reads of the year in view whose Book has no page count (a row opens its book page, where
+// the count can be set).
+function pickPagesMissing() {
+  sheet.value = { kind: 'pagesMissing', year: stats.year }
 }
 // A genre's row opens the Library's Finished list filtered by it (and by the year in view).
 function pickGenre(genre: string) {
@@ -150,7 +165,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
           <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
             <div class="flex flex-col gap-md">
               <ProfileYearPills v-model="stats.year" :years="years" :loading="loading" />
-              <ProfileFigures :figures="loading ? null : figures" />
+              <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" />
             </div>
 
             <section id="columns" class="flex flex-col gap-md pt-xl">
@@ -164,7 +179,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
             </section>
 
             <UiReveal :show="loading || daysShown">
-              <ProfileDays class="pt-xl" :days="stats.record?.days ?? null" :since="stats.record?.daysSince ?? null" />
+              <ProfileDays class="pt-xl" :days="stats.record?.days ?? null" :since="stats.record?.daysSince ?? null" @pick="pickDay" />
             </UiReveal>
             <UiReveal :show="loading || figures.rated > 0">
               <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
@@ -207,7 +222,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
       </div>
     </Transition>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.year === 'all'" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
     <ProfilePhoto ref="photo" />
   </div>
 </template>

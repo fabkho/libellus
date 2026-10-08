@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { BookSnapshot } from '@/data/books'
+import type { BookFormat, BookSnapshot } from '@/data/books'
 import { createLibrary } from '@/data/library'
+import { readAsOf } from '@/data/readAs'
 import { signUpMember } from './support/member'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
@@ -78,5 +79,76 @@ describe('setReadAs', () => {
     const ida = await signUpMember()
     const { data: added } = await createLibrary(ida.client).addToLibrary(book())
     await expect(sql(`update public.library_entries set read_as = 'paper' where id = $1`, [added!.id])).rejects.toThrow(/library_entries_read_as_known/)
+  })
+})
+
+describe('changing the edition presets Read as from its format', () => {
+  const edition = (title: string, fields: Partial<BookSnapshot> = {}): BookSnapshot => ({
+    ...book(),
+    title: runTitle(title),
+    ...fields,
+  })
+  const printed = (title: string, format: BookFormat | null): BookSnapshot =>
+    edition(title, { source: 'openlibrary', appleId: null, openLibraryEditionKey: `OL${uniqueAppleId().slice(2, 10)}M`, format })
+
+  it('says it as the new edition is read, in the same call that moves the entry', async () => {
+    const member = await signUpMember()
+    const library = createLibrary(member.client)
+    const { data: added } = await library.addToLibrary(printed('Solaris', 'paperback'))
+    await library.setReadAs(added!.id, 'physical')
+
+    const ebook = await library.changeEdition(added!.id, edition('Solaris'))
+    expect(ebook.data).toMatchObject({ id: added!.id, readAs: 'ebook', book: { format: 'ebook' } })
+    expect((await library.entry(added!.id)).data!.readAs).toBe('ebook')
+
+    const audio = await library.changeEdition(added!.id, printed('Solaris', 'audiobook'))
+    expect(audio.data!.readAs).toBe('audiobook')
+    const hardcover = await library.changeEdition(added!.id, printed('Solaris', 'hardcover'))
+    expect(hardcover.data!.readAs).toBe('physical')
+  })
+
+  it('takes the format she says for the new edition when its source said none', async () => {
+    const member = await signUpMember()
+    const library = createLibrary(member.client)
+    const { data: added } = await library.addToLibrary(edition('Solaris'))
+    await library.setReadAs(added!.id, 'ebook')
+
+    const { data } = await library.changeEdition(added!.id, printed('Solaris', null), 'audiobook')
+    expect(data).toMatchObject({ readAs: 'audiobook', formatOverride: 'audiobook', book: { format: null } })
+  })
+
+  it('leaves what she said when the new edition\'s format is unknown, and when it is read the same way', async () => {
+    const member = await signUpMember()
+    const library = createLibrary(member.client)
+    const { data: added } = await library.addToLibrary(printed('Solaris', 'paperback'))
+    await library.setReadAs(added!.id, 'audiobook')
+
+    expect((await library.changeEdition(added!.id, printed('Solaris', null))).data!.readAs).toBe('audiobook')
+    expect((await library.changeEdition(added!.id, printed('Solaris', 'hardcover'))).data!.readAs).toBe('physical')
+    await library.setReadAs(added!.id, 'audiobook')
+    // Paper to paper: her word was about how she read it, not about the cover.
+    expect((await library.changeEdition(added!.id, printed('Solaris', 'paperback'))).data!.readAs).toBe('audiobook')
+  })
+
+  it('keeps an unset word unset: the edition\'s format is its default already', async () => {
+    const member = await signUpMember()
+    const library = createLibrary(member.client)
+    const { data: added } = await library.addToLibrary(printed('Solaris', 'paperback'))
+
+    const { data } = await library.changeEdition(added!.id, edition('Solaris'))
+    expect(data!.readAs).toBeNull()
+    expect(readAsOf(data!)).toBe('ebook')
+  })
+
+  it('is not done by a refused change', async () => {
+    const member = await signUpMember()
+    const library = createLibrary(member.client)
+    const { data: added } = await library.addToLibrary(printed('Solaris', 'paperback'))
+    const other = edition('Solaris, again')
+    await library.addToLibrary(other)
+    await library.setReadAs(added!.id, 'physical')
+
+    expect((await library.changeEdition(added!.id, other)).error).toBe('edition_in_library')
+    expect((await library.entry(added!.id)).data!.readAs).toBe('physical')
   })
 })

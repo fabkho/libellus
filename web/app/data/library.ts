@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Book, BookFormat, BookSnapshot } from './books'
+import { bookKey, type Book, type BookFormat, type BookSnapshot } from './books'
 import type { ReadAs } from './readAs'
 import { ratingFromRow, type GoodreadsRow } from './goodreads'
 import { NO_PROGRESS, type ProgressValue } from './progress'
@@ -501,13 +501,27 @@ export function mapLibraryError(failure: { message?: string; code?: string }): L
   return 'unknown'
 }
 
+/**
+ * How an add is made. `optimistic`: the answer is the entry as it will be, at
+ * once, and the call itself waits in the outbox like an offline write (and is
+ * sent right away when the device is online): the same line, order, retries and
+ * refusal handling, so the member never waits for the network to see her Book on
+ * the shelf. What the database refuses afterwards (already in the Library, an
+ * invalid Book) is a failure of the outbox, not an answer here. A search result
+ * that is not in the Catalogue yet can wait this way too: its Cover is resolved
+ * just before it is sent (`QueuedWrite.coverPending`). Left out, an add that
+ * is not held by the line (the device is online and nothing waits) asks the
+ * database and answers with what it said.
+ */
+export type AddHow = { optimistic?: boolean }
+
 export type Library = {
   /**
    * Puts a Book into the member's Library: finds or adds the Catalogue Book and
    * creates the entry with its Status and first read (`AddWith`), in one call.
    * Fails with `already_in_library` the second time.
    */
-  addToLibrary: (book: BookSnapshot, options?: AddWith) => Promise<Result<LibraryEntry>>
+  addToLibrary: (book: BookSnapshot, options?: AddWith, how?: AddHow) => Promise<Result<LibraryEntry>>
   /**
    * Starts the first read of a Want to read entry on a day (`YYYY-MM-DD`, the
    * member's today by default in the caller). Returns the entry, now
@@ -720,11 +734,12 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     return read.data ? { data: read.data, error: null } : { data: null, error: 'entry_not_found' }
   }
 
-  async function addToLibrary(book: BookSnapshot, options: AddWith = {}): Promise<Result<LibraryEntry>> {
+  async function addToLibrary(book: BookSnapshot, options: AddWith = {}, { optimistic = false }: AddHow = {}): Promise<Result<LibraryEntry>> {
     // A Catalogue Book can wait: the call needs nothing the device does not hold.
-    // A search result (its Cover still to resolve) or a Manual book cannot.
-    if (queue?.holds()) {
-      const waiting = await queueAdd(book, options)
+    // A search result (its Cover still to resolve) or a Manual book cannot, unless
+    // the add is optimistic: then the search result waits too, its Cover resolved when it is sent.
+    if (queue?.holds() || (optimistic && queue?.open())) {
+      const waiting = await queueAdd(book, options, optimistic)
       if (waiting) return waiting
     }
     if (!online()) return OFFLINE
@@ -736,27 +751,42 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     return reread((added.data as { id: string }).id)
   }
 
-  /** An add that waits in the outbox, if it can (a Catalogue Book): the entry as it will be. Null: it cannot wait. */
-  async function queueAdd(book: BookSnapshot, options: AddWith): Promise<Result<LibraryEntry> | null> {
-    if (queue && 'id' in book && (book as Book).source !== 'manual') {
-      const known = book as Book
-      if (queue.entryForBook(known.id)) return { data: null, error: 'already_in_library' }
-      const write: QueuedWrite = {
-        action: 'add_to_library',
-        args: { p_book: bookToRow(book), ...addWithArguments(options) },
-        about: known.title,
-        queuedAt: new Date().toISOString(),
-        book: known,
-        creates: { entry_id: localId(), session_id: localId() },
+  /**
+   * An add that waits in the outbox, if it can (a Catalogue Book; a search result
+   * when `optimistic`): the entry as it will be. Null: it cannot wait.
+   */
+  async function queueAdd(book: BookSnapshot, options: AddWith, optimistic = false): Promise<Result<LibraryEntry> | null> {
+    if (!queue || book.source === 'manual') return null
+    // A search result is shown as a Book under its page key until the database gives it its id.
+    const provisional = !('id' in book)
+    if (provisional && !optimistic) return null
+    let known: Book
+    if (provisional) {
+      // Nothing to name it by (no source id, no ISBN): the database says what is wrong with it.
+      try {
+        known = { ...book, id: bookKey(book), createdAt: new Date().toISOString() }
+      } catch {
+        return null
       }
-      write.entryId = write.creates!.entry_id
-      const after = applyWrite(null, write)
-      if (typeof after === 'string') return { data: null, error: after }
-      if (!after) return { data: null, error: 'unknown' }
-      await queue.add(write)
-      return { data: after, error: null }
+    } else {
+      known = book as Book
     }
-    return null
+    if (queue.entryForBook(known.id)) return { data: null, error: 'already_in_library' }
+    const write: QueuedWrite = {
+      action: 'add_to_library',
+      args: { p_book: bookToRow(known), ...addWithArguments(options) },
+      about: known.title,
+      queuedAt: new Date().toISOString(),
+      book: known,
+      creates: { entry_id: localId(), session_id: localId() },
+      ...(provisional ? { coverPending: true } : {}),
+    }
+    write.entryId = write.creates!.entry_id
+    const after = applyWrite(null, write)
+    if (typeof after === 'string') return { data: null, error: after }
+    if (!after) return { data: null, error: 'unknown' }
+    await queue.add(write)
+    return { data: after, error: null }
   }
 
   return {

@@ -9,6 +9,7 @@ import {
   type OutboxItem,
   type SyncFailure,
 } from '~/data/outbox'
+import { bookToRow } from '~/data/library'
 import { COLLECTION_ACTIONS, READER_ACTIONS, type WriteQueue } from '~/data/queuedWrites'
 import { useCollectionsStore } from '~/stores/collections'
 import { useHistoryStore } from '~/stores/history'
@@ -65,11 +66,23 @@ export const useSyncStore = defineStore('sync', () => {
     return answered
   }
 
+  /**
+   * An add from a search result waits with the Cover its snapshot had (the tap did not wait for
+   * the cover chain): resolved here, just before the first send, as the Add sheet used to
+   * before it asked the database. The arguments to send, the Book's as the Catalogue will keep it.
+   */
+  async function prepare(item: OutboxItem): Promise<Record<string, unknown>> {
+    if (item.action !== 'add_to_library' || !item.book) return item.args
+    const { id: _id, createdAt: _createdAt, goodreads: _goodreads, ...snapshot } = item.book
+    const resolved = await useLibraryStore().withCover(snapshot)
+    return { ...item.args, p_book: bookToRow(resolved) }
+  }
+
   function open(memberId: string) {
     close()
     if (!import.meta.client || !backend) return
     const storage = typeof indexedDB === 'undefined' ? memoryOutboxStorage() : indexedDbOutboxStorage(indexedDB)
-    const box = createOutbox({ memberId, storage, send: createSender(backend), reachable })
+    const box = createOutbox({ memberId, storage, send: createSender(backend), reachable, prepare })
     outbox = box
     unsubscribe = box.subscribe(() => {
       if (outbox !== box) return
@@ -106,6 +119,7 @@ export const useSyncStore = defineStore('sync', () => {
 
   /** What the repositories write into (data/queuedWrites.ts, WriteQueue). */
   const queue: WriteQueue = {
+    open: () => outbox !== null,
     holds,
     entry: (entryId) => useLibraryStore().entryById(entryId),
     entryForBook: (bookId) => useLibraryStore().entryForBook(bookId),

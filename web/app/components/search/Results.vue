@@ -38,6 +38,7 @@ const online = useOnline()
 function pick(hit: SearchHit) {
   if (hit.entry) void ebooks.linkFound(hit.entry)
   else if (hit.otherEdition) ebooks.chooseEdition(hit.book, ownEntries())
+  // Linked to the file once added: that needs the database's own entry id, so it is not waited out.
   else library.openAdd(hit.book)
 }
 
@@ -47,7 +48,8 @@ const ownEntries = () => search.own.map((hit) => hit.entry!)
 /** The +: the Add sheet; while linking, another edition of one of her Books asks first (never a second entry unasked). */
 function add(hit: SearchHit) {
   if (search.linking && hit.otherEdition) ebooks.chooseEdition(hit.book, ownEntries())
-  else library.openAdd(hit.book)
+  // The + of a result: she sees the Book on her shelf at once, the outbox sends it (stores/library.ts, confirmAdd).
+  else library.openAdd(hit.book, { optimistic: !search.linking })
 }
 
 /**
