@@ -9,7 +9,7 @@ import { signUpMember } from '../tests/support/member'
 import { sql, uniqueEmail, visitorClient } from '../tests/support/stack'
 import { test } from './fixtures'
 import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID, shelfOwner } from './shelfOwner'
-import { expectAccessible, openProfile, signedIn, signedInAs, untilStill } from './support'
+import { expectAccessible, goto, openProfile, signedIn, signedInAs, untilStill } from './support'
 
 /**
  * The owner reads the client error log in the app (docs/OPERATIONS.md, Client
@@ -277,6 +277,102 @@ test('the owner reads the waitlist, copies who waits, marks one invited and dele
   await page.getByTestId('waitlist.refresh').click()
   await asked
   await expect(entry(first)).toBeVisible()
+})
+
+/** The `waitlist-invite` edge function (supabase/functions/waitlist-invite), stood in: these flows never mail. */
+const INVITE_FUNCTION = '**/functions/v1/waitlist-invite'
+const EXPIRES = '2026-10-27T09:00:00.000Z'
+/** The expiry as the row says it, in the app's locale. */
+const UNTIL = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(EXPIRES))
+
+/** An answer of that function, as `route.fulfill` takes it. */
+function inviteAnswer(body: unknown, status = 200) {
+  return {
+    status,
+    contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type' },
+    body: JSON.stringify(body),
+  }
+}
+
+test('the owner invites one: confirmed, mailed, marked invited, and the code is hers to copy', async ({ page }) => {
+  // WebKit grants no clipboard permission in a test: what the app writes is recorded instead.
+  await page.addInitScript(() => {
+    ;(window as unknown as { __copied: string[] }).__copied = []
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async (text: string) => void (window as unknown as { __copied: string[] }).__copied.push(text) },
+    })
+  })
+  const mailed = uniqueEmail('wl-mailed')
+  const unsent = uniqueEmail('wl-unsent')
+  await visitors([mailed, unsent])
+  const ids = Object.fromEntries(
+    (await sql<{ id: string; email: string }>('select id, email::text from private.waitlist where email::text = any($1)', [[mailed, unsent]])).map((r) => [r.email, r.id]),
+  )
+  // The function answers per entry: the first is mailed, the second finds no mail set up.
+  const asked: { id: string; authorization: string | null }[] = []
+  let answer: (id: string) => ReturnType<typeof inviteAnswer> = (id) =>
+    id === ids[mailed]
+      ? inviteAnswer({ code: 'K7QM-X2PA', expiresAt: EXPIRES, emailed: true })
+      : inviteAnswer({ code: 'B4TR-9WNE', expiresAt: EXPIRES, emailed: false, reason: 'not_configured' })
+  await page.route(INVITE_FUNCTION, (route) => {
+    const id = (route.request().postDataJSON() as { id: string }).id
+    asked.push({ id, authorization: route.request().headers()['authorization'] ?? null })
+    return route.fulfill(answer(id))
+  })
+  await signInAsOwner(page)
+  await goto(page, '/profile/waitlist')
+  const entry = (address: string) => page.getByTestId('waitlist.entry').filter({ hasText: address })
+  await expect(entry(mailed)).toBeVisible()
+  await untilStill(page)
+
+  // Invite asks first, naming the address; Cancel sends nothing.
+  await expect(entry(mailed).getByTestId('waitlist.invite')).toHaveText(en.waitlist.invite)
+  await entry(mailed).getByTestId('waitlist.invite').click()
+  await expect(page.getByTestId('waitlist.inviteConfirm.title')).toHaveText(en.waitlist.inviteConfirm.title.replace('{email}', mailed))
+  await expect(page.getByTestId('waitlist.inviteConfirm.text')).toHaveText(en.waitlist.inviteConfirm.text)
+  await expectAccessibleBoth(page, 'Waitlist, invite confirm')
+  await page.getByTestId('waitlist.inviteConfirm.cancel').click()
+  await expect(page.getByTestId('waitlist.inviteConfirm')).toBeHidden()
+  expect(asked).toEqual([])
+
+  // Send invite: the function is asked for this entry with her session; the entry is invited and shows its code.
+  await entry(mailed).getByTestId('waitlist.invite').click()
+  await page.getByTestId('waitlist.inviteConfirm.confirm').click()
+  await expect(page.getByTestId('waitlist.inviteConfirm')).toBeHidden()
+  expect(asked).toEqual([{ id: ids[mailed], authorization: expect.stringMatching(/^Bearer \S+/) }])
+  await expect(entry(mailed).getByTestId('waitlist.invited')).toHaveText(en.waitlist.invitedDone)
+  await expect(entry(mailed).getByTestId('waitlist.invite')).toHaveCount(0)
+  await expect(entry(mailed).getByTestId('waitlist.codeValue')).toHaveText('K7QM-X2PA')
+  await expect(entry(mailed).getByTestId('waitlist.codeNote')).toHaveText(en.waitlist.code.emailed.replace('{date}', UNTIL))
+  await entry(mailed).getByTestId('waitlist.copyCode').click()
+  await expect(entry(mailed).getByTestId('waitlist.copyCode')).toHaveText(en.waitlist.code.copied)
+  expect(await page.evaluate(() => (window as unknown as { __copied: string[] }).__copied.at(-1))).toBe('K7QM-X2PA')
+
+  // No mail set up: the code all the same, a plain line that nothing was sent, and the entry still waiting.
+  await entry(unsent).getByTestId('waitlist.invite').click()
+  await page.getByTestId('waitlist.inviteConfirm.confirm').click()
+  await expect(page.getByTestId('waitlist.inviteConfirm')).toBeHidden()
+  await expect(entry(unsent).getByTestId('waitlist.codeValue')).toHaveText('B4TR-9WNE')
+  await expect(entry(unsent).getByTestId('waitlist.codeNote')).toHaveText(en.waitlist.code.not_configured.replace('{date}', UNTIL))
+  await expect(entry(unsent).getByTestId('waitlist.invited')).toHaveText(en.waitlist.markInvited)
+  await expect(entry(unsent).getByTestId('waitlist.invite')).toBeVisible()
+  await untilStill(page)
+  await expectAccessibleBoth(page, 'Waitlist, invited with codes')
+
+  // The send failed this time: said so; and a refusal (not the owner) stays in the Confirm with its reason.
+  answer = () => inviteAnswer({ code: 'B4TR-9WNE', expiresAt: EXPIRES, emailed: false, reason: 'send_failed' })
+  await entry(unsent).getByTestId('waitlist.invite').click()
+  await page.getByTestId('waitlist.inviteConfirm.confirm').click()
+  await expect(entry(unsent).getByTestId('waitlist.codeNote')).toHaveText(en.waitlist.code.send_failed.replace('{date}', UNTIL))
+  answer = () => inviteAnswer({ error: 'not_owner' }, 403)
+  await entry(unsent).getByTestId('waitlist.invite').click()
+  await page.getByTestId('waitlist.inviteConfirm.confirm').click()
+  await expect(page.getByTestId('waitlist.inviteConfirm.error')).toHaveText(en.waitlist.inviteError)
+  await page.getByTestId('waitlist.inviteConfirm.cancel').click()
+  await expect(page.getByTestId('waitlist.inviteConfirm')).toBeHidden()
+  await expect(entry(unsent).getByTestId('waitlist.invited')).toHaveText(en.waitlist.markInvited)
 })
 
 test('nobody on the list: the empty state', async ({ page }) => {

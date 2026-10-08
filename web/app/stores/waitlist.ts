@@ -1,5 +1,14 @@
 import { defineStore } from 'pinia'
-import { createWaitlist, waiting, type JoinErrorCode, type Waitlist, type WaitlistEntry, type WaitlistErrorCode } from '~/data/waitlist'
+import {
+  createWaitlist,
+  waiting,
+  type InviteCode,
+  type InviteErrorCode,
+  type JoinErrorCode,
+  type Waitlist,
+  type WaitlistEntry,
+  type WaitlistErrorCode,
+} from '~/data/waitlist'
 import { isShelfOwner } from '~/utils/shelfOwner'
 import { useSessionStore } from '~/stores/session'
 
@@ -12,6 +21,11 @@ import { useSessionStore } from '~/stores/session'
  * again and refuses anyone else, so for a member who is not the owner `isOwner` is false, nothing is
  * asked of the server and nothing is shown. A load that fails keeps the entries already on screen;
  * signing out (or another member signing in) forgets them all.
+ *
+ * `invite` is the Invite button: a one-use code for the entry, mailed by the `waitlist-invite` edge
+ * function, the entry then invited. The code it answers is kept for the session (`codes`), so the row
+ * can show it with Copy, also when the mail did not go out (`sent` says why: the entry stays waiting
+ * and the next Invite gets the same code). The codes are never stored on the device.
  */
 export const useWaitlistStore = defineStore('waitlist', () => {
   const session = useSessionStore()
@@ -44,6 +58,8 @@ export const useWaitlistStore = defineStore('waitlist', () => {
   const loading = ref(false)
   /** What the last write (invited, delete) was refused with. */
   const writeError = ref<WaitlistErrorCode | null>(null)
+  /** The codes Invite answered this session, by entry id, and whether the mail went out (or why not). */
+  const codes = ref<Record<string, InviteCode & { sent: 'emailed' | 'not_configured' | 'send_failed' }>>({})
   /** How many still wait for an invite: the Profile row's value. */
   const waitingCount = computed(() => (entries.value ? waiting(entries.value).length : null))
 
@@ -86,6 +102,26 @@ export const useWaitlistStore = defineStore('waitlist', () => {
     return true
   }
 
+  /**
+   * Invites one entry; null when the mail went out and the entry is invited. `not_configured` and
+   * `send_failed` still leave its code in `codes`; the others (`not_owner`, `offline`, `unknown`) nothing.
+   */
+  async function invite(id: string): Promise<InviteErrorCode | null> {
+    const r = repo()
+    if (!isOwner.value || !r || !entries.value) return 'unknown'
+    const member = session.member?.id
+    writeError.value = null
+    const result = await r.invite(id)
+    if (member !== session.member?.id) return 'unknown'
+    if (result.data) codes.value = { ...codes.value, [id]: { code: result.data.code, expiresAt: result.data.expiresAt, sent: result.error ?? 'emailed' } }
+    if (result.error !== null) return result.error
+    // Mailed, but the function could not mark her: the manual path does it (and says so when it fails).
+    if (!result.data.marked && !(await setInvited([id], true))) return null
+    const now = new Date()
+    entries.value = (entries.value ?? []).map((entry) => (entry.id === id ? { ...entry, invitedAt: entry.invitedAt ?? now } : entry))
+    return null
+  }
+
   /** Deletes one entry; gone from the list once the database says so. */
   async function remove(id: string): Promise<boolean> {
     const r = repo()
@@ -106,6 +142,7 @@ export const useWaitlistStore = defineStore('waitlist', () => {
     entries.value = null
     loadError.value = null
     writeError.value = null
+    codes.value = {}
   }
 
   watch(
@@ -113,5 +150,5 @@ export const useWaitlistStore = defineStore('waitlist', () => {
     (next, before) => next !== before && reset(),
   )
 
-  return { isOwner, join, entries, loadError, loading, writeError, waitingCount, load, setInvited, remove, reset }
+  return { isOwner, join, entries, loadError, loading, writeError, codes, waitingCount, load, invite, setInvited, remove, reset }
 })
