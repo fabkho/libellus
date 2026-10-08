@@ -42,6 +42,11 @@ export default defineConfig({
   retries: CI ? 1 : 0,
   workers: CI ? CI_WORKERS : undefined,
   timeout: CI ? 60_000 : 30_000,
+  // A run that hangs is ended here, by the run itself, and not by the job: the job's
+  // 30-minute `timeout-minutes` kills it with no blob report, so a hang cost 30 billed
+  // minutes and left nothing to look at (shard 2 of run 37752557924, 8 October 2026).
+  // A healthy shard runs about 4 minutes of flows, twice that with a retried test.
+  globalTimeout: CI ? 15 * 60_000 : 0,
   expect: { timeout: CI ? 10_000 : 5_000 },
   reporter: CI ? [['list'], ['github'], ['blob']] : 'list',
   use: {
