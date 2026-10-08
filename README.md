@@ -7,8 +7,8 @@ later Swift/Kotlin port mechanical.
 
 ![Libellus on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
 
-Libellus runs as one small, invite-only instance for its owner and a few friends
-(libellus.fabkho.dev), and anyone can run their own: [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
+Libellus runs as one private, invite-only instance for its owner and a few friends
+(libellus.fabkho.dev).
 
 ## What it does
 
@@ -72,9 +72,10 @@ Libellus runs as one small, invite-only instance for its owner and a few friends
 
 ## Quick start (local)
 
-Needs Docker, Node 24, pnpm and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
+Needs access to this repository, Docker, Node 24, pnpm and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
 
 ```sh
+# clone this repository
 git clone https://github.com/fabkho/libellus && cd libellus
 supabase start                 # the local stack on ports 55320–55329: Postgres, Auth, Studio, a mail catcher
 cd web
@@ -92,7 +93,6 @@ design tokens, the layout of the repository and everything else for working on t
 
 | | |
 | --- | --- |
-| [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) | Run your own instance: Supabase, Cloudflare Pages, invites, every setting in one table |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Run, test and change it locally |
 | [docs/HOSTING.md](docs/HOSTING.md) | How the owner's instance is built and served on Cloudflare Pages |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | The client error log and how to read it |
@@ -104,9 +104,9 @@ design tokens, the layout of the repository and everything else for working on t
 
 ## Contributing, security, license
 
-Libellus is a personal project; issues are welcome, and pull requests for bugs and small things too
-([CONTRIBUTING.md](CONTRIBUTING.md)). Please report security problems privately
-([SECURITY.md](SECURITY.md)).
+Libellus is a personal project and the repository is private: issues and pull requests are for the
+owner and the collaborators invited to it ([CONTRIBUTING.md](CONTRIBUTING.md)). Please report
+security problems privately ([SECURITY.md](SECURITY.md)).
 
 **License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate, private layer and not part of this
 license; Libellus builds and runs without it.
