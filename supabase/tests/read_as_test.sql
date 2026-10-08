@@ -3,10 +3,12 @@
 --
 -- library_entries.read_as is physical, ebook, audiobook or null (not said), set through
 -- set_read_as: only on the member's own entry, taken back with null, refused for any other
--- word. It belongs to the entry, not to a read: Finish, Read again and Change edition leave it.
+-- word. It belongs to the entry, not to a read: Finish and Read again leave it. Change edition
+-- presets it from the new edition's format when her word was set and the edition is read
+-- another way (move_entry_to); an unset one follows the edition by itself.
 
 begin;
-select plan(16);
+select plan(27);
 
 create schema if not exists tests;
 
@@ -84,6 +86,63 @@ select public.finish_reading(:'hyperion', current_date, 16, 'long, and worth it'
 select is(tests.read_as_of(:'hyperion'), 'audiobook', 'a start and a finish leave it');
 select public.read_again(:'hyperion', current_date);
 select is(tests.read_as_of(:'hyperion'), 'audiobook', 'so does a read again');
+
+-- ------------------------------------------------------------------ change edition
+
+-- Moving the entry to another edition presets her word from that edition's format
+-- (hardcover and paperback are paper), in the same transaction as the move.
+\set solaris_paper '{"title":"Solaris","source":"openlibrary","openlibrary_edition_key":"OL990016901M","isbn13":"9790000169011","format":"paperback"}'
+\set solaris_paper2 '{"title":"Solaris","source":"openlibrary","openlibrary_edition_key":"OL990016902M","isbn13":"9790000169028","format":"hardcover"}'
+\set solaris_ebook '{"title":"Solaris","source":"apple","apple_id":"990000169003","isbn13":"9790000169035"}'
+\set solaris_audio '{"title":"Solaris","source":"openlibrary","openlibrary_edition_key":"OL990016904M","isbn13":"9790000169042","format":"audiobook"}'
+\set solaris_bare '{"title":"Solaris","source":"openlibrary","openlibrary_edition_key":"OL990016905M","isbn13":"9790000169059"}'
+
+select (public.add_to_library(:'solaris_paper')).id as solaris \gset
+select public.set_read_as(:'solaris', 'physical');
+
+select public.change_edition(:'solaris', :'solaris_ebook');
+select is(tests.read_as_of(:'solaris'), 'ebook', 'an ebook edition: she read it as an ebook');
+select public.change_edition(:'solaris', :'solaris_audio');
+select is(tests.read_as_of(:'solaris'), 'audiobook', 'an audiobook edition: as an audiobook');
+select public.change_edition(:'solaris', :'solaris_paper');
+select is(tests.read_as_of(:'solaris'), 'physical', 'a paperback: on paper');
+
+-- Her word on the new edition's format counts, the Book's own where she said none.
+select public.change_edition(:'solaris', :'solaris_bare', 'audiobook');
+select is(tests.read_as_of(:'solaris'), 'audiobook', 'the format she says for the new edition is the one that presets');
+
+-- A format nobody knows leaves her word alone.
+select public.change_edition(:'solaris', :'solaris_paper2');
+select public.set_read_as(:'solaris', 'ebook');
+select public.change_edition(:'solaris', :'solaris_bare');
+select is(tests.read_as_of(:'solaris'), 'ebook', 'an edition of no known format leaves what she said');
+
+-- ... and so does a move to an edition read the same way.
+select public.change_edition(:'solaris', :'solaris_audio');
+select public.set_read_as(:'solaris', 'physical');
+select public.change_edition(:'solaris', :'solaris_paper');
+select public.set_read_as(:'solaris', 'audiobook');
+select public.change_edition(:'solaris', :'solaris_paper2');
+select is(tests.read_as_of(:'solaris'), 'audiobook', 'paper to paper: her own word stays');
+select is((select format_override::text from public.library_entries where id = :'solaris'), null, 'and her format word is the Book''s');
+
+-- An unset word stays unset: the edition's format is its default.
+select public.set_read_as(:'solaris', null);
+select public.change_edition(:'solaris', :'solaris_ebook');
+select is(tests.read_as_of(:'solaris'), 'unset', 'a word she never said is not made up');
+
+-- The move and the preset are one statement: a refused move changes nothing.
+select (public.add_to_library(:'solaris_audio')).id as solaris_two \gset
+select public.set_read_as(:'solaris', 'physical');
+select throws_ok(format($$ select public.change_edition(%L, %L) $$, :'solaris', :'solaris_audio'),
+  '23505', 'edition_in_library', 'an edition she has as another entry is refused');
+select is(tests.read_as_of(:'solaris'), 'physical', 'and her word is as it was');
+
+-- Her own edition presets it too.
+select public.set_read_as(:'solaris', 'ebook');
+select public.remove_from_library(:'solaris_two');
+select public.use_own_edition(:'solaris', '{"format":"hardcover","authors":["Stanisław Lem"],"isbn13":"9781399607735","page_count":300,"language":"en","cover_url":"https://example.com/solaris.jpg"}');
+select is(tests.read_as_of(:'solaris'), 'physical', 'her own edition, a hardcover: on paper');
 
 -- ---------------------------------------------------------------------- privacy
 

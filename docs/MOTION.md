@@ -296,6 +296,15 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   into its row and handing over, the Profile's View Transition: `afterMotion`, `utils/motion.ts`)
   before it is applied, and an entry that did not change stays the same object, so a refresh
   that changed nothing re-renders nothing (`reuseEntries`).
+- **Change edition's list.** The editions arrive from several sources while the sheet is open. Each
+  one that arrives opens its room and fades in over `standard` (`UiListMotion`, as a list that
+  changes), so the rows after it, the line under the list and "My edition isn't listed" glide down
+  instead of the sheet popping; the current edition is first and picked and never moves (rows are
+  only ever added at the end, so the list is `still`: nothing is moved to a new place, or the
+  sheet's own rise between two renders would be read as every row's move). The line under the list ("Looking for other editions…", "didn't
+  load", "No other editions found") is a `UiReveal`, so it opens and closes its room too. A sheet
+  that opens again starts its list afresh, without animating out what it kept while it slid away.
+  Reduce Motion: the list simply changes (`e2e/change-edition.spec.ts`).
 - **Tally mark.** A finish adds a mark to Home's tally: it fades in at full lamp with its glow and
   settles to the others' strength over twice `sheet`. Only a mark added to a count already on
   screen lights up.

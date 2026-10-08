@@ -208,6 +208,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expect(page.getByTestId('edition')).toBeVisible()
       await expect(page.getByTestId('edition.loading')).toHaveCount(0)
       await expectAccessible(page, 'Change edition')
+      // A format said: the helper line, the picked row and the action's words change.
+      await page.getByTestId('edition.format.audiobook').click()
+      await expect(page.getByTestId('edition.formatHelp')).toBeVisible()
+      await untilStill(page)
+      await expectAccessible(page, 'Change edition, a format said')
       // My edition isn't listed: the ISBN, nothing found, her own edition's form with a wrong field.
       await page.getByTestId('edition.missing').click()
       await expect(page.getByTestId('ownEdition')).toBeVisible()
