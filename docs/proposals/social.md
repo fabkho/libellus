@@ -1,5 +1,10 @@
 # Proposal: social features for a small, private circle
 
+> **Decided since:** the owner answered §10's questions on 8 October 2026. The scope of version 1,
+> its mocks and a proposed version 2 are in [social-v1.md](social-v1.md), which wins where the two
+> differ (most visibly: accounts are private by default and public ones can be followed without
+> asking, as on Instagram; reviews and Did not finish are shown by default).
+
 Status: **proposal, nothing built.** This document changes no code, table or test. It is for the
 owner to decide on (§10 ends with the questions he has to answer first); each slice of the roadmap
 then becomes its own `ready-for-agent` issue.
@@ -514,8 +519,9 @@ already does with `routePattern`.
 ### Wireframes
 
 Low-fi, in the design's terms: eyebrows in mono caps, titles in the serif, hairlines between rows,
-covers as `[▮]`, the lamp `●` for the one lit thing. Clickable mocks in both themes are in
-[`social/`](social/) (`mock.html`, screenshots `mock-light.png`, `mock-dark.png`).
+covers as `[▮]`, the lamp `●` for the one lit thing. These sketch the proposal; the mocks of what
+version 1 ships, in both themes, are in [`social/`](social/) (`mock.html`, `v1-*.png`) and described in
+[social-v1.md](social-v1.md).
 
 **1. Home, last section: Your circle**
 
