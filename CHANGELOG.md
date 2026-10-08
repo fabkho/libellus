@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.4.0](https://github.com/fabkho/libellus/compare/v1.3.0...v1.4.0) (2026-10-08)
+
+
+### Features
+
+* **data:** add a Book optimistically through the outbox ([9b15b88](https://github.com/fabkho/libellus/commit/9b15b88784d57c572f2e1a8f68468f04443a8b3c))
+* **db:** started_series, the series she has started and not finished ([9b4e81a](https://github.com/fabkho/libellus/commit/9b4e81a01c429e0463ea1608f7e525d0c7d6e163))
+* **edition:** changing edition presets Read as from the new edition's format ([61bf2a6](https://github.com/fabkho/libellus/commit/61bf2a665f467cb81c7fca03af8450c6a17551be))
+* **edition:** the editions move in as the sources answer ([e7b3111](https://github.com/fabkho/libellus/commit/e7b3111e61e2bf926bfe3ccc96bc8ea968b2c358))
+* **edition:** the editions move in, the format row says what it does, Read as follows the edition ([a5d35d1](https://github.com/fabkho/libellus/commit/a5d35d161ef43ce4cf2378130190205186a484db))
+* **edition:** the format row says what it does and goes along with the change ([80509b5](https://github.com/fabkho/libellus/commit/80509b54e8b02015bd9b004af8312d7eae6d7b3f))
+* **home:** the data layer for the series she has started ([d81cfc4](https://github.com/fabkho/libellus/commit/d81cfc42e062f1964d8f03c939d094108d01bdfc))
+* **home:** the series she has started, five at a time, with a See more sheet ([674e7d1](https://github.com/fabkho/libellus/commit/674e7d1a39d7be66defd6e543fda253c608a86a7))
+* **home:** the series she has started, five at a time, with a See more sheet ([dd38584](https://github.com/fabkho/libellus/commit/dd38584c833924718d3c26e6f77e2e8b9e028dc7))
+* **profile:** open the books read on a day from the Reading days ([b61ef57](https://github.com/fabkho/libellus/commit/b61ef57b22bde45c807ca907fa6b6ea88c3b3878))
+* **profile:** open the books read on a day from the Reading days ([c416ec5](https://github.com/fabkho/libellus/commit/c416ec586ff47fbb7598b55933fa27b035c1991a))
+* **profile:** open the books without a page count from the Pages card ([c32fc89](https://github.com/fabkho/libellus/commit/c32fc8910e62a2fcec16a7e2a2c5bedc89994c5d))
+* **profile:** open the books without a page count from the Pages card ([3845e95](https://github.com/fabkho/libellus/commit/3845e959ec3548d6da54d3944c738b954695f7e2))
+* **search:** make adding from the palette optimistic ([203fada](https://github.com/fabkho/libellus/commit/203fada485c7300ba7b1cffec214c05caa986010))
+* **search:** make the palette's add optimistic ([399add6](https://github.com/fabkho/libellus/commit/399add6773acfc7ba1919201606a787a7baeec0a))
+* **stats:** name the reads each reading day was read in ([25eb798](https://github.com/fabkho/libellus/commit/25eb79864888e7694d355ec19e059ffb6281b58b))
+* **stats:** read the books without a page count ([2e15d1d](https://github.com/fabkho/libellus/commit/2e15d1db78e993ecee074b48442b4d10ef06282f))
+
+
+### Fixes
+
+* **db:** give the change-edition read-as migration its own version ([1e0492b](https://github.com/fabkho/libellus/commit/1e0492bc12ee79a202b49347e161fcaab3215cf3))
+* **db:** give the change-edition read-as migration its own version ([7a4c552](https://github.com/fabkho/libellus/commit/7a4c552d08695c7424474340dcc2bde66616143e))
+
 ## [1.3.0](https://github.com/fabkho/libellus/compare/v1.2.0...v1.3.0) (2026-10-08)
 
 
