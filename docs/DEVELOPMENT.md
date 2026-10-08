@@ -90,6 +90,41 @@ pnpm tokens:check                          # fails if a generated file differs f
 generated files; CI checks they match. The values are direction D "Night Reader" from the design
 round (#4); docs/DESIGN.md says what each token is for.
 
+### Emails
+
+The sign-in code's mail (`supabase/templates/magic_link.html`) wears the same tokens, but a mail
+client is not a browser, so the file is **generated**: `design/emails/` holds the shell every Libellus
+mail shares (`shell.mjs`: wordmark, card, footer, the light colours inlined, the dark-mode block, the
+type and spacing from `tokens.json`) and what each mail says (`magic_link.mjs`). `design/emails.mjs`
+writes the result, and CI fails when it differs from the committed file, as it does for the tokens.
+
+```sh
+cd design && pnpm emails            # rewrites supabase/templates/*.html from tokens.json and design/emails/
+pnpm emails:check                   # fails if a committed template is stale (CI runs it)
+cd ../web && pnpm email:preview     # renders each template with a sample code and screenshots it,
+                                    # phone and desktop width, light and dark → web/.email-preview/ (gitignored)
+```
+
+Edit the shell or a mail's copy, never the HTML. The build also checks the mail: 4.5:1 for every
+text colour in both schemes, no image, font, link or script to fetch, a `lang`, a `<title>`, the
+dark block, under 20 KB (Gmail clips at about 102 KB), and what the mail's file says it must or must
+not contain (`{{ .Token }}` yes, `{{ .ConfirmationURL }}` no). The preview shows Chromium's
+rendering and its `prefers-color-scheme: dark`, the way Apple Mail applies it; Gmail's and Outlook's
+own engines are not here (Mailpit's *Checks* tab, at http://127.0.0.1:55324, scores a received mail
+against the clients' CSS support).
+
+**A second email** (an invite, say) reuses the shell: add `design/emails/<name>.mjs` exporting
+`output` (where the file goes), `build(kit)` (`kit.render({ title, preheader, content, footer })`,
+with `kit.eyebrow`, `kit.paragraph`, `kit.code` for the card's inside, and `kit.x(paintClasses, css)`
+for anything of your own: a paint class is a colour role, inlined for light and overridden in the
+dark block, so there is no colour to type), optionally `sample` (what the preview puts in for each
+template variable), `requires`, `forbids` and `allowLinks` (the lint refuses links by default).
+List it in `design/emails.mjs`, run `pnpm emails`. A new component (a button, a link style) goes
+into `shell.mjs` next to `code`, with its colours as paint classes.
+
+Supabase's local Auth reads the templates when the stack starts, so after changing one run
+`supabase stop && supabase start` and request a code to see it in the local mailbox.
+
 ### Signing in locally
 
 Libellus is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
@@ -122,7 +157,7 @@ Members cannot read, create or change invite codes (RLS and revoked grants, cove
 
 ### Local services
 
-Studio at http://127.0.0.1:55323, the local mailbox (sign-in codes) at http://127.0.0.1:55324.
+Studio at http://127.0.0.1:55323, the local mailbox (sign-in codes, in the designed mail) at http://127.0.0.1:55324.
 
 ## Layout
 
@@ -136,7 +171,8 @@ web/          Nuxt 4 SPA + PWA — the reference app (rules: web/AGENTS.md)
                 the owner's (docs/OWNER.md)
   regal.config.ts  the optional Regal layer (LIBELLUS_REGAL=1)
 scripts/      create-invite-code.sh, the operator's tool for minting invite codes
-design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift)
+design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swift); emails/ + emails.mjs, the mail shell and
+              the generated supabase/templates
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests, edge functions
 docs/         SELF_HOSTING.md, DEVELOPMENT.md (this), TESTING.md, DESIGN.md (design guideline),
               MOTION.md (motion), parity.md (per-screen behaviour), covers.md, OWNER.md (the owner's
@@ -146,5 +182,5 @@ SPEC.md       condensed spec; CONTEXT.md the domain glossary
 
 CI (`.github/workflows/ci.yml`) runs on pull requests, for the paths they change: pgTAP and the Vitest data layer
 against a local stack, the Playwright flows in WebKit (same job, sharded), `nuxt generate`, and the
-generated-tokens check. A push to `main` runs the cheap checks only, docs-only changes run nothing
+generated-tokens and generated-emails checks. A push to `main` runs the cheap checks only, docs-only changes run nothing
 (docs/TESTING.md, "CI: what runs when").

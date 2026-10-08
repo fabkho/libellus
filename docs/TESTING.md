@@ -451,7 +451,7 @@ Any change under `.github/` runs everything, so CI changes are tested by CI.
 | --- | --- |
 | `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), the user flows (`e2e`), plus the web build for `web/**` |
 | `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip |
-| `design/**`, `web/app/assets/css/tokens.generated.css` | Tokens check |
+| `design/**`, `web/app/assets/css/tokens.generated.css`, `supabase/templates/**` | Tokens check and emails check (the generated mail is current) |
 | `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite) | Deno lint, check, test of that function |
 
 On `main` the flows run whatever changed (every run there must say whether the whole suite passes). A
@@ -470,7 +470,7 @@ Jobs, and why they are shaped so:
   (`scripts/test-backup-roundtrip.sh`, docs/OPERATIONS.md "Backups"), on a stack of its own, beside the
   flows rather than in front of them.
 - **`e2e`**, four shards: the flows (`web/e2e`) on the static build, each shard with its own stack.
-- **`statics`**: the checks that take seconds (tokens, `nuxt generate` with and without Regal, the Deno
+- **`statics`**: the checks that take seconds (tokens, emails, `nuxt generate` with and without Regal, the Deno
   suites) in one job.
 - **`e2e-report`**: when a shard failed, one HTML report merged from the shards' blob reports, with the
   traces (artifact `playwright-report`).

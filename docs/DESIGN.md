@@ -68,6 +68,19 @@ How it works in CSS: `design/build.mjs` writes the light values into Tailwind's 
 dark) { :root:not([data-theme]) }`. Every utility reads the variable, so one class (`bg-surface`,
 `text-ink-muted`, `shadow-float`) is right in both themes. A component never branches on the theme.
 
+## Email
+
+The sign-in code's mail is the app's design in a medium without CSS: the same two rooms (light and
+dark, by `prefers-color-scheme`), the same tokens (`surface` page, `surfaceRaised` card with a
+`hairline` ring and `lg` corners, the `fill` code cell with `md` corners, `ink`/`inkMuted`/`inkFaint`
+text, the lamp `accent` as the short rule under the code, where the app lights the focused cell),
+Newsreader italic for the wordmark, Geist for the copy, Geist Mono for the eyebrow and the code. None
+of these fonts load in a mail client, so each stack carries system fallbacks (Georgia, the system
+sans, `ui-monospace`/Menlo/Consolas) and the mail names no web font. Alpha colours are flattened onto
+the surface they sit on. The code is one piece of text, not six cells, so it copies as one number.
+It is generated from `design/tokens.json` by `design/emails.mjs`; how to build and reuse it is in
+[DEVELOPMENT.md](DEVELOPMENT.md#emails).
+
 ## Tokens
 
 One source, `design/tokens.json`; `cd design && pnpm tokens` writes

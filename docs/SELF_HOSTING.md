@@ -57,7 +57,13 @@ Run everything below from the repository's root unless it says otherwise.
      `Your Libellus sign-in code` and the body of `supabase/templates/magic_link.html` (it shows
      `{{ .Token }}`, the six digits, and no link). Both need it: the first mail of a sign-up is the
      confirmation, every later one the magic link. Supabase lets you edit the templates once
-     custom SMTP is set up (step 2).
+     custom SMTP is set up (step 2). The body is a designed mail (Libellus' wordmark, colours and
+     code cell, light and dark), so paste the whole file, from `<!doctype html>` to `</html>`, into
+     the dashboard's HTML source field, not a rewrite of it. It is generated from
+     `design/tokens.json` (`cd design && pnpm emails`; [DEVELOPMENT.md](DEVELOPMENT.md#emails)): when
+     the design or its copy changes, paste the new file again into both templates. The subject lives
+     only in the dashboard (and in `supabase/config.toml` for the local stack); the file does not
+     carry it. `cd web && pnpm email:preview` shows how it looks, with a sample code, before you paste.
 4. **Keys.** *Project Settings → API keys*: the **Project URL** and the **anon** (publishable) key
    go into the web app (step 3); they are public, the database's row-level security decides what
    they can do. The **service_role** (secret) key is only for your own scripts (step 5): never put
@@ -279,7 +285,7 @@ Content-Security-Policy in `web/public/_headers` also names the owner's shelf ho
 | Supabase Auth | Site URL, Redirect URLs | `http://127.0.0.1:3020` locally | Your address (step 1.3, 4). |
 | Supabase Auth | Confirm email, Email OTP length | on, 6 | As in `supabase/config.toml` (step 1.3). |
 | Supabase Auth | User sign-ups | on | Leave on; invite codes gate sign-up in the database. |
-| Supabase Auth | Email templates | Supabase's | Magic Link and Confirm signup from `supabase/templates/magic_link.html` (step 1.3). |
+| Supabase Auth | Email templates | Supabase's | Magic Link and Confirm signup, the designed mail in `supabase/templates/magic_link.html` (step 1.3; re-paste it when it changes). |
 | Supabase Auth | SMTP host, port, user, password, sender address and name | Supabase's (team only) | Your mail provider (step 2). |
 | Invite codes | `scripts/create-invite-code.sh` | none | Uses, expiry, label, the code itself (step 5). Locally `LIBELLUS-DEV` is seeded. |
 | Function secrets | `LIBELLUS_SITE_URL` | unset | `goodreads-rating`: your address, named in its User-Agent; `waitlist-invite`: the sign-up link in the invite mail. Optional. |
