@@ -47,6 +47,11 @@ for (const scheme of ['light', 'dark'] as const) {
       }) as never
     })
     await signedIn(page)
+    // Home's date and greeting fade out under the Profile, and the greeting is the time of day's
+    // ("Good morning" is longer than "Good evening"): at 80 ms a letter of it can lie under the
+    // spot looked at below and tell as a ring. The probe is about the ring, so the words are
+    // kept out of the snapshot (hidden, so nothing moves).
+    await page.addStyleTag({ content: '[data-testid="home.date"], [data-testid="home.title"] { visibility: hidden }' })
     await page.getByTestId('shell.avatar').click()
     await page.waitForFunction(() => (window as unknown as { transition?: unknown }).transition)
     await page.evaluate(async () => {
