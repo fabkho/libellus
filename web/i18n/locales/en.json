@@ -567,6 +567,8 @@
       "finishedIt": "Finished it?",
       "reached": "That's the last page.",
       "finishHint": "Saves your progress first.",
+      "notFinishing": "Not finishing it?",
+      "abandonHint": "Stops the read where you are.",
       "undo": "Undo",
       "undoLabel": "Undo {change}",
       "saved": "Progress saved, {change}. Undo is beside it for a few seconds.",

@@ -2,15 +2,18 @@
 // The book page (D's book-new / book-reading / book-finished): the cover
 // lights the room. Under it the title, the author, the facts in small mono,
 // then the Book's state and the one action it asks for — Add to Library for a
-// Book that is not in the Library, Start reading on Want to read, Finish while
-// it is being read (with Abandon beside it), Read again on a finished Book and
-// Start again on an abandoned one — and what the Book is about. Opened from search (a Catalogue Book by id, or a result that is not
-// in the Catalogue yet by its source id) and from the Library. Where a Book
-// came from is never shown. Under the action, when the member has linked an
-// ebook file on this device (#131), one quiet line says so (BookEbook); with
-// the copy there, Read now is the lit action on Want to read and Reading (the
-// rest steps back beside it) and opens the built-in reader over the page, its
-// cover flying from this one (components/reader/Reader.vue).
+// Book that is not in the Library, Start reading on Want to read, Update
+// progress while it is being read (under its progress; Finish and DNF live in
+// that sheet, not here), Read again on a finished Book and Start again on an
+// abandoned one — and what the Book is about. Opened from search (a Catalogue
+// Book by id, or a result that is not in the Catalogue yet by its source id)
+// and from the Library. Where a Book came from is never shown. Under the
+// action, when the member has linked an ebook file on this device (#131), one
+// quiet line says so (BookEbook); with the copy there, Read now is the lit
+// action on Want to read and Reading (Start reading or Update progress steps
+// back under it) and opens the built-in reader over the page, its cover flying
+// from this one (components/reader/Reader.vue). How she read it (Read as, #169)
+// is set in the options sheet.
 import { formatOf } from '~/data/books'
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
@@ -234,15 +237,12 @@ function back() {
       <p v-else class="mt-ms mb-md text-center text-caption text-ink-faint" data-testid="book.notInLibrary">
         {{ t('book.notInLibrary') }}
       </p>
-      <!-- How she read it (#169): hers, not the edition's. -->
-      <BookReadAs v-if="entry" :entry="entry" testid="book.readAs" class="mb-md" />
-
       <BookProgress v-if="entry?.status === 'reading'" :entry="entry" />
 
       <UiButton v-if="!entry" block :offline="addOffline" data-testid="book.add" @click="library.openAdd(book)">
         <UiIcon name="plus" :size="18" bold />{{ t('book.add') }}
       </UiButton>
-      <!-- With the ebook here, reading it is the action; Start, Finish and Abandon step back beside it. -->
+      <!-- With the ebook here, reading it is the action; Start reading or Update progress steps back under it. -->
       <template v-else-if="ebook && (entry.status === 'want_to_read' || entry.status === 'reading')">
         <UiButton block data-testid="book.read" @click="reader.open(entry)">
           <UiIcon name="read" :size="18" />{{ t('book.read') }}
@@ -250,26 +250,17 @@ function back() {
         <UiButton v-if="entry.status === 'want_to_read'" class="mt-sm" tone="quiet" block data-testid="book.start" @click="reading.openStart(entry)">
           <UiIcon name="arrow" :size="18" />{{ t('book.start') }}
         </UiButton>
-        <div v-else class="mt-sm flex gap-ms">
-          <UiButton class="flex-1" tone="quiet" data-testid="book.finish" @click="reading.openFinish(entry)">
-            <UiIcon name="check" :size="18" />{{ t('book.finish') }}
-          </UiButton>
-          <UiButton tone="quiet" data-testid="book.abandon" @click="reading.openAbandon(entry)">
-            {{ t('book.abandon') }}
-          </UiButton>
-        </div>
+        <UiButton v-else class="mt-sm" tone="quiet" block data-testid="book.updateProgress" @click="reading.openProgress(entry)">
+          <UiIcon name="bookmark" :size="18" />{{ t('book.progress.update') }}
+        </UiButton>
       </template>
       <UiButton v-else-if="entry.status === 'want_to_read'" block data-testid="book.start" @click="reading.openStart(entry)">
         <UiIcon name="arrow" :size="18" bold />{{ t('book.start') }}
       </UiButton>
-      <div v-else-if="entry.status === 'reading'" class="flex gap-ms">
-        <UiButton class="flex-1" data-testid="book.finish" @click="reading.openFinish(entry)">
-          <UiIcon name="check" :size="18" bold />{{ t('book.finish') }}
-        </UiButton>
-        <UiButton tone="secondary" data-testid="book.abandon" @click="reading.openAbandon(entry)">
-          {{ t('book.abandon') }}
-        </UiButton>
-      </div>
+      <!-- Being read: moving the bookmark is the action. Finish and DNF wait in its sheet. -->
+      <UiButton v-else-if="entry.status === 'reading'" block data-testid="book.updateProgress" @click="reading.openProgress(entry)">
+        <UiIcon name="bookmark" :size="18" bold />{{ t('book.progress.update') }}
+      </UiButton>
       <!-- Closed: the next read starts a new session; the earlier ones stay. -->
       <UiButton
         v-else

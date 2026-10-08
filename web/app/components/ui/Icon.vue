@@ -22,6 +22,7 @@ export type IconName =
   | 'globe'
   | 'pencil'
   | 'flag'
+  | 'bookmark'
   | 'arrow'
   | 'sun'
   | 'moon'
@@ -116,6 +117,7 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     </template>
     <template v-else-if="name === 'pencil'"><path d="M15 5.5 18.5 9 9 18.5H5.5V15z" /></template>
     <template v-else-if="name === 'flag'"><path d="M6 20.5V4.5M6 5h11l-2.5 4 2.5 4H6" /></template>
+    <template v-else-if="name === 'bookmark'"><path d="M6.5 5.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v14l-5.5-3.8-5.5 3.8z" /></template>
     <template v-else-if="name === 'arrow'"><path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" /></template>
     <template v-else-if="name === 'sun'">
       <circle cx="12" cy="12" r="3.8" />

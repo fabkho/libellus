@@ -291,6 +291,20 @@ export async function settledBox(locator: Locator) {
   return last!
 }
 
+/**
+ * How a read ends from the book page: its one action while reading, Update progress, and in that
+ * sheet Finish or DNF (the page carries neither). The progress sheet gives way to the Finish or DNF
+ * sheet, which is open, at rest, when this returns.
+ */
+export async function endFromBook(page: Page, how: 'finish' | 'abandon') {
+  await page.getByTestId('book.updateProgress').click()
+  await expect(page.getByTestId('progress')).toBeVisible()
+  await page.getByTestId(`progress.${how}`).click()
+  await expect(page.getByTestId('progress')).toBeHidden()
+  await expect(page.getByTestId(how)).toBeVisible()
+  await untilStill(page)
+}
+
 /** A finger (here a mouse) pressed on the stars and dragged to `quarters`. */
 export async function dragRating(page: Page, control: Locator, quarters: number) {
   const box = await settledBox(control)

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Read as (issue #169): how the member read this Book, physical, ebook or audiobook. One row of
-// three icon segments (UiIconSegments, as the edition's format row) under the Book's state, on the Book page, in the options sheet and in the Finish sheet
-// (which passes `model` instead of `entry`: its choice is sent with the finish). It is hers, not
+// three icon segments (UiIconSegments, as the edition's format row), in the Book's options sheet
+// and in the Finish sheet (which passes `model` instead of `entry`: its choice is sent with the
+// finish); not on the Book page, which keeps to its one action. It is hers, not
 // the edition's: where she has not said, the edition's format is lit as the default
 // (`readAsOf`), and tapping the lit segment of her own word takes it back. Setting it needs the
 // connection (the segments are disabled and say Offline otherwise).

@@ -311,7 +311,8 @@ async function main() {
     await page.evaluate(() => scrollTo(0, 0))
   }
   if (wanted('finish')) {
-    await page.getByTestId('book.finish').click()
+    await page.getByTestId('book.updateProgress').click()
+    await page.getByTestId('progress.finish').click()
     await page.getByTestId('finish.review').waitFor()
     await sleep(600)
     await tapReal(page, 'finish.review')

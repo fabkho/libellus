@@ -5,12 +5,13 @@
 // away from her own total, #60) or, without a page count, the percent read
 // with "Add pages"; how much is done (or left); the pace a day; the days to go.
 // Then the last three weeks as bars, today lit, and "Last time · Yesterday · 24
-// pages" with Update progress, which opens the sheet. Nothing here edits by
-// itself. The reading log sits under the book's actions (ProgressLog.vue).
-// The bar and the row under it (the value in words at the left, Update progress
-// at the right) are always there, so a read never tracked has the tracked layout's
-// skeleton (issue #81, after #79): its row says "Not started · 224 pages". The
-// figures, chart and "Last time" open in below the row with a fade (UiReveal, the
+// pages". Nothing here edits by itself: Update progress, which opens the sheet, is
+// the page's own action under this block (pages/book/[key].vue), and the reading
+// log sits under it (ProgressLog.vue).
+// The bar and the line of words under it are always there, so a read never tracked
+// has the tracked layout's skeleton (issue #81, after #79): its line says "Not
+// started · 224 pages". The
+// figures, chart and "Last time" open in below the line with a fade (UiReveal, the
 // rule is `progressShownOf`), so the first save moves nothing but the fill and the
 // words; a value without a day yet shows the figures but no chart.
 // Updating works offline too: it waits to sync (#93).
@@ -64,14 +65,9 @@ const chartLabel = computed(() =>
       :value-text="words.value"
       data-testid="book.progressBar"
     />
-    <div class="flex items-center justify-between gap-ms pt-sm">
-      <p class="figures min-w-0 truncate text-meta" :class="started ? 'text-ink-muted' : 'text-ink-faint'" data-testid="book.progressText">
-        {{ started ? words.value : notStarted }}
-      </p>
-      <UiButton tone="quiet" size="sm" class="shrink-0" data-testid="book.updateProgress" @click="reading.openProgress(entry)">
-        {{ t('book.progress.update') }}
-      </UiButton>
-    </div>
+    <p class="figures truncate pt-sm text-meta" :class="started ? 'text-ink-muted' : 'text-ink-faint'" data-testid="book.progressText">
+      {{ started ? words.value : notStarted }}
+    </p>
 
     <UiReveal :show="shown !== 'none'" data-testid="book.progressStats">
       <div class="pt-md">

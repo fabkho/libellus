@@ -113,7 +113,7 @@ test('a member adds a book as Currently reading, started today unless another da
   await page.getByTestId('add.submit').click()
   await expect(page.getByTestId('add')).toBeHidden()
   await expect(page.getByTestId('book.status')).toHaveText(en.status.reading)
-  await expect(page.getByTestId('book.finish')).toBeVisible()
+  await expect(page.getByTestId('book.updateProgress')).toBeVisible()
 
   await page.getByTestId('shell.tab.library').click()
   await page.getByTestId('library.segment.reading').click()

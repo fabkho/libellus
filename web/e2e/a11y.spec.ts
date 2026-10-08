@@ -9,7 +9,7 @@ import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueApp
 import { enrichedLibrary, forgetEnriched } from './enriched'
 import { startedSeries } from './started'
 import { test } from './fixtures'
-import { expectAccessible, openProfile, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
+import { endFromBook, expectAccessible, openProfile, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
 
 /**
  * Accessibility (docs/ACCESSIBILITY.md): axe-core over every main screen and
@@ -189,17 +189,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
       const member = await signedIn(page)
       await seed(page, member.client)
 
-      // Being read: the page, Update progress (the wheel), Finish, Abandon, the options, Change edition.
+      // Being read: the page, Update progress (the wheel, Finish and DNF under it), Finish, Abandon
+      // (both from that sheet), the options (Read as), Change edition.
       await page.getByTestId('home.entry').first().click()
       await expect(page.getByTestId('book.title')).toBeVisible()
       await expectAccessible(page, 'a Book being read')
       await openSheet(page, 'book.updateProgress', 'progress')
+      await expect(page.getByTestId('progress.abandonRow')).toBeVisible()
       await expectAccessible(page, 'Update progress')
       await closeSheet(page, 'progress')
-      await openSheet(page, 'book.finish', 'finish')
+      await endFromBook(page, 'finish')
       await expectAccessible(page, 'Finish')
       await closeSheet(page, 'finish')
-      await openSheet(page, 'book.abandon', 'abandon')
+      await endFromBook(page, 'abandon')
       await expectAccessible(page, 'Abandon')
       await closeSheet(page, 'abandon')
       await openSheet(page, 'book.options', 'bookOptions')
@@ -445,5 +447,32 @@ test.describe('accessibility, the keyboard', { tag: '@full' }, () => {
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()
     await expect(start).toBeFocused()
+  })
+
+  test('a Book being read has one action; Finish and DNF follow each other in its sheet, and focus comes back to it', async ({ page }) => {
+    const member = await signedIn(page)
+    await seed(page, member.client)
+    await page.getByTestId('home.entry').first().click()
+    const update = page.getByTestId('book.updateProgress')
+    await expect(update).toBeVisible()
+    await untilStill(page)
+    await update.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('progress')).toBeVisible()
+    await untilStill(page)
+    // Finish, then DNF under it: next to each other in the focus order, as they are read (WebKit's
+    // Tab skips buttons, like Safari's default, so the order is read from the document).
+    const order = await page.getByTestId('progress').evaluate((sheet) =>
+      [...sheet.querySelectorAll<HTMLElement>('button:not([disabled]), input, [tabindex]:not([tabindex="-1"])')].map((el) => el.dataset.testid),
+    )
+    expect(order.slice(-2)).toEqual(['progress.finish', 'progress.abandon'])
+    await page.getByTestId('progress.abandon').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('abandon')).toBeVisible()
+    await untilStill(page)
+    // The DNF sheet took over from the progress sheet; leaving it gives focus back to the page's action.
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('abandon')).toBeHidden()
+    await expect(update).toBeFocused()
   })
 })
