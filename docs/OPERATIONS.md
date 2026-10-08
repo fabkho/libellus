@@ -304,8 +304,9 @@ Database backup → Run workflow):
    the file's. A lifecycle rule deletes objects under `db/` after 35 days: a month of nightly backups.
 
 A failed run is mailed by GitHub to whoever last changed the workflow's schedule. Each successful run names
-its object in the run's summary. GitHub switches scheduled workflows off in a public repository after 60
-days without a commit (and mails before it does): Actions → Database backup → Enable workflow brings it back.
+its object in the run's summary. The 60-day rule that turns a scheduled workflow off after a stretch
+without a commit is a public repository's — this one is private, so the cron keeps running. Worth knowing all
+the same: a cron that stops leaves no red run behind, only a gap in Actions → Database backup.
 
 ### What is in a backup, and what is not
 

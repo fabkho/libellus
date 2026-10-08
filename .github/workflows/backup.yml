@@ -6,11 +6,11 @@ name: Database backup
 # then checked. docs/OPERATIONS.md, "Backups", has what is in it, the setup and
 # the restore.
 #
-# The repository is public, and so is this job's log. Nothing of the database may
-# reach it: the plaintext dump exists only inside the pipe (scripts/backup-db.sh),
-# only the encrypted file touches the disk (the runner's temp folder, removed at
-# the end), nothing is uploaded as an artifact, and the parts of the connection
-# string are masked before anything connects.
+# The repository is private, and a log still outlives the run, readable by everyone with
+# access to it. Nothing of the database may reach one: the plaintext dump exists only
+# inside the pipe (scripts/backup-db.sh), only the encrypted file touches the disk (the
+# runner's temp folder, removed at the end), nothing is uploaded as an artifact, and the
+# parts of the connection string are masked before anything connects.
 #
 # Without the repository variable BACKUP_AGE_RECIPIENT (a fork, a self-hosted
 # instance that did not set it up) the job is skipped. A failed run is mailed by
