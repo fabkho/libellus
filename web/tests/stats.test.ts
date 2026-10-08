@@ -6,6 +6,8 @@ import {
   DAYS_SHOWN,
   figuresOf,
   readingDaysSummary,
+  readsOnDay,
+  type ReadingDay,
   readingSinceOf,
   readsInMonth,
   readsWithoutPages,
@@ -108,6 +110,31 @@ describe('readsWithoutPages', () => {
     expect(readsWithoutPages(reads).map((r) => r.sessionId)).toEqual(['No end date', 'Unnumbered again', 'Uncounted', 'Answered'])
   })
 })
+/** A day of the calendar as the record has it, naming the titles it was read in. */
+function readingDay(day: string, read: boolean, ...titles: string[]): ReadingDay {
+  return { day, read, pages: read ? 10 : 0, reads: titles.map((title) => statsRead(title, null, 100)) }
+}
+
+describe('readsOnDay', () => {
+  const days = [readingDay('2026-03-11', false), readingDay('2026-03-12', true, 'Mort', 'Dune'), readingDay('2026-03-13', true, 'Dune')]
+
+  it("is the reads the day's dot stands for, as the record named them", () => {
+    expect(readsOnDay(days, '2026-03-12').map((r) => r.sessionId)).toEqual(['Mort', 'Dune'])
+    expect(readsOnDay(days, '2026-03-13').map((r) => r.sessionId)).toEqual(['Dune'])
+  })
+
+  it('is nothing for a day not read, a day outside the weeks, or a day kept without its reads', () => {
+    expect(readsOnDay(days, '2026-03-11')).toEqual([])
+    expect(readsOnDay(days, '2026-01-01')).toEqual([])
+    // A record the device kept before the days named their reads.
+    expect(readsOnDay([{ day: '2026-03-12', read: true, pages: 10 } as ReadingDay], '2026-03-12')).toEqual([])
+  })
+
+  it('gives every day that was read at least one read', () => {
+    for (const day of days) expect(day.read).toBe(day.reads.length > 0)
+  })
+})
+
 describe('the record', () => {
   it('is empty for a member who has read nothing yet', async () => {
     const { stats, add } = await member()
@@ -119,7 +146,7 @@ describe('the record', () => {
     expect(data!.wantToRead).toBe(1)
     expect(data!.reading).toBe(0)
     expect(data!.days).toHaveLength(DAYS_SHOWN)
-    expect(data!.days.at(-1)).toEqual({ day: today, read: false, pages: 0 })
+    expect(data!.days.at(-1)).toEqual({ day: today, read: false, pages: 0, reads: [] })
     expect(data!.daysSince).toBeNull()
     expect(figuresOf(data!.reads, 'all').books).toBe(0)
     expect(yearsOf(data!.reads)).toEqual([])
@@ -223,10 +250,42 @@ describe('the record', () => {
 
     const { data } = await stats.record(today)
     expect(data!.daysSince).toBe(addDays(today, -60))
-    expect(data!.days.at(-1)).toEqual({ day: today, read: true, pages: 20 })
-    expect(data!.days.at(-2)).toEqual({ day: addDays(today, -1), read: false, pages: 0 })
-    expect(data!.days.at(-3)).toEqual({ day: addDays(today, -2), read: true, pages: 30 })
+    const figures = (index: number) => {
+      const { reads, ...day } = data!.days.at(index)!
+      return { ...day, titles: reads.map((r) => r.book.title) }
+    }
+    // Both Books were read today (Mort by percent, so no pages): each is named, the open reads among them.
+    expect(figures(-1)).toEqual({ day: today, read: true, pages: 20, titles: [runTitle('East of Eden'), runTitle('Mort')].sort() })
+    expect(figures(-2)).toEqual({ day: addDays(today, -1), read: false, pages: 0, titles: [] }) // a day of no progress names nothing
+    expect(figures(-3)).toEqual({ day: addDays(today, -2), read: true, pages: 30, titles: [runTitle('East of Eden')] })
     expect(readingDaysSummary(data!.days)).toEqual({ read: 2, count: 30, perDay: 25 })
+    // A read still going is named like any other, with the Book and nothing it has not got (no end, no outcome).
+    const eden0 = readsOnDay(data!.days, today).find((r) => r.book.title === runTitle('East of Eden'))!
+    expect(eden0).toMatchObject({ outcome: null, endedOn: null, startedOn: addDays(today, -5), pages: 608, nth: 0 })
+  })
+
+  it("names a finished read as the record's own, second read and all, on the days it was read", async () => {
+    const { stats, add } = await member()
+    const today = isoDay()
+    const entry = await add('Dune', { pages: 400 })
+    await reads(entry.id, [
+      { started: addDays(today, -20), ended: addDays(today, -15), rating: 16 },
+      { started: addDays(today, -4), ended: addDays(today, -2), rating: 20 },
+    ])
+    const [first, second] = (await sql<{ id: string }>('select id from public.reading_sessions where entry_id = $1 order by started_on', [entry.id])).map((r) => r.id)
+    await sql('insert into public.reading_progress_days (session_id, day, start_page, end_page) values ($1, $2, 0, 100), ($3, $4, 100, 130)', [
+      first,
+      addDays(today, -16),
+      second,
+      addDays(today, -3),
+    ])
+    const { data } = await stats.record(today)
+    const onFirst = readsOnDay(data!.days, addDays(today, -16))
+    const onSecond = readsOnDay(data!.days, addDays(today, -3))
+    expect(onFirst).toEqual([data!.reads.find((r) => r.sessionId === first)])
+    expect(onSecond).toEqual([data!.reads.find((r) => r.sessionId === second)])
+    expect(onFirst[0]!.nth).toBe(1)
+    expect(onSecond[0]).toMatchObject({ nth: 2, rating: 20, outcome: 'finished' })
   })
 
   it('reads a history longer than one page of the API (1,000 rows) whole', async () => {

@@ -33,7 +33,8 @@ export type StatsRead = {
   book: Book
   startedOn: string | null
   endedOn: string | null
-  outcome: SessionOutcome
+  /** Null only for a read still going, which a day of the reading days can name (`ReadingDay.reads`). */
+  outcome: SessionOutcome | null
   /** Quarter stars, 1–20, or null when unrated. */
   rating: number | null
   /** The pages that count: the member's own total, else the edition's. */
@@ -44,8 +45,12 @@ export type StatsRead = {
   nth: number
 }
 
-/** One day of the last weeks: whether anything was read, and how many pages (percent-only days read no pages). */
-export type ReadingDay = { day: string; read: boolean; pages: number }
+/**
+ * One day of the last weeks: whether anything was read, how many pages (percent-only days read no pages) and
+ * the reads it was read in, the very days of progress the other two come from: a day that was read always
+ * has at least one, an open read included.
+ */
+export type ReadingDay = { day: string; read: boolean; pages: number; reads: StatsRead[] }
 
 /** What the Profile is drawn from. */
 export type ReadingRecord = {
@@ -72,7 +77,7 @@ type SessionStatsRow = {
   entry_id: string
   started_on: string | null
   ended_on: string | null
-  outcome: SessionOutcome
+  outcome: SessionOutcome | null
   rating: number | null
   created_at: string
   entry: { page_count_override: number | null; book: BookRow }
@@ -84,7 +89,26 @@ type DayStatsRow = {
   start_percent: number | null
   end_page: number | null
   end_percent: number | null
-  session: { entry: { page_count_override: number | null; book: { page_count: number | null } } }
+  session: SessionStatsRow
+}
+
+/** What a read's row is asked for, closed (the figures) or open (a day of progress names it). */
+const SESSION_COLUMNS = `id, entry_id, started_on, ended_on, outcome, rating, created_at, entry:library_entries!inner(page_count_override, book:books!inner(${BOOK_COLUMNS}))`
+
+function readOfRow(row: SessionStatsRow, nth: number): StatsRead {
+  const book = bookFromRow(row.entry.book)
+  return {
+    sessionId: row.id,
+    entryId: row.entry_id,
+    book,
+    startedOn: row.started_on,
+    endedOn: row.ended_on,
+    outcome: row.outcome,
+    rating: row.rating,
+    pages: pageCountOf({ book, pageCountOverride: row.entry.page_count_override }),
+    days: row.started_on && row.ended_on ? daysSpanned(row.started_on, row.ended_on) : null,
+    nth,
+  }
 }
 
 /** The closed reads from their rows, oldest end first, each knowing which read of its entry it is. */
@@ -93,43 +117,50 @@ export function readsFromRows(rows: readonly SessionStatsRow[]): StatsRead[] {
   const sorted = [...rows].sort((a, b) => order(a).localeCompare(order(b)) || a.created_at.localeCompare(b.created_at))
   const seen = new Map<string, number>()
   return sorted.map((row) => {
-    const book = bookFromRow(row.entry.book)
     let nth = 0
     if (row.outcome === 'finished') {
       nth = (seen.get(row.entry_id) ?? 0) + 1
       seen.set(row.entry_id, nth)
     }
-    return {
-      sessionId: row.id,
-      entryId: row.entry_id,
-      book,
-      startedOn: row.started_on,
-      endedOn: row.ended_on,
-      outcome: row.outcome,
-      rating: row.rating,
-      pages: pageCountOf({ book, pageCountOverride: row.entry.page_count_override }),
-      days: row.started_on && row.ended_on ? daysSpanned(row.started_on, row.ended_on) : null,
-      nth,
-    }
+    return readOfRow(row, nth)
   })
 }
 
-/** The last `count` days up to today from the days' rows: read or not, and the pages (all Books together). */
-export function readingDaysFromRows(rows: readonly DayStatsRow[], today: string, count = DAYS_SHOWN): ReadingDay[] {
+/**
+ * The last `count` days up to today from the days' rows: read or not, the pages (all Books together) and the reads
+ * it was read in. A read already among the closed `reads` is that one (so its "second read" stays), any other, a
+ * read still going, is built from its row. A day's reads are the latest started first.
+ */
+export function readingDaysFromRows(rows: readonly DayStatsRow[], today: string, count = DAYS_SHOWN, reads: readonly StatsRead[] = []): ReadingDay[] {
+  const known = new Map(reads.map((r) => [r.sessionId, r]))
   const byDay = new Map<string, ReadingDay>()
   for (const row of rows) {
     const pageCount = pageCountOf({ book: { pageCount: row.session.entry.book.page_count }, pageCountOverride: row.session.entry.page_count_override })
     const amount = amountOf(dayFromRow({ session_id: '', ...row }), pageCount)
     if (amount <= 0) continue
-    const day = byDay.get(row.day) ?? { day: row.day, read: false, pages: 0 }
+    const day = byDay.get(row.day) ?? { day: row.day, read: false, pages: 0, reads: [] }
     day.read = true
     if (unitOf(pageCount) === 'page') day.pages += amount
+    if (!day.reads.some((r) => r.sessionId === row.session.id)) {
+      const read = known.get(row.session.id) ?? readOfRow(row.session, 0)
+      known.set(read.sessionId, read)
+      day.reads.push(read)
+    }
     byDay.set(row.day, day)
+  }
+  for (const day of byDay.values()) {
+    day.reads.sort((a, b) => (b.startedOn ?? '').localeCompare(a.startedOn ?? '') || a.book.title.localeCompare(b.book.title) || a.sessionId.localeCompare(b.sessionId))
   }
   return Array.from({ length: count }, (_, i) => {
     const day = addDays(today, i - count + 1)
-    return byDay.get(day) ?? { day, read: false, pages: 0 }
+    return byDay.get(day) ?? { day, read: false, pages: 0, reads: [] }
   })
+}
+
+/** The reads a day was read in, for its sheet: the ones the chart's dot for it stands for (none for a day not read). */
+export function readsOnDay(days: readonly ReadingDay[], day: string): StatsRead[] {
+  // A record kept on the device before the days named their reads has none: they come with the next load.
+  return days.find((d) => d.day === day)?.reads ?? []
 }
 
 // ------------------------------------------------------------------ figures
@@ -318,7 +349,7 @@ export function createStats(client: SupabaseClient): Stats {
         allPages<SessionStatsRow>((from, to) =>
           client
             .from('reading_sessions')
-            .select(`id, entry_id, started_on, ended_on, outcome, rating, created_at, entry:library_entries!inner(page_count_override, book:books!inner(${BOOK_COLUMNS}))`)
+            .select(SESSION_COLUMNS)
             .not('outcome', 'is', null)
             .order('id')
             .range(from, to)
@@ -329,7 +360,7 @@ export function createStats(client: SupabaseClient): Stats {
         allPages<DayStatsRow>((start, end) =>
           client
             .from('reading_progress_days')
-            .select('day, start_page, start_percent, end_page, end_percent, session:reading_sessions!inner(entry:library_entries!inner(page_count_override, book:books!inner(page_count)))')
+            .select(`day, start_page, start_percent, end_page, end_percent, session:reading_sessions!inner(${SESSION_COLUMNS})`)
             .gte('day', from)
             .lte('day', today)
             .order('session_id')
@@ -341,12 +372,13 @@ export function createStats(client: SupabaseClient): Stats {
       ])
       const failed = sessions.error ?? want.error ?? reading.error ?? days.error ?? first.error
       if (failed || !sessions.data || !days.data) return { data: null, error: mapLibraryError(failed ?? {}) }
+      const closed = readsFromRows(sessions.data)
       return {
         data: {
-          reads: readsFromRows(sessions.data),
+          reads: closed,
           wantToRead: want.count ?? 0,
           reading: reading.count ?? 0,
-          days: readingDaysFromRows(days.data, today),
+          days: readingDaysFromRows(days.data, today, DAYS_SHOWN, closed),
           daysSince: first.data[0]?.day ?? null,
         },
         error: null,
