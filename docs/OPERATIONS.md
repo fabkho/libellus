@@ -206,7 +206,7 @@ offline. Only the instance's owner has it: the database answers `owner_client_er
 only to the member named in `private.instance_owner` and raises `not_owner` for anyone else, signed-out
 callers cannot call them at all, and the app shows the row and the page only for the member named by
 `NUXT_PUBLIC_SHELF_OWNER_ID` and asks for nothing otherwise. Both have to name the owner: see
-[SELF_HOSTING.md, The owner](SELF_HOSTING.md#the-owner). A member who is not the owner has no row, the
+[SETUP.md, The owner](SETUP.md#the-owner). A member who is not the owner has no row, the
 address `/profile/errors` is a 404, and a call to the functions is refused. The functions give the 30 days
 the log keeps at most (`p_days`, 1 to 30, the app asks for 7) and at most 200 groups.
 
@@ -262,7 +262,7 @@ only by `join_waitlist` (granted to `anon`: checked, limited to 5 new entries an
 **Profile → Account → Waitlist** shows who waits (newest first, from whose page), **Copy waiting emails**
 puts the addresses still waiting on the clipboard, comma-separated for a Bcc field, **Invite**, **Mark
 invited** and **Delete** (a request to be forgotten) work on one entry. Same owner as for Errors
-([SELF_HOSTING.md, The owner](SELF_HOSTING.md#the-owner)).
+([SETUP.md, The owner](SETUP.md#the-owner)).
 
 **Invite** (after a Confirm) asks the `waitlist-invite` edge function with the owner's session: the
 database gives the entry a one-use invite code valid 14 days (`owner_waitlist_prepare_invite`; the entry
@@ -271,7 +271,7 @@ keeps it in `invite_code_id` and gets the same one again while it is unused and 
 entry invited. The owner sees the code with **Copy code** either way. Without the SMTP secrets, or when the
 send fails, nothing is marked and the row says the email was not sent: send the code another way, or Invite
 again later (same code). The function never logs the address or the code. Deploying it and its secrets:
-[SELF_HOSTING.md, Optional pieces](SELF_HOSTING.md#optional-pieces) and
+[SETUP.md, Optional pieces](SETUP.md#optional-pieces) and
 `supabase/functions/waitlist-invite/README.md`. **Mark invited** stays the manual path (an invite sent by
 hand, a code from `scripts/create-invite-code.sh`). In SQL:
 
@@ -315,7 +315,7 @@ the same: a cron that stops leaves no red run behind, only a gap in Actions → 
 | `public`: every Library, Book, Reading session, Collection, reader place and highlight (the member's own selected words, #131), invite code, Goodreads cache, … (schema and data) | Storage objects: the members' profile photos in the bucket `avatars` (#156; Covers are links, not files). See below |
 | `private`: the error log, the shelf's publish state, the error log's salt | Vault secrets (`github_dispatch_token`): encrypted with the project's own key, useless anywhere else |
 | `auth.users` and `auth.identities`: the members and their sign-in records, with their ids, so every row that names a member still does | Sign-in sessions, refresh tokens, one-time codes, MFA challenges, the auth audit log: they belong to the project they came from (members sign in again) |
-| The rest of `auth`'s data (MFA factors, SSO, OAuth clients; all empty here) and its schema, restored only by `--mode full` | Auth settings, SMTP, email templates (dashboard; docs/SELF_HOSTING.md) |
+| The rest of `auth`'s data (MFA factors, SSO, OAuth clients; all empty here) and its schema, restored only by `--mode full` | Auth settings, SMTP, email templates (dashboard; docs/SETUP.md) |
 | `supabase_migrations.schema_migrations`: which migrations the data belongs to | Edge functions and their secrets (`supabase/functions/`, `supabase secrets set`) |
 | | `pg_cron` jobs and `pg_net`'s queue: the migrations schedule the jobs again |
 
@@ -387,7 +387,7 @@ object from the dashboard and pass the file.
 
 **Into a fresh Supabase project** (the hosted one is gone or broken):
 
-1. Create the project (region `eu-central-1`) and set it up as docs/SELF_HOSTING.md step 1 says: link, Auth
+1. Create the project (region `eu-central-1`) and set it up as docs/SETUP.md step 1 says: link, Auth
    settings, email templates, SMTP (step 2). `supabase db push` from a checkout that has at least the
    backup's migrations: the restore says which migration the backup ends with and refuses a target that
    lacks any of them. The push also brings back the `pg_cron` jobs.

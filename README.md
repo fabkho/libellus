@@ -113,6 +113,7 @@ design tokens, the layout of the repository and everything else for working on t
 
 | | |
 | --- | --- |
+| [docs/SETUP.md](docs/SETUP.md) | Setting up the owner's instance: Supabase, Cloudflare Pages, invites, every setting in one table |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Run, test and change it locally |
 | [docs/HOSTING.md](docs/HOSTING.md) | How the owner's instance is built and served on Cloudflare Pages |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | The client error log and how to read it |

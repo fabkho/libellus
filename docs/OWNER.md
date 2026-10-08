@@ -7,7 +7,7 @@ the files it names (`web/scripts/import-fable.ts`, `web/scripts/fable/`,
 `web/app/data/import/{fable,readingTracker}.ts` for Fable;
 `web/scripts/export-regal.ts`, `web/app/data/export/`, `supabase/functions/regal-export/` and the
 `shelf_publish` migration for Regal). The Regal layer itself is opt-in (`LIBELLUS_REGAL=1`,
-[SELF_HOSTING.md](SELF_HOSTING.md), Optional pieces).
+[SETUP.md](SETUP.md), Optional pieces).
 
 ## The Fable import and the dev seed
 

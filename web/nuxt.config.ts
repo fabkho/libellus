@@ -139,7 +139,7 @@ export default defineNuxtConfig({
   },
 
   // Every value an instance sets for itself, from NUXT_PUBLIC_* env vars at build time (the table in
-  // docs/SELF_HOSTING.md). All of it ends up in the static files: public by nature, never a secret.
+  // docs/SETUP.md). All of it ends up in the static files: public by nature, never a secret.
   runtimeConfig: {
     public: {
       // NUXT_PUBLIC_SUPABASE_URL / NUXT_PUBLIC_SUPABASE_ANON_KEY (.env).
