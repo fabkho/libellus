@@ -2,13 +2,23 @@
 // A year's four figures (issue #78, A's grid): Books (with the re-reads and
 // the DNF under it), Pages (with the reads without a count, or the pages a
 // book), the Average Rating (with the ones not rated yet) and the Days a book
-// (the median from start to finish). Between hairlines, two by two. While the
-// reading record loads (`figures` null) the grid stands as it will be, its
-// labels in place and a placeholder in the wave where each figure goes; the
-// figures arrive into it (docs/MOTION.md, Loading).
+// (the median from start to finish). Between hairlines, two by two. The reads
+// without a count are a button where a page can open their sheet (the Profile
+// and a year in review; `still` on a reading page, #171, whose visitor has
+// none). While the reading record loads (`figures` null) the grid stands as it
+// will be, its labels in place and a placeholder in the wave where each figure
+// goes; the figures arrive into it (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
-const props = defineProps<{ figures: YearFigures | null }>()
+const props = withDefaults(
+  defineProps<{
+    figures: YearFigures | null
+    /** Only the figures, nothing to open (a reading page, #171): the line stays plain text. */
+    still?: boolean
+  }>(),
+  { still: false },
+)
+defineEmits<{ pagesMissing: [] }>()
 const { t } = useI18n()
 const { count, large, stars } = useFigures()
 const arriving = useArrival(() => !props.figures)
@@ -19,10 +29,13 @@ const booksLine = computed(() => {
   const parts = [f.rereads ? t('profile.figures.rereads', { count: count(f.rereads) }) : null, f.abandoned ? t('profile.figures.dnf', { count: count(f.abandoned) }) : null]
   return parts.filter(Boolean).join(' · ')
 })
+/** The reads without a count, and whether the line can open them (nothing to open on a reading page). */
+const pagesMissing = computed(() => props.figures?.pagesMissing ?? 0)
+const pagesMissingOpens = computed(() => !props.still && pagesMissing.value > 0)
 const pagesLine = computed(() => {
   const f = props.figures
   if (!f) return ''
-  if (f.pagesMissing) return t('profile.figures.pagesMissing', { count: count(f.pagesMissing) })
+  if (pagesMissing.value) return t('profile.figures.pagesMissing', { count: count(pagesMissing.value) })
   return f.books ? t('profile.figures.pagesPerBook', { count: count(Math.round(f.pages / f.books)) }) : ''
 })
 const averageLine = computed(() => {
@@ -59,7 +72,21 @@ const cells = computed(() => {
         <span class="bar skeleton wave" :style="{ '--wave': i * 0.12 }" />
       </dd>
       <dd v-else class="value text-figure tabular-nums" :class="{ arrive: arriving }" :style="{ '--chars': String(cell.value).length }" :data-testid="`profile.${cell.key}`">{{ cell.value }}</dd>
-      <dd class="figures truncate text-meta text-ink-faint" :class="{ arrive: arriving }" :data-testid="cell.lineTestid">{{ cell.line }}</dd>
+      <dd class="figures truncate text-meta text-ink-faint" :class="{ arrive: arriving }" :data-testid="cell.lineTestid">
+        <!-- The reads without a count open their sheet; a page without one (a reading page, #171) keeps the plain line. -->
+        <button
+          v-if="cell.key === 'pages' && pagesMissingOpens"
+          type="button"
+          class="line -mx-xs flex max-w-full items-center gap-xxs rounded-sm px-xs"
+          :aria-label="t('profile.figures.pagesMissingOpen', { count: count(pagesMissing) })"
+          data-testid="profile.pagesMissing"
+          @click="$emit('pagesMissing')"
+        >
+          <span class="min-w-0 truncate">{{ cell.line }}</span>
+          <UiIcon name="chevron" :size="13" />
+        </button>
+        <template v-else>{{ cell.line }}</template>
+      </dd>
     </div>
   </dl>
 </template>
@@ -72,6 +99,15 @@ const cells = computed(() => {
 /* A line with nothing to say keeps its height, so the four cells line up. */
 .cell > :last-child {
   min-height: var(--text-meta--line-height);
+}
+/* The Pages line where it opens a sheet: the quiet press of a tappable figure (Ratings.vue, Columns.vue). */
+.line:active {
+  background: var(--color-fill);
+}
+@media (hover: hover) {
+  .line:hover {
+    background: var(--color-fill);
+  }
 }
 /* The figure's line, held by its placeholder too: nothing moves when it lands. */
 .value {
