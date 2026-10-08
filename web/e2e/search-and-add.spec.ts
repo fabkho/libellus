@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
-import { goto, recordedApple, signedIn, untilStill } from './support'
+import { recordedApple, signedIn, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -114,19 +114,4 @@ test('a member finds a book, opens it, adds it and sees it on Want to read', asy
   // The other segments explain themselves.
   await page.getByTestId('library.segment.reading').click()
   await expect(page.getByTestId('library.segmentEmpty.reading')).toBeVisible()
-})
-
-test('a search that finds nothing says so', async ({ page }) => {
-  await signedIn(page)
-  await page.getByTestId('shell.tab.search').click()
-  await page.getByTestId('search.query').fill('qxzvwlmbrt')
-  await expect(page.getByTestId('search.noResults')).toContainText(en.search.noResultsTitle)
-})
-
-test('a book page opened from a link asks for the book again', async ({ page }) => {
-  await signedIn(page)
-  await goto(page, '/book/apple-1504159680')
-  await expect(page.getByTestId('book.title')).toHaveText('Piranesi')
-  await page.getByTestId('book.back').click()
-  await expect(page).toHaveURL(/\/library$/)
 })

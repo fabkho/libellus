@@ -1,10 +1,8 @@
 import { expect } from '@playwright/test'
-import en from '../i18n/locales/en.json' with { type: 'json' }
 import { METAMORPHOSIS_GUTENBERG, type EpubSpec } from '../tests/support/epub'
-import { sql } from '../tests/support/stack'
 import { test } from './fixtures'
 import { openReader, shelve, withEbook } from './readerSupport'
-import { recordedApple, signedIn, untilStill } from './support'
+import { recordedApple, signedIn } from './support'
 
 /**
  * The built-in reader (#131, phase 2), on the iPhone viewport. Chromium: the
@@ -13,141 +11,18 @@ import { recordedApple, signedIn, untilStill } from './support'
  * openings of Metamorphosis's three parts (Project Gutenberg #5200, public
  * domain) and linked with Add ebook, as phase 1 does.
  *
- * - Read now is the lit action of a Book being read with its ebook here; it
- *   opens the reader over the page, the printed page by default (sepia).
- * - A page turned and the reader closed: the progress is written (forward
- *   only, at once on closing) and the place is kept server-side.
- * - The Aa sheet's Classic mode switches the style; Contents goes to a part.
- * - A Want to read Book asks to start reading before progress counts.
- * - A crafted EPUB (Metamorphosis with every trick in its first part) runs no
- *   script and reaches nothing outside the book, in a scriptless frame
- *   (Chromium) and in one that allows scripts (as WebKit needs), while it still
- *   shows, styled, and turns its pages.
+ * What is left is the one check that needs a real browser: a crafted EPUB
+ * (Metamorphosis with every trick in its first part) runs no script and reaches
+ * nothing outside the book, in a scriptless frame (Chromium) and in one that
+ * allows scripts (as WebKit needs), while it still shows, styled, and turns its
+ * pages. The reader's other rules are tests/reader.test.ts, reader-places.test.ts
+ * and reader-markup.test.ts.
  */
 
 test.use({ browserName: 'chromium' })
 
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)
-})
-
-/** The progress of the member's open read. */
-const progressOf = (email: string) =>
-  sql<{ progress_page: number | null }>(
-    `select s.progress_page from public.reading_sessions s
-       join public.library_entries e on e.id = s.entry_id
-       join auth.users u on u.id = e.member_id
-      where u.email = $1 and s.outcome is null`,
-    [email],
-  )
-
-test('Read now opens the reader; a page turned is progress, written on closing, and the place is kept', async ({ page }) => {
-  const member = await signedIn(page)
-  const entry = await shelve(member, 'Metamorphosis', 'reading')
-  await withEbook(page, entry)
-
-  // With the ebook here, Read now is the action and Update progress steps back under it.
-  await expect(page.getByTestId('book.read')).toHaveText(en.book.read)
-  await expect(page.getByTestId('book.updateProgress')).toHaveText(en.book.progress.update)
-
-  const reader = await openReader(page)
-  // The printed page in sepia, by default.
-  await expect(reader).toHaveAttribute('data-mode', 'c')
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia')
-
-  // Turn on: the keyboard's arrow turns a page, as a tap at the right edge does.
-  const opened = (await reader.getAttribute('data-fraction'))!
-  await page.keyboard.press('ArrowRight')
-  await expect(reader).not.toHaveAttribute('data-fraction', opened)
-  const turned = (await reader.getAttribute('data-fraction'))!
-  // A second turn asked for while the page still settles is kept, not lost.
-  await page.keyboard.press('ArrowRight')
-  await page.mouse.click(370, 400)
-  await expect.poll(async () => Number(await reader.getAttribute('data-fraction'))).toBeGreaterThan(Number(turned))
-  const read = (await reader.getAttribute('data-fraction'))!
-
-  // A tap in the middle brings the capsule; Back closes the book.
-  await reader.getByTestId('reader.page').click({ position: { x: 195, y: 400 } })
-  await page.getByTestId('reader.back').click()
-  await expect(page.getByTestId('reader')).toHaveCount(0)
-  await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'sepia')
-
-  // The progress went forward (on closing, not after the idle wait), and the place is the server's too.
-  await expect.poll(async () => (await progressOf(member.email))[0]?.progress_page ?? 0).toBeGreaterThan(0)
-  await expect
-    .poll(async () => (await sql<{ n: number }>('select count(*)::int as n from public.reader_places where entry_id = $1', [entry.id]))[0]!.n)
-    .toBe(1)
-
-  // Opening again goes back to the same place.
-  const again = await openReader(page)
-  await expect(again).toHaveAttribute('data-fraction', read)
-})
-
-test('Aa: Classic mode switches the style and stays; Contents goes to a part', async ({ page }) => {
-  const member = await signedIn(page)
-  const entry = await shelve(member, 'Metamorphosis', 'reading')
-  await withEbook(page, entry)
-
-  const reader = await openReader(page)
-  await reader.getByTestId('reader.page').click({ position: { x: 195, y: 400 } })
-  await page.getByTestId('reader.type').click()
-  await expect(page.getByTestId('readerType')).toBeVisible()
-  await page.getByTestId('readerType.classic').click()
-  await expect(page.getByTestId('readerType.classic')).toHaveAttribute('aria-checked', 'true')
-  await expect(reader).toHaveAttribute('data-mode', 'a')
-  await page.keyboard.press('Escape')
-  await untilStill(page)
-
-  await reader.getByTestId('reader.page').click({ position: { x: 195, y: 400 } })
-  await page.getByTestId('reader.contents').click()
-  await expect(page.getByTestId('readerContents.list')).toBeVisible()
-  await page.getByTestId('readerContents.item.2').click()
-  await expect(page.getByTestId('readerContents')).toHaveCount(0)
-  await expect(reader).toHaveAttribute('data-chapter', '2')
-})
-
-test('Aa: Justify says what it does, and sets the text and its hyphenation inside the book', async ({ page }) => {
-  const member = await signedIn(page)
-  const entry = await shelve(member, 'Metamorphosis', 'reading')
-  await withEbook(page, entry)
-
-  const reader = await openReader(page)
-  // What the book's own paragraph is set with, read inside its frame.
-  const setting = async () => {
-    for (const frame of page.frames()) {
-      const p = frame.locator('p', { hasText: 'Gregor Samsa' }).first()
-      if (frame.url().startsWith('blob:') && (await p.count())) {
-        return p.evaluate((el) => {
-          const style = getComputedStyle(el)
-          return { align: style.textAlign, hyphens: style.hyphens }
-        })
-      }
-    }
-    return null
-  }
-  await expect.poll(setting).toEqual({ align: 'justify', hyphens: 'auto' })
-
-  await reader.getByTestId('reader.page').click({ position: { x: 195, y: 400 } })
-  await page.getByTestId('reader.type').click()
-  await expect(page.getByTestId('readerType')).toBeVisible()
-  await expect(page.getByTestId('readerType.justify')).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByTestId('readerType.justifyHint')).toHaveText(en.reader.type.justifyOn)
-
-  await page.getByTestId('readerType.justify').click()
-  await expect(page.getByTestId('readerType.justify')).toHaveAttribute('aria-checked', 'false')
-  await expect(page.getByTestId('readerType.justifyHint')).toHaveText(en.reader.type.justifyOff)
-  await expect.poll(setting).toEqual({ align: 'start', hyphens: 'manual' })
-})
-
-test('A Want to read Book: Read now opens the book and asks to start reading', async ({ page }) => {
-  const member = await signedIn(page)
-  const entry = await shelve(member, 'Metamorphosis', 'want_to_read')
-  await withEbook(page, entry)
-
-  // Start reading steps back beside Read now.
-  await expect(page.getByTestId('book.start')).toBeVisible()
-  await openReader(page)
-  await expect(page.getByTestId('start')).toBeVisible()
 })
 
 // ------------------------------------------------------------------ a crafted book
