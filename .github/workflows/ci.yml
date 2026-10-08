@@ -53,8 +53,8 @@ concurrency:
 env:
   # The owner's builds extend Regal (her shelf, #23; web/regal.config.ts), a private repo Nuxt
   # downloads with this token (a GitHub token that can read fabkho/regal), when LIBELLUS_REGAL=1.
-  # Where the secret is missing (a fork, a pull request from one) the app builds without the
-  # shelf and its flows skip, as anyone's would; the statics job also builds that way on purpose.
+  # Where the secret is missing (a run with no access to it) the app builds without the
+  # shelf and its flows skip; the statics job also builds that way on purpose.
   GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
   LIBELLUS_REGAL: ${{ secrets.GIGET_AUTH != '' && '1' || '' }}
   # Playwright shards: 4, each about as long as the others (web/e2e/shard.ts, from
@@ -480,7 +480,7 @@ jobs:
           ls .output/public/_nuxt/regal.*.js
           ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
 
-      # What a fork builds (docs/SELF_HOSTING.md): no Regal, no GIGET_AUTH. It has to build, and
+      # The build without the private Regal layer (docs/SETUP.md): no Regal, no GIGET_AUTH. It has to build, and
       # nothing of the shelf may be left in it. Pull requests only; the build is the cheap part.
       - name: Web builds without Regal (a fork's build)
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' && github.event_name != 'push' }}

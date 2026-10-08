@@ -11,7 +11,7 @@ const surface: ThemeColors = tokens.color.surface.$value
 
 // What's new (docs/OPERATIONS.md, "Releases"): this build's release, from version.txt and its part
 // of CHANGELOG.md at the repository root (release-please writes both). Read once, at build time;
-// only that release's notes end up in the app. A missing file (a fork that removed them) is no release.
+// only that release's notes end up in the app. A missing file (a checkout without them) is no release.
 const rootFile = (name: string) => {
   try {
     return readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
