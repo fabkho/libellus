@@ -78,7 +78,7 @@ does with your data.
 | [Supabase](https://supabase.com), region `eu-central-1` | The database (Postgres), sign-in (Auth), profile photos (Storage) and the edge functions: everything you save, your email address, the waitlist and the error log |
 | [Cloudflare Pages](https://pages.cloudflare.com) | Serves the app's static files and the link previews of a shared reading page; Cloudflare Web Analytics counts page loads from there |
 | [Cloudflare R2](https://developers.cloudflare.com/r2/) | A private bucket with the nightly database backup, encrypted before it is uploaded with a key only the owner holds; each file is deleted after 35 days (docs/OPERATIONS.md, "Backups") |
-| An email provider (SMTP) | Sends the six-digit sign-in codes and the waitlist invites, so it sees the address it mails |
+| Resend (an email provider, over SMTP) | Sends the six-digit sign-in codes and the waitlist invites, so it sees the address it mails |
 | [GitHub](https://github.com) | The code and its CI. None of your data: the backup job encrypts the dump while it streams and keeps no artifact or log of it |
 
 ## Tech stack
