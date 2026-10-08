@@ -28,9 +28,9 @@ writes the version and the notes from the conventional commits (CONTRIBUTING.md)
    release. Its second job, **deploy**, in the GitHub environment `production`:
    1. checks that **the full suite passed on `main`** for the release: main's latest CI run for the
       tagged commit, or for its nearest ancestor with a run (the release commit itself starts none),
-      must be green with its user flows run (`scripts/release-e2e-gate.sh`). Pull requests run only the
-      core flows; every CI run on `main` runs all of them, the `@full` ones included (docs/TESTING.md,
-      "CI: what runs when"). A run still going is waited for (up to 15 minutes). Red, or none: the
+      must be green with its user flows run (`scripts/release-e2e-gate.sh`). Pull requests run no flows;
+      every CI run on `main` runs all of them, the `@full` ones included (docs/TESTING.md, "CI: what runs
+      when"). A run still going is waited for (up to 25 minutes). Red, or none: the
       deploy stops before anything changed, and says which run to look at. Fix `main` (or re-run a
       flaky run), then deploy the tag by hand (below).
    2. links the hosted project (`SUPABASE_PROJECT_REF`), prints `supabase db push --linked --include-all
