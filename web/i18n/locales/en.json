@@ -162,6 +162,7 @@
       "rereads": "{count} read again",
       "dnf": "{count} DNF",
       "pagesMissing": "{count} without a count",
+      "pagesMissingOpen": "{count} without a count: show the books",
       "pagesPerBook": "{count} a book",
       "unrated": "{count} not rated yet",
       "rated": "{count} rated",
@@ -246,7 +247,8 @@
       "month": "{month} {year}",
       "stars": "{count} star · {year} | {count} stars · {year}",
       "allYears": "All years",
-      "readIn": "in a day | in {count} days"
+      "readIn": "in a day | in {count} days",
+      "pagesMissing": "Books without a page count"
     },
     "year": {
       "eyebrow": "Your year in books",

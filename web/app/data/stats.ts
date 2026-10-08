@@ -200,6 +200,15 @@ export function readsWithStars(reads: readonly StatsRead[], year: StatsYear, sta
     .sort((a, b) => b.rating! - a.rating! || (b.endedOn ?? '').localeCompare(a.endedOn ?? ''))
 }
 
+/**
+ * The finished reads of a year (or all) whose Book has no page count: exactly the reads
+ * `pagesMissing` counts, in the same order (newest end first), so the Pages card's line and the
+ * sheet it opens can never disagree.
+ */
+export function readsWithoutPages(reads: readonly StatsRead[], year: StatsYear = 'all'): StatsRead[] {
+  return finishedIn(reads, year).filter((r) => r.pages === null)
+}
+
 function median(values: number[]): number | null {
   if (!values.length) return null
   const sorted = [...values].sort((a, b) => a - b)
@@ -240,7 +249,7 @@ export function figuresOf(reads: readonly StatsRead[], year: StatsYear): YearFig
     year,
     books: finished.length,
     pages: paged.reduce((sum, r) => sum + r.pages!, 0),
-    pagesMissing: finished.length - paged.length,
+    pagesMissing: readsWithoutPages(reads, year).length,
     rated: rated.length,
     unrated: finished.length - rated.length,
     average: rated.length ? rated.reduce((sum, r) => sum + r.rating!, 0) / rated.length : null,
