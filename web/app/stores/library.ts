@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { bookKey, type Book, type BookSnapshot } from '~/data/books'
+import { bookKey, sourceKeys, type Book, type BookSnapshot } from '~/data/books'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import { forgetLibrary, readLibrary, saveLibrary } from '~/data/deviceLibrary'
 import {
@@ -127,16 +127,43 @@ export const useLibraryStore = defineStore('library', () => {
     // What did not change stays the object it was, and a list that did not change the
     // list it was: the screens re-render only what changed, nothing on most refreshes.
     let changed = !loaded.value
+    const before = STATUSES.flatMap((status) => lists[status])
     for (const status of STATUSES) {
       const next = reuseEntries(lists[status], merged[status])
       if (next === lists[status]) continue
       lists[status] = next
       changed = true
     }
+    if (changed) reconcile(before)
     for (const entry of STATUSES.flatMap((status) => lists[status])) if (entryByKey.get(entry.book.id) !== entry) remember(entry)
     loaded.value = true
     loadedAt = asked
     if (changed) save()
+  }
+
+  /**
+   * After a read replaced the lists: what the screens learned from the entries that are gone
+   * (a write the database refused, an add whose entry now has the database's id) they learn
+   * again. The pages and search's results forget a gone entry; one that took its place
+   * (the same Book, now with the database's ids) is what they show from here, under the page
+   * key the other one was reached by. So a refused add leaves no mark on its result, no page
+   * keeping an entry that is not there, and a synced one is the entry the database has.
+   */
+  function reconcile(before: LibraryEntry[]) {
+    const now = STATUSES.flatMap((status) => lists[status])
+    const ids = new Set(now.map((entry) => entry.id))
+    const gone = before.filter((entry) => !ids.has(entry.id))
+    if (!gone.length) return
+    const known = new Set(before.map((entry) => entry.id))
+    const arrived = now.filter((entry) => !known.has(entry.id))
+    for (const entry of gone) {
+      const keys = [...entryByKey].filter(([, held]) => held.id === entry.id).map(([key]) => key)
+      for (const key of keys) entryByKey.delete(key)
+      search.markRemoved(entry.id)
+      const successor = arrived.find((next) => keys.some((key) => key === next.book.id || sourceKeys(next.book).includes(key)))
+      if (successor) remember(successor, { keys })
+    }
+    for (const entry of arrived) search.markAdded(entry)
   }
 
   /**
@@ -162,10 +189,13 @@ export const useLibraryStore = defineStore('library', () => {
     return null
   }
 
-  /** The member's entry for a Book as the device shows it. */
+  /**
+   * The member's entry for a Book as the device shows it: by the Catalogue id, or by a page key
+   * (an entry added from a search result shows under its page key until the database answers).
+   */
   function entryForBook(bookId: string): LibraryEntry | null {
     for (const status of STATUSES) {
-      const found = lists[status].find((entry) => entry.book.id === bookId)
+      const found = lists[status].find((entry) => entry.book.id === bookId || sourceKeys(entry.book).includes(bookId))
       if (found) return found
     }
     return null
@@ -283,11 +313,18 @@ export const useLibraryStore = defineStore('library', () => {
   const addDraft = reactive<AddDraft>(newAddDraft())
   const addBusy = ref(false)
   const addError = ref<LibraryErrorCode | null>(null)
+  /** The sheet was opened from search's results: confirming shows the entry at once and the outbox sends it (`confirmAdd`). */
+  let addOptimistic = false
 
   // A change of mind is a new try: the last refusal no longer applies.
   watch(addDraft, () => (addError.value = null))
 
-  function openAdd(book: BookSnapshot | Book) {
+  /**
+   * Opens the Add sheet for a Book. `optimistic` (the search palette's +): confirming does not
+   * wait for the network, see `confirmAdd`.
+   */
+  function openAdd(book: BookSnapshot | Book, { optimistic = false }: { optimistic?: boolean } = {}) {
+    addOptimistic = optimistic
     adding.value = book
     Object.assign(addDraft, newAddDraft())
     addError.value = null
@@ -318,6 +355,12 @@ export const useLibraryStore = defineStore('library', () => {
    * its thumbhash and colours; the Placeholder cover if none will). One
    * database call does the rest (the entry and, for Currently reading and
    * Finished, its first read). Returns the entry, or null with `addError` set.
+   *
+   * From search's results (`openAdd`, `optimistic`) none of that is waited for: the add goes
+   * into the outbox like an offline write (data/library.ts, `AddHow`), the entry is in its list,
+   * the result's mark has flipped and the sheet is shut as soon as it is there, and the outbox
+   * sends it (resolving the Cover first) right away. What the database refuses comes back as a
+   * failure in the sync sheet and the entry goes away again (`reconcile`).
    */
   async function confirmAdd(): Promise<LibraryEntry | null> {
     const book = adding.value
@@ -326,9 +369,15 @@ export const useLibraryStore = defineStore('library', () => {
     // A day the database would refuse is told before anything is sent (or a cover looked up).
     addError.value = checkAddDraft(addDraft, isoDay())
     if (addError.value) return null
+    // Only while there is a line to write into (somebody signed in): else it asks the database as before.
+    const optimistic = addOptimistic && sync.queue.open()
     addBusy.value = true
     try {
-      const result = await repo.addToLibrary(await withCover(book), addWithFromDraft(addDraft))
+      const result = await repo.addToLibrary(
+        optimistic ? { ...book } : await withCover(book),
+        addWithFromDraft(addDraft),
+        { optimistic },
+      )
       if (result.error) {
         addError.value = result.error
         return null
