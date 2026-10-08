@@ -609,7 +609,11 @@
       "busy": "Changing…",
       "save": "Save",
       "saving": "Saving…",
+      "changeAndSave": "Change & save",
       "formatLabel": "Format",
+      "copyFormat": "Format of your copy",
+      "formatHelp": "Say what your copy is. It doesn't filter the list.",
+      "formatSaid": "Your copy will be saved as {format}.",
       "missing": "My edition isn't listed"
     },
     "goodreads": {
