@@ -26,14 +26,16 @@ writes the version and the notes from the conventional commits (CONTRIBUTING.md)
    the notes is the commit's subject, so the way to better notes is a better subject. To force a
    version, a commit with a `Release-As: 2.0.0` footer does it.
 3. The push of that merge runs the workflow again. Its first job tags `vX.Y.Z` and creates the GitHub
-   release. Its second job, **deploy**, in the GitHub environment `production`:
-   1. checks that **the full suite passed on `main`** for the release: main's latest CI run for the
-      tagged commit, or for its nearest ancestor with a run (the release commit itself starts none),
-      must be green with its user flows run (`scripts/release-e2e-gate.sh`). Pull requests run no flows;
-      every CI run on `main` runs all of them, the `@full` ones included (docs/TESTING.md, "CI: what runs
-      when"). A run still going is waited for (up to 25 minutes). Red, or none: the
-      deploy stops before anything changed, and says which run to look at. Fix `main` (or re-run a
-      flaky run), then deploy the tag by hand (below).
+   release. Its second job, **flows**, runs every user flow, `@full` ones included, against the tagged commit
+   on a local stack (`.github/workflows/e2e.yml`, one shard: about 20 minutes, billed once per release).
+   Pull requests and pushes to `main` run none (docs/TESTING.md, "CI: what runs when"), so this is the run
+   that reads them all before a release. Red: `deploy` does not start and nothing changed; the tag and the
+   GitHub release exist, but production did not move. A flaky flow: *Re-run failed jobs* on the run. A real
+   break: fix `main`, and the next release carries the fix (a `fix:` commit), or deploy the tag anyway with
+   `skip_flows` (below). Its third job, **deploy**, in the GitHub environment `production`, starts only when
+   `flows` passed:
+   1. checks the tag against `main` and `production` (the tag must be on `main`; `production` only moves
+      forward).
    2. links the hosted project (`SUPABASE_PROJECT_REF`), prints `supabase db push --linked --include-all
       --dry-run` (the migrations it is about to apply), then applies them. A failure stops here: nothing
       else changes.
@@ -85,11 +87,15 @@ Actions → Release → **Run workflow** (from `main`), or:
 ```sh
 gh workflow run release.yml -f tag=v1.4.0                       # deploy v1.4.0 again (a retry)
 gh workflow run release.yml -f tag=v1.3.2 -f migrations=false   # roll back to v1.3.2
+gh workflow run release.yml -f tag=v1.5.1 -f skip_flows=true    # deploy v1.5.1 without running the flows first
 ```
 
-The run checks that the tag is on `main` and that its full suite passed there, then does the same
-steps. A rollback to a release older than that check (its runs on `main` ran no user flows) needs
-`-f skip_e2e_gate=true`. A **retry** after a failed run
+The run checks that the tag is on `main`, then does the same steps. The flows (about 20 billed minutes)
+run first for a manual run with `migrations` on, **not** for a rollback (`migrations` off: the older release
+shipped with them, and a flow failing on an old tag must not hold a rollback back), and not with
+`skip_flows` on, the way to deploy without waiting for them (a retry of a deploy that failed after its
+flows passed, for one). A tag older than `scripts/ci-disk.sh` (v1.5.0 and before) cannot run them: use
+`skip_flows` for it. A **retry** after a failed run
 picks up where it failed: the migrations already applied are no longer pending, the functions are
 deployed again, and `production` moves forward or is left where it is.
 

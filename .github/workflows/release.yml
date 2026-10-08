@@ -8,9 +8,13 @@ name: Release
 #      the conventional commits merged since the last release.
 #   2. The owner merges that pull request. The push it makes runs release-please
 #      again, which tags vX.Y.Z and creates the GitHub release.
-#   3. `deploy` (same run, in the `production` environment) checks that main's
-#      latest full CI run for the release (every user flow, @full included) is
-#      green, waiting for one still going (scripts/release-e2e-gate.sh), then pushes the
+#   3. `flows` (same run) runs every user flow, @full included, against the tagged
+#      commit on a local stack (e2e.yml, one shard, about 20 billed minutes). They
+#      run nowhere else on the way to a release: not on pull requests and not on
+#      pushes to main (docs/TESTING.md, "CI: what runs when"). The release pull
+#      request cannot run them: a pull request release-please opens with the run's
+#      own token starts no workflow. Red, and the release stops with nothing shipped.
+#   4. `deploy` (same run, in the `production` environment) then pushes the
 #      database migrations, deploys every edge function and moves the branch
 #      `production` to the tag. Cloudflare Pages builds `production` as the live
 #      site (docs/HOSTING.md), so the web app follows last, on a backend that
@@ -23,9 +27,12 @@ name: Release
 # Run it by hand (Actions → Release → Run workflow, from `main`, or
 # `gh workflow run release.yml -f tag=v1.2.3`) to deploy an existing tag again:
 # a retry after a failure, or a rollback to an older release (then with
-# `migrations` off: migrations only go forward, see docs/OPERATIONS.md).
+# `migrations` off: migrations only go forward, see docs/OPERATIONS.md). A rollback
+# runs no flows (the older release shipped with them); a manual run with `migrations`
+# on runs them, unless `skip_flows` is on: `gh workflow run release.yml -f tag=v1.2.3
+# -f skip_flows=true` deploys without waiting for them.
 #
-# Never on pull requests: both jobs check the repository.
+# Never on pull requests: every job checks the repository.
 on:
   push:
     branches: [main]
@@ -40,8 +47,8 @@ on:
         required: true
         type: boolean
         default: true
-      skip_e2e_gate:
-        description: 'Deploy without a green full CI run on main for the tag (only for a rollback to a release older than that check)'
+      skip_flows:
+        description: 'Deploy without running the user flows first (they take about 20 minutes)'
         required: false
         type: boolean
         default: false
@@ -72,17 +79,48 @@ jobs:
       - uses: googleapis/release-please-action@v5
         id: release
 
-  deploy:
-    name: deploy ${{ inputs.tag || needs.release-please.outputs.tag_name }} to production
+  # Every user flow before anything goes out: red, and the release stops with the
+  # migrations, the functions and the branch `production` untouched. The steps are
+  # e2e.yml's, shared with ci.yml (`full-e2e` label, manual run); the tagged commit is
+  # what runs. Forward releases only: a rollback (a manual run with `migrations` off,
+  # for a tag that already shipped) pays nothing for them and is not held up by a
+  # flow failing on an older release. `skip_flows` skips them on a manual run.
+  flows:
+    name: user flows of ${{ inputs.tag || needs.release-please.outputs.tag_name }}
     needs: release-please
     # `release-please` is skipped on a manual run; !cancelled() lets this job run anyway.
     if: >-
       ${{ !cancelled() && github.repository == 'fabkho/libellus' && (
+        (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true') ||
+        (github.event_name == 'workflow_dispatch' && inputs.migrations && !inputs.skip_flows)
+      ) }}
+    permissions:
+      contents: read # a called workflow's permissions only narrow its caller's
+    uses: ./.github/workflows/e2e.yml
+    with:
+      ref: refs/tags/${{ inputs.tag || needs.release-please.outputs.tag_name }}
+      # One shard: each one pays its own setup (stack, browsers, build) on a two-core
+      # runner, so four cost more billed minutes than one, which is slower to finish.
+      shards: '[1]'
+    secrets: inherit
+
+  deploy:
+    name: deploy ${{ inputs.tag || needs.release-please.outputs.tag_name }} to production
+    needs: [release-please, flows]
+    # `release-please` and `flows` are skipped on a manual run; !cancelled() lets this
+    # job run anyway. It runs when the flows passed, or when they were left out on
+    # purpose: a manual run with `migrations` off (a rollback) or with `skip_flows` on.
+    # A failed or cancelled flows job stops the release here, before anything changed.
+    if: >-
+      ${{ !cancelled() && github.repository == 'fabkho/libellus' && (
+        needs.flows.result == 'success' ||
+        (github.event_name == 'workflow_dispatch' && (!inputs.migrations || inputs.skip_flows))
+      ) && (
         github.event_name == 'workflow_dispatch' ||
         (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true')
       ) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35 # 15 of them for CI on main to finish, if it is still going
+    timeout-minutes: 15
     # The environment's secrets are readable by this job only (docs/OPERATIONS.md,
     # "Releases": what to set up). Its deployment branch rule should allow `main` only.
     environment:
@@ -97,7 +135,6 @@ jobs:
     # changed workflow files to a branch, and most releases do.
     permissions:
       contents: read
-      actions: read # the CI runs on main the release waits for (scripts/release-e2e-gate.sh)
     env:
       SUPABASE_CLI: 2.118.0 # pinned like ci.yml
       EVENT: ${{ github.event_name }}
@@ -169,17 +206,6 @@ jobs:
           fi
           echo "production: ${current:-none} → $target ($move)"
           { echo "target=$target"; echo "current=$current"; echo "move=$move"; } >> "$GITHUB_OUTPUT"
-
-      # Before anything is deployed: main's latest full CI run (every user flow, @full
-      # included: pull requests run only the core ones) for the tag's commit, or for its
-      # nearest ancestor with a run, must be green. A run still going is waited for.
-      - name: The full suite passed on main
-        if: ${{ !inputs.skip_e2e_gate }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TARGET: ${{ steps.branch.outputs.target }}
-          WAIT_SECONDS: 1500 # a full run on main takes about 20 minutes on one shard
-        run: scripts/release-e2e-gate.sh "$TARGET"
 
       - uses: supabase/setup-cli@v3
         with:

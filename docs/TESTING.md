@@ -434,20 +434,25 @@ said there was nothing finished; it now stands in its final shape from the first
 `.github/workflows/ci.yml`. The repository is private, so every job is billed from the account's included
 Actions minutes — 2,000 a month on Free, 3,000 with Pro, shared with the other private repositories — and a
 standard runner has two cores where a public repository's has four. The workflow weighs the minutes as much
-as the wait for a pull request's result; the numbers below were measured on the four-core public runner.
+as the wait for a pull request's result; the numbers in "Measured" below were taken on the four-core public
+runner.
+
+The flows are the expensive part (about 20 billed minutes for the whole suite in one job), so they run **once
+per release** and nowhere else by default.
 
 | Event | What runs |
 | --- | --- |
-| Pull request | What the changed paths call for (below). **No Playwright flows**: the flows are where the minutes go, and a broken one is caught on `main`, minutes after the merge, where a release reads the result. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
+| Pull request | What the changed paths call for (below). **No Playwright flows**: the flows are where the minutes go. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
 | Pull request with the label **`full-e2e`** | Those checks, and **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
-| Push to `main` (a merge) | **Every flow**, `@full` included, and the checks the changed paths call for. A regression in an `@full` flow is found here, minutes after the merge, instead of on the pull request. |
-| `workflow_dispatch` | Everything (`gh workflow run CI --ref <branch>`). |
+| Push to `main` (a merge) | The checks the changed paths call for, **no flows**. A regression the checks do not see is found by the flows of the next release (below), or sooner with the label or a manual run. |
+| `workflow_dispatch` | Everything, every flow (`gh workflow run CI --ref <branch>`). |
+| Release (`release.yml`: the push of the release pull request's merge, or a manual run with `migrations` on) | **Every flow**, `@full` included, against the tagged commit, in the `flows` job, before `deploy`. About 20 billed minutes, once per release. |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
-| The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No run at all. `release.yml` runs instead, and **its deploy waits for main's latest full run** (below). |
+| The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No CI run. `release.yml` runs instead, and **its deploy waits for its own flows** (below). |
 
-There is no nightly run: every merge to `main` already runs the whole suite, and a full run a day would be
-some 900 of the account's included minutes a month — about twice what every other private repository draws
-together.
+There is no nightly run: a full run a day would be some 600 of the account's included minutes a month, and a
+run on every push to `main` about as many again (what the flows cost per merge is what this table was
+changed for). The flows' result is read where it matters, in the release run.
 
 A `what changed` job (about 5 seconds) turns the changed files into the jobs to run (`dorny/paths-filter`).
 Any change under `.github/` runs everything, so CI changes are tested by CI.
@@ -459,22 +464,31 @@ Any change under `.github/` runs everything, so CI changes are tested by CI.
 | `design/**`, `web/app/assets/css/tokens.generated.css`, `supabase/templates/**` | Tokens check and emails check (the generated mail is current) |
 | `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite) | Deno lint, check, test of that function |
 
-On `main` the flows run whatever changed (every run there must say whether the whole suite passes). A
-pull request that touches several of these runs the union. A skipped job is a pass for everything
-downstream, and no branch is protected by required checks, so a skip never blocks a merge.
+A pull request or a push to `main` that touches several of these runs the union. A skipped job is a pass
+for everything downstream, and no branch is protected by required checks, so a skip never blocks a merge.
 
-**Releases wait for the full suite.** `release.yml`'s deploy first runs `scripts/release-e2e-gate.sh`:
-it takes main's latest full CI run (a push or a manual one) for the release's commit, or
-for its nearest ancestor with a run (the release commit itself starts none), waits for it if it is still
-going, and stops the release with a message naming the run unless it passed with its flows run
-(docs/OPERATIONS.md, "Releases").
+**Releases run the full suite themselves.** `release.yml` has a `flows` job between `release-please` and
+`deploy`: it checks out the **tag** (`refs/tags/vX.Y.Z`, for a manual run the `tag` input) and runs the
+same workflow the label and a manual run use (`.github/workflows/e2e.yml`, one shard). `deploy` needs it
+and starts only when it passed: red, and nothing is deployed (docs/OPERATIONS.md, "Releases"). They are
+left out, on purpose, in two cases only: a manual run with `migrations` off (a rollback: the older release
+shipped with them, and a flow failing on an old tag must not hold a rollback back) and a manual run with
+`skip_flows` on (`gh workflow run release.yml -f tag=vX.Y.Z -f migrations=true -f skip_flows=true`, to deploy
+without waiting for them).
+
+The flows are a **reusable workflow** (`e2e.yml`, `workflow_call`) rather than a composite action: what both
+callers share is whole jobs (the shard matrix, the runner, the timeout, the report that merges the shards),
+and an action holds steps only, so each caller would keep those twice. The callers pass `ref` (what to
+test; empty is the calling run's own commit) and `shards` (a JSON list); the called workflow has no
+`concurrency` of its own and reads the caller's secret `GIGET_AUTH` (`secrets: inherit`).
 
 Jobs, and why they are shaped so:
 
 - **`backend`**: pgTAP, Vitest against the stack, and the backup round trip
   (`scripts/test-backup-roundtrip.sh`, docs/OPERATIONS.md "Backups"), on a stack of its own, beside the
   flows rather than in front of them.
-- **`e2e`**, four shards: the flows (`web/e2e`) on the static build, each shard with its own stack.
+- **`e2e`** (`e2e.yml`, called by `ci.yml` for the label and a manual run, by `release.yml` as `flows`; four
+  shards, one in a release): the flows (`web/e2e`) on the static build, each shard with its own stack.
 - **`statics`**: the checks that take seconds (tokens, emails, `nuxt generate` with and without Regal, the Deno
   suites) in one job.
 - **`e2e-report`**: when a shard failed, one HTML report merged from the shards' blob reports, with the
@@ -519,11 +533,35 @@ local pass.
 
 ```sh
 cd web
-pnpm e2e                          # every flow, what a release waits for on main
+pnpm e2e                          # every flow, what a release runs before it deploys
 pnpm e2e --grep-invert @full      # without the @full flows, for a quick local pass
 pnpm e2e --grep @full             # only the @full flows
 gh pr edit <n> --add-label full-e2e   # every flow on that pull request's CI
 ```
+
+### Disk
+
+A standard runner has little disk (the private repository's two-core `ubuntu-latest`), and the flows put a lot
+on it: the stack's Docker images, WebKit and Chromium, `node_modules` and the pnpm store, the two builds, and
+what Playwright writes while it runs. One job running every flow (`E2E_SHARDS=1`) died of it on 8 October
+2026 (run 37842426225): after about 20 minutes of flows, `WebKit encountered an internal error`, then
+`ENOSPC: no space left on device` when the retries wrote their traces. Four shards spread the same flows over
+four disks and never hit it.
+
+The run printed no `df`, so the share of each part was not measured then. What is known: Playwright's output
+was already small (`trace: 'on-first-retry'`, `screenshot: 'only-on-failure'`, no video; 17 retried tests in
+that run, and the blob report is only uploaded when a shard fails), so the room went to the runner's own
+image, which carries several GB of tools the job never uses. The flows job (`e2e.yml`) therefore:
+
+- **frees them first** (`scripts/ci-disk.sh free`: the Android SDK, .NET, Haskell, Swift, boost, CodeQL,
+  PowerShell and Docker's cached images; the first step after checkout, about a minute at most);
+- **measures** with `scripts/ci-disk.sh`: `df` before and after the clean-up, a report once the stack, the
+  browsers and the build are in place, one after the flows, and a sample of the used disk every two minutes
+  in between (`used / avail / use%` of `/`), with what each part holds (`docker system df`, the Playwright
+  browsers, the pnpm store, `node_modules`, `test-results`, `/tmp`). Read them in the log of the next full run
+  (steps *Free disk the job does not need*, *Disk with the stack…*, *Disk after the flows*) before changing
+  anything else; if the line still climbs by the minute, something the flows write is the culprit and the
+  `/tmp` and `test-results` lines say which.
 
 ### How many shards
 
@@ -542,6 +580,9 @@ build, with the stack starting behind them) on top of its share of the flows; pa
 a shard. The repository variable `E2E_SHARDS` changes the number without a commit.
 
 ### Measured
+
+(Taken when every push to `main` ran the flows; they run once per release now, and an estimate of what
+that costs a month is in the pull request that moved them.)
 
 Wall time of the run and its slowest jobs, from the jobs API (October 2026; runs 37606141210, 37601341246,
 37607066496 before, 37623156029, 37625498536, 37624494494, 37625511464 after):
