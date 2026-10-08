@@ -13,8 +13,12 @@ import { type EnrichResult, mapError, OFFLINE } from './result'
  *                         how many whole-numbered books the series has ("Book 2 of 9")
  *                         and its works with her statuses; her correction if she made one
  *   series(id)            series_works: one series in order (the series sheet)
- *   next()                next_in_series: per series she finished a work of, the next
- *                         one she has not finished
+ *   started()             started_series: per series she has started (a work she is
+ *                         reading or finished; Want to read or abandoned alone do not
+ *                         count) that still has a work open, the next open one, the
+ *                         latest activity first. A series whose every work the
+ *                         Catalogue knows is finished (or being read) is not listed:
+ *                         a total nobody knows never makes a series unfinished
  *   set / clear / reset   set_entry_series / reset_entry_series, keyed by her entry
  *
  * Titles and covers come in `language` where the work has an edition in it,
@@ -47,9 +51,16 @@ export type BookSeries = {
   series: BookSeriesPlace[]
 }
 
-export type NextInSeries = {
+/** One series she has started and not finished: what Home's "Next in your series" lists. */
+export type StartedSeries = {
   series: { id: string; name: string; parentId?: string }
-  finished: { position: number; workId?: string; title?: string }
+  /** How many of its works she finished. */
+  finished: number
+  /** How many whole-numbered works it has ("Book 3 of 10"); none when the series gives no numbers. */
+  count?: number
+  /** The day she last finished or began reading a work of it (YYYY-MM-DD). */
+  activeOn?: string
+  /** The next work open: its cover, title, place and her status of it (none, or Want to read). */
   next: WorkCard
 }
 
@@ -59,7 +70,7 @@ export type SeriesCorrection = { seriesId: string; position: number | null } | {
 export type SeriesRepository = {
   forBook: (bookId: string, language?: string) => Promise<EnrichResult<BookSeries>>
   series: (seriesId: string, language?: string) => Promise<EnrichResult<SeriesInfo | null>>
-  next: (limit?: number, language?: string) => Promise<EnrichResult<NextInSeries[]>>
+  started: (limit?: number, language?: string) => Promise<EnrichResult<StartedSeries[]>>
   set: (entryId: string, correction: SeriesCorrection) => Promise<EnrichResult<BookSeries>>
   /** She says the Book is in no series. */
   clear: (entryId: string) => Promise<EnrichResult<BookSeries>>
@@ -113,15 +124,11 @@ export function createSeries(
       return { data: data ? normalizeSeries(data as SeriesInfo) : null, error: null }
     },
 
-    async next(limit = 5, language = 'en') {
-      const { data, error } = await client.rpc('next_in_series', { p_limit: limit, p_language: language })
+    async started(limit = 100, language = 'en') {
+      const { data, error } = await client.rpc('started_series', { p_limit: limit, p_language: language })
       if (error) return { data: null, error: mapError(error) }
       return {
-        data: ((data ?? []) as NextInSeries[]).map((item) => ({
-          ...item,
-          finished: { ...item.finished, position: Number(item.finished.position) },
-          next: numbered(item.next),
-        })),
+        data: ((data ?? []) as StartedSeries[]).map((item) => ({ ...item, finished: Number(item.finished), next: numbered(item.next) })),
         error: null,
       }
     },

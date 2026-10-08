@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BookAuthor } from '@/data/enrich'
-import type { NextInSeries } from '@/data/enrich/series'
+import type { StartedSeries } from '@/data/enrich/series'
 import { DEVICE_ENRICH_KEY, emptyCopy, readEnrichCopy, remembered, saveEnrichCopy } from '@/data/enrich/device'
 import {
   authorInitials,
@@ -11,7 +11,8 @@ import {
   rowAuthorKey,
   sameName,
   seriesLine,
-  upNextInSeries,
+  nextPlace,
+  startedOnHome,
   workBookKey,
 } from '@/utils/enrich'
 import type { DeviceStorage } from '@/data/localData'
@@ -139,20 +140,34 @@ describe('the author line', () => {
 })
 
 describe('next in your series', () => {
-  const item = (title: string, status?: 'want_to_read' | 'reading' | 'finished', isbn: string | null = '9780552131063'): NextInSeries => ({
+  const item = (title: string, isbn: string | null = '9780552131063', position: number | null = 2, count?: number): StartedSeries => ({
     series: { id: title, name: 'Discworld' },
-    finished: { position: 1 },
+    finished: 1,
+    ...(count ? { count } : {}),
     next: {
       title,
-      position: 2,
-      ...(status ? { entry: { entryId: 'e', bookId: `b-${title}`, status } } : {}),
+      ...(position === null ? {} : { position }),
       edition: { title, isbn13: isbn, openlibrary_edition_key: null, cover_url: null },
     },
   })
 
-  it('leaves out one she reads already and one with nothing to open, and shows three at most', () => {
-    const shown = upNextInSeries([item('A', 'reading'), item('B'), item('C', 'want_to_read'), item('D', undefined, null), item('E'), item('F')])
-    expect(shown.map((i) => i.next.title)).toEqual(['B', 'C', 'E'])
+  it('lists five at most and says whether there are more, leaving out one with nothing to open', () => {
+    const six = ['A', 'B', 'C', 'D', 'E', 'F'].map((t) => item(t))
+    expect(startedOnHome(six).shown.map((i) => i.next.title)).toEqual(['A', 'B', 'C', 'D', 'E'])
+    expect(startedOnHome(six).more).toBe(true)
+    expect(startedOnHome(six).all).toHaveLength(6)
+
+    const five = ['A', 'B', 'C', 'D', 'E'].map((t) => item(t))
+    expect(startedOnHome(five).more).toBe(false)
+    expect(startedOnHome([...five.slice(0, 4), item('X', null), item('Y')]).all.map((i) => i.next.title)).toEqual(['A', 'B', 'C', 'D', 'Y'])
+  })
+
+  it('says where the next work stands: of the count when it is whole and within it', () => {
+    expect(nextPlace(item('A', undefined, 3, 10))).toEqual({ n: '3', count: 10 })
+    expect(nextPlace(item('A', undefined, 2.5, 10))).toEqual({ n: '2.5', count: null })
+    expect(nextPlace(item('A', undefined, 12, 10))).toEqual({ n: '12', count: null })
+    expect(nextPlace(item('A', undefined, 3))).toEqual({ n: '3', count: null })
+    expect(nextPlace(item('A', undefined, null, 10))).toBeNull()
   })
 })
 
