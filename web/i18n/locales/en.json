@@ -1047,7 +1047,7 @@
     "rowValue": "{count} waiting",
     "title": "Waitlist",
     "back": "Back",
-    "intro": "People who asked for an invite on a reading page. Nothing is sent from here: copy the addresses, invite them yourself and mark them. Only you can see this.",
+    "intro": "People who asked for an invite on a reading page. Invite emails one a code to sign up with; or copy the addresses, invite them yourself and mark them. Only you can see this.",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
     "summary": "{waiting} waiting · {invited} invited",
@@ -1055,8 +1055,23 @@
     "copied": "Copied",
     "fromMember": "from {name}’s page",
     "fromPage": "from a reading page",
+    "invite": "Invite",
     "markInvited": "Mark invited",
     "invitedDone": "Invited",
+    "inviteConfirm": {
+      "title": "Send an invite to {email}?",
+      "text": "They get an email with an invite code that works once, for 14 days, and the entry is marked invited.",
+      "action": "Send invite"
+    },
+    "inviteError": "The invite could not be made. Try again.",
+    "code": {
+      "label": "Invite code",
+      "copy": "Copy code",
+      "copied": "Copied",
+      "emailed": "Emailed. Works once, until {date}.",
+      "not_configured": "The email was not sent: mail isn’t set up. Send the code another way; it works once, until {date}.",
+      "send_failed": "The email could not be sent. Send the code another way, or Invite again; it works once, until {date}."
+    },
     "delete": "Delete {email}",
     "confirm": {
       "title": "Delete {email}?",

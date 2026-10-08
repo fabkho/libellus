@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "email:preview": "node scripts/preview-email.mjs",
     "e2e:build": "tsx e2e/build.ts",
     "import:fable": "tsx scripts/import-fable.ts",
     "export:regal": "tsx scripts/export-regal.ts",

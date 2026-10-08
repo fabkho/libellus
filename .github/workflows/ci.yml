@@ -85,6 +85,7 @@ jobs:
       regal: ${{ steps.decide.outputs.regal }}
       og: ${{ steps.decide.outputs.og }}
       enrich: ${{ steps.decide.outputs.enrich }}
+      invite: ${{ steps.decide.outputs.invite }}
     steps:
       - uses: actions/checkout@v7
         if: github.event_name == 'push'
@@ -115,6 +116,8 @@ jobs:
               - *ci
               - 'design/**'
               - 'web/app/assets/css/tokens.generated.css'
+              - 'supabase/templates/**'
+              - 'supabase/functions/waitlist-invite/invite_mail.generated.mjs'
             goodreads:
               - *ci
               - 'supabase/functions/goodreads-rating/**'
@@ -129,6 +132,10 @@ jobs:
               - *ci
               - 'supabase/functions/enrich/**'
               - 'web/app/data/enrich/genres.ts'
+            invite:
+              - *ci
+              - 'supabase/functions/waitlist-invite/**'
+              - 'design/emails/**'
 
       - name: Decide
         id: decide
@@ -143,6 +150,7 @@ jobs:
           FILTER_REGAL: ${{ steps.filter.outputs.regal }}
           FILTER_OG: ${{ steps.filter.outputs.og }}
           FILTER_ENRICH: ${{ steps.filter.outputs.enrich }}
+          FILTER_INVITE: ${{ steps.filter.outputs.invite }}
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
         run: |
           all=false
@@ -156,6 +164,7 @@ jobs:
           regal=$(on "$FILTER_REGAL")
           og=$(on "$FILTER_OG")
           enrich=$(on "$FILTER_ENRICH")
+          invite=$(on "$FILTER_INVITE")
           # Playwright: on a pull request when the app or the schema it runs on changed;
           # on main (push, nightly, by hand) always, so every run there says whether the
           # whole suite passes (what a release waits for).
@@ -169,12 +178,12 @@ jobs:
           shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
 
           statics=false
-          for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich"; do [ "$v" = true ] && statics=true; done
+          for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich" "$invite"; do [ "$v" = true ] && statics=true; done
 
           {
             echo "backend=$backend"; echo "e2e=$e2e"; echo "e2e_filter=$e2e_filter"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
-            echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"
+            echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"
           } | tee -a "$GITHUB_OUTPUT"
 
   # Database rules (pgTAP), the web data layer (Vitest) and the backup round trip
@@ -446,6 +455,11 @@ jobs:
         working-directory: design
         run: pnpm install --frozen-lockfile && pnpm tokens:check
 
+      - name: Email templates are generated, not hand-edited
+        if: ${{ !cancelled() && needs.changes.outputs.tokens == 'true' }}
+        working-directory: design
+        run: pnpm install --frozen-lockfile && pnpm emails:check
+
       - name: Web builds (nuxt generate)
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
         working-directory: web
@@ -483,7 +497,7 @@ jobs:
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@v2
-        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true'
+        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true'
         with:
           deno-version: v2.x
 
@@ -516,4 +530,12 @@ jobs:
       - name: enrich function (Deno lint, check, test)
         if: ${{ !cancelled() && needs.changes.outputs.enrich == 'true' }}
         working-directory: supabase/functions/enrich
+        run: deno lint && deno check *.ts && deno task test
+
+      # The waitlist-invite edge function (#171): the owner's Invite, with a stand-in
+      # database and mailer (mailed, not configured, a failed send, not the owner, a bad
+      # body) and the mail's text. Nothing is sent and the SMTP client is never loaded.
+      - name: waitlist-invite function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.invite == 'true' }}
+        working-directory: supabase/functions/waitlist-invite
         run: deno lint && deno check *.ts && deno task test

@@ -1,12 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
- * The waitlist (supabase/migrations/20261011040000_waitlist.sql, issue #171).
+ * The waitlist (supabase/migrations/20261011040000_waitlist.sql and 20261013010000_waitlist_invite.sql,
+ * issue #171).
  *
  * A visitor of a reading page leaves her address (`join`, no account, signed out
- * is the normal case) and the instance's owner reads the list, marks entries
- * invited and deletes one (`list`, `setInvited`, `remove`; the database refuses
- * anyone else with `not_owner`). No e-mail is sent from here: inviting is by hand.
+ * is the normal case) and the instance's owner reads the list, invites an entry,
+ * marks entries invited and deletes one (`list`, `invite`, `setInvited`, `remove`;
+ * the database refuses anyone else with `not_owner`). `invite` asks the
+ * `waitlist-invite` edge function, which gets the entry a one-use code, mails it and
+ * marks the entry invited; without mail (not configured, or the send failed) it still
+ * answers the code, for the owner to send herself. Mark invited stays the manual path.
  *
  * Framework-free: the repository receives the Supabase client and the online
  * check; the rest is what a native port copies 1:1.
@@ -28,6 +32,33 @@ export function looksLikeEmail(text: string): boolean {
 export type JoinErrorCode = 'invalid' | 'rate_limited' | 'offline' | 'unknown'
 export type WaitlistErrorCode = 'not_owner' | 'offline' | 'unknown'
 export type WaitlistResult<T> = { data: T; error: null } | { data: null; error: WaitlistErrorCode }
+
+/** The edge function behind `invite` (supabase/functions/waitlist-invite). */
+export const INVITE_FUNCTION = 'waitlist-invite'
+
+/**
+ * Why an Invite did not mail: `not_configured` (the instance has no SMTP secrets) and `send_failed`
+ * (the mail server refused or was away) still come with the code; the others with nothing.
+ */
+export type InviteErrorCode = 'not_owner' | 'offline' | 'not_configured' | 'send_failed' | 'unknown'
+
+/** A one-use invite code for an entry, and when it stops working. */
+export type InviteCode = { code: string; expiresAt: Date }
+
+export type InviteResult =
+  /** Mailed. `marked` is false when the entry could not be marked invited afterwards (mark it by hand). */
+  | { data: InviteCode & { marked: boolean }; error: null }
+  /** Not mailed, the entry still waiting: the code is there to send another way, and the next Invite reuses it. */
+  | { data: InviteCode; error: 'not_configured' | 'send_failed' }
+  | { data: null; error: 'not_owner' | 'offline' | 'unknown' }
+
+/** What the function answers (supabase/functions/waitlist-invite/handler.ts). */
+type InviteAnswer = { code?: unknown; expiresAt?: unknown; emailed?: unknown; reason?: unknown; invited?: unknown }
+
+/** The part of the Supabase client the repository needs: its RPCs and `functions.invoke`. */
+export type WaitlistClient = Pick<SupabaseClient, 'rpc'> & {
+  functions: { invoke: (name: string, options: { body: Record<string, unknown> }) => Promise<{ data: unknown; error: unknown }> }
+}
 
 /** One entry, as the owner reads it. `memberName` is the first name of the member whose page it was joined from. */
 export type WaitlistEntry = {
@@ -92,13 +123,32 @@ export type Waitlist = {
   join: (email: string, token: string | null, website?: string) => Promise<{ error: JoinErrorCode | null }>
   /** The owner's list, newest first. */
   list: () => Promise<WaitlistResult<WaitlistEntry[]>>
+  /**
+   * Invites one entry: a one-use code (the entry's own while it is unused and unexpired), mailed to
+   * the address, the entry then marked invited. Not mailed: the code all the same, the entry waiting.
+   */
+  invite: (id: string) => Promise<InviteResult>
   /** Marks entries invited, or waiting again (false). */
   setInvited: (ids: readonly string[], invited: boolean) => Promise<WaitlistResult<number>>
   /** Deletes one entry for good (a request to be forgotten). */
   remove: (id: string) => Promise<WaitlistResult<boolean>>
 }
 
-export function createWaitlist(client: SupabaseClient, { online = () => true }: { online?: () => boolean } = {}): Waitlist {
+/** The function's refusal, read off the answer it came with: 403 is the database's `not_owner`. */
+async function inviteError(error: unknown): Promise<'not_owner' | 'unknown'> {
+  const context = (error as { context?: unknown } | null)?.context
+  if (context instanceof Response) {
+    if (context.status === 403) return 'not_owner'
+    try {
+      if (((await context.clone().json()) as { error?: unknown } | null)?.error === 'not_owner') return 'not_owner'
+    } catch {
+      // Not JSON: nothing more to learn from it.
+    }
+  }
+  return 'unknown'
+}
+
+export function createWaitlist(client: WaitlistClient, { online = () => true }: { online?: () => boolean } = {}): Waitlist {
   return {
     async join(email, token, website = '') {
       if (!online()) return { error: 'offline' }
@@ -111,6 +161,22 @@ export function createWaitlist(client: SupabaseClient, { online = () => true }: 
       const { data, error } = await client.rpc('owner_waitlist')
       if (error) return { data: null, error: ownerError(error) }
       return { data: ((data ?? []) as EntryRow[]).map(entryFromRow), error: null }
+    },
+
+    async invite(id) {
+      if (!online()) return { data: null, error: 'offline' }
+      try {
+        const { data, error } = await client.functions.invoke(INVITE_FUNCTION, { body: { id } })
+        if (error) return { data: null, error: await inviteError(error) }
+        const answer = data as InviteAnswer | null
+        const expiresAt = typeof answer?.expiresAt === 'string' ? new Date(answer.expiresAt) : null
+        if (typeof answer?.code !== 'string' || !answer.code || !expiresAt || Number.isNaN(expiresAt.getTime())) return { data: null, error: 'unknown' }
+        const code = { code: answer.code, expiresAt }
+        if (answer.emailed === true) return { data: { ...code, marked: answer.invited !== false }, error: null }
+        return { data: code, error: answer.reason === 'not_configured' ? 'not_configured' : 'send_failed' }
+      } catch {
+        return { data: null, error: 'unknown' }
+      }
     },
 
     async setInvited(ids, invited) {
