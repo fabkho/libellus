@@ -15,7 +15,12 @@
 // items from the corner of the page once it is back on screen. A snapshot
 // taken off the page is marked `data-detached` and moves nothing (the style
 // below); an update that is measured on the page moves as ever.
-withDefaults(defineProps<{ tag?: string }>(), { tag: 'div' })
+//
+// `still`: items are only ever added or removed, never reordered, so none is moved
+// to a new place (no `-move` class). A list inside a sheet that is still rising
+// needs it: the sheet's own travel between two renders would read as every item's
+// own move, and the rows already there would be flung back by the distance.
+withDefaults(defineProps<{ tag?: string; still?: boolean }>(), { tag: 'div', still: false })
 
 /**
  * How many items are opening or closing their room. While any is, the list
@@ -122,6 +127,7 @@ function clean(el: Element) {
     ref="group"
     :tag="tag"
     name="list-motion"
+    :move-class="still ? 'list-motion-still' : undefined"
     :css="false"
     :data-moving="moving > 0 || undefined"
     @enter="onEnter"
