@@ -18,7 +18,9 @@ import { test } from './fixtures'
  * image then fades in (e2e/book-flight-android.spec.ts has the sharp case).
  * And what used to go wrong (docs/MOTION.md, What can go wrong): a flight
  * turned around never shows the live page with its cover beside the flying
- * one; with the same Book twice on Home, Back flies into the one tapped.
+ * one; with the same Book twice on Home, Back flies into the one tapped; a
+ * Book page still loading gets the cover all the same, waiting on the
+ * stand-in until the hero is drawn there.
  */
 // What moves is the subject here: the transitions play, which the config's Reduce Motion would cut.
 test.use({ reducedMotion: 'no-preference' })
@@ -397,5 +399,59 @@ test.describe('with series and authors', () => {
     await expect(upNext.locator('[data-cover]')).not.toHaveAttribute('data-flight-hidden')
     await thaw(page)
     await expectLanded(page, 2)
+  })
+
+  test('a Book page still loading: the cover flies to its place and waits there for the hero; a missing Book lets it go', { tag: '@full' }, async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 })
+    const member = await signedIn(page)
+    const data = await enrichedLibrary(member.client)
+    stored.push(...data.ids)
+    // Mort is in the Catalogue, not in her Library: its page asks the Catalogue by its ISBN, and every
+    // such answer is held back until let go (`release`), so the page is still loading when the cover lands.
+    let release = () => {}
+    const hold = () => new Promise<void>((resolve) => (release = resolve))
+    let released = hold()
+    await page.route(/\/rest\/v1\/books\?.*isbn13=eq\./, async (route) => {
+      await released
+      await route.fallback()
+    })
+    await page.goto(`/author/${data.authors.pratchett}`)
+    const mort = page.getByTestId('author.work').filter({ has: page.getByText('Mort', { exact: true }) })
+    await expect(mort).toBeVisible()
+    await mort.scrollIntoViewIfNeeded()
+    await untilStill(page)
+    await watchFrames(page, `/book/isbn-${data.mort.isbn13}`)
+
+    await mort.getByTestId('author.workLink').click()
+    // The page is still loading: the cover flew all the way, and stays on the hero's place.
+    const waiting = page.getByTestId('book.loading').getByTestId('shell.flightHeld')
+    await expect(waiting).toHaveCount(1)
+    await expect(page.getByTestId('shell.flightCover')).toHaveCount(0)
+    expect((await seen(page)).widest).toBeGreaterThan(130)
+    const place = (await waiting.boundingBox())!
+
+    // The Book comes: the hero takes over where the cover waited, and nothing of the flight is left.
+    release()
+    await expect(page.getByTestId('book.title')).toHaveText(data.mort.title)
+    const hero = (await page.getByTestId('book.hero').locator('[data-cover]').boundingBox())!
+    for (const side of ['x', 'y', 'width', 'height'] as const) expect(hero[side]).toBeCloseTo(place[side], 0)
+    await expectLanded(page, 1)
+    expect((await seen(page)).doubles).toEqual([])
+
+    // A Book no source knows (Forever Free, the next of her Forever War): the cover flies, finds no hero, and goes.
+    released = hold()
+    await page.goto('/')
+    const free = page.getByTestId('home.next').filter({ hasText: 'Forever Free' })
+    await expect(free).toBeVisible()
+    await free.scrollIntoViewIfNeeded()
+    await untilStill(page)
+    await watchFrames(page, (await free.locator('a').first().getAttribute('href'))!)
+    await free.locator('[data-cover]').click()
+    await expect(page.getByTestId('book.loading').getByTestId('shell.flightHeld')).toHaveCount(1)
+    release()
+    await expect(page.getByTestId('book.missing')).toBeVisible()
+    // (A new page load: the flights are counted afresh.)
+    await expectLanded(page, 1)
+    expect((await seen(page)).widest).toBeGreaterThan(130)
   })
 })

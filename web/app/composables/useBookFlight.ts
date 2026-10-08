@@ -31,6 +31,9 @@
  *   on the hero, in its sheet, until that image is decoded and faded in
  *   (`hold`); one that lands without it lands on its thumbhash, and the hero
  *   fades its image in there.
+ * - A book page whose Book is still loading has no hero yet, only a stand-in
+ *   at its cover's place (`data-flight-stand-in`): the cover flies there,
+ *   lands and waits, and moves into the hero once it is drawn (`wait`).
  * - Back flies into the very cover the push left from (`Origin.cover`), not
  *   another cover of the same Book on the page; a cover off screen never flies.
  * - `ShellBookFlight` (in the tabs layout) holds the two fixed layers: the
@@ -73,6 +76,11 @@ const LAYER = '[data-flight-layer]'
 const OVER_SHEET = 'data-over-sheet'
 /** On the root while a flight is about to start: the live page is hidden under the copy of the page being left. */
 const POSE = 'data-flight-pose'
+/**
+ * Where a book page's hero cover will be while its Book is still loading (the
+ * book page's placeholder): a push lands there and waits for the hero.
+ */
+const STAND_IN = '[data-flight-stand-in]'
 /**
  * How long the copy of the page being left may stand in for it before the
  * navigation has drawn the new page (a slow first load of the page's code):
@@ -117,6 +125,8 @@ interface Departure {
   previous: Flight | null
   /** push: where it started, so that Back knows whether the cover can go back. */
   origin: Origin | null
+  /** push: the hero's own (large) image, as the tapped cover's asks for it on the press (`prepare`). */
+  sharpSrc: string | null
 }
 
 interface Origin {
@@ -140,7 +150,9 @@ interface Flight {
   heroBox: Box | null
   /** The live covers hidden while a copy flies for them. */
   hidden: HTMLElement[]
+  /** A push: the hero's cover it lands on, or while the Book loads the stand-in at its place (`standIn`). */
   hero: HTMLElement | null
+  standIn: boolean
   fly: HTMLElement | null
   snapshot: HTMLElement | null
   channels: Record<keyof Channels, Animation[]>
@@ -158,6 +170,8 @@ interface Flight {
   sharp: HTMLImageElement | null
   /** The large image is decoded and showing (or fading in) in the air: the copy may stay on the hero (`hold`). */
   sharpShown: boolean
+  /** The address of that image, known before the hero is drawn (a Book still loading). */
+  sharpSrc: string | null
   origin: Origin | null
 }
 
@@ -217,6 +231,15 @@ function tappedCover(origin: Origin | null, path: string): HTMLElement | null {
   const href = router?.resolve(path).href ?? path
   if (!cover?.isConnected || inLayer(cover) || cover.closest('a[href]')?.getAttribute('href') !== href) return null
   return onScreen(box(cover), viewport()) ? cover : null
+}
+
+/** The book page's hero cover as drawn now, or while its Book is still loading the stand-in at its place. */
+function heroCover(): { cover: HTMLElement; standIn: boolean } | null {
+  const live = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)].find((element) => !inLayer(element)) ?? null
+  const hero = live(`${HERO} ${COVER}`)
+  if (hero) return { cover: hero, standIn: false }
+  const standIn = live(STAND_IN)
+  return standIn ? { cover: standIn, standIn: true } : null
 }
 
 /**
@@ -381,6 +404,7 @@ export function launch(link: HTMLElement, to: string) {
     sinks: [],
     previous,
     origin: { page: router.currentRoute.value.fullPath, search, cover: cover ? new WeakRef(cover) : null },
+    sharpSrc: sharpSrcOf(cover),
   }
   pose(pending)
 }
@@ -462,6 +486,7 @@ function leaving(to: RouteLocationNormalized, from: RouteLocationNormalized) {
     sinks: reduced ? [] : risers().flatMap((element) => snapshot.copyOf(element) ?? []),
     previous,
     origin: previous?.origin ?? origins.get(from.path) ?? null,
+    sharpSrc: null,
   }
   // A swipe the browser animated has already shown the list: nothing to hold.
   if (!browserAnimatedBack) pose(pending)
@@ -550,6 +575,7 @@ function fresh(departure: Departure): Flight {
     heroBox: null,
     hidden: [],
     hero: null,
+    standIn: false,
     fly: null,
     snapshot: null,
     channels: { cover: [], book: [], list: [] },
@@ -560,6 +586,7 @@ function fresh(departure: Departure): Flight {
     row: null,
     sharp: null,
     sharpShown: false,
+    sharpSrc: departure.sharpSrc,
     origin: departure.origin,
   }
 }
@@ -607,15 +634,21 @@ function riseIn(flight: Flight, value: number) {
     play(element, [{ transform: `translateY(${distance}px)` }, { transform: 'none' }], flight, 'book', value, false)
 }
 
-/** Sends a push's cover to the hero once the hero is drawn; false while it is not. */
+/**
+ * Sends a push's cover to the hero once the hero is drawn; false while it is not. A book page whose
+ * Book is still loading (one this device has not seen: an author's work, the next of a series) has
+ * a stand-in at the hero cover's place and size: the cover flies there and waits for the hero (`land`).
+ */
 function aim(flight: Flight, value: number): boolean {
-  const hero = document.querySelector<HTMLElement>(`${HERO} ${COVER}`)
+  const target = heroCover()
   const fly = flight.fly
   const rowBox = flight.rowBox
-  if (!hero || !fly || !rowBox) return false
+  if (!target || !fly || !rowBox) return false
+  const { cover: hero, standIn } = target
   const heroBox = heroBoxOf(hero)
   if (!heroBox.width) return false
   flight.hero = hero
+  flight.standIn = standIn
   flight.heroBox = heroBox
   flight.waitUntil = null
   hide(flight, hero)
@@ -626,8 +659,10 @@ function aim(flight: Flight, value: number): boolean {
   Object.assign(fly.style, { left: `${heroBox.left}px`, top: `${heroBox.top}px`, width: `${heroBox.width}px`, height: `${heroBox.height}px` })
   for (const copy of copies) copy.style.borderRadius = radius
   const image = hero.querySelector<HTMLImageElement>(':scope > img')
-  if (image) sharpen(flight, image, copies, rowBox, heroBox, value)
-  else {
+  // The stand-in has no image: the one the press asked for (`prepare`) is the hero's.
+  const src = image ? image.currentSrc || image.src : standIn ? flight.sharpSrc : null
+  if (src) sharpen(flight, src, copies, rowBox, heroBox, value)
+  else if (!standIn) {
     // A Placeholder: the hero's cloth, with its type, fades in over the list's on the way.
     const top = coverCopy(hero)
     top.classList.add('flight-copy')
@@ -637,6 +672,20 @@ function aim(flight: Flight, value: number): boolean {
   }
   play(fly, [{ transform: transformFrom(heroBox, rowBox) }, { transform: 'none' }], flight, 'cover', value, false)
   return true
+}
+
+/**
+ * A push that aimed at the stand-in of a Book still loading: once the hero is drawn in its place,
+ * that is what the cover is landing on (hidden under the copy until it has).
+ */
+function heroDrawn(flight: Flight) {
+  if (!flight.standIn) return
+  const target = heroCover()
+  if (!target || target.standIn) return
+  flight.hero = target.cover
+  flight.standIn = false
+  hide(flight, target.cover)
+  riseIn(flight, channelsOf(flight).book)
 }
 
 /**
@@ -673,10 +722,9 @@ function fadeSoft(flight: Flight, copies: HTMLElement[], rowBox: Box, heroBox: B
  * leaving the thumbhash under it: on a slow network the cover lands on its
  * thumbhash and the hero's image fades in there, never the small one enlarged.
  */
-function sharpen(flight: Flight, hero: HTMLImageElement, copies: HTMLElement[], rowBox: Box, heroBox: Box, value: number) {
+function sharpen(flight: Flight, src: string, copies: HTMLElement[], rowBox: Box, heroBox: Box, value: number) {
   const sheet = copies.at(-1)
-  const src = hero.currentSrc || hero.src
-  if (!sheet || !src) return
+  if (!sheet) return
   const sharp = document.createElement('img')
   sharp.alt = ''
   sharp.decoding = 'async'
@@ -767,11 +815,12 @@ function track(flight: Flight) {
     if (flight.waitUntil !== null) {
       const value = channelsOf(flight).cover
       if (!aim(flight, value) && performance.now() > flight.waitUntil) {
-        // No hero in time (the book is still loading): the cover fades where it is.
+        // No hero in time, and no stand-in for it (a page with neither): the cover fades where it is.
         flight.waitUntil = null
         if (flight.fly) play(flight.fly, [{ opacity: 1 }, { opacity: 0 }], flight, 'cover', 0, false)
       }
     }
+    heroDrawn(flight)
     const all = animations(flight)
     const still = all.some((animation) => animation.playState === 'paused')
     if (!still && flight.waitUntil === null && all.every((animation) => animation.playState === 'finished')) land(flight, true)
@@ -802,7 +851,13 @@ function letGo(flight: Flight) {
  */
 function land(flight: Flight, ended = false) {
   const fly = flight.fly
+  // The hero may have been drawn in the stand-in's place in this very frame.
+  if (flight.standIn) {
+    const target = heroCover()
+    if (target && !target.standIn) [flight.hero, flight.standIn] = [target.cover, false]
+  }
   const hero = flight.towards === 'book' ? flight.hero : null
+  const standIn = hero && flight.standIn ? hero : null
   const row = flight.towards === 'list' && ended ? flight.row : null
   // The hero's image in the air, if it has come in: it stays as shown once the flight's animations end.
   const sharp = flight.sharpShown ? flight.sharp : null
@@ -810,6 +865,13 @@ function land(flight: Flight, ended = false) {
   flight.fly = null
   drop(flight)
   if (flight.towards === 'book' && flight.origin) remember(flight.path, flight.origin)
+  // The Book is still loading: the copy waits on the stand-in for the hero (or, if the page has
+  // said meanwhile that there is no Book, fades where it landed).
+  if (fly && standIn) {
+    if (standIn.isConnected) wait(fly, standIn, flight)
+    else fadeAway(fly)
+    return
+  }
   // The hero's own image is not on screen yet: the copy stays on it until it is, if it shows that
   // image (or a cloth). Else the copy goes: the hero shows its thumbhash and fades its image in there.
   const sharpOrCloth = Boolean(sharp) || !fly?.querySelector('img')
@@ -818,6 +880,12 @@ function land(flight: Flight, ended = false) {
   // is decoded and showing, then gives way to it.
   else if (fly && row && row.isConnected && fly.querySelector('img')) handOff(fly, row)
   else fly?.remove()
+}
+
+/** A landed copy with nowhere to stay: it fades out where it is, over `quick`. */
+function fadeAway(fly: HTMLElement) {
+  const out = fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: durationToken('quick'), easing: easingToken('standard'), fill: 'both' })
+  out.finished.then(() => fly.remove(), () => fly.remove())
 }
 
 function remember(path: string, origin: Origin) {
@@ -851,7 +919,7 @@ function drop(flight: Flight) {
  * under the chrome like it; the cover never shows twice.
  */
 function hold(fly: HTMLElement, hero: HTMLElement) {
-  keep(fly, hero, () => shown(hero), false)
+  keep(fly, hero, shown, false)
 }
 
 /**
@@ -877,8 +945,27 @@ function handOff(fly: HTMLElement, row: HTMLElement) {
   keep(fly, row, () => decoded && shown(row), true)
 }
 
-/** Moves the flown copy into `cover`'s sheet, until `ready`; `fade` lets it go gently instead of at once. */
-function keep(fly: HTMLElement, cover: HTMLElement, ready: () => boolean, fade: boolean) {
+/**
+ * The cover has landed where the hero will be, but its Book is still loading (a Book this device has
+ * not seen: an author's work, the next of a series). The copy waits in the stand-in, so it scrolls and
+ * leaves with the page, showing the hero's image if it has come (else the thumbhash under it: the
+ * row's small image would be blown up). Once the hero is drawn there, the copy moves into it and stays
+ * until the hero's own image is in, as `hold` does. A Book that turns out missing (no hero comes) lets
+ * it go in a short fade; leaving the page takes it along.
+ */
+function wait(fly: HTMLElement, standIn: HTMLElement, flight: Flight) {
+  for (const image of fly.querySelectorAll('img')) if (image !== flight.sharp) image.style.opacity = '0'
+  const path = flight.path
+  const next = () => (router?.currentRoute.value.path === path ? heroCover()?.cover ?? null : null)
+  keep(fly, standIn, (cover) => !cover.matches(STAND_IN) && shown(cover), false, next)
+}
+
+/**
+ * Moves the flown copy into `cover`'s sheet, until `ready`; `fade` lets it go gently instead of at once.
+ * `next`: where it moves on to once `cover` leaves the document (the hero drawn in a stand-in's place);
+ * none there, it goes in a short fade. Without it, a cover leaving takes the copy with it.
+ */
+function keep(fly: HTMLElement, cover: HTMLElement, ready: (cover: HTMLElement) => boolean, fade: boolean, next?: () => HTMLElement | null) {
   const held = document.createElement('div')
   held.className = 'flight-held'
   held.dataset.testid = 'shell.flightHeld'
@@ -887,6 +974,7 @@ function keep(fly: HTMLElement, cover: HTMLElement, ready: () => boolean, fade: 
   for (const copy of held.querySelectorAll('[data-cover]')) copy.removeAttribute('data-cover')
   fly.remove()
   cover.appendChild(held)
+  let at = cover
   let frame = 0
   const release = (gently = false) => {
     cancelAnimationFrame(frame)
@@ -896,8 +984,14 @@ function keep(fly: HTMLElement, cover: HTMLElement, ready: () => boolean, fade: 
     out.finished.then(() => held.remove(), () => held.remove())
   }
   const check = () => {
-    if (!cover.isConnected) release()
-    else if (ready()) release(fade)
+    if (!at.isConnected) {
+      const to = next?.()
+      if (!next) return release()
+      if (!to) return release(true)
+      at = to
+      at.appendChild(held)
+    }
+    if (ready(at)) release(fade)
     else frame = requestAnimationFrame(check)
   }
   releaseHold?.()
