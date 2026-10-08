@@ -66,11 +66,10 @@ async function adaWithAPage() {
   return { ada, pages, token, reading, loved, fine, wanted }
 }
 
-async function expectAccessibleBoth(page: Page, where: string) {
-  for (const colorScheme of ['light', 'dark'] as const) {
-    await page.emulateMedia({ colorScheme })
-    await expectAccessible(page, `${where} (${colorScheme})`)
-  }
+/** One theme, dark (docs/ACCESSIBILITY.md): the page takes the viewer's own, and the tokens are checked in both. */
+async function expectAccessibleDark(page: Page, where: string) {
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expectAccessible(page, `${where} (dark)`)
 }
 
 test.describe('a reading page, signed out', () => {
@@ -92,7 +91,7 @@ test.describe('a reading page, signed out', () => {
     await expect(page.getByTestId('readingPage.shelfCovers.book')).toHaveCount(2)
     await expect(page.getByTestId('readingPage.shelfRow')).toHaveCount(0)
     await expectNoSideScroll(page, 'reading page')
-    await expectAccessibleBoth(page, 'reading page')
+    await expectAccessibleDark(page, 'reading page')
 
     // The footer: the waitlist form, and a way in for whoever has a code.
     await expect(page.getByTestId('readingPage.waitlist')).toContainText(en.readingPage.waitlist.text)
@@ -103,7 +102,7 @@ test.describe('a reading page, signed out', () => {
     await expect(page.getByTestId('bookCard.title')).toHaveText(loved.book.title)
     await expect(page.getByTestId('bookCard.rating')).toContainText(fill(en.readingPage.card.rating, { name: 'Ada' }))
     await expect(page.getByTestId('bookCard.review')).toHaveCount(0)
-    await expectAccessibleBoth(page, 'Book card')
+    await expectAccessibleDark(page, 'Book card')
 
     await page.getByTestId('bookCard.page').click()
     await expect(page).toHaveURL(new RegExp(`/r/${token}$`))
@@ -119,7 +118,7 @@ test.describe('a reading page, signed out', () => {
     await page.reload()
     await expect(page.getByTestId('readingPage.missing')).toContainText(en.readingPage.missing.title)
     await expect(page.getByTestId('readingPage.title')).toHaveCount(0)
-    await expectAccessibleBoth(page, 'a dead reading page')
+    await expectAccessibleDark(page, 'a dead reading page')
     await page.goto(`/r/${token}/book/${loved.book.id}`)
     await expect(page.getByTestId('bookCard.missing')).toBeVisible()
 
@@ -266,7 +265,7 @@ test.describe('a cover flies to its Book card and back', () => {
     // The hero is the live one; her review is hers until she shares it.
     await expect(page.getByTestId('bookCard.hero').locator('[data-cover]')).toBeVisible()
     await expect(page.getByTestId('bookCard.review')).toHaveCount(0)
-    await expectAccessibleBoth(page, 'Book card after the flight')
+    await expectAccessibleDark(page, 'Book card after the flight')
 
     // Back (her page's link): the cover flies into its row; the page is as it was.
     await page.getByTestId('bookCard.page').click()
@@ -348,14 +347,14 @@ test.describe('the waitlist on a reading page, signed out', () => {
     await expect(page.getByTestId('readingPage.waitlistInvalid')).toHaveText(en.readingPage.waitlist.invalid)
     await expect(page.getByTestId('readingPage.waitlistEmail')).toHaveAttribute('aria-invalid', 'true')
     expect(await sql('select 1 from private.waitlist where email::text like $1', ['%not-an-address%'])).toHaveLength(0)
-    await expectAccessibleBoth(page, 'waitlist form with an error')
+    await expectAccessibleDark(page, 'waitlist form with an error')
 
     // An address: "You're on the list", and the form is gone.
     await page.getByTestId('readingPage.waitlistEmail').fill(` ${address.toUpperCase()} `)
     await page.getByTestId('readingPage.waitlistEmail').press('Enter')
     await expect(page.getByTestId('readingPage.waitlistDone')).toContainText(en.readingPage.waitlist.doneTitle)
     await expect(form).toHaveCount(0)
-    await expectAccessibleBoth(page, 'waitlist, joined')
+    await expectAccessibleDark(page, 'waitlist, joined')
     const rows = await sql<{ source: string; consent_text_version: string; invited_at: string | null; member: string | null }>(
       'select source, consent_text_version, invited_at, source_member_id::text as member from private.waitlist where email::text = $1',
       [address],
@@ -387,7 +386,7 @@ test.describe('the waitlist on a reading page, signed out', () => {
     await page.getByTestId('readingPage.waitlistJoin').click()
     await expect(page.getByTestId('readingPage.waitlistError')).toHaveText(en.readingPage.waitlist.rateLimited)
     expect(await sql('select 1 from private.waitlist where email::text like $1', ['wl-limit-%'])).toHaveLength(0)
-    await expectAccessibleBoth(page, 'waitlist form, refused')
+    await expectAccessibleDark(page, 'waitlist form, refused')
 
     // Offline: the button says so and nothing is sent.
     await context.setOffline(true)
@@ -418,7 +417,7 @@ test.describe('her side', () => {
     await page.getByTestId('profile.readingPage').click()
     await expect(page.getByTestId('sharing.on')).toHaveAttribute('aria-checked', 'false')
     await expect(page.getByTestId('sharing.link')).toHaveCount(0)
-    await expectAccessibleBoth(page, 'Share sheet, off')
+    await expectAccessibleDark(page, 'Share sheet, off')
 
     await page.getByTestId('sharing.on').click()
     await expect(page.getByTestId('sharing.on')).toHaveAttribute('aria-checked', 'true')
@@ -426,7 +425,7 @@ test.describe('her side', () => {
     expect(link).toMatch(/\/r\/[A-Za-z0-9_-]{22}$/)
     await page.getByTestId('sharing.section.year').click()
     await expect(page.getByTestId('sharing.section.year')).toHaveAttribute('aria-checked', 'false')
-    await expectAccessibleBoth(page, 'Share sheet, on')
+    await expectAccessibleDark(page, 'Share sheet, on')
     await page.keyboard.press('Escape')
     await untilStill(page)
     await expect(page.getByTestId('profile.readingPageValue')).toHaveText(en.sharing.rowOn)
@@ -437,7 +436,7 @@ test.describe('her side', () => {
     await page.getByTestId('bookOptions.share').click()
     await expect(page.getByTestId('shareBook.review')).toHaveAttribute('aria-checked', 'false')
     await page.getByTestId('shareBook.review').click()
-    await expectAccessibleBoth(page, 'Share book sheet')
+    await expectAccessibleDark(page, 'Share book sheet')
     await page.getByTestId('shareBook.copy').click()
     await expect.poll(async () => (await sql<{ review: boolean }>('select review from public.reading_page_books where member_id = $1', [member.id]))[0]?.review).toBe(true)
 

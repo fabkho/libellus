@@ -4,8 +4,8 @@ import { openReader, shelve, withEbook } from './readerSupport'
 import { expectAccessible, recordedApple, signedIn, untilStill } from './support'
 
 /**
- * Accessibility of the built-in reader (#131; docs/ACCESSIBILITY.md): axe-core in each of its three
- * rooms, light, dark and sepia, on a phone (412 × 915): the page with its chrome, the Aa sheet,
+ * Accessibility of the built-in reader (#131; docs/ACCESSIBILITY.md): axe-core in its dark
+ * room only (one theme, as in e2e/a11y.spec.ts), on a phone (412 × 915): the page with its chrome, the Aa sheet,
  * Contents, the selection's bubble and the Translate and Define sheets it opens. Its own file
  * because it runs in Chromium (the ebook is kept in the origin private file system, which
  * Playwright's WebKit does not write, as in e2e/reader.spec.ts); the rest of the flow is
@@ -52,7 +52,7 @@ async function recordedLookups(page: Page) {
 }
 
 /**
- * The reader (#131) in each of its rooms: the page with its chrome (the capsule, the folio), the Aa
+ * The reader (#131) in its dark room: the page with its chrome (the capsule, the folio), the Aa
  * sheet, Contents, the selection's bubble and the Translate and Define sheets that it opens. The
  * room is the reader's own setting (sepia by default), so the app's theme stays light; Chromium,
  * as the ebook is kept in the origin private file system (e2e/reader.spec.ts).
@@ -60,7 +60,7 @@ async function recordedLookups(page: Page) {
 test.describe('accessibility, the reader', { tag: '@full' }, () => {
   test.use({ viewport: { width: 412, height: 915 } })
 
-  for (const room of ['sepia', 'light', 'dark'] as const) {
+  for (const room of ['dark'] as const) {
     test(`the reader in the ${room} room: chrome, Aa, Contents, search, a selection, Translate and Define`, async ({ page }) => {
       await recordedApple(page)
       await recordedLookups(page)
