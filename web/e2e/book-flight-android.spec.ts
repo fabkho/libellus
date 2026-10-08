@@ -64,15 +64,23 @@ async function shelf(memberId: string, count: number) {
 
 type Frame = { t: number; width: number; top: number; small: number; sharp: number }
 
-/** From now on, every frame: the flying cover's box, and how much of the list's small image and of the hero's large one shows in it. */
+/**
+ * From now on, every frame: the flying cover's box, and how much of the list's small image and of the hero's large one shows in it.
+ * And, as the cover is first seen, how long its travel is set to run: the animation's own timing (the cover's `transform`), which the
+ * frames cannot say. They are what the main thread gets to look at, and a starved one looks only every 80 ms.
+ */
 async function record(page: Page) {
   await page.evaluate(() => {
     const frames: Frame[] = []
-    Object.assign(window, { __frames: frames })
+    Object.assign(window, { __frames: frames, __travel: 0 })
     let looked = 0
     const look = () => {
       const fly = document.querySelector('[data-testid="shell.flightCover"]')
       if (fly) {
+        for (const animation of fly.getAnimations()) {
+          if (!(animation.effect as KeyframeEffect).getKeyframes().some((keyframe) => 'transform' in keyframe)) continue
+          Object.assign(window, { __travel: Math.max((window as unknown as { __travel: number }).__travel, Number(animation.effect!.getComputedTiming().endTime)) })
+        }
         const box = fly.getBoundingClientRect()
         const opacity = (large: boolean) =>
           Math.max(
@@ -90,6 +98,9 @@ async function record(page: Page) {
 }
 
 const frames = (page: Page) => page.evaluate(() => (window as unknown as { __frames: Frame[] }).__frames)
+
+/** How long the cover's travel was set to run (ms), as read off the animation. */
+const travel = (page: Page) => page.evaluate(() => (window as unknown as { __travel: number }).__travel)
 
 /**
  * Signed in with six Books on Want to read, on the Library, the CPU slowed to a phone's.
@@ -128,11 +139,16 @@ test('in the built app, a Library row’s cover flies into the book page over fr
   await landed(page)
   const hero = (await page.getByTestId('book.hero').locator('[data-cover]').boundingBox())!
 
-  // Between the row and the hero for a good part of `standard` (250 ms), growing and rising every frame.
+  // The travel is `standard` (250 ms) long, not the quarter of a millisecond the build's `.25s` once read as: the animation's
+  // own timing says so, whatever the main thread got round to drawing. Sampled in frames, the length of the flight depends on
+  // how often the page's main thread gets to look (every 17 ms here, every 80 ms with the CPU starved as on a busy CI runner:
+  // 2 frames in the air, 77 ms apart), which says nothing about the flight, a compositor's.
+  expect(await travel(page)).toBeGreaterThanOrEqual(200)
+
+  // And what was seen of it is between the row and the hero (not in one jump to the end), growing and rising every frame.
   const flown = await frames(page)
   const between = flown.filter((frame) => frame.width > rowCover.width + 1 && frame.width < hero.width - 1)
-  expect(between.length).toBeGreaterThanOrEqual(4)
-  expect(between.at(-1)!.t - between[0]!.t).toBeGreaterThan(100)
+  expect(between.length).toBeGreaterThanOrEqual(1)
   for (let i = 1; i < between.length; i++) {
     expect(between[i]!.width).toBeGreaterThanOrEqual(between[i - 1]!.width)
     expect(between[i]!.top).toBeLessThanOrEqual(between[i - 1]!.top)
