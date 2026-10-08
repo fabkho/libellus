@@ -73,6 +73,19 @@ export function bookKey(book: Pick<Book, 'id'> | BookSnapshot): string {
   throw new Error('A Book needs an id, a source id or an ISBN to have a page')
 }
 
+/**
+ * Every page key a Book can be reached under besides its id: by the source ids
+ * and the ISBN it carries. An entry added from a search result before the
+ * database answered is under one of them; the Catalogue's Book has them all.
+ */
+export function sourceKeys(book: BookSnapshot): string[] {
+  return [
+    book.appleId ? `apple-${book.appleId}` : null,
+    book.openLibraryEditionKey ? `ol-${book.openLibraryEditionKey}` : null,
+    book.isbn13 ? `isbn-${book.isbn13}` : null,
+  ].filter((key): key is string => key !== null)
+}
+
 export type BookKey =
   | { kind: 'catalogue'; id: string }
   | { kind: 'apple'; appleId: string }

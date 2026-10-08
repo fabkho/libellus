@@ -1,4 +1,4 @@
-import type { Book } from './books'
+import { sourceKeys, type Book } from './books'
 import type { CollectionSummary } from './collections'
 import { sortEntries, type EntryStatus, type LibraryEntry, type LibraryErrorCode, type ReadingSession } from './library'
 
@@ -79,8 +79,18 @@ export type QueuedWrite = {
    * behind it are rewritten to them (`outbox.ts`).
    */
   creates?: { entry_id?: string; session_id?: string }
-  /** The Book an add puts in the Library (the device shows it; the call sends its snapshot). */
+  /**
+   * The Book an add puts in the Library (the device shows it; the call sends its snapshot). A
+   * search result that is not in the Catalogue yet is shown as a Book whose `id` is its page key
+   * (`bookKey`: `apple-…`, `ol-…`, `isbn-…`), so every link to it opens its page until the
+   * database answers with the Catalogue's own id.
+   */
   book?: Book
+  /**
+   * An add whose snapshot still has to get its Cover (a search result, optimistic): the outbox
+   * resolves it just before the send (`createOutbox`, `prepare`), so the tap never waits for it.
+   */
+  coverPending?: boolean
 }
 
 /**
@@ -88,6 +98,8 @@ export type QueuedWrite = {
  * whether writes wait now, the device's copy to answer from, and the line itself.
  */
 export type WriteQueue = {
+  /** Whether there is a line to write into (somebody is signed in): an optimistic write needs one, even while nothing waits. */
+  open: () => boolean
   /** Whether a write waits now: offline, or while earlier ones still wait (so they keep their order). */
   holds: () => boolean
   /** One of the member's entries, as the device shows it now. */
@@ -249,6 +261,16 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
 }
 
 /**
+ * Whether the entry is for the Book an add names: the same Catalogue id, or (a search result
+ * added before the database answered is a Book under its page key) one of the source ids
+ * and the ISBN the entry's Book carries, so a read that already has the added entry does not get it twice.
+ */
+export function holdsBook(entry: LibraryEntry, book: Book | undefined): boolean {
+  if (!book) return false
+  return entry.book.id === book.id || sourceKeys(entry.book).includes(book.id)
+}
+
+/**
  * The writes still waiting, laid over a Library (the database's, just read, or
  * the device's copy): each entry as it will be once they sync. A write that does
  * not fit any more (its entry is gone, or the copy shows it done already) is
@@ -265,7 +287,7 @@ export function applyWrites(
     if (!write.entryId) continue
     const before =
       write.action === 'add_to_library'
-        ? ([...entries.values()].find((entry) => entry.book.id === write.book?.id) ?? null)
+        ? ([...entries.values()].find((entry) => holdsBook(entry, write.book)) ?? null)
         : (entries.get(write.entryId) ?? null)
     const after = applyWrite(before, write)
     if (typeof after === 'string') continue

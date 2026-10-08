@@ -129,11 +129,18 @@ export function createOutbox({
   storage,
   send,
   reachable,
+  prepare,
   now = () => Date.now(),
 }: {
   memberId: string
   storage: OutboxStorage
   send: Send
+  /**
+   * Gets a write ready just before its first send, when it says it is not (`coverPending`: an
+   * optimistic add of a search result, whose Cover is resolved here so the tap never waited
+   * for it): the arguments to send instead. A rejection sends it as it is. Left out, nothing is prepared.
+   */
+  prepare?: (item: OutboxItem) => Promise<Record<string, unknown>>
   /** Whether anything answers at all, asked before a flush sends. Left out, it is taken for granted. */
   reachable?: () => Promise<boolean>
   now?: () => number
@@ -226,6 +233,15 @@ export function createOutbox({
       if (item.retryAt > now()) {
         report.retryAt = item.retryAt
         break
+      }
+      if (item.coverPending && prepare) {
+        const ready = await prepare(item).catch(() => null)
+        // The line may have changed meanwhile (a sign-out): only this item is touched.
+        if (state.items[0]?.id !== item.id) continue
+        if (ready) item.args = ready
+        // Once: a send that did not get through is tried again with the Cover it has.
+        item.coverPending = false
+        await persist()
       }
       let outcome: SendOutcome
       try {
