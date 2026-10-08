@@ -260,18 +260,31 @@ A reading page ends in a form where a visitor leaves her address to get an invit
 only by `join_waitlist` (granted to `anon`: checked, limited to 5 new entries an hour per salted address and
 100 in all, a honeypot field, the same answer for an address already there) and read only by the owner:
 **Profile → Account → Waitlist** shows who waits (newest first, from whose page), **Copy waiting emails**
-puts the addresses still waiting on the clipboard, comma-separated for a Bcc field, **Mark invited** and
-**Delete** (a request to be forgotten) work on one entry. Same owner as for Errors
-([SELF_HOSTING.md, The owner](SELF_HOSTING.md#the-owner)). **Nothing is mailed:** invite by hand, with an
-invite code from `public.invite_codes`. In SQL:
+puts the addresses still waiting on the clipboard, comma-separated for a Bcc field, **Invite**, **Mark
+invited** and **Delete** (a request to be forgotten) work on one entry. Same owner as for Errors
+([SELF_HOSTING.md, The owner](SELF_HOSTING.md#the-owner)).
+
+**Invite** (after a Confirm) asks the `waitlist-invite` edge function with the owner's session: the
+database gives the entry a one-use invite code valid 14 days (`owner_waitlist_prepare_invite`; the entry
+keeps it in `invite_code_id` and gets the same one again while it is unused and unexpired; labelled
+`waitlist`, never with the address), the function mails it over SMTP with the sign-up link and then marks the
+entry invited. The owner sees the code with **Copy code** either way. Without the SMTP secrets, or when the
+send fails, nothing is marked and the row says the email was not sent: send the code another way, or Invite
+again later (same code). The function never logs the address or the code. Deploying it and its secrets:
+[SELF_HOSTING.md, Optional pieces](SELF_HOSTING.md#optional-pieces) and
+`supabase/functions/waitlist-invite/README.md`. **Mark invited** stays the manual path (an invite sent by
+hand, a code from `scripts/create-invite-code.sh`). In SQL:
 
 ```sql
-select email, created_at, invited_at from private.waitlist order by created_at desc;
+select w.email, w.created_at, w.invited_at, c.code, c.uses, c.expires_at
+  from private.waitlist w left join public.invite_codes c on c.id = w.invite_code_id
+ order by w.created_at desc;
 delete from private.waitlist where email = 'someone@example.org';  -- when she asks
 ```
 
-Sending the invites (and a confirmation mail before an address counts, which Germany recommends) is a
-follow-up through Resend.
+Deleting an entry leaves its code (no address in it) valid until it expires; delete it from
+`public.invite_codes` as well if it should stop working. A confirmation mail before an address counts
+(which Germany recommends) is not part of this.
 
 ## Backups
 
@@ -475,7 +488,7 @@ key, `citext` in `public` and the open trigger functions were, `supabase/tests/l
 | `authenticated_security_definer_function_executable` (0029) | `owner_client_errors(integer)`, `owner_client_error_detail(text)` | The owner reads the error log in the app (Client errors, above). Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line of the function, before any row is read, so executability by `authenticated` opens nothing. They return groups and counts, never another member's id. |
 | the same (0028) | `log_client_error(…)` | The error log (Client errors, above) has to hear from devices that are signed out: the sign-in screens, a deploy's missing chunks. It only appends to `private.client_errors`, scrubs what it is given, and limits signed-out reports harder (per salted address and in total). |
 | the same (0028) | `join_waitlist(text, text, text)` | A reading page is public, so its waitlist form has to work signed out. It only appends to `private.waitlist`, checks the address, limits callers (5 new entries an hour per salted address, 100 in all) and answers the same whether the address was new or not. Nothing can be read through it. |
-| `authenticated_security_definer_function_executable` (0029) | `owner_waitlist()`, `owner_waitlist_set_invited(uuid[], boolean)`, `owner_waitlist_delete(uuid)` | The owner reads and edits the waitlist in the app. Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line, before any row is touched. |
+| `authenticated_security_definer_function_executable` (0029) | `owner_waitlist()`, `owner_waitlist_set_invited(uuid[], boolean)`, `owner_waitlist_delete(uuid)`, `owner_waitlist_prepare_invite(uuid)` | The owner reads and edits the waitlist in the app. Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line, before any row is touched. |
 | `rls_enabled_no_policy` (0008, INFO) | `public.invite_codes`, `public.synced_writes`, `private.client_errors`, `private.client_error_salt`, `private.instance_owner`, `private.waitlist`, `private.waitlist_joins` | RLS on with no policy is "nobody reads or writes this through the API". Only the security-definer functions above use these tables. A policy here would open them. |
 | `auth_leaked_password_protection` | Auth | Members sign in with a code sent by e-mail (OTP); nobody has a password, so there is nothing to check against HaveIBeenPwned. |
 | `auth_insufficient_mfa_options` | Auth | The same: the e-mail code is the only factor and there is no password to put a second factor behind. Revisit if passwords ever come. |

@@ -6,7 +6,9 @@
 // while nobody knows the edition's format. A radiogroup: each segment is a radio
 // named by its format, arrow keys move the choice. A tap says it is that format;
 // what that does is the host's. `testid` names the group; each segment is
-// `<testid>.<format>`.
+// `<testid>.<format>`. `help` is one quiet line between the label and the row
+// (`<testid>Help`) that says what the row does; the group is described by it
+// and it is announced politely as it changes.
 import { BOOK_FORMATS, type BookFormat } from '~/data/books'
 import type { IconSegment } from '~/components/ui/IconSegments.vue'
 
@@ -16,6 +18,8 @@ defineProps<{
   testid: string
   /** Her own edition must have one: the label carries the lamp's asterisk. */
   required?: boolean
+  /** One line under the label that says what choosing does. */
+  help?: string
   /** Marked in the error colour (her own edition without one). */
   invalid?: boolean
   disabled?: boolean
@@ -24,6 +28,7 @@ const emit = defineEmits<{ choose: [format: BookFormat] }>()
 
 const { t } = useI18n()
 const labelId = useId()
+const helpId = useId()
 
 /** An ebook is drawn as a reader with a home bar; the Reader's own `ebook` icon is a page of text. */
 const options = computed<IconSegment<BookFormat>[]>(() =>
@@ -33,13 +38,15 @@ const options = computed<IconSegment<BookFormat>[]>(() =>
 
 <template>
   <div>
-    <p :id="labelId" class="eyebrow mx-xs mb-ms" :class="invalid && 'text-error'">
+    <p :id="labelId" class="eyebrow mx-xs" :class="[invalid && 'text-error', help ? 'mb-xxs' : 'mb-ms']">
       {{ label }}<span v-if="required" class="ml-xxs text-accent-ink" aria-hidden="true">*</span>
     </p>
+    <p v-if="help" :id="helpId" class="mx-xs mb-ms text-caption text-ink-faint" aria-live="polite" :data-testid="`${testid}Help`">{{ help }}</p>
     <UiIconSegments
       :options="options"
       :value="value"
       :labelledby="labelId"
+      :aria-describedby="help ? helpId : undefined"
       :required="required"
       :invalid="invalid"
       :disabled="disabled"

@@ -9,7 +9,9 @@
 // `<testid>.error`. `offline` (#15): the action stays, disabled, and says
 // "Offline" (UiButton); Cancel still closes it. `alternative`: a safe way out
 // offered above the destructive action (Sign out with changes waiting to sync:
-// "Sync first", #93), `<testid>.alternative`.
+// "Sync first", #93), `<testid>.alternative`. `tone`: the action's UiButton tone,
+// `danger` unless the action loses nothing but cannot be called back either (the
+// owner's Invite sends a mail: `primary`).
 const open = defineModel<boolean>('open', { required: true })
 
 const props = withDefaults(
@@ -21,9 +23,10 @@ const props = withDefaults(
     error?: string | null
     offline?: boolean
     alternative?: string
+    tone?: 'danger' | 'primary'
     testid: string
   }>(),
-  { text: undefined, busy: false, error: null, offline: false, alternative: undefined },
+  { text: undefined, busy: false, error: null, offline: false, alternative: undefined, tone: 'danger' },
 )
 const emit = defineEmits<{ confirm: []; alternative: [] }>()
 
@@ -91,7 +94,7 @@ const textId = useId()
             </UiButton>
             <UiButton
               block
-              tone="danger"
+              :tone="tone"
               :disabled="busy"
               :offline="offline"
               :aria-busy="busy"

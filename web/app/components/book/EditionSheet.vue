@@ -7,8 +7,12 @@
 // Book, so the page can move to its address.
 //
 // Over the list, the picked edition's format (hardcover, paperback, ebook,
-// audiobook): what its source said, or her own word on her edition. A tap
-// says it is another; with her own edition picked, the action saves just that.
+// audiobook): what its source said, or her own word on her edition. It is not
+// a filter: it is her word on what her copy is, and a line under its label
+// says so, then says what she said will be saved. A tap says it is another:
+// the picked row's facts take it at once; with another edition picked, the
+// action says it goes along ("Change & save"); with her own edition
+// picked, the action saves just that.
 // Under the list, "My edition isn't listed" closes the sheet for the next
 // step (BookOwnEditionSheet: find it by its ISBN, or make it herself).
 import { formatOf } from '~/data/books'
@@ -52,8 +56,16 @@ const shown = computed(() =>
 const action = computed(() => {
   if (!online.value) return t('common.offline')
   if (edition.busy) return edition.choice ? t('book.edition.busy') : t('book.edition.saving')
-  return edition.choice || !edition.formatChanged ? t('book.edition.action') : t('book.edition.save')
+  if (edition.choice) {
+    return edition.formatSaid ? t('book.edition.changeAndSave') : t('book.edition.action')
+  }
+  return edition.formatChanged ? t('book.edition.save') : t('book.edition.action')
 })
+
+/** What the format row does: said before she touches it, and what she said after. */
+const formatHelp = computed(() =>
+  edition.format ? t('book.edition.formatSaid', { format: t(`book.formatFact.${edition.format}`) }) : t('book.edition.formatHelp'),
+)
 
 async function change() {
   const changed = await edition.confirm()
@@ -93,7 +105,8 @@ function missing() {
       <BookFormatChoice
         class="mb-ml"
         :value="edition.shownFormat"
-        :label="t('book.edition.formatLabel')"
+        :label="t('book.edition.copyFormat')"
+        :help="formatHelp"
         testid="edition.format"
         :disabled="edition.busy"
         @choose="edition.chooseFormat"

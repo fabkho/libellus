@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createWaitlist, emailsText, entryFromRow, looksLikeEmail, waiting, type WaitlistEntry } from '@/data/waitlist'
+import { createWaitlist, emailsText, entryFromRow, INVITE_FUNCTION, looksLikeEmail, waiting, type WaitlistClient, type WaitlistEntry } from '@/data/waitlist'
 import { createAuth } from '@/data/auth'
 import { createReadingPages } from '@/data/readingPage'
 import { signUpMember, type TestMember } from './support/member'
@@ -150,5 +150,116 @@ describe('the repository', () => {
     expect(error).not.toBeNull()
     const direct = await newClient().schema('private' as 'public').from('waitlist').select('*')
     expect(direct.error).not.toBeNull()
+  })
+})
+
+/**
+ * Inviting one entry (Invite on the owner's Waitlist): the repository asks the `waitlist-invite` edge
+ * function, which is never called here (supabase/functions/waitlist-invite has its own tests): a stand-in
+ * for `functions.invoke` answers what the function answers. The database call the function makes as the
+ * owner is asked for real below, for the shape the function reads.
+ */
+describe('inviting', () => {
+  const ID = '6f1c1c39-5a64-4c39-9a3e-2c1f1a0b9d11'
+  const EXPIRES = '2026-10-27T09:00:00.000Z'
+
+  /** A client whose `functions.invoke` answers with `answer` and remembers what it was asked. */
+  function functions(answer: () => Promise<{ data: unknown; error: unknown }>) {
+    const asked: { name: string; body: unknown }[] = []
+    const client: WaitlistClient = {
+      rpc: (() => {
+        throw new Error('no RPC expected')
+      }) as unknown as WaitlistClient['rpc'],
+      functions: {
+        invoke: async (name, { body }) => {
+          asked.push({ name, body })
+          return answer()
+        },
+      },
+    }
+    return { client, asked }
+  }
+  /** How supabase-js reports a non-2xx answer: a FunctionsHttpError with the Response as its context. */
+  const refused = (status: number, body: unknown) =>
+    Promise.resolve({ data: null, error: Object.assign(new Error('Edge Function returned a non-2xx status code'), { context: new Response(JSON.stringify(body), { status }) }) })
+
+  it('asks the function with the entry id and reads a mailed invite', async () => {
+    const { client, asked } = functions(() => Promise.resolve({ data: { code: 'K7QM-X2PA', expiresAt: EXPIRES, emailed: true }, error: null }))
+    expect(await createWaitlist(client).invite(ID)).toEqual({ data: { code: 'K7QM-X2PA', expiresAt: new Date(EXPIRES), marked: true }, error: null })
+    expect(asked).toEqual([{ name: INVITE_FUNCTION, body: { id: ID } }])
+  })
+
+  it('says when the mail went out but the entry was not marked', async () => {
+    const { client } = functions(() => Promise.resolve({ data: { code: 'K7QM-X2PA', expiresAt: EXPIRES, emailed: true, invited: false }, error: null }))
+    expect((await createWaitlist(client).invite(ID)).data).toMatchObject({ marked: false })
+  })
+
+  it('keeps the code when nothing was mailed: not configured, or the send failed', async () => {
+    for (const reason of ['not_configured', 'send_failed'] as const) {
+      const { client } = functions(() => Promise.resolve({ data: { code: 'K7QM-X2PA', expiresAt: EXPIRES, emailed: false, reason }, error: null }))
+      expect(await createWaitlist(client).invite(ID)).toEqual({ data: { code: 'K7QM-X2PA', expiresAt: new Date(EXPIRES) }, error: reason })
+    }
+  })
+
+  it('reads the refusal of someone who is not the owner, and anything else as unknown', async () => {
+    expect(await createWaitlist(functions(() => refused(403, { error: 'not_owner' })).client).invite(ID)).toEqual({ data: null, error: 'not_owner' })
+    for (const answer of [
+      () => refused(404, { error: 'not_found' }),
+      () => refused(502, { error: 'database_failed' }),
+      () => refused(500, 'not json'),
+      () => Promise.resolve({ data: null, error: new Error('Failed to send a request to the Edge Function') }),
+      () => Promise.resolve({ data: { emailed: true }, error: null }),
+      () => Promise.resolve({ data: { code: 'X', expiresAt: 'not a date', emailed: true }, error: null }),
+      () => Promise.reject(new TypeError('Load failed')),
+    ])
+      expect(await createWaitlist(functions(answer).client).invite(ID)).toEqual({ data: null, error: 'unknown' })
+  })
+
+  it('asks nothing offline', async () => {
+    const { client, asked } = functions(() => Promise.reject(new Error('asked')))
+    expect(await createWaitlist(client, { online: () => false }).invite(ID)).toEqual({ data: null, error: 'offline' })
+    expect(asked).toEqual([])
+  })
+
+  describe('the database call behind it', () => {
+    let owner: TestMember
+    let other: TestMember
+    let before: string | null
+
+    beforeAll(async () => {
+      owner = await signUpMember()
+      other = await signUpMember()
+      before = (await sql<{ owner_id: string | null }>('select owner_id from private.instance_owner'))[0]?.owner_id ?? null
+    })
+    afterAll(async () => {
+      await sql('update private.instance_owner set owner_id = $1', [before])
+    })
+
+    it('gives the owner the address and one code for the entry, the same one twice, and nobody else anything', async () => {
+      await sql('update private.instance_owner set owner_id = $1', [owner.id])
+      const address = uniqueEmail('wl-invite')
+      await createWaitlist(visitorClient()).join(address, null)
+      const id = (await createWaitlist(owner.client).list()).data!.find((e) => e.email === address)!.id
+
+      const first = await owner.client.rpc('owner_waitlist_prepare_invite', { p_id: id })
+      expect(first.error).toBeNull()
+      expect(first.data).toEqual([{ email: address, code: expect.stringMatching(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/), expires_at: expect.any(String) }])
+      const again = await owner.client.rpc('owner_waitlist_prepare_invite', { p_id: id })
+      expect(again.data).toEqual(first.data)
+      // Preparing does not mark her invited: the function does that once the mail went out.
+      expect((await createWaitlist(owner.client).list()).data!.find((e) => e.email === address)!.invitedAt).toBeNull()
+
+      for (const client of [other.client, newClient()]) {
+        const { data, error } = await client.rpc('owner_waitlist_prepare_invite', { p_id: id })
+        expect(data).toBeNull()
+        expect(error).not.toBeNull()
+      }
+      const unknown = await owner.client.rpc('owner_waitlist_prepare_invite', { p_id: '00000000-0000-4000-8000-000000000000' })
+      expect(unknown.error?.message).toContain('waitlist_entry_not_found')
+
+      // The test's code goes with the entry (deleting an entry leaves its code; this one is the test's own).
+      await sql('delete from public.invite_codes where id = (select invite_code_id from private.waitlist where email::text = $1)', [address])
+      await createWaitlist(owner.client).remove(id)
+    })
   })
 })

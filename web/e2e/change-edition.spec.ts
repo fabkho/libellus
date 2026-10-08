@@ -228,3 +228,161 @@ test('an Apple edition has no language to show: its row starts with the year, wi
   // Rows only Apple knows (OpenLibrary has nothing to fill in) start with the year.
   expect(facts.filter(({ parts }) => /^\d{4}$/.test(parts[0] ?? '')).length).toBeGreaterThan(0)
 })
+
+/** The sheet's format row says what it does in a line of its own, and its words as the member sets them. */
+const said = (format: 'audiobook' | 'paperback' | 'ebook' | 'hardcover') => en.book.edition.formatSaid.replace('{format}', en.book.formatFact[format])
+
+async function openChangeEdition(page: Parameters<typeof signedIn>[0], entry: LibraryEntry) {
+  await goto(page, `/book/${entry.book.id}`)
+  await page.getByTestId('book.options').click()
+  await page.getByTestId('bookOptions.changeEdition').click()
+  await expect(page.getByTestId('edition')).toBeVisible()
+  await expect(page.getByTestId('edition.loading')).toBeHidden()
+}
+
+test('the format row says what it does, shows its effect at once and goes along with the change (and Read as follows)', async ({ page }) => {
+  const member = await signedIn(page)
+  const library = createLibrary(member.client)
+  const entry = (await library.addToLibrary(piranesi(), { status: 'finished', startedOn: '2026-01-01', endedOn: '2026-01-09', rating: 16 })).data as LibraryEntry
+  expect((await library.setReadAs(entry.id, 'physical')).error).toBeNull()
+
+  await openChangeEdition(page, entry)
+  // It is not a filter, and says so before she touches it.
+  await expect(page.getByTestId('edition.formatHelp')).toHaveText(en.book.edition.formatHelp)
+  await expect(page.getByTestId('edition.format')).toHaveAccessibleDescription(en.book.edition.formatHelp)
+  const candidates = page.getByTestId('edition.candidate')
+  const count = await candidates.count()
+
+  // The Spanish edition's source says nothing about its format: none is lit, and it does not need to be.
+  const spanish = candidates.filter({ hasText: 'Spanish' })
+  await spanish.click()
+  await expect(page.getByTestId('edition.format.ebook')).toHaveAttribute('aria-checked', 'false')
+  await expect(page.getByTestId('edition.action')).toHaveText(en.book.edition.action)
+
+  // Saying it is an audiobook filters nothing, changes the picked row at once, and the action says it goes along.
+  await page.getByTestId('edition.format.audiobook').click()
+  await expect(candidates).toHaveCount(count)
+  await expect(page.getByTestId('edition.formatHelp')).toHaveText(said('audiobook'))
+  await expect(spanish.getByTestId('edition.candidateFacts')).toContainText(en.book.formatFact.audiobook)
+  await expect(candidates.first().getByTestId('edition.candidateFacts')).toContainText(en.book.formatFact.ebook)
+  await expect(page.getByTestId('edition.action')).toHaveText(en.book.edition.changeAndSave)
+
+  // Picking another edition forgets it; picking this one again starts from what its source says.
+  await candidates.first().click()
+  await expect(page.getByTestId('edition.formatHelp')).toHaveText(en.book.edition.formatHelp)
+  await expect(page.getByTestId('edition.action')).toHaveText(en.book.edition.action)
+  await spanish.click()
+  await page.getByTestId('edition.format.audiobook').click()
+  await page.getByTestId('edition.action').click()
+  await expect(page.getByTestId('edition')).toBeHidden()
+
+  // The format she said is the one saved with the new edition, and her Read as follows it.
+  await expect(page.getByTestId('book.facts')).toContainText(en.book.formatFact.audiobook)
+  await expect(page.getByTestId('book.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
+  const [saved] = await sql<{ format_override: string | null; read_as: string | null; format: string | null }>(
+    `select e.format_override, e.read_as, b.format from public.library_entries e join public.books b on b.id = e.book_id where e.id = $1`,
+    [entry.id],
+  )
+  expect(saved).toEqual({ format_override: 'audiobook', read_as: 'audiobook', format: null })
+})
+
+test('a format she does not change is not said: the action stays Change, and her Read as stays where it was', async ({ page }) => {
+  const member = await signedIn(page)
+  const library = createLibrary(member.client)
+  const entry = (await library.addToLibrary(piranesi(), { status: 'finished', startedOn: '2026-01-01', endedOn: '2026-01-09', rating: 16 })).data as LibraryEntry
+  // Her own word, about how she read it; the Spanish edition does not say what it is.
+  expect((await library.setReadAs(entry.id, 'audiobook')).error).toBeNull()
+
+  await openChangeEdition(page, entry)
+  await page.getByTestId('edition.candidate').filter({ hasText: 'Spanish' }).click()
+  await expect(page.getByTestId('edition.action')).toHaveText(en.book.edition.action)
+  await page.getByTestId('edition.action').click()
+  await expect(page.getByTestId('edition')).toBeHidden()
+
+  await expect(page.getByTestId('book.facts')).toContainText('272 pages')
+  await expect(page.getByTestId('book.readAs.audiobook')).toHaveAttribute('aria-checked', 'true')
+  const [saved] = await sql<{ format_override: string | null; read_as: string | null }>(
+    `select format_override, read_as from public.library_entries where id = $1`,
+    [entry.id],
+  )
+  expect(saved).toEqual({ format_override: null, read_as: 'audiobook' })
+})
+
+test('an edition read another way presets Read as, and her own edition\'s format saves on its own', async ({ page }) => {
+  const member = await signedIn(page)
+  const library = createLibrary(member.client)
+  const entry = (await library.addToLibrary(piranesi(), { status: 'finished', startedOn: '2026-01-01', endedOn: '2026-01-09', rating: 16 })).data as LibraryEntry
+  // An Apple edition is an ebook; she said she read it as one.
+  expect((await library.setReadAs(entry.id, 'ebook')).error).toBeNull()
+
+  await openChangeEdition(page, entry)
+  await page.getByTestId('edition.candidate').filter({ hasText: 'Spanish' }).click()
+  await page.getByTestId('edition.format.hardcover').click()
+  await page.getByTestId('edition.action').click()
+  await expect(page.getByTestId('edition')).toBeHidden()
+  await expect(page.getByTestId('book.facts')).toContainText(en.book.formatFact.hardcover)
+  // Paper now: the ebook word gave way to the new edition's.
+  await expect(page.getByTestId('book.readAs.physical')).toHaveAttribute('aria-checked', 'true')
+
+  // With her own edition picked the action is Save, and saving a format leaves Read as to her.
+  await page.getByTestId('book.options').click()
+  await page.getByTestId('bookOptions.changeEdition').click()
+  await expect(page.getByTestId('edition.action')).toBeDisabled()
+  await page.getByTestId('edition.format.paperback').click()
+  await expect(page.getByTestId('edition.action')).toHaveText(en.book.edition.save)
+  await expect(page.getByTestId('edition.formatHelp')).toHaveText(said('paperback'))
+  await page.getByTestId('edition.action').click()
+  await expect(page.getByTestId('edition')).toBeHidden()
+  await expect(page.getByTestId('book.facts')).toContainText(en.book.formatFact.paperback)
+  await expect(page.getByTestId('book.readAs.physical')).toHaveAttribute('aria-checked', 'true')
+})
+
+test.describe('the list of editions moves in', () => {
+  // The flows run with Reduce Motion; this one is about what is drawn on the way.
+  test.use({ reducedMotion: 'no-preference' })
+
+  test('editions that arrive open their room and fade in; the current row stays where it is', async ({ page }) => {
+    const member = await signedIn(page)
+    const entry = (await createLibrary(member.client).addToLibrary(piranesi())).data as LibraryEntry
+    await goto(page, `/book/${entry.book.id}`)
+    await page.getByTestId('book.options').click()
+
+    // Every frame from the tap on: where the first row sits under the hint, and how opaque the
+    // rows after it are (a row that pops in is never seen below 1).
+    await page.evaluate(() => {
+      const frames: { first: number | null; others: number[]; rows: number }[] = []
+      Object.assign(window, { __editionFrames: frames })
+      const look = () => {
+        const rows = [...document.querySelectorAll<HTMLElement>('[data-testid="edition.candidate"]')]
+        const hint = document.querySelector('[data-testid="edition.hint"]')
+        frames.push({
+          first: rows[0] && hint ? Math.round((rows[0].getBoundingClientRect().top - hint.getBoundingClientRect().bottom) * 10) / 10 : null,
+          others: rows.slice(1).map((row) => Number(getComputedStyle(row).opacity)),
+          rows: rows.length,
+        })
+        if (frames.length < 900) requestAnimationFrame(look)
+      }
+      requestAnimationFrame(look)
+    })
+    await page.getByTestId('bookOptions.changeEdition').click()
+    await expect(page.getByTestId('edition.loading')).toBeVisible()
+    await expect(page.getByTestId('edition.loading')).toBeHidden()
+    await expect.poll(() => page.getByTestId('edition.candidate').count()).toBeGreaterThan(20)
+    // Let the last room settle (the list says it is moving while one does).
+    await expect(page.getByTestId('edition').locator('[data-moving]')).toHaveCount(0)
+
+    const frames = await page.evaluate(() => (window as unknown as { __editionFrames: { first: number | null; others: number[]; rows: number }[] }).__editionFrames)
+    // The current row never moved under the hint once the others began to arrive (the sheet
+    // rising carries both; what came before is the sheet's own layout settling).
+    const arriving = frames.findIndex((frame) => frame.rows > 1)
+    expect(arriving).toBeGreaterThan(-1)
+    const firsts = new Set(frames.slice(arriving).map((frame) => frame.first).filter((value) => value !== null))
+    expect([...firsts]).toHaveLength(1)
+    // The ones that came after it faded in: partly drawn on the way, never before they had their room.
+    const opacities = frames.flatMap((frame) => frame.others)
+    expect(opacities.some((opacity) => opacity > 0 && opacity < 1)).toBe(true)
+    expect(opacities.at(-1)).toBe(1)
+    // The rows were not added all in one frame to a list already full.
+    expect(frames.some((frame) => frame.rows > 1 && frame.others.some((opacity) => opacity < 1))).toBe(true)
+  })
+})

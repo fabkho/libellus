@@ -164,6 +164,19 @@ export const useEditionStore = defineStore('edition', () => {
     return format.value !== formatOf(entry.book, entry.formatOverride)
   })
 
+  /**
+   * The format she said, when it goes along with what the action does: another
+   * format than the picked edition's source said (with another edition picked,
+   * it is saved with the change), or than her own edition has (the action
+   * saves it). Null when she has said nothing, or what is already so.
+   */
+  const formatSaid = computed<BookFormat | null>(() => {
+    if (!format.value) return null
+    const found = choice.value
+    if (found) return format.value !== formatOf(found.book) ? format.value : null
+    return formatChanged.value ? format.value : null
+  })
+
   function chooseFormat(value: BookFormat) {
     if (busy.value) return
     format.value = value
@@ -179,7 +192,9 @@ export const useEditionStore = defineStore('edition', () => {
     const entry = changing.value
     const candidate = choice.value
     if (!entry || busy.value || !(candidate || formatChanged.value)) return null
-    const changed = candidate ? await changeTo(entry, candidate.book, format.value) : await setFormat(entry, format.value)
+    // What the row said she is changing to is what she gets: her word, else the format the row
+    // showed (the database keeps it as hers only where it differs from the Book it finds).
+    const changed = candidate ? await changeTo(entry, candidate.book, format.value ?? formatOf(candidate.book)) : await setFormat(entry, format.value)
     if (changed) {
       cancel()
       changing.value = null
@@ -295,6 +310,7 @@ export const useEditionStore = defineStore('edition', () => {
     format,
     shownFormat,
     formatChanged,
+    formatSaid,
     isPicked,
     open,
     close,

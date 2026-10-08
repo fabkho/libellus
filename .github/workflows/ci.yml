@@ -85,6 +85,7 @@ jobs:
       regal: ${{ steps.decide.outputs.regal }}
       og: ${{ steps.decide.outputs.og }}
       enrich: ${{ steps.decide.outputs.enrich }}
+      invite: ${{ steps.decide.outputs.invite }}
     steps:
       - uses: actions/checkout@v7
         if: github.event_name == 'push'
@@ -115,6 +116,8 @@ jobs:
               - *ci
               - 'design/**'
               - 'web/app/assets/css/tokens.generated.css'
+              - 'supabase/templates/**'
+              - 'supabase/functions/waitlist-invite/invite_mail.generated.mjs'
             goodreads:
               - *ci
               - 'supabase/functions/goodreads-rating/**'
@@ -129,6 +132,10 @@ jobs:
               - *ci
               - 'supabase/functions/enrich/**'
               - 'web/app/data/enrich/genres.ts'
+            invite:
+              - *ci
+              - 'supabase/functions/waitlist-invite/**'
+              - 'design/emails/**'
 
       - name: Decide
         id: decide
@@ -142,6 +149,7 @@ jobs:
           FILTER_REGAL: ${{ steps.filter.outputs.regal }}
           FILTER_OG: ${{ steps.filter.outputs.og }}
           FILTER_ENRICH: ${{ steps.filter.outputs.enrich }}
+          FILTER_INVITE: ${{ steps.filter.outputs.invite }}
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
         run: |
           all=false
@@ -155,6 +163,7 @@ jobs:
           regal=$(on "$FILTER_REGAL")
           og=$(on "$FILTER_OG")
           enrich=$(on "$FILTER_ENRICH")
+          invite=$(on "$FILTER_INVITE")
           # Playwright: never on an ordinary pull request (docs/TESTING.md, "CI: what
           # runs when"). The flows are where the minutes go, and a broken one is caught
           # on main, minutes after the merge, where a release reads the result. They run
@@ -167,12 +176,12 @@ jobs:
           shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
 
           statics=false
-          for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich"; do [ "$v" = true ] && statics=true; done
+          for v in "$web" "$tokens" "$goodreads" "$regal" "$og" "$enrich" "$invite"; do [ "$v" = true ] && statics=true; done
 
           {
             echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
-            echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"
+            echo "goodreads=$goodreads"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"
           } | tee -a "$GITHUB_OUTPUT"
 
   # Database rules (pgTAP), the web data layer (Vitest) and the backup round trip
@@ -193,6 +202,9 @@ jobs:
     timeout-minutes: 20
     env:
       SUPABASE_CLI: 2.118.0 # pinned: "latest" resolves via the GitHub API and gets rate-limited; matches local
+      # The stack's images come from GitHub's registry, not the CLI's default (public.ecr.aws),
+      # which throttled parallel pulls ("toomanyrequests: Rate exceeded"). See docs/TESTING.md.
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v7
 
@@ -262,6 +274,7 @@ jobs:
         shard: ${{ fromJSON(needs.changes.outputs.shards) }}
     env:
       SUPABASE_CLI: 2.118.0 # pinned like `backend`
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io # as in `backend`
       # Built in its own step above (web/playwright.config.ts would build it otherwise).
       LIBELLUS_E2E_PREBUILT: '1'
     steps:
@@ -441,6 +454,11 @@ jobs:
         working-directory: design
         run: pnpm install --frozen-lockfile && pnpm tokens:check
 
+      - name: Email templates are generated, not hand-edited
+        if: ${{ !cancelled() && needs.changes.outputs.tokens == 'true' }}
+        working-directory: design
+        run: pnpm install --frozen-lockfile && pnpm emails:check
+
       - name: Web builds (nuxt generate)
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
         working-directory: web
@@ -478,7 +496,7 @@ jobs:
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@v2
-        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true'
+        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true'
         with:
           deno-version: v2.x
 
@@ -511,4 +529,12 @@ jobs:
       - name: enrich function (Deno lint, check, test)
         if: ${{ !cancelled() && needs.changes.outputs.enrich == 'true' }}
         working-directory: supabase/functions/enrich
+        run: deno lint && deno check *.ts && deno task test
+
+      # The waitlist-invite edge function (#171): the owner's Invite, with a stand-in
+      # database and mailer (mailed, not configured, a failed send, not the owner, a bad
+      # body) and the mail's text. Nothing is sent and the SMTP client is never loaded.
+      - name: waitlist-invite function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.invite == 'true' }}
+        working-directory: supabase/functions/waitlist-invite
         run: deno lint && deno check *.ts && deno task test

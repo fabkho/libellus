@@ -3,14 +3,17 @@ import {
   createSeries,
   type BookSeries,
   type EnrichErrorCode,
-  type NextInSeries,
   type SeriesCorrection,
   type SeriesInfo,
   type SeriesRepository,
+  type StartedSeries,
 } from '~/data/enrich'
 import { LIMITS, remembered } from '~/data/enrich/device'
 import { useEnrichCopyStore } from '~/stores/enrichCopy'
 import { useSessionStore } from '~/stores/session'
+
+/** How many started series Home asks for: all of them, for its sheet. */
+const STARTED_LIMIT = 100
 
 /** What the series sheet shows: a series of the Book, and which Book it was opened from. */
 export type SeriesSheet = { seriesId: string; bookId: string }
@@ -20,7 +23,7 @@ export type SeriesEditing = { entryId: string; bookId: string }
 /**
  * Series (issue #167): the Book page's series line (`book_series_info`), the
  * series sheet with its works and her statuses (`series_works`), Home's "Next
- * in your series" (`next_in_series`) and her own correction of a Book's
+ * in your series" (`started_series`: the series she has started and not finished) and her own correction of a Book's
  * series and position (set, "in no series", back to the suggested one). What
  * was read last is kept on the device (stores/enrichCopy.ts), so the line, the
  * sheet and Home's row show offline; corrections need a connection (the
@@ -84,15 +87,16 @@ export const useSeriesStore = defineStore('series', () => {
 
   // ------------------------------------------------- next in your series
 
-  const next = computed<NextInSeries[]>(() => copy.data.next ?? [])
+  /** The series she has started and not finished, latest activity first, as this device last knew them. */
+  const started = computed<StartedSeries[]>(() => copy.data.started ?? [])
 
-  async function loadNext() {
+  async function loadStarted() {
     const repo = series()
     if (!repo || !isOnline()) return
     const member = session.member?.id
-    const result = await repo.next(6, language())
+    const result = await repo.started(STARTED_LIMIT, language())
     if (result.error || member !== session.member?.id) return
-    copy.update(() => ({ next: result.data }))
+    copy.update(() => ({ started: result.data }))
   }
 
   // ------------------------------------------------------------- sheets
@@ -127,7 +131,7 @@ export const useSeriesStore = defineStore('series', () => {
       }
       keepBook(target.bookId, result.data)
       // Home's row follows her correction.
-      void loadNext()
+      void loadStarted()
       return true
     } finally {
       busy.value = false
@@ -146,5 +150,5 @@ export const useSeriesStore = defineStore('series', () => {
     (now, before) => now !== before && reset(),
   )
 
-  return { ofBook, loadForBook, info, loadSeries, next, loadNext, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
+  return { ofBook, loadForBook, info, loadSeries, started, loadStarted, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
 })

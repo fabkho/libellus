@@ -18,10 +18,12 @@ import type { Book, BookSnapshot } from '~/data/books'
 import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
 import { workKey } from '~/data/merge'
 import { SHARED_EBOOKS_CACHE } from '~/data/localData'
+import { isLocalId } from '~/data/queuedWrites'
 import { useEditionStore } from '~/stores/edition'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
+import { useSyncStore } from '~/stores/sync'
 
 /** Where a report came from: a share, a scan of the folder. */
 export type ReportSource = Extract<EbookSource, 'share' | 'folder'>
@@ -71,6 +73,7 @@ type PermissionHandle = FileSystemDirectoryHandle & {
 export const useEbooksStore = defineStore('ebooks', () => {
   const session = useSessionStore()
   const library = useLibraryStore()
+  const sync = useSyncStore()
   const search = useSearchStore()
 
   /** The browser can keep copies (the origin private file system): without it nothing ebook-related is offered. */
@@ -200,7 +203,8 @@ export const useEbooksStore = defineStore('ebooks', () => {
    */
   async function entries(): Promise<LibraryEntry[]> {
     if (!library.loaded || isOnline()) await library.load()
-    return [...library.reading, ...library.wantToRead, ...library.finished]
+    // An entry still waiting to sync (added from search, optimistic) has no id the database knows: a link kept on the device would name it.
+    return [...library.reading, ...library.wantToRead, ...library.finished].filter((entry) => !isLocalId(entry.id))
   }
 
   /** Ask the browser to keep the copies under storage pressure, once there is one worth keeping. */
@@ -497,6 +501,8 @@ export const useEbooksStore = defineStore('ebooks', () => {
     if (name === 'confirmAdd') {
       after(async (entry) => {
         if (!entry) return
+        // Not synced yet (added from search, optimistic): a waiting file is matched once it has (below).
+        if (isLocalId((entry as LibraryEntry).id)) return
         const sought = Date.now() - findingSince < FIND_WINDOW_MS ? finding.value : null
         finding.value = null
         // As it is now: ignored or linked meanwhile, it is not hers to link any more.
@@ -657,6 +663,16 @@ export const useEbooksStore = defineStore('ebooks', () => {
     repository = null
     persistAsked = false
   }
+
+  // What was added from search while the outbox held it may be a Book a waiting file is: matched now it is synced.
+  watch(
+    () => sync.pending,
+    async (now, before) => {
+      if (now !== 0 || !before || !waiting.value.length) return
+      await repo()?.rematch(await entries())
+      await refresh()
+    },
+  )
 
   watch(
     () => session.member?.id,

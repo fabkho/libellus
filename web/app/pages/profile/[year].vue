@@ -7,7 +7,7 @@
 // books rated so), the genres (a row opens the Library filtered by it and the year), the records, the authors read more than once, and the
 // years either side. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
-import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
+import { figuresOf, readsInMonth, readsWithoutPages, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useBookStore } from '~/stores/book'
 import { useGenresStore } from '~/stores/genres'
@@ -71,12 +71,26 @@ const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m +
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
 
-// A star row's books; open again on Back from a book opened in it.
+// A star row's books, or the year's reads without a page count; open again on Back from a book opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
-const sheetTitle = computed(() => (shown.value?.kind === 'stars' ? t('profile.sheet.stars', { count: shown.value.star, year: String(shown.value.year) }, shown.value.star) : ''))
-const sheetReads = computed(() => (shown.value?.kind === 'stars' ? readsWithStars(reads.value, shown.value.year, shown.value.star) : []))
+const sheetTitle = computed(() => {
+  const s = shown.value
+  if (!s) return ''
+  if (s.kind === 'pagesMissing') return t('profile.sheet.pagesMissing')
+  return s.kind === 'stars' ? t('profile.sheet.stars', { count: s.star, year: String(s.year) }, s.star) : ''
+})
+const sheetReads = computed(() => {
+  const s = shown.value
+  if (!s) return []
+  if (s.kind === 'stars') return readsWithStars(reads.value, s.year, s.star)
+  return s.kind === 'pagesMissing' ? readsWithoutPages(reads.value, s.year) : []
+})
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
+}
+// The Pages line: the year's reads without a page count.
+function pickPagesMissing() {
+  sheet.value = { kind: 'pagesMissing', year: year.value }
 }
 
 // A genre's row opens the Library's Finished list filtered by it and by this year (#168).
@@ -105,7 +119,7 @@ function back() {
     <UiReveal :show="loading || hasYear">
       <!-- No gaps between the blocks: each carries the space before it inside its room, so a block that closes takes its space along. -->
       <div class="relative flex flex-col px-screen pt-lg" :aria-busy="loading || undefined">
-        <ProfileFigures :figures="loading ? null : figures" />
+        <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" />
 
         <ProfileMonthBooks class="pt-xl" :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 

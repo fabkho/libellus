@@ -171,6 +171,102 @@ test('the avatar opens the Profile: the figures of all years and of one, the she
   await page.getByTestId('profile.back').click()
   await expect(page.getByTestId('home.title')).toBeVisible()
 })
+/**
+ * The Pages figure's line, where it reads "N without a count": a finished read whose
+ * Book has no page count, on top of the seed's (every one of which has a count).
+ */
+test('the Pages card opens the books without a page count', async ({ page }) => {
+  const member = await signedIn(page)
+  await seed(page, member.client, [[book('Noumenon', 'Marina J. Lostetter', null), [['2025-01-02', '2025-01-20', 16]]]])
+  await page.getByTestId('shell.avatar').click()
+  await expect(page).toHaveURL(/\/profile$/)
+
+  // Under All the line is a button that says what it opens, and it opens the one read without a count.
+  const line = page.getByTestId('profile.pagesMissing')
+  await expect(line).toHaveText(fill(en.profile.figures.pagesMissing, { count: 1 }))
+  await expect(line).toHaveAttribute('aria-label', fill(en.profile.figures.pagesMissingOpen, { count: 1 }))
+  await line.click()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(en.profile.sheet.pagesMissing)
+  await expect(page.getByTestId('profileReads.read').getByTestId('profile.readTitle')).toHaveText([runTitle('Noumenon')])
+  // Its row opens the book page, where the page count can be set (#60), and Back from there is the sheet again.
+  await page.getByTestId('profileReads.read').click()
+  await expect(page.getByTestId('book.title')).toHaveText(runTitle('Noumenon'))
+  await page.getByTestId('book.back').click()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(en.profile.sheet.pagesMissing)
+  await page.getByTestId('profileReads.cancel').click()
+  await expect(page.getByTestId('profileReads')).toBeHidden()
+
+  // 2025, the year it was read in: the line is the button, and the sheet is that year's.
+  await page.getByTestId('profile.year.2025').click()
+  await expect(page.getByTestId('profile.pagesMissing')).toHaveText(fill(en.profile.figures.pagesMissing, { count: 1 }))
+  await page.getByTestId('profile.pagesMissing').click()
+  await expect(page.getByTestId('profileReads.read').getByTestId('profile.readTitle')).toHaveText([runTitle('Noumenon')])
+  await page.getByTestId('profileReads.cancel').click()
+
+  // 2024: every read of the year has a count, so the line is plain text and nothing opens from it.
+  await page.getByTestId('profile.year.2024').click()
+  await expect(page.getByTestId('profile.pagesMissing')).toHaveCount(0)
+})
+/**
+ * The Reading days: a day that was read is a button that opens the books it was read in; a day that was not is
+ * a quiet dot. The seed's East of Eden (still being read) has today, 24 pages; Hyperion, finished, has a day of
+ * 40 pages ten days ago.
+ */
+test('a day read in the Reading days opens the books read that day', async ({ page }) => {
+  const member = await signedIn(page)
+  const today = isoDay()
+  const lit = addDays(today, -10)
+  await seed(page, member.client, [[book('Hyperion', 'Dan Simmons', 482), [[addDays(today, -12), addDays(today, -9), 16]]]])
+  const [hyperion] = await sql<{ id: string }>(
+    'select s.id from public.reading_sessions s join public.library_entries e on e.id = s.entry_id join public.books b on b.id = e.book_id where b.title = $1',
+    [runTitle('Hyperion')],
+  )
+  await sql('insert into public.reading_progress_days (session_id, day, start_page, end_page) values ($1, $2, 0, 40)', [hyperion!.id, lit])
+  await page.reload()
+  await page.getByTestId('shell.avatar').click()
+  await expect(page).toHaveURL(/\/profile$/)
+
+  // The English words of a day, as the member's locale gives them: "12 March", "Thursday 12 March".
+  const long = (day: string) => {
+    const date = new Date(`${day}T00:00:00`)
+    return `${date.getDate()} ${date.toLocaleString('en', { month: 'long' })}`
+  }
+  const title = (day: string) => `${new Date(`${day}T00:00:00`).toLocaleString('en', { weekday: 'long' })} ${long(day)}`
+
+  // Only the two days that were read are buttons, each named by its day and its pages; every other day is a dot.
+  const days = page.getByTestId('profile.days')
+  await expect(days.getByRole('button')).toHaveCount(2)
+  await expect(page.getByTestId(`profile.day.${lit}`)).toHaveAccessibleName(plural(en.profile.days.dayRead, 40, { date: long(lit) }))
+  await expect(page.getByTestId(`profile.day.${today}`)).toHaveAccessibleName(plural(en.profile.days.dayRead, 24, { date: long(today) }))
+  await expect(page.getByTestId(`profile.day.${addDays(today, -1)}`)).toHaveCount(0)
+  await expect(page.getByRole('group', { name: fill(en.profile.days.label, { read: 2, count: 30 }) })).toBeVisible()
+
+  // The button has the room the grid has (its cell and half the gaps, 24 × 20) and the dot is no smaller for it.
+  const box = (await page.getByTestId(`profile.day.${lit}`).boundingBox())!
+  expect(box.width).toBeGreaterThanOrEqual(24)
+  expect(box.height).toBeGreaterThanOrEqual(20)
+
+  // A tap opens the sheet of the day: its title in words, the book read that day, as the other sheets' rows.
+  await page.getByTestId(`profile.day.${lit}`).click()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(title(lit))
+  await expect(page.getByTestId('profileReads.read').getByTestId('profile.readTitle')).toHaveText([runTitle('Hyperion')])
+  // Its row opens the book page, and Back from there is the sheet again.
+  await page.getByTestId('profileReads.read').click()
+  await expect(page.getByTestId('book.title')).toHaveText(runTitle('Hyperion'))
+  await page.getByTestId('book.back').click()
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(title(lit))
+  await page.getByTestId('profileReads.cancel').click()
+  await expect(page.getByTestId('profileReads')).toBeHidden()
+
+  // From the keyboard: Tab to the day, Enter; a read still going is named like any other.
+  await page.getByTestId(`profile.day.${today}`).focus()
+  await expect(page.getByTestId(`profile.day.${today}`)).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('profileReads.sheetTitle')).toHaveText(title(today))
+  await expect(page.getByTestId('profileReads.read').getByTestId('profile.readTitle')).toHaveText([runTitle('East of Eden')])
+  await page.getByTestId('profileReads.cancel').click()
+  await expect(page.getByTestId('profileReads')).toBeHidden()
+})
 
 test('a member with nothing finished yet sees the empty Profile and her account', async ({ page }) => {
   const member = await signedIn(page)

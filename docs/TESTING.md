@@ -456,8 +456,8 @@ Any change under `.github/` runs everything, so CI changes are tested by CI.
 | --- | --- |
 | `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), plus the web build for `web/**` |
 | `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip |
-| `design/**`, `web/app/assets/css/tokens.generated.css` | Tokens check |
-| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich) | Deno lint, check, test of that function |
+| `design/**`, `web/app/assets/css/tokens.generated.css`, `supabase/templates/**` | Tokens check and emails check (the generated mail is current) |
+| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite) | Deno lint, check, test of that function |
 
 On `main` the flows run whatever changed (every run there must say whether the whole suite passes). A
 pull request that touches several of these runs the union. A skipped job is a pass for everything
@@ -475,7 +475,7 @@ Jobs, and why they are shaped so:
   (`scripts/test-backup-roundtrip.sh`, docs/OPERATIONS.md "Backups"), on a stack of its own, beside the
   flows rather than in front of them.
 - **`e2e`**, four shards: the flows (`web/e2e`) on the static build, each shard with its own stack.
-- **`statics`**: the checks that take seconds (tokens, `nuxt generate` with and without Regal, the Deno
+- **`statics`**: the checks that take seconds (tokens, emails, `nuxt generate` with and without Regal, the Deno
   suites) in one job.
 - **`e2e-report`**: when a shard failed, one HTML report merged from the shards' blob reports, with the
   traces (artifact `playwright-report`).
@@ -486,6 +486,9 @@ uses them) and joins it (`… wait`) once pnpm has installed, the browsers' syst
 app is built: by then it is up. The pnpm store and the Playwright browsers are cached. **Supabase images
 are not cached**: restoring a `docker save` tarball and `docker load` took longer than the pull (about
 125 s against 85 to 90 s), so that was dropped.
+The images are pulled from `ghcr.io` (`SUPABASE_INTERNAL_IMAGE_REGISTRY` in the `backend` and `e2e` jobs) because the
+CLI's default, `public.ecr.aws`, throttled the parallel pulls of the shards (`toomanyrequests: Rate exceeded`);
+`supabase start took N s` in each job's log shows what the start costs.
 
 ### What makes the flows fast
 

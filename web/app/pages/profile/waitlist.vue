@@ -3,16 +3,21 @@
 // reading page, newest first. Reached from the Profile's Account section (its Waitlist row); only the
 // owner's account has it (stores/waitlist.ts), and for anyone else the address is a page that doesn't exist
 // (`validate`, the same 404 as any unknown address) and nothing is asked of the server, which refuses them as
-// well (`not_owner`). Nothing is mailed from here: she copies the addresses still waiting (comma-separated,
-// for a Bcc field), sends the invites herself and marks them invited.
+// well (`not_owner`). Invite mails one entry a one-use code (the `waitlist-invite` edge function) and marks it
+// invited; or she copies the addresses still waiting (comma-separated, for a Bcc field), sends the invites
+// herself and marks them invited.
 //
 // A pushed screen in the tab layout, built like Errors: the round back and a Refresh button in the bar, the
-// large title, how many wait and how many were invited, Copy waiting emails, then one row an entry: the address,
-// when she joined (relative) and whose page it was ("from Ada's page"), Mark invited (or Invited, which takes
-// it back) and Delete behind a Confirm (a request to be forgotten: gone for good). Nobody yet: D's empty state.
-// The list cannot be loaded: why, and Try again (a load that fails keeps the entries on screen). Writes are
-// disabled and say Offline while the device is (#15).
+// large title, how many wait and how many were invited, Copy waiting emails, then one block an entry: the
+// address, when she joined (relative) and whose page it was ("from Ada's page") with Delete behind a Confirm (a
+// request to be forgotten: gone for good); beneath, Invite (waiting entries only, behind a Confirm: "Send an
+// invite to …?") and Mark invited (or Invited, which takes it back). After an Invite the entry shows its code
+// with Copy code and a line: emailed, or why the mail did not go out (mail not set up, the send failed: the
+// entry stays waiting, the code is for sending another way and the next Invite gets the same one). The codes
+// live for the session only. Nobody yet: D's empty state. The list cannot be loaded: why, and Try again (a load
+// that fails keeps the entries on screen). Writes are disabled and say Offline while the device is (#15).
 import { emailsText, waiting, type WaitlistEntry } from '~/data/waitlist'
+import { dateFormat } from '~/utils/intl'
 import { isShelfOwner } from '~/utils/shelfOwner'
 import { relativeTime } from '~/utils/relativeTime'
 import { useSessionStore } from '~/stores/session'
@@ -54,10 +59,8 @@ watch(() => store.entries, () => (now.value = Date.now()))
 const meta = (entry: WaitlistEntry) =>
   [relativeTime(entry.joinedAt, now.value, locale.value), entry.memberName ? t('waitlist.fromMember', { name: entry.memberName }) : t('waitlist.fromPage')].join(' · ')
 
-const copied = ref(false)
-let copiedTimer: ReturnType<typeof setTimeout> | undefined
-async function copy() {
-  const text = emailsText(waitingEntries.value)
+/** Puts text on the clipboard; without one (an insecure origin, a refused permission) selects it the old way. */
+async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text)
   } catch {
@@ -75,11 +78,34 @@ async function copy() {
       area.remove()
     }
   }
+}
+
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
+async function copy() {
+  await copyText(emailsText(waitingEntries.value))
   copied.value = true
   clearTimeout(copiedTimer)
   copiedTimer = setTimeout(() => (copied.value = false), 1800)
 }
-onUnmounted(() => clearTimeout(copiedTimer))
+
+/** The entry whose code was just copied: its button says Copied for a moment. */
+const copiedCode = ref<string | null>(null)
+let copiedCodeTimer: ReturnType<typeof setTimeout> | undefined
+async function copyCode(entry: WaitlistEntry) {
+  const code = store.codes[entry.id]?.code
+  if (!code) return
+  await copyText(code)
+  copiedCode.value = entry.id
+  clearTimeout(copiedCodeTimer)
+  copiedCodeTimer = setTimeout(() => (copiedCode.value = null), 1800)
+}
+onUnmounted(() => {
+  clearTimeout(copiedTimer)
+  clearTimeout(copiedCodeTimer)
+})
+
+const until = (date: Date) => dateFormat(locale.value, { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
 
 const busy = ref<string | null>(null)
 async function toggleInvited(entry: WaitlistEntry) {
@@ -102,6 +128,25 @@ async function remove() {
 }
 // A refusal stays in the Confirm; a new question starts clean.
 watch(deleting, () => (store.writeError = null))
+
+// Invite, behind its own Confirm. A refusal (not the owner, offline, anything else) stays in it; an answer
+// with a code closes it, mailed or not: the row says which.
+const inviting = ref<WaitlistEntry | null>(null)
+const inviteOpen = computed({ get: () => inviting.value !== null, set: (open: boolean) => !open && !sending.value && (inviting.value = null) })
+const sending = ref(false)
+const inviteError = ref<'offline' | 'failed' | null>(null)
+async function invite() {
+  const entry = inviting.value
+  if (!entry || sending.value) return
+  sending.value = true
+  busy.value = entry.id
+  const error = await store.invite(entry.id)
+  sending.value = false
+  busy.value = null
+  if (error === null || error === 'not_configured' || error === 'send_failed') inviting.value = null
+  else inviteError.value = error === 'offline' ? 'offline' : 'failed'
+}
+watch(inviting, () => (inviteError.value = null))
 </script>
 
 <template>
@@ -136,31 +181,61 @@ watch(deleting, () => (store.writeError = null))
         </div>
 
         <ul class="flex flex-col divide-y divide-hairline" data-testid="waitlist.list">
-          <li v-for="entry in entries" :key="entry.id" class="flex items-center gap-sm py-md" :class="entry.invitedAt && 'opacity-70'" data-testid="waitlist.entry">
-            <div class="flex min-w-0 flex-1 flex-col gap-xxs">
-              <span class="wrap-anywhere text-body text-ink" data-testid="waitlist.email">{{ entry.email }}</span>
-              <span class="figures text-meta text-ink-faint" data-testid="waitlist.meta">{{ meta(entry) }}</span>
+          <li v-for="entry in entries" :key="entry.id" class="flex flex-col gap-sm py-md" data-testid="waitlist.entry">
+            <div class="flex flex-col gap-xs">
+              <div class="flex items-center gap-sm">
+                <div class="flex min-w-0 flex-1 flex-col gap-xxs">
+                  <span class="wrap-anywhere text-body" :class="entry.invitedAt ? 'text-ink-muted' : 'text-ink'" data-testid="waitlist.email">{{ entry.email }}</span>
+                  <span class="figures text-meta text-ink-faint" data-testid="waitlist.meta">{{ meta(entry) }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="relative flex size-(--size-touch) shrink-0 items-center justify-center text-ink-muted disabled:opacity-50"
+                  :aria-label="t('waitlist.delete', { email: entry.email })"
+                  :disabled="!online"
+                  data-testid="waitlist.delete"
+                  @click="deleting = entry"
+                >
+                  <UiIcon name="trash" :size="20" />
+                </button>
+              </div>
+              <div class="flex flex-wrap items-center gap-sm">
+                <UiButton
+                  v-if="!entry.invitedAt"
+                  tone="secondary"
+                  size="sm"
+                  :disabled="busy === entry.id"
+                  :offline="!online"
+                  data-testid="waitlist.invite"
+                  @click="inviting = entry"
+                >
+                  {{ t('waitlist.invite') }}
+                </UiButton>
+                <UiButton
+                  :tone="entry.invitedAt ? 'quiet' : 'secondary'"
+                  size="sm"
+                  :disabled="busy === entry.id"
+                  :offline="!online"
+                  data-testid="waitlist.invited"
+                  @click="toggleInvited(entry)"
+                >
+                  <UiIcon v-if="entry.invitedAt" name="check" :size="14" />{{ entry.invitedAt ? t('waitlist.invitedDone') : t('waitlist.markInvited') }}
+                </UiButton>
+              </div>
             </div>
-            <UiButton
-              :tone="entry.invitedAt ? 'quiet' : 'secondary'"
-              size="sm"
-              :disabled="busy === entry.id"
-              :offline="!online"
-              data-testid="waitlist.invited"
-              @click="toggleInvited(entry)"
-            >
-              <UiIcon v-if="entry.invitedAt" name="check" :size="14" />{{ entry.invitedAt ? t('waitlist.invitedDone') : t('waitlist.markInvited') }}
-            </UiButton>
-            <button
-              type="button"
-              class="relative flex size-(--size-touch) shrink-0 items-center justify-center text-ink-muted disabled:opacity-50"
-              :aria-label="t('waitlist.delete', { email: entry.email })"
-              :disabled="!online"
-              data-testid="waitlist.delete"
-              @click="deleting = entry"
-            >
-              <UiIcon name="trash" :size="20" />
-            </button>
+            <div v-if="store.codes[entry.id]" class="flex flex-col gap-xs" data-testid="waitlist.code">
+              <div class="flex flex-wrap items-center gap-sm">
+                <p class="figures rounded-md bg-fill px-md py-sm text-caption text-ink">
+                  <span class="sr-only">{{ t('waitlist.code.label') }}: </span><span data-testid="waitlist.codeValue">{{ store.codes[entry.id]!.code }}</span>
+                </p>
+                <UiButton tone="secondary" size="sm" data-testid="waitlist.copyCode" @click="copyCode(entry)">
+                  <UiIcon name="copy" :size="14" />{{ copiedCode === entry.id ? t('waitlist.code.copied') : t('waitlist.code.copy') }}
+                </UiButton>
+              </div>
+              <p class="text-footnote text-ink-muted" role="status" data-testid="waitlist.codeNote">
+                {{ t(`waitlist.code.${store.codes[entry.id]!.sent}`, { date: until(store.codes[entry.id]!.expiresAt) }) }}
+              </p>
+            </div>
           </li>
         </ul>
       </template>
@@ -187,6 +262,19 @@ watch(deleting, () => (store.writeError = null))
       :offline="!online"
       testid="waitlist.confirm"
       @confirm="remove()"
+    />
+
+    <UiConfirm
+      v-model:open="inviteOpen"
+      :title="t('waitlist.inviteConfirm.title', { email: inviting?.email ?? '' })"
+      :text="t('waitlist.inviteConfirm.text')"
+      :action="t('waitlist.inviteConfirm.action')"
+      tone="primary"
+      :busy="sending"
+      :error="inviteError ? (inviteError === 'offline' ? t('waitlist.offline') : t('waitlist.inviteError')) : null"
+      :offline="!online"
+      testid="waitlist.inviteConfirm"
+      @confirm="invite()"
     />
   </div>
 </template>
