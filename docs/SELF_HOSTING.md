@@ -154,6 +154,23 @@ supabase functions deploy reading-page-og                         # verify_jwt =
 No secrets: the runtime provides `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Without it the preview
 falls back to the Book's cover or the app icon.
 
+**Invites from the waitlist.** A reading page's visitors can leave their address; you read them in
+Profile → Account → Waitlist ([The owner](#the-owner)). Its **Invite** button asks the `waitlist-invite`
+edge function, which gets the entry a one-use code, mails it over SMTP and marks the entry invited
+(`supabase/functions/waitlist-invite/README.md`). Any SMTP service works (the one from step 2 will do);
+hosted Supabase blocks outgoing ports 25 and 587, so use 465 or your provider's alternative port:
+
+```sh
+supabase functions deploy waitlist-invite                        # verify_jwt = true comes from supabase/config.toml
+supabase secrets set SMTP_HOST=<smtp host> SMTP_PORT=465 SMTP_USER=<user> SMTP_PASS=<password> \
+  SMTP_FROM=<invites@your domain> SMTP_FROM_NAME=Libellus      # SMTP_FROM_NAME is optional
+supabase secrets set LIBELLUS_SITE_URL=https://<your address>    # optional: the sign-up link in the mail
+```
+
+Without the SMTP secrets the Invite button still mints the code and shows it to you to send another way
+(the entry stays waiting); without the function it says the invite could not be made, and Mark invited
+and Copy waiting emails work as before.
+
 **Book links for everyone.** Each member keeps her own Book links in the Profile (stored in the
 database, private to her). An instance can add links every member sees first, built into the app:
 
@@ -265,7 +282,8 @@ Content-Security-Policy in `web/public/_headers` also names the owner's shelf ho
 | Supabase Auth | Email templates | Supabase's | Magic Link and Confirm signup from `supabase/templates/magic_link.html` (step 1.3). |
 | Supabase Auth | SMTP host, port, user, password, sender address and name | Supabase's (team only) | Your mail provider (step 2). |
 | Invite codes | `scripts/create-invite-code.sh` | none | Uses, expiry, label, the code itself (step 5). Locally `LIBELLUS-DEV` is seeded. |
-| Function secrets | `LIBELLUS_SITE_URL` | unset | `goodreads-rating`: your address, named in its User-Agent. Optional. |
+| Function secrets | `LIBELLUS_SITE_URL` | unset | `goodreads-rating`: your address, named in its User-Agent; `waitlist-invite`: the sign-up link in the invite mail. Optional. |
+| Function secrets | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_FROM_NAME` | unset (no mail: Invite shows the code only) | `waitlist-invite`: the SMTP server that mails waitlist invites. Port 465 or the provider's alternative; 25 and 587 are blocked on hosted Supabase. `SMTP_FROM_NAME` optional. |
 | Function secrets | `REGAL_EXPORT_TOKEN`, `REGAL_OWNER_EMAIL`, `REGAL_OWNER_NAME`, `REGAL_*` | unset | `regal-export`, owner only ([OWNER.md](OWNER.md)). |
 | Database | `private.instance_owner.owner_id` | empty (nobody) | Who may read the client error log through `owner_client_errors` ([The owner](#the-owner)). Set once by SQL. |
 | Database | `private.shelf_publish.owner_id`, Vault `github_dispatch_token` | empty | The shelf's publish trigger, owner only; does nothing while empty. |

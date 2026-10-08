@@ -82,6 +82,8 @@ supabase secrets set SMTP_HOST=<smtp host> SMTP_PORT=465 SMTP_USER=<user> SMTP_P
 supabase secrets set LIBELLUS_SITE_URL=https://<your address>   # optional: the link in the mail
 ```
 
-It reads `verify_jwt = true` from `config.toml`. It needs the migration
+On the owner's instance a release deploys it with the others and applies the migration
+(docs/OPERATIONS.md, Releases); only the secrets are set by hand, once. It reads `verify_jwt = true`
+from `config.toml`. It needs the migration
 `20261013010000_waitlist_invite.sql` (`owner_waitlist_prepare_invite`). Until it is deployed the
 Invite button says the invite could not be made; Mark invited and Copy waiting emails work as before.
