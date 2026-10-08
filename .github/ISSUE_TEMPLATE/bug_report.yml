@@ -26,6 +26,5 @@ body:
     attributes:
       label: Where
       options:
-        - A self-hosted instance
         - Running it locally
         - The owner's instance
