@@ -452,7 +452,7 @@ Any change under `.github/` runs everything, so CI changes are tested by CI.
 | `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), the user flows (`e2e`), plus the web build for `web/**` |
 | `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip |
 | `design/**`, `web/app/assets/css/tokens.generated.css` | Tokens check |
-| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich) | Deno lint, check, test of that function |
+| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite) | Deno lint, check, test of that function |
 
 On `main` the flows run whatever changed (every run there must say whether the whole suite passes). A
 pull request that touches several of these runs the union. A skipped job is a pass for everything
