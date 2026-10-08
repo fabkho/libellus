@@ -243,9 +243,13 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
 
   Interruptible like the search morph: Back tapped while the cover is still flying in turns it
   around from the point on screen, and the same book tapped again while it flies back sends it in
-  again from there; anything else lands the running flight at once. If the book page has not drawn
-  its hero when the flight starts, the cover waits for it (a frame or so, at most `standard`), then
-  fades where it is.
+  again from there; anything else lands the running flight at once. A Book this device has not
+  seen yet (an author's work, the next of a series) has no hero for a moment: its page stands a
+  quiet box at the hero cover's place, the cover flies there as to any hero, lands and waits on it,
+  and the hero takes over in the same place once drawn. A page with neither (a public Book card
+  still loading) is waited for a frame or so, at most `standard`, and the cover then fades where
+  it is. What goes wrong, and what the flight does instead, is listed under *How the push to a
+  book is built*.
 - **Tab bar away.** On every page (Home, Library, the Profile, a book, Collections, a Collection, Import) the tab bar
   slides down past the screen edge and fade out while the member scrolls down, and
   come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
@@ -397,6 +401,43 @@ the new direction's animation at the time its curve shows the same value (`start
 
 Not the View Transitions API, for the reasons above: a flight turned around mid-air, a page that keeps
 its scroll and its live state, and covers that land on their own pixels need live elements.
+
+Looked at again when the flight was reported glitchy and sometimes absent (the avatar's View
+Transition felt steadier): recorded frame by frame on a slowed CPU and network, with long Libraries,
+in Chromium and WebKit, the motion itself ran smooth and landed on its pixels; every fault was in
+what flies where (the cases above). A View Transition would need the same answers (which cover
+carries the name, where it lands while the Book loads) and would freeze the screen until the new
+page is drawn, so the FLIP stays.
+
+On a phone the flight is the compositor's, not the main thread's: every part is `transform` or
+`opacity` in Web Animations, which Chromium and WebKit hand to the compositor (iOS Safari to another
+process), so the page's own work mid-flight (a list rendering, a store answering) cannot make it
+stutter. The first frame's hold (`playbackRate` 0, then 1) shows in a Chromium trace as a failure to
+composite (`compositeFailed` 12) but the animation is composited once let go;
+`updatePlaybackRate(1)` instead would keep it on the main thread for good. What the main thread
+still does is the tap's work before the first frame (the page's copy, the measuring) and the
+bookkeeping between frames (landing, the hand-over), so a busy main thread delays the start or the
+hand-over, never the motion. `e2e/book-flight-android.spec.ts` holds the main thread for 200 ms
+mid-flight and watches the cover keep moving in the frames the compositor sends.
+
+### What can go wrong, and what the flight does instead
+
+The flight never animates towards a box that is not on screen or has no size, always ends on the
+live hero (or row) pixel for pixel, and its one fallback is a short fade, never a half state. Each
+case below is a flow in `e2e/book-flight.spec.ts`.
+
+| What happens | Without care | What the flight does |
+|---|---|---|
+| The Book's page is still loading (a Book this device has not seen: an author's work, the next of a series) | No hero to aim at: the cover waited `standard`, then faded where it was. The second time (the page cached) it flew, so it looked as if it worked only sometimes | The page's loading box is a stand-in at the hero cover's place (`data-flight-stand-in`): the cover flies there and lands, waits on it (the hero's image if it came, else the thumbhash), and moves into the hero once that is drawn, staying until the hero's image is in (`wait`, `keep`) |
+| The Book turns out missing or fails to load | — | The waiting copy fades out over `quick` |
+| A page with neither hero nor stand-in (a public Book card loading) | — | The cover waits up to `standard`, then fades where it is |
+| The same Book twice on a page (Home: Want to read and Next in your series) | Back flew into the first one in the page, not the one tapped | The push remembers the cover it left from (`Origin.cover`, a weak reference: the tab page is kept alive); Back flies into that one while it is on screen |
+| A title tapped whose cover is elsewhere (Home's reading card) | The first cover of that Book in the page, even one scrolled away | The nearest cover of that Book on screen; none on screen → the cross-fade |
+| Back mid-flight, or the same Book again while it flies back | Until the turned-around flight started, the router's new page showed at the strength the other page had, with its own cover beside the one in the air (a frame or two of flicker) | The turn-around poses like any departure: the copy of the page being left at the strength the screen showed it, the live page hidden, until the new flight takes over |
+| The new page is slow to draw (its code still loading) | The new page bare before the flight | The pose holds the screen as it was, up to 1 s |
+| The hero's large image is not in yet | The row's small image blown up to the hero's size | The row's image fades to the thumbhash before it is blown up; the large one fades in when decoded (`sharpen`, `fadeSoft`) |
+| The row's image was dropped while the book page was open | A blur or the thumbhash on the row for a moment after Back | The copy stays on the row until the row's image is decoded (`handOff`) |
+| iOS Safari's edge swipe, Reduce Motion, a book opened from search, a row scrolled away | — | No flight: the browser's own motion, a cross-fade, or the cover leaves with its page |
 
 ## Reduce Motion
 
