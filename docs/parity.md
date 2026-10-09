@@ -576,7 +576,7 @@ Actions → result:
 - On → `set_entry_hidden(entry, true)`, shown at once. The Book is gone for everyone else: from the feed, her profile, her counts and her figures.
 - Off → `set_entry_hidden(entry, false)`.
 - Offline: the switch works and the change waits in the outbox like the other changes to her own Books; the sync chip counts it (see *Save offline and sync later*). It is the one follow-related write that can wait.
-Edge cases: applies to any Book, Catalogue or Manual book (see *Manual book sheet*, *My edition isn't listed*). A hidden Book never becomes a feed entry. The sources do not say whether turning the switch off puts back what was already hidden from the feed (see the report of the docs task); this entry does not claim it.
+Edge cases: applies to any Book, Catalogue or Manual book (see *Manual book sheet*, *My edition isn't listed*). A hidden Book never becomes a feed entry. Unhiding a Book brings its old activity back with its dates, as switching a section back on does (contract §1.5a).
 Copy keys: `bookOptions.hide`, `bookOptions.hideHint`
 IDs: `bookOptions.hide` (the switch row)
 Flow: none named in the sources; the write's queue in `web/tests/outbox.test.ts`, the rules in pgTAP (`supabase/tests/social_activity_test.sql`)
