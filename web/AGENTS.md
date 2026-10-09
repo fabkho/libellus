@@ -11,6 +11,8 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm e2e` — Playwright, iPhone viewport, WebKit, Reduce Motion on, on the static build served
   like Pages (`e2e/build.ts` + `e2e/serve.mjs`, :4327). `LIBELLUS_E2E_DEV=1` runs it on `nuxt dev`.
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
+- `pnpm perf` — the client performance harness (production build, throttled Chromium and WebKit, scripted
+  journeys, a table): `perf/README.md`; findings in `../docs/perf/`. Needs its own throwaway stack, never the shared one.
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo
   fabkho/regal, is opt-in: `LIBELLUS_REGAL=1` plus `REGAL_LAYER=/path/to/regal-checkout` or
   `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
