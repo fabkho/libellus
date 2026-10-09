@@ -22,7 +22,7 @@
 // page — at its resting place with its scrim, its list scrolled where it was,
 // nothing rising or fading in. A fresh open (no `restore`) still rises.
 import { revealDelta, sheetLift } from '~/utils/keyboard'
-import { afterRise, browserEnvironment, defersFieldFocus, fieldMayTakeFocus, RISE_FOCUS_MARGIN } from '~/utils/sheetFocus'
+import { afterRise, browserEnvironment, defersFieldFocus, fieldMayTakeFocus, panelIsRising, RISE_FOCUS_MARGIN } from '~/utils/sheetFocus'
 import { durationToken, prefersReducedMotion } from '~/utils/motion'
 import type { SheetRestore } from '~/composables/useSheetRestore'
 
@@ -106,8 +106,9 @@ watch(open, (isOpen) => {
     scrolled.value = (props.restore?.scroll ?? 0) > 0
     resting.value = Boolean(props.restore)
     stopWaitingForRise()
-    // The signal is `moving` clearing; the timer is for when it comes late or never (PR #229).
-    if (waitsForRise()) riseFocus = afterRise(focusField, durationToken('sheet') + RISE_FOCUS_MARGIN)
+    // The signal is `moving` clearing; the fallback is for when it comes late or never (PR #229), and
+    // it ends the rise itself — so a late signal cannot leave `data-moving` on a sheet standing still.
+    if (waitsForRise()) riseFocus = afterRise(endRise, durationToken('sheet') + RISE_FOCUS_MARGIN, { stillRising: () => panelIsRising(panel.value) })
     window.addEventListener('keydown', onKeydown)
     if (props.restore) void putBack(props.restore.scroll)
   } else {
@@ -181,10 +182,27 @@ const titleId = useId()
  * guess from where it happens to be.
  */
 const moving = ref(false)
+/**
+ * The end of the rise, for the fallback (utils/sheetFocus.ts): it only comes this far once
+ * the panel says it is not on its way any more, so `data-moving` coming off here is the truth
+ * about a sheet standing still, and the watcher below moves focus on the render after it.
+ * The panel's own end-of-enter is the usual way there.
+ */
+function endRise() {
+  moving.value = false
+}
+
 // The rise is over: the field waiting for it takes focus.
 // After the render, so `data-moving` is already off the panel when the field takes focus.
-watch(moving, (now) => !now && riseFocus?.settled(), { flush: 'post' })
-
+watch(
+  moving,
+  (now) => {
+    if (now || !riseFocus) return
+    riseFocus.settled()
+    focusField()
+  },
+  { flush: 'post' },
+)
 /**
  * The sheet is being put back (`restore`): its enter transitions are off, for
  * this opening only. Set as it opens, before it is drawn, and cleared once it
