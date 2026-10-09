@@ -132,7 +132,9 @@ jobs:
             enrich:
               - *ci
               - 'supabase/functions/enrich/**'
+              - 'supabase/functions/catalogue-check/**'
               - 'web/app/data/enrich/genres.ts'
+              - 'web/app/data/entities.ts'
             invite:
               - *ci
               - 'supabase/functions/waitlist-invite/**'
@@ -373,6 +375,14 @@ jobs:
       - name: enrich function (Deno lint, check, test)
         if: ${{ !cancelled() && needs.changes.outputs.enrich == 'true' }}
         working-directory: supabase/functions/enrich
+        run: deno lint && deno check *.ts && deno task test
+
+      # The catalogue-check edge function (social v2a): unchecked Catalogue Books read at
+      # Apple and Open Library, on stand-in sources and an in-memory store. It shares the
+      # enrich function's http client (so it runs with it) and the entity decoder.
+      - name: catalogue-check function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.enrich == 'true' }}
+        working-directory: supabase/functions/catalogue-check
         run: deno lint && deno check *.ts && deno task test
 
       # The waitlist-invite edge function (#171): the owner's Invite, with a stand-in
