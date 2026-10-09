@@ -612,6 +612,9 @@
       "hint": "Pick the edition you hold. Your reads, ratings and collections stay with the book.",
       "listLabel": "Editions",
       "current": "Your edition",
+      "shown": "Showing now",
+      "browseHint": "Look at the other editions of this book. Nothing is saved: your Library stays as it is.",
+      "show": "Show",
       "loading": "Looking for other editions…",
       "none": "No other editions found.",
       "failed": "Other editions didn't load.",
@@ -623,7 +626,6 @@
       "changeAndSave": "Change & save",
       "formatLabel": "Format",
       "copyFormat": "Format of your copy",
-      "formatHelp": "Say what your copy is. It doesn't filter the list.",
       "formatSaid": "Your copy will be saved as {format}.",
       "missing": "My edition isn't listed"
     },

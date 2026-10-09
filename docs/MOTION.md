@@ -317,6 +317,8 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   the new title takes more or fewer lines it slides from where it was to where it is now over
   `standard`. Interruptible: leaving the page or another change ends it at
   once, the new edition in place. Reduce Motion: the cross-fade alone, nothing slides.
+  The same plays for a Book that is not in the Library when she picks another edition to look at
+  (Change edition's read-only form, `edition.viewing`): the page's Book changes, nothing is saved.
 - **A list changes.** Finish, Abandon or Start moves a Book from one list to another: the list on
   screen holds still until the sheet has fallen away (`useSettled`), then the card or row that
   leaves fades over `exit` while its room closes over `standard`, so the ones after it slide up and
