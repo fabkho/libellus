@@ -192,7 +192,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   one line with an ellipsis; the full text is in the accessible name. A row has `min-h`, never `h`, and
   its text column `min-w-0`. A large figure (the Profile's) measures itself against its cell
   (`container-type: inline-size`) and takes the size that fits, never wider than its cell. The rule
-  is held by `web/e2e/large-text.spec.ts` (Chromium with its default font size doubled).
+  is checked by hand with the default font size doubled (no flow; docs/TESTING.md, "Which flows").
 - **Safe areas** through utilities only: `screen-inset` (a whole screen), `bar-top` (a bar's
   44 pt controls row starts under the status bar, and at least `barTop` 8 off the top edge where the
   device reports no inset — every browser tab — so it never touches the browser's toolbar; the

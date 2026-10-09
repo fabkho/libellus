@@ -19,8 +19,7 @@ test.beforeEach(async ({ page }) => {
 test('a member finds a book, opens it, adds it and sees it on Want to read', async ({ page }) => {
   // The Catalogue is shared with every other run on this stack, which may have
   // added another edition of Piranesi just now; this flow is about a Book
-  // found on Apple Books, so the Catalogue answers nothing here
-  // (full-search.spec.ts drives it).
+  // found on Apple Books, so the Catalogue answers nothing here.
   await page.route(/\/rest\/v1\/rpc\/search_books/, async (route) =>
     route.fulfill({ response: await route.fetch(), body: '[]' }),
   )

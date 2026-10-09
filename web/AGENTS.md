@@ -16,7 +16,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
   `NUXT_PUBLIC_REGAL_LIBRARY_SRC` (the published library file). Without the flag `dev`, `e2e` and
   `build` run without it: `ShelfStage`/`ShelfRow` resolve to `app/regal/Absent.vue`, nobody is the
-  shelf's owner, `e2e/shelf.spec.ts` skips. With it, a missing layer or file stops `dev`/`generate`.
+  shelf's owner. With it, a missing layer or file stops `dev`/`generate`.
   Regal stays in its own `regal` chunk, loaded only by `LazyShelfStage` and never precached; the
   build fails if the entry ever imports it.
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.

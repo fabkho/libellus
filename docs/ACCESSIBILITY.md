@@ -111,7 +111,7 @@ shimmer stops, the tab bar stays.
   serious or critical axe violation and prints the moderate and minor ones. A new screen or sheet on a
   critical path gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), in the
   dark theme only: its colours come from the tokens whose contrast is checked in both themes (the table
-  under "Contrast"). The reader's, in its dark room, is `e2e/a11y-reader.spec.ts` (Chromium).
+  under "Contrast"). The reader is not on a critical path and has no scan; its rooms' colours are in the table.
   A violation that cannot be fixed in Libellus goes in `ALLOWED` in `e2e/support.ts` with its reason
   — never a rule switched off for a whole page.
 - **The keyboard and the screen reader** are not covered by axe: the second flow in `a11y.spec.ts`
@@ -139,8 +139,9 @@ shimmer stops, the tab bar stays.
   as a polite status that takes the form's place, and a honeypot field hidden from assistive tech and out
   of the tab order. The owner's Waitlist page names every trash button with the address it deletes and
   asks before deleting.
-- **The reader** (#131) is scanned in its dark room (`e2e/a11y-reader.spec.ts`: the page and its
-  chrome, Aa, Contents, search, the selection's bubble, Translate and Define) in the printed style;
+- **The reader** (#131) was scanned in its three rooms (the page and its
+  chrome, Aa, Contents, search, the selection's bubble, Translate and Define) in the printed style,
+  once by hand and by a flow since removed (docs/TESTING.md, "Which flows");
   the Classic style's bars and the scroll style's use the same tokens and are not scanned apart.
   Not done by hand: VoiceOver or TalkBack through a book (the page text is the book's own markup,
   inside a frame).
@@ -148,7 +149,7 @@ shimmer stops, the tab bar stays.
   the core loop, but gestures injected through adb are not taken as TalkBack gestures, so swiping
   through a screen and turning the wheel with TalkBack were not done by a person. Worth one manual
   pass on a phone; VoiceOver on iOS was not tried.
-- **Text at 200 %** (the rule is in DESIGN.md, Text size; held by `e2e/large-text.spec.ts`): the
+- **Text at 200 %** (the rule is in DESIGN.md, Text size; checked by hand, no flow): the
   Profile's figures scale down to fit their cell, and a Book's title in a row takes a second line from
   117 % text on a 412 px phone. Authors and meta lines are still cut with an ellipsis (a design choice:
   one line each; the full text is in the accessible name), and so are a sheet's title between Cancel

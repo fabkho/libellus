@@ -55,8 +55,8 @@ what Cloudflare Pages serves, service worker and manifest included.
 ### Regal, the owner's shelf (optional)
 
 Regal is the owner's 3D bookshelf, a Nuxt layer in a private repository. It is opt-in: without
-`LIBELLUS_REGAL=1` the app builds, runs and tests without it, the shelf's places stay empty and
-`e2e/shelf.spec.ts` skips. CI builds both ways. With access to it:
+`LIBELLUS_REGAL=1` the app builds, runs and tests without it, the shelf's places stay empty.
+CI builds both ways. With access to it:
 
 ```sh
 export LIBELLUS_REGAL=1

@@ -93,12 +93,12 @@ export async function handSession(page: Page, kept: Map<string, string>) {
  * Every flow runs on an iPhone's Safari, where Home shows the install hint
  * (issue #94) above what the flow reads and taps. It is dismissed from the
  * start, the way a member who has been here before has: `installHint: true`
- * leaves it to the flow that is about it (e2e/install-hint.spec.ts).
+ * leaves it to a flow that is about it (none now: tests/install-hint.test.ts).
  *
  * The same goes for Home's offer of the import (a card on the empty Home and over a Library of
  * a few Books, utils/importHint.ts): the member is marked as one who imported before, so no flow
- * has it above what it reads and taps. `importHint: true` leaves it to the flow that is
- * about it (e2e/import-offer.spec.ts).
+ * has it above what it reads and taps. `importHint: true` leaves it to a flow that is
+ * about it (none now: tests/import-hint.test.ts).
  */
 export async function signedIn(
   page: Page,
@@ -160,7 +160,7 @@ export async function untilStill(page: Page) {
  * in its final shape from the first frame (a member with nothing finished has
  * the empty state over her account rows at once, the Library being on the
  * device), so the rows no longer slide when the reading record lands
- * (e2e/profile.spec.ts watches them). Still: the record in (`profile.library`
+ * (no flow watches them now). Still: the record in (`profile.library`
  * is the hero's line for it), then nothing moving, so a flow reads the page as
  * a member does and a Library the device did not have yet has been settled too.
  */
@@ -178,15 +178,15 @@ export async function openProfile(page: Page) {
  * entry left on top of the page's (composables/useBackDismiss.ts). A sheet that has
  * just closed steps back off its entry a moment later, and WebKit loses a page load
  * that starts during that step back: `load` never comes, or its driver reports an
- * internal error (collections.spec.ts in CI).
+ * internal error (seen in CI).
  *
  * A page that is still fetching its own code loses one the same way, and the two
  * loads then cancel each other: the load cancels the chunk the app is importing, and
  * Nuxt cannot tell a cancelled import from a chunk a deploy replaced (app:chunkError
  * → nuxt:chunk-reload), so it reloads the page it is on while the member is leaving
  * it — WebKit reports `Frame load interrupted` or an internal error, or `load` never
- * comes. That is what made import.spec.ts, import-edition.spec.ts, no-side-scroll
- * and shelf.spec.ts flaky on main (a `page.goto` a moment after the one before it),
+ * comes. That is what made four flows (imports, no-side-scroll, the shelf's) flaky on main
+ * (a `page.goto` a moment after the one before it),
  * and why `untilStill` waits for the app: a load from here is a load from a page
  * that is done.
  */
