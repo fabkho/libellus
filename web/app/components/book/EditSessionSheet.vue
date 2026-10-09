@@ -45,6 +45,13 @@ const label = computed(() =>
   history.editBusy ? t('editSession.busy') : history.editError ? t('editSession.retry') : t('editSession.action'),
 )
 const reviewId = useId()
+
+// "Contains spoilers" (social v2a): the sheet's own flag, off each time it opens. Nothing writes it yet:
+// the parent can bind it (`v-model:spoilers`) and a later change sends it with the review.
+const spoilers = defineModel<boolean>('spoilers', { default: false })
+watch(open, (isOpen) => {
+  if (isOpen) spoilers.value = false
+})
 const reasonId = useId()
 
 // Deleting a read: the question, and what it costs when it is the only read.
@@ -124,6 +131,7 @@ watch(
             data-testid="editSession.review"
           />
         </div>
+        <BookSpoilerSwitch v-model="spoilers" class="mt-md" :disabled="history.editBusy" testid="editSession.spoilers" />
       </template>
 
       <div v-else-if="outcome === 'abandoned'" class="mt-lg">

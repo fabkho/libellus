@@ -42,6 +42,13 @@ const label = computed(() =>
 )
 const reviewId = useId()
 
+// "Contains spoilers" (social v2a): the sheet's own flag, off each time it opens. Nothing writes it yet:
+// the parent can bind it (`v-model:spoilers`) and a later change sends it with the review.
+const spoilers = defineModel<boolean>('spoilers', { default: false })
+watch(open, (isOpen) => {
+  if (isOpen) spoilers.value = false
+})
+
 const summary = computed(() => {
   const startedOn = entry.value?.latestSession?.startedOn
   if (!entry.value || !startedOn || !/^\d{4}-\d{2}-\d{2}$/.test(reading.endedOn)) return null
@@ -96,6 +103,7 @@ const summary = computed(() => {
           data-testid="finish.review"
         />
       </div>
+      <BookSpoilerSwitch v-model="spoilers" class="mt-md" :disabled="reading.finishBusy" testid="finish.spoilers" />
 
       <p v-if="reading.finishError" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="finish.error">
         {{ t(`library.error.${reading.finishError}`) }}
