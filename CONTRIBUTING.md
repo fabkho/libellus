@@ -14,7 +14,9 @@ Working on the code:
   `data-testid` on every control); [CONTEXT.md](CONTEXT.md) the words for things.
 - Rules live in the database: a change to them comes with a migration and pgTAP tests
   (`supabase/tests/`). A change to the data layer comes with Vitest tests against the local stack, a
-  change a member can see with a Playwright flow and its entry in [docs/parity.md](docs/parity.md).
+  change a member can see with its entry in [docs/parity.md](docs/parity.md), and with a Playwright flow
+  only if it is on a critical path (docs/TESTING.md, "Which flows"; everything else is a Vitest or pgTAP
+  test).
 - Commits are [conventional](https://www.conventionalcommits.org) (`fix(search): …`), one concern
   each, with a body that says why in full sentences.
 - CI runs what your change touches (docs/TESTING.md, "CI: what runs when"); it has to be green.

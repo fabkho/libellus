@@ -46,7 +46,7 @@ Code that animates with the Web Animations API reads the durations back from the
 (`durationToken`, `utils/motion.ts`) in either unit: the source writes milliseconds, but the built
 stylesheet is minified to the shortest form (`--duration-standard: .25s`). Read as a bare number that
 was a quarter of a millisecond, and every such motion jumped to its end in the built app while the
-dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.spec.ts`).
+dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/android/flight.ts`).
 
 ## Named motions
 
@@ -78,7 +78,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   The named element (`data-profile-avatar`) is the whole avatar, the ring, the shadow, the photo and
   the initials: in the hero it is the button that draws the ring, not the disc inside it, so the
   ring flies with the photo instead of standing at its place from the first frame
-  (`e2e/avatar-flight.spec.ts`).
+  (checked by eye; no flow).
 - **Push to an author** (#167). Tapping an author (the Book page's author line, a list row's author)
   moves the page as the push to the Profile does, without a ring and with its wave held still the
   same way: the author's page fades in as the
@@ -154,7 +154,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   what was open and puts it back: `composables/useSheetRestore.ts`). What plays is the page's: the
   cover flies back over the sheet (the flying layer goes above it, `data-over-sheet`) and lands on its
   row in the sheet. A fresh opening (the tally tapped again) rises as always, and the way out is
-  unchanged. Reduce Motion: as for every sheet, nothing moves either way (`e2e/sheet-restore.spec.ts`).
+  unchanged. Reduce Motion: as for every sheet, nothing moves either way (checked by eye; no flow).
 - **Reveal.** Something that was not there until it had something to say (the book page's figures,
   chart and reading log before any progress was tracked, `UiReveal`) opens its room and fades in over
   `standard`, so what sits under it glides down instead of jumping; it closes over `exit`. Clipped only
@@ -297,7 +297,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   (`UiListMotion`). A change made on another screen (a Start on the book page) plays when the list
   is back on screen. Interruptible: an item reverses from the height it has. A list never moves
   items it measured off the page (a kept-alive tab in the background re-rendering): coming back to a
-  tab shows its list in place (`e2e/library-return.spec.ts`).
+  tab shows its list in place (checked by eye; no flow).
   The lists' quiet refresh when a tab comes back waits for whatever is moving (the cover flying back
   into its row and handing over, the Profile's View Transition: `afterMotion`, `utils/motion.ts`)
   before it is applied, and an entry that did not change stays the same object, so a refresh
@@ -310,7 +310,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   sheet's own rise between two renders would be read as every row's move). The line under the list ("Looking for other editions…", "didn't
   load", "No other editions found") is a `UiReveal`, so it opens and closes its room too. A sheet
   that opens again starts its list afresh, without animating out what it kept while it slid away.
-  Reduce Motion: the list simply changes (`e2e/change-edition.spec.ts`).
+  Reduce Motion: the list simply changes (checked by eye; no flow).
 - **Tally mark.** A finish adds a mark to Home's tally: it fades in at full lamp with its glow and
   settles to the others' strength over twice `sheet`. Only a mark added to a count already on
   screen lights up.
@@ -321,7 +321,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   fades in and rises the last `xs` over twice `sheet` on the `standard` curve, in the accent colour
   (`accentInk`) that settles to its quiet one, as the tally's new mark lights and settles. Only a change on
   screen plays; a row drawn with the status in it just has it. Reduce Motion: no delay, the status is there
-  at once (`e2e/home-series.spec.ts`).
+  at once (checked by eye; no flow).
 - **Sheet on the keyboard.** A sheet whose field has the iOS keyboard rides up on it like the search
   palette, over `keyboard` with the `keyboard` curve, and its focused field scrolls into view.
 - **Hover.** With a mouse (only where the device hovers), rows and menu items take the `fill`,
@@ -436,14 +436,16 @@ composite (`compositeFailed` 12) but the animation is composited once let go;
 `updatePlaybackRate(1)` instead would keep it on the main thread for good. What the main thread
 still does is the tap's work before the first frame (the page's copy, the measuring) and the
 bookkeeping between frames (landing, the hand-over), so a busy main thread delays the start or the
-hand-over, never the motion. `e2e/book-flight-android.spec.ts` holds the main thread for 200 ms
-mid-flight and watches the cover keep moving in the frames the compositor sends.
+hand-over, never the motion. Holding the main thread for 200 ms mid-flight and watching the cover keep moving
+in the frames the compositor sends showed it (a flow, removed with the motion flows; `e2e/android/flight.ts`
+is what is left, on the emulator).
 
 ### What can go wrong, and what the flight does instead
 
 The flight never animates towards a box that is not on screen or has no size, always ends on the
 live hero (or row) pixel for pixel, and its one fallback is a short fade, never a half state. Each
-case below is a flow in `e2e/book-flight.spec.ts`.
+case below was a flow in `book-flight.spec.ts`, removed with the motion flows (docs/TESTING.md, "Which
+flows"); the flight's geometry is `tests/flight.test.ts`.
 
 | What happens | Without care | What the flight does |
 |---|---|---|

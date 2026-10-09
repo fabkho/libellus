@@ -116,30 +116,3 @@ test('a member starts a book, finishes it with 3.75 stars and a review, and find
   )
   expect(session).toEqual({ started_on: today, ended_on: today, rating: 15, review: 'A house of tides and statues.' })
 })
-
-test('a failed start says why and tries again', async ({ page }) => {
-  await signedIn(page)
-  await addPiranesi(page)
-  await page.getByTestId('book.start').click()
-
-  // A day that has not come yet is refused in the sheet, before anything is sent.
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 2)
-  await page.getByTestId('start.date').fill(isoDay(tomorrow))
-  await page.getByTestId('start.submit').click()
-  await expect(page.getByTestId('start.error')).toHaveText(en.library.error.date_in_future)
-  await page.getByTestId('start.date').fill(isoDay())
-
-  // The server fails (a connection that answers nothing is queued instead: no-answer.spec.ts):
-  // the sheet stays, says so, and offers to try again.
-  await page.route('**/rest/v1/rpc/start_reading', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'The server fell over.' }) }))
-  await page.getByTestId('start.submit').click()
-  await expect(page.getByTestId('start.error')).toHaveText(en.library.error.unknown)
-  await expect(page.getByTestId('start.submit')).toHaveText(en.start.retry)
-  await expect(page.getByTestId('book.status')).toHaveText(en.status.want_to_read)
-
-  await page.unroute('**/rest/v1/rpc/start_reading')
-  await page.getByTestId('start.submit').click()
-  await expect(page.getByTestId('start')).toBeHidden()
-  await expect(page.getByTestId('book.status')).toHaveText(en.status.reading)
-})

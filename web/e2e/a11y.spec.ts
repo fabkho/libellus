@@ -1,27 +1,23 @@
 import { expect, type Page } from '@playwright/test'
-import sharp from 'sharp'
-import en from '../i18n/locales/en.json' with { type: 'json' }
 import type { BookSnapshot } from '../app/data/books'
 import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
-import { enrichedLibrary, forgetEnriched } from './enriched'
-import { startedSeries } from './started'
 import { test } from './fixtures'
-import { endFromBook, expectAccessible, openProfile, recordedApple, recordedTitleQuery, signedIn, untilStill } from './support'
+import { endFromBook, expectAccessible, openProfile, recordedApple, signedIn, untilStill } from './support'
 
 /**
- * Accessibility (docs/ACCESSIBILITY.md): axe-core over every main screen and
- * sheet, in the light and the dark room, on a phone (412 × 915, the Pixel the
+ * Accessibility (docs/ACCESSIBILITY.md): axe-core over the screens and sheets of the critical paths
+ * (the way in, Home and the search, a Book with Start, Update progress, Finish and Add, the Library,
+ * the Profile), in the dark room only (the design's own; the text tokens are checked in both
+ * themes by their contrast table in docs/ACCESSIBILITY.md), on a phone (412 × 915, the Pixel the
  * Android checks use). A serious or critical violation fails the flow; the
  * moderate and minor ones are printed, not failed (the DevTools' Nuxt a11y tab
  * shows them while developing). The scan is `expectAccessible` (e2e/support.ts);
  * a violation that is known and cannot be fixed here goes in its ALLOWED with the
- * reason, never by turning a rule off for a whole screen. Your shelf's screens
- * are scanned in e2e/shelf.spec.ts, where the owner's flows take turns; the reading page,
- * its Book cards and their sheets (#171) in e2e/reading-page.spec.ts. The reader
- * (#131) is scanned in each of its three rooms in e2e/a11y-reader.spec.ts (Chromium).
+ * reason, never by turning a rule off for a whole screen. The public reading page, its Book cards
+ * and the waitlist form are scanned in e2e/reading-page.spec.ts.
  */
 
 function book(title: string, author: string, pages: number | null): BookSnapshot {
@@ -82,11 +78,6 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
   await expect(page.getByTestId('home.title')).toBeVisible()
 }
 
-/** A small picture for the photo's sheets. */
-function samplePhoto(): Promise<Buffer> {
-  return sharp({ create: { width: 600, height: 400, channels: 3, background: { r: 180, g: 140, b: 90 } } }).png().toBuffer()
-}
-
 /** Opens a sheet with a tap and waits for it to be in place. */
 async function openSheet(page: Page, opener: string, sheet: string) {
   await page.getByTestId(opener).first().click()
@@ -100,297 +91,115 @@ async function closeSheet(page: Page, sheet: string) {
   await untilStill(page)
 }
 
-for (const colorScheme of ['light', 'dark'] as const) {
-  test.describe(`accessibility, ${colorScheme}`, { tag: '@full' }, () => {
-    test.use({ colorScheme, viewport: { width: 412, height: 915 } })
+test.describe('accessibility, dark', { tag: '@full' }, () => {
+  test.use({ colorScheme: 'dark', viewport: { width: 412, height: 915 } })
 
-    test('the way in: sign in, sign up, the code', async ({ page }) => {
-      await page.goto('/sign-up')
-      await expect(page.getByTestId('signUp.title')).toBeVisible()
-      await expectAccessible(page, 'sign up')
+  test('the way in: sign in, sign up, the code', async ({ page }) => {
+    await page.goto('/sign-up')
+    await expect(page.getByTestId('signUp.title')).toBeVisible()
+    await expectAccessible(page, 'sign up')
 
-      const member = await signUpMember()
-      await emailCooldown()
-      await page.goto('/sign-in')
-      await expect(page.getByTestId('signIn.title')).toBeVisible()
-      await expectAccessible(page, 'sign in')
-      await page.getByTestId('signIn.email').fill(member.email)
-      await page.getByTestId('signIn.submit').click()
-      await expect(page).toHaveURL(/\/verify$/)
-      await expectAccessible(page, 'the code')
-      await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
-      await expect(page.getByTestId('home.title')).toBeVisible()
-    })
-
-    test('Home, its sheet, the search palette and its results', async ({ page }) => {
-      await recordedApple(page)
-      const member = await signedIn(page)
-      await expectAccessible(page, 'Home, empty')
-      await seed(page, member.client)
-      await expectAccessible(page, 'Home')
-      await openSheet(page, 'home.tally', 'homeTally')
-      await expectAccessible(page, "Home's Read in sheet")
-      await closeSheet(page, 'homeTally')
-
-      await page.getByTestId('shell.tab.search').click()
-      await expect(page.getByTestId('search.query')).toBeFocused()
-      await untilStill(page)
-      await expectAccessible(page, 'the search palette')
-      await page.getByTestId('search.query').fill('Piranesi')
-      await expect(page.getByTestId('search.result').first()).toBeVisible()
-      await expectAccessible(page, 'search results')
-    })
-
-    test('the Library: its segments, the filters, Collections', async ({ page }) => {
-      const member = await signedIn(page)
-      await seed(page, member.client)
-      await page.getByTestId('shell.tab.library').click()
-      for (const segment of ['want_to_read', 'reading', 'finished']) {
-        await page.getByTestId(`library.segment.${segment}`).click()
-        await expectAccessible(page, `the Library, ${segment}`)
-      }
-      await openSheet(page, 'library.view.filter', 'libraryFilter')
-      await page.getByTestId('libraryFilter.status.notFinished').click()
-      await page.getByTestId('libraryFilter.action').click()
-      await expect(page.getByTestId('libraryFilter')).toBeHidden()
-      await untilStill(page)
-      await expectAccessible(page, 'the Library, not finished')
-      await page.getByTestId('library.view.clear').click()
-      await untilStill(page)
-      // Filter and sort (#169): the pills, the sheets, a filter set (chips, count), nothing matching.
-      await openSheet(page, 'library.view.filter', 'libraryFilter')
-      await expectAccessible(page, 'the Library, Filter')
-      await page.getByTestId('libraryFilter.rating.4').click()
-      await page.getByTestId('libraryFilter.action').click()
-      await expect(page.getByTestId('libraryFilter')).toBeHidden()
-      await untilStill(page)
-      await expect(page.getByTestId('library.view.chip')).toHaveCount(1)
-      await expectAccessible(page, 'the Library, filtered')
-      await openSheet(page, 'library.view.sort', 'librarySort')
-      await expectAccessible(page, 'the Library, Sort')
-      await closeSheet(page, 'librarySort')
-      await openSheet(page, 'library.view.filter', 'libraryFilter')
-      await page.getByTestId('libraryFilter.pagesMin').fill('9000')
-      await page.getByTestId('libraryFilter.action').click()
-      await expect(page.getByTestId('library.viewEmpty')).toBeVisible()
-      await untilStill(page)
-      await expectAccessible(page, 'the Library, nothing matches')
-      await page.getByTestId('library.viewEmpty.clear').click()
-      await untilStill(page)
-      await page.goto('/collections')
-      await expect(page.getByTestId('collections.title')).toBeVisible()
-      await expectAccessible(page, 'Collections')
-    })
-
-    test('a Book in every status, and its sheets', async ({ page }) => {
-      // Eleven scans and four Books: longer than a usual flow, above all on CI's two cores.
-      test.slow()
-      await recordedApple(page)
-      const member = await signedIn(page)
-      await seed(page, member.client)
-
-      // Being read: the page, Update progress (the wheel, Finish and DNF under it), Finish, Abandon
-      // (both from that sheet), the options (Read as), Change edition.
-      await page.getByTestId('home.entry').first().click()
-      await expect(page.getByTestId('book.title')).toBeVisible()
-      await expectAccessible(page, 'a Book being read')
-      await openSheet(page, 'book.updateProgress', 'progress')
-      await expect(page.getByTestId('progress.abandonRow')).toBeVisible()
-      await expectAccessible(page, 'Update progress')
-      await closeSheet(page, 'progress')
-      await endFromBook(page, 'finish')
-      await expectAccessible(page, 'Finish')
-      await closeSheet(page, 'finish')
-      await endFromBook(page, 'abandon')
-      await expectAccessible(page, 'Abandon')
-      await closeSheet(page, 'abandon')
-      await openSheet(page, 'book.options', 'bookOptions')
-      await expectAccessible(page, "a Book's options")
-      await page.getByTestId('bookOptions.changeEdition').click()
-      await expect(page.getByTestId('edition')).toBeVisible()
-      await expect(page.getByTestId('edition.loading')).toHaveCount(0)
-      await expectAccessible(page, 'Change edition')
-      // A format said: the helper line, the picked row and the action's words change.
-      await page.getByTestId('edition.format.audiobook').click()
-      await expect(page.getByTestId('edition.formatHelp')).toBeVisible()
-      await untilStill(page)
-      await expectAccessible(page, 'Change edition, a format said')
-      // My edition isn't listed: the ISBN, nothing found, her own edition's form with a wrong field.
-      await page.getByTestId('edition.missing').click()
-      await expect(page.getByTestId('ownEdition')).toBeVisible()
-      await untilStill(page)
-      await expectAccessible(page, "My edition isn't listed")
-      await page.getByTestId('ownEdition.isbn').fill('979-0-000042-01-8')
-      await page.getByTestId('ownEdition.lookUp').click()
-      await expect(page.getByTestId('ownEdition.notFound')).toBeVisible()
-      await expectAccessible(page, "My edition isn't listed, nothing found")
-      await page.getByTestId('ownEdition.startOwn').click()
-      await page.getByTestId('ownEdition.submit').click()
-      await expect(page.getByTestId('ownEdition.invalid')).toBeVisible()
-      await expectAccessible(page, 'her own edition')
-      await closeSheet(page, 'ownEdition')
-
-      // Wanted: Start.
-      await page.getByTestId('shell.tab.library').click()
-      await page.getByTestId('library.segment.want_to_read').click()
-      await page.getByTestId('library.entry').first().click()
-      await expect(page.getByTestId('book.title')).toBeVisible()
-      await expectAccessible(page, 'a wanted Book')
-      await openSheet(page, 'book.start', 'start')
-      await expectAccessible(page, 'Start reading')
-      await closeSheet(page, 'start')
-
-      // Finished, with its reads.
-      await page.getByTestId('shell.tab.library').click()
-      await page.getByTestId('library.segment.finished').click()
-      await page.getByTestId('library.entry').first().click()
-      await expect(page.getByTestId('book.title')).toBeVisible()
-      await expectAccessible(page, 'a finished Book')
-      await expect(page.getByTestId('book.genre').first()).toBeVisible()
-      await openSheet(page, 'book.genresEdit', 'genreSheet')
-      await expectAccessible(page, 'the genres sheet')
-      await closeSheet(page, 'genreSheet')
-
-      // Not in the Library: from a search result, and Add.
-      await page.getByTestId('shell.tab.search').click()
-      // Apple's Piranesi, not hers: the Catalogue (her own and every other flow's) answers nothing here.
-      await page.route(/\/rest\/v1\/rpc\/search_books/, async (route) => route.fulfill({ response: await route.fetch(), body: '[]' }))
-      await page.getByTestId('search.query').fill('Piranesi')
-      // The first result the sources found, after her own group ("In your Library").
-      await page.locator('[data-testid="search.results"] > li[data-near-key]').first().getByTestId('search.result').click()
-      await expect(page.getByTestId('book.add')).toBeVisible()
-      await expectAccessible(page, 'a Book not in the Library')
-      await openSheet(page, 'book.add', 'add')
-      await expectAccessible(page, 'Add')
-    })
-
-    test('an author\'s page, a series and its correction, Home\'s next in series', async ({ page }) => {
-      const member = await signedIn(page)
-      const data = await enrichedLibrary(member.client)
-      try {
-        await page.goto(`/author/${data.authors.pratchett}`)
-        await expect(page.getByTestId('author.name')).toBeVisible()
-        await expectAccessible(page, "an author's page")
-        await page.goto(`/book/${data.entries.feetOfClay.book.id}`)
-        await expect(page.getByTestId('book.series')).toBeVisible()
-        await expectAccessible(page, 'a Book in a series')
-        await openSheet(page, 'book.series', 'series')
-        await expectAccessible(page, 'the series sheet')
-        await page.getByTestId('series.correct').click()
-        await expect(page.getByTestId('seriesEdit')).toBeVisible()
-        await untilStill(page)
-        await expectAccessible(page, 'correcting a series')
-        await closeSheet(page, 'seriesEdit')
-        await page.goto('/')
-        await expect(page.getByTestId('home.nextInSeries')).toBeVisible()
-        await expectAccessible(page, "Home with the next in a series")
-      } finally {
-        await forgetEnriched(data.ids)
-      }
-    })
-
-    test("Home's next in your series: the section, its sheet and a Want to read added", async ({ page }) => {
-      const member = await signedIn(page)
-      const data = await startedSeries(member.client, 6)
-      try {
-        await page.goto('/')
-        await expect(page.getByTestId('home.nextMore')).toBeVisible()
-        await untilStill(page)
-        await expectAccessible(page, 'Home with five series started and See more')
-        await openSheet(page, 'home.nextMore', 'homeSeries')
-        await expectAccessible(page, "Home's series sheet")
-        await page.getByTestId('homeSeries.rowWant').last().click()
-        await expect(page.getByTestId('add')).toBeVisible()
-        await untilStill(page)
-        await page.getByTestId('add.submit').click()
-        await expect(page.getByTestId('add')).toBeHidden()
-        await expect(page.getByTestId('homeSeries.rowStatus')).toHaveText(en.status.want_to_read)
-        await untilStill(page)
-        await expectAccessible(page, "the series sheet with a Want to read added")
-        await closeSheet(page, 'homeSeries')
-      } finally {
-        await forgetEnriched(data.ids)
-      }
-    })
-
-    test('the Profile, its sheets and a year in review', async ({ page }) => {
-      const member = await signedIn(page)
-      await seed(page, member.client)
-      // Until the reading record is in and has come to rest: its figures and lines fade in over `standard`
-      // (`arrive`), and a scan that starts before them reads colours half way (#7c7872 for inkFaint).
-      await openProfile(page)
-      await expect(page.getByTestId('profile.figures')).toBeVisible()
-      await expectAccessible(page, 'the Profile')
-      await openSheet(page, 'profile.stars.4', 'profileReads')
-      await expectAccessible(page, "the Profile's reads sheet")
-      await closeSheet(page, 'profileReads')
-      await openSheet(page, 'profile.pagesMissing', 'profileReads')
-      await expectAccessible(page, "the Profile's reads without a page count")
-      await closeSheet(page, 'profileReads')
-      await openSheet(page, `profile.day.${isoDay()}`, 'profileReads')
-      await expectAccessible(page, "the Profile's reads of a day")
-      await closeSheet(page, 'profileReads')
-      await openSheet(page, 'profile.links', 'links')
-      await expectAccessible(page, 'Book links')
-      await closeSheet(page, 'links')
-      await openSheet(page, 'profile.whatsNew', 'whatsNew')
-      await expectAccessible(page, "What's new")
-      await closeSheet(page, 'whatsNew')
-      // The photo (#156): the crop, then the sheet of a saved photo.
-      await page.getByTestId('photo.file').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: await samplePhoto() })
-      await expect(page.getByTestId('photo.picture')).toBeVisible()
-      await untilStill(page)
-      await expectAccessible(page, 'the photo crop')
-      await page.getByTestId('photo.action').click()
-      await expect(page.getByTestId('photo')).toBeHidden()
-      await untilStill(page)
-      await openSheet(page, 'profile.avatar', 'photo')
-      await expectAccessible(page, 'the photo sheet')
-      await closeSheet(page, 'photo')
-      await page.goto('/profile/2025')
-      await expect(page.getByTestId('yearInReview.title')).toHaveText('2025')
-      // Her favourite is the record's: in once the year has arrived, and the page has come to rest.
-      await expect(page.getByTestId('yearInReview.favouriteTitle')).toBeVisible()
-      await expectAccessible(page, 'a year in review')
-    })
-
-    test('Import: the apps it reads, how to export from each, a refused file', async ({ page }) => {
-      await signedIn(page)
-      await page.goto('/import')
-      await expect(page.getByTestId('import.howTo')).toBeVisible()
-      await expectAccessible(page, 'Import')
-      await page.getByTestId('import.howTo.hardcover').click()
-      await expect(page.getByTestId('import.howTo.hardcover.text')).toBeVisible()
-      await page.getByTestId('import.file').setInputFiles({ name: 'notes.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Email\nA,B\n') })
-      await expect(page.getByTestId('import.fileError')).toBeVisible()
-      await expectAccessible(page, 'Import, how to export and a refused file')
-    })
-
-    test('Import: the preview with a book to choose an edition for, and the Choose edition sheet', async ({ page }) => {
-      await recordedTitleQuery(page)
-      await signedIn(page)
-      await page.goto('/import')
-      const header =
-        'Book Id,Title,Author,ISBN,ISBN13,My Rating,Publisher,Number of Pages,Year Published,Date Read,Date Added,Exclusive Shelf,My Review'
-      await page.getByTestId('import.file').setInputFiles({
-        name: 'goodreads_library_export.csv',
-        mimeType: 'text/csv',
-        buffer: Buffer.from(`${header}\n991,Piranesi,Susanna Clarke,,,0,,,,,2025/06/12,to-read,\n`),
-      })
-      await expect(page.getByTestId('import.start')).toBeVisible({ timeout: 30_000 })
-      await expectAccessible(page, 'Import preview, a book to choose an edition for')
-      await openSheet(page, 'import.attentionList.action', 'edition')
-      await expect(page.getByTestId('edition.loading')).toHaveCount(0, { timeout: 30_000 })
-      await expectAccessible(page, 'Choose edition')
-      await closeSheet(page, 'edition')
-      await page.getByTestId('import.attentionList.action').first().click()
-      await page.getByTestId('edition.candidate').nth(1).click()
-      await page.getByTestId('edition.action').click()
-      await expect(page.getByTestId('import.choices')).toBeVisible()
-      await expectAccessible(page, 'Import preview, her choices')
-    })
+    const member = await signUpMember()
+    await emailCooldown()
+    await page.goto('/sign-in')
+    await expect(page.getByTestId('signIn.title')).toBeVisible()
+    await expectAccessible(page, 'sign in')
+    await page.getByTestId('signIn.email').fill(member.email)
+    await page.getByTestId('signIn.submit').click()
+    await expect(page).toHaveURL(/\/verify$/)
+    await expectAccessible(page, 'the code')
+    await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
+    await expect(page.getByTestId('home.title')).toBeVisible()
   })
-}
+
+  test('Home, its sheet, the search palette and its results', async ({ page }) => {
+    await recordedApple(page)
+    const member = await signedIn(page)
+    await expectAccessible(page, 'Home, empty')
+    await seed(page, member.client)
+    await expectAccessible(page, 'Home')
+    await openSheet(page, 'home.tally', 'homeTally')
+    await expectAccessible(page, "Home's Read in sheet")
+    await closeSheet(page, 'homeTally')
+
+    await page.getByTestId('shell.tab.search').click()
+    await expect(page.getByTestId('search.query')).toBeFocused()
+    await untilStill(page)
+    await expectAccessible(page, 'the search palette')
+    await page.getByTestId('search.query').fill('Piranesi')
+    await expect(page.getByTestId('search.result').first()).toBeVisible()
+    await expectAccessible(page, 'search results')
+  })
+
+  test('the Library: its three segments', async ({ page }) => {
+    const member = await signedIn(page)
+    await seed(page, member.client)
+    await page.getByTestId('shell.tab.library').click()
+    for (const segment of ['want_to_read', 'reading', 'finished']) {
+      await page.getByTestId(`library.segment.${segment}`).click()
+      await expectAccessible(page, `the Library, ${segment}`)
+    }
+  })
+
+  test('a Book in every status, and its sheets', async ({ page }) => {
+    // Seven scans and four Books: longer than a usual flow, above all on CI's two cores.
+    test.slow()
+    await recordedApple(page)
+    const member = await signedIn(page)
+    await seed(page, member.client)
+
+    // Being read: the page, Update progress (the wheel), Finish.
+    await page.getByTestId('home.entry').first().click()
+    await expect(page.getByTestId('book.title')).toBeVisible()
+    await expectAccessible(page, 'a Book being read')
+    await openSheet(page, 'book.updateProgress', 'progress')
+    await expect(page.getByTestId('progress.abandonRow')).toBeVisible()
+    await expectAccessible(page, 'Update progress')
+    await closeSheet(page, 'progress')
+    await endFromBook(page, 'finish')
+    await expectAccessible(page, 'Finish')
+    await closeSheet(page, 'finish')
+
+    // Wanted: Start.
+    await page.getByTestId('shell.tab.library').click()
+    await page.getByTestId('library.segment.want_to_read').click()
+    await page.getByTestId('library.entry').first().click()
+    await expect(page.getByTestId('book.title')).toBeVisible()
+    await expectAccessible(page, 'a wanted Book')
+    await openSheet(page, 'book.start', 'start')
+    await expectAccessible(page, 'Start reading')
+    await closeSheet(page, 'start')
+
+    // Finished, with its reads.
+    await page.getByTestId('shell.tab.library').click()
+    await page.getByTestId('library.segment.finished').click()
+    await page.getByTestId('library.entry').first().click()
+    await expect(page.getByTestId('book.title')).toBeVisible()
+    await expectAccessible(page, 'a finished Book')
+
+    // Not in the Library: from a search result, and Add.
+    await page.getByTestId('shell.tab.search').click()
+    // Apple's Piranesi, not hers: the Catalogue (her own and every other flow's) answers nothing here.
+    await page.route(/\/rest\/v1\/rpc\/search_books/, async (route) => route.fulfill({ response: await route.fetch(), body: '[]' }))
+    await page.getByTestId('search.query').fill('Piranesi')
+    // The first result the sources found, after her own group ("In your Library").
+    await page.locator('[data-testid="search.results"] > li[data-near-key]').first().getByTestId('search.result').click()
+    await expect(page.getByTestId('book.add')).toBeVisible()
+    await expectAccessible(page, 'a Book not in the Library')
+    await openSheet(page, 'book.add', 'add')
+    await expectAccessible(page, 'Add')
+  })
+
+  test('the Profile, where she signs out and deletes her account', async ({ page }) => {
+    const member = await signedIn(page)
+    await seed(page, member.client)
+    // Until the reading record is in and has come to rest: its figures and lines fade in over `standard`
+    // (`arrive`), and a scan that starts before them reads colours half way (#7c7872 for inkFaint).
+    await openProfile(page)
+    await expect(page.getByTestId('profile.figures')).toBeVisible()
+    await expectAccessible(page, 'the Profile')
+  })
+})
 
 /**
  * What axe cannot see: the keyboard. The Library's segments are tabs (the arrows move between

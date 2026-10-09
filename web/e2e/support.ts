@@ -6,9 +6,8 @@ import { appleAnswer, appleCover } from '../tests/support/apple'
 import { openLibraryAnswer } from '../tests/support/openLibrary'
 import { INSTALL_HINT_KEY } from '../app/utils/installHint'
 import { IMPORT_HINT_KEY } from '../app/utils/importHint'
-import { createAuth } from '../app/data/auth'
 import { signUpMember } from '../tests/support/member'
-import { emailCooldown, newClient, readMailedCode, serviceRoleKey, stack } from '../tests/support/stack'
+import { emailCooldown, readMailedCode } from '../tests/support/stack'
 
 /**
  * Answers every source behind search from the recordings: Apple
@@ -52,31 +51,6 @@ export async function recordedApple(page: Page) {
   )
 }
 
-/**
- * After `recordedApple`: the recordings answer a search for "piranesi" only, and the
- * import and its Choose edition sheet ask for "<title> <first author>"
- * ("Piranesi Susanna Clarke"). This points that query at the same recordings, so
- * a book without an ISBN finds Piranesi's many editions by its title.
- */
-export async function recordedTitleQuery(page: Page) {
-  const recorded = (url: URL) => {
-    for (const [name, value] of url.searchParams) if (value.trim().toLowerCase() === 'piranesi susanna clarke') url.searchParams.set(name, 'piranesi')
-    return url
-  }
-  for (const [host, answer] of [
-    ['https://itunes.apple.com/**', appleAnswer],
-    ['https://openlibrary.org/**', openLibraryAnswer],
-  ] as const)
-    await page.route(host, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        headers: { 'access-control-allow-origin': '*' },
-        body: JSON.stringify(answer(recorded(new URL(route.request().url())))),
-      }),
-    )
-}
-
 /** What supabase-js keeps of a session (`sb-<host>-auth-token`), kept in memory on the test's side. */
 export function sessionStorageInMemory() {
   const kept = new Map<string, string>()
@@ -91,7 +65,7 @@ export function sessionStorageInMemory() {
 }
 
 /**
- * Hands a session made through the API (`signUpMember`, `signedInClient`) to the page: the
+ * Hands a session made through the API (`signUpMember`) to the page: the
  * entries supabase-js wrote are put into its localStorage before the app boots, so the app
  * starts signed in, the way it does for a member who signed in before. Once per tab (a flag in
  * sessionStorage): a sign-out in the flow sticks, and a second call for someone else (the next
@@ -119,12 +93,12 @@ export async function handSession(page: Page, kept: Map<string, string>) {
  * Every flow runs on an iPhone's Safari, where Home shows the install hint
  * (issue #94) above what the flow reads and taps. It is dismissed from the
  * start, the way a member who has been here before has: `installHint: true`
- * leaves it to the flow that is about it (e2e/install-hint.spec.ts).
+ * leaves it to a flow that is about it (none now: tests/install-hint.test.ts).
  *
  * The same goes for Home's offer of the import (a card on the empty Home and over a Library of
  * a few Books, utils/importHint.ts): the member is marked as one who imported before, so no flow
- * has it above what it reads and taps. `importHint: true` leaves it to the flow that is
- * about it (e2e/import-offer.spec.ts).
+ * has it above what it reads and taps. `importHint: true` leaves it to a flow that is
+ * about it (none now: tests/import-hint.test.ts).
  */
 export async function signedIn(
   page: Page,
@@ -163,38 +137,6 @@ export async function signedIn(
 }
 
 /**
- * Someone who exists signs in once more, on a client of its own (another device): the auth
- * server's admin makes the code (no mail, so no mail's cooldown and no other flow's code read by
- * mistake) and it is typed back the way the app does. Its session can be handed to a page
- * (`handSession`, or `signedInAs`).
- */
-export async function signedInClient(email: string) {
-  const key = serviceRoleKey()
-  const response = await fetch(`${stack.url}/auth/v1/admin/generate_link`, {
-    method: 'POST',
-    headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ type: 'magiclink', email }),
-  })
-  const link = (await response.json()) as { email_otp?: string; properties?: { email_otp?: string }; msg?: string }
-  const code = link.email_otp ?? link.properties?.email_otp
-  if (!response.ok || !code) throw new Error(`No sign-in code for ${email}: ${response.status} ${JSON.stringify(link)}`)
-  const { kept, storage } = sessionStorageInMemory()
-  const client = newClient(storage)
-  const verified = await createAuth(client).verifyCode(email, code)
-  if (verified.error) throw new Error(`Sign-in of ${email} failed: ${verified.error}`)
-  return { client, kept }
-}
-
-/** Someone who exists (the shelf's owner, a member on another device), signed in on this page, on Home. */
-export async function signedInAs(page: Page, email: string) {
-  const { client, kept } = await signedInClient(email)
-  await handSession(page, kept)
-  await page.goto('/')
-  await expect(page.getByTestId('home.title')).toBeVisible()
-  return client
-}
-
-/**
  * Waits until the page is up and nothing on it is moving. Up first: a document that
  * is still starting has nothing moving either, and a flow that reads it then reads the
  * HTML the build serves, not a screen (`#__nuxt` is empty until the app has rendered
@@ -218,7 +160,7 @@ export async function untilStill(page: Page) {
  * in its final shape from the first frame (a member with nothing finished has
  * the empty state over her account rows at once, the Library being on the
  * device), so the rows no longer slide when the reading record lands
- * (e2e/profile.spec.ts watches them). Still: the record in (`profile.library`
+ * (no flow watches them now). Still: the record in (`profile.library`
  * is the hero's line for it), then nothing moving, so a flow reads the page as
  * a member does and a Library the device did not have yet has been settled too.
  */
@@ -231,31 +173,20 @@ export async function openProfile(page: Page) {
 }
 
 /**
- * Brings the tab bar back the way a member does: up to the top of the page,
- * where it always shows (composables/useHideOnScroll.ts). A page scrolled down
- * to a control has it away, and a tap on a tab that is off the screen goes
- * nowhere ("element is outside of the viewport").
- */
-export async function showTabBar(page: Page) {
-  await page.evaluate(() => window.scrollTo(0, 0))
-  await expect(page.getByTestId('shell.tabs')).not.toHaveAttribute('data-away')
-}
-
-/**
  * Opens an address the way a member types it in, once the page she is on has come
  * to rest: the app up and nothing moving (`untilStill`), and no sheet's own history
  * entry left on top of the page's (composables/useBackDismiss.ts). A sheet that has
  * just closed steps back off its entry a moment later, and WebKit loses a page load
  * that starts during that step back: `load` never comes, or its driver reports an
- * internal error (collections.spec.ts in CI).
+ * internal error (seen in CI).
  *
  * A page that is still fetching its own code loses one the same way, and the two
  * loads then cancel each other: the load cancels the chunk the app is importing, and
  * Nuxt cannot tell a cancelled import from a chunk a deploy replaced (app:chunkError
  * → nuxt:chunk-reload), so it reloads the page it is on while the member is leaving
  * it — WebKit reports `Frame load interrupted` or an internal error, or `load` never
- * comes. That is what made import.spec.ts, import-edition.spec.ts, no-side-scroll
- * and shelf.spec.ts flaky on main (a `page.goto` a moment after the one before it),
+ * comes. That is what made four flows (imports, no-side-scroll, the shelf's) flaky on main
+ * (a `page.goto` a moment after the one before it),
  * and why `untilStill` waits for the app: a load from here is a load from a page
  * that is done.
  */

@@ -16,7 +16,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
   `NUXT_PUBLIC_REGAL_LIBRARY_SRC` (the published library file). Without the flag `dev`, `e2e` and
   `build` run without it: `ShelfStage`/`ShelfRow` resolve to `app/regal/Absent.vue`, nobody is the
-  shelf's owner, `e2e/shelf.spec.ts` skips. With it, a missing layer or file stops `dev`/`generate`.
+  shelf's owner. With it, a missing layer or file stops `dev`/`generate`.
   Regal stays in its own `regal` chunk, loaded only by `LazyShelfStage` and never precached; the
   build fails if the entry ever imports it.
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
@@ -51,9 +51,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - Accessibility (`../docs/ACCESSIBILITY.md`): WCAG 2.2 AA in both themes. Text only in the text
   tokens (`ink`, `inkMuted`, `inkFaint`, `accentInk`, `error`; never `inkGhost`), a name from
   `en.json` on every icon button, a cover `decorative` where its title is beside it, one `h1` a
-  page, a polite status for what comes and goes. A new screen or sheet gets an `expectAccessible`
-  scan in `e2e/a11y.spec.ts`, both themes. `pnpm dev` shows axe's findings in the DevTools' Nuxt
-  a11y tab.
+  page, a polite status for what comes and goes. A screen or sheet on a critical path (below) gets an
+  `expectAccessible` scan in `e2e/a11y.spec.ts`, in one theme, dark (the design's own room); colours
+  come from tokens that `../docs/ACCESSIBILITY.md` already checks in both themes. `pnpm dev` shows
+  axe's findings in the DevTools' Nuxt a11y tab.
 - Every interactive element (and every element a test reads) gets `data-testid="<screen>.<element>"`
   (`start.title`, `search.query`, `book.finish`). It is the native accessibility identifier too, so
   name it for what it is, not how it looks.
@@ -75,7 +76,13 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 ## Definition of done for a screen
 1. Works against the local stack on a phone viewport.
 2. Data behaviour covered in `tests/` where it touches Supabase.
-3. A Playwright flow in `e2e/`.
+3. A Playwright flow in `e2e/` only for a critical path: getting in (sign up with an invite code, the
+   six-digit code, sign in, sign out); the core loop (search → add → start → update progress →
+   finish); offline (the app opens offline on its kept Library, changes made offline sync later);
+   what leaves the app (the public reading page, a Book card, the waitlist form); deleting the
+   account; and, when it lands, the social loop. Everything else is tested where it is cheapest:
+   rules in pgTAP (`../supabase/tests/`), logic in Vitest (`tests/`: pure functions, repositories
+   against the local stack). Motion and visual polish are not tested end to end.
 4. Entry in `../docs/parity.md`: states, actions, copy keys, test IDs, the Playwright flow.
 
 ## Gotchas

@@ -116,8 +116,7 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
           }),
       )
       // The Goodreads line (#69): the function is never reached, so no flow can
-      // make it ask Goodreads. Unknown, unless a spec answers otherwise
-      // (e2e/goodreads.spec.ts).
+      // make it ask Goodreads. Unknown.
       await context.route(GOODREADS_FUNCTION, (route) => route.fulfill(goodreadsAnswer({ status: 'not_found' })))
       await context.route(
         (url) => /^https?:$/.test(url.protocol) && !isLocal(url) && !isCoverCdn(url),

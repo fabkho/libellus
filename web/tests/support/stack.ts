@@ -42,7 +42,7 @@ export const stack = {
 
 /**
  * The stack's service-role key, asked for only by the fixtures that need what
- * no member can do (a member with a given id: the shelf's owner, e2e/shelf.spec.ts).
+ * no member can do (a member with a given id: the shelf's owner).
  */
 export const serviceRoleKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY ?? localStackValue('SERVICE_ROLE_KEY')
 
