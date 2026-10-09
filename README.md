@@ -57,9 +57,12 @@ does with your data.
 - **Page loads are counted, nothing more.** This instance uses Cloudflare Web Analytics, which is
   cookieless and stores no identifier on your device (docs/HOSTING.md).
 - **Your data is yours**: row-level security in the database means a member only ever reads her own
-  Library, reviews, Collections and Book links.
+  Library, reviews, Collections and Book links. The one exception is the people she follows: a member
+  sees what the members she follows (or a public account) chose to show, through database functions that
+  check the follow and that member's switches. A private account is the default, and nothing of it is
+  shown to strangers.
 - **Delete is in the app**: Profile → Account → Delete account removes your account and everything
-  of yours (Library, reading sessions, ratings, reviews, Collections, name, photo, sign-in) from the
+  of yours (Library, reading sessions, ratings, reviews, Collections, name, photo, follows, follow requests, blocks, activity, sign-in) from the
   database at once. The encrypted nightly backups below forget it when they expire, within 35 days.
   An export of your data is planned; until it exists, the app only imports (Goodreads, Hardcover).
 - **Sharing is opt-in**: a member's reading page is off until she turns it on, shows only the
