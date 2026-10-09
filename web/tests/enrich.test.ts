@@ -167,6 +167,47 @@ describe('series', () => {
     expect(await createSeries(other.client).started()).toEqual({ data: [], error: null })
   })
 
+  it('she mutes a whole started series, finds it in the muted list and unmutes it; it stays muted when she reads on', async () => {
+    const { member, two } = await reader()
+    const series = createSeries(member.client)
+    const breq = (await series.started()).data![0]!.series.id
+
+    expect(await series.muted()).toEqual({ data: [], error: null })
+    expect(await series.mute(breq)).toEqual({ data: true, error: null })
+    expect(await series.mute(breq)).toEqual({ data: true, error: null })
+    expect(await series.started()).toEqual({ data: [], error: null })
+    const muted = (await series.muted()).data!
+    expect(muted.map((s) => [s.series.name, s.finished, s.next.title])).toEqual([[runTitle('Breq'), 1, runTitle('Ancillary Sword')]])
+
+    // Reading the next work of it does not unmute it; the muted item moves on.
+    await createLibrary(member.client).startReading(two.id, '2026-09-10')
+    expect((await series.started()).data).toEqual([])
+    expect((await series.muted()).data!.map((s) => s.next.title)).toEqual(['Ancillary Mercy'])
+
+    expect(await series.unmute(breq)).toEqual({ data: true, error: null })
+    expect(await series.unmute(breq)).toEqual({ data: true, error: null })
+    expect((await series.started()).data!.map((s) => s.series.name)).toEqual([runTitle('Breq')])
+    expect(await series.muted()).toEqual({ data: [], error: null })
+  })
+
+  it('a mute is hers alone, an unknown series is refused, and offline nothing is sent', async () => {
+    const { member } = await reader()
+    const breq = (await createSeries(member.client).started()).data![0]!.series.id
+    await createSeries(member.client).mute(breq)
+
+    const other = await signUpMember()
+    expect(await createSeries(other.client).muted()).toEqual({ data: [], error: null })
+    expect((await createSeries(other.client).mute(crypto.randomUUID())).error).toBe('series_not_found')
+    expect((await createSeries(other.client).unmute(crypto.randomUUID())).error).toBe('series_not_found')
+    await createSeries(other.client).unmute(breq)
+    expect((await createSeries(member.client).muted()).data).toHaveLength(1)
+
+    const offline = createSeries(member.client, { online: () => false })
+    expect(await offline.mute(breq)).toEqual({ data: null, error: 'offline' })
+    expect(await offline.unmute(breq)).toEqual({ data: null, error: 'offline' })
+    expect((await createSeries(member.client).muted()).data).toHaveLength(1)
+  })
+
   it('she corrects a series by name, says "in no series", and resets; offline nothing is sent', async () => {
     const { member, two } = await reader()
     const series = createSeries(member.client)

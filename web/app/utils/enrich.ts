@@ -81,6 +81,27 @@ export function startedOnHome(items: readonly StartedSeries[], limit = HOME_SERI
 }
 
 /**
+ * A series muted (`on`) or unmuted: its item moves from one list to the other, each kept in the
+ * database's order (latest activity first, then the name). A series that is not in the list it
+ * leaves is left alone (the lists are asked again right after).
+ */
+export function moveMuted(
+  lists: { started: readonly StartedSeries[]; muted: readonly StartedSeries[] },
+  seriesId: string,
+  on: boolean,
+): { started: StartedSeries[]; muted: StartedSeries[] } {
+  const from = on ? lists.started : lists.muted
+  const to = on ? lists.muted : lists.started
+  const item = from.find((s) => s.series.id === seriesId)
+  if (!item) return { started: [...lists.started], muted: [...lists.muted] }
+  const rest = from.filter((s) => s !== item)
+  const into = [...to.filter((s) => s.series.id !== seriesId), item].sort(
+    (a, b) => (b.activeOn ?? '').localeCompare(a.activeOn ?? '') || a.series.name.localeCompare(b.series.name),
+  )
+  return on ? { started: rest, muted: into } : { started: into, muted: rest }
+}
+
+/**
  * Where the next work stands in its series, as a row says it: "Book 3 of 10"
  * (a whole-numbered place within the count), "Book 2.5" (a novella, or a place
  * past the count), or none when the series gives no place.

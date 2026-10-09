@@ -24,7 +24,8 @@ export type SeriesEditing = { entryId: string; bookId: string }
  * Series (issue #167): the Book page's series line (`book_series_info`), the
  * series sheet with its works and her statuses (`series_works`), Home's "Next
  * in your series" (`started_series`: the series she has started and not finished) and her own correction of a Book's
- * series and position (set, "in no series", back to the suggested one). What
+ * series and position (set, "in no series", back to the suggested one), and
+ * muting a whole series (online only, like her correction). What
  * was read last is kept on the device (stores/enrichCopy.ts), so the line, the
  * sheet and Home's row show offline; corrections need a connection (the
  * repository refuses them offline, the sheet says so).
@@ -89,15 +90,53 @@ export const useSeriesStore = defineStore('series', () => {
 
   /** The series she has started and not finished, latest activity first, as this device last knew them. */
   const started = computed<StartedSeries[]>(() => copy.data.started ?? [])
+  /** The started series she muted, as this device last knew them. */
+  const muted = computed<StartedSeries[]>(() => copy.data.muted ?? [])
 
   async function loadStarted() {
     const repo = series()
     if (!repo || !isOnline()) return
     const member = session.member?.id
-    const result = await repo.started(STARTED_LIMIT, language())
-    if (result.error || member !== session.member?.id) return
-    copy.update(() => ({ started: result.data }))
+    const [open, hidden] = await Promise.all([repo.started(STARTED_LIMIT, language()), repo.muted(STARTED_LIMIT, language())])
+    if (member !== session.member?.id) return
+    // Each list is kept as soon as it is answered; a failed one keeps the device's copy.
+    copy.update(() => ({
+      ...(open.error ? {} : { started: open.data }),
+      ...(hidden.error ? {} : { muted: hidden.data }),
+    }))
   }
+
+  /** The series being muted or unmuted, and why the last one was refused. */
+  const muting = ref<string | null>(null)
+  const muteError = ref<EnrichErrorCode | null>(null)
+
+  /**
+   * Mutes (or unmutes) a whole series. Online only: nothing is queued, and the device's copy
+   * changes only once the server has answered. Returns the error code, or null when it is done.
+   */
+  async function setMuted(seriesId: string, on: boolean): Promise<EnrichErrorCode | null> {
+    const repo = series()
+    if (!repo || muting.value) return null
+    muting.value = seriesId
+    muteError.value = null
+    const member = session.member?.id
+    try {
+      const result = on ? await repo.mute(seriesId) : await repo.unmute(seriesId)
+      if (result.error) {
+        muteError.value = result.error
+        return result.error
+      }
+      if (member !== session.member?.id) return null
+      // The row moves from one list to the other at once; the lists are then asked again for what the server says.
+      copy.update((c) => moveMuted({ started: c.started ?? [], muted: c.muted ?? [] }, seriesId, on))
+      void loadStarted()
+      return null
+    } finally {
+      muting.value = null
+    }
+  }
+  const mute = (seriesId: string) => setMuted(seriesId, true)
+  const unmute = (seriesId: string) => setMuted(seriesId, false)
 
   // ------------------------------------------------------------- sheets
 
@@ -139,6 +178,8 @@ export const useSeriesStore = defineStore('series', () => {
   }
 
   function reset() {
+    muting.value = null
+    muteError.value = null
     sheet.value = null
     editing.value = null
     busy.value = false
@@ -150,5 +191,5 @@ export const useSeriesStore = defineStore('series', () => {
     (now, before) => now !== before && reset(),
   )
 
-  return { ofBook, loadForBook, info, loadSeries, started, loadStarted, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
+  return { ofBook, loadForBook, info, loadSeries, started, muted, loadStarted, muting, muteError, mute, unmute, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
 })
