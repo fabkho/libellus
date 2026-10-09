@@ -23,12 +23,15 @@ const name = computed(() => props.friend.member.name?.trim() || t('member.someon
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
         <span class="flex items-baseline justify-between gap-sm">
           <span class="truncate text-subhead font-medium">{{ name }}</span>
-          <span class="eyebrow shrink-0">{{ dayLabel }}</span>
+          <span class="eyebrow shrink-0" aria-hidden="true">{{ dayLabel }}</span>
         </span>
         <span class="flex items-center justify-between gap-sm">
           <span class="line-clamp-2 min-w-0 text-caption text-ink-muted">
             <template v-for="(phrase, index) in friend.phrases" :key="index">
-              <span v-if="index > 0" aria-hidden="true">{{ t('circle.join') }}</span>
+              <template v-if="index > 0">
+                <span aria-hidden="true">{{ t('circle.join') }}</span>
+                <span class="sr-only">, </span>
+              </template>
               <template v-if="phrase.type === 'batch'">{{ t(`feed.${phrase.key}`, { count: phrase.count }) }}</template>
               <i18n-t v-else-if="phrase.verb === 'want'" keypath="circle.want" tag="span" scope="global">
                 <template #title>
@@ -44,6 +47,8 @@ const name = computed(() => props.friend.member.name?.trim() || t('member.someon
                 </template>
               </template>
             </template>
+            <!-- The day is drawn at the top right; read, it follows the sentence. -->
+            <span class="sr-only">, {{ dayLabel }}</span>
           </span>
           <span class="flex shrink-0" aria-hidden="true">
             <UiCover

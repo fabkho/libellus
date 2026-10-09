@@ -637,6 +637,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "share": "Share link",
     "copy": "Copy",
     "copied": "Copied.",
+    "failed": "Couldn't copy the link. Select it and copy by hand.",
     "renew": "New link",
     "renewHint": "A new link stops the old one at once. People who already follow you stay.",
     "renewTitle": "Make a new link?",
