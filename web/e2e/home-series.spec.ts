@@ -134,6 +134,30 @@ test.describe('motion', () => {
     await untilStill(page)
     const before = await row.boundingBox()
 
+    // Her status's arrival is read from the animation itself, as the status is added: a starved runner
+    // paints no frame in between, and by the time the row is read the arrival is over and the class
+    // that carried it is gone (the same reading as e2e/change-edition.spec.ts).
+    await row.evaluate((li) => {
+      const arriving: { name: string; state: string; duration: unknown; delay: unknown; keyframes: Record<string, unknown>[] }[] = []
+      Object.assign(window, { __arriving: arriving })
+      new MutationObserver((records) => {
+        for (const record of records)
+          for (const node of record.addedNodes)
+            if (node instanceof HTMLElement && node.dataset.testid === 'home.nextStatus')
+              for (const animation of node.getAnimations() as CSSAnimation[]) {
+                const keyframes = (animation.effect as KeyframeEffect).getKeyframes()
+                const timing = animation.effect!.getTiming()
+                arriving.push({
+                  name: animation.animationName,
+                  state: animation.playState,
+                  duration: timing.duration,
+                  delay: timing.delay,
+                  keyframes: keyframes.map(({ offset, opacity, transform, color }) => ({ offset, opacity, transform, color })),
+                })
+              }
+      }).observe(li, { childList: true, subtree: true })
+    })
+
     await row.getByTestId('home.nextWant').click()
     await expect(page.getByTestId('add')).toBeVisible()
     await untilStill(page)
@@ -144,11 +168,36 @@ test.describe('motion', () => {
     // rises and lights, over twice `sheet`; the button is on its way out, not in the way.
     const status = row.getByTestId('home.nextStatus')
     await expect(status).toHaveText(en.status.want_to_read)
-    expect(await status.evaluate((el) => el.getAnimations().some((animation) => (animation as CSSAnimation).animationName.startsWith('state-arrive')))).toBe(true)
+    const { arriving, sheet, sheetExit } = await page.evaluate(() => {
+      const tokens = getComputedStyle(document.documentElement)
+      // In ms: the dev server writes a token as `250ms`, the build as `.25s`.
+      const ms = (value: string) => parseFloat(value) * (/ms$/.test(value) ? 1 : 1000)
+      return {
+        arriving: (window as unknown as { __arriving: { name: string; state: string; duration: unknown; delay: unknown; keyframes: Record<string, unknown>[] }[] }).__arriving,
+        sheet: ms(tokens.getPropertyValue('--duration-sheet').trim()),
+        sheetExit: ms(tokens.getPropertyValue('--duration-sheet-exit').trim()),
+      }
+    })
+    // Her status arrives with the app's own arrival: one animation, held `sheetExit` (the sheet falling
+    // away), then up the last `xs` and into the accent, over twice `sheet`, settling where the other
+    // statuses stand. Read while it is still arriving, so nothing about the way it is drawn is guessed.
+    expect(arriving).toHaveLength(1)
+    const arrival = arriving[0]!
+    expect(arrival.name).toMatch(/^state-arrive/)
+    expect(arrival.state).toBe('running')
+    expect({ duration: arrival.duration, delay: arrival.delay }).toEqual({ duration: 2 * sheet, delay: sheetExit })
+    expect(arrival.keyframes.map((frame) => frame.offset)).toEqual([0, 0.35, 1])
+    expect(arrival.keyframes[0]).toMatchObject({ opacity: '0', transform: expect.stringMatching(/^translateY\(\d+(\.\d+)?px\)$/) })
+    expect(arrival.keyframes[1]).toMatchObject({ opacity: '1', transform: 'none' })
+    expect(arrival.keyframes[2]).toMatchObject({ opacity: '1', transform: 'none' })
+    // It lights in the accent, holds it, and gives way to the quiet colour the others stand in.
+    expect(arrival.keyframes[0]!.color).toBe(arrival.keyframes[1]!.color)
+    expect(arrival.keyframes[2]!.color).not.toBe(arrival.keyframes[1]!.color)
     expect((await row.boundingBox())?.height).toBe(before?.height)
     await expect(row.getByTestId('home.nextWant')).toHaveCount(0)
     // It ends where the others' statuses stand: quiet, at rest.
     await expect.poll(() => status.evaluate((el) => el.getAnimations().length)).toBe(0)
+    expect(arrival.keyframes[2]!.color).toBe(await status.evaluate((el) => getComputedStyle(el).color))
     expect((await row.boundingBox())?.height).toBe(before?.height)
   })
 
