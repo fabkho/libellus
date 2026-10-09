@@ -163,6 +163,11 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   Home's small import offer (one to three entries, `HomeImportOffer`) is one: it stands in the first frame when the
   device's Library says so (no opening, nothing moves when the lists arrive) and closes like a Reveal when
   the × is tapped, or when the one question about an import on another device says yes.
+  The Book page's sections below About (`BookSection`: More from the author, Similar books next) are
+  one too, whole (heading and content) in one room: nothing is reserved for them and they have no
+  placeholders, because they sit at the page's foot and start their data only when they near the
+  viewport (one IntersectionObserver on the section's root); they open when the data is in and are
+  not in the page at all when there is nothing to show (offline without a copy, an error, no data).
 - **Search morph.** As iOS 26 and Apple Books do it, the tab bar's capsule turns into the search
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's
