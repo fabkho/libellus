@@ -19,10 +19,10 @@ Four migrations, one per task, in this order (timestamps after `20261014020000`)
 
 | Task | File |
 |---|---|
-| D1 | `supabase/migrations/20261015010000_social_settings.sql` |
-| D2 | `supabase/migrations/20261015020000_social_follows.sql` |
-| D3 | `supabase/migrations/20261015030000_social_activity.sql` |
-| D4 | `supabase/migrations/20261015040000_social_readers.sql` |
+| D1 | `supabase/migrations/20261017010000_social_settings.sql` |
+| D2 | `supabase/migrations/20261017020000_social_follows.sql` |
+| D3 | `supabase/migrations/20261017030000_social_activity.sql` |
+| D4 | `supabase/migrations/20261017040000_social_readers.sql` |
 
 Conventions, as in the existing migrations: a header comment saying what and why; `security
 definer` functions with `set search_path` pinned; `revoke all … from public, anon` then `grant execute
@@ -311,7 +311,7 @@ anything that is not a uuid (no cast in the policy: a bad folder name must not t
 ### 1.5a Hardening and accepted risks (gate 1)
 
 After the four migrations, a leak review (gate 1) found two holes, closed by
-`20261015050000_social_hardening.sql` and `supabase/tests/social_hardening_test.sql`: the declined
+`20261017050000_social_hardening.sql` and `supabase/tests/social_hardening_test.sql`: the declined
 request on an account gone public (`set_private`, above) and hidden Books on the public reading page
 (`set_entry_hidden`, above). The same migration closes two races (`follow` reads the owner's
 `social_settings` row `for share`, so `set_private` waits for it; `follow` and `block` take an advisory

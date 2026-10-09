@@ -75,7 +75,7 @@ create table public.social_settings (
 comment on table public.social_settings is
   'Social v1: whether a member''s account is private, which sections of her reading others may see, '
   'and her follow link. No row = private, every section on, no link yet (private.social_of). '
-  'Read by its member; written only through the functions in 20261015010000_social_settings.sql.';
+  'Read by its member; written only through the functions in 20261017010000_social_settings.sql.';
 
 create table public.follows (
   follower_id  uuid not null references auth.users on delete cascade,
