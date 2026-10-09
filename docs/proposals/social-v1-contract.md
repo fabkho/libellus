@@ -150,11 +150,13 @@ Rules, in the trigger before inserting, in this order:
 
 0. **Same statement**: a session's trigger first deletes its entry's `want` row written in the same
    statement (`created_at = statement_timestamp()`), whatever it then writes or not.
-1. **Quiet**: nothing when `auth.uid()` is null (service role, the owner's scripts) or
-   `current_setting('libellus.quiet', true) = 'on'`. The migration sets it on the imports without
-   rewriting them: `alter function public.import_books(jsonb) set libellus.quiet = 'on';` and the same
-   for `public.import_book_for(uuid, text, jsonb)`. (A later `create or replace` of either drops that
-   setting: the D3 tests catch it.)
+1. **Quiet**: nothing when `auth.uid()` is null (service role, the owner's scripts), when
+   `current_setting('libellus.quiet', true) = 'on'`, or when the call stack
+   (`get diagnostics … = pg_context`, checked last because it costs the most) shows
+   `public.import_books(`. (A function-level `set libellus.quiet` was the first plan; since Postgres 15
+   it needs superuser rights to set a custom parameter on a function, which Supabase's `postgres` role
+   has not, locally or hosted. The call stack also survives a later `create or replace` of the import.)
+   `import_book_for` needs nothing: it only finds or makes Book rows, never entries or sessions.
 2. **Old news**: no `finished`/`abandoned` when `ended_on` is null or earlier than
    `(now() at time zone 'utc')::date - 14`.
 3. **Settle**: `visible_at = now() + (select settle_window from private.social_config)`. Before
