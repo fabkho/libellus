@@ -8,20 +8,22 @@
 // cover is decorative.
 //
 // `compact` is Home's: no review. `bare` is the batch sheet's: the avatar line is not repeated, the
-// member is in the sheet's title. `dayLabel` is the word at the line's end Home puts the day in
+// member is in the sheet's title, and the cover is `size="sm"`. `dayLabel` is the word at the line's end Home puts the day in
 // (the page has day eyebrows instead). `testid` is the row's; the parts add `Member`, `Book`,
 // `Review` and `More` to it.
 import type { FeedEntry } from '~/data/feed'
 import { useBookStore } from '~/stores/book'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   entry: FeedEntry
   testid: string
   compact?: boolean
   bare?: boolean
   dayLabel?: string | null
   eager?: boolean
-}>()
+  /** The cover: `md` in the feed, `sm` in the batch sheet, where a row is a title and an author. */
+  size?: 'sm' | 'md'
+}>(), { size: 'md' })
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -66,10 +68,10 @@ async function unfold() {
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'md')"
+        :src="coverSrc(book.coverUrl, size)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
-        size="md"
+        :size="size"
         :eager="eager"
       />
     </UiPressLink>
@@ -78,10 +80,10 @@ async function unfold() {
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'md')"
+        :src="coverSrc(book.coverUrl, size)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
-        size="md"
+        :size="size"
         :eager="eager"
       />
     </span>
