@@ -303,6 +303,20 @@ export const useLibraryStore = defineStore('library', () => {
     const changed = { ...(entryById(entry.id) ?? entry), readAs: result.data.readAs ?? null }
     entryChanged(changed)
     return { entry: changed }
+
+  /**
+   * Hides the entry from her followers, or shows it again (social v1). Waits in the outbox
+   * offline, so it does not need the connection. Returns the entry, or null with the code.
+   */
+  async function setHidden(entry: LibraryEntry, hidden: boolean): Promise<{ entry: LibraryEntry } | { error: LibraryErrorCode }> {
+    const repo = library()
+    if (!repo) return { error: 'unknown' }
+    const result = await repo.setHidden(entry.id, hidden)
+    if (result.error) return { error: result.error }
+    const changed = { ...(entryById(entry.id) ?? entry), hidden: result.data.hidden ?? hidden }
+    entryChanged(changed)
+    return { entry: changed }
+  }
   }
 
   // ---------------------------------------------------------------- Add sheet
@@ -512,6 +526,7 @@ export const useLibraryStore = defineStore('library', () => {
     editionChanged,
     entryRemoved,
     setReadAs,
+    setHidden,
     withCover,
     adding,
     addDraft,
