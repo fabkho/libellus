@@ -1780,7 +1780,6 @@
   },
   "review": {
     "spoilers": "Contains spoilers",
-    "spoilersHint": "Readers who haven't finished it see this review folded.",
     "folded": "Contains spoilers",
     "showAnyway": "Show anyway"
   },

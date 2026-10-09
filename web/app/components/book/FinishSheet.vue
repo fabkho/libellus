@@ -101,9 +101,12 @@ const summary = computed(() => {
           :maxlength="REVIEW_MAX_LENGTH"
           :disabled="reading.finishBusy"
           data-testid="finish.review"
-        />
+        >
+          <template #footer>
+            <BookSpoilerSwitch v-model="spoilers" :disabled="reading.finishBusy" testid="finish.spoilers" />
+          </template>
+        </UiTextArea>
       </div>
-      <BookSpoilerSwitch v-model="spoilers" class="mt-md" :disabled="reading.finishBusy" testid="finish.spoilers" />
 
       <p v-if="reading.finishError" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="finish.error">
         {{ t(`library.error.${reading.finishError}`) }}

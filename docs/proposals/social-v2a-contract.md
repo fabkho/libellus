@@ -97,12 +97,12 @@ the like (Anna likes Ida's finish, Ida sees the count and Anna's name) and a spo
 
 Props-only components and strings, wired by a later task. Test ids: `<row>WantToRead` (`friends.entryWantToRead`
 on a feed row, `home.circleFeature.wantToRead`, `member.finishedWantToRead`; `.error` under each),
-`finish.spoilers` and `editSession.spoilers` (the switch in the two sheets, off by default, written nowhere
+`finish.spoilers` and `editSession.spoilers` (the switch in the footer of the review box in the two sheets, shown once there is a review, off by default, written nowhere
 yet; `v-model:spoilers` on each sheet), `feed.like` (`LikeButton`, `.count` inside), `likers` (`LikersSheet`,
 `likers.row`, `likers.member`, `likers.empty`, `likers.error`, `likers.offline`). Keys in `en.json`:
 `social.wantToRead.{add,label,inLabel,error}`, `social.state.{wantToRead,reading,read,notFinished}`,
 `social.like.{like,unlike,label,unlabel,count,ownLabel,error}`, `social.likers.{title,empty,loadError,offline}`,
-`review.{spoilers,spoilersHint,folded,showAnyway}`.
+`review.{spoilers,folded,showAnyway}`.
 
 ## 5. A checked Catalogue (PR B)
 

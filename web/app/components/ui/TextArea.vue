@@ -3,7 +3,9 @@
 // a quiet filled box with the label and its hint on top, the text in the
 // serif italic, a lamp ring while it has the focus. It grows with the text up
 // to a few lines, then scrolls. Attributes (maxlength, data-testid, …) go to
-// the <textarea>.
+// the <textarea>. The `footer` slot is a line at the bottom of the box (a control that belongs to the text,
+// such as the review's "Contains spoilers" switch): it opens (UiReveal) once there is text and closes when
+// the text is gone, so an empty box stays as it was.
 defineOptions({ inheritAttrs: false })
 
 defineProps<{ id: string; label: string; hint?: string }>()
@@ -42,6 +44,11 @@ onMounted(fit)
       @focus="focused = true"
       @blur="focused = false"
     />
+    <UiReveal v-if="$slots.footer" :show="model.trim().length > 0" class="-mb-xs">
+      <div class="mt-xs flex items-center justify-end border-t border-hairline pt-xs">
+        <slot name="footer" />
+      </div>
+    </UiReveal>
   </label>
 </template>
 
