@@ -1,4 +1,3 @@
-import { thumbHashToDataURL } from 'thumbhash'
 import type { BookSnapshot, CoverColors } from '../data/books'
 import { appleArtwork } from '../data/apple'
 import { openLibraryCoverAt, openLibraryIsbnCover } from '../data/openLibrary'
@@ -23,16 +22,8 @@ export function clothOf(title: string): number {
   return (hash % CLOTH_COUNT) + 1
 }
 
-/** A stored thumbhash (base64) → a tiny PNG data URL to show while the cover loads. */
-export function thumbhashDataUrl(hash: string | null | undefined): string | null {
-  if (!hash) return null
-  try {
-    const bytes = Uint8Array.from(atob(hash), (c) => c.charCodeAt(0))
-    return thumbHashToDataURL(bytes)
-  } catch {
-    return null
-  }
-}
+/** A stored thumbhash (base64) → a tiny PNG data URL to show while the cover loads (decoded once per hash: utils/thumbhash.ts). */
+export { thumbhashDataUrl } from './thumbhash'
 
 type Rgb = [number, number, number]
 
