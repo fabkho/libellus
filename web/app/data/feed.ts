@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { LOCAL_DATA_PREFIX, type DeviceStorage } from './localData'
+import { isNoAnswer } from './network'
 import {
   cardFromJson,
   mapSocialError,
@@ -137,13 +138,15 @@ export function createFeed(client: SupabaseClient, { online }: { online: () => b
   return {
     async page(before) {
       if (!online()) return { data: null, error: 'offline' satisfies SocialErrorCode }
-      const { data, error } = await client.rpc('feed', {
+      const answer = await client.rpc('feed', {
         p_before: before?.at ?? null,
         p_before_id: before?.id ?? null,
         p_limit: FEED_PAGE,
       })
-      if (error) return { data: null, error: mapSocialError(error) }
-      return { data: ((data ?? []) as FeedJson[]).map(entryFromJson), error: null }
+      // No answer at all is offline, so the page offers the copy and reads again on reconnect.
+      if (isNoAnswer(answer)) return { data: null, error: 'offline' satisfies SocialErrorCode }
+      if (answer.error) return { data: null, error: mapSocialError(answer.error) }
+      return { data: ((answer.data ?? []) as FeedJson[]).map(entryFromJson), error: null }
     },
   }
 }

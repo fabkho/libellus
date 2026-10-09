@@ -218,4 +218,15 @@ describe('offline', () => {
     expect((await createSocial(ada.client, { online: () => true }).mine()).error).toBeNull()
     expect(rpc).toHaveBeenCalledTimes(1)
   })
+
+  it('reads a call that got no answer (status 0) as offline, not unknown; a refusal stays its code', async () => {
+    const noAnswer = { rpc: async () => ({ data: null, error: { message: 'TypeError: Failed to fetch' }, status: 0 }) }
+    const social = createSocial(noAnswer as never, { online: () => true })
+    expect(await social.follow(randomUUID())).toEqual({ data: null, error: 'offline' })
+    expect(await social.setPrivate(false)).toEqual({ data: null, error: 'offline' })
+    expect(await social.people()).toEqual({ data: null, error: 'offline' })
+
+    const refused = { rpc: async () => ({ data: null, error: { message: 'follow_self', code: 'P0001' }, status: 400 }) }
+    expect(await createSocial(refused as never, { online: () => true }).follow(randomUUID())).toEqual({ data: null, error: 'follow_self' })
+  })
 })
