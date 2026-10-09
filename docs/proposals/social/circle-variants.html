@@ -1,0 +1,404 @@
+<!doctype html>
+<!--
+  Libellus · social v1 · P1 · "Your circle" on Home, four ways. A design prototype to choose from;
+  not app code. Tokens and cover classes are copied from mock.html. `?theme=dark` or the button
+  switches the room. The same data in all four phones.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Libellus · Your circle, four ways</title>
+<style>
+  :root, [data-theme="light"] {
+    --surface: #f4f0e9; --raised: #fbf9f5; --sheet: #fbf9f5; --fill: rgb(40 30 20 / .05);
+    --fill-strong: rgb(40 30 20 / .085); --hairline: rgb(40 30 20 / .1); --hairline-strong: rgb(40 30 20 / .17);
+    --ink: #1c1915; --ink-muted: rgb(28 25 21 / .74); --ink-faint: rgb(28 25 21 / .62); --ink-ghost: rgb(28 25 21 / .2);
+    --on-ink: #f8f5ef; --accent: #b8782a; --accent-ink: #845418; --accent-soft: rgb(184 120 42 / .12);
+    --star: #b8782a; --star-track: rgb(28 25 21 / .2); --glass: rgb(251 249 245 / .62); --scrim: rgb(26 20 14 / .38);
+    --stage: #1a1714; --error: #b03a20; --lamp: rgb(239 183 104 / .16);
+    --shadow-cover: 0 10px 24px rgb(60 40 20 / .22), 0 2px 5px rgb(60 40 20 / .18);
+    --shadow-float: 0 12px 30px rgb(60 40 20 / .18);
+    --lit: rgb(184 120 42 / .14);
+  }
+  [data-theme="dark"] {
+    --surface: #0e0c0a; --raised: #171512; --sheet: #1b1815; --fill: rgb(255 238 214 / .055);
+    --fill-strong: rgb(255 238 214 / .1); --hairline: rgb(255 236 210 / .085); --hairline-strong: rgb(255 236 210 / .16);
+    --ink: #eee7dc; --ink-muted: rgb(238 231 220 / .74); --ink-faint: rgb(238 231 220 / .56); --ink-ghost: rgb(238 231 220 / .2);
+    --on-ink: #0e0c0a; --accent: #efb768; --accent-ink: #efb768; --accent-soft: rgb(239 183 104 / .14);
+    --star: #efb768; --star-track: rgb(238 231 220 / .2); --glass: rgb(28 25 22 / .58); --scrim: rgb(0 0 0 / .5);
+    --stage: #000; --error: #ec8063; --lamp: rgb(239 183 104 / .14);
+    --shadow-cover: 0 10px 28px rgb(0 0 0 / .5), 0 2px 6px rgb(0 0 0 / .4);
+    --shadow-float: 0 12px 30px rgb(0 0 0 / .35);
+    --lit: rgb(120 80 40 / .38);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--surface); color: var(--ink); font: 15px/20px Geist, -apple-system, system-ui, sans-serif;
+         letter-spacing: -.005em; padding: 28px 32px; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  .mono { font-family: "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .eyebrow { font: 500 10.5px/12px "Geist Mono", ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+  .page-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 18px; }
+  .page-head h1 { font: 500 24px/27px Newsreader, Georgia, serif; }
+  .page-head button { margin-left: auto; font-size: 13px; background: var(--fill); border: .5px solid var(--hairline-strong); border-radius: 999px; padding: 8px 14px; }
+  section.row { padding: 18px 0 26px; }
+  section.row > h2 { font: 500 21px/24px Newsreader, Georgia, serif; margin-bottom: 4px; }
+  section.row > p { color: var(--ink-muted); font-size: 13px; margin-bottom: 16px; }
+  .phones { display: flex; gap: 26px; align-items: flex-start; }
+  .phone { width: 375px; height: 760px; border-radius: 44px; background: var(--surface); position: relative; overflow: hidden;
+           box-shadow: 0 0 0 .5px var(--hairline-strong), var(--shadow-float); flex: none; }
+  .caption { margin-top: 10px; width: 375px; text-align: center; color: var(--ink-muted); font-size: 12.5px; line-height: 17px; }
+  .caption b { color: var(--ink); font-weight: 500; }
+  .screen { position: absolute; inset: 0; padding: 54px 20px 100px; overflow: hidden; }
+  .bar { height: 44px; display: flex; align-items: center; justify-content: space-between; }
+  .round { width: 36px; height: 36px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(24px);
+           box-shadow: 0 0 0 .5px var(--hairline-strong); display: grid; place-items: center; font-size: 16px; }
+  .av { width: 32px; height: 32px; border-radius: 999px; box-shadow: 0 0 0 .5px var(--hairline-strong) inset; position: relative;
+        display: grid; place-items: center; font: 500 11px "Geist Mono", ui-monospace, monospace; flex: none; color: var(--ink); }
+  .av.photo { color: transparent; box-shadow: 0 0 0 .5px var(--hairline-strong); }
+  .av.sm { width: 26px; height: 26px; font-size: 10px; }
+  .av.xl { width: 72px; height: 72px; font-size: 22px; }
+  .av .dot { position: absolute; top: 0; right: 0; width: 8px; height: 8px; border-radius: 9px; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
+  .pa { background: linear-gradient(140deg, #c9a27e, #7d5a45 60%, #3b2a22); }
+  .pb { background: linear-gradient(140deg, #9fb3c8, #4f6478 60%, #24303d); }
+  .pc { background: linear-gradient(140deg, #d6b5a8, #a2675d 60%, #4a2d2a); }
+  .pi { background: linear-gradient(140deg, #b9c49f, #6b7a4f 60%, #2f3824); }
+  .title-lg { font: 500 28px/34px Geist, system-ui, sans-serif; letter-spacing: -.03em; margin: 8px 0 14px; }
+  .section-head { height: 44px; display: flex; align-items: center; justify-content: space-between; }
+  .muted { color: var(--ink-muted); } .faint { color: var(--ink-faint); }
+  .small { font-size: 13px; line-height: 18px; }
+  .cover { width: 40px; aspect-ratio: 2/3; border-radius: 2.5px; box-shadow: var(--shadow-cover); flex: none; position: relative;
+           overflow: hidden; color: #f1e3c8; padding: 4px 3px; font: 500 6.5px/7.5px Newsreader, Georgia, serif; }
+  .cover::after { content: ""; position: absolute; inset: 0 auto 0 3px; width: 1px; background: rgb(255 255 255 / .12); }
+  .cover.xs { width: 30px; font-size: 5px; line-height: 6px; padding: 3px 2px; }
+  .cover.md { width: 56px; font-size: 8px; line-height: 9px; padding: 6px 5px; }
+  .cover.lg { width: 72px; font-size: 9.5px; line-height: 10.5px; padding: 7px 6px; }
+  .c1 { background: #3b2430; } .c2 { background: #22303f; } .c3 { background: #2c3a2e; }
+  .c4 { background: #4a3220; } .c5 { background: #30293f; } .c6 { background: #4a2624; }
+  .fan { display: flex; } .fan .cover + .cover { margin-left: -18px; }
+  .item { display: flex; gap: 12px; padding: 12px 0; border-top: .5px solid var(--hairline); }
+  .item.first { border-top: 0; }
+  .who { display: flex; align-items: center; gap: 8px; font-size: 14.5px; }
+  .who b { font-weight: 500; } .who .verb { color: var(--ink-muted); }
+  .who .end { margin-left: auto; }
+  .book { font: 500 17px/20px Newsreader, Georgia, serif; letter-spacing: -.01em; }
+  .book.sm { font-size: 15px; line-height: 18px; }
+  .author { color: var(--ink-muted); font-size: 13px; line-height: 18px; }
+  .stars { color: var(--star); font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+  .stars .off { color: var(--star-track); }
+  .stars .half { background: linear-gradient(90deg, var(--star) 50%, var(--star-track) 50%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stars .v { font: 11px "Geist Mono", ui-monospace, monospace; color: var(--ink-faint); margin-left: 4px; letter-spacing: 0; }
+  .review { font: italic 14.5px/21px Newsreader, Georgia, serif; color: var(--ink-muted); margin-top: 6px;
+            display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .more { font-size: 13px; color: var(--ink-faint); margin-top: 2px; display: inline-block; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+  .btn.sm { height: 32px; padding: 0 14px; font-size: 13px; }
+  .btn.md { height: 40px; padding: 0 18px; font-size: 14.5px; }
+  .btn.lg { height: 50px; padding: 0 22px; font-size: 16px; width: 100%; }
+  .btn.primary { background: var(--ink); color: var(--on-ink); }
+  .btn.secondary { box-shadow: 0 0 0 .5px var(--hairline-strong) inset; }
+  .btn.quiet { background: var(--fill); }
+  .btn.plain { color: var(--ink-muted); }
+  .tabs { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 8px 14px;
+          border-radius: 999px; background: var(--glass); backdrop-filter: blur(30px); box-shadow: 0 0 0 .5px var(--hairline-strong), var(--shadow-float); }
+  .tabs span { width: 52px; height: 46px; display: grid; place-items: center; color: var(--ink-faint); font-size: 19px; position: relative; }
+  .tabs span.on { color: var(--ink); }
+  .tabs span.on::after { content: ""; position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 99px; background: var(--accent); }
+  .tally { border-block: .5px solid var(--hairline); padding: 12px 0; display: flex; align-items: center; justify-content: space-between; }
+  .ticks { color: var(--accent); letter-spacing: 1px; }
+  .hero { text-align: center; padding-top: 4px; }
+  .hero .av { margin: 0 auto 10px; }
+  .hero h3 { font: 500 24px/29px Geist, system-ui, sans-serif; letter-spacing: -.01em; }
+  .lit { position: absolute; inset: 0 0 auto; height: 300px; background: radial-gradient(120% 80% at 50% 0, var(--lit), transparent 70%); pointer-events: none; }
+  .pills { display: flex; gap: 8px; margin: 14px 0 10px; }
+  .pill { height: 32px; padding: 0 14px; border-radius: 999px; display: grid; place-items: center; font-size: 13px;
+          box-shadow: 0 0 0 .5px var(--hairline-strong) inset; color: var(--ink-muted); }
+  .pill.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+  .figures { display: grid; grid-template-columns: repeat(4, 1fr); border-block: .5px solid var(--hairline); padding: 12px 0; }
+  .figures div { display: flex; flex-direction: column; gap: 4px; }
+  .figures .n { font: 300 26px/28px "Geist Mono", ui-monospace, monospace; letter-spacing: -.04em; }
+  .figures .s { font-size: 11px; color: var(--ink-faint); }
+  .cols { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; align-items: end; height: 92px; }
+  .cols div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .cols i { width: 100%; border-radius: 3px 3px 1px 1px; background: var(--fill-strong); display: block; }
+  .cols i.now { background: var(--accent); }
+  .cols span { font: 10px "Geist Mono", ui-monospace, monospace; color: var(--ink-faint); }
+  .rating-row { display: grid; grid-template-columns: 18px 1fr 22px; gap: 10px; align-items: center; height: 22px; }
+  .rating-row i { display: block; height: 4px; border-radius: 4px; background: var(--star); }
+  .row-covers { display: flex; gap: 10px; }
+  .year-cards { display: flex; gap: 10px; }
+  .year-card { flex: 1; border-radius: 14px; background: var(--raised); box-shadow: 0 0 0 .5px var(--hairline) inset; padding: 12px; display: flex; gap: 10px; align-items: center; }
+  .year-card .y { font: 300 26px/28px "Geist Mono", ui-monospace, monospace; letter-spacing: -.04em; }
+  .month { display: grid; grid-template-columns: 30px 1fr 18px; gap: 10px; align-items: center; padding: 8px 0; border-top: .5px solid var(--hairline); }
+  .month .covers { display: flex; gap: 6px; }
+  .sheet-bg { position: absolute; inset: 0; background: var(--scrim); }
+  .stage { position: absolute; inset: 0; background: var(--stage); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--sheet); border-radius: 30px 30px 0 0; padding: 5px 20px 30px; }
+  .grabber { width: 36px; height: 5px; border-radius: 99px; background: var(--ink-ghost); margin: 0 auto; }
+  .sheet-top { height: 44px; margin-top: 11px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .sheet-top .t { font-weight: 500; font-size: 17px; }
+  .sheet-top .a { justify-self: end; color: var(--accent-ink); font-weight: 500; }
+  .group { background: var(--fill); border-radius: 14px; margin: 6px 0 16px; }
+  .sw { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; font-size: 15px; }
+  .sw + .sw { border-top: .5px solid var(--hairline); }
+  .sw .ic { width: 22px; color: var(--ink-faint); text-align: center; display: grid; place-items: center; }
+  .sw .grow { flex: 1; }
+  .sw.danger { color: var(--error); }
+  .switch { width: 40px; height: 24px; border-radius: 99px; background: var(--fill-strong); position: relative; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 99px; background: var(--raised);
+                   box-shadow: 0 1px 3px rgb(0 0 0 / .25); transition: transform .25s cubic-bezier(.2,0,0,1); }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(16px); }
+  .hint { color: var(--ink-faint); font-size: 13px; line-height: 18px; margin: -8px 4px 16px; }
+  .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--fill); margin: 4px 0 10px; }
+  .seg span { flex: 1; height: 32px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; color: var(--ink-muted); }
+  .seg span.on { background: var(--raised); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .12), 0 0 0 .5px var(--hairline) inset; }
+  .person { display: flex; align-items: center; gap: 12px; min-height: 60px; border-top: .5px solid var(--hairline); }
+  .person.first { border-top: 0; }
+  .person .name { flex: 1; font-size: 15px; }
+  .person .name small { display: block; font-size: 12.5px; color: var(--ink-faint); }
+  .empty { text-align: center; padding: 70px 18px 0; }
+  .empty h3 { font: 500 24px/29px Newsreader, Georgia, serif; margin: 18px 0 8px; }
+  .lamp { width: 180px; height: 130px; margin: 0 auto; position: relative; }
+  .lamp::before { content: ""; position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 160px; height: 120px;
+                  background: radial-gradient(60% 70% at 50% 10%, rgb(239 183 104 / .35), transparent 70%); }
+  .lamp .shelf { position: absolute; bottom: 0; left: 10px; right: 10px; height: 2px; background: var(--hairline-strong); }
+  .lamp .bulb { position: absolute; top: 6px; left: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 9px; background: var(--accent); box-shadow: 0 0 18px var(--accent); }
+  .link-box { font: 13px/18px "Geist Mono", ui-monospace, monospace; background: var(--fill); border-radius: 14px; padding: 14px; word-break: break-all; margin: 8px 0 12px; }
+  .lock { width: 44px; height: 44px; border-radius: 99px; background: var(--fill); display: grid; place-items: center; margin: 22px auto 12px; color: var(--ink-muted); font-size: 18px; }
+  .status { margin: 6px 0 0; text-align: center; font-size: 13px; color: var(--ink-faint); }
+  .rule { border-top: .5px solid var(--hairline); margin: 14px 0 0; }
+  /* ---- circle variants ---------------------------------------------------------------- */
+  .phones .caption { margin-top: 12px; }
+  .round.sm { width: 32px; height: 32px; font-size: 13px; flex: none; }
+  .pip { width: 8px; height: 8px; border-radius: 9px; background: var(--accent); flex: none; }
+  i.t { font-family: Newsreader, Georgia, serif; font-size: 1.04em; }
+
+  /* 1 · Shelf */
+  .raised-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px;
+                background: var(--raised); box-shadow: 0 0 0 .5px var(--hairline) inset; margin-top: 4px; }
+  .raised-row p { flex: 1; font-size: 14.5px; line-height: 19px; }
+  .strip { display: flex; gap: 12px; margin: 14px -20px 0; padding: 0 20px 6px; overflow-x: auto; scrollbar-width: none; align-items: flex-start; }
+  .strip::-webkit-scrollbar { display: none; }
+  .card { width: 130px; flex: none; }
+  .cv { position: relative; height: 195px; display: flex; align-items: flex-end; }
+  .cover.shelf { width: 130px; font-size: 12px; line-height: 13.5px; padding: 10px 9px; border-radius: 3px; }
+  .cv .av { position: absolute; left: 8px; bottom: -11px; box-shadow: 0 0 0 .5px var(--hairline-strong) inset, 0 0 0 2.5px var(--surface); }
+  .fan.shelf .cover { width: 62px; font-size: 7.5px; line-height: 8.5px; padding: 5px 4px; border-radius: 2.5px; }
+  .fan.shelf .cover + .cover { margin-left: -28px; }
+  .card .name { margin-top: 16px; font-size: 14px; line-height: 18px; font-weight: 500; }
+  .card .verb { font-size: 13px; line-height: 17px; color: var(--ink-muted); }
+  .card .day { margin-top: 4px; font: 10.5px/13px "Geist Mono", ui-monospace, monospace; letter-spacing: .04em; color: var(--ink-faint); }
+  .card .stars { margin-top: 3px; }
+
+  /* 2 · By friend */
+  .friend { display: grid; grid-template-columns: 32px 1fr 60px; column-gap: 12px; row-gap: 2px; align-items: center; padding: 12px 0; border-top: .5px solid var(--hairline); }
+  .friend > .av { grid-row: 1 / 3; align-self: start; }
+  .friend .head { grid-column: 2 / 4; }
+  .friend .said { grid-column: 2; }
+  .friend .fan { grid-column: 3; grid-row: 2; }
+  .friend.request { display: flex; gap: 12px; }
+  .friend.first { border-top: 0; padding-top: 4px; }
+  .friend .body { flex: 1; min-width: 0; }
+  .friend .head { display: flex; align-items: baseline; gap: 8px; font-size: 14.5px; line-height: 19px; }
+  .friend .head b { font-weight: 500; }
+  .friend .head .end { margin-left: auto; }
+  .friend .said { font-size: 13px; line-height: 18px; color: var(--ink-muted); }
+  .friend .said .star { color: var(--star); }
+  .fan.small { justify-content: flex-end; }
+  .fan.small .cover + .cover { margin-left: -21px; }
+  .fan.small .cover { width: 30px; }
+
+  /* 3 · Lit feature */
+  .quiet-line { display: flex; align-items: center; gap: 10px; min-height: 40px; margin-top: 2px; font-size: 14.5px; }
+  .quiet-line p { flex: 1; }
+  .feature { position: relative; margin-top: 8px; padding: 14px; border-radius: 22px; display: flex; gap: 14px;
+             background: radial-gradient(130% 90% at 0% 0%, var(--lit), transparent 72%), var(--raised);
+             box-shadow: 0 0 0 .5px var(--hairline) inset; }
+  .feature .cover { width: 96px; font-size: 10.5px; line-height: 11.5px; padding: 8px 7px; border-radius: 3px; }
+  .feature .col { flex: 1; min-width: 0; }
+  .feature .who { font-size: 14px; }
+  .feature .book { font-size: 20px; line-height: 23px; margin-top: 8px; }
+  .feature .stars { margin-top: 4px; display: block; }
+  .feature .review { -webkit-line-clamp: 3; margin-top: 8px; font-size: 14.5px; }
+  .line { display: flex; align-items: center; gap: 10px; min-height: 44px; border-top: .5px solid var(--hairline); font-size: 14.5px; }
+  .line.first { border-top: 0; }
+  .line .end { margin-left: auto; }
+  .line .txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .textlink { display: inline-block; margin-top: 4px; font-size: 14px; color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="page-head">
+  <h1>Libellus · “Your circle” on Home, four ways</h1>
+  <span class="eyebrow">Prototype for docs/proposals/social-v1.md · not app code</span>
+  <button type="button" id="theme">Switch room</button>
+</div>
+<p style="color:var(--ink-muted);font-size:13px;margin:-8px 0 22px;max-width:640px">Same data in every phone: Ida's request, Anna's finish with her review, Ben's start, Anna's three on Want to read, and (where there's room) Clara's finish and Tom's start.</p>
+
+<section class="row">
+  <div class="phones">
+
+    <!-- 0 · Today -->
+    <div>
+      <div class="phone" id="p0"><div class="screen" style="padding-top:48px">
+        <div class="bar"><span></span><span class="av">F<span class="dot"></span></span></div>
+        <p class="eyebrow">Friday · 9 Oct</p>
+        <p class="title-lg">Good evening, Fabian</p>
+        <div class="tally"><div><p class="eyebrow">Read in 2026</p><p class="ticks">||||| ||||| |||</p></div><span class="mono" style="font-size:28px;font-weight:300">13</span></div>
+        <div class="section-head"><span class="eyebrow">Your circle</span></div>
+        <div class="item first" style="align-items:center;padding-top:4px">
+          <span class="av photo pi"></span>
+          <p style="flex:1"><b style="font-weight:500">Ida</b> <span class="muted">asked to follow you</span></p>
+          <button class="btn sm primary">Accept</button><button class="round" style="width:32px;height:32px;font-size:13px" aria-label="Decline">✕</button>
+        </div>
+        <div class="item">
+          <div class="cover md c2">The Left Hand of Darkness</div>
+          <div style="flex:1">
+            <div class="who"><span class="av sm photo pa"></span><b>Anna</b><span class="verb">finished</span><span class="end eyebrow">Today</span></div>
+            <p class="book" style="margin-top:6px">The Left Hand of Darkness</p>
+            <p class="stars">★★★★<span class="half">★</span><span class="v">4.50</span></p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="cover md c3">Piranesi</div>
+          <div style="flex:1">
+            <div class="who"><span class="av sm photo pb"></span><b>Ben</b><span class="verb">started</span><span class="end eyebrow">Yesterday</span></div>
+            <p class="book" style="margin-top:6px">Piranesi</p><p class="author">Susanna Clarke</p>
+          </div>
+        </div>
+        <div class="item" style="align-items:center">
+          <div class="fan"><div class="cover c6">Stoner</div><div class="cover c1">Middle­march</div><div class="cover c5">Kindred</div></div>
+          <div class="who" style="flex:1"><span class="av sm photo pa"></span><b>Anna</b><span class="verb">added 3 to Want to read</span></div>
+        </div>
+        <button class="btn md quiet" style="width:100%;margin-top:6px">Show more</button>
+        <div class="tabs"><span class="on">⌂</span><span>▤</span><span>⌕</span></div>
+      </div></div>
+      <p class="caption"><b>0 · Today.</b> The baseline: a request, three rows with the cover at the left, Show more. Good at telling each event fully, a finish with its stars. Costs the most height, and a batch or a quiet row looks the same weight as a review.</p>
+    </div>
+
+    <!-- 1 · Shelf -->
+    <div>
+      <div class="phone" id="p1"><div class="screen" style="padding-top:48px">
+        <div class="bar"><span></span><span class="av">F<span class="dot"></span></span></div>
+        <p class="eyebrow">Friday · 9 Oct</p>
+        <p class="title-lg">Good evening, Fabian</p>
+        <div class="tally"><div><p class="eyebrow">Read in 2026</p><p class="ticks">||||| ||||| |||</p></div><span class="mono" style="font-size:28px;font-weight:300">13</span></div>
+        <div class="section-head"><span class="eyebrow">Your circle</span><span class="small muted">See all ›</span></div>
+        <div class="raised-row">
+          <span class="av photo pi"><span class="dot"></span></span>
+          <p><b style="font-weight:500">Ida</b><br><span class="muted" style="font-size:13px;line-height:17px">asked to follow you</span></p>
+          <button class="btn sm primary">Accept</button><button class="round sm" aria-label="Decline">✕</button>
+        </div>
+        <div class="strip">
+          <div class="card">
+            <div class="cv"><div class="cover shelf c2">The Left Hand of Darkness</div><span class="av sm photo pa"></span></div>
+            <p class="name">Anna</p><p class="verb">finished</p>
+            <p class="day">TODAY</p>
+            <p class="stars">★★★★<span class="half">★</span><span class="v">4.50</span></p>
+          </div>
+          <div class="card">
+            <div class="cv"><div class="cover shelf c3">Piranesi</div><span class="av sm photo pb"></span></div>
+            <p class="name">Ben</p><p class="verb">started</p>
+            <p class="day">YESTERDAY</p>
+          </div>
+          <div class="card">
+            <div class="cv"><div class="fan shelf"><div class="cover c6">Stoner</div><div class="cover c1">Middle­march</div><div class="cover c5">Kindred</div></div><span class="av sm photo pa"></span></div>
+            <p class="name">Anna</p><p class="verb">added 3 to Want to read</p>
+            <p class="day">YESTERDAY</p>
+          </div>
+          <div class="card">
+            <div class="cv"><div class="cover shelf c5">Kindred</div><span class="av sm photo pc"></span></div>
+            <p class="name">Clara</p><p class="verb">finished</p>
+            <p class="day">TUESDAY</p>
+            <p class="stars">★★★★<span class="off">★</span><span class="v">4.00</span></p>
+          </div>
+          <div class="card">
+            <div class="cv"><div class="cover shelf c6">Stoner</div><span class="av sm photo pi"></span></div>
+            <p class="name">Tom</p><p class="verb">started</p>
+            <p class="day">MONDAY</p>
+          </div>
+        </div>
+        <div class="tabs"><span class="on">⌂</span><span>▤</span><span>⌕</span></div>
+      </div></div>
+      <p class="caption"><b>1 · Shelf.</b> Covers first, the most “bookish”, and one glance shows five events at once; the strip scrolls sideways and See all replaces the button. Trade-off: less text (no review, no title but the cover's), and a sideways scroll on a page that otherwise only scrolls down.</p>
+    </div>
+
+    <!-- 2 · By friend -->
+    <div>
+      <div class="phone" id="p2"><div class="screen" style="padding-top:48px">
+        <div class="bar"><span></span><span class="av">F<span class="dot"></span></span></div>
+        <p class="eyebrow">Friday · 9 Oct</p>
+        <p class="title-lg">Good evening, Fabian</p>
+        <div class="tally"><div><p class="eyebrow">Read in 2026</p><p class="ticks">||||| ||||| |||</p></div><span class="mono" style="font-size:28px;font-weight:300">13</span></div>
+        <div class="section-head"><span class="eyebrow">Your circle</span></div>
+        <div class="friend request first">
+          <span class="av photo pi"><span class="dot"></span></span>
+          <div class="body"><p class="head"><b>Ida</b><span class="muted" style="font-size:13px">· asked to follow you</span></p></div>
+          <button class="btn sm primary">Accept</button><button class="round sm" aria-label="Decline">✕</button>
+        </div>
+        <div class="friend">
+          <span class="av photo pa"></span>
+          <p class="head"><b>Anna</b><span class="end eyebrow">Today</span></p>
+          <p class="said">finished <i class="t">The Left Hand of Darkness</i> <span class="star">★</span>4.5 · added 3 to Want to read</p>
+          <div class="fan small"><div class="cover xs c2">The Left Hand of Darkness</div><div class="cover xs c6">Stoner</div><div class="cover xs c1">Middle­march</div><div class="cover xs c5">Kindred</div></div>
+        </div>
+        <div class="friend">
+          <span class="av photo pb"></span>
+          <p class="head"><b>Ben</b><span class="end eyebrow">Yesterday</span></p>
+          <p class="said">started <i class="t">Piranesi</i></p>
+          <div class="fan small"><div class="cover xs c3">Piranesi</div></div>
+        </div>
+        <div class="friend">
+          <span class="av photo pc"></span>
+          <p class="head"><b>Clara</b><span class="end eyebrow">Tuesday</span></p>
+          <p class="said">finished <i class="t">Kindred</i> <span class="star">★</span>4</p>
+          <div class="fan small"><div class="cover xs c5">Kindred</div></div>
+        </div>
+        <button class="btn md quiet" style="width:100%;margin-top:6px">Show more</button>
+        <div class="tabs"><span class="on">⌂</span><span>▤</span><span>⌕</span></div>
+      </div></div>
+      <p class="caption"><b>2 · By friend.</b> The calmest and shortest: one row per member, a busy friend folds into one sentence, the request keeps the same shape. Trade-off: single events are hidden inside a sentence, no review, and two events of one friend share one day.</p>
+    </div>
+
+    <!-- 3 · Lit feature -->
+    <div>
+      <div class="phone" id="p3"><div class="screen" style="padding-top:48px">
+        <div class="bar"><span></span><span class="av">F<span class="dot"></span></span></div>
+        <p class="eyebrow">Friday · 9 Oct</p>
+        <p class="title-lg">Good evening, Fabian</p>
+        <div class="tally"><div><p class="eyebrow">Read in 2026</p><p class="ticks">||||| ||||| |||</p></div><span class="mono" style="font-size:28px;font-weight:300">13</span></div>
+        <div class="section-head"><span class="eyebrow">Your circle</span></div>
+        <div class="quiet-line">
+          <span class="pip"></span>
+          <p><b style="font-weight:500">Ida</b> <span class="muted">asked to follow you</span></p>
+          <button class="btn sm primary">Accept</button><button class="round sm" aria-label="Decline">✕</button>
+        </div>
+        <div class="feature">
+          <div class="cover c2">The Left Hand of Darkness</div>
+          <div class="col">
+            <div class="who"><span class="av sm photo pa"></span><b>Anna</b><span class="verb">finished</span></div>
+            <p class="book">The Left Hand of Darkness</p>
+            <span class="stars">★★★★<span class="half">★</span><span class="v">4.50</span></span>
+            <p class="review">“Cold, slow and the warmest book I read this year.”</p>
+          </div>
+        </div>
+        <div style="margin-top:6px">
+          <div class="line first"><span class="av sm photo pb"></span><span class="txt"><b style="font-weight:500">Ben</b> <span class="muted">started</span> <i class="t">Piranesi</i></span><span class="end eyebrow">Yesterday</span></div>
+          <div class="line"><span class="av sm photo pa"></span><span class="txt"><b style="font-weight:500">Anna</b> <span class="muted">added 3 to Want to read</span></span><span class="end eyebrow">Yesterday</span></div>
+        </div>
+        <span class="textlink">Show more ›</span>
+        <div class="tabs"><span class="on">⌂</span><span>▤</span><span>⌕</span></div>
+      </div></div>
+      <p class="caption"><b>3 · Lit feature.</b> Makes one review count: the newest entry gets the room, lit by the same ambient light as a profile, and the rest are one line each. Trade-off: the others recede, and a quiet day's feature is a plain start with nothing to read.</p>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  const root = document.documentElement
+  if (new URLSearchParams(location.search).get('theme') === 'dark') root.dataset.theme = 'dark'
+  document.getElementById('theme').onclick = () => (root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark')
+</script>
+</body>
+</html>
