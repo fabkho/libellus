@@ -84,3 +84,19 @@ describe('her figures that could not be read (L2)', () => {
     expect(members.viewOf('ida')).toMatchObject({ record: null, recordError: null })
   })
 })
+
+describe('what was read of her after she is unfollowed, blocked or removed (P2)', () => {
+  it('keeps no figures, Want to read or year of hers; only the profile the action leaves', async () => {
+    recordAnswer = { data: { reads: [], wantToRead: 2, reading: 1 }, error: null, status: 200 }
+    const members = await store()
+    await members.load('ida')
+    members.setYear('ida', 2025)
+    expect(members.viewOf('ida').record).not.toBeNull()
+    members.relationChanged('ida', { kind: 'unfollow' })
+    expect(members.viewOf('ida')).toMatchObject({ record: null, want: null, year: 'all', recordError: null, loaded: true })
+
+    await members.load('ida')
+    members.relationChanged('ida', { kind: 'removeFollower' })
+    expect(members.viewOf('ida')).toMatchObject({ record: null, loaded: true })
+  })
+})
