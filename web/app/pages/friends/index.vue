@@ -89,24 +89,7 @@ watch(
   <div class="relative min-h-dvh" data-testid="friends">
     <UiTopBar :back-label="t('member.back')" back-testid="friends.back" @back="back">
       <template #trailing>
-        <UiRoundButton :label="t('feed.peopleLabel')" data-testid="friends.people" @click="navigateTo('/friends/people')">
-          <!-- Two readers, in the icon set's hairline stroke: the set has no people glyph yet. -->
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            :style="{ strokeWidth: 'var(--stroke-icon)' }"
-          >
-            <circle cx="9.5" cy="8.5" r="3" />
-            <path d="M4 19c.4-3.2 2.5-5 5.5-5s5.1 1.8 5.5 5" />
-            <path d="M15.5 5.7a3 3 0 0 1 0 5.6M17.5 14.3c1.4.6 2.3 2.1 2.5 4.2" />
-          </svg>
-        </UiRoundButton>
+        <UiRoundButton icon="people" :label="t('feed.peopleLabel')" data-testid="friends.people" @click="navigateTo('/friends/people')" />
       </template>
     </UiTopBar>
 

@@ -22,7 +22,7 @@ const privacy = computed(() => privacyValueKey(social.mine))
     <h2 class="eyebrow">{{ t('friends.section') }}</h2>
     <UiRowGroup>
       <UiRow to="/friends" icon="stack" :label="t('circle.title')" chevron data-testid="profile.circle" />
-      <UiRow to="/friends/people" icon="globe" :label="t('friends.people')" chevron data-testid="profile.people">
+      <UiRow to="/friends/people" icon="people" :label="t('friends.people')" chevron data-testid="profile.people">
         <span v-if="waiting" class="text-ink-muted" data-testid="profile.peopleValue">{{ t('friends.peopleRequests', { count: waiting }, waiting) }}</span>
       </UiRow>
       <UiRow as="button" icon="share" :label="t('friends.followLink')" chevron data-testid="profile.followLink" @click="linkOpen = true" />
