@@ -26,6 +26,7 @@ import { useEbooksStore } from '~/stores/ebooks'
 import { useEditionStore } from '~/stores/edition'
 import { useHistoryStore } from '~/stores/history'
 import { useSeriesStore } from '~/stores/series'
+import { useLibraryStore } from '~/stores/library'
 
 const props = defineProps<{ entry: LibraryEntry | null }>()
 const emit = defineEmits<{ removed: [] }>()
@@ -83,6 +84,14 @@ function ask() {
   history.askRemove(props.entry)
 }
 
+const library = useLibraryStore()
+// Hiding waits in the outbox offline, like Finish and Remove. A failed write is
+// already reported by the sync sheet, so nothing shows here.
+async function hide(on: boolean) {
+  if (!props.entry) return
+  await library.setHidden(props.entry, on)
+}
+
 async function remove() {
   if (await history.confirmRemove()) emit('removed')
 }
@@ -130,6 +139,14 @@ async function unlink() {
       <BookReadAs v-if="entry" :entry="entry" testid="bookOptions.readAs" class="mb-md" />
       <UiRowGroup>
         <UiRow v-if="entry" as="button" icon="share" :label="t('bookOptions.share')" data-testid="bookOptions.share" @click="share" />
+        <UiSwitchRow
+          v-if="entry"
+          :model-value="entry.hidden ?? false"
+          icon="lock"
+          :label="t('bookOptions.hide')"
+          testid="bookOptions.hide"
+          @update:model-value="hide"
+        />
         <UiRow
           as="button"
           icon="stack"
@@ -169,6 +186,7 @@ async function unlink() {
           @click="ask"
         />
       </UiRowGroup>
+      <p v-if="entry?.hidden" class="mt-xs text-footnote text-ink-faint" data-testid="bookOptions.hideHint">{{ t('bookOptions.hideHint') }}</p>
     </div>
   </UiSheet>
 
