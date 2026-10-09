@@ -89,9 +89,8 @@ export function loadStateAt(time: number, nav: LoadTimes | undefined): string {
 /** What the user was doing in the frame: an event's type, `navigation`, or nothing known. */
 function duringOf(entry: LoafEntry, navigated: boolean): string | null {
   if (navigated) return 'navigation'
-  const end = entry.startTime + entry.duration
-  const stamp = positive(entry.firstUIEventTimestamp)
-  if (stamp === null || stamp < entry.startTime || stamp > end) return null
+  // The event's own time, from before the frame began (it waited for the main thread): set only for a frame that handled one.
+  if (positive(entry.firstUIEventTimestamp) === null) return null
   const listener = (entry.scripts ?? []).find((script) => script.invokerType === 'event-listener' && script.invoker)
   const type = listener?.invoker?.match(/\.on([a-z]+)$/i)?.[1]?.toLowerCase()
   return type ? `interaction (${type})` : 'interaction'
