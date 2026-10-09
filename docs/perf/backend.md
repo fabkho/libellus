@@ -477,6 +477,8 @@ the generated column: 15k rows, instant. Implementer: Opus (RLS design) or Sonne
 review of the predicate. Measure again: `search.*` in `scripts/perf/explain.mjs`; production
 `search_books` mean/max; `books_search_tsv` in `pg_stat_user_indexes.idx_scan` (> 0).
 
+**Fixed** in PR #249 (migration 20261020020000): `search_books` is security definer with the `books_readable` predicate word for word in both branches, over `private.book_search` (the same words, stored, GIN index `book_search_words`, kept by a trigger on `books`) instead of a column on `books`, so the JSON of `setof books` / `books(*)` is unchanged; `books_search` dropped. S2 as the member: `author 7 lastname` 58 -> 4.7 ms, `book title 12345` 53 -> 3.3 ms, `bo` 129 -> 21 ms (warm: 66 -> 2.1, 59 -> 0.6, 147 -> 23 ms); 2-CPU throughput 31 -> 554 searches/s. Write cost +~25 us per new Book (600-book import unchanged, 2,000 books ~+8 %). Measure again: `book_search_words` in `pg_stat_user_indexes.idx_scan` (> 0).
+
 ### F2. `import_books` is quadratic (impact high for onboarding, effort S)
 
 **Evidence class: L** (the quadratic, the fix) **+ P** (the 8 s `authenticated` timeout and the x2.5-x9 factors). Rank 1: a 600-book import fits the timeout only with 1.3-1.8x to spare at the typical factor ("Does a 600-book Goodreads import fit...").
