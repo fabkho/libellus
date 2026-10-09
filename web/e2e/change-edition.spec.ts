@@ -353,25 +353,29 @@ test.describe('the list of editions moves in', () => {
     await page.getByTestId('book.options').click()
 
     // Every frame from the tap on: where the first row sits in its list. And, for every row that
-    // arrives, the animation it carries — its room opening and its fade — read from the
-    // animation itself: a frame drawn while one runs may never come on a starved runner, and a
-    // whole `standard` fade then falls between two frames (docs/MOTION.md, as above).
+    // arrives, the transitions it is laid in with — its room opening and its fade — read from the
+    // animations themselves as the row is added, and where the row then stands. A frame drawn while
+    // one runs may never come on a starved runner, and the transitions' own events do not hold
+    // either: the list settles the room itself (`whenSettled`, its safety timer `standard` later,
+    // ListMotion.vue) and clearing the row's styles can reach the browser before it updates the
+    // animation, which reports the room as cancelled a few milliseconds short of its end — on a row
+    // that ends fully open all the same. What is read is what the transitions are and where the row
+    // lands, never a frame or an event on the way (docs/MOTION.md, as above).
     await page.evaluate(() => {
-      type Done = { from: unknown; to: unknown; duration: unknown; events: string[] }
+      type Laid = { from: unknown; to: unknown; duration: unknown; delay: unknown }
       // `place`: where the first row sits in its list — not under the hint, whose own box can
       // change under it (a late font), which says nothing about the row.
       const frames: { place: number | null; rows: number }[] = []
-      const arriving: { index: number; room: Done; fade: Done }[] = []
+      const arriving: { index: number; room: Laid; fade: Laid }[] = []
       Object.assign(window, { __editionFrames: frames, __editionArriving: arriving })
 
-      /** What a transition of one property does, and how it ends (`null` when it does not run). */
-      const transition = (row: HTMLElement, property: string): Done | null => {
+      /** What a transition of one property is, as it is laid in (`null` when it does not run). */
+      const transition = (row: HTMLElement, property: string): Laid | null => {
         const animation = row.getAnimations().find((one) => (one as CSSTransition).transitionProperty === property)
         if (!animation) return null
         const keyframes = (animation.effect as KeyframeEffect).getKeyframes() as Record<string, string>[]
-        const events: string[] = []
-        for (const type of ['finish', 'cancel']) animation.addEventListener(type, () => events.push(type))
-        return { from: keyframes[0]?.[property], to: keyframes.at(-1)?.[property], duration: animation.effect!.getTiming().duration, events }
+        const timing = animation.effect!.getTiming()
+        return { from: keyframes[0]?.[property], to: keyframes.at(-1)?.[property], duration: timing.duration, delay: timing.delay }
       }
 
       const look = () => {
@@ -406,12 +410,17 @@ test.describe('the list of editions moves in', () => {
     // Let the last room settle (the list says it is moving while one does).
     await expect(page.getByTestId('edition').locator('[data-moving]')).toHaveCount(0)
 
-    const { frames, arriving, standard } = await page.evaluate(() => ({
-      frames: (window as unknown as { __editionFrames: { place: number | null; rows: number }[] }).__editionFrames,
-      arriving: (window as unknown as { __editionArriving: { index: number; room: { from: unknown; to: unknown; duration: unknown; events: string[] }; fade: { from: unknown; to: unknown; duration: unknown; events: string[] } }[] }).__editionArriving,
-      // In ms: the dev server writes the token as `250ms`, the build as `.25s`.
-      standard: ((value) => parseFloat(value) * (/ms$/.test(value) ? 1 : 1000))(getComputedStyle(document.documentElement).getPropertyValue('--duration-standard').trim()),
-    }))
+    const { frames, arriving, standard, settled } = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll<HTMLElement>('[data-testid="edition.candidate"]')]
+      return {
+        frames: (window as unknown as { __editionFrames: { place: number | null; rows: number }[] }).__editionFrames,
+        arriving: (window as unknown as { __editionArriving: { index: number; room: { from: unknown; to: unknown; duration: unknown; delay: unknown }; fade: { from: unknown; to: unknown; duration: unknown; delay: unknown } }[] }).__editionArriving,
+        // In ms: the dev server writes the token as `250ms`, the build as `.25s`.
+        standard: ((value) => parseFloat(value) * (/ms$/.test(value) ? 1 : 1000))(getComputedStyle(document.documentElement).getPropertyValue('--duration-standard').trim()),
+        // Where every row that arrived stands now that nothing is moving: its room open and itself whole.
+        settled: rows.slice(1).map((row) => ({ height: getComputedStyle(row).height, opacity: getComputedStyle(row).opacity })),
+      }
+    })
     // The current row never moved in its list once the others began to arrive; what came before
     // is the sheet's own layout settling. A rect read while the sheet rides up comes back
     // rounded, so a sub-pixel spread is not a move.
@@ -420,15 +429,16 @@ test.describe('the list of editions moves in', () => {
     const places = frames.slice(arrived).map((frame) => frame.place).filter((value): value is number => value !== null)
     expect(places.length).toBeGreaterThan(0)
     expect(Math.max(...places) - Math.min(...places)).toBeLessThan(1)
-    // Every other row arrived opening its room and fading in over `standard`, played to its
-    // end: one arrival per row the sheet ended with, after the current one, in its place.
-    expect(arriving).toHaveLength((await page.getByTestId('edition.candidate').count()) - 1)
+    // Every other row arrived opening its room and fading in over `standard` — its room to its own
+    // height, its fade to whole — one arrival per row the sheet ended with, after the current one,
+    // in its place, and every one of them stands there fully open.
+    expect(arriving).toHaveLength(settled.length)
     expect(arriving.map((row) => row.index)).toEqual(arriving.map((_, index) => index + 1))
-    for (const row of arriving) {
-      expect(row.room).toEqual({ from: '0px', to: expect.stringMatching(/^\d+(\.\d+)?px$/), duration: standard, events: expect.arrayContaining(['finish']) })
-      expect(row.fade).toEqual({ from: '0', to: '1', duration: standard, events: expect.arrayContaining(['finish']) })
-      expect([...row.room.events, ...row.fade.events]).not.toContain('cancel')
-    }
+    arriving.forEach((row, at) => {
+      expect(row.room).toEqual({ from: '0px', to: settled[at]!.height, duration: standard, delay: 0 })
+      expect(row.fade).toEqual({ from: '0', to: '1', duration: standard, delay: 0 })
+      expect(settled[at]!.opacity).toBe('1')
+    })
     await expect(page.getByTestId('edition.candidate').last()).toHaveCSS('opacity', '1')
   })
 })
