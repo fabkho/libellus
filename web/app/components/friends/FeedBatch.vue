@@ -41,26 +41,26 @@ const what = computed(() => t(`feed.${feedBatchKey(props.batch.kind)}`, { count:
           class="cover"
         />
       </span>
-      <span class="flex min-w-0 flex-1 items-start justify-between gap-sm">
-        <!-- One line, as an entry's, when the sentence fits beside the name; else it drops under the avatar. -->
-        <span class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
-          <span class="flex min-w-0 items-center gap-sm">
-            <FriendsAvatar :card="batch.member" />
-            <span class="truncate font-medium">{{ name }}</span>
-          </span>
-          <span class="min-w-0 text-ink-muted">{{ what }}</span>
+      <span class="flex min-w-0 flex-1 items-start justify-between gap-sm pr-xs">
+        <!-- Always one line, the avatar, the name and the verb: a count of two digits ("added 17 to Want to read") used to
+             drop under the avatar at 390 px. What does not fit is cut at the end (the verb before the name); the button's name
+             above carries the whole sentence. -->
+        <span class="flex min-w-0 items-center gap-sm text-subhead">
+          <FriendsAvatar :card="batch.member" class="shrink-0" />
+          <span class="min-w-0 truncate font-medium">{{ name }}</span>
+          <span class="min-w-0 shrink-[3] truncate text-ink-muted">{{ what }}</span>
         </span>
         <span v-if="dayLabel" class="eyebrow shrink-0 pt-xs">{{ dayLabel }}</span>
       </span>
-      <UiIcon name="chevron" :size="16" class="-ml-ml shrink-0 text-ink-ghost" />
+      <UiIcon name="chevron" :size="16" class="-mr-xs -ml-ml shrink-0 text-ink-ghost" />
     </button>
   </li>
 </template>
 
 <style scoped>
-/* The fan: each cover a little over the one before it, three of them as wide as a feed row's cover
-   (`md`), so the text column starts where an entry's does. */
+/* The fan: each cover mostly over the one before it, so three of them are narrower than a feed row's
+   cover (`md`) and leave the text column room for a count of two digits at 390 px. */
 .cover + .cover {
-  margin-left: calc(-0.6 * var(--size-cover-sm));
+  margin-left: calc(-0.7 * var(--size-cover-sm));
 }
 </style>

@@ -54,16 +54,15 @@ onMounted(open)
       <p class="text-subhead text-ink-muted">{{ t('follow.loading') }}</p>
     </div>
 
-    <div v-else-if="outcome === 'missing'" class="flex flex-1 flex-col justify-center gap-sm py-xxl" data-testid="follow.missing">
-      <h1 class="book-title text-title">{{ t('follow.missingTitle') }}</h1>
-      <p class="text-body text-ink-muted">{{ t('follow.missing') }}</p>
-      <UiButton to="/" tone="secondary" size="md" class="mt-md self-start" data-testid="follow.home">{{ t('tabs.home') }}</UiButton>
-    </div>
+    <FriendsNote v-else-if="outcome === 'missing'" heading :title="t('follow.missingTitle')" :text="t('follow.missing')" class="flex-1 justify-center" data-testid="follow.missing">
+      <UiButton to="/" tone="secondary" size="md" data-testid="follow.home">{{ t('tabs.home') }}</UiButton>
+    </FriendsNote>
 
-    <div v-else class="flex flex-1 flex-col items-center justify-center gap-md text-center" role="status" data-testid="follow.error">
+    <template v-else>
       <h1 class="sr-only">{{ t('app.name') }}</h1>
-      <p class="text-subhead text-ink-muted">{{ outcome === 'offline' ? t('readingPage.offline') : t('readingPage.error') }}</p>
-      <UiButton tone="secondary" size="md" data-testid="follow.retry" @click="open">{{ t('readingPage.retry') }}</UiButton>
-    </div>
+      <FriendsNote :text="outcome === 'offline' ? t('readingPage.offline') : t('readingPage.error')" role="status" class="flex-1 justify-center" data-testid="follow.error">
+        <UiButton tone="secondary" size="md" data-testid="follow.retry" @click="open">{{ t('readingPage.retry') }}</UiButton>
+      </FriendsNote>
+    </template>
   </main>
 </template>

@@ -1,16 +1,24 @@
 <script setup lang="ts">
-// The favourite of a member's year in review (social v1, U4): the Book she rated best, as a card lit by its
-// cover, the same card as on the Profile's own year page (pages/profile/[year].vue, which draws it inline
-// and so cannot be reused from there). With `read` null, the placeholders hold its place in the loading
-// wave (docs/MOTION.md, Loading). A Manual book is not opened.
+// The favourite of a year in review: the Book rated best, as a card lit by its cover. One card for the
+// Profile's own year page and for a member's (social v1, U4): `foreign` is the member's, where a Manual
+// book is hers alone and opens nothing (as in MonthBooks); `testid` names the card, its title is `<testid>Title`. With `read` null, the placeholders hold its
+// place in the loading wave (docs/MOTION.md, Loading). Attributes (`id`, `class`) land on the card, not
+// on the placeholders.
 import type { StatsRead } from '~/data/stats'
 
-defineProps<{ read: StatsRead | null }>()
+defineOptions({ inheritAttrs: false })
+withDefaults(defineProps<{ read: StatsRead | null; foreign?: boolean; testid?: string }>(), { foreign: false, testid: 'yearInReview.favourite' })
 const { t } = useI18n()
 </script>
 
 <template>
-  <FriendsMemberBookLink v-if="read" :book="{ id: read.book.id, manual: read.book.source === 'manual' }" class="card relative flex flex-col items-center gap-md overflow-hidden rounded-lg bg-surface-raised px-inset py-lg text-center shadow-raised edge-faint" data-testid="memberYear.favourite">
+  <FriendsMemberBookLink
+    v-if="read"
+    v-bind="$attrs"
+    :book="linkOf(read.book, foreign)"
+    class="relative flex flex-col items-center gap-md overflow-hidden rounded-lg bg-surface-raised px-inset py-lg text-center shadow-raised edge-faint"
+    :data-testid="testid"
+  >
     <UiAmbient :colors="read.book.coverColors" shape="card" />
     <span class="eyebrow relative">{{ t('profile.year.favourite') }}</span>
     <UiCover
@@ -25,7 +33,7 @@ const { t } = useI18n()
       glow
     />
     <span class="relative flex flex-col items-center gap-xs">
-      <span class="book-title text-book-title" data-testid="memberYear.favouriteTitle">{{ read.book.title }}</span>
+      <span class="book-title text-book-title" :data-testid="`${testid}Title`">{{ read.book.title }}</span>
       <span class="text-body text-ink-muted">{{ formatAuthors(read.book.authors, t('common.etAl')) }}</span>
       <UiStars :quarters="read.rating" size="md" />
     </span>
