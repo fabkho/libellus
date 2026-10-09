@@ -121,8 +121,12 @@ watch(
       <div ref="end" class="h-px" aria-hidden="true" />
     </div>
 
-    <div v-else-if="!feed.loaded && feed.loading" class="px-screen pt-md" aria-hidden="true">
-      <ProfileRowPlaceholder v-for="i in 4" :key="i" :wave="i * 0.08" label />
+    <!-- The first answer on its way: rows of a feed entry's height under a day's eyebrow, so nothing moves when it comes. -->
+    <div v-else-if="!feed.loaded && feed.loading" class="px-screen pt-sm" aria-busy="true" data-testid="friends.loading">
+      <section class="pt-md" aria-hidden="true">
+        <FriendsRowPlaceholder kind="day" />
+        <FriendsRowPlaceholder v-for="i in 4" :key="i" kind="feed" :wave="i * 0.08" />
+      </section>
     </div>
 
     <div v-else-if="feed.emptyState === 'nobody'" class="px-screen pt-lg" data-testid="friends.empty">

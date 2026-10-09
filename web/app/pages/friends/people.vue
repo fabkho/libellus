@@ -232,6 +232,11 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
 
         <p v-if="failed && online" class="text-footnote text-error" role="alert" data-testid="people.error">{{ t('people.error') }}</p>
       </template>
+
+      <!-- The first answer on its way: rows of a person's height, so the list does not jump when it comes. -->
+      <div v-else class="flex flex-col" aria-busy="true" data-testid="people.loading">
+        <FriendsRowPlaceholder v-for="i in 4" :key="i" kind="person" :wave="i * 0.1" />
+      </div>
     </div>
 
     <FriendsMemberSheet v-model:open="sheet" :member="sheetMember" :following="sheetRelation.following" :follower="sheetRelation.follower" @changed="changed" />
