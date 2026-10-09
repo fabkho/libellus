@@ -52,6 +52,15 @@ set it up and run it is in [`docs/TESTING.md`](TESTING.md).
 `pnpm build` (or `pnpm generate`) runs `nuxt generate`; `.output/public` (also linked as `dist`) is
 what Cloudflare Pages serves, service worker and manifest included.
 
+### Performance (`web/perf`)
+
+`pnpm perf` measures the production build the way a phone meets it (Slow 4G and a 4x CPU in Chromium,
+WebKit as it is, cold and warm starts, tab switches, a Book, the search palette, the Profile) against a
+library of the owner's size; `pnpm perf:bundle` reads what the build ships. It runs on a stack of its own
+(ports 55671–55679) and one listener on :3101, never the shared one. How to run it, what it fakes, and
+the Android and iOS device sessions: [`web/perf/README.md`](../web/perf/README.md); what it found:
+[`docs/perf/`](perf/).
+
 ### Regal, the owner's shelf (optional)
 
 Regal is the owner's 3D bookshelf, a Nuxt layer in a private repository. It is opt-in: without
