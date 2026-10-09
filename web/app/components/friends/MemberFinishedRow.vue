@@ -2,7 +2,8 @@
 // One finished Book on a member's profile (social v1, U4b), in the section and in its *See all* sheet: the
 // cover, title, author, her stars and the day, and her review folded at four lines with More. The stars and
 // the review are there only where her switches let them through (the database sends them null otherwise).
-// A cover or title opens the Book, flying into its page; a Manual book opens nothing.
+// A cover or title opens the Book, flying into its page; a Manual book opens nothing. The title's link is the
+// Book's one link for the keyboard and screen readers (the cover's is hidden from both, as the feed's rows have it).
 import type { SocialBook } from '~/data/social'
 
 defineProps<{ item: { book: SocialBook; endedOn: string | null; rating: number | null; review: string | null } }>()
@@ -13,7 +14,7 @@ const { formatDay } = useDays()
 
 <template>
   <div class="flex items-start gap-inset py-sm">
-    <FriendsMemberBookLink :book="item.book" class="shrink-0">
+    <FriendsMemberBookLink :book="item.book" class="shrink-0" tabindex="-1" aria-hidden="true" data-testid="member.finishedCover">
       <UiCover
         decorative
         :title="item.book.title"
@@ -25,7 +26,7 @@ const { formatDay } = useDays()
       />
     </FriendsMemberBookLink>
     <div class="flex min-w-0 flex-1 flex-col gap-xxs">
-      <FriendsMemberBookLink :book="item.book" class="flex flex-col gap-xxs">
+      <FriendsMemberBookLink :book="item.book" class="flex flex-col gap-xxs" data-testid="member.finishedBook">
         <span class="book-title title-wrap text-callout" data-testid="member.finishedTitle">{{ item.book.title }}</span>
         <span class="truncate text-caption text-ink-muted">{{ formatAuthors(item.book.authors, t('common.etAl')) }}</span>
       </FriendsMemberBookLink>
