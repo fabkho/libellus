@@ -5,9 +5,9 @@
 // shows (stores/goodreads.ts); it opens its room and fades in when the answer
 // comes. A rating the Book already carried (a Library copy, offline too) shows
 // at once. Hidden while nothing is known, when Goodreads does not know the
-// Book, when it has no ratings, and for a Book without an ISBN.
+// Book, when it has no ratings, and for a Book with neither an ISBN nor an author.
 import type { Book, BookSnapshot } from '~/data/books'
-import { goodreadsIsbn, goodreadsUrl, showsRating } from '~/data/goodreads'
+import { goodreadsKey, goodreadsUrl, showsRating } from '~/data/goodreads'
 import { useGoodreadsStore } from '~/stores/goodreads'
 import { numberFormat } from '~/utils/intl'
 
@@ -23,7 +23,7 @@ const rating = useAfterMotion(() => {
 })
 
 // After the page has rendered, so the line never holds the page up.
-onMounted(() => watch(() => goodreadsIsbn(props.book), () => void goodreads.load(props.book), { immediate: true }))
+onMounted(() => watch(() => goodreadsKey(props.book), () => void goodreads.load(props.book), { immediate: true }))
 
 const compact = computed(() => numberFormat(locale.value, { notation: 'compact', maximumFractionDigits: 1 }))
 /** "138K ratings", then "6.1K reviews" when Goodreads said; the last one ends "on Goodreads". */

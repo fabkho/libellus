@@ -12,7 +12,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createGoodreads, userAgent } from './client.ts'
 import type { GoodreadsAnswer } from './goodreads.ts'
-import { type CachedAnswer, createHandler } from './handler.ts'
+import { type CacheKey, type CachedAnswer, createHandler } from './handler.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -23,7 +23,8 @@ const supabase = createClient(url, serviceKey, {
 })
 
 type Row = {
-  isbn13: string
+  isbn13?: string
+  title_key?: string
   status: 'found' | 'not_found'
   matched_by: 'isbn' | 'title' | null
   goodreads_id: string | null
@@ -46,10 +47,17 @@ function fromRow(row: Row): CachedAnswer {
   }
 }
 
-function toRow(isbn13: string, answer: GoodreadsAnswer & { checkedAt: string }): Row {
+/** Where an answer is cached: by ISBN-13, or by title and authors for a Book without an ISBN. */
+function table(key: CacheKey) {
+  return 'isbn13' in key
+    ? { name: 'goodreads_ratings', column: 'isbn13', value: key.isbn13 }
+    : { name: 'goodreads_title_ratings', column: 'title_key', value: key.titleKey }
+}
+
+function toRow(key: CacheKey, answer: GoodreadsAnswer & { checkedAt: string }): Row {
   const found = answer.status === 'found' ? answer : null
   return {
-    isbn13,
+    [table(key).column]: table(key).value,
     status: answer.status,
     matched_by: found?.matchedBy ?? null,
     goodreads_id: found?.goodreadsId ?? null,
@@ -62,13 +70,14 @@ function toRow(isbn13: string, answer: GoodreadsAnswer & { checkedAt: string }):
 
 const handler = createHandler({
   cache: {
-    async get(isbn13) {
-      const { data, error } = await supabase.from('goodreads_ratings').select('*').eq('isbn13', isbn13).maybeSingle<Row>()
+    async get(key) {
+      const { name, column, value } = table(key)
+      const { data, error } = await supabase.from(name).select('*').eq(column, value).maybeSingle<Row>()
       if (error) throw new Error(error.message)
       return data ? fromRow(data) : null
     },
-    async put(isbn13, answer) {
-      const { error } = await supabase.from('goodreads_ratings').upsert(toRow(isbn13, answer))
+    async put(key, answer) {
+      const { error } = await supabase.from(table(key).name).upsert(toRow(key, answer))
       if (error) throw new Error(error.message)
     },
   },

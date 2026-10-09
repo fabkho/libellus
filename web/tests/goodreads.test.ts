@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
-import { createGoodreads, goodreadsIsbn, goodreadsUrl, ratingFromRow, showsRating, type FunctionsClient } from '@/data/goodreads'
+import { createGoodreads, goodreadsIsbn, goodreadsKey, goodreadsUrl, ratingFromRow, showsRating, type FunctionsClient } from '@/data/goodreads'
 import { createLibrary } from '@/data/library'
 import { signUpMember } from './support/member'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
@@ -78,14 +78,50 @@ describe('the repository', () => {
     expect((await createGoodreads(byTitle.client).rating(book())).data?.reviewsCount).toBeNull()
   })
 
-  it('asks with the ISBN-10 converted, and not at all without an ISBN or offline', async () => {
+  it('asks with the ISBN-10 converted, and not at all offline', async () => {
     const { client, asked } = functions(() => ({ data: { status: 'not_found' }, error: null }))
     await createGoodreads(client).rating(book({ isbn13: null, isbn10: '0061803200' }))
     expect((asked[0]!.body as { isbn13: string }).isbn13).toBe('9780061803208')
 
-    expect(await createGoodreads(client).rating(book({ isbn13: null }))).toEqual({ data: null, error: null })
     expect(await createGoodreads(client, { online: () => false }).rating(book())).toEqual({ data: null, error: 'offline' })
+    expect(await createGoodreads(client, { online: () => false }).rating(book({ isbn13: null }))).toEqual({
+      data: null,
+      error: 'offline',
+    })
     expect(asked).toHaveLength(1)
+  })
+
+  it('asks for a Book without an ISBN by its title and authors alone', async () => {
+    const { client, asked } = functions(() => ({
+      data: { status: 'found', goodreadsId: '32109569', rating: 4.24, ratingsCount: 146833, reviewsCount: null, matchedBy: 'title' },
+      error: null,
+    }))
+    const wicked = book({ isbn13: null, isbn10: null, title: 'Something Wicked This Way Comes', authors: ['Ray Bradbury'] })
+    expect(await createGoodreads(client).rating(wicked)).toEqual({
+      data: { goodreadsId: '32109569', rating: 4.24, ratingsCount: 146833, reviewsCount: null },
+      error: null,
+    })
+    // No `isbn13` key at all: the function reads that as "look it up by title and author".
+    expect(asked).toEqual([
+      { name: 'goodreads-rating', body: { title: 'Something Wicked This Way Comes', authors: ['Ray Bradbury'] } },
+    ])
+  })
+
+  it('does not ask for a Book with no ISBN and no author (a title alone never matches)', async () => {
+    const { client, asked } = functions(() => ({ data: { status: 'not_found' }, error: null }))
+    expect(await createGoodreads(client).rating(book({ isbn13: null, authors: [] }))).toEqual({ data: null, error: null })
+    expect(asked).toHaveLength(0)
+  })
+
+  it('remembers a Book by its ISBN-13, else by title and first author; nothing to ask with is no key', () => {
+    expect(goodreadsKey({ isbn13: '9780061803208', isbn10: null, title: 'Small Gods', authors: [] })).toBe('9780061803208')
+    expect(goodreadsKey({ isbn13: null, isbn10: '0061803200', title: 'Small Gods', authors: [] })).toBe('9780061803208')
+    const wicked = { isbn13: null, isbn10: null, title: 'Something Wicked This Way Comes', authors: ['Ray Bradbury', 'Other'] }
+    expect(goodreadsKey(wicked)).toBe('title:something wicked this way comes|ray bradbury')
+    // The same title twice in the Catalogue is one question.
+    expect(goodreadsKey({ ...wicked, title: ' something wicked this way comes ' })).toBe(goodreadsKey(wicked))
+    expect(goodreadsKey({ ...wicked, authors: [] })).toBeNull()
+    expect(goodreadsKey({ ...wicked, authors: ['  '] })).toBeNull()
   })
 
   it('a failing function is "unavailable", never a miss', async () => {

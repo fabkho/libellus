@@ -14,7 +14,7 @@
 // back under it) and opens the built-in reader over the page, its cover flying
 // from this one (components/reader/Reader.vue). How she read it (Read as, #169)
 // is set in the options sheet.
-import { formatOf } from '~/data/books'
+import { formatOf, sourceKeys } from '~/data/books'
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useEditionStore } from '~/stores/edition'
@@ -51,10 +51,35 @@ const followed = ref<string | null>(null)
 const key = computed(() => followed.value ?? routeKey.value)
 watch(routeKey, () => (followed.value = null))
 const page = computed(() => books.page(key.value))
-const book = computed(() => page.value?.book ?? null)
+// A Book that is not in her Library can show another of its editions (Change edition, read only):
+// the page's own Book is what `viewed` stands in for, here and nowhere else (stores/edition.ts, `viewing`).
+const viewed = computed(() => edition.viewOf(routeKey.value))
+const book = computed(() => viewed.value ?? page.value?.book ?? null)
 const entry = computed(() => page.value?.entry ?? null)
 
 watch(key, (value) => books.load(value), { immediate: true })
+
+// What she looked at is gone with the page, or with the Book it was a view of.
+watch(routeKey, () => edition.stopViewing())
+onBeforeUnmount(() => edition.stopViewing())
+// The edition she looks at is in her Library by now (she added it here, or already had it): the page
+// is that entry's, and takes its address as after a change of edition (`editionChanged`).
+watch(
+  () => {
+    const shown = viewed.value
+    if (!shown) return null
+    for (const bookKey of 'id' in shown ? [shown.id] : sourceKeys(shown)) {
+      const held = library.entryForBook(bookKey)
+      if (held) return held
+    }
+    return null
+  },
+  (held) => {
+    if (!held) return
+    edition.stopViewing()
+    editionChanged(held)
+  },
+)
 
 // Change edition animates (docs/MOTION.md, Change edition): the old hero is
 // copied before the page draws the new Book, then turns into it.
@@ -70,6 +95,17 @@ watch(
     if (!move || !shown || !('id' in shown) || shown.id !== move.from) return
     editionChange.capture()
     followed.value = move.to.book.id
+    void nextTick(editionChange.play)
+  },
+  { flush: 'pre' },
+)
+
+// The edition she looks at (a Book that is not in her Library) changes the page the same way.
+watch(
+  () => edition.viewing,
+  (now, before) => {
+    if (!now || now === before || !page.value?.book) return
+    editionChange.capture()
     void nextTick(editionChange.play)
   },
   { flush: 'pre' },
@@ -171,7 +207,7 @@ function back() {
     <!-- What the old edition was about, over the new text while a change of edition plays. -->
     <div ref="pageWas" class="pointer-events-none absolute inset-0" aria-hidden="true" inert />
     <UiTopBar :back-label="t('book.back')" back-testid="book.back" @back="back">
-      <template v-if="entry" #trailing>
+      <template v-if="book" #trailing>
         <UiRoundButton icon="more" :label="t('book.options')" data-testid="book.options" @click="optionsOpen = true" />
       </template>
     </UiTopBar>
@@ -280,7 +316,7 @@ function back() {
 
     <BookHistory v-if="entry" :entry="entry" />
     <BookEditSessionSheet />
-    <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" @removed="back" />
+    <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" :shown="book" :page="routeKey" @removed="back" />
     <BookEditionSheet @changed="editionChanged" />
     <!-- The reader, loaded on its first opening (the engine is its own chunk). -->
     <LazyReader v-if="readerOpen && entry && ebook" :entry="entry" :record="ebook" :hero="heroEl" @closed="reader.close()" />
