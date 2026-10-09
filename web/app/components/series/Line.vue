@@ -25,7 +25,8 @@ onMounted(() =>
 )
 
 const place = computed(() => (props.bookId ? series.ofBook(props.bookId)?.series[0] : undefined))
-const line = computed(() => seriesLine(place.value))
+// What arrives late waits for the cover's flight (useAfterMotion): the line is there in the first frame when the device has it.
+const line = useAfterMotion(() => seriesLine(place.value))
 const where = computed(() => {
   const l = line.value
   if (!l?.position) return null
