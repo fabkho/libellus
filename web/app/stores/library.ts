@@ -405,6 +405,32 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  /**
+   * The *Want to read* button on another member's Book (social v2a): adds a Catalogue Book as Want to
+   * read at once, no sheet. `known` is the Book as a page already loaded it; without it the Book is
+   * asked for (online only: the add needs the source ids and the ISBN the social answers do not carry).
+   * A Catalogue Book add waits in the outbox offline like any other (data/library.ts, `addToLibrary`).
+   * Refused for a Manual book. Returns the entry, or the code.
+   */
+  async function addWantToRead(id: string, known: BookSnapshot | Book | null = null): Promise<{ entry: LibraryEntry } | { error: LibraryErrorCode }> {
+    const repo = library()
+    if (!repo) return { error: 'unknown' }
+    if (entryForBook(id)) return { error: 'already_in_library' }
+    let book = known && 'id' in known ? known : null
+    if (!book) {
+      if (!isOnline()) return { error: 'offline' }
+      const found = await repo.book(id)
+      if (found.error) return { error: found.error }
+      if (!found.data) return { error: 'unknown' }
+      book = found.data
+    }
+    if (book.source === 'manual') return { error: 'book_invalid' }
+    const result = await repo.addToLibrary(await withCover(book), {})
+    if (result.error) return { error: result.error }
+    entryChanged(result.data, bookKey(book))
+    return { entry: result.data }
+  }
+
   // ------------------------------------------------------- the device's copy
 
   /** Cancels the write waiting for an idle moment, if there is one. */
@@ -535,6 +561,7 @@ export const useLibraryStore = defineStore('library', () => {
     openAdd,
     closeAdd,
     confirmAdd,
+    addWantToRead,
     reset,
   }
 })
