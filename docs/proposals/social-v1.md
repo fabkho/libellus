@@ -181,6 +181,16 @@ Tasks, models, order and checks: [social-v1-plan.md](social-v1-plan.md).
 
 ## Version 2
 
+**Order (owner, 9 October 2026, after version 1 shipped):** first the version 1 debt (below), then
+**2a** as one wave: spoiler-safe reviews (1), likes (2), you both read (4), reading the same book now (7),
+friends' Want to read on yours (8). Then 2b (readers on a Book's page and finding people: 3, 6), then 2c
+(GIFs 9; *Send a book* 5 still a maybe).
+
+**Version 1 debt:** HTTP 404/429 for the named refusals (today 500); paging in People; an end-to-end
+guard that fails a flow on an uncaught page error; *See all* with its count; one favourite card shared
+by the two year pages; a two-digit batch that wraps; one quiet empty/error block; and the Catalogue
+trusting its first adder's title, description and cover (a design to decide first).
+
 The owner's answers to the proposed list (8 October 2026): yes to 1, 3, 4, 7 and 8; likes instead of
 *Want to read too* (2); *Send a book* maybe (5); people found through reviews on a Book's page (6);
 and a new idea, GIFs and stickers in reviews. Not scheduled yet: version 1 comes first.
@@ -201,8 +211,9 @@ and a new idea, GIFs and stickers in reviews. Not scheduled yet: version 1 comes
 
 Likes replace *Want to read too*. To keep them from becoming a score:
 
-- **Who, not how many.** Under an entry: "Liked by Anna and Ben" (people you know, by name), never a
-  number. In a large circle the line stops at two names and "others".
+- **A number on the heart; names for the author.** (Owner, 9 October 2026, replacing "who, not how
+  many": names do not scale to a hundred likes.) The heart shows how many liked the entry to everyone
+  who can see it; only the entry's author can open the list of who liked it.
 - **She hears once.** The author gets one quiet row in her *Your circle* ("Anna liked your review of
   Piranesi"), no notification and no badge.
 - **Private stays private.** A like is visible only to people who can see the entry, and goes when the
