@@ -93,7 +93,8 @@ describe('the report', () => {
     expect(during(frame())).toBeUndefined()
     expect(during(frame({ firstUIEventTimestamp: 9100 }))).toBe('during: interaction (click)')
     expect(during(frame({ firstUIEventTimestamp: 9100, scripts: [] }))).toBe('during: interaction')
-    expect(during(frame({ firstUIEventTimestamp: 100 }))).toBeUndefined()
+    expect(during(frame({ firstUIEventTimestamp: 8990 }))).toBe('during: interaction (click)')
+    expect(during(frame({ firstUIEventTimestamp: 0 }))).toBeUndefined()
     expect(during(frame(), true)).toBe('during: navigation')
   })
 
