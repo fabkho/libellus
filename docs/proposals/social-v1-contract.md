@@ -443,8 +443,11 @@ The error log reports `/friends/[member]` and `/f/[token]`, never the id or toke
 
 Every interactive element and everything a test reads, as `<screen>.<element>`:
 
-- **Home** (`components/home/Circle.vue`): `home.circle`, `home.circleRequest`, `home.circleAccept`,
-  `home.circleDecline`, `home.circleEntry`, `home.circleMore`.
+- **Home** (`components/home/Circle.vue`, `CircleFeature.vue`, `CircleFriend.vue`): `home.circle`,
+  `home.circleRequest`, `home.circleAccept`, `home.circleDecline`; the card of a finished Book
+  `home.circleFeature` (`.member`, `.cover`, `.title`, `.stars`, `.review`, `.more`); a member's
+  row `home.circleFriend`; `home.circleMore`. (`home.circleEntry` and `home.circleBatch` are gone: the
+  rows are one per member, a batch is a phrase of her sentence.)
 - **Feed** (`/friends`): `friends`, `friends.back`, `friends.people`, `friends.day`, `friends.entry`,
   `friends.entryMember`, `friends.entryBook`, `friends.entryReview`, `friends.entryMore`,
   `friends.batch`, `friends.empty`, `friends.emptyShare`, `friends.quiet`, `friends.offline`,
@@ -481,7 +484,9 @@ New keys (English as written; `{name}` etc. are i18n parameters):
   "circle": {
     "title": "Your circle",
     "more": "Show more",
-    "asked": "{name} asked to follow you",
+    "askedLine": "asked to follow you",
+    "want": "added {title} to Want to read",
+    "join": " · ",
     "accept": "Accept",
     "decline": "Decline",
     "declineLabel": "Decline {name}"

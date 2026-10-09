@@ -1,13 +1,14 @@
 <!doctype html>
 <!--
-  Libellus · social v1 · P1 · "Your circle" on Home, four ways. A design prototype to choose from;
+  Libellus · social v1 · P1 · "Your circle" on Home, four ways, and a fifth that combines three of
+  them (4 · Combined, with and without a finished Book). A design prototype to choose from;
   not app code. Tokens and cover classes are copied from mock.html. `?theme=dark` or the button
-  switches the room. The same data in all four phones.
+  switches the room. The same data in all the phones.
 -->
 <html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
-<title>Libellus · Your circle, four ways</title>
+<title>Libellus · Your circle, four ways and a combined one</title>
 <style>
   :root, [data-theme="light"] {
     --surface: #f4f0e9; --raised: #fbf9f5; --sheet: #fbf9f5; --fill: rgb(40 30 20 / .05);
@@ -225,15 +226,22 @@
   .line .end { margin-left: auto; }
   .line .txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .textlink { display: inline-block; margin-top: 4px; font-size: 14px; color: var(--ink-muted); }
+
+  /* 4 · Combined: Shelf's request row, By friend's rows, Lit feature's card */
+  .feature + .friends, .raised-row + .friends { margin-top: 8px; }
+  .raised-row + .feature { margin-top: 10px; }
+  .friends .friend.first { padding-top: 8px; }
+  .phone.tall { height: 1010px; } /* the Home page scrolls: the combined design is taller than one screen */
+  .feature .who .verb { color: var(--ink-muted); }
 </style>
 </head>
 <body>
 <div class="page-head">
-  <h1>Libellus · “Your circle” on Home, four ways</h1>
+  <h1>Libellus · “Your circle” on Home, four ways, and a combined one</h1>
   <span class="eyebrow">Prototype for docs/proposals/social-v1.md · not app code</span>
   <button type="button" id="theme">Switch room</button>
 </div>
-<p style="color:var(--ink-muted);font-size:13px;margin:-8px 0 22px;max-width:640px">Same data in every phone: Ida's request, Anna's finish with her review, Ben's start, Anna's three on Want to read, and (where there's room) Clara's finish and Tom's start.</p>
+<p style="color:var(--ink-muted);font-size:13px;margin:-8px 0 22px;max-width:640px">Same data in every phone (4 and 4b are the combined design, below): Ida's request, Anna's finish with her review, Ben's start, Anna's three on Want to read, and (where there's room) Clara's finish and Tom's start.</p>
 
 <section class="row">
   <div class="phones">
@@ -390,6 +398,101 @@
         <div class="tabs"><span class="on">⌂</span><span>▤</span><span>⌕</span></div>
       </div></div>
       <p class="caption"><b>3 · Lit feature.</b> Makes one review count: the newest entry gets the room, lit by the same ambient light as a profile, and the rest are one line each. Trade-off: the others recede, and a quiet day's feature is a plain start with nothing to read.</p>
+    </div>
+
+  </div>
+</section>
+
+<section class="row">
+  <h2>4 · Combined</h2>
+  <p>The owner's pick: Shelf's request row, By friend's list, and Lit feature's card for a finished Book. Order: the request, the card, the list (at most three members), Show more. Left: this week has a finish. Right: a week without one, so no card and the list alone.</p>
+  <div class="phones">
+
+    <!-- 4 · Combined -->
+    <div>
+      <div class="phone tall" id="p4"><div class="screen" style="padding-top:48px">
+        <div class="bar"><span></span><span class="av">F<span class="dot"></span></span></div>
+        <p class="eyebrow">Friday · 9 Oct</p>
+        <p class="title-lg">Good evening, Fabian</p>
+        <div class="tally"><div><p class="eyebrow">Read in 2026</p><p class="ticks">||||| ||||| |||</p></div><span class="mono" style="font-size:28px;font-weight:300">13</span></div>
+        <div class="section-head"><span class="eyebrow">Your circle</span></div>
+        <div class="raised-row">
+          <span class="av photo pi"><span class="dot"></span></span>
+          <p><b style="font-weight:500">Ida</b><br><span class="muted" style="font-size:13px;line-height:17px">asked to follow you</span></p>
+          <button class="btn sm primary">Accept</button><button class="round sm" aria-label="Decline">✕</button>
+        </div>
+        <div class="feature">
+          <div class="cover c2">The Left Hand of Darkness</div>
+          <div class="col">
+            <div class="who"><span class="av sm photo pa"></span><b>Anna</b><span class="verb">finished</span></div>
+            <p class="book">The Left Hand of Darkness</p>
+            <span class="stars">★★★★<span class="half">★</span><span class="v">4.50</span></span>
+            <p class="review">“Cold, slow and the warmest book I read this year.”</p>
+          </div>
+        </div>
+        <div class="friends">
+          <div class="friend first">
+            <span class="av photo pb"></span>
+            <p class="head"><b>Ben</b><span class="end eyebrow">Yesterday</span></p>
+            <p class="said">started <i class="t">Piranesi</i></p>
+            <div class="fan small"><div class="cover xs c3">Piranesi</div></div>
+          </div>
+          <div class="friend">
+            <span class="av photo pa"></span>
+            <p class="head"><b>Anna</b><span class="end eyebrow">Yesterday</span></p>
+            <p class="said">added 3 to Want to read</p>
+            <div class="fan small"><div class="cover xs c6">Stoner</div><div class="cover xs c1">Middle­march</div><div class="cover xs c5">Kindred</div></div>
+          </div>
+          <div class="friend">
+            <span class="av photo pc"></span>
+            <p class="head"><b>Clara</b><span class="end eyebrow">Tuesday</span></p>
+            <p class="said">finished <i class="t">Kindred</i></p>
+            <div class="fan small"><div class="cover xs c5">Kindred</div></div>
+          </div>
+        </div>
+        <button class="btn md quiet" style="width:100%;margin-top:6px">Show more</button>
+        <div class="tabs"><span class="on">⌂</span><span>▤</span><span>⌕</span></div>
+      </div></div>
+      <p class="caption"><b>4 · Combined.</b> The request stays one raised row, the week's one finished Book gets the room with her review, and everyone else is one calm row each. Anna's finish leaves the list, so her row says only what else she did.</p>
+    </div>
+
+    <!-- 4b · Combined, a week without a finish -->
+    <div>
+      <div class="phone tall" id="p4b"><div class="screen" style="padding-top:48px">
+        <div class="bar"><span></span><span class="av">F<span class="dot"></span></span></div>
+        <p class="eyebrow">Friday · 9 Oct</p>
+        <p class="title-lg">Good evening, Fabian</p>
+        <div class="tally"><div><p class="eyebrow">Read in 2026</p><p class="ticks">||||| ||||| |||</p></div><span class="mono" style="font-size:28px;font-weight:300">13</span></div>
+        <div class="section-head"><span class="eyebrow">Your circle</span></div>
+        <div class="raised-row">
+          <span class="av photo pi"><span class="dot"></span></span>
+          <p><b style="font-weight:500">Ida</b><br><span class="muted" style="font-size:13px;line-height:17px">asked to follow you</span></p>
+          <button class="btn sm primary">Accept</button><button class="round sm" aria-label="Decline">✕</button>
+        </div>
+        <div class="friends">
+          <div class="friend first">
+            <span class="av photo pb"></span>
+            <p class="head"><b>Ben</b><span class="end eyebrow">Yesterday</span></p>
+            <p class="said">started <i class="t">Piranesi</i></p>
+            <div class="fan small"><div class="cover xs c3">Piranesi</div></div>
+          </div>
+          <div class="friend">
+            <span class="av photo pa"></span>
+            <p class="head"><b>Anna</b><span class="end eyebrow">Yesterday</span></p>
+            <p class="said">added 3 to Want to read</p>
+            <div class="fan small"><div class="cover xs c6">Stoner</div><div class="cover xs c1">Middle­march</div><div class="cover xs c5">Kindred</div></div>
+          </div>
+          <div class="friend">
+            <span class="av photo pi"></span>
+            <p class="head"><b>Tom</b><span class="end eyebrow">Monday</span></p>
+            <p class="said">started <i class="t">Stoner</i></p>
+            <div class="fan small"><div class="cover xs c6">Stoner</div></div>
+          </div>
+        </div>
+        <button class="btn md quiet" style="width:100%;margin-top:6px">Show more</button>
+        <div class="tabs"><span class="on">⌂</span><span>▤</span><span>⌕</span></div>
+      </div></div>
+      <p class="caption"><b>4b · Combined, no finish this week.</b> Nobody finished a Book in the last seven days, so there is no card and the list is the whole section: the request, a row per member, Show more. Anna's finish is older than a week and is not told.</p>
     </div>
 
   </div>
