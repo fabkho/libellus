@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// Profile → Friends (social v1, U1): her side of following in three rows. People (how many requests
+// Profile → Friends (social v1, U1): her side of following. Your circle (the feed: always reachable here,
+// also when Home shows no Your circle), then three rows. People (how many requests
 // wait, else nothing; to the People page), Your follow link (opens its sheet) and Privacy (Private or
 // Public; opens the privacy sheet, which holds what followers see and who she blocked). Read when the
 // Profile opens, before Share.
@@ -20,6 +21,7 @@ const privacy = computed(() => privacyValueKey(social.mine))
   <section id="friends" class="flex flex-col gap-sm" data-testid="profile.friends">
     <h2 class="eyebrow">{{ t('friends.section') }}</h2>
     <UiRowGroup>
+      <UiRow to="/friends" icon="stack" :label="t('circle.title')" chevron data-testid="profile.circle" />
       <UiRow to="/friends/people" icon="globe" :label="t('friends.people')" chevron data-testid="profile.people">
         <span v-if="waiting" class="text-ink-muted" data-testid="profile.peopleValue">{{ t('friends.peopleRequests', { count: waiting }, waiting) }}</span>
       </UiRow>

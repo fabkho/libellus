@@ -464,7 +464,7 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
   (`profile.figures`, `profile.columns`, …, as the reused components carry them);
   `memberYear` (`.back`, `.title`) for the year page.
 - **Follow link** (`/f/<token>`): `follow`, `follow.loading`, `follow.missing`.
-- **Profile** (`components/profile/Friends.vue`): `profile.friends`, `profile.people`,
+- **Profile** (`components/profile/Friends.vue`): `profile.friends`, `profile.circle`, `profile.people`,
   `profile.peopleValue`, `profile.followLink`, `profile.privacy`, `profile.privacyValue`.
 - **Privacy sheet**: `privacy` (`.cancel`), `privacy.private`, `privacy.section.reading|want|finished|ratings|reviews|abandoned|year`,
   `privacy.blocked`, `privacy.error`; going public confirm `goPublic` (`.confirm`, `.cancel`).
