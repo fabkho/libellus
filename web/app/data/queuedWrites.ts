@@ -33,6 +33,8 @@ export const QUEUED_ACTIONS = [
   'update_progress',
   'update_session',
   'remove_from_library',
+  // Hide a Book from her followers (social v1): one flag on her own entry.
+  'set_entry_hidden',
   'add_to_collection',
   'remove_from_collection',
   'reorder_collection',
@@ -197,7 +199,7 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
               review: trimmed(args.p_review),
             })
           : null
-    return { id: write.creates.entry_id, status, addedAt: queuedAt, book: write.book, pageCountOverride: null, readAs: null, latestSession }
+    return { id: write.creates.entry_id, status, addedAt: queuedAt, book: write.book, pageCountOverride: null, readAs: null, hidden: false, latestSession }
   }
   if (!entry) return 'entry_not_found'
 
@@ -255,6 +257,9 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
     }
     case 'remove_from_library':
       return null
+    case 'set_entry_hidden':
+      // A null leaves it as it is (the database's `coalesce`).
+      return { ...entry, hidden: typeof args.p_hidden === 'boolean' ? args.p_hidden : (entry.hidden ?? false) }
     default:
       return entry
   }

@@ -68,6 +68,11 @@ export type LibraryEntry = {
    * default). Absent on a copy from before it existed.
    */
   readAs?: ReadAs | null
+  /**
+   * Kept from her followers (social v1): a hidden entry is gone for everyone but her. Absent on a
+   * copy from before it existed, which reads as `false`; every read from the database has it.
+   */
+  hidden?: boolean
   latestSession: ReadingSession | null
 }
 
@@ -364,12 +369,14 @@ export type EntryRow = {
   format_override?: BookFormat | null
   /** Absent on a row from before Read as existed (a cached Library). */
   read_as?: ReadAs | null
+  /** Absent on a row from before hiding existed (a cached Library). */
+  hidden?: boolean
   book: BookRow
   latest: SessionRow | null
 }
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
+export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, hidden, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
 
 export function bookFromRow(row: BookRow): Book {
   return {
@@ -448,6 +455,7 @@ export function entryFromRow(row: EntryRow): LibraryEntry {
     pageCountOverride: row.page_count_override ?? null,
     formatOverride: row.format_override ?? null,
     readAs: row.read_as ?? null,
+    hidden: row.hidden ?? false,
     latestSession: row.latest ? sessionFromRow(row.latest) : null,
   }
 }
@@ -620,6 +628,12 @@ export type Library = {
    * connection, like Change edition. Returns the entry. Refused with `read_as_invalid`.
    */
   setReadAs: (entryId: string, readAs: ReadAs | null) => Promise<Result<LibraryEntry>>
+  /**
+   * Hides the entry from her followers, or shows it again (social v1): a hidden Book is gone for
+   * everyone but her. Can wait offline like the other writes (`set_entry_hidden` in the outbox);
+   * returns the entry as it will be. Refused `entry_not_found` for an entry that is not hers.
+   */
+  setHidden: (entryId: string, hidden: boolean) => Promise<Result<LibraryEntry>>
   /**
    * Removes the entry from the Library with its reads and its places on
    * Collections (the Collections and the Book stay).
@@ -920,6 +934,17 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       if (!online()) return OFFLINE
       const set = await client.rpc('set_read_as', { p_entry_id: entryId, p_read_as: readAs })
       if (isNoAnswer(set)) return OFFLINE
+      if (set.error) return { data: null, error: mapLibraryError(set.error) }
+      return reread(entryId)
+    },
+
+    async setHidden(entryId, hidden) {
+      const args = { p_entry: entryId, p_hidden: hidden }
+      const waiting = await queuedEntry('set_entry_hidden', args, entryId)
+      if (waiting) return waiting
+      if (!online()) return OFFLINE
+      const set = await client.rpc('set_entry_hidden', args)
+      if (isNoAnswer(set)) return unansweredEntry('set_entry_hidden', args, entryId)
       if (set.error) return { data: null, error: mapLibraryError(set.error) }
       return reread(entryId)
     },

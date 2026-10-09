@@ -72,7 +72,7 @@ export function starOf(rating: number): number {
   return Math.max(1, Math.floor(rating / 4))
 }
 
-type SessionStatsRow = {
+export type SessionStatsRow = {
   id: string
   entry_id: string
   started_on: string | null
