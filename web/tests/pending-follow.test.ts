@@ -21,7 +21,7 @@ function memoryStorage(): DeviceStorage {
   } as DeviceStorage
 }
 
-const TOKEN = `${'abc-_'.repeat(5)}XY`
+const TOKEN = `${'abc-_'.repeat(4)}XY`
 const OTHER = `${'Q7'.repeat(10)}-_`
 const NOW = 1_700_000_000_000
 
