@@ -4,7 +4,9 @@ Read-only assessment of the Libellus backend (Postgres 17 + PostgREST + Auth + S
 functions + Cloudflare Pages) for the step from one member to a few hundred. Nothing in the app, no
 migration and no production access was changed or used: the numbers come from the read-only
 production extracts the coordinator pulled on 2026-10-09 (`/tmp/perf-backend/`) and from a
-throwaway local stack with synthetic data. Client waterfalls and bundle weight belong to the
+throwaway local stack with synthetic data; a follow-up round (R1-R6, run read-only against production
+by the coordinator, section "Production readings") replaced my first guess of "production = local x5" by
+measured factors. Client waterfalls and bundle weight belong to the
 client assessment (perf-client-1); this file lists only what the server side could batch.
 
 Everything the numbers need is reproducible from `scripts/perf/` (see "Reproducing" at the end).
@@ -13,17 +15,20 @@ Everything the numbers need is reproducible from `scripts/perf/` (see "Reproduci
 
 The database is idle today: the 40 heaviest statements add up to 124 s over about 4.5 days, and 56 %
 of that is the app. Nothing is slow for one member. What this assessment found is **what stops
-scaling**, ranked by impact x effort:
+scaling**, ranked by impact x effort **after the production readings**. Evidence class: **P** = measured
+in production (statement statistics, EXPLAIN as the member, headers, settings), **L** = measured on the
+local stack, **C** = read from code/docs. Local figures carry the production factor of "Production
+readings": x2.5 best case, x4-9 typical mean, x15-30 for the occasional slow run.
 
-| # | Finding | Evidence (local, ms) | Effort | Tier |
-| --- | --- | --- | --- | --- |
-| 1 | `search_books` cannot use its GIN index under RLS: every search is a sequential scan that recomputes `unaccent` + `to_tsvector` for every book | 4 ms (400 books) -> 15 ms (2.5k) -> **52-114 ms (15k books)**; `books_search` is "unused" in the advisors for this reason; fix: 7-67x | M | Opus (RLS) |
-| 2 | `import_books` is O(n^2): the title match computes `work_title_key(b.title)` for every Book she has, for every file row | 600 books 1.4 s, **2,000 books 12.6 s**; one expression index: 0.25 s / 0.73 s | S | DeepSeek |
-| 3 | Queries on `reading_sessions` / `reading_progress_days` without an `entry_id` filter scan the whole table (RLS is a hashed sub-plan on every row) | Home's `readInYear`: 0.09 -> 0.63 -> **6.0 ms and 30,548 buffers** (one member); an invoker function that starts from her entries: 0.57 ms / 585 buffers | M | Sonnet |
-| 4 | Home refetches the whole Library on every activation with the full `books.*` row (the description is ~half of it); lists are capped silently at PostgREST's 1,000 rows | 304 KB raw / 24 KB gzip per Home (150 entries), **1.95 MB / 141 KB** for a 1,000-entry member; a 4th full copy when Search opens | M | Sonnet |
-| 5 | `started_series` and (not yet shipped) `muted_series_list` compute the same large CTE twice per Home | 8 + 6 ms (150 entries), 25 + 21 ms (1,000); prod mean of `started_series`: **54 ms, max 1.5 s** | S | Sonnet |
-| 6 | `cron.job_run_details` is never purged and costs more than the jobs it logs | 3,426 bookkeeping statements, 9.8 s, vs 9.0 s for `shelf_publish_dispatch` itself | S | DeepSeek |
-| 7 | CORS preflight per distinct URL (to verify: `Access-Control-Max-Age` of the hosted API; Safari caps it at 5 min) | local Kong sends none | S-M | coordinator check |
+| # | Finding (was) | Evidence | Numbers | Effort | Tier |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **F2** `import_books` is O(n^2): the title match computes `work_title_key(b.title)` for every Book she has, for every file row (**was 2, up**) | **L** + P factor | 600 books 1.4-2.8 s locally, worst 100-row call 0.5-0.7 s; **x9 = 4.4-6.1 s of the 8 s `authenticated` timeout, x15+ times out**; 2,000 books 12.6-21.9 s, times out from the ~840th entry at x9; one index: 0.25 s / 0.73 s, worst call 40 ms | S | DeepSeek |
+| 2 | **F1** `search_books` cannot use its GIN index under RLS: a sequential scan that recomputes `unaccent` + `to_tsvector` for every book (same) | **L**, P at 185 books | production **69 ms** for `'the'` at 185 books (EXPLAIN), mean 21.6 / sd 48 / max 576 ms over 181 calls; local 1.2-3 ms; linear in Books: 4 -> 15 -> **52-114 ms at 15k locally, ~0.4-0.8 s typical on this instance**; fix 7-67x | M | Opus (RLS) |
+| 3 | **F4** Home refetches the whole Library per activation with full `books.*`; 1,000-row cap; 4th full copy on Search (**was 4, up**) | **P** (R3, R1) + L | avg description **1,226 chars = ~65 % of a Book's JSON** (my seed had 740): ~300 KB per Home at 130 books (my figure 241 KB), 151 unfiltered full-Library fetches in 4.5 days (mean 27 ms, max 613); 1.95 MB (141 KB gzip) for 1,000 entries locally | M | Sonnet |
+| 4 | **F5** `started_series` and (unshipped) `muted_series_list` compute the same CTE twice per Home (**same; the production figure was misattributed, see below**) | **P** + L | `started_series` (21 calls) mean **55 ms**, sd 48, max 177, 2,368 buffers per call (same plan work as local, 6 ms); the 54 ms / max 1.5 s I quoted belongs to `next_in_series`, Home's older query | S | Sonnet |
+| 5 | **F3** `reading_sessions` / `reading_progress_days` policy forces whole-table scans (**was 3, down**) | **L**; plan shape confirmed in P | production `readInYear` is 0.38 ms and 10 buffers at 80 rows (533 calls, mean 1.5 ms): invisible today; locally 0.09 -> 0.63 -> **6.0 ms / 30,548 buffers** at 36k sessions, 0.57 ms when driven from her entries | M | Sonnet |
+| 6 | **F6** `cron.job_run_details` never purged (same) | **P** | log is 344 kB after 6 days (~456 rows/day); `shelf-publish` 1,223 runs avg 8.6 ms, max 159 | S | DeepSeek |
+| 7 | **F7** CORS preflight (**was 7, answered and down**) | **P** + C | `access-control-max-age: 3600`: fine for Chrome (cap 2 h); WebKit caps it at 10 min, so one preflight per distinct URL per 10 min on iPhone; no action | - | - |
 
 Social v1 (PR #235) is fine to ship from a performance standpoint, with a few things worth doing
 first or right after (section "Social v1 before it ships"): `feed()` costs followees x their
@@ -31,12 +36,13 @@ retained activity, not the page size (18 ms p50 at 200 follows, linear); `my_peo
 200/200 and is also what Home calls to count follows; two foreign keys without index; the Home
 refetch pattern gets two more requests.
 
-Headroom (section "Throughput"): on this Mac, with the database limited to 2 CPUs (about a Supabase
-Micro), 10 connections serve ~500 list requests/s and ~30 searches/s at 15k books; 20 members
-opening Home in the same instant (120 requests) finish in 0.77 s p50 / 1.0 s p95. Home needs ~25 ms of
-database time and the burst of 20 above is ~26 Home opens per second on 2 vCPUs: three hundred
-members are no problem *if* search and the sessions queries stop being linear in the catalogue and in
-the sessions table.
+Headroom (sections "Throughput" and "Production readings"): on this Mac, with the database limited to
+2 CPUs, 10 connections serve ~500 list requests/s and ~30 searches/s at 15k books; 20 members opening
+Home in the same instant (120 requests) finish in 0.77 s p50 / 1.0 s p95. The production instance
+is a Micro-class compute (224 MB shared buffers, 60 connections): at x2.5 that is 1.9 s / 2.5 s, at x9
+about 7 s / 9 s for an instant burst of 20, which no realistic peak reaches (5-10 at once is). Home needs ~25 ms of
+local database time (60-225 ms there). Three hundred members are no problem *if* search, the import and
+the sessions queries stop being linear in the catalogue, in her Library and in the sessions table.
 
 ## Method
 
@@ -60,11 +66,10 @@ the sessions table.
 - **End to end**: `scripts/perf/screens.mjs` replays the requests of each screen through Kong and
   PostgREST with a minted HS256 JWT (no GoTrue needed), alone or as N members at once; `oha` for
   sustained throughput. (pgbench/k6 are not installed; Node's `fetch` and `oha` do the same job.)
-- **Calibration.** Production runs the same statements about **5-9x slower** than this Mac
-  (18 cores, everything cached): `started_series` mean 54 ms in production vs 6 ms here;
-  `search_books` 21.6 ms on 185 Books vs 3.9 ms on 400 here; the 2-CPU runs below add the
-  contention but not the slower cores. Read every local figure as a ratio and as "x5" for production.
-  I have no instance size (request R2).
+- **Calibration.** First assumed "production = local x5" from two statements; the production readings
+  (section below) give measured factors per statement: **x2.5 best case** (production minimum vs local
+  warm), **x4-9 typical** (production mean vs local warm), **x15-30** for single slow runs. Read every
+  local figure with those three multipliers; the 2-CPU runs add contention but not slower cores.
 
 ## What production says (the extracts of 2026-10-09)
 
@@ -81,17 +86,18 @@ the sessions table.
 
 By total time the app's top statements are the Library lists (`library_entries` + embeds: 8.3 s, 6.7 s,
 5.3 s, 4.1 s ... across 433 and 287 calls: the same three lists in two deploys of the client, each
-Home activation = 3 statements), `started_series` (133 calls, 7.2 s), `enrich_save` (the
+Home activation = 3 statements), `next_in_series` (133 calls, 7.2 s: Home's older series query; the first
+version called it `started_series`), `enrich_save` (the
 `p_payload` RPC: 191 calls, 26 ms mean, 5.0 s, the enrichment writer), `search_books`
-(181 calls, 21.6 ms mean, max 576 ms), `next_in_series` (21 calls, 55 ms), `library_genres`
+(181 calls, 21.6 ms mean, max 576 ms), `started_series` (21 calls, 55 ms), `library_genres`
 (156 calls, 10.4 ms), `reading_sessions` queries (191 + 132 calls, 11-13 ms).
-**By mean** (ignoring Studio): `started_series` 54 ms (max 1,528), `next_in_series` 55 ms,
+**By mean** (ignoring Studio): `next_in_series` 54 ms (max 1,528), `started_series` 55 ms (21 calls, max 177),
 `enrich_save` 26 ms, the token RPCs (`public_reading_page`/`public_book_card`, matched by their
 argument names) 27-58 ms (20-23 calls, max 255-294 ms: cold), `search_books` 21.6-29 ms, Library lists 12-28 ms, `log_client_error` 33 ms.
 The means are dominated by cold caches (max values 10-50x the mean) on a small shared-CPU
-instance, which is why the local figures are multiplied by 5-9 above. The statement texts are cut at
-160 characters in the extract, so the mapping of the three-way `library_entries` groups to
-want/reading/finished is inferred (request R1 asks for full text and standard deviations).
+instance, which is why the local figures are multiplied by 5-9 above. The statement texts are now
+known (R1, "Production readings"): the three `library_entries` groups are finished / want to read /
+reading by their `ORDER BY`.
 
 ### Advisors
 
@@ -145,45 +151,210 @@ Nothing here needs an index today; the one plan that is wrong at scale is F1.
 day, so 1,217 calls is 4.2 days since 2026-10-05 (the nested calls from the library triggers are not
 counted: `pg_stat_statements.track = top`). Each run is a primary-key read of the one-row
 `private.shelf_publish` and, only when the owner changed something and 10 minutes passed, a Vault
-secret decrypt and a `net.http_post` (that branch is the 154 ms maximum). The 7.4 ms mean is mostly
-what a background-worker connection costs on a small instance, not the function: locally the
-`up_to_date` path is 0.05 ms. In all, the three recurring jobs + their bookkeeping are 28.4 s in ~4.5
+secret decrypt and a `net.http_post` (that branch is the 154 ms maximum). The 7.4 ms mean (R6a: p50 7.2 ms, max 159) is mostly
+what a fresh background worker costs on this instance, not the function: measured locally, the
+`up_to_date` path is 0.03-0.09 ms warm and 0.56 ms as the first call of a fresh session, x13 to 7.2 ms. In all, the three recurring jobs + their bookkeeping are 28.4 s in ~4.5
 days, 0.007 % of one core. **Not a problem.** The only real consequence: `cron.job_run_details` gets
 ~456 rows a day that nothing deletes (F6). `enrich-drain` every 10 minutes (335 calls, 9.5 ms) returns
 `idle` without a network call when the queue is empty; `purge_abandoned_signups` hourly (152 calls,
 42 ms mean) deletes from `auth.users` by an unindexed predicate, harmless below tens of thousands
 of users.
 
+## Production readings
+
+The coordinator ran requests R1-R6 of the first version of this report read-only against production on
+2026-10-09 (`/tmp/perf-backend/r/`). R7 (the Early Hints toggle) could not be read and stays an open
+question for the owner. What the files say, and what it changes.
+
+### The instance (R2)
+
+| Setting | Value | Reading |
+| --- | --- | --- |
+| Postgres | 17.11, aarch64 | |
+| `shared_buffers` / `effective_cache_size` / `work_mem` | 224 MB / 384 MB / 2,184 kB | a Micro-class compute (1 GB RAM); the whole dataset fits, every plan below shows `read=0` |
+| `max_connections` | 60 | see "Connection ceiling" |
+| `jit`, `max_parallel_workers_per_gather`, `random_page_cost` | off, 1, 1.1 | jit off is right for small statements |
+| `statement_timeout` | default 120 s; **`authenticated` 8 s**, `anon` 3 s, `authenticator` 8 s (+ `lock_timeout` 8 s), `service_role` none | the limit that binds every RPC a member calls |
+| Realtime publication (R6c) | empty | Realtime is unused, as the code said |
+| Cron (R6a) | `shelf-publish` */5: 1,223 runs, avg 8.6 ms, p50 7.2, max 159; `enrich-drain` */10: 338 runs, avg 11.0, max 88; `purge-abandoned-signups` hourly: 152 runs, avg 45, max 96; `enrich-refresh`, `purge-client-errors`, `purge-synced-writes` daily: 15-36 ms | all trivial; `cron.job_run_details` is **344 kB** after 6 days (F6 is housekeeping, not a problem) |
+| Least-used indexes (R6d) | the unused ones are the FK-support and tiny-table indexes the advisors already listed, plus `books_search` (idx_scan 0: F1) | no new index to drop; `client_errors_created_at` exists (3 scans) |
+
+### The statements that matter (R1, with standard deviations)
+
+The text identifies each statement (the first version inferred some). `buf` = shared buffers hit per
+call in production; "local" = the same work on my stack at a matching size (139 entries, 185 Books,
+2,318 works, 663 `work_series` rows: the production shape), warm, best of 5. **Production's plans
+touch the same number of buffers as mine** (`started_series`: 3,909 in production, 3,891 locally;
+`search_books`: 1,080 vs 1,034), so the difference below is speed and noise, not a different plan.
+
+| Statement (calls) | min | mean | sd | max | buf | local | x min | x mean | x max |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Library list, finished (`order by latest.ended_on`) (433 + 287) | 11.1 / 11.8 | 19.3 / 23.3 | 18 / 19 | 328 / 220 | 635 / 672 | 4.5 | 2.5 | 4.3-5.2 | 49-73 |
+| Library list, want to read (`order by added_at`) (433 + 287) | 5.6 / 5.7 | 12.4 / 14.2 | 13 / 13 | 167 / 115 | 348 | 1.4 | 4.0 | 8.8-10 | 80-120 |
+| Library list, reading (`order by latest.started_on`) (433 + 286) | 0.7 / 0.9 | 3.6 / 4.6 | 12 / 16 | 226 / 265 | 80 | ~1 | ~1 | 3.6-4.6 | 230 |
+| Library, no filter (`libraryEntries()`: Search opens, import) (100 + 51) | 17.0 / 17.7 | 27.7 / 25.7 | 60 / 21 | 613 / 115 | 973 | ~9 (the three lists) | 1.9 | 2.9-3.1 | 68 |
+| `started_series` (21) | 16.3 | **55.1** | 48 | 177 | 2,368 | 6.1 | 2.7 | 9.0 | ~20-71 (measured today at 139 entries: mean 55) |
+| `next_in_series` (133; Home's older series query) | 8.6 | **54.0** | **143** | **1,528** | 2,055 | 3.6 | 2.4 | 15 | ~22-77 (heavy ~35-126) |
+| `search_books` (181 + 40) | **2.7** / 3.6 | 21.6 / 29.0 | **48 / 39** | 576 / 194 | 356 | 1.2-3.4 | ~1 | 7-18 | 190 |
+| `enrich_save` (191; the edge function's writer) | 1.5 | 26.4 | 34 | 187 | 1,710 | not measured | | | |
+| `reading_sessions` with embedded Book (Profile) (191 + 132) | 6.6 / 7.6 | 11.3 / 13.4 | 7 / 8 | 75 / 68 | 469-517 | 1.9 | 3.5 | 5.9-7.0 | 36-39 |
+| `readInYear` count (533) | 0.02 | 1.49 | 4.0 | 63 | 32 | 0.09 | | 17 | |
+
+The 433/287 pairs are the same statement in two client deploys. Every row says the same thing: **the minimum is about 2.5x the warm local time, the mean 4-9x, the
+maximum 50-400x**, with a standard deviation as large as the mean: production is fast most of the time
+and has frequent slow runs, as a shared-CPU burstable instance does. (R1 shows `shared_blks_read = 0`
+except for 3, 16 and 2 reads in three rows, so the slow runs are not disk.) I/O is not the cause;
+CPU credits or noisy neighbours are the likely ones, which only the dashboard's CPU graph can confirm
+(R9).
+
+Corrections to the first version. **`started_series` has 21 calls, not 133**: the 133-call, 54 ms,
+max-1.5 s statement is `next_in_series`, the query Home used before 20261014; `started_series` is its
+replacement and was deployed late (21 calls). Both cost about 55 ms per call on this instance for the
+same plan work that costs 4-6 ms locally. `muted_series_list` is not in the extract, as expected.
+
+### EXPLAIN as the real member (R4)
+
+| Call | Production | Local at the same size | Reading |
+| --- | --- | --- | --- |
+| `started_series(50, 'en')` | **174 ms**, 3,909 buffers, planning 0.02 ms | 4-6 ms, 3,891 buffers | same plan, 29-43x slower: the maximum of the statement's own distribution (max 176.6 ms over 21 calls), a slow run, not the typical one (mean 55 ms) |
+| `search_books('the', 20)` | **69 ms**, 1,080 buffers, a `Function Scan` | 1.2-3.4 ms (`'the'` here: 90 of 185 titles start with "The") | x20-57 for one run; the same statement's production minimum is 2.7 ms and its mean 21.6 ms with sd 48. The 69 ms is again the slow tail. I could not reproduce a cold-backend cost of that size locally (first call in a fresh session: 3.3 ms against 1.2-1.3 warm) |
+| `readInYear` count | 0.38 ms, 10 buffers; **still a `Seq Scan on reading_sessions` with the hashed sub-plan** (80 rows) | 0.09 ms, 6 buffers | the F3 plan shape is the one in production; it costs nothing at 80 rows |
+
+A repeat-run EXPLAIN in one session would separate "slow tail" from "slow instance": R9 below.
+
+### The Library payload (R3)
+
+130 Books, average `description` **1,226 characters** (p95 2,271), average row 1,242 bytes
+(`pg_column_size`, i.e. the stored, possibly compressed row; the JSON PostgREST sends is larger). My seed had 740
+characters: the production list is **~1.65x my payload per entry**. With ~650 bytes of other columns the
+description is **~65 %** of a Book's JSON. That agrees with the coordinator's "~300 KB for 130 books"
+(my 118-entry local Home was 241 KB): 130 x (1.9 KB Book + ~0.4 KB entry/session/rating) = ~300 KB, and a
+1,000-entry member is ~2.3 MB raw. F4's first fix (leave `description` out of the lists) removes
+two thirds of the bytes of every Home activation, more than the half I estimated.
+
+### CORS preflight (R5)
+
+The hosted API answers `OPTIONS` with `access-control-max-age: 3600` (the local Kong sends none), headers
+`apikey,authorization,content-type,x-client-info`. Chrome honours it up to 2 h, Firefox up to 24 h,
+**WebKit caps it at 10 minutes** (MDN, `Access-Control-Max-Age`): on the primary target (iPhone) each
+distinct URL pays one preflight per 10 minutes of use, and the three Library lists, the year count
+and the RPCs are eight distinct URLs. A cost of one extra round trip per URL per 10 minutes, in parallel
+with the others: not worth a proxy. F7 is closed; batching (F4.4) would remove it as a side effect.
+
+### Recalibration
+
+Where I have both numbers, the factor between this Mac (18 cores, warm) and this instance is:
+
+| Case | Factor | Used for |
+| --- | --- | --- |
+| production **minimum** vs local warm | **x2.4-2.7** (list finished 2.5, `started_series` 2.7, `next_in_series` 2.4) | best case, an idle instance |
+| production **mean** vs local warm | **x4-9** (lists 4.3-9, `started_series` 9, `search_books` 7, Profile 6), x15 for `next_in_series` (sd 143) | typical latency |
+| a single slow run (max, or the EXPLAINs of R4) | **x17-57** (`search_books` EXPLAIN x20-57, `started_series` x29) | tail |
+| a fresh background worker (cron statements, first call in a new backend) | **x13** (`shelf_publish_dispatch` p50 7.2 ms in production, 0.56 ms for its first call in a fresh local session; the warm call is 0.03-0.09 ms) | why every cron statement costs 7-45 ms |
+
+The first version said "x5": right for the mean of the lists, **too low for `started_series` and the
+tails, and too high for the best case**. The hot-path table below now shows two columns, x2.5 and
+x9. The coordinator's "x17" for `search_books` compares one slow production run with a warm local
+one; production's own distribution for the same statement is 2.7 / 21.6 / 576 ms (min / mean / max).
+
+### What gets more or less urgent
+
+| Finding | Before | After | Why |
+| --- | --- | --- | --- |
+| F2 `import_books` | 2 | **1** | the 8 s timeout is within the typical factor (next section); S effort, no risk, so it goes first |
+| F1 `search_books` | 1 | 2 | slightly more urgent in absolute terms (production 21.6 ms mean on 185 Books, 69 ms tail: ~0.4-0.8 s typical at 15k Books), but cheap now; the fix is M, RLS-sensitive, and the index is not needed below ~2k Books |
+| F4 payload / refetch | 4 | **3** | descriptions are 65 % of the JSON and 1.65x my seed; production already makes 151 unfiltered full-Library fetches in 4.5 days (Search opens, import); 433 + 287 Home activations in the same time |
+| F5 series | 5 | 4 | `started_series` really costs 55 ms mean there on every Home (sd 48), and the muted variant doubles it |
+| F3 sessions policy | 3 | 5 | production `readInYear` is 0.38 ms at 80 rows, 1.5 ms mean; the cost is real only as the table grows (30 k buffers at 36 k sessions locally). Fix when the first 20 members join, or alongside F4 |
+| F7 CORS | 7 | closed | max-age 3600 |
+| F6 cron | 6 | 6 | log is 344 kB |
+
+### Does a 600-book Goodreads import fit the 8 s `authenticated` timeout?
+
+The timeout applies to each API call, and the app sends 100 rows per `import_books` call
+(`bookImport.ts: writeRows`), so a 600-book import is six calls and the last is the slowest.
+Local, on the production-sized start (139 entries, 185 Books): two runs of 600 books took 2.3 s and 2.8 s;
+the worst call (the sixth) took **0.49 and 0.68 s**. A 2,000-book run: 21.9 s, calls growing from 0.26 s to
+**1.94 s**; the fit over all 20 calls is `call ms = 133 + 0.9 x entries in her Library at that moment`.
+
+| Factor | Worst call of a 600-book import (0.49-0.68 s) | Verdict | Entries in her Library at which one call reaches 8 s |
+| --- | --- | --- | --- |
+| x2.5 (best case) | 1.2-1.7 s | fits | ~3,400 |
+| x4.3 (mean of the lists) | 2.1-2.9 s | fits | ~1,900 |
+| x9 (typical mean) | **4.4-6.1 s** | **fits with 1.3-1.8x to spare** | ~840 |
+| x15-17 (slow run) | 7.4-11.6 s | **times out** | ~450 |
+
+So **on this instance a 600-book import fits the 8 s timeout at best-case and typical speed, with a
+margin of only 1.3-1.8x at the typical mean, and fails in a slow run** (production's maxima are 50-400x its
+means, so a slow minute is not exotic); a second import for a member who already has ~840+ books times out
+at the typical mean, and a 2,000-book import fails from about its 8th call on. Each call is its own
+transaction, so a failed call leaves the earlier ones imported and the client sees a partial import.
+With the F2 index the same worst call is ~40 ms locally (x29 = 1.2 s): the timeout stops being a
+question. This moves F2 to the top.
+
+### Search growth on this instance (F1)
+
+Local cost is linear in the Catalogue: ~3.4 us per Book for a selective query, ~5.3 us for a common prefix
+(52 / 79 ms at 15,000 Books, 114 ms for `'bo'`), plus ~0.6 ms. Production: mean 21.6 ms at 185 Books
+(= x7 on ~3 ms), so:
+
+| Catalogue | local | x2.5 (best) | x7 (measured mean) | x20 (a slow run, e.g. the 69 ms EXPLAIN) |
+| --- | --- | --- | --- | --- |
+| 185 Books (today) | 1.2-3 ms | 3-8 ms | **~21 ms (measured)** | 69 ms (measured) |
+| 2,000 | 7-11 ms | 18-27 ms | 50-75 ms | 150-220 ms |
+| 5,000 | 17-27 ms | 45-65 ms | 120-190 ms | 350-540 ms |
+| 15,000 | 52-114 ms | 130-285 ms | 360-800 ms | 1.0-2.3 s |
+
+A typed query runs after a 220 ms pause from 2 characters, so at ~5k Books (a few dozen members with
+overlapping taste) every search is a visible 120-190 ms typical wait and CPU-bound: with 2 shared
+vCPUs about 4-12 searches/s at 15k Books (local 2-CPU run: 31/s, divided by the factor), i.e. 3-5 members
+typing at once saturate the instance. The 8 s timeout is not the limit for search (it would take ~100k Books).
+
+### Connection ceiling (60) and the PostgREST pool
+
+REST traffic does not open connections per request: PostgREST holds a fixed pool (not a `pg_settings` value,
+so R2 cannot show it) and queues requests past it, as my local runs show (pool of 10: 30 connections make
+p50 x6). 20 members opening Home at once (120 requests) therefore queue, they do not exhaust 60
+connections; the time is the pool x the statement times above (at x9, Home is 60-225 ms of database time:
+20 at once clear in ~2 s at the best case and ~7 s at the typical mean, p95 higher; the same burst of 5
+takes ~0.6 s typical). What the 60 does not allow is slack for direct connections: GoTrue, Storage, the
+cron workers (three jobs, a connection each for milliseconds), `pg_net`, Realtime (its publication is
+empty but it may still hold a few), PostgREST's pool and the dashboard share them. Nothing in the app
+opens a direct Postgres connection (the edge functions use supabase-js over REST), so the ceiling is not
+the constraint to design around; R8 shows the actual mix. PostgREST also gives up waiting for a free pool
+connection after its acquisition timeout (10 s by default): that, not Postgres, is the failure that a
+too-large burst at x9 would show first.
+
 ## Hot paths
 
 What each screen asks (from `web/app/data/*.ts` and the stores), with the cost I measured. "ms" are
 local, authenticated, warm; buffers in parentheses for the ones where the plan shape matters.
 **Inv/Def** = security invoker/definer; **Vol** = stable/volatile. All reads are stable invoker unless
-said. 10x = S1, 100x = S2; "heavy" = the 1,000-entry member at S2. Production = local x 5.
+said. 10x = S1, 100x = S2; "heavy" = the 1,000-entry member at S2. The last column is the S2 figure at x2.5 (best case) to x9 (typical mean), see "Production readings"; single slow runs go to x20-30.
 
-| Screen / call | Inv/Def, Vol | Touches | Today (S0) | 10x (S1) | 100x (S2) | Heavy | 100x in production (x5) |
+| Screen / call | Inv/Def, Vol | Touches | Today (S0) | 10x (S1) | 100x (S2) | Heavy | 100x on this instance (x2.5 - x9) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Home**, whole screen (6 parallel requests), p50 / p95 | | | 7.2 / 8.2 | 7.0 / 8.6 | 7.9 / 9.9 | 30 / 36 | ~40 / ~50 |
-| `library_entries` want_to_read, SQL only | table, RLS | her entries + `books.*` + `goodreads_rating()` + `latest_session()` per row | 1.5 | 1.3 | 1.9 | 7.2 | ~10 (heavy ~36) |
-| `library_entries` finished, ordered by `latest(ended_on)` | table, RLS | same | 4.4 | 3.4 | 3.6 | 19.9 (8,024 buffers) | ~18 (heavy ~100) |
-| `reading_sessions` count (`readInYear`, HEAD) | table, RLS (hashed sub-plan) | **all** sessions of the table | 0.09 | 0.63 (2,869) | **6.0 (30,548)** | 6.9 | **~30**, linear: ~300 ms at 3M sessions |
-| `started_series` | invoker, stable | her entries, sessions, `work_series` | 6.2 | 6.6 | 7.9 | 24.6 | ~40 (prod today: mean 54, max 1,528) |
-| `muted_series_list` (20261016, not in prod) | invoker, stable | the same CTE again | 4.8 | 5.6 | 5.7 | 20.5 | ~28 |
-| **Library** (3 lists + `library_genres`), p50 / p95 | | + her entries again | 6.5 / 7.3 | 6.0 / 7.8 | 6.2 / 7.7 | 29 / 31 | ~30 / ~40 |
-| `library_genres` | invoker, stable | her entries x `book_genres` | 1.3 | 1.5 | 1.9 | 4.8 | ~10 |
-| **Book page**, 6 requests, p50 / p95 | | by id / `entry_id` | 3.2 / 3.9 | 2.8 / 3.4 | 3.1 / 3.8 | | flat |
+| **Home**, whole screen (6 parallel requests), p50 / p95 | | | 7.2 / 8.2 | 7.0 / 8.6 | 7.9 / 9.9 | 30 / 36 | ~20-70 / ~25-90 |
+| `library_entries` want_to_read, SQL only | table, RLS | her entries + `books.*` + `goodreads_rating()` + `latest_session()` per row | 1.5 | 1.3 | 1.9 | 7.2 | ~5-17 (heavy ~18-65) |
+| `library_entries` finished, ordered by `latest(ended_on)` | table, RLS | same | 4.4 | 3.4 | 3.6 | 19.9 (8,024 buffers) | ~9-32 (heavy ~50-180) |
+| `reading_sessions` count (`readInYear`, HEAD) | table, RLS (hashed sub-plan) | **all** sessions of the table | 0.09 | 0.63 (2,869) | **6.0 (30,548)** | 6.9 | ~15-54; linear: ~50 ms locally at 300k sessions, 0.12-0.45 s there |
+| `started_series` | invoker, stable | her entries, sessions, `work_series` | 6.2 | 6.6 | 7.9 | 24.6 | ~20-71 (measured today at 139 entries: mean 55) |
+| `muted_series_list` (20261016, not in prod) | invoker, stable | the same CTE again | 4.8 | 5.6 | 5.7 | 20.5 | ~14-51 |
+| **Library** (3 lists + `library_genres`), p50 / p95 | | + her entries again | 6.5 / 7.3 | 6.0 / 7.8 | 6.2 / 7.7 | 29 / 31 | ~16-56 / ~19-69 |
+| `library_genres` | invoker, stable | her entries x `book_genres` | 1.3 | 1.5 | 1.9 | 4.8 | ~5-17 |
+| **Book page**, 6 requests, p50 / p95 | | by id / `entry_id` | 3.2 / 3.9 | 2.8 / 3.4 | 3.1 / 3.8 | | ~8-28, flat |
 | `book_series_info` / `book_authors_of` / `book_genres` | invoker, stable | by book, indexed | 3.3 / 0.8 / 1.0 | 3.3 / 0.8 / 1.0 | 3.3 / 0.8 / 1.0 | same | flat |
-| **Profile**, 5 requests, p50 / p95 | | | 5.1 / 6.3 | 5.5 / 6.4 | 13.3 / 16.3 | 33 / 35 | ~65 / ~85 (heavy ~165) |
-| closed sessions with embedded Book, paged by 1,000 | table, RLS | **all her sessions** + entry + Book | 2.3 | 1.8 | 2.1 | 10.2 (1.3 MB raw) | ~10 (heavy ~50) |
-| `reading_progress_days`, 83 days, embeds session | table, RLS (3 levels) | the whole table | 0.2 | 0.5 (1,966) | 2.4 (3,520) | 3.1 | ~12; linear in the table |
-| first progress day ("since": `order by day limit 1`) | table, RLS | seq scan of the whole table | 0.14 | 0.40 (821) | 1.9 (940) | 2.9 | ~9; linear |
-| **Search**: `search_books('book title 1')` / `('author 7 lastname')` / `('bo')` | invoker, stable, plpgsql | **every Book** (seq scan, F1) | 4.0 / 3.2 / 4.9 | 14.8 / 10.9 / 21.0 | **79 / 52 / 114** | same | **~400 / ~260 / ~570**; linear in the catalogue |
-| `author_page` | invoker, stable | the author's works x her entries | 5.4 | 5.8 | 5.7 | 5.6 | flat |
-| `series_works` | invoker, stable | one series | 2.6 | 2.7 | 2.9 | 2.9 | flat |
-| `next_in_series` / `my_works` | invoker, stable | her entries x works | 3.6 / 1.5 | 4.7 / 1.8 | 8.6 / 2.4 | 14.0 / 5.8 (196 KB raw) | ~45 / ~30 for heavy |
+| **Profile**, 5 requests, p50 / p95 | | | 5.1 / 6.3 | 5.5 / 6.4 | 13.3 / 16.3 | 33 / 35 | ~33-120 / ~41-147 (heavy ~80-300) |
+| closed sessions with embedded Book, paged by 1,000 | table, RLS | **all her sessions** + entry + Book | 2.3 | 1.8 | 2.1 | 10.2 (1.3 MB raw) | ~5-19 (heavy ~26-92) |
+| `reading_progress_days`, 83 days, embeds session | table, RLS (3 levels) | the whole table | 0.2 | 0.5 (1,966) | 2.4 (3,520) | 3.1 | ~6-22; linear in the table |
+| first progress day ("since": `order by day limit 1`) | table, RLS | seq scan of the whole table | 0.14 | 0.40 (821) | 1.9 (940) | 2.9 | ~5-17; linear |
+| **Search**: `search_books('book title 1')` / `('author 7 lastname')` / `('bo')` | invoker, stable, plpgsql | **every Book** (seq scan, F1) | 4.0 / 3.2 / 4.9 | 14.8 / 10.9 / 21.0 | **79 / 52 / 114** | same | **~200-710 / ~130-470 / ~285-1,030**; linear in the catalogue |
+| `author_page` | invoker, stable | the author's works x her entries | 5.4 | 5.8 | 5.7 | 5.6 | ~14-51 |
+| `series_works` | invoker, stable | one series | 2.6 | 2.7 | 2.9 | 2.9 | ~7-26 |
+| `next_in_series` / `my_works` | invoker, stable | her entries x works | 3.6 / 1.5 | 4.7 / 1.8 | 8.6 / 2.4 | 14.0 / 5.8 (196 KB raw) | ~22-77 (heavy ~35-126) |
 | `sync_write`: `update_progress` / `add_to_library` (new Book) / start + finish | definer, volatile | one row + `synced_writes` | 0.17 / 0.22 / 0.31 per call | | | | negligible |
-| `import_books`, 600 rows as 6 calls | definer, volatile | her whole Library per file row (F2) | 1.4 s | | 2,000 rows: **12.6 s** | | an 8 s statement timeout is reached at ~2,500 entries per call |
-| `public_reading_page` (crawler, `/r/<token>`, `og.png` check) | definer, stable, anon | her finished / reading | 4.2 (150 entries) | | | 12.5 (22k buffers) | ~20-60 |
+| `import_books`, 600 rows as 6 calls | definer, volatile | her whole Library per file row (F2) | 1.4 s | | 2,000 rows: **12.6 s** | | worst call 0.5-0.7 s locally = 4.4-6.1 s at x9 of the 8 s timeout; see "Production readings" |
+| `public_reading_page` (crawler, `/r/<token>`, `og.png` check) | definer, stable, anon | her finished / reading | 4.2 (150 entries) | | | 12.5 (22k buffers) | ~10-38 (heavy ~31-113) |
 | `enrich` edge function: a first view of an unknown author | edge function -> `enrich_save` | Wikidata / Open Library | network-bound; `enrich_save` 26 ms mean in prod | | | | |
 
 What RLS costs (authenticated vs the same query as `service_role` with the member filter added by
@@ -208,7 +379,7 @@ Raw / gzip (the hosted gateway compresses; local Kong does not, see "API and hos
 
 Per entry the list sends ~1.4-2.2 KB; in my seed `description` is **53 % of the Book JSON**
 (111 of 209 KB for 150 entries), plus `cover_thumbhash` and colours (3 %). Real Apple blurbs are
-longer than my 740 characters, so the share is probably higher (R3 asks for the real average).
+longer than my 740 characters: R3 measured the real average, **1,226 characters (p95 2,271)**, i.e. ~65 % of the JSON and ~1.65x my payload per entry (see "Production readings").
 
 ## Throughput and concurrency (S2)
 
@@ -223,7 +394,7 @@ longer than my 740 characters, so the share is probably higher (R3 asks for the 
 | `search_books('author 7 lastname')`, 10 connections | 153 req/s (p50 65 ms) | **31 req/s (p50 308 ms)** |
 
 PostgREST's pool is 10 connections here; past it requests queue (30 connections: p50 x6). The
-hosted pool is sized by compute tier (R2).
+hosted pool is not a `pg_settings` value; see "Connection ceiling" in "Production readings".
 
 **20 members opening Home at once** (20 x 6 = 120 requests in the same instant, 10 rounds, the
 screen finishes when the slowest request does):
@@ -247,6 +418,8 @@ loosen: every policy or definer change below keeps the visibility rule word for 
 pgTAP test for "member A cannot see member B's row".**
 
 ### F1. `search_books` never uses its GIN index (impact high, effort M)
+
+**Evidence class: L** (plans, scaling, fix) **+ P** (production: 69 ms EXPLAIN, mean 21.6 / sd 48 / max 576 ms at 185 Books, `books_search` idx_scan 0). Rank 2 (production projection: "Search growth on this instance").
 
 Evidence. `books_search` is a GIN index on `to_tsvector('simple', book_search_text(title, authors))`.
 Under RLS the planner cannot use it: `books_readable` is a security-barrier qual and `ts_match_vq`
@@ -306,6 +479,8 @@ review of the predicate. Measure again: `search.*` in `scripts/perf/explain.mjs`
 
 ### F2. `import_books` is quadratic (impact high for onboarding, effort S)
 
+**Evidence class: L** (the quadratic, the fix) **+ P** (the 8 s `authenticated` timeout and the x2.5-x9 factors). Rank 1: a 600-book import fits the timeout only with 1.3-1.8x to spare at the typical factor ("Does a 600-book Goodreads import fit...").
+
 Evidence. `import_books` (20261009100000) first looks for "hers under another edition":
 `select e.id from library_entries e join books b on b.id = e.book_id where e.member_id = v_member and
 public.work_title_key(b.title) = v_title ...` for every file row. `work_title_key` is two
@@ -317,8 +492,10 @@ import of 600 books (6 calls of 100): 1,341 ms   batches: 80, 130, 189, 255, 300
 import of 2000 books (20 calls)      : 12,609 ms  batches: 80 ... 580 (10th) ... 1,175 ms (20th)
 ```
 
-~0.6 ms per Book already in her Library per 100 rows. On a 5x slower core a 100-row call passes the
-API's 8 s statement timeout at about 2,500 entries, so a long Goodreads export would fail partway.
+~0.6-0.9 ms per Book already in her Library per 100 rows (fit on a production-sized start: `call ms =
+133 + 0.9 x entries`). A 100-row call passes the `authenticated` role's 8 s statement timeout (R2b) at ~3,400
+entries at x2.5, ~840 at the typical x9 and ~450 in a slow run (x15-17), so a long Goodreads export fails
+partway; a 600-book import fits with 1.3-1.8x to spare at x9 (section "Production readings").
 The social triggers do not change this (600 books: 1,399 ms with them, 1,341 ms without; `activity`
 rows written: 0, the import is quiet).
 
@@ -334,7 +511,9 @@ inserts (enrichment, imports). Risk: none for RLS (no policy touched); the funct
 the query plan only changes. Implementer: DeepSeek (mechanical), plus the existing
 `import_books_*_test.sql`. Measure again: `scripts/perf/import.sql` with 2,000 books.
 
-### F3. Whole-table scans through the `reading_sessions` policy (impact medium now, high later; effort M)
+### F3. Whole-table scans through the `reading_sessions` policy (impact low now, high later; effort M)
+
+**Evidence class: L**; production confirms the plan shape (seq scan + hashed sub-plan, 0.38 ms at 80 rows). Rank 5.
 
 Evidence. The policy is `exists (select 1 from library_entries e where e.id = entry_id and e.member_id
 = (select auth.uid()))`. For a query that does not filter on `entry_id` the planner builds a hashed
@@ -352,7 +531,7 @@ The same shape on `reading_progress_days` (`exists` through `reading_sessions` t
 three levels): the Profile's 83-day query 0.2 -> 2.4 ms, and "since" (`select day ... order by day
 limit 1`, a seq scan of the table) 0.14 -> 1.9 ms. All three are O(total rows of everybody), not of
 hers, and the first runs on **every Home activation**. Today's production tables are tiny, so the
-cost is invisible; at 3M sessions `readInYear` alone would be ~300 ms (x5).
+cost is invisible; at 300k sessions `readInYear` alone would be ~50 ms locally, 0.12-0.45 s on this instance (x2.5-x9).
 
 Fix without touching RLS: SECURITY INVOKER functions that start from her entries, so the planner
 drives a nested loop on `reading_sessions_import_key_once` / `reading_sessions_entry`:
@@ -376,6 +555,8 @@ Implementer: Sonnet + pgTAP "member A's count excludes B's reads". Measure again
 `profile.*` at S2; production `reading_sessions` statements.
 
 ### F4. The Library request: size, refetch, the 1,000-row cap (impact medium-high, effort M)
+
+**Evidence class: P** (R3: description 1,226 chars average; R1: 151 unfiltered full-Library fetches, 10,323 requests in 4.5 days) **+ L** (payload sizes) **+ C** (the 1,000-row cap, `onActivated` refetch). Rank 3.
 
 Evidence (payload table above): every Home activation (`onActivated(load)`, `pages/index.vue`) asks
 for the three lists again, each embedding `books.*`; 304 KB raw (24 KB gzip) at 150 entries, 1.95 MB
@@ -408,18 +589,23 @@ Measure again: `screens.mjs --screen home` payload columns; production request c
 
 ### F5. `started_series` + `muted_series_list` do the same work twice (impact medium, effort S)
 
+**Evidence class: P** (statement statistics, EXPLAIN as the member) **+ L** (the duplicate work, the fix). Rank 4.
+
 `stores/series.ts:loadStarted` calls both RPCs in parallel; both run `started_series_items` (a CTE
 chain over her entries, sessions and `work_series` with a lateral `NOT EXISTS` per candidate series)
 and differ only in the final `muted` filter. Measured: 7.9 + 5.7 ms at 150 entries, 24.6 + 20.5 ms
-at 1,000 (4,143-23,346 buffers each). In production `started_series` is already the slowest app
-statement by mean (54 ms, max 1,528 ms; the muted variant, migration 20261016, is not deployed yet:
-no `muted_series_list` in the extract). Fix: one function returning `{ open: [...], muted: [...] }`
+at 1,000 (4,143-23,346 buffers each). In production `started_series` (21 calls) has a mean of 55 ms (sd 48, max 177, 2,368 buffers per call)
+on every Home, and a single EXPLAIN as the member took 174 ms for 3,909 buffers (the same work takes 4-6 ms
+here); the muted variant (migration 20261016) is not deployed yet. Fix: one function returning `{ open: [...], muted: [...] }`
 from a single evaluation (compute `specific` once, split on `exists (muted_series)`), keep the old two
 as wrappers for compatibility. ~45 % off Home's series cost. Risk none (invoker). Sonnet.
-`next_in_series` (21 calls, 55 ms in prod) shares the shape; it scales with her library
-(3.6 -> 14 ms) and is only on the Next sheet.
+`next_in_series` (133 calls in production, mean 54 ms, sd 143, **max 1,528 ms**) is Home's *older* series
+query, replaced by `started_series`; the app no longer calls it, so it can be dropped in a later migration
+once nothing else does (check the Next sheet first).
 
 ### F6. pg_cron housekeeping (impact low, effort S)
+
+**Evidence class: P** (R6: log 344 kB, job times). Rank 6.
 
 `cron.job_run_details` is written twice per run (3,426 statements, 9.8 s, more than the jobs) and
 never trimmed: ~456 rows/day, ~170k a year. Add `cron.schedule('purge-cron-log', '15 3 * * *', $$
@@ -427,18 +613,13 @@ delete from cron.job_run_details where end_time < now() - interval '7 days' $$)`
 `shelf-publish` to `*/10` (its own `min_interval` is 10 minutes, so the other five runs an hour are
 `debounced` no-ops). DeepSeek. Nothing else in the cron set is worth touching.
 
-### F7. CORS preflight and round trips (impact unknown until checked, effort S-M)
+### F7. CORS preflight and round trips (closed)
 
-The app talks cross-origin to `<ref>.supabase.co`, with `authorization`, `apikey` and
-`content-type: application/json` headers: every request is preflighted. A preflight result is cached
-per URL for `Access-Control-Max-Age`; the local Kong sends **none** (browsers then use 5 s) and
-Safari/WebKit (the primary target, iPhone) caps any value at **5 minutes**, Chrome at 2 hours. If the
-hosted API behaves as the local one, each Home activation after a pause pays a preflight round trip
-(~1 RTT, in parallel) in front of each of its 6-8 requests, and the `library_entries?...&status=eq.x`
-URLs differ per list. Request R5 asks for the one `OPTIONS` call that settles it. If the header is
-absent or short: a same-origin proxy (`/api/*` in a Pages Function: CPU is a few ms per request, but
-it costs Function invocations on the free plan, 100k a day) or the batching in F4.4 are the fixes;
-do not buy this before R5 answers.
+**Evidence class: P** (R5) **+ C** (browser caps). The first version could not tell whether the hosted API
+sends `Access-Control-Max-Age`. It does: **3600**, with `apikey,authorization,content-type,x-client-info`
+allowed. Chrome honours it (cap 2 h); WebKit caps it at 10 minutes, so an iPhone pays one extra round trip
+per distinct URL per 10 minutes, in parallel with the other requests. No proxy and no change needed; the
+batching of F4.4 would remove it as a side effect.
 
 ### F8. Smaller things
 
@@ -536,7 +717,7 @@ each, warm, authenticated.
 
 End to end with PostgREST: `friends` screen (`feed` + `my_people`) 38 / 45 ms p50/p95 at 200 follows;
 Home with `feed` and `my_people` added (an upper bound: `my_people` runs on Home only when the feed is empty or
-full): 8 requests, 40 / 47 ms p50/p95 for one member, 360 / 423 ms with 20 members at once. Production multiplier ~5: 90 ms for `feed` at 200 follows.
+full): 8 requests, 40 / 47 ms p50/p95 for one member, 360 / 423 ms with 20 members at once. On this instance (x2.5-x9) `feed` at 200 follows is ~45-160 ms.
 
 **N1. `feed()` cost is followees x their retained activity, not the page size** (effort M, Opus). The plan:
 
@@ -614,44 +795,23 @@ at ~2 ms. The six new RLS-no-policy tables will show up as INFO lints like the e
 
 ## Requests for the coordinator
 
-All read-only. Run as the project owner (SQL editor or `psql`), paste the output.
+R1-R6 are answered (section "Production readings"). Open, all read-only:
 
-**R1 - which statement is which, and how much the means lie.** The extract cut the text at 160 characters.
+**R7 - Early Hints (owner).** Dashboard -> `fabkho.dev` zone -> Speed -> Optimization -> Early Hints: on or
+off? A `curl` cannot show 103 responses reliably, so this one needs the owner. Still open.
 
-```sql
-select calls, round(mean_exec_time::numeric, 2) as mean, round(stddev_exec_time::numeric, 2) as sd,
-       round(min_exec_time::numeric, 2) as min, round(max_exec_time::numeric, 2) as max, rows,
-       shared_blks_hit, shared_blks_read, left(query, 1200) as q
-  from pg_stat_statements
- where query like '%library_entries%' or query like '%search_books%' or query like '%started_series%'
-    or query like '%next_in_series%' or query like '%reading_sessions%' or query like '%enrich_save%'
- order by total_exec_time desc limit 25;
-```
-
-**R2 - the instance.** Size, memory, limits, which decides the x5 and the pool.
+**R8 - the connection mix** (is 60 a constraint, and what holds the connections):
 
 ```sql
-select name, setting, unit from pg_settings
- where name in ('shared_buffers','work_mem','effective_cache_size','max_connections','random_page_cost',
-                'max_parallel_workers_per_gather','statement_timeout','jit','track_activity_query_size');
-select rolname, rolconfig from pg_roles where rolname in ('anon','authenticated','authenticator','service_role','postgres');
-select version();
+select usename, application_name, state, count(*) as n
+  from pg_stat_activity where datname = current_database() group by 1, 2, 3 order by n desc;
+select name, setting from pg_settings
+ where name in ('superuser_reserved_connections', 'reserved_connections', 'cron.max_running_jobs');
 ```
 
-Plus from the dashboard (not SQL): compute add-on (Nano/Micro/Small...), PostgREST max rows, DB
-pool size, and whether Realtime is enabled.
-
-**R3 - how much of the Library response is `description`.**
-
-```sql
-select count(*) as books, avg(length(b.description))::int as avg_description,
-       percentile_cont(0.95) within group (order by length(b.description))::int as p95_description,
-       avg(pg_column_size(b.*))::int as avg_row_bytes
-  from public.books b where b.id in (select book_id from public.library_entries);
-```
-
-**R4 - the real plans of the three read-only functions that matter, as the member.** (Reads only;
-`explain analyze` of a stable function executes it, nothing is written.)
+**R9 - slow tail or slow instance** (the 69 ms `search_books` and the 174 ms `started_series` EXPLAINs against
+production minimums of 2.7 ms and 16 ms). One transaction, same member as R4, five runs of each; send every
+`Execution Time`:
 
 ```sql
 begin;
@@ -659,41 +819,19 @@ select set_config('request.jwt.claims', json_build_object(
   'sub', (select member_id from public.library_entries group by 1 order by count(*) desc limit 1),
   'role', 'authenticated')::text, true);
 set local role authenticated;
-explain (analyze, buffers) select public.started_series(50, 'en');
 explain (analyze, buffers) select * from public.search_books('the', 20);
-explain (analyze, buffers) select count(*) from public.reading_sessions
- where outcome = 'finished' and ended_on >= date_trunc('year', current_date) and ended_on <= current_date;
+explain (analyze, buffers) select * from public.search_books('the', 20);
+explain (analyze, buffers) select * from public.search_books('the', 20);
+explain (analyze, buffers) select * from public.search_books('the', 20);
+explain (analyze, buffers) select * from public.search_books('the', 20);
+explain (analyze, buffers) select public.started_series(50, 'en');
+explain (analyze, buffers) select public.started_series(50, 'en');
+explain (analyze, buffers) select public.started_series(50, 'en');
 rollback;
 ```
 
-**R5 - the CORS preflight cache of the hosted API** (one `OPTIONS`, no credentials, no write):
-
-```sh
-curl -si -X OPTIONS 'https://<project-ref>.supabase.co/rest/v1/rpc/started_series' \
-  -H 'Origin: https://libellus.fabkho.dev' -H 'Access-Control-Request-Method: POST' \
-  -H 'Access-Control-Request-Headers: apikey,authorization,content-type,x-client-info' | grep -i '^access-control\|^HTTP'
-```
-
-I need `access-control-max-age`. Also, in the browser's network tab on a phone-sized Safari/WebKit
-window, whether `OPTIONS` rows appear in front of the Home requests on the second Home visit
-within five minutes.
-
-**R6 - the cron log and the realtime publication.**
-
-```sql
-select j.jobname, j.schedule, count(*) as runs, min(d.start_time) as first_run,
-       round(avg(extract(epoch from d.end_time - d.start_time) * 1000)::numeric, 1) as avg_ms,
-       round((percentile_cont(0.5) within group (order by extract(epoch from d.end_time - d.start_time) * 1000))::numeric, 1) as p50_ms,
-       round(max(extract(epoch from d.end_time - d.start_time) * 1000)::numeric, 1) as max_ms
-  from cron.job_run_details d join cron.job j using (jobid) group by 1, 2;
-select pg_size_pretty(pg_total_relation_size('cron.job_run_details'));
-select * from pg_publication_tables where pubname = 'supabase_realtime';
-select relname, indexrelname, idx_scan from pg_stat_user_indexes
- where schemaname in ('public','private') order by idx_scan limit 40;
-```
-
-**R7 - Early Hints.** Dashboard -> `fabkho.dev` zone -> Speed -> Optimization -> Early Hints: on or off?
-(A `curl` cannot show 103 responses reliably.)
+and, from the dashboard (not SQL), the CPU utilisation graph of the last 5 days: sustained use near the
+burst baseline would explain the tail (and would make every factor above worse).
 
 ## Reproducing
 
@@ -726,8 +864,9 @@ docker update --cpus=2 supabase_db_libellus-perf supabase_rest_libellus-perf    
 | `scripts/perf/proposals.sql` | the fixes of F1-F3 as runnable, rolled-back sketches |
 | `scripts/perf/measure.sh` | one scenario start to finish |
 
-Caveats. Local timings are warm-cache, on an ARM Mac with 18 cores; the x5 for production is a
-calibration from two statements, not a measurement. The S2 catalogue (15k Books, 190k works) is
+Caveats. Local timings are warm-cache, on an ARM Mac with 18 cores; the production factors (x2.5 best,
+x4-9 typical, x15-30 slow runs) come from comparing production's statement statistics and EXPLAINs with
+matched local runs; the scatter is as large as the mean. The S2 catalogue (15k Books, 190k works) is
 what 300 members with ~150 entries each and some overlap would hold; a community that reads
 the same few hundred books would have a smaller Catalogue and a cheaper search. Production's
 `pg_stat_statements` window is ~4.5 days of one member. No Storage, Auth or edge-function call was
