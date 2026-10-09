@@ -24,7 +24,7 @@ const props = withDefaults(
 defineEmits<{ accept: []; decline: []; followBack: [] }>()
 
 const { t, locale } = useI18n()
-const name = computed(() => props.request.name ?? t('member.someone'))
+const name = computed(() => props.request.name?.trim() || t('member.someone'))
 // Counted against the moment the row was drawn, as the app writes days elsewhere.
 const shownAt = Date.now()
 const asked = computed(() => t('people.askedOn', { when: relativeTime(new Date(props.request.askedAt), shownAt, locale.value) }))
@@ -54,7 +54,13 @@ const id = (people: string, home: string) => (props.compact ? home : people)
     <template v-if="state === 'asked'">
       <UiButton v-if="offline" tone="secondary" size="sm" offline :data-testid="id('people.accept', 'home.circleAccept')" />
       <template v-else>
-        <UiButton size="sm" :disabled="busy" :data-testid="id('people.accept', 'home.circleAccept')" @click="$emit('accept')">
+        <UiButton
+          size="sm"
+          :disabled="busy"
+          :aria-label="compact ? t('circle.acceptLabel', { name }) : t('people.acceptLabel', { name })"
+          :data-testid="id('people.accept', 'home.circleAccept')"
+          @click="$emit('accept')"
+        >
           {{ compact ? t('circle.accept') : t('people.accept') }}
         </UiButton>
         <button
@@ -68,7 +74,7 @@ const id = (people: string, home: string) => (props.compact ? home : people)
         >
           <UiIcon name="close" :size="18" />
         </button>
-        <UiButton v-else tone="plain" size="sm" :disabled="busy" data-testid="people.decline" @click="$emit('decline')">
+        <UiButton v-else tone="plain" size="sm" :disabled="busy" :aria-label="t('people.declineLabel', { name })" data-testid="people.decline" @click="$emit('decline')">
           {{ t('people.decline') }}
         </UiButton>
       </template>
