@@ -57,7 +57,8 @@ const URL_TAIL = /([a-z][a-z0-9+.-]*:\/\/[^\s?#"'<>()]*)[?#][^\s"'<>()]*?((?::\d
 // A route's secret or personal part: a member's id (`/friends/<uuid>`, then anything after it) and a follow link's token (`/f/<token>`).
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const MEMBER_ROUTE = new RegExp(`^/friends/${UUID}(?=/|$)`, 'i')
-const FOLLOW_ROUTE = /^\/f\/[^/]+$/
+// A trailing slash too: Cloudflare Pages serves routes as folders (middleware/auth.global.ts).
+const FOLLOW_ROUTE = /^\/f\/[^/]+(?=\/?$)/
 
 /** A text without e-mail addresses, tokens or the query and fragment of its URLs. */
 export function scrubText(text: string): string {

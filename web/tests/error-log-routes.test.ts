@@ -12,6 +12,8 @@ describe('scrubRoute', () => {
     expect(scrubRoute('/friends/7C9E6679-7425-40DE-944B-E07FC1F90AE7/2026')).toBe('/friends/[member]/2026')
     expect(scrubRoute('/f/Xk3-abcDEF_123')).toBe('/f/[token]')
     expect(scrubRoute('/f/Xk3-abcDEF_123?ref=mail#top')).toBe('/f/[token]')
+    expect(scrubRoute('/f/Xk3-abcDEF_123/')).toBe('/f/[token]/')
+    expect(scrubRoute('/friends/7c9e6679-7425-40de-944b-e07fc1f90ae7/')).toBe('/friends/[member]/')
   })
 
   it('keeps the other paths as they are', () => {
