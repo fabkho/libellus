@@ -33,6 +33,8 @@ export type ReadingSession = {
   outcome: SessionOutcome | null
   rating: number | null
   review: string | null
+  /** The review gives the story away (social v2a): members who have not finished the Book see it folded. */
+  reviewSpoilers: boolean
   abandonReason: string | null
   progressPage: number | null
   progressPercent: number | null
@@ -164,6 +166,8 @@ export type SessionEdit = {
   endedOn: string
   rating: number | null
   review: string
+  /** "Contains spoilers", with the review (a blank review has none). */
+  reviewSpoilers: boolean
   abandonReason: string
 }
 
@@ -174,8 +178,17 @@ export function sessionEditOf(session: ReadingSession): SessionEdit {
     endedOn: session.endedOn ?? '',
     rating: session.rating,
     review: session.review ?? '',
+    reviewSpoilers: Boolean(session.reviewSpoilers),
     abandonReason: session.abandonReason ?? '',
   }
+}
+
+/**
+ * The spoiler flag as the arguments carry it: only when set, and only with a review (a blank review has
+ * none), so a call without a flag is the call as it was before version 2a. The database defaults to false.
+ */
+export function spoilerArguments(review: string | null | undefined, reviewSpoilers: boolean | null | undefined) {
+  return review?.trim() && reviewSpoilers ? { p_review_spoilers: true } : {}
 }
 
 /**
@@ -207,6 +220,7 @@ export function sessionEditArguments(session: ReadingSession, edit: SessionEdit)
     p_rating: session.outcome === 'finished' ? edit.rating : null,
     p_review: session.outcome === 'finished' ? edit.review || null : null,
     p_abandon_reason: session.outcome === 'abandoned' ? edit.abandonReason || null : null,
+    ...(session.outcome === 'finished' ? spoilerArguments(edit.review, edit.reviewSpoilers) : {}),
   }
 }
 
@@ -235,6 +249,8 @@ export type AddWith = {
   endedOn?: string | null
   rating?: number | null
   review?: string | null
+  /** The review contains spoilers (social v2a); only with a review. */
+  reviewSpoilers?: boolean
 }
 
 /**
@@ -248,11 +264,12 @@ export type AddDraft = {
   endedOn: string
   rating: number | null
   review: string
+  reviewSpoilers: boolean
 }
 
 /** A new draft: Want to read, nothing else chosen. */
 export function newAddDraft(): AddDraft {
-  return { status: 'want_to_read', startedOn: '', endedOn: '', rating: null, review: '' }
+  return { status: 'want_to_read', startedOn: '', endedOn: '', rating: null, review: '', reviewSpoilers: false }
 }
 
 /**
@@ -278,6 +295,7 @@ export function addWithFromDraft(draft: AddDraft): AddWith {
       endedOn: draft.endedOn,
       rating: draft.rating,
       review: draft.review,
+      reviewSpoilers: draft.reviewSpoilers,
     }
   }
   return { status: 'want_to_read' }
@@ -303,13 +321,14 @@ export function checkAddDraft(draft: AddDraft, today: string): LibraryErrorCode 
 }
 
 /** `AddWith` as the trailing arguments of `add_to_library` and `add_manual_book`. */
-export function addWithArguments({ status = 'want_to_read', startedOn, endedOn, rating, review }: AddWith) {
+export function addWithArguments({ status = 'want_to_read', startedOn, endedOn, rating, review, reviewSpoilers }: AddWith) {
   return {
     p_status: status,
     p_started_on: startedOn || null,
     p_ended_on: endedOn || null,
     p_rating: rating ?? null,
     p_review: review || null,
+    ...spoilerArguments(review, reviewSpoilers),
   }
 }
 
@@ -354,6 +373,8 @@ export type SessionRow = {
   outcome: SessionOutcome | null
   rating: number | null
   review: string | null
+  /** Absent on a row from before spoiler flags existed (a cached Library). */
+  review_spoilers?: boolean | null
   abandon_reason: string | null
   progress_page: number | null
   progress_percent: number | null
@@ -437,6 +458,7 @@ export function sessionFromRow(row: SessionRow): ReadingSession {
     outcome: row.outcome,
     rating: row.rating,
     review: row.review,
+    reviewSpoilers: row.review_spoilers ?? false,
     abandonReason: row.abandon_reason,
     // `?? null`: a row from before progress existed (a cached Library) has none.
     progressPage: row.progress_page ?? null,
@@ -542,7 +564,7 @@ export type Library = {
    */
   finish: (
     entryId: string,
-    finished: { endedOn: string; rating?: number | null; review?: string | null },
+    finished: { endedOn: string; rating?: number | null; review?: string | null; reviewSpoilers?: boolean },
   ) => Promise<Result<LibraryEntry>>
   /**
    * Ends the open read as abandoned on a day, with an optional reason (trimmed;
@@ -821,8 +843,14 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       return reread(entryId)
     },
 
-    async finish(entryId, { endedOn, rating = null, review = null }) {
-      const args = { p_entry_id: entryId, p_ended_on: endedOn, p_rating: rating, p_review: review }
+    async finish(entryId, { endedOn, rating = null, review = null, reviewSpoilers = false }) {
+      const args = {
+        p_entry_id: entryId,
+        p_ended_on: endedOn,
+        p_rating: rating,
+        p_review: review,
+        ...spoilerArguments(review, reviewSpoilers),
+      }
       const waiting = await queuedEntry('finish_reading', args, entryId)
       if (waiting) return waiting
       if (!online()) return OFFLINE

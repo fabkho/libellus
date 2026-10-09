@@ -107,7 +107,7 @@ export const useHistoryStore = defineStore('history', () => {
 
   /** The read the Edit sheet is about; null while it is closed. */
   const editing = ref<HistoryTarget | null>(null)
-  const draft = reactive<SessionEdit>({ startedOn: '', endedOn: '', rating: null, review: '', abandonReason: '' })
+  const draft = reactive<SessionEdit>({ startedOn: '', endedOn: '', rating: null, review: '', reviewSpoilers: false, abandonReason: '' })
   const editBusy = ref(false)
   const editError = ref<LibraryErrorCode | null>(null)
 

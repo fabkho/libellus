@@ -1,12 +1,25 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isNoAnswer } from './network'
 import {
+  CIRCLE_BOOKS_MAX,
+  bothReadFromJson,
   cardFromJson,
+  circleBookFromJson,
+  likeFieldsFromJson,
   mapSocialError,
+  recentLikeFromJson,
+  reviewFlagsFromJson,
   socialBookFromJson,
+  type BothRead,
+  type BothReadJson,
+  type CircleBook,
+  type CircleBookJson,
   type FollowState,
+  type LikeResult,
   type MemberCard,
   type MemberProfile,
+  type RecentLike,
+  type RecentLikeJson,
   type SocialBook,
   type SocialErrorCode,
   type SocialResult,
@@ -24,19 +37,32 @@ import {
  * follow is the card alone), and whether an id belongs to a member at all (a stranger, a blocked
  * member and a renewed link all answer the same). Offline, every call is refused with `offline`
  * before anything is sent, as every repository here does.
+ *
+ * Version 2a (docs/proposals/social-v2a-contract.md §1.2–1.4, §2) adds likes (`like`, `unlike`,
+ * `sessionLikers`, `myRecentLikes`), "You both read" (`bothRead`) and who reads or wants the same Book
+ * (`circleReading`, `circleWant`). Likes need the connection (offline: `offline`, nothing is queued);
+ * so do the others.
  */
 
 export type {
+  BothRead,
+  CircleBook,
   FollowState,
+  LikeFields,
+  LikeResult,
   MemberCard,
+  MemberFinished,
   MemberProfile,
+  RecentLike,
+  ReadOf,
+  ReviewFlags,
   SocialBook,
   SocialErrorCode,
   SocialResult,
   SocialSection,
   SocialSections,
 } from './socialShapes'
-export { SOCIAL_SECTIONS } from './socialShapes'
+export { CIRCLE_BOOKS_MAX, SOCIAL_SECTIONS } from './socialShapes'
 
 /** Her own settings. `link`: the token of her follow link; `requests`: asks waiting for her answer. */
 export type MySocial = { private: boolean; sections: SocialSections; link: string; requests: number }
@@ -94,6 +120,20 @@ export interface Social {
   profile(member: string): Promise<SocialResult<MemberProfile | null>>
   /** Her whole Want to read (the profile's See all); null when not visible or switched off. */
   want(member: string): Promise<SocialResult<{ book: SocialBook; addedOn: string }[] | null>>
+  /** Likes a finished read (`MemberFinished.sessionId`, a feed entry's); idempotent. `not_found` for one she may not see, `rate_limited` past 300 an hour. */
+  like(session: string): Promise<SocialResult<LikeResult>>
+  /** Takes the like back; idempotent. */
+  unlike(session: string): Promise<SocialResult<LikeResult>>
+  /** Who liked her own finished read, newest first (anyone else's: `not_found`). */
+  sessionLikers(session: string): Promise<SocialResult<MemberCard[]>>
+  /** Home's Your circle: her reads liked in the last week, newest like first, five at most. */
+  myRecentLikes(): Promise<SocialResult<RecentLike[]>>
+  /** The Books she and the member both finished (her editions, newest of hers first); `year`: her reads ended that year. `[]` when she may not see them. */
+  bothRead(member: string, year?: number | null): Promise<SocialResult<BothRead[]>>
+  /** Of her open reads (Book ids, 50 at most), who she follows reads the same Book now; Books with nobody are left out. */
+  circleReading(books: readonly string[]): Promise<SocialResult<CircleBook[]>>
+  /** The same for her Want to read and theirs. */
+  circleWant(books: readonly string[]): Promise<SocialResult<CircleBook[]>>
 }
 
 /** `https://<site>/f/<token>`: the link the share sheet hands out. */
@@ -130,7 +170,13 @@ type ProfileJson =
       counts: { read: number | null; reading: number | null; want: number | null }
       reading: { book: BookJson; startedOn: string | null }[]
       want: { book: BookJson; addedOn: string }[]
-      finished: { book: BookJson; endedOn: string | null; rating: number | null; review: string | null }[]
+      finished: (Parameters<typeof reviewFlagsFromJson>[0] &
+        Parameters<typeof likeFieldsFromJson>[0] & {
+          book: BookJson
+          endedOn: string | null
+          rating: number | null
+          review: string | null
+        })[]
     }
 
 function mySocialFromJson(json: MySocialJson): MySocial {
@@ -173,6 +219,8 @@ function profileFromJson(json: ProfileJson): MemberProfile {
       endedOn: f.endedOn ?? null,
       rating: f.rating ?? null,
       review: f.review ?? null,
+      ...reviewFlagsFromJson(f),
+      ...likeFieldsFromJson(f),
     })),
   }
 }
@@ -191,6 +239,14 @@ export function createSocial(client: SupabaseClient, { online = () => true }: { 
   }
 
   const nothing = () => undefined
+  const likeResultOf = (json: LikeResult): LikeResult => ({ likes: Number(json.likes), liked: Boolean(json.liked) })
+
+  /** `circle_reading` / `circle_want`: the first `CIRCLE_BOOKS_MAX` Books; none to ask about asks nothing. */
+  function circle(fn: 'circle_reading' | 'circle_want', books: readonly string[]): Promise<SocialResult<CircleBook[]>> {
+    const asked = [...new Set(books)].slice(0, CIRCLE_BOOKS_MAX)
+    if (asked.length === 0) return Promise.resolve({ data: [], error: null })
+    return call<CircleBookJson[], CircleBook[]>(fn, { p_books: asked }, (j) => j.map(circleBookFromJson))
+  }
 
   return {
     mine: () => call('my_social', {}, mySocialFromJson),
@@ -224,5 +280,14 @@ export function createSocial(client: SupabaseClient, { online = () => true }: { 
         { p_member: member },
         (j) => (j ? j.map((w) => ({ book: socialBookFromJson(w.book), addedOn: w.addedOn })) : null),
       ),
+
+    like: (session) => call<LikeResult, LikeResult>('like', { p_session: session }, likeResultOf),
+    unlike: (session) => call<LikeResult, LikeResult>('unlike', { p_session: session }, likeResultOf),
+    sessionLikers: (session) => call<CardJson[], MemberCard[]>('session_likers', { p_session: session }, (j) => j.map(cardFromJson)),
+    myRecentLikes: () => call<RecentLikeJson[], RecentLike[]>('my_recent_likes', {}, (j) => j.map(recentLikeFromJson)),
+    bothRead: (member, year = null) =>
+      call<BothReadJson[], BothRead[]>('both_read', { p_member: member, p_year: year }, (j) => j.map(bothReadFromJson)),
+    circleReading: (books) => circle('circle_reading', books),
+    circleWant: (books) => circle('circle_want', books),
   }
 }

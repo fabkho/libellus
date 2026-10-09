@@ -82,6 +82,82 @@ export function socialBookFromJson(json: BookJson): SocialBook {
   }
 }
 
+/**
+ * Social v2a, the review's flag (contract §1.1), on every answer that hands another member's review out.
+ * `spoilers`: the author flagged it (false when the review is not shown at all); `folded`: it is
+ * flagged and the caller has not finished the same Book, so the client hides it behind "Show anyway"
+ * (the review is still in the answer). Her own answers are never folded.
+ */
+export type ReviewFlags = { spoilers: boolean; folded: boolean }
+
+type ReviewFlagsJson = { spoilers?: boolean | null; folded?: boolean | null }
+
+export function reviewFlagsFromJson(json: ReviewFlagsJson): ReviewFlags {
+  return { spoilers: Boolean(json.spoilers), folded: Boolean(json.folded) }
+}
+
+/**
+ * Social v2a, likes (contract §1.2), on a finished read of another member: `sessionId` is the read a like
+ * is on (null on a row that is no finished read), `likes` the count of the likes the database still
+ * allows, `liked` whether the caller gave one.
+ */
+export type LikeFields = { sessionId: string | null; likes: number; liked: boolean }
+
+type LikeFieldsJson = { sessionId?: string | null; likes?: number | null; liked?: boolean | null }
+
+export function likeFieldsFromJson(json: LikeFieldsJson): LikeFields {
+  return { sessionId: json.sessionId ?? null, likes: Number(json.likes ?? 0), liked: Boolean(json.liked) }
+}
+
+/** What `like` and `unlike` answer: the count now, and whether the caller likes it. */
+export type LikeResult = { likes: number; liked: boolean }
+
+/** Home's "Your circle": one of her reads that was liked lately. `at`: the newest like (ISO). */
+export type RecentLike = { session: string; book: SocialBook; likers: MemberCard[]; count: number; at: string }
+
+type BookJsonOf = Parameters<typeof socialBookFromJson>[0]
+
+export type RecentLikeJson = { session: string; book: BookJsonOf; likers: CardJson[]; count: number; at: string }
+
+export function recentLikeFromJson(json: RecentLikeJson): RecentLike {
+  return {
+    session: json.session,
+    book: socialBookFromJson(json.book),
+    likers: json.likers.map(cardFromJson),
+    count: Number(json.count),
+    at: json.at,
+  }
+}
+
+/** One side of "You both read": a rating in quarters (null: none, or hers not shown) and the day it ended. */
+export type ReadOf = { rating: number | null; endedOn: string | null }
+
+/** A Book the caller and a member both finished: her edition, and each side's latest finished read. */
+export type BothRead = { book: SocialBook; mine: ReadOf; hers: ReadOf }
+
+export type BothReadJson = {
+  book: BookJsonOf
+  mine: { rating: number | null; endedOn: string | null }
+  hers: { rating: number | null; endedOn: string | null }
+}
+
+export function bothReadFromJson(json: BothReadJson): BothRead {
+  const side = (read: BothReadJson['mine']): ReadOf => ({ rating: read.rating ?? null, endedOn: read.endedOn ?? null })
+  return { book: socialBookFromJson(json.book), mine: side(json.mine), hers: side(json.hers) }
+}
+
+/** The members she follows who read (or want to read) the same Book as hers: three cards at most, and how many more. */
+export type CircleBook = { book: string; members: MemberCard[]; more: number }
+
+export type CircleBookJson = { book: string; members: CardJson[]; more: number }
+
+export function circleBookFromJson(json: CircleBookJson): CircleBook {
+  return { book: json.book, members: json.members.map(cardFromJson), more: Number(json.more) }
+}
+
+/** The most Books `circleReading` / `circleWant` look at in one call (the database's limit too). */
+export const CIRCLE_BOOKS_MAX = 50
+
 /** What her followers see, section by section; all on by default. */
 export const SOCIAL_SECTIONS = ['reading', 'want', 'finished', 'ratings', 'reviews', 'abandoned', 'year'] as const
 export type SocialSection = (typeof SOCIAL_SECTIONS)[number]
@@ -89,6 +165,10 @@ export type SocialSections = Record<SocialSection, boolean>
 
 /** Where the caller stands with a member. */
 export type FollowState = 'self' | 'none' | 'requested' | 'following'
+
+/** One of a member's finished Books on her profile: her latest finished read of it. */
+export type MemberFinished = LikeFields &
+  ReviewFlags & { book: SocialBook; endedOn: string | null; rating: number | null; review: string | null }
 
 /** Another member's profile (contract §1.5, member_profile). `visible` false: the card of a private account. */
 export type MemberProfile =
@@ -106,5 +186,5 @@ export type MemberProfile =
       counts: { read: number | null; reading: number | null; want: number | null }
       reading: { book: SocialBook; startedOn: string | null }[]
       want: { book: SocialBook; addedOn: string }[]
-      finished: { book: SocialBook; endedOn: string | null; rating: number | null; review: string | null }[]
+      finished: MemberFinished[]
     }
