@@ -446,7 +446,7 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
 - **Home** (`components/home/Circle.vue`, `CircleFeature.vue`, `CircleFriend.vue`): `home.circle`,
   `home.circleRequest`, `home.circleAccept`, `home.circleDecline`; the card of a finished Book
   `home.circleFeature` (`.member`, `.cover`, `.title`, `.stars`, `.review`, `.more`); a member's
-  row `home.circleFriend`; `home.circleMore`. (`home.circleEntry` and `home.circleBatch` are gone: the
+  row `home.circleFriend`; `home.circleTitle` (the title, a link to the feed); `home.circleMore`. (`home.circleEntry` and `home.circleBatch` are gone: the
   rows are one per member, a batch is a phrase of her sentence.)
 - **Feed** (`/friends`): `friends`, `friends.back`, `friends.people`, `friends.day`, `friends.entry`,
   `friends.entryMember`, `friends.entryBook`, `friends.entryReview`, `friends.entryMore`,
