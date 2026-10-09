@@ -111,6 +111,19 @@ export function nextPlace(item: Pick<StartedSeries, 'series' | 'count' | 'next'>
   return line?.position ? { n: line.position, count: line.count } : null
 }
 
+/**
+ * The works of an author's Standalone and Other groups, newest first (series keep their reading
+ * order, so they never go through this): the latest year first, works without a year last, the
+ * title (the locale's collation) between equals so the order never depends on how they came.
+ */
+export function newestFirst(works: readonly WorkCard[]): WorkCard[] {
+  return [...works].sort((a, b) => {
+    if (a.year != null && b.year != null && a.year !== b.year) return b.year - a.year
+    if ((a.year == null) !== (b.year == null)) return a.year == null ? 1 : -1
+    return a.title.localeCompare(b.title)
+  })
+}
+
 /** Names compared the way people write them: case, accents, dots and spacing aside. */
 export function sameName(a: string, b: string): boolean {
   const norm = (s: string) =>

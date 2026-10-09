@@ -11,12 +11,12 @@
 // of them, each with Unmute (online only: offline it says "Offline"). Muting and
 // unmuting move a series between the lists with the list's motion while the sheet is
 // open, so what she pressed is seen to happen; Home behind it follows once the sheet
-// is gone. `expanded` opens the muted list at once (the section's "Muted (n)" pill).
+// is gone. The muted list always opens closed.
 import type { StartedSeries } from '~/data/enrich'
 import { useSeriesStore } from '~/stores/series'
 
 const open = defineModel<boolean>('open', { required: true })
-const props = defineProps<{ items: readonly StartedSeries[]; muted: readonly StartedSeries[]; expanded?: boolean }>()
+defineProps<{ items: readonly StartedSeries[]; muted: readonly StartedSeries[] }>()
 const emit = defineEmits<{ more: [item: StartedSeries] }>()
 
 const { t } = useI18n()
@@ -27,7 +27,7 @@ const mutedOpen = ref(false)
 const failure = ref<string | null>(null)
 watch(open, (isOpen) => {
   if (!isOpen) return
-  mutedOpen.value = Boolean(props.expanded)
+  mutedOpen.value = false
   failure.value = null
 })
 

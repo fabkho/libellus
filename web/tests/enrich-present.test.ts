@@ -10,6 +10,7 @@ import {
   moreFromAuthor,
   lifeSpan,
   moveMuted,
+  newestFirst,
   parsePosition,
   positionText,
   rowAuthorKey,
@@ -275,5 +276,25 @@ describe('the device\'s copy', () => {
     record = remembered(record, 'Q2', 1, 2)
     expect(record).toEqual({ Q2: 1, Q3: 0 })
     expect(Object.keys(record)).toEqual(['Q2', 'Q3'])
+  })
+})
+
+describe('newestFirst', () => {
+  it('puts the latest year first, works without a year last, titles between equals', () => {
+    const list = [
+      work('Undated B'),
+      work('Old', { year: 1990 }),
+      work('Zeta', { year: 2005 }),
+      work('Undated A'),
+      work('Alpha', { year: 2005 }),
+      work('New', { year: 2020 }),
+    ]
+    expect(newestFirst(list).map((w) => w.title)).toEqual(['New', 'Alpha', 'Zeta', 'Old', 'Undated A', 'Undated B'])
+  })
+
+  it('does not change the list it is given', () => {
+    const list = [work('A', { year: 1990 }), work('B', { year: 2000 })]
+    newestFirst(list)
+    expect(list.map((w) => w.title)).toEqual(['A', 'B'])
   })
 })
