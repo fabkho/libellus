@@ -4,12 +4,12 @@
 // finished, each as the next work still open in it ("Book 3 of 10 · Discworld")
 // with her status of it or "+ Want to read", opening its Book's page. The latest
 // activity first (the database's `started_series`); five at most, and when there
-// are more a "See more" pill opens all of them in a sheet (HomeNextSheet). Each row has
+// are more (or she muted some) a pill, "See all n" with n the series she has open, opens all
+// of them in a sheet (HomeNextSheet). Each row has
 // a "..." (HomeNextMenu: Mute series, online only); a muted series leaves the list with
 // its motion and is found again in the sheet, under "Muted (n)", where it is unmuted.
-// The section stays while she has muted ones, with a "Muted (n)" pill in place of "See
-// more" when five or fewer are left, so she can always get to them; it hides only when
-// nothing is started and nothing muted. The last
+// The section stays while she has muted ones, with the same pill, so she can always get
+// to them; it hides only when nothing is started and nothing muted. The last
 // section of Home, so appearing after the lists moves nothing; kept on the device,
 // so it is there at once (offline too) the next time. A change plays like a list's
 // (`UiListMotion`, once the sheet that caused it has gone) and the section, when it
@@ -68,11 +68,11 @@ watch(
           type="button"
           class="more relative inline-flex h-(--size-button-sm) items-center gap-xxs rounded-pill pr-sm pl-md text-footnote text-ink-muted edge hover:bg-fill"
           aria-haspopup="dialog"
-          :aria-label="started.more ? t('series.seeMoreLabel', { count: started.all.length }) : t('series.mutedLabel', { count: hidden })"
+          :aria-label="t('series.seeMoreLabel', { count: started.all.length })"
           data-testid="home.nextMore"
           @click="more = true"
         >
-          {{ started.more ? t('series.seeMore') : t('series.muted', { count: hidden }) }}<UiIcon name="chevron" :size="13" />
+          {{ t('series.seeAll', { count: started.all.length }) }}<UiIcon name="chevron" :size="13" />
         </button>
       </div>
       <UiListMotion tag="ul" :aria-label="t('series.next')">
@@ -86,7 +86,7 @@ watch(
         />
       </UiListMotion>
     </section>
-    <HomeNextSheet v-model:open="more" :items="sheetItems" :muted="series.muted" :expanded="!started.more" @more="openMenu" />
+    <HomeNextSheet v-model:open="more" :items="sheetItems" :muted="series.muted" @more="openMenu" />
     <HomeNextMenu v-model:open="menuOpen" :item="menu" />
   </UiReveal>
 </template>
