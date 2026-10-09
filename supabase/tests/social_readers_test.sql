@@ -9,7 +9,7 @@
 -- Photos open to connected members through a policy. Assertions ask about rows this test made.
 
 begin;
-select plan(50);
+select plan(130);
 
 create schema if not exists tests;
 
@@ -67,6 +67,39 @@ returns boolean language sql as $$
                   where r -> 'entry' -> 'book' ->> 'title' = p_title and r ->> 'outcome' = p_outcome)
 $$;
 
+-- Gate 2: the cover of a titled Book in a list of {book: …}, the closed read of a title in a
+-- record, and whether the feed's started row of a title says "again".
+create or replace function tests.cover_of(p_list jsonb, p_title text)
+returns text language sql as $$
+  select e -> 'book' ->> 'cover_url' from jsonb_array_elements(coalesce(p_list, '[]')) e
+   where e -> 'book' ->> 'title' = p_title limit 1
+$$;
+create or replace function tests.read_of(p_record jsonb, p_title text, p_outcome text)
+returns jsonb language sql as $$
+  select r from jsonb_array_elements(coalesce(p_record -> 'reads', '[]')) r
+   where r -> 'entry' -> 'book' ->> 'title' = p_title and r ->> 'outcome' = p_outcome limit 1
+$$;
+create or replace function tests.is_again(p_feed jsonb, p_title text)
+returns boolean language sql as $$
+  select exists (select 1 from jsonb_array_elements(coalesce(p_feed, '[]')) e
+                  where e -> 'book' ->> 'title' = p_title and e ->> 'kind' = 'started' and e ->> 'again' = 'true')
+$$;
+-- Her Book of her own making, with a cover she typed (set past the API, as the table allows it).
+create or replace function tests.manual_with_cover(p_title text, p_cover text, p_status text default 'want_to_read')
+returns uuid language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v_entry uuid;
+begin
+  v_entry := (public.add_manual_book(p_title, array['Some Author'], null, 100, 'want_to_read')).id;
+  if p_status = 'finished' then
+    perform public.start_reading(v_entry, current_date - 3);
+    perform public.finish_reading(v_entry, current_date, 16, null);
+  end if;
+  update public.books set cover_url = p_cover, cover_thumbhash = 'thumb', cover_dominant = '#aabbcc', cover_secondary = '#112233'
+   where id = (select book_id from public.library_entries where id = v_entry);
+  return v_entry;
+end;
+$$;
+
 grant usage on schema tests to anon, authenticated;
 grant execute on all functions in schema tests to anon, authenticated;
 
@@ -74,6 +107,8 @@ create temporary table ids (name text primary key, id uuid) on commit drop;
 grant all on ids to authenticated, anon;
 create temporary table pages (name text primary key, page jsonb) on commit drop;
 grant all on pages to authenticated, anon;
+create temporary table links (name text primary key, link text) on commit drop;
+grant all on links to authenticated, anon;
 
 insert into ids values
   ('ada', tests.member('ada@social4.pgtap.test', 'Ada')),
@@ -239,6 +274,242 @@ select is(public.member_reading_record((select id from ids where name = 'ada')),
 select tests.act_as((select id from ids where name = 'eve'));
 select is(public.member_reading_record((select id from ids where name = 'pia')) -> 'reads' -> 0 -> 'entry' -> 'book' ->> 'title', 'Circe',
   'a public member''s record is anyone''s');
+
+-- ==================================================================== gate 2 (privacy review)
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"reading": true, "want": true, "finished": true, "ratings": true, "reviews": true, "abandoned": true, "year": true}');
+
+-- ------------------------------------------------------------ her whole Want to read
+
+select tests.act_as((select id from ids where name = 'cy'));
+select is(public.member_want((select id from ids where name = 'ada')), null::jsonb, 'a stranger finds no Want to read of a private member');
+select tests.act_as((select id from ids where name = 'gil'));
+select is(public.member_want((select id from ids where name = 'ada')), null::jsonb, 'a member whose request waits finds none');
+select tests.act_as((select id from ids where name = 'dan'));
+select is(public.member_want((select id from ids where name = 'ada')), null::jsonb, 'a blocked member finds none');
+select tests.act_as((select id from ids where name = 'eve'));
+select is(public.member_want((select id from ids where name = 'ada')), null::jsonb, 'one who only opened her link finds none');
+select is(public.member_want((select id from ids where name = 'pia')), '[]'::jsonb, 'but a public member''s is anyone''s (here empty)');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"want": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_want((select id from ids where name = 'ada')), null::jsonb, 'with Want to read off a follower finds none');
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"want": true}');
+select public.set_entry_hidden((select id from ids where name = 'wish'), true);
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(not tests.has_book(public.member_want((select id from ids where name = 'ada')), 'Kindred'), 'a hidden Book is not in her Want to read');
+select ok(not tests.has_book(public.member_profile((select id from ids where name = 'ada')) -> 'want', 'Kindred'), 'nor on her profile');
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_entry_hidden((select id from ids where name = 'wish'), false);
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(tests.has_book(public.member_want((select id from ids where name = 'ada')), 'Kindred'), 'and is back once shown again');
+
+-- ------------------------------------------------------ a profile, switch by switch
+
+select is(jsonb_typeof(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'read'), 'number', 'all on: her count of Books read');
+select is(jsonb_typeof(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'reading'), 'number', 'and of Books she is reading');
+select is(jsonb_typeof(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'want'), 'number', 'and of Books she wants');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"finished": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'read', 'null'::jsonb, 'Finished off: no count of Books read');
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'finished', '[]'::jsonb, 'and no finished Books');
+select is(jsonb_typeof(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'reading'), 'number', 'the other counts stay');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"finished": true, "reading": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'reading', 'null'::jsonb, 'Currently reading off: no count');
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'reading', '[]'::jsonb, 'and no Books she reads');
+select is(jsonb_typeof(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'read'), 'number', 'Books read stay');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"reading": true, "want": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'counts' -> 'want', 'null'::jsonb, 'Want to read off: no count');
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'want', '[]'::jsonb, 'and no Books she wants');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"want": true, "ratings": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'finished' -> 0 -> 'rating', 'null'::jsonb, 'Ratings off: a finished Book has none');
+select isnt(public.member_profile((select id from ids where name = 'ada')) -> 'finished' -> 0 -> 'review', 'null'::jsonb, 'but keeps its review');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"ratings": true, "reviews": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'finished' -> 0 -> 'review', 'null'::jsonb, 'Reviews off: a finished Book has none');
+select isnt(public.member_profile((select id from ids where name = 'ada')) -> 'finished' -> 0 -> 'rating', 'null'::jsonb, 'but keeps its rating');
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"reviews": true}');
+
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'followsYou', 'false'::jsonb, 'she does not follow him');
+select is(public.member_profile((select id from ids where name = 'pia')) -> 'followsYou', 'false'::jsonb, 'nor does a public member he follows');
+reset role;
+insert into public.follows (follower_id, followee_id, accepted_at)
+  values ((select id from ids where name = 'ada'), (select id from ids where name = 'ben'), now());
+select tests.act_as((select id from ids where name = 'ben'));
+select is(public.member_profile((select id from ids where name = 'ada')) -> 'followsYou', 'true'::jsonb, 'once she follows him, followsYou says so');
+reset role;
+delete from public.follows
+ where follower_id = (select id from ids where name = 'ada') and followee_id = (select id from ids where name = 'ben');
+
+-- -------------------------------------------------- the feed: again, reviewed
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.read_again((select id from ids where name = 'done'), current_date);
+insert into ids values ('later', (public.add_to_library(tests.snap('Review Later'), 'reading', current_date - 5)).id);
+select public.finish_reading((select id from ids where name = 'later'), current_date, 16, null);
+select public.update_session(
+  (select id from public.reading_sessions where entry_id = (select id from ids where name = 'later')),
+  current_date - 5, current_date, 16, 'Words, a day later.', null);
+
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(tests.is_again(public.feed(), 'The Left Hand of Darkness'), 'reading a finished Book again says "again"');
+select ok(tests.has_book(public.feed(), 'Review Later', 'reviewed'), 'a review added after the finish is a "reviewed" row');
+select is(tests.entry_of(public.feed(), 'Review Later', 'reviewed') ->> 'review', 'Words, a day later.', 'with her words');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"finished": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(not tests.is_again(public.feed(), 'The Left Hand of Darkness'), 'Finished off: no "again", it would tell what she finished');
+select ok(tests.has_book(public.feed(), 'The Left Hand of Darkness', 'started'), 'though the started row stays');
+select ok(not tests.has_book(public.feed(), 'Review Later', 'reviewed'), 'Finished off: no "reviewed" row either');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"finished": true, "reviews": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(not tests.has_book(public.feed(), 'Review Later', 'reviewed'), 'Reviews off: no "reviewed" row');
+select ok(tests.has_book(public.feed(), 'Review Later', 'finished'), 'but she still finished it');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"reviews": true}');
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(tests.has_book(public.feed(), 'Review Later', 'reviewed'), 'both on: the "reviewed" row is back');
+
+-- Gate 2, fix 4: a review she has since cleared leaves no "reviewed X" without words.
+reset role;
+update public.reading_sessions set review = null
+ where entry_id = (select id from ids where name = 'later') and outcome = 'finished';
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(not tests.has_book(public.feed(), 'Review Later', 'reviewed'), 'a review she cleared leaves no "reviewed" row');
+select ok(tests.has_book(public.feed(), 'Review Later', 'finished'), 'and her finish stays');
+
+-- ------------------------------------------------ her reading record, in gate 2
+
+select ok(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'The Left Hand of Darkness', 'finished') -> 'rating' <> 'null'::jsonb,
+  'a follower gets her rating while ratings are on');
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"ratings": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select is(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'The Left Hand of Darkness', 'finished') -> 'rating', 'null'::jsonb,
+  'Ratings off: the closed read has none');
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"ratings": true}');
+select public.set_entry_hidden((select id from ids where name = 'later'), true);
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(not tests.has_read(public.member_reading_record((select id from ids where name = 'ada')), 'Review Later', 'finished'), 'a hidden Book is not in her record');
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_entry_hidden((select id from ids where name = 'later'), false);
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(tests.has_read(public.member_reading_record((select id from ids where name = 'ada')), 'Review Later', 'finished'), 'and is back once shown again');
+
+select tests.act_as((select id from ids where name = 'gil'));
+select is(public.member_reading_record((select id from ids where name = 'ada')), null::jsonb, 'a member whose request waits gets no record');
+select tests.act_as((select id from ids where name = 'dan'));
+select is(public.member_reading_record((select id from ids where name = 'ada')), null::jsonb, 'a blocked member gets none');
+select tests.act_as((select id from ids where name = 'cy'));
+select is(public.member_reading_record((select id from ids where name = 'ada')), null::jsonb, 'a stranger gets none');
+
+-- ------------------------------------- gate 2, fix 1: a cover she typed is no tracking pixel
+
+select tests.act_as((select id from ids where name = 'ada'));
+select tests.manual_with_cover('Pixel Book', 'https://tracker.example/pixel.png?u=ada');
+select tests.manual_with_cover('Userinfo Book', 'https://covers.openlibrary.org@tracker.example/b/id/1-L.jpg');
+select tests.manual_with_cover('Suffix Book', 'https://covers.openlibrary.org.tracker.example/b/id/1-L.jpg');
+select tests.manual_with_cover('Http Book', 'http://covers.openlibrary.org/b/id/1-L.jpg');
+select tests.manual_with_cover('Open Library Book', 'https://covers.openlibrary.org/b/id/1-L.jpg');
+select tests.manual_with_cover('Apple Book', 'https://is3-ssl.mzstatic.com/image/thumb/a/600x900bb.jpg');
+select tests.manual_with_cover('Regal Book', 'https://books.fabkho.dev/covers/a.jpg');
+select tests.manual_with_cover('Pixel Read', 'https://tracker.example/pixel-read.png', 'finished');
+select tests.manual_with_cover('Good Read', 'https://covers.openlibrary.org/b/id/2-L.jpg', 'finished');
+select public.set_reading_page(true);
+insert into links values ('page', (select token from public.reading_pages where member_id = (select id from ids where name = 'ada')));
+
+select tests.act_as((select id from ids where name = 'ben'));
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Pixel Book'), null, 'her Want to read: a cover on any host is not shown');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Userinfo Book'), null, 'nor one whose host is only a name before an @');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Suffix Book'), null, 'nor one on a host that only begins like a known one');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Http Book'), null, 'nor a plain http one');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Open Library Book'), 'https://covers.openlibrary.org/b/id/1-L.jpg', 'an Open Library cover stays');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Apple Book'), 'https://is3-ssl.mzstatic.com/image/thumb/a/600x900bb.jpg', 'an Apple cover stays');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Regal Book'), 'https://books.fabkho.dev/covers/a.jpg', 'and one of the Regal library');
+select is(public.member_want((select id from ids where name = 'ada')) @> jsonb_build_array(jsonb_build_object('book', jsonb_build_object('title', 'Pixel Book', 'cover_thumbhash', null, 'cover_dominant', null, 'cover_secondary', null))),
+  true, 'the thumbhash and colours go with a cover that is dropped');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Kindred'), null, 'a catalogue Book without a cover is as it was');
+
+select is(tests.cover_of(public.feed(null, null, 50), 'Pixel Book'), null, 'the feed: her typed cover is not shown');
+select ok(tests.has_book(public.feed(null, null, 50), 'Pixel Book', 'want'), 'though the row is');
+select is(tests.cover_of(public.feed(null, null, 50), 'Open Library Book'), 'https://covers.openlibrary.org/b/id/1-L.jpg', 'a known host is');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'want', 'Pixel Book'), null, 'her profile: Want to read, not shown');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'want', 'Open Library Book'), 'https://covers.openlibrary.org/b/id/1-L.jpg', 'a known host is');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'finished', 'Pixel Read'), null, 'her profile: finished, not shown');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'finished', 'Good Read'), 'https://covers.openlibrary.org/b/id/2-L.jpg', 'a known host is');
+select is(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'Pixel Read', 'finished') -> 'entry' -> 'book' -> 'cover_url', 'null'::jsonb, 'her record: not shown');
+select is(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'Pixel Read', 'finished') -> 'entry' -> 'book' -> 'cover_thumbhash', 'null'::jsonb, 'nor its thumbhash');
+select is(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'Good Read', 'finished') -> 'entry' -> 'book' ->> 'cover_url', 'https://covers.openlibrary.org/b/id/2-L.jpg', 'a known host is');
+
+select tests.act_anon();
+select ok(position('tracker.example' in public.public_reading_page((select link from links where name = 'page'))::text) = 0, 'her public reading page: no typed cover');
+select ok(position('covers.openlibrary.org/b/id/2-L.jpg' in public.public_reading_page((select link from links where name = 'page'))::text) > 0, 'but a known host stays');
+reset role;
+
+-- ------------------------------------- gate 2, fix 3: her current photo, not her folder
+
+insert into storage.objects (bucket_id, name, owner_id)
+select 'avatars', (select id from ids where name = 'ada')::text || '/' || repeat(h, 32) || s || '.webp',
+       (select id from ids where name = 'ada')::text
+  from (values ('a'), ('b')) as hs(h), (values (''), ('-128')) as ss(s);
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_avatar((select id from ids where name = 'ada')::text || '/' || repeat('a', 32) || '.webp');
+
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('a', 32) || '.webp'), 'a follower sees her current photo');
+select ok(public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('a', 32) || '-128.webp'), 'and its small twin');
+select ok(not public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('b', 32) || '.webp'), 'not an older photo of hers');
+select ok(not public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('b', 32) || '-128.webp'), 'nor its small twin');
+select ok(not public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('a', 32) || '.jpg'), 'nor the same name in another type');
+select ok(not public.can_see_member_file((select id from ids where name = 'ada')::text || '/notes.webp'), 'nor any other name in her folder');
+select ok(not public.can_see_member_file(null), 'a null name is no photo');
+select is((select count(*)::int from storage.objects where bucket_id = 'avatars' and name like (select id from ids where name = 'ada')::text || '/%'), 2,
+  'the policy lets him list her current photo and its twin, and nothing else of her folder');
+select tests.act_as((select id from ids where name = 'cy'));
+select ok(not public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('a', 32) || '.webp'), 'a stranger does not see even the current photo');
+select is((select count(*)::int from storage.objects where bucket_id = 'avatars' and name like (select id from ids where name = 'ada')::text || '/%'), 0, 'and lists nothing');
+select tests.act_as((select id from ids where name = 'dan'));
+select ok(not public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('a', 32) || '.webp'), 'a blocked member does not');
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_avatar((select id from ids where name = 'ada')::text || '/' || repeat('b', 32) || '.webp');
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('b', 32) || '.webp'), 'a new photo is seen once it is her current one');
+select ok(not public.can_see_member_file((select id from ids where name = 'ada')::text || '/' || repeat('a', 32) || '.webp'), 'and the one it replaced is not');
+
+-- ------------------------------------------------------------- signed out
+
+select tests.act_anon();
+select is(
+  (select count(*)::int from unnest(array[
+      'public.feed(timestamptz, uuid, integer)', 'public.member_profile(uuid)', 'public.member_want(uuid)',
+      'public.member_reading_record(uuid)', 'public.can_see_member_folder(text)', 'public.can_see_member_file(text)'
+    ]) f where has_function_privilege('anon', f::regprocedure, 'execute')),
+  0, 'signed out, none of these can be executed');
+reset role;
 
 -- ------------------------------------------------------------- removing a follower
 
