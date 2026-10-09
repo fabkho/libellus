@@ -25,7 +25,7 @@ const backend = {
     if (fn === 'feed') return { data: feedAnswer, error: null, status: 200 }
     if (fn === 'my_people') {
       if (people === 'fail') return { data: null, error: { message: 'boom', code: 'XX000' }, status: 500 }
-      return { data: { following: followingIds.map((id) => ({ id, name: id, photo: null })), followers: [], requests: [], requested: [] }, error: null, status: 200 }
+      return { data: { following: followingIds.map((id) => ({ id, name: id, photo: null })), followers: [], followingIds, requests: [], requested: [] }, error: null, status: 200 }
     }
     return { data: null, error: null, status: 200 }
   },

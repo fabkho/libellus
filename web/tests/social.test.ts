@@ -168,6 +168,34 @@ describe('following', () => {
   })
 })
 
+describe('her people in pages', () => {
+  it('lists the newest follow first with its time, who follows whom, and the next page after a row', async () => {
+    const { ada, ben, adaSocial, benSocial } = await twoMembers()
+    await adaSocial.setPrivate(false)
+    expect((await benSocial.follow(ada.id)).data).toBe('following')
+    expect((await adaSocial.follow(ben.id)).data).toBe('requested')
+
+    const people = (await adaSocial.people()).data!
+    expect(people.followers).toEqual([expect.objectContaining({ id: ben.id, followsBack: false, at: expect.any(String) })])
+    expect(Number.isNaN(Date.parse(people.followers[0]!.at))).toBe(false)
+    const mine = (await benSocial.people()).data!
+    expect(mine.following).toEqual([expect.objectContaining({ id: ada.id, followsYou: false })])
+    expect(mine.followingIds).toEqual([ada.id])
+
+    expect(await adaSocial.peoplePage('followers', { at: people.followers[0]!.at, id: ben.id })).toEqual({ data: [], error: null })
+    expect((await adaSocial.peoplePage('followers', { at: '2000-01-01T00:00:00Z', id: ben.id })).data!.map((c) => c.id)).toEqual([])
+    expect((await adaSocial.peoplePage('followers', { at: '2999-01-01T00:00:00Z', id: ben.id })).data!.map((c) => c.id)).toEqual([ben.id])
+  })
+
+  it('refuses a list that is not Following or Followers, and a page offline', async () => {
+    const { ada, adaSocial } = await twoMembers()
+    expect((await ada.client.rpc('my_people_page', { p_list: 'requests' })).error).toMatchObject({ message: 'people_list_invalid' })
+    const offline = createSocial(ada.client, { online: () => false })
+    expect(await offline.peoplePage('followers', { at: '2999-01-01T00:00:00Z', id: ada.id })).toEqual({ data: null, error: 'offline' })
+    expect((await adaSocial.people()).data!.followers).toEqual([])
+  })
+})
+
 describe('blocking', () => {
   it('lists the blocked member, and her link answers null for him', async () => {
     const { ada, ben, adaSocial, benSocial } = await twoMembers()
@@ -197,6 +225,45 @@ describe('refusals', () => {
     expect((await adaSocial.answer(randomUUID(), true)).error).toBe('not_found')
     expect((await adaSocial.follow('not-a-uuid')).error).toBe('not_found')
     expect((await adaSocial.target('short')).data).toBeNull()
+  })
+
+  // The database raises named refusals with PostgREST's own statuses (errcode PT404, PT429), not as a 500; the
+  // body keeps the message, which is what `mapSocialError` reads.
+  it('come with their HTTP status: not_found a 404, entry_not_found a 404, rate_limited a 429', async () => {
+    const { ada, ben, adaSocial, benSocial } = await twoMembers()
+
+    const unknown = await ada.client.rpc('follow', { p_member: randomUUID() })
+    expect(unknown.status).toBe(404)
+    expect(unknown.error).toMatchObject({ message: 'not_found', code: 'PT404' })
+    expect((await ada.client.rpc('answer_request', { p_member: randomUUID(), p_accept: true })).status).toBe(404)
+    expect((await ada.client.rpc('block', { p_member: randomUUID() })).status).toBe(404)
+
+    const hidden = await ada.client.rpc('set_entry_hidden', { p_entry: randomUUID(), p_hidden: true })
+    expect(hidden.status).toBe(404)
+    expect(hidden.error).toMatchObject({ message: 'entry_not_found', code: 'PT404' })
+
+    // Thirty follow calls an hour: a private member asked again and again is the cheapest way to count them.
+    await adaSocial.target((await benSocial.mine()).data!.link)
+    for (let call = 0; call < 30; call++) expect((await adaSocial.follow(ben.id)).error).toBeNull()
+    const limited = await ada.client.rpc('follow', { p_member: ben.id })
+    expect(limited.status).toBe(429)
+    expect(limited.error).toMatchObject({ message: 'rate_limited', code: 'PT429' })
+    expect((await adaSocial.follow(ben.id)).error).toBe('rate_limited')
+  })
+
+  it('are read by their message whatever the status says, and a call that got no answer stays offline', async () => {
+    const answers = (status: number, code: string, message: string) => ({
+      rpc: async () => (status === 0 ? { data: null, error: { message: 'TypeError: Failed to fetch' }, status } : { data: null, error: { message, code }, status }),
+    })
+    const refusal = (client: ReturnType<typeof answers>) => createSocial(client as never, { online: () => true }).follow(randomUUID())
+    expect(await refusal(answers(404, 'PT404', 'not_found'))).toEqual({ data: null, error: 'not_found' })
+    expect(await refusal(answers(404, 'PT404', 'entry_not_found'))).toEqual({ data: null, error: 'entry_not_found' })
+    expect(await refusal(answers(429, 'PT429', 'rate_limited'))).toEqual({ data: null, error: 'rate_limited' })
+    expect(await refusal(answers(429, 'PT429', 'follow_limit'))).toEqual({ data: null, error: 'follow_limit' })
+    // A 404 or 429 that is not one of ours (a proxy's) is unknown, never mistaken for a refusal.
+    expect(await refusal(answers(404, 'PGRST202', 'Could not find the function'))).toEqual({ data: null, error: 'unknown' })
+    expect(await refusal(answers(429, '', 'Too Many Requests'))).toEqual({ data: null, error: 'unknown' })
+    expect(await refusal(answers(0, '', ''))).toEqual({ data: null, error: 'offline' })
   })
 })
 

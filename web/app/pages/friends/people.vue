@@ -4,7 +4,8 @@
 // while a request waits; the page opens on it then). Following and Followers rows open the member's
 // profile and carry a ⋯ for what she can do about them (components/friends/MemberSheet.vue); a
 // follower she does not follow gets Follow back. Requests: Accept (the row then says "follows you now"
-// with Follow back) or Decline (the row leaves). No counts anywhere. Everything is the store's
+// with Follow back) or Decline (the row leaves). Following and Followers come in pages, the next one when the
+// end of the list shows. No counts anywhere. Everything is the store's
 // (stores/social.ts); what is decided apart from the screen is utils/people.ts. Offline every write
 // button says so and waits.
 import type { MemberCard } from '~/data/socialShapes'
@@ -161,8 +162,37 @@ function changed() {
   accepted.value = nextAccepted
 }
 
-const followingIds = computed(() => new Set((people.value?.following ?? []).map((member) => member.id)))
-const followerIds = computed(() => new Set((people.value?.followers ?? []).map((member) => member.id)))
+// Whom she follows, all of it (Following is paged, so its rows are not the whole of it).
+const followingIds = computed(() => new Set(people.value?.followingIds ?? []))
+
+// ------------------------------------------------------------------ more, near the end
+// Following and Followers come in pages. A mark after the rows; once it is within a screen of the view, the
+// next page is asked for (as the feed page does, pages/friends/index.vue). Requests are never paged.
+const paged = computed(() => (segment.value === 'requests' ? null : segment.value))
+const hasMore = computed(() => Boolean(paged.value && people.value?.[paged.value].length && !social.peopleEnded[paged.value]))
+const loadingMore = computed(() => Boolean(paged.value && social.peopleLoadingMore[paged.value]))
+const end = useTemplateRef<HTMLElement>('end')
+let observer: IntersectionObserver | null = null
+function watchEnd() {
+  observer?.disconnect()
+  if (!end.value || typeof IntersectionObserver === 'undefined') return
+  observer = new IntersectionObserver((seen) => seen.some((s) => s.isIntersecting) && paged.value && void social.loadMorePeople(paged.value), {
+    rootMargin: '100% 0px',
+  })
+  observer.observe(end.value)
+}
+onMounted(watchEnd)
+onBeforeUnmount(() => observer?.disconnect())
+// A page of rows that still leaves the mark in view must ask for the next one: observe it afresh. So must
+// the other list being shown and the connection coming back: `loadMorePeople` does nothing offline, and an
+// observer that has already reported the mark in view does not report it again.
+watch(
+  () => [paged.value, people.value?.following.length, people.value?.followers.length, hasMore.value, loadingMore.value, online.value, loading.value] as const,
+  async () => {
+    await nextTick()
+    watchEnd()
+  },
+)
 </script>
 
 <template>
@@ -192,7 +222,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
         <template v-if="segment === 'following'">
           <UiListMotion v-if="people?.following.length" tag="ul" class="flex flex-col">
             <li v-for="member in people.following" :key="member.id" class="border-hairline not-first:border-t">
-              <FriendsPersonRow :member="member" @more="openSheet(member, { following: true, follower: followerIds.has(member.id) })" />
+              <FriendsPersonRow :member="member" @more="openSheet(member, { following: true, follower: member.followsYou })" />
             </li>
           </UiListMotion>
           <p v-else class="py-lg text-center text-subhead text-ink-muted" data-testid="people.empty">{{ t('people.emptyFollowing') }}</p>
@@ -229,6 +259,12 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
             />
           </li>
         </UiListMotion>
+
+        <!-- More of Following or Followers on its way: rows of a person's height under the last one. -->
+        <div v-if="loadingMore" class="flex flex-col" aria-busy="true" data-testid="people.loadingMore">
+          <FriendsRowPlaceholder v-for="i in 2" :key="i" kind="person" :wave="i * 0.1" />
+        </div>
+        <div v-if="hasMore" ref="end" class="h-px" aria-hidden="true" data-testid="people.end" />
 
         <p v-if="failed && online" class="text-footnote text-error" role="alert" data-testid="people.error">{{ t('people.error') }}</p>
       </template>

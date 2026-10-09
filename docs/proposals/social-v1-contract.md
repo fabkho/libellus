@@ -38,15 +38,21 @@ null; every key in the shapes below is always present, with `null` where it has 
 
 ### 1.1 Refusals
 
-| Code | SQLSTATE | When |
+The SQLSTATE of a named refusal is what PostgREST answers with: `PT404` and `PT429` are PostgREST's own
+(a SQLSTATE `PTnnn` is HTTP status nnn), so those refusals are a 404 and a 429 and not a 500; the body keeps the
+message (`{"code":"PT404","message":"not_found",...}`), which is what the client reads. (`20261019020000_social_http_codes.sql`;
+before it they were `P0002` and `54000`, answered as 500.)
+
+| Code | SQLSTATE (HTTP) | When |
 |---|---|---|
-| `not_signed_in` | `42501` | no `auth.uid()` |
-| `not_found` | `P0002` | a member, link or request that is unknown, blocked either way, or not reachable: always the same answer, never "forbidden" |
-| `entry_not_found` | `P0002` | an entry that is not hers |
-| `follow_self` | `22023` | following or blocking herself (checked before anything else) |
-| `follow_limit` | `54000` | the caller has 150 rows in `follows` already (accepted, asked or declined), or 20 that are not accepted (asked or declined) |
-| `rate_limited` | `54000` | 30 or more `follow` calls logged for the caller in the last hour (a refused call rolls back with its own log row) |
-| `social_sections_invalid` | `22023` | `set_social_sections` with an unknown key or a non-boolean |
+| `not_signed_in` | `42501` (403) | no `auth.uid()` |
+| `not_found` | `PT404` (404) | a member, link or request that is unknown, blocked either way, or not reachable: always the same answer, never "forbidden" |
+| `entry_not_found` | `PT404` (404) | an entry that is not hers (`set_entry_hidden`; the other Library functions raise it as `P0002`) |
+| `follow_self` | `22023` (400) | following or blocking herself (checked before anything else) |
+| `follow_limit` | `PT429` (429) | the caller has 150 rows in `follows` already (accepted, asked or declined), or 20 that are not accepted (asked or declined) |
+| `rate_limited` | `PT429` (429) | 30 or more `follow` calls logged for the caller in the last hour (a refused call rolls back with its own log row) |
+| `social_sections_invalid` | `22023` (400) |
+| `people_list_invalid` | `22023` (400) | `my_people_page` with a list that is not `following` or `followers` (the client never asks) | `set_social_sections` with an unknown key or a non-boolean |
 
 ### 1.2 Tables (D1, D3)
 
@@ -230,19 +236,22 @@ non-zero; D1 returns the count from `follows`).
 | `remove_follower(p_member uuid)` | `void` | Deletes `p_member`'s follow or request to the caller. |
 | `block(p_member uuid)` | `void` | `follow_self` for herself; `not_found` unless `p_member` is reachable for the caller or already blocked by her (an unknown id must not tell a stranger whether it is a member). Deletes follows and requests both ways, inserts `blocks` (once), deletes both `follow_link_views` rows. |
 | `unblock(p_member uuid)` | `void` | Deletes the caller's block of `p_member`; nothing to delete: no error. Follows do not come back. |
-| `my_people()` | `People` | |
+| `my_people()` | `People` | The first page (30) of Following and Followers, newest follow first; Requests and Requested whole (at most 20 each); `followingIds`. |
+| `my_people_page(p_list text, p_before timestamptz default null, p_before_id uuid default null, p_limit integer default 30)` | `(Card & {...})[]` | The page of `following` or `followers` after the row (`p_before` = its `at`, `p_before_id` = its `id`): a keyset on (`accepted_at`, member id), newest first, as `feed()`; `p_limit` clamped to 1..50 (null: 30); fewer rows than the limit is the end. Another list: `people_list_invalid`. |
 | `my_blocked()` | `Card[]` | Newest block first. `photo` is null here (a block hides photos both ways). |
 
 ```json
 // FollowTarget
 { "member": Card, "private": true, "state": "self" | "none" | "requested" | "following" }
 
-// People: each list ordered by name (nulls last), then id
+// People: Following and Followers the first 30, newest follow first (`at`: when it was accepted, with the id the keyset
+// of my_people_page)
 {
-  "following": [Card],                                      // she accepted
-  "followers": [Card & { "followsBack": true|false }],      // accepted follows of the member
+  "following":    [Card & { "at": "timestamptz", "followsYou": true|false }],   // she accepted
+  "followers":    [Card & { "at": "timestamptz", "followsBack": true|false }],  // accepted follows of the member
+  "followingIds": ["uuid"],                                 // everyone she follows (150 at most), newest follow first
   "requests":  [Card & { "askedAt": "timestamptz" }],       // to the member, pending, not declined; newest first
-  "requested": [Card]                                       // the member's own pending asks (declined ones too)
+  "requested": [Card]                                       // the member's own pending asks (declined ones too), by name
 }
 ```
 
@@ -326,7 +335,6 @@ Accepted, on purpose:
 - **A declined member can withdraw and ask again**, at most 30 calls an hour. Block is the answer.
 - **A removed follower who still has the link** sees her card and can ask again; a new link is the
   real removal (the app's Remove confirm offers it).
-- **People lists have no paging**: fine for a circle; revisit before public accounts grow to thousands.
 - **Unhiding a Book brings its old activity back** with its dates, as switching a section back on does.
 - **`purge-activity` is only scheduled where pg_cron exists**, as `purge-synced-writes` is.
 
@@ -374,9 +382,6 @@ their tests in `social_readers_test.sql` and `social_follows_test.sql`:
 
 Accepted, known (S1):
 
-- **Refusals with errcode P0002 (`not_found`, `entry_not_found`, …) and 54000 (`rate_limited`, `follow_limit`)
-  reach the client as HTTP 500** with only the named message (PostgREST's mapping); the client maps by name. No
-  SQL text, relation or column name is in any of them.
 - **A member can give a new Catalogue Book her own title, description and cover**: the first to add it decides
   what the Catalogue holds, and others who add it, and now their followers, see the title and description as plain
   text. The cover is held back by the host list above; the text is not. This is the Catalogue's trust model, older
@@ -413,9 +418,13 @@ export type SocialSections = { reading: boolean; want: boolean; finished: boolea
 export type MySocial = { private: boolean; sections: SocialSections; link: string; requests: number }
 export type FollowState = 'self' | 'none' | 'requested' | 'following'
 export type FollowTarget = { member: MemberCard; private: boolean; state: FollowState }
+export type Followed = MemberCard & { at: string; followsYou: boolean }
+export type Follower = MemberCard & { at: string; followsBack: boolean }
+export const PEOPLE_PAGE = 30
 export type People = {
-  following: MemberCard[]
-  followers: (MemberCard & { followsBack: boolean })[]
+  following: Followed[]       // the first page
+  followers: Follower[]       // the first page
+  followingIds: string[]      // everyone she follows
   requests: (MemberCard & { askedAt: string })[]
   requested: MemberCard[]
 }
@@ -433,6 +442,8 @@ export interface Social {
   block(member: string): Promise<Result<void, SocialErrorCode>>
   unblock(member: string): Promise<Result<void, SocialErrorCode>>
   people(): Promise<Result<People, SocialErrorCode>>
+  /** The page of Following or Followers after the row `before`; fewer than `PEOPLE_PAGE`: the end. */
+  peoplePage(list: 'following' | 'followers', before: { at: string; id: string }): Promise<Result<(Followed | Follower)[], SocialErrorCode>>
   blocked(): Promise<Result<MemberCard[], SocialErrorCode>>
   profile(member: string): Promise<Result<MemberProfile | null, SocialErrorCode>>
   /** Her whole Want to read (the profile's See all); null when not visible or switched off. */
@@ -505,7 +516,7 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
   `friends.batch`, `friends.empty`, `friends.emptyShare`, `friends.quiet`, `friends.offline`,
   `friends.loading` (the placeholders while the first answer is on its way), `friends.loadError`, `friends.retry`; the batch sheet `friendsBatch` (`.sheetTitle`, `.cancel`,
   `.row`).
-- **People** (`/friends/people`): `people`, `people.back`, `people.status` (the page's polite status), `people.loading`, `people.segment.following|followers|requests`,
+- **People** (`/friends/people`): `people`, `people.back`, `people.status` (the page's polite status), `people.loading`, `people.loadingMore` (the placeholders under the last row while the next page is on its way), `people.end` (the mark whose showing asks for it), `people.segment.following|followers|requests`,
   `people.row`, `people.rowMore`, `people.accept`, `people.decline`, `people.followBack`,
   `people.empty`; the member sheet `memberSheet` (`.unfollow`, `.remove`, `.block`, `.cancel`); the
   block confirm `blockConfirm` (`.confirm`, `.cancel`).

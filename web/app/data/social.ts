@@ -44,9 +44,25 @@ export type MySocial = { private: boolean; sections: SocialSections; link: strin
 /** What a follow link opens: the member behind it and where the caller stands with her. */
 export type FollowTarget = { member: MemberCard; private: boolean; state: FollowState }
 
+/** A row of Following or Followers: `at` is when the follow was accepted, the keyset for the next page. */
+export type Followed = MemberCard & { at: string; followsYou: boolean }
+export type Follower = MemberCard & { at: string; followsBack: boolean }
+
+/** The lists that come in pages, newest follow first. Requests (at most 20 waiting) and Requested never do. */
+export type PeopleList = 'following' | 'followers'
+
+/** How many rows `people()` and `peoplePage()` ask for; fewer rows back than this is the end of the list. */
+export const PEOPLE_PAGE = 30
+
+/**
+ * `following` and `followers`: the first page (`PEOPLE_PAGE`) of each; `followingIds`: everyone she follows
+ * (150 at most), which what is not paged needs (the feed keeps the entries of people she still follows, a
+ * Followers row says whether she follows that member).
+ */
 export type People = {
-  following: MemberCard[]
-  followers: (MemberCard & { followsBack: boolean })[]
+  following: Followed[]
+  followers: Follower[]
+  followingIds: string[]
   requests: (MemberCard & { askedAt: string })[]
   requested: MemberCard[]
 }
@@ -70,6 +86,9 @@ export interface Social {
   block(member: string): Promise<SocialResult<void>>
   unblock(member: string): Promise<SocialResult<void>>
   people(): Promise<SocialResult<People>>
+  /** The page of Following or Followers after the row `before` (`at` and `id`); fewer than `PEOPLE_PAGE`: the end. */
+  peoplePage(list: 'following', before: { at: string; id: string }): Promise<SocialResult<Followed[]>>
+  peoplePage(list: 'followers', before: { at: string; id: string }): Promise<SocialResult<Follower[]>>
   blocked(): Promise<SocialResult<MemberCard[]>>
   /** A member's profile; null when she is not reachable (and for herself). */
   profile(member: string): Promise<SocialResult<MemberProfile | null>>
@@ -89,9 +108,12 @@ type BookJson = Parameters<typeof socialBookFromJson>[0]
 
 type MySocialJson = { private: boolean; sections: SocialSections; link: string; requests: number }
 type FollowTargetJson = { member: CardJson; private: boolean; state: FollowState }
+type FollowedJson = CardJson & { at: string; followsYou: boolean }
+type FollowerJson = CardJson & { at: string; followsBack: boolean }
 type PeopleJson = {
-  following: CardJson[]
-  followers: (CardJson & { followsBack: boolean })[]
+  following: FollowedJson[]
+  followers: FollowerJson[]
+  followingIds: string[]
   requests: (CardJson & { askedAt: string })[]
   requested: CardJson[]
 }
@@ -119,10 +141,14 @@ function targetFromJson(json: FollowTargetJson): FollowTarget {
   return { member: cardFromJson(json.member), private: json.private, state: json.state }
 }
 
+const followedFromJson = (json: FollowedJson): Followed => ({ ...cardFromJson(json), at: json.at, followsYou: Boolean(json.followsYou) })
+const followerFromJson = (json: FollowerJson): Follower => ({ ...cardFromJson(json), at: json.at, followsBack: Boolean(json.followsBack) })
+
 function peopleFromJson(json: PeopleJson): People {
   return {
-    following: json.following.map(cardFromJson),
-    followers: json.followers.map((f) => ({ ...cardFromJson(f), followsBack: Boolean(f.followsBack) })),
+    following: json.following.map(followedFromJson),
+    followers: json.followers.map(followerFromJson),
+    followingIds: [...json.followingIds],
     requests: json.requests.map((r) => ({ ...cardFromJson(r), askedAt: r.askedAt })),
     requested: json.requested.map(cardFromJson),
   }
@@ -183,6 +209,12 @@ export function createSocial(client: SupabaseClient, { online = () => true }: { 
     unblock: (member) => call('unblock', { p_member: member }, nothing),
 
     people: () => call('my_people', {}, peopleFromJson),
+    peoplePage: ((list: PeopleList, before: { at: string; id: string }) =>
+      call<(FollowedJson | FollowerJson)[], (Followed | Follower)[]>(
+        'my_people_page',
+        { p_list: list, p_before: before.at, p_before_id: before.id, p_limit: PEOPLE_PAGE },
+        (j) => j.map((row) => (list === 'following' ? followedFromJson(row as FollowedJson) : followerFromJson(row as FollowerJson))),
+      )) as Social['peoplePage'],
     blocked: () => call<CardJson[], MemberCard[]>('my_blocked', {}, (j) => j.map(cardFromJson)),
 
     profile: (member) => call<ProfileJson | null, MemberProfile | null>('member_profile', { p_member: member }, (j) => (j ? profileFromJson(j) : null)),

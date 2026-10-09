@@ -187,7 +187,7 @@ friends' Want to read on yours (8), and **a checked Catalogue** (below). Then 2b
 and finding people: 3, 6), then 2c
 (GIFs 9; *Send a book* 5 still a maybe).
 
-**Version 1 debt:** HTTP 404/429 for the named refusals (today 500); paging in People; an end-to-end
+**Version 1 debt:** ~~HTTP 404/429 for the named refusals; paging in People~~ (done, social v1.1); an end-to-end
 guard that fails a flow on an uncaught page error; *See all* with its count; one favourite card shared
 by the two year pages; a two-digit batch that wraps; one quiet empty/error block; and the Catalogue
 trusting its first adder (moved into 2a, below).

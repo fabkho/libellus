@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { createLibrary, entryFromRow, type EntryRow, type LibraryEntry } from '@/data/library'
@@ -81,6 +82,20 @@ describe('hiding a Book from followers', () => {
     expect(await createLibrary(ben.client).setHidden(entry.id, true)).toEqual({ data: null, error: 'entry_not_found' })
     expect(await createLibrary(ben.client).setHidden('not-an-id', true)).toEqual({ data: null, error: 'entry_not_found' })
     expect((await createLibrary(ada.client).entry(entry.id)).data?.hidden).toBe(false)
+  })
+
+  it('is refused with a 404 (PT404), and sent from the outbox it is a refusal, not a failure that waits for a retry', async () => {
+    const ada = await signUpMember()
+    const ben = await signUpMember()
+    const entry = (await createLibrary(ada.client).addToLibrary(book('Ada Also Only'))).data!
+
+    const direct = await ben.client.rpc('set_entry_hidden', { p_entry: entry.id, p_hidden: true })
+    expect(direct.status).toBe(404)
+    expect(direct.error).toMatchObject({ message: 'entry_not_found', code: 'PT404' })
+
+    // Through sync_write, as the outbox sends it: a refusal (it would be refused again), not a failure to try later.
+    const item = { id: randomUUID(), action: 'set_entry_hidden', args: { p_entry: entry.id, p_hidden: true } }
+    expect(await createSender(ben.client)(item as never)).toEqual({ kind: 'refused', code: 'entry_not_found' })
   })
 
   it('is refused offline when nothing can wait', async () => {

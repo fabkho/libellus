@@ -106,13 +106,13 @@ select ok(tests.has_member(public.my_people() -> 'requested', (select id from id
 
 select tests.act_as((select id from ids where name = 'cy'));
 select throws_ok(format($$ select public.follow(%L) $$, (select id from ids where name = 'ada')),
-  'P0002', 'not_found', 'a member who never opened her link cannot ask');
+  'PT404', 'not_found', 'a member who never opened her link cannot ask');
 
 select tests.act_as((select id from ids where name = 'ada'));
 select ok(tests.has_member(public.my_people() -> 'requests', (select id from ids where name = 'ben')), 'she sees the request');
 select is(public.my_social() -> 'requests', '1'::jsonb, 'and its count');
 select throws_ok(format($$ select public.answer_request(%L, true) $$, (select id from ids where name = 'cy')),
-  'P0002', 'not_found', 'there is nothing to answer from a member who did not ask');
+  'PT404', 'not_found', 'there is nothing to answer from a member who did not ask');
 select public.answer_request((select id from ids where name = 'ben'), true);
 select ok((public.my_people() -> 'followers') @> jsonb_build_array(jsonb_build_object(
   'id', (select id from ids where name = 'ben'), 'followsBack', false)), 'accepted, he is her follower');
@@ -179,7 +179,7 @@ select throws_ok(format($$ select public.block(%L) $$, (select id from ids where
 select tests.act_as((select id from ids where name = 'ben'));
 select is(public.follow_target((select link from links where name = 'ada')), null::jsonb, 'blocked, her link finds nobody for him');
 select throws_ok(format($$ select public.follow(%L) $$, (select id from ids where name = 'ada')),
-  'P0002', 'not_found', 'and he cannot ask');
+  'PT404', 'not_found', 'and he cannot ask');
 
 select tests.act_as((select id from ids where name = 'ada'));
 select public.unblock((select id from ids where name = 'ben'));
@@ -204,7 +204,7 @@ reset role;
 insert into private.follow_calls (member_id) select (select id from ids where name = 'eve') from generate_series(1, 30);
 select tests.act_as((select id from ids where name = 'eve'));
 select throws_ok(format($$ select public.follow(%L) $$, (select id from ids where name = 'pia')),
-  '54000', 'rate_limited', 'thirty follow calls an hour are the most');
+  'PT429', 'rate_limited', 'thirty follow calls an hour are the most');
 
 reset role;
 -- Fen has twenty open requests to private members whose links she opened.
@@ -223,17 +223,17 @@ end;
 $$;
 select tests.act_as((select id from ids where name = 'fen'));
 select throws_ok(format($$ select public.follow(%L) $$, (select id from ids where name = 'm21')),
-  '54000', 'follow_limit', 'twenty open requests are the most');
+  'PT429', 'follow_limit', 'twenty open requests are the most');
 
 -- ------------------------------------------- an unknown id answers as a private stranger does
 
 select tests.act_as((select id from ids where name = 'cy'));
 select throws_ok(format($$ select public.follow(%L) $$, gen_random_uuid()),
-  'P0002', 'not_found', 'following an id nobody has: not_found');
+  'PT404', 'not_found', 'following an id nobody has: not_found');
 select throws_ok(format($$ select public.block(%L) $$, gen_random_uuid()),
-  'P0002', 'not_found', 'blocking an id nobody has: not_found');
+  'PT404', 'not_found', 'blocking an id nobody has: not_found');
 select throws_ok(format($$ select public.block(%L) $$, (select id from ids where name = 'ada')),
-  'P0002', 'not_found', 'blocking a private member he never reached: the same not_found');
+  'PT404', 'not_found', 'blocking a private member he never reached: the same not_found');
 
 -- Gate 2: follow() asks "reachable" again once it holds the pair's lock, so a block that was
 -- committed while it waited cannot be followed through. A second session is not at hand here, so
@@ -277,7 +277,7 @@ select tests.act_as((select id from ids where name = 'hal'));
 select is(public.follow((select id from ids where name = 'hal-followed')) ->> 'state', 'following',
   'at 150 follows, a member he already follows is "following", not follow_limit');
 select throws_ok(format($$ select public.follow(%L) $$, (select id from ids where name = 'hal-new')),
-  '54000', 'follow_limit', 'while a new one is still refused');
+  'PT429', 'follow_limit', 'while a new one is still refused');
 reset role;
 select is((select count(*)::int from private.follow_calls where member_id = (select id from ids where name = 'hal')), 0,
   'and answering "following" logged no call');
