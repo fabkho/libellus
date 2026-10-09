@@ -1629,6 +1629,7 @@
     "askedLine": "asked to follow you",
     "want": "added {title} to Want to read",
     "join": " · ",
+    "and": " and ",
     "accept": "Accept",
     "decline": "Decline",
     "declineLabel": "Decline {name}"
