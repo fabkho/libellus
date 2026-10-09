@@ -183,13 +183,24 @@ Tasks, models, order and checks: [social-v1-plan.md](social-v1-plan.md).
 
 **Order (owner, 9 October 2026, after version 1 shipped):** first the version 1 debt (below), then
 **2a** as one wave: spoiler-safe reviews (1), likes (2), you both read (4), reading the same book now (7),
-friends' Want to read on yours (8). Then 2b (readers on a Book's page and finding people: 3, 6), then 2c
+friends' Want to read on yours (8), and **a checked Catalogue** (below). Then 2b (readers on a Book's page
+and finding people: 3, 6), then 2c
 (GIFs 9; *Send a book* 5 still a maybe).
 
 **Version 1 debt:** HTTP 404/429 for the named refusals (today 500); paging in People; an end-to-end
 guard that fails a flow on an uncaught page error; *See all* with its count; one favourite card shared
 by the two year pages; a two-digit batch that wraps; one quiet empty/error block; and the Catalogue
-trusting its first adder's title, description and cover (a design to decide first).
+trusting its first adder (moved into 2a, below).
+
+**A checked Catalogue (in 2a, owner, 9 October 2026).** A Book is one row of `books` that every member
+who adds it shares. Today the first member to add a Book sets its title, author, description and cover from
+her device, and the database stores them unchecked; a member who calls the database directly could give a
+popular Book a false title or a spam description, which everyone who adds it later, and since social v1
+their followers, would see (plain text: no code runs, nothing leaks). In 2a the server fills a new
+Catalogue Book's details from its source itself (Apple's lookup by id, Open Library by edition key or
+ISBN), not from the device. Adding stays instant and offline-capable: the row is marked unchecked, and
+a server task replaces its details soon after. What others see of a Book before its check (e.g. a second
+member adding it in that window) is settled in 2a's design. A Manual book stays her own and is not checked.
 
 The owner's answers to the proposed list (8 October 2026): yes to 1, 3, 4, 7 and 8; likes instead of
 *Want to read too* (2); *Send a book* maybe (5); people found through reviews on a Book's page (6);
