@@ -208,8 +208,7 @@ export type MoreFromAuthor = {
 
 /**
  * The section's content from an author page, or null when there is nothing to
- * show: no page, or an author the page knows nothing of beyond her name and no
- * other works to offer.
+ * show: no page, or none of her other works to offer.
  */
 export function moreFromAuthor(page: AuthorPage | null | undefined, current: CurrentBook, limit = MORE_FROM_AUTHOR): MoreFromAuthor | null {
   if (!page) return null
@@ -222,10 +221,7 @@ export function moreFromAuthor(page: AuthorPage | null | undefined, current: Cur
     seen.add(id)
     if (!isCurrentWork(work, current)) others.push(work)
   }
-  const total = seen.size
   const works = [...others.filter((w) => workBookKey(w)), ...others.filter((w) => !workBookKey(w))].slice(0, limit)
-  const a = page.author
-  const profile = Boolean(a.photo?.url || a.summary?.text || yearOf(a.born) !== null || yearOf(a.died) !== null)
-  if (!works.length && !profile) return null
-  return { author: a, total, works, more: others.length > works.length }
+  if (!works.length) return null
+  return { author: page.author, total: seen.size, works, more: others.length > works.length }
 }

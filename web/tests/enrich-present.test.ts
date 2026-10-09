@@ -149,19 +149,14 @@ describe('more from the author', () => {
     expect(more?.more).toBe(false)
   })
 
-  it('is nothing for no page, or an author known by her name alone with nothing else of hers', () => {
+  it('is nothing for no page, or when this is the only work she is known for', () => {
     expect(moreFromAuthor(null, reading)).toBeNull()
     expect(moreFromAuthor(pageOf({ standalone: [work('Mort')] }), reading)).toBeNull()
-  })
-
-  it('still shows an author with a photo, dates or intro when this is her only known work', () => {
     const born = { date: '1948-04-28T00:00:00Z', precision: 11 as const }
-    const more = moreFromAuthor(pageOf({ standalone: [work('Mort')] }, { born }), reading)
-    expect(more?.works).toEqual([])
-    expect(more?.author.name).toBe('Terry Pratchett')
+    expect(moreFromAuthor(pageOf({ standalone: [work('Mort')] }, { born }), reading)).toBeNull()
   })
 
-  it('shows works of an author with nothing but the name', () => {
+  it('shows the works of an author with nothing but the name', () => {
     expect(moreFromAuthor(pageOf({ standalone: [work('Mort'), work('Nation')] }), reading)?.works).toHaveLength(1)
   })
 })

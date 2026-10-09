@@ -1,19 +1,18 @@
 <script setup lang="ts">
 // "More from the author", the first section under the Book page's About (it
-// follows the BookSection pattern, components/book/Section.vue): the Book's
-// first linked author (the one the author line names first; the others are one
-// tap away on that line) with her portrait, name (a link to her page), life
-// dates, a two-line cut of her Wikipedia intro, up to three of her other works
-// as on her page (the Book itself left out; her status of each; a tap opens
-// the Book with its cover flying), and "Show all <n>" to her page.
+// follows the BookSection pattern, components/book/Section.vue): the books of
+// the Book's first linked author (the one the author line names first; the
+// others are one tap away on that line) and nothing else about her — no
+// portrait, no intro, no credits (those are her page's). Her name, a link to
+// her page; up to three of her other works as on her page (the Book itself
+// left out; her status of each; a tap opens the Book with its cover flying);
+// and "Show all <n>" to her page.
 //
-// The credits the licences ask for sit with what they cover, here as on her
-// page (AuthorCredits): "From Wikipedia" beside the intro, the portrait's
-// author and licence. Her page is the one `authors.load` fetches and the device
-// keeps (a dozen of them, the same copy her own page opens from), so what has
-// been seen shows offline; a Book with no linked author (not in the Catalogue,
-// or nobody has enriched it), an author the Catalogue has nothing on, or a
-// page that has not come (offline, an error): no section, never an error state.
+// Her page is the one `authors.load` fetches and the device keeps (a dozen of
+// them, the same copy her own page opens from), so what has been seen shows
+// offline. A Book with no linked author (not in the Catalogue, or nobody has
+// enriched it), an author with no other works known, or a page that has not
+// come (offline, an error): no section, never an error state.
 import type { Book, BookSnapshot } from '~/data/books'
 import { useAuthorsStore } from '~/stores/authors'
 
@@ -46,26 +45,21 @@ const more = computed(() => {
     title: props.book.title,
   })
 })
-const dates = useLifeDates(() => more.value?.author)
 </script>
 
 <template>
   <BookSection v-model:near="near" :show="Boolean(more)" :title="t('book.authorMore')" testid="book.authorMore">
     <template v-if="more">
-      <NuxtLink :to="`/author/${more.author.key}`" class="-mx-xs flex items-center gap-md px-xs py-xs" data-testid="book.authorMoreLink">
-        <AuthorPortrait :author="more.author" testid="book.authorMore" />
-        <span class="flex min-w-0 flex-col gap-xs">
-          <span class="text-headline text-balance wrap-anywhere" data-testid="book.authorMoreName">{{ more.author.name }}</span>
-          <span v-if="dates" class="eyebrow" data-testid="book.authorMoreDates">{{ dates }}</span>
-        </span>
+      <NuxtLink
+        :to="`/author/${more.author.key}`"
+        class="-ml-sm -mt-xs mb-xs flex min-h-(--size-touch) items-center gap-xxs px-sm text-body-large font-medium text-ink"
+        data-testid="book.authorMoreLink"
+      >
+        <span class="min-w-0 wrap-anywhere" data-testid="book.authorMoreName">{{ more.author.name }}</span>
+        <UiIcon name="chevron" :size="12" class="shrink-0 text-ink-faint" />
       </NuxtLink>
 
-      <p v-if="more.author.summary" class="mt-ms line-clamp-2 text-subhead text-ink-muted" :lang="more.author.summary.language" data-testid="book.authorMoreSummary">
-        {{ more.author.summary.text }}
-      </p>
-      <AuthorCredits :author="more.author" testid="book.authorMore" class="mt-xs" />
-
-      <ul v-if="more.works.length" class="mt-sm" :aria-label="t('book.authorMoreWorks', { name: more.author.name })">
+      <ul :aria-label="t('book.authorMoreWorks', { name: more.author.name })">
         <AuthorWorkRow v-for="(work, index) in more.works" :key="work.workId ?? work.entry?.entryId ?? `${work.title}-${index}`" :work="work" testid="book.authorMoreWork" :author="more.author.name" />
       </ul>
       <NuxtLink
