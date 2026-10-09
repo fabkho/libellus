@@ -14,6 +14,9 @@ let mode: 'answer' | 'silent' = 'answer'
 
 const settings = { private: true, sections: {}, link: 'x'.repeat(22), requests: 0 }
 const answers: Record<string, unknown> = {
+  follow: { state: 'requested' },
+  unfollow: null,
+  remove_follower: null,
   my_social: settings,
   set_private: settings,
   my_people: { following: [], followers: [], requests: [], requested: [] },
@@ -28,6 +31,9 @@ const backend = {
   },
 }
 
+const told = { dropped: [] as string[], changes: [] as unknown[] }
+vi.mock('~/stores/feed', () => ({ useFeedStore: () => ({ dropMember: (id: string) => told.dropped.push(id) }) }))
+vi.mock('~/stores/memberProfile', () => ({ useMemberProfileStore: () => ({ relationChanged: (id: string, change: unknown) => told.changes.push([id, change]) }) }))
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 
 async function store() {
@@ -54,6 +60,8 @@ async function reconnect() {
 }
 
 beforeEach(() => {
+  told.dropped.length = 0
+  told.changes.length = 0
   online.value = true
   mode = 'answer'
   calls.length = 0
@@ -93,5 +101,35 @@ describe('back online', () => {
     expect(social.people).not.toBeNull()
     expect(social.blocked).toEqual([])
     expect(toRaw(social.mine)).toMatchObject({ private: true })
+  })
+})
+
+describe('a change of relation tells the feed and the member\'s profile (M3, M4)', () => {
+  it('drops her from the feed and patches her profile after Unfollow and Block, not after Remove as follower', async () => {
+    const social = await store()
+    await social.unfollow('ida')
+    await social.block('ben')
+    await social.removeFollower('cy')
+    expect(told.dropped).toEqual(['ida', 'ben'])
+    expect(told.changes).toEqual([
+      ['ida', { kind: 'unfollow' }],
+      ['ben', { kind: 'block' }],
+      ['cy', { kind: 'removeFollower' }],
+    ])
+  })
+
+  it('patches her profile with the state a follow answered', async () => {
+    const social = await store()
+    await social.follow('ida')
+    expect(told.changes).toEqual([['ida', { kind: 'follow', state: 'requested' }]])
+    expect(told.dropped).toEqual([])
+  })
+
+  it('tells nobody of a change that was refused', async () => {
+    const social = await store()
+    mode = 'silent'
+    expect((await social.unfollow('ida')).error).toBe('offline')
+    expect(told.dropped).toEqual([])
+    expect(told.changes).toEqual([])
   })
 })

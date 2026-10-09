@@ -71,6 +71,11 @@ export function mergeFirstPage(current: readonly FeedEntry[], fresh: readonly Fe
   return [...fresh, ...current.filter((entry) => !seen.has(entry.id) && newer(last, entry))]
 }
 
+/** The entries without any by this member (after she is unfollowed, blocked or removed as a follower). */
+export function withoutMember(entries: readonly FeedEntry[], member: string): FeedEntry[] {
+  return entries.filter((entry) => entry.member.id !== member)
+}
+
 /** An older page's entries after the ones she has, without any she already has. */
 export function appendPage(current: readonly FeedEntry[], page: readonly FeedEntry[]): FeedEntry[] {
   const seen = new Set(current.map((entry) => entry.id))

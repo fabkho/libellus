@@ -9,6 +9,7 @@ import {
   feedEmptyState,
   feedVerbKey,
   mergeFirstPage,
+  withoutMember,
 } from '@/utils/feedView'
 
 /**
@@ -160,5 +161,21 @@ describe("when the device's copy was taken", () => {
     const now = new Date(2026, 9, 9, 18, 30)
     expect(copyTimeLabel(new Date(2026, 9, 9, 14, 2), now, 'en-GB')).toBe('14:02')
     expect(copyTimeLabel(new Date(2026, 9, 7, 14, 2), now, 'en-GB')).toMatch(/^Wed,? 14:02$/)
+  })
+})
+
+describe('a member who left her circle', () => {
+  it('takes her entries out and keeps everyone else\'s, in order', () => {
+    const ida = { id: 'ida', name: 'Ida', photo: null }
+    const all = [entry('a', 5), { ...entry('i1', 4), member: ida }, entry('b', 3), { ...entry('i2', 2), member: ida }]
+    expect(withoutMember(all, 'ida').map((e) => e.id)).toEqual(['a', 'b'])
+    expect(withoutMember(all, 'nobody')).toEqual(all)
+  })
+
+  it('does not bring her back when a full first page is joined to the older pages she had', () => {
+    const ida = { id: 'ida', name: 'Ida', photo: null }
+    const had = [...page('n', FEED_PAGE, 100), { ...entry('old-ida', 10), member: ida }]
+    const shown = withoutMember(had, 'ida')
+    expect(mergeFirstPage(shown, page('n', FEED_PAGE, 100)).some((e) => e.member.id === 'ida')).toBe(false)
   })
 })

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { createFeed, feedDays, FEED_PAGE, readFeed, saveFeed, type Feed, type FeedEntry } from '~/data/feed'
 import type { SocialErrorCode } from '~/data/socialShapes'
 import { isoDay } from '~/utils/dates'
-import { appendPage, copyTakenAt, feedEmptyState, mergeFirstPage } from '~/utils/feedView'
+import { appendPage, copyTakenAt, feedEmptyState, mergeFirstPage, withoutMember } from '~/utils/feedView'
 import { useSessionStore } from '~/stores/session'
 
 /**
@@ -112,6 +112,21 @@ export const useFeedStore = defineStore('feed', () => {
     ended.value = result.data.length < FEED_PAGE
   }
 
+  /**
+   * A member is no longer in her circle (unfollowed, blocked, removed as a follower; told by the social
+   * store, which changes the relationship): her entries leave what is shown and the device's copy is
+   * saved again without them, with the time it was taken (not "now": the rest is no newer). Without it
+   * an offline Home, or a refresh that keeps the older pages she scrolled to, would still show her.
+   */
+  function dropMember(id: string) {
+    if (!entries.value.some((entry) => entry.member.id === id)) return
+    entries.value = withoutMember(entries.value, id)
+    const member = session.member?.id
+    if (import.meta.client && member) saveFeed(window.localStorage, member, entries.value.slice(0, FEED_PAGE), takenAt.value ?? new Date())
+    // Nothing left: the empty state depends on whether she follows anyone still.
+    if (!entries.value.length && isOnline()) void askFollowing()
+  }
+
   function reset() {
     entries.value = []
     loaded.value = false
@@ -151,5 +166,5 @@ export const useFeedStore = defineStore('feed', () => {
     if (now && (loadError.value === 'offline' || takenAt.value)) void refresh()
   })
 
-  return { entries, days, loaded, loading, loadingMore, loadError, ended, offlineSince, emptyState, refresh, loadMore, reset }
+  return { entries, days, loaded, loading, loadingMore, loadError, ended, offlineSince, emptyState, refresh, loadMore, dropMember, reset }
 })

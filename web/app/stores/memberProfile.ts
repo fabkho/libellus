@@ -4,7 +4,7 @@ import type { MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
 import type { StatsYear } from '~/data/stats'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
-import { yearIn } from '~/utils/memberProfile'
+import { profileAfter, yearIn, type RelationChange } from '~/utils/memberProfile'
 import { createRereads } from '~/utils/rereads'
 
 /** Her whole Want to read, newest first (*See all*). */
@@ -157,6 +157,20 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     return true
   }
 
+  /**
+   * The caller changed the relation with her (told by the social store, which makes the change): her view
+   * follows the action's answer at once (`profileAfter`), so it is right even when the read after it fails
+   * or the connection drops. Nothing to patch where her profile was never read.
+   */
+  function relationChanged(id: string, change: RelationChange) {
+    const had = views.value[id]
+    if (!had?.loaded) return
+    const profile = profileAfter(had.profile, change)
+    if (!profile) return patch(id, { ...fresh(), loaded: true })
+    // A closed card has no figures or Want to read of hers to keep.
+    patch(id, { profile, ...(profile.visible ? {} : { record: null, want: null, recordLoading: false }) })
+  }
+
   function forget() {
     generation++
     views.value = {}
@@ -176,5 +190,5 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     for (const [id, view] of Object.entries(views.value)) if (view.error === 'offline' && !view.loaded) void load(id)
   })
 
-  return { views, viewOf, load, setYear, follow, withdraw, forget }
+  return { views, viewOf, load, setYear, follow, withdraw, relationChanged, forget }
 })
