@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { BookAuthor } from '@/data/enrich'
+import type { AuthorPage, BookAuthor } from '@/data/enrich'
+import type { WorkCard } from '@/data/enrich/works'
 import type { StartedSeries } from '@/data/enrich/series'
 import { DEVICE_ENRICH_KEY, emptyCopy, readEnrichCopy, remembered, saveEnrichCopy } from '@/data/enrich/device'
 import {
   authorInitials,
   authorParts,
+  isCurrentWork,
+  moreFromAuthor,
   lifeSpan,
   parsePosition,
   positionText,
@@ -96,6 +99,69 @@ describe('where a work opens', () => {
     expect(workBookKey({ edition: { title: 'Mort', isbn13: null, openlibrary_edition_key: 'OL7353617M', cover_url: null } })).toBe('ol-OL7353617M')
     expect(workBookKey({ edition: { title: 'Mort', isbn13: '123', openlibrary_edition_key: null, cover_url: null } })).toBeNull()
     expect(workBookKey({})).toBeNull()
+  })
+})
+
+const work = (title: string, extra: Partial<WorkCard> = {}): WorkCard => ({
+  workId: `w-${title}`,
+  title,
+  edition: { title, isbn13: null, openlibrary_edition_key: `OL${title.length}M`, cover_url: null },
+  ...extra,
+})
+const pageOf = (parts: Partial<AuthorPage> = {}, author: Partial<AuthorPage['author']> = {}): AuthorPage => ({
+  author: { id: 'a1', key: 'Q46248', name: 'Terry Pratchett', ...author },
+  genres: [],
+  series: [],
+  standalone: [],
+  other: [],
+  stale: false,
+  ...parts,
+})
+const ISBN = '9780552131063'
+const reading = { bookId: 'b-mort', key: 'b-mort', isbn13: null, title: 'Mort' }
+
+describe('more from the author', () => {
+  it('tells the Book the page is on by her entry, its key, its ISBN or its title', () => {
+    expect(isCurrentWork(work('Other', { entry: { entryId: 'e', bookId: 'b-mort', status: 'reading' } }), reading)).toBe(true)
+    expect(isCurrentWork(work('Mort', { edition: { title: 'Mort', isbn13: '9780552131063', openlibrary_edition_key: null, cover_url: null } }), { ...reading, bookId: null, key: `isbn-${ISBN}` })).toBe(true)
+    expect(isCurrentWork(work('Other', { edition: { title: 'Other', isbn13: '9780552131063', openlibrary_edition_key: 'OL9M', cover_url: null } }), { ...reading, bookId: null, isbn13: '9780552131063' })).toBe(true)
+    expect(isCurrentWork(work('MORT'), reading)).toBe(true)
+    expect(isCurrentWork(work('Guards! Guards!'), reading)).toBe(false)
+  })
+
+  it('offers three of her other works, those that open a Book first, each once, in the page order', () => {
+    const none = { workId: 'w-x', title: 'Nothing to open' }
+    const page = pageOf({
+      series: [{ id: 's1', name: 'Discworld', works: [work('Mort'), none, work('Eric'), work('Sourcery')] }],
+      standalone: [work('Nation'), work('Eric')],
+      other: [work('Dodger')],
+    })
+    const more = moreFromAuthor(page, reading)
+    expect(more?.works.map((w) => w.title)).toEqual(['Eric', 'Sourcery', 'Nation'])
+    expect(more?.total).toBe(6)
+    expect(more?.more).toBe(true)
+  })
+
+  it('has no "Show all" when everything is shown, and shows what is left of a short list', () => {
+    const more = moreFromAuthor(pageOf({ standalone: [work('Mort'), work('Nation')] }), reading)
+    expect(more?.works.map((w) => w.title)).toEqual(['Nation'])
+    expect(more?.more).toBe(false)
+  })
+
+  it('is nothing for no page, or an author known by her name alone with nothing else of hers', () => {
+    expect(moreFromAuthor(null, reading)).toBeNull()
+    expect(moreFromAuthor(pageOf({ standalone: [work('Mort')] }), reading)).toBeNull()
+  })
+
+  it('still shows an author with a photo, dates or intro when this is her only known work', () => {
+    const born = { date: '1948-04-28T00:00:00Z', precision: 11 as const }
+    const more = moreFromAuthor(pageOf({ standalone: [work('Mort')] }, { born }), reading)
+    expect(more?.works).toEqual([])
+    expect(more?.author.name).toBe('Terry Pratchett')
+  })
+
+  it('shows works of an author with nothing but the name', () => {
+    expect(moreFromAuthor(pageOf({ standalone: [work('Mort'), work('Nation')] }), reading)?.works).toHaveLength(1)
   })
 })
 

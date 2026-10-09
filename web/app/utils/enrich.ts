@@ -1,4 +1,4 @@
-import type { BookAuthor, LifeDate } from '~/data/enrich/authors'
+import type { AuthorHero, AuthorPage, BookAuthor, LifeDate } from '~/data/enrich/authors'
 import type { BookSeriesPlace, StartedSeries } from '~/data/enrich/series'
 import type { WorkCard } from '~/data/enrich/works'
 
@@ -157,4 +157,54 @@ export function parsePosition(text: string): number | null | 'invalid' {
   if (!value) return null
   if (!/^\d{1,4}(\.\d{1,2})?$/.test(value)) return 'invalid'
   return Number(value)
+}
+
+/** The Book a Book page is on, as far as its works can be told from the author's others. */
+export type CurrentBook = { bookId: string | null; key: string; isbn13?: string | null; title: string }
+
+/** Whether an author's work is the Book the page is about: her entry of it, its edition's key or ISBN, or the same title. */
+export function isCurrentWork(work: WorkCard, current: CurrentBook): boolean {
+  if (current.bookId && work.entry?.bookId === current.bookId) return true
+  const key = workBookKey(work)
+  if (key && (key === current.key || key === current.bookId)) return true
+  if (current.isbn13 && work.edition?.isbn13 === current.isbn13) return true
+  return sameName(work.title, current.title)
+}
+
+/** How many of the author's other works the Book page's "More from the author" shows; "Show all" has the rest. */
+export const MORE_FROM_AUTHOR = 3
+
+/** What the Book page's "More from the author" shows. */
+export type MoreFromAuthor = {
+  author: AuthorHero
+  /** All the works her page lists (this Book's included): what "Show all" says. */
+  total: number
+  /** Up to `limit` others, those that open a Book first, each once, in the page's order (series, novels, the rest). */
+  works: WorkCard[]
+  /** More other works than the ones shown: "Show all" has a reason to be there. */
+  more: boolean
+}
+
+/**
+ * The section's content from an author page, or null when there is nothing to
+ * show: no page, or an author the page knows nothing of beyond her name and no
+ * other works to offer.
+ */
+export function moreFromAuthor(page: AuthorPage | null | undefined, current: CurrentBook, limit = MORE_FROM_AUTHOR): MoreFromAuthor | null {
+  if (!page) return null
+  const all = [...page.series.flatMap((s) => s.works), ...page.standalone, ...page.other]
+  const seen = new Set<string>()
+  const others: WorkCard[] = []
+  for (const work of all) {
+    const id = work.workId ?? `${work.title}\n${work.year ?? ''}`
+    if (seen.has(id)) continue
+    seen.add(id)
+    if (!isCurrentWork(work, current)) others.push(work)
+  }
+  const total = seen.size
+  const works = [...others.filter((w) => workBookKey(w)), ...others.filter((w) => !workBookKey(w))].slice(0, limit)
+  const a = page.author
+  const profile = Boolean(a.photo?.url || a.summary?.text || yearOf(a.born) !== null || yearOf(a.died) !== null)
+  if (!works.length && !profile) return null
+  return { author: a, total, works, more: others.length > works.length }
 }
