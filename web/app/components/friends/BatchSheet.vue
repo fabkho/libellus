@@ -23,7 +23,7 @@ const { t } = useI18n()
   >
     <p class="eyebrow pb-xs" data-testid="friendsBatch.day">{{ dayLabel }}</p>
     <ul class="flex flex-col divide-y divide-hairline" data-testid="friendsBatch.list">
-      <FriendsFeedRow v-for="entry in batch.entries" :key="entry.id" :entry="entry" bare testid="friendsBatch.row" />
+      <FriendsFeedRow v-for="entry in batch.entries" :key="entry.id" :entry="entry" bare size="sm" testid="friendsBatch.row" />
     </ul>
   </UiSheet>
 </template>

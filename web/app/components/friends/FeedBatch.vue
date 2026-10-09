@@ -42,6 +42,7 @@ const what = computed(() => t(`feed.${feedBatchKey(props.batch.kind)}`, { count:
         />
       </span>
       <span class="flex min-w-0 flex-1 items-start justify-between gap-sm">
+        <!-- One line, as an entry's, when the sentence fits beside the name; else it drops under the avatar. -->
         <span class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
           <span class="flex min-w-0 items-center gap-sm">
             <FriendsAvatar :card="batch.member" />
@@ -51,14 +52,15 @@ const what = computed(() => t(`feed.${feedBatchKey(props.batch.kind)}`, { count:
         </span>
         <span v-if="dayLabel" class="eyebrow shrink-0 pt-xs">{{ dayLabel }}</span>
       </span>
-      <UiIcon name="chevron" :size="16" class="shrink-0 text-ink-ghost" />
+      <UiIcon name="chevron" :size="16" class="-ml-ml shrink-0 text-ink-ghost" />
     </button>
   </li>
 </template>
 
 <style scoped>
-/* The fan: each cover a little over the one before it. */
+/* The fan: each cover a little over the one before it, three of them as wide as a feed row's cover
+   (`md`), so the text column starts where an entry's does. */
 .cover + .cover {
-  margin-left: calc(-1 * var(--spacing-ml));
+  margin-left: calc(-0.6 * var(--size-cover-sm));
 }
 </style>
