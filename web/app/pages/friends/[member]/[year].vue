@@ -45,6 +45,9 @@ onMounted(show)
 onActivated(show)
 onDeactivated(() => (showing = false))
 watch(id, () => void members.load(id.value))
+// Back online while the page is open: a Requested or Follow it shows, or figures it missed, may be old.
+const online = useOnline()
+watch(online, (now) => now && showing && void members.load(id.value))
 
 const record = computed(() => view.value.record)
 const reads = computed(() => record.value?.reads ?? [])
