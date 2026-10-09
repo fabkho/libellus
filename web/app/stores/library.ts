@@ -303,6 +303,7 @@ export const useLibraryStore = defineStore('library', () => {
     const changed = { ...(entryById(entry.id) ?? entry), readAs: result.data.readAs ?? null }
     entryChanged(changed)
     return { entry: changed }
+  }
 
   /**
    * Hides the entry from her followers, or shows it again (social v1). Waits in the outbox
@@ -316,7 +317,6 @@ export const useLibraryStore = defineStore('library', () => {
     const changed = { ...(entryById(entry.id) ?? entry), hidden: result.data.hidden ?? hidden }
     entryChanged(changed)
     return { entry: changed }
-  }
   }
 
   // ---------------------------------------------------------------- Add sheet
