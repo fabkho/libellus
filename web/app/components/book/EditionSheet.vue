@@ -63,9 +63,7 @@ const action = computed(() => {
 })
 
 /** What the format row does: said before she touches it, and what she said after. */
-const formatHelp = computed(() =>
-  edition.format ? t('book.edition.formatSaid', { format: t(`book.formatFact.${edition.format}`) }) : t('book.edition.formatHelp'),
-)
+const formatHelp = computed(() => (edition.format ? t('book.edition.formatSaid', { format: t(`book.formatFact.${edition.format}`) }) : undefined))
 
 async function change() {
   const changed = await edition.confirm()
