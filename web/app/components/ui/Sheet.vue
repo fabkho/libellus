@@ -8,9 +8,11 @@
 // action get `<testid>.cancel` and `<testid>.action`.
 //
 // While it is open the rest of the app is out of reach (`inert`), the page
-// does not scroll under it, and focus is inside it — on the panel, or on the
-// field marked `data-autofocus`, focused in the tap that opened the sheet so
-// iOS raises the keyboard with it. Closing gives focus back to what opened it
+// does not scroll under it, and focus is inside it: on the panel at once, and
+// then on the field marked `data-autofocus` once the sheet has finished rising
+// (`data-moving` cleared), so the keyboard does not arrive while the panel is
+// still on its own curve (utils/sheetFocus.ts holds the rules, and the one
+// switch for iOS). Closing gives focus back to what opened it
 // (composables/useModalLayer.ts). With the keyboard up the sheet rides on it
 // and the focused field scrolls into view (composables/useKeyboardInset.ts).
 //
@@ -20,13 +22,23 @@
 // page — at its resting place with its scrim, its list scrolled where it was,
 // nothing rising or fading in. A fresh open (no `restore`) still rises.
 import { revealDelta, sheetLift } from '~/utils/keyboard'
+import { afterRise, browserEnvironment, defersFieldFocus, fieldMayTakeFocus, RISE_FOCUS_MARGIN } from '~/utils/sheetFocus'
+import { durationToken, prefersReducedMotion } from '~/utils/motion'
 import type { SheetRestore } from '~/composables/useSheetRestore'
 
 const open = defineModel<boolean>('open', { required: true })
 
 const props = withDefaults(
-  defineProps<{ title: string; testid: string; action?: string; actionDisabled?: boolean; restore?: SheetRestore | null }>(),
-  { action: undefined, actionDisabled: false, restore: null },
+  defineProps<{
+    title: string
+    testid: string
+    action?: string
+    actionDisabled?: boolean
+    restore?: SheetRestore | null
+    /** The `data-autofocus` field takes focus once the sheet has finished rising, not in the opening tap (utils/sheetFocus.ts). */
+    deferFocus?: boolean
+  }>(),
+  { action: undefined, actionDisabled: false, restore: null, deferFocus: true },
 )
 const emit = defineEmits<{ action: [] }>()
 
@@ -41,9 +53,46 @@ const { handlers, offset, dragging } = useSwipeDown(close)
 const scrim = useTemplateRef<HTMLElement>('scrim')
 const panel = useTemplateRef<HTMLElement>('panel')
 const body = useTemplateRef<HTMLElement>('body')
+
+/** The field that wants the keyboard, if the sheet has one. */
+function autofocusField() {
+  return panel.value?.querySelector<HTMLElement>('[data-autofocus]') ?? null
+}
+
+/**
+ * Armed while the field waits for the rise: it takes focus when `moving`
+ * clears, or after the fallback, whichever is first. Null when the field takes
+ * focus at once (see `waitsForRise`) and once it has been settled.
+ */
+let riseFocus: ReturnType<typeof afterRise> | null = null
+
+/** Stage 2: the sheet is in place; the field takes focus unless the member has put it somewhere else. */
+function focusField() {
+  riseFocus = null
+  const field = autofocusField()
+  if (!open.value || !panel.value || !field || !fieldMayTakeFocus(document.activeElement, panel.value)) return
+  field.focus({ preventScroll: true })
+}
+
+/**
+ * Whether the field waits for the rise. Not for a sheet that is put back
+ * (`restore`: no enter transition, nothing to wait for), under Reduce Motion
+ * (nothing moves, so focus at once), where `deferFocus` is off, or where the
+ * switch in utils/sheetFocus.ts says the device takes it in the tap.
+ */
+function waitsForRise() {
+  return props.deferFocus && !props.restore && !prefersReducedMotion() && defersFieldFocus(browserEnvironment())
+}
+
+function stopWaitingForRise() {
+  riseFocus?.cancel()
+  riseFocus = null
+}
+
 const { afterLeave } = useModalLayer(open, {
   elements: () => [scrim.value, panel.value],
-  initialFocus: () => panel.value?.querySelector<HTMLElement>('[data-autofocus]') ?? panel.value,
+  // Stage 1: the panel while the field waits (focus trap, VoiceOver), else the field at once.
+  initialFocus: () => (riseFocus ? panel.value : (autofocusField() ?? panel.value)),
   close,
 })
 
@@ -56,14 +105,22 @@ watch(open, (isOpen) => {
     // Coming back (`restore`): the hairline is where the scroll left it, drawn with the sheet.
     scrolled.value = (props.restore?.scroll ?? 0) > 0
     resting.value = Boolean(props.restore)
+    stopWaitingForRise()
+    // The signal is `moving` clearing; the timer is for when it comes late or never (PR #229).
+    if (waitsForRise()) riseFocus = afterRise(focusField, durationToken('sheet') + RISE_FOCUS_MARGIN)
     window.addEventListener('keydown', onKeydown)
     if (props.restore) void putBack(props.restore.scroll)
   } else {
+    stopWaitingForRise()
     followsKeyboard.value = false
     window.removeEventListener('keydown', onKeydown)
   }
 })
-onUnmounted(() => import.meta.client && window.removeEventListener('keydown', onKeydown))
+onUnmounted(() => {
+  if (!import.meta.client) return
+  stopWaitingForRise()
+  window.removeEventListener('keydown', onKeydown)
+})
 
 // ------------------------------------------------------------- the keyboard
 
@@ -124,6 +181,9 @@ const titleId = useId()
  * guess from where it happens to be.
  */
 const moving = ref(false)
+// The rise is over: the field waiting for it takes focus.
+// After the render, so `data-moving` is already off the panel when the field takes focus.
+watch(moving, (now) => !now && riseFocus?.settled(), { flush: 'post' })
 
 /**
  * The sheet is being put back (`restore`): its enter transitions are off, for

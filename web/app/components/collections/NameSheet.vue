@@ -53,8 +53,8 @@ async function save() {
       <UiRowGroup>
         <label class="relative flex h-(--size-row) items-center gap-ms px-inset text-body transition-colors duration-(--duration-quick) ease-standard focus-within:bg-accent-soft">
           <span class="shrink-0" :class="collections.nameError ? 'text-error' : 'text-ink-muted'">{{ t('collections.nameLabel') }}</span>
-          <!-- data-autofocus: UiSheet focuses it in the tap that opened the
-               sheet, so iOS raises the keyboard with the sheet. -->
+          <!-- data-autofocus: UiSheet focuses it once the sheet has finished
+               rising, so the keyboard does not arrive mid-rise. -->
           <input
             data-autofocus
             v-model="name"

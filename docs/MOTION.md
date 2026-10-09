@@ -155,6 +155,18 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than
   0.5 px/ms, otherwise it settles back (`web/app/composables/useSwipeDown.ts`).
+  **Focus and the keyboard.** In two stages: focus moves into the panel at once (the focus trap and
+  VoiceOver need it), and a sheet's `data-autofocus` field (Collection name, member name, series
+  edit, own edition) takes it only once the rise is over — when `data-moving` clears — so the
+  keyboard does not arrive on its own curve while the panel is still on `sheet` (the panel moves on
+  `keyboard` while the keyboard is up: `lift`). Not `requestAnimationFrame` (one frame, not the
+  rise). Guards: focus the member has put inside the sheet meanwhile is left alone; a sheet that is
+  put back (`restore`) and Reduce Motion (nothing moves) focus the field at once; a fallback timer
+  of `sheet` + 200 ms focuses it if the end-of-rise signal comes late or never (as `afterMotion`'s
+  patience does); closing first drops the wait. `UiSheet`'s `deferFocus` (default true) switches it
+  per sheet; `FIELD_FOCUS_AFTER_RISE` in `web/app/utils/sheetFocus.ts` switches it per platform,
+  and is the one place to flip if iOS does not raise the keyboard from a `focus()` outside the
+  opening tap (`ios: false` brings the old tap-time focus back on iPhone only).
 - **A sheet comes back.** A sheet that leads to a Book page (Home's *Read in 2026*, the Profile's and a
   year in review's rows of Books) is open again when the member returns from that Book by Back (the
   system's or the page's own), and it comes back as if it had simply stayed open under the Book page:
