@@ -54,17 +54,28 @@ const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.\p{L}{2,}/gu
 const JWT = /\beyJ[\w-]{4,}\.[\w-]{4,}\.[\w-]{4,}/g
 // A URL's query and fragment; a stack frame's `:line:column` after them stays.
 const URL_TAIL = /([a-z][a-z0-9+.-]*:\/\/[^\s?#"'<>()]*)[?#][^\s"'<>()]*?((?::\d+){0,2})(?=[\s"'<>()]|$)/gi
+// A route's secret or personal part: a member's id (`/friends/<uuid>`, then anything after it) and a follow link's token (`/f/<token>`).
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+const MEMBER_ROUTE = new RegExp(`^/friends/${UUID}(?=/|$)`, 'i')
+const FOLLOW_ROUTE = /^\/f\/[^/]+$/
 
 /** A text without e-mail addresses, tokens or the query and fragment of its URLs. */
 export function scrubText(text: string): string {
   return text.replace(EMAIL, '[email]').replace(JWT, '[token]').replace(URL_TAIL, '$1$2')
 }
-
-/** The path of a route or address, nothing after it; null for anything else. */
+/**
+ * The path of a route or address, nothing after it; null for anything else. A member's
+ * page and a follow link carry their secret id or token, so they go in by their pattern
+ * (`/friends/[member]`, `/f/[token]`), never as they are.
+ */
 export function scrubRoute(route: string | null | undefined): string | null {
   if (!route) return null
   const path = route.split(/[?#]/, 1)[0]!.trim()
-  return path.startsWith('/') ? path.slice(0, ROUTE_MAX) : null
+  if (!path.startsWith('/')) return null
+  const scrubbed = path
+    .replace(MEMBER_ROUTE, '/friends/[member]')
+    .replace(FOLLOW_ROUTE, '/f/[token]')
+  return scrubbed.slice(0, ROUTE_MAX)
 }
 
 const cut = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text)
