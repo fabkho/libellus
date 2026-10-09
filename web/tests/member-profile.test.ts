@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { StatsRead } from '../app/data/stats'
 import type { MemberProfile, SocialBook, SocialSections } from '../app/data/socialShapes'
-import { bookPathOf, libraryLine, memberBlocks, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
+import { bookPathOf, figuresWithRatings, libraryLine, memberBlocks, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
 
 // What another member's profile shows (social v1, U4): pure, no stack needed.
 
@@ -116,5 +116,12 @@ describe('the year in the pills', () => {
     expect(yearIn(2025, reads)).toBe(2025)
     expect(yearIn(2024, reads)).toBe('all')
     expect(yearIn(2020, [])).toBe('all')
+  })
+})
+
+describe('her figures without her Ratings', () => {
+  it('drops the "not rated yet" line, which she did not say, and keeps the rest', () => {
+    expect(figuresWithRatings({ unrated: 8, books: 8 }, false)).toEqual({ unrated: 0, books: 8 })
+    expect(figuresWithRatings({ unrated: 8, books: 8 }, true)).toEqual({ unrated: 8, books: 8 })
   })
 })

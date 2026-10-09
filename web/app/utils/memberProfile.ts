@@ -87,3 +87,11 @@ export function bookPathOf(book: Pick<SocialBook, 'id' | 'manual'>): string | nu
 export function yearIn(year: StatsYear, reads: readonly StatsRead[]): StatsYear {
   return year === 'all' || yearsOf(reads as StatsRead[]).includes(year) ? year : 'all'
 }
+
+/**
+ * Her figures as her Ratings switch allows: with it off her stars come through as nothing, so "N not rated
+ * yet" under the Average would tell something that is not true (she may have rated them all). The line goes.
+ */
+export function figuresWithRatings<T extends { unrated: number }>(figures: T, ratingsOn: boolean): T {
+  return ratingsOn ? figures : { ...figures, unrated: 0 }
+}
