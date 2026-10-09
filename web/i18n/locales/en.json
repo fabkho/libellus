@@ -1634,6 +1634,7 @@
     "batchStarted": "started {count} books",
     "batchAbandoned": "didn't finish {count} books",
     "batchWant": "added {count} to Want to read",
+    "batchReviewed": "reviewed {count} books",
     "batchTitle": "{name} · {count}",
     "more": "More",
     "today": "Today",
