@@ -1689,7 +1689,10 @@
     "finished": "Recently finished",
     "years": "Years in review",
     "yearEyebrow": "{name} · Year in review",
-    "someone": "A reader"
+    "someone": "A reader",
+    "offline": "You're offline. This profile shows once you're back.",
+    "loadError": "This profile couldn't be loaded.",
+    "retry": "Try again"
   },
   "follow": {
     "loading": "Opening…",
