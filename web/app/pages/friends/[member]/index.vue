@@ -173,12 +173,12 @@ function back() {
 
     <!-- Nobody there: a dead link, or someone who blocked her. Nothing says why. -->
     <div v-if="missing" class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="member.missing">
-      <p class="book-title text-callout">{{ t('follow.missingTitle') }}</p>
+      <h1 class="book-title text-callout">{{ t('follow.missingTitle') }}</h1>
     </div>
 
     <!-- Not read yet, and no copy: offline, or it failed. -->
     <div v-else-if="view.error && !view.loaded" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="member.loadError">
-      <p class="text-subhead text-ink-muted">{{ view.error === 'offline' ? t('member.offline') : t('member.loadError') }}</p>
+      <h1 class="text-subhead font-normal text-ink-muted">{{ view.error === 'offline' ? t('member.offline') : t('member.loadError') }}</h1>
       <UiButton v-if="view.error !== 'offline'" tone="secondary" size="md" data-testid="member.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
     </div>
 
@@ -236,7 +236,7 @@ function back() {
           <section class="flex flex-col gap-md pb-xl" data-testid="member.want">
             <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
               <h2 class="eyebrow">{{ t('member.want') }}</h2>
-              <UiButton v-if="blocks.wantAll" tone="quiet" size="sm" data-testid="member.wantAll" @click="wantOpen = true">
+              <UiButton v-if="blocks.wantAll" tone="quiet" size="sm" :aria-label="t('member.seeAllLabel', { section: t('member.want') })" data-testid="member.wantAll" @click="wantOpen = true">
                 {{ t('member.wantAll') }}<UiIcon name="chevron" :size="13" />
               </UiButton>
             </div>

@@ -26,7 +26,7 @@ const members = useMemberProfileStore()
 const id = computed(() => String(route.params.member))
 const year = computed(() => Number(route.params.year))
 const view = computed(() => members.viewOf(id.value))
-const name = computed(() => view.value.profile?.member.name ?? t('member.someone'))
+const name = computed(() => view.value.profile?.member.name?.trim() || t('member.someone'))
 const open = computed(() => {
   const p = view.value.profile
   return p && p.visible ? p : null
@@ -94,24 +94,25 @@ function back() {
     <UiTopBar :back-label="t('member.back')" back-testid="memberYear.back" @back="back" />
 
     <div v-if="missing" class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="memberYear.missing">
-      <p class="book-title text-callout">{{ t('follow.missingTitle') }}</p>
+      <h1 class="book-title text-callout">{{ t('follow.missingTitle') }}</h1>
     </div>
 
     <!-- Her profile came, her figures did not (offline, or it failed): not a dead link. -->
     <div v-else-if="view.recordError && !record" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="memberYear.recordError">
-      <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>
+      <h1 class="text-subhead font-normal text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</h1>
       <UiButton v-if="view.recordError !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
     </div>
 
     <div v-else-if="view.error && !view.loaded" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="memberYear.loadError">
-      <p class="text-subhead text-ink-muted">{{ view.error === 'offline' ? t('member.offline') : t('member.loadError') }}</p>
+      <h1 class="text-subhead font-normal text-ink-muted">{{ view.error === 'offline' ? t('member.offline') : t('member.loadError') }}</h1>
       <UiButton v-if="view.error !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
     </div>
 
     <template v-else>
       <section class="relative flex flex-col items-center px-xl pt-md text-center">
-        <p class="eyebrow" data-testid="memberYear.eyebrow">{{ view.loaded ? t('member.yearEyebrow', { name }) : '' }}</p>
-        <h1 class="year mt-sm tabular-nums" data-testid="memberYear.title">{{ year }}</h1>
+        <!-- The h1 carries her name too (hidden), so the page is named in full; the drawn eyebrow is not read twice. -->
+        <p class="eyebrow" aria-hidden="true" data-testid="memberYear.eyebrow">{{ view.loaded ? t('member.yearEyebrow', { name }) : '' }}</p>
+        <h1 class="year mt-sm tabular-nums" data-testid="memberYear.title"><span v-if="view.loaded" class="sr-only">{{ t('member.yearEyebrow', { name }) }}, </span>{{ year }}</h1>
       </section>
 
       <UiReveal :show="loading || hasYear">

@@ -587,8 +587,9 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "reading": "Currently reading",
     "want": "Want to read",
     "wantAll": "See all",
+    "finishedAll": "See all",
+    "seeAllLabel": "See all, {section}",
     "finished": "Recently finished",
-    "years": "Years in review",
     "yearEyebrow": "{name} · Year in review",
     "someone": "A reader"
   },
