@@ -5,9 +5,11 @@ database answers, what the repositories return, the routes, test ids and strings
 its part exactly as written; a change to this file is the orchestrator's, before the task, never
 inside it. Behaviour and reasons: [social-v1.md](social-v1.md).
 
-Words: **member** is the signed-in caller (`auth.uid()`), **she** the member whose data is asked for.
+Words: **the caller** is the signed-in member (`auth.uid()`); **the owner** is the member whose
+settings, reading or follows are asked about or acted on (for D1's setters, the caller herself).
 "Visible" always means: computed in a definer function at read time from the current follows, blocks,
-her switches and her hidden Books.
+the owner's switches and her hidden Books. A member without a `social_settings` row counts as private
+with every section on, everywhere (`private.social_of`).
 
 ---
 
@@ -26,7 +28,13 @@ Conventions, as in the existing migrations: a header comment saying what and why
 definer` functions with `set search_path` pinned; `revoke all … from public, anon` then `grant execute
 … to authenticated` on every public function; helpers in `private` (revoked from every API role);
 refusals as `raise exception '<code>' using errcode = '<sqlstate>'`; triggers' functions revoked
-(`20261003144600_revoke_trigger_function_execute.sql`).
+(`20261003144600_revoke_trigger_function_execute.sql`). Supabase grants every new `public` table to the
+API roles by default: every new table gets an explicit `revoke all on … from anon, authenticated` (as
+`reading_pages` does) before its one grant, if it has one.
+
+**Every function returns `jsonb`** (or `void`/`boolean` where the tables say so); a list is `[]`, never
+null; every key in the shapes below is always present, with `null` where it has no value (never
+`jsonb_strip_nulls`).
 
 ### 1.1 Refusals
 
@@ -35,9 +43,9 @@ refusals as `raise exception '<code>' using errcode = '<sqlstate>'`; triggers' f
 | `not_signed_in` | `42501` | no `auth.uid()` |
 | `not_found` | `P0002` | a member, link or request that is unknown, blocked either way, or not reachable: always the same answer, never "forbidden" |
 | `entry_not_found` | `P0002` | an entry that is not hers |
-| `follow_self` | `22023` | following herself |
-| `follow_limit` | `54000` | 150 follows (accepted and asked) or 20 open requests of hers already |
-| `rate_limited` | `54000` | more than 30 `follow` calls in the last hour |
+| `follow_self` | `22023` | following or blocking herself (checked before anything else) |
+| `follow_limit` | `54000` | the caller has 150 rows in `follows` already (accepted, asked or declined), or 20 that are not accepted (asked or declined) |
+| `rate_limited` | `54000` | 30 or more `follow` calls logged for the caller in the last hour (a refused call rolls back with its own log row) |
 | `social_sections_invalid` | `22023` | `set_social_sections` with an unknown key or a non-boolean |
 
 ### 1.2 Tables (D1, D3)
@@ -54,7 +62,7 @@ create table public.social_settings (
   show_reviews   boolean not null default true,
   show_abandoned boolean not null default true,
   show_year      boolean not null default true,
-  follow_token   text not null unique check (follow_token ~ '^[A-Za-z0-9_-]{22}$'),
+  follow_token   text not null unique check (follow_token ~ '^[A-Za-z0-9_-]{22}$'),  -- private.reading_page_token(): 16 random bytes, base64url, padding stripped
   updated_at     timestamptz not null default now()
 );
 -- A member without a row has the defaults above (private, everything on) and no link yet;
@@ -99,7 +107,8 @@ create table private.social_config (
 insert into private.social_config default values;
 
 -- Calls of follow(), for the hourly limit; rows older than a day are deleted by follow() itself.
-create table private.follow_calls (member_id uuid not null, at timestamptz not null default now());
+create table private.follow_calls (member_id uuid not null references auth.users on delete cascade,
+                                   at timestamptz not null default now());
 create index follow_calls_member_at on private.follow_calls (member_id, at);
 ```
 
@@ -134,11 +143,13 @@ raises a `warning` and never fails the library write (as `private.shelf_publish_
 |---|---|---|
 | `reading_sessions_activity` | `after insert` | `started` (outcome null; `on_day` = `started_on`), `finished` / `abandoned` (inserted closed; `on_day` = `ended_on`) |
 | same | `after update of outcome` (null → finished/abandoned) | `finished` / `abandoned`, `on_day` = `ended_on` |
-| same | `after update of review` (null → text, outcome `finished`, and the session's `finished` row is already visible) | `reviewed`, `on_day` = `ended_on` |
+| same | `after update of review` (`OLD.review` null → text, **`OLD.outcome` already `finished`**, so not the finishing update itself, and the session's `finished` row is already visible) | `reviewed`, `on_day` = `ended_on` |
 | `library_entries_activity` | `after insert` (not deferred: a deferred trigger would fire after an import returned, outside its quiet setting) | `want`, written with `created_at = statement_timestamp()`; `on_day` = `added_at::date`. A session inserted **in the same statement** (`add_to_library` with a status) deletes that `want` row before writing its own |
 
-Rules, in the trigger before inserting:
+Rules, in the trigger before inserting, in this order:
 
+0. **Same statement**: a session's trigger first deletes its entry's `want` row written in the same
+   statement (`created_at = statement_timestamp()`), whatever it then writes or not.
 1. **Quiet**: nothing when `auth.uid()` is null (service role, the owner's scripts) or
    `current_setting('libellus.quiet', true) = 'on'`. The migration sets it on the imports without
    rewriting them: `alter function public.import_books(jsonb) set libellus.quiet = 'on';` and the same
@@ -147,9 +158,10 @@ Rules, in the trigger before inserting:
 2. **Old news**: no `finished`/`abandoned` when `ended_on` is null or earlier than
    `(now() at time zone 'utc')::date - 14`.
 3. **Settle**: `visible_at = now() + (select settle_window from private.social_config)`. Before
-   inserting, delete this entry's rows whose `visible_at > now()` (a correction inside the window
-   replaces what was written). `reviewed` never replaces `finished`; it is written only once the
-   finish is visible.
+   inserting, delete the rows still inside their window (`visible_at > now()`) **of the same session**,
+   and the entry's `want` row if it is still inside its window: a correction replaces what was written
+   (want → started, started → finished, started → abandoned), but a finished read stays when she starts
+   it again. `reviewed` never replaces `finished`; it is written only once the finish is visible.
 4. **Once**: at most one row per (`session_id`, `kind`).
 
 `purge_activity()` (in `private`): deletes rows with `created_at < now() - interval '13 months'`,
@@ -163,7 +175,8 @@ scheduled `purge-activity` daily 03:45 UTC where pg_cron exists (as `purge_synce
 { "id": "uuid", "name": "Anna" | null, "photo": "<id>/<hash>.webp" | null }
 ```
 
-`name`: `user_metadata.name`, trimmed, cut at 40 characters, null when empty. `photo`:
+`name`: `user_metadata.name` (the first name the app asks for), trimmed, cut at 40 characters, null
+when empty. `photo`:
 `accounts.avatar_path` when `public.can_see_member_photo(id)` is true for the caller, else null. Never
 the address.
 
@@ -173,11 +186,12 @@ the address.
 **Sections**: `{ "reading", "want", "finished", "ratings", "reviews", "abandoned", "year" }`, all
 booleans.
 
-**Reachable**: she is reachable for the member when she is not the member, neither blocked the
-other, and one of: her account is public; the member follows her or asked to; she follows the member
-or asked to; the member opened her link (`follow_link_views`).
+**Reachable**: the owner is reachable for the caller when she is not the caller, neither blocked the
+other, and one of: her account is public; the caller follows her or asked to (declined included); she
+follows the caller or asked to; the caller opened her link (`follow_link_views`).
 
-**Visible** (her reading): reachable, and her account is public or the member follows her (accepted).
+**Visible** (her reading): reachable, and her account is public or the caller follows her (accepted).
+A request still waiting sees nothing.
 
 ### 1.5 Functions
 
@@ -190,9 +204,9 @@ All `security definer`, granted to `authenticated` only, refusing `not_signed_in
 | `my_social()` | `MySocial` | Makes her row if missing (with a fresh token). |
 | `set_private(p_private boolean)` | `MySocial` | Going public (`false`) accepts every waiting request that is not declined. |
 | `set_social_sections(p_sections jsonb)` | `MySocial` | Only the keys of *Sections*; unnamed keys keep their value; else `social_sections_invalid`. |
-| `renew_follow_link()` | `MySocial` | A new token; the old one answers `null` in `follow_target`. |
-| `set_entry_hidden(p_entry uuid, p_hidden boolean)` | `void` | `entry_not_found` for an entry not hers. Also an action of `sync_write` (`set_entry_hidden`, args `{ p_entry, p_hidden }`), added to the latest `sync_write` (`20261010120000_reader_highlights.sql`) without changing its other actions. |
-| `can_see_member_photo(p_owner uuid)` | `boolean` | True for herself, and when `p_owner` is reachable for the caller. Used by the avatars policy (D4). Lives in `public` (policies cannot call into `private`), `stable`. |
+| `renew_follow_link()` | `MySocial` | A new token; the old one answers `null` in `follow_target`. Deletes the `follow_link_views` rows of her visitors who have no follow or request with her either way: who only opened the old link is forgotten. |
+| `set_entry_hidden(p_entry uuid, p_hidden boolean)` | `void` | `entry_not_found` for an entry not hers. Also an action of `sync_write` (`set_entry_hidden`, args `{ p_entry, p_hidden }`): the migration re-creates `sync_write` from its latest version (`20261010120000_reader_highlights.sql`), **copying the whole body** and adding one `when` branch. |
+| `can_see_member_photo(p_owner uuid)` | `boolean` | True for herself, and when `p_owner` is reachable for the caller. Lives in `public` (policies cannot call into `private`), `stable`. |
 
 ```json
 // MySocial
@@ -207,15 +221,15 @@ non-zero; D1 returns the count from `follows`).
 | Function | Returns | Does |
 |---|---|---|
 | `follow_target(p_token text)` | `FollowTarget` or `null` | `null` for a malformed, unknown or renewed token and when either blocked the other. Otherwise records `(member, her)` in `follow_link_views`. Her own token: `state = 'self'`. |
-| `follow(p_member uuid)` | `{ "state": "following" \| "requested" }` | `not_found` unless she is reachable; `follow_self`; limits (§1.1). Public, or she already follows the member: `following` at once. Private: a request (`requested`). Already following or asked: the same answer, nothing changes. A declined request stays declined and answers `requested`. Logs the call in `private.follow_calls`. |
-| `withdraw_request(p_member uuid)` | `void` | Deletes the member's request to her (declined or not). Nothing to delete: no error. |
-| `answer_request(p_member uuid, p_accept boolean)` | `void` | On her own pending request from `p_member`: accept sets `accepted_at`, decline sets `declined_at`. No such request: `not_found`. |
-| `unfollow(p_member uuid)` | `void` | Deletes the member's follow or request to her. |
-| `remove_follower(p_member uuid)` | `void` | Deletes `p_member`'s follow or request to the member. |
-| `block(p_member uuid)` | `void` | Deletes follows and requests both ways, inserts `blocks`, deletes both `follow_link_views` rows. `follow_self` for herself. |
-| `unblock(p_member uuid)` | `void` | Deletes the block. Follows do not come back. |
+| `follow(p_member uuid)` | `{ "state": "following" \| "requested" }` | In this order: `follow_self`; `not_found` unless the owner is reachable; the rate limit; the follow limits (§1.1). Already following: `following`, nothing changes. **Public** owner: `following` at once (a declined or waiting request of the caller's is turned into the follow). **Private** owner: a request, `requested`, **also when she already follows the caller** (following back asks, owner's decision, social-v1.md B 9). Already asked, declined or not: `requested`, nothing changes. Logs the call in `private.follow_calls`. |
+| `withdraw_request(p_member uuid)` | `void` | Deletes the caller's request to the owner (declined or not). Nothing to delete: no error. |
+| `answer_request(p_member uuid, p_accept boolean)` | `void` | On a request from `p_member` to the caller that is neither accepted nor declined: accept sets `accepted_at`, decline sets `declined_at`. Any other case (none, accepted, declined): `not_found`. A decline is final until the asker withdraws and asks again. |
+| `unfollow(p_member uuid)` | `void` | Deletes the caller's follow or request to the owner. |
+| `remove_follower(p_member uuid)` | `void` | Deletes `p_member`'s follow or request to the caller. |
+| `block(p_member uuid)` | `void` | `follow_self` for herself; `not_found` unless `p_member` is reachable for the caller or already blocked by her (an unknown id must not tell a stranger whether it is a member). Deletes follows and requests both ways, inserts `blocks` (once), deletes both `follow_link_views` rows. |
+| `unblock(p_member uuid)` | `void` | Deletes the caller's block of `p_member`; nothing to delete: no error. Follows do not come back. |
 | `my_people()` | `People` | |
-| `my_blocked()` | `Card[]` | Newest block first. |
+| `my_blocked()` | `Card[]` | Newest block first. `photo` is null here (a block hides photos both ways). |
 
 ```json
 // FollowTarget
@@ -234,13 +248,15 @@ non-zero; D1 returns the count from `follows`).
 
 | Function | Returns | Does |
 |---|---|---|
-| `feed(p_before timestamptz default null, p_before_id uuid default null, p_limit integer default 30)` | `FeedEntry[]` | Rows of members she follows (accepted, not blocked), `visible_at <= now()`, not hidden, kind allowed by her switches; ordered `visible_at desc, id desc`; keyset `(visible_at, id) < (p_before, p_before_id)`; `p_limit` clamped to 1–50. |
-| `member_profile(p_member uuid)` | `MemberProfile` or `null` | `null` unless reachable (herself: `null` too; the app shows her own Profile). |
+| `feed(p_before timestamptz default null, p_before_id uuid default null, p_limit integer default 30)` | `FeedEntry[]` | Rows of owners the caller follows (accepted, not blocked either way), `visible_at <= now()`, not hidden, kind allowed by the owner's switches; ordered `visible_at desc, id desc`; keyset `(visible_at, id) < (p_before, p_before_id)`; `p_limit` clamped to 1–50. `FeedEntry.id` is `activity.id`. |
+| `member_profile(p_member uuid)` | `MemberProfile` or `null` | `null` unless reachable (the caller herself: `null` too; the app shows her own Profile). |
+| `member_want(p_member uuid)` | `[{ "book": Book, "addedOn": "date" }]` or `null` | *See all* under Want to read: every Want to read entry, newest first, not hidden. `null` unless visible and `show_want`. |
 | `member_reading_record(p_member uuid)` | `MemberRecord` or `null` | `null` unless visible and `show_year`. |
 
 Kind → switch: `started` → `show_reading`; `want` → `show_want`; `finished` → `show_finished`;
-`abandoned` → `show_abandoned`; `reviewed` → `show_reviews` and `show_finished`. In every answer:
-`rating` is null unless `show_ratings`; `review` is null unless `show_reviews`; an abandon reason,
+`abandoned` → `show_abandoned`; `reviewed` → `show_reviews` and `show_finished`. In every answer
+(feed, profile, record): `rating` is null unless `show_ratings`; `review` is null unless `show_reviews`;
+`again` is false unless `show_finished` (it would tell of an earlier finish); an abandon reason,
 progress, reading days, highlights, notes, collections, the address and hidden Books never appear.
 
 ```json
@@ -258,13 +274,13 @@ progress, reading days, highlights, notes, collections, the address and hidden B
 // MemberProfile when not visible (a private account the member does not follow)
 { "member": Card, "private": true, "state": FollowState, "visible": false }
 
-// MemberProfile when visible
+// MemberProfile when visible ("private": the owner's real setting: a follower of a private account gets this too)
 {
-  "member": Card, "private": false, "state": FollowState, "visible": true,
+  "member": Card, "private": true, "state": FollowState, "visible": true,
   "followsYou": true,
   "sections": Sections,
   "since": "2025-03-01" | null,              // earliest start or end of a closed, not hidden read
-  "counts": { "read": 42, "reading": 2, "want": 17 },   // hidden entries left out; a switched-off section: null
+  "counts": { "read": 42, "reading": 2, "want": 17 },   // entries (not reads): read = with a finished read; reading = with an open read; want = Want to read. Hidden left out; a count whose section is off: null (read ← show_finished)
   "reading":  [{ "book": Book, "startedOn": "date" }],               // ≤ 6, newest start first; [] when off
   "want":     [{ "book": Book, "addedOn": "date" }],                 // ≤ 12, newest first; [] when off
   "finished": [{ "book": Book, "endedOn": "date"|null, "rating": 18|null, "review": "…"|null }] // ≤ 12, latest finished read per Book; [] when off
@@ -272,15 +288,20 @@ progress, reading days, highlights, notes, collections, the address and hidden B
 
 // MemberRecord: exactly the rows data/stats.ts reads for her own Profile
 {
-  "reads": [SessionStatsRow],   // closed reads, not hidden; abandoned ones only with show_abandoned; rating null without show_ratings
-  "wantToRead": 17, "reading": 2
+  "reads": [SessionStatsRow],   // closed reads of entries not hidden: finished ones only with show_finished, abandoned only with show_abandoned; rating null without show_ratings
+  "wantToRead": 17,             // null without show_want; hidden left out
+  "reading": 2                  // null without show_reading; hidden left out
 }
 // SessionStatsRow = { id, entry_id, started_on, ended_on, outcome, rating, created_at,
-//                     entry: { page_count_override, book: <books row as BOOK_COLUMNS gives it> } }
+//                     entry: { page_count_override, book: <the books row's columns, as bookFromRow
+//                     (web/app/data/library.ts) reads them; "goodreads": null> } }
 ```
 
 Avatars (D4): a new select policy on `storage.objects`, named `avatars_select_connected`:
-`bucket_id = 'avatars' and public.can_see_member_photo(((storage.foldername(name))[1])::uuid)`.
+`bucket_id = 'avatars' and public.can_see_member_folder((storage.foldername(name))[1])`, where
+`public.can_see_member_folder(p_folder text) returns boolean` (D4, `stable`, definer) answers false for
+anything that is not a uuid (no cast in the policy: a bad folder name must not throw) and
+`can_see_member_photo` otherwise.
 
 ### 1.6 The database tests
 
@@ -329,6 +350,8 @@ export interface Social {
   people(): Promise<Result<People, SocialErrorCode>>
   blocked(): Promise<Result<MemberCard[], SocialErrorCode>>
   profile(member: string): Promise<Result<MemberProfile | null, SocialErrorCode>>
+  /** Her whole Want to read (the profile's See all); null when not visible or switched off. */
+  want(member: string): Promise<Result<{ book: SocialBook; addedOn: string }[] | null, SocialErrorCode>>
 }
 export function createSocial(client: SupabaseClient, options: { online: () => boolean }): Social
 /** `https://<site>/f/<token>`: the link the share sheet hands out. */
@@ -400,7 +423,7 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
   `people.row`, `people.rowMore`, `people.accept`, `people.decline`, `people.followBack`,
   `people.empty`; the member sheet `memberSheet` (`.unfollow`, `.remove`, `.block`, `.cancel`); the
   block confirm `blockConfirm` (`.confirm`, `.cancel`).
-- **Member** (`/friends/<member>`): `member`, `member.back`, `member.more`, `member.hero`,
+- **Member** (`/friends/<member>`; *See all* opens the sheet `memberWant` with `.sheetTitle`, `.cancel`, `.row`): `member`, `member.back`, `member.more`, `member.hero`,
   `member.name`, `member.since`, `member.library`, `member.follow`, `member.ask`, `member.requested`,
   `member.private`, `member.reading`, `member.want`, `member.wantAll`, `member.finished`,
   `member.finishedReview`, `member.yearCards`, and the Profile's own figure ids inside

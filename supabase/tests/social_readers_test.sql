@@ -9,7 +9,7 @@
 -- Photos open to connected members through a policy. Assertions ask about rows this test made.
 
 begin;
-select plan(45);
+select plan(50);
 
 create schema if not exists tests;
 
@@ -81,7 +81,8 @@ insert into ids values
   ('cy',  tests.member('cy@social4.pgtap.test', 'Cy')),
   ('dan', tests.member('dan@social4.pgtap.test', 'Dan')),
   ('eve', tests.member('eve@social4.pgtap.test', 'Eve')),
-  ('pia', tests.member('pia@social4.pgtap.test', 'Pia'));
+  ('pia', tests.member('pia@social4.pgtap.test', 'Pia')),
+  ('gil', tests.member('gil@social4.pgtap.test', 'Gil'));
 
 update private.social_config set settle_window = interval '0';
 
@@ -100,11 +101,12 @@ select public.set_private(false);
 insert into ids values ('pia_done', (public.add_to_library(tests.snap('Circe'), 'reading', current_date - 4)).id);
 select public.finish_reading((select id from ids where name = 'pia_done'), current_date, 16, null);
 
--- Ben and Dan follow Ada; Eve opened her link; Ada blocked Dan.
+-- Ben and Dan follow Ada; Gil asked and waits; Eve opened her link; Ada blocked Dan.
 reset role;
 insert into public.follows (follower_id, followee_id, accepted_at) values
   ((select id from ids where name = 'ben'), (select id from ids where name = 'ada'), now()),
-  ((select id from ids where name = 'dan'), (select id from ids where name = 'ada'), now());
+  ((select id from ids where name = 'dan'), (select id from ids where name = 'ada'), now()),
+  ((select id from ids where name = 'gil'), (select id from ids where name = 'ada'), null);
 insert into public.follow_link_views (visitor_id, member_id) values
   ((select id from ids where name = 'eve'), (select id from ids where name = 'ada'));
 insert into public.blocks (blocker_id, blocked_id) values
@@ -138,6 +140,8 @@ select tests.act_as((select id from ids where name = 'eve'));
 select ok(not tests.has_book(public.feed(), 'The Left Hand of Darkness'), 'opening her link is not following her');
 select tests.act_as((select id from ids where name = 'dan'));
 select ok(not tests.has_book(public.feed(), 'The Left Hand of Darkness'), 'a blocked follower sees nothing of her');
+select tests.act_as((select id from ids where name = 'gil'));
+select ok(not tests.has_book(public.feed(), 'The Left Hand of Darkness'), 'a request still waiting sees nothing of her');
 
 -- ------------------------------------------------------------- her switches
 
@@ -191,6 +195,7 @@ select ok(position('too slow' in (select page from pages where name = 'ada_for_b
           and position('social4.pgtap.test' in (select page from pages where name = 'ada_for_ben')::text) = 0,
   'never an abandon reason or her address');
 select is(public.member_profile((select id from ids where name = 'ben')), null::jsonb, 'his own profile is not asked here');
+select ok(tests.has_book(public.member_want((select id from ids where name = 'ada')), 'Kindred'), 'See all: her whole Want to read');
 
 select tests.act_as((select id from ids where name = 'eve'));
 insert into pages values ('ada_for_eve', public.member_profile((select id from ids where name = 'ada')));
@@ -212,6 +217,8 @@ select ok((public.member_reading_record((select id from ids where name = 'ada'))
   'in the shape data/stats.ts reads');
 select ok(tests.has_read(public.member_reading_record((select id from ids where name = 'ada')), 'Infinite Jest', 'abandoned'),
   'with what she put down while that is on');
+select ok(position('too slow' in public.member_reading_record((select id from ids where name = 'ada'))::text) = 0,
+  'but never why');
 
 select tests.act_as((select id from ids where name = 'ada'));
 select public.set_social_sections('{"abandoned": false}');
@@ -220,12 +227,26 @@ select ok(not tests.has_read(public.member_reading_record((select id from ids wh
   'and without it while it is off');
 
 select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"finished": false}');
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(not tests.has_read(public.member_reading_record((select id from ids where name = 'ada')), 'The Left Hand of Darkness', 'finished'),
+  'Finished off: her figures leave out what she finished');
+
+select tests.act_as((select id from ids where name = 'ada'));
 select public.set_social_sections('{"year": false}');
 select tests.act_as((select id from ids where name = 'ben'));
 select is(public.member_reading_record((select id from ids where name = 'ada')), null::jsonb, 'with figures off there is no record');
 select tests.act_as((select id from ids where name = 'eve'));
 select is(public.member_reading_record((select id from ids where name = 'pia')) -> 'reads' -> 0 -> 'entry' -> 'book' ->> 'title', 'Circe',
   'a public member''s record is anyone''s');
+
+-- ------------------------------------------------------------- removing a follower
+
+select tests.act_as((select id from ids where name = 'ada'));
+select public.set_social_sections('{"finished": true}');
+select public.remove_follower((select id from ids where name = 'ben'));
+select tests.act_as((select id from ids where name = 'ben'));
+select ok(not tests.has_book(public.feed(), 'The Left Hand of Darkness'), 'a removed follower sees nothing more of her');
 
 -- --------------------------------------------------------------------- photos
 

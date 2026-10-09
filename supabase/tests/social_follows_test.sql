@@ -3,13 +3,14 @@
 --
 -- A follow link opens a private member's card and lets a member ask; she accepts or declines,
 -- and a declined request looks to the asker like one still waiting. A public member is
--- followed at once by anyone who reaches her. Following back needs no asking. Unfollow, remove
+-- followed at once by anyone who reaches her. Following back asks a private follower like
+-- anyone else (owner, social-v1.md B 9). A new link forgets who only opened the old one. Unfollow, remove
 -- and block are silent; a block cuts both ways and closes her link to him. Limits stop a
 -- script. Nobody can follow, or learn of, a member they never reached. Assertions ask about
 -- rows this test made, never counts of a table.
 
 begin;
-select plan(43);
+select plan(44);
 
 create schema if not exists tests;
 
@@ -147,9 +148,10 @@ select ok(not tests.has_member(public.my_people() -> 'requested', (select id fro
 -- ------------------------------------------------------------------ follow back
 
 select tests.act_as((select id from ids where name = 'ada'));
-select is(public.follow((select id from ids where name = 'ben')) ->> 'state', 'following',
-  'following back a private follower needs no asking');
+select is(public.follow((select id from ids where name = 'ben')) ->> 'state', 'requested',
+  'following back a private follower asks him, as anyone would');
 select tests.act_as((select id from ids where name = 'ben'));
+select public.answer_request((select id from ids where name = 'ada'), true);
 select ok((public.my_people() -> 'followers') @> jsonb_build_array(jsonb_build_object(
   'id', (select id from ids where name = 'ada'), 'followsBack', true)), 'he sees she follows him, and that he follows back');
 
@@ -187,10 +189,14 @@ select isnt(public.follow_target((select link from links where name = 'ada')), n
 
 -- ------------------------------------------------------------------- new link
 
+select tests.act_as((select id from ids where name = 'gil'));
+select public.follow_target((select link from links where name = 'ada'));
 select tests.act_as((select id from ids where name = 'ada'));
 select public.renew_follow_link();
 select tests.act_as((select id from ids where name = 'gil'));
 select is(public.follow_target((select link from links where name = 'ada')), null::jsonb, 'a renewed link finds nobody');
+select ok(not tests.viewed((select id from ids where name = 'gil'), (select id from ids where name = 'ada')),
+  'and who only opened the old one is forgotten');
 
 -- ----------------------------------------------------------------------- limits
 

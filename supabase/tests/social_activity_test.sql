@@ -11,7 +11,7 @@
 -- row written in the same statement. Separate statements (this file's, the app's calls) keep both.
 
 begin;
-select plan(27);
+select plan(28);
 
 create schema if not exists tests;
 
@@ -73,7 +73,8 @@ insert into ids values
   ('ada', tests.member('ada@social3.pgtap.test', 'Ada')),
   ('ben', tests.member('ben@social3.pgtap.test', 'Ben'));
 
--- Most of the test reads rows at once: no settle window.
+-- Most of the test reads rows at once: no settle window. (The file is one transaction, so now()
+-- is the same everywhere; statement_timestamp() is not.)
 update private.social_config set settle_window = interval '0';
 
 select has_table('public', 'activity', 'activity exists');
@@ -116,18 +117,39 @@ select is(tests.kinds((select id from ids where name = 'e3')), array['finished',
 insert into ids values ('old', (public.add_to_library(tests.snap('Middlemarch'), 'finished', current_date - 40, current_date - 30, 16, null)).id);
 select is(tests.kinds((select id from ids where name = 'old')), '{}'::text[], 'logging a read that ended a month ago writes nothing');
 
-insert into ids values ('undated', (public.add_to_library(tests.snap('Emma'), 'finished')).id);
+-- A finished read without dates only comes from an import or an edit; written here as one
+-- statement with her as the member (add_to_library refuses a finish without an end).
+reset role;
+select set_config('request.jwt.claims',
+  json_build_object('sub', (select id from ids where name = 'ada'), 'role', 'authenticated')::text, true);
+do $$
+declare v_book uuid; v_entry uuid;
+begin
+  insert into public.books (title, authors, source, apple_id) values ('Emma', array['X'], 'apple', '9988776611')
+    returning id into v_book;
+  insert into public.library_entries (member_id, book_id) values ((select id from ids where name = 'ada'), v_book)
+    returning id into v_entry;
+  insert into ids values ('undated', v_entry);
+  insert into public.reading_sessions (entry_id, outcome) values (v_entry, 'finished');
+end;
+$$;
 select is(tests.kinds((select id from ids where name = 'undated')), '{}'::text[], 'a finished read without dates writes nothing');
+select tests.act_as((select id from ids where name = 'ada'));
 
 insert into ids values ('recent', (public.add_to_library(tests.snap('Circe'), 'finished', current_date - 3, current_date - 1, 14, null)).id);
 select is(tests.kinds((select id from ids where name = 'recent')), array['finished'], 'a read logged that ended yesterday is news');
 
 insert into counts values ('before_import', tests.rows_of((select id from ids where name = 'ada')));
-select public.import_books(jsonb_build_array(
-  jsonb_build_object('key', 'social3:1', 'book', jsonb_build_object('title', 'Imported Wish', 'authors', jsonb_build_array('X'), 'source', 'manual'),
-                     'status', 'want_to_read'),
-  jsonb_build_object('key', 'social3:2', 'book', jsonb_build_object('title', 'Imported Today', 'authors', jsonb_build_array('X'), 'source', 'manual'),
-                     'status', 'finished', 'started_on', current_date - 2, 'ended_on', current_date, 'rating', 12)));
+select is(
+  (select array_agg(r ->> 'outcome' order by n) from jsonb_array_elements(public.import_books(jsonb_build_array(
+    jsonb_build_object('key', 'social3:1', 'status', 'want_to_read',
+      'book', jsonb_build_object('title', 'Imported Wish', 'authors', jsonb_build_array('X'), 'source', 'manual',
+                                 'cover_url', 'https://example.org/wish.jpg')),
+    jsonb_build_object('key', 'social3:2', 'status', 'finished', 'started_on', current_date - 2, 'ended_on', current_date, 'rating', 12,
+      'book', jsonb_build_object('title', 'Imported Today', 'authors', jsonb_build_array('X'), 'source', 'manual',
+                                 'cover_url', 'https://example.org/today.jpg'))))) with ordinality as t(r, n)),
+  array['added', 'added'],
+  'the import itself works');
 select is(tests.rows_of((select id from ids where name = 'ada')), (select n from counts where name = 'before_import'),
   'an import writes nothing, not even a read that ended today');
 
