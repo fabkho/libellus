@@ -8,7 +8,8 @@
 // (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
-const props = defineProps<{ years: readonly YearFigures[] | null }>()
+// `base`: where a year opens, the Profile's own by default (another member's profile: `/friends/<member>`).
+const props = withDefaults(defineProps<{ years: readonly YearFigures[] | null; base?: string }>(), { base: '/profile' })
 const { t } = useI18n()
 const { count } = useFigures()
 const arriving = useArrival(() => !props.years)
@@ -36,7 +37,7 @@ const arriving = useArrival(() => !props.years)
       <NuxtLink
         v-for="y in years ?? []"
         :key="y.year"
-        :to="`/profile/${y.year}`"
+        :to="`${base}/${y.year}`"
         class="card relative flex shrink-0 flex-col gap-sm overflow-hidden rounded-lg bg-surface-raised p-inset shadow-raised edge-faint active:opacity-80"
         :class="{ arrive: arriving }"
         :data-testid="`profile.yearCard.${y.year}`"
