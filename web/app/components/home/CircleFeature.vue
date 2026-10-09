@@ -72,12 +72,15 @@ async function unfold() {
     </span>
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
-      <div class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
-        <NuxtLink :to="`/friends/${card.member.id}`" class="reach flex min-w-0 items-center gap-sm" data-testid="home.circleFeature.member">
-          <FriendsAvatar :card="card.member" />
-          <span class="truncate font-medium">{{ name }}</span>
-        </NuxtLink>
-        <span class="min-w-0 text-ink-muted">{{ verb }}</span>
+      <div class="flex w-full min-w-0 items-center justify-between gap-md">
+        <div class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
+          <NuxtLink :to="`/friends/${card.member.id}`" class="reach flex min-w-0 items-center gap-sm" data-testid="home.circleFeature.member">
+            <FriendsAvatar :card="card.member" />
+            <span class="truncate font-medium">{{ name }}</span>
+          </NuxtLink>
+          <span class="min-w-0 text-ink-muted">{{ verb }}</span>
+        </div>
+        <FriendsWantToReadButton :book="book" testid="home.circleFeature.wantToRead" />
       </div>
 
       <UiPressLink
@@ -101,8 +104,6 @@ async function unfold() {
           @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
-
-      <FriendsWantToReadButton :book="book" testid="home.circleFeature.wantToRead" />
     </div>
   </div>
 </template>

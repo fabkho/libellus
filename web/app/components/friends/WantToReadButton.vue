@@ -7,7 +7,8 @@
 // `wantToReadFace` (utils/wantToRead.ts); the Library store's lists say where the Book is, so the button
 // flips by itself when the add lands, wherever else the Book changes.
 //
-// Props: `book` (SocialBook), `testid`. Test ids: `<testid>` (the button or link), `<testid>.error`.
+// Drawn as small clickable text, not a pill, so it sits at the right of a row without making it taller. Props: `book`
+// (SocialBook), `testid`. Test ids: `<testid>` (the button or link), `<testid>.error`.
 import type { SocialBook } from '~/data/socialShapes'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
@@ -44,31 +45,56 @@ const where = computed(() => (face.value?.kind === 'in' ? t(`social.state.${WHER
 </script>
 
 <template>
-  <span v-if="face" class="inline-flex items-center gap-sm">
-    <UiButton
-      v-if="face.kind === 'add'"
-      tone="quiet"
-      size="sm"
-      :offline="offline"
+  <span v-if="face" class="inline-flex shrink-0 items-center" :data-testid="`${testid}.wrap`">
+    <button v-if="face.kind === 'add' && offline" type="button" class="tiny text-ink-faint" disabled :data-testid="testid" data-offline>
+      <UiIcon name="offline" :size="12" />{{ t('common.offline') }}
+    </button>
+    <button
+      v-else-if="face.kind === 'add'"
+      type="button"
+      class="tiny"
+      :class="failed ? 'text-error' : 'text-accent-ink'"
       :disabled="busy"
       :aria-busy="busy"
       :aria-label="t('social.wantToRead.label', { title: book.title })"
       :data-testid="testid"
       @click="add"
     >
-      <UiIcon name="plus" :size="14" />{{ t('social.wantToRead.add') }}
-    </UiButton>
-    <UiButton
+      <template v-if="failed"><span role="alert" :data-testid="`${testid}.error`">{{ t('social.wantToRead.error') }}</span></template>
+      <template v-else><UiIcon name="plus" :size="12" />{{ t('social.wantToRead.add') }}</template>
+    </button>
+    <NuxtLink
       v-else
-      tone="quiet"
-      size="sm"
       :to="`/book/${book.id}`"
+      class="tiny text-ink-faint"
       :aria-label="t('social.wantToRead.inLabel', { title: book.title, where })"
       :data-testid="testid"
       @click="books.prefetch(book.id)"
     >
-      <UiIcon name="check" :size="14" />{{ where }}
-    </UiButton>
-    <span v-if="failed" class="text-caption text-error" role="alert" :data-testid="`${testid}.error`">{{ t('social.wantToRead.error') }}</span>
+      <UiIcon name="check" :size="12" />{{ where }}
+    </NuxtLink>
   </span>
 </template>
+
+<style scoped>
+/* Clickable text, no pill: it never makes its row taller. The 44 px target is an invisible box centred on it. */
+.tiny {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-caption, 0.8125rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+.tiny::after {
+  position: absolute;
+  inset: 50% calc(-1 * var(--spacing-sm)) auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
+}
+.tiny:disabled {
+  opacity: 0.6;
+}
+</style>

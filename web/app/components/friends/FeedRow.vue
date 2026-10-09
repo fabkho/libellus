@@ -113,7 +113,10 @@ async function unfold() {
       >{{ book.title }}</UiPressLink>
       <span v-else class="book-title text-callout py-xxs" :data-testid="`${testid}Book`">{{ book.title }}</span>
 
-      <p v-if="authorLine" class="text-caption text-ink-muted">{{ authorLine }}</p>
+      <div v-if="authorLine || showWant" class="flex w-full min-w-0 items-center justify-between gap-md">
+        <p class="min-w-0 truncate text-caption text-ink-muted">{{ authorLine }}</p>
+        <FriendsWantToReadButton v-if="showWant" :book="book" :testid="`${testid}WantToRead`" />
+      </div>
       <UiStars v-if="entry.rating" :quarters="entry.rating" :data-testid="`${testid}Stars`" />
 
       <template v-if="showReview">
@@ -132,10 +135,6 @@ async function unfold() {
           @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
-
-      <div v-if="showWant" class="mt-xs flex items-center gap-sm">
-        <FriendsWantToReadButton :book="book" :testid="`${testid}WantToRead`" />
-      </div>
     </div>
   </li>
 </template>
