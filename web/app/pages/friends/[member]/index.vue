@@ -56,6 +56,8 @@ onMounted(show)
 onActivated(show)
 onDeactivated(() => (showing = false))
 watch(id, () => void members.load(id.value))
+// Back online while the page is open: a Requested or Follow it shows, or figures it missed, may be old.
+watch(online, (now) => now && showing && void members.load(id.value))
 
 // ------------------------------------------------------------------ her reading, in figures
 const thisYear = Number(isoDay().slice(0, 4))
