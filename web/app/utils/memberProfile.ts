@@ -13,6 +13,9 @@ export type VisibleProfile = Extract<MemberProfile, { visible: true }>
 /** How many of her Want to read the profile carries (the newest); the rest is behind *See all*. */
 export const WANT_SHOWN = 12
 
+/** How many of her finished Books the section shows (the newest): a glance, as Home's Your circle shows 3; the rest is behind *See all*. */
+export const FINISHED_SHOWN = 3
+
 /** The blocks of her profile, in the order they stand; each is on or off. */
 export type MemberBlocks = {
   /** Currently reading: covers. */
@@ -27,6 +30,8 @@ export type MemberBlocks = {
   ratings: boolean
   /** Recently finished. */
   finished: boolean
+  /** *See all* beside it: she has more than the section shows. */
+  finishedAll: boolean
   /** Years in review: the cards to her year pages. */
   yearCards: boolean
 }
@@ -50,6 +55,7 @@ export function memberBlocks(profile: VisibleProfile, record: { reads: readonly 
     figures,
     ratings: figures && s.ratings,
     finished: s.finished && profile.finished.length > 0,
+    finishedAll: s.finished && profile.finished.length > FINISHED_SHOWN,
     yearCards: figures && years.length > 0,
   }
 }
