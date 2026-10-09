@@ -18,6 +18,8 @@ export type MemberView = {
   record: MemberRecord | null
   /** Whether the record is still being asked for. */
   recordLoading: boolean
+  /** The last refusal of reading her record, with none on screen: her figures are missing, not "not for you". */
+  recordError: SocialErrorCode | null
   /** Her whole Want to read, once asked for. */
   want: MemberWant | null
   /** The year in the pills. */
@@ -36,6 +38,7 @@ const fresh = (): MemberView => ({
   profile: null,
   record: null,
   recordLoading: false,
+  recordError: null,
   want: null,
   year: 'all',
   error: null,
@@ -102,6 +105,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       profile,
       error: null,
       loaded: true,
+      recordError: null,
       recordLoading: wantsRecord && !had.record,
       // A private account she does not follow has none of it.
       ...(open ? {} : { record: null, want: null }),
@@ -114,9 +118,10 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
   async function loadRecord(id: string, run: number) {
     const answer = await statsRepo()?.record(id)
     if (run !== generation) return
-    // A refusal keeps the record already on screen; without one the figures give way.
+    // A refusal keeps the record already on screen; without one the figures give way, and the page says why
+    // (a record that is "not for her" answers null without an error: only that reads as a dead link).
     const record = answer?.error ? viewOf(id).record : (answer?.data ?? null)
-    patch(id, { record, recordLoading: false, year: record ? yearIn(viewOf(id).year, record.reads) : 'all' })
+    patch(id, { record, recordError: answer?.error ?? null, recordLoading: false, year: record ? yearIn(viewOf(id).year, record.reads) : 'all' })
   }
 
   async function loadWant(id: string, run: number) {
