@@ -1670,6 +1670,8 @@
     "requests": "Requests",
     "askedOn": "asked {when}",
     "followsYouNow": "follows you now",
+    "accepted": "{name} follows you now.",
+    "declined": "Request from {name} declined.",
     "accept": "Accept",
     "decline": "Decline",
     "acceptLabel": "Accept {name}",
@@ -1698,6 +1700,8 @@
     "follow": "Follow",
     "ask": "Ask to follow",
     "requested": "Requested",
+    "following": "Following",
+    "withdrawn": "Request withdrawn.",
     "requestedHint": "Tap to withdraw.",
     "privateTitle": "Private account",
     "privateText": "Ask to follow to see what {name} reads. {name} decides; nobody else is told.",
@@ -1768,6 +1772,7 @@
     "title": "Blocked",
     "unblock": "Unblock",
     "unblockLabel": "Unblock {name}",
+    "unblocked": "{name} unblocked.",
     "empty": "You haven't blocked anyone."
   }
 }

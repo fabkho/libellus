@@ -29,6 +29,18 @@ const name = computed(() => props.request.name?.trim() || t('member.someone'))
 const shownAt = Date.now()
 const asked = computed(() => t('people.askedOn', { when: relativeTime(new Date(props.request.askedAt), shownAt, locale.value) }))
 const id = (people: string, home: string) => (props.compact ? home : people)
+
+// Accept turns into Follow back, another button: keep focus where it was by handing it over (a11y).
+const followBackButton = useTemplateRef<{ $el: HTMLElement }>('followBackButton')
+watch(
+  () => props.state,
+  async (now, was) => {
+    if (was !== 'asked' || now !== 'accepted') return
+    const hadFocus = document.activeElement === document.body || !!document.activeElement?.closest('[data-testid="people.row"]')
+    await nextTick()
+    if (hadFocus) followBackButton.value?.$el?.focus()
+  },
+)
 </script>
 
 <template>
@@ -81,6 +93,7 @@ const id = (people: string, home: string) => (props.compact ? home : people)
     </template>
     <UiButton
       v-else-if="state === 'accepted'"
+      ref="followBackButton"
       tone="secondary"
       size="sm"
       :disabled="busy"

@@ -33,7 +33,7 @@ const { count, monthLong, monthLetter } = useFigures()
 const id = computed(() => String(route.params.member))
 const view = computed(() => members.viewOf(id.value))
 const card = computed(() => view.value.profile?.member ?? null)
-const name = computed(() => card.value?.name ?? t('member.someone'))
+const name = computed(() => card.value?.name?.trim() || t('member.someone'))
 /** The profile as the caller may see it, or null (a private account she does not follow, nobody, not known yet). */
 const open = computed(() => {
   const p = view.value.profile
@@ -123,6 +123,25 @@ const canFollow = computed(() => !!open.value && !open.value.private && open.val
 const requested = computed(() => closed.value?.state === 'requested')
 const failed = computed(() => !!view.value.failed && view.value.failed !== 'offline')
 
+// What an action did, said in the one polite status the page keeps: Ask to follow becomes Requested and
+// Follow leaves, so neither says it by itself (a11y).
+const said = ref('')
+watch(id, () => (said.value = ''))
+const hero = useTemplateRef<{ focus: () => void }>('hero')
+async function follow() {
+  const wasOpen = !!open.value
+  if (!(await members.follow(id.value))) return
+  if (wasOpen) {
+    // The Follow button is gone: focus goes to her name, where the page begins.
+    said.value = t('member.following')
+    await nextTick()
+    hero.value?.focus()
+  } else said.value = t('member.requested')
+}
+async function withdraw() {
+  if (await members.withdraw(id.value)) said.value = t('member.withdrawn')
+}
+
 // ⋯: the member sheet (Unfollow · Remove as follower · Block, by the relation). Once one went
 // through, the profile is read again: Unfollow brings back Follow (or the private card), Block leaves
 // nobody to show.
@@ -150,6 +169,8 @@ function back() {
       </template>
     </UiTopBar>
 
+    <p class="sr-only" role="status" data-testid="member.status">{{ said }}</p>
+
     <!-- Nobody there: a dead link, or someone who blocked her. Nothing says why. -->
     <div v-if="missing" class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="member.missing">
       <p class="book-title text-callout">{{ t('follow.missingTitle') }}</p>
@@ -169,32 +190,37 @@ function back() {
 
     <!-- A private account she does not follow. -->
     <template v-else-if="closed && card">
-      <FriendsMemberHero :card="card">
+      <FriendsMemberHero ref="hero" :card="card">
         <span class="lock mt-md flex items-center justify-center rounded-pill bg-fill text-ink-muted" aria-hidden="true">
           <UiIcon name="lock" :size="20" />
         </span>
         <p class="mt-md text-body font-medium" data-testid="member.private">{{ t('member.privateTitle') }}</p>
         <p class="mt-xs text-body text-ink-muted">{{ t('member.privateText', { name }) }}</p>
       </FriendsMemberHero>
-      <div class="relative flex flex-col gap-sm px-screen pt-lg pb-xl" aria-live="polite">
-        <template v-if="requested">
-          <UiButton tone="secondary" size="lg" block :offline="!online" :disabled="view.busy" data-testid="member.requested" @click="members.withdraw(id)">
-            {{ t('member.requested') }}
-          </UiButton>
-          <p class="text-center text-footnote text-ink-faint">{{ t('member.requestedHint') }}</p>
-        </template>
-        <UiButton v-else block :offline="!online" :disabled="view.busy" data-testid="member.ask" @click="members.follow(id)">{{ t('member.ask') }}</UiButton>
+      <div class="relative flex flex-col gap-sm px-screen pt-lg pb-xl">
+        <!-- One button for both: Ask to follow and Requested are the same control, so focus stays on it. -->
+        <UiButton
+          :tone="requested ? 'secondary' : 'primary'"
+          block
+          :offline="!online"
+          :disabled="view.busy"
+          :data-testid="requested ? 'member.requested' : 'member.ask'"
+          @click="requested ? withdraw() : follow()"
+        >
+          {{ requested ? t('member.requested') : t('member.ask') }}
+        </UiButton>
+        <p v-if="requested" class="text-center text-footnote text-ink-faint">{{ t('member.requestedHint') }}</p>
         <p v-if="failed" class="text-center text-footnote text-error" role="alert" data-testid="member.error">{{ t('privacy.error') }}</p>
       </div>
     </template>
 
     <!-- A profile she may see. -->
     <template v-else-if="open && blocks">
-      <FriendsMemberHero :card="open.member" :since="open.since" :library="library" />
+      <FriendsMemberHero ref="hero" :card="open.member" :since="open.since" :library="library" />
 
       <div class="relative flex flex-col px-screen pt-lg">
-        <div v-if="canFollow" class="flex flex-col gap-sm pb-xl" aria-live="polite">
-          <UiButton block :offline="!online" :disabled="view.busy" data-testid="member.follow" @click="members.follow(id)">{{ t('member.follow') }}</UiButton>
+        <div v-if="canFollow" class="flex flex-col gap-sm pb-xl">
+          <UiButton block :offline="!online" :disabled="view.busy" data-testid="member.follow" @click="follow">{{ t('member.follow') }}</UiButton>
           <p v-if="failed" class="text-center text-footnote text-error" role="alert" data-testid="member.error">{{ t('privacy.error') }}</p>
         </div>
 
