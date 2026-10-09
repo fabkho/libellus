@@ -235,7 +235,7 @@ function back() {
               <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
             </UiReveal>
             <UiReveal :show="loading || hasRecords">
-              <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />
+              <ProfileRecords class="pt-xl" foreign :figures="loading ? null : figures" />
             </UiReveal>
             <UiReveal :show="loading || figures.authors.length > 0">
               <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" />
@@ -267,7 +267,7 @@ function back() {
     />
     <FriendsMemberWantSheet v-model:open="wantOpen" :title="t('member.want')" :items="wantAll" />
     <FriendsMemberFinishedSheet v-if="open" v-model:open="finishedOpen" :title="t('member.finished')" :items="open.finished" />
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
+    <ProfileReadsSheet v-model:open="sheetOpen" foreign :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
   </div>
 </template>
 
