@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { StatsRead } from '../app/data/stats'
 import type { MemberProfile, SocialBook, SocialSections } from '../app/data/socialShapes'
-import { FINISHED_SHOWN, bookPathOf, figuresWithRatings, libraryLine, linkOf, memberBlocks, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
+import { FINISHED_SHOWN, bookPathOf, figuresWithRatings, libraryLine, linkOf, memberBlocks, profileAfter, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
 
 // What another member's profile shows (social v1, U4): pure, no stack needed.
 
@@ -141,5 +141,39 @@ describe('her figures without her Ratings', () => {
   it('drops the "not rated yet" line, which she did not say, and keeps the rest', () => {
     expect(figuresWithRatings({ unrated: 8, books: 8 }, false)).toEqual({ unrated: 0, books: 8 })
     expect(figuresWithRatings({ unrated: 8, books: 8 }, true)).toEqual({ unrated: 8, books: 8 })
+  })
+})
+
+describe('her profile after the caller changed the relation', () => {
+  const card = { id: 'm', name: 'Anna', photo: null }
+  const closed = (state: 'none' | 'requested'): MemberProfile => ({ member: card, private: true, state, visible: false })
+
+  it('leaves nobody to show after Block', () => {
+    expect(profileAfter(profile(), { kind: 'block' })).toBeNull()
+    expect(profileAfter(closed('none'), { kind: 'block' })).toBeNull()
+  })
+
+  it('gives a private account its closed card after Unfollow, and a public one its Follow button', () => {
+    expect(profileAfter(profile(), { kind: 'unfollow' })).toEqual(closed('none'))
+    const open = { ...profile(), private: false }
+    expect(profileAfter(open, { kind: 'unfollow' })).toEqual({ ...open, state: 'none' })
+  })
+
+  it('takes the state a follow answered, on a profile she may see or a card that asks', () => {
+    const open = { ...profile(), private: false, state: 'none' as const }
+    expect(profileAfter(open, { kind: 'follow', state: 'following' })).toMatchObject({ visible: true, state: 'following' })
+    expect(profileAfter(closed('none'), { kind: 'follow', state: 'requested' })).toEqual(closed('requested'))
+    // A card cannot become a profile without a read: it is left for the read to settle.
+    expect(profileAfter(closed('none'), { kind: 'follow', state: 'following' })).toEqual(closed('none'))
+  })
+
+  it('takes a withdrawn request back to none, and ends "follows you" on Remove as follower', () => {
+    expect(profileAfter(closed('requested'), { kind: 'withdraw' })).toEqual(closed('none'))
+    expect(profileAfter({ ...profile(), followsYou: true }, { kind: 'removeFollower' })).toMatchObject({ followsYou: false, state: 'following' })
+    expect(profileAfter(closed('none'), { kind: 'removeFollower' })).toEqual(closed('none'))
+  })
+
+  it('has nothing to patch without a profile', () => {
+    expect(profileAfter(null, { kind: 'unfollow' })).toBeNull()
   })
 })

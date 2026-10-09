@@ -110,3 +110,32 @@ export function yearIn(year: StatsYear, reads: readonly StatsRead[]): StatsYear 
 export function figuresWithRatings<T extends { unrated: number }>(figures: T, ratingsOn: boolean): T {
   return ratingsOn ? figures : { ...figures, unrated: 0 }
 }
+
+/** What happened to the relation with her, as the action answered (stores/social.ts). */
+export type RelationChange =
+  | { kind: 'follow'; state: 'following' | 'requested' }
+  | { kind: 'withdraw' }
+  | { kind: 'unfollow' }
+  /** She no longer follows the caller. */
+  | { kind: 'removeFollower' }
+  | { kind: 'block' }
+
+/**
+ * Her profile after the caller changed the relation, from the action's own answer (not from a read that
+ * may fail): Block leaves nobody to show (null), Unfollow gives a public account its Follow button and
+ * a private one its closed card, a follow or a withdrawal sets the state the database returned, Remove as
+ * follower ends "follows you". A shape a change cannot reach is left as it is; the next read settles it.
+ */
+export function profileAfter(profile: MemberProfile | null, change: RelationChange): MemberProfile | null {
+  if (!profile || change.kind === 'block') return null
+  switch (change.kind) {
+    case 'unfollow':
+      return profile.visible && !profile.private ? { ...profile, state: 'none' } : { member: profile.member, private: true, state: 'none', visible: false }
+    case 'removeFollower':
+      return profile.visible ? { ...profile, followsYou: false } : profile
+    case 'withdraw':
+      return profile.visible ? profile : { ...profile, state: 'none' }
+    case 'follow':
+      return profile.visible || change.state === 'requested' ? { ...profile, state: change.state } : profile
+  }
+}

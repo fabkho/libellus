@@ -12,6 +12,9 @@ import {
   type SocialSection,
 } from '~/data/social'
 import { useSessionStore } from '~/stores/session'
+import { useFeedStore } from '~/stores/feed'
+import { useMemberProfileStore } from '~/stores/memberProfile'
+import type { RelationChange } from '~/utils/memberProfile'
 import { createRereads } from '~/utils/rereads'
 
 /**
@@ -153,8 +156,14 @@ export const useSocialStore = defineStore('social', () => {
   /**
    * A change to who follows whom: done, then what it touches is read again (her settings carry the
    * requests count, People the lists, Blocked the list). The result is the repository's, for the screen.
+   * `after` tells the other stores what the answer changed (the feed, the member's profile), so none of
+   * them waits for a read that may fail and no page patches itself.
    */
-  async function change<T>(run: (r: Social) => Promise<SocialResult<T>>, refresh: ('mine' | 'people' | 'blocked')[]): Promise<SocialResult<T>> {
+  async function change<T>(
+    run: (r: Social) => Promise<SocialResult<T>>,
+    refresh: ('mine' | 'people' | 'blocked')[],
+    after?: (data: T) => void,
+  ): Promise<SocialResult<T>> {
     const r = repo()
     const member = session.member?.id
     if (!r || !member) return { data: null, error: 'not_signed_in' }
@@ -167,6 +176,7 @@ export const useSocialStore = defineStore('social', () => {
       errors.value = { ...errors.value, follow: result.error }
       return result
     }
+    after?.(result.data)
     await Promise.all([
       refresh.includes('mine') ? load(true) : null,
       refresh.includes('people') ? loadPeople(true) : null,
@@ -175,12 +185,19 @@ export const useSocialStore = defineStore('social', () => {
     return result
   }
 
-  const follow = (member: string) => change((r) => r.follow(member), ['people'])
-  const withdraw = (member: string) => change((r) => r.withdraw(member), ['people'])
+  /** The member's profile on screen follows the action; `left`: she also leaves her circle (the feed drops her entries). */
+  function relation(member: string, what: RelationChange, left = false) {
+    if (left) useFeedStore().dropMember(member)
+    useMemberProfileStore().relationChanged(member, what)
+  }
+
+  const follow = (member: string) => change((r) => r.follow(member), ['people'], (state) => relation(member, { kind: 'follow', state }))
+  const withdraw = (member: string) => change((r) => r.withdraw(member), ['people'], () => relation(member, { kind: 'withdraw' }))
   const answer = (member: string, accept: boolean) => change((r) => r.answer(member, accept), ['mine', 'people'])
-  const unfollow = (member: string) => change((r) => r.unfollow(member), ['people'])
-  const removeFollower = (member: string) => change((r) => r.removeFollower(member), ['people'])
-  const block = (member: string) => change((r) => r.block(member), ['mine', 'people', 'blocked'])
+  const unfollow = (member: string) => change((r) => r.unfollow(member), ['people'], () => relation(member, { kind: 'unfollow' }, true))
+  // She stops following the caller: what the caller sees of her feed is unchanged.
+  const removeFollower = (member: string) => change((r) => r.removeFollower(member), ['people'], () => relation(member, { kind: 'removeFollower' }))
+  const block = (member: string) => change((r) => r.block(member), ['mine', 'people', 'blocked'], () => relation(member, { kind: 'block' }, true))
 
   /** What a follow link opens, a member's profile and her whole Want to read: read, nothing kept. */
   const target = async (token: string): Promise<SocialResult<FollowTarget | null>> => repo()?.target(token) ?? { data: null, error: 'unknown' }
