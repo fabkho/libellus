@@ -124,7 +124,7 @@ function back() {
 
           <UiReveal :show="loading || !!figures.favourite">
             <div class="pt-xl" :class="{ arrive: arriving }">
-              <FriendsMemberFavourite :read="loading ? null : figures.favourite" />
+              <ProfileFavourite foreign testid="memberYear.favourite" :read="loading ? null : figures.favourite" />
             </div>
           </UiReveal>
 
