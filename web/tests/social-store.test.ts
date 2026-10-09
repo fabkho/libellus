@@ -31,8 +31,9 @@ const backend = {
   },
 }
 
-const told = { dropped: [] as string[], changes: [] as unknown[] }
+const told = { dropped: [] as string[], photos: [] as string[], changes: [] as unknown[] }
 vi.mock('~/stores/feed', () => ({ useFeedStore: () => ({ dropMember: (id: string) => told.dropped.push(id) }) }))
+vi.mock('~/stores/memberPhotos', () => ({ useMemberPhotosStore: () => ({ drop: (id: string) => told.photos.push(id) }) }))
 vi.mock('~/stores/memberProfile', () => ({ useMemberProfileStore: () => ({ relationChanged: (id: string, change: unknown) => told.changes.push([id, change]) }) }))
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 
@@ -61,6 +62,7 @@ async function reconnect() {
 
 beforeEach(() => {
   told.dropped.length = 0
+  told.photos.length = 0
   told.changes.length = 0
   online.value = true
   mode = 'answer'
@@ -131,5 +133,25 @@ describe('a change of relation tells the feed and the member\'s profile (M3, M4)
     expect((await social.unfollow('ida')).error).toBe('offline')
     expect(told.dropped).toEqual([])
     expect(told.changes).toEqual([])
+  })
+})
+
+describe('nothing of a member stays on the device after she is blocked, unfollowed or removed (P2)', () => {
+  it('drops her photo after each of the three, and her feed rows after Unfollow and Block only', async () => {
+    const social = await store()
+    await social.unfollow('ida')
+    await social.block('ben')
+    await social.removeFollower('cy')
+    expect(told.photos).toEqual(['ida', 'ben', 'cy'])
+    expect(told.dropped).toEqual(['ida', 'ben'])
+  })
+
+  it('drops nothing for a follow, or for a change that was refused', async () => {
+    const social = await store()
+    await social.follow('ida')
+    mode = 'silent'
+    await social.block('ben')
+    expect(told.photos).toEqual([])
+    expect(told.dropped).toEqual([])
   })
 })
