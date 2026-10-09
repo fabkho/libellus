@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import {
   createSocial,
+  PEOPLE_PAGE,
   type FollowTarget,
   type MemberCard,
   type MemberProfile,
   type MySocial,
   type People,
+  type PeopleList,
   type Social,
   type SocialErrorCode,
   type SocialResult,
@@ -28,6 +30,9 @@ import { createRereads } from '~/utils/rereads'
  * Writes wait for a connection (the repository refuses them offline, the controls say Offline). A
  * refusal is kept per action for the sheet that made it to show (`errors`). Signing out, or another
  * member signing in, forgets everything.
+ *
+ * People comes in pages: Following and Followers the first thirty newest follows at first and the next
+ * ones through `loadMorePeople` (`peopleEnded`, `peopleLoadingMore`); Requests and Requested whole.
  */
 
 /** The actions whose refusal a sheet shows. */
@@ -48,6 +53,10 @@ export const useSocialStore = defineStore('social', () => {
   const mine = ref<MySocial | null>(null)
   /** Who she follows, who follows her, who asked, who she asked; null until known. */
   const people = ref<People | null>(null)
+  /** Per list: the last page came back short, there is no more to ask for. */
+  const peopleEnded = ref<Record<PeopleList, boolean>>({ following: false, followers: false })
+  /** Per list: an older page is on its way. */
+  const peopleLoadingMore = ref<Record<PeopleList, boolean>>({ following: false, followers: false })
   /** The members she blocked; null until known. */
   const blocked = ref<MemberCard[] | null>(null)
   /** The last refusal of each action; cleared when the action is tried again. */
@@ -65,6 +74,8 @@ export const useSocialStore = defineStore('social', () => {
   let loadingMine: Promise<void> | null = null
   let loadingPeople: Promise<void> | null = null
   let loadingBlocked: Promise<void> | null = null
+  /** Counts the lists read afresh or dropped: a page that was asked for before is then of a list that is gone. */
+  let peopleEpoch = 0
 
   /** Keeps `result`'s data in `target` when this member is still the one signed in; true when it did. */
   function take<T>(member: string, action: SocialAction, result: SocialResult<T>, keep: (data: T) => void): boolean {
@@ -91,15 +102,69 @@ export const useSocialStore = defineStore('social', () => {
     return loadingMine
   }
 
+  /**
+   * Her people. Read once per sign-in unless `force`; read again, it is the first page of Following and
+   * Followers and then as many more as she had scrolled to, so a list she is deep in does not jump back
+   * to its start when she unfollows someone or a request is answered.
+   */
   function loadPeople(force = false): Promise<void> {
     const member = session.member?.id
     if (!member || (!force && people.value)) return Promise.resolve()
     loadingPeople ??= (async () => {
       const r = repo()
       if (!r) return
-      take(member, 'people', await r.people(), (data) => (people.value = data))
+      const had = { following: people.value?.following.length ?? 0, followers: people.value?.followers.length ?? 0 }
+      const result = await r.people()
+      if (member !== session.member?.id) return
+      if (result.error) return void take(member, 'people', result, () => undefined)
+      let read = result.data
+      const ended = { following: read.following.length < PEOPLE_PAGE, followers: read.followers.length < PEOPLE_PAGE }
+      for (const list of ['following', 'followers'] as const) {
+        while (!ended[list] && read[list].length < had[list]) {
+          const last = read[list].at(-1)!
+          const more = await (list === 'following' ? r.peoplePage('following', last) : r.peoplePage('followers', last))
+          if (member !== session.member?.id) return
+          // A page that fails leaves the list as far as it got; the end mark asks again.
+          if (more.error) break
+          read = { ...read, [list]: [...read[list], ...more.data] }
+          ended[list] = more.data.length < PEOPLE_PAGE
+        }
+      }
+      peopleEpoch++
+      peopleEnded.value = ended
+      take(member, 'people', { data: read, error: null }, (data) => (people.value = data))
     })().finally(() => (loadingPeople = null))
     return loadingPeople
+  }
+
+  /**
+   * The next page of Following or Followers, when the list has one and the device can ask: asked when the
+   * end of the list shows. A page that fails stays unread (the end showing again asks again); one that
+   * arrives after the list was read afresh or dropped is of a list that is gone, and is left out.
+   */
+  async function loadMorePeople(list: PeopleList): Promise<void> {
+    const r = repo()
+    const member = session.member?.id
+    const have = people.value
+    const last = have?.[list].at(-1)
+    if (!r || !member || !have || !last || peopleEnded.value[list] || peopleLoadingMore.value[list] || !isOnline()) return
+    const epoch = peopleEpoch
+    peopleLoadingMore.value = { ...peopleLoadingMore.value, [list]: true }
+    const result = await (list === 'following' ? r.peoplePage('following', last) : r.peoplePage('followers', last))
+    peopleLoadingMore.value = { ...peopleLoadingMore.value, [list]: false }
+    if (epoch !== peopleEpoch || member !== session.member?.id) return
+    if (result.error || !people.value) return
+    const known = new Set(people.value[list].map((row) => row.id))
+    const fresh = result.data.filter((row) => !known.has(row.id))
+    people.value = { ...people.value, [list]: [...people.value[list], ...fresh] } as People
+    peopleEnded.value = { ...peopleEnded.value, [list]: result.data.length < PEOPLE_PAGE }
+  }
+
+  /** Forgets what was read of People, so the next read starts from the first page. */
+  function dropPeople() {
+    people.value = null
+    peopleEpoch++
+    peopleEnded.value = { following: false, followers: false }
   }
 
   function loadBlocked(force = false): Promise<void> {
@@ -128,7 +193,7 @@ export const useSocialStore = defineStore('social', () => {
       loadedFor = member
     })
     // Going public settles the requests waiting: People is no longer what it was.
-    if (kept && action === 'privacy') people.value = null
+    if (kept && action === 'privacy') dropPeople()
     return kept
   }
 
@@ -148,7 +213,7 @@ export const useSocialStore = defineStore('social', () => {
     rereads.note(sent, result.error, ['blocked', 'people'])
     if (!take(member, 'unblock', result, () => undefined)) return false
     await loadBlocked(true)
-    people.value = null
+    dropPeople()
     return true
   }
 
@@ -218,7 +283,8 @@ export const useSocialStore = defineStore('social', () => {
 
   function reset() {
     mine.value = null
-    people.value = null
+    dropPeople()
+    peopleLoadingMore.value = { following: false, followers: false }
     blocked.value = null
     errors.value = {}
     busy.value = false
@@ -246,12 +312,15 @@ export const useSocialStore = defineStore('social', () => {
   return {
     mine,
     people,
+    peopleEnded,
+    peopleLoadingMore,
     blocked,
     errors,
     busy,
     requests,
     load,
     loadPeople,
+    loadMorePeople,
     loadBlocked,
     setPrivate,
     setSections,

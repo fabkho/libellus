@@ -168,6 +168,34 @@ describe('following', () => {
   })
 })
 
+describe('her people in pages', () => {
+  it('lists the newest follow first with its time, who follows whom, and the next page after a row', async () => {
+    const { ada, ben, adaSocial, benSocial } = await twoMembers()
+    await adaSocial.setPrivate(false)
+    expect((await benSocial.follow(ada.id)).data).toBe('following')
+    expect((await adaSocial.follow(ben.id)).data).toBe('requested')
+
+    const people = (await adaSocial.people()).data!
+    expect(people.followers).toEqual([expect.objectContaining({ id: ben.id, followsBack: false, at: expect.any(String) })])
+    expect(Number.isNaN(Date.parse(people.followers[0]!.at))).toBe(false)
+    const mine = (await benSocial.people()).data!
+    expect(mine.following).toEqual([expect.objectContaining({ id: ada.id, followsYou: false })])
+    expect(mine.followingIds).toEqual([ada.id])
+
+    expect(await adaSocial.peoplePage('followers', { at: people.followers[0]!.at, id: ben.id })).toEqual({ data: [], error: null })
+    expect((await adaSocial.peoplePage('followers', { at: '2000-01-01T00:00:00Z', id: ben.id })).data!.map((c) => c.id)).toEqual([])
+    expect((await adaSocial.peoplePage('followers', { at: '2999-01-01T00:00:00Z', id: ben.id })).data!.map((c) => c.id)).toEqual([ben.id])
+  })
+
+  it('refuses a list that is not Following or Followers, and a page offline', async () => {
+    const { ada, adaSocial } = await twoMembers()
+    expect((await ada.client.rpc('my_people_page', { p_list: 'requests' })).error).toMatchObject({ message: 'people_list_invalid' })
+    const offline = createSocial(ada.client, { online: () => false })
+    expect(await offline.peoplePage('followers', { at: '2999-01-01T00:00:00Z', id: ada.id })).toEqual({ data: null, error: 'offline' })
+    expect((await adaSocial.people()).data!.followers).toEqual([])
+  })
+})
+
 describe('blocking', () => {
   it('lists the blocked member, and her link answers null for him', async () => {
     const { ada, ben, adaSocial, benSocial } = await twoMembers()

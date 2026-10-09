@@ -61,7 +61,7 @@ export const useFeedStore = defineStore('feed', () => {
     asking.value = true
     try {
       const { data, error } = await backend.rpc('my_people')
-      following.value = error ? null : ((data as { following?: unknown[] } | null)?.following?.length ?? 0)
+      following.value = error ? null : ((data as { followingIds?: unknown[] } | null)?.followingIds?.length ?? 0)
     } finally {
       asking.value = false
     }
@@ -93,7 +93,7 @@ export const useFeedStore = defineStore('feed', () => {
       const social = useSocialStore()
       await social.loadPeople(true)
       if (member !== session.member?.id) return
-      if (social.people) stillFollowing = new Set(social.people.following.map((card) => card.id))
+      if (social.people) stillFollowing = new Set(social.people.followingIds)
     }
     const merged = mergeFirstPage(entries.value, result.data, stillFollowing)
     // The same entries as the ones showing (the device's copy, or the last load) change nothing on the page.
