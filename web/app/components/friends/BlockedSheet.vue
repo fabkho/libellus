@@ -32,7 +32,15 @@ const error = computed(() => (social.errors.unblock && social.errors.unblock !==
         >
           <UiAvatar :initials="initialsOf('', member.name)" />
           <span class="min-w-0 flex-1 truncate text-body">{{ member.name ?? t('member.someone') }}</span>
-          <UiButton tone="secondary" size="sm" :disabled="disabled" :offline="!online" data-testid="blocked.unblock" @click="social.unblock(member.id)">
+          <UiButton
+            tone="secondary"
+            size="sm"
+            :disabled="disabled"
+            :offline="!online"
+            :aria-label="online ? t('blocked.unblockLabel', { name: member.name?.trim() || t('member.someone') }) : undefined"
+            data-testid="blocked.unblock"
+            @click="social.unblock(member.id)"
+          >
             {{ t('blocked.unblock') }}
           </UiButton>
         </li>

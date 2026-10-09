@@ -514,7 +514,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "and": " and ",
     "accept": "Accept",
     "decline": "Decline",
-    "declineLabel": "Decline {name}"
+    "declineLabel": "Decline {name}",
+    "acceptLabel": "Accept {name}"
   },
   "feed": {
     "title": "Your circle",
@@ -552,6 +553,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "followsYouNow": "follows you now",
     "accept": "Accept",
     "decline": "Decline",
+    "acceptLabel": "Accept {name}",
+    "declineLabel": "Decline {name}",
     "followBack": "Follow back",
     "moreLabel": "More for {name}",
     "emptyFollowing": "You don't follow anyone yet.",
@@ -639,6 +642,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
   "blocked": {
     "title": "Blocked",
     "unblock": "Unblock",
+    "unblockLabel": "Unblock {name}",
     "empty": "You haven't blocked anyone."
   },
   "bookOptions": { "hide": "Hide from followers", "hideHint": "Hidden: not in your circle's feed, not on your profile, not in the figures they see." },
