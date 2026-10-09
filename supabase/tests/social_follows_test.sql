@@ -10,7 +10,7 @@
 -- rows this test made, never counts of a table.
 
 begin;
-select plan(44);
+select plan(49);
 
 create schema if not exists tests;
 
@@ -225,11 +225,36 @@ select tests.act_as((select id from ids where name = 'fen'));
 select throws_ok(format($$ select public.follow(%L) $$, (select id from ids where name = 'm21')),
   '54000', 'follow_limit', 'twenty open requests are the most');
 
--- --------------------------------------------------------------- signed out
+-- ------------------------------------------- an unknown id answers as a private stranger does
+
+select tests.act_as((select id from ids where name = 'cy'));
+select throws_ok(format($$ select public.follow(%L) $$, gen_random_uuid()),
+  'P0002', 'not_found', 'following an id nobody has: not_found');
+select throws_ok(format($$ select public.block(%L) $$, gen_random_uuid()),
+  'P0002', 'not_found', 'blocking an id nobody has: not_found');
+select throws_ok(format($$ select public.block(%L) $$, (select id from ids where name = 'ada')),
+  'P0002', 'not_found', 'blocking a private member he never reached: the same not_found');
+
+-- Gate 2: follow() asks "reachable" again once it holds the pair's lock, so a block that was
+-- committed while it waited cannot be followed through. A second session is not at hand here, so
+-- the order inside the function is what is checked: the second look comes after the lock.
+select ok(
+  position('blocked_either' in substr(pg_get_functiondef('public.follow(uuid)'::regprocedure),
+             position('pair:' in pg_get_functiondef('public.follow(uuid)'::regprocedure)))) > 0,
+  'follow looks for a block again after taking the pair''s lock');
+
+-- ---------------------------------------------------------------- signed out
 
 select tests.act_anon();
 select throws_ok($$ select public.follow_target('AAAAAAAAAAAAAAAAAAAAAA') $$, '42501', null, 'signed out, no link opens');
 select throws_ok($$ select public.my_people() $$, '42501', null, 'signed out, no people');
+select is(
+  (select count(*)::int from unnest(array[
+      'public.follow_target(text)', 'public.follow(uuid)', 'public.withdraw_request(uuid)', 'public.answer_request(uuid, boolean)',
+      'public.unfollow(uuid)', 'public.remove_follower(uuid)', 'public.block(uuid)', 'public.unblock(uuid)',
+      'public.my_people()', 'public.my_blocked()', 'public.renew_follow_link()'
+    ]) f where has_function_privilege('anon', f::regprocedure, 'execute')),
+  0, 'signed out, none of the follow functions can be executed');
 
 select * from finish();
 rollback;

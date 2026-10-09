@@ -10,7 +10,7 @@
 -- table.
 
 begin;
-select plan(32);
+select plan(43);
 
 create schema if not exists tests;
 
@@ -141,9 +141,31 @@ select is_empty(
 select throws_ok($$ select 1 from public.follows $$, '42501', null, 'members cannot read follows directly');
 select throws_ok($$ select 1 from public.blocks $$, '42501', null, 'members cannot read blocks directly');
 select throws_ok($$ select 1 from public.follow_link_views $$, '42501', null, 'members cannot read link views directly');
+select throws_ok(format($$ insert into public.follows (follower_id, followee_id, accepted_at) values (%L, %L, now()) $$,
+  (select id from ids where name = 'ben'), (select id from ids where name = 'ada')),
+  '42501', null, 'members cannot write follows directly (no following without asking)');
+select throws_ok(format($$ insert into public.blocks (blocker_id, blocked_id) values (%L, %L) $$,
+  (select id from ids where name = 'ben'), (select id from ids where name = 'ada')),
+  '42501', null, 'nor blocks');
+select throws_ok(format($$ insert into public.follow_link_views (visitor_id, member_id) values (%L, %L) $$,
+  (select id from ids where name = 'ben'), (select id from ids where name = 'ada')),
+  '42501', null, 'nor link views (no opening a private card without her link)');
+select throws_ok(format($$ update public.social_settings set private = false where member_id = %L $$, (select id from ids where name = 'ada')),
+  '42501', null, 'nor another member''s settings');
+select throws_ok(format($$ update public.social_settings set private = false where member_id = %L $$, (select id from ids where name = 'ben')),
+  '42501', null, 'nor his own: the settings change through their functions');
+select throws_ok($$ delete from public.follows $$, '42501', null, 'nor delete follows');
+select tests.act_as((select id from ids where name = 'ada'));
+select is(
+  (select count(*)::int from public.social_settings where member_id = (select id from ids where name = 'ada')), 1,
+  'but she reads her own settings');
 
 select tests.act_anon();
 select throws_ok($$ select public.my_social() $$, '42501', null, 'signed out, there are no settings to ask for');
+select throws_ok($$ select 1 from public.follows $$, '42501', null, 'signed out, follows are closed');
+select throws_ok($$ select 1 from public.blocks $$, '42501', null, 'blocks');
+select throws_ok($$ select 1 from public.follow_link_views $$, '42501', null, 'link views');
+select throws_ok($$ select 1 from public.social_settings $$, '42501', null, 'and settings');
 reset role;
 
 -- --------------------------------------------- going public accepts requests
