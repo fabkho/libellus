@@ -178,14 +178,13 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
     <div class="flex flex-col gap-md px-screen pt-ms">
       <UiSegmented v-model="segment" :options="options" :label="t('people.title')" testid="people.segment" />
 
-      <div v-if="loadFailed" class="px-lg pt-xl text-center" data-testid="people.loadError">
-        <p class="text-subhead text-ink-muted">{{ t('people.loadError') }}</p>
-        <UiButton tone="secondary" size="md" class="mt-md" data-testid="people.retry" @click="social.loadPeople(true)">
+      <FriendsNote v-if="loadFailed" :text="t('people.loadError')" data-testid="people.loadError">
+        <UiButton tone="secondary" size="md" data-testid="people.retry" @click="social.loadPeople(true)">
           {{ t('people.retry') }}
         </UiButton>
-      </div>
+      </FriendsNote>
 
-      <p v-else-if="offlineEmpty" class="px-lg pt-xl text-center text-subhead text-ink-muted" data-testid="people.offline">{{ t('people.offline') }}</p>
+      <FriendsNote v-else-if="offlineEmpty" :text="t('people.offline')" data-testid="people.offline" />
 
       <template v-else-if="!loading">
         <!-- Following -->
@@ -195,7 +194,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
               <FriendsPersonRow :member="member" @more="openSheet(member, { following: true, follower: followerIds.has(member.id) })" />
             </li>
           </UiListMotion>
-          <p v-else class="py-lg text-center text-subhead text-ink-muted" data-testid="people.empty">{{ t('people.emptyFollowing') }}</p>
+          <FriendsNote v-else :text="t('people.emptyFollowing')" data-testid="people.empty" />
         </template>
 
         <!-- Followers -->
@@ -212,7 +211,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
               />
             </li>
           </UiListMotion>
-          <p v-else class="py-lg text-center text-subhead text-ink-muted" data-testid="people.empty">{{ t('people.emptyFollowers') }}</p>
+          <FriendsNote v-else :text="t('people.emptyFollowers')" data-testid="people.empty" />
         </template>
 
         <!-- Requests -->

@@ -172,15 +172,12 @@ function back() {
     <p class="sr-only" role="status" data-testid="member.status">{{ said }}</p>
 
     <!-- Nobody there: a dead link, or someone who blocked her. Nothing says why. -->
-    <div v-if="missing" class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="member.missing">
-      <h1 class="book-title text-callout">{{ t('follow.missingTitle') }}</h1>
-    </div>
+    <FriendsNote v-if="missing" heading :title="t('follow.missingTitle')" data-testid="member.missing" />
 
     <!-- Not read yet, and no copy: offline, or it failed. -->
-    <div v-else-if="view.error && !view.loaded" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="member.loadError">
-      <h1 class="text-subhead font-normal text-ink-muted">{{ view.error === 'offline' ? t('member.offline') : t('member.loadError') }}</h1>
+    <FriendsNote v-else-if="view.error && !view.loaded" heading :text="view.error === 'offline' ? t('member.offline') : t('member.loadError')" data-testid="member.loadError">
       <UiButton v-if="view.error !== 'offline'" tone="secondary" size="md" data-testid="member.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
-    </div>
+    </FriendsNote>
 
     <!-- The first answer on its way: her place is held, nothing moves when it comes. -->
     <section v-else-if="!view.loaded" class="relative flex flex-col items-center px-xl pt-sm" aria-busy="true" aria-hidden="true">

@@ -93,20 +93,16 @@ function back() {
     <UiAmbient :colors="figures.favourite?.book.coverColors ?? null" />
     <UiTopBar :back-label="t('member.back')" back-testid="memberYear.back" @back="back" />
 
-    <div v-if="missing" class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="memberYear.missing">
-      <h1 class="book-title text-callout">{{ t('follow.missingTitle') }}</h1>
-    </div>
+    <FriendsNote v-if="missing" heading :title="t('follow.missingTitle')" data-testid="memberYear.missing" />
 
     <!-- Her profile came, her figures did not (offline, or it failed): not a dead link. -->
-    <div v-else-if="view.recordError && !record" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="memberYear.recordError">
-      <h1 class="text-subhead font-normal text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</h1>
+    <FriendsNote v-else-if="view.recordError && !record" heading :text="view.recordError === 'offline' ? t('member.offline') : t('member.loadError')" data-testid="memberYear.recordError">
       <UiButton v-if="view.recordError !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
-    </div>
+    </FriendsNote>
 
-    <div v-else-if="view.error && !view.loaded" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="memberYear.loadError">
-      <h1 class="text-subhead font-normal text-ink-muted">{{ view.error === 'offline' ? t('member.offline') : t('member.loadError') }}</h1>
+    <FriendsNote v-else-if="view.error && !view.loaded" heading :text="view.error === 'offline' ? t('member.offline') : t('member.loadError')" data-testid="memberYear.loadError">
       <UiButton v-if="view.error !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
-    </div>
+    </FriendsNote>
 
     <template v-else>
       <section class="relative flex flex-col items-center px-xl pt-md text-center">
