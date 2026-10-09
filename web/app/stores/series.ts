@@ -106,9 +106,8 @@ export const useSeriesStore = defineStore('series', () => {
     }))
   }
 
-  /** The series being muted or unmuted, and why the last one was refused. */
+  /** The series being muted or unmuted: one at a time. */
   const muting = ref<string | null>(null)
-  const muteError = ref<EnrichErrorCode | null>(null)
 
   /**
    * Mutes (or unmutes) a whole series. Online only: nothing is queued, and the device's copy
@@ -118,14 +117,10 @@ export const useSeriesStore = defineStore('series', () => {
     const repo = series()
     if (!repo || muting.value) return null
     muting.value = seriesId
-    muteError.value = null
     const member = session.member?.id
     try {
       const result = on ? await repo.mute(seriesId) : await repo.unmute(seriesId)
-      if (result.error) {
-        muteError.value = result.error
-        return result.error
-      }
+      if (result.error) return result.error
       if (member !== session.member?.id) return null
       // The row moves from one list to the other at once; the lists are then asked again for what the server says.
       copy.update((c) => moveMuted({ started: c.started ?? [], muted: c.muted ?? [] }, seriesId, on))
@@ -179,7 +174,6 @@ export const useSeriesStore = defineStore('series', () => {
 
   function reset() {
     muting.value = null
-    muteError.value = null
     sheet.value = null
     editing.value = null
     busy.value = false
@@ -191,5 +185,5 @@ export const useSeriesStore = defineStore('series', () => {
     (now, before) => now !== before && reset(),
   )
 
-  return { ofBook, loadForBook, info, loadSeries, started, muted, loadStarted, muting, muteError, mute, unmute, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
+  return { ofBook, loadForBook, info, loadSeries, started, muted, loadStarted, muting, mute, unmute, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
 })

@@ -92,6 +92,8 @@ Books of the author whose work no source knows are listed under `other`.
 | `forBook(bookId, language?)` | `book_series_info(p_book, p_language)` | `{ overridden, series: BookSeriesPlace[] }` |
 | `series(seriesId, language?)` | `series_works(p_series, p_language)` | one series in order (the series sheet) |
 | `started(limit?, language?)` | `started_series(p_limit, p_language)` | Home's row: the series she has started and not finished, latest activity first: `[{ series, finished, count?, activeOn?, next: WorkCard }]` (`next_in_series` stays in the database for installed apps still on the older shape) |
+| `muted(limit?, language?)` | `muted_series_list(p_limit, p_language)` | the started series she muted, the same items (not in `started`) |
+| `mute(seriesId)` / `unmute(seriesId)` | `mute_series(p_series)` / `unmute_series(p_series)` | `true`; the whole series, idempotent, `series_not_found` for one she cannot see; online only, not queued |
 | `set(entryId, { name, position })` / `set(entryId, { seriesId, position })` | `set_entry_series` | her correction, then `forBook` |
 | `clear(entryId)` | `set_entry_series(…, null, null, null)` | "in no series" |
 | `reset(entryId)` | `reset_entry_series(p_entry)` | back to the computed series |
