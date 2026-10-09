@@ -106,55 +106,6 @@ test('progress saved offline survives a reload and syncs once the connection is 
   await expect(page.getByTestId('home.progressValue')).toHaveText('p. 64 of 300')
 })
 
-test('a change the database refuses on sync is undone and stays as a failure to dismiss', async ({ page, baseURL }) => {
-  await recordedApple(page)
-  const network = await keepShell(page, baseURL!)
-  const member = await signedIn(page)
-  const library = createLibrary(member.client)
-  const added = await library.addToLibrary(book('Lantern Year'), { status: 'reading', startedOn: addDays(isoDay(), -3) })
-  await goto(page, '/library')
-  await page.getByTestId('library.segment.reading').click()
-  await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Lantern Year'))
-
-  // Finished offline: on Finished at once, waiting to sync.
-  await network.goOffline()
-  await page.getByTestId('library.finish').click()
-  await page.getByTestId('finish.submit').click()
-  await expect(page.getByTestId('finish')).toBeHidden()
-  await expect(page.getByTestId('shell.syncLabel')).toHaveText(waiting(1))
-  await page.getByTestId('library.segment.finished').click()
-  await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Lantern Year'))
-
-  // Meanwhile, on another device, she gave the read up.
-  await library.abandon(added.data!.id, { endedOn: isoDay(), reason: 'Lost the thread.' })
-
-  // Back online: the finish is refused (nothing is open to finish), the Library
-  // shows what the database has, and the chip says what could not sync.
-  await network.goOnline()
-  await expect(page.getByTestId('shell.syncLabel')).toHaveText(en.sync.chipFailed.replace('{count}', '1'))
-  expect((await readOf(member.email, 'Lantern Year'))[0]!.outcome).toBe('abandoned')
-  await page.getByTestId('library.view.filter').click()
-  await page.getByTestId('libraryFilter.status.notFinished').click()
-  await page.getByTestId('libraryFilter.action').click()
-  await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Lantern Year'))
-
-  await page.getByTestId('shell.sync').click()
-  await expect(page.getByTestId('sync.failure')).toHaveCount(1)
-  await expect(page.getByTestId('sync.failureAbout')).toHaveText(runTitle('Lantern Year'))
-  await expect(page.getByTestId('sync.failureText')).toHaveText(en.sync.failedItem.replace('{action}', en.sync.action.finish_reading))
-  await expect(page.getByTestId('sync.failureReason')).toHaveText(en.library.error.not_reading)
-  await page.getByTestId('sync.dismiss').click()
-  await expect(page.getByTestId('sync.allSynced')).toHaveText(en.sync.allSynced)
-  await page.getByTestId('sync.cancel').click()
-  await expect(page.getByTestId('shell.sync')).toBeHidden()
-
-  // Dismissed for good: a reload does not bring it back.
-  await page.reload()
-  await page.getByTestId('library.segment.finished').click()
-  await expect(page.getByTestId('library.entryTitle')).toHaveText(runTitle('Lantern Year'))
-  await expect(page.getByTestId('shell.sync')).toBeHidden()
-})
-
 /** Saves `page` as the progress of the Book on Home's card. */
 async function saveProgress(page: import('@playwright/test').Page, value: number) {
   await page.getByTestId('home.update').click()

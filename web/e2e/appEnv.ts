@@ -15,9 +15,9 @@ export function appEnv(): Record<string, string> {
     LIBELLUS_E2E: '1',
     NUXT_PUBLIC_SUPABASE_URL: stack.url,
     NUXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
-    // Your shelf (#23) is one member's: the flows' owner, made with this id (e2e/shelf.spec.ts).
+    // Your shelf (#23) is one member's: the flows' owner, made with this id (tests/shelf.test.ts).
     NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
-    // The library file Regal shows, in a build with it (LIBELLUS_REGAL=1): the address e2e/shelf.spec.ts answers.
+    // The library file Regal shows, in a build with it (LIBELLUS_REGAL=1): the address SHELF_LIBRARY_SRC names (e2e/shelfOwner.ts).
     NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
   }
 }
