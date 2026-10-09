@@ -73,9 +73,11 @@ function watchEnd() {
 }
 onMounted(watchEnd)
 onBeforeUnmount(() => observer?.disconnect())
-// A page of rows that still leaves the mark in view must ask for the next one: observe it afresh.
+// A page of rows that still leaves the mark in view must ask for the next one: observe it afresh. So must
+// the connection coming back and the refresh it starts ending: `loadMore` does nothing offline or while that
+// refresh runs, and an observer that has already reported the mark in view does not report it again.
 watch(
-  () => [feed.entries.length, feed.ended, feed.loadingMore] as const,
+  () => [feed.entries.length, feed.ended, feed.loadingMore, feed.loading, online.value] as const,
   async () => {
     await nextTick()
     watchEnd()
