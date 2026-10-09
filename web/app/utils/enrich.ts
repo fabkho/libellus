@@ -1,6 +1,7 @@
 import type { AuthorHero, AuthorPage, BookAuthor, LifeDate } from '~/data/enrich/authors'
 import type { BookSeriesPlace, StartedSeries } from '~/data/enrich/series'
 import type { WorkCard } from '~/data/enrich/works'
+import { coverFallbacks, coverSrc, type CoverSize } from './cover'
 
 /**
  * What the author pages, the series line and Home's "Next in your series"
@@ -62,6 +63,33 @@ export function workBookKey(work: Pick<WorkCard, 'entry' | 'edition'>): string |
 /** A work's cover: the one the page chose (hers, else in her language), else its edition's. */
 export function workCover(work: Pick<WorkCard, 'coverUrl' | 'edition'>): string | null {
   return work.coverUrl ?? work.edition?.cover_url ?? null
+}
+
+/**
+ * The images behind a work's cover at `size`: the one it asks for and what it
+ * tries when that fails (OpenLibrary's cover of its edition by ISBN). The work
+ * card carries no thumbhash or colours of its own (only her Book has them,
+ * `WorkRow`), so these are all a row can do to be ready.
+ */
+export function workCoverImages(work: Pick<WorkCard, 'coverUrl' | 'edition'>, size: CoverSize): { src: string | null; fallbacks: string[] } {
+  const url = workCover(work)
+  return { src: coverSrc(url, size), fallbacks: coverFallbacks({ coverUrl: url, isbn13: work.edition?.isbn13 ?? null }, size) }
+}
+
+/**
+ * The covers of a section's works to ask for before their rows are on screen,
+ * once the page that names them has arrived: each work's own image at `size`
+ * (the one its row will ask for, so the browser has it already), each once,
+ * the first `limit` of them. Not the fallbacks: only a cover that failed needs one.
+ */
+export function coversToPrefetch(works: readonly Pick<WorkCard, 'coverUrl' | 'edition'>[], size: CoverSize, limit: number): string[] {
+  const urls: string[] = []
+  for (const work of works) {
+    if (urls.length >= limit) break
+    const { src } = workCoverImages(work, size)
+    if (src && !urls.includes(src)) urls.push(src)
+  }
+  return urls
 }
 
 /** How many series Home's "Next in your series" lists; the rest are in its sheet. */

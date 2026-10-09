@@ -202,3 +202,23 @@ load or comes back blank.**
   edition), the edition picker's rows (keyed by index), Own edition's found step, and its cover
   preview (the link itself).
 - Before any image has loaded nothing is held: a new `src` shows as before.
+
+## Covers in "More from the author" (A9)
+
+Owner: one author's row loaded whole, another's showed two covers about a second late. Cause: the
+work cards from `author_page` (`work_card`) carry a cover URL and the edition's ISBN, **no
+thumbhash or colours**, and `AuthorWorkRow` passed neither them nor fallbacks; its rows were lazy
+images in a section that opens with a reveal, so a cover was asked for only when its row was in
+view, and an OpenLibrary one answers in ~575 ms (p90 1.1 s) on top of the author page's own round trip.
+
+- The rows get what the data has: OpenLibrary's cover of the edition by ISBN as a fallback
+  (`workCoverImages`, `coverFallbacks`); a work she has (her Library entry on the device, and that
+  Book's cover is the very image the card names) sits on her Book's thumbhash and colours, any other
+  on the quiet fill every cover without them has. Adding thumbhash/colours to `work_card` would
+  only cover works she owns, which the device already knows, so no migration.
+- The section asks for its covers as soon as her page arrives (`coversToPrefetch` →
+  `new Image()`, at most `MORE_FROM_AUTHOR` = 3, each once, at the row's size), and its rows are
+  `eager`.
+- The source ranking is unchanged: the card's cover is what the page chose (hers, else in her
+  language). There is no data here that Apple has covers for the same works; looking each one up by
+  ISBN on Apple (36 ms against OpenLibrary's 575 ms) would be a follow-up, measured first.
