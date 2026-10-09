@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { createFeed, feedDays, FEED_PAGE, readFeed, saveFeed, type Feed, type FeedEntry } from '~/data/feed'
 import type { SocialErrorCode } from '~/data/socialShapes'
 import { isoDay } from '~/utils/dates'
-import { appendPage, copyTakenAt, feedEmptyState, mergeFirstPage, withoutMember } from '~/utils/feedView'
+import { appendPage, copyTakenAt, feedEmptyState, mergeFirstPage, withoutDoubledReviews, withoutMember } from '~/utils/feedView'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
 
@@ -50,7 +50,7 @@ export const useFeedStore = defineStore('feed', () => {
   /** `my_people()` is on its way: no empty state yet, so the wrong one never shows for a moment. */
   const asking = ref(false)
 
-  const days = computed(() => feedDays(entries.value, (at) => isoDay(new Date(at))))
+  const days = computed(() => feedDays(withoutDoubledReviews(entries.value), (at) => isoDay(new Date(at))))
   /** Offline with entries on screen: when they are from (the offline line). */
   const offlineSince = computed(() => (!online.value && entries.value.length ? takenAt.value : null))
   /** Which empty state to show; null while there are entries or nothing has answered yet. */

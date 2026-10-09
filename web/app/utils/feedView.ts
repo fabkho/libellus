@@ -73,6 +73,18 @@ export function mergeFirstPage(current: readonly FeedEntry[], fresh: readonly Fe
   return [...fresh, ...current.filter((entry) => !seen.has(entry.id) && newer(last, entry) && (!following || following.has(entry.member.id)))]
 }
 
+/**
+ * A review is written after the finish, and the database keeps both rows: `finished`, then `reviewed`.
+ * A finished row carries the review (read live), so when a member's `finished` row for a Book is among
+ * the entries, her `reviewed` row for the same Book is left out: the reader sees one fact once. A `reviewed`
+ * row whose finish is not loaded (an older page, or outside the window) stays. Done before the rows and
+ * batches are built, so a batch of reviews counts only the ones that are left.
+ */
+export function withoutDoubledReviews(entries: readonly FeedEntry[]): FeedEntry[] {
+  const finished = new Set(entries.filter((entry) => entry.kind === 'finished').map((entry) => `${entry.member.id}\u0000${entry.book.id}`))
+  return entries.filter((entry) => entry.kind !== 'reviewed' || !finished.has(`${entry.member.id}\u0000${entry.book.id}`))
+}
+
 /** The entries without any by this member (after she is unfollowed, blocked or removed as a follower). */
 export function withoutMember(entries: readonly FeedEntry[], member: string): FeedEntry[] {
   return entries.filter((entry) => entry.member.id !== member)
