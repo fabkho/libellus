@@ -11,14 +11,13 @@
 // their dash, so the rows stand at their height; the covers then slide in as
 // on opening (docs/MOTION.md, Loading).
 import type { StatsRead } from '~/data/stats'
-import { useBookStore } from '~/stores/book'
+import { linkOf } from '~/utils/memberProfile'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import { coverDelay, rowDelay, SLIDE } from '~/utils/monthIntro'
 
-const props = withDefaults(defineProps<{ months: { month: number, reads: StatsRead[] }[], loading?: boolean, goneBy?: number }>(), { loading: false, goneBy: 12 })
+const props = withDefaults(defineProps<{ months: { month: number, reads: StatsRead[] }[], loading?: boolean, goneBy?: number, foreign?: boolean }>(), { loading: false, goneBy: 12, foreign: false })
 
 const { t } = useI18n()
-const books = useBookStore()
 const { count, monthShort, monthLong } = useFigures()
 
 const root = ref<HTMLElement | null>(null)
@@ -97,7 +96,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <span v-if="loading && m.month <= goneBy" class="flex flex-1" aria-hidden="true"><span class="cover-skeleton skeleton wave" :style="{ '--wave': (m.month - 1) * 0.06 }" /></span>
       <span v-else-if="m.reads.length" class="relative flex min-w-0 flex-1 flex-wrap gap-xs" data-intro-row>
         <span v-for="read in m.reads" :key="read.sessionId" class="block" data-intro-cover>
-          <UiPressLink :to="`/book/${read.book.id}`" :aria-label="read.book.title" data-testid="yearInReview.read" @press="books.prefetch(read.book.id)">
+          <FriendsMemberBookLink :book="linkOf(read.book, foreign)" :aria-label="read.book.title" data-testid="yearInReview.read">
             <UiCover
               :title="read.book.title"
               :authors="read.book.authors"
@@ -106,7 +105,7 @@ onBeforeUnmount(() => observer?.disconnect())
               :colors="read.book.coverColors"
               size="sm"
             />
-          </UiPressLink>
+          </FriendsMemberBookLink>
         </span>
       </span>
       <span v-else class="flex-1 text-ink-ghost" aria-hidden="true">—</span>
