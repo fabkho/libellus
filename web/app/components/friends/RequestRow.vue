@@ -75,17 +75,19 @@ watch(
         >
           {{ compact ? t('circle.accept') : t('people.accept') }}
         </UiButton>
-        <button
+        <!-- Home's ✕: a plain pill button, so it has the app's pressed state and its 44 px target. -->
+        <UiButton
           v-if="compact"
-          type="button"
+          tone="plain"
+          size="sm"
+          class="-mr-xs"
           :aria-label="t('circle.declineLabel', { name })"
           :disabled="busy"
-          class="-mr-xs flex size-(--size-touch) shrink-0 items-center justify-center rounded-pill text-ink-muted disabled:opacity-50"
           data-testid="home.circleDecline"
           @click="$emit('decline')"
         >
           <UiIcon name="close" :size="18" />
-        </button>
+        </UiButton>
         <UiButton v-else tone="plain" size="sm" :disabled="busy" :aria-label="t('people.declineLabel', { name })" data-testid="people.decline" @click="$emit('decline')">
           {{ t('people.decline') }}
         </UiButton>

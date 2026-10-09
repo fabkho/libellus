@@ -65,10 +65,10 @@ async function unfold() {
       data-testid="home.circleFeature.cover"
       @press="books.prefetch(book.id)"
     >
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
     </UiPressLink>
     <span v-else class="relative shrink-0">
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
     </span>
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
