@@ -12,6 +12,7 @@ import {
   type SocialSection,
 } from '~/data/social'
 import { useSessionStore } from '~/stores/session'
+import { createRereads } from '~/utils/rereads'
 
 /**
  * Following, her side (social v1, data/social.ts): her own settings (private or public, what her
@@ -52,6 +53,9 @@ export const useSocialStore = defineStore('social', () => {
 
   /** Follow requests waiting for her answer (the People row's value, the lamp dot on her avatar). */
   const requests = computed(() => mine.value?.requests ?? 0)
+
+  /** What a write that got no answer may have changed on the server: read again when back online. */
+  const rereads = createRereads<'mine' | 'people' | 'blocked'>()
 
   let loadedFor: string | null = null
   let loadingMine: Promise<void> | null = null
@@ -112,7 +116,9 @@ export const useSocialStore = defineStore('social', () => {
     if (!r || !member || busy.value) return false
     busy.value = true
     errors.value = { ...errors.value, [action]: undefined }
+    const sent = isOnline()
     const result = await run(r).finally(() => (busy.value = false))
+    rereads.note(sent, result.error, action === 'privacy' ? ['mine', 'people'] : ['mine'])
     const kept = take(member, action, result, (data) => {
       mine.value = data
       loadedFor = member
@@ -133,7 +139,9 @@ export const useSocialStore = defineStore('social', () => {
     if (!r || !member || busy.value) return false
     busy.value = true
     errors.value = { ...errors.value, unblock: undefined }
+    const sent = isOnline()
     const result = await r.unblock(id).finally(() => (busy.value = false))
+    rereads.note(sent, result.error, ['blocked', 'people'])
     if (!take(member, 'unblock', result, () => undefined)) return false
     await loadBlocked(true)
     people.value = null
@@ -151,8 +159,10 @@ export const useSocialStore = defineStore('social', () => {
     const member = session.member?.id
     if (!r || !member) return { data: null, error: 'not_signed_in' }
     errors.value = { ...errors.value, follow: undefined }
+    const sent = isOnline()
     const result = await run(r)
     if (member !== session.member?.id) return result
+    rereads.note(sent, result.error, refresh)
     if (result.error) {
       errors.value = { ...errors.value, follow: result.error }
       return result
@@ -188,6 +198,7 @@ export const useSocialStore = defineStore('social', () => {
     errors.value = {}
     busy.value = false
     loadedFor = null
+    rereads.clear()
   }
 
   watch(
@@ -195,10 +206,13 @@ export const useSocialStore = defineStore('social', () => {
     (now, before) => now !== before && reset(),
   )
 
-  // Back online with her settings never read: read them now.
+  // Back online with her settings never read: read them now. So are the reads a write that got no
+  // answer may have changed (the server may have applied it before the line died).
   const online = useOnline()
   watch(online, (now) => {
-    if (now && errors.value.load === 'offline') void load()
+    if (!now) return
+    if (errors.value.load === 'offline') void load()
+    for (const target of rereads.take()) void (target === 'mine' ? load(true) : target === 'people' ? loadPeople(true) : loadBlocked(true))
   })
 
   return {

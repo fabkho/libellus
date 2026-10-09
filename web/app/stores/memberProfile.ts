@@ -5,6 +5,7 @@ import type { StatsYear } from '~/data/stats'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
 import { yearIn } from '~/utils/memberProfile'
+import { createRereads } from '~/utils/rereads'
 
 /** Her whole Want to read, newest first (*See all*). */
 export type MemberWant = { book: SocialBook; addedOn: string }[]
@@ -63,6 +64,9 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     stats ??= createMemberStats(backend, { online: isOnline })
     return stats
   }
+
+  /** Members whose follow or withdrawal got no answer: her profile is read again when back online. */
+  const rereads = createRereads<string>()
 
   const views = ref<Record<string, MemberView>>({})
   /** Bumped when the member changes: an answer that began before it is thrown away. */
@@ -140,8 +144,10 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     if (viewOf(id).busy) return false
     const generationThen = generation
     patch(id, { busy: true, failed: null })
+    const sent = isOnline()
     const result = await run()
     if (generationThen !== generation) return false
+    rereads.note(sent, result.error, [id])
     if (result.error) {
       patch(id, { busy: false, failed: result.error })
       return false
@@ -154,6 +160,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
   function forget() {
     generation++
     views.value = {}
+    rereads.clear()
   }
 
   watch(
@@ -161,10 +168,11 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     (now, before) => now !== before && forget(),
   )
 
-  // Back online with a profile that could not be read: read it again.
+  // Back online with a profile that could not be read, or whose follow got no answer: read it again.
   const online = useOnline()
   watch(online, (now) => {
     if (!now) return
+    for (const id of rereads.take()) void load(id)
     for (const [id, view] of Object.entries(views.value)) if (view.error === 'offline' && !view.loaded) void load(id)
   })
 
