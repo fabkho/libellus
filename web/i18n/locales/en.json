@@ -70,7 +70,8 @@
   },
   "shell": {
     "tabsLabel": "Main navigation",
-    "avatarLabel": "Profile"
+    "avatarLabel": "Profile",
+    "avatarRequest": "Your profile, a follow request is waiting"
   },
   "sync": {
     "chip": "Waiting to sync ({count})",
@@ -99,7 +100,8 @@
       "reorder_collection": "New order",
       "rename_collection": "Renamed",
       "delete_collection": "Deleted",
-      "save_reader_highlight": "Highlight"
+      "save_reader_highlight": "Highlight",
+      "set_entry_hidden": "Hide from followers"
     }
   },
   "account": {
@@ -122,7 +124,7 @@
     "rowNone": "Add",
     "avatarLabel": "Profile photo",
     "title": "Profile photo",
-    "private": "Only you see it. It's saved small, without where or when it was taken.",
+    "private": "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken.",
     "choose": "Choose a photo",
     "replace": "Choose another",
     "remove": "Remove photo",
@@ -233,7 +235,7 @@
     },
     "deleteAccount": {
       "title": "Delete your account?",
-      "text": "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and photo, and your sign-in. It can't be undone.",
+      "text": "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and photo, who you follow and who follows you, and your sign-in. It can't be undone.",
       "unsynced": "The change that has not synced yet is lost too. | The {count} changes that have not synced yet are lost too.",
       "action": "Delete account",
       "failed": "Your account could not be deleted, and nothing was removed. Try again."
@@ -682,7 +684,7 @@
       "pageCount": "Pages"
     },
     "optional": "Optional",
-    "private": "Only you can see this book. It stays out of the shared catalogue.",
+    "private": "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu.",
     "submit": "Add to Library",
     "busy": "Adding…",
     "invalid": {
@@ -727,7 +729,7 @@
     "ownHint": "Same title and author, your copy's details. The cover is generated unless you link an image.",
     "backToIsbn": "Back to the ISBN",
     "coverPlaceholder": "https://…",
-    "private": "Only you can see your edition. It stays out of the shared catalogue.",
+    "private": "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu.",
     "field": {
       "format": "Format",
       "isbn": "ISBN",
@@ -893,7 +895,9 @@
     "addEbook": "Add ebook",
     "replaceEbook": "Replace ebook file",
     "unlinkEbook": "Unlink ebook",
-    "share": "Share"
+    "share": "Share",
+    "hide": "Hide from followers",
+    "hideHint": "Hidden: not in your circle's feed, not on your profile, not in the figures they see."
   },
   "removeEntry": {
     "title": "Remove “{title}” from your Library?",
@@ -1394,7 +1398,7 @@
     "rowOn": "On",
     "rowOff": "Off",
     "switch": "Reading page",
-    "about": "A page of what you read, for friends: anyone with its link can open it, without signing in. Nobody finds it without the link.",
+    "about": "A page of what you read, for friends: anyone with its link can open it, without signing in. Nobody finds it without the link. Your followers in the app see what you choose under Friends → Privacy.",
     "never": "Never on it: your email address, notes, highlights, or a review you didn’t share.",
     "link": "Your link",
     "share": "Share link",
@@ -1618,5 +1622,135 @@
       "offline": "You’re offline. Try again once you’re back.",
       "unknown": "The series couldn’t be saved. Try again."
     }
+  },
+  "circle": {
+    "title": "Your circle",
+    "more": "Show more",
+    "asked": "{name} asked to follow you",
+    "accept": "Accept",
+    "decline": "Decline",
+    "declineLabel": "Decline {name}"
+  },
+  "feed": {
+    "title": "Your circle",
+    "peopleLabel": "People",
+    "started": "started",
+    "startedAgain": "started again",
+    "finished": "finished",
+    "abandoned": "didn't finish",
+    "want": "added to Want to read",
+    "reviewed": "reviewed",
+    "batchFinished": "finished {count} books",
+    "batchStarted": "started {count} books",
+    "batchAbandoned": "didn't finish {count} books",
+    "batchWant": "added {count} to Want to read",
+    "batchTitle": "{name} · {count}",
+    "more": "More",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "emptyTitle": "Reading is better with a friend or two.",
+    "empty": "Send your follow link to the people you'd like here. What they start and finish will show up on this page.",
+    "emptyShare": "Share your follow link",
+    "quietTitle": "Quiet for now.",
+    "quiet": "When the people you follow start or finish a book, it shows here.",
+    "offline": "Offline · as of {time}",
+    "loadError": "Your circle couldn't be loaded.",
+    "retry": "Try again"
+  },
+  "people": {
+    "title": "People",
+    "following": "Following",
+    "followers": "Followers",
+    "requests": "Requests",
+    "askedOn": "asked {when}",
+    "followsYouNow": "follows you now",
+    "accept": "Accept",
+    "decline": "Decline",
+    "followBack": "Follow back",
+    "moreLabel": "More for {name}",
+    "emptyFollowing": "You don't follow anyone yet.",
+    "emptyFollowers": "Nobody follows you yet.",
+    "unfollow": "Unfollow",
+    "remove": "Remove as follower",
+    "block": "Block",
+    "sheetNote": "{name} isn't told. Block also stops {name} following you again or opening your link.",
+    "blockTitle": "Block {name}?",
+    "blockText": "You stop following each other, and neither of you sees the other's reading.",
+    "blockConfirm": "Block"
+  },
+  "member": {
+    "back": "Back",
+    "moreLabel": "More",
+    "since": "Reading here since {month}",
+    "library": "{read} read · {reading} reading · {want} want",
+    "follow": "Follow",
+    "ask": "Ask to follow",
+    "requested": "Requested",
+    "requestedHint": "Tap to withdraw.",
+    "privateTitle": "Private account",
+    "privateText": "Ask to follow to see what {name} reads. {name} decides; nobody else is told.",
+    "reading": "Currently reading",
+    "want": "Want to read",
+    "wantAll": "See all",
+    "finished": "Recently finished",
+    "years": "Years in review",
+    "yearEyebrow": "{name} · Year in review",
+    "someone": "A reader"
+  },
+  "follow": {
+    "loading": "Opening…",
+    "missingTitle": "This link isn't here any more.",
+    "missing": "Ask for a new one."
+  },
+  "friends": {
+    "section": "Friends",
+    "people": "People",
+    "peopleRequests": "No requests | 1 request | {count} requests",
+    "followLink": "Your follow link",
+    "privacy": "Privacy",
+    "private": "Private",
+    "public": "Public"
+  },
+  "privacy": {
+    "title": "Privacy",
+    "done": "Done",
+    "private": "Private account",
+    "privateHint": "You approve each follower. Turn it off and any member with your link can follow you and see what's switched on below.",
+    "sections": "What followers see",
+    "section": {
+      "reading": "Currently reading",
+      "want": "Want to read",
+      "finished": "Finished",
+      "ratings": "Ratings",
+      "reviews": "Reviews",
+      "abandoned": "Did not finish",
+      "year": "Year in review and figures"
+    },
+    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book from its ⋯ menu.",
+    "blocked": "Blocked",
+    "blockedNone": "None",
+    "goPublicTitle": "Make your account public?",
+    "goPublicText": "Any member with your link can follow you without asking. People waiting for an answer become followers now.",
+    "goPublicConfirm": "Make public",
+    "error": "That didn't save. Try again."
+  },
+  "followLink": {
+    "title": "Your follow link",
+    "textPrivate": "Send it to friends in Libellus. Your account is private, so they ask and you decide.",
+    "textPublic": "Send it to friends in Libellus. Your account is public, so they can follow you straight away.",
+    "share": "Share link",
+    "copy": "Copy",
+    "copied": "Copied.",
+    "renew": "New link",
+    "renewHint": "A new link stops the old one at once. People who already follow you stay.",
+    "renewTitle": "Make a new link?",
+    "renewText": "The link you sent before stops working.",
+    "renewConfirm": "New link",
+    "shareText": "Follow what I read on Libellus"
+  },
+  "blocked": {
+    "title": "Blocked",
+    "unblock": "Unblock",
+    "empty": "You haven't blocked anyone."
   }
 }
