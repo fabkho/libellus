@@ -530,7 +530,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "batchStarted": "started {count} books",
     "batchAbandoned": "didn't finish {count} books",
     "batchWant": "added {count} to Want to read",
-    "batchTitle": "{name} · {count}",
+    "batchTitle": "{name} · {count} books",
     "more": "More",
     "today": "Today",
     "yesterday": "Yesterday",
@@ -568,13 +568,14 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "blockTitle": "Block {name}?",
     "blockText": "You stop following each other, and neither of you sees the other's reading.",
     "blockConfirm": "Block",
-    "offline": "You're offline. People show once you're back."
+    "offline": "You're offline. People show once you're back.",
+    "loadError": "People couldn't be loaded. Try again."
   },
   "member": {
     "back": "Back",
     "moreLabel": "More",
     "since": "Reading here since {month}",
-    "library": "{read} read · {reading} reading · {want} want",
+    "library": "{read} read · {reading} reading · {want} to read",
     "follow": "Follow",
     "ask": "Ask to follow",
     "requested": "Requested",
@@ -620,7 +621,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
       "abandoned": "Did not finish",
       "year": "Year in review and figures"
     },
-    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book from its ⋯ menu.",
+    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book in its options.",
     "blocked": "Blocked",
     "blockedNone": "None",
     "goPublicTitle": "Make your account public?",
@@ -650,8 +651,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "unblocked": "{name} unblocked.",
     "empty": "You haven't blocked anyone."
   },
-  "bookOptions": { "hide": "Hide from followers", "hideHint": "Hidden: not in your circle's feed, not on your profile, not in the figures they see." },
-  "sync": { "action": { "set_entry_hidden": "Hide from followers" } },
+  "bookOptions": { "hide": "Hide from followers", "hideHint": "Hidden from your followers: not in their feed, not on your profile, not in the figures they see." },
+  "sync": { "action": { "set_entry_hidden": "Visibility to followers" } },
   "shell": { "avatarRequest": "Your profile, a follow request is waiting" }
 }
 ```
@@ -663,8 +664,8 @@ Changed keys:
 | Key | New English |
 |---|---|
 | `photo.private` | "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken." |
-| `manual.private` | "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu." |
-| `ownEdition.private` | "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu." |
+| `manual.private` | "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options." |
+| `ownEdition.private` | "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options." |
 | `profile.deleteAccount.text` | "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and photo, who you follow and who follows you, and your sign-in. It can't be undone." |
 | `sharing.about` | its current text, plus one sentence: "Your followers in the app see what you choose under Friends → Privacy." |
 

@@ -101,7 +101,7 @@
       "rename_collection": "Renamed",
       "delete_collection": "Deleted",
       "save_reader_highlight": "Highlight",
-      "set_entry_hidden": "Hide from followers"
+      "set_entry_hidden": "Visibility to followers"
     }
   },
   "account": {
@@ -684,7 +684,7 @@
       "pageCount": "Pages"
     },
     "optional": "Optional",
-    "private": "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu.",
+    "private": "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options.",
     "submit": "Add to Library",
     "busy": "Adding…",
     "invalid": {
@@ -729,7 +729,7 @@
     "ownHint": "Same title and author, your copy's details. The cover is generated unless you link an image.",
     "backToIsbn": "Back to the ISBN",
     "coverPlaceholder": "https://…",
-    "private": "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu.",
+    "private": "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options.",
     "field": {
       "format": "Format",
       "isbn": "ISBN",
@@ -897,7 +897,7 @@
     "unlinkEbook": "Unlink ebook",
     "share": "Share",
     "hide": "Hide from followers",
-    "hideHint": "Hidden: not in your circle's feed, not on your profile, not in the figures they see."
+    "hideHint": "Hidden from your followers: not in their feed, not on your profile, not in the figures they see."
   },
   "removeEntry": {
     "title": "Remove “{title}” from your Library?",
@@ -1649,7 +1649,7 @@
     "batchAbandoned": "didn't finish {count} books",
     "batchWant": "added {count} to Want to read",
     "batchReviewed": "reviewed {count} books",
-    "batchTitle": "{name} · {count}",
+    "batchTitle": "{name} · {count} books",
     "more": "More",
     "today": "Today",
     "yesterday": "Yesterday",
@@ -1688,7 +1688,7 @@
     "blockText": "You stop following each other, and neither of you sees the other's reading.",
     "blockConfirm": "Block",
     "offline": "You're offline. People show once you're back.",
-    "loadError": "People didn't load. Check your connection and try again.",
+    "loadError": "People couldn't be loaded. Try again.",
     "retry": "Try again",
     "error": "That didn't work. Try again."
   },
@@ -1696,7 +1696,7 @@
     "back": "Back",
     "moreLabel": "More",
     "since": "Reading here since {month}",
-    "library": "{read} read · {reading} reading · {want} want",
+    "library": "{read} read · {reading} reading · {want} to read",
     "follow": "Follow",
     "ask": "Ask to follow",
     "requested": "Requested",
@@ -1745,7 +1745,7 @@
       "abandoned": "Did not finish",
       "year": "Year in review and figures"
     },
-    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book from its ⋯ menu.",
+    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book in its options.",
     "blocked": "Blocked",
     "blockedNone": "None",
     "goPublicTitle": "Make your account public?",
