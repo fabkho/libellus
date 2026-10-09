@@ -8,7 +8,8 @@
 //  - `state`    'asked' (waiting: Accept and Decline), 'accepted' (she said yes: "follows you now" and
 //               Follow back), 'following' (and she followed back: nothing more), 'requested' (she asked
 //               back: Requested). Default 'asked'; `compact` only knows 'asked';
-//  - `compact`  one line, "Ida asked to follow you", Accept and a ✕ Decline (no date, no Follow back);
+//  - `compact`  Home's: one raised, rounded row (the Shelf mock's), the avatar with the lamp dot, her name and
+//               "asked to follow you" under it in muted ink, Accept and a ✕ Decline (no date, no Follow back);
 //  - `offline`  no connection: the buttons give way to one disabled Offline button;
 //  - `busy`     a write on its way: the buttons wait.
 // Emits `accept`, `decline`, `followBack`. Test ids: `people.row`, `people.accept`, `people.decline`,
@@ -33,17 +34,21 @@ const id = (people: string, home: string) => (props.compact ? home : people)
 <template>
   <div
     class="flex items-center gap-ms"
-    :class="compact ? 'min-h-(--size-touch) py-xs' : 'min-h-(--size-row) py-xs'"
+    :class="compact ? 'min-h-(--size-touch) rounded-md bg-surface-raised px-ms py-xs edge-faint' : 'min-h-(--size-row) py-xs'"
     :data-testid="id('people.row', 'home.circleRequest')"
   >
-    <FriendsAvatar :card="request" />
+    <!-- Home's row: the lamp dot on the avatar's upper right edge, ringed in the raised colour. -->
+    <span v-if="compact" class="relative flex shrink-0">
+      <FriendsAvatar :card="request" />
+      <span class="request-dot pointer-events-none absolute rounded-pill bg-accent" aria-hidden="true" />
+    </span>
+    <FriendsAvatar v-else :card="request" />
 
-    <p v-if="compact" class="min-w-0 flex-1 text-subhead">
-      {{ t('circle.asked', { name }) }}
-    </p>
-    <div v-else class="flex min-w-0 flex-1 flex-col">
-      <span class="truncate text-body">{{ name }}</span>
-      <span class="truncate text-caption text-ink-muted">{{ state === 'asked' ? asked : t('people.followsYouNow') }}</span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="truncate" :class="compact ? 'text-subhead font-medium' : 'text-body'">{{ name }}</span>
+      <span class="truncate text-caption text-ink-muted">{{
+        compact ? t('circle.askedLine') : state === 'asked' ? asked : t('people.followsYouNow')
+      }}</span>
     </div>
 
     <template v-if="state === 'asked'">
@@ -57,7 +62,7 @@ const id = (people: string, home: string) => (props.compact ? home : people)
           type="button"
           :aria-label="t('circle.declineLabel', { name })"
           :disabled="busy"
-          class="-mr-sm flex size-(--size-touch) shrink-0 items-center justify-center rounded-pill text-ink-muted disabled:opacity-50"
+          class="-mr-xs flex size-(--size-touch) shrink-0 items-center justify-center rounded-pill text-ink-muted disabled:opacity-50"
           data-testid="home.circleDecline"
           @click="$emit('decline')"
         >
@@ -82,3 +87,14 @@ const id = (people: string, home: string) => (props.compact ? home : people)
     <span v-else-if="state === 'requested'" class="shrink-0 px-sm text-caption text-ink-muted" data-testid="people.requested">{{ t('member.requested') }}</span>
   </div>
 </template>
+
+<style scoped>
+/* The lamp dot, as on the header's avatar (shell/Header.vue), ringed in the row's raised colour. */
+.request-dot {
+  top: 0;
+  right: 0;
+  width: var(--spacing-sm);
+  height: var(--spacing-sm);
+  border: var(--stroke-rule) solid var(--color-surface-raised);
+}
+</style>
