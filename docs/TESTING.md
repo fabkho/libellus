@@ -334,6 +334,40 @@ much room a sheet has: before the fix in #58 the Finish sheet stood on the keybo
 the top of the screen, its header and Cancel out of reach. `keyboardRoomOf` (the visual viewport's
 height while the keyboard is up) now caps the sheet's height.
 
+## The scrim and the status bar (A6, Android)
+
+On Android the dimming scrim of a sheet stopped at the status bar while the app's own background did not. What
+the code shows: the app is installed as a PWA (`display: standalone`), where the system draws the status bar
+outside the web viewport and colours it from `<meta name="theme-color">`; the background looks full-bleed
+because the tags carry the page's `surface`, while a scrim, a translucent layer inside the viewport, cannot
+paint into the system bar. `position: fixed` going container-relative under a transformed ancestor is not it:
+the scrim is teleported to `<body>`, nothing above it is transformed, filtered or contained, and
+`e2e/sheet-backdrop.spec.ts` (Chromium, Pixel 7) pins its box to the whole visual viewport. The fix is in
+the tags (`utils/statusBarDim.ts`): while a layer is open they take the scrim-blended colour. Whether the
+system's bar really follows the tag in the installed app is what the phone has to say:
+
+1. On the phone: Settings → Developer options → USB debugging on; plug in. On the Mac open
+   `chrome://inspect/#devices`, tick *Discover USB devices*.
+2. Open Libellus **from its home-screen icon** (installed, standalone) and *inspect* it from the list (the
+   installed app is listed as its own page; a Chrome tab is the other target to try after).
+3. Open a sheet (Profile → Name). In the Elements panel select the scrim (`[data-testid="accountName.scrim"]`).
+   In the Console: `const s = document.querySelector('[data-testid$=".scrim"]'); [s.parentElement.tagName, getComputedStyle(s).position, JSON.stringify(s.getBoundingClientRect()), JSON.stringify(document.documentElement.getBoundingClientRect()), visualViewport.height, innerHeight ]`.
+   Expect `BODY`, `fixed`, a box at `top: 0` the height of `<html>`, and the heights equal. For the containing
+   block, walk up: `for (let n = s.parentElement; n; n = n.parentElement) { const c = getComputedStyle(n); if (c.transform !== 'none' || c.filter !== 'none' || c.contain !== 'none') console.log(n.tagName, c.transform, c.filter, c.contain) }` prints nothing.
+4. Read the tags: `[...document.querySelectorAll('meta[name=theme-color]')].map(m => m.content)` with the sheet
+   open (dimmed colours, e.g. `#a19c96` over the light page) and after closing it (`#f4f0e9` / `#0e0c0a`
+   again). Then change one by hand while the sheet is open: `document.querySelector('meta[name=theme-color]').content = '#ff0000'`
+   (a tag whose `media` matches the phone's appearance) and watch the status bar.
+5. Read the result:
+
+| Observed | Meaning | Next |
+| --- | --- | --- |
+| Scrim box = `<html>` box, no transformed ancestor; the status bar tint follows the tag (red test, and the dim on a real sheet) | Cause confirmed: the bar is the tag's, and the dimmed tag fixes it | Nothing: ship `statusBarDim`. |
+| Scrim box = `<html>` box, no ancestor; the bar follows the red tag, but a real sheet leaves it undimmed | The tag is rewritten after we set it (the head manager or another writer), or the scrim token is unreadable (`--color-scrim` empty) | Check `meta.content` during the sheet; fix the writer. |
+| Scrim box = `<html>` box, no ancestor; the bar does **not** follow the tag at all | System restriction (an edge-to-edge window the system draws the bar over, or the TWA's own `statusBarColor`): no web code can change it | Remove `statusBarDim`; the TWA's native `statusBarColor` is the lever (PR #102's wrapper), not the page. |
+| Scrim box starts below `0` or is shorter than `<html>`, or an ancestor is listed | Hypothesis holds: a containing block for `fixed` | Find the ancestor from the list; move the scrim out of it or remove the transform/filter/contain. |
+| Scrim box is full but the area under the status bar is *app* background that stays bright | The page is not drawn under the bar (no `viewport-fit=cover` effect): the bar is a system strip | As the third row. |
+
 ## The barcode scanner (#92)
 
 The scanner needs a camera, which neither Playwright flow nor the Simulator has, so the real devices check
