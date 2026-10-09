@@ -146,3 +146,24 @@ cold, so the after numbers are, if anything, pessimistic.
 Not done here: the Android emulator run the issue mentions (the brief asked for Chromium with
 throttling instead); a cover for the rows that have none anywhere (DNB rehosting, or an owner call on
 ranking coverless results lower than equally good matches by more than a tie-break).
+
+## Sizes the browser can choose (`srcset`, A7)
+
+`UiCover` gives an Apple cover a `srcset` of the same artwork at the neighbouring boxes
+(`coverSrcset` in `utils/cover.ts`): `120x180bb` (120w), `240x360bb` (240w), `600x900bb` (600w), the
+ones up to the box its size asks for (`APPLE_BOX`), and `sizes` is the size's token width
+(`coverSizes`: 30, 40, 72, 82, 140 px; a cover's width is its size's token alone, no call site
+overrides it, so `sizes` is true everywhere). `src` stays the one `coverSrc` URL (old browsers, and
+what the fallbacks and the book flight key on; the flight reads `currentSrc`). The halo and the
+backing of a fitted image carry the same `srcset`/`sizes`, so all three are one download. Loading
+(`lazy`/`eager`, `fetchpriority`) is unchanged.
+
+- `xs`/`sm` (30, 40 px) have one candidate (120w), so no `srcset`: the single URL stays.
+- `md`/`lg` offer 120w and 240w: a 72 px cover on a 1× screen takes 120w, no longer 240w.
+- `xl` (the book page hero) offers 120w, 240w and 600w: 140 px at 1× takes 240w, at 2× and 3× 600w.
+- OpenLibrary has **no** `srcset`: 'M' and 'L' are maxima ("up to 180 px"), not fixed widths, so a
+  width descriptor would be a guess, and every extra OpenLibrary request is a ~575 ms round trip.
+  It keeps one URL per size (`OPENLIBRARY_SIZE`).
+- Not done on purpose (owner decision): always the largest image downscaled locally, `@nuxt/image`.
+  So a list row and the book page still ask for different boxes; the browser's choice only follows
+  what the screen can show.

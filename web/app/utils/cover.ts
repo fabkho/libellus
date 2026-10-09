@@ -127,6 +127,35 @@ export function coverSrc(url: string | null | undefined, size: CoverSize): strin
   return openLibraryCoverAt(url, OPENLIBRARY_SIZE[size])
 }
 
+/** The tokens' cover widths in CSS px (`size.cover.*`, tokens.generated.css): what each size renders at, at every call site (the width is the size's token alone). */
+export const COVER_WIDTH: Record<CoverSize, number> = { xs: 30, sm: 40, md: 72, lg: 82, xl: 140 }
+
+/** Apple's artwork widths a cover chooses between: the distinct boxes of `APPLE_BOX`, narrowest first. */
+const APPLE_WIDTHS = [...new Set(Object.values(APPLE_BOX).map(([width]) => width))].sort((a, b) => a - b)
+
+/**
+ * Candidates for the `srcset` of a cover shown at `size`: the same artwork at
+ * the Apple boxes up to the one `size` asks for, by width, so the browser takes
+ * the narrowest one that is sharp at its pixel ratio (a 140 px hero on a 1×
+ * screen gets 240, not 600). Only Apple's artwork: its CDN renders any box, and
+ * the widths are the boxes' own. OpenLibrary has no srcset: its 'M' and 'L' are
+ * no fixed widths (a cover's 'M' is "up to 180 px"), so a width descriptor
+ * would be a guess, and every extra OpenLibrary request costs a ~575 ms round
+ * trip (docs/covers.md). A size with one candidate (`xs`, `sm`) has no srcset:
+ * `coverSrc` is it. Null when there is none.
+ */
+export function coverSrcset(url: string | null | undefined, size: CoverSize): string | null {
+  if (!url || !/mzstatic\.com\//.test(url) || appleArtwork(url, 1, 1) === url) return null
+  const widths = APPLE_WIDTHS.filter((width) => width <= APPLE_BOX[size][0])
+  if (widths.length < 2) return null
+  return widths.map((width) => `${appleArtwork(url, width, width * 1.5)} ${width}w`).join(', ')
+}
+
+/** The `sizes` of a cover's `srcset`: its token width, a fixed one (the cover never grows with its container). */
+export function coverSizes(size: CoverSize): string {
+  return `${COVER_WIDTH[size]}px`
+}
+
 /**
  * The images to try after a cover's own one fails (a 404, a broken file) or
  * comes back blank (`isBlankCover`), before the Placeholder: OpenLibrary's

@@ -22,7 +22,7 @@
 // is shown whole, fitted into the slot (object-fit: contain), on a blurred
 // copy of itself, so the slot is filled in the cover's own colours and no
 // letter of its title is cut off. A cover near 2:3 fills the slot as always.
-import { isBlankCover, type CoverColors } from '~/utils/cover'
+import { coverSizes, coverSrcset, isBlankCover, type CoverColors } from '~/utils/cover'
 
 const props = withDefaults(
   defineProps<{
@@ -88,6 +88,13 @@ function next() {
   attempt.value++
 }
 
+// An Apple cover offers its sizes (`srcset`, by width) and says what width it renders at (`sizes`), so
+// the browser takes the narrowest sharp one. The halo and the backing say the same, so all three are one download.
+const imageSet = computed(() => {
+  const srcset = attempt.value === 0 ? coverSrcset(current.value, props.size) : null
+  return { src: current.value!, srcset: srcset ?? undefined, sizes: srcset ? coverSizes(props.size) : undefined }
+})
+
 const showImage = computed(() => Boolean(current.value))
 watch(showImage, (shown) => emit('fallback', !shown), { immediate: true })
 
@@ -136,16 +143,16 @@ const authorLine = computed(() => formatAuthors(props.authors, t('common.etAl'))
 <template>
   <div class="relative shrink-0 aspect-2/3" :class="WIDTHS[size]">
     <template v-if="glow">
-      <img v-if="showImage" :src="current!" alt="" class="halo" :class="!loaded && 'out'" :loading="eager ? 'eager' : 'lazy'" aria-hidden="true" />
+      <img v-if="showImage" v-bind="imageSet" alt="" class="halo" :class="!loaded && 'out'" :loading="eager ? 'eager' : 'lazy'" aria-hidden="true" />
       <span class="pool" :class="showImage && loaded && 'out'" :style="glowStyle" aria-hidden="true" />
     </template>
 
     <div class="sheet relative size-full overflow-hidden shadow-cover" :class="RADII[size]" :style="underlay" data-cover>
       <!-- Behind a fitted image only; the fitted image is positioned to paint over it. A cover that fills its slot stays unpositioned, as the flight expects. -->
-      <img v-if="showImage && fitted" :src="current!" alt="" class="backing" :class="loaded ? 'opacity-100' : 'opacity-0'" aria-hidden="true" />
+      <img v-if="showImage && fitted" v-bind="imageSet" alt="" class="backing" :class="loaded ? 'opacity-100' : 'opacity-0'" aria-hidden="true" />
       <img
         v-if="showImage"
-        :src="current!"
+        v-bind="imageSet"
         :alt="decorative ? '' : title"
         :loading="eager ? 'eager' : 'lazy'"
         :fetchpriority="priority ? 'high' : undefined"
