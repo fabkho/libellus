@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { scrubRoute } from '../app/data/errorLog'
+import { scrubRoute, scrubText } from '../app/data/errorLog'
 
 /**
  * The route a client error report carries (data/errorLog.ts): the path, never its
@@ -16,10 +16,33 @@ describe('scrubRoute', () => {
     expect(scrubRoute('/friends/7c9e6679-7425-40de-944b-e07fc1f90ae7/')).toBe('/friends/[member]/')
   })
 
+  it('scrubs an id or a token wherever it stands in the path', () => {
+    expect(scrubRoute('/friends/7c9e6679-7425-40de-944b-e07fc1f90ae7/x')).toBe('/friends/[member]/x')
+    expect(scrubRoute('/f/Xk3-abcDEF_123/x')).toBe('/f/[token]/x')
+    expect(scrubRoute('/a/f/Xk3-abcDEF_123')).toBe('/a/f/[token]')
+    expect(scrubRoute('/x/7c9e6679-7425-40de-944b-e07fc1f90ae7')).toBe('/x/[id]')
+  })
+
   it('keeps the other paths as they are', () => {
     expect(scrubRoute('/friends')).toBe('/friends')
     expect(scrubRoute('/friends/people')).toBe('/friends/people')
     expect(scrubRoute('/book/abc')).toBe('/book/abc')
     expect(scrubRoute('book/abc')).toBeNull()
+  })
+})
+
+describe('scrubText', () => {
+  const ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
+
+  it("scrubs a member's id and a follow token from a Nuxt 404 message and a stack", () => {
+    expect(scrubText(`Page not found: /friends/${ID}/x`)).toBe('Page not found: /friends/[id]/x')
+    expect(scrubText('Page not found: /f/Xk3-abcDEF_123/x')).toBe('Page not found: /f/[token]/x')
+    expect(scrubText(`at load (https://libellus.app/f/Xk3-abcDEF_123?x=1:12:5)\nid ${ID.toUpperCase()}`)).toBe(
+      'at load (https://libellus.app/f/[token]:12:5)\nid [id]',
+    )
+  })
+
+  it('keeps the rest of the text', () => {
+    expect(scrubText('Failed to fetch /friends/people')).toBe('Failed to fetch /friends/people')
   })
 })

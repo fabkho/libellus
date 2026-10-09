@@ -171,6 +171,12 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     const had = views.value[id]
     if (!had?.loaded) return
     const profile = profileAfter(had.profile, change)
+    // She is blocked, unfollowed or no longer follows her: nothing of what was read of her stays (her figures,
+    // her Want to read, her year), the view is only what the action's answer makes of her profile.
+    if (change.kind === 'block' || change.kind === 'unfollow' || change.kind === 'removeFollower') {
+      views.value = { ...views.value, [id]: { ...fresh(), loaded: true, profile } }
+      return
+    }
     if (!profile) return patch(id, { ...fresh(), loaded: true })
     // A closed card has no figures or Want to read of hers to keep.
     patch(id, { profile, ...(profile.visible ? {} : { record: null, want: null, recordLoading: false }) })

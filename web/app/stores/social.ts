@@ -13,6 +13,7 @@ import {
 } from '~/data/social'
 import { useSessionStore } from '~/stores/session'
 import { useFeedStore } from '~/stores/feed'
+import { useMemberPhotosStore } from '~/stores/memberPhotos'
 import { useMemberProfileStore } from '~/stores/memberProfile'
 import type { RelationChange } from '~/utils/memberProfile'
 import { createRereads } from '~/utils/rereads'
@@ -185,19 +186,26 @@ export const useSocialStore = defineStore('social', () => {
     return result
   }
 
-  /** The member's profile on screen follows the action; `left`: she also leaves her circle (the feed drops her entries). */
-  function relation(member: string, what: RelationChange, left = false) {
-    if (left) useFeedStore().dropMember(member)
+  /**
+   * One place for what a change of relation does to the others (the stores below only keep what they were
+   * told): her profile on screen follows the action (`relationChanged`); `left` (unfollow, block, remove as
+   * follower): nothing of her stays on the device (her photo, in memory and in IndexedDB, and what was read
+   * of her profile), and `fromFeed` (she leaves her circle: unfollow, block) her entries leave the feed and
+   * its device copy. Remove as follower leaves the feed alone: whom she follows is unchanged.
+   */
+  function relation(member: string, what: RelationChange, { left = false, fromFeed = false } = {}) {
+    if (fromFeed) useFeedStore().dropMember(member)
+    if (left) useMemberPhotosStore().drop(member)
     useMemberProfileStore().relationChanged(member, what)
   }
 
   const follow = (member: string) => change((r) => r.follow(member), ['people'], (state) => relation(member, { kind: 'follow', state }))
   const withdraw = (member: string) => change((r) => r.withdraw(member), ['people'], () => relation(member, { kind: 'withdraw' }))
   const answer = (member: string, accept: boolean) => change((r) => r.answer(member, accept), ['mine', 'people'])
-  const unfollow = (member: string) => change((r) => r.unfollow(member), ['people'], () => relation(member, { kind: 'unfollow' }, true))
+  const unfollow = (member: string) => change((r) => r.unfollow(member), ['people'], () => relation(member, { kind: 'unfollow' }, { left: true, fromFeed: true }))
   // She stops following the caller: what the caller sees of her feed is unchanged.
-  const removeFollower = (member: string) => change((r) => r.removeFollower(member), ['people'], () => relation(member, { kind: 'removeFollower' }))
-  const block = (member: string) => change((r) => r.block(member), ['mine', 'people', 'blocked'], () => relation(member, { kind: 'block' }, true))
+  const removeFollower = (member: string) => change((r) => r.removeFollower(member), ['people'], () => relation(member, { kind: 'removeFollower' }, { left: true }))
+  const block = (member: string) => change((r) => r.block(member), ['mine', 'people', 'blocked'], () => relation(member, { kind: 'block' }, { left: true, fromFeed: true }))
 
   /** What a follow link opens, a member's profile and her whole Want to read: read, nothing kept. */
   const target = async (token: string): Promise<SocialResult<FollowTarget | null>> => repo()?.target(token) ?? { data: null, error: 'unknown' }

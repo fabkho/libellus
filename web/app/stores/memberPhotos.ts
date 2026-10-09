@@ -59,6 +59,8 @@ export const useMemberPhotosStore = defineStore('memberPhotos', () => {
   const wanted = new Map<string, string | null>()
   const running = new Map<string, Promise<void>>()
   const failed = new Map<string, { path: string; at: number }>()
+  /** Bumped per member by `drop`: a run for her that began before it throws its result away. */
+  const dropped = new Map<string, number>()
   /** Bumped on sign-out and when another member signs in: a run that began before it throws its result away. */
   let generation = 0
 
@@ -86,9 +88,10 @@ export const useMemberPhotosStore = defineStore('memberPhotos', () => {
 
   async function reconcile(memberId: string, run: number): Promise<void> {
     const card = wanted.get(memberId) ?? null
+    const drops = dropped.get(memberId) ?? 0
     if (!read.has(memberId)) {
       const kept = await cache().read(memberId).catch(() => null)
-      if (run !== generation) return
+      if (run !== generation || drops !== (dropped.get(memberId) ?? 0)) return
       read.add(memberId)
       if (kept && !shown.value[memberId]) show(memberId, kept)
     }
@@ -104,7 +107,7 @@ export const useMemberPhotosStore = defineStore('memberPhotos', () => {
     const r = repo()
     if (!r || !isOnline() || !card || !mayRetryMemberPhoto(failed.get(memberId) ?? null, card, Date.now())) return
     const files = await r.download(card)
-    if (run !== generation) return
+    if (run !== generation || drops !== (dropped.get(memberId) ?? 0)) return
     if (files.error) return void failed.set(memberId, { path: card, at: Date.now() })
     failed.delete(memberId)
     const photo = { path: card, ...files.data }
@@ -148,8 +151,26 @@ export const useMemberPhotosStore = defineStore('memberPhotos', () => {
     return current[size]
   }
 
+  /**
+   * Nothing of this member stays on the device: her URLs are revoked and her record deleted from IndexedDB
+   * (a bare avatar never reaches the plan's "delete" branch, which needs a card without a photo). Told by the
+   * social store once she is blocked, unfollowed or removed as a follower; a member who shows again is
+   * downloaded again, if the bucket still lets her photo through.
+   */
+  function drop(memberId: string) {
+    dropped.set(memberId, (dropped.get(memberId) ?? 0) + 1)
+    show(memberId, null)
+    read.delete(memberId)
+    settled.delete(memberId)
+    wanted.delete(memberId)
+    running.delete(memberId)
+    failed.delete(memberId)
+    void keep(memberId, null)
+  }
+
   function forget() {
     generation++
+    dropped.clear()
     for (const photo of Object.values(shown.value)) {
       URL.revokeObjectURL(photo.small)
       URL.revokeObjectURL(photo.large)
@@ -171,5 +192,5 @@ export const useMemberPhotosStore = defineStore('memberPhotos', () => {
     },
   )
 
-  return { photoOf }
+  return { photoOf, drop }
 })
