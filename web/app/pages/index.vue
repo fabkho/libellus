@@ -52,7 +52,11 @@ watch(
 </script>
 
 <template>
-  <HomeEmpty v-if="empty" />
+  <div v-if="empty" class="flex flex-col gap-xl">
+    <HomeEmpty />
+    <!-- A new member who follows someone, or has a request, sees her circle here too; it shows nothing otherwise, and arrives last (UiReveal). -->
+    <HomeCircle />
+  </div>
 
   <div v-else-if="library.loaded" class="flex flex-col gap-lg">
     <HomeInstallHint />

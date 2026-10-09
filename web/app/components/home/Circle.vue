@@ -12,7 +12,7 @@
 //
 // Test ids: `home.circle`, `home.circleRequest|circleAccept|circleDecline` (the request row),
 // `home.circleFeature` (+ `.member`, `.cover`, `.title`, `.stars`, `.review`, `.more`),
-// `home.circleFriend`, `home.circleMore`.
+// `home.circleFriend`, `home.circleTitle` (the title, a link to the feed), `home.circleMore`.
 import { circleView } from '~/utils/circleView'
 import { useFeedStore } from '~/stores/feed'
 import { useSocialStore } from '~/stores/social'
@@ -66,7 +66,12 @@ onActivated(() => {
   <UiReveal :show="friends.length > 0 || !!card || !!request">
     <section data-testid="home.circle">
       <div class="flex h-(--size-touch) items-center">
-        <h2 class="eyebrow">{{ t('circle.title') }}</h2>
+        <h2>
+          <NuxtLink to="/friends" class="eyebrow flex h-(--size-touch) items-center gap-xs" data-testid="home.circleTitle">
+            {{ t('circle.title') }}
+            <UiIcon name="chevron" :size="12" class="shrink-0" />
+          </NuxtLink>
+        </h2>
       </div>
       <FriendsRequestRow
         v-if="request"
