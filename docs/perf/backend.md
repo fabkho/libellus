@@ -5,7 +5,7 @@ functions + Cloudflare Pages) for the step from one member to a few hundred. Not
 migration and no production access was changed or used: the numbers come from the read-only
 production extracts the coordinator pulled on 2026-10-09 (`/tmp/perf-backend/`) and from a
 throwaway local stack with synthetic data. Client waterfalls and bundle weight belong to the
-client assessment (`docs/perf/client.md`); this file lists only what the server side could batch.
+client assessment (perf-client-1); this file lists only what the server side could batch.
 
 Everything the numbers need is reproducible from `scripts/perf/` (see "Reproducing" at the end).
 
