@@ -166,6 +166,31 @@ describe('a member\u2019s row', () => {
     expect(anna!.books.map((b) => b.id)).toEqual(['b1', 'b2', 'b3'])
   })
 
+  it('two single entries of one kind are one phrase with both Books, newest first', () => {
+    const view = circleView(feed(entry(TOM, 'want', 'b1', 2), entry(TOM, 'want', 'b2', 3), entry(TOM, 'started', 'b3', 4)), options)
+    expect(view.friends[0]!.phrases).toEqual([{ type: 'entry', verb: 'want', books: [expect.objectContaining({ id: 'b1' }), expect.objectContaining({ id: 'b2' })] }])
+    expect(view.friends[0]!.books.map((b) => b.id)).toEqual(['b1', 'b2'])
+  })
+
+  it('two events of different kinds stay two phrases', () => {
+    const view = circleView(feed(entry(BEN, 'started', 'b1', 2), entry(BEN, 'want', 'b2', 3)), options)
+    expect(verbs(view.friends[0]!.phrases)).toEqual(['started', 'want'])
+    expect(view.friends[0]!.phrases.map((p) => (p.type === 'entry' ? p.books.length : 0))).toEqual([1, 1])
+  })
+
+  it('a started and a started-again entry are two kinds of verb, so two phrases', () => {
+    const view = circleView(feed(entry(BEN, 'started', 'b1', 2, { again: true }), entry(BEN, 'started', 'b2', 3)), options)
+    expect(verbs(view.friends[0]!.phrases)).toEqual(['startedAgain', 'started'])
+  })
+
+  it('a batch next to a single entry of the same kind stays two phrases', () => {
+    const view = circleView(
+      feed(entry(ANNA, 'want', 'b1', 2 + 24), entry(ANNA, 'want', 'b2', 3), entry(ANNA, 'want', 'b3', 4), entry(ANNA, 'want', 'b4', 5)),
+      options,
+    )
+    expect(verbs(view.friends[0]!.phrases)).toEqual(['batchWant:3', 'want'])
+  })
+
   it('a started-again entry keeps its own verb', () => {
     const view = circleView(feed(entry(BEN, 'started', 'b1', 2, { again: true })), options)
     expect(verbs(view.friends[0]!.phrases)).toEqual(['startedAgain'])

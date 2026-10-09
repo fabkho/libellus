@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The card of Home's Your circle (social v1, U8; the "Lit feature" mock): the week's one finished Book,
 // in a raised, rounded panel lit by the Book's own cover (`UiAmbient`, the light a year card has on
-// the Profile). The cover at the left; at the right her avatar and name ("Anna finished"), the title
+// the Profile; a Book on the Placeholder is lit by its cloth, as the book page is). The cover at the left; at the right her avatar and name ("Anna finished"), the title
 // in the serif, her stars when she shows them, and her review in the serif italic folded at three
 // lines, `More` unfolding it, as the feed's rows do. The cover and the title open the Book, the cover
 // flying there as everywhere else (UiPressLink); a Manual book opens nothing, a follower cannot read
@@ -22,6 +22,9 @@ const name = computed(() => props.card.member.name?.trim() || t('member.someone'
 const verb = computed(() => t(`feed.${props.card.verb}`))
 const book = computed(() => props.card.book)
 const bookPath = computed(() => `/book/${book.value.id}`)
+// A Book without a cover shows the Placeholder: the cloth's colour lights the card then (as the book page's hero is lit).
+const coverFallback = ref(false)
+const clothColor = computed(() => `var(--color-cloth${clothOf(book.value.title)})`)
 
 // The review: three lines, and `More` only when there is more than three lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -44,7 +47,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <div class="relative flex items-start gap-ml overflow-hidden rounded-lg bg-surface-raised p-inset shadow-raised edge-faint" data-testid="home.circleFeature">
-    <UiAmbient :colors="book.coverColors" shape="card" />
+    <UiAmbient :colors="book.coverColors" :cloth="coverFallback ? clothColor : null" shape="card" />
 
     <UiPressLink
       v-if="!book.manual"
@@ -55,10 +58,10 @@ onBeforeUnmount(() => observer?.disconnect())
       data-testid="home.circleFeature.cover"
       @press="books.prefetch(book.id)"
     >
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
     </UiPressLink>
     <span v-else class="relative shrink-0">
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
     </span>
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">

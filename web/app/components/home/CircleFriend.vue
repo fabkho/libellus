@@ -31,9 +31,18 @@ const name = computed(() => props.friend.member.name?.trim() || t('member.someon
               <span v-if="index > 0" aria-hidden="true">{{ t('circle.join') }}</span>
               <template v-if="phrase.type === 'batch'">{{ t(`feed.${phrase.key}`, { count: phrase.count }) }}</template>
               <i18n-t v-else-if="phrase.verb === 'want'" keypath="circle.want" tag="span" scope="global">
-                <template #title><i class="book-title italic">{{ phrase.book.title }}</i></template>
+                <template #title>
+                  <template v-for="(book, at) in phrase.books" :key="book.id">
+                    <template v-if="at > 0">{{ t('circle.and') }}</template><i class="book-title italic">{{ book.title }}</i>
+                  </template>
+                </template>
               </i18n-t>
-              <template v-else>{{ t(`feed.${phrase.verb}`) }} <i class="book-title italic">{{ phrase.book.title }}</i></template>
+              <template v-else>
+                {{ t(`feed.${phrase.verb}`) }}
+                <template v-for="(book, at) in phrase.books" :key="book.id">
+                  <template v-if="at > 0">{{ t('circle.and') }}</template><i class="book-title italic">{{ book.title }}</i>
+                </template>
+              </template>
             </template>
           </span>
           <span class="flex shrink-0" aria-hidden="true">

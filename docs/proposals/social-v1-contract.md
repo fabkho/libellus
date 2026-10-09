@@ -487,6 +487,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "askedLine": "asked to follow you",
     "want": "added {title} to Want to read",
     "join": " · ",
+    "and": " and ",
     "accept": "Accept",
     "decline": "Decline",
     "declineLabel": "Decline {name}"

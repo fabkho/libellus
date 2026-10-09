@@ -14,7 +14,7 @@ import { feedBatchKey, feedVerbKey } from './feedView'
  *   activity still makes her row. What is left is batched again (`feedDays`), since a batch that
  *   lost a member of its three may be none any more.
  * - The list groups the rows by member, ordered by each member's newest row; a row holds at most
- *   `CIRCLE_PHRASES` of her newest events, the day is her newest event's, the covers are those of
+ *   `CIRCLE_PHRASES` of her newest events (two single entries of one verb are one phrase with both titles), the day is her newest event's, the covers are those of
  *   the Books her phrases name (at most `CIRCLE_COVERS`). At most `CIRCLE_MEMBERS` rows.
  */
 
@@ -29,9 +29,9 @@ export const CIRCLE_COVERS = 3
 
 const DAY_MS = 86_400_000
 
-/** One thing a member did, as a piece of her sentence: an entry (a verb and its Book) or a batch (a verb and a count). */
+/** One thing a member did, as a piece of her sentence: an entry (a verb and its Book, or its two Books when her two newest events are of one kind) or a batch (a verb and a count). */
 export type CirclePhrase =
-  | { type: 'entry'; verb: ReturnType<typeof feedVerbKey>; book: SocialBook }
+  | { type: 'entry'; verb: ReturnType<typeof feedVerbKey>; books: SocialBook[] }
   | { type: 'batch'; key: ReturnType<typeof feedBatchKey>; count: number }
 
 /** The finished Book that gets the card. `verb`: "finished", or "reviewed" when only the review is within the week. */
@@ -88,8 +88,17 @@ function cardOf(picked: FeedEntry, same: readonly FeedEntry[]): CircleCard {
 
 function phraseOf(row: FeedRow): CirclePhrase {
   return row.type === 'entry'
-    ? { type: 'entry', verb: feedVerbKey(row.entry.kind, row.entry.again), book: row.entry.book }
+    ? { type: 'entry', verb: feedVerbKey(row.entry.kind, row.entry.again), books: [row.entry.book] }
     : { type: 'batch', key: feedBatchKey(row.kind), count: row.entries.length }
+}
+
+/** Her phrases: one per row, except two single entries of one verb, which are one phrase with both Books. */
+function phrasesOf(rows: readonly FeedRow[]): CirclePhrase[] {
+  const [first, second] = rows.map(phraseOf)
+  if (first?.type === 'entry' && second?.type === 'entry' && first.verb === second.verb) {
+    return [{ type: 'entry', verb: first.verb, books: [...first.books, ...second.books] }]
+  }
+  return [first, second].filter((phrase): phrase is CirclePhrase => Boolean(phrase))
 }
 
 function booksOf(row: FeedRow): SocialBook[] {
@@ -121,7 +130,7 @@ export function circleView(entries: readonly FeedEntry[], options: Options): Cir
     const told = rows.slice(0, CIRCLE_PHRASES)
     const books = new Map<string, SocialBook>()
     for (const row of told) for (const book of booksOf(row)) if (!books.has(book.id)) books.set(book.id, book)
-    return { member, day, phrases: told.map(phraseOf), books: [...books.values()].slice(0, CIRCLE_COVERS) }
+    return { member, day, phrases: phrasesOf(told), books: [...books.values()].slice(0, CIRCLE_COVERS) }
   })
 
   return { card, friends }
