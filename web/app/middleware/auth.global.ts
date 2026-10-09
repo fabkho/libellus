@@ -1,4 +1,5 @@
 import { useSessionStore } from '~/stores/session'
+import { followToOpen, followTokenIn, keepFollow, peekFollow } from '~/utils/pendingFollow'
 import { keepShare, peekShare } from '~/utils/pendingShare'
 import { isPublicPath } from '~/utils/publicPath'
 
@@ -29,6 +30,11 @@ export default defineNuxtRouteMiddleware((to) => {
 
   if (session.status === 'signedIn') {
     if (import.meta.client && path !== '/share' && peekShare(window.localStorage)) return navigateTo('/share', { replace: true })
+    // A follow link (social v1, pages/f/[token].vue) kept the same way opens after a share waiting.
+    if (import.meta.client) {
+      const follow = followToOpen(path, peekFollow(window.localStorage), !!peekShare(window.localStorage))
+      if (follow) return navigateTo(follow, { replace: true })
+    }
     return isAuthRoute ? navigateTo('/') : undefined
   }
 
@@ -37,6 +43,9 @@ export default defineNuxtRouteMiddleware((to) => {
     // Shared ebook files wait in the service worker's cache meanwhile (#131).
     if (shared.title || shared.text || shared.url || shared.ebooks) keepShare(window.localStorage, shared)
   }
+
+  const followed = followTokenIn(path)
+  if (followed && import.meta.client) keepFollow(window.localStorage, followed)
 
   if (!isAuthRoute) return navigateTo(session.pending ? '/verify' : '/sign-in')
   if (path === '/verify' && !session.pending) return navigateTo('/sign-in')
