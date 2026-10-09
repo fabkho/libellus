@@ -43,6 +43,13 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => observer?.disconnect())
+
+/** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
+async function unfold() {
+  expanded.value = true
+  await nextTick()
+  review.value?.focus()
+}
 </script>
 
 <template>
@@ -85,13 +92,13 @@ onBeforeUnmount(() => observer?.disconnect())
       <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.circleFeature.stars" />
 
       <template v-if="card.review">
-        <p ref="review" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.circleFeature.review">{{ card.review }}</p>
+        <p ref="review" tabindex="-1" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.circleFeature.review">{{ card.review }}</p>
         <button
           v-if="clamped && !expanded"
           type="button"
           class="-mt-xs -mb-sm min-h-(--size-touch) text-caption text-ink-faint hover:text-ink-muted"
           data-testid="home.circleFeature.more"
-          @click="expanded = true"
+          @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
     </div>
