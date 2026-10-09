@@ -35,12 +35,16 @@ watch(
   { immediate: true },
 )
 const answering = ref(false)
+/** An answer the database refused (not one the offline label already says): the row stays, so say why. */
+const answerFailed = ref(false)
 async function answer(accept: boolean) {
   const asking = request.value
   if (!asking) return
   answering.value = true
+  answerFailed.value = false
   // The store reads her settings and People again: the row leaves, the header's dot with it.
-  await social.answer(asking.id, accept)
+  const result = await social.answer(asking.id, accept)
+  answerFailed.value = !!result.error && result.error !== 'offline'
   answering.value = false
 }
 
@@ -83,6 +87,7 @@ onActivated(() => {
         @accept="answer(true)"
         @decline="answer(false)"
       />
+      <p v-if="request && answerFailed" class="mb-xs px-xs text-footnote text-error" role="alert" data-testid="home.circleError">{{ t('people.error') }}</p>
       <UiListMotion tag="div">
         <div v-if="card" :key="cardKey" class="py-xs">
           <HomeCircleFeature :card="card" eager />
