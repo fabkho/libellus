@@ -24,6 +24,11 @@ export const POOR_CLS = 0.25
 export const POOR_INP = 300
 /** In ms. */
 export const POOR_LCP = 4000
+/**
+ * In ms: a frame (script, style, layout, paint) that took this long is a stutter
+ * the member felt; reported as `LoAF` (data/loaf.ts), not one of the three Core Web Vitals.
+ */
+export const POOR_LOAF = 200
 
 export type VitalName = 'CLS' | 'INP' | 'LCP'
 
