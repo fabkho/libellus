@@ -301,6 +301,8 @@ function back() {
       </button>
     </section>
 
+    <BookMoreFromAuthor v-if="book" :book="book" :book-key="key" />
+
     <div v-if="!book && page?.phase !== 'missing' && page?.phase !== 'error'" class="relative flex flex-col items-center px-xl pt-sm" data-testid="book.loading">
       <!-- At the hero cover's place and size: a cover flying in lands here and waits for the hero (composables/useBookFlight.ts). -->
       <span class="placeholder relative rounded-cover-lg bg-fill" aria-hidden="true" data-flight-stand-in />
