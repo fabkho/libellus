@@ -198,7 +198,7 @@ and a new idea, GIFs and stickers in reviews. Not scheduled yet: version 1 comes
 | # | Feature | Status | Effort |
 |---|---|---|---|
 | 1 | **Spoiler-safe reviews.** "Contains spoilers" on the Finish and Edit read sheets; followers who have not finished the Book see the review folded behind *Show anyway*. | yes | S |
-| 2 | **Likes.** A heart on a feed entry (a finish, a review) and on a review wherever it shows. See *Likes* below for how they stay calm. | yes, instead of *Want to read too* | S–M |
+| 2 | **Likes and *Want to read*.** A heart on a feed entry (a finish, a review) and on a review wherever it shows, and beside it a separate *Want to read* button that puts the Book on her own Want to read. See *Likes* below. | yes, both (owner, 9 October 2026) | S–M |
 | 3 | **Readers on a Book's page.** A *Readers* section under the Goodreads line: the people you follow who read it, with their stars, status and review, matched by work so other editions count. Grows into 6. | yes | M |
 | 4 | **You both read.** On a profile and her year in review: the Books you both finished, both your stars side by side. No totals. | yes | S |
 | 5 | **Send a book.** Book ⋯ → *Send to…* a follower, with a note; a *For you* row on Home, not in the feed. | maybe | M |
@@ -222,8 +222,11 @@ Likes replace *Want to read too*. To keep them from becoming a score:
 - Data: `likes(member, activity)` (or `session` for a review on a Book page), unique per pair, read only
   through the feed and profile functions that already check who may see what.
 
-Open: should liking a finish also offer *Add to Want to read* in the same tap (a long-press)? It keeps
-what 2 was meant to do.
+**Want to read, its own button** (owner, 9 October 2026, instead of a long-press on the heart): beside the
+heart on a friend's entry (feed, Home's card, her profile's rows), *Want to read* adds the Book to her own
+Library as Want to read, in one tap and offline too (the outbox's add). If the Book is already in her
+Library the button says where (*Want to read*, *Reading*, *Read*) and opens the Book instead. The friend is
+not told. A Manual book has no button (it cannot be opened).
 
 ### Finding people (6)
 
