@@ -10,9 +10,11 @@
 // `compact` is Home's: no review. `bare` is the batch sheet's: the avatar line is not repeated, the
 // member is in the sheet's title, and the cover is `size="sm"`. `dayLabel` is the word at the line's end Home puts the day in
 // (the page has day eyebrows instead). `testid` is the row's; the parts add `Member`, `Book`,
-// `Review` and `More` to it.
+// `Review`, `More` and `WantToRead` to it. The Want to read button (FriendsWantToReadButton) is on what a
+// friend finished, reviewed or started, not on a Manual book.
 import type { FeedEntry } from '~/data/feed'
 import { useBookStore } from '~/stores/book'
+import { carriesWantToRead } from '~/utils/wantToRead'
 
 const props = withDefaults(defineProps<{
   entry: FeedEntry
@@ -34,6 +36,8 @@ const book = computed(() => props.entry.book)
 const bookPath = computed(() => `/book/${book.value.id}`)
 const authorLine = computed(() => formatAuthors(book.value.authors, t('common.etAl')))
 const showReview = computed(() => Boolean(props.entry.review) && !props.compact)
+// The Want to read button: on what a friend finished, reviewed or started (not on Home's compact rows).
+const showWant = computed(() => carriesWantToRead(props.entry.kind) && !props.compact)
 
 // The review: four lines, and `More` only when there is more than four lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -128,6 +132,10 @@ async function unfold() {
           @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
+
+      <div v-if="showWant" class="mt-xs flex items-center gap-sm">
+        <FriendsWantToReadButton :book="book" :testid="`${testid}WantToRead`" />
+      </div>
     </div>
   </li>
 </template>

@@ -1777,5 +1777,40 @@
     "unblockLabel": "Unblock {name}",
     "unblocked": "{name} unblocked.",
     "empty": "You haven't blocked anyone."
+  },
+  "review": {
+    "spoilers": "Contains spoilers",
+    "spoilersHint": "Readers who haven't finished it see this review folded.",
+    "folded": "Contains spoilers",
+    "showAnyway": "Show anyway"
+  },
+  "social": {
+    "wantToRead": {
+      "add": "Want to read",
+      "label": "Add {title} to Want to read",
+      "inLabel": "{title}: {where}. Open the book",
+      "error": "Couldn't add it. Try again."
+    },
+    "state": {
+      "wantToRead": "Want to read",
+      "reading": "Reading",
+      "read": "Read",
+      "notFinished": "Not finished"
+    },
+    "like": {
+      "like": "Like",
+      "unlike": "Remove like",
+      "label": "Like {name}’s read of {title}",
+      "unlabel": "Remove your like from {name}’s read of {title}",
+      "count": "{count} like | {count} likes",
+      "ownLabel": "{count} like on your read of {title}. See who liked it | {count} likes on your read of {title}. See who liked it",
+      "error": "Couldn't save your like. Try again."
+    },
+    "likers": {
+      "title": "Liked by",
+      "empty": "No likes yet.",
+      "loadError": "The likes couldn't be loaded.",
+      "offline": "You're offline. The likes show once you're back."
+    }
   }
 }

@@ -9,7 +9,7 @@
 // so the cover is decorative. Drawing only: utils/circleView.ts picks the card.
 //
 // Props: `card` (CircleCard), `eager` (the cover loads now). Test ids: `home.circleFeature` (the panel),
-// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`.
+// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`.
 import type { CircleCard } from '~/utils/circleView'
 import { useBookStore } from '~/stores/book'
 
@@ -101,6 +101,8 @@ async function unfold() {
           @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
+
+      <FriendsWantToReadButton :book="book" testid="home.circleFeature.wantToRead" />
     </div>
   </div>
 </template>

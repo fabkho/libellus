@@ -36,6 +36,9 @@ const { formatDay } = useDays()
         <span v-if="item.endedOn">{{ formatDay(item.endedOn) }}</span>
       </span>
       <FriendsMemberReview v-if="item.review" :text="item.review" />
+      <div class="mt-xs flex items-center gap-sm">
+        <FriendsWantToReadButton :book="item.book" testid="member.finishedWantToRead" />
+      </div>
     </div>
   </div>
 </template>
