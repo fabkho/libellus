@@ -441,8 +441,8 @@ Actions → result:
 Edge cases: a card is the newest finish or review of the last seven days (`CARD_DAYS`) and is never part of a batch; at most three member rows (`CIRCLE_MEMBERS`), two phrases per row (`CIRCLE_PHRASES`), three covers per fan (`CIRCLE_COVERS`). Shown under the empty Library's state too, for a new member with a request or activity.
 Copy keys: `circle.title|more|askedLine|accept|declineLabel|want|join|and`, `feed.finished|reviewed|started|startedAgain|abandoned|want|batchFinished|batchStarted|batchAbandoned|batchWant|batchReviewed|more|today|yesterday`, `member.someone`
 IDs: `home.circle`, `home.circleTitle`, `home.circleRequest`, `home.circleAccept`, `home.circleDecline`, `home.circleFeature` (+ `.member`, `.cover`, `.title`, `.stars`, `.review`, `.more`), `home.circleFriend`, `home.circleMore`
-Flow: no flow of its own (the loop is E1, contract §6); `web/tests/circle-view.test.ts`
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/circle-view.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### The feed  (web: `app/pages/friends/index.vue`, `components/friends/FeedRow.vue`, `components/friends/FeedBatch.vue`, `data/feed.ts`, `stores/feed.ts`; database: `feed()`)
 Purpose: what the people she follows started, finished and added, newest first (social v1; "Your circle" in full).
@@ -457,8 +457,8 @@ Actions → result:
 Edge cases: never an entry: imports (Goodreads, Hardcover, the owner's Fable import); a finish or DNF logged with an end more than 14 days back; anything in its first 10 minutes (a correction inside them replaces it); a hidden Book (*Hide from followers*); a switched-off section. Entries of a member the viewer does not follow never show. Offline nothing is asked for.
 Copy keys: `feed.*` (as listed under *Your circle on Home*, plus `feed.title`, `feed.peopleLabel`, `feed.emptyTitle|empty|emptyShare|quietTitle|quiet|offline|loadError|retry`), `friends.people`, `member.back`
 IDs: `friends`, `friends.title`, `friends.back`, `friends.people`, `friends.day`, `friends.entry`, `friends.entryMember`, `friends.entryBook`, `friends.entryStars`, `friends.entryDay`, `friends.entryReview`, `friends.entryMore`, `friends.empty`, `friends.emptyShare`, `friends.quiet`, `friends.offline`, `friends.loadError`, `friends.retry`
-Flow: no flow of its own (E1); `web/tests/feed.test.ts`, `web/tests/feed-view.test.ts`
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/feed.test.ts`, `web/tests/feed-view.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### A batch  (web: `components/friends/FeedBatch.vue`, `components/friends/BatchSheet.vue`, batching in `data/feed.ts`)
 Purpose: three or more of the same kind by the same member on the same day, as one row of the feed.
@@ -469,8 +469,8 @@ Actions → result:
 Edge cases: exactly three is a batch (`BATCH_FROM` = 3); two are two rows. Different kinds of one member on one day are separate rows. A batch shows only the Books the feed may show (hidden Books and switched-off kinds are left out before counting).
 Copy keys: `feed.batchFinished|batchStarted|batchAbandoned|batchWant|batchReviewed|batchTitle`
 IDs: `friends.batch`, `friends.batchOpen`, `friendsBatch` (`.sheetTitle`, `.cancel`, `.day`, `.list`, `.row`, `.rowBook`)
-Flow: no flow of its own (E1); `web/tests/feed.test.ts`
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: no flow of its own; `web/tests/feed.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### People  (web: `app/pages/friends/people.vue`, `components/friends/PersonRow.vue`, `components/friends/RequestRow.vue`, `components/friends/MemberSheet.vue`; `stores/social.ts`, `data/social.ts`; database: `follow()`, `answer_request()`, `unfollow()`, `remove_follower()`, `block()`)
 Purpose: who she follows, who follows her, and who asked to; the place to act on each.
@@ -481,8 +481,8 @@ Actions → result: Accept / Decline → *Follow requests*. Follow back → a re
 Edge cases: limits, refused by the database: 150 follows, 20 open requests, 30 follow calls an hour (`follow_limit`, `rate_limited`). Block removes both directions, refuses her requests and link visits, and hides each from the other everywhere; the blocked member is not told. Unblock is in the Privacy sheet's *Blocked*.
 Copy keys: `people.title|following|followers|requests|askedOn|accept|decline|followBack|followsYouNow|moreLabel|unfollow|remove|block|blockTitle|blockText|blockConfirm|sheetNote|emptyFollowing|emptyFollowers|loadError|retry|error`, `member.requested`, `common.offline`
 IDs: `people`, `people.title`, `people.back`, `people.segment.following`, `people.segment.followers`, `people.segment.requests`, `people.row`, `people.rowMember`, `people.rowMore`, `people.accept`, `people.decline`, `people.followBack`, `people.requested`, `people.empty`, `people.loadError`, `people.retry`, `people.error`; `memberSheet` (`.unfollow`, `.remove`, `.block`, `.error`, `.cancel`); `blockConfirm` (`.confirm`, `.cancel`)
-Flow: no flow of its own (E1); `web/tests/people.test.ts`
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/people.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### Follow requests  (web: `components/friends/RequestRow.vue`, `components/home/Circle.vue`, the Requests segment of `app/pages/friends/people.vue`, the People row's value in `components/profile/Friends.vue`, the lamp dot in `components/shell/Header.vue`; `stores/social.ts`; database: `answer_request()`, `follow()`)
 Purpose: a member asks to follow a private account, and the account's owner answers. No screen of its own: the request shows in four places.
@@ -496,8 +496,8 @@ Actions → result:
 Edge cases: the dot and the request count are read when the tab shell starts and when the app comes back to the foreground, online only (`mine.requests`). A request from a blocked member does not exist (block refuses requests). The asker's side of a declined request is not shown to her as declined (`declined_at` is never sent).
 Copy keys: `circle.askedLine|accept|declineLabel`, `people.askedOn|accept|decline|followBack|followsYouNow`, `friends.peopleRequests`, `shell.avatarRequest`, `common.offline`
 IDs: `home.circleRequest`, `home.circleAccept`, `home.circleDecline`, `people.segment.requests`, `people.accept`, `people.decline`, `people.followBack`, `profile.people`, `profile.peopleValue`, `shell.avatarDot`
-Flow: no flow of its own (E1 covers accept end to end); `web/tests/people.test.ts`
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/people.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### A member's profile  (web: `app/pages/friends/[member]/index.vue`, `components/friends/{MemberHero,MemberFavourite,MemberFinished,MemberFinishedRow,MemberFinishedSheet,MemberWantSheet,MemberReview,MemberCovers,MemberSheet}.vue`, `utils/memberProfile.ts`, and the Profile's own blocks it reuses (`components/profile/*`))
 Purpose: another member's reading as she lets followers see it (social v1, `/friends/<member>`).
@@ -514,8 +514,8 @@ Actions → result:
 Edge cases: a private account's card is reachable only after her follow link was opened (`member_profile` answers null otherwise). Currently reading shows covers only. Records and Authors you return to still link a Manual book to `/book/<id>` (they carry no manual flag): a follower who taps one lands on that page's missing state, as for any other member's Manual book. A year with no Books shows only the year's title. Her reading days and progress are never shown.
 Copy keys: `member.back|moreLabel|since|library|follow|ask|requested|requestedHint|privateTitle|privateText|reading|want|wantAll|finished|years|yearEyebrow|someone|offline|loadError|retry`, `follow.missingTitle`, `feed.more`, and the `profile.*` copy of the reused blocks
 IDs: `member`, `member.back`, `member.more`, `member.hero`, `member.avatar`, `member.name`, `member.since`, `member.library`, `member.follow`, `member.ask`, `member.requested`, `member.private`, `member.error`, `member.reading` (+ `.readingBooks`, `.readingBooks.book`), `member.want` (+ `.wantBooks`), `member.wantAll`, `member.inReview`, `member.finished`, `member.finishedTitle`, `member.finishedReview`, `member.finishedMore`, `member.finishedAll`, `member.yearCards`, `member.missing`, `member.loadError`, `member.retry`, the reused blocks' `profile.*` ids; sheets `memberWant` and `memberFinished` (`.sheetTitle`, `.cancel`, `.row`)
-Flow: no flow of its own (E1); `web/tests/member-profile.test.ts` (the blocks by switches, the Library line, the Manual book path, the year fallback, figures without Ratings)
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/member-profile.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### A member's year in review  (web: `app/pages/friends/[member]/[year].vue`, the year blocks of `components/profile/*` reused, `utils/memberProfile.ts`)
 Purpose: one year of another member's reading on a page of its own, as on her own Profile (`/friends/<member>/<year>`). Never her reading days or progress.
@@ -525,8 +525,8 @@ Actions → result: Back → her profile. A year either side → that year's pag
 Edge cases: a section she has switched off is absent here too; the figures do not show Ratings when she has switched those off.
 Copy keys: `member.yearEyebrow`, `member.back`, `member.someone`, and the `yearInReview.*` copy of the reused blocks
 IDs: `memberYear`, `memberYear.back`, `memberYear.title`, `memberYear.eyebrow`, `memberYear.favourite`, `memberYear.favouriteTitle`, `memberYear.before`, `memberYear.after`, `memberYear.missing`, `memberYear.loadError`, `memberYear.retry` (plus the year blocks' ids)
-Flow: no flow of its own (E1); `web/tests/member-profile.test.ts` (the year fallback)
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: no flow of its own; `web/tests/member-profile.test.ts` (the year fallback)
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### Follow link  (web: `app/pages/f/[token].vue`, `components/friends/LinkSheet.vue` (her side), `components/profile/Friends.vue` (the row), `utils/pendingFollow.ts` and `middleware/auth.global.ts` (the device's copy); database: `follow_target(token)`, `renew_follow_link()`, `follow_link_views`)
 Purpose: her link (`/f/<token>`, 128 random bits) opens her profile for whoever follows it, from her side and the visitor's.
@@ -540,8 +540,8 @@ Actions → result:
 Edge cases: unknown, renewed, blocked (either way) and malformed links give the same missing state, and nothing says why. The app's SPA fallback serves `/f/<token>`; no Pages Function is involved. The error log reports `/f/[token]`, never the token. Opened by a member she already follows, the profile is the full one (see *A member's profile*).
 Copy keys: `follow.loading|missingTitle|missing`, `followLink.title|textPrivate|textPublic|value|share|shareText|copy|copied|renew|renewHint|renewTitle|renewText|renewConfirm`, `friends.followLink`, `common.offline`
 IDs: `follow`, `follow.loading`, `follow.missing`; `profile.followLink`; sheet `followLink` (`.cancel`, `.action`), `followLink.value`, `followLink.share`, `followLink.copy`, `followLink.renew`, `followLink.outcome` (the status line; its copy is `followLink.copied`), `followLink.error`; `renewFollowLink` (`.confirm`, `.cancel`)
-Flow: no flow of its own; E1 covers the link end to end (contract §6); `web/tests/pending-follow.test.ts`
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/pending-follow.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### Privacy  (web: `components/friends/PrivacySheet.vue`, the row in `components/profile/Friends.vue`, `stores/social.ts`, `data/social.ts`; database: `set_private()`, `set_social_sections()`, `social_settings`)
 Purpose: who sees her reading. A private account by default: each follower is let in by her. Turning it off lets any member with her link follow at once.
@@ -555,8 +555,8 @@ Actions → result:
 Edge cases: going private again keeps the followers she has (social-v1.md, A2). The reason she gave for not finishing never leaves her Library; the Did not finish switch shows only that she put the Book down. A Book hidden with *Hide from followers* stays hidden whatever these switches say.
 Copy keys: `privacy.title|done|private|privateHint|sections|section.reading|section.want|section.finished|section.ratings|section.reviews|section.abandoned|section.year|never|blocked|blockedNone|goPublicTitle|goPublicText|goPublicConfirm|error`, `friends.privacy|private|public`, `common.offline`
 IDs: `profile.privacy`, `profile.privacyValue`; `privacy` (`.cancel`, `.action`), `privacy.private`, `privacy.section.reading|want|finished|ratings|reviews|abandoned|year`, `privacy.blocked`, `privacy.blockedValue`, `privacy.error`; `goPublic` (`.confirm`, `.cancel`)
-Flow: no flow of its own (E1 covers the loop); the rules in pgTAP (`supabase/tests/social_settings_test.sql`, `social_follows_test.sql`)
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: no flow of its own; the rules in pgTAP (`supabase/tests/social_settings_test.sql`, `social_follows_test.sql`)
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### Blocked  (web: `components/friends/BlockedSheet.vue`, opened from the Privacy sheet)
 Purpose: the members she has blocked, and unblocking them.
@@ -566,8 +566,8 @@ Actions → result: Unblock → `unblock()`: the row leaves. Blocking itself is 
 Edge cases: a blocked member gets `not_found` for her profile and link (the same answer as a dead link); nothing says why.
 Copy keys: `blocked.title|unblock|empty`
 IDs: `blocked` (`.cancel`), `blocked.row`, `blocked.unblock`, `blocked.empty`, `blocked.error`
-Flow: no flow of its own (E1); `web/tests/social.test.ts`
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/social.test.ts`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### Hide from followers  (web: the switch row in `components/book/OptionsSheet.vue` (the Book's ⋯), `setHidden` in `stores/library.ts`, `data/library.ts`, `set_entry_hidden` in `data/queuedWrites.ts`; database: `set_entry_hidden(entry, hidden)` (`library_entries.hidden`), also an action of `sync_write`)
 Purpose: keep one Book out of what followers see, while it stays in her Library and her own figures.
@@ -579,8 +579,8 @@ Actions → result:
 Edge cases: applies to any Book, Catalogue or Manual book (see *Manual book sheet*, *My edition isn't listed*). A hidden Book never becomes a feed entry. Unhiding a Book brings its old activity back with its dates, as switching a section back on does (contract §1.5a).
 Copy keys: `bookOptions.hide`, `bookOptions.hideHint`
 IDs: `bookOptions.hide` (the switch row)
-Flow: none named in the sources; the write's queue in `web/tests/outbox.test.ts`, the rules in pgTAP (`supabase/tests/social_activity_test.sql`)
-- [ ] Web  - [ ] iOS  - [ ] Android
+Flow: `web/e2e/friends.spec.ts`; `web/tests/outbox.test.ts`, `supabase/tests/social_activity_test.sql`
+- [x] Web  - [ ] iOS  - [ ] Android
 
 ### Year in review  (web: `app/pages/profile/[year].vue`, `components/profile/*`, `stores/stats.ts`, `data/stats.ts`)
 Purpose: one year of the member's reading on a page of its own (issue #78; B's full-screen year, in figures).
