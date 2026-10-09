@@ -437,8 +437,26 @@ standard runner has two cores where a public repository's has four. The workflow
 as the wait for a pull request's result; the numbers in "Measured" below were taken on the four-core public
 runner.
 
-The flows are the expensive part (about 20 billed minutes for the whole suite in one job), so they run **once
-per release** and nowhere else by default.
+The flows are the expensive part (about 20 billed minutes for the whole suite in one job, when it was 243
+measured flows and 2,126 s; since 8 October 2026 it is the 30 flows of the critical paths, about 325 s of
+measured flow time, below), so they run **once per release** and nowhere else by default.
+
+### Which flows
+
+End-to-end tests are worth their cost only for **critical paths**, and a flow exists only for one:
+
+1. getting in: sign up with an invite code, the six-digit code, sign in, sign out;
+2. the core loop: search → add → start → update progress → finish;
+3. offline: the app opens offline on its kept Library, and changes made offline sync later;
+4. what leaves the app: the public reading page, a Book card and the waitlist form;
+5. deleting the account;
+6. (when it lands) the social loop.
+
+Everything else is tested where it is cheapest: rules in pgTAP (`supabase/tests/`), logic in Vitest
+(`web/tests/`: pure functions, and repositories against the local stack). Motion and visual polish are not tested
+end to end. A new screen therefore does not get a flow of its own; it gets one only if it is on a path above.
+Accessibility scans (`expectAccessible`) run in **one theme, dark**, for the screens on the critical paths;
+colours come from tokens that docs/ACCESSIBILITY.md already checks in both themes.
 
 | Event | What runs |
 | --- | --- |
@@ -446,7 +464,7 @@ per release** and nowhere else by default.
 | Pull request with the label **`full-e2e`** | Those checks, and **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
 | Push to `main` (a merge) | The checks the changed paths call for, **no flows**. A regression the checks do not see is found by the flows of the next release (below), or sooner with the label or a manual run. |
 | `workflow_dispatch` | Everything, every flow (`gh workflow run CI --ref <branch>`). |
-| Release (`release.yml`: the push of the release pull request's merge, or a manual run with `migrations` on) | **Every flow**, `@full` included, against the tagged commit, in the `flows` job, before `deploy`. About 20 billed minutes, once per release. |
+| Release (`release.yml`: the push of the release pull request's merge, or a manual run with `migrations` on) | **Every flow**, `@full` included, against the tagged commit, in the `flows` job, before `deploy`. About 20 billed minutes when it was 243 flows, fewer now (30 flows, 325 s; not measured in CI yet), once per release. |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
 | The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No CI run. `release.yml` runs instead, and **its deploy waits for its own flows** (below). |
 
@@ -513,7 +531,7 @@ CLI's default, `public.ecr.aws`, throttled the parallel pulls of the shards (`to
   it while Supabase starts. `LIBELLUS_E2E_DEV=1` runs the flows on `nuxt dev` instead.
 - **A flow is handed its session.** `signedIn()` signs the member up through the API and puts the session
   into the page's storage before the app boots; the sign-in screens are tested where they are the subject
-  (`auth.spec.ts`, a11y's way in, the share that waits through the sign-in, `core-loop`).
+  (`auth.spec.ts`, a11y's way in, `core-loop`).
 - **Reduce Motion is on** (`reducedMotion: 'reduce'` in `playwright.config.ts`), so no flow waits for a
   sheet or a morph. What is about motion opts back in with `test.use({ reducedMotion: 'no-preference' })`.
 - **Workers follow the cores**: three on the runner's four (two on two cores, where three starved WebKit,
@@ -521,15 +539,11 @@ CLI's default, `public.ecr.aws`, throttled the parallel pulls of the shards (`to
 
 ### The `@full` flows
 
-Tagged `@full` (`{ tag: '@full' }` on the test or its `describe`), about 45 % of the flows' time: the axe
-scans (`a11y`, `a11y-reader`, the import card's and the shelf's), the motion and visual specs
-(`book-flight`, `book-flight-android`, `layout-shift`, `library-return`'s frame watch, `sheet-restore`,
-`tab-bar-away`, the search morph, the Profile's frame watches, `no-side-scroll`, `insets`, `large-text`,
-`book-page-polish`), the shelf beyond the owner's row, and the long permutation lists whose rules Vitest
-holds (most of `barcode-scan`, `install-hint`, `share`, `import-offer`, `progress-never-tracked`, `ebooks`;
-`covers`, two of `goodreads`). A new flow is core unless it is one of those kinds. Nothing in CI runs the
-core suite alone any more (the flows left pull requests, above): the tag is what to exclude for a quick
-local pass.
+Tagged `@full` (`{ tag: '@full' }` on the test or its `describe`), about a third of the flows' time (8 of the 30
+flows, about 109 s of 325): the axe scans (`a11y`, `a11y-reader`). The motion and visual specs and the long
+permutation lists whose rules Vitest holds are gone (see "Which flows"). A new flow is core unless it is a scan.
+Nothing in CI runs the core suite alone any more (the flows left pull requests, above): the tag is what to
+exclude for a quick local pass.
 
 ```sh
 cd web
@@ -577,7 +591,9 @@ cd web && pnpm exec tsx e2e/shard.ts record <run id> && git add e2e/durations.js
 
 Each shard costs its setup (about a minute and a half, most of it the browsers' system libraries and the
 build, with the stack starting behind them) on top of its share of the flows; past four, setup is most of
-a shard. The repository variable `E2E_SHARDS` changes the number without a commit.
+a shard. The repository variable `E2E_SHARDS` changes the number without a commit. With 325 s of flows (30
+flows, 25 of them weighed in `durations.json`) four shards are mostly setup; one or two are probably enough,
+which no run has measured yet.
 
 ### Measured
 
@@ -597,5 +613,7 @@ Wall time of the run and its slowest jobs, from the jobs API (October 2026; runs
 | … billed minutes | about 6 | about 32 |
 
 The flows' own time fell from about 2,650 test-seconds (CI, two workers) to about 2,130 for the whole
-suite on three workers, of which the core suite is about 1,200. Locally (6 workers) the whole suite went
+suite on three workers, of which the core suite was about 1,200. Cutting the suite to the critical paths
+(8 October 2026) took it from 292 flows in 64 files (243 weighed, 2,126 s) to 30 flows in 14 files (25 weighed,
+325 s; the weights of the flows trimmed since are unmeasured until the next `shard.ts record`). Locally (6 workers) the whole suite went
 from 4.3 minutes on `nuxt dev` to 1.7 on the build.
