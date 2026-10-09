@@ -1626,7 +1626,9 @@
   "circle": {
     "title": "Your circle",
     "more": "Show more",
-    "asked": "{name} asked to follow you",
+    "askedLine": "asked to follow you",
+    "want": "added {title} to Want to read",
+    "join": " · ",
     "accept": "Accept",
     "decline": "Decline",
     "declineLabel": "Decline {name}"
