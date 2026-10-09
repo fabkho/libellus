@@ -38,15 +38,20 @@ null; every key in the shapes below is always present, with `null` where it has 
 
 ### 1.1 Refusals
 
-| Code | SQLSTATE | When |
+The SQLSTATE of a named refusal is what PostgREST answers with: `PT404` and `PT429` are PostgREST's own
+(a SQLSTATE `PTnnn` is HTTP status nnn), so those refusals are a 404 and a 429 and not a 500; the body keeps the
+message (`{"code":"PT404","message":"not_found",...}`), which is what the client reads. (`20261019010000_social_http_codes.sql`;
+before it they were `P0002` and `54000`, answered as 500.)
+
+| Code | SQLSTATE (HTTP) | When |
 |---|---|---|
-| `not_signed_in` | `42501` | no `auth.uid()` |
-| `not_found` | `P0002` | a member, link or request that is unknown, blocked either way, or not reachable: always the same answer, never "forbidden" |
-| `entry_not_found` | `P0002` | an entry that is not hers |
-| `follow_self` | `22023` | following or blocking herself (checked before anything else) |
-| `follow_limit` | `54000` | the caller has 150 rows in `follows` already (accepted, asked or declined), or 20 that are not accepted (asked or declined) |
-| `rate_limited` | `54000` | 30 or more `follow` calls logged for the caller in the last hour (a refused call rolls back with its own log row) |
-| `social_sections_invalid` | `22023` | `set_social_sections` with an unknown key or a non-boolean |
+| `not_signed_in` | `42501` (403) | no `auth.uid()` |
+| `not_found` | `PT404` (404) | a member, link or request that is unknown, blocked either way, or not reachable: always the same answer, never "forbidden" |
+| `entry_not_found` | `PT404` (404) | an entry that is not hers (`set_entry_hidden`; the other Library functions raise it as `P0002`) |
+| `follow_self` | `22023` (400) | following or blocking herself (checked before anything else) |
+| `follow_limit` | `PT429` (429) | the caller has 150 rows in `follows` already (accepted, asked or declined), or 20 that are not accepted (asked or declined) |
+| `rate_limited` | `PT429` (429) | 30 or more `follow` calls logged for the caller in the last hour (a refused call rolls back with its own log row) |
+| `social_sections_invalid` | `22023` (400) | `set_social_sections` with an unknown key or a non-boolean |
 
 ### 1.2 Tables (D1, D3)
 
@@ -374,9 +379,6 @@ their tests in `social_readers_test.sql` and `social_follows_test.sql`:
 
 Accepted, known (S1):
 
-- **Refusals with errcode P0002 (`not_found`, `entry_not_found`, …) and 54000 (`rate_limited`, `follow_limit`)
-  reach the client as HTTP 500** with only the named message (PostgREST's mapping); the client maps by name. No
-  SQL text, relation or column name is in any of them.
 - **A member can give a new Catalogue Book her own title, description and cover**: the first to add it decides
   what the Catalogue holds, and others who add it, and now their followers, see the title and description as plain
   text. The cover is held back by the host list above; the text is not. This is the Catalogue's trust model, older

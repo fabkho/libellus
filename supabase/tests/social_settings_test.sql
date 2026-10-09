@@ -197,7 +197,7 @@ select ok(not tests.hidden((select id from ids where name = 'ada_entry')), 'and 
 select tests.act_as((select id from ids where name = 'ben'));
 select throws_ok(
   format($$ select public.set_entry_hidden(%L, true) $$, (select id from ids where name = 'ada_entry')),
-  'P0002', 'entry_not_found', 'nobody hides a Book of someone else''s Library');
+  'PT404', 'entry_not_found', 'nobody hides a Book of someone else''s Library');
 
 -- ------------------------------------------------------- who may see a photo
 
