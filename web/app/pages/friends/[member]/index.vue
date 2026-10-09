@@ -118,9 +118,16 @@ const canFollow = computed(() => !!open.value && !open.value.private && open.val
 const requested = computed(() => closed.value?.state === 'requested')
 const failed = computed(() => !!view.value.failed && view.value.failed !== 'offline')
 
-// ⋯: Unfollow · Remove as follower · Block. No action yet: U3 builds the member sheet
-// (components/friends/MemberSheet.vue) and opens it from here, handed this member's card.
-function more() {}
+// ⋯: the member sheet (Unfollow · Remove as follower · Block, by the relation). Once one went
+// through, the profile is read again: Unfollow brings back Follow (or the private card), Block leaves
+// nobody to show.
+const moreOpen = ref(false)
+function more() {
+  moreOpen.value = true
+}
+function changed() {
+  void members.load(id.value)
+}
 
 // The round back: by history when there is one (the feed, People, a follow link), else to the feed.
 function back() {
@@ -249,6 +256,14 @@ function back() {
       </div>
     </template>
 
+    <FriendsMemberSheet
+      v-if="open"
+      v-model:open="moreOpen"
+      :member="open.member"
+      :following="open.state === 'following'"
+      :follower="open.followsYou"
+      @changed="changed"
+    />
     <FriendsMemberWantSheet v-model:open="wantOpen" :title="t('member.want')" :items="wantAll" />
     <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
   </div>
