@@ -1,7 +1,7 @@
 /**
  * Asks the `goodreads-rating` function about every Book in one member's
  * Library, one after another, and reports what Goodreads knew: found by ISBN,
- * found by title, not found, no ISBN to ask with. Fills the cache the way the
+ * found by title (also for a Book without an ISBN), not found, nothing to ask with. Fills the cache the way the
  * book page would, Book by Book; the function keeps its own one-a-second limit.
  *
  *   SUPABASE_URL=http://127.0.0.1:55321 SUPABASE_SERVICE_ROLE_KEY=… \
@@ -55,9 +55,9 @@ const missing: string[] = []
 for (const [index, { book }] of entries.entries()) {
   const isbn13 = book.isbn13 ?? (book.isbn10 ? isbn10To13(book.isbn10) : null)
   const label = `${String(index + 1).padStart(3)} ${book.title} — ${book.authors.join(', ')}`
-  if (!isbn13) {
+  if (!isbn13 && !book.authors.length) {
     tally.noIsbn++
-    lines.push(`${label}: no ISBN`)
+    lines.push(`${label}: no ISBN and no author`)
     missing.push(lines.at(-1)!)
     continue
   }
@@ -65,7 +65,7 @@ for (const [index, { book }] of entries.entries()) {
   const response = await fetch(`${url}/functions/v1/goodreads-rating`, {
     method: 'POST',
     headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ isbn13, title: book.title, authors: book.authors }),
+    body: JSON.stringify({ ...(isbn13 ? { isbn13 } : {}), title: book.title, authors: book.authors }),
   })
   const body = await response.json()
   const ms = Math.round(performance.now() - started)
@@ -84,5 +84,5 @@ for (const [index, { book }] of entries.entries()) {
   console.log(lines.at(-1))
 }
 
-console.log(`\n${entries.length} Books: ${tally.isbn} found by ISBN, ${tally.title} by title, ${tally.notFound} not found, ${tally.noIsbn} without an ISBN, ${tally.failed} failed`)
+console.log(`\n${entries.length} Books: ${tally.isbn} found by ISBN, ${tally.title} by title, ${tally.notFound} not found, ${tally.noIsbn} without an ISBN or an author, ${tally.failed} failed`)
 for (const line of missing) console.log(line)
