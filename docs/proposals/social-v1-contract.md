@@ -354,6 +354,34 @@ Accepted, on purpose (gate 2):
 - **A queued Hide from followers takes effect when it syncs**: until the device is online the Book stays visible.
 - **Cloudflare (the host) sees page paths** such as `/f/<token>` in its logs and its analytics, as it already does for reading pages.
 
+**Security round S1** (the stack attacked by hand through PostgREST, RPC and Storage with real accounts and two
+concurrent sessions; nothing critical or high) closed three more points in `20261017070000_social_s1.sql`, with
+their tests in `social_readers_test.sql` and `social_follows_test.sql`:
+
+- **A Catalogue Book's cover is no tracking pixel either.** `catalogue_book_for` stores the `cover_url` the first
+  member to add a new Book sent, and the next member to add it gets that row; gate 2 let every Book without an
+  owner through `private.cover_shown`. The host list now applies to every Book handed to someone else, Catalogue
+  Books included (feed, profile, Want to read, record, public reading page and its cards); url, thumbhash and
+  colours still go together, and a Book without a URL shows none. Apple, Open Library and Regal covers are on the
+  list, so a normal Catalogue Book still shows its cover.
+- **`follow_target` and `block` cannot race.** `follow_target` took no lock between its look for a block and
+  writing the link view, so a block committed in between left the view behind (and, once she unblocked, the
+  blocked member was reachable again without opening her link). It takes the pair's advisory lock, as `follow`
+  and `block` do, and looks for a block again before it writes; null as for a blocked visitor.
+- **"Already following" comes before the limits.** `follow()` answers `following` and changes and counts nothing
+  when the caller already follows the member, before the rate and size limits (§1.5), so a member at 150 follows
+  no longer gets `follow_limit` for someone she follows.
+
+Accepted, known (S1):
+
+- **Refusals with errcode P0002 (`not_found`, `entry_not_found`, …) and 54000 (`rate_limited`, `follow_limit`)
+  reach the client as HTTP 500** with only the named message (PostgREST's mapping); the client maps by name. No
+  SQL text, relation or column name is in any of them.
+- **A member can give a new Catalogue Book her own title, description and cover**: the first to add it decides
+  what the Catalogue holds, and others who add it, and now their followers, see the title and description as plain
+  text. The cover is held back by the host list above; the text is not. This is the Catalogue's trust model, older
+  than social v1 (`catalogue_book_for` / `add_to_library`), and outside this release.
+
 ### 1.6 The database tests
 
 Written by the orchestrator before the tasks (step 0.2), in `supabase/tests/`:

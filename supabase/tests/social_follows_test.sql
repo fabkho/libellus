@@ -10,7 +10,7 @@
 -- rows this test made, never counts of a table.
 
 begin;
-select plan(49);
+select plan(55);
 
 create schema if not exists tests;
 
@@ -242,6 +242,45 @@ select ok(
   position('blocked_either' in substr(pg_get_functiondef('public.follow(uuid)'::regprocedure),
              position('pair:' in pg_get_functiondef('public.follow(uuid)'::regprocedure)))) > 0,
   'follow looks for a block again after taking the pair''s lock');
+
+-- S1: follow_target held no lock, so a block committed between its look and its insert could not see
+-- (and delete) the link view it wrote. Same order as follow's: the pair's lock, then a second look
+-- for a block, then the insert. The second session is not at hand here, so the order is what is checked.
+select ok(
+  position('pair:' in pg_get_functiondef('public.follow_target(text)'::regprocedure)) > 0
+  and position('pg_advisory_xact_lock' in pg_get_functiondef('public.follow_target(text)'::regprocedure)) > 0,
+  'follow_target takes the pair''s advisory lock, the one follow and block take');
+select ok(
+  (select position('blocked_either' in substr(d, position('pg_advisory_xact_lock' in d))) > 0
+          and position('insert into public.follow_link_views' in d)
+              > position('pg_advisory_xact_lock' in d) + position('blocked_either' in substr(d, position('pg_advisory_xact_lock' in d)))
+     from (select pg_get_functiondef('public.follow_target(text)'::regprocedure) d) f),
+  'and looks for a block again after the lock, before it writes the view');
+
+-- S1: "already following" is answered before the limits (§1.5), also at 150 follows, and counts nothing.
+reset role;
+insert into ids values ('hal', tests.member('hal@social2.pgtap.test', 'Hal'));
+with t as (
+  insert into auth.users (id, instance_id, aud, role, email, raw_user_meta_data, created_at, updated_at)
+  select gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+         format('t%s@social2.pgtap.test', i), '{"invite_code": "T-SOCIAL-2"}'::jsonb, now(), now()
+    from generate_series(1, 150) i
+  returning id)
+insert into public.follows (follower_id, followee_id, accepted_at)
+select (select id from ids where name = 'hal'), id, now() from t;
+insert into ids values ('hal-followed', (select followee_id from public.follows where follower_id = (select id from ids where name = 'hal') limit 1));
+insert into ids values ('hal-new', tests.member('halnew@social2.pgtap.test', 'New'));
+insert into public.social_settings (member_id, private, follow_token)
+values ((select id from ids where name = 'hal-new'), false, private.reading_page_token());
+select is((select count(*)::int from public.follows where follower_id = (select id from ids where name = 'hal')), 150, 'Hal follows 150 members');
+select tests.act_as((select id from ids where name = 'hal'));
+select is(public.follow((select id from ids where name = 'hal-followed')) ->> 'state', 'following',
+  'at 150 follows, a member he already follows is "following", not follow_limit');
+select throws_ok(format($$ select public.follow(%L) $$, (select id from ids where name = 'hal-new')),
+  '54000', 'follow_limit', 'while a new one is still refused');
+reset role;
+select is((select count(*)::int from private.follow_calls where member_id = (select id from ids where name = 'hal')), 0,
+  'and answering "following" logged no call');
 
 -- ---------------------------------------------------------------- signed out
 
