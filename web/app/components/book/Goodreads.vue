@@ -16,7 +16,8 @@ const props = defineProps<{ book: Book | BookSnapshot }>()
 const { t, locale } = useI18n()
 const goodreads = useGoodreadsStore()
 
-const rating = computed(() => {
+// A rating that arrives late waits for the cover's flight (useAfterMotion); one the Book carried is there in the first frame.
+const rating = useAfterMotion(() => {
   const found = goodreads.rating(props.book)
   return showsRating(found) ? found : null
 })

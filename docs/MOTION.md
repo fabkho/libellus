@@ -92,6 +92,16 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   Profile's wave, and the page replaces them whole when it comes, so nothing on it moves; opened again,
   it is there from the device's copy. A Book's series line, the first time, opens its room like a
   `Reveal` (Goodreads' line does the same); after that it is there in the first frame.
+  **Late arrivals wait for the cover.** The hero's cover is at the top of the page and nothing that
+  arrives can move it (its box is the stand-in's, and the flight's end, to the pixel: measured on
+  Chromium at 4x CPU and on WebKit), but the series line (about 22 px) and the rating (about 26 px)
+  open their rooms under the title and push the state line and the action down. An answer that came
+  while the cover was still in the air did that on top of the hero's rise, two motions on one
+  stretch of page, so both wait until nothing moves (`useAfterMotion`, `afterMotion`: the flight and
+  its hand-over) and then open their room as above; what the device already knows stands in the
+  first frame. No space is reserved for them: a Book without a series or a rating would carry a gap
+  of that height (`BookGenres` reserves a row only for a Library Book, whose chips are almost
+  always on the device).
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
@@ -163,6 +173,11 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   Home's small import offer (one to three entries, `HomeImportOffer`) is one: it stands in the first frame when the
   device's Library says so (no opening, nothing moves when the lists arrive) and closes like a Reveal when
   the × is tapped, or when the one question about an import on another device says yes.
+  The Book page's sections below About (`BookSection`: More from the author, Similar books next) are
+  one too, whole (heading and content) in one room: nothing is reserved for them and they have no
+  placeholders, because they sit at the page's foot and start their data only when they near the
+  viewport (one IntersectionObserver on the section's root); they open when the data is in and are
+  not in the page at all when there is nothing to show (offline without a copy, an error, no data).
 - **Search morph.** As iOS 26 and Apple Books do it, the tab bar's capsule turns into the search
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's

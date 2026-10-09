@@ -1,4 +1,4 @@
-import type { BookAuthor, LifeDate } from '~/data/enrich/authors'
+import type { AuthorHero, AuthorPage, BookAuthor, LifeDate } from '~/data/enrich/authors'
 import type { BookSeriesPlace, StartedSeries } from '~/data/enrich/series'
 import type { WorkCard } from '~/data/enrich/works'
 
@@ -81,6 +81,27 @@ export function startedOnHome(items: readonly StartedSeries[], limit = HOME_SERI
 }
 
 /**
+ * A series muted (`on`) or unmuted: its item moves from one list to the other, each kept in the
+ * database's order (latest activity first, then the name). A series that is not in the list it
+ * leaves is left alone (the lists are asked again right after).
+ */
+export function moveMuted(
+  lists: { started: readonly StartedSeries[]; muted: readonly StartedSeries[] },
+  seriesId: string,
+  on: boolean,
+): { started: StartedSeries[]; muted: StartedSeries[] } {
+  const from = on ? lists.started : lists.muted
+  const to = on ? lists.muted : lists.started
+  const item = from.find((s) => s.series.id === seriesId)
+  if (!item) return { started: [...lists.started], muted: [...lists.muted] }
+  const rest = from.filter((s) => s !== item)
+  const into = [...to.filter((s) => s.series.id !== seriesId), item].sort(
+    (a, b) => (b.activeOn ?? '').localeCompare(a.activeOn ?? '') || a.series.name.localeCompare(b.series.name),
+  )
+  return on ? { started: rest, muted: into } : { started: into, muted: rest }
+}
+
+/**
  * Where the next work stands in its series, as a row says it: "Book 3 of 10"
  * (a whole-numbered place within the count), "Book 2.5" (a novella, or a place
  * past the count), or none when the series gives no place.
@@ -157,4 +178,50 @@ export function parsePosition(text: string): number | null | 'invalid' {
   if (!value) return null
   if (!/^\d{1,4}(\.\d{1,2})?$/.test(value)) return 'invalid'
   return Number(value)
+}
+
+/** The Book a Book page is on, as far as its works can be told from the author's others. */
+export type CurrentBook = { bookId: string | null; key: string; isbn13?: string | null; title: string }
+
+/** Whether an author's work is the Book the page is about: her entry of it, its edition's key or ISBN, or the same title. */
+export function isCurrentWork(work: WorkCard, current: CurrentBook): boolean {
+  if (current.bookId && work.entry?.bookId === current.bookId) return true
+  const key = workBookKey(work)
+  if (key && (key === current.key || key === current.bookId)) return true
+  if (current.isbn13 && work.edition?.isbn13 === current.isbn13) return true
+  return sameName(work.title, current.title)
+}
+
+/** How many of the author's other works the Book page's "More from the author" shows; "Show all" has the rest. */
+export const MORE_FROM_AUTHOR = 3
+
+/** What the Book page's "More from the author" shows. */
+export type MoreFromAuthor = {
+  author: AuthorHero
+  /** All the works her page lists (this Book's included): what "Show all" says. */
+  total: number
+  /** Up to `limit` others, those that open a Book first, each once, in the page's order (series, novels, the rest). */
+  works: WorkCard[]
+  /** More other works than the ones shown: "Show all" has a reason to be there. */
+  more: boolean
+}
+
+/**
+ * The section's content from an author page, or null when there is nothing to
+ * show: no page, or none of her other works to offer.
+ */
+export function moreFromAuthor(page: AuthorPage | null | undefined, current: CurrentBook, limit = MORE_FROM_AUTHOR): MoreFromAuthor | null {
+  if (!page) return null
+  const all = [...page.series.flatMap((s) => s.works), ...page.standalone, ...page.other]
+  const seen = new Set<string>()
+  const others: WorkCard[] = []
+  for (const work of all) {
+    const id = work.workId ?? `${work.title}\n${work.year ?? ''}`
+    if (seen.has(id)) continue
+    seen.add(id)
+    if (!isCurrentWork(work, current)) others.push(work)
+  }
+  const works = [...others.filter((w) => workBookKey(w)), ...others.filter((w) => !workBookKey(w))].slice(0, limit)
+  if (!works.length) return null
+  return { author: page.author, total: seen.size, works, more: others.length > works.length }
 }

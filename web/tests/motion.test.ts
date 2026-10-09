@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { parseDuration } from '../app/utils/motion'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { addMover, followAfterMotion, parseDuration } from '../app/utils/motion'
 
 /**
  * Motion tokens read back from the stylesheet (utils/motion.ts). The tokens
@@ -23,5 +23,39 @@ describe('parseDuration', () => {
     expect(parseDuration('')).toBe(0)
     expect(parseDuration('250')).toBe(0)
     expect(parseDuration('fast')).toBe(0)
+  })
+})
+
+/**
+ * What arrives late waits for the cover (utils/motion.ts, followAfterMotion): the Book page's series line
+ * and Goodreads' rating opened their room under the hero while the cover still flew in.
+ */
+describe('followAfterMotion', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const frames = () => vi.stubGlobal('requestAnimationFrame', (run: () => void) => setTimeout(run, 0))
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  it('applies at once when nothing moves', async () => {
+    frames()
+    const seen: string[] = []
+    followAfterMotion<string>((value) => seen.push(value))('series')
+    await sleep(5)
+    expect(seen).toEqual(['series'])
+  })
+
+  it('holds a change while something moves, then applies the newest one only', async () => {
+    frames()
+    let flying = true
+    const remove = addMover(() => flying)
+    const seen: string[] = []
+    const follow = followAfterMotion<string>((value) => seen.push(value))
+    follow('series')
+    follow('rating')
+    await sleep(20)
+    expect(seen).toEqual([])
+    flying = false
+    await sleep(20)
+    expect(seen).toEqual(['rating'])
+    remove()
   })
 })
