@@ -330,6 +330,30 @@ Accepted, on purpose:
 - **Unhiding a Book brings its old activity back** with its dates, as switching a section back on does.
 - **`purge-activity` is only scheduled where pg_cron exists**, as `purge-synced-writes` is.
 
+**Gate 2** (a privacy review of the whole of social v1: no critical or high leak) closed four more points in
+`20261015060000_social_gate2.sql`, with their tests in the `social_*_test.sql` files:
+
+- **A Manual book's cover is no tracking pixel.** `cover_url` of a member's own Book is any `https://` URL she
+  typed, and a follower's browser would fetch it when the feed opens. `private.cover_shown(book)` lets a cover
+  of such a Book (with its thumbhash and colours) reach others only on `covers.openlibrary.org`,
+  `*.mzstatic.com` or `books.fabkho.dev`, the hosts the app's own sources use (no Storage bucket holds a
+  cover); else null and the follower sees the cloth Placeholder. Every path goes through it: the feed,
+  `member_profile` and `member_want` (`social_book_json`), the public reading page and its cards
+  (`reading_page_book_json`), and the record's Book in `member_reading_record`.
+- **`follow` and `block` cannot race.** `follow` checks `blocked_either` and `reachable` again once it holds
+  the pair's lock, so a block committed while it waited is not followed through (`not_found`).
+- **A photo, not the folder.** `avatars_select_connected` now calls `can_see_member_file(name)`: only the
+  member's current photo (`accounts.avatar_path`) and its `-128` twin, not the older photos still in her folder.
+- **A `reviewed` row needs its review.** The feed leaves out a `reviewed` row whose session's review has been
+  cleared, instead of "reviewed X" with no text (only the feed hands out `activity` rows).
+
+Accepted, on purpose (gate 2):
+
+- **Going public deletes declined requests**, so a declined asker sees Follow rather than Following; he can now follow anyway.
+- **A second account can tell "blocked" from "private"**, as on Instagram; only the blocker is learned.
+- **A queued Hide from followers takes effect when it syncs**: until the device is online the Book stays visible.
+- **Cloudflare (the host) sees page paths** such as `/f/<token>` in its logs and its analytics, as it already does for reading pages.
+
 ### 1.6 The database tests
 
 Written by the orchestrator before the tasks (step 0.2), in `supabase/tests/`:
