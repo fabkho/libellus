@@ -15,7 +15,7 @@ const { formatDay } = useDays()
   <UiSheet v-model:open="open" :title="title" testid="memberWant">
     <ul class="flex flex-col pb-lg">
       <li v-for="item in items" :key="item.book.id" data-testid="memberWant.row">
-        <FriendsMemberBookLink :book="item.book" class="flex items-center gap-inset py-sm active:opacity-80">
+        <FriendsMemberBookLink :book="item.book" class="flex items-center gap-inset py-sm active:opacity-80" data-testid="memberWant.book">
           <UiCover
             decorative
             :title="item.book.title"
