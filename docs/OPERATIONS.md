@@ -168,7 +168,7 @@ database's own small log, no third-party service:
 | `chunk` | a chunk of the build that could not be loaded, usually after a deploy (`app:chunkError`, or any error saying so) | the same |
 | `outbox` | a write that waited offline and was refused when it synced: `<action> refused: <code>` | `web/app/stores/sync.ts` |
 | `shelf` | the owner's shelf: the library file could not be fetched or read (`library file unreachable` / `invalid`), or Regal could not show it (`Regal: …`) | `web/app/stores/shelf.ts`, `web/app/components/shelf/` |
-| `vitals` | a Core Web Vital that went badly on a device, with its culprit: `CLS 0.42 on /library`, `INP 410 ms on /book/:key`, `LCP 4.8 s on /` (Web Vitals, below) | `web/app/plugins/vitals.client.ts`, `web/app/data/vitals.ts` |
+| `vitals` | a Core Web Vital that went badly on a device, with its culprit: `CLS 0.42 on /library`, `INP 410 ms on /book/:key`, `LCP 4.8 s on /`, or a stutter: `LoAF 312 ms on /library` (Web Vitals, below) | `web/app/plugins/vitals.client.ts`, `web/app/data/vitals.ts`, `web/app/data/loaf.ts` |
 
 How it works: `web/app/data/errorLog.ts` keeps a short line of reports on the device (in memory and in
 `localStorage`, so a reload after a missing chunk keeps it), folds the same error into one report with a
@@ -228,6 +228,32 @@ The error log folds, scrubs, limits and sends these rows like any other; the bui
 was the search palette growing with its results before it kept its room; any other element is a
 screen whose layout changes after its first frame, which is worth a look. `vitals` rows on a dev
 server only print, like every report (above).
+
+**Stutters (`LoAF`).** Chromium (Android Chrome, desktop Chrome and Edge) also tells the app about each
+**long animation frame**: one frame, from an input or a timer to the next paint, that took
+`POOR_LOAF` = 200 ms or more (`web/app/data/vitals.ts`; the code is `web/app/data/loaf.ts`). It is
+observed once the app is idle like the vitals above, and only there: WebKit (iOS) and Firefox have no
+such entry, so no row comes from them. Not counted: frames in the first 3 s of the page (the start is
+measured on its own) and any while the page is in the background. At most 3 rows per route and 10 per
+page life, and a script in a route is one row however often it stutters. The row is `LoAF 312 ms on
+/library` (the route's pattern, as above) and its stack says what the frame was made of:
+
+- `blocking:` the part of the frame that kept the page from answering input, `render:` and
+  `style/layout:` the time from where rendering and layout began to the frame's end.
+- `scripts:` up to three scripts, the longest first, each as `invoker (function) from /_nuxt/<chunk>.js
+  123 ms`: who called it (`BUTTON.onclick`, `Window.requestAnimationFrame`, `TimerHandler:setTimeout`,
+  a promise), the function, the chunk by its path (query and fragment dropped, another host by its
+  host only) and its time in the frame. A chunk is the build's file name, so it is matched to the
+  `app_version` of the row.
+- `during:` `interaction (click)` when the frame handled a tap or key, `navigation` when the route
+  changed meanwhile; nothing for a timer or an animation. `load state:` as for the vitals.
+
+Reading them against a slow phone: a slow device makes *every* screen stutter a little in the same
+scripts (and the same chunk), so look for a **route** or **function** that comes up on many members and
+devices; a stutter whose `scripts:` is one function of the app, on a few routes, is the app's, a long
+`render:` or `style/layout:` with small scripts is a heavy page (many elements, a big list). Wherever
+the same row comes from one device only, it is that device. Open the chunk of the build, find the
+function and fix or defer it. Elements and text are never reported.
 
 ### Reading them
 
