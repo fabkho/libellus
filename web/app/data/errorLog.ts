@@ -57,12 +57,19 @@ const URL_TAIL = /([a-z][a-z0-9+.-]*:\/\/[^\s?#"'<>()]*)[?#][^\s"'<>()]*?((?::\d
 // A route's secret or personal part: a member's id (`/friends/<uuid>`, then anything after it) and a follow link's token (`/f/<token>`).
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const MEMBER_ROUTE = new RegExp(`^/friends/${UUID}(?=/|$)`, 'i')
-// A trailing slash too: Cloudflare Pages serves routes as folders (middleware/auth.global.ts).
-const FOLLOW_ROUTE = /^\/f\/[^/]+(?=\/?$)/
+// Any id, anywhere (a Nuxt 404 words `Page not found: /friends/<uuid>/x`, a stack carries the address): a member's, a Book's, a request's.
+const ANY_UUID = new RegExp(`\\b${UUID}\\b`, 'gi')
+// A follow link's token wherever `/f/` stands, whatever follows it (a trailing slash, `/x`, a query): in text it ends at the first character a token has not.
+const FOLLOW_TOKEN = /\/f\/[\w-]+/g
 
 /** A text without e-mail addresses, tokens or the query and fragment of its URLs. */
 export function scrubText(text: string): string {
-  return text.replace(EMAIL, '[email]').replace(JWT, '[token]').replace(URL_TAIL, '$1$2')
+  return text
+    .replace(EMAIL, '[email]')
+    .replace(JWT, '[token]')
+    .replace(URL_TAIL, '$1$2')
+    .replace(ANY_UUID, '[id]')
+    .replace(FOLLOW_TOKEN, '/f/[token]')
 }
 /**
  * The path of a route or address, nothing after it; null for anything else. A member's
@@ -75,7 +82,8 @@ export function scrubRoute(route: string | null | undefined): string | null {
   if (!path.startsWith('/')) return null
   const scrubbed = path
     .replace(MEMBER_ROUTE, '/friends/[member]')
-    .replace(FOLLOW_ROUTE, '/f/[token]')
+    .replace(ANY_UUID, '[id]')
+    .replace(FOLLOW_TOKEN, '/f/[token]')
   return scrubbed.slice(0, ROUTE_MAX)
 }
 
