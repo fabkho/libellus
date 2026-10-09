@@ -8,6 +8,7 @@
 // opens its room (`UiReveal`).
 import type { FeedRow } from '~/data/feed'
 import { useFeedStore } from '~/stores/feed'
+import { useSocialStore } from '~/stores/social'
 
 /** How many rows Home shows: a glance, the feed's page has the rest. */
 const SHOWN = 3
@@ -17,6 +18,29 @@ type Batch = Extract<FeedRow, { type: 'batch' }>
 const { t } = useI18n()
 const feed = useFeedStore()
 const { label } = useFeedDay()
+const social = useSocialStore()
+const online = useOnline()
+
+// The newest request that waits (People has them all), above the entries: the section shows for it
+// alone too. Her settings carry the count (read by the shell's header); the list is asked for when
+// there is one.
+const request = computed(() => (social.requests > 0 ? (social.people?.requests[0] ?? null) : null))
+watch(
+  () => social.requests,
+  (waiting) => {
+    if (waiting > 0) void social.loadPeople(true)
+  },
+  { immediate: true },
+)
+const answering = ref(false)
+async function answer(accept: boolean) {
+  const asking = request.value
+  if (!asking) return
+  answering.value = true
+  // The store reads her settings and People again: the row leaves, the header's dot with it.
+  await social.answer(asking.id, accept)
+  answering.value = false
+}
 
 /** The newest rows with the day each is from, across the days. */
 const rows = useSettled(() => feed.days.flatMap((day) => day.rows.map((row) => ({ row, day: day.day }))).slice(0, SHOWN))
@@ -48,16 +72,20 @@ function openBatch(row: Batch, day: string) {
 </script>
 
 <template>
-  <UiReveal :show="rows.length > 0">
+  <UiReveal :show="rows.length > 0 || !!request">
     <section data-testid="home.circle">
       <div class="flex h-(--size-touch) items-center">
         <h2 class="eyebrow">{{ t('circle.title') }}</h2>
       </div>
-      <!--
-        U3 (the follow request): a row for the request that waits (`home.circleRequest`, with
-        `home.circleAccept` and `home.circleDecline`) goes here, above the entries, and the section
-        then shows with a request alone (`rows.length > 0 || requests > 0`).
-      -->
+      <FriendsRequestRow
+        v-if="request"
+        :request="request"
+        compact
+        :offline="!online"
+        :busy="answering"
+        @accept="answer(true)"
+        @decline="answer(false)"
+      />
       <UiListMotion tag="ul" class="flex flex-col divide-y divide-hairline" :aria-label="t('circle.title')">
         <template v-for="({ row, day }, index) in rows" :key="rowKey(row)">
           <FriendsFeedRow
@@ -78,7 +106,7 @@ function openBatch(row: Batch, day: string) {
           />
         </template>
       </UiListMotion>
-      <UiButton tone="quiet" size="md" block to="/friends" class="mt-sm" data-testid="home.circleMore">{{ t('circle.more') }}</UiButton>
+      <UiButton v-if="rows.length > 0" tone="quiet" size="md" block to="/friends" class="mt-sm" data-testid="home.circleMore">{{ t('circle.more') }}</UiButton>
     </section>
     <FriendsBatchSheet v-if="batch" v-model:open="sheetOpen" :batch="batch" :day-label="batchDay" />
   </UiReveal>
