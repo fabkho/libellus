@@ -27,11 +27,23 @@ describe('colours', () => {
     expect(parseColor('rgb(10,20,30)')).toEqual({ r: 10, g: 20, b: 30, a: 1 })
     expect(parseColor('  RGB(0 0 0 / .5) ')).toEqual({ r: 0, g: 0, b: 0, a: 0.5 })
   })
+  it('reads the minifier’s four- and eight-digit hex, alpha included', () => {
+    // One digit a channel, alpha too: `#f00a` is half-transparent red, not red with a trailing digit.
+    expect(parseColor('#f00a')).toEqual({ r: 255, g: 0, b: 0, a: 170 / 255 })
+    expect(parseColor('#1a1')).toEqual({ r: 17, g: 170, b: 17, a: 1 })
+    // What Lightning CSS makes of `rgb(26 20 14 / 0.38)`: the alpha byte is the scrim's opacity.
+    expect(parseColor('#1a140e61')).toEqual({ r: 26, g: 20, b: 14, a: 97 / 255 })
+    expect(blendOver('#1a140e61', LIGHT)).toBe(blendOver(LIGHT_SCRIM, LIGHT))
+    expect(blendOver('#1a140e61', LIGHT)).not.toBe(LIGHT) // used as the alpha, not read as opaque
+    expect(blendOver('#f4f0e9ff', LIGHT)).toBe(LIGHT) // opaque: nothing over it
+  })
   it('knows what it cannot read', () => {
     expect(parseColor('')).toBeNull()
     expect(parseColor('red')).toBeNull()
     expect(parseColor('color-mix(in srgb, red, blue)')).toBeNull()
     expect(parseColor('rgb(1 2)')).toBeNull()
+    expect(parseColor('#12345')).toBeNull()
+    expect(parseColor('#1234567')).toBeNull()
   })
   it('lays the scrim over the page colour', () => {
     expect(blendOver(DARK_SCRIM, '#ffffff')).toBe('#808080')

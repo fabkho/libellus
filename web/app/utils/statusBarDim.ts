@@ -28,14 +28,20 @@ type Rgba = { r: number; g: number; b: number; a: number }
 
 const clamp = (value: number, max: number) => Math.min(max, Math.max(0, value))
 
-/** `#rgb`, `#rrggbb`, `rgb()` and `rgba()` in both the comma and the space syntax, `/ alpha` or `%` included. Null for anything else. */
+/** `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()` and `rgba()` in both the comma and the space syntax, `/ alpha` or `%` included. Null for anything else. */
 export function parseColor(input: string): Rgba | null {
   const text = input.trim().toLowerCase()
-  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/.exec(text)
+  // Four digits as well as three, and eight as well as six: the minifier writes `rgb(26 20 14 / 0.38)`
+  // as `#1a140e61` (Lightning CSS, a production build), and a scrim read as no colour at all means no
+  // dim at all — the tags then keep their own colour and the status bar stays bright under a sheet.
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/.exec(text)
   if (hex) {
-    const digits = hex[1]!.length === 3 ? [...hex[1]!].map((d) => d + d).join('') : hex[1]!
+    // A short form is one digit a channel, alpha included; doubling each digit is what makes it rgba.
+    const digits = hex[1]!.length <= 4 ? [...hex[1]!].map((d) => d + d).join('') : hex[1]!
     const n = parseInt(digits, 16)
-    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 }
+    return digits.length === 8
+      ? { r: (n >>> 24) & 255, g: (n >>> 16) & 255, b: (n >>> 8) & 255, a: (n & 255) / 255 }
+      : { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 }
   }
   const fn = /^rgba?\(\s*([^)]*?)\s*\)$/.exec(text)
   if (!fn) return null
