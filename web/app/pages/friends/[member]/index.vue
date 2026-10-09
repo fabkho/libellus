@@ -236,8 +236,8 @@ function back() {
           <section class="flex flex-col gap-md pb-xl" data-testid="member.want">
             <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
               <h2 class="eyebrow">{{ t('member.want') }}</h2>
-              <UiButton v-if="blocks.wantAll" tone="quiet" size="sm" :aria-label="t('member.seeAllLabel', { section: t('member.want') })" data-testid="member.wantAll" @click="wantOpen = true">
-                {{ t('member.wantAll') }}<UiIcon name="chevron" :size="13" />
+              <UiButton v-if="blocks.wantAll" tone="quiet" size="sm" :aria-label="t('member.seeAllLabel', { count: count(open.counts.want ?? 0), section: t('member.want') })" data-testid="member.wantAll" @click="wantOpen = true">
+                <span class="figures">{{ t('member.wantAll', { count: count(open.counts.want ?? 0) }) }}</span><UiIcon name="chevron" :size="13" />
               </UiButton>
             </div>
             <FriendsMemberCovers :books="open.want.map((w) => w.book)" size="sm" testid="member.wantBooks" />
