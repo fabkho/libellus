@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEVICE_FEED_KEY, FEED_PAGE, saveFeed, type FeedEntry } from '@/data/feed'
+import { DEVICE_FEED_KEY, FEED_PAGE, feedDays, saveFeed, type FeedEntry } from '@/data/feed'
 import {
   appendPage,
   copyTakenAt,
@@ -9,6 +9,7 @@ import {
   feedEmptyState,
   feedVerbKey,
   mergeFirstPage,
+  withoutDoubledReviews,
   withoutMember,
 } from '@/utils/feedView'
 
@@ -188,5 +189,47 @@ describe('a member who left her circle', () => {
     // Unknown (People not read): nothing is dropped.
     expect(mergeFirstPage(had, fresh, null).map((e) => e.id).slice(FEED_PAGE)).toEqual(['old-ada', 'old-ida'])
     expect(mergeFirstPage(had, fresh).length).toBe(FEED_PAGE + 2)
+  })
+})
+
+describe('a review that follows its finish', () => {
+  const book = (id: string) => ({ ...BOOK, id, title: id })
+  const of = (id: string, minutes: number, kind: FeedEntry['kind'], bookId: string, member = CARD): FeedEntry => ({
+    ...entry(id, minutes),
+    member,
+    kind,
+    book: book(bookId),
+    review: kind === 'finished' || kind === 'reviewed' ? 'Quiet and strange.' : null,
+  })
+  const day = (entries: FeedEntry[]) => feedDays(withoutDoubledReviews(entries), (at) => at.slice(0, 10))[0]!.rows
+
+  it('shows one row when both the finish and the review are loaded', () => {
+    const rows = day([of('r', 20, 'reviewed', 'home'), of('f', 10, 'finished', 'home')])
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ type: 'entry', entry: { id: 'f', kind: 'finished' } })
+  })
+
+  it('keeps a review whose finish is not loaded', () => {
+    const rows = day([of('r', 20, 'reviewed', 'home')])
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ entry: { id: 'r', kind: 'reviewed' } })
+  })
+
+  it("keeps a review of a Book she did not finish here, and another member's review of the same Book", () => {
+    const ben = { id: 'ben', name: 'Ben', photo: null }
+    const rows = day([of('r1', 40, 'reviewed', 'home', ben), of('r2', 30, 'reviewed', 'other'), of('f', 10, 'finished', 'home')])
+    expect(rows.map((row) => row.type === 'entry' && row.entry.id)).toEqual(['r1', 'r2', 'f'])
+  })
+
+  it('counts a batch of reviews without the ones whose finish is loaded', () => {
+    const reviews = ['a', 'b', 'c', 'd'].map((b, i) => of(`r${b}`, 50 - i, 'reviewed', b))
+    // Three of the four reviewed Books are finished too: one review is left, so no batch.
+    let rows = day([...reviews, of('fa', 5, 'finished', 'a'), of('fb', 4, 'finished', 'b'), of('fc', 3, 'finished', 'c')])
+    expect(rows.filter((row) => row.type === 'batch' && row.kind === 'reviewed')).toHaveLength(0)
+    expect(rows.filter((row) => row.type === 'entry' && row.entry.kind === 'reviewed').map((row) => row.type === 'entry' && row.entry.id)).toEqual(['rd'])
+    // Only one of the four is: three reviews are left, and they are a batch.
+    rows = day([...reviews, of('fa', 5, 'finished', 'a')])
+    const batch = rows.find((row) => row.type === 'batch' && row.kind === 'reviewed')
+    expect(batch?.type === 'batch' && batch.entries.map((e) => e.id)).toEqual(['rb', 'rc', 'rd'])
   })
 })
