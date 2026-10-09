@@ -437,7 +437,7 @@ standard runner has two cores where a public repository's has four. The workflow
 as the wait for a pull request's result; the numbers in "Measured" below were taken on the four-core public
 runner.
 
-The flows are the expensive part (about 20 billed minutes for the whole suite in one job), so they run **once
+The flows are the expensive part (about 35 billed minutes for the whole suite in one job), so they run **once
 per release** and nowhere else by default.
 
 | Event | What runs |
@@ -446,7 +446,7 @@ per release** and nowhere else by default.
 | Pull request with the label **`full-e2e`** | Those checks, and **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
 | Push to `main` (a merge) | The checks the changed paths call for, **no flows**. A regression the checks do not see is found by the flows of the next release (below), or sooner with the label or a manual run. |
 | `workflow_dispatch` | Everything, every flow (`gh workflow run CI --ref <branch>`). |
-| Release (`release.yml`: the push of the release pull request's merge, or a manual run with `migrations` on) | **Every flow**, `@full` included, against the tagged commit, in the `flows` job, before `deploy`. About 20 billed minutes, once per release. |
+| Release (`release.yml`: the push of the release pull request's merge, or a manual run with `migrations` on) | **Every flow**, `@full` included, against the tagged commit, in the `flows` job, before `deploy`. About 35 billed minutes, once per release. |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
 | The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No CI run. `release.yml` runs instead, and **its deploy waits for its own flows** (below). |
 
@@ -475,6 +475,12 @@ left out, on purpose, in two cases only: a manual run with `migrations` off (a r
 shipped with them, and a flow failing on an old tag must not hold a rollback back) and a manual run with
 `skip_flows` on (`gh workflow run release.yml -f tag=vX.Y.Z -f migrations=true -f skip_flows=true`, to deploy
 without waiting for them).
+
+The one shard a release runs holds the whole suite — **292 tests** — and the two-core runner the private
+repository gets needs longer than the 25 minutes that ended the v1.5.1 release run with 53 of them never run
+(37848739700, 8 October 2026). The caps follow: the run ends itself at `globalTimeout` 40 minutes
+(`web/playwright.config.ts`) and the job waits 45 (`timeout-minutes`, `e2e.yml`), so a hang is ended by the
+run — with its report — and never by the job.
 
 The flows are a **reusable workflow** (`e2e.yml`, `workflow_call`) rather than a composite action: what both
 callers share is whole jobs (the shard matrix, the runner, the timeout, the report that merges the shards),

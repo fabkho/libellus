@@ -12,8 +12,8 @@ name: CI
 #   workflow_dispatch everything, every flow (a manual full run)
 #
 # The flows are the one reusable workflow e2e.yml, called from here and from
-# release.yml. They are ~20 billed minutes on the private repository's two-core
-# runners, which is why only a release (and a label or a manual run) pays them.
+# release.yml. They are about 35 billed minutes on the two-core runner the private
+# repository gets, which is why only a release (and a label or a manual run) pays them.
 #
 # Docs-only changes (*.md, docs/**, android/**) start no run at all, and neither
 # does a release pull request ("chore(main): release x.y.z", release.yml): it only

@@ -43,12 +43,14 @@ export default defineConfig({
   workers: CI ? CI_WORKERS : undefined,
   timeout: CI ? 60_000 : 30_000,
   // A run that hangs is ended here, by the run itself, and not by the job: the job's
-  // 30-minute `timeout-minutes` kills it with no blob report, so a hang cost 30 billed
+  // 45-minute `timeout-minutes` kills it with no blob report, so a hang cost the billed
   // minutes and left nothing to look at (shard 2 of run 37752557924, 8 October 2026).
-  // A shard runs about 4 minutes of flows, but `E2E_SHARDS=1` (docs/TESTING.md) puts
-  // the whole core suite in one job: about 16 minutes of flows, 18 with a retried test.
-  // Twenty-five stays clear of that and of the job's 30, and still bounds a hang.
-  globalTimeout: CI ? 25 * 60_000 : 0,
+  // A shard runs about 4 minutes of flows, but `E2E_SHARDS=1` (docs/TESTING.md) puts the
+  // whole suite in one job, and that is what every release runs: 292 tests, and the
+  // two-core runner the private repository gets reached 236 of them before twenty-five
+  // minutes were up (the release run of v1.5.1, 37848739700, 8 October 2026). Forty stays
+  // clear of the whole suite and of the job's 45, and still bounds a hang.
+  globalTimeout: CI ? 40 * 60_000 : 0,
   expect: { timeout: CI ? 10_000 : 5_000 },
   reporter: CI ? [['list'], ['github'], ['blob']] : 'list',
   use: {

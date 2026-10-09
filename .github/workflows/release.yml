@@ -9,7 +9,7 @@ name: Release
 #   2. The owner merges that pull request. The push it makes runs release-please
 #      again, which tags vX.Y.Z and creates the GitHub release.
 #   3. `flows` (same run) runs every user flow, @full included, against the tagged
-#      commit on a local stack (e2e.yml, one shard, about 20 billed minutes). They
+#      commit on a local stack (e2e.yml, one shard, about 35 billed minutes). They
 #      run nowhere else on the way to a release: not on pull requests and not on
 #      pushes to main (docs/TESTING.md, "CI: what runs when"). The release pull
 #      request cannot run them: a pull request release-please opens with the run's
@@ -48,7 +48,7 @@ on:
         type: boolean
         default: true
       skip_flows:
-        description: 'Deploy without running the user flows first (they take about 20 minutes)'
+        description: 'Deploy without running the user flows first (they take about 35 minutes)'
         required: false
         type: boolean
         default: false

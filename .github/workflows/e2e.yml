@@ -57,7 +57,9 @@ jobs:
   e2e:
     name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Above the run's own cap (`globalTimeout`, 40 minutes, web/playwright.config.ts), so a run that
+    # hangs ends by itself and still writes its report; below it the job would be killed with none.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
