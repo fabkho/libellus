@@ -87,15 +87,15 @@ export const useFeedStore = defineStore('feed', () => {
     loadError.value = null
     // Older entries she scrolled to are kept only for people she follows now: asked of her People (read
     // again, as it may be old) when there are such entries to keep. Unknown: none is dropped.
-    let following: Set<string> | null = null
+    let stillFollowing: Set<string> | null = null
     const fresh = new Set(result.data.map((entry) => entry.id))
     if (result.data.length >= FEED_PAGE && entries.value.some((entry) => !fresh.has(entry.id))) {
       const social = useSocialStore()
       await social.loadPeople(true)
       if (member !== session.member?.id) return
-      if (social.people) following = new Set(social.people.following.map((card) => card.id))
+      if (social.people) stillFollowing = new Set(social.people.following.map((card) => card.id))
     }
-    const merged = mergeFirstPage(entries.value, result.data, following)
+    const merged = mergeFirstPage(entries.value, result.data, stillFollowing)
     // The same entries as the ones showing (the device's copy, or the last load) change nothing on the page.
     if (JSON.stringify(toRaw(entries.value)) !== JSON.stringify(merged)) entries.value = merged
     ended.value = result.data.length < FEED_PAGE
