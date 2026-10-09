@@ -51,7 +51,7 @@ const reads = computed(() => record.value?.reads ?? [])
 const loading = computed(() => !record.value && (!view.value.loaded || view.value.recordLoading))
 const blocks = computed(() => (open.value ? memberBlocks(open.value, record.value, loading.value) : null))
 /** Her figures are not for the caller: a dead link, a private account, or her switches (the page is then the quiet state). */
-const missing = computed(() => view.value.loaded && !view.value.recordLoading && !record.value)
+const missing = computed(() => view.value.loaded && !view.value.recordLoading && !record.value && !view.value.recordError)
 const years = computed(() => yearsOf(reads.value))
 const figures = computed(() => figuresWithRatings(figuresOf(reads.value, year.value), open.value?.sections.ratings ?? true))
 const hasYear = computed(() => !!record.value && figures.value.books > 0)
@@ -92,6 +92,12 @@ function back() {
 
     <div v-if="missing" class="relative flex flex-col items-center gap-xs px-xl py-xl text-center" data-testid="memberYear.missing">
       <p class="book-title text-callout">{{ t('follow.missingTitle') }}</p>
+    </div>
+
+    <!-- Her profile came, her figures did not (offline, or it failed): not a dead link. -->
+    <div v-else-if="view.recordError && !record" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="memberYear.recordError">
+      <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>
+      <UiButton v-if="view.recordError !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
     </div>
 
     <div v-else-if="view.error && !view.loaded" class="relative flex flex-col items-center gap-md px-xl py-xl text-center" data-testid="memberYear.loadError">

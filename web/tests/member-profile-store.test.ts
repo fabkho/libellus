@@ -22,6 +22,7 @@ const followed: MemberProfile = {
 }
 
 let answer: MemberProfile | null = followed
+let recordAnswer: { data: unknown; error: unknown; status: number } = { data: null, error: null, status: 200 }
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 vi.mock('~/stores/social', () => ({
   useSocialStore: () => ({
@@ -34,7 +35,7 @@ async function store() {
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('watch', watch)
-  vi.stubGlobal('useBackend', () => ({ rpc: async () => ({ data: null, error: null, status: 200 }) }))
+  vi.stubGlobal('useBackend', () => ({ rpc: async () => recordAnswer }))
   vi.stubGlobal('useOnline', () => readonly(ref(true)))
   vi.stubGlobal('isOnline', () => true)
   setActivePinia(createPinia())
@@ -42,7 +43,10 @@ async function store() {
   return useMemberProfileStore()
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  recordAnswer = { data: null, error: null, status: 200 }
+})
 
 describe('relationChanged', () => {
   it('turns a followed private profile into its closed card after Unfollow, with no read', async () => {
@@ -65,5 +69,18 @@ describe('relationChanged', () => {
     const members = await store()
     members.relationChanged('ida', { kind: 'block' })
     expect(members.viewOf('ida').loaded).toBe(false)
+  })
+})
+
+describe('her figures that could not be read (L2)', () => {
+  it('keeps the error, so the page does not call it a dead link; a record that is not for her has none', async () => {
+    recordAnswer = { data: null, error: { message: 'Failed to fetch' }, status: 0 }
+    const members = await store()
+    await members.load('ida')
+    expect(members.viewOf('ida')).toMatchObject({ record: null, recordError: 'offline', recordLoading: false })
+
+    recordAnswer = { data: null, error: null, status: 200 }
+    await members.load('ida')
+    expect(members.viewOf('ida')).toMatchObject({ record: null, recordError: null })
   })
 })
