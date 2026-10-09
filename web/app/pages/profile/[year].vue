@@ -9,7 +9,6 @@
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
 import { figuresOf, readsInMonth, readsWithoutPages, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
-import { useBookStore } from '~/stores/book'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useShelfStore } from '~/stores/shelf'
@@ -23,7 +22,6 @@ const router = useRouter()
 const stats = useStatsStore()
 const bookGenres = useGenresStore()
 const libraryView = useLibraryViewStore()
-const books = useBookStore()
 // Your shelf (#23): the year's Books as Regal's 3D row under the months, for the owner only.
 const shelf = useShelfStore()
 
@@ -129,43 +127,7 @@ function back() {
 
         <UiReveal :show="loading || !!figures.favourite">
           <div class="pt-xl">
-            <UiPressLink
-              v-if="figures.favourite"
-              id="favourite"
-              :to="`/book/${figures.favourite.book.id}`"
-              class="relative flex flex-col items-center gap-md overflow-hidden rounded-lg bg-surface-raised px-inset py-lg text-center shadow-raised edge-faint"
-              :class="{ arrive: arriving }"
-              data-testid="yearInReview.favourite"
-              @press="books.prefetch(figures.favourite.book.id)"
-            >
-              <UiAmbient :colors="figures.favourite.book.coverColors" shape="card" />
-              <span class="eyebrow relative">{{ t('profile.year.favourite') }}</span>
-              <UiCover
-                decorative
-                class="relative"
-                :title="figures.favourite.book.title"
-                :authors="figures.favourite.book.authors"
-                :src="coverSrc(figures.favourite.book.coverUrl, 'lg')"
-                :thumbhash="figures.favourite.book.coverThumbhash"
-                :colors="figures.favourite.book.coverColors"
-                size="lg"
-                glow
-              />
-              <span class="relative flex flex-col items-center gap-xs">
-                <span class="book-title text-book-title" data-testid="yearInReview.favouriteTitle">{{ figures.favourite.book.title }}</span>
-                <span class="text-body text-ink-muted">{{ formatAuthors(figures.favourite.book.authors, t('common.etAl')) }}</span>
-                <UiStars :quarters="figures.favourite.rating" size="md" />
-              </span>
-            </UiPressLink>
-            <div v-else class="flex flex-col items-center gap-md rounded-lg bg-surface-raised px-inset py-lg shadow-raised edge-faint" aria-hidden="true">
-              <span class="eyebrow">{{ t('profile.year.favourite') }}</span>
-              <span class="favourite-cover skeleton wave" />
-              <span class="flex w-full flex-col items-center gap-xs">
-                <span class="line title-line"><span class="skeleton wave w-1/2" :style="{ '--wave': 0.05 }" /></span>
-                <span class="line body-line"><span class="skeleton wave w-1/3" :style="{ '--wave': 0.1 }" /></span>
-                <span class="line stars-line"><span class="skeleton wave w-1/4" :style="{ '--wave': 0.15 }" /></span>
-              </span>
-            </div>
+            <ProfileFavourite id="favourite" :read="figures.favourite" :class="{ arrive: arriving }" />
           </div>
         </UiReveal>
 
@@ -220,30 +182,5 @@ function back() {
   line-height: 1;
   font-weight: var(--font-weight-light);
   letter-spacing: var(--text-figure--letter-spacing);
-}
-/* The placeholders while the record loads: the favourite's cover (UiCover `lg`) and its lines
-   at the heights of the text they stand for. */
-.favourite-cover {
-  width: var(--size-cover-lg);
-  aspect-ratio: 2 / 3;
-  border-radius: var(--radius-cover-lg);
-}
-.line {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-}
-.line > * {
-  height: 62%;
-}
-.title-line {
-  height: var(--text-book-title--line-height);
-}
-.body-line {
-  height: var(--text-body--line-height);
-}
-.stars-line {
-  height: var(--text-caption--line-height);
 }
 </style>

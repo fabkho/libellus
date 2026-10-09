@@ -452,6 +452,8 @@ no sheet or list moving, no page on its way to its scroll place), `goto` (an
 address opened once the page is at rest), boxes compared in one `evaluate`
 (e2e/support.ts, e2e/fixtures.ts).
 
+Every flow also fails at its end on an uncaught error of any page of any context it opened (`pageerror`, in `noPageErrors` of e2e/fixtures.ts; Anna's own browser in friends.spec.ts included), listing each with its stack; `EXPECTED_PAGE_ERRORS` there is the allowlist for an error that is the point of a flow, each with its reason, and is empty. A spec imports `test` from `./fixtures`, never from `@playwright/test`, or it has no guard.
+
 Two things a laptop hides and a runner shows (issue #146): the dev server bundles a
 package the first time a page imports it, and the pages open then can be reloaded under
 their flows (`vite.optimizeDeps.include` in `nuxt.config.ts` lists what a later screen reaches first, so

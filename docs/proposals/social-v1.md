@@ -181,6 +181,27 @@ Tasks, models, order and checks: [social-v1-plan.md](social-v1-plan.md).
 
 ## Version 2
 
+**Order (owner, 9 October 2026, after version 1 shipped):** first the version 1 debt (below), then
+**2a** as one wave: spoiler-safe reviews (1), likes (2), you both read (4), reading the same book now (7),
+friends' Want to read on yours (8), and **a checked Catalogue** (below). Then 2b (readers on a Book's page
+and finding people: 3, 6), then 2c
+(GIFs 9; *Send a book* 5 still a maybe).
+
+**Version 1 debt:** ~~HTTP 404/429 for the named refusals; paging in People~~ (done, social v1.1); an end-to-end
+guard that fails a flow on an uncaught page error; *See all* with its count; one favourite card shared
+by the two year pages; a two-digit batch that wraps; one quiet empty/error block; and the Catalogue
+trusting its first adder (moved into 2a, below).
+
+**A checked Catalogue (in 2a, owner, 9 October 2026).** A Book is one row of `books` that every member
+who adds it shares. Today the first member to add a Book sets its title, author, description and cover from
+her device, and the database stores them unchecked; a member who calls the database directly could give a
+popular Book a false title or a spam description, which everyone who adds it later, and since social v1
+their followers, would see (plain text: no code runs, nothing leaks). In 2a the server fills a new
+Catalogue Book's details from its source itself (Apple's lookup by id, Open Library by edition key or
+ISBN), not from the device. Adding stays instant and offline-capable: the row is marked unchecked, and
+a server task replaces its details soon after. What others see of a Book before its check (e.g. a second
+member adding it in that window) is settled in 2a's design. A Manual book stays her own and is not checked.
+
 The owner's answers to the proposed list (8 October 2026): yes to 1, 3, 4, 7 and 8; likes instead of
 *Want to read too* (2); *Send a book* maybe (5); people found through reviews on a Book's page (6);
 and a new idea, GIFs and stickers in reviews. Not scheduled yet: version 1 comes first.
@@ -188,7 +209,7 @@ and a new idea, GIFs and stickers in reviews. Not scheduled yet: version 1 comes
 | # | Feature | Status | Effort |
 |---|---|---|---|
 | 1 | **Spoiler-safe reviews.** "Contains spoilers" on the Finish and Edit read sheets; followers who have not finished the Book see the review folded behind *Show anyway*. | yes | S |
-| 2 | **Likes.** A heart on a feed entry (a finish, a review) and on a review wherever it shows. See *Likes* below for how they stay calm. | yes, instead of *Want to read too* | S–M |
+| 2 | **Likes and *Want to read*.** A heart on a feed entry (a finish, a review) and on a review wherever it shows, and beside it a separate *Want to read* button that puts the Book on her own Want to read. See *Likes* below. | yes, both (owner, 9 October 2026) | S–M |
 | 3 | **Readers on a Book's page.** A *Readers* section under the Goodreads line: the people you follow who read it, with their stars, status and review, matched by work so other editions count. Grows into 6. | yes | M |
 | 4 | **You both read.** On a profile and her year in review: the Books you both finished, both your stars side by side. No totals. | yes | S |
 | 5 | **Send a book.** Book ⋯ → *Send to…* a follower, with a note; a *For you* row on Home, not in the feed. | maybe | M |
@@ -201,8 +222,9 @@ and a new idea, GIFs and stickers in reviews. Not scheduled yet: version 1 comes
 
 Likes replace *Want to read too*. To keep them from becoming a score:
 
-- **Who, not how many.** Under an entry: "Liked by Anna and Ben" (people you know, by name), never a
-  number. In a large circle the line stops at two names and "others".
+- **A number on the heart; names for the author.** (Owner, 9 October 2026, replacing "who, not how
+  many": names do not scale to a hundred likes.) The heart shows how many liked the entry to everyone
+  who can see it; only the entry's author can open the list of who liked it.
 - **She hears once.** The author gets one quiet row in her *Your circle* ("Anna liked your review of
   Piranesi"), no notification and no badge.
 - **Private stays private.** A like is visible only to people who can see the entry, and goes when the
@@ -211,8 +233,11 @@ Likes replace *Want to read too*. To keep them from becoming a score:
 - Data: `likes(member, activity)` (or `session` for a review on a Book page), unique per pair, read only
   through the feed and profile functions that already check who may see what.
 
-Open: should liking a finish also offer *Add to Want to read* in the same tap (a long-press)? It keeps
-what 2 was meant to do.
+**Want to read, its own button** (owner, 9 October 2026, instead of a long-press on the heart): beside the
+heart on a friend's entry (feed, Home's card, her profile's rows), *Want to read* adds the Book to her own
+Library as Want to read, in one tap and offline too (the outbox's add). If the Book is already in her
+Library the button says where (*Want to read*, *Reading*, *Read*) and opens the Book instead. The friend is
+not told. A Manual book has no button (it cannot be opened).
 
 ### Finding people (6)
 

@@ -1,4 +1,5 @@
-import type { MemberCard, People } from '~/data/socialShapes'
+import type { People } from '~/data/social'
+import type { MemberCard } from '~/data/socialShapes'
 
 /**
  * What People and the member sheet decide (social v1, U3), apart from the screens so a test pins it and

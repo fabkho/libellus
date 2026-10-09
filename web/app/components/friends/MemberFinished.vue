@@ -13,6 +13,7 @@ const props = defineProps<{
 defineEmits<{ all: [] }>()
 
 const { t } = useI18n()
+const { count } = useFigures()
 const shown = computed(() => props.items.slice(0, FINISHED_SHOWN))
 </script>
 
@@ -20,8 +21,8 @@ const shown = computed(() => props.items.slice(0, FINISHED_SHOWN))
   <section class="flex flex-col" data-testid="member.finished">
     <div class="mb-xs flex h-(--size-button-sm) items-center justify-between gap-md">
       <h2 class="eyebrow">{{ t('member.finished') }}</h2>
-      <UiButton v-if="all" tone="quiet" size="sm" :aria-label="t('member.seeAllLabel', { section: t('member.finished') })" data-testid="member.finishedAll" @click="$emit('all')">
-        {{ t('member.finishedAll') }}<UiIcon name="chevron" :size="13" />
+      <UiButton v-if="all" tone="quiet" size="sm" :aria-label="t('member.seeAllLabel', { count: count(items.length), section: t('member.finished') })" data-testid="member.finishedAll" @click="$emit('all')">
+        <span class="figures">{{ t('member.finishedAll', { count: count(items.length) }) }}</span><UiIcon name="chevron" :size="13" />
       </UiButton>
     </div>
     <ul class="flex flex-col">
