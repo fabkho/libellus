@@ -1,26 +1,30 @@
 # goodreads-rating
 
 The book page's Goodreads line (issue #69): a Book's Goodreads rating, ratings count, review count
-and Goodreads id, by ISBN-13, on demand. Server-side only — the browser never talks to Goodreads.
+and Goodreads id, by ISBN-13 (by title and first author for a Book without an ISBN), on demand. Server-side only — the browser never talks to Goodreads.
 Only the figures and the id are kept, never review texts.
 
 ```
 POST /functions/v1/goodreads-rating   { "isbn13": "9780061803208", "title": "Small Gods", "authors": ["Terry Pratchett"] }
 GET  /functions/v1/goodreads-rating?isbn=9780061803208&title=Small%20Gods&author=Terry%20Pratchett
+POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terry Pratchett"] }    # no ISBN
 
 200 { "status": "found", "goodreadsId": "6388978", "rating": 4.32, "ratingsCount": 137875,
       "reviewsCount": 6116, "matchedBy": "isbn", "checkedAt": "…" }
 200 { "status": "not_found", "checkedAt": "…" }
-400 isbn_invalid · 401 unauthorized · 502 goodreads_unavailable · 503 busy
+400 isbn_invalid · 400 book_unidentified (no ISBN, and no title or no author) · 401 unauthorized · 502 goodreads_unavailable · 503 busy
 ```
 
 How it answers (`handler.ts`):
 
-1. A row in `goodreads_ratings` checked within 30 days → that row, a miss included.
-2. Otherwise Goodreads' keyless `book/review_counts.json?isbns=<isbn>`: the edition's book id and the
+1. A row in `goodreads_ratings` → that row, while a found rating is under 30 days old and a miss under 7.
+   A Book without an ISBN has its row in `goodreads_title_ratings`, keyed by its normalised title and
+   author surnames (`titleKey`, e.g. `something wicked this way comes|bradbury`): the question asked,
+   so the same title twice in the Catalogue shares one row.
+2. Otherwise (with an ISBN) Goodreads' keyless `book/review_counts.json?isbns=<isbn>`: the edition's book id and the
    work's counts over all editions (`average_rating`, `work_ratings_count`,
    `work_text_reviews_count`). 404 is a miss; a stub without ratings counts as one too.
-3. On a miss, with a title and an author: `book/auto_complete?format=json&q=<main title> <surname>`,
+3. On a miss, or straight away without an ISBN, with a title and an author: `book/auto_complete?format=json&q=<main title> <surname>`,
    the first result whose normalised title (as given, without parentheses, or before a subtitle)
    equals the Book's and whose author's surname is one of the Book's authors' (`goodreads.ts`,
    `matchTitle`). No review count then.
@@ -73,8 +77,8 @@ cd supabase/functions/goodreads-rating && deno run --allow-net --allow-write=fix
 
 ## Deploy (hosted)
 
-1. Migration: `supabase db push` (adds `goodreads_ratings` and `goodreads_rating(books)`; nothing
-   else changes).
+1. Migration: `supabase db push` (adds `goodreads_ratings`, `goodreads_rating(books)` and
+   `goodreads_title_ratings`; nothing else changes).
 2. Function: `supabase functions deploy goodreads-rating` (reads `verify_jwt = false` from
    `config.toml`; or pass `--no-verify-jwt`).
 3. Secrets: none needed. The hosted runtime provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
@@ -84,4 +88,4 @@ cd supabase/functions/goodreads-rating && deno run --allow-net --allow-write=fix
 4. Optional: warm the owner's Library with `warm_library.ts` against the hosted URL and its
    service-role key, or let the book pages fill the cache as they are opened.
 
-No cron: ratings are asked for when a book page is opened and refreshed after 30 days.
+No cron: ratings are asked for when a book page is opened and refreshed after 30 days (a miss after 7).
