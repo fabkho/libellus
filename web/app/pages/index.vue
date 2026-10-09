@@ -77,6 +77,8 @@ watch(
     <HomeUpNext v-if="wantToRead.length" :entries="wantToRead" />
     <!-- Last, so its coming (after the lists) moves nothing under it (#167). -->
     <HomeNextInSeries />
+    <!-- Last of all, for the same reason: it arrives after the lists and moves nothing above it. -->
+    <HomeCircle />
     <HomeTallySheet v-model:open="tallyOpen" :year="library.readInYearOf" :restore="tallyRestore" />
   </div>
 
