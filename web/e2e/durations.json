@@ -1,6 +1,7 @@
 {
   "a11y.spec.ts › accessibility, dark › a Book in every status, and its sheets": 56.4,
   "a11y.spec.ts › accessibility, dark › Home, its sheet, the search palette and its results": 14.5,
+  "a11y.spec.ts › accessibility, dark › the social screens: Your circle on Home, the feed, People, a member and her year, the follow link, Privacy and the member sheet": 30,
   "a11y.spec.ts › accessibility, dark › the way in: sign in, sign up, the code": 12.1,
   "a11y.spec.ts › accessibility, the keyboard › the Library segments are tabs, a sheet keeps and returns focus, a save keeps focus on its card": 8.2,
   "auth.spec.ts › a mistyped code is refused and the field is cleared for another go": 4.3,
@@ -12,6 +13,7 @@
   "delete-account-offline.spec.ts › offline the row is disabled and says so; a change still waiting is named, then discarded with the account": 6.7,
   "delete-account.spec.ts › a member deletes her account: gone from the database and the device, the address needs a new invite": 23,
   "ebooks.spec.ts › Add ebook links a picked EPUB to the Book; the Library marks it; Unlink deletes the copy": 7.1,
+  "friends.spec.ts › Ida shares her link, Anna asks and is let in, a finish shows in her circle and goes when it is hidden, a block ends it": 20,
   "offline-sync.spec.ts › progress saved offline survives a reload and syncs once the connection is back": 5.4,
   "offline-sync.spec.ts › signing out with changes waiting asks first; offline only \"Sign out anyway\" is offered, and it drops them": 8.1,
   "offline.spec.ts › the Library opens offline, online-only actions say so, and search finds her own books": 6,

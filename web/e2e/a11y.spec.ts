@@ -5,7 +5,7 @@ import { addDays, isoDay } from '../app/utils/dates'
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { endFromBook, expectAccessible, openProfile, recordedApple, signedIn, untilStill } from './support'
+import { endFromBook, expectAccessible, goto, openProfile, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * Accessibility (docs/ACCESSIBILITY.md): axe-core over the screens and sheets of the critical paths
@@ -198,6 +198,71 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await openProfile(page)
     await expect(page.getByTestId('profile.figures')).toBeVisible()
     await expectAccessible(page, 'the Profile')
+  })
+
+  test('the social screens: Your circle on Home, the feed, People, a member and her year, the follow link, Privacy and the member sheet', async ({ page }) => {
+    // Eight scans and four members: longer than a usual flow.
+    test.slow()
+    const anna = await signedIn(page)
+    const [ida, ben, cleo] = [await signUpMember(), await signUpMember(), await signUpMember()]
+    for (const [member, name] of [[anna, 'Anna'], [ida, 'Ida'], [ben, 'Ben'], [cleo, 'Cleo']] as const) {
+      await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [member.id, name])
+    }
+    // Anna follows Ida and Cleo; Ben asks to follow Anna (a request on Home and under People).
+    for (const [follower, followee, accepted] of [[anna, ida, true], [anna, cleo, true], [ben, anna, false]] as const) {
+      await sql(`insert into public.follows (follower_id, followee_id, accepted_at) values ($1, $2, ${accepted ? 'now()' : 'null'})`, [follower.id, followee.id])
+    }
+    // Ida's week: a finish with her stars and a review (the card) and an older one (her row); Cleo's: a Book wanted (her row).
+    const today = isoDay()
+    const idas = createLibrary(ida.client)
+    await idas.addToLibrary(book('Piranesi', 'Susanna Clarke', 272), { status: 'finished', startedOn: addDays(today, -5), endedOn: today, rating: 18, review: 'A house of tides and statues.' })
+    await idas.addToLibrary(book('Dune', 'Frank Herbert', 896), { status: 'finished', startedOn: addDays(today, -30), endedOn: addDays(today, -5), rating: 16 })
+    await createLibrary(cleo.client).addToLibrary(book('Ruin', 'John Gwynne', 800))
+    // Settled, whatever the settle window is now (the social flow sets it to zero while it runs): shown to Anna at once.
+    await sql(`update public.activity set visible_at = now() - interval '1 second' where member_id = any($1)`, [[ida.id, cleo.id]])
+    const link = (await ben.client.rpc('my_social')).data.link as string
+
+    // Home: the request, the card and the rows of Your circle.
+    await page.reload()
+    await expect(page.getByTestId('home.circleRequest')).toBeVisible()
+    await expect(page.getByTestId('home.circleFeature')).toBeVisible()
+    await expect(page.getByTestId('home.circleFriend').first()).toBeVisible()
+    await expectAccessible(page, 'Home with Your circle')
+
+    // The feed.
+    await page.getByTestId('home.circleTitle').click()
+    await expect(page.getByTestId('friends.entry').first()).toBeVisible()
+    await expectAccessible(page, 'the feed')
+
+    // People: the request, then who she follows and the member sheet of one of them.
+    await goto(page, '/friends/people')
+    await page.getByTestId('people.segment.requests').click()
+    await expect(page.getByTestId('people.row')).toHaveCount(1)
+    await expectAccessible(page, 'People, requests')
+    await page.getByTestId('people.segment.following').click()
+    await expect(page.getByTestId('people.row')).toHaveCount(2)
+    await openSheet(page, 'people.rowMore', 'memberSheet')
+    await expectAccessible(page, 'the member sheet')
+    await closeSheet(page, 'memberSheet')
+
+    // A member and her year.
+    await goto(page, `/friends/${ida.id}`)
+    await expect(page.getByTestId('member.finishedTitle').first()).toBeVisible()
+    await expectAccessible(page, 'a member')
+    await goto(page, `/friends/${ida.id}/${today.slice(0, 4)}`)
+    await expect(page.getByTestId('memberYear.title')).toBeVisible()
+    await expectAccessible(page, "a member's year")
+
+    // A follow link to a private account: the card, with Ask to follow.
+    await goto(page, `/f/${link}`)
+    await expect(page.getByTestId('member.ask')).toBeVisible()
+    await expectAccessible(page, 'a follow link, the private card')
+
+    // Privacy, from the Profile.
+    await goto(page, '/')
+    await openProfile(page)
+    await openSheet(page, 'profile.privacy', 'privacy')
+    await expectAccessible(page, 'Privacy')
   })
 })
 
