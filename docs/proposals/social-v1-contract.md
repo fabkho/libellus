@@ -345,6 +345,12 @@ question to the orchestrator.
 Framework-free, as every repository: the client and `{ online }` passed in, every write refused
 offline with `offline` before anything is sent, database refusals mapped to their code.
 
+**Shared shapes: `web/app/data/socialShapes.ts`** (written by the orchestrator before W1–W3, so the
+three can work in parallel): `SocialErrorCode`, `SocialResult<T>`, `mapSocialError`, `MemberCard` +
+`cardFromJson`, `SocialBook` + `socialBookFromJson` (`year`, as `Book` names it), `SocialSections` +
+`SOCIAL_SECTIONS`, `FollowState`, `MemberProfile`. The repositories import them from there and do not
+redefine them; `data/social.ts` re-exports them for the stores.
+
 ```ts
 // data/social.ts (W1)
 export type SocialErrorCode = 'offline' | 'not_signed_in' | 'not_found' | 'follow_self' | 'follow_limit'
@@ -384,9 +390,7 @@ export function createSocial(client: SupabaseClient, options: { online: () => bo
 /** `https://<site>/f/<token>`: the link the share sheet hands out. */
 export function followLink(origin: string, token: string): string
 
-// MemberProfile, SocialBook mirror §1.4 in camelCase (book via bookFromRow-like mapping:
-// SocialBook = Pick<Book, 'id' | 'title' | 'authors' | 'publishedYear' | 'coverUrl'
-//   | 'coverThumbhash' | 'coverColors'> & { manual: boolean })
+// MemberProfile, SocialBook, MemberCard, …: from data/socialShapes.ts (above).
 
 // data/feed.ts (W2)
 export type FeedKind = 'started' | 'finished' | 'abandoned' | 'want' | 'reviewed'
