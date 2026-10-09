@@ -3,7 +3,6 @@
 // there is none. Unblocking changes nobody's follow: it only lets that member find her link again.
 import { useSocialStore } from '~/stores/social'
 import type { MemberCard } from '~/data/socialShapes'
-import { initialsOf } from '~/utils/initials'
 
 const open = defineModel<boolean>('open', { required: true })
 
@@ -45,28 +44,30 @@ const error = computed(() => (social.errors.unblock && social.errors.unblock !==
   <UiSheet v-model:open="open" :title="t('blocked.title')" testid="blocked">
     <div ref="body" class="flex flex-col gap-md pt-xs pb-lg">
       <p class="sr-only" role="status" data-testid="blocked.status">{{ said }}</p>
-      <UiListMotion v-if="social.blocked?.length" still tag="ul" class="overflow-hidden rounded-md bg-fill edge-faint">
-        <li
-          v-for="member in social.blocked"
-          :key="member.id"
-          class="flex min-h-(--size-row) items-center gap-ms border-hairline-strong px-inset py-xs not-first:border-t"
-          data-testid="blocked.row"
-        >
-          <UiAvatar :initials="initialsOf('', member.name)" />
-          <span class="min-w-0 flex-1 truncate text-body">{{ nameOf(member) }}</span>
-          <UiButton
-            tone="secondary"
-            size="sm"
-            :disabled="disabled"
-            :offline="!online"
-            :aria-label="online ? t('blocked.unblockLabel', { name: nameOf(member) }) : undefined"
-            data-testid="blocked.unblock"
-            @click="unblock(member)"
+      <UiRowGroup v-if="social.blocked?.length">
+        <UiListMotion still tag="ul">
+          <li
+            v-for="member in social.blocked"
+            :key="member.id"
+            class="flex min-h-(--size-row) items-center gap-ms border-hairline px-inset py-xs not-first:border-t"
+            data-testid="blocked.row"
           >
-            {{ t('blocked.unblock') }}
-          </UiButton>
-        </li>
-      </UiListMotion>
+            <FriendsAvatar :card="member" />
+            <span class="min-w-0 flex-1 truncate text-body">{{ nameOf(member) }}</span>
+            <UiButton
+              tone="secondary"
+              size="sm"
+              :disabled="disabled"
+              :offline="!online"
+              :aria-label="online ? t('blocked.unblockLabel', { name: nameOf(member) }) : undefined"
+              data-testid="blocked.unblock"
+              @click="unblock(member)"
+            >
+              {{ t('blocked.unblock') }}
+            </UiButton>
+          </li>
+        </UiListMotion>
+      </UiRowGroup>
       <p v-else-if="social.blocked" tabindex="-1" class="py-md text-center text-subhead text-ink-muted" data-testid="blocked.empty">{{ t('blocked.empty') }}</p>
       <p v-if="error" class="text-footnote text-error" role="alert" data-testid="blocked.error">{{ error }}</p>
     </div>

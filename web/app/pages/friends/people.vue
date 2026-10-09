@@ -191,7 +191,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
         <!-- Following -->
         <template v-if="segment === 'following'">
           <UiListMotion v-if="people?.following.length" tag="ul" class="flex flex-col">
-            <li v-for="member in people.following" :key="member.id" class="border-hairline-strong not-first:border-t">
+            <li v-for="member in people.following" :key="member.id" class="border-hairline not-first:border-t">
               <FriendsPersonRow :member="member" @more="openSheet(member, { following: true, follower: followerIds.has(member.id) })" />
             </li>
           </UiListMotion>
@@ -201,7 +201,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
         <!-- Followers -->
         <template v-else-if="segment === 'followers'">
           <UiListMotion v-if="people?.followers.length" tag="ul" class="flex flex-col">
-            <li v-for="member in people.followers" :key="member.id" class="border-hairline-strong not-first:border-t">
+            <li v-for="member in people.followers" :key="member.id" class="border-hairline not-first:border-t">
               <FriendsPersonRow
                 :member="member"
                 :follow-back="followBackFace(member, asked, followed)"
@@ -217,7 +217,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
 
         <!-- Requests -->
         <UiListMotion v-else tag="ul" class="flex flex-col">
-          <li v-for="item in waiting" :key="item.id" class="border-hairline-strong not-first:border-t">
+          <li v-for="item in waiting" :key="item.id" class="border-hairline not-first:border-t">
             <FriendsRequestRow
               :request="requestRowOf(item)"
               :state="requestRowOf(item).state"
