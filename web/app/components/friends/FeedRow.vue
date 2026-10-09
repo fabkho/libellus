@@ -50,6 +50,13 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => observer?.disconnect())
+
+/** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
+async function unfold() {
+  expanded.value = true
+  await nextTick()
+  review.value?.focus()
+}
 </script>
 
 <template>
@@ -106,6 +113,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <template v-if="showReview">
         <p
           ref="review"
+          tabindex="-1"
           class="book-title mt-xs text-subhead text-ink-muted italic"
           :class="!expanded && 'line-clamp-4'"
           :data-testid="`${testid}Review`"
@@ -115,7 +123,7 @@ onBeforeUnmount(() => observer?.disconnect())
           type="button"
           class="-mt-xs -mb-sm min-h-(--size-touch) text-caption text-ink-faint hover:text-ink-muted"
           :data-testid="`${testid}More`"
-          @click="expanded = true"
+          @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
     </div>
