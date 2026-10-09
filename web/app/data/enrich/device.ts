@@ -34,10 +34,12 @@ export type EnrichCopy = {
   bookAuthors: Record<string, BookAuthor[]>
   /** Home's "Next in your series": the series she has started, as last asked. */
   started: StartedSeries[] | null
+  /** The started series she muted, as last asked (absent in a copy written before muting existed). */
+  muted?: StartedSeries[] | null
 }
 
 export function emptyCopy(memberId: string): EnrichCopy {
-  return { memberId, authors: {}, bookSeries: {}, series: {}, bookAuthors: {}, started: null }
+  return { memberId, authors: {}, bookSeries: {}, series: {}, bookAuthors: {}, started: null, muted: null }
 }
 
 /** The saved copy, if there is one and it is this member's; else an empty one. */

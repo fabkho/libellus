@@ -6,7 +6,8 @@ import { type EnrichResult, mapError, OFFLINE } from './result'
 /**
  * Series (issue #167): a Book's series and its place in them, a series in
  * reading order, Home's "Next in your series", and the member's own
- * correction. Positions may have decimals (0.5 a prequel, 2.5 a novella).
+ * correction and her muting of a series. Positions may have decimals (0.5 a
+ * prequel, 2.5 a novella).
  *
  *   forBook(book)         book_series_info: the most specific series first (City
  *                         Watch before Discworld), each with the Book's position,
@@ -19,6 +20,10 @@ import { type EnrichResult, mapError, OFFLINE } from './result'
  *                         latest activity first. A series whose every work the
  *                         Catalogue knows is finished (or being read) is not listed:
  *                         a total nobody knows never makes a series unfinished
+ *   muted()               muted_series_list: the started series she muted, the same items
+ *                         (they are not in `started()`)
+ *   mute / unmute         mute_series / unmute_series: the whole series, never one book;
+ *                         idempotent; a series that is not hers to see is `series_not_found`
  *   set / clear / reset   set_entry_series / reset_entry_series, keyed by her entry
  *
  * Titles and covers come in `language` where the work has an edition in it,
@@ -71,6 +76,12 @@ export type SeriesRepository = {
   forBook: (bookId: string, language?: string) => Promise<EnrichResult<BookSeries>>
   series: (seriesId: string, language?: string) => Promise<EnrichResult<SeriesInfo | null>>
   started: (limit?: number, language?: string) => Promise<EnrichResult<StartedSeries[]>>
+  /** The started series she muted (not in `started`), same items. */
+  muted: (limit?: number, language?: string) => Promise<EnrichResult<StartedSeries[]>>
+  /** Hides the whole series from Home; it stays muted when she reads on in it. Online only. */
+  mute: (seriesId: string) => Promise<EnrichResult<true>>
+  /** Brings a muted series back. Online only. */
+  unmute: (seriesId: string) => Promise<EnrichResult<true>>
   set: (entryId: string, correction: SeriesCorrection) => Promise<EnrichResult<BookSeries>>
   /** She says the Book is in no series. */
   clear: (entryId: string) => Promise<EnrichResult<BookSeries>>
@@ -106,6 +117,23 @@ export function createSeries(
     return { data: toBookSeries(result.data), error: null }
   }
 
+  async function items(name: string, limit: number, language: string): Promise<EnrichResult<StartedSeries[]>> {
+    const { data, error } = await client.rpc(name, { p_limit: limit, p_language: language })
+    if (error) return { data: null, error: mapError(error) }
+    return {
+      data: ((data ?? []) as StartedSeries[]).map((item) => ({ ...item, finished: Number(item.finished), next: numbered(item.next) })),
+      error: null,
+    }
+  }
+
+  async function toggle(name: string, seriesId: string): Promise<EnrichResult<true>> {
+    if (!online()) return OFFLINE
+    const result = await client.rpc(name, { p_series: seriesId })
+    if (isNoAnswer(result)) return OFFLINE
+    if (result.error) return { data: null, error: mapError(result.error) }
+    return { data: true, error: null }
+  }
+
   function toBookSeries(data: unknown): BookSeries {
     const value = (data ?? {}) as { overridden?: boolean; series?: BookSeriesPlace[] }
     return { overridden: Boolean(value.overridden), series: (value.series ?? []).map(normalizeSeries) }
@@ -124,13 +152,15 @@ export function createSeries(
       return { data: data ? normalizeSeries(data as SeriesInfo) : null, error: null }
     },
 
-    async started(limit = 100, language = 'en') {
-      const { data, error } = await client.rpc('started_series', { p_limit: limit, p_language: language })
-      if (error) return { data: null, error: mapError(error) }
-      return {
-        data: ((data ?? []) as StartedSeries[]).map((item) => ({ ...item, finished: Number(item.finished), next: numbered(item.next) })),
-        error: null,
-      }
+    started: (limit = 100, language = 'en') => items('started_series', limit, language),
+    muted: (limit = 100, language = 'en') => items('muted_series_list', limit, language),
+
+    async mute(seriesId) {
+      return toggle('mute_series', seriesId)
+    },
+
+    async unmute(seriesId) {
+      return toggle('unmute_series', seriesId)
     },
 
     async set(entryId, correction) {

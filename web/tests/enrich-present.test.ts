@@ -9,6 +9,7 @@ import {
   isCurrentWork,
   moreFromAuthor,
   lifeSpan,
+  moveMuted,
   parsePosition,
   positionText,
   rowAuthorKey,
@@ -226,6 +227,25 @@ describe('next in your series', () => {
     const five = ['A', 'B', 'C', 'D', 'E'].map((t) => item(t))
     expect(startedOnHome(five).more).toBe(false)
     expect(startedOnHome([...five.slice(0, 4), item('X', null), item('Y')]).all.map((i) => i.next.title)).toEqual(['A', 'B', 'C', 'D', 'Y'])
+  })
+
+  it('moves a muted series to the muted list and back, each in the database\'s order', () => {
+    const at = (title: string, activeOn: string): StartedSeries => ({ ...item(title), activeOn })
+    const a = at('A', '2026-09-03')
+    const b = at('B', '2026-09-01')
+    const c = at('C', '2026-09-02')
+    const muted = moveMuted({ started: [a, b, c], muted: [] }, 'B', true)
+    expect(muted.started.map((i) => i.next.title)).toEqual(['A', 'C'])
+    expect(muted.muted.map((i) => i.next.title)).toEqual(['B'])
+
+    const back = moveMuted({ started: muted.started, muted: [...muted.muted, c] }, 'C', false)
+    expect(back.started.map((i) => i.next.title)).toEqual(['A', 'C'])
+    expect(back.muted.map((i) => i.next.title)).toEqual(['B'])
+    const both = moveMuted(muted, 'B', false)
+    expect(both.started.map((i) => i.next.title)).toEqual(['A', 'C', 'B'])
+    expect(both.muted).toEqual([])
+    // A series not in the list it leaves changes nothing.
+    expect(moveMuted(muted, 'Z', true)).toEqual(muted)
   })
 
   it('says where the next work stands: of the count when it is whole and within it', () => {
