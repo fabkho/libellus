@@ -63,12 +63,14 @@ function newer(a: Pick<FeedEntry, 'at' | 'id'>, b: Pick<FeedEntry, 'at' | 'id'>)
  * The list after a refresh: the fresh first page, then what was already loaded below it (older
  * than the fresh page's last entry), so a refresh does not cut the list back to one page under
  * the member's thumb. A first page that is not full is the whole feed: nothing below it is kept.
+ * `following` (who she follows now, when known): a kept entry of anyone else is dropped, so a member she
+ * unfollowed (here or on another device) or blocked does not come back with the older pages.
  */
-export function mergeFirstPage(current: readonly FeedEntry[], fresh: readonly FeedEntry[]): FeedEntry[] {
+export function mergeFirstPage(current: readonly FeedEntry[], fresh: readonly FeedEntry[], following: ReadonlySet<string> | null = null): FeedEntry[] {
   const last = fresh.at(-1)
   if (!last || fresh.length < FEED_PAGE) return [...fresh]
   const seen = new Set(fresh.map((entry) => entry.id))
-  return [...fresh, ...current.filter((entry) => !seen.has(entry.id) && newer(last, entry))]
+  return [...fresh, ...current.filter((entry) => !seen.has(entry.id) && newer(last, entry) && (!following || following.has(entry.member.id)))]
 }
 
 /** The entries without any by this member (after she is unfollowed, blocked or removed as a follower). */
