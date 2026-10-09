@@ -1,4 +1,4 @@
-import { expect, test as base, type Locator, type Page } from '@playwright/test'
+import { expect, test as base, type BrowserContext, type Locator, type Page } from '@playwright/test'
 import { appleCover } from '../tests/support/apple'
 
 /**
@@ -93,11 +93,51 @@ function tapsWaitForSheets(page: Page) {
   locator.__waitsForSheets = true
 }
 
-export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void }>({
+/**
+ * Errors a page may throw by design. Empty: an uncaught exception is a bug until a flow
+ * proves it is the point of the flow. Every entry says why, so none is added to quiet a flow.
+ */
+const EXPECTED_PAGE_ERRORS: { match: RegExp; why: string }[] = []
+
+export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void; noPageErrors: void }>({
   stillSheets: [
     async ({ page }, use) => {
       tapsWaitForSheets(page)
       await use()
+    },
+    { auto: true },
+  ],
+  noPageErrors: [
+    async ({ context, browser }, use) => {
+      // An uncaught exception of any page (`pageerror`: Playwright reports an uncaught throw and an
+      // unhandled rejection there, not as a `console` error) fails the test at its end, with each
+      // one's message and stack. A feed refresh once threw on every load and the suite passed (social v1).
+      const thrown: string[] = []
+      const watch = (ctx: BrowserContext) => {
+        const onPage = (page: Page) =>
+          page.on('pageerror', (error) => {
+            const text = error.stack || `${error.name}: ${error.message}`
+            if (EXPECTED_PAGE_ERRORS.some(({ match }) => match.test(text))) return
+            thrown.push(`${page.url()}\n${text}`)
+          })
+        for (const page of ctx.pages()) onPage(page)
+        ctx.on('page', onPage)
+      }
+      watch(context)
+      // A flow that needs a second member makes her a context of her own (friends.spec.ts:
+      // `browser.newContext`); every context made while the test runs is watched too.
+      const newContext = browser.newContext
+      browser.newContext = async function (this: typeof browser, ...args: Parameters<typeof newContext>) {
+        const made = await newContext.apply(this, args)
+        watch(made)
+        return made
+      } as typeof newContext
+      try {
+        await use()
+      } finally {
+        browser.newContext = newContext
+      }
+      expect(thrown, 'uncaught errors in a page').toEqual([])
     },
     { auto: true },
   ],
