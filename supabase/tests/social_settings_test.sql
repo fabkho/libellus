@@ -4,7 +4,7 @@
 --
 -- A member starts private with every section on and a follow link of 22 characters; only she
 -- reads or changes her settings; a new link replaces the old one; going public accepts the
--- requests that wait (a declined one stays declined); the follow tables are closed to the API
+-- requests that wait (a declined one is deleted); the follow tables are closed to the API
 -- roles; a Book can be hidden from followers, online and through sync_write; and a photo is for
 -- the members she is connected to. Assertions ask about rows this test made, never counts of a
 -- table.
@@ -160,8 +160,8 @@ select is(
   tests.follow_state((select id from ids where name = 'ben'), (select id from ids where name = 'ada')), 'accepted',
   'going public accepts the request that waited');
 select is(
-  tests.follow_state((select id from ids where name = 'cy'), (select id from ids where name = 'ada')), 'declined',
-  'a declined request stays declined');
+  tests.follow_state((select id from ids where name = 'cy'), (select id from ids where name = 'ada')), null,
+  'a declined request is gone once she is public');
 select public.set_private(true);
 
 -- -------------------------------------------------------------- hiding a Book
