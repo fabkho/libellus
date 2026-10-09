@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
@@ -64,6 +65,10 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
+    // supabase-js builds a Realtime client (and the Phoenix socket under it, ~95 KB unminified) in
+    // every client; the app opens no channel. The stub keeps what supabase-js calls on its own
+    // (app/data/realtimeStub.ts). Same alias in vitest.config.ts, so the data-layer suite runs on it.
+    resolve: { alias: { '@supabase/realtime-js': fileURLToPath(new URL('./app/data/realtimeStub.ts', import.meta.url)) } },
     // The Playwright flows' build (e2e/build.ts): the hooks they need that are otherwise the dev
     // server's (the error log's triggers, the reader's engine on window). False in every other
     // build, where the code behind it is dropped.
