@@ -67,6 +67,15 @@ const loading = computed(() => !people.value && !loadFailed.value && !offlineEmp
 // ------------------------------------------------------------------ the actions
 
 const failed = ref(false)
+/** What the last action did, said politely: a row that changes or leaves otherwise says nothing (a11y). */
+const said = ref('')
+const heading = useTemplateRef<HTMLElement>('heading')
+/** A row is about to leave: focus would fall to the page, so it goes to the title, where the list starts. */
+function focusHeading() {
+  const active = document.activeElement
+  if (!active || active === document.body || active.closest('[data-testid="people.row"]')) heading.value?.focus({ preventScroll: true })
+}
+const nameOf = (member: MemberCard) => member.name?.trim() || t('member.someone')
 
 async function guard(id: string, run: () => Promise<boolean>) {
   if (pending.value.has(id) || !online.value) return
@@ -94,7 +103,10 @@ async function accept(request: MemberCard & { askedAt: string }) {
     // At once: the row says what it is now before the database has answered.
     accepted.value = new Map(accepted.value).set(request.id, { ...request, state: 'accepted' })
     const result = await social.answer(request.id, true)
-    if (!result.error) return true
+    if (!result.error) {
+      said.value = t('people.accepted', { name: nameOf(request) })
+      return true
+    }
     const next = new Map(accepted.value)
     next.delete(request.id)
     accepted.value = next
@@ -102,11 +114,16 @@ async function accept(request: MemberCard & { askedAt: string }) {
   })
 }
 
-async function decline(id: string) {
+async function decline(member: MemberCard) {
+  const id = member.id
+  focusHeading()
   await guard(id, async () => {
     gone.value = new Set(gone.value).add(id)
     const result = await social.answer(id, false)
-    if (!result.error) return true
+    if (!result.error) {
+      said.value = t('people.declined', { name: nameOf(member) })
+      return true
+    }
     const next = new Set(gone.value)
     next.delete(id)
     gone.value = next
@@ -153,8 +170,10 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
     <UiTopBar :back-label="t('member.back')" back-testid="people.back" @back="back" />
 
     <header class="px-screen pt-bar">
-      <h1 class="text-large-title" data-testid="people.title">{{ t('people.title') }}</h1>
+      <h1 ref="heading" tabindex="-1" class="text-large-title" data-testid="people.title">{{ t('people.title') }}</h1>
     </header>
+
+    <p class="sr-only" role="status" data-testid="people.status">{{ said }}</p>
 
     <div class="flex flex-col gap-md px-screen pt-ms">
       <UiSegmented v-model="segment" :options="options" :label="t('people.title')" testid="people.segment" />
@@ -172,7 +191,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
         <!-- Following -->
         <template v-if="segment === 'following'">
           <UiListMotion v-if="people?.following.length" tag="ul" class="flex flex-col">
-            <li v-for="member in people.following" :key="member.id" class="border-hairline-strong not-first:border-t">
+            <li v-for="member in people.following" :key="member.id" class="border-hairline not-first:border-t">
               <FriendsPersonRow :member="member" @more="openSheet(member, { following: true, follower: followerIds.has(member.id) })" />
             </li>
           </UiListMotion>
@@ -182,7 +201,7 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
         <!-- Followers -->
         <template v-else-if="segment === 'followers'">
           <UiListMotion v-if="people?.followers.length" tag="ul" class="flex flex-col">
-            <li v-for="member in people.followers" :key="member.id" class="border-hairline-strong not-first:border-t">
+            <li v-for="member in people.followers" :key="member.id" class="border-hairline not-first:border-t">
               <FriendsPersonRow
                 :member="member"
                 :follow-back="followBackFace(member, asked, followed)"
@@ -198,14 +217,14 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
 
         <!-- Requests -->
         <UiListMotion v-else tag="ul" class="flex flex-col">
-          <li v-for="item in waiting" :key="item.id" class="border-hairline-strong not-first:border-t">
+          <li v-for="item in waiting" :key="item.id" class="border-hairline not-first:border-t">
             <FriendsRequestRow
               :request="requestRowOf(item)"
               :state="requestRowOf(item).state"
               :offline="!online"
               :busy="pending.has(item.id)"
               @accept="accept(item)"
-              @decline="decline(item.id)"
+              @decline="decline(item)"
               @follow-back="followBack(item.id)"
             />
           </li>
@@ -213,6 +232,11 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
 
         <p v-if="failed && online" class="text-footnote text-error" role="alert" data-testid="people.error">{{ t('people.error') }}</p>
       </template>
+
+      <!-- The first answer on its way: rows of a person's height, so the list does not jump when it comes. -->
+      <div v-else class="flex flex-col" aria-busy="true" data-testid="people.loading">
+        <FriendsRowPlaceholder v-for="i in 4" :key="i" kind="person" :wave="i * 0.1" />
+      </div>
     </div>
 
     <FriendsMemberSheet v-model:open="sheet" :member="sheetMember" :following="sheetRelation.following" :follower="sheetRelation.follower" @changed="changed" />

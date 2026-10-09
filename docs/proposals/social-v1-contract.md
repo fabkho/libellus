@@ -475,15 +475,15 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
 - **Feed** (`/friends`): `friends`, `friends.back`, `friends.people`, `friends.day`, `friends.entry`,
   `friends.entryMember`, `friends.entryBook`, `friends.entryReview`, `friends.entryMore`,
   `friends.batch`, `friends.empty`, `friends.emptyShare`, `friends.quiet`, `friends.offline`,
-  `friends.loadError`, `friends.retry`; the batch sheet `friendsBatch` (`.sheetTitle`, `.cancel`,
+  `friends.loading` (the placeholders while the first answer is on its way), `friends.loadError`, `friends.retry`; the batch sheet `friendsBatch` (`.sheetTitle`, `.cancel`,
   `.row`).
-- **People** (`/friends/people`): `people`, `people.back`, `people.segment.following|followers|requests`,
+- **People** (`/friends/people`): `people`, `people.back`, `people.status` (the page's polite status), `people.loading`, `people.segment.following|followers|requests`,
   `people.row`, `people.rowMore`, `people.accept`, `people.decline`, `people.followBack`,
   `people.empty`; the member sheet `memberSheet` (`.unfollow`, `.remove`, `.block`, `.cancel`); the
   block confirm `blockConfirm` (`.confirm`, `.cancel`).
 - **Member** (`/friends/<member>`; *See all* opens the sheet `memberWant` with `.sheetTitle`, `.cancel`, `.row`, `.book`; *See all* under Recently finished the sheet `memberFinished`, the same): `member`, `member.back`, `member.more`, `member.hero`,
   `member.name`, `member.since`, `member.library`, `member.follow`, `member.ask`, `member.requested`,
-  `member.private`, `member.reading`, `member.want`, `member.wantAll`, `member.finished`,
+  `member.status` (the page's polite status), `member.private`, `member.reading`, `member.want`, `member.wantAll`, `member.finished`,
   `member.finishedAll` (only above 3 finished Books), `member.finishedCover` (the cover's link, hidden from the keyboard and screen readers: the title's is the Book's one), `member.finishedBook` (the title's link), `member.finishedTitle`, `member.finishedReview`, `member.finishedMore`, `member.yearCards`, and the Profile's own figure ids inside
   (`profile.figures`, `profile.columns`, …, as the reused components carry them);
   `memberYear` (`.back`, `.title`) for the year page.
@@ -495,7 +495,7 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
 - **Follow link sheet**: `followLink` (`.cancel`), `followLink.value`, `followLink.share`,
   `followLink.copy`, `followLink.renew`, `followLink.outcome`; renew confirm `renewFollowLink`
   (`.confirm`, `.cancel`).
-- **Blocked sheet**: `blocked` (`.cancel`), `blocked.row`, `blocked.unblock`, `blocked.empty`.
+- **Blocked sheet**: `blocked` (`.cancel`), `blocked.row`, `blocked.unblock`, `blocked.empty`, `blocked.status` (polite).
 - **Book options**: `bookOptions.hide` (the switch row).
 - **Header**: `shell.avatarDot` (the lamp dot while a request waits).
 
@@ -514,7 +514,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "and": " and ",
     "accept": "Accept",
     "decline": "Decline",
-    "declineLabel": "Decline {name}"
+    "declineLabel": "Decline {name}",
+    "acceptLabel": "Accept {name}"
   },
   "feed": {
     "title": "Your circle",
@@ -529,7 +530,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "batchStarted": "started {count} books",
     "batchAbandoned": "didn't finish {count} books",
     "batchWant": "added {count} to Want to read",
-    "batchTitle": "{name} · {count}",
+    "batchTitle": "{name} · {count} books",
     "more": "More",
     "today": "Today",
     "yesterday": "Yesterday",
@@ -550,8 +551,12 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "requests": "Requests",
     "askedOn": "asked {when}",
     "followsYouNow": "follows you now",
+    "accepted": "{name} follows you now.",
+    "declined": "Request from {name} declined.",
     "accept": "Accept",
     "decline": "Decline",
+    "acceptLabel": "Accept {name}",
+    "declineLabel": "Decline {name}",
     "followBack": "Follow back",
     "moreLabel": "More for {name}",
     "emptyFollowing": "You don't follow anyone yet.",
@@ -563,24 +568,28 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "blockTitle": "Block {name}?",
     "blockText": "You stop following each other, and neither of you sees the other's reading.",
     "blockConfirm": "Block",
-    "offline": "You're offline. People show once you're back."
+    "offline": "You're offline. People show once you're back.",
+    "loadError": "People couldn't be loaded. Try again."
   },
   "member": {
     "back": "Back",
     "moreLabel": "More",
     "since": "Reading here since {month}",
-    "library": "{read} read · {reading} reading · {want} want",
+    "library": "{read} read · {reading} reading · {want} to read",
     "follow": "Follow",
     "ask": "Ask to follow",
     "requested": "Requested",
+    "following": "Following",
+    "withdrawn": "Request withdrawn.",
     "requestedHint": "Tap to withdraw.",
     "privateTitle": "Private account",
     "privateText": "Ask to follow to see what {name} reads. {name} decides; nobody else is told.",
     "reading": "Currently reading",
     "want": "Want to read",
     "wantAll": "See all",
+    "finishedAll": "See all",
+    "seeAllLabel": "See all, {section}",
     "finished": "Recently finished",
-    "years": "Years in review",
     "yearEyebrow": "{name} · Year in review",
     "someone": "A reader"
   },
@@ -613,7 +622,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
       "abandoned": "Did not finish",
       "year": "Year in review and figures"
     },
-    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book from its ⋯ menu.",
+    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book in its options.",
     "blocked": "Blocked",
     "blockedNone": "None",
     "goPublicTitle": "Make your account public?",
@@ -629,6 +638,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "share": "Share link",
     "copy": "Copy",
     "copied": "Copied.",
+    "failed": "Couldn't copy the link. Select it and copy by hand.",
     "renew": "New link",
     "renewHint": "A new link stops the old one at once. People who already follow you stay.",
     "renewTitle": "Make a new link?",
@@ -639,10 +649,12 @@ New keys (English as written; `{name}` etc. are i18n parameters):
   "blocked": {
     "title": "Blocked",
     "unblock": "Unblock",
+    "unblockLabel": "Unblock {name}",
+    "unblocked": "{name} unblocked.",
     "empty": "You haven't blocked anyone."
   },
-  "bookOptions": { "hide": "Hide from followers", "hideHint": "Hidden: not in your circle's feed, not on your profile, not in the figures they see." },
-  "sync": { "action": { "set_entry_hidden": "Hide from followers" } },
+  "bookOptions": { "hide": "Hide from followers", "hideHint": "Hidden from your followers: not in their feed, not on your profile, not in the figures they see." },
+  "sync": { "action": { "set_entry_hidden": "Visibility to followers" } },
   "shell": { "avatarRequest": "Your profile, a follow request is waiting" }
 }
 ```
@@ -654,8 +666,8 @@ Changed keys:
 | Key | New English |
 |---|---|
 | `photo.private` | "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken." |
-| `manual.private` | "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu." |
-| `ownEdition.private` | "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in its ⋯ menu." |
+| `manual.private` | "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options." |
+| `ownEdition.private` | "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options." |
 | `profile.deleteAccount.text` | "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and photo, who you follow and who follows you, and your sign-in. It can't be undone." |
 | `sharing.about` | its current text, plus one sentence: "Your followers in the app see what you choose under Friends → Privacy." |
 

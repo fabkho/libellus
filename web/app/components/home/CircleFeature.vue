@@ -43,6 +43,13 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => observer?.disconnect())
+
+/** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
+async function unfold() {
+  expanded.value = true
+  await nextTick()
+  review.value?.focus()
+}
 </script>
 
 <template>
@@ -58,15 +65,15 @@ onBeforeUnmount(() => observer?.disconnect())
       data-testid="home.circleFeature.cover"
       @press="books.prefetch(book.id)"
     >
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
     </UiPressLink>
     <span v-else class="relative shrink-0">
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'md')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
     </span>
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
       <div class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
-        <NuxtLink :to="`/friends/${card.member.id}`" class="flex min-w-0 items-center gap-sm" data-testid="home.circleFeature.member">
+        <NuxtLink :to="`/friends/${card.member.id}`" class="reach flex min-w-0 items-center gap-sm" data-testid="home.circleFeature.member">
           <FriendsAvatar :card="card.member" />
           <span class="truncate font-medium">{{ name }}</span>
         </NuxtLink>
@@ -76,7 +83,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <UiPressLink
         v-if="!book.manual"
         :to="bookPath"
-        class="book-title text-callout"
+        class="reach book-title text-callout"
         data-testid="home.circleFeature.title"
         @press="books.prefetch(book.id)"
       >{{ book.title }}</UiPressLink>
@@ -85,15 +92,29 @@ onBeforeUnmount(() => observer?.disconnect())
       <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.circleFeature.stars" />
 
       <template v-if="card.review">
-        <p ref="review" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.circleFeature.review">{{ card.review }}</p>
+        <p ref="review" tabindex="-1" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.circleFeature.review">{{ card.review }}</p>
         <button
           v-if="clamped && !expanded"
           type="button"
           class="-mt-xs -mb-sm min-h-(--size-touch) text-caption text-ink-faint hover:text-ink-muted"
           data-testid="home.circleFeature.more"
-          @click="expanded = true"
+          @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* A link drawn smaller than a finger: its 44 px target is an invisible box centred on it, as UiButton's. */
+.reach {
+  position: relative;
+}
+.reach::after {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
+}
+</style>

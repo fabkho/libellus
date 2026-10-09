@@ -8,20 +8,22 @@
 // cover is decorative.
 //
 // `compact` is Home's: no review. `bare` is the batch sheet's: the avatar line is not repeated, the
-// member is in the sheet's title. `dayLabel` is the word at the line's end Home puts the day in
+// member is in the sheet's title, and the cover is `size="sm"`. `dayLabel` is the word at the line's end Home puts the day in
 // (the page has day eyebrows instead). `testid` is the row's; the parts add `Member`, `Book`,
 // `Review` and `More` to it.
 import type { FeedEntry } from '~/data/feed'
 import { useBookStore } from '~/stores/book'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   entry: FeedEntry
   testid: string
   compact?: boolean
   bare?: boolean
   dayLabel?: string | null
   eager?: boolean
-}>()
+  /** The cover: `md` in the feed, `sm` in the batch sheet, where a row is a title and an author. */
+  size?: 'sm' | 'md'
+}>(), { size: 'md' })
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -50,6 +52,13 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => observer?.disconnect())
+
+/** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
+async function unfold() {
+  expanded.value = true
+  await nextTick()
+  review.value?.focus()
+}
 </script>
 
 <template>
@@ -59,10 +68,10 @@ onBeforeUnmount(() => observer?.disconnect())
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'md')"
+        :src="coverSrc(book.coverUrl, size)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
-        size="md"
+        :size="size"
         :eager="eager"
       />
     </UiPressLink>
@@ -71,10 +80,10 @@ onBeforeUnmount(() => observer?.disconnect())
         decorative
         :title="book.title"
         :authors="book.authors"
-        :src="coverSrc(book.coverUrl, 'md')"
+        :src="coverSrc(book.coverUrl, size)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
-        size="md"
+        :size="size"
         :eager="eager"
       />
     </span>
@@ -82,7 +91,7 @@ onBeforeUnmount(() => observer?.disconnect())
     <div class="flex min-w-0 flex-1 flex-col items-start gap-xxs">
       <div v-if="!bare" class="flex w-full min-w-0 items-start justify-between gap-sm">
         <div class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
-          <NuxtLink :to="`/friends/${entry.member.id}`" class="flex min-w-0 items-center gap-sm" :data-testid="`${testid}Member`">
+          <NuxtLink :to="`/friends/${entry.member.id}`" class="reach flex min-w-0 items-center gap-sm" :data-testid="`${testid}Member`">
             <FriendsAvatar :card="entry.member" />
             <span class="truncate font-medium">{{ name }}</span>
           </NuxtLink>
@@ -94,7 +103,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <UiPressLink
         v-if="!book.manual"
         :to="bookPath"
-        class="book-title text-callout py-xxs"
+        class="reach book-title text-callout py-xxs"
         :data-testid="`${testid}Book`"
         @press="books.prefetch(book.id)"
       >{{ book.title }}</UiPressLink>
@@ -106,6 +115,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <template v-if="showReview">
         <p
           ref="review"
+          tabindex="-1"
           class="book-title mt-xs text-subhead text-ink-muted italic"
           :class="!expanded && 'line-clamp-4'"
           :data-testid="`${testid}Review`"
@@ -115,9 +125,23 @@ onBeforeUnmount(() => observer?.disconnect())
           type="button"
           class="-mt-xs -mb-sm min-h-(--size-touch) text-caption text-ink-faint hover:text-ink-muted"
           :data-testid="`${testid}More`"
-          @click="expanded = true"
+          @click="unfold"
         >{{ t('feed.more') }}</button>
       </template>
     </div>
   </li>
 </template>
+
+<style scoped>
+/* A link drawn smaller than a finger: its 44 px target is an invisible box centred on it, as UiButton's. */
+.reach {
+  position: relative;
+}
+.reach::after {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
+}
+</style>

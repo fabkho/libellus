@@ -24,11 +24,23 @@ const props = withDefaults(
 defineEmits<{ accept: []; decline: []; followBack: [] }>()
 
 const { t, locale } = useI18n()
-const name = computed(() => props.request.name ?? t('member.someone'))
+const name = computed(() => props.request.name?.trim() || t('member.someone'))
 // Counted against the moment the row was drawn, as the app writes days elsewhere.
 const shownAt = Date.now()
 const asked = computed(() => t('people.askedOn', { when: relativeTime(new Date(props.request.askedAt), shownAt, locale.value) }))
 const id = (people: string, home: string) => (props.compact ? home : people)
+
+// Accept turns into Follow back, another button: keep focus where it was by handing it over (a11y).
+const followBackButton = useTemplateRef<{ $el: HTMLElement }>('followBackButton')
+watch(
+  () => props.state,
+  async (now, was) => {
+    if (was !== 'asked' || now !== 'accepted') return
+    const hadFocus = document.activeElement === document.body || !!document.activeElement?.closest('[data-testid="people.row"]')
+    await nextTick()
+    if (hadFocus) followBackButton.value?.$el?.focus()
+  },
+)
 </script>
 
 <template>
@@ -54,27 +66,36 @@ const id = (people: string, home: string) => (props.compact ? home : people)
     <template v-if="state === 'asked'">
       <UiButton v-if="offline" tone="secondary" size="sm" offline :data-testid="id('people.accept', 'home.circleAccept')" />
       <template v-else>
-        <UiButton size="sm" :disabled="busy" :data-testid="id('people.accept', 'home.circleAccept')" @click="$emit('accept')">
+        <UiButton
+          size="sm"
+          :disabled="busy"
+          :aria-label="compact ? t('circle.acceptLabel', { name }) : t('people.acceptLabel', { name })"
+          :data-testid="id('people.accept', 'home.circleAccept')"
+          @click="$emit('accept')"
+        >
           {{ compact ? t('circle.accept') : t('people.accept') }}
         </UiButton>
-        <button
+        <!-- Home's ✕: a plain pill button, so it has the app's pressed state and its 44 px target. -->
+        <UiButton
           v-if="compact"
-          type="button"
+          tone="plain"
+          size="sm"
+          class="-mr-xs"
           :aria-label="t('circle.declineLabel', { name })"
           :disabled="busy"
-          class="-mr-xs flex size-(--size-touch) shrink-0 items-center justify-center rounded-pill text-ink-muted disabled:opacity-50"
           data-testid="home.circleDecline"
           @click="$emit('decline')"
         >
           <UiIcon name="close" :size="18" />
-        </button>
-        <UiButton v-else tone="plain" size="sm" :disabled="busy" data-testid="people.decline" @click="$emit('decline')">
+        </UiButton>
+        <UiButton v-else tone="plain" size="sm" :disabled="busy" :aria-label="t('people.declineLabel', { name })" data-testid="people.decline" @click="$emit('decline')">
           {{ t('people.decline') }}
         </UiButton>
       </template>
     </template>
     <UiButton
       v-else-if="state === 'accepted'"
+      ref="followBackButton"
       tone="secondary"
       size="sm"
       :disabled="busy"

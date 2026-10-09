@@ -48,7 +48,10 @@ How:
   TalkBack turns with a swipe up or down. A drawn rating is `role="img"` named "3.75 of 5 stars".
 - A cover is named by its title only where it stands alone (Want to read's row, a year's months);
   wherever the title is written beside it the cover is `decorative` (UiCover), so nothing is read
-  twice.
+  twice. In the social screens (feed, Home's circle, a member's finished Books) that is one link per
+  Book: the cover's link is `aria-hidden` and out of the tab order, the title is the Book's link.
+- A follow request's buttons say whose it is (`Accept {name}`, `Decline {name}`, `Unblock {name}`), and the
+  lamp dot on the header's avatar is `aria-hidden` (the avatar's label says a request waits).
 - Text drawn in pieces (dots between facts, a count beside a year, a month's count) is given to
   assistive tech as one phrase: an `aria-label` on the heading or group, or a visually hidden string
   with the drawn pieces hidden.

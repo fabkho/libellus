@@ -11,7 +11,11 @@ const props = defineProps<{ card: MemberCard; since?: string | null; library?: s
 
 const { t } = useI18n()
 const { monthYear } = useFigures()
-const name = computed(() => props.card.name ?? t('member.someone'))
+const name = computed(() => props.card.name?.trim() || t('member.someone'))
+
+// Her name is where the page begins: focus goes there when a button that stood under it is gone.
+const title = useTemplateRef<HTMLElement>('title')
+defineExpose({ focus: () => title.value?.focus({ preventScroll: true }) })
 </script>
 
 <template>
@@ -20,7 +24,7 @@ const name = computed(() => props.card.name ?? t('member.someone'))
     <span class="ring rounded-pill" data-testid="member.avatar">
       <FriendsAvatar :card="card" size="large" />
     </span>
-    <h1 class="mt-md max-w-full truncate text-title" data-testid="member.name">{{ name }}</h1>
+    <h1 ref="title" tabindex="-1" class="mt-md max-w-full truncate text-title" data-testid="member.name">{{ name }}</h1>
     <p v-if="since" class="mt-xs text-body text-ink-muted" data-testid="member.since">{{ t('member.since', { month: monthYear(since) }) }}</p>
     <p v-if="library" class="eyebrow mt-sm" data-testid="member.library">{{ library }}</p>
     <slot />
