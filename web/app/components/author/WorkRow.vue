@@ -7,7 +7,8 @@
 // touch-down, its cover flying into the hero; a work with no edition to open
 // is a plain row, and where it has no edition we could add, "Find" opens the
 // search with its title (and author), as a scanned book nothing knows does, so
-// she can add the edition search finds. Her status follows what this device
+// she can add the edition search finds. `trailing` is a slot after the status (Home's series
+// rows put their "..." menu there). Her status follows what this device
 // knows of her Library, so a Start or an add elsewhere shows here at once.
 import { isNotFinished } from '~/data/library'
 import type { WorkCard } from '~/data/enrich'
@@ -143,6 +144,7 @@ async function want() {
         </button>
       </Transition>
     </div>
+    <slot name="trailing" />
   </li>
 </template>
 

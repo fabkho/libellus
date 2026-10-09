@@ -41,6 +41,35 @@ function book(title: string, author: string, pages: number | null): BookSnapshot
   }
 }
 
+/**
+ * A linked author with her works (#167): the Book page's "More from the author". The Books are hers; the
+ * works are the Books' own and some more she has, each with an edition to open. Named with the run tag,
+ * so the sweep finds them (tests/support/stack.ts).
+ */
+async function linkedAuthor(name: string, books: { book: { id: string; title: string } }[], more: string[]) {
+  const key = (suffix: 'A' | 'W') => `OL${Math.floor(1_000_000 + Math.random() * 9_000_000)}${suffix}`
+  const [author] = await sql<{ id: string }>(
+    `insert into public.authors (openlibrary_key, name, birth_date, birth_precision, summaries, fetched_at, works_fetched_at)
+     values ($1, $2, '1929-10-21', 11, $3::jsonb, now(), now()) returning id`,
+    [key('A'), runTitle(name), JSON.stringify({ en: { text: 'An American author of novels, short stories, poetry and essays, best known for her science fiction and fantasy.', title: name, url: 'https://en.wikipedia.org/wiki/Ursula_K._Le_Guin' } })],
+  )
+  const work = async (title: string, bookId?: string) => {
+    const isbn13 = `978${Math.floor(1_000_000_000 + Math.random() * 8_999_999_999)}`.slice(0, 13)
+    const edition = bookId ? {} : { en: { title, isbn13, openlibrary_edition_key: null, cover_url: null } }
+    const [w] = await sql<{ id: string }>(
+      `insert into public.works (openlibrary_key, title, first_year, kind, editions, fetched_at) values ($1, $2, 1966, 'novel', $3::jsonb, now()) returning id`,
+      [key('W'), title, JSON.stringify(edition)],
+    )
+    await sql('insert into public.work_authors (work_id, author_id, position) values ($1, $2, 1)', [w!.id, author!.id])
+    if (bookId) await sql(`insert into public.book_works (book_id, work_id, matched_by) values ($1, $2, 'title')`, [bookId, w!.id])
+  }
+  for (const entry of books) {
+    await work(entry.book.title, entry.book.id)
+    await sql('insert into public.book_authors (book_id, position, author_id) values ($1, 1, $2)', [entry.book.id, author!.id])
+  }
+  for (const title of more) await work(runTitle(title))
+}
+
 /** A Library with something in every state: three reads finished (one this year, one unrated), one abandoned, one being read with a day of progress, one wanted. */
 async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
   const library = createLibrary(client)
@@ -64,12 +93,14 @@ async function seed(page: Page, client: Parameters<typeof createLibrary>[0]) {
   }
   await genred(await add(book('Dune', 'Frank Herbert', 896), [['2025-04-12', '2025-05-17', 16]]), 'sci-fi', 'fantasy')
   // Read this year: Home's tally counts it and opens its sheet.
-  await genred(await add(book('The Dispossessed', 'Ursula K. Le Guin', 387), [[addDays(isoDay(), -9), addDays(isoDay(), -3), 18]]), 'sci-fi', 'literary')
+  const dispossessed = await add(book('The Dispossessed', 'Ursula K. Le Guin', 387), [[addDays(isoDay(), -9), addDays(isoDay(), -3), 18]])
+  await genred(dispossessed, 'sci-fi', 'literary')
   await genred(await add(book('Piranesi', 'Susanna Clarke', 272), [['2024-11-27', '2024-12-29', null]]), 'fantasy')
   // A finished read whose Book has no page count: the Pages card's "N without a count" line opens it.
-  await add(book('The Lathe of Heaven', 'Ursula K. Le Guin', null), [['2024-03-02', '2024-03-20', null]])
+  const lathe = await add(book('The Lathe of Heaven', 'Ursula K. Le Guin', null), [['2024-03-02', '2024-03-20', null]])
   await add(book('Ruin', 'John Gwynne', 800), [['2025-02-04', '2025-02-04', null, 'abandoned']])
-  await add(book('Up Next', 'Ursula K. Le Guin', 200), [])
+  const upNext = await add(book('Up Next', 'Ursula K. Le Guin', 200), [])
+  await linkedAuthor('Ursula K. Le Guin', [dispossessed, lathe, upNext], ['Rocannon\'s World', 'The Left Hand of Darkness', 'A Wizard of Earthsea'])
   const eden = await add(book('East of Eden', 'John Steinbeck', 608), [])
   await library.startReading(eden.id, addDays(isoDay(), -2))
   const [read] = await sql<{ id: string }>('select id from public.reading_sessions where entry_id = $1', [eden.id])
@@ -176,6 +207,11 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await page.getByTestId('library.entry').first().click()
     await expect(page.getByTestId('book.title')).toBeVisible()
     await expectAccessible(page, 'a finished Book')
+    // Her author under it (#167): the section starts when it nears the viewport, then opens.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+    await expect(page.getByTestId('book.authorMoreWork').first()).toBeVisible()
+    await untilStill(page)
+    await expectAccessible(page, 'a Book, its author below')
 
     // Not in the Library: from a search result, and Add.
     await page.getByTestId('shell.tab.search').click()

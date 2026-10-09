@@ -102,3 +102,20 @@ export function afterMotion(): Promise<void> {
     requestAnimationFrame(check)
   })
 }
+
+/**
+ * A change that waits for the motion to end: `apply` is called with the value once nothing
+ * moves (at once when nothing does), and a value that arrives while an earlier one still
+ * waits replaces it, so only the newest is ever applied. For what arrives late and would
+ * open its room under a cover in flight (the Book page's series line and Goodreads' rating
+ * landing on the hero's rise), so the two never move at once.
+ */
+export function followAfterMotion<T>(apply: (value: T) => void): (value: T) => void {
+  let latest = 0
+  return (value) => {
+    const mine = ++latest
+    void afterMotion().then(() => {
+      if (mine === latest) apply(value)
+    })
+  }
+}

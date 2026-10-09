@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { BookAuthor } from '@/data/enrich'
+import type { AuthorPage, BookAuthor } from '@/data/enrich'
+import type { WorkCard } from '@/data/enrich/works'
 import type { StartedSeries } from '@/data/enrich/series'
 import { DEVICE_ENRICH_KEY, emptyCopy, readEnrichCopy, remembered, saveEnrichCopy } from '@/data/enrich/device'
 import {
   authorInitials,
   authorParts,
+  isCurrentWork,
+  moreFromAuthor,
   lifeSpan,
+  moveMuted,
   parsePosition,
   positionText,
   rowAuthorKey,
@@ -99,6 +103,64 @@ describe('where a work opens', () => {
   })
 })
 
+const work = (title: string, extra: Partial<WorkCard> = {}): WorkCard => ({
+  workId: `w-${title}`,
+  title,
+  edition: { title, isbn13: null, openlibrary_edition_key: `OL${title.length}M`, cover_url: null },
+  ...extra,
+})
+const pageOf = (parts: Partial<AuthorPage> = {}, author: Partial<AuthorPage['author']> = {}): AuthorPage => ({
+  author: { id: 'a1', key: 'Q46248', name: 'Terry Pratchett', ...author },
+  genres: [],
+  series: [],
+  standalone: [],
+  other: [],
+  stale: false,
+  ...parts,
+})
+const ISBN = '9780552131063'
+const reading = { bookId: 'b-mort', key: 'b-mort', isbn13: null, title: 'Mort' }
+
+describe('more from the author', () => {
+  it('tells the Book the page is on by her entry, its key, its ISBN or its title', () => {
+    expect(isCurrentWork(work('Other', { entry: { entryId: 'e', bookId: 'b-mort', status: 'reading' } }), reading)).toBe(true)
+    expect(isCurrentWork(work('Mort', { edition: { title: 'Mort', isbn13: '9780552131063', openlibrary_edition_key: null, cover_url: null } }), { ...reading, bookId: null, key: `isbn-${ISBN}` })).toBe(true)
+    expect(isCurrentWork(work('Other', { edition: { title: 'Other', isbn13: '9780552131063', openlibrary_edition_key: 'OL9M', cover_url: null } }), { ...reading, bookId: null, isbn13: '9780552131063' })).toBe(true)
+    expect(isCurrentWork(work('MORT'), reading)).toBe(true)
+    expect(isCurrentWork(work('Guards! Guards!'), reading)).toBe(false)
+  })
+
+  it('offers three of her other works, those that open a Book first, each once, in the page order', () => {
+    const none = { workId: 'w-x', title: 'Nothing to open' }
+    const page = pageOf({
+      series: [{ id: 's1', name: 'Discworld', works: [work('Mort'), none, work('Eric'), work('Sourcery')] }],
+      standalone: [work('Nation'), work('Eric')],
+      other: [work('Dodger')],
+    })
+    const more = moreFromAuthor(page, reading)
+    expect(more?.works.map((w) => w.title)).toEqual(['Eric', 'Sourcery', 'Nation'])
+    expect(more?.total).toBe(6)
+    expect(more?.more).toBe(true)
+  })
+
+  it('has no "Show all" when everything is shown, and shows what is left of a short list', () => {
+    const more = moreFromAuthor(pageOf({ standalone: [work('Mort'), work('Nation')] }), reading)
+    expect(more?.works.map((w) => w.title)).toEqual(['Nation'])
+    expect(more?.more).toBe(false)
+  })
+
+  it('is nothing for no page, or when this is the only work she is known for', () => {
+    expect(moreFromAuthor(null, reading)).toBeNull()
+    expect(moreFromAuthor(pageOf({ standalone: [work('Mort')] }), reading)).toBeNull()
+    const born = { date: '1948-04-28T00:00:00Z', precision: 11 as const }
+    expect(moreFromAuthor(pageOf({ standalone: [work('Mort')] }, { born }), reading)).toBeNull()
+  })
+
+  it('shows the works of an author with nothing but the name', () => {
+    expect(moreFromAuthor(pageOf({ standalone: [work('Mort'), work('Nation')] }), reading)?.works).toHaveLength(1)
+  })
+})
+
 describe('the author line', () => {
   it('links each credited name to the linked author of that name', () => {
     expect(authorParts(['Terry Pratchett', 'Neil Gaiman'], [pratchett, gaiman], 'et al.')).toEqual([
@@ -160,6 +222,25 @@ describe('next in your series', () => {
     const five = ['A', 'B', 'C', 'D', 'E'].map((t) => item(t))
     expect(startedOnHome(five).more).toBe(false)
     expect(startedOnHome([...five.slice(0, 4), item('X', null), item('Y')]).all.map((i) => i.next.title)).toEqual(['A', 'B', 'C', 'D', 'Y'])
+  })
+
+  it('moves a muted series to the muted list and back, each in the database\'s order', () => {
+    const at = (title: string, activeOn: string): StartedSeries => ({ ...item(title), activeOn })
+    const a = at('A', '2026-09-03')
+    const b = at('B', '2026-09-01')
+    const c = at('C', '2026-09-02')
+    const muted = moveMuted({ started: [a, b, c], muted: [] }, 'B', true)
+    expect(muted.started.map((i) => i.next.title)).toEqual(['A', 'C'])
+    expect(muted.muted.map((i) => i.next.title)).toEqual(['B'])
+
+    const back = moveMuted({ started: muted.started, muted: [...muted.muted, c] }, 'C', false)
+    expect(back.started.map((i) => i.next.title)).toEqual(['A', 'C'])
+    expect(back.muted.map((i) => i.next.title)).toEqual(['B'])
+    const both = moveMuted(muted, 'B', false)
+    expect(both.started.map((i) => i.next.title)).toEqual(['A', 'C', 'B'])
+    expect(both.muted).toEqual([])
+    // A series not in the list it leaves changes nothing.
+    expect(moveMuted(muted, 'Z', true)).toEqual(muted)
   })
 
   it('says where the next work stands: of the count when it is whole and within it', () => {

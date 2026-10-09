@@ -104,6 +104,9 @@ export async function sweepRun() {
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
     [TEST_PUBLISHER, `% [${runTag()}]`],
   )
+  // The authors and works a flow linked to them (#167), named with the run tag as the Books are.
+  await sql('delete from public.works where title like $1', [`% [${runTag()}]`])
+  await sql('delete from public.authors where name like $1', [`% [${runTag()}]`])
 }
 
 /**
