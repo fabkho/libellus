@@ -66,7 +66,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
       <div class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
-        <NuxtLink :to="`/friends/${card.member.id}`" class="flex min-w-0 items-center gap-sm" data-testid="home.circleFeature.member">
+        <NuxtLink :to="`/friends/${card.member.id}`" class="reach flex min-w-0 items-center gap-sm" data-testid="home.circleFeature.member">
           <FriendsAvatar :card="card.member" />
           <span class="truncate font-medium">{{ name }}</span>
         </NuxtLink>
@@ -76,7 +76,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <UiPressLink
         v-if="!book.manual"
         :to="bookPath"
-        class="book-title text-callout"
+        class="reach book-title text-callout"
         data-testid="home.circleFeature.title"
         @press="books.prefetch(book.id)"
       >{{ book.title }}</UiPressLink>
@@ -97,3 +97,17 @@ onBeforeUnmount(() => observer?.disconnect())
     </div>
   </div>
 </template>
+
+<style scoped>
+/* A link drawn smaller than a finger: its 44 px target is an invisible box centred on it, as UiButton's. */
+.reach {
+  position: relative;
+}
+.reach::after {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
+}
+</style>
