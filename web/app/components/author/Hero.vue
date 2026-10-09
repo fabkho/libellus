@@ -13,22 +13,7 @@ const props = defineProps<{ author: AuthorHero | null; genres: readonly GenreId[
 
 const { t } = useI18n()
 
-const initials = computed(() => (props.author ? authorInitials(props.author.name) : ''))
-const span = computed(() => (props.author ? lifeSpan(props.author.born, props.author.died) : null))
-const dates = computed(() => {
-  const s = span.value
-  if (!s) return null
-  if (s.kind === 'span') return t('author.lived', { born: s.born, died: s.died })
-  if (s.kind === 'born') return t('author.born', { year: s.born })
-  return t('author.died', { year: s.died })
-})
-
-const photoShown = ref(false)
-watch(
-  () => props.author?.photo?.url,
-  () => (photoShown.value = false),
-)
-const credit = computed(() => props.author?.photo?.credit ?? null)
+const dates = useLifeDates(() => props.author)
 
 const summary = computed(() => props.author?.summary ?? null)
 const long = computed(() => (summary.value?.text.length ?? 0) > 360)
@@ -38,21 +23,7 @@ const expanded = ref(false)
 <template>
   <section class="relative flex flex-col items-center px-xl pt-sm text-center" data-testid="author.hero">
     <template v-if="author">
-      <span class="ring figures relative flex items-center justify-center overflow-hidden rounded-pill bg-surface-raised text-title text-ink-muted shadow-cover" aria-hidden="true">
-        <span data-testid="author.initials">{{ initials }}</span>
-        <img
-          v-if="author.photo?.url"
-          :src="author.photo.url"
-          alt=""
-          draggable="false"
-          decoding="async"
-          class="photo absolute inset-0 size-full object-cover"
-          :class="photoShown && 'shown'"
-          data-testid="author.photo"
-          @load="photoShown = true"
-        />
-        <span class="pointer-events-none absolute inset-0 rounded-pill edge" />
-      </span>
+      <AuthorPortrait :author="author" />
       <h1 class="mt-md max-w-full text-title text-balance wrap-anywhere" :class="{ arrive: arriving }" data-testid="author.name">{{ author.name }}</h1>
       <p v-if="dates" class="eyebrow mt-xs" :class="{ arrive: arriving }" data-testid="author.dates">{{ dates }}</p>
       <ul v-if="genres.length" class="mt-ms flex flex-wrap justify-center gap-xs" :aria-label="t('author.genres')" :class="{ arrive: arriving }" data-testid="author.genres">
@@ -72,17 +43,7 @@ const expanded = ref(false)
           {{ t('author.more') }}
         </button>
       </div>
-      <p v-if="summary || credit" class="mt-sm w-full text-left text-footnote text-ink-faint" data-testid="author.credits">
-        <a v-if="summary" :href="summary.url" target="_blank" rel="noopener" class="credit underline-offset-2 hover:underline" data-testid="author.wikipedia">{{ t('author.fromWikipedia') }}</a>
-        <span v-if="summary && credit" aria-hidden="true">{{ ' · ' }}</span>
-        <span v-if="credit" data-testid="author.photoCredit">
-          <a v-if="credit.fileUrl" :href="credit.fileUrl" target="_blank" rel="noopener" class="credit underline-offset-2 hover:underline" data-testid="author.photoFile">{{ credit.artist ? t('author.photoBy', { artist: credit.artist }) : t('author.photo') }}</a>
-          <template v-else>{{ credit.artist ? t('author.photoBy', { artist: credit.artist }) : t('author.photo') }}</template>
-          <template v-if="credit.licence">
-            {{ ' · ' }}<a v-if="credit.licenceUrl" :href="credit.licenceUrl" target="_blank" rel="noopener license" class="credit underline-offset-2 hover:underline" data-testid="author.photoLicence">{{ credit.licence }}</a><template v-else>{{ credit.licence }}</template>
-          </template>
-        </span>
-      </p>
+      <AuthorCredits :author="author" class="mt-sm w-full" />
     </template>
 
     <!-- Loading: the same shape in placeholders, replaced whole when the page comes (nothing below moves). -->
@@ -98,32 +59,12 @@ const expanded = ref(false)
 </template>
 
 <style scoped>
-.ring {
-  width: var(--size-cover-md);
-  height: var(--size-cover-md);
-}
-
-/* The portrait fades in over the initials once decoded. */
-.photo {
-  opacity: 0;
-  transition: opacity var(--duration-standard) var(--ease-standard);
-}
-.photo.shown {
-  opacity: 1;
-}
-
 .clamped {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 5;
 }
-
-/* Links in a line of small text: padded above and below for the finger (inline padding moves no line). */
-.credit {
-  padding-block: var(--spacing-sm);
-}
-
 
 /* A placeholder line at the height of the text it stands for. */
 .line {
