@@ -2,8 +2,8 @@
 
 A calm, mobile-first book tracker you install from the home screen: search a book → **Want to
 read** → **Currently reading** → **Finished**, with the date, a quarter-star rating and a few words.
-No social feed, no ads, no trackers. Built web first on Nuxt and Supabase, with the docs that make a
-later Swift/Kotlin port mechanical.
+Friends can follow what you choose to share, and nothing else: no ads, no trackers. Built web first
+on Nuxt and Supabase, with the docs that make a later Swift/Kotlin port mechanical.
 
 ![Libellus on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
 
@@ -33,6 +33,12 @@ Libellus runs as one private, invite-only instance for its owner and a few frien
   offline wait in an outbox and sync once you are back.
 - **An app, not a website**: installable (PWA), full screen, share a link from another app to open
   the book, long-press shortcuts, light and dark themes ("Night Reader").
+- **Friends, by choice.** Share your follow link and people ask to follow you (your account is private
+  until you let them in; a public one can be followed at once). Your switches decide what they see:
+  what you are reading, Want to read, what you finished, ratings, reviews, books you put down, your year
+  in review. Hide a single Book from them, or block someone.
+- **Your circle.** Home shows what the people you follow finished, reviewed or started, and a follow
+  request to answer; the feed lists all of it, newest first.
 - **Invite-only accounts** with a six-digit code by email; no passwords. Delete your account from
   the app.
 
@@ -51,9 +57,12 @@ does with your data.
 - **Page loads are counted, nothing more.** This instance uses Cloudflare Web Analytics, which is
   cookieless and stores no identifier on your device (docs/HOSTING.md).
 - **Your data is yours**: row-level security in the database means a member only ever reads her own
-  Library, reviews, Collections and Book links.
+  Library, reviews, Collections and Book links. The one exception is the people she follows: a member
+  sees what the members she follows (or a public account) chose to show, through database functions that
+  check the follow and that member's switches. A private account is the default, and nothing of it is
+  shown to strangers.
 - **Delete is in the app**: Profile → Account → Delete account removes your account and everything
-  of yours (Library, reading sessions, ratings, reviews, Collections, name, photo, sign-in) from the
+  of yours (Library, reading sessions, ratings, reviews, Collections, name, photo, follows, follow requests, blocks, activity, sign-in) from the
   database at once. The encrypted nightly backups below forget it when they expire, within 35 days.
   An export of your data is planned; until it exists, the app only imports (Goodreads, Hardcover).
 - **Sharing is opt-in**: a member's reading page is off until she turns it on, shows only the
