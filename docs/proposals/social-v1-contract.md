@@ -477,13 +477,13 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
   `friends.batch`, `friends.empty`, `friends.emptyShare`, `friends.quiet`, `friends.offline`,
   `friends.loadError`, `friends.retry`; the batch sheet `friendsBatch` (`.sheetTitle`, `.cancel`,
   `.row`).
-- **People** (`/friends/people`): `people`, `people.back`, `people.segment.following|followers|requests`,
+- **People** (`/friends/people`): `people`, `people.back`, `people.status` (the page's polite status), `people.segment.following|followers|requests`,
   `people.row`, `people.rowMore`, `people.accept`, `people.decline`, `people.followBack`,
   `people.empty`; the member sheet `memberSheet` (`.unfollow`, `.remove`, `.block`, `.cancel`); the
   block confirm `blockConfirm` (`.confirm`, `.cancel`).
 - **Member** (`/friends/<member>`; *See all* opens the sheet `memberWant` with `.sheetTitle`, `.cancel`, `.row`, `.book`; *See all* under Recently finished the sheet `memberFinished`, the same): `member`, `member.back`, `member.more`, `member.hero`,
   `member.name`, `member.since`, `member.library`, `member.follow`, `member.ask`, `member.requested`,
-  `member.private`, `member.reading`, `member.want`, `member.wantAll`, `member.finished`,
+  `member.status` (the page's polite status), `member.private`, `member.reading`, `member.want`, `member.wantAll`, `member.finished`,
   `member.finishedAll` (only above 3 finished Books), `member.finishedCover` (the cover's link, hidden from the keyboard and screen readers: the title's is the Book's one), `member.finishedBook` (the title's link), `member.finishedTitle`, `member.finishedReview`, `member.finishedMore`, `member.yearCards`, and the Profile's own figure ids inside
   (`profile.figures`, `profile.columns`, …, as the reused components carry them);
   `memberYear` (`.back`, `.title`) for the year page.
@@ -495,7 +495,7 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
 - **Follow link sheet**: `followLink` (`.cancel`), `followLink.value`, `followLink.share`,
   `followLink.copy`, `followLink.renew`, `followLink.outcome`; renew confirm `renewFollowLink`
   (`.confirm`, `.cancel`).
-- **Blocked sheet**: `blocked` (`.cancel`), `blocked.row`, `blocked.unblock`, `blocked.empty`.
+- **Blocked sheet**: `blocked` (`.cancel`), `blocked.row`, `blocked.unblock`, `blocked.empty`, `blocked.status` (polite).
 - **Book options**: `bookOptions.hide` (the switch row).
 - **Header**: `shell.avatarDot` (the lamp dot while a request waits).
 
@@ -551,6 +551,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "requests": "Requests",
     "askedOn": "asked {when}",
     "followsYouNow": "follows you now",
+    "accepted": "{name} follows you now.",
+    "declined": "Request from {name} declined.",
     "accept": "Accept",
     "decline": "Decline",
     "acceptLabel": "Accept {name}",
@@ -576,6 +578,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "follow": "Follow",
     "ask": "Ask to follow",
     "requested": "Requested",
+    "following": "Following",
+    "withdrawn": "Request withdrawn.",
     "requestedHint": "Tap to withdraw.",
     "privateTitle": "Private account",
     "privateText": "Ask to follow to see what {name} reads. {name} decides; nobody else is told.",
@@ -643,6 +647,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "title": "Blocked",
     "unblock": "Unblock",
     "unblockLabel": "Unblock {name}",
+    "unblocked": "{name} unblocked.",
     "empty": "You haven't blocked anyone."
   },
   "bookOptions": { "hide": "Hide from followers", "hideHint": "Hidden: not in your circle's feed, not on your profile, not in the figures they see." },
