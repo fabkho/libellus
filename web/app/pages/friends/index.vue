@@ -151,8 +151,9 @@ watch(
     </div>
 
     <div v-else-if="feed.loadError" class="px-lg pt-xxl text-center" data-testid="friends.loadError">
-      <p class="text-subhead text-ink-muted">{{ t('feed.loadError') }}</p>
-      <UiButton tone="secondary" size="md" class="mt-md" :disabled="!online" data-testid="friends.retry" @click="feed.refresh()">
+      <!-- Offline it says so, with no button to press: it reads again on its own once back (stores/feed.ts). -->
+      <p class="text-subhead text-ink-muted">{{ feed.loadError === 'offline' ? t('feed.loadOffline') : t('feed.loadError') }}</p>
+      <UiButton v-if="feed.loadError !== 'offline'" tone="secondary" size="md" class="mt-md" :disabled="!online" data-testid="friends.retry" @click="feed.refresh()">
         {{ t('feed.retry') }}
       </UiButton>
     </div>

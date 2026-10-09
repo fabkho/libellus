@@ -102,6 +102,7 @@ const error = computed(() => (social.errors.privacy && social.errors.privacy !==
           @click="blockedOpen = true"
         >
           <span v-if="social.blocked" class="text-ink-muted" data-testid="privacy.blockedValue">{{ blockedCount ?? t('privacy.blockedNone') }}</span>
+          <span v-else-if="!online" class="text-ink-muted" data-testid="privacy.blockedOffline">{{ t('common.offline') }}</span>
         </UiRow>
       </UiRowGroup>
     </div>

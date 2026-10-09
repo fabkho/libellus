@@ -515,6 +515,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "quietTitle": "Quiet for now.",
     "quiet": "When the people you follow start or finish a book, it shows here.",
     "offline": "Offline · as of {time}",
+    "loadOffline": "You're offline. Your circle shows once you're back.",
     "loadError": "Your circle couldn't be loaded.",
     "retry": "Try again"
   },
@@ -600,6 +601,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "title": "Your follow link",
     "textPrivate": "Send it to friends in Libellus. Your account is private, so they ask and you decide.",
     "textPublic": "Send it to friends in Libellus. Your account is public, so they can follow you straight away.",
+    "offline": "You're offline. Your link shows once you're back.",
     "share": "Share link",
     "copy": "Copy",
     "copied": "Copied.",
