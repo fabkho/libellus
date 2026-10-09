@@ -215,6 +215,9 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
 
         <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
 
+        <!-- Friends (social v1): who follows her, her follow link, her privacy. -->
+        <ProfileFriends class="mb-xl" />
+
         <!-- Share (#171): her public reading page, off until she turns it on. -->
         <ProfileSharing class="mb-xl" />
 

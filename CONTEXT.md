@@ -9,7 +9,9 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
   above it.
 - **Catalogue** — the shared set of Books that Members have added from Apple Books or OpenLibrary.
   Readable by every Member.
-- **Manual book** — a Book a Member typed in by hand. Private to that Member, never in the Catalogue.
+- **Manual book** — a Book a Member typed in by hand. Private to her Library, never in the Catalogue: no
+  other Member finds it. Her Followers see it with her reads, but cannot open it, unless she hides it
+  (*Hidden from followers*).
 - **Own edition** — a Member's own edition of a Book no source knows (Change edition → "My edition isn't
   listed"): a Manual book with the Book's title and authors and her copy's details.
 - **Format** — what an edition is: hardcover, paperback, ebook or audiobook. The source's, or the Member's
@@ -35,7 +37,22 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 - **Want to read row** — the short row of *Want to read* entries on Home (it was called "Up next").
 - **Read in <year>** — the count of finished sessions with an end date in the current year,
   re-reads included.
-- **Profile** — the member's page behind the avatar: her reading in figures (by year or all years)
-  and her account. Figures and covers only.
+- **Profile** — the member's page behind the avatar: her reading in figures (by year or all years), her
+  Friends (Your circle, People, Your follow link, Privacy) and her account.
 - **Year in review** — one calendar year of the Profile on a page of its own: its finished reads by
   month, its favourite, its records.
+- **Follower** — a Member who follows another Member, once accepted (a Follow request) or at once (a Public
+  account). A follower sees what the Member lets followers see: her switches, her figures, her Books that
+  are not hidden. The same link seen from the other side is *following*.
+- **Follow request** — a Member's ask to follow a Private account, waiting for the owner's answer. Accept
+  makes the asker a follower; Decline tells nobody, and the asker still sees "Requested".
+- **Private account** — the default for every Member. Nobody follows her except by her Accept, and nobody
+  sees anything of hers before that. Turned off, it is a Public account.
+- **Public account** — a Member's account that anyone with her Follow link can follow at once, without a
+  Follow request. Her switches still apply.
+- **Follow link** — a Member's link (`/f/<token>`, 128 random bits) that opens her profile for a signed-in
+  visitor, who may then follow her or ask to. A new link kills the old one at once; followers stay.
+- **Circle** — the Members a Member follows, and what they read: *Your circle* on Home and the feed. Not
+  her followers.
+- **Hidden from followers** — a Book a Member hides from her followers (the Book's ⋯): gone from their
+  feed, her profile, her counts and her figures. It stays in her own Library and figures.

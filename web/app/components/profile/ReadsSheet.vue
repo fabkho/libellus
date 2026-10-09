@@ -12,8 +12,8 @@ import type { SheetRestore } from '~/composables/useSheetRestore'
 
 const open = defineModel<boolean>('open', { required: true })
 withDefaults(
-  defineProps<{ title: string; reads: readonly StatsRead[]; withYear?: boolean; testid?: string; restore?: SheetRestore | null }>(),
-  { withYear: false, testid: 'profileReads', restore: null },
+  defineProps<{ title: string; reads: readonly StatsRead[]; withYear?: boolean; foreign?: boolean; testid?: string; restore?: SheetRestore | null }>(),
+  { withYear: false, foreign: false, testid: 'profileReads', restore: null },
 )
 </script>
 
@@ -21,7 +21,7 @@ withDefaults(
   <UiSheet v-model:open="open" :title="title" :testid="testid" :restore="restore">
     <slot name="top" />
     <div class="flex flex-col" :data-testid="`${testid}.list`">
-      <ProfileReadRow v-for="read in reads" :key="read.sessionId" :read="read" :with-year="withYear" :data-testid="`${testid}.read`" />
+      <ProfileReadRow v-for="read in reads" :key="read.sessionId" :read="read" :with-year="withYear" :foreign="foreign" :data-testid="`${testid}.read`" />
     </div>
     <slot name="foot" />
   </UiSheet>

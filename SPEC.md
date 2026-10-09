@@ -17,11 +17,14 @@ is issue [#1](https://github.com/fabkho/libellus/issues/1). The words used here 
 - Invite-only accounts with a six-digit email code.
 - Replace Fable: import its history once, then delete it.
 - Built so a later Swift/Kotlin port is mechanical (the Trappist strategy).
+- Social, version 1 (follows by link, a feed on Home, private accounts by default): members see what
+  their circle reads, and each decides what her followers see ([docs/proposals/social-v1.md](docs/proposals/social-v1.md)).
 
-Non-goals (v1): social features (friends, feed, likes, follows), a work/edition hierarchy, fuzzy dates, a
-"Paused" state, open sign-up, Sign in with Apple/Google, page progress, German UI, desktop layouts.
-Sharing came later, without the social network (#171, below): a public reading page and Book cards
-behind a link the member hands out herself.
+Non-goals (v1): likes, notifications, people search or suggestions (social v2, see docs/proposals/social-v1.md), a
+work/edition hierarchy, fuzzy dates, a "Paused" state, open sign-up, Sign in with Apple/Google, page
+progress, German UI, desktop layouts.
+Sharing came later, as a link (#171, below): a public reading page and Book cards behind a link the
+member hands out herself. A link is not a follow.
 
 ## 2. Platform & Stack
 
@@ -58,7 +61,7 @@ custom shelves.
   `paperback` | `ebook` | `audiobook`, as the source said it; Apple's are ebooks; null when unknown),
   source (`apple` | `openlibrary` | `manual` | `import`), source identifiers, `owner_id` only for Manual
   books. Unique on ISBN-13 for non-manual books and on source identifiers.
-- **library_entries** — member, book, status (`want_to_read` | `reading` | `finished`), added at, and the
+- **library_entries** — member, book, status (`want_to_read` | `reading` | `finished`), added at, `hidden` (social v1: *Hide from followers*, the Book is kept from every follower's view), and the
   member's own word on her edition's format (`format_override`, null = the Book's; never written into
   the shared Book).
   Unique per member and book. `status` is a stored column for filtering and sorting, but derived:
@@ -93,6 +96,15 @@ custom shelves.
   a filled honeypot (`website`) answers the same and stores nothing — and read, marked invited and
   deleted only through `owner_waitlist`, `owner_waitlist_set_invited`, `owner_waitlist_delete`, which
   raise `not_owner` for anyone but the member named in `private.instance_owner`.
+- **social_settings** (social v1) — per member: `private` (default true) and the seven switches (Currently
+  reading, Want to read, Finished, Ratings, Reviews, Did not finish, Year in review and figures), and her
+  follow link's token. **follows** — follower, followee, requested, accepted or declined (the asker never
+  sees declined); **blocks**; **follow_link_views** (who opened whose link: what lets a private account's
+  card reach a member). **activity** — the feed's entries (kind, day, visible from when: the 10-minute
+  settle window), read only through `feed()`, kept 13 months. Visibility is decided at read time by
+  definer functions, never stored. Written only through the RPCs: `follow`, `answer_request`, `unfollow`,
+  `remove_follower`, `block`, `unblock`, `set_private`, `set_social_sections`, `renew_follow_link`,
+  `set_entry_hidden`.
 - **invite_codes**, **accounts** — as in Trappist.
 
 Rules enforced in the database: status derived from sessions (none → *Want to read*, latest open →
@@ -124,6 +136,10 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
          Profile → Share: her reading page (on/off, its link, its sections); Book → ⋯ → Share: its card
+         Home    → Your circle: a follow request, one card of a finish this week, a row per followed member
+         Home    → Your circle → Show more → /friends (her circle's feed, newest first) → People (followers, requests)
+         Profile → Friends: Your circle, People, Your follow link, Privacy (the seven switches, Blocked)
+         /f/<token> (her follow link) → a member's profile: /friends/<member> and /friends/<member>/<year>
 (public) /r/<token> her reading page · /r/<token>/book/<id> a Book card — anyone with the link, no sign-in;
          both end in the waitlist form
          Profile → Account → Waitlist (the owner's account only): who asked for an invite
@@ -145,7 +161,11 @@ and ported as the design system (#5, docs/DESIGN.md); this spec fixes structure 
   keep-alive pages, navigation on pointer-down. Covers resolved once, cached by the service worker.
 - Privacy: minimal data, EU region, no trackers. Keys never committed. The profile photo (#156) is
   made on the device (512 and 128 px, re-encoded without EXIF or GPS) and kept in a private Storage
-  bucket only she can read; the device keeps a copy, deleted on sign-out.
+  bucket that she and the members connected to her can read; the device keeps a copy, deleted on sign-out.
+- Social (social v1): a private account until she switches it off. Followers see only the sections she
+  switched on, never a hidden Book, her notes, her progress or her reasons for not finishing; a block hides
+  each member from the other everywhere. Nothing is visible to anyone before she lets a follower in or
+  makes her account public. Follow writes need the connection; only *Hide from followers* waits offline.
 - Sharing (#171) is off until she turns it on, and only what she chose leaves the database: her
   first name, the sections she switched on (the Books she is reading, this year's counts, her
   favourites, what she finished with its Ratings, her shelf) and the reviews she shared one by one.
@@ -201,17 +221,21 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
 - **Re-reads and DNF are sessions**, not statuses. No "Paused".
 - **Quarter-star ratings**, stored as integer quarters 1–20, optional.
 - **English UI**, every string in the message file from day one.
-- **Invite-gated email-code sign-in**, Trappist 1:1. No social.
+- **Invite-gated email-code sign-in**, Trappist 1:1.
 - **Sharing is a link, not a network** (owner, #166/#171): one public reading page per member, off by
-  default, at an unguessable link she can renew or turn off; Book cards under it; no accounts, likes or
-  follows. A visitor who wants in leaves her address on the **waitlist** at the end of the page (no
+  default, at an unguessable link she can renew or turn off; Book cards under it; no accounts or likes
+  (follows are social v1, below). A visitor who wants in leaves her address on the **waitlist** at the end of the page (no
   account is made, nothing is mailed; the owner reads the list in the app and invites by hand). The owner's page shows Regal's
   3D shelf from the published library file; anyone else's a row of covers (Regal's assets are made
   for the owner's Library only). Link previews come from Open Graph images rendered by a Supabase edge
   function and cached by the Pages Function in front of `/r/*` (docs/HOSTING.md).
 - **Covers resolved once** on entering the Catalogue (Apple → OpenLibrary → placeholder), stored as
   URL + thumbhash.
-- **Manual books stay private**, never in the Catalogue. So does a member's own edition ("My edition isn't
+- **Social, version 1** (owner, 8 October 2026): a private account by default; follows by the follow link
+  only; a feed on Home and on its own page; her seven switches decide what followers see; a Book she hides
+  from followers is gone for them. The answers and their reasons: [docs/proposals/social-v1.md](docs/proposals/social-v1.md).
+- **Manual books stay private** to her Library, never in the Catalogue (followers see them with her reads,
+  unless she hides one: social v1). So does a member's own edition ("My edition isn't
   listed": no source knows her copy): it is a Manual book of hers, and the entry moves to it as Change
   edition moves one, keeping its reads.
 - **Formats are the source's, corrections are hers**: a Catalogue Book keeps the format its source gave;

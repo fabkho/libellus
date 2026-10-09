@@ -20,6 +20,7 @@ export type IconName =
   | 'slash'
   | 'stack'
   | 'globe'
+  | 'people'
   | 'pencil'
   | 'flag'
   | 'bookmark'
@@ -114,6 +115,11 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     </template>
     <template v-else-if="name === 'globe'">
       <circle cx="12" cy="12" r="8" /><path d="M4 12h16M12 4c2.3 2.4 3.3 5 3.3 8s-1 5.6-3.3 8c-2.3-2.4-3.3-5-3.3-8s1-5.6 3.3-8z" />
+    </template>
+    <!-- Two readers: a head and shoulders, and a second one behind it to the right. -->
+    <template v-else-if="name === 'people'">
+      <circle cx="9.5" cy="8.5" r="3" /><path d="M4 19c.4-3.2 2.5-5 5.5-5s5.1 1.8 5.5 5" />
+      <path d="M15.5 5.7a3 3 0 0 1 0 5.6M17.5 14.3c1.4.6 2.3 2.1 2.5 4.2" />
     </template>
     <template v-else-if="name === 'pencil'"><path d="M15 5.5 18.5 9 9 18.5H5.5V15z" /></template>
     <template v-else-if="name === 'flag'"><path d="M6 20.5V4.5M6 5h11l-2.5 4 2.5 4H6" /></template>

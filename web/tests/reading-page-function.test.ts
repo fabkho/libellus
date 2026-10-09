@@ -25,7 +25,8 @@ const SHELL = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title
 /** A 2×3 PNG: what the stand-in renderer answers with. */
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAEElEQVR4nGPYUqEBRAwoFABXCQf5h5XBIQAAAABJRU5ErkJggg==', 'base64')
 
-const COVER = 'https://covers.libellus.test/piranesi.jpg'
+// A host the app's covers really come from: a reading page hands out a cover only from those (social v1, S1).
+const COVER = 'https://covers.openlibrary.org/b/id/8231856-L.jpg'
 
 type Context = Parameters<typeof onRequest>[0]
 
