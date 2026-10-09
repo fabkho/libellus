@@ -475,9 +475,9 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
 - **Feed** (`/friends`): `friends`, `friends.back`, `friends.people`, `friends.day`, `friends.entry`,
   `friends.entryMember`, `friends.entryBook`, `friends.entryReview`, `friends.entryMore`,
   `friends.batch`, `friends.empty`, `friends.emptyShare`, `friends.quiet`, `friends.offline`,
-  `friends.loadError`, `friends.retry`; the batch sheet `friendsBatch` (`.sheetTitle`, `.cancel`,
+  `friends.loading` (the placeholders while the first answer is on its way), `friends.loadError`, `friends.retry`; the batch sheet `friendsBatch` (`.sheetTitle`, `.cancel`,
   `.row`).
-- **People** (`/friends/people`): `people`, `people.back`, `people.status` (the page's polite status), `people.segment.following|followers|requests`,
+- **People** (`/friends/people`): `people`, `people.back`, `people.status` (the page's polite status), `people.loading`, `people.segment.following|followers|requests`,
   `people.row`, `people.rowMore`, `people.accept`, `people.decline`, `people.followBack`,
   `people.empty`; the member sheet `memberSheet` (`.unfollow`, `.remove`, `.block`, `.cancel`); the
   block confirm `blockConfirm` (`.confirm`, `.cancel`).
