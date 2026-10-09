@@ -634,15 +634,30 @@ Changed keys:
 
 ## 6. The one flow (E1)
 
-`web/e2e/friends.spec.ts`, two members made by the existing fixtures, the settle window set to zero
-through the database at the start and back to ten minutes at the end
-(`update private.social_config set settle_window = …`, as the e2e fixtures already reach the database).
-Steps: Ida (private by default) copies her link → Anna opens it → sees the private card → Ask to
-follow → Requested → Ida sees the request on Home → Accept → Ida finishes a Book → Anna's Home shows
-it in *Your circle* → Show more → the feed → Ida's name → her profile with the Book under Recently
-finished → Ida hides the Book → Anna's feed and Ida's profile no longer show it → Ida blocks Anna →
-Anna's circle is empty and the link answers "This link isn't here any more". The new screens join
-`a11y.spec.ts`, dark only, `@full`.
+`web/e2e/friends.spec.ts`: one test, two members made by the existing fixtures (`signedIn`), each in a browser
+context of her own (Ida's is the test's `page`, Anna's a second context with the project's device options); the
+settle window is set to zero through the database in `beforeAll` and back to ten minutes in `afterAll`
+(`update private.social_config set settle_window = …`, with `sql` from `tests/support/stack.ts`), so a failure
+restores it too. Steps:
+
+1. Ida (private by default): Profile → Your follow link; the link is read from `followLink.value`, Copy says "Copied."
+2. Anna opens the link (`goto`): it lands on Ida's page, the private card (`member.private`), Ask to follow →
+   `member.requested`.
+3. Ida's Home shows the request in Your circle (`home.circleRequest`); Accept (`home.circleAccept`) answers it.
+4. Ida finishes a Book today with 4.5 stars and a review (the Library's API, `addToLibrary` with `status: 'finished'`,
+   as a11y's seed does; the UI's finish is core-loop's).
+5. Anna's Home shows it as the lit card (`home.circleFeature`: `.member`, `.title`, `.stars`, `.review`); Your circle's
+   title (`home.circleTitle`) opens the feed (one `friends.entry`); Ida's name (`friends.entryMember`) opens her page, the
+   Book under Recently finished (`member.finishedTitle`).
+6. Ida hides the Book (Library → Finished → the Book → ⋯ → Hide from followers, `bookOptions.hide`); Anna's feed, her
+   Home card and Ida's page no longer show it.
+7. Ida blocks Anna (Profile → People → Followers → ⋯ → Block → confirm); Anna's Your circle is gone and the link
+   answers "This link isn't here any more" (`follow.missing`).
+
+The new screens join `a11y.spec.ts`, dark only, `@full`: one test that makes Anna, Ida (a finish with a review, an older
+one), Cleo (a wanted Book) and Ben (a request to follow Anna), settles their activity by its own `visible_at` (so it does
+not depend on the window the social flow sets), and scans Home with Your circle, the feed, People (requests and
+following), the member sheet, a member, her year, a private follow link's card and Privacy.
 
 ## 7. Parity outline (E2)
 
