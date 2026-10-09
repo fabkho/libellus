@@ -298,5 +298,9 @@ describe('the feed against the social stack', () => {
     expect((await feed.page(both[1]!)).data).toEqual([])
     const offline = createFeed(newClient(), { online: () => false })
     expect(await offline.page()).toEqual({ data: null, error: 'offline' })
+
+    // A connection that answers nothing (status 0) is offline too, not a failed load.
+    const silent = { rpc: async () => ({ data: null, error: { message: 'Failed to fetch' }, status: 0 }) }
+    expect(await createFeed(silent as never, { online: () => true }).page()).toEqual({ data: null, error: 'offline' })
   })
 })

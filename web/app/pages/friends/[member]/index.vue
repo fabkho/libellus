@@ -56,6 +56,8 @@ onMounted(show)
 onActivated(show)
 onDeactivated(() => (showing = false))
 watch(id, () => void members.load(id.value))
+// Back online while the page is open: a Requested or Follow it shows, or figures it missed, may be old.
+watch(online, (now) => now && showing && void members.load(id.value))
 
 // ------------------------------------------------------------------ her reading, in figures
 const thisYear = Number(isoDay().slice(0, 4))
@@ -63,6 +65,8 @@ const thisMonth = Number(isoDay().slice(5, 7))
 const record = computed(() => view.value.record)
 const reads = computed(() => record.value?.reads ?? [])
 const loading = computed(() => !record.value && view.value.recordLoading)
+/** Her figures are switched on but could not be read: said, so it does not look as if she has none. */
+const recordFailed = computed(() => !!view.value.recordError && !record.value && !!open.value?.sections.year && !!open.value.sections.finished)
 const blocks = computed(() => (open.value ? memberBlocks(open.value, record.value, loading.value) : null))
 const years = computed(() => yearsOf(reads.value))
 const year = computed({
@@ -213,6 +217,11 @@ function back() {
             <FriendsMemberCovers :books="open.want.map((w) => w.book)" size="sm" testid="member.wantBooks" />
           </section>
         </UiReveal>
+
+        <div v-if="recordFailed" class="flex flex-col items-center gap-sm pb-xl text-center" data-testid="member.recordError">
+          <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>
+          <UiButton v-if="view.recordError !== 'offline'" tone="secondary" size="md" data-testid="member.recordRetry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
+        </div>
 
         <UiReveal :show="blocks.figures">
           <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">

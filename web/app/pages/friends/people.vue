@@ -60,7 +60,9 @@ const options = computed(() => segments.value.map((value) => ({ value, label: t(
 
 const asked = computed(() => new Set((people.value?.requested ?? []).map((member) => member.id)))
 const loadFailed = computed(() => !people.value && Boolean(social.errors.people) && social.errors.people !== 'offline')
-const loading = computed(() => !people.value && !loadFailed.value)
+/** Opened offline with nothing read yet: the page says so (it reads again once back, stores/social.ts). */
+const offlineEmpty = computed(() => !people.value && social.errors.people === 'offline')
+const loading = computed(() => !people.value && !loadFailed.value && !offlineEmpty.value)
 
 // ------------------------------------------------------------------ the actions
 
@@ -163,6 +165,8 @@ const followerIds = computed(() => new Set((people.value?.followers ?? []).map((
           {{ t('people.retry') }}
         </UiButton>
       </div>
+
+      <p v-else-if="offlineEmpty" class="px-lg pt-xl text-center text-subhead text-ink-muted" data-testid="people.offline">{{ t('people.offline') }}</p>
 
       <template v-else-if="!loading">
         <!-- Following -->

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isNoAnswer } from './network'
 import {
   cardFromJson,
   mapSocialError,
@@ -156,9 +157,11 @@ export function createSocial(client: SupabaseClient, { online = () => true }: { 
   /** One call to a database function: offline refused first, a refusal mapped, the answer read by `read`. */
   async function call<J, T>(fn: string, args: Record<string, unknown>, read: (json: J) => T): Promise<SocialResult<T>> {
     if (!online()) return { data: null, error: 'offline' }
-    const { data, error } = await client.rpc(fn, args)
-    if (error) return { data: null, error: mapSocialError(error) }
-    return { data: read(data as J), error: null }
+    const answer = await client.rpc(fn, args)
+    // A connection that answers nothing is offline, not an unknown failure (as memberStats.ts has it).
+    if (isNoAnswer(answer)) return { data: null, error: 'offline' }
+    if (answer.error) return { data: null, error: mapSocialError(answer.error) }
+    return { data: read(answer.data as J), error: null }
   }
 
   const nothing = () => undefined

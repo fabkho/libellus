@@ -21,7 +21,7 @@
 //
 // Share (issue #171): the Book's card on her reading page, in its own sheet
 // (SharingBookSheet: with or without her review, the link to share or copy).
-import type { LibraryEntry } from '~/data/library'
+import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useEditionStore } from '~/stores/edition'
 import { useHistoryStore } from '~/stores/history'
@@ -85,12 +85,24 @@ function ask() {
 }
 
 const library = useLibraryStore()
-// Hiding waits in the outbox offline, like Finish and Remove. A failed write is
-// already reported by the sync sheet, so nothing shows here.
+// Hiding waits in the outbox offline, like Finish and Remove, and a queued write the database
+// refuses later is reported by the sync sheet. A call answered right here (the Book was removed on
+// another device, say) is refused in this sheet: the switch does not flip, and the line says why.
+// One call at a time, so a quick second tap cannot leave the older answer last.
+const hiding = ref(false)
+const hideError = ref<LibraryErrorCode | null>(null)
 async function hide(on: boolean) {
-  if (!props.entry) return
-  await library.setHidden(props.entry, on)
+  if (!props.entry || hiding.value) return
+  hiding.value = true
+  hideError.value = null
+  try {
+    const result = await library.setHidden(props.entry, on)
+    if ('error' in result) hideError.value = result.error
+  } finally {
+    hiding.value = false
+  }
 }
+watch(open, (isOpen) => isOpen && (hideError.value = null))
 
 async function remove() {
   if (await history.confirmRemove()) emit('removed')
@@ -145,6 +157,7 @@ async function unlink() {
           icon="lock"
           :label="t('bookOptions.hide')"
           testid="bookOptions.hide"
+          :disabled="hiding"
           @update:model-value="hide"
         />
         <UiRow
@@ -186,6 +199,7 @@ async function unlink() {
           @click="ask"
         />
       </UiRowGroup>
+      <p v-if="hideError" class="mt-xs text-footnote text-error" role="alert" data-testid="bookOptions.hideError">{{ t(`library.error.${hideError}`) }}</p>
       <p v-if="entry?.hidden" class="mt-xs text-footnote text-ink-faint" data-testid="bookOptions.hideHint">{{ t('bookOptions.hideHint') }}</p>
     </div>
   </UiSheet>

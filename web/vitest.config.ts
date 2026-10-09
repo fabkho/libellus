@@ -13,7 +13,8 @@ process.env.LIBELLUS_TEST_RUN ??= randomUUID().slice(0, 8)
 // Plain Node, no Nuxt runtime: the data layer is framework-free on purpose.
 export default defineConfig({
   resolve: {
-    alias: { '@': resolve('./app') },
+    // `~` is Nuxt's alias for the same folder: the stores' own imports resolve in tests/social-store.test.ts.
+    alias: { '@': resolve('./app'), '~': resolve('./app') },
   },
   test: {
     include: ['tests/**/*.test.ts'],

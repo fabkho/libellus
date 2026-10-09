@@ -4,7 +4,8 @@ import type { MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
 import type { StatsYear } from '~/data/stats'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
-import { yearIn } from '~/utils/memberProfile'
+import { profileAfter, yearIn, type RelationChange } from '~/utils/memberProfile'
+import { createRereads } from '~/utils/rereads'
 
 /** Her whole Want to read, newest first (*See all*). */
 export type MemberWant = { book: SocialBook; addedOn: string }[]
@@ -17,6 +18,8 @@ export type MemberView = {
   record: MemberRecord | null
   /** Whether the record is still being asked for. */
   recordLoading: boolean
+  /** The last refusal of reading her record, with none on screen: her figures are missing, not "not for you". */
+  recordError: SocialErrorCode | null
   /** Her whole Want to read, once asked for. */
   want: MemberWant | null
   /** The year in the pills. */
@@ -35,6 +38,7 @@ const fresh = (): MemberView => ({
   profile: null,
   record: null,
   recordLoading: false,
+  recordError: null,
   want: null,
   year: 'all',
   error: null,
@@ -63,6 +67,9 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     stats ??= createMemberStats(backend, { online: isOnline })
     return stats
   }
+
+  /** Members whose follow or withdrawal got no answer: her profile is read again when back online. */
+  const rereads = createRereads<string>()
 
   const views = ref<Record<string, MemberView>>({})
   /** Bumped when the member changes: an answer that began before it is thrown away. */
@@ -98,6 +105,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       profile,
       error: null,
       loaded: true,
+      recordError: null,
       recordLoading: wantsRecord && !had.record,
       // A private account she does not follow has none of it.
       ...(open ? {} : { record: null, want: null }),
@@ -110,9 +118,10 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
   async function loadRecord(id: string, run: number) {
     const answer = await statsRepo()?.record(id)
     if (run !== generation) return
-    // A refusal keeps the record already on screen; without one the figures give way.
+    // A refusal keeps the record already on screen; without one the figures give way, and the page says why
+    // (a record that is "not for her" answers null without an error: only that reads as a dead link).
     const record = answer?.error ? viewOf(id).record : (answer?.data ?? null)
-    patch(id, { record, recordLoading: false, year: record ? yearIn(viewOf(id).year, record.reads) : 'all' })
+    patch(id, { record, recordError: answer?.error ?? null, recordLoading: false, year: record ? yearIn(viewOf(id).year, record.reads) : 'all' })
   }
 
   async function loadWant(id: string, run: number) {
@@ -140,8 +149,10 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     if (viewOf(id).busy) return false
     const generationThen = generation
     patch(id, { busy: true, failed: null })
+    const sent = isOnline()
     const result = await run()
     if (generationThen !== generation) return false
+    rereads.note(sent, result.error, [id])
     if (result.error) {
       patch(id, { busy: false, failed: result.error })
       return false
@@ -151,9 +162,24 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     return true
   }
 
+  /**
+   * The caller changed the relation with her (told by the social store, which makes the change): her view
+   * follows the action's answer at once (`profileAfter`), so it is right even when the read after it fails
+   * or the connection drops. Nothing to patch where her profile was never read.
+   */
+  function relationChanged(id: string, change: RelationChange) {
+    const had = views.value[id]
+    if (!had?.loaded) return
+    const profile = profileAfter(had.profile, change)
+    if (!profile) return patch(id, { ...fresh(), loaded: true })
+    // A closed card has no figures or Want to read of hers to keep.
+    patch(id, { profile, ...(profile.visible ? {} : { record: null, want: null, recordLoading: false }) })
+  }
+
   function forget() {
     generation++
     views.value = {}
+    rereads.clear()
   }
 
   watch(
@@ -161,12 +187,13 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     (now, before) => now !== before && forget(),
   )
 
-  // Back online with a profile that could not be read: read it again.
+  // Back online with a profile that could not be read, or whose follow got no answer: read it again.
   const online = useOnline()
   watch(online, (now) => {
     if (!now) return
+    for (const id of rereads.take()) void load(id)
     for (const [id, view] of Object.entries(views.value)) if (view.error === 'offline' && !view.loaded) void load(id)
   })
 
-  return { views, viewOf, load, setYear, follow, withdraw, forget }
+  return { views, viewOf, load, setYear, follow, withdraw, relationChanged, forget }
 })

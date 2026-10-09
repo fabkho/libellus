@@ -50,7 +50,7 @@ const error = computed(() => (social.errors.link && social.errors.link !== 'offl
     <div class="flex flex-col gap-md pt-xs pb-lg">
       <p class="text-body text-ink">{{ social.mine?.private === false ? t('followLink.textPublic') : t('followLink.textPrivate') }}</p>
 
-      <p class="figures min-h-(--size-touch) rounded-md bg-fill px-md py-sm text-caption break-all text-ink-muted" data-testid="followLink.value">{{ url }}</p>
+      <p class="figures min-h-(--size-touch) rounded-md bg-fill px-md py-sm text-caption break-all text-ink-muted" data-testid="followLink.value">{{ url ?? (online ? '' : t('followLink.offline')) }}</p>
 
       <UiButton block tone="primary" :disabled="!url" data-testid="followLink.share" @click="share">
         <UiIcon name="share" :size="18" />{{ t('followLink.share') }}
