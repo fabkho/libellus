@@ -44,6 +44,8 @@ function rowKey(row: FeedRow): string {
 const batch = shallowRef<Batch | null>(null)
 const batchDay = ref('')
 const sheetOpen = ref(false)
+// Following nobody: "Share your follow link" opens the link sheet right here (U1's).
+const linkOpen = ref(false)
 function openBatch(row: Batch, day: string) {
   batch.value = row
   batchDay.value = label(day)
@@ -140,7 +142,7 @@ watch(
 
     <div v-else-if="feed.emptyState === 'nobody'" class="px-screen pt-lg" data-testid="friends.empty">
       <UiEmptyState screen="friendsEmpty" :title="t('feed.emptyTitle')" :text="t('feed.empty')">
-        <UiButton to="/profile" class="self-center" data-testid="friends.emptyShare">{{ t('feed.emptyShare') }}</UiButton>
+        <UiButton class="self-center" data-testid="friends.emptyShare" @click="linkOpen = true">{{ t('feed.emptyShare') }}</UiButton>
       </UiEmptyState>
     </div>
 
@@ -156,5 +158,6 @@ watch(
     </div>
 
     <FriendsBatchSheet v-if="batch" v-model:open="sheetOpen" :batch="batch" :day-label="batchDay" :restore="restore" />
+    <FriendsLinkSheet v-model:open="linkOpen" />
   </div>
 </template>

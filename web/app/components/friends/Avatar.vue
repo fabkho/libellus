@@ -5,8 +5,12 @@
 // feed's rows, the batch fan, People and a member's page all come here, so the photo (U7) arrives
 // in all of them at once. Drawing only, like UiAvatar; the link or button around it carries the label.
 import type { MemberCard } from '~/data/socialShapes'
+import { useMemberPhotosStore } from '~/stores/memberPhotos'
 
-const props = defineProps<{ card: MemberCard }>()
+// `large`: the 512 px file, for a hero; rows take the 128 px one.
+const props = withDefaults(defineProps<{ card: MemberCard; size?: 'small' | 'large' }>(), { size: 'small' })
+const photos = useMemberPhotosStore()
+const photo = computed(() => photos.photoOf(props.card, props.size))
 
 const { t } = useI18n()
 const initials = computed(() =>
@@ -15,6 +19,5 @@ const initials = computed(() =>
 </script>
 
 <template>
-  <!-- `photo` is null until U7 lets a member see another's photo. -->
-  <UiAvatar :initials="initials" :photo="null" />
+  <UiAvatar :initials="initials" :photo="photo" />
 </template>
