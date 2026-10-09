@@ -138,6 +138,8 @@ const text = (value: unknown): string | null => (typeof value === 'string' ? val
 const number = (value: unknown): number | null => (typeof value === 'number' ? value : null)
 /** Trimmed; blank is none (as the database stores a review or a reason). */
 const trimmed = (value: unknown): string | null => text(value)?.trim() || null
+/** The spoiler flag of a write's arguments: set, and with a review (as the database stores it). */
+const spoilers = (args: Record<string, unknown>): boolean => args.p_review_spoilers === true && trimmed(args.p_review) !== null
 
 function newSession(id: string, createdAt: string, fields: Partial<ReadingSession> = {}): ReadingSession {
   return {
@@ -147,6 +149,7 @@ function newSession(id: string, createdAt: string, fields: Partial<ReadingSessio
     outcome: null,
     rating: null,
     review: null,
+    reviewSpoilers: false,
     abandonReason: null,
     progressPage: null,
     progressPercent: null,
@@ -169,6 +172,7 @@ export function editedSession(session: ReadingSession, args: Record<string, unkn
     endedOn: session.outcome ? text(args.p_ended_on) : null,
     rating: session.outcome === 'finished' ? number(args.p_rating) : session.rating,
     review: session.outcome === 'finished' ? trimmed(args.p_review) : session.review,
+    reviewSpoilers: session.outcome === 'finished' ? spoilers(args) : Boolean(session.reviewSpoilers),
     abandonReason: session.outcome === 'abandoned' ? trimmed(args.p_abandon_reason) : session.abandonReason,
   }
 }
@@ -197,6 +201,7 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
               outcome: 'finished',
               rating: number(args.p_rating),
               review: trimmed(args.p_review),
+              reviewSpoilers: spoilers(args),
             })
           : null
     return { id: write.creates.entry_id, status, addedAt: queuedAt, book: write.book, pageCountOverride: null, readAs: null, hidden: false, latestSession }
@@ -220,7 +225,7 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
       if (endedOn && session.startedOn && endedOn < session.startedOn) return 'ended_before_started'
       const closed: ReadingSession =
         write.action === 'finish_reading'
-          ? { ...session, endedOn, outcome: 'finished', rating: number(args.p_rating), review: trimmed(args.p_review) }
+          ? { ...session, endedOn, outcome: 'finished', rating: number(args.p_rating), review: trimmed(args.p_review), reviewSpoilers: spoilers(args) }
           : { ...session, endedOn, outcome: 'abandoned', abandonReason: trimmed(args.p_reason) }
       return { ...entry, status: 'finished', latestSession: closed }
     }
