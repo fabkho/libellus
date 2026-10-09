@@ -142,10 +142,10 @@ select is(tests.kinds((select id from ids where name = 'recent')), array['finish
 insert into counts values ('before_import', tests.rows_of((select id from ids where name = 'ada')));
 select is(
   (select array_agg(r ->> 'outcome' order by n) from jsonb_array_elements(public.import_books(jsonb_build_array(
-    jsonb_build_object('key', 'social3:1', 'status', 'want_to_read',
+    jsonb_build_object('key', 'social:1', 'status', 'want_to_read',
       'book', jsonb_build_object('title', 'Imported Wish', 'authors', jsonb_build_array('X'), 'source', 'manual',
                                  'cover_url', 'https://example.org/wish.jpg')),
-    jsonb_build_object('key', 'social3:2', 'status', 'finished', 'started_on', current_date - 2, 'ended_on', current_date, 'rating', 12,
+    jsonb_build_object('key', 'social:2', 'status', 'finished', 'started_on', current_date - 2, 'ended_on', current_date, 'rating', 12,
       'book', jsonb_build_object('title', 'Imported Today', 'authors', jsonb_build_array('X'), 'source', 'manual',
                                  'cover_url', 'https://example.org/today.jpg'))))) with ordinality as t(r, n)),
   array['added', 'added'],
@@ -153,11 +153,15 @@ select is(
 select is(tests.rows_of((select id from ids where name = 'ada')), (select n from counts where name = 'before_import'),
   'an import writes nothing, not even a read that ended today');
 
+-- The quiet setting at run time (a function-level SET of it needs superuser, so the imports are
+-- recognised by their call stack instead: the import assertions above): while it is on, nothing is written.
+select set_config('libellus.quiet', 'on', true);
+insert into ids values ('hushed', (public.add_to_library(tests.snap('Quiet Book'), 'reading', current_date)).id);
+select is(tests.kinds((select id from ids where name = 'hushed')), '{}'::text[], 'while libellus.quiet is on, adding a Book as Currently reading writes nothing');
+select set_config('libellus.quiet', '', true);
+insert into ids values ('loud', (public.add_to_library(tests.snap('Loud Book'), 'reading', current_date)).id);
+select is(tests.kinds((select id from ids where name = 'loud')), array['started'], 'once it is off, the next one writes its row again');
 reset role;
-select ok(exists (select 1 from pg_proc where oid = 'public.import_books(jsonb)'::regprocedure and 'libellus.quiet=on' = any(proconfig)),
-  'import_books runs quiet');
-select ok(exists (select 1 from pg_proc where oid = 'public.import_book_for(uuid, text, jsonb)'::regprocedure and 'libellus.quiet=on' = any(proconfig)),
-  'import_book_for runs quiet');
 
 -- The service role, or any write without a member, writes nothing.
 select set_config('request.jwt.claims', '', true);
