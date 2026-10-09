@@ -1671,6 +1671,7 @@
     "blockTitle": "Block {name}?",
     "blockText": "You stop following each other, and neither of you sees the other's reading.",
     "blockConfirm": "Block",
+    "offline": "You're offline. People show once you're back.",
     "loadError": "People didn't load. Check your connection and try again.",
     "retry": "Try again",
     "error": "That didn't work. Try again."
