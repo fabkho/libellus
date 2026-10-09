@@ -454,10 +454,10 @@ Every interactive element and everything a test reads, as `<screen>.<element>`:
   `people.row`, `people.rowMore`, `people.accept`, `people.decline`, `people.followBack`,
   `people.empty`; the member sheet `memberSheet` (`.unfollow`, `.remove`, `.block`, `.cancel`); the
   block confirm `blockConfirm` (`.confirm`, `.cancel`).
-- **Member** (`/friends/<member>`; *See all* opens the sheet `memberWant` with `.sheetTitle`, `.cancel`, `.row`): `member`, `member.back`, `member.more`, `member.hero`,
+- **Member** (`/friends/<member>`; *See all* opens the sheet `memberWant` with `.sheetTitle`, `.cancel`, `.row`; *See all* under Recently finished the sheet `memberFinished`, the same): `member`, `member.back`, `member.more`, `member.hero`,
   `member.name`, `member.since`, `member.library`, `member.follow`, `member.ask`, `member.requested`,
   `member.private`, `member.reading`, `member.want`, `member.wantAll`, `member.finished`,
-  `member.finishedReview`, `member.yearCards`, and the Profile's own figure ids inside
+  `member.finishedAll` (only above 3 finished Books), `member.finishedTitle`, `member.finishedReview`, `member.finishedMore`, `member.yearCards`, and the Profile's own figure ids inside
   (`profile.figures`, `profile.columns`, …, as the reused components carry them);
   `memberYear` (`.back`, `.title`) for the year page.
 - **Follow link** (`/f/<token>`): `follow`, `follow.loading`, `follow.missing`.

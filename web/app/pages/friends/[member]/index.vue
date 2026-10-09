@@ -7,7 +7,7 @@
 //  - a profile she may see (public, or followed): the hero (photo, name, since when, the Library line),
 //    Follow where the account is public and she does not follow yet, then, by her switches, Currently
 //    reading, Want to read (the newest, then See all), the year pills and the four figures, By year or
-//    By month, Ratings, Records, Authors, Recently finished and the Years in review. The Profile's own
+//    By month, Ratings, Records, Authors, Recently finished (the newest 3, then See all) and the Years in review. The Profile's own
 //    blocks, fed from her record. Never her reading days, a progress, an account row or a shelf.
 // A Book opens its page with the cover flying into it, a Manual book opens nothing (it is not in the
 // Catalogue). Read each time the page shows (stores/memberProfile.ts), online only.
@@ -90,9 +90,10 @@ const library = computed(() => {
 const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 
 // ------------------------------------------------------------------ sheets
-// A month's books or a star row's, as on the Profile; the whole Want to read.
+// A month's books or a star row's, as on the Profile; the whole Want to read; all her finished Books.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const wantOpen = ref(false)
+const finishedOpen = ref(false)
 const sheetTitle = computed(() => {
   const s = shown.value
   if (!s) return ''
@@ -244,7 +245,7 @@ function back() {
 
         <UiReveal :show="blocks.finished">
           <div class="pb-xl">
-            <FriendsMemberFinished :items="open.finished" />
+            <FriendsMemberFinished :items="open.finished" :all="blocks.finishedAll" @all="finishedOpen = true" />
           </div>
         </UiReveal>
 
@@ -265,6 +266,7 @@ function back() {
       @changed="changed"
     />
     <FriendsMemberWantSheet v-model:open="wantOpen" :title="t('member.want')" :items="wantAll" />
+    <FriendsMemberFinishedSheet v-if="open" v-model:open="finishedOpen" :title="t('member.finished')" :items="open.finished" />
     <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
   </div>
 </template>
