@@ -29,7 +29,7 @@ const { t } = useI18n()
 const social = useSocialStore()
 const online = useOnline()
 
-const name = computed(() => props.member?.name ?? t('member.someone'))
+const name = computed(() => props.member?.name?.trim() || t('member.someone'))
 const actions = computed(() => memberActions({ following: props.following, follower: props.follower }))
 const confirming = ref(false)
 const working = ref(false)

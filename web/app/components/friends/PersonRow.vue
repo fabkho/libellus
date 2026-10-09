@@ -11,7 +11,7 @@
 import type { MemberCard } from '~/data/socialShapes'
 import type { FollowBackFace } from '~/utils/people'
 
-withDefaults(defineProps<{ member: MemberCard; followBack?: FollowBackFace; offline?: boolean; busy?: boolean }>(), {
+const props = withDefaults(defineProps<{ member: MemberCard; followBack?: FollowBackFace; offline?: boolean; busy?: boolean }>(), {
   followBack: null,
   offline: false,
   busy: false,
@@ -19,13 +19,14 @@ withDefaults(defineProps<{ member: MemberCard; followBack?: FollowBackFace; offl
 defineEmits<{ more: []; followBack: [] }>()
 
 const { t } = useI18n()
+const name = computed(() => props.member.name?.trim() || t('member.someone'))
 </script>
 
 <template>
   <div class="flex min-h-(--size-row) items-center gap-ms py-xs" data-testid="people.row">
     <NuxtLink :to="`/friends/${member.id}`" class="flex min-h-(--size-touch) min-w-0 flex-1 items-center gap-ms active:opacity-70" data-testid="people.rowMember">
       <FriendsAvatar :card="member" />
-      <span class="min-w-0 flex-1 truncate text-body">{{ member.name ?? t('member.someone') }}</span>
+      <span class="min-w-0 flex-1 truncate text-body">{{ name }}</span>
     </NuxtLink>
     <UiButton
       v-if="followBack === 'offer'"
@@ -41,7 +42,7 @@ const { t } = useI18n()
     <span v-else-if="followBack === 'requested'" class="shrink-0 px-sm text-caption text-ink-muted" data-testid="people.requested">{{ t('member.requested') }}</span>
     <button
       type="button"
-      :aria-label="t('people.moreLabel', { name: member.name ?? t('member.someone') })"
+      :aria-label="t('people.moreLabel', { name })"
       class="-mr-sm flex size-(--size-touch) shrink-0 items-center justify-center text-ink-faint active:text-ink"
       data-testid="people.rowMore"
       @click="$emit('more')"
