@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// The book page's options (D's ⋯ in the top bar; issue #11), for a Book that
-// is in the Library: Change edition (issue #41, opens its sheet) and Remove
-// from Library. Remove does not act at
+// The book page's options (D's ⋯ in the top bar; issue #11). On every Book
+// page: Change edition (issue #41, opens its sheet; for a Book that is not in
+// the Library it only looks at the other editions, nothing is saved, and it is
+// the one row such a Book has). For a Book in the Library also Read as, Share,
+// Hide, Series, the ebook and Remove from Library. Remove does not act at
 // once: the confirmation says what goes with it (the Book's reads and its
 // places on collections; the collections stay), and only its button removes.
 // `removed` fires once the entry is gone, so the page can leave the Book. The
@@ -21,6 +23,7 @@
 //
 // Share (issue #171): the Book's card on her reading page, in its own sheet
 // (SharingBookSheet: with or without her review, the link to share or copy).
+import type { Book, BookSnapshot } from '~/data/books'
 import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useEditionStore } from '~/stores/edition'
@@ -28,7 +31,8 @@ import { useHistoryStore } from '~/stores/history'
 import { useSeriesStore } from '~/stores/series'
 import { useLibraryStore } from '~/stores/library'
 
-const props = defineProps<{ entry: LibraryEntry | null }>()
+// `shown` is the Book the page shows; `page` its address, which a look at another edition belongs to.
+const props = defineProps<{ entry: LibraryEntry | null; shown: Book | BookSnapshot; page: string }>()
 const emit = defineEmits<{ removed: [] }>()
 const open = defineModel<boolean>('open', { required: true })
 
@@ -48,11 +52,11 @@ const confirming = computed({
 
 // Kept while the sheet and the question slide away, so the book line and the
 // question's title do not empty mid-exit.
-const book = ref(props.entry?.book ?? null)
+const book = ref<Book | BookSnapshot | null>(props.entry?.book ?? props.shown)
 watch(
-  () => props.entry,
-  (entry) => {
-    if (entry) book.value = entry.book
+  () => props.entry?.book ?? props.shown,
+  (shown) => {
+    if (shown) book.value = shown
   },
   { immediate: true },
 )
@@ -65,10 +69,11 @@ function share() {
   sharing.value = true
 }
 
+// A Book that is not in her Library opens the same sheet to look at its editions (nothing is saved).
 function changeEdition() {
-  if (!props.entry) return
   open.value = false
-  edition.open(props.entry)
+  if (props.entry) edition.open(props.entry)
+  else edition.browse(props.page, props.shown)
 }
 
 const series = useSeriesStore()
@@ -191,6 +196,7 @@ async function unlink() {
           <UiRow v-if="ebook" as="button" icon="close" :label="t('bookOptions.unlinkEbook')" data-testid="bookOptions.unlinkEbook" @click="askUnlink" />
         </template>
         <UiRow
+          v-if="entry"
           as="button"
           icon="close"
           tone="danger"
