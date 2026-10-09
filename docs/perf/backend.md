@@ -511,6 +511,8 @@ inserts (enrichment, imports). Risk: none for RLS (no policy touched); the funct
 the query plan only changes. Implementer: DeepSeek (mechanical), plus the existing
 `import_books_*_test.sql`. Measure again: `scripts/perf/import.sql` with 2,000 books.
 
+**Fixed** in PR #238 (`books_work_title_key`, migration 20261018010000): 600 books 1,280-1,292 -> 225-232 ms, 2,000 books 12.4-12.7 s -> 738-754 ms, locally.
+
 ### F3. Whole-table scans through the `reading_sessions` policy (impact low now, high later; effort M)
 
 **Evidence class: L**; production confirms the plan shape (seq scan + hashed sub-plan, 0.38 ms at 80 rows). Rank 5.
@@ -603,6 +605,8 @@ as wrappers for compatibility. ~45 % off Home's series cost. Risk none (invoker)
 query, replaced by `started_series`; the app no longer calls it, so it can be dropped in a later migration
 once nothing else does (check the Next sheet first).
 
+**Partly fixed** in PR #238 (20261018040000): the two lists are two requests over one helper, so one evaluation cannot be shared in SQL. `muted_series_list` now answers `[]` after one probe when nothing is muted (2.64 -> 0.02 ms, Home's series cost -39 % for a member without mutes). A member with mutes still runs the chain twice; that needs one client call.
+
 ### F6. pg_cron housekeeping (impact low, effort S)
 
 **Evidence class: P** (R6: log 344 kB, job times). Rank 6.
@@ -612,6 +616,8 @@ never trimmed: ~456 rows/day, ~170k a year. Add `cron.schedule('purge-cron-log',
 delete from cron.job_run_details where end_time < now() - interval '7 days' $$)`. Optionally move
 `shelf-publish` to `*/10` (its own `min_interval` is 10 minutes, so the other five runs an hour are
 `debounced` no-ops). DeepSeek. Nothing else in the cron set is worth touching.
+
+**Fixed** in PR #238 (20261018030000): `purge-cron-log`, daily 03:15 UTC, `private.purge_cron_log()` deletes rows older than 7 days. `shelf-publish` stays at `*/5`.
 
 ### F7. CORS preflight and round trips (closed)
 
@@ -766,6 +772,8 @@ numbers.
 `create index on public.blocks (blocked_id)` and `... follow_link_views (member_id)`. Everything else
 is covered: `follows` by its primary key and `follows_followee`, `activity` by `activity_feed`,
 `activity_entry`, `activity_once`, `private.follow_calls` by `(member_id, at)`.
+
+**Fixed** in PR #238 (20261018020000): both indexes added. The private one-row tables (`instance_owner`, `shelf_publish`) stay unindexed on purpose.
 
 **N5. `purge_activity()`** deletes `where created_at < now() - interval '13 months'` with no index on
 `created_at`: a sequential scan once a night, ~5 ms at 24k rows, ~50 ms at 300k. Fine; add the index

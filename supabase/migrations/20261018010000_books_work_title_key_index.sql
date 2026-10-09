@@ -1,0 +1,12 @@
+-- import_books: an index for the title match (perf assessment F2, docs/perf/backend.md).
+--
+-- For every row of a Goodreads file, import_books looks for "hers under another
+-- edition": her entries joined to books, `public.work_title_key(b.title) = v_title`.
+-- Without an index that evaluates work_title_key (two regexp_replace, a
+-- split_part, match_text -> unaccent) for every Book she has, so row k of a file
+-- costs O(k) and a 2,000-book import took 12.6 s locally (600 books: 1.3 s).
+--
+-- work_title_key is declared `immutable` (20261005095000_import_books_title_match.sql),
+-- so an expression index on it is allowed. Nothing else changes: the query, the
+-- function and every policy stay as they are; only the plan can differ.
+create index if not exists books_work_title_key on public.books (public.work_title_key(title));
