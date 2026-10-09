@@ -9,7 +9,7 @@
 -- Photos open to connected members through a policy. Assertions ask about rows this test made.
 
 begin;
-select plan(130);
+select plan(144);
 
 create schema if not exists tests;
 
@@ -96,6 +96,23 @@ begin
   end if;
   update public.books set cover_url = p_cover, cover_thumbhash = 'thumb', cover_dominant = '#aabbcc', cover_secondary = '#112233'
    where id = (select book_id from public.library_entries where id = v_entry);
+  return v_entry;
+end;
+$$;
+
+-- S1: the same for a Catalogue Book (no owner): its cover is whatever the first member to add it sent,
+-- so it is set past the API here, as `catalogue_book_for` lets it be stored.
+create or replace function tests.catalogue_with_cover(p_title text, p_cover text, p_status text default 'want_to_read')
+returns uuid language plpgsql security definer set search_path = pg_catalog, public as $$
+declare v_entry uuid;
+begin
+  v_entry := (public.add_to_library(tests.snap(p_title), 'want_to_read')).id;
+  if p_status = 'finished' then
+    perform public.start_reading(v_entry, current_date - 3);
+    perform public.finish_reading(v_entry, current_date, 16, null);
+  end if;
+  update public.books set cover_url = p_cover, cover_thumbhash = 'thumb', cover_dominant = '#aabbcc', cover_secondary = '#112233'
+   where id = (select book_id from public.library_entries where id = v_entry) and owner_id is null;
   return v_entry;
 end;
 $$;
@@ -467,6 +484,38 @@ select is(tests.read_of(public.member_reading_record((select id from ids where n
 select tests.act_anon();
 select ok(position('tracker.example' in public.public_reading_page((select link from links where name = 'page'))::text) = 0, 'her public reading page: no typed cover');
 select ok(position('covers.openlibrary.org/b/id/2-L.jpg' in public.public_reading_page((select link from links where name = 'page'))::text) > 0, 'but a known host stays');
+reset role;
+
+-- ------------------------------- S1: a Catalogue Book's cover is no exception to the host list
+
+select tests.act_as((select id from ids where name = 'ada'));
+select tests.catalogue_with_cover('Foreign Catalogue Book', 'https://tracker.example/catalogue.png?u=ada');
+select tests.catalogue_with_cover('Apple Catalogue Book', 'https://is1-ssl.mzstatic.com/image/thumb/b/600x900bb.jpg');
+select tests.catalogue_with_cover('Foreign Catalogue Read', 'https://tracker.example/catalogue-read.png', 'finished');
+select tests.catalogue_with_cover('Open Library Catalogue Read', 'https://covers.openlibrary.org/b/id/3-L.jpg', 'finished');
+insert into ids values ('foreignbook', (select e.book_id from public.library_entries e join public.books b on b.id = e.book_id
+                                         where e.member_id = (select id from ids where name = 'ada') and b.title = 'Foreign Catalogue Read'));
+select public.share_book_card((select id from ids where name = 'foreignbook'), true);
+
+select tests.act_as((select id from ids where name = 'ben'));
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Foreign Catalogue Book'), null, 'her Want to read: a Catalogue cover on a foreign host is not shown');
+select is(tests.cover_of(public.member_want((select id from ids where name = 'ada')), 'Apple Catalogue Book'), 'https://is1-ssl.mzstatic.com/image/thumb/b/600x900bb.jpg', 'an Apple Catalogue cover is');
+select is(tests.cover_of(public.feed(null, null, 50), 'Foreign Catalogue Book'), null, 'the feed: not shown either');
+select is(tests.cover_of(public.feed(null, null, 50), 'Apple Catalogue Book'), 'https://is1-ssl.mzstatic.com/image/thumb/b/600x900bb.jpg', 'an Apple one is');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'want', 'Foreign Catalogue Book'), null, 'her profile: Want to read, not shown');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'want', 'Apple Catalogue Book'), 'https://is1-ssl.mzstatic.com/image/thumb/b/600x900bb.jpg', 'an Apple one is');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'finished', 'Foreign Catalogue Read'), null, 'her profile: finished, not shown');
+select is(tests.cover_of(public.member_profile((select id from ids where name = 'ada')) -> 'finished', 'Open Library Catalogue Read'), 'https://covers.openlibrary.org/b/id/3-L.jpg', 'an Open Library one is');
+select is(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'Foreign Catalogue Read', 'finished') -> 'entry' -> 'book' -> 'cover_url', 'null'::jsonb, 'her record: not shown');
+select is(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'Foreign Catalogue Read', 'finished') -> 'entry' -> 'book' -> 'cover_dominant', 'null'::jsonb, 'nor its colours');
+select is(tests.read_of(public.member_reading_record((select id from ids where name = 'ada')), 'Open Library Catalogue Read', 'finished') -> 'entry' -> 'book' ->> 'cover_url', 'https://covers.openlibrary.org/b/id/3-L.jpg', 'an Open Library one is');
+
+select tests.act_anon();
+select ok(position('tracker.example' in public.public_reading_page((select link from links where name = 'page'))::text) = 0, 'her public reading page: no Catalogue cover on a foreign host');
+select ok(position('covers.openlibrary.org/b/id/3-L.jpg' in public.public_reading_page((select link from links where name = 'page'))::text) > 0, 'but an Open Library Catalogue cover stays');
+select ok(position('tracker.example' in coalesce(public.public_book_card((select link from links where name = 'page'),
+    (select id from ids where name = 'foreignbook'))::text, '')) = 0,
+  'and the shared card of a Catalogue Book on a foreign host carries no cover');
 reset role;
 
 -- ------------------------------------- gate 2, fix 3: her current photo, not her folder
