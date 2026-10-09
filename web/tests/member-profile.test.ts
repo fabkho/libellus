@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { StatsRead } from '../app/data/stats'
 import type { MemberProfile, SocialBook, SocialSections } from '../app/data/socialShapes'
-import { FINISHED_SHOWN, bookPathOf, figuresWithRatings, libraryLine, memberBlocks, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
+import { FINISHED_SHOWN, bookPathOf, figuresWithRatings, libraryLine, linkOf, memberBlocks, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
 
 // What another member's profile shows (social v1, U4): pure, no stack needed.
 
@@ -117,6 +117,12 @@ describe('a Book on her profile', () => {
   it('opens its page, except a Manual book, which opens nothing', () => {
     expect(bookPathOf({ id: 'abc', manual: false })).toBe('/book/abc')
     expect(bookPathOf({ id: 'abc', manual: true })).toBeNull()
+  })
+
+  it('in the Profile\'s blocks, a Manual book is shut only on her page, never on the own Profile', () => {
+    expect(bookPathOf(linkOf({ id: 'abc', source: 'manual' }, true))).toBeNull()
+    expect(bookPathOf(linkOf({ id: 'abc', source: 'manual' }, false))).toBe('/book/abc')
+    expect(bookPathOf(linkOf({ id: 'abc', source: 'apple' }, true))).toBe('/book/abc')
   })
 })
 

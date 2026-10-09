@@ -110,7 +110,7 @@ function back() {
         <div class="relative flex flex-col px-screen pt-lg" :aria-busy="loading || undefined">
           <ProfileFigures :figures="loading ? null : figures" still />
 
-          <ProfileMonthBooks class="pt-xl" :months="months" :loading="loading" :gone-by="monthsGoneBy" />
+          <ProfileMonthBooks class="pt-xl" foreign :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 
           <UiReveal :show="loading || !!figures.favourite">
             <div class="pt-xl" :class="{ arrive: arriving }">
@@ -122,7 +122,7 @@ function back() {
             <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
           </UiReveal>
           <UiReveal :show="loading || hasRecords">
-            <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />
+            <ProfileRecords class="pt-xl" foreign :figures="loading ? null : figures" />
           </UiReveal>
           <UiReveal :show="loading || figures.authors.length > 0">
             <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" :limit="3" />
@@ -143,7 +143,7 @@ function back() {
       </UiReveal>
     </template>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" />
+    <ProfileReadsSheet v-model:open="sheetOpen" foreign :restore="restore" :title="sheetTitle" :reads="sheetReads" />
   </div>
 </template>
 

@@ -89,6 +89,15 @@ export function bookPathOf(book: Pick<SocialBook, 'id' | 'manual'>): string | nu
   return book.manual ? null : `/book/${book.id}`
 }
 
+/**
+ * The Book as `FriendsMemberBookLink` takes it, from a Profile block: on a member's page (`foreign`) a
+ * Manual book (`source` 'manual') is her own and not in the Catalogue, so it opens nothing; on the own
+ * Profile every Book opens, her own Manual ones included.
+ */
+export function linkOf(book: { id: string; source: string }, foreign: boolean): Pick<SocialBook, 'id' | 'manual'> {
+  return { id: book.id, manual: foreign && book.source === 'manual' }
+}
+
 /** The year pills' value after her years changed: the one in view if she still has it, else All. */
 export function yearIn(year: StatsYear, reads: readonly StatsRead[]): StatsYear {
   return year === 'all' || yearsOf(reads as StatsRead[]).includes(year) ? year : 'all'

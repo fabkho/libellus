@@ -1,29 +1,30 @@
 <script setup lang="ts">
 // One read in the Profile (issue #78): Library's row — small cover, serif
-// title, author — opening the book page from the touch-down. Either with a
+// title, author — opening the book page from the touch-down (on a member's page, `foreign`, a Manual book opens nothing). Either with a
 // mono line of its stars, its day and how long it took (the month and rating
 // sheets, a second read marked), or with a `label` over the title (a record)
 // and a `figure` at the right.
 import type { StatsRead } from '~/data/stats'
-import { useBookStore } from '~/stores/book'
+import { linkOf } from '~/utils/memberProfile'
 
-withDefaults(defineProps<{ read: StatsRead; label?: string; figure?: string; withYear?: boolean }>(), {
+const props = withDefaults(defineProps<{ read: StatsRead; label?: string; figure?: string; withYear?: boolean; foreign?: boolean }>(), {
   label: undefined,
   figure: undefined,
   withYear: false,
+  foreign: false,
 })
+const link = computed(() => linkOf(props.read.book, props.foreign))
 
 const { t } = useI18n()
 const { formatDay } = useDays()
 const { readIn } = useFigures()
-const books = useBookStore()
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'] as const
 /** "Second read", as the reading history names it. */
 const nthRead = (n: number) => (ORDINALS[n - 1] ? t(`history.ordinal.${ORDINALS[n - 1]}`) : t('history.nth', { n }))
 </script>
 
 <template>
-  <UiPressLink :to="`/book/${read.book.id}`" class="row flex items-center gap-inset py-sm" @press="books.prefetch(read.book.id)">
+  <FriendsMemberBookLink :book="link" class="row flex items-center gap-inset py-sm">
     <UiCover
       decorative
       :title="read.book.title"
@@ -52,7 +53,7 @@ const nthRead = (n: number) => (ORDINALS[n - 1] ? t(`history.ordinal.${ORDINALS[
       </template>
     </span>
     <span v-if="figure" class="figures shrink-0 text-caption text-ink-muted">{{ figure }}</span>
-  </UiPressLink>
+  </FriendsMemberBookLink>
 </template>
 
 <style scoped>
