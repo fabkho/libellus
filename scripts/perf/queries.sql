@@ -27,6 +27,10 @@ select count(*) from public.search_books('book title 1', 20)
 select count(*) from public.search_books('author 7 lastname', 20)
 -- name: search.two_letters
 select count(*) from public.search_books('bo', 20)
+-- name: search.one_match
+select count(*) from public.search_books('book title 12345', 20)
+-- name: search.isbn
+select count(*) from public.search_books('978-0000001234', 20)
 -- name: book.series_info
 select public.book_series_info(:'book', 'en')
 -- name: book.authors_of
