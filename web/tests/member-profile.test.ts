@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { StatsRead } from '../app/data/stats'
 import type { MemberProfile, SocialBook, SocialSections } from '../app/data/socialShapes'
-import { bookPathOf, figuresWithRatings, libraryLine, memberBlocks, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
+import { FINISHED_SHOWN, bookPathOf, figuresWithRatings, libraryLine, memberBlocks, yearIn, type VisibleProfile } from '../app/utils/memberProfile'
 
 // What another member's profile shows (social v1, U4): pure, no stack needed.
 
@@ -43,6 +43,7 @@ describe('the blocks her switches leave', () => {
       figures: true,
       ratings: true,
       finished: true,
+      finishedAll: false,
       yearCards: true,
     })
   })
@@ -57,6 +58,17 @@ describe('the blocks her switches leave', () => {
   it('offers See all only when she has more Want to read than the profile carries', () => {
     expect(memberBlocks(profile({ counts: { read: 4, reading: 1, want: 12 }, want: 12 }), record, false).wantAll).toBe(false)
     expect(memberBlocks(profile({ counts: { read: 4, reading: 1, want: 17 }, want: 12 }), record, false).wantAll).toBe(true)
+  })
+
+  it('offers See all under Recently finished only above the newest FINISHED_SHOWN (3)', () => {
+    const finished = (n: number) => Array.from({ length: n }, (_, i) => ({ book: book(`f${i}`), endedOn: '2026-10-09', rating: null, review: null }))
+    const withFinished = (n: number, over: Parameters<typeof profile>[0] = {}) => ({ ...profile(over), finished: finished(n) }) as VisibleProfile
+    expect(FINISHED_SHOWN).toBe(3)
+    expect(memberBlocks(withFinished(3), record, false)).toMatchObject({ finished: true, finishedAll: false })
+    expect(memberBlocks(withFinished(4), record, false)).toMatchObject({ finished: true, finishedAll: true })
+    expect(memberBlocks(withFinished(12), record, false).finishedAll).toBe(true)
+    expect(memberBlocks(withFinished(12, { sections: { finished: false } }), record, false).finishedAll).toBe(false)
+    expect(memberBlocks(withFinished(0), record, false).finishedAll).toBe(false)
   })
 
   it('closes her figures without the year switch or without Finished, whatever the record holds', () => {
