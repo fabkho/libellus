@@ -178,4 +178,15 @@ describe('a member who left her circle', () => {
     const shown = withoutMember(had, 'ida')
     expect(mergeFirstPage(shown, page('n', FEED_PAGE, 100)).some((e) => e.member.id === 'ida')).toBe(false)
   })
+
+  it('keeps older entries only of the people she follows now, when that is known', () => {
+    const ida = { id: 'ida', name: 'Ida', photo: null }
+    const had = [...page('n', FEED_PAGE, 100), entry('old-ada', 10), { ...entry('old-ida', 9), member: ida }]
+    const fresh = page('n', FEED_PAGE, 100)
+    expect(mergeFirstPage(had, fresh, new Set(['ada'])).map((e) => e.id).slice(FEED_PAGE)).toEqual(['old-ada'])
+    expect(mergeFirstPage(had, fresh, new Set()).length).toBe(FEED_PAGE)
+    // Unknown (People not read): nothing is dropped.
+    expect(mergeFirstPage(had, fresh, null).map((e) => e.id).slice(FEED_PAGE)).toEqual(['old-ada', 'old-ida'])
+    expect(mergeFirstPage(had, fresh).length).toBe(FEED_PAGE + 2)
+  })
 })
