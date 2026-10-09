@@ -1667,7 +1667,10 @@
     "sheetNote": "{name} isn't told. Block also stops {name} following you again or opening your link.",
     "blockTitle": "Block {name}?",
     "blockText": "You stop following each other, and neither of you sees the other's reading.",
-    "blockConfirm": "Block"
+    "blockConfirm": "Block",
+    "loadError": "People didn't load. Check your connection and try again.",
+    "retry": "Try again",
+    "error": "That didn't work. Try again."
   },
   "member": {
     "back": "Back",
