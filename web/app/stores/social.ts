@@ -206,12 +206,15 @@ export const useSocialStore = defineStore('social', () => {
     (now, before) => now !== before && reset(),
   )
 
-  // Back online with her settings never read: read them now. So are the reads a write that got no
-  // answer may have changed (the server may have applied it before the line died).
+  // Back online: read what could not be read while offline, or never was (the header skips her settings
+  // offline, People and Blocked opened with nothing to show), and the reads a write that got no answer may
+  // have changed (the server may have applied it before the line died).
   const online = useOnline()
   watch(online, (now) => {
     if (!now) return
-    if (errors.value.load === 'offline') void load()
+    if (!mine.value || errors.value.load) void load(true)
+    if (errors.value.people) void loadPeople(true)
+    if (errors.value.blocked) void loadBlocked(true)
     for (const target of rereads.take()) void (target === 'mine' ? load(true) : target === 'people' ? loadPeople(true) : loadBlocked(true))
   })
 

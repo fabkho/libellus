@@ -537,7 +537,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "sheetNote": "{name} isn't told. Block also stops {name} following you again or opening your link.",
     "blockTitle": "Block {name}?",
     "blockText": "You stop following each other, and neither of you sees the other's reading.",
-    "blockConfirm": "Block"
+    "blockConfirm": "Block",
+    "offline": "You're offline. People show once you're back."
   },
   "member": {
     "back": "Back",
