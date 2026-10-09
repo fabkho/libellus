@@ -12,6 +12,14 @@ process.env.LIBELLUS_TEST_RUN ??= randomUUID().slice(0, 8)
 // Data-layer suite against the real local Supabase stack (SPEC.md, Testing).
 // Plain Node, no Nuxt runtime: the data layer is framework-free on purpose.
 export default defineConfig({
+  plugins: [
+    {
+      // The feed store reads and writes the device's copy only `import.meta.client` (the app is an SPA, so
+      // always in the browser); in Node that flag is undefined. Only this store, so no other test changes.
+      name: 'libellus-feed-store-is-client',
+      transform: (code, id) => (id.endsWith('/app/stores/feed.ts') ? code.replaceAll('import.meta.client', 'true') : null),
+    },
+  ],
   resolve: {
     // `~` is Nuxt's alias for the same folder: the stores' own imports resolve in tests/social-store.test.ts.
     alias: { '@': resolve('./app'), '~': resolve('./app') },
