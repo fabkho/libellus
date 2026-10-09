@@ -21,6 +21,7 @@ watch(open, (isOpen) => {
   void social.loadBlocked()
 })
 
+const sectionsId = useId()
 const disabled = computed(() => !online.value || social.busy || !social.mine)
 const blockedOpen = ref(false)
 const goingPublic = ref(false)
@@ -61,15 +62,15 @@ const error = computed(() => (social.errors.privacy && social.errors.privacy !==
             @click="togglePrivate"
           >
             <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
-            <UiSwitch v-else :on="social.mine?.private ?? true" />
+            <UiSwitch :on="social.mine?.private ?? true" />
           </UiRow>
         </UiRowGroup>
         <p class="px-xs text-footnote text-ink-faint">{{ t('privacy.privateHint') }}</p>
       </div>
 
       <div class="flex flex-col gap-sm">
-        <span class="eyebrow">{{ t('privacy.sections') }}</span>
-        <UiRowGroup>
+        <span :id="sectionsId" class="eyebrow">{{ t('privacy.sections') }}</span>
+        <UiRowGroup role="group" :aria-labelledby="sectionsId">
           <UiRow
             v-for="section in SOCIAL_SECTIONS"
             :key="section"
@@ -83,7 +84,7 @@ const error = computed(() => (social.errors.privacy && social.errors.privacy !==
             @click="toggle(section)"
           >
             <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
-            <UiSwitch v-else :on="social.mine?.sections[section] ?? true" />
+            <UiSwitch :on="social.mine?.sections[section] ?? true" />
           </UiRow>
         </UiRowGroup>
         <p class="px-xs text-footnote text-ink-faint">{{ t('privacy.never') }}</p>

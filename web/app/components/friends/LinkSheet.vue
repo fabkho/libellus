@@ -73,7 +73,7 @@ const error = computed(() => (social.errors.link && social.errors.link !== 'offl
       </div>
 
       <p class="min-h-(--text-footnote--line-height) text-footnote text-ink-muted" role="status" data-testid="followLink.outcome">
-        {{ outcome === 'copied' ? t('followLink.copied') : '' }}
+        {{ outcome === 'copied' ? t('followLink.copied') : outcome === 'failed' ? t('followLink.failed') : '' }}
       </p>
       <p v-if="error && !renewing" class="text-footnote text-error" role="alert" data-testid="followLink.error">{{ error }}</p>
       <p class="text-footnote text-ink-faint">{{ t('followLink.renewHint') }}</p>
