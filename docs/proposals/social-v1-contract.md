@@ -204,10 +204,10 @@ All `security definer`, granted to `authenticated` only, refusing `not_signed_in
 | Function | Returns | Does |
 |---|---|---|
 | `my_social()` | `MySocial` | Makes her row if missing (with a fresh token). |
-| `set_private(p_private boolean)` | `MySocial` | Going public (`false`) accepts every waiting request that is not declined. |
+| `set_private(p_private boolean)` | `MySocial` | Going public (`false`) accepts every waiting request that is not declined and **deletes the declined ones** (on a public account a lone "requested" would tell the asker he was declined; deleting rather than accepting keeps her decline: he may follow like anyone else now). |
 | `set_social_sections(p_sections jsonb)` | `MySocial` | Only the keys of *Sections*; unnamed keys keep their value; else `social_sections_invalid`. |
 | `renew_follow_link()` | `MySocial` | A new token; the old one answers `null` in `follow_target`. Deletes the `follow_link_views` rows of her visitors who have no follow or request with her either way: who only opened the old link is forgotten. |
-| `set_entry_hidden(p_entry uuid, p_hidden boolean)` | `void` | `entry_not_found` for an entry not hers. Also an action of `sync_write` (`set_entry_hidden`, args `{ p_entry, p_hidden }`): the migration re-creates `sync_write` from its latest version (`20261010120000_reader_highlights.sql`), **copying the whole body** and adding one `when` branch. |
+| `set_entry_hidden(p_entry uuid, p_hidden boolean)` | `void` | `entry_not_found` for an entry not hers. A hidden entry is gone for everyone but her: also from her public reading page and its Book cards (`private.reading_page_*`, `public_book_card`). Also an action of `sync_write` (`set_entry_hidden`, args `{ p_entry, p_hidden }`): the migration re-creates `sync_write` from its latest version (`20261010120000_reader_highlights.sql`), **copying the whole body** and adding one `when` branch. |
 | `can_see_member_photo(p_owner uuid)` | `boolean` | True for herself, and when `p_owner` is reachable for the caller. Lives in `public` (policies cannot call into `private`), `stable`. |
 
 ```json
@@ -295,8 +295,11 @@ progress, reading days, highlights, notes, collections, the address and hidden B
   "reading": 2                  // null without show_reading; hidden left out
 }
 // SessionStatsRow = { id, entry_id, started_on, ended_on, outcome, rating, created_at,
-//                     entry: { page_count_override, book: <the books row's columns, as bookFromRow
-//                     (web/app/data/library.ts) reads them; "goodreads": null> } }
+//                     entry: { page_count_override, book: { exactly the columns BookRow
+//                     (web/app/data/library.ts) has: id, title, authors, isbn13, isbn10, page_count,
+//                     published_year, language, publisher, description, cover_url, cover_thumbhash,
+//                     cover_dominant, cover_secondary, source, apple_id, openlibrary_edition_key,
+//                     openlibrary_work_key, format, created_at; "goodreads": null } } }  (never owner_id)
 ```
 
 Avatars (D4): a new select policy on `storage.objects`, named `avatars_select_connected`:
@@ -304,6 +307,28 @@ Avatars (D4): a new select policy on `storage.objects`, named `avatars_select_co
 `public.can_see_member_folder(p_folder text) returns boolean` (D4, `stable`, definer) answers false for
 anything that is not a uuid (no cast in the policy: a bad folder name must not throw) and
 `can_see_member_photo` otherwise.
+
+### 1.5a Hardening and accepted risks (gate 1)
+
+After the four migrations, a leak review (gate 1) found two holes, closed by
+`20261015050000_social_hardening.sql` and `supabase/tests/social_hardening_test.sql`: the declined
+request on an account gone public (`set_private`, above) and hidden Books on the public reading page
+(`set_entry_hidden`, above). The same migration closes two races (`follow` reads the owner's
+`social_settings` row `for share`, so `set_private` waits for it; `follow` and `block` take an advisory
+transaction lock on the sorted pair of members), names the record's Book column by column, and puts
+`private.social_config` and `private.follow_calls` behind RLS.
+
+Accepted, on purpose:
+
+- **A public account can be confirmed by its id**: `follow` and `block` succeed on it and answer
+  `not_found` for an unknown id. Being public means being reachable; ids are random 128-bit uuids a
+  stranger never sees, and private accounts stay indistinguishable from non-members.
+- **A declined member can withdraw and ask again**, at most 30 calls an hour. Block is the answer.
+- **A removed follower who still has the link** sees her card and can ask again; a new link is the
+  real removal (the app's Remove confirm offers it).
+- **People lists have no paging**: fine for a circle; revisit before public accounts grow to thousands.
+- **Unhiding a Book brings its old activity back** with its dates, as switching a section back on does.
+- **`purge-activity` is only scheduled where pg_cron exists**, as `purge-synced-writes` is.
 
 ### 1.6 The database tests
 
