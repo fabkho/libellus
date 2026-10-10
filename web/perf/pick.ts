@@ -140,6 +140,15 @@ async function demo(browser: Browser, auth: Record<string, string>, variant: 'de
   const ctx = await context(browser, auth, videoDir)
   const page = await ctx.newPage()
   page.on('pageerror', (e) => console.log(`  pageerror: ${e.message}`))
+  // What the deal fetches that the app does not otherwise (Regal's chunk, its fonts; the 2D deal's chunk).
+  const fetched: Record<string, number> = {}
+  page.on('requestfinished', async (request) => {
+    const path = new URL(request.url()).pathname
+    const kind = /\/_nuxt\/regal\.[^/]+\.js$/.test(path) ? 'regal js' : /\/_nuxt\/regal\.[^/]+\.css$/.test(path) ? 'regal css' : /^\/_fonts\//.test(path) ? 'fonts' : null
+    if (!kind) return
+    const sizes = await request.sizes().catch(() => null)
+    fetched[kind] = (fetched[kind] ?? 0) + (sizes ? sizes.responseBodySize + sizes.responseHeadersSize : 0)
+  })
   const shot = async (name: string) => {
     const file = join(OUT, `${variant}-${name}.png`)
     await page.screenshot({ path: file })
@@ -195,7 +204,7 @@ async function demo(browser: Browser, auth: Record<string, string>, variant: 'de
   if (recorded) renameSync(recorded, join(OUT, `${variant}.webm`))
   rmSync(videoDir, { recursive: true, force: true })
   for (const file of [`${variant}.webm`, `${variant}-strip.png`]) copyFileSync(join(OUT, file), join(SHOTS, file))
-  console.log(`  ${variant}: ${OUT}/${variant}.webm, ${variant}-strip.png (${frames.length} frames)`)
+  console.log(`  ${variant}: ${OUT}/${variant}.webm, ${variant}-strip.png (${frames.length} frames); fetched for the deal: ${JSON.stringify(fetched)}`)
 }
 
 function pickSome<T>(list: T[], n: number): T[] {
@@ -235,7 +244,14 @@ async function measure(browser: Browser, auth: Record<string, string>, variant: 
   const data = await page.evaluate(() => {
     const w = window as unknown as Record<string, unknown>
     w.__rec = false
-    const loaf = (w.__loaf as PerformanceEntry[]).map((e) => ({ duration: e.duration, blocking: (e as unknown as { blockingDuration: number }).blockingDuration }))
+    type Loaf = PerformanceEntry & { blockingDuration: number; renderStart: number; styleAndLayoutStart: number; scripts: { invoker: string; duration: number; sourceFunctionName: string; sourceURL: string }[] }
+    const loaf = (w.__loaf as Loaf[]).map((e) => ({
+      duration: e.duration,
+      blocking: e.blockingDuration,
+      at: e.startTime,
+      render: e.renderStart ? Math.round(e.startTime + e.duration - e.renderStart) : 0,
+      scripts: e.scripts.map((x) => `${x.invoker} ${Math.round(x.duration)}ms ${x.sourceFunctionName}@${x.sourceURL.split('/').pop()}`).slice(0, 3),
+    }))
     const marks = performance.getEntriesByType('mark').filter((m) => m.name.startsWith('regal:deal')).map((m) => m.name)
     const at = (name: string) => performance.getEntriesByName(name).at(-1)?.startTime ?? null
     return { gaps: w.__gaps as number[], times: w.__times as number[], loaf, loafAt: (w.__loaf as PerformanceEntry[]).map((e) => e.startTime), marks, start: at('pick:deal:start'), end: at('pick:deal:end') }
@@ -261,6 +277,7 @@ async function measure(browser: Browser, auth: Record<string, string>, variant: 
     loaf: data.loaf.filter((_, i) => inDeal(data.loafAt[i]!)).length,
     loafBlocking: Math.round(data.loaf.filter((_, i) => inDeal(data.loafAt[i]!)).reduce((a, e) => a + (e.blocking ?? 0), 0)),
     wholeLong: whole.filter((g) => g > 33.4).length,
+    loafDetail: data.loaf.filter((_, i) => inDeal(data.loafAt[i]!)).map((e) => ({ ...e, at: Math.round(e.at - (data.start ?? 0)), duration: Math.round(e.duration) })),
     wholeMax: Math.round(Math.max(...whole) * 10) / 10,
     marks: data.marks,
   }
@@ -283,6 +300,7 @@ if (!args['no-measure']) {
     for (let run = 0; run < Number(args.runs); run++) {
       const row = await measure(browser, auth, variant, cpu)
       rows.push(row)
+      if (process.env.PICK_LOAF) console.log(JSON.stringify(row.loafDetail))
       console.log(`  ${variant} #${run + 1}: deal ${row.dealMs} ms, ${row.frames} frames, ${row.fps} fps, p50 ${row.p50} p95 ${row.p95} max ${row.max} ms, long ${row.long}, LoAF ${row.loaf} (${row.loafBlocking} ms blocking) · Pick→bar ${row.ms} ms: long ${row.wholeLong}, max ${row.wholeMax} ms`)
     }
   writeFileSync(join(OUT, 'frames.json'), JSON.stringify({ cpu, deal: args.deal || 'default', rows }, null, 2))

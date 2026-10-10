@@ -25,7 +25,7 @@ const books = round.candidates.map(dealBookOf)
 const winner = round.candidates[round.winner]!
 const reduced = prefersReducedMotion()
 /** The first deal takes its time; a round after a Decline is shorter. */
-const duration = round.number === 1 ? 4000 : 2200
+const duration = round.number === 1 ? 3600 : 2200
 
 type DealComponent = { skip: () => void }
 const loadDeal2d = () => import('~/components/pick/Deal2d.vue')
@@ -76,7 +76,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 /** The flight's cover: UiCover's `xl`, scaled to the rect the deal ended on. */
 const landingStyle = computed(() => {
   const rect = landing.value
-  if (!rect) return {}
+  if (!rect) return { left: '0px', top: '0px' }
   return { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` }
 })
 </script>
@@ -109,7 +109,7 @@ const landingStyle = computed(() => {
           decorative
           :title="candidate.book.title"
           :authors="candidate.book.authors"
-          :src="coverSrc(candidate.book.coverUrl, 'md')"
+          :src="coverSrc(candidate.book.coverUrl, 'sm')"
           :thumbhash="candidate.book.coverThumbhash"
           :colors="candidate.book.coverColors"
           size="md"
@@ -120,9 +120,10 @@ const landingStyle = computed(() => {
 
     <p class="hint float-bottom absolute inset-x-0 text-center text-caption text-ink-faint" aria-hidden="true">{{ t('pick.skip') }}</p>
 
-    <!-- Where the winner rests: the cover the flight takes off with. -->
-    <div v-if="landing" ref="source" class="source fixed" :style="landingStyle" data-testid="pick.landing">
-      <div class="scale" :style="{ transform: `scale(${landing.width / 140})` }">
+    <!-- Where the winner rests: the cover the flight takes off with. There from the start, unseen,
+         so its image is decoded by the time it is laid over the deal's. -->
+    <div ref="source" class="source fixed" :class="!landing && 'waiting-source'" :style="landingStyle" :data-testid="landing ? 'pick.landing' : undefined">
+      <div class="scale" :style="{ transform: `scale(${(landing?.width ?? 140) / 140})` }">
         <UiCover
           decorative
           :title="winner.book.title"
@@ -142,6 +143,10 @@ const landingStyle = computed(() => {
 .deal {
   top: calc(var(--bar-top) + var(--spacing-xxl));
   bottom: calc(var(--float-bottom) + var(--spacing-xxl));
+}
+
+.waiting-source {
+  visibility: hidden;
 }
 
 .waiting {
