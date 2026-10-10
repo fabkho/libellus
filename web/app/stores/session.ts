@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
-import { clearLocalData, clearLocalDatabase, clearLocalFiles } from '~/data/localData'
+import { forgetMemberData, otherMemberHere } from '~/data/localData'
 import { useSyncStore } from '~/stores/sync'
+import { PENDING_FOLLOW_KEY } from '~/utils/pendingFollow'
+import { PENDING_SHARE_KEY } from '~/utils/pendingShare'
 import { PENDING_SIGN_IN_KEY } from '~/utils/signedOutRoute'
 
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn'
@@ -32,6 +34,8 @@ export const useSessionStore = defineStore('session', () => {
   const pending = ref<PendingCode | null>(null)
   const error = ref<AuthErrorCode | null>(null)
   const busy = ref(false)
+  /** The member is ending the session herself (sign out, delete account): the session listener leaves the clearing to those. */
+  let signingOut = false
 
   // The address the sign-up screen starts with: the one the sign-in screen just
   // found no account for. Not persisted: nothing has been sent yet, so a
@@ -123,12 +127,45 @@ export const useSessionStore = defineStore('session', () => {
     if (saved) {
       adopt(saved)
       void client.restoreMember().then(({ member, unreachable }) => {
-        if (member) adopt(member)
-        else if (!unreachable) adopt(null)
+        if (member) void signedInAs(member)
+        // A refusal (not a missing connection): the session is over, and so is what the device kept of it.
+        else if (!unreachable) void sessionEnded()
       })
       return
     }
-    adopt(await client.currentMember())
+    const current = await client.currentMember()
+    if (current) await signedInAs(current)
+    // Nobody is signed in, and a member's data is still here: her session died while the app was closed.
+    else if (import.meta.client && readSavedMember(window.localStorage)) await sessionEnded()
+    else adopt(null)
+  }
+
+  /**
+   * A member is signed in (a code verified, a session restored, a sign-in in another tab). If
+   * what the device holds is another member's, all of it goes first: nothing of the last one
+   * is shown to, or sent for, this one (security round, F11).
+   */
+  async function signedInAs(next: Member) {
+    if (import.meta.client) {
+      if (otherMemberHere(window.localStorage, next.id, readSavedMember(window.localStorage)?.id ?? null)) await forgetDevice()
+    }
+    adopt(next)
+  }
+
+  /**
+   * The session ended without the member asking (the refresh token is gone: revoked, expired,
+   * a sign-out in another tab): the device forgets what it kept of her, as a sign-out does, but
+   * keeps what is not hers (a sign-in or share waiting) and the writes still waiting to sync, so
+   * they go out when she is back (the outbox is hers by id and sent for no one else). Not for a
+   * missing connection: offline the session cannot be renewed, which proves nothing.
+   */
+  async function sessionEnded() {
+    // Her own sign-out or account deletion clears the device itself, after the session is over.
+    if (signingOut) {
+      adopt(null)
+      return
+    }
+    await forgetDevice({ sessionEnded: true })
   }
 
   /** The sign-in screen: the address alone decides which screen comes next. */
@@ -172,7 +209,9 @@ export const useSessionStore = defineStore('session', () => {
         return false
       }
       signUpEmail.value = ''
-      adopt(await client.currentMember())
+      const next = await client.currentMember()
+      if (next) await signedInAs(next)
+      else adopt(null)
       return true
     })
     return verified ?? false
@@ -246,20 +285,37 @@ export const useSessionStore = defineStore('session', () => {
    * header's sync chip says how many).
    */
   async function signOut() {
-    await auth()?.signOut()
-    await forgetDevice()
+    signingOut = true
+    try {
+      await auth()?.signOut()
+      await forgetDevice()
+    } finally {
+      signingOut = false
+    }
   }
 
-  /** The device forgets the member: the Library's copy, the outbox, her ebook files, the pending address. */
-  async function forgetDevice() {
+  /**
+   * The device forgets the member: the Library's copy and every other cache of hers under `libellus.`
+   * (descriptions, genres, ebook metadata, the feed, her places and highlights, the views she
+   * kept), the outbox and her ebook records in IndexedDB, her ebook files, the covers and
+   * portraits she browsed, the pending address. `sessionEnded`: her session died by itself, so
+   * what waits for the next sign-in (the address, a share, a follow) and her unsynced writes stay.
+   */
+  async function forgetDevice({ sessionEnded = false }: { sessionEnded?: boolean } = {}) {
     if (import.meta.client) {
+      const memberId = member.value?.id ?? readSavedMember(window.localStorage)?.id ?? null
       useSyncStore().close()
-      clearLocalData(window.localStorage)
-      if (typeof indexedDB !== 'undefined') await clearLocalDatabase(indexedDB)
-      // The copies of her ebook files (#131), and any shared file not taken in yet.
-      await clearLocalFiles({ storage: navigator.storage, caches: typeof caches === 'undefined' ? null : caches })
+      await forgetMemberData(
+        {
+          storage: window.localStorage,
+          indexedDB: typeof indexedDB === 'undefined' ? null : indexedDB,
+          caches: typeof caches === 'undefined' ? null : caches,
+          files: navigator.storage,
+        },
+        { sessionEnded, memberId, keep: [PENDING_SIGN_IN_KEY, PENDING_SHARE_KEY, PENDING_FOLLOW_KEY] },
+      )
     }
-    pending.value = null
+    if (!sessionEnded) pending.value = null
     adopt(null)
   }
 
@@ -280,6 +336,7 @@ export const useSessionStore = defineStore('session', () => {
     const client = auth()
     if (!client || deleting.value) return 'unknown'
     deleting.value = true
+    signingOut = true
     try {
       const result = await client.deleteAccount({ online: isOnline })
       if (result.error) return result.error
@@ -288,6 +345,7 @@ export const useSessionStore = defineStore('session', () => {
       return null
     } finally {
       deleting.value = false
+      signingOut = false
     }
   }
 
@@ -303,6 +361,8 @@ export const useSessionStore = defineStore('session', () => {
     error,
     busy,
     adopt,
+    signedInAs,
+    sessionEnded,
     restore,
     submitEmail,
     submitSignUp,
