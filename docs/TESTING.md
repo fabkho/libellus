@@ -477,11 +477,10 @@ looked at the rows' place on every frame was removed with the layout flows).
 
 ## CI: what runs when
 
-`.github/workflows/ci.yml`. The repository is private, so every job is billed from the account's included
-Actions minutes — 2,000 a month on Free, 3,000 with Pro, shared with the other private repositories — and a
-standard runner has two cores where a public repository's has four. The workflow weighs the minutes as much
-as the wait for a pull request's result; the numbers in "Measured" below were taken on the four-core public
-runner.
+`.github/workflows/ci.yml`. The repository is public, so standard runners cost no Actions minutes and have four cores (the
+numbers in "Measured" below were taken on that runner). The workflow still weighs the minutes as much as the
+wait for a pull request's result, so a change that can fail cheaply does so before the expensive flows, and
+the runs a fork starts need the owner's approval first.
 
 The flows are the expensive part (about 20 billed minutes for the whole suite in one job, when it was 243
 measured flows and 2,126 s; since 8 October 2026 it is the 29 flows of the critical paths, about 308 s of
@@ -601,7 +600,7 @@ gh pr edit <n> --add-label full-e2e   # every flow on that pull request's CI
 
 ### Disk
 
-A standard runner has little disk (the private repository's two-core `ubuntu-latest`), and the flows put a lot
+A standard runner has little disk (the standard `ubuntu-latest` runner), and the flows put a lot
 on it: the stack's Docker images, WebKit and Chromium, `node_modules` and the pnpm store, the two builds, and
 what Playwright writes while it runs. One job running every flow (`E2E_SHARDS=1`) died of it on 8 October
 2026 (run 37842426225): after about 20 minutes of flows, `WebKit encountered an internal error`, then
