@@ -39,10 +39,12 @@ const backend = {
   },
 }
 
-const told = { dropped: [] as string[], photos: [] as string[], changes: [] as unknown[] }
+const told = { dropped: [] as string[], photos: [] as string[], changes: [] as unknown[], likes: [] as string[], circles: [] as string[] }
 vi.mock('~/stores/feed', () => ({ useFeedStore: () => ({ dropMember: (id: string) => told.dropped.push(id) }) }))
 vi.mock('~/stores/memberPhotos', () => ({ useMemberPhotosStore: () => ({ drop: (id: string) => told.photos.push(id) }) }))
 vi.mock('~/stores/memberProfile', () => ({ useMemberProfileStore: () => ({ relationChanged: (id: string, change: unknown) => told.changes.push([id, change]) }) }))
+vi.mock('~/stores/likes', () => ({ useLikesStore: () => ({ dropMember: (id: string) => told.likes.push(id) }) }))
+vi.mock('~/stores/circleBooks', () => ({ useCircleBooksStore: () => ({ dropMember: (id: string) => told.circles.push(id) }) }))
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 
 async function store() {
@@ -75,6 +77,8 @@ beforeEach(() => {
   told.dropped.length = 0
   told.photos.length = 0
   told.changes.length = 0
+  told.likes.length = 0
+  told.circles.length = 0
   online.value = true
   mode = 'answer'
   calls.length = 0
@@ -157,6 +161,15 @@ describe('nothing of a member stays on the device after she is blocked, unfollow
     expect(told.dropped).toEqual(['ida', 'ben'])
   })
 
+  it('takes her out of Home\'s likes and the covers\' circles after each of the three (privacy review M2)', async () => {
+    const social = await store()
+    await social.unfollow('ida')
+    await social.block('ben')
+    await social.removeFollower('cy')
+    expect(told.likes).toEqual(['ida', 'ben', 'cy'])
+    expect(told.circles).toEqual(['ida', 'ben', 'cy'])
+  })
+
   it('drops nothing for a follow, or for a change that was refused', async () => {
     const social = await store()
     await social.follow('ida')
@@ -164,6 +177,8 @@ describe('nothing of a member stays on the device after she is blocked, unfollow
     await social.block('ben')
     expect(told.photos).toEqual([])
     expect(told.dropped).toEqual([])
+    expect(told.likes).toEqual([])
+    expect(told.circles).toEqual([])
   })
 })
 

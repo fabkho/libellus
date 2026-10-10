@@ -59,15 +59,16 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     const r = repo()
     const member = session.member?.id
     if (!r || !member || !isOnline()) return
+    const run = generation
     // Whom she follows: read once per sign-in. Nobody: nothing to ask. Not known (it failed): ask anyway.
     await social.loadPeople()
     if (member !== session.member?.id) return
+    if (run !== generation) return
     if (social.people && social.people.followingIds.length === 0) {
       reading.value = {}
       want.value = {}
       return
     }
-    const run = generation
     askedFor = signature.value
     askedAt = performance.now()
     const readingIds = idsOf(library.reading)
@@ -124,6 +125,24 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     { immediate: true },
   )
 
+  /**
+   * A member left her circle (unfollow, block, remove as follower): she goes from the groups at once, and an answer
+   * on its way (it may still name her) is thrown away; the next `load` asks again. A group with nobody left goes.
+   */
+  function dropMember(id: string) {
+    const without = (groups: Record<string, CircleGroup>): Record<string, CircleGroup> =>
+      Object.fromEntries(
+        Object.entries(groups).flatMap(([book, group]) => {
+          if (!group.members.some((m) => m.id === id)) return [[book, group]]
+          const members = group.members.filter((m) => m.id !== id)
+          return members.length ? [[book, { ...group, members }]] : []
+        }),
+      )
+    generation++
+    reading.value = without(reading.value)
+    want.value = without(want.value)
+  }
+
   watch(
     () => session.member?.id ?? null,
     (now, before) => now !== before && forget(),
@@ -136,5 +155,5 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
   // Back online.
   watch(online, (now) => now && wanted && void load())
 
-  return { reading, want, load, forget }
+  return { reading, want, load, forget, dropMember }
 })

@@ -101,9 +101,9 @@ on a feed row, `home.circleFeature.wantToRead`, `member.finishedWantToRead`; `.e
 `finish.spoilers` and `editSession.spoilers` (the switch in the footer of the review box in the two sheets, shown once there is a review, off by default, written nowhere
 yet; `v-model:spoilers` on each sheet), `feed.like` (`LikeButton`, `.count` inside), `likers` (`LikersSheet`,
 `likers.row`, `likers.member`, `likers.empty`, `likers.error`, `likers.offline`). Keys in `en.json`:
-`social.wantToRead.{add,label,added,error}`,
-`social.like.{like,unlike,label,unlabel,count,ownLabel,error}`, `social.likers.{title,empty,loadError,offline}`,
-`review.{spoilers,folded,showAnyway}`.
+`social.wantToRead.{add,label,added,addedShort,error}`,
+`social.like.{like,unlike,label,count,ownLabel,error}`, `social.likers.{title,empty,loading,loadError,offline}`,
+`review.{spoilers,spoilersHint,folded,showAnyway,showAnywayLabel}`.
 
 ## 5. A checked Catalogue (PR B)
 

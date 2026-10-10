@@ -39,9 +39,9 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <ul v-if="rows.length" class="flex flex-col" data-testid="home.likes" :aria-label="t('social.likers.title')">
+  <ul v-if="rows.length" class="flex flex-col" data-testid="home.likes">
     <li v-for="row in rows" :key="row.item.session">
-      <button type="button" class="flex min-h-(--size-touch) w-full items-center gap-ms py-xs text-left" :aria-label="`${row.names}. ${t('social.likes.open')}`" data-testid="home.like" @click="$emit('open', row.item)">
+      <button type="button" class="flex min-h-(--size-touch) w-full items-center gap-ms py-xs text-left" :aria-describedby="`likes-open-${row.item.session}`" data-testid="home.like" @click="$emit('open', row.item)">
         <span class="flex shrink-0" aria-hidden="true">
           <span v-for="liker in row.item.likers.slice(0, 3)" :key="liker.id" class="face"><FriendsAvatar :card="liker" /></span>
         </span>
@@ -50,6 +50,8 @@ const rows = computed(() =>
           <template #title><i class="book-title italic">{{ titleOf(row.item) }}</i></template>
         </i18n-t>
         <UiIcon name="heart" :size="14" class="shrink-0 text-accent-ink" />
+        <!-- The button's name is the sentence itself; this says what a tap does. -->
+        <span :id="`likes-open-${row.item.session}`" class="sr-only">{{ t('social.likes.open') }}</span>
       </button>
     </li>
   </ul>
