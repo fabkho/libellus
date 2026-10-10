@@ -31,6 +31,8 @@ const { values: args } = parseArgs({
     'no-measure': { type: 'boolean', default: false },
     deal: { type: 'string', default: '' },
     headed: { type: 'boolean', default: false },
+    /** The Mac's GPU (Metal through ANGLE, new headless) instead of SwiftShader's software WebGL. */
+    gpu: { type: 'boolean', default: false },
   },
 })
 
@@ -135,7 +137,8 @@ async function strip(files: string[], to: string) {
 }
 
 async function demo(browser: Browser, auth: Record<string, string>, variant: 'deck' | 'stack' | 'wheel') {
-  const videoDir = join(OUT, `video-${variant}`)
+  const name = `${variant}${args.deal ? `-${args.deal}` : ''}`
+  const videoDir = join(OUT, `video-${name}`)
   rmSync(videoDir, { recursive: true, force: true })
   const ctx = await context(browser, auth, videoDir)
   const page = await ctx.newPage()
@@ -149,8 +152,8 @@ async function demo(browser: Browser, auth: Record<string, string>, variant: 'de
     const sizes = await request.sizes().catch(() => null)
     fetched[kind] = (fetched[kind] ?? 0) + (sizes ? sizes.responseBodySize + sizes.responseHeadersSize : 0)
   })
-  const shot = async (name: string) => {
-    const file = join(OUT, `${variant}-${name}.png`)
+  const shot = async (shotName: string) => {
+    const file = join(OUT, `${name}-${shotName}.png`)
     await page.screenshot({ path: file })
     return file
   }
@@ -198,13 +201,13 @@ async function demo(browser: Browser, auth: Record<string, string>, variant: 'de
   const video = page.video()
   await ctx.close()
   const recorded = video ? await video.path() : null
-  const frames = [join(OUT, `${variant}-1-entry.png`), join(OUT, `${variant}-2-choose.png`), ...pickSome(deal1, 5), result, other, ...pickSome(deal2, 2), second, end]
-  const stripFile = join(OUT, `${variant}-strip.png`)
+  const frames = [join(OUT, `${name}-1-entry.png`), join(OUT, `${name}-2-choose.png`), ...pickSome(deal1, 5), result, other, ...pickSome(deal2, 2), second, end]
+  const stripFile = join(OUT, `${name}-strip.png`)
   await strip(frames, stripFile)
-  if (recorded) renameSync(recorded, join(OUT, `${variant}.webm`))
+  if (recorded) renameSync(recorded, join(OUT, `${name}.webm`))
   rmSync(videoDir, { recursive: true, force: true })
-  for (const file of [`${variant}.webm`, `${variant}-strip.png`]) copyFileSync(join(OUT, file), join(SHOTS, file))
-  console.log(`  ${variant}: ${OUT}/${variant}.webm, ${variant}-strip.png (${frames.length} frames); fetched for the deal: ${JSON.stringify(fetched)}`)
+  for (const file of [`${name}.webm`, `${name}-strip.png`]) copyFileSync(join(OUT, file), join(SHOTS, file))
+  console.log(`  ${name}: ${OUT}/${name}.webm, ${name}-strip.png (${frames.length} frames); fetched for the deal: ${JSON.stringify(fetched)}`)
 }
 
 function pickSome<T>(list: T[], n: number): T[] {
@@ -286,8 +289,21 @@ async function measure(browser: Browser, auth: Record<string, string>, variant: 
 const auth = await session()
 const browser = await chromium.launch({
   headless: !args.headed,
-  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
+  ...(args.gpu ? { channel: 'chromium' } : {}),
+  args: args.gpu
+    ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl']
+    : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
 })
+if (args.gpu) {
+  const probe = await browser.newPage()
+  const renderer = await probe.evaluate(() => {
+    const gl = document.createElement('canvas').getContext('webgl2')
+    const info = gl?.getExtension('WEBGL_debug_renderer_info')
+    return gl && info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'no webgl'
+  })
+  console.log(`WebGL renderer: ${renderer}`)
+  await probe.close()
+}
 if (!args['no-demo']) {
   console.log('demo: video and frame strip per variant')
   for (const variant of VARIANTS) await demo(browser, auth, variant)
@@ -303,8 +319,9 @@ if (!args['no-measure']) {
       if (process.env.PICK_LOAF) console.log(JSON.stringify(row.loafDetail))
       console.log(`  ${variant} #${run + 1}: deal ${row.dealMs} ms, ${row.frames} frames, ${row.fps} fps, p50 ${row.p50} p95 ${row.p95} max ${row.max} ms, long ${row.long}, LoAF ${row.loaf} (${row.loafBlocking} ms blocking) · Pick→bar ${row.ms} ms: long ${row.wholeLong}, max ${row.wholeMax} ms`)
     }
-  writeFileSync(join(OUT, 'frames.json'), JSON.stringify({ cpu, deal: args.deal || 'default', rows }, null, 2))
-  copyFileSync(join(OUT, 'frames.json'), join(SHOTS, `frames${args.deal ? `-${args.deal}` : ''}.json`))
+  const label = `${args.deal || '3d'}${args.gpu ? '-gpu' : ''}`
+  writeFileSync(join(OUT, `frames-${label}.json`), JSON.stringify({ cpu, deal: args.deal || 'default', gpu: args.gpu, rows }, null, 2))
+  copyFileSync(join(OUT, `frames-${label}.json`), join(SHOTS, `frames-${label}.json`))
 }
 await browser.close()
 console.log(readdirSync(SHOTS).join(' '))
