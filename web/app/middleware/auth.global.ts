@@ -1,10 +1,8 @@
 import { useSessionStore } from '~/stores/session'
-import { followToOpen, followTokenIn, keepFollow, peekFollow } from '~/utils/pendingFollow'
-import { keepShare, peekShare } from '~/utils/pendingShare'
+import { followToOpen, peekFollow } from '~/utils/pendingFollow'
+import { peekShare } from '~/utils/pendingShare'
 import { isPublicPath } from '~/utils/publicPath'
-
-/** The only screens a signed-out member may see. */
-const AUTH_ROUTES = ['/sign-in', '/sign-up', '/verify']
+import { AUTH_ROUTES, signedOutDestination, withoutSlash } from '~/utils/signedOutRoute'
 
 /**
  * Everything else is behind the code. Signed-in members have no business on
@@ -15,18 +13,11 @@ const AUTH_ROUTES = ['/sign-in', '/sign-up', '/verify']
 export default defineNuxtRouteMiddleware((to) => {
   // The design playground (a dev-only route tree; production builds strip it).
   if (import.meta.dev && to.path.startsWith('/prototype')) return
-  // Cloudflare Pages serves each generated route as a folder and redirects `/sign-up` to
-  // `/sign-up/`, so a page opened at its address arrives with the slash: compare without it.
-  const path = to.path.length > 1 ? to.path.replace(/\/+$/, '') : to.path
+  const path = withoutSlash(to.path)
   // A member's reading page and its Book cards (#171) are for anyone with the link, signed in or not.
   if (isPublicPath(path)) return
 
   const session = useSessionStore()
-  const isAuthRoute = AUTH_ROUTES.includes(path)
-
-  // A share (issue #91, pages/share.vue) that came before the sign-in is kept on the device and
-  // opened once the member is in, wherever the sign-in sends her first.
-  const first = (value: unknown) => (Array.isArray(value) ? first(value[0]) : typeof value === 'string' ? value : null)
 
   if (session.status === 'signedIn') {
     if (import.meta.client && path !== '/share' && peekShare(window.localStorage)) return navigateTo('/share', { replace: true })
@@ -35,18 +26,11 @@ export default defineNuxtRouteMiddleware((to) => {
       const follow = followToOpen(path, peekFollow(window.localStorage), !!peekShare(window.localStorage))
       if (follow) return navigateTo(follow, { replace: true })
     }
-    return isAuthRoute ? navigateTo('/') : undefined
+    return AUTH_ROUTES.includes(path) ? navigateTo('/') : undefined
   }
 
-  if (path === '/share' && import.meta.client) {
-    const shared = { title: first(to.query.title), text: first(to.query.text), url: first(to.query.url), ebooks: first(to.query.ebooks) }
-    // Shared ebook files wait in the service worker's cache meanwhile (#131).
-    if (shared.title || shared.text || shared.url || shared.ebooks) keepShare(window.localStorage, shared)
-  }
-
-  const followed = followTokenIn(path)
-  if (followed && import.meta.client) keepFollow(window.localStorage, followed)
-
-  if (!isAuthRoute) return navigateTo(session.pending ? '/verify' : '/sign-in')
-  if (path === '/verify' && !session.pending) return navigateTo('/sign-in')
+  // A share (issue #91) or a follow link that came before the sign-in is kept on the device and
+  // opened once the member is in, wherever the sign-in sends her first.
+  const destination = signedOutDestination(to, { pending: !!session.pending, storage: import.meta.client ? window.localStorage : null })
+  if (destination) return navigateTo(destination)
 })

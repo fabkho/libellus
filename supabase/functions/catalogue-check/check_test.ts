@@ -344,3 +344,32 @@ Deno.test('an ISBN with no source id asks the Book\'s own source first, then the
   assertEquals((await checkBook(fallsBack.http, book({ isbn13: ISBN, source: 'apple' }))).status, 'found')
   assertEquals(fallsBack.asked, [apple(ISBN, 'us'), apple(ISBN, 'de'), apple(ISBN, 'gb'), BY_ISBN])
 })
+
+// private.cover_allowed (supabase/migrations/20261022010000_catalogue_input.sql), the one list the database checks every cover by.
+const COVER_ALLOWED = /^https:\/\/(covers\.openlibrary\.org|books\.fabkho\.dev|([a-z0-9-]+\.)+mzstatic\.com)(\/|$)/i
+
+Deno.test('a cover the function writes is always on the database\'s allow-list; any other host is no cover', async () => {
+  const hosts = [
+    'https://is1-ssl.mzstatic.com/image/thumb/a/b.jpg/100x100bb.jpg',
+    'https://is5-ssl.mzstatic.com/image/thumb/a/b.jpg/100x100bb.jpg',
+  ]
+  for (const url of hosts) {
+    const cover = appleCover(url)
+    assertEquals(cover !== undefined && COVER_ALLOWED.test(cover), true, url)
+  }
+  for (const id of [1, 8231856, 12]) assertEquals(COVER_ALLOWED.test(openLibraryCover([id])!), true)
+  for (
+    const hostile of [
+      'https://evil.example/a.jpg',
+      'https://covers.openlibrary.org.evil.example/a.jpg',
+      'https://is1-ssl.mzstatic.com.evil.example/a.jpg',
+      'https://books.fabkho.dev/a.jpg',
+      'http://is1-ssl.mzstatic.com/a.jpg',
+    ]
+  ) {
+    const { http } = testHttp({ [lookup('1111', 'us')]: { results: [{ ...ITEM, artworkUrl100: hostile }] } })
+    const outcome = await checkBook(http, book({ title: 'Guards & Guards', apple_id: '1111' }))
+    assertEquals(outcome.status, 'found', hostile)
+    assertEquals(outcome.status === 'found' ? 'cover_url' in outcome.result : null, false, `${hostile}: no cover is written`)
+  }
+})

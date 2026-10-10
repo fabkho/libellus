@@ -278,7 +278,12 @@
     "title": "Shared with Libellus",
     "finding": "Finding your book…",
     "taking": "Taking in your ebook…",
-    "takingMany": "Taking in your ebooks… {done} of {total}"
+    "takingMany": "Taking in your ebooks… {done} of {total}",
+    "confirmTitle": "Add {count} ebook shared to Libellus? | Add {count} ebooks shared to Libellus?",
+    "confirmText": "Only add files you chose to share. They stay on this device.",
+    "skipped": "{count} shared file is not an EPUB, or too large, and is left out. | {count} shared files are not EPUBs, or too large, and are left out.",
+    "add": "Add",
+    "notNow": "Not now"
   },
   "tabs": {
     "home": "Home",

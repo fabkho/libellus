@@ -8,7 +8,7 @@
 -- Book the source names otherwise is marked failed and nothing is written.
 
 begin;
-select plan(26);
+select plan(37);
 
 create schema if not exists tests;
 
@@ -172,6 +172,29 @@ select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '{"aut
 select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '{"title":5}')$q$, '22023', 'result_invalid',
   'and a title that is not text');
 select is(public.catalogue_check_save(gen_random_uuid(), '{"title":"Nobody"}'), false, 'a save for no Book writes nothing');
+
+-- ------------------------------------- covers: the one allow-list (private.cover_allowed), never a failed update
+
+select tests.act_as((select id from ids where name = 'ada'));
+insert into ids values
+  ('c_ok',   (public.add_to_library(tests.snap('Cover Ok') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL99999996M"}', 'want_to_read', null)).id),
+  ('c_evil', (public.add_to_library(tests.snap('Cover Evil') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL99999997M"}', 'want_to_read', null)).id),
+  ('c_sub',  (public.add_to_library(tests.snap('Cover Sub') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL99999998M"}', 'want_to_read', null)).id),
+  ('c_http', (public.add_to_library(tests.snap('Cover Http') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL99999999M"}', 'want_to_read', null)).id),
+  ('c_man',  (select book_id from public.add_manual_book('Own Cover Notebook', array['Ada'], null, null)));
+reset role;
+select is(public.catalogue_check_save(tests.book_of((select id from ids where name = 'c_ok')), '{"title":"Cover Ok","cover_url":"https://covers.openlibrary.org/b/id/12-L.jpg"}'), true, 'a cover on the allow-list: the save goes through');
+select is((select cover_url from public.books where id = tests.book_of((select id from ids where name = 'c_ok'))), 'https://covers.openlibrary.org/b/id/12-L.jpg', 'and is kept');
+select is(public.catalogue_check_save(tests.book_of((select id from ids where name = 'c_evil')), '{"title":"Cover Evil","cover_url":"https://evil.example/pixel.png"}'), true, 'a cover off the list does not fail the save');
+select is((select cover_url from public.books where id = tests.book_of((select id from ids where name = 'c_evil'))), null, 'it is written as no cover');
+select is(public.catalogue_check_save(tests.book_of((select id from ids where name = 'c_sub')), '{"title":"Cover Sub","cover_url":"https://covers.openlibrary.org.evil.example/x.jpg"}'), true, 'a look-alike host: the save goes through');
+select is((select cover_url from public.books where id = tests.book_of((select id from ids where name = 'c_sub'))), null, 'without the cover');
+select is(public.catalogue_check_save(tests.book_of((select id from ids where name = 'c_http')), '{"title":"Cover Http","cover_url":"http://covers.openlibrary.org/b/id/12-L.jpg"}'), true, 'plain http: the save goes through');
+select is((select cover_url from public.books where id = tests.book_of((select id from ids where name = 'c_http'))), null, 'without the cover');
+update public.books set cover_url = 'https://example.org/her-own.jpg' where id = (select id from ids where name = 'c_man');
+select is((select cover_url from public.books where id = (select id from ids where name = 'c_man')), 'https://example.org/her-own.jpg', 'a Manual book''s cover is free of the list (private to its owner)');
+select is(public.catalogue_check_save((select id from ids where name = 'c_man'), '{"title":"Own Cover Notebook","cover_url":"https://covers.openlibrary.org/b/id/1-L.jpg"}'), false, 'and the check never touches it');
+select is((select cover_url from public.books where id = (select id from ids where name = 'c_man')), 'https://example.org/her-own.jpg', 'its cover stays');
 
 -- ------------------------------------------------ nothing here for a member to call
 select tests.act_as((select id from ids where name = 'ada'));

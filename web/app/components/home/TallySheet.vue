@@ -38,7 +38,7 @@ watch(
   open,
   (isOpen) => {
     if (!isOpen) return
-    void stats.load()
+    void stats.load({ ifStale: true })
     void shelf.load()
   },
   { immediate: true },

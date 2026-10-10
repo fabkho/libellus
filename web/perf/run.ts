@@ -3,7 +3,7 @@
  *
  *   pnpm perf                                  all profiles, 5 runs each, prints the table
  *   pnpm perf --profile slow4g-4x --runs 7     one profile
- *   pnpm perf --journey start,tabs             some journeys (start, tabs, book, search, profile)
+ *   pnpm perf --journey start,tabs             some journeys (start, tabs, book, search, profile, revisit, window)
  *   pnpm perf --cpuprofile                     also save a V8 CPU profile of every step (.cpuprofile; perf/cpuprofile.py)
  *   pnpm perf --trace                          also save a Chrome trace of every step (perf/analyse.py)
  *
@@ -27,7 +27,7 @@ const { values: args } = parseArgs({
   options: {
     profile: { type: 'string', default: 'slow4g-4x,chromium,webkit' },
     runs: { type: 'string', default: '5' },
-    journey: { type: 'string', default: 'start,tabs,book,search,profile' },
+    journey: { type: 'string', default: 'start,tabs,book,search,profile,revisit' },
     label: { type: 'string', default: new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') },
     out: { type: 'string', default: '' },
     cpuprofile: { type: 'boolean', default: false },
@@ -193,6 +193,32 @@ const STEPS: StepDef[] = [
   },
   { id: 'e2-profile-back', journey: 'profile', label: 'Profile → back', act: (s) => s.page.goBack().then(() => {}), ready: visible('home.title'), settle: 800 },
 ]
+
+/** Library ⇄ Profile by the tab bar and the avatar, the way a member goes back and forth. */
+const toLibrary = (s: Session) => s.page.getByTestId('shell.tab.library').count().then((n) => (n ? s.tap('shell.tab.library') : s.page.goBack().then(() => {})))
+/** What a quick revisit costs (journey `revisit`: all inside the freshness window, FRESH_MS) and what a visit after it costs (`window`: asked after 61 s of waiting). */
+const REVISIT: StepDef[] = [
+  { id: 'f1-home-to-library', journey: 'revisit', label: 'Home → Library (first visit)', act: (s) => s.tap('shell.tab.library'), ready: visible('library.entry'), settle: 1500 },
+  { id: 'f2-library-to-profile', journey: 'revisit', label: 'Library → Profile (first visit)', act: (s) => s.tap('shell.avatar'), ready: visible('profile.figures'), settle: 2000 },
+  { id: 'f3-profile-to-library', journey: 'revisit', label: 'Profile → Library (revisit)', act: toLibrary, ready: visible('library.entry'), settle: 1500 },
+  { id: 'f4-library-to-profile', journey: 'revisit', label: 'Library → Profile (revisit)', act: (s) => s.tap('shell.avatar'), ready: visible('profile.figures'), settle: 2000 },
+  { id: 'f5-profile-to-library', journey: 'revisit', label: 'Profile → Library (revisit 2)', act: toLibrary, ready: visible('library.entry'), settle: 1500 },
+  {
+    id: 'g1-library-after-window',
+    journey: 'window',
+    label: 'Library, 61 s after the last read',
+    prepare: async (s) => {
+      await s.tap('shell.avatar')
+      await visible('profile.figures')(s)
+      await sleep(61_000)
+    },
+    act: toLibrary,
+    ready: visible('library.entry'),
+    settle: 1500,
+  },
+  { id: 'g2-profile-after-window', journey: 'window', label: 'Profile, 61 s after the last read', prepare: () => sleep(61_000), act: (s) => s.tap('shell.avatar'), ready: visible('profile.figures'), settle: 2000 },
+]
+STEPS.push(...REVISIT)
 
 async function runStep(s: Session, def: StepDef, dir: string): Promise<StepResult> {
   const t0 = Date.now()

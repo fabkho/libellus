@@ -91,6 +91,15 @@ export function uniqueAppleId(): string {
 }
 
 /**
+ * An Open Library edition key of an edition no real Book has, unique per call. `OL[1-9][0-9]{0,11}M`
+ * is what the books table's check and `catalogue_book_for` accept (F17), so a leading `1` keeps a
+ * random tail from spending the fixture on `book_invalid`.
+ */
+export function uniqueEditionKey(): string {
+  return `OL1${uniqueAppleId().slice(3, 11)}M`
+}
+
+/**
  * Removes this run's members (their Library entries go with them) and then the
  * test Books this run put into the Catalogue, now that no Library holds them.
  */

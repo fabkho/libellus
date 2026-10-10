@@ -6,11 +6,11 @@ contract (`social-v1-contract.md`) still holds: who may see what (`private.visib
 the seven switches, hidden Books, blocks both ways) is reused, never re-implemented.
 
 Added later, in the same release (owner, 11 October 2026): **Readers on a Book's page**, shown as **In your circle** (item 3 of
-`social-v1.md`, §1.5, §2, §3, §4 below; migration `20261021040000_book_readers.sql`; only the people she
+`social-v1.md`, §1.5, §2, §3, §4 below; migration `20261023040000_book_readers.sql`; only the people she
 follows, strangers are a later version).
 
-Two pull requests: **A** (§1–§4, migration `20261021010000_social_v2a.sql`) and **B** (§5, migration
-`20261021020000_catalogue_check.sql` and an edge function). Main's perf work takes `20261020*`.
+Two pull requests: **A** (§1–§4, migration `20261023010000_social_v2a.sql`) and **B** (§5, migration
+`20261023020000_catalogue_check.sql` and an edge function). Main's perf work takes `20261020*`, its security fixes `20261022*` (the cover allow-list `private.cover_allowed`, the Goodreads cache), so version 2a's four migrations are `20261023010000` (PR A), `…020000` (the checked Catalogue), `…030000` (rating-only reviews) and `…040000` (Readers), in that order.
 
 ## 1. Database (PR A)
 

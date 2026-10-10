@@ -113,6 +113,26 @@ describe('the repository', () => {
     expect(asked).toHaveLength(0)
   })
 
+  it('never sends the title or authors of a Manual Book (private to its owner): its ISBN alone, or nothing', async () => {
+    const { client, asked } = functions(() => ({ data: { status: 'not_found' }, error: null }))
+    const repository = createGoodreads(client)
+    // Without an ISBN a Manual Book is not asked about at all (the function would look it up by title).
+    const diary = book({ source: 'manual', isbn13: null, title: 'Zorbulax Geheim Tagebuch', authors: ['Ida Zorbulax'] })
+    expect(await repository.rating(diary)).toEqual({ data: null, error: null })
+    expect(asked).toHaveLength(0)
+    expect(goodreadsKey(diary)).toBeNull()
+    // With an ISBN (public catalogue data) it is asked by the ISBN, without a title.
+    await repository.rating({ ...diary, isbn13: '9780061803208' })
+    await repository.rating({ ...diary, isbn13: null, isbn10: '0061803200' })
+    expect(asked).toEqual([
+      { name: 'goodreads-rating', body: { isbn13: '9780061803208' } },
+      { name: 'goodreads-rating', body: { isbn13: '9780061803208' } },
+    ])
+    // Every other Book still sends its title and authors.
+    await repository.rating(book({ source: 'openlibrary' }))
+    expect(asked[2]!.body).toEqual({ isbn13: '9780061803208', title: expect.any(String), authors: ['Terry Pratchett'] })
+  })
+
   it('remembers a Book by its ISBN-13, else by title and first author; nothing to ask with is no key', () => {
     expect(goodreadsKey({ isbn13: '9780061803208', isbn10: null, title: 'Small Gods', authors: [] })).toBe('9780061803208')
     expect(goodreadsKey({ isbn13: null, isbn10: '0061803200', title: 'Small Gods', authors: [] })).toBe('9780061803208')
@@ -154,8 +174,20 @@ describe('the repository', () => {
 
 describe('the cache, as a member sees it', () => {
   const isbns: string[] = []
+  const titleKeys: string[] = []
   afterAll(async () => {
     await sql('delete from public.goodreads_ratings where isbn13 = any($1)', [isbns])
+    await sql('delete from public.goodreads_title_ratings where title_key = any($1)', [titleKeys])
+  })
+
+  it('the title cache holds the titles of Manual books, so no member reads it', async () => {
+    const key = `${runTitle('zorbulax geheim tagebuch').toLowerCase()}|zorbulax`
+    titleKeys.push(key)
+    await sql(`insert into public.goodreads_title_ratings (title_key, status) values ($1, 'not_found')`, [key])
+    const max = await signUpMember()
+    const read = await max.client.from('goodreads_title_ratings').select('title_key').eq('title_key', key)
+    expect(read.error?.code).toBe('42501')
+    expect(read.data).toBeNull()
   })
 
   it('a Library entry\'s Book carries its found rating; a miss is none; members cannot write it', async () => {

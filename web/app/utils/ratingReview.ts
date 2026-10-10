@@ -12,7 +12,7 @@
  *    halves a number above 5 ("8/10" is 4 stars);
  *  - a number above 5 with no `/10` ("1984", "7") is no rating (it may be a title or a year): the text stays a review;
  *  - 0 is a rating-only text with no rating (unrated).
- * supabase/migrations/20261021030000_rating_only_reviews.sql applies the same rule to reads already imported
+ * supabase/migrations/20261023030000_rating_only_reviews.sql applies the same rule to reads already imported
  * (a SQL regex of the same pattern): keep the two in step; tests/rating-review.test.ts pins the forms.
  * Pure: no framework, so a native port copies it.
  */

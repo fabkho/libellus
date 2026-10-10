@@ -182,6 +182,8 @@ export const useSyncStore = defineStore('sync', () => {
     // The reader's highlights change nothing the Library, the Collections or the days show.
     if (synced.every((action) => READER_ACTIONS.has(action))) return
     await library.load()
+    // What the Profile's record and the genres hold was read before these writes landed: their next visit asks again.
+    library.touch()
     if (library.readInYear !== null) void library.loadReadInYear()
     useHistoryStore().refresh()
     useProgressDaysStore().refreshAll()

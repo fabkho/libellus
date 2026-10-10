@@ -228,8 +228,8 @@ select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '[]')$
 -- ------------------------------------------------------------- a miss
 
 select is((select (title, description, cover_url, checked_at is not null, check_failed, check_unknown)::text from public.books where id = (select id from ids where name = 'b_missed')),
-  '("Missed Book",,https://example.org/' || md5('Missed Book') || '.jpg,t,f,t)',
-  'a Book its source does not know is checked and unknown, not failed, and its legacy description is cleared');
+  '("Missed Book",,,t,f,t)',
+  'a Book its source does not know is checked and unknown, not failed, its legacy description is cleared (and the cover off the allow-list never entered)');
 select tests.act_as((select id from ids where name = 'ben'));
 select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book') ->> 'title', 'Missed Book',
   'others still get its title (as for a Manual book: catalogue_check_unknown_test.sql has the rest)');

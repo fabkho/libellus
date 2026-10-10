@@ -38,8 +38,8 @@ let showing = false
 function show() {
   if (showing) return
   showing = true
-  void stats.load()
-  void bookGenres.load()
+  void stats.load({ ifStale: true })
+  void bookGenres.load({ ifStale: true })
   void shelf.load()
   // The Library tells the page, before the record does, whether anything is finished (below).
   if (!library.loaded) void library.load()

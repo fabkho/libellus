@@ -1,7 +1,8 @@
 // The wall behind sign-in: Fabian's best-rated reads and the books the design
 // round was drawn with, as Apple Books covers (600×900, CORS open). Nobody is
 // signed in on these screens, so the wall can't show a member's own books.
-// Hotlinked, loaded with low priority over the cloth-coloured placeholder.
+// Hotlinked, loaded with low priority over the cloth-coloured placeholder, at the size the wall
+// draws (components/auth/Frame.vue asks for `lg`: the URL's 600x900 is rewritten by `coverSrc`).
 export const WALL_COVERS: readonly { title: string, author: string, cover: string }[] = [
   { title: 'Dune', author: 'Frank Herbert', cover: 'https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/85/70/2f/85702f34-2982-e2ee-d883-b5ffc3ae0897/9781101658055.d.jpg/600x900bb.jpg' },
   { title: 'Stoner', author: 'John Williams', cover: 'https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/bf/1f/bc/bf1fbcda-11b3-4cee-2909-1104ebe422b6/9781590173930.jpg/600x900bb.jpg' },

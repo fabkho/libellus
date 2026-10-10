@@ -1,4 +1,4 @@
--- A review that is only a rating is a rating (migration 20261021030000_rating_only_reviews.sql):
+-- A review that is only a rating is a rating (migration 20261023030000_rating_only_reviews.sql):
 --   supabase test db
 --
 -- The text rule (private.rating_from_review_text, mirrored by web/app/utils/ratingReview.ts) in every form, and the

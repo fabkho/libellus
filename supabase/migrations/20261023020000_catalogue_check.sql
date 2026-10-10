@@ -284,7 +284,8 @@ comment on table private.catalogue_additions is
   'Social v2a §5: how many new Catalogue Books a member made on a day (catalogue_book_for refuses the 201st: catalogue_limit).';
 revoke all on private.catalogue_additions from public, anon, authenticated;
 
--- catalogue_book_for, from its latest body (20261011090000_own_edition.sql), whole; the only change is
+-- catalogue_book_for, from its latest body (20261022010000_catalogue_input.sql: no cover off the allow-list, Open Library
+-- keys in their pattern), whole; the only change is
 -- the count after a new row (and the description, which a client never stores for a Catalogue Book: null): a member makes at most 200 new Catalogue Books a day. The 201st is refused
 -- with `catalogue_limit` (PT429) and the whole add rolls back; a Book that is in the Catalogue already
 -- costs nothing (the first member's row is shared). Rows the check will read, one by one at the sources'
@@ -320,12 +321,25 @@ begin
     v_book.format := coalesce(v_book.format, 'ebook');
   end if;
 
+  -- A cover off the allow-list (private.cover_allowed, 20261022010000) is no cover: the Book is
+  -- added without it, with the thumbhash and colours that describe it (F1).
+  v_book.cover_url := nullif(btrim(v_book.cover_url), '');
+  if v_book.cover_url is not null and not private.cover_allowed(v_book.cover_url) then
+    v_book.cover_url       := null;
+    v_book.cover_thumbhash := null;
+    v_book.cover_dominant  := null;
+    v_book.cover_secondary := null;
+  end if;
+
   -- Only what search finds enters this way (see #41): Manual books have their
   -- own paths, and an `import` snapshot must match a Catalogue Book.
   if v_book.title is null
      or v_book.source is null
      or v_book.source not in ('apple', 'openlibrary', 'import')
-     or coalesce(v_book.isbn13, v_book.apple_id, v_book.openlibrary_edition_key) is null then
+     or coalesce(v_book.isbn13, v_book.apple_id, v_book.openlibrary_edition_key) is null
+     -- Open Library keys end up in a URL (F17): the table's check, refused politely.
+     or v_book.openlibrary_edition_key !~ '^OL[1-9][0-9]{0,11}M$'
+     or v_book.openlibrary_work_key !~ '^OL[1-9][0-9]{0,11}W$' then
     raise exception 'book_invalid' using errcode = '22023';
   end if;
 
@@ -468,7 +482,7 @@ revoke all on function private.catalogue_title_forms(text) from public, anon, au
 --                  names otherwise is marked failed and nothing is written)
 --   authors        text[], 1–20 names of at most 200 characters; else '{}'
 --   description    text of at most 10000 characters; else null
---   cover_url      https URL at covers.openlibrary.org or *.mzstatic.com; else no cover (and no
+--   cover_url      https URL on private.cover_allowed's list (Open Library's covers, Apple's artwork, the Regal library); else no cover (and no
 --                  thumbhash or colours: a new URL drops the old ones, which described another picture)
 --   publisher      text of at most 200 characters; else null
 --   language       two or three lower-case letters; else null
@@ -539,7 +553,9 @@ begin
 
   if jsonb_typeof(p_result -> 'cover_url') = 'string'
      and char_length(p_result ->> 'cover_url') <= 500
-     and (p_result ->> 'cover_url') ~* '^https://(covers\.openlibrary\.org|([a-z0-9-]+\.)+mzstatic\.com)/[^[:space:]]+$' then
+     and (p_result ->> 'cover_url') !~ '[[:space:]]'
+     -- The one allow-list (20261022010000): a cover off it is no cover (the books CHECK would refuse the whole update).
+     and private.cover_allowed(p_result ->> 'cover_url') then
     v_cover := p_result ->> 'cover_url';
   end if;
 
@@ -890,7 +906,8 @@ $$;
 revoke all on function public.member_reading_record(uuid) from public, anon;
 grant execute on function public.member_reading_record(uuid) to authenticated;
 
--- search_books, from its latest body (20261020020000_search_books_index.sql), whole; a search hands
+-- search_books, from its latest body (20261022010000_catalogue_input.sql: the query cut to 200 characters; its search path
+-- with pg_temp last, 20261022020000_goodreads_hardening.sql), whole; a search hands
 -- rows to others, so a Book that is not shown (private.book_shown: the check could not confirm it, and
 -- she does not have it in her Library) is left out.
 create or replace function public.search_books(p_query text, p_limit integer default 20)
@@ -898,11 +915,13 @@ returns setof public.books
 language plpgsql
 stable
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_limit  integer := least(greatest(coalesce(p_limit, 20), 1), 50);
-  v_isbn13 text := regexp_replace(coalesce(p_query, ''), '[\s-]', '', 'g');
+  -- No bound on the query was a free 8 s of CPU per call (F14, 20261022010000); the app never sends more.
+  v_query  text := left(p_query, 200);
+  v_isbn13 text := regexp_replace(coalesce(v_query, ''), '[\s-]', '', 'g');
   v_words  tsquery;
   v_text   text;
 begin
@@ -918,11 +937,11 @@ begin
     return;
   end if;
 
-  v_words := public.book_search_query(p_query);
+  v_words := public.book_search_query(v_query);
   if v_words is null then
     return;
   end if;
-  v_text := btrim(public.book_search_text(p_query, '{}'));
+  v_text := btrim(public.book_search_text(v_query, '{}'));
   return query
     select books.* from private.book_search s
       join public.books on books.id = s.book_id

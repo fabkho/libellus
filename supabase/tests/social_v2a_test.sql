@@ -155,55 +155,55 @@ update private.social_config set settle_window = interval '0';
 -- of them in 2020), her Dune and Solaris, and Emma to read.
 select tests.act_as((select id from ids where name = 'ida'));
 insert into ids values
-  ('pir',  tests.finished('Piranesi', 'OLPIR', 18, 'The twist is the house.', true)),
-  ('cir',  tests.finished('Circe', 'OLCIR', 16, 'Lovely.', false, current_date - 1)),
-  ('sec',  tests.finished('Secret Book', 'OLSEC', 12, null, false, current_date - 2)),
-  ('f1',   tests.finished('Old One', 'OLF1', 14, null, false, date '2020-05-05')),
-  ('f2',   tests.finished('Fourth', 'OLF2', 10, null)),
-  ('f3',   tests.finished('Fifth', 'OLF3', 10, null)),
-  ('f4',   tests.finished('Sixth', 'OLF4', 10, null)),
-  ('dune', tests.reading('Dune', 'OLDUNE')),
-  ('sol',  tests.reading('Solaris', 'OLSOL')),
-  ('emma', tests.wanting('Emma', 'OLEMMA'));
+  ('pir',  tests.finished('Piranesi', 'OL7770001W', 18, 'The twist is the house.', true)),
+  ('cir',  tests.finished('Circe', 'OL7770002W', 16, 'Lovely.', false, current_date - 1)),
+  ('sec',  tests.finished('Secret Book', 'OL7770003W', 12, null, false, current_date - 2)),
+  ('f1',   tests.finished('Old One', 'OL7770101W', 14, null, false, date '2020-05-05')),
+  ('f2',   tests.finished('Fourth', 'OL7770102W', 10, null)),
+  ('f3',   tests.finished('Fifth', 'OL7770103W', 10, null)),
+  ('f4',   tests.finished('Sixth', 'OL7770104W', 10, null)),
+  ('dune', tests.reading('Dune', 'OL7770004W')),
+  ('sol',  tests.reading('Solaris', 'OL7770005W')),
+  ('emma', tests.wanting('Emma', 'OL7770006W'));
 
 -- Pia (public): a spoiler review.
 select tests.act_as((select id from ids where name = 'pia'));
 select public.set_private(false);
-insert into ids values ('ham', tests.finished('Hamnet', 'OLHAM', 18, 'Everyone knows how it ends.', true));
+insert into ids values ('ham', tests.finished('Hamnet', 'OL7770007W', 18, 'Everyone knows how it ends.', true));
 
 -- Ben: Circe in another edition (older, 3 stars), Dune, Solaris, Emma, Old One, Ben's own Book.
 select tests.act_as((select id from ids where name = 'ben'));
 insert into ids values
-  ('b_cir',  tests.finished('Circe (Ben''s)', 'OLCIR', 12, null, false, current_date - 40)),
-  ('b_f1',   tests.finished('Old One (Ben''s)', 'OLF1', 20, null, false, date '2020-06-01')),
-  ('b_sec',  tests.finished('Secret Book (Ben''s)', 'OLSEC', 8, null)),
-  ('b_dune', tests.reading('Dune (Ben''s)', 'OLDUNE')),
-  ('b_sol',  tests.reading('Solaris (Ben''s)', 'OLSOL')),
-  ('b_emma', tests.wanting('Emma (Ben''s)', 'OLEMMA')),
-  ('b_sam',  tests.finished('Sam Wrote This (Ben''s)', 'OLSAM', 8, null)),
-  ('b_own',  tests.finished('Ben Wrote This', 'OLBEN', 14, 'Mine.'));
+  ('b_cir',  tests.finished('Circe (Ben''s)', 'OL7770002W', 12, null, false, current_date - 40)),
+  ('b_f1',   tests.finished('Old One (Ben''s)', 'OL7770101W', 20, null, false, date '2020-06-01')),
+  ('b_sec',  tests.finished('Secret Book (Ben''s)', 'OL7770003W', 8, null)),
+  ('b_dune', tests.reading('Dune (Ben''s)', 'OL7770004W')),
+  ('b_sol',  tests.reading('Solaris (Ben''s)', 'OL7770005W')),
+  ('b_emma', tests.wanting('Emma (Ben''s)', 'OL7770006W')),
+  ('b_sam',  tests.finished('Sam Wrote This (Ben''s)', 'OL7770008W', 8, null)),
+  ('b_own',  tests.finished('Ben Wrote This', 'OL7770009W', 14, 'Mine.'));
 
 -- Cy: Piranesi (another edition), Dune, Solaris, Emma.
 select tests.act_as((select id from ids where name = 'cy'));
 insert into ids values
-  ('c_pir',  tests.finished('Piranesi (Cy''s)', 'OLPIR', 16, null)),
-  ('c_dune', tests.reading('Dune (Cy''s)', 'OLDUNE')),
-  ('c_sol',  tests.reading('Solaris (Cy''s)', 'OLSOL')),
-  ('c_emma', tests.wanting('Emma (Cy''s)', 'OLEMMA'));
+  ('c_pir',  tests.finished('Piranesi (Cy''s)', 'OL7770001W', 16, null)),
+  ('c_dune', tests.reading('Dune (Cy''s)', 'OL7770004W')),
+  ('c_sol',  tests.reading('Solaris (Cy''s)', 'OL7770005W')),
+  ('c_emma', tests.wanting('Emma (Cy''s)', 'OL7770006W'));
 
 -- The rest read Dune (E1 to E3), Solaris and Emma (Sam, who only waits, and Dan, whom Ben does not follow).
 select tests.act_as((select id from ids where name = 'e1'));
-select tests.reading('Dune (E1)', 'OLDUNE'), tests.wanting('Emma (E1)', 'OLEMMA');
+select tests.reading('Dune (E1)', 'OL7770004W'), tests.wanting('Emma (E1)', 'OL7770006W');
 select tests.act_as((select id from ids where name = 'e2'));
-select tests.reading('Dune (E2)', 'OLDUNE');
+select tests.reading('Dune (E2)', 'OL7770004W');
 select tests.act_as((select id from ids where name = 'e3'));
-select tests.reading('Dune (E3)', 'OLDUNE');
+select tests.reading('Dune (E3)', 'OL7770004W');
 select tests.act_as((select id from ids where name = 'sam'));
-select tests.reading('Solaris (Sam)', 'OLSOL'), tests.wanting('Emma (Sam)', 'OLEMMA'), tests.finished('Sam Wrote This', 'OLSAM', 14, 'Sam''s.'), tests.finished('Circe (Sam''s)', 'OLCIR', 10, null);
+select tests.reading('Solaris (Sam)', 'OL7770005W'), tests.wanting('Emma (Sam)', 'OL7770006W'), tests.finished('Sam Wrote This', 'OL7770008W', 14, 'Sam''s.'), tests.finished('Circe (Sam''s)', 'OL7770002W', 10, null);
 select tests.act_as((select id from ids where name = 'dan'));
-select tests.reading('Solaris (Dan)', 'OLSOL'), tests.finished('Circe (Dan''s)', 'OLCIR', 8, null);
+select tests.reading('Solaris (Dan)', 'OL7770005W'), tests.finished('Circe (Dan''s)', 'OL7770002W', 8, null);
 select tests.act_as((select id from ids where name = 'uf'));
-select tests.finished('Uf Wrote This', 'OLUF', 14, null);
+select tests.finished('Uf Wrote This', 'OL7770010W', 14, null);
 
 -- Follows: Ben follows Ida, Pia, Cy and E1 to E3, and asked Sam; Cy, Dan, Uf and Rf follow Ida.
 reset role;
@@ -527,7 +527,7 @@ select ok((select relrowsecurity from pg_class where oid = 'public.likes'::regcl
 
 -- Ben finishes Piranesi too (another edition of the work): the fold lifts, and it is a book they share.
 select tests.act_as((select id from ids where name = 'ben'));
-insert into ids values ('b_pir', tests.finished('Piranesi (Ben''s)', 'OLPIR', 14, null));
+insert into ids values ('b_pir', tests.finished('Piranesi (Ben''s)', 'OL7770001W', 14, null));
 select is(tests.entry_of(public.feed(), 'Piranesi', 'finished') -> 'folded', 'false'::jsonb, 'once Ben has finished the Book his fold lifts');
 select is((select array_agg(r -> 'book' ->> 'title' order by ord)
              from jsonb_array_elements(public.both_read((select id from ids where name = 'ida'))) with ordinality t(r, ord)),
@@ -592,7 +592,7 @@ select is(public.circle_reading(array[(select book from dune)]) -> 0 -> 'members
 reset role;
 update public.library_entries e set added_at = now() - make_interval(hours => x.h)
   from (values ('e3', 1), ('e2', 2), ('e1', 3), ('ida', 4), ('cy', 5)) x(n, h), public.books b
- where e.member_id = (select id from ids where name = x.n) and b.id = e.book_id and b.openlibrary_work_key = 'OLDUNE';
+ where e.member_id = (select id from ids where name = x.n) and b.id = e.book_id and b.openlibrary_work_key = 'OL7770004W';
 select tests.act_as((select id from ids where name = 'ben'));
 select is((select array_agg(m ->> 'name') from jsonb_array_elements(public.circle_reading(array[(select book from dune)]) -> 0 -> 'members') m),
           array['E3', 'E2', 'E1'], 'the three shown are the newest entries first');

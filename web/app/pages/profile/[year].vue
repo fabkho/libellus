@@ -33,8 +33,8 @@ let showing = false
 function show() {
   if (showing) return
   showing = true
-  void stats.load()
-  void bookGenres.load()
+  void stats.load({ ifStale: true })
+  void bookGenres.load({ ifStale: true })
   void shelf.load()
 }
 onMounted(show)
