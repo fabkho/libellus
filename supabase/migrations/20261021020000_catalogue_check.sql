@@ -39,15 +39,18 @@
 --   checked          all of it, as the source said it.
 --   unchecked        title, authors and a cover by the S1 allowlist (private.cover_shown), as now; not
 --                    its description (private.description_shown).
---   failed           nothing a member sent: title null, authors [], no cover, no description, "unverified":
+--   failed           (a mismatch) nothing a member sent: title null, authors [], no cover, no description, "unverified":
 --                    true (private.book_shown), to everyone but members who have the Book in their own
 --                    Library, who read their row as they added it. A search leaves it out for them.
 -- A mismatch (the source's answer is another Book: a real ISBN with another Book's id) also clears the
 -- row's source keys (isbn13, isbn10, apple_id, Open Library keys), so the unique indexes free them for an
--- honest add; the members who hold the row keep it.
+-- honest add; the members who hold the row keep it, and the table (books_readable) shows the row to no one
+-- else, so a planted title is not readable through PostgREST either.
 -- Every answer that hands a Book to others asks book_shown: `reading_page_book_json` (so `social_book_json`,
 -- the feed, profiles, want lists, the reading page's Books, you both read, the circle, likes),
 -- `member_reading_record` (which also asks description_shown) and `search_books`.
+--   unknown          no source knows the Book (a miss: an import-only ISBN): shown as stored, like a Manual
+--                    book: title and authors, a cover by the allowlist, no description. Not hidden.
 --
 -- The function's address and secret, once, by the owner (supabase/functions/catalogue-check/README.md):
 --
@@ -62,16 +65,22 @@ create schema if not exists private;
 
 alter table public.books add column if not exists checked_at timestamptz;
 alter table public.books add column if not exists check_failed boolean not null default false;
+alter table public.books add column if not exists check_unknown boolean not null default false;
 
 comment on column public.books.checked_at is
   'Social v2a §5: when the catalogue-check function read this Catalogue Book at its source; null = not checked. '
   'Manual books are never checked.';
 comment on column public.books.check_failed is
-  'Social v2a §5: the source did not know this Book, or its answer is not this Book (checked_at is set, nothing was written; others see it as unverified, private.book_shown).';
+  'Social v2a §5: the source answered with another Book than this row says (a mismatch: checked_at is set, nothing was written, the keys are cleared; others do not see the row at all, and a member who has it sees it unverified, private.book_shown).';
+comment on column public.books.check_unknown is
+  'Social v2a §5: no source knows this Book (a miss: checked_at is set, no source text, the description null; shown to others as stored, like a Manual book, but its description).';
 
 alter table public.books drop constraint if exists books_manual_unchecked;
 alter table public.books add constraint books_manual_unchecked
-  check (owner_id is null or (checked_at is null and not check_failed));
+  check (owner_id is null or (checked_at is null and not check_failed and not check_unknown));
+
+alter table public.books drop constraint if exists books_check_one_state;
+alter table public.books add constraint books_check_one_state check (not (check_failed and check_unknown));
 
 -- A Book the check found to be another Book (a mismatch) loses its source keys: it is then a failed row
 -- with none (the unique indexes free them), so the key requirement holds for every row but those.
@@ -100,6 +109,22 @@ drop trigger if exists books_no_client_description on public.books;
 create trigger books_no_client_description
   before insert on public.books
   for each row execute function private.books_no_client_description();
+
+-- A Book the check found to be another Book (check_failed: a planted title, authors and cover under a real
+-- ISBN) is read through the table by the members who have it in their own Library and by no one else
+-- (books_readable, a stranger's `select … from books where check_failed` gives nothing). private.book_shown
+-- does the same inside the functions that hand Books out; the policy is the same rule for the table itself.
+-- (member_id, book_id) is library_entries_once_per_book: the lookup is one index probe.
+drop policy if exists books_readable on public.books;
+create policy books_readable on public.books
+  for select to authenticated
+  using (
+    owner_id = (select auth.uid())
+    or (owner_id is null
+        and (not check_failed
+             or exists (select 1 from public.library_entries e
+                         where e.member_id = (select auth.uid()) and e.book_id = books.id)))
+  );
 
 -- What the claim looks for: unchecked Catalogue Books, oldest first (a flood of new rows waits behind them).
 drop index if exists public.books_unchecked;
@@ -570,8 +595,10 @@ begin
 end;
 $$;
 
--- The source answered and does not know the Book: checked, failed, no source text written and the
--- description (a legacy client's) null. The Book keeps its keys: it may be found later.
+-- The source answered and does not know the Book (no Apple or Open Library record for its key): checked, and
+-- unknown, not failed: no source text was written and the description (a legacy client's) is null, the row
+-- keeps its keys and shows to others as stored, as a Manual book does (title, authors, a cover by the S1
+-- allowlist, no description). Nothing a source says contradicts it.
 create or replace function public.catalogue_check_miss(p_book uuid)
 returns boolean
 language plpgsql
@@ -582,7 +609,7 @@ declare
   v_found boolean;
 begin
   update public.books
-     set checked_at = now(), check_failed = true, description = null
+     set checked_at = now(), check_unknown = true, description = null
    where id = p_book and owner_id is null and checked_at is null;
   v_found := found;
   delete from private.catalogue_check_state where book_id = p_book;
@@ -590,7 +617,7 @@ begin
 end;
 $$;
 
--- The source's answer is another Book than the row says (its keys or title disagree): checked, failed,
+-- The source's answer is another Book than the row says (its title is not the row's): checked, failed,
 -- description null, and the source keys cleared, so the unique indexes free the ISBN, Apple id and edition
 -- key a member paired with another Book's for an honest add. Members who hold the row keep it, and read it
 -- as they added it (others see "unverified", private.book_shown).
@@ -651,7 +678,8 @@ set search_path = pg_catalog, public
 as $$
   select jsonb_build_object(
     'unchecked', (select count(*) from public.books where owner_id is null and checked_at is null),
-    'checked', (select count(*) from public.books where owner_id is null and checked_at is not null and not check_failed),
+    'checked', (select count(*) from public.books where owner_id is null and checked_at is not null and not check_failed and not check_unknown),
+    'unknown', (select count(*) from public.books where owner_id is null and check_unknown),
     'failed', (select count(*) from public.books where owner_id is null and check_failed),
     'backingOff', (select count(*) from private.catalogue_check_state where not_before > now()),
     -- The last call the cron made and what it answered (a 401 here: the token the function has is not the Vault's).
@@ -686,13 +714,13 @@ language sql
 immutable
 set search_path = pg_catalog
 as $$
-  select p_book.checked_at is not null and not p_book.check_failed
+  select p_book.checked_at is not null and not p_book.check_failed and not p_book.check_unknown
 $$;
 
 revoke all on function private.description_shown(public.books) from public, anon, authenticated;
 
--- Whether a Book may be handed to somebody else as what it says it is. A Book the check could not
--- confirm (its source does not know it, or its answer is not this Book: check_failed) is shown to no
+-- Whether a Book may be handed to somebody else as what it says it is. A Book the check found to be
+-- another Book (check_failed: its source's answer contradicts the row's title) is shown to no
 -- one but the members who have it in their own Library, where it is her row as she added it; to
 -- everyone else (a follower, a visitor of a reading page, the search) it is nothing a member sent.
 -- Every answer that hands a Book to others asks this, as the cover ones ask cover_shown.

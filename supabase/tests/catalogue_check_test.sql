@@ -10,7 +10,7 @@
 -- check's functions.
 
 begin;
-select plan(36);
+select plan(37);
 
 create schema if not exists tests;
 
@@ -227,12 +227,13 @@ select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '[]')$
 
 -- ------------------------------------------------------------- a miss
 
-select is((select (title, description, cover_url, checked_at is not null, check_failed)::text from public.books where id = (select id from ids where name = 'b_missed')),
-  '("Missed Book",,https://example.org/' || md5('Missed Book') || '.jpg,t,t)',
-  'a Book its source does not know is failed and checked, and its legacy description is cleared');
+select is((select (title, description, cover_url, checked_at is not null, check_failed, check_unknown)::text from public.books where id = (select id from ids where name = 'b_missed')),
+  '("Missed Book",,https://example.org/' || md5('Missed Book') || '.jpg,t,f,t)',
+  'a Book its source does not know is checked and unknown, not failed, and its legacy description is cleared');
 select tests.act_as((select id from ids where name = 'ben'));
-select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book'), null,
-  'and nothing vouches for its text: others no longer get its title, nor its description (catalogue_check_failed_test.sql has the rest)');
+select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book') ->> 'title', 'Missed Book',
+  'others still get its title (as for a Manual book: catalogue_check_unknown_test.sql has the rest)');
+select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book') -> 'description', 'null'::jsonb, 'but no description');
 
 -- ------------------------------------------------------ who may call, the kick
 
