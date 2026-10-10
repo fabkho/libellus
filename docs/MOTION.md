@@ -124,6 +124,12 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   Chromium at CPU 6x (`pnpm perf:flows`, flows `book-tilt`, `book-back-held`, `home-to-book-pressed`):
   no dropped frame while dragging, about 1 ms of style work per frame at 6x, and the flight in and
   out unchanged against the build without it.
+- **Collections row** (the Library's way into Collections, A13). With no covers to fan (no
+  Collections, only empty ones, or the list still loading) the row shows bookends in the fan's
+  place. Covers that arrive while the row is on screen (the list loading, a first cover added) fade
+  in over the bookends as they fade out, over `standard`, in place; the last cover gone, the other
+  way. Nothing travels or resizes, and covers the row opens with are simply there. With Reduce
+  Motion, a swap.
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
