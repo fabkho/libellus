@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book } from './books'
 import { LIST_BOOK_COLUMNS, bookFromRow, mapLibraryError, type BookRow, type Result, type SessionOutcome } from './library'
+import { allPages } from './paging'
 import { pageCountOf } from './progress'
 import { amountOf, dayFromRow, unitOf } from './progressDays'
 import { addDays, daysSpanned } from '../utils/dates'
@@ -319,26 +320,6 @@ export function readingDaysSummary(days: readonly ReadingDay[], count = 30) {
 export type Stats = {
   /** The member's reading record as of `today` (`YYYY-MM-DD`, the member's day). */
   record: (today: string) => Promise<Result<ReadingRecord>>
-}
-
-/** The most rows the API returns for one request (`max_rows`, supabase/config.toml). */
-const PAGE = 1000
-
-/**
- * Every row of a query, page by page: the API answers at most `PAGE` rows a
- * request, and a member's whole history (an imported Library) can be more.
- * The query must have a stable order for the pages to meet.
- */
-async function allPages<Row>(
-  page: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message?: string; code?: string } | null }>,
-): Promise<{ data: Row[]; error: null } | { data: null; error: { message?: string; code?: string } }> {
-  const rows: Row[] = []
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1)
-    if (error) return { data: null, error }
-    rows.push(...(data ?? []))
-    if (!data || data.length < PAGE) return { data: rows, error: null }
-  }
 }
 
 export function createStats(client: SupabaseClient): Stats {

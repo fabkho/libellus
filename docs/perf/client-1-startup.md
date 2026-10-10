@@ -222,6 +222,7 @@ re-running `pnpm perf` on the fix.
 - Evidence: `app/pages/index.vue:45` (`onActivated(load)`), `app/pages/library.vue:101` (`onActivated(() => library.load() …)`), `stores/library.ts:96` `load()` has no freshness window: `loadedAt` only discards *older answers*. Home→Library: 40 requests, **3 × `library_entries` = 350 KB JSON / 111 KB brotli** 2 s after the previous load; Profile→Home: the same again (93 KB brotli); Profile open: `reading_sessions` 237 KB + `progress_days` 55 KB + genres 22 KB, every time. The parse/mapping lands in the tab-switch animation: LoAF `lRaWNZUA.js Response.text.then` **76–175 ms**, `setTimeout` frame 107–186 ms on Library mount, TBT 57–102 ms (4x), worst frame 117 ms (6x: 183–233 ms, 201 / 328 ms LoAF). This is the likeliest source of the owner's occasional stutters: they come with the tab switch, not with scrolling.
 - Fix: a freshness window (skip the refresh when the lists are younger than e.g. 60 s and nothing changed on the device (`lastChange`)); refresh on `visibilitychange` and pull-to-refresh instead; one RPC for the three lists; later a delta (`updated_at`/ETag) so a refresh answers in bytes, not hundreds of KB. Same treatment for the Profile's sessions.
 - Risk: medium (stale Library after an add on another device: the outbox/`lastChange` rules exist; needs tests in `tests/`); offline paths unchanged. Expected: −100–200 ms main thread per tab switch, −100–450 KB per switch; removes the long frame at b1/b3/b4. Tier: **Sonnet** (logic + data-layer tests).
+- **Status: Fixed** for Home and the Library in #255 (§8's tab journeys), and for the Profile's record, the genres and the Collections list in §9. A server stamp for a refetch after the window was weighed and **not built** (§9.3).
 
 **F-2. Cold start is bytes and main-thread bound; the entry is 186 KB brotli and 57 % of its main chunk is the Supabase client** — impact high (first launch, every update), effort M
 - Evidence: §3.1 (1,009 ms unattributed LoAF = entry parse/compile; ~400 KB brotli before first paint on a 200 KB/s link), §3.3 (supabase-js parts 57 %, **realtime + phoenix 95 KB unminified for a feature the app never uses**, message compiler 36 KB shipped for precompiled messages), the two experiments (waterfall fixes alone give ≤ 60 ms).
@@ -315,3 +316,111 @@ re-running `pnpm perf` on the fix.
 The two LCP figures are not comparable: the later one is real content. The cold first paint moved
 by the Realtime bytes only (−55 to −80 ms); the prefetch change is what halves the long frames and
 brings the first cover forward.
+
+
+## 9. The 1,000-row cap and the refetches #255 left (F-1, second half)
+
+Local stack `libellus-perf-ppg` (own ports 55691–55699), the synthetic 150-entry member of §1, the
+production build of `origin/main` (`46dfb6a0`) against the build with this change, `slow4g-4x`
+(Chromium, CPU 4x, 1.6 Mbit/s, 150 ms), **5 runs each, medians**, journeys `revisit` and `window`
+(new in `perf/run.ts`). Load average at the start of the series: **2.8 (before) and 4.3 (after)**
+on a Mac shared with other workers, so the timings are indicative; request counts and bytes do not
+move with load (spread under 1 %).
+
+### 9.1 The cap (correctness, proven)
+
+`supabase/config.toml` has `max_rows = 1000` (the local value; the hosted project is configured in
+its dashboard and was not read here: production is out of bounds). PostgREST cuts every answer at
+that many rows **without an error**, and also the rows embedded under one parent: a Collection with
+1,150 entries answers 1,000 (`tests/library-cap.test.ts` shows both against the real server; on the
+code before this change the same test reads 1,000 of 1,150).
+
+Whole-table reads of the member's, and what became of each:
+
+| Read | Rows | Before | Now |
+| --- | --- | --- | --- |
+| the three Status lists (`entries(status)`) | one per entry | one request, cut at 1,000 | paged |
+| Search's Library copy (`libraryEntries`) | one per entry | one request, cut at 1,000 | paged |
+| `library_genres` (genre filter, Profile figures) | one per entry | one request, cut at 1,000 | paged (`order=entry_id`) |
+| a Collection page (`collections.get`) | its entries, embedded | cut at 1,000 | paged (`range` on the embedded table, by position) |
+| the days of the reads on screen (`progressDays`) | days of the asked sessions | cut at 1,000 | paged (session, day) |
+| the Profile's sessions and days (`stats.record`) | sessions, days | already paged (a private `allPages` in `data/stats.ts`) | now the shared helper |
+| import's keys, the export | one per entry | already paged | unchanged |
+| descriptions (40 ids), Apple ids (the result's ≤ 25), one entry's sessions, the Collections list (rows = Collections, 4 covers each) | bounded | one request | unchanged |
+
+Method: `data/paging.ts` (`allPages`, pages of 1,000 = the server's cap, until a short page, one at a
+time, so a member under the cap still costs the one request it did), a total order with the id last
+(`added_at desc, id`; `position`; `entry_id`; `session_id, day`), and a row that two pages both carried
+(a write between them) kept once. All or nothing: the first failed page is the error and no rows, so
+the Library store keeps the good Library it had (`tests/library-paging-store.test.ts`: page 2 failing
+leaves the 2,500 entries as they were and shows the error). What a page cannot see: a delete between
+two pages can move a row past the page boundary; that member's own change re-reads (`lastChange`), another
+device's is read at the next visit. `PAGE_SIZE` must not exceed the server's `max_rows`: a bigger page
+would be cut and taken for the last.
+
+Tests: `tests/paging.test.ts` (a client that cuts at 1,000 holding 2,500 rows: three requests, whole, in
+order, no duplicates, failure on page 2/3 is an error), `tests/library-paging-store.test.ts`,
+`tests/library-cap.test.ts` (1,150 entries all added the same instant and read the same day, against
+the real PostgREST).
+
+### 9.2 Refetch gating beyond Home (proven)
+
+The rule of #255 (60 s, `load({ ifStale })`) now also covers the Profile's record
+(`stats.load`), the genres (`library_genres`) and the Collections list on the Library tab, through one
+helper, `createFreshness` (`utils/fresh.ts`): nothing is fresh until a read has landed; a **change of
+hers** forgets it at once (`Library.changes`: a finish, an edit or removal of a read, an add; `roster`,
+for the genres: an entry came, went or changed Book; the outbox drained; her own genre correction;
+every change to a Collection), and a read that was asked before the change and lands after it never
+makes the data fresh: it is read once more. Retry, back online, a member change and the e2e build
+(`FRESH_MS` 0) ask as before.
+
+Requests to the API per tab switch (not counting preflights; KB = brotli on the wire; medians of 5):
+
+| step | before | after |
+| --- | ---: | ---: |
+| Home → Library, first visit of the session (genres, Collections, authors) | 3 / 18.6 KB | 3 / 18.6 KB |
+| Library → Profile, first visit (one request fewer: the genres were read a moment ago) | 6 / 23.1 KB | 5 / 16.3 KB |
+| **Profile → Library**, quick revisit | 2 / 15.9 KB | **0 / 0** |
+| **Library → Profile**, quick revisit (sessions 14.3, days, genres 6.9) | 4 / 21.9 KB | **0 / 0** |
+| **Profile → Library**, second revisit | 2 / 15.7 KB | **0 / 0** |
+| Library, 61 s after the last read | 5 / 48.6 KB | 5 / 48.8 KB |
+| Profile, 61 s after the last read | 4 / 22.8 KB | 4 / 22.9 KB |
+
+Ready times (tap → screen), before → after: 206 → 205, 225 → 216, 148 → 144, 145 → 140, 143 → 142,
+139 → 140, 148 → 149 ms; spread 4–16 % (the 16 % is the revisit to the Profile, after), so no change is
+claimed. The saving is requests and bytes (about 38 KB per Library ⇄ Profile round, plus the
+parse and the re-render the answers cost on a phone), not a faster screen: the screens show the device
+copy meanwhile. The harness does not log the Profile's two `head` counts, so Profile counts are two
+short in both columns. Tests: `tests/refetch-gating.test.ts` (the rule, and per store: a quick revisit
+is 0 requests, a visit after the window one, forced always asks, a change forgets it, a read in flight
+when a change is made is read again, a failure is asked again at the next visit),
+`tests/library-fresh.test.ts` (`change signals`).
+
+### 9.3 A change stamp: measured, not built
+
+The idea: a cheap server stamp so a visit after the window asks one tiny question and skips the
+reads when nothing changed. What it would save, measured on the two visits after the window above:
+
+| Visit after the window | requests / KB now | with a stamp, nothing changed | with a stamp, something changed |
+| --- | ---: | ---: | ---: |
+| Library (3 lists, genres, Collections) | 5 / 48.8 KB | 1 / ~0.2 KB | 6 / 49 KB, one round trip later |
+| Profile (sessions, days, genres) | 4 / 22.9 KB | 1 / ~0.2 KB | 5 / 23 KB, one round trip later |
+
+That is **about 70 KB brotli (200 KB decoded) per pair of visits at 150 entries**, and it grows with
+the Library (about 7x at 1,000 entries: ~330 KB brotli). Why it is **not built now**:
+
+- **It saves bytes, not time.** The screens already show the device copy while the read runs
+  (stale-while-revalidate): ready 139 ms with the five requests, and the longest answer takes 0.25 s at
+  1.6 Mbit/s. A phone on a normal connection does not feel it. At production's volume (one member, ~100
+  Home activations a day, at most a part of them past the window) it is a few MB a day at most.
+- **The stamp would be wrong with what exists.** `library_entries` has no `updated_at`, and edits of a
+  read (rating, review, dates), a format, `read_as`, `hidden`, a genre correction or a Collection's order
+  change nothing `count(*)` and `max(added_at, progress_updated_at, created_at)` can see; a delete plus an
+  add keeps the count. A correct stamp is a per-member counter bumped by triggers on six tables
+  (entries, sessions, progress days, collections, collection entries, entry genres), a new table with
+  an RLS rule and a pgTAP test, and a write on every progress save: the cost and the risk are larger than
+  the saving.
+- **Worth revisiting** when a member holds ~1,000 entries (a post-window visit is then ~330 KB brotli,
+  and a Goodreads import makes that member real), or if a native client needs a cheap change check; the
+  design is in `docs/perf/backend.md` F4.3.
+
