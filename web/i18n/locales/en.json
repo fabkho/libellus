@@ -1760,6 +1760,8 @@
     "textPrivate": "Send it to friends in Libellus. Your account is private, so they ask and you decide.",
     "textPublic": "Send it to friends in Libellus. Your account is public, so they can follow you straight away.",
     "offline": "You're offline. Your link shows once you're back.",
+    "qrLabel": "QR code of your follow link",
+    "qrHint": "Let someone scan this to follow you.",
     "share": "Share link",
     "copy": "Copy",
     "copied": "Copied.",
