@@ -7,15 +7,17 @@
 import type { MemberCard } from '~/data/socialShapes'
 import { useMemberPhotosStore } from '~/stores/memberPhotos'
 
-// `large`: the 512 px file, for a hero; rows take the 128 px one.
-const props = withDefaults(defineProps<{ card: MemberCard; size?: 'small' | 'large' }>(), { size: 'small' })
+// `large`: the 512 px file, for a hero; rows take the 128 px one. `single`: one initial, the first letter of her
+// name (the small avatars on a cover, CircleAvatars: two letters do not fit in a disc that small).
+const props = withDefaults(defineProps<{ card: MemberCard; size?: 'small' | 'large'; single?: boolean }>(), { size: 'small', single: false })
 const photos = useMemberPhotosStore()
 const photo = computed(() => photos.photoOf(props.card, props.size))
 
 const { t } = useI18n()
-const initials = computed(() =>
-  props.card.name?.trim() ? initialsOf('', props.card.name) : ([...t('member.someone')][0] ?? '?').toLocaleUpperCase(),
-)
+const initials = computed(() => {
+  const all = props.card.name?.trim() ? initialsOf('', props.card.name) : ([...t('member.someone')][0] ?? '?').toLocaleUpperCase()
+  return props.single ? ([...all][0] ?? all) : all
+})
 </script>
 
 <template>
