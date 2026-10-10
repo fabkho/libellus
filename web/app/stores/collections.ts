@@ -12,6 +12,7 @@ import {
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import { readCollections, saveCollections } from '~/data/deviceLibrary'
 import type { LibraryEntry } from '~/data/library'
+import { createFreshness } from '~/utils/fresh'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -35,7 +36,9 @@ export type Naming = { mode: 'create' } | { mode: 'rename'; id: string }
  * Collections), one Collection's page, which Collections a Book is on (the book
  * page), the collection picker and the name sheet. Every change goes through
  * the repository as one call and shows at once; the list refreshes behind it.
- * Signing out (or another member signing in) forgets all of it.
+ * The Library tab asks for the list when it is shown, but not again within `FRESH_MS` of the
+ * last answer (`loadList({ ifStale })`, utils/fresh.ts), and every change made here forgets
+ * that at once, so the next visit reads what the database has. Signing out (or another member signing in) forgets all of it.
  *
  * The device keeps a copy of the list, the Collections opened here and the
  * memberships it knows (data/deviceLibrary.ts, issue #15), written whenever
@@ -72,9 +75,20 @@ export const useCollectionsStore = defineStore('collections', () => {
   const loadError = ref<CollectionErrorCode | null>(null)
 
   let listing: Promise<void> | null = null
+  const freshness = createFreshness()
 
-  /** Reads the list (again). Asking while a read is on its way waits for that one. */
-  function loadList(): Promise<void> {
+  /**
+   * Reads the list (again). `ifStale`: the Library tab being shown, which a list this fresh stands for;
+   * anything else asks. Asking while a read is on its way waits for that one, which then reads once
+   * more if the ask was a change (`readList`).
+   */
+  function loadList({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
+    if (ifStale) {
+      if (listing) return listing
+      if (loaded.value && !loadError.value && freshness.isFresh()) return Promise.resolve()
+    } else if (listing) {
+      freshness.invalidate()
+    }
     listing ??= readList().finally(() => (listing = null))
     return listing
   }
@@ -85,8 +99,11 @@ export const useCollectionsStore = defineStore('collections', () => {
     // Offline the device's copy stands (with none, it is asked and fails visibly).
     if ((!isOnline() || waiting()) && loaded.value) return
     const member = session.member?.id
+    const ticket = freshness.ask()
     const result = await collections.list()
     if (member !== session.member?.id) return
+    // A change was made meanwhile (or asked for again): this answer may not have it.
+    if (freshness.outdated(ticket)) return readList()
     if (result.error) {
       loadError.value = result.error
       return
@@ -94,10 +111,12 @@ export const useCollectionsStore = defineStore('collections', () => {
     loadError.value = null
     list.value = result.data
     loaded.value = true
+    freshness.landed(ticket)
   }
 
   /** The list entry, kept in step with a change made here. */
   function patchSummary(id: string, change: (summary: CollectionSummary) => CollectionSummary) {
+    freshness.invalidate()
     list.value = list.value.map((summary) => (summary.id === id ? change(summary) : summary))
   }
 
@@ -133,6 +152,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   }
 
   function setEntries(id: string, entries: LibraryEntry[]) {
+    freshness.invalidate()
     const current = pages.get(id)
     if (current?.collection) pages.set(id, { ...current, collection: { ...current.collection, entries } })
     patchSummary(id, (summary) => ({ ...summary, count: entries.length, covers: entries.slice(0, MOSAIC_SIZE).map((e) => e.book) }))
@@ -165,6 +185,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     if (!isValidName(name)) return { data: null, error: 'name_invalid' }
     const result = await collections.create(name)
     if (result.error) return result
+    freshness.invalidate()
     list.value = [...list.value.filter((summary) => summary.id !== result.data.id), result.data]
     loaded.value = true
     return result
@@ -188,6 +209,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     const result = await collections.delete(id)
     // Gone already (another device) is as good as deleted.
     if (result.error && result.error !== 'collection_missing') return result.error
+    freshness.invalidate()
     list.value = list.value.filter((summary) => summary.id !== id)
     pages.delete(id)
     for (const [entry, ids] of memberships) memberships.set(entry, ids.filter((other) => other !== id))
@@ -469,6 +491,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   // ------------------------------------------------------------------- reset
 
   function reset() {
+    freshness.invalidate()
     list.value = []
     loaded.value = false
     loadError.value = null

@@ -22,9 +22,9 @@ const fan = computed(() =>
 )
 
 // The Library page is kept alive: read the list when this row appears, and
-// again whenever the page shows again.
-onMounted(() => void collections.loadList())
-onActivated(() => void collections.loadList())
+// again whenever the page shows again, unless it is fresh (stores/collections.ts, `FRESH_MS`).
+onMounted(() => void collections.loadList({ ifStale: true }))
+onActivated(() => void collections.loadList({ ifStale: true }))
 const session = useSessionStore()
 watch(
   () => session.member?.id,
