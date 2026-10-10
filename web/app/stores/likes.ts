@@ -8,9 +8,11 @@ import { shownFace, toggledFace, type LikeFace, type LikeOverride } from '~/util
  * Likes (social v2a, contract §1.2 and §3): the hearts on other members' finished reads and, for her own
  * reads, who liked them. A tap shows its result at once and is sent; the database's answer (the count now)
  * replaces it, a refusal takes it back and the row says so (`failed`). Likes need the connection: offline
- * the heart says Offline and nothing is sent or queued. Home's "Your circle" lists her reads liked this
+ * the heart stays faint and nothing is sent or queued. Home's "Your circle" lists her reads liked this
  * week (`recent`, read with the feed's refresh); the device keeps the last answer for an offline Home.
- * Signing out, or another member signing in, forgets everything.
+ * Signing out, or another member signing in, forgets everything; so does a member who leaves her circle
+ * (`dropMember`: unfollow, block, remove as follower — the database deletes the likes between them, and nothing
+ * of her stays in memory or on the device).
  */
 
 const DEVICE_KEY = `${LOCAL_DATA_PREFIX}likes`
@@ -36,6 +38,8 @@ export const useLikesStore = defineStore('likes', () => {
   const busy = reactive<Record<string, boolean>>({})
   /** The last tap on this read was refused (and taken back). */
   const failed = reactive<Record<string, boolean>>({})
+  /** Whose read each tapped heart is on (`dropMember` finds her hearts by it). */
+  const owners: Record<string, string> = {}
 
   /** What the heart of a read shows, given what its row says. */
   function face(session: string, base: LikeFace): LikeFace {
@@ -43,7 +47,7 @@ export const useLikesStore = defineStore('likes', () => {
   }
 
   /** Likes the read, or takes the like back. Returns false for a refusal. Offline it does nothing (the heart says Offline). */
-  async function toggle(read: string, base: LikeFace): Promise<boolean> {
+  async function toggle(read: string, base: LikeFace, owner?: string): Promise<boolean> {
     const r = repo()
     if (!r || busy[read] || !online.value) return false
     const member = session.member?.id
@@ -51,10 +55,12 @@ export const useLikesStore = defineStore('likes', () => {
     const next = toggledFace(now)
     failed[read] = false
     busy[read] = true
+    if (owner) owners[read] = owner
     overrides[read] = { face: next, base }
     const result = await (now.liked ? r.unlike(read) : r.like(read))
     busy[read] = false
-    if (member !== session.member?.id) return false
+    // She left the circle meanwhile (`dropMember`): nothing of her read is kept.
+    if (member !== session.member?.id || (owner && owners[read] !== owner)) return false
     if (result.error) {
       // Taken back: the row says what it said before the tap.
       delete overrides[read]
@@ -118,8 +124,31 @@ export const useLikesStore = defineStore('likes', () => {
     }
   }
 
+  /**
+   * A member left her circle: she goes from Home's likes (an item with nobody left goes; the count loses her),
+   * from the device's copy of them and from the hearts tapped on her reads.
+   */
+  function dropMember(id: string) {
+    for (const [read, owner] of Object.entries(owners)) {
+      if (owner !== id) continue
+      delete overrides[read]
+      delete busy[read]
+      delete failed[read]
+      delete owners[read]
+    }
+    if (!recent.value?.some((item) => item.likers.some((liker) => liker.id === id))) return
+    recent.value = recent.value
+      .map((item) => {
+        const likers = item.likers.filter((liker) => liker.id !== id)
+        return likers.length === item.likers.length ? item : { ...item, likers, count: Math.max(likers.length, item.count - 1) }
+      })
+      .filter((item) => item.likers.length > 0)
+    const member = session.member?.id
+    if (member) save(member, recent.value)
+  }
+
   function reset() {
-    for (const map of [overrides, busy, failed] as Record<string, unknown>[]) for (const key of Object.keys(map)) delete map[key]
+    for (const map of [overrides, busy, failed, owners] as Record<string, unknown>[]) for (const key of Object.keys(map)) delete map[key]
     recent.value = null
     loading = null
   }
@@ -134,5 +163,5 @@ export const useLikesStore = defineStore('likes', () => {
   )
   restore()
 
-  return { face, toggle, busy, failed, recent, loadRecent, likers, reset }
+  return { face, toggle, busy, failed, recent, loadRecent, likers, dropMember, reset }
 })

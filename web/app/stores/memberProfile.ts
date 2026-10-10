@@ -123,6 +123,8 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       ...(open ? {} : { record: null, want: null }),
       ...(open && !profile.sections.year ? { record: null } : {}),
       ...(open && !wantsAll ? { want: null } : {}),
+      // "You both read" is hers to show only while her finished section is on and the profile open (privacy review L4).
+      ...(open && profile.sections.finished ? {} : { bothRead: {} }),
     })
     await Promise.all([wantsRecord ? loadRecord(id, run) : null, wantsAll ? loadWant(id, run) : null, open && profile.sections.finished ? loadBothRead(id, year, run) : null])
   }

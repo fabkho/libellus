@@ -131,6 +131,25 @@ describe('You both read (social v2a)', () => {
     expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, error: null, recordError: null, loaded: true })
   })
 
+  it('is cleared once her finished section is off, or her profile closes (privacy review L4)', async () => {
+    bothAnswer = { data: [read], error: null }
+    const members = await store()
+    await members.load('ida')
+    expect(members.viewOf('ida').bothRead).toEqual({ all: [read] })
+    // She turns her finished section off: the next read of her profile takes the row away.
+    answer = { ...followed, sections: { ...OPEN, finished: false } }
+    await members.load('ida')
+    expect(members.viewOf('ida').bothRead).toEqual({})
+    // It comes back with the section, and goes again with a profile that closes (a private card).
+    answer = followed
+    await members.load('ida')
+    expect(members.viewOf('ida').bothRead).toEqual({ all: [read] })
+    answer = { member: card, private: true, state: 'none', visible: false }
+    await members.load('ida')
+    expect(members.viewOf('ida').bothRead).toEqual({})
+    answer = followed
+  })
+
   it('is not asked for a profile that hides her finished Books', async () => {
     answer = { ...followed, sections: { ...OPEN, finished: false } }
     const members = await store()

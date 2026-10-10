@@ -136,6 +136,33 @@ describe('the circle on her Books', () => {
     await vi.waitFor(() => expect(asked('circle_reading')).toHaveLength(1))
   })
 
+  it('takes a member who left her circle out of every group at once, and a group with nobody left goes (privacy review M2)', async () => {
+    const circle = await store()
+    await circle.load()
+    expect(circle.reading.r1?.members).toEqual([CARD])
+    circle.dropMember('ben')
+    expect(circle.reading).toEqual({})
+    expect(circle.want).toEqual({})
+  })
+
+  it('keeps the others of a group', async () => {
+    const circle = await store()
+    await circle.load()
+    const cleo = { id: 'cleo', name: 'Cleo', photo: null }
+    circle.reading = { r1: { members: [CARD, cleo], more: 1 } }
+    circle.dropMember('ben')
+    expect(circle.reading).toEqual({ r1: { members: [cleo], more: 1 } })
+  })
+
+  it('throws away an answer that was on its way when she left (it may still name her)', async () => {
+    const circle = await store()
+    const asking = circle.load()
+    circle.dropMember('ben')
+    await asking
+    expect(circle.reading).toEqual({})
+    expect(circle.want).toEqual({})
+  })
+
   it('forgets everything when another member signs in', async () => {
     const circle = await store()
     await circle.load()
