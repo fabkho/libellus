@@ -1,0 +1,243 @@
+######## a_search.mjs
+max add_manual_book                            200 {"id":"8cba88fb-1814-46d4-8d08-4b58cd4fc3e8","member_id":"56417f73-fdff-49fc-8d40-bcea0ea4ffbf","book_id":"e67667e3-8aac-402b-bbf8-5b7089b3c4d0","sta
+ida add_manual_book                            200 {"id":"34c8c839-dacf-4411-b602-7758039a22dd","member_id":"32c84494-07f6-4172-bd1e-c1c35bf60a06","book_id":"21296333-c72c-47ad-9bc3-193768365833","sta
+ida search "Zorbulax"                          200 [{"id":"523f0f0b-24d8-4a58-a9ef-b09403cbfe73","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn10":nul
+ida search "Zorb" prefix                       200 [{"id":"523f0f0b-24d8-4a58-a9ef-b09403cbfe73","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn10":nul
+ida search isbn 9780306406157                  200 [{"id":"281c98ff-a3e0-48ba-8a66-6f2b5d8dd88d","title":"Collider","authors":["A"],"isbn13":"9780306406157","isbn10":null,"page_count":1,"published_yea
+ida search Maximus                             200 [{"id":"523f0f0b-24d8-4a58-a9ef-b09403cbfe73","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn10":nul
+cleo search "Zorbulax"                         200 [{"id":"056716dc-dcdc-46ed-8349-c69f5a173796","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":null,"isbn10":null,"page_cou
+cleo search "Zorb" prefix                      200 [{"id":"056716dc-dcdc-46ed-8349-c69f5a173796","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":null,"isbn10":null,"page_cou
+cleo search isbn 9780306406157                 200 [{"id":"523f0f0b-24d8-4a58-a9ef-b09403cbfe73","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn10":nul
+cleo search Maximus                            200 [{"id":"056716dc-dcdc-46ed-8349-c69f5a173796","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":null,"isbn10":null,"page_cou
+anon search "Zorbulax"                         401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function search_books"} 1ms
+anon search "Zorb" prefix                      401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function search_books"} 1ms
+anon search isbn 9780306406157                 401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function search_books"} 1ms
+anon search Maximus                            401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function search_books"} 1ms
+max sees own                                   200 [{"id":"e67667e3-8aac-402b-bbf8-5b7089b3c4d0","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn10":nul
+max sees own by isbn                           200 [{"id":"e67667e3-8aac-402b-bbf8-5b7089b3c4d0","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn10":nul
+ida sees Max via REST books?title              200 [{"id":"523f0f0b-24d8-4a58-a9ef-b09403cbfe73","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn10":nul
+ida sees Max via REST books?select=*           200 [] 1ms
+ida table private.book_search (profile)        406 {"code":"PGRST106","details":null,"hint":"Only the following schemas are exposed: public, graphql_public","message":"Invalid schema: private"} 
+ida table private.book_search (public)         404 {"code":"PGRST205","details":null,"hint":null,"message":"Could not find the table 'public.book_search' in the schema cache"} 1ms
+service table private.book_search profile      406 {"code":"PGRST106","details":null,"hint":"Only the following schemas are exposed: public, graphql_public","message":"Invalid schema: private"} 
+ida cron profile                               406 {"code":"PGRST106","details":null,"hint":"Only the following schemas are exposed: public, graphql_public","message":"Invalid schema: cron"} 
+ida rpc private.book_search_sync               406 {"code":"PGRST106","details":null,"hint":"Only the following schemas are exposed: public, graphql_public","message":"Invalid schema: private"} 1ms
+ida rpc purge_cron_log                         406 {"code":"PGRST106","details":null,"hint":"Only the following schemas are exposed: public, graphql_public","message":"Invalid schema: private"} 1ms
+ida rpc purge_cron_log public                  404 {"code":"PGRST202","details":"Searched for the function public.purge_cron_log without parameters or with a single unnamed json/jsonb parameter, but n
+craft "'"                                      200 [] 1ms
+craft "\""                                     200 [] 1ms
+craft "'; drop table books;--"                 200 [] 1ms
+craft "a:*"                                    200 [{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36","title":"SecSeries Alpha 1","authors":["Sec Author"],"isbn13":null,"isbn10":null,"page_count":null,"pub
+craft "*:*"                                    200 [] 2ms
+craft "!"                                      200 [] 1ms
+craft "!a"                                     200 [{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36","title":"SecSeries Alpha 1","authors":["Sec Author"],"isbn13":null,"isbn10":null,"page_count":null,"pub
+craft "a & b | !c"                             200 [] 1ms
+craft "a <-> b"                                200 [] 1ms
+craft "a <1> b"                                200 [] 1ms
+craft "(a"                                     200 [{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36","title":"SecSeries Alpha 1","authors":["Sec Author"],"isbn13":null,"isbn10":null,"page_count":null,"pub
+craft "a)"                                     200 [{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36","title":"SecSeries Alpha 1","authors":["Sec Author"],"isbn13":null,"isbn10":null,"page_count":null,"pub
+craft "\\"                                     200 [] 1ms
+craft "\\'"                                    200 [] 1ms
+craft "&"                                      200 [] 1ms
+craft "|"                                      200 [] 1ms
+craft "()"                                     200 [] 1ms
+craft "'':*"                                   200 [] 1ms
+craft "a:*b"                                   200 [] 1ms
+craft "a:A"                                    200 [{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36","title":"SecSeries Alpha 1","authors":["Sec Author"],"isbn13":null,"isbn10":null,"page_count":null,"pub
+craft "a:B"                                    200 [] 1ms
+craft "%"                                      200 [] 1ms
+craft "_"                                      200 [] 1ms
+craft "\u0000"                                 400 {"code":"22P05","details":"\\u0000 cannot be converted to text.","hint":null,"message":"unsupported Unicode escape sequence"} 1ms
+craft "ß"                                      200 [] 1ms
+craft "İ"                                      200 [{"id":"21296333-c72c-47ad-9bc3-193768365833","title":"Quillfeather Idas Notizen","authors":["Ida Quillfeather"],"isbn13":null,"isbn10":null,"page_co
+craft "日本"                                     200 [] 1ms
+craft "<script>"                               200 [] 1ms
+craft "a'b"                                    200 [] 1ms
+craft "a\\b"                                   200 [] 1ms
+craft ":*:*"                                   200 [] 1ms
+craft "' & ' | '"                              200 [] 1ms
+craft "                          "             200 [] 1ms
+craft "a a a a a a a a a a a a a "             200 [{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36","title":"SecSeries Alpha 1","authors":["Sec Author"],"isbn13":null,"isbn10":null,"page_count":null,"pub
+craft "Quarvelin Quarvelin Quarve"             200 [] 23ms
+craft "xxxxxxxxxxxxxxxxxxxxxxxxxx"             200 [] 5ms
+craft "null"                                   200 [] 1ms
+limit null                                     200 [] 1ms
+limit -5                                       200 [] 1ms
+limit 0                                        200 [] 1ms
+limit 1                                        200 [] 1ms
+limit 50                                       200 [] 1ms
+limit 51                                       200 [] 1ms
+limit 1000000                                  200 [] 1ms
+limit 2147483647                               200 [] 1ms
+limit abc                                      400 {"code":"22P02","details":null,"hint":null,"message":"invalid input syntax for type integer: \"abc\""} 1ms
+query as number                                200 [{"id":"616b53c2-9ea3-457e-a236-08d6e5733e4b","title":"PagingBook 123","authors":["P"],"isbn13":null,"isbn10":null,"page_count":null,"published_year"
+query as array                                 200 [{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36","title":"SecSeries Alpha 1","authors":["Sec Author"],"isbn13":null,"isbn10":null,"page_count":null,"pub
+no args                                        404 {"code":"PGRST202","details":"Searched for the function public.search_books without parameters or with a single unnamed json/jsonb parameter, but no 
+20000 words                                    500 {"code":"54001","details":null,"hint":"Increase the configuration parameter \"max_stack_depth\" (currently 2048kB), after ensuring the platform's sta
+######## a_series.mjs
+ida started_and_muted_series                         200 {"open":[{"next":{"title":"SecSeries Alpha 2","genres":[],"workId":"64994d5b-55fb-49bf-bcce-dab3b5db4e41","position":2,"wikidataId":"Q995002"},
+ida muted_series_list                                200 [{"next":{"title":"SecSeries Gamma 2","genres":[],"workId":"08bcac36-b14b-4833-bafd-4f6015322e5d","position":2,"wikidataId":"Q995003"},"count":
+max started_and_muted_series                         200 {"open":[],"muted":[]} 4ms
+max muted_series_list                                200 [] 3ms
+max started_series_core(true,true)                   200 {"open":[],"muted":[]} 3ms
+max started_series_items                             200 [] 3ms
+anon started_and_muted_series                        401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function started_and_muted_series"} 1ms
+anon muted_series_list                               401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function muted_series_list"} 1ms
+anon started_series_core(true,true)                  401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function started_series_core"} 1ms
+anon started_series_items                            401 {"code":"42501","details":null,"hint":null,"message":"permission denied for function started_series_items"} 1ms
+max GET muted_series                                 200 [{"member_id":"56417f73-fdff-49fc-8d40-bcea0ea4ffbf","series_id":"a9a29ab1-61ba-4e02-aca8-e11bd3298735","muted_at":"2026-10-10T18:10:24.344707+
+max GET muted_series member=ida                      200 [] 1ms
+max INSERT muted_series as ida                       403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.muted_series TO authentic
+max INSERT muted_series as ida real series           403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.muted_series TO authentic
+max mute_series self                                 204  1ms
+max started (own mute alpha)                         200 {"open":[],"muted":[]} 2ms
+max unmute ida row? DELETE muted_series ida          403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT DELETE ON public.muted_series TO authentic
+ida still muted (gamma)                              200 [{"next":{"title":"SecSeries Gamma 2","genres":[],"workId":"08bcac36-b14b-4833-bafd-4f6015322e5d","position":2,"wikidataId":"Q995003"},"count":
+limit null 200 550B
+limit -1 200 550B
+limit 0 200 550B
+limit 1 200 550B
+limit 200 200 550B
+limit 201 200 550B
+limit 2147483647 200 550B
+lang null 200 {"open":[{"next":{"title":"SecSeries Alpha 2","genres":[],"workId":"64994d5b-55f
+lang  200 {"open":[{"next":{"title":"SecSeries Alpha 2","genres":[],"workId":"64994d5b-55f
+lang de'; drop table works;-- 200 {"open":[{"next":{"title":"SecSeries Alpha 2","genres":[],"workId":"64994d5b-55f
+lang xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 200 {"open":[{"next":{"title":"SecSeries Alpha 2","genres":[],"workId":"64994d5b-55f
+lang zz 200 {"open":[{"next":{"title":"SecSeries Alpha 2","genres":[],"workId":"64994d5b-55f
+ida work_card other lang                             200 null 1ms
+max GET series (catalogue)                           200 [{"name":"SecSeries Alpha"},{"name":"SecSeries Gamma Muted"}] 1ms
+anon GET series                                      401 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.series TO anon;","message
+######## a_gr.mjs
+anon GET goodreads_title_ratings                     401 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.goodreads_title_ratings T
+anon GET goodreads_ratings                           401 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.goodreads_ratings TO anon
+ida INSERT goodreads_title_ratings                   403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.goodreads_title_ratings T
+ida UPSERT (merge-duplicates)                        403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT, UPDATE ON public.goodreads_title_r
+ida PATCH goodreads_title_ratings                    403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.goodreads_title_ratings T
+ida DELETE goodreads_title_ratings                   403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT DELETE ON public.goodreads_title_ratings T
+ida INSERT goodreads_ratings                         403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.goodreads_ratings TO auth
+ida DELETE goodreads_ratings                         403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT DELETE ON public.goodreads_ratings TO auth
+ida TRUNCATE via rpc? n/a ida GET (rows)             200 [{"title_key":"zorbulax geheim tagebuch|zorbulax","status":"not_found","checked_at":"2026-10-10T18:11:43.063+00:00"},{"title_key":"secret title
+service insert bad key (no pipe)                     400 {"code":"23514","details":"Failing row contains (nopipe, not_found, null, null, null, null, null, 2026-10-10 18:25:16.966+00).","hint":null,"me
+service insert key >1000                             400 {"code":"23514","details":"Failing row contains (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..., not_found, null, null, nu
+service insert rating 6                              400 {"code":"23514","details":"Failing row contains (x|y, found, title, 1, 6.00, 1, null, 2026-10-10 18:25:16.968+00).","hint":null,"message":"new 
+service insert html id                               400 {"code":"23514","details":"Failing row contains (x|y, found, title, <img src=x>, 4.00, 1, null, 2026-10-10 18:25:16.969+00).","hint":null,"mess
+service insert a not_found key as a Manual title would produce 409 {"code":"23505","details":"Key (title_key)=(zorbulax geheim tagebuch|zorbulax) already exists.","hint":null,"message":"duplicate key 
+max reads all keys (shared cache)                    200 [{"title_key":"zorbulax geheim tagebuch|zorbulax","status":"not_found","checked_at":"2026-10-10T18:11:43.063+00:00"},{"title_key":"secret title
+max filter by prefix ilike zorb*                     200 [{"title_key":"zorbulax geheim tagebuch|zorbulax"}] 1ms
+goodreads_rating(books) computed rel, ida            200 [{"id":"96f6bf84-e1c5-4813-b333-cbc6c79bfe05","title":"Quillfeather Idas Notizen","goodreads":null},{"id":"296d659a-c14d-4e8d-92e1-edc3d2f8ac36
+######## a_books.mjs
+ida INSERT books owner null (catalogue)              403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.books TO authenticated;",
+ida INSERT books owner=max                           403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.books TO authenticated;",
+ida INSERT books owner=ida                           403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.books TO authenticated;",
+ida PATCH max's manual book                          403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.books TO authenticated;",
+ida PATCH own manual owner_id=null (publish)         403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.books TO authenticated;",
+ida DELETE own book direct                           403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT DELETE ON public.books TO authenticated;",
+ida PATCH catalogue book                             403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.books TO authenticated;",
+add_manual_book title 10000                          400 {"code":"22023","details":null,"hint":null,"message":"book_invalid"} 1ms
+add_manual_book title 200000                         400 {"code":"22023","details":null,"hint":null,"message":"book_invalid"} 4ms
+add_manual_book title 2000000                        400 {"code":"22023","details":null,"hint":null,"message":"book_invalid"} 26ms
+add_manual_book many-word title                      400 {"code":"22023","details":null,"hint":null,"message":"book_invalid"} 8ms
+add_manual_book catalog-isbn collision               200 {"id":"c0555de6-1aa1-4bfa-b1e1-3b63998803f8","member_id":"32c84494-07f6-4172-bd1e-c1c35bf60a06","book_id":"ec18f449-be50-4add-ab5b-6c274866fd86
+ida search Collider (own)                            200 [{"id":"ec18f449-be50-4add-ab5b-6c274866fd86","title":"Collider","authors":["A"],"isbn13":"9780306406157","isbn10":null,"page_count":1,"publish
+max search same isbn (his own only)                  200 [{"id":"e67667e3-8aac-402b-bbf8-5b7089b3c4d0","title":"Zorbulax Geheim Tagebuch","authors":["Maximus Zorbulax"],"isbn13":"9780306406157","isbn1
+######## a_add.mjs
+normal                                               200 {"id":"625250f8-a296-406d-86ec-31520cc0fb4a","member_id":"32c84494-07f6-4172-bd1e-c1c35bf60a06","book_id":"33d624b9-47af-49fd-a189-588c4a5b13d7
+title 100000 chars one word                          400 {"code":"23514","details":"Failing row contains (fef5cbc0-4542-43b4-aa5c-203d3f46b21d, Hugewordaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+title 60000 words                                    400 {"code":"23514","details":"Failing row contains (9816f4db-4e75-4f22-95d7-846215a8fa36, w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w1
+title 5 MB                                           400 {"code":"23514","details":"Failing row contains (9f15b9ce-21fd-4105-bbc0-184fc65a1ca0, x x x x x x x x x x x x x x x x x x x x x x x x x x x x 
+cover_url javascript:                                200 {"id":"ea421a87-8c4d-4847-9be7-06680f6c52ab","member_id":"32c84494-07f6-4172-bd1e-c1c35bf60a06","book_id":"37a0707b-53cf-4929-aff6-8029c92c78d3
+cover_url tracking host                              200 {"id":"40ae7ddb-4a37-4b01-b81d-8c3f02bb7429","member_id":"32c84494-07f6-4172-bd1e-c1c35bf60a06","book_id":"d13aed9b-5737-4fe5-8547-09a70e2f8f98
+description html                                     200 {"id":"3b5895dd-42c7-41f8-86a1-cc297a2eb678","member_id":"32c84494-07f6-4172-bd1e-c1c35bf60a06","book_id":"e33beeb9-6ab8-4790-8700-1205d6f5326d
+stored                                               200 [{"title":"Sec Normal Title","cover_url":null,"description":null,"source":"apple"},{"title":"Sec Cover JS","cover_url":"javascript:alert(1)","d
+######## a_cover.mjs
+200 [
+  [
+    'Sec Cover Track',
+    'https://evil.example/pixel.gif',
+    'apple',
+    null
+  ],
+  [
+    'Sec Cover Track',
+    'https://evil.example/pixel.gif',
+    'apple',
+    null
+  ]
+]
+[
+  [ 'Sec Desc', '<img src=x onerror=alert(1)>' ],
+  [ 'Sec Desc', '<img src=x onerror=alert(1)>' ]
+]
+######## a_codes3.mjs
+cleo follow_target(max token)            200 null 3ms
+cleo follow max (private)                404 {"code":"PT404","details":null,"hint":null,"message":"not_found"} 2ms
+max block cleo                           204  2ms
+Cleo is blocked by Max. Cleo calls, ghost vs Max (blocker) vs Ida (live, no link, no relation):
+follow                 404 {"code":"PT404","details":null,"hint":null,"message" ghost==blocker: true  ghost==stranger: true
+member_profile         200 null                                                 ghost==blocker: true  ghost==stranger: true
+member_want            200 null                                                 ghost==blocker: true  ghost==stranger: true
+member_reading_record  200 null                                                 ghost==blocker: true  ghost==stranger: true
+withdraw_request       204                                                      ghost==blocker: true  ghost==stranger: true
+answer_request         404 {"code":"PT404","details":null,"hint":null,"message" ghost==blocker: true  ghost==stranger: true
+remove_follower        204                                                      ghost==blocker: true  ghost==stranger: true
+unfollow               204                                                      ghost==blocker: true  ghost==stranger: true
+cleo follow_target(max token)            200 null 1ms
+cleo follow_target(garbage)              200 null 1ms
+max follow cleo (blocker->blocked)       404 {"code":"PT404","details":null,"hint":null,"message":"not_found"} 1ms
+max follow ghost                         404 {"code":"PT404","details":null,"hint":null,"message":"not_found"} 1ms
+median ms follow: ghost 1 blocker 1 stranger 1
+cleo GET blocks                          403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.blocks TO authenticated;","message":"
+cleo GET follows                         403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.follows TO authenticated;","message":
+max GET blocks                           403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.blocks TO authenticated;","message":"
+ida GET follows                          403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.follows TO authenticated;","message":
+cleo feed                                200 [] 2ms
+cleo feed limit 1e9                      200 [] 2ms
+######## a_import.mjs
+max manual book { id: '4aa1e555-491b-45d4-a467-ab72ddedbf8c', isbn13: '9780306406157' }
+cleo import book_id=max manual: [{"key":"goodreads:17916567176401","error":"book_invalid","outcome":"failed"}]
+cleo import source=import isbn of max manual: [{"key":"goodreads:17916567176402","outcome":"in_library","entry_id":"44a60e75-727d-49b1-b30c-ae0f3f7e83a6"}]
+cleo import manual same title (own copy): [{"key":"goodreads:17916567176403","outcome":"in_library","entry_id":"3d0ee2fb-e612-4623-bb4e-f03eb22e6da6"}]
+cleo library after: [{"book_id":"523f0f0b-24d8-4a58-a9ef-b09403cbfe73","books":{"title":"Zorbulax Geheim Tagebuch","owner_id":null}},{"book_id":"056716dc-dcdc-46ed-8349-c69f5a17379…
+max library unchanged: 2
+ida import 100 rows bad: {"code":"22023","details":null,"hint":null,"message":"too_many_rows"}
+ida import huge review: [{"key":"goodreads:17916567176409","error":"review_too_long","outcome":"failed"}]
+######## a_page.mjs
+no range: 1000 (cap)
+pages 1000 115 unique 1115
+far range 416 {"code":"PGRST103","details":"An offset of 5000 was requested, but there are only 1115 rows.","hint":null,"message":"Requested range not satisfiable"} */1115
+max sees 2 content-range 0-1/2
+anon 401
+limit=100000 -> 1000
+order latest() 400 {"code":"PGRST108","details":null,"hint":"Verify that 'latest' is included in the 'select' query parameter.","message":"'latest' is not an embedded resource in …
+order bad 200 [{"id":"18a0ea20-2c81-4243-98e1-384b1112a5b2"},{"id":"2de5c53a-9d6e-406d-854d-d18e04a66a24"},{"id":"25359f91-a6f7-4ae7-b1ce-3f1655e8fd5b"}]
+order by embedded owner 400 {"code":"42703","details":null,"hint":null,"message":"column library_entries_books_1.owner_id does not exist"}
+######## a_fn.mjs
+no auth header                               401 {"error":"unauthorized"} 83ms *
+anon key as bearer                           401 {"error":"unauthorized"} 8ms *
+garbage bearer                               401 {"error":"unauthorized"} 3ms *
+expired-looking jwt (tampered sig)           401 {"error":"unauthorized"} 5ms *
+PUT with member                              405 {"error":"method_not_allowed"} 2ms *
+member: body not json                        400 {"error":"isbn_invalid"} 18ms *
+member: empty {}                             400 {"error":"book_unidentified"} 16ms *
+member: bad isbn                             400 {"error":"isbn_invalid"} 20ms *
+member: isbn injection                       400 {"error":"isbn_invalid"} 19ms *
+member: isbn is object                       400 {"error":"book_unidentified"} 17ms *
+member: title only (no author)               400 {"error":"book_unidentified"} 16ms *
+member: title array                          400 {"error":"book_unidentified"} 15ms *
+member: GET no params                        400 {"error":"book_unidentified"} 17ms *
+member: 8MB body                             502 {"error":"goodreads_unavailable"} 7300ms *
+service key (allowed by design)              400 {"error":"book_unidentified"} 2ms *
+######## a_olkey.mjs
+409 {"code":"23505","details":null,"hint":null,"message":"already_in_library"}
+######## a_misc.mjs
+invite_code_status valid valid
+invite_code_status bogus invalid
+log_client_error anon 200
+storage/v1/bucket 200 []
+storage/v1/object/list/avatars 200 []
+openapi root anon 200 10647
+graphql 200 {"errors": [{"message": "pg_graphql extension is not enabled."}]}
+######## a_impcover.mjs
+[{"key":"goodreads:cov1791657050260","outcome":"in_library","entry_id":"983f5b9b-4845-4d06-b230-d3bae52442bf"}]
+[["Import Cover Probe","https://evil.example/imp.gif"]]
