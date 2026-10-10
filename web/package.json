@@ -25,6 +25,7 @@
     "perf:probe": "tsx perf/probe.ts",
     "perf:bundle": "tsx perf/bundle.ts",
     "perf:flows": "tsx perf/flows.ts",
+    "perf:images": "tsx perf/images.ts",
     "perf:layers": "tsx perf/layers.ts"
   },
   "dependencies": {

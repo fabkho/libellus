@@ -159,8 +159,10 @@ watch(
             v-for="(hit, index) in search.own"
             :key="hit.key"
             :hit="hit"
+            :ref="nearby.observe"
+            :data-near-key="hit.key"
             :linking="search.linking"
-            eager
+            :eager="index < FIRST_COVERS || nearby.has(hit.key)"
             :priority="index < FIRST_COVERS"
             data-testid="search.ownResult"
             @pick="pick(hit)"
