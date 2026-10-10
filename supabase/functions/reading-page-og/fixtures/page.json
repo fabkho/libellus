@@ -8,7 +8,7 @@
         "title": "Piranesi",
         "authors": ["Susanna Clarke"],
         "published_year": 2020,
-        "cover_url": "https://covers.test/piranesi.png",
+        "cover_url": "https://covers.openlibrary.org/b/id/piranesi.png",
         "cover_thumbhash": "1QcSHQRnh493V4dIh4eXh1h4kJUI",
         "cover_dominant": "#2c3a2e",
         "cover_secondary": "#4a3220"
@@ -35,7 +35,7 @@
         "title": "The Left Hand of Darkness",
         "authors": ["Ursula K. Le Guin"],
         "published_year": 1969,
-        "cover_url": "https://covers.test/left-hand.png",
+        "cover_url": "https://covers.openlibrary.org/b/id/left-hand.png",
         "cover_thumbhash": null,
         "cover_dominant": "#22303f",
         "cover_secondary": null
@@ -50,7 +50,7 @@
         "title": "Small Gods",
         "authors": ["Terry Pratchett"],
         "published_year": 1992,
-        "cover_url": "https://covers.test/small-gods.png",
+        "cover_url": "https://covers.openlibrary.org/b/id/small-gods.png",
         "cover_thumbhash": null,
         "cover_dominant": "#4a2624",
         "cover_secondary": "#3b2430"
@@ -83,7 +83,7 @@
         "title": "Ça & “Ünïcode”",
         "authors": ["Ève O’Brien"],
         "published_year": 2011,
-        "cover_url": "http://covers.test/insecure.png",
+        "cover_url": "http://covers.openlibrary.org/b/id/insecure.png",
         "cover_thumbhash": null,
         "cover_dominant": "#3b2430",
         "cover_secondary": null
