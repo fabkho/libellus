@@ -8,9 +8,11 @@ import { isbn10To13 } from './books'
  *
  * Asked on demand by the book page, for any Book with an ISBN or, failing that,
  * a title and an author (in the Library or not), from the `goodreads-rating` edge function: it answers from the
- * shared cache (`goodreads_ratings`, or `goodreads_title_ratings` for a Book without an
- * ISBN; a found rating is refreshed after 30 days, a miss after 7) or asks Goodreads
- * once, server-side. The browser never talks to Goodreads. A Catalogue Book
+ * shared cache (`goodreads_ratings`; a Book without an ISBN, or whose ISBN Goodreads does not
+ * know, by title in a cache only the function reads; a found rating is refreshed after 30 days,
+ * a miss after 7) or asks Goodreads once, server-side. A Manual Book is private to its owner, so
+ * its title and authors are never sent: it is asked by its ISBN alone (public catalogue data) or
+ * not at all. The browser never talks to Goodreads. A Catalogue Book
  * also carries the cached rating in its row (`books.goodreads`, the
  * `goodreads_rating` computed relationship), so a Library loaded once shows it
  * offline too. Framework-free: the store hands in the Supabase client (only
@@ -55,9 +57,13 @@ export function goodreadsIsbn(book: Pick<BookSnapshot, 'isbn13' | 'isbn10'>): st
  * there is nothing to ask with: no ISBN and no author (a title alone never
  * matches, so the function would refuse it).
  */
-export function goodreadsKey(book: Pick<BookSnapshot, 'isbn13' | 'isbn10' | 'title' | 'authors'>): string | null {
+export function goodreadsKey(
+  book: Pick<BookSnapshot, 'isbn13' | 'isbn10' | 'title' | 'authors'> & { source?: BookSnapshot['source'] },
+): string | null {
   const isbn13 = goodreadsIsbn(book)
   if (isbn13) return isbn13
+  // The title of a Manual Book is private: it is not asked about by title.
+  if (book.source === 'manual') return null
   const author = book.authors.find((a) => a.trim())
   const title = book.title.trim()
   return title && author ? `title:${title.toLowerCase()}|${author.trim().toLowerCase()}` : null
@@ -95,7 +101,7 @@ export type GoodreadsResult =
   | { data: null; error: 'offline' | 'unavailable' }
 
 export type Goodreads = {
-  /** The Book's rating; `data: null` when Goodreads does not know it. Nothing is asked without an ISBN or an author. */
+  /** The Book's rating; `data: null` when Goodreads does not know it. Nothing is asked without an ISBN or an author (a Manual Book: without an ISBN). */
   rating: (book: Book | BookSnapshot) => Promise<GoodreadsResult>
 }
 
@@ -104,12 +110,12 @@ export function createGoodreads(client: FunctionsClient, { online = () => true }
     async rating(book) {
       if (!goodreadsKey(book)) return { data: null, error: null }
       if (!online()) return { data: null, error: 'offline' }
-      // Without an ISBN the function looks the Book up by its title and authors alone.
+      // Without an ISBN the function looks the Book up by its title and authors alone; a Manual Book
+      // (private to its owner) only ever sends its ISBN, never its title or authors.
       const isbn13 = goodreadsIsbn(book)
+      const body = book.source === 'manual' ? { isbn13 } : { ...(isbn13 ? { isbn13 } : {}), title: book.title, authors: book.authors }
       try {
-        const { data, error } = await client.functions.invoke(GOODREADS_FUNCTION, {
-          body: { ...(isbn13 ? { isbn13 } : {}), title: book.title, authors: book.authors },
-        })
+        const { data, error } = await client.functions.invoke(GOODREADS_FUNCTION, { body })
         const answer = data as Answer | null
         if (error || !answer || (answer.status !== 'found' && answer.status !== 'not_found'))
           return { data: null, error: 'unavailable' }
