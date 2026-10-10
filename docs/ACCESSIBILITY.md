@@ -127,15 +127,14 @@ shimmer stops, the tab bar stays.
 ## Known gaps
 
 - **Small text controls on a feed row** (social v2a: *+ Want to read* and the heart, `tiny-action` in `main.css`)
-  are text-sized on purpose (the owner's decision: a row must not grow). They meet WCAG 2.2 AA target size
-  (2.5.8: drawn at 24 × 24 px, `--size-target`). The app's own 44 px rule (`--size-touch`) holds in width (the
-  invisible hit box is 44 px wide at least) and in height where the row has the room: the hit box starts at the
-  drawn box's top and reaches 20 px below it (`--size-touch` minus `--size-target`), and never up, because the
-  title or the stars sit right above (1 to 3 px), so a tap near them lands on them. Measured in the feed row,
-  Home's card and a member's Recently finished rows: the hit box overlaps no other link, text or button, and the
-  next line is 5 px or more below it. A row that has less room below sets `--tiny-action-down` (and
-  `--tiny-action-up` where there is room above). Busy and Offline are `aria-disabled`, not `disabled`, so focus
-  stays.
+  are text-sized on purpose (the owner's decision: a row must not grow for them). They meet WCAG 2.2 AA target
+  size (2.5.8: drawn at 24 × 24 px, `--size-target`). The app's own 44 px rule (`--size-touch`) holds in width (the
+  invisible hit box is 44 px wide at least) but not in height: the hit box starts at the drawn box's top, because
+  the title or the stars sit right above it (1 to 3 px), so a tap near them lands on them, and it reaches
+  `--tiny-action-down` below, which is 0 by default because what is below differs from row to row. Each row sets
+  what it measured at 360 and 390 px, with no link, text or button under the box: a member's Recently finished row
+  12 px (2 px with a review under it), the feed row 2 px, Home's card 0. Busy and Offline are `aria-disabled`, not
+  `disabled`, so focus stays.
 - **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
   scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
   each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}
