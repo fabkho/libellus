@@ -11,6 +11,7 @@ import {
   type WriteOptions,
 } from './library'
 import { isNoAnswer } from './network'
+import { allPages } from './paging'
 import type { QueuedAction } from './queuedWrites'
 
 /**
@@ -188,25 +189,36 @@ export function createCollections(client: SupabaseClient, { online = () => true,
     },
 
     async get(id) {
-      const { data, error } = await client
-        .from('collections')
-        .select(`id, name, position, created_at, entries:collection_entries(position, entry:library_entries!inner(${ENTRY}))`)
-        .eq('id', id)
-        .order('position', { referencedTable: 'entries' })
-        .maybeSingle<DetailRow>()
-      if (error) {
+      // The entries under the Collection are cut at 1,000 too (max_rows reaches embedded rows), so they are
+      // read page by page, in their position (unique within a Collection), with the Collection's own row
+      // coming back each time (data/paging.ts).
+      const seen: { head: Omit<DetailRow, 'entries'> | null } = { head: null }
+      const pages = await allPages<DetailRow['entries'][number]>(async (from, to) => {
+        const { data, error } = await client
+          .from('collections')
+          .select(`id, name, position, created_at, entries:collection_entries(position, entry:library_entries!inner(${ENTRY}))`)
+          .eq('id', id)
+          .order('position', { referencedTable: 'entries' })
+          .range(from, to, { referencedTable: 'entries' })
+          .maybeSingle<DetailRow>()
+        if (error) return { data: null, error }
+        if (data) seen.head = data
+        return { data: data?.entries ?? [], error: null }
+      })
+      if (pages.error) {
         // An id that is not a uuid is simply not one of hers.
-        if (error.code === '22P02') return { data: null, error: null }
-        return { data: null, error: mapCollectionError(error) }
+        if (pages.error.code === '22P02') return { data: null, error: null }
+        return { data: null, error: mapCollectionError(pages.error) }
       }
-      if (!data) return { data: null, error: null }
+      const found = seen.head
+      if (!found) return { data: null, error: null }
       return {
         data: {
-          id: data.id,
-          name: data.name,
-          position: data.position,
-          createdAt: data.created_at,
-          entries: data.entries.map((item) => entryFromRow(item.entry)),
+          id: found.id,
+          name: found.name,
+          position: found.position,
+          createdAt: found.created_at,
+          entries: pages.data.map((item) => entryFromRow(item.entry)),
         },
         error: null,
       }

@@ -101,7 +101,7 @@ const empty = computed(
 onActivated(() => {
   // Not again while the lists are fresh (stores/library.ts, `FRESH_MS`).
   void library.load({ ifStale: true })
-  void bookGenres.load()
+  void bookGenres.load({ ifStale: true })
   // Sent here to look at one list (the Profile's genres, #168): that segment, as filtered.
   if (libraryView.focus) {
     segment.value = libraryView.focus

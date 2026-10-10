@@ -271,3 +271,46 @@ describe('descriptions', () => {
     expect(library.descriptionOf(book(BOOK_C))).toBe('From the search result.')
   })
 })
+
+/**
+ * What the Profile's record and the genres watch to forget their own freshness (stores/stats.ts,
+ * stores/genres.ts; tests/refetch-gating.test.ts): `changes` goes up with every change of hers made
+ * on this device, `roster` only when entries came or went or one now has another Book.
+ */
+describe('change signals', () => {
+  it('a finish moves `changes` and leaves `roster`; an add or a removal moves both', async () => {
+    const library = await store()
+    await library.load({ ifStale: true })
+    const at = { changes: library.changes, roster: library.roster }
+
+    // e1 is hers already (Want to read): starting it changes the entry, not who is in the Library.
+    library.entryChanged(entry('e1', 'reading', book(BOOK_A)))
+    expect(library.changes).toBe(at.changes + 1)
+    expect(library.roster).toBe(at.roster)
+
+    // A new entry came.
+    library.entryChanged(entry('e9', 'want_to_read', book(BOOK_C)))
+    expect(library.changes).toBe(at.changes + 2)
+    expect(library.roster).toBe(at.roster + 1)
+
+    // One now points at another Book (a change of edition).
+    library.entryChanged(entry('e9', 'want_to_read', book(BOOK_A)))
+    expect(library.roster).toBe(at.roster + 2)
+
+    library.entryRemoved('e9')
+    expect(library.changes).toBe(at.changes + 4)
+    expect(library.roster).toBe(at.roster + 3)
+  })
+
+  it('`touch` (the outbox drained) moves both; a read of the lists that finds them the same moves neither', async () => {
+    const library = await store()
+    await library.load({ ifStale: true })
+    const at = { changes: library.changes, roster: library.roster }
+    await library.load()
+    expect(library.changes).toBe(at.changes)
+    expect(library.roster).toBe(at.roster)
+    library.touch()
+    expect(library.changes).toBe(at.changes + 1)
+    expect(library.roster).toBe(at.roster + 1)
+  })
+})
