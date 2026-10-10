@@ -1,6 +1,6 @@
 /**
  * The function's side of the database: the claim and what it stores, all service-role RPCs of
- * supabase/migrations/20261021020000_catalogue_check.sql. Nothing here takes a member's input.
+ * supabase/migrations/20261023020000_catalogue_check.sql. Nothing here takes a member's input.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CheckBook, CheckResult } from './check.ts'

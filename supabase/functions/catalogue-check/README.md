@@ -101,7 +101,7 @@ written under the ISBN).
   Polite as the enrichment is: one request at a time per host (Open Library a second, Apple three), identified
   by User-Agent, a timeout, two retries. A response is read to 1 MB and no further (a record from a source we
   do not control): past it the Book is `unavailable` and tried again later, not retried at once.
-- **Writes**: only through the service-role RPCs of `20261021020000_catalogue_check.sql`, only to an
+- **Writes**: only through the service-role RPCs of `20261023020000_catalogue_check.sql`, only to an
   unchecked Catalogue Book, and only title, authors, description, cover (and the cover's hash and colours,
   cleared), publisher, language, format, pages, year. Every field is validated here (type, length, plain text,
   https cover on the two cover hosts) and again in `catalogue_check_save`. A title that is not the row's
