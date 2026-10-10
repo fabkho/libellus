@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.9.3](https://github.com/fabkho/libellus/compare/v1.9.2...v1.9.3) (2026-10-10)
+
+
+### Performance
+
+* **auth:** draw the sign-in wall's covers after the form, preconnect to the API ([9bc2350](https://github.com/fabkho/libellus/commit/9bc23501159017ab95bba90e1134d26085c5d9fb))
+* **auth:** sign-in wall covers after the form, preconnect to the API ([150acbf](https://github.com/fabkho/libellus/commit/150acbf4ad51a9137553d57577bd56e25c25a479))
+* do not disable certificate validation in the wall measurement script ([827daac](https://github.com/fabkho/libellus/commit/827daac14271caca51eebce36689853f24525e0b))
+
 ## [1.9.2](https://github.com/fabkho/libellus/compare/v1.9.1...v1.9.2) (2026-10-10)
 
 
