@@ -126,6 +126,12 @@ shimmer stops, the tab bar stays.
 
 ## Known gaps
 
+- **Small text controls on a feed row** (social v2a: *+ Want to read* and the heart, `tiny-action` in `main.css`)
+  are text-sized on purpose (the owner's decision: a row must not grow). They meet WCAG 2.2 AA target size
+  (2.5.8: drawn at 24 × 24 px, `--size-target`) but not the app's own 44 px rule in the drawn box: the 44 px
+  (`--size-touch`) is an invisible hit box, wide and tall at least, and it overlaps the line above and below it by
+  about 10 px, so a tap near the title or the stars can land on them. Busy and Offline are `aria-disabled`, not
+  `disabled`, so focus stays.
 - **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
   scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
   each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}

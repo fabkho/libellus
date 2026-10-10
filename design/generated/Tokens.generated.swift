@@ -121,6 +121,7 @@ enum Tokens {
 
     enum Size {
         static let touch: CGFloat = 44
+        static let target: CGFloat = 24
         static let maxContent: CGFloat = 480
         static let avatar: CGFloat = 32
         static let tab: CGFloat = 72

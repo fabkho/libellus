@@ -139,6 +139,40 @@ html[data-glass='off'] *::after {
   letter-spacing: 0;
 }
 
+/*
+ * Small clickable text on a row's line (social v2a: Want to read, the heart): the text's own size, no pill. Its
+ * drawn box is --size-target (24 px, WCAG 2.2 AA 2.5.8) and the margin pulls it back into a caption's line, so a
+ * row does not grow; its touch box, the ::after, is --size-touch wide and tall at least (the app's own 44 px rule).
+ * `aria-disabled` dims it a little and keeps focus (a disabled button would drop it).
+ */
+@utility tiny-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  min-width: var(--size-target);
+  min-height: var(--size-target);
+  margin-block: calc((var(--text-caption--line-height) - var(--size-target)) / 2);
+  font-size: var(--text-caption);
+  line-height: 1;
+  white-space: nowrap;
+
+  &::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, var(--size-touch));
+    height: var(--size-touch);
+    content: '';
+    transform: translate(-50%, -50%);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+  }
+}
+
 /* The small uppercase section label (D's eyebrow). */
 @utility eyebrow {
   font-family: var(--font-mono);
