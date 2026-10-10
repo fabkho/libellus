@@ -6,7 +6,7 @@
 // under the row, not inside the link (a button does not belong in one); the rest of the row is as it was.
 import { bookCardPath, type PublicReadingPage } from '~/data/readingPage'
 
-defineProps<{ items: NonNullable<PublicReadingPage['finished']>; token: string }>()
+defineProps<{ items: NonNullable<PublicReadingPage['finished']>; token: string; name?: string | null }>()
 
 const { t } = useI18n()
 const { formatDay } = useDays()
@@ -36,8 +36,8 @@ const { formatDay } = useDays()
         </span>
       </UiPressLink>
       <div v-if="item.review && item.folded" class="folded pb-sm">
-        <FriendsReviewFold folded testid="readingPage.folded">
-          <span class="line-clamp-4 text-subhead text-ink-muted" data-testid="readingPage.review">{{ item.review }}</span>
+        <FriendsReviewFold folded :name="name ?? undefined" testid="readingPage.folded">
+          <span tabindex="-1" class="line-clamp-4 text-subhead text-ink-muted" data-testid="readingPage.review">{{ item.review }}</span>
         </FriendsReviewFold>
       </div>
     </li>

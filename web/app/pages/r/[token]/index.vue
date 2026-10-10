@@ -98,7 +98,7 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
 
           <section v-if="finished.length" aria-labelledby="reading-finished" class="flex flex-col gap-sm" data-testid="readingPage.finishedSection">
             <h2 id="reading-finished" class="eyebrow">{{ t('readingPage.finished') }}</h2>
-            <ReadingFinishedList :items="finished" :token="token" />
+            <ReadingFinishedList :items="finished" :token="token" :name="name" />
           </section>
 
           <section v-if="regal || shelfBooks.length" aria-labelledby="reading-shelf" class="flex flex-col gap-md" data-testid="readingPage.shelf">
