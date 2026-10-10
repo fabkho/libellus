@@ -29,7 +29,8 @@
     "perf:flows": "tsx perf/flows.ts",
     "perf:images": "tsx perf/images.ts",
     "perf:list": "tsx perf/list.ts",
-    "perf:layers": "tsx perf/layers.ts"
+    "perf:layers": "tsx perf/layers.ts",
+    "perf:pick": "tsx perf/pick.ts"
   },
   "dependencies": {
     "@fontsource/geist": "^5.3.0",

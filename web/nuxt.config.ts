@@ -219,6 +219,9 @@ export default defineNuxtConfig({
     // Whether this build has Regal (LIBELLUS_REGAL=1): fixed at build time, unlike runtimeConfig,
     // so no env var can point the app at a shelf the build doesn't have (stores/shelf.ts).
     regal: REGAL_ENABLED,
+    // PROTOTYPE (#259, Pick my next book): on for everyone in this build with LIBELLUS_PICKER=1;
+    // otherwise only in a tab opened with `?pick=1` (components/pick/Layer.vue).
+    picker: /^(1|true)$/i.test(process.env.LIBELLUS_PICKER?.trim() ?? ''),
     // The release this build is and its notes for members (utils/changelog.ts, composables/useWhatsNew.ts).
     release,
   },

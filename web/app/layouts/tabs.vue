@@ -81,6 +81,8 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
     <BookProgressSheet />
     <BookAbandonSheet />
     <ShellWhatsNewSheet />
+    <!-- PROTOTYPE (#259): Pick my next book, behind ?pick=1 / LIBELLUS_PICKER=1. -->
+    <PickLayer />
   </div>
 </template>
 
