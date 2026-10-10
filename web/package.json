@@ -24,6 +24,7 @@
     "perf:serve": "node perf/serve.mjs",
     "perf:probe": "tsx perf/probe.ts",
     "perf:bundle": "tsx perf/bundle.ts",
+    "perf:signin": "tsx perf/signin.ts",
     "perf:flows": "tsx perf/flows.ts",
     "perf:layers": "tsx perf/layers.ts"
   },
