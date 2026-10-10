@@ -40,6 +40,10 @@ async function store() {
   vi.stubGlobal('useBackend', () => ({}))
   vi.stubGlobal('useOnline', () => readonly(online))
   vi.stubGlobal('isOnline', () => online.value)
+  // The store keeps the device's copy as it does in the browser (the vitest config reads `import.meta.client` as true for it).
+  const storage = { length: 0, key: () => null, getItem: () => null, setItem: () => undefined, removeItem: () => undefined }
+  vi.stubGlobal('window', { localStorage: storage, addEventListener: () => undefined })
+  vi.stubGlobal('document', { addEventListener: () => undefined, visibilityState: 'visible' })
   pinia = createPinia()
   setActivePinia(pinia)
   const { useLibraryStore } = await import('~/stores/library')
