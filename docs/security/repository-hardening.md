@@ -130,9 +130,9 @@ key needs `non_fast_forward` bypass there and is **not** a bypass actor on `main
 }
 ```
 
-The `actor_id` is a placeholder for the deploy key's id (`gh api repos/fabkho/libellus/keys`): ids of deploy keys as
-ruleset bypass actors are not verified; if the API refuses the type, restrict the branch to repository admins and keep
-the key as it is.
+The `actor_id` is the deploy key's id today (`gh api repos/fabkho/libellus/keys`; a regenerated key has a new one).
+Deploy keys as ruleset bypass actors were not tried; if the API refuses the type, restrict the branch to repository
+admins and keep the key as it is.
 
 ### F8: secrets (owner checklist)
 
