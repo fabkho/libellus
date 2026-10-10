@@ -78,8 +78,9 @@ show_ratings), endedOn } }]`, newest of hers first; `p_year` limits to her reads
   open `session_likers` in a sheet. Home's *Your circle* gets one quiet row per liked read from
   `my_recent_likes` ("Anna and Ben liked your review of *Piranesi*", "Anna and 4 others …").
 - **Want to read** button beside the heart (owner's decision): adds the Book to her Library as Want to
-  read through the existing add (offline too, the outbox); if the Book is in her Library it says where
-  (*Want to read* / *Reading* / *Read*) and opens the Book. Not on Manual books. The friend is not told.
+  read through the existing add (offline too, the outbox). Only there to add (owner's decision): a Book already in
+  her Library, in any list, shows no button and no state, and the feed says nothing of where it is; after an add
+  it says *Added* for a moment. Not on Manual books. The friend is not told.
 - **You both read**: a section on a member's profile and her year page (with `p_year`), covers with both
   stars, hidden when empty.
 - **Reading now** on Home's reading cards and **Want too** on her Want to read covers (Home's Up next, the
@@ -100,7 +101,7 @@ on a feed row, `home.circleFeature.wantToRead`, `member.finishedWantToRead`; `.e
 `finish.spoilers` and `editSession.spoilers` (the switch in the footer of the review box in the two sheets, shown once there is a review, off by default, written nowhere
 yet; `v-model:spoilers` on each sheet), `feed.like` (`LikeButton`, `.count` inside), `likers` (`LikersSheet`,
 `likers.row`, `likers.member`, `likers.empty`, `likers.error`, `likers.offline`). Keys in `en.json`:
-`social.wantToRead.{add,label,inLabel,error}`, `social.state.{wantToRead,reading,read,notFinished}`,
+`social.wantToRead.{add,label,added,error}`,
 `social.like.{like,unlike,label,unlabel,count,ownLabel,error}`, `social.likers.{title,empty,loadError,offline}`,
 `review.{spoilers,folded,showAnyway}`.
 
