@@ -15,6 +15,7 @@ import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
 import { useMemberProfileStore } from '~/stores/memberProfile'
+import type { BothReadItem } from '~/utils/circle'
 
 definePageMeta({
   layout: 'tabs',
@@ -91,6 +92,8 @@ const library = computed(() => {
   const p = open.value
   return p ? libraryLine(p.counts, (marks) => t('member.library', marks), count) : null
 })
+// You both read: the answer of `both_read(member)`; empty until a later task wires it (nothing is asked yet).
+const bothRead = ref<BothReadItem[]>([])
 const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 
 // ------------------------------------------------------------------ sheets
@@ -240,6 +243,8 @@ function back() {
             <FriendsMemberCovers :books="open.want.map((w) => w.book)" size="sm" testid="member.wantBooks" />
           </section>
         </UiReveal>
+
+        <FriendsBothRead class="pb-xl" :items="bothRead" :name="name" />
 
         <div v-if="recordFailed" class="flex flex-col items-center gap-sm pb-xl text-center" data-testid="member.recordError">
           <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>

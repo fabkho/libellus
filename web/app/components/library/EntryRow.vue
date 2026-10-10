@@ -13,8 +13,10 @@
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useAuthorsStore } from '~/stores/authors'
 import { useBookStore } from '~/stores/book'
+import type { CircleGroup } from '~/utils/circle'
 
-const props = defineProps<{ entry: LibraryEntry; eager?: boolean }>()
+// `circle`: on a Want to read row, the followed members who want the same Book (social v2a, FriendsCircleAvatars), on the cover's lower edge.
+const props = defineProps<{ entry: LibraryEntry; eager?: boolean; circle?: CircleGroup | null }>()
 
 const { t, locale } = useI18n()
 const { formatDay } = useDays()
@@ -29,51 +31,69 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
 </script>
 
 <template>
-  <UiPressLink
-    :to="`/book/${entry.book.id}`"
-    class="row flex items-center gap-inset py-sm"
-    data-testid="library.entry"
-    @press="books.prefetch(entry.book.id)"
-  >
-    <UiCover
-      decorative
-      :title="entry.book.title"
-      :authors="entry.book.authors"
-      :src="coverSrc(entry.book.coverUrl, 'sm')"
-      :thumbhash="entry.book.coverThumbhash"
-      :colors="entry.book.coverColors"
-      size="sm"
-      :eager="eager"
-      :class="notFinished && 'dimmed'"
+  <div class="relative">
+    <UiPressLink
+      :to="`/book/${entry.book.id}`"
+      class="row flex items-center gap-inset py-sm"
+      data-testid="library.entry"
+      @press="books.prefetch(entry.book.id)"
+    >
+      <UiCover
+        decorative
+        :title="entry.book.title"
+        :authors="entry.book.authors"
+        :src="coverSrc(entry.book.coverUrl, 'sm')"
+        :thumbhash="entry.book.coverThumbhash"
+        :colors="entry.book.coverColors"
+        size="sm"
+        :eager="eager"
+        :class="notFinished && 'dimmed'"
+      />
+      <span class="flex min-w-0 flex-1 flex-col gap-xxs">
+        <span class="book-title title-wrap text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ entry.book.title }}</span>
+        <span class="flex min-w-0 items-center gap-xs">
+          <span
+            class="truncate text-caption"
+            :class="[notFinished ? 'text-ink-faint' : 'text-ink-muted', authorKey && 'underline decoration-hairline-strong underline-offset-2']"
+            :data-press-to="authorKey ? `/author/${authorKey}` : undefined"
+            data-testid="library.entryAuthor"
+          >{{ authorLine }}</span>
+          <EbooksMark :entry="entry" testid="library.ebookMark" />
+        </span>
+        <span v-if="notFinished" class="figures mt-xxs flex items-center gap-xs text-meta text-ink-faint" data-testid="library.entryNotFinished">
+          <UiIcon name="slash" :size="11" />
+          {{ latest?.endedOn ? t('library.notFinishedOn', { date: formatDay(latest.endedOn, { year: false }) }) : t('status.notFinished') }}
+        </span>
+        <span v-else-if="entry.status === 'finished'" class="figures mt-xxs flex items-center gap-sm text-meta text-ink-faint">
+          <UiStars v-if="latest?.rating" :quarters="latest.rating" data-testid="library.entryRating" />
+          <span v-else class="text-ink-faint" data-testid="library.entryUnrated">{{ t('rating.none') }}</span>
+          <template v-if="latest?.endedOn">
+            <span class="dot" aria-hidden="true" /><span data-testid="library.entryEnded">{{ formatDay(latest.endedOn, { year: false }) }}</span>
+          </template>
+        </span>
+        <span v-else class="figures mt-xxs text-meta text-ink-faint">{{ t('library.added', { date: added }) }}</span>
+      </span>
+    </UiPressLink>
+    <!-- Beside the row's link, not in it: a button inside a link is not a thing. Centred on the cover's lower edge (the cover is centred in the row). -->
+    <FriendsCircleAvatars
+      v-if="circle?.members.length"
+      :members="circle.members"
+      :more="circle.more"
+      kind="want"
+      testid="library.wantWith"
+      class="avatars absolute z-10 flex"
     />
-    <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-      <span class="book-title title-wrap text-body-large" :class="notFinished && 'text-ink-muted'" data-testid="library.entryTitle">{{ entry.book.title }}</span>
-      <span class="flex min-w-0 items-center gap-xs">
-        <span
-          class="truncate text-caption"
-          :class="[notFinished ? 'text-ink-faint' : 'text-ink-muted', authorKey && 'underline decoration-hairline-strong underline-offset-2']"
-          :data-press-to="authorKey ? `/author/${authorKey}` : undefined"
-          data-testid="library.entryAuthor"
-        >{{ authorLine }}</span>
-        <EbooksMark :entry="entry" testid="library.ebookMark" />
-      </span>
-      <span v-if="notFinished" class="figures mt-xxs flex items-center gap-xs text-meta text-ink-faint" data-testid="library.entryNotFinished">
-        <UiIcon name="slash" :size="11" />
-        {{ latest?.endedOn ? t('library.notFinishedOn', { date: formatDay(latest.endedOn, { year: false }) }) : t('status.notFinished') }}
-      </span>
-      <span v-else-if="entry.status === 'finished'" class="figures mt-xxs flex items-center gap-sm text-meta text-ink-faint">
-        <UiStars v-if="latest?.rating" :quarters="latest.rating" data-testid="library.entryRating" />
-        <span v-else class="text-ink-faint" data-testid="library.entryUnrated">{{ t('rating.none') }}</span>
-        <template v-if="latest?.endedOn">
-          <span class="dot" aria-hidden="true" /><span data-testid="library.entryEnded">{{ formatDay(latest.endedOn, { year: false }) }}</span>
-        </template>
-      </span>
-      <span v-else class="figures mt-xxs text-meta text-ink-faint">{{ t('library.added', { date: added }) }}</span>
-    </span>
-  </UiPressLink>
+  </div>
 </template>
 
 <style scoped>
+/* The avatars sit on the lower edge of the cover: it is centred in the row, 3:2 tall. */
+.avatars {
+  left: -4px;
+  top: calc(50% + var(--size-cover-sm) * 0.75);
+  transform: translateY(-50%);
+}
+
 /* An abandoned read: its cover fades back and its words go quiet. */
 .dimmed {
   opacity: 0.45;

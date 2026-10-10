@@ -14,8 +14,10 @@ import type { LibraryEntry } from '~/data/library'
 import { pageCountOf, progressFraction, progressOf, progressReachedEnd } from '~/data/progress'
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
+import type { CircleGroup } from '~/utils/circle'
 
-const props = defineProps<{ entry: LibraryEntry; eager?: boolean }>()
+// `circle`: the followed members reading the same Book now (social v2a, FriendsCircleAvatars), on the cover's lower edge.
+const props = defineProps<{ entry: LibraryEntry; eager?: boolean; circle?: CircleGroup | null }>()
 
 const { t, n } = useI18n()
 const { formatDay, dayOfRead } = useDays()
@@ -59,18 +61,29 @@ function act() {
     data-testid="home.readingCard"
   >
     <UiAmbient :colors="entry.book.coverColors" shape="card" />
-    <UiPressLink :to="`/book/${entry.book.id}`" class="relative" tabindex="-1" aria-hidden="true" @press="books.prefetch(entry.book.id)">
-      <UiCover
-        :title="entry.book.title"
-        :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'lg')"
-        :thumbhash="entry.book.coverThumbhash"
-        :colors="entry.book.coverColors"
-        size="lg"
-        glow
-        :eager="eager"
+    <div class="relative shrink-0 self-start">
+      <UiPressLink :to="`/book/${entry.book.id}`" class="relative block" tabindex="-1" aria-hidden="true" @press="books.prefetch(entry.book.id)">
+        <UiCover
+          :title="entry.book.title"
+          :authors="entry.book.authors"
+          :src="coverSrc(entry.book.coverUrl, 'lg')"
+          :thumbhash="entry.book.coverThumbhash"
+          :colors="entry.book.coverColors"
+          size="lg"
+          glow
+          :eager="eager"
+        />
+      </UiPressLink>
+      <!-- Beside the cover's link, not in it: a button inside a link is not a thing. -->
+      <FriendsCircleAvatars
+        v-if="circle?.members.length"
+        :members="circle.members"
+        :more="circle.more"
+        kind="reading"
+        testid="home.readingWith"
+        class="absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2 translate-y-1/2 [--circle-ring:var(--color-surface-raised)]"
       />
-    </UiPressLink>
+    </div>
     <div class="relative flex min-w-0 flex-1 flex-col pt-xxs">
       <UiPressLink :to="`/book/${entry.book.id}`" class="flex flex-col gap-xs" data-testid="home.entry" @press="books.prefetch(entry.book.id)">
         <span class="book-title line-clamp-2 text-book-title" data-testid="home.entryTitle">{{ entry.book.title }}</span>
