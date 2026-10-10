@@ -1,0 +1,49 @@
+Timing is off.
+ setseed 
+---------
+ 
+(1 row)
+
+DELETE 1
+SET
+SET
+TRUNCATE TABLE
+SELECT 1
+INSERT 0 133
+INSERT 0 5054
+INSERT 0 5054
+SELECT 1444
+INSERT 0 289
+INSERT 0 1444
+INSERT 0 400
+INSERT 0 400
+INSERT 0 400
+INSERT 0 800
+INSERT 0 280
+INSERT 0 400
+INSERT 0 1
+INSERT 0 1
+SELECT 118
+ALTER TABLE
+UPDATE 118
+INSERT 0 118
+SELECT 83
+INSERT 0 83
+INSERT 0 12
+INSERT 0 102
+INSERT 0 1
+RESET
+INSERT 0 400
+VACUUM
+DO
+     what      | count 
+---------------+-------
+ members       |     1
+ books         |   400
+ works         |  5054
+ work_series   |  1444
+ entries       |   118
+ sessions      |    95
+ progress_days |   102
+(7 rows)
+

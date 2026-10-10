@@ -1,0 +1,60 @@
+
+## home: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. GET library_entries?want_to_read | 200 | 2.9 | 4.4 | 49.7 | 3.9
+2. GET library_entries?reading | 200 | 2.6 | 4.2 | 25.2 | 2.6
+3. GET library_entries?finished | 200 | 6.0 | 8.2 | 165.8 | 13.1
+4. GET reading_sessions | 206 | 1.9 | 4.6 | 0.0 | 0.1
+5. POST rpc/started_series | 200 | 6.4 | 7.5 | 6.1 | 1.5
+6. POST rpc/muted_series_list | 200 | 4.9 | 7.5 | 0.0 | 0.0
+screen total | | 6.7 | 8.9 | |
+
+## library: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. GET library_entries?want_to_read | 200 | 2.5 | 3.3 | 49.7 | 3.9
+2. GET library_entries?reading | 200 | 2.2 | 3.1 | 25.2 | 2.6
+3. GET library_entries?finished | 200 | 5.6 | 6.1 | 165.8 | 13.1
+4. POST rpc/library_genres | 200 | 1.8 | 2.8 | 18.2 | 5.8
+screen total | | 6.2 | 6.8 | |
+
+## profile: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. GET reading_sessions | 200 | 4.4 | 5.3 | 145.5 | 11.6
+2. GET library_entries?want_to_read | 206 | 1.1 | 1.8 | 0.0 | 0.1
+3. GET library_entries?reading | 206 | 1.1 | 2.0 | 0.0 | 0.1
+4. GET reading_progress_days | 200 | 4.9 | 5.7 | 136.6 | 3.4
+5. GET reading_progress_days | 200 | 1.5 | 4.2 | 0.0 | 0.0
+screen total | | 5.3 | 6.1 | |
+
+## book: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. GET books | 200 | 1.3 | 1.8 | 1.4 | 0.5
+2. GET library_entries | 200 | 1.4 | 2.1 | 2.0 | 0.7
+3. POST rpc/book_series_info | 200 | 2.6 | 2.9 | 2.2 | 0.8
+4. POST rpc/book_authors_of | 200 | 1.3 | 1.9 | 0.1 | 0.1
+5. POST rpc/book_genres | 200 | 1.4 | 1.7 | 0.1 | 0.1
+6. GET reading_sessions | 200 | 1.1 | 1.5 | 0.3 | 0.2
+screen total | | 2.6 | 3.1 | |
+
+## author: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. POST rpc/author_page | 200 | 4.1 | 4.6 | 12.4 | 3.0
+screen total | | 4.2 | 4.7 | |
+
+## series: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. POST rpc/series_works | 200 | 1.8 | 2.2 | 2.1 | 0.8
+screen total | | 1.9 | 2.2 | |
+
+## search: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. POST rpc/search_books | 200 | 1.3 | 1.9 | 26.8 | 1.6
+2. POST rpc/search_books | 200 | 1.1 | 1.4 | 26.1 | 1.6
+3. POST rpc/search_books | 200 | 1.4 | 1.9 | 27.0 | 1.6
+screen total | | 1.6 | 2.1 | |
+
+## next: 1 member(s) x 30 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. POST rpc/next_in_series | 200 | 2.7 | 3.5 | 2.3 | 0.8
+2. POST rpc/my_works | 200 | 1.3 | 3.3 | 24.3 | 8.3
+screen total | | 2.7 | 3.6 | |

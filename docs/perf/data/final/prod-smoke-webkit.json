@@ -1,0 +1,537 @@
+{
+ "engine": "webkit",
+ "url": "https://libellus.fabkho.dev",
+ "startedAt": "2026-10-10T19:40:44.568Z",
+ "loadAtStart": [
+  2.6,
+  2.2,
+  3.32
+ ],
+ "runs": [
+  {
+   "run": 1,
+   "cold": {
+    "shownMs": 297,
+    "fcp": 258,
+    "lcp": 420,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 63,
+    "requestsOwn": 37,
+    "fromServiceWorker": 0,
+    "onWire": 63,
+    "transferKB": 1083.8,
+    "transferOwnKB": 350.2,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 54,
+    "fcp": 49,
+    "lcp": 144,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 64,
+    "requestsOwn": 36,
+    "fromServiceWorker": 56,
+    "onWire": 8,
+    "transferKB": 10.3,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "cloudflareinsights.com",
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "offline": {
+    "ok": false,
+    "error": "Error: page.reload: WebKit encountered an internal error\nCall log:\n\u001b[2m  - waiting for navigation until \"commit\"\u001b[22m\n"
+   }
+  },
+  {
+   "run": 2,
+   "cold": {
+    "shownMs": 300,
+    "fcp": 261,
+    "lcp": 368,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 63,
+    "requestsOwn": 37,
+    "fromServiceWorker": 0,
+    "onWire": 63,
+    "transferKB": 1083.8,
+    "transferOwnKB": 350.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 69,
+    "fcp": 159,
+    "lcp": 184,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 60,
+    "requestsOwn": 36,
+    "fromServiceWorker": 56,
+    "onWire": 4,
+    "transferKB": 10.2,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "cloudflareinsights.com",
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "offline": {
+    "ok": false,
+    "error": "Error: page.reload: WebKit encountered an internal error\nCall log:\n\u001b[2m  - waiting for navigation until \"commit\"\u001b[22m\n"
+   }
+  },
+  {
+   "run": 3,
+   "cold": {
+    "shownMs": 263,
+    "fcp": 226,
+    "lcp": 340,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 63,
+    "requestsOwn": 37,
+    "fromServiceWorker": 0,
+    "onWire": 63,
+    "transferKB": 1083.8,
+    "transferOwnKB": 350.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 1094,
+    "fcp": 1096,
+    "lcp": 1200,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 64,
+    "requestsOwn": 36,
+    "fromServiceWorker": 56,
+    "onWire": 8,
+    "transferKB": 10.3,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "cloudflareinsights.com",
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "offline": {
+    "ok": false,
+    "error": "Error: page.reload: WebKit encountered an internal error\nCall log:\n\u001b[2m  - waiting for navigation until \"commit\"\u001b[22m\n"
+   }
+  },
+  {
+   "run": 4,
+   "cold": {
+    "shownMs": 256,
+    "fcp": 229,
+    "lcp": 340,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 63,
+    "requestsOwn": 37,
+    "fromServiceWorker": 0,
+    "onWire": 63,
+    "transferKB": 1083.8,
+    "transferOwnKB": 350.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 1101,
+    "fcp": 1093,
+    "lcp": 1208,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 64,
+    "requestsOwn": 36,
+    "fromServiceWorker": 56,
+    "onWire": 8,
+    "transferKB": 10.3,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "cloudflareinsights.com",
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "offline": {
+    "ok": false,
+    "error": "Error: page.reload: WebKit encountered an internal error\nCall log:\n\u001b[2m  - waiting for navigation until \"commit\"\u001b[22m\n"
+   }
+  },
+  {
+   "run": 5,
+   "cold": {
+    "shownMs": 273,
+    "fcp": 262,
+    "lcp": 376,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 63,
+    "requestsOwn": 37,
+    "fromServiceWorker": 0,
+    "onWire": 63,
+    "transferKB": 1083.8,
+    "transferOwnKB": 350.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 1086,
+    "fcp": 1080,
+    "lcp": 1172,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 64,
+    "requestsOwn": 36,
+    "fromServiceWorker": 56,
+    "onWire": 8,
+    "transferKB": 10.3,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "cloudflareinsights.com",
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "offline": {
+    "ok": false,
+    "error": "Error: page.reload: WebKit encountered an internal error\nCall log:\n\u001b[2m  - waiting for navigation until \"commit\"\u001b[22m\n"
+   }
+  }
+ ],
+ "browser": "webkit 26.6",
+ "device": "iPhone 14 (no throttling)",
+ "median": {
+  "cold": {
+   "shownMs": {
+    "median": 273,
+    "spread": 0.16117216117216118
+   },
+   "fcp": {
+    "median": 258,
+    "spread": 0.13953488372093023
+   },
+   "lcp": {
+    "median": 368,
+    "spread": 0.21739130434782608
+   },
+   "cls": {
+    "median": 0,
+    "spread": 0
+   },
+   "requests": {
+    "median": 63,
+    "spread": 0
+   },
+   "fromServiceWorker": {
+    "median": 0,
+    "spread": 0
+   },
+   "onWire": {
+    "median": 63,
+    "spread": 0
+   },
+   "transferKB": {
+    "median": 1083.8,
+    "spread": 0
+   }
+  },
+  "warm": {
+   "shownMs": {
+    "median": 1086,
+    "spread": 0.9640883977900553
+   },
+   "fcp": {
+    "median": 1080,
+    "spread": 0.9694444444444444
+   },
+   "lcp": {
+    "median": 1172,
+    "spread": 0.9078498293515358
+   },
+   "cls": {
+    "median": 0,
+    "spread": 0
+   },
+   "requests": {
+    "median": 64,
+    "spread": 0.0625
+   },
+   "fromServiceWorker": {
+    "median": 56,
+    "spread": 0
+   },
+   "onWire": {
+    "median": 8,
+    "spread": 0.5
+   },
+   "transferKB": {
+    "median": 10.3,
+    "spread": 0.009708737864077808
+   }
+  }
+ },
+ "headers": {
+  "/": {
+   "url": "https://libellus.fabkho.dev/",
+   "status": 200,
+   "cc": "public, max-age=0, must-revalidate",
+   "ce": "br",
+   "cf": "DYNAMIC",
+   "ct": "text/html; charset=utf-8"
+  },
+  "/_nuxt/entry.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/entry.DKKMhmGU.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/_nuxt/<hash>.js": {
+   "url": "https://libellus.fabkho.dev/_nuxt/CNY62EnG.js",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "application/javascript"
+  },
+  "/beacon.min.js": {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js",
+   "status": 200,
+   "cc": "public, max-age=86400",
+   "ce": "gzip",
+   "ct": "text/javascript;charset=UTF-8"
+  },
+  "/manifest.webmanifest": {
+   "url": "https://libellus.fabkho.dev/manifest.webmanifest",
+   "status": 200,
+   "cc": "no-cache",
+   "ce": "br",
+   "cf": "DYNAMIC",
+   "ct": "application/manifest+json"
+  },
+  "/_nuxt/Button.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/Button.C9Z8n98R.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/_nuxt/Frame.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/Frame.CukXiAUr.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/cdn-cgi/rum": {
+   "url": "https://cloudflareinsights.com/cdn-cgi/rum",
+   "status": 204,
+   "ct": "text/plain"
+  },
+  "/_nuxt/geist-latin-400-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-latin-400-normal.B40WzpMT.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/geist-latin-500-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-latin-500-normal.CTWBw9NS.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/newsreader-latin-400-italic.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/newsreader-latin-400-italic.CEihAR-f.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/geist-mono-latin-500-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-mono-latin-500-normal.YINYabwD.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/sw.js": {
+   "url": "https://libellus.fabkho.dev/sw.js",
+   "status": 200,
+   "cc": "no-cache",
+   "ce": "br",
+   "cf": "REVALIDATED",
+   "ct": "application/javascript"
+  },
+  "/image/thumb/Publication125/v4/bf/1f/bc/bf1fbcda-11b3-4cee-2909-1104ebe422b6/9781590173930.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/bf/1f/bc/bf1fbcda-11b3-4cee-2909-1104ebe422b6/9781590173930.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16428340, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16069207, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication123/v4/09/46/bc/0946bcea-bf39-686e-9b02-66e5ebfcc58e/9780345508553.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/09/46/bc/0946bcea-bf39-686e-9b02-66e5ebfcc58e/9780345508553.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15501983, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication122/v4/85/70/2f/85702f34-2982-e2ee-d883-b5ffc3ae0897/9781101658055.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/85/70/2f/85702f34-2982-e2ee-d883-b5ffc3ae0897/9781101658055.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15132368, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication221/v4/c8/bf/b3/c8bfb35c-53b3-7373-ad0e-561c68761d74/9780593983768.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bfb35c-53b3-7373-ad0e-561c68761d74/9780593983768.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15040121, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/8c/aa/9d/8caa9d7e-fc0c-7e9b-c226-0581f81a9700/1059114320.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/8c/aa/9d/8caa9d7e-fc0c-7e9b-c226-0581f81a9700/1059114320.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14057342, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication122/v4/ed/e4/63/ede463a3-a899-9d31-ce86-98816dcb7181/9780307414090.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/ed/e4/63/ede463a3-a899-9d31-ce86-98816dcb7181/9780307414090.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16304882, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication113/v4/b1/c4/35/b1c4350e-2063-d273-2231-853bff00db6e/9780316068796.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication113/v4/b1/c4/35/b1c4350e-2063-d273-2231-853bff00db6e/9780316068796.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16482788, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/d8/83/55/d8835508-3e61-54ec-27e0-b6b4d0c86a76/9780547728247.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d8/83/55/d8835508-3e61-54ec-27e0-b6b4d0c86a76/9780547728247.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15777322, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication18/v4/cf/40/60/cf406087-2bbf-ed33-73ba-f6e6b2375bd9/mzm.jkfqpgso.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication18/v4/cf/40/60/cf406087-2bbf-ed33-73ba-f6e6b2375bd9/mzm.jkfqpgso.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16275581, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication112/v4/1b/5d/b0/1b5db081-7488-c533-fb17-8ab7eec1f49e/9780756413057.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/1b/5d/b0/1b5db081-7488-c533-fb17-8ab7eec1f49e/9780756413057.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15071950, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication1/v4/10/1f/b7/101fb78b-a06b-3427-8876-773ed9bc8351/9780345539793.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/10/1f/b7/101fb78b-a06b-3427-8876-773ed9bc8351/9780345539793.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14701062, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication/62/b5/91/mzi.ioyhzhmc.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication/62/b5/91/mzi.ioyhzhmc.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15670082, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/13/fb/63/13fb6355-fce2-0e4b-08b7-48452037759a/9780593135211.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/13/fb/63/13fb6355-fce2-0e4b-08b7-48452037759a/9780593135211.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15915121, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication126/v4/4a/c4/3c/4ac43c1a-ccd8-8abf-a18d-3df2232c8180/9780061991127.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/4a/c4/3c/4ac43c1a-ccd8-8abf-a18d-3df2232c8180/9780061991127.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14766669, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/8b/c8/4a/8bc84a3e-bd3e-cabd-f5e2-a8739f9cad91/9780307781888.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/8b/c8/4a/8bc84a3e-bd3e-cabd-f5e2-a8739f9cad91/9780307781888.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15734857, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication221/v4/3b/84/cc/3b84ccb0-a252-40be-183b-19b5c098654a/9780061803208.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/3b/84/cc/3b84ccb0-a252-40be-183b-19b5c098654a/9780061803208.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16464608, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication122/v4/b4/b3/d5/b4b3d5b1-0dd6-abf5-7856-965e628b9fc1/9780547539638.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/b4/b3/d5/b4b3d5b1-0dd6-abf5-7856-965e628b9fc1/9780547539638.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14315874, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication4/v4/2c/e3/68/2ce3683c-ce5f-866b-072d-952108c35b0c/SANDMAN_v1_PN_cover.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication4/v4/2c/e3/68/2ce3683c-ce5f-866b-072d-952108c35b0c/SANDMAN_v1_PN_cover.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16263591, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication6/v4/02/7c/aa/027caae8-d826-f17d-30a3-1e75d5bfd187/9781473208735.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication6/v4/02/7c/aa/027caae8-d826-f17d-30a3-1e75d5bfd187/9781473208735.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15091313, no-transform",
+   "ct": "image/jpeg"
+  }
+ },
+ "loadAtEnd": [
+  2.38,
+  2.24,
+  3.24
+ ]
+}

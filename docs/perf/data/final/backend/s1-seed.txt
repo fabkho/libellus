@@ -1,0 +1,49 @@
+Timing is off.
+ setseed 
+---------
+ 
+(1 row)
+
+DELETE 1
+SET
+SET
+TRUNCATE TABLE
+SELECT 1
+INSERT 0 833
+INSERT 0 31654
+INSERT 0 31654
+SELECT 9044
+INSERT 0 1809
+INSERT 0 9044
+INSERT 0 2500
+INSERT 0 2500
+INSERT 0 2500
+INSERT 0 5000
+INSERT 0 1750
+INSERT 0 2500
+INSERT 0 30
+INSERT 0 30
+SELECT 4307
+ALTER TABLE
+UPDATE 4307
+INSERT 0 4307
+SELECT 3308
+INSERT 0 3308
+INSERT 0 229
+INSERT 0 2046
+INSERT 0 30
+RESET
+INSERT 0 2500
+VACUUM
+DO
+     what      | count 
+---------------+-------
+ members       |    30
+ books         |  2500
+ works         | 31654
+ work_series   |  9044
+ entries       |  4307
+ sessions      |  3537
+ progress_days |  2046
+(7 rows)
+

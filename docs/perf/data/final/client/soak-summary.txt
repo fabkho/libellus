@@ -1,0 +1,34 @@
+5 runs of 30/30/30/30/30 rounds (/tmp/perf-final/flight-soak)
+| measure | rounds 2–11 | last 10 rounds |
+|---|---|---|
+| push start ms | 47 [47–47.5] | 47 [47–49] |
+| push hero drawn ms | 31 [30–31.5] | 30.5 [30–32] |
+| push fly ms | 300 [291.5–300] | 300 [291.5–300] |
+| push dropped (sum) | 2 [2–4] | 2 [0–3] |
+| push worst gap ms | 17 [17–17] | 17 [17–17] |
+| push LoAF ms (sum) | 0 [0–0] | 0 [0–0] |
+| pop start ms | 47 [47–48] | 47 [47–48] |
+| pop fly ms | 233 [233–241.5] | 233 [217–241.5] |
+| pop dropped (sum) | 0 [0–0] | 0 [0–0] |
+| pop worst gap ms | 17 [17–17] | 17 [17–17] |
+| pop LoAF ms (sum) | 0 [0–0] | 0 [0–0] |
+| animations | 0 [0–0] | 0 [0–0] |
+| elements | 379 [379–379] | 379 [379–379] |
+| DOM nodes (all) | 919 [884–919] | 919 [884–919] |
+| listeners | 212 [211–212] | 212 [211–212] |
+| JS heap MB | 10.2 [10.2–10.3] | 11.1 [11–11.1] |
+| left behind | 0 [0–0] | 0 [0–0] |
+| stack requests | 15 [15–15] | 15 [14.5–15] |
+| stack requests failed (sum) | 0 [0–0] | 0 [0–0] |
+| stack kB | 59.5 [59–59.5] | 60 [59.5–60] |
+| in flight at push tap | 0 [0–0] | 0 [0–0] |
+| in flight at pop tap | 0 [0–0] | 0 [0–0] |
+| LoAF ms in round (sum) | 0 [0–0] | 0 [0–0] |
+
+| run | most stack requests in flight at a tap | requests failed | rounds that asked the stack nothing | frames dropped in all flights | LoAF ms |
+|---|---|---|---|---|---|
+| chromium-home-local-0.json | 0 | 0 | 0 | 4 | 70 |
+| chromium-home-local-1.json | 0 | 0 | 0 | 7 | 75 |
+| chromium-home-local-2.json | 0 | 0 | 0 | 4 | 71 |
+| chromium-home-local-3.json | 0 | 0 | 0 | 7 | 68 |
+| chromium-home-local-4.json | 0 | 0 | 0 | 7 | 68 |

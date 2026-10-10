@@ -1,0 +1,12 @@
+              set_config              
+--------------------------------------
+ da1da237-d1d6-2ab6-cc4a-c621f210906c
+(1 row)
+
+SET
+BEGIN
+NOTICE:  sync_write update_progress: 0.17 ms per call
+NOTICE:  sync_write add_to_library (new Catalogue Book): 0.31 ms per call
+DO
+NOTICE:  sync_write start_reading + finish_reading (pair): 0.65 ms per pair
+ROLLBACK

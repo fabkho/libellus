@@ -1,0 +1,495 @@
+{
+ "engine": "chromium",
+ "url": "https://libellus.fabkho.dev",
+ "startedAt": "2026-10-10T19:37:48.533Z",
+ "loadAtStart": [
+  1.04,
+  1.8,
+  3.47
+ ],
+ "runs": [
+  {
+   "run": 1,
+   "cold": {
+    "shownMs": 2557,
+    "fcp": 2224,
+    "lcp": 2224,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0.0009,
+    "loaf": [
+     {
+      "start": 231,
+      "dur": 658,
+      "block": 0,
+      "render": 2,
+      "scripts": []
+     },
+     {
+      "start": 2124,
+      "dur": 91,
+      "block": 40,
+      "render": 34,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 53ms"
+      ]
+     }
+    ],
+    "requests": 46,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 46,
+    "transferKB": 341.7,
+    "transferOwnKB": 331.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 140,
+    "fcp": 132,
+    "lcp": 132,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0,
+    "loaf": [],
+    "requests": 38,
+    "requestsOwn": 35,
+    "fromServiceWorker": 35,
+    "onWire": 3,
+    "transferKB": 10.1,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 117
+   }
+  },
+  {
+   "run": 2,
+   "cold": {
+    "shownMs": 2559,
+    "fcp": 2220,
+    "lcp": 2220,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0.0009,
+    "loaf": [
+     {
+      "start": 247,
+      "dur": 698,
+      "block": 0,
+      "render": 2,
+      "scripts": []
+     },
+     {
+      "start": 2117,
+      "dur": 93,
+      "block": 43,
+      "render": 36,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 55ms"
+      ]
+     }
+    ],
+    "requests": 46,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 46,
+    "transferKB": 341.7,
+    "transferOwnKB": 331,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 142,
+    "fcp": 128,
+    "lcp": 128,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0,
+    "loaf": [],
+    "requests": 43,
+    "requestsOwn": 40,
+    "fromServiceWorker": 40,
+    "onWire": 3,
+    "transferKB": 10.1,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 106
+   }
+  },
+  {
+   "run": 3,
+   "cold": {
+    "shownMs": 2522,
+    "fcp": 2180,
+    "lcp": 2180,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0.0009,
+    "loaf": [
+     {
+      "start": 211,
+      "dur": 670,
+      "block": 0,
+      "render": 2,
+      "scripts": []
+     },
+     {
+      "start": 2080,
+      "dur": 92,
+      "block": 42,
+      "render": 34,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 57ms"
+      ]
+     }
+    ],
+    "requests": 46,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 46,
+    "transferKB": 341.7,
+    "transferOwnKB": 331.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 140,
+    "fcp": 136,
+    "lcp": 136,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0,
+    "loaf": [
+     {
+      "start": 75,
+      "dur": 54,
+      "block": 0,
+      "render": 3,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 32ms"
+      ]
+     }
+    ],
+    "requests": 38,
+    "requestsOwn": 35,
+    "fromServiceWorker": 35,
+    "onWire": 3,
+    "transferKB": 10.1,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 115
+   }
+  },
+  {
+   "run": 4,
+   "cold": {
+    "shownMs": 2528,
+    "fcp": 2196,
+    "lcp": 2196,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0.0009,
+    "loaf": [
+     {
+      "start": 212,
+      "dur": 655,
+      "block": 0,
+      "render": 3,
+      "scripts": []
+     },
+     {
+      "start": 2095,
+      "dur": 90,
+      "block": 39,
+      "render": 32,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 55ms"
+      ]
+     }
+    ],
+    "requests": 46,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 46,
+    "transferKB": 341.7,
+    "transferOwnKB": 331.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 133,
+    "fcp": 124,
+    "lcp": 124,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0,
+    "loaf": [],
+    "requests": 38,
+    "requestsOwn": 35,
+    "fromServiceWorker": 35,
+    "onWire": 3,
+    "transferKB": 10.1,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 112
+   }
+  },
+  {
+   "run": 5,
+   "cold": {
+    "shownMs": 2520,
+    "fcp": 2180,
+    "lcp": 2180,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0.0009,
+    "loaf": [
+     {
+      "start": 213,
+      "dur": 670,
+      "block": 0,
+      "render": 3,
+      "scripts": []
+     },
+     {
+      "start": 2079,
+      "dur": 91,
+      "block": 41,
+      "render": 32,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 57ms"
+      ]
+     }
+    ],
+    "requests": 46,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 46,
+    "transferKB": 341.7,
+    "transferOwnKB": 331,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 145,
+    "fcp": 136,
+    "lcp": 136,
+    "lcpEl": "p[signIn.brand]",
+    "cls": 0,
+    "loaf": [
+     {
+      "start": 76,
+      "dur": 51,
+      "block": 0,
+      "render": 6,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 30ms"
+      ]
+     }
+    ],
+    "requests": 38,
+    "requestsOwn": 35,
+    "fromServiceWorker": 35,
+    "onWire": 3,
+    "transferKB": 10.1,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 116
+   }
+  }
+ ],
+ "browser": "chromium 153.0.8010.12",
+ "device": "Pixel 7 (CPU 4x, Slow 4G)",
+ "median": {
+  "cold": {
+   "shownMs": {
+    "median": 2528,
+    "spread": 0.015427215189873418
+   },
+   "fcp": {
+    "median": 2196,
+    "spread": 0.020036429872495445
+   },
+   "lcp": {
+    "median": 2196,
+    "spread": 0.020036429872495445
+   },
+   "cls": {
+    "median": 0.0009,
+    "spread": 0
+   },
+   "requests": {
+    "median": 46,
+    "spread": 0
+   },
+   "fromServiceWorker": {
+    "median": 0,
+    "spread": 0
+   },
+   "onWire": {
+    "median": 46,
+    "spread": 0
+   },
+   "transferKB": {
+    "median": 341.7,
+    "spread": 0
+   }
+  },
+  "warm": {
+   "shownMs": {
+    "median": 140,
+    "spread": 0.08571428571428572
+   },
+   "fcp": {
+    "median": 132,
+    "spread": 0.09090909090909091
+   },
+   "lcp": {
+    "median": 132,
+    "spread": 0.09090909090909091
+   },
+   "cls": {
+    "median": 0,
+    "spread": 0
+   },
+   "requests": {
+    "median": 38,
+    "spread": 0.13157894736842105
+   },
+   "fromServiceWorker": {
+    "median": 35,
+    "spread": 0.14285714285714285
+   },
+   "onWire": {
+    "median": 3,
+    "spread": 0
+   },
+   "transferKB": {
+    "median": 10.1,
+    "spread": 0
+   }
+  }
+ },
+ "headers": {
+  "/": {
+   "url": "https://libellus.fabkho.dev/",
+   "status": 200,
+   "cc": "public, max-age=0, must-revalidate",
+   "ce": "br",
+   "cf": "DYNAMIC",
+   "ct": "text/html; charset=utf-8"
+  },
+  "/_nuxt/entry.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/entry.DKKMhmGU.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/_nuxt/<hash>.js": {
+   "url": "https://libellus.fabkho.dev/_nuxt/Dj1z8OTw.js",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "application/javascript"
+  },
+  "/beacon.min.js": {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js",
+   "status": 200,
+   "cc": "public, max-age=86400",
+   "ce": "gzip",
+   "ct": "text/javascript;charset=UTF-8"
+  },
+  "/_nuxt/Button.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/Button.C9Z8n98R.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/_nuxt/Frame.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/Frame.CukXiAUr.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/cdn-cgi/rum": {
+   "url": "https://cloudflareinsights.com/cdn-cgi/rum",
+   "status": 204
+  },
+  "/_nuxt/geist-mono-latin-500-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-mono-latin-500-normal.YINYabwD.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/geist-latin-400-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-latin-400-normal.B40WzpMT.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/geist-latin-500-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-latin-500-normal.CTWBw9NS.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/newsreader-latin-400-italic.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/newsreader-latin-400-italic.CEihAR-f.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  }
+ },
+ "loadAtEnd": [
+  2.83,
+  2.12,
+  3.44
+ ]
+}

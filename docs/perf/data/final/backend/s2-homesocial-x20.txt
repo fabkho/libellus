@@ -1,0 +1,12 @@
+
+## homeSocial: 20 member(s) x 10 rounds (screen = slowest request of the parallel set)
+request | status | p50 ms | p95 ms | raw KB | gzip KB
+1. GET library_entries?want_to_read | 200 | 93.2 | 240.9 | 37.4 | 4.7
+2. GET library_entries?reading | 200 | 82.9 | 236.1 | 11.9 | 1.9
+3. GET library_entries?finished | 200 | 84.6 | 244.2 | 143.3 | 16.1
+4. GET reading_sessions | 206 | 76.2 | 247.3 | 0.0 | 0.1
+5. POST rpc/started_series | 200 | 170.3 | 260.7 | 8.6 | 1.9
+6. POST rpc/muted_series_list | 200 | 168.6 | 264.0 | 0.0 | 0.0
+7. POST rpc/feed | 200 | 163.6 | 255.0 | 0.0 | 0.0
+8. POST rpc/my_people | 200 | 163.0 | 257.3 | 0.1 | 0.1
+screen total | | 233.2 | 268.2 | |
