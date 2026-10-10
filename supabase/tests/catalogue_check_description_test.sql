@@ -7,7 +7,7 @@
 -- Library. `search_books` hands the description masked by the same rule.
 
 begin;
-select plan(37);
+select plan(38);
 
 create schema if not exists tests;
 
@@ -59,7 +59,7 @@ grant usage on schema tests to anon, authenticated;
 grant execute on all functions in schema tests to anon, authenticated;
 
 create temporary table ids (name text primary key, id uuid) on commit drop;
-grant all on ids to authenticated, anon;
+grant all on ids to authenticated, anon, service_role;
 
 -- Whatever else is in this database is checked already: the claims below see only this test's Books.
 update public.books set checked_at = now() where owner_id is null and checked_at is null;
@@ -156,7 +156,11 @@ select throws_ok($$ select description from public.books $$, '42501', null, 'and
 reset role;
 select is((select count(*)::int from public.books where id = (select id from ids where name = 'b_pending') and description = 'Blurb of Pending Blurb'), 1,
   'the description is stored as it was (the guard is on reading)');
-select is(has_function_privilege('service_role', 'public.book_description(uuid)', 'execute'), true, 'the service role may call it (it has the table anyway)');
+select set_config('request.jwt.claims', json_build_object('role', 'service_role')::text, true);
+set local role service_role;
+select is(public.book_description((select id from ids where name = 'b_failed')), 'Blurb of Failed Blurb', 'the service role reads any blurb (it has the table anyway)');
+select is(public.book_description((select id from ids where name = 'b_manual')), 'Blurb of Manual Blurb', 'and a Manual book''s');
+reset role;
 select is(has_function_privilege('authenticated', 'private.description_readable(public.books)', 'execute'), false, 'the rule itself is private');
 
 select * from finish();

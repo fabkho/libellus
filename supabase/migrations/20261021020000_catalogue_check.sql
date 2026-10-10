@@ -15,7 +15,7 @@
 -- sent and nothing fails: the Books simply stay unchecked.
 --
 -- The queue is implicit: every Catalogue Book (owner_id null) with `checked_at` null. Existing rows
--- are unchecked too, so the check works through them over time (newest first). The state a claim
+-- are unchecked too, so the check works through them over time (oldest first). The state a claim
 -- needs (lease, attempts, backoff) lives in `private.catalogue_check_state`, one row per Book that
 -- was ever claimed. A Manual book (owner_id set) is never checked, never claimed, and a constraint
 -- keeps it so.
@@ -60,14 +60,15 @@ comment on column public.books.checked_at is
   'Social v2a §5: when the catalogue-check function read this Catalogue Book at its source; null = not checked. '
   'Manual books are never checked.';
 comment on column public.books.check_failed is
-  'Social v2a §5: the source did not know this Book (checked_at is set, the data are as the first member sent them).';
+  'Social v2a §5: the source did not know this Book, or its answer is not this Book (checked_at is set, nothing was written; others see it as unverified, private.book_shown).';
 
 alter table public.books drop constraint if exists books_manual_unchecked;
 alter table public.books add constraint books_manual_unchecked
   check (owner_id is null or (checked_at is null and not check_failed));
 
--- What the claim looks for: unchecked Catalogue Books, newest first.
-create index if not exists books_unchecked on public.books (created_at desc)
+-- What the claim looks for: unchecked Catalogue Books, oldest first (a flood of new rows waits behind them).
+drop index if exists public.books_unchecked;
+create index books_unchecked on public.books (created_at)
   where owner_id is null and checked_at is null;
 
 -- ------------------------------------------------------------- the state
@@ -175,9 +176,138 @@ $$;
 revoke all on function private.catalogue_check_due() from public, anon, authenticated;
 revoke all on function private.catalogue_check_kick() from public, anon, authenticated;
 
+-- ------------------------------------------------------------- flooding
+
+-- How many new Catalogue Books a member has made today: at most 200 (private.catalogue_daily_limit).
+-- Counted in catalogue_book_for, which every add goes through. A day's row is dropped a week later.
+create table if not exists private.catalogue_additions (
+  member_id uuid not null references auth.users on delete cascade,
+  day       date not null default current_date,
+  n         integer not null default 0,
+  primary key (member_id, day)
+);
+
+comment on table private.catalogue_additions is
+  'Social v2a §5: how many new Catalogue Books a member made on a day (catalogue_book_for refuses the 201st: catalogue_limit).';
+revoke all on private.catalogue_additions from public, anon, authenticated;
+
+-- catalogue_book_for, from its latest body (20261011090000_own_edition.sql), whole; the only change is
+-- the count after a new row: a member makes at most 200 new Catalogue Books a day. The 201st is refused
+-- with `catalogue_limit` (PT429) and the whole add rolls back; a Book that is in the Catalogue already
+-- costs nothing (the first member's row is shared). Rows the check will read, one by one at the sources'
+-- pace, cannot be made faster than that by one account.
+create or replace function public.catalogue_book_for(p_book jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_book   public.books;
+  v_id     uuid;
+  v_member uuid := auth.uid();
+  v_limit  constant integer := 200;
+  v_count  integer;
+begin
+  if p_book is null or jsonb_typeof(p_book) <> 'object' then
+    raise exception 'book_invalid' using errcode = '22023';
+  end if;
+
+  v_book := jsonb_populate_record(null::public.books, p_book);
+  -- Normalised here too, so every client finds the same row.
+  v_book.title   := nullif(btrim(v_book.title), '');
+  v_book.isbn13  := nullif(upper(regexp_replace(v_book.isbn13, '[^0-9Xx]', '', 'g')), '');
+  v_book.isbn10  := nullif(upper(regexp_replace(v_book.isbn10, '[^0-9Xx]', '', 'g')), '');
+  v_book.authors := coalesce(
+    (select array_agg(btrim(a) order by n) from unnest(v_book.authors) with ordinality as t(a, n)
+      where nullif(btrim(a), '') is not null),
+    '{}'
+  );
+  if v_book.source = 'apple' then
+    v_book.format := coalesce(v_book.format, 'ebook');
+  end if;
+
+  -- Only what search finds enters this way (see #41): Manual books have their
+  -- own paths, and an `import` snapshot must match a Catalogue Book.
+  if v_book.title is null
+     or v_book.source is null
+     or v_book.source not in ('apple', 'openlibrary', 'import')
+     or coalesce(v_book.isbn13, v_book.apple_id, v_book.openlibrary_edition_key) is null then
+    raise exception 'book_invalid' using errcode = '22023';
+  end if;
+
+  -- An ISBN match wins over a source match: the same edition found through
+  -- another source is still the same Book.
+  select id into v_id from public.books
+   where owner_id is null and v_book.isbn13 is not null and isbn13 = v_book.isbn13;
+  if v_id is null then
+    select id into v_id from public.books
+     where owner_id is null
+       and ((v_book.apple_id is not null and apple_id = v_book.apple_id)
+         or (v_book.openlibrary_edition_key is not null
+             and openlibrary_edition_key = v_book.openlibrary_edition_key))
+     limit 1;
+  end if;
+
+  if v_id is null and v_book.source = 'import' then
+    raise exception 'book_invalid' using errcode = '22023';
+  end if;
+
+  if v_id is null then
+    -- Two members adding the same new Book at once: the second insert waits for
+    -- the first transaction, then does nothing, and the next statement (a new
+    -- snapshot) finds the winner's row instead.
+    insert into public.books (
+      title, authors, isbn13, isbn10, page_count, published_year, language, publisher,
+      description, cover_url, cover_thumbhash, cover_dominant, cover_secondary, source,
+      apple_id, openlibrary_edition_key, openlibrary_work_key, format
+    ) values (
+      v_book.title, v_book.authors, v_book.isbn13, v_book.isbn10, v_book.page_count,
+      v_book.published_year, v_book.language, v_book.publisher, v_book.description,
+      v_book.cover_url, v_book.cover_thumbhash, lower(v_book.cover_dominant),
+      lower(v_book.cover_secondary), v_book.source, v_book.apple_id,
+      v_book.openlibrary_edition_key, v_book.openlibrary_work_key, v_book.format
+    )
+    on conflict do nothing
+    returning id into v_id;
+
+    -- A new row: it counts against the member's day (not a service-role or test call, which has no member).
+    if v_id is not null and v_member is not null then
+      insert into private.catalogue_additions as a (member_id, day, n)
+      values (v_member, current_date, 1)
+      on conflict (member_id, day) do update set n = a.n + 1 where a.n < v_limit
+      returning a.n into v_count;
+      if v_count is null then
+        raise exception 'catalogue_limit' using errcode = 'PT429';
+      end if;
+      delete from private.catalogue_additions where member_id = v_member and day < current_date - 7;
+    end if;
+
+    if v_id is null then
+      select id into v_id from public.books
+       where owner_id is null
+         and ((v_book.isbn13 is not null and isbn13 = v_book.isbn13)
+           or (v_book.apple_id is not null and apple_id = v_book.apple_id)
+           or (v_book.openlibrary_edition_key is not null
+               and openlibrary_edition_key = v_book.openlibrary_edition_key))
+       limit 1;
+    end if;
+    -- Only if the winner rolled back in between; the member can simply retry.
+    if v_id is null then
+      raise exception 'book_conflict' using errcode = '40001';
+    end if;
+  end if;
+
+  return v_id;
+end;
+$$;
+
+revoke all on function public.catalogue_book_for(jsonb) from public, anon, authenticated;
+
 -- ------------------------------------------------------ the function's side
 
--- Claims up to p_limit unchecked Catalogue Books for p_lease: never tried first, then newest first.
+-- Claims up to p_limit unchecked Catalogue Books for p_lease: never tried first, then oldest first (legacy
+-- rows included: a member who adds Books in bulk goes to the back of the queue, not the front).
 -- A Manual book is never due (and cannot be: books_manual_unchecked).
 create or replace function public.catalogue_check_claim(p_limit integer default 8, p_lease interval default interval '3 minutes')
 returns setof public.books
@@ -194,7 +324,7 @@ begin
      where b.owner_id is null and b.checked_at is null
        and coalesce(s.not_before, '-infinity') <= now()
        and (s.claimed_until is null or s.claimed_until < now())
-     order by coalesce(s.attempts, 0), b.created_at desc
+     order by coalesce(s.attempts, 0), b.created_at, b.id
      limit greatest(1, least(coalesce(p_limit, 8), 50))
      for update of b skip locked
   ),
@@ -448,6 +578,8 @@ set search_path = pg_catalog, public
 as $$
   select private.description_shown(p_book)
       or p_book.owner_id = (select auth.uid())
+      -- The service role (the export script, the check) reads every blurb: it has the table.
+      or (select auth.role()) = 'service_role'
       or exists (select 1 from public.library_entries e
                   where e.member_id = (select auth.uid()) and e.book_id = p_book.id)
 $$;
@@ -469,7 +601,7 @@ as $$
   select b.description
     from public.books b
    where b.id = p_book
-     and (b.owner_id is null or b.owner_id = (select auth.uid()))
+     and (b.owner_id is null or b.owner_id = (select auth.uid()) or (select auth.role()) = 'service_role')
      and private.description_readable(b)
 $$;
 
@@ -484,7 +616,7 @@ as $$
     from public.books b
    where b.id = any (p_books[1:5000])
      and b.description is not null
-     and (b.owner_id is null or b.owner_id = (select auth.uid()))
+     and (b.owner_id is null or b.owner_id = (select auth.uid()) or (select auth.role()) = 'service_role')
      and private.description_readable(b)
 $$;
 
