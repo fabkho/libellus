@@ -13,7 +13,9 @@ import { goto, openProfile, signedIn, untilStill } from './support'
  * private card, asks and waits; Ida accepts it from Home; Ida finishes a Book with a rating and a review, and
  * it is a lit card in Anna's Your circle, then a row of the feed, then on Ida's page under Recently finished;
  * Ida hides the Book, and it is gone from the feed and the page; Ida blocks Anna, and the circle is gone and
- * the link no longer opens. The rules behind each step are pgTAP's (supabase/tests/social_*), the data layer's
+ * the link no longer opens. Version 2a joins it: Anna likes Ida's finish from the feed (the heart keeps), Ida's
+ * Home says "Anna liked your review of …" and its sheet names Anna; Ida marks her review as spoilers, and Anna,
+ * who has not finished the Book, sees it folded and unfolds it. The rules behind each step are pgTAP's (supabase/tests/social_*), the data layer's
  * and the views' Vitest; this flow is the screens joined up, the way one member meets another.
  *
  * The settle window (a finish is shown to followers only after it, so a correction is not announced) is
@@ -125,12 +127,52 @@ test('Ida shares her link, Anna asks and is let in, a finish shows in her circle
     await expect(anna.getByTestId('member.name')).toHaveText('Ida')
     await expect(anna.getByTestId('member.finished').getByTestId('member.finishedTitle')).toHaveText(book.title)
 
+    // Anna likes Ida's finish from the feed: the heart fills at once, counts one and keeps after a reload.
+    await goto(anna, '/friends')
+    const heart = anna.getByTestId('friends.entryLike')
+    await expect(heart).toHaveAttribute('aria-pressed', 'false')
+    await heart.click()
+    await expect(heart).toHaveAttribute('aria-pressed', 'true')
+    await expect(anna.getByTestId('friends.entryLike.count')).toHaveText('1')
+    await goto(anna, '/friends')
+    await expect(anna.getByTestId('friends.entryLike')).toHaveAttribute('aria-pressed', 'true')
+    await expect(anna.getByTestId('friends.entryLike.count')).toHaveText('1')
+
+    // Ida's Home: one quiet row says who liked her review, and its sheet names Anna.
+    await goto(ida, '/')
+    const liked = ida.getByTestId('home.like')
+    await expect(liked).toHaveCount(1)
+    await expect(liked).toContainText(`Anna liked your review of ${book.title}`)
+    await liked.click()
+    await expect(ida.getByTestId('likers')).toBeVisible()
+    await expect(ida.getByTestId('likers.row')).toHaveCount(1)
+    await expect(ida.getByTestId('likers.row')).toContainText('Anna')
+    await ida.keyboard.press('Escape')
+    await expect(ida.getByTestId('likers')).toBeHidden()
+
     // Ida hides the Book: Library → Finished → the Book → ⋯ → Hide from followers.
     await goto(ida, '/')
     await ida.getByTestId('shell.tab.library').click()
     await ida.getByTestId('library.segment.finished').click()
     await ida.getByTestId('library.entry').click()
     await expect(ida.getByTestId('book.title')).toHaveText(book.title)
+
+    // She marks her review as spoilers (the switch is in the review box, there with the text): Anna has not
+    // finished the Book, so her feed folds the review behind Show anyway, and Show anyway unfolds it.
+    await ida.getByTestId('history.edit').first().click()
+    await expect(ida.getByTestId('editSession')).toBeVisible()
+    await ida.getByTestId('editSession.spoilers').click()
+    await expect(ida.getByTestId('editSession.spoilers')).toHaveAttribute('aria-checked', 'true')
+    await ida.getByTestId('editSession.submit').click()
+    await expect(ida.getByTestId('editSession')).toBeHidden()
+    await goto(anna, '/friends')
+    await expect(anna.getByTestId('friends.entryFolded')).toContainText(en.review.folded)
+    await expect(anna.getByTestId('friends.entryReview')).toHaveCount(0)
+    await expect(anna.getByTestId('friends.entryLike')).toBeVisible()
+    await anna.getByTestId('review.showAnyway').click()
+    await expect(anna.getByTestId('friends.entryReview')).toHaveText('A house of tides and statues.')
+    await expect(anna.getByTestId('friends.entryFolded')).toHaveCount(0)
+
     await ida.getByTestId('book.options').click()
     await expect(ida.getByTestId('bookOptions')).toBeVisible()
     const hide = ida.getByTestId('bookOptions.hide')
