@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.9.2](https://github.com/fabkho/libellus/compare/v1.9.1...v1.9.2) (2026-10-10)
+
+
+### Fixes
+
+* **security:** a shared ebook is imported only after the member taps Add (F4) ([b17acd3](https://github.com/fabkho/libellus/commit/b17acd33cad1256f9de54759ce732fd7d13a2760))
+* **security:** bound the search_books query to 200 characters (F14) ([1515122](https://github.com/fabkho/libellus/commit/15151224a48a4bffcece8265be222ea89bb12cf6))
+* **security:** Catalogue input: cover host list, Open Library keys, search query bound (F1, F17, F14) ([c1e55e1](https://github.com/fabkho/libellus/commit/c1e55e173dcae3808502ebfaa94be239b63c4b81))
+* **security:** constrain Open Library keys on books (F17) ([cfd4e79](https://github.com/fabkho/libellus/commit/cfd4e7968b106d234ac3cfeb40bd7f3b1a5c26b0))
+* **security:** Dependabot version updates for npm and github-actions (F7) ([bf48c7c](https://github.com/fabkho/libellus/commit/bf48c7ceea5671dd5b20e5e5eacc48d674d6bef2))
+* **security:** docs for a public repository: third-party terms, no 'private repository' statements, neutral wording (F22, F23, F24) ([fdce2bc](https://github.com/fabkho/libellus/commit/fdce2bc5b8f19d01a186129b89067ee852d11f96))
+* **security:** forget every device key and cache on sign-out and on a dead session (F10, F11) ([11d3a23](https://github.com/fabkho/libellus/commit/11d3a23583e2b59cb40c97e41c590b9987e04132))
+* **security:** Goodreads hardening, package B (F2, F3, F15, F16, F18, I1, I2) ([e0d1bb9](https://github.com/fabkho/libellus/commit/e0d1bb93a907aa8fc714786189d8f2e01986d39a))
+* **security:** goodreads-rating cache, bounds, rate limit; close the title cache (F2, F3, F15, F16, I1, I2) ([7c0e992](https://github.com/fabkho/libellus/commit/7c0e992de3cfee488073013fa03c88fc1e5882db))
+* **security:** never ask Goodreads by title for a Manual book (F3) ([f18f087](https://github.com/fabkho/libellus/commit/f18f087edf6e9870a9f83e102614c6f867c14cc6))
+* **security:** no account-wide secret in pull request jobs (F8) ([2727c74](https://github.com/fabkho/libellus/commit/2727c740fc0541d078e6b726d808b0e5d09a9a8b))
+* **security:** per-member rate limit on enrich, constant-time secret check (F16, I1) ([3caab89](https://github.com/fabkho/libellus/commit/3caab890a09f5c1ceb7331c9d50d14d08359b044))
+* **security:** pin third-party actions by full commit SHA (F6) ([85c40d2](https://github.com/fabkho/libellus/commit/85c40d2ca0f8295785294dc61d275c3225df8197))
+* **security:** reading-page-og fetches covers only from the cover hosts, redirects hop by hop (F18) ([834afc2](https://github.com/fabkho/libellus/commit/834afc23f4ac82175cc81577084772e765238672))
+* **security:** refuse a Catalogue cover off the host allow-list (F1) ([fb8bcfe](https://github.com/fabkho/libellus/commit/fb8bcfe2737f41f44bdb88ceeaa3eaf8d02a055a))
+* **security:** repository and public-repo hygiene (F5-F8, F12, F20-F24) ([caa5f89](https://github.com/fabkho/libellus/commit/caa5f89158cf66f6a52adc014b251ff27fb320dd))
+* **security:** robots.txt and .well-known/security.txt (F12) ([82047af](https://github.com/fabkho/libellus/commit/82047af537c3b4c378a713f97d7b476f55482369))
+* **security:** share target confirmation, device data after sign-out and a dead session (F4, F10, F11) ([4e1166d](https://github.com/fabkho/libellus/commit/4e1166d3985b3d63233bd4e1ac2409839623c90f))
+
 ## [1.9.1](https://github.com/fabkho/libellus/compare/v1.9.0...v1.9.1) (2026-10-10)
 
 
