@@ -4,9 +4,11 @@
 // the Book's first linked author (the one the author line names first; the
 // others are one tap away on that line) and nothing else about her — no
 // portrait, no intro, no credits (those are her page's). Her name, a link to
-// her page; up to three of her other works as on her page (the Book itself
-// left out; her status of each; a tap opens the Book with its cover flying);
-// and "Show all <n>" to her page.
+// her page; up to three of her other works, her latest (her page keeps each
+// series in its reading order; this teaser is her newest, whatever the group:
+// the latest year first, works without a year last, the Book itself left out;
+// her status of each; a tap opens the Book with its cover flying); and
+// "Show all <n>" to her page.
 //
 // Her page is the one `authors.load` fetches and the device keeps (a dozen of
 // them, the same copy her own page opens from), so what has been seen shows
