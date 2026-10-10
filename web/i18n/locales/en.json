@@ -1716,7 +1716,12 @@
     "someone": "A reader",
     "offline": "You're offline. This profile shows once you're back.",
     "loadError": "This profile couldn't be loaded.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "bothRead": "You both read",
+    "bothReadYours": "You: {rating}",
+    "bothReadHers": "{name}: {rating}",
+    "bothReadNoRating": "no rating",
+    "bothReadLegend": "Your stars, then {name}’s"
   },
   "follow": {
     "loading": "Opening…",
@@ -1804,6 +1809,19 @@
       "empty": "No likes yet.",
       "loadError": "The likes couldn't be loaded.",
       "offline": "You're offline. The likes show once you're back."
+    },
+    "circle": {
+      "reading": "Also reading: {names}",
+      "want": "Also want to read: {names}",
+      "sheetReading": "Also reading",
+      "sheetWant": "Also want to read",
+      "more": "and {count} more",
+      "names": {
+        "one": "{a}",
+        "two": "{a} and {b}",
+        "three": "{a}, {b} and {c}",
+        "others": "{a}, {b} and {count} others"
+      }
     }
   }
 }

@@ -18,6 +18,7 @@ import { useLibraryStore } from '~/stores/library'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useSessionStore } from '~/stores/session'
+import type { CircleGroup } from '~/utils/circle'
 
 definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 
@@ -26,6 +27,9 @@ const library = useLibraryStore()
 const libraryView = useLibraryViewStore()
 // The genre filter's lookup (#168): provided to the view store by the genres store, which the device fills at once.
 const bookGenres = useGenresStore()
+
+// Followed members who want the same Books (circle_want), by her Book's id; empty until a later task wires it (nothing is asked yet).
+const circleWant = ref<Record<string, CircleGroup>>({})
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
@@ -154,7 +158,7 @@ watch(
     <LibraryViewBar v-if="base.length" :status="segment" :view="view" :entries="base" :shown="arranged.length" :genres="genres" />
 
     <UiListMotion v-if="segment === 'want_to_read' && lists.want_to_read.length" class="flex flex-col pt-xs" data-testid="library.wantToRead">
-      <LibraryEntryRow v-for="(entry, index) in arranged" :key="entry.id" :entry="entry" :eager="index < 8" />
+      <LibraryEntryRow v-for="(entry, index) in arranged" :key="entry.id" :entry="entry" :eager="index < 8" :circle="circleWant[entry.book.id]" />
     </UiListMotion>
 
     <UiListMotion v-else-if="segment === 'reading' && lists.reading.length" class="flex flex-col gap-ms pt-md" data-testid="library.reading">

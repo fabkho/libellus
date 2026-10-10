@@ -4,11 +4,12 @@
 // screen's edge; each cover opens its book page from the touch-down.
 import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
+import type { CircleGroup } from '~/utils/circle'
 
 /** How many covers the row shows: it is a glance, the Library has the rest. */
 const SHOWN = 8
 
-const props = defineProps<{ entries: readonly LibraryEntry[] }>()
+const props = defineProps<{ entries: readonly LibraryEntry[]; circle?: Readonly<Record<string, CircleGroup>> }>()
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -29,25 +30,34 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
       </NuxtLink>
     </div>
     <div class="scrollbar-none -mx-screen -mb-lg flex gap-ms overflow-x-auto px-screen pt-sm pb-xl" data-testid="home.upNextRow">
-      <UiPressLink
-        v-for="(entry, index) in shown"
-        :key="entry.id"
-        :to="`/book/${entry.book.id}`"
-        :aria-label="entry.book.title"
-        class="shrink-0"
-        data-testid="home.upNextEntry"
-        @press="books.prefetch(entry.book.id)"
-      >
-        <UiCover
-          :title="entry.book.title"
-          :authors="entry.book.authors"
-          :src="coverSrc(entry.book.coverUrl, 'md')"
-          :thumbhash="entry.book.coverThumbhash"
-          :colors="entry.book.coverColors"
-          size="md"
-          :eager="index < 5"
+      <div v-for="(entry, index) in shown" :key="entry.id" class="relative shrink-0">
+        <UiPressLink
+          :to="`/book/${entry.book.id}`"
+          :aria-label="entry.book.title"
+          class="block"
+          data-testid="home.upNextEntry"
+          @press="books.prefetch(entry.book.id)"
+        >
+          <UiCover
+            :title="entry.book.title"
+            :authors="entry.book.authors"
+            :src="coverSrc(entry.book.coverUrl, 'md')"
+            :thumbhash="entry.book.coverThumbhash"
+            :colors="entry.book.coverColors"
+            size="md"
+            :eager="index < 5"
+          />
+        </UiPressLink>
+        <!-- Who else wants it (social v2a): beside the cover's link, on its lower edge. -->
+        <FriendsCircleAvatars
+          v-if="circle?.[entry.book.id]?.members.length"
+          :members="circle[entry.book.id]!.members"
+          :more="circle[entry.book.id]!.more"
+          kind="want"
+          testid="home.wantWith"
+          class="absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2 translate-y-1/2"
         />
-      </UiPressLink>
+      </div>
     </div>
   </section>
 </template>

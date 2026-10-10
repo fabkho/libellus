@@ -9,6 +9,7 @@ import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, memberBlocks } from '~/utils/memberProfile'
 import { useMemberProfileStore } from '~/stores/memberProfile'
+import type { BothReadItem } from '~/utils/circle'
 
 definePageMeta({
   layout: 'tabs',
@@ -49,6 +50,8 @@ watch(id, () => void members.load(id.value))
 const online = useOnline()
 watch(online, (now) => now && showing && void members.load(id.value))
 
+// You both read, in her year: the answer of `both_read(member, year)`; empty until a later task wires it.
+const bothRead = ref<BothReadItem[]>([])
 const record = computed(() => view.value.record)
 const reads = computed(() => record.value?.reads ?? [])
 const loading = computed(() => !record.value && (!view.value.loaded || view.value.recordLoading))
@@ -133,6 +136,8 @@ function back() {
           <UiReveal :show="loading || figures.authors.length > 0">
             <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" :limit="3" />
           </UiReveal>
+
+          <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" />
 
           <div class="pt-xl">
             <nav class="flex min-h-(--size-button-sm) items-center justify-between" :aria-label="t('profile.year.other')">
