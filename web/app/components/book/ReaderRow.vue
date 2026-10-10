@@ -4,8 +4,9 @@
 // ("Finished · 3 Oct", "Reading · 2 Oct", "Put down · 30 Sep", "Wants to read · 1 Oct") with her stars when she
 // shows them, and her review in the serif italic folded at four lines (FriendsMemberReview), or behind *Show
 // anyway* when she flagged spoilers and the caller has not finished this work (FriendsReviewFold, as the feed). A
-// finished read with a review carries the heart (FriendsLikes: the existing likes on a finished read). No
-// *Want to read* button: she is on the Book's page, which has its own add.
+// finished read with a review carries the heart, alone in the shared icon column at the row's right edge
+// (FriendsRowActions `cover="avatar"`, the column as tall as the avatar, so the heart is level with it, on her name and
+// state lines; a row without one has no column and keeps its width). No *Want to read*: she is on the Book's page, which has its own add.
 //
 // Props: `reader` (BookReader), `title` (the Book's, for the heart's label), `testid`. The row is `<testid>`; the
 // heart is `<testid>.like`.
@@ -29,10 +30,7 @@ const heart = computed(() => props.reader.state === 'finished' && Boolean(props.
       <FriendsAvatar :card="reader.member" />
     </NuxtLink>
     <div class="flex min-w-0 flex-1 flex-col gap-xxs">
-      <div class="flex items-center justify-between gap-md">
-        <NuxtLink :to="`/friends/${reader.member.id}`" class="reach min-w-0 truncate text-callout font-medium" :data-testid="`${testid}.member`">{{ name }}</NuxtLink>
-        <FriendsLikes v-if="heart" :row="reader" :name="name" :owner="reader.member.id" :title="title" :testid="`${testid}.like`" />
-      </div>
+      <NuxtLink :to="`/friends/${reader.member.id}`" class="reach min-w-0 truncate text-callout font-medium" :data-testid="`${testid}.member`">{{ name }}</NuxtLink>
       <span class="figures flex min-w-0 items-center gap-sm overflow-hidden text-meta whitespace-nowrap text-ink-faint">
         <span :data-testid="`${testid}.state`">{{ state }}</span>
         <template v-if="day"><span class="dot" aria-hidden="true" /><span>{{ day }}</span></template>
@@ -43,6 +41,8 @@ const heart = computed(() => props.reader.state === 'finished' && Boolean(props.
       </FriendsReviewFold>
       <FriendsLikeError v-if="heart" :row="reader" :testid="`${testid}.like`" />
     </div>
+    <!-- The heart alone (she is on the Book's page: no Want to read), in the shared icon column, level with the avatar. -->
+    <FriendsRowActions cover="avatar" :like="heart ? reader : null" :name="name" :owner="reader.member.id" :title="title" :like-testid="`${testid}.like`" />
   </div>
 </template>
 

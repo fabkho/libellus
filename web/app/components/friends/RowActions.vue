@@ -5,6 +5,8 @@
 // member's Recently finished row and its sheet, the feed row, Home's card. The text column keeps the rest of the
 // width and nothing wraps. The Readers rows on the Book page take only the heart (`book` left out).
 //  - `cover`   the size of the row's cover (`sm`, `md`, `lg`): the column is as tall as that cover and its icons sit in the middle.
+//              `avatar`: for a row led by an avatar and no cover (the Readers rows): the column is as tall as the avatar
+//              (at least one 44 px box) and the heart sits level with it, on the member's name and state lines.
 //  - `book`    the Book, for Want to read (SocialBook); leave it out for a row that has only the heart.
 //  - `like`    the row, for the heart (FriendsLikes: `sessionId`, `likes`, `liked`), with `name` (the member whose read it
 //              is), `owner` (her id), `title`; leave `like` out for a row with no heart.
@@ -18,7 +20,7 @@ import { useLibraryStore } from '~/stores/library'
 
 const props = withDefaults(
   defineProps<{
-    cover: 'sm' | 'md' | 'lg'
+    cover: 'sm' | 'md' | 'lg' | 'avatar'
     book?: SocialBook | null
     like?: { sessionId?: string | null; likes?: number; liked?: boolean } | null
     name?: string
@@ -33,7 +35,7 @@ const props = withDefaults(
 const library = useLibraryStore()
 const wants = computed(() => Boolean(props.book && wantState(props.book, library.entryForBook(props.book.id))))
 const likes = computed(() => Boolean(props.like && likeable(props.like)))
-const height = computed(() => ({ sm: 'h-[calc(var(--size-cover-sm)*1.5)]', md: 'h-[calc(var(--size-cover-md)*1.5)]', lg: 'h-[calc(var(--size-cover-lg)*1.5)]' })[props.cover])
+const height = computed(() => ({ sm: 'h-[calc(var(--size-cover-sm)*1.5)]', md: 'h-[calc(var(--size-cover-md)*1.5)]', lg: 'h-[calc(var(--size-cover-lg)*1.5)]', avatar: 'h-[max(var(--size-avatar),var(--size-touch))]' })[props.cover])
 </script>
 
 <template>
