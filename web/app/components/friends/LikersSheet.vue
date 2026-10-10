@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // Who liked her read (social v2a, contract §3): the sheet the author's own heart opens, newest like first.
 // Props only: the screen asks `session_likers` and hands the answer in.
-//  - `members`  the cards (MemberCard), or null while they are on their way.
+//  - `members`  the cards (MemberCard), or null while they are on their way ("Loading…" says so).
 //  - `error`    the ask failed; `offline` the device has no connection (likes are online only).
 // One row per member: her avatar (FriendsAvatar) and name, a link to her page. Test ids: `likers` (the sheet),
-// `likers.row`, `likers.empty`, `likers.error`.
+// `likers.row`, `likers.empty`, `likers.loading`, `likers.error`.
 import type { MemberCard } from '~/data/socialShapes'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -29,6 +29,7 @@ const nameOf = (member: MemberCard) => member.name?.trim() || t('member.someone'
           </li>
         </ul>
       </UiRowGroup>
+      <p v-else-if="!members" class="py-md text-center text-subhead text-ink-muted" role="status" data-testid="likers.loading">{{ t('social.likers.loading') }}</p>
       <p v-else-if="members" class="py-md text-center text-subhead text-ink-muted" data-testid="likers.empty">{{ t('social.likers.empty') }}</p>
     </div>
   </UiSheet>
