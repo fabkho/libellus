@@ -22,7 +22,7 @@ const books = useBookStore()
 
 const name = computed(() => props.card.member.name?.trim() || t('member.someone'))
 const verb = computed(() => t(`feed.${props.card.verb}`))
-const book = computed(() => props.card.book)
+const book = computed(() => shownBook(props.card.book, t('book.outsideCatalogue')))
 const bookPath = computed(() => `/book/${book.value.id}`)
 // A Book without a cover shows the Placeholder: the cloth's colour lights the card then (as the book page's hero is lit).
 const coverFallback = ref(false)
@@ -67,7 +67,7 @@ async function unfold() {
     <UiAmbient :colors="book.coverColors" :cloth="coverFallback ? clothColor : null" shape="card" />
 
     <UiPressLink
-      v-if="!book.manual"
+      v-if="!book.manual && !book.unverified"
       :to="bookPath"
       class="relative shrink-0"
       tabindex="-1"
@@ -94,7 +94,7 @@ async function unfold() {
       </div>
 
       <UiPressLink
-        v-if="!book.manual"
+        v-if="!book.manual && !book.unverified"
         :to="bookPath"
         class="reach book-title text-callout"
         data-testid="home.circleFeature.title"

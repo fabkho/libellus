@@ -40,6 +40,8 @@ export type PublicBook = {
   coverUrl: string | null
   coverThumbhash: string | null
   coverColors: CoverColors | null
+  /** One the server check could not confirm: no title, authors or cover (utils/unverifiedBook.ts). */
+  unverified: boolean
 }
 
 /** This year's figures: counts only, no Books (stats.ts' YearFigures, as far as the page shows them). */
@@ -148,13 +150,14 @@ type SettingsRow = {
 
 type PublicBookRow = {
   id: string
-  title: string
+  title: string | null
   authors: string[] | null
   published_year: number | null
   cover_url: string | null
   cover_thumbhash: string | null
   cover_dominant: string | null
   cover_secondary: string | null
+  unverified?: boolean | null
 }
 
 type PublicPageRow = {
@@ -209,12 +212,13 @@ export function settingsFromRow(row: SettingsRow | null): ReadingPageSettings {
 export function publicBookFromRow(row: PublicBookRow): PublicBook {
   return {
     id: row.id,
-    title: row.title,
+    title: row.title ?? '',
     authors: row.authors ?? [],
-    year: row.published_year,
+    year: row.published_year ?? null,
     coverUrl: row.cover_url,
     coverThumbhash: row.cover_thumbhash,
     coverColors: row.cover_dominant && row.cover_secondary ? { dominant: row.cover_dominant, secondary: row.cover_secondary } : null,
+    unverified: Boolean(row.unverified),
   }
 }
 

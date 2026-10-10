@@ -24,12 +24,13 @@ const bookId = computed(() => String(route.params.book ?? ''))
 watch([token, bookId], ([now, book]) => void store.loadCard(now, book), { immediate: true })
 
 const card = computed(() => store.card)
+const book = computed(() => (card.value ? shownBook(card.value.book, t('book.outsideCatalogue')) : null))
 const name = computed(() => card.value?.name ?? null)
-const authors = computed(() => (card.value ? formatAuthors(card.value.book.authors, t('common.etAl')) : ''))
+const authors = computed(() => (card.value ? formatAuthors(book.value?.authors ?? [], t('common.etAl')) : ''))
 
 useHead({
   title: () =>
-    (store.cardState === 'missing' ? t('readingPage.missing.title') : card.value ? card.value.book.title : t('readingPage.titleNone')) + ` · ${t('app.name')}`,
+    (store.cardState === 'missing' ? t('readingPage.missing.title') : book.value ? book.value.title : t('readingPage.titleNone')) + ` · ${t('app.name')}`,
   meta: [{ name: 'robots', content: 'noindex, nofollow' }],
 })
 
@@ -84,22 +85,22 @@ const status = computed(() => {
       </div>
 
       <!-- The hero, as the book page's: the cover that was tapped flies here (data-flight="hero"), and what follows it rises in. -->
-      <template v-else-if="card">
+      <template v-else-if="card && book">
         <section class="flex flex-col items-center gap-lg pt-lg text-center" data-flight="hero" data-testid="bookCard.hero">
           <UiCover
             decorative
             eager
             priority
             glow
-            :title="card.book.title"
-            :authors="card.book.authors"
-            :src="coverSrc(card.book.coverUrl, 'xl')"
-            :thumbhash="card.book.coverThumbhash"
-            :colors="card.book.coverColors"
+            :title="book.title"
+            :authors="book.authors"
+            :src="coverSrc(book.coverUrl, 'xl')"
+            :thumbhash="book.coverThumbhash"
+            :colors="book.coverColors"
             size="xl"
           />
           <div class="flex flex-col gap-xs">
-            <h1 class="book-title text-title text-balance" data-testid="bookCard.title">{{ card.book.title }}</h1>
+            <h1 class="book-title text-title text-balance" data-testid="bookCard.title">{{ book.title }}</h1>
             <p v-if="authors" class="text-body text-ink-muted" data-testid="bookCard.authors">{{ authors }}</p>
             <p class="figures text-meta text-ink-faint" data-testid="bookCard.status">{{ status }}</p>
           </div>

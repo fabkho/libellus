@@ -119,6 +119,8 @@ export type LibraryErrorCode =
   /** Edit or delete a read: no such read in the member's Library (gone, or never theirs). */
   | 'session_not_found'
   | 'not_signed_in'
+  /** Add: the member has made the day's 200 new Catalogue Books (the database's `catalogue_limit`, a 429). */
+  | 'catalogue_limit'
   /** The device has no connection: nothing was sent (`WriteOptions`). */
   | 'offline'
   | 'unknown'
@@ -145,6 +147,7 @@ const RAISED_CODES = [
   'read_as_invalid',
   'session_not_found',
   'not_signed_in',
+  'catalogue_limit',
 ] as const satisfies readonly LibraryErrorCode[]
 
 /** The longest review a session keeps (the database's limit too). */
@@ -360,6 +363,8 @@ export type BookRow = {
   created_at: string
   /** The cached Goodreads rating (`goodreads_rating`), when asked for with BOOK_COLUMNS. */
   goodreads?: GoodreadsRow | null
+  /** A Book the server check could not confirm, as the social answers carry it (`member_reading_record`): nothing else of it is known. */
+  unverified?: boolean | null
 }
 
 /** A `books` row with its cached Goodreads rating (issue #69), so a Library kept for offline has it. */
@@ -418,7 +423,8 @@ export function bookFromRow(row: BookRow): Book {
   return {
     id: row.id,
     createdAt: row.created_at,
-    title: row.title,
+    // A Book that is not shown to the caller has no title (`unverified`): '' is what the screens replace.
+    title: row.title ?? '',
     authors: row.authors ?? [],
     isbn13: row.isbn13,
     isbn10: row.isbn10,
@@ -439,6 +445,7 @@ export function bookFromRow(row: BookRow): Book {
     format: row.format ?? null,
     // Undefined rather than null without one, so a Book reads the same as before it existed.
     goodreads: ratingFromRow(row.goodreads) ?? undefined,
+    ...(row.unverified ? { unverified: true as const } : {}),
   }
 }
 

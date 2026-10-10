@@ -8,6 +8,7 @@ const open = defineModel<boolean>('open', { required: true })
 defineProps<{ title: string; items: readonly { book: SocialBook; addedOn: string }[] }>()
 
 const { t } = useI18n()
+const shown = (book: SocialBook) => shownBook(book, t('book.outsideCatalogue'))
 const { formatDay } = useDays()
 </script>
 
@@ -18,16 +19,16 @@ const { formatDay } = useDays()
         <FriendsMemberBookLink :book="item.book" class="flex items-center gap-inset py-sm active:opacity-80" data-testid="memberWant.book">
           <UiCover
             decorative
-            :title="item.book.title"
-            :authors="item.book.authors"
-            :src="coverSrc(item.book.coverUrl, 'sm')"
-            :thumbhash="item.book.coverThumbhash"
-            :colors="item.book.coverColors"
+            :title="shown(item.book).title"
+            :authors="shown(item.book).authors"
+            :src="coverSrc(shown(item.book).coverUrl, 'sm')"
+            :thumbhash="shown(item.book).coverThumbhash"
+            :colors="shown(item.book).coverColors"
             size="sm"
           />
           <span class="flex min-w-0 flex-1 flex-col gap-xxs">
-            <span class="book-title title-wrap text-callout">{{ item.book.title }}</span>
-            <span class="truncate text-caption text-ink-muted">{{ formatAuthors(item.book.authors, t('common.etAl')) }}</span>
+            <span class="book-title title-wrap text-callout">{{ shown(item.book).title }}</span>
+            <span v-if="shown(item.book).authors.length" class="truncate text-caption text-ink-muted">{{ formatAuthors(shown(item.book).authors, t('common.etAl')) }}</span>
             <span class="figures text-meta text-ink-faint">{{ formatDay(item.addedOn) }}</span>
           </span>
         </FriendsMemberBookLink>

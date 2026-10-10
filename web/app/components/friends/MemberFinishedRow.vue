@@ -10,9 +10,10 @@
 import type { MemberFinished } from '~/data/social'
 import { likeable } from '~/utils/likes'
 
-defineProps<{ item: MemberFinished; name?: string }>()
+const props = defineProps<{ item: MemberFinished; name?: string }>()
 
 const { t } = useI18n()
+const shown = computed(() => shownBook(props.item.book, t('book.outsideCatalogue')))
 const { formatDay } = useDays()
 </script>
 
@@ -21,18 +22,18 @@ const { formatDay } = useDays()
     <FriendsMemberBookLink :book="item.book" class="shrink-0" tabindex="-1" aria-hidden="true" data-testid="member.finishedCover">
       <UiCover
         decorative
-        :title="item.book.title"
-        :authors="item.book.authors"
-        :src="coverSrc(item.book.coverUrl, 'sm')"
-        :thumbhash="item.book.coverThumbhash"
-        :colors="item.book.coverColors"
+        :title="shown.title"
+        :authors="shown.authors"
+        :src="coverSrc(shown.coverUrl, 'sm')"
+        :thumbhash="shown.coverThumbhash"
+        :colors="shown.coverColors"
         size="sm"
       />
     </FriendsMemberBookLink>
     <div class="flex min-w-0 flex-1 flex-col gap-xxs">
       <FriendsMemberBookLink :book="item.book" class="flex flex-col gap-xxs" data-testid="member.finishedBook">
-        <span class="book-title title-wrap text-callout" data-testid="member.finishedTitle">{{ item.book.title }}</span>
-        <span class="truncate text-caption text-ink-muted">{{ formatAuthors(item.book.authors, t('common.etAl')) }}</span>
+        <span class="book-title title-wrap text-callout" data-testid="member.finishedTitle">{{ shown.title }}</span>
+        <span v-if="shown.authors.length" class="truncate text-caption text-ink-muted">{{ formatAuthors(shown.authors, t('common.etAl')) }}</span>
       </FriendsMemberBookLink>
       <div class="mt-xxs flex items-center justify-between gap-md">
         <span class="figures flex min-w-0 items-center gap-sm overflow-hidden text-meta whitespace-nowrap text-ink-faint">

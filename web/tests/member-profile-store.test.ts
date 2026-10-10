@@ -41,6 +41,7 @@ async function store() {
   vi.stubGlobal('ref', ref)
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('watch', watch)
+  vi.stubGlobal('useNuxtApp', () => ({ $i18n: { t: (key: string) => key } }))
   vi.stubGlobal('useBackend', () => ({ rpc: async () => recordAnswer }))
   vi.stubGlobal('useOnline', () => readonly(ref(true)))
   vi.stubGlobal('isOnline', () => true)

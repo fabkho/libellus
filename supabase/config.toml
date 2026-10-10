@@ -419,6 +419,12 @@ static_files = ["./functions/reading-page-og/fonts/*.ttf"]
 [functions.enrich]
 verify_jwt = false
 
+# A checked Catalogue (social v2a): unchecked Catalogue Books read at their source. Only
+# the service-role key or the shared secret CATALOGUE_CHECK_TOKEN (pg_cron's call) pass; the
+# function checks that itself: supabase/functions/catalogue-check/README.md.
+[functions.catalogue-check]
+verify_jwt = false
+
 # The owner's Invite on her Waitlist screen (issue #171). Only a signed-in member's
 # request reaches it (verify_jwt); which member may invite is the database's call,
 # since the function asks it with the caller's own session and holds no service-role

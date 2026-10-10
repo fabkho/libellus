@@ -347,6 +347,7 @@
       "book_invalid": "This book can't be added: it is missing what we need to keep it.",
       "session_invalid": "Those dates, that rating or review don't go with that status.",
       "not_signed_in": "Sign in again to add books.",
+      "catalogue_limit": "You've added a lot of new books today. Try again tomorrow.",
       "unknown": "Something went wrong. Please try again.",
       "entry_not_found": "This book isn't in your Library any more.",
       "already_reading": "You are reading this book already.",
@@ -509,6 +510,7 @@
   },
   "book": {
     "title": "Book",
+    "outsideCatalogue": "Outside the catalogue",
     "back": "Back",
     "pages": "{count} pages",
     "add": "Add to Library",
