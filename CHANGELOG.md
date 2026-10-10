@@ -1,5 +1,51 @@
 # Changelog
 
+## [1.7.0](https://github.com/fabkho/libellus/compare/v1.6.0...v1.7.0) (2026-10-10)
+
+
+### Features
+
+* **covers:** offer Apple covers at their neighbouring sizes with srcset and sizes ([d52d40d](https://github.com/fabkho/libellus/commit/d52d40d2d100e7b24f2fb1b0fa93088da2b3b0f8))
+* **goodreads:** rate Books without an ISBN by title and author ([5ceff67](https://github.com/fabkho/libellus/commit/5ceff67936233a6950860d7a833f46b50eb9bfbe))
+* **goodreads:** rate Books without an ISBN by title and author, misses kept 7 days ([275b601](https://github.com/fabkho/libellus/commit/275b6018a8768ff72885e162b43b518392e580d7))
+* **social:** keyset paging for People's Following and Followers ([57a60d7](https://github.com/fabkho/libellus/commit/57a60d7a23ef634fe4fd0a283045cfc659aa1818))
+* **social:** People loads the next page when the end of a list shows ([6880ea9](https://github.com/fabkho/libellus/commit/6880ea96bbf2f9a122cb7f63727ff31eec9285de))
+* **social:** the member profile's See all say how many, as the shelf's does ([5461a3e](https://github.com/fabkho/libellus/commit/5461a3e5b9440245cf6e30f9afe7f9d138895321))
+* **social:** v1.1 — HTTP codes, People paging, page-error guard, polish ([67545bb](https://github.com/fabkho/libellus/commit/67545bb74752c8fa47751262ace81b00e9c46726))
+* **web:** author page lists standalone and other works newest first ([22c87b6](https://github.com/fabkho/libellus/commit/22c87b68266042b532fc2d28ae65eb22acaf2a8a))
+* **web:** author works newest first; muted series open in place on Home ([65335c6](https://github.com/fabkho/libellus/commit/65335c69349f55bb8d3d4bc3165d5e594c74883d))
+* **web:** Change edition for a Book that is not in the Library ([678d45a](https://github.com/fabkho/libellus/commit/678d45a072fd4bada7b013e733b370e9b8d56cdd))
+* **web:** Change edition for a Book that is not in the Library ([b96c42a](https://github.com/fabkho/libellus/commit/b96c42a21cdba5dcb6db280d609932407c69ea51))
+* **web:** Home's series pill says how many series are open and opens the sheet ([004a4fe](https://github.com/fabkho/libellus/commit/004a4fe08ec0552217fa06685b78c884b2c03eae))
+
+
+### Fixes
+
+* **covers:** a cover in view is not replaced by another artwork unless it fails ([0157deb](https://github.com/fabkho/libellus/commit/0157deb4f34819b2ce6dc52ed9abe8ba00d53fdf))
+* **social:** raise the named refusals with PostgREST's HTTP codes ([f9ef6d6](https://github.com/fabkho/libellus/commit/f9ef6d67b83c559d5fe4954a7df554f747f10c87))
+* **ui:** a sheet's fallback field focus waits for the panel to stop moving ([1a2c9d2](https://github.com/fabkho/libellus/commit/1a2c9d26148b8c62c837acacfff7c2650b143f58))
+* **ui:** dim the Android status bar with a sheet's scrim ([a8b6982](https://github.com/fabkho/libellus/commit/a8b69821843b3e18c959ca8fb63a4d4f5ac8ba18))
+* **ui:** dim the status bar with a sheet's scrim on Android ([fad6570](https://github.com/fabkho/libellus/commit/fad657065f7017dbaaf80d8e8027810252f69787))
+* **web:** a sheet's field takes focus once the sheet has finished rising ([23efb45](https://github.com/fabkho/libellus/commit/23efb451e1827544d810d50fe0a3208bc8060db3))
+* **web:** a sheet's field takes focus once the sheet has finished rising ([c497cb5](https://github.com/fabkho/libellus/commit/c497cb5b094bc5b23380c9b53a132d77c3bff927))
+* **web:** a two-digit batch in the feed keeps to one line at 390 px ([b3a0837](https://github.com/fabkho/libellus/commit/b3a0837512f24425ca338feea3230961a58caa68))
+* **web:** drop the format row's hint from Change edition ([7acb421](https://github.com/fabkho/libellus/commit/7acb421d2ebf1a3a23e737a591c366e586cbe00d))
+* **web:** sheet focus waits for the rise, and the status-bar dim reads 8-digit hex ([4379b39](https://github.com/fabkho/libellus/commit/4379b391928f9afe31c048bf64be40e1294427f9))
+* **web:** the status-bar dim reads the minifier's 8-digit hex ([3443d00](https://github.com/fabkho/libellus/commit/3443d00ef6c4d044957dda0ee3a69de96e971483))
+
+
+### Performance
+
+* **covers:** ready the covers of More from the author before their rows are seen ([dec897f](https://github.com/fabkho/libellus/commit/dec897f78d7a26325bdc6899b3a53ea4af87235b))
+* **covers:** srcset, covers that stay, ready covers in More from the author ([cdf040d](https://github.com/fabkho/libellus/commit/cdf040d43feb7bcd8d82a17914e2fa3e20fc061d))
+* **db:** import title index, social FK indexes, cron log purge, muted list shortcut ([ef2c8af](https://github.com/fabkho/libellus/commit/ef2c8af55e18bf9a86d016c152ba72c26bb16513))
+* **db:** index blocks.blocked_id and follow_link_views.member_id ([ae167d4](https://github.com/fabkho/libellus/commit/ae167d4c756dcddad923d32e4cbba5cb08e0b90b))
+* **db:** index work_title_key(title) for import_books' title match ([7d2c915](https://github.com/fabkho/libellus/commit/7d2c91558ac7ac2ab3a643d0b30c83b79cdabb82))
+* **db:** muted_series_list skips the series chain when nothing is muted ([e0b0f74](https://github.com/fabkho/libellus/commit/e0b0f7466f375934312cf8f001755efa28bada32))
+* **db:** purge pg_cron's run log after 7 days ([ca9af6e](https://github.com/fabkho/libellus/commit/ca9af6e1d20a9d6adf7a59683d7008477aad6e41))
+* **db:** search_books matches against stored, indexed words ([c882b5b](https://github.com/fabkho/libellus/commit/c882b5bdd39181b9aec8b7d8a02c0f6a9fbde9cf))
+* **db:** search_books uses an index (F1): definer function over stored search words ([c06af30](https://github.com/fabkho/libellus/commit/c06af30f68403ad80e9b2eff59b3eb57e080df2a))
+
 ## [1.6.0](https://github.com/fabkho/libellus/compare/v1.5.1...v1.6.0) (2026-10-09)
 
 
