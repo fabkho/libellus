@@ -9,11 +9,10 @@
 // so the cover is decorative. Drawing only: utils/circleView.ts picks the card.
 //
 // Props: `card` (CircleCard), `eager` (the cover loads now). Test ids: `home.circleFeature` (the panel),
-// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`, `.like` (the heart, at the
-// right of the actions line, Want to read at its left; `.like.error` when a like was refused), `.folded` (a review flagged as spoilers, folded behind *Show anyway*).
+// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`, `.like` (the heart, under Want to read in the
+// icon column at the card's right edge, centred on the cover; `.like.error` when a like was refused), `.folded` (a review flagged as spoilers, folded behind *Show anyway*).
 import type { CircleCard } from '~/utils/circleView'
 import { useBookStore } from '~/stores/book'
-import { focusAfterWant } from '~/utils/focusAfterWant'
 import { likeable } from '~/utils/likes'
 
 const props = defineProps<{ card: CircleCard; eager?: boolean }>()
@@ -26,14 +25,8 @@ const verb = computed(() => t(`feed.${props.card.verb}`))
 const book = computed(() => shownBook(props.card.book, t('book.outsideCatalogue')))
 const bookPath = computed(() => `/book/${book.value.id}`)
 const showHeart = computed(() => likeable(props.card))
-// Want to read: not on a Manual book (the button says nothing for one), so the line is not drawn for it alone.
+// Want to read: not on a Manual book (the control says nothing for one).
 const showWant = computed(() => !book.value.manual)
-const panel = useTemplateRef<{ $el: HTMLElement }>('panel')
-/** The button is gone once the Book is added: focus goes to the heart, else the title. */
-async function wanted() {
-  await nextTick()
-  focusAfterWant(panel.value?.$el, 'home.circleFeature.like', 'home.circleFeature.title')
-}
 
 // The review: three lines, and `More` only when there is more than three lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -69,7 +62,7 @@ async function unfold() {
 </script>
 
 <template>
-  <UiLitCard v-slot="{ onFallback }" ref="panel" :colors="book.coverColors" :title="book.title" class="flex items-start gap-ml p-inset" data-testid="home.circleFeature">
+  <UiLitCard v-slot="{ onFallback }" :colors="book.coverColors" :title="book.title" class="flex items-start gap-ml p-inset" data-testid="home.circleFeature">
 
     <UiPressLink
       v-if="!book.manual && !book.unverified"
@@ -106,12 +99,6 @@ async function unfold() {
 
       <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.circleFeature.stars" />
 
-      <!-- The actions, on a line of their own (the text column is too narrow for them beside the stars or the name): Want to read first, the heart last, as in the feed. -->
-      <div v-if="showWant || showHeart" class="flex w-full min-w-0 items-center justify-between gap-md">
-        <FriendsWantToReadButton v-if="showWant" :book="book" testid="home.circleFeature.wantToRead" @added="wanted" />
-        <span v-else />
-        <FriendsLikes v-if="showHeart" :row="card" :name="name" :owner="card.member.id" :title="book.title" testid="home.circleFeature.like" />
-      </div>
       <FriendsLikeError v-if="showHeart" :row="card" testid="home.circleFeature.like" />
 
       <FriendsReviewFold v-if="card.review" :folded="card.folded" :name="name" testid="home.circleFeature.folded">
@@ -125,6 +112,19 @@ async function unfold() {
         >{{ t('feed.more') }}</button>
       </FriendsReviewFold>
     </div>
+
+    <!-- At the card's right edge, centred on its cover (the same column as the rows': Want to read on top, the heart under it). -->
+    <FriendsRowActions
+      class="relative"
+      cover="lg"
+      :book="showWant ? book : null"
+      :like="showHeart ? card : null"
+      :name="name"
+      :owner="card.member.id"
+      :title="book.title"
+      want-testid="home.circleFeature.wantToRead"
+      like-testid="home.circleFeature.like"
+    />
   </UiLitCard>
 </template>
 

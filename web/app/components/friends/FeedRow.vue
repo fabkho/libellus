@@ -10,13 +10,12 @@
 // `compact` is Home's: no review. `bare` is the batch sheet's: the avatar line is not repeated, the
 // member is in the sheet's title, and the cover is `size="sm"`. `dayLabel` is the word at the line's end Home puts the day in
 // (the page has day eyebrows instead). `testid` is the row's; the parts add `Member`, `Book`,
-// `Review`, `More`, `WantToRead` and `Like` to it. At the right of the author line, Want to read first and the
-// heart last (the same order on Home's card and a member's rows): the Want to read button (FriendsWantToReadButton,
-// on what a friend finished, reviewed or started, not on a Manual book) and the heart (FriendsLikes, on a finished read). A review flagged as spoilers that she may not read yet is folded behind
+// `Review`, `More`, `WantToRead` and `Like` to it. At the row's right edge, a narrow column centred on the
+// cover (FriendsRowActions, the same on Home's card and a member's rows): Want to read on top (on what a friend finished,
+// reviewed or started, not on a Manual book), the heart under it (on a finished read). A review flagged as spoilers that she may not read yet is folded behind
 // *Show anyway* (FriendsReviewFold); the stars stay.
 import type { FeedEntry } from '~/data/feed'
 import { useBookStore } from '~/stores/book'
-import { focusAfterWant } from '~/utils/focusAfterWant'
 import { likeable } from '~/utils/likes'
 import { carriesWantToRead } from '~/utils/wantToRead'
 
@@ -43,12 +42,6 @@ const showReview = computed(() => Boolean(props.entry.review) && !props.compact)
 // The Want to read button: on what a friend finished, reviewed or started (not on Home's compact rows).
 const showWant = computed(() => carriesWantToRead(props.entry.kind) && !props.compact)
 const showHeart = computed(() => likeable(props.entry) && !props.compact)
-const row = useTemplateRef<HTMLElement>('row')
-/** The button is gone once the Book is added: focus goes to the heart, else the title. */
-async function wanted() {
-  await nextTick()
-  focusAfterWant(row.value, `${props.testid}Like`, `${props.testid}Book`)
-}
 
 // The review: four lines, and `More` only when there is more than four lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -84,7 +77,7 @@ async function unfold() {
 </script>
 
 <template>
-  <li ref="row" class="flex items-start gap-ml py-ms" :data-testid="testid">
+  <li class="flex min-h-[calc(var(--size-touch)*2)] items-start gap-ml py-ms" :data-testid="testid">
     <UiPressLink v-if="!book.manual && !book.unverified" :to="bookPath" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
       <UiCover
         decorative
@@ -131,13 +124,7 @@ async function unfold() {
       >{{ book.title }}</UiPressLink>
       <span v-else class="book-title text-callout py-xxs" :data-testid="`${testid}Book`">{{ book.title }}</span>
 
-      <div v-if="authorLine || showWant || showHeart" class="flex w-full min-w-0 items-center justify-between gap-md py-xs">
-        <p class="min-w-0 truncate text-caption text-ink-muted">{{ authorLine }}</p>
-        <span v-if="showWant || showHeart" class="flex shrink-0 items-center gap-md [--tiny-action-down:var(--spacing-xxs)]">
-          <FriendsWantToReadButton v-if="showWant" :book="book" :testid="`${testid}WantToRead`" @added="wanted" />
-          <FriendsLikes v-if="showHeart" :row="entry" :name="name" :owner="entry.member.id" :title="book.title" :testid="`${testid}Like`" />
-        </span>
-      </div>
+      <p v-if="authorLine" class="max-w-full min-w-0 truncate py-xs text-caption text-ink-muted">{{ authorLine }}</p>
       <FriendsLikeError v-if="showHeart" :row="entry" :testid="`${testid}Like`" />
       <UiStars v-if="entry.rating" :quarters="entry.rating" :data-testid="`${testid}Stars`" />
 
@@ -158,6 +145,17 @@ async function unfold() {
         >{{ t('feed.more') }}</button>
       </FriendsReviewFold>
     </div>
+
+    <FriendsRowActions
+      :cover="size"
+      :book="showWant ? book : null"
+      :like="showHeart ? entry : null"
+      :name="name"
+      :owner="entry.member.id"
+      :title="book.title"
+      :want-testid="`${testid}WantToRead`"
+      :like-testid="`${testid}Like`"
+    />
   </li>
 </template>
 

@@ -140,37 +140,29 @@ html[data-glass='off'] *::after {
 }
 
 /*
- * Small clickable text on a row's line (social v2a: Want to read, the heart): the text's own size, no pill. Its
- * drawn box is --size-target (24 px, WCAG 2.2 AA 2.5.8) and the margin pulls it back into a caption's line, so a
- * row does not grow. Its touch box, the ::after, is --size-touch wide at least, and as tall as the free space allows:
- * it starts at the drawn box's top, because the title or the stars sit right above it (a tap near them must land
- * on them), and reaches --tiny-action-down below it: 0 by default, because what is below differs from row to row
- * (a review, the next row's title 13 px away, the stars 6 px away). The row that uses it says how far it may reach
- * (`--tiny-action-down`, up to --size-touch minus --size-target) after measuring that no link, text or button is
- * under the box at 360 and 390 px (and `--tiny-action-up` where there is room above). `aria-disabled` dims it
- * a little and keeps focus (a disabled button would drop it).
+ * An icon button in the column at a row's right edge (social v2a: Want to read, the heart; the owner's choice of
+ * the three layouts he was shown). Drawn at --size-target (24 px, WCAG 2.2 AA 2.5.8), its touch box, the ::after,
+ * is --size-touch square (the app's 44 px rule), centred on the icon. The column stacks them 44 px apart, centre
+ * to centre (the gap is --size-touch minus --size-target), so the boxes meet and never overlap, and the column is
+ * as narrow as the icon. `aria-disabled` keeps focus where a disabled button would drop it.
  */
-@utility tiny-action {
+@utility icon-action {
   position: relative;
-  display: inline-flex;
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-xs);
-  min-width: var(--size-target);
-  min-height: var(--size-target);
-  margin-block: calc((var(--text-caption--line-height) - var(--size-target)) / 2);
-  font-size: var(--text-caption);
-  line-height: 1;
-  white-space: nowrap;
+  width: var(--size-target);
+  height: var(--size-target);
 
   &::after {
     position: absolute;
-    top: calc(-1 * var(--tiny-action-up, 0px));
+    top: 50%;
     left: 50%;
-    width: max(100%, var(--size-touch));
-    height: calc(var(--size-target) + var(--tiny-action-up, 0px) + var(--tiny-action-down, 0px));
+    width: var(--size-touch);
+    height: var(--size-touch);
     content: '';
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
   }
 
   &[aria-disabled='true'] {
