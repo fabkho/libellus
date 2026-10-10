@@ -10,10 +10,13 @@
 // `compact` is Home's: no review. `bare` is the batch sheet's: the avatar line is not repeated, the
 // member is in the sheet's title, and the cover is `size="sm"`. `dayLabel` is the word at the line's end Home puts the day in
 // (the page has day eyebrows instead). `testid` is the row's; the parts add `Member`, `Book`,
-// `Review`, `More` and `WantToRead` to it. The Want to read button (FriendsWantToReadButton) is on what a
-// friend finished, reviewed or started, not on a Manual book.
+// `Review`, `More`, `WantToRead` and `Like` to it. At the right of the author line: the heart (FriendsLikes, on
+// a finished read) and the Want to read button (FriendsWantToReadButton, on what a friend finished, reviewed or
+// started, not on a Manual book). A review flagged as spoilers that she may not read yet is folded behind
+// *Show anyway* (FriendsReviewFold); the stars stay.
 import type { FeedEntry } from '~/data/feed'
 import { useBookStore } from '~/stores/book'
+import { likeable } from '~/utils/likes'
 import { carriesWantToRead } from '~/utils/wantToRead'
 
 const props = withDefaults(defineProps<{
@@ -38,6 +41,7 @@ const authorLine = computed(() => formatAuthors(book.value.authors, t('common.et
 const showReview = computed(() => Boolean(props.entry.review) && !props.compact)
 // The Want to read button: on what a friend finished, reviewed or started (not on Home's compact rows).
 const showWant = computed(() => carriesWantToRead(props.entry.kind) && !props.compact)
+const showHeart = computed(() => likeable(props.entry) && !props.compact)
 
 // The review: four lines, and `More` only when there is more than four lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -48,13 +52,20 @@ function measure() {
   if (el && !expanded.value) clamped.value = el.scrollHeight > el.clientHeight + 1
 }
 let observer: ResizeObserver | null = null
-onMounted(() => {
-  measure()
-  if (review.value && typeof ResizeObserver !== 'undefined') {
-    observer = new ResizeObserver(measure)
-    observer.observe(review.value)
-  }
-})
+// The review's line is there once it is drawn (a folded one is not, until *Show anyway*): measured and watched from then on.
+watch(
+  review,
+  (el) => {
+    observer?.disconnect()
+    if (!el) return
+    measure()
+    if (typeof ResizeObserver !== 'undefined') {
+      observer ??= new ResizeObserver(measure)
+      observer.observe(el)
+    }
+  },
+  { flush: 'post', immediate: true },
+)
 onBeforeUnmount(() => observer?.disconnect())
 
 /** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
@@ -113,13 +124,17 @@ async function unfold() {
       >{{ book.title }}</UiPressLink>
       <span v-else class="book-title text-callout py-xxs" :data-testid="`${testid}Book`">{{ book.title }}</span>
 
-      <div v-if="authorLine || showWant" class="flex w-full min-w-0 items-center justify-between gap-md">
+      <div v-if="authorLine || showWant || showHeart" class="flex w-full min-w-0 items-center justify-between gap-md">
         <p class="min-w-0 truncate text-caption text-ink-muted">{{ authorLine }}</p>
-        <FriendsWantToReadButton v-if="showWant" :book="book" :testid="`${testid}WantToRead`" />
+        <span v-if="showWant || showHeart" class="flex shrink-0 items-center gap-md">
+          <FriendsLikes v-if="showHeart" :row="entry" :name="name" :title="book.title" :testid="`${testid}Like`" />
+          <FriendsWantToReadButton v-if="showWant" :book="book" :testid="`${testid}WantToRead`" />
+        </span>
       </div>
+      <FriendsLikeError v-if="showHeart" :row="entry" :testid="`${testid}Like`" />
       <UiStars v-if="entry.rating" :quarters="entry.rating" :data-testid="`${testid}Stars`" />
 
-      <template v-if="showReview">
+      <FriendsReviewFold v-if="showReview" :folded="entry.folded" :testid="`${testid}Folded`">
         <p
           ref="review"
           tabindex="-1"
@@ -134,7 +149,7 @@ async function unfold() {
           :data-testid="`${testid}More`"
           @click="unfold"
         >{{ t('feed.more') }}</button>
-      </template>
+      </FriendsReviewFold>
     </div>
   </li>
 </template>

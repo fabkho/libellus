@@ -4,9 +4,13 @@
 // the review are there only where her switches let them through (the database sends them null otherwise).
 // A cover or title opens the Book, flying into its page; a Manual book opens nothing. The title's link is the
 // Book's one link for the keyboard and screen readers (the cover's is hidden from both, as the feed's rows have it).
-import type { SocialBook } from '~/data/social'
+// Social v2a: at the right of the stars' line the heart (FriendsLikes: `member.finishedLike`; `name` is hers, for
+// the screen reader) and Want to read; a review flagged as spoilers that the reader may not read yet is folded
+// behind *Show anyway* (`member.finishedFolded`).
+import type { MemberFinished } from '~/data/social'
+import { likeable } from '~/utils/likes'
 
-defineProps<{ item: { book: SocialBook; endedOn: string | null; rating: number | null; review: string | null } }>()
+defineProps<{ item: MemberFinished; name?: string }>()
 
 const { t } = useI18n()
 const { formatDay } = useDays()
@@ -36,9 +40,15 @@ const { formatDay } = useDays()
           <span v-if="item.rating && item.endedOn" class="dot" aria-hidden="true" />
           <span v-if="item.endedOn">{{ formatDay(item.endedOn) }}</span>
         </span>
-        <FriendsWantToReadButton :book="item.book" testid="member.finishedWantToRead" />
+        <span class="flex shrink-0 items-center gap-md">
+          <FriendsLikes v-if="likeable(item)" :row="item" :name="name || t('member.someone')" :title="item.book.title" testid="member.finishedLike" />
+          <FriendsWantToReadButton :book="item.book" testid="member.finishedWantToRead" />
+        </span>
       </div>
-      <FriendsMemberReview v-if="item.review" :text="item.review" />
+      <FriendsLikeError v-if="likeable(item)" :row="item" testid="member.finishedLike" />
+      <FriendsReviewFold v-if="item.review" :folded="item.folded" testid="member.finishedFolded">
+        <FriendsMemberReview :text="item.review" />
+      </FriendsReviewFold>
     </div>
   </div>
 </template>

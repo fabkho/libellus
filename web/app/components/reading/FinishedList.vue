@@ -2,6 +2,8 @@
 // Recently finished on a reading page (issue #171): Library's row (small
 // cover, serif title, author), her Rating and the day she finished, and her
 // review under it where she shared it. Each row opens the Book's card, its cover flying there (UiPressLink).
+// A review she flagged as spoilers is folded for a visitor (social v2a): "Contains spoilers · Show anyway" in its place,
+// under the row, not inside the link (a button does not belong in one); the rest of the row is as it was.
 import { bookCardPath, type PublicReadingPage } from '~/data/readingPage'
 
 defineProps<{ items: NonNullable<PublicReadingPage['finished']>; token: string }>()
@@ -30,14 +32,24 @@ const { formatDay } = useDays()
             <UiStars v-if="item.rating" :quarters="item.rating" />
             <template v-if="item.endedOn"><span v-if="item.rating" class="dot" aria-hidden="true" />{{ formatDay(item.endedOn) }}</template>
           </span>
-          <span v-if="item.review" class="mt-xs line-clamp-4 text-subhead text-ink-muted" data-testid="readingPage.review">{{ item.review }}</span>
+          <span v-if="item.review && !item.folded" class="mt-xs line-clamp-4 text-subhead text-ink-muted" data-testid="readingPage.review">{{ item.review }}</span>
         </span>
       </UiPressLink>
+      <div v-if="item.review && item.folded" class="folded pb-sm">
+        <FriendsReviewFold folded testid="readingPage.folded">
+          <span class="line-clamp-4 text-subhead text-ink-muted" data-testid="readingPage.review">{{ item.review }}</span>
+        </FriendsReviewFold>
+      </div>
     </li>
   </ul>
 </template>
 
 <style scoped>
+/* Under the row, level with its text (the cover and the gap are to the left of it). */
+.folded {
+  margin-top: calc(-1 * var(--spacing-xs));
+  padding-left: calc(var(--size-cover-sm) + var(--spacing-inset));
+}
 .dot {
   width: var(--spacing-xxs);
   height: var(--spacing-xxs);

@@ -236,7 +236,7 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await expectAccessible(page, 'the Profile')
   })
 
-  test('the social screens: Your circle on Home, the feed, People, a member and her year, the follow link, Privacy and the member sheet', async ({ page }) => {
+  test('the social screens: Your circle on Home with its likes and the likers sheet, the feed, People, a member and her year, the follow link, Privacy and the member sheet', async ({ page }) => {
     // Eight scans and four members: longer than a usual flow.
     test.slow()
     const anna = await signedIn(page)
@@ -245,7 +245,7 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
       await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [member.id, name])
     }
     // Anna follows Ida and Cleo; Ben asks to follow Anna (a request on Home and under People).
-    for (const [follower, followee, accepted] of [[anna, ida, true], [anna, cleo, true], [ben, anna, false]] as const) {
+    for (const [follower, followee, accepted] of [[anna, ida, true], [anna, cleo, true], [ben, anna, false], [ida, anna, true]] as const) {
       await sql(`insert into public.follows (follower_id, followee_id, accepted_at) values ($1, $2, ${accepted ? 'now()' : 'null'})`, [follower.id, followee.id])
     }
     // Ida's week: a finish with her stars and a review (the card) and an older one (her row); Cleo's: a Book wanted (her row).
@@ -254,8 +254,12 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await idas.addToLibrary(book('Piranesi', 'Susanna Clarke', 272), { status: 'finished', startedOn: addDays(today, -5), endedOn: today, rating: 18, review: 'A house of tides and statues.' })
     await idas.addToLibrary(book('Dune', 'Frank Herbert', 896), { status: 'finished', startedOn: addDays(today, -30), endedOn: addDays(today, -5), rating: 16 })
     await createLibrary(cleo.client).addToLibrary(book('Ruin', 'John Gwynne', 800))
+    // Her own finish, liked by Ida (Home's likes row, and the likers sheet).
+    await createLibrary(anna.client).addToLibrary(book('The Dispossessed', 'Ursula K. Le Guin', 387), { status: 'finished', startedOn: addDays(today, -6), endedOn: addDays(today, -1), rating: 20, review: 'Walls, and what is behind them.' })
+    const [read] = await sql<{ id: string }>(`select s.id from public.reading_sessions s join public.library_entries e on e.id = s.entry_id where e.member_id = $1`, [anna.id])
+    expect((await ida.client.rpc('like', { p_session: read!.id })).error).toBeNull()
     // Settled, whatever the settle window is now (the social flow sets it to zero while it runs): shown to Anna at once.
-    await sql(`update public.activity set visible_at = now() - interval '1 second' where member_id = any($1)`, [[ida.id, cleo.id]])
+    await sql(`update public.activity set visible_at = now() - interval '1 second' where member_id = any($1)`, [[ida.id, cleo.id, anna.id]])
     const link = (await ben.client.rpc('my_social')).data.link as string
 
     // Home: the request, the card and the rows of Your circle.
@@ -264,6 +268,11 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await expect(page.getByTestId('home.circleFeature')).toBeVisible()
     await expect(page.getByTestId('home.circleFriend').first()).toBeVisible()
     await expectAccessible(page, 'Home with Your circle')
+    await expect(page.getByTestId('home.like')).toHaveCount(1)
+    await openSheet(page, 'home.like', 'likers')
+    await expect(page.getByTestId('likers.row')).toHaveCount(1)
+    await expectAccessible(page, 'the likers sheet')
+    await closeSheet(page, 'likers')
 
     // The feed.
     await page.getByTestId('home.circleTitle').click()

@@ -1822,6 +1822,12 @@
         "three": "{a}, {b} and {c}",
         "others": "{a}, {b} and {count} others"
       }
+    },
+    "likes": {
+      "reviewed": "{names} liked your review of {title}",
+      "finished": "{names} liked that you finished {title}",
+      "read": "{names} liked your read of {title}",
+      "open": "See who liked it"
     }
   }
 }

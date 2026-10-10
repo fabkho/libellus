@@ -37,6 +37,11 @@ function entry(member: typeof ANNA, kind: FeedKind, bookId: string, hoursAgo: nu
     book: book(bookId),
     rating: null,
     review: null,
+    spoilers: false,
+    folded: false,
+    sessionId: null,
+    likes: 0,
+    liked: false,
     ...extra,
   }
 }
@@ -65,6 +70,13 @@ describe('the card', () => {
     const view = circleView(feed(finished, reviewed), options)
     expect(view.card).toMatchObject({ verb: 'finished', rating: 16, review: 'Slow, then warm.' })
     expect(view.friends).toEqual([])
+  })
+
+  it('carries the heart of the read and the fold of the review the card shows (social v2a)', () => {
+    const finished = entry(ANNA, 'finished', 'b2', 6, { rating: 16, sessionId: 's1', likes: 3, liked: true })
+    const reviewed = entry(ANNA, 'reviewed', 'b2', 5, { rating: 16, review: 'The end!', spoilers: true, folded: true })
+    expect(circleView(feed(finished, reviewed), options).card).toMatchObject({ sessionId: 's1', likes: 3, liked: true, review: 'The end!', folded: true })
+    expect(circleView(feed(entry(ANNA, 'finished', 'b2', 5)), options).card).toMatchObject({ sessionId: null, likes: 0, liked: false, folded: false })
   })
 
   it('says "reviewed" when only the review is within the week', () => {

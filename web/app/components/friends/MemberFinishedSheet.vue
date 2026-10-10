@@ -2,17 +2,17 @@
 // All the Books she finished that the profile carries (social v1, U4b; *See all* under Recently finished): a
 // sheet with the section's rows, newest first. A row's Book opens its page (which closes the sheet); a
 // Manual book opens nothing.
-import type { SocialBook } from '~/data/social'
+import type { MemberFinished } from '~/data/social'
 
 const open = defineModel<boolean>('open', { required: true })
-defineProps<{ title: string; items: readonly { book: SocialBook; endedOn: string | null; rating: number | null; review: string | null }[] }>()
+defineProps<{ title: string; items: readonly MemberFinished[]; name?: string }>()
 </script>
 
 <template>
   <UiSheet v-model:open="open" :title="title" testid="memberFinished">
     <ul class="flex flex-col pb-lg">
       <li v-for="item in items" :key="item.book.id" class="row" data-testid="memberFinished.row">
-        <FriendsMemberFinishedRow :item="item" />
+        <FriendsMemberFinishedRow :item="item" :name="name" />
       </li>
     </ul>
   </UiSheet>

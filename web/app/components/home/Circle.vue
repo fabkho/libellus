@@ -15,10 +15,13 @@
 // `home.circleFriend`, `home.circleTitle` (the title, a link to the feed), `home.circleMore`.
 import { circleView } from '~/utils/circleView'
 import { useFeedStore } from '~/stores/feed'
+import { useLikesStore } from '~/stores/likes'
+import type { MemberCard, RecentLike } from '~/data/social'
 import { useSocialStore } from '~/stores/social'
 
 const { t } = useI18n()
 const feed = useFeedStore()
+const likes = useLikesStore()
 const { label } = useFeedDay()
 const social = useSocialStore()
 const online = useOnline()
@@ -59,15 +62,36 @@ let justMounted = false
 onMounted(() => {
   justMounted = true
   void feed.refresh()
+  void likes.loadRecent()
   void nextTick(() => (justMounted = false))
 })
 onActivated(() => {
-  if (!justMounted) void feed.refresh()
+  if (!justMounted) {
+    void feed.refresh()
+    void likes.loadRecent()
+  }
 })
+
+// Who liked one of her reads: the sheet asks `session_likers` for the read tapped (online only: offline it says so).
+const likersOpen = ref(false)
+const likers = ref<readonly MemberCard[] | null>(null)
+const likersFailed = ref(false)
+let asked = ''
+async function openLikers(item: RecentLike) {
+  asked = item.session
+  likers.value = null
+  likersFailed.value = false
+  likersOpen.value = true
+  if (!online.value) return
+  const result = await likes.likers(item.session)
+  if (asked !== item.session) return
+  if (result.error) likersFailed.value = result.error !== 'offline'
+  else likers.value = result.data
+}
 </script>
 
 <template>
-  <UiReveal :show="friends.length > 0 || !!card || !!request">
+  <UiReveal :show="friends.length > 0 || !!card || !!request || !!likes.recent?.length">
     <section data-testid="home.circle">
       <div class="flex h-(--size-touch) items-center">
         <h2>
@@ -88,6 +112,7 @@ onActivated(() => {
         @decline="answer(false)"
       />
       <p v-if="request && answerFailed" class="mb-xs px-xs text-footnote text-error" role="alert" data-testid="home.circleError">{{ t('people.error') }}</p>
+      <HomeCircleLikes v-if="likes.recent?.length" :items="likes.recent" @open="openLikers" />
       <UiListMotion tag="div">
         <div v-if="card" :key="cardKey" class="py-xs">
           <HomeCircleFeature :card="card" eager />
@@ -103,6 +128,7 @@ onActivated(() => {
         />
       </UiListMotion>
       <UiButton v-if="friends.length > 0 || card" tone="quiet" size="md" block to="/friends" class="mt-sm" data-testid="home.circleMore">{{ t('circle.more') }}</UiButton>
+      <FriendsLikersSheet v-model:open="likersOpen" :members="likers" :error="likersFailed" :offline="!online" />
     </section>
   </UiReveal>
 </template>

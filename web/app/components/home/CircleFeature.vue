@@ -9,9 +9,11 @@
 // so the cover is decorative. Drawing only: utils/circleView.ts picks the card.
 //
 // Props: `card` (CircleCard), `eager` (the cover loads now). Test ids: `home.circleFeature` (the panel),
-// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`.
+// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`, `.like` (the heart, at the
+// stars' line's end; `.like.error` when a like was refused), `.folded` (a review flagged as spoilers, folded behind *Show anyway*).
 import type { CircleCard } from '~/utils/circleView'
 import { useBookStore } from '~/stores/book'
+import { likeable } from '~/utils/likes'
 
 const props = defineProps<{ card: CircleCard; eager?: boolean }>()
 
@@ -24,6 +26,7 @@ const book = computed(() => props.card.book)
 const bookPath = computed(() => `/book/${book.value.id}`)
 // A Book without a cover shows the Placeholder: the cloth's colour lights the card then (as the book page's hero is lit).
 const coverFallback = ref(false)
+const showHeart = computed(() => likeable(props.card))
 const clothColor = computed(() => `var(--color-cloth${clothOf(book.value.title)})`)
 
 // The review: three lines, and `More` only when there is more than three lines of it.
@@ -35,13 +38,20 @@ function measure() {
   if (el && !expanded.value) clamped.value = el.scrollHeight > el.clientHeight + 1
 }
 let observer: ResizeObserver | null = null
-onMounted(() => {
-  measure()
-  if (review.value && typeof ResizeObserver !== 'undefined') {
-    observer = new ResizeObserver(measure)
-    observer.observe(review.value)
-  }
-})
+// The review's line is there once it is drawn (a folded one is not, until *Show anyway*): measured and watched from then on.
+watch(
+  review,
+  (el) => {
+    observer?.disconnect()
+    if (!el) return
+    measure()
+    if (typeof ResizeObserver !== 'undefined') {
+      observer ??= new ResizeObserver(measure)
+      observer.observe(el)
+    }
+  },
+  { flush: 'post', immediate: true },
+)
 onBeforeUnmount(() => observer?.disconnect())
 
 /** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
@@ -92,9 +102,14 @@ async function unfold() {
       >{{ book.title }}</UiPressLink>
       <span v-else class="book-title text-callout" data-testid="home.circleFeature.title">{{ book.title }}</span>
 
-      <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.circleFeature.stars" />
+      <div v-if="card.rating || showHeart" class="flex w-full min-w-0 items-center justify-between gap-md">
+        <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.circleFeature.stars" />
+        <span v-else />
+        <FriendsLikes v-if="showHeart" :row="card" :name="name" :title="book.title" testid="home.circleFeature.like" />
+      </div>
+      <FriendsLikeError v-if="showHeart" :row="card" testid="home.circleFeature.like" />
 
-      <template v-if="card.review">
+      <FriendsReviewFold v-if="card.review" :folded="card.folded" testid="home.circleFeature.folded">
         <p ref="review" tabindex="-1" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.circleFeature.review">{{ card.review }}</p>
         <button
           v-if="clamped && !expanded"
@@ -103,7 +118,7 @@ async function unfold() {
           data-testid="home.circleFeature.more"
           @click="unfold"
         >{{ t('feed.more') }}</button>
-      </template>
+      </FriendsReviewFold>
     </div>
   </div>
 </template>

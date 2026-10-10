@@ -45,10 +45,6 @@ const label = computed(() =>
   history.editBusy ? t('editSession.busy') : history.editError ? t('editSession.retry') : t('editSession.action'),
 )
 const reviewId = useId()
-
-// "Contains spoilers" (social v2a): the sheet's own flag, off each time it opens. Nothing writes it yet:
-// the parent can bind it (`v-model:spoilers`) and a later change sends it with the review.
-const spoilers = defineModel<boolean>('spoilers', { default: false })
 watch(open, (isOpen) => {
   if (isOpen) spoilers.value = false
 })
@@ -131,7 +127,7 @@ watch(
             data-testid="editSession.review"
           >
             <template #footer>
-              <BookSpoilerSwitch v-model="spoilers" :disabled="history.editBusy" testid="editSession.spoilers" />
+              <BookSpoilerSwitch v-model="history.draft.reviewSpoilers" :disabled="history.editBusy" testid="editSession.spoilers" />
             </template>
           </UiTextArea>
         </div>
