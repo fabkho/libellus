@@ -143,8 +143,8 @@ select is(public.catalogue_check_save((select id from ids where name = 'b_plante
   'title', 'A Bestseller', 'authors', jsonb_build_array('Famous'), 'description', 'The bestseller''s blurb')), false,
   'a source title that is not the stored title (by work_title_key) writes nothing: the answer is false');
 select is((select (title, authors, description, check_failed, checked_at is not null)::text from public.books where id = (select id from ids where name = 'b_planted')),
-  '("Planted Title","{""An Author""}","Blurb of Planted Title",t,t)',
-  'the Book is failed and checked, with the data the member sent, none of the bestseller''s');
+  '("Planted Title","{""An Author""}",,t,t)',
+  'the Book is failed and checked, with the data the member sent (and no description), none of the bestseller''s');
 select is((select count(*)::int from private.catalogue_check_state where book_id = (select id from ids where name = 'b_planted')), 0,
   'and is out of the queue');
 select is(public.catalogue_check_save((select id from ids where name = 'b_planted'), '{"title":"Planted Title"}'), false,

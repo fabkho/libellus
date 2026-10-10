@@ -4,8 +4,7 @@
 -- `goodreads_ratings` is shared like the Catalogue: every member reads it, only
 -- the service role (the goodreads-rating edge function) writes it. A found row
 -- has what the page shows, a miss nothing but its time. A Catalogue Book finds
--- its found rating by its ISBN (`goodreads_rating(library_entries)`, on the entry: the books row cannot
--- be passed whole while its description is withheld), never a miss.
+-- its found rating by its ISBN (`goodreads_rating(books)`), never a miss.
 -- Assertions ask about the rows this test made, never about how many rows a
 -- table holds.
 
@@ -53,9 +52,6 @@ insert into public.books (title, authors, isbn13, source, apple_id) values
   ('Unknown Book', '{Ann Author}', '9798991234573', 'apple', '990000000002'),
   ('No ISBN Book', '{Ann Author}', null, 'apple', '990000000003');
 
-insert into public.library_entries (member_id, book_id)
-select :'ida_id'::uuid, id from public.books where title in ('Rated Book', 'Unknown Book', 'No ISBN Book');
-
 -- -------------------------------------------------------------------- shape
 
 select has_table('public', 'goodreads_ratings', 'the cache exists');
@@ -89,14 +85,14 @@ select throws_ok(
 
 select results_eq(
   $$ select g.goodreads_id, g.rating, g.ratings_count, g.reviews_count
-       from public.library_entries e join public.books b on b.id = e.book_id, public.goodreads_rating(e) g where b.title = 'Rated Book' $$,
+       from public.books b, public.goodreads_rating(b) g where b.title = 'Rated Book' $$,
   $$ values ('6388978'::text, 4.32::numeric(3,2), 137875, 6116) $$,
-  'a Library entry finds its Book''s rating by its ISBN');
+  'a Catalogue Book finds its rating by its ISBN');
 select is_empty(
-  $$ select 1 from public.library_entries e join public.books b on b.id = e.book_id, public.goodreads_rating(e) g where b.title = 'Unknown Book' $$,
+  $$ select 1 from public.books b, public.goodreads_rating(b) g where b.title = 'Unknown Book' $$,
   'a miss is no rating');
 select is_empty(
-  $$ select 1 from public.library_entries e join public.books b on b.id = e.book_id, public.goodreads_rating(e) g where b.title = 'No ISBN Book' $$,
+  $$ select 1 from public.books b, public.goodreads_rating(b) g where b.title = 'No ISBN Book' $$,
   'a Book without an ISBN has none');
 
 -- ------------------------------------------------------------------- members
@@ -108,10 +104,9 @@ select set_eq(
   $$ values ('9798991234566', 'found'), ('9798991234573', 'not_found') $$,
   'a member reads the cache, misses included');
 select is(
-  (select g.goodreads_id from public.library_entries e join public.books b on b.id = e.book_id, public.goodreads_rating(e) g
-    where b.title = 'Rated Book'),
+  (select g.goodreads_id from public.books b, public.goodreads_rating(b) g where b.title = 'Rated Book'),
   '6388978',
-  'and the rating of her entry''s Book through it');
+  'and a Book''s rating through it');
 select throws_ok(
   $$ insert into public.goodreads_ratings (isbn13, status) values ('9798991234580', 'not_found') $$,
   '42501', null, 'a member cannot add to the cache');

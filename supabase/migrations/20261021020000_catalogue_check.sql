@@ -21,11 +21,19 @@
 -- keeps it so.
 --
 --   books.checked_at    null = not checked. Set when the source answered: with its data (saved) or
---                       without the Book (a miss).
---   books.check_failed  true when the source did not know the Book: checked_at is set, the data stay.
+--                       without the Book (a miss), or with another Book (a mismatch).
+--   books.check_failed  true when the source did not know the Book, or its answer was not this Book:
+--                       checked_at is set, no source text was written, and the description is null.
 --
 -- A source that is down is no miss: the Book stays unchecked and is tried again after 5 min, 10,
 -- 20 … at most a day.
+--
+-- A description is source text. A client never stores one for a Catalogue Book: `catalogue_book_for`
+-- leaves it null, and so does every other insert of a Catalogue row (a trigger, `books_no_client_description`);
+-- only `catalogue_check_save` writes it, from the source, and a miss or mismatch sets it null. So the column
+-- stays readable as before, and holds only what a source said (a legacy row keeps the description a client
+-- once sent until its check overwrites or clears it: `description_shown` still withholds it from others
+-- until then). A Manual book (owner_id set) keeps its own, which only its owner reads.
 --
 -- What other members and the public reading page see of a Book:
 --   checked          all of it, as the source said it.
@@ -34,13 +42,12 @@
 --   failed           nothing a member sent: title null, authors [], no cover, no description, "unverified":
 --                    true (private.book_shown), to everyone but members who have the Book in their own
 --                    Library, who read their row as they added it. A search leaves it out for them.
--- `reading_page_book_json` (so `social_book_json`, the feed, profiles, want lists and the reading page's
--- Books) carries no description, by design, and asks book_shown; `member_reading_record`, the one answer
--- that handed a description to others, asks description_shown and book_shown. The member's own Library
--- reads `books` directly and shows the row as she added it, but no longer its description: that column
--- is not selectable by the API roles (column grants), so it cannot be read around these rules; it comes
--- from book_description / book_descriptions (private.description_readable: checked, or hers, or in her
--- Library), and `search_books` hands it masked by the same rule.
+-- A mismatch (the source's answer is another Book: a real ISBN with another Book's id) also clears the
+-- row's source keys (isbn13, isbn10, apple_id, Open Library keys), so the unique indexes free them for an
+-- honest add; the members who hold the row keep it.
+-- Every answer that hands a Book to others asks book_shown: `reading_page_book_json` (so `social_book_json`,
+-- the feed, profiles, want lists, the reading page's Books, you both read, the circle, likes),
+-- `member_reading_record` (which also asks description_shown) and `search_books`.
 --
 -- The function's address and secret, once, by the owner (supabase/functions/catalogue-check/README.md):
 --
@@ -65,6 +72,34 @@ comment on column public.books.check_failed is
 alter table public.books drop constraint if exists books_manual_unchecked;
 alter table public.books add constraint books_manual_unchecked
   check (owner_id is null or (checked_at is null and not check_failed));
+
+-- A Book the check found to be another Book (a mismatch) loses its source keys: it is then a failed row
+-- with none (the unique indexes free them), so the key requirement holds for every row but those.
+alter table public.books drop constraint if exists books_catalogue_key;
+alter table public.books add constraint books_catalogue_key
+  check (source = 'manual' or check_failed or coalesce(isbn13, apple_id, openlibrary_edition_key) is not null);
+
+-- A client never stores a description for a Catalogue Book (see the header): whatever an insert says, a
+-- Catalogue row starts without one. The check writes it (catalogue_check_save), from the source.
+create or replace function private.books_no_client_description()
+returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $$
+begin
+  if new.owner_id is null then
+    new.description := null;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function private.books_no_client_description() from public, anon, authenticated;
+
+drop trigger if exists books_no_client_description on public.books;
+create trigger books_no_client_description
+  before insert on public.books
+  for each row execute function private.books_no_client_description();
 
 -- What the claim looks for: unchecked Catalogue Books, oldest first (a flood of new rows waits behind them).
 drop index if exists public.books_unchecked;
@@ -225,7 +260,7 @@ comment on table private.catalogue_additions is
 revoke all on private.catalogue_additions from public, anon, authenticated;
 
 -- catalogue_book_for, from its latest body (20261011090000_own_edition.sql), whole; the only change is
--- the count after a new row: a member makes at most 200 new Catalogue Books a day. The 201st is refused
+-- the count after a new row (and the description, which a client never stores for a Catalogue Book: null): a member makes at most 200 new Catalogue Books a day. The 201st is refused
 -- with `catalogue_limit` (PT429) and the whole add rolls back; a Book that is in the Catalogue already
 -- costs nothing (the first member's row is shared). Rows the check will read, one by one at the sources'
 -- pace, cannot be made faster than that by one account.
@@ -296,7 +331,7 @@ begin
       apple_id, openlibrary_edition_key, openlibrary_work_key, format
     ) values (
       v_book.title, v_book.authors, v_book.isbn13, v_book.isbn10, v_book.page_count,
-      v_book.published_year, v_book.language, v_book.publisher, v_book.description,
+      v_book.published_year, v_book.language, v_book.publisher, null,
       v_book.cover_url, v_book.cover_thumbhash, lower(v_book.cover_dominant),
       lower(v_book.cover_secondary), v_book.source, v_book.apple_id,
       v_book.openlibrary_edition_key, v_book.openlibrary_work_key, v_book.format
@@ -432,8 +467,7 @@ begin
   -- The source's record must be this Book's: the first member's title is the key the check was
   -- asked by (a real ISBN with another Book's id would otherwise write the other Book under it).
   if public.work_title_key(v_book.title) is distinct from public.work_title_key(v_title) then
-    update public.books set checked_at = now(), check_failed = true where id = p_book;
-    delete from private.catalogue_check_state where book_id = p_book;
+    perform public.catalogue_check_mismatch(p_book);
     return false;
   end if;
 
@@ -508,7 +542,8 @@ begin
 end;
 $$;
 
--- The source answered and does not know the Book: checked, failed, the data stay as they were.
+-- The source answered and does not know the Book: checked, failed, no source text written and the
+-- description (a legacy client's) null. The Book keeps its keys: it may be found later.
 create or replace function public.catalogue_check_miss(p_book uuid)
 returns boolean
 language plpgsql
@@ -519,7 +554,31 @@ declare
   v_found boolean;
 begin
   update public.books
-     set checked_at = now(), check_failed = true
+     set checked_at = now(), check_failed = true, description = null
+   where id = p_book and owner_id is null and checked_at is null;
+  v_found := found;
+  delete from private.catalogue_check_state where book_id = p_book;
+  return v_found;
+end;
+$$;
+
+-- The source's answer is another Book than the row says (its keys or title disagree): checked, failed,
+-- description null, and the source keys cleared, so the unique indexes free the ISBN, Apple id and edition
+-- key a member paired with another Book's for an honest add. Members who hold the row keep it, and read it
+-- as they added it (others see "unverified", private.book_shown).
+create or replace function public.catalogue_check_mismatch(p_book uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_found boolean;
+begin
+  update public.books
+     set checked_at = now(), check_failed = true, description = null,
+         isbn13 = null, isbn10 = null, apple_id = null,
+         openlibrary_edition_key = null, openlibrary_work_key = null
    where id = p_book and owner_id is null and checked_at is null;
   v_found := found;
   delete from private.catalogue_check_state where book_id = p_book;
@@ -580,7 +639,7 @@ declare
 begin
   foreach v_fn in array array[
     'public.catalogue_check_claim(integer, interval)', 'public.catalogue_check_save(uuid, jsonb)',
-    'public.catalogue_check_miss(uuid)', 'public.catalogue_check_failed(uuid, text)',
+    'public.catalogue_check_miss(uuid)', 'public.catalogue_check_mismatch(uuid)', 'public.catalogue_check_failed(uuid, text)',
     'public.catalogue_check_release(uuid)', 'public.catalogue_check_status()'
   ] loop
     execute format('revoke all on function %s from public, anon, authenticated', v_fn);
@@ -603,116 +662,6 @@ as $$
 $$;
 
 revoke all on function private.description_shown(public.books) from public, anon, authenticated;
-
--- Whether the caller may read a Book's description: it was read at its source (description_shown), or it
--- is hers (a Manual book of her own), or she has the Book in her own Library, where she reads the row
--- as she added it. Nobody else reads another member's unchecked or failed blurb.
-create or replace function private.description_readable(p_book public.books)
-returns boolean
-language sql
-stable
-set search_path = pg_catalog, public
-as $$
-  select private.description_shown(p_book)
-      or p_book.owner_id = (select auth.uid())
-      -- The service role (the export script, the check) reads every blurb: it has the table.
-      or (select auth.role()) = 'service_role'
-      or exists (select 1 from public.library_entries e
-                  where e.member_id = (select auth.uid()) and e.book_id = p_book.id)
-$$;
-
-revoke all on function private.description_readable(public.books) from public, anon, authenticated;
-
--- The one way a member reads a description: `books.description` is not selectable by the API roles any
--- more (column grants below), so the rule above cannot be skirted by `GET /books?select=description`.
--- `book_description` for one Book; `book_descriptions` for many (her Library's), as one object
--- {book id: description}, so a page of rows is never cut by the API's row limit. A Book that is not
--- readable, has no description or does not exist is not in the answer.
-create or replace function public.book_description(p_book uuid)
-returns text
-language sql
-stable
-security definer
-set search_path = pg_catalog, public
-as $$
-  select b.description
-    from public.books b
-   where b.id = p_book
-     and (b.owner_id is null or b.owner_id = (select auth.uid()) or (select auth.role()) = 'service_role')
-     and private.description_readable(b)
-$$;
-
-create or replace function public.book_descriptions(p_books uuid[])
-returns jsonb
-language sql
-stable
-security definer
-set search_path = pg_catalog, public
-as $$
-  select coalesce(jsonb_object_agg(b.id, b.description), '{}'::jsonb)
-    from public.books b
-   where b.id = any (p_books[1:5000])
-     and b.description is not null
-     and (b.owner_id is null or b.owner_id = (select auth.uid()) or (select auth.role()) = 'service_role')
-     and private.description_readable(b)
-$$;
-
-revoke all on function public.book_description(uuid), public.book_descriptions(uuid[]) from public, anon;
-grant execute on function public.book_description(uuid), public.book_descriptions(uuid[]) to authenticated;
-
--- The Goodreads rating of a Library entry's Book (web/app/data/library.ts embeds it beside the Book).
--- It was a computed relationship on `books` (`goodreads_rating(public.books)`), which takes the whole
--- row, and a whole row is readable only with every column: not with `description` withheld. The same
--- relationship now hangs on the entry, which has no column to withhold; the function reads only
--- the Book's id and ISBN-13.
-create or replace function public.goodreads_rating(public.library_entries)
-returns setof public.goodreads_ratings
-language sql
-stable
-rows 1
-set search_path = pg_catalog, public
-as $$
-  select g.*
-    from public.goodreads_ratings g
-    join public.books b on b.isbn13 = g.isbn13
-   where b.id = $1.book_id
-     and g.status = 'found'
-$$;
-
-revoke all on function public.goodreads_rating(public.library_entries) from public, anon;
-grant execute on function public.goodreads_rating(public.library_entries) to authenticated, service_role;
-
-drop function if exists public.goodreads_rating(public.books);
-
--- A Book's row with its description as the caller may read it: the one the search hands out.
-create or replace function private.book_masked(p_book public.books)
-returns public.books
-language sql
-stable
-set search_path = pg_catalog, public
-as $$
-  select * from jsonb_populate_record(
-    p_book,
-    jsonb_build_object('description', case when private.description_readable(p_book) then p_book.description end))
-$$;
-
-revoke all on function private.book_masked(public.books) from public, anon, authenticated;
-
--- The API roles read every column of `books` but `description`: select on the columns, named. A column
--- added later is not readable until it is granted here (the pgTAP test says so); the description goes
--- through book_description above. The service role and the owner are not affected.
-do $$
-declare
-  v_columns text;
-begin
-  select string_agg(quote_ident(a.attname), ', ' order by a.attnum) into v_columns
-    from pg_attribute a
-   where a.attrelid = 'public.books'::regclass and a.attnum > 0 and not a.attisdropped
-     and a.attname <> 'description';
-  execute 'revoke select on public.books from authenticated';
-  execute format('grant select (%s) on public.books to authenticated', v_columns);
-end;
-$$;
 
 -- Whether a Book may be handed to somebody else as what it says it is. A Book the check could not
 -- confirm (its source does not know it, or its answer is not this Book: check_failed) is shown to no
@@ -821,8 +770,8 @@ begin
                  'published_year', b.published_year,
                  'language', b.language,
                  'publisher', b.publisher,
-                 -- Withheld until the server's check has read it at its source, unless it is hers (private.description_readable).
-                 'description', case when private.description_readable(b) then b.description end,
+                 -- Withheld until the server's check has read it at its source (private.description_shown).
+                 'description', case when private.description_shown(b) then b.description end,
                  -- A cover only where private.cover_shown says (1. above); else the Placeholder.
                  'cover_url', case when private.cover_shown(b) then b.cover_url end,
                  'cover_thumbhash', case when private.cover_shown(b) then b.cover_thumbhash end,
@@ -887,8 +836,7 @@ grant execute on function public.member_reading_record(uuid) to authenticated;
 
 -- search_books, from its latest body (20261020020000_search_books_index.sql), whole; a search hands
 -- rows to others, so a Book that is not shown (private.book_shown: the check could not confirm it, and
--- she does not have it in her Library) is left out, and a row carries its description only as she may
--- read it (private.book_masked): `returns setof books` used to hand every searcher every blurb.
+-- she does not have it in her Library) is left out.
 create or replace function public.search_books(p_query text, p_limit integer default 20)
 returns setof public.books
 language plpgsql
@@ -904,8 +852,7 @@ declare
 begin
   if v_isbn13 ~ '^97[89][0-9]{10}$' then
     return query
-      select m.* from public.books
-        cross join lateral private.book_masked(books) m
+      select books.* from public.books
        where books.isbn13 = v_isbn13
          -- books_readable, word for word
          and (books.owner_id is null or books.owner_id = (select auth.uid()))
@@ -921,9 +868,8 @@ begin
   end if;
   v_text := btrim(public.book_search_text(p_query, '{}'));
   return query
-    select m.* from private.book_search s
+    select books.* from private.book_search s
       join public.books on books.id = s.book_id
-      cross join lateral private.book_masked(books) m
      where s.words @@ v_words
        -- books_readable, word for word
        and (books.owner_id is null or books.owner_id = (select auth.uid()))
@@ -940,8 +886,7 @@ comment on function public.search_books(text, integer) is
   'Catalogue search: the Books the caller can see (the Catalogue and her own Manual books) whose '
   'title and authors begin with the typed words, accents ignored; an ISBN-13 by ISBN. Best first. '
   'Security definer: applies the books_readable rule itself, so the words index is usable. A Book '
-  'the check could not confirm is left out unless she has it in her Library (private.book_shown); the '
-  'description is hers to read or null (private.book_masked).';
+  'the check could not confirm is left out unless she has it in her Library (private.book_shown).';
 
 revoke all on function public.search_books(text, integer) from public, anon;
 grant execute on function public.search_books(text, integer) to authenticated;

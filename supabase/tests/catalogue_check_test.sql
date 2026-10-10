@@ -6,11 +6,11 @@
 -- reading page get its title and authors but not its description; her own Library shows her row as
 -- she added it. The claim picks only unchecked Catalogue Books, once at a time, and a Book whose
 -- source is down comes back later; a save writes what the source said (validated) and opens the
--- description; a miss marks the Book failed and keeps its data. Only the service role calls the
+-- description; a miss marks the Book failed and clears its description. Only the service role calls the
 -- check's functions.
 
 begin;
-select plan(35);
+select plan(36);
 
 create schema if not exists tests;
 
@@ -110,6 +110,11 @@ insert into ids values ('notebook', (select book_id from public.add_manual_book(
 
 reset role;
 insert into ids select 'b_' || name, tests.book_of(id) from ids where name in ('open', 'saved', 'missed', 'late', 'claim', 'sly');
+-- A client never stores a description for a Catalogue Book (books_no_client_description): the blurbs the
+-- rest of this file reads are legacy ones, set here as they were before.
+select is((select count(*)::int from public.books where id in (select id from ids where name like 'b\_%') and description is not null), 0,
+  'a description a client sends for a Catalogue Book is not stored');
+update public.books set description = 'Blurb of ' || title where id in (select id from ids where name like 'b\_%');
 
 select is((select checked_at from public.books where id = (select id from ids where name = 'b_open')), null,
   'a Book a member adds starts unchecked');
@@ -131,7 +136,7 @@ select is(tests.record_book((select id from ids where name = 'ada'), 'Open Book'
   'and its cover only by the allowlist (this host is not on it)');
 
 select tests.act_as((select id from ids where name = 'ada'));
-select is(public.book_description((select id from ids where name = 'b_open')), 'Blurb of Open Book',
+select is((select description from public.books where id = (select id from ids where name = 'b_open')), 'Blurb of Open Book',
   'her own Library reads the row as she added it');
 
 reset role;
@@ -223,8 +228,8 @@ select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '[]')$
 -- ------------------------------------------------------------- a miss
 
 select is((select (title, description, cover_url, checked_at is not null, check_failed)::text from public.books where id = (select id from ids where name = 'b_missed')),
-  '("Missed Book","Blurb of Missed Book",https://example.org/' || md5('Missed Book') || '.jpg,t,t)',
-  'a Book its source does not know is failed and checked, and keeps its data');
+  '("Missed Book",,https://example.org/' || md5('Missed Book') || '.jpg,t,t)',
+  'a Book its source does not know is failed and checked, and its legacy description is cleared');
 select tests.act_as((select id from ids where name = 'ben'));
 select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book'), null,
   'and nothing vouches for its text: others no longer get its title, nor its description (catalogue_check_failed_test.sql has the rest)');

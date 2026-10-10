@@ -10,7 +10,7 @@
 -- description); a checked Book is shown whole.
 
 begin;
-select plan(28);
+select plan(30);
 
 create schema if not exists tests;
 
@@ -191,6 +191,21 @@ select is((public.add_to_library(tests.snap('Planted Book') || '{"isbn13":"97801
 select is((select count(*)::int from public.search_books('Planted Book')), 1, 'he now finds it');
 select is(tests.record_book((select id from ids where name = 'ada'), (select id from ids where name = 'b_failed')) ->> 'title', 'Planted Book',
   'and Ada''s record shows it to him as it is stored: he has it in his own Library');
+
+-- You both read (social v2a): hers is a failed Book that shares a work key with one he finished: handed unverified.
+select tests.act_as((select id from ids where name = 'ada'));
+insert into ids values ('wk', (public.add_to_library(tests.snap('Shared Work A') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL5551M","openlibrary_work_key":"OL5551W"}', 'reading', current_date - 3)).id);
+select public.finish_reading((select id from ids where name = 'wk'), current_date, 18, null);
+reset role;
+select public.catalogue_check_miss(tests.book_of((select id from ids where name = 'wk')));
+select tests.act_as((select id from ids where name = 'ben'));
+insert into ids values ('wkb', (public.add_to_library(tests.snap('Shared Work B') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL5552M","openlibrary_work_key":"OL5551W"}', 'reading', current_date - 3)).id);
+select public.finish_reading((select id from ids where name = 'wkb'), current_date, 18, null);
+select ok(exists (select 1 from jsonb_array_elements(public.both_read((select id from ids where name = 'ada'))) b
+                   where b -> 'book' ->> 'id' = tests.book_of((select id from ids where name = 'wk'))::text
+                     and b -> 'book' -> 'unverified' = 'true'::jsonb and b -> 'book' -> 'title' = 'null'::jsonb),
+  'you both read hands a failed Book of hers as unverified');
+select ok(position('Shared Work A' in public.both_read((select id from ids where name = 'ada'))::text) = 0, 'without its title');
 
 select tests.act_as((select id from ids where name = 'cy'));
 select is(tests.record_book((select id from ids where name = 'ada'), (select id from ids where name = 'b_failed')) -> 'unverified', 'true'::jsonb,
