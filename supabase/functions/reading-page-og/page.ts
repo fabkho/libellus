@@ -5,16 +5,33 @@
  * tests can build a page or a card by hand.
  */
 
-/** A Book as a visitor sees it: `private.reading_page_book_json`. */
+/**
+ * A Book as a visitor sees it: `private.reading_page_book_json`. An unverified Book (one the server check could not
+ * confirm, social v2a §5) carries an id and `unverified: true` and nothing else: no title, no authors, no cover.
+ */
 export type PublicBook = {
   id: string
-  title: string
-  authors: string[]
+  title: string | null
+  authors: string[] | null
   published_year: number | null
   cover_url: string | null
   cover_thumbhash: string | null
   cover_dominant: string | null
   cover_secondary: string | null
+  unverified?: boolean | null
+}
+
+/** What the app says for an unverified Book (i18n `book.outsideCatalogue`), as the web draws it. */
+export const OUTSIDE_CATALOGUE = 'Outside the catalogue'
+
+/** The title an image draws: the Book's own, or "Outside the catalogue" for one without (an unverified Book). */
+export function bookTitle(book: PublicBook): string {
+  return book.title?.trim() || OUTSIDE_CATALOGUE
+}
+
+/** A Book without a title is drawn on the cloth Placeholder, as the web draws it. */
+export function isOutside(book: PublicBook): boolean {
+  return Boolean(book.unverified) || !book.title?.trim()
 }
 
 export type PublicReadingPage = {
@@ -34,7 +51,7 @@ export type PublicReadingPage = {
     months: number[]
   }
   favourites?: { book: PublicBook; rating: number | null }[]
-  finished?: { book: PublicBook; ended_on: string | null; rating: number | null; review: string | null }[]
+  finished?: { book: PublicBook; ended_on: string | null; rating: number | null; review: string | null; spoilers?: boolean | null; folded?: boolean | null }[]
   shelf?: { kind: 'regal' } | { kind: 'covers'; books: PublicBook[] }
 }
 
@@ -45,6 +62,19 @@ export type PublicBookCard = {
   ended_on: string | null
   rating: number | null
   review: string | null
+  /** The review is flagged as spoilers (social v2a). */
+  spoilers?: boolean | null
+  /** Folded for this visitor: an image is a visitor without a sign-in, so a flagged review is never drawn. */
+  folded?: boolean | null
+}
+
+/**
+ * The review an image may draw: the card's own, unless it is folded for spoilers (or flagged: the image is cached
+ * publicly and nobody can have finished the Book as far as it knows). Null when there is none.
+ */
+export function shownReview(card: PublicBookCard): string | null {
+  if (card.folded || card.spoilers) return null
+  return card.review?.trim() ? card.review : null
 }
 
 /** The address' token: 128 random bits as 22 base64url characters. */
@@ -90,7 +120,7 @@ export function pageCovers(page: PublicReadingPage, limit: number): PublicBook[]
 export function pageSummary(page: PublicReadingPage): string {
   const parts: string[] = []
   const reading = page.reading?.[0]
-  if (reading) parts.push(`Reading ${reading.book.title}`)
+  if (reading) parts.push(isOutside(reading.book) ? 'Reading a book outside the catalogue' : `Reading ${bookTitle(reading.book)}`)
   if (page.year && page.year.books > 0) parts.push(`${page.year.books} ${plural(page.year.books, 'book')} in ${page.year.year}`)
   const finished = page.finished?.length ?? 0
   if (!parts.length && finished) parts.push(`${finished} ${plural(finished, 'book')} finished`)
