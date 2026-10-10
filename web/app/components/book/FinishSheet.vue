@@ -41,10 +41,6 @@ const label = computed(() =>
   reading.finishBusy ? t('finish.busy') : reading.finishError ? t('finish.retry') : t('finish.action'),
 )
 const reviewId = useId()
-
-// "Contains spoilers" (social v2a): the sheet's own flag, off each time it opens. Nothing writes it yet:
-// the parent can bind it (`v-model:spoilers`) and a later change sends it with the review.
-const spoilers = defineModel<boolean>('spoilers', { default: false })
 watch(open, (isOpen) => {
   if (isOpen) spoilers.value = false
 })
@@ -103,7 +99,7 @@ const summary = computed(() => {
           data-testid="finish.review"
         >
           <template #footer>
-            <BookSpoilerSwitch v-model="spoilers" :disabled="reading.finishBusy" testid="finish.spoilers" />
+            <BookSpoilerSwitch v-model="reading.reviewSpoilers" :disabled="reading.finishBusy" testid="finish.spoilers" />
           </template>
         </UiTextArea>
       </div>
