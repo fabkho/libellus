@@ -31,9 +31,28 @@ select vault.create_secret('<the CATALOGUE_CHECK_TOKEN function secret>', 'catal
 ```
 
 ```sh
-supabase secrets set CATALOGUE_CHECK_TOKEN=<random>      # LIBELLUS_SITE_URL and ENRICH_CONTACT are read too (User-Agent)
-supabase functions deploy catalogue-check
+supabase secrets set CATALOGUE_CHECK_TOKEN="$(openssl rand -hex 32)"   # 32 characters at least, else it is ignored
+supabase functions deploy catalogue-check                              # LIBELLUS_SITE_URL and ENRICH_CONTACT are read too (User-Agent)
 ```
+
+The address must be `https://` (the database refuses another: the call carries the token). The Vault secret
+`catalogue_check_token` must be the same string as the function secret.
+
+## If it does not run
+
+The cron's call is sent through pg_net and answers into the database a minute later, where the next kick reads it.
+The owner looks here:
+
+```sql
+select last_kick_at, last_status, last_error, last_status_at from private.catalogue_check_settings;
+```
+
+`last_status` 200 is a drain that ran; **401** is a token the function does not accept (the Vault's is not the
+function secret, or the secret is under 32 characters: the function logs it and takes the service-role key only);
+5xx or a null status with an `last_error` (a timeout, no route) is the function being down or slow. The status
+action of the function (`{"action":"status"}`) answers the counts and the same three fields as `lastKickAt`,
+`lastStatus`, `lastError`; the function's logs have the rest. Nothing alerts: a Book that stays unchecked is the
+sign (it shows to others as its first member sent it, title and authors only).
 
 ## What it asks, per Book (`check.ts`)
 
@@ -71,14 +90,16 @@ written under the ISBN).
 
 ## Trust and limits (the security notes)
 
-- **Caller**: the service-role key or `CATALOGUE_CHECK_TOKEN`, nothing else; a signed-in member's token is
-  refused (`verify_jwt` is off, the function checks itself). The request carries an action and a number; the
+- **Caller**: the service-role key or `CATALOGUE_CHECK_TOKEN` (32 characters at least, else ignored), nothing
+  else, compared in constant time (`authorize.ts`); a signed-in member's token is refused (`verify_jwt` is off,
+  the function checks itself). The request carries an action and a number; the
   work comes from the database queue, so no member chooses what is fetched.
 - **Fetches**: only `itunes.apple.com` and `openlibrary.org`, over https (`safe_fetch.ts`: allowlist per
   request and per redirect hop, no credentials or ports, three hops at most). The addresses are built from the
   Book's keys after a shape check (digits, `OL…M/W/A`, ISBN-13/10), so a hostile key cannot steer a request.
   Polite as the enrichment is: one request at a time per host (Open Library a second, Apple three), identified
-  by User-Agent, a timeout, two retries.
+  by User-Agent, a timeout, two retries. A response is read to 1 MB and no further (a record from a source we
+  do not control): past it the Book is `unavailable` and tried again later, not retried at once.
 - **Writes**: only through the service-role RPCs of `20261021020000_catalogue_check.sql`, only to an
   unchecked Catalogue Book, and only title, authors, description, cover (and the cover's hash and colours,
   cleared), publisher, language, format, pages, year. Every field is validated here (type, length, plain text,
