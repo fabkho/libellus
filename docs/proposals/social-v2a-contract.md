@@ -103,7 +103,17 @@ the like (Anna likes Ida's finish, Ida sees the count and Anna's name) and a spo
   `catalogue-check`, which looks each up at its source (Apple: the iTunes lookup by `apple_id`; Open Library:
   the edition or work key, or the ISBN) and writes **title, authors, description, cover url** from the
   source (cover through the existing cover rules), sets `checked_at`; a Book its source does not know gets
-  `check_failed = true`, `checked_at` set, and keeps its data. Rate-limit friendly (N small, backoff).
+  `check_failed = true`, `checked_at` set, and nothing written. Rate-limit friendly (N small, backoff).
+  **Identity** (review C2): a Book is resolved by one key (ISBN-13, ISBN-10, Apple id, Open Library edition
+  key, work key, in this order); every other key the row stores must agree with the source's record and the
+  stored title must be the source's by `work_title_key`; any disagreement is `check_failed`, nothing written,
+  no other key tried. **Verified is all from the source**: authors, cover, description, publisher, language,
+  format are the source's or empty; pages and year the source's, else the member's only when plausible.
+  **A failed Book** is shown to nobody outside a Library: title null, authors [], no cover, no description,
+  `unverified: true` (`private.book_shown`); the web calls it "Outside the catalogue". **Descriptions** are
+  read through `book_description(s)` only (`books.description` is not an API column): checked, or hers, or in
+  her Library. **Flooding**: at most 200 new Catalogue Books per member per day (`catalogue_limit`, PT429);
+  the queue claims oldest first.
 - Until checked, social answers and the public reading page hand out an unchecked Book's **title and
   author** but not its **description**, and its cover only by the S1 allowlist (as now). The window is
   minutes; the member's own Library shows her row as she added it.
