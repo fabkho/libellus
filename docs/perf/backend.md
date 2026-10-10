@@ -611,6 +611,8 @@ once nothing else does (check the Next sheet first).
 
 **Partly fixed** in PR #238 (20261018040000): the two lists are two requests over one helper, so one evaluation cannot be shared in SQL. `muted_series_list` now answers `[]` after one probe when nothing is muted (2.64 -> 0.02 ms, Home's series cost -39 % for a member without mutes). A member with mutes still runs the chain twice; that needs one client call.
 
+**Fixed** (PR #255, migration 20261020030000): `started_and_muted_series(p_limit, p_language)` returns `{"open": ..., "muted": ...}` from one evaluation of the chain (`started_series_core`, which the helper of the two old functions now wraps; their signature, JSON and RLS rule are unchanged, installed apps keep calling them). Home asks once (`startedAndMuted`; a database without the function answers `PGRST202` and the two old calls are made). Local, a member with 150 entries, 40 series of 10 works, 6 open and 12 muted: the two calls 12.2 ms (median of 9, 10.5-13.7) -> one call 6.2 ms (5.9-7.7), -49 %; Home's series requests 2 -> 1. Production not measured.
+
 ### F6. pg_cron housekeeping (impact low, effort S)
 
 **Evidence class: P** (R6: log 344 kB, job times). Rank 6.

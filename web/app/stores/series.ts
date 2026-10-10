@@ -11,6 +11,7 @@ import {
 import { LIMITS, remembered } from '~/data/enrich/device'
 import { useEnrichCopyStore } from '~/stores/enrichCopy'
 import { useSessionStore } from '~/stores/session'
+import { FRESH_MS } from '~/utils/fresh'
 
 /** How many started series Home asks for: all of them, for its sheet. */
 const STARTED_LIMIT = 100
@@ -93,17 +94,35 @@ export const useSeriesStore = defineStore('series', () => {
   /** The started series she muted, as this device last knew them. */
   const muted = computed<StartedSeries[]>(() => copy.data.muted ?? [])
 
-  async function loadStarted() {
+  /** When Home's lists were asked for (`performance.now()`), by the last answer. */
+  let startedAt = -Infinity
+  let startedRunning: Promise<void> | null = null
+
+  /**
+   * Home's "Next in your series" and its muted ones: one call, one evaluation on the server
+   * (data/enrich/series.ts, `startedAndMuted`). `ifStale`: not again while the last answer is
+   * fresh (a visit to Home); a mute, a correction or a Book started or finished asks without it.
+   */
+  function loadStarted({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
+    if (ifStale && (startedRunning || performance.now() - startedAt < FRESH_MS)) return startedRunning ?? Promise.resolve()
+    const run: Promise<void> = fetchStarted().finally(() => {
+      if (startedRunning === run) startedRunning = null
+    })
+    startedRunning = run
+    return run
+  }
+
+  async function fetchStarted() {
     const repo = series()
     if (!repo || !isOnline()) return
     const member = session.member?.id
-    const [open, hidden] = await Promise.all([repo.started(STARTED_LIMIT, language()), repo.muted(STARTED_LIMIT, language())])
+    const asked = performance.now()
+    const result = await repo.startedAndMuted(STARTED_LIMIT, language())
     if (member !== session.member?.id) return
-    // Each list is kept as soon as it is answered; a failed one keeps the device's copy.
-    copy.update(() => ({
-      ...(open.error ? {} : { started: open.data }),
-      ...(hidden.error ? {} : { muted: hidden.data }),
-    }))
+    // A failed ask keeps the device's copy.
+    if (result.error) return
+    startedAt = asked
+    copy.update(() => ({ started: result.data.open, muted: result.data.muted }))
   }
 
   /** The series being muted or unmuted: one at a time. */
@@ -173,6 +192,8 @@ export const useSeriesStore = defineStore('series', () => {
   }
 
   function reset() {
+    startedAt = -Infinity
+    startedRunning = null
     muting.value = null
     sheet.value = null
     editing.value = null
