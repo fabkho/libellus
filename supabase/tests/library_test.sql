@@ -123,7 +123,7 @@ select lives_ok(
   $$ select public.add_to_library('{"title":"Piranesi (rewritten)","source":"apple","apple_id":"990000000001","description":"Another blurb."}') $$,
   'another member adds the same Book');
 select results_eq(
-  $$ select b.title, b.description from public.library_entries e join public.books b on b.id = e.book_id
+  $$ select b.title, public.book_description(b.id) from public.library_entries e join public.books b on b.id = e.book_id
       where e.member_id = auth.uid() and b.apple_id = '990000000001' $$,
   $$ values ('Piranesi', null::text) $$,
   'it is the same Catalogue Book, and the first snapshot is kept');

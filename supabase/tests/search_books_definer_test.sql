@@ -75,7 +75,8 @@ insert into public.books (title, authors, source, owner_id, isbn13) values
   ('Geheimtitel Vorlauf', '{"Max Brannoch"}', 'manual', :'max_id', '9780000002025');
 
 -- The function as it was before 20261020020000, verbatim but for its name:
--- security invoker, so the books_readable policy decides what it sees.
+-- security invoker, so the books_readable policy decides what it sees. (Its columns are named: the API
+-- roles cannot select `books.description`, so the old function's blurb is null here; no fixture has one.)
 create or replace function tests.search_books_old(p_query text, p_limit integer default 20)
 returns setof public.books
 language plpgsql
@@ -91,7 +92,7 @@ declare
 begin
   if v_isbn13 ~ '^97[89][0-9]{10}$' then
     return query
-      select b.* from public.books b
+      select b.id, b.title, b.authors, b.isbn13, b.isbn10, b.page_count, b.published_year, b.language, b.publisher, null::text as description, b.cover_url, b.cover_thumbhash, b.cover_dominant, b.cover_secondary, b.source, b.apple_id, b.openlibrary_edition_key, b.openlibrary_work_key, b.owner_id, b.created_at, b.format, b.checked_at, b.check_failed from public.books b
        where b.isbn13 = v_isbn13
        order by b.owner_id is null, b.created_at desc, b.id
        limit v_limit;
@@ -104,7 +105,7 @@ begin
   end if;
   v_text := btrim(public.book_search_text(p_query, '{}'));
   return query
-    select b.* from public.books b
+    select b.id, b.title, b.authors, b.isbn13, b.isbn10, b.page_count, b.published_year, b.language, b.publisher, null::text as description, b.cover_url, b.cover_thumbhash, b.cover_dominant, b.cover_secondary, b.source, b.apple_id, b.openlibrary_edition_key, b.openlibrary_work_key, b.owner_id, b.created_at, b.format, b.checked_at, b.check_failed from public.books b
      where to_tsvector('simple'::regconfig, public.book_search_text(b.title, b.authors)) @@ v_words
      order by btrim(public.book_search_text(b.title, '{}')) = v_text desc,
               ts_rank(to_tsvector('simple'::regconfig, public.book_search_text(b.title, b.authors)), v_words) desc,

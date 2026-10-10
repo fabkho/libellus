@@ -131,7 +131,7 @@ select is(tests.record_book((select id from ids where name = 'ada'), 'Open Book'
   'and its cover only by the allowlist (this host is not on it)');
 
 select tests.act_as((select id from ids where name = 'ada'));
-select is((select description from public.books where id = (select id from ids where name = 'b_open')), 'Blurb of Open Book',
+select is(public.book_description((select id from ids where name = 'b_open')), 'Blurb of Open Book',
   'her own Library reads the row as she added it');
 
 reset role;
