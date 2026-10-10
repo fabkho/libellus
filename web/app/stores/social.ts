@@ -14,6 +14,7 @@ import {
   type SocialSection,
 } from '~/data/social'
 import { useSessionStore } from '~/stores/session'
+import { useBookReadersStore } from '~/stores/bookReaders'
 import { useCircleBooksStore } from '~/stores/circleBooks'
 import { useFeedStore } from '~/stores/feed'
 import { useLikesStore } from '~/stores/likes'
@@ -262,11 +263,14 @@ export const useSocialStore = defineStore('social', () => {
    */
   function relation(member: string, what: RelationChange, { left = false, fromFeed = false } = {}) {
     if (fromFeed) useFeedStore().dropMember(member)
+    // Her Books' readers: a follow may add someone, so what was read is stale; a member who left goes at once.
+    useBookReadersStore().stale()
     if (left) {
       useMemberPhotosStore().drop(member)
       // Her name and avatar leave Home's likes row (and its device copy), the covers' circles and the hearts tapped on her reads.
       useLikesStore().dropMember(member)
       useCircleBooksStore().dropMember(member)
+      useBookReadersStore().dropMember(member)
     }
     useMemberProfileStore().relationChanged(member, what)
   }
