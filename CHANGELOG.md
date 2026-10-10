@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.9.1](https://github.com/fabkho/libellus/compare/v1.9.0...v1.9.1) (2026-10-10)
+
+
+### Fixes
+
+* **web:** a failed reader prefetch must not break Read now ([3179f1f](https://github.com/fabkho/libellus/commit/3179f1f9e8a1c4529d0d2b31f1d9334d9beb5cf2))
+* **web:** More from the author shows the author's newest works ([f8e5529](https://github.com/fabkho/libellus/commit/f8e5529c4aec98fc893162ca7b6c575f6ea45298))
+* **web:** More from the author shows the author's newest works ([a1a4a44](https://github.com/fabkho/libellus/commit/a1a4a44f614eac2416686325f9236ced9d858fc7))
+
+
+### Performance
+
+* **web:** bundle trims (F1 sign-in guard, F2 vitals chunk, F4 Options API) ([ea340c9](https://github.com/fabkho/libellus/commit/ea340c92be92e12cc1ecfd7b9bd009fb706818d9))
+* **web:** ebook reader out of the precache, fetched ahead for members with ebooks ([6949cc4](https://github.com/fabkho/libellus/commit/6949cc441b4309d1d5e57382f6b3d5e70c34fcc7))
+* **web:** lazy images audited, message compiler dropped, list measurement scripts ([63dd8b9](https://github.com/fabkho/libellus/commit/63dd8b94b21ecdd238b78021a5ea9dcc8366a04e))
+* **web:** take the ebook reader out of the precache and fetch it ahead for members who use ebooks ([d4a9a37](https://github.com/fabkho/libellus/commit/d4a9a37f483317e125c03df762ba2b02aeb9ad9c))
+
 ## [1.9.0](https://github.com/fabkho/libellus/compare/v1.8.0...v1.9.0) (2026-10-10)
 
 
