@@ -146,7 +146,8 @@ async function withdraw() {
 
 // ⋯: the member sheet (Unfollow · Remove as follower · Block, by the relation). Once one went
 // through, the profile is read again: Unfollow brings back Follow (or the private card), Block leaves
-// nobody to show.
+// nobody to show. The page is scrolled to its top then (smoothly, at once with Reduce Motion), so the hero with
+// its new Follow or Requested shows: she was down the page when she opened ⋯ (owner's note 04.3).
 const moreOpen = ref(false)
 function more() {
   moreOpen.value = true
@@ -154,6 +155,53 @@ function more() {
 function changed() {
   void members.load(id.value)
 }
+const modalShown = useModalShown()
+function scrollToHero() {
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
+}
+/**
+ * Scrolls to the hero once the member sheet has gone. Not before: the page is locked while the sheet is on screen,
+ * and the sheet steps back off its own history entry when it closes (composables/useBackDismiss.ts), whose popstate
+ * the browser answers by putting the page back where it was. So it waits for that popstate (or, when none comes,
+ * a moment) and then scrolls.
+ */
+function scrollAfterSheet() {
+  let stepped = false
+  const onPop = () => (stepped = true)
+  window.addEventListener('popstate', onPop)
+  const scroll = () => {
+    window.removeEventListener('popstate', onPop)
+    requestAnimationFrame(scrollToHero)
+  }
+  const afterSheet = () => {
+    if (stepped) return scroll()
+    const settle = () => {
+      window.removeEventListener('popstate', settle)
+      clearTimeout(fallback)
+      scroll()
+    }
+    const fallback = setTimeout(settle, 600)
+    window.addEventListener('popstate', settle)
+  }
+  if (!modalShown.value) return afterSheet()
+  const stop = watch(modalShown, (shown) => {
+    if (shown) return
+    stop()
+    afterSheet()
+  })
+}
+// What the hero shows of the relation: Unfollow, Remove as follower and Block each change it (the store follows the
+// action at once), and the member sheet may be gone by then (the profile turned into a closed card), so the page
+// watches the relation itself rather than the sheet's `changed`. Not the first answer for a member (`null` before).
+const relation = computed(() => {
+  if (!view.value.loaded) return null
+  const p = view.value.profile
+  return `${id.value}|${p ? `${p.state}|${p.visible}|${p.visible ? p.followsYou : ''}` : 'none'}`
+})
+watch(relation, (now, before) => {
+  if (!now || !before || now.split('|')[0] !== before.split('|')[0]) return
+  scrollAfterSheet()
+})
 
 // The round back: by history when there is one (the feed, People, a follow link), else to the feed.
 function back() {
