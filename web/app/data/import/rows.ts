@@ -1,3 +1,4 @@
+import { isRatingOnlyReview, looksLikeRatingButIsNot, ratingFromReviewText } from '../../utils/ratingReview'
 import { isValidIsbn10, isValidIsbn13, isbn10To13 } from '../books'
 import type { EntryStatus } from '../library'
 import { REVIEW_MAX_LENGTH } from '../library'
@@ -45,6 +46,8 @@ export type ImportProblem =
   | { code: 'dateInvalid' }
   /** A review over the length a session keeps: cut. */
   | { code: 'reviewTooLong' }
+  /** A review that is only a number above 5 ("1984", "7"): no rating, so it stays a review. */
+  | { code: 'ratingLikeReview' }
   /** A row with no title: skipped. */
   | { code: 'noTitle' }
   /** The same book twice in the file (same key): the second skipped. */
@@ -240,6 +243,21 @@ export function importKey(
   if (/^\d+$/.test(id)) return `${source}:${id}`
   if (book.isbn13) return `${source}:isbn-${book.isbn13}`
   return `${source}:t-${keyPart(`${workTitle(book.title)}|${surname(book.authors[0])}`)}`
+}
+
+/**
+ * A review that is only a rating ("4.6", "5/5", "4.5/5": utils/ratingReview.ts) is the rating, not a review: it is
+ * not kept as a review, and the read has it as its rating when it has none (rounded down to the quarter steps); a
+ * rating the row already has stays. A number above 5 with no `/10` is no rating: it stays a review, reported.
+ */
+export function splitRatingReview(
+  review: string | null,
+  rating: number | null,
+  problems: ImportProblem[],
+): { review: string | null; rating: number | null } {
+  if (isRatingOnlyReview(review)) return { review: null, rating: rating ?? ratingFromReviewText(review) }
+  if (looksLikeRatingButIsNot(review)) problems.push({ code: 'ratingLikeReview' })
+  return { review, rating }
 }
 
 /** A review cut to the length a session keeps, with the problem when it was. */
