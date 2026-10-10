@@ -122,10 +122,17 @@ yet; `v-model:spoilers` on each sheet), `feed.like` (`LikeButton`, `.count` insi
   no other key tried. **Verified is all from the source**: authors, cover, description, publisher, language,
   format are the source's or empty; pages and year the source's, else the member's only when plausible.
   **A failed Book** is shown to nobody outside a Library: title null, authors [], no cover, no description,
-  `unverified: true` (`private.book_shown`); the web calls it "Outside the catalogue". **Descriptions** are
-  read through `book_description(s)` only (`books.description` is not an API column): checked, or hers, or in
-  her Library. **Flooding**: at most 200 new Catalogue Books per member per day (`catalogue_limit`, PT429);
-  the queue claims oldest first.
+  `unverified: true` (`private.book_shown`, used by everything that hands a Book to others: the feed, profiles,
+  reading pages, you both read, the circle, likes, the record, the search); the web calls it "Outside the
+  catalogue". On a **mismatch** (the source's answer is another Book) the row's source keys (ISBN, Apple id,
+  Open Library keys) are cleared too, so an honest add of that ISBN makes a new row; members who hold the row
+  keep it. **A description is source text**: a client never stores one for a Catalogue Book
+  (`catalogue_book_for` and a trigger leave it null); only the check writes it, from the source, and a miss or
+  mismatch sets it null, so `books.description` stays readable as before and holds only what a source said
+  (a legacy row keeps its old client description until its check overwrites or clears it; others get no
+  description of an unchecked Book meanwhile). A Manual book keeps its own, which only its owner reads. The
+  member's own new Book shows no description until its check (minutes). **Flooding**: at most 200 new Catalogue
+  Books per member per day (`catalogue_limit`, PT429); the queue claims oldest first.
 - Until checked, social answers and the public reading page hand out an unchecked Book's **title and
   author** but not its **description**, and its cover only by the S1 allowlist (as now). The window is
   minutes; the member's own Library shows her row as she added it.
