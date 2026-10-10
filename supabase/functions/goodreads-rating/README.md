@@ -12,29 +12,39 @@ POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terr
 200 { "status": "found", "goodreadsId": "6388978", "rating": 4.32, "ratingsCount": 137875,
       "reviewsCount": 6116, "matchedBy": "isbn", "checkedAt": "…" }
 200 { "status": "not_found", "checkedAt": "…" }
-400 isbn_invalid · 400 book_unidentified (no ISBN, and no title or no author) · 401 unauthorized · 502 goodreads_unavailable · 503 busy
+400 isbn_invalid · 400 book_unidentified (no ISBN, and no title or no author) · 401 unauthorized · 413 payload_too_large (over 16 KB) · 429 rate_limited (a member: 20 calls a minute) · 502 goodreads_unavailable · 503 busy
 ```
 
 How it answers (`handler.ts`):
 
 1. A row in `goodreads_ratings` → that row, while a found rating is under 30 days old and a miss under 7.
-   A Book without an ISBN has its row in `goodreads_title_ratings`, keyed by its normalised title and
-   author surnames (`titleKey`, e.g. `something wicked this way comes|bradbury`): the question asked,
-   so the same title twice in the Catalogue shares one row.
+   It holds only what Goodreads said about the ISBN (`matched_by = 'isbn'`, or a miss). A Book without an
+   ISBN, or whose ISBN Goodreads does not know, has its row in `goodreads_title_ratings`, keyed by its
+   normalised title and author surnames (`titleKey`, e.g. `something wicked this way comes|bradbury`): the
+   question asked, so the same title twice in the Catalogue shares one row. A title comes from the caller,
+   so what a title search found is never stored under an ISBN. Only this function (service role) reads or
+   writes `goodreads_title_ratings`: its keys hold the titles of private Manual books.
 2. Otherwise (with an ISBN) Goodreads' keyless `book/review_counts.json?isbns=<isbn>`: the edition's book id and the
    work's counts over all editions (`average_rating`, `work_ratings_count`,
    `work_text_reviews_count`). 404 is a miss; a stub without ratings counts as one too.
-3. On a miss, or straight away without an ISBN, with a title and an author: `book/auto_complete?format=json&q=<main title> <surname>`,
+3. On a miss (stored under the ISBN), or straight away without an ISBN, with a title and an author
+   (and the title key's own cache, first): `book/auto_complete?format=json&q=<main title> <surname>`,
    the first result whose normalised title (as given, without parentheses, or before a subtitle)
    equals the Book's and whose author's surname is one of the Book's authors' (`goodreads.ts`,
    `matchTitle`). No review count then.
-4. The answer is stored (`found` or `not_found`, with its time) and returned. A failure (Goodreads
+4. The answer is stored under the key it was asked with (`found` or `not_found`, with its time) and returned. A failure (Goodreads
    down, slow, refusing, garbled) is never stored: the next page view tries again.
 
 Rate safety (`client.ts`): identified by `User-Agent: Libellus/1.0 (…)`, at most one Goodreads
 request a second per running instance (a soft limit — Supabase may run more than one instance under
 load), a request that would queue longer than 4 s is refused with `busy`, 3 s per request, and one
-lookup per ISBN at a time (two pages asking at once share it).
+lookup per Book at a time (two pages asking at once share it).
+
+Bounds: a body (or address) over 16 KB is refused (413), an author name is cut to 200 characters, a title
+key over 400 is not asked (with an ISBN the title is left out; without one it is no Book), log lines
+carry at most 120 characters of a key, and a member is held to 20 calls a minute (the service role is
+not): `public.edge_rate_hit` counts them in `edge_rate_limits`, and an unreachable counter is a 503.
+The service-role key is compared in constant time (`secret.ts`).
 
 Callers: a signed-in member's access token, or the service-role key (`warm_library.ts`). The anon
 key is refused. `verify_jwt` is off in `supabase/config.toml` because the function checks the
