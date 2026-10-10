@@ -293,3 +293,25 @@ re-running `pnpm perf` on the fix.
 - **The service worker's own downloads and install cost** under throttle (CDP's session does not reach the worker); precache size and double download are known, their time is not.
 - **Production headers on a Function response and Cloudflare's compression of the API**: assumed (docs/HOSTING.md), not touched.
 - **The real library's content** (covers from Apple's CDN, real descriptions): synthetic but sized to the owner's 290 KB; the field CLS on `/book/:key` (0.35–1.15) did not reproduce with it.
+
+
+## 8. After the first fixes (F-2 Realtime, F-5, F-12, F-7; F-6 tried, not shipped)
+
+`slow4g-4x`, 7 runs, medians, same hour, machine load 3.5–3.9 at the start of each series
+(other workers on the Mac): the build before the fixes (`7983e398`) against the build with them.
+
+| | before | after |
+| --- | ---: | ---: |
+| Entry, raw / brotli | 685.0 / 190.5 KB | 630.0 / 177.3 KB |
+| Prefetch links (files, brotli) | 56 / 113.7 KB | 0 |
+| Cold start: Home shown | 3,140 ms | 3,086 ms |
+| Cold LCP (element) | 4,048 ms (the grain) | 4,200 ms (the first cover) |
+| Cold boot long frames (LoAF total) | 1,515 ms | 763 ms |
+| Cold requests / KB | 217 / 503 | 161 / 460 |
+| Warm start: Home shown | 380 ms | 384 ms (151 requests, was 207) |
+| Library mount (`b1`): ready / LoAF / TBT | 219 / 116 / 56 ms | 194 / 96 / 34 ms |
+| Profile open (`b3`) | 213 ms, LoAF 214 | 218 ms, LoAF 213 |
+
+The two LCP figures are not comparable: the later one is real content. The cold first paint moved
+by the Realtime bytes only (−55 to −80 ms); the prefetch change is what halves the long frames and
+brings the first cover forward.
