@@ -10,7 +10,7 @@
 -- request that waits, and the same Book under another edition. Assertions ask about rows this test made.
 
 begin;
-select plan(148);
+select plan(152);
 
 create schema if not exists tests;
 
@@ -441,6 +441,19 @@ select is(private.like_count(tests.session_of((select id from ids where name = '
 update public.social_settings set private = true where member_id = (select id from ids where name = 'pia');
 select is(private.like_count(tests.session_of((select id from ids where name = 'ham'))), 0, 'a public account that goes private: the stranger''s like is not counted');
 update public.social_settings set private = false where member_id = (select id from ids where name = 'pia');
+-- Going private takes back what strangers gave: a public account's strangers' likes go, her followers' stay.
+select tests.act_as((select id from ids where name = 'ben'));
+select public."like"(tests.session_of((select id from ids where name = 'ham')));
+select tests.act_as((select id from ids where name = 'pia'));
+select public.set_private(true);
+select is(tests.likes_of(tests.session_of((select id from ids where name = 'ham'))), 1::bigint,
+          'set_private(true): the stranger''s like is deleted, the follower''s stays');
+select public.set_private(false);
+select is(tests.likes_of(tests.session_of((select id from ids where name = 'ham'))), 1::bigint,
+          'public again: the stranger''s like does not come back');
+reset role;
+select is((select array_agg(member_id) from public.likes where session_id = tests.session_of((select id from ids where name = 'ham'))),
+          array[(select id from ids where name = 'ben')], 'only Ben''s');
 
 -- A hidden Book: its likes stay but are not counted or listed.
 select tests.act_as((select id from ids where name = 'ida'));
@@ -539,7 +552,8 @@ select tests.act_as((select id from ids where name = 'ida'));
 select public.set_social_sections('{"ratings": true, "year": false}');
 select tests.act_as((select id from ids where name = 'ben'));
 select is(public.both_read((select id from ids where name = 'ida'), 2020), '[]'::jsonb, 'Year off: her year page has nothing');
-select is(jsonb_array_length(public.both_read((select id from ids where name = 'ida'))), 4, 'while her profile still has the list');
+select is(public.both_read((select id from ids where name = 'ida')), '[]'::jsonb,
+          'and so has her profile (as member_reading_record: every shared Book would reach past the twelve she shows)');
 select tests.act_as((select id from ids where name = 'ida'));
 select public.set_social_sections('{"year": true, "finished": false}');
 select tests.act_as((select id from ids where name = 'ben'));
@@ -575,6 +589,13 @@ select is(jsonb_array_length(public.circle_reading(array[(select book from dune)
 select is(jsonb_array_length(public.circle_reading(array[(select book from dune)]) -> 0 -> 'members'), 3, 'at most three members …');
 select is(tests.circle_more(public.circle_reading(array[(select book from dune)]), (select book from dune)), 2, '… and how many more');
 select is(public.circle_reading(array[(select book from dune)]) -> 0 -> 'members' -> 0 ? 'photo', true, 'as cards');
+reset role;
+update public.library_entries e set added_at = now() - make_interval(hours => x.h)
+  from (values ('e3', 1), ('e2', 2), ('e1', 3), ('ida', 4), ('cy', 5)) x(n, h), public.books b
+ where e.member_id = (select id from ids where name = x.n) and b.id = e.book_id and b.openlibrary_work_key = 'OLDUNE';
+select tests.act_as((select id from ids where name = 'ben'));
+select is((select array_agg(m ->> 'name') from jsonb_array_elements(public.circle_reading(array[(select book from dune)]) -> 0 -> 'members') m),
+          array['E3', 'E2', 'E1'], 'the three shown are the newest entries first');
 select is(public.circle_reading(array[tests.book_of((select id from ids where name = 'sol'))]), '[]'::jsonb, 'a Book that is not in her Library: nothing');
 select is(public.circle_reading(array[(select book from emma)]), '[]'::jsonb, 'her Want to read is not Reading now');
 select is(public.circle_reading('{}'), '[]'::jsonb, 'no Books: nothing');

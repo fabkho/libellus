@@ -649,6 +649,37 @@ as $$
   select private.visible(p_liker, p_owner) and (private.social_of(p_owner)).show_finished
 $$;
 
+-- The likes of a finished read that the database still allows, set-based: the owner's side is looked at
+-- once (her finished section is on, the Book is not hidden, her account's private flag), the likers'
+-- side by joins (not herself, no block either way, and for a private account an accepted follow). The
+-- same answer as `like_allowed` liker by liker (visible = reachable and, for a private account, an
+-- accepted follow; a public account is reachable by anyone not blocked), without its queries per like.
+create or replace function private.allowed_likes(p_session uuid)
+returns setof public.likes
+language sql
+stable
+set search_path = pg_catalog, public, private
+as $$
+  with o as (
+    select e.member_id as owner, so.private
+      from public.reading_sessions s
+      join public.library_entries e on e.id = s.entry_id and not e.hidden
+      cross join lateral private.social_of(e.member_id) so
+     where s.id = p_session and s.outcome = 'finished' and so.show_finished
+  )
+  select l.*
+    from public.likes l
+    cross join o
+   where l.session_id = p_session
+     and l.member_id <> o.owner
+     and not exists (select 1 from public.blocks b
+                      where (b.blocker_id = l.member_id and b.blocked_id = o.owner)
+                         or (b.blocker_id = o.owner and b.blocked_id = l.member_id))
+     and (not o.private
+          or exists (select 1 from public.follows f
+                      where f.follower_id = l.member_id and f.followee_id = o.owner and f.accepted_at is not null))
+$$;
+
 -- The likes of a finished read that the database still allows; none while its Book is hidden.
 create or replace function private.like_count(p_session uuid)
 returns integer
@@ -656,12 +687,7 @@ language sql
 stable
 set search_path = pg_catalog, public, private
 as $$
-  select count(*)::integer
-    from public.likes l
-    join public.reading_sessions s on s.id = l.session_id and s.outcome = 'finished'
-    join public.library_entries e on e.id = s.entry_id and not e.hidden
-   where l.session_id = p_session
-     and private.like_allowed(l.member_id, e.member_id)
+  select count(*)::integer from private.allowed_likes(p_session)
 $$;
 
 create or replace function private.liked_by(p_member uuid, p_session uuid)
@@ -723,6 +749,7 @@ create trigger blocks_likes_on_block
 revoke all on function private.finished_same_book(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.review_folded(uuid, uuid, uuid, boolean) from public, anon, authenticated;
 revoke all on function private.like_allowed(uuid, uuid) from public, anon, authenticated;
+revoke all on function private.allowed_likes(uuid) from public, anon, authenticated;
 revoke all on function private.like_count(uuid) from public, anon, authenticated;
 revoke all on function private.liked_by(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.likes_on_follow_end() from public, anon, authenticated;
@@ -1163,18 +1190,18 @@ begin
     raise exception 'not_found' using errcode = 'PT404';
   end if;
 
-  -- The pair's lock (the one follow and block take): a block cannot slip in between the look above
-  -- and the insert below, and the follow row is held so that an unfollow waits for this like and
-  -- then takes it away with its trigger.
+  -- The pair's lock (the one follow and block take), and the follow row held `for share` before the
+  -- look below: an unfollow waits for this like and then takes it away with its trigger, and one that
+  -- committed first is seen by the look. A block cannot slip in between either.
   perform pg_advisory_xact_lock(hashtextextended(
     'pair:' || least(v_caller, v_owner)::text || greatest(v_caller, v_owner)::text, 0));
+  perform 1 from public.follows where follower_id = v_caller and followee_id = v_owner for share;
   if not exists (select 1 from public.reading_sessions s
                    join public.library_entries e on e.id = s.entry_id and not e.hidden
                   where s.id = p_session and s.outcome = 'finished' and e.member_id = v_owner)
      or private.like_allowed(v_caller, v_owner) is not true then
     raise exception 'not_found' using errcode = 'PT404';
   end if;
-  perform 1 from public.follows where follower_id = v_caller and followee_id = v_owner for share;
 
   if not exists (select 1 from public.likes where member_id = v_caller and session_id = p_session) then
     -- One call at a time per member, so that parallel calls cannot slip past the limit.
@@ -1251,9 +1278,7 @@ begin
 
   return (select coalesce(jsonb_agg(private.member_card(v_caller, l.member_id)
                                     order by l.created_at desc, l.member_id), '[]'::jsonb)
-            from public.likes l
-           where l.session_id = p_session
-             and private.like_allowed(l.member_id, v_caller));
+            from private.allowed_likes(p_session) l);
 end;
 $$;
 
@@ -1281,23 +1306,27 @@ begin
              'likers', (select coalesce(jsonb_agg(private.member_card(v_caller, x.member_id)
                                                   order by x.created_at desc, x.member_id), '[]'::jsonb)
                           from (select l2.member_id, l2.created_at
-                                  from public.likes l2
-                                 where l2.session_id = g.session_id
-                                   and private.like_allowed(l2.member_id, v_caller)
+                                  from private.allowed_likes(g.session_id) l2
                                  order by l2.created_at desc, l2.member_id
                                  limit 3) x),
              'count', g.cnt,
              'at', g.at) order by g.at desc, g.session_id), '[]'::jsonb)
       from (
-        select s.id as session_id, e.book_id, max(l.created_at) as at, count(*)::integer as cnt
-          from public.reading_sessions s
-          join public.library_entries e on e.id = s.entry_id and e.member_id = v_caller and not e.hidden
-          join public.likes l on l.session_id = s.id
-         where s.outcome = 'finished'
-           and private.like_allowed(l.member_id, v_caller)
-         group by s.id, e.book_id
-        having max(l.created_at) > now() - interval '7 days'
-         order by max(l.created_at) desc, s.id
+        select c.session_id, c.book_id, max(a.created_at) as at, count(*)::integer as cnt
+          from (
+            -- Her finished reads, not hidden, with a like in the last week: cut before anything is
+            -- asked of the likers.
+            select s.id as session_id, e.book_id
+              from public.reading_sessions s
+              join public.library_entries e on e.id = s.entry_id and e.member_id = v_caller and not e.hidden
+             where s.outcome = 'finished'
+               and exists (select 1 from public.likes l
+                            where l.session_id = s.id and l.created_at > now() - interval '7 days')
+          ) c
+          cross join lateral private.allowed_likes(c.session_id) a
+         group by c.session_id, c.book_id
+        having max(a.created_at) > now() - interval '7 days'
+         order by max(a.created_at) desc, c.session_id
          limit 5
       ) g
       join public.books b on b.id = g.book_id
@@ -1309,8 +1338,8 @@ $$;
 
 -- The Books both finished, newest of hers first: { book (her edition), mine: { rating, endedOn },
 -- hers: { rating (null without show_ratings), endedOn } }. Only where her finished reads are
--- visible to the caller (visible, show_finished; with p_year, the year page's show_year too);
--- otherwise, and for herself, `[]`. Mine is my latest finished read of the same Book.
+-- visible to the caller, as `member_reading_record` has them (visible, and both show_finished and
+-- show_year: the list is every shared Book, past the profile's twelve); otherwise, and for herself, `[]`. Mine is my latest finished read of the same Book.
 create or replace function public.both_read(p_member uuid, p_year integer default null)
 returns jsonb
 language plpgsql
@@ -1329,7 +1358,7 @@ begin
     return '[]'::jsonb;
   end if;
   v_s := private.social_of(p_member);
-  if not v_s.show_finished or (p_year is not null and not v_s.show_year) then
+  if not v_s.show_finished or not v_s.show_year then
     return '[]'::jsonb;
   end if;
 
@@ -1385,7 +1414,7 @@ as $$
                 then exists (select 1 from public.reading_sessions s where s.entry_id = e.id and s.outcome is null)
                 else e.status = 'want_to_read' end
   ), hers as (
-    select distinct on (m.book_id, e.member_id) m.book_id, e.member_id, e.added_at
+    select distinct on (m.book_id, e.member_id) m.book_id, e.member_id, e.added_at, e.id as entry_id
       from mine m
       join public.books b2 on b2.id = m.book_id
                           or (m.wk is not null and b2.openlibrary_work_key = m.wk)
@@ -1398,10 +1427,10 @@ as $$
                      and exists (select 1 from public.reading_sessions s where s.entry_id = e.id and s.outcome is null)
                 else coalesce(st.show_want, true) and e.status = 'want_to_read' end
        and not private.blocked_either(p_caller, e.member_id)
-     order by m.book_id, e.member_id
+     order by m.book_id, e.member_id, e.added_at desc, e.id
   ), ranked as (
     select h.book_id, h.member_id,
-           row_number() over (partition by h.book_id order by h.added_at desc, h.member_id) as rn,
+           row_number() over (partition by h.book_id order by h.added_at desc, h.entry_id, h.member_id) as rn,
            count(*) over (partition by h.book_id) as total
       from hers h
   )
@@ -1449,6 +1478,51 @@ begin
   return private.circle_of(v_caller, p_books, false);
 end;
 $$;
+
+-- ------------------------------------------------------------------ going private
+
+-- set_private: the latest (20261017050000_social_hardening.sql), and a member who goes private takes
+-- back what strangers gave her: the likes on her reads by members who are not her accepted followers
+-- (a public account's strangers; a public, private, public again must not bring them back).
+create or replace function public.set_private(p_private boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $$
+declare
+  v_member uuid := auth.uid();
+begin
+  if v_member is null then
+    raise exception 'not_signed_in' using errcode = '42501';
+  end if;
+  perform private.social_ensure(v_member);
+  update public.social_settings
+     set private = coalesce(p_private, private), updated_at = now()
+   where member_id = v_member;
+  if p_private is false then
+    update public.follows
+       set accepted_at = now()
+     where followee_id = v_member and accepted_at is null and declined_at is null;
+    -- A declined request does not survive: it would be the only "requested" left on a public
+    -- account, and so tell the asker he was declined.
+    delete from public.follows
+     where followee_id = v_member and accepted_at is null and declined_at is not null;
+  elsif p_private is true then
+    delete from public.likes l
+     using public.reading_sessions s, public.library_entries e
+     where s.id = l.session_id
+       and e.id = s.entry_id
+       and e.member_id = v_member
+       and not exists (select 1 from public.follows f
+                        where f.follower_id = l.member_id and f.followee_id = v_member and f.accepted_at is not null);
+  end if;
+  return private.my_social_json(v_member);
+end;
+$$;
+
+revoke all on function public.set_private(boolean) from public, anon;
+grant execute on function public.set_private(boolean) to authenticated;
 
 -- ------------------------------------------------------------------ grants
 
