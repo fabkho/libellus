@@ -89,12 +89,27 @@ revoke all on private.catalogue_check_state from public, anon, authenticated;
 
 create table if not exists private.catalogue_check_settings (
   id              boolean primary key default true check (id),
-  -- The function's address; null = off (nothing is sent; the Books stay unchecked).
-  function_url    text check (function_url ~ '^https?://'),
+  -- The function's address; null = off (nothing is sent; the Books stay unchecked). https only: the
+  -- call carries a bearer secret.
+  function_url    text,
   min_interval    interval not null default interval '50 seconds',
   last_kick_at    timestamptz,
-  last_request_id bigint
+  last_request_id bigint,
+  -- What the last call that has answered said (pg_net's response; the kick reads it a minute later): its
+  -- HTTP status (null when there was none: a timeout, no route) and the error or the start of the body
+  -- when it was not a 2xx. A 401 here is a token the function does not know; see the function's README.
+  last_status     integer,
+  last_error      text,
+  last_status_at  timestamptz
 );
+
+-- Re-runnable, and for a table that was made before: https only, and the status columns.
+alter table private.catalogue_check_settings drop constraint if exists catalogue_check_settings_function_url_check;
+alter table private.catalogue_check_settings add constraint catalogue_check_settings_function_url_check
+  check (function_url ~ '^https://[^[:space:]]+$');
+alter table private.catalogue_check_settings add column if not exists last_status integer;
+alter table private.catalogue_check_settings add column if not exists last_error text;
+alter table private.catalogue_check_settings add column if not exists last_status_at timestamptz;
 
 comment on table private.catalogue_check_settings is
   'Social v2a §5: where the catalogue-check edge function is (null = off) and when it was last called. '
@@ -136,10 +151,28 @@ declare
   v_settings private.catalogue_check_settings;
   v_token text;
   v_request bigint;
+  v_seen boolean;
+  v_status integer;
+  v_error text;
 begin
   select * into v_settings from private.catalogue_check_settings where id;
   if v_settings.function_url is null then
     return 'off';
+  end if;
+
+  -- What the last call answered, once pg_net has it (it keeps responses for hours): a call that fails
+  -- (a 401 for a wrong token, a 5xx, a timeout, no route) would otherwise leave the Books unchecked
+  -- without a word. Read before anything else, so an idle or debounced kick records it too.
+  if v_settings.last_request_id is not null and to_regclass('net._http_response') is not null then
+    execute 'select true, status_code, case when status_code between 200 and 299 and error_msg is null then null '
+            'else left(coalesce(error_msg, content), 500) end '
+            'from net._http_response where id = $1'
+      into v_seen, v_status, v_error using v_settings.last_request_id;
+    if v_seen then
+      update private.catalogue_check_settings
+         set last_status = v_status, last_error = v_error, last_status_at = now()
+       where id;
+    end if;
   end if;
   if not private.catalogue_check_due() then
     return 'idle';
@@ -521,7 +554,7 @@ as $$
    where book_id = p_book
 $$;
 
--- The check at a glance.
+-- The check at a glance, and the last call the cron made with what it answered.
 create or replace function public.catalogue_check_status()
 returns jsonb
 language sql
@@ -533,7 +566,11 @@ as $$
     'unchecked', (select count(*) from public.books where owner_id is null and checked_at is null),
     'checked', (select count(*) from public.books where owner_id is null and checked_at is not null and not check_failed),
     'failed', (select count(*) from public.books where owner_id is null and check_failed),
-    'backingOff', (select count(*) from private.catalogue_check_state where not_before > now())
+    'backingOff', (select count(*) from private.catalogue_check_state where not_before > now()),
+    -- The last call the cron made and what it answered (a 401 here: the token the function has is not the Vault's).
+    'lastKickAt', (select last_kick_at from private.catalogue_check_settings where id),
+    'lastStatus', (select last_status from private.catalogue_check_settings where id),
+    'lastError', (select last_error from private.catalogue_check_settings where id)
   )
 $$;
 
