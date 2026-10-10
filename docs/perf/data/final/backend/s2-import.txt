@@ -1,0 +1,6 @@
+NOTICE:  import of 600 books: 233 ms  batch |  ms   
+NOTICE:  import of 600 books: 247 ms  batch |  ms   
+NOTICE:  import of 600 books: 228 ms  batch |  ms   
+NOTICE:  import of 2000 books: 755 ms  batch |  ms   
+NOTICE:  import of 2000 books: 760 ms  batch |  ms   
+NOTICE:  import of 2000 books: 756 ms  batch |  ms   

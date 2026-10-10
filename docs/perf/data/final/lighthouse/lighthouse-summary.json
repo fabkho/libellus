@@ -1,0 +1,127 @@
+{
+ "tool": "lighthouse 13.5.0",
+ "url": "https://libellus.fabkho.dev/ (production, v1.9.2 deployed at the time; an earlier set of 3 runs on v1.9.1: performance 73/71/75 median 73, accessibility 100, best practices 100, SEO 82 (robots.txt answered the SPA shell))",
+ "formFactor": "mobile: Lighthouse default (412x823 at 1.75x, simulated Slow 4G 1.6 Mbit/s 150 ms, CPU 4x)",
+ "chrome": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+ "runs": 3,
+ "benchmarkIndex": [
+  4612,
+  4644,
+  4634
+ ],
+ "loadAtRun": "2.0-2.6",
+ "categories": {
+  "performance": [
+   75,
+   70,
+   72
+  ],
+  "accessibility": [
+   100,
+   100,
+   100
+  ],
+  "best-practices": [
+   100,
+   100,
+   100
+  ],
+  "seo": [
+   91,
+   91,
+   91
+  ]
+ },
+ "metrics": {
+  "first-contentful-paint": [
+   3280.685,
+   3752.785,
+   3281.305
+  ],
+  "largest-contentful-paint": [
+   5061.929,
+   5945.614,
+   5686.218
+  ],
+  "total-blocking-time": [
+   10,
+   15,
+   24
+  ],
+  "cumulative-layout-shift": [
+   0.001,
+   0.001,
+   0.001
+  ],
+  "speed-index": [
+   3280.685,
+   3752.785,
+   3281.305
+  ],
+  "interactive": [
+   5146.22,
+   6072.039,
+   5851.915
+  ],
+  "server-response-time": [
+   41,
+   51,
+   45
+  ],
+  "total-byte-weight": [
+   1129865,
+   1129836,
+   1128701
+  ]
+ },
+ "failing": [
+  [
+   "first-contentful-paint",
+   "3.3 s"
+  ],
+  [
+   "largest-contentful-paint",
+   "5.1 s"
+  ],
+  [
+   "interactive",
+   "5.1 s"
+  ],
+  [
+   "unused-javascript",
+   "Est savings of 84 KiB"
+  ],
+  [
+   "meta-description",
+   null
+  ],
+  [
+   "bf-cache",
+   "1 failure reason"
+  ],
+  [
+   "cache-insight",
+   "Est savings of 4 KiB"
+  ],
+  [
+   "image-delivery-insight",
+   "Est savings of 670 KiB"
+  ],
+  [
+   "lcp-discovery-insight",
+   null
+  ],
+  [
+   "legacy-javascript-insight",
+   "Est savings of 10 KiB"
+  ],
+  [
+   "network-dependency-tree-insight",
+   null
+  ],
+  [
+   "render-blocking-insight",
+   "Est savings of 340 ms"
+  ]
+ ]
+}

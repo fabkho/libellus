@@ -1,0 +1,19 @@
+$ tsx perf/images.ts --json /tmp/perf-final/images.json
+
+Image census, slow4g-4x (network throttled, CPU 1x), 2026-10-10
+
+| screen | `<img>` | hidden | lazy | eager | decoding=async | on screen | loaded | cover requests | cover KB | eager & off screen (loaded) | lazy & off screen (loaded) | on screen, not loaded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Home | 14 | 0 | 3 | 11 | 14 | 11 | 11 | 8 | 296 | 0 | 0 | 0 |
+| Library (top) | 51 | 0 | 43 | 8 | 51 | 11 | 28 | 28 | 301 | 0 | 17 | 0 |
+| Library (scrolled to the bottom) | 51 | 0 | 43 | 8 | 51 | 11 | 51 | 23 | 245 | 8 | 32 | 0 |
+| Profile | 19 | 0 | 19 | 0 | 19 | 0 | 15 | 13 | 191 | 0 | 15 | 0 |
+| Profile → year | 47 | 0 | 47 | 0 | 47 | 28 | 47 | 39 | 493 | 0 | 19 | 0 |
+| Collections | 16 | 0 | 0 | 16 | 16 | 16 | 16 | 13 | 139 | 0 | 0 | 0 |
+| A collection | 10 | 0 | 0 | 10 | 10 | 10 | 10 | 4 | 43 | 0 | 0 | 0 |
+| Book page | 2 | 0 | 0 | 2 | 2 | 2 | 2 | 1 | 117 | 0 | 0 | 0 |
+| Search: "piranesi" | 34 | 0 | 9 | 25 | 34 | 14 | 25 | 25 | 411 | 11 | 0 | 0 |
+| Sign in (signed out) | 20 | 0 | 10 | 10 | 20 | 20 | 20 | 20 | 737 | 0 | 0 | 0 |
+
+library-bottom: eager and off screen: library.entry y-2898 x20; library.entry y-2821 x20; library.entry y-2744 x20; library.entry y-2667 x20; library.entry y-2590 x20; library.entry y-2513 x20; library.entry y-2436 x20; library.entry y-2359 x20
+search: eager and off screen: search.result y-123 x28; search.result y-199 x28; search.result y-267 x28; search.result y-411 x28; search.result y-487 x28; search.result y-555 x28; search.result y-623 x28; search.result y-691 x28; search.result y-759 x28; search.result y-963 x28; search.result y-1655 x28

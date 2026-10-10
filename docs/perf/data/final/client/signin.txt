@@ -1,0 +1,7 @@
+$ tsx perf/signin.ts --runs 5
+run 1: shown 217.7 KB in 22 files (1988 ms) · after 9s 228.8 KB in 28 files · at /sign-in
+run 2: shown 217.7 KB in 22 files (1995 ms) · after 9s 228.8 KB in 28 files · at /sign-in
+run 3: shown 217.7 KB in 22 files (1995 ms) · after 9s 228.8 KB in 28 files · at /sign-in
+run 4: shown 217.6 KB in 22 files (1998 ms) · after 9s 228.8 KB in 28 files · at /sign-in
+run 5: shown 217.6 KB in 22 files (1991 ms) · after 9s 228.8 KB in 28 files · at /sign-in
+slow4g-4x /: median shown 217.7 KB · median after settle 228.8 KB · files 28 · tap-free time to form 1995 ms

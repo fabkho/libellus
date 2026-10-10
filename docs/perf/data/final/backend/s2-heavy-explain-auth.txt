@@ -1,0 +1,24 @@
+member 1 role authenticated (rows picked: book 00c17fd9 series 0d0f656b author OL4482A)
+name | exec ms | plan ms | buffers hit | read
+home.list.want_to_read | 6.84 | 0.62 | 2337 | 0
+home.list.finished | 19.58 | 0.64 | 7968 | 0
+home.readInYear | 6.49 | 0.33 | 30560 | 0
+home.started_series | 22.70 | 0.00 | 23703 | 0
+home.muted_series_list | 19.09 | 0.00 | 20945 | 0
+library.library_genres | 4.57 | 0.02 | 9462 | 0
+profile.sessions | 9.91 | 0.96 | 9021 | 0
+profile.counts | 0.13 | 0.24 | 24 | 0
+profile.progress_days_83d | 2.96 | 0.73 | 5398 | 0
+profile.days_since | 2.82 | 0.64 | 5128 | 0
+search.title_prefix | 9.80 | 0.02 | 23104 | 0
+search.author | 3.83 | 0.02 | 5225 | 0
+search.two_letters | 16.55 | 0.02 | 46429 | 0
+search.one_match | 2.01 | 0.02 | 1172 | 0
+search.isbn | 0.73 | 0.02 | 718 | 0
+book.series_info | 3.25 | 0.00 | 2672 | 0
+book.authors_of | 0.80 | 0.01 | 784 | 0
+book.genres | 0.94 | 0.01 | 939 | 0
+series.series_works | 2.73 | 0.00 | 2396 | 0
+author.author_page | 5.54 | 0.00 | 3821 | 0
+next.next_in_series | 13.61 | 0.00 | 15999 | 0
+next.my_works | 5.39 | 0.02 | 12046 | 0
