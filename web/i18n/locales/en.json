@@ -1721,7 +1721,7 @@
     "bothReadYours": "You: {rating}",
     "bothReadHers": "{name}: {rating}",
     "bothReadNoRating": "no rating",
-    "bothReadLegend": "Your stars, then {name}’s"
+    "bothReadLegend": "Your rating first, then {name}’s"
   },
   "follow": {
     "loading": "Opening…",
@@ -1820,7 +1820,7 @@
         "one": "{a}",
         "two": "{a} and {b}",
         "three": "{a}, {b} and {c}",
-        "others": "{a}, {b} and {count} others"
+        "others": "{a}, {b} and {count} other | {a}, {b} and {count} others"
       }
     },
     "likes": {
