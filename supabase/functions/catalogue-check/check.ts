@@ -11,10 +11,20 @@
  * (web/app/data/covers.ts) and the database lets others see (private.cover_shown). Anything else is
  * left out, and the Book keeps what it has. The database validates again (catalogue_check_save).
  *
+ * A Book is resolved by ONE key, in this order: ISBN-13, ISBN-10, Apple id, Open Library edition key,
+ * work key. Every other key the row stores must agree with what the source says (an Open Library
+ * edition lists the stored ISBN and its work; Apple's record for the ISBN has the stored Apple id; a
+ * key of the other source's kind is read there and must name the same Book) and the stored title
+ * must be the source's title by the app's normalised key (`work_title_key`). Any disagreement is a
+ * `mismatch`: nothing is written, the Book is marked failed, and no other key is tried (a member
+ * could otherwise pair a real ISBN with a bestseller's id and have the bestseller's data written
+ * under the ISBN).
+ *
  * A source that does not know a Book is `unknown`; a source that failed (down, slow, garbled) is
  * `unavailable` and never a miss.
  */
 import { decodeEntities } from '../../../web/app/data/entities.ts'
+import { workTitle } from '../../../web/app/data/import/readingTracker.ts'
 import { type Http, SourceUnavailable } from '../enrich/http.ts'
 
 export const ITUNES = 'https://itunes.apple.com'
@@ -32,6 +42,8 @@ export const MAX_DESCRIPTION = 10_000
 /** The columns of a claimed Book the check reads. */
 export type CheckBook = {
   id: string
+  /** What the first member sent; it must be the source's title (by `titleKey`) for the check to write anything. */
+  title: string
   source?: string | null
   apple_id: string | null
   isbn13: string | null
@@ -52,6 +64,8 @@ export type CheckResult = {
 export type Outcome =
   | { status: 'found'; result: CheckResult }
   | { status: 'unknown' }
+  /** The source answered, and the row's keys or title disagree with the answer: failed, nothing written. */
+  | { status: 'mismatch'; reason: string }
   | { status: 'unavailable'; error: string }
 
 // ------------------------------------------------------------------ keys
@@ -246,37 +260,215 @@ async function authorNames(http: Http, list: unknown, via?: string): Promise<str
   return names(found)
 }
 
-/**
- * The Book at Open Library: the edition by its key, else by ISBN, else its work. A key the source
- * does not know falls through to the next; a source that fails is `unavailable` unless a later one
- * answers.
- */
-export async function lookupOpenLibrary(http: Http, book: CheckBook): Promise<Outcome> {
-  const candidates: { url: string; kind: 'edition' | 'work' }[] = []
-  const edition = keyOf(book.openlibrary_edition_key, EDITION_KEY)
-  if (edition) candidates.push({ url: `${OPENLIBRARY}/books/${edition}.json`, kind: 'edition' })
-  for (const isbn of [book.isbn13, book.isbn10]) {
-    const clean = (isbn ?? '').trim()
-    if (ISBN13.test(clean) || ISBN10.test(clean)) candidates.push({ url: `${OPENLIBRARY}/isbn/${clean}.json`, kind: 'edition' })
-  }
-  const work = keyOf(book.openlibrary_work_key, WORK_KEY)
-  if (work) candidates.push({ url: `${OPENLIBRARY}/works/${work}.json`, kind: 'work' })
+// ---------------------------------------------------------------- identity
 
+/** The key two titles are compared by: the app's `work_title_key` (brackets and the part after a colon dropped, accents and punctuation ignored). */
+export function titleKey(value: string | null | undefined): string {
+  return workTitle(value ?? '')
+}
+
+/** ISBN-10 → ISBN-13 (978 prefix, new check digit). */
+export function isbn10To13(isbn10: string): string {
+  const body = `978${isbn10.slice(0, 9)}`
+  const sum = [...body].reduce((total, digit, index) => total + Number(digit) * (index % 2 ? 3 : 1), 0)
+  return `${body}${(10 - (sum % 10)) % 10}`
+}
+
+/** The keys a row stores, each checked for shape; the ISBN-10 is folded into the ISBN-13 it must equal. */
+type Keys = { isbn13: string | null; apple: string | null; edition: string | null; work: string | null }
+
+function keysOf(book: CheckBook): Keys | Outcome {
+  const bad = (reason: string): Outcome => ({ status: 'mismatch', reason })
+  const text = (value: string | null | undefined) => (value ?? '').trim()
+  let isbn13: string | null = null
+  if (text(book.isbn13)) {
+    if (!ISBN13.test(text(book.isbn13))) return bad('isbn13_malformed')
+    isbn13 = text(book.isbn13)
+  }
+  if (text(book.isbn10)) {
+    if (!ISBN10.test(text(book.isbn10))) return bad('isbn10_malformed')
+    const converted = isbn10To13(text(book.isbn10))
+    if (isbn13 && isbn13 !== converted) return bad('isbn10_disagrees_with_isbn13')
+    isbn13 ??= converted
+  }
+  let apple: string | null = null
+  if (text(book.apple_id)) {
+    if (!APPLE_ID.test(text(book.apple_id))) return bad('apple_id_malformed')
+    apple = text(book.apple_id)
+  }
+  const edition = text(book.openlibrary_edition_key) ? keyOf(book.openlibrary_edition_key, EDITION_KEY) : null
+  if (text(book.openlibrary_edition_key) && !edition) return bad('edition_key_malformed')
+  const work = text(book.openlibrary_work_key) ? keyOf(book.openlibrary_work_key, WORK_KEY) : null
+  if (text(book.openlibrary_work_key) && !work) return bad('work_key_malformed')
+  if (!isbn13 && !apple && !edition && !work) return bad('no_key')
+  return { isbn13, apple, edition, work }
+}
+
+const isKeys = (value: Keys | Outcome): value is Keys => !('status' in value)
+
+const mismatch = (reason: string): Outcome => ({ status: 'mismatch', reason })
+
+/** The ISBN-13 form of every ISBN an Open Library record lists. */
+function isbn13sOf(found: OlRecord): Set<string> {
+  const out = new Set<string>()
+  for (const field of ['isbn_13', 'isbn_10']) {
+    const list = found[field]
+    if (!Array.isArray(list)) continue
+    for (const raw of list) {
+      const isbn = typeof raw === 'string' ? raw.replace(/[\s-]/g, '').toUpperCase() : ''
+      if (ISBN13.test(isbn)) out.add(isbn)
+      else if (ISBN10.test(isbn)) out.add(isbn10To13(isbn))
+    }
+  }
+  return out
+}
+
+function workKeysOf(found: OlRecord): string[] {
+  const keys: string[] = []
+  if (Array.isArray(found.works)) {
+    for (const entry of found.works) {
+      const key = keyOf(typeof record(entry)?.key === 'string' ? (record(entry)!.key as string) : null, WORK_KEY)
+      if (key) keys.push(key)
+    }
+  }
+  return keys
+}
+
+/**
+ * Apple's answer for the ISBN, per storefront: the edition with the stored Apple id when the row has
+ * one (any other edition of the ISBN does not vouch for it), else the first ebook.
+ */
+async function viaAppleIsbn(http: Http, keys: Keys, wanted: string): Promise<Outcome> {
   let failure: string | null = null
-  for (const candidate of candidates) {
+  let sawEditions = false
+  for (const country of STOREFRONTS) {
+    let body: { results?: unknown } | null
     try {
-      const found = record(await http.json(candidate.url))
-      if (!found) continue
-      const result = await fromOpenLibrary(http, found, candidate.kind)
-      // A record that does not even name the Book is no answer.
-      if (!result.title) continue
-      return { status: 'found', result }
+      body = await http.json<{ results?: unknown }>(`${ITUNES}/lookup?${new URLSearchParams({ isbn: keys.isbn13!, country })}`)
     } catch (error) {
       if (!(error instanceof SourceUnavailable)) throw error
       failure = error.message
+      continue
+    }
+    const items = (Array.isArray(body?.results) ? (body!.results as AppleItem[]) : []).filter(
+      (item) => item && typeof item === 'object' && item.trackId !== undefined && (!item.kind || item.kind === 'ebook'),
+    )
+    if (!items.length) continue
+    sawEditions = true
+    const item = keys.apple ? items.find((candidate) => String(candidate.trackId) === keys.apple) : items[0]
+    if (!item) continue
+    return await appleFound(http, fromApple(item), keys, wanted)
+  }
+  if (sawEditions) return mismatch('apple_id_not_this_isbn')
+  return failure ? { status: 'unavailable', error: failure } : { status: 'unknown' }
+}
+
+/** Apple's record, once it is the Book's: the title must be the stored one, and keys of the other source must agree. */
+async function appleFound(http: Http, result: CheckResult | null, keys: Keys, wanted: string): Promise<Outcome> {
+  if (!result) return { status: 'unknown' }
+  if (titleKey(result.title) !== wanted) return mismatch('title')
+  const other = await confirmOpenLibraryKeys(http, keys, wanted)
+  return other ?? { status: 'found', result }
+}
+
+/**
+ * A row resolved at Apple that also stores Open Library keys: they must name the same Book there
+ * (the edition lists the stored ISBN and has the stored title; the work is one of the edition's, or,
+ * with no edition, has the stored title). Null when they do.
+ */
+async function confirmOpenLibraryKeys(http: Http, keys: Keys, wanted: string): Promise<Outcome | null> {
+  let editionWorks: string[] | null = null
+  if (keys.edition) {
+    const found = record(await http.json(`${OPENLIBRARY}/books/${keys.edition}.json`))
+    if (!found) return mismatch('edition_key_unknown')
+    if (titleKey(title(found.title)) !== wanted) return mismatch('edition_key_title')
+    if (keys.isbn13 && !isbn13sOf(found).has(keys.isbn13)) return mismatch('edition_key_isbn')
+    editionWorks = workKeysOf(found)
+  }
+  if (keys.work) {
+    if (editionWorks) {
+      if (!editionWorks.includes(keys.work)) return mismatch('work_key_not_in_edition')
+    } else {
+      const found = record(await http.json(`${OPENLIBRARY}/works/${keys.work}.json`))
+      if (!found) return mismatch('work_key_unknown')
+      if (titleKey(title(found.title)) !== wanted) return mismatch('work_key_title')
     }
   }
-  return failure ? { status: 'unavailable', error: failure } : { status: 'unknown' }
+  return null
+}
+
+/** The Open Library record the row's key (or ISBN) names, and whether it is the row's Book. */
+async function viaOpenLibrary(
+  http: Http,
+  keys: Keys,
+  wanted: string,
+  target: { url: string; kind: 'edition' | 'work'; byIsbn?: boolean },
+): Promise<Outcome> {
+  const found = record(await http.json(target.url))
+  if (!found) return { status: 'unknown' }
+  // A record that does not even name the Book is no answer.
+  const heading = title(found.title)
+  if (!heading) return { status: 'unknown' }
+  if (titleKey(heading) !== wanted) return mismatch('title')
+  if (target.kind === 'edition') {
+    // Found by its key, the record is the edition; found by ISBN, it must be the edition the row names.
+    const recordKey = keyOf(typeof found.key === 'string' ? found.key : null, EDITION_KEY)
+    if (keys.edition && (recordKey ? recordKey !== keys.edition : target.byIsbn)) return mismatch('edition_key')
+    if (keys.isbn13 && !isbn13sOf(found).has(keys.isbn13)) return mismatch('isbn')
+    if (keys.work && !workKeysOf(found).includes(keys.work)) return mismatch('work_key')
+  }
+  return { status: 'found', result: await fromOpenLibrary(http, found, target.kind) }
+}
+
+/**
+ * The Book at its source, by one key (ISBN-13, ISBN-10, Apple id, Open Library edition, work, in this
+ * order) with every other key and the title checked against the answer; see the header. A source that
+ * fails is `unavailable`, a disagreement a `mismatch`, a source that does not know the key `unknown`.
+ * `apple`: Apple's answers for the Apple ids already asked in one request (`lookupApple`). A row that
+ * stores an Apple id is resolved at Apple (by its ISBN, or by the id), so the id is never taken on trust.
+ */
+export async function checkBook(http: Http, book: CheckBook, apple: Map<string, Outcome> = new Map()): Promise<Outcome> {
+  const keys = keysOf(book)
+  if (!isKeys(keys)) return keys
+  const wanted = titleKey(book.title)
+  try {
+    if (keys.isbn13) {
+      const order: ('apple' | 'openlibrary')[] = keys.apple
+        ? ['apple']
+        : keys.edition || keys.work
+        ? ['openlibrary']
+        : book.source === 'apple'
+        ? ['apple', 'openlibrary']
+        : ['openlibrary', 'apple']
+      let failure: Outcome | null = null
+      for (const source of order) {
+        const outcome = source === 'apple'
+          ? await viaAppleIsbn(http, keys, wanted)
+          : await viaOpenLibrary(http, keys, wanted, { url: `${OPENLIBRARY}/isbn/${keys.isbn13}.json`, kind: 'edition', byIsbn: true })
+        if (outcome.status === 'unavailable') failure = outcome
+        else if (outcome.status !== 'unknown') return outcome
+      }
+      return failure ?? { status: 'unknown' }
+    }
+    if (keys.apple) {
+      const outcome = apple.get(keys.apple) ?? (await lookupApple(http, [keys.apple])).get(keys.apple) ?? { status: 'unknown' as const }
+      return outcome.status === 'found' ? await appleFound(http, outcome.result, keys, wanted) : outcome
+    }
+    if (keys.edition) {
+      return await viaOpenLibrary(http, keys, wanted, { url: `${OPENLIBRARY}/books/${keys.edition}.json`, kind: 'edition' })
+    }
+    return await viaOpenLibrary(http, keys, wanted, { url: `${OPENLIBRARY}/works/${keys.work}.json`, kind: 'work' })
+  } catch (error) {
+    if (error instanceof SourceUnavailable) return { status: 'unavailable', error: error.message }
+    throw error
+  }
+}
+
+/** Whether the check asks Apple for this Book by its id alone (the one lookup a batch can share). */
+export function appleIdOnly(book: CheckBook): string | null {
+  const id = (book.apple_id ?? '').trim()
+  const hasIsbn = Boolean((book.isbn13 ?? '').trim() || (book.isbn10 ?? '').trim())
+  return APPLE_ID.test(id) && !hasIsbn ? id : null
 }
 
 async function fromOpenLibrary(http: Http, found: OlRecord, kind: 'edition' | 'work'): Promise<CheckResult> {

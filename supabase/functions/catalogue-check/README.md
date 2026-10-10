@@ -37,21 +37,35 @@ supabase functions deploy catalogue-check
 
 ## What it asks, per Book (`check.ts`)
 
-- **Apple** (a Book with an `apple_id`): `https://itunes.apple.com/lookup?id=<ids>&country=us` (then `de`, `gb`
-  for the ids not found), many Books per request. An id no storefront knows is unknown.
-- **Open Library**: the edition `/books/<key>.json`, else `/isbn/<isbn>.json` (13, then 10), else the work
-  `/works/<key>.json`; the edition's work for a blurb or cover it lacks; `/authors/<key>.json` for the names
-  (at most three). A key the source lacks falls through to the next.
+A Book is resolved by **one** key, in this order: ISBN-13, ISBN-10, Apple id, Open Library edition key, work
+key. **Every other key the row stores must agree** with what the source says, and the stored title must be the
+source's title by the app's normalised key (`work_title_key`: brackets and the part after a colon dropped, accents
+and punctuation ignored). Any disagreement is a `mismatch`: `check_failed`, nothing written, and no other key is
+ever tried (a member could otherwise pair a real ISBN with a bestseller's id and have the bestseller's data
+written under the ISBN).
+
+- **By ISBN** (13, or an ISBN-10 as its ISBN-13; both stored must be the same number): a row with an Apple id
+  is asked of **Apple** (`/lookup?isbn=<isbn>&country=us`, then `de`, `gb`): the edition with the stored id
+  must be among the answers. Else a row with Open Library keys, or whose `source` is openlibrary, is asked of
+  **Open Library** (`/isbn/<isbn>.json`): the record's `key` is the stored edition key, its ISBNs list the stored
+  ISBN, its works list the stored work key. A row with an ISBN only asks its own source first, then the other.
+- **By Apple id** (no ISBN): `/lookup?id=<ids>&country=us` (then `de`, `gb` for the ids not found), many Books
+  per request. Open Library keys stored with an Apple row are read at Open Library: the edition has the same
+  title and lists the stored ISBN; the work is one of the edition's (or, with no edition, has the same title).
+- **By Open Library edition key** (`/books/<key>.json`), else **work key** (`/works/<key>.json`); the edition's
+  work for a blurb or cover it lacks; `/authors/<key>.json` for the names (at most three).
+- Keys that are not shaped like keys (an ISBN-10 that is no ISBN-13's twin, an Apple id that is not digits, …)
+  are a mismatch before anything is asked. A key the source lacks is `unknown`, which is a miss too.
 - Covers by the app's rules (`web/app/data/covers.ts`): Apple's artwork on `*.mzstatic.com` at 600 × 900, or
-  `covers.openlibrary.org/b/id/<n>-L.jpg`. Anything else is left out and the Book keeps its cover. The cover's
-  thumbhash and colours are dropped when the URL changes (they described another picture).
+  `covers.openlibrary.org/b/id/<n>-L.jpg`. Anything else is left out. The cover's thumbhash and colours are
+  dropped when the URL changes (they described another picture).
 
 ## What happens to the answer
 
 | Answer | Stored |
 | --- | --- |
 | the source knows the Book | `catalogue_check_save`: title, authors, description (the source's, null if it has none), cover; `checked_at` set |
-| the source does not know it | `catalogue_check_miss`: `check_failed = true`, `checked_at` set, data kept |
+| the source does not know it, or its answer disagrees with the row (`mismatch`) | `catalogue_check_miss`: `check_failed = true`, `checked_at` set, nothing written |
 | the source failed (down, slow, garbled, 429) | `catalogue_check_failed`: tried again after 5 min, 10, 20 … at most a day; never given up (an unchecked Book only keeps its description withheld) |
 | the run ran out of time (50 s) | `catalogue_check_release`: back at once, the attempt not counted |
 
