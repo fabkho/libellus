@@ -216,61 +216,86 @@ Deno.test('Open Library: an edition\'s facts are the source\'s or nothing: pages
   assertEquals(outcome.status === 'found' ? [outcome.result.page_count, outcome.result.publisher, outcome.result.language, outcome.result.format, outcome.result.published_year] : null, [176, null, 'ger', null, null])
 })
 
-Deno.test('one key: the ISBN first, at Open Library; the other keys of the row must agree with the edition it names', async () => {
+Deno.test('the strongest key: the ISBN first, at Open Library; every other key is bookkeeping and stays', async () => {
   const record = { key: '/books/OL1M', title: 'Penguin Classics Emma', isbn_13: [ISBN], isbn_10: ['0141439513'], works: [{ key: '/works/OL9W' }], description: 'd', covers: [1] }
   const full = { isbn13: ISBN, isbn10: '0141439513', openlibrary_edition_key: 'OL1M', openlibrary_work_key: 'OL9W', title: 'Penguin Classics Emma' }
   const ok = testHttp({ [BY_ISBN]: record })
   assertEquals((await checkBook(ok.http, book(full))).status, 'found')
-  assertEquals(ok.asked, [BY_ISBN], 'by the ISBN, not by the edition key it also stores')
+  assertEquals(ok.asked.slice(0, 1), [BY_ISBN], 'by the ISBN, not by the edition key it also stores')
 
-  // The review's second exploit: a real ISBN with another edition's key (which is tried first by key). Nothing else is asked.
-  const exploit = testHttp({ [BY_ISBN]: record, 'https://openlibrary.org/books/OL2M.json': { title: 'A Bestseller', description: 'planted', covers: [2] } })
-  assertEquals(await checkBook(exploit.http, book({ ...full, openlibrary_edition_key: 'OL2M' })), { status: 'mismatch', reason: 'edition_key' })
-  assertEquals(exploit.asked, [BY_ISBN])
-
+  // Missing is not contradicting: another edition of the ISBN, another work, an ISBN the edition does not list,
+  // an ISBN-10 that is not its twin: the Book is found, from the record the ISBN names.
   for (
-    const [reason, overrides, answer_] of [
-      ['work_key', { openlibrary_work_key: 'OL8W' }, record],
-      ['isbn', { isbn13: '9780000000002', isbn10: null }, { ...record }],
-      ['title', { title: 'A Bestseller' }, record],
-      ['title', {}, { ...record, title: 'Something Else Entirely' }],
-    ] as const
+    const overrides of [
+      { openlibrary_edition_key: 'OL2M' },
+      { openlibrary_work_key: 'OL8W' },
+      { isbn10: '0306406152' },
+      { isbn10: null },
+      { isbn10: 'ABC', openlibrary_work_key: '/etc/passwd' },
+    ]
   ) {
-    const { http, asked } = testHttp({ [BY_ISBN]: answer_, [`https://openlibrary.org/isbn/9780000000002.json`]: answer_ })
-    const outcome = await checkBook(http, book({ ...full, ...overrides }))
-    assertEquals(outcome, { status: 'mismatch', reason }, reason)
-    assertEquals(asked.length, 1, 'a mismatch asks nothing more')
+    const { http } = testHttp({ [BY_ISBN]: record, 'https://openlibrary.org/books/OL2M.json': { title: 'Something Else Entirely' } })
+    assertEquals((await checkBook(http, book({ ...full, ...overrides }))).status, 'found', JSON.stringify(overrides))
   }
+  const unlisted = testHttp({ [BY_ISBN]: { ...record, isbn_13: undefined, isbn_10: undefined } })
+  assertEquals((await checkBook(unlisted.http, book(full))).status, 'found', 'an edition that lists no ISBN at all')
 })
 
-Deno.test('one key: an ISBN-10 that is not the ISBN-13 of the row, or keys that are not keys, are a mismatch before anything is asked', async () => {
+Deno.test('the planted row: another Book\'s title under a real ISBN is the one mismatch (the review\'s exploits)', async () => {
+  const record = { key: '/books/OL1M', title: 'Emma', isbn_13: [ISBN], works: [{ key: '/works/OL9W' }], description: 'd', covers: [1] }
+  // Exploit 2: the ISBN of Emma, the edition key and the title of A Bestseller. The key is not trusted over the ISBN.
+  const exploit = testHttp({ [BY_ISBN]: record, 'https://openlibrary.org/books/OL2M.json': { title: 'A Bestseller', description: 'planted', covers: [2] } })
+  assertEquals(
+    await checkBook(exploit.http, book({ title: 'A Bestseller', isbn13: ISBN, openlibrary_edition_key: 'OL2M', openlibrary_work_key: 'OL2W' })),
+    { status: 'mismatch', reason: 'title' },
+  )
+  // The edition the row names does not list the ISBN, so its title does not stand in for the ISBN's.
+  const other = testHttp({ [BY_ISBN]: record, 'https://openlibrary.org/books/OL2M.json': { title: 'A Bestseller', isbn_13: ['9780000000002'] } })
+  assertEquals((await checkBook(other.http, book({ title: 'A Bestseller', isbn13: ISBN, openlibrary_edition_key: 'OL2M' }))).status, 'mismatch')
+  // A title that is not Emma's at all, by the ISBN alone.
+  assertEquals((await checkBook(testHttp({ [BY_ISBN]: record }).http, book({ title: 'A Bestseller', isbn13: ISBN }))).status, 'mismatch')
+  assertEquals((await checkBook(testHttp({ [BY_ISBN]: { ...record, title: 'Something Else Entirely' } }).http, book({ title: 'Emma', isbn13: ISBN }))).status, 'mismatch')
+})
+
+Deno.test('titles are tolerant: the edition\'s, its subtitle, its work\'s, a leading article, brackets', async () => {
+  const edition = { key: '/books/OL1M', title: 'Dune', subtitle: 'Book One', works: [{ key: '/works/OL9W' }], isbn_13: [ISBN] }
+  const routes = { [BY_ISBN]: edition, [WORK]: { title: 'Duna' } }
+  for (const stored of ['Dune', 'dune', 'Dune: Book One', 'Dune (Dune Chronicles #1)', 'Dune - Book One', 'Duna', 'The Dune']) {
+    const outcome = await checkBook(testHttp(routes).http, book({ title: stored, isbn13: ISBN }))
+    assertEquals(outcome.status, 'found', stored)
+  }
+  const article = await checkBook(testHttp({ [BY_ISBN]: { key: '/books/OL1M', title: 'The Hobbit' } }).http, book({ title: 'Hobbit', isbn13: ISBN }))
+  assertEquals(article.status, 'found')
+  // The title written is the source's own form of the Book's name: the work's when the edition is another language's.
+  const reprint = await checkBook(testHttp({ [BY_ISBN]: { key: '/books/OL1M', title: 'Hadrianus un Anilari', works: [{ key: '/works/OL9W' }] }, [WORK]: { title: 'Memoirs of Hadrian' } }).http, book({ title: 'Memoirs of Hadrian', isbn13: ISBN }))
+  assertEquals(reprint.status === 'found' ? reprint.result.title : null, 'Memoirs of Hadrian')
+  // Dune is not Dune Messiah.
+  assertEquals((await checkBook(testHttp({ [BY_ISBN]: { key: '/books/OL1M', title: 'Dune Messiah' } }).http, book({ title: 'Dune', isbn13: ISBN }))).status, 'mismatch')
+})
+
+Deno.test('keys that cannot be asked are left out: an ISBN-10 alone is asked as its ISBN-13; with nothing to ask the Book is unknown', async () => {
   const { http, asked } = testHttp({})
-  assertEquals(await checkBook(http, book({ isbn13: ISBN, isbn10: 'ABC' })), { status: 'mismatch', reason: 'isbn10_malformed' })
-  assertEquals(await checkBook(http, book({ isbn13: ISBN, isbn10: '0306406152' })), { status: 'mismatch', reason: 'isbn10_disagrees_with_isbn13' })
-  assertEquals(await checkBook(http, book({ openlibrary_edition_key: '../../x' })), { status: 'mismatch', reason: 'edition_key_malformed' })
-  assertEquals(await checkBook(http, book({ openlibrary_edition_key: 'OL1M', openlibrary_work_key: '/etc/passwd' })), { status: 'mismatch', reason: 'work_key_malformed' })
-  assertEquals(await checkBook(http, book({ apple_id: '12x' })), { status: 'mismatch', reason: 'apple_id_malformed' })
-  assertEquals(await checkBook(http, book({ isbn13: '12345' })), { status: 'mismatch', reason: 'isbn13_malformed' })
-  assertEquals(await checkBook(http, book()), { status: 'mismatch', reason: 'no_key' })
+  assertEquals(await checkBook(http, book({ isbn13: 'x', isbn10: 'ABC', openlibrary_edition_key: '../../x', openlibrary_work_key: '/etc/passwd', apple_id: '12x' })), { status: 'unknown' })
+  assertEquals(await checkBook(http, book()), { status: 'unknown' })
   assertEquals(asked, [])
+  const tenOnly = testHttp({ [BY_ISBN]: { key: '/books/OL1M', title: 'A Book' } })
+  assertEquals((await checkBook(tenOnly.http, book({ isbn13: null, isbn10: '0141439513' }))).status, 'found')
 })
 
-Deno.test('one key: an ISBN with an Apple id asks Apple for the ISBN; another edition of the ISBN does not vouch for the id (the first exploit)', async () => {
+Deno.test('Apple: an ISBN with several editions; the id the row names is bookkeeping, a title that is not the row\'s is the mismatch', async () => {
   const item = { ...ITEM, trackId: 7777, trackName: 'Emma' }
-  const exploit = testHttp({ [apple(ISBN, 'us')]: { results: [item] }, [lookup('1111', 'us')]: { results: [{ ...ITEM, trackId: 1111 }] } })
-  assertEquals(await checkBook(exploit.http, book({ title: 'Emma', isbn13: ISBN, apple_id: '1111', source: 'apple' })), { status: 'mismatch', reason: 'apple_id_not_this_isbn' })
-  assertEquals(exploit.asked, [apple(ISBN, 'us'), apple(ISBN, 'de'), apple(ISBN, 'gb')], 'only the ISBN, in the storefronts: neither the id nor Open Library is tried after it')
-
-  // The same title under the ISBN, by its own id: found, and written from Apple's record of that id.
-  const ok = testHttp({ [apple(ISBN, 'us')]: { results: [{ ...item, trackId: 1111 }, item] } })
-  const outcome = await checkBook(ok.http, book({ title: 'Emma', isbn13: ISBN, apple_id: '7777', source: 'apple' }))
-  assertEquals(outcome.status, 'found')
+  const lookupIsbn = { [apple(ISBN, 'us')]: { results: [item] } }
+  // Another id for the same Book under the ISBN: found, written from the record of the ISBN; the id stays.
+  const other = await checkBook(testHttp(lookupIsbn).http, book({ title: 'Emma', isbn13: ISBN, apple_id: '1111', source: 'apple' }))
+  assertEquals(other.status, 'found')
+  // The id is among them: that edition is used.
+  const ok = testHttp({ [apple(ISBN, 'us')]: { results: [{ ...item, trackId: 1111, trackName: 'Emma (Annotated)' }, item] } })
+  assertEquals((await checkBook(ok.http, book({ title: 'Emma', isbn13: ISBN, apple_id: '7777', source: 'apple' }))).status, 'found')
   assertEquals(ok.asked, [apple(ISBN, 'us')])
-  assertEquals((outcome as { result: { title: string } }).result.title, 'Emma')
-
-  // The record has this id, under another title: the row's title is the member's.
-  const planted = testHttp({ [apple(ISBN, 'us')]: { results: [{ ...item, trackName: 'A Bestseller' }] } })
-  assertEquals(await checkBook(planted.http, book({ title: 'Emma', isbn13: ISBN, apple_id: '7777' })), { status: 'mismatch', reason: 'title' })
+  // The review's first exploit: the ISBN of Emma with another Book's id and title.
+  const exploit = testHttp({ ...lookupIsbn, [lookup('1111', 'us')]: { results: [{ ...ITEM, trackId: 1111 }] } })
+  assertEquals(await checkBook(exploit.http, book({ title: 'Guards & Guards', isbn13: ISBN, apple_id: '1111', source: 'apple' })), { status: 'mismatch', reason: 'title' })
+  assertEquals(exploit.asked, [apple(ISBN, 'us'), apple(ISBN, 'de'), apple(ISBN, 'gb')], 'only the ISBN, in the storefronts: neither the id nor Open Library is tried after it')
 
   // An ISBN Apple does not sell in any storefront is unknown, never a miss while a storefront is down.
   assertEquals(await checkBook(testHttp({}).http, book({ isbn13: ISBN, apple_id: '7777' })), { status: 'unknown' })
@@ -278,25 +303,15 @@ Deno.test('one key: an ISBN with an Apple id asks Apple for the ISBN; another ed
   assertEquals((await checkBook(down.http, book({ isbn13: ISBN, apple_id: '7777' }))).status, 'unavailable')
 })
 
-Deno.test('one key: an Apple id alone; Open Library keys stored with it must name the same Book there', async () => {
+Deno.test('Apple id alone: found; Open Library keys stored with it are bookkeeping; another title is a mismatch', async () => {
   const item = { ...ITEM, trackName: 'Emma' }
   const alone = testHttp({ [lookup('1111', 'us')]: { results: [item] } })
   assertEquals((await checkBook(alone.http, book({ title: 'Emma', apple_id: '1111' }))).status, 'found')
   assertEquals(alone.asked, [lookup('1111', 'us')])
 
-  const edition = { title: 'Emma', isbn_13: [ISBN], works: [{ key: '/works/OL9W' }] }
-  const both = testHttp({ [lookup('1111', 'us')]: { results: [item] }, [EDITION]: edition })
-  assertEquals((await checkBook(both.http, book({ title: 'Emma', apple_id: '1111', openlibrary_edition_key: 'OL1M', openlibrary_work_key: 'OL9W' }))).status, 'found')
-
-  const wrongWork = testHttp({ [lookup('1111', 'us')]: { results: [item] }, [EDITION]: edition })
-  assertEquals(await checkBook(wrongWork.http, book({ title: 'Emma', apple_id: '1111', openlibrary_edition_key: 'OL1M', openlibrary_work_key: 'OL8W' })), {
-    status: 'mismatch',
-    reason: 'work_key_not_in_edition',
-  })
-  const wrongEdition = testHttp({ [lookup('1111', 'us')]: { results: [item] }, [EDITION]: { ...edition, title: 'A Bestseller' } })
-  assertEquals(await checkBook(wrongEdition.http, book({ title: 'Emma', apple_id: '1111', openlibrary_edition_key: 'OL1M' })), { status: 'mismatch', reason: 'edition_key_title' })
-  const noEdition = testHttp({ [lookup('1111', 'us')]: { results: [item] } })
-  assertEquals(await checkBook(noEdition.http, book({ title: 'Emma', apple_id: '1111', openlibrary_edition_key: 'OL1M' })), { status: 'mismatch', reason: 'edition_key_unknown' })
+  const withKeys = testHttp({ [lookup('1111', 'us')]: { results: [item] } })
+  assertEquals((await checkBook(withKeys.http, book({ title: 'Emma', apple_id: '1111', openlibrary_edition_key: 'OL1M', openlibrary_work_key: 'OL9W' }))).status, 'found')
+  assertEquals(withKeys.asked, [lookup('1111', 'us')], 'nothing at Open Library is asked')
   const titleOfApple = testHttp({ [lookup('1111', 'us')]: { results: [item] } })
   assertEquals(await checkBook(titleOfApple.http, book({ title: 'A Bestseller', apple_id: '1111' })), { status: 'mismatch', reason: 'title' })
 })
