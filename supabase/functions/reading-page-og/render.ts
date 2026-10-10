@@ -14,7 +14,9 @@ import satori from 'satori'
 import { initWasm, Resvg } from '@resvg/resvg-wasm'
 import { encodeBase64 } from '@std/encoding/base64'
 import {
+  bookTitle,
   clamp,
+  isOutside,
   firstAuthor,
   pageCovers,
   pageSummary,
@@ -23,6 +25,7 @@ import {
   type PublicBookCard,
   type PublicReadingPage,
   ratingValue,
+  shownReview,
   statusLine,
 } from './page.ts'
 
@@ -41,6 +44,8 @@ const C = {
   accent: '#efb768',
   starTrack: 'rgba(238, 231, 220, 0.2)',
   clothInk: '#f1e3c8',
+  // The Placeholder's cloth (--color-cloth1): what a Book without a title or a cover is drawn on, as the app does.
+  cloth: '#3b2430',
 } as const
 
 /** A satori layout node. Written by hand: no JSX, no React in this function. */
@@ -198,13 +203,16 @@ function eyebrow(text: string, size = 20): Node {
  */
 function cover(book: PublicBook, src: string | null, width: number): Node {
   const height = Math.round(width * 1.5)
+  // An unverified Book: no colours of its own, the cloth Placeholder with the one string on it, as the web draws it.
+  const outside = isOutside(book)
+  const dominant = outside ? C.cloth : (book.cover_dominant ?? C.raised)
   const style = {
     display: 'flex',
     width,
     height,
     borderRadius: width >= 100 ? 5 : 3.5,
     overflow: 'hidden',
-    backgroundColor: book.cover_dominant ?? C.raised,
+    backgroundColor: dominant,
     border: `1px solid ${C.hairline}`,
   }
   if (src) {
@@ -216,7 +224,7 @@ function cover(book: PublicBook, src: string | null, width: number): Node {
       flexDirection: 'column',
       justifyContent: 'flex-end',
       padding: Math.round(width * 0.09),
-      backgroundImage: `linear-gradient(160deg, ${book.cover_secondary ?? book.cover_dominant ?? C.raised}, ${book.cover_dominant ?? C.raised})`,
+      ...(outside ? {} : { backgroundImage: `linear-gradient(160deg, ${book.cover_secondary ?? dominant}, ${dominant})` }),
     },
     children: el('div', {
       style: {
@@ -227,7 +235,7 @@ function cover(book: PublicBook, src: string | null, width: number): Node {
         lineHeight: 1.15,
         color: C.clothInk,
       },
-      children: clamp(book.title, 42),
+      children: clamp(bookTitle(book), 42),
     }),
   })
 }
@@ -283,7 +291,9 @@ export async function renderCard(card: PublicBookCard, deps: RenderDeps = {}): P
   const src = await loadCover(card.book, deps)
   const author = firstAuthor(card.book)
   const value = ratingValue(card.rating)
-  const review = card.review ? clamp(card.review, 150) : null
+  // A review folded for spoilers stays off the image: it is cached publicly, for anyone with the link.
+  const shown = shownReview(card)
+  const review = shown ? clamp(shown, 150) : null
   const name = (card.name ?? '').trim()
   return await toPng(
     el('div', {
@@ -310,7 +320,7 @@ export async function renderCard(card: PublicBookCard, deps: RenderDeps = {}): P
               children: [
                 el('div', {
                   style: { display: 'flex', fontFamily: 'Newsreader', fontWeight: 500, fontSize: 58, lineHeight: 1.1, color: C.ink },
-                  children: clamp(card.book.title, 70),
+                  children: clamp(bookTitle(card.book), 70),
                 }),
                 author
                   ? el('div', {

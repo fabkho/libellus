@@ -8,7 +8,7 @@
  */
 import { assert, assertEquals, assertStringIncludes } from '@std/assert'
 import { createHandler, MAX_AGE_SECONDS } from './handler.ts'
-import type { PublicBookCard, PublicReadingPage } from './page.ts'
+import type { PublicBook, PublicBookCard, PublicReadingPage } from './page.ts'
 import { ANON_KEY, isPng, pngSize, readFixture, STACK_URL, type StubPlan, stubFetch } from './test_support.ts'
 
 const TOKEN = 'a-reading-page-token-1'
@@ -122,4 +122,53 @@ Deno.test('anything but GET is refused', async () => {
   const { handler } = setup({ page: page() })
   const response = await handler(new Request(`http://localhost/reading-page-og?token=${TOKEN}`, { method: 'POST' }))
   assertEquals(response.status, 405)
+})
+
+/** What the database hands out for a Book the server check could not confirm: an id and the flag, nothing else. */
+const UNVERIFIED: PublicBook = {
+  id: 'c0ffee00-91a4-4e58-ae60-7c1d2e3f4a5b',
+  title: null,
+  authors: [],
+  published_year: null,
+  cover_url: null,
+  cover_thumbhash: null,
+  cover_dominant: null,
+  cover_secondary: null,
+  unverified: true,
+}
+
+Deno.test('a review folded for spoilers is not on the card image: it is the card without a review (finding 2)', async () => {
+  const draw = async (shared: PublicBookCard) => {
+    const { handler } = setup({ card: shared, cover: 'png' })
+    const response = await handler(ask(`?token=${TOKEN}&book=${BOOK}`))
+    assertEquals(response.status, 200)
+    return await png(response)
+  }
+  const bare = await draw({ ...card(), review: null })
+  const folded = await draw({ ...card(), spoilers: true, folded: true })
+  const open = await draw({ ...card(), spoilers: false, folded: false })
+  assertEquals(folded, bare)
+  assert(open.length !== bare.length || open.some((byte, at) => byte !== bare[at]), 'an ordinary review should be drawn')
+})
+
+Deno.test('a card for an unverified Book draws, as "Outside the catalogue", with no title (finding 4)', async () => {
+  const { handler, logs } = setup({ card: { ...card(), book: UNVERIFIED }, cover: 'png' })
+  const response = await handler(ask(`?token=${TOKEN}&book=${BOOK}`))
+  assertEquals([response.status, logs], [200, []])
+  assertEquals(pngSize(await png(response)), { width: 1200, height: 630 })
+})
+
+Deno.test('a page holding unverified Books draws, in every section that shows a Book (finding 4)', async () => {
+  const withUnverified: PublicReadingPage = {
+    ...page(),
+    reading: [{ book: UNVERIFIED, started_on: null }, ...(page().reading ?? [])],
+    finished: [{ book: UNVERIFIED, ended_on: null, rating: null, review: null }, ...(page().finished ?? [])],
+    favourites: [{ book: UNVERIFIED, rating: 20 }],
+    shelf: { kind: 'covers', books: [UNVERIFIED] },
+  }
+  const { handler, logs } = setup({ page: withUnverified, cover: 'png' })
+  const response = await handler(ask(`?token=${TOKEN}`))
+  assertEquals(response.status, 200)
+  assertEquals(pngSize(await png(response)), { width: 1200, height: 630 })
+  assertEquals(logs, [])
 })
