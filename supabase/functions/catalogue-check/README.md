@@ -2,7 +2,7 @@
 
 A checked Catalogue (social v2a contract §5, `docs/proposals/social-v2a-contract.md`). A Catalogue Book
 keeps what the first member to add it sent; this function reads each unchecked one at its source and writes
-what the source says: **title, authors, description, cover URL**. Until a Book is checked, other members and
+what the source says: **title, authors, description, cover URL, publisher, language, format, pages and year**. Until a Book is checked, other members and
 the public reading page get its title and authors but not its description (`private.description_shown`).
 
 ```
@@ -64,7 +64,7 @@ written under the ISBN).
 
 | Answer | Stored |
 | --- | --- |
-| the source knows the Book | `catalogue_check_save`: title, authors, description (the source's, null if it has none), cover; `checked_at` set |
+| the source knows the Book | `catalogue_check_save`: the source's title, authors (or none), description (or none), cover (or none), publisher, language and format (or none); pages and year the source's, else the row's own only if plausible; `checked_at` set. Nothing the member sent stays that the source did not say |
 | the source does not know it, or its answer disagrees with the row (`mismatch`) | `catalogue_check_miss`: `check_failed = true`, `checked_at` set, nothing written |
 | the source failed (down, slow, garbled, 429) | `catalogue_check_failed`: tried again after 5 min, 10, 20 … at most a day; never given up (an unchecked Book only keeps its description withheld) |
 | the run ran out of time (50 s) | `catalogue_check_release`: back at once, the attempt not counted |
@@ -81,9 +81,10 @@ written under the ISBN).
   by User-Agent, a timeout, two retries.
 - **Writes**: only through the service-role RPCs of `20261021020000_catalogue_check.sql`, only to an
   unchecked Catalogue Book, and only title, authors, description, cover (and the cover's hash and colours,
-  cleared). Every field is validated here (type, length, plain text, https cover on the two cover hosts) and
-  again in `catalogue_check_save`. A title that is too long, a cover elsewhere, authors that are not all text are
-  ignored (the Book keeps its own); a description over 10 000 characters is cut there.
+  cleared), publisher, language, format, pages, year. Every field is validated here (type, length, plain text,
+  https cover on the two cover hosts) and again in `catalogue_check_save`. A title that is not the row's
+  (`work_title_key`) marks the Book failed and writes nothing; authors that are not all text, a cover elsewhere,
+  a description over 10 000 characters are stored as nothing, not as the member's value.
 - **Trusts**: that Apple and Open Library answer for the Book's keys. It does not trust the first member's
   text, which is the point. An Open Library record is crowd-edited; what it says about a Book is checked only
   for shape, as the app's own search already treats it.

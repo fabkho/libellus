@@ -38,6 +38,8 @@ export const MAX_AUTHOR_NAMES_FETCHED = 3
 export const MAX_TITLE = 500
 export const MAX_NAME = 200
 export const MAX_DESCRIPTION = 10_000
+export const MAX_PUBLISHER = 200
+export const MAX_PAGES = 10_000
 
 /** The columns of a claimed Book the check reads. */
 export type CheckBook = {
@@ -59,6 +61,13 @@ export type CheckResult = {
   /** The source's description; null when it has none (the first member's is then dropped). */
   description: string | null
   cover_url?: string
+  /** The source's, or null: a verified Book keeps none of the first member's (catalogue_check_save). */
+  publisher: string | null
+  language: string | null
+  format: 'hardcover' | 'paperback' | 'ebook' | 'audiobook' | null
+  /** The source's, or null when it has none (the row's own is then kept only if plausible). */
+  page_count: number | null
+  published_year: number | null
 }
 
 export type Outcome =
@@ -171,6 +180,24 @@ export function openLibraryCover(covers: unknown): string | undefined {
 
 type AppleItem = Record<string, unknown>
 
+/** The first year (1000–2099) a date text names. */
+function yearOf(value: unknown): number | null {
+  const match = typeof value === 'string' ? /\b(1\d{3}|20\d{2})\b/.exec(value) : null
+  return match ? Number(match[1]) : null
+}
+
+/** Open Library's free-text `physical_format` as one of the four formats; null for anything else. (data/openLibrary.ts.) */
+export function formatFromPhysical(physical: unknown): CheckResult['format'] {
+  const text = (typeof physical === 'string' ? physical : '').trim().toLowerCase()
+  if (!text) return null
+  if (/audio|mp3|cassette|hörbuch|livre audio/.test(text)) return 'audiobook'
+  if (/e-?book|electronic|kindle|epub|digital|e-text/.test(text)) return 'ebook'
+  if (/hard ?(cover|back|bound)|library binding|gebunden|cartonn|relié|cartoné|tapa dura|rilegato/.test(text)) return 'hardcover'
+  if (/paper ?back|soft ?(cover|back)|mass market|trade|pocket|taschenbuch|broschiert|brossura|broché|tapa blanda|rústica|poche|kartoniert/.test(text))
+    return 'paperback'
+  return null
+}
+
 export function lookupUrl(ids: readonly string[], country: string): string {
   return `${ITUNES}/lookup?${new URLSearchParams({ id: [...ids].sort().join(','), country })}`
 }
@@ -185,6 +212,12 @@ function fromApple(item: AppleItem): CheckResult | null {
     ...(authors ? { authors } : {}),
     description: description(item.description),
     ...(cover ? { cover_url: cover } : {}),
+    // Apple's ebook records say none of publisher, language or pages.
+    publisher: null,
+    language: null,
+    format: 'ebook',
+    page_count: null,
+    published_year: yearOf(item.releaseDate),
   }
 }
 
@@ -483,10 +516,24 @@ async function fromOpenLibrary(http: Http, found: OlRecord, kind: 'edition' | 'w
     ? (await authorNames(http, found.authors)) ?? (work ? await authorNames(http, work.authors, 'author') : undefined)
     : await authorNames(http, found.authors, 'author')
   const cover = openLibraryCover(found.covers) ?? openLibraryCover(work?.covers)
+  // The edition's own facts; a work has none of them.
+  const edition = kind === 'edition'
+  const pages = Number(found.number_of_pages)
+  const paginated = Number(/\d+/.exec(typeof found.pagination === 'string' ? found.pagination : '')?.[0])
+  const pageCount = [pages, paginated].find((n) => Number.isInteger(n) && n > 0 && n <= MAX_PAGES) ?? null
+  const publishers = Array.isArray(found.publishers) ? found.publishers : []
+  const publisher = typeof publishers[0] === 'string' ? decodeEntities(publishers[0]).replace(/\s+/g, ' ').trim() : ''
+  const languageKey = record(Array.isArray(found.languages) ? found.languages[0] : null)?.key
+  const language = /\/languages\/([a-z]{3})$/.exec(typeof languageKey === 'string' ? languageKey : '')?.[1] ?? null
   return {
     ...(heading ? { title: heading } : {}),
     ...(authors ? { authors } : {}),
     description: description(found.description) ?? description(work?.description),
     ...(cover ? { cover_url: cover } : {}),
+    publisher: edition && publisher && publisher.length <= MAX_PUBLISHER ? publisher : null,
+    language: edition ? language : null,
+    format: edition ? formatFromPhysical(found.physical_format) : null,
+    page_count: edition ? pageCount : null,
+    published_year: edition ? yearOf(found.publish_date) : null,
   }
 }

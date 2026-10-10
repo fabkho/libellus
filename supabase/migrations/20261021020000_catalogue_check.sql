@@ -202,16 +202,24 @@ begin
 end;
 $$;
 
--- Stores what the source says for a claimed Book, and marks it checked. p_result:
---   title        text, 1–500 characters        (else the Book keeps its title)
---   authors      text[], 1–20 names of at most 200 characters (else it keeps its authors)
---   description  text of at most 10000 characters, or null: the source's, whatever the Book had
---                (omitted = kept)
---   cover_url    https URL at covers.openlibrary.org or *.mzstatic.com (else the Book keeps its
---                cover); a new URL drops the old thumbhash and colours, which described another picture
+-- Stores what the source says for a claimed Book, and marks it checked: a verified Book is the
+-- source's, all of it, and nothing of what the first member sent stays that the source did not say.
+-- p_result:
+--   title          text, 1–500 characters; required, and its work_title_key must be the stored title's
+--                  (the function checks the identity; this is the second lock: a Book the source
+--                  names otherwise is marked failed and nothing is written)
+--   authors        text[], 1–20 names of at most 200 characters; else '{}'
+--   description    text of at most 10000 characters; else null
+--   cover_url      https URL at covers.openlibrary.org or *.mzstatic.com; else no cover (and no
+--                  thumbhash or colours: a new URL drops the old ones, which described another picture)
+--   publisher      text of at most 200 characters; else null
+--   language       two or three lower-case letters; else null
+--   format         hardcover | paperback | ebook | audiobook; else null
+--   page_count     1–10000; the source's, else the Book's own when it is in range, else null
+--   published_year 1000–next year; the source's, else the Book's own when it is in range, else null
 -- The function validates too; this is the second lock on the door, because the writer is a
 -- service that reads other people's answers. Answers false when there was nothing to write: no such
--- Book, a Manual book, a Book already checked.
+-- Book, a Manual book, a Book already checked, a title that is not the Book's.
 create or replace function public.catalogue_check_save(p_book uuid, p_result jsonb)
 returns boolean
 language plpgsql
@@ -219,12 +227,17 @@ security definer
 set search_path = pg_catalog, public
 as $$
 declare
-  v_title text;
-  v_authors text[];
-  v_has_description boolean := false;
+  v_book        public.books;
+  v_title       text;
+  v_authors     text[];
   v_description text;
-  v_cover text;
-  v_found boolean;
+  v_cover       text;
+  v_publisher   text;
+  v_language    text;
+  v_format      public.book_format;
+  v_pages       integer;
+  v_year        integer;
+  v_max_year    integer := extract(year from now())::integer + 1;
 begin
   if p_result is null or jsonb_typeof(p_result) <> 'object' then
     raise exception 'result_invalid' using errcode = '22023';
@@ -232,9 +245,26 @@ begin
 
   if jsonb_typeof(p_result -> 'title') = 'string' then
     v_title := btrim(p_result ->> 'title');
-    if char_length(v_title) not between 1 and 500 then
-      v_title := null;
-    end if;
+  end if;
+  if v_title is null or char_length(v_title) not between 1 and 500 then
+    raise exception 'result_invalid' using errcode = '22023';
+  end if;
+
+  select * into v_book
+    from public.books b
+   where b.id = p_book and b.owner_id is null and b.checked_at is null
+     for update;
+  if not found then
+    delete from private.catalogue_check_state where book_id = p_book;
+    return false;
+  end if;
+
+  -- The source's record must be this Book's: the first member's title is the key the check was
+  -- asked by (a real ISBN with another Book's id would otherwise write the other Book under it).
+  if public.work_title_key(v_book.title) is distinct from public.work_title_key(v_title) then
+    update public.books set checked_at = now(), check_failed = true where id = p_book;
+    delete from private.catalogue_check_state where book_id = p_book;
+    return false;
   end if;
 
   if jsonb_typeof(p_result -> 'authors') = 'array'
@@ -245,16 +275,9 @@ begin
       from jsonb_array_elements(p_result -> 'authors') with ordinality as t(a, n);
   end if;
 
-  if p_result ? 'description' then
-    if jsonb_typeof(p_result -> 'description') = 'null' then
-      v_has_description := true;
-    elsif jsonb_typeof(p_result -> 'description') = 'string' then
-      v_description := nullif(btrim(p_result ->> 'description'), '');
-      v_has_description := char_length(coalesce(v_description, '')) <= 10000;
-      if not v_has_description then
-        v_description := null;
-      end if;
-    end if;
+  if jsonb_typeof(p_result -> 'description') = 'string'
+     and char_length(p_result ->> 'description') <= 10000 then
+    v_description := nullif(btrim(p_result ->> 'description'), '');
   end if;
 
   if jsonb_typeof(p_result -> 'cover_url') = 'string'
@@ -263,21 +286,55 @@ begin
     v_cover := p_result ->> 'cover_url';
   end if;
 
+  if jsonb_typeof(p_result -> 'publisher') = 'string'
+     and char_length(btrim(p_result ->> 'publisher')) between 1 and 200 then
+    v_publisher := btrim(p_result ->> 'publisher');
+  end if;
+
+  if jsonb_typeof(p_result -> 'language') = 'string' and (p_result ->> 'language') ~ '^[a-z]{2,3}$' then
+    v_language := p_result ->> 'language';
+  end if;
+
+  if jsonb_typeof(p_result -> 'format') = 'string'
+     and (p_result ->> 'format') in ('hardcover', 'paperback', 'ebook', 'audiobook') then
+    v_format := (p_result ->> 'format')::public.book_format;
+  end if;
+
+  -- Pages and year: the source's when it has them, else the Book's own, if plausible.
+  if jsonb_typeof(p_result -> 'page_count') = 'number' and (p_result ->> 'page_count') ~ '^[0-9]{1,5}$'
+     and (p_result ->> 'page_count')::integer between 1 and 10000 then
+    v_pages := (p_result ->> 'page_count')::integer;
+  elsif v_book.page_count between 1 and 10000 then
+    v_pages := v_book.page_count;
+  end if;
+
+  if jsonb_typeof(p_result -> 'published_year') = 'number' and (p_result ->> 'published_year') ~ '^[0-9]{1,4}$'
+     and (p_result ->> 'published_year')::integer between 1000 and v_max_year then
+    v_year := (p_result ->> 'published_year')::integer;
+  elsif v_book.published_year between 1000 and v_max_year then
+    v_year := v_book.published_year;
+  end if;
+
   update public.books b
-     set title = coalesce(v_title, b.title),
-         authors = coalesce(v_authors, b.authors),
-         description = case when v_has_description then v_description else b.description end,
-         cover_url = coalesce(v_cover, b.cover_url),
-         cover_thumbhash = case when v_cover is not null and v_cover is distinct from b.cover_url then null else b.cover_thumbhash end,
-         cover_dominant = case when v_cover is not null and v_cover is distinct from b.cover_url then null else b.cover_dominant end,
-         cover_secondary = case when v_cover is not null and v_cover is distinct from b.cover_url then null else b.cover_secondary end,
+     set title = v_title,
+         authors = coalesce(v_authors, '{}'),
+         description = v_description,
+         cover_url = v_cover,
+         -- The hash and colours describe the picture they came with: kept only if the source's cover is that URL.
+         cover_thumbhash = case when v_cover is not null and v_cover is not distinct from b.cover_url then b.cover_thumbhash end,
+         cover_dominant = case when v_cover is not null and v_cover is not distinct from b.cover_url then b.cover_dominant end,
+         cover_secondary = case when v_cover is not null and v_cover is not distinct from b.cover_url then b.cover_secondary end,
+         publisher = v_publisher,
+         language = v_language,
+         format = v_format,
+         page_count = v_pages,
+         published_year = v_year,
          checked_at = now(),
          check_failed = false
-   where b.id = p_book and b.owner_id is null and b.checked_at is null;
-  v_found := found;
+   where b.id = p_book;
 
   delete from private.catalogue_check_state where book_id = p_book;
-  return v_found;
+  return true;
 end;
 $$;
 

@@ -77,6 +77,7 @@ const ITEM = {
   artistName: 'Terry Pratchett',
   description: '<p>Blurb &quot;one&quot;</p>',
   artworkUrl100: ART,
+  releaseDate: '2012-05-03T07:00:00Z',
 }
 
 Deno.test('Apple: title, authors, description and cover from the source, ids in one request', async () => {
@@ -90,10 +91,18 @@ Deno.test('Apple: title, authors, description and cover from the source, ids in 
       authors: ['Terry Pratchett'],
       description: 'Blurb "one"',
       cover_url: 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/ab/cd/9783641264864.jpg/600x900bb.jpg',
+      publisher: null,
+      language: null,
+      format: 'ebook',
+      page_count: null,
+      published_year: 2012,
     },
   })
   // A cover off Apple's CDN is left out: the Book keeps the one it has.
-  assertEquals(outcomes.get('2222'), { status: 'found', result: { title: 'Two', authors: ['A', 'B'], description: 'Blurb "one"' } })
+  assertEquals(outcomes.get('2222'), {
+    status: 'found',
+    result: { title: 'Two', authors: ['A', 'B'], description: 'Blurb "one"', publisher: null, language: null, format: 'ebook', page_count: null, published_year: 2012 },
+  })
 })
 
 Deno.test('Apple: an id the first storefront lacks is asked of the next, alone', async () => {
@@ -139,7 +148,17 @@ Deno.test('titles are compared by the app\'s work key: brackets, the part after 
 
 Deno.test('Open Library: the edition, its authors\' names, the work\'s blurb, the edition\'s cover', async () => {
   const { http, asked } = testHttp({
-    [EDITION]: { title: 'Piranesi.', authors: [{ key: '/authors/OL7A' }], works: [{ key: '/works/OL9W' }], covers: [-1, 123] },
+    [EDITION]: {
+      title: 'Piranesi.',
+      authors: [{ key: '/authors/OL7A' }],
+      works: [{ key: '/works/OL9W' }],
+      covers: [-1, 123],
+      publishers: ['Penguin '],
+      languages: [{ key: '/languages/eng' }],
+      physical_format: 'Paperback',
+      number_of_pages: 272,
+      publish_date: 'Sep 15, 2020',
+    },
     [WORK]: { description: { type: '/type/text', value: 'The work\'s blurb' }, covers: [456] },
     'https://openlibrary.org/authors/OL7A.json': { name: 'Susanna Clarke' },
   })
@@ -151,6 +170,11 @@ Deno.test('Open Library: the edition, its authors\' names, the work\'s blurb, th
       authors: ['Susanna Clarke'],
       description: 'The work\'s blurb',
       cover_url: 'https://covers.openlibrary.org/b/id/123-L.jpg',
+      publisher: 'Penguin',
+      language: 'eng',
+      format: 'paperback',
+      page_count: 272,
+      published_year: 2020,
     },
   })
   assertEquals(asked, [EDITION, WORK, 'https://openlibrary.org/authors/OL7A.json'])
@@ -163,8 +187,33 @@ Deno.test('Open Library: a work alone, authors by its author roles', async () =>
   })
   assertEquals(await checkBook(http, book({ title: 'Emma', openlibrary_work_key: 'OL9W' })), {
     status: 'found',
-    result: { title: 'Emma', authors: ['Jane Austen'], description: 'Blurb', cover_url: 'https://covers.openlibrary.org/b/id/5-L.jpg' },
+    result: {
+      title: 'Emma',
+      authors: ['Jane Austen'],
+      description: 'Blurb',
+      cover_url: 'https://covers.openlibrary.org/b/id/5-L.jpg',
+      publisher: null,
+      language: null,
+      format: null,
+      page_count: null,
+      published_year: null,
+    },
   })
+})
+
+Deno.test('Open Library: an edition\'s facts are the source\'s or nothing: pages by pagination, a publisher too long, a format it does not name', async () => {
+  const { http } = testHttp({
+    [EDITION]: {
+      title: 'Facts',
+      pagination: '176 p.',
+      publishers: ['x'.repeat(201)],
+      languages: [{ key: '/languages/ger' }, { key: '/languages/eng' }],
+      physical_format: 'CD-ROM',
+      publish_date: 'sometime',
+    },
+  })
+  const outcome = await checkBook(http, book({ title: 'Facts', openlibrary_edition_key: 'OL1M' }))
+  assertEquals(outcome.status === 'found' ? [outcome.result.page_count, outcome.result.publisher, outcome.result.language, outcome.result.format, outcome.result.published_year] : null, [176, null, 'ger', null, null])
 })
 
 Deno.test('one key: the ISBN first, at Open Library; the other keys of the row must agree with the edition it names', async () => {
