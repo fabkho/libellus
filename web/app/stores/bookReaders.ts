@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { createSocial, READERS_PAGE, type BookReader, type ReadersCursor, type Social } from '~/data/social'
 import { useSessionStore } from '~/stores/session'
-import { mergeReaders, READERS_SHOWN, withoutMember } from '~/utils/bookReaders'
+import { mergeReaders, READERS_SHOWN, readersWithout } from '~/utils/bookReaders'
 
 /**
  * Readers on a Book's page (social v2a, contract §1.5): the members she follows who hold the Book's work, read
@@ -95,8 +95,8 @@ export const useBookReadersStore = defineStore('bookReaders', () => {
     generation++
     books.value = Object.fromEntries(
       Object.entries(books.value).map(([book, per]) => {
-        const top = withoutMember(per.top, id)
-        const all = withoutMember(per.all, id)
+        const top = readersWithout(per.top, id)
+        const all = readersWithout(per.all, id)
         const was = top.length !== per.top.length || all.length !== per.all.length
         return [book, { ...per, top, all, total: was ? Math.max(0, per.total - 1) : per.total }]
       }),

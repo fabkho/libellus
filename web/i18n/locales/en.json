@@ -631,6 +631,20 @@
       "formatSaid": "Your copy will be saved as {format}.",
       "missing": "My edition isn't listed"
     },
+    "readers": {
+      "title": "Readers",
+      "all": "See all {count}",
+      "allLabel": "See all {count} readers of this book",
+      "finished": "Finished",
+      "reading": "Reading",
+      "abandoned": "Put down",
+      "want": "Wants to read",
+      "loading": "Loading readers",
+      "sheetTitle": "Readers",
+      "more": "Show more",
+      "loadingMore": "Loading more readers",
+      "someone": "A reader"
+    },
     "goodreads": {
       "ratingLabel": "Rated {rating} out of 5",
       "ratings": "{count} rating | {count} ratings",

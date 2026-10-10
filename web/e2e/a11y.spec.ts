@@ -311,6 +311,56 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
   })
 })
 
+test.describe('accessibility, readers', { tag: '@full' }, () => {
+  test.use({ colorScheme: 'dark', viewport: { width: 412, height: 915 } })
+
+  test("a Book's Readers, with their states, and the See all sheet", async ({ page }) => {
+    test.slow()
+    const anna = await signedIn(page)
+    const work = `OL${Math.floor(Math.random() * 8_000_000) + 1_000_000}W`
+    const edition = (title: string): BookSnapshot => ({
+      ...book(title, 'Susanna Clarke', 272),
+      source: 'openlibrary',
+      appleId: null,
+      openLibraryEditionKey: `OL${Math.floor(Math.random() * 8_000_000) + 1_000_000}M`,
+      openLibraryWorkKey: work,
+    })
+    const today = isoDay()
+    const mine = (await createLibrary(anna.client).addToLibrary(edition('Piranesi'), { status: 'want_to_read' })).data!
+    // Six readers she follows: a finished read with a review (a spoiler one among them), a plain finish, one reading, one wanting.
+    const states = [
+      { status: 'finished', review: 'A house of tides and statues.', spoilers: true },
+      { status: 'finished', review: 'Quiet and strange.' },
+      { status: 'finished' },
+      { status: 'reading' },
+      { status: 'reading' },
+      { status: 'want_to_read' },
+    ] as const
+    for (const [i, state] of states.entries()) {
+      const reader = await signUpMember()
+      await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [reader.id, `Reader ${i + 1}`])
+      await sql(`insert into public.follows (follower_id, followee_id, accepted_at) values ($1, $2, now())`, [anna.id, reader.id])
+      const options =
+        state.status === 'finished'
+          ? { status: 'finished' as const, startedOn: addDays(today, -6), endedOn: addDays(today, -i), rating: 16, ...('review' in state ? { review: state.review } : {}), ...('spoilers' in state ? { reviewSpoilers: true } : {}) }
+          : state.status === 'reading'
+            ? { status: 'reading' as const, startedOn: addDays(today, -i) }
+            : { status: 'want_to_read' as const }
+      expect((await createLibrary(reader.client).addToLibrary(edition(`Piranesi ${i}`), options)).error).toBeNull()
+    }
+    await sql(`update public.activity set visible_at = now() - interval '1 second'`)
+
+    await goto(page, `/book/${mine.book.id}`)
+    await expect(page.getByTestId('book.readers.row')).toHaveCount(5)
+    await expect(page.getByTestId('book.readers.all')).toBeVisible()
+    await expectAccessible(page, "a Book's Readers")
+    await openSheet(page, 'book.readers.all', 'bookReaders')
+    await expect(page.getByTestId('bookReaders.row')).toHaveCount(6)
+    await expectAccessible(page, 'the Readers sheet')
+    await closeSheet(page, 'bookReaders')
+  })
+})
+
 /**
  * What axe cannot see: the keyboard. The Library's segments are tabs (the arrows move between
  * them), a sheet takes focus, keeps it and gives it back on Escape, and saving progress on

@@ -4,7 +4,7 @@ import { createLibrary } from '@/data/library'
 import { createSocial, READERS_PAGE } from '@/data/social'
 import { bookReaderFromJson, bookReadersPageFromJson } from '@/data/socialShapes'
 import type { BookReader } from '@/data/socialShapes'
-import { compareReaders, mergeReaders, readerRank, READERS_SHOWN, withoutMember } from '@/utils/bookReaders'
+import { compareReaders, mergeReaders, readerRank, READERS_SHOWN, readersWithout } from '@/utils/bookReaders'
 import { isoDay } from '@/utils/dates'
 import { signUpMember, type TestMember } from './support/member'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
@@ -58,7 +58,7 @@ describe('the order the screen keeps', () => {
   })
 
   it('drops a member who left her circle, and the section shows five', () => {
-    expect(withoutMember([reader('a', 'want', null), reader('b', 'want', null)], 'a').map((r) => r.member.id)).toEqual(['b'])
+    expect(readersWithout([reader('a', 'want', null), reader('b', 'want', null)], 'a').map((r) => r.member.id)).toEqual(['b'])
     expect(READERS_SHOWN).toBe(5)
   })
 })

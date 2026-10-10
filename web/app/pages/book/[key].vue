@@ -314,6 +314,9 @@ function back() {
       <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="reader.open(entry)" />
     </div>
 
+    <!-- The people she follows who read it (social v2a, §1.5): under the Book's one action, so the action stays in view. -->
+    <BookReaders v-if="book" :book="book" />
+
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
     <CollectionsBookRow v-if="book" :book="book" :entry="entry" :book-key="key" />
 
