@@ -4,15 +4,18 @@ import { useFeedStore } from '~/stores/feed'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
+import { FRESH_MS } from '~/utils/fresh'
 import type { CircleGroup } from '~/utils/circle'
 
 /**
  * Who she follows reads, or wants to read, the same Books (social v2a, contract §1.4): Home's reading cards,
  * Up next and the Library's Want to read rows show them as small avatars on the cover (FriendsCircleAvatars).
  * `circleReading` is asked with the Book ids of her open reads and `circleWant` with those of her Want to read,
- * each at most `CIRCLE_BOOKS_MAX`, newest first; both maps are by her Book's id. Asked when Home or the Library
- * shows (the page calls `load`) and again after each refresh of the feed, online only: offline, or on a refusal,
- * the last answer stays. A member who follows nobody (her People says so) makes no call, and nothing is asked
+ * each at most `CIRCLE_BOOKS_MAX`, newest first; both maps are by her Book's id. Asked by the store itself
+ * whenever her lists arrive or the Books in them change, again when Home or the Library shows and the answer is
+ * no longer fresh (`load({ ifStale })`), and after each refresh of the feed; online only: offline, or on a
+ * refusal, the last answer stays. It must not depend on a page remembering to ask (Home once did not, and no
+ * avatar ever came). A member who follows nobody (her People says so) makes no call, and nothing is asked
  * for a list with no Books. Nothing is kept on the device: another member signing in forgets it.
  */
 export const useCircleBooksStore = defineStore('circleBooks', () => {
@@ -46,6 +49,11 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     Object.fromEntries(books.map((b) => [b.book, { members: b.members, more: b.more }]))
 
   const idsOf = (entries: readonly { book: { id: string } }[]) => [...new Set(entries.map((e) => e.book.id))].slice(0, CIRCLE_BOOKS_MAX)
+  /** The Books asked about, as one string: null while her lists are not there yet. */
+  const signature = computed(() => (library.loaded ? `${idsOf(library.reading).join()}|${idsOf(library.wantToRead).join()}` : null))
+  /** What the last ask was about, and when (`performance.now()`). */
+  let askedFor: string | null = null
+  let askedAt = -Infinity
 
   async function ask(): Promise<void> {
     const r = repo()
@@ -60,6 +68,8 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
       return
     }
     const run = generation
+    askedFor = signature.value
+    askedAt = performance.now()
     const readingIds = idsOf(library.reading)
     const wantIds = idsOf(library.wantToRead)
     const [r1, r2] = await Promise.all([
@@ -72,9 +82,14 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     if (!r2.error) want.value = byBook(r2.data)
   }
 
-  /** Asks again (Home or the Library shows). Calls that come while one is on its way share its next run. */
-  function load(): Promise<void> {
+  /**
+   * Asks again. Calls that come while one is on its way share its next run. `ifStale`: Home or the Library showing
+   * again leaves a fresh answer to the same Books alone.
+   */
+  function load({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
     wanted = true
+    if (ifStale && loading) return loading
+    if (ifStale && askedFor === signature.value && performance.now() - askedAt < FRESH_MS) return Promise.resolve()
     if (loading) {
       again = true
       return loading
@@ -96,7 +111,18 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     generation++
     reading.value = {}
     want.value = {}
+    askedFor = null
+    askedAt = -Infinity
   }
+
+  // Her lists arrived, or her Books changed (one added, started, finished): who else reads or wants them.
+  watch(
+    signature,
+    (now) => {
+      if (now !== null && session.member) void load()
+    },
+    { immediate: true },
+  )
 
   watch(
     () => session.member?.id ?? null,

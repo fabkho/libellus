@@ -33,7 +33,9 @@ const backend = {
   },
 }
 
-const lists = reactive({ reading: [] as { book: { id: string } }[], wantToRead: [] as { book: { id: string } }[] })
+type Entries = { book: { id: string } }[]
+const freshLists = () => reactive({ loaded: false, reading: [] as Entries, wantToRead: [] as Entries })
+let lists = freshLists()
 // Made afresh for each test, so the watchers of an earlier test's store never see this one's changes.
 let feedState = reactive({ takenAt: null as Date | null })
 let session = reactive({ member: { id: 'ada' } as { id: string } | null })
@@ -65,6 +67,7 @@ beforeEach(() => {
   calls.length = 0
   followingIds = ['ben']
   refuse = false
+  lists = freshLists()
   lists.reading = books('r', 3)
   lists.wantToRead = books('w', 3)
   feedState = reactive({ takenAt: null as Date | null })
@@ -72,6 +75,40 @@ beforeEach(() => {
 })
 
 describe('the circle on her Books', () => {
+  // The cause of "Home never shows the avatars": the store waited for a page to call `load`, and Home no longer did.
+  // It asks by itself once her lists are there, and again when her Books change.
+  it('asks by itself when her lists arrive, with no page asking, and when her Books change', async () => {
+    const circle = await store()
+    await nextTick()
+    expect(calls.filter((c) => c.fn.startsWith('circle_'))).toEqual([])
+    lists.loaded = true
+    await vi.waitFor(() => expect(Object.keys(circle.reading)).toEqual(['r1', 'r2']))
+    expect(asked('circle_reading')).toEqual([['r0', 'r1', 'r2']])
+    expect(asked('circle_want')).toEqual([['w0', 'w1', 'w2']])
+    lists.wantToRead = [...books('w', 3), ...books('x', 1)]
+    await vi.waitFor(() => expect(asked('circle_want')).toHaveLength(2))
+    expect(asked('circle_want')[1]).toEqual(['w0', 'w1', 'w2', 'x0'])
+  })
+
+  it('makes no call for a member who follows nobody, even when her lists arrive', async () => {
+    followingIds = []
+    await store()
+    lists.loaded = true
+    await vi.waitFor(() => expect(calls.some((c) => c.fn === 'my_people')).toBe(true))
+    await nextTick()
+    expect(calls.filter((c) => c.fn.startsWith('circle_'))).toEqual([])
+  })
+
+  it('leaves a fresh answer to the same Books alone when a page shows again (ifStale), and asks when they changed', async () => {
+    const circle = await store()
+    lists.loaded = true
+    await vi.waitFor(() => expect(asked('circle_reading')).toHaveLength(1))
+    await circle.load({ ifStale: true })
+    expect(asked('circle_reading')).toHaveLength(1)
+    await circle.load()
+    expect(asked('circle_reading')).toHaveLength(2)
+  })
+
   it('asks with Book ids only, one call for each list, and keeps the answers by Book', async () => {
     const circle = await store()
     await circle.load()
