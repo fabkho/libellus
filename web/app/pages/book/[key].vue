@@ -224,6 +224,7 @@ function back() {
         size="xl"
         glow
         eager
+        tilt
         @fallback="coverFallback = $event"
       />
       <h1

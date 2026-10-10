@@ -392,6 +392,56 @@ async function main() {
     await page.getByTestId('home.title').waitFor()
   }, 1200)
 
+  // 10. The hero cover's lean (utils/coverTilt.ts) with the flight: a finger already on the hero's
+  // place while the cover flies in (the lean is gated off), a drag across the landed cover, and Back
+  // while the finger still holds it (the lean is dropped before the flight measures the hero).
+  const finger = async (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] })
+  const heroBox = async () => (await page.getByTestId('book.hero').locator('[data-cover]').first().boundingBox())!
+  const drag = async (box: { x: number; y: number; width: number; height: number }, steps: number) => {
+    const y = box.y + box.height * 0.3
+    for (let i = 0; i <= steps; i++) {
+      const across = (i / steps) * 2 * Math.PI
+      await finger('touchMove', box.x + box.width * (0.5 + 0.45 * Math.sin(across)), y + box.height * 0.3 * (1 - Math.cos(across)))
+      await sleep(16)
+    }
+  }
+  await flow('home-to-book-pressed', async () => {
+    await tapCover(homeLink, 0)
+    // Where the hero cover will land (top centre of the page), pressed while it flies.
+    await sleep(60)
+    const vw = page.viewportSize()!.width
+    await finger('touchStart', vw / 2 + 30, 160)
+    for (let i = 0; i < 20; i++) {
+      await finger('touchMove', vw / 2 + 30 + i * 2, 160)
+      await sleep(16)
+    }
+    await finger('touchEnd')
+    await heroIn()
+  })
+  await sleep(800)
+  const leans = () => page.evaluate(() => document.querySelector<HTMLElement>('[data-testid="book.hero"] [data-cover]')?.style.transform ?? '')
+  await flow('book-tilt', async () => {
+    const box = await heroBox()
+    await finger('touchStart', box.x + box.width * 0.5, box.y + box.height * 0.3)
+    // Sideways first, so the page does not take it as a scroll.
+    await finger('touchMove', box.x + box.width * 0.62, box.y + box.height * 0.3)
+    await drag(box, 60)
+    console.log('lean while dragged:', await leans())
+    await finger('touchEnd')
+  }, 800)
+  await flow('book-back-held', async () => {
+    const box = await heroBox()
+    await finger('touchStart', box.x + box.width * 0.9, box.y + box.height * 0.15)
+    await finger('touchMove', box.x + box.width * 0.95, box.y + box.height * 0.12)
+    await sleep(200)
+    console.log('lean before Back:', await leans())
+    // Back while the finger holds the cover (the page's own Back, as a second finger would press it).
+    await page.getByTestId('book.back').dispatchEvent('click')
+    await page.getByTestId('home.title').waitFor()
+    await finger('touchEnd')
+  })
+
   writeFileSync(join(out, 'results.json'), JSON.stringify(results, null, 2))
   if (args.cdp) await page.close()
   else await browser.close()
