@@ -5,7 +5,7 @@ What version 2a builds, fixed before the tasks start. Scope and the owner's deci
 contract (`social-v1-contract.md`) still holds: who may see what (`private.visible`, `private.reachable`,
 the seven switches, hidden Books, blocks both ways) is reused, never re-implemented.
 
-Added later, in the same release (owner, 11 October 2026): **Readers on a Book's page** (item 3 of
+Added later, in the same release (owner, 11 October 2026): **Readers on a Book's page**, shown as **In your circle** (item 3 of
 `social-v1.md`, §1.5, §2, §3, §4 below; migration `20261021040000_book_readers.sql`; only the people she
 follows, strangers are a later version).
 
@@ -123,8 +123,10 @@ Readers (§1.5): `social.bookReaders(book, after?, limit?)` → `{ total, items:
   Library's Want to read): up to three small avatars on the cover's edge, "+N", a tap opens a small sheet
   with the names.
 
-- **Readers** (§1.5): on a Book's page, under the Goodreads line (`BookReaders`, `components/book/Readers.vue`):
-  a small heading and up to five rows, then *See all {count}* opening a sheet with all (paged by 50 as People
+- **In your circle** (§1.5; the people she follows who have the Book, reading, finished, put down or only wanting it, so
+  not "Readers"; the component and test ids keep that name): on a Book's page, under its description (About) and right
+  above *More from the author*, or right above it with no description (`BookReaders`, `components/book/Readers.vue`):
+  a small heading "In your circle" and up to five rows, then *See all {count}* opening a sheet with all (paged by 50 as People
   is). A row: avatar, her name (opens her profile), her state and day ("Finished 3 Oct", "Reading since 2 Oct",
   "Wants to read"), her stars, her review in the serif italic, folded as in the feed (*Show anyway* for a spoiler
   she flagged when the caller has not finished the Book), a heart on a review (`LikeButton`). No *Want to read*
@@ -142,7 +144,7 @@ the like (Anna likes Ida's finish, Ida sees the count and Anna's name) and a spo
 
 Readers (§1.5): test ids `book.readers` (the section), `book.readers.row`, `book.readers.all` (*See all*), sheet
 `bookReaders` (`bookReaders.row`, `.empty`, `.more`), `book.readers.like` on a row's heart; strings
-`book.readers.{title,all,finished,reading,abandoned,want,loading}`. pgTAP `book_readers_test.sql`, Vitest
+`book.readers.{title,all,finished,reading,abandoned,want,loading}` (`book.readers.title` is "In your circle", the sheet's title too). pgTAP `book_readers_test.sql`, Vitest
 `book-readers.test.ts`; parity in `docs/parity.md` (Book page); the sheet is in the dark `@full` a11y scan.
 
 ### Screens built without the database (task V2A-B1)

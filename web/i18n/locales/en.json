@@ -639,17 +639,17 @@
       "missing": "My edition isn't listed"
     },
     "readers": {
-      "title": "Readers",
+      "title": "In your circle",
       "all": "See all {count}",
-      "allLabel": "See all {count} readers of this book",
+      "allLabel": "See all {count} people in your circle who have this book",
       "finished": "Finished",
       "reading": "Reading",
       "abandoned": "Put down",
       "want": "Wants to read",
-      "loading": "Loading readers",
-      "sheetTitle": "Readers",
+      "loading": "Loading your circle",
+      "sheetTitle": "In your circle",
       "more": "Show more",
-      "loadingMore": "Loading more readers",
+      "loadingMore": "Loading more people",
       "someone": "A reader"
     },
     "goodreads": {
