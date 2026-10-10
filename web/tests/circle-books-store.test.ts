@@ -161,16 +161,53 @@ describe('the circle on her Books', () => {
     expect({ reading: circle.reading, want: circle.want }).toEqual(before)
   })
 
-  it('asks again after the feed is refreshed, once a page has asked for it', async () => {
+  it('asks again after the feed is refreshed once the answer is stale, not while it is fresh for the same Books', async () => {
     const circle = await store()
     feedState.takenAt = new Date()
     await nextTick()
     await nextTick()
     expect(calls.filter((c) => c.fn.startsWith('circle_'))).toEqual([])
+    lists.loaded = true
     await circle.load()
-    calls.length = 0
+    expect(asked('circle_reading')).toHaveLength(1)
+    // Fresh: Home's own feed refresh (the first load's) does not ask the same Books again.
     feedState.takenAt = new Date(Date.now() + 1000)
+    await nextTick()
+    await nextTick()
+    expect(asked('circle_reading')).toHaveLength(1)
+    // Stale (a minute and more later): it does.
+    const now = performance.now()
+    const spy = vi.spyOn(performance, 'now').mockReturnValue(now + 61_000)
+    feedState.takenAt = new Date(Date.now() + 2000)
+    await vi.waitFor(() => expect(asked('circle_reading')).toHaveLength(2))
+    spy.mockRestore()
+  })
+
+  it('makes one request for one set of Books, however many calls come in a tick (Home asked twice on its first load)', async () => {
+    const circle = await store()
+    lists.loaded = true
+    // Her lists arrived (the store's own watcher asks), and the page, the feed's refresh and the second page ask in the same tick.
+    const asks = [circle.load(), circle.load({ ifStale: true }), circle.load(), circle.load({ ifStale: true })]
+    feedState.takenAt = new Date()
+    await Promise.all(asks)
+    await nextTick()
+    await nextTick()
+    expect(asked('circle_reading')).toHaveLength(1)
+    expect(asked('circle_want')).toHaveLength(1)
+    expect(calls.filter((c) => c.fn === 'my_people')).toHaveLength(1)
+  })
+
+  it('asks again, once, when her Books change while a request is on its way', async () => {
+    const circle = await store()
+    lists.loaded = true
+    const first = circle.load()
     await vi.waitFor(() => expect(asked('circle_reading')).toHaveLength(1))
+    lists.wantToRead = [...books('w', 3), ...books('x', 1)]
+    await first
+    await vi.waitFor(() => expect(asked('circle_want')).toHaveLength(2))
+    await nextTick()
+    expect(asked('circle_want')).toHaveLength(2)
+    expect(asked('circle_want')[1]).toEqual(['w0', 'w1', 'w2', 'x0'])
   })
 
   it('takes a member who left her circle out of every group at once, and a group with nobody left goes (privacy review M2)', async () => {

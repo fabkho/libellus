@@ -4,7 +4,7 @@
 // the review are there only where her switches let them through (the database sends them null otherwise).
 // A cover or title opens the Book, flying into its page; a Manual book opens nothing. The title's link is the
 // Book's one link for the keyboard and screen readers (the cover's is hidden from both, as the feed's rows have it).
-// Social v2a: at the right of the stars' line, Want to read first and the heart last (the order of the feed and
+// Social v2a: at the right of the stars' line (under it, at the right, where they do not fit beside the stars and the day), Want to read first and the heart last (the order of the feed and
 // Home's card; FriendsLikes: `member.finishedLike`, `name` is hers, for the screen reader); a review flagged as
 // spoilers that the reader may not read yet is folded behind *Show anyway* (`member.finishedFolded`).
 import type { MemberFinished } from '~/data/social'
@@ -42,13 +42,14 @@ async function wanted() {
         <span class="book-title title-wrap text-callout" data-testid="member.finishedTitle">{{ shown.title }}</span>
         <span v-if="shown.authors.length" class="truncate text-caption text-ink-muted">{{ formatAuthors(shown.authors, t('common.etAl')) }}</span>
       </FriendsMemberBookLink>
-      <div class="mt-xxs flex items-center justify-between gap-md">
-        <span class="figures flex min-w-0 items-center gap-sm overflow-hidden text-meta whitespace-nowrap text-ink-faint">
+      <!-- The stars and the day are never clipped: where the actions do not fit beside them they take a line of their own under, at the right (one row, one more line only when it must). -->
+      <div class="mt-xxs flex flex-wrap items-center gap-x-md gap-y-xs">
+        <span class="figures flex min-w-0 items-center gap-sm text-meta text-ink-faint">
           <UiStars v-if="item.rating" :quarters="item.rating" />
-          <span v-if="item.rating && item.endedOn" class="dot" aria-hidden="true" />
-          <span v-if="item.endedOn">{{ formatDay(item.endedOn) }}</span>
+          <span v-if="item.rating && item.endedOn" class="dot shrink-0" aria-hidden="true" />
+          <span v-if="item.endedOn" class="whitespace-nowrap">{{ formatDay(item.endedOn) }}</span>
         </span>
-        <span class="flex shrink-0 items-center gap-md">
+        <span class="ml-auto flex shrink-0 items-center gap-md" :class="item.review ? '[--tiny-action-down:var(--spacing-xxs)]' : '[--tiny-action-down:var(--spacing-ms)]'">
           <FriendsWantToReadButton :book="item.book" testid="member.finishedWantToRead" @added="wanted" />
           <FriendsLikes v-if="likeable(item)" :row="item" :name="name || t('member.someone')" :owner="memberId" :title="shown.title" testid="member.finishedLike" />
         </span>

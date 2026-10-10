@@ -193,6 +193,8 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
             <UiReveal :show="loading || figures.authors.length > 0">
               <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" />
             </UiReveal>
+            <!-- Your reviews (social v2a): lit cards in a sideways row, from her Library on the device; above the years in review. -->
+            <ProfileReviews />
             <ProfileYearCards class="pt-xl" :years="loading ? null : yearFigures" />
           </div>
         </UiReveal>

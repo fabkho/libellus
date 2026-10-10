@@ -54,6 +54,9 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
   /** What the last ask was about, and when (`performance.now()`). */
   let askedFor: string | null = null
   let askedAt = -Infinity
+  /** The run on its way has read her Books (and the generation it began in): a `load` for other Books, or after a forget, needs another run. */
+  let idsRead = false
+  let askedGeneration = 0
 
   async function ask(): Promise<void> {
     const r = repo()
@@ -71,6 +74,8 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     }
     askedFor = signature.value
     askedAt = performance.now()
+    askedGeneration = generation
+    idsRead = true
     const readingIds = idsOf(library.reading)
     const wantIds = idsOf(library.wantToRead)
     const [r1, r2] = await Promise.all([
@@ -89,20 +94,23 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
    */
   function load({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
     wanted = true
-    if (ifStale && loading) return loading
-    if (ifStale && askedFor === signature.value && performance.now() - askedAt < FRESH_MS) return Promise.resolve()
     if (loading) {
-      again = true
+      // One request per set of Books: a call that comes while a run is on its way shares it, unless that run asked
+      // about other Books or was begun before a forget (one that has not read her Books yet reads them as they are).
+      if (idsRead && (signature.value !== askedFor || generation !== askedGeneration)) again = true
       return loading
     }
+    if (ifStale && askedFor === signature.value && performance.now() - askedAt < FRESH_MS) return Promise.resolve()
     loading = (async () => {
       try {
         do {
           again = false
+          idsRead = false
           await ask()
         } while (again)
       } finally {
         loading = null
+        idsRead = false
       }
     })()
     return loading
@@ -139,6 +147,7 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
         }),
       )
     generation++
+    askedAt = -Infinity
     reading.value = without(reading.value)
     want.value = without(want.value)
   }
@@ -147,10 +156,11 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     () => session.member?.id ?? null,
     (now, before) => now !== before && forget(),
   )
-  // The feed was refreshed: her circle may have moved with it.
+  // The feed was refreshed: her circle may have moved with it. Not again for the same Books within the fresh window
+  // (Home's first load refreshes the feed while the answer for her lists is on its way or has just come).
   watch(
     () => feed.takenAt,
-    (now) => now && wanted && void load(),
+    (now) => now && wanted && void load({ ifStale: true }),
   )
   // Back online.
   watch(online, (now) => now && wanted && void load())

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The card of Home's Your circle (social v1, U8; the "Lit feature" mock): the week's one finished Book,
-// in a raised, rounded panel lit by the Book's own cover (`UiAmbient`, the light a year card has on
-// the Profile; a Book on the Placeholder is lit by its cloth, as the book page is). The cover at the left; at the right her avatar and name ("Anna finished"), the title
+// in a raised, rounded panel lit by the Book's own cover (UiLitCard, shared with Your reviews on the Profile; a
+// Book on the Placeholder is lit by its cloth, as the book page is). The cover at the left; at the right her avatar and name ("Anna finished"), the title
 // in the serif, her stars when she shows them, and her review in the serif italic folded at three
 // lines, `More` unfolding it, as the feed's rows do. The cover and the title open the Book, the cover
 // flying there as everywhere else (UiPressLink); a Manual book opens nothing, a follower cannot read
@@ -25,18 +25,15 @@ const name = computed(() => props.card.member.name?.trim() || t('member.someone'
 const verb = computed(() => t(`feed.${props.card.verb}`))
 const book = computed(() => shownBook(props.card.book, t('book.outsideCatalogue')))
 const bookPath = computed(() => `/book/${book.value.id}`)
-// A Book without a cover shows the Placeholder: the cloth's colour lights the card then (as the book page's hero is lit).
-const coverFallback = ref(false)
 const showHeart = computed(() => likeable(props.card))
 // Want to read: not on a Manual book (the button says nothing for one), so the line is not drawn for it alone.
 const showWant = computed(() => !book.value.manual)
-const panel = useTemplateRef<HTMLElement>('panel')
+const panel = useTemplateRef<{ $el: HTMLElement }>('panel')
 /** The button is gone once the Book is added: focus goes to the heart, else the title. */
 async function wanted() {
   await nextTick()
-  focusAfterWant(panel.value, 'home.circleFeature.like', 'home.circleFeature.title')
+  focusAfterWant(panel.value?.$el, 'home.circleFeature.like', 'home.circleFeature.title')
 }
-const clothColor = computed(() => `var(--color-cloth${clothOf(book.value.title)})`)
 
 // The review: three lines, and `More` only when there is more than three lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -72,8 +69,7 @@ async function unfold() {
 </script>
 
 <template>
-  <div ref="panel" class="relative flex items-start gap-ml overflow-hidden rounded-lg bg-surface-raised p-inset shadow-raised edge-faint" data-testid="home.circleFeature">
-    <UiAmbient :colors="book.coverColors" :cloth="coverFallback ? clothColor : null" shape="card" />
+  <UiLitCard v-slot="{ onFallback }" ref="panel" :colors="book.coverColors" :title="book.title" class="flex items-start gap-ml p-inset" data-testid="home.circleFeature">
 
     <UiPressLink
       v-if="!book.manual && !book.unverified"
@@ -84,10 +80,10 @@ async function unfold() {
       data-testid="home.circleFeature.cover"
       @press="books.prefetch(book.id)"
     >
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
     </UiPressLink>
     <span v-else class="relative shrink-0">
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
     </span>
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
@@ -129,7 +125,7 @@ async function unfold() {
         >{{ t('feed.more') }}</button>
       </FriendsReviewFold>
     </div>
-  </div>
+  </UiLitCard>
 </template>
 
 <style scoped>

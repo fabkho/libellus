@@ -156,6 +156,25 @@ yet; `v-model:spoilers` on each sheet), `feed.like` (`LikeButton`, `.count` insi
 `social.like.{like,unlike,label,count,ownLabel,error}`, `social.likers.{title,empty,loading,loadError,offline}`,
 `review.{spoilers,spoilersHint,folded,showAnyway,showAnywayLabel}`.
 
+### Your reviews on the Profile (task V2A-B5 and B5b, owner's request)
+
+A section **Your reviews** on the own Profile, **above Years in review**: her reads with a review, newest first
+(by the read's end day, else the day it was written), as **lit cards** (the Home circle card's panel: the raised
+panel lit by the Book's cover, the cloth for a coverless Book; cover at the left, title, her stars and the day, a
+quiet "Spoilers" tag when she flagged it, the review in serif italic folded at four lines; no avatar or name, never
+folded for her) in a **sideways row** like the years' (no scroll bar, snapping, the next card peeking). The row
+holds the newest six and ends on a **See all {count}** card (a row of every review would be as long as her history
+and as many covers to draw; the end card says there is more and leads to it); **See all {count}** is also the button
+at the section head (shown with more than six), and *More* on a clamped review opens the same sheet: cards in a row
+are as tall as the tallest, so unfolding one in place would make a single tall card with no room to grow. The
+**sheet** lists all of them as rows, each folded with More in place. A card opens the Book. No reviews: no section.
+Web only, no database: from her Library on the device (`utils/profileReviews.ts`), so offline too; the device holds
+each entry's latest read, so it is one review per Book, and a re-read in progress hides the review of the read
+before it until it ends. The lit panel is shared (`ui/LitCard.vue`, used by Home's circle card). Test ids:
+`profile.reviews`, `profile.reviews.row` (the sideways row), `profile.reviews.card` (`.cover`, `.book`, `.title`,
+`.spoilers`, `.review`, `.more`), `profile.reviews.allCard`, `profile.reviews.all` (the head's button), the sheet
+`profileReviews` (`.row`). Strings: `profile.reviews.{title,all,allLabel,allCard,spoilers}`.
+
 ## 5. A checked Catalogue (PR B)
 
 - `books.checked_at timestamptz` (null = not checked) and `books.check_failed boolean default false`.
