@@ -79,7 +79,7 @@ describe('a description is source text', () => {
     const ben = await signUpMember()
     const pending = await adds(ada, book('Searchable Pending'))
     const failed = await adds(ada, book('Searchable Failed'))
-    await sql('select public.catalogue_check_miss($1)', [failed.book.id])
+    await sql('select public.catalogue_check_mismatch($1)', [failed.book.id])
 
     const search = async (member: TestMember, text: string) => {
       const result = await member.client.rpc('search_books', { p_query: runTitle(text), p_limit: 10 })
@@ -89,6 +89,31 @@ describe('a description is source text', () => {
     expect((await search(ben, 'Searchable Pending')).map((row) => row.id)).toEqual([pending.book.id])
     expect(await search(ben, 'Searchable Failed')).toEqual([])
     expect((await search(ada, 'Searchable Failed')).map((row) => row.id)).toEqual([failed.book.id])
+
+    // The table too (GET /rest/v1/books): a stranger reads nothing of a failed Book, the member who holds it reads her row.
+    const stranger = await ben.client.from('books').select('id, title').eq('id', failed.book.id)
+    expect(stranger.data).toEqual([])
+    expect((await ben.client.from('books').select('id').eq('check_failed', true).eq('id', failed.book.id)).data).toEqual([])
+    expect((await ben.client.from('books').select('id').eq('id', pending.book.id)).data).toHaveLength(1)
+    const holder = await ada.client.from('books').select('id, title').eq('id', failed.book.id)
+    expect(holder.data).toEqual([{ id: failed.book.id, title: failed.book.title }])
+    // Her own Library's read of it, and the Book page's.
+    const held = (await createLibrary(ada.client).entries('want_to_read')).data!.find((entry) => entry.book.id === failed.book.id)
+    expect(held?.book.title).toBe(failed.book.title)
+    expect((await createLibrary(ada.client).book(failed.book.id)).data?.title).toBe(failed.book.title)
+    expect((await createLibrary(ben.client).book(failed.book.id)).data).toBeNull()
+  })
+
+  it('a miss is no failure: the Book is unknown, and others read it as stored, without a description', async () => {
+    const ada = await signUpMember()
+    const ben = await signUpMember()
+    const entry = await adds(ada, book('Import Only'))
+    await sql('update public.books set description = $2 where id = $1', [entry.book.id, 'a legacy blurb'])
+    await sql('select public.catalogue_check_miss($1)', [entry.book.id])
+    const seen = (await createLibrary(ben.client).book(entry.book.id)).data!
+    expect(seen).toMatchObject({ title: entry.book.title, description: null })
+    const row = await sql<{ check_failed: boolean; check_unknown: boolean }>('select check_failed, check_unknown from public.books where id = $1', [entry.book.id])
+    expect(row[0]).toEqual({ check_failed: false, check_unknown: true })
   })
 })
 
@@ -96,7 +121,7 @@ describe('a Book the check could not confirm', () => {
   it('reaches a follower as unverified in her record, and shown as the one string', async () => {
     const ada = await signUpMember()
     const entry = await adds(ada, book('Planted'), 'finished')
-    await sql('select public.catalogue_check_miss($1)', [entry.book.id])
+    await sql('select public.catalogue_check_mismatch($1)', [entry.book.id])
     const ben = await signUpMember()
     // Her account is private by default: Ben asks, she accepts.
     const mine = await ada.client.rpc('my_social')

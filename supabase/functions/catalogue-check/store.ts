@@ -9,7 +9,7 @@ export type Store = {
   /** Claims up to `limit` unchecked Catalogue Books (leased until they are stored or given back). */
   claim: (limit: number) => Promise<CheckBook[]>
   save: (bookId: string, result: CheckResult) => Promise<boolean>
-  /** The source does not know the Book: failed, checked, no description. */
+  /** No source knows the Book: checked and unknown (not failed), no description, its keys kept. */
   miss: (bookId: string) => Promise<boolean>
   /** The source's answer is another Book than the row says: failed, checked, no description, its source keys cleared. */
   mismatch: (bookId: string) => Promise<boolean>
