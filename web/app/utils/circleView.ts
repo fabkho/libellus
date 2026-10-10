@@ -41,6 +41,12 @@ export type CircleCard = {
   verb: 'finished' | 'reviewed'
   rating: number | null
   review: string | null
+  /** The review is flagged as spoilers and she has not finished the Book: it is folded behind *Show anyway* (social v2a). */
+  folded: boolean
+  /** The finished read the heart is on (null without one: no heart), its count and whether she liked it (social v2a). */
+  sessionId: string | null
+  likes: number
+  liked: boolean
   at: string
 }
 
@@ -76,12 +82,19 @@ function cardOf(picked: FeedEntry, same: readonly FeedEntry[]): CircleCard {
   // `same` is newest first, the picked one among it: the rating and review are the newest that has one.
   const rated = same.find((entry) => entry.rating)
   const reviewed = same.find((entry) => entry.review)
+  // The finished read the heart is on: the picked entry's, else another entry of the same Book that has one.
+  const read = picked.sessionId ? picked : (same.find((entry) => entry.sessionId) ?? picked)
+  const written = picked.review ? picked : reviewed
   return {
     member: picked.member,
     book: picked.book,
     verb: same.some((entry) => entry.kind === 'finished') ? 'finished' : 'reviewed',
     rating: picked.rating ?? rated?.rating ?? null,
-    review: picked.review ?? reviewed?.review ?? null,
+    review: written?.review ?? null,
+    folded: written?.folded ?? false,
+    sessionId: read.sessionId ?? null,
+    likes: read.likes ?? 0,
+    liked: read.liked ?? false,
     at: picked.at,
   }
 }

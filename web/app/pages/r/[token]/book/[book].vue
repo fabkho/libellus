@@ -112,7 +112,9 @@ const status = computed(() => {
 
         <figure v-if="card.review" class="mt-lg flex w-full flex-col gap-sm text-left" data-testid="bookCard.review">
           <figcaption class="eyebrow">{{ name ? t('readingPage.card.review', { name }) : t('readingPage.card.reviewNone') }}</figcaption>
-          <blockquote class="text-body whitespace-pre-line text-ink">{{ card.review }}</blockquote>
+          <FriendsReviewFold :folded="card.folded" testid="bookCard.folded">
+            <blockquote class="text-body whitespace-pre-line text-ink">{{ card.review }}</blockquote>
+          </FriendsReviewFold>
         </figure>
       </template>
 

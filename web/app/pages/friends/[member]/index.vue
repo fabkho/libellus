@@ -282,7 +282,7 @@ function back() {
 
         <UiReveal :show="blocks.finished">
           <div class="pb-xl">
-            <FriendsMemberFinished :items="open.finished" :all="blocks.finishedAll" @all="finishedOpen = true" />
+            <FriendsMemberFinished :items="open.finished" :name="name" :all="blocks.finishedAll" @all="finishedOpen = true" />
           </div>
         </UiReveal>
 
@@ -303,7 +303,7 @@ function back() {
       @changed="changed"
     />
     <FriendsMemberWantSheet v-model:open="wantOpen" :title="t('member.want')" :items="wantAll" />
-    <FriendsMemberFinishedSheet v-if="open" v-model:open="finishedOpen" :title="t('member.finished')" :items="open.finished" />
+    <FriendsMemberFinishedSheet v-if="open" v-model:open="finishedOpen" :title="t('member.finished')" :items="open.finished" :name="name" />
     <ProfileReadsSheet v-model:open="sheetOpen" foreign :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
   </div>
 </template>

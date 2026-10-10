@@ -273,7 +273,8 @@ function cardDescription(data) {
       : data?.status === 'want_to_read'
         ? `${name} wants to read it`
         : `${name} finished it`
-  const review = typeof data?.review === 'string' ? data.review.replace(/\s+/g, ' ').trim() : ''
+  // A review flagged as spoilers is folded for every visitor without a sign-in, and a crawler is one: it stays out of the preview.
+  const review = typeof data?.review === 'string' && data?.folded !== true ? data.review.replace(/\s+/g, ' ').trim() : ''
   if (!review) return `${line}.`
   const excerpt = review.length > 160 ? `${review.slice(0, 160).replace(/\s+\S*$/, '')}…` : review
   return `${line}. “${excerpt}”`
