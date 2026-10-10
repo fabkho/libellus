@@ -3,6 +3,7 @@ import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, typ
 import { readSavedMember } from '~/data/deviceLibrary'
 import { clearLocalData, clearLocalDatabase, clearLocalFiles } from '~/data/localData'
 import { useSyncStore } from '~/stores/sync'
+import { PENDING_SIGN_IN_KEY } from '~/utils/signedOutRoute'
 
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn'
 
@@ -13,8 +14,8 @@ export type PendingCode = {
   sentAt: number
 }
 
-// Under the prefix signing out clears (data/localData.ts).
-const PENDING_KEY = 'libellus.pendingSignIn'
+// Under the prefix signing out clears (data/localData.ts); the router's first navigation reads it too.
+const PENDING_KEY = PENDING_SIGN_IN_KEY
 
 // otp_expiry in supabase/config.toml. After that the stored address only leads
 // to a code that no longer works, so it is dropped rather than restored.

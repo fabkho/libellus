@@ -138,3 +138,21 @@ test('the way in opens at its address with a trailing slash, as Cloudflare Pages
   await page.goto('/sign-in/')
   await expect(page.getByTestId('signIn.email')).toBeVisible()
 })
+
+test('a signed-out visitor is sent to sign-in before the page behind the address is fetched', async ({ page }) => {
+  // The router's first navigation redirects a device that holds nothing of a member (router.options.ts,
+  // docs/perf/bundle.md F1): Home's and the Book page's chunks (which carry their test ids) never arrive.
+  const scripts: string[] = []
+  page.on('response', (response) => {
+    if (/\/_nuxt\/[^/]+\.js$/.test(new URL(response.url()).pathname)) void response.text().then((text) => scripts.push(text), () => {})
+  })
+  for (const path of ['/', '/book/not-a-book', '/friends']) {
+    await page.goto(path)
+    await expect(page.getByTestId('signIn.title')).toBeVisible()
+    await expect(page).toHaveURL(/\/sign-in$/)
+  }
+  await untilStill(page)
+  expect(scripts.length).toBeGreaterThan(5)
+  expect(scripts.some((text) => text.includes('home.readingEmpty'))).toBe(false)
+  expect(scripts.some((text) => text.includes('book.hero'))).toBe(false)
+})
