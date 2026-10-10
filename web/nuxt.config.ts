@@ -82,7 +82,14 @@ export default defineNuxtConfig({
     // The Playwright flows' build (e2e/build.ts): the hooks they need that are otherwise the dev
     // server's (the error log's triggers, the reader's engine on window). False in every other
     // build, where the code behind it is dropped.
-    define: { __LIBELLUS_E2E__: JSON.stringify(Boolean(process.env.LIBELLUS_E2E)) },
+    define: {
+      __LIBELLUS_E2E__: JSON.stringify(Boolean(process.env.LIBELLUS_E2E)),
+      // No component in the app, in Nuxt, vue-router, i18n, TresJS or the Regal layer uses the Options
+      // API (`data()`, `methods`, `computed` objects, `mixins`): every component is `<script setup>`.
+      // Vue drops the code that reads those options from its runtime (1.6 KB brotli off the entry,
+      // docs/perf/bundle.md, F4). A dependency that needs it would fail at run time: check before adding one.
+      __VUE_OPTIONS_API__: false,
+    },
     // `nuxt dev` bundles a package the first time a page imports it. A package first met while a
     // member (or a Playwright flow) is already on the page is bundled then: the dev server
     // re-optimizes, and a page open at that moment can be reloaded under its user, so a tap on

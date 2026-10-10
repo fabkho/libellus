@@ -19,7 +19,7 @@
  * Framework-free: entries come in as the browser hands them over (only the fields
  * read here), the route and the origin are handed in.
  */
-import { describeResource, POOR_LOAF } from './vitals'
+import { describeResource, POOR_LOAF } from './vitalsBasics'
 
 /** Frames in the first moments of a page are the start's; it is measured on its own. */
 export const BOOT_IGNORED_MS = 3000

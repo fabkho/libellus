@@ -166,3 +166,58 @@ The experiments are in the raw data (`data/bundle/experiments.tsv`). No experime
 The build used `nuxt generate` on Node 24.21 and pnpm 12.6 with the frozen lockfile.
 
 The bare-Nuxt baseline: `/tmp` throwaway project (`npx nuxi@latest init`, minimal template, ssr:false), 55.0 KB brotli entry.
+
+## 7. Status of the findings
+
+Measured on this branch with `pnpm perf:bundle` and `pnpm perf:signin` (`web/perf/signin.ts`: a first launch of
+the sign-in screen, no session, empty cache, Chromium at `slow4g-4x`, brotli over the wire, median of 3), against
+`origin/main` at `3d8e9440`. Owner's decision: F3 and F7 are not done, on purpose.
+
+| # | Status | Result |
+| --- | --- | --- |
+| F1 | **done in this PR** | Sign-in screen visible: 79 → 20 files, 298.8 → 219.3 KB, 2,989 → 1,993 ms (localhost, throttled). The estimate was ~20 KB; Home's page pulls most of the app's lazy components. Entry +0.6 KB (the guard). |
+| F2 | **done in this PR** | After the idle work (9 s): 86 → 81 files, 334.4 → 304.0 KB (−30.4 KB). |
+| F4 | **done in this PR** | Entry 176.7 → 175.5 KB (−1.2 KB; the report measured −1.6 on a slightly different base). |
+| F6 | **paused** | See "F6" below and `bundle-trims-notes.md`. Not shipped. |
+| F3, F5, F5b, F7 | F3 and F7 not done (owner). F5/F5b belong to `perf/lazy-images-i18n`. | |
+
+### F4: Options API
+
+No `.vue` file in `app/`, and none in Nuxt's runtime components, vue-router, `@nuxtjs/i18n` (composition mode),
+Pinia, the vendored foliate-js (no Vue), the Regal layer or TresJS 5 (`@tresjs/core`, `@tresjs/cientos`),
+uses `data()`, `methods`, `computed` objects, `mixins` or lifecycle options (grepped; Regal's and TresJS's sources
+read from a local checkout, not built). `__VUE_OPTIONS_API__: false` is in `vite.define`. A dependency that needs
+it would fail at run time: check before adding a package that ships Options API components. Checked with the auth,
+friends and offline e2e flows on the new build.
+
+### F1: how
+
+`app/router.options.ts` adds a `beforeEnter` to every route (first navigation only) that sends a visitor to
+`/sign-in` before the page's chunk is fetched, only when `knownSignedOut` (`utils/signedOutRoute.ts`): no
+`sb-*-auth-token` key, no offline Library copy, no code in the air. Everything else (a stored session, an expired
+one, the offline start) takes the old path through the middleware. The middleware and the guard share
+`signedOutDestination`, so the share and follow-link keeping (`/share`, `/f/<token>`), `/verify` and the public
+`/r/` pages behave as before. Tests: `tests/signed-out-route.test.ts`, and `e2e/auth.spec.ts` (a signed-out visitor
+opening `/`, a Book and `/friends` never receives Home's or the Book page's chunk; fails without the guard).
+
+### F2: how
+
+`data/loaf.ts` imported `data/vitals.ts` statically while the vitals plugin imports it with `import()`. The bundler
+then builds a namespace object for the dynamic import with its `__exportAll` helper, which sat in the shared chunk
+with papaparse, the import store and the scanner. The two parts `loaf.ts` uses moved to `data/vitalsBasics.ts`
+(re-exported from `vitals.ts`, so its tests and reports are unchanged); a test keeps `vitals.ts` dynamic-only.
+General rule found: a module imported both statically and dynamically gets a namespace object; keep a dynamically
+imported leaf free of static importers.
+
+### F6: paused
+
+Measured so far: the reader is not ~200 KB brotli of the precache, it is **~83 KB** (precache 769.2 → 686.4 KB
+download, 230 → 223 entries, with the reader chunks out). The earlier figure came from the harness's signature
+regex, which tags any chunk mentioning `epub` or `CFI`. A working split exists (an `ebook-reader` group in
+`codeSplitting` plus `ebook-reader-entry` names for `Reader.vue` and `engine.ts`, `globIgnores`, a CacheFirst rule,
+a prefetch on idle for members whose snapshot holds a linked ebook and on a Book page with one) and passes
+`reader.spec.ts` and `ebooks.spec.ts`, but the instant-open proof (tap → reader at slow4g-4x, prefetched vs not) has
+not been run, so nothing is shipped. Code and plan: `docs/perf/bundle-trims-notes.md` and
+`docs/perf/data/bundle/f6-wip.patch`. Other lazily needed things in the precache (listed, none moved): the shared
+chunk with the import store / `OwnEditionSheet` (~21 KB br), the Book page chunk (~18 KB), the Friends/blocked
+page (~13 KB), the ebook ingest worker (~5 KB).

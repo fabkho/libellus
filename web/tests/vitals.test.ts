@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { createErrorLog, type ErrorReport } from '@/data/errorLog'
 import { createRouteTimeline, routePattern } from '@/data/routeTimeline'
@@ -209,5 +210,23 @@ describe('the route of a culprit', () => {
     expect(timeline.at(null)).toBe('/book/:key')
     expect(routePattern('/profile/:year()')).toBe('/profile/:year')
     expect(routePattern('/:slug(.*)*')).toBe('/:slug*')
+  })
+})
+
+describe('the vitals module stays dynamic-only', () => {
+  // The plugin loads data/vitals.ts with `import()`. A module that is also imported statically gets a
+  // namespace object, built by a bundler helper in a chunk the sign-in screen should not fetch
+  // (docs/perf/bundle.md, F2). So nothing but the plugin may import it; shared parts live in vitalsBasics.ts.
+  const importers = ['app/data/loaf.ts', 'app/composables/useLoaf.ts', 'app/composables/useErrorLog.ts', 'app/data/vitalsBasics.ts']
+  it.each(importers)('%s does not import data/vitals', (file) => {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
+    expect(source).not.toMatch(/from\s+['"][^'"]*\/vitals['"]/)
+  })
+
+  it('still offers what loaf.ts needs, from the leaf', async () => {
+    const leaf = await import('@/data/vitalsBasics')
+    const vitals = await import('@/data/vitals')
+    expect(vitals.POOR_LOAF).toBe(leaf.POOR_LOAF)
+    expect(vitals.describeResource).toBe(leaf.describeResource)
   })
 })
