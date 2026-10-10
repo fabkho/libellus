@@ -126,15 +126,16 @@ shimmer stops, the tab bar stays.
 
 ## Known gaps
 
-- **Small text controls on a feed row** (social v2a: *+ Want to read* and the heart, `tiny-action` in `main.css`)
-  are text-sized on purpose (the owner's decision: a row must not grow for them). They meet WCAG 2.2 AA target
-  size (2.5.8: drawn at 24 × 24 px, `--size-target`). The app's own 44 px rule (`--size-touch`) holds in width (the
-  invisible hit box is 44 px wide at least) but not in height: the hit box starts at the drawn box's top, because
-  the title or the stars sit right above it (1 to 3 px), so a tap near them lands on them, and it reaches
-  `--tiny-action-down` below, which is 0 by default because what is below differs from row to row. Each row sets
-  what it measured at 360 and 390 px, with no link, text or button under the box: a member's Recently finished row
-  12 px (2 px with a review under it), the feed row 2 px, Home's card 0. Busy and Offline are `aria-disabled`, not
-  `disabled`, so focus stays.
+- **The icon column on a friend's Book row** (social v2a: *Want to read* and the heart, `icon-action` in `main.css`,
+  `RowActions`): the owner chose a narrow column at the row's right edge, centred on the cover, over text-sized
+  controls on the line (which could not have a 44 px box without covering the title or the stars). Each icon is drawn at
+  24 × 24 px (`--size-target`, WCAG 2.2 AA 2.5.8) with a 44 × 44 px touch box (`--size-touch`, the app's own rule) centred
+  on it; the two icons are 44 px apart, centre to centre, so the boxes meet and never overlap, and they sit in the column
+  beside the text, so a tap near a title or the stars is theirs. The name is hidden text (the icon is drawn), and the heart
+  keeps one constant name with `aria-pressed`. Busy and Offline are `aria-disabled`, not `disabled`, so focus stays;
+  the focus ring is the app's (2 px `accentInk`). The heart's count hangs under the icon, inside its box's lower half, and
+  is part of the heart's name. A row whose cover is small (`sm`, 60 px tall) has a column of 68 px and 88 px of
+  boxes, taller than the cover; every such row is at least 91 px tall, so the boxes of two rows do not meet.
 - **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
   scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
   each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}
