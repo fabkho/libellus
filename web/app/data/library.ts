@@ -117,6 +117,8 @@ export type LibraryErrorCode =
   /** Edit or delete a read: no such read in the member's Library (gone, or never theirs). */
   | 'session_not_found'
   | 'not_signed_in'
+  /** Add: the member has made the day's 200 new Catalogue Books (the database's `catalogue_limit`, a 429). */
+  | 'catalogue_limit'
   /** The device has no connection: nothing was sent (`WriteOptions`). */
   | 'offline'
   | 'unknown'
@@ -143,6 +145,7 @@ const RAISED_CODES = [
   'read_as_invalid',
   'session_not_found',
   'not_signed_in',
+  'catalogue_limit',
 ] as const satisfies readonly LibraryErrorCode[]
 
 /** The longest review a session keeps (the database's limit too). */
@@ -326,7 +329,11 @@ export type BookRow = {
   published_year: number | null
   language: string | null
   publisher: string | null
-  description: string | null
+  /**
+   * Not a column the API reads (`books.description` is granted to no API role): the Book's blurb as
+   * `book_descriptions` hands it (`fillDescriptions`), or `search_books`' masked one. Absent = none.
+   */
+  description?: string | null
   cover_url: string | null
   cover_thumbhash: string | null
   cover_dominant: string | null
@@ -338,12 +345,19 @@ export type BookRow = {
   /** Absent on a row from before formats existed (a cached Library). */
   format?: BookFormat | null
   created_at: string
-  /** The cached Goodreads rating (`goodreads_rating`), when asked for with BOOK_COLUMNS. */
+  /** The cached Goodreads rating: on the entry (`goodreads_rating(library_entries)`), merged into its Book by `entryFromRow`. */
   goodreads?: GoodreadsRow | null
+  /** A Book the server check could not confirm, as the social answers carry it (`member_reading_record`): nothing else of it is known. */
+  unverified?: boolean | null
 }
 
-/** A `books` row with its cached Goodreads rating (issue #69), so a Library kept for offline has it. */
-export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*)'
+/**
+ * The columns of a `books` row the API reads: every one but `description`, which no API role may select
+ * (a Book's blurb is read through `book_descriptions`, `fillDescriptions`, so another member's unchecked
+ * one cannot be). A column added to `books` is added here and granted in its migration. `select=*` is refused.
+ */
+export const BOOK_COLUMNS =
+  'id, title, authors, isbn13, isbn10, page_count, published_year, language, publisher, cover_url, cover_thumbhash, cover_dominant, cover_secondary, source, apple_id, openlibrary_edition_key, openlibrary_work_key, format, created_at'
 
 /** The `reading_sessions` row, as PostgREST returns it. */
 export type SessionRow = {
@@ -371,18 +385,21 @@ export type EntryRow = {
   read_as?: ReadAs | null
   /** Absent on a row from before hiding existed (a cached Library). */
   hidden?: boolean
+  /** The Book's cached Goodreads rating (issue #69), so a Library kept for offline has it: a relationship of the entry, not of `books`. */
+  goodreads?: GoodreadsRow | null
   book: BookRow
   latest: SessionRow | null
 }
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, hidden, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
+export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, hidden, goodreads:goodreads_rating(*), book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
 
 export function bookFromRow(row: BookRow): Book {
   return {
     id: row.id,
     createdAt: row.created_at,
-    title: row.title,
+    // A Book that is not shown to the caller has no title (`unverified`): '' is what the screens replace.
+    title: row.title ?? '',
     authors: row.authors ?? [],
     isbn13: row.isbn13,
     isbn10: row.isbn10,
@@ -390,7 +407,7 @@ export function bookFromRow(row: BookRow): Book {
     year: row.published_year,
     language: row.language,
     publisher: row.publisher,
-    description: row.description,
+    description: row.description ?? null,
     coverUrl: row.cover_url,
     coverThumbhash: row.cover_thumbhash,
     coverColors:
@@ -402,6 +419,7 @@ export function bookFromRow(row: BookRow): Book {
     format: row.format ?? null,
     // Undefined rather than null without one, so a Book reads the same as before it existed.
     goodreads: ratingFromRow(row.goodreads) ?? undefined,
+    ...(row.unverified ? { unverified: true as const } : {}),
   }
 }
 
@@ -451,13 +469,55 @@ export function entryFromRow(row: EntryRow): LibraryEntry {
     id: row.id,
     status: row.status,
     addedAt: row.added_at,
-    book: bookFromRow(row.book),
+    book: bookFromRow(row.goodreads && !row.book.goodreads ? { ...row.book, goodreads: row.goodreads } : row.book),
     pageCountOverride: row.page_count_override ?? null,
     formatOverride: row.format_override ?? null,
     readAs: row.read_as ?? null,
     hidden: row.hidden ?? false,
     latestSession: row.latest ? sessionFromRow(row.latest) : null,
   }
+}
+
+/** How many Books one `book_descriptions` call asks for (the database answers 5000 at most). */
+const DESCRIPTION_BATCH = 500
+
+/**
+ * Sets each row's `description` to what `book_descriptions` says the caller may read (her own Library's
+ * and every checked Book's), null for the rest: `books.description` is not an API column, so a Book's
+ * blurb comes this way or not at all. A call that fails leaves the rows as they are: no blurb, and the
+ * Book still loads (a description is not what a page waits for).
+ */
+export async function fillDescriptions(client: SupabaseClient, rows: readonly BookRow[]): Promise<void> {
+  const ids = [...new Set(rows.map((row) => row.id))]
+  const found: Record<string, string> = {}
+  let answered = true
+  for (let at = 0; at < ids.length; at += DESCRIPTION_BATCH) {
+    const { data, error } = await client.rpc('book_descriptions', { p_books: ids.slice(at, at + DESCRIPTION_BATCH) })
+    if (error || !data || typeof data !== 'object') {
+      answered = false
+      continue
+    }
+    Object.assign(found, data as Record<string, string>)
+  }
+  if (!answered) return
+  for (const row of rows) row.description = found[row.id] ?? null
+}
+
+/**
+ * What a Book read on its own (not through an entry, which carries its rating beside it) lacks: its
+ * blurb (`fillDescriptions`) and its cached Goodreads rating, read from the cache by ISBN-13.
+ */
+export async function fillBookExtras(client: SupabaseClient, rows: readonly BookRow[]): Promise<void> {
+  const isbns = [...new Set(rows.map((row) => row.isbn13).filter((isbn): isbn is string => Boolean(isbn)))]
+  const [, ratings] = await Promise.all([
+    fillDescriptions(client, rows),
+    isbns.length
+      ? client.from('goodreads_ratings').select('*').in('isbn13', isbns).eq('status', 'found').returns<(GoodreadsRow & { isbn13: string })[]>()
+      : Promise.resolve({ data: [] as (GoodreadsRow & { isbn13: string })[], error: null }),
+  ])
+  if (ratings.error) return
+  const byIsbn = new Map(ratings.data.map((rating) => [rating.isbn13, rating]))
+  for (const row of rows) row.goodreads = (row.isbn13 ? byIsbn.get(row.isbn13) : null) ?? null
 }
 
 /**
@@ -738,6 +798,7 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       .eq('id', entryId)
       .maybeSingle<EntryRow>()
     if (error) return { data: null, error: mapLibraryError(error) }
+    if (data) await fillDescriptions(client, [data.book])
     return { data: data ? entryFromRow(data) : null, error: null }
   }
 
@@ -984,6 +1045,7 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       if (status === 'finished') query = query.order('latest(ended_on)', { ascending: false, nullsFirst: false })
       const { data, error } = await query.order('added_at', { ascending: false }).returns<EntryRow[]>()
       if (error) return { data: null, error: mapLibraryError(error) }
+      await fillDescriptions(client, data.map((row) => row.book))
       return { data: data.map(entryFromRow), error: null }
     },
 
@@ -1007,12 +1069,14 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
         .eq('book_id', bookId)
         .maybeSingle<EntryRow>()
       if (error) return { data: null, error: mapLibraryError(error) }
+      if (data) await fillDescriptions(client, [data.book])
       return { data: data ? entryFromRow(data) : null, error: null }
     },
 
     async book(id) {
       const { data, error } = await client.from('books').select(BOOK_COLUMNS).eq('id', id).maybeSingle<BookRow>()
       if (error) return { data: null, error: mapLibraryError(error) }
+      if (data) await fillBookExtras(client, [data])
       return { data: data ? bookFromRow(data) : null, error: null }
     },
 
@@ -1031,7 +1095,10 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
           .eq(column, value)
           .maybeSingle<BookRow>()
         if (error) return { data: null, error: mapLibraryError(error) }
-        if (data) return { data: bookFromRow(data), error: null }
+        if (data) {
+          await fillBookExtras(client, [data])
+          return { data: bookFromRow(data), error: null }
+        }
       }
       return { data: null, error: null }
     },
@@ -1045,6 +1112,7 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
         .in('book.apple_id', [...appleIds])
         .returns<EntryRow[]>()
       if (error) return { data: null, error: mapLibraryError(error) }
+      await fillDescriptions(client, data.map((row) => row.book))
       for (const row of data) if (row.book.apple_id) found.set(row.book.apple_id, entryFromRow(row))
       return { data: found, error: null }
     },
@@ -1054,11 +1122,12 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       if (!appleIds.length) return { data: found, error: null }
       const { data, error } = await client
         .from('books')
-        .select('*')
+        .select(BOOK_COLUMNS)
         .is('owner_id', null)
         .in('apple_id', [...appleIds])
         .returns<BookRow[]>()
       if (error) return { data: null, error: mapLibraryError(error) }
+      await fillBookExtras(client, data)
       for (const row of data) if (row.apple_id) found.set(row.apple_id, bookFromRow(row))
       return { data: found, error: null }
     },
