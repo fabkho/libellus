@@ -1,17 +1,9 @@
-// Shapes and wording of the two circle features of social v2a (contract §1.3, §1.4), kept apart from
-// data/socialShapes.ts until the data layer (task A) has its own: the components take these as props.
-import type { SocialBook } from '~/data/social'
-import type { MemberCard } from '~/data/socialShapes'
+// Shapes and wording of the circle features of social v2a (contract §1.4). The data layer's shapes are
+// `CircleBook` and `BothRead` (data/socialShapes.ts); the components take these.
+import type { CircleBook } from '~/data/social'
 
 /** Followed members reading (or wanting) one of her Books, as `circle_reading` / `circle_want` hand them: at most three cards, and how many more there are. */
-export type CircleGroup = { members: readonly MemberCard[]; more: number }
-
-/** One Book both read (`both_read`): her own read, and hers (no rating without `show_ratings`). */
-export type BothReadItem = {
-  book: SocialBook
-  mine: { rating: number | null; endedOn: string | null }
-  hers: { rating: number | null; endedOn: string | null }
-}
+export type CircleGroup = Pick<CircleBook, 'members' | 'more'>
 
 /** How the names of a circle are said: all of them up to three, else the first two and the count of the rest ("Anna, Ben and 2 others"). */
 export function circleNameParts(names: readonly string[], more: number): { key: 'one' | 'two' | 'three' | 'others'; args: Record<string, string | number>; count: number } {

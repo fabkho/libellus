@@ -22,12 +22,18 @@ const followed: MemberProfile = {
 }
 
 let answer: MemberProfile | null = followed
+let bothAnswer: { data: unknown[] | null; error: string | null } = { data: [], error: null }
+const bothCalls: (number | null)[] = []
 let recordAnswer: { data: unknown; error: unknown; status: number } = { data: null, error: null, status: 200 }
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 vi.mock('~/stores/social', () => ({
   useSocialStore: () => ({
     profile: async () => ({ data: answer, error: null }),
     want: async () => ({ data: null, error: null }),
+    bothRead: async (_id: string, year: number | null) => {
+      bothCalls.push(year)
+      return bothAnswer
+    },
   }),
 }))
 
@@ -45,6 +51,8 @@ async function store() {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  bothAnswer = { data: [], error: null }
+  bothCalls.length = 0
   recordAnswer = { data: null, error: null, status: 200 }
 })
 
@@ -98,5 +106,36 @@ describe('what was read of her after she is unfollowed, blocked or removed (P2)'
     await members.load('ida')
     members.relationChanged('ida', { kind: 'removeFollower' })
     expect(members.viewOf('ida')).toMatchObject({ record: null, loaded: true })
+  })
+})
+
+describe('You both read (social v2a)', () => {
+  const read = { book: { id: 'b' }, mine: { rating: 12, endedOn: null }, hers: { rating: null, endedOn: null } }
+
+  it('is read with her profile, for all her years, and for one year when the year page asks', async () => {
+    bothAnswer = { data: [read], error: null }
+    const members = await store()
+    await members.load('ida')
+    expect(members.viewOf('ida').bothRead).toEqual({ all: [read] })
+    await members.load('ida', 2025)
+    expect(bothCalls).toEqual([null, 2025])
+    expect(Object.keys(members.viewOf('ida').bothRead).sort()).toEqual(['2025', 'all'])
+    await members.loadBothRead('ida', 2024)
+    expect(bothCalls).toEqual([null, 2025, 2024])
+  })
+
+  it('stays empty, with no error, when she may not see it or it is refused', async () => {
+    bothAnswer = { data: null, error: 'unknown' }
+    const members = await store()
+    await members.load('ida')
+    expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, error: null, recordError: null, loaded: true })
+  })
+
+  it('is not asked for a profile that hides her finished Books', async () => {
+    answer = { ...followed, sections: { ...OPEN, finished: false } }
+    const members = await store()
+    await members.load('ida')
+    answer = followed
+    expect(bothCalls).toEqual([])
   })
 })

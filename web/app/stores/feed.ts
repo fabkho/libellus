@@ -177,5 +177,5 @@ export const useFeedStore = defineStore('feed', () => {
     if (now && (loadError.value === 'offline' || takenAt.value)) void refresh()
   })
 
-  return { entries, days, loaded, loading, loadingMore, loadError, ended, offlineSince, emptyState, refresh, loadMore, dropMember, reset }
+  return { entries, days, loaded, loading, loadingMore, loadError, ended, takenAt, offlineSince, emptyState, refresh, loadMore, dropMember, reset }
 })

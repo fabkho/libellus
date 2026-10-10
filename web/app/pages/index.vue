@@ -7,6 +7,7 @@
 // empty state and the way to Search. Kept alive: coming back shows what was
 // there and refreshes quietly behind it.
 import { useLibraryStore } from '~/stores/library'
+import { useCircleBooksStore } from '~/stores/circleBooks'
 import { useSessionStore } from '~/stores/session'
 
 definePageMeta({ layout: 'tabs', screen: 'home', titleSize: 'title', dated: true, greeting: true, keepalive: true })
@@ -21,9 +22,10 @@ const session = useSessionStore()
 const reading = useSettled(() => library.reading)
 const wantToRead = useSettled(() => library.wantToRead)
 const readInYear = useSettled(() => library.readInYear)
-// Followed members who read, or want, the same Books (circle_reading / circle_want), by her Book's id; empty until a later task wires them (nothing is asked yet).
-const circleReading = ref<Record<string, CircleGroup>>({})
-const circleWant = ref<Record<string, CircleGroup>>({})
+// Followed members who read, or want, the same Books (circle_reading / circle_want), by her Book's id.
+const circle = useCircleBooksStore()
+const circleReading = computed(() => circle.reading)
+const circleWant = computed(() => circle.want)
 
 // The year's Books, in a sheet: the tally opens it (HomeTallySheet).
 const tallyOpen = ref(false)
@@ -41,7 +43,7 @@ const empty = computed(
 )
 
 function load() {
-  void library.load()
+  void library.load().then(() => circle.load())
   void library.loadReadInYear()
 }
 
