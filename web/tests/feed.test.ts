@@ -244,7 +244,7 @@ function book(title: string): BookSnapshot {
     language: 'en',
     publisher: TEST_PUBLISHER,
     description: null,
-    coverUrl: 'https://example.org/cover.jpg',
+    coverUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/11/22/33/2/600x900bb.jpg',
     coverThumbhash: null,
     coverColors: { dominant: '#112233', secondary: '#445566' },
     source: 'apple',

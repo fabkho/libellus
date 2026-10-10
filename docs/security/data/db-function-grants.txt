@@ -1,0 +1,179 @@
+private.activity_on_entry() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.activity_on_session() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.activity_quiet() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.blocked_either(p_a uuid, p_b uuid) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.book_search_sync() definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.can_see_photo(p_caller uuid, p_owner uuid) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.client_error_hash(p_kind text, p_message text) definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.cover_shown(p_book books) definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.enrich_author(p jsonb) definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.enrich_kick() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.enrich_on_book() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.enrich_series(p jsonb) definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.enrich_work(p jsonb) definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.is_instance_owner() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.link_templates_valid(p_templates jsonb) definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.member_card(p_caller uuid, p_owner uuid) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.member_name(p_member uuid) definer=false cfg={"search_path=pg_catalog, auth"} anon=false auth=false
+private.my_social_json(p_member uuid) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.people_page(p_caller uuid, p_list text, p_before timestamp with time zone, p_before_id uuid, p_limit integer) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.purge_activity() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.purge_client_errors() definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.purge_cron_log() definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.reachable(p_caller uuid, p_owner uuid) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.reader_highlights_forward_only() definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.reader_places_forward_only() definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.reading_page_book_json(p_book books) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.reading_page_books_entry_gone() definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.reading_page_books_entry_moved() definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.reading_page_favourites(p_member uuid) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.reading_page_finished(p_member uuid, p_limit integer) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.reading_page_has_regal(p_member uuid) definer=false cfg={"search_path=pg_catalog, private"} anon=false auth=false
+private.reading_page_name(p_member uuid) definer=false cfg={"search_path=pg_catalog, auth"} anon=false auth=false
+private.reading_page_reading(p_member uuid) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.reading_page_reads(p_member uuid) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.reading_page_review(p_member uuid, p_book uuid, p_review text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.reading_page_shown_books(p_page reading_pages) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.reading_page_token() definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.reading_page_year(p_member uuid) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.scrub_client_text(p_text text) definer=false cfg={search_path=pg_catalog} anon=false auth=false
+private.shelf_publish_changed(p_member uuid) definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.shelf_publish_dispatch() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.shelf_publish_on_entry() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.shelf_publish_on_session() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.shelf_publish_send(p_token text, p_repository text, p_event_type text) definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.shelf_publish_token() definer=true cfg={"search_path=\"\""} anon=false auth=false
+private.social_book_json(p_book books) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.social_ensure(p_member uuid) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.social_of(p_member uuid) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+private.visible(p_caller uuid, p_owner uuid) definer=false cfg={"search_path=pg_catalog, public, private"} anon=false auth=false
+private.waitlist_email_ok(p_email text) definer=false cfg={search_path=pg_catalog} anon=false auth=false
+public.abandon_reading(p_entry_id uuid, p_ended_on date, p_reason text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.add_first_session(p_entry_id uuid, p_status entry_status, p_started_on date, p_ended_on date, p_rating integer, p_review text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.add_manual_book(p_title text, p_authors text[], p_isbn text, p_page_count integer, p_status entry_status, p_started_on date, p_ended_on date, p_rating integer, p_review text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.add_to_collection(p_collection uuid, p_book jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.add_to_library(p_book jsonb, p_status entry_status, p_started_on date, p_ended_on date, p_rating integer, p_review text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.admit_user(p_id uuid, p_meta jsonb) definer=true cfg={"search_path=public, pg_catalog"} anon=false auth=false
+public.answer_request(p_member uuid, p_accept boolean) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.author_by_key(p_author text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.author_page(p_author text, p_language text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.author_surname_key(p_name text) definer=false cfg={"search_path=\"\""} anon=false auth=false
+public.block(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.book_authors_for(p_books uuid[]) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.book_authors_of(p_book uuid) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.book_genres(p_book uuid) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.book_search_query(p_query text) definer=false cfg={"search_path=\"\""} anon=true auth=true
+public.book_search_text(p_title text, p_authors text[]) definer=false cfg={"search_path=\"\""} anon=true auth=true
+public.book_series_info(p_book uuid, p_language text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.can_see_member_file(p_name text) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.can_see_member_folder(p_folder text) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.can_see_member_photo(p_owner uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.catalogue_book_for(p_book jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.change_edition(p_entry_id uuid, p_book jsonb, p_format book_format) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.clamp_progress_page(p_page integer, p_page_count integer) definer=false cfg={search_path=pg_catalog} anon=false auth=true
+public.clamp_session_progress(p_entry_id uuid, p_page_count integer) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.collection_entries_same_member() definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.collection_name(p_name text) definer=false cfg={search_path=pg_catalog} anon=false auth=false
+public.create_collection(p_name text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.create_invite_code(p_max_uses integer, p_expires_at timestamp with time zone, p_label text, p_code text) definer=true cfg={"search_path=public, extensions, pg_catalog"} anon=false auth=false
+public.delete_collection(p_collection uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.delete_my_account() definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.delete_session(p_session_id uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.enrich_backfill(p_limit integer) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_claim(p_limit integer, p_lease interval, p_book uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_failed(p_book uuid, p_error text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_refresh(p_limit integer) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_request(p_book uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_save(p_payload jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_save_genres(p_book uuid, p_genres jsonb, p_map_version integer) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_stale_authors(p_limit integer) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.enrich_status() definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.entry_status_of(p_entry_id uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.feed(p_before timestamp with time zone, p_before_id uuid, p_limit integer) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.finish_reading(p_entry_id uuid, p_ended_on date, p_rating integer, p_review text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.follow(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.follow_target(p_token text) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.goodreads_rating(books) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.handle_new_user() definer=true cfg={"search_path=public, pg_catalog"} anon=false auth=false
+public.handle_user_confirmed() definer=true cfg={"search_path=public, pg_catalog"} anon=false auth=false
+public.import_book_for(p_member uuid, p_book_id text, p_book jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.import_books(p_rows jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.import_place_in_collections(p_member uuid, p_entry uuid, p_names jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.invite_code_status(p_code text) definer=true cfg={"search_path=public, pg_catalog"} anon=true auth=true
+public.isbn_valid(p_isbn text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.join_waitlist(p_email text, p_token text, p_website text) definer=true cfg={"search_path=\"\""} anon=true auth=true
+public.latest_session(library_entries) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.library_entries_derive_status() definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.library_genres() definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.log_client_error(p_kind text, p_message text, p_stack text, p_route text, p_app_version text, p_user_agent text, p_standalone boolean, p_online boolean, p_count integer) definer=true cfg={search_path=pg_catalog} anon=true auth=true
+public.match_text(p_text text) definer=false cfg={"search_path=\"\""} anon=false auth=false
+public.member_profile(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.member_reading_record(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.member_want(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.move_entry_to(p_entry library_entries, p_book_id uuid, p_format book_format) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.mute_series(p_series uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.muted_series_list(p_limit integer, p_language text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.my_blocked() definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.my_people() definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.my_people_page(p_list text, p_before timestamp with time zone, p_before_id uuid, p_limit integer) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.my_social() definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.my_works() definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.next_in_series(p_limit integer, p_language text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.own_collection(p_collection uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.owner_client_error_detail(p_message_hash text) definer=true cfg={"search_path=\"\""} anon=false auth=true
+public.owner_client_errors(p_days integer) definer=true cfg={"search_path=\"\""} anon=false auth=true
+public.owner_waitlist() definer=true cfg={"search_path=\"\""} anon=false auth=true
+public.owner_waitlist_delete(p_id uuid) definer=true cfg={"search_path=\"\""} anon=false auth=true
+public.owner_waitlist_prepare_invite(p_id uuid) definer=true cfg={"search_path=\"\""} anon=false auth=true
+public.owner_waitlist_set_invited(p_ids uuid[], p_invited boolean) definer=true cfg={"search_path=\"\""} anon=false auth=true
+public.progress_page_fits(p_page integer, p_page_count integer) definer=false cfg={search_path=pg_catalog} anon=false auth=true
+public.public_book_card(p_token text, p_book uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=true auth=true
+public.public_reading_page(p_token text) definer=true cfg={"search_path=pg_catalog, public, private"} anon=true auth=true
+public.purge_abandoned_signups() definer=true cfg={"search_path=public, pg_catalog"} anon=false auth=false
+public.purge_synced_writes() definer=false cfg={search_path=pg_catalog} anon=false auth=false
+public.read_again(p_entry_id uuid, p_started_on date) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.read_as_for_format(p_format book_format) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.reading_sessions_no_future_dates() definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.reading_sessions_update_status() definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=false
+public.remove_follower(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.remove_from_collection(p_collection uuid, p_entry uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.remove_from_library(p_entry_id uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.rename_collection(p_collection uuid, p_name text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.renew_follow_link() definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.renew_reading_page_link() definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.reorder_collection(p_collection uuid, p_entries uuid[]) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.reset_entry_genres(p_entry uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.reset_entry_series(p_entry uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.save_reader_highlight(p_id uuid, p_entry_id uuid, p_file_hash text, p_cfi text, p_section_index integer, p_color text, p_excerpt text, p_note text, p_deleted boolean, p_at timestamp with time zone, p_created_at timestamp with time zone) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.save_reader_place(p_entry_id uuid, p_cfi text, p_fraction real, p_file_hash text, p_at timestamp with time zone) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.search_books(p_query text, p_limit integer) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.series_works(p_series uuid, p_language text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_avatar(p_path text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_entry_format(p_entry_id uuid, p_format book_format) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_entry_genres(p_entry uuid, p_genres text[]) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_entry_hidden(p_entry uuid, p_hidden boolean) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_entry_series(p_entry uuid, p_series uuid, p_name text, p_position numeric) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_link_templates(p_templates jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_private(p_private boolean) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.set_read_as(p_entry_id uuid, p_read_as text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_reading_page(p_on boolean) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.set_reading_page_sections(p_sections jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.set_social_sections(p_sections jsonb) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.share_book_card(p_book uuid, p_review boolean) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.signup_invite(p_meta jsonb, p_lock boolean) definer=true cfg={"search_path=public, extensions, pg_catalog"} anon=false auth=false
+public.start_reading(p_entry_id uuid, p_started_on date) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.started_and_muted_series(p_limit integer, p_language text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.started_series(p_limit integer, p_language text) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.started_series_core(p_limit integer, p_language text, p_open boolean, p_muted boolean) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.started_series_items(p_limit integer, p_language text, p_muted boolean) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.sync_write(p_request_id uuid, p_action text, p_args jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.unblock(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.unfollow(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.unmute_series(p_series uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.unshare_book_card(p_book uuid) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.update_progress(p_entry_id uuid, p_page integer, p_percent integer, p_set_page_count boolean, p_page_count integer, p_day date, p_clear boolean) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.update_session(p_session_id uuid, p_started_on date, p_ended_on date, p_rating integer, p_review text, p_abandon_reason text) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.use_own_edition(p_entry_id uuid, p_book jsonb) definer=true cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.withdraw_request(p_member uuid) definer=true cfg={"search_path=pg_catalog, public, private"} anon=false auth=true
+public.work_card(p_work uuid, p_language text, p_position numeric) definer=false cfg={"search_path=pg_catalog, public"} anon=false auth=true
+public.work_title_key(p_title text) definer=false cfg={"search_path=\"\""} anon=false auth=false

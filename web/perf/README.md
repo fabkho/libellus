@@ -15,7 +15,8 @@ worker, duplicates). A saved result is plain JSON: `pnpm perf:report` prints it 
 
 Needs Docker, the Supabase CLI, Node 24, pnpm, `pnpm exec playwright install chromium webkit`, and
 `pnpm install` in `web/`. Nothing here touches the shared stack (ports 553xx) or any other
-worker's: it starts its own on ports 55671–55679 (`PERF_STACK_PORT` moves them) and one listener
+worker's: it starts its own on ports 55671–55679 (`PERF_STACK_PORT` moves them; the server's proxy to
+the stack needs `PERF_UPSTREAM=http://127.0.0.1:<port>` then too) and one listener
 on 3101 (`PERF_APP_PORT`).
 
 ```sh
@@ -105,6 +106,9 @@ in that order, so DOM size and heap grow along the run, as in a session.
 | Command | What |
 | --- | --- |
 | `pnpm perf:bundle` | the build's entry, prefetched chunks, largest chunks, service worker precache by kind, fonts (no browser) |
+| `pnpm perf:images` | the image census: every `<img>` per screen (lazy/eager, `decoding`, on screen, loaded, cover requests and bytes, eager images that load off screen) and the signed-out sign-in wall; Chromium, Slow 4G network, `--screens home,library`, `--json out.json` |
+| `pnpm perf:list` | the long lists: DOM nodes, style/layout/script time, long frames for the Library's segments (mount, switch, scroll) and search typing, medians of `--runs`; `--css` tries a rule without a build; Library size by `PERF_ENTRIES=1000 pnpm perf:seed` |
+| `tsx perf/flight-check.ts` | does the cover flight still land on the row's cover and Back restore the scroll place, on a Library of any size (`--rows`, `--scroll`) |
 | `pnpm perf:probe` | the Library device copy's read / parse / stringify / write cost at 1x, 4x, 6x |
 | `pnpm perf:flows` | the motion flows of the earlier assessment (Home → Book cover flight, tab switches, Profile transition, search morph) with traces, rAF gaps, LoAF, `--profile` CPU profiles, `--layers` the layer tree; for the runtime and rendering work |
 | `pnpm perf:layers` | composited layers mid-transition |

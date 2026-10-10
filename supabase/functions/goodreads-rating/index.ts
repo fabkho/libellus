@@ -12,7 +12,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { createGoodreads, userAgent } from './client.ts'
 import type { GoodreadsAnswer } from './goodreads.ts'
-import { type CacheKey, type CachedAnswer, createHandler } from './handler.ts'
+import { type CacheKey, type CachedAnswer, type Caller, createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
+import { sameSecret } from './secret.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -82,12 +83,22 @@ const handler = createHandler({
     },
   },
   goodreads: createGoodreads({ fetch: (input, init) => fetch(input, init), userAgent: userAgent(Deno.env.get('LIBELLUS_SITE_URL')) }),
-  async authorize(request) {
+  async authorize(request): Promise<Caller | null> {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
-    if (!token) return false
-    if (token === serviceKey) return true
+    if (!token) return null
+    if (await sameSecret(token, serviceKey)) return { member: null }
     const { data, error } = await supabase.auth.getUser(token)
-    return !error && Boolean(data.user)
+    return !error && data.user ? { member: data.user.id } : null
+  },
+  async throttle(member) {
+    const { data, error } = await supabase.rpc('edge_rate_hit', {
+      p_member: member,
+      p_bucket: 'goodreads-rating',
+      p_limit: MEMBER_LIMIT,
+      p_window_seconds: MEMBER_WINDOW_SECONDS,
+    })
+    if (error) throw new Error(error.message)
+    return data === true
   },
 })
 

@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.9.1](https://github.com/fabkho/libellus/compare/v1.9.0...v1.9.1) (2026-10-10)
+
+
+### Fixes
+
+* **web:** a failed reader prefetch must not break Read now ([3179f1f](https://github.com/fabkho/libellus/commit/3179f1f9e8a1c4529d0d2b31f1d9334d9beb5cf2))
+* **web:** More from the author shows the author's newest works ([f8e5529](https://github.com/fabkho/libellus/commit/f8e5529c4aec98fc893162ca7b6c575f6ea45298))
+* **web:** More from the author shows the author's newest works ([a1a4a44](https://github.com/fabkho/libellus/commit/a1a4a44f614eac2416686325f9236ced9d858fc7))
+
+
+### Performance
+
+* **web:** bundle trims (F1 sign-in guard, F2 vitals chunk, F4 Options API) ([ea340c9](https://github.com/fabkho/libellus/commit/ea340c92be92e12cc1ecfd7b9bd009fb706818d9))
+* **web:** ebook reader out of the precache, fetched ahead for members with ebooks ([6949cc4](https://github.com/fabkho/libellus/commit/6949cc441b4309d1d5e57382f6b3d5e70c34fcc7))
+* **web:** lazy images audited, message compiler dropped, list measurement scripts ([63dd8b9](https://github.com/fabkho/libellus/commit/63dd8b94b21ecdd238b78021a5ea9dcc8366a04e))
+* **web:** take the ebook reader out of the precache and fetch it ahead for members who use ebooks ([d4a9a37](https://github.com/fabkho/libellus/commit/d4a9a37f483317e125c03df762ba2b02aeb9ad9c))
+
+## [1.9.0](https://github.com/fabkho/libellus/compare/v1.8.0...v1.9.0) (2026-10-10)
+
+
+### Features
+
+* **collections:** bookends instead of a bare rectangle in the Library's Collections row ([d98d3a3](https://github.com/fabkho/libellus/commit/d98d3a358a36d557cf976c0596333036d63bb141))
+* **collections:** bookends instead of a bare rectangle in the Library's Collections row ([565e95a](https://github.com/fabkho/libellus/commit/565e95a95cb72ccf2387bb0fbf8b999455ca2161))
+
+
+### Fixes
+
+* **library:** read every row of the Library past PostgREST's 1,000-row cap ([a59481c](https://github.com/fabkho/libellus/commit/a59481ca03218c1d2b522c9d1f13ad47e256da19))
+
+
+### Performance
+
+* **client:** Profile, genres and Collections list are not refetched on a quick revisit ([93ee2c4](https://github.com/fabkho/libellus/commit/93ee2c430ed6e5de47c378cf59f4b8223c6754ed))
+* page the Library past 1,000 rows, gate Profile/genres/Collections refetches (F4) ([8d890db](https://github.com/fabkho/libellus/commit/8d890db450245fc110e49fce69d5f8f3c1027b4e))
+
 ## [1.8.0](https://github.com/fabkho/libellus/compare/v1.7.0...v1.8.0) (2026-10-10)
 
 

@@ -115,16 +115,15 @@ async function openLikers(item: RecentLike) {
       <HomeCircleLikes v-if="likes.recent?.length" :items="likes.recent" @open="openLikers" />
       <UiListMotion tag="div">
         <div v-if="card" :key="cardKey" class="py-xs">
-          <HomeCircleFeature :card="card" eager />
+          <HomeCircleFeature :card="card" />
         </div>
       </UiListMotion>
       <UiListMotion tag="ul" class="flex flex-col divide-y divide-hairline" :aria-label="t('circle.title')">
         <HomeCircleFriend
-          v-for="(friend, index) in friends"
+          v-for="friend in friends"
           :key="friend.member.id"
           :friend="friend"
           :day-label="label(friend.day)"
-          :eager="index < 3"
         />
       </UiListMotion>
       <UiButton v-if="friends.length > 0 || card" tone="quiet" size="md" block to="/friends" class="mt-sm" data-testid="home.circleMore">{{ t('circle.more') }}</UiButton>

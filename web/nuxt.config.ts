@@ -26,6 +26,20 @@ const release = releaseNotes(rootFile('CHANGELOG.md'), rootFile('version.txt'))
 // and the home-screen launchers refetch them instead of keeping the old ones.
 const iconVersion = 2
 
+/**
+ * What the ebook reader is made of, for the service worker's sake (it is fetched ahead, not precached: see
+ * `globIgnores` below): the reader's sheets and chrome, foliate-js, the sanitizer, and the font files the
+ * engine names by `?url`. They go into one chunk named `ebook-reader`; the two files the app imports
+ * dynamically (`components/reader/Reader.vue`, `reader/engine.ts`) are named by their address instead
+ * (`isReaderEntry`): a module the bundler is told to group *and* that is dynamically imported gets a facade
+ * chunk that exports the module's namespace object without declaring it (`SyntaxError: Export
+ * 'engine_exports' is not defined in module`, so the reader never opens).
+ */
+const isReaderEntry = (id: string | null | undefined) => /\/app\/(components\/reader\/Reader\.vue|reader\/engine\.ts)(\?|$)/.test(id ?? '')
+const isReaderModule = (id: string) =>
+  !isReaderEntry(id) &&
+  /\/app\/(components\/)?reader\/|\/node_modules\/(\.pnpm\/[^/]+\/node_modules\/)?dompurify\/|\/@fontsource\/[^/]+\/files\/[^?]+\?url$/.test(id)
+
 // Libellus web — the reference app (SPEC.md). Everything personal sits behind
 // the sign-in, so there is nothing to render on the server: SPA, built to
 // static files for Cloudflare Pages.
@@ -74,7 +88,18 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css'],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+      {
+        // The reader's files, for utils/readerChunks.ts: it fetches them before it imports them. Beside Nuxt's own
+        // `builds/` files, which Pages serves with a short cache.
+        name: 'libellus-reader-files',
+        generateBundle(_options: unknown, bundle: Record<string, unknown>) {
+          const files = Object.keys(bundle).filter((file) => /(^|\/)ebook-reader[^/]*\.(js|css)$/.test(file))
+          if (files.length) (this as { emitFile: (file: object) => void }).emitFile({ type: 'asset', fileName: '_nuxt/builds/reader-files.json', source: JSON.stringify(files) })
+        },
+      },
+    ],
     // supabase-js builds a Realtime client (and the Phoenix socket under it, ~95 KB unminified) in
     // every client; the app opens no channel. The stub keeps what supabase-js calls on its own
     // (app/data/realtimeStub.ts). Same alias in vitest.config.ts, so the data-layer suite runs on it.
@@ -82,7 +107,14 @@ export default defineNuxtConfig({
     // The Playwright flows' build (e2e/build.ts): the hooks they need that are otherwise the dev
     // server's (the error log's triggers, the reader's engine on window). False in every other
     // build, where the code behind it is dropped.
-    define: { __LIBELLUS_E2E__: JSON.stringify(Boolean(process.env.LIBELLUS_E2E)) },
+    define: {
+      __LIBELLUS_E2E__: JSON.stringify(Boolean(process.env.LIBELLUS_E2E)),
+      // No component in the app, in Nuxt, vue-router, i18n, TresJS or the Regal layer uses the Options
+      // API (`data()`, `methods`, `computed` objects, `mixins`): every component is `<script setup>`.
+      // Vue drops the code that reads those options from its runtime (1.6 KB brotli off the entry,
+      // docs/perf/bundle.md, F4). A dependency that needs it would fail at run time: check before adding one.
+      __VUE_OPTIONS_API__: false,
+    },
     // `nuxt dev` bundles a package the first time a page imports it. A package first met while a
     // member (or a Playwright flow) is already on the page is bundled then: the dev server
     // re-optimizes, and a page open at that moment can be reloaded under its user, so a tap on
@@ -101,12 +133,17 @@ export default defineNuxtConfig({
           codeSplitting: {
             groups: [
               { name: 'zxing', test: /zxing-wasm/ },
+              { name: 'ebook-reader', test: isReaderModule, includeDependenciesRecursively: false },
               // Only what the test names: Regal's modules use the app's Vue and Nuxt, which stay where they are.
               { name: 'regal', test: isRegalModule, includeDependenciesRecursively: false },
             ],
           },
-          chunkFileNames: (chunk: { name: string }) =>
-            chunk.name === 'zxing' || chunk.name === 'regal' ? `_nuxt/${chunk.name}.[hash].js` : '_nuxt/[hash].js',
+          chunkFileNames: (chunk: { name: string; facadeModuleId?: string | null }) =>
+            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'ebook-reader'
+              ? `_nuxt/${chunk.name}.[hash].js`
+              : isReaderEntry(chunk.facadeModuleId)
+                ? '_nuxt/ebook-reader-entry.[hash].js'
+                : '_nuxt/[hash].js',
         },
       },
     },
@@ -194,6 +231,11 @@ export default defineNuxtConfig({
     strategy: 'no_prefix',
     detectBrowserLanguage: false,
     locales: [{ code: 'en', language: 'en', file: 'en.json' }],
+    // The messages are compiled at build (the module's Vite plugin turns en.json into AST), so the
+    // client needs no message compiler: `dropMessageCompiler` leaves it out of the entry (−16 KB raw,
+    // −4 KB brotli; `runtimeOnly` alone moved nothing). A string that is not in en.json could not be
+    // compiled on the device: tests/i18n-runtime-only.test.ts pins what the app's messages need.
+    bundle: { dropMessageCompiler: true },
   },
 
   // Installable from the home screen, full-screen once opened from there; the
@@ -290,7 +332,10 @@ export default defineNuxtConfig({
       // fetched when the scanner first opens, and kept by the cache below.
       // Nor is Regal (the owner's shelf, #23): its chunk and styles, its fonts and its model are
       // fetched when the shelf first opens, and kept by the caches below.
-      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', ...regalAssets().globIgnores],
+      // Nor is the ebook reader (components/reader, foliate-js, the sanitizer: the `reader` chunk and its
+      // styles): the app fetches it ahead for a member who has an ebook (data/reader/prefetch.ts) and the
+      // cache below keeps it, so a book opened before opens offline too.
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', '**/ebook-reader*.js', '**/ebook-reader*.css', ...regalAssets().globIgnores],
       runtimeCaching: [
         ...regalAssets().runtimeCaching,
         {
@@ -298,6 +343,13 @@ export default defineNuxtConfig({
           urlPattern: ({ url }) => /\/_nuxt\/zxing[^/]*\.(js|wasm)$/.test(url.pathname),
           handler: 'CacheFirst',
           options: { cacheName: 'libellus-barcode-decoder', expiration: { maxEntries: 4 } },
+        },
+        {
+          // The ebook reader, as the app fetches it ahead or the Book page asks for it. Cache first: the
+          // file's name carries its hash. Two files a release (script, styles): a few releases' worth.
+          urlPattern: ({ url }) => /\/_nuxt\/ebook-reader[^/]*\.(js|css)$/.test(url.pathname),
+          handler: 'CacheFirst',
+          options: { cacheName: 'libellus-reader', expiration: { maxEntries: 6 } },
         },
         {
           // Covers as an <img> asks for them (no-cors: an opaque answer, which

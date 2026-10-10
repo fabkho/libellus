@@ -5,6 +5,7 @@ import { ratingFromRow, type GoodreadsRow } from './goodreads'
 import { NO_PROGRESS, type ProgressValue } from './progress'
 import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
 import { isNoAnswer } from './network'
+import { allPages, uniqueById } from './paging'
 import { applyWrite, localId, type QueuedAction, type QueuedWrite, type WriteQueue } from './queuedWrites'
 
 /**
@@ -922,12 +923,16 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     async progressDays(sessionIds) {
       const days: Record<string, ProgressDay[]> = Object.fromEntries(sessionIds.map((id) => [id, []]))
       if (!sessionIds.length) return { data: days, error: null }
-      const { data, error } = await client
-        .from('reading_progress_days')
-        .select('session_id, day, start_page, start_percent, end_page, end_percent')
-        .in('session_id', [...sessionIds])
-        .order('day')
-        .returns<ProgressDayRow[]>()
+      const { data, error } = await allPages<ProgressDayRow>((from, to) =>
+        client
+          .from('reading_progress_days')
+          .select('session_id, day, start_page, start_percent, end_page, end_percent')
+          .in('session_id', [...sessionIds])
+          .order('session_id')
+          .order('day')
+          .range(from, to)
+          .returns<ProgressDayRow[]>(),
+      )
       if (error) return { data: null, error: mapLibraryError(error) }
       for (const row of data) days[row.session_id]?.push(dayFromRow(row))
       return { data: days, error: null }
@@ -1034,13 +1039,17 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     },
 
     async entries(status) {
-      let query = client.from('library_entries').select(ENTRY_COLUMNS).eq('status', status)
-      // Ordered by the latest session's day through the to-one relationship.
-      if (status === 'reading') query = query.order('latest(started_on)', { ascending: false, nullsFirst: false })
-      if (status === 'finished') query = query.order('latest(ended_on)', { ascending: false, nullsFirst: false })
-      const { data, error } = await query.order('added_at', { ascending: false }).returns<EntryRow[]>()
+      // Page by page: the API answers 1,000 rows at most and says nothing when it cuts (data/paging.ts).
+      // Ordered by the latest session's day through the to-one relationship, newest added next, the id
+      // last so the order is total and the pages meet. All or nothing: a failed page is the error.
+      const { data, error } = await allPages<EntryRow>((from, to) => {
+        let query = client.from('library_entries').select(ENTRY_COLUMNS).eq('status', status)
+        if (status === 'reading') query = query.order('latest(started_on)', { ascending: false, nullsFirst: false })
+        if (status === 'finished') query = query.order('latest(ended_on)', { ascending: false, nullsFirst: false })
+        return query.order('added_at', { ascending: false }).order('id').range(from, to).returns<EntryRow[]>()
+      })
       if (error) return { data: null, error: mapLibraryError(error) }
-      return { data: data.map(entryFromRow), error: null }
+      return { data: uniqueById(data).map(entryFromRow), error: null }
     },
 
     async readInYear(year) {

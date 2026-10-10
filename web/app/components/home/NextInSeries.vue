@@ -75,11 +75,10 @@ watch(
       </div>
       <UiListMotion tag="ul" :aria-label="t('series.next')">
         <HomeNextRow
-          v-for="(item, index) in shown"
+          v-for="item in shown"
           :key="`${item.series.id}:${item.next.workId ?? item.next.title}`"
           :item="item"
           testid="home.next"
-          :eager="index < 3"
           @more="openMenu"
         />
       </UiListMotion>

@@ -15,8 +15,12 @@ POST /functions/v1/enrich
 { "action": "remap" }                    service: apply the current genre mapping to stored signals
 { "action": "status" }                   service: the queue at a glance
 
-200 { … } · 400 action_invalid · 401 unauthorized · 403 forbidden · 404 not_found · 502 source_unavailable
+200 { … } · 400 action_invalid · 401 unauthorized · 403 forbidden · 404 not_found · 429 rate_limited · 502 source_unavailable · 503 busy
 ```
+
+A member's `book` and `author` calls are counted per member (10 a minute, `public.edge_rate_hit`): they spend the
+shared Apple, Open Library and Wikidata budget. The service is not counted; an unreachable counter is a 503.
+The service-role key and `ENRICH_TOKEN` are compared in constant time (`secret.ts`).
 
 ## When it runs
 

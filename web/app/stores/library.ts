@@ -97,6 +97,19 @@ export const useLibraryStore = defineStore('library', () => {
 
   /** When this device last changed the Library (`performance.now()`): reads asked for before it are stale. */
   let lastChange = -Infinity
+  /**
+   * What the stores that keep a window of freshness of their own (stores/stats.ts, stores/genres.ts)
+   * watch to know a change of hers is not in what they hold yet. `changes` goes up with any change to
+   * an entry made on this device (a write, a removal, the outbox drained: `touch`); what another device
+   * changed is read at the next visit after the window, as for the lists. `roster` only when entries came or went or one now has another Book (what the genres
+   * are keyed by). Plain counters: the reader does not care how far, only that it moved.
+   */
+  const changes = ref(0)
+  const roster = ref(0)
+  function touch({ rosterToo = true } = {}) {
+    changes.value++
+    if (rosterToo) roster.value++
+  }
   /** When the lists showing were asked for (`performance.now()`), by the last load that landed. */
   let loadedAt = -Infinity
   /** The load on its way, and the one that follows it for whoever asked meanwhile (`load`). */
@@ -305,6 +318,8 @@ export const useLibraryStore = defineStore('library', () => {
    */
   function entryChanged(entry: LibraryEntry, ...keys: string[]) {
     lastChange = performance.now()
+    const was = entryById(entry.id)
+    touch({ rosterToo: !was || was.book.id !== entry.book.id })
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entry.id)
     lists[entry.status] = sortEntries([entry, ...lists[entry.status]])
     remember(entry, { keys })
@@ -334,6 +349,7 @@ export const useLibraryStore = defineStore('library', () => {
    */
   function entryRemoved(entryId: string) {
     lastChange = performance.now()
+    touch()
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entryId)
     for (const [key, known] of entryByKey) if (known.id === entryId) entryByKey.delete(key)
     search.markRemoved(entryId)
@@ -710,6 +726,9 @@ export const useLibraryStore = defineStore('library', () => {
     loaded,
     loadError,
     load,
+    changes,
+    roster,
+    touch,
     rebase,
     entryById,
     entryForBook,

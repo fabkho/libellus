@@ -12,6 +12,8 @@ import {
   type Ebooks,
 } from '~/data/ebooks/ebooks'
 import { memberDir, memoryFiles, opfsFiles } from '~/data/ebooks/files'
+import { firstEbookLinked, hasOpenableEbook } from '~/data/reader/prefetch'
+import { discardShared, pendingShare, readShared, type PendingShare } from '~/data/ebooks/shared'
 import { readEbooksSnapshot, saveEbooksSnapshot } from '~/data/ebooks/snapshot'
 import { clearlyAnotherBook, fileAuthors, fileTitle, findQuery } from '~/data/ebooks/match'
 import type { Book, BookSnapshot } from '~/data/books'
@@ -24,6 +26,7 @@ import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
+import { prefetchReader } from '~/utils/readerChunks'
 
 /** Where a report came from: a share, a scan of the folder. */
 export type ReportSource = Extract<EbookSource, 'share' | 'folder'>
@@ -251,32 +254,43 @@ export const useEbooksStore = defineStore('ebooks', () => {
     }
   }
 
+  /** The cache of shared files, or null where there is none (an insecure context) or no member to take them in. */
+  async function sharedCache() {
+    return typeof caches === 'undefined' ? null : await caches.open(SHARED_EBOOKS_CACHE)
+  }
+
   /**
-   * The share sheet's files, kept by the service worker in Cache Storage until
-   * now (public/sw-share.js): every share waiting there is taken in, then
-   * removed from the cache. A share that arrives meanwhile stays for the next
-   * time; one that could not be taken in (no member, no storage) stays too.
+   * What waits under one share's id (public/sw-share.js), for the confirmation on /share: the
+   * names and sizes. Every other share waiting in the cache is deleted: what nobody confirmed
+   * does not pile up, and only the one the member is looking at can be taken. Null: nothing
+   * (valid and recent) under that id.
    */
-  async function takeShared(): Promise<EbookReport | null> {
-    if (typeof caches === 'undefined' || !repo()) return null
-    const cache = await caches.open(SHARED_EBOOKS_CACHE)
-    const files: File[] = []
-    const taken: string[] = []
-    for (const metaRequest of (await cache.keys()).filter((request) => new URL(request.url).pathname.endsWith('/meta'))) {
-      const meta = (await (await cache.match(metaRequest))?.json().catch(() => null)) as {
-        id: string
-        files: { index: number; name: string; type: string; lastModified: number }[]
-      } | null
-      if (!meta) continue
-      for (const item of meta.files) {
-        const response = await cache.match(`/__shared/${meta.id}/${item.index}`)
-        if (response) files.push(new File([await response.blob()], item.name, { type: item.type || 'application/epub+zip', lastModified: item.lastModified }))
-      }
-      taken.push(metaRequest.url, ...meta.files.map((item) => new URL(`/__shared/${meta.id}/${item.index}`, metaRequest.url).href))
-    }
+  async function pendingShared(id: string): Promise<PendingShare | null> {
+    const cache = await sharedCache().catch(() => null)
+    if (!cache) return null
+    await discardShared(cache, { keep: id })
+    return await pendingShare(cache, id)
+  }
+
+  /**
+   * The member's tap on "Add": takes in the files of the share `id` (and no other), then deletes
+   * it from the cache. Taking in nothing without this call is the point (security round F4:
+   * a cross-site POST can leave files in the cache, never in the Library). One that could not be
+   * taken in (no member, no storage) stays for the next try.
+   */
+  async function takeShared(id: string): Promise<EbookReport | null> {
+    const cache = await sharedCache()
+    if (!cache || !repo()) return null
+    const files = await readShared(cache, id)
     const done = files.length ? await addFiles(files, 'share') : null
-    if (done || !files.length) for (const url of taken) await cache.delete(url)
+    if (done || !files.length) await discardShared(cache, { only: id })
     return done
+  }
+
+  /** "Not now" on the confirmation: the share is deleted, nothing taken. */
+  async function dropShared(id: string): Promise<void> {
+    const cache = await sharedCache().catch(() => null)
+    if (cache) await discardShared(cache, { only: id })
   }
 
   // ---------------------------------------------------------------- one Book
@@ -664,6 +678,15 @@ export const useEbooksStore = defineStore('ebooks', () => {
     persistAsked = false
   }
 
+  // The reader is fetched ahead for a member who uses ebooks on this device (data/reader/prefetch.ts): at once when
+  // she links her first one, so it is there before her first Read now. Later starts: plugins/reader-prefetch.client.ts.
+  watch(
+    () => hasOpenableEbook({ records: records.value, missing: missing.value }),
+    (now, before) => {
+      if (firstEbookLinked(before, now, loaded.value)) prefetchReader()
+    },
+  )
+
   // What was added from search while the outbox held it may be a Book a waiting file is: matched now it is synced.
   watch(
     () => sync.pending,
@@ -720,7 +743,9 @@ export const useEbooksStore = defineStore('ebooks', () => {
     load,
     linkFor,
     addFiles,
+    pendingShared,
     takeShared,
+    dropShared,
     addForBook,
     confirmPick,
     cancelPick,

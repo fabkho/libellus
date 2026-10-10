@@ -33,7 +33,10 @@ happens once per link and version.
    key**: the same two functions the page itself reads, so a renewed or switched-off link stops
    producing images at once, and nothing she did not publish can reach an image. `null` is a 404.
 3. The covers are fetched (https only, 2.5 s each, `image/*` and at most 5 MB) and passed to satori
-   as data URLs. A cover host that refuses, 404s or hangs costs only that one cover: its block in
+   as data URLs. Only from the hosts the database lets through (`private.cover_shown`: Open Library,
+   Apple's artwork, the published shelf; the function checks them itself) and never with `redirect: follow`:
+   a redirect is followed hop by hop (at most 3) and only to those hosts or the Internet Archive, where
+   Open Library keeps its images (`render.ts`, `cover_test.ts`). A cover host that refuses, 404s or hangs costs only that one cover: its block in
    the Book's own colour stands in, as in the app.
 4. satori lays the image out and resvg turns the SVG into the PNG.
 

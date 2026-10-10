@@ -108,7 +108,7 @@ onActivated(() => {
   void library.load({ ifStale: true })
   // The store asks by itself when her lists arrive or change; coming back asks again once the answer is stale.
   void circle.load({ ifStale: true })
-  void bookGenres.load()
+  void bookGenres.load({ ifStale: true })
   // Sent here to look at one list (the Profile's genres, #168): that segment, as filtered.
   if (libraryView.focus) {
     segment.value = libraryView.focus

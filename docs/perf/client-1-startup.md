@@ -222,16 +222,20 @@ re-running `pnpm perf` on the fix.
 - Evidence: `app/pages/index.vue:45` (`onActivated(load)`), `app/pages/library.vue:101` (`onActivated(() => library.load() …)`), `stores/library.ts:96` `load()` has no freshness window: `loadedAt` only discards *older answers*. Home→Library: 40 requests, **3 × `library_entries` = 350 KB JSON / 111 KB brotli** 2 s after the previous load; Profile→Home: the same again (93 KB brotli); Profile open: `reading_sessions` 237 KB + `progress_days` 55 KB + genres 22 KB, every time. The parse/mapping lands in the tab-switch animation: LoAF `lRaWNZUA.js Response.text.then` **76–175 ms**, `setTimeout` frame 107–186 ms on Library mount, TBT 57–102 ms (4x), worst frame 117 ms (6x: 183–233 ms, 201 / 328 ms LoAF). This is the likeliest source of the owner's occasional stutters: they come with the tab switch, not with scrolling.
 - Fix: a freshness window (skip the refresh when the lists are younger than e.g. 60 s and nothing changed on the device (`lastChange`)); refresh on `visibilitychange` and pull-to-refresh instead; one RPC for the three lists; later a delta (`updated_at`/ETag) so a refresh answers in bytes, not hundreds of KB. Same treatment for the Profile's sessions.
 - Risk: medium (stale Library after an add on another device: the outbox/`lastChange` rules exist; needs tests in `tests/`); offline paths unchanged. Expected: −100–200 ms main thread per tab switch, −100–450 KB per switch; removes the long frame at b1/b3/b4. Tier: **Sonnet** (logic + data-layer tests).
+- **Status: Fixed** for Home and the Library in #255 (§8's tab journeys), and for the Profile's record, the genres and the Collections list in §9. A server stamp for a refetch after the window was weighed and **not built** (§9.3).
 
 **F-2. Cold start is bytes and main-thread bound; the entry is 186 KB brotli and 57 % of its main chunk is the Supabase client** — impact high (first launch, every update), effort M
 - Evidence: §3.1 (1,009 ms unattributed LoAF = entry parse/compile; ~400 KB brotli before first paint on a 200 KB/s link), §3.3 (supabase-js parts 57 %, **realtime + phoenix 95 KB unminified for a feature the app never uses**, message compiler 36 KB shipped for precompiled messages), the two experiments (waterfall fixes alone give ≤ 60 ms).
 - Fix: build the Supabase client from `auth-js`, `postgrest-js`, `functions-js` (and `storage-js` lazily, only the avatar code uses it) instead of `createClient`; `i18n` runtime-only bundle (`bundle.runtimeOnly`) to drop the compiler; look at what else the first screen's 65 chunks pull in. Expected: −60–100 KB raw gzip-equivalent of ≈ 25–35 KB brotli ⇒ −150–250 ms on Slow 4G cold, −100–200 ms of compile at 4x. Risk: medium (a hand-assembled client must keep `createSupabaseClient`'s contract: `app/data/createSupabaseClient.ts` is the one place; a native port is unaffected). Tier: **Sonnet** (build config + client assembly), measured with `pnpm perf:bundle`.
-- **Status: Fixed (the Realtime half; the message compiler is not done).** `@supabase/realtime-js` (and the Phoenix socket under it) is aliased to a 30-line stub (`app/data/realtimeStub.ts`; `nuxt.config.ts` `vite.resolve.alias`, the same alias and `server.deps.inline` in `vitest.config.ts` so the data-layer suite runs on the client the app ships) instead of assembling the client by hand: `createSupabaseClient` and its contract are untouched, auth, PostgREST, Storage and Functions are the library's own code. The app opens no channel, so nothing is lost; `channel()` throws. Measured (`pnpm perf:bundle`; `pnpm perf --profile slow4g-4x --journey start,tabs --runs 7`, load 7.5 before, 4.6 after): the supabase chunk 216.9 → 161.9 KB raw (47.9 → 34.8 KB brotli), the entry 685.0 → 630.0 KB raw / 190.5 → 177.4 KB brotli (−13 KB), cold start (Home shown) 3,142 → 3,063 ms (−79 ms, runs within 3,123–3,149 and 3,058–3,094), cold LCP 4,100 → 4,016 ms, cold wire 507 → 497 KB. Warm start and the tab journeys do not move. `tests/realtime-stub.test.ts` pins what supabase-js asks of the stub; a supabase-js upgrade that asks more fails there.
+- **Status: Fixed (the Realtime half; the message compiler: see below).** `@supabase/realtime-js` (and the Phoenix socket under it) is aliased to a 30-line stub (`app/data/realtimeStub.ts`; `nuxt.config.ts` `vite.resolve.alias`, the same alias and `server.deps.inline` in `vitest.config.ts` so the data-layer suite runs on the client the app ships) instead of assembling the client by hand: `createSupabaseClient` and its contract are untouched, auth, PostgREST, Storage and Functions are the library's own code. The app opens no channel, so nothing is lost; `channel()` throws. Measured (`pnpm perf:bundle`; `pnpm perf --profile slow4g-4x --journey start,tabs --runs 7`, load 7.5 before, 4.6 after): the supabase chunk 216.9 → 161.9 KB raw (47.9 → 34.8 KB brotli), the entry 685.0 → 630.0 KB raw / 190.5 → 177.4 KB brotli (−13 KB), cold start (Home shown) 3,142 → 3,063 ms (−79 ms, runs within 3,123–3,149 and 3,058–3,094), cold LCP 4,100 → 4,016 ms, cold wire 507 → 497 KB. Warm start and the tab journeys do not move. `tests/realtime-stub.test.ts` pins what supabase-js asks of the stub; a supabase-js upgrade that asks more fails there.
+- **Status, message compiler: Fixed (`i18n.bundle.dropMessageCompiler`).** The app's 1,441 messages are compiled at build by the module's Vite plugin (`en.json` reaches the client as AST: `{t:0,b:…}` in the messages chunk), and nothing on the device compiles a string: no `t(key, 'default text')`, no `messages` in a component, no runtime-loaded catalogue (`rt`/`tm`/`setLocaleMessage` are not used; `te`, `<i18n-t>` and the plural/named/literal forms are compiled messages). The messages use plural pipes, named placeholders and the `{'@'}` literal; none uses a link (`@:`) or HTML. `bundle.runtimeOnly: true` alone changed nothing (entry 628.9 KB raw both ways: the build already resolves vue-i18n's bundler build, whose compiler is guarded by `__INTLIFY_DROP_MESSAGE_COMPILER__`); `bundle.dropMessageCompiler: true` is the switch that removes it (alone or with `runtimeOnly`: the same bytes). Measured, `pnpm perf:bundle`: entry **628.9 → 613.2 KB raw, 201.2 → 196.7 KB gzip, 176.7 → 172.7 KB brotli (−4.0 KB, −2.3 %)**; the i18n chunk 136.6 → 120.9 KB raw (40.3 → 36.3 KB brotli); all JS+CSS 575.1 → 571.1 KB brotli; the service worker's precache 770.8 → 766.7 KB (numbers against the build with the lazy-image change before it). Smaller than the 36 KB unminified the visualizer showed: the minified compiler is ~16 KB, and the part vue-i18n's runtime needs stays. Checked in the built app (Chromium, signed in): Home, Library (`48 books`, a plural), search and its results render text, no key shows, no console warning. `tests/i18n-runtime-only.test.ts` compiles the whole of `en.json` with the generator the build uses and formats it with vue-i18n: a plural (`import.doneTitle`, `ownerErrors.members`), a plural with a name (`profile.year.monthLabel`), named placeholders, the `{'@'}` literal, a synthetic linked message (`@:` and `@.upper:`), `te`, the missing-key answer, no message left as a string, every one of the 1,441 messages rendering without a placeholder left over, and no message with link or HTML syntax. Dynamic-key sites (`library.segment.${status}`, `te(\`manual.error.${code}\`)`, `te(\`genre.${value}\`)`) look keys up in compiled messages and are in the test too.
+- **`bundle.fullInstall: false` (bundle report F5b): not done.** It stops vue-i18n registering `<i18n-t>`/`<i18n-d>`/`<i18n-n>` and `v-t` globally; the app uses `<i18n-t>` in `home/CircleFriend.vue` and `book/Goodreads.vue` (4 uses), so it would need those imported by hand for ~1.2 KB. Left for a follow-up that does that. German (#257) is fine with the change: its messages are compiled at build too.
 
 **F-3. DOM and style cost grow along a session; the Library renders all 150 rows** — impact medium, effort S (CSS) to L (virtualization)
 - Evidence: DOM nodes 514 (warm start) → 1,542 (Library) → 2,855 (Profile) → 3,312 (Book) → **4,631 (search)**; style recalculation 29 ms (Library mount) → 127 ms (Profile) → **172 ms while typing in search** (4x), heap 7 → 17 MB. Home and Library are `keepalive` (`pages/index.vue:12`, `pages/library.vue:22`), no `content-visibility` anywhere in `app/`.
 - Fix: `content-visibility: auto` + `contain-intrinsic-size` on Library rows (S); the Library list as a windowed list if that is not enough (L). Expected: Library mount and every later style recalc scale with the visible rows, not 150: the biggest lever against "gets laggy after a while". Risk: medium (scroll anchoring, the book flight reading row positions: `useBookFlight`, `data-cover`). Tier: **Sonnet** for the CSS attempt, **Opus** if virtualization.
 - The step order matters: search ran last, after the other pages were alive; part 2 should measure it in isolation.
+- **Status: measured in §11** (150 and 1,000 entries, search typing in isolation): list size does cause long frames; `content-visibility` helps but breaks scroll restoration and the Back flight, so it is not shipped; the 172 ms of style recalculation while typing in search does not depend on the list or the DOM size.
 
 **F-4. Search typing shifts the results: CLS 0.42 under throttle** — impact high for the Vitals score, effort M
 - Evidence: `d2-search-type`, CLS **0.4203** in every slow4g run (4x and 6x, two series), 0 unthrottled; shifted nodes: three `li` results (`0,0,0,0 → 12,561 / 12,493 / 12,357, 388 × 68`), LoAF `Response.json.then` 98–108 ms at the same moment. The palette is on every page, so its CLS counts for `/` and the Book (field: 0.74 on `/`). `components/shell/SearchOverlay.vue:25–32` already records a CLS 1.0 history here (the "room" in `usePaletteRoom.ts`).
@@ -315,3 +319,226 @@ re-running `pnpm perf` on the fix.
 The two LCP figures are not comparable: the later one is real content. The cold first paint moved
 by the Realtime bytes only (−55 to −80 ms); the prefetch change is what halves the long frames and
 brings the first cover forward.
+
+
+## 9. The 1,000-row cap and the refetches #255 left (F-1, second half)
+
+Local stack `libellus-perf-ppg` (own ports 55691–55699), the synthetic 150-entry member of §1, the
+production build of `origin/main` (`46dfb6a0`) against the build with this change, `slow4g-4x`
+(Chromium, CPU 4x, 1.6 Mbit/s, 150 ms), **5 runs each, medians**, journeys `revisit` and `window`
+(new in `perf/run.ts`). Load average at the start of the series: **2.8 (before) and 4.3 (after)**
+on a Mac shared with other workers, so the timings are indicative; request counts and bytes do not
+move with load (spread under 1 %).
+
+### 9.1 The cap (correctness, proven)
+
+`supabase/config.toml` has `max_rows = 1000` (the local value; the hosted project is configured in
+its dashboard and was not read here: production is out of bounds). PostgREST cuts every answer at
+that many rows **without an error**, and also the rows embedded under one parent: a Collection with
+1,150 entries answers 1,000 (`tests/library-cap.test.ts` shows both against the real server; on the
+code before this change the same test reads 1,000 of 1,150).
+
+Whole-table reads of the member's, and what became of each:
+
+| Read | Rows | Before | Now |
+| --- | --- | --- | --- |
+| the three Status lists (`entries(status)`) | one per entry | one request, cut at 1,000 | paged |
+| Search's Library copy (`libraryEntries`) | one per entry | one request, cut at 1,000 | paged |
+| `library_genres` (genre filter, Profile figures) | one per entry | one request, cut at 1,000 | paged (`order=entry_id`) |
+| a Collection page (`collections.get`) | its entries, embedded | cut at 1,000 | paged (`range` on the embedded table, by position) |
+| the days of the reads on screen (`progressDays`) | days of the asked sessions | cut at 1,000 | paged (session, day) |
+| the Profile's sessions and days (`stats.record`) | sessions, days | already paged (a private `allPages` in `data/stats.ts`) | now the shared helper |
+| import's keys, the export | one per entry | already paged | unchanged |
+| descriptions (40 ids), Apple ids (the result's ≤ 25), one entry's sessions, the Collections list (rows = Collections, 4 covers each) | bounded | one request | unchanged |
+
+Method: `data/paging.ts` (`allPages`, pages of 1,000 = the server's cap, until a short page, one at a
+time, so a member under the cap still costs the one request it did), a total order with the id last
+(`added_at desc, id`; `position`; `entry_id`; `session_id, day`), and a row that two pages both carried
+(a write between them) kept once. All or nothing: the first failed page is the error and no rows, so
+the Library store keeps the good Library it had (`tests/library-paging-store.test.ts`: page 2 failing
+leaves the 2,500 entries as they were and shows the error). What a page cannot see: a delete between
+two pages can move a row past the page boundary; that member's own change re-reads (`lastChange`), another
+device's is read at the next visit. `PAGE_SIZE` must not exceed the server's `max_rows`: a bigger page
+would be cut and taken for the last.
+
+Tests: `tests/paging.test.ts` (a client that cuts at 1,000 holding 2,500 rows: three requests, whole, in
+order, no duplicates, failure on page 2/3 is an error), `tests/library-paging-store.test.ts`,
+`tests/library-cap.test.ts` (1,150 entries all added the same instant and read the same day, against
+the real PostgREST).
+
+### 9.2 Refetch gating beyond Home (proven)
+
+The rule of #255 (60 s, `load({ ifStale })`) now also covers the Profile's record
+(`stats.load`), the genres (`library_genres`) and the Collections list on the Library tab, through one
+helper, `createFreshness` (`utils/fresh.ts`): nothing is fresh until a read has landed; a **change of
+hers** forgets it at once (`Library.changes`: a finish, an edit or removal of a read, an add; `roster`,
+for the genres: an entry came, went or changed Book; the outbox drained; her own genre correction;
+every change to a Collection), and a read that was asked before the change and lands after it never
+makes the data fresh: it is read once more. Retry, back online, a member change and the e2e build
+(`FRESH_MS` 0) ask as before.
+
+Requests to the API per tab switch (not counting preflights; KB = brotli on the wire; medians of 5):
+
+| step | before | after |
+| --- | ---: | ---: |
+| Home → Library, first visit of the session (genres, Collections, authors) | 3 / 18.6 KB | 3 / 18.6 KB |
+| Library → Profile, first visit (one request fewer: the genres were read a moment ago) | 6 / 23.1 KB | 5 / 16.3 KB |
+| **Profile → Library**, quick revisit | 2 / 15.9 KB | **0 / 0** |
+| **Library → Profile**, quick revisit (sessions 14.3, days, genres 6.9) | 4 / 21.9 KB | **0 / 0** |
+| **Profile → Library**, second revisit | 2 / 15.7 KB | **0 / 0** |
+| Library, 61 s after the last read | 5 / 48.6 KB | 5 / 48.8 KB |
+| Profile, 61 s after the last read | 4 / 22.8 KB | 4 / 22.9 KB |
+
+Ready times (tap → screen), before → after: 206 → 205, 225 → 216, 148 → 144, 145 → 140, 143 → 142,
+139 → 140, 148 → 149 ms; spread 4–16 % (the 16 % is the revisit to the Profile, after), so no change is
+claimed. The saving is requests and bytes (about 38 KB per Library ⇄ Profile round, plus the
+parse and the re-render the answers cost on a phone), not a faster screen: the screens show the device
+copy meanwhile. The harness does not log the Profile's two `head` counts, so Profile counts are two
+short in both columns. Tests: `tests/refetch-gating.test.ts` (the rule, and per store: a quick revisit
+is 0 requests, a visit after the window one, forced always asks, a change forgets it, a read in flight
+when a change is made is read again, a failure is asked again at the next visit),
+`tests/library-fresh.test.ts` (`change signals`).
+
+### 9.3 A change stamp: measured, not built
+
+The idea: a cheap server stamp so a visit after the window asks one tiny question and skips the
+reads when nothing changed. What it would save, measured on the two visits after the window above:
+
+| Visit after the window | requests / KB now | with a stamp, nothing changed | with a stamp, something changed |
+| --- | ---: | ---: | ---: |
+| Library (3 lists, genres, Collections) | 5 / 48.8 KB | 1 / ~0.2 KB | 6 / 49 KB, one round trip later |
+| Profile (sessions, days, genres) | 4 / 22.9 KB | 1 / ~0.2 KB | 5 / 23 KB, one round trip later |
+
+That is **about 70 KB brotli (200 KB decoded) per pair of visits at 150 entries**, and it grows with
+the Library (about 7x at 1,000 entries: ~330 KB brotli). Why it is **not built now**:
+
+- **It saves bytes, not time.** The screens already show the device copy while the read runs
+  (stale-while-revalidate): ready 139 ms with the five requests, and the longest answer takes 0.25 s at
+  1.6 Mbit/s. A phone on a normal connection does not feel it. At production's volume (one member, ~100
+  Home activations a day, at most a part of them past the window) it is a few MB a day at most.
+- **The stamp would be wrong with what exists.** `library_entries` has no `updated_at`, and edits of a
+  read (rating, review, dates), a format, `read_as`, `hidden`, a genre correction or a Collection's order
+  change nothing `count(*)` and `max(added_at, progress_updated_at, created_at)` can see; a delete plus an
+  add keeps the count. A correct stamp is a per-member counter bumped by triggers on six tables
+  (entries, sessions, progress days, collections, collection entries, entry genres), a new table with
+  an RLS rule and a pgTAP test, and a write on every progress save: the cost and the risk are larger than
+  the saving.
+- **Worth revisiting** when a member holds ~1,000 entries (a post-window visit is then ~330 KB brotli,
+  and a Goodreads import makes that member real), or if a native client needs a cheap change check; the
+  design is in `docs/perf/backend.md` F4.3.
+
+## 10. Lazy images, i18n compiler, long lists (this round)
+
+- **Lazy images:** audited in `docs/covers.md` (Lazy images, audited): per image site, before and after. The signed-in screens were lazy already (Home 8 covers / 296 KB at cold start, Library mount 28 / 299 KB: the browser's 1,250 px look-ahead, measured); what changed: the sign-in wall 2,319 → 737 KB, her own Books in search no longer all eager (157 → 28 cover requests for the query "the" on 150 Books), the author page's later groups, Home's last two sections, the halo's decoding, the Book hero's priority. Tool: `pnpm perf:images`.
+- **Message compiler:** dropped from the client, entry 176.7 → 172.7 KB brotli (F-2 above).
+- **Virtual list: measured, content-visibility tried and not shipped, a virtual list proposed (not built): §11.**
+
+## 11. Long lists: the Library's rows and search results (F-3, measured)
+
+`pnpm perf:list` (`web/perf/list.ts`): one warm page per run, the steps in the order a session meets them
+(Home → Library → Finished segment → scroll to the end → back to the top → search open → type
+"piranesi" → type "the"), `slow4g-4x` (CPU 4x, 1.6 Mbit/s, 150 ms), **5 runs each, medians**, `~` =
+spread above 15 %. Load average at the start of the series 3.6–5.3 (other workers on the Mac; every
+before/after pair below was run within minutes of each other). The build is `origin/main` after #263
+(lazy images in), on the 150-entry synthetic Library of §1 (the Library tab opens on *Want to read*: 48
+rows; *Finished*: 99 rows) and on a 1,000-entry one (`PERF_ENTRIES=1000 pnpm perf:seed`: 320 and 677
+rows). `style`, `layout` are CDP's `RecalcStyleDuration`/`LayoutDuration` over the step; the long frame
+is the Long Animation Frame (LoAF) of the step.
+
+### Library, as it is
+
+| step | rows | DOM nodes | style ms | layout ms | frames > 50 ms | longest frame ms (LoAF) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **150 entries** | | | | | | |
+| Home → Library (Want to read) | 48 | 705 | 30~ | 8~ | 1 | 83~ (97) |
+| → Finished segment | 99 | 3,959 | 38 | 16~ | 1 | **133 (141)** |
+| Finished: scroll to the end (77 covers) | 99 | 3,967 | 79 | 46~ | 0 | 17~ |
+| **1,000 entries** | | | | | | |
+| Home → Library (Want to read) | 320 | 3,425 | 72~ | 27~ | 1 | **267 (285)** |
+| → Finished segment | 677 | 26,609 | 206 | 102 | 2~ | **767 (748)** |
+| Finished: scroll to the end (681 covers) | 677 | 26,615 | 324 | 379 | **183** | 83~ |
+
+### Search
+
+| step | DOM nodes | style ms | layout ms | longest frame ms (LoAF) |
+| --- | ---: | ---: | ---: | ---: |
+| Home only, type "piranesi" (34 results) | 938 | 189~ | 17~ | 183~ (202~) |
+| 150 entries (Library mounted), type "piranesi" | 4,575 | 176~ | 18~ | 67~ (80~) |
+| 1,000 entries (Library mounted), type "piranesi" | 27,223 | 172 | 18~ | 200 (193) |
+| 150 entries, "the" (her own Books match widely) | 6,382 | 97 | 21~ | **133 (149)** |
+| 1,000 entries, "the" (677+ own rows, 302 covers asked for) | 40,850 | 355~ | 105 | **1,017 (999)** |
+
+### What the numbers say
+
+- **Typing in search costs the same with a 150- or a 1,000-entry Library, and with the Library not
+  mounted at all** (style 172–189 ms for 938, 4,575 and 27,223 nodes): the 172 ms of F-3 is not the
+  list's or the DOM's size. Not the covers' `container-type` either (206 ms with it off); with masks,
+  backdrop filters, transitions and animations off it falls to 131 ms, so part of it is the palette's
+  own motion (F-4's ground), not part of this question.
+- **A long frame from the list's size exists, and is mostly JavaScript.** The Finished switch's frame holds
+  one script of ~90 ms (Vue mounting 99 rows; read on the content-visibility build below, where style + layout
+  in the frame are 13 ms, ~50 ms without it): about 0.9 ms a row at 4x CPU.
+  So 99 rows (the owner's size) make a 133–141 ms frame, 677 rows 750 ms, once per segment switch or
+  Library mount. Scrolling is fine at 150 entries (no frame over 50 ms) and janky at 1,000 (183).
+- **Nothing grows unboundedly in the Library** (nodes are flat across the scroll steps), but **search's
+  "In your Library" group has no bound**: every own Book matching the query is a row (677 rows, 40,850
+  nodes, a 1 s frame at 1,000 entries; 99 rows and 133 ms at 150).
+- Not fine by the rule (no frame over 50 ms from list size): so the cheap try came first.
+
+### `content-visibility: auto` on the rows, tried
+
+`.row { content-visibility: auto; contain-intrinsic-size: auto 77px; overflow-clip-margin: 40px }` on
+`library/EntryRow.vue` and the same on `search/ResultRow.vue`, inside `@supports (content-visibility:
+auto) and (overflow-clip-margin: 1px)`. The containment clips what a row paints outside its box (the
+pressed fill reaches 8 px beyond it, the cover's shadow 24 px of blur); without `overflow-clip-margin`
+the clip was seen to remove both, with it they stay (Chromium 153), and a browser without it keeps the
+plain row. Same series and load as above:
+
+| step | before | after |
+| --- | ---: | ---: |
+| 150: Library mount, longest frame | 97 | 98 |
+| 150: Finished switch, longest frame (style ms) | 141 (38) | 113 (25) |
+| 150: search "the", longest frame (style ms) | 149 (97) | 129 (38) |
+| 1,000: Library mount, longest frame | 285 | 234 |
+| 1,000: Finished switch, longest frame | 748 | 471 |
+| 1,000: scroll the Finished segment, frames over 50 ms (style + layout ms) | 183 (703) | 0 (2,031: spread over frames) |
+| 1,000: search "the", longest frame | 999 | 741~ |
+
+It helps the style and layout share and removes the scroll jank, but the script that mounts the rows is
+untouched, so a frame over 50 ms is left everywhere (98–113 ms at 150). **And it breaks the cover flight
+and scroll restoration, so it is not shipped.** `web/perf/flight-check.ts` taps a Finished row at a
+scroll place far from the top, goes to the Book and Back and compares the flying cover's box, frame by
+frame, with the row's own cover (and the scroll place before and after), on 677 rows:
+
+| build | Back lands on the row's cover | scroll place restored |
+| --- | --- | --- |
+| `origin/main` (4 rounds, scroll 0–4,500 px) | 0 px off, flight in every round | 0 → 0, 1,500 → 1,500, 3,000 → 3,000, 4,500 → 4,500 |
+| with `content-visibility` rows (3 rounds) | **25.5 px off; 8.5 px off; no flight at all (cross-fade) at 3,000 px** | 0 → 0, **1,500 → 1,143**, 3,000 → 3,000 |
+
+The flight measures the row's cover (`useBookFlight.ts`, `coverFor`/`tappedCover`) as the page comes back,
+when the skipped rows' sizes are still the 77 px guess (the document's height changed by 400 px between
+reads); the router's scroll restoration lands on the guess too. The soak (`LIBELLUS_E2E_PERF=1 playwright
+test e2e/perf`, Library, 30 rounds, CPU ÷4, 3 repeats) did not see it: its Library is 51 rows and its taps
+stay on the first screen (0 dropped frames, `fly` 267/217 ms, flat nodes and heap, with and without).
+Fixing the flight to wait for the skipped rows would be a change of `useBookFlight.ts`, a larger risk than
+the gain left over (the script cost does not go away).
+
+### Proposal (not built): a windowed list
+
+Only a list that mounts the rows near the screen removes the script cost (a frame of the 48-row
+Library mount, ~100 ms, is the floor here; 99 rows add 40 ms, 677 add 650 ms) and the DOM growth:
+
+- VueUse's `useVirtualList` (fixed `itemHeight: 77`; the Library rows are 77 px, 76 for a year's first)
+  on the Library's segments: the page, not an inner container, scrolls here (`window.scrollY`, the
+  router's restoration, sticky year headers), so it needs the page-scroll variant (`useWindowVirtualList`
+  or an own range from `window.scrollY`), spacer blocks of the rows' height, and year headers as items.
+  Costs: the flight must still find the row (rows in range only: a Back to a row outside the window
+  needs the list scrolled to it before the measure), `scrollIntoView`/restoration depend on the spacer
+  height being exact, and the pressed-fill/shadow bleed needs no clip (rows are not contained).
+- Search results are a reversed list with variable rows (68–84 px) and a mask: harder, and
+  the cheaper change comes first: **bound her own Books group** (the 20 best, and a "Show all n" row), a
+  product decision (SPEC/owner), which alone turns the 1,000-entry "the" from 677+ rows to ~30.
+- Expected: the Library's mount and segment switch constant at the ~100 ms floor instead of 133 / 285 /
+  750 ms; DOM nodes flat at ~1,000 instead of 3,959 / 26,609. To be measured with `pnpm perf:list` and
+  `perf/flight-check.ts` before anything ships. Owner's call: at 150 entries the gain is the 40 ms between
+  the 48-row and the 99-row frame.

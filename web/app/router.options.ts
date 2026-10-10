@@ -1,10 +1,11 @@
 import type { RouterConfig } from '@nuxt/schema'
-import { createWebHistory, START_LOCATION } from 'vue-router'
+import { createWebHistory, START_LOCATION, type RouteLocationNormalized } from 'vue-router'
 import { useNuxtApp, useRouter } from '#imports'
 import { bookPageOf } from '~/utils/bookPageKey'
 import { isBookPath } from '~/utils/flight'
 import { tabPlaces, untilReachable, type PageWatch, type ScrollPlace } from '~/utils/tabPlaces'
 import { keepsForeignLayers, listenForBack } from '~/composables/useBackDismiss'
+import { knownSignedOut, signedOutDestination } from '~/utils/signedOutRoute'
 
 // Where a page opens (Nuxt's own scroll behaviour, plus the tabs' places):
 // back and forward return to where the page was; a tab (Home, Library) opens
@@ -41,6 +42,28 @@ const documentWatch: PageWatch = {
 let landing: { cancel(): void } | null = null
 
 export default {
+  // A visitor the device knows to be signed out is sent to the sign-in screen by the router's first
+  // navigation, before the page behind her address is fetched. Nuxt registers the auth middleware
+  // (`router.beforeEach`) only after `router.isReady()`, and the first navigation, started by
+  // `app.use(router)`, loads the matched page's chunk (Home's, for `/`) before that: ~20 KB of Home
+  // nobody signed out ever sees (docs/perf/bundle.md, F1). `beforeEnter` runs before a route's
+  // components are loaded. Only the first navigation, and only when `knownSignedOut` (no stored session,
+  // no offline Library, no code in the air): any other start goes through the middleware as before, and
+  // Nuxt's own replace to the address she opened (at `app:created`) still runs the middleware once.
+  routes: (routes) => {
+    const early = (to: RouteLocationNormalized, from: RouteLocationNormalized) => {
+      if (from !== START_LOCATION || typeof window === 'undefined') return
+      let storage: Storage
+      try {
+        storage = window.localStorage
+      } catch {
+        return
+      }
+      if (!knownSignedOut(storage)) return
+      return signedOutDestination(to, { pending: false, storage })
+    }
+    return routes.map((route) => ({ ...route, beforeEnter: [early, ...(route.beforeEnter ? [route.beforeEnter].flat() : [])] }))
+  },
   // Nuxt's own history, with the Back that closes a sheet listening before the
   // router does (composables/useBackDismiss.ts), and that lets a Back off another
   // layer's entry (Regal's row, a Book broken out) pass the router by.

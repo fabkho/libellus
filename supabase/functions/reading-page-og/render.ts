@@ -110,25 +110,68 @@ function loadResvg(): Promise<void> {
 // --------------------------------------------------------------------- covers
 
 /**
+ * The hosts a cover may come from, as the database lets them through: `private.cover_shown`
+ * (supabase/migrations/20261017060000_social_gate2.sql) matches the same ones on the whole host.
+ * The function keeps its own copy, so it never trusts what the database sends: a cover is
+ * fetched only from here, and only over https.
+ */
+const COVER_HOST = /^(covers\.openlibrary\.org|books\.fabkho\.dev|([a-z0-9-]+\.)+mzstatic\.com)$/i
+/**
+ * Where an allowed cover host may send the request on: Open Library answers every cover with a
+ * redirect to the Internet Archive, where it keeps the images (the same hosts, then `archive.org`
+ * and its subdomains).
+ */
+const REDIRECT_HOST = /^(covers\.openlibrary\.org|books\.fabkho\.dev|([a-z0-9-]+\.)+mzstatic\.com|([a-z0-9-]+\.)*archive\.org)$/i
+/** At most this many redirects are followed (Open Library's takes two). */
+const MAX_REDIRECTS = 3
+
+/** Whether `url` is an https URL on one of `hosts`, with no credentials and no other port. */
+export function coverUrlAllowed(url: URL, hosts: RegExp = COVER_HOST): boolean {
+  return url.protocol === 'https:' && !url.username && !url.password && (url.port === '' || url.port === '443') && hosts.test(url.hostname)
+}
+
+/**
  * A cover as a data URL for satori, or null when there is none, it is not
- * https, or the host is slow or unhappy. Covers come from any host a Book was
- * imported from, so this never blocks the image: the caller draws a block in
- * the cover's own colour instead.
+ * https on a known cover host, or the host is slow or unhappy. The database already
+ * only hands out covers of those hosts; this checks again, and follows a redirect
+ * itself, one hop at a time, only to a host a cover really lives on. It never blocks
+ * the image: the caller draws a block in the cover's own colour instead.
  */
 export async function loadCover(book: PublicBook, deps: RenderDeps): Promise<string | null> {
-  const url = book.cover_url
-  if (!url || !url.startsWith('https://')) return null
+  if (!book.cover_url) return null
+  let current: URL
+  try {
+    current = new URL(book.cover_url)
+  } catch {
+    return null
+  }
+  if (!coverUrlAllowed(current)) return null
   const fetchImpl = deps.fetch ?? ((input, init) => fetch(input, init))
   const abort = new AbortController()
   const timer = setTimeout(() => abort.abort(), deps.coverTimeoutMs ?? 2500)
   try {
-    const response = await fetchImpl(url, { signal: abort.signal, redirect: 'follow' })
-    const type = response.headers.get('content-type') ?? ''
-    if (!response.ok || !type.startsWith('image/')) return null
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    // Five megabytes is far more than any cover; anything larger is a mistake.
-    if (!bytes.length || bytes.length > 5_000_000) return null
-    return `data:${type.split(';')[0]};base64,${encodeBase64(bytes)}`
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      const response = await fetchImpl(current.href, { signal: abort.signal, redirect: 'manual' })
+      if (response.status >= 300 && response.status < 400) {
+        await response.body?.cancel().catch(() => {})
+        const location = response.headers.get('location')
+        if (!location) return null
+        try {
+          current = new URL(location, current)
+        } catch {
+          return null
+        }
+        if (!coverUrlAllowed(current, REDIRECT_HOST)) return null
+        continue
+      }
+      const type = response.headers.get('content-type') ?? ''
+      if (!response.ok || !type.startsWith('image/')) return null
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      // Five megabytes is far more than any cover; anything larger is a mistake.
+      if (!bytes.length || bytes.length > 5_000_000) return null
+      return `data:${type.split(';')[0]};base64,${encodeBase64(bytes)}`
+    }
+    return null
   } catch {
     return null
   } finally {

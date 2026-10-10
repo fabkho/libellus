@@ -222,3 +222,82 @@ view, and an OpenLibrary one answers in ~575 ms (p90 1.1 s) on top of the author
 - The source ranking is unchanged: the card's cover is what the page chose (hers, else in her
   language). There is no data here that Apple has covers for the same works; looking each one up by
   ISBN on Apple (36 ms against OpenLibrary's 575 ms) would be a follow-up, measured first.
+
+## Lazy images, audited (L1)
+
+Owner: nothing off-screen should be rendered or requested until it is near the viewport. Every
+`<img>` the app can render was read and, for the screens the harness reaches, counted
+(`cd web && pnpm perf:images`: per screen the `<img>` in the DOM, lazy/eager, `decoding`, on screen,
+loaded, cover requests and bytes, the eager ones that load off screen; Chromium, Slow 4G network,
+412 × 915 at 2.625×, seeded Library of 150 entries; the covers answered by `perf/serve.mjs`).
+
+**The browser's distance.** `loading="lazy"` starts an image when it comes within a distance of the
+viewport that Chromium sets by connection type: 1,250 px on 4G or faster, 2,500 px on 3G or slower.
+Measured here (Library, Slow 4G profile, viewport 915 px): the last row requested starts at
+2,161 px from the top of the page, the first one held back at 2,238 px: 915 + 1,250. That is
+17 rows beyond the screen (77 px each) loaded on Library mount, 28 covers (299 KB) in all: 8 eager
+(the rows above the fold), 3 lazy on screen, 17 lazy ahead. Horizontal rows (Home's Up next) work the
+same way on the x axis. Safari and Firefox choose their own distances (not measured: WebKit has no
+throttling in the harness); the app sets none. The two places where a mask or a clipped box defeat
+the browser's look-ahead have their own rule (search results: `useNearView`, above; sections that
+open with a reveal: eager, A9).
+
+Rules the audit settled on: a cover is `eager` only where it is the first screen (Home's reading
+cards and Up next, the Library's first rows, the first of a list inside a sheet that has just
+opened), where it is the page's LCP (the Book page's hero: `eager`, `priority`), where a clipped box
+would keep a lazy image from starting (More from the author's three rows, prefetched in A9), or
+where the cover flight needs the image there (below). Everything else is lazy. Every `UiCover` image
+is `decoding="async"`, in a 2:3 box of a token width (`aspect-2/3`), so no image shifts the layout;
+the plain `<img>`s below are all in boxes of their own size.
+
+**The cover flight** (docs/MOTION.md, `useBookFlight.ts`) needs two things, and lazy loading touches
+neither: the tapped cover is on screen, so its image has started (within the browser's distance by
+construction; before it has loaded the flight shows its thumbhash, as before), and the hero's
+image is `eager` and asked for with `preloadImage` (`fetchpriority="high"`) when the finger goes
+down. The flight's own copies (`snapshot.ts`, `useEditionChange.ts`, `readerFlight.ts`) are made
+`eager`/`sync` by their code. `identity` and the More from the author prefetch are unchanged.
+
+| Image site | Before | After |
+| --- | --- | --- |
+| `UiCover`: the sheet image | lazy / eager by prop, `decoding=async`, `fetchpriority=high` with `priority` | same |
+| `UiCover`: the halo (`glow`) | same URL as the sheet, `decoding` default (sync) | `decoding=async`: its decode no longer blocks a frame |
+| `UiCover`: the backing of a `whole` cover | no `loading`, no `decoding` (eager) | follows `eager`, `decoding=async` |
+| Home: reading cards (`index < 3`) | eager (the LCP is the first one) | same |
+| Home: Up next (`index < 5`) | eager | same: on screen on a phone (8 cold-start covers, 296 KB, all visible) |
+| Home: Next in your series, Circle feature and friends | eager (`index < 3`, the feature) | **lazy**: the last sections of Home, below the fold; the section's reveal opens when its data is there and the browser starts what is in range |
+| Library: segment rows (`index < 8`), reading cards (`< 4`) | eager; the rest lazy | same (11 rows on a phone: 8 eager, 3 lazy on screen, 17 lazy ahead) |
+| Library: "Collections" link covers (xs) | lazy | same |
+| Profile: favourite, year cards, authors' books (3 each), month books, read rows, public pages | lazy | same (none on the first screen) |
+| Profile year page (`/profile/:year`): month books | lazy | same: 47 `<img>`, 28 on screen, 39 requests |
+| Collections list (mosaics, `index < 4`) and a collection (`index < 10`) | eager | same: on screen (16 and 10) |
+| Search results (the sources' rows) | eager first six (+ `priority`) and rows within a list height (`useNearView`, a mask defeats lazy) | same |
+| Search results: her own Books ("In your Library") | **every row eager**, however many match (an author with 40 Books: 40 requests) | first six, then the rows within a list height, like the others |
+| Edition picker (Book page), Own edition, Edition choice (ebooks), import's done screen | eager / first six, in sheets that mount on open or at the top of a page | same |
+| Author page: works (`index < 4`) | eager in **every** group (a series below the fold asked for 4 covers at once) | eager in the first group only |
+| Book page hero | eager, no priority | eager, `fetchpriority=high` (the page's LCP; the flight preloads it the same way) |
+| More from the author | eager, prefetched (A9) | same |
+| Friends: feed rows (`dayIndex === 0 && index < 4`), member pages, sheets | eager first four of the first day, else lazy | same |
+| Ebooks: waiting rows, candidate sheet, contents sheet, end of book | lazy | same (blob or file covers: no network) |
+| Sign-in wall (`AuthFrame`, 20 plain `<img>` of 82 px in boxes of the wall's size) | the URL's 600 × 900 (≈ 116 KB each), all eager, low priority: 20 requests, 2,319 KB | `lg` 240 × 360 (37 KB), the first two rows eager, the two rows under the veil lazy: 20 requests on a phone (all within range), **737 KB** (−68 %) |
+| Avatar (header, Profile, photo editor), author portrait | plain `<img>`, eager, in a 32–72 px circle, first screen; the portrait is the author page's hero | same: first screen, sized box, initials underneath |
+| Photo crop (`profile/Photo.vue`) | an object URL in a box of explicit size | same |
+| CSS: thumbhash under a cover (`background-image: url(data:…)`), film grain (inline SVG), Button gradient | no request | same: no `url()` reaches the network anywhere in `app/` |
+| Shelf (`ShelfPile`, `ShelfRow`) | colours only; Regal (the private layer: its own textures) is not in this repo and not in the build | same |
+| Reader | EPUB images come from the book file (blob URLs, sanitised in `data/reader/markup.ts`): no network | same |
+
+Measured with the harness (`slow4g-4x`, 5 runs, medians, load average 3.6–4.0; cover requests and
+bytes from the network log; the first column is the build before this change, the second after):
+
+| | before | after |
+| --- | ---: | ---: |
+| Cold start (Home shown): cover requests / KB | 8 / 296 | 8 / 296 |
+| Warm start | 8 / 296 | 8 / 296 |
+| Library mount (Home → Library, `b1`) | 28 / 301 | 28 / 299 |
+| Library scrolled to the bottom (`b2`) | 26 / 595 | 26 / 590 |
+| Profile open (`b3`) | 13 / 191 | 13 / 191 |
+| Sign-in, signed out (`perf:images`, unthrottled) | 20 / 2,319 | 20 / 737 |
+| Search "the" on a Library of 150 (`perf:list`, her own Books match widely) | 157 / — | 28 / — |
+
+So the signed-in screens did not change: they were lazy already, and the audit's job there was to
+prove it and to find the few exceptions (above). Home's first screen asks for the 8 covers it shows
+and no more; the Library asks for 28 of the 51 images in its DOM, those within 1,250 px.

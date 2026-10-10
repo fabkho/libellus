@@ -68,7 +68,7 @@ In the repository's settings (the workflow does not change them):
 
 | Where | What |
 | --- | --- |
-| Settings → Actions → General → Workflow permissions | **Allow GitHub Actions to create and approve pull requests** on, so release-please can open its pull request. |
+| Settings → Actions → General → Workflow permissions | **Allow GitHub Actions to create and approve pull requests** on, so release-please can open its pull request (the one checkbox also lets Actions approve; how to turn it off: [repository-hardening.md](security/repository-hardening.md), F20). |
 | Settings → Environments → **`production`** | Deployment branches and tags: **Selected branches and tags → `main`** (a manual run from another branch is refused). No reviewers needed: merging the release pull request is the approval. |
 | `production` → environment secret `SUPABASE_ACCESS_TOKEN` | A Supabase personal access token of an account that can manage the project (dashboard → Account → Access Tokens). The CLI uses it for the Management API and to log in to the database with a temporary role, so no database password is needed. |
 | `production` → environment secret `SUPABASE_DB_PASSWORD` (optional) | The database password, only if the temporary role ever fails; the CLI then uses it instead. |
