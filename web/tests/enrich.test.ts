@@ -190,6 +190,34 @@ describe('series', () => {
     expect(await series.muted()).toEqual({ data: [], error: null })
   })
 
+  it('startedAndMuted answers both Home lists in one call: what started and muted answer, item for item', async () => {
+    const { member, two } = await reader()
+    const series = createSeries(member.client)
+    const breq = (await series.started()).data![0]!.series.id
+
+    // Nothing muted: everything open, nothing muted.
+    const before = (await series.startedAndMuted()).data!
+    expect(before.open).toEqual((await series.started()).data)
+    expect(before.muted).toEqual([])
+
+    // Muted: it moves to the other side, and each side is what its own function says.
+    await series.mute(breq)
+    const muted = (await series.startedAndMuted()).data!
+    expect(muted.open).toEqual((await series.started()).data)
+    expect(muted.muted).toEqual((await series.muted()).data)
+    expect(muted.muted.map((s) => s.series.name)).toEqual([runTitle('Breq')])
+    expect(muted.open).toEqual([])
+
+    // The limit cuts each side by itself, and the answers follow her reading.
+    await createLibrary(member.client).startReading(two.id, '2026-09-10')
+    expect((await series.startedAndMuted(1)).data).toEqual({ open: (await series.started(1)).data, muted: (await series.muted(1)).data })
+    expect((await series.startedAndMuted()).data!.muted.map((s) => s.next.title)).toEqual(['Ancillary Mercy'])
+
+    // Somebody else's mutes are not hers to see.
+    const other = await signUpMember()
+    expect((await createSeries(other.client).startedAndMuted()).data).toEqual({ open: [], muted: [] })
+  })
+
   it('a mute is hers alone, an unknown series is refused, and offline nothing is sent', async () => {
     const { member } = await reader()
     const breq = (await createSeries(member.client).started()).data![0]!.series.id

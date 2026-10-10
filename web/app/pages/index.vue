@@ -42,7 +42,11 @@ function load() {
   void library.loadReadInYear()
 }
 
-onActivated(load)
+// Coming back to Home asks again only for what has gone stale (stores/library.ts, `FRESH_MS`); Retry and a member change always ask.
+onActivated(() => {
+  void library.load({ ifStale: true })
+  void library.loadReadInYear({ ifStale: true })
+})
 // Kept alive, so a member change (the lists reset) while it is not showing has
 // to bring it back by itself.
 watch(

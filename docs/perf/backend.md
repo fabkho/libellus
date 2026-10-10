@@ -591,6 +591,8 @@ Fixes, in order of value for effort:
 
 Measure again: `screens.mjs --screen home` payload columns; production request count per day.
 
+**Fixed** (1 and the refetch half of 3; PR #255): `LIST_BOOK_COLUMNS` leaves `description` (and `owner_id`) out of the three lists, the Library read for search, a Collection's entries and the Profile's reads; the device keeps the descriptions of the Books she has apart and fills them idle (one request per 40 Books, once per Book), so an owned Book still reads in full offline; Home and Library do not ask for the lists, the year count or the series again within 60 s of the last answer (`load({ ifStale })`; back online, the outbox, imports and Retry ask at once). Measured with the client harness (`pnpm perf`, slow4g-4x, 5 runs, load average 5-6, a 150-entry member): per tab switch the three list requests (92.4 KB brotli, 369 KB decoded) are 0; API requests per Home activation 7 -> 2 (95 -> 0.2 KB), per Library activation 5 -> 2 (108 -> 15.6 KB); a visit after the window reads the lists in 32.8 KB brotli (191 KB decoded, -65 %); the Profile's `reading_sessions` 58.2 -> 16.0 KB (293 -> 136 KB decoded); warm start 95 -> 36 KB of API. Long frames at a tab switch were none before and after (the first Library mount's 121-133 ms LoAF is the page mounting, unchanged); Home shown 413 -> 424 ms warm, inside the noise (390-443 ms). The price: a first start on a device now also reads the descriptions once, 67 KB brotli in 4 requests after Home is shown (cold start API 96 -> 103 KB). Not done: `.range()` paging past 1,000 rows (2), a server stamp (3), the `home()` RPC (4); the Profile still reads its sessions on every open; the Library tab still asks for collections, genres and authors (15.6 KB); Search's Library copy (`libraryEntries`) is still the full list, now without descriptions.
+
 ### F5. `started_series` + `muted_series_list` do the same work twice (impact medium, effort S)
 
 **Evidence class: P** (statement statistics, EXPLAIN as the member) **+ L** (the duplicate work, the fix). Rank 4.
@@ -608,6 +610,8 @@ query, replaced by `started_series`; the app no longer calls it, so it can be dr
 once nothing else does (check the Next sheet first).
 
 **Partly fixed** in PR #238 (20261018040000): the two lists are two requests over one helper, so one evaluation cannot be shared in SQL. `muted_series_list` now answers `[]` after one probe when nothing is muted (2.64 -> 0.02 ms, Home's series cost -39 % for a member without mutes). A member with mutes still runs the chain twice; that needs one client call.
+
+**Fixed** (PR #255, migration 20261020030000): `started_and_muted_series(p_limit, p_language)` returns `{"open": ..., "muted": ...}` from one evaluation of the chain (`started_series_core`, which the helper of the two old functions now wraps; their signature, JSON and RLS rule are unchanged, installed apps keep calling them). Home asks once (`startedAndMuted`; a database without the function answers `PGRST202` and the two old calls are made). Local, a member with 150 entries, 40 series of 10 works, 6 open and 12 muted: the two calls 12.2 ms (median of 9, 10.5-13.7) -> one call 6.2 ms (5.9-7.7), -49 %; Home's series requests 2 -> 1. Production not measured.
 
 ### F6. pg_cron housekeeping (impact low, effort S)
 

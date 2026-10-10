@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { bookKey, sourceKeys, type Book, type BookSnapshot } from '~/data/books'
+import { bookKey, parseBookKey, sourceKeys, type Book, type BookSnapshot } from '~/data/books'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
-import { forgetLibrary, readLibrary, saveLibrary } from '~/data/deviceLibrary'
+import { forgetLibrary, readDescriptions, readLibrary, saveDescriptions, saveLibrary } from '~/data/deviceLibrary'
 import {
   addWithFromDraft,
   checkAddDraft,
@@ -18,6 +18,7 @@ import { applyWrites } from '~/data/queuedWrites'
 import { reuseEntries } from '~/data/reuseEntries'
 import type { ReadAs } from '~/data/readAs'
 import { isoDay } from '~/utils/dates'
+import { FRESH_MS } from '~/utils/fresh'
 import { onIdle } from '~/utils/idle'
 import { afterMotion } from '~/utils/motion'
 import { useSearchStore } from '~/stores/search'
@@ -43,6 +44,17 @@ export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read', 'readin
  * every load and change, read back when the store is set up, so the app opens
  * on the last-loaded Library, connection or not. Offline nothing is asked for;
  * the lists refresh by themselves once the connection is back.
+ *
+ * Home and Library ask for the lists when their tab is shown, but not again while what
+ * they hold is fresh (`FRESH_MS`, `load({ ifStale })`): a change made on this device is in the
+ * lists already, and a change made elsewhere is read at the next visit after the window. A forced
+ * `load()` (back online, the outbox drained, an import) never waits for it.
+ *
+ * The lists leave the description out (`LIST_BOOK_COLUMNS`): it is 65 % of a Book's JSON and only
+ * the book page shows it. The device keeps the descriptions of the Books in the Library apart
+ * (`descriptions`, `descriptionOf`): filled from the book page, from what an older copy still holds
+ * and, once the Library is loaded and the browser idle, by a request for the ones it lacks, so an
+ * owned Book's page reads in full offline.
  *
  * Offline the changes still happen (issue #93): they wait in the outbox
  * (stores/sync.ts) and the entry moves as if the database had answered. Every
@@ -87,7 +99,6 @@ export const useLibraryStore = defineStore('library', () => {
   let lastChange = -Infinity
   /** When the lists showing were asked for (`performance.now()`), by the last load that landed. */
   let loadedAt = -Infinity
-
   /** The load on its way, and the one that follows it for whoever asked meanwhile (`load`). */
   let loading: Promise<void> | null = null
   let following: Promise<void> | null = null
@@ -103,7 +114,12 @@ export const useLibraryStore = defineStore('library', () => {
    * sharing the bandwidth with the Book page's own reads, whose writes-as-POST
    * then timed out and put the app offline until the pile had drained.
    */
-  function load(): Promise<void> {
+  function load({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
+    if (ifStale) {
+      // Home and Library asking for a visit: lists that are fresh stand, and a load on its way is the answer.
+      if (loading) return loading
+      if (loaded.value && !loadError.value && performance.now() - loadedAt < FRESH_MS) return Promise.resolve()
+    }
     if (!loading) {
       loading = fetchLists().finally(() => (loading = null))
       return loading
@@ -148,6 +164,8 @@ export const useLibraryStore = defineStore('library', () => {
       if (lastChange > asked) return fetchLists()
     }
     loadError.value = null
+    // What the lists on screen know that the new ones do not (a snapshot's description, an older copy's).
+    keepDescriptionsOf(STATUSES.flatMap((status) => lists[status]))
     // The writes still waiting, laid over what the database has (issue #93).
     const merged = applyWrites(
       { want_to_read: results[0]!.data!, reading: results[1]!.data!, finished: results[2]!.data! },
@@ -168,6 +186,7 @@ export const useLibraryStore = defineStore('library', () => {
     loaded.value = true
     loadedAt = asked
     if (changed) save()
+    fillDescriptions()
   }
 
   /**
@@ -238,21 +257,27 @@ export const useLibraryStore = defineStore('library', () => {
   const readInYearOf = ref(Number(isoDay().slice(0, 4)))
 
   let countAsks = 0
+  /** When the count showing was asked for (`performance.now()`); a count from the device's copy is as good as none. */
+  let countedAt = -Infinity
 
   /** Counts this year's finished sessions (data/library.ts, `readInYear`): one call. */
-  async function loadReadInYear() {
+  async function loadReadInYear({ ifStale = false }: { ifStale?: boolean } = {}) {
     const repo = library()
     if (!repo) return
     const member = session.member?.id
     const year = Number(isoDay().slice(0, 4))
+    // A count this fresh stands (a finish on this device asks for a new one itself).
+    if (ifStale && readInYear.value !== null && readInYearOf.value === year && performance.now() - countedAt < FRESH_MS) return
     const ask = ++countAsks
     if (!isOnline()) return
+    const asked = performance.now()
     const result = await repo.readInYear(year)
     // Another member, or a newer count asked for meanwhile (a finish): that one wins.
     if (member !== session.member?.id || ask !== countAsks) return
     if (result.error) return
     readInYearOf.value = year
     readInYear.value = result.data
+    countedAt = asked
     save()
   }
 
@@ -283,6 +308,7 @@ export const useLibraryStore = defineStore('library', () => {
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entry.id)
     lists[entry.status] = sortEntries([entry, ...lists[entry.status]])
     remember(entry, { keys })
+    keepDescriptionsOf([entry])
     search.markAdded(entry)
     save()
     // A finish adds to the year's count. Only a count Home has shown is kept
@@ -434,6 +460,102 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  // ----------------------------------------------------------- descriptions
+
+  /**
+   * The description of each Book in the Library, by Book id (`''`: it has none). The lists leave it
+   * out (`LIST_BOOK_COLUMNS`); the book page reads it from here when its Book has none of its own
+   * (`descriptionOf`). Shallow: a Book's text is set once.
+   */
+  const descriptions = shallowReactive(new Map<string, string>())
+
+  let descriptionsRead = false
+  /** The device's descriptions, read the first time something needs them (not at start: it is a few hundred KB to parse). */
+  function readDeviceDescriptions() {
+    if (descriptionsRead) return
+    descriptionsRead = true
+    const member = session.member?.id
+    if (!import.meta.client || !member) return
+    const kept = readDescriptions(window.localStorage, member)
+    if (kept) for (const [id, text] of Object.entries(kept)) if (!descriptions.has(id)) descriptions.set(id, text)
+  }
+
+  /** The description of a Book as the device knows it, null when it has none or is not known yet. */
+  function descriptionOf(book: Pick<Book, 'description'> & { id?: string }): string | null {
+    if (book.description) return book.description
+    readDeviceDescriptions()
+    return (book.id ? descriptions.get(book.id) : undefined) || null
+  }
+
+  /** What the database said about a Book's description (null: none), once it did. */
+  function rememberDescription(bookId: string, description: string | null | undefined) {
+    if (description === undefined) return
+    readDeviceDescriptions()
+    const text = description ?? ''
+    if (descriptions.get(bookId) === text) return
+    descriptions.set(bookId, text)
+    saveDescriptionsLater()
+  }
+
+  /** The descriptions the entries carry (a snapshot's, an older device copy's): kept, not asked for again. */
+  function keepDescriptionsOf(entries: readonly LibraryEntry[]) {
+    for (const entry of entries) if (entry.book.description) rememberDescription(entry.book.id, entry.book.description)
+  }
+
+  let filling = false
+  /**
+   * Asks, once the browser is idle, for the descriptions of the Library's Catalogue Books that the
+   * device does not hold yet: all of them the first time (a few hundred KB, in pieces), then only
+   * the ones added since. So an owned Book reads in full offline without the lists carrying them.
+   */
+  function fillDescriptions() {
+    if (filling || !import.meta.client || !isOnline()) return
+    filling = true
+    const member = session.member?.id
+    onIdle(
+      async () => {
+        try {
+          const repo = library()
+          if (!repo || member !== session.member?.id) return
+          readDeviceDescriptions()
+          const missing = STATUSES.flatMap((status) => lists[status])
+            .map((entry) => entry.book.id)
+            .filter((id) => !descriptions.has(id) && parseBookKey(id)?.kind === 'catalogue')
+          if (!missing.length) return
+          const result = await repo.descriptions(missing)
+          if (result.error || member !== session.member?.id) return
+          for (const id of missing) rememberDescription(id, result.data.get(id) ?? null)
+        } finally {
+          filling = false
+        }
+      },
+      { timeout: 5000, fallback: 2500 },
+    )
+  }
+
+  let savingDescriptions: (() => void) | null = null
+  function saveDescriptionsLater() {
+    if (!import.meta.client) return
+    savingDescriptions?.()
+    savingDescriptions = onIdle(
+      () => {
+        savingDescriptions = null
+        writeDescriptions()
+      },
+      { timeout: 4000, fallback: 1500 },
+    )
+  }
+
+  /** The descriptions of the Books she has, now. Only once the Library was loaded (else nothing is known to drop). */
+  function writeDescriptions() {
+    const member = session.member
+    if (!import.meta.client || !member || !loaded.value) return
+    const have = new Set(STATUSES.flatMap((status) => lists[status]).map((entry) => entry.book.id))
+    const kept: Record<string, string> = {}
+    for (const [id, text] of descriptions) if (have.has(id)) kept[id] = text
+    saveDescriptions(window.localStorage, member.id, kept)
+  }
+
   // ------------------------------------------------------- the device's copy
 
   /** Cancels the write waiting for an idle moment, if there is one. */
@@ -458,6 +580,11 @@ export const useLibraryStore = defineStore('library', () => {
 
   /** The waiting write, now (the page is hidden or going away). */
   function flushSave() {
+    if (savingDescriptions) {
+      savingDescriptions()
+      savingDescriptions = null
+      writeDescriptions()
+    }
     if (!saving) return
     saving()
     saving = null
@@ -487,6 +614,8 @@ export const useLibraryStore = defineStore('library', () => {
     if (!saved) return
     for (const status of STATUSES) lists[status] = saved.lists[status]
     for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
+    // A copy from before the lists left the description out still has them: kept, so they are not asked for.
+    keepDescriptionsOf(STATUSES.flatMap((status) => lists[status]))
     // Last year's tally is no answer to this year's question.
     if (saved.readInYear?.year === readInYearOf.value) readInYear.value = saved.readInYear.count
     loaded.value = true
@@ -495,7 +624,12 @@ export const useLibraryStore = defineStore('library', () => {
   function reset() {
     saving?.()
     saving = null
+    savingDescriptions?.()
+    savingDescriptions = null
+    descriptions.clear()
+    descriptionsRead = false
     loadedAt = -Infinity
+    countedAt = -Infinity
     for (const status of STATUSES) lists[status] = []
     loaded.value = false
     loadError.value = null
@@ -549,6 +683,8 @@ export const useLibraryStore = defineStore('library', () => {
     readInYear,
     readInYearOf,
     loadReadInYear,
+    descriptionOf,
+    rememberDescription,
     entryByKey,
     remember,
     entryChanged,

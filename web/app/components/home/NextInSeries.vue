@@ -40,11 +40,11 @@ function openMenu(item: StartedSeries) {
 let justMounted = false
 onMounted(() => {
   justMounted = true
-  void series.loadStarted()
+  void series.loadStarted({ ifStale: true })
   void nextTick(() => (justMounted = false))
 })
 onActivated(() => {
-  if (!justMounted) void series.loadStarted()
+  if (!justMounted) void series.loadStarted({ ifStale: true })
 })
 // A Book finished (or started) elsewhere: what is open in a series changes.
 watch(
