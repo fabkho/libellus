@@ -1,4 +1,4 @@
--- Catalogue input (security assessment, October 2026: F1, F17).
+-- Catalogue input (security assessment, October 2026: F1, F17, F14).
 --
 -- F1  A Catalogue Book's cover was whatever the first member sent: a tracking pixel for every
 --     member who later looked at the Book, and any image of her choice. S1 put the host list
@@ -15,6 +15,9 @@
 --     URL (`enrich`) and were unchecked: both get the format of Open Library's own keys
 --     (the pattern `editionKey()` / `workKey()` in functions/enrich/openlibrary.ts accept, capped at
 --     12 digits). The two functions above refuse a key off the pattern as `book_invalid`.
+-- F14 `search_books` had no bound on the query: 8 s of CPU per call for a 0.5 MB one. The query is cut
+--     to 200 characters (the app never sends more) before the ISBN test and the words are built.
+--     Signature, JSON shape, grants and the `books_readable` rule are as in 20261020020000.
 --
 -- If the migration stops at a VALIDATE: a Book whose Open Library key is odd and which has no other key
 -- (no ISBN-13, no Apple id) cannot be nulled (books_catalogue_key); look at it by hand.
@@ -333,3 +336,63 @@ end;
 $$;
 
 revoke all on function public.import_book_for(uuid, text, jsonb) from public, anon, authenticated;
+
+-- ------------------------------------------------------------------ 4. search_books (F14)
+
+-- As 20261020020000_search_books_index.sql, whole, with the query cut to 200 characters first.
+-- SECURITY DEFINER over private.book_search: the `books_readable` rule is applied here, word for
+-- word, in each branch, exactly as there. Grants as they were: authenticated and service_role may
+-- execute it, anon and public may not.
+create or replace function public.search_books(p_query text, p_limit integer default 20)
+returns setof public.books
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_limit  integer := least(greatest(coalesce(p_limit, 20), 1), 50);
+  -- No bound on the query was a free 8 s of CPU per call (F14); the app never sends more.
+  v_query  text := left(p_query, 200);
+  v_isbn13 text := regexp_replace(coalesce(v_query, ''), '[\s-]', '', 'g');
+  v_words  tsquery;
+  v_text   text;
+begin
+  if v_isbn13 ~ '^97[89][0-9]{10}$' then
+    return query
+      select books.* from public.books
+       where books.isbn13 = v_isbn13
+         -- books_readable, word for word
+         and (owner_id is null or owner_id = (select auth.uid()))
+       order by books.owner_id is null, books.created_at desc, books.id
+       limit v_limit;
+    return;
+  end if;
+
+  v_words := public.book_search_query(v_query);
+  if v_words is null then
+    return;
+  end if;
+  v_text := btrim(public.book_search_text(v_query, '{}'));
+  return query
+    select books.* from private.book_search s
+      join public.books on books.id = s.book_id
+     where s.words @@ v_words
+       -- books_readable, word for word
+       and (owner_id is null or owner_id = (select auth.uid()))
+     order by s.title = v_text desc,
+              ts_rank(s.words, v_words) desc,
+              books.created_at desc,
+              books.id
+     limit v_limit;
+end;
+$$;
+
+comment on function public.search_books(text, integer) is
+  'Catalogue search: the Books the caller can see (the Catalogue and her own Manual books) whose '
+  'title and authors begin with the typed words (the first 200 characters of the query), accents '
+  'ignored; an ISBN-13 by ISBN. Best first. Security definer: applies the books_readable rule '
+  'itself, so the words index is usable.';
+
+revoke all on function public.search_books(text, integer) from public, anon;
+grant execute on function public.search_books(text, integer) to authenticated;

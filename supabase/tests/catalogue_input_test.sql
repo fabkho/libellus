@@ -1,4 +1,4 @@
--- Catalogue input (20261022010000_catalogue_input.sql; security assessment F1, F17):
+-- Catalogue input (20261022010000_catalogue_input.sql; security assessment F1, F17, F14):
 --   supabase test db
 --
 -- F1  a cover off the allow-list never reaches a Catalogue Book: the table refuses it, and
@@ -6,9 +6,11 @@
 --     colours); a Manual book's private cover stays; the allow-list is one function that
 --     `cover_shown` calls too.
 -- F17 an Open Library key that is not one of Open Library's own is refused.
+-- F14 search_books cuts the query to 200 characters, and still shows each member only the Books
+--     `books_readable` lets her see (member A cannot see member B's Manual book).
 
 begin;
-select plan(33);
+select plan(46);
 set local client_min_messages = warning;
 
 create schema if not exists tests;
@@ -149,6 +151,63 @@ select throws_ok(
 select throws_ok(
   $$ insert into public.books (title, source, apple_id, openlibrary_work_key) values ('Direct', 'apple', '990000100020', 'OL1M') $$,
   '23514', null, 'and a work key that is not one');
+
+-- ------------------------------------------------------- F14: the query bound
+
+insert into public.books (title, authors, source, apple_id) values
+  ('Quarvelinxo Catalogue', '{"Odessa Ilt"}', 'apple', '990000100030');
+insert into public.books (title, authors, source, owner_id) values
+  ('Quarvelinxo Geheim', '{"Max Ilt"}', 'manual', :'max_id');
+
+select tests.act_as(:'ida_id');
+
+-- Without the bound the extra word would be part of the query and exclude the Book.
+select is(
+  (select count(*)::int from public.search_books(rpad('Quarvelinxo', 200) || ' neverexistingwordzz')),
+  1, 'the query is cut to 200 characters: a word after them is ignored');
+select is(
+  (select count(*)::int from public.search_books(rpad('Quarvelinxo', 199) || ' neverexistingwordzz')),
+  1, 'at 199 characters the same');
+select is(
+  (select count(*)::int from public.search_books('Quarvelinxo neverexistingwordzz')),
+  0, 'a short query is not cut: the extra word still excludes the Book');
+select lives_ok(
+  $$ select count(*) from public.search_books((select string_agg('w' || i || 'x', ' ') from generate_series(1, 100000) i)) $$,
+  'a 100,000-word query is answered');
+select lives_ok(
+  $$ select count(*) from public.search_books(repeat('a ', 250000)) $$,
+  'so is a 500,000-character one');
+select is(
+  (select count(*)::int from public.search_books('9780140449144' || repeat(' ', 300) || 'x')),
+  1, 'the ISBN test is made on the cut query');
+
+-- The visibility rule is unchanged: member A cannot see member B's Manual book.
+select is(
+  (select count(*)::int from public.search_books('Quarvelinxo') where title = 'Quarvelinxo Geheim'),
+  0, 'Ida cannot find Max''s Manual book (member A cannot see member B''s row)');
+select is(
+  (select count(*)::int from public.search_books(rpad('Geheim', 200) || ' tail') where title = 'Quarvelinxo Geheim'),
+  0, 'nor with a long query');
+reset role;
+select tests.act_as(:'max_id');
+select is(
+  (select count(*)::int from public.search_books('Quarvelinxo') where title = 'Quarvelinxo Geheim'),
+  1, 'Max finds it');
+select is(
+  (select count(*)::int from public.search_books('Quarvelinxo') where title = 'Quarvelinxo Catalogue'),
+  1, 'and the Catalogue Book');
+
+reset role;
+select is(
+  (select prosecdef from pg_proc where oid = 'public.search_books(text, integer)'::regprocedure),
+  true, 'search_books is still security definer');
+select is(
+  (select pg_get_function_identity_arguments(oid) from pg_proc where proname = 'search_books' and pronamespace = 'public'::regnamespace),
+  'p_query text, p_limit integer', 'with the signature it had');
+select ok(
+  has_function_privilege('authenticated', 'public.search_books(text, integer)', 'execute')
+  and not has_function_privilege('anon', 'public.search_books(text, integer)', 'execute'),
+  'and its grants');
 
 select * from finish();
 rollback;
