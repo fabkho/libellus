@@ -55,7 +55,7 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
           :more="circle[entry.book.id]!.more"
           kind="want"
           testid="home.wantWith"
-          class="absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2 translate-y-1/2"
+          class="absolute bottom-xs left-1/2 z-10 flex -translate-x-1/2"
         />
       </div>
     </div>

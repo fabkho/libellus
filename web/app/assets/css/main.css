@@ -150,6 +150,34 @@ html[data-glass='off'] *::after {
   color: var(--color-ink-faint);
 }
 
+/* A control drawn as small text, no pill (a friend's Want to read, a heart with its count): it never makes its row taller.
+   WCAG 2.2's 24 px target is its own box, pulled back into the row by the negative margin; the app's 44 px (--size-touch)
+   is an invisible box centred on it, at least that wide and tall. Put `padding-block: var(--spacing-xs)` on the line it
+   sits in so the 44 px boxes of neighbouring lines overlap less. */
+@utility tap-text {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-caption);
+  line-height: 1;
+  white-space: nowrap;
+  min-width: calc(var(--spacing-sm) * 3);
+  min-height: calc(var(--spacing-sm) * 3);
+  margin-block: calc(var(--spacing-sm) * -0.75);
+
+  &::after {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: calc(100% + var(--spacing-sm) * 2);
+    min-width: var(--size-touch);
+    height: var(--size-touch);
+    content: '';
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* Book titles: serif, optical sizes on. */
 @utility book-title {
   font-family: var(--font-serif);
