@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.8.0](https://github.com/fabkho/libellus/compare/v1.7.0...v1.8.0) (2026-10-10)
+
+
+### Features
+
+* **book:** the hero cover leans under the finger ([8e75565](https://github.com/fabkho/libellus/commit/8e755659049703fe7622fb0ebf937fd1fe6f44ba))
+
+
+### Fixes
+
+* **library:** load the Library one read at a time ([c30d65b](https://github.com/fabkho/libellus/commit/c30d65b3356c39d3a9bfab0b17bb91b8174ad8b6))
+* **library:** one Library read at a time; measure the flight over many round-trips (A10) ([fa5a338](https://github.com/fabkho/libellus/commit/fa5a338ab76c748a8b405532b5eb64fe84dd0076))
+
+
+### Performance
+
+* **db:** Home's two series lists from one call (F5) ([e44577f](https://github.com/fabkho/libellus/commit/e44577f9a5d63c99aaec535103bc125d51657557))
+* Library payload and refetch (F4), one call for Home's series (F5) ([f278d3c](https://github.com/fabkho/libellus/commit/f278d3c2cfb1240e498ee1cbd7bb4f4d6ce29608))
+* **web:** decode a cover's thumbhash once, not on every mount ([d763860](https://github.com/fabkho/libellus/commit/d763860ef75ffa099d1a1f0ff376d4d1fafa3a57))
+* **web:** leave Supabase Realtime out of the build ([e76fb96](https://github.com/fabkho/libellus/commit/e76fb9629efed7467bb78fbf7a6f62940b2c2b97))
+* **web:** no prefetch links for the route chunks ([4c117ec](https://github.com/fabkho/libellus/commit/4c117eca18d65c9511c64e1934edca299037f910))
+* **web:** startup bundle and boot fixes (Realtime stub, thumbhash cache, no prefetch, grain) ([3e7c17a](https://github.com/fabkho/libellus/commit/3e7c17ac0c2f2dcf6968d345b6cc4719aad08ee3))
+* **web:** the film grain is an inline SVG, so it is not the LCP element ([173d625](https://github.com/fabkho/libellus/commit/173d625bdd2127ce45f58db0418ee3f363896d49))
+* **web:** the lists leave the description out and a fresh Library is not read again (F4) ([7db03ca](https://github.com/fabkho/libellus/commit/7db03ca350936eaf74a6670bd35ac65079a86636))
+
 ## [1.7.0](https://github.com/fabkho/libellus/compare/v1.6.0...v1.7.0) (2026-10-10)
 
 
