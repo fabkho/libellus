@@ -213,6 +213,9 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
           <div class="pb-xl" />
         </UiReveal>
 
+        <!-- Your reviews (social v2a): her newest three, from her Library on the device; after the figures and the years in review, before her shelf and her friends. -->
+        <ProfileReviews />
+
         <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
 
         <!-- Friends (social v1): who follows her, her follow link, her privacy. -->

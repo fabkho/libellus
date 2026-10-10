@@ -265,6 +265,12 @@
       "after": "{year}",
       "beforeLabel": "The year before, {year}",
       "afterLabel": "The year after, {year}"
+    },
+    "reviews": {
+      "title": "Your reviews",
+      "all": "See all {count}",
+      "allLabel": "See all {count} of your reviews",
+      "spoilers": "Spoilers"
     }
   },
   "share": {
