@@ -113,6 +113,13 @@ export const useHistoryStore = defineStore('history', () => {
 
   // A change of mind is a new try: the last refusal no longer applies.
   watch(draft, () => (editError.value = null))
+  // "Contains spoilers" goes with the review: emptied, the flag is off again (its switch is hidden then).
+  watch(
+    () => draft.review,
+    (text) => {
+      if (!text?.trim()) draft.reviewSpoilers = false
+    },
+  )
 
   function openEdit(entry: LibraryEntry, read: ReadingSession) {
     editing.value = { entry, session: read }

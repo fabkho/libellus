@@ -332,6 +332,13 @@ export const useLibraryStore = defineStore('library', () => {
 
   // A change of mind is a new try: the last refusal no longer applies.
   watch(addDraft, () => (addError.value = null))
+  // "Contains spoilers" goes with the review: emptied, the flag is off again (its switch is hidden then).
+  watch(
+    () => addDraft.review,
+    (text) => {
+      if (!text.trim()) addDraft.reviewSpoilers = false
+    },
+  )
 
   /**
    * Opens the Add sheet for a Book. `optimistic` (the search palette's +): confirming does not
