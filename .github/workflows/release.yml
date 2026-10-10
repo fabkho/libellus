@@ -102,7 +102,6 @@ jobs:
       # One shard: each one pays its own setup (stack, browsers, build) on a two-core
       # runner, so four cost more billed minutes than one, which is slower to finish.
       shards: '[1]'
-    secrets: inherit
 
   deploy:
     name: deploy ${{ inputs.tag || needs.release-please.outputs.tag_name }} to production

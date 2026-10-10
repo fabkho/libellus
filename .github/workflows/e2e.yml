@@ -27,20 +27,17 @@ on:
         required: false
         type: string
         default: '[1]'
-    secrets:
-      GIGET_AUTH:
-        required: false
 
 permissions:
   contents: read
 
 env:
-  # The owner's builds extend Regal (her shelf, #23; web/regal.config.ts), a private repo Nuxt
-  # downloads with this token (a GitHub token that can read fabkho/regal), when LIBELLUS_REGAL=1.
-  # Where the secret is missing (a run with no access to it) the app builds without the
-  # shelf and its flows skip.
-  GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
-  LIBELLUS_REGAL: ${{ secrets.GIGET_AUTH != '' && '1' || '' }}
+  # The owner's builds extend Regal (her shelf, #23; web/regal.config.ts), a Nuxt layer that
+  # Nuxt downloads from fabkho/regal when LIBELLUS_REGAL=1. The repository is public, so the
+  # run's own read-only token is all the download needs: no secret is passed to this workflow
+  # (its callers no longer use `secrets: inherit`; F8 in docs/security/final-round-2026-10.md).
+  GIGET_AUTH: ${{ github.token }}
+  LIBELLUS_REGAL: '1'
 
 jobs:
   # The user flows (web/e2e: Playwright in WebKit at iPhone size) on the static

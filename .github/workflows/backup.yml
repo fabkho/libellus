@@ -6,8 +6,7 @@ name: Database backup
 # then checked. docs/OPERATIONS.md, "Backups", has what is in it, the setup and
 # the restore.
 #
-# The repository is private, and a log still outlives the run, readable by everyone with
-# access to it. Nothing of the database may reach one: the plaintext dump exists only
+# The repository is public, so a log is readable by anyone and outlives the run. Nothing of the database may reach one: the plaintext dump exists only
 # inside the pipe (scripts/backup-db.sh), only the encrypted file touches the disk (the
 # runner's temp folder, removed at the end), nothing is uploaded as an artifact, and the
 # parts of the connection string are masked before anything connects.
