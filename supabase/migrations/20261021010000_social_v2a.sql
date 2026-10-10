@@ -1524,6 +1524,54 @@ $$;
 revoke all on function public.set_private(boolean) from public, anon;
 grant execute on function public.set_private(boolean) to authenticated;
 
+-- ------------------------------------------------------------------ unfollow, remove follower
+
+-- unfollow and remove_follower: the latest (20261017020000_social_follows.sql), and the pair's advisory
+-- lock (the one follow, block and like take) before the follow row goes. A like that is in flight holds
+-- the lock and the follow row, so these wait for it and their trigger then takes the like away; one that
+-- comes after waits for the lock and looks again (`like` checks `like_allowed` once it holds the follow
+-- row for share), so a like can no longer outlive its follow.
+create or replace function public.unfollow(p_member uuid)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $$
+declare
+  v_caller uuid := auth.uid();
+begin
+  if v_caller is null then
+    raise exception 'not_signed_in' using errcode = '42501';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended(
+    'pair:' || least(v_caller, p_member)::text || greatest(v_caller, p_member)::text, 0));
+  delete from public.follows where follower_id = v_caller and followee_id = p_member;
+end;
+$$;
+
+create or replace function public.remove_follower(p_member uuid)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $$
+declare
+  v_caller uuid := auth.uid();
+begin
+  if v_caller is null then
+    raise exception 'not_signed_in' using errcode = '42501';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended(
+    'pair:' || least(v_caller, p_member)::text || greatest(v_caller, p_member)::text, 0));
+  delete from public.follows where follower_id = p_member and followee_id = v_caller;
+end;
+$$;
+
+revoke all on function public.unfollow(uuid) from public, anon;
+revoke all on function public.remove_follower(uuid) from public, anon;
+grant execute on function public.unfollow(uuid) to authenticated;
+grant execute on function public.remove_follower(uuid) to authenticated;
+
 -- ------------------------------------------------------------------ grants
 
 revoke all on function private.circle_of(uuid, uuid[], boolean) from public, anon, authenticated;
