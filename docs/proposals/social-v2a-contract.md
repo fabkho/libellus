@@ -133,7 +133,7 @@ Readers (§1.5): `social.bookReaders(book, after?, limit?)` → `{ total, items:
   a small heading "In your circle" and up to five rows, then *See all {count}* opening a sheet with all (paged by 50 as People
   is). A row: avatar, her name (opens her profile), her state and day ("Finished 3 Oct", "Reading since 2 Oct",
   "Wants to read"), her stars, her review in the serif italic, folded as in the feed (*Show anyway* for a spoiler
-  she flagged when the caller has not finished the Book), a heart on a review (`LikeButton`). No *Want to read*
+  she flagged when the caller has not finished the Book), a heart on a review, alone in the icon column at the row's right edge (`RowActions`, level with the avatar). No *Want to read*
   button (she is on the Book's page). Nobody, signed out, a reading page, a Manual book, a Book she cannot read:
   no section and no empty text. Loading: a quiet placeholder of the section's height. Offline: the list last
   loaded for this Book in the session, else nothing; never an error block. Built so a strangers' part can be added
