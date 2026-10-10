@@ -1,37 +1,40 @@
 <script setup lang="ts">
-// The *Want to read* button on a friend's Book (social v2a, contract §3): in the feed, on Home's card and on
-// a member's Recently finished rows. Only there to add: a Book that is not in her Library gets the button, which
-// adds it as Want to read at once (stores/library.ts, `addWantToRead`: the existing add, so offline it waits in
-// the outbox, once the Book is known to the device). A Book she has, in any list, shows nothing (the feed does
-// not repeat what her Library says), and nor does a Manual book. After an add it says *Added* for a moment (and says "Added to Want to read" to a screen reader), then
-// goes; the live region that says it (`role=status`) is mounted from the start, so screen readers announce it, and
-// `added` is emitted so the row can move focus off the button that is going (to the heart, else the title). The friend is not told. `canWantToRead` (utils/wantToRead.ts) decides; the Library store's lists make it
-// go by themselves when the Book arrives, wherever it was added.
-//
-// Drawn as small clickable text, not a pill (the `tiny-action` utility), so it sits on a row's line without making it
-// taller. Busy and Offline are `aria-disabled`, not `disabled`: focus stays. A refusal is a `role=alert` beside the
-// button, not inside it (the button's name would hide it). Props: `book` (SocialBook), `testid`. Emits `added`.
-// Test ids: `<testid>` (the button), `<testid>.added`, `<testid>.error`.
+// *Want to read* on a friend's Book (social v2a, contract §3; the owner's layout B): an icon in the column at the
+// row's right edge (FriendsRowActions), above the heart. Three things it can be (`wantState`, utils/wantToRead.ts):
+//  - a Book that is not in her Library: a bookmark with a plus, which adds it as Want to read at once
+//    (stores/library.ts, `addWantToRead`: the existing add, so offline it waits in the outbox, once the Book is
+//    known to the device). Offline, with a Book the device does not hold: the same icon, faint, `aria-disabled`
+//    (the name says "Offline");
+//  - a Book she has, in any list: a filled bookmark, quiet, which opens the Book (a link), named with where it
+//    stands: "On your Want to read", "Reading", "Read", "Not finished" (the existing strings);
+//  - nothing for a Manual book, or one the check could not confirm.
+// After an add the control becomes the filled bookmark (the Library store's lists have the Book) and focus goes to it;
+// a live region (`role=status`, mounted from the start so it is announced) says "Added to Want to read". The friend is
+// not told. A refusal turns the icon to the error colour and is said as a `role=alert` (the icon is the whole control
+// here; tapping again tries again). Busy and Offline are `aria-disabled`, not `disabled`: focus stays.
+// Props: `book` (SocialBook), `testid`. Test ids: `<testid>` (the button, or the link when she has the Book),
+// `<testid>.error`.
 import type { SocialBook } from '~/data/socialShapes'
 import { useBookStore } from '~/stores/book'
 import { useLibraryStore } from '~/stores/library'
-import { canWantToRead } from '~/utils/wantToRead'
+import { wantState } from '~/utils/wantToRead'
 
 const props = defineProps<{ book: SocialBook; testid: string }>()
-const emit = defineEmits<{ added: [] }>()
 
 const { t } = useI18n()
 const library = useLibraryStore()
 const books = useBookStore()
 const online = useOnline()
 
-const show = computed(() => canWantToRead(props.book, library.entryForBook(props.book.id)))
+const state = computed(() => wantState(props.book, library.entryForBook(props.book.id)))
 const busy = ref(false)
 const failed = ref(false)
-// *Added to Want to read*, for a moment after the add landed (the button itself is gone by then: the Book is in her Library).
-const added = ref(false)
+// *Added to Want to read*, said once to a screen reader after the add landed.
+const said = ref(false)
 let hide: ReturnType<typeof setTimeout> | undefined
 onBeforeUnmount(() => clearTimeout(hide))
+// The control: the button, or (a component) the link, whose element is `$el`.
+const control = ref<HTMLElement | { $el: HTMLElement } | null>(null)
 // Offline, an add can wait only for a Book the device already holds (a page it has opened).
 const known = () => {
   const held = books.page(props.book.id)?.book
@@ -47,30 +50,44 @@ async function add() {
   busy.value = false
   failed.value = 'error' in result && result.error !== 'already_in_library'
   if ('entry' in result) {
-    added.value = true
+    said.value = true
     clearTimeout(hide)
-    hide = setTimeout(() => (added.value = false), 2200)
-    emit('added')
+    hide = setTimeout(() => (said.value = false), 2200)
+    // The button is a link now: focus goes with it.
+    await nextTick()
+    const c = control.value
+    ;(c && '$el' in c ? c.$el : c)?.focus()
   }
 }
 </script>
 
 <template>
   <button
-    v-if="show"
+    v-if="state?.kind === 'add'"
+    ref="control"
     type="button"
-    class="tiny-action"
-    :class="offline ? 'text-ink-faint' : 'text-accent-ink'"
+    class="icon-action"
+    :class="failed ? 'text-error' : offline ? 'text-ink-faint' : 'text-accent-ink'"
     :aria-disabled="busy || offline"
     :aria-busy="busy"
-    :aria-label="t('social.wantToRead.label', { title: book.title })"
     :data-testid="testid"
     @click="add"
   >
-    <UiIcon :name="offline ? 'offline' : 'plus'" :size="12" />{{ offline ? t('common.offline') : t('social.wantToRead.add') }}
+    <UiIcon name="bookmarkPlus" :size="18" />
+    <span class="sr-only">{{ t('social.wantToRead.label', { title: book.title }) }}<template v-if="offline">. {{ t('common.offline') }}</template></span>
   </button>
-  <span v-else-if="added" class="tiny-action text-ink-faint" aria-hidden="true" :data-testid="`${testid}.added`"><UiIcon name="check" :size="12" />{{ t('social.wantToRead.addedShort') }}</span>
-  <span v-if="failed && show" class="text-caption text-error" role="alert" :data-testid="`${testid}.error`">{{ t('social.wantToRead.error') }}</span>
+  <UiPressLink
+    v-else-if="state?.kind === 'have'"
+    ref="control"
+    :to="`/book/${book.id}`"
+    class="icon-action text-ink-faint"
+    :data-testid="testid"
+    @press="books.prefetch(book.id)"
+  >
+    <UiIcon name="bookmark" :size="18" class="fill-current" />
+    <span class="sr-only">{{ t('social.wantToRead.inLabel', { title: book.title, where: t(`social.state.${state.where}`) }) }}</span>
+  </UiPressLink>
+  <span v-if="failed && state?.kind === 'add'" class="sr-only" role="alert" :data-testid="`${testid}.error`">{{ t('social.wantToRead.error') }}</span>
   <!-- Mounted from the start, so a screen reader announces what lands in it (a region that arrives with its text is skipped). -->
-  <span class="sr-only" role="status" aria-live="polite">{{ added ? t('social.wantToRead.added') : '' }}</span>
+  <span class="sr-only" role="status" aria-live="polite">{{ said ? t('social.wantToRead.added') : '' }}</span>
 </template>

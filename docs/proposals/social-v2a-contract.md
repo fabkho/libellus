@@ -113,10 +113,14 @@ Readers (§1.5): `social.bookReaders(book, after?, limit?)` → `{ total, items:
   card and a member's Recently finished rows; tap toggles; the author's own entries show the count and
   open `session_likers` in a sheet. Home's *Your circle* gets one quiet row per liked read from
   `my_recent_likes` ("Anna and Ben liked your review of *Piranesi*", "Anna and 4 others …").
-- **Want to read** button beside the heart (owner's decision): adds the Book to her Library as Want to
-  read through the existing add (offline too, the outbox). Only there to add (owner's decision): a Book already in
-  her Library, in any list, shows no button and no state, and the feed says nothing of where it is; after an add
-  it says *Added* for a moment. Not on Manual books. The friend is not told.
+- **Want to read** above the heart (owner's decision, variant B of the three layouts he was shown): both are
+  icons in one narrow column at the row's right edge, centred on the cover (`RowActions`, one component for the
+  feed row, Home's card and a member's Recently finished rows and sheet; the Readers rows on the Book page take
+  only the heart). *Want to read* is a bookmark with a plus: it adds the Book to her Library as Want to read
+  through the existing add (offline too, the outbox). A Book she already has, in any list, shows a filled, quiet
+  bookmark that opens the Book, named by where it stands ("On your Want to read", "Reading", "Read", "Not
+  finished"). After an add the icon becomes that bookmark. Not on Manual books. The friend is not told. The heart's
+  count hangs under it (only above 0).
 - **You both read**: a section on a member's profile and her year page (with `p_year`), covers with both
   stars, hidden when empty.
 - **Reading now** on Home's reading cards and **Want too** on her Want to read covers (Home's Up next, the

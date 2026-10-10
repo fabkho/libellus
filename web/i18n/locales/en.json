@@ -1819,7 +1819,13 @@
       "label": "Add {title} to Want to read",
       "error": "Couldn't add it. Try again.",
       "added": "Added to Want to read",
-      "addedShort": "Added"
+      "inLabel": "{title}: {where}. Open the book"
+    },
+    "state": {
+      "wantToRead": "On your Want to read",
+      "reading": "Reading",
+      "read": "Read",
+      "notFinished": "Not finished"
     },
     "like": {
       "like": "Like",
