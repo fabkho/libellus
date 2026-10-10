@@ -1720,10 +1720,7 @@
     "loadError": "This profile couldn't be loaded.",
     "retry": "Try again",
     "bothRead": "You both read",
-    "bothReadYours": "You: {rating}",
-    "bothReadHers": "{name}: {rating}",
-    "bothReadNoRating": "no rating",
-    "bothReadLegend": "Your rating first, then {name}’s"
+    "bothReadHers": "{name}: {rating}"
   },
   "follow": {
     "loading": "Opening…",
