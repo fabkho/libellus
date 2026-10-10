@@ -9,8 +9,8 @@ import type { LibraryEntry } from '../data/library'
  * review of the read before it until it ends (the database has it, the device's lists do not carry it).
  */
 
-/** The reviews the Profile shows before *See all*. */
-export const REVIEWS_SHOWN = 3
+/** The cards the sideways row holds before its last *See all* card (the section's *See all* button and the sheet have every one). */
+export const REVIEWS_SHOWN = 6
 
 export type ProfileReview = {
   /** The read's id: the row's key. */

@@ -229,13 +229,19 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
   test('the Profile, where she signs out and deletes her account', async ({ page }) => {
     const member = await signedIn(page)
     await seed(page, member.client)
-    // Her reviews (social v2a): four finished reads with a review, the first flagged as spoilers, so the section
-    // has its three rows and *See all*; the Library is read again for them.
-    await sql(
-      `update public.reading_sessions s set review = 'A quiet book, and I would read it again.', review_spoilers = (s.id = (select min(id::text)::uuid from public.reading_sessions where entry_id in (select id from public.library_entries where member_id = $1)))
-        where s.id in (select s2.id from public.reading_sessions s2 join public.library_entries e on e.id = s2.entry_id where e.member_id = $1 and s2.outcome = 'finished' order by s2.ended_on desc nulls last limit 4)`,
-      [member.id],
-    )
+    // Her reviews (social v2a): seven finished reads with a review, the first flagged as spoilers, so the row holds
+    // six cards and its last "See all" card; the Library is read again for them.
+    const today = isoDay()
+    for (let i = 0; i < 7; i++) {
+      await createLibrary(member.client).addToLibrary(book(`Reviewed ${i + 1}`, 'Ada Fenn', 200), {
+        status: 'finished',
+        startedOn: addDays(today, -20 - i),
+        endedOn: addDays(today, -10 - i),
+        rating: 16,
+        review: 'A quiet book, and I would read it again. It rewards the second time even more, and the ending is the best of it.',
+        reviewSpoilers: i === 0,
+      })
+    }
     // Nothing in flight when the page goes (a cancelled request is an uncaught error to the fixture).
     await page.waitForLoadState('networkidle')
     await page.reload()
@@ -243,10 +249,12 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     // (`arrive`), and a scan that starts before them reads colours half way (#7c7872 for inkFaint).
     await openProfile(page)
     await expect(page.getByTestId('profile.figures')).toBeVisible()
+    await expect(page.getByTestId('profile.reviews.card')).toHaveCount(6)
+    await expect(page.getByTestId('profile.reviews.allCard')).toBeVisible()
+    await untilStill(page)
     await expectAccessible(page, 'the Profile')
-    await expect(page.getByTestId('profile.reviews.row')).toHaveCount(3)
     await openSheet(page, 'profile.reviews.all', 'profileReviews')
-    await expect(page.getByTestId('profileReviews.row')).toHaveCount(4)
+    await expect(page.getByTestId('profileReviews.row')).toHaveCount(7)
     await expectAccessible(page, 'Your reviews, all of them')
     await closeSheet(page, 'profileReviews')
   })

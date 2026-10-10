@@ -74,7 +74,7 @@ describe('profileReviews', () => {
     expect(one).toMatchObject({ rating: 18, spoilers: true, review: '  The end.  ', endedOn: '2026-10-01' })
   })
 
-  it('shows three before See all', () => {
-    expect(REVIEWS_SHOWN).toBe(3)
+  it('holds six cards before the row\'s See all card', () => {
+    expect(REVIEWS_SHOWN).toBe(6)
   })
 })

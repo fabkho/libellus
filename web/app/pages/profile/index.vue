@@ -193,6 +193,8 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
             <UiReveal :show="loading || figures.authors.length > 0">
               <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" />
             </UiReveal>
+            <!-- Your reviews (social v2a): lit cards in a sideways row, from her Library on the device; above the years in review. -->
+            <ProfileReviews />
             <ProfileYearCards class="pt-xl" :years="loading ? null : yearFigures" />
           </div>
         </UiReveal>
@@ -212,9 +214,6 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
           </div>
           <div class="pb-xl" />
         </UiReveal>
-
-        <!-- Your reviews (social v2a): her newest three, from her Library on the device; after the figures and the years in review, before her shelf and her friends. -->
-        <ProfileReviews />
 
         <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
 
