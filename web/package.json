@@ -37,17 +37,17 @@
     "@fontsource/newsreader": "^5.3.0",
     "@nuxtjs/i18n": "^10.6.0",
     "@pinia/nuxt": "^1.0.2",
-    "@supabase/supabase-js": "^2.117.2",
+    "@supabase/supabase-js": "^2.117.3",
     "dompurify": "^3.4.16",
     "fflate": "^0.8.3",
-    "nuxt": "^4.5.2",
+    "nuxt": "^4.6.0",
     "papaparse": "^5.7.0",
     "pinia": "^4.0.3",
     "thumbhash": "^0.1.1",
     "vue": "^3.5.43",
-    "vue-router": "^5.3.1",
+    "vue-router": "^5.4.0",
     "web-vitals": "^6.2.3",
-    "zxing-wasm": "^3.1.4"
+    "zxing-wasm": "^3.1.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
