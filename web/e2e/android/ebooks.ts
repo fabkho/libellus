@@ -134,6 +134,8 @@ async function share(page: Page, names: string[]) {
     document.body.append(form)
     form.submit()
   }, names)
+  // The share asks first (security round F4): "Add N ebooks shared to Libellus?"; the tap takes them in.
+  await page.getByTestId('share.add').click({ timeout: 60_000 })
   await page.waitForURL(/\/ebooks$/, { timeout: 60_000 })
   await page.getByTestId('ebooks.reportLine').waitFor({ timeout: 60_000 })
   console.log('shared', names.join(', '), 'in', Date.now() - started, 'ms:', await page.getByTestId('ebooks.reportLine').innerText())

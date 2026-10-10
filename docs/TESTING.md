@@ -197,7 +197,8 @@ pnpm tsx e2e/android/ebooks.ts --base http://localhost:3126 --out /tmp/libellus-
 ```
 
 `share1`/`share3` POST one and three EPUBs to `/share` from the installed page itself (`multipart/form-data`,
-real `File`s, through the app's service worker, `public/sw-share.js`): the share sheet entry needs a
+real `File`s, through the app's service worker, `public/sw-share.js`) and then tap *Add* on the confirmation
+the app asks for (security round F4; `e2e/share.spec.ts` covers that flow and a POST from another site): the share sheet entry needs a
 WebAPK, as for #91 above, so a phone with a Google account is where the real share sheet is checked.
 `pick` taps *Choose* in the Ebooks page's Ebook folder row; Android's folder picker opens (the storage
 root and `Download` itself say "Can't use this folder"; open `Download` → `Books` → *Use this folder* →
