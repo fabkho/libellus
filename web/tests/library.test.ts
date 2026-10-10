@@ -214,11 +214,11 @@ describe('the lists carry no description (perf F4)', () => {
     expect(await library.descriptions([])).toEqual({ data: new Map(), error: null })
   })
 
-  it('LIST_BOOK_COLUMNS names every column of books but the description (and the owner and the two check columns, which no screen reads)', async () => {
+  it('LIST_BOOK_COLUMNS names every column of books but the description (and the owner and the check columns, which no screen reads)', async () => {
     const columns = await sql<{ column_name: string }>(
       "select column_name from information_schema.columns where table_schema = 'public' and table_name = 'books'",
     )
     const listed = LIST_BOOK_COLUMNS.split(', ').filter((name) => !name.includes(':'))
-    expect(columns.map((row) => row.column_name).filter((name) => !['description', 'owner_id', 'checked_at', 'check_failed'].includes(name)).sort()).toEqual([...listed].sort())
+    expect(columns.map((row) => row.column_name).filter((name) => !['description', 'owner_id', 'checked_at', 'check_failed', 'check_unknown'].includes(name)).sort()).toEqual([...listed].sort())
   })
 })

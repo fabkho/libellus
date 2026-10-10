@@ -84,8 +84,8 @@ written under the ISBN).
 | Answer | Stored |
 | --- | --- |
 | the source knows the Book | `catalogue_check_save`: the source's title, authors (or none), description (or none), cover (or none), publisher, language and format (or none); pages and year the source's, else the row's own only if plausible; `checked_at` set. Nothing the member sent stays that the source did not say |
-| the source does not know it | `catalogue_check_miss`: `check_failed = true`, `checked_at` set, no source text written, the description (a legacy client's) cleared |
-| its answer disagrees with the row (`mismatch`) | `catalogue_check_mismatch`: as a miss, and the row's source keys (ISBN, Apple id, Open Library keys) cleared, so the unique indexes free them for an honest add; members who hold the row keep it |
+| the source does not know it (a miss) | `catalogue_check_miss`: `checked_at` set and `check_unknown = true`, **not failed**: no source text written, the description (a legacy client's) cleared, the keys kept. Others see it as stored, like a Manual book: title and authors, a cover by the S1 allowlist, no description |
+| its answer disagrees with the row (`mismatch`) | `catalogue_check_mismatch`: `check_failed = true`, no description, and the row's source keys (ISBN, Apple id, Open Library keys) cleared, so the unique indexes free them for an honest add; members who hold the row keep it; no one else reads the row, not even through the table (`books_readable`) |
 | the source failed (down, slow, garbled, 429) | `catalogue_check_failed`: tried again after 5 min, 10, 20 … at most a day; never given up (an unchecked Book only keeps its description withheld) |
 | the run ran out of time (50 s) | `catalogue_check_release`: back at once, the attempt not counted |
 

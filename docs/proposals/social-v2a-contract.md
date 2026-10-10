@@ -114,14 +114,21 @@ yet; `v-model:spoilers` on each sheet), `feed.like` (`LikeButton`, `.count` insi
   edge function, `pg_net`, `pg_cron`): every minute, up to N unchecked Books are sent to an edge function
   `catalogue-check`, which looks each up at its source (Apple: the iTunes lookup by `apple_id`; Open Library:
   the edition or work key, or the ISBN) and writes **title, authors, description, cover url** from the
-  source (cover through the existing cover rules), sets `checked_at`; a Book its source does not know gets
-  `check_failed = true`, `checked_at` set, and nothing written. Rate-limit friendly (N small, backoff).
-  **Identity** (review C2): a Book is resolved by one key (ISBN-13, ISBN-10, Apple id, Open Library edition
-  key, work key, in this order); every other key the row stores must agree with the source's record and the
-  stored title must be the source's by `work_title_key`; any disagreement is `check_failed`, nothing written,
-  no other key tried. **Verified is all from the source**: authors, cover, description, publisher, language,
+  source (cover through the existing cover rules), sets `checked_at`. Rate-limit friendly (N small, backoff).
+  **Identity** (review C2, C4): a Book is resolved by its strongest key (ISBN-13, ISBN-10, Apple id, Open
+  Library edition key, work key, in this order; never a weaker one when the stronger is unknown). Missing is not
+  contradicting: another edition of the ISBN, another work, an ISBN the edition does not list, an ISBN-10 that
+  is not the ISBN-13's twin are bookkeeping, the source's data is written and the keys stay. Only a positive
+  title contradiction (the record's title, subtitle or work's title, or Apple's record for the ISBN, is not the
+  row's by a tolerant `work_title_key`) is a **mismatch**: `check_failed`, nothing written, the keys cleared.
+  **Verified is all from the source**: authors, cover, description, publisher, language,
   format are the source's or empty; pages and year the source's, else the member's only when plausible.
-  **A failed Book** is shown to nobody outside a Library: title null, authors [], no cover, no description,
+  **A miss is not a failure**: when no source knows a Book (an import-only ISBN) it is checked as *unknown*
+  (`check_unknown`), not failed: no source text, its description null, its keys kept, and others see it as
+  stored like a Manual book (title and authors, a cover by the S1 allowlist, no description). Only a mismatch
+  is failed.
+  **A failed Book** (a mismatch) is shown to nobody outside a Library, and its row is not readable through the
+  table either (`books_readable`: a failed Catalogue row only to members who have it in their Library): title null, authors [], no cover, no description,
   `unverified: true` (`private.book_shown`, used by everything that hands a Book to others: the feed, profiles,
   reading pages, you both read, the circle, likes, the record, the search); the web calls it "Outside the
   catalogue". On a **mismatch** (the source's answer is another Book) the row's source keys (ISBN, Apple id,

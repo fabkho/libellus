@@ -127,8 +127,8 @@ select is((select count(*)::int from public.books where isbn13 = '9780141439518'
 -- ---------------------------------------------------------------- a mere miss
 
 select public.catalogue_check_miss((select id from ids where name = 'b_missed'));
-select is((select (check_failed, isbn13, description)::text from public.books where id = (select id from ids where name = 'b_missed')),
-  '(t,9780141439600,)', 'a miss (the source does not know it) keeps the keys');
+select is((select (check_failed, check_unknown, isbn13, description)::text from public.books where id = (select id from ids where name = 'b_missed')),
+  '(f,t,9780141439600,)', 'a miss (the source does not know it) is unknown, not failed, and keeps the keys');
 
 -- ------------------------------------------------- the save's title lock is a mismatch too
 

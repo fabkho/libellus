@@ -2,7 +2,8 @@
 -- review HIGH 2):
 --   supabase test db
 --
--- check_failed means nothing vouches for the row's text: the source does not know the Book, or its
+-- (A row is failed by a mismatch, which clears its keys; here it is marked directly so its keys stay, as the
+-- work-key pairing below needs.) check_failed means nothing vouches for the row's text: the source does not know the Book, or its
 -- answer is not this Book. For anyone but a member with the Book in her own Library, every answer that
 -- hands a Book to others (the feed, a profile, Want to read, her reading record, the public reading
 -- page and its cards, the search) gives it as title null, authors [], no cover, no description,
@@ -10,7 +11,7 @@
 -- description); a checked Book is shown whole.
 
 begin;
-select plan(30);
+select plan(35);
 
 create schema if not exists tests;
 
@@ -58,6 +59,8 @@ $$;
 create or replace function tests.book_of(p_entry uuid)
 returns uuid language sql security definer as $$ select book_id from public.library_entries where id = p_entry $$;
 
+create or replace function tests.created_of(p_book uuid)
+returns timestamptz language sql security definer as $$ select created_at from public.books where id = p_book $$;
 create or replace function tests.record_book(p_member uuid, p_book uuid)
 returns jsonb language sql security definer as $$
   select r -> 'entry' -> 'book'
@@ -101,8 +104,8 @@ insert into links values ('page', (select token from public.reading_pages where 
 
 reset role;
 insert into ids select 'b_' || name, tests.book_of(id) from ids where name in ('failed', 'pending', 'good', 'wanted');
-select public.catalogue_check_miss((select id from ids where name = 'b_failed'));
-select public.catalogue_check_miss((select id from ids where name = 'b_wanted'));
+update public.books set checked_at = now(), check_failed = true where id = (select id from ids where name = 'b_failed');
+update public.books set checked_at = now(), check_failed = true where id = (select id from ids where name = 'b_wanted');
 select public.catalogue_check_save((select id from ids where name = 'b_good'), jsonb_build_object(
   'title', 'Good Book', 'authors', jsonb_build_array('Real Author'), 'description', 'Real blurb',
   'cover_url', 'https://is1-ssl.mzstatic.com/image/thumb/x/600x900bb.jpg'));
@@ -123,7 +126,7 @@ select is(private.book_shown((select b from public.books b where b.id = (select 
 
 select tests.act_as((select id from ids where name = 'ben'));
 select is(tests.record_book((select id from ids where name = 'ada'), (select id from ids where name = 'b_failed')),
-  jsonb_build_object('id', (select id from ids where name = 'b_failed'), 'created_at', (select created_at from public.books where id = (select id from ids where name = 'b_failed')),
+  jsonb_build_object('id', (select id from ids where name = 'b_failed'), 'created_at', tests.created_of((select id from ids where name = 'b_failed')),
     'title', null, 'authors', '[]'::jsonb, 'isbn13', null, 'isbn10', null, 'page_count', null, 'published_year', null, 'language', null,
     'publisher', null, 'description', null, 'cover_url', null, 'cover_thumbhash', null, 'cover_dominant', null, 'cover_secondary', null,
     'source', 'apple', 'apple_id', null, 'openlibrary_edition_key', null, 'openlibrary_work_key', null, 'format', null, 'goodreads', null,
@@ -160,6 +163,13 @@ select is((select count(*)::int from public.search_books('Planted Book')), 0, 't
 select is((select count(*)::int from public.search_books('9780141439518')), 0, 'nor by its ISBN');
 select is((select count(*)::int from public.search_books('Pending Book')), 1, 'an unchecked one is found');
 
+-- The table itself (GET /rest/v1/books): a stranger reads nothing of a failed Book, by id, by its title or by the flag.
+select is((select count(*)::int from public.books where id = (select id from ids where name = 'b_failed')), 0,
+  'a stranger''s select from books by id gives nothing for a failed Book');
+select is((select count(*)::int from public.books where title = 'Planted Book' or isbn13 = '9780141439518'), 0, 'nor by its title or ISBN');
+select is((select count(*)::int from public.books where check_failed), 0, 'and check_failed lists nothing of others');
+select is((select count(*)::int from public.books where id in (select id from ids where name in ('b_pending', 'b_good'))), 2, 'while an unchecked and a checked Book are read');
+
 -- --------------------------------------------------- the public reading page and its cards
 
 select tests.act_anon();
@@ -181,6 +191,7 @@ select is(public.public_book_card((select link from links where name = 'page'), 
 select tests.act_as((select id from ids where name = 'ada'));
 select is((select title from public.books where id = (select id from ids where name = 'b_failed')), 'Planted Book',
   'she reads her own row as she added it');
+select is((select count(*)::int from public.books where check_failed and id = (select id from ids where name = 'b_failed')), 1, 'and finds it by the flag: her Library holds it');
 select is((select count(*)::int from public.search_books('Planted Book')), 1, 'and finds it in the search');
 select is((select count(*)::int from public.search_books('9780141439518')), 1, 'and by its ISBN');
 
@@ -197,7 +208,7 @@ select tests.act_as((select id from ids where name = 'ada'));
 insert into ids values ('wk', (public.add_to_library(tests.snap('Shared Work A') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL5551M","openlibrary_work_key":"OL5551W"}', 'reading', current_date - 3)).id);
 select public.finish_reading((select id from ids where name = 'wk'), current_date, 18, null);
 reset role;
-select public.catalogue_check_miss(tests.book_of((select id from ids where name = 'wk')));
+update public.books set checked_at = now(), check_failed = true where id = tests.book_of((select id from ids where name = 'wk'));
 select tests.act_as((select id from ids where name = 'ben'));
 insert into ids values ('wkb', (public.add_to_library(tests.snap('Shared Work B') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL5552M","openlibrary_work_key":"OL5551W"}', 'reading', current_date - 3)).id);
 select public.finish_reading((select id from ids where name = 'wkb'), current_date, 18, null);
