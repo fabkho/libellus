@@ -1,4 +1,4 @@
--- Catalogue input (security assessment, October 2026: F1).
+-- Catalogue input (security assessment, October 2026: F1, F17).
 --
 -- F1  A Catalogue Book's cover was whatever the first member sent: a tracking pixel for every
 --     member who later looked at the Book, and any image of her choice. S1 put the host list
@@ -11,7 +11,13 @@
 --       2. `catalogue_book_for` (add_to_library, change_edition) and `import_book_for` (import_books)
 --          add the Book without a cover that is off the list, and without its thumbhash and
 --          colours, which describe that picture. The add does not fail.
+-- F17 `books.openlibrary_edition_key` / `openlibrary_work_key` end up in the path of an Open Library
+--     URL (`enrich`) and were unchecked: both get the format of Open Library's own keys
+--     (the pattern `editionKey()` / `workKey()` in functions/enrich/openlibrary.ts accept, capped at
+--     12 digits). The two functions above refuse a key off the pattern as `book_invalid`.
 --
+-- If the migration stops at a VALIDATE: a Book whose Open Library key is odd and which has no other key
+-- (no ISBN-13, no Apple id) cannot be nulled (books_catalogue_key); look at it by hand.
 
 -- ------------------------------------------------------------ 1. the one allow-list
 
@@ -57,17 +63,35 @@ alter table public.books
   add constraint books_cover_url_allowed
   check (source = 'manual' or cover_url is null or private.cover_allowed(cover_url)) not valid;
 
--- Rows from before: the cover goes with its thumbhash and colours.
+alter table public.books
+  add constraint books_openlibrary_edition_key_format
+  check (openlibrary_edition_key ~ '^OL[1-9][0-9]{0,11}M$') not valid,
+  add constraint books_openlibrary_work_key_format
+  check (openlibrary_work_key ~ '^OL[1-9][0-9]{0,11}W$') not valid;
+
+-- Rows from before: the cover goes with its thumbhash and colours; an odd Open Library key goes
+-- (a Book that has no other key stays, and VALIDATE below stops: see the header).
 update public.books
    set cover_url = null, cover_thumbhash = null, cover_dominant = null, cover_secondary = null
  where source <> 'manual' and cover_url is not null and not private.cover_allowed(cover_url);
 
+update public.books
+   set openlibrary_edition_key = null
+ where openlibrary_edition_key !~ '^OL[1-9][0-9]{0,11}M$'
+   and (source = 'manual' or coalesce(isbn13, apple_id) is not null);
+
+update public.books
+   set openlibrary_work_key = null
+ where openlibrary_work_key !~ '^OL[1-9][0-9]{0,11}W$';
+
 alter table public.books validate constraint books_cover_url_allowed;
+alter table public.books validate constraint books_openlibrary_edition_key_format;
+alter table public.books validate constraint books_openlibrary_work_key_format;
 
 -- --------------------------------------------------------------- 3. the functions that add a Book
 
 -- #41's catalogue_book_for (as 20261011090000_own_edition.sql: same signature, same behaviour),
--- now without a cover that is off the list.
+-- now without a cover that is off the list and refusing an Open Library key off its pattern.
 create or replace function public.catalogue_book_for(p_book jsonb)
 returns uuid
 language plpgsql
@@ -111,7 +135,10 @@ begin
   if v_book.title is null
      or v_book.source is null
      or v_book.source not in ('apple', 'openlibrary', 'import')
-     or coalesce(v_book.isbn13, v_book.apple_id, v_book.openlibrary_edition_key) is null then
+     or coalesce(v_book.isbn13, v_book.apple_id, v_book.openlibrary_edition_key) is null
+     -- Open Library keys end up in a URL (F17): the table's check, refused politely.
+     or v_book.openlibrary_edition_key !~ '^OL[1-9][0-9]{0,11}M$'
+     or v_book.openlibrary_work_key !~ '^OL[1-9][0-9]{0,11}W$' then
     raise exception 'book_invalid' using errcode = '22023';
   end if;
 
@@ -171,7 +198,7 @@ $$;
 
 revoke all on function public.catalogue_book_for(jsonb) from public, anon, authenticated;
 
--- #40's import_book_for (as 20261011090100_import_own_edition.sql), the same change. A Manual
+-- #40's import_book_for (as 20261011090100_import_own_edition.sql), the same two changes. A Manual
 -- book's cover is private to its owner and stays as it is.
 create or replace function public.import_book_for(p_member uuid, p_book_id text, p_book jsonb)
 returns uuid
@@ -252,7 +279,10 @@ begin
   if v_book.source is null
      or v_book.source not in ('apple', 'openlibrary', 'import')
      or coalesce(v_book.isbn13, v_book.apple_id, v_book.openlibrary_edition_key) is null
-     or (v_book.source = 'import' and v_book.isbn13 is null) then
+     or (v_book.source = 'import' and v_book.isbn13 is null)
+     -- Open Library keys end up in a URL (F17): the table's check, refused politely.
+     or v_book.openlibrary_edition_key !~ '^OL[1-9][0-9]{0,11}M$'
+     or v_book.openlibrary_work_key !~ '^OL[1-9][0-9]{0,11}W$' then
     raise exception 'book_invalid' using errcode = '22023';
   end if;
 

@@ -1,13 +1,14 @@
--- Catalogue input (20261022010000_catalogue_input.sql; security assessment F1):
+-- Catalogue input (20261022010000_catalogue_input.sql; security assessment F1, F17):
 --   supabase test db
 --
 -- F1  a cover off the allow-list never reaches a Catalogue Book: the table refuses it, and
 --     add_to_library / import_books add the Book without it (and without its thumbhash and
 --     colours); a Manual book's private cover stays; the allow-list is one function that
 --     `cover_shown` calls too.
+-- F17 an Open Library key that is not one of Open Library's own is refused.
 
 begin;
-select plan(26);
+select plan(33);
 set local client_min_messages = warning;
 
 create schema if not exists tests;
@@ -120,6 +121,34 @@ select results_eq(
 select is(
   (select cover_url from public.books where title = 'Private Cover' and owner_id = auth.uid()),
   'https://example.com/private.jpg', 'a Manual book keeps its private cover');
+
+-- ------------------------------------------------------- F17: Open Library keys
+
+select throws_ok(
+  $$ select public.add_to_library('{"source":"openlibrary","openlibrary_edition_key":"../../search.json?q=x&limit=1#","title":"Key Probe","authors":["A"]}'::jsonb, 'want_to_read') $$,
+  '22023', 'book_invalid', 'a path-traversal edition key is refused');
+select throws_ok(
+  $$ select public.add_to_library('{"source":"openlibrary","openlibrary_edition_key":"OL990100002M","openlibrary_work_key":"../x","title":"Key Probe","authors":["A"]}'::jsonb, 'want_to_read') $$,
+  '22023', 'book_invalid', 'nor a work key that is not one');
+select throws_ok(
+  $$ select public.add_to_library('{"source":"openlibrary","openlibrary_edition_key":"OL990100002W","title":"Key Probe","authors":["A"]}'::jsonb, 'want_to_read') $$,
+  '22023', 'book_invalid', 'an edition key must end in M');
+select lives_ok(
+  $$ select public.add_to_library('{"source":"openlibrary","openlibrary_edition_key":"OL990100003M","openlibrary_work_key":"OL990100003W","title":"Key Fine","authors":["A"]}'::jsonb, 'want_to_read') $$,
+  'Open Library''s own keys are stored');
+select results_eq(
+  $$ select outcome from jsonb_to_recordset(public.import_books('[{"key":"goodreads:catinput4","status":"want_to_read",
+        "book":{"title":"Import Key","authors":["A"],"source":"openlibrary","openlibrary_edition_key":"../../x"}}]'::jsonb)) as r(outcome text) $$,
+  $$ values ('failed') $$,
+  'import_books refuses the same key');
+
+reset role;
+select throws_ok(
+  $$ insert into public.books (title, source, openlibrary_edition_key) values ('Direct', 'openlibrary', '../../search.json') $$,
+  '23514', null, 'the table refuses an edition key that is not one');
+select throws_ok(
+  $$ insert into public.books (title, source, apple_id, openlibrary_work_key) values ('Direct', 'apple', '990000100020', 'OL1M') $$,
+  '23514', null, 'and a work key that is not one');
 
 select * from finish();
 rollback;
