@@ -30,8 +30,13 @@ const CI = Boolean(process.env.CI)
 const DEV = Boolean(process.env.LIBELLUS_E2E_DEV)
 const CI_WORKERS = Number(process.env.E2E_WORKERS) || (availableParallelism() >= 4 ? 3 : 2)
 
+// Measurements (e2e/perf, tagged @perf) run only by hand, with LIBELLUS_E2E_PERF=1: they take
+// minutes, drive Chromium with the CPU slowed, and assert nothing a pull request should wait on.
+const PERF = Boolean(process.env.LIBELLUS_E2E_PERF)
+
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: PERF ? [] : ['**/perf/**'],
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
   // Sharding splits by test rather than by file (a few files hold a third of the flows, so

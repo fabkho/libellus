@@ -159,6 +159,18 @@ in history; `--theme light|dark`. It writes a strip of the screencast, the fligh
 pnpm tsx e2e/android/flight-return.ts --base http://localhost:3126 --out /tmp/libellus-cover-return --name after --theme dark --network cold
 ```
 
+**The flight after many round-trips** (does it wear?) is a Playwright measurement, `e2e/perf/flight-soak.spec.ts`
+(tagged `@perf`): the config leaves `e2e/perf` out unless `LIBELLUS_E2E_PERF=1`, so no run, local or CI,
+picks it up by accident. Thirty round-trips Home → Book → Back in Chromium (CPU ÷4) or WebKit, per round
+the flight's timings, its dropped and long frames, what it left behind, the document's and the heap's size
+and the stack's requests; `e2e/perf/summarize.ts` makes the tables of docs/MOTION.md ("After many
+flights"). Run on a quiet machine, at least five runs:
+
+```sh
+LIBELLUS_E2E_PERF=1 FLIGHT_OUT=/tmp/flight-soak pnpm exec playwright test e2e/perf --repeat-each 5 --workers 1
+pnpm tsx e2e/perf/summarize.ts /tmp/flight-soak
+```
+
 **Share target and app shortcuts (#91).** Both need a **WebAPK**: Chrome on Android registers a web app
 as a share target and shows its manifest `shortcuts` on a long-press only once Google's server has minted
 an APK for it. On the emulator without a Google account Chrome's Install (⋮ → Add to home screen →
