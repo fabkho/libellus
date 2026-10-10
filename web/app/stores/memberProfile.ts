@@ -57,6 +57,7 @@ const fresh = (): MemberView => ({
  * followed by a fresh read of her profile (a follow of a public account opens it at once).
  */
 export const useMemberProfileStore = defineStore('memberProfile', () => {
+  const nuxtApp = useNuxtApp()
   const backend = useBackend()
   const session = useSessionStore()
   const social = useSocialStore()
@@ -64,7 +65,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
   let stats: MemberStats | null = null
   function statsRepo(): MemberStats | null {
     if (!backend) return null
-    stats ??= createMemberStats(backend, { online: isOnline })
+    stats ??= createMemberStats(backend, { online: isOnline, outside: () => nuxtApp.$i18n.t('book.outsideCatalogue') })
     return stats
   }
 

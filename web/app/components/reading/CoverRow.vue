@@ -19,28 +19,30 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
+const PressLink = resolveComponent('UiPressLink')
+const shown = (book: PublicBook) => shownBook(book, t('book.outsideCatalogue'))
 const size = computed(() => (props.compact ? 'md' : 'lg'))
 </script>
 
 <template>
   <ul class="scrollbar-none -mx-screen flex snap-x scroll-px-screen gap-ms overflow-x-auto px-screen pb-xs" :data-testid="testid">
     <li v-for="item in items" :key="item.book.id" class="shrink-0 snap-start" :class="compact ? 'w-(--size-cover-md)' : 'w-(--size-cover-lg)'">
-      <UiPressLink :to="bookCardPath(token, item.book.id)" class="cover-link flex flex-col gap-xs rounded-cover" :data-testid="`${testid}.book`">
+      <component :is="item.book.unverified ? 'span' : PressLink" :to="item.book.unverified ? undefined : bookCardPath(token, item.book.id)" class="cover-link flex flex-col gap-xs rounded-cover" :data-testid="`${testid}.book`">
         <UiCover
           :decorative="!compact"
-          :title="item.book.title"
-          :authors="item.book.authors"
-          :src="coverSrc(item.book.coverUrl, size)"
-          :thumbhash="item.book.coverThumbhash"
-          :colors="item.book.coverColors"
+          :title="shown(item.book).title"
+          :authors="shown(item.book).authors"
+          :src="coverSrc(shown(item.book).coverUrl, size)"
+          :thumbhash="shown(item.book).coverThumbhash"
+          :colors="shown(item.book).coverColors"
           :size="size"
         />
         <template v-if="!compact">
-          <span class="book-title line-clamp-2 text-caption">{{ item.book.title }}</span>
-          <span class="truncate text-meta text-ink-muted">{{ formatAuthors(item.book.authors, t('common.etAl')) }}</span>
+          <span class="book-title line-clamp-2 text-caption">{{ shown(item.book).title }}</span>
+          <span v-if="shown(item.book).authors.length" class="truncate text-meta text-ink-muted">{{ formatAuthors(shown(item.book).authors, t('common.etAl')) }}</span>
           <UiStars v-if="item.rating" :quarters="item.rating" :show-value="false" />
         </template>
-      </UiPressLink>
+      </component>
     </li>
   </ul>
 </template>

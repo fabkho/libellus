@@ -13,6 +13,7 @@ import type { CircleFriend } from '~/utils/circleView'
 const props = defineProps<{ friend: CircleFriend; dayLabel: string; eager?: boolean }>()
 
 const { t } = useI18n()
+const shown = (book: SocialBook) => shownBook(book, t('book.outsideCatalogue'))
 const name = computed(() => props.friend.member.name?.trim() || t('member.someone'))
 </script>
 
@@ -36,14 +37,14 @@ const name = computed(() => props.friend.member.name?.trim() || t('member.someon
               <i18n-t v-else-if="phrase.verb === 'want'" keypath="circle.want" tag="span" scope="global">
                 <template #title>
                   <template v-for="(book, at) in phrase.books" :key="book.id">
-                    <template v-if="at > 0">{{ t('circle.and') }}</template><i class="book-title italic">{{ book.title }}</i>
+                    <template v-if="at > 0">{{ t('circle.and') }}</template><i class="book-title italic">{{ shown(book).title }}</i>
                   </template>
                 </template>
               </i18n-t>
               <template v-else>
                 {{ t(`feed.${phrase.verb}`) }}
                 <template v-for="(book, at) in phrase.books" :key="book.id">
-                  <template v-if="at > 0">{{ t('circle.and') }}</template><i class="book-title italic">{{ book.title }}</i>
+                  <template v-if="at > 0">{{ t('circle.and') }}</template><i class="book-title italic">{{ shown(book).title }}</i>
                 </template>
               </template>
             </template>
@@ -55,11 +56,11 @@ const name = computed(() => props.friend.member.name?.trim() || t('member.someon
               v-for="book in friend.books"
               :key="book.id"
               decorative
-              :title="book.title"
-              :authors="book.authors"
-              :src="coverSrc(book.coverUrl, 'sm')"
-              :thumbhash="book.coverThumbhash"
-              :colors="book.coverColors"
+              :title="shown(book).title"
+              :authors="shown(book).authors"
+              :src="coverSrc(shown(book).coverUrl, 'sm')"
+              :thumbhash="shown(book).coverThumbhash"
+              :colors="shown(book).coverColors"
               size="xs"
               :eager="eager"
               class="cover"

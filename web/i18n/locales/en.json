@@ -509,6 +509,7 @@
   },
   "book": {
     "title": "Book",
+    "outsideCatalogue": "Outside the catalogue",
     "back": "Back",
     "pages": "{count} pages",
     "add": "Add to Library",

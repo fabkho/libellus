@@ -54,11 +54,13 @@ export function cardFromJson(json: CardJson): MemberCard {
 /** A Book as the social answers carry it. `manual`: a Manual book, which a follower cannot open. */
 export type SocialBook = Pick<Book, 'id' | 'title' | 'authors' | 'year' | 'coverUrl' | 'coverThumbhash' | 'coverColors'> & {
   manual: boolean
+  /** One the server check could not confirm: no title, authors or cover (utils/unverifiedBook.ts). */
+  unverified: boolean
 }
 
 type BookJson = {
   id: string
-  title: string
+  title: string | null
   authors: string[] | null
   published_year: number | null
   cover_url: string | null
@@ -66,12 +68,13 @@ type BookJson = {
   cover_dominant: string | null
   cover_secondary: string | null
   manual: boolean
+  unverified?: boolean | null
 }
 
 export function socialBookFromJson(json: BookJson): SocialBook {
   return {
     id: json.id,
-    title: json.title,
+    title: json.title ?? '',
     authors: json.authors ?? [],
     year: json.published_year ?? null,
     coverUrl: json.cover_url ?? null,
@@ -79,6 +82,7 @@ export function socialBookFromJson(json: BookJson): SocialBook {
     coverColors:
       json.cover_dominant && json.cover_secondary ? { dominant: json.cover_dominant, secondary: json.cover_secondary } : null,
     manual: Boolean(json.manual),
+    unverified: Boolean(json.unverified),
   }
 }
 
