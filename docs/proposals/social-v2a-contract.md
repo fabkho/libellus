@@ -105,6 +105,20 @@ yet; `v-model:spoilers` on each sheet), `feed.like` (`LikeButton`, `.count` insi
 `social.like.{like,unlike,label,count,ownLabel,error}`, `social.likers.{title,empty,loading,loadError,offline}`,
 `review.{spoilers,spoilersHint,folded,showAnyway,showAnywayLabel}`.
 
+### Your reviews on the Profile (task V2A-B5, owner's request)
+
+A section **Your reviews** on the own Profile, after the figures and the years in review and before her shelf and
+Friends (it is about her reading, so it follows the figures; the account and the social rows stay at the end):
+her reads with a review, **newest first** (by the read's end day, else the day it was written), the newest
+three, each a row shaped like a member's Recently finished (cover, title, author, her stars, the day, the review
+in serif italic folded at four lines with More), never folded for spoilers (it is hers) but a quiet "Spoilers"
+tag when she flagged it; a row opens the Book. **See all {count}** (once she has more than three) opens the sheet
+with all of them. No reviews: no section. Web only, no database: from her Library on the device
+(`utils/profileReviews.ts`), so offline too; the device holds each entry's latest read, so it is one review per
+Book, and a re-read in progress hides the review of the read before it until it ends. Test ids: `profile.reviews`,
+`profile.reviews.row` (`.title`, `.spoilers`), `profile.reviews.all`, the sheet `profileReviews` (`.row`). Strings:
+`profile.reviews.{title,all,allLabel,spoilers}`.
+
 ## 5. A checked Catalogue (PR B)
 
 - `books.checked_at timestamptz` (null = not checked) and `books.check_failed boolean default false`.
