@@ -74,7 +74,7 @@ jobs:
                       print(f"::add-mask::{v}")
           PY
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # pg_dump must be at least the server's version; install exactly that one.
       - name: Server version

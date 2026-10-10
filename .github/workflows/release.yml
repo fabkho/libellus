@@ -76,7 +76,7 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       # release-please-config.json and .release-please-manifest.json say what to release.
-      - uses: googleapis/release-please-action@v5
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         id: release
 
   # Every user flow before anything goes out: red, and the release stops with the
@@ -172,7 +172,7 @@ jobs:
 
       # The whole history (cheap: a few thousand commits) so the tag can be checked
       # against `main` and `production`. The deploy key is kept for the push below.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: refs/tags/${{ steps.which.outputs.tag }}
           fetch-depth: 0
@@ -207,7 +207,7 @@ jobs:
           echo "production: ${current:-none} → $target ($move)"
           { echo "target=$target"; echo "current=$current"; echo "move=$move"; } >> "$GITHUB_OUTPUT"
 
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: ${{ env.SUPABASE_CLI }}
 

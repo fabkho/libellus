@@ -68,7 +68,7 @@ jobs:
       # Built in its own step above (web/playwright.config.ts would build it otherwise).
       LIBELLUS_E2E_PREBUILT: '1'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.ref }}
 
@@ -82,18 +82,18 @@ jobs:
       - name: Sample the disk (in the background)
         run: scripts/ci-disk.sh sample
 
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: ${{ env.SUPABASE_CLI }}
 
       - name: Start Supabase (in the background)
         run: scripts/ci-supabase.sh start
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 12
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -115,7 +115,7 @@ jobs:
       # reloads, layout shifts).
       - name: Cache the browsers
         id: browsers
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
@@ -181,7 +181,7 @@ jobs:
       # The blob report holds the results, screenshots and traces of this shard.
       - name: Upload the blob report
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-blob-${{ matrix.shard }}
           path: web/blob-report/
@@ -196,15 +196,15 @@ jobs:
     if: ${{ !cancelled() && needs.e2e.result == 'failure' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.ref }}
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 12
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -214,7 +214,7 @@ jobs:
         working-directory: web
         run: pnpm install --frozen-lockfile
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         continue-on-error: true
         with:
           path: web/all-blob-reports
@@ -228,7 +228,7 @@ jobs:
 
       - name: Upload the report and traces
         if: hashFiles('web/playwright-report/**') != ''
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-report
           path: web/playwright-report/
