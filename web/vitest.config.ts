@@ -22,9 +22,16 @@ export default defineConfig({
   ],
   resolve: {
     // `~` is Nuxt's alias for the same folder: the stores' own imports resolve in tests/social-store.test.ts.
-    alias: { '@': resolve('./app'), '~': resolve('./app') },
+    alias: {
+      '@': resolve('./app'),
+      '~': resolve('./app'),
+      // As in nuxt.config.ts: the suite exercises the client the app ships.
+      '@supabase/realtime-js': resolve('./app/data/realtimeStub.ts'),
+    },
   },
   test: {
+    // Node loads supabase-js from node_modules as it is, past the alias above: inlined, its import of Realtime resolves to the stub.
+    server: { deps: { inline: [/@supabase\/supabase-js/] } },
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     env: { LIBELLUS_TEST_RUN: process.env.LIBELLUS_TEST_RUN },
