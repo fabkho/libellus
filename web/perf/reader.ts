@@ -9,6 +9,7 @@
  *
  *   prefetched   waits until the reader's chunks are in (or the build has none to wait for), then taps Read now
  *   mid-prefetch taps the moment the button shows
+ *   dropped      the prefetch fails (its files are blocked), the connection is back at the tap
  *   cold         no prefetch (Save-Data on): what the tap costs with nothing fetched ahead
  *
  * and for each: tap → the reader's room is on screen, tap → `data-ready` (the opening flight and the engine
@@ -34,11 +35,12 @@ const label = arg('label', 'build')
 const base = appUrl('chromium')
 const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!
 
-type Case = { name: string; sw: boolean; wait: 'chunks' | 'button' | 'off' }
+type Case = { name: string; sw: boolean; wait: 'chunks' | 'button' | 'off' | 'dropped' }
 const CASES: Case[] = [
   { name: 'network · prefetched', sw: false, wait: 'chunks' },
   { name: 'network · mid-prefetch', sw: false, wait: 'button' },
   { name: 'network · cold', sw: false, wait: 'off' },
+  { name: 'network · dropped, then tap', sw: false, wait: 'dropped' },
   { name: 'sw · returning member', sw: true, wait: 'chunks' },
 ]
 
@@ -91,6 +93,8 @@ async function measure(c: Case, context: BrowserContext, book: string) {
   // Nothing fetched ahead: the browser says the member asked to save data, so the app does not prefetch (a failed
   // prefetch would leave the failure in the module map, and the tap would fail with it).
   if (c.wait === 'off') await page.addInitScript(() => Object.defineProperty(navigator, 'connection', { value: { saveData: true } }))
+  // The connection drops while the prefetch downloads (the files are blocked), and is back at the tap.
+  if (c.wait === 'dropped') await cdp.send('Network.setBlockedURLs', { urls: ['*/_nuxt/ebook-reader*'] })
   await page.addInitScript(() => {
     const w = window as unknown as { __tap?: { at: number; layer: number | null; ready: number | null; loaders: string[] } }
     const watch = () => {
@@ -111,6 +115,10 @@ async function measure(c: Case, context: BrowserContext, book: string) {
     // Prefetched: every chunk of the reader is in (builds without a `reader` chunk have no wait to do).
     await page.waitForFunction(() => performance.getEntriesByType('resource').some((e) => /ebook-reader|\/reader\./.test(e.name)) || false, null, { timeout: 30_000 }).catch(() => {})
     await page.waitForTimeout(2500)
+  }
+  if (c.wait === 'dropped') {
+    await page.waitForTimeout(4000)
+    await cdp.send('Network.setBlockedURLs', { urls: [] })
   }
   const before = await page.evaluate(() => performance.getEntriesByType('resource').filter((e) => /_nuxt\//.test(e.name)).length)
   await page.evaluate(() => {

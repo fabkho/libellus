@@ -38,27 +38,54 @@ export function firstEbookLinked(before: boolean, now: boolean, recordsRead: boo
   return now && !before && recordsRead
 }
 
+/** Waits between a failed fetch ahead and its next try; as many tries as there are entries. */
+export const RETRY_DELAYS_MS = [5000, 20_000, 60_000]
+
 /**
- * The fetch ahead, once: `load` imports the reader's modules, whose answer the browser keeps (the module map), so
- * a second call has nothing to do and the member's tap is answered from memory. A failed attempt (no connection,
- * a deploy replaced the chunk) is forgotten, so the next call tries again.
+ * The fetch ahead, once: `load` brings the reader's code in (data/reader/prefetch.ts's caller says how), and the
+ * browser keeps the modules, so a second call has nothing to do and the member's tap is answered from memory.
+ *
+ * A failed `load` is never kept: the next call starts it again (the browser keeps a failed `import()` for good,
+ * so `load` must make sure the files are in before it imports; utils/readerChunks.ts does). `prefetch` (the
+ * triggers) tries again by itself after a failure, later and later, a few times, and only while the device
+ * still allows it; `ensure` (Read now) loads whatever the connection, joins a load on its way, and says if it
+ * failed.
  */
-export function createReaderPrefetch(load: () => Promise<unknown>, connection: () => Connection) {
-  let started: Promise<void> | null = null
+export function createReaderPrefetch(
+  load: () => Promise<unknown>,
+  connection: () => Connection,
+  { delays = RETRY_DELAYS_MS, later = (run: () => void, ms: number) => void setTimeout(run, ms) }: { delays?: number[]; later?: (run: () => void, ms: number) => void } = {},
+) {
+  let loading: Promise<void> | null = null
+  let tries = 0
+  function run(): Promise<void> {
+    loading ??= load().then(
+      () => {
+        tries = 0
+      },
+      (error: unknown) => {
+        loading = null
+        throw error
+      },
+    )
+    return loading
+  }
+  function retry() {
+    const delay = delays[tries++]
+    if (delay !== undefined) later(prefetch, delay)
+  }
+  function prefetch(): void {
+    if (loading || !mayPrefetch(connection())) return
+    run().catch(retry)
+  }
   return {
     /** Starts the fetch unless it is on its way, done, or not wanted here; never throws. */
-    prefetch(): void {
-      if (started || !mayPrefetch(connection())) return
-      started = load().then(
-        () => undefined,
-        () => {
-          started = null
-        },
-      )
-    },
-    /** Whether the modules are (or are being) fetched; for the tests. */
+    prefetch,
+    /** Loads (or joins the load on its way) and resolves when the reader's code is in; rejects when it could not be. */
+    ensure: run,
+    /** Whether the code is being, or has been, fetched; for the tests. */
     get started() {
-      return started !== null
+      return loading !== null
     },
   }
 }

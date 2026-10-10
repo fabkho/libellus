@@ -88,7 +88,18 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css'],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+      {
+        // The reader's files, for utils/readerChunks.ts: it fetches them before it imports them. Beside Nuxt's own
+        // `builds/` files, which Pages serves with a short cache.
+        name: 'libellus-reader-files',
+        generateBundle(_options: unknown, bundle: Record<string, unknown>) {
+          const files = Object.keys(bundle).filter((file) => /(^|\/)ebook-reader[^/]*\.(js|css)$/.test(file))
+          if (files.length) (this as { emitFile: (file: object) => void }).emitFile({ type: 'asset', fileName: '_nuxt/builds/reader-files.json', source: JSON.stringify(files) })
+        },
+      },
+    ],
     // supabase-js builds a Realtime client (and the Phoenix socket under it, ~95 KB unminified) in
     // every client; the app opens no channel. The stub keeps what supabase-js calls on its own
     // (app/data/realtimeStub.ts). Same alias in vitest.config.ts, so the data-layer suite runs on it.
