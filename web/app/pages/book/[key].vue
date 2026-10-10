@@ -23,7 +23,9 @@ import { useLibraryStore } from '~/stores/library'
 import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
+import { onIdle } from '~/utils/idle'
 import { afterMotion } from '~/utils/motion'
+import { prefetchReader } from '~/utils/readerChunks'
 
 // One page through a change of edition, though the address changes (utils/bookPageKey.ts).
 definePageMeta({ layout: 'tabs', screen: 'book', pushed: true, key: bookPageKey })
@@ -186,6 +188,8 @@ const ebook = computed(() => {
   const record = ebooks.linkFor(entry.value)
   return record && !ebooks.missing.has(record.id) ? record : null
 })
+// With its ebook here, the reader's code is fetched ahead (data/reader/prefetch.ts), so Read now opens it from memory.
+watch(ebook, (record) => record && onIdle(prefetchReader, { timeout: 1500 }), { immediate: true })
 const readerOpen = computed(() => Boolean(entry.value && ebook.value && reader.openEntryId === entry.value.id))
 
 /** The entry now has another Book (#41): the page, showing it already, takes its address in place of the old one. */
