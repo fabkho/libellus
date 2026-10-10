@@ -28,6 +28,8 @@ const { values: args } = parseArgs({
     label: { type: 'string', default: 'list' },
     /** Only these steps (ids). */
     only: { type: 'string', default: '' },
+    /** CSS added to every page before the app runs: an experiment (what does a rule cost?), not a measurement of the build. */
+    css: { type: 'string', default: '' },
   },
 })
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -76,6 +78,12 @@ async function main() {
   for (let run = 1; run <= runs; run++) {
     const context = await newContext(browser, profile, await memberSession())
     const page = await context.newPage()
+    if (args.css)
+      await context.addInitScript((css: string) => {
+        const add = () => document.head.appendChild(Object.assign(document.createElement('style'), { textContent: css }))
+        if (document.head) add()
+        else document.addEventListener('DOMContentLoaded', add)
+      }, args.css)
     const cdp = await context.newCDPSession(page)
     const net = await netLog(page, cdp)
     await cdp.send('Performance.enable')
@@ -135,7 +143,7 @@ async function main() {
         row.loafN.push(stats.loaf.n)
         row.loafMs.push(stats.loaf.totalMs)
         row.loafMax.push(stats.loaf.maxMs)
-        console.log(`  run ${run} ${step.id.padEnd(20)} ready ${ready} ms  nodes ${dom.nodes}  rows ${dom.rows}  own ${dom.own}  covers ${net.entries.filter((e) => e.at >= t0 && e.host === 'covers').length}  style ${d.styleMs} layout ${d.layoutMs} script ${d.scriptMs} ms  frames>50 ${stats.frames?.over50 ?? 0} worst ${stats.frames?.worstMs ?? 0}  loaf ${stats.loaf.n}/${stats.loaf.maxMs} ms`)
+        console.log(`  run ${run} ${step.id.padEnd(20)} ready ${ready} ms  nodes ${dom.nodes}  rows ${dom.rows}  own ${dom.own}  covers ${net.entries.filter((e) => e.at >= t0 && e.host === 'covers').length}  style ${d.styleMs} layout ${d.layoutMs} script ${d.scriptMs} ms  frames>50 ${stats.frames?.over50 ?? 0} worst ${stats.frames?.worstMs ?? 0}  loaf ${stats.loaf.n}/${stats.loaf.maxMs} ms (style+layout ${stats.loaf.styleLayoutMs}, blocking ${stats.loaf.blockingMs}; ${stats.loaf.top.slice(0, 2).join(' | ')})`)
       } catch (e) {
         console.log(`  run ${run} ${step.id} failed: ${(e as Error).message.split('\n')[0]}`)
         await page.goto(appUrl(profile.engine) + '/').catch(() => {})
