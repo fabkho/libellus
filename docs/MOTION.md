@@ -102,6 +102,28 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   first frame. No space is reserved for them: a Book without a series or a rating would carry a gap
   of that height (`BookGenres` reserves a row only for a Library Book, whose chips are almost
   always on the device).
+- **Hero cover** (A11, prototype in `docs/prototypes/`). The Book page's hero cover turns to the
+  finger: the touched side comes up towards it, at most 8° at the cover's edge, in perspective. The
+  lean comes in over `instant` (the Press duration) on the `standard` curve, then follows the finger
+  frame by frame; let go, it comes back flat over `standard` (a Web Animation), and a new press
+  mid-way starts from what is on screen. Only the sheet leans (`[data-cover]`); the halo and the pool
+  of light behind it stay where they are. The hero only: no other cover leans (`UiCover`'s `tilt`,
+  `utils/coverTilt.ts`). A vertical move that starts on the cover scrolls the page (`touch-action:
+  pan-y`): the browser takes it, the pointer is cancelled and the cover comes back as on a release; a
+  move that starts sideways keeps it. A long press opens no image menu. The pointer only: the phone's
+  own movement (DeviceOrientation) does nothing, so nothing leans while the page is just held.
+  **With the flight.** A press does nothing while anything moves (`moving()`: the cover's flight, its
+  hand-over, a View Transition) or while the sheet is hidden for a copy flying in its place. Whatever
+  measures the hero next calls `stillCovers()` first: Back (`leaving`, before `heroBoxOf()` and
+  `coverCopy()`; `heroBoxOf` takes out only the page's rise, so a lean would move the box the copy
+  starts from), a push from the book page, Read now and its return, Change edition. The lean is put
+  back at once, with no animation, and the flight measures the cover's own box. **Cost.** One
+  `transform` write per frame (batched in `requestAnimationFrame`), the cover's box read once at the
+  press, `will-change: transform` on the sheet from the press until it is flat again and not
+  otherwise: no layout and no paint per frame, a style recalculation of the sheet alone. Measured in
+  Chromium at CPU 6x (`pnpm perf:flows`, flows `book-tilt`, `book-back-held`, `home-to-book-pressed`):
+  no dropped frame while dragging, about 1 ms of style work per frame at 6x, and the flight in and
+  out unchanged against the build without it.
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
@@ -556,6 +578,7 @@ flows"); the flight's geometry is `tests/flight.test.ts`.
 | The new page is slow to draw (its code still loading) | The new page bare before the flight | The pose holds the screen as it was, up to 1 s |
 | The hero's large image is not in yet | The row's small image blown up to the hero's size | The row's image fades to the thumbhash before it is blown up; the large one fades in when decoded (`sharpen`, `fadeSoft`) |
 | The row's image was dropped while the book page was open | A blur or the thumbhash on the row for a moment after Back | The copy stays on the row until the row's image is decoded (`handOff`) |
+| Back (or Read now) while a finger holds the hero cover leaning, or while it comes back flat | The copy would start from the leaned box (`heroBoxOf` takes out only the rise) and jump onto the flat one | The lean is put back at once before anything is measured (`stillCovers`); a press while anything moves does nothing (Hero cover) |
 | iOS Safari's edge swipe, Reduce Motion, a book opened from search, a row scrolled away | — | No flight: the browser's own motion, a cross-fade, or the cover leaves with its page |
 
 ## Reduce Motion
@@ -574,7 +597,8 @@ stand at rest at once. Your shelf: the pile is there at once and the 3D replaces
 without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader
 cross-fades in and out in place), the printed page turns at once, and its search palette
-cross-fades like the app's.
+cross-fades like the app's. The hero cover does not lean: it is a picture like any other, and the
+page scrolls from it.
 
 ## Non-motions
 

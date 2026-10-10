@@ -60,6 +60,7 @@ import {
 } from '~/utils/flight'
 import { addMover, durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
+import { stillCovers } from '~/utils/coverTilt'
 import { coverSrc } from '~/utils/cover'
 import { preloadImage } from '~/utils/preload'
 
@@ -385,6 +386,8 @@ export function launch(link: HTMLElement, to: string) {
   if (!layers || !router || !import.meta.client) return
   const path = router.resolve(to).path
   if (!isFlightPath(path) || path === router.currentRoute.value.path) return
+  // A hero cover leaning on the page being left (a push from a book page) is copied flat.
+  stillCovers()
   const reduced = prefersReducedMotion()
   const previous = takeOver(path, 'list')
   const cover = reduced ? null : tappedOn(link, path)
@@ -467,6 +470,9 @@ function leaving(to: RouteLocationNormalized, from: RouteLocationNormalized) {
   if (pending || !isFlightPath(from.path) || to.path === from.path) return
   // Only Back reverses the push; a tab or a link from the book page is a new place (no motion).
   if (!isBack(to, from)) return
+  // The hero is measured and copied next: a lean (utils/coverTilt.ts) would move its box, and
+  // `heroBoxOf` takes out only the page's rise. Back to flat at once, before anything is read.
+  stillCovers()
   const reduced = prefersReducedMotion()
   const previous = takeOver(from.path, 'book')
   const hero = document.querySelector<HTMLElement>(`${HERO} ${COVER}`)

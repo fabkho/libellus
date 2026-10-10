@@ -18,6 +18,7 @@
  */
 import type { Ref } from 'vue'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { stillCovers } from '~/utils/coverTilt'
 
 interface Parts {
   /** The page's root: the ambient light is its first child. */
@@ -94,6 +95,8 @@ export function useEditionChange(parts: Parts) {
   /** The old Book as it is on screen, the moment before the page draws the new one. */
   function capture() {
     finish()
+    // The old hero is copied as it stands: never mid-lean (utils/coverTilt.ts).
+    stillCovers()
     const hero = parts.hero.value
     const page = parts.page.value
     if (!hero || !page) return
