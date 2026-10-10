@@ -1,41 +1,60 @@
 <script setup lang="ts">
 // The heart on a finished read (social v2a, contract §3): in the feed, on Home's card and on a member's
-// Recently finished rows. Props only; the screen that has the read wires `toggle` and `open`.
-//  - Another member's read: a heart with its count (the count is hidden at 0). Pressed (`liked`) it is filled
-//    and the lamp's colour; a tap emits `toggle`. Likes are online only: offline the button says *Offline*
-//    in its place and waits (UiButton's `offline`).
-//  - Her own read (`own`): the heart cannot be pressed, it shows the count and a tap emits `open`, which opens
-//    the likers sheet (LikersSheet). Nothing at all while nobody liked it.
-// `busy`: a like on its way (the button cannot be pressed twice). `name` and `title` are the read's owner and
-// Book, for the screen reader's label. Test ids: `<testid>` (the button).
+// Recently finished rows. Small clickable text like Want to read's (it never makes its row taller): the
+// heart and its count (hidden at 0), filled and in the lamp's colour once she liked it. Props only; the row
+// wires `toggle` (FriendsLikes, stores/likes.ts). Likes need the connection: offline it says *Offline* in
+// its place. `busy`: a like on its way. `name` and `title` are the read's owner and Book, for the screen
+// reader. Her own reads have no heart (the likers sheet on Home is where she sees who). Test ids:
+// `<testid>` (the button), `<testid>.count`.
 const props = withDefaults(
-  defineProps<{ count: number; liked?: boolean; own?: boolean; offline?: boolean; busy?: boolean; name: string; title: string; testid?: string }>(),
-  { liked: false, own: false, offline: false, busy: false, testid: 'feed.like' },
+  defineProps<{ count: number; liked?: boolean; offline?: boolean; busy?: boolean; name: string; title: string; testid?: string }>(),
+  { liked: false, offline: false, busy: false, testid: 'feed.like' },
 )
-defineEmits<{ toggle: []; open: [] }>()
+defineEmits<{ toggle: [] }>()
 
 const { t } = useI18n()
-const label = computed(() => {
-  if (props.own) return t('social.like.ownLabel', { count: props.count, title: props.title }, props.count)
-  return props.liked ? t('social.like.unlabel', { name: props.name, title: props.title }) : t('social.like.label', { name: props.name, title: props.title })
-})
-const hidden = computed(() => props.own && props.count === 0)
+const label = computed(() => t(props.liked ? 'social.like.unlabel' : 'social.like.label', { name: props.name, title: props.title }))
 </script>
 
 <template>
-  <UiButton
-    v-if="!hidden"
-    tone="plain"
-    size="sm"
-    :offline="offline && !own"
+  <button v-if="offline" type="button" class="tiny text-ink-faint" disabled :data-testid="testid" data-offline>
+    <UiIcon name="offline" :size="12" />{{ t('common.offline') }}
+  </button>
+  <button
+    v-else
+    type="button"
+    class="tiny"
+    :class="liked ? 'text-accent-ink' : 'text-ink-faint'"
     :disabled="busy"
     :aria-label="label"
-    :aria-pressed="own ? undefined : liked"
-    :class="liked && !own ? '!text-accent-ink' : ''"
+    :aria-pressed="liked"
     :data-testid="testid"
-    @click="own ? $emit('open') : $emit('toggle')"
+    @click="$emit('toggle')"
   >
-    <UiIcon name="heart" :size="16" :class="liked && !own && 'fill-current'" />
-    <span v-if="count > 0" class="figures" :data-testid="`${testid}.count`">{{ count }}</span>
-  </UiButton>
+    <UiIcon name="heart" :size="14" :class="liked && 'fill-current'" />
+    <span v-if="count > 0" class="figures" :aria-label="t('social.like.count', { count }, count)" :data-testid="`${testid}.count`">{{ count }}</span>
+  </button>
 </template>
+
+<style scoped>
+/* Clickable text, no pill: it never makes its row taller. The 44 px target is an invisible box centred on it. */
+.tiny {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-caption, 0.8125rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+.tiny::after {
+  position: absolute;
+  inset: 50% calc(-1 * var(--spacing-sm)) auto;
+  height: var(--size-touch);
+  content: '';
+  transform: translateY(-50%);
+}
+.tiny:disabled {
+  opacity: 0.6;
+}
+</style>
