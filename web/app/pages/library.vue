@@ -105,7 +105,9 @@ const empty = computed(
 
 onActivated(() => {
   // Not again while the lists are fresh (stores/library.ts, `FRESH_MS`).
-  void library.load({ ifStale: true }).then(() => circle.load())
+  void library.load({ ifStale: true })
+  // The store asks by itself when her lists arrive or change; coming back asks again once the answer is stale.
+  void circle.load({ ifStale: true })
   void bookGenres.load()
   // Sent here to look at one list (the Profile's genres, #168): that segment, as filtered.
   if (libraryView.focus) {
@@ -120,7 +122,7 @@ watch(
   () => session.member?.id,
   (member) => {
     if (!member) return
-    void library.load().then(() => circle.load())
+    void library.load()
     void bookGenres.load()
   },
 )

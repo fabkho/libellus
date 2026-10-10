@@ -43,7 +43,7 @@ const empty = computed(
 )
 
 function load() {
-  void library.load().then(() => circle.load())
+  void library.load()
   void library.loadReadInYear()
 }
 
@@ -51,6 +51,8 @@ function load() {
 onActivated(() => {
   void library.load({ ifStale: true })
   void library.loadReadInYear({ ifStale: true })
+  // The store asks by itself when her lists arrive or change; coming back asks again once the answer is stale.
+  void circle.load({ ifStale: true })
 })
 // Kept alive, so a member change (the lists reset) while it is not showing has
 // to bring it back by itself.
