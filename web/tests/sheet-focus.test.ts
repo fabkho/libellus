@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { afterRise, defersFieldFocus, fieldMayTakeFocus, FIELD_FOCUS_AFTER_RISE, RISE_FOCUS_MARGIN } from '@/utils/sheetFocus'
+import { afterRise, defersFieldFocus, fieldMayTakeFocus, FIELD_FOCUS_AFTER_RISE, panelIsRising, RISE_FOCUS_MARGIN, RISE_FOCUS_RETRIES, RISE_FOCUS_RETRY } from '@/utils/sheetFocus'
 
 /**
  * When a sheet's field takes focus (UiSheet, utils/sheetFocus.ts): the panel at
@@ -79,7 +79,7 @@ describe('waiting for the rise', () => {
   it('holds the field back until the sheet says it is in place', () => {
     const time = clock()
     let focused = 0
-    const wait = afterRise(() => focused++, FALLBACK, time.timers)
+    const wait = afterRise(() => focused++, FALLBACK, { timers: time.timers })
     time.advance(FALLBACK - 1)
     expect(focused).toBe(0)
     wait.settled()
@@ -90,7 +90,7 @@ describe('waiting for the rise', () => {
   it('focuses once: the signal and then the timer do not repeat it', () => {
     const time = clock()
     let focused = 0
-    const wait = afterRise(() => focused++, FALLBACK, time.timers)
+    const wait = afterRise(() => focused++, FALLBACK, { timers: time.timers })
     wait.settled()
     wait.settled()
     time.advance(FALLBACK * 2)
@@ -100,7 +100,7 @@ describe('waiting for the rise', () => {
   it('falls back to a timer when the signal never comes', () => {
     const time = clock()
     let focused = 0
-    afterRise(() => focused++, FALLBACK, time.timers)
+    afterRise(() => focused++, FALLBACK, { timers: time.timers })
     time.advance(FALLBACK)
     expect(focused).toBe(1)
   })
@@ -108,11 +108,58 @@ describe('waiting for the rise', () => {
   it('does nothing once cancelled (the sheet closed first)', () => {
     const time = clock()
     let focused = 0
-    const wait = afterRise(() => focused++, FALLBACK, time.timers)
+    const wait = afterRise(() => focused++, FALLBACK, { timers: time.timers })
     wait.cancel()
     wait.settled()
     time.advance(FALLBACK * 2)
     expect(focused).toBe(0)
     expect(time.armed).toBe(0)
+  })
+
+  it('does not take focus while the panel says it is on its way', () => {
+    const time = clock()
+    let focused = 0
+    let rising = true
+    const wait = afterRise(() => focused++, FALLBACK, { timers: time.timers, stillRising: () => rising })
+    time.advance(FALLBACK)
+    for (let look = 0; look < 3; look++) {
+      expect(focused, `after ${look} more looks`).toBe(0)
+      time.advance(RISE_FOCUS_RETRY)
+    }
+    expect(time.armed, 'still looking, not given up').toBe(1)
+    rising = false
+    wait.settled()
+    expect(focused).toBe(1)
+    expect(time.armed).toBe(0)
+  })
+
+  it('gives up on a rise that never ends, once its patience runs out', () => {
+    const time = clock()
+    let focused = 0
+    afterRise(() => focused++, FALLBACK, { timers: time.timers, stillRising: () => true })
+    time.advance(FALLBACK)
+    for (let look = 0; look < RISE_FOCUS_RETRIES; look++) {
+      expect(focused, `after ${look} looks`).toBe(0)
+      time.advance(RISE_FOCUS_RETRY)
+    }
+    expect(focused).toBe(1)
+    expect(time.armed).toBe(0)
+  })
+})
+
+/** A panel reduced to what `panelIsRising` reads. */
+function panel({ entering = false, running = false } = {}) {
+  return {
+    classList: { contains: (name: string) => entering && name === 'sheet-enter-from' },
+    getAnimations: () => [{ playState: running ? 'running' : 'finished' }],
+  } as unknown as HTMLElement
+}
+
+describe('what counts as still rising', () => {
+  it('is a rise that has not begun, one under way, and nothing else', () => {
+    expect(panelIsRising(panel())).toBe(false)
+    expect(panelIsRising(panel({ entering: true })), 'Vue has not taken the enter-from class off yet').toBe(true)
+    expect(panelIsRising(panel({ running: true })), 'the transition is running').toBe(true)
+    expect(panelIsRising(null)).toBe(false)
   })
 })

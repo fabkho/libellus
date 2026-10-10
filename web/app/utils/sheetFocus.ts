@@ -28,6 +28,19 @@ export const FIELD_FOCUS_AFTER_RISE = {
  */
 export const RISE_FOCUS_MARGIN = 200
 
+/**
+ * How long the fallback waits before it looks again, when the panel turns out
+ * to be on its way still (ms). The fallback's deadline is measured from the
+ * opening tap, but the rise itself starts a frame or two later — Vue takes the
+ * `enter-from` class off and arms the end of the enter on the next frames, and
+ * a loaded browser can stretch those past the margin (CI: the field took focus
+ * mid-rise, run 38000897658). So the fallback asks the panel, not its own clock, and looks again.
+ */
+export const RISE_FOCUS_RETRY = 100
+
+/** How many looks the fallback takes before it settles anyway (2 s of patience): a rise that never reports its end cannot hold the keyboard back for good. */
+export const RISE_FOCUS_RETRIES = 20
+
 /** Whether the field waits for the rise on this device. */
 export function defersFieldFocus(env: InstallEnvironment, policy: { ios: boolean; elsewhere: boolean } = FIELD_FOCUS_AFTER_RISE): boolean {
   return isIos(env) ? policy.ios : policy.elsewhere
@@ -36,6 +49,18 @@ export function defersFieldFocus(env: InstallEnvironment, policy: { ios: boolean
 /** The slice of `navigator` the policy reads. */
 export function browserEnvironment(): InstallEnvironment {
   return { userAgent: navigator.userAgent, platform: navigator.platform, maxTouchPoints: navigator.maxTouchPoints }
+}
+
+/**
+ * Whether the panel is still on its way: the rise has not begun (Vue's
+ * `sheet-enter-from` is still on it) or its own transition is running. The
+ * fallback asks this instead of trusting its deadline, so a late frame cannot
+ * put the keyboard on the field in the middle of the rise.
+ */
+export function panelIsRising(panel: HTMLElement | null | undefined): boolean {
+  if (!panel) return false
+  if (panel.classList.contains('sheet-enter-from')) return true
+  return panel.getAnimations({ subtree: false }).some((animation) => animation.playState === 'running')
 }
 
 /**
@@ -54,14 +79,36 @@ type Timers = {
 }
 const realTimers: Timers = { set: (run, ms) => setTimeout(run, ms), clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>) }
 
+/** What `afterRise` may be told: the clock it runs on, and whether the panel is still on its way. */
+type RiseWait = {
+  timers?: Timers
+  stillRising?: () => boolean
+}
+
 /**
  * Runs `run` once: when `settled()` is called (the sheet's `data-moving` has
  * cleared) or, failing that, after `fallback` ms. `cancel()` drops it (the sheet
  * closed first). Whichever comes first wins; the other does nothing.
+ *
+ * The fallback is a last resort, not a second opinion: before it runs, it asks
+ * `stillRising()`, and a panel that says it is on its way gets another
+ * `RISE_FOCUS_RETRY` ms and another look (up to `RISE_FOCUS_RETRIES` of them, so
+ * a rise that never ends still gives up). A signal that is late is not a rise
+ * that is over, and taking focus mid-rise is what puts the keyboard up over a
+ * panel still on the move.
  */
-export function afterRise(run: () => void, fallback: number, timers: Timers = realTimers) {
+export function afterRise(run: () => void, fallback: number, { timers = realTimers, stillRising = () => false }: RiseWait = {}) {
   let done = false
-  const handle = timers.set(() => settled(), fallback)
+  let looks = 0
+  let handle: unknown
+  function arm(ms: number) {
+    handle = timers.set(comeDue, ms)
+  }
+  function comeDue() {
+    if (done) return
+    if (stillRising() && looks++ < RISE_FOCUS_RETRIES) return arm(RISE_FOCUS_RETRY)
+    settled()
+  }
   function settled() {
     if (done) return
     done = true
@@ -73,5 +120,6 @@ export function afterRise(run: () => void, fallback: number, timers: Timers = re
     done = true
     timers.clear(handle)
   }
+  arm(fallback)
   return { settled, cancel }
 }
