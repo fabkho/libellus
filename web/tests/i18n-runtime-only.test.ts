@@ -90,6 +90,17 @@ describe('the app’s messages, compiled at build and formatted on the device', 
     expect(linked.t('upper')).toBe('LIBELLUS')
   })
 
+  it('a key built at runtime resolves like any other (the app’s dynamic-key sites)', () => {
+    // library.vue: t(`library.segment.${status}`); ManualSheet / OwnEditionSheet: te(`manual.error.${code}`) ? … : t(`library.error.${code}`);
+    // FilterSheet: te(`genre.${value}`) ? … : value. Keys are looked up in compiled messages: no string is compiled here.
+    for (const status of ['want_to_read', 'reading', 'finished']) expect(app.t(`library.segment.${status}`)).toBe(strings[`library.segment.${status}`])
+    for (const code of ['book_invalid', 'isbn_invalid']) {
+      expect(app.te(`manual.error.${code}`)).toBe(true)
+      expect(app.t(`manual.error.${code}`)).toBe(strings[`manual.error.${code}`])
+    }
+    expect(app.te('manual.error.no_such_code')).toBe(false)
+  })
+
   it('knows its keys (`te`), and a missing key answers with the key', () => {
     expect(app.te('import.doneTitle')).toBe(true)
     expect(app.te('genre.nothing-like-this')).toBe(false)
