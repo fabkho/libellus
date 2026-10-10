@@ -57,7 +57,7 @@ returns uuid language plpgsql as $$
 declare v_book uuid; v_entry uuid;
 begin
   insert into public.books (title, authors, source, apple_id, cover_url)
-  values (p_title, array['An Author'], 'apple', (floor(random() * 1e9))::bigint::text, 'https://example.org/' || p_title || '.jpg')
+  values (p_title, array['An Author'], 'apple', (floor(random() * 1e9))::bigint::text, 'https://covers.openlibrary.org/b/' || p_title || '.jpg')
   returning id into v_book;
   insert into public.library_entries (member_id, book_id) values (p_member, v_book) returning id into v_entry;
   return v_entry;
