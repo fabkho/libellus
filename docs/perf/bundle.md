@@ -1,0 +1,168 @@
+# Bundle size assessment
+
+Read-only research, `origin/main` at `46dfb6a0` (the worktree this was measured in). No app code,
+config or dependency changed; the experiments below were built in the worktree and reverted.
+Raw measurements: [`data/bundle/`](data/bundle/). Measured with `pnpm perf:bundle` (`web/perf/bundle.ts`),
+a Playwright capture of an unauthenticated first load, and throwaway builds. Brotli is quality 11.
+
+**Top line: there is still something to gain, but it is small.** The first screen costs about 305 KB
+brotli of JS/CSS (fonts extra), against about 55 KB for a bare Nuxt 4 SPA. About 130 KB of that
+gap is not the app's own code. It is lazy chunks the sign-in screen fetches (a Home chunk and the
+vitals chain) and a service-worker precache that is four times the entry. Every compile-time
+experiment saves 1–6 KB brotli each. Together they reach roughly 10 KB on the entry, and the
+sign-in fix is worth more than all of them.
+
+## 1. Payload table
+
+Brotli q11. "Sign-in" is a fresh, unauthenticated load of `/`. "Home after sign-in" was not measured:
+it needs the seeded Supabase stack from `web/perf/README.md`, which was not started here.
+
+| Payload | raw KB | gzip KB | brotli KB | note |
+| --- | ---: | ---: | ---: | --- |
+| Entry (`index.html`: 1 script, 1 CSS, 11 modulepreload) | 628.9 | 201.2 | **176.7** | harness; the sum of its 12 files |
+| Sign-in: all JS + CSS requested (86 files) | 1,047.1 | 345.3 | **305.3** | the entry plus lazy chunks (below) |
+| Sign-in: fonts (3 woff2 requested, Geist/Newsreader latin) | — | — | ~47 | not measured by script; estimated from the sign-in trace |
+| Sign-in: messages (`BJDnPcHj.js`, en.json compiled) | 94.4 | — | 15.9 | in the 86 above; fetched by a waterfall, not preloaded |
+| Service worker precache (230 entries) | 2,077.4 | — | **770.5** download | JS 535.6 · CSS 29.4 · fonts 163.2 (woff2 only) · icons 41.7 · other 0.5 |
+| Bare Nuxt 4 SPA entry (`npx nuxi@latest init`, minimal, ssr:false) | 170.8 | — | **55.0** | the baseline; 6 JS/CSS files, all in the entry |
+
+Against the baseline: the app's entry is 3.2× a bare Nuxt SPA (177 vs 55 KB brotli). The bare build
+is Nuxt runtime + Vue + vue-router only. The app's extra ~122 KB brotli on the entry is roughly
+Supabase (~35 KB brotli, `LJ-jPCQl`), i18n + intlify (~40 KB, `AvAfgI_h` and the runtime part of
+`BE7Zge0u`), Pinia and the app's eager stores, and web-vitals/unhead glue. Per-chunk attribution
+below is by sourcemap bytes, so it is approximate.
+
+The harness's "Messages chunk" line points at `AvAfgI_h.js`. That is wrong: `AvAfgI_h.js` is
+mostly eager app store code (library, collections, search, outbox, queued writes). The messages are
+`BJDnPcHj.js` (loaded by dynamic import, see F7). The harness's signature table mislabels it as
+"foliate / reader" for the same reason.
+
+### Entry and sign-in chunks, by content (sourcemap attribution)
+
+Built with `sourcemap: { client: true }` for attribution only, then reverted.
+
+| Chunk | brotli KB | What it is |
+| --- | ---: | --- |
+| `BE7Zge0u` | 52.4 | Nuxt runtime, vue-router 23 KB raw, runtime-dom 16 KB raw, unhead, ofetch, i18n runtime glue |
+| `AvAfgI_h` | 40.3 | app stores and data (library, collections, search, outbox, merge, covers, avatar), vue-i18n + message-compiler (~17 KB raw), pinia |
+| `LJ-jPCQl` | 34.8 | supabase-js: auth-js 99 KB raw, **storage-js 22.5 KB, postgrest-js 16.4 KB, umbrella 10.6 KB, iceberg-js 5.4 KB, functions-js 2.8 KB** |
+| `mCIrZfd0` | 27.2 | Vue runtime-core 59 KB raw, reactivity 17 KB raw |
+| `entry` CSS | 9.4 | Tailwind output, 52.7 KB raw |
+| `BJDnPcHj` | 15.9 | en.json messages, 94 KB raw (AST form, about 2× the source text) |
+| `D0FuntN8` | 9.1 | Home components (ReadingCard, Circle, CircleFeature) — loaded at `/` before the sign-in redirect (§3, F1) |
+| `C8TB2poD` | 20.7 | papaparse + `stores/import.ts` + `OwnEditionSheet` + the `__exportAll` helper the vitals module needs (§3, F2) |
+| `SZ_wTi5w` | 4.8 | web-vitals, idle import |
+
+Heaviest app modules by source (sourcemap): `vue-router`, `runtime-core`, `runtime-dom`, `nuxt/app`
+composables, and `app/data/library.ts` (13 KB raw in `AvAfgI`), `app/stores/library.ts` (6.7 KB).
+Lazy and correctly split: `dompurify` + foliate reader (`m3-Iqux7`, 92 KB raw, 29 KB br), foliate's
+`zip.js` (35 KB raw), `zxing` (36 KB raw wasm glue, 0.95 MB wasm, out of the precache), the reader
+engine, `papaparse`, Regal (out of the precache).
+
+Duplicated packages: the harness does not check for them, and I did not add a check. The one visible
+sign is a build warning, `Duplicated imports "thumbhashDataUrl"` from `app/utils/cover.ts` and
+`app/utils/thumbhash.ts` (~1 KB; not worth fixing for size alone).
+
+## 2. Classification of the large items
+
+| Item | Needed on | Already lazy? | Should it be? |
+| --- | --- | --- | --- |
+| Nuxt runtime, vue, vue-router, unhead | first paint | eager | no (required) |
+| vue-i18n + message compiler + messages | first paint | compiler and messages eager (waterfall for messages) | compiler: no (see F5). messages: needed, but preload them |
+| supabase-js umbrella (storage, functions, iceberg) | first paint (the client is built at boot) | no; storage used by `avatar.ts`, ebooks files, session | storage/functions could be built lazily (F3) |
+| Realtime | not used | stubbed by PR #254 | done |
+| Home components on `/` | Home only | lazy, but fetched at `/` before the sign-in redirect | no: F1 |
+| vitals (web-vitals, `data/vitals.ts`) | after load | idle `import()` | yes, but its helper chunk drags in papaparse (F2) |
+| papaparse, import store, OwnEditionSheet | Profile → Import, a book's edition sheet | lazy by route, but pulled by the vitals helper | yes once F2 is fixed |
+| foliate reader, dompurify, zip.js | opening an ebook | lazy | yes (correct). Precached, see F6 |
+| zxing (barcode) | opening the scanner | lazy, out of the precache | yes (correct) |
+| Regal (three.js) | the shelf, only with `LIBELLUS_REGAL=1` | lazy, out of the precache | yes; not in this build |
+| web-vitals, workbox-window | after load | idle | leave (~7 KB, deferred) |
+| Options API code in Vue | none known | everything on | `__VUE_OPTIONS_API__: false` is safe only if no dependency uses the Options API. Not checked (F4) |
+
+## 3. Findings, ranked by impact × effort
+
+Savings: **measured** = a throwaway build, brotli of the entry, compared with the same build at
+origin/main. **Estimate** = bytes from the sign-in trace, not a build.
+
+| # | Finding | Evidence | Saving | Proposed change | Risk | Effort | Model | Conflicts |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| F1 | Sign-in fetches the Home page chunk. Nuxt awaits `router.isReady()` (`nuxt/dist/pages/runtime/plugins/router.js:108`) before the `router.beforeEach` that runs middleware (`:121`). So `app/middleware/auth.global.ts` redirects only at `app:created`, after `/` (`app/pages/index.vue`) has loaded Home's chunk (`D0FuntN8`, 9 KB br). | Sign-in trace (`data/bundle/signin-requests.txt`; sub-agent trace of the router order, §4). | **Estimate ~20 KB br** off the sign-in path (Home-only deps not preloaded by sign-in). | Redirect unauthenticated `/` to `/sign-in` before the router reads the location (e.g. in `app/router.options.ts` or a `history` wrapper), only when no Supabase session key is stored. | Medium: share and deep-link flows, and the token-key check, need e2e. | M | Sonnet | `app/router.options.ts`, auth middleware. Not in any in-flight file listed. |
+| F2 | The vitals plugin's idle `import('~/data/vitals')` pulls `C8TB2poD` (papaparse, import store, `OwnEditionSheet`, a runtime helper) and the barcode scanner's chunk onto the sign-in path. The helper is rolldown's `__exportAll` namespace object, which `vitals.ts` needs. | Sign-in trace; `BKDt57C4.js` opens with `import{c as e}from"./C8TB2poD.js"`. | **Estimate ~25 KB br** off sign-in (`C8TB2poD` 20.7, scanner ~4). | Make `app/data/vitals.ts` not depend on the shared namespace helper (import named exports), or move the helper into a tiny module. Alternatively a `codeSplitting` group for the helper. | Low. Vitals is a diagnostic path; verify the vitals reporter still sends. | S | Sonnet (rolldown group syntax untested: check first) | `app/plugins/vitals.client.ts`, `app/data/vitals.ts`. |
+| F3 | `@supabase/supabase-js` umbrella always constructs StorageClient, FunctionsClient and Realtime in `SupabaseClient`'s constructor (`SupabaseClient.ts:410-430`, verified by reading the 2.117.2 source), so tree-shaking cannot drop them. No official slim entry point exists (only `.`, `./cors`, `./tracing` in `exports`). | Measured: stubbing storage-js, functions-js and iceberg-js (aliases in `nuxt.config.ts`) gives 171.0 vs 177.1. | **Measured 6.1 KB br** upper bound on the entry; a real fix keeps `storage` usable (`avatar.ts`, ebooks) and so saves less. | Build the client from `@supabase/auth-js` + `@supabase/postgrest-js` directly (a small `createSupabaseClient` replacement) and build `StorageClient` lazily in `avatar.ts` / ebooks. Keep the write-timeout fetch and the session storage wiring. | Medium-high: auth/session wiring is not in the public API of the sub-packages; the sign-in and sync flows need e2e. Unverified as supported by Supabase. | M–L | Sonnet, with the data-layer tests | `app/data/createSupabaseClient.ts`, `app/data/avatar.ts`, `app/stores/session.ts`. |
+| F4 | `__VUE_OPTIONS_API__: false` (plus `__VUE_PROD_DEVTOOLS__`, `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`, which are already false in `@vitejs/plugin-vue` 6.0.9, `dist/index.mjs:1693-1695`). | **Measured 1.6 KB br** (175.5). | 1.6 KB | `vite.define` for the one flag. | Low–medium: any dependency with `data()`/`methods:` breaks at runtime. None found in `app/*.vue`; not verified against dependencies. | S | DeepSeek (config), then e2e | none |
+| F5 | i18n: `bundle.runtimeOnly: true` + `dropMessageCompiler: true` (messages must be precompiled; no runtime-built strings). | **Measured 5.3 KB br** (171.8). | **5.3 KB br**, entry only. | Two config keys. | Medium: any `t()` with a string built at runtime, or `te`/`tm` on dynamic keys, throws. Needs an audit for dynamic keys and a full e2e pass. The source confirms the JIT branch is skipped (`@intlify/core-base` `core-base.mjs:201-245`). | S (config) + audit | Sonnet (audit), DeepSeek (keys) | **perf/lazy-images-i18n** is measuring the same flags. Coordinate; its result was not available. |
+| F5b | `bundle.fullInstall: false`. | **Measured 1.2 KB br.** | 1.2 KB | config key | Low: removes the global install of the i18n components/directives. Check the app does not use `<i18n-t>`. | S | DeepSeek | as F5 |
+| F6 | Service worker precache is 770 KB download (535 KB JS) on first install, including the ebook reader, dompurify, zip.js and the Home/route chunks. It is not on the first-paint path but it competes for the same connection on the first launch. | `sw.js` precache: 230 entries, 2,077 KB raw. | Not a first-paint saving. Could drop ~200–300 KB brotli from the first install. | Owner decision: exclude the reader chunks from the precache (`globIgnores`) and keep them in a runtime cache on first open. Reader offline use would then need a first open while online. | Medium: offline reading of an already-imported book would break until the reader is opened once online. | S (config) | Owner question first, then DeepSeek | `nuxt.config.ts` `pwa.workbox.globIgnores` only. |
+| F7 | The messages file (`BJDnPcHj`, 15.9 KB br) is loaded by a dynamic `import()` from the entry, with no modulepreload, so it is a request waterfall after the entry. | Trace: `Z(()=>import('./BJDnPcHj.js'),[])` in `BE7Zge0u.js`. | Latency, not bytes: one RTT on the first paint (not measured). | Preload it (Vite's `modulePreload` option or the i18n module's preload config; the option was not verified). | Low. | S | DeepSeek | none |
+
+Not worth doing (each is under ~3 KB br or already done, so we do not revisit them):
+
+- **Nuxt `experimental.treeshakeClientOnly`**: does not exist in `@nuxt/schema` 4.5.2 (verified).
+- **`payloadExtraction`**: forced to `false` by Nuxt when `ssr: false` (verified, `schema index.mjs:676-678`).
+- **`componentIslands`**: `auto` and inactive without island components (verified in source). Nothing to remove.
+- **`viewTransition`**: default off (verified). Keep it off.
+- **`build.analyze`**: diagnostic only.
+- **`cssCodeSplit`**: already on by default in Vite; Nuxt reads it.
+- **Vue devtools and hydration-mismatch flags**: already false (see F4).
+- **Prefetch hints**: already disabled in `nuxt.config.ts:61`.
+- **Polyfills**: none shipped. Vite 8.3.2's default `build.target` is `baseline-widely-available`, which means Chrome 111, Safari/iOS 16.4, Firefox 114 for syntax only; no legacy polyfills (verified in the Vite source). `vite/modulepreload-polyfill` is added by Nuxt (~0.5 KB, not worth removing).
+- **web-vitals and workbox-window** on idle: ~7 KB brotli, but deferred and not on first paint.
+- **Thumbhash duplicate import**: ~1 KB.
+- **`dompurify`**: lazy already; the only eager use would be the reader.
+- **Icon strategy and font subsetting**: fonts are woff2 only and latin subsets already (`woff` fallbacks are excluded from the precache on purpose, `nuxt.config.ts` workbox comment). Icon approach was not measured; no finding.
+
+Not checked (no claim made): CSS unused utilities beyond what Tailwind v4 already emits; `font-display`
+and font preloading; inline SVG/data URIs in JS; source-map leakage in the default build (none
+emitted: no `.map` files in the default `nuxt generate` output, checked); duplicate package versions
+(checked only top-level: one `vue`, one `vue-i18n`, one `@intlify` set); HTTP headers on Pages
+(the harness serves its own).
+
+## 4. Research notes (with sources)
+
+Sub-agents, Sonnet, read the installed packages for each claim.
+
+- **supabase-js 2.117.2.** VERIFIED in source: the constructor builds `SupabaseStorageClient` and
+  realtime unconditionally (`dist/SupabaseClient.ts` ~l.388–430 of the package source). Package
+  `exports` has only `.`, `./cors`, `./tracing`. Issue #151 (https://github.com/supabase/supabase-js/issues/151, 2021,
+  old) reports the same. No official slim entry was found; direct `@supabase/auth-js` + `postgrest-js` use is unverified as supported.
+- **@nuxtjs/i18n 10.6.0.** CLAIM: https://i18n.nuxtjs.org/docs/api/options: `runtimeOnly` requires messages
+  resolvable at build time. VERIFIED in `module.mjs:52-55, 1716, 1781-1784, 2451-2452`. The
+  `dropMessageCompiler` behaviour is in `@intlify/core-base`. Docs were read through a summariser:
+  quotes approximate.
+- **Vue compile-time flags.** CLAIM: https://vuejs.org/api/compile-time-flags.html (Vue 3.5 docs).
+  VERIFIED: Nuxt does not set them itself; `@vitejs/plugin-vue` 6.0.9 sets the defaults.
+- **Nuxt 4 experimental flags.** CLAIM and VERIFIED in `@nuxt/schema` 4.5.2 as above; docs at
+  https://nuxt.com/docs/4.x/guide/going-further/experimental-features.
+- **Vite 8.3.2 target.** VERIFIED in `vite/dist/node/chunks/node.js:720-726`; the target applies to syntax, not polyfills.
+
+Not researched further in the time box: Cloudflare Pages Early Hints, `Cache-Control` for hashed
+assets (Pages sets `_headers`, already in the repo; not changed here), and the nuxt-i18n-micro
+comparison for issue #257 (out of scope for this report; no verdict given).
+
+## 5. Open questions for the owner
+
+1. **Ebook reader offline.** Should the reader chunks (~200 KB br, about 40% of the precache) stay
+   precached (offline reading of an already-imported book with no connection), or be fetched on
+   first open (F6)? This is the biggest single byte decision, and it is yours.
+2. **Browser floor.** Vite's default target is Chrome 111, iOS 16.4. Is that the floor you want? A
+   lower floor needs `@vitejs/plugin-legacy`, which costs more bytes than anything here.
+3. **German (issue #257).** F5 (runtimeOnly) makes every message precompiled. It is fine for a
+   second locale, but the German strings must then be compiled at build time (they will be).
+
+## 6. Experiment log
+
+Brotli of the entry (`pnpm build` of the worktree with each change, reverted after):
+
+| Experiment | Entry brotli KB | Delta |
+| --- | ---: | ---: |
+| origin/main | 177.1 | — |
+| `bundle.fullInstall: false` | 175.9 | −1.2 |
+| `vite.define __VUE_OPTIONS_API__: false` (+ 2 flags, already false) | 175.5 | −1.6 |
+| `bundle.runtimeOnly` + `dropMessageCompiler` | 171.8 | −5.3 |
+| supabase storage-js, functions-js, iceberg-js stubbed (upper bound for F3) | 171.0 | −6.1 |
+
+The experiments are in the raw data (`data/bundle/experiments.tsv`). No experiment is committed.
+The build used `nuxt generate` on Node 24.21 and pnpm 12.6 with the frozen lockfile.
+
+The bare-Nuxt baseline: `/tmp` throwaway project (`npx nuxi@latest init`, minimal template, ssr:false), 55.0 KB brotli entry.
