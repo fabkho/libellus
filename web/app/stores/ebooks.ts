@@ -12,6 +12,7 @@ import {
   type Ebooks,
 } from '~/data/ebooks/ebooks'
 import { memberDir, memoryFiles, opfsFiles } from '~/data/ebooks/files'
+import { firstEbookLinked, hasOpenableEbook } from '~/data/reader/prefetch'
 import { readEbooksSnapshot, saveEbooksSnapshot } from '~/data/ebooks/snapshot'
 import { clearlyAnotherBook, fileAuthors, fileTitle, findQuery } from '~/data/ebooks/match'
 import type { Book, BookSnapshot } from '~/data/books'
@@ -24,6 +25,7 @@ import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
+import { prefetchReader } from '~/utils/readerChunks'
 
 /** Where a report came from: a share, a scan of the folder. */
 export type ReportSource = Extract<EbookSource, 'share' | 'folder'>
@@ -663,6 +665,15 @@ export const useEbooksStore = defineStore('ebooks', () => {
     repository = null
     persistAsked = false
   }
+
+  // The reader is fetched ahead for a member who uses ebooks on this device (data/reader/prefetch.ts): at once when
+  // she links her first one, so it is there before her first Read now. Later starts: plugins/reader-prefetch.client.ts.
+  watch(
+    () => hasOpenableEbook({ records: records.value, missing: missing.value }),
+    (now, before) => {
+      if (firstEbookLinked(before, now, loaded.value)) prefetchReader()
+    },
+  )
 
   // What was added from search while the outbox held it may be a Book a waiting file is: matched now it is synced.
   watch(

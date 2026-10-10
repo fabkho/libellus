@@ -23,7 +23,9 @@ import { useLibraryStore } from '~/stores/library'
 import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
+import { onIdle } from '~/utils/idle'
 import { afterMotion } from '~/utils/motion'
+import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
 // One page through a change of edition, though the address changes (utils/bookPageKey.ts).
 definePageMeta({ layout: 'tabs', screen: 'book', pushed: true, key: bookPageKey })
@@ -186,6 +188,13 @@ const ebook = computed(() => {
   const record = ebooks.linkFor(entry.value)
   return record && !ebooks.missing.has(record.id) ? record : null
 })
+// With its ebook here, the reader's code is fetched ahead (data/reader/prefetch.ts), so Read now opens it from memory.
+watch(ebook, (record) => record && onIdle(prefetchReader, { timeout: 1500 }), { immediate: true })
+/** Read now: the reader's code first (a no-op once it is in; a tap before it arrived, or after a failed fetch, loads it), then the reader. */
+async function read(target: LibraryEntry) {
+  await loadReader().catch(() => {})
+  reader.open(target)
+}
 const readerOpen = computed(() => Boolean(entry.value && ebook.value && reader.openEntryId === entry.value.id))
 
 /** The entry now has another Book (#41): the page, showing it already, takes its address in place of the old one. */
@@ -284,7 +293,7 @@ function back() {
       </UiButton>
       <!-- With the ebook here, reading it is the action; Start reading or Update progress steps back under it. -->
       <template v-else-if="ebook && (entry.status === 'want_to_read' || entry.status === 'reading')">
-        <UiButton block data-testid="book.read" @click="reader.open(entry)">
+        <UiButton block data-testid="book.read" @click="read(entry)">
           <UiIcon name="read" :size="18" />{{ t('book.read') }}
         </UiButton>
         <UiButton v-if="entry.status === 'want_to_read'" class="mt-sm" tone="quiet" block data-testid="book.start" @click="reading.openStart(entry)">
@@ -312,7 +321,7 @@ function back() {
         <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
       <!-- Its ebook on this device, when one is linked (#131); a finished or abandoned Book opens in the reader from here. -->
-      <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="reader.open(entry)" />
+      <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="read(entry)" />
     </div>
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />

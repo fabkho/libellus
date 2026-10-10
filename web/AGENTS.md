@@ -21,6 +21,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   shelf's owner. With it, a missing layer or file stops `dev`/`generate`.
   Regal stays in its own `regal` chunk, loaded only by `LazyShelfStage` and never precached; the
   build fails if the entry ever imports it.
+  The ebook reader (`components/reader`, foliate-js, DOMPurify) is the `ebook-reader*` chunks, also never
+  precached (`globIgnores`): `data/reader/prefetch.ts` says when they are fetched ahead (a member with an
+  ebook on this device, online, no Save-Data), a CacheFirst rule keeps them. Keep the group's modules apart
+  from the two files imported dynamically (nuxt.config.ts says why), and a prefetch trigger behind `prefetchReader`.
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.
 
