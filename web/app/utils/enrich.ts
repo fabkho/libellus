@@ -140,16 +140,23 @@ export function nextPlace(item: Pick<StartedSeries, 'series' | 'count' | 'next'>
 }
 
 /**
- * The works of an author's Standalone and Other groups, newest first (series keep their reading
- * order, so they never go through this): the latest year first, works without a year last, the
- * title (the locale's collation) between equals so the order never depends on how they came.
+ * The works of an author's Standalone and Other groups, newest first (on her page the series keep their
+ * reading order, so they do not go through this there; the Book page's teaser sorts every group with
+ * it): the latest year first, works without a year last, the title (the locale's collation) between
+ * equals so the order never depends on how they came.
  */
 export function newestFirst(works: readonly WorkCard[]): WorkCard[] {
-  return [...works].sort((a, b) => {
-    if (a.year != null && b.year != null && a.year !== b.year) return b.year - a.year
-    if ((a.year == null) !== (b.year == null)) return a.year == null ? 1 : -1
-    return a.title.localeCompare(b.title)
-  })
+  return [...works].sort((a, b) => byYear(a, b) || a.title.localeCompare(b.title))
+}
+
+/**
+ * Two works by year alone: the later year first, a work without a year after any that has one, and 0
+ * between two of the same year (each caller settles that tie itself).
+ */
+function byYear(a: WorkCard, b: WorkCard): number {
+  if (a.year != null && b.year != null && a.year !== b.year) return b.year - a.year
+  if ((a.year == null) !== (b.year == null)) return a.year == null ? 1 : -1
+  return 0
 }
 
 /** Names compared the way people write them: case, accents, dots and spacing aside. */
@@ -241,7 +248,7 @@ export type MoreFromAuthor = {
   author: AuthorHero
   /** All the works her page lists (this Book's included): what "Show all" says. */
   total: number
-  /** Up to `limit` others, those that open a Book first, each once, in the page's order (series, novels, the rest). */
+  /** Up to `limit` others, her latest first, each once; a work that opens a Book page before another of the same year. */
   works: WorkCard[]
   /** More other works than the ones shown: "Show all" has a reason to be there. */
   more: boolean
@@ -249,7 +256,8 @@ export type MoreFromAuthor = {
 
 /**
  * The section's content from an author page, or null when there is nothing to
- * show: no page, or none of her other works to offer.
+ * show: no page, or none of her other works to offer. What it offers is her
+ * latest, so it does not follow her own page's order.
  */
 export function moreFromAuthor(page: AuthorPage | null | undefined, current: CurrentBook, limit = MORE_FROM_AUTHOR): MoreFromAuthor | null {
   if (!page) return null
@@ -262,7 +270,18 @@ export function moreFromAuthor(page: AuthorPage | null | undefined, current: Cur
     seen.add(id)
     if (!isCurrentWork(work, current)) others.push(work)
   }
-  const works = [...others.filter((w) => workBookKey(w)), ...others.filter((w) => !workBookKey(w))].slice(0, limit)
+  // Her latest first, as her page's Novels and Other are: this is a teaser of what she has written last,
+  // not a reading order (the series' own order is her page's). Among the works of one year a work that
+  // opens a Book page comes first (the reader can tap through to it), never ahead of a newer work; the
+  // title settles the rest, so the order never depends on how her page arrived.
+  const works = [...others]
+    .sort(
+      (a, b) =>
+        byYear(a, b) ||
+        (workBookKey(a) ? 0 : 1) - (workBookKey(b) ? 0 : 1) ||
+        a.title.localeCompare(b.title),
+    )
+    .slice(0, limit)
   if (!works.length) return null
   return { author: page.author, total: seen.size, works, more: others.length > works.length }
 }

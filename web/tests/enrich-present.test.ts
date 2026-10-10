@@ -131,17 +131,36 @@ describe('more from the author', () => {
     expect(isCurrentWork(work('Guards! Guards!'), reading)).toBe(false)
   })
 
-  it('offers three of her other works, those that open a Book first, each once, in the page order', () => {
-    const none = { workId: 'w-x', title: 'Nothing to open' }
+  it('offers her three newest works across every group, each once, the series\' reading order aside', () => {
     const page = pageOf({
-      series: [{ id: 's1', name: 'Discworld', works: [work('Mort'), none, work('Eric'), work('Sourcery')] }],
-      standalone: [work('Nation'), work('Eric')],
-      other: [work('Dodger')],
+      series: [{ id: 's1', name: 'Discworld', works: [work('Mort'), work('Sourcery', { year: 1988 }), work('Eric', { year: 1990 })] }],
+      standalone: [work('Eric', { year: 1990 }), work('Nation', { year: 2008 })],
+      other: [work('Dodger', { year: 2012 }), work('Undated')],
     })
     const more = moreFromAuthor(page, reading)
-    expect(more?.works.map((w) => w.title)).toEqual(['Eric', 'Sourcery', 'Nation'])
+    expect(more?.works.map((w) => w.title)).toEqual(['Dodger', 'Nation', 'Eric'])
     expect(more?.total).toBe(6)
     expect(more?.more).toBe(true)
+  })
+
+  it('puts a work that opens a Book page first among the works of one year, never ahead of a newer one', () => {
+    const plain = (title: string, year?: number): WorkCard => ({ workId: `w-${title}`, title, ...(year == null ? {} : { year }) })
+    const page = pageOf({
+      standalone: [plain('Latest, nothing to open', 2012), plain('Undated, nothing to open')],
+      other: [work('Latest, opens', { year: 2012 }), work('Older, opens', { year: 2005 })],
+    })
+    const more = moreFromAuthor(page, reading)
+    expect(more?.works.map((w) => w.title)).toEqual(['Latest, opens', 'Latest, nothing to open', 'Older, opens'])
+  })
+
+  it('leaves this Book out of what it shows, and counts it once in the whole', () => {
+    const page = pageOf({
+      standalone: [work('Mort', { year: 2020 }), work('Dodger', { year: 2012 }), work('Nation', { year: 2008 })],
+    })
+    const more = moreFromAuthor(page, reading)
+    expect(more?.works.map((w) => w.title)).toEqual(['Dodger', 'Nation'])
+    expect(more?.total).toBe(3)
+    expect(more?.more).toBe(false)
   })
 
   it('has no "Show all" when everything is shown, and shows what is left of a short list', () => {
