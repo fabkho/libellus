@@ -88,13 +88,42 @@ export const useLibraryStore = defineStore('library', () => {
   /** When the lists showing were asked for (`performance.now()`), by the last load that landed. */
   let loadedAt = -Infinity
 
+  /** The load on its way, and the one that follows it for whoever asked meanwhile (`load`). */
+  let loading: Promise<void> | null = null
+  let following: Promise<void> | null = null
+
   /**
-   * Asks for the three lists and shows them. While something moves (the cover
-   * flying back into its row, the Profile's View Transition) the answer waits
-   * for it to end before it is applied, so re-rendering the lists does not
-   * land on a frame of it; the first load is applied at once.
+   * Asks for the three lists and shows them. One at a time: a screen that comes
+   * back while a load is on its way (Home, each time a Book page is closed) does
+   * not start another; one more load follows the one on its way, for all that
+   * asked meanwhile, so every ask is answered by lists asked for after it.
+   * Without that each return to Home started its own read of the whole Library,
+   * and on a slow connection they piled up faster than they came in: 55 at once
+   * after a dozen round-trips with 400 Books (e2e/perf/flight-soak.spec.ts),
+   * sharing the bandwidth with the Book page's own reads, whose writes-as-POST
+   * then timed out and put the app offline until the pile had drained.
    */
-  async function load() {
+  function load(): Promise<void> {
+    if (!loading) {
+      loading = fetchLists().finally(() => (loading = null))
+      return loading
+    }
+    following ??= loading
+      .catch(() => undefined)
+      .then(() => {
+        following = null
+        return load()
+      })
+    return following
+  }
+
+  /**
+   * One load. While something moves (the cover flying back into its row, the
+   * Profile's View Transition) the answer waits for it to end before it is
+   * applied, so re-rendering the lists does not land on a frame of it; the
+   * first load is applied at once.
+   */
+  async function fetchLists(): Promise<void> {
     const repo = library()
     if (!repo) return
     // Offline the device's copy is all there is; asking would only fail. (With
@@ -106,7 +135,7 @@ export const useLibraryStore = defineStore('library', () => {
     if (member !== session.member?.id) return
     // An add, start or finish landed while the lists were on their way: they
     // may not have it yet, so ask again rather than show the older state.
-    if (lastChange > asked) return load()
+    if (lastChange > asked) return fetchLists()
     const failed = results.find((result) => result.error)
     if (failed) {
       loadError.value = failed.error
@@ -116,7 +145,7 @@ export const useLibraryStore = defineStore('library', () => {
       await afterMotion()
       // Another member meanwhile, or a newer answer already shown.
       if (member !== session.member?.id || asked < loadedAt) return
-      if (lastChange > asked) return load()
+      if (lastChange > asked) return fetchLists()
     }
     loadError.value = null
     // The writes still waiting, laid over what the database has (issue #93).
