@@ -67,13 +67,14 @@ export type Memory = {
   queue: CheckBook[]
   saved: { id: string; result: CheckResult }[]
   missed: string[]
+  mismatched: string[]
   failed: { id: string; error: string }[]
   released: string[]
   claims: number[]
 }
 
 export function memoryStore(queue: CheckBook[], options: { saveFails?: (id: string) => boolean } = {}): { store: Store; memory: Memory } {
-  const memory: Memory = { queue: [...queue], saved: [], missed: [], failed: [], released: [], claims: [] }
+  const memory: Memory = { queue: [...queue], saved: [], missed: [], mismatched: [], failed: [], released: [], claims: [] }
   const store: Store = {
     claim: (limit) => {
       memory.claims.push(limit)
@@ -86,6 +87,10 @@ export function memoryStore(queue: CheckBook[], options: { saveFails?: (id: stri
     },
     miss: (id) => {
       memory.missed.push(id)
+      return Promise.resolve(true)
+    },
+    mismatch: (id) => {
+      memory.mismatched.push(id)
       return Promise.resolve(true)
     },
     failed: (id, error) => {

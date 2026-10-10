@@ -75,9 +75,12 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
         if (outcome.status === 'found') {
           await deps.store.save(book.id, outcome.result)
           tally.checked++
-        } else if (outcome.status === 'unknown' || outcome.status === 'mismatch') {
-          // The source does not know the Book, or what it says is not what the row says: failed, nothing written.
-          if (outcome.status === 'mismatch') log(`catalogue-check: ${book.id} does not match its source (${outcome.reason})`)
+        } else if (outcome.status === 'mismatch') {
+          // What the source says is not what the row says: failed, and the row's source keys cleared (squatting).
+          log(`catalogue-check: ${book.id} does not match its source (${outcome.reason})`)
+          await deps.store.mismatch(book.id)
+          tally.missed++
+        } else if (outcome.status === 'unknown') {
           await deps.store.miss(book.id)
           tally.missed++
         } else {

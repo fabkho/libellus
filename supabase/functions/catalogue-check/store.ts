@@ -9,8 +9,10 @@ export type Store = {
   /** Claims up to `limit` unchecked Catalogue Books (leased until they are stored or given back). */
   claim: (limit: number) => Promise<CheckBook[]>
   save: (bookId: string, result: CheckResult) => Promise<boolean>
-  /** The source does not know the Book: failed, checked, its data stay. */
+  /** The source does not know the Book: failed, checked, no description. */
   miss: (bookId: string) => Promise<boolean>
+  /** The source's answer is another Book than the row says: failed, checked, no description, its source keys cleared. */
+  mismatch: (bookId: string) => Promise<boolean>
   /** The source could not be asked: back, later. */
   failed: (bookId: string, error: string) => Promise<void>
   /** Not tried (out of time): back at once. */
@@ -35,6 +37,7 @@ export function createSupabaseStore(supabase: SupabaseClient): Store {
     },
     save: (bookId, result) => rpc<boolean>('catalogue_check_save', { p_book: bookId, p_result: result }),
     miss: (bookId) => rpc<boolean>('catalogue_check_miss', { p_book: bookId }),
+    mismatch: (bookId) => rpc<boolean>('catalogue_check_mismatch', { p_book: bookId }),
     async failed(bookId, error) {
       await rpc('catalogue_check_failed', { p_book: bookId, p_error: error })
     },

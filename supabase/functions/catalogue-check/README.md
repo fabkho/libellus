@@ -3,7 +3,7 @@
 A checked Catalogue (social v2a contract §5, `docs/proposals/social-v2a-contract.md`). A Catalogue Book
 keeps what the first member to add it sent; this function reads each unchecked one at its source and writes
 what the source says: **title, authors, description, cover URL, publisher, language, format, pages and year**. Until a Book is checked, other members and
-the public reading page get its title and authors but not its description (`private.description_shown`).
+the public reading page get its title and authors but not its description (`private.description_shown`). A client never stores a description for a Catalogue Book; only this function writes it.
 
 ```
 POST /functions/v1/catalogue-check
@@ -84,7 +84,8 @@ written under the ISBN).
 | Answer | Stored |
 | --- | --- |
 | the source knows the Book | `catalogue_check_save`: the source's title, authors (or none), description (or none), cover (or none), publisher, language and format (or none); pages and year the source's, else the row's own only if plausible; `checked_at` set. Nothing the member sent stays that the source did not say |
-| the source does not know it, or its answer disagrees with the row (`mismatch`) | `catalogue_check_miss`: `check_failed = true`, `checked_at` set, nothing written |
+| the source does not know it | `catalogue_check_miss`: `check_failed = true`, `checked_at` set, no source text written, the description (a legacy client's) cleared |
+| its answer disagrees with the row (`mismatch`) | `catalogue_check_mismatch`: as a miss, and the row's source keys (ISBN, Apple id, Open Library keys) cleared, so the unique indexes free them for an honest add; members who hold the row keep it |
 | the source failed (down, slow, garbled, 429) | `catalogue_check_failed`: tried again after 5 min, 10, 20 … at most a day; never given up (an unchecked Book only keeps its description withheld) |
 | the run ran out of time (50 s) | `catalogue_check_release`: back at once, the attempt not counted |
 

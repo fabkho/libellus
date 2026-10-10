@@ -75,7 +75,7 @@ Deno.test('drain: each Book is checked at its source and stored, missed, or give
   assertEquals(memory.failed.map((f) => f.id), [olDown.id])
 })
 
-Deno.test('drain: a Book whose keys or title disagree with its source is missed (failed, nothing written) and logged', async () => {
+Deno.test('drain: a Book whose keys or title disagree with its source is a mismatch (failed, keys cleared) and logged, not a miss', async () => {
   const planted = book({ title: 'Planted', isbn13: '9780141439518', openlibrary_edition_key: 'OL2M' })
   const fine = book({ title: 'Fine', openlibrary_edition_key: 'OL3M' })
   const { handler, memory, logs, asked } = setup({
@@ -87,7 +87,8 @@ Deno.test('drain: a Book whose keys or title disagree with its source is missed 
     },
   })
   assertEquals(await (await handler(post({ action: 'drain' }))).json(), { checked: 1, missed: 1, failed: 0, released: 0 })
-  assertEquals(memory.missed, [planted.id])
+  assertEquals(memory.mismatched, [planted.id])
+  assertEquals(memory.missed, [])
   assertEquals(memory.saved.map((s) => s.id), [fine.id])
   assertEquals(logs.length, 1)
   assertEquals(logs[0]!.includes('edition_key'), true)
