@@ -104,7 +104,7 @@ written under the ISBN).
 - **Writes**: only through the service-role RPCs of `20261023020000_catalogue_check.sql`, only to an
   unchecked Catalogue Book, and only title, authors, description, cover (and the cover's hash and colours,
   cleared), publisher, language, format, pages, year. Every field is validated here (type, length, plain text,
-  https cover on the two cover hosts) and again in `catalogue_check_save`. A title that is not the row's
+  https cover on the two cover hosts) and again in `catalogue_check_save`, which asks `private.cover_allowed` (the database's one cover allow-list; a cover off it is written as no cover and never fails the update; a Manual book is never touched). A title that is not the row's
   (`work_title_key`) marks the Book failed and writes nothing; authors that are not all text, a cover elsewhere,
   a description over 10 000 characters are stored as nothing, not as the member's value.
 - **Trusts**: that Apple and Open Library answer for the Book's keys. It does not trust the first member's

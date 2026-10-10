@@ -38,6 +38,13 @@ import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
 const today = isoDay()
 
+/** A work key of Open Library's own shape (`OL<digits>W`, the database refuses others), one per name and run: the name and the run's tag, hashed. */
+function workKeyOf(name: string): string {
+  let hash = 0
+  for (const char of `${name}${runTitle('')}`) hash = (hash * 31 + char.charCodeAt(0)) % 9_000_000
+  return `OL${1_000_000 + hash}W`
+}
+
 function book(title: string, workKey: string | null = null): BookSnapshot {
   return {
     title: runTitle(title),
@@ -55,7 +62,7 @@ function book(title: string, workKey: string | null = null): BookSnapshot {
     source: 'apple',
     appleId: uniqueAppleId(),
     openLibraryEditionKey: null,
-    openLibraryWorkKey: workKey ? `${workKey}${runTitle('')}`.replace(/\W/g, '') : null,
+    openLibraryWorkKey: workKey ? workKeyOf(workKey) : null,
   }
 }
 

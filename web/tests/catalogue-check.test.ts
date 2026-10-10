@@ -74,6 +74,27 @@ describe('a description is source text', () => {
     expect((await adaLibrary.book(other.book.id)).data?.description).toBeNull()
   })
 
+  it('the Book page\'s and the lists\' description reads (`descriptions`, `book`) see only source text, and no failed Book she does not hold', async () => {
+    const ada = await signUpMember()
+    const ben = await signUpMember()
+    const sent = await adds(ada, book('Described'))
+    const failed = await adds(ada, book('Described Failed'))
+    const adaLibrary = createLibrary(ada.client)
+    const benLibrary = createLibrary(ben.client)
+
+    // A client's blurb never lands (the add stores none): the reads answer null until the check writes the source's.
+    expect((await adaLibrary.descriptions([sent.book.id])).data!.get(sent.book.id)).toBeNull()
+    await sql('select public.catalogue_check_save($1, $2::jsonb)', [sent.book.id, JSON.stringify({ title: sent.book.title, description: 'Source text.' })])
+    expect((await adaLibrary.descriptions([sent.book.id])).data!.get(sent.book.id)).toBe('Source text.')
+    expect((await benLibrary.descriptions([sent.book.id])).data!.get(sent.book.id)).toBe('Source text.')
+
+    // A failed Book: its row is hers alone (books_readable), so Ben's read finds nothing, not even a null.
+    await sql('select public.catalogue_check_mismatch($1)', [failed.book.id])
+    expect((await benLibrary.descriptions([failed.book.id])).data!.has(failed.book.id)).toBe(false)
+    expect((await benLibrary.book(failed.book.id)).data).toBeNull()
+    expect((await adaLibrary.descriptions([failed.book.id])).data!.get(failed.book.id)).toBeNull()
+  })
+
   it('the catalogue search hands a failed Book to nobody who does not have it', async () => {
     const ada = await signUpMember()
     const ben = await signUpMember()
