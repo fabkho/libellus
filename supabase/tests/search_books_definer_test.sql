@@ -295,12 +295,12 @@ select ok(
 
 select is(
   (select proconfig from pg_proc where oid = 'public.search_books(text, integer)'::regprocedure),
-  array['search_path=pg_catalog, public'],
-  'its search path is pinned to pg_catalog, public');
+  array['search_path=pg_catalog, public, pg_temp'],
+  'its search path is pinned to pg_catalog, public, with pg_temp last');
 
 select is(
   (select proconfig from pg_proc where oid = 'private.book_search_sync()'::regprocedure),
-  array['search_path=pg_catalog, public'],
+  array['search_path=pg_catalog, public, pg_temp'],
   'so is the trigger function''s');
 
 select is(

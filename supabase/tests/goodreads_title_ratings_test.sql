@@ -1,14 +1,15 @@
 -- Goodreads' rating for a Book without an ISBN, the cache keyed by title and authors:
 --   supabase test db
 --
--- `goodreads_title_ratings` is shared like `goodreads_ratings`: every member reads
--- it, only the service role (the goodreads-rating edge function) writes it. A found
--- row has what the page shows, a miss nothing but its time. The ISBN cache keeps
--- its rules (goodreads_ratings_test.sql); here only that the new table did not
--- loosen them.
+-- `goodreads_title_ratings` is read and written only by the service role (the
+-- goodreads-rating edge function): its keys hold the title and author surnames of
+-- every Book a member opened, a private Manual book included (security round F3), so
+-- no member reads it. A found row has what the page shows, a miss nothing but its
+-- time. The ISBN cache keeps its rules (goodreads_ratings_test.sql): members still
+-- read it, and the Library's goodreads_rating(books) reads that table only.
 
 begin;
-select plan(18);
+select plan(21);
 
 create schema if not exists tests;
 
@@ -76,10 +77,16 @@ select throws_ok(
 
 select tests.act_as(:'ida_id');
 
-select set_eq(
-  $$ select title_key, status from public.goodreads_title_ratings where title_key like 'zzz test%' $$,
-  $$ values ('zzz test wicked way|zzzauthor', 'found'), ('zzz test unknown|zzzauthor', 'not_found') $$,
-  'a member reads the cache, misses included');
+-- Member A cannot see member B's row (or any row): not even the policy-free table.
+select throws_ok(
+  $$ select title_key from public.goodreads_title_ratings where title_key like 'zzz test%' $$,
+  '42501', null, 'a member cannot read the cache: it holds Manual titles');
+select is(
+  (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'goodreads_title_ratings'),
+  0, 'and no policy lets a member in');
+select ok(
+  not has_table_privilege('authenticated', 'public.goodreads_title_ratings', 'select'),
+  'the select grant is gone');
 select throws_ok(
   $$ insert into public.goodreads_title_ratings (title_key, status) values ('zzz b|zzz', 'not_found') $$,
   '42501', null, 'a member cannot add to the cache');
@@ -130,6 +137,9 @@ select tests.act_as(:'ida_id');
 select throws_ok(
   $$ insert into public.goodreads_ratings (isbn13, status) values ('9798991234597', 'not_found') $$,
   '42501', null, 'the ISBN cache still refuses a member');
+select lives_ok(
+  $$ select count(*) from public.goodreads_ratings $$,
+  'and still lets her read it');
 reset role;
 
 select * from finish();
