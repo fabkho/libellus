@@ -65,7 +65,7 @@ grant all on ids to authenticated, anon;
 -- Whatever else is in this database is checked already: the claims below see only this test's Books.
 update public.books set checked_at = now() where owner_id is null and checked_at is null;
 
-create or replace function tests.ed(p_title text, p_work text default 'OLRDRW1W')
+create or replace function tests.ed(p_title text, p_work text default 'OL7771001W')
 returns jsonb language sql as $$
   select jsonb_build_object('title', p_title, 'authors', jsonb_build_array('An Author'), 'source', 'openlibrary',
                             'openlibrary_edition_key', 'OL' || (floor(random() * 8000000) + 1000000)::bigint || 'M',
@@ -166,7 +166,7 @@ select tests.act_as((select id from ids where name = 'pat')); insert into ids va
 select tests.act_as((select id from ids where name = 'quin')); insert into ids values ('quin_e', (public.add_to_library(tests.ed('The Work'), 'finished', date '2026-10-07' - 5, date '2026-10-07', 10, 'Quin review', false)).id);
 select tests.act_as((select id from ids where name = 'rex')); insert into ids values ('rex_e', (public.add_to_library(tests.ed('The Work'), 'finished', date '2026-10-04' - 5, date '2026-10-04', 16, 'Rex review', false)).id);
 select tests.act_as((select id from ids where name = 'sue')); insert into ids values ('sue_e', (public.add_to_library(tests.ed('The Work'), 'finished', date '2026-10-04' - 5, date '2026-10-04', 16, 'Sue review', false)).id);
-select tests.act_as((select id from ids where name = 'tim')); insert into ids values ('tim_e', (public.add_to_library(tests.ed('Another Work', 'OLRDRW2W'), 'finished', date '2026-09-01', date '2026-10-04', 16, 'Tim review', false)).id);
+select tests.act_as((select id from ids where name = 'tim')); insert into ids values ('tim_e', (public.add_to_library(tests.ed('Another Work', 'OL7771002W'), 'finished', date '2026-09-01', date '2026-10-04', 16, 'Tim review', false)).id);
 select tests.act_as((select id from ids where name = 'una')); insert into ids values ('una_fin', (public.add_to_library(tests.ed('The Work'), 'finished', date '2026-09-10' - 5, date '2026-09-10', 20, 'Una earlier', false)).id);
 select tests.act_as((select id from ids where name = 'una')); insert into ids values ('una_e', (public.add_to_library(tests.ed('The Work'), 'reading', date '2026-10-02')).id);
 
