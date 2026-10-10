@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isUnverified, shownBook } from '../app/utils/unverifiedBook'
 import { socialBookFromJson } from '../app/data/socialShapes'
+import { canWantToRead } from '../app/utils/wantToRead'
 
 const normal = {
   id: 'a',
@@ -42,5 +43,14 @@ describe('unverified Book', () => {
     const book = socialBookFromJson(json)
     expect(book).toMatchObject({ id: 'b', title: '', authors: [], coverUrl: null, unverified: true, manual: false })
     expect(socialBookFromJson({ ...json, title: 'Dune', unverified: undefined } as never).unverified).toBe(false)
+  })
+})
+
+describe('Want to read', () => {
+  it('is not offered on an unverified Book (nothing to keep), nor a Manual one, nor one she has', () => {
+    expect(canWantToRead({ manual: false }, null)).toBe(true)
+    expect(canWantToRead({ manual: false, unverified: true }, null)).toBe(false)
+    expect(canWantToRead({ manual: true }, null)).toBe(false)
+    expect(canWantToRead({ manual: false }, { status: 'reading' })).toBe(false)
   })
 })

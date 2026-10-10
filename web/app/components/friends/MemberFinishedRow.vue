@@ -42,7 +42,7 @@ const { formatDay } = useDays()
           <span v-if="item.endedOn">{{ formatDay(item.endedOn) }}</span>
         </span>
         <span class="flex shrink-0 items-center gap-md">
-          <FriendsLikes v-if="likeable(item)" :row="item" :name="name || t('member.someone')" :title="item.book.title" testid="member.finishedLike" />
+          <FriendsLikes v-if="likeable(item)" :row="item" :name="name || t('member.someone')" :title="shown.title" testid="member.finishedLike" />
           <FriendsWantToReadButton :book="item.book" testid="member.finishedWantToRead" />
         </span>
       </div>

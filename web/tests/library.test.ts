@@ -185,6 +185,9 @@ describe('the lists carry no description (perf F4)', () => {
     const library = createLibrary(ida.client)
     const piranesi = book()
     const added = (await library.addToLibrary(piranesi)).data!
+    // A client never stores a description for a Catalogue Book (the check writes it, from the source): the blurb
+    // is a source's, here set as the check sets it.
+    await sql('update public.books set description = $2 where id = $1', [added.book.id, piranesi.description])
 
     expect(added.book.description).toBeNull()
     expect((await library.entries('want_to_read')).data![0]!.book.description).toBeNull()
@@ -203,6 +206,7 @@ describe('the lists carry no description (perf F4)', () => {
     const library = createLibrary(ida.client)
     const bare = (await library.addToLibrary(book({ description: null }))).data!
     const told = (await library.addToLibrary(book())).data!
+    await sql('update public.books set description = $2 where id = $1', [told.book.id, book().description])
     const ids = [bare.book.id, told.book.id, ...Array.from({ length: 90 }, () => crypto.randomUUID())]
     const asked = (await library.descriptions(ids)).data!
     expect(asked.get(bare.book.id)).toBeNull()
@@ -210,11 +214,11 @@ describe('the lists carry no description (perf F4)', () => {
     expect(await library.descriptions([])).toEqual({ data: new Map(), error: null })
   })
 
-  it('LIST_BOOK_COLUMNS names every column of books but the description (and the owner, which no screen reads)', async () => {
+  it('LIST_BOOK_COLUMNS names every column of books but the description (and the owner and the two check columns, which no screen reads)', async () => {
     const columns = await sql<{ column_name: string }>(
       "select column_name from information_schema.columns where table_schema = 'public' and table_name = 'books'",
     )
     const listed = LIST_BOOK_COLUMNS.split(', ').filter((name) => !name.includes(':'))
-    expect(columns.map((row) => row.column_name).filter((name) => name !== 'description' && name !== 'owner_id').sort()).toEqual([...listed].sort())
+    expect(columns.map((row) => row.column_name).filter((name) => !['description', 'owner_id', 'checked_at', 'check_failed'].includes(name)).sort()).toEqual([...listed].sort())
   })
 })

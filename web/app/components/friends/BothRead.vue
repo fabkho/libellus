@@ -12,6 +12,8 @@ import type { BothRead } from '~/data/social'
 
 defineProps<{ items: readonly BothRead[]; name: string }>()
 const { t } = useI18n()
+// A Book the check could not confirm is the one string, on the Placeholder, and opens nothing (utils/unverifiedBook.ts).
+const shown = (book: BothRead['book']) => shownBook(book, t('book.outsideCatalogue'))
 const said = (quarters: number | null) => (quarters ? ratingText(quarters) : t('member.bothReadNoRating'))
 </script>
 
@@ -24,13 +26,13 @@ const said = (quarters: number | null) => (quarters ? ratingText(quarters) : t('
     </div>
     <ul class="scrollbar-none -mx-screen flex snap-x scroll-px-screen gap-ms overflow-x-auto px-screen pt-xs pb-xxl -mb-xl">
       <li v-for="item in items" :key="item.book.id" class="flex w-(--size-cover-md) shrink-0 snap-start flex-col gap-xs">
-        <FriendsMemberBookLink :book="item.book" class="cover-link block rounded-cover" :aria-label="item.book.title" data-testid="member.bothRead.book">
+        <FriendsMemberBookLink :book="item.book" class="cover-link block rounded-cover" :aria-label="shown(item.book).title" data-testid="member.bothRead.book">
           <UiCover
-            :title="item.book.title"
-            :authors="item.book.authors"
-            :src="coverSrc(item.book.coverUrl, 'md')"
-            :thumbhash="item.book.coverThumbhash"
-            :colors="item.book.coverColors"
+            :title="shown(item.book).title"
+            :authors="shown(item.book).authors"
+            :src="coverSrc(shown(item.book).coverUrl, 'md')"
+            :thumbhash="shown(item.book).coverThumbhash"
+            :colors="shown(item.book).coverColors"
             size="md"
           />
         </FriendsMemberBookLink>

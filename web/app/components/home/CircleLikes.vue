@@ -16,6 +16,7 @@ defineEmits<{ open: [item: RecentLike] }>()
 
 const { t } = useI18n()
 const library = useLibraryStore()
+const titleOf = (item: RecentLike) => shownBook(item.book, t('book.outsideCatalogue')).title
 const nameOf = (card: { name: string | null }) => card.name?.trim() || t('member.someone')
 
 /** What her Library says of the read: with a review or without; null when it does not hold that read any more. */
@@ -46,7 +47,7 @@ const rows = computed(() =>
         </span>
         <i18n-t :keypath="row.keypath" tag="span" scope="global" class="line-clamp-2 min-w-0 flex-1 text-caption text-ink-muted">
           <template #names>{{ row.names }}</template>
-          <template #title><i class="book-title italic">{{ row.item.book.title }}</i></template>
+          <template #title><i class="book-title italic">{{ titleOf(row.item) }}</i></template>
         </i18n-t>
         <UiIcon name="heart" :size="14" class="shrink-0 text-accent-ink" />
       </button>
