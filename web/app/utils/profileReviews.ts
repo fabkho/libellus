@@ -1,8 +1,11 @@
 import type { LibraryEntry } from '../data/library'
+import { isRatingOnlyReview } from './ratingReview'
 
 /**
  * "Your reviews" on the own Profile (social v2a, owner's request): her reads that have a review, newest first,
  * worked out from her Library on the device (so it works offline). Pure, framework-free.
+ *
+ * Written reviews only: a text that is only a number is a rating (`isRatingOnlyReview`), not a review, and is left out.
  *
  * What the device holds of her reads is each entry's latest session (`LibraryEntry.latestSession`): so one
  * review per Book, the one of her latest read when that read is a finished one; a re-read in progress hides the
@@ -33,7 +36,8 @@ export function profileReviews(entries: readonly LibraryEntry[]): ProfileReview[
   for (const entry of entries) {
     const read = entry.latestSession
     const text = read?.review?.trim()
-    if (!read || read.outcome !== 'finished' || !text) continue
+    // A text that is only a number ("4.6", "5/5", a Goodreads import) is her rating, not a review.
+    if (!read || read.outcome !== 'finished' || !text || isRatingOnlyReview(text)) continue
     made.set(read.id, read.createdAt)
     reviews.push({ id: read.id, entry, endedOn: read.endedOn, rating: read.rating, review: read.review!, spoilers: Boolean(read.reviewSpoilers) })
   }

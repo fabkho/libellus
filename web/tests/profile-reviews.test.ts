@@ -43,6 +43,22 @@ describe('profileReviews', () => {
     expect(titles(list)).toEqual(['Book 1'])
   })
 
+  it('leaves out a text that is only a number: that is a rating, not a review', () => {
+    const list = [
+      entry({ review: '4.6', endedOn: '2026-10-01' }),
+      entry({ review: '5/5', endedOn: '2026-10-02' }),
+      entry({ review: ' 4,5 ★ ', endedOn: '2026-10-03' }),
+      entry({ review: '4.6/10', endedOn: '2026-10-04' }),
+      entry({ review: '8/10', endedOn: '2026-10-05' }),
+      entry({ review: '4 stars', endedOn: '2026-10-06' }),
+      entry({ review: 'Wonderful', endedOn: '2026-10-07' }),
+      entry({ review: '1984', endedOn: '2026-10-08' }),
+      entry({ review: '4.5/5, wonderful', endedOn: '2026-10-09' }),
+    ]
+    // A number above 5 is no rating (a title, a year), and a number with words is a review.
+    expect(profileReviews(list).map((r) => r.review)).toEqual(['4.5/5, wonderful', '1984', 'Wonderful'])
+  })
+
   it('is newest first by the day the read ended', () => {
     const list = [
       entry({ review: 'a', endedOn: '2026-03-01' }),
