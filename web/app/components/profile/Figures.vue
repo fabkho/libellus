@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // A year's four figures (issue #78, A's grid): Books (with the re-reads and
 // the DNF under it), Pages (with the reads without a count, or the pages a
-// book), the Average Rating (with the ones not rated yet) and the Days a book
+// book; a dash when no Book has a count, never "0": utils/pagesFigure.ts), the Average Rating (with the ones not rated yet) and the Days a book
 // (the median from start to finish). Between hairlines, two by two. The reads
 // without a count are a button where a page can open their sheet (the Profile
 // and a year in review; `still` on a reading page, #171, whose visitor has
@@ -35,8 +35,9 @@ const pagesMissingOpens = computed(() => !props.still && pagesMissing.value > 0)
 const pagesLine = computed(() => {
   const f = props.figures
   if (!f) return ''
-  if (pagesMissing.value) return t('profile.figures.pagesMissing', { count: count(pagesMissing.value) })
-  return f.books ? t('profile.figures.pagesPerBook', { count: count(Math.round(f.pages / f.books)) }) : ''
+  const pages = pagesFigure(f)
+  if (pages.missing) return t('profile.figures.pagesMissing', { count: count(pages.missing) })
+  return pages.perBook !== null ? t('profile.figures.pagesPerBook', { count: count(pages.perBook) }) : ''
 })
 const averageLine = computed(() => {
   const f = props.figures
@@ -49,7 +50,7 @@ const cells = computed(() => {
   const f = props.figures
   return [
     { key: 'books', label: t('profile.figures.books'), value: f && count(f.books), line: booksLine.value, lineTestid: 'profile.booksLine', edge: 'border-r-(length:--stroke-hairline) border-b-(length:--stroke-hairline) pr-md' },
-    { key: 'pages', label: t('profile.figures.pages'), value: f && large(f.pages), line: pagesLine.value, edge: 'border-b-(length:--stroke-hairline) pl-md' },
+    { key: 'pages', label: t('profile.figures.pages'), value: f && (pagesFigure(f).value === null ? '–' : large(pagesFigure(f).value!)), line: pagesLine.value, edge: 'border-b-(length:--stroke-hairline) pl-md' },
     { key: 'average', label: t('profile.figures.average'), value: f && stars(f.average), line: averageLine.value, edge: 'border-r-(length:--stroke-hairline) pr-md' },
     {
       key: 'daysABook',
