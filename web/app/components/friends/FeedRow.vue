@@ -133,7 +133,7 @@ async function unfold() {
 
       <div v-if="authorLine || showWant || showHeart" class="flex w-full min-w-0 items-center justify-between gap-md py-xs">
         <p class="min-w-0 truncate text-caption text-ink-muted">{{ authorLine }}</p>
-        <span v-if="showWant || showHeart" class="flex shrink-0 items-center gap-md">
+        <span v-if="showWant || showHeart" class="flex shrink-0 items-center gap-md [--tiny-action-down:var(--spacing-xxs)]">
           <FriendsWantToReadButton v-if="showWant" :book="book" :testid="`${testid}WantToRead`" @added="wanted" />
           <FriendsLikes v-if="showHeart" :row="entry" :name="name" :owner="entry.member.id" :title="book.title" :testid="`${testid}Like`" />
         </span>

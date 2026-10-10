@@ -144,9 +144,10 @@ html[data-glass='off'] *::after {
  * drawn box is --size-target (24 px, WCAG 2.2 AA 2.5.8) and the margin pulls it back into a caption's line, so a
  * row does not grow. Its touch box, the ::after, is --size-touch wide at least, and as tall as the free space allows:
  * it starts at the drawn box's top, because the title or the stars sit right above it (a tap near them must land
- * on them), and reaches --tiny-action-down below it, by default the rest of the app's 44 px (--size-touch minus
- * --size-target): in every row it is used in, the next line is 25 px or more further down. A row where it is
- * closer sets `--tiny-action-down` (and `--tiny-action-up` where there is room above). `aria-disabled` dims it
+ * on them), and reaches --tiny-action-down below it: 0 by default, because what is below differs from row to row
+ * (a review, the next row's title 13 px away, the stars 6 px away). The row that uses it says how far it may reach
+ * (`--tiny-action-down`, up to --size-touch minus --size-target) after measuring that no link, text or button is
+ * under the box at 360 and 390 px (and `--tiny-action-up` where there is room above). `aria-disabled` dims it
  * a little and keeps focus (a disabled button would drop it).
  */
 @utility tiny-action {
@@ -167,7 +168,7 @@ html[data-glass='off'] *::after {
     top: calc(-1 * var(--tiny-action-up, 0px));
     left: 50%;
     width: max(100%, var(--size-touch));
-    height: calc(var(--size-target) + var(--tiny-action-up, 0px) + var(--tiny-action-down, var(--size-touch) - var(--size-target)));
+    height: calc(var(--size-target) + var(--tiny-action-up, 0px) + var(--tiny-action-down, 0px));
     content: '';
     transform: translateX(-50%);
   }
