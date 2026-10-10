@@ -13,7 +13,7 @@ import { fakeClock, recordedFetch } from './test_support.ts'
 
 const ALL = Object.keys(SCENARIOS) as ScenarioName[]
 
-function setup(options: { fetch?: FetchLike; books?: ScenarioName[] } = {}) {
+function setup(options: { fetch?: FetchLike; books?: ScenarioName[]; throttle?: (member: string) => Promise<boolean> } = {}) {
   const time = fakeClock()
   const recorded = recordedFetch(ALL)
   // Rowling's author answers were not recorded (her scenario counts her as fetched).
@@ -24,8 +24,10 @@ function setup(options: { fetch?: FetchLike; books?: ScenarioName[] } = {}) {
     sources: createSources(createHttp({ fetch: options.fetch ?? recorded.fetch, userAgent: 'test', clock: time.clock }), LANGUAGES),
     authorize: (request): Promise<Caller> => {
       const token = request.headers.get('authorization')
-      return Promise.resolve(token === 'Bearer service' ? 'service' : token === 'Bearer member' ? 'member' : null)
+      const member = token === 'Bearer member' ? 'member' : token === 'Bearer other' ? 'other' : null
+      return Promise.resolve(token === 'Bearer service' ? 'service' : member ? { member } : null)
     },
+    throttle: options.throttle,
     now: time.now,
     log: (message) => logs.push(message),
   })
@@ -83,4 +85,45 @@ Deno.test('a member asks for one Book: that Book is enriched now, an unknown one
   assertEquals(memory.saved.map((p) => p.book?.id), [id])
   const unknown = await handler(post({ action: 'book', bookId: '00000000-0000-4000-8000-0000000000ff' }, 'member'))
   assertEquals(unknown.status, 404)
+})
+
+// ----------------------------------------- security round F16: a limit per member
+
+Deno.test('F16: a member over her limit gets 429 on book and author before any work; the service is not counted', async () => {
+  const counted: string[] = []
+  const { handler, memory, asked } = setup({
+    books: ['le-guin-earthsea'],
+    throttle: (member) => {
+      counted.push(member)
+      return Promise.resolve(counted.filter((m) => m === member).length <= 1)
+    },
+  })
+  memory.queue.length = 0
+  const id = SCENARIOS['le-guin-earthsea'].id
+  assertEquals((await handler(post({ action: 'book', bookId: id }, 'member'))).status, 200)
+
+  const book = await handler(post({ action: 'book', bookId: id }, 'member'))
+  assertEquals([book.status, await book.json()], [429, { error: 'rate_limited' }])
+  assertEquals(book.headers.get('retry-after'), '60')
+  const author = await handler(post({ action: 'author', key: 'Q46248' }, 'member'))
+  assertEquals(author.status, 429)
+  const fetched = asked.length
+
+  // Somebody else has her own count; the service role (pg_cron, the warm-up) is never counted.
+  assertEquals((await handler(post({ action: 'author', key: 'Q46248' }, 'other'))).status, 404)
+  assertEquals((await handler(post({ action: 'drain' }, 'service'))).status, 200)
+  assertEquals((await handler(post({ action: 'book', bookId: id }, 'service'))).status, 200)
+  assertEquals(counted, ['member', 'member', 'member', 'other'])
+  assert(asked.length >= fetched)
+  // A request that is no valid action is not counted.
+  await handler(post({ action: 'book', bookId: 'not-a-uuid' }, 'other'))
+  assertEquals(counted.length, 4)
+})
+
+Deno.test('F16: when the counter cannot be asked the member gets 503 and nothing is fetched', async () => {
+  const { handler, asked, logs } = setup({ books: ['le-guin-earthsea'], throttle: () => Promise.reject(new Error('db down')) })
+  const response = await handler(post({ action: 'book', bookId: SCENARIOS['le-guin-earthsea'].id }, 'member'))
+  assertEquals([response.status, await response.json()], [503, { error: 'busy' }])
+  assertEquals(asked.length, 0)
+  assertEquals(logs.length, 1)
 })
