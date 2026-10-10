@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { dimStatusBar } from '~/utils/statusBarDim'
 
 /**
  * What a sheet or a dialog does to the rest of the app while it is open, as on
@@ -89,10 +90,20 @@ export function useModalLayer(
   let layer: Layer | null = null
   let shown = false
 
+  let undim: (() => void) | null = null
+
   function markShown(value: boolean) {
     if (value === shown) return
     shown = value
     shownLayers.value += value ? 1 : -1
+    // The status bar of the installed app is outside the viewport, so the scrim cannot reach it:
+    // it takes the scrim's colour for as long as the layer is on screen (utils/statusBarDim.ts).
+    if (!import.meta.client) return
+    if (value) undim = dimStatusBar()
+    else {
+      undim?.()
+      undim = null
+    }
   }
 
   async function enter() {

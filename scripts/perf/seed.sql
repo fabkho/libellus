@@ -194,6 +194,16 @@ select member_id, md5('series' || (1 + (random() * 50)::int))::uuid from perf_en
 on conflict do nothing;
 
 reset session_replication_role;
+-- The search words (20261020020000_search_books_index.sql) are kept by a trigger the load skipped.
+select to_regclass('private.book_search') is not null as has_book_search \gset
+\if :has_book_search
+  insert into private.book_search (book_id, words, title)
+  select id, to_tsvector('simple'::regconfig, public.book_search_text(title, authors)),
+         btrim(public.book_search_text(title, '{}'))
+    from public.books
+  on conflict (book_id) do nothing;
+  vacuum private.book_search;  -- flush the GIN pending list, as autovacuum would
+\endif
 do $$ declare t regclass; begin
   for t in select c.oid from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where c.relkind = 'r' and n.nspname in ('public', 'private') loop

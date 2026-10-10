@@ -126,6 +126,7 @@ function says(row: EditionRow): string {
             :title="row.book.title"
             :authors="row.book.authors"
             :src="coverSrc(row.book.coverUrl, 'sm')"
+            :identity="row.book.isbn13 ?? ('id' in row.book ? row.book.id : row.book.title)"
             :fallbacks="coverFallbacks(row.book, 'sm')"
             :thumbhash="row.book.coverThumbhash"
             :colors="row.book.coverColors"

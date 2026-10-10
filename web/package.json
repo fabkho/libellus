@@ -16,7 +16,16 @@
     "e2e:build": "tsx e2e/build.ts",
     "import:fable": "tsx scripts/import-fable.ts",
     "export:regal": "tsx scripts/export-regal.ts",
-    "seed:dev": "tsx scripts/import-fable.ts --email dev@libellus.local --prune"
+    "seed:dev": "tsx scripts/import-fable.ts --email dev@libellus.local --prune",
+    "perf": "tsx perf/run.ts",
+    "perf:report": "tsx perf/report.ts",
+    "perf:seed": "tsx perf/seed.ts",
+    "perf:build": "node perf/build.mjs",
+    "perf:serve": "node perf/serve.mjs",
+    "perf:probe": "tsx perf/probe.ts",
+    "perf:bundle": "tsx perf/bundle.ts",
+    "perf:flows": "tsx perf/flows.ts",
+    "perf:layers": "tsx perf/layers.ts"
   },
   "dependencies": {
     "@fontsource/geist": "^5.3.0",

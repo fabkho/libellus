@@ -146,3 +146,79 @@ cold, so the after numbers are, if anything, pessimistic.
 Not done here: the Android emulator run the issue mentions (the brief asked for Chromium with
 throttling instead); a cover for the rows that have none anywhere (DNB rehosting, or an owner call on
 ranking coverless results lower than equally good matches by more than a tie-break).
+
+## Sizes the browser can choose (`srcset`, A7)
+
+`UiCover` gives an Apple cover a `srcset` of the same artwork at the neighbouring boxes
+(`coverSrcset` in `utils/cover.ts`): `120x180bb` (120w), `240x360bb` (240w), `600x900bb` (600w), the
+ones up to the box its size asks for (`APPLE_BOX`), and `sizes` is the size's token width
+(`coverSizes`: 30, 40, 72, 82, 140 px; a cover's width is its size's token alone, no call site
+overrides it, so `sizes` is true everywhere). `src` stays the one `coverSrc` URL (old browsers, and
+what the fallbacks and the book flight key on; the flight reads `currentSrc`). The halo and the
+backing of a fitted image carry the same `srcset`/`sizes`, so all three are one download. Loading
+(`lazy`/`eager`, `fetchpriority`) is unchanged.
+
+- `xs`/`sm` (30, 40 px) have one candidate (120w), so no `srcset`: the single URL stays.
+- `md`/`lg` offer 120w and 240w: a 72 px cover on a 1× screen takes 120w, no longer 240w.
+- `xl` (the book page hero) offers 120w, 240w and 600w: 140 px at 1× takes 240w, at 2× and 3× 600w.
+- OpenLibrary has **no** `srcset`: 'M' and 'L' are maxima ("up to 180 px"), not fixed widths, so a
+  width descriptor would be a guess, and every extra OpenLibrary request is a ~575 ms round trip.
+  It keeps one URL per size (`OPENLIBRARY_SIZE`).
+- Not done on purpose (owner decision): always the largest image downscaled locally, `@nuxt/image`.
+  So a list row and the book page still ask for different boxes; the browser's choice only follows
+  what the screen can show.
+
+## A cover in view stays (A8)
+
+Owner report: a cover sometimes becomes a different image. Found in the code (`UiCover` before the
+guard), in the order they can happen:
+
+1. **Real, the main one.** A mounted `UiCover` whose `src` changes: its `watch` on `props.src`
+   reset `attempt` and `loaded` and showed the new URL. Rows stay mounted (keyed by entry or
+   Book) while a re-sync or a change of edition hands them another `coverUrl`, so the shown
+   cover was replaced by another artwork.
+2. **Real, rarer.** An `error` or blank `load` on an image already shown moved on to
+   `coverFallbacks` (OpenLibrary's cover by ISBN): another artwork. `fallbacks` was not part of the
+   watch, so a stale attempt index also survived a changed list. With `srcset` (A7) a size of the
+   same artwork can fail too, which would have been this path.
+3. **Not a cause of a swap.** `withCover` (`stores/library.ts`) runs only when a Book is added,
+   before the Book has a cover: nothing mounted shows the old one. An add under a mounted cover of
+   the same edition arrives as path 1.
+
+End-state rule, in `utils/cover.ts` (`CoverShowing`; `tests/cover-showing.test.ts` pins each path,
+including the old behaviour as `before`): **once an image of a cover has loaded and is not blank, a
+later `src`, or a fallback, never replaces it with another artwork unless the one in view fails to
+load or comes back blank.**
+
+- Another size of the same artwork (`artworkOf`: Apple's box, OpenLibrary's S/M/L ignored) is not
+  another image: it takes over, the image in view stays until it has loaded. If that size fails,
+  the cover goes back to the size that loaded (no `srcset` again) rather than to a fallback.
+- A newer `src` of another artwork is held (`held`). If the image in view fails, the fallbacks of
+  the old chain are tried first, then the held one, then the Placeholder.
+- The deliberate change is signalled by `identity` (a `UiCover` prop): what the cover is of. Another
+  `identity` starts the cover afresh. Default: title and authors (a different Book at the same
+  mounted `UiCover`). Where a mounted cover changes edition under the same title it is given
+  the edition's ISBN: the book page (`pages/book/[key].vue`, which stays mounted through Change
+  edition), the edition picker's rows (keyed by index), Own edition's found step, and its cover
+  preview (the link itself).
+- Before any image has loaded nothing is held: a new `src` shows as before.
+
+## Covers in "More from the author" (A9)
+
+Owner: one author's row loaded whole, another's showed two covers about a second late. Cause: the
+work cards from `author_page` (`work_card`) carry a cover URL and the edition's ISBN, **no
+thumbhash or colours**, and `AuthorWorkRow` passed neither them nor fallbacks; its rows were lazy
+images in a section that opens with a reveal, so a cover was asked for only when its row was in
+view, and an OpenLibrary one answers in ~575 ms (p90 1.1 s) on top of the author page's own round trip.
+
+- The rows get what the data has: OpenLibrary's cover of the edition by ISBN as a fallback
+  (`workCoverImages`, `coverFallbacks`); a work she has (her Library entry on the device, and that
+  Book's cover is the very image the card names) sits on her Book's thumbhash and colours, any other
+  on the quiet fill every cover without them has. Adding thumbhash/colours to `work_card` would
+  only cover works she owns, which the device already knows, so no migration.
+- The section asks for its covers as soon as her page arrives (`coversToPrefetch` →
+  `new Image()`, at most `MORE_FROM_AUTHOR` = 3, each once, at the row's size), and its rows are
+  `eager`.
+- The source ranking is unchanged: the card's cover is what the page chose (hers, else in her
+  language). There is no data here that Apple has covers for the same works; looking each one up by
+  ISBN on Apple (36 ms against OpenLibrary's 575 ms) would be a follow-up, measured first.

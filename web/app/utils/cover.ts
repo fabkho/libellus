@@ -127,6 +127,35 @@ export function coverSrc(url: string | null | undefined, size: CoverSize): strin
   return openLibraryCoverAt(url, OPENLIBRARY_SIZE[size])
 }
 
+/** The tokens' cover widths in CSS px (`size.cover.*`, tokens.generated.css): what each size renders at, at every call site (the width is the size's token alone). */
+export const COVER_WIDTH: Record<CoverSize, number> = { xs: 30, sm: 40, md: 72, lg: 82, xl: 140 }
+
+/** Apple's artwork widths a cover chooses between: the distinct boxes of `APPLE_BOX`, narrowest first. */
+const APPLE_WIDTHS = [...new Set(Object.values(APPLE_BOX).map(([width]) => width))].sort((a, b) => a - b)
+
+/**
+ * Candidates for the `srcset` of a cover shown at `size`: the same artwork at
+ * the Apple boxes up to the one `size` asks for, by width, so the browser takes
+ * the narrowest one that is sharp at its pixel ratio (a 140 px hero on a 1×
+ * screen gets 240, not 600). Only Apple's artwork: its CDN renders any box, and
+ * the widths are the boxes' own. OpenLibrary has no srcset: its 'M' and 'L' are
+ * no fixed widths (a cover's 'M' is "up to 180 px"), so a width descriptor
+ * would be a guess, and every extra OpenLibrary request costs a ~575 ms round
+ * trip (docs/covers.md). A size with one candidate (`xs`, `sm`) has no srcset:
+ * `coverSrc` is it. Null when there is none.
+ */
+export function coverSrcset(url: string | null | undefined, size: CoverSize): string | null {
+  if (!url || !/mzstatic\.com\//.test(url) || appleArtwork(url, 1, 1) === url) return null
+  const widths = APPLE_WIDTHS.filter((width) => width <= APPLE_BOX[size][0])
+  if (widths.length < 2) return null
+  return widths.map((width) => `${appleArtwork(url, width, width * 1.5)} ${width}w`).join(', ')
+}
+
+/** The `sizes` of a cover's `srcset`: its token width, a fixed one (the cover never grows with its container). */
+export function coverSizes(size: CoverSize): string {
+  return `${COVER_WIDTH[size]}px`
+}
+
 /**
  * The images to try after a cover's own one fails (a 404, a broken file) or
  * comes back blank (`isBlankCover`), before the Placeholder: OpenLibrary's
@@ -147,4 +176,89 @@ export const MIN_SHOWN_SIDE = 16
 /** Whether a loaded image (its natural size) is a blank stand-in rather than a cover. */
 export function isBlankCover(width: number, height: number): boolean {
   return Math.min(width, height) < MIN_SHOWN_SIDE
+}
+
+/**
+ * Which artwork a cover URL is of, whatever size it is asked at: Apple's box and
+ * OpenLibrary's S/M/L are not part of it. Two URLs of one artwork are one image
+ * to the member, at another size; two of another are another image.
+ */
+export function artworkOf(url: string): string {
+  return openLibraryCoverAt(appleArtwork(url, 1, 1), 'M')
+}
+
+/**
+ * What a mounted cover (UiCover) shows, as a state it moves through; framework
+ * free, so the rule is pinned by tests/cover-showing.test.ts and a native port
+ * copies it. The rule: **once an image of a cover has been shown, a later
+ * change of `src`, or a fallback, never swaps it for another artwork unless the
+ * shown one fails**. Another size of the same artwork is no other image
+ * (`artworkOf`); a deliberate change is signalled by `identity` (what the
+ * cover is of: an edition's ISBN; by default title and authors), which starts
+ * the cover afresh.
+ */
+export interface CoverShowing {
+  /** The sources to try in order: `src`, then its fallbacks. */
+  chain: readonly string[]
+  /** Which of `chain` is in the image. */
+  attempt: number
+  /** What the cover is of; a change of it is a deliberate change of cover. */
+  identity: string
+  /** The image in view (loaded, not blank), or null while none is. */
+  shown: string | null
+  /** A newer chain that came while an image was in view and differs from it; null if none came. Taken up only if the shown one fails. */
+  held: readonly string[] | null
+  /** Whether the image may offer its sizes (`srcset`); not after a size of it failed. */
+  srcset: boolean
+}
+
+/** What a cover is asked to show. */
+export interface CoverInput {
+  src: string | null | undefined
+  fallbacks: readonly string[]
+  identity: string
+}
+
+const chainOf = ({ src, fallbacks }: CoverInput): readonly string[] => (src ? [src, ...fallbacks] : [])
+
+/** A cover that shows nothing yet, set to try `input`. */
+export function startCover(input: CoverInput): CoverShowing {
+  return { chain: chainOf(input), attempt: 0, identity: input.identity, shown: null, held: null, srcset: true }
+}
+
+/** The source in the image now, or null: the Placeholder. */
+export function coverNow(state: CoverShowing): string | null {
+  return state.chain[state.attempt] ?? null
+}
+
+/** The cover is asked to show something else (`src`, `fallbacks` or `identity` changed). */
+export function coverInputChanged(state: CoverShowing, input: CoverInput): CoverShowing {
+  if (state.shown === null || input.identity !== state.identity) return startCover(input)
+  const chain = chainOf(input)
+  if (chain.length === state.chain.length && chain.every((url, index) => url === state.chain[index])) return { ...state, held: null }
+  // Another size of what is in view: the same cover, swapped for the size.
+  if (chain.length && artworkOf(chain[0]!) === artworkOf(state.shown)) return { ...state, chain, attempt: 0, held: null, srcset: true }
+  return { ...state, held: chain }
+}
+
+/** An image loaded and is not blank: `url` (the image's `currentSrc`) is in view. */
+export function coverShown(state: CoverShowing, url: string): CoverShowing {
+  return { ...state, shown: url }
+}
+
+/**
+ * The image at `url` (its `currentSrc`) failed or came back blank. A size of
+ * the artwork in view failing leaves that artwork in view, at the size that
+ * loaded. The one in view failing, or one before any was, moves to the next
+ * source, then the newer chain held back, then the Placeholder.
+ */
+export function coverFailed(state: CoverShowing, url: string): CoverShowing {
+  const shown = state.shown
+  if (shown !== null && url !== shown && artworkOf(url) === artworkOf(shown)) {
+    return { ...state, chain: [shown, ...state.chain.slice(state.attempt + 1)], attempt: 0, srcset: false }
+  }
+  const attempt = state.attempt + 1
+  if (attempt < state.chain.length) return { ...state, attempt, shown: null, srcset: true }
+  if (state.held) return { ...startCover({ src: state.held[0], fallbacks: state.held.slice(1), identity: state.identity }) }
+  return { ...state, attempt, shown: null }
 }

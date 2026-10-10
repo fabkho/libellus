@@ -37,7 +37,7 @@ const online = useOnline()
 const PressLink = resolveComponent('UiPressLink')
 
 const key = computed(() => workBookKey(props.work))
-const cover = computed(() => workCover(props.work))
+const images = computed(() => workCoverImages(props.work, 'sm'))
 /** Her entry as this device knows it now, else as the page was read. */
 const live = computed(() => {
   const bookId = props.work.entry?.bookId
@@ -48,6 +48,12 @@ const live = computed(() => {
 const status = computed(() => live.value?.status ?? props.work.entry?.status ?? null)
 const rating = computed(() => (live.value ? (live.value.latestSession?.rating ?? null) : (props.work.entry?.rating ?? null)))
 const notFinished = computed(() => (live.value ? isNotFinished(live.value) : false))
+// A work she has shows her Book's blur and colours while its cover loads, when it is that very image (the
+// author page's work cards carry none of their own); any other sits on the quiet fill, as every cover without them.
+const owned = computed(() => {
+  const book = live.value?.book
+  return book && book.coverUrl && book.coverUrl === workCover(props.work) ? book : null
+})
 const meta = computed(() => [props.place, props.year && props.work.year ? String(props.work.year) : null].filter(Boolean).join(' · '))
 
 // "Find": no edition to add, so the search looks for one (the palette opens over the page).
@@ -85,7 +91,7 @@ async function want() {
       :aria-current="current ? 'page' : undefined"
       @press="key && books.prefetch(key)"
     >
-      <UiCover decorative :title="work.title" :src="coverSrc(cover, 'sm')" size="sm" :eager="eager" :class="notFinished && 'dimmed'" />
+      <UiCover decorative :title="work.title" :src="images.src" :fallbacks="images.fallbacks" :thumbhash="owned?.coverThumbhash" :colors="owned?.coverColors" size="sm" :eager="eager" :class="notFinished && 'dimmed'" />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
         <span class="book-title title-wrap text-body-large" :data-testid="`${testid}Title`">{{ work.title }}</span>
         <span v-if="meta || current" class="figures flex items-center gap-xs text-meta text-ink-faint">
