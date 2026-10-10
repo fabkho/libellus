@@ -1780,7 +1780,6 @@
   },
   "review": {
     "spoilers": "Contains spoilers",
-    "spoilersHint": "Readers who haven't finished it see this review folded.",
     "folded": "Contains spoilers",
     "showAnyway": "Show anyway"
   },
@@ -1788,14 +1787,8 @@
     "wantToRead": {
       "add": "Want to read",
       "label": "Add {title} to Want to read",
-      "inLabel": "{title}: {where}. Open the book",
-      "error": "Couldn't add it. Try again."
-    },
-    "state": {
-      "wantToRead": "Want to read",
-      "reading": "Reading",
-      "read": "Read",
-      "notFinished": "Not finished"
+      "error": "Couldn't add it. Try again.",
+      "added": "Added"
     },
     "like": {
       "like": "Like",

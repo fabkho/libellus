@@ -129,9 +129,12 @@ watch(
             :maxlength="REVIEW_MAX_LENGTH"
             :disabled="history.editBusy"
             data-testid="editSession.review"
-          />
+          >
+            <template #footer>
+              <BookSpoilerSwitch v-model="spoilers" :disabled="history.editBusy" testid="editSession.spoilers" />
+            </template>
+          </UiTextArea>
         </div>
-        <BookSpoilerSwitch v-model="spoilers" class="mt-md" :disabled="history.editBusy" testid="editSession.spoilers" />
       </template>
 
       <div v-else-if="outcome === 'abandoned'" class="mt-lg">

@@ -30,15 +30,15 @@ const { formatDay } = useDays()
         <span class="book-title title-wrap text-callout" data-testid="member.finishedTitle">{{ item.book.title }}</span>
         <span class="truncate text-caption text-ink-muted">{{ formatAuthors(item.book.authors, t('common.etAl')) }}</span>
       </FriendsMemberBookLink>
-      <span v-if="item.rating || item.endedOn" class="figures mt-xxs flex items-center gap-sm overflow-hidden text-meta whitespace-nowrap text-ink-faint">
-        <UiStars v-if="item.rating" :quarters="item.rating" />
-        <span v-if="item.rating && item.endedOn" class="dot" aria-hidden="true" />
-        <span v-if="item.endedOn">{{ formatDay(item.endedOn) }}</span>
-      </span>
-      <FriendsMemberReview v-if="item.review" :text="item.review" />
-      <div class="mt-xs flex items-center gap-sm">
+      <div class="mt-xxs flex items-center justify-between gap-md">
+        <span class="figures flex min-w-0 items-center gap-sm overflow-hidden text-meta whitespace-nowrap text-ink-faint">
+          <UiStars v-if="item.rating" :quarters="item.rating" />
+          <span v-if="item.rating && item.endedOn" class="dot" aria-hidden="true" />
+          <span v-if="item.endedOn">{{ formatDay(item.endedOn) }}</span>
+        </span>
         <FriendsWantToReadButton :book="item.book" testid="member.finishedWantToRead" />
       </div>
+      <FriendsMemberReview v-if="item.review" :text="item.review" />
     </div>
   </div>
 </template>
