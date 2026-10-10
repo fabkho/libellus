@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { WALL_COVERS } from '@/components/auth/wall'
 import { APPLE_BOX, COVER_WIDTH, coverFallbacks, coverSizes, coverSrc, coverSrcset, isBlankCover, type CoverSize } from '@/utils/cover'
 
 /**
@@ -116,5 +117,14 @@ describe('a blank stand-in', () => {
     [115, 180, false],
   ])('%i × %i is blank: %s', (width, height, blank) => {
     expect(isBlankCover(width, height)).toBe(blank)
+  })
+})
+
+describe('the sign-in wall', () => {
+  // The wall draws its covers 82 px wide (`lg`, components/auth/Frame.vue) behind a veil: it asks for
+  // 240 × 360, not the 600 × 900 its URLs carry (about 3× the bytes for nothing a phone can show).
+  it.each(WALL_COVERS.map((book) => [book.title, book.cover]))('%s is asked for at the `lg` box', (_title, cover) => {
+    expect(coverSrc(cover, 'lg')).toBe(cover.replace('600x900bb', '240x360bb'))
+    expect(coverSrc(cover, 'lg')).toMatch(/\/240x360bb\.jpg$/)
   })
 })

@@ -190,13 +190,13 @@ watch(
 <template>
   <div ref="root" class="relative shrink-0 aspect-2/3" :class="[WIDTHS[size], tilt && 'tilt']">
     <template v-if="glow">
-      <img v-if="showImage" v-bind="imageSet" alt="" class="halo" :class="!loaded && 'out'" :loading="eager ? 'eager' : 'lazy'" aria-hidden="true" />
+      <img v-if="showImage" v-bind="imageSet" alt="" class="halo" :class="!loaded && 'out'" :loading="eager ? 'eager' : 'lazy'" decoding="async" aria-hidden="true" />
       <span class="pool" :class="showImage && loaded && 'out'" :style="glowStyle" aria-hidden="true" />
     </template>
 
     <div class="sheet relative size-full overflow-hidden shadow-cover" :class="RADII[size]" :style="underlay" data-cover>
       <!-- Behind a fitted image only; the fitted image is positioned to paint over it. A cover that fills its slot stays unpositioned, as the flight expects. -->
-      <img v-if="showImage && fitted" v-bind="imageSet" alt="" class="backing" :class="loaded ? 'opacity-100' : 'opacity-0'" aria-hidden="true" />
+      <img v-if="showImage && fitted" v-bind="imageSet" alt="" class="backing" :class="loaded ? 'opacity-100' : 'opacity-0'" :loading="eager ? 'eager' : 'lazy'" decoding="async" aria-hidden="true" />
       <img
         v-if="showImage"
         v-bind="imageSet"

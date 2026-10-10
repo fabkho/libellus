@@ -73,7 +73,7 @@ function back() {
       <AuthorHero :author="author" :genres="page?.genres ?? []" :arriving="arriving" />
 
       <div v-if="page" class="relative px-ml" :class="{ arrive: arriving }">
-        <section v-for="group in groups" :key="group.id" class="pt-xl" :data-testid="group.places ? 'author.series' : `author.${group.id}`">
+        <section v-for="(group, g) in groups" :key="group.id" class="pt-xl" :data-testid="group.places ? 'author.series' : `author.${group.id}`">
           <div class="flex min-h-(--size-touch) items-end justify-between gap-md pb-xs">
             <h2 class="min-w-0">
               <span v-if="group.parent" class="eyebrow block text-ink-faint" data-testid="author.seriesParent">{{ group.parent }}</span>
@@ -89,7 +89,7 @@ function back() {
               :place="placeOf(group, work)"
               testid="author.work"
               :author="author?.name"
-              :eager="index < 4"
+              :eager="g === 0 && index < 4"
             />
           </component>
           <button

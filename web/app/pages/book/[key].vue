@@ -225,6 +225,7 @@ function back() {
         size="xl"
         glow
         eager
+        priority
         tilt
         @fallback="coverFallback = $event"
       />

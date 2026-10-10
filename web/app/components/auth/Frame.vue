@@ -3,7 +3,8 @@
 // it, the wordmark, then the screen's form (default slot) and its way out to
 // the other screen (slot `footer`). The shelf is a wall of real covers (see
 // wall.ts), tilted and veiled; each stands on a cloth-coloured board that
-// shows until its image arrives, or instead of it when the image fails.
+// shows until its image arrives, or instead of it when the image fails. They are asked for at the
+// size they are drawn (`lg`, 240 × 360 for an 82 px slot), not the 600 × 900 the data holds.
 import { WALL_COVERS } from './wall'
 
 defineProps<{ screen: string }>()
@@ -16,6 +17,9 @@ const WALL = WALL_COVERS.slice(0, 20).map((book, i) => ({
   cloth: ((i * 2 + Math.floor(i / 5)) % 6) + 1,
 }))
 const failed = ref(new Set<number>())
+// The first two rows are what the lamp shows; the other two sit under the veil (it is nearly opaque
+// from 38 % down), so they load when the browser finds them near the view, not with the page.
+const WALL_EAGER = 10
 </script>
 
 <template>
@@ -26,10 +30,11 @@ const failed = ref(new Set<number>())
         <img
           v-if="!failed.has(i)"
           class="cover"
-          :src="book.cover"
+          :src="coverSrc(book.cover, 'lg')"
           alt=""
-          width="600"
-          height="900"
+          width="240"
+          height="360"
+          :loading="i < WALL_EAGER ? 'eager' : 'lazy'"
           decoding="async"
           fetchpriority="low"
           @error="failed = new Set(failed).add(i)"

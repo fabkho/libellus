@@ -194,6 +194,11 @@ export default defineNuxtConfig({
     strategy: 'no_prefix',
     detectBrowserLanguage: false,
     locales: [{ code: 'en', language: 'en', file: 'en.json' }],
+    // The messages are compiled at build (the module's Vite plugin turns en.json into AST), so the
+    // client needs no message compiler: `dropMessageCompiler` leaves it out of the entry (−16 KB raw,
+    // −4 KB brotli; `runtimeOnly` alone moved nothing). A string that is not in en.json could not be
+    // compiled on the device: tests/i18n-runtime-only.test.ts pins what the app's messages need.
+    bundle: { dropMessageCompiler: true },
   },
 
   // Installable from the home screen, full-screen once opened from there; the

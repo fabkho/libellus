@@ -20,7 +20,8 @@
 //     function after 450 ms, the analytics beacon empty.
 //   - The cover CDN stand-in: requests for the host `is1-ssl.mzstatic.com` (Chromium maps it to
 //     127.0.0.1, perf/browser.ts) get a synthetic JPEG of the size Apple's `<w>x<h>bb.jpg` URL asks
-//     for and about the bytes a real cover has (11 KB at 120x180, 25 KB at 200x300), made with sharp.
+//     for and about the bytes a real cover has (11 KB at 120x180, 37 KB at 240x360, 116 KB at 600x900), made with sharp;
+//     the seeded Books' `/perf/<n>/…` URLs and any other artwork URL (the sign-in wall's) alike.
 // Not emulated: Early Hints, HTTP/3, Cloudflare's edge latency.
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
@@ -102,8 +103,10 @@ const covers = new Map()
 async function coverResponse(req, res) {
   const url = new URL(req.url ?? '/', 'https://is1-ssl.mzstatic.com')
   const match = /\/perf\/(\d+)\/[^/]+\/(\d+)x(\d+)bb\.jpg$/.exec(url.pathname)
-  if (!match) return void res.writeHead(404).end()
-  const [, n, w, h] = match.map(Number)
+  // Any other Apple artwork (the sign-in wall's real URLs): a cover too, numbered by its path.
+  const other = match ? null : /\/(\d+)x(\d+)bb\.jpg$/.exec(url.pathname)
+  if (!match && !other) return void res.writeHead(404).end()
+  const [, n, w, h] = match ? match.map(Number) : [0, createHash('md5').update(url.pathname).digest().readUInt16BE(0), Number(other[1]), Number(other[2])]
   const key = `${n}:${w}x${h}`
   if (!covers.has(key)) covers.set(key, jpeg(n, w, h))
   const body = await covers.get(key)
