@@ -46,6 +46,11 @@ const label = computed(() => t(props.liked ? 'social.like.unlabel' : 'social.lik
   font-size: var(--text-caption, 0.8125rem);
   line-height: 1;
   white-space: nowrap;
+  /* 24 px by 24 px at least (WCAG 2.2 target size), pulled back into the row by the margin so the row does not grow. */
+  min-width: 24px;
+  min-height: 24px;
+  margin-block: -6px;
+  justify-content: center;
 }
 .tiny::after {
   position: absolute;
