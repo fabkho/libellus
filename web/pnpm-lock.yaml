@@ -44,6 +44,9 @@ importers:
       thumbhash:
         specifier: ^0.1.1
         version: 0.1.1
+      uqr:
+        specifier: ^0.1.3
+        version: 0.1.3
       vue:
         specifier: ^3.5.43
         version: 3.5.43(typescript@6.0.3)
