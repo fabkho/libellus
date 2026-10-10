@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { createMemberStats, type MemberRecord, type MemberStats } from '~/data/memberStats'
-import type { MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
+import type { BothRead, MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
 import type { StatsYear } from '~/data/stats'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
@@ -9,6 +9,9 @@ import { createRereads } from '~/utils/rereads'
 
 /** Her whole Want to read, newest first (*See all*). */
 export type MemberWant = { book: SocialBook; addedOn: string }[]
+
+/** The key of `MemberView.bothRead`: one year, or `all`. */
+export const bothReadKey = (year: number | null): string => (year === null ? 'all' : String(year))
 
 /** What the page knows of one member. */
 export type MemberView = {
@@ -22,6 +25,11 @@ export type MemberView = {
   recordError: SocialErrorCode | null
   /** Her whole Want to read, once asked for. */
   want: MemberWant | null
+  /**
+   * The Books she and the member both finished ("You both read"), by `bothReadKey`: all her years, or one.
+   * An extra section: never an error, a refusal or being offline leaves what was read, or nothing.
+   */
+  bothRead: Record<string, BothRead[]>
   /** The year in the pills. */
   year: StatsYear
   /** The last refusal of reading her, with no copy to show instead: `offline`, or something else (a retry). */
@@ -40,6 +48,7 @@ const fresh = (): MemberView => ({
   recordLoading: false,
   recordError: null,
   want: null,
+  bothRead: {},
   year: 'all',
   error: null,
   loaded: false,
@@ -80,8 +89,11 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     views.value = { ...views.value, [id]: { ...viewOf(id), ...change } }
   }
 
-  /** Her profile, then what it opens (her record and her whole Want to read) while it shows. */
-  async function load(id: string): Promise<void> {
+  /**
+   * Her profile, then what it opens (her record, her whole Want to read and the Books you both read) while it shows.
+   * `year`: her year page, which wants the Books you both read in that year rather than in all her years.
+   */
+  async function load(id: string, year: number | null = null): Promise<void> {
     const run = generation
     const member = session.member?.id
     const had = viewOf(id)
@@ -112,7 +124,15 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       ...(open && !profile.sections.year ? { record: null } : {}),
       ...(open && !wantsAll ? { want: null } : {}),
     })
-    await Promise.all([wantsRecord ? loadRecord(id, run) : null, wantsAll ? loadWant(id, run) : null])
+    await Promise.all([wantsRecord ? loadRecord(id, run) : null, wantsAll ? loadWant(id, run) : null, open && profile.sections.finished ? loadBothRead(id, year, run) : null])
+  }
+
+  /** "You both read" with her, for all her years or one (the year page): online only, nothing shown on a refusal. */
+  async function loadBothRead(id: string, year: number | null, run = generation): Promise<void> {
+    if (!isOnline()) return
+    const answer = await social.bothRead(id, year)
+    if (run !== generation || answer.error) return
+    patch(id, { bothRead: { ...viewOf(id).bothRead, [bothReadKey(year)]: answer.data } })
   }
 
   async function loadRecord(id: string, run: number) {
@@ -201,5 +221,5 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     for (const [id, view] of Object.entries(views.value)) if (view.error === 'offline' && !view.loaded) void load(id)
   })
 
-  return { views, viewOf, load, setYear, follow, withdraw, relationChanged, forget }
+  return { views, viewOf, load, loadBothRead, setYear, follow, withdraw, relationChanged, forget }
 })

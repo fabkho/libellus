@@ -14,8 +14,7 @@
 import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
-import { useMemberProfileStore } from '~/stores/memberProfile'
-import type { BothReadItem } from '~/utils/circle'
+import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
 
 definePageMeta({
   layout: 'tabs',
@@ -92,8 +91,8 @@ const library = computed(() => {
   const p = open.value
   return p ? libraryLine(p.counts, (marks) => t('member.library', marks), count) : null
 })
-// You both read: the answer of `both_read(member)`; empty until a later task wires it (nothing is asked yet).
-const bothRead = ref<BothReadItem[]>([])
+// You both read, loaded with her profile (the store); an extra section, so no error line: hidden until it has Books.
+const bothRead = computed(() => view.value.bothRead[bothReadKey(null)] ?? [])
 const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 
 // ------------------------------------------------------------------ sheets

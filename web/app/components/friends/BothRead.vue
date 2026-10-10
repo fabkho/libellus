@@ -4,13 +4,13 @@
 // rows, yours and hers (hers absent when she shows no ratings: `rating` null). A cover opens its Book
 // (FriendsMemberBookLink, a Manual book opens nothing). The section is not drawn without Books.
 // Props only: the screen asks `both_read(member, year?)` and hands the answer in.
-//  - `items`  the answer (BothReadItem[], newest of hers first).
+//  - `items`  the answer (BothRead[], newest of hers first).
 //  - `name`   her name, for the screen reader's labels.
 // Test ids: `member.bothRead` (the section), `member.bothRead.book`, `member.bothRead.mine`,
 // `member.bothRead.hers`.
-import type { BothReadItem } from '~/utils/circle'
+import type { BothRead } from '~/data/social'
 
-defineProps<{ items: readonly BothReadItem[]; name: string }>()
+defineProps<{ items: readonly BothRead[]; name: string }>()
 const { t } = useI18n()
 const said = (quarters: number | null) => (quarters ? ratingText(quarters) : t('member.bothReadNoRating'))
 </script>

@@ -275,6 +275,7 @@ export const useSocialStore = defineStore('social', () => {
   /** What a follow link opens, a member's profile and her whole Want to read: read, nothing kept. */
   const target = async (token: string): Promise<SocialResult<FollowTarget | null>> => repo()?.target(token) ?? { data: null, error: 'unknown' }
   const profile = async (member: string): Promise<SocialResult<MemberProfile | null>> => repo()?.profile(member) ?? { data: null, error: 'unknown' }
+  const bothRead = async (member: string, year: number | null = null) => repo()?.bothRead(member, year) ?? { data: null, error: 'unknown' as const }
   const want = async (member: string) => repo()?.want(member) ?? { data: null, error: 'unknown' as const }
 
   function clearError(action?: SocialAction) {
@@ -335,6 +336,7 @@ export const useSocialStore = defineStore('social', () => {
     block,
     profile,
     want,
+    bothRead,
     clearError,
     reset,
   }

@@ -18,7 +18,7 @@ import { useLibraryStore } from '~/stores/library'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useSessionStore } from '~/stores/session'
-import type { CircleGroup } from '~/utils/circle'
+import { useCircleBooksStore } from '~/stores/circleBooks'
 
 definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 
@@ -28,8 +28,9 @@ const libraryView = useLibraryViewStore()
 // The genre filter's lookup (#168): provided to the view store by the genres store, which the device fills at once.
 const bookGenres = useGenresStore()
 
-// Followed members who want the same Books (circle_want), by her Book's id; empty until a later task wires it (nothing is asked yet).
-const circleWant = ref<Record<string, CircleGroup>>({})
+// Followed members who want the same Books (circle_want), by her Book's id; asked when the Library shows.
+const circle = useCircleBooksStore()
+const circleWant = computed(() => circle.want)
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
@@ -103,7 +104,7 @@ const empty = computed(
 )
 
 onActivated(() => {
-  void library.load()
+  void library.load().then(() => circle.load())
   void bookGenres.load()
   // Sent here to look at one list (the Profile's genres, #168): that segment, as filtered.
   if (libraryView.focus) {
@@ -118,7 +119,7 @@ watch(
   () => session.member?.id,
   (member) => {
     if (!member) return
-    void library.load()
+    void library.load().then(() => circle.load())
     void bookGenres.load()
   },
 )
