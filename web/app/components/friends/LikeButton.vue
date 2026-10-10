@@ -6,8 +6,8 @@
 // contradicts itself; the count is part of the same `sr-only` name (an aria-label on the button, or on a span inside it, would hide it). Likes need the
 // connection: offline the heart stays, faint, without a word (Want to read says Offline), `aria-disabled`; busy is
 // `aria-disabled` too, so focus stays on the button. Her own reads have no heart (the likers sheet on Home is where
-// she sees who). The count hangs under the icon without taking room in the column, so the 44 px boxes of the two icons
-// stay 44 px apart (main.css, `icon-action`).
+// she sees who). The count hangs under the icon without taking room in the column, so the pair stays close (main.css,
+// `icon-action`).
 // `name` and `title` are the read's owner and Book. Test ids: `<testid>` (the button), `<testid>.count`.
 const props = withDefaults(
   defineProps<{ count: number; liked?: boolean; offline?: boolean; busy?: boolean; name: string; title: string; testid?: string }>(),

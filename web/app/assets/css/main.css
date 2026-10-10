@@ -141,10 +141,12 @@ html[data-glass='off'] *::after {
 
 /*
  * An icon button in the column at a row's right edge (social v2a: Want to read, the heart; the owner's choice of
- * the three layouts he was shown). Drawn at --size-target (24 px, WCAG 2.2 AA 2.5.8), its touch box, the ::after,
- * is --size-touch square (the app's 44 px rule), centred on the icon. The column stacks them 44 px apart, centre
- * to centre (the gap is --size-touch minus --size-target), so the boxes meet and never overlap, and the column is
- * as narrow as the icon. `aria-disabled` keeps focus where a disabled button would drop it.
+ * the three layouts he was shown). Drawn at --size-target (24 px, WCAG 2.2 AA 2.5.8). Its touch box, the ::after, is
+ * --size-touch wide (the app's 44 px rule) and as tall as the icon plus `--hit-up` above and `--hit-down` below
+ * (10 px each by default: 44 px, centred, for an icon alone). The pair of icons sit a small gap apart; their boxes
+ * split at the midpoint between them (`RowActions` sets `--hit-up` and `--hit-down` on each) and reach outward, so
+ * they never overlap each other or the row above and below. The column is as narrow as the icon.
+ * `aria-disabled` keeps focus where a disabled button would drop it.
  */
 @utility icon-action {
   position: relative;
@@ -157,12 +159,12 @@ html[data-glass='off'] *::after {
 
   &::after {
     position: absolute;
-    top: 50%;
+    top: calc(-1 * var(--hit-up, (var(--size-touch) - var(--size-target)) / 2));
     left: 50%;
     width: var(--size-touch);
-    height: var(--size-touch);
+    height: calc(var(--size-target) + var(--hit-up, (var(--size-touch) - var(--size-target)) / 2) + var(--hit-down, (var(--size-touch) - var(--size-target)) / 2));
     content: '';
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
   }
 
   &[aria-disabled='true'] {

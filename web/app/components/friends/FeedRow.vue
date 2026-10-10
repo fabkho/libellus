@@ -77,7 +77,7 @@ async function unfold() {
 </script>
 
 <template>
-  <li class="flex min-h-[calc(var(--size-touch)*2)] items-start gap-ml py-ms" :data-testid="testid">
+  <li class="flex items-start gap-ml py-ms" :data-testid="testid">
     <UiPressLink v-if="!book.manual && !book.unverified" :to="bookPath" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
       <UiCover
         decorative
