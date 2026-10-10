@@ -88,7 +88,7 @@ select public.follow((select id from ids where name = 'ada'));
 
 select tests.act_as((select id from ids where name = 'ada'));
 insert into ids values
-  ('imp',  (public.add_to_library(tests.snap('Im Haus der Feinde') || '{"source":"apple","isbn13":"9788000000017","cover_url":"https://covers.openlibrary.org/b/id/9-L.jpg"}', 'reading', current_date - 3)).id),
+  ('imp',  (public.add_to_library(tests.snap('Unknown Import Only Book') || '{"source":"apple","isbn13":"9788000000017","cover_url":"https://covers.openlibrary.org/b/id/9-L.jpg"}', 'reading', current_date - 3)).id),
   ('mis',  (public.add_to_library(tests.snap('Mismatched Pair') || '{"isbn13":"9788000000024"}', 'reading', current_date - 3)).id);
 select public.finish_reading((select id from ids where name = 'imp'), current_date, 18, null);
 select public.finish_reading((select id from ids where name = 'mis'), current_date, 18, null);
@@ -113,18 +113,18 @@ select is(public.catalogue_check_status() ->> 'unknown', (select count(*)::text 
 
 select tests.act_as((select id from ids where name = 'ben'));
 select ok(exists (select 1 from jsonb_array_elements(public.feed()) e
-                   where e -> 'book' ->> 'title' = 'Im Haus der Feinde' and e -> 'book' -> 'unverified' is null
+                   where e -> 'book' ->> 'title' = 'Unknown Import Only Book' and e -> 'book' -> 'unverified' is null
                      and e -> 'book' ->> 'cover_url' = 'https://covers.openlibrary.org/b/id/9-L.jpg'),
   'the feed names an unknown Book, with its allowlisted cover, not unverified');
 select ok(exists (select 1 from jsonb_array_elements(public.member_profile((select id from ids where name = 'ada')) -> 'finished') e
-                   where e -> 'book' ->> 'title' = 'Im Haus der Feinde' and e -> 'book' -> 'unverified' is null),
+                   where e -> 'book' ->> 'title' = 'Unknown Import Only Book' and e -> 'book' -> 'unverified' is null),
   'so does her profile');
-select is(tests.record_book((select id from ids where name = 'ada'), 'Im Haus der Feinde') -> 'description', 'null'::jsonb, 'her record gives its title and no description');
-select is((select count(*)::int from public.search_books('Im Haus der Feinde')), 1, 'the search finds it');
+select is(tests.record_book((select id from ids where name = 'ada'), 'Unknown Import Only Book') -> 'description', 'null'::jsonb, 'her record gives its title and no description');
+select is((select count(*)::int from public.search_books('Unknown Import Only Book')), 1, 'the search finds it');
 select is((select count(*)::int from public.books where id = (select id from ids where name = 'b_imp')), 1, 'and the table shows the row');
 select is((select count(*)::int from public.books where id = (select id from ids where name = 'b_mis')), 0, 'while the failed one is not in the table for him');
 select tests.act_anon();
-select ok(position('Im Haus der Feinde' in public.public_reading_page((select link from links where name = 'page'))::text) > 0
+select ok(position('Unknown Import Only Book' in public.public_reading_page((select link from links where name = 'page'))::text) > 0
           and position('Mismatched Pair' in public.public_reading_page((select link from links where name = 'page'))::text) = 0,
   'the public reading page names the unknown Book and not the failed one');
 

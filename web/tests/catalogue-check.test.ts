@@ -94,6 +94,8 @@ describe('a description is source text', () => {
     const stranger = await ben.client.from('books').select('id, title').eq('id', failed.book.id)
     expect(stranger.data).toEqual([])
     expect((await ben.client.from('books').select('id').eq('check_failed', true).eq('id', failed.book.id)).data).toEqual([])
+    expect((await ben.client.from('books').select('id').ilike('title', failed.book.title)).data).toEqual([])
+    expect((await ben.client.from('books').select('id').eq('check_failed', true).limit(50)).data!.map((row) => row.id)).not.toContain(failed.book.id)
     expect((await ben.client.from('books').select('id').eq('id', pending.book.id)).data).toHaveLength(1)
     const holder = await ada.client.from('books').select('id, title').eq('id', failed.book.id)
     expect(holder.data).toEqual([{ id: failed.book.id, title: failed.book.title }])
