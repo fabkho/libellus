@@ -18,8 +18,7 @@ const { formatDay } = useDays()
 </script>
 
 <template>
-  <!-- At least two touch boxes tall (88 px): the icons of one row and the next are 44 px apart, so their boxes meet and never overlap. -->
-  <div class="flex min-h-[calc(var(--size-touch)*2)] items-start gap-inset py-sm">
+  <div class="flex items-start gap-inset py-sm">
     <FriendsMemberBookLink :book="item.book" class="shrink-0" tabindex="-1" aria-hidden="true" data-testid="member.finishedCover">
       <UiCover
         decorative

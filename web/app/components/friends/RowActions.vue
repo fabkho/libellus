@@ -36,12 +36,28 @@ const library = useLibraryStore()
 const wants = computed(() => Boolean(props.book && wantState(props.book, library.entryForBook(props.book.id))))
 const likes = computed(() => Boolean(props.like && likeable(props.like)))
 const height = computed(() => ({ sm: 'h-[calc(var(--size-cover-sm)*1.5)]', md: 'h-[calc(var(--size-cover-md)*1.5)]', lg: 'h-[calc(var(--size-cover-lg)*1.5)]', avatar: 'h-[max(var(--size-avatar),var(--size-touch))]' })[props.cover])
+// How far the touch box of an icon of the pair reaches outward (away from the other icon): what 44 px needs, or less
+// where the row has no more room: the space above and below the pair inside the cover, and the row's own padding.
+const pair = computed(() => wants.value && likes.value)
+const reach = computed(
+  () =>
+    ({
+      sm: '[--reach:min(calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2),calc((var(--size-cover-sm)_*_1.5_-_2_*_var(--size-target)_-_var(--spacing-xs))_/_2_+_var(--spacing-sm)))]',
+      md: '[--reach:calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2)]',
+      lg: '[--reach:calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2)]',
+      avatar: '[--reach:calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2)]',
+    })[props.cover],
+)
 </script>
 
 <template>
-  <!-- A column as tall as the cover, its icons in the middle; its icons (and their 44 px boxes) are 44 px apart, centre to centre. -->
-  <div v-if="wants || likes" class="flex w-(--size-target) shrink-0 flex-col items-center justify-center gap-y-[calc(var(--size-touch)_-_var(--size-target))]" :class="height" data-testid="rowActions">
-    <FriendsWantToReadButton v-if="book" :book="book" :testid="wantTestid" />
-    <FriendsLikes v-if="like" :row="like" :name="name" :owner="owner" :title="title" :testid="likeTestid" />
+  <!-- A column as tall as the cover, the pair of icons in the middle, a small gap (4 px) apart; each icon's 44 px box reaches outward from the midpoint between them. -->
+  <div v-if="wants || likes" class="flex w-(--size-target) shrink-0 flex-col items-center justify-center" :class="[height, reach, pair && 'gap-y-xs']" data-testid="rowActions">
+    <div v-if="book" class="flex" :class="pair && '[--hit-up:var(--reach)] [--hit-down:calc(var(--spacing-xs)_/_2)]'">
+      <FriendsWantToReadButton :book="book" :testid="wantTestid" />
+    </div>
+    <div v-if="like" class="flex" :class="pair && '[--hit-up:calc(var(--spacing-xs)_/_2)] [--hit-down:var(--reach)]'">
+      <FriendsLikes :row="like" :name="name" :owner="owner" :title="title" :testid="likeTestid" />
+    </div>
   </div>
 </template>

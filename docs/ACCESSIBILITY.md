@@ -129,13 +129,15 @@ shimmer stops, the tab bar stays.
 - **The icon column on a friend's Book row** (social v2a: *Want to read* and the heart, `icon-action` in `main.css`,
   `RowActions`): the owner chose a narrow column at the row's right edge, centred on the cover, over text-sized
   controls on the line (which could not have a 44 px box without covering the title or the stars). Each icon is drawn at
-  24 × 24 px (`--size-target`, WCAG 2.2 AA 2.5.8) with a 44 × 44 px touch box (`--size-touch`, the app's own rule) centred
-  on it; the two icons are 44 px apart, centre to centre, so the boxes meet and never overlap, and they sit in the column
-  beside the text, so a tap near a title or the stars is theirs. The name is hidden text (the icon is drawn), and the heart
-  keeps one constant name with `aria-pressed`. Busy and Offline are `aria-disabled`, not `disabled`, so focus stays;
-  the focus ring is the app's (2 px `accentInk`). The heart's count hangs under the icon, inside its box's lower half, and
-  is part of the heart's name. A row whose cover is small (`sm`, 60 px tall) has a column of 68 px and 88 px of
-  boxes, taller than the cover; every such row is at least 91 px tall, so the boxes of two rows do not meet.
+  24 × 24 px (`--size-target`, WCAG 2.2 AA 2.5.8) with a touch box (`--size-touch`, the app's own 44 px rule) centred
+  on it sideways. The two icons are a close pair, 4 px apart (the drawn heart is 18 px), and their boxes split at the midpoint
+  between them and reach outward, the bookmark's up and the heart's down, so they never overlap each other; each is
+  44 px wide and, with room (Home's card, the feed; a heart alone in the Readers rows is centred), 44 px tall. On a member's Recently finished row, whose cover is small (`sm`, 60 px tall) and whose height the column must not
+  grow, the boxes stop at the row's own edge (the 8 px padding above and below it), so they are 38 px tall (44 px wide):
+  the boxes of two rows meet at the border and never overlap, and a tap near a title or the stars is not theirs. The
+  name is hidden text (the icon is drawn), and the heart keeps one constant name with `aria-pressed`. Busy and Offline
+  are `aria-disabled`, not `disabled`, so focus stays; the focus ring is the app's (2 px `accentInk`). The heart's count
+  hangs right under the icon, inside its box where the box is tall enough, and is part of the heart's name.
 - **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
   scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
   each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}
