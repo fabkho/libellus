@@ -3,7 +3,7 @@ import type { BookFormat, BookSnapshot } from '@/data/books'
 import { createLibrary } from '@/data/library'
 import { readAsOf } from '@/data/readAs'
 import { signUpMember } from './support/member'
-import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
+import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId, uniqueEditionKey } from './support/stack'
 
 /** Read as (issue #169) through the repository, against the local stack, as real signed-in members. */
 
@@ -89,7 +89,7 @@ describe('changing the edition presets Read as from its format', () => {
     ...fields,
   })
   const printed = (title: string, format: BookFormat | null): BookSnapshot =>
-    edition(title, { source: 'openlibrary', appleId: null, openLibraryEditionKey: `OL${uniqueAppleId().slice(2, 10)}M`, format })
+    edition(title, { source: 'openlibrary', appleId: null, openLibraryEditionKey: uniqueEditionKey(), format })
 
   it('says it as the new edition is read, in the same call that moves the entry', async () => {
     const member = await signUpMember()

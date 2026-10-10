@@ -7,6 +7,11 @@ import { isoDay } from '@/utils/dates'
 import { signUpMember, type TestMember } from './support/member'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
+/** Apple artwork, on a host `private.cover_allowed` lets through (an off-list cover is stored as none). */
+const APPLE_COVER = 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/cc/x/600x900bb.jpg'
+/** What the Cover step answers with at send time: another Apple cover, distinct from the snapshot's. */
+const RESOLVED_COVER = 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/cc/y/600x900bb.jpg'
+
 /**
  * Adding a Book from search's results is optimistic: the add goes into the
  * outbox like an offline write and answers at once with the entry as it will be,
@@ -27,7 +32,7 @@ function result(title: string, overrides: Partial<BookSnapshot> = {}): BookSnaps
     language: 'en',
     publisher: TEST_PUBLISHER,
     description: null,
-    coverUrl: 'https://example.invalid/cover.jpg',
+    coverUrl: APPLE_COVER,
     coverThumbhash: null,
     coverColors: null,
     source: 'apple',
@@ -147,7 +152,7 @@ describe('an optimistic add', () => {
     const phone = device(member, {
       prepare: async (item) => {
         prepared.push(item.about)
-        return { ...item.args, p_book: { ...(item.args.p_book as object), cover_url: 'https://example.invalid/resolved.jpg' } }
+        return { ...item.args, p_book: { ...(item.args.p_book as object), cover_url: RESOLVED_COVER } }
       },
     })
     const hit = result('Fledgling')
@@ -157,7 +162,7 @@ describe('an optimistic add', () => {
     await phone.outbox.flush()
     expect(prepared).toEqual([hit.title])
     const [entry] = await onServer(member)
-    expect(entry!.book.coverUrl).toBe('https://example.invalid/resolved.jpg')
+    expect(entry!.book.coverUrl).toBe(RESOLVED_COVER)
   })
 
   it('still sends a Book whose Cover could not be resolved', async () => {
