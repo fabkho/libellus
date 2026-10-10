@@ -138,6 +138,15 @@ test('Ida shares her link, Anna asks and is let in, a finish shows in her circle
     await expect(anna.getByTestId('friends.entryLike')).toHaveAttribute('aria-pressed', 'true')
     await expect(anna.getByTestId('friends.entryLike.count')).toHaveText('1')
 
+    // The Book's page lists Ida among Anna's readers (social v2a, §1.5): finished, with her review.
+    await anna.getByTestId('friends.entryBook').click()
+    await expect(anna.getByTestId('book.title')).toHaveText(book.title)
+    const readers = anna.getByTestId('book.readers')
+    await expect(readers.getByTestId('book.readers.row')).toHaveCount(1)
+    await expect(readers.getByTestId('book.readers.row')).toContainText('Ida')
+    await expect(readers.getByTestId('book.readers.row.state')).toHaveText(en.book.readers.finished)
+    await expect(readers.getByTestId('member.finishedReview')).toHaveText('A house of tides and statues.')
+
     // Ida's Home: one quiet row says who liked her review, and its sheet names Anna.
     await goto(ida, '/')
     const liked = ida.getByTestId('home.like')

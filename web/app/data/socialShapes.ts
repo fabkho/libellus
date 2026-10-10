@@ -159,6 +159,55 @@ export function circleBookFromJson(json: CircleBookJson): CircleBook {
   return { book: json.book, members: json.members.map(cardFromJson), more: Number(json.more) }
 }
 
+/**
+ * Social v2a, Readers on a Book's page (contract §1.5): one followed member who holds the Book's work, with
+ * the one state of hers that is most relevant and only what her profile shows the caller. `day`: the day of
+ * the state (the read's end, its start, the day it was put down, the day it was added); `rating` and `review`
+ * only where her switches show them; `sessionId`, `likes`, `liked` of the finished read (null / 0 / false
+ * on any other state), `spoilers` and `folded` as the feed's.
+ */
+export type ReaderState = 'finished' | 'reading' | 'abandoned' | 'want'
+
+export type BookReader = LikeFields &
+  ReviewFlags & { member: MemberCard; state: ReaderState; day: string | null; rating: number | null; review: string | null }
+
+export type BookReaderJson = {
+  member: CardJson
+  state: ReaderState
+  day: string | null
+  rating?: number | null
+  review?: string | null
+  spoilers?: boolean | null
+  folded?: boolean | null
+  sessionId?: string | null
+  likes?: number | null
+  liked?: boolean | null
+}
+
+export function bookReaderFromJson(json: BookReaderJson): BookReader {
+  return {
+    member: cardFromJson(json.member),
+    state: json.state,
+    day: json.day ?? null,
+    rating: json.rating ?? null,
+    review: json.review ?? null,
+    ...reviewFlagsFromJson(json),
+    ...likeFieldsFromJson(json),
+  }
+}
+
+/** The keyset the next page of readers starts after (opaque to the screen: the database's `next`). */
+export type ReadersCursor = { rank: number; day: string; member: string }
+
+/** One page of a Book's readers: how many in all, this page's rows, and where the next page starts (null: the end). */
+export type BookReadersPage = { total: number; items: BookReader[]; next: ReadersCursor | null }
+
+export type BookReadersPageJson = { total: number; items: BookReaderJson[]; next: ReadersCursor | null }
+
+export function bookReadersPageFromJson(json: BookReadersPageJson): BookReadersPage {
+  return { total: Number(json.total), items: json.items.map(bookReaderFromJson), next: json.next ?? null }
+}
+
 /** The most Books `circleReading` / `circleWant` look at in one call (the database's limit too). */
 export const CIRCLE_BOOKS_MAX = 50
 

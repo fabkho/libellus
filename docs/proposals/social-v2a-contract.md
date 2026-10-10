@@ -5,6 +5,10 @@ What version 2a builds, fixed before the tasks start. Scope and the owner's deci
 contract (`social-v1-contract.md`) still holds: who may see what (`private.visible`, `private.reachable`,
 the seven switches, hidden Books, blocks both ways) is reused, never re-implemented.
 
+Added later, in the same release (owner, 11 October 2026): **Readers on a Book's page**, shown as **In your circle** (item 3 of
+`social-v1.md`, §1.5, §2, §3, §4 below; migration `20261021040000_book_readers.sql`; only the people she
+follows, strangers are a later version).
+
 Two pull requests: **A** (§1–§4, migration `20261021010000_social_v2a.sql`) and **B** (§5, migration
 `20261021020000_catalogue_check.sql` and an edge function). Main's perf work takes `20261020*`.
 
@@ -61,12 +65,44 @@ show_ratings), endedOn } }]`, newest of hers first; `p_year` limits to her reads
 - `circle_want(p_books uuid[])`: the same for her Want to read Books and members' Want to read
   (`show_want`).
 
+### 1.5 Readers on a Book's page
+
+`book_readers(p_book uuid, p_after jsonb default null, p_limit integer default 50)`: the members the caller
+follows who hold the same work as `p_book`, each with the one state of hers that is most relevant, and only what
+her own profile shows the caller. Same shape of function as the rest (`security definer`, `search_path = ''`,
+revoked from `public`/`anon`). Like `feed` and `member_profile` it counts no calls: its work is bounded (at most
+the 150 members she can follow, a page of 50 at most) and it writes nothing.
+
+- **Who.** Members with an **accepted** follow from the caller, no block either way (`private.visible`), not the
+  caller. The Books matched are the ones `circle_reading` / `both_read` match: the same `books.id`, or the same
+  non-null `openlibrary_work_key` (any edition), except an edition the check failed (`check_failed`, which could
+  carry a planted work key) unless it is `p_book` itself; hidden entries never. A Manual `p_book` (no work, the
+  owner's alone), a Book the caller may not read (`books_readable`: a failed Catalogue row she does not hold) or
+  an unknown id answer an empty list, the same answer as for a Book nobody reads.
+- **What each shows** is exactly her profile's rules (`member_profile`, `member_reading_record`), never a second
+  set: **Reading** (an open read) only with `show_reading`; **Finished** (her latest finished read: day, stars
+  only with `show_ratings`, review only with `show_reviews`, `spoilers` / `folded` as the feed, `sessionId`,
+  `likes`, `liked`) only with `show_finished`; **Abandoned** (the day) only with `show_abandoned`; **Wants to
+  read** (the day she added it) only with `show_want`. A member with nothing to show for the Book is not listed.
+- **One row per member**, her state by precedence: Reading, else Finished, else Abandoned, else Wants to read.
+- **Order**: Finished with a review she shows (newest first), Finished without, Reading (newest start), Abandoned,
+  Wants to read (newest add); a day that is missing sorts last, then by member id. A keyset page: the answer's
+  `next` is the cursor for `p_after` (null at the end).
+- **Answer**: `{ total, items: [{ member: MemberCard, state: 'finished'|'reading'|'abandoned'|'want', day, rating,
+  review, spoilers, folded, sessionId, likes, liked }], next }`, `total` all the members listed. Nothing else
+  (no book ids, no edition, no counts of her library).
+- **Likes** are the existing ones, on a finished read (`like(sessionId)`): no new target.
+
 ## 2. Data layer (PR A)
 
 `web/app/data/social.ts` (and `socialShapes.ts`): `like`, `unlike`, `sessionLikers`, `myRecentLikes`,
 `bothRead`, `circleReading`, `circleWant`, and the new fields on feed entries and member finished rows
 (`spoilers`, `folded`, `likes`, `liked`, `sessionId`). Likes and spoiler flags are **online only** (say
 "Offline"); writing `review_spoilers` with a review goes the review's way (queued with it offline).
+
+Readers (§1.5): `social.bookReaders(book, after?, limit?)` → `{ total, items: BookReader[], next }` in
+`data/social.ts` with its shapes (`BookReader`, `bookReaderFromJson`) and the order the screen keeps
+(`utils/bookReaders.ts`). Online only; offline the session keeps the last list loaded for a Book.
 
 ## 3. Screens (PR A)
 
@@ -87,12 +123,29 @@ show_ratings), endedOn } }]`, newest of hers first; `p_year` limits to her reads
   Library's Want to read): up to three small avatars on the cover's edge, "+N", a tap opens a small sheet
   with the names.
 
+- **In your circle** (§1.5; the people she follows who have the Book, reading, finished, put down or only wanting it, so
+  not "Readers"; the component and test ids keep that name): on a Book's page, under its description (About) and right
+  above *More from the author*, or right above it with no description (`BookReaders`, `components/book/Readers.vue`):
+  a small heading "In your circle" and up to five rows, then *See all {count}* opening a sheet with all (paged by 50 as People
+  is). A row: avatar, her name (opens her profile), her state and day ("Finished 3 Oct", "Reading since 2 Oct",
+  "Wants to read"), her stars, her review in the serif italic, folded as in the feed (*Show anyway* for a spoiler
+  she flagged when the caller has not finished the Book), a heart on a review (`LikeButton`). No *Want to read*
+  button (she is on the Book's page). Nobody, signed out, a reading page, a Manual book, a Book she cannot read:
+  no section and no empty text. Loading: a quiet placeholder of the section's height. Offline: the list last
+  loaded for this Book in the session, else nothing; never an error block. Built so a strangers' part can be added
+  below it (`BookReaders` takes `readers`; a later `BookReviews` sits under it).
+
 ## 4. Test ids, strings, flow (PR A)
 
 Test ids per element as v1 (`feed.like`, `feed.likes`, `feed.wantToRead`, `member.bothRead`,
 `home.readingWith`, `likers` sheet, `review.spoilers`, `review.showAnyway`, …: the tasks list theirs here).
 Strings under `social.*` / `review.*`, plain as v1's. **E2e**: the friends flow (`e2e/friends.spec.ts`) gains
 the like (Anna likes Ida's finish, Ida sees the count and Anna's name) and a spoiler fold; no new flow.
+
+Readers (§1.5): test ids `book.readers` (the section), `book.readers.row`, `book.readers.all` (*See all*), sheet
+`bookReaders` (`bookReaders.row`, `.empty`, `.more`), `book.readers.like` on a row's heart; strings
+`book.readers.{title,all,finished,reading,abandoned,want,loading}` (`book.readers.title` is "In your circle", the sheet's title too). pgTAP `book_readers_test.sql`, Vitest
+`book-readers.test.ts`; parity in `docs/parity.md` (Book page); the sheet is in the dark `@full` a11y scan.
 
 ### Screens built without the database (task V2A-B1)
 

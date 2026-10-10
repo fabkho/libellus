@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isNoAnswer } from './network'
 import {
   CIRCLE_BOOKS_MAX,
+  bookReadersPageFromJson,
   bothReadFromJson,
   cardFromJson,
   circleBookFromJson,
@@ -10,6 +11,9 @@ import {
   recentLikeFromJson,
   reviewFlagsFromJson,
   socialBookFromJson,
+  type BookReader,
+  type BookReadersPage,
+  type BookReadersPageJson,
   type BothRead,
   type BothReadJson,
   type CircleBook,
@@ -18,6 +22,7 @@ import {
   type LikeResult,
   type MemberCard,
   type MemberProfile,
+  type ReadersCursor,
   type RecentLike,
   type RecentLikeJson,
   type SocialBook,
@@ -45,6 +50,8 @@ import {
  */
 
 export type {
+  BookReader,
+  BookReadersPage,
   BothRead,
   CircleBook,
   FollowState,
@@ -54,6 +61,8 @@ export type {
   MemberFinished,
   MemberProfile,
   RecentLike,
+  ReadersCursor,
+  ReaderState,
   ReadOf,
   ReviewFlags,
   SocialBook,
@@ -134,7 +143,16 @@ export interface Social {
   circleReading(books: readonly string[]): Promise<SocialResult<CircleBook[]>>
   /** The same for her Want to read and theirs. */
   circleWant(books: readonly string[]): Promise<SocialResult<CircleBook[]>>
+  /**
+   * Readers on a Book's page (contract §1.5): the members she follows who hold the Book's work, each in her most
+   * relevant state and as far as her profile shows it, finished with a review first. `after`: the previous page's
+   * `next`; `limit`: at most `READERS_PAGE`. An empty page for a Manual book, one she cannot read, or nobody.
+   */
+  bookReaders(book: string, after?: ReadersCursor | null, limit?: number): Promise<SocialResult<BookReadersPage>>
 }
+
+/** The most readers one `bookReaders` call returns (the database's limit too); the See-all sheet pages by it. */
+export const READERS_PAGE = 50
 
 /** `https://<site>/f/<token>`: the link the share sheet hands out. */
 export function followLink(origin: string, token: string): string {
@@ -287,6 +305,12 @@ export function createSocial(client: SupabaseClient, { online = () => true }: { 
     myRecentLikes: () => call<RecentLikeJson[], RecentLike[]>('my_recent_likes', {}, (j) => j.map(recentLikeFromJson)),
     bothRead: (member, year = null) =>
       call<BothReadJson[], BothRead[]>('both_read', { p_member: member, p_year: year }, (j) => j.map(bothReadFromJson)),
+    bookReaders: (book, after = null, limit = READERS_PAGE) =>
+      call<BookReadersPageJson, BookReadersPage>(
+        'book_readers',
+        { p_book: book, p_after: after, p_limit: Math.min(Math.max(1, limit), READERS_PAGE) },
+        bookReadersPageFromJson,
+      ),
     circleReading: (books) => circle('circle_reading', books),
     circleWant: (books) => circle('circle_want', books),
   }

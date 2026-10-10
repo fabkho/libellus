@@ -638,6 +638,20 @@
       "formatSaid": "Your copy will be saved as {format}.",
       "missing": "My edition isn't listed"
     },
+    "readers": {
+      "title": "In your circle",
+      "all": "See all {count}",
+      "allLabel": "See all {count} people in your circle who have this book",
+      "finished": "Finished",
+      "reading": "Reading",
+      "abandoned": "Put down",
+      "want": "Wants to read",
+      "loading": "Loading your circle",
+      "sheetTitle": "In your circle",
+      "more": "Show more",
+      "loadingMore": "Loading more people",
+      "someone": "A reader"
+    },
     "goodreads": {
       "ratingLabel": "Rated {rating} out of 5",
       "ratings": "{count} rating | {count} ratings",
