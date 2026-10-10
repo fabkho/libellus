@@ -8,7 +8,7 @@
 -- Book the source names otherwise is marked failed and nothing is written.
 
 begin;
-select plan(22);
+select plan(26);
 
 create schema if not exists tests;
 
@@ -154,6 +154,18 @@ select is(public.catalogue_check_save((select id from ids where name = 'b_bracke
   'brackets in the stored title do not count against the source''s');
 select is(public.catalogue_check_save((select id from ids where name = 'b_accent'), '{"title":"Emile: A Life"}'), true,
   'nor accents, nor a subtitle after a colon');
+
+-- Tolerant: a leading article, a subtitle the source adds or the member did, a dash.
+select tests.act_as((select id from ids where name = 'ada'));
+insert into ids values
+  ('art',  (public.add_to_library(tests.snap('Hobbit') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL99999993M"}', 'want_to_read', null)).id),
+  ('sub',  (public.add_to_library(tests.snap('Dregs of Empire: A Tale') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL99999994M"}', 'want_to_read', null)).id),
+  ('dash', (public.add_to_library(tests.snap('Dune') || '{"source":"openlibrary","apple_id":null,"openlibrary_edition_key":"OL99999995M"}', 'want_to_read', null)).id);
+reset role;
+select is(public.catalogue_check_save(tests.book_of((select id from ids where name = 'art')), '{"title":"The Hobbit"}'), true, 'a leading article the source has and the member left out is the same Book');
+select is(public.catalogue_check_save(tests.book_of((select id from ids where name = 'sub')), '{"title":"The Dregs of Empire"}'), true, 'a subtitle only the member has, and an article only the source has');
+select is(public.catalogue_check_save(tests.book_of((select id from ids where name = 'dash')), '{"title":"Dune - Book One"}'), true, 'a dash subtitle');
+select is(public.catalogue_check_save(gen_random_uuid(), '{"title":"Dune"}'), false, 'a save for no Book is nothing');
 
 select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '{"authors":["No Title"]}')$q$, '22023', 'result_invalid',
   'a result without a title is refused');
