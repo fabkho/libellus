@@ -9,8 +9,8 @@ import type { Row } from '@/data/import/csv'
 
 /**
  * A review that is only a rating is a rating, not a review (utils/ratingReview.ts; tests/rating-review.test.ts pins
- * the forms), in every importer that reads free-text reviews: Goodreads, Hardcover and the Fable tracker. A rating the
- * row has stays; a number above 5 with no `/10` stays a review and is reported.
+ * the forms), in every importer that reads free-text reviews: Goodreads, Hardcover and the Fable tracker. The text's
+ * number wins over the row's rating; a number above 5 with no `/10` stays a review and is reported.
  */
 
 const TODAY = '2026-10-21'
@@ -19,16 +19,23 @@ describe('Goodreads', () => {
   const goodreads = (review: string, rating = '0', shelf = 'read') =>
     mapRows(goodreadsAdapter, [{ 'Book Id': '1', Title: 'A Book', Author: 'An Author', 'Exclusive Shelf': shelf, 'My Rating': rating, 'My Review': review, 'Date Read': '2026/09/01' } as Row], TODAY).books[0]!
 
-  it('takes a rating-only review as the rating when the read has none, rounded down, and keeps no review', () => {
+  it('takes a rating-only review as the rating, rounded down, and keeps no review', () => {
     for (const [text, quarters] of [['4.6', 18], ['5/5', 20], ['4.5/5', 18], ['4.6/10', 18], ['3', 12], ['4,9', 19], ['4.5 ★', 18]] as const) {
       expect(goodreads(text).session, text).toMatchObject({ outcome: 'finished', rating: quarters, review: null })
     }
     expect(goodreads('4.6').problems).toEqual([])
   })
 
-  it('keeps the rating the row already has, and still drops the number as a review', () => {
-    expect(goodreads('4.3', '4').session).toMatchObject({ rating: 16, review: null })
+  it("lets the text's number win over the row's whole stars (the number is the real rating)", () => {
+    expect(goodreads('4.3', '4').session).toMatchObject({ rating: 17, review: null })
+    expect(goodreads('4.6', '5').session).toMatchObject({ rating: 18, review: null })
+    expect(goodreads('4.5/5', '4').session).toMatchObject({ rating: 18, review: null })
+    expect(goodreads('4.6/10', '5').session).toMatchObject({ rating: 18, review: null })
     expect(goodreads('5/5', '5').session).toMatchObject({ rating: 20, review: null })
+  })
+
+  it('keeps the row\'s rating when the text says none (0), and drops the text', () => {
+    expect(goodreads('0', '4').session).toMatchObject({ rating: 16, review: null })
   })
 
   it('leaves a real review alone, and a number that is no rating (above 5, no /10) as a review, reported', () => {
@@ -56,7 +63,8 @@ describe('Hardcover', () => {
 
   it('reads the same rule', () => {
     expect(hardcover('4.6').session).toMatchObject({ rating: 18, review: null })
-    expect(hardcover('4.5/5', '3').session).toMatchObject({ rating: 12, review: null })
+    expect(hardcover('4.5/5', '3').session).toMatchObject({ rating: 18, review: null })
+    expect(hardcover('4.6', '4.5').session).toMatchObject({ rating: 18, review: null })
     expect(hardcover('Lovely').session).toMatchObject({ rating: null, review: 'Lovely' })
     expect(hardcover('1984').problems).toEqual([{ code: 'ratingLikeReview' }])
   })
@@ -74,7 +82,8 @@ describe('the Fable tracker', () => {
 
   it('reads the same rule', () => {
     expect(mapped(null, '4.6')).toMatchObject({ rating: 18, review: null })
-    expect(mapped(4.5, '5/5')).toMatchObject({ rating: 18, review: null })
+    expect(mapped(4.5, '5/5')).toMatchObject({ rating: 20, review: null })
+    expect(mapped(4, '4.3')).toMatchObject({ rating: 17, review: null })
     expect(mapped(null, 'Lovely')).toMatchObject({ rating: null, review: 'Lovely' })
   })
 })
