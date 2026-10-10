@@ -107,6 +107,7 @@ in that order, so DOM size and heap grow along the run, as in a session.
 | --- | --- |
 | `pnpm perf:bundle` | the build's entry, prefetched chunks, largest chunks, service worker precache by kind, fonts (no browser) |
 | `pnpm perf:images` | the image census: every `<img>` per screen (lazy/eager, `decoding`, on screen, loaded, cover requests and bytes, eager images that load off screen) and the signed-out sign-in wall; Chromium, Slow 4G network, `--screens home,library`, `--json out.json` |
+| `pnpm perf:wall` | the sign-in wall against the form, from a first launch of `/sign-in`: form painted, LCP and its element, requests and KB asked for by the form's first paint and after `--settle` ms, cover requests before the form; `--profile slow4g-4x\|chromium\|webkit`, `--runs 7`. Needs a build served (`LIBELLUS_SERVE_ROOT=<public dir>` serves a saved one: a before and an after in turn); no stack |
 | `pnpm perf:list` | the long lists: DOM nodes, style/layout/script time, long frames for the Library's segments (mount, switch, scroll) and search typing, medians of `--runs`; `--css` tries a rule without a build; Library size by `PERF_ENTRIES=1000 pnpm perf:seed` |
 | `tsx perf/flight-check.ts` | does the cover flight still land on the row's cover and Back restore the scroll place, on a Library of any size (`--rows`, `--scroll`) |
 | `pnpm perf:probe` | the Library device copy's read / parse / stringify / write cost at 1x, 4x, 6x |

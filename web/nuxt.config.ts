@@ -26,6 +26,19 @@ const release = releaseNotes(rootFile('CHANGELOG.md'), rootFile('version.txt'))
 // and the home-screen launchers refetch them instead of keeping the old ones.
 const iconVersion = 2
 
+// The hosts the first screens certainly ask, opened ahead (`app.head.link` below): the API (a returning
+// member's start asks it nine times, a visitor's sign-in once she submits; it is the instance's own host,
+// from the same variable as `runtimeConfig`, so a build without one has no link) and Apple's cover host
+// (the sign-in wall and Home draw covers from it: DNS only, because the wall's covers are asked for after
+// the form is painted and a socket opened at the start would sit idle for seconds). docs/perf/final-round.md, #2.
+const apiOrigin = (() => {
+  try {
+    return new URL(process.env.NUXT_PUBLIC_SUPABASE_URL ?? '').origin
+  } catch {
+    return ''
+  }
+})()
+
 /**
  * What the ebook reader is made of, for the service worker's sake (it is fetched ahead, not precached: see
  * `globIgnores` below): the reader's sheets and chrome, foliate-js, the sanitizer, and the font files the
@@ -186,6 +199,9 @@ export default defineNuxtConfig({
         { rel: 'apple-touch-icon', href: `/apple-touch-icon.png?v=${iconVersion}` },
         { rel: 'icon', href: `/favicon.svg?v=${iconVersion}`, type: 'image/svg+xml' },
         { rel: 'icon', href: `/favicon.ico?v=${iconVersion}`, sizes: '32x32 16x16' },
+        // `crossorigin`: supabase-js asks with fetch (CORS, no credentials), which uses the anonymous connection pool.
+        ...(apiOrigin ? [{ rel: 'preconnect', href: apiOrigin, crossorigin: 'anonymous' as const }] : []),
+        { rel: 'dns-prefetch', href: 'https://is1-ssl.mzstatic.com' },
       ],
     },
   },

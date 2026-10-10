@@ -25,6 +25,7 @@
     "perf:probe": "tsx perf/probe.ts",
     "perf:bundle": "tsx perf/bundle.ts",
     "perf:signin": "tsx perf/signin.ts",
+    "perf:wall": "tsx perf/wall.ts",
     "perf:reader": "tsx perf/reader.ts",
     "perf:flows": "tsx perf/flows.ts",
     "perf:images": "tsx perf/images.ts",
