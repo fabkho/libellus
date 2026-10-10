@@ -296,6 +296,7 @@ bytes from the network log; the first column is the build before this change, th
 | Library scrolled to the bottom (`b2`) | 26 / 595 | 26 / 590 |
 | Profile open (`b3`) | 13 / 191 | 13 / 191 |
 | Sign-in, signed out (`perf:images`, unthrottled) | 20 / 2,319 | 20 / 737 |
+| Search "the" on a Library of 150 (`perf:list`, her own Books match widely) | 157 / — | 28 / — |
 
 So the signed-in screens did not change: they were lazy already, and the audit's job there was to
 prove it and to find the few exceptions (above). Home's first screen asks for the 8 covers it shows
