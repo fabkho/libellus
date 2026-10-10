@@ -81,7 +81,7 @@ function act() {
         :more="circle.more"
         kind="reading"
         testid="home.readingWith"
-        class="absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2 translate-y-1/2 [--circle-ring:var(--color-surface-raised)]"
+        class="absolute bottom-xs left-1/2 z-10 flex -translate-x-1/2 [--circle-ring:var(--color-surface-raised)]"
       />
     </div>
     <div class="relative flex min-w-0 flex-1 flex-col pt-xxs">

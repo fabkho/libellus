@@ -87,11 +87,12 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
 </template>
 
 <style scoped>
-/* The avatars sit on the lower edge of the cover: it is centred in the row, 3:2 tall. */
+/* The avatars sit inside the cover's lower edge, their end at its right edge (a stack of three and "+N" is wider than the
+   cover, so it grows to the left, over the page's margin, never over the title). The cover is centred in the row, 3:2 tall. */
 .avatars {
-  left: -4px;
-  top: calc(50% + var(--size-cover-sm) * 0.75);
-  transform: translateY(-50%);
+  left: var(--size-cover-sm);
+  top: calc(50% + var(--size-cover-sm) * 0.75 - var(--spacing-xs));
+  transform: translate(calc(-100% + var(--spacing-xs)), -100%);
 }
 
 /* An abandoned read: its cover fades back and its words go quiet. */

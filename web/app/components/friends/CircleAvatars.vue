@@ -9,8 +9,11 @@
 //  - `kind`     'reading' ("Also reading: Anna, Ben and 2 others") or 'want' ("Also want to read: …"), the
 //               button's accessible name and the sheet's title.
 // The sheet lists the cards (FriendsAvatar and name, a row opens `/friends/<id>`), and says "and N more" when
-// there are others. `--circle-ring` (default: the page's colour) is the ring that separates the avatars from one
-// another and from what is under them; a card sets it to its own surface.
+// there are others. The avatars are small (`--size-avatar-xs`) and carry no initials, only the photo or the plain
+// disc: at that size letters are noise. "+N" is a chip of the same size, so it reads on a cover and on a card's
+// light. `--circle-ring` (default: the page's colour) is the ring that separates the avatars from one another and
+// from what is under them; a card sets it to its own surface. Put the stack inside the cover's lower edge
+// (`bottom: var(--spacing-xs)`): its 44 px hit area then stays clear of what is under the cover.
 // Test ids: `<testid>` (the button, default `circleAvatars`), `circleAvatars.sheet`, `circleAvatars.row`,
 // `circleAvatars.member`, `circleAvatars.more`.
 import type { MemberCard } from '~/data/socialShapes'
@@ -40,7 +43,9 @@ const title = computed(() => t(props.kind === 'reading' ? 'social.circle.sheetRe
       <span v-for="(member, i) in shown" :key="member.id" class="mini" :class="i > 0 && 'overlap'" aria-hidden="true">
         <FriendsAvatar :card="member" />
       </span>
-      <span v-if="extra > 0" class="figures ml-xxs text-meta font-medium text-ink-muted" aria-hidden="true">+{{ extra }}</span>
+      <span v-if="extra > 0" class="disc overlap" aria-hidden="true">
+        <span class="chip figures text-meta font-medium text-ink-muted edge rounded-pill bg-fill">+{{ extra }}</span>
+      </span>
     </button>
 
     <UiSheet v-model:open="open" :title="title" testid="circleAvatars.sheet">
@@ -62,29 +67,43 @@ const title = computed(() => t(props.kind === 'reading' ? 'social.circle.sheetRe
 </template>
 
 <style scoped>
-/* Small avatars: UiAvatar reads its size from --size-avatar, so the small ones are that token turned down here. */
-.mini {
-  --size-avatar: 20px;
+/* Small avatars: UiAvatar reads its size from --size-avatar, so the small ones are that token turned down here
+   (--size-avatar-xs). No initials at this size: only a photo shows, over the plain disc. */
+.mini,
+.disc {
   display: flex;
-  border-radius: var(--radius-pill, 9999px);
+  border-radius: var(--radius-pill);
   /* An opaque disc under the avatar (its fill is see-through), so the cover does not show through; the same colour is the ring. */
   background: var(--circle-ring, var(--color-surface));
-  box-shadow: 0 0 0 1.5px var(--circle-ring, var(--color-surface));
+  box-shadow: 0 0 0 var(--spacing-xxs) var(--circle-ring, var(--color-surface));
+}
+.mini {
+  --size-avatar: var(--size-avatar-xs);
 }
 .mini :deep(.figures) {
-  font-size: 0.5625rem;
-  line-height: 1;
+  color: transparent;
 }
 .overlap {
-  margin-inline-start: -11px;
+  margin-inline-start: calc(-1 * var(--spacing-xs));
 }
-/* The tap target is the 44 px the rest of the app keeps, around a button that draws small. */
+/* "+N": a chip as tall as the avatars, wider when it needs to be. */
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-avatar-xs);
+  height: var(--size-avatar-xs);
+  padding-inline: var(--spacing-xs);
+  position: relative;
+}
+/* The tap target is the app's 44 px, around a stack that draws small: as tall as --size-touch, a little wider than the stack. */
 .hit {
   position: relative;
 }
 .hit::before {
   position: absolute;
-  inset: -12px -8px;
+  inset-block: calc((var(--size-touch) - var(--size-avatar-xs)) / -2);
+  inset-inline: calc(-1 * var(--spacing-sm));
   content: '';
 }
 </style>
