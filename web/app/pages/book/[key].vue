@@ -218,6 +218,7 @@ function back() {
         :title="book.title"
         :authors="book.authors"
         :src="coverSrc(book.coverUrl, 'xl')"
+        :identity="book.isbn13 ?? ('id' in book ? book.id : book.title)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
         size="xl"

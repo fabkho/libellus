@@ -15,7 +15,10 @@ import { extname, join, normalize, relative, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const port = Number(process.argv[2] ?? 4327)
-const root = fileURLToPath(new URL('../.output-e2e/public/', import.meta.url))
+// LIBELLUS_SERVE_ROOT points it at another build (perf/serve.mjs serves the production one).
+const root = process.env.LIBELLUS_SERVE_ROOT
+  ? join(process.env.LIBELLUS_SERVE_ROOT, '/')
+  : fileURLToPath(new URL('../.output-e2e/public/', import.meta.url))
 const functionsDir = fileURLToPath(new URL('../functions/', import.meta.url))
 
 const TYPES = {

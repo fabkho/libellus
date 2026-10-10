@@ -45,6 +45,24 @@ const more = computed(() => {
     title: props.book.title,
   })
 })
+
+// Her works' covers are asked for as soon as her page arrives, not when their rows scroll into view:
+// OpenLibrary answers in ~575 ms (p90 1.1 s, docs/covers.md), so a cover asked for only then pops in a
+// second late. At most the section's own rows (`MORE_FROM_AUTHOR`), each once, at the size the row
+// asks for; the rows are `eager` for the same reason (a lazy image in a section that is still opening waits).
+const prefetched = new Set<string>()
+watch(
+  more,
+  (shown) => {
+    if (!shown || typeof Image === 'undefined') return
+    for (const url of coversToPrefetch(shown.works, 'sm', MORE_FROM_AUTHOR)) {
+      if (prefetched.has(url)) continue
+      prefetched.add(url)
+      new Image().src = url
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -60,7 +78,7 @@ const more = computed(() => {
       </NuxtLink>
 
       <ul :aria-label="t('book.authorMoreWorks', { name: more.author.name })">
-        <AuthorWorkRow v-for="(work, index) in more.works" :key="work.workId ?? work.entry?.entryId ?? `${work.title}-${index}`" :work="work" testid="book.authorMoreWork" :author="more.author.name" />
+        <AuthorWorkRow v-for="(work, index) in more.works" :key="work.workId ?? work.entry?.entryId ?? `${work.title}-${index}`" :work="work" testid="book.authorMoreWork" :author="more.author.name" eager />
       </ul>
       <NuxtLink
         v-if="more.more"

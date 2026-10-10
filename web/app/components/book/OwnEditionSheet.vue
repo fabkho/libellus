@@ -183,6 +183,7 @@ const errorText = computed(() => {
           :title="found.title"
           :authors="found.authors"
           :src="coverSrc(found.coverUrl, 'md')"
+          :identity="found.isbn13 ?? found.title"
           :fallbacks="coverFallbacks(found, 'md')"
           :thumbhash="found.coverThumbhash"
           :colors="found.coverColors"
@@ -217,7 +218,7 @@ const errorText = computed(() => {
     <!-- Her own -->
     <form v-else-if="own.step === 'own'" novalidate data-testid="ownEdition.ownStep" @submit.prevent="act">
       <div class="flex flex-col items-center gap-ms pt-xs pb-lg">
-        <UiCover :title="own.book?.title ?? ''" :authors="own.book?.authors ?? []" :src="preview" size="md" eager decorative data-testid="ownEdition.cover" />
+        <UiCover :title="own.book?.title ?? ''" :authors="own.book?.authors ?? []" :src="preview" :identity="preview ?? ''" size="md" eager decorative data-testid="ownEdition.cover" />
         <span class="text-center text-footnote text-ink-faint">{{ t('ownEdition.ownHint') }}</span>
       </div>
 
