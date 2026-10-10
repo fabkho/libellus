@@ -9,6 +9,8 @@ const props = defineProps<{
   items: readonly MemberFinished[]
   /** Her name, for the hearts' labels. */
   name?: string
+  /** Her id, for the hearts. */
+  memberId?: string
   /** *See all*: she has more than the section shows. */
   all: boolean
 }>()
@@ -29,7 +31,7 @@ const shown = computed(() => props.items.slice(0, FINISHED_SHOWN))
     </div>
     <ul class="flex flex-col">
       <li v-for="item in shown" :key="item.book.id" class="row">
-        <FriendsMemberFinishedRow :item="item" :name="name" />
+        <FriendsMemberFinishedRow :item="item" :name="name" :member-id="memberId" />
       </li>
     </ul>
   </section>

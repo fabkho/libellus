@@ -1,65 +1,38 @@
 <script setup lang="ts">
 // The heart on a finished read (social v2a, contract §3): in the feed, on Home's card and on a member's
-// Recently finished rows. Small clickable text like Want to read's (it never makes its row taller): the
-// heart and its count (hidden at 0), filled and in the lamp's colour once she liked it. Props only; the row
-// wires `toggle` (FriendsLikes, stores/likes.ts). Likes need the connection: offline it says *Offline* in
-// its place. `busy`: a like on its way. `name` and `title` are the read's owner and Book, for the screen
-// reader. Her own reads have no heart (the likers sheet on Home is where she sees who). Test ids:
-// `<testid>` (the button), `<testid>.count`.
+// Recently finished rows. Small clickable text (the `tiny-action` utility, as Want to read's) that never makes its
+// row taller: the heart and its count (hidden at 0), filled and in the lamp's colour once she liked it. Props only;
+// the row wires `toggle` (FriendsLikes, stores/likes.ts). One constant name ("Like Ida’s read of Piranesi") and
+// `aria-pressed` for the state, so a screen reader says "…, pressed" and never contradicts itself; the count is
+// part of the same `sr-only` name (an aria-label on the button, or on a span inside it, would hide it). Likes need the connection: offline
+// the heart stays, faint, without a word (Want to read says Offline), `aria-disabled`; busy is `aria-disabled` too,
+// so focus stays on the button. Her own reads have no heart (the likers sheet on Home is where she sees who).
+// `name` and `title` are the read's owner and Book. Test ids: `<testid>` (the button), `<testid>.count`.
 const props = withDefaults(
   defineProps<{ count: number; liked?: boolean; offline?: boolean; busy?: boolean; name: string; title: string; testid?: string }>(),
   { liked: false, offline: false, busy: false, testid: 'feed.like' },
 )
-defineEmits<{ toggle: [] }>()
+const emit = defineEmits<{ toggle: [] }>()
 
 const { t } = useI18n()
-const label = computed(() => t(props.liked ? 'social.like.unlabel' : 'social.like.label', { name: props.name, title: props.title }))
+function press() {
+  if (!props.offline && !props.busy) emit('toggle')
+}
 </script>
 
 <template>
-  <button v-if="offline" type="button" class="tiny text-ink-faint" disabled :data-testid="testid" data-offline>
-    <UiIcon name="offline" :size="12" />{{ t('common.offline') }}
-  </button>
   <button
-    v-else
     type="button"
-    class="tiny"
-    :class="liked ? 'text-accent-ink' : 'text-ink-faint'"
-    :disabled="busy"
-    :aria-label="label"
+    class="tiny-action"
+    :class="offline ? 'text-ink-faint' : liked ? 'text-accent-ink' : 'text-ink-faint'"
+    :aria-disabled="offline || busy"
     :aria-pressed="liked"
     :data-testid="testid"
-    @click="$emit('toggle')"
+    @click="press"
   >
     <UiIcon name="heart" :size="14" :class="liked && 'fill-current'" />
-    <span v-if="count > 0" class="figures" :aria-label="t('social.like.count', { count }, count)" :data-testid="`${testid}.count`">{{ count }}</span>
+    <span v-if="count > 0" class="figures" aria-hidden="true" :data-testid="`${testid}.count`">{{ count }}</span>
+    <!-- The button's name, from its content (an aria-label would hide the count): the label, then the count when there is one. -->
+    <span class="sr-only">{{ t('social.like.label', { name, title }) }}<template v-if="count > 0">, {{ t('social.like.count', { count }, count) }}</template></span>
   </button>
 </template>
-
-<style scoped>
-/* Clickable text, no pill: it never makes its row taller. The 44 px target is an invisible box centred on it. */
-.tiny {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: var(--text-caption, 0.8125rem);
-  line-height: 1;
-  white-space: nowrap;
-  /* 24 px by 24 px at least (WCAG 2.2 target size), pulled back into the row by the margin so the row does not grow. */
-  min-width: 24px;
-  min-height: 24px;
-  margin-block: -6px;
-  justify-content: center;
-}
-.tiny::after {
-  position: absolute;
-  inset: 50% calc(-1 * var(--spacing-sm)) auto;
-  height: var(--size-touch);
-  content: '';
-  transform: translateY(-50%);
-}
-.tiny:disabled {
-  opacity: 0.6;
-}
-</style>
