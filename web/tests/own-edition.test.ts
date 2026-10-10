@@ -17,7 +17,7 @@ import { addDays, isoDay } from '@/utils/dates'
 import { appleAnswer } from './support/apple'
 import { signUpMember } from './support/member'
 import { openLibraryAnswer } from './support/openLibrary'
-import { runTitle, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
+import { runTitle, TEST_PUBLISHER, uniqueAppleId, uniqueEditionKey } from './support/stack'
 
 /**
  * "My edition isn't listed" (Change edition). The owner's case: his *I Am
@@ -364,7 +364,7 @@ describe('formats and her own edition in the Library', () => {
     const library = createLibrary(member.client)
     const added = (await library.addToLibrary(edition('I Am Legend'))).data as LibraryEntry
 
-    const printed = edition('I Am Legend (Gollancz)', { source: 'openlibrary', appleId: null, openLibraryEditionKey: `OL${uniqueAppleId().slice(2, 10)}M` })
+    const printed = edition('I Am Legend (Gollancz)', { source: 'openlibrary', appleId: null, openLibraryEditionKey: uniqueEditionKey() })
     const { data, error } = await library.changeEdition(added.id, printed, 'hardcover')
 
     expect(error).toBeNull()
@@ -376,7 +376,7 @@ describe('formats and her own edition in the Library', () => {
     const library = createLibrary(member.client)
     const added = (await library.addToLibrary(edition('I Am Legend'))).data as LibraryEntry
     const printed = (title: string, format: BookFormat | null) =>
-      edition(title, { source: 'openlibrary', appleId: null, openLibraryEditionKey: `OL${uniqueAppleId().slice(2, 10)}M`, format })
+      edition(title, { source: 'openlibrary', appleId: null, openLibraryEditionKey: uniqueEditionKey(), format })
 
     // Her word differs from the source's: it is the entry's, the Book keeps what its source said.
     const said = await library.changeEdition(added.id, printed('I Am Legend (Gollancz)', 'hardcover'), 'paperback')
@@ -389,7 +389,7 @@ describe('formats and her own edition in the Library', () => {
 
     // A row that shows a format the Catalogue's Book of it does not have (another source said it
     // first): the sheet sends what the row showed, so that is what she has.
-    const known = edition('I Am Legend (Tor)', { source: 'openlibrary', appleId: null, openLibraryEditionKey: `OL${uniqueAppleId().slice(2, 10)}M`, format: null })
+    const known = edition('I Am Legend (Tor)', { source: 'openlibrary', appleId: null, openLibraryEditionKey: uniqueEditionKey(), format: null })
     await createLibrary((await signUpMember()).client).addToLibrary(known)
     const row = await library.changeEdition(added.id, { ...known, format: 'audiobook' }, 'audiobook')
     expect(row.data).toMatchObject({ formatOverride: 'audiobook', book: { format: null } })

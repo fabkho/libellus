@@ -488,6 +488,11 @@ reset role;
 
 -- ------------------------------- S1: a Catalogue Book's cover is no exception to the host list
 
+-- Since 20261022010000 the table refuses such a cover on a Catalogue Book, so this is a row from before
+-- (the migration cleans them): the check is dropped for the rest of this transaction to set one up,
+-- and cover_shown must still hide it.
+alter table public.books drop constraint books_cover_url_allowed;
+
 select tests.act_as((select id from ids where name = 'ada'));
 select tests.catalogue_with_cover('Foreign Catalogue Book', 'https://tracker.example/catalogue.png?u=ada');
 select tests.catalogue_with_cover('Apple Catalogue Book', 'https://is1-ssl.mzstatic.com/image/thumb/b/600x900bb.jpg');
