@@ -50,6 +50,16 @@ export default defineNuxtConfig({
   // Playwright run, which sets LIBELLUS_E2E (playwright.config.ts).
   devtools: { enabled: !process.env.LIBELLUS_E2E },
 
+  hooks: {
+    // No `<link rel="prefetch">` for the ~55 route chunks in index.html. The service worker precaches
+    // every one of them on the first launch (pwa.workbox below), so the hints only made the page's
+    // own downloads share the pipe with them: 56 requests and ~45 KB twice on a first launch, and
+    // the entry's long frames doubled. Without them, Slow 4G/4x: 56 fewer requests, cold LoAF
+    // 1,510 -> 770 ms, LCP -200 ms (docs/perf/client-1-startup.md, F-7).
+    'build:manifest': (manifest) => {
+      for (const chunk of Object.values(manifest)) chunk.prefetch = false
+    },
+  },
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment],
   // Accessibility and hints in Nuxt DevTools (docs/ACCESSIBILITY.md): `nuxt dev` only, never in a
   // build (both modules also do nothing outside dev, and `$development` keeps them out of the
