@@ -27,13 +27,17 @@
 -- A source that is down is no miss: the Book stays unchecked and is tried again after 5 min, 10,
 -- 20 … at most a day.
 --
--- What other members and the public reading page see of an unchecked Book: title, authors and a
--- cover by the S1 allowlist (private.cover_shown), as now; not its description
--- (private.description_shown). `reading_page_book_json` (so `social_book_json`, the feed, profiles,
--- want lists and the reading page's Books) carries no description at all, by design; the one answer
--- that handed a description to others, `member_reading_record`, now asks description_shown. A Book
--- whose check failed (its source does not know it) is withheld too: nothing vouches for its text.
--- The member's own Library reads `books` directly and shows the row as she added it.
+-- What other members and the public reading page see of a Book:
+--   checked          all of it, as the source said it.
+--   unchecked        title, authors and a cover by the S1 allowlist (private.cover_shown), as now; not
+--                    its description (private.description_shown).
+--   failed           nothing a member sent: title null, authors [], no cover, no description, "unverified":
+--                    true (private.book_shown), to everyone but members who have the Book in their own
+--                    Library, who read their row as they added it. A search leaves it out for them.
+-- `reading_page_book_json` (so `social_book_json`, the feed, profiles, want lists and the reading page's
+-- Books) carries no description, by design, and asks book_shown; `member_reading_record`, the one answer
+-- that handed a description to others, asks description_shown and book_shown. The member's own Library
+-- reads `books` directly and shows the row as she added it.
 --
 -- The function's address and secret, once, by the owner (supabase/functions/catalogue-check/README.md):
 --
@@ -430,6 +434,64 @@ $$;
 
 revoke all on function private.description_shown(public.books) from public, anon, authenticated;
 
+-- Whether a Book may be handed to somebody else as what it says it is. A Book the check could not
+-- confirm (its source does not know it, or its answer is not this Book: check_failed) is shown to no
+-- one but the members who have it in their own Library, where it is her row as she added it; to
+-- everyone else (a follower, a visitor of a reading page, the search) it is nothing a member sent.
+-- Every answer that hands a Book to others asks this, as the cover ones ask cover_shown.
+-- `auth.uid()` is the member asking; null (the public reading page) has no Library.
+create or replace function private.book_shown(p_book public.books)
+returns boolean
+language sql
+stable
+set search_path = pg_catalog, public
+as $$
+  select not p_book.check_failed
+      or exists (select 1 from public.library_entries e
+                  where e.member_id = (select auth.uid()) and e.book_id = p_book.id)
+$$;
+
+revoke all on function private.book_shown(public.books) from public, anon, authenticated;
+
+-- A Book as followers and reading pages see it (20261017060000_social_gate2.sql's, whole): every
+-- function that hands a Book to someone else goes through this one, the feed, member_profile and
+-- member_want (by social_book_json), the public reading page and its cards. A Book that is not
+-- shown (private.book_shown) is `unverified`: no title, no authors, no cover, no description, no year.
+create or replace function private.reading_page_book_json(p_book public.books)
+returns jsonb
+language sql
+stable
+set search_path = pg_catalog, public, private
+as $$
+  select case when private.book_shown(p_book) then
+    jsonb_build_object(
+      'id', p_book.id,
+      'title', p_book.title,
+      'authors', to_jsonb(p_book.authors),
+      'published_year', p_book.published_year,
+      'cover_url', case when private.cover_shown(p_book) then p_book.cover_url end,
+      'cover_thumbhash', case when private.cover_shown(p_book) then p_book.cover_thumbhash end,
+      'cover_dominant', case when private.cover_shown(p_book) then p_book.cover_dominant end,
+      'cover_secondary', case when private.cover_shown(p_book) then p_book.cover_secondary end
+    )
+  else
+    jsonb_build_object(
+      'id', p_book.id,
+      'title', null,
+      'authors', '[]'::jsonb,
+      'published_year', null,
+      'cover_url', null,
+      'cover_thumbhash', null,
+      'cover_dominant', null,
+      'cover_secondary', null,
+      'description', null,
+      'unverified', true
+    )
+  end
+$$;
+
+revoke all on function private.reading_page_book_json(public.books) from public, anon, authenticated;
+
 -- member_reading_record, from its latest body (20261017060000_social_gate2.sql), whole; only the
 -- Book's description changed: `private.description_shown`. Grants as they were.
 create or replace function public.member_reading_record(p_member uuid)
@@ -467,7 +529,8 @@ begin
              'entry', jsonb_build_object(
                'page_count_override', e.page_count_override,
                -- The Book by the columns bookFromRow reads, named: never owner_id, nor a column added later.
-               'book', jsonb_build_object(
+               -- A Book that is not shown (private.book_shown) is `unverified`: nothing a member sent.
+               'book', case when private.book_shown(b) then jsonb_build_object(
                  'id', b.id,
                  'created_at', b.created_at,
                  'title', b.title,
@@ -491,6 +554,30 @@ begin
                  'openlibrary_work_key', b.openlibrary_work_key,
                  'format', b.format,
                  'goodreads', null)
+               else jsonb_build_object(
+                 'id', b.id,
+                 'created_at', b.created_at,
+                 'title', null,
+                 'authors', '[]'::jsonb,
+                 'isbn13', null,
+                 'isbn10', null,
+                 'page_count', null,
+                 'published_year', null,
+                 'language', null,
+                 'publisher', null,
+                 'description', null,
+                 'cover_url', null,
+                 'cover_thumbhash', null,
+                 'cover_dominant', null,
+                 'cover_secondary', null,
+                 'source', b.source,
+                 'apple_id', null,
+                 'openlibrary_edition_key', null,
+                 'openlibrary_work_key', null,
+                 'format', null,
+                 'goodreads', null,
+                 'unverified', true)
+               end
              )
            ) order by s.ended_on nulls last, s.created_at, s.id), '[]'::jsonb)
     into v_reads
@@ -517,6 +604,63 @@ $$;
 
 revoke all on function public.member_reading_record(uuid) from public, anon;
 grant execute on function public.member_reading_record(uuid) to authenticated;
+
+-- search_books, from its latest body (20261020020000_search_books_index.sql), whole; only a Book
+-- that is not shown (private.book_shown: the check could not confirm it, and she does not have it in
+-- her Library) is left out: a search hands rows to others, and there is nothing of it to show.
+create or replace function public.search_books(p_query text, p_limit integer default 20)
+returns setof public.books
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_limit  integer := least(greatest(coalesce(p_limit, 20), 1), 50);
+  v_isbn13 text := regexp_replace(coalesce(p_query, ''), '[\s-]', '', 'g');
+  v_words  tsquery;
+  v_text   text;
+begin
+  if v_isbn13 ~ '^97[89][0-9]{10}$' then
+    return query
+      select books.* from public.books
+       where books.isbn13 = v_isbn13
+         -- books_readable, word for word
+         and (owner_id is null or owner_id = (select auth.uid()))
+         and private.book_shown(books)
+       order by books.owner_id is null, books.created_at desc, books.id
+       limit v_limit;
+    return;
+  end if;
+
+  v_words := public.book_search_query(p_query);
+  if v_words is null then
+    return;
+  end if;
+  v_text := btrim(public.book_search_text(p_query, '{}'));
+  return query
+    select books.* from private.book_search s
+      join public.books on books.id = s.book_id
+     where s.words @@ v_words
+       -- books_readable, word for word
+       and (owner_id is null or owner_id = (select auth.uid()))
+       and private.book_shown(books)
+     order by s.title = v_text desc,
+              ts_rank(s.words, v_words) desc,
+              books.created_at desc,
+              books.id
+     limit v_limit;
+end;
+$$;
+
+comment on function public.search_books(text, integer) is
+  'Catalogue search: the Books the caller can see (the Catalogue and her own Manual books) whose '
+  'title and authors begin with the typed words, accents ignored; an ISBN-13 by ISBN. Best first. '
+  'Security definer: applies the books_readable rule itself, so the words index is usable. A Book '
+  'the check could not confirm is left out unless she has it in her Library (private.book_shown).';
+
+revoke all on function public.search_books(text, integer) from public, anon;
+grant execute on function public.search_books(text, integer) to authenticated;
 
 -- ------------------------------------------------------------------- pg_cron
 

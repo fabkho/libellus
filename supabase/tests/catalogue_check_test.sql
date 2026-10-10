@@ -226,8 +226,8 @@ select is((select (title, description, cover_url, checked_at is not null, check_
   '("Missed Book","Blurb of Missed Book",https://example.org/' || md5('Missed Book') || '.jpg,t,t)',
   'a Book its source does not know is failed and checked, and keeps its data');
 select tests.act_as((select id from ids where name = 'ben'));
-select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book') -> 'description', 'null'::jsonb,
-  'and nothing vouches for its description, so others still do not get it');
+select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book'), null,
+  'and nothing vouches for its text: others no longer get its title, nor its description (catalogue_check_failed_test.sql has the rest)');
 
 -- ------------------------------------------------------ who may call, the kick
 
