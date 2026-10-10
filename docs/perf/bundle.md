@@ -179,7 +179,9 @@ the sign-in screen, no session, empty cache, Chromium at `slow4g-4x`, brotli ove
 | F2 | **done in this PR** | After the idle work (9 s): 86 → 81 files, 334.4 → 304.0 KB (−30.4 KB). |
 | F4 | **done in this PR** | Entry 176.7 → 175.5 KB (−1.2 KB; the report measured −1.6 on a slightly different base). |
 | F6 | **paused** | See "F6" below and `bundle-trims-notes.md`. Not shipped. |
-| F3, F5, F5b, F7 | F3 and F7 not done (owner). F5/F5b belong to `perf/lazy-images-i18n`. | |
+| F3, F7 | not done (owner). | |
+| F5 | **done** in #263 (`dropMessageCompiler`; `runtimeOnly` alone changed nothing): entry 176.7 → 172.7 KB br. | |
+| F5b | **skipped, on purpose** (`bundle.fullInstall: false`): the app uses `<i18n-t>` (`home/CircleFriend.vue`, `book/Goodreads.vue`), which `fullInstall: false` stops registering globally; 1.2 KB br would need those components imported by hand. Left as it is. | |
 
 ### F4: Options API
 

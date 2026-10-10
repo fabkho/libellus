@@ -235,6 +235,7 @@ re-running `pnpm perf` on the fix.
 - Evidence: DOM nodes 514 (warm start) → 1,542 (Library) → 2,855 (Profile) → 3,312 (Book) → **4,631 (search)**; style recalculation 29 ms (Library mount) → 127 ms (Profile) → **172 ms while typing in search** (4x), heap 7 → 17 MB. Home and Library are `keepalive` (`pages/index.vue:12`, `pages/library.vue:22`), no `content-visibility` anywhere in `app/`.
 - Fix: `content-visibility: auto` + `contain-intrinsic-size` on Library rows (S); the Library list as a windowed list if that is not enough (L). Expected: Library mount and every later style recalc scale with the visible rows, not 150: the biggest lever against "gets laggy after a while". Risk: medium (scroll anchoring, the book flight reading row positions: `useBookFlight`, `data-cover`). Tier: **Sonnet** for the CSS attempt, **Opus** if virtualization.
 - The step order matters: search ran last, after the other pages were alive; part 2 should measure it in isolation.
+- **Status: measured in §11** (150 and 1,000 entries, search typing in isolation): list size does cause long frames; `content-visibility` helps but breaks scroll restoration and the Back flight, so it is not shipped; the 172 ms of style recalculation while typing in search does not depend on the list or the DOM size.
 
 **F-4. Search typing shifts the results: CLS 0.42 under throttle** — impact high for the Vitals score, effort M
 - Evidence: `d2-search-type`, CLS **0.4203** in every slow4g run (4x and 6x, two series), 0 unthrottled; shifted nodes: three `li` results (`0,0,0,0 → 12,561 / 12,493 / 12,357, 388 × 68`), LoAF `Response.json.then` 98–108 ms at the same moment. The palette is on every page, so its CLS counts for `/` and the Book (field: 0.74 on `/`). `components/shell/SearchOverlay.vue:25–32` already records a CLS 1.0 history here (the "room" in `usePaletteRoom.ts`).
@@ -430,4 +431,114 @@ the Library (about 7x at 1,000 entries: ~330 KB brotli). Why it is **not built n
 
 - **Lazy images:** audited in `docs/covers.md` (Lazy images, audited): per image site, before and after. The signed-in screens were lazy already (Home 8 covers / 296 KB at cold start, Library mount 28 / 299 KB: the browser's 1,250 px look-ahead, measured); what changed: the sign-in wall 2,319 → 737 KB, her own Books in search no longer all eager (157 → 28 cover requests for the query "the" on 150 Books), the author page's later groups, Home's last two sections, the halo's decoding, the Book hero's priority. Tool: `pnpm perf:images`.
 - **Message compiler:** dropped from the client, entry 176.7 → 172.7 KB brotli (F-2 above).
-- **Virtual list: not evaluated yet, paused by the owner; the question is open.** The measurement scripts exist in `web/perf`: `list.ts` (`pnpm perf:list`: DOM nodes, style/layout/script time, long frames and Long Animation Frames for the Library's segments, scrolling, and search typing, medians of N runs; `PERF_ENTRIES=1000 pnpm perf:seed` sets the Library's size), `images.ts` (the image census) and the seed's size knob. Readings taken while writing them (slow4g-4x, 5 runs, load 3–4, not a verdict): at 150 entries Library mount 104 ms and the Finished segment (99 rows, 3,954 nodes) 148 ms longest animation frame, style recalculation 33 and 42 ms, search typing 199 ms of style at 4,568 nodes; at 1,000 entries the Finished segment (677 rows, 26,604 nodes) one 815 ms frame, scrolling it 181 frames over 50 ms. A trial of `content-visibility: auto` on the Library rows (needs `overflow-clip-margin` for the pressed fill and the cover's shadow) cut the 150-entry Finished switch to 108 ms and the 1,000-entry one to 442 ms; it was not shipped, and its effect on scroll restoration and the flight's measure of a row is unchecked.
+- **Virtual list: measured, content-visibility tried and not shipped, a virtual list proposed (not built): §11.**
+
+## 11. Long lists: the Library's rows and search results (F-3, measured)
+
+`pnpm perf:list` (`web/perf/list.ts`): one warm page per run, the steps in the order a session meets them
+(Home → Library → Finished segment → scroll to the end → back to the top → search open → type
+"piranesi" → type "the"), `slow4g-4x` (CPU 4x, 1.6 Mbit/s, 150 ms), **5 runs each, medians**, `~` =
+spread above 15 %. Load average at the start of the series 3.6–5.3 (other workers on the Mac; every
+before/after pair below was run within minutes of each other). The build is `origin/main` after #263
+(lazy images in), on the 150-entry synthetic Library of §1 (the Library tab opens on *Want to read*: 48
+rows; *Finished*: 99 rows) and on a 1,000-entry one (`PERF_ENTRIES=1000 pnpm perf:seed`: 320 and 677
+rows). `style`, `layout` are CDP's `RecalcStyleDuration`/`LayoutDuration` over the step; the long frame
+is the Long Animation Frame (LoAF) of the step.
+
+### Library, as it is
+
+| step | rows | DOM nodes | style ms | layout ms | frames > 50 ms | longest frame ms (LoAF) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **150 entries** | | | | | | |
+| Home → Library (Want to read) | 48 | 705 | 30~ | 8~ | 1 | 83~ (97) |
+| → Finished segment | 99 | 3,959 | 38 | 16~ | 1 | **133 (141)** |
+| Finished: scroll to the end (77 covers) | 99 | 3,967 | 79 | 46~ | 0 | 17~ |
+| **1,000 entries** | | | | | | |
+| Home → Library (Want to read) | 320 | 3,425 | 72~ | 27~ | 1 | **267 (285)** |
+| → Finished segment | 677 | 26,609 | 206 | 102 | 2~ | **767 (748)** |
+| Finished: scroll to the end (681 covers) | 677 | 26,615 | 324 | 379 | **183** | 83~ |
+
+### Search
+
+| step | DOM nodes | style ms | layout ms | longest frame ms (LoAF) |
+| --- | ---: | ---: | ---: | ---: |
+| Home only, type "piranesi" (34 results) | 938 | 189~ | 17~ | 183~ (202~) |
+| 150 entries (Library mounted), type "piranesi" | 4,575 | 176~ | 18~ | 67~ (80~) |
+| 1,000 entries (Library mounted), type "piranesi" | 27,223 | 172 | 18~ | 200 (193) |
+| 150 entries, "the" (her own Books match widely) | 6,382 | 97 | 21~ | **133 (149)** |
+| 1,000 entries, "the" (677+ own rows, 302 covers asked for) | 40,850 | 355~ | 105 | **1,017 (999)** |
+
+### What the numbers say
+
+- **Typing in search costs the same with a 150- or a 1,000-entry Library, and with the Library not
+  mounted at all** (style 172–189 ms for 938, 4,575 and 27,223 nodes): the 172 ms of F-3 is not the
+  list's or the DOM's size. Not the covers' `container-type` either (206 ms with it off); with masks,
+  backdrop filters, transitions and animations off it falls to 131 ms, so part of it is the palette's
+  own motion (F-4's ground), not part of this question.
+- **A long frame from the list's size exists, and is mostly JavaScript.** The Finished switch's frame holds
+  one script of ~90 ms (Vue mounting 99 rows; read on the content-visibility build below, where style + layout
+  in the frame are 13 ms, ~50 ms without it): about 0.9 ms a row at 4x CPU.
+  So 99 rows (the owner's size) make a 133–141 ms frame, 677 rows 750 ms, once per segment switch or
+  Library mount. Scrolling is fine at 150 entries (no frame over 50 ms) and janky at 1,000 (183).
+- **Nothing grows unboundedly in the Library** (nodes are flat across the scroll steps), but **search's
+  "In your Library" group has no bound**: every own Book matching the query is a row (677 rows, 40,850
+  nodes, a 1 s frame at 1,000 entries; 99 rows and 133 ms at 150).
+- Not fine by the rule (no frame over 50 ms from list size): so the cheap try came first.
+
+### `content-visibility: auto` on the rows, tried
+
+`.row { content-visibility: auto; contain-intrinsic-size: auto 77px; overflow-clip-margin: 40px }` on
+`library/EntryRow.vue` and the same on `search/ResultRow.vue`, inside `@supports (content-visibility:
+auto) and (overflow-clip-margin: 1px)`. The containment clips what a row paints outside its box (the
+pressed fill reaches 8 px beyond it, the cover's shadow 24 px of blur); without `overflow-clip-margin`
+the clip was seen to remove both, with it they stay (Chromium 153), and a browser without it keeps the
+plain row. Same series and load as above:
+
+| step | before | after |
+| --- | ---: | ---: |
+| 150: Library mount, longest frame | 97 | 98 |
+| 150: Finished switch, longest frame (style ms) | 141 (38) | 113 (25) |
+| 150: search "the", longest frame (style ms) | 149 (97) | 129 (38) |
+| 1,000: Library mount, longest frame | 285 | 234 |
+| 1,000: Finished switch, longest frame | 748 | 471 |
+| 1,000: scroll the Finished segment, frames over 50 ms (style + layout ms) | 183 (703) | 0 (2,031: spread over frames) |
+| 1,000: search "the", longest frame | 999 | 741~ |
+
+It helps the style and layout share and removes the scroll jank, but the script that mounts the rows is
+untouched, so a frame over 50 ms is left everywhere (98–113 ms at 150). **And it breaks the cover flight
+and scroll restoration, so it is not shipped.** `web/perf/flight-check.ts` taps a Finished row at a
+scroll place far from the top, goes to the Book and Back and compares the flying cover's box, frame by
+frame, with the row's own cover (and the scroll place before and after), on 677 rows:
+
+| build | Back lands on the row's cover | scroll place restored |
+| --- | --- | --- |
+| `origin/main` (4 rounds, scroll 0–4,500 px) | 0 px off, flight in every round | 0 → 0, 1,500 → 1,500, 3,000 → 3,000, 4,500 → 4,500 |
+| with `content-visibility` rows (3 rounds) | **25.5 px off; 8.5 px off; no flight at all (cross-fade) at 3,000 px** | 0 → 0, **1,500 → 1,143**, 3,000 → 3,000 |
+
+The flight measures the row's cover (`useBookFlight.ts`, `coverFor`/`tappedCover`) as the page comes back,
+when the skipped rows' sizes are still the 77 px guess (the document's height changed by 400 px between
+reads); the router's scroll restoration lands on the guess too. The soak (`LIBELLUS_E2E_PERF=1 playwright
+test e2e/perf`, Library, 30 rounds, CPU ÷4, 3 repeats) did not see it: its Library is 51 rows and its taps
+stay on the first screen (0 dropped frames, `fly` 267/217 ms, flat nodes and heap, with and without).
+Fixing the flight to wait for the skipped rows would be a change of `useBookFlight.ts`, a larger risk than
+the gain left over (the script cost does not go away).
+
+### Proposal (not built): a windowed list
+
+Only a list that mounts the rows near the screen removes the script cost (a frame of the 48-row
+Library mount, ~100 ms, is the floor here; 99 rows add 40 ms, 677 add 650 ms) and the DOM growth:
+
+- VueUse's `useVirtualList` (fixed `itemHeight: 77`; the Library rows are 77 px, 76 for a year's first)
+  on the Library's segments: the page, not an inner container, scrolls here (`window.scrollY`, the
+  router's restoration, sticky year headers), so it needs the page-scroll variant (`useWindowVirtualList`
+  or an own range from `window.scrollY`), spacer blocks of the rows' height, and year headers as items.
+  Costs: the flight must still find the row (rows in range only: a Back to a row outside the window
+  needs the list scrolled to it before the measure), `scrollIntoView`/restoration depend on the spacer
+  height being exact, and the pressed-fill/shadow bleed needs no clip (rows are not contained).
+- Search results are a reversed list with variable rows (68–84 px) and a mask: harder, and
+  the cheaper change comes first: **bound her own Books group** (the 20 best, and a "Show all n" row), a
+  product decision (SPEC/owner), which alone turns the 1,000-entry "the" from 677+ rows to ~30.
+- Expected: the Library's mount and segment switch constant at the ~100 ms floor instead of 133 / 285 /
+  750 ms; DOM nodes flat at ~1,000 instead of 3,959 / 26,609. To be measured with `pnpm perf:list` and
+  `perf/flight-check.ts` before anything ships. Owner's call: at 150 entries the gain is the 40 ms between
+  the 48-row and the 99-row frame.
