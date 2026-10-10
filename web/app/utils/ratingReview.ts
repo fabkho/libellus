@@ -1,9 +1,10 @@
 /**
  * A review that is only a number is a rating written as text ("4.6", "5/5", "4.5/5", "4,5 ★", "4 stars"):
  * Goodreads has whole stars only, so some readers type the finer rating into the review box. Such a text is
- * the rating, not a review (the owner's decision): an import does not keep it as a review, and when the read
- * has no rating the number becomes it, rounded DOWN to the quarter steps a rating has (4.6 → 4.5 = 18 quarters,
- * 4.9 → 4.75 = 19, 5 → 20). A read that already has a rating keeps it.
+ * the rating, not a review (the owner's decisions): an import does not keep it as a review, and the number is the
+ * read's rating, rounded DOWN to the quarter steps a rating has (4.6 → 4.5 = 18 quarters, 4.3 → 4.25 = 17,
+ * 4.9 → 4.75 = 19, 5 → 20), over the whole or half stars the exporting app stored (the number is the real rating).
+ * A text that says no rating (0) leaves the row's rating.
  *
  * The text is: optional spaces, a number with `.` or `,`, optionally `/5` or `/10`, optionally `★` or `stars`,
  * optional spaces; nothing else. The rules for the number:

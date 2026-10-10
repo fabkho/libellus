@@ -247,15 +247,16 @@ export function importKey(
 
 /**
  * A review that is only a rating ("4.6", "5/5", "4.5/5": utils/ratingReview.ts) is the rating, not a review: it is
- * not kept as a review, and the read has it as its rating when it has none (rounded down to the quarter steps); a
- * rating the row already has stays. A number above 5 with no `/10` is no rating: it stays a review, reported.
+ * not kept as a review, and its number, rounded down to the quarter steps, is the read's rating, over the row's own
+ * (the apps store whole or half stars; the number the reader wrote is the real rating). A number above 5 with no
+ * `/10` is no rating: it stays a review, reported.
  */
 export function splitRatingReview(
   review: string | null,
   rating: number | null,
   problems: ImportProblem[],
 ): { review: string | null; rating: number | null } {
-  if (isRatingOnlyReview(review)) return { review: null, rating: rating ?? ratingFromReviewText(review) }
+  if (isRatingOnlyReview(review)) return { review: null, rating: ratingFromReviewText(review) ?? rating }
   if (looksLikeRatingButIsNot(review)) problems.push({ code: 'ratingLikeReview' })
   return { review, rating }
 }
