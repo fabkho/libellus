@@ -278,12 +278,24 @@ down. The flight's own copies (`snapshot.ts`, `useEditionChange.ts`, `readerFlig
 | More from the author | eager, prefetched (A9) | same |
 | Friends: feed rows (`dayIndex === 0 && index < 4`), member pages, sheets | eager first four of the first day, else lazy | same |
 | Ebooks: waiting rows, candidate sheet, contents sheet, end of book | lazy | same (blob or file covers: no network) |
-| Sign-in wall (`AuthFrame`, 20 plain `<img>` of 82 px in boxes of the wall's size) | the URL's 600 × 900 (≈ 116 KB each), all eager, low priority: 20 requests, 2,319 KB | `lg` 240 × 360 (37 KB), the first two rows eager, the two rows under the veil lazy: 20 requests on a phone (all within range), **737 KB** (−68 %) |
+| Sign-in wall (`AuthFrame`, 20 plain `<img>` of 82 px in boxes of the wall's size) | the URL's 600 × 900 (≈ 116 KB each), all eager, low priority: 20 requests, 2,319 KB; then (#263) `lg` 240 × 360, the first two rows eager: 20 requests, 737 KB, **before the form was painted**: a cover was the page's LCP (5.6 s in production, 2.2 s without them) | `lg` 240 × 360 (37 KB) on **fifteen** covers (the fourth row lies under a veil that is opaque from 48 % down: 0–2 % of a cover on a phone, ≤ 6 % on a 1080p desktop; its boards stay), asked for after the form is painted and the browser idle (`afterPaint`), low priority, drawn on `<canvas>`es (`WallCover.vue`: a canvas is not an LCP candidate, an `<img>` of 82 px is bigger than the wordmark), faded in over their board; 0 cover requests before the form, 15 / 564 KB after (see Sign-in wall, below) |
 | Avatar (header, Profile, photo editor), author portrait | plain `<img>`, eager, in a 32–72 px circle, first screen; the portrait is the author page's hero | same: first screen, sized box, initials underneath |
 | Photo crop (`profile/Photo.vue`) | an object URL in a box of explicit size | same |
 | CSS: thumbhash under a cover (`background-image: url(data:…)`), film grain (inline SVG), Button gradient | no request | same: no `url()` reaches the network anywhere in `app/` |
 | Shelf (`ShelfPile`, `ShelfRow`) | colours only; Regal (the private layer: its own textures) is not in this repo and not in the build | same |
 | Reader | EPUB images come from the book file (blob URLs, sanitised in `data/reader/markup.ts`): no network | same |
+
+**Sign-in wall, after the form** (`pnpm perf:wall`, `perf/wall.ts`: first launch of `/sign-in`, Pixel 7 profile, `slow4g-4x`, 7 runs per series, two series per build in turn, load 1.4–1.8; medians (min–max); the cover host is the harness's stand-in, so Apple's real latency is not in it):
+
+| | before (v1.9.2) | after |
+| --- | ---: | ---: |
+| LCP | 6,200 ms (`img.cover`) | **2,092 ms** (the wordmark) |
+| Form shown | 2,105 ms | 2,105 ms |
+| Requests / KB asked for by the form's first paint | 48 / 1,025 | 28 / 284 |
+| Cover requests before the form is painted | 20 | **0** |
+| Requests / KB after 8 s | 53 / 1,034 | 48 / 848 (15 covers) |
+
+An `<img>` was tried first (mounted after the form, lazy, low priority, fading in): the form was no longer behind the covers, but each cover (82 px, 100 × 134 with the tilt: 13,462 px²) is a larger LCP candidate than the wordmark (10,168 px²), so LCP moved to the moment the first cover arrived (5.6 s). Hence the canvases. `e2e/sign-in-wall.spec.ts` pins: no cover request starts before the first frame with the form in it, the `lg` size, the wall `aria-hidden` with nothing focusable, the member's focus kept, the fade (and none with Reduce Motion).
 
 Measured with the harness (`slow4g-4x`, 5 runs, medians, load average 3.6–4.0; cover requests and
 bytes from the network log; the first column is the build before this change, the second after):

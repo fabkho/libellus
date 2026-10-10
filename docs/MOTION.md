@@ -384,6 +384,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
 - **Hover.** With a mouse (only where the device hovers), rows and menu items take the `fill`,
   pills deepen by it, the lit button lets a little of the room through. No transition beyond the
   existing ones.
+- **Sign-in wall.** The cloth boards of the wall behind the way in are there from the first frame; their covers are asked for after the form has been painted (`components/auth/Frame.vue`) and each fades in over its board over `standard`, `opacity` only, when it has been drawn (`WallCover.vue`). Nothing moves with it and nothing waits for it. With Reduce Motion there is no transition: the cover is there at once.
 - **Cover.** The image fades in over its thumbhash or colour over `standard` once decoded; no
   zoom, no slide.
 - **Search results.** A new answer replaces the list in place, best match at the bottom; while a
@@ -603,7 +604,7 @@ stand at rest at once. Your shelf: the pile is there at once and the 3D replaces
 without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader
 cross-fades in and out in place), the printed page turns at once, and its search palette
-cross-fades like the app's. The hero cover does not lean: it is a picture like any other, and the
+cross-fades like the app's. The sign-in wall's covers do not fade (they are there at once). The hero cover does not lean: it is a picture like any other, and the
 page scrolls from it.
 
 ## Non-motions
