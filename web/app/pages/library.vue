@@ -18,6 +18,7 @@ import { useLibraryStore } from '~/stores/library'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useSessionStore } from '~/stores/session'
+import { usePickStore } from '~/stores/pick'
 
 definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 
@@ -26,6 +27,9 @@ const library = useLibraryStore()
 const libraryView = useLibraryViewStore()
 // The genre filter's lookup (#168): provided to the view store by the genres store, which the device fills at once.
 const bookGenres = useGenresStore()
+
+// PROTOTYPE (#259): Pick my next book, at the head of the Want to read list (`?pick=1`).
+const pick = usePickStore()
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
@@ -151,6 +155,20 @@ watch(
     </div>
 
     <div :id="panelId" role="tabpanel" :aria-labelledby="tabId(segment)">
+    <!-- PROTOTYPE (#259): the picker's way in, where the pile it picks from is. -->
+    <NuxtLink
+      v-if="pick.enabled && segment === 'want_to_read' && lists.want_to_read.length >= 2"
+      to="/pick"
+      class="mt-ms flex items-center gap-ms rounded-md bg-fill px-ms py-sm active:bg-fill-strong"
+      data-testid="library.pick"
+    >
+      <UiIcon name="stack" :size="20" class="text-accent-ink" />
+      <span class="flex min-w-0 flex-1 flex-col">
+        <span class="text-body text-ink">{{ t('pick.entry') }}</span>
+        <span class="truncate text-caption text-ink-muted">{{ t('pick.entryHint') }}</span>
+      </span>
+      <UiIcon name="chevron" :size="16" class="text-ink-ghost" />
+    </NuxtLink>
     <!-- Filters and sort of the chosen list (#169), whatever there is to filter. -->
     <LibraryViewBar v-if="base.length" :status="segment" :view="view" :entries="base" :shown="arranged.length" :genres="genres" />
 

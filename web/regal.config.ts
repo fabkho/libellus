@@ -94,9 +94,9 @@ let regalDir: string | null = null
 // the two Libellus components that use them, and the fonts' stylesheet they import. Nothing else in
 // the app imports these.
 const REGAL_PACKAGES = /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:three|three-stdlib|@tresjs|gsap|@vueuse|@monogrid|troika-[^\\/]+|camera-controls|postprocessing|stats-gl|meshoptimizer|bidi-js|webgl-sdf-generator)[\\/]/
-const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue|nuxt-fonts-global\.css/
+const SHELF_STAGE = /[\\/]app[\\/]components[\\/](?:shelf[\\/](?:Stage|Row)|pick[\\/]Deal3d)\.vue|nuxt-fonts-global\.css/
 /** The two components themselves, however they are imported (`~/components/shelf/Row.vue`, an absolute path). */
-const SHELF_COMPONENT = /[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue$/
+const SHELF_COMPONENT = /[\\/]components[\\/](?:shelf[\\/](?:Stage|Row)|pick[\\/]Deal3d)\.vue$/
 
 /** Whether a module belongs in the `regal` chunk (nuxt.config.ts, codeSplitting). */
 export function isRegalModule(id: string): boolean {
