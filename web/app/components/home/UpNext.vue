@@ -20,14 +20,7 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
   <section data-testid="home.upNext">
     <div class="flex h-(--size-touch) items-center justify-between">
       <h2 class="eyebrow">{{ t('home.upNext') }}</h2>
-      <NuxtLink
-        to="/library"
-        class="figures -mr-sm flex min-h-(--size-touch) items-center gap-xxs px-sm text-footnote text-ink-faint hover:text-ink-muted"
-        data-testid="home.seeAll"
-      >
-        {{ t('home.seeAll', { count: entries.length }) }}
-        <UiIcon name="chevron" :size="13" />
-      </NuxtLink>
+      <UiSeeAll to="/library" data-testid="home.seeAll">{{ t('home.seeAll', { count: entries.length }) }}</UiSeeAll>
     </div>
     <div class="scrollbar-none -mx-screen -mb-lg flex gap-ms overflow-x-auto px-screen pt-sm pb-xl" data-testid="home.upNextRow">
       <div v-for="(entry, index) in shown" :key="entry.id" class="relative shrink-0">

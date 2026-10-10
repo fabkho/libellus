@@ -27,16 +27,15 @@ const open = ref(false)
     <section class="flex flex-col gap-md pt-xl" data-testid="profile.reviews">
       <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
         <h2 class="eyebrow">{{ t('profile.reviews.title') }}</h2>
-        <UiButton
+        <UiSeeAll
           v-if="more"
-          tone="quiet"
-          size="sm"
+          dialog
           :aria-label="t('profile.reviews.allLabel', { count: count(reviews.length) })"
           data-testid="profile.reviews.all"
           @click="open = true"
         >
-          <span class="figures">{{ t('profile.reviews.all', { count: count(reviews.length) }) }}</span><UiIcon name="chevron" :size="13" />
-        </UiButton>
+          {{ t('profile.reviews.all', { count: count(reviews.length) }) }}
+        </UiSeeAll>
       </div>
       <ul class="scrollbar-none -mx-screen flex snap-x snap-proximity scroll-px-screen gap-ms overflow-x-auto px-screen pb-md" data-testid="profile.reviews.row">
         <li v-for="(item, index) in shown" :key="item.id" class="flex snap-start">

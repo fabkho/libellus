@@ -283,9 +283,9 @@ function back() {
           <section class="flex flex-col gap-md pb-xl" data-testid="member.want">
             <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
               <h2 class="eyebrow">{{ t('member.want') }}</h2>
-              <UiButton v-if="blocks.wantAll" tone="quiet" size="sm" :aria-label="t('member.seeAllLabel', { count: count(open.counts.want ?? 0), section: t('member.want') })" data-testid="member.wantAll" @click="wantOpen = true">
-                <span class="figures">{{ t('member.wantAll', { count: count(open.counts.want ?? 0) }) }}</span><UiIcon name="chevron" :size="13" />
-              </UiButton>
+              <UiSeeAll v-if="blocks.wantAll" dialog :aria-label="t('member.seeAllLabel', { count: count(open.counts.want ?? 0), section: t('member.want') })" data-testid="member.wantAll" @click="wantOpen = true">
+                {{ t('member.wantAll', { count: count(open.counts.want ?? 0) }) }}
+              </UiSeeAll>
             </div>
             <FriendsMemberCovers :books="open.want.map((w) => w.book)" size="sm" testid="member.wantBooks" />
           </section>
@@ -308,9 +308,9 @@ function back() {
             <section id="columns" class="flex flex-col gap-md pt-xl">
               <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
                 <h2 class="eyebrow">{{ year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-                <UiButton v-if="!loading && year !== 'all'" tone="quiet" size="sm" :to="`/friends/${id}/${year}`" data-testid="member.inReview">
-                  {{ t('profile.inReview', { year }) }}<UiIcon name="chevron" :size="13" />
-                </UiButton>
+                <UiSeeAll v-if="!loading && year !== 'all'" :to="`/friends/${id}/${year}`" data-testid="member.inReview">
+                  {{ t('profile.inReview', { year }) }}
+                </UiSeeAll>
               </div>
               <ProfileColumns :columns="loading ? null : columns" :placeholders="year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
             </section>
