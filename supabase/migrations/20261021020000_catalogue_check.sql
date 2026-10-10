@@ -407,11 +407,39 @@ begin
 end;
 $$;
 
+-- Whether two titles name the same Book, as the check compares them (the TS `titleForms` does the same):
+-- by the app's work key (brackets and subtitle dropped, accents and punctuation ignored), by the whole
+-- title, and by the part before a dash, each with and without a leading article. Tolerant on purpose: a
+-- real Book must never fail its own check.
+create or replace function private.catalogue_title_forms(p_title text)
+returns text[]
+language sql
+immutable
+set search_path = pg_catalog, public
+as $$
+  select coalesce(array_agg(distinct f) filter (where f <> ''), '{}')
+    from (
+      select k as f
+        from unnest(array[
+          public.work_title_key(p_title), public.match_text(p_title),
+          public.work_title_key(split_part(p_title, ' - ', 1)), public.match_text(split_part(p_title, ' - ', 1))
+        ]) as k
+      union
+      select regexp_replace(k, '^(the|a|an|der|die|das|ein|eine|le|la|les|l|un|une|el|los|las|il|lo|gli|het|een) ', '')
+        from unnest(array[
+          public.work_title_key(p_title), public.match_text(p_title),
+          public.work_title_key(split_part(p_title, ' - ', 1)), public.match_text(split_part(p_title, ' - ', 1))
+        ]) as k
+    ) x
+$$;
+
+revoke all on function private.catalogue_title_forms(text) from public, anon, authenticated;
+
 -- Stores what the source says for a claimed Book, and marks it checked: a verified Book is the
 -- source's, all of it, and nothing of what the first member sent stays that the source did not say.
 -- p_result:
---   title          text, 1–500 characters; required, and its work_title_key must be the stored title's
---                  (the function checks the identity; this is the second lock: a Book the source
+--   title          text, 1–500 characters; required, and it must name the stored title's Book (a shared
+--                  private.catalogue_title_forms; the function checks the identity; this is the second lock: a Book the source
 --                  names otherwise is marked failed and nothing is written)
 --   authors        text[], 1–20 names of at most 200 characters; else '{}'
 --   description    text of at most 10000 characters; else null
@@ -466,7 +494,7 @@ begin
 
   -- The source's record must be this Book's: the first member's title is the key the check was
   -- asked by (a real ISBN with another Book's id would otherwise write the other Book under it).
-  if public.work_title_key(v_book.title) is distinct from public.work_title_key(v_title) then
+  if not private.catalogue_title_forms(v_book.title) && private.catalogue_title_forms(v_title) then
     perform public.catalogue_check_mismatch(p_book);
     return false;
   end if;
