@@ -1,9 +1,10 @@
 // Run from web/: cp ../docs/perf/data/final/search-cls.ts perf/_search-cls.ts && pnpm tsx perf/_search-cls.ts slow4g-4x [--reduced]; delete the copy after.
 // Stack, build and server as for `pnpm perf` (web/perf/README.md).
 // Diagnosis of the search palette's CLS 0.42 (final round): what shifts when the answers land, with reduced motion, without the CPU slowdown, etc.
+// Nothing here turns a certificate check off: the browser's errors are `browser.ts`'s business (the Chromium SPKI
+// list, the context's `ignoreHTTPSErrors`) and this script makes no Node-side request to the TLS server.
 import { launch, memberSession, newContext, PROFILES, throttle } from './browser'
 import { APP_URL } from './env'
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 const variant = process.argv[2] ?? 'slow4g-4x'
 const reduced = process.argv.includes('--reduced')
 const profile = PROFILES[variant]!
