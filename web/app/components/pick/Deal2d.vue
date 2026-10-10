@@ -77,7 +77,8 @@ async function land(ms: number) {
   // The winner's card hands over to the end cover, which grows from the card's size in front.
   ended.value = true
   await nextTick()
-  const grow = end.value!.animate(
+  if (!end.value) return
+  const grow = end.value.animate(
     [
       { transform: `scale(${cardWidth / endWidth})`, opacity: props.reducedMotion ? 0 : 1 },
       { transform: 'scale(1)', opacity: 1 },
@@ -88,6 +89,7 @@ async function land(ms: number) {
   await grow.finished.catch(() => undefined)
   // Held still a moment: the result reads before the cover flies.
   await new Promise((resolve) => setTimeout(resolve, skipped ? 60 : 260))
+  if (!end.value) return
   emit('picked', { index: props.winner, id: props.books[props.winner]!.id, rect: rectOfEnd() })
 }
 
@@ -109,7 +111,8 @@ async function play() {
       fill: 'backwards',
     })
   }
-  spin = ring.value!.animate(
+  if (!ring.value) return
+  spin = ring.value.animate(
     [
       { transform: `translateZ(${-layout.value.radius}px) rotateY(0deg)` },
       { transform: `translateZ(${-layout.value.radius}px) rotateY(${-total}deg)` },

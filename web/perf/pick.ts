@@ -214,12 +214,15 @@ async function measure(browser: Browser, auth: Record<string, string>, variant: 
   await page.evaluate(() => {
     const w = window as unknown as Record<string, unknown>
     const gaps: number[] = []
+    const times: number[] = []
     w.__gaps = gaps
+    w.__times = times
     w.__rec = true
     ;(w.__loaf as unknown[]).length = 0
     let last = performance.now()
     const tick = (t: number) => {
       gaps.push(t - last)
+      times.push(t)
       last = t
       if (w.__rec) requestAnimationFrame(tick)
     }
@@ -234,11 +237,15 @@ async function measure(browser: Browser, auth: Record<string, string>, variant: 
     w.__rec = false
     const loaf = (w.__loaf as PerformanceEntry[]).map((e) => ({ duration: e.duration, blocking: (e as unknown as { blockingDuration: number }).blockingDuration }))
     const marks = performance.getEntriesByType('mark').filter((m) => m.name.startsWith('regal:deal')).map((m) => m.name)
-    return { gaps: w.__gaps as number[], loaf, marks }
+    const at = (name: string) => performance.getEntriesByName(name).at(-1)?.startTime ?? null
+    return { gaps: w.__gaps as number[], times: w.__times as number[], loaf, loafAt: (w.__loaf as PerformanceEntry[]).map((e) => e.startTime), marks, start: at('pick:deal:start'), end: at('pick:deal:end') }
   })
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
   await ctx.close()
-  const gaps = data.gaps.slice(1)
+  // The deal itself: from `ready` (the motion starts) to the winner resting; the rest is the page's.
+  const inDeal = (t: number) => data.start !== null && data.end !== null && t >= data.start && t <= data.end
+  const gaps = data.gaps.slice(1).filter((_, i) => inDeal(data.times[i + 1]!))
+  const whole = data.gaps.slice(1)
   const sorted = [...gaps].sort((a, b) => a - b)
   const pct = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))] ?? 0
   return {
@@ -250,8 +257,11 @@ async function measure(browser: Browser, auth: Record<string, string>, variant: 
     p95: Math.round(pct(0.95) * 10) / 10,
     max: Math.round((sorted.at(-1) ?? 0) * 10) / 10,
     long: gaps.filter((g) => g > 33.4).length,
-    loaf: data.loaf.length,
-    loafBlocking: Math.round(data.loaf.reduce((a, e) => a + (e.blocking ?? 0), 0)),
+    dealMs: data.start !== null && data.end !== null ? Math.round(data.end - data.start) : null,
+    loaf: data.loaf.filter((_, i) => inDeal(data.loafAt[i]!)).length,
+    loafBlocking: Math.round(data.loaf.filter((_, i) => inDeal(data.loafAt[i]!)).reduce((a, e) => a + (e.blocking ?? 0), 0)),
+    wholeLong: whole.filter((g) => g > 33.4).length,
+    wholeMax: Math.round(Math.max(...whole) * 10) / 10,
     marks: data.marks,
   }
 }
@@ -273,7 +283,7 @@ if (!args['no-measure']) {
     for (let run = 0; run < Number(args.runs); run++) {
       const row = await measure(browser, auth, variant, cpu)
       rows.push(row)
-      console.log(`  ${variant} #${run + 1}: ${row.ms} ms, ${row.frames} frames, ${row.fps} fps, p50 ${row.p50} p95 ${row.p95} max ${row.max} ms, long ${row.long}, LoAF ${row.loaf} (${row.loafBlocking} ms blocking)`)
+      console.log(`  ${variant} #${run + 1}: deal ${row.dealMs} ms, ${row.frames} frames, ${row.fps} fps, p50 ${row.p50} p95 ${row.p95} max ${row.max} ms, long ${row.long}, LoAF ${row.loaf} (${row.loafBlocking} ms blocking) · Pick→bar ${row.ms} ms: long ${row.wholeLong}, max ${row.wholeMax} ms`)
     }
   writeFileSync(join(OUT, 'frames.json'), JSON.stringify({ cpu, deal: args.deal || 'default', rows }, null, 2))
   copyFileSync(join(OUT, 'frames.json'), join(SHOTS, `frames${args.deal ? `-${args.deal}` : ''}.json`))

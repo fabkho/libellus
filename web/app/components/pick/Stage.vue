@@ -38,6 +38,12 @@ const ready = ref(false)
 const landing = shallowRef<DealRect | null>(null)
 const source = useTemplateRef<HTMLElement>('source')
 
+// The deal's window, for the frame-cost measurement (perf/pick.ts).
+function onReady() {
+  ready.value = true
+  performance.mark('pick:deal:start')
+}
+
 function skip() {
   deal.value?.skip()
 }
@@ -46,6 +52,7 @@ function skip() {
 async function picked(result: DealPicked) {
   if (landing.value || pick.phase !== 'dealing') return
   landing.value = result.rect
+  performance.mark('pick:deal:end')
   await nextTick()
   const to = `/book/${winner.key}`
   pick.dealt(to)
@@ -91,7 +98,7 @@ const landingStyle = computed(() => {
         :reduced-motion="reduced"
         :label="t('pick.stageLabel')"
         :class="landing && 'invisible'"
-        @ready="ready = true"
+        @ready="onReady"
         @picked="picked"
       />
       <!-- The same start for every variant: the chosen covers in a row, until the deal is drawn. -->
