@@ -1,7 +1,7 @@
 # Libellus — Spec Sheet (v1, 2026-10-02)
 
 > A mobile-first book tracker that nails one loop: **search → add → start → finish**. Personal first,
-> ready for a handful of invited people later (first: Fabian's girlfriend, coming from Goodreads).
+> ready for a handful of invited people later (the first invitee comes from Goodreads).
 
 This is the condensed version. The full spec — user stories, implementation and testing decisions —
 is issue [#1](https://github.com/fabkho/libellus/issues/1). The words used here are defined in

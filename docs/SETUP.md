@@ -224,8 +224,8 @@ Content-Security-Policy in `web/public/_headers` names both hosts and allows the
 it carries its own `script-src 'none'` policy, and its frame runs no script where the browser allows
 that (not WebKit), so a crafted EPUB cannot act as the member (`web/app/data/reader/markup.ts`).
 
-**Regal, the 3D shelf** is the owner's private Nuxt layer; the app builds without it and loses
-nothing else. It needs `LIBELLUS_REGAL=1`, access to the private repository (`GIGET_AUTH`), a
+**Regal, the 3D shelf** is the owner's Nuxt layer (its own repository, fabkho/regal); the app builds without it and loses
+nothing else. It needs `LIBELLUS_REGAL=1`, a way to download it (`GIGET_AUTH`, any GitHub token; CI uses the run's own read-only token), a
 published library file and the owner's user id (table below). Its data feed (`regal-export`, the
 `shelf_publish` trigger with `pg_net` and a Vault secret) does nothing until configured:
 [OWNER.md](OWNER.md).
@@ -257,7 +257,7 @@ are off until set.
 | Web build env | `NODE_VERSION` (Pages) | Pages' default | `24`. |
 | Web build env | `NUXT_PUBLIC_LINK_TEMPLATES` | empty | Book links for every member, JSON (above). Public. |
 | Web build env | `LIBELLUS_REGAL` | unset (off) | `1` builds with the owner's Regal layer. Owner only. |
-| Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal, or a local checkout. Owner only. |
+| Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal (CI: the run's own `github.token`), or a local checkout. Owner only. |
 | Web build env | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | empty | The published library file Regal shows. Required with `LIBELLUS_REGAL=1`. Owner only. |
 | Web build env | `NUXT_PUBLIC_SHELF_OWNER_ID` | empty (nobody) | The auth user id of the instance's owner: sees the Errors row and page, and Your shelf with Regal ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)). Owner only. |
 | Supabase Auth | Site URL, Redirect URLs | `http://127.0.0.1:3020` locally | The instance's address (step 1.3, 4). |

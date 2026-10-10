@@ -134,9 +134,10 @@ design tokens, the layout of the repository and everything else for working on t
 
 ## Contributing, security, license
 
-Libellus is a personal project and the repository is private: issues and pull requests are for the
-owner and the collaborators invited to it ([CONTRIBUTING.md](CONTRIBUTING.md)). Please report
+Libellus is a personal project and the repository is public: issues and pull requests are welcome
+([CONTRIBUTING.md](CONTRIBUTING.md)). Third-party data and services are listed in
+[docs/THIRD-PARTY.md](docs/THIRD-PARTY.md). Please report
 security problems privately ([SECURITY.md](SECURITY.md)).
 
-**License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate, private layer and not part of this
+**License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate layer in its own repository and not part of this
 license; Libellus builds and runs without it.

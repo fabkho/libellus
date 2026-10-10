@@ -117,7 +117,7 @@ be computed by the same functions if a definer RPC hands over rows of the same s
 | | One-way follow, no consent (Letterboxd, Twitter) | **One-way follow with consent** (BookWyrm "Manually approve followers", Instagram private accounts) | Mutual friends (Goodreads friends, StoryGraph friends) |
 |---|---|---|---|
 | Mental model | "I watch her" | "She let me follow her" | "We are friends" |
-| Fits a circle where not everyone knows everyone (the owner's friends, his girlfriend's friends) | No: any member sees every member | Yes | Yes |
+| Fits a circle where not everyone knows everyone (the owner's friends and the friends of the owner's friends) | No: any member sees every member | Yes | Yes |
 | Asymmetric taste (she reads crime, he doesn't care) | Yes | Yes | No: friendship forces both feeds |
 | Data | `follows(follower, followee)` | the same plus `accepted_at` | the same, two rows or one with a state |
 | Precedent | — | BookWyrm: *"Anyone can just follow you … To limit this, … enable 'Manually approve followers'"* ([docs](https://docs.joinbookwyrm.com/privacy-controls.html)) | StoryGraph makes friends opt-in, default "Nobody can add me" ([help](https://thestorygraph.freshdesk.com/support/solutions/articles/79000141957)) |

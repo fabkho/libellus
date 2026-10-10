@@ -12,7 +12,7 @@ name: CI
 #   workflow_dispatch everything, every flow (a manual full run)
 #
 # The flows are the one reusable workflow e2e.yml, called from here and from
-# release.yml. They are ~20 billed minutes on the private repository's two-core
+# release.yml. They are ~20 runner minutes on the two-core
 # runners, which is why only a release (and a label or a manual run) pays them.
 #
 # Docs-only changes (*.md, docs/**, android/**) start no run at all, and neither
@@ -51,12 +51,13 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # The owner's builds extend Regal (her shelf, #23; web/regal.config.ts), a private repo Nuxt
-  # downloads with this token (a GitHub token that can read fabkho/regal), when LIBELLUS_REGAL=1.
-  # Where the secret is missing (a run with no access to it) the app builds without the
-  # shelf and its flows skip; the statics job also builds that way on purpose.
-  GIGET_AUTH: ${{ secrets.GIGET_AUTH }}
-  LIBELLUS_REGAL: ${{ secrets.GIGET_AUTH != '' && '1' || '' }}
+  # The owner's builds extend Regal (her shelf, #23; web/regal.config.ts), a Nuxt layer that
+  # Nuxt downloads from fabkho/regal when LIBELLUS_REGAL=1. The repository is public, so the
+  # run's own read-only token is all the download needs (web/regal.config.ts asks for a token):
+  # no account-wide secret reaches a pull request's jobs (docs/security/final-round-2026-10.md,
+  # F8). The statics job also builds without the layer, on purpose.
+  GIGET_AUTH: ${{ github.token }}
+  LIBELLUS_REGAL: '1'
   # Playwright shards of a `full-e2e` or manual run: 4, each about as long as the others
   # (web/e2e/shard.ts, from the durations CI measured), as weighed in docs/TESTING.md
   # ("How many shards"). The repository variable E2E_SHARDS overrides it without a commit.
@@ -88,11 +89,11 @@ jobs:
       enrich: ${{ steps.decide.outputs.enrich }}
       invite: ${{ steps.decide.outputs.invite }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: github.event_name == 'push'
 
       # Every filter lists the workflow files: changing CI runs what CI does.
-      - uses: dorny/paths-filter@v4
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
         id: filter
         if: github.event_name != 'workflow_dispatch'
         with:
@@ -206,9 +207,9 @@ jobs:
       # which throttled parallel pulls ("toomanyrequests: Rate exceeded"). See docs/TESTING.md.
       SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: ${{ env.SUPABASE_CLI }}
 
@@ -217,12 +218,12 @@ jobs:
 
       # Same major as local. Build scripts pnpm may run (esbuild) are approved in
       # web/pnpm-workspace.yaml, so a frozen install passes on pnpm 11+.
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 12
 
       # cache: pnpm keeps the pnpm store between runs.
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -264,7 +265,6 @@ jobs:
     uses: ./.github/workflows/e2e.yml
     with:
       shards: ${{ needs.changes.outputs.shards }}
-    secrets: inherit
 
   # The checks that take seconds each, in one job so the minutes are not rounded
   # up four times: the design tokens, the web build, and the two edge functions
@@ -277,14 +277,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
         with:
           version: 12
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         if: needs.changes.outputs.web == 'true' || needs.changes.outputs.tokens == 'true'
         with:
           node-version: 24
@@ -324,7 +324,7 @@ jobs:
           ls .output/public/_nuxt/regal.*.js
           ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
 
-      # The build without the private Regal layer (docs/SETUP.md): no Regal, no GIGET_AUTH. It has to build, and
+      # The build without the Regal layer (docs/SETUP.md): no Regal, no GIGET_AUTH. It has to build, and
       # nothing of the shelf may be left in it. Pull requests only; the build is the cheap part.
       - name: Web builds without Regal (a fork's build)
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' && github.event_name != 'push' }}
@@ -339,7 +339,7 @@ jobs:
           ! ls .output/public/_nuxt/regal.*.js 2>/dev/null
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
-      - uses: denoland/setup-deno@v2
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true'
         with:
           deno-version: v2.x

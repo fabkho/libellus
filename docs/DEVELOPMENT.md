@@ -63,7 +63,7 @@ the Android and iOS device sessions: [`web/perf/README.md`](../web/perf/README.m
 
 ### Regal, the owner's shelf (optional)
 
-Regal is the owner's 3D bookshelf, a Nuxt layer in a private repository. It is opt-in: without
+Regal is the owner's 3D bookshelf, a Nuxt layer in its own repository (fabkho/regal). It is opt-in: without
 `LIBELLUS_REGAL=1` the app builds, runs and tests without it, the shelf's places stay empty.
 CI builds both ways. With access to it:
 
