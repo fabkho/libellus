@@ -60,16 +60,15 @@ onMounted(() => {
     <section class="flex flex-col px-ml pt-xl" :aria-labelledby="headingId" :aria-busy="pending || undefined">
       <div class="mb-xs flex h-(--size-button-sm) items-center justify-between gap-md">
         <h2 :id="headingId" class="eyebrow" data-testid="book.readersTitle">{{ t('book.readers.title') }}</h2>
-        <UiButton
+        <UiSeeAll
           v-if="total > rows.length && rows.length > 0"
-          tone="quiet"
-          size="sm"
+          dialog
           :aria-label="t('book.readers.allLabel', { count: count(total) })"
           data-testid="book.readers.all"
           @click="sheet = true"
         >
-          <span class="figures">{{ t('book.readers.all', { count: count(total) }) }}</span><UiIcon name="chevron" :size="13" />
-        </UiButton>
+          {{ t('book.readers.all', { count: count(total) }) }}
+        </UiSeeAll>
       </div>
       <div v-if="pending && rows.length === 0" class="flex flex-col" role="status" :aria-label="t('book.readers.loading')" data-testid="book.readers.loading">
         <FriendsRowPlaceholder kind="person" :wave="0" />

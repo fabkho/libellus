@@ -63,17 +63,15 @@ watch(
     <section data-testid="home.nextInSeries">
       <div class="flex h-(--size-touch) items-center justify-between">
         <h2 class="eyebrow">{{ t('series.next') }}</h2>
-        <button
+        <UiSeeAll
           v-if="started.more || hidden > 0"
-          type="button"
-          class="more relative inline-flex h-(--size-button-sm) items-center gap-xxs rounded-pill pr-sm pl-md text-footnote text-ink-muted edge hover:bg-fill"
-          aria-haspopup="dialog"
+          dialog
           :aria-label="t('series.seeMoreLabel', { count: started.all.length })"
           data-testid="home.nextMore"
           @click="more = true"
         >
-          {{ t('series.seeAll', { count: started.all.length }) }}<UiIcon name="chevron" :size="13" />
-        </button>
+          {{ t('series.seeAll', { count: started.all.length }) }}
+        </UiSeeAll>
       </div>
       <UiListMotion tag="ul" :aria-label="t('series.next')">
         <HomeNextRow
@@ -90,14 +88,3 @@ watch(
     <HomeNextMenu v-model:open="menuOpen" :item="menu" />
   </UiReveal>
 </template>
-
-<style scoped>
-/* The drawn pill is 32 px; the touch target stays 44. */
-.more::after {
-  position: absolute;
-  inset: 50% 0 auto;
-  height: var(--size-touch);
-  content: '';
-  transform: translateY(-50%);
-}
-</style>
