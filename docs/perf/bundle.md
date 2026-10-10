@@ -178,7 +178,7 @@ the sign-in screen, no session, empty cache, Chromium at `slow4g-4x`, brotli ove
 | F1 | **done in this PR** | Sign-in screen visible: 79 → 20 files, 298.8 → 219.3 KB, 2,989 → 1,993 ms (localhost, throttled). The estimate was ~20 KB; Home's page pulls most of the app's lazy components. Entry +0.6 KB (the guard). |
 | F2 | **done in this PR** | After the idle work (9 s): 86 → 81 files, 334.4 → 304.0 KB (−30.4 KB). |
 | F4 | **done in this PR** | Entry 176.7 → 175.5 KB (−1.2 KB; the report measured −1.6 on a slightly different base). |
-| F6 | **paused** | See "F6" below and `bundle-trims-notes.md`. Not shipped. |
+| F6 | **done in this PR** (reader out of the precache, fetched ahead) | Precache 766.9 → 683.5 KB download (−83.4 KB, −9 entries); the reader is ~83 KB brotli, not the ~200 the report guessed. Read now with the chunks fetched ahead: room on screen 80 ms after the tap, as before. |
 | F3, F5, F5b, F7 | F3 and F7 not done (owner). F5/F5b belong to `perf/lazy-images-i18n`. | |
 
 ### F4: Options API
@@ -209,15 +209,21 @@ with papaparse, the import store and the scanner. The two parts `loaf.ts` uses m
 General rule found: a module imported both statically and dynamically gets a namespace object; keep a dynamically
 imported leaf free of static importers.
 
-### F6: paused
+### F6: how, and what it costs
 
-Measured so far: the reader is not ~200 KB brotli of the precache, it is **~83 KB** (precache 769.2 → 686.4 KB
-download, 230 → 223 entries, with the reader chunks out). The earlier figure came from the harness's signature
-regex, which tags any chunk mentioning `epub` or `CFI`. A working split exists (an `ebook-reader` group in
-`codeSplitting` plus `ebook-reader-entry` names for `Reader.vue` and `engine.ts`, `globIgnores`, a CacheFirst rule,
-a prefetch on idle for members whose snapshot holds a linked ebook and on a Book page with one) and passes
-`reader.spec.ts` and `ebooks.spec.ts`, but the instant-open proof (tap → reader at slow4g-4x, prefetched vs not) has
-not been run, so nothing is shipped. Code and plan: `docs/perf/bundle-trims-notes.md` and
-`docs/perf/data/bundle/f6-wip.patch`. Other lazily needed things in the precache (listed, none moved): the shared
-chunk with the import store / `OwnEditionSheet` (~21 KB br), the Book page chunk (~18 KB), the Friends/blocked
-page (~13 KB), the ebook ingest worker (~5 KB).
+The reader (`ebook-reader*` chunks: Reader.vue, its sheets, foliate-js, DOMPurify, the engine's font files; one group in `codeSplitting`, and `ebook-reader-entry` names for the two dynamically imported files) is out of the precache (`globIgnores`). A CacheFirst rule (`libellus-reader`) keeps it once fetched. `data/reader/prefetch.ts` decides who fetches it, and when: `hasOpenableEbook` (a linked record whose copy is on this device, from the ebooks snapshot or store; never the Library, never the server), online and not Save-Data; at idle 1.5 s after mount, at idle on a Book page with its ebook, and at once when the first ebook is linked. Tests: `tests/reader-prefetch.test.ts`; e2e `reader.spec.ts`, `ebooks.spec.ts`, `a11y.spec.ts`, `offline.spec.ts` pass.
+
+`pnpm perf:reader` (Slow 4G, 4x CPU, median of 3, ms from the tap; the member has a Book with an ebook linked):
+
+| Case | Main (reader precached) room / ready | This PR room / ready | Loading UI |
+| --- | ---: | ---: | --- |
+| chunks fetched ahead (prefetched) | 362 / 1,901 (precache, but not yet loaded in memory) | **82 / 788** | none |
+| tap the moment the Book page shows (mid-prefetch) | 867 / 2,520 | 1,505 / 2,185 | none |
+| no prefetch (cold tap, Save-Data) | 613 / 2,250 | 1,230 / 2,080 | none |
+| returning member, service worker | 83 / 784 | 78 / 766 | none |
+
+"Room" is the first frame of the reader layer (the cover starts to fly), "ready" is `data-ready`: the flight and the engine done. A tap with nothing fetched ahead shows **nothing** until the chunks arrive (1.2 s at Slow 4G, 85 KB): `Reader.vue` has no loader and none was added, so it is a dead tap, then the normal opening. The prefetched path shows no spinner or skeleton and is as fast as the precached one. Smallest mitigation if the cold tap matters, not built: keep the button's pressed state until the room is ready (invisible otherwise). The mid-prefetch and cold rows are ~0.6 s worse than main's: the room now also waits for the 72 KB group chunk (main's Reader.vue chunk was small and the rest loaded behind the flight), and in the mid-prefetch case the Book page's own requests share the pipe with the prefetch.
+
+Offline (checked with the service worker in Chromium): a reader fetched once, by any trigger, opens offline from `libellus-reader`; a reader never fetched (Save-Data) does not. That is the one accepted regression: a member needs one online start with an ebook linked. A failed `import()` stays in the browser's module map for good (checked in Chromium: a retry fails too), so `utils/readerChunks.ts` fetches the files first (`fetch`, the list is the build's `_nuxt/builds/reader-files.json`; a failure leaves nothing behind) and imports only once they are cached. A failed prefetch is tried again after 5, 20 and 60 s (online, no Save-Data), and Read now itself loads whatever is missing before it opens the reader (a tap after a dropped prefetch opens it: 1,023 / 1,703 ms at Slow 4G/4x). A cold tap costs ~0.25 s more than with a parallel import (fetch, then import).
+
+Bundler notes: a module that is in a `codeSplitting` group and also imported dynamically gets a facade chunk with an undeclared namespace export (`Export 'engine_exports' is not defined`), so the two dynamic entries stay out of the group. A group named `reader` collides with the chunk named from `stores/reader.ts`. Other lazily needed things in the precache (listed, not moved: no measurement of their opening): the shared chunk with the import store and `OwnEditionSheet` (~21 KB br), the Book page chunk (~18 KB), Friends' blocked page (~13 KB), the ebook ingest worker (~5 KB).
