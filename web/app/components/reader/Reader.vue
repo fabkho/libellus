@@ -25,6 +25,7 @@ import { ProgressWriter, progressAt } from '~/data/reader/progress'
 import { MARGINS, type ReaderTheme } from '~/data/reader/settings'
 import type { Highlight, HighlightColor } from '~/data/reader/device'
 import { REST, fitBox, poseOf, ratioOf, readerCoverCopy, rectOf } from '~/utils/readerFlight'
+import { stillCovers } from '~/utils/coverTilt'
 import type { ChromeInfo } from '~/utils/readerChrome'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 import type { Box, Layout, PageColors, ReaderEngine, Relocation, Selection } from '~/reader/engine'
@@ -618,6 +619,8 @@ function coverOnPage(): Box | null {
 }
 
 function heroImage(): { el: HTMLElement; src: string; box: Box } | null {
+  // Measured flat: a hero cover still leaning (or coming back from it) is put back at once (utils/coverTilt.ts).
+  stillCovers()
   const sheet = props.hero?.querySelector<HTMLElement>('[data-cover]')
   const img = sheet?.querySelector('img')
   if (!sheet || !img?.complete || !img.naturalWidth) return null

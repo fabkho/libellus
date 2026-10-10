@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book } from './books'
-import { BOOK_COLUMNS, bookFromRow, mapLibraryError, type BookRow, type Result, type SessionOutcome } from './library'
+import { LIST_BOOK_COLUMNS, bookFromRow, mapLibraryError, type BookRow, type Result, type SessionOutcome } from './library'
 import { pageCountOf } from './progress'
 import { amountOf, dayFromRow, unitOf } from './progressDays'
 import { addDays, daysSpanned } from '../utils/dates'
@@ -93,7 +93,7 @@ type DayStatsRow = {
 }
 
 /** What a read's row is asked for, closed (the figures) or open (a day of progress names it). */
-const SESSION_COLUMNS = `id, entry_id, started_on, ended_on, outcome, rating, created_at, entry:library_entries!inner(page_count_override, book:books!inner(${BOOK_COLUMNS}))`
+const SESSION_COLUMNS = `id, entry_id, started_on, ended_on, outcome, rating, created_at, entry:library_entries!inner(page_count_override, book:books!inner(${LIST_BOOK_COLUMNS}))`
 
 function readOfRow(row: SessionStatsRow, nth: number): StatsRead {
   const book = bookFromRow(row.entry.book)

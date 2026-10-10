@@ -139,7 +139,8 @@ const since = computed(() => {
   if (e.status === 'finished' && latest.value?.endedOn) return formatDay(latest.value.endedOn)
   return t('book.addedOn', { date: t('common.dayMonth', dateParts(new Date(e.addedAt), locale.value)) })
 })
-const description = computed(() => book.value?.description ?? '')
+// A Book from the Library comes from a list, which carries none: the device's copy has it (stores/library.ts, `descriptionOf`).
+const description = computed(() => (book.value ? library.descriptionOf(book.value) : null) ?? '')
 // Long enough to be cut at five lines: then "More" shows the rest.
 const long = computed(() => description.value.length > 320 || description.value.split('\n').length > 5)
 const expanded = ref(false)
@@ -224,6 +225,7 @@ function back() {
         size="xl"
         glow
         eager
+        tilt
         @fallback="coverFallback = $event"
       />
       <h1

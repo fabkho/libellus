@@ -345,7 +345,8 @@ export type BookRow = {
   published_year: number | null
   language: string | null
   publisher: string | null
-  description: string | null
+  /** Absent on a row of a list (`LIST_BOOK_COLUMNS` leaves it out): ask for it with `descriptions` or `book`. */
+  description?: string | null
   cover_url: string | null
   cover_thumbhash: string | null
   cover_dominant: string | null
@@ -363,6 +364,20 @@ export type BookRow = {
 
 /** A `books` row with its cached Goodreads rating (issue #69), so a Library kept for offline has it. */
 export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*)'
+
+/**
+ * A Book as the lists carry it (the three Status lists, the Library read for search, a Collection's
+ * entries, the Profile's reads): every column the screens of a list read, **without the description**.
+ * That is about 65 % of a Book's JSON (1,226 characters on average, perf assessment F4) and only the
+ * book page shows it. The device keeps it apart (`stores/library.ts`, `descriptions`) and the book page
+ * asks for it with `book`. A column added to `books` is added here too: tests/library.test.ts compares
+ * the two lists against the table.
+ */
+export const LIST_BOOK_COLUMNS =
+  'id, title, authors, isbn13, isbn10, page_count, published_year, language, publisher, cover_url, cover_thumbhash, cover_dominant, cover_secondary, source, apple_id, openlibrary_edition_key, openlibrary_work_key, created_at, format, goodreads:goodreads_rating(*)'
+
+/** How many Books' descriptions one request asks for (the ids are in the address). */
+export const DESCRIPTION_BATCH = 40
 
 /** The `reading_sessions` row, as PostgREST returns it. */
 export type SessionRow = {
@@ -397,7 +412,7 @@ export type EntryRow = {
 }
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, hidden, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
+export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, hidden, book:books!inner(${LIST_BOOK_COLUMNS}), latest:latest_session(*)`
 
 export function bookFromRow(row: BookRow): Book {
   return {
@@ -411,7 +426,8 @@ export function bookFromRow(row: BookRow): Book {
     year: row.published_year,
     language: row.language,
     publisher: row.publisher,
-    description: row.description,
+    // A list's row has none (`LIST_BOOK_COLUMNS`): null here, the device's descriptions know it.
+    description: row.description ?? null,
     coverUrl: row.cover_url,
     coverThumbhash: row.cover_thumbhash,
     coverColors:
@@ -677,8 +693,13 @@ export type Library = {
   entry: (entryId: string) => Promise<Result<LibraryEntry | null>>
   /** The member's entry for a Book, or null when it is not in the Library. */
   entryForBook: (bookId: string) => Promise<Result<LibraryEntry | null>>
-  /** A Book the member can see (the Catalogue, or their own Manual book). */
+  /** A Book the member can see (the Catalogue, or their own Manual book), with its description. */
   book: (id: string) => Promise<Result<Book | null>>
+  /**
+   * The descriptions of Books (null where a Book has none), by Book id: what the lists leave out
+   * (`LIST_BOOK_COLUMNS`). Asked in pieces of `DESCRIPTION_BATCH`; the Books the member cannot see are not answered.
+   */
+  descriptions: (bookIds: readonly string[]) => Promise<Result<Map<string, string | null>>>
   /** The Catalogue Book for a source id or ISBN-13, if a member has added it before. */
   catalogueBook: (key: { appleId?: string; isbn13?: string; openLibraryEditionKey?: string }) => Promise<Result<Book | null>>
   /** The member's statuses for a set of Apple ids, for search results. */
@@ -1042,6 +1063,20 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       const { data, error } = await client.from('books').select(BOOK_COLUMNS).eq('id', id).maybeSingle<BookRow>()
       if (error) return { data: null, error: mapLibraryError(error) }
       return { data: data ? bookFromRow(data) : null, error: null }
+    },
+
+    async descriptions(bookIds) {
+      const found = new Map<string, string | null>()
+      for (let at = 0; at < bookIds.length; at += DESCRIPTION_BATCH) {
+        const { data, error } = await client
+          .from('books')
+          .select('id, description')
+          .in('id', bookIds.slice(at, at + DESCRIPTION_BATCH))
+          .returns<{ id: string; description: string | null }[]>()
+        if (error) return { data: null, error: mapLibraryError(error) }
+        for (const row of data) found.set(row.id, row.description)
+      }
+      return { data: found, error: null }
     },
 
     async catalogueBook({ appleId, isbn13, openLibraryEditionKey }) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
-import { createLibrary } from '@/data/library'
+import { createLibrary, LIST_BOOK_COLUMNS } from '@/data/library'
 import { signUpMember } from './support/member'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 
@@ -178,3 +178,43 @@ async function unusedIsbn13(): Promise<string> {
     if (!taken.length) return isbn
   }
 }
+
+describe('the lists carry no description (perf F4)', () => {
+  it('a Status list, an entry and the Library read leave the description out; the Book and `descriptions` have it', async () => {
+    const ida = await signUpMember()
+    const library = createLibrary(ida.client)
+    const piranesi = book()
+    const added = (await library.addToLibrary(piranesi)).data!
+
+    expect(added.book.description).toBeNull()
+    expect((await library.entries('want_to_read')).data![0]!.book.description).toBeNull()
+    expect((await library.entryForBook(added.book.id)).data!.book.description).toBeNull()
+    // The same Book, from the lists, still says everything else a list shows.
+    expect((await library.entries('want_to_read')).data![0]!.book).toMatchObject({ title: piranesi.title, pageCount: 272, coverColors: piranesi.coverColors })
+
+    expect((await library.book(added.book.id)).data!.description).toBe(piranesi.description)
+    const asked = (await library.descriptions([added.book.id, crypto.randomUUID()])).data!
+    expect(asked.get(added.book.id)).toBe(piranesi.description)
+    expect(asked.size).toBe(1)
+  })
+
+  it('descriptions asks in pieces, null where a Book has none', async () => {
+    const ida = await signUpMember()
+    const library = createLibrary(ida.client)
+    const bare = (await library.addToLibrary(book({ description: null }))).data!
+    const told = (await library.addToLibrary(book())).data!
+    const ids = [bare.book.id, told.book.id, ...Array.from({ length: 90 }, () => crypto.randomUUID())]
+    const asked = (await library.descriptions(ids)).data!
+    expect(asked.get(bare.book.id)).toBeNull()
+    expect(asked.get(told.book.id)).toBe(book().description)
+    expect(await library.descriptions([])).toEqual({ data: new Map(), error: null })
+  })
+
+  it('LIST_BOOK_COLUMNS names every column of books but the description (and the owner, which no screen reads)', async () => {
+    const columns = await sql<{ column_name: string }>(
+      "select column_name from information_schema.columns where table_schema = 'public' and table_name = 'books'",
+    )
+    const listed = LIST_BOOK_COLUMNS.split(', ').filter((name) => !name.includes(':'))
+    expect(columns.map((row) => row.column_name).filter((name) => name !== 'description' && name !== 'owner_id').sort()).toEqual([...listed].sort())
+  })
+})

@@ -102,6 +102,28 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   first frame. No space is reserved for them: a Book without a series or a rating would carry a gap
   of that height (`BookGenres` reserves a row only for a Library Book, whose chips are almost
   always on the device).
+- **Hero cover** (A11, prototype in `docs/prototypes/`). The Book page's hero cover turns to the
+  finger: the touched side comes up towards it, at most 8° at the cover's edge, in perspective. The
+  lean comes in over `instant` (the Press duration) on the `standard` curve, then follows the finger
+  frame by frame; let go, it comes back flat over `standard` (a Web Animation), and a new press
+  mid-way starts from what is on screen. Only the sheet leans (`[data-cover]`); the halo and the pool
+  of light behind it stay where they are. The hero only: no other cover leans (`UiCover`'s `tilt`,
+  `utils/coverTilt.ts`). A vertical move that starts on the cover scrolls the page (`touch-action:
+  pan-y`): the browser takes it, the pointer is cancelled and the cover comes back as on a release; a
+  move that starts sideways keeps it. A long press opens no image menu. The pointer only: the phone's
+  own movement (DeviceOrientation) does nothing, so nothing leans while the page is just held.
+  **With the flight.** A press does nothing while anything moves (`moving()`: the cover's flight, its
+  hand-over, a View Transition) or while the sheet is hidden for a copy flying in its place. Whatever
+  measures the hero next calls `stillCovers()` first: Back (`leaving`, before `heroBoxOf()` and
+  `coverCopy()`; `heroBoxOf` takes out only the page's rise, so a lean would move the box the copy
+  starts from), a push from the book page, Read now and its return, Change edition. The lean is put
+  back at once, with no animation, and the flight measures the cover's own box. **Cost.** One
+  `transform` write per frame (batched in `requestAnimationFrame`), the cover's box read once at the
+  press, `will-change: transform` on the sheet from the press until it is flat again and not
+  otherwise: no layout and no paint per frame, a style recalculation of the sheet alone. Measured in
+  Chromium at CPU 6x (`pnpm perf:flows`, flows `book-tilt`, `book-back-held`, `home-to-book-pressed`):
+  no dropped frame while dragging, about 1 ms of style work per frame at 6x, and the flight in and
+  out unchanged against the build without it.
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
@@ -469,6 +491,75 @@ hand-over, never the motion. Holding the main thread for 200 ms mid-flight and w
 in the frames the compositor sends showed it (a flow, removed with the motion flows; `e2e/android/flight.ts`
 is what is left, on the emulator).
 
+### After many flights
+
+Reported (A10): the avatar's transition stays smooth a hundred times in a row, but after ten to fifteen
+round-trips from Home into a Book and back every transition is glitchy for a while, then recovers.
+`e2e/perf/flight-soak.spec.ts` drives that by hand (tagged `@perf`, only with `LIBELLUS_E2E_PERF=1`,
+never in CI): N round-trips (tap a cover, Back; the next cover each round) in Chromium at 412 × 915 with
+the CPU slowed 4×, or in WebKit; per flight the time from the tap to its first frame, its length, the
+frames it dropped and the long animation frames (LoAF) from the tap to the hand-off; per round, at rest
+and after a garbage collection, what the flight left (`.flight-cover`, `.flight-held`,
+`[data-flight-hidden]`, `data-moving`), `document.getAnimations()`, covers and elements in the
+document, all DOM nodes (detached ones too), listeners and the JS heap, and the stack's requests (how
+many, how many still on their way at each tap, how many failed). `e2e/perf/summarize.ts` turns the
+runs into the tables below.
+
+```sh
+LIBELLUS_E2E_PERF=1 LIBELLUS_E2E_PORT=3103 FLIGHT_OUT=/tmp/flight-soak pnpm exec playwright test e2e/perf --repeat-each 5 --workers 1
+pnpm tsx e2e/perf/summarize.ts /tmp/flight-soak
+```
+
+Measured 10 October 2026 on an M-series Mac (18 cores; the load average 4–9, other agents' builds
+running), 5 runs of 30 round-trips each, every value the median over the runs and [min–max]:
+
+**The flight itself does not wear.** On a local stack (Home with 3 being read, 8 wanted and 12–40 finished
+Books; the Library with 51), rounds 2–11 against the last ten, in Chromium ÷4: tap to first frame
+48 ms [48–64] → 48.5 [48–56], push 300 ms, Back 250 ms both times, 0–4 frames dropped in ten flights
+both times, no long frame after round 1 (which loads the Book page's code), 0 elements left behind in
+any of the 150 rounds, `getAnimations()` 0 at rest, the document's elements constant (347; the
+Library's 309), all DOM nodes constant (886), listeners constant (215), the heap 10 → 11 MB (0.06 MB a
+round, the Book store's pages). WebKit: tap to first frame 58.5 ms → 58, push 273.5 → 273.5, Back 225 →
+224, 0 frames dropped, elements constant. `will-change` is already only on the box in the air
+(`.flight-cover` exists only while it flies; the page's copy carries `will-change: opacity` and leaves
+with it), so scoping it is not an experiment to run.
+
+**What grows is the Library's reads.** Home asks for the whole Library each time it is shown again
+(`onActivated`), so every Back into Home started a read of all three lists, whether or not the last one
+had come back. With 400 finished Books (the finished list ≈ 800 kB) over a phone's connection (300 ms
+round trip, 1.6 Mbit/s, `FLIGHT_NET=slow FLIGHT_FINISHED=400`) a read takes longer than a round-trip,
+so they piled up, shared the bandwidth with the Book page's own reads, and the Book page's reads sent as
+`POST` (`rpc/book_authors_of`, `book_genres`, `book_series_info`, `my_people`, `feed`, …) were cut off
+at 8 s (`WRITE_TIMEOUT_MS`, data/network.ts), which counts the device offline until the probe answers:
+for 7–8 rounds the app asked the stack nothing, then the pile drained and it recovered. The fix
+(`stores/library.ts`, `load`): one load at a time, and one more after it for all that asked meanwhile
+(`tests/library-load.test.ts`).
+
+| per run of 30 rounds (400 Books, slow connection, CPU ÷4) | before | after |
+|---|---|---|
+| most of the stack's requests on their way at a tap | 55–56 | 3–4 |
+| requests cut off (failed) | 22–25 | 0 |
+| rounds that asked the stack nothing (counted offline) | 7–8 | 0 |
+| frames dropped in all 60 flights | 1–6 | 2–4 |
+| long animation frames, ms in all rounds | 72–78 | 67–129 |
+
+The pile never cost the flight a frame in Chromium ÷4 (an 800 kB answer parses in well under a long
+frame there): what it costs is the Book page's content and the app's writes, which a member sees as
+the app going wrong for a while. Not run, as there was a growing quantity to fix and the flight's
+frames do not degrade: `content-visibility` on long lists and deferring heavy sections until the flight
+has landed. Neither has a measurement behind it yet.
+
+**Reading the field log for a flight.** A flight that stutters on a member's phone shows only in the
+LoAF rows of Profile → Account → Errors (docs/OPERATIONS.md, Stutters), and only from Chromium
+(Android): WebKit reports no long animation frames, so an iPhone sends none. A push stutters on
+`/book/:key` (the route has changed when the flight starts), a Back on the page it lands on (`/`,
+`/library`). `during: interaction (click)` is the tap's own frame (the page's copy and the measuring,
+`launch` and `snapshotOf` in the chunk of `useBookFlight`, by the names the build gave them);
+`Window.requestAnimationFrame` with that chunk is the flight's bookkeeping between frames (`track`,
+`land`, `keep`); a script from a store's or a
+page's chunk with `TimerHandler` or a promise is work that landed on the flight. Rows that come in
+bursts on one member after many Book pages, from the stores' chunks, are what this section describes.
+
 ### What can go wrong, and what the flight does instead
 
 The flight never animates towards a box that is not on screen or has no size, always ends on the
@@ -487,6 +578,7 @@ flows"); the flight's geometry is `tests/flight.test.ts`.
 | The new page is slow to draw (its code still loading) | The new page bare before the flight | The pose holds the screen as it was, up to 1 s |
 | The hero's large image is not in yet | The row's small image blown up to the hero's size | The row's image fades to the thumbhash before it is blown up; the large one fades in when decoded (`sharpen`, `fadeSoft`) |
 | The row's image was dropped while the book page was open | A blur or the thumbhash on the row for a moment after Back | The copy stays on the row until the row's image is decoded (`handOff`) |
+| Back (or Read now) while a finger holds the hero cover leaning, or while it comes back flat | The copy would start from the leaned box (`heroBoxOf` takes out only the rise) and jump onto the flat one | The lean is put back at once before anything is measured (`stillCovers`); a press while anything moves does nothing (Hero cover) |
 | iOS Safari's edge swipe, Reduce Motion, a book opened from search, a row scrolled away | — | No flight: the browser's own motion, a cross-fade, or the cover leaves with its page |
 
 ## Reduce Motion
@@ -505,7 +597,8 @@ stand at rest at once. Your shelf: the pile is there at once and the 3D replaces
 without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader
 cross-fades in and out in place), the printed page turns at once, and its search palette
-cross-fades like the app's.
+cross-fades like the app's. The hero cover does not lean: it is a picture like any other, and the
+page scrolls from it.
 
 ## Non-motions
 
