@@ -14,7 +14,6 @@ import { chromium } from '@playwright/test'
 import { launch, netLog, PROFILES, stubTheWorld, throttle } from './browser'
 import { appUrl, env } from './env'
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 const arg = (name: string, fallback: string) => {
   const at = process.argv.indexOf(`--${name}`)
   return at < 0 ? fallback : (process.argv[at + 1] ?? fallback)
