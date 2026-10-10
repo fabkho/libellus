@@ -13,7 +13,7 @@
  * pg_net). There is no member caller: the function reads its work from the database queue and takes
  * nothing from the request but the action and a number.
  */
-import { type CheckBook, lookupApple, lookupOpenLibrary, type Outcome } from './check.ts'
+import { appleIdOnly, type CheckBook, checkBook, lookupApple, type Outcome } from './check.ts'
 import type { Http } from '../enrich/http.ts'
 import type { Store } from './store.ts'
 
@@ -51,28 +51,33 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
   async function checkAll(books: CheckBook[], deadline: number): Promise<Tally> {
     const tally: Tally = { checked: 0, missed: 0, failed: 0, released: 0 }
     let apple = new Map<string, Outcome>()
-    const appleBooks = books.filter((book) => book.apple_id)
-    if (appleBooks.length) {
+    const appleIds = books.map(appleIdOnly).filter((id): id is string => id !== null)
+    if (appleIds.length) {
       try {
-        apple = await lookupApple(deps.http, appleBooks.map((book) => book.apple_id!))
+        apple = await lookupApple(deps.http, appleIds)
       } catch (error) {
         log(`catalogue-check: Apple lookup failed: ${error}`)
       }
     }
     for (const book of books) {
       try {
-        if (now() >= deadline && !(book.apple_id && apple.has(book.apple_id))) {
+        // Out of time: give the Book back, unless its answer is already in and needs nothing more.
+        const asked = appleIdOnly(book)
+        const inHand = asked !== null && apple.has(asked) && !book.openlibrary_edition_key && !book.openlibrary_work_key
+        if (now() >= deadline && !inHand) {
           await deps.store.release(book.id)
           tally.released++
           continue
         }
-        const outcome: Outcome = book.apple_id
-          ? apple.get(book.apple_id) ?? { status: 'unavailable', error: 'apple_lookup_failed' }
-          : await lookupOpenLibrary(deps.http, book)
+        const outcome: Outcome = asked !== null && !apple.has(asked)
+          ? { status: 'unavailable', error: 'apple_lookup_failed' }
+          : await checkBook(deps.http, book, apple)
         if (outcome.status === 'found') {
           await deps.store.save(book.id, outcome.result)
           tally.checked++
-        } else if (outcome.status === 'unknown') {
+        } else if (outcome.status === 'unknown' || outcome.status === 'mismatch') {
+          // The source does not know the Book, or what it says is not what the row says: failed, nothing written.
+          if (outcome.status === 'mismatch') log(`catalogue-check: ${book.id} does not match its source (${outcome.reason})`)
           await deps.store.miss(book.id)
           tally.missed++
         } else {

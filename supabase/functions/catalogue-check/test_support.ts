@@ -52,6 +52,7 @@ export function testHttp(routes: Record<string, Answer>, clock = fakeClock()): {
 export function book(overrides: Partial<CheckBook> = {}): CheckBook {
   return {
     id: crypto.randomUUID(),
+    title: 'A Book',
     source: 'openlibrary',
     apple_id: null,
     isbn13: null,

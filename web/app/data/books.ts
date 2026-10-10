@@ -50,7 +50,13 @@ export type BookSnapshot = {
  * the cached Goodreads rating of its ISBN, when the row was loaded with it
  * (data/goodreads.ts); absent on a copy from before it existed.
  */
-export type Book = BookSnapshot & { id: string; createdAt: string; goodreads?: GoodreadsRating | null }
+export type Book = BookSnapshot & {
+  id: string
+  createdAt: string
+  goodreads?: GoodreadsRating | null
+  /** A Book the server check could not confirm, as another member's record carries it: no title, authors or cover (utils/unverifiedBook.ts). */
+  unverified?: true
+}
 
 /**
  * The format that counts for a Book: the member's own word on her entry's

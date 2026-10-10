@@ -10,7 +10,7 @@
 -- check's functions.
 
 begin;
-select plan(34);
+select plan(35);
 
 create schema if not exists tests;
 
@@ -131,7 +131,7 @@ select is(tests.record_book((select id from ids where name = 'ada'), 'Open Book'
   'and its cover only by the allowlist (this host is not on it)');
 
 select tests.act_as((select id from ids where name = 'ada'));
-select is((select description from public.books where id = (select id from ids where name = 'b_open')), 'Blurb of Open Book',
+select is(public.book_description((select id from ids where name = 'b_open')), 'Blurb of Open Book',
   'her own Library reads the row as she added it');
 
 reset role;
@@ -205,13 +205,17 @@ reset role;
 select is(public.catalogue_check_save((select id from ids where name = 'b_saved'), '{"title":"Again"}'), false,
   'a checked Book is not written again');
 
--- Validation: what is not a title, authors, a source's cover or a short blurb is ignored.
+-- Validation: what is not a source's authors, cover or short blurb is not stored; a Book without the
+-- source's title cannot be verified.
+select throws_ok(
+  format($f$select public.catalogue_check_save(%L, jsonb_build_object('title', repeat('x', 501)))$f$, (select id from ids where name = 'b_open')),
+  '22023', 'result_invalid', 'a title that is too long is no verification');
 select public.catalogue_check_save((select id from ids where name = 'b_open'), jsonb_build_object(
-  'title', repeat('x', 501), 'authors', jsonb_build_array('Fine', 5), 'description', null,
+  'title', 'Open Book', 'authors', jsonb_build_array('Fine', 5), 'description', null,
   'cover_url', 'https://evil.example/cover.jpg'));
 select is((select (title, authors, description, cover_url, checked_at is not null)::text from public.books where id = (select id from ids where name = 'b_open')),
-  '("Open Book","{""An Author""}",,https://example.org/' || md5('Open Book') || '.jpg,t)',
-  'a title too long, authors not all text and a cover off the sources'' hosts change nothing; the source''s empty description clears the first member''s');
+  '("Open Book",{},,,t)',
+  'authors not all text and a cover off the sources'' hosts are not kept, and the source''s empty description clears the first member''s: a verified Book is the source''s alone');
 
 select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '[]')$q$, '22023', 'result_invalid',
   'a result that is not an object is refused');
@@ -222,8 +226,8 @@ select is((select (title, description, cover_url, checked_at is not null, check_
   '("Missed Book","Blurb of Missed Book",https://example.org/' || md5('Missed Book') || '.jpg,t,t)',
   'a Book its source does not know is failed and checked, and keeps its data');
 select tests.act_as((select id from ids where name = 'ben'));
-select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book') -> 'description', 'null'::jsonb,
-  'and nothing vouches for its description, so others still do not get it');
+select is(tests.record_book((select id from ids where name = 'ada'), 'Missed Book'), null,
+  'and nothing vouches for its text: others no longer get its title, nor its description (catalogue_check_failed_test.sql has the rest)');
 
 -- ------------------------------------------------------ who may call, the kick
 

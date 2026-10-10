@@ -30,7 +30,7 @@ const books = useBookStore()
 
 const name = computed(() => props.entry.member.name?.trim() || t('member.someone'))
 const verb = computed(() => t(`feed.${feedVerbKey(props.entry.kind, props.entry.again)}`))
-const book = computed(() => props.entry.book)
+const book = computed(() => shownBook(props.entry.book, t('book.outsideCatalogue')))
 const bookPath = computed(() => `/book/${book.value.id}`)
 const authorLine = computed(() => formatAuthors(book.value.authors, t('common.etAl')))
 const showReview = computed(() => Boolean(props.entry.review) && !props.compact)
@@ -63,7 +63,7 @@ async function unfold() {
 
 <template>
   <li class="flex items-start gap-ml py-ms" :data-testid="testid">
-    <UiPressLink v-if="!book.manual" :to="bookPath" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
+    <UiPressLink v-if="!book.manual && !book.unverified" :to="bookPath" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
       <UiCover
         decorative
         :title="book.title"
@@ -101,7 +101,7 @@ async function unfold() {
       </div>
 
       <UiPressLink
-        v-if="!book.manual"
+        v-if="!book.manual && !book.unverified"
         :to="bookPath"
         class="reach book-title text-callout py-xxs"
         :data-testid="`${testid}Book`"

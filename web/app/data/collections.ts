@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
 import {
+  BOOK_COLUMNS,
   bookFromRow,
   bookToRow,
   ENTRY_COLUMNS,
   entryFromRow,
+  fillDescriptions,
   type BookRow,
   type EntryRow,
   type LibraryEntry,
@@ -172,7 +174,7 @@ export function createCollections(client: SupabaseClient, { online = () => true,
         .from('collections')
         .select(
           'id, name, position, created_at, count:collection_entries(count), ' +
-            'firsts:collection_entries(position, entry:library_entries!inner(book:books!inner(*)))',
+            'firsts:collection_entries(position, entry:library_entries!inner(book:books!inner(' + BOOK_COLUMNS + ')))',
         )
         .order('position')
         .order('position', { referencedTable: 'firsts' })
@@ -200,6 +202,7 @@ export function createCollections(client: SupabaseClient, { online = () => true,
         return { data: null, error: mapCollectionError(error) }
       }
       if (!data) return { data: null, error: null }
+      await fillDescriptions(client, data.entries.map((item) => item.entry.book))
       return {
         data: {
           id: data.id,
@@ -285,6 +288,7 @@ export function createCollections(client: SupabaseClient, { online = () => true,
         .eq('id', (added.data as { id: string }).id)
         .single<EntryRow>()
       if (entry.error) return { data: null, error: mapCollectionError(entry.error) }
+      await fillDescriptions(client, [entry.data.book])
       return { data: entryFromRow(entry.data), error: null }
     },
 

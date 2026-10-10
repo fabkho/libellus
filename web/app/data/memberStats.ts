@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isNoAnswer } from './network'
 import { mapSocialError, type SocialResult } from './socialShapes'
 import { readsFromRows, type SessionStatsRow, type StatsRead } from './stats'
+import { shownBook } from '../utils/unverifiedBook'
 
 /**
  * A member's reading in figures (social v1, contract §1.5 `member_reading_record`): the rows the
@@ -21,7 +22,14 @@ export type MemberStats = {
   record: (member: string) => Promise<SocialResult<MemberRecord | null>>
 }
 
-export function createMemberStats(client: SupabaseClient, { online = () => true }: { online?: () => boolean } = {}): MemberStats {
+/**
+ * `outside`: the one string an unverified Book (one the server check could not confirm, which the record
+ * hands out as an id and nothing else) is shown as, in the words of the caller's language.
+ */
+export function createMemberStats(
+  client: SupabaseClient,
+  { online = () => true, outside = () => 'Outside the catalogue' }: { online?: () => boolean; outside?: () => string } = {},
+): MemberStats {
   return {
     async record(member) {
       if (!online()) return { data: null, error: 'offline' }
@@ -31,7 +39,11 @@ export function createMemberStats(client: SupabaseClient, { online = () => true 
       const json = answer.data as MemberRecordJson | null
       if (!json) return { data: null, error: null }
       return {
-        data: { reads: readsFromRows(json.reads ?? []), wantToRead: json.wantToRead ?? null, reading: json.reading ?? null },
+        data: {
+          reads: readsFromRows(json.reads ?? []).map((read) => (read.book.unverified ? { ...read, book: shownBook(read.book, outside()) } : read)),
+          wantToRead: json.wantToRead ?? null,
+          reading: json.reading ?? null,
+        },
         error: null,
       }
     },

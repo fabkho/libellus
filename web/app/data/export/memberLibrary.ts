@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book } from '../books'
 import {
+  BOOK_COLUMNS,
   bookFromRow,
+  fillDescriptions,
   sessionFromRow,
   sortSessions,
   type BookRow,
@@ -41,12 +43,14 @@ export async function readMemberLibrary(client: SupabaseClient, memberId: string
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await client
       .from('library_entries')
-      .select('id, status, added_at, page_count_override, book:books!inner(*), sessions:reading_sessions(*)')
+      .select(`id, status, added_at, page_count_override, book:books!inner(${BOOK_COLUMNS}), sessions:reading_sessions(*)`)
       .eq('member_id', memberId)
       .order('id')
       .range(from, from + PAGE - 1)
       .returns<ExportRow[]>()
     if (error) throw new Error(`Reading the Library: ${error.message}`)
+    // The blurbs come the one way they can (`books.description` is not an API column).
+    await fillDescriptions(client, (data ?? []).map((row) => row.book))
     for (const row of data ?? []) {
       entries.push({
         id: row.id,

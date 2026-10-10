@@ -71,3 +71,33 @@ Deno.test('a 400 is not retried', async () => {
   await assertRejects(() => http.json('https://query.wikidata.org/sparql?bad'), SourceUnavailable)
   assertEquals(source.asked.length, 1)
 })
+
+Deno.test('maxBytes: a body past the cap is abandoned, once, and is no answer; one inside it is read', async () => {
+  const time = fakeClock()
+  const big = counting(() => new Response('{"x":"' + 'a'.repeat(2000) + '"}', { headers: { 'content-type': 'application/json' } }))
+  big.setClock(time.now)
+  const capped = createHttp({ fetch: big.fetch, userAgent: 'UA', clock: time.clock, maxBytes: 1000 })
+  await assertRejects(() => capped.json('https://openlibrary.org/big.json'), SourceUnavailable, 'response over 1000 bytes')
+  assertEquals(big.asked.length, 1, 'not retried')
+
+  // Streamed without a Content-Length: cut off as it passes the cap.
+  let pulled = 0
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      pulled++
+      controller.enqueue(new Uint8Array(400).fill(97))
+      if (pulled > 50) controller.close()
+    },
+  })
+  const endless = counting(() => new Response(stream))
+  endless.setClock(time.now)
+  await assertRejects(
+    () => createHttp({ fetch: endless.fetch, userAgent: 'UA', clock: time.clock, maxBytes: 1000 }).json('https://openlibrary.org/endless.json'),
+    SourceUnavailable,
+  )
+  assertEquals(pulled < 10, true, 'the stream is cancelled, not read to the end')
+
+  const small = counting(() => Response.json({ ok: true }))
+  small.setClock(time.now)
+  assertEquals(await createHttp({ fetch: small.fetch, userAgent: 'UA', clock: time.clock, maxBytes: 1000 }).json('https://openlibrary.org/small.json'), { ok: true })
+})

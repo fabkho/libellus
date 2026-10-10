@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseIsbn } from './books'
 import { abortError } from './fetching'
-import { bookFromRow, ENTRY_COLUMNS, entryFromRow, type BookRow, type EntryRow, type LibraryEntry } from './library'
+import { bookFromRow, ENTRY_COLUMNS, entryFromRow, fillDescriptions, type BookRow, type EntryRow, type LibraryEntry } from './library'
 import type { Found } from './merge'
 
 /**
@@ -37,6 +37,7 @@ export function createCatalogueSearch(client: SupabaseClient): CatalogueSearch {
     async libraryEntries() {
       const { data, error } = await client.from('library_entries').select(ENTRY_COLUMNS).returns<EntryRow[]>()
       if (error) throw new Error(error.message)
+      await fillDescriptions(client, data.map((row) => row.book))
       return data.map(entryFromRow)
     },
   }

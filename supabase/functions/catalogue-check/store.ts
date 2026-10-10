@@ -18,7 +18,7 @@ export type Store = {
   status: () => Promise<Record<string, number>>
 }
 
-const COLUMNS = ['id', 'source', 'apple_id', 'isbn13', 'isbn10', 'openlibrary_edition_key', 'openlibrary_work_key'] as const
+const COLUMNS = ['id', 'title', 'source', 'apple_id', 'isbn13', 'isbn10', 'openlibrary_edition_key', 'openlibrary_work_key'] as const
 
 export function createSupabaseStore(supabase: SupabaseClient): Store {
   async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {

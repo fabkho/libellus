@@ -53,9 +53,9 @@ Deno.test('a body that is not an action is refused', async () => {
 })
 
 Deno.test('drain: each Book is checked at its source and stored, missed, or given back', async () => {
-  const apple = book({ source: 'apple', apple_id: '1111' })
+  const apple = book({ title: 'Apple Title', source: 'apple', apple_id: '1111' })
   const unknown = book({ source: 'apple', apple_id: '2222' })
-  const olOk = book({ openlibrary_edition_key: 'OL1M' })
+  const olOk = book({ title: 'OL Title', openlibrary_edition_key: 'OL1M' })
   const olMiss = book({ openlibrary_work_key: 'OL404W' })
   const olDown = book({ openlibrary_edition_key: 'OL5M' })
   const { handler, memory } = setup({
@@ -75,6 +75,25 @@ Deno.test('drain: each Book is checked at its source and stored, missed, or give
   assertEquals(memory.failed.map((f) => f.id), [olDown.id])
 })
 
+Deno.test('drain: a Book whose keys or title disagree with its source is missed (failed, nothing written) and logged', async () => {
+  const planted = book({ title: 'Planted', isbn13: '9780141439518', openlibrary_edition_key: 'OL2M' })
+  const fine = book({ title: 'Fine', openlibrary_edition_key: 'OL3M' })
+  const { handler, memory, logs, asked } = setup({
+    queue: [planted, fine],
+    routes: {
+      'https://openlibrary.org/isbn/9780141439518.json': { key: '/books/OL1M', title: 'Planted', isbn_13: ['9780141439518'] },
+      'https://openlibrary.org/books/OL2M.json': { title: 'A Bestseller', description: 'planted' },
+      'https://openlibrary.org/books/OL3M.json': { title: 'Fine' },
+    },
+  })
+  assertEquals(await (await handler(post({ action: 'drain' }))).json(), { checked: 1, missed: 1, failed: 0, released: 0 })
+  assertEquals(memory.missed, [planted.id])
+  assertEquals(memory.saved.map((s) => s.id), [fine.id])
+  assertEquals(logs.length, 1)
+  assertEquals(logs[0]!.includes('edition_key'), true)
+  assertEquals(asked.includes('https://openlibrary.org/books/OL2M.json'), false, 'the planted edition key is never fetched')
+})
+
 Deno.test('drain: the batch is the default, or what was asked up to the cap; nothing else of the request is read', async () => {
   const a = setup()
   await a.handler(post({ action: 'drain' }))
@@ -86,8 +105,8 @@ Deno.test('drain: the batch is the default, or what was asked up to the cap; not
 })
 
 Deno.test('drain: a Book whose store fails goes back, the others go on', async () => {
-  const bad = book({ openlibrary_edition_key: 'OL1M' })
-  const good = book({ openlibrary_edition_key: 'OL2M' })
+  const bad = book({ title: 'Bad', openlibrary_edition_key: 'OL1M' })
+  const good = book({ title: 'Good', openlibrary_edition_key: 'OL2M' })
   const { handler, memory, logs } = setup({
     queue: [bad, good],
     routes: { 'https://openlibrary.org/books/OL1M.json': { title: 'Bad' }, 'https://openlibrary.org/books/OL2M.json': { title: 'Good' } },
@@ -101,8 +120,8 @@ Deno.test('drain: a Book whose store fails goes back, the others go on', async (
 
 Deno.test('drain: out of time, the Books not yet tried are given back, not counted as attempts', async () => {
   const clock = fakeClock()
-  const first = book({ openlibrary_edition_key: 'OL1M' })
-  const second = book({ openlibrary_edition_key: 'OL2M' })
+  const first = book({ title: 'Slow', openlibrary_edition_key: 'OL1M' })
+  const second = book({ title: 'Never asked', openlibrary_edition_key: 'OL2M' })
   const { handler, memory } = setup({
     clock,
     budgetMs: BUDGET_MS,
