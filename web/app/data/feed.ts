@@ -63,6 +63,9 @@ export type FeedRow =
   | { type: 'entry'; entry: FeedEntry }
   | { type: 'batch'; member: MemberCard; kind: FeedKind; day: string | null; entries: FeedEntry[] }
 
+/** What a batch's sheet shows: a member and her reads. `kind`: the one kind of all of them (a batch's, the sheet's title says how many), or null for a mix (her name alone). */
+export type FeedBatchView = { member: MemberCard; kind: FeedKind | null; entries: FeedEntry[] }
+
 /** `day`: the calendar day of `at` as the caller's `dayOf` has it. */
 export type FeedDay = { day: string; rows: FeedRow[] }
 

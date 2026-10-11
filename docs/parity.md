@@ -455,7 +455,8 @@ States: hidden altogether with no request, no card and no row (Home does not nud
 Actions → result:
 - Accept (`circle.accept`) → `social.answer` (accepted): she gets a follower; the row leaves, the lamp dot with it. Decline (✕, `circle.declineLabel`) → declined; nobody is told.
 - The card's cover or title → `/book/<id>`, the cover flying there; a Manual book opens nothing.
-- The card's avatar or name, or a row → `/friends/<member>`.
+- The card's avatar or name → `/friends/<member>`, her avatar flying into her page's (`member-avatar`; none with Reduce Motion; Back flies it home).
+- A row (anywhere on it but her avatar and name) → what a tap on the feed's batch row does (social v2a): the **sheet** of the reads her sentence names (`friendsBatch`, titled "<name> · <count>" when they are of one kind, with her name alone when they differ and each row then says what she did; the day as its eyebrow; a Book in it opens its page and Back brings the sheet back), or, when the sentence tells of one read, that Book (the cover flying there; a Manual or unverified Book opens the sheet instead). Her avatar and name on the row → `/friends/<member>`, the avatar flying.
 - More (`circle.more` on the card, `feed.more`) → the review unfolds.
 - The title (`circle.title`) and Show more → `/friends`.
 Edge cases: a card is the newest finish or review of the last seven days (`CARD_DAYS`) and is never part of a batch; at most three member rows (`CIRCLE_MEMBERS`), two phrases per row (`CIRCLE_PHRASES`), three covers per fan (`CIRCLE_COVERS`). Shown under the empty Library's state too, for a new member with a request or activity.
@@ -472,8 +473,8 @@ Layout: a pushed screen in the tabs layout: round Back at the left, **People** a
 States: loading (the device's copy at once and refreshed; with no copy, row placeholders) · content, 30 entries at a time (`FEED_PAGE`), older pages as she scrolls near the end · pull to refresh · empty, following nobody: `feed.emptyTitle` "Reading is better with a friend or two.", `feed.empty`, and **Share your follow link** (`feed.emptyShare`, to the link sheet) · empty, following people with nothing yet: `feed.quietTitle` / `feed.quiet` "Quiet for now." · offline: the last copy the device kept, under `feed.offline` "Offline · as of {time}" (a copy older than seven days is not shown) · load error: `feed.loadError` with **Try again** (`feed.retry`).
 Actions → result:
 - A cover or title → `/book/<id>` with the cover flight; a Manual book opens nothing.
-- The name or the avatar → `/friends/<member>`.
-- A batch → its sheet (see *A batch*).
+- The name or the avatar → `/friends/<member>`, the avatar flying into her page's (`member-avatar`, as on Home; Back flies it home; none with Reduce Motion).
+- A batch → its sheet (see *A batch*); on its row too her avatar and name are their own target, to her page.
 - People → `/friends/people`.
 - Back → where it was opened from, by history, with that page's scroll kept (Home's *Your circle ›* or *Show more*, the Profile's Friends row, a member's page); Home only for a feed opened directly (`utils/back.ts`, the one rule of the pushed pages: back through the history when there is a page before it, else the fallback).
 Edge cases: never an entry: imports (Goodreads, Hardcover, the owner's Fable import); a finish or DNF logged with an end more than 14 days back; anything in its first 10 minutes (a correction inside them replaces it); a hidden Book (*Hide from followers*); a switched-off section. Entries of a member the viewer does not follow never show. Offline nothing is asked for.
@@ -486,7 +487,7 @@ Flow: `web/e2e/friends.spec.ts`; `web/tests/feed.test.ts`, `web/tests/feed-view.
 Purpose: three or more of the same kind by the same member on the same day, as one row of the feed.
 Layout: one row: a fan of covers, the member's avatar and name, "finished 3 books" (`feed.batchFinished`; likewise `batchStarted`, `batchAbandoned`, `batchWant` "added 3 to Want to read", `batchReviewed`), the day eyebrow. The sheet (`friendsBatch`) is titled "<name> · <count>" (`feed.batchTitle`), lists the day and one row per Book (cover, title, authors).
 Actions → result:
-- The row → the sheet (`friends.batchOpen`).
+- The row (the fan and the rest of it, but her avatar and name) → the sheet (`friends.batchOpen`); her avatar and name → `/friends/<member>`, the avatar flying (`friends.batchMember`).
 - A Book in the sheet → `/book/<id>` with the cover flight; Back from the Book brings the sheet back as it was. A Manual book opens nothing.
 Edge cases: exactly three is a batch (`BATCH_FROM` = 3); two are two rows. Different kinds of one member on one day are separate rows. A batch shows only the Books the feed may show (hidden Books and switched-off kinds are left out before counting).
 Copy keys: `feed.batchFinished|batchStarted|batchAbandoned|batchWant|batchReviewed|batchTitle`

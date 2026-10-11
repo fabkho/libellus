@@ -231,7 +231,8 @@ function back() {
 
     <!-- The first answer on its way: her place is held, nothing moves when it comes. -->
     <section v-else-if="!view.loaded" class="relative flex flex-col items-center px-xl pt-sm" aria-busy="true" aria-hidden="true">
-      <span class="ring skeleton wave rounded-pill" />
+      <!-- `data-member-avatar-stand-in`: where her avatar flies to while the page is not read yet (plugins/author-transition.client.ts). -->
+      <span class="ring skeleton wave rounded-pill" data-member-avatar-stand-in />
       <span class="line title-line mt-md w-full"><span class="skeleton wave w-1/3" :style="{ '--wave': 0.05 }" /></span>
     </section>
 

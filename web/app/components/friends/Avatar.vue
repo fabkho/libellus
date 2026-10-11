@@ -21,5 +21,6 @@ const initials = computed(() => {
 </script>
 
 <template>
-  <UiAvatar :initials="initials" :photo="photo" />
+  <!-- `data-member-avatar`: the avatar that flies into her page's hero (plugins/author-transition.client.ts). -->
+  <UiAvatar :initials="initials" :photo="photo" data-member-avatar />
 </template>

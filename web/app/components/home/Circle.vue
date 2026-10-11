@@ -2,8 +2,9 @@
 // "Your circle" on Home (social v1, U8, the combined mock): the newest follow request as one raised
 // row (Accept, ✕), then the week's one finished Book as a lit card with her stars and review
 // (HomeCircleFeature), then one row per member, newest first, at most three (HomeCircleFriend: her
-// name, the day, one sentence of what she did lately, a fan of the covers it names), and "Show more"
-// to the feed's page. utils/circleView.ts decides what the card is and what each row says, from the
+// name, the day, one sentence of what she did lately, a fan of the covers it names; a tap opens the
+// sheet of those reads, as the feed's batch row does, or the Book when it is one read, her avatar and
+// name opening her page), and "Show more" to the feed's page. utils/circleView.ts decides what the card is and what each row says, from the
 // feed store's loaded entries. The last section of Home, so its coming (the copy at once, the
 // refreshed feed a moment after) moves nothing above it. Hidden altogether while there is no
 // request, no card and no row: Home does not nudge anyone to be social. A change plays like a list's
@@ -13,10 +14,12 @@
 // Test ids: `home.circle`, `home.circleRequest|circleAccept|circleDecline` (the request row),
 // `home.circleFeature` (+ `.member`, `.cover`, `.title`, `.stars`, `.review`, `.more`),
 // `home.circleFriend`, `home.circleTitle` (the title, a link to the feed), `home.circleMore`.
-import { circleView } from '~/utils/circleView'
+import { circleView, entriesKind } from '~/utils/circleView'
 import { useFeedStore } from '~/stores/feed'
 import { useLikesStore } from '~/stores/likes'
 import type { MemberCard, RecentLike } from '~/data/social'
+import type { FeedBatchView } from '~/data/feed'
+import type { CircleFriend } from '~/utils/circleView'
 import { useSocialStore } from '~/stores/social'
 
 const { t } = useI18n()
@@ -50,6 +53,23 @@ async function answer(accept: boolean) {
   answerFailed.value = !!result.error && result.error !== 'offline'
   answering.value = false
 }
+
+// A row's sheet (social v2a): the reads her sentence names, as the feed's batch row opens them. Kept after it closes,
+// so its rows stay while it slides away; Back from a Book opened from it opens it again as it was left.
+const sheet = shallowRef<{ view: FeedBatchView; day: string } | null>(null)
+const sheetOpen = ref(false)
+function openRow(friend: CircleFriend) {
+  sheet.value = { view: { member: friend.member, kind: entriesKind(friend.entries), entries: friend.entries }, day: label(friend.day) }
+  sheetOpen.value = true
+}
+const { restore } = useSheetRestore({
+  testid: 'friendsBatch',
+  sheet: () => (sheetOpen.value && sheet.value ? sheet.value : null),
+  reopen: (kept) => {
+    sheet.value = kept
+    sheetOpen.value = true
+  },
+})
 
 /** The card and the rows, from what the feed has loaded. */
 const view = useSettled(() => circleView(feed.entries, { now: new Date(), dayOf: (at) => isoDay(new Date(at)) }))
@@ -124,9 +144,11 @@ async function openLikers(item: RecentLike) {
           :key="friend.member.id"
           :friend="friend"
           :day-label="label(friend.day)"
+          @open="openRow(friend)"
         />
       </UiListMotion>
       <UiButton v-if="friends.length > 0 || card" tone="quiet" size="md" block to="/friends" class="mt-sm" data-testid="home.circleMore">{{ t('circle.more') }}</UiButton>
+      <FriendsBatchSheet v-if="sheet" v-model:open="sheetOpen" :batch="sheet.view" :day-label="sheet.day" :restore="restore" />
       <FriendsLikersSheet v-model:open="likersOpen" :members="likers" :error="likersFailed" :offline="!online" />
     </section>
   </UiReveal>
