@@ -15,10 +15,11 @@
 // back, drag to turn it. Back (the round button or the system's) puts a Book
 // that is out away first.
 //
-// Loading: the Books as a pile of slabs in their Spines' colours (ShelfPile),
-// at once from the device's Library (or the owner's file), while Regal and
-// three.js come (`LazyShelfStage`, the `regal` chunk); the 3D fades in over
-// it. Nothing finished yet: the lamp over the empty shelf, no empty room. The
+// Loading: no stand-in, as the row's cards. The room is its plain surface
+// while Regal and three.js come (`LazyShelfStage`, the `regal` chunk); then
+// Regal's own entrance plays, the Stack's settle-in (the Books drop into
+// place from the bottom up, as when the pile is re-sorted; none with Reduce
+// Motion). A screen reader hears that it is loading. Nothing finished yet: the lamp over the empty shelf, no empty room. The
 // Library (or the file) can't be read: why, and Try again (offline: when the
 // connection is back). Regal's chunk can't be had (offline before it was ever
 // fetched): a quiet word, no crash; once fetched it is kept for offline.
@@ -56,7 +57,7 @@ const countText = computed(() =>
     : t('shelf.count', { count: count(books.value.length) }, books.value.length),
 )
 
-// The 3D has drawn: the pile hands over to it.
+// The 3D has the Library and is drawing it.
 const ready = ref(false)
 /** Nothing finished or being read yet: the empty state, not an empty room. */
 const empty = computed(() => !!shelf.shelf && books.value.length === 0)
@@ -100,7 +101,7 @@ function back() {
              up behind the top bar, so the pile starts above the middle and fills the rest, and a
              Book taken out stands clear of the card about it at the bottom. -->
         <div v-if="shelf.shelf && !empty && !noChunk" class="lift absolute inset-x-0 bottom-0">
-          <LazyShelfStage ref="stage" :year="year" :library="shelf.document" class="room-3d" :class="ready && 'ready'" data-testid="shelf.stage" @ready="ready = true" />
+          <LazyShelfStage ref="stage" :year="year" :library="shelf.document" :class="ready && 'ready'" data-testid="shelf.stage" @ready="ready = true" />
         </div>
 
         <div v-if="empty" class="absolute inset-0 flex flex-col justify-center pb-xxl" data-testid="shelf.emptyState">
@@ -111,12 +112,7 @@ function back() {
           {{ t('shelf.noChunk') }}
         </p>
 
-        <Transition name="hand-over">
-          <div v-if="!ready && !empty && !noChunk && !(shelf.loadError && !shelf.shelf)" class="pointer-events-none absolute inset-0 flex items-center justify-center px-xxl" data-testid="shelf.loading">
-            <ShelfPile :books="books" :limit="22" class="w-full" />
-            <span class="sr-only" aria-live="polite">{{ t('shelf.loading') }}</span>
-          </div>
-        </Transition>
+        <span v-if="!ready && !empty && !noChunk && !(shelf.loadError && !shelf.shelf)" class="sr-only" aria-live="polite" data-testid="shelf.loading">{{ t('shelf.loading') }}</span>
 
         <div v-if="shelf.loadError && !shelf.shelf" class="absolute inset-0 flex flex-col items-center justify-center gap-md px-xl text-center" data-testid="shelf.error">
           <p class="text-subhead text-ink-muted">{{ shelf.loadError === 'offline' ? t('shelf.offline') : t('shelf.loadError') }}</p>
@@ -132,24 +128,5 @@ function back() {
 <style scoped>
 .lift {
   top: -20%;
-}
-.room-3d {
-  opacity: 0;
-  transition: opacity var(--duration-standard) var(--ease-standard);
-}
-.room-3d.ready {
-  opacity: 1;
-}
-.hand-over-leave-active {
-  transition: opacity var(--duration-standard) var(--ease-standard);
-}
-.hand-over-leave-to {
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .room-3d,
-  .hand-over-leave-active {
-    transition: none;
-  }
 }
 </style>
