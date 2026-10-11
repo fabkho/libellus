@@ -80,7 +80,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   ring flies with the photo instead of standing at its place from the first frame
   (checked by eye; no flow).
 - **The avatar to a member's page** (social v2a). Tapping a member's avatar or name (the feed's rows and
-  batch rows, Home's card and rows, People, the Readers rows, the likers and circle sheets) moves the page as
+  batch rows, Home's card and rows, People, the Readers rows, the likers and friends sheets) moves the page as
   the push to an author does, and her avatar morphs into the hero's: the avatar tapped and the page's are one
   element (`view-transition-name: member-avatar`, set inline by `plugins/author-transition.client.ts` while it runs),
   growing over `standard`; Back shrinks the hero's into the avatar it left from (the first of hers on screen
