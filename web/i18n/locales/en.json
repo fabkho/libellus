@@ -1782,5 +1782,62 @@
     "unblockLabel": "Unblock {name}",
     "unblocked": "{name} unblocked.",
     "empty": "You haven't blocked anyone."
+  },
+  "pick": {
+    "entry": "Pick my next book",
+    "entryHint": "Can't decide? Choose a few, let chance pick one.",
+    "title": "Pick my next book",
+    "back": "Back to the Library",
+    "intro": "Choose the books you're in the mood for. One of them will be picked for you.",
+    "count": "{count} of {max} chosen | {count} of {max} chosen",
+    "needMore": "Choose at least {min}",
+    "full": "That's the most for one pick ({max})",
+    "action": "Pick",
+    "actionCount": "Pick from {count}",
+    "chosen": "Chosen",
+    "remove": "Remove {title}",
+    "select": "Choose {title}",
+    "deselect": "Don't choose {title}",
+    "wantToRead": "Want to read",
+    "wantToReadCount": "{count} book | {count} books",
+    "searchLabel": "Add a book from search",
+    "searchPlaceholder": "Not on your list? Search",
+    "searchEmpty": "Nothing found",
+    "searchLoading": "Searching…",
+    "fromSearch": "From search",
+    "notNext": "{status}: not for picking",
+    "variant": "Animation",
+    "variantTitle": "How the pick is dealt",
+    "variants": {
+      "deck": {
+        "name": "A · Deck",
+        "line": "A card shuffle: riffle, cut, the top card turns over."
+      },
+      "stack": {
+        "name": "B · Stack",
+        "line": "Regal's Stack: the pile sorts itself and slows to one."
+      },
+      "wheel": {
+        "name": "C · Wheel",
+        "line": "A wheel of covers spins and stops at the marker."
+      }
+    },
+    "dealing": "Picking one of {count}…",
+    "skip": "Tap to skip",
+    "stageLabel": "Shuffling the books you chose",
+    "picked": "Picked for you: {title}",
+    "round": "Round {round} · {count} in the running | Round {round} · {count} in the running",
+    "lastOne": "The last one left",
+    "accept": "Start reading",
+    "accepting": "Starting…",
+    "decline": "Not this one",
+    "accepted": "Enjoy {title}",
+    "done": "Done",
+    "leave": "Stop picking",
+    "others": "Still in the running",
+    "emptyTitle": "That was all of them",
+    "emptyText": "None of these, then. Maybe another day, or other books.",
+    "chooseAgain": "Choose again",
+    "prototype": "Prototype"
   }
 }
