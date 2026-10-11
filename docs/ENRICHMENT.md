@@ -110,6 +110,16 @@ every known work is finished is complete however many more may exist.
 `series[0].position` of `series[0].count` (whole-numbered positions). A Book can be in two (Feet of Clay:
 City Watch 3, Discworld 19).
 
+**Split volumes are not members.** Wikidata files the paperback halves of a long novel as items of its
+series at a decimal ordinal ("The Dragonbone Chair, part 1" = 1.1 … "To Green Angel Tower, Part 4" = 3.4:
+Memory, Sorrow, and Thorn had eleven "books", not three). A work at a decimal position x.y of a series whose
+novel at position x is titled "<its title>, part N" (`isSplitVolume`, wikidata.ts) is not stored as a
+member — not from an author's works, not from a series' works, and a Book that is one keeps its work without
+the place. A decimal alone stays a place (a novella between two novels: Ender's Saga 1.5, The Murderbot
+Diaries 7.5, The Last King of Osten Ard 0.5), and so does a title like "..., part 2" with no such novel in
+its series. `private.drop_split_volumes()` (migration 20261026010000) removes the ones stored before by the
+same rule: the link always, the work only when no Book and no other series needs it.
+
 `next` answers, per series she finished a work of, the first later work she has not finished (with its
 status, so the UI may leave out one she is reading already); the sub-series rather than its parent; most
 recent finish first. Her corrections count.

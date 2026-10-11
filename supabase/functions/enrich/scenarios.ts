@@ -60,6 +60,34 @@ export const SCENARIOS = {
     openlibrary_edition_key: null,
     openlibrary_work_key: 'OL82560W',
   },
+  // Tad Williams, The Dragonbone Chair (Open Library, by its work key): Memory, Sorrow, and Thorn 1.
+  // Wikidata also holds the paperback halves of the three novels as items of the series at
+  // positions 1.1, 1.2 … 3.4 ("The Dragonbone Chair, part 1"): they are no members of the series.
+  // The author is met for the first time (his works list has them too).
+  'williams-dragonbone-chair': {
+    id: '00000000-0000-4000-8000-000000000006',
+    title: 'The Dragonbone Chair',
+    authors: ['Tad Williams'],
+    isbn13: null,
+    isbn10: null,
+    language: 'en',
+    apple_id: null,
+    openlibrary_edition_key: null,
+    openlibrary_work_key: 'OL2250813W',
+  },
+  // The same series from one of its split volumes (the work Open Library files as "part 1"):
+  // the Book's work keeps no place in the series. Author and series counted as fetched.
+  'williams-dragonbone-part-1': {
+    id: '00000000-0000-4000-8000-000000000007',
+    title: 'The Dragonbone Chair, part 1',
+    authors: ['Tad Williams'],
+    isbn13: null,
+    isbn10: null,
+    language: 'en',
+    apple_id: null,
+    openlibrary_edition_key: null,
+    openlibrary_work_key: 'OL2250778W',
+  },
   // Nobody knows it: no ISBN, no key, a title and author no source has.
   'no-data': {
     id: '00000000-0000-4000-8000-000000000004',
@@ -76,5 +104,5 @@ export const SCENARIOS = {
 
 export type ScenarioName = keyof typeof SCENARIOS
 /** Scenarios whose authors count as fetched within 30 days: only the Book is asked about. */
-export const AUTHORS_FRESH: readonly ScenarioName[] = ['rowling-feuerkelch']
+export const AUTHORS_FRESH: readonly ScenarioName[] = ['rowling-feuerkelch', 'williams-dragonbone-part-1']
 export const LANGUAGES = ['en', 'de'] as const

@@ -82,7 +82,8 @@ long-term cache: authors, works and series are asked about again after 30 days, 
 - `handler.ts` — the requests. `index.ts` — the wiring.
 - `backfill.ts` — the backfill and coverage report from a terminal.
 - `scenarios.ts`, `fixtures/`, `record_fixtures.ts` — recorded answers for Pratchett (Small Gods),
-  Le Guin (A Wizard of Earthsea), Haldeman (The Forever War) and a Book nobody knows.
+  Le Guin (A Wizard of Earthsea), Haldeman (The Forever War), Williams (The Dragonbone Chair, and its
+  split volume "part 1": the paperback halves are no series members) and a Book nobody knows.
 - `*_test.ts` — unit tests; never call a source (an unrecorded URL fails).
 
 ## Local
