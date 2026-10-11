@@ -41,7 +41,7 @@ export function readerStateKey(state: ReaderState): string {
   return `book.readers.${state}`
 }
 
-/** A member left her circle (unfollow, block, remove as follower): her row goes. */
+/** A member left her friends (unfollow, block, remove as follower): her row goes. */
 export function readersWithout(list: readonly BookReader[], id: string): BookReader[] {
   return list.filter((r) => r.member.id !== id)
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Your reviews, on the own Profile (social v2a, owner's request: "there's no place where I can see all my reviews"),
 // above the years in review: her reads that have a review (utils/profileReviews.ts: from her Library on the device,
-// so it is there offline), newest first, as lit cards (ProfileReviewCard, the shape of Home's circle card) in a
+// so it is there offline), newest first, as lit cards (ProfileReviewCard, the shape of Home's friends card) in a
 // sideways row like the years' (no scroll bar, the next card peeking at the edge, snapping to the cards). The row
 // holds the newest `REVIEWS_SHOWN` and, with more, ends on a *See all {count}* card: a row of every review would be
 // as long as her history (and as many covers to draw), while a stop at the end of the row says that there is more

@@ -52,7 +52,7 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
   Follow request. Her switches still apply.
 - **Follow link** — a Member's link (`/f/<token>`, 128 random bits) that opens her profile for a signed-in
   visitor, who may then follow her or ask to. A new link kills the old one at once; followers stay.
-- **Friends** — the Members a Member follows, and what they read: *Your friends* on Home and the feed (it was called "Your circle"; the keys, ids and code keep `circle`). Not
+- **Friends** — the Members a Member follows, and what they read: *Your friends* on Home and the feed (it was called "Circle" / "Your circle"; the database functions `circle_reading`, `circle_want`, `circle_of` and the data layer that mirrors them (`circleReading`, `circleWant`, `CircleBook`) keep the old word, because renaming a deployed RPC would break installed apps). Not
   her followers.
 - **Hidden from followers** — a Book a Member hides from her followers (the Book's ⋯): gone from their
   feed, her profile, her counts and her figures. It stays in her own Library and figures.

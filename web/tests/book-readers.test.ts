@@ -57,7 +57,7 @@ describe('the order the screen keeps', () => {
     expect(merged.map((r) => [r.member.id, r.state])).toEqual([['a', 'finished'], ['b', 'reading'], ['c', 'want']])
   })
 
-  it('drops a member who left her circle, and the section shows five', () => {
+  it('drops a member who left her friends, and the section shows five', () => {
     expect(readersWithout([reader('a', 'want', null), reader('b', 'want', null)], 'a').map((r) => r.member.id)).toEqual(['b'])
     expect(READERS_SHOWN).toBe(5)
   })

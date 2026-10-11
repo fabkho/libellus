@@ -8,7 +8,7 @@ import { mergeReaders, READERS_SHOWN, readersWithout } from '~/utils/bookReaders
  * when the Book's page shows (`load`, the first `READERS_SHOWN`) and, for *See all*, in pages (`loadAll`,
  * `loadMore`). Online only: offline, or on a refusal, the last list loaded for this Book in the session stays on
  * screen, and with none there is nothing to show, never an error. Nothing is kept on the device: signing out or
- * another member signing in forgets it, and so does a change of relation (a member who leaves her circle goes from
+ * another member signing in forgets it, and so does a change of relation (a member who leaves her friends goes from
  * every list at once, `dropMember`; a follow or an accepted request makes every list stale, so the next view asks).
  *
  * Per Book: `top` (what the section shows), `total` (how many in all), `all` (the sheet's rows, paged).
@@ -41,7 +41,7 @@ export const useBookReadersStore = defineStore('bookReaders', () => {
   /** Which Books are being read now (the section's placeholder). */
   const loading = ref<Record<string, boolean>>({})
   const loadingMore = ref<Record<string, boolean>>({})
-  /** Bumped when the member changes or the circle moved: an answer that began before it is thrown away. */
+  /** Bumped when the member changes or the friends moved: an answer that began before it is thrown away. */
   let generation = 0
 
   const of = (book: string): PerBook => books.value[book] ?? fresh()
@@ -90,7 +90,7 @@ export const useBookReadersStore = defineStore('bookReaders', () => {
     patch(book, { all: mergeReaders(of(book).all, answer.data.items), next: answer.data.next, total: answer.data.total })
   }
 
-  /** A member left her circle (unfollow, block, remove as follower): her row goes from every list, and an answer on its way is thrown away. */
+  /** A member left her friends (unfollow, block, remove as follower): her row goes from every list, and an answer on its way is thrown away. */
   function dropMember(id: string) {
     generation++
     books.value = Object.fromEntries(
@@ -103,7 +103,7 @@ export const useBookReadersStore = defineStore('bookReaders', () => {
     )
   }
 
-  /** The circle changed (a follow, an accepted request): what was read may be missing someone, the next view asks again. */
+  /** The friends changed (a follow, an accepted request): what was read may be missing someone, the next view asks again. */
   function stale() {
     generation++
     books.value = Object.fromEntries(Object.entries(books.value).map(([book, per]) => [book, { ...per, loaded: false, allLoaded: false, next: null }]))

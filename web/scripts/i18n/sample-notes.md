@@ -14,7 +14,7 @@ Wording I would change in the `gemini-3.8-flash` column above:
 - `feed.emptyTitle`: "Lesen ist schöner mit Freunden." is good. In other runs the same prompt at temperature 0 gave other good lines ("Lesen macht mit ein, zwei Freunden mehr Freude."): the model is **not fully deterministic**. Harmless for the workflow (an existing translation is never overwritten), but a second run is not a reproduction.
 - `privacy.goPublicText`: "Alle mit deinem Link können dir ohne Anfrage folgen" is natural; the lite models say "Jedes Mitglied", closer to the English.
 - `import.howTo.goodreads` keeps "My Books → Import and export → Export library" in English on purpose (Goodreads' site is English). The checker lists it as "looks English"; it is the one expected hit.
-- `circle.want`, `status.want_to_read`: **Möchte ich lesen**, the wording Goodreads' German shelf has (see `german-glossary.md`), in all three models. The key stays `circle.*`; the English says "Your friends".
+- `friends.want`, `status.want_to_read`: **Möchte ich lesen**, the wording Goodreads' German shelf has (see `german-glossary.md`), in all three models. The English says "Your friends".
 
 What the sample showed about the tool:
 

@@ -3,7 +3,7 @@ import type { MemberCard, SocialBook } from '../data/socialShapes'
 import { feedBatchKey, feedVerbKey } from './feedView'
 
 /**
- * What Home's "Your circle" decides before it draws (social v1, U8): which finished Book gets the
+ * What Home's "Your friends" decides before it draws (social v1, U8): which finished Book gets the
  * card, and what is left for the list, one row per member. Pure, so the tests pin it and a native
  * port copies it. The input is the feed store's loaded entries, newest first.
  *
@@ -14,28 +14,28 @@ import { feedBatchKey, feedVerbKey } from './feedView'
  *   activity still makes her row. What is left is batched again (`feedDays`), since a batch that
  *   lost a member of its three may be none any more.
  * - The list groups the rows by member, ordered by each member's newest row; a row holds at most
- *   `CIRCLE_PHRASES` of her newest events (two single entries of one verb are one phrase with both titles), the day is her newest event's, the covers are those of
- *   the Books her phrases name (at most `CIRCLE_COVERS`). At most `CIRCLE_MEMBERS` rows.
+ *   `FRIENDS_PHRASES` of her newest events (two single entries of one verb are one phrase with both titles), the day is her newest event's, the covers are those of
+ *   the Books her phrases name (at most `FRIENDS_COVERS`). At most `FRIENDS_MEMBERS` rows.
  */
 
 /** The days back a finish is still "this week's". */
 export const CARD_DAYS = 7
 /** How many members the list shows: a glance, the feed's page has the rest. */
-export const CIRCLE_MEMBERS = 3
+export const FRIENDS_MEMBERS = 3
 /** How many events one member's sentence holds. */
-export const CIRCLE_PHRASES = 2
+export const FRIENDS_PHRASES = 2
 /** How many covers the fan shows. */
-export const CIRCLE_COVERS = 3
+export const FRIENDS_COVERS = 3
 
 const DAY_MS = 86_400_000
 
 /** One thing a member did, as a piece of her sentence: an entry (a verb and its Book, or its two Books when her two newest events are of one kind) or a batch (a verb and a count). */
-export type CirclePhrase =
+export type FriendsPhrase =
   | { type: 'entry'; verb: ReturnType<typeof feedVerbKey>; books: SocialBook[] }
   | { type: 'batch'; key: ReturnType<typeof feedBatchKey>; count: number }
 
 /** The finished Book that gets the card. `verb`: "finished", or "reviewed" when only the review is within the week. */
-export type CircleCard = {
+export type FriendsCard = {
   member: MemberCard
   book: SocialBook
   verb: 'finished' | 'reviewed'
@@ -54,9 +54,9 @@ export type CircleCard = {
  * `entries`: every read her sentence names (newest first), what a tap on the row opens: the Book when it is one read, else a
  * sheet of them (as the feed's batch row opens its sheet). `books` are the covers of the fan.
  */
-export type CircleFriend = { member: MemberCard; day: string; phrases: CirclePhrase[]; books: SocialBook[]; entries: FeedEntry[] }
+export type FriendsRow = { member: MemberCard; day: string; phrases: FriendsPhrase[]; books: SocialBook[]; entries: FeedEntry[] }
 
-export type CircleView = { card: CircleCard | null; friends: CircleFriend[] }
+export type FriendsView = { card: FriendsCard | null; friends: FriendsRow[] }
 
 type Options = {
   /** The moment the section is drawn at. */
@@ -82,7 +82,7 @@ function pickCard(entries: readonly FeedEntry[], { now, dayOf }: Options): FeedE
   return best
 }
 
-function cardOf(picked: FeedEntry, same: readonly FeedEntry[]): CircleCard {
+function cardOf(picked: FeedEntry, same: readonly FeedEntry[]): FriendsCard {
   // `same` is newest first, the picked one among it: the rating and review are the newest that has one.
   const rated = same.find((entry) => entry.rating)
   const reviewed = same.find((entry) => entry.review)
@@ -103,26 +103,26 @@ function cardOf(picked: FeedEntry, same: readonly FeedEntry[]): CircleCard {
   }
 }
 
-function phraseOf(row: FeedRow): CirclePhrase {
+function phraseOf(row: FeedRow): FriendsPhrase {
   return row.type === 'entry'
     ? { type: 'entry', verb: feedVerbKey(row.entry.kind, row.entry.again), books: [row.entry.book] }
     : { type: 'batch', key: feedBatchKey(row.kind), count: row.entries.length }
 }
 
 /** Her phrases: one per row, except two single entries of one verb, which are one phrase with both Books. */
-function phrasesOf(rows: readonly FeedRow[]): CirclePhrase[] {
+function phrasesOf(rows: readonly FeedRow[]): FriendsPhrase[] {
   const [first, second] = rows.map(phraseOf)
   if (first?.type === 'entry' && second?.type === 'entry' && first.verb === second.verb) {
     return [{ type: 'entry', verb: first.verb, books: [...first.books, ...second.books] }]
   }
-  return [first, second].filter((phrase): phrase is CirclePhrase => Boolean(phrase))
+  return [first, second].filter((phrase): phrase is FriendsPhrase => Boolean(phrase))
 }
 
 function booksOf(row: FeedRow): SocialBook[] {
   return row.type === 'entry' ? [row.entry.book] : row.entries.map((entry) => entry.book)
 }
 
-export function circleView(entries: readonly FeedEntry[], options: Options): CircleView {
+export function friendsView(entries: readonly FeedEntry[], options: Options): FriendsView {
   const picked = pickCard(entries, options)
   const same = picked
     ? entries.filter((entry) => entry.member.id === picked.member.id && entry.book.id === picked.book.id && isFinish(entry))
@@ -143,8 +143,8 @@ export function circleView(entries: readonly FeedEntry[], options: Options): Cir
     }
   }
 
-  const friends = [...byMember.values()].slice(0, CIRCLE_MEMBERS).map(({ member, day, rows }) => {
-    const told = rows.slice(0, CIRCLE_PHRASES)
+  const friends = [...byMember.values()].slice(0, FRIENDS_MEMBERS).map(({ member, day, rows }) => {
+    const told = rows.slice(0, FRIENDS_PHRASES)
     const books = new Map<string, SocialBook>()
     for (const row of told) for (const book of booksOf(row)) if (!books.has(book.id)) books.set(book.id, book)
     // One read of a Book, however many of her events name it (a finish and its review): the Books her sentence tells of.
@@ -152,7 +152,7 @@ export function circleView(entries: readonly FeedEntry[], options: Options): Cir
     for (const entry of told.flatMap((row) => (row.type === 'entry' ? [row.entry] : row.entries))) {
       if (!entries.some((kept) => kept.book.id === entry.book.id)) entries.push(entry)
     }
-    return { member, day, phrases: phrasesOf(told), books: [...books.values()].slice(0, CIRCLE_COVERS), entries }
+    return { member, day, phrases: phrasesOf(told), books: [...books.values()].slice(0, FRIENDS_COVERS), entries }
   })
 
   return { card, friends }

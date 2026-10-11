@@ -4,7 +4,7 @@
 // line repeated. A row opens its Book's page, which closes the sheet; Back from the Book opens it
 // again as it was left (`restore`, components/ui/Sheet.vue).
 //
-// Home's Your circle opens it for a member's row too (social v2a): the reads her sentence names. Of one kind (a
+// Home's Your friends opens it for a member's row too (social v2a): the reads her sentence names. Of one kind (a
 // feed batch's, or "finished A and B") it is the same sheet; of several (`kind: null`: "started A, added B to Want
 // to read") the title is her name alone and each row says what she did, with her avatar and name (which open her
 // page) as in the feed.

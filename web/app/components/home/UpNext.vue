@@ -4,12 +4,12 @@
 // screen's edge; each cover opens its book page from the touch-down.
 import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
-import type { CircleGroup } from '~/utils/circle'
+import type { FriendsGroup } from '~/utils/friendsNames'
 
 /** How many covers the row shows: it is a glance, the Library has the rest. */
 const SHOWN = 8
 
-const props = defineProps<{ entries: readonly LibraryEntry[]; circle?: Readonly<Record<string, CircleGroup>> }>()
+const props = defineProps<{ entries: readonly LibraryEntry[]; friends?: Readonly<Record<string, FriendsGroup>> }>()
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -42,10 +42,10 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
           />
         </UiPressLink>
         <!-- Who else wants it (social v2a): beside the cover's link, on its lower edge. -->
-        <FriendsCircleAvatars
-          v-if="circle?.[entry.book.id]?.members.length"
-          :members="circle[entry.book.id]!.members"
-          :more="circle[entry.book.id]!.more"
+        <FriendsAlsoAvatars
+          v-if="friends?.[entry.book.id]?.members.length"
+          :members="friends[entry.book.id]!.members"
+          :more="friends[entry.book.id]!.more"
           kind="want"
           testid="home.wantWith"
           class="absolute bottom-xs left-1/2 z-10 flex -translate-x-1/2"

@@ -146,7 +146,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 `figures` (mono, tabular) for dates, counts and ratings, `eyebrow` for section labels.
 
 A member's name: `text-body` regular in lists of members (People, Requests, Blocked); `text-subhead`
-medium only inside a feed sentence (a feed row, Home's circle rows and its request row).
+medium only inside a feed sentence (a feed row, Home's friends rows and its request row).
 
 ### Space, radius, size
 

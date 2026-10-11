@@ -1,21 +1,21 @@
 <script setup lang="ts">
-// The card of Home's Your circle (social v1, U8; the "Lit feature" mock): the week's one finished Book,
+// The card of Home's Your friends (social v1, U8; the "Lit feature" mock): the week's one finished Book,
 // in a raised, rounded panel lit by the Book's own cover (UiLitCard, shared with Your reviews on the Profile; a
 // Book on the Placeholder is lit by its cloth, as the book page is). The cover at the left; at the right her avatar and name ("Anna finished"), the title
 // in the serif, her stars when she shows them, and her review in the serif italic folded at three
 // lines, `More` unfolding it, as the feed's rows do. The cover and the title open the Book, the cover
 // flying there as everywhere else (UiPressLink); a Manual book opens nothing, a follower cannot read
 // it. Her avatar and name open her page (`/friends/<member>`). The title is written beside the cover,
-// so the cover is decorative. Drawing only: utils/circleView.ts picks the card.
+// so the cover is decorative. Drawing only: utils/friendsView.ts picks the card.
 //
-// Props: `card` (CircleCard), `eager` (the cover loads now). Test ids: `home.circleFeature` (the panel),
-// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`, `.like` (the heart, under Want to read in the
+// Props: `card` (FriendsCard), `eager` (the cover loads now). Test ids: `home.friendsFeature` (the panel),
+// `home.friendsFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`, `.like` (the heart, under Want to read in the
 // icon column at the card's right edge, centred on the cover; `.like.error` when a like was refused), `.folded` (a review flagged as spoilers, folded behind *Show anyway*).
-import type { CircleCard } from '~/utils/circleView'
+import type { FriendsCard } from '~/utils/friendsView'
 import { useBookStore } from '~/stores/book'
 import { likeable } from '~/utils/likes'
 
-const props = defineProps<{ card: CircleCard; eager?: boolean }>()
+const props = defineProps<{ card: FriendsCard; eager?: boolean }>()
 
 const { t } = useI18n()
 const books = useBookStore()
@@ -62,7 +62,7 @@ async function unfold() {
 </script>
 
 <template>
-  <UiLitCard v-slot="{ onFallback }" :colors="book.coverColors" :title="book.title" class="flex items-start gap-ml p-inset" data-testid="home.circleFeature">
+  <UiLitCard v-slot="{ onFallback }" :colors="book.coverColors" :title="book.title" class="flex items-start gap-ml p-inset" data-testid="home.friendsFeature">
 
     <UiPressLink
       v-if="!book.manual && !book.unverified"
@@ -70,7 +70,7 @@ async function unfold() {
       class="relative shrink-0"
       tabindex="-1"
       aria-hidden="true"
-      data-testid="home.circleFeature.cover"
+      data-testid="home.friendsFeature.cover"
       @press="books.prefetch(book.id)"
     >
       <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
@@ -81,7 +81,7 @@ async function unfold() {
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
       <div class="flex min-w-0 flex-wrap items-center gap-x-sm gap-y-xxs text-subhead">
-        <NuxtLink :to="`/friends/${card.member.id}`" class="reach flex min-w-0 items-center gap-sm" data-testid="home.circleFeature.member">
+        <NuxtLink :to="`/friends/${card.member.id}`" class="reach flex min-w-0 items-center gap-sm" data-testid="home.friendsFeature.member">
           <FriendsAvatar :card="card.member" />
           <span class="truncate font-medium">{{ name }}</span>
         </NuxtLink>
@@ -92,22 +92,22 @@ async function unfold() {
         v-if="!book.manual && !book.unverified"
         :to="bookPath"
         class="reach book-title text-callout"
-        data-testid="home.circleFeature.title"
+        data-testid="home.friendsFeature.title"
         @press="books.prefetch(book.id)"
       >{{ book.title }}</UiPressLink>
-      <span v-else class="book-title text-callout" data-testid="home.circleFeature.title">{{ book.title }}</span>
+      <span v-else class="book-title text-callout" data-testid="home.friendsFeature.title">{{ book.title }}</span>
 
-      <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.circleFeature.stars" />
+      <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.friendsFeature.stars" />
 
-      <FriendsLikeError v-if="showHeart" :row="card" testid="home.circleFeature.like" />
+      <FriendsLikeError v-if="showHeart" :row="card" testid="home.friendsFeature.like" />
 
-      <FriendsReviewFold v-if="card.review" :folded="card.folded" :name="name" testid="home.circleFeature.folded">
-        <p ref="review" tabindex="-1" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.circleFeature.review">{{ card.review }}</p>
+      <FriendsReviewFold v-if="card.review" :folded="card.folded" :name="name" testid="home.friendsFeature.folded">
+        <p ref="review" tabindex="-1" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.friendsFeature.review">{{ card.review }}</p>
         <button
           v-if="clamped && !expanded"
           type="button"
           class="-mt-xs -mb-sm min-h-(--size-touch) text-caption text-ink-faint hover:text-ink-muted"
-          data-testid="home.circleFeature.more"
+          data-testid="home.friendsFeature.more"
           @click="unfold"
         >{{ t('feed.more') }}</button>
       </FriendsReviewFold>
@@ -122,8 +122,8 @@ async function unfold() {
       :name="name"
       :owner="card.member.id"
       :title="book.title"
-      want-testid="home.circleFeature.wantToRead"
-      like-testid="home.circleFeature.like"
+      want-testid="home.friendsFeature.wantToRead"
+      like-testid="home.friendsFeature.like"
     />
   </UiLitCard>
 </template>

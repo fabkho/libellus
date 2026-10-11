@@ -8,7 +8,7 @@ import { useSocialStore } from '~/stores/social'
 
 /**
  * The feed (social v1, docs/proposals/social-v1.md §C, data/feed.ts): what the members she follows
- * did, newest first. Shown on Home as "Your circle" (its newest three) and on its own page
+ * did, newest first. Shown on Home as "Your friends" (its newest three) and on its own page
  * (`/friends`, thirty at a time, more as she scrolls).
  *
  * The device keeps the last first page (`saveFeed`), read back when the store is set up, so the feed
@@ -127,7 +127,7 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   /**
-   * A member is no longer in her circle (unfollowed, blocked, removed as a follower; told by the social
+   * A member is no longer in her friends (unfollowed, blocked, removed as a follower; told by the social
    * store, which changes the relationship): her entries leave what is shown and the device's copy is
    * saved again without them, with the time it was taken (not "now": the rest is no newer). Without it
    * an offline Home, or a refresh that keeps the older pages she scrolled to, would still show her.

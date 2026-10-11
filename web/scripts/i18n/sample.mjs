@@ -127,7 +127,7 @@ if (models.length > 1) {
     lines.push(`| \`${model}\` | ${r.check.stats.errors} | ${r.check.stats.warnings} | ${r.check.stats.medianRatio} | ${r.usage.prompt} | ${r.usage.answer} | ${r.usage.thinking} | ${r.seconds} |`)
   }
   lines.push('')
-  const fifteen = ['status.want_to_read', 'status.reading', 'status.finished', 'status.notFinished', 'profile.account.delete', 'sync.syncing', 'profile.records.days', 'collection.moved', 'circle.want', 'auth.error.invite_gone', 'home.loadError', 'feed.emptyTitle', 'feed.empty', 'home.installHint.text', 'privacy.goPublicText']
+  const fifteen = ['status.want_to_read', 'status.reading', 'status.finished', 'status.notFinished', 'profile.account.delete', 'sync.syncing', 'profile.records.days', 'collection.moved', 'friends.want', 'auth.error.invite_gone', 'home.loadError', 'feed.emptyTitle', 'feed.empty', 'home.installHint.text', 'privacy.goPublicText']
   lines.push('| Key | English | ' + models.map(m => `\`${m}\``).join(' | ') + ' |', '| --- | --- | ' + models.map(() => '---').join(' | ') + ' |')
   for (const key of fifteen) lines.push(`| ${code(key)} | ${code(sampleFlat[key])} | ${models.map(m => code(results[m].de[key])).join(' | ')} |`)
   lines.push('')

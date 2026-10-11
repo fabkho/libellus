@@ -14,7 +14,7 @@ import {
 import { signUpMember } from './support/member'
 
 /**
- * The photos of the members in her circle (social v1, U7). The pure part first:
+ * The photos of the members in her friends (social v1, U7). The pure part first:
  * what the device does with a member's record given her card (`memberPhotoPlan`
  * and the minute's wait after a failed download), which is all the store
  * decides that is not IndexedDB-bound. Then the bucket, as real members: Ada's

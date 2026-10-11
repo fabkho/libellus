@@ -264,7 +264,7 @@ down. The flight's own copies (`snapshot.ts`, `useEditionChange.ts`, `readerFlig
 | `UiCover`: the backing of a `whole` cover | no `loading`, no `decoding` (eager) | follows `eager`, `decoding=async` |
 | Home: reading cards (`index < 3`) | eager (the LCP is the first one) | same |
 | Home: Up next (`index < 5`) | eager | same: on screen on a phone (8 cold-start covers, 296 KB, all visible) |
-| Home: Next in your series, Circle feature and friends | eager (`index < 3`, the feature) | **lazy**: the last sections of Home, below the fold; the section's reveal opens when its data is there and the browser starts what is in range |
+| Home: Next in your series, the Friends feature and rows | eager (`index < 3`, the feature) | **lazy**: the last sections of Home, below the fold; the section's reveal opens when its data is there and the browser starts what is in range |
 | Library: segment rows (`index < 8`), reading cards (`< 4`) | eager; the rest lazy | same (11 rows on a phone: 8 eager, 3 lazy on screen, 17 lazy ahead) |
 | Library: "Collections" link covers (xs) | lazy | same |
 | Profile: favourite, year cards, authors' books (3 each), month books, read rows, public pages | lazy | same (none on the first screen) |

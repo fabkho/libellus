@@ -36,12 +36,12 @@ describe('a book page, cleaned', () => {
   it('loses its script elements, also in SVG', () => {
     const out = clean(
       `<script src="${BLOB}"/><script>parent.pwned = 1</script>`,
-      `<p>One morning</p><svg xmlns="http://www.w3.org/2000/svg"><script>parent.pwned = 2</script><circle r="4"/></svg>`,
+      `<p>One morning</p><svg xmlns="http://www.w3.org/2000/svg"><script>parent.pwned = 2</script><friends r="4"/></svg>`,
     )
     expect(scriptsIn(out)).toEqual([])
     expect(out).not.toContain('pwned')
     expect(out).toContain('<p>One morning</p>')
-    expect(out).toContain('circle')
+    expect(out).toContain('friends')
   })
 
   it('loses inline event handlers (onload, onerror, onclick, SVG onbegin)', () => {

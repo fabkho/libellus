@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CIRCLE_BOOKS_MAX } from '@/data/social'
 
 /**
- * Who she follows reads, or wants, the same Books (social v2a, stores/circleBooks.ts): the calls carry only Book
+ * Who she follows reads, or wants, the same Books (social v2a, stores/friendsBooks.ts): the calls carry only Book
  * ids (her open reads, her Want to read), at most CIRCLE_BOOKS_MAX; offline, or refused, the last answer stays;
  * a member who follows nobody makes no call; the feed's refresh asks again. The store runs as in Nuxt with the
  * auto-imports it uses stood in for, a fake backend (`circle_reading`, `circle_want`, `my_people`), and the real
@@ -61,8 +61,8 @@ async function store() {
   vi.stubGlobal('useOnline', () => readonly(online))
   vi.stubGlobal('isOnline', () => online.value)
   setActivePinia(createPinia())
-  const { useCircleBooksStore } = await import('~/stores/circleBooks')
-  return useCircleBooksStore()
+  const { useFriendsBooksStore } = await import('~/stores/friendsBooks')
+  return useFriendsBooksStore()
 }
 
 beforeEach(() => {
@@ -78,15 +78,15 @@ beforeEach(() => {
   session = reactive({ member: { id: 'ada' } as { id: string } | null })
 })
 
-describe('the circle on her Books', () => {
+describe('the friends on her Books', () => {
   // The cause of "Home never shows the avatars": the store waited for a page to call `load`, and Home no longer did.
   // It asks by itself once her lists are there, and again when her Books change.
   it('asks by itself when her lists arrive, with no page asking, and when her Books change', async () => {
-    const circle = await store()
+    const friends = await store()
     await nextTick()
     expect(calls.filter((c) => c.fn.startsWith('circle_'))).toEqual([])
     lists.loaded = true
-    await vi.waitFor(() => expect(Object.keys(circle.reading)).toEqual(['r1', 'r2']))
+    await vi.waitFor(() => expect(Object.keys(friends.reading)).toEqual(['r1', 'r2']))
     expect(asked('circle_reading')).toEqual([['r0', 'r1', 'r2']])
     expect(asked('circle_want')).toEqual([['w0', 'w1', 'w2']])
     lists.wantToRead = [...books('w', 3), ...books('x', 1)]
@@ -104,75 +104,75 @@ describe('the circle on her Books', () => {
   })
 
   it('leaves a fresh answer to the same Books alone when a page shows again (ifStale), and asks when they changed', async () => {
-    const circle = await store()
+    const friends = await store()
     lists.loaded = true
     await vi.waitFor(() => expect(asked('circle_reading')).toHaveLength(1))
-    await circle.load({ ifStale: true })
+    await friends.load({ ifStale: true })
     expect(asked('circle_reading')).toHaveLength(1)
-    await circle.load()
+    await friends.load()
     expect(asked('circle_reading')).toHaveLength(2)
   })
 
   it('asks with Book ids only, one call for each list, and keeps the answers by Book', async () => {
-    const circle = await store()
-    await circle.load()
+    const friends = await store()
+    await friends.load()
     expect(asked('circle_reading')).toEqual([['r0', 'r1', 'r2']])
     expect(asked('circle_want')).toEqual([['w0', 'w1', 'w2']])
-    expect(circle.reading).toEqual({ r1: { members: [CARD], more: 0 }, r2: { members: [CARD], more: 0 } })
-    expect(circle.want.w1).toEqual({ members: [CARD], more: 2 })
-    expect(circle.want.w0).toBeUndefined()
+    expect(friends.reading).toEqual({ r1: { members: [CARD], more: 0 }, r2: { members: [CARD], more: 0 } })
+    expect(friends.want.w1).toEqual({ members: [CARD], more: 2 })
+    expect(friends.want.w0).toBeUndefined()
   })
 
   it('asks about at most CIRCLE_BOOKS_MAX Books of each list, the first (newest) ones', async () => {
     lists.reading = books('r', CIRCLE_BOOKS_MAX + 10)
     lists.wantToRead = books('w', CIRCLE_BOOKS_MAX + 10)
-    const circle = await store()
-    await circle.load()
+    const friends = await store()
+    await friends.load()
     expect(asked('circle_reading')[0]).toEqual(lists.reading.slice(0, CIRCLE_BOOKS_MAX).map((e) => e.book.id))
     expect(asked('circle_want')[0]).toHaveLength(CIRCLE_BOOKS_MAX)
   })
 
   it('asks nothing for a list without Books', async () => {
     lists.reading = []
-    const circle = await store()
-    await circle.load()
+    const friends = await store()
+    await friends.load()
     expect(asked('circle_reading')).toEqual([])
     expect(asked('circle_want')).toHaveLength(1)
   })
 
   it('makes no call for a member who follows nobody', async () => {
     followingIds = []
-    const circle = await store()
-    await circle.load()
+    const friends = await store()
+    await friends.load()
     expect(calls.filter((c) => c.fn.startsWith('circle_'))).toEqual([])
-    expect(circle.reading).toEqual({})
+    expect(friends.reading).toEqual({})
   })
 
   it('keeps the last answer offline and on a refusal', async () => {
-    const circle = await store()
-    await circle.load()
-    const before = { reading: circle.reading, want: circle.want }
+    const friends = await store()
+    await friends.load()
+    const before = { reading: friends.reading, want: friends.want }
     calls.length = 0
     online.value = false
-    await circle.load()
+    await friends.load()
     expect(calls).toEqual([])
-    expect({ reading: circle.reading, want: circle.want }).toEqual(before)
+    expect({ reading: friends.reading, want: friends.want }).toEqual(before)
     // Back online asks again by itself; the database refuses.
     refuse = true
     online.value = true
-    await circle.load()
+    await friends.load()
     expect(calls.filter((c) => c.fn.startsWith('circle_')).length).toBeGreaterThanOrEqual(2)
-    expect({ reading: circle.reading, want: circle.want }).toEqual(before)
+    expect({ reading: friends.reading, want: friends.want }).toEqual(before)
   })
 
   it('asks again after the feed is refreshed once the answer is stale, not while it is fresh for the same Books', async () => {
-    const circle = await store()
+    const friends = await store()
     feedState.takenAt = new Date()
     await nextTick()
     await nextTick()
     expect(calls.filter((c) => c.fn.startsWith('circle_'))).toEqual([])
     lists.loaded = true
-    await circle.load()
+    await friends.load()
     expect(asked('circle_reading')).toHaveLength(1)
     // Fresh: Home's own feed refresh (the first load's) does not ask the same Books again.
     feedState.takenAt = new Date(Date.now() + 1000)
@@ -188,10 +188,10 @@ describe('the circle on her Books', () => {
   })
 
   it('makes one request for one set of Books, however many calls come in a tick (Home asked twice on its first load)', async () => {
-    const circle = await store()
+    const friends = await store()
     lists.loaded = true
     // Her lists arrived (the store's own watcher asks), and the page, the feed's refresh and the second page ask in the same tick.
-    const asks = [circle.load(), circle.load({ ifStale: true }), circle.load(), circle.load({ ifStale: true })]
+    const asks = [friends.load(), friends.load({ ifStale: true }), friends.load(), friends.load({ ifStale: true })]
     feedState.takenAt = new Date()
     await Promise.all(asks)
     await nextTick()
@@ -202,9 +202,9 @@ describe('the circle on her Books', () => {
   })
 
   it('asks again, once, when her Books change while a request is on its way', async () => {
-    const circle = await store()
+    const friends = await store()
     lists.loaded = true
-    const first = circle.load()
+    const first = friends.load()
     await vi.waitFor(() => expect(asked('circle_reading')).toHaveLength(1))
     lists.wantToRead = [...books('w', 3), ...books('x', 1)]
     await first
@@ -214,41 +214,41 @@ describe('the circle on her Books', () => {
     expect(asked('circle_want')[1]).toEqual(['w0', 'w1', 'w2', 'x0'])
   })
 
-  it('takes a member who left her circle out of every group at once, and a group with nobody left goes (privacy review M2)', async () => {
-    const circle = await store()
-    await circle.load()
-    expect(circle.reading.r1?.members).toEqual([CARD])
-    circle.dropMember('ben')
-    expect(circle.reading).toEqual({})
-    expect(circle.want).toEqual({})
+  it('takes a member who left her friends out of every group at once, and a group with nobody left goes (privacy review M2)', async () => {
+    const friends = await store()
+    await friends.load()
+    expect(friends.reading.r1?.members).toEqual([CARD])
+    friends.dropMember('ben')
+    expect(friends.reading).toEqual({})
+    expect(friends.want).toEqual({})
   })
 
   it('keeps the others of a group', async () => {
-    const circle = await store()
-    await circle.load()
+    const friends = await store()
+    await friends.load()
     const cleo = { id: 'cleo', name: 'Cleo', photo: null }
-    circle.reading = { r1: { members: [CARD, cleo], more: 1 } }
-    circle.dropMember('ben')
-    expect(circle.reading).toEqual({ r1: { members: [cleo], more: 1 } })
+    friends.reading = { r1: { members: [CARD, cleo], more: 1 } }
+    friends.dropMember('ben')
+    expect(friends.reading).toEqual({ r1: { members: [cleo], more: 1 } })
   })
 
   it('throws away an answer that was on its way when she left (it may still name her)', async () => {
-    const circle = await store()
-    const asking = circle.load()
-    circle.dropMember('ben')
+    const friends = await store()
+    const asking = friends.load()
+    friends.dropMember('ben')
     await asking
-    expect(circle.reading).toEqual({})
-    expect(circle.want).toEqual({})
+    expect(friends.reading).toEqual({})
+    expect(friends.want).toEqual({})
   })
 
   it('forgets everything when another member signs in', async () => {
-    const circle = await store()
-    await circle.load()
-    expect(Object.keys(circle.reading)).not.toHaveLength(0)
+    const friends = await store()
+    await friends.load()
+    expect(Object.keys(friends.reading)).not.toHaveLength(0)
     session.member = { id: 'bea' }
     await nextTick()
-    expect(circle.reading).toEqual({})
-    expect(circle.want).toEqual({})
+    expect(friends.reading).toEqual({})
+    expect(friends.want).toEqual({})
   })
 })
 
@@ -269,18 +269,18 @@ describe('a request cancelled by a navigation', () => {
 
   for (const fn of ['my_people', 'circle_reading', 'circle_want'] as const) {
     it(`${fn}: the shared run resolves, every caller of it too, and the last answer stays`, async () => {
-      const circle = await store()
-      await circle.load()
-      const before = { reading: circle.reading, want: circle.want }
+      const friends = await store()
+      await friends.load()
+      const before = { reading: friends.reading, want: friends.want }
       cancelled = [fn]
       // Several callers share the run on its way; one is a watcher's `void`.
       lists.loaded = true
       lists.reading = [...books('r', 3), ...books('n', 1)]
-      const shared = [circle.load(), circle.load({ ifStale: true }), circle.load()]
+      const shared = [friends.load(), friends.load({ ifStale: true }), friends.load()]
       await expect(Promise.all(shared)).resolves.toBeDefined()
       await settle()
       expect(unhandled).toEqual([])
-      if (fn !== 'my_people') expect(circle.want).toEqual(before.want)
+      if (fn !== 'my_people') expect(friends.want).toEqual(before.want)
     })
   }
 

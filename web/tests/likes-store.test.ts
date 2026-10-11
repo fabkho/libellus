@@ -92,7 +92,7 @@ describe('likes store', () => {
   })
 })
 
-describe('a member who leaves her circle (privacy review M2)', () => {
+describe('a member who leaves her friends (privacy review M2)', () => {
   const ben = { id: 'ben', name: 'Ben', photo: null }
   const cleo = { id: 'cleo', name: 'Cleo', photo: null }
   const book = { id: 'b1', title: 'Piranesi', authors: [], year: null, coverUrl: null, coverThumbhash: null, coverColors: null, manual: false, unverified: false }

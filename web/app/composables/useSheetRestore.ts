@@ -18,7 +18,7 @@ export interface SheetRestore {
  * then opens as it was left (no rise, no scrim fading in, its list scrolled
  * where it was) rather than as a fresh one does. `testid` is the sheet whose
  * scroll is kept, and which sheet the kept place belongs to: a page may have
- * more than one (Home: the year's Books, a circle row's Books); each puts back
+ * more than one (Home: the year's Books, a friends row's Books); each puts back
  * only its own.
  */
 export function useSheetRestore<T>({ testid, sheet, reopen }: { testid: string; sheet: () => T | null; reopen: (kept: T) => void }) {
