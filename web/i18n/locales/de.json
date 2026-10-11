@@ -1896,7 +1896,9 @@
     "folded": "Enthält Spoiler",
     "showAnyway": "Trotzdem anzeigen",
     "spoilersHint": "Freunde, die es noch nicht gelesen haben, sehen sie eingeklappt.",
-    "showAnywayLabel": "Rezension von {name} trotzdem anzeigen"
+    "showAnywayLabel": "Rezension von {name} trotzdem anzeigen",
+    "more": "mehr",
+    "less": "weniger"
   },
   "social": {
     "wantToRead": {
