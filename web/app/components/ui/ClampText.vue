@@ -6,6 +6,7 @@
 // land on the root; `testid` names the text, the button is `<testid>.more`. A click on the button
 // stops there, so a row that opens something does not open it too.
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { heightKeyframes, isCut } from '~/utils/clampText'
 import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
 
 const props = withDefaults(defineProps<{ text: string; testid?: string }>(), { testid: 'clamp' })
@@ -22,7 +23,7 @@ let animation: Animation | null = null
 function measure() {
   const el = body.value
   if (!el || expanded.value) return
-  truncated.value = el.scrollHeight > el.clientHeight + 1
+  truncated.value = isCut(el.scrollHeight, el.clientHeight)
 }
 
 async function toggle() {
@@ -34,8 +35,9 @@ async function toggle() {
   animation?.cancel()
   animation = null
   const to = el.getBoundingClientRect().height
-  if (prefersReducedMotion() || from === to || typeof el.animate !== 'function') return
-  animation = el.animate([{ height: `${from}px` }, { height: `${to}px` }], {
+  const keyframes = heightKeyframes(from, to, prefersReducedMotion())
+  if (!keyframes || typeof el.animate !== 'function') return
+  animation = el.animate(keyframes, {
     duration: durationToken('standard'),
     easing: easingToken('standard'),
   })
