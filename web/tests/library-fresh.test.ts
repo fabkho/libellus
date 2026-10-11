@@ -234,6 +234,26 @@ describe('descriptions', () => {
     expect(calls.descriptions).toEqual([[BOOK_A, BOOK_B], [BOOK_C]])
   })
 
+  it('the shelf asks for them now, not when idle: one request however often it asks, and none offline', async () => {
+    catalogue.set(BOOK_A, 'About A.')
+    const library = await store()
+    await library.load({ ifStale: true })
+    await Promise.all([library.ensureDescriptions(), library.ensureDescriptions()])
+    expect(calls.descriptions).toEqual([[BOOK_A, BOOK_B]])
+    expect(library.descriptionOf(book(BOOK_A))).toBe('About A.')
+
+    // The idle fill finds nothing missing; a later ask neither.
+    await idle()
+    await library.ensureDescriptions()
+    expect(calls.descriptions).toHaveLength(1)
+
+    online.value = false
+    server = { ...server, reading: [entry('e3', 'reading', book(BOOK_C))] }
+    library.entryChanged(entry('e3', 'reading', book(BOOK_C)))
+    await library.ensureDescriptions()
+    expect(calls.descriptions).toHaveLength(1)
+  })
+
   it('a next start has them from the device, offline too, without asking', async () => {
     catalogue.set(BOOK_A, 'About A.')
     const first = await store()
