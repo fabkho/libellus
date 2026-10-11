@@ -54,8 +54,8 @@ import {
  *   a Read Count above 1 adds that many earlier finished reads, undated;
  * - a did-not-finish shelf (`dnf`, `abandoned`, …, #64) → Finished, one
  *   abandoned session ended on Date Read; no rating (only finished reads have one);
- * - `currently-reading` → Currently reading, an open session started on
- *   Date Added (today when it has none); earlier reads as for `read`;
+ * - `currently-reading` → Currently reading, an open session started today
+ *   (the export has no start day; Date Added is when she shelved the book, not when she began it); earlier reads as for `read`;
  * - `to-read` and any other shelf → Want to read, no session;
  * - every shelf that is not one of these (`favourites`, `sci-fi`, a custom
  *   exclusive one like `wishlist`) → a Collection the preview offers;
@@ -137,7 +137,8 @@ export function mapGoodreadsRow(row: Row, index: number, today: string): ImportB
   } else {
     if (shelfName === 'currently-reading') {
       status = 'reading'
-      session = { startedOn: addedOn ?? today, endedOn: null, outcome: null, rating: null, review: null }
+      // Goodreads writes no start day: Date Added is when she shelved it (often as to-read, long before), so it is no start.
+      session = { startedOn: today, endedOn: null, outcome: null, rating: null, review: null }
       extraReads = readCount - 1
     } else {
       status = 'want_to_read'

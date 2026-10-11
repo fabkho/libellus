@@ -185,7 +185,7 @@ describe('importing a Goodreads export', () => {
         status: 'reading',
         source: 'import',
         owner_id: null,
-        sessions: [{ started: '2025-08-01', ended: null, outcome: null, rating: null, review: null, key: 'goodreads:12' }],
+        sessions: [{ started: today, ended: null, outcome: null, rating: null, review: null, key: 'goodreads:12' }],
       },
       { title: runTitle('Glass Orchard'), status: 'want_to_read', source: 'import', owner_id: null, sessions: null },
       {
