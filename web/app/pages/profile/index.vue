@@ -184,6 +184,8 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
             <UiReveal :show="loading || figures.rated > 0">
               <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
             </UiReveal>
+            <!-- Your shelf, the Profile's eye-catcher, right under the ratings: below the fold when the page opens, so its card is never seen before its Books are drawn. -->
+            <ProfileShelf v-if="shelf.available" class="pt-xl" />
             <UiReveal :show="genresShown">
               <ProfileGenres class="pt-xl" :figures="loading ? null : genreFigures" @pick="pickGenre" />
             </UiReveal>
@@ -215,7 +217,8 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
           <div class="pb-xl" />
         </UiReveal>
 
-        <ProfileShelf v-if="shelf.available" class="mb-xl" />
+        <!-- Nothing finished yet: no figures to stand under, so her shelf (its empty line) stands here. -->
+        <ProfileShelf v-if="shelf.available && !(placeholders || hasStats)" class="mb-xl" />
 
         <!-- Friends (social v1): who follows her, her follow link, her privacy. -->
         <ProfileFriends class="mb-xl" />
