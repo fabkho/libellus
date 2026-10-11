@@ -224,9 +224,10 @@ Content-Security-Policy in `web/public/_headers` names both hosts and allows the
 it carries its own `script-src 'none'` policy, and its frame runs no script where the browser allows
 that (not WebKit), so a crafted EPUB cannot act as the member (`web/app/data/reader/markup.ts`).
 
-**Regal, the 3D shelf** is the owner's Nuxt layer (its own repository, fabkho/regal); the app builds without it and loses
-nothing else. It needs `LIBELLUS_REGAL=1`, a way to download it (`GIGET_AUTH`, any GitHub token; CI uses the run's own read-only token), a
-published library file and the owner's user id (table below). Its data feed (`regal-export`, the
+**Regal, the 3D shelf** (Your shelf, every member's own) is a Nuxt layer (its own repository, fabkho/regal); the app builds without it and loses
+nothing else. It needs `LIBELLUS_REGAL=1` and a way to download it (`GIGET_AUTH`, any GitHub token; CI uses the run's own read-only token;
+`REGAL_LAYER=<checkout>` for a local one). A member's shelf is built on her device from her Library: nothing to publish, nothing stored or sent.
+Optional, for the owner's portfolio: a published library file and the owner's user id (table below), and its data feed (`regal-export`, the
 `shelf_publish` trigger with `pg_net` and a Vault secret) does nothing until configured:
 [OWNER.md](OWNER.md).
 
@@ -256,10 +257,10 @@ are off until set.
 | Web build env | `NUXT_PUBLIC_SUPABASE_ANON_KEY` | none (required) | Its anon (publishable) key. Public. |
 | Web build env | `NODE_VERSION` (Pages) | Pages' default | `24`. |
 | Web build env | `NUXT_PUBLIC_LINK_TEMPLATES` | empty | Book links for every member, JSON (above). Public. |
-| Web build env | `LIBELLUS_REGAL` | unset (off) | `1` builds with the owner's Regal layer. Owner only. |
-| Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal (CI: the run's own `github.token`), or a local checkout. Owner only. |
-| Web build env | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | empty | The published library file Regal shows. Required with `LIBELLUS_REGAL=1`. Owner only. |
-| Web build env | `NUXT_PUBLIC_SHELF_OWNER_ID` | empty (nobody) | The auth user id of the instance's owner: sees the Errors row and page, and Your shelf with Regal ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)). Owner only. |
+| Web build env | `LIBELLUS_REGAL` | unset (off) | `1` builds with the Regal layer: Your shelf for every member. |
+| Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal (CI: the run's own `github.token`), or a local checkout. With `LIBELLUS_REGAL=1`. |
+| Web build env | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | empty | The owner's published library file: his shelf is that file (the portfolio's); unset, his shelf is built on the device like everyone's. Owner only. |
+| Web build env | `NUXT_PUBLIC_SHELF_OWNER_ID` | empty (nobody) | The auth user id of the instance's owner: sees the Errors row and page, and his published shelf with Regal ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)). Owner only. |
 | Supabase Auth | Site URL, Redirect URLs | `http://127.0.0.1:3020` locally | The instance's address (step 1.3, 4). |
 | Supabase Auth | Confirm email, Email OTP length | on, 6 | As in `supabase/config.toml` (step 1.3). |
 | Supabase Auth | User sign-ups | on | Leave on; invite codes gate sign-up in the database. |

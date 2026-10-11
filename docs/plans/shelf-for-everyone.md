@@ -6,6 +6,35 @@ colour so it's one colour." The last open item before friends are invited. Relat
 shelf needs love; this does the reachability and the free-tier part of it, not the parity with the
 portfolio's `app` mode).
 
+## What the shelf is for (#214)
+
+1. A member's reading as an object she is proud of: every Book she has read, standing in its cover's colour.
+2. The app's eye-catcher and part of the free tier: the screen a friend is shown first.
+3. Hers alone: built from her own Library on her device, never published, offline too.
+4. A place to browse her own history by feel (a year, a colour, a thick book), not a list to manage.
+5. Not the portfolio: the owner's published shelf stays his public one; everyone else's is private.
+
+## Priorities
+
+Must-haves for the friends round (this PR, with the Regal PR it needs):
+
+1. Everyone gets a shelf (the gates go; the build flag still decides whether Regal is built in).
+2. One colour per Book: Spine and back flat in the cover's most common colour, with guard rails.
+3. It follows the member's theme (no forced night room; a member in the dark theme gets it).
+4. Always reachable: Profile → Your shelf → Show all whenever a Book stands on it (not only above 80),
+   and Show all on each year in review to that year's Stack full screen (`?year=`).
+5. Smooth at 1,000 Books, lazy, out of the precache, offline from the device's Library.
+
+Parity with the portfolio's `app` mode, staged by value (a second PR, none of it half-built in this one):
+
+| # | Item | Proposal |
+|---|---|---|
+| P1 | Sort and filter (date read, rating, year) | Regal's `controls` chips over the Stack, themed like the app's view bar; kept in the address as today. Smallest step, highest value. |
+| P2 | Fuller details panel | Regal's panel with the review (hers, private), read count, dates started and finished, and a link to the book page (`/book/<id>`, the Libellus id is the Book's id) instead of Goodreads for a member's shelf. |
+| P3 | Records and summary | A sheet from the top bar's count: Regal's summary and records (longest, shortest, most re-read, by year) from the same document, no new data. |
+| P4 | Sidebar on wide screens | `RegalBooksSidebar` beside the Stack above the column's width (tablet/desktop), with `library`. |
+| P5 | A short year's Stack sits low | Regal's phone camera puts the pile's top at 80 % of the height; a year's 10 Books leave the upper half empty: start a short pile lower in the view. |
+
 ## What changes
 
 **Who.** Every signed-in member in a build with Regal (`LIBELLUS_REGAL=1`) has Your shelf: the
