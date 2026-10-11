@@ -1,9 +1,11 @@
-import { expect } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { expect, type Page } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { createFeedback, buildContext } from '../app/data/feedback'
 import { signUpMember } from '../tests/support/member'
 import { sql } from '../tests/support/stack'
 import { test } from './fixtures'
+import { SHELF_LIBRARY_SRC } from './shelfOwner'
 import { expectAccessible, openProfile, signedIn, signedInAsOwner, untilStill } from './support'
 
 /**
@@ -13,6 +15,20 @@ import { expectAccessible, openProfile, signedIn, signedInAsOwner, untilStill } 
  * it went through. The owner's account has a Feedback row under it: the messages, newest first, as text
  * (never markup), with Mark handled. Everyone else has neither the row nor the page.
  */
+
+/**
+ * The published library file the owner's Profile shows (#23, `SHELF_LIBRARY_SRC`): the owner is
+ * signed in here, so her Profile asks for it (the shell's warm-up, the Profile's card, and Regal's
+ * own components). Answered from the synthetic fixture, the way the shelf's own flows did
+ * (tests/fixtures/shelf/library.json): no flow reaches the live address (`noLiveApis`, e2e/fixtures.ts).
+ */
+const LIBRARY_FILE = readFileSync(new URL('../tests/fixtures/shelf/library.json', import.meta.url), 'utf8')
+
+async function recordedShelf(page: Page) {
+  await page.route(SHELF_LIBRARY_SRC, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: LIBRARY_FILE }),
+  )
+}
 
 type Row = { kind: string; body: string; context: Record<string, unknown>; handled_at: string | null }
 const rowsOf = (memberId: string) => sql<Row>('select kind, body, context, handled_at::text from public.feedback where member_id = $1 order by created_at', [memberId])
@@ -129,6 +145,8 @@ test('the owner reads what was sent, as text, and marks it handled', async ({ pa
   expect(await createFeedback(writer.client).send('feature', markup, context)).toEqual({ error: null })
   const [{ id }] = await sql<{ id: string }>('select id from public.feedback where member_id = $1', [writer.id])
 
+  // The owner's Profile shows her Regal shelf, which reads the published library file: answered.
+  await recordedShelf(page)
   await signedInAsOwner(page)
   await openProfile(page)
   await expect(page.getByTestId('profile.feedback')).toBeVisible()
