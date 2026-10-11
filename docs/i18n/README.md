@@ -100,7 +100,7 @@ Model default: **`gemini-3.8-flash`** (`DEFAULT_MODEL` in `run.mjs`). Prices are
 | `gemini-3.1-flash-lite` | $0.25 | $1.50 | spends about twice its answer in hidden thinking tokens: not cheaper in practice |
 | `gemini-2.5-flash-lite` | $0.10 | $0.40 | **not available to this key** (HTTP 404, "no longer available to new users") |
 
-Measured with the Gemini `countTokens` endpoint and the usage the API reports (a pass-through, `scripts/i18n/usage-proxy.mjs`, adds up the real tokens of a run): `en.json` is 68,573 bytes = **20,500 tokens** as a file; the flat key→value JSON the kit sends is **18,669 tokens**. Each request carries about 3,700 tokens of brief, glossary and examples; the answer is about 1.25× the tokens sent (German, plus the echoed keys).
+Measured with the Gemini `countTokens` endpoint and the `usageMetadata` the API returns (a temporary pass-through added it up while the translation ran; it is gone, the numbers only fed this estimate): `en.json` is 68,573 bytes = **20,500 tokens** as a file; the flat key→value JSON the kit sends is **18,669 tokens**. Each request carries about 3,700 tokens of brief, glossary and examples; the answer is about 1.25× the tokens sent (German, plus the echoed keys).
 
 | Run | Requests | Input tokens | Output tokens | `gemini-3.8-flash` | `gemini-3.5-flash-lite` |
 | --- | --- | --- | --- | --- | --- |
@@ -109,7 +109,7 @@ Measured with the Gemini `countTokens` endpoint and the usage the API reports (a
 | Re-run for 50 new keys | 1 | ≈ 4,600 | ≈ 1,150 | ≈ $0.008 | ≈ $0.004 |
 | Re-run for 200 new keys | 4 | ≈ 18,400 | ≈ 4,600 | ≈ $0.03 | ≈ $0.02 |
 
-The first full run (1,561 keys, `gemini-3.8-flash`) was measured through the usage proxy: **32 requests, 142,468 prompt tokens, 27,380 answer tokens, no thinking tokens = $0.21** (the estimate above, made from the sample's rates on 1,446 keys, was $0.18). It took three minutes. On the free tier Google may use the prompts to improve its products ("Used to improve our products: Yes" on the price page); the strings are public in this repository anyway, but check which tier the key is on before sending anything private.
+The first full run (1,561 keys, `gemini-3.8-flash`), its usage added up as it ran: **32 requests, 142,468 prompt tokens, 27,380 answer tokens, no thinking tokens = $0.21** (the estimate above, made from the sample's rates on 1,446 keys, was $0.18). It took three minutes. On the free tier Google may use the prompts to improve its products ("Used to improve our products: Yes" on the price page); the strings are public in this repository anyway, but check which tier the key is on before sending anything private.
 
 ## Dry run (sample)
 

@@ -3,9 +3,8 @@
 //   node scripts/i18n/sample.mjs [--models a,b] [--primary a] [--force]
 //
 // Never touches i18n/locales: every model gets its own copy under web/.i18n-sample/ (git-ignored) holding
-// only the sample's keys. A pass-through proxy (usage-proxy.mjs) records the tokens each run really used.
+// only the sample's keys. No token accounting: the pass-through proxy that added up the API's `usageMetadata` for the cost estimate in docs/i18n/README.md is gone.
 // Afterwards docs/i18n/german-sample.md is rendered from the results plus scripts/i18n/sample-notes.md.
-import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,7 +21,6 @@ const opt = name => { const i = argv.indexOf(`--${name}`); return i === -1 ? und
 const models = (opt('models') ?? DEFAULT_MODEL).split(',')
 const primary = opt('primary') ?? models[0]
 const force = argv.includes('--force')
-const port = 3104
 
 const sample = JSON.parse(readFileSync(join(here, 'sample-keys.json'), 'utf8'))
 const en = JSON.parse(readFileSync(join(web, 'i18n', 'locales', 'en.json'), 'utf8'))
@@ -43,28 +41,14 @@ function nest(flat) {
 
 async function runModel(model) {
   const dir = join(scratch, model)
-  const usage = join(dir, 'usage.jsonl')
   if (existsSync(join(dir, 'i18n', 'locales', 'de.json')) && !force) return { dir, cached: true }
   rmSync(dir, { recursive: true, force: true })
   mkdirSync(join(dir, 'i18n', 'locales'), { recursive: true })
   writeFileSync(join(dir, 'i18n', 'locales', 'en.json'), `${JSON.stringify(nest(sampleFlat), null, 2)}\n`)
-  const proxy = spawn(process.execPath, [join(here, 'usage-proxy.mjs'), String(port), usage], { stdio: ['ignore', 'ignore', 'inherit'] })
-  await new Promise(r => setTimeout(r, 400))
-  try {
-    const started = Date.now()
-    translate(dir, ['--model', model, '--base-url', `http://127.0.0.1:${port}`])
-    writeFileSync(join(dir, 'seconds.txt'), String(((Date.now() - started) / 1000).toFixed(1)))
-  } finally {
-    proxy.kill()
-  }
+  const started = Date.now()
+  translate(dir, ['--model', model])
+  writeFileSync(join(dir, 'seconds.txt'), String(((Date.now() - started) / 1000).toFixed(1)))
   return { dir, cached: false }
-}
-
-function usageOf(dir) {
-  const file = join(dir, 'usage.jsonl')
-  if (!existsSync(file)) return { requests: 0, prompt: 0, answer: 0, thinking: 0 }
-  const rows = readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l))
-  return rows.reduce((sum, r) => ({ requests: sum.requests + 1, prompt: sum.prompt + r.prompt, answer: sum.answer + r.answer, thinking: sum.thinking + r.thinking }), { requests: 0, prompt: 0, answer: 0, thinking: 0 })
 }
 
 const results = {}
@@ -73,11 +57,11 @@ for (const model of models) {
   const { dir } = await runModel(model)
   const de = JSON.parse(readFileSync(join(dir, 'i18n', 'locales', 'de.json'), 'utf8'))
   const enSample = JSON.parse(readFileSync(join(dir, 'i18n', 'locales', 'en.json'), 'utf8'))
-  results[model] = { dir, de: flatten(de), check: verify(enSample, de), usage: usageOf(dir), seconds: existsSync(join(dir, 'seconds.txt')) ? readFileSync(join(dir, 'seconds.txt'), 'utf8') : '?' }
-  console.log(`   ${JSON.stringify(results[model].check.stats)} usage ${JSON.stringify(results[model].usage)}`)
+  results[model] = { dir, de: flatten(de), check: verify(enSample, de), seconds: existsSync(join(dir, 'seconds.txt')) ? readFileSync(join(dir, 'seconds.txt'), 'utf8') : '?' }
+  console.log(`   ${JSON.stringify(results[model].check.stats)}`)
 }
 
-writeFileSync(join(scratch, 'summary.json'), JSON.stringify({ primary, models: Object.fromEntries(Object.entries(results).map(([m, r]) => [m, { stats: r.check.stats, usage: r.usage, seconds: r.seconds, errors: r.check.errors, warnings: r.check.warnings }])) }, null, 2))
+writeFileSync(join(scratch, 'summary.json'), JSON.stringify({ primary, models: Object.fromEntries(Object.entries(results).map(([m, r]) => [m, { stats: r.check.stats, seconds: r.seconds, errors: r.check.errors, warnings: r.check.warnings }])) }, null, 2))
 
 // ---- render docs/i18n/german-sample.md --------------------------------------------------------
 const esc = text => String(text ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ')
@@ -121,10 +105,10 @@ if (rest.length) {
 }
 if (models.length > 1) {
   lines.push('## Model comparison', '', `The same ${sample.keys.length + Object.keys(sample.synthetic).length} strings, same context, same settings (the kit sends temperature 0 and the least thinking each model accepts).`, '')
-  lines.push('| Model | Errors | Warnings | Median × | Prompt tok | Answer tok | Thinking tok | Seconds |', '| --- | --- | --- | --- | --- | --- | --- | --- |')
+  lines.push('| Model | Errors | Warnings | Median × | Seconds |', '| --- | --- | --- | --- | --- |')
   for (const model of models) {
     const r = results[model]
-    lines.push(`| \`${model}\` | ${r.check.stats.errors} | ${r.check.stats.warnings} | ${r.check.stats.medianRatio} | ${r.usage.prompt} | ${r.usage.answer} | ${r.usage.thinking} | ${r.seconds} |`)
+    lines.push(`| \`${model}\` | ${r.check.stats.errors} | ${r.check.stats.warnings} | ${r.check.stats.medianRatio} | ${r.seconds} |`)
   }
   lines.push('')
   const fifteen = ['status.want_to_read', 'status.reading', 'status.finished', 'status.notFinished', 'profile.account.delete', 'sync.syncing', 'profile.records.days', 'collection.moved', 'friends.want', 'auth.error.invite_gone', 'home.loadError', 'feed.emptyTitle', 'feed.empty', 'home.installHint.text', 'privacy.goPublicText']

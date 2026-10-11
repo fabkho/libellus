@@ -127,11 +127,11 @@ One table per kind of string. `{…}` and `\|` are the app's placeholders and pl
 
 The same 49 strings, same context, same settings (the kit sends temperature 0 and the least thinking each model accepts).
 
-| Model | Errors | Warnings | Median × | Prompt tok | Answer tok | Thinking tok | Seconds |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `gemini-3.8-flash` | 0 | 3 | 1.14 | 4708 | 1134 | 0 | 9.6 |
-| `gemini-3.5-flash-lite` | 1 | 4 | 1.15 | 4708 | 1157 | 0 | 4.3 |
-| `gemini-3.1-flash-lite` | 0 | 2 | 1.12 | 4708 | 1128 | 2208 | 9.6 |
+| Model | Errors | Warnings | Median × | Seconds |
+| --- | --- | --- | --- | --- |
+| `gemini-3.8-flash` | 0 | 3 | 1.14 | 9.6 |
+| `gemini-3.5-flash-lite` | 1 | 4 | 1.15 | 4.3 |
+| `gemini-3.1-flash-lite` | 0 | 2 | 1.12 | 9.6 |
 
 | Key | English | `gemini-3.8-flash` | `gemini-3.5-flash-lite` | `gemini-3.1-flash-lite` |
 | --- | --- | --- | --- | --- |
