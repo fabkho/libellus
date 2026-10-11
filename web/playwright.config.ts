@@ -56,7 +56,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     baseURL: `http://localhost:${PORT}`,
     ...devices['iPhone 15'],
-    // WebKit is closest to Safari on iPhone, where Libellus is mostly used.
+    // WebKit is closest to Safari on iPhone, where BetterReads is mostly used.
     browserName: 'webkit',
     // Reduce Motion, as a member who turned it on: sheets, morphs and fades are cut to their end
     // (docs/MOTION.md), so a flow waits for none of them, and Reduce Motion gets the coverage of

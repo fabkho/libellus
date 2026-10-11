@@ -6,7 +6,7 @@ import { surname, workTitle } from './readingTracker'
 
 /**
  * The normalised import row (issue #111): what any supported app's export says
- * about one book, in the words Libellus stores. Each app has an adapter
+ * about one book, in the words BetterReads stores. Each app has an adapter
  * (goodreads.ts, hardcover.ts) that maps its rows to this; everything after —
  * the preview, the edition lookup (data/bookImport.ts), `import_books` — reads
  * only this model, so a new app is one more adapter and nothing else.
@@ -14,7 +14,7 @@ import { surname, workTitle } from './readingTracker'
  * Pure and framework-free, like everything under data/import/.
  */
 
-/** The apps whose exports Libellus reads. */
+/** The apps whose exports BetterReads reads. */
 export type ImportSource = 'goodreads' | 'hardcover'
 
 /** An earlier read with its days, finished. */
@@ -35,7 +35,7 @@ export type ImportSession = {
  * change, or not at all (`skipped`). Codes are copy keys (`import.note.<code>`).
  */
 export type ImportProblem =
-  /** A status Libellus has none of (a custom Goodreads exclusive shelf like `wishlist`): added as Want to read. */
+  /** A status BetterReads has none of (a custom Goodreads exclusive shelf like `wishlist`): added as Want to read. */
   | { code: 'otherShelf'; shelf: string }
   /** A rating or review on a book that is not finished: left out (only finished reads have them). */
   | { code: 'notFinishedRating' }
@@ -57,7 +57,7 @@ export type ImportProblem =
   | { code: 'extraReads'; count: number }
   /** Earlier reads with their dates (Hardcover's several Date Started / Date Finished). */
   | { code: 'earlierReads'; count: number }
-  /** Paused on Hardcover: Libellus has no pause, it is added as Currently reading. */
+  /** Paused on Hardcover: BetterReads has no pause, it is added as Currently reading. */
   | { code: 'paused' }
   /** A row the app lists without a status (Hardcover's None, Ignored): skipped. */
   | { code: 'notShelved' }
@@ -148,7 +148,7 @@ export class MissingColumnsError extends Error {
 }
 
 /**
- * Another app's export Libellus does not read yet, told by its header
+ * Another app's export BetterReads does not read yet, told by its header
  * (`storygraph`, `librarything`, `bookshelf`), so the screen can name it.
  */
 export type OtherApp = 'storygraph' | 'librarything' | 'bookshelf'

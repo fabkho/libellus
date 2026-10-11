@@ -6,7 +6,7 @@ import { test } from './fixtures'
 
 /**
  * The install hint (#94): iOS has no install prompt, so Home in Safari on an
- * iPhone or iPad says "Share → Add to Home Screen" until Libellus is installed;
+ * iPhone or iPad says "Share → Add to Home Screen" until BetterReads is installed;
  * dismissed, it stays away for a week. Android's Chrome has its own prompt; the
  * Profile's account rows offer a quiet "Install app" row only once Chrome has fired
  * `beforeinstallprompt`. The browsers are stood in by their user agents (the

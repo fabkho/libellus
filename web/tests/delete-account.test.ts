@@ -146,7 +146,7 @@ describe('deleteAccount', () => {
 })
 
 describe('what the device forgets afterwards', () => {
-  it('is everything under the Libellus prefix; the theme stays', async () => {
+  it('is everything under the BetterReads prefix; the theme stays', async () => {
     const storage = browserStorage()
     const ida = await signUpMember(storage)
     saveLibrary(storage, { member: { id: ida.id, email: ida.email }, lists: { want_to_read: [], reading: [], finished: [] }, readInYear: null })

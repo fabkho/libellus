@@ -166,7 +166,7 @@ test('the log cannot be loaded: it says so and tries again', async ({ page }) =>
   await expect(page.getByTestId('errors.emptyTitle')).toBeVisible()
 })
 
-// Nuxt's own page for an address that doesn't exist is not a Libellus screen (its link home has no test ID).
+// Nuxt's own page for an address that doesn't exist is not a BetterReads screen (its link home has no test ID).
 const anyone = test.extend<{ everyControlHasATestId: void }>({ everyControlHasATestId: [async ({}, use) => use(), { auto: true }] })
 
 anyone('nobody else has the log: no row, no address, no request, and the database refuses her', async ({ page }) => {

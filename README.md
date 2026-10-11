@@ -1,13 +1,13 @@
-# Libellus
+# BetterReads
 
 A calm, mobile-first book tracker you install from the home screen: search a book → **Want to
 read** → **Currently reading** → **Finished**, with the date, a quarter-star rating and a few words.
 No social feed, no ads, no trackers. Built web first on Nuxt and Supabase, with the docs that make a
 later Swift/Kotlin port mechanical.
 
-![Libellus on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
+![BetterReads on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
 
-Libellus runs as one small, invite-only instance for its owner and a few friends
+BetterReads runs as one small, invite-only instance for its owner and a few friends
 (libellus.fabkho.dev), and anyone can run their own: [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
 
 ## What it does
@@ -51,7 +51,7 @@ Libellus runs as one small, invite-only instance for its owner and a few friends
   sections she picks (never her email, notes, highlights or a review she didn't share), sits at an
   unguessable link out of search engines, and dies at once when she makes a new link or turns it off.
 - **The waitlist is the only address a visitor can leave**: a reading page ends in a small form
-  ("Libellus is invite-only for now"); the address is kept only to send an invite, readable only by the
+  ("BetterReads is invite-only for now"); the address is kept only to send an invite, readable only by the
   instance's owner and deleted on request. No account is made from the page.
 - **Search stays plain**: the browser asks Apple Books and Open Library directly for the words you
   type, nothing else; the Goodreads rating is looked up by the server, so Goodreads never sees you.
@@ -75,7 +75,7 @@ Libellus runs as one small, invite-only instance for its owner and a few friends
 Needs Docker, Node 24, pnpm and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
 
 ```sh
-git clone https://github.com/fabkho/libellus && cd libellus
+git clone https://github.com/fabkho/betterreads && cd betterreads
 supabase start                 # the local stack on ports 55320–55329: Postgres, Auth, Studio, a mail catcher
 cd web
 cp .env.example .env           # paste the anon key `supabase start` printed
@@ -104,9 +104,9 @@ design tokens, the layout of the repository and everything else for working on t
 
 ## Contributing, security, license
 
-Libellus is a personal project; issues are welcome, and pull requests for bugs and small things too
+BetterReads is a personal project; issues are welcome, and pull requests for bugs and small things too
 ([CONTRIBUTING.md](CONTRIBUTING.md)). Please report security problems privately
 ([SECURITY.md](SECURITY.md)).
 
 **License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate, private layer and not part of this
-license; Libellus builds and runs without it.
+license; BetterReads builds and runs without it.

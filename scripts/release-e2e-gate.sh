@@ -12,7 +12,7 @@
 set -euo pipefail
 
 target="${1:?usage: $0 <commit>}"
-repo="${GITHUB_REPOSITORY:-fabkho/libellus}"
+repo="${GITHUB_REPOSITORY:-fabkho/betterreads}"
 wait_seconds="${WAIT_SECONDS:-1800}"
 server="${GITHUB_SERVER_URL:-https://github.com}"
 

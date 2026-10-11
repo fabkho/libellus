@@ -1,6 +1,6 @@
-# Libellus — Domain glossary
+# BetterReads — Domain glossary
 
-The words Libellus uses for its domain, in code, copy, tests and issues alike. Terms only; how they
+The words BetterReads uses for its domain, in code, copy, tests and issues alike. Terms only; how they
 are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 
 - **Member** — a signed-in user.

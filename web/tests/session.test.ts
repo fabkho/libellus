@@ -69,7 +69,7 @@ describe('the session on the device', () => {
 })
 
 describe('clearing what the device cached', () => {
-  it('removes Libellus keys and nothing else', () => {
+  it('removes BetterReads keys and nothing else', () => {
     const storage = browserStorage()
     storage.setItem(`${LOCAL_DATA_PREFIX}pendingSignIn`, '{}')
     storage.setItem(`${LOCAL_DATA_PREFIX}library`, '[]')

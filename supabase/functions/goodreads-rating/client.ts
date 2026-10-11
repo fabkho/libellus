@@ -24,7 +24,7 @@ import {
  */
 export function userAgent(siteUrl?: string | null): string {
   const site = siteUrl?.trim()
-  return `Libellus/1.0 (private book tracker${site ? `; +${site}` : ''})`
+  return `BetterReads/1.0 (private book tracker${site ? `; +${site}` : ''})`
 }
 export const USER_AGENT = userAgent()
 export const MIN_INTERVAL_MS = 1000

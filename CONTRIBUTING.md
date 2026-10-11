@@ -1,6 +1,6 @@
 # Contributing
 
-Libellus is a personal project that a few people use every day. Issues are welcome: a bug, something
+BetterReads is a personal project that a few people use every day. Issues are welcome: a bug, something
 that reads wrong, a step in [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) that no longer matches the
 dashboards. Pull requests are welcome for bugs, docs and small improvements; for a new feature,
 please open an issue first and wait for a yes, since the app deliberately does one loop and stays

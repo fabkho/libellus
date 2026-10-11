@@ -260,7 +260,7 @@ async function main() {
     const standalone = await candidate.evaluate(() => matchMedia('(display-mode: standalone)').matches).catch(() => false)
     if (standalone === args.standalone) page = candidate
   }
-  if (!page && args.standalone) throw new Error('No installed app open: add Libellus to the home screen and open it from its icon first.')
+  if (!page && args.standalone) throw new Error('No installed app open: add BetterReads to the home screen and open it from its icon first.')
   page ??= pages[0]
   if (!page) throw new Error('No Chrome tab open: open Chrome on the device first.')
 

@@ -46,7 +46,7 @@ const WATCH_CONTROLS = () => {
   }
   const scan = () => {
     if (location.pathname.startsWith('/prototype')) return
-    // A book's own pages (the reader's blob: frames, #131) are the publisher's markup, not a screen of Libellus.
+    // A book's own pages (the reader's blob: frames, #131) are the publisher's markup, not a screen of BetterReads.
     if (location.protocol === 'blob:') return
     for (const el of document.querySelectorAll(CONTROLS)) {
       if (seen.has(el) || el.hasAttribute('data-testid')) continue

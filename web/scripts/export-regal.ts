@@ -16,7 +16,7 @@
  *   --carry-art <url|file> the library file Regal shows now (the daily chain:
  *                         https://books.fabkho.dev/v2/library.json): Books it has
  *                         keep its art (front, Spine, back, colours) instead of
- *                         the Libellus Cover (app/data/export/carryArt.ts)
+ *                         the BetterReads Cover (app/data/export/carryArt.ts)
  *   --statuses <list>     Reading statuses to export, comma-separated, from
  *                         read, dnf, currently-reading, to-read. Default:
  *                         read,dnf,currently-reading (Finished and Currently
@@ -180,7 +180,7 @@ async function main() {
   if (art) {
     const carried = carryArt(file, art.file, art.resolveRef)
     file = carried.file
-    console.log(`  art from ${art.label} (${art.file.books.length} Books): carried for ${carried.carried.length} (${count(carried.carried.map((item) => `by ${item.by}`))}), ${carried.unmatched.length} keep the Libellus Cover`)
+    console.log(`  art from ${art.label} (${art.file.books.length} Books): carried for ${carried.carried.length} (${count(carried.carried.map((item) => `by ${item.by}`))}), ${carried.unmatched.length} keep the BetterReads Cover`)
     for (const book of carried.unmatched) console.log(`    no published art: ${book.title} — ${book.authors[0] ?? '?'} [${book.isbn13 ?? 'no ISBN-13'}]`)
   }
 

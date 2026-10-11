@@ -1,12 +1,12 @@
 <script setup lang="ts">
-// The Web Share Target (issue #91): sharing a link or text to Libellus from
+// The Web Share Target (issue #91): sharing a link or text to BetterReads from
 // Goodreads, Amazon, a browser or a bookstore app opens `/share?title=&text=&url=`
 // (the service worker turns the manifest's POST into that GET, public/sw-share.js).
 // The page reads what was shared, finds the Book and goes to its page, or to the
 // search palette with the words typed in when no Book is certain. Either way it
 // replaces itself in the history, so Back never lands on a page that only redirects.
 //
-// EPUB files shared to Libellus (issue #131) arrive as `/share?ebooks=<id>`: the
+// EPUB files shared to BetterReads (issue #131) arrive as `/share?ebooks=<id>`: the
 // service worker kept them on the device; the page takes them in (copies them,
 // links what fits) and goes to the ebooks page, which says what happened
 // ("3 ebooks · 2 linked · 1 needs you"). `ebooks=missed`: the share came before

@@ -6,7 +6,7 @@ import { test } from './fixtures'
 import { recordedApple, settledBox, signedIn } from './support'
 
 /**
- * The smoke flow of the whole loop Libellus promises (#16), start to end in one
+ * The smoke flow of the whole loop BetterReads promises (#16), start to end in one
  * session: sign in → search → add → start → finish with a Rating and a review →
  * counted on Home and under Finished. Apple answers from the recordings
  * (e2e/support.ts); the Library is the real local stack, fresh in CI. The

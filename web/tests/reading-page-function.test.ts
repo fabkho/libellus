@@ -20,7 +20,7 @@ import { runTitle, sql, stack, TEST_PUBLISHER, uniqueAppleId } from './support/s
 const SITE = 'https://libellus.fabkho.dev'
 
 /** The shell Pages would serve: short, with the two places the Function writes into. */
-const SHELL = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Libellus</title></head><body><div id="__nuxt"></div></body></html>'
+const SHELL = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>BetterReads</title></head><body><div id="__nuxt"></div></body></html>'
 
 /** A 2×3 PNG: what the stand-in renderer answers with. */
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAEElEQVR4nGPYUqEBRAwoFABXCQf5h5XBIQAAAABJRU5ErkJggg==', 'base64')
@@ -126,7 +126,7 @@ describe('the page behind a link', () => {
 
     expect(response.status).toBe(200)
     expect(html).toContain('<meta property="og:title" content="Ada’s reading">')
-    expect(html).toContain(`<title>Ada’s reading · Libellus</title>`)
+    expect(html).toContain(`<title>Ada’s reading · BetterReads</title>`)
     // What she is reading, then her year: both out of what the page publishes.
     expect(html).toMatch(
       new RegExp(`<meta property="og:description" content="Reading ${escapeForRegExp(readingTitle)} · 1 book in ${new Date().getFullYear()}">`),
@@ -175,7 +175,7 @@ describe('the page behind a link', () => {
       const html = await response.text()
       // The shell all the same, so the app says there is no such page.
       expect(html).toContain('<div id="__nuxt">')
-      expect(html).toContain('<title>Not found · Libellus</title>')
+      expect(html).toContain('<title>Not found · BetterReads</title>')
       expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow')
     }
     // Also where there is no backend: the shape alone says it.
@@ -211,7 +211,7 @@ describe('the page behind a link', () => {
         const response = await onRequest(context(path))
         expect(response.status, path).toBe(200)
         const html = await response.text()
-        expect(html).toContain('<title>Libellus</title>')
+        expect(html).toContain('<title>BetterReads</title>')
         expect(html).not.toContain('og:image')
       }
     }
@@ -225,7 +225,7 @@ describe('the page behind a link', () => {
     expect(response.status).toBe(200)
     const html = await response.text()
     expect(html).not.toContain('og:image')
-    expect(html).toContain('<title>Libellus</title>')
+    expect(html).toContain('<title>BetterReads</title>')
   })
 })
 

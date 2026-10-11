@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Regal's 3D Stack (the layer's RegalBooksStage, #23) in Libellus' night room.
+// Regal's 3D Stack (the layer's RegalBooksStage, #23) in BetterReads' night room.
 // The only component that touches Regal: always loaded through
 // `LazyShelfStage`, so it, Regal, three.js and TresJS are one chunk (`regal`,
 // regal.config.ts) that only the shelf's places ever fetch, and the service
@@ -14,7 +14,7 @@
 // room it stands in. It fills the box
 // it is put in (a positioned one).
 import '#build/nuxt-fonts-global.css'
-// Libellus' look for Regal's tooltip and Book detail panel: the `regal-themed` class
+// BetterReads' look for Regal's tooltip and Book detail panel: the `regal-themed` class
 // (with `theme="auto"`), in a stylesheet of its own so it travels with the regal chunk.
 import '~/assets/css/regal-themed.css'
 import { goodreadsUrl } from '~/utils/goodreads'

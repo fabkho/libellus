@@ -50,7 +50,7 @@ export type ImportPhase = 'pick' | 'reading' | 'matching' | 'preview' | 'importi
  * Why a file could not be used. Copy: `import.fileError.<code>`. `notCsv`: a
  * spreadsheet or anything else that is no text table; `notSupported`: a CSV
  * no supported app wrote; `storygraph`, `librarything`, `bookshelf`: another
- * app's CSV, told by its header, which Libellus does not read yet;
+ * app's CSV, told by its header, which BetterReads does not read yet;
  * `missingColumns`: a supported app's export without columns its rows need
  * (`fileErrorDetail` says which app and which columns).
  */

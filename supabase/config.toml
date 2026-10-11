@@ -3,7 +3,7 @@
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
 #
-# Libellus runs next to Trappist's stack (5432x) on the same machine, so it gets
+# BetterReads runs next to Trappist's stack (5432x) on the same machine, so it gets
 # its own name — container names and volumes are keyed on it — and its own port
 # range: everything lives in 55320–55329, nothing on a default port.
 project_id = "libellus"
@@ -459,9 +459,9 @@ enabled = true
 # later one the magic link. Both have to carry the same six digits, or half the
 # flow would hand out a link.
 [auth.email.template.magic_link]
-subject = "Your Libellus sign-in code"
+subject = "Your BetterReads sign-in code"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
-subject = "Your Libellus sign-in code"
+subject = "Your BetterReads sign-in code"
 content_path = "./supabase/templates/magic_link.html"

@@ -12,7 +12,7 @@ export type DeviceStorage = KeyValueStorage & {
 }
 
 /**
- * Everything Libellus keeps on the device itself starts with this, so signing
+ * Everything BetterReads keeps on the device itself starts with this, so signing
  * out can find it without knowing every feature: the pending sign-in address
  * and the offline Library (`data/deviceLibrary.ts`, #15). A feature that
  * caches something names its keys `libellus.<thing>`; nothing else has to change.
@@ -21,14 +21,14 @@ export const LOCAL_DATA_PREFIX = 'libellus.'
 
 /**
  * What the device keeps in IndexedDB rather than under `libellus.` keys: one
- * database, `libellus`, with a store per feature (the outbox of writes waiting
+ * database, `betterreads`, with a store per feature (the outbox of writes waiting
  * to sync, `data/outbox.ts`, #93; the ebook files linked to Books and the
  * picked ebook folder, `data/ebooks/`, #131; her profile photo, `data/avatar.ts`,
  * #156). A feature that needs one adds its
  * store to `LOCAL_STORES` and raises `LOCAL_DATABASE_VERSION`; every feature
  * opens the database through `openLocalDatabase`, so they agree on its version.
  */
-export const LOCAL_DATABASE = 'libellus'
+export const LOCAL_DATABASE = 'betterreads'
 
 /** The stores of `LOCAL_DATABASE` and how each is keyed. */
 export const LOCAL_STORES: Record<string, IDBObjectStoreParameters & { indexes?: Record<string, string | string[]> }> = {
@@ -114,7 +114,7 @@ export function clearLocalDatabase(factory: Pick<IDBFactory, 'deleteDatabase'>, 
  * her ebook files in the origin private file system (`ebooks/`,
  * `data/ebooks/files.ts`) and any ebook shared to the app that was not taken in
  * yet (the service worker's cache, `public/sw-share.js`). Nothing of it was
- * ever uploaded, so this is the only copy Libellus had. Resolves either way.
+ * ever uploaded, so this is the only copy BetterReads had. Resolves either way.
  */
 export async function clearLocalFiles({
   storage,

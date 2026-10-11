@@ -60,7 +60,7 @@ a miss, and the Book is stored with what the others found (`not_found` when nobo
 
 ## Politeness (`http.ts`)
 
-`User-Agent: Libellus/1.0 (private book tracker; +<LIBELLUS_SITE_URL>; <ENRICH_CONTACT>) enrich`, as the
+`User-Agent: BetterReads/1.0 (private book tracker; +<LIBELLUS_SITE_URL>; <ENRICH_CONTACT>) enrich`, as the
 Wikimedia User-Agent policy asks; one request at a time per host and spaced (Open Library and the Wikidata
 Query Service 1/s, Apple one every 3 s, the Wikimedia APIs 5/s); 10 s per request; 429 and 5xx retried
 twice, honouring `Retry-After` (at most 10 s); answers kept ten minutes in memory. The tables are the

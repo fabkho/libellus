@@ -24,7 +24,7 @@ import { expectAccessible, expectNoSideScroll, goto, signedIn, signedInAs, signe
  */
 
 const LIBRARY_SRC = 'https://books.fabkho.dev/v2/library.json'
-/** Regal's code: the built `regal` chunk, or (the dev server) its components and the two of Libellus' that import them. */
+/** Regal's code: the built `regal` chunk, or (the dev server) its components and the two of BetterReads' that import them. */
 const REGAL_CODE = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
 
 // Only a build with Regal has the shelf (LIBELLUS_REGAL=1, web/regal.config.ts; CI sets it).
@@ -189,7 +189,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.getByTestId('profile.shelfAll')).toHaveCount(0)
     await expect(page.locator('a[href^="/profile/shelf"]')).toHaveCount(0)
 
-    // The row fills Libellus' card edge to edge: no second frame of Regal's inside it.
+    // The row fills BetterReads' card edge to edge: no second frame of Regal's inside it.
     expect(await row.evaluate((el) => [getComputedStyle(el).borderTopWidth, getComputedStyle(el).borderRadius])).toEqual(['0px', '0px'])
 
     // A Book taken out breaks out over the whole screen, above the header and the tab bar.
@@ -198,7 +198,7 @@ test.describe('Your shelf, the owner', () => {
     await takeOut(page, row)
     const out = page.locator('body > .row-card__view--out')
     await expect(out).toHaveCount(1)
-    // The phone's sheet is Libellus' (Done, the action in the lamp colour, no pills) and clears the gesture bar.
+    // The phone's sheet is BetterReads' (Done, the action in the lamp colour, no pills) and clears the gesture bar.
     const sheet = page.locator('body > [role=dialog].row-card__details--sheet')
     if (await sheet.count()) {
       expect(Number.parseFloat(await sheet.evaluate((el) => getComputedStyle(el).paddingBottom))).toBeGreaterThanOrEqual(24)
@@ -373,7 +373,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(page.locator('body > .row-card__view--out')).toHaveCount(1)
     await expectAccessible(page, "a year's review, a Book out of the row")
     const moves = await countNavigations(page)
-    // The details are Libellus' (regal-themed): the sheet's Done is the one way back that shows, no round Back.
+    // The details are BetterReads' (regal-themed): the sheet's Done is the one way back that shows, no round Back.
     const details = page.locator('body > [role=dialog].row-card__details')
     await expect(details).toBeVisible()
     await expect(page.locator('.row-card__back')).toHaveCount(0)
@@ -491,7 +491,7 @@ test.describe('Your shelf, the owner', () => {
     const background = () => panel.evaluate((element) => getComputedStyle(element).backgroundColor)
     await expect(panel).toHaveAttribute('data-regal-theme', 'dark')
     expect(brightness(await background())).toBeLessThan(0.2)
-    // Libellus' own buttons, not Regal's.
+    // BetterReads' own buttons, not Regal's.
     await expect(page.getByTestId('shelf.putBack')).toBeVisible()
 
     // The room's theme flips (the shelf page itself never does; this is the hook Regal watches).
@@ -503,7 +503,7 @@ test.describe('Your shelf, the owner', () => {
     await expect(panel).toHaveAttribute('data-regal-theme', 'dark')
     expect(brightness(await background())).toBeLessThan(0.2)
 
-    // Put back, with Libellus' button.
+    // Put back, with BetterReads' button.
     await page.getByTestId('shelf.putBack').click()
     await expect(panel).toHaveCount(0)
   })
@@ -518,7 +518,7 @@ test.describe('Your shelf, the owner', () => {
     const button = card.getByRole('list', { name: BOOK_LIST }).getByRole('button').first()
     await button.focus()
     await page.keyboard.press('Enter')
-    // Libellus' sheet fills Regal's `#detail` slot: the dialog is named "{title} details", and focus is inside it.
+    // BetterReads' sheet fills Regal's `#detail` slot: the dialog is named "{title} details", and focus is inside it.
     const dialog = page.getByRole('dialog', { name: /details$/ })
     await expect(dialog).toBeVisible()
     await expect.poll(() => dialog.evaluate((el) => el.contains(document.activeElement))).toBe(true)
@@ -561,7 +561,7 @@ test.describe('Your shelf, the owner', () => {
 
       await takeOut(page, row)
       await expect(page.getByTestId('shelfRow.sheet')).toBeVisible()
-      // The Book out is a modal dialog; Libellus' sheet fills Regal's `#detail`, so Regal names it "{title} details".
+      // The Book out is a modal dialog; BetterReads' sheet fills Regal's `#detail`, so Regal names it "{title} details".
       const dialog = page.getByRole('dialog', { name: /details$/ })
       await expect(dialog).toHaveCount(1)
       await expect(dialog).toHaveAttribute('aria-modal', 'true')
@@ -578,7 +578,7 @@ test.describe('Your shelf, the owner', () => {
   })
 })
 
-// Nuxt's own page for an address that doesn't exist is not a Libellus screen (its link home has no test ID).
+// Nuxt's own page for an address that doesn't exist is not a BetterReads screen (its link home has no test ID).
 const anyone = test.extend<{ everyControlHasATestId: void }>({ everyControlHasATestId: [async ({}, use) => use(), { auto: true }] })
 
 anyone('nobody else has a shelf: no card, no row, no file, no Regal, no address', async ({ page }) => {

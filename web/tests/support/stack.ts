@@ -25,7 +25,7 @@ function localStackValue(name: string): string {
 }
 
 /**
- * Coordinates for the local stack. The defaults are the libellus ports from
+ * Coordinates for the local stack. The defaults are the betterreads ports from
  * supabase/config.toml (553xx, so Trappist's stack on 543xx can run alongside);
  * CI sets them from `supabase status -o env`.
  */

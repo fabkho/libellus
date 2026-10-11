@@ -1,5 +1,5 @@
 <script lang="ts">
-/** Every icon Libellus draws (docs/DESIGN.md, Icons). */
+/** Every icon BetterReads draws (docs/DESIGN.md, Icons). */
 export type IconName =
   | 'home'
   | 'library'

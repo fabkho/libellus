@@ -4,7 +4,7 @@ import { SECTION_CSP, sanitizeCss, sanitizeResource, sanitizeSection } from '../
 
 /**
  * A book's pages are cleaned before the reader shows them (#131, phase 2):
- * an EPUB from anywhere must not run a script as Libellus nor reach outside
+ * an EPUB from anywhere must not run a script as BetterReads nor reach outside
  * the book, while its text, styles, pictures, fonts and its own links stay.
  * Each fixture below is one way a crafted EPUB tries it.
  */

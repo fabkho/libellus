@@ -3,22 +3,22 @@ import type { LibraryBook, LibraryBookAssets, RegalLibraryFile } from './regalLi
 /**
  * Carrying published art over (issue #22): the Books Regal already shows keep
  * their images. Regal's portfolio has Spine and back art for its Books (paid
- * AI art, photos) that Libellus does not know of; an export with only the
+ * AI art, photos) that BetterReads does not know of; an export with only the
  * Cover would make Regal assets drop it. Given the library file that is
  * published now, every exported Book that was in it takes that Book's whole
  * `assets` (front, Spine, back, pile copies, palette, Spine colour, photo
  * faces, source), so its faces stay one consistent set; Books it does not
- * know keep the Libellus Cover and colours.
+ * know keep the BetterReads Cover and colours.
  *
  * A Book is found by its ISBN-13 first, then by its work: the title (without
  * a series in brackets or a subtitle after a colon, case, accents and
  * punctuation ignored) and the first author's surname. So a Book whose
- * edition Libellus changed (another ISBN, a slightly different title) still
+ * edition BetterReads changed (another ISBN, a slightly different title) still
  * finds its art. A title that two published Books share is not matched, and no
  * published Book lends its art twice.
  *
  * Published art is sticky: a matched Book shows the published front even when
- * its Libellus Cover changes. Pure; `resolveRef` turns an image reference of
+ * its BetterReads Cover changes. Pure; `resolveRef` turns an image reference of
  * the published file (relative to that file) into one that works from the
  * exported file, or null when it cannot.
  */
@@ -116,7 +116,7 @@ export function carryArt(file: RegalLibraryFile, published: RegalLibraryFile, re
     }
     const art = resolveAssets(match.source.assets!, resolveRef)
     carried.push({ id: book.id, title: book.title, from: match.source.id, by: match.by })
-    // The published set wins face by face; what it lacks, the Libellus Cover fills.
+    // The published set wins face by face; what it lacks, the BetterReads Cover fills.
     const { assets: own, ...rest } = book
     return { ...rest, assets: { ...own, ...art } }
   })

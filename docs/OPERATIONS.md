@@ -70,12 +70,12 @@ In the repository's settings (the workflow does not change them):
 | `production` → environment secret `SUPABASE_ACCESS_TOKEN` | A Supabase personal access token of an account that can manage the project (dashboard → Account → Access Tokens). The CLI uses it for the Management API and to log in to the database with a temporary role, so no database password is needed. |
 | `production` → environment secret `SUPABASE_DB_PASSWORD` (optional) | The database password, only if the temporary role ever fails; the CLI then uses it instead. |
 | `production` → environment variable `SUPABASE_PROJECT_REF` | `ltedflcewdcqtqzcjeyr` |
-| `production` → environment secret `PRODUCTION_DEPLOY_KEY` | The private half of an SSH key whose public half is a **deploy key with write access** (Settings → Deploy keys). It moves the branch `production`: the run's own `GITHUB_TOKEN` stays read-only, and GitHub refuses a `GITHUB_TOKEN` push that brings changed workflow files to a branch. `ssh-keygen -t ed25519 -N '' -C 'libellus production' -f prod-deploy-key`. |
-| Cloudflare Pages → libellus → Settings → Builds → Branch control | **Production branch: `production`**. Previews stay on for every other branch, `main` included (`main.libellus-3q1.pages.dev`). |
+| `production` → environment secret `PRODUCTION_DEPLOY_KEY` | The private half of an SSH key whose public half is a **deploy key with write access** (Settings → Deploy keys). It moves the branch `production`: the run's own `GITHUB_TOKEN` stays read-only, and GitHub refuses a `GITHUB_TOKEN` push that brings changed workflow files to a branch. `ssh-keygen -t ed25519 -N '' -C 'betterreads production' -f prod-deploy-key`. |
+| Cloudflare Pages → betterreads → Settings → Builds → Branch control | **Production branch: `production`**. Previews stay on for every other branch, `main` included (`main.libellus-3q1.pages.dev`). |
 
 Only the deploy job reads the environment's secrets; the release-please job has
 `contents`/`pull-requests`/`issues: write` and nothing else, and both jobs only run in
-`fabkho/libellus` (never in a fork, never on a pull request). One deploy runs at a time.
+`fabkho/betterreads` (never in a fork, never on a pull request). One deploy runs at a time.
 
 ### Deploying a tag by hand: retry and rollback
 
@@ -100,7 +100,7 @@ app then runs on the newer schema, which works as long as migrations are additiv
 migration itself was the mistake, write a new one that undoes it and release that (a `fix:` patch
 release), rather than rolling back.
 
-For the web app alone there is also Pages' one-click rollback (Workers & Pages → libellus →
+For the web app alone there is also Pages' one-click rollback (Workers & Pages → betterreads →
 Deployments → ⋯ → Rollback, docs/HOSTING.md); the next release's push to `production` replaces it.
 
 ### The first release

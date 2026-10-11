@@ -14,7 +14,7 @@ import {
  * byte for byte (`generatedAt` aside), so Regal assets (`pnpm regal-assets`)
  * finds every Book it has seen before and rebuilds nothing.
  *
- * A Libellus Book is one edition, which is what Regal calls a Book too, so one
+ * A BetterReads Book is one edition, which is what Regal calls a Book too, so one
  * Library entry is one Book in the file:
  *
  * - `id` is the Book's id (the edition, not the entry): stable across exports
@@ -35,7 +35,7 @@ import {
  * - Cover: `assets.front` is the Cover URL (http(s) only), `assets.palette` is
  *   made from the Cover's two precomputed colours (`coverPalette`). The
  *   thumbhash has no place in the format and is left out.
- * - Left out, because Libellus does not know them: `seriesTitle` (the title
+ * - Left out, because BetterReads does not know them: `seriesTitle` (the title
  *   is stored as the source gives it), `binding`, `originalYear`, `genre`,
  *   `quotes`, `reviewHasSpoiler`, Spine and back art. Regal assets fills what
  *   it can (art, pile copies, colours, a blurb where `description` is missing).
@@ -101,7 +101,7 @@ export type RegalExportSession = {
   review: string | null
 }
 
-export const REGAL_GENERATOR = 'libellus'
+export const REGAL_GENERATOR = 'betterreads'
 
 const ISBN13 = /^97[89]\d{10}$/
 const ISBN10 = /^\d{9}[\dX]$/

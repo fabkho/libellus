@@ -9,7 +9,7 @@ import { appleArtwork, COVER_LARGE, isbnFromArtwork, plainText } from '../../app
  *
  * Ported from Regal's front resolver (~/code/regal scripts/assets/front.ts:
  * `findApple`, `resolveFront`, `titleScore`, the DNB and Open Library cover
- * URLs), adapted to what Libellus stores: one cover URL with its thumbhash and
+ * URLs), adapted to what BetterReads stores: one cover URL with its thumbhash and
  * two colours, exactly as `add_to_library` gets them (app/data/covers.ts
  * `describeCover`), and Apple's or OpenLibrary's id for the edition.
  *
@@ -32,7 +32,7 @@ import { appleArtwork, COVER_LARGE, isbnFromArtwork, plainText } from '../../app
  * fetch and sharp; tests pass recordings), like the search repository's fetch.
  */
 
-export const USER_AGENT = 'Libellus/0.1 (+https://github.com/fabkho/libellus)'
+export const USER_AGENT = 'Libellus/0.1 (+https://github.com/fabkho/betterreads)'
 
 /** Height a cover should reach before the chain stops looking (Regal front.ts MIN_HEIGHT). */
 export const MIN_HEIGHT = 800

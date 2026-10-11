@@ -1,4 +1,4 @@
-/* Libellus' look for what Regal draws around its 3D: the tooltip and the Book
+/* BetterReads' look for what Regal draws around its 3D: the tooltip and the Book
    detail panel (the card, the phone's sheet). Add the class `regal-themed` to a
    Regal component (RegalBooksStage …) together with `theme="auto"` and it wears
    D's tokens in both themes. Imported by the components that use it, never by
@@ -54,7 +54,7 @@
   --text-xl: var(--text-callout);
 }
 
-/* The row fills the Libellus card (ShelfRowCard: raised, rounded, clipped)
+/* The row fills the BetterReads card (ShelfRowCard: raised, rounded, clipped)
    edge to edge, so Regal's frame around it is one too many: its own tokens
    drop it, and the card's rounding clips the row; the card's surface shows
    through. */
@@ -63,7 +63,7 @@
   --regal-row-radius: 0;
   --regal-row-background: transparent;
 
-  /* The row's sheet (a Book broken out on a phone) is Libellus' own inside
+  /* The row's sheet (a Book broken out on a phone) is BetterReads' own inside
      (ShelfBookSheet: its title row, its padding), so the container is a bare
      one, as UiSheet's `max-w-(--size-max-content) rounded-t-sheet
      bg-surface-sheet shadow-sheet safe-bottom`: no padding of Regal's but the

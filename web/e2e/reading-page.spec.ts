@@ -27,7 +27,7 @@ import { expectAccessible, expectNoSideScroll, signedIn, untilStill } from './su
  */
 
 const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]))
-/** Regal's code: the built `regal` chunk, or (the dev server) its components and the two of Libellus' that import them. */
+/** Regal's code: the built `regal` chunk, or (the dev server) its components and the two of BetterReads' that import them. */
 const REGAL_CODE = /\/regal\.[^/]*\.js$|\/components\/regal\/|\/components\/shelf\/(?:Row|Stage)\.vue/
 
 function book(title: string): BookSnapshot {

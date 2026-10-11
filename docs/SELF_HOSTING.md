@@ -1,6 +1,6 @@
-# Self-hosting Libellus
+# Self-hosting BetterReads
 
-Your own Libellus: a Supabase project for the data and sign-in, and the web app as static files on
+Your own BetterReads: a Supabase project for the data and sign-in, and the web app as static files on
 Cloudflare Pages (or any static host). Both have free tiers that are plenty for a handful of
 readers. Plan on an hour, most of it in two dashboards.
 
@@ -43,7 +43,7 @@ Run everything below from the repository's root unless it says otherwise.
    on in every Supabase project; there is nothing to set up in the dashboard, and the photos are not
    in the nightly backup ([OPERATIONS.md](OPERATIONS.md#backups)).
    `supabase/seed.sql` (the local dev invite and member) is **not** pushed: it only runs locally.
-3. **Auth settings** (Authentication in the dashboard). Libellus signs in with a six-digit code,
+3. **Auth settings** (Authentication in the dashboard). BetterReads signs in with a six-digit code,
    never a link, so the code stays inside the installed app.
    - *Sign In / Providers → Email*: Email enabled; **Confirm email on**; **Email OTP length 6**;
      Email OTP expiration 3600 seconds. Every other provider off.
@@ -54,7 +54,7 @@ Run everything below from the repository's root unless it says otherwise.
      `https://<project>.pages.dev` if you use that address too) under Redirect URLs. The codes don't
      use links, but Supabase builds a few addresses from these.
    - *Emails → Templates*: for **Magic Link** and for **Confirm signup**, subject
-     `Your Libellus sign-in code` and the body of `supabase/templates/magic_link.html` (it shows
+     `Your BetterReads sign-in code` and the body of `supabase/templates/magic_link.html` (it shows
      `{{ .Token }}`, the six digits, and no link). Both need it: the first mail of a sign-up is the
      confirmation, every later one the magic link. Supabase lets you edit the templates once
      custom SMTP is set up (step 2).
@@ -71,7 +71,7 @@ the dashboard.
 Supabase's built-in mail only delivers to your project's team members and only a few an hour, so
 real members need your own SMTP server: *Authentication → Emails → SMTP Settings* → Enable custom
 SMTP, with your provider's host, port, user and password, a **sender address** on a domain you have
-verified with that provider (e.g. `books@example.org`) and a **sender name** (e.g. `Libellus`).
+verified with that provider (e.g. `books@example.org`) and a **sender name** (e.g. `BetterReads`).
 Then set the templates (step 1.3). Send yourself a code from the app (step 5) to check it arrives.
 
 ## 3. The web app on Cloudflare Pages
@@ -114,7 +114,7 @@ else: it uses relative addresses and asks Supabase at the URL it was built with.
 
 ## 5. The first account
 
-Libellus is invite-only, so the first code comes from the service-role key, on your machine:
+BetterReads is invite-only, so the first code comes from the service-role key, on your machine:
 
 ```sh
 export SUPABASE_URL=https://<ref>.supabase.co
@@ -125,7 +125,7 @@ scripts/create-invite-code.sh --label "me"                 # one use, 14 days; p
 Open your address, **Sign up** with your email and the code, and type the six digits from the mail.
 The code is spent once the address is proved. Make more the same way for the people you invite
 (`--uses 5 --days 30`, `--code HELLO-BOOKS`, `--days 0` for never expiring); `--help` says the rest.
-A code with many uses and no expiry, shared openly, is as close to open sign-up as Libellus gets.
+A code with many uses and no expiry, shared openly, is as close to open sign-up as BetterReads gets.
 
 Install it: Share → Add to Home Screen on an iPhone, Install app in Chrome on Android.
 
@@ -211,7 +211,7 @@ holds and how to restore one into a new project: [OPERATIONS.md, Backups](OPERAT
 
 **Releases.** The owner's instance ships through versioned releases (`.github/workflows/release.yml`,
 [OPERATIONS.md, Releases](OPERATIONS.md#releases)): Pages builds a `production` branch the workflow
-moves. The workflow only runs in `fabkho/libellus`, so a fork does nothing of it: Pages builds your
+moves. The workflow only runs in `fabkho/betterreads`, so a fork does nothing of it: Pages builds your
 production branch on every push, you push migrations and functions yourself (above), and the app's
 version and What's new come from the `version.txt` and `CHANGELOG.md` you build with. To use it in your
 fork, change the repository it checks and set up the environment it describes.
@@ -273,7 +273,7 @@ Content-Security-Policy in `web/public/_headers` also names the owner's shelf ho
 | GitHub Actions secrets | `SUPABASE_DB_URL`, `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY` | unset | Nightly backups: the session pooler's connection string, an R2 token for the bucket. Optional ([OPERATIONS.md](OPERATIONS.md#backups)). |
 | GitHub Actions variables | `BACKUP_AGE_RECIPIENT`, `CLOUDFLARE_ACCOUNT_ID`, `BACKUP_R2_BUCKET`, `BACKUP_MIN_BYTES` | unset (backup skipped), `libellus-backups`, `50000` | Nightly backups: your age public key, where the bucket is. |
 | Restore script | `LIBELLUS_PRODUCTION_REF` | the owner's project ref | The project `scripts/restore-backup.sh` refuses without `--i-know`: set your own. |
-| Source | App name, icons, colours | Libellus, "Night Reader" | Not settings: `web/nuxt.config.ts` (`pwa.manifest`), `web/i18n/locales/en.json` (`app.name`), `design/tokens.json`, `design/icons/`. |
+| Source | App name, icons, colours | BetterReads, "Night Reader" | Not settings: `web/nuxt.config.ts` (`pwa.manifest`), `web/i18n/locales/en.json` (`app.name`), `design/tokens.json`, `design/icons/`. |
 
 `web/.env.example` lists the web build's variables for local work.
 

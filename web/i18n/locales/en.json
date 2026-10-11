@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Libellus",
+    "name": "BetterReads",
     "tagline": "The books you read, kept quietly."
   },
   "common": {
@@ -33,7 +33,7 @@
       "code_invalid": "That code is wrong, has expired or was already used. Request a new one.",
       "rate_limited": "Too many attempts. Please wait a moment.",
       "email_invalid": "Enter a valid email address.",
-      "not_configured": "Libellus is missing its backend configuration.",
+      "not_configured": "BetterReads is missing its backend configuration.",
       "unknown": "Something went wrong. Please try again."
     }
   },
@@ -51,7 +51,7 @@
   },
   "signUp": {
     "title": "Create your account",
-    "intro": "Libellus is invite-only. Your code comes from whoever invited you.",
+    "intro": "BetterReads is invite-only. Your code comes from whoever invited you.",
     "emailLabel": "Email",
     "emailPlaceholder": "you{'@'}example.com",
     "inviteLabel": "Invite code",
@@ -261,7 +261,7 @@
     }
   },
   "share": {
-    "title": "Shared with Libellus",
+    "title": "Shared with BetterReads",
     "finding": "Finding your book…",
     "taking": "Taking in your ebook…",
     "takingMany": "Taking in your ebooks… {done} of {total}"
@@ -293,7 +293,7 @@
     "loadError": "Your books could not be loaded.",
     "retry": "Try again",
     "installHint": {
-      "title": "Keep Libellus on your Home Screen",
+      "title": "Keep BetterReads on your Home Screen",
       "text": "Tap Share, then Add to Home Screen. It opens like an app, full screen.",
       "addToHome": "Add to Home Screen",
       "dismiss": "Dismiss"
@@ -485,11 +485,11 @@
       "notBook": "That doesn't look like a book's barcode.",
       "looking": "Looking up {isbn}…",
       "askingTitle": "Allow the camera",
-      "asking": "Libellus uses the camera only to read a barcode. Nothing is recorded or sent.",
+      "asking": "BetterReads uses the camera only to read a barcode. Nothing is recorded or sent.",
       "deniedTitle": "Camera access is off",
-      "denied": "Allow the camera for Libellus in your browser's site settings to scan a barcode. You can always search by title or ISBN.",
+      "denied": "Allow the camera for BetterReads in your browser's site settings to scan a barcode. You can always search by title or ISBN.",
       "noneTitle": "No camera found",
-      "none": "Libellus found no camera it can use, or could not load its barcode reader. Search by title or ISBN instead.",
+      "none": "BetterReads found no camera it can use, or could not load its barcode reader. Search by title or ISBN instead.",
       "dismiss": "Close",
       "offline": "You're offline. Only your Library can be searched."
     }
@@ -971,11 +971,11 @@
     "toLibrary": "Go to Library",
     "another": "Import another file",
     "fileError": {
-      "notSupported": "That isn't an export Libellus can read. Choose the CSV you exported from Goodreads or Hardcover.",
+      "notSupported": "That isn't an export BetterReads can read. Choose the CSV you exported from Goodreads or Hardcover.",
       "notCsv": "That isn't a CSV file. Goodreads and Hardcover both export one.",
-      "storygraph": "That's a StoryGraph export, which Libellus can't read yet. Export from Goodreads or Hardcover instead.",
-      "librarything": "That's a LibraryThing export, which Libellus can't read yet. Export from Goodreads or Hardcover instead.",
-      "bookshelf": "That's a Bookshelf app export, which Libellus can't read yet. Export from Goodreads or Hardcover instead.",
+      "storygraph": "That's a StoryGraph export, which BetterReads can't read yet. Export from Goodreads or Hardcover instead.",
+      "librarything": "That's a LibraryThing export, which BetterReads can't read yet. Export from Goodreads or Hardcover instead.",
+      "bookshelf": "That's a Bookshelf app export, which BetterReads can't read yet. Export from Goodreads or Hardcover instead.",
       "missingColumns": "That looks like a {app} export, but it has no {columns} column. Export it again without changing it. | That looks like a {app} export, but it has no {columns} columns. Export it again without changing it.",
       "empty": "There are no books in that file.",
       "unreadable": "That file couldn't be read.",
@@ -1134,7 +1134,7 @@
       "scanning": "Scanning…",
       "scanningCount": "Scanning… {done} of {total}",
       "hint": "Choose a subfolder such as Download/Books: Android does not allow the Download folder itself. Scan finds new EPUBs there and keeps a copy of each on this device.",
-      "error": "Libellus could not read the folder. Tap Scan and allow it, or choose the folder again."
+      "error": "BetterReads could not read the folder. Tap Scan and allow it, or choose the folder again."
     },
     "report": {
       "share": "Shared",
@@ -1146,7 +1146,7 @@
       "failed": "{count} isn't an EPUB | {count} aren't EPUBs",
       "dismiss": "Dismiss"
     },
-    "missed": "The shared files did not reach Libellus. Share them again.",
+    "missed": "The shared files did not reach BetterReads. Share them again.",
     "needsYou": "Needs you",
     "linked": "Linked",
     "couldBe": "Could be one of your books | Could be one of {count} of your books",
@@ -1159,9 +1159,9 @@
     "untitled": "Untitled ebook",
     "empty": {
       "title": "No ebooks yet",
-      "text": "Share EPUB files to Libellus, or add one from a book's options."
+      "text": "Share EPUB files to BetterReads, or add one from a book's options."
     },
-    "footer": "Ebook files stay on this device. Libellus never uploads them, and signing out deletes them here.",
+    "footer": "Ebook files stay on this device. BetterReads never uploads them, and signing out deletes them here.",
     "chooseSheet": {
       "title": "Which book is it?"
     },
@@ -1193,7 +1193,7 @@
     "error": {
       "not_epub": "That file isn't an EPUB.",
       "storage": "The ebook could not be kept on this device. Free some space and try again.",
-      "folder": "Libellus could not read the folder. Tap Scan and allow it, or choose the folder again."
+      "folder": "BetterReads could not read the folder. Tap Scan and allow it, or choose the folder again."
     }
   },
   "bookEbook": {
@@ -1428,12 +1428,12 @@
     "error": "The page could not be loaded.",
     "retry": "Try again",
     "footer": {
-      "tagline": "Libellus — track what you read",
+      "tagline": "BetterReads — track what you read",
       "signUp": "Have an invite code? Sign up"
     },
     "waitlist": {
       "title": "Want in?",
-      "text": "Libellus is invite-only for now. Leave your email and we’ll send you an invite when there’s room.",
+      "text": "BetterReads is invite-only for now. Leave your email and we’ll send you an invite when there’s room.",
       "email": "Your email",
       "placeholder": "you{'@'}example.com",
       "honeypot": "Leave this field empty",

@@ -163,7 +163,7 @@ pnpm tsx e2e/android/flight-return.ts --base http://localhost:3126 --out /tmp/li
 as a share target and shows its manifest `shortcuts` on a long-press only once Google's server has minted
 an APK for it. On the emulator without a Google account Chrome's Install (⋮ → Add to home screen →
 Install) pins a Chrome "webapp" launcher shortcut instead: it opens standalone, but Chrome's share sheet
-does not list Libellus and the icon's long-press menu has no shortcuts (App info, Pause app, Widgets,
+does not list BetterReads and the icon's long-press menu has no shortcuts (App info, Pause app, Widgets,
 Remove). So on the emulator the flows are driven the way Android would start them: through the DevTools
 socket, navigate the installed (standalone) page to `/share?title=&text=&url=` and to the shortcuts'
 addresses (`/?search=1`, `/?progress=1`), and read what Chrome made of the manifest with

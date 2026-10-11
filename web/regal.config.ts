@@ -48,12 +48,12 @@ export const REGAL_ENABLED = /^(1|true)$/i.test(process.env.LIBELLUS_REGAL?.trim
 
 /**
  * The published library file Regal shows (NUXT_PUBLIC_REGAL_LIBRARY_SRC; the owner's is the one
- * her portfolio shows, whose CORS allows Libellus). Empty without Regal.
+ * her portfolio shows, whose CORS allows BetterReads). Empty without Regal.
  */
 export const REGAL_LIBRARY_SRC = REGAL_ENABLED ? (process.env.NUXT_PUBLIC_REGAL_LIBRARY_SRC?.trim() ?? '') : ''
 
 const MISSING = [
-  'LIBELLUS_REGAL=1 builds Libellus with Regal (the owner\'s shelf, #23), and Regal could not be found.',
+  'LIBELLUS_REGAL=1 builds BetterReads with Regal (the owner\'s shelf, #23), and Regal could not be found.',
   'Set REGAL_LAYER to a checkout of fabkho/regal (REGAL_LAYER=/path/to/regal),',
   'or GIGET_AUTH to a GitHub token that can read the private repo fabkho/regal',
   '(the Cloudflare Pages build and CI read it from their secrets).',
@@ -61,7 +61,7 @@ const MISSING = [
 ].join('\n')
 
 const NO_LIBRARY = [
-  'LIBELLUS_REGAL=1 builds Libellus with Regal (the owner\'s shelf, #23), and it has no library file to show.',
+  'LIBELLUS_REGAL=1 builds BetterReads with Regal (the owner\'s shelf, #23), and it has no library file to show.',
   'Set NUXT_PUBLIC_REGAL_LIBRARY_SRC to the published file (https://…/v2/library.json).',
 ].join('\n')
 
@@ -91,7 +91,7 @@ export function regalLayer(): (string | [string, Record<string, unknown>])[] {
 let regalDir: string | null = null
 
 // three.js and what renders it; Regal's components and utilities (its folder);
-// the two Libellus components that use them, and the fonts' stylesheet they import. Nothing else in
+// the two BetterReads components that use them, and the fonts' stylesheet they import. Nothing else in
 // the app imports these.
 const REGAL_PACKAGES = /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:three|three-stdlib|@tresjs|gsap|@vueuse|@monogrid|troika-[^\\/]+|camera-controls|postprocessing|stats-gl|meshoptimizer|bidi-js|webgl-sdf-generator)[\\/]/
 const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue|nuxt-fonts-global\.css/

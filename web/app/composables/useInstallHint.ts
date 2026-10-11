@@ -2,7 +2,7 @@
  * The install hint (issue #94, utils/installHint.ts has the rules) and, on
  * Android, the install prompt Chrome offers.
  *
- * `visible` is what Home shows: the iPhone/iPad Safari hint while Libellus is
+ * `visible` is what Home shows: the iPhone/iPad Safari hint while BetterReads is
  * not installed and not dismissed in the last week. `dismiss()` hides it and
  * remembers that on this device.
  *

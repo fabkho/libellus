@@ -193,7 +193,7 @@ const property = (name, content) => `<meta property="${name}" content="${escapeH
 const noIndexTag = () => meta('robots', 'noindex, nofollow')
 
 function notFoundTags() {
-  return noIndexTag() + property('og:title', 'Libellus') + property('og:description', 'This reading page is not here any more.')
+  return noIndexTag() + property('og:title', 'BetterReads') + property('og:description', 'This reading page is not here any more.')
 }
 
 /** What a crawler shows for the link: the title, a line about it, and the image. */
@@ -205,7 +205,7 @@ function tagsFor(data, { url, token, book, payload }) {
     property('og:title', ogTitle(data, book)),
     property('og:description', description(data, book)),
     property('og:type', book ? 'article' : 'website'),
-    property('og:site_name', 'Libellus'),
+    property('og:site_name', 'BetterReads'),
     property('og:url', page),
     property('og:image', image),
     property('og:image:width', String(IMAGE.width)),
@@ -235,8 +235,8 @@ function ogTitle(data, book) {
 /** The browser tab's title, and what a plain link list shows. */
 function titleFor(data, book) {
   if (data === undefined) return null
-  if (data === null) return 'Not found · Libellus'
-  return `${ogTitle(data, book)} · Libellus`
+  if (data === null) return 'Not found · BetterReads'
+  return `${ogTitle(data, book)} · BetterReads`
 }
 
 /** A Rating in whole and half stars, as a sentence says it: "4½ stars", "5 stars", "1 star". */

@@ -13,7 +13,7 @@ import { parseLibraryFile, type LibraryBook } from './export/regalLibraryFile'
  * Framework-free: the fetch is handed in, like search's.
  */
 
-/** A Book on the shelf, as far as Libellus needs it. */
+/** A Book on the shelf, as far as BetterReads needs it. */
 export type ShelfBook = {
   id: string
   title: string

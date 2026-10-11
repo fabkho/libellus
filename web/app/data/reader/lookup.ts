@@ -158,7 +158,7 @@ export async function define(
     for (const candidate of [...new Set([word, word.toLowerCase()])]) {
       const response = await fetcher(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(candidate)}`, {
         signal,
-        headers: { 'Api-User-Agent': 'Libellus (https://github.com/fabkho/libellus)' },
+        headers: { 'Api-User-Agent': 'BetterReads (https://github.com/fabkho/betterreads)' },
       })
       if (response.status === 404) continue
       if (!response.ok) return { data: null, error: 'failed' }

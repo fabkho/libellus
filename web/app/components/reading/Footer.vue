@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// The quiet end of a reading page and a Book card (issue #171): "Libellus — track what you read", the
-// waitlist (Libellus is invite-only and the page creates no account, so a visitor leaves her address and
+// The quiet end of a reading page and a Book card (issue #171): "BetterReads — track what you read", the
+// waitlist (BetterReads is invite-only and the page creates no account, so a visitor leaves her address and
 // the owner invites her when there is room: ReadingWaitlist) and a way in for anyone who already has a
 // code. `token` is the page's: the database finds whose page it was and keeps nothing of it. Nothing
 // about the member goes into it.

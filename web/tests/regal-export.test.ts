@@ -76,7 +76,7 @@ function entry(n: number, bookFields: Partial<Book>, sessions: ReadingSession[],
 /** A Library with every case the mapping knows, in no particular order. */
 function library(): MemberLibraryEntry[] {
   return [
-    // Finished once: every field Libellus has.
+    // Finished once: every field BetterReads has.
     entry(
       3,
       {
@@ -151,7 +151,7 @@ describe('exportRegalLibrary', () => {
       ['Stoner', 'read'],
     ])
     const empty = exportRegalLibrary([], { generatedAt: GENERATED_AT })
-    expect(empty).toEqual({ version: 2, generatedAt: GENERATED_AT, generator: 'libellus', books: [] })
+    expect(empty).toEqual({ version: 2, generatedAt: GENERATED_AT, generator: 'betterreads', books: [] })
     expect(validateLibraryFile(empty).ok).toBe(true)
   })
 })
@@ -372,7 +372,7 @@ describe('carryArt', () => {
     expect(validateLibraryFile(file).ok).toBe(true)
   })
 
-  it('keeps the Libellus Cover where a face cannot be resolved, and is the same on every run', () => {
+  it('keeps the BetterReads Cover where a face cannot be resolved, and is the same on every run', () => {
     const once = carryArt(exported(), published, (ref) => (ref.startsWith('http') ? ref : null))
     expect(once.file.books.find((book) => book.title === 'Kindred')!.assets).toEqual({
       front: 'https://is1-ssl.mzstatic.com/image/thumb/kindred/600x900bb.jpg',

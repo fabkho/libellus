@@ -25,7 +25,7 @@ const release = releaseNotes(rootFile('CHANGELOG.md'), rootFile('version.txt'))
 // and the home-screen launchers refetch them instead of keeping the old ones.
 const iconVersion = 2
 
-// Libellus web — the reference app (SPEC.md). Everything personal sits behind
+// BetterReads web — the reference app (SPEC.md). Everything personal sits behind
 // the sign-in, so there is nothing to render on the server: SPA, built to
 // static files for Cloudflare Pages.
 export default defineNuxtConfig({
@@ -102,7 +102,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'en' },
       // The static shell's title, for the moment before the app sets its own from the message file
       // (app.vue): a page without one is announced by its address.
-      title: 'Libellus',
+      title: 'BetterReads',
       meta: [
         // viewport-fit=cover so the installed app can draw under the notch (and
         // Chrome on Android edge to edge, behind its gesture bar); screens pad
@@ -188,8 +188,8 @@ export default defineNuxtConfig({
     registerType: 'autoUpdate',
     manifest: {
       id: '/',
-      name: 'Libellus',
-      short_name: 'Libellus',
+      name: 'BetterReads',
+      short_name: 'BetterReads',
       description: 'Your books: what you want to read, what you are reading, what you have read.',
       lang: 'en',
       start_url: '/',
@@ -210,7 +210,7 @@ export default defineNuxtConfig({
         // Alpha only: the launcher tints it when the member turns themed icons on.
         { src: `/icon-monochrome-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
       ],
-      // Sharing to Libellus from another app. A link or text (issue #91: Goodreads, Amazon, a
+      // Sharing to BetterReads from another app. A link or text (issue #91: Goodreads, Amazon, a
       // browser, a bookstore app) opens the app at /share?title=&text=&url= (pages/share.vue),
       // which finds the Book and goes to its page. EPUB files, one or many (issue #131: from the
       // download notification or the file manager), are taken in and linked to Books. A manifest

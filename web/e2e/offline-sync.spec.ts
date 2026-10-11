@@ -166,7 +166,7 @@ async function saveProgress(page: import('@playwright/test').Page, value: number
 }
 
 const outboxDatabases = (page: import('@playwright/test').Page) =>
-  page.evaluate(async () => (await indexedDB.databases()).map((db) => db.name).filter((name) => name === 'libellus'))
+  page.evaluate(async () => (await indexedDB.databases()).map((db) => db.name).filter((name) => name === 'betterreads'))
 
 test('signing out with changes waiting asks first; offline only "Sign out anyway" is offered, and it drops them', async ({ page, baseURL }) => {
   await recordedApple(page)
@@ -196,7 +196,7 @@ test('signing out with changes waiting asks first; offline only "Sign out anyway
   await page.getByTestId('signOutUnsynced.cancel').click()
   await expect(page.getByTestId('signOutUnsynced')).toBeHidden()
   await expect(page.getByTestId('profile.signOut')).toBeVisible()
-  expect(await outboxDatabases(page)).toEqual(['libellus'])
+  expect(await outboxDatabases(page)).toEqual(['betterreads'])
 
   // Sign out anyway: the change is gone with the device's copy, never sent.
   await page.getByTestId('profile.signOut').click()

@@ -10,7 +10,7 @@ import { goto, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * The share target and the app shortcuts (#91). Another app shares a link or
- * text to Libellus: it opens at /share?title=&text=&url= (the manifest's GET
+ * text to BetterReads: it opens at /share?title=&text=&url= (the manifest's GET
  * share_target), finds the Book through the same sources as search and goes to
  * its page, replacing /share in the history, or opens the search palette with the
  * words typed in. Signed out, the share waits through the sign-in. The

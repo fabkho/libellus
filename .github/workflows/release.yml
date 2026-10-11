@@ -52,7 +52,7 @@ permissions: {}
 jobs:
   release-please:
     name: release pull request and tag
-    if: github.event_name == 'push' && github.repository == 'fabkho/libellus'
+    if: github.event_name == 'push' && github.repository == 'fabkho/betterreads'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # One at a time and never cancelled: a run cut off between creating the release
@@ -77,7 +77,7 @@ jobs:
     needs: release-please
     # `release-please` is skipped on a manual run; !cancelled() lets this job run anyway.
     if: >-
-      ${{ !cancelled() && github.repository == 'fabkho/libellus' && (
+      ${{ !cancelled() && github.repository == 'fabkho/betterreads' && (
         github.event_name == 'workflow_dispatch' ||
         (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true')
       ) }}
@@ -295,7 +295,7 @@ jobs:
             echo "### Web app"
             if [ "$MOVED" = success ]; then
               echo "Branch \`production\` is at \`${TARGET:0:7}\` ($MOVE). Cloudflare Pages builds it now: its check on"
-              echo "[the commit]($REPO/commit/$TARGET) links the deployment (also Workers & Pages → libellus → Deployments)."
+              echo "[the commit]($REPO/commit/$TARGET) links the deployment (also Workers & Pages → betterreads → Deployments)."
               echo "Live at https://libellus.fabkho.dev once the build is done."
             else
               echo "Branch \`production\` not moved (${MOVED:-not reached}): the live site is unchanged."

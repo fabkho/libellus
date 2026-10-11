@@ -484,11 +484,11 @@ function fontFaces() {
   const face = (family: string, url: string, weight: number, style = 'normal') =>
     `@font-face { font-family: '${family}'; src: url('${new URL(url, location.href).href}') format('woff2'); font-weight: ${weight}; font-style: ${style}; font-display: block; }`
   return [
-    face('Libellus Serif', newsreader400, 400),
-    face('Libellus Serif', newsreader400i, 400, 'italic'),
-    face('Libellus Serif', newsreader600, 600),
-    face('Libellus Sans', geist400, 400),
-    face('Libellus Sans', geist600, 600),
+    face('BetterReads Serif', newsreader400, 400),
+    face('BetterReads Serif', newsreader400i, 400, 'italic'),
+    face('BetterReads Serif', newsreader600, 600),
+    face('BetterReads Sans', geist400, 400),
+    face('BetterReads Sans', geist600, 600),
   ].join('\n')
 }
 
@@ -498,7 +498,7 @@ function fontFaces() {
  * own structure (headings, centring, images), its colours give way to the room.
  */
 export function pageCss(settings: ReaderSettings, colors: PageColors, flow: Flow = 'paginated', touchSelection = false): string {
-  const family = settings.font === 'serif' ? `'Libellus Serif', Georgia, serif` : `'Libellus Sans', system-ui, sans-serif`
+  const family = settings.font === 'serif' ? `'BetterReads Serif', Georgia, serif` : `'BetterReads Sans', system-ui, sans-serif`
   const size = FONT_SIZES[settings.size] ?? 18
   const leading = LEADINGS[settings.leading] ?? 1.55
   // Edge to edge: paragraphs lose their first-line indent's extra and the space between them shrinks, for the most text per screen.
@@ -652,7 +652,7 @@ function describeRange(engine: ReaderEngine, doc: Document, range: Range, custom
 }
 
 /**
- * A book's scripts never run as Libellus. foliate's frames are of the app's
+ * A book's scripts never run as BetterReads. foliate's frames are of the app's
  * origin (it lays out, selects and listens inside them), so three layers keep
  * an EPUB from anywhere out of the member's session:
  * - its script files are never loaded, and every page, SVG and stylesheet is

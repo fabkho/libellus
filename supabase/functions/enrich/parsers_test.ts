@@ -95,10 +95,10 @@ Deno.test('a Commons portrait keeps its licence and author, without tracking par
 })
 
 Deno.test('the User-Agent names the app, the instance and a contact (Wikimedia policy)', () => {
-  assertEquals(userAgent(), `Libellus/1.0 (private book tracker; ${DEFAULT_CONTACT}) enrich`)
+  assertEquals(userAgent(), `BetterReads/1.0 (private book tracker; ${DEFAULT_CONTACT}) enrich`)
   assertEquals(
     userAgent('https://books.example.org', 'owner@example.org'),
-    'Libellus/1.0 (private book tracker; +https://books.example.org; owner@example.org) enrich',
+    'BetterReads/1.0 (private book tracker; +https://books.example.org; owner@example.org) enrich',
   )
 })
 

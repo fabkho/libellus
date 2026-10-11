@@ -23,7 +23,7 @@ async function phonePhoto(hue: number): Promise<Buffer> {
   return sharp({ create: { width: 1200, height: 900, channels: 3, background: { r: hue, g: 120, b: 255 - hue } } })
     .composite([{ input: Buffer.from(`<svg width="1200" height="900"><circle cx="600" cy="450" r="300" fill="#f4e3c1"/></svg>`) }])
     .withExif({
-      IFD0: { Make: 'Libellus Test Camera', DateTime: '2026:10:01 09:30:00' },
+      IFD0: { Make: 'BetterReads Test Camera', DateTime: '2026:10:01 09:30:00' },
       IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '52/1 31/1 12/1', GPSLongitudeRef: 'E', GPSLongitude: '13/1 24/1 36/1' },
     })
     .jpeg({ quality: 90 })
@@ -85,7 +85,7 @@ test('a member adds her photo, sees it everywhere and offline, replaces it and r
   expect(metadataIn(stored)).toEqual([])
   const meta = await sharp(stored).metadata()
   expect({ format: meta.format, width: meta.width, height: meta.height, exif: meta.exif }).toEqual({ format: 'webp', width: 512, height: 512, exif: undefined })
-  expect(Buffer.from(stored).toString('latin1')).not.toContain('Libellus Test Camera')
+  expect(Buffer.from(stored).toString('latin1')).not.toContain('BetterReads Test Camera')
 
   // Every tab's header shows it.
   await page.getByTestId('profile.back').click()

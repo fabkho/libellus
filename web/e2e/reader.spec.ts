@@ -122,7 +122,7 @@ test('A Want to read Book: Read now opens the book and asks to start reading', a
 /** What a script of the book would leave on the app's window, had it run. */
 const pwn = (what: string) => `top.__libellusPwned=(top.__libellusPwned||[]).concat('${what}')`
 
-/** Metamorphosis, its first part carrying every way a page tries to run a script as Libellus or reach outside the book. */
+/** Metamorphosis, its first part carrying every way a page tries to run a script as BetterReads or reach outside the book. */
 const CRAFTED: EpubSpec = {
   ...METAMORPHOSIS_GUTENBERG,
   chapters: METAMORPHOSIS_GUTENBERG.chapters!.map((chapter, i) =>

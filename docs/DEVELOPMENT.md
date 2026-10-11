@@ -1,6 +1,6 @@
-# Developing Libellus
+# Developing BetterReads
 
-How to run, test and change Libellus on your machine. What it is and how to host your own:
+How to run, test and change BetterReads on your machine. What it is and how to host your own:
 [README](../README.md) and [SELF_HOSTING.md](SELF_HOSTING.md). Rules for code changes:
 [web/AGENTS.md](../web/AGENTS.md); domain words: [CONTEXT.md](../CONTEXT.md).
 
@@ -16,7 +16,7 @@ pnpm install
 pnpm dev                           # http://localhost:3020, best in a phone-sized viewport
 ```
 
-The libellus stack has its own project id and ports (55320–55329), so it runs next to other local
+The betterreads stack has its own project id and ports (55320–55329), so it runs next to other local
 Supabase stacks (Trappist's on 5432x) without touching them. Stop only this one with `supabase stop`
 from the repo root — never `supabase stop --all`.
 
@@ -92,7 +92,7 @@ round (#4); docs/DESIGN.md says what each token is for.
 
 ### Signing in locally
 
-Libellus is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
+BetterReads is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
 
 | What | Value |
 | --- | --- |

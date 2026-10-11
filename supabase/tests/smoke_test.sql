@@ -1,5 +1,5 @@
 -- The database suite's first test: proves `supabase test db` runs against the
--- libellus stack with pgTAP available. Real rules (invite gate, RLS, derived
+-- betterreads stack with pgTAP available. Real rules (invite gate, RLS, derived
 -- status, session checks) arrive with the migrations that introduce them.
 begin;
 
