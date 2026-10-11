@@ -14,8 +14,8 @@ Translated with **the-i18n-kit** (`@the-i18n-kit/cli@8.3.0`) through the Gemini 
 | Identical `@:` links | yes |
 | Identical `{'@'}` literals | yes |
 | No leftover English | check: import.howTo.goodreads (looks English: books, and, library) |
-| Length ratio German / English (characters, placeholders removed) | median ×1.08, 90th percentile ×1.5, max ×3.67 |
-| Other warnings | circle.want: length (22 → 38 characters (×1.73)); photo.private: symbols (English has "", German has "–") |
+| Length ratio German / English (characters, placeholders removed) | median ×1.14, 90th percentile ×1.5, max ×1.8 |
+| Other warnings | friends.want: length (22 → 38 characters (×1.73)); feed.batchFinished: length (15 → 27 characters (×1.80)) |
 
 ## Side by side
 
@@ -29,7 +29,7 @@ One table per kind of string. `{…}` and `\|` are the app's placeholders and pl
 | `status.want_to_read` | `Want to read` | `Möchte ich lesen` | 1.33 |
 | `status.reading` | `Currently reading` | `Lese ich gerade` | 0.88 |
 | `status.finished` | `Finished` | `Gelesen` | 0.88 |
-| `status.notFinished` | `DNF` | `Abgebrochen` | 3.67 |
+| `status.notFinished` | `DNF` | `DNF` | 1.00 |
 | `rating.none` | `Not rated` | `Nicht bewertet` | 1.56 |
 | `profile.account.signOut` | `Sign out` | `Abmelden` | 1.00 |
 | `profile.account.delete` | `Delete account` | `Konto löschen` | 0.93 |
@@ -40,24 +40,24 @@ One table per kind of string. `{…}` and `\|` are the app's placeholders and pl
 
 | Key | English | German | × |
 | --- | --- | --- | --- |
-| `sync.syncing` | `Syncing {count} change… \| Syncing {count} changes…` | `Synchronisiere {count} Änderung … \| Synchronisiere {count} Änderungen …` | 1.58 |
+| `sync.syncing` | `Syncing {count} change… \| Syncing {count} changes…` | `{count} Änderung synchronisieren … \| {count} Änderungen synchronisieren …` | 1.64 |
 | `shelf.count` | `{count} book \| {count} books` | `{count} Buch \| {count} Bücher` | 1.07 |
 | `profile.records.days` | `{count} day \| {count} days` | `{count} Tag \| {count} Tage` | 1.00 |
 | `book.goodreads.ratings` | `{count} rating \| {count} ratings` | `{count} Bewertung \| {count} Bewertungen` | 1.39 |
 | `genre.stats.row` | `{genre}: {percent} of your books, {count} book \| {genre}: {percent} of your books, {count} books` | `{genre}: {percent} deiner Bücher, {count} Buch \| {genre}: {percent} deiner Bücher, {count} Bücher` | 1.02 |
 | `profile.ratings.row` | `{star} star: {count} \| {star} stars: {count}` | `{star} Stern: {count} \| {star} Sterne: {count}` | 1.11 |
-| `sync.waiting` | `{count} change made on this device waits for a connection. It syncs by itself once you're online. \| {count} changes made on this device wait for a connection. They sync by themselves once you're online.` | `{count} Änderung auf diesem Gerät wartet auf Empfang. Sie wird synchronisiert, sobald du online bist. \| {count} Änderungen auf diesem Gerät warten auf Empfang. Sie werden synchronisiert, sobald du online bist.` | 1.04 |
-| `shelf.card.allLabel` | `Show all {count} book on your shelf \| Show all {count} books on your shelf` | `Alle {count} Buch in deinem Regal zeigen \| Alle {count} Bücher in deinem Regal zeigen` | 1.18 |
+| `sync.waiting` | `{count} change made on this device waits for a connection. It syncs by itself once you're online. \| {count} changes made on this device wait for a connection. They sync by themselves once you're online.` | `{count} Änderung auf diesem Gerät wartet auf eine Verbindung. Sie synchronisiert sich automatisch, sobald du online bist. \| {count} Änderungen auf diesem Gerät warten auf eine Verbindung. Sie synchronisieren sich automatisch, sobald du online bist.` | 1.24 |
+| `shelf.card.allLabel` | `Show all {count} book on your shelf \| Show all {count} books on your shelf` | `Alle {count} Buch in deinem Regal anzeigen \| Alle {count} Bücher in deinem Regal anzeigen` | 1.25 |
 | `sample.linkedPlural` | `@:status.finished: {count} book \| @:status.finished: {count} books` | `@:status.finished: {count} Buch \| @:status.finished: {count} Bücher` | 1.02 |
 
 ### Placeholders
 
 | Key | English | German | × |
 | --- | --- | --- | --- |
-| `home.readInLabel` | `Read in {year}: {count}` | `Gelesen {year}: {count}` | 1.00 |
-| `collection.moved` | `{title} moved to place {place} of {count}.` | `{title} auf Platz {place} von {count} verschoben.` | 1.33 |
-| `circle.declineLabel` | `Decline {name}` | `{name} ablehnen` | 1.13 |
-| `feed.batchFinished` | `finished {count} books` | `hat {count} Bücher beendet` | 1.27 |
+| `home.readInLabel` | `Read in {year}: {count}` | `Gelesen in {year}: {count}` | 1.30 |
+| `collection.moved` | `{title} moved to place {place} of {count}.` | `{title} an Stelle {place} von {count} verschoben.` | 1.33 |
+| `friends.declineLabel` | `Decline {name}` | `{name} ablehnen` | 1.13 |
+| `feed.batchFinished` | `finished {count} books` | `hat {count} Bücher zu Ende gelesen` | 1.80 |
 | `common.today` | `Today · {date}` | `Heute · {date}` | 1.00 |
 | `reader.where` | `{percent} % · {left} left` | `{percent} % · noch {left}` | 1.00 |
 | `book.progress.percent` | `{percent} %` | `{percent} %` | 1.00 |
@@ -67,9 +67,9 @@ One table per kind of string. `{…}` and `\|` are the app's placeholders and pl
 | Key | English | German | × |
 | --- | --- | --- | --- |
 | `book.goodreads.on` | `on {goodreads}` | `auf {goodreads}` | 1.33 |
-| `circle.want` | `added {title} to Want to read` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` | 1.73 |
-| `circle.join` | ` · ` | ` · ` | 1.00 |
-| `circle.and` | ` and ` | ` und ` | 1.00 |
+| `friends.want` | `added {title} to Want to read` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` | 1.73 |
+| `friends.join` | ` · ` | ` · ` | 1.00 |
+| `friends.and` | ` and ` | ` und ` | 1.00 |
 
 ### Linked @:
 
@@ -88,28 +88,28 @@ One table per kind of string. `{…}` and `\|` are the app's placeholders and pl
 
 | Key | English | German | × |
 | --- | --- | --- | --- |
-| `sync.waiting` | `{count} change made on this device waits for a connection. It syncs by itself once you're online. \| {count} changes made on this device wait for a connection. They sync by themselves once you're online.` | `{count} Änderung auf diesem Gerät wartet auf Empfang. Sie wird synchronisiert, sobald du online bist. \| {count} Änderungen auf diesem Gerät warten auf Empfang. Sie werden synchronisiert, sobald du online bist.` | 1.04 |
-| `photo.private` | `You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken.` | `Sichtbar für dich und deine Kontakte: wer dir folgt, wem du folgst, wer angefragt oder deinen Folge-Link geöffnet hat – und bei öffentlichem Konto für alle in Libellus. Klein gespeichert, ohne Ort oder Zeit der Aufnahme.` | 0.95 |
-| `sharing.about` | `A page of what you read, for friends: anyone with its link can open it, without signing in. Nobody finds it without the link. Your followers in the app see what you choose under Friends → Privacy.` | `Eine Seite mit deinen Büchern für Freunde: wer den Link hat, kann sie öffnen, ganz ohne Anmeldung. Ohne Link findet sie niemand. Deine Follower in der App sehen, was du unter Freunde → Privatsphäre auswählst.` | 1.06 |
-| `privacy.goPublicText` | `Any member with your link can follow you without asking. People waiting for an answer become followers now.` | `Alle mit deinem Link können dir ohne Anfrage folgen. Wer gerade wartet, wird direkt zum Follower.` | 0.91 |
-| `home.installHint.text` | `Tap Share, then Add to Home Screen. It opens like an app, full screen.` | `Tippe auf „Teilen“, dann auf „Zum Home-Bildschirm“. Öffnet sich als App, im Vollbild.` | 1.21 |
-| `waitlist.code.not_configured` | `The email was not sent: mail isn’t set up. Send the code another way; it works once, until {date}.` | `E-Mail wurde nicht gesendet: E-Mail ist nicht eingerichtet. Schick den Code anders; er gilt einmalig bis {date}.` | 1.15 |
-| `import.howTo.goodreads` | `On goodreads.com: My Books → Import and export → Export library. Download the CSV when the link appears.` | `Auf goodreads.com: My Books → Import and export → Export library. Lade die CSV herunter, sobald der Link da ist.` | 1.08 |
+| `sync.waiting` | `{count} change made on this device waits for a connection. It syncs by itself once you're online. \| {count} changes made on this device wait for a connection. They sync by themselves once you're online.` | `{count} Änderung auf diesem Gerät wartet auf eine Verbindung. Sie synchronisiert sich automatisch, sobald du online bist. \| {count} Änderungen auf diesem Gerät warten auf eine Verbindung. Sie synchronisieren sich automatisch, sobald du online bist.` | 1.24 |
+| `photo.private` | `You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken.` | `Du und die Mitglieder, mit denen du verbunden bist, können es sehen: wer dir folgt, wem du folgst, wer angefragt hat, wer deinen Folge-Link geöffnet hat und alle in Libellus, solange dein Konto öffentlich ist. Es wird klein gespeichert, ohne Ort oder Aufnahmezeitpunkt.` | 1.16 |
+| `sharing.about` | `A page of what you read, for friends: anyone with its link can open it, without signing in. Nobody finds it without the link. Your followers in the app see what you choose under Friends → Privacy.` | `Eine Seite mit deinen gelesenen Büchern für Freunde: Jede Person mit dem Link kann sie öffnen, ganz ohne Anmeldung. Niemand findet sie ohne den Link. Deine Follower in der App sehen, was du unter Freunde → Privatsphäre auswählst.` | 1.17 |
+| `privacy.goPublicText` | `Any member with your link can follow you without asking. People waiting for an answer become followers now.` | `Jedes Mitglied mit deinem Link kann dir folgen, ohne zu fragen. Wer auf eine Antwort wartet, wird sofort zu deinen Followern hinzugefügt.` | 1.28 |
+| `home.installHint.text` | `Tap Share, then Add to Home Screen. It opens like an app, full screen.` | `Tippe auf „Teilen“, dann auf „Zum Home-Bildschirm“. Öffnet sich wie eine App im Vollbild.` | 1.27 |
+| `waitlist.code.not_configured` | `The email was not sent: mail isn’t set up. Send the code another way; it works once, until {date}.` | `Die E-Mail wurde nicht gesendet: Mail ist nicht eingerichtet. Schicke den Code auf anderem Weg; er funktioniert einmalig bis {date}.` | 1.37 |
+| `import.howTo.goodreads` | `On goodreads.com: My Books → Import and export → Export library. Download the CSV when the link appears.` | `Auf goodreads.com: My Books → Import and export → Export library. Lade die CSV herunter, sobald der Link erscheint.` | 1.11 |
 
 ### Error
 
 | Key | English | German | × |
 | --- | --- | --- | --- |
 | `auth.error.invite_gone` | `That invite code is no longer valid. Ask for a new one.` | `Dieser Einladungscode ist nicht mehr gültig. Bitte um einen neuen.` | 1.20 |
-| `library.error.ended_before_started` | `That is before you started it. Pick the start day or later.` | `Das liegt vor dem Startdatum. Wähle den ersten Tag oder später.` | 1.07 |
+| `library.error.ended_before_started` | `That is before you started it. Pick the start day or later.` | `Das liegt vor deinem Start. Wähle den Starttag oder später.` | 1.00 |
 | `home.loadError` | `Your books could not be loaded.` | `Deine Bücher konnten nicht geladen werden.` | 1.35 |
-| `waitlist.code.not_configured` | `The email was not sent: mail isn’t set up. Send the code another way; it works once, until {date}.` | `E-Mail wurde nicht gesendet: E-Mail ist nicht eingerichtet. Schick den Code anders; er gilt einmalig bis {date}.` | 1.15 |
+| `waitlist.code.not_configured` | `The email was not sent: mail isn’t set up. Send the code another way; it works once, until {date}.` | `Die E-Mail wurde nicht gesendet: Mail ist nicht eingerichtet. Schicke den Code auf anderem Weg; er funktioniert einmalig bis {date}.` | 1.37 |
 
 ### Sheet title and hint
 
 | Key | English | German | × |
 | --- | --- | --- | --- |
-| `collections.pickerTitle` | `Add to collection` | `Zur Sammlung hinzufügen` | 1.35 |
+| `collections.pickerTitle` | `Add to collection` | `Zu Sammlung hinzufügen` | 1.29 |
 | `genre.sheet.title` | `Genres` | `Genres` | 1.00 |
 | `genre.sheet.hint` | `Up to three, the main one first.` | `Bis zu drei, das wichtigste zuerst.` | 1.09 |
 | `ownEdition.title.isbn` | `Find your edition` | `Ausgabe finden` | 0.82 |
@@ -119,7 +119,7 @@ One table per kind of string. `{…}` and `\|` are the app's placeholders and pl
 | Key | English | German | × |
 | --- | --- | --- | --- |
 | `feed.emptyTitle` | `Reading is better with a friend or two.` | `Lesen ist schöner mit Freunden.` | 0.79 |
-| `feed.empty` | `Send your follow link to the people you'd like here. What they start and finish will show up on this page.` | `Schick deinen Folge-Link an Freunde. Was sie beginnen und beenden, siehst du hier.` | 0.77 |
+| `feed.empty` | `Send your follow link to the people you'd like here. What they start and finish will show up on this page.` | `Schicke deinen Folge-Link an Leute, die du hier sehen möchtest. Was sie anfangen und beenden, erscheint auf dieser Seite.` | 1.14 |
 | `library.segmentEmpty.finished.title` | `No finished books yet` | `Noch keine gelesenen Bücher` | 1.29 |
 | `collection.missingTitle` | `Collection not found` | `Sammlung nicht gefunden` | 1.15 |
 
@@ -129,27 +129,27 @@ The same 49 strings, same context, same settings (the kit sends temperature 0 an
 
 | Model | Errors | Warnings | Median × | Prompt tok | Answer tok | Thinking tok | Seconds |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `gemini-3.8-flash` | 0 | 3 | 1.08 | 4708 | 1102 | 0 | 11.4 |
-| `gemini-3.5-flash-lite` | 0 | 4 | 1.15 | 4708 | 1145 | 0 | 4.3 |
-| `gemini-3.1-flash-lite` | 0 | 2 | 1.12 | 4708 | 1137 | 2386 | 9.4 |
+| `gemini-3.8-flash` | 0 | 3 | 1.14 | 4708 | 1134 | 0 | 9.6 |
+| `gemini-3.5-flash-lite` | 1 | 4 | 1.15 | 4708 | 1157 | 0 | 4.3 |
+| `gemini-3.1-flash-lite` | 0 | 2 | 1.12 | 4708 | 1128 | 2208 | 9.6 |
 
 | Key | English | `gemini-3.8-flash` | `gemini-3.5-flash-lite` | `gemini-3.1-flash-lite` |
 | --- | --- | --- | --- | --- |
 | `status.want_to_read` | `Want to read` | `Möchte ich lesen` | `Möchte ich lesen` | `Möchte ich lesen` |
 | `status.reading` | `Currently reading` | `Lese ich gerade` | `Lese ich gerade` | `Lese ich gerade` |
 | `status.finished` | `Finished` | `Gelesen` | `Gelesen` | `Gelesen` |
-| `status.notFinished` | `DNF` | `Abgebrochen` | `Abgebrochen` | `Abgebrochen` |
+| `status.notFinished` | `DNF` | `DNF` | `Abgebrochen` | `Abgebrochen` |
 | `profile.account.delete` | `Delete account` | `Konto löschen` | `Konto löschen` | `Konto löschen` |
-| `sync.syncing` | `Syncing {count} change… \| Syncing {count} changes…` | `Synchronisiere {count} Änderung … \| Synchronisiere {count} Änderungen …` | `Synchronisiere {count} Änderung … \| Synchronisiere {count} Änderungen …` | `Synchronisiere {count} Änderung … \| Synchronisiere {count} Änderungen …` |
+| `sync.syncing` | `Syncing {count} change… \| Syncing {count} changes…` | `{count} Änderung synchronisieren … \| {count} Änderungen synchronisieren …` | `Synchronisiere {count} Änderung… \| Synchronisiere {count} Änderungen…` | `Synchronisiere {count} Änderung … \| Synchronisiere {count} Änderungen …` |
 | `profile.records.days` | `{count} day \| {count} days` | `{count} Tag \| {count} Tage` | `{count} Tag \| {count} Tage` | `{count} Tag \| {count} Tage` |
-| `collection.moved` | `{title} moved to place {place} of {count}.` | `{title} auf Platz {place} von {count} verschoben.` | `{title} verschoben auf Platz {place} von {count}.` | `{title} an Position {place} von {count} verschoben.` |
-| `circle.want` | `added {title} to Want to read` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` |
+| `collection.moved` | `{title} moved to place {place} of {count}.` | `{title} an Stelle {place} von {count} verschoben.` | `{title} verschoben auf Platz {place} von {count}.` | `{title} an Position {place} von {count} verschoben.` |
+| `friends.want` | `added {title} to Want to read` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` | `hat {title} zu „Möchte ich lesen“ hinzugefügt` |
 | `auth.error.invite_gone` | `That invite code is no longer valid. Ask for a new one.` | `Dieser Einladungscode ist nicht mehr gültig. Bitte um einen neuen.` | `Dieser Einladungscode ist nicht mehr gültig. Bitte um einen neuen.` | `Dieser Einladungscode ist nicht mehr gültig. Frage nach einem neuen.` |
 | `home.loadError` | `Your books could not be loaded.` | `Deine Bücher konnten nicht geladen werden.` | `Deine Bücher konnten nicht geladen werden.` | `Deine Bücher konnten nicht geladen werden.` |
 | `feed.emptyTitle` | `Reading is better with a friend or two.` | `Lesen ist schöner mit Freunden.` | `Lesen macht mit Freunden mehr Spaß.` | `Lesen ist schöner mit Freunden.` |
-| `feed.empty` | `Send your follow link to the people you'd like here. What they start and finish will show up on this page.` | `Schick deinen Folge-Link an Freunde. Was sie beginnen und beenden, siehst du hier.` | `Schicke deinen Folge-Link an Leute, die du dabeihaben möchtest. Was sie anfangen und beenden, erscheint auf dieser Seite.` | `Sende deinen Folge-Link an Leute, die du hier haben möchtest. Was sie anfangen und beenden, erscheint auf dieser Seite.` |
-| `home.installHint.text` | `Tap Share, then Add to Home Screen. It opens like an app, full screen.` | `Tippe auf „Teilen“, dann auf „Zum Home-Bildschirm“. Öffnet sich als App, im Vollbild.` | `Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“. Es öffnet sich wie eine App im Vollbild.` | `Tippe auf „Teilen“, dann auf „Zum Home-Bildschirm“. Es öffnet sich wie eine App, im Vollbildmodus.` |
-| `privacy.goPublicText` | `Any member with your link can follow you without asking. People waiting for an answer become followers now.` | `Alle mit deinem Link können dir ohne Anfrage folgen. Wer gerade wartet, wird direkt zum Follower.` | `Jedes Mitglied mit deinem Link kann dir folgen, ohne zu fragen. Personen, die auf eine Antwort warten, werden jetzt Follower.` | `Jedes Mitglied mit deinem Link kann dir folgen, ohne zu fragen. Leute, die auf eine Antwort warten, werden jetzt Follower.` |
+| `feed.empty` | `Send your follow link to the people you'd like here. What they start and finish will show up on this page.` | `Schicke deinen Folge-Link an Leute, die du hier sehen möchtest. Was sie anfangen und beenden, erscheint auf dieser Seite.` | `Sende deinen Folge-Link an Leute, die du hier dabeihaben möchtest. Was sie anfangen und beenden, erscheint auf dieser Seite.` | `Sende deinen Folge-Link an Leute, die du hier haben möchtest. Was sie anfangen und beenden, erscheint auf dieser Seite.` |
+| `home.installHint.text` | `Tap Share, then Add to Home Screen. It opens like an app, full screen.` | `Tippe auf „Teilen“, dann auf „Zum Home-Bildschirm“. Öffnet sich wie eine App im Vollbild.` | `Tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“. Es öffnet sich wie eine App im Vollbildmodus.` | `Tippe auf Teilen, dann auf „Zum Home-Bildschirm“. Es öffnet sich wie eine App, im Vollbild.` |
+| `privacy.goPublicText` | `Any member with your link can follow you without asking. People waiting for an answer become followers now.` | `Jedes Mitglied mit deinem Link kann dir folgen, ohne zu fragen. Wer auf eine Antwort wartet, wird sofort zu deinen Followern hinzugefügt.` | `Jedes Mitglied mit deinem Link kann dir folgen, ohne zu fragen. Personen, die auf eine Antwort warten, werden jetzt Follower.` | `Jedes Mitglied mit deinem Link kann dir folgen, ohne zu fragen. Leute, die auf eine Antwort warten, werden jetzt Follower.` |
 
 ## What I would change (reviewer's notes)
 
@@ -167,7 +167,7 @@ Wording I would change in the `gemini-3.8-flash` column above:
 - `feed.emptyTitle`: "Lesen ist schöner mit Freunden." is good. In other runs the same prompt at temperature 0 gave other good lines ("Lesen macht mit ein, zwei Freunden mehr Freude."): the model is **not fully deterministic**. Harmless for the workflow (an existing translation is never overwritten), but a second run is not a reproduction.
 - `privacy.goPublicText`: "Alle mit deinem Link können dir ohne Anfrage folgen" is natural; the lite models say "Jedes Mitglied", closer to the English.
 - `import.howTo.goodreads` keeps "My Books → Import and export → Export library" in English on purpose (Goodreads' site is English). The checker lists it as "looks English"; it is the one expected hit.
-- `circle.want`, `status.want_to_read`: **Möchte ich lesen**, the wording Goodreads' German shelf has (see `german-glossary.md`), in all three models. The key stays `circle.*`; the English says "Your friends".
+- `friends.want`, `status.want_to_read`: **Möchte ich lesen**, the wording Goodreads' German shelf has (see `german-glossary.md`), in all three models. The English says "Your friends".
 
 What the sample showed about the tool:
 

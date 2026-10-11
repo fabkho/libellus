@@ -11,7 +11,9 @@ Libellus has one source language, English: `web/i18n/locales/en.json`. German (`
 | `web/scripts/i18n/run.mjs` | `pnpm i18n:translate` / `i18n:verify` / `i18n:status`: the kit plus the fixes and checks Libellus needs. |
 | `web/scripts/i18n/verify.mjs` | The checks: keys, placeholders, plural forms, links, English left over, length, quotes, gender signs. |
 | `web/tests/i18n-parity.test.ts` | The Vitest parity test (fails when `de.json` and `en.json` drift). |
-| `docs/i18n/german-glossary.md` | The glossary decisions, as a table to correct. |
+| `docs/i18n/german-glossary.md` | The glossary decisions, as a table to correct, and the check against Goodreads' German. |
+| `docs/i18n/german-review.md` | How the first full translation was reviewed: what was changed, what is still open. |
+| `web/i18n/locales/de.json`, `web/.i18n-kit.lock.json` | The German messages and the kit's record of which English each was made from (commit both). |
 | `docs/i18n/german-sample.md` | The dry run: 49 strings, English and German side by side, three models compared. |
 
 ## Setup (once per machine)
@@ -85,7 +87,7 @@ When the same fix appears twice, put it in `glossary.json` (a word) or `ai-conte
 AssertionError: expected [ 'missing social.requested: not in de.json', … ] to deeply equal []
 ```
 
-A new feature's strings may land in `en.json` before they are translated only if the key is named in `ALLOW_UNTRANSLATED` in that test file (empty today, and the goal). Until `de.json` exists the test only checks itself (its ten cases on a made-up pair), so it passes on today's `main`.
+A new feature's strings may land in `en.json` before they are translated only if the key is named in `ALLOW_UNTRANSLATED` in that test file (empty today, and the goal). The German messages must also compile: `tests/i18n-runtime-only.test.ts` runs `de.json` through the same build step as `en.json` (`strictMessage`) and renders every message with a count and a word for each name, so a stray `{` or `|` in a translation fails the test, not a phone.
 
 ## Cost
 
@@ -107,7 +109,7 @@ Measured with the Gemini `countTokens` endpoint and the usage the API reports (a
 | Re-run for 50 new keys | 1 | ≈ 4,600 | ≈ 1,150 | ≈ $0.008 | ≈ $0.004 |
 | Re-run for 200 new keys | 4 | ≈ 18,400 | ≈ 4,600 | ≈ $0.03 | ≈ $0.02 |
 
-The full run is an estimate from the sample's measured rates (49 keys: 4,599 prompt tokens, 1,123 answer tokens, no thinking); the real run's usage is recorded the same way. On the free tier Google may use the prompts to improve its products ("Used to improve our products: Yes" on the price page); the strings are public in this repository anyway, but check which tier the key is on before sending anything private.
+The first full run (1,561 keys, `gemini-3.8-flash`) was measured through the usage proxy: **32 requests, 142,468 prompt tokens, 27,380 answer tokens, no thinking tokens = $0.21** (the estimate above, made from the sample's rates on 1,446 keys, was $0.18). It took three minutes. On the free tier Google may use the prompts to improve its products ("Used to improve our products: Yes" on the price page); the strings are public in this repository anyway, but check which tier the key is on before sending anything private.
 
 ## Dry run (sample)
 

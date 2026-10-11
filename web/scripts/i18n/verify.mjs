@@ -87,7 +87,7 @@ export function verify(en, de, options = {}) {
     if (t === s && /[A-Za-zÄÖÜäöüß]{4,}/.test(s.replace(/\{[^}]*\}/g, '')) && !bareWords(s).every(w => SAME_OK.has(w) || NAMES.has(w))) {
       warn(key, 'unchanged', 'identical to the English')
     } else {
-      const words = t.replace(/\{[^}]*\}/g, ' ').replace(/@(?:\.[a-z]+)?:(?:\([^)]+\)|[\w.-]+)/g, ' ').toLowerCase().match(/[a-zäöüß']+/g) ?? []
+      const words = t.replace(/\{[^}]*\}/g, ' ').replace(/@(?:\.[a-z]+)?:(?:\([^)]+\)|[\w.-]+)/g, ' ').replace(/\be-?books?\b/gi, ' ').toLowerCase().match(/[a-zäöüß']+/g) ?? []
       const english = words.filter(w => ENGLISH_WORDS.has(w) && !SAME_OK.has(w))
       if (english.length >= 2 || (words.length <= 3 && english.length >= 1 && !SAME_OK.has(english[0]))) warn(key, 'english', `looks English: ${[...new Set(english)].join(', ')}`)
     }
@@ -100,7 +100,7 @@ export function verify(en, de, options = {}) {
     if (/"/.test(t)) warn(key, 'quotes', 'straight " quotes: use „…“')
     if (/(^|[\s(])'|'($|[\s).,])/.test(t.replace(/\{'[^']*'\}/g, ''))) warn(key, 'quotes', 'straight \' quotes: use ‚…‘ or „…“')
     // "Sie" is also "she/they" (Sie werden synchronisiert): only the polite forms are flagged (Ihnen, Ihre, "Wählen Sie").
-    if (/\b(?:Ihnen|Ihre[mnrs]?|Ihr)\b/.test(t) || /(?:^|[.!?:]\s+)[A-ZÄÖÜ][a-zäöüß]+(?:en|ern|eln)\s+Sie\b/.test(t)) warn(key, 'sie', 'formal "Sie" form; the app says du')
+    if (/(?<![.!?]\s)(?<!^)\b(?:Ihnen|Ihre[mnrs]?|Ihr)\b/.test(t) || /\bIhnen\b/.test(t) || /(?:^|[.!?:]\s+)[A-ZÄÖÜ][a-zäöüß]+(?:en|ern|eln)\s+Sie\b/.test(t)) warn(key, 'sie', 'formal "Sie" form; the app says du')
 
     const bare = text => text.replace(/\{[^}]*\}/g, '').trim()
     if (bare(s).length >= 3) {
