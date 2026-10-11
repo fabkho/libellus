@@ -238,5 +238,5 @@ about 250 calls).
   or `romance`. The RDF record (`recordSchema=RDFxml`) lists the GND subject headings as ids; their labels
   come from `https://lobid.org/gnd/<id>.json` (CC0, `access-control-allow-origin: *`), and a table of GND
   genre headings (Kriminalroman, Fantasy, Liebesroman …) to our twenty ids would be needed. Feasible, one to
-  two days with a unit-tested mapping; how many novels carry such a heading was not measured, and fiction
-  records in the samples had none. Wikidata and Open Library subjects (above) stay the better source.
+  two days with a unit-tested mapping; how many novels carry such a heading was not measured (the `oai_dc` samples showed only
+  the coarse group). Wikidata and Open Library subjects (above) stay the better source.
