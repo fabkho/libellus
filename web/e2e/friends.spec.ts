@@ -120,12 +120,18 @@ test('Ida shares her link, Anna asks and is let in, a finish shows in her friend
     // Your friends' title opens the feed: the finish is its one entry. Ida's name opens her page, the Book under Recently finished.
     await anna.getByTestId('home.friendsTitle').click()
     await expect(anna).toHaveURL(/\/friends\/?$/)
+    await expect(anna.getByTestId('shell.tab.friends')).toHaveAttribute('aria-current', 'page')
     await expect(anna.getByTestId('friends.entry')).toHaveCount(1)
     await expect(anna.getByTestId('friends.entryBook')).toHaveText(book.title)
     await anna.getByTestId('friends.entryMember').click()
     await expect(anna).toHaveURL(new RegExp(`/friends/${idaMember.id}$`))
     await expect(anna.getByTestId('member.name')).toHaveText('Ida')
     await expect(anna.getByTestId('member.finished').getByTestId('member.finishedTitle')).toHaveText(book.title)
+    // Back from her page is the Friends tab, lit, with its feed.
+    await anna.getByTestId('member.back').click()
+    await expect(anna).toHaveURL(/\/friends\/?$/)
+    await expect(anna.getByTestId('shell.tab.friends')).toHaveAttribute('aria-current', 'page')
+    await expect(anna.getByTestId('friends.entry')).toHaveCount(1)
 
     // Anna likes Ida's finish from the feed: the heart fills at once, counts one and keeps after a reload.
     await goto(anna, '/friends')
@@ -160,7 +166,8 @@ test('Ida shares her link, Anna asks and is let in, a finish shows in her friend
     await expect(ida.getByTestId('likers')).toBeHidden()
 
     // Back from Your friends is back to where she came from, scroll kept (as People's): Profile → Friends → Your
-    // friends → back is the Profile at the row she pressed, not Home.
+    // friends → back is the Profile at the row she pressed, not Home. With the Friends tab on (the default) the
+    // feed is a tab and the browser's Back does it; Back's own button is the pushed screen's, with the tab off.
     await goto(ida, '/')
     await openProfile(ida)
     const friendsRow = ida.getByTestId('profile.friendsRow')
@@ -170,11 +177,29 @@ test('Ida shares her link, Anna asks and is let in, a finish shows in her friend
     expect(scrolled).toBeGreaterThan(0)
     await friendsRow.click()
     await expect(ida).toHaveURL(/\/friends\/?$/)
-    await ida.getByTestId('friends.back').click()
+    await expect(ida.getByTestId('shell.tab.friends')).toHaveAttribute('aria-current', 'page')
+    await expect(ida.getByTestId('friends.back')).toHaveCount(0)
+    await ida.goBack()
     await expect(ida).toHaveURL(/\/profile\/?$/)
     await expect(friendsRow).toBeVisible()
     await untilStill(ida)
     expect(Math.abs((await ida.evaluate(() => window.scrollY)) - scrolled)).toBeLessThan(4)
+
+    // Tab off (Profile → Account → Friends tab): the feed is the pushed screen, Back its button.
+    await ida.getByTestId('profile.friendsTab').click()
+    await expect(ida.getByTestId('shell.tab.friends')).toHaveCount(0)
+    await friendsRow.scrollIntoViewIfNeeded()
+    await untilStill(ida)
+    const scrolledOff = await ida.evaluate(() => window.scrollY)
+    await friendsRow.click()
+    await expect(ida).toHaveURL(/\/friends\/?$/)
+    await ida.getByTestId('friends.back').click()
+    await expect(ida).toHaveURL(/\/profile\/?$/)
+    await expect(friendsRow).toBeVisible()
+    await untilStill(ida)
+    expect(Math.abs((await ida.evaluate(() => window.scrollY)) - scrolledOff)).toBeLessThan(4)
+    await ida.getByTestId('profile.friendsTab').click()
+    await expect(ida.getByTestId('shell.tab.friends')).toBeVisible()
 
     // Ida hides the Book: Library → Finished → the Book → ⋯ → Hide from followers.
     await goto(ida, '/')

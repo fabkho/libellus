@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
 import { forgetMemberData, otherMemberHere } from '~/data/localData'
+import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSyncStore } from '~/stores/sync'
 import { PENDING_FOLLOW_KEY } from '~/utils/pendingFollow'
 import { PENDING_SHARE_KEY } from '~/utils/pendingShare'
@@ -314,6 +315,8 @@ export const useSessionStore = defineStore('session', () => {
         },
         { sessionEnded, memberId, keep: [PENDING_SIGN_IN_KEY, PENDING_SHARE_KEY, PENDING_FOLLOW_KEY] },
       )
+      // The Friends tab setting went with the rest: back to its default, on.
+      useFriendsTabStore().reload()
     }
     if (!sessionEnded) pending.value = null
     adopt(null)

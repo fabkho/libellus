@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// D's tab bar: a small floating capsule of three icons, the content running
+// D's tab bar: a small floating capsule of icons (Home, Library, Friends while it is on, Search), the content running
 // on underneath with nothing behind it (no fade, no scroll edge: the capsule's
-// own glass, edge and shadow set it apart). Home and Library are pages;
+// own glass, edge and shadow set it apart). Home, Library and Friends are pages;
 // Search is not — it opens the search palette over the page you are on
 // (stores/search.ts), and the capsule itself turns into that palette
 // (docs/MOTION.md, Search morph): while it does, this bar stays where it is
@@ -20,7 +20,10 @@
 // bar (a screen reader or keyboard reaching it brings it back): search opening
 // snaps it back to its place first, without a transition, so the morph always
 // grows out of the capsule where it rests.
+import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSearchStore } from '~/stores/search'
+import { TABS, type Tab } from '~/utils/friendsTab'
+import { withoutSlash } from '~/utils/signedOutRoute'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -34,18 +37,19 @@ const away = computed(() => scrolledAway.value || Boolean(route.meta.immersive))
 /** Search is taking the bar over: it is where it rests at once, for the morph to measure. */
 const still = computed(() => search.isOpen || chrome.value !== 'tabs')
 
-const PAGES = [
-  { key: 'home', to: '/', icon: 'home' },
-  { key: 'library', to: '/library', icon: 'library' },
-] as const
+// Home, Library and, while its setting is on (Profile → Account), Friends: the feed as a tab of its own.
+// Search comes after them: it is an action, the bar's detached last place.
+const friendsTab = useFriendsTabStore()
+const shown = (tab: Tab) => friendsTab.tabs.some((visible) => visible.key === tab.key)
 
-const current = (to: string) => route.path === to
+// A reload or a link can leave the slash on (`/friends/`): the same tab.
+const current = (to: string) => withoutSlash(route.path) === to
 
 // Each tab keeps its place (utils/tabPlaces.ts): whatever leaves a tab page —
 // a tab, a book, the search palette — notes how far down it was first, before
 // the next page can change the scroll.
 const router = useRouter()
-const stopRemembering = router.beforeEach((_to, from) => tabPlaces.leave(from.path, window.scrollY))
+const stopRemembering = router.beforeEach((_to, from) => tabPlaces.leave(from.path, window.scrollY, Boolean(from.meta.pushed)))
 onUnmounted(stopRemembering)
 
 /** The tab already showing, tapped again: back to its top, as iOS does. */
@@ -66,21 +70,25 @@ function tapped(event: MouseEvent, to: string) {
     data-testid="shell.tabs"
     @focusin="reveal"
   >
-    <NuxtLink
-      v-for="tab in PAGES"
-      :key="tab.key"
-      data-morph="tab"
-      :to="tab.to"
-      class="tab"
-      :class="current(tab.to) ? 'text-ink' : 'text-ink-faint'"
-      :aria-current="current(tab.to) ? 'page' : undefined"
-      :data-testid="`shell.tab.${tab.key}`"
-      @click="tapped($event, tab.to)"
-    >
-      <UiIcon :name="tab.icon" :bold="current(tab.to)" />
-      <span class="sr-only">{{ t(`tabs.${tab.key}`) }}</span>
-      <span class="dot" :class="current(tab.to) ? 'opacity-100' : 'opacity-0'" aria-hidden="true" />
-    </NuxtLink>
+    <template v-for="tab in TABS" :key="tab.key">
+      <!-- The Friends tab comes and goes with its setting: its width opens and closes, and the capsule, centred, follows. -->
+      <Transition name="tab">
+        <NuxtLink
+          v-if="shown(tab)"
+          data-morph="tab"
+          :to="tab.to"
+          class="tab"
+          :class="current(tab.to) ? 'text-ink' : 'text-ink-faint'"
+          :aria-current="current(tab.to) ? 'page' : undefined"
+          :data-testid="`shell.tab.${tab.key}`"
+          @click="tapped($event, tab.to)"
+        >
+          <UiIcon :name="tab.icon" :bold="current(tab.to)" />
+          <span class="sr-only">{{ t(`tabs.${tab.key}`) }}</span>
+          <span class="dot" :class="current(tab.to) ? 'opacity-100' : 'opacity-0'" aria-hidden="true" />
+        </NuxtLink>
+      </Transition>
+    </template>
     <button
       type="button"
       class="tab text-ink-faint"
@@ -135,6 +143,22 @@ nav.away {
 
 .bar.still {
   transition: none;
+}
+
+/* The Friends tab turning on or off: its width opens or closes under a fade, so the capsule (centred
+   on the screen) grows or shrinks about its middle and the tabs beside it slide to their new places.
+   With Reduce Motion the transition is a swap (main.css). */
+.tab-enter-active,
+.tab-leave-active {
+  overflow: hidden;
+  transition:
+    width var(--duration-standard) var(--ease-standard),
+    opacity var(--duration-standard) var(--ease-standard);
+}
+.tab-enter-from,
+.tab-leave-to {
+  width: 0;
+  opacity: 0;
 }
 
 /* 6 under the icon (`xs` + `xxs`), less the dot's own `xs`. */
