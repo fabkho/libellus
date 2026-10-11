@@ -396,6 +396,12 @@ deno_version = 2
 [functions.goodreads-rating]
 verify_jwt = false
 
+# German editions from the German National Library for the barcode scan, the ISBN lookups and the
+# edition picker (supabase/functions/dnb-lookup). The function checks the caller itself (a
+# signed-in member, or the service role), like goodreads-rating.
+[functions.dnb-lookup]
+verify_jwt = false
+
 # The owner's Regal library file for the Regal workflow (issue #110). Its caller
 # has no Supabase key, only the shared secret REGAL_EXPORT_TOKEN, which the
 # function checks itself: supabase/functions/regal-export/README.md.

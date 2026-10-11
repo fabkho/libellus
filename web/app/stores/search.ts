@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
+import { createDnb } from '~/data/dnb'
 import type { LibraryEntry } from '~/data/library'
 import { editionKeys, workKey } from '~/data/merge'
 import { useLibraryStore } from '~/stores/library'
@@ -116,6 +117,8 @@ export const useSearchStore = defineStore('search', () => {
       fetch: (url, init) => fetch(url, init),
       languages,
       catalogue: catalogue ?? undefined,
+      // German editions Apple Books and Open Library do not know, by ISBN (the scan, a typed ISBN).
+      dnb: backend ? createDnb(backend, { online: () => isOnline() }) : undefined,
     })
     return source
   }
