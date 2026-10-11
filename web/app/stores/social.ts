@@ -101,7 +101,9 @@ export const useSocialStore = defineStore('social', () => {
       if (!r) return
       const result = await r.mine()
       if (take(member, 'load', result, (data) => (mine.value = data))) loadedFor = member
-    })().finally(() => (loadingMine = null))
+    })()
+      .catch(() => undefined)
+      .finally(() => (loadingMine = null))
     return loadingMine
   }
 
@@ -136,7 +138,9 @@ export const useSocialStore = defineStore('social', () => {
       peopleEpoch++
       peopleEnded.value = ended
       take(member, 'people', { data: read, error: null }, (data) => (people.value = data))
-    })().finally(() => (loadingPeople = null))
+    })()
+      .catch(() => undefined)
+      .finally(() => (loadingPeople = null))
     return loadingPeople
   }
 
@@ -177,7 +181,9 @@ export const useSocialStore = defineStore('social', () => {
       const r = repo()
       if (!r) return
       take(member, 'blocked', await r.blocked(), (data) => (blocked.value = data))
-    })().finally(() => (loadingBlocked = null))
+    })()
+      .catch(() => undefined)
+      .finally(() => (loadingBlocked = null))
     return loadingBlocked
   }
 

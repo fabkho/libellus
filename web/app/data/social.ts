@@ -249,7 +249,10 @@ export function createSocial(client: SupabaseClient, { online = () => true }: { 
   /** One call to a database function: offline refused first, a refusal mapped, the answer read by `read`. */
   async function call<J, T>(fn: string, args: Record<string, unknown>, read: (json: J) => T): Promise<SocialResult<T>> {
     if (!online()) return { data: null, error: 'offline' }
-    const answer = await client.rpc(fn, args)
+    // A request that throws (a navigation cancelled it: WebKit says "Fetch API cannot load … due to access control
+    // checks") got no answer: the same as offline, and never a rejection for a caller that did not expect one.
+    const answer = await Promise.resolve(client.rpc(fn, args)).catch(() => null)
+    if (!answer) return { data: null, error: 'offline' }
     // A connection that answers nothing is offline, not an unknown failure (as memberStats.ts has it).
     if (isNoAnswer(answer)) return { data: null, error: 'offline' }
     if (answer.error) return { data: null, error: mapSocialError(answer.error) }
