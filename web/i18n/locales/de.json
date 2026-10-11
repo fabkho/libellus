@@ -1046,17 +1046,24 @@
     "yearCount": "{year} · {count} Buch | {year} · {count} Bücher",
     "loading": "Dein Regal wird geladen",
     "loadError": "Dein Regal konnte nicht geladen werden.",
-    "offline": "Du bist offline. Dein Regal erscheint, sobald du wieder da bist.",
+    "offline": "Du bist offline. Dein Regal siehst du wieder, wenn du online bist.",
     "retry": "Nochmal versuchen",
+    "noChunk": "Dein Regal braucht beim ersten Mal eine Verbindung. Danach öffnet es sich offline.",
+    "empty": {
+      "title": "Noch nichts im Regal",
+      "text": "Die Bücher, die du beendest, stehen hier, jedes in der Farbe seines Covers."
+    },
     "card": {
       "title": "Dein Regal",
       "rowLabel": "Dein Regal, die neuesten Bücher",
       "all": "Alle anzeigen",
-      "allLabel": "Alle {count} Buch in deinem Regal anzeigen | Alle {count} Bücher in deinem Regal anzeigen"
+      "allLabel": "Alle {count} Buch in deinem Regal anzeigen | Alle {count} Bücher in deinem Regal anzeigen",
+      "empty": "Lies ein Buch zu Ende und es steht hier."
     },
     "year": {
       "title": "Im Regal",
-      "rowLabel": "{year} in deinem Regal"
+      "rowLabel": "{year} in deinem Regal",
+      "allLabel": "{count} Buch von {year} in deinem Regal anzeigen | Alle {count} Bücher von {year} in deinem Regal anzeigen"
     },
     "detail": {
       "showBack": "Rückseite zeigen",

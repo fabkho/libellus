@@ -6968,6 +6968,11 @@
           "de"
         ]
       },
+      "shelf.card.empty": {
+        "3b8d804bd3fba827": [
+          "de"
+        ]
+      },
       "shelf.card.rowLabel": {
         "061d4a76dc21c14b": [
           "de"
@@ -7023,6 +7028,16 @@
           "de"
         ]
       },
+      "shelf.empty.text": {
+        "dc81de53485d1699": [
+          "de"
+        ]
+      },
+      "shelf.empty.title": {
+        "e86a1d63ede22466": [
+          "de"
+        ]
+      },
       "shelf.loadError": {
         "12d4f05b1884f788": [
           "de"
@@ -7030,6 +7045,11 @@
       },
       "shelf.loading": {
         "403ca9c2e21e8667": [
+          "de"
+        ]
+      },
+      "shelf.noChunk": {
+        "0d98e794887ec4ab": [
           "de"
         ]
       },
@@ -7045,6 +7065,11 @@
       },
       "shelf.title": {
         "fee11e0d4ebadc2c": [
+          "de"
+        ]
+      },
+      "shelf.year.allLabel": {
+        "5273a29b2cd466e5": [
           "de"
         ]
       },
