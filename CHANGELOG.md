@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.11.0](https://github.com/fabkho/libellus/compare/v1.10.0...v1.11.0) (2026-10-11)
+
+
+### Features
+
+* **legal:** fill the privacy notice's last placeholders ([9364650](https://github.com/fabkho/libellus/commit/9364650afb48e6040783ba241a5ae40040913606))
+* **legal:** postpone the imprint, ship the privacy notice alone ([712c81b](https://github.com/fabkho/libellus/commit/712c81bd7d1f7e8b6d11b20364cb620a807f7b01))
+* **legal:** privacy notice and imprint (draft text) ([d866535](https://github.com/fabkho/libellus/commit/d86653541debb219db8e2ef6fcbe3c50754ff087))
+
 ## [1.10.0](https://github.com/fabkho/libellus/compare/v1.9.2...v1.10.0) (2026-10-11)
 
 
