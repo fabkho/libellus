@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SessionStorage } from '@/data/createSupabaseClient'
 import { DEVICE_LIBRARY_KEY } from '@/data/deviceLibrary'
+import { IMPRINT_ENABLED } from '@/legal/config'
 import { type DeviceStorage } from '@/data/localData'
 import { peekFollow } from '@/utils/pendingFollow'
 import { peekShare } from '@/utils/pendingShare'
@@ -71,11 +72,18 @@ describe('signedOutDestination', () => {
     }
   })
 
-  it('lets the access screens and the public reading pages be', () => {
-    for (const path of ['/sign-in', '/sign-in/', '/sign-up', '/r/some-token', '/r/some-token/book/1']) {
+  it('lets the access screens, the public reading pages and the privacy notice be', () => {
+    for (const path of ['/sign-in', '/sign-in/', '/sign-up', '/r/some-token', '/r/some-token/book/1', '/privacy', '/privacy/']) {
       expect(signedOutDestination(at(path), { pending: false, storage: storage() })).toBeUndefined()
     }
     expect(signedOutDestination(at('/verify'), { pending: true, storage: storage() })).toBeUndefined()
+    // Not even a code in the air sends her away from the privacy notice she was reading before she signed up.
+    expect(signedOutDestination(at('/privacy'), { pending: true, storage: storage() })).toBeUndefined()
+  })
+
+  it('treats the imprint as any address behind the sign-in while it is postponed', () => {
+    const imprint = signedOutDestination(at('/imprint'), { pending: false, storage: storage() })
+    expect(imprint).toBe(IMPRINT_ENABLED ? undefined : '/sign-in')
   })
 
   it('sends a code in the air back to the verify screen, and verify without one to sign-in', () => {

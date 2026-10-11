@@ -223,6 +223,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
 
         <ProfileAccount @photo="photo?.start()" />
         <ProfileContactRow />
+        <ProfileLegal />
       </div>
     </Transition>
 
