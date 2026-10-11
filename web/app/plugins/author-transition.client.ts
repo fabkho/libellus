@@ -104,7 +104,7 @@ export default defineNuxtPlugin(() => {
     if (inside) return inside
     const href = link.getAttribute('href')
     for (let up = link.parentElement, depth = 0; up && depth < 4; up = up.parentElement, depth++) {
-      const found = up.querySelector<HTMLElement>(`a[href="${href}"] [data-member-avatar]`)
+      const found = up.querySelector<HTMLElement>(`a[href="${CSS.escape(href ?? '')}"] [data-member-avatar]`)
       if (found) return found
     }
     return null
@@ -247,7 +247,7 @@ export default defineNuxtPlugin(() => {
         } else if (flight) {
           const left = origin?.avatar.deref()
           const target =
-            left && onScreen(left) ? left : [...document.querySelectorAll<HTMLElement>(`a[href="/friends/${flight.id}"] [data-member-avatar]`)].find(onScreen)
+            left && onScreen(left) ? left : [...document.querySelectorAll<HTMLElement>(`a[href="${CSS.escape(`/friends/${flight.id}`)}"] [data-member-avatar]`)].find(onScreen)
           nameOf(target, NAME)
         }
         finish?.()
