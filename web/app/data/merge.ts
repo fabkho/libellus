@@ -10,10 +10,10 @@ import type { LibraryEntry } from './library'
  * came from; `source` stays internal.
  */
 
-export type SourceName = 'catalogue' | 'apple' | 'openlibrary'
+export type SourceName = 'catalogue' | 'apple' | 'openlibrary' | 'dnb'
 
 /** The order sources rank in when nothing else decides: the Catalogue first. */
-export const SOURCE_ORDER: readonly SourceName[] = ['catalogue', 'apple', 'openlibrary']
+export const SOURCE_ORDER: readonly SourceName[] = ['catalogue', 'apple', 'openlibrary', 'dnb']
 
 /** One Book one source found. `popularity`: whatever count of readers or ratings the source has (0 if none). */
 export type Found = { book: BookSnapshot | Book; source: SourceName; popularity: number }

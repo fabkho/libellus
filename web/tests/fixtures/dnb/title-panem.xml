@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/"><version>1.1</version><numberOfRecords>6</numberOfRecords><records><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>[The hunger games] ; Die Tribute von Panem : ungekürzte Lesungen / Suzanne Collins. Ungekürzt gelesen von Maria Koschny. Regie: Frank Gustavus und Markus Langer. Übers.: Sylke Hachmeister und Peter Klöss</dc:title>
+  <dc:creator>Collins, Suzanne [Mitwirkender]</dc:creator>
+  <dc:creator>Koschny, Maria [Mitwirkender]</dc:creator>
+  <dc:creator>Gustavus, Frank [Mitwirkender]</dc:creator>
+  <dc:creator>Hachmeister, Sylke [Mitwirkender]</dc:creator>
+  <dc:creator>Klöss, Peter [Mitwirkender]</dc:creator>
+  <dc:creator>Langer, Markus [Mitwirkender]</dc:creator>
+  <dc:creator>Garcia, Eduardo [Mitwirkender]</dc:creator>
+  <dc:publisher>Leipzig</dc:publisher>
+  <dc:publisher>Frankfurt am Main : Deutsche Nationalbibliothek</dc:publisher>
+  <dc:date>2022</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xsi:type="tel:URN">urn:nbn:de:101:1-2022101714302008132883</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://nbn-resolving.de/urn:nbn:de:101:1-2022101714302008132883</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://d-nb.info/1264406126/34</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1264406126</dc:identifier>
+  <dc:subject>K Kinder- und Jugendliteratur</dc:subject>
+  <dc:type>Online-Ressource</dc:type>
+</dc></recordData><recordPosition>1</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>[The Hunger Games] ; Die Tribute von Panem 1. Tödliche Spiele / Suzanne Collins</dc:title>
+  <dc:creator>Collins, Suzanne [Verfasser]</dc:creator>
+  <dc:creator>Klöss, Peter [Übersetzer]</dc:creator>
+  <dc:creator>Hachmeister, Sylke [Übersetzer]</dc:creator>
+  <dc:publisher>Hamburg : Verlag Friedrich Oetinger GmbH</dc:publisher>
+  <dc:date>2022</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-3-7512-0303-6 Broschur : EUR 12.00 (DE), EUR 12.40 (AT)</dc:identifier>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">3-7512-0303-6</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1251832598</dc:identifier>
+  <dc:subject>K Kinder- und Jugendliteratur</dc:subject>
+  <dc:format>416 Seiten</dc:format>
+</dc></recordData><recordPosition>2</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Die Tribute von Panem. Gesamtausgabe. Alle drei Bände der Panem-Trilogie : Enthält: "Die Tribute von Panem. Tödliche Spiele", "Die Tribute von Panem. Gefährliche Liebe" und "Die Tribute von Panem. Flammender Zorn" / Suzanne Collins</dc:title>
+  <dc:creator>Collins, Suzanne [Verfasser]</dc:creator>
+  <dc:creator>Klöss, Peter [Übersetzer]</dc:creator>
+  <dc:creator>Hachmeister, Sylke [Übersetzer]</dc:creator>
+  <dc:publisher>Hamburg : Verlag Friedrich Oetinger</dc:publisher>
+  <dc:date>2013</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xsi:type="tel:URN">urn:nbn:de:101:1-2013122012277</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://nbn-resolving.de/urn:nbn:de:101:1-2013122012277</dc:identifier>
+  <dc:identifier xsi:type="tel:ISBN">978-3-86274-152-6</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://d-nb.info/1045812749/34</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://www.oetinger.de</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1045812749</dc:identifier>
+  <dc:subject>K Kinder- und Jugendliteratur</dc:subject>
+  <dc:type>Online-Ressource</dc:type>
+</dc></recordData><recordPosition>3</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Die Tribute von Panem. Tödliche Spiele : Gekürzte Audioversion / Suzanne Collins</dc:title>
+  <dc:creator>Collins, Suzanne [Verfasser]</dc:creator>
+  <dc:creator>Koschny, Maria [Erzähler]</dc:creator>
+  <dc:publisher>Hamburg : Oetinger audio</dc:publisher>
+  <dc:date>2013</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xsi:type="tel:URN">urn:nbn:de:101:1-2015071721822</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://nbn-resolving.de/urn:nbn:de:101:1-2015071721822</dc:identifier>
+  <dc:identifier xsi:type="tel:ISBN">978-3-8373-6028-8</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://d-nb.info/1074062779/34</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://www.oetinger-audio.de/</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1074062779</dc:identifier>
+  <dc:subject>K Kinder- und Jugendliteratur</dc:subject>
+  <dc:type>Online-Ressource</dc:type>
+</dc></recordData><recordPosition>4</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Die Tribute von Panem. Tödliche Spiele : Ungekürzte Lesung / Suzanne Collins</dc:title>
+  <dc:creator>Collins, Suzanne [Verfasser]</dc:creator>
+  <dc:creator>Koschny, Maria [Erzähler]</dc:creator>
+  <dc:publisher>Hamburg : Oetinger audio</dc:publisher>
+  <dc:date>2013</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xsi:type="tel:URN">urn:nbn:de:101:1-2015071716525</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://nbn-resolving.de/urn:nbn:de:101:1-2015071716525</dc:identifier>
+  <dc:identifier xsi:type="tel:ISBN">978-3-8373-6313-5</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://d-nb.info/1074060059/34</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://www.oetinger-audio.de/</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1074060059</dc:identifier>
+  <dc:subject>K Kinder- und Jugendliteratur</dc:subject>
+  <dc:type>Online-Ressource</dc:type>
+</dc></recordData><recordPosition>5</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Die Tribute von Panem. Tödliche Spiele / Suzanne Collins</dc:title>
+  <dc:creator>Collins, Suzanne [Verfasser]</dc:creator>
+  <dc:publisher>Hamburg : Verlag Friedrich Oetinger</dc:publisher>
+  <dc:date>2010</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xsi:type="tel:URN">urn:nbn:de:101:1-2013032717483</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://nbn-resolving.de/urn:nbn:de:101:1-2013032717483</dc:identifier>
+  <dc:identifier xsi:type="tel:ISBN">978-3-86274-141-0</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://d-nb.info/1032979437/34</dc:identifier>
+  <dc:identifier xsi:type="tel:URL">http://www.DieTributevonPanem.de</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1032979437</dc:identifier>
+  <dc:subject>K Kinder- und Jugendliteratur</dc:subject>
+  <dc:type>Online-Ressource</dc:type>
+</dc></recordData><recordPosition>6</recordPosition></record></records><echoedSearchRetrieveRequest><version>1.1</version><query>tit="Tödliche Spiele" and per="Collins" and (bbg=Aa* or bbg=Oa*)</query><xQuery xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"/><maximumRecords>6</maximumRecords><recordSchema>oai_dc</recordSchema></echoedSearchRetrieveRequest></searchRetrieveResponse>

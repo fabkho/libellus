@@ -1,5 +1,6 @@
 import { formatOf, type Book, type BookFormat, type BookSnapshot } from './books'
 import { createApple } from './apple'
+import type { Dnb } from './dnb'
 import type { CatalogueSearch } from './catalogueSearch'
 import { abortError, type FetchLike } from './fetching'
 import { editionKeys, normalise } from './merge'
@@ -39,8 +40,8 @@ export type EditionCandidate = { book: Book | BookSnapshot; current: boolean }
 export type EditionsOutcome = { candidates: EditionCandidate[]; pending: boolean; failed: boolean }
 
 /** Where a candidate came from; internal, and the order they rank in when nothing else decides. */
-export type EditionSourceName = 'catalogue' | 'work' | 'apple' | 'openlibrary'
-export const EDITION_SOURCE_ORDER: readonly EditionSourceName[] = ['catalogue', 'work', 'apple', 'openlibrary']
+export type EditionSourceName = 'catalogue' | 'work' | 'apple' | 'openlibrary' | 'dnb'
+export const EDITION_SOURCE_ORDER: readonly EditionSourceName[] = ['catalogue', 'work', 'apple', 'openlibrary', 'dnb']
 
 /** At most this many editions besides the current one. */
 export const EDITIONS_LIMIT = 60
@@ -232,28 +233,35 @@ export function mergeEditions(
   }
 
   const language = languageCode(current.language) ?? languageCode(deviceLanguage)
+  // Editions only the National Library knows (a row another source has too is that source's, with the library's facts filled in).
+  const dnbBooks = new Set<Book | BookSnapshot>(answers.dnb ?? [])
   // Rows that look the same are one: the one with most to say, the Catalogue's
   // on a tie, at the earliest rank any of them had.
   const ownSignature = editionSignature(current)
-  const distinct = new Map<string, { book: Book | BookSnapshot; rank: number }>()
+  const distinct = new Map<string, { book: Book | BookSnapshot; rank: number; dnbOnly: boolean }>()
   for (const group of groups) {
     if (group === own) continue
     const book = representative(group.books)
     if (book.source === 'manual') continue
     const signature = editionSignature(book)
     if (signature === ownSignature) continue
+    const dnbOnly = group.books.every((one) => dnbBooks.has(one))
     const kept = distinct.get(signature)
     if (!kept) {
-      distinct.set(signature, { book, rank: group.rank })
+      distinct.set(signature, { book, rank: group.rank, dnbOnly })
       continue
     }
     const gain = richness(book) - richness(kept.book) || Number('id' in book) - Number('id' in kept.book)
-    distinct.set(signature, { book: gain > 0 ? book : kept.book, rank: Math.min(kept.rank, group.rank) })
+    distinct.set(signature, { book: gain > 0 ? book : kept.book, rank: Math.min(kept.rank, group.rank), dnbOnly: kept.dnbOnly && dnbOnly })
   }
 
+  // A German edition only the National Library knows has no cover: it comes after the editions that have one,
+  // unless German is the member's language: then a German edition without a cover is as good as one with.
+  const shown = (one: { book: Book | BookSnapshot; dnbOnly: boolean }) =>
+    Number(Boolean(one.book.coverUrl) || (language === 'de' && one.dnbOnly && languageCode(one.book.language) === 'de'))
   const others = [...distinct.values()]
     .sort((a, b) => {
-      const cover = Number(Boolean(b.book.coverUrl)) - Number(Boolean(a.book.coverUrl))
+      const cover = shown(b) - shown(a)
       if (cover) return cover
       if (language) {
         const same = (book: BookSnapshot) => Number(languageCode(book.language) === language)
@@ -302,7 +310,7 @@ export function appendEditions(shown: readonly EditionCandidate[], merged: reado
 // ------------------------------------------------------------ by its ISBN
 
 /** Where an edition found by its ISBN came from; internal. */
-export type IsbnSourceName = 'catalogue' | 'apple' | 'openlibrary'
+export type IsbnSourceName = 'catalogue' | 'apple' | 'openlibrary' | 'dnb'
 
 /**
  * What a lookup by ISBN found ("My edition isn't listed"). `edition`: the
@@ -335,16 +343,28 @@ export function isbnEdition(
   if (catalogued) return catalogued
   const apple = answers.apple?.[0]
   const openLibrary = answers.openlibrary?.[0]
-  const lead = openLibrary ?? apple
+  // A German edition the others do not know: the National Library's (its facts; a cover only where Open Library has one).
+  const german = answers.dnb?.[0]
+  const lead = openLibrary ?? apple ?? german
   if (!lead) return null
   const found: BookSnapshot = { ...lead, isbn13 }
   if (openLibrary && apple)
     for (const field of ISBN_FILLABLE) if (found[field] == null && apple[field] != null) (found[field] as unknown) = apple[field]
+  if (german && lead !== german)
+    for (const field of ISBN_FILLABLE) if (found[field] == null && german[field] != null) (found[field] as unknown) = german[field]
   if (!found.authors.length) found.authors = [...current.authors]
   return found
 }
 
 // -------------------------------------------------------------------- lookup
+
+/**
+ * Whether the National Library is worth asking for a book's editions: German is the member's language
+ * (any of the languages the sources are asked in), or the book itself is German. Pure.
+ */
+export function wantsGerman(languages: readonly string[], book: Pick<BookSnapshot, 'language'>): boolean {
+  return languages.some((language) => languageCode(language) === 'de') || languageCode(book.language) === 'de'
+}
 
 export type EditionsOptions = {
   signal?: AbortSignal
@@ -371,6 +391,8 @@ export function createEditions(options: {
   languages: readonly string[]
   /** The own Catalogue; left out where there is no backend. */
   catalogue?: CatalogueSearch
+  /** The German National Library (data/dnb.ts): editions of German books, and a last resort by ISBN. */
+  dnb?: Pick<Dnb, 'editions' | 'lookupIsbn'>
 }): Editions {
   const apple = createApple(options)
   const openLibrary = createOpenLibrary(options)
@@ -385,7 +407,7 @@ export function createEditions(options: {
     return found.find((hit) => hit.book.openLibraryWorkKey)?.book.openLibraryWorkKey ?? null
   }
 
-  function asks(): Partial<Record<EditionSourceName, Ask>> {
+  function asks(book: Book): Partial<Record<EditionSourceName, Ask>> {
     const catalogue = options.catalogue
     const titled = (book: Book, found: { book: Book | BookSnapshot }[]) =>
       found.map((hit) => hit.book).filter((hit) => isEditionOf(book, hit))
@@ -397,11 +419,15 @@ export function createEditions(options: {
       },
       apple: async (book, signal) => titled(book, await apple.search(editionsQuery(book), signal)),
       openlibrary: async (book, signal) => titled(book, await openLibrary.search(editionsQuery(book), signal)),
+      // Only where German is in play: the member's language, or the book's own.
+      ...(options.dnb && wantsGerman(options.languages, book)
+        ? { dnb: async (found: Book, signal?: AbortSignal) => (await options.dnb!.editions(found, { signal })).filter((edition) => isEditionOf(found, edition)) }
+        : {}),
     }
   }
 
   async function find(book: Book, { signal, onUpdate }: EditionsOptions = {}): Promise<EditionsOutcome> {
-    const sources = asks()
+    const sources = asks(book)
     const names = EDITION_SOURCE_ORDER.filter((name) => sources[name])
     const answers: Partial<Record<EditionSourceName, (Book | BookSnapshot)[]>> = {}
     const failures = new Set<EditionSourceName>()
@@ -450,7 +476,19 @@ export function createEditions(options: {
     settled.forEach((result, index) => {
       if (result.status === 'fulfilled') answers[asked[index]![0]] = result.value
     })
-    const edition = isbnEdition(book, isbn13, answers)
+    let edition = isbnEdition(book, isbn13, answers)
+    // None of them has it: a German edition may be in the National Library (a last resort, asked alone).
+    if (!edition && options.dnb) {
+      try {
+        const german = await options.dnb.lookupIsbn(isbn13, { signal })
+        if (german) {
+          answers.dnb = [german]
+          edition = isbnEdition(book, isbn13, answers)
+        }
+      } catch {
+        if (signal?.aborted) throw abortError()
+      }
+    }
     // Nothing found while neither Apple nor OpenLibrary answered: whether they know it cannot be told.
     return { edition, failed: !edition && !answers.apple && !answers.openlibrary }
   }

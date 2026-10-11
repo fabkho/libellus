@@ -158,3 +158,42 @@ docs/parity.md, *Genres*; the author page's genre chips use the same labels (`ge
 ## Not yet
 
 - The outbox does not carry the corrections yet (`sync_write`): they need a connection.
+
+## German editions from the German National Library (`dnb-lookup`)
+
+Where Apple Books and Open Library do not know a German book, the German National Library (DNB, Deutsche
+Nationalbibliothek) often does: its catalogue is open data (CC0: no attribution, no storing limit; the privacy
+policy names it as a courtesy). It gives the *edition*, not the book's life around it: title, authors, ISBN-13,
+publisher, year, language, pages. No cover (the covers its catalogue shows are licensed to libraries and the VLB
+sells them: not usable) and no real genre (a DDC class and `B Belletristik`, see the trial in the draft PR #306).
+It is used in the three places a member meets an unknown German edition, never in the import (the trial showed no
+gain there).
+
+| Where | What happens |
+|---|---|
+| Barcode scan, a typed ISBN in search, a book page opened cold (`createSearch`, `lookupIsbn`) | Asked last and only when the Catalogue, Apple and Open Library found nothing for the ISBN: the edition shows like any other result |
+| My edition isn't listed → ISBN (`createEditions().lookupIsbn`) | The same last resort |
+| Change edition / Choose edition (`createEditions().find`) | Editions of the work by title and first author, only where German is in play (`wantsGerman`); one row per ISBN-13, the facts filled into a row another source has; cover-less rows sort after those with a cover, unless German is the member's language and the edition is German |
+| Adding or picking one (`createLibrary` → `catalogued`) | A member may only add or pick a Catalogue Book, so the function's `book` action first makes it (source `import`, from what the DNB says about the ISBN, with the cover the app resolved or Open Library's) |
+
+### The function
+
+`supabase/functions/dnb-lookup` (README there): `POST { action: 'isbn' | 'editions' | 'book', … }`, a signed-in
+member (or the service role), 30 calls a minute per member (`edge_rate_hit`, bucket `dnb-lookup`), 4 KB bodies. The
+SRU interface (`https://services.dnb.de/sru/dnb`, CQL, record schema `oai_dc`) answers cross-origin reads, so the
+browser could have asked it directly; the function exists for the Catalogue write (`book`), the member limit, one
+breaker and one politeness budget for all members (five requests a second, four seconds each, three failed
+answers in a row rest it for a minute: its converter fails now and then with a diagnostic and HTTP 200). The
+parsing is `web/app/data/dnbRecord.ts` (no imports; Deno and the browser both read it). There is no cache table:
+the data is small, the answers are fast (about 100 ms) and a Catalogue Book is the cache of what was added.
+
+Queries: `num=<ISBN-13>` (an ISBN-10 is converted first); `tit="<title>" and per="<surname>" and (bbg=Aa* or
+bbg=Oa*)` (printed and online books; audio, music and periodicals left out, as are records titled like a reading).
+The title is cleaned for readers: `Titel : Untertitel / Verfasser` → `Titel: Untertitel`, a leading
+`[Original] ; ` and a series that leads the title (`Reihe 1 : Titel`, `Reihe, Band 3: Titel`) dropped; authors
+`Nachname, Vorname [Verfasser]` → `Vorname Nachname`, translators, readers and artists left out.
+
+Checked on a local stack with 15 ISBNs of well-known German classics (Faust, Die Verwandlung, Der Prozess, Werther,
+Effi Briest, Der Sandmann, Michael Kohlhaas, Zarathustra, Die Räuber, Der Schimmelreiter): the 10 that Apple Books
+and Open Library did not know were all found by the library and could be added (a Catalogue Book of source `import`,
+no cover); the 5 they knew were found without asking it.

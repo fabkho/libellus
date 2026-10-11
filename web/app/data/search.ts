@@ -1,5 +1,6 @@
 import { parseIsbn, type BookSnapshot } from './books'
 import { createApple } from './apple'
+import type { Dnb } from './dnb'
 import type { CatalogueSearch } from './catalogueSearch'
 import { abortError, type FetchLike } from './fetching'
 import type { LibraryEntry } from './library'
@@ -66,6 +67,11 @@ export function createSearch(options: {
   languages: readonly string[]
   /** The own Catalogue; left out where there is no backend. */
   catalogue?: CatalogueSearch
+  /**
+   * The German National Library (data/dnb.ts), a last resort for an ISBN: asked only when the
+   * other sources found nothing for it, so a German edition they do not know still shows.
+   */
+  dnb?: Pick<Dnb, 'lookupIsbn'>
 }): Search {
   const apple = createApple(options)
   const openLibrary = createOpenLibrary(options)
@@ -80,6 +86,13 @@ export function createSearch(options: {
       ...(catalogue ? { catalogue: (signal?: AbortSignal) => catalogue.search(isbn ?? text, signal) } : {}),
       apple: (signal) => (isbn ? apple.lookupIsbn(isbn, signal) : apple.search(text, signal)),
       openlibrary: (signal) => (isbn ? openLibrary.lookupIsbn(isbn, signal) : openLibrary.search(text, signal)),
+      // Asked after the others (`search` below waits for them): an ISBN only, and only when none of them had it.
+      ...(isbn && options.dnb
+        ? { dnb: async (signal?: AbortSignal): Promise<Found[]> => {
+            const book = await options.dnb!.lookupIsbn(isbn, { signal })
+            return book ? [{ book, source: 'dnb' as const, popularity: 0 }] : []
+          } }
+        : {}),
     }
   }
 
@@ -105,22 +118,27 @@ export function createSearch(options: {
 
     // Updates go out one after another, in the order the sources answered.
     let reported = Promise.resolve()
-    await Promise.all(
-      names.map((name) =>
-        sources[name]!(signal)
-          .then(
-            (found) => void (answers[name] = found),
-            () => void failures.add(name),
-          )
-          .then(() => {
-            reported = reported.then(async () => {
-              const now = await outcome()
-              if (!signal?.aborted) onUpdate?.(now)
-            })
-            return reported
-          }),
-      ),
-    )
+    const answerOf = (name: SourceName, ask: Ask | undefined = sources[name]) =>
+      (ask ? ask(signal) : Promise.resolve([] as Found[]))
+        .then(
+          (found) => void (answers[name] = found),
+          () => void failures.add(name),
+        )
+        .then(() => {
+          reported = reported.then(async () => {
+            const now = await outcome()
+            if (!signal?.aborted) onUpdate?.(now)
+          })
+          return reported
+        })
+    const direct = names.filter((name) => name !== 'dnb').map((name) => answerOf(name))
+    // The National Library is a last resort: it is asked once the others have answered and none had the ISBN.
+    const last = names.includes('dnb')
+      ? Promise.allSettled(direct).then(() =>
+          answerOf('dnb', Object.values(answers).some((found) => found.length > 0) ? async () => [] : sources.dnb),
+        )
+      : null
+    await Promise.all(last ? [...direct, last] : direct)
     if (signal?.aborted) throw abortError()
     return outcome()
   }
@@ -141,6 +159,15 @@ export function createSearch(options: {
       if (signal?.aborted) throw abortError()
       if (fromApple.status === 'fulfilled' && fromApple.value) return fromApple.value
       if (fromOpenLibrary.status === 'fulfilled' && fromOpenLibrary.value[0]) return fromOpenLibrary.value[0].book
+      // A German edition neither knows (a book page opened cold, after a reload): the National Library.
+      if (options.dnb) {
+        try {
+          const german = await options.dnb.lookupIsbn(isbn13, { signal })
+          if (german) return german
+        } catch {
+          if (signal?.aborted) throw abortError()
+        }
+      }
       if (fromApple.status === 'rejected' && fromOpenLibrary.status === 'rejected') throw fromApple.reason
       return null
     },
