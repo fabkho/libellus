@@ -49,7 +49,13 @@ How:
 - A cover is named by its title only where it stands alone (Want to read's row, a year's months);
   wherever the title is written beside it the cover is `decorative` (UiCover), so nothing is read
   twice. In the social screens (feed, Home's circle, a member's finished Books) that is one link per
-  Book: the cover's link is `aria-hidden` and out of the tab order, the title is the Book's link.
+  Book: the cover's link is `aria-hidden` and out of the tab order, the title is the Book's link. A member's row
+  that opens a sheet (Home's circle rows, the feed's batch rows) has one button for the row, named by its sentence
+  ("Ida: started Piranesi, 2 days ago"; the fan is `aria-hidden`), stretched over the row (`stretched`, main.css);
+  her avatar and her name are separate, above it: the name is the link to her page, the avatar's link is
+  `aria-hidden` and out of the tab order (a pointer's second way to the same place), so nothing is nested and her
+  page has one link per row. The focus ring is drawn on the stretched box. A row of one openable read is that Book's
+  link instead.
 - A follow request's buttons say whose it is (`Accept {name}`, `Decline {name}`, `Unblock {name}`), and the
   lamp dot on the header's avatar is `aria-hidden` (the avatar's label says a request waits).
 - Text drawn in pieces (dots between facts, a count beside a year, a month's count) is given to
