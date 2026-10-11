@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, nextTick, reactive, readonly, ref, shallowRef, watch } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CIRCLE_BOOKS_MAX } from '@/data/social'
 
 /**
@@ -15,11 +15,14 @@ let online = ref(true)
 const calls: { fn: string; args: unknown }[] = []
 let followingIds: string[] = ['ben']
 let refuse = false
+/** Requests that throw, as WebKit's fetch does when a navigation cancels it: "Fetch API cannot load … due to access control checks". */
+let cancelled: string[] = []
 const CARD = { id: 'ben', name: 'Ben', photo: null }
 
 const backend = {
   rpc: async (fn: string, args: { p_books?: string[] }) => {
     calls.push({ fn, args })
+    if (cancelled.includes(fn)) throw new TypeError('Fetch API cannot load http://127.0.0.1:55621/rest/v1/rpc/' + fn + ' due to access control checks.')
     if (fn === 'my_social') return { data: { private: true, sections: {}, link: 'x'.repeat(22), requests: 0 }, error: null, status: 200 }
     if (fn === 'my_people') {
       return { data: { following: followingIds.map((id) => ({ id, name: id, photo: null })), followers: [], followingIds, requests: [], requested: [] }, error: null, status: 200 }
@@ -67,6 +70,7 @@ beforeEach(() => {
   calls.length = 0
   followingIds = ['ben']
   refuse = false
+  cancelled = []
   lists = freshLists()
   lists.reading = books('r', 3)
   lists.wantToRead = books('w', 3)
@@ -245,5 +249,47 @@ describe('the circle on her Books', () => {
     await nextTick()
     expect(circle.reading).toEqual({})
     expect(circle.want).toEqual({})
+  })
+})
+
+describe('a request cancelled by a navigation', () => {
+  // WebKit rejects the fetch of a request a navigation cancelled. The calls are `void`ed by watchers and shared by
+  // pages, so a rejection that gets out is an uncaught error of the page (the Playwright guard `noPageErrors`).
+  const unhandled: unknown[] = []
+  const onUnhandled = (reason: unknown) => void unhandled.push(reason)
+  beforeEach(() => {
+    unhandled.length = 0
+    process.on('unhandledRejection', onUnhandled)
+  })
+  afterEach(() => void process.off('unhandledRejection', onUnhandled))
+  const settle = async () => {
+    // Rejections are reported once the microtasks and a macrotask have run.
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+
+  for (const fn of ['my_people', 'circle_reading', 'circle_want'] as const) {
+    it(`${fn}: the shared run resolves, every caller of it too, and the last answer stays`, async () => {
+      const circle = await store()
+      await circle.load()
+      const before = { reading: circle.reading, want: circle.want }
+      cancelled = [fn]
+      // Several callers share the run on its way; one is a watcher's `void`.
+      lists.loaded = true
+      lists.reading = [...books('r', 3), ...books('n', 1)]
+      const shared = [circle.load(), circle.load({ ifStale: true }), circle.load()]
+      await expect(Promise.all(shared)).resolves.toBeDefined()
+      await settle()
+      expect(unhandled).toEqual([])
+      if (fn !== 'my_people') expect(circle.want).toEqual(before.want)
+    })
+  }
+
+  it('a watcher that asks by itself (void) leaves nothing unhandled', async () => {
+    cancelled = ['my_people', 'circle_reading', 'circle_want']
+    await store()
+    lists.loaded = true
+    await vi.waitFor(() => expect(calls.some((c) => c.fn === 'my_people')).toBe(true))
+    await settle()
+    expect(unhandled).toEqual([])
   })
 })

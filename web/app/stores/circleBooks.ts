@@ -108,6 +108,9 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
           idsRead = false
           await ask()
         } while (again)
+      } catch {
+        // A cancelled request (a navigation, WebKit's "Fetch API cannot load …") is no news: the last answer stays.
+        // Callers `void load()` or share this promise, so it must never reject.
       } finally {
         loading = null
         idsRead = false

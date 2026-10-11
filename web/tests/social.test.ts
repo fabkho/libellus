@@ -265,6 +265,15 @@ describe('refusals', () => {
     expect(await refusal(answers(429, '', 'Too Many Requests'))).toEqual({ data: null, error: 'unknown' })
     expect(await refusal(answers(0, '', ''))).toEqual({ data: null, error: 'offline' })
   })
+
+  it('a request that throws (a navigation cancelled it, as WebKit\u2019s fetch does) is offline, never a rejection', async () => {
+    const cancelled = {
+      rpc: () => Promise.reject(new TypeError('Fetch API cannot load http://127.0.0.1:55621/rest/v1/rpc/my_people due to access control checks.')),
+    }
+    const social = createSocial(cancelled as never, { online: () => true })
+    expect(await social.people()).toEqual({ data: null, error: 'offline' })
+    expect(await social.circleReading(['a'])).toEqual({ data: null, error: 'offline' })
+  })
 })
 
 describe('offline', () => {
