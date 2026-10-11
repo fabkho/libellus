@@ -282,7 +282,7 @@ down. The flight's own copies (`snapshot.ts`, `useEditionChange.ts`, `readerFlig
 | Avatar (header, Profile, photo editor), author portrait | plain `<img>`, eager, in a 32–72 px circle, first screen; the portrait is the author page's hero | same: first screen, sized box, initials underneath |
 | Photo crop (`profile/Photo.vue`) | an object URL in a box of explicit size | same |
 | CSS: thumbhash under a cover (`background-image: url(data:…)`), film grain (inline SVG), Button gradient | no request | same: no `url()` reaches the network anywhere in `app/` |
-| Shelf (`ShelfPile`, `ShelfRow`) | colours only; Regal (the private layer: its own textures) is not in this repo and not in the build | same |
+| Shelf (`ShelfRow`, `ShelfStage`) | colours only; Regal (the private layer: its own textures) is not in this repo and not in the build | same |
 | Reader | EPUB images come from the book file (blob URLs, sanitised in `data/reader/markup.ts`): no network | same |
 
 **Sign-in wall, after the form** (`pnpm perf:wall`, `perf/wall.ts`: first launch of `/sign-in`, Pixel 7 profile, `slow4g-4x`, 7 runs per series, two series per build in turn, load 1.4–1.8; medians (min–max); the cover host is the harness's stand-in, so Apple's real latency is not in it):
