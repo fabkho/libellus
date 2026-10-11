@@ -262,6 +262,29 @@ export async function resolveBookCover(book: BookSnapshot, sources: CoverSources
 }
 
 /**
+ * Whether this very image will do as a Cover (`coverVerdict`), and if so its
+ * thumbhash and colours: for a cover somebody else's lookup named (the import's
+ * cover fill, data/coverFill.ts), where there is no chain to walk. Apple's
+ * artwork and Open Library's covers are asked for at the sizes the chain uses;
+ * any other address is read as it is. Null when it will not do; an image that
+ * could not be read in time (offline, a timeout) is kept without thumbhash and
+ * colours, as the chain keeps its own.
+ */
+export async function verifyCover(url: string, sources: Pick<CoverSources, 'probe' | 'budgetMs'>): Promise<ResolvedCover | null> {
+  const candidate = APPLE_CDN.test(url) ? appleCandidate(url) : OPENLIBRARY_COVERS.test(url) ? openLibraryCandidate(url) : { url, probe: url }
+  let image: ProbedImage | null | typeof TIMEOUT
+  try {
+    image = await within(sources.probe(candidate.probe), sources.budgetMs ?? 6000)
+  } catch {
+    image = TIMEOUT
+  }
+  if (image === TIMEOUT) return { coverUrl: candidate.url, coverThumbhash: null, coverColors: null }
+  if (!image || coverVerdict(image) !== 'ok') return null
+  const { thumbhash, colors } = describeCover(image.pixels)
+  return { coverUrl: candidate.url, coverThumbhash: thumbhash, coverColors: colors }
+}
+
+/**
  * The Cover of the member's own edition ("My edition isn't listed"): the image
  * she gave (an https URL) is kept whatever it is, with its thumbhash and
  * colours when it can be read (most hosts do not allow it: then it shows

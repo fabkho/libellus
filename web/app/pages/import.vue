@@ -158,6 +158,15 @@ const failures = computed<ImportNote[]>(() =>
 
       <ImportCounts :counts="store.byStatus" class="mt-md" />
 
+      <!-- Covers for identified books that have none, asked for in the background: quiet, and gone once answered. -->
+      <p
+        v-if="store.coverProgress && store.coverProgress.done < store.coverProgress.total"
+        class="figures mt-sm text-footnote text-ink-faint"
+        data-testid="import.covers"
+      >
+        {{ t('import.coverFill', { done: store.coverProgress.done, total: store.coverProgress.total, found: store.coverProgress.found }) }}
+      </p>
+
       <ImportProgress
         v-if="store.phase === 'matching'"
         class="mt-lg"

@@ -102,18 +102,85 @@ describe('writing rows', () => {
   })
 })
 
+describe('writing with covers found meanwhile', () => {
+  const written: { p_rows: { key: string; book?: { cover_url: string | null; cover_thumbhash: string | null } }[] }[] = []
+  const client = {
+    rpc: async (_name: string, args: (typeof written)[number]) => {
+      written.push(args)
+      return { data: args.p_rows.map((row) => ({ key: row.key, outcome: 'added', entry_id: 'e' })), error: null }
+    },
+  } as unknown as SupabaseClient
+  const importer = (probe: (url: string) => Promise<null>) =>
+    createBookImport(client, {
+      lookups: { catalogue: { search: async () => [] }, search: { search: async () => ({ results: [], pending: false, failed: false }), lookupIsbn: async () => null } },
+      probe,
+    })
+  const bare = (n: number): ImportRow => ({ ...rowOf(n), book: { ...snapshot(n), coverUrl: null } })
+
+  it('asks for each row just before its chunk: a row not written yet takes the cover that came in since', async () => {
+    written.length = 0
+    const rows = Array.from({ length: IMPORT_CHUNK + 1 }, (_, n) => bare(n))
+    const refreshed: string[] = []
+    const found = 'https://covers.openlibrary.org/b/id/42-L.jpg'
+    const result = await importer(async () => null).write(rows, {
+      onWritten: () => {},
+      refresh: (row) => {
+        refreshed.push(row.key)
+        // The cover arrives while the first chunk is written: only the last row, in the second chunk, gets it.
+        return row.key === `goodreads:${IMPORT_CHUNK}` ? { ...row, book: { ...row.book, coverUrl: found, coverThumbhash: 'hash' } as never } : row
+      },
+    })
+    expect(result.error).toBeNull()
+    expect(refreshed).toHaveLength(rows.length)
+    expect(written[0]!.p_rows.every((row) => !row.book?.cover_url)).toBe(true)
+    expect(written[1]!.p_rows[0]!.book).toMatchObject({ cover_url: found, cover_thumbhash: 'hash' })
+  })
+
+  it('does not resolve a cover again that the fill found with its thumbhash', async () => {
+    written.length = 0
+    const probed: string[] = []
+    const row: ImportRow = { ...rowOf(1), book: { ...snapshot(1), coverUrl: 'https://covers.openlibrary.org/b/id/7-L.jpg', coverThumbhash: 'hash' } }
+    await importer(async (url) => (probed.push(url), null)).write([row], { onWritten: () => {} })
+    expect(probed).toEqual([])
+    expect(written[0]!.p_rows[0]!.book).toMatchObject({ cover_url: 'https://covers.openlibrary.org/b/id/7-L.jpg', cover_thumbhash: 'hash' })
+  })
+
+  it('lends the cover the fill found for an edition only the file knows, without probing it again', async () => {
+    written.length = 0
+    const probed: string[] = []
+    const row: ImportRow = {
+      ...rowOf(1),
+      book: { ...snapshot(1), coverUrl: null, source: 'import' },
+      coverFrom: { ...snapshot(2), coverUrl: 'https://covers.openlibrary.org/b/id/9-L.jpg', coverThumbhash: 'lent' },
+    }
+    await importer(async (url) => (probed.push(url), null)).write([row], { onWritten: () => {} })
+    expect(written[0]!.p_rows[0]!.book).toMatchObject({ cover_url: 'https://covers.openlibrary.org/b/id/9-L.jpg', cover_thumbhash: 'lent' })
+    // Its own ISBN was tried for a cover (the Open Library by-ISBN step); the lent image was not read again.
+    expect(probed.every((url) => !url.includes('/b/id/9-'))).toBe(true)
+  })
+})
+
 describe('needsLook', () => {
   const cover = { coverUrl: 'https://example.test/c.jpg' }
-  it('is true when no edition was found, whatever the cover', () => {
+  it('is true when nothing identifies the row: no edition found and no ISBN in the file, whatever the cover', () => {
     expect(needsLook('fromFile', cover)).toBe(true)
     expect(needsLook('fromFile', null)).toBe(true)
+    expect(needsLook('fromFile', null, { isbn13: null })).toBe(true)
   })
-  it('is true when the edition found has no cover', () => {
-    expect(needsLook('matched', { coverUrl: null })).toBe(true)
-    expect(needsLook('matched', null)).toBe(true)
+  it('is true when a source could not be asked: a better edition may exist', () => {
+    expect(needsLook('fromFile', null, { isbn13: '9783453441088', unsure: true })).toBe(true)
   })
-  it('is false for a match with a cover (a similar edition is probably fine)', () => {
+  it('is false for a row the file names by its ISBN, with or without a cover', () => {
+    expect(needsLook('fromFile', null, { isbn13: '9783453441088' })).toBe(false)
+    expect(needsLook('fromFile', cover, { isbn13: '9783453441088' })).toBe(false)
+  })
+  it('is false for a match: no cover is a quiet note, not a review item', () => {
     expect(needsLook('matched', cover)).toBe(false)
+    expect(needsLook('matched', { coverUrl: null })).toBe(false)
+    expect(needsLook('matched', null)).toBe(false)
+  })
+  it('is true for a row not looked up yet', () => {
+    expect(needsLook(null, null)).toBe(true)
   })
 })
 
@@ -220,6 +287,48 @@ describe('a host that keeps refusing', () => {
     clock = 1500
     expect((await paced('https://itunes.apple.com/search?term=b')).status).toBe(200)
     expect((await paced('https://itunes.apple.com/search?term=c')).status).toBe(200)
+  })
+
+  it('waits what the host names in Retry-After before it tries again', async () => {
+    let calls = 0
+    const fetch: FetchLike = async () =>
+      ++calls === 1
+        ? { ok: false, status: 429, json: async () => ({}), headers: { get: (name) => (name.toLowerCase() === 'retry-after' ? '0.08' : null) } }
+        : { ok: true, status: 200, json: async () => ({}) }
+    const paced = pacedFetch(fetch, { gapMs: { 'itunes.apple.com': 1 }, retryMs: 1 })
+    const started = Date.now()
+    expect((await paced('https://itunes.apple.com/search?term=a')).status).toBe(200)
+    expect(Date.now() - started).toBeGreaterThanOrEqual(75)
+    expect(calls).toBe(2)
+  })
+
+  it('leaves a host that named a time alone for a short while, not the flat cool-down, and says how long', async () => {
+    let clock = 0
+    let calls = 0
+    const fetch: FetchLike = async () => (
+      calls++,
+      { ok: false, status: 429, json: async () => ({}), headers: { get: () => '0.001' } }
+    )
+    const paced = pacedFetch(fetch, { gapMs: { 'itunes.apple.com': 1 }, retryMs: 1, cooldownMs: 60_000, now: () => clock })
+    await paced('https://itunes.apple.com/search?term=a')
+    expect(calls).toBe(3)
+    expect(paced.blockedFor('itunes.apple.com')).toBe(15_000)
+    expect(paced.blockedFor('openlibrary.org')).toBe(0)
+    clock = 14_000
+    expect((await paced('https://itunes.apple.com/search?term=b')).status).toBe(429)
+    expect(calls).toBe(3)
+    clock = 15_500
+    expect(paced.blockedFor('itunes.apple.com')).toBe(0)
+    await paced('https://itunes.apple.com/search?term=c')
+    expect(calls).toBe(4)
+  })
+
+  it('keeps the flat cool-down when the host names no time', async () => {
+    let clock = 0
+    const fetch: FetchLike = async () => ({ ok: false, status: 403, json: async () => ({}) })
+    const paced = pacedFetch(fetch, { gapMs: { 'itunes.apple.com': 1 }, retryMs: 1, cooldownMs: 60_000, now: () => clock })
+    await paced('https://itunes.apple.com/search?term=a')
+    expect(paced.blockedFor('itunes.apple.com')).toBe(60_000)
   })
 
   it('does not hold back a host that is not paced', async () => {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import type { Book, BookSnapshot } from '~/data/books'
+import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, type CoverFound } from '~/data/coverFill'
 import { probeImageInBrowser } from '~/data/covers'
 import {
   createBookImport,
@@ -11,6 +12,7 @@ import {
   needsLook,
   importedKeys,
   pacedFetch,
+  type PacedFetch,
   type BookImport,
   type Edition,
   type EditionChoice,
@@ -33,7 +35,7 @@ import {
 } from '~/data/import/rows'
 import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
 import { editionKeys } from '~/data/merge'
-import { createSearch, isAbort } from '~/data/search'
+import { createSearch, isAbort, type Search } from '~/data/search'
 import { candidateKey } from '~/stores/edition'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
@@ -43,6 +45,8 @@ import { clearMatches, readMatches, writeMatches, type StoredMatch } from '~/uti
 
 /** No book answered for this long while looking up: the screen offers to go on with what is there. */
 const STALL_MS = 45_000
+/** Import is pressed: the cover fill's rows still being asked get this long before the write starts; what is not in by then follows if it can. */
+const COVER_GRACE_MS = 3000
 
 /**
  * pick: no file yet · reading: the file is being read · matching: editions
@@ -95,9 +99,9 @@ export type Attention = {
   /** Her edition is hers to choose (Choose edition): matched by title or only from the file. */
   choose: boolean
   /**
-   * Whether it is a book to look at for sure: no edition was found (it is added as the file says),
-   * the edition found has no cover, or the row was skipped. The other rows only carry a note
-   * (found by its title with a cover, a custom shelf …) and the screen keeps them behind a toggle.
+   * Whether it is a book to look at for sure: nothing identifies it (no edition found and no ISBN in the
+   * file, or a source could not be asked), or the row was skipped. The other rows only carry a note
+   * (found by its title, a missing cover, a custom shelf …) and the screen keeps them behind a toggle.
    */
   look: boolean
   /** The edition she chose, as it will be written: its language, year and pages show on the row. */
@@ -169,6 +173,8 @@ export const useImportStore = defineStore('import', () => {
   const stalled = ref(false)
   let lastAnswerAt = 0
   let stallTimer: ReturnType<typeof setInterval> | null = null
+  /** The background search for covers of rows that have none: null when nothing was asked for. */
+  const coverProgress = ref<CoverFillProgress | null>(null)
   const outcomes = shallowRef<RowOutcome[]>([])
   const writeError = ref<LibraryErrorCode | null>(null)
 
@@ -178,26 +184,89 @@ export const useImportStore = defineStore('import', () => {
   let repository: BookImport | null = null
   let repositoryLanguage = ''
   let catalogue: ReturnType<typeof createCatalogueSearch> | null = null
+  /** One paced `fetch` for the whole import (the lookups and the cover fill): Apple's refusals are known to both. */
+  let liveFetch: PacedFetch | null = null
+  let searcher: Search | null = null
   function importer(): BookImport | null {
     if (!backend) return null
     catalogue ??= createCatalogueSearch(backend)
     const languages = searchLanguages()
     if (repositoryLanguage !== languages[0]) repository = null
     repositoryLanguage = languages[0] ?? ''
-    repository ??= createBookImport(backend, {
-      lookups: {
-        catalogue,
-        search: createSearch({
-          // Apple refuses a burst; a little room between its requests keeps it answering.
-          fetch: pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } }),
-          languages,
-          catalogue,
-        }),
-      },
-      probe: probeImageInBrowser,
-      online: isOnline,
-    })
+    // Apple refuses a burst; a little room between its requests keeps it answering.
+    liveFetch ??= pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } })
+    if (!repository) {
+      searcher = createSearch({ fetch: liveFetch, languages, catalogue })
+      repository = createBookImport(backend, {
+        lookups: { catalogue, search: searcher },
+        probe: probeImageInBrowser,
+        online: isOnline,
+      })
+    }
     return repository
+  }
+
+  // ------------------------------------------------------------ covers, meanwhile
+
+  let fill: CoverFill | null = null
+
+  function stopFill() {
+    const ending = fill
+    // Detached first: what its last report says is no business of the next file or member.
+    fill = null
+    ending?.stop()
+    coverProgress.value = null
+  }
+
+  /** A row a source identified (or whose ISBN the file names) whose edition has no cover: asked for in the background (data/coverFill.ts). */
+  function wantCover(index: number) {
+    const book = books.value[index]
+    const edition = editions.value[index]
+    if (!fill || !book || !edition) return
+    const verdict = verdicts.value[index]
+    // A Catalogue Book keeps the cover it has (the database never changes it); a member's pick is hers.
+    const wanted =
+      (verdict === 'matched' || verdict === 'fromFile') &&
+      !chosen.value.has(index) &&
+      !edition.unsure &&
+      !('id' in edition.book) &&
+      edition.book.source !== 'manual' &&
+      !edition.book.coverUrl &&
+      !edition.coverFrom?.coverUrl
+    if (!wanted) return fill.drop(book.key)
+    fill.add({ key: book.key, row: book, book: edition.book, alternatives: edition.alternatives })
+  }
+
+  /** The fill found a cover: it goes on the row's edition (its own, or the cover its ISBN-only Book borrows), in the preview and in what the write will take. */
+  function coverFound(key: string, found: CoverFound) {
+    const index = indexOf(key)
+    const edition = editions.value[index]
+    if (index < 0 || !edition || chosen.value.has(index)) return
+    const next = mergeCover(edition, found)
+    if (!next) return
+    editions.value[index] = next
+    remember(key, next)
+    version.value++
+  }
+
+  function startFill() {
+    stopFill()
+    if (!liveFetch || !searcher) return
+    const own: CoverFill = (fill = createCoverFill({
+      fetch: liveFetch,
+      search: searcher,
+      probe: probeImageInBrowser,
+      hostBlockedFor: (host) => liveFetch?.blockedFor(host) ?? 0,
+      onFound: (key, found) => {
+        if (fill === own) coverFound(key, found)
+      },
+      onProgress: (progress) => {
+        if (fill !== own) return
+        coverProgress.value = progress.total ? progress : null
+        // Every row answered: what was found is kept on the device with the matches (a reload does not ask again).
+        if (progress.total && progress.done >= progress.total) keepMatches()
+      },
+    }))
   }
 
   let lookup: AbortController | null = null
@@ -269,13 +338,13 @@ export const useImportStore = defineStore('import', () => {
       if (verdict === 'matched' && edition?.via === 'title') {
         notes.push({ code: 'byTitle', year: edition.book.year, language: edition.book.language })
       }
-      // Found, but without a cover: the one sign that the edition may be the wrong one.
+      // Found, but without a cover (the fill looks for one in the background): only a note.
       if (verdict === 'matched' && !edition?.book.coverUrl) notes.push({ code: 'noCover' })
       notes.push(...book.problems)
       const shown = verdict === 'matched' || edition?.coverFrom ? (edition?.coverFrom ?? edition?.book ?? null) : null
       const choose = Boolean(edition) && (verdict === 'fromFile' || (verdict === 'matched' && (edition?.via === 'title' || !edition?.book.coverUrl)))
-      // No match at all, or a match without a cover, is the bad sign; a similar edition with a cover is probably fine.
-      const look = needsLook(verdict, shown)
+      // Nothing identifies it, or a source could not be asked, is the bad sign; a match without a cover is a quiet note.
+      const look = needsLook(verdict, shown, { isbn13: edition?.book.isbn13 ?? book.isbn13, unsure: edition?.unsure })
       if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, choose, look, notes })
     }
     for (const row of skipped.value) {
@@ -328,6 +397,7 @@ export const useImportStore = defineStore('import', () => {
   function reset() {
     lookup?.abort()
     lookup = null
+    stopFill()
     stopWatching()
     stopChoosing()
     chosen.value = new Set()
@@ -395,6 +465,7 @@ export const useImportStore = defineStore('import', () => {
     settle(looking)
     stopWatching()
     keepMatches()
+    fill?.holdSearch(false)
     phase.value = 'preview'
   }
 
@@ -453,6 +524,7 @@ export const useImportStore = defineStore('import', () => {
     const remembered = import.meta.client && memberId ? readMatches(window.localStorage, memberId) : new Map<string, StoredMatch>()
     matchMemory.clear()
     for (const [key, match] of remembered) matchMemory.set(key, match)
+    startFill()
     const pending = undecided.filter(({ book, index }) => {
       const match = remembered.get(book.key)
       if (!match) return true
@@ -463,6 +535,8 @@ export const useImportStore = defineStore('import', () => {
         ...(match.coverFrom ? { coverFrom: match.coverFrom as unknown as Edition['book'] } : {}),
       }
       verdicts.value[index] = verdictOf(book, editions.value[index]!)
+      // Rows kept from an earlier run that still have no cover go on looking for one.
+      wantCover(index)
       return false
     })
     progress.total = undecided.length
@@ -491,6 +565,8 @@ export const useImportStore = defineStore('import', () => {
             remember(parsed.books[at]!.key, edition)
             answered()
             version.value++
+            // An identified row without a cover is looked at in the background, while the lookup goes on.
+            wantCover(at)
           },
           onSecondPass(done, total) {
             secondPass.value = { done, total }
@@ -508,6 +584,7 @@ export const useImportStore = defineStore('import', () => {
     settle(pending)
     stopWatching()
     keepMatches()
+    fill?.holdSearch(false)
     phase.value = 'preview'
   }
 
@@ -669,6 +746,7 @@ export const useImportStore = defineStore('import', () => {
     editions.value[index] = next
     verdicts.value[index] = verdictOf(book, next)
     chosen.value = new Set(chosen.value).add(index)
+    fill?.drop(book.key)
     version.value++
     stopChoosing()
   }
@@ -678,6 +756,14 @@ export const useImportStore = defineStore('import', () => {
     const repo = importer()
     if (!repo || phase.value !== 'preview') return
     stopChoosing()
+    // Pressed while covers are still being asked for: a short grace, then the write takes what is there.
+    phase.value = 'importing'
+    progress.total = toImport.value.length
+    progress.done = 0
+    outcomes.value = []
+    writeError.value = null
+    fill?.holdSearch(false)
+    if (fill) await fill.settled(COVER_GRACE_MS)
     const kept = new Set(shelves.value.filter((shelf) => shelf.chosen).map((shelf) => shelf.name.toLowerCase()))
     const chosenShelves = (book: ImportBook) => book.shelves.filter((name) => kept.has(name.toLowerCase()))
     const pending: ImportRow[] = toImport.value.map(({ book, edition }) => ({
@@ -695,18 +781,21 @@ export const useImportStore = defineStore('import', () => {
       book: edition!.book,
       coverFrom: edition!.coverFrom ?? null,
     }))
-    writeError.value = null
-    outcomes.value = []
     progress.total = pending.length
-    progress.done = 0
-    phase.value = 'importing'
 
+    // Rows not written yet take the covers that came in meanwhile (the fill goes on during the write).
+    const at = new Map(books.value.map((book, index) => [book.key, index]))
     const written = await repo.write(pending, {
       onWritten(chunk) {
         outcomes.value = [...outcomes.value, ...chunk]
         progress.done += chunk.length
       },
+      refresh(row) {
+        const edition = editions.value[at.get(row.key) ?? -1]
+        return edition ? { ...row, book: edition.book, coverFrom: edition.coverFrom ?? null } : row
+      },
     })
+    stopFill()
     if (written.error) writeError.value = written.error
     else if (import.meta.client) clearMatches(window.localStorage)
     phase.value = 'done'
@@ -777,6 +866,7 @@ export const useImportStore = defineStore('import', () => {
     choosingBook,
     progress,
     secondPass,
+    coverProgress,
     stalled,
     finishNow,
     outcomes,

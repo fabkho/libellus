@@ -11,6 +11,8 @@ export type FetchLike = (url: string, init?: { signal?: AbortSignal }) => Promis
   json: () => Promise<unknown>
   /** The body as text, for the sources that answer XML (the DNB); the JSON ones never ask for it. */
   text?: () => Promise<string>
+  /** Read by the pacing (`Retry-After`); the browser's and Node's responses have it, a recording may not. */
+  headers?: { get: (name: string) => string | null }
 }>
 
 export function abortError(): Error {
