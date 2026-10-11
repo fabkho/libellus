@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.0](https://github.com/fabkho/libellus/compare/v1.13.0...v1.14.0) (2026-10-11)
+
+
+### Features
+
+* **editions:** German editions from the German National Library for the scan, ISBN lookups and the edition picker ([#307](https://github.com/fabkho/libellus/issues/307)) ([50b1e75](https://github.com/fabkho/libellus/commit/50b1e75fab92af2e139e8c8c2edbbf3db3d08fb6))
+
+
+### Fixes
+
+* **import:** Goodreads import reaches the preview, matches the right volume and edits less to review ([#303](https://github.com/fabkho/libellus/issues/303)) ([a5b6225](https://github.com/fabkho/libellus/commit/a5b6225a3ec541a944dc03b1191389f470a17d6e))
+
 ## [1.13.0](https://github.com/fabkho/libellus/compare/v1.12.2...v1.13.0) (2026-10-11)
 
 
