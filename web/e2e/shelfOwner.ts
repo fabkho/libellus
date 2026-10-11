@@ -7,7 +7,7 @@ import { createInviteCode, serviceRoleKey, sql, stack, uniqueEmail } from '../te
  */
 export const SHELF_OWNER_ID = '5e1f0000-0000-4000-8000-000000000023'
 
-/** The library file the flows' app shows (NUXT_PUBLIC_REGAL_LIBRARY_SRC); no flow answers it now (the owner's row has none). */
+/** The library file the flows' app shows (NUXT_PUBLIC_REGAL_LIBRARY_SRC); a flow that signs the owner in answers it from the synthetic fixture (e2e/contact.spec.ts), so none reaches the live address. */
 export const SHELF_LIBRARY_SRC = 'https://books.fabkho.dev/v2/library.json'
 
 /**

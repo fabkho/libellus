@@ -79,7 +79,10 @@ export function regalLayer(): (string | [string, Record<string, unknown>])[] {
   if (!REGAL_LIBRARY_SRC && !isPrepare()) throw new Error(`[regal] ${NO_LIBRARY}`)
   // A trailing slash: a folder, not a package name.
   if (local) return [local.replace(/\/?$/, '/')]
-  if (auth) return [['github:fabkho/regal', { install: true, auth }]]
+  // Regal's own pnpm-workspace.yaml decides its build scripts (`allowBuilds`). The install c12
+  // runs by default ignores that file, and pnpm then refuses to install packages it may not
+  // build (esbuild, unrs-resolver, vue-demi): ERR_PNPM_IGNORED_BUILDS, on a store without them.
+  if (auth) return [['github:fabkho/regal', { install: { ignoreWorkspace: false }, auth }]]
   if (isPrepare()) {
     console.warn(`[regal] ${MISSING}\nPreparing without it: the shelf's components have no types.`)
     return []

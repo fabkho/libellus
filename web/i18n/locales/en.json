@@ -1120,6 +1120,66 @@
     "offline": "You’re offline. This works once you’re back.",
     "retry": "Try again"
   },
+  "contact": {
+    "row": "Contact",
+    "title": "Contact",
+    "kindLabel": "What is it about?",
+    "kind": {
+      "bug": "Bug",
+      "feature": "Feature request",
+      "other": "Something else"
+    },
+    "label": "Your message",
+    "hint": "At least {min} characters",
+    "placeholder": {
+      "bug": "What went wrong? What did you expect to happen instead?",
+      "feature": "What would you like Libellus to do?",
+      "other": "What is on your mind?"
+    },
+    "count": "{count} / {max}",
+    "countLabel": "{count} of {max} characters",
+    "context": "We also send the app version and your device type.",
+    "send": "Send",
+    "sending": "Sending…",
+    "retry": "Try again",
+    "offline": "You’re offline.",
+    "error": {
+      "rate_limited": "That’s a lot of messages for now. Please try again in a while.",
+      "invalid": "That message can’t be sent as it is. Check its length and try again.",
+      "unknown": "That didn’t go through. Your text is still here; try again."
+    },
+    "done": {
+      "title": "Thanks, got it.",
+      "text": "I read everything.",
+      "action": "Done"
+    }
+  },
+  "feedback": {
+    "row": "Feedback",
+    "rowNone": "None",
+    "rowValue": "{count} open",
+    "title": "Feedback",
+    "back": "Back",
+    "intro": "What members sent from Contact, newest first. Only you can see this.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "summary": "{open} open · {handled} handled",
+    "anonymous": "A member",
+    "details": "Device details",
+    "markHandled": "Mark handled",
+    "handled": "Handled",
+    "reopen": "Open again",
+    "more": "Show older",
+    "loadingMore": "Loading…",
+    "empty": {
+      "title": "Nothing yet",
+      "text": "When a member writes from Contact, it shows here."
+    },
+    "loadError": "The messages could not be loaded.",
+    "writeError": "That could not be saved. Try again.",
+    "offline": "You’re offline. This works once you’re back.",
+    "retry": "Try again"
+  },
   "ownerErrors": {
     "row": "Errors",
     "rowNone": "None",
