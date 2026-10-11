@@ -164,12 +164,23 @@ export function fileEdition(row: ImportBook, alternatives: readonly (Book | Book
 }
 
 /**
- * Whether a row of the preview is one to look at for sure: no edition was found
- * (`fromFile`: added as the file says), or the edition shown has no cover. A
- * similar edition with a cover is probably fine and only carries its note.
+ * Whether a row of the preview is one to look at for sure: nothing identifies it
+ * (no source knows its edition and the file has no ISBN for it, or a source could
+ * not be asked: a better edition may exist), or it is not looked up yet. A row a
+ * source found, or whose ISBN the file names, is identified: a missing cover is a
+ * quiet note (`import.note.noCover`), never a review item. The cover fill
+ * (data/coverFill.ts) looks for it in the background and the Book is added
+ * without one when none is found; the wrong edition would not show in its cover
+ * anyway, the member sees the edition's facts when she opens Choose edition.
  */
-export function needsLook(verdict: 'imported' | 'inLibrary' | 'matched' | 'fromFile' | null, shown: Pick<BookSnapshot, 'coverUrl'> | null): boolean {
-  return verdict === 'fromFile' || !shown?.coverUrl
+export function needsLook(
+  verdict: 'imported' | 'inLibrary' | 'matched' | 'fromFile' | null,
+  shown: Pick<BookSnapshot, 'coverUrl'> | null,
+  row: { isbn13?: string | null; unsure?: boolean } = {},
+): boolean {
+  if (verdict === 'fromFile') return !row.isbn13 || Boolean(row.unsure)
+  if (verdict === 'matched') return false
+  return !shown?.coverUrl
 }
 
 /** One row of the choice sheet: the edition, whether the preview has it now, and whether it is the file's own. */
@@ -222,27 +233,45 @@ export async function eachLimited<T>(
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
 }
 
+/** A paced `fetch`: also says how long a host stays refused (0 when it is not). */
+export type PacedFetch = FetchLike & { blockedFor: (host: string) => number }
+
 /**
  * A `fetch` that keeps its distance from hosts that count requests: at least
  * `gapMs` between two requests to one host, and a request the host refused
  * for being too many (403, 429, 503) tried twice more, after `retryMs` and
- * twice that; a host that still refuses is left alone for `cooldownMs` (its
- * requests answer 429 at once), then asked once, and again with the retries
- * when it answers. Apple's
+ * twice that (a `Retry-After` of up to `retryAfterMaxMs` seconds the host names
+ * is waited instead, when it asks for more); a host that still refuses is left
+ * alone (its requests answer 429 at once) for `cooldownMs`, or, when it named a
+ * time, for three times that (at least 15 s), then asked once, and again with
+ * the retries when it answers. Apple's
  * Search API allows only a few requests a minute per address before it starts
- * refusing; a whole Library looked up at once would otherwise lose Apple
+ * refusing (measured: 429 with `Retry-After: 5…11` after 36 s at 4 requests a
+ * second, after 107 s at 40 a minute, none at 20 a minute, usable again within
+ * 10 s); a whole Library looked up at once would otherwise lose Apple
  * halfway through.
  */
 export function pacedFetch(
   fetch: FetchLike,
-  { gapMs, retryMs = 2000, cooldownMs = 60_000, now = Date.now }: { gapMs: Record<string, number>; retryMs?: number; cooldownMs?: number; now?: () => number },
-): FetchLike {
+  {
+    gapMs,
+    retryMs = 2000,
+    cooldownMs = 60_000,
+    retryAfterMaxMs = 30_000,
+    now = Date.now,
+  }: { gapMs: Record<string, number>; retryMs?: number; cooldownMs?: number; retryAfterMaxMs?: number; now?: () => number },
+): PacedFetch {
   const nextAt = new Map<string, number>()
   /** Hosts that kept refusing: asked no more until then, so a refused host costs no time per request (it cost 6 s each, for an hour). */
   const blockedUntil = new Map<string, number>()
   /** Hosts that were blocked and are being tried again: one attempt, no waiting between retries. */
   const probing = new Set<string>()
   const refused = (status: number) => [403, 429, 503].includes(status)
+  /** How long the host asked to be left alone (`Retry-After` in seconds), capped; 0 when it said nothing usable. */
+  const askedFor = (response: { headers?: { get: (name: string) => string | null } }) => {
+    const seconds = Number(response.headers?.get('retry-after'))
+    return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, retryAfterMaxMs) : 0
+  }
   const wait = (ms: number, signal?: AbortSignal) =>
     new Promise<void>((resolve, reject) => {
       if (ms <= 0) return resolve()
@@ -261,22 +290,24 @@ export function pacedFetch(
     await wait(at - now(), signal)
   }
 
-  return async (url, init) => {
+  const paced: PacedFetch = async (url, init) => {
     const host = new URL(url).hostname
     if (gapMs[host] && (blockedUntil.get(host) ?? 0) > now()) return { ok: false, status: 429, json: async () => ({}) }
     await turn(host, init?.signal)
     let response = await fetch(url, init)
     if (gapMs[host] && refused(response.status)) {
+      let named = askedFor(response)
       const delays = probing.has(host) ? [] : [retryMs, retryMs * 2]
       for (const delay of delays) {
-        await wait(delay, init?.signal)
+        await wait(Math.max(delay, named), init?.signal)
         await turn(host, init?.signal)
         response = await fetch(url, init)
         if (!refused(response.status)) break
+        named = Math.max(named, askedFor(response))
       }
       if (refused(response.status)) {
         // Still refused after the waits: leave the host alone for a while.
-        blockedUntil.set(host, now() + cooldownMs)
+        blockedUntil.set(host, now() + (named ? Math.min(cooldownMs, Math.max(15_000, named * 3)) : cooldownMs))
         probing.add(host)
       } else {
         probing.delete(host)
@@ -286,6 +317,8 @@ export function pacedFetch(
     }
     return response
   }
+  paced.blockedFor = (host) => Math.max(0, (blockedUntil.get(host) ?? 0) - now())
+  return paced
 }
 
 // ------------------------------------------------------- what she has already
@@ -458,18 +491,22 @@ export async function importedKeys(client: SupabaseClient): Promise<Result<Map<s
   }
 }
 
-/** A Book new to the Catalogue gets its Cover first (as on add); a Book with an id or a Manual book goes as it is. */
+/**
+ * A Book new to the Catalogue gets its Cover first (as on add); a Book with an id or a Manual book goes as it is.
+ * A cover the cover fill found (it has its thumbhash: data/coverFill.ts) is not resolved again.
+ */
 export async function withCover(
   book: Book | BookSnapshot,
   probe: ProbeImage,
   coverFrom?: Book | BookSnapshot | null,
 ): Promise<Book | BookSnapshot> {
   if ('id' in book || book.source === 'manual') return book
+  if (book.coverUrl && book.coverThumbhash) return book
   const own = await resolveBookCover(book, { probe })
   if (own.coverUrl || !coverFrom) return { ...book, ...own }
   // Nothing for its own ISBN: the same work's edition lends its cover.
   const lent =
-    'id' in coverFrom
+    'id' in coverFrom || (coverFrom.coverUrl && coverFrom.coverThumbhash)
       ? { coverUrl: coverFrom.coverUrl, coverThumbhash: coverFrom.coverThumbhash, coverColors: coverFrom.coverColors }
       : await resolveBookCover(coverFrom, { probe })
   return { ...book, ...(lent.coverUrl ? lent : own) }
@@ -495,7 +532,14 @@ export type BookImport = {
    * each call's outcomes. A call that fails ends the import with its error
    * (what was written stays written: importing again picks up the rest).
    */
-  write: (rows: readonly ImportRow[], options: { onWritten: (outcomes: RowOutcome[]) => void }) => Promise<Result<RowOutcome[]>>
+  write: (
+    rows: readonly ImportRow[],
+    options: {
+      onWritten: (outcomes: RowOutcome[]) => void
+      /** Asked for each row just before its chunk's covers are resolved: what the cover fill found since (data/coverFill.ts). */
+      refresh?: (row: ImportRow) => ImportRow
+    },
+  ) => Promise<Result<RowOutcome[]>>
 }
 
 export function createBookImport(
@@ -550,13 +594,13 @@ export function createBookImport(
       }
     },
 
-    async write(rows, { onWritten }) {
+    async write(rows, { onWritten, refresh }) {
       const outcomes: RowOutcome[] = []
       // The covers of a chunk are resolved all at once, and those of the next chunk
       // while this one is written: the image probes (a download and a decode each)
       // were what made a long import take minutes after "Import" was pressed.
       const covered = async (start: number): Promise<ImportRow[]> => {
-        const chunk = [...rows.slice(start, start + IMPORT_CHUNK)]
+        const chunk = rows.slice(start, start + IMPORT_CHUNK).map((row) => refresh?.(row) ?? row)
         await eachLimited(chunk, IMPORT_CHUNK, async (row, index) => {
           chunk[index] = { ...row, book: await withCover(row.book, probe, row.coverFrom).catch(() => row.book) }
         })
