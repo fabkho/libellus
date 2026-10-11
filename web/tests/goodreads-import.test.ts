@@ -19,7 +19,7 @@ import { parseGoodreads } from '@/data/import/goodreads'
 import type { ImportBook } from '@/data/import/rows'
 import { createLibrary } from '@/data/library'
 import { createSearch, type FetchLike } from '@/data/search'
-import { isoDay } from '@/utils/dates'
+import { addDays, isoDay } from '@/utils/dates'
 import { appleAnswer } from './support/apple'
 import { signUpMember } from './support/member'
 import { openLibraryAnswer } from './support/openLibrary'
@@ -185,7 +185,7 @@ describe('importing a Goodreads export', () => {
         status: 'reading',
         source: 'import',
         owner_id: null,
-        sessions: [{ started: today, ended: null, outcome: null, rating: null, review: null, key: 'goodreads:12' }],
+        sessions: [{ started: addDays(today, -1), ended: null, outcome: null, rating: null, review: null, key: 'goodreads:12' }],
       },
       { title: runTitle('Glass Orchard'), status: 'want_to_read', source: 'import', owner_id: null, sessions: null },
       {

@@ -1,5 +1,6 @@
 import type { EntryStatus } from '../library'
 import { plainText } from '../apple'
+import { addDays } from '../../utils/dates'
 import { readCsv, canonicalRows, type Row } from './csv'
 import { normalize, splitSeriesTitle } from './readingTracker'
 import {
@@ -54,7 +55,7 @@ import {
  *   a Read Count above 1 adds that many earlier finished reads, undated;
  * - a did-not-finish shelf (`dnf`, `abandoned`, …, #64) → Finished, one
  *   abandoned session ended on Date Read; no rating (only finished reads have one);
- * - `currently-reading` → Currently reading, an open session started today
+ * - `currently-reading` → Currently reading, an open session started the day before the import
  *   (the export has no start day; Date Added is when she shelved the book, not when she began it); earlier reads as for `read`;
  * - `to-read` and any other shelf → Want to read, no session;
  * - every shelf that is not one of these (`favourites`, `sci-fi`, a custom
@@ -138,7 +139,8 @@ export function mapGoodreadsRow(row: Row, index: number, today: string): ImportB
     if (shelfName === 'currently-reading') {
       status = 'reading'
       // Goodreads writes no start day: Date Added is when she shelved it (often as to-read, long before), so it is no start.
-      session = { startedOn: today, endedOn: null, outcome: null, rating: null, review: null }
+      // The day before the import: she was already reading it.
+      session = { startedOn: addDays(today, -1), endedOn: null, outcome: null, rating: null, review: null }
       extraReads = readCount - 1
     } else {
       status = 'want_to_read'

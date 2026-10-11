@@ -80,11 +80,11 @@ describe('parseGoodreads', () => {
     })
   })
 
-  it('opens a read for a book being read, started on the day of the import (Date Added is when it was shelved, not begun)', () => {
+  it('opens a read for a book being read, started the day before the import (Date Added is when it was shelved, not begun)', () => {
     expect(byKey('goodreads:1003')).toMatchObject({
       status: 'reading',
       pageCount: null,
-      session: { startedOn: TODAY, endedOn: null, outcome: null, rating: null, review: null },
+      session: { startedOn: '2026-10-02', endedOn: null, outcome: null, rating: null, review: null },
       addedOn: '2025-08-01',
     })
   })
@@ -149,8 +149,8 @@ describe('parseGoodreads', () => {
       session: { endedOn: null, rating: null },
       problems: [{ code: 'dateInvalid' }, { code: 'ratingInvalid' }],
     })
-    // A usable Date Added or not: the read started today.
-    expect(now).toMatchObject({ session: { startedOn: TODAY }, problems: [{ code: 'dateInvalid' }] })
+    // A usable Date Added or not: the read started the day before the import.
+    expect(now).toMatchObject({ session: { startedOn: '2026-10-02' }, problems: [{ code: 'dateInvalid' }] })
   })
 
   it('is pure: the same file and day give the same books', () => {
