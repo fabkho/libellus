@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { allPlaceholders, LEGAL_DOCUMENTS, legalLangOf, placeholdersOf } from '@/legal'
+import { ACTIVE_DOCUMENTS, allPlaceholders, LEGAL_DOCUMENTS, legalLangOf, placeholdersOf } from '@/legal'
+import { IMPRINT_ENABLED } from '@/legal/config'
 import { PLACEHOLDER } from '@/legal/placeholders'
 import { LEGAL_LANGS, type LegalBlock } from '@/legal/types'
 import { isAppPath, parseInline, placeholdersIn } from '@/utils/legalInline'
@@ -11,14 +12,42 @@ import { isPublicPath } from '@/utils/publicPath'
  * languages, every placeholder listed for the owner, and nobody in them who does not belong there.
  */
 describe('the public addresses', () => {
-  it('lets the privacy notice, the imprint and the reading pages be opened signed out', () => {
-    for (const path of ['/privacy', '/imprint', '/r/some-token', '/r/some-token/book/1']) expect(isPublicPath(path), path).toBe(true)
+  it('lets the privacy notice and the reading pages be opened signed out', () => {
+    for (const path of ['/privacy', '/privacy/', '/r/some-token', '/r/some-token/book/1']) expect(isPublicPath(path), path).toBe(true)
+  })
+
+  it('lets the imprint be opened signed out only once it is on', () => {
+    for (const path of ['/imprint', '/imprint/']) expect(isPublicPath(path), path).toBe(IMPRINT_ENABLED)
   })
 
   it('keeps everything else behind the sign-in, lookalikes included', () => {
     for (const path of ['/', '/library', '/profile', '/privacy-policy', '/imprints', '/book/privacy', '/rx', '/f/abc', '/share', '/sign-in']) {
       expect(isPublicPath(path), path).toBe(false)
     }
+  })
+})
+
+describe('the imprint, postponed', () => {
+  it('is off for the friends round, and the pages that are on follow the constant', () => {
+    expect(IMPRINT_ENABLED).toBe(false)
+    expect(Object.keys(ACTIVE_DOCUMENTS)).toEqual(IMPRINT_ENABLED ? ['privacy', 'imprint'] : ['privacy'])
+  })
+
+  it('leaves no trace of it in the privacy notice while it is off', () => {
+    if (IMPRINT_ENABLED) return
+    const privacy = JSON.stringify(LEGAL_DOCUMENTS.privacy)
+    expect(privacy).not.toMatch(/imprint|impressum|\/imprint/i)
+    expect(privacy).not.toContain(PLACEHOLDER.address)
+    // The controller is named, with the e-mail address to reach it.
+    for (const lang of LEGAL_LANGS) {
+      const lines = LEGAL_DOCUMENTS.privacy[lang].sections.find((section) => section.id === 'responsible')!.blocks.find((block) => 'lines' in block)
+      expect(lines && 'lines' in lines ? lines.lines : []).toEqual(['Fabian Kirchhoff', expect.stringContaining(PLACEHOLDER.email)])
+    }
+  })
+
+  it('keeps its text, and the postal address and second contact it needs, in the repository', () => {
+    expect(placeholdersOf(LEGAL_DOCUMENTS.imprint).sort()).toEqual([PLACEHOLDER.address, PLACEHOLDER.contact, PLACEHOLDER.email].sort())
+    expect(LEGAL_DOCUMENTS.imprint.de.lead).toContain('§ 5 DDG')
   })
 })
 
@@ -49,8 +78,7 @@ describe('the texts', () => {
     expect(all).not.toMatch(/nina|g[uü]lpen|heinsberg|bookretreat/i)
   })
 
-  it('say the German imprint is the one § 5 DDG asks for, and the privacy notice cites the GDPR articles it relies on', () => {
-    expect(LEGAL_DOCUMENTS.imprint.de.lead).toContain('§ 5 DDG')
+  it('cite the GDPR articles the privacy notice relies on', () => {
     const privacy = JSON.stringify(LEGAL_DOCUMENTS.privacy.en)
     for (const article of ['Art. 6(1)(a)', 'Art. 6(1)(b)', 'Art. 6(1)(f)', 'Art. 15 to 21']) expect(privacy).toContain(article)
   })
@@ -75,7 +103,9 @@ describe('the placeholders', () => {
   })
 
   it('come from one table, and every one of them is used', () => {
-    expect([...allPlaceholders()].sort()).toEqual(Object.values(PLACEHOLDER).sort())
+    // The address and the second contact belong to the imprint (and the address to the privacy notice's controller lines) once it is on.
+    const postponed: string[] = IMPRINT_ENABLED ? [] : [PLACEHOLDER.address, PLACEHOLDER.contact]
+    expect([...allPlaceholders()].sort()).toEqual(Object.values(PLACEHOLDER).filter((placeholder) => !postponed.includes(placeholder)).sort())
   })
 
   it('are in both languages of the page that uses them', () => {
@@ -83,7 +113,6 @@ describe('the placeholders', () => {
       const stringify = (lang: 'en' | 'de') => placeholdersIn(JSON.stringify(document[lang])).sort()
       expect(stringify('de')).toEqual(stringify('en'))
     }
-    expect(placeholdersOf(LEGAL_DOCUMENTS.imprint)).toContain(PLACEHOLDER.address)
   })
 })
 

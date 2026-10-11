@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { LEGAL_DOCUMENTS, legalLangOf, placeholdersOf } from '~/legal'
+import { IMPRINT_ENABLED } from '~/legal/config'
 import { LEGAL_LANGS, type LegalLang, type LegalPage } from '~/legal/types'
 import { useSessionStore } from '~/stores/session'
 
@@ -52,7 +53,8 @@ function back() {
         <p v-if="draft" :lang="lang" class="rounded-md bg-fill px-inset py-ms text-caption text-ink-muted" data-testid="legal.draft">{{ DRAFT[lang] }}</p>
       </header>
       <LegalDocument :text="text" :lang="lang" />
-      <LegalLinks class="legal-chrome" />
+      <!-- The other page, once there is one. -->
+      <LegalLinks v-if="IMPRINT_ENABLED" class="legal-chrome" />
     </div>
   </main>
 </template>

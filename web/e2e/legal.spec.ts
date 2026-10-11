@@ -1,17 +1,18 @@
 import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
+import { IMPRINT_ENABLED } from '../app/legal/config'
 import { test } from './fixtures'
 import { expectAccessible, openProfile, signedIn } from './support'
 
 /**
- * The privacy notice and the imprint (docs/legal-checklist.md): public pages, English and German on the
- * same page, linked from the way in and from the Profile. The texts are a draft the owner reviews, so
- * these flows check what the pages are and where they sit, never a sentence of them.
+ * The privacy notice (and the imprint, once `IMPRINT_ENABLED`, legal/config.ts; postponed for the friends
+ * round, docs/legal-checklist.md): public pages, English and German on the same page, linked from the way in
+ * and from the Profile. The texts are a draft the owner reviews, so these flows check what the pages are and
+ * where they sit, never a sentence of them.
  */
-const PAGES = [
-  { path: '/privacy', page: 'privacy', title: { en: 'Privacy notice', de: 'Datenschutzerklärung' } },
-  { path: '/imprint', page: 'imprint', title: { en: 'Imprint', de: 'Impressum' } },
-] as const
+const PRIVACY = { path: '/privacy', page: 'privacy', title: { en: 'Privacy notice', de: 'Datenschutzerklärung' } } as const
+const IMPRINT = { path: '/imprint', page: 'imprint', title: { en: 'Imprint', de: 'Impressum' } } as const
+const PAGES = IMPRINT_ENABLED ? [PRIVACY, IMPRINT] : [PRIVACY]
 
 for (const { path, page: name, title } of PAGES) {
   test(`${path} opens signed out, in English and in German, and the switch changes the text and the address`, async ({ page }) => {
@@ -47,6 +48,7 @@ test.describe('a German device', () => {
 })
 
 test('the notice and the imprint link to each other and keep the language', async ({ page }) => {
+  test.skip(!IMPRINT_ENABLED, 'the imprint is postponed')
   await page.goto('/privacy?lang=de')
   await expect(page.getByTestId('legal.title')).toHaveText('Datenschutzerklärung')
   await page.getByTestId('legal.link').first().click()
@@ -57,21 +59,55 @@ test('the notice and the imprint link to each other and keep the language', asyn
   await expect(page.getByTestId('legal.title')).toBeVisible()
 })
 
-test('the sign-in and the sign-up screens link both pages, and Back goes where she came from', async ({ page }) => {
+test('the privacy notice has no link to the imprint and no postal address while the imprint is postponed', async ({ page }) => {
+  test.skip(IMPRINT_ENABLED, 'the imprint is on')
+  for (const lang of ['en', 'de']) {
+    await page.goto(`/privacy?lang=${lang}`)
+    await expect(page.getByTestId('legal.title')).toBeVisible()
+    await expect(page.getByTestId('legal.link')).toHaveCount(0)
+    await expect(page.getByTestId('legal.links')).toHaveCount(0)
+    await expect(page.getByTestId('legal.text')).not.toContainText(/imprint|impressum|STREET, POSTCODE/i)
+    // The controller by name and e-mail address.
+    await expect(page.getByTestId('legal.text')).toContainText('Fabian Kirchhoff')
+    await expect(page.getByTestId('legal.text')).toContainText('[[EMAIL ADDRESS]]')
+  }
+})
+
+// Nuxt's own error page has a link of its own ("Go back home") that is not a control of Libellus: these two
+// flows do not ask it for a `data-testid` (e2e/fixtures.ts, everyControlHasATestId).
+const unknownAddress = test.extend({ everyControlHasATestId: [async ({}, use) => use(), { auto: true }] })
+
+unknownAddress('/imprint is an address that does not exist while the imprint is postponed, signed out', async ({ page }) => {
+  unknownAddress.skip(IMPRINT_ENABLED, 'the imprint is on')
+  // The same 404 as any unknown address, not the page.
+  await page.goto('/imprint')
+  await expect(page.getByText('404').first()).toBeVisible()
+  await expect(page.getByTestId('legal.screen')).toHaveCount(0)
+})
+
+unknownAddress('signed in, /imprint is the same 404 as any unknown address', async ({ page }) => {
+  unknownAddress.skip(IMPRINT_ENABLED, 'the imprint is on')
+  await signedIn(page)
+  await page.goto('/imprint')
+  await expect(page.getByText('404').first()).toBeVisible()
+  await expect(page.getByTestId('legal.screen')).toHaveCount(0)
+})
+
+test('the sign-in and the sign-up screens link the privacy notice alone, and Back goes where she came from', async ({ page }) => {
   await page.goto('/sign-in')
   await expect(page.getByTestId('signIn.title')).toBeVisible()
   await expect(page.getByTestId('legal.privacy')).toHaveText(en.legal.privacy)
-  await expect(page.getByTestId('legal.imprint')).toHaveText(en.legal.imprint)
-  await page.getByTestId('legal.imprint').click()
+  await expect(page.getByTestId('legal.imprint')).toHaveCount(IMPRINT_ENABLED ? 1 : 0)
+  await page.getByTestId('legal.privacy').click()
   await expect(page.getByTestId('legal.title')).toBeVisible()
-  await expect(page).toHaveURL(/\/imprint\/?(\?.*)?$/)
+  await expect(page).toHaveURL(/\/privacy\/?(\?.*)?$/)
   await page.getByTestId('legal.back').click()
   await expect(page).toHaveURL(/\/sign-in\/?$/)
 
   await page.goto('/sign-up')
   await expect(page.getByTestId('signUp.title')).toBeVisible()
   await expect(page.getByTestId('legal.privacy')).toBeVisible()
-  await expect(page.getByTestId('legal.imprint')).toBeVisible()
+  await expect(page.getByTestId('legal.imprint')).toHaveCount(IMPRINT_ENABLED ? 1 : 0)
   // The one sentence, with the link in it.
   await expect(page.getByTestId('signUp.consent')).toContainText(en.signUp.consent.replace('{privacy}', en.legal.privacyNotice))
   await page.getByTestId('signUp.privacy').click()
@@ -87,11 +123,11 @@ test('opened with no history, Back goes to the sign-in signed out', async ({ pag
   await expect(page).toHaveURL(/\/sign-in\/?$/)
 })
 
-test('a signed-in member finds both pages at the bottom of the Profile and Back returns to it', async ({ page }) => {
+test('a signed-in member finds the privacy notice at the bottom of the Profile and Back returns to it', async ({ page }) => {
   await signedIn(page)
   await openProfile(page)
   await page.getByTestId('legal.privacy').scrollIntoViewIfNeeded()
-  await expect(page.getByTestId('legal.imprint')).toBeVisible()
+  await expect(page.getByTestId('legal.imprint')).toHaveCount(IMPRINT_ENABLED ? 1 : 0)
   await page.getByTestId('legal.privacy').click()
   // Signed in she is not sent Home or anywhere else: the page is hers to read too.
   await expect(page.getByTestId('legal.screen')).toHaveAttribute('data-page', 'privacy')

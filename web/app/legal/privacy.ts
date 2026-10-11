@@ -1,3 +1,4 @@
+import { IMPRINT_ENABLED } from './config'
 import { PLACEHOLDER as X } from './placeholders'
 import type { LegalDocument } from './types'
 
@@ -17,8 +18,8 @@ export const PRIVACY: LegalDocument = {
         heading: 'Who is responsible',
         blocks: [
           { p: 'Responsible under the GDPR is:' },
-          { lines: ['Fabian Kirchhoff', X.address, `Email: ${X.email}`] },
-          { p: 'I run Libellus alone, as a private, non-commercial project. There is no data protection officer; none is required. The [imprint](/imprint) has the same details.' },
+          { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `Email: ${X.email}`] },
+          { p: 'I run Libellus alone, as a private, non-commercial project. There is no data protection officer; none is required.' + (IMPRINT_ENABLED ? ' The [imprint](/imprint) has the same details.' : '') },
         ],
       },
       {
@@ -156,8 +157,8 @@ export const PRIVACY: LegalDocument = {
         heading: 'Wer verantwortlich ist',
         blocks: [
           { p: 'Verantwortlich im Sinne der DSGVO ist:' },
-          { lines: ['Fabian Kirchhoff', X.address, `E-Mail: ${X.email}`] },
-          { p: 'Ich betreibe Libellus allein, als privates Projekt ohne Gewinnabsicht. Einen Datenschutzbeauftragten gibt es nicht; er ist nicht vorgeschrieben. Dieselben Angaben stehen im [Impressum](/imprint).' },
+          { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `E-Mail: ${X.email}`] },
+          { p: 'Ich betreibe Libellus allein, als privates Projekt ohne Gewinnabsicht. Einen Datenschutzbeauftragten gibt es nicht; er ist nicht vorgeschrieben.' + (IMPRINT_ENABLED ? ' Dieselben Angaben stehen im [Impressum](/imprint).' : '') },
         ],
       },
       {

@@ -22,7 +22,7 @@ How:
   the critical paths (docs/TESTING.md, "Which flows"): `web/e2e/a11y.spec.ts`; the public reading page, its
   Book cards, a dead link, the Share sheet and the Book's Share sheet (#171) in
   `web/e2e/reading-page.spec.ts`, with the waitlist form in its states.
-  The privacy notice and the imprint (`/privacy`, `/imprint`), in English and German, in both themes, in
+  The privacy notice (and the imprint, once it is on: `/privacy`, `/imprint`), in English and German, in both themes, in
   `web/e2e/legal.spec.ts`; each text carries its own `lang`, so a screen reader reads the German in German.
 - **The accessibility tree**: Playwright's ARIA snapshot of each screen, and on the Android emulator
   (`libellus-pixel`, Chrome) the node tree TalkBack reads (`uiautomator dump` with TalkBack on), through
