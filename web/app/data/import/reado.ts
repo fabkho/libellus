@@ -1,4 +1,5 @@
 import type { BookSnapshot } from '../books'
+import { normaliseName } from '../collections'
 import type { EntryStatus, SessionOutcome } from '../library'
 import type { ImportEntry, ImportSession } from './fable'
 import { isbnLanguage, toIsbn13, type ReadLanguage } from './readingTracker'
@@ -453,7 +454,8 @@ const STATUS_LISTS: Record<string, string> = {
 export function collectionName(listName: string): string | null {
   if (listName in STATUS_LISTS) return null
   if (listName === '_favorites') return 'Favourites'
-  return listName.replace(/^_+/, '').trim().slice(0, 80) || null
+  // As the database names a Collection: trimmed, runs of spaces collapsed, up to 80 characters.
+  return normaliseName(listName.replace(/^_+/, '')).slice(0, 80) || null
 }
 
 interface Stamped {
