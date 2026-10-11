@@ -15,6 +15,8 @@
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import { getCACertificates, setDefaultCACertificates } from 'node:tls'
 import { createClient } from '@supabase/supabase-js'
 import { chromium, devices, webkit, type Browser, type BrowserContext, type CDPSession, type Page, type Request } from '@playwright/test'
 import { APP_SUPABASE_URL, appUrl, env, MEMBER_EMAIL } from './env'
@@ -165,13 +167,27 @@ export async function memberSession(): Promise<Record<string, string>> {
   return { [`sb-${new URL(APP_SUPABASE_URL).hostname.split('.')[0]}-auth-token`]: value! }
 }
 
-/** The SPKI hash of perf/serve.mjs's certificate: Chromium then trusts it fully (a bare ignore-certificate-errors leaves the page an insecure context, with no service worker). */
+/** The certificate perf/serve.mjs serves with: it makes one for itself in .data/perf/tls-2 before it listens. */
+const harnessCertPath = new URL('../../.data/perf/tls-2/cert.pem', import.meta.url).pathname
+
+/** The SPKI hash of that certificate: Chromium then trusts it fully (a bare ignore-certificate-errors leaves the page an insecure context, with no service worker). */
 function spkiHash() {
-  const cert = new URL('../../.data/perf/tls-2/cert.pem', import.meta.url).pathname
-  const der = execFileSync('openssl', ['x509', '-in', cert, '-pubkey', '-noout'], { encoding: 'utf8' })
+  const der = execFileSync('openssl', ['x509', '-in', harnessCertPath, '-pubkey', '-noout'], { encoding: 'utf8' })
   const raw = execFileSync('openssl', ['pkey', '-pubin', '-outform', 'der'], { input: der })
   return createHash('sha256').update(raw).digest('base64')
 }
+
+/**
+ * Node's side of the same trust: what the harness itself asks of that server (the WebKit cover and API
+ * routes below, which go through `fetch`) trusts this certificate, rather than certificate validation
+ * being switched off for the process. Before anything connects: a TLS client that has connected keeps
+ * the store it was built with, so this must not wait for the first request.
+ */
+function trustHarnessCertificate() {
+  if (!existsSync(harnessCertPath)) return
+  setDefaultCACertificates([...getCACertificates('default'), readFileSync(harnessCertPath, 'utf8')])
+}
+trustHarnessCertificate()
 
 export async function launch(profile: Profile): Promise<Browser> {
   if (profile.engine === 'webkit') return webkit.launch()
@@ -241,7 +257,7 @@ export async function stubTheWorld(context: BrowserContext, profile: Profile) {
     })
     await context.route(/^https:\/\/is1-ssl\.mzstatic\.com\//, async (route) => {
       const res = await fetch(route.request().url().replace('is1-ssl.mzstatic.com', `localhost:${env.coverPort}`), { headers: { 'x-perf-host': 'is1-ssl.mzstatic.com' } }).catch(() => null)
-      // Node's fetch must accept the self-signed certificate: the harness sets NODE_TLS_REJECT_UNAUTHORIZED=0.
+      // Node's fetch trusts the harness's certificate itself (see trustHarnessCertificate).
       if (!res?.ok) return route.fulfill({ status: 404 })
       await route.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' }, body: Buffer.from(await res.arrayBuffer()) })
     })

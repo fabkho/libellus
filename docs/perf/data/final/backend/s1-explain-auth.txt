@@ -1,0 +1,24 @@
+member 2 role authenticated (rows picked: book 65d8db90 series 997d5f7d author OL101A)
+name | exec ms | plan ms | buffers hit | read
+home.list.want_to_read | 1.30 | 0.67 | 565 | 0
+home.list.finished | 3.44 | 0.63 | 1487 | 0
+home.readInYear | 0.62 | 0.38 | 2870 | 0
+home.started_series | 7.19 | 0.00 | 5867 | 0
+home.muted_series_list | 5.67 | 0.00 | 5216 | 0
+library.library_genres | 1.48 | 0.02 | 2218 | 0
+profile.sessions | 1.77 | 1.01 | 1565 | 0
+profile.counts | 0.07 | 0.23 | 10 | 0
+profile.progress_days_83d | 0.51 | 0.78 | 1967 | 0
+profile.days_since | 0.41 | 0.63 | 822 | 0
+search.title_prefix | 3.14 | 0.02 | 1550 | 0
+search.author | 2.78 | 0.02 | 1550 | 0
+search.two_letters | 3.70 | 0.02 | 1550 | 0
+search.one_match | 1.90 | 0.02 | 1165 | 0
+search.isbn | 0.72 | 0.02 | 716 | 0
+book.series_info | 3.12 | 0.00 | 2709 | 0
+book.authors_of | 0.76 | 0.01 | 804 | 0
+book.genres | 1.00 | 0.01 | 971 | 0
+series.series_works | 2.67 | 0.01 | 2436 | 0
+author.author_page | 5.73 | 0.00 | 3895 | 0
+next.next_in_series | 4.57 | 0.00 | 4408 | 0
+next.my_works | 1.82 | 0.02 | 3110 | 0

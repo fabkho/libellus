@@ -1,0 +1,18 @@
+== /
+HTTP/2 200  content-type: text/html; charset=utf-8 cache-control: public, max-age=0, must-revalidate cf-cache-status: DYNAMIC content-encoding: br alt-svc: h3=":443"; ma=86400 size_download=1601 http=2 time=0.089895 
+== /_nuxt/CyfolQEy.js
+HTTP/2 200  content-type: application/javascript cache-control: public, max-age=31536000, immutable etag: W/"9f3c5038598ef4275311a776b9e5ce1e" content-encoding: br age: 154 cf-cache-status: HIT alt-svc: h3=":443"; ma=86400 size_download=54325 http=2 time=0.072560 
+== /_nuxt/entry.DKKMhmGU.css
+HTTP/2 200  content-type: text/css; charset=utf-8 cache-control: public, max-age=31536000, immutable etag: W/"340e1839f2385809e7bd41d09559d909" content-encoding: br age: 156 cf-cache-status: HIT alt-svc: h3=":443"; ma=86400 size_download=11397 http=2 time=0.059550 
+== /sw.js
+HTTP/2 200  content-type: application/javascript cache-control: no-cache etag: W/"fba29ff963f20575fdf46b8e33b29a34" content-encoding: br cf-cache-status: REVALIDATED alt-svc: h3=":443"; ma=86400 size_download=3618 http=2 time=0.064677 
+== /manifest.webmanifest
+HTTP/2 200  content-type: application/manifest+json cache-control: no-cache etag: W/"dabfb71b26243c033d040b6f4cba2478" content-encoding: br cf-cache-status: DYNAMIC alt-svc: h3=":443"; ma=86400 size_download=524 http=2 time=0.070736 
+== /robots.txt
+HTTP/2 200  content-type: text/plain; charset=utf-8 cache-control: public, max-age=0, must-revalidate etag: W/"c19b18a3440c38e7b4d6ff5a8b69a831" content-encoding: br cf-cache-status: EXPIRED alt-svc: h3=":443"; ma=86400 size_download=97 http=2 time=0.075414 
+== /favicon.svg
+HTTP/2 200  content-type: image/svg+xml cache-control: public, max-age=0, must-revalidate etag: W/"90f1f9dfb122687be838e687375a7088" content-encoding: br cf-cache-status: REVALIDATED alt-svc: h3=":443"; ma=86400 size_download=598 http=2 time=0.067646 
+== /icon-192.png
+HTTP/2 200  content-type: image/png content-length: 20910 cache-control: public, max-age=0, must-revalidate etag: "509264c63482391ba104f949d3cfc731" cf-cache-status: REVALIDATED alt-svc: h3=":443"; ma=86400 size_download=20910 http=2 time=0.078652 
+== /_nuxt/builds/latest.json
+HTTP/2 200  content-type: application/json cache-control: public, max-age=1, immutable, public, max-age=31536000, immutable etag: W/"d8d2dd8ba3a02ee545fe5b963c78cb7c" content-encoding: br cf-cache-status: DYNAMIC alt-svc: h3=":443"; ma=86400 size_download=60 http=2 time=0.065568 

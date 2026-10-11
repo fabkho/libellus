@@ -1,0 +1,24 @@
+member 2 role service_role (rows picked: book 0068c94f series babb4cfc author OL1190A)
+name | exec ms | plan ms | buffers hit | read
+home.list.want_to_read | 1.52 | 0.57 | 673 | 0
+home.list.finished | 2.85 | 0.59 | 1038 | 0
+home.readInYear | 0.29 | 0.35 | 407 | 0
+home.started_series | 5.78 | 0.00 | 5086 | 0
+home.muted_series_list | 3.98 | 0.00 | 4072 | 0
+library.library_genres | 1.21 | 0.02 | 1195 | 0
+profile.sessions | 1.82 | 0.85 | 1092 | 0
+profile.counts | 0.04 | 0.17 | 8 | 0
+profile.progress_days_83d | 0.47 | 0.45 | 636 | 0
+profile.days_since | 0.45 | 0.41 | 639 | 0
+search.title_prefix | 10.27 | 0.02 | 23104 | 0
+search.author | 3.70 | 0.02 | 5225 | 0
+search.two_letters | 16.60 | 0.02 | 46429 | 0
+search.one_match | 2.03 | 0.02 | 1172 | 0
+search.isbn | 0.72 | 0.02 | 718 | 0
+book.series_info | 2.72 | 0.00 | 2618 | 0
+book.authors_of | 0.55 | 0.01 | 586 | 0
+book.genres | 0.80 | 0.01 | 799 | 0
+series.series_works | 2.38 | 0.00 | 2346 | 0
+author.author_page | 4.62 | 0.00 | 3763 | 0
+next.next_in_series | 7.47 | 0.00 | 3749 | 0
+next.my_works | 1.84 | 0.02 | 1798 | 0

@@ -1,0 +1,22 @@
+ set_config 
+------------
+ 100
+(1 row)
+
+CREATE TABLE
+GRANT
+SELECT 300
+GRANT
+DO
+RESET
+           what            |  n  | p50_ms | p95_ms | max_ms 
+---------------------------+-----+--------+--------+--------
+ feed page 1 (30)          | 100 |  16.98 |  18.26 |  22.76
+ feed page 2 (keyset)      | 100 |  16.54 |  17.77 |  18.60
+ member_profile (followed) | 100 |   2.48 |   2.68 |   3.84
+ member_profile (stranger) | 100 |   2.35 |   2.57 |   2.71
+ member_reading_record     | 100 |   3.23 |   3.65 |   3.94
+ member_want               | 100 |   2.03 |   2.57 |   2.76
+ my_people                 | 100 |   6.07 |   6.55 |   7.09
+(7 rows)
+
