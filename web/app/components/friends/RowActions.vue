@@ -37,12 +37,13 @@ const wants = computed(() => Boolean(props.book && wantState(props.book, library
 const likes = computed(() => Boolean(props.like && likeable(props.like)))
 const height = computed(() => ({ sm: 'h-[calc(var(--size-cover-sm)*1.5)]', md: 'h-[calc(var(--size-cover-md)*1.5)]', lg: 'h-[calc(var(--size-cover-lg)*1.5)]', avatar: 'h-[max(var(--size-avatar),var(--size-touch))]' })[props.cover])
 // How far the touch box of an icon of the pair reaches outward (away from the other icon): what 44 px needs, or less
-// where the row has no more room: the space above and below the pair inside the cover, and the row's own padding.
+// where the row has no more room: the space above and below the pair inside the cover, and the row's own padding
+// (`--row-pad`, set by a row that has more than 8 px: the feed row's 14 px gives an `sm` pair its full 44 px).
 const pair = computed(() => wants.value && likes.value)
 const reach = computed(
   () =>
     ({
-      sm: '[--reach:min(calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2),calc((var(--size-cover-sm)_*_1.5_-_2_*_var(--size-target)_-_var(--spacing-xs))_/_2_+_var(--spacing-sm)))]',
+      sm: '[--reach:min(calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2),calc((var(--size-cover-sm)_*_1.5_-_2_*_var(--size-target)_-_var(--spacing-xs))_/_2_+_var(--row-pad,_var(--spacing-sm))))]',
       md: '[--reach:calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2)]',
       lg: '[--reach:calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2)]',
       avatar: '[--reach:calc(var(--size-touch)_-_var(--size-target)_-_var(--spacing-xs)_/_2)]',

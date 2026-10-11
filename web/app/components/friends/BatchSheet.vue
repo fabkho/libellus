@@ -28,7 +28,7 @@ const title = computed(() => (props.batch.kind ? t('feed.batchTitle', { name: na
   >
     <p class="eyebrow pb-xs" data-testid="friendsBatch.day">{{ dayLabel }}</p>
     <ul class="flex flex-col divide-y divide-hairline" data-testid="friendsBatch.list">
-      <FriendsFeedRow v-for="entry in batch.entries" :key="entry.id" :entry="entry" :bare="batch.kind !== null" size="sm" testid="friendsBatch.row" />
+      <FriendsFeedRow v-for="entry in batch.entries" :key="entry.id" :entry="entry" :bare="batch.kind !== null" testid="friendsBatch.row" />
     </ul>
   </UiSheet>
 </template>
