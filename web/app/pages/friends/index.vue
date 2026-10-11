@@ -26,9 +26,10 @@ useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
 
 onMounted(() => void feed.refresh())
 
-// Home is where the feed is reached from: back always leads there, by history when it came from it.
+// The feed is reached from Home (Your circle ›), the Profile's Friends row and a member's page: back is to wherever she
+// came from, scroll kept (as People's); Home only for a feed opened directly (utils/back.ts).
 function back() {
-  if (window.history.state?.back === '/') router.back()
+  if (canGoBack(window.history.state)) router.back()
   else void navigateTo('/')
 }
 

@@ -87,7 +87,7 @@ function pickStars(star: number) {
 
 // Back to her profile it came from (or to it, opened from an address).
 function back() {
-  if (String(window.history.state?.back ?? '').startsWith(`/friends/${id.value}`)) router.back()
+  if (canGoBack(window.history.state)) router.back()
   else void navigateTo(`/friends/${id.value}`)
 }
 </script>
