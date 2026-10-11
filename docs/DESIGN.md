@@ -299,16 +299,22 @@ medium only inside a feed sentence (a feed row, Home's friends rows and its requ
 - **Year in review** (`pages/profile/[year].vue`): pushed from the Profile, lit by the year's
   favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
   their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
-  and the years either side (they replace the page, so Back is the Profile). For the owner only, a
-  card under the months with that year's Books as Regal's 3D row, starting at January (its pile
-  standing in while the library file loads). Loads like the Profile: its shape at once, a cover's
+  and the years either side (they replace the page, so Back is the Profile). A card under the
+  months with that year's Books as Regal's 3D row, starting at January, and a quiet Show all to
+  that year's Stack full screen. Loads like the Profile: its shape at once, a cover's
   placeholder in every month gone by.
-- **Your shelf** (`pages/profile/shelf.vue`, #23; the owner's account only, nothing anywhere for
-  anyone else): Regal's 3D Stack of the published library file, the one the portfolio shows. A
-  pushed screen that fills the column (`immersive`: the tab bar steps away) in the **night room in
-  either theme**: the page carries `data-theme="dark"`, so every token takes its Night value inside
-  it, and the status bar takes the room's colour while it is open. A bookcase is an object in a
-  room, like a cover; the lamp-lit dark lets the Spines carry the colour (principle 2). The round
+- **Your shelf** (`pages/profile/shelf.vue`, #23, #214; every member's own, built on the device
+  from her Library; the owner's is the published library file his portfolio shows): Regal's 3D
+  Stack. **One colour per Book**: each Book's Spine and back are flat in its cover's most common
+  colour (`utils/bookColour.ts`: saturation at most 0.55, lightness 0.14–0.84, nudged out of the
+  middle band until the ink reads at 4.5:1), the title and author printed along the Spine in Regal's
+  ink or paper, whichever contrasts more, a quiet title block on the back; the front stays the cover
+  (a Book without one: the Placeholder's cloth, and a front drawn like its back). The pile reads as
+  a bookcase, not as noise: no colour louder than a printed cloth, no type that doesn't read. A
+  pushed screen that fills the column (`immersive`: the tab bar steps away) **in the member's own
+  theme** (it used to force the night room; a member in the dark theme gets it): a bookcase is an
+  object in a room, like a cover, and the room is hers. Nothing read yet: the lamp over the empty
+  shelf (`UiEmptyState`), never an empty room. The round
   back button and the title pinned, the count beside them in mono, the Stack below, its view
   reaching up behind the top bar so the pile starts above the middle. Regal's own parts (the tooltip
   and the Book's detail panel, a card, or on a phone a bottom sheet) wear D's tokens in the room's
@@ -329,14 +335,14 @@ medium only inside a feed sentence (a feed row, Home's friends rows and its requ
   Front cover at the right in the lamp colour; no pills), then the title in the book-title style,
   one mono line of facts (author, day, pages), the blurb in four lines and a trailing Goodreads
   link. Regal keeps the container.
-  The Profile shows it as a section like the others ("Your shelf", the count, a quiet Show all only
-  when there are more Books than its row holds) over a raised card filled edge to edge by Regal's
+  The Profile shows it as a section like the others ("Your shelf", the count, a quiet Show all
+  whenever a Book stands on it; nothing read yet: one quiet line in the card's place) over a raised card filled edge to edge by Regal's
   row (`RegalBooksRow`, `regal-themed` in the app's theme): the Stack turned on its side, the newest
   80 Books standing Spines out, a sheet and the month between months. The year in review has the
   same card with that year's Books. The row scrolls sideways under the finger and never traps the
   page's scroll; a Book tapped breaks out over the whole screen, header and tab bar included, and
   Done, Escape, a tap beside it or the system's Back lands it in the row again. The row has no loading
-  step of ours: the owner's screens warm it ahead on idle (Regal's `preloadRegal`: the library file,
+  step of ours: the owner's screens warm it ahead on idle, anyone's card when it mounts (Regal's `preloadRegal`: the library file,
   the 3D code, the first Spines), so it appears with Regal's own intro, the Stack's turned on its side;
   where nothing is drawn yet (a first visit with no head start) the card is its plain surface until the
   row has its Spines, never slabs, a spinner or a shimmer. Only the shelf page's Stack, which has no

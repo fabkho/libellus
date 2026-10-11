@@ -177,11 +177,22 @@ export function exportRegalLibrary(entries: readonly RegalExportEntry[], options
   }
 }
 
+/** One formatter per zone: making one costs more than formatting with it (a member's shelf builds 1,000 days at once). */
+const dayFormats = new Map<string, Intl.DateTimeFormat>()
+function dayFormat(timeZone: string): Intl.DateTimeFormat {
+  let format = dayFormats.get(timeZone)
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+    dayFormats.set(timeZone, format)
+  }
+  return format
+}
+
 /** An instant (ISO date-time) as the calendar day it falls on in a time zone, `YYYY-MM-DD`. */
 export function dayIn(instant: string, timeZone: string): string | null {
   const date = new Date(instant)
   if (Number.isNaN(date.getTime())) return null
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+  const parts = dayFormat(timeZone).formatToParts(date)
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
   return `${part('year')}-${part('month')}-${part('day')}`
 }

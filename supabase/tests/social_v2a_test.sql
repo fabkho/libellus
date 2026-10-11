@@ -353,9 +353,15 @@ select is(public."like"(tests.session_of((select id from ids where name = 'pir')
 
 -- The count and the flag in the answers.
 select tests.act_as((select id from ids where name = 'ben'));
-select is(tests.entry_of(public.feed(), 'Piranesi', 'finished') -> 'likes', '3'::jsonb, 'the feed counts the likes');
-select is(tests.entry_of(public.feed(), 'Piranesi', 'finished') -> 'liked', 'true'::jsonb, 'and says she liked it');
-select is(tests.entry_of(public.feed(), 'Circe', 'finished') -> 'liked', 'false'::jsonb, 'another read of hers she did not: false');
+-- The feed is read with its largest page (50) from here on. Every activity row this file writes is
+-- written in one transaction, and `visible_at` is `now()` (the transaction's, so the same for all of
+-- them) plus the settle window, which the fixture zeroes; with one `visible_at` everywhere the feed's
+-- `order by visible_at desc, id desc` breaks every tie on the row's random uuid. Ben's feed holds 32
+-- rows here, so the default 30-row cut would keep a different 30 each run and these assertions on a
+-- named entry would flake. Asking for the whole page asserts on every row.
+select is(tests.entry_of(public.feed(null, null, 50), 'Piranesi', 'finished') -> 'likes', '3'::jsonb, 'the feed counts the likes');
+select is(tests.entry_of(public.feed(null, null, 50), 'Piranesi', 'finished') -> 'liked', 'true'::jsonb, 'and says she liked it');
+select is(tests.entry_of(public.feed(null, null, 50), 'Circe', 'finished') -> 'liked', 'false'::jsonb, 'another read of hers she did not: false');
 select is(tests.row_of(public.member_profile((select id from ids where name = 'ida')), 'Piranesi') -> 'likes', '3'::jsonb, 'the profile counts too');
 select is(tests.row_of(public.member_profile((select id from ids where name = 'ida')), 'Circe') -> 'liked', 'false'::jsonb, 'and says who liked');
 
@@ -414,7 +420,7 @@ select tests.act_as((select id from ids where name = 'ida'));
 select public.remove_follower((select id from ids where name = 'rf'));
 select is(tests.likes_of(tests.session_of((select id from ids where name = 'cir'))), 2::bigint, 'a removed follower''s like goes');
 select tests.act_as((select id from ids where name = 'ben'));
-select is(tests.entry_of(public.feed(), 'Circe', 'finished') -> 'likes', '2'::jsonb, 'the feed counts what is left');
+select is(tests.entry_of(public.feed(null, null, 50), 'Circe', 'finished') -> 'likes', '2'::jsonb, 'the feed counts what is left');
 select public."like"(tests.session_of((select id from ids where name = 'ham')));
 select tests.act_as((select id from ids where name = 'sam'));
 select public."like"(tests.session_of((select id from ids where name = 'ham')));
@@ -528,7 +534,7 @@ select ok((select relrowsecurity from pg_class where oid = 'public.likes'::regcl
 -- Ben finishes Piranesi too (another edition of the work): the fold lifts, and it is a book they share.
 select tests.act_as((select id from ids where name = 'ben'));
 insert into ids values ('b_pir', tests.finished('Piranesi (Ben''s)', 'OL7770001W', 14, null));
-select is(tests.entry_of(public.feed(), 'Piranesi', 'finished') -> 'folded', 'false'::jsonb, 'once Ben has finished the Book his fold lifts');
+select is(tests.entry_of(public.feed(null, null, 50), 'Piranesi', 'finished') -> 'folded', 'false'::jsonb, 'once Ben has finished the Book his fold lifts');
 select is((select array_agg(r -> 'book' ->> 'title' order by ord)
              from jsonb_array_elements(public.both_read((select id from ids where name = 'ida'))) with ordinality t(r, ord)),
           array['Piranesi', 'Circe', 'Secret Book', 'Old One'],

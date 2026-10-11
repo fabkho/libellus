@@ -1048,15 +1048,22 @@
     "loadError": "Your shelf could not be loaded.",
     "offline": "You're offline. Your shelf shows once you're back.",
     "retry": "Try again",
+    "noChunk": "Your shelf needs a connection the first time. It opens offline after that.",
+    "empty": {
+      "title": "Nothing on the shelf yet",
+      "text": "The books you finish stand here, each in its cover's colour."
+    },
     "card": {
       "title": "Your shelf",
       "rowLabel": "Your shelf, the newest books",
       "all": "Show all",
-      "allLabel": "Show all {count} book on your shelf | Show all {count} books on your shelf"
+      "allLabel": "Show all {count} book on your shelf | Show all {count} books on your shelf",
+      "empty": "Finish a book and it stands here."
     },
     "year": {
       "title": "On the shelf",
-      "rowLabel": "{year} on your shelf"
+      "rowLabel": "{year} on your shelf",
+      "allLabel": "Show the {count} book of {year} on your shelf | Show the {count} books of {year} on your shelf"
     },
     "detail": {
       "showBack": "Show back",

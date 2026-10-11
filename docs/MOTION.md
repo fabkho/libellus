@@ -331,8 +331,9 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   each, a third of `instant` apart, from `sm` above; then they hold still (no shimmer, no breathing),
   and once Regal's Stack has the Library and has drawn, it fades in over `standard` and the slabs fade
   out over the same, in place. The cards' row (the Profile's, a year in review's, Home's *Read in*
-  sheet) has no stand-in and no fade of ours: the owner's screens warm it on idle, and the card, which
-  keeps its size, is its plain surface until the row has drawn the Spines in view; then Regal's intro
+  sheet) has no stand-in and no fade of ours: the owner's screens warm it on idle (anyone's card warms
+  its own when it mounts), and the card, which keeps its size, is its plain surface until the row has
+  drawn the Spines in view; then Regal's intro
   plays, the Stack's turned for a row (each Book pops in a little to the right of its place and slides
   home, cascading from the left, the newest last, 0.7 s; the month sheets, dates, focus label and scroll
   bar fade in as they settle), once per mount and not at all with Reduce Motion, where the row simply
@@ -341,7 +342,11 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   the intro plays where it is seen. The 3D itself moves as Regal decides (the Stack's scroll and flick,
   the row's sideways scroll with the Books tipping towards you as they pass the middle, a Book coming
   out and turning, a Book breaking out of the row to the middle of the screen and landing back where it
-  was shown): Regal's own motion, which honours Reduce Motion itself.
+  was shown): Regal's own motion, which honours Reduce Motion itself. A member's shelf (every Book in
+  its one colour, flat faces) adds no motion of its own: a Book far from the view starts as its plain
+  colour and its title is printed on before it scrolls in (a view height ahead, further ahead in a
+  fling), so a Spine is never seen changing; the low-power and Reduce Motion rules are Regal's Stack
+  rules, unchanged (on-demand frames on phones, no intro or shuffle with Reduce Motion).
 - **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
   changes to another edition: the old cover, title, author and facts (and what the Book is about)
   lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
