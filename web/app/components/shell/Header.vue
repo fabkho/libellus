@@ -43,19 +43,23 @@ onUnmounted(() => document.removeEventListener('visibilitychange', refreshReques
   <header class="bar-top relative z-20 px-screen" data-testid="shell.header">
     <div class="flex h-(--size-touch) items-center justify-between gap-sm">
       <ShellSyncChip />
-      <NuxtLink
-        to="/profile"
-        :aria-label="requestWaits ? t('shell.avatarRequest') : t('shell.avatarLabel')"
-        class="-mr-sm flex shrink-0 size-(--size-touch) items-center justify-center"
-        data-testid="shell.avatar"
-      >
-        <span class="relative flex">
-          <UiAvatar :initials="initials" :photo="avatar.small" data-profile-avatar />
-          <Transition name="dot">
-            <span v-if="requestWaits" class="request-dot pointer-events-none absolute rounded-pill bg-accent" aria-hidden="true" data-testid="shell.avatarDot" />
-          </Transition>
-        </span>
-      </NuxtLink>
+      <!-- A tab's own button (the Friends tab's People) sits beside the avatar, at the trailing edge. -->
+      <div class="flex shrink-0 items-center">
+        <slot name="actions" />
+        <NuxtLink
+          to="/profile"
+          :aria-label="requestWaits ? t('shell.avatarRequest') : t('shell.avatarLabel')"
+          class="-mr-sm flex shrink-0 size-(--size-touch) items-center justify-center"
+          data-testid="shell.avatar"
+        >
+          <span class="relative flex">
+            <UiAvatar :initials="initials" :photo="avatar.small" data-profile-avatar />
+            <Transition name="dot">
+              <span v-if="requestWaits" class="request-dot pointer-events-none absolute rounded-pill bg-accent" aria-hidden="true" data-testid="shell.avatarDot" />
+            </Transition>
+          </span>
+        </NuxtLink>
+      </div>
     </div>
     <div class="flex min-w-0 flex-col gap-sm py-bar">
       <p v-if="eyebrow" class="eyebrow" :data-testid="`${screen}.date`">{{ eyebrow }}</p>

@@ -229,6 +229,7 @@
       "title": "Konto",
       "theme": "Dunkelmodus",
       "glass": "Glas",
+      "friendsTab": "Freunde-Tab",
       "glassLevel": {
         "strong": "Stark",
         "medium": "Mittel",
@@ -297,6 +298,7 @@
   "tabs": {
     "home": "Startseite",
     "library": "Bibliothek",
+    "friends": "Freunde",
     "search": "Suche"
   },
   "home": {

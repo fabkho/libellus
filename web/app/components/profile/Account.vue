@@ -23,6 +23,7 @@
 // chrome is on this device — Strong, Medium, Off (no transparency at all), a segmented choice in
 // the row — to compare on a phone.
 import { useAvatarStore } from '~/stores/avatar'
+import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useSessionStore } from '~/stores/session'
@@ -54,6 +55,10 @@ onMounted(() => void errors.load())
 // Waitlist (#171): the owner's too, with the same guard.
 const waitlist = useWaitlistStore()
 onMounted(() => void waitlist.load())
+// Friends tab: the feed in the tab bar, on until she turns it off (stores/friendsTab.ts).
+const friendsTab = useFriendsTabStore()
+const showFriendsTab = computed({ get: () => friendsTab.enabled, set: (on: boolean) => friendsTab.set(on) })
+
 // Glass: the owner's, like Errors.
 const glass = useGlassStore()
 const glassLevel = computed({ get: () => glass.level, set: (level: GlassLevel) => glass.set(level) })
@@ -192,6 +197,7 @@ const whatsNew = useWhatsNew()
         data-testid="profile.install"
         @click="installApp.install()"
       />
+      <UiSwitchRow v-model="showFriendsTab" icon="people" :label="t('profile.account.friendsTab')" testid="profile.friendsTab" />
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
       <UiRow
         as="button"

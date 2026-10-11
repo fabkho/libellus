@@ -57,6 +57,10 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
   with Reduce Motion).
+- **Friends tab on or off** (Profile → Account → Friends tab). The tab's width opens or closes to 0
+  under a fade over `standard`, so the capsule (centred on the screen) grows or shrinks about its middle
+  and the tabs beside it slide to their new places; the page does not move. With Reduce Motion it is a swap.
+  (Width is laid out for a 62 px bar, and only while the switch is turned: nothing else of the page is.)
 - **Push to the Profile** (#78). Tapping the avatar in a tab's header grows it into the Profile's
   ring over `standard`, as a cover flies into a book's hero: the Profile fades in as the tab fades
   out (one's opacity the other's complement) and rises `md` into place; the tab bar does not move,
@@ -313,7 +317,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   still loading) is waited for a frame or so, at most `standard`, and the cover then fades where
   it is. What goes wrong, and what the flight does instead, is listed under *How the push to a
   book is built*.
-- **Tab bar away.** On every page (Home, Library, the Profile, a book, Collections, a Collection, Import) the tab bar
+- **Tab bar away.** On every page (Home, Library, Friends, the Profile, a book, Collections, a Collection, Import) the tab bar
   slides down past the screen edge and fade out while the member scrolls down, and
   come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
   by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
