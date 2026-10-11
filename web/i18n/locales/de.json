@@ -177,7 +177,7 @@
       "pagesPerBook": "{count} pro Buch",
       "unrated": "{count} noch nicht bewertet",
       "rated": "{count} bewertet",
-      "usually": "meistens, von Anfang bis Ende"
+      "usually": "meist Start bis Ende"
     },
     "byMonth": "Nach Monat",
     "byYear": "Nach Jahr",
@@ -446,7 +446,7 @@
       "sortKey": {
         "dateRead": "Lesedatum",
         "dateStarted": "Startdatum",
-        "dateAdded": "Hinzugefügt am",
+        "dateAdded": "Hinzugefügt",
         "rating": "Bewertung",
         "title": "Titel",
         "author": "Autor",
@@ -480,7 +480,7 @@
       },
       "status": {
         "finished": "Gelesen",
-        "notFinished": "Nicht gelesen"
+        "notFinished": "Abgebrochen"
       }
     }
   },
@@ -552,13 +552,13 @@
     "since": "Seit {date} · Tag {day}",
     "start": "Lesen beginnen",
     "finish": "Beenden",
-    "abandon": "Abbrechen",
+    "abandon": "Weglegen",
     "readAgain": "Nochmal lesen",
     "startAgain": "Nochmal beginnen",
     "options": "Buchoptionen",
     "progress": {
       "label": "Lesefortschritt",
-      "none": "Noch nicht begonnen",
+      "none": "Noch offen",
       "notStarted": "Nicht begonnen · {count} Seite | Nicht begonnen · {count} Seiten",
       "notStartedNoCount": "Nicht begonnen · Keine Seitenzahl",
       "notStartedPercent": "Nicht begonnen · In Prozent",
@@ -567,7 +567,7 @@
       "percent": "{percent} %",
       "update": "Fortschritt aktualisieren",
       "updateShort": "Aktualisieren",
-      "title": "Fortschritt aktualisieren",
+      "title": "Fortschritt",
       "save": "Speichern",
       "busy": "Speichere …",
       "retry": "Nochmal versuchen",
@@ -602,8 +602,8 @@
       "undoLabel": "{change} rückgängig machen",
       "saved": "Fortschritt gespeichert, {change}. Daneben kannst du es einige Sekunden lang rückgängig machen.",
       "theEnd": "Ende.",
-      "perDay": "{count} am Tag",
-      "perDayPercent": "{count} % am Tag",
+      "perDay": "{count} pro Tag",
+      "perDayPercent": "{count} % pro Tag",
       "days": "1 Tag | {count} Tage",
       "paceLine": "{perDay} · {days}",
       "endLine": "{days} · {perDay}",
@@ -628,8 +628,8 @@
       "chartLabel": "Gelesen in den letzten {count} Tagen: {amount} insgesamt",
       "logTitle": "Leselog",
       "logEnd": "S. {page}",
-      "readIn": "Gelesen in {days} · {perDay}",
-      "readPerDayPages": "1 Seite am Tag | {count} Seiten am Tag"
+      "readIn": "Lesedauer: {days} · {perDay}",
+      "readPerDayPages": "1 Seite pro Tag | {count} Seiten pro Tag"
     },
     "edition": {
       "open": "Ausgabe ändern",
@@ -696,7 +696,7 @@
     }
   },
   "add": {
-    "title": "Zur Bibliothek hinzufügen",
+    "title": "Zur Bibliothek",
     "statusLabel": "Status",
     "needs": {
       "want_to_read": "Ohne Datum",
@@ -1764,7 +1764,7 @@
     "following": "Du folgst",
     "followers": "Follower",
     "requests": "Anfragen",
-    "askedOn": "angefragt {when}",
+    "askedOn": "Anfrage {when}",
     "followsYouNow": "folgt dir jetzt",
     "accepted": "{name} folgt dir jetzt.",
     "declined": "Anfrage von {name} abgelehnt.",
@@ -1820,11 +1820,15 @@
     "missingTitle": "Diesen Link gibt es nicht mehr.",
     "missing": "Frag nach einem neuen."
   },
+  "language": {
+    "row": "Sprache",
+    "label": "Sprache der App"
+  },
   "friends": {
     "section": "Freunde",
     "title": "Deine Freunde",
     "more": "Mehr anzeigen",
-    "askedLine": "möchte dir folgen",
+    "askedLine": "will dir folgen",
     "want": "hat {title} zu „Möchte ich lesen“ hinzugefügt",
     "join": " · ",
     "and": " und ",

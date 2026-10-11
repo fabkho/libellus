@@ -12,6 +12,7 @@ Libellus has one source language, English: `web/i18n/locales/en.json`. German (`
 | `web/scripts/i18n/verify.mjs` | The checks: keys, placeholders, plural forms, links, English left over, length, quotes, gender signs. |
 | `web/tests/i18n-parity.test.ts` | The Vitest parity test (fails when `de.json` and `en.json` drift). |
 | `docs/i18n/german-glossary.md` | The glossary decisions, as a table to correct, and the check against Goodreads' German. |
+| `docs/i18n/german-pass.md` | The German pass: every main screen in German at 390 and 360 px, in both themes, and what it found. |
 | `docs/i18n/german-review.md` | How the first full translation was reviewed: what was changed, what is still open. |
 | `web/i18n/locales/de.json`, `web/.i18n-kit.lock.json` | The German messages and the kit's record of which English each was made from (commit both). |
 | `docs/i18n/german-sample.md` | The dry run: 49 strings, English and German side by side, three models compared. |
@@ -127,3 +128,15 @@ Translates the 49 strings in `scripts/i18n/sample-keys.json` into `web/.i18n-sam
 - **Not deterministic**: a second run on the same key can word it differently. The kit never overwrites an existing translation, so this only matters when you redo a key.
 - **The model sees one string, not the screen.** See "Review" above.
 - `{'@'}` (vue-i18n literal) is not checked by the kit; `verify.mjs` checks it. `<i18n-t>` messages are plain strings with a named slot: the kit protects `{slot}` like any placeholder.
+
+## How the app chooses its language, and how a new one is added
+
+`web/app/utils/locale.ts` is the rule (docs/parity.md, *Language*): the member's choice on the Profile's Language row, else the first language of `navigator.languages` the app speaks, else English. `web/app/plugins/locale.client.ts` hands the result to `@nuxtjs/i18n` before the first paint, so only that language's messages are downloaded. The module's own detection stays off (`detectBrowserLanguage: false`).
+
+To add a language (say French, `fr`):
+
+1. Add `{ code: 'fr', language: 'fr-FR', file: 'fr.json', name: 'Français' }` to `i18n.locales` in `nuxt.config.ts`.
+2. Add `{ code: 'fr', name: 'Français' }` to `APP_LOCALES` and let `AppLocale`, `parseLocale` and `localeOfTag` know it (`utils/locale.ts`); the Profile row lists `APP_LOCALES` and picks it up.
+3. Add `fr` to `locales` in `web/i18n-kit.config.ts`, a `localeNotes` entry (register, quotes, gender rules), a `fr` for every term of `glossary.json` and `examples.json`, and a rule or two in `ai-context.md` (its quotation marks, its date order).
+4. Make the file, review it, and read it on a screen: `run.mjs` targets `de` only today (`--targetLocales de`, `i18n/locales/de.json`), so generalise it first; then the German pass's spec with `fr` in place of `de`. The parity test and the compile test in `tests/` take the new file the way they take `de.json`; `legalLangOf` and the legal pages have their own texts per language (`app/legal`).
+5. Plurals: vue-i18n's default picks the first form for exactly one; a language with more forms (Polish, Russian, Arabic) needs a `pluralRules` entry in `i18n.config.ts`, and the checks in `verify.mjs` (they compare the *number* of forms with the English) will need to allow its count.

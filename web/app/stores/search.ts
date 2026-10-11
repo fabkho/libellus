@@ -104,12 +104,17 @@ export const useSearchStore = defineStore('search', () => {
     if (seen.size > SEEN_LIMIT) seen.delete(seen.keys().next().value!)
   }
 
+  const searchLanguages = useSearchLanguages()
   let source: Search | null = null
-  /** The search repository, set up for this device's languages (the storefronts follow them). */
+  let sourceLanguage = ''
+  /** The search repository, set up for the app's language, then the device's (the storefronts follow them); made again when the app's changes. */
   function repository(): Search {
+    const languages = searchLanguages()
+    if (sourceLanguage !== languages[0]) source = null
+    sourceLanguage = languages[0] ?? ''
     source ??= createSearch({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: catalogue ?? undefined,
     })
     return source

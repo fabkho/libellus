@@ -180,6 +180,7 @@ const whatsNew = useWhatsNew()
         <span v-else-if="waitlist.waitingCount !== null" class="text-ink-faint" data-testid="profile.waitlistValue">{{ t('waitlist.rowNone') }}</span>
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
+      <ProfileLanguage />
       <UiRow v-if="errors.isOwner" icon="stack" :label="t('profile.account.glass')">
         <template #trailing>
           <UiSegmented v-model="glassLevel" compact :options="glassOptions" :label="t('profile.account.glass')" testid="profile.glass" />

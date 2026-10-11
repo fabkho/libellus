@@ -250,6 +250,13 @@ export async function enrichBook(
       break
     }
   }
+  // A split volume ("The Dragonbone Chair, part 1") is not a member of the series its novel is in.
+  let splitVolume = false
+  if (work) {
+    const whole = await withoutSplitPlaces(work, sources)
+    splitVolume = whole.series.length < work.series.length
+    work = whole
+  }
   if (work) {
     used.add('wikidata')
     const genreLabels = await labelsOf(sources, work.genres)
@@ -280,18 +287,18 @@ export async function enrichBook(
     }
     if (stale.length) {
       for (const qid of stale) payload.series.push({ ...seriesPayload(qid, facts.get(qid)), fetched: true })
-      for (const member of await sources.wdSeriesWorks(stale)) {
+      for (const member of wd.withoutSplitVolumes(await sources.wdSeriesWorks(stale))) {
         if (member.qid === work.qid || member.kind === null || member.kind === 'short-story') continue
         payload.works.push(listedWorkPayload(member, facts))
       }
     }
-  } else if (olWork?.series.length) {
+  } else if (!splitVolume && olWork?.series.length) {
     for (const place of olWork.series.slice(0, 3)) {
       const name = await sources.olSeriesName(place.key)
       if (name) series.push({ series: { openlibrary: place.key, name }, position: place.position, source: 'openlibrary' })
     }
   }
-  if (!series.length) {
+  if (!series.length && !splitVolume) {
     for (const text of edition?.seriesText ?? []) {
       const parsed = ol.parseSeriesText(text)
       if (parsed) {
@@ -425,6 +432,25 @@ function listedWorkPayload(work: wd.ListedWork, series: Map<string, wd.SeriesFac
   }
 }
 
+/**
+ * The work without its places as a split volume: a place at a decimal position x.y whose novel at
+ * position x of the same series (a work it is part of, P361/P1433) is "<its title>, part N".
+ */
+async function withoutSplitPlaces(work: wd.WorkFacts, sources: Sources): Promise<wd.WorkFacts> {
+  const decimal = work.series.some((p) => p.position !== null && !Number.isInteger(p.position))
+  if (!decimal || !work.wholes.length) return work
+  const entities = await sources.wdEntities(work.wholes.slice(0, 3), ['labels', 'claims'])
+  const wholes = [...entities.values()].map((entity) => wd.parseWork(entity, sources.languages))
+  const series = work.series.filter((place) =>
+    !wd.isSplitVolume(
+      work,
+      place.position,
+      wholes.filter((whole) => whole.series.some((s) => s.series === place.series && s.position === Math.trunc(place.position!))),
+    )
+  )
+  return { ...work, series }
+}
+
 // ------------------------------------------------------------------- Author
 
 /**
@@ -478,7 +504,7 @@ export async function enrichAuthor(ref: AuthorRef, ctx: EnrichContext): Promise<
   })
 
   // Works: Wikidata's list (with series), Open Library's per language (covers, editions).
-  const listed = qid ? (await sources.wdAuthorWorks(qid)).filter((w) => w.kind !== null && w.kind !== 'short-story') : []
+  const listed = qid ? wd.withoutSplitVolumes(await sources.wdAuthorWorks(qid)).filter((w) => w.kind !== null && w.kind !== 'short-story') : []
   const olDocs = new Map<string, Map<string, ol.OlSearchDoc>>()
   if (openlibrary) {
     for (const language of sources.languages) {

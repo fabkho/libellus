@@ -1820,6 +1820,10 @@
     "missingTitle": "This link isn't here any more.",
     "missing": "Ask for a new one."
   },
+  "language": {
+    "row": "Language",
+    "label": "Language of the app"
+  },
   "friends": {
     "section": "Friends",
     "title": "Your friends",
