@@ -52,6 +52,12 @@ export type Search = {
    * update is reported after that.
    */
   search: (query: string, options?: SearchOptions) => Promise<SearchOutcome>
+  /**
+   * Apple Books' ebook editions for a title and author, from its first storefront only (one request): where
+   * the other sources were asked already and only a cover is wanted (the import's cover fill). `failed` when
+   * Apple did not answer (refused, unreachable).
+   */
+  searchCovers: (query: string, options?: { signal?: AbortSignal }) => Promise<{ results: { book: BookSnapshot }[]; pending: false; failed: boolean }>
   /** One Apple Book by its track id: a book page opened cold. Null when no storefront has it; rejects when none answered. */
   lookupApple: (appleId: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
   /** One edition by ISBN-13: Apple Books first, then OpenLibrary. Null or a rejection as `lookupApple`. */
@@ -149,6 +155,14 @@ export function createSearch(options: {
 
   return {
     search,
+    async searchCovers(query, { signal } = {}) {
+      try {
+        return { results: (await apple.searchFirst(query.trim(), signal)).map(({ book }) => ({ book })), pending: false, failed: false }
+      } catch {
+        if (signal?.aborted) throw abortError()
+        return { results: [], pending: false, failed: true }
+      }
+    },
     lookupApple: (appleId, { signal } = {}) => apple.lookupId(appleId, signal),
     lookupAppleIsbn,
     async lookupIsbn(isbn13, { signal } = {}) {
