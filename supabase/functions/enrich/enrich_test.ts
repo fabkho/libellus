@@ -131,3 +131,35 @@ Deno.test('an author and series fetched within 30 days are not asked about again
   assert(!asked.some((url) => url.includes('/authors/OL26980A') && url.includes('search')))
   assert(!asked.some((url) => url.includes('wikipedia.org')))
 })
+
+Deno.test('Williams, The Dragonbone Chair: the paperback halves are no members of Memory, Sorrow, and Thorn', async () => {
+  const { payload } = await run('williams-dragonbone-chair')
+  const book = payload.book!
+  assertEquals(book.work?.wikidata, 'Q2560992')
+  assertEquals(book.work?.series?.map((s) => [s.series.name, s.position]), [['Memory, Sorrow, and Thorn', 1]])
+
+  // Wikidata lists 11 items in the series (the three novels and their eight "part N" halves) and the
+  // author's list has the same: only the novels, and the author's other works, come through.
+  const inSeries = payload.works.filter((w) => w.series?.some((s) => s.series.wikidata === 'Q1167968'))
+  assertEquals(
+    [...new Set(inSeries.map((w) => `${w.series![0]!.position} ${w.title}`))].sort(),
+    ['1 The Dragonbone Chair', '2 Stone of Farewell', '3 To Green Angel Tower'],
+  )
+  assertEquals(payload.works.filter((w) => /, part \d+$/i.test(w.title)), [])
+  // Another series' decimal position stays: The Heart of What Was Lost is Osten Ard 0.5.
+  const osten = payload.works.find((w) => w.title === 'The Heart of What Was Lost')
+  assertEquals(osten?.series?.map((s) => s.position), [0.5])
+  // Standalones and series without the splits are untouched.
+  assert(payload.works.some((w) => w.title === 'The Witchwood Crown'))
+  assert(payload.works.some((w) => w.title === 'Tailchaser\u2019s Song' || w.title === "Tailchaser's Song"))
+})
+
+Deno.test('Williams, The Dragonbone Chair, part 1: its work keeps no place in the series its novel is in', async () => {
+  const { payload } = await run('williams-dragonbone-part-1')
+  const work = payload.book!.work!
+  assertEquals(work.wikidata, 'Q140457363')
+  assertEquals(work.title, 'The Dragonbone Chair, part 1')
+  assertEquals(work.series, [])
+  // Nor does Open Library's series text put it back.
+  assertEquals(payload.series, [])
+})

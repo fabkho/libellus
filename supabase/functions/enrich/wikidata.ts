@@ -258,6 +258,8 @@ export type WorkFacts = {
   openLibraryIds: string[]
   /** P629: the work this item is an edition or translation of. */
   editionOf: string[]
+  /** P361 (part of) and P1433 (published in): the larger works it is a part of. Not asked of lists. */
+  wholes: string[]
   kind: WorkKind | null
 }
 
@@ -289,8 +291,56 @@ export function parseWork(entity: Entity, languages: readonly string[]): WorkFac
     year: yearOf(time(entity, 'P577')),
     openLibraryIds: strings(entity, 'P648').filter((id) => /^OL\d+W$/.test(id)),
     editionOf: items(entity, 'P629'),
+    wholes: unique([...items(entity, 'P361'), ...items(entity, 'P1433')]),
     kind: kindOf(types, forms, genres),
   }
+}
+
+// ---------------------------------------------------------- split volumes
+
+/**
+ * Whether `title` is "<parent>, part N": how Wikidata names the volumes a long novel was split into
+ * for print (Memory, Sorrow and Thorn: "The Dragonbone Chair, part 1", "To Green Angel Tower,
+ * Part 4"). Case-insensitive on "part"; N is a number.
+ */
+export function isPartTitle(title: string, parent: string): boolean {
+  const t = title.trim().toLowerCase()
+  const p = parent.trim().toLowerCase()
+  const head = `${p}, part `
+  return p.length > 0 && t.startsWith(head) && /^[0-9]+$/.test(t.slice(head.length))
+}
+
+type Titled = Pick<WorkFacts, 'title' | 'titles'>
+
+function titlesOf(work: Titled): string[] {
+  return [work.title, ...Object.values(work.titles)].filter((t): t is string => !!t)
+}
+
+/**
+ * A split volume: a place at a decimal position x.y in a series whose novel at position x is
+ * "<its title>, part N". The decimal alone is not enough (Ender's Saga 1.5 and The Murderbot
+ * Diaries 7.5 are novellas between two novels), and nor is the title (a work "..., part 2" with
+ * no parent in the series is left alone). `parents` are the works at whole positions of the
+ * same series.
+ */
+export function isSplitVolume(work: Titled, position: number | null, parents: readonly Titled[]): boolean {
+  if (position === null || Number.isInteger(position) || position < 0) return false
+  return parents.some((parent) => titlesOf(work).some((t) => titlesOf(parent).some((p) => isPartTitle(t, p))))
+}
+
+/**
+ * The works of a list (an author's, a series') without the split volumes: a work that is a split
+ * volume in any of its series is not a work of its own. The parents are looked for in the list.
+ */
+export function withoutSplitVolumes<T extends Titled & { qid: string; series: SeriesPlace[] }>(works: readonly T[]): T[] {
+  const parentsOf = (work: T, place: SeriesPlace) =>
+    place.position === null || Number.isInteger(place.position)
+      ? []
+      : works.filter((other) =>
+        other.qid !== work.qid &&
+        other.series.some((o) => o.series === place.series && o.position === Math.trunc(place.position!))
+      )
+  return works.filter((work) => !work.series.some((place) => isSplitVolume(work, place.position, parentsOf(work, place))))
 }
 
 export function isEdition(work: Pick<WorkFacts, 'types' | 'editionOf'>): boolean {
@@ -467,6 +517,7 @@ export function parseWorks(body: unknown, languages: readonly string[]): ListedW
       year: yearOf(parseTime({ time: row.published?.value ? `+${row.published.value.replace(/^\+/, '')}` : undefined, precision: 9 })),
       openLibraryIds: words(row.ols?.value).filter((id) => /^OL\d+W$/.test(id)),
       editionOf: [],
+      wholes: [],
       kind: kindOf(types, forms, genres),
     })
   }
