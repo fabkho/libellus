@@ -32,3 +32,6 @@ web/all-blob-reports/
 
 # Email preview renders (`pnpm email:preview` in web/): screenshots of the templates.
 web/.email-preview/
+
+# i18n dry-run output (web/scripts/i18n/sample.mjs): scratch translations, never committed.
+web/.i18n-sample/
