@@ -158,3 +158,85 @@ docs/parity.md, *Genres*; the author page's genre chips use the same labels (`ge
 ## Not yet
 
 - The outbox does not carry the corrections yet (`sync_write`): they need a connection.
+
+## Trial: the German National Library (DNB) as an import source
+
+**Verdict: not worth shipping for the import.** It finds the edition of about half of the books no other
+source knows, but it gives no cover and no usable genre, so what the owner sees in "Needs a look" does not
+change. The trial code is on the branch `trial/dnb-source` (one commit: `web/app/data/dnb.ts`, its tests and
+recorded fixtures, the hook in `findEdition`); this document is all that is proposed for merging.
+
+### What was tried
+
+The Google Books API was declined (its terms forbid storing the data and require branding). The DNB
+catalogue is CC0: no attribution, no storing limit. Its SRU interface
+(`https://services.dnb.de/sru/dnb`, CQL) answers cross-origin reads (`access-control-allow-origin: *`), so
+the trial is a plain client module like the Apple and Open Library ones, no Edge Function. Record schema
+`oai_dc` (flat, read with a few patterns; no XML parser). Queries: `num=<ISBN-13>`, and for a title
+`tit="…" and per="<surname>" and (bbg=Aa* or bbg=Oa*)` (printed and online books; audio and music left
+out). A record gives title (`Titel : Untertitel / Verfasser`), creators (`Nachname, Vorname [Verfasser]`),
+publisher, year, language, extent (`622 S.`), ISBNs, and two subjects: the DDC class and the DNB's own coarse
+group (`B Belletristik`, `K Kinder- und Jugendliteratur`, `S Schulbücher`). It was asked last, only for rows
+the Catalogue, Apple Books and Open Library did not find: an ISBN lookup for a row with an ISBN, a title and
+author search for a row without. The found record becomes an `import` Book (no migration); the title and
+authors stay as the file says them (the trade's subtitles are noise: "Roman - Die hochwertig veredelte
+Ausgabe"). Its own circuit breaker: three errors in a row rest it for a minute (the SRU reports a failing
+converter as a diagnostic with HTTP 200, which a status check misses).
+
+### Numbers (the owner's 709-book Goodreads export, run on 11 October 2026)
+
+Before, the shipped pipeline (#303) without DNB: 709 rows in 532 s, **211 found by no source** (160 with an
+ISBN no source knows, 51 without). The earlier run of the same file found 166 unfound (98 and 68): Apple
+answers differently from day to day once its per-address limit is spent (44 Apple matches today against 135),
+so compare the DNB gain with today's 211.
+
+DNB added for those 211 rows:
+
+| | |
+|---|---|
+| found by DNB | **103** (49 % of the unfound; 14.5 % of the file): 90 by their exact ISBN, 13 by title and author (these got an ISBN) |
+| still found by no source | 103 (65 with an ISBN, 38 without); 5 more were found by Apple on being asked again |
+| false matches in 30 DNB-only hits checked by hand (all 13 title hits, 17 of the 90 ISBN hits) | **0** (same book, same author); most record titles carry the trade's subtitle, hence her title is kept |
+| language of the 103 | 101 German, 2 English (special editions listed under a German publisher) |
+| calls / errors / time | 206 calls, 0 errors or timeouts, 102 ms on average: 21 s in all, about **5 s** of wall time at four rows at once |
+| 20 well-known German titles by hand (title and author) | **20 of 20** found, 20 calls, 0 errors |
+| covers for the 103 | **1** (Open Library cover by the DNB ISBN) |
+
+`MARC21-xml` answered with a converter diagnostic on all five tries, so only `oai_dc` was used (0 errors in
+about 250 calls).
+
+### Why the verdict is no
+
+- The 90 ISBN hits are rows the file already knew: Goodreads' export carries the ISBN, publisher, pages and
+  year. DNB adds the language and a confirmation that the edition exists. Only the 13 title hits gain a thing
+  that was missing (the ISBN).
+- Those rows stay without a cover, which is what the preview treats as the bad sign: they would move from
+  "added as the file says" to "matched, without a cover" and stay in the visible Needs a look list. The count
+  the owner sees does not shrink.
+- No cover is available from DNB: its catalogue shows covers (`portal.dnb.de/opac/mvb/cover?isbn=…`, 10 of
+  12 sampled ISBNs answered an image), but only under an agreement between the German Library Association,
+  VG Bild-Kunst and the VLB cover service; re-use needs a contract with the VLB (see
+  https://www.dnb.de/EN/catalogueimage). Same kind of problem as Google Books. Not usable.
+
+### Where it would help, where not
+
+| Place | Value | Effort |
+|---|---|---|
+| Import | Low, as measured: the language and 13 ISBNs for 709 books | Done on the trial branch; shipping it is a day (merge, German copy for the note, parity.md) |
+| Barcode scan / add by ISBN for a German book Apple and Open Library do not know | Good: a title and authors where there is none | About half a day (`lookupIsbn` is written) |
+| Edition picker (Change edition) for German books | Moderate: German editions with publisher, year and pages (13 same-work records for one well-known title); rows without covers | Half a day plus a ranking that drops sets and reprints |
+| Search Palette | Low: German results with no cover look poor; dedupe by ISBN needed | A day |
+
+### What is still missing, and the cheapest fill
+
+- **Covers.** No free source for German editions was found: Open Library has the cover of 1 of 103 ISBNs, DNB's
+  and the VLB's are licensed. The remaining options are a VLB cover-service contract, or Apple's German
+  storefront by title (the search already asks `de-DE`).
+- **Genres.** DNB's `oai_dc` has only the DDC class and the coarse group: fiction is `B Belletristik` / `830
+  Deutsche Literatur`, children's books `K Kinder- und Jugendliteratur`, which map to at most `ya` and the
+  non-fiction classes (DDC 9xx → `history`, 1xx → `philosophy`, 5xx → `science`), never to `crime`, `fantasy`
+  or `romance`. The RDF record (`recordSchema=RDFxml`) lists the GND subject headings as ids; their labels
+  come from `https://lobid.org/gnd/<id>.json` (CC0, `access-control-allow-origin: *`), and a table of GND
+  genre headings (Kriminalroman, Fantasy, Liebesroman …) to our twenty ids would be needed. Feasible, one to
+  two days with a unit-tested mapping; how many novels carry such a heading was not measured, and fiction
+  records in the samples had none. Wikidata and Open Library subjects (above) stay the better source.
