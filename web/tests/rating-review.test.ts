@@ -86,3 +86,27 @@ describe('what is not a rating-only review', () => {
     expect(looksLikeRatingButIsNot('Book 2 of 3')).toBe(false)
   })
 })
+
+describe('a long text is no rating, and costs nothing to say so', () => {
+  it('answers a 10 000-space text within 50 ms, whatever follows', () => {
+    for (const text of [' '.repeat(10_000), '1' + ' '.repeat(10_000) + 'x', ' '.repeat(10_000) + '4.5', '1' + ' '.repeat(10_000) + '/', '4/' + ' '.repeat(10_000)]) {
+      const started = performance.now()
+      expect(isRatingOnlyReview(text)).toBe(false)
+      expect(ratingFromReviewText(text)).toBeNull()
+      expect(looksLikeRatingButIsNot(text)).toBe(false)
+      expect(performance.now() - started).toBeLessThan(50)
+    }
+  })
+
+  it('still reads the forms with a little room, up to 40 characters', () => {
+    expect(ratingFromReviewText('4.5' + ' '.repeat(30) + '★')).toBe(18)
+    expect(ratingFromReviewText('4.5' + ' '.repeat(40) + '★')).toBeNull()
+  })
+
+  it('stays linear even without the length cut (the regex itself)', () => {
+    const regex = /^\s*(\d+(?:[.,]\d+)?)(?:\s*\/\s*(5|10))?(?:\s*(?:★|stars?))?\s*$/i
+    const started = performance.now()
+    regex.test('1' + ' '.repeat(100_000) + 'x')
+    expect(performance.now() - started).toBeLessThan(200)
+  })
+})
