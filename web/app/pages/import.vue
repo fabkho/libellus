@@ -246,7 +246,10 @@ const failures = computed<ImportNote[]>(() =>
         >
           {{ t(showMinor ? 'import.attentionMinorHide' : 'import.attentionMinorShow', { count: attentionMinor.length }) }}
         </UiButton>
-        <ImportNoteList v-if="showMinor" :items="attentionMinor" testid="import.attentionMinorList" class="mt-xs" @act="store.openChoice" />
+        <!-- Opens its room and fades in, so what sits under it glides down (docs/MOTION.md). -->
+        <UiReveal :show="showMinor">
+          <ImportNoteList :items="attentionMinor" testid="import.attentionMinorList" class="mt-xs" @act="store.openChoice" />
+        </UiReveal>
       </template>
 
       <!-- Books whose edition she chose herself: the preview has her pick, and she can change it. -->
