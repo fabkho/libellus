@@ -32,7 +32,7 @@ const links = text => [...text.matchAll(/@(?:\.[a-z]+)?:(?:\([^)]+\)|[\w.-]+)/g)
 
 const ENGLISH_WORDS = new Set(['the', 'and', 'you', 'your', 'you\'re', 'to', 'of', 'is', 'are', 'not', 'for', 'with', 'this', 'that', 'was', 'were', 'has', 'have', 'it', 'in', 'on', 'or', 'we', 'will', 'can', 'could', 'please', 'try', 'again', 'back', 'nothing', 'yet', 'book', 'books', 'read', 'reading', 'finished', 'library', 'edition', 'collection', 'series', 'circle', 'invite', 'sign', 'up', 'out', 'new', 'add', 'saved', 'link', 'copy'])
 // Words that are English on purpose or the same in both languages (the glossary keeps them).
-const NAMES = new Set(['libellus', 'goodreads', 'hardcover', 'storygraph', 'librarything', 'apple', 'books', 'open', 'library', 'openlibrary', 'wikipedia', 'wiktionary', 'mymemory', 'supabase', 'regal', 'isbn', 'epub', 'epubs', 'csv', 'pdf', 'url', 'genres', 'covers', 'links', 'codes', 'e-mail', 'foliate', 'dnf'])
+const NAMES = new Set(['betterreads', 'goodreads', 'hardcover', 'storygraph', 'librarything', 'apple', 'books', 'open', 'library', 'openlibrary', 'wikipedia', 'wiktionary', 'mymemory', 'supabase', 'regal', 'isbn', 'epub', 'epubs', 'csv', 'pdf', 'url', 'genres', 'covers', 'links', 'codes', 'e-mail', 'foliate', 'dnf'])
 const bareWords = text => text.replace(/\{[^}]*\}/g, ' ').toLowerCase().match(/[a-zäöüß][a-zäöüß'-]*/g) ?? []
 const SAME_OK = new Set(['link', 'copy', 'cover', 'genre', 'offline', 'code', 'import', 'export', 'hardcover', 'new', 'series', 'sign', 'in', 'on', 'up', 'out', 'will', 'was', 'back', 'add'])
 

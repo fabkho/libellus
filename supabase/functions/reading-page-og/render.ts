@@ -216,11 +216,11 @@ const dataUrl = (svg: string) => `data:image/svg+xml;base64,${encodeBase64(svg)}
 
 // -------------------------------------------------------------------- pieces
 
-/** "libellus" in the serif italic, the wordmark the app shows. */
+/** "betterreads" in the serif italic, the wordmark the app shows. */
 function wordmark(size = 36): Node {
   return el('div', {
     style: { display: 'flex', fontFamily: 'Newsreader', fontStyle: 'italic', fontWeight: 400, fontSize: size, color: C.accent },
-    children: 'libellus',
+    children: 'betterreads',
   })
 }
 

@@ -5,7 +5,7 @@ import type { LegalDocument } from './types'
 export const IMPRINT: LegalDocument = {
   en: {
     title: 'Imprint',
-    lead: 'Information under § 5 DDG (the German Digital Services Act) about the operator of Libellus.',
+    lead: 'Information under § 5 DDG (the German Digital Services Act) about the operator of BetterReads.',
     version: 'Version: 11 October 2026',
     sections: [
       {
@@ -22,7 +22,7 @@ export const IMPRINT: LegalDocument = {
         id: 'about',
         heading: 'About this site',
         blocks: [
-          { p: 'Libellus (libellus.fabkho.dev) is a private, non-commercial beta for its operator and invited friends. It is free, shows no advertising and earns no money.' },
+          { p: 'BetterReads (libellus.fabkho.dev) is a private, non-commercial beta for its operator and invited friends. It is free, shows no advertising and earns no money.' },
           { p: 'The source code is public at [github.com/fabkho/libellus](https://github.com/fabkho/libellus), under the MIT licence. How the app handles your data is in the [privacy notice](/privacy).' },
         ],
       },
@@ -30,7 +30,7 @@ export const IMPRINT: LegalDocument = {
   },
   de: {
     title: 'Impressum',
-    lead: 'Angaben gemäß § 5 DDG zum Betreiber von Libellus.',
+    lead: 'Angaben gemäß § 5 DDG zum Betreiber von BetterReads.',
     version: 'Stand: 11. Oktober 2026',
     sections: [
       {
@@ -47,7 +47,7 @@ export const IMPRINT: LegalDocument = {
         id: 'about',
         heading: 'Über diese Seite',
         blocks: [
-          { p: 'Libellus (libellus.fabkho.dev) ist eine private Beta ohne Gewinnabsicht für den Betreiber und eingeladene Freunde. Sie ist kostenlos, zeigt keine Werbung und verdient kein Geld.' },
+          { p: 'BetterReads (libellus.fabkho.dev) ist eine private Beta ohne Gewinnabsicht für den Betreiber und eingeladene Freunde. Sie ist kostenlos, zeigt keine Werbung und verdient kein Geld.' },
           { p: 'Der Quellcode ist öffentlich unter [github.com/fabkho/libellus](https://github.com/fabkho/libellus), unter der MIT-Lizenz. Wie die App mit deinen Daten umgeht, steht in der [Datenschutzerklärung](/privacy).' },
         ],
       },

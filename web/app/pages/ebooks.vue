@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Ebooks on this device (issue #131, phase 1): the EPUB files Libellus keeps a
+// Ebooks on this device (issue #131, phase 1): the EPUB files BetterReads keeps a
 // copy of, linked to Books in the Library. Reached from the Profile's account
 // rows and from a share of EPUB files (pages/share.vue), whose result it shows
 // at the top: "3 ebooks · 2 linked · 1 needs you" (and how many were not EPUBs).

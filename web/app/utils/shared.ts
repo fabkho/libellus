@@ -1,7 +1,7 @@
 import { isbn10To13, isValidIsbn10, isValidIsbn13 } from '../data/books'
 
 /**
- * What the Android share sheet hands Libellus (issue #91): the manifest's GET
+ * What the Android share sheet hands BetterReads (issue #91): the manifest's GET
  * `share_target` passes `title`, `text` and `url` as query parameters. Apps
  * fill them as they please: Chrome puts the link in `text` (and the page title
  * in `title`), Goodreads and Amazon share a sentence with the link inside it,

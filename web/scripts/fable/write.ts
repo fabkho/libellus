@@ -3,7 +3,7 @@ import { bookToRow } from '../../app/data/library'
 import { IMPORT_KEY_PREFIX, type ImportEntry, type ImportSession } from '../../app/data/import/fable'
 
 /**
- * Writes a mapped Fable import into one member's Library (issue #17), as the
+ * Writes a mapped import (Fable, #17; Reado, which maps to the same entries) into one member's Library, as the
  * service role: Books into the Catalogue (or found there), Library entries and
  * Reading sessions. Idempotent: everything is found again by its source keys,
  * so running it twice changes nothing the second time.
@@ -13,7 +13,7 @@ import { IMPORT_KEY_PREFIX, type ImportEntry, type ImportSession } from '../../a
  *   (the first snapshot is kept), only a missing cover is filled in. A Book with
  *   no key at all cannot be in the Catalogue: it becomes the member's Manual
  *   book, private to them.
- * - Entries by `import_key` (`fable:<tracker id>`); an entry the member already
+ * - Entries by `import_key` (`fable:<tracker id>`, `reado:isbn:<isbn13>`); an entry the member already
  *   made in the app for the same Book is adopted rather than doubled. When the
  *   overrides move a record to another edition, its entry moves with it —
  *   unless the member changed the entry's edition in the app (#41,
@@ -31,8 +31,10 @@ import { IMPORT_KEY_PREFIX, type ImportEntry, type ImportSession } from '../../a
 export interface WriteOptions {
   /** Read everything, write nothing: the counts say what a real run would do. */
   dryRun?: boolean
-  /** Delete this member's imported entries whose Fable record is no longer in the plan. */
+  /** Delete this member's imported entries whose record is no longer in the plan. */
   prune?: boolean
+  /** The import's key space (`fable:`, `reado:`): what `prune` and the sessions' lookup are limited to. */
+  keyPrefix?: string
   /** Progress lines. */
   log?: (line: string) => void
 }
@@ -113,7 +115,7 @@ export async function writeImport(
   entries: readonly ImportEntry[],
   options: WriteOptions = {},
 ): Promise<WriteResult> {
-  const { dryRun = false, log = () => {} } = options
+  const { dryRun = false, log = () => {}, keyPrefix = IMPORT_KEY_PREFIX } = options
   const result: WriteResult = {
     books: { created: 0, reused: 0, coverFilled: 0, manual: 0 },
     entries: { created: 0, adopted: 0, moved: 0, unchanged: 0, memberEdition: 0, stale: [], pruned: 0 },
@@ -259,7 +261,7 @@ export async function writeImport(
           await client.from('reading_sessions')
             .select('id, import_key, started_on, ended_on, outcome, rating, review, abandon_reason')
             .eq('entry_id', entryId)
-            .like('import_key', `${IMPORT_KEY_PREFIX}%`),
+            .like('import_key', `${keyPrefix}%`),
           'Reading the sessions',
         ) as SessionRow[])
       : []
@@ -316,7 +318,7 @@ export async function writeImport(
   // Imported entries whose record the plan no longer has (an override now skips it).
   const planned = new Set(entries.map((entry) => entry.key))
   const imported = check(
-    await client.from('library_entries').select(ENTRY_FIELDS).eq('member_id', memberId).like('import_key', `${IMPORT_KEY_PREFIX}%`),
+    await client.from('library_entries').select(ENTRY_FIELDS).eq('member_id', memberId).like('import_key', `${keyPrefix}%`),
     'Reading the imported entries',
   ) as EntryRow[]
   for (const row of imported) {

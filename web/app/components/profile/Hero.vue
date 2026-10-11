@@ -2,6 +2,8 @@
 // The top of the Profile (issue #78, B's hero): the member's initials large in
 // a ring, her name (or the address while she has none), since when she reads
 // here, and the Library in one mono line — read · reading · want to read.
+// The name is a button too (`name`): the shortcut to the Name row's sheet (components/shell/NameSheet.vue,
+// opened by the page), quiet — a small pencil after it, an underline while pressed — and 44 px high.
 // While the reading record loads (`loading`) the two lines under the name
 // are placeholders; the "since" line closes if it turns out to have nothing
 // to say (docs/MOTION.md, Loading). The ring shows her photo where she has
@@ -22,7 +24,7 @@ const props = withDefaults(
   }>(),
   { loading: false, expectSince: true },
 )
-const emit = defineEmits<{ photo: [] }>()
+const emit = defineEmits<{ photo: []; name: [] }>()
 const arriving = useArrival(() => props.loading)
 
 const { t } = useI18n()
@@ -32,6 +34,13 @@ const initials = computed(() => initialsOf(session.member?.email ?? '', session.
 const avatar = useAvatarStore()
 onMounted(() => void avatar.load())
 const online = useOnline()
+// Safari does not focus a button when it is tapped, and the sheet gives focus back to what had it
+// when it opened (composables/useModalLayer.ts): so the name takes it first and gets it back.
+function editName(event: MouseEvent) {
+  ;(event.currentTarget as HTMLElement).focus({ preventScroll: true })
+  emit('name')
+}
+const shown = computed(() => session.member?.name ?? session.member?.email ?? '')
 </script>
 
 <template>
@@ -54,7 +63,18 @@ const online = useOnline()
         <span class="pointer-events-none absolute inset-0 rounded-pill edge" />
       </span>
     </button>
-    <h1 class="mt-md max-w-full truncate text-title" data-testid="profile.title">{{ session.member?.name ?? session.member?.email ?? '' }}</h1>
+    <h1 class="mt-md flex max-w-full justify-center text-title" data-testid="profile.title">
+      <button
+        type="button"
+        class="name-edit group relative my-(--name-edit-gap) flex min-h-(--size-touch) max-w-full min-w-(--size-touch) items-center justify-center"
+        :aria-label="`${shown}, ${t('profile.editName')}`"
+        data-testid="profile.nameEdit"
+        @click="editName"
+      >
+        <span class="truncate decoration-1 underline-offset-4 group-active:underline">{{ shown }}</span>
+        <UiIcon name="pencil" :size="14" class="pointer-events-none absolute left-full ml-xs text-ink-faint" />
+      </button>
+    </h1>
     <UiReveal :show="(loading && expectSince) || !!since" class="w-full">
       <p v-if="since" class="mt-xs text-body text-ink-muted" :class="{ arrive: arriving }" data-testid="profile.since">{{ t('profile.since', { date: monthYear(since) }) }}</p>
       <p v-else class="line body-line mt-xs" aria-hidden="true"><span class="skeleton wave w-1/2" /></p>
@@ -81,6 +101,10 @@ const online = useOnline()
 }
 .eyebrow-line {
   height: var(--text-eyebrow--line-height);
+}
+.name-edit {
+  /* The 44 px button sits in the heading's own line: the room it adds over the text is taken back. */
+  --name-edit-gap: calc((var(--text-title--line-height) - var(--size-touch)) / 2);
 }
 .ring {
   width: var(--size-cover-md);

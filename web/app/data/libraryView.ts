@@ -186,15 +186,15 @@ export function matches(entry: LibraryEntry, status: EntryStatus, view: ListView
 }
 
 /** The sort key of the first author: the last word of the name (Austen before Herbert), then the whole name. */
-function authorKey(entry: LibraryEntry): string {
+export function authorKey(entry: LibraryEntry): string {
   const first = entry.book.authors[0]?.trim() ?? ''
   return `${first.split(/\s+/).at(-1) ?? ''}\u0000${first}`
 }
 
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+export const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
 /** Compares two values the sort has; an entry without one goes last whichever way the sort goes. */
-function order<T>(dir: SortDir, a: T | null, b: T | null, compare: (x: T, y: T) => number): number {
+export function order<T>(dir: SortDir, a: T | null, b: T | null, compare: (x: T, y: T) => number): number {
   if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1
   return (dir === 'asc' ? 1 : -1) * compare(a, b)
 }

@@ -115,7 +115,7 @@ async function appPage(): Promise<Page> {
     const standalone = await candidate.evaluate(() => matchMedia('(display-mode: standalone)').matches && document.visibilityState === 'visible').catch(() => false)
     if (standalone) return candidate
   }
-  throw new Error('Open the installed Libellus (its icon on the home screen) first.')
+  throw new Error('Open the installed BetterReads (its icon on the home screen) first.')
 }
 
 /** What Android's share sheet hands the app: a multipart POST of the files to /share, here made by the page from files the Mac serves. */
@@ -134,7 +134,7 @@ async function share(page: Page, names: string[]) {
     document.body.append(form)
     form.submit()
   }, names)
-  // The share asks first (security round F4): "Add N ebooks shared to Libellus?"; the tap takes them in.
+  // The share asks first (security round F4): "Add N ebooks shared to BetterReads?"; the tap takes them in.
   await page.getByTestId('share.add').click({ timeout: 60_000 })
   await page.waitForURL(/\/ebooks$/, { timeout: 60_000 })
   await page.getByTestId('ebooks.reportLine').waitFor({ timeout: 60_000 })

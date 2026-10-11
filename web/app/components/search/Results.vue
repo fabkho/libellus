@@ -14,10 +14,14 @@
 // Library" next to the query (#131, `search.own`), at once and before any
 // source answers; the results the sources found follow without them. Opened by
 // Find book (`search.linking`), a tap picks a result for the ebook file
-// instead of opening its page (`pick`).
+// instead of opening its page (`pick`). Opened by a Collection's + (`search.target`), the + of a row
+// puts that Book on the Collection (one already on it shows a check) and the palette stays open for the
+// next one; the lines that would hint at searching name the Collection, and say that a Book new to the
+// Library goes onto Want to read.
 import { parseIsbn } from '~/data/books'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useLibraryStore } from '~/stores/library'
+import { useCollectionsStore } from '~/stores/collections'
 import { useManualStore } from '~/stores/manual'
 import { useSearchStore, type SearchHit } from '~/stores/search'
 import { SEARCH_DEBOUNCE_MS } from '~/data/search'
@@ -28,6 +32,7 @@ const search = useSearchStore()
 const library = useLibraryStore()
 const manual = useManualStore()
 const ebooks = useEbooksStore()
+const collections = useCollectionsStore()
 const online = useOnline()
 
 /**
@@ -45,8 +50,39 @@ function pick(hit: SearchHit) {
 /** Her entries as the group shows them (read when search opened). */
 const ownEntries = () => search.own.map((hit) => hit.entry!)
 
+// Aimed at a Collection (its + opened search): the Books already on it, and the adds on their way.
+const targetName = computed(() => search.target?.name ?? null)
+const onTargetIds = computed(() => {
+  const target = search.target
+  return new Set(target ? (collections.page(target.id)?.collection?.entries ?? []).map((entry) => entry.id) : [])
+})
+const onTarget = (hit: SearchHit) => Boolean(hit.entry && onTargetIds.value.has(hit.entry.id))
+const adding = reactive(new Set<string>())
+const addError = ref<string | null>(null)
+watch(() => [search.query, search.target?.id], () => (addError.value = null))
+
+/** The + of a result aimed at a Collection: one call puts the Book on it (and on Want to read first when it is new). */
+async function addToTarget(hit: SearchHit) {
+  const target = search.target
+  if (!target || adding.has(hit.key)) return
+  adding.add(hit.key)
+  addError.value = null
+  try {
+    const result = await collections.addBook(target.id, hit.book, hit.key)
+    // Already on it is where she wanted it to be.
+    if (result.error && result.error !== 'already_in_collection') addError.value = result.error
+  } finally {
+    adding.delete(hit.key)
+  }
+}
+
 /** The +: the Add sheet; while linking, another edition of one of her Books asks first (never a second entry unasked). */
 function add(hit: SearchHit) {
+  if (search.target) void addToTarget(hit)
+  else addInLibrary(hit)
+}
+
+function addInLibrary(hit: SearchHit) {
   if (search.linking && hit.otherEdition) ebooks.chooseEdition(hit.book, ownEntries())
   // The + of a result: she sees the Book on her shelf at once, the outbox sends it (stores/library.ts, confirmAdd).
   else library.openAdd(hit.book, { optimistic: !search.linking })
@@ -131,7 +167,7 @@ watch(
   <!-- Fills the palette's room, its content at the bottom (usePaletteRoom.ts): an answer never moves what is on screen. -->
   <div class="relative flex min-h-0 flex-1 flex-col justify-end" aria-live="polite" data-room>
     <p v-if="state === 'idle'" class="px-lg py-lg text-center text-caption text-ink-faint" data-testid="search.empty">
-      {{ t('search.empty') }}
+      {{ targetName ? t('search.emptyTarget', { name: targetName }) : t('search.empty') }}
     </p>
 
     <!-- Leaves over the results arriving where it stood (see .loading-leave-active). -->
@@ -162,6 +198,9 @@ watch(
             :ref="nearby.observe"
             :data-near-key="hit.key"
             :linking="search.linking"
+            :target="targetName"
+            :on-target="onTarget(hit)"
+            :adding="adding.has(hit.key)"
             :eager="index < FIRST_COVERS || nearby.has(hit.key)"
             :priority="index < FIRST_COVERS"
             data-testid="search.ownResult"
@@ -181,6 +220,9 @@ watch(
         <SearchResultRow
           :hit="hit"
           :linking="search.linking"
+          :target="targetName"
+          :on-target="onTarget(hit)"
+          :adding="adding.has(hit.key)"
           :eager="index < FIRST_COVERS || nearby.has(hit.key)"
           :priority="index < FIRST_COVERS"
           @pick="pick(hit)"
@@ -194,10 +236,16 @@ watch(
       <li v-if="search.fromLibrary" class="px-md pt-xxl pb-xs text-center text-footnote text-ink-faint" data-testid="search.offline">
         {{ t('search.offlineNote') }}
       </li>
+      <li v-else-if="targetName" class="px-md pt-xxl pb-xs text-center text-footnote text-ink-faint" data-testid="search.targetNote">
+        {{ t('search.targetNote', { name: targetName }) }}
+      </li>
       <li v-else-if="!isbnQuery" class="px-md pt-xxl pb-xs text-center text-footnote text-ink-faint" data-testid="search.hint">
         {{ t('search.hint') }}
       </li>
     </ol>
+    <p v-if="addError" class="px-md py-xs text-center text-caption text-error" role="alert" data-testid="search.addError">
+      {{ t(`collections.error.${addError}`) }}
+    </p>
 
     <div v-else-if="state === 'none' && search.fromLibrary" class="px-ml pt-ml pb-md" data-testid="search.noResults">
       <p class="text-callout font-medium">{{ t('search.noResultsTitle') }}</p>

@@ -1,6 +1,6 @@
-# Developing Libellus
+# Developing BetterReads
 
-How to run, test and change Libellus on your machine. What it is and how the owner's instance is set
+How to run, test and change BetterReads on your machine. What it is and how the owner's instance is set
 up: [README](../README.md) and [SETUP.md](SETUP.md). Rules for code changes:
 [web/AGENTS.md](../web/AGENTS.md); domain words: [CONTEXT.md](../CONTEXT.md).
 
@@ -102,7 +102,7 @@ round (#4); docs/DESIGN.md says what each token is for.
 ### Emails
 
 The sign-in code's mail (`supabase/templates/magic_link.html`) wears the same tokens, but a mail
-client is not a browser, so the file is **generated**: `design/emails/` holds the shell every Libellus
+client is not a browser, so the file is **generated**: `design/emails/` holds the shell every BetterReads
 mail shares (`shell.mjs`: wordmark, card, footer, the light colours inlined, the dark-mode block, the
 type and spacing from `tokens.json`) and what each mail says (`magic_link.mjs`). `design/emails.mjs`
 writes the result, and CI fails when it differs from the committed file, as it does for the tokens.
@@ -146,7 +146,7 @@ Supabase's local Auth reads the templates when the stack starts, so after changi
 
 ### Signing in locally
 
-Libellus is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
+BetterReads is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
 
 | What | Value |
 | --- | --- |

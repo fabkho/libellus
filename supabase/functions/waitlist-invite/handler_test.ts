@@ -68,7 +68,7 @@ Deno.test('an invite is prepared as the caller, mailed, then marked invited', as
   assertEquals(calls, [`prepare ${ID}`, `invited ${ID}`])
   assertEquals(sent.length, 1)
   assertEquals(sent[0].to, EMAIL)
-  assertEquals(sent[0].subject, 'Your Libellus invite')
+  assertEquals(sent[0].subject, 'Your BetterReads invite')
   assertStringIncludes(sent[0].text, CODE)
   assertStringIncludes(sent[0].text, 'https://libellus.example.org/sign-up')
   assertEquals(response.headers.get('access-control-allow-origin'), '*')

@@ -1,6 +1,6 @@
 # Hosting
 
-Libellus is static files on **Cloudflare Pages**, project `libellus`, served at
+BetterReads is static files on **Cloudflare Pages**, project `libellus`, served at
 https://libellus.fabkho.dev. Supabase (eu-central-1) is the backend; the owner's shelf reads
 its library file from `books.fabkho.dev` (R2 bucket `portfolio-books`, published by Regal's
 workflow, docs/OWNER.md "Feeding Regal"). The database is backed up every night into the private R2
@@ -162,7 +162,7 @@ On top of Pages' defaults (`X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`, `Access-Control-Allow-Origin: *`):
 
 - `Strict-Transport-Security`, `X-Frame-Options: DENY`, a `Permissions-Policy` that allows only
-  the camera (the barcode scanner), and only to Libellus.
+  the camera (the barcode scanner), and only to BetterReads.
 - `Content-Security-Policy-Report-Only`: violations show in the browser console, nothing is
   blocked. A new host the app talks to (a search source, a cover host read with CORS) goes into
   `connect-src` first. To enforce it, rename the header once a while of real use reports

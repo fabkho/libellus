@@ -30,7 +30,7 @@ Parity with the portfolio's `app` mode, staged by value (a second PR, none of it
 | # | Item | Proposal |
 |---|---|---|
 | P1 | Sort and filter (date read, rating, year) | Regal's `controls` chips over the Stack, themed like the app's view bar; kept in the address as today. Smallest step, highest value. |
-| P2 | Fuller details panel | Regal's panel with the review (hers, private), read count, dates started and finished, and a link to the book page (`/book/<id>`, the Libellus id is the Book's id) instead of Goodreads for a member's shelf. |
+| P2 | Fuller details panel | Regal's panel with the review (hers, private), read count, dates started and finished, and a link to the book page (`/book/<id>`, the BetterReads id is the Book's id) instead of Goodreads for a member's shelf. |
 | P3 | Records and summary | A sheet from the top bar's count: Regal's summary and records (longest, shortest, most re-read, by year) from the same document, no new data. |
 | P4 | Sidebar on wide screens | `RegalBooksSidebar` beside the Stack above the column's width (tablet/desktop), with `library`. |
 | P5 | A short year's Stack sits low | Regal's phone camera puts the pile's top at 80 % of the height; a year's 10 Books leave the upper half empty: start a short pile lower in the view. |
@@ -47,9 +47,9 @@ keeps (`stores/library.ts`, the device copy: offline too). Nothing is fetched fr
 written anywhere: a member's shelf is never published, never public. The public reading pages
 (`/r/<token>`, the `regal` kind) stay as they are.
 
-**The owner** keeps the published file (`books.fabkho.dev/v2/library.json`) in Libellus, unchanged:
+**The owner** keeps the published file (`books.fabkho.dev/v2/library.json`) in BetterReads, unchanged:
 it is what his portfolio and his reading page show (the paid Spine and back art), it is the file the
-`shelf_publish` chain writes, and keeping it means his Libellus shelf and his portfolio are one shelf.
+`shelf_publish` chain writes, and keeping it means his BetterReads shelf and his portfolio are one shelf.
 Everybody else gets the member mode. (One line to flip later if he wants the flat look himself.)
 
 **One colour per Book (the owner's rule).** Spine and back are one flat colour, the cover's most
@@ -76,7 +76,7 @@ draws exactly as before):
    validator; images must be absolute URLs.
 4. Size from pages and binding, hover, pull-out, turn, the Stack and the Row: unchanged.
 
-**Libellus:**
+**BetterReads:**
 
 1. `data/shelf/` gets the member source: the Library lists → `RegalExportEntry` →
    `exportRegalLibrary` (reused, not forked; finished and Currently reading Books) → `assets.color`
@@ -110,5 +110,5 @@ no migration. The privacy notice (PR #281) needs no sentence.
 
 ## Order
 
-Regal PR first (merged by the coordinator), then the Libellus PR bumps the Regal ref: its CI cannot
+Regal PR first (merged by the coordinator), then the BetterReads PR bumps the Regal ref: its CI cannot
 pass against the old Regal main until then.

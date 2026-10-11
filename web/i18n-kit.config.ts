@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineI18nKitConfig } from '@the-i18n-kit/cli/config'
 
-// Policy for the-i18n-kit (https://github.com/fabkho/the-i18n-kit): how Libellus is translated.
+// Policy for the-i18n-kit (https://github.com/fabkho/the-i18n-kit): how BetterReads is translated.
 // The words live in i18n/kit/ so a person can read and correct them without reading code:
 //   ai-context.md  the voice and the rules the model gets as its system prompt
 //   glossary.json  terms to keep and the German words to use
@@ -25,7 +25,7 @@ export default defineI18nKitConfig({
   locales: ['en', 'de'],
   localeFileFormat: 'json',
 
-  context: 'Libellus is a calm, invite-only PWA for keeping track of the books you read: Library, Want to read, Currently reading, Finished, reading history, ratings, Collections, friends. Every string is a short mobile UI label, button, sheet title, empty state or error message.',
+  context: 'BetterReads is a calm, invite-only PWA for keeping track of the books you read: Library, Want to read, Currently reading, Finished, reading history, ratings, Collections, friends. Every string is a short mobile UI label, button, sheet title, empty state or error message.',
   translationPrompt: read('ai-context.md'),
   localeNotes: {
     de: 'German (Germany), informal "du" (never "Sie"), warm and plain, German is 20-30 % longer than English so choose short words. Typographic quotes „…“ and ‚…‘.',

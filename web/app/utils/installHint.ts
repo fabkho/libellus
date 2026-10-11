@@ -7,7 +7,7 @@
  * Screen. Home shows a small hint for that, only where it helps:
  * - on an iPhone or iPad, in Safari itself (other iOS browsers and in-app web
  *   views lay their Share menu out differently, so the steps would be wrong);
- * - while Libellus is not installed (`navigator.standalone`, or the standalone
+ * - while BetterReads is not installed (`navigator.standalone`, or the standalone
  *   display mode, says the installed app is what is running);
  * - never again for a week once dismissed, so it asks at most once a week.
  *

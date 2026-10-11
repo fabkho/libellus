@@ -50,7 +50,7 @@ watch(error, (problem) => {
 
 <template>
   <RegalBooksRow class="shelf-row regal-themed" theme="auto" inspect="viewport" :year="props.year ?? null" :limit="props.limit ?? null" :label="props.label ?? ''" :library="props.library ?? null" :back-button="false" rotate="turntable">
-    <!-- The whole details, Libellus' own (BookSheet): Regal keeps the container, its fade and the Book's gestures. -->
+    <!-- The whole details, BetterReads' own (BookSheet): Regal keeps the container, its fade and the Book's gestures. -->
     <template #detail="{ book, close, flip, face, sheet }">
       <ShelfBookSheet :book="book" :face="face" :sheet="sheet" @close="close" @flip="flip" />
     </template>

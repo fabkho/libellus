@@ -28,7 +28,7 @@ The table below is in force as written, with the later changes noted in `german-
 
 Goodreads has **no official German interface**: goodreads.com and its apps are English-only (a German user reads "Want to Read", "Currently Reading", "Read"). The German words below are what German sources use for Goodreads' own screens: the German wikiHow guide ("Der ultimative Goodreads-Leitfaden", <https://de.wikihow.com/Goodreads-nutzen>, which gives each English label with its German one), the German Google Play and App Store listings (<https://play.google.com/store/apps/details?hl=de&id=com.goodreads>), and German articles and import guides (<https://www.epubli.com/wissen/goodreads-fuer-autoren>, <https://linkflare.io/de/hilfe/importieren/>). Where they agree, the glossary uses them; where Goodreads has no word, it says so.
 
-| Goodreads (English) | German in those sources | Libellus glossary now | Changed? |
+| Goodreads (English) | German in those sources | BetterReads glossary now | Changed? |
 | --- | --- | --- | --- |
 | Want to Read (shelf) | **Möchte ich lesen** (wikiHow, epubli, Linkflare; the Play listing's machine text says „Willst du lesen“-Regal) | Möchte ich lesen | **yes** (was *Will ich lesen*) |
 | Currently Reading | **Lese ich gerade** | Lese ich gerade | no |
@@ -42,13 +42,13 @@ Goodreads has **no official German interface**: goodreads.com and its apps are E
 | Edition | **Ausgabe** ("die Ausgabe der Bücher ändern") | Ausgabe | no |
 | Genres | **Genres** | Genre | no |
 | Home | **Startseite** | Startseite | **yes** (was *Start*) |
-| My Books | **Meine Bücher** | Bibliothek | no: Libellus' English is "Library", not "My Books"; *Bibliothek* is its direct word. Change it if you want *Meine Bücher* (D1). |
+| My Books | **Meine Bücher** | Bibliothek | no: BetterReads' English is "Library", not "My Books"; *Bibliothek* is its direct word. Change it if you want *Meine Bücher* (D1). |
 | Reading Challenge | **Lese-Challenge** | not used in the app | |
 | Status update | **Statusaktualisierung** | "Update progress" = *Fortschritt aktualisieren* | no |
 
 The Goodreads export instructions in `import.howTo.goodreads` stay in English on purpose: Goodreads' menus are English.
 
-Kept as written (never translated): Libellus, Goodreads, Hardcover (the app), StoryGraph, LibraryThing, Apple Books, Open Library, Wikipedia, Wiktionary, MyMemory, Supabase, **Regal**, ISBN, EPUB, CSV, PDF, URL, CC BY-SA. Menu names inside another service stay English because that service is English ("My Books → Import and export → Export library").
+Kept as written (never translated): BetterReads, Goodreads, Hardcover (the app), StoryGraph, LibraryThing, Apple Books, Open Library, Wikipedia, Wiktionary, MyMemory, Supabase, **Regal**, ISBN, EPUB, CSV, PDF, URL, CC BY-SA. Menu names inside another service stay English because that service is English ("My Books → Import and export → Export library").
 
 Other rules decided in `ai-context.md` (read them once): informal *du* always; German quotes „…“; the status or button name inside a sentence goes in „…“ (zu „Will ich lesen“ hinzugefügt); `{placeholders}`, `|` plural forms and `@:links` untouched; every label as short as the language allows (German is about 12-15 % longer on this sample, about 50 % at the 90th percentile).
 

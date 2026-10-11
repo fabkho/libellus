@@ -2,7 +2,7 @@
 // The progress line, as a control: D's hairline (UiProgress: the lamp for what
 // is read, a faint rule for the rest), 44 px of touch around it. Drag along it
 // and a mono bubble says the page; let go to jump there. A small tick marks the
-// page saved in Libellus. A native range input underneath, so the keyboard and
+// page saved in BetterReads. A native range input underneath, so the keyboard and
 // assistive tech get a slider for free. A light tick per page passed (Android).
 import { stepTick } from '~/utils/haptics'
 

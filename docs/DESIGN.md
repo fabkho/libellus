@@ -1,6 +1,6 @@
-# Libellus — Design Guideline
+# BetterReads — Design Guideline
 
-Libellus wears direction **D "Night Reader"**, picked in the design round (#4) and ported in #5.
+BetterReads wears direction **D "Night Reader"**, picked in the design round (#4) and ported in #5.
 The prototype stays viewable on branch `proto/round-1` (`/prototype?d=d`, Room: Night / Day), and
 its binding decisions are in `web/app/components/proto/directions/d/DECISIONS.md` there. This file
 is the guideline for everything built after it: what the design wants, the tokens it is made of,
@@ -126,7 +126,7 @@ in the precache). Each `text-*` utility sets size, line height, tracking and (wh
 
 | Token | Size / line | Tracking | Weight | Use |
 |---|---|---|---|---|
-| `text-wordmark` | 54 / 54 | −0.02em | 400 | "libellus", serif italic, lowercase |
+| `text-wordmark` | 54 / 54 | −0.02em | 400 | "betterreads", serif italic, lowercase |
 | `text-figure` | 44 / 44 | −0.04em | 300 | A large count (Read in <year>) |
 | `text-large-title` | 28 / 34 | −0.03em | 500 | A tab's title (Library) |
 | `text-title` | 24 / 27 | −0.025em | 500 | Home's title under its date |
@@ -331,7 +331,7 @@ medium only inside a feed sentence (a feed row, Home's friends rows and its requ
   but the bottom inset, no frame, `--radius-sheet`, `surface-sheet`, `shadow-sheet`, the column's
   width, one grabber: Regal's, at UiSheet's size and colour, which also drags the Book back). Regal's
   own frame round the row's card is dropped with `--regal-row-border/-radius/-background` (the
-  Libellus card is the only edge), and Regal's round Back is off (`:back-button="false"`). The Book
+  BetterReads card is the only edge), and Regal's round Back is off (`:back-button="false"`). The Book
   broken out on a phone is a quieter cousin of the app's sheets (`ShelfBookSheet`, through Regal's
   `#detail` slot): UiSheet's title row (a plain Done at the left puts the Book back, Back cover /
   Front cover at the right in the lamp colour; no pills), then the title in the book-title style,

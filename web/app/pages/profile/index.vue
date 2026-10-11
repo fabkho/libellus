@@ -149,6 +149,8 @@ function back() {
 
 // Her photo (#156): the hero's avatar and the Account's Photo row both open it.
 const photo = useTemplateRef<{ start: () => void }>('photo')
+// Her name: the hero's name and the Account's Name row both open the one sheet.
+const naming = ref(false)
 </script>
 
 <template>
@@ -156,7 +158,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
     <UiAmbient :colors="light" />
     <UiTopBar :back-label="t('profile.back')" back-testid="profile.back" @back="back" />
 
-    <ProfileHero @photo="photo?.start()" :since="since" :read="booksRead" :reading="stats.record?.reading ?? 0" :want="stats.record?.wantToRead ?? 0" :loading="loading" :expect-since="placeholders" />
+    <ProfileHero @photo="photo?.start()" @name="naming = true" :since="since" :read="booksRead" :reading="stats.record?.reading ?? 0" :want="stats.record?.wantToRead ?? 0" :loading="loading" :expect-since="placeholders" />
 
     <!-- No gaps between the blocks: each carries the space after it inside its room, so a block that closes takes its space along. -->
     <Transition name="decided" @before-enter="arriving = true" @after-enter="arriving = false" @enter-cancelled="arriving = false">
@@ -171,9 +173,6 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
             <section id="columns" class="flex flex-col gap-md pt-xl">
               <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
                 <h2 class="eyebrow">{{ stats.year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-                <UiSeeAll v-if="!loading && stats.year !== 'all'" :to="`/profile/${stats.year}`" data-testid="profile.inReview">
-                  {{ t('profile.inReview', { year: stats.year }) }}
-                </UiSeeAll>
               </div>
               <ProfileColumns :columns="loading ? null : columns" :placeholders="stats.year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
             </section>
@@ -226,7 +225,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
         <!-- Share (#171): her public reading page, off until she turns it on. -->
         <ProfileSharing class="mb-xl" />
 
-        <ProfileAccount @photo="photo?.start()" />
+        <ProfileAccount @photo="photo?.start()" @name="naming = true" />
         <ProfileContactRow />
         <ProfileLegal />
       </div>
@@ -234,6 +233,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
 
     <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
     <ProfilePhoto ref="photo" />
+    <ShellNameSheet v-model:open="naming" />
   </div>
 </template>
 

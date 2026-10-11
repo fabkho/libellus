@@ -7,7 +7,7 @@ import { hardcoverAdapter } from '@/data/import/hardcover'
 import { MissingColumnsError, UnknownExportError } from '@/data/import/rows'
 
 /**
- * Which app wrote a file (#111): the member drops an export and Libellus tells
+ * Which app wrote a file (#111): the member drops an export and BetterReads tells
  * Goodreads from Hardcover by the header alone, whatever a spreadsheet did to
  * it on the way (BOM, `;`, Excel's `sep=` line, Windows-1252, quoted or
  * re-cased header cells, columns in another order). A CSV of no supported app

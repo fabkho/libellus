@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The waitlist form at the end of a reading page and a Book card (issue #171). Libellus is
+// The waitlist form at the end of a reading page and a Book card (issue #171). BetterReads is
 // invite-only and the page creates no account: a visitor leaves her address and the owner invites
 // her when there is room (no e-mail is sent from here; the owner reads the list in Profile → Account
 // → Waitlist). One field and one button, then what the address is used for. The page's token goes

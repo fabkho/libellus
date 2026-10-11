@@ -135,7 +135,7 @@ function back() {
             <ProfileRecords class="pt-xl" foreign :figures="loading ? null : figures" />
           </UiReveal>
           <UiReveal :show="loading || figures.authors.length > 0">
-            <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" :limit="3" />
+            <ProfileAuthors class="pt-xl" foreign :name="view.profile?.member.name?.trim() || undefined" :figures="loading ? null : figures" :limit="3" />
           </UiReveal>
 
           <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" />

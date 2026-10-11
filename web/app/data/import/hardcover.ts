@@ -62,7 +62,7 @@ import { languageCode } from './editions'
  *   before it finished;
  * - `Currently Reading` → an open read from its start (Date Added, else today,
  *   without one); finished reads before it as earlier reads. `Paused` reads the
- *   same, with a note (Libellus has no pause);
+ *   same, with a note (BetterReads has no pause);
  * - `Want to Read` and anything else → Want to read, no reads;
  * - `None` / `Ignored` → skipped (Hardcover keeps it off her library too);
  * - Lists → Collections the preview offers (positions dropped), and `Owned`

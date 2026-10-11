@@ -51,7 +51,7 @@ export const REGAL_ENABLED = /^(1|true)$/i.test(process.env.LIBELLUS_REGAL?.trim
 
 /**
  * The published library file Regal shows (NUXT_PUBLIC_REGAL_LIBRARY_SRC; the owner's is the one
- * her portfolio shows, whose CORS allows Libellus). Empty without Regal.
+ * her portfolio shows, whose CORS allows BetterReads). Empty without Regal.
  */
 export const REGAL_LIBRARY_SRC = REGAL_ENABLED ? (process.env.NUXT_PUBLIC_REGAL_LIBRARY_SRC?.trim() ?? '') : ''
 
@@ -94,7 +94,7 @@ export function regalLayer(): (string | [string, Record<string, unknown>])[] {
 let regalDir: string | null = null
 
 // three.js and what renders it; Regal's components and utilities (its folder);
-// the two Libellus components that use them, and the fonts' stylesheet they import. Nothing else in
+// the two BetterReads components that use them, and the fonts' stylesheet they import. Nothing else in
 // the app imports these.
 const REGAL_PACKAGES = /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:three|three-stdlib|@tresjs|gsap|@vueuse|@monogrid|troika-[^\\/]+|camera-controls|postprocessing|stats-gl|meshoptimizer|bidi-js|webgl-sdf-generator)[\\/]/
 const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue|nuxt-fonts-global\.css/

@@ -1,0 +1,459 @@
+{
+ "schemaVersion": 1,
+ "generatedAt": "2026-10-11T08:00:00.000Z",
+ "userId": "invented-user",
+ "authUser": {
+  "email": "invented@example.invalid"
+ },
+ "userObject": {
+  "username": "invented",
+  "lists": {
+   "2025": [
+    {
+     "p_id": "5c5bab9e512852d7db5b1b371b3a67003c5e7c57adba8cc1532db177467ed92c",
+     "source": {
+      "type": "library_list",
+      "extra": "9783000000010"
+     },
+     "updatedAt": "2025-01-02T10:00:00.000Z"
+    },
+    {
+     "p_id": "f2ca74fcbb6cc291d9aa4273ae89acd58986aba13eb9de9c5644e7ed8fad5cb6",
+     "source": {
+      "type": "unknown"
+     },
+     "updatedAt": "2025-01-03T10:00:00.000Z"
+    },
+    {
+     "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+     "source": {
+      "type": "unknown"
+     },
+     "updatedAt": "2025-01-04T10:00:00.000Z"
+    }
+   ],
+   "_read": [
+    {
+     "p_id": "5c5bab9e512852d7db5b1b371b3a67003c5e7c57adba8cc1532db177467ed92c",
+     "source": {
+      "type": "library_list",
+      "extra": "9783000000010"
+     },
+     "updatedAt": "2025-03-01T10:00:00.000Z"
+    },
+    {
+     "p_id": "f2ca74fcbb6cc291d9aa4273ae89acd58986aba13eb9de9c5644e7ed8fad5cb6",
+     "source": {
+      "type": "unknown"
+     },
+     "updatedAt": "2025-04-02T10:00:00.000Z"
+    },
+    {
+     "p_id": "df063ce6635f1a7d667feba0632d9c3d4686de5a8a08239e9d486930156ddc38",
+     "source": {
+      "type": "library_list",
+      "extra": "9791000000084"
+     },
+     "updatedAt": "2025-05-03T10:00:00.000Z"
+    },
+    {
+     "p_id": "56e276e467118a3565be3e4fd79561aa7eb5947b1f63cc95faf0548761ca3bc5",
+     "source": {
+      "type": "library_list",
+      "extra": "9791000000107"
+     },
+     "updatedAt": "2024-02-02T10:00:00.000Z"
+    },
+    {
+     "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+     "source": {
+      "type": "unknown"
+     },
+     "updatedAt": "2025-06-01T10:00:00.000Z"
+    }
+   ],
+   "_reading": [
+    {
+     "p_id": "6218125012c189988d9d74827aa76d494bc35eaf15b830db4d60c5cb6135267b",
+     "source": {
+      "type": "library_list",
+      "extra": "9791000000053"
+     },
+     "updatedAt": "2026-09-01T10:00:00.000Z"
+    }
+   ],
+   "_stack": [
+    {
+     "p_id": "f0aed7356b90c2e5562adcd508122e8099bdb89df029f894be75b15dc453baa3",
+     "source": {
+      "type": "library_list",
+      "extra": "9791000000060"
+     },
+     "updatedAt": "2026-01-10T10:00:00.000Z"
+    },
+    {
+     "p_id": "875421bd6a2137c6aeb6dd571ec06bc26c0cf32190428c1a8865bc17419fedb3",
+     "source": {
+      "type": "unknown"
+     },
+     "updatedAt": "2026-01-11T10:00:00.000Z"
+    }
+   ],
+   "_wishlist": [
+    {
+     "p_id": "e97a89b09d0e73555fc42e71cebad1a7232e0e2750e44964793834dd1be137ce",
+     "source": {
+      "type": "unknown"
+     },
+     "updatedAt": "2026-02-01T10:00:00.000Z"
+    }
+   ],
+   "_aborted": [],
+   "_favorites": [
+    {
+     "p_id": "5c5bab9e512852d7db5b1b371b3a67003c5e7c57adba8cc1532db177467ed92c",
+     "source": {
+      "type": "library_list",
+      "extra": "9783000000010"
+     },
+     "updatedAt": "2025-03-05T10:00:00.000Z"
+    },
+    {
+     "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+     "source": {
+      "type": "unknown"
+     },
+     "updatedAt": "2025-06-02T10:00:00.000Z"
+    }
+   ],
+   "Ebook TBR": [
+    {
+     "p_id": "f0aed7356b90c2e5562adcd508122e8099bdb89df029f894be75b15dc453baa3",
+     "source": {
+      "type": "library_list",
+      "extra": "9791000000060"
+     },
+     "updatedAt": "2026-03-01T10:00:00.000Z"
+    }
+   ]
+  },
+  "listConfigs": {
+   "2025": {
+    "visible": true,
+    "updatedAt": "2025-06-23T20:27:36.190Z"
+   }
+  },
+  "addToListCount": 12
+ },
+ "readingJournal": [
+  {
+   "updatedAt": "2024-06-23T11:36:58.441Z",
+   "books": {
+    "9783000000010": {
+     "pageCount": 320,
+     "rating": 4.5,
+     "events": [
+      {
+       "at": "2025-01-10T12:00:00.000Z",
+       "pages": 0,
+       "type": "START"
+      },
+      {
+       "at": "2025-02-20T12:00:00.000Z",
+       "pages": 320,
+       "type": "COMPLETE"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "9783000000027": {
+     "pageCount": 280,
+     "rating": 3,
+     "events": [
+      {
+       "at": "2025-03-05T18:10:11.123Z",
+       "pages": 0,
+       "type": "START"
+      },
+      {
+       "at": "2025-03-06T18:10:11.123Z",
+       "pages": 40
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "9791000000039": {
+     "pageCount": 200,
+     "events": [
+      {
+       "at": "2024-05-01T12:00:00.000Z",
+       "pages": 0,
+       "type": "START"
+      },
+      {
+       "at": "2024-05-09T12:00:00.000Z",
+       "pages": 60,
+       "type": "ABORT"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "9791000000046": {
+     "events": [
+      {
+       "at": "2023-07-30T12:00:00.000Z",
+       "pages": 0,
+       "type": "START"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "9791000000053": {
+     "pageCount": 400,
+     "events": [
+      {
+       "at": "2026-09-01T12:00:00.000Z",
+       "pages": 0,
+       "type": "START"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "9791000000077": {
+     "rating": 4,
+     "events": [
+      {
+       "at": "2023-08-01T12:00:00.000Z",
+       "pages": 0,
+       "type": "START"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "9791000000091": {
+     "events": [
+      {
+       "at": "2024-04-04T09:09:09.909Z",
+       "pages": 0,
+       "type": "START"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "9791000000107": {
+     "pageCount": 150,
+     "rating": 5,
+     "events": [
+      {
+       "at": "2022-03-01T12:00:00.000Z",
+       "pages": 0,
+       "type": "START"
+      },
+      {
+       "at": "2022-03-15T12:00:00.000Z",
+       "pages": 150,
+       "type": "COMPLETE"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    },
+    "B0ABCDEFGH": {
+     "pageCount": 100,
+     "rating": 2,
+     "events": [
+      {
+       "at": "2024-01-01T12:00:00.000Z",
+       "pages": 0,
+       "type": "START"
+      },
+      {
+       "at": "2024-01-09T12:00:00.000Z",
+       "pages": 100,
+       "type": "COMPLETE"
+      }
+     ],
+     "updatedAt": "2024-06-23T11:36:58.442Z"
+    }
+   }
+  },
+  {
+   "updatedAt": "2024-06-23T13:13:58.431Z",
+   "books": {
+    "9783000000027": {
+     "pageCount": 280,
+     "events": [],
+     "updatedAt": "2024-06-23T13:13:58.431Z"
+    },
+    "9791000000046": {
+     "events": [],
+     "updatedAt": "2024-06-23T13:13:58.431Z"
+    }
+   }
+  }
+ ],
+ "newJournal": [
+  {
+   "p_id": "f2ca74fcbb6cc291d9aa4273ae89acd58986aba13eb9de9c5644e7ed8fad5cb6",
+   "at": "2025-03-05T18:10:11.123Z",
+   "pages": 0,
+   "type": "START",
+   "change": 0,
+   "timezoneOffset": -60,
+   "updatedAt": "2026-05-27T09:49:27.603Z"
+  },
+  {
+   "p_id": "f2ca74fcbb6cc291d9aa4273ae89acd58986aba13eb9de9c5644e7ed8fad5cb6",
+   "at": "2025-03-06T18:10:11.123Z",
+   "pages": 40,
+   "change": 40,
+   "timezoneOffset": -60,
+   "id": "inv-progress-1",
+   "isDeleted": false
+  },
+  {
+   "p_id": "f2ca74fcbb6cc291d9aa4273ae89acd58986aba13eb9de9c5644e7ed8fad5cb6",
+   "at": "2025-03-20T23:30:00.000Z",
+   "pages": 280,
+   "type": "COMPLETE",
+   "change": 240,
+   "timezoneOffset": -60
+  },
+  {
+   "p_id": "f2ca74fcbb6cc291d9aa4273ae89acd58986aba13eb9de9c5644e7ed8fad5cb6",
+   "at": "2025-03-22T10:00:00.000Z",
+   "pages": 280,
+   "type": "COMPLETE",
+   "change": 0,
+   "timezoneOffset": -60,
+   "isDeleted": true
+  },
+  {
+   "p_id": "5c5bab9e512852d7db5b1b371b3a67003c5e7c57adba8cc1532db177467ed92c",
+   "at": "2025-01-10T12:00:00.000Z",
+   "pages": 0,
+   "type": "START",
+   "change": 0
+  },
+  {
+   "p_id": "5c5bab9e512852d7db5b1b371b3a67003c5e7c57adba8cc1532db177467ed92c",
+   "at": "2025-01-15T20:00:00.000Z",
+   "pages": 100,
+   "change": 100,
+   "timezoneOffset": -60
+  },
+  {
+   "p_id": "6218125012c189988d9d74827aa76d494bc35eaf15b830db4d60c5cb6135267b",
+   "at": "2026-09-01T12:00:00.000Z",
+   "pages": 0,
+   "type": "START",
+   "change": 0
+  },
+  {
+   "p_id": "56e276e467118a3565be3e4fd79561aa7eb5947b1f63cc95faf0548761ca3bc5",
+   "at": "2024-01-05T09:00:00.000Z",
+   "pages": 0,
+   "type": "START",
+   "change": 0,
+   "timezoneOffset": -60
+  },
+  {
+   "p_id": "56e276e467118a3565be3e4fd79561aa7eb5947b1f63cc95faf0548761ca3bc5",
+   "at": "2024-02-01T20:00:00.000Z",
+   "pages": 150,
+   "type": "COMPLETE",
+   "change": 150,
+   "timezoneOffset": -60
+  },
+  {
+   "p_id": "ae8511acdfdad39fef5263f9bdbda5962084e49fa37d690056df192e8acdc2e4",
+   "at": "2024-04-04T09:09:09.909Z",
+   "pages": 0,
+   "type": "START",
+   "change": 0
+  },
+  {
+   "p_id": "4dcadc8b12d759421c76368962a7d2391f8f27f391e05c25fb8c1a32b51cdbde",
+   "at": "2024-04-04T09:09:09.909Z",
+   "pages": 0,
+   "type": "START",
+   "change": 0
+  },
+  {
+   "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+   "at": "2025-05-01T12:30:00.000Z",
+   "pages": 0,
+   "type": "START",
+   "change": 0,
+   "timezoneOffset": -120
+  },
+  {
+   "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+   "at": "2025-06-01T12:30:00.000Z",
+   "pages": 300,
+   "type": "COMPLETE",
+   "change": 300,
+   "timezoneOffset": -120
+  },
+  {
+   "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+   "at": "2025-05-20T12:30:00.000Z",
+   "pages": 150,
+   "change": 150,
+   "timezoneOffset": -120
+  },
+  {
+   "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+   "at": "2025-05-21T12:30:00.000Z",
+   "pages": 200,
+   "change": 50,
+   "timezoneOffset": -120
+  }
+ ],
+ "customBooks": [
+  {
+   "p_id": "df063ce6635f1a7d667feba0632d9c3d4686de5a8a08239e9d486930156ddc38",
+   "rating": 3.5,
+   "updatedAt": "2025-05-04T10:00:00.000Z",
+   "pageCount": 210
+  },
+  {
+   "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+   "rating": 4,
+   "ratedAt": "2025-06-02T10:00:00.000Z",
+   "pageCount": 300
+  },
+  {
+   "rating": 5,
+   "pageCount": 111,
+   "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+   "pageCount": 222,
+   "updatedAt": "2025-01-01T00:00:00.000Z"
+  }
+ ],
+ "posts": [
+  {
+   "p_id": "5c5bab9e512852d7db5b1b371b3a67003c5e7c57adba8cc1532db177467ed92c",
+   "rating": 5,
+   "message": " A review of an invented book.\n\nSecond paragraph. ",
+   "createdAt": "2025-03-02T10:00:00.000Z",
+   "isDeleted": false
+  },
+  {
+   "p_id": "9fe13553f429ad482c83e0200372cff89536c7f97857d8c1bc875f27d0208a27",
+   "rating": 4.5,
+   "message": "A review of a book nobody can name yet.",
+   "createdAt": "2025-06-03T10:00:00.000Z",
+   "isDeleted": false
+  }
+ ],
+ "notifications": [
+  {
+   "id": "n1",
+   "title": "invented notification"
+  }
+ ],
+ "followers": [],
+ "library": null
+}

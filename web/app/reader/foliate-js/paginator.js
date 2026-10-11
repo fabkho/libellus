@@ -243,7 +243,7 @@ class View {
         })
         // `allow-scripts` is needed for events because of WebKit bug
         // https://bugs.webkit.org/show_bug.cgi?id=218086
-        // Libellus: the sandbox comes from ./frame.js (scriptless where the browser allows it).
+        // BetterReads: the sandbox comes from ./frame.js (scriptless where the browser allows it).
         this.#iframe.setAttribute('sandbox', frame.sandbox)
         this.#iframe.setAttribute('scrolling', 'no')
     }
@@ -287,7 +287,7 @@ class View {
     }
     render(layout) {
         if (!layout) return
-        // Libellus: a resize can arrive while the section's document is still loading.
+        // BetterReads: a resize can arrive while the section's document is still loading.
         if (!this.document?.body) return
         this.#column = layout.flow !== 'scrolled'
         this.#layout = layout
@@ -758,7 +758,7 @@ export class Paginator extends HTMLElement {
     }
     render() {
         if (!this.#view) return
-        // Libellus: nothing to lay out or anchor while the section is still loading.
+        // BetterReads: nothing to lay out or anchor while the section is still loading.
         if (!this.#view.document?.body) return
         this.#view.render(this.#beforeRender({
             vertical: this.#vertical,

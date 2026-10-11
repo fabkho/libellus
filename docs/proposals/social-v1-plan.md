@@ -26,7 +26,7 @@ each is checked. Written before any worker starts; the coordinator reads it firs
   the pgTAP tests of steps 1–4 exist before the database tasks start, so a database task is "make these
   tests pass, change none of them without asking".
 - **A database of our own.** The local stack (`project_id = "libellus"`, ports 55320–55329) is shared by
-  every Libellus worktree on this machine, the coordinator's other workers included, and a
+  every BetterReads worktree on this machine, the coordinator's other workers included, and a
   `supabase db reset` in one wipes the others. The social work runs on its **own stack**: a copy of
   `supabase/` with `project_id = "libellus-social"` and ports **55620–55629**, started and reset only by
   the orchestrator or the one database task holding it. The suites already read their stack from the

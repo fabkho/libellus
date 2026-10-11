@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSessionStore } from '~/stores/session'
 
-// Libellus is invite-only: an address and the invite code that lets it in. The
+// BetterReads is invite-only: an address and the invite code that lets it in. The
 // database judges the code (and again when the address is proved); the form
 // asks first so a wrong code fails against the field that caused it.
 const { t } = useI18n()

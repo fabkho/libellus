@@ -1,4 +1,4 @@
-# Libellus — Spec Sheet (v1, 2026-10-02)
+# BetterReads — Spec Sheet (v1, 2026-10-02)
 
 > A mobile-first book tracker that nails one loop: **search → add → start → finish**. Personal first,
 > ready for a handful of invited people later (the first invitee comes from Goodreads).
@@ -9,7 +9,7 @@ is issue [#1](https://github.com/fabkho/libellus/issues/1). The words used here 
 
 ## 1. Goals
 
-- Find a book fast (Apple Books, OpenLibrary and Libellus' own Catalogue in parallel), put it on
+- Find a book fast (Apple Books, OpenLibrary and BetterReads' own Catalogue in parallel), put it on
   *Want to read*, mark when reading starts, and on finishing record the date, a quarter-star rating
   and a few words — on the phone, in a few taps, with sharp covers.
 - Re-reads and abandoned attempts are first-class: every read is a Reading session with its own dates.
@@ -263,7 +263,7 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
   is copied into the origin private file system, so reading it needs no permission and works offline;
   the picked folder is only for finding files (Android asks for its permission again every session).
   Files come from the share sheet, the folder (Scan) and Add ebook on a Book page; matching tries the
-  ISBN, then title and first author, and leaves the rest to the member. Libellus never downloads books
+  ISBN, then title and first author, and leaves the rest to the member. BetterReads never downloads books
   or names where they come from.
 
 ## 9. Testing

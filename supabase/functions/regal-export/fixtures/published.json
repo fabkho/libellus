@@ -33,7 +33,7 @@
     },
     {
       "id": "published-gone",
-      "title": "A Book Libellus No Longer Has",
+      "title": "A Book BetterReads No Longer Has",
       "authors": ["Nobody"],
       "status": "read",
       "assets": { "front": "gone/front.webp" }
