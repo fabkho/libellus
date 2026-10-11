@@ -18,7 +18,7 @@ is issue [#1](https://github.com/fabkho/libellus/issues/1). The words used here 
 - Replace Fable: import its history once, then delete it.
 - Built so a later Swift/Kotlin port is mechanical (the Trappist strategy).
 - Social, version 1 (follows by link, a feed on Home, private accounts by default): members see what
-  their circle reads, and each decides what her followers see ([docs/proposals/social-v1.md](docs/proposals/social-v1.md)).
+  their friends read, and each decides what her followers see ([docs/proposals/social-v1.md](docs/proposals/social-v1.md)).
 
 Non-goals (v1): likes, notifications, people search or suggestions (social v2, see docs/proposals/social-v1.md), a
 work/edition hierarchy, fuzzy dates, a "Paused" state, open sign-up, Sign in with Apple/Google, page
@@ -136,9 +136,9 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
          Profile → Share: her reading page (on/off, its link, its sections); Book → ⋯ → Share: its card
-         Home    → Your circle: a follow request, one card of a finish this week, a row per followed member
-         Home    → Your circle → Show more → /friends (her circle's feed, newest first) → People (followers, requests)
-         Profile → Friends: Your circle, People, Your follow link, Privacy (the seven switches, Blocked)
+         Home    → Your friends: a follow request, one card of a finish this week, a row per followed member
+         Home    → Your friends → Show more → /friends (her friends' feed, newest first) → People (followers, requests)
+         Profile → Friends: Your friends, People, Your follow link, Privacy (the seven switches, Blocked)
          /f/<token> (her follow link) → a member's profile: /friends/<member> and /friends/<member>/<year>
 (public) /r/<token> her reading page · /r/<token>/book/<id> a Book card — anyone with the link, no sign-in;
          both end in the waitlist form

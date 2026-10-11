@@ -1,5 +1,6 @@
 [
   { "key": "tabs.library", "de": "Bibliothek", "note": "a tab label: one word, no full stop" },
+  { "key": "circle.title", "de": "Deine Freunde", "note": "'Your friends': a section title, informal possessive" },
   { "key": "home.emptyTitle", "de": "Noch nichts im Regal", "note": "an empty-state headline: quiet, no full stop" },
   { "key": "signIn.intro", "de": "Wir schicken dir einen sechsstelligen Code per E-Mail. Kein Passwort.", "note": "informal du, short sentences, full stops" },
   { "key": "library.error.offline", "de": "Du bist offline. Es wurde nichts gespeichert.", "note": "an error: what happened, no blame" },

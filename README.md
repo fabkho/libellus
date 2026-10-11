@@ -37,7 +37,7 @@ Libellus runs as one private, invite-only instance for its owner and a few frien
   until you let them in; a public one can be followed at once). Your switches decide what they see:
   what you are reading, Want to read, what you finished, ratings, reviews, books you put down, your year
   in review. Hide a single Book from them, or block someone.
-- **Your circle.** Home shows what the people you follow finished, reviewed or started, and a follow
+- **Your friends.** Home shows what the people you follow finished, reviewed or started, and a follow
   request to answer; the feed lists all of it, newest first.
 - **Invite-only accounts** with a six-digit code by email; no passwords. Delete your account from
   the app.

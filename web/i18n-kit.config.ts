@@ -25,7 +25,7 @@ export default defineI18nKitConfig({
   locales: ['en', 'de'],
   localeFileFormat: 'json',
 
-  context: 'Libellus is a calm, invite-only PWA for keeping track of the books you read: Library, Want to read, Currently reading, Finished, reading history, ratings, Collections, a small circle of friends. Every string is a short mobile UI label, button, sheet title, empty state or error message.',
+  context: 'Libellus is a calm, invite-only PWA for keeping track of the books you read: Library, Want to read, Currently reading, Finished, reading history, ratings, Collections, friends. Every string is a short mobile UI label, button, sheet title, empty state or error message.',
   translationPrompt: read('ai-context.md'),
   localeNotes: {
     de: 'German (Germany), informal "du" (never "Sie"), warm and plain, German is 20-30 % longer than English so choose short words. Typographic quotes „…“ and ‚…‘.',

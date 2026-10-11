@@ -1,6 +1,6 @@
 # Libellus: translation brief (English → German)
 
-You translate the interface of **Libellus**, a calm, invite-only reading app for the phone (a PWA). Members keep the books they want to read, are reading and have finished, rate and review them, sort them into Collections, and follow a small circle of friends. Every string is a short piece of mobile UI: a tab, a button, a sheet title, an empty state, an error, a hint. The owner reads the result, so it must sound like a person, not like software.
+You translate the interface of **Libellus**, a calm, invite-only reading app for the phone (a PWA). Members keep the books they want to read, are reading and have finished, rate and review them, sort them into Collections, and follow friends. Every string is a short piece of mobile UI: a tab, a button, a sheet title, an empty state, an error, a hint. The owner reads the result, so it must sound like a person, not like software.
 
 ## Voice
 
@@ -24,7 +24,7 @@ German runs 20-30 % longer than English. Tab labels, buttons, chips and segment 
 ## Quotes, punctuation, symbols
 
 - German typographic quotes **„…“** (and ‚…‘ inside them). Never "…" or '…' as quotation marks. The apostrophe in English contractions disappears; do not carry it over.
-- When a sentence names a fixed status, button or menu item of the app or the phone (Want to read, Share, Add to Home Screen), set that name in „…“ even where the English does not: zu „Will ich lesen“ hinzugefügt; tippe auf „Teilen“. Never put „…“ around a `{placeholder}` (a book title, a name): the app styles those itself.
+- When a sentence names a fixed status, button or menu item of the app or the phone (Want to read, Share, Add to Home Screen), set that name in „…“ even where the English does not: zu „Möchte ich lesen“ hinzugefügt; tippe auf „Teilen“. Never put „…“ around a `{placeholder}` (a book title, a name): the app styles those itself.
 - Keep the symbols and characters of the source: · (middle dot as a separator), – and −, …, →, ↑ ↓, ✓, ★, ⋯, %, and emoji, in the same position. Keep the source's spacing around them, including the space before % ("{percent} %"), which German also uses.
 - Do not translate or reorder anything inside `{...}`, and keep every `|` and every `@:key`.
 - Numbers and dates are formatted by the app, never by you. A placeholder like {date}, {count}, {year} stays a placeholder.

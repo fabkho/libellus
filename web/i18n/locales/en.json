@@ -141,7 +141,7 @@
     "file": "Photo file",
     "cropTitle": "Move and scale",
     "hint": "Drag to move it, pinch or use the slider to zoom. With the keys: arrows move, + and − zoom.",
-    "area": "Your photo in the circle",
+    "area": "Your photo among your friends",
     "zoom": "Zoom",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -1723,7 +1723,7 @@
     }
   },
   "circle": {
-    "title": "Your circle",
+    "title": "Your friends",
     "more": "Show more",
     "askedLine": "asked to follow you",
     "want": "added {title} to Want to read",
@@ -1735,7 +1735,7 @@
     "acceptLabel": "Accept {name}"
   },
   "feed": {
-    "title": "Your circle",
+    "title": "Your friends",
     "peopleLabel": "People",
     "started": "started",
     "startedAgain": "started again",
@@ -1758,8 +1758,8 @@
     "quietTitle": "Quiet for now.",
     "quiet": "When the people you follow start or finish a book, it shows here.",
     "offline": "Offline · as of {time}",
-    "loadOffline": "You're offline. Your circle shows once you're back.",
-    "loadError": "Your circle couldn't be loaded.",
+    "loadOffline": "You're offline. What your friends read shows once you're back.",
+    "loadError": "What your friends read couldn't be loaded.",
     "retry": "Try again"
   },
   "people": {
