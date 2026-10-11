@@ -309,9 +309,6 @@ function back() {
             <section id="columns" class="flex flex-col gap-md pt-xl">
               <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
                 <h2 class="eyebrow">{{ year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-                <UiSeeAll v-if="!loading && year !== 'all'" :to="`/friends/${id}/${year}`" data-testid="member.inReview">
-                  {{ t('profile.inReview', { year }) }}
-                </UiSeeAll>
               </div>
               <ProfileColumns :columns="loading ? null : columns" :placeholders="year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
             </section>
@@ -323,7 +320,7 @@ function back() {
               <ProfileRecords class="pt-xl" foreign :figures="loading ? null : figures" />
             </UiReveal>
             <UiReveal :show="loading || figures.authors.length > 0">
-              <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" />
+              <ProfileAuthors class="pt-xl" foreign :name="card?.name?.trim() || undefined" :figures="loading ? null : figures" />
             </UiReveal>
           </div>
         </UiReveal>

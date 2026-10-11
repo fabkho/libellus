@@ -6,15 +6,20 @@
 // loading wave (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
-const props = withDefaults(defineProps<{ figures: YearFigures | null; limit?: number }>(), { limit: 4 })
+// `foreign`: another member's profile, so the title names her (`name`) instead of saying "you".
+const props = withDefaults(defineProps<{ figures: YearFigures | null; limit?: number; foreign?: boolean; name?: string }>(), { limit: 4, foreign: false, name: undefined })
 const { t } = useI18n()
 const { count, stars } = useFigures()
 const arriving = useArrival(() => !props.figures)
+const authorsTitle = computed(() => {
+  if (!props.foreign) return t('profile.authors.title')
+  return props.name ? t('profile.authors.titleOf', { name: props.name }) : t('profile.authors.titleNeutral')
+})
 </script>
 
 <template>
   <section v-if="!figures || figures.authors.length" id="authors" class="flex flex-col gap-xs" data-testid="profile.authors">
-    <h2 class="eyebrow mb-xs">{{ t('profile.authors.title') }}</h2>
+    <h2 class="eyebrow mb-xs">{{ authorsTitle }}</h2>
     <template v-if="!figures">
       <ProfileRowPlaceholder v-for="i in limit" :key="i" :wave="(i - 1) * 0.15" fan />
     </template>
