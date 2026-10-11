@@ -7,7 +7,7 @@
 -- where nothing is lost; a text that is not only a rating is left alone; nothing else changes; a second run changes nothing.
 
 begin;
-select plan(32);
+select plan(45);
 
 create schema if not exists tests;
 insert into public.invite_codes (code, label, max_uses) values ('T-RATING-REVIEW', 'rating-only reviews test', 5);
@@ -86,6 +86,9 @@ select x.n, tests.finished('Read ' || x.n, x.r, x.t)
     ('gr_null',    null::integer, '4.5/5'),
     ('gr_zero',    12,           '0'),
     ('hc_half',    14,           '4.6'),
+    ('hc_whole',   16,           '4.6'),
+    ('app_edit',   12,           '4.6'),
+    ('long',       null,         '4.5'),
     ('app_null',   null,         '4.6'),
     ('app_kept',   16,           '4.3'),
     ('app_equal',  18,           '4.6'),
@@ -107,11 +110,17 @@ update public.reading_sessions set outcome = 'abandoned', rating = null, review 
 -- What an import wrote carries its key.
 update public.reading_sessions s set import_key = k.key
   from reads r, (values ('gr_whole', 'goodreads:1'), ('gr_five', 'goodreads:2'), ('gr_same', 'goodreads:3'), ('gr_quarter', 'goodreads:4'),
-                        ('gr_null', 'goodreads:5'), ('gr_zero', 'goodreads:6'), ('hc_half', 'hardcover:7')) k(n, key)
+                        ('gr_null', 'goodreads:5'), ('gr_zero', 'goodreads:6'), ('hc_half', 'hardcover:7'), ('hc_whole', 'hardcover:8'),
+                        ('app_edit', 'goodreads:9')) k(n, key)
  where r.entry = s.entry_id and r.name = k.n;
+-- A text with room around it, longer than 40 characters (a finish trims, so it is written past the API).
+update public.reading_sessions s set review = '4.5' || repeat(' ', 50) from reads r where r.entry = s.entry_id and r.name = 'long';
+-- Spoiler flags: on a read whose text is cleared (must go false) and on one whose text stays (stays true).
+update public.reading_sessions s set review_spoilers = true
+  from reads r where r.entry = s.entry_id and r.name in ('gr_whole', 'app_kept', 'hc_half');
 
 create temporary table before as
-  select s.id, md5(concat_ws('|', s.entry_id, s.outcome, s.started_on, s.ended_on, s.abandon_reason, s.review_spoilers, s.import_key)) as other
+  select s.id, md5(concat_ws('|', s.entry_id, s.outcome, s.started_on, s.ended_on, s.abandon_reason, s.import_key)) as other
     from public.reading_sessions s join reads r on r.entry = s.entry_id;
 
 create or replace function tests.rating(p_name text)
@@ -129,9 +138,12 @@ select is(tests.rating('gr_whole'), 17, 'an imported whole-star rating (4) gives
 select is(tests.rating('gr_five'), 18, 'an imported 5 stars gives way to "4.6": 18');
 select is(tests.rating('gr_same'), 20, '"5/5" on 5 stars: 20, unchanged');
 select is(tests.rating('gr_quarter'), 17, 'a quarter rating on a Goodreads read was set in the app: it stays');
+select is(tests.rating('hc_half'), 14, 'a Hardcover half-star rating is not a whole star: it stays (every source, not only Goodreads)');
+select is(tests.rating('hc_whole'), 18, 'a Hardcover whole-star rating gives way to the number');
+select is(tests.rating('app_edit'), 18, 'ACCEPTED EDGE: a whole star set in the app on an imported read looks like the import''s and gives way (import_key is never cleared on an edit)');
+select is(tests.rating('long'), null, 'a text over 40 characters is no rating (as the TypeScript rule)');
 select is(tests.rating('gr_null'), 18, 'an imported read with no rating takes "4.5/5": 18');
 select is(tests.rating('gr_zero'), 12, '"0" says no rating: the rating stays');
-select is(tests.rating('hc_half'), 18, 'a Hardcover rating (an import) gives way too, half stars included');
 select is(tests.rating('app_null'), 18, 'a read made in the app with no rating takes the number');
 select is(tests.rating('app_kept'), 16, 'a rating set in the app (no import key) stays, whatever the text says');
 select is(tests.rating('app_equal'), 18, 'and the same number changes nothing');
@@ -144,9 +156,15 @@ select is(tests.rating('aband'), null, 'an abandoned read has none to give');
 
 select is(
   (select array_agg(n || '=' || coalesce(tests.review(n), '-') order by n)
-     from unnest(array['gr_whole', 'gr_five', 'gr_same', 'gr_quarter', 'gr_null', 'gr_zero', 'hc_half', 'app_null', 'app_equal']) n),
-  array['app_equal=-', 'app_null=-', 'gr_five=-', 'gr_null=-', 'gr_quarter=-', 'gr_same=-', 'gr_whole=-', 'gr_zero=-', 'hc_half=-'],
-  'the number text is cleared: imports, reads whose rating is now the number, and "0"');
+     from unnest(array['gr_whole', 'gr_five', 'gr_same', 'gr_null', 'gr_zero', 'hc_whole', 'app_edit', 'app_null', 'app_equal']) n),
+  array['app_edit=-', 'app_equal=-', 'app_null=-', 'gr_five=-', 'gr_null=-', 'gr_same=-', 'gr_whole=-', 'gr_zero=-', 'hc_whole=-'],
+  'the number text is cleared only where the rating is now the number (or the text is "0")');
+select is(tests.review('gr_quarter'), '4.6', 'a kept quarter rating that differs from the text keeps the text (nothing is lost)');
+select is(tests.review('hc_half'), '4.6', 'and so does a kept Hardcover half star');
+select is((select review_spoilers from public.reading_sessions s join reads r on r.entry = s.entry_id where r.name = 'gr_whole'), false,
+          'a cleared text takes its spoiler flag with it');
+select is((select review_spoilers from public.reading_sessions s join reads r on r.entry = s.entry_id where r.name = 'hc_half'), true,
+          'a kept text keeps its spoiler flag');
 select is(tests.review('app_kept'), '4.3', 'an app read whose own rating differs keeps the text (nothing is lost)');
 select is(tests.review('words'), '5 stars, loved it', 'a real review is kept …');
 select is(tests.review('series'), 'Book 2 of 3', '… and so is "Book 2 of 3" …');
@@ -154,11 +172,21 @@ select is(tests.review('year'), '1984', '… and "1984"');
 select is(tests.review('review'), 'Lovely.', '"Lovely." too');
 select is(tests.review('aband'), '4.6', 'an abandoned read keeps its text');
 select is(
-  (select md5(string_agg(s.id::text || md5(concat_ws('|', s.entry_id, s.outcome, s.started_on, s.ended_on, s.abandon_reason, s.review_spoilers, s.import_key)), ',' order by s.id))
+  (select md5(string_agg(s.id::text || md5(concat_ws('|', s.entry_id, s.outcome, s.started_on, s.ended_on, s.abandon_reason, s.import_key)), ',' order by s.id))
      from public.reading_sessions s join reads r on r.entry = s.entry_id),
   (select md5(string_agg(b.id::text || b.other, ',' order by b.id)) from before b),
   'nothing but the rating and the number text changes');
+select is((select count(*)::int from private.rating_only_reviews_backup b join reads r on r.entry = (select entry_id from public.reading_sessions where id = b.id)),
+          9, 'the nine changed reads were copied to the backup, and only they');
+select is((select b.rating from private.rating_only_reviews_backup b join public.reading_sessions s on s.id = b.id join reads r on r.entry = s.entry_id where r.name = 'gr_whole'), 16::smallint,
+          'the backup holds the rating as it was …');
+select is((select b.review || '/' || b.review_spoilers::text from private.rating_only_reviews_backup b join public.reading_sessions s on s.id = b.id join reads r on r.entry = s.entry_id where r.name = 'gr_whole'),
+          '4.3/true', '… and the text and spoiler flag');
+select is((select count(*)::int from private.rating_only_reviews_backup b join public.reading_sessions s on s.id = b.id join reads r on r.entry = s.entry_id where r.name in ('gr_quarter', 'hc_half', 'app_kept', 'words', 'review')), 0,
+          'a read the fix leaves as it is is not in the backup');
 select is(private.rating_only_reviews_fix(), 0, 'a second run changes nothing');
+select is((select count(*)::int from private.rating_only_reviews_backup b join reads r on r.entry = (select entry_id from public.reading_sessions where id = b.id)), 9, 'and copies nothing');
+select is(has_table_privilege('authenticated', 'private.rating_only_reviews_backup', 'select'), false, 'the backup has no grants');
 select is(has_function_privilege('authenticated', 'private.rating_only_reviews_fix()', 'execute')
           or has_function_privilege('anon', 'private.rating_from_review_text(text)', 'execute'), false, 'no API role runs the helpers');
 

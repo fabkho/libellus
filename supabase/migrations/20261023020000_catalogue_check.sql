@@ -294,7 +294,7 @@ create or replace function public.catalogue_book_for(p_book jsonb)
 returns uuid
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_book   public.books;
@@ -420,7 +420,7 @@ create or replace function public.catalogue_check_claim(p_limit integer default 
 returns setof public.books
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 begin
   return query
@@ -496,7 +496,7 @@ create or replace function public.catalogue_check_save(p_book uuid, p_result jso
 returns boolean
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_book        public.books;
@@ -619,7 +619,7 @@ create or replace function public.catalogue_check_miss(p_book uuid)
 returns boolean
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_found boolean;
@@ -641,7 +641,7 @@ create or replace function public.catalogue_check_mismatch(p_book uuid)
 returns boolean
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_found boolean;
@@ -663,7 +663,7 @@ create or replace function public.catalogue_check_failed(p_book uuid, p_error te
 returns void
 language sql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
   update private.catalogue_check_state
      set claimed_until = null,
@@ -677,7 +677,7 @@ create or replace function public.catalogue_check_release(p_book uuid)
 returns void
 language sql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
   update private.catalogue_check_state
      set claimed_until = null, attempts = greatest(attempts - 1, 0)
@@ -690,7 +690,7 @@ returns jsonb
 language sql
 stable
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
   select jsonb_build_object(
     'unchecked', (select count(*) from public.books where owner_id is null and checked_at is null),
@@ -800,7 +800,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_caller uuid := auth.uid();
