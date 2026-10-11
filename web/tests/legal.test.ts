@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { ACTIVE_DOCUMENTS, allPlaceholders, LEGAL_DOCUMENTS, legalLangOf, placeholdersOf } from '@/legal'
 import { IMPRINT_ENABLED } from '@/legal/config'
-import { PLACEHOLDER } from '@/legal/placeholders'
+import { EMAIL, PLACEHOLDER } from '@/legal/placeholders'
 import { LEGAL_LANGS, type LegalBlock } from '@/legal/types'
 import { isAppPath, parseInline, placeholdersIn } from '@/utils/legalInline'
 import { isPublicPath } from '@/utils/publicPath'
@@ -41,12 +41,12 @@ describe('the imprint, postponed', () => {
     // The controller is named, with the e-mail address to reach it.
     for (const lang of LEGAL_LANGS) {
       const lines = LEGAL_DOCUMENTS.privacy[lang].sections.find((section) => section.id === 'responsible')!.blocks.find((block) => 'lines' in block)
-      expect(lines && 'lines' in lines ? lines.lines : []).toEqual(['Fabian Kirchhoff', expect.stringContaining(PLACEHOLDER.email)])
+      expect(lines && 'lines' in lines ? lines.lines : []).toEqual(['Fabian Kirchhoff', expect.stringContaining(EMAIL)])
     }
   })
 
   it('keeps its text, and the postal address and second contact it needs, in the repository', () => {
-    expect(placeholdersOf(LEGAL_DOCUMENTS.imprint).sort()).toEqual([PLACEHOLDER.address, PLACEHOLDER.contact, PLACEHOLDER.email].sort())
+    expect(placeholdersOf(LEGAL_DOCUMENTS.imprint).sort()).toEqual([PLACEHOLDER.address, PLACEHOLDER.contact].sort())
     expect(LEGAL_DOCUMENTS.imprint.de.lead).toContain('§ 5 DDG')
   })
 })
@@ -100,6 +100,11 @@ describe('the placeholders', () => {
 
   it('are exactly the ones docs/legal-checklist.md lists', () => {
     expect([...allPlaceholders()].sort()).toEqual([...listed].sort())
+  })
+
+  it('are all filled in on the pages that are on, so the Draft note is gone from the privacy notice', () => {
+    expect(placeholdersOf(LEGAL_DOCUMENTS.privacy)).toEqual([])
+    expect(allPlaceholders()).toEqual(IMPRINT_ENABLED ? [PLACEHOLDER.address, PLACEHOLDER.contact] : [])
   })
 
   it('come from one table, and every one of them is used', () => {

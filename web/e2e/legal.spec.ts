@@ -51,7 +51,7 @@ test('the notice and the imprint link to each other and keep the language', asyn
   test.skip(!IMPRINT_ENABLED, 'the imprint is postponed')
   await page.goto('/privacy?lang=de')
   await expect(page.getByTestId('legal.title')).toHaveText('Datenschutzerklärung')
-  await page.getByTestId('legal.link').first().click()
+  await page.locator('[data-testid="legal.link"][href^="/imprint"]').first().click()
   await expect(page).toHaveURL(/\/imprint\/?\?lang=de$/)
   await expect(page.getByTestId('legal.title')).toHaveText('Impressum')
   await page.getByTestId('legal.privacy').click()
@@ -59,17 +59,19 @@ test('the notice and the imprint link to each other and keep the language', asyn
   await expect(page.getByTestId('legal.title')).toBeVisible()
 })
 
-test('the privacy notice has no link to the imprint and no postal address while the imprint is postponed', async ({ page }) => {
+test('the privacy notice has no link to the imprint, no postal address and no placeholder left while the imprint is postponed', async ({ page }) => {
   test.skip(IMPRINT_ENABLED, 'the imprint is on')
   for (const lang of ['en', 'de']) {
     await page.goto(`/privacy?lang=${lang}`)
     await expect(page.getByTestId('legal.title')).toBeVisible()
-    await expect(page.getByTestId('legal.link')).toHaveCount(0)
+    await expect(page.locator('[data-testid="legal.link"][href*="imprint"]')).toHaveCount(0)
     await expect(page.getByTestId('legal.links')).toHaveCount(0)
-    await expect(page.getByTestId('legal.text')).not.toContainText(/imprint|impressum|STREET, POSTCODE/i)
+    await expect(page.getByTestId('legal.text')).not.toContainText(/imprint|impressum|STREET, POSTCODE|\[\[/i)
+    // Nothing is missing any more: no Draft note.
+    await expect(page.getByTestId('legal.draft')).toHaveCount(0)
     // The controller by name and e-mail address.
     await expect(page.getByTestId('legal.text')).toContainText('Fabian Kirchhoff')
-    await expect(page.getByTestId('legal.text')).toContainText('[[EMAIL ADDRESS]]')
+    await expect(page.getByTestId('legal.text').getByRole('link', { name: 'privacy@fabkho.dev' }).first()).toHaveAttribute('href', 'mailto:privacy@fabkho.dev')
   }
 })
 

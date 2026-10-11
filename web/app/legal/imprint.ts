@@ -1,4 +1,4 @@
-import { PLACEHOLDER as X } from './placeholders'
+import { EMAIL_LINK, PLACEHOLDER as X } from './placeholders'
 import type { LegalDocument } from './types'
 
 /** The imprint (Impressum): the details § 5 DDG asks of a digital service, for a private, non-commercial beta. */
@@ -16,7 +16,7 @@ export const IMPRINT: LegalDocument = {
       {
         id: 'contact',
         heading: 'Contact',
-        blocks: [{ lines: [`Email: ${X.email}`, `Also: ${X.contact}`] }],
+        blocks: [{ lines: [`Email: ${EMAIL_LINK}`, `Also: ${X.contact}`] }],
       },
       {
         id: 'about',
@@ -41,7 +41,7 @@ export const IMPRINT: LegalDocument = {
       {
         id: 'contact',
         heading: 'Kontakt',
-        blocks: [{ lines: [`E-Mail: ${X.email}`, `Außerdem: ${X.contact}`] }],
+        blocks: [{ lines: [`E-Mail: ${EMAIL_LINK}`, `Außerdem: ${X.contact}`] }],
       },
       {
         id: 'about',

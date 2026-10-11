@@ -1,5 +1,5 @@
 import { IMPRINT_ENABLED } from './config'
-import { PLACEHOLDER as X } from './placeholders'
+import { EMAIL_LINK, PLACEHOLDER as X } from './placeholders'
 import type { LegalDocument } from './types'
 
 /**
@@ -18,8 +18,8 @@ export const PRIVACY: LegalDocument = {
         heading: 'Who is responsible',
         blocks: [
           { p: 'Responsible under the GDPR is:' },
-          { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `Email: ${X.email}`] },
-          { p: 'I run Libellus alone, as a private, non-commercial project. There is no data protection officer; none is required.' + (IMPRINT_ENABLED ? ' The [imprint](/imprint) has the same details.' : '') },
+          { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `Email: ${EMAIL_LINK}`] },
+          { p: 'I run Libellus alone, as a private, non-commercial project. There is no data protection officer; none is required. Members can also write to me through Contact in their Profile.' + (IMPRINT_ENABLED ? ' The [imprint](/imprint) has the same details.' : '') },
         ],
       },
       {
@@ -68,7 +68,7 @@ export const PRIVACY: LegalDocument = {
               '**Supabase** (the database, sign-in, profile photo storage and server functions): the project runs in the EU region eu-central-1 (Frankfurt, Germany). It holds everything you save in the app and your email address. The provider is Supabase Pte. Ltd., Singapore.',
               '**Cloudflare Pages** (hosting of the app’s files and of link previews of reading pages; Web Analytics): Cloudflare, Inc., USA. Cloudflare answers from a data centre near you and sees your IP address while it does.',
               '**Cloudflare R2** (the nightly backup of the database): a private storage space with a location hint for Western Europe. The backup is encrypted before it is uploaded, with a key only I hold, and each file is deleted after 35 days.',
-              `**Resend** (email): sends the sign-in codes and the invites, so it sees your address and the message. The provider is Resend (USA). ${X.resend}`,
+              '**Resend** (email): Resend (Plus Five Five, Inc., USA) sends the sign-in codes, invites and notification emails. It receives the recipient’s email address, the message content (the code or the invite link) and delivery metadata. The sending region is Ireland (EU). Because the provider is a US company, transfers rest on the EU Standard Contractual Clauses (Module Two, controller to processor) in its [data processing addendum](https://resend.com/legal/dpa), which also records its commitments under the EU-U.S. Data Privacy Framework. Its [sub-processors](https://resend.com/legal/subprocessors) are listed on its site.',
               '**GitHub** (the code, which is public, and its automated tests): none of your data. The backup job encrypts the database dump while it streams and leaves no copy of it in GitHub.',
               '**Other members** see only what you choose to show (see Friends and your reading page above).',
             ],
@@ -119,9 +119,9 @@ export const PRIVACY: LegalDocument = {
         heading: 'Your rights',
         blocks: [
           { p: 'You have the right to access, rectification, erasure, restriction of processing, data portability and objection (Art. 15 to 21 GDPR). Where processing rests on your consent, you can withdraw it at any time, with effect for the future. Much of this is in the app: you change your name, photo and sharing under Profile, and delete your account there, which cannot be undone.' },
-          { p: `A download of your data is coming. Until then, write to ${X.email} and I send you your data in a common, machine-readable format. I answer within one month.` },
+          { p: `A download of your data is coming. Until then, write to ${EMAIL_LINK} and I send you your data in a common, machine-readable format. I answer within one month.` },
           { p: 'You may object at any time to processing based on my legitimate interest (Art. 21 GDPR). There are no automated decisions about you and no profiling.' },
-          { p: `You can complain to a data protection authority, for example the one responsible for me: ${X.authority}.` },
+          { p: 'You can complain to a data protection authority, for example the one responsible for me: the State Commissioner for Data Protection and Freedom of Information of North Rhine-Westphalia (LDI NRW), Postfach 20 04 44, 40102 Düsseldorf, [www.ldi.nrw.de](https://www.ldi.nrw.de). Complaints go through the complaint form on that site.' },
         ],
       },
       {
@@ -157,8 +157,8 @@ export const PRIVACY: LegalDocument = {
         heading: 'Wer verantwortlich ist',
         blocks: [
           { p: 'Verantwortlich im Sinne der DSGVO ist:' },
-          { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `E-Mail: ${X.email}`] },
-          { p: 'Ich betreibe Libellus allein, als privates Projekt ohne Gewinnabsicht. Einen Datenschutzbeauftragten gibt es nicht; er ist nicht vorgeschrieben.' + (IMPRINT_ENABLED ? ' Dieselben Angaben stehen im [Impressum](/imprint).' : '') },
+          { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `E-Mail: ${EMAIL_LINK}`] },
+          { p: 'Ich betreibe Libellus allein, als privates Projekt ohne Gewinnabsicht. Einen Datenschutzbeauftragten gibt es nicht; er ist nicht vorgeschrieben. Mitglieder können mir auch über „Kontakt“ in ihrem Profil schreiben.' + (IMPRINT_ENABLED ? ' Dieselben Angaben stehen im [Impressum](/imprint).' : '') },
         ],
       },
       {
@@ -207,7 +207,7 @@ export const PRIVACY: LegalDocument = {
               '**Supabase** (Datenbank, Anmeldung, Speicher für Profilfotos und Serverfunktionen): Das Projekt läuft in der EU-Region eu-central-1 (Frankfurt, Deutschland). Dort liegt alles, was du in der App speicherst, und deine E-Mail-Adresse. Anbieter ist Supabase Pte. Ltd., Singapur.',
               '**Cloudflare Pages** (Hosting der Dateien der App und der Link-Vorschauen von Leseseiten; Web Analytics): Cloudflare, Inc., USA. Cloudflare antwortet aus einem Rechenzentrum in deiner Nähe und sieht dabei deine IP-Adresse.',
               '**Cloudflare R2** (die nächtliche Sicherung der Datenbank): ein privater Speicher mit Standort-Hinweis Westeuropa. Die Sicherung wird vor dem Hochladen verschlüsselt, mit einem Schlüssel, den nur ich habe, und jede Datei wird nach 35 Tagen gelöscht.',
-              `**Resend** (E-Mail): verschickt die Anmeldecodes und die Einladungen und sieht deshalb deine Adresse und die Nachricht. Anbieter ist Resend (USA). ${X.resend}`,
+              '**Resend** (E-Mail): Resend (Plus Five Five, Inc., USA) verschickt die Anmeldecodes, Einladungen und Benachrichtigungs-E-Mails. Es erhält die E-Mail-Adresse der Empfängerin oder des Empfängers, den Inhalt der Nachricht (den Code oder den Einladungslink) und Zustelldaten. Die Versandregion ist Irland (EU). Weil der Anbieter ein US-Unternehmen ist, beruhen Übermittlungen auf den EU-Standardvertragsklauseln (Modul zwei, Verantwortlicher an Auftragsverarbeiter) in seinem [Auftragsverarbeitungsvertrag](https://resend.com/legal/dpa), der auch seine Verpflichtungen unter dem EU-U.S. Data Privacy Framework festhält. Seine [Unterauftragsverarbeiter](https://resend.com/legal/subprocessors) sind auf seiner Website aufgeführt.',
               '**GitHub** (der Code, der öffentlich ist, und seine automatischen Tests): keine Daten von dir. Der Sicherungs-Job verschlüsselt den Datenbank-Dump, während er läuft, und hinterlässt bei GitHub keine Kopie.',
               '**Andere Mitglieder** sehen nur, was du zeigen willst (siehe Freunde und deine Leseseite oben).',
             ],
@@ -258,9 +258,9 @@ export const PRIVACY: LegalDocument = {
         heading: 'Deine Rechte',
         blocks: [
           { p: 'Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch (Art. 15 bis 21 DSGVO). Wo die Verarbeitung auf deiner Einwilligung beruht, kannst du sie jederzeit mit Wirkung für die Zukunft widerrufen. Vieles geht direkt in der App: Name, Foto und Freigaben änderst du im Profil, und dort löschst du auch dein Konto, was sich nicht rückgängig machen lässt.' },
-          { p: `Ein Download deiner Daten kommt noch. Bis dahin schreib an ${X.email}, dann schicke ich dir deine Daten in einem gängigen, maschinenlesbaren Format. Ich antworte innerhalb eines Monats.` },
+          { p: `Ein Download deiner Daten kommt noch. Bis dahin schreib an ${EMAIL_LINK}, dann schicke ich dir deine Daten in einem gängigen, maschinenlesbaren Format. Ich antworte innerhalb eines Monats.` },
           { p: 'Der Verarbeitung auf Grundlage meines berechtigten Interesses kannst du jederzeit widersprechen (Art. 21 DSGVO). Es gibt keine automatisierten Entscheidungen über dich und kein Profiling.' },
-          { p: `Du kannst dich bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel bei der für mich zuständigen: ${X.authority}.` },
+          { p: 'Du kannst dich bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel bei der für mich zuständigen: der Landesbeauftragten für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW), Postfach 20 04 44, 40102 Düsseldorf, [www.ldi.nrw.de](https://www.ldi.nrw.de). Beschwerden gehen über das Beschwerdeformular auf dieser Website.' },
         ],
       },
       {

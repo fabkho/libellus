@@ -6,24 +6,26 @@ notice only. Both pages carry English and German text on the same page (`web/app
 catalogue does not exist yet (issue #257). While a placeholder is left in the text, the page shows a "Draft" note; it
 goes away by itself when the last one is filled.
 
-## Placeholders to fill in
+## Placeholders
 
-Each is written as `[[…]]` in `web/app/legal/` and drawn marked on the page. `web/tests/legal.test.ts` fails when
-this list and the texts of the pages that are on disagree, so a new placeholder cannot slip in unlisted.
-
-| Placeholder | What goes there | Where it is used |
-| --- | --- | --- |
-| `[[EMAIL ADDRESS]]` | An address you read; the privacy notice promises an answer within a month | Privacy notice (who is responsible, rights) |
-| `[[SUPERVISORY AUTHORITY]]` | The data protection authority of your federal state, with its address | Privacy notice (rights) |
-| `[[VERIFY RESEND REGION AND TRANSFER BASIS]]` | Where Resend processes the mail (its dashboard shows the sending region) and which transfer basis its data processing agreement gives (EU-U.S. Data Privacy Framework, standard contractual clauses) | Privacy notice (recipients) |
-
-To fill one: replace it in `web/app/legal/placeholders.ts` (one place, used by both languages), and delete its row here.
-Nothing else.
+**None are left** on the pages that are on. `web/tests/legal.test.ts` fails when the texts of those pages hold a
+`[[…]]` placeholder that is not listed in a table here, so a new one cannot slip in unlisted; while one is left the
+page shows a "Draft" note, which goes away by itself when the last one is filled. The values live in
+`web/app/legal/placeholders.ts` (the e-mail address) and in `web/app/legal/privacy.ts` (the supervisory authority, the
+mail provider's lines). The imprint's two placeholders, not shown while it is postponed, are in the next section.
 
 **A postal address is customary** and recommended before a wider launch. Art. 13 GDPR asks the notice for the
 controller's identity and contact details, which the name and the e-mail address give; most notices add the postal
 address too. It comes back with the imprint (below), or earlier by hand: add `X.address` to the "Who is responsible"
-lines in `privacy.ts`.
+lines in `privacy.ts` (and list it in a table here).
+
+## Owner checks before the friends round
+
+- **The alias must receive mail.** The notice names `privacy@fabkho.dev` (a Cloudflare Email Routing alias) as the contact
+  and for rights requests: send it a test mail and see that it arrives.
+- **Resend's sending region.** The notice says Ireland (EU): confirm in the Resend dashboard under Domains that the
+  sending region is Ireland.
+- **A lawyer's glance** before a wider launch.
 
 ## The imprint is postponed: what turning it on needs
 
@@ -35,9 +37,10 @@ screens and the Profile show "Privacy" alone), and the privacy notice names its 
 
 To turn it on:
 
-1. Fill the two placeholders it brings back, in `web/app/legal/placeholders.ts`, and list them in the table above
-   (the test requires it): `[[STREET, POSTCODE, CITY]]` (your postal address; a P.O. box does not satisfy § 5 DDG) and
-   `[[PHONE OR CONTACT FORM]]` (a second, fast way to reach you: a phone number, or a contact form if you build one).
+1. Fill the two placeholders it brings back: `[[STREET, POSTCODE, CITY]]` (your postal address; a P.O. box does not
+   satisfy § 5 DDG) and `[[PHONE OR CONTACT FORM]]` (a second, fast way to reach you: a phone number, or a contact form
+   if you build one). Write the real values in `web/app/legal/placeholders.ts`, or keep the markers and list each in a
+   table row here (the first cell the marker in backticks); `web/tests/legal.test.ts` wants one or the other.
 2. Set `IMPRINT_ENABLED = true`. The route, the "Privacy · Imprint" lines, the cross-reference in the privacy notice and
    the postal address in "Who is responsible" all come back with it.
 3. Have the imprint read by a lawyer: whether anything more is needed (a content-responsible person under § 18 MStV, a
@@ -53,7 +56,7 @@ The notice says these; confirm each, or change the text (and the version date) w
   (Supabase Pte. Ltd., Singapore) with its data processing agreement accepted.
 - **Cloudflare**: Web Analytics stays cookieless and stores nothing on the device (docs/HOSTING.md); the data processing
   terms are accepted; the R2 bucket `libellus-backups` has its location hint `weur` and the 35-day rule.
-- **Resend**: the data processing agreement is accepted (see the placeholder above).
+- **Resend**: the data processing agreement is accepted, and the notice's lines on its region, transfer basis and sub-processors still match its pages.
 - **Sign-in sessions**: the notice says Supabase Auth keeps time, IP address and browser of sign-ins. That is what its
   session and audit tables hold today; check again after an upgrade.
 - **Email**: the notice promises that a deleted waitlist entry goes on request (`owner_waitlist_delete`, the Waitlist
