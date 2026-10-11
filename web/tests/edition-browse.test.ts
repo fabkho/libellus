@@ -77,6 +77,7 @@ async function store() {
   vi.stubGlobal('computed', computed)
   vi.stubGlobal('watch', watch)
   vi.stubGlobal('useBackend', () => ({}))
+  vi.stubGlobal('useSearchLanguages', () => () => ['en'])
   setActivePinia(createPinia())
   const { useEditionStore } = await import('~/stores/edition')
   return useEditionStore()

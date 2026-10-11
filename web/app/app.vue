@@ -1,8 +1,8 @@
 <script setup lang="ts">
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
-// The document title comes out of the message file like every other string.
-useHead({ title: () => t('app.name') })
+// The document title comes out of the message file like every other string; <html lang> is the language on screen.
+useHead({ title: () => t('app.name'), htmlAttrs: { lang: () => locale.value } })
 </script>
 
 <template>

@@ -40,11 +40,16 @@ export const useOwnEditionStore = defineStore('ownEdition', () => {
   const imports = useImportStore()
   const session = useSessionStore()
 
+  const searchLanguages = useSearchLanguages()
   let source: Editions | null = null
+  let sourceLanguage = ''
   function repository(): Editions {
+    const languages = searchLanguages()
+    if (sourceLanguage !== languages[0]) source = null
+    sourceLanguage = languages[0] ?? ''
     source ??= createEditions({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: backend ? createCatalogueSearch(backend) : undefined,
     })
     return source

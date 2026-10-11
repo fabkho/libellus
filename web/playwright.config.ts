@@ -33,10 +33,13 @@ const CI_WORKERS = Number(process.env.E2E_WORKERS) || (availableParallelism() >=
 // Measurements (e2e/perf, tagged @perf) run only by hand, with LIBELLUS_E2E_PERF=1: they take
 // minutes, drive Chromium with the CPU slowed, and assert nothing a pull request should wait on.
 const PERF = Boolean(process.env.LIBELLUS_E2E_PERF)
+// The German pass (e2e/i18n, docs/i18n/german-pass.md) walks every screen in German at 390 and 360 px, in both
+// themes, and writes screenshots and findings: by hand too, with LIBELLUS_E2E_GERMAN=1.
+const GERMAN = Boolean(process.env.LIBELLUS_E2E_GERMAN)
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: PERF ? [] : ['**/perf/**'],
+  testIgnore: [...(PERF ? [] : ['**/perf/**']), ...(GERMAN ? [] : ['**/i18n/**'])],
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
   // Sharding splits by test rather than by file (a few files hold a third of the flows, so
