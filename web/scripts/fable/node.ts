@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import sharp from 'sharp'
+import type { FetchLike } from '../../app/data/fetching'
 import { USER_AGENT, type CoverLookupDeps, type EditionLookup, type ProbedImage } from './covers'
 
 /**
@@ -23,15 +24,13 @@ function paced(gapMs: number) {
   }
 }
 
-export function nodeLookupDeps(log: (line: string) => void = () => {}): CoverLookupDeps {
-  const apple = paced(350)
-
+function makeRequest(log: (line: string) => void) {
   /**
    * The response, after waiting out rate limits and hiccups. Throws when the
    * source could not be asked at all, so a failure is never cached as "not
    * found": that Book is simply looked up again next run.
    */
-  async function request(url: string, timeoutMs: number): Promise<Response> {
+  return async function request(url: string, timeoutMs: number): Promise<Response> {
     const host = new URL(url).host
     let failure = 'no answer'
     for (let attempt = 0; attempt < 4; attempt++) {
@@ -53,6 +52,24 @@ export function nodeLookupDeps(log: (line: string) => void = () => {}): CoverLoo
     }
     throw new Error(`${host} unavailable (${failure})`)
   }
+}
+
+/**
+ * `fetch` the way the search repositories take it, with the same patience: Apple
+ * one request at a time and a little apart, rate limits waited out, retries.
+ */
+export function nodeFetch(log: (line: string) => void = () => {}): FetchLike {
+  const apple = paced(350)
+  const request = makeRequest(log)
+  return (url) => {
+    const ask = () => request(url, 15_000)
+    return new URL(url).host === 'itunes.apple.com' ? apple(ask) : ask()
+  }
+}
+
+export function nodeLookupDeps(log: (line: string) => void = () => {}): CoverLookupDeps {
+  const apple = paced(350)
+  const request = makeRequest(log)
 
   return {
     async getJson(url) {
