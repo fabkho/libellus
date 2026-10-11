@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
+import { createDnb } from '~/data/dnb'
 import type { Book, BookSnapshot } from '~/data/books'
 import { probeImageInBrowser } from '~/data/covers'
 import {
@@ -184,15 +185,13 @@ export const useImportStore = defineStore('import', () => {
     const languages = searchLanguages()
     if (repositoryLanguage !== languages[0]) repository = null
     repositoryLanguage = languages[0] ?? ''
+    // Apple refuses a burst; a little room between its requests keeps it answering, and the National Library is asked politely too.
+    const paced = pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250, 'services.dnb.de': 200 } })
     repository ??= createBookImport(backend, {
       lookups: {
         catalogue,
-        search: createSearch({
-          // Apple refuses a burst; a little room between its requests keeps it answering.
-          fetch: pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } }),
-          languages,
-          catalogue,
-        }),
+        search: createSearch({ fetch: paced, languages, catalogue }),
+        dnb: createDnb({ fetch: paced }),
       },
       probe: probeImageInBrowser,
       online: isOnline,

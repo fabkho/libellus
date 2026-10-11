@@ -5,6 +5,7 @@ import { resolveBookCover, type ProbeImage } from './covers'
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
 import { editionSignature } from './editions'
+import type { Dnb } from './dnb'
 import { bookFromRow, rankEditions, sameVolume, titleQuery } from './import/editions'
 import type { ImportBook } from './import/rows'
 import { surname, workTitle } from './import/readingTracker'
@@ -87,6 +88,8 @@ export const ALTERNATIVES_KEPT = 20
 export type Lookups = {
   catalogue: Pick<CatalogueSearch, 'search'>
   search: Pick<Search, 'lookupIsbn' | 'search'>
+  /** The German National Library (data/dnb.ts), asked last, for what no other source knows. */
+  dnb?: Dnb
   timeoutMs?: number
 }
 
@@ -103,6 +106,13 @@ async function withDeadline<T>(ms: number, outer: AbortSignal | undefined, task:
     outer?.removeEventListener('abort', abort)
   }
 }
+
+/**
+ * A National Library record names the edition (ISBN, publisher, year, pages, language) in the trade's
+ * words: a marketing subtitle, "Roman - Die hochwertig veredelte Ausgabe". The title and authors stay
+ * as the file says them.
+ */
+const inHerWords = (book: BookSnapshot, row: ImportBook): BookSnapshot => ({ ...book, title: row.title, authors: row.authors.length ? [...row.authors] : book.authors })
 
 /** Finds the edition of one row (see the steps above). Rejects only when `signal` aborts. */
 export async function findEdition(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
@@ -128,6 +138,11 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
   if (row.isbn13) {
     const exact = await byIsbn(row.isbn13)
     if (exact) return { book: exact, via: 'isbn', unsure: false }
+    // An ISBN none of those knows may be a German edition: the National Library has it (title, publisher, pages, language).
+    if (lookups.dnb) {
+      const german = await ask((s) => lookups.dnb!.lookupIsbn(row.isbn13!, { signal: s }))
+      if (german) return { book: inHerWords(german, row), via: 'isbn', unsure: false }
+    }
   }
 
   const outcome = await ask((s) => lookups.search.search(titleQuery(row), { signal: s }))
@@ -144,12 +159,18 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
       if (again) ranked = rankEditions(row, again.results).map((result) => result.book)
     }
   }
+  // Nobody knew the work, and the row has no ISBN to look up: the National Library's title and author search (German books).
+  if (!ranked.length && !row.isbn13 && lookups.dnb) {
+    const german = await ask((s) => lookups.dnb!.search(row.title, row.authors[0] ?? '', { signal: s }))
+    if (german) ranked = rankEditions(row, german.map((book) => ({ book }))).map((result) => result.book)
+  }
   const alternatives = ranked.slice(0, ALTERNATIVES_KEPT)
   const same = ranked[0] ?? null
+  const dnbPick = Boolean(same && lookups.dnb && same.source === 'import')
   const own = bookFromRow(row)
   // An ISBN no source knows is still the edition she shelved: hers, with the work's cover.
   if (own.isbn13) return { book: own, via: null, unsure, coverFrom: same, alternatives }
-  if (same) return { book: same, via: 'title', unsure: false, alternatives }
+  if (same) return { book: dnbPick ? inHerWords(same, row) : same, via: 'title', unsure: false, alternatives }
   return { book: own, via: null, unsure, alternatives }
 }
 

@@ -9,6 +9,8 @@ export type FetchLike = (url: string, init?: { signal?: AbortSignal }) => Promis
   ok: boolean
   status: number
   json: () => Promise<unknown>
+  /** The body as text, for the sources that answer XML (the DNB); the JSON ones never ask for it. */
+  text?: () => Promise<string>
 }>
 
 export function abortError(): Error {
