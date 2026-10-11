@@ -19,6 +19,7 @@
     "i18n:sample": "node scripts/i18n/sample.mjs",
     "e2e:build": "tsx e2e/build.ts",
     "import:fable": "tsx scripts/import-fable.ts",
+    "import:reado": "tsx scripts/import-reado.ts",
     "export:regal": "tsx scripts/export-regal.ts",
     "seed:dev": "tsx scripts/import-fable.ts --email dev@libellus.local --prune",
     "perf": "tsx perf/run.ts",
