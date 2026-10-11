@@ -159,6 +159,7 @@
     }
   },
   "profile": {
+    "editName": "Edit your name",
     "title": "Profile",
     "back": "Back",
     "since": "Reading here since {date}",

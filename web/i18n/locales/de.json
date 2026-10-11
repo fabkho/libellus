@@ -159,6 +159,7 @@
     }
   },
   "profile": {
+    "editName": "Namen ändern",
     "title": "Profil",
     "back": "Zurück",
     "since": "Liest hier seit {date}",
