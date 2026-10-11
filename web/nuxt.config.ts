@@ -239,14 +239,19 @@ export default defineNuxtConfig({
     release,
   },
 
-  // One locale and every string in i18n/locales/en.json, so German is a
-  // mechanical follow-up and a native port maps the keys onto its string
-  // catalogue. No URL prefix: there is only one language to route to.
+  // English (the source: every string is a key of i18n/locales/en.json, which a native port maps onto its
+  // string catalogue) and German (de.json, made with the-i18n-kit: docs/i18n/README.md). No URL prefix: one
+  // address per screen. The language is not detected by the module (detectBrowserLanguage is off): the phone's
+  // language or the member's choice is put on it before the first paint by plugins/locale.client.ts
+  // (utils/locale.ts has the rule). Only the active language's messages are downloaded (lazy files).
   i18n: {
     defaultLocale: 'en',
     strategy: 'no_prefix',
     detectBrowserLanguage: false,
-    locales: [{ code: 'en', language: 'en', file: 'en.json' }],
+    locales: [
+      { code: 'en', language: 'en', file: 'en.json', name: 'English' },
+      { code: 'de', language: 'de-DE', file: 'de.json', name: 'Deutsch' },
+    ],
     // The messages are compiled at build (the module's Vite plugin turns en.json into AST), so the
     // client needs no message compiler: `dropMessageCompiler` leaves it out of the entry (−16 KB raw,
     // −4 KB brotli; `runtimeOnly` alone moved nothing). A string that is not in en.json could not be

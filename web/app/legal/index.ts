@@ -9,7 +9,7 @@ import { placeholdersIn } from '../utils/legalInline'
 export const LEGAL_DOCUMENTS: Record<LegalPage, LegalDocument> = { privacy: PRIVACY, imprint: IMPRINT }
 export const ACTIVE_DOCUMENTS: Partial<Record<LegalPage, LegalDocument>> = IMPRINT_ENABLED ? LEGAL_DOCUMENTS : { privacy: PRIVACY }
 
-/** The text's language: `?lang=` when it names one, else the device's first listed language when German, else English. */
+/** The text's language: `?lang=` when it names one, else the first of `languages` when German, else English (the page passes the app's language: German app, German text). */
 export function legalLangOf(query: unknown, languages: readonly string[]): LegalLang {
   const asked = Array.isArray(query) ? query[0] : query
   if (typeof asked === 'string' && (LEGAL_LANGS as readonly string[]).includes(asked)) return asked as LegalLang

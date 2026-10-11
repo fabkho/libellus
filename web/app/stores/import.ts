@@ -156,18 +156,23 @@ export const useImportStore = defineStore('import', () => {
 
   /** Rows whose edition she chose herself, by index: the match does not touch them again. */
   const chosen = shallowRef(new Set<number>())
+  const searchLanguages = useSearchLanguages()
   let repository: BookImport | null = null
+  let repositoryLanguage = ''
   let catalogue: ReturnType<typeof createCatalogueSearch> | null = null
   function importer(): BookImport | null {
     if (!backend) return null
     catalogue ??= createCatalogueSearch(backend)
+    const languages = searchLanguages()
+    if (repositoryLanguage !== languages[0]) repository = null
+    repositoryLanguage = languages[0] ?? ''
     repository ??= createBookImport(backend, {
       lookups: {
         catalogue,
         search: createSearch({
           // Apple refuses a burst; a little room between its requests keeps it answering.
           fetch: pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } }),
-          languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+          languages,
           catalogue,
         }),
       },
@@ -393,12 +398,16 @@ export const useImportStore = defineStore('import', () => {
   const choosing = ref<EditionChoosing | null>(null)
   let asking: AbortController | null = null
   let editionSource: ReturnType<typeof createEditions> | null = null
+  let editionSourceLanguage = ''
 
   /** Its own lookup of a work's editions, as the Book page's Change edition has (`data/editions.ts`). */
   function editionsLookup() {
+    const languages = searchLanguages()
+    if (editionSourceLanguage !== languages[0]) editionSource = null
+    editionSourceLanguage = languages[0] ?? ''
     editionSource ??= createEditions({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: backend ? (catalogue ??= createCatalogueSearch(backend)) : undefined,
     })
     return editionSource
