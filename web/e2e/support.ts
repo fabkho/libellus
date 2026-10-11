@@ -6,8 +6,10 @@ import { appleAnswer, appleCover } from '../tests/support/apple'
 import { openLibraryAnswer } from '../tests/support/openLibrary'
 import { INSTALL_HINT_KEY } from '../app/utils/installHint'
 import { IMPORT_HINT_KEY } from '../app/utils/importHint'
+import { createAuth } from '../app/data/auth'
 import { signUpMember } from '../tests/support/member'
-import { emailCooldown, readMailedCode } from '../tests/support/stack'
+import { emailCooldown, mailCount, newClient, readMailedCode, sql } from '../tests/support/stack'
+import { shelfOwner } from './shelfOwner'
 
 /**
  * Answers every source behind search from the recordings: Apple
@@ -134,6 +136,36 @@ export async function signedIn(
   }
   await expect(page.getByTestId('home.title')).toBeVisible()
   return member
+}
+
+/**
+ * The instance's owner, signed in: the member the flows' build names as the owner (`shelfOwner`, the
+ * app's NUXT_PUBLIC_SHELF_OWNER_ID) and the one the database names (`private.instance_owner`, which
+ * the owner's screens ask: Waitlist, Errors, Feedback). She is not made by a sign-up, so she signs in
+ * with the code mailed to her, and the page is handed that session (`handSession`).
+ */
+export async function signedInAsOwner(page: Page) {
+  const owner = await shelfOwner()
+  await sql('update private.instance_owner set owner_id = $1', [owner.id])
+  await page.addInitScript((key) => {
+    if (!localStorage.getItem(key)) localStorage.setItem(key, String(Date.now()))
+  }, INSTALL_HINT_KEY)
+  await page.addInitScript(
+    ([key, id]) => localStorage.setItem(key!, JSON.stringify({ ...JSON.parse(localStorage.getItem(key!) ?? '{}'), [id!]: 'imported' })),
+    [IMPORT_HINT_KEY, owner.id],
+  )
+  const { kept, storage } = sessionStorageInMemory()
+  const auth = createAuth(newClient(storage))
+  const mailed = await mailCount(owner.email)
+  await emailCooldown()
+  const requested = await auth.requestCode(owner.email)
+  if (requested.kind !== 'sent') throw new Error(`The owner could not be sent a code: ${JSON.stringify(requested)}`)
+  const verified = await auth.verifyCode(owner.email, await readMailedCode(owner.email, mailed + 1))
+  if (verified.error) throw new Error(`The owner could not sign in: ${verified.error}`)
+  await handSession(page, kept)
+  await page.goto('/')
+  await expect(page.getByTestId('home.title')).toBeVisible()
+  return owner
 }
 
 /**
