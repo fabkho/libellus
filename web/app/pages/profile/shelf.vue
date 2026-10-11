@@ -6,11 +6,11 @@
 // file his portfolio shows. In a build without Regal the address is a page
 // that doesn't exist (`validate`, the same 404 as any unknown address).
 //
-// A pushed screen in the tab layout that fills it: the night room in either
-// theme (`data-theme="dark"` on the page, so every token takes its Night value
-// inside, and the status bar the room's colour while it is open), the round
-// back button pinned, the count beside the title, and the Stack filling what is
-// left; the tab bar steps away (`immersive`). Regal does the rest: scroll,
+// A pushed screen in the tab layout that fills it, in the member's own theme
+// (#214: it used to force the night room; the night room is now what a member
+// in the dark theme gets), the round back button pinned, the count beside the
+// title, and the Stack filling what is left; the tab bar steps away
+// (`immersive`). Regal does the rest: scroll,
 // drag or flick through the pile, tap a Book to take it out, tap again for its
 // back, drag to turn it. Back (the round button or the system's) puts a Book
 // that is out away first.
@@ -24,9 +24,7 @@
 // fetched): a quiet word, no crash; once fetched it is kept for offline.
 // `?year=2025` (a year in review's stack, opened full screen): that year only.
 import { describeError, isChunkError } from '~/data/errorLog'
-import { applyPreference } from '~/utils/theme'
 import { useShelfStore } from '~/stores/shelf'
-import { useThemeStore } from '~/stores/theme'
 
 definePageMeta({
   layout: 'tabs',
@@ -42,7 +40,6 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const shelf = useShelfStore()
-const theme = useThemeStore()
 const { count } = useFigures()
 
 useHead({ title: () => `${t('shelf.title')} · ${t('app.name')}` })
@@ -74,10 +71,7 @@ const stage = ref<{ picked: boolean; putAway: () => void } | null>(null)
 
 onMounted(() => {
   void shelf.load()
-  // The browser's bar and the installed app's status bar: the night room's colour while it is open.
-  for (const tag of document.querySelectorAll('meta[name="theme-color"]')) tag.setAttribute('content', theme.colors.dark)
 })
-onBeforeUnmount(() => applyPreference(document, theme.preference, theme.colors))
 
 // A Book that is out goes back first, for the round button as for the system Back (a layer
 // over the page, like a sheet: useBackDismiss); then back to where the shelf was opened from.
@@ -93,10 +87,10 @@ function back() {
 </script>
 
 <template>
-  <div data-theme="dark" class="fixed inset-0 mx-auto flex max-w-(--size-max-content) flex-col overflow-hidden bg-surface text-ink" data-testid="shelf">
+  <div class="fixed inset-0 mx-auto flex max-w-(--size-max-content) flex-col overflow-hidden bg-surface text-ink" data-testid="shelf">
     <UiTopBar :title="t('shelf.title')" :back-label="t('shelf.back')" back-testid="shelf.back" @back="back">
       <template #trailing>
-        <span v-if="shelf.shelf" class="figures pr-xs text-meta text-ink-muted" data-testid="shelf.count">{{ countText }}</span>
+        <span v-if="shelf.shelf && !empty" class="figures pr-xs text-meta text-ink-muted" data-testid="shelf.count">{{ countText }}</span>
       </template>
     </UiTopBar>
 

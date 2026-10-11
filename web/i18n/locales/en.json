@@ -1029,7 +1029,8 @@
     },
     "year": {
       "title": "On the shelf",
-      "rowLabel": "{year} on your shelf"
+      "rowLabel": "{year} on your shelf",
+      "allLabel": "Show the {count} book of {year} on your shelf | Show the {count} books of {year} on your shelf"
     },
     "detail": {
       "showBack": "Show back",

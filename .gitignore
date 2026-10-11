@@ -32,3 +32,6 @@ web/all-blob-reports/
 
 # Email preview renders (`pnpm email:preview` in web/): screenshots of the templates.
 web/.email-preview/
+
+# Screenshots and videos a proof script writes (web/perf/shelf.ts): looked at, never committed.
+/.shots/

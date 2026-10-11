@@ -28,7 +28,7 @@ const empty = computed(() => !!shelf.shelf && books.value.length === 0)
     <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
       <h2 class="eyebrow">
         {{ t('shelf.card.title') }}
-        <span v-if="shelf.shelf" class="figures ml-xs text-ink-faint" data-testid="profile.shelfCount">{{ count(books.length) }}</span>
+        <span v-if="shelf.shelf && !empty" class="figures ml-xs text-ink-faint" data-testid="profile.shelfCount">{{ count(books.length) }}</span>
       </h2>
       <UiButton v-if="more" tone="quiet" size="sm" to="/profile/shelf" :aria-label="t('shelf.card.allLabel', { count: count(books.length) }, books.length)" data-testid="profile.shelfAll">
         {{ t('shelf.card.all') }}<UiIcon name="chevron" :size="13" />
