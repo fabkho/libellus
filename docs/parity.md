@@ -475,7 +475,7 @@ Actions → result:
 - The name or the avatar → `/friends/<member>`.
 - A batch → its sheet (see *A batch*).
 - People → `/friends/people`.
-- Back → Home (the page is pushed from Home's *Show more*).
+- Back → where it was opened from, by history, with that page's scroll kept (Home's *Your circle ›* or *Show more*, the Profile's Friends row, a member's page); Home only for a feed opened directly (`utils/back.ts`, the one rule of the pushed pages: back through the history when there is a page before it, else the fallback).
 Edge cases: never an entry: imports (Goodreads, Hardcover, the owner's Fable import); a finish or DNF logged with an end more than 14 days back; anything in its first 10 minutes (a correction inside them replaces it); a hidden Book (*Hide from followers*); a switched-off section. Entries of a member the viewer does not follow never show. Offline nothing is asked for.
 Copy keys: `feed.*` (as listed under *Your circle on Home*, plus `feed.title`, `feed.peopleLabel`, `feed.emptyTitle|empty|emptyShare|quietTitle|quiet|offline|loadError|retry`), `friends.people`, `member.back`
 IDs: `friends`, `friends.title`, `friends.back`, `friends.people`, `friends.day`, `friends.entry`, `friends.entryMember`, `friends.entryBook`, `friends.entryStars`, `friends.entryDay`, `friends.entryReview`, `friends.entryMore`, `friends.empty`, `friends.emptyShare`, `friends.quiet`, `friends.offline`, `friends.loadError`, `friends.retry`
@@ -673,7 +673,7 @@ States: loading (nothing yet) · list · no Collections (the lamp over the empty
 Actions → result:
 - Tap a Collection → its page `/collections/<id>`.
 - `collections.new` or the + → the **name sheet** (`UiSheet`, title `collections.new`, the action **Create** at the top right, Enter does the same): one row, `collections.nameLabel` with the field (placeholder `collections.namePlaceholder`, at most 80 characters, focused in the tap that opens the sheet, so the keyboard comes up in it). **One call**, `create_collection(name)`: trimmed, inner runs of whitespace collapsed; the new Collection goes to the end of her list. The sheet closes and the row appears; a refusal stays in the sheet under the field (`collections.error.<code>`).
-- Back (`collections.back`) → the Library, by history when it came from there.
+- Back (`collections.back`) → where it was opened from, by history; the Library for a page opened directly.
 Edge cases: a name she already uses, in any case, is `name_taken` (names are per member: someone else may have the same); blank or longer than 80 characters is `name_invalid` (Create stays disabled while the field is blank). The list and the Library row refresh whenever the Library shows again. Signing out (or another member signing in) forgets them.
 Copy keys: `collections.title`, `collections.back`, `collections.intro`, `collections.count`, `collections.new`, `collections.create`, `collections.nameLabel`, `collections.namePlaceholder`, `collections.emptyTitle`, `collections.empty`, `collections.loadError`, `collections.retry`, `collections.error.*`, `common.cancel`
 IDs: `library.collections`, `library.collectionsCount`, `collections.back`, `collections.newTop`, `collections.title`, `collections.list`, `collections.item`, `collections.itemName`, `collections.itemCount`, `collections.new`, `collections.emptyTitle`, `collections.empty`, `collections.loadError`, `collections.retry`, `collectionName`, `collectionName.cancel`, `collectionName.action`, `collectionName.input`, `collectionName.error`

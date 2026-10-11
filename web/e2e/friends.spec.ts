@@ -159,6 +159,23 @@ test('Ida shares her link, Anna asks and is let in, a finish shows in her circle
     await ida.keyboard.press('Escape')
     await expect(ida.getByTestId('likers')).toBeHidden()
 
+    // Back from Your circle is back to where she came from, scroll kept (as People's): Profile → Friends → Your
+    // circle → back is the Profile at the row she pressed, not Home.
+    await goto(ida, '/')
+    await openProfile(ida)
+    const circleRow = ida.getByTestId('profile.circle')
+    await circleRow.scrollIntoViewIfNeeded()
+    await untilStill(ida)
+    const scrolled = await ida.evaluate(() => window.scrollY)
+    expect(scrolled).toBeGreaterThan(0)
+    await circleRow.click()
+    await expect(ida).toHaveURL(/\/friends\/?$/)
+    await ida.getByTestId('friends.back').click()
+    await expect(ida).toHaveURL(/\/profile\/?$/)
+    await expect(circleRow).toBeVisible()
+    await untilStill(ida)
+    expect(Math.abs((await ida.evaluate(() => window.scrollY)) - scrolled)).toBeLessThan(4)
+
     // Ida hides the Book: Library → Finished → the Book → ⋯ → Hide from followers.
     await goto(ida, '/')
     await ida.getByTestId('shell.tab.library').click()
