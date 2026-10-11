@@ -2,8 +2,8 @@
  * The Regal library file, version 2: its types and its validator, vendored from
  * Regal (fabkho/regal, `shared/types/libraryFile.ts` and
  * `shared/library/libraryFile.ts` at commit e1842aa9445481f2572d438e94491c3e21a6ae40,
- * "Merge pull request #44: Regal assets", plus `assets.color` from fabkho/regal's flat
- * faces, branch feat/flat-spines). The format is Regal's
+ * "Merge pull request #44: Regal assets", plus `assets.color` from fabkho/regal#82
+ * (flat faces)). The format is Regal's
  * (docs/library-file.md there); Libellus only produces it (`regal.ts`).
  *
  * A port, not an import: Libellus' CI has no Regal checkout. Only the parts a

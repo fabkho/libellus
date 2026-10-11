@@ -20,16 +20,14 @@ const { count } = useFigures()
         {{ t('shelf.year.title') }}
         <span v-if="books.length" class="figures ml-xs text-ink-faint" data-testid="yearInReview.shelfCount">{{ count(books.length) }}</span>
       </h2>
-      <UiButton
+      <UiSeeAll
         v-if="books.length"
-        tone="quiet"
-        size="sm"
         :to="`/profile/shelf?year=${year}`"
         :aria-label="t('shelf.year.allLabel', { year, count: count(books.length) }, books.length)"
         data-testid="yearInReview.shelfAll"
       >
-        {{ t('shelf.card.all') }}<UiIcon name="chevron" :size="13" />
-      </UiButton>
+        {{ t('shelf.card.all') }}
+      </UiSeeAll>
     </div>
     <ShelfRowCard :year="year" :label="t('shelf.year.rowLabel', { year })" data-testid="yearInReview.shelfRow" />
   </section>
