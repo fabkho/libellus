@@ -94,14 +94,31 @@ export function keyOf(value: string | null | undefined, shape: RegExp): string |
 
 // ------------------------------------------------------------------ text
 
+/** One tag: `<…>`, and nothing inside it that is a bracket again. */
+const TAG = /<[^<>]*>/g
+
+/**
+ * A string with every tag gone.
+ *
+ * One pass is not enough: `<scr<script>ipt>` loses its inner `<script>` and what is left of the
+ * outer one — `<scr` and `ipt>` — joins up into `<script>`, a tag again ("incomplete
+ * multi-character sanitization", CodeQL). So the pass repeats until the string stops changing.
+ */
+function stripTags(html: string): string {
+  let text = html.replace(TAG, '')
+  for (let pass = text.replace(TAG, ''); pass !== text; pass = text.replace(TAG, '')) text = pass
+  return text
+}
+
 /** Markup as plain text: paragraphs kept, tags dropped, entities decoded. (data/apple.ts's plainText.) */
 export function plainText(html: unknown): string | null {
   if (typeof html !== 'string' || !html) return null
   const text = decodeEntities(
-    html
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/(?:p|div|li|h\d)>/gi, '\n\n')
-      .replace(/<[^>]*>/g, ''),
+    stripTags(
+      html
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(?:p|div|li|h\d)>/gi, '\n\n'),
+    ),
   )
     // deno-lint-ignore no-control-regex
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
@@ -110,6 +127,9 @@ export function plainText(html: unknown): string | null {
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
+    // A decoded entity can spell a tag again (`&lt;script&gt;`): what leaves here is text, shown as
+    // text, never markup, so no angle bracket survives at all.
+    .replace(/[<>]/g, '')
   return text || null
 }
 

@@ -16,12 +16,17 @@ import {
 } from './check.ts'
 import { answer, book, testHttp } from './test_support.ts'
 
-const lookup = (ids: string, country: string) => `https://itunes.apple.com/lookup?id=${ids.replace(',', '%2C')}&country=${country}`
+const lookup = (ids: string, country: string) => `https://itunes.apple.com/lookup?id=${ids.replaceAll(',', '%2C')}&country=${country}`
 const ART = 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/ab/cd/9783641264864.jpg/100x100bb.jpg'
 
 Deno.test('text: tags dropped, entities decoded, control characters gone, capped', () => {
   assertEquals(plainText('<p>One &amp; two</p><p>Three<br>four</p>'), 'One & two\n\nThree\nfour')
   assertEquals(plainText('a\u0000b<script>alert(1)</script>'), 'abalert(1)')
+  // A tag inside a tag: one pass leaves `<script>` behind (what is left of `<scr<script>ipt>` joins
+  // up again), which is markup once more ("incomplete multi-character sanitization", CodeQL).
+  assertEquals(plainText('<scr<script>ipt>alert(1)</script>'), 'alert(1)')
+  // A decoded entity can spell a bracket again, and that goes too: what is stored is text.
+  assertEquals(plainText('a&lt;b'), 'ab')
   assertEquals(description({ type: '/type/text', value: 'From the work' }), 'From the work')
   assertEquals(description(42), null)
   assertEquals(description('x'.repeat(MAX_DESCRIPTION + 50))?.length, MAX_DESCRIPTION)
