@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.2](https://github.com/fabkho/libellus/compare/v1.12.1...v1.12.2) (2026-10-11)
+
+
+### Fixes
+
+* **test:** give the v2a feed assertions the whole page ([1d8932a](https://github.com/fabkho/libellus/commit/1d8932a8ba27885dde7c1805ebe3b42b5a2428f7))
+* **test:** give the v2a feed assertions the whole page ([78f53d9](https://github.com/fabkho/libellus/commit/78f53d97f01d8c57b192ade8f8da6ec27e2906f9))
+
 ## [1.12.1](https://github.com/fabkho/libellus/compare/v1.12.0...v1.12.1) (2026-10-11)
 
 
