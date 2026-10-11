@@ -23,6 +23,9 @@ test('a member finds a book, opens it, adds it and sees it on Want to read', asy
   await page.route(/\/rest\/v1\/rpc\/search_books/, async (route) =>
     route.fulfill({ response: await route.fetch(), body: '[]' }),
   )
+  // This Book may be in the Catalogue already (`catalogue_book_for` matched the Apple id), and a
+  // Catalogue Book's description is the check's to write (social v2a contract §5): until it has,
+  // the page shows the text the search result brought, without storing it (pages/book/[key].vue).
   const member = await signedIn(page)
 
   // An empty Library says so, with the way to search.
