@@ -39,9 +39,21 @@ const props = defineProps<{
 const { t } = useI18n()
 const shelf = useShelfStore()
 const library = computed(() => (props.published ? null : shelf.document))
+// A member's row waits for her own document (stores/shelf.ts): without one, Regal would read the
+// published file in its place. The owner's (and the reading page's) is that file.
+const ownFile = computed(() => props.published || shelf.source === 'published')
+const rowReady = computed(() => ownFile.value || !!library.value)
 
 // A head start for a visit that came straight here (shared with the shell's warm-up when that has run).
-onMounted(() => warmShelfRow(props.year ?? null, library.value))
+onMounted(() => {
+  watch(
+    rowReady,
+    (now, before) => {
+      if (now && !before) warmShelfRow(props.year ?? null, library.value)
+    },
+    { immediate: true },
+  )
+})
 
 // Regal's chunk could not be had (offline before it was ever fetched): a quiet word, not a crash.
 const noChunk = ref(false)
@@ -57,7 +69,7 @@ onErrorCaptured((error) => {
     <p v-if="noChunk" class="flex h-full items-center justify-center px-xl text-center text-subhead text-ink-muted" data-testid="shelf.noChunk">
       {{ t('shelf.noChunk') }}
     </p>
-    <LazyShelfRow v-else :year="year" :limit="limit" :label="label" :library="library" />
+    <LazyShelfRow v-else-if="rowReady" :year="year" :limit="limit" :label="label" :library="library" />
   </div>
 </template>
 

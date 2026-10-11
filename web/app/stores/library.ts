@@ -551,32 +551,44 @@ export const useLibraryStore = defineStore('library', () => {
     for (const entry of entries) if (entry.book.description) rememberDescription(entry.book.id, entry.book.description)
   }
 
-  let filling = false
+  let fetchingDescriptions: Promise<void> | null = null
   /**
-   * Asks, once the browser is idle, for the descriptions of the Library's Catalogue Books that the
-   * device does not hold yet: all of them the first time (a few hundred KB, in pieces), then only
-   * the ones added since. So an owned Book reads in full offline without the lists carrying them.
+   * Asks now for the descriptions of the Library's Catalogue Books that the device does not hold
+   * yet (all of them the first time, a few hundred KB in pieces; then only the ones added since),
+   * and settles once they are kept. One request at a time: a second ask while one is on its way
+   * waits for it. Offline, or with nothing missing, it settles at once. The shelf waits for it
+   * before it builds a member's Books (stores/shelf.ts), so each back carries its blurb.
+   */
+  function ensureDescriptions(): Promise<void> {
+    if (!import.meta.client || !isOnline()) return Promise.resolve()
+    fetchingDescriptions ??= (async () => {
+      const member = session.member?.id
+      const repo = library()
+      if (!repo || !member) return
+      readDeviceDescriptions()
+      const missing = STATUSES.flatMap((status) => lists[status])
+        .map((entry) => entry.book.id)
+        .filter((id) => !descriptions.has(id) && parseBookKey(id)?.kind === 'catalogue')
+      if (!missing.length) return
+      const result = await repo.descriptions(missing)
+      if (result.error || member !== session.member?.id) return
+      for (const id of missing) rememberDescription(id, result.data.get(id) ?? null)
+    })().finally(() => (fetchingDescriptions = null))
+    return fetchingDescriptions
+  }
+
+  let fillWaiting = false
+  /**
+   * Once the browser is idle, the descriptions the device lacks (`ensureDescriptions`), so an
+   * owned Book reads in full offline without the lists carrying them.
    */
   function fillDescriptions() {
-    if (filling || !import.meta.client || !isOnline()) return
-    filling = true
-    const member = session.member?.id
+    if (fillWaiting || !import.meta.client || !isOnline()) return
+    fillWaiting = true
     onIdle(
-      async () => {
-        try {
-          const repo = library()
-          if (!repo || member !== session.member?.id) return
-          readDeviceDescriptions()
-          const missing = STATUSES.flatMap((status) => lists[status])
-            .map((entry) => entry.book.id)
-            .filter((id) => !descriptions.has(id) && parseBookKey(id)?.kind === 'catalogue')
-          if (!missing.length) return
-          const result = await repo.descriptions(missing)
-          if (result.error || member !== session.member?.id) return
-          for (const id of missing) rememberDescription(id, result.data.get(id) ?? null)
-        } finally {
-          filling = false
-        }
+      () => {
+        fillWaiting = false
+        void ensureDescriptions()
       },
       { timeout: 5000, fallback: 2500 },
     )
@@ -736,6 +748,7 @@ export const useLibraryStore = defineStore('library', () => {
     readInYearOf,
     loadReadInYear,
     descriptionOf,
+    ensureDescriptions,
     rememberDescription,
     entryByKey,
     remember,

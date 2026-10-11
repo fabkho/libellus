@@ -26,6 +26,9 @@ import { useSessionStore } from '~/stores/session'
  * shelf screen opens; a published file that fails keeps the last shelf on
  * screen. Signing out (or another member signing in) forgets it.
  */
+/** Longest a member's shelf waits for its blurbs before it shows without them (ms). */
+const BLURB_WAIT = 3000
+
 export const useShelfStore = defineStore('shelf', () => {
   const session = useSessionStore()
   const library = useLibraryStore()
@@ -46,23 +49,45 @@ export const useShelfStore = defineStore('shelf', () => {
   // ------------------------------------------------------------ a member's
 
   /**
-   * Her shelf's library document, for Regal's `library` prop: rebuilt only when
-   * a list changes (the lists keep their identity across refreshes that change
-   * nothing), so Regal is handed the same object and draws nothing again. A
-   * watch, not a computed: the blurbs the device keeps are read without being
-   * tracked, a description arriving later is no reason to rebuild.
+   * Her shelf's library document, for Regal's `library` prop. Built once a shelf screen asks for it
+   * (`load`), and again when a list changes (the lists keep their identity across refreshes that
+   * change nothing, so Regal is handed the same object and draws nothing again). Each build waits
+   * for the blurbs of her Books first (`ensureDescriptions`: the lists leave them out; the first
+   * time on a device they are asked for, after that the device has them), so every back is
+   * printed with its blurb. A slow answer is not waited for past BLURB_WAIT: the Books come
+   * without, and once more when the blurbs are in. Until the first build there is no document,
+   * and the screens show no row (never the published file in its place).
    */
   const document = shallowRef<RegalLibraryFile | null>(null)
+  /** A shelf screen asked for it (`load`): until then nothing is built. */
+  const wanted = ref(false)
+  let builds = 0
+  function buildDocument(): RegalLibraryFile {
+    return memberShelfDocument([...library.reading, ...library.finished], {
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      descriptionOf: (book) => library.descriptionOf(book),
+    })
+  }
   watch(
-    [available, source, () => library.loaded, () => library.reading, () => library.finished],
-    ([has, from, loaded, reading, finished]) => {
-      document.value =
-        has && from === 'member' && loaded
-          ? memberShelfDocument([...reading, ...finished], {
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-              descriptionOf: (book) => library.descriptionOf(book),
-            })
-          : null
+    [available, source, wanted, () => library.loaded, () => library.reading, () => library.finished],
+    ([has, from, want, loaded]) => {
+      const build = ++builds
+      if (!has || from !== 'member') {
+        document.value = null
+        return
+      }
+      if (!want || !loaded) return
+      const current = () => build === builds
+      const late = setTimeout(() => {
+        if (current()) document.value = buildDocument()
+      }, BLURB_WAIT)
+      void library
+        .ensureDescriptions()
+        .catch(() => undefined)
+        .then(() => {
+          clearTimeout(late)
+          if (current()) document.value = buildDocument()
+        })
     },
     { immediate: true },
   )
@@ -115,6 +140,7 @@ export const useShelfStore = defineStore('shelf', () => {
   function load(): Promise<void> {
     if (!available.value) return Promise.resolve()
     if (source.value === 'published') return loadPublished()
+    wanted.value = true
     return library.load({ ifStale: true })
   }
 
@@ -122,6 +148,8 @@ export const useShelfStore = defineStore('shelf', () => {
   const readIn = (year: number) => booksReadIn(shelf.value?.books ?? [], year)
 
   function reset() {
+    wanted.value = false
+    document.value = null
     published.value = null
     publishedError.value = null
   }
