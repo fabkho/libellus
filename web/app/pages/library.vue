@@ -18,7 +18,7 @@ import { useLibraryStore } from '~/stores/library'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useSessionStore } from '~/stores/session'
-import { useCircleBooksStore } from '~/stores/circleBooks'
+import { useFriendsBooksStore } from '~/stores/friendsBooks'
 
 definePageMeta({ layout: 'tabs', screen: 'library', keepalive: true })
 
@@ -29,8 +29,8 @@ const libraryView = useLibraryViewStore()
 const bookGenres = useGenresStore()
 
 // Followed members who want the same Books (circle_want), by her Book's id; asked when the Library shows.
-const circle = useCircleBooksStore()
-const circleWant = computed(() => circle.want)
+const friendsBooks = useFriendsBooksStore()
+const friendsWant = computed(() => friendsBooks.want)
 
 const SEGMENTS: readonly EntryStatus[] = ['want_to_read', 'reading', 'finished']
 const segment = ref<EntryStatus>('want_to_read')
@@ -107,7 +107,7 @@ onActivated(() => {
   // Not again while the lists are fresh (stores/library.ts, `FRESH_MS`).
   void library.load({ ifStale: true })
   // The store asks by itself when her lists arrive or change; coming back asks again once the answer is stale.
-  void circle.load({ ifStale: true })
+  void friendsBooks.load({ ifStale: true })
   void bookGenres.load({ ifStale: true })
   // Sent here to look at one list (the Profile's genres, #168): that segment, as filtered.
   if (libraryView.focus) {
@@ -162,7 +162,7 @@ watch(
     <LibraryViewBar v-if="base.length" :status="segment" :view="view" :entries="base" :shown="arranged.length" :genres="genres" />
 
     <UiListMotion v-if="segment === 'want_to_read' && lists.want_to_read.length" class="flex flex-col pt-xs" data-testid="library.wantToRead">
-      <LibraryEntryRow v-for="(entry, index) in arranged" :key="entry.id" :entry="entry" :eager="index < 8" :circle="circleWant[entry.book.id]" />
+      <LibraryEntryRow v-for="(entry, index) in arranged" :key="entry.id" :entry="entry" :eager="index < 8" :friends="friendsWant[entry.book.id]" />
     </UiListMotion>
 
     <UiListMotion v-else-if="segment === 'reading' && lists.reading.length" class="flex flex-col gap-ms pt-md" data-testid="library.reading">

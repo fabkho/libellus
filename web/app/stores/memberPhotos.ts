@@ -13,7 +13,7 @@ import type { MemberCard } from '~/data/socialShapes'
 import { useSessionStore } from '~/stores/session'
 
 /**
- * The photos of the members in her circle (social v1, U7). `photoOf(card)`
+ * The photos of the members in her friends (social v1, U7). `photoOf(card)`
  * is an object URL of the member's small photo (`'large'`: the big one, for a
  * profile's hero), or null while it loads, offline without a copy, after a
  * failed download, and for a member with none: the avatar then draws initials.

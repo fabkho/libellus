@@ -141,7 +141,7 @@
     "file": "Photo file",
     "cropTitle": "Move and scale",
     "hint": "Drag to move it, pinch or use the slider to zoom. With the keys: arrows move, + and − zoom.",
-    "area": "Your photo in the circle",
+    "area": "Your photo among your friends",
     "zoom": "Zoom",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -653,15 +653,15 @@
       "missing": "My edition isn't listed"
     },
     "readers": {
-      "title": "In your circle",
+      "title": "Among your friends",
       "all": "See all {count}",
-      "allLabel": "See all {count} people in your circle who have this book",
+      "allLabel": "See all {count} friends who have this book",
       "finished": "Finished",
       "reading": "Reading",
       "abandoned": "Put down",
       "want": "Wants to read",
-      "loading": "Loading your circle",
-      "sheetTitle": "In your circle",
+      "loading": "Loading your friends",
+      "sheetTitle": "Among your friends",
       "more": "Show more",
       "loadingMore": "Loading more people",
       "someone": "A reader"
@@ -1729,20 +1729,8 @@
       "unknown": "The series couldn’t be saved. Try again."
     }
   },
-  "circle": {
-    "title": "Your circle",
-    "more": "Show more",
-    "askedLine": "asked to follow you",
-    "want": "added {title} to Want to read",
-    "join": " · ",
-    "and": " and ",
-    "accept": "Accept",
-    "decline": "Decline",
-    "declineLabel": "Decline {name}",
-    "acceptLabel": "Accept {name}"
-  },
   "feed": {
-    "title": "Your circle",
+    "title": "Your friends",
     "peopleLabel": "People",
     "started": "started",
     "startedAgain": "started again",
@@ -1765,8 +1753,8 @@
     "quietTitle": "Quiet for now.",
     "quiet": "When the people you follow start or finish a book, it shows here.",
     "offline": "Offline · as of {time}",
-    "loadOffline": "You're offline. Your circle shows once you're back.",
-    "loadError": "Your circle couldn't be loaded.",
+    "loadOffline": "You're offline. What your friends read shows once you're back.",
+    "loadError": "What your friends read couldn't be loaded.",
     "retry": "Try again"
   },
   "people": {
@@ -1832,6 +1820,16 @@
   },
   "friends": {
     "section": "Friends",
+    "title": "Your friends",
+    "more": "Show more",
+    "askedLine": "asked to follow you",
+    "want": "added {title} to Want to read",
+    "join": " · ",
+    "and": " and ",
+    "accept": "Accept",
+    "decline": "Decline",
+    "declineLabel": "Decline {name}",
+    "acceptLabel": "Accept {name}",
     "people": "People",
     "peopleRequests": "No requests | 1 request | {count} requests",
     "followLink": "Your follow link",
@@ -1923,7 +1921,7 @@
       "offline": "You're offline. The likes show once you're back.",
       "loading": "Loading…"
     },
-    "circle": {
+    "friends": {
       "reading": "Also reading: {names}",
       "want": "Also want to read: {names}",
       "sheetReading": "Also reading",

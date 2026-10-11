@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -121,5 +121,27 @@ describe('the app’s messages, compiled at build and formatted on the device', 
   it('no message uses what a compiler would be needed for beyond the above (linked, modifiers, HTML)', () => {
     const odd = Object.entries(strings).filter(([, source]) => /@[.:]|<[a-z/]/i.test(source.replace("{'@'}", '')))
     expect(odd).toEqual([])
+  })
+})
+
+/**
+ * The German file goes through the same build as the English one (docs/i18n/README.md): every message must compile
+ * (`strictMessage`: a stray `{` or `|` in a translation would stop the build here, not on a phone) and render with a
+ * count and a word for every name. It is skipped until `i18n/locales/de.json` exists.
+ */
+const dePath = new URL('../i18n/locales/de.json', import.meta.url)
+describe.skipIf(!existsSync(dePath))('the German messages, compiled at build and formatted on the device', () => {
+  it('every message compiles and renders, with the names of its English source filled', () => {
+    const de = JSON.parse(readFileSync(dePath, 'utf8')) as Record<string, unknown>
+    const german = flatten(de)
+    const i18n = createI18n({ legacy: false, locale: 'de', fallbackLocale: 'en', missingWarn: false, fallbackWarn: false, warnHtmlMessage: false, messages: { de: precompile(de) as never } }).global
+    const failed: string[] = []
+    for (const [key, source] of Object.entries(strings)) {
+      const names = Object.fromEntries([...source.matchAll(/\{(\w+)\}/g)].map((match) => [match[1], match[1] === 'count' ? 2 : 'x']))
+      const text = i18n.t(key, names, 2)
+      if (typeof text !== 'string' || text === key || text === '' || /\{\w+\}/.test(text)) failed.push(`${key}: ${String(text)}`)
+      else if (german[key] === undefined) failed.push(`${key}: not in de.json`)
+    }
+    expect(failed).toEqual([])
   })
 })

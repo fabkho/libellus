@@ -363,7 +363,7 @@ function back() {
       </button>
     </section>
 
-    <!-- In your circle (social v2a, §1.5): the people she follows who have this Book, under its description and right above More from the author. -->
+    <!-- In your friends (social v2a, §1.5): the people she follows who have this Book, under its description and right above More from the author. -->
     <BookReaders v-if="book" :book="book" />
 
     <BookMoreFromAuthor v-if="book" :book="book" :book-key="key" />

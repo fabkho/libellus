@@ -173,7 +173,7 @@ html[data-glass='off'] *::after {
 }
 
 /*
- * The tap of a whole row (social v2a: a Home circle row and the feed's batch row open their sheet): a button or link
+ * The tap of a whole row (social v2a: a Home friends row and the feed's batch row open their sheet): a button or link
  * that holds the row's words (or only its fan), its ::after stretched over the row, which must be `relative`. What
  * else the row has to tap (her avatar, her name) is `relative z-1` above it, so nothing is nested in a link or a
  * button. The focus ring is drawn on the stretched box, inside the row's edge, so the row's overflow cannot cut it.

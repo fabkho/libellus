@@ -13,10 +13,10 @@
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useAuthorsStore } from '~/stores/authors'
 import { useBookStore } from '~/stores/book'
-import type { CircleGroup } from '~/utils/circle'
+import type { FriendsGroup } from '~/utils/friendsNames'
 
-// `circle`: on a Want to read row, the followed members who want the same Book (social v2a, FriendsCircleAvatars), on the cover's lower edge.
-const props = defineProps<{ entry: LibraryEntry; eager?: boolean; circle?: CircleGroup | null }>()
+// `friends`: on a Want to read row, the followed members who want the same Book (social v2a, FriendsAlsoAvatars), on the cover's lower edge.
+const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: FriendsGroup | null }>()
 
 const { t, locale } = useI18n()
 const { formatDay } = useDays()
@@ -75,10 +75,10 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
       </span>
     </UiPressLink>
     <!-- Beside the row's link, not in it: a button inside a link is not a thing. Centred on the cover's lower edge (the cover is centred in the row). -->
-    <FriendsCircleAvatars
-      v-if="circle?.members.length"
-      :members="circle.members"
-      :more="circle.more"
+    <FriendsAlsoAvatars
+      v-if="friends?.members.length"
+      :members="friends.members"
+      :more="friends.more"
       kind="want"
       testid="library.wantWith"
       class="avatars absolute z-10 flex"

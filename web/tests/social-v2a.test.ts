@@ -31,7 +31,7 @@ import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
 /**
  * Social version 2a, data layer (docs/proposals/social-v2a-contract.md §2): the review's spoiler flag
  * (arguments, the device's copy of a queued write, the outbox), the new fields on feed entries and a
- * member's finished rows, likes, "You both read" and the circle's same Book, through the repository: the
+ * member's finished rows, likes, "You both read" and the friends' same Book, through the repository: the
  * mapping with a stand-in client, the real answers against the social stack with real members, and
  * offline. Who may see what is the database's (supabase/tests/social_v2a_test.sql).
  */
@@ -223,7 +223,7 @@ describe('the answers read into shapes', () => {
   const BOOK = { id: 'b', title: 'T', authors: null, published_year: null, cover_url: null, cover_thumbhash: null, cover_dominant: null, cover_secondary: null, manual: false }
   const CARD = { id: 'm', name: null, photo: null }
 
-  it('reads a recent like, a shared Book and a circle row', () => {
+  it('reads a recent like, a shared Book and a friends row', () => {
     expect(recentLikeFromJson({ session: 's', book: BOOK, likers: [CARD], count: 4, at: '2026-10-20T10:00:00Z' })).toEqual({
       session: 's',
       book: { id: 'b', title: 'T', authors: [], year: null, coverUrl: null, coverThumbhash: null, coverColors: null, manual: false, unverified: false },
@@ -277,7 +277,7 @@ describe('the calls, with a stand-in client', () => {
     expect(call.rpc).toHaveBeenLastCalledWith('both_read', { p_member: 'm', p_year: 2026 })
   })
 
-  it('asks the circle about each Book once, at most 50, and asks nothing for none', async () => {
+  it('asks the friends about each Book once, at most 50, and asks nothing for none', async () => {
     const call = stub({ data: [{ book: 'b1', members: [CARD], more: 0 }] })
     expect((await call.social.circleReading(['b1', 'b1'])).data).toEqual([{ book: 'b1', members: [CARD], more: 0 }])
     expect(call.rpc).toHaveBeenLastCalledWith('circle_reading', { p_books: ['b1'] })

@@ -1,25 +1,25 @@
 <script setup lang="ts">
-// "Your circle" on Home (social v1, U8, the combined mock): the newest follow request as one raised
+// "Your friends" on Home (social v1, U8, the combined mock): the newest follow request as one raised
 // row (Accept, ✕), then the week's one finished Book as a lit card with her stars and review
-// (HomeCircleFeature), then one row per member, newest first, at most three (HomeCircleFriend: her
+// (HomeFriendsFeature), then one row per member, newest first, at most three (HomeFriendsRow: her
 // name, the day, one sentence of what she did lately, a fan of the covers it names; a tap opens the
 // sheet of those reads, as the feed's batch row does, or the Book when it is one read, her avatar and
-// name opening her page), and "Show more" to the feed's page. utils/circleView.ts decides what the card is and what each row says, from the
+// name opening her page), and "Show more" to the feed's page. utils/friendsView.ts decides what the card is and what each row says, from the
 // feed store's loaded entries. The last section of Home, so its coming (the copy at once, the
 // refreshed feed a moment after) moves nothing above it. Hidden altogether while there is no
 // request, no card and no row: Home does not nudge anyone to be social. A change plays like a list's
 // (`UiListMotion`, once the sheet that caused it has gone) and the section, when it has something
 // for the first time, opens its room (`UiReveal`).
 //
-// Test ids: `home.circle`, `home.circleRequest|circleAccept|circleDecline` (the request row),
-// `home.circleFeature` (+ `.member`, `.cover`, `.title`, `.stars`, `.review`, `.more`),
-// `home.circleFriend`, `home.circleTitle` (the title, a link to the feed), `home.circleMore`.
-import { circleView, entriesKind } from '~/utils/circleView'
+// Test ids: `home.friends`, `home.friendsRequest|friendsAccept|friendsDecline` (the request row),
+// `home.friendsFeature` (+ `.member`, `.cover`, `.title`, `.stars`, `.review`, `.more`),
+// `home.friendsRow`, `home.friendsTitle` (the title, a link to the feed), `home.friendsMore`.
+import { friendsView, entriesKind } from '~/utils/friendsView'
 import { useFeedStore } from '~/stores/feed'
 import { useLikesStore } from '~/stores/likes'
 import type { MemberCard, RecentLike } from '~/data/social'
 import type { FeedBatchView } from '~/data/feed'
-import type { CircleFriend } from '~/utils/circleView'
+import type { FriendsRow } from '~/utils/friendsView'
 import { useSocialStore } from '~/stores/social'
 
 const { t } = useI18n()
@@ -58,7 +58,7 @@ async function answer(accept: boolean) {
 // so its rows stay while it slides away; Back from a Book opened from it opens it again as it was left.
 const sheet = shallowRef<{ view: FeedBatchView; day: string } | null>(null)
 const sheetOpen = ref(false)
-function openRow(friend: CircleFriend) {
+function openRow(friend: FriendsRow) {
   sheet.value = { view: { member: friend.member, kind: entriesKind(friend.entries), entries: friend.entries }, day: label(friend.day) }
   sheetOpen.value = true
 }
@@ -72,7 +72,7 @@ const { restore } = useSheetRestore({
 })
 
 /** The card and the rows, from what the feed has loaded. */
-const view = useSettled(() => circleView(feed.entries, { now: new Date(), dayOf: (at) => isoDay(new Date(at)) }))
+const view = useSettled(() => friendsView(feed.entries, { now: new Date(), dayOf: (at) => isoDay(new Date(at)) }))
 const card = computed(() => view.value.card)
 const friends = computed(() => view.value.friends)
 const cardKey = computed(() => (card.value ? `${card.value.member.id}:${card.value.book.id}:${card.value.at}` : ''))
@@ -112,11 +112,11 @@ async function openLikers(item: RecentLike) {
 
 <template>
   <UiReveal :show="friends.length > 0 || !!card || !!request || !!likes.recent?.length">
-    <section data-testid="home.circle">
+    <section data-testid="home.friends">
       <div class="flex h-(--size-touch) items-center">
         <h2>
-          <NuxtLink to="/friends" class="eyebrow flex h-(--size-touch) items-center gap-xs" data-testid="home.circleTitle">
-            {{ t('circle.title') }}
+          <NuxtLink to="/friends" class="eyebrow flex h-(--size-touch) items-center gap-xs" data-testid="home.friendsTitle">
+            {{ t('friends.title') }}
             <UiIcon name="chevron" :size="12" class="shrink-0" />
           </NuxtLink>
         </h2>
@@ -131,15 +131,15 @@ async function openLikers(item: RecentLike) {
         @accept="answer(true)"
         @decline="answer(false)"
       />
-      <p v-if="request && answerFailed" class="mb-xs px-xs text-footnote text-error" role="alert" data-testid="home.circleError">{{ t('people.error') }}</p>
-      <HomeCircleLikes v-if="likes.recent?.length" :items="likes.recent" @open="openLikers" />
+      <p v-if="request && answerFailed" class="mb-xs px-xs text-footnote text-error" role="alert" data-testid="home.friendsError">{{ t('people.error') }}</p>
+      <HomeFriendsLikes v-if="likes.recent?.length" :items="likes.recent" @open="openLikers" />
       <UiListMotion tag="div">
         <div v-if="card" :key="cardKey" class="py-xs">
-          <HomeCircleFeature :card="card" />
+          <HomeFriendsFeature :card="card" />
         </div>
       </UiListMotion>
-      <UiListMotion tag="ul" class="flex flex-col divide-y divide-hairline" :aria-label="t('circle.title')">
-        <HomeCircleFriend
+      <UiListMotion tag="ul" class="flex flex-col divide-y divide-hairline" :aria-label="t('friends.title')">
+        <HomeFriendsRow
           v-for="friend in friends"
           :key="friend.member.id"
           :friend="friend"
@@ -147,7 +147,7 @@ async function openLikers(item: RecentLike) {
           @open="openRow(friend)"
         />
       </UiListMotion>
-      <UiButton v-if="friends.length > 0 || card" tone="quiet" size="md" block to="/friends" class="mt-sm" data-testid="home.circleMore">{{ t('circle.more') }}</UiButton>
+      <UiButton v-if="friends.length > 0 || card" tone="quiet" size="md" block to="/friends" class="mt-sm" data-testid="home.friendsMore">{{ t('friends.more') }}</UiButton>
       <FriendsBatchSheet v-if="sheet" v-model:open="sheetOpen" :batch="sheet.view" :day-label="sheet.day" :restore="restore" />
       <FriendsLikersSheet v-model:open="likersOpen" :members="likers" :error="likersFailed" :offline="!online" />
     </section>

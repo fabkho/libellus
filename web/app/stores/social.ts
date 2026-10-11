@@ -15,7 +15,7 @@ import {
 } from '~/data/social'
 import { useSessionStore } from '~/stores/session'
 import { useBookReadersStore } from '~/stores/bookReaders'
-import { useCircleBooksStore } from '~/stores/circleBooks'
+import { useFriendsBooksStore } from '~/stores/friendsBooks'
 import { useFeedStore } from '~/stores/feed'
 import { useLikesStore } from '~/stores/likes'
 import { useMemberPhotosStore } from '~/stores/memberPhotos'
@@ -264,7 +264,7 @@ export const useSocialStore = defineStore('social', () => {
    * One place for what a change of relation does to the others (the stores below only keep what they were
    * told): her profile on screen follows the action (`relationChanged`); `left` (unfollow, block, remove as
    * follower): nothing of her stays on the device (her photo, in memory and in IndexedDB, what was read
-   * of her profile, her place in Home's likes row and in the covers' circles), and `fromFeed` (she leaves her circle: unfollow, block) her entries leave the feed and
+   * of her profile, her place in Home's likes row and in the covers' friends), and `fromFeed` (she leaves her friends: unfollow, block) her entries leave the feed and
    * its device copy. Remove as follower leaves the feed alone: whom she follows is unchanged.
    */
   function relation(member: string, what: RelationChange, { left = false, fromFeed = false } = {}) {
@@ -273,9 +273,9 @@ export const useSocialStore = defineStore('social', () => {
     useBookReadersStore().stale()
     if (left) {
       useMemberPhotosStore().drop(member)
-      // Her name and avatar leave Home's likes row (and its device copy), the covers' circles and the hearts tapped on her reads.
+      // Her name and avatar leave Home's likes row (and its device copy), the covers' friends and the hearts tapped on her reads.
       useLikesStore().dropMember(member)
-      useCircleBooksStore().dropMember(member)
+      useFriendsBooksStore().dropMember(member)
       useBookReadersStore().dropMember(member)
     }
     useMemberProfileStore().relationChanged(member, what)

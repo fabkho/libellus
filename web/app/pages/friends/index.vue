@@ -3,7 +3,7 @@
 // first, under day eyebrows (Today, Yesterday, Monday, 3 Oct), thirty at a time and more as she
 // scrolls near the end. Each entry is a FeedRow, three or more of one kind by one member and day a
 // FeedBatch that opens its sheet. The People button at the top right opens People. Pushed from
-// Home's "Your circle" (Show more), in the tab layout, so Home stays alive under it.
+// Home's "Your friends" (Show more), in the tab layout, so Home stays alive under it.
 //
 // The device's copy shows at once and the load refreshes it; offline there is only the copy, under
 // a line that says when it is from. Pull to refresh is the browser's own. Empty: following nobody
@@ -26,7 +26,7 @@ useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
 
 onMounted(() => void feed.refresh())
 
-// The feed is reached from Home (Your circle ›), the Profile's Friends row and a member's page: back is to wherever she
+// The feed is reached from Home (Your friends ›), the Profile's Friends row and a member's page: back is to wherever she
 // came from, scroll kept (as People's); Home only for a feed opened directly (utils/back.ts).
 function back() {
   if (canGoBack(window.history.state)) router.back()

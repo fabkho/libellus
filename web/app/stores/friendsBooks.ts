@@ -5,11 +5,11 @@ import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
 import { FRESH_MS } from '~/utils/fresh'
-import type { CircleGroup } from '~/utils/circle'
+import type { FriendsGroup } from '~/utils/friendsNames'
 
 /**
  * Who she follows reads, or wants to read, the same Books (social v2a, contract §1.4): Home's reading cards,
- * Up next and the Library's Want to read rows show them as small avatars on the cover (FriendsCircleAvatars).
+ * Up next and the Library's Want to read rows show them as small avatars on the cover (FriendsAlsoAvatars).
  * `circleReading` is asked with the Book ids of her open reads and `circleWant` with those of her Want to read,
  * each at most `CIRCLE_BOOKS_MAX`, newest first; both maps are by her Book's id. Asked by the store itself
  * whenever her lists arrive or the Books in them change, again when Home or the Library shows and the answer is
@@ -18,7 +18,7 @@ import type { CircleGroup } from '~/utils/circle'
  * avatar ever came). A member who follows nobody (her People says so) makes no call, and nothing is asked
  * for a list with no Books. Nothing is kept on the device: another member signing in forgets it.
  */
-export const useCircleBooksStore = defineStore('circleBooks', () => {
+export const useFriendsBooksStore = defineStore('friendsBooks', () => {
   const backend = useBackend()
   const session = useSessionStore()
   const social = useSocialStore()
@@ -34,8 +34,8 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
   }
 
   /** Per Book of hers: who else reads it now / wants it. Only Books with somebody have a key. */
-  const reading = shallowRef<Record<string, CircleGroup>>({})
-  const want = shallowRef<Record<string, CircleGroup>>({})
+  const reading = shallowRef<Record<string, FriendsGroup>>({})
+  const want = shallowRef<Record<string, FriendsGroup>>({})
 
   /** Bumped when the member changes: an answer that began before it is thrown away. */
   let generation = 0
@@ -45,7 +45,7 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
   /** Whether a page has asked for the maps: the feed's refresh only follows once one has. */
   let wanted = false
 
-  const byBook = (books: CircleBook[]): Record<string, CircleGroup> =>
+  const byBook = (books: CircleBook[]): Record<string, FriendsGroup> =>
     Object.fromEntries(books.map((b) => [b.book, { members: b.members, more: b.more }]))
 
   const idsOf = (entries: readonly { book: { id: string } }[]) => [...new Set(entries.map((e) => e.book.id))].slice(0, CIRCLE_BOOKS_MAX)
@@ -137,11 +137,11 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
   )
 
   /**
-   * A member left her circle (unfollow, block, remove as follower): she goes from the groups at once, and an answer
+   * A member left her friends (unfollow, block, remove as follower): she goes from the groups at once, and an answer
    * on its way (it may still name her) is thrown away; the next `load` asks again. A group with nobody left goes.
    */
   function dropMember(id: string) {
-    const without = (groups: Record<string, CircleGroup>): Record<string, CircleGroup> =>
+    const without = (groups: Record<string, FriendsGroup>): Record<string, FriendsGroup> =>
       Object.fromEntries(
         Object.entries(groups).flatMap(([book, group]) => {
           if (!group.members.some((m) => m.id === id)) return [[book, group]]
@@ -159,7 +159,7 @@ export const useCircleBooksStore = defineStore('circleBooks', () => {
     () => session.member?.id ?? null,
     (now, before) => now !== before && forget(),
   )
-  // The feed was refreshed: her circle may have moved with it. Not again for the same Books within the fresh window
+  // The feed was refreshed: her friends may have moved with it. Not again for the same Books within the fresh window
   // (Home's first load refreshes the feed while the answer for her lists is on its way or has just come).
   watch(
     () => feed.takenAt,

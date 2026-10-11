@@ -14,7 +14,7 @@ import {
 } from '@/utils/feedView'
 
 /**
- * What the feed page and Home's circle decide before they draw (social v1, U5): the day's words, which
+ * What the feed page and Home's friends decide before they draw (social v1, U5): the day's words, which
  * empty state, how a refresh joins the pages already loaded, the verbs, the copy's time.
  */
 
@@ -165,7 +165,7 @@ describe("when the device's copy was taken", () => {
   })
 })
 
-describe('a member who left her circle', () => {
+describe('a member who left her friends', () => {
   it('takes her entries out and keeps everyone else\'s, in order', () => {
     const ida = { id: 'ida', name: 'Ida', photo: null }
     const all = [entry('a', 5), { ...entry('i1', 4), member: ida }, entry('b', 3), { ...entry('i2', 2), member: ida }]

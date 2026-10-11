@@ -8,9 +8,9 @@ import { shownFace, toggledFace, type LikeFace, type LikeOverride } from '~/util
  * Likes (social v2a, contract §1.2 and §3): the hearts on other members' finished reads and, for her own
  * reads, who liked them. A tap shows its result at once and is sent; the database's answer (the count now)
  * replaces it, a refusal takes it back and the row says so (`failed`). Likes need the connection: offline
- * the heart stays faint and nothing is sent or queued. Home's "Your circle" lists her reads liked this
+ * the heart stays faint and nothing is sent or queued. Home's "Your friends" lists her reads liked this
  * week (`recent`, read with the feed's refresh); the device keeps the last answer for an offline Home.
- * Signing out, or another member signing in, forgets everything; so does a member who leaves her circle
+ * Signing out, or another member signing in, forgets everything; so does a member who leaves her friends
  * (`dropMember`: unfollow, block, remove as follower — the database deletes the likes between them, and nothing
  * of her stays in memory or on the device).
  */
@@ -59,7 +59,7 @@ export const useLikesStore = defineStore('likes', () => {
     overrides[read] = { face: next, base }
     const result = await (now.liked ? r.unlike(read) : r.like(read))
     busy[read] = false
-    // She left the circle meanwhile (`dropMember`): nothing of her read is kept.
+    // She left the friends meanwhile (`dropMember`): nothing of her read is kept.
     if (member !== session.member?.id || (owner && owners[read] !== owner)) return false
     if (result.error) {
       // Taken back: the row says what it said before the tap.
@@ -125,7 +125,7 @@ export const useLikesStore = defineStore('likes', () => {
   }
 
   /**
-   * A member left her circle: she goes from Home's likes (an item with nobody left goes; the count loses her),
+   * A member left her friends: she goes from Home's likes (an item with nobody left goes; the count loses her),
    * from the device's copy of them and from the hearts tapped on her reads.
    */
   function dropMember(id: string) {

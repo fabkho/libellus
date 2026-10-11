@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Her reads that were liked this week, in Home's Your circle (social v2a, contract §3): one quiet row per read,
+// Her reads that were liked this week, in Home's Your friends (social v2a, contract §3): one quiet row per read,
 // newest like first, above the card — a few small avatars and one sentence in muted ink: "Anna and Ben liked your
 // review of *Piranesi*", "Anna and 4 others liked …", "… liked that you finished *Piranesi*" for a finish without
 // a review (her own Library says which; a read it no longer holds says "liked your read of"). A tap asks who
@@ -9,7 +9,7 @@
 // Props: `items` (RecentLike[]). Emits `open` with the item. Test ids: `home.likes` (the list), `home.like` (a row).
 import type { RecentLike } from '~/data/social'
 import { useLibraryStore } from '~/stores/library'
-import { circleNameParts } from '~/utils/circle'
+import { friendsNameParts } from '~/utils/friendsNames'
 
 const props = defineProps<{ items: readonly RecentLike[] }>()
 defineEmits<{ open: [item: RecentLike] }>()
@@ -27,11 +27,11 @@ function reviewed(item: RecentLike): boolean | null {
 
 const rows = computed(() =>
   props.items.map((item) => {
-    const parts = circleNameParts(item.likers.map(nameOf), Math.max(0, item.count - item.likers.length))
+    const parts = friendsNameParts(item.likers.map(nameOf), Math.max(0, item.count - item.likers.length))
     const had = reviewed(item)
     return {
       item,
-      names: t(`social.circle.names.${parts.key}`, parts.args, parts.count),
+      names: t(`social.friends.names.${parts.key}`, parts.args, parts.count),
       keypath: had === null ? 'social.likes.read' : had ? 'social.likes.reviewed' : 'social.likes.finished',
     }
   }),

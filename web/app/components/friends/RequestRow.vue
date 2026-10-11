@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // One follow request (social v1, U3): People's Requests segment and, `compact`, the top of Home's
-// Your circle (feed mock, screen 1). Drawing only: the page that shows it answers the emits through
+// Your friends (feed mock, screen 1). Drawing only: the page that shows it answers the emits through
 // stores/social.ts (`answer(id, accept)`, `follow(id)`) and decides when the row leaves.
 //
 // Props:
@@ -13,7 +13,7 @@
 //  - `offline`  no connection: the buttons give way to one disabled Offline button;
 //  - `busy`     a write on its way: the buttons wait.
 // Emits `accept`, `decline`, `followBack`. Test ids: `people.row`, `people.accept`, `people.decline`,
-// `people.followBack` (compact: `home.circleRequest`, `home.circleAccept`, `home.circleDecline`).
+// `people.followBack` (compact: `home.friendsRequest`, `home.friendsAccept`, `home.friendsDecline`).
 import type { MemberCard } from '~/data/socialShapes'
 import type { RequestState } from '~/utils/people'
 
@@ -47,7 +47,7 @@ watch(
   <div
     class="flex items-center gap-ms"
     :class="compact ? 'min-h-(--size-touch) rounded-md bg-surface-raised px-ms py-xs edge-faint' : 'min-h-(--size-row) py-xs'"
-    :data-testid="id('people.row', 'home.circleRequest')"
+    :data-testid="id('people.row', 'home.friendsRequest')"
   >
     <!-- Home's row: the lamp dot on the avatar's upper right edge, ringed in the raised colour. -->
     <span v-if="compact" class="relative flex shrink-0">
@@ -59,21 +59,21 @@ watch(
     <div class="flex min-w-0 flex-1 flex-col">
       <span class="truncate" :class="compact ? 'text-subhead font-medium' : 'text-body'">{{ name }}</span>
       <span class="truncate text-caption text-ink-muted">{{
-        compact ? t('circle.askedLine') : state === 'asked' ? asked : t('people.followsYouNow')
+        compact ? t('friends.askedLine') : state === 'asked' ? asked : t('people.followsYouNow')
       }}</span>
     </div>
 
     <template v-if="state === 'asked'">
-      <UiButton v-if="offline" tone="secondary" size="sm" offline :data-testid="id('people.accept', 'home.circleAccept')" />
+      <UiButton v-if="offline" tone="secondary" size="sm" offline :data-testid="id('people.accept', 'home.friendsAccept')" />
       <template v-else>
         <UiButton
           size="sm"
           :disabled="busy"
-          :aria-label="compact ? t('circle.acceptLabel', { name }) : t('people.acceptLabel', { name })"
-          :data-testid="id('people.accept', 'home.circleAccept')"
+          :aria-label="compact ? t('friends.acceptLabel', { name }) : t('people.acceptLabel', { name })"
+          :data-testid="id('people.accept', 'home.friendsAccept')"
           @click="$emit('accept')"
         >
-          {{ compact ? t('circle.accept') : t('people.accept') }}
+          {{ compact ? t('friends.accept') : t('people.accept') }}
         </UiButton>
         <!-- Home's ✕: a plain pill button, so it has the app's pressed state and its 44 px target. -->
         <UiButton
@@ -81,9 +81,9 @@ watch(
           tone="plain"
           size="sm"
           class="-mr-xs"
-          :aria-label="t('circle.declineLabel', { name })"
+          :aria-label="t('friends.declineLabel', { name })"
           :disabled="busy"
-          data-testid="home.circleDecline"
+          data-testid="home.friendsDecline"
           @click="$emit('decline')"
         >
           <UiIcon name="close" :size="18" />
