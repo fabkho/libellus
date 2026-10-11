@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
 
 const resolve = (path: string) => fileURLToPath(new URL(path, import.meta.url))
@@ -13,6 +14,8 @@ process.env.LIBELLUS_TEST_RUN ??= randomUUID().slice(0, 8)
 // Plain Node, no Nuxt runtime: the data layer is framework-free on purpose.
 export default defineConfig({
   plugins: [
+    // Compiles the components the component tests mount (tests/*.test.ts with @vitest-environment jsdom).
+    vue(),
     {
       // The feed, likes, library and friendsTab stores read and write the device's copy only `import.meta.client` (the app is an
       // SPA, so always in the browser); in Node that flag is undefined. Only these stores, so no other test changes.

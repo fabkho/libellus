@@ -1896,7 +1896,9 @@
     "folded": "Contains spoilers",
     "showAnyway": "Show anyway",
     "spoilersHint": "Friends who haven't finished it see it folded.",
-    "showAnywayLabel": "Show anyway, {name}’s review"
+    "showAnywayLabel": "Show anyway, {name}’s review",
+    "more": "more",
+    "less": "less"
   },
   "social": {
     "wantToRead": {
