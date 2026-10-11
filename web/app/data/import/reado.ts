@@ -65,13 +65,17 @@ import { isbnLanguage, toIsbn13, type ReadLanguage } from './readingTracker'
  * report only: a `p_id`-only book is no Book (no title), and when stage 2 maps
  * it to an ISBN its entry gets the ISBN key like any other.
  *
- * ## What is still missing
+ * ## What is still missing (the larger account, 2026-10-11)
  *
- * `p_id`-only books (about two thirds of the larger account's shelves), their
- * finish dates and ratings, 3 400 of its 4 200 progress entries (`pages` per
- * day: Libellus has no per-day progress import), and its reviews, are reported
- * with their counts and left out. Kindle ASIN books cannot be looked up. Reading
- * goals, streaks, badges, followers, comments and notes are not read at all.
+ * - 461 `p_id`-only books: 692 shelf items (267 on `_read`, 86 on `_stack`), 257
+ *   finish dates, 135 ratings, 101 reviews, and 2 684 progress entries (pages per
+ *   day; Libellus has no per-day progress import). Counted by reason in
+ *   `report.unattachable`, listed in the run's report for a later p_id → ISBN bridge.
+ * - 49 Kindle ASIN books (20 finished, 19 rated): no ISBN, no lookup.
+ * - 66 of the 262 planned ISBN books (41 finished, 35 rated) have no title on Apple
+ *   Books or OpenLibrary: reported by the script, not written.
+ * - 114 ISBN books that are a lone `START` on no shelf (left out by default).
+ * Reading goals, streaks, badges, followers, comments and notes are not read at all.
  */
 
 export const READO_KEY_PREFIX = 'reado:'

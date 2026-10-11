@@ -1,10 +1,11 @@
 # The owner's instance
 
 Tooling that only the owner's instance (libellus.fabkho.dev) uses: bringing the owner's Fable
-history over once, and publishing the owner's Library to Regal, the 3D bookshelf on
+history over once (and, from the app's own export, a Reado account's), and publishing the owner's Library to Regal, the 3D bookshelf on
 fabkho.dev/books. Nothing here is needed to run Libellus; anyone not working on these two can ignore this page and
 the files it names (`web/scripts/import-fable.ts`, `web/scripts/fable/`,
 `web/app/data/import/{fable,readingTracker}.ts` for Fable;
+`web/scripts/import-reado.ts`, `web/scripts/reado/`, `web/app/data/import/reado.ts` for Reado;
 `web/scripts/export-regal.ts`, `web/app/data/export/`, `supabase/functions/regal-export/` and the
 `shelf_publish` migration for Regal). The Regal layer itself is opt-in (`LIBELLUS_REGAL=1`,
 [SETUP.md](SETUP.md), Optional pieces).
@@ -39,6 +40,48 @@ takes `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and wants the host repeated
 Known gaps: the German National Library's covers are found for German editions but not stored (its
 server answers browsers with a bot page, so they need rehosting first; follow-up issue); Regal's
 Goodreads second opinion on read dates is not part of the import.
+
+## The Reado import
+
+Reado's iOS app has a data export (found by exploring the app: it is in none of Reado's help articles;
+the exact menu path is for the owner to add here). The file is `schemaVersion: 1` JSON and holds much
+more than books (notifications, followers, comments, push tokens, the email), so it is private: keep it
+out of the repository, commits and pull requests. `web/scripts/import-reado.ts` reads only the keys it
+needs (`userObject.lists`, `readingJournal`, `newJournal`, `customBooks`, `posts`).
+
+```sh
+cd web
+pnpm import:reado --from ~/Downloads/export.json --plan                      # map only: counts and the report
+pnpm import:reado --from ~/Downloads/export.json --email you@example.com --dry-run
+pnpm import:reado --from ~/Downloads/export.json --email you@example.com     # local stack
+pnpm import:reado --help          # --started-only, --aborted, --no-collections, --no-covers, --prune, --offline
+```
+
+One run per exported account, into the member it belongs to; `--target hosted` works as for Fable.
+The rules are in the header of `web/app/data/import/reado.ts`. In short: `_read` finished with the
+journal's real days (the shelf item's `updatedAt` is when it was added, never a reading date), `_reading`
+currently reading, `_stack`, `_wishlist` and every custom list Want to read, `_favorites` and the custom
+lists also Collections (additive: the import never takes an entry off one), an `ABORT` event a DNF,
+ratings in half stars kept exactly as quarters (4.5 stars is 18). Keys are `reado:isbn:<isbn13>`.
+
+**The export names books by ISBN or by a 64-hex `p_id`, and holds no titles.** The ISBN books are looked
+up like a barcode scan (Apple Books, then OpenLibrary; cached in `.data/reado-import/`), then get the
+Fable import's cover chain. A `p_id` is attached to an ISBN only on hard evidence (an ISBN on its shelf
+item, or a dated event that is the same in `newJournal` and the journal and belongs to one ISBN); the
+rest is **not imported** and the run says so, last and loudly, by reason, with the full list in
+`.data/reado-import/report-<member>.json`.
+
+First real run (the larger account, 458 finished books on Reado's shelves; local stack): 196 entries
+(166 finished, 30 Want to read), 166 reads (163 finished, 3 DNF), 144 ratings, 71 reviews, 7 Collections
+with 115 entries; a second run changed nothing. Not imported: 461 `p_id`-only books (692 shelf items, of
+them 267 on `_read`; 257 finished, 135 rated, 101 reviewed; 2 684 progress entries), 49 Kindle ASIN
+books, 66 ISBNs with no title on Apple or OpenLibrary (41 finished), and 114 ISBN books that are a lone
+`START` on no shelf (what the 2023 imports wrote for books never read; `--started-only want` keeps them).
+
+Known gaps, and what closes them (stage 2): the `p_id` → ISBN/title bridge. Reado's own API
+(`internal/booksBatched` on `backend-14.read-o.com`) looks like p_ids in, books out, but answers 403
+anonymously, so it needs a credential. It would attach the 461 books above, plus their ratings, dates and
+reviews. The mail to `support@reado.app` about the export's `library: null` is the zero-risk route.
 
 ## Feeding Regal
 
