@@ -345,9 +345,9 @@ medium only inside a feed sentence (a feed row, Home's friends rows and its requ
   step of ours: the owner's screens warm it ahead on idle, anyone's card when it mounts (Regal's `preloadRegal`: the library file,
   the 3D code, the first Spines), so it appears with Regal's own intro, the Stack's turned on its side;
   where nothing is drawn yet (a first visit with no head start) the card is its plain surface until the
-  row has its Spines, never slabs, a spinner or a shimmer. Only the shelf page's Stack, which has no
-  intro of its own to wait for, stands in with `ShelfPile`: the Books as flat slabs in their Spines'
-  colours, as thick as they are long.
+  row has its Spines, never slabs, a spinner or a shimmer. The shelf page's Stack the same: the room
+  is its plain surface while the 3D comes, then Regal's entrance (the Stack's settle-in, the Books
+  dropping into place as when the pile is re-sorted) is the arrival.
 - **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
   own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
   follows the theme, so native parts — the date picker, autofill — do too); Safari, without

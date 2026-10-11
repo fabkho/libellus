@@ -327,10 +327,11 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   it in its resting place first, with no transition, and the morph grows out of it there. A change
   of page (Back included) brings it back on the way. A screen that fills the room (`immersive`:
   Your shelf, #23) has it away for as long as it shows, the same slide.
-- **Your shelf** (#23). The shelf page's loading pile: its slabs settle in one after another, `standard`
-  each, a third of `instant` apart, from `sm` above; then they hold still (no shimmer, no breathing),
-  and once Regal's Stack has the Library and has drawn, it fades in over `standard` and the slabs fade
-  out over the same, in place. The cards' row (the Profile's, a year in review's, Home's *Read in*
+- **Your shelf** (#23). The shelf page has no stand-in, like the cards: the room is its plain surface
+  while Regal's code comes, and the Stack arrives with Regal's own entrance, the settle-in a re-sort
+  ends with (the Books drop a little into their places from the bottom of the view up; Regal holds it,
+  unseen, up to 0.8 s for the faces in view), not at all with Reduce Motion, where the pile simply
+  stands. The cards' row (the Profile's, a year in review's, Home's *Read in*
   sheet) has no stand-in and no fade of ours: the owner's screens warm it on idle (anyone's card warms
   its own when it mounts), and the card, which keeps its size, is its plain surface until the row has
   drawn the Spines in view; then Regal's intro
@@ -613,8 +614,8 @@ page left cross-fade in place over `standard`, both ways. Change edition is the 
 edition's hero cross-fades into the new one over `standard`, and the content below takes its new
 place at once. The tab bar away does not hide at all: a bar that pops in and out in place
 is more motion than one that stays. The month rows of a year in review do not open: their covers
-stand at rest at once. Your shelf: the pile is there at once and the 3D replaces it
-without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
+stand at rest at once. Your shelf: no entrance, the Stack stands in its place as soon
+as it has drawn. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader
 cross-fades in and out in place), the printed page turns at once, and its search palette
 cross-fades like the app's. The sign-in wall's covers do not fade (they are there at once). The hero cover does not lean: it is a picture like any other, and the
