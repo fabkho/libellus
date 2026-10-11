@@ -14,11 +14,10 @@ process.env.LIBELLUS_TEST_RUN ??= randomUUID().slice(0, 8)
 export default defineConfig({
   plugins: [
     {
-      // The feed and library stores read and write the device's copy only `import.meta.client` (the app is an SPA, so
-      // always in the browser); in Node that flag is undefined. Only these stores, so no other test changes.
+      // The feed, likes and library stores read and write the device's copy only `import.meta.client` (the app is an
+      // SPA, so always in the browser); in Node that flag is undefined. Only these stores, so no other test changes.
       name: 'libellus-stores-are-client',
-      transform: (code, id) =>
-        id.endsWith('/app/stores/feed.ts') || id.endsWith('/app/stores/library.ts') ? code.replaceAll('import.meta.client', 'true') : null,
+      transform: (code, id) => (/\/app\/stores\/(feed|likes|library)\.ts$/.test(id) ? code.replaceAll('import.meta.client', 'true') : null),
     },
   ],
   resolve: {

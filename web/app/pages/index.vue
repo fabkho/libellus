@@ -7,6 +7,7 @@
 // empty state and the way to Search. Kept alive: coming back shows what was
 // there and refreshes quietly behind it.
 import { useLibraryStore } from '~/stores/library'
+import { useCircleBooksStore } from '~/stores/circleBooks'
 import { useSessionStore } from '~/stores/session'
 
 definePageMeta({ layout: 'tabs', screen: 'home', titleSize: 'title', dated: true, greeting: true, keepalive: true })
@@ -21,6 +22,10 @@ const session = useSessionStore()
 const reading = useSettled(() => library.reading)
 const wantToRead = useSettled(() => library.wantToRead)
 const readInYear = useSettled(() => library.readInYear)
+// Followed members who read, or want, the same Books (circle_reading / circle_want), by her Book's id.
+const circle = useCircleBooksStore()
+const circleReading = computed(() => circle.reading)
+const circleWant = computed(() => circle.want)
 
 // The year's Books, in a sheet: the tally opens it (HomeTallySheet).
 const tallyOpen = ref(false)
@@ -46,6 +51,8 @@ function load() {
 onActivated(() => {
   void library.load({ ifStale: true })
   void library.loadReadInYear({ ifStale: true })
+  // The store asks by itself when her lists arrive or change; coming back asks again once the answer is stale.
+  void circle.load({ ifStale: true })
 })
 // Kept alive, so a member change (the lists reset) while it is not showing has
 // to bring it back by itself.
@@ -73,7 +80,7 @@ watch(
         <span v-if="reading.length" class="eyebrow text-ink-faint" data-testid="home.readingCount">{{ reading.length }}</span>
       </div>
       <UiListMotion class="flex flex-col gap-ms">
-        <HomeReadingCard v-for="(entry, index) in reading" :key="entry.id" :entry="entry" :eager="index < 3" />
+        <HomeReadingCard v-for="(entry, index) in reading" :key="entry.id" :entry="entry" :eager="index < 3" :circle="circleReading[entry.book.id]" />
       </UiListMotion>
       <Transition name="after-leave">
         <p v-if="!reading.length" class="text-subhead text-ink-muted" data-testid="home.readingEmpty">{{ t('home.readingEmpty') }}</p>
@@ -82,7 +89,7 @@ watch(
 
     <HomeTally :year="library.readInYearOf" :count="readInYear" @open="tallyOpen = true" />
 
-    <HomeUpNext v-if="wantToRead.length" :entries="wantToRead" />
+    <HomeUpNext v-if="wantToRead.length" :entries="wantToRead" :circle="circleWant" />
     <!-- Last, so its coming (after the lists) moves nothing under it (#167). -->
     <HomeNextInSeries />
     <!-- Last of all, for the same reason: it arrives after the lists and moves nothing above it. -->

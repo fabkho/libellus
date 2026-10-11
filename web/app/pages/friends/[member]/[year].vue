@@ -8,7 +8,7 @@
 import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, memberBlocks } from '~/utils/memberProfile'
-import { useMemberProfileStore } from '~/stores/memberProfile'
+import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
 
 definePageMeta({
   layout: 'tabs',
@@ -39,16 +39,20 @@ let showing = false
 function show() {
   if (showing) return
   showing = true
-  void members.load(id.value)
+  void members.load(id.value, year.value)
 }
 onMounted(show)
 onActivated(show)
 onDeactivated(() => (showing = false))
-watch(id, () => void members.load(id.value))
+watch(id, () => void members.load(id.value, year.value))
+// Her next or earlier year (the page stays): only the Books you both read in it are asked for.
+watch(year, () => void members.loadBothRead(id.value, year.value))
 // Back online while the page is open: a Requested or Follow it shows, or figures it missed, may be old.
 const online = useOnline()
-watch(online, (now) => now && showing && void members.load(id.value))
+watch(online, (now) => now && showing && void members.load(id.value, year.value))
 
+// You both read, in her year (`both_read(member, year)`), loaded with her profile; an extra section: no error line, hidden until it has Books.
+const bothRead = computed(() => view.value.bothRead[bothReadKey(year.value)] ?? [])
 const record = computed(() => view.value.record)
 const reads = computed(() => record.value?.reads ?? [])
 const loading = computed(() => !record.value && (!view.value.loaded || view.value.recordLoading))
@@ -83,7 +87,7 @@ function pickStars(star: number) {
 
 // Back to her profile it came from (or to it, opened from an address).
 function back() {
-  if (String(window.history.state?.back ?? '').startsWith(`/friends/${id.value}`)) router.back()
+  if (canGoBack(window.history.state)) router.back()
   else void navigateTo(`/friends/${id.value}`)
 }
 </script>
@@ -97,11 +101,11 @@ function back() {
 
     <!-- Her profile came, her figures did not (offline, or it failed): not a dead link. -->
     <FriendsNote v-else-if="view.recordError && !record" heading :text="view.recordError === 'offline' ? t('member.offline') : t('member.loadError')" data-testid="memberYear.recordError">
-      <UiButton v-if="view.recordError !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
+      <UiButton v-if="view.recordError !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id, year)">{{ t('member.retry') }}</UiButton>
     </FriendsNote>
 
     <FriendsNote v-else-if="view.error && !view.loaded" heading :text="view.error === 'offline' ? t('member.offline') : t('member.loadError')" data-testid="memberYear.loadError">
-      <UiButton v-if="view.error !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
+      <UiButton v-if="view.error !== 'offline'" tone="secondary" size="md" data-testid="memberYear.retry" @click="members.load(id, year)">{{ t('member.retry') }}</UiButton>
     </FriendsNote>
 
     <template v-else>
@@ -133,6 +137,8 @@ function back() {
           <UiReveal :show="loading || figures.authors.length > 0">
             <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" :limit="3" />
           </UiReveal>
+
+          <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" />
 
           <div class="pt-xl">
             <nav class="flex min-h-(--size-button-sm) items-center justify-between" :aria-label="t('profile.year.other')">

@@ -229,14 +229,37 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
   test('the Profile, where she signs out and deletes her account', async ({ page }) => {
     const member = await signedIn(page)
     await seed(page, member.client)
+    // Her reviews (social v2a): seven finished reads with a review, the first flagged as spoilers, so the row holds
+    // six cards and its last "See all" card; the Library is read again for them.
+    const today = isoDay()
+    for (let i = 0; i < 7; i++) {
+      await createLibrary(member.client).addToLibrary(book(`Reviewed ${i + 1}`, 'Ada Fenn', 200), {
+        status: 'finished',
+        startedOn: addDays(today, -20 - i),
+        endedOn: addDays(today, -10 - i),
+        rating: 16,
+        review: 'A quiet book, and I would read it again. It rewards the second time even more, and the ending is the best of it.',
+        reviewSpoilers: i === 0,
+      })
+    }
+    // Nothing in flight when the page goes (a cancelled request is an uncaught error to the fixture).
+    await page.waitForLoadState('networkidle')
+    await page.reload()
     // Until the reading record is in and has come to rest: its figures and lines fade in over `standard`
     // (`arrive`), and a scan that starts before them reads colours half way (#7c7872 for inkFaint).
     await openProfile(page)
     await expect(page.getByTestId('profile.figures')).toBeVisible()
+    await expect(page.getByTestId('profile.reviews.card')).toHaveCount(6)
+    await expect(page.getByTestId('profile.reviews.allCard')).toBeVisible()
+    await untilStill(page)
     await expectAccessible(page, 'the Profile')
+    await openSheet(page, 'profile.reviews.all', 'profileReviews')
+    await expect(page.getByTestId('profileReviews.row')).toHaveCount(7)
+    await expectAccessible(page, 'Your reviews, all of them')
+    await closeSheet(page, 'profileReviews')
   })
 
-  test('the social screens: Your circle on Home, the feed, People, a member and her year, the follow link, Privacy and the member sheet', async ({ page }) => {
+  test('the social screens: Your circle on Home with its likes and the likers sheet, the feed, People, a member and her year, the follow link, Privacy and the member sheet', async ({ page }) => {
     // Eight scans and four members: longer than a usual flow.
     test.slow()
     const anna = await signedIn(page)
@@ -245,7 +268,7 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
       await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [member.id, name])
     }
     // Anna follows Ida and Cleo; Ben asks to follow Anna (a request on Home and under People).
-    for (const [follower, followee, accepted] of [[anna, ida, true], [anna, cleo, true], [ben, anna, false]] as const) {
+    for (const [follower, followee, accepted] of [[anna, ida, true], [anna, cleo, true], [ben, anna, false], [ida, anna, true]] as const) {
       await sql(`insert into public.follows (follower_id, followee_id, accepted_at) values ($1, $2, ${accepted ? 'now()' : 'null'})`, [follower.id, followee.id])
     }
     // Ida's week: a finish with her stars and a review (the card) and an older one (her row); Cleo's: a Book wanted (her row).
@@ -254,8 +277,12 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await idas.addToLibrary(book('Piranesi', 'Susanna Clarke', 272), { status: 'finished', startedOn: addDays(today, -5), endedOn: today, rating: 18, review: 'A house of tides and statues.' })
     await idas.addToLibrary(book('Dune', 'Frank Herbert', 896), { status: 'finished', startedOn: addDays(today, -30), endedOn: addDays(today, -5), rating: 16 })
     await createLibrary(cleo.client).addToLibrary(book('Ruin', 'John Gwynne', 800))
+    // Her own finish, liked by Ida (Home's likes row, and the likers sheet).
+    await createLibrary(anna.client).addToLibrary(book('The Dispossessed', 'Ursula K. Le Guin', 387), { status: 'finished', startedOn: addDays(today, -6), endedOn: addDays(today, -1), rating: 20, review: 'Walls, and what is behind them.' })
+    const [read] = await sql<{ id: string }>(`select s.id from public.reading_sessions s join public.library_entries e on e.id = s.entry_id where e.member_id = $1`, [anna.id])
+    expect((await ida.client.rpc('like', { p_session: read!.id })).error).toBeNull()
     // Settled, whatever the settle window is now (the social flow sets it to zero while it runs): shown to Anna at once.
-    await sql(`update public.activity set visible_at = now() - interval '1 second' where member_id = any($1)`, [[ida.id, cleo.id]])
+    await sql(`update public.activity set visible_at = now() - interval '1 second' where member_id = any($1)`, [[ida.id, cleo.id, anna.id]])
     const link = (await ben.client.rpc('my_social')).data.link as string
 
     // Home: the request, the card and the rows of Your circle.
@@ -264,6 +291,11 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await expect(page.getByTestId('home.circleFeature')).toBeVisible()
     await expect(page.getByTestId('home.circleFriend').first()).toBeVisible()
     await expectAccessible(page, 'Home with Your circle')
+    await expect(page.getByTestId('home.like')).toHaveCount(1)
+    await openSheet(page, 'home.like', 'likers')
+    await expect(page.getByTestId('likers.row')).toHaveCount(1)
+    await expectAccessible(page, 'the likers sheet')
+    await closeSheet(page, 'likers')
 
     // The feed.
     await page.getByTestId('home.circleTitle').click()
@@ -299,6 +331,56 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await openProfile(page)
     await openSheet(page, 'profile.privacy', 'privacy')
     await expectAccessible(page, 'Privacy')
+  })
+})
+
+test.describe('accessibility, readers', { tag: '@full' }, () => {
+  test.use({ colorScheme: 'dark', viewport: { width: 412, height: 915 } })
+
+  test("a Book's Readers, with their states, and the See all sheet", async ({ page }) => {
+    test.slow()
+    const anna = await signedIn(page)
+    const work = `OL${Math.floor(Math.random() * 8_000_000) + 1_000_000}W`
+    const edition = (title: string): BookSnapshot => ({
+      ...book(title, 'Susanna Clarke', 272),
+      source: 'openlibrary',
+      appleId: null,
+      openLibraryEditionKey: `OL${Math.floor(Math.random() * 8_000_000) + 1_000_000}M`,
+      openLibraryWorkKey: work,
+    })
+    const today = isoDay()
+    const mine = (await createLibrary(anna.client).addToLibrary(edition('Piranesi'), { status: 'want_to_read' })).data!
+    // Six readers she follows: a finished read with a review (a spoiler one among them), a plain finish, one reading, one wanting.
+    const states = [
+      { status: 'finished', review: 'A house of tides and statues.', spoilers: true },
+      { status: 'finished', review: 'Quiet and strange.' },
+      { status: 'finished' },
+      { status: 'reading' },
+      { status: 'reading' },
+      { status: 'want_to_read' },
+    ] as const
+    for (const [i, state] of states.entries()) {
+      const reader = await signUpMember()
+      await sql(`update auth.users set raw_user_meta_data = raw_user_meta_data || jsonb_build_object('name', $2::text) where id = $1`, [reader.id, `Reader ${i + 1}`])
+      await sql(`insert into public.follows (follower_id, followee_id, accepted_at) values ($1, $2, now())`, [anna.id, reader.id])
+      const options =
+        state.status === 'finished'
+          ? { status: 'finished' as const, startedOn: addDays(today, -6), endedOn: addDays(today, -i), rating: 16, ...('review' in state ? { review: state.review } : {}), ...('spoilers' in state ? { reviewSpoilers: true } : {}) }
+          : state.status === 'reading'
+            ? { status: 'reading' as const, startedOn: addDays(today, -i) }
+            : { status: 'want_to_read' as const }
+      expect((await createLibrary(reader.client).addToLibrary(edition(`Piranesi ${i}`), options)).error).toBeNull()
+    }
+    await sql(`update public.activity set visible_at = now() - interval '1 second'`)
+
+    await goto(page, `/book/${mine.book.id}`)
+    await expect(page.getByTestId('book.readers.row')).toHaveCount(5)
+    await expect(page.getByTestId('book.readers.all')).toBeVisible()
+    await expectAccessible(page, "a Book's Readers")
+    await openSheet(page, 'book.readers.all', 'bookReaders')
+    await expect(page.getByTestId('bookReaders.row')).toHaveCount(6)
+    await expectAccessible(page, 'the Readers sheet')
+    await closeSheet(page, 'bookReaders')
   })
 })
 

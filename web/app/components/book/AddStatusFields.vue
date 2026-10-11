@@ -8,7 +8,7 @@
 // the end is never before the start. `v-model` is the sheet's `AddDraft`
 // (data/library.ts); `testid` is the sheet's name (`add`, `manual`), so the
 // controls are `<testid>.status.<status>`, `.started`, `.ended`, `.rating`,
-// `.review`, `.clearStarted`. The sheet shows the error and runs the action.
+// `.review`, `.spoilers` ("Contains spoilers", with a review), `.clearStarted`. The sheet shows the error and runs the action.
 import { REVIEW_MAX_LENGTH, chooseAddStatus, type AddDraft } from '~/data/library'
 import { ADDABLE_STATUSES } from '~/stores/library'
 
@@ -106,7 +106,11 @@ function choose(status: AddDraft['status']) {
           :maxlength="REVIEW_MAX_LENGTH"
           :disabled="busy"
           :data-testid="`${testid}.review`"
-        />
+        >
+          <template #footer>
+            <BookSpoilerSwitch v-model="draft.reviewSpoilers" :disabled="busy" :testid="`${testid}.spoilers`" />
+          </template>
+        </UiTextArea>
       </div>
     </div>
   </Transition>

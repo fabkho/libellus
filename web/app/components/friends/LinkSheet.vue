@@ -2,7 +2,7 @@
 // Her follow link (social v1, U1; Profile → Friends → Your follow link): the only way in for now. What it
 // does depends on her account (they ask, or they follow at once), then the link in mono, Share link (the
 // platform's share sheet, the clipboard where there is none), Copy, and New link behind a Confirm (the
-// old one dies at once). The link exists from the first time she opens Friends, private or public.
+// old one dies at once). Above them the link as a QR code (FriendsLinkQr), to scan in person. The link exists from the first time she opens Friends, private or public.
 import { followLink } from '~/data/social'
 import { useSocialStore } from '~/stores/social'
 import { copyLink, shareLink, type ShareOutcome } from '~/utils/shareLink'
@@ -51,6 +51,9 @@ const error = computed(() => (social.errors.link && social.errors.link !== 'offl
       <p class="text-body text-ink">{{ social.mine?.private === false ? t('followLink.textPublic') : t('followLink.textPrivate') }}</p>
 
       <p class="figures min-h-(--size-touch) rounded-md bg-fill px-md py-sm text-caption break-all text-ink-muted" data-testid="followLink.value">{{ url ?? (online ? '' : t('followLink.offline')) }}</p>
+
+      <!-- Only with a link: offline, or before it is known, there is nothing to draw. -->
+      <FriendsLinkQr :url="url" />
 
       <UiButton block tone="primary" :disabled="!url" data-testid="followLink.share" @click="share">
         <UiIcon name="share" :size="18" />{{ t('followLink.share') }}

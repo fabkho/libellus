@@ -81,7 +81,7 @@ useBackDismiss(
 )
 function back() {
   if (stage.value?.picked) return stage.value.putAway()
-  if (String(window.history.state?.back ?? '').startsWith('/profile')) router.back()
+  if (canGoBack(window.history.state)) router.back()
   else void navigateTo(year.value ? `/profile/${year.value}` : '/profile')
 }
 </script>

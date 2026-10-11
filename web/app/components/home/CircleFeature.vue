@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The card of Home's Your circle (social v1, U8; the "Lit feature" mock): the week's one finished Book,
-// in a raised, rounded panel lit by the Book's own cover (`UiAmbient`, the light a year card has on
-// the Profile; a Book on the Placeholder is lit by its cloth, as the book page is). The cover at the left; at the right her avatar and name ("Anna finished"), the title
+// in a raised, rounded panel lit by the Book's own cover (UiLitCard, shared with Your reviews on the Profile; a
+// Book on the Placeholder is lit by its cloth, as the book page is). The cover at the left; at the right her avatar and name ("Anna finished"), the title
 // in the serif, her stars when she shows them, and her review in the serif italic folded at three
 // lines, `More` unfolding it, as the feed's rows do. The cover and the title open the Book, the cover
 // flying there as everywhere else (UiPressLink); a Manual book opens nothing, a follower cannot read
@@ -9,9 +9,11 @@
 // so the cover is decorative. Drawing only: utils/circleView.ts picks the card.
 //
 // Props: `card` (CircleCard), `eager` (the cover loads now). Test ids: `home.circleFeature` (the panel),
-// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`.
+// `home.circleFeature.member`, `.cover`, `.title`, `.review`, `.more`, `.wantToRead`, `.like` (the heart, under Want to read in the
+// icon column at the card's right edge, centred on the cover; `.like.error` when a like was refused), `.folded` (a review flagged as spoilers, folded behind *Show anyway*).
 import type { CircleCard } from '~/utils/circleView'
 import { useBookStore } from '~/stores/book'
+import { likeable } from '~/utils/likes'
 
 const props = defineProps<{ card: CircleCard; eager?: boolean }>()
 
@@ -20,11 +22,11 @@ const books = useBookStore()
 
 const name = computed(() => props.card.member.name?.trim() || t('member.someone'))
 const verb = computed(() => t(`feed.${props.card.verb}`))
-const book = computed(() => props.card.book)
+const book = computed(() => shownBook(props.card.book, t('book.outsideCatalogue')))
 const bookPath = computed(() => `/book/${book.value.id}`)
-// A Book without a cover shows the Placeholder: the cloth's colour lights the card then (as the book page's hero is lit).
-const coverFallback = ref(false)
-const clothColor = computed(() => `var(--color-cloth${clothOf(book.value.title)})`)
+const showHeart = computed(() => likeable(props.card))
+// Want to read: not on a Manual book (the control says nothing for one).
+const showWant = computed(() => !book.value.manual)
 
 // The review: three lines, and `More` only when there is more than three lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -35,13 +37,20 @@ function measure() {
   if (el && !expanded.value) clamped.value = el.scrollHeight > el.clientHeight + 1
 }
 let observer: ResizeObserver | null = null
-onMounted(() => {
-  measure()
-  if (review.value && typeof ResizeObserver !== 'undefined') {
-    observer = new ResizeObserver(measure)
-    observer.observe(review.value)
-  }
-})
+// The review's line is there once it is drawn (a folded one is not, until *Show anyway*): measured and watched from then on.
+watch(
+  review,
+  (el) => {
+    observer?.disconnect()
+    if (!el) return
+    measure()
+    if (typeof ResizeObserver !== 'undefined') {
+      observer ??= new ResizeObserver(measure)
+      observer.observe(el)
+    }
+  },
+  { flush: 'post', immediate: true },
+)
 onBeforeUnmount(() => observer?.disconnect())
 
 /** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
@@ -53,11 +62,10 @@ async function unfold() {
 </script>
 
 <template>
-  <div class="relative flex items-start gap-ml overflow-hidden rounded-lg bg-surface-raised p-inset shadow-raised edge-faint" data-testid="home.circleFeature">
-    <UiAmbient :colors="book.coverColors" :cloth="coverFallback ? clothColor : null" shape="card" />
+  <UiLitCard v-slot="{ onFallback }" :colors="book.coverColors" :title="book.title" class="flex items-start gap-ml p-inset" data-testid="home.circleFeature">
 
     <UiPressLink
-      v-if="!book.manual"
+      v-if="!book.manual && !book.unverified"
       :to="bookPath"
       class="relative shrink-0"
       tabindex="-1"
@@ -65,10 +73,10 @@ async function unfold() {
       data-testid="home.circleFeature.cover"
       @press="books.prefetch(book.id)"
     >
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
     </UiPressLink>
     <span v-else class="relative shrink-0">
-      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="coverFallback = $event" />
+      <UiCover decorative :title="book.title" :authors="book.authors" :src="coverSrc(book.coverUrl, 'lg')" :thumbhash="book.coverThumbhash" :colors="book.coverColors" size="lg" glow :eager="eager" @fallback="onFallback" />
     </span>
 
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
@@ -81,7 +89,7 @@ async function unfold() {
       </div>
 
       <UiPressLink
-        v-if="!book.manual"
+        v-if="!book.manual && !book.unverified"
         :to="bookPath"
         class="reach book-title text-callout"
         data-testid="home.circleFeature.title"
@@ -91,7 +99,9 @@ async function unfold() {
 
       <UiStars v-if="card.rating" :quarters="card.rating" data-testid="home.circleFeature.stars" />
 
-      <template v-if="card.review">
+      <FriendsLikeError v-if="showHeart" :row="card" testid="home.circleFeature.like" />
+
+      <FriendsReviewFold v-if="card.review" :folded="card.folded" :name="name" testid="home.circleFeature.folded">
         <p ref="review" tabindex="-1" class="book-title text-subhead text-ink-muted italic" :class="!expanded && 'line-clamp-3'" data-testid="home.circleFeature.review">{{ card.review }}</p>
         <button
           v-if="clamped && !expanded"
@@ -100,9 +110,22 @@ async function unfold() {
           data-testid="home.circleFeature.more"
           @click="unfold"
         >{{ t('feed.more') }}</button>
-      </template>
+      </FriendsReviewFold>
     </div>
-  </div>
+
+    <!-- At the card's right edge, centred on its cover (the same column as the rows': Want to read on top, the heart under it). -->
+    <FriendsRowActions
+      class="relative"
+      cover="lg"
+      :book="showWant ? book : null"
+      :like="showHeart ? card : null"
+      :name="name"
+      :owner="card.member.id"
+      :title="book.title"
+      want-testid="home.circleFeature.wantToRead"
+      like-testid="home.circleFeature.like"
+    />
+  </UiLitCard>
 </template>
 
 <style scoped>

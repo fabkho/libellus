@@ -62,6 +62,9 @@ export const useFeedStore = defineStore('feed', () => {
     try {
       const { data, error } = await backend.rpc('my_people')
       following.value = error ? null : ((data as { followingIds?: unknown[] } | null)?.followingIds?.length ?? 0)
+    } catch {
+      // A request cancelled by a navigation (WebKit: "Fetch API cannot load …") says nothing: not known, as on an error.
+      following.value = null
     } finally {
       asking.value = false
     }
@@ -177,5 +180,5 @@ export const useFeedStore = defineStore('feed', () => {
     if (now && (loadError.value === 'offline' || takenAt.value)) void refresh()
   })
 
-  return { entries, days, loaded, loading, loadingMore, loadError, ended, offlineSince, emptyState, refresh, loadMore, dropMember, reset }
+  return { entries, days, loaded, loading, loadingMore, loadError, ended, takenAt, offlineSince, emptyState, refresh, loadMore, dropMember, reset }
 })

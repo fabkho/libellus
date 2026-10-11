@@ -58,7 +58,16 @@
     "invitePlaceholder": "Your invite code",
     "submit": "Send code",
     "hasAccount": "Already a member?",
-    "signInLink": "Sign in"
+    "signInLink": "Sign in",
+    "consent": "By creating an account you accept the {privacy}."
+  },
+  "legal": {
+    "privacy": "Privacy",
+    "imprint": "Imprint",
+    "privacyNotice": "privacy notice",
+    "nav": "Legal",
+    "back": "Back",
+    "language": "Language of the text"
   },
   "verify": {
     "title": "Check your email",
@@ -265,6 +274,13 @@
       "after": "{year}",
       "beforeLabel": "The year before, {year}",
       "afterLabel": "The year after, {year}"
+    },
+    "reviews": {
+      "title": "Your reviews",
+      "all": "See all {count}",
+      "allLabel": "See all {count} of your reviews",
+      "spoilers": "Spoilers",
+      "allCard": "See all"
     }
   },
   "share": {
@@ -352,6 +368,7 @@
       "book_invalid": "This book can't be added: it is missing what we need to keep it.",
       "session_invalid": "Those dates, that rating or review don't go with that status.",
       "not_signed_in": "Sign in again to add books.",
+      "catalogue_limit": "You've added a lot of new books today. Try again tomorrow.",
       "unknown": "Something went wrong. Please try again.",
       "entry_not_found": "This book isn't in your Library any more.",
       "already_reading": "You are reading this book already.",
@@ -514,6 +531,7 @@
   },
   "book": {
     "title": "Book",
+    "outsideCatalogue": "Outside the catalogue",
     "back": "Back",
     "pages": "{count} pages",
     "add": "Add to Library",
@@ -633,6 +651,20 @@
       "copyFormat": "Format of your copy",
       "formatSaid": "Your copy will be saved as {format}.",
       "missing": "My edition isn't listed"
+    },
+    "readers": {
+      "title": "In your circle",
+      "all": "See all {count}",
+      "allLabel": "See all {count} people in your circle who have this book",
+      "finished": "Finished",
+      "reading": "Reading",
+      "abandoned": "Put down",
+      "want": "Wants to read",
+      "loading": "Loading your circle",
+      "sheetTitle": "In your circle",
+      "more": "Show more",
+      "loadingMore": "Loading more people",
+      "someone": "A reader"
     },
     "goodreads": {
       "ratingLabel": "Rated {rating} out of 5",
@@ -965,6 +997,7 @@
       "ratingInvalid": "Rating left out: it isn't 1 to 5 stars.",
       "dateInvalid": "A date left out: it isn't a day, or it hasn't come yet.",
       "reviewTooLong": "Review shortened to the 10,000 characters we keep.",
+      "ratingLikeReview": "Its review is only a number above 5, so it stays a review: it isn't read as a rating.",
       "noTitle": "Skipped: it has no title.",
       "duplicate": "Skipped: it is in the file twice.",
       "fromFileIsbn": "Only your file knows this edition. Added as it says, with its ISBN.",
@@ -1114,6 +1147,66 @@
       "text": "When someone asks for an invite on a reading page, their address shows here."
     },
     "loadError": "The waitlist could not be loaded.",
+    "writeError": "That could not be saved. Try again.",
+    "offline": "You’re offline. This works once you’re back.",
+    "retry": "Try again"
+  },
+  "contact": {
+    "row": "Contact",
+    "title": "Contact",
+    "kindLabel": "What is it about?",
+    "kind": {
+      "bug": "Bug",
+      "feature": "Feature request",
+      "other": "Something else"
+    },
+    "label": "Your message",
+    "hint": "At least {min} characters",
+    "placeholder": {
+      "bug": "What went wrong? What did you expect to happen instead?",
+      "feature": "What would you like Libellus to do?",
+      "other": "What is on your mind?"
+    },
+    "count": "{count} / {max}",
+    "countLabel": "{count} of {max} characters",
+    "context": "We also send the app version and your device type.",
+    "send": "Send",
+    "sending": "Sending…",
+    "retry": "Try again",
+    "offline": "You’re offline.",
+    "error": {
+      "rate_limited": "That’s a lot of messages for now. Please try again in a while.",
+      "invalid": "That message can’t be sent as it is. Check its length and try again.",
+      "unknown": "That didn’t go through. Your text is still here; try again."
+    },
+    "done": {
+      "title": "Thanks, got it.",
+      "text": "I read everything.",
+      "action": "Done"
+    }
+  },
+  "feedback": {
+    "row": "Feedback",
+    "rowNone": "None",
+    "rowValue": "{count} open",
+    "title": "Feedback",
+    "back": "Back",
+    "intro": "What members sent from Contact, newest first. Only you can see this.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "summary": "{open} open · {handled} handled",
+    "anonymous": "A member",
+    "details": "Device details",
+    "markHandled": "Mark handled",
+    "handled": "Handled",
+    "reopen": "Open again",
+    "more": "Show older",
+    "loadingMore": "Loading…",
+    "empty": {
+      "title": "Nothing yet",
+      "text": "When a member writes from Contact, it shows here."
+    },
+    "loadError": "The messages could not be loaded.",
     "writeError": "That could not be saved. Try again.",
     "offline": "You’re offline. This works once you’re back.",
     "retry": "Try again"
@@ -1728,7 +1821,9 @@
     "someone": "A reader",
     "offline": "You're offline. This profile shows once you're back.",
     "loadError": "This profile couldn't be loaded.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "bothRead": "You both read",
+    "bothReadHers": "{name}: {rating}"
   },
   "follow": {
     "loading": "Opening…",
@@ -1772,6 +1867,8 @@
     "textPrivate": "Send it to friends in Libellus. Your account is private, so they ask and you decide.",
     "textPublic": "Send it to friends in Libellus. Your account is public, so they can follow you straight away.",
     "offline": "You're offline. Your link shows once you're back.",
+    "qrLabel": "QR code of your follow link",
+    "qrHint": "Let someone scan this to follow you.",
     "share": "Share link",
     "copy": "Copy",
     "copied": "Copied.",
@@ -1789,5 +1886,61 @@
     "unblockLabel": "Unblock {name}",
     "unblocked": "{name} unblocked.",
     "empty": "You haven't blocked anyone."
+  },
+  "review": {
+    "spoilers": "Contains spoilers",
+    "folded": "Contains spoilers",
+    "showAnyway": "Show anyway",
+    "spoilersHint": "Friends who haven't finished it see it folded.",
+    "showAnywayLabel": "Show anyway, {name}’s review"
+  },
+  "social": {
+    "wantToRead": {
+      "add": "Want to read",
+      "label": "Add {title} to Want to read",
+      "error": "Couldn't add it. Try again.",
+      "added": "Added to Want to read",
+      "inLabel": "{title}: {where}. Open the book"
+    },
+    "state": {
+      "wantToRead": "On your Want to read",
+      "reading": "Reading",
+      "read": "Read",
+      "notFinished": "Not finished"
+    },
+    "like": {
+      "like": "Like",
+      "unlike": "Remove like",
+      "label": "Like {name}’s read of {title}",
+      "count": "{count} like | {count} likes",
+      "ownLabel": "{count} like on your read of {title}. See who liked it | {count} likes on your read of {title}. See who liked it",
+      "error": "Couldn't save your like. Try again."
+    },
+    "likers": {
+      "title": "Liked by",
+      "empty": "No likes yet.",
+      "loadError": "The likes couldn't be loaded.",
+      "offline": "You're offline. The likes show once you're back.",
+      "loading": "Loading…"
+    },
+    "circle": {
+      "reading": "Also reading: {names}",
+      "want": "Also want to read: {names}",
+      "sheetReading": "Also reading",
+      "sheetWant": "Also want to read",
+      "more": "and {count} more",
+      "names": {
+        "one": "{a}",
+        "two": "{a} and {b}",
+        "three": "{a}, {b} and {c}",
+        "others": "{a}, {b} and {count} other | {a}, {b} and {count} others"
+      }
+    },
+    "likes": {
+      "reviewed": "{names} liked your review of {title}",
+      "finished": "{names} liked that you finished {title}",
+      "read": "{names} liked your read of {title}",
+      "open": "See who liked it"
+    }
   }
 }

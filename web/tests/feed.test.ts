@@ -50,6 +50,11 @@ function entry(day: string, minutes: number, member = ADA, kind: FeedKind = 'fin
     book: { ...BOOK, id: `b${counter}` },
     rating: null,
     review: null,
+    spoilers: false,
+    folded: false,
+    sessionId: null,
+    likes: 0,
+    liked: false,
   }
 }
 /** Newest first, as `feed` answers. */
@@ -187,12 +192,13 @@ describe("the device's copy", () => {
   it('reads as none when torn, foreign or of another shape', () => {
     const device = deviceStorage()
     for (const raw of [
-      '{"version":1,"data":{"memberId":"me","savedAt":"2026-10-12T10:0',
+      '{"version":2,"data":{"memberId":"me","savedAt":"2026-10-12T10:0',
       'not json',
-      '{"version":2,"data":{"memberId":"me","savedAt":"2026-10-12T10:00:00Z","entries":[]}}',
-      '{"version":1,"data":{"memberId":"me","savedAt":"2026-10-12T10:00:00Z","entries":"x"}}',
-      '{"version":1,"data":{"memberId":"me","savedAt":"2026-10-12T10:00:00Z","entries":[{"id":1}]}}',
-      '{"version":1,"data":{"memberId":"me","savedAt":"yesterday","entries":[]}}',
+      '{"version":1,"data":{"memberId":"me","savedAt":"2026-10-12T10:00:00Z","entries":[]}}',
+      '{"version":3,"data":{"memberId":"me","savedAt":"2026-10-12T10:00:00Z","entries":[]}}',
+      '{"version":2,"data":{"memberId":"me","savedAt":"2026-10-12T10:00:00Z","entries":"x"}}',
+      '{"version":2,"data":{"memberId":"me","savedAt":"2026-10-12T10:00:00Z","entries":[{"id":1}]}}',
+      '{"version":2,"data":{"memberId":"me","savedAt":"yesterday","entries":[]}}',
       'null',
     ]) {
       device.setItem(DEVICE_FEED_KEY, raw)
@@ -281,6 +287,11 @@ describe('the feed against the social stack', () => {
       book: { id: first.book.id, title: first.book.title, manual: false },
       rating: null,
       review: null,
+      spoilers: false,
+      folded: false,
+      sessionId: first.latestSession!.id,
+      likes: 0,
+      liked: false,
     })
     expect(page[0]!.member.name).not.toBeUndefined()
     expect(typeof page[0]!.id).toBe('string')

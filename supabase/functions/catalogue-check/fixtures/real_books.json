@@ -1,0 +1,1070 @@
+[
+ {
+  "row": {
+   "title": "Swan song",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780671741037",
+   "isbn10": "0671741039",
+   "openlibrary_edition_key": "OL24940068M",
+   "openlibrary_work_key": "OL3909679W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780671741037.json": {
+    "__redirect": "https://openlibrary.org/books/OL7663889M.json"
+   },
+   "https://openlibrary.org/books/OL7663889M.json": {
+    "title": "Swan Song",
+    "authors": [
+     {
+      "key": "/authors/OL711465A"
+     }
+    ],
+    "publish_date": "June 1, 1987",
+    "publishers": [
+     "Pocket"
+    ],
+    "covers": [
+     408116
+    ],
+    "physical_format": "Mass Market Paperback",
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "isbn_13": [
+     "9780671741037"
+    ],
+    "isbn_10": [
+     "0671741039"
+    ],
+    "key": "/books/OL7663889M",
+    "number_of_pages": 960,
+    "works": [
+     {
+      "key": "/works/OL3909679W"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL3909679W.json": {
+    "description": {
+     "type": "/type/text",
+     "value": "An ancient evil roams the desolate landscape of an America ravaged by nuclear war. \r\nHe is the Man with the Scarlet Eye, a malevolent force that feeds on the dark desires of the countless followers he has gathered into his service. His only desire is to find a special child named Swan -- and destroy her. But those who would protect the girl are determined to fight for what is left of the worldŠand their souls. \r\nIn a wasteland born of rage, populated by monstrous creatures and marauding armies, the last survivors on earth have been drawn into the final battle between good and evil that will decide the fate of humanity...."
+    },
+    "title": "Swan Song",
+    "covers": [
+     1405021
+    ],
+    "key": "/works/OL3909679W",
+    "authors": [
+     {
+      "type": {
+       "key": "/type/author_role"
+      },
+      "author": {
+       "key": "/authors/OL711465A"
+      }
+     }
+    ]
+   },
+   "https://openlibrary.org/authors/OL711465A.json": {
+    "name": "Robert R. McCammon",
+    "key": "/authors/OL711465A"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Brave New World",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780060850524",
+   "isbn10": "0060850523",
+   "openlibrary_edition_key": "OL7283039M",
+   "openlibrary_work_key": "OL64365W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780060850524.json": {
+    "__redirect": "https://openlibrary.org/books/OL40234250M.json"
+   },
+   "https://openlibrary.org/books/OL40234250M.json": {
+    "title": "Brave New World",
+    "publish_date": "1932",
+    "publishers": [
+     "Harper & Brothers"
+    ],
+    "key": "/books/OL40234250M",
+    "works": [
+     {
+      "key": "/works/OL64365W"
+     }
+    ],
+    "covers": [
+     14630303
+    ],
+    "isbn_10": [
+     "0060850523"
+    ]
+   },
+   "https://openlibrary.org/works/OL64365W.json": {
+    "title": "Brave New World",
+    "key": "/works/OL64365W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL19767A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "description": "Originally published in 1932, this outstanding work of literature is more crucial and relevant today than ever before. Cloning, feel-good drugs, antiaging programs, and total social control through politics, programming, and media -- has Aldous Huxley accurately predicted our future? With a storyteller's genius, he weaves these ethical controversies in a compelling narrative that dawns in the year 632 AF (After Ford, the deity). When Lenina and Bernard visit a savage reservation, we experience how Utopia can destroy humanity. A powerful work of speculative fiction that has enthralled and terrified readers for generations, Brave New World is both a warning to be heeded and thought-provoking yet satisfying entertainment. - Container.",
+    "covers": [
+     8231823,
+     7877366,
+     36629,
+     4735296,
+     76273,
+     38160,
+     38161,
+     28007,
+     -1,
+     75319,
+     6300729,
+     380854,
+     7730373,
+     7944082,
+     8458270,
+     8741857,
+     8756770,
+     8761508,
+     10141683,
+     10434737,
+     10179684,
+     10427017,
+     10284209,
+     4917603,
+     980448,
+     6809781,
+     6859627,
+     6896729,
+     10667240,
+     10993168,
+     11540816,
+     14132626,
+     12349851,
+     10883516,
+     12992919,
+     13521220,
+     13524752,
+     6624877,
+     11676540,
+     12948824,
+     12999171,
+     14847148,
+     8432136,
+     12527373,
+     13668788
+    ]
+   },
+   "https://openlibrary.org/authors/OL19767A.json": {
+    "key": "/authors/OL19767A",
+    "name": "Aldous Huxley"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Memoirs of Hadrian",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780374529260",
+   "isbn10": "0374529264",
+   "openlibrary_edition_key": "OL9150736M",
+   "openlibrary_work_key": "OL106837W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780374529260.json": {
+    "__redirect": "https://openlibrary.org/books/OL35722593M.json"
+   },
+   "https://openlibrary.org/books/OL35722593M.json": {
+    "works": [
+     {
+      "key": "/works/OL106837W"
+     }
+    ],
+    "title": "Hadrianus'un Anıları",
+    "publishers": [
+     "Adam"
+    ],
+    "publish_date": "2003",
+    "key": "/books/OL35722593M",
+    "covers": [
+     12458928
+    ],
+    "isbn_10": [
+     "0374529264"
+    ],
+    "number_of_pages": 277,
+    "physical_format": "Paperback",
+    "languages": [
+     {
+      "key": "/languages/tur"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL106837W.json": {
+    "title": "Mémoires d'Hadrien",
+    "covers": [
+     1003164,
+     967431,
+     2141000,
+     4230303,
+     3243075,
+     419452,
+     107955,
+     5257200,
+     9718971,
+     10786289,
+     6538310,
+     12332942,
+     12453230,
+     12453239,
+     15018587,
+     14909000
+    ],
+    "key": "/works/OL106837W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL20371A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "description": "*Mémoires d'Hadrien* est un roman historique de l'écrivaine française Marguerite Yourcenar, publié en 1951. Ces pseudo-mémoires de l'empereur romain Hadrien ont immédiatement rencontré un extraordinaire succès international et assuré à son auteur une grande célébrité. Il s’agit d’une œuvre dont le projet remonte à l’adolescence de l’autrice. Yourcenar considérant le projet comme trop ambitieux pour être une œuvre de jeunesse, le décrivait de la trempe de ceux « qu’on ne doit pas oser avant d’avoir dépassé quarante ans ».\r\n\r\nLe livre est présenté comme une longue lettre d’un vieil empereur adressée à son petit-fils adoptif et éventuel successeur âgé de 17 ans, Marc Aurèle. L’empereur Hadrien médite et se remémore ses triomphes militaires, son amour de la poésie et de la musique, sa philosophie ainsi que sa passion pour son jeune amant bithynien, Antinoüs. \r\n\r\n-------------\r\n\r\n*Memoirs of Hadrian* (French: Mémoires d'Hadrien) is a novel by the Belgian-born French writer Marguerite Yourcenar about the life and death of Roman Emperor Hadrian. First published in France in French in 1951 as Mémoires d'Hadrien, the book was an immediate success, meeting with enormous critical acclaim. Although the historical Hadrian wrote an autobiography, it has been lost.\r\n\r\nThe book takes the form of a letter to Hadrian's adoptive grandson and eventual successor \"Mark\" (Marcus Aurelius). The emperor meditates on military triumphs, love of poetry and music, philosophy, and his passion for his lover Antinous, all in a manner similar to Gustave Flaubert's \"melancholy of the antique world.\"\r\n\r\nYourcenar noted in her postscript *Carnet de note* to the original edition, quoting Flaubert, that she had chosen Hadrian as the subject of the novel in part because he had lived at a time when the Roman gods were no longer believed in, but Christianity was not yet established. This intrigued her for what she saw as parallels to her own post-war European world."
+   },
+   "https://openlibrary.org/books/OL9150736M.json": {
+    "title": "Memoirs of Hadrian",
+    "publish_date": "2005",
+    "physical_format": "Paperback",
+    "covers": [
+     12453230
+    ],
+    "isbn_10": [
+     "0374529264"
+    ],
+    "isbn_13": [
+     "9780374529260"
+    ],
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "publishers": [
+     "Farrar, Straus and Giroux"
+    ],
+    "key": "/books/OL9150736M",
+    "number_of_pages": 347,
+    "works": [
+     {
+      "key": "/works/OL106837W"
+     }
+    ]
+   },
+   "https://openlibrary.org/authors/OL20371A.json": {
+    "name": "Marguerite Yourcenar",
+    "title": "1903-1987.",
+    "key": "/authors/OL20371A"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "The first man in Rome",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780380710812",
+   "isbn10": "0380710811",
+   "openlibrary_edition_key": "OL24632145M",
+   "openlibrary_work_key": "OL1882554W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780380710812.json": {
+    "__redirect": "https://openlibrary.org/books/OL24207169M.json"
+   },
+   "https://openlibrary.org/books/OL24207169M.json": {
+    "description": {
+     "type": "/type/text",
+     "value": "A story tracing the creation of Republican Rome presents those who founded an empire, including Marius and Sulla, each determined to become the First Man of Rome. When the world cowered before the legions of Rome, two extraordinary men dreamed of personal glory: the military genius and wealthy rural \"upstart\" Marius, and Sulla, penniless and debauched but of aristocratic birth. Men of exceptional vision, courage, cunning, and ruthless ambition, separately they faced the insurmountable opposition of powerful, vindictive foes. Yet allied they could answer the treachery of rivals, lovers, enemy generals, and senatorial vipers with intricate and merciless machinations of their own -- to achieve in the end a bloody and splendid foretold destiny ... and win the most coveted honor the Republic could bestow."
+    },
+    "title": "The first man in Rome",
+    "authors": [
+     {
+      "key": "/authors/OL225331A"
+     }
+    ],
+    "publish_date": "1991",
+    "publishers": [
+     "Avon Books",
+     "Avon"
+    ],
+    "isbn_10": [
+     "0380710811"
+    ],
+    "pagination": "1076 p. :",
+    "covers": [
+     6500908
+    ],
+    "isbn_13": [
+     "9780380710812"
+    ],
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "key": "/books/OL24207169M",
+    "number_of_pages": 1076,
+    "works": [
+     {
+      "key": "/works/OL1882554W"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL1882554W.json": {
+    "description": {
+     "type": "/type/text",
+     "value": "This historical fiction takes prominent Roman names of the time, and tells their tale in an astonishingly descriptive way. It follows the life of Gaius Marius, and his fellow Roman, Lucius Cornelius Sulla, and their struggles for power through war, politics, and blood."
+    },
+    "title": "The First Man in Rome",
+    "covers": [
+     2204666,
+     75589,
+     6800133,
+     4032410,
+     3138330,
+     5257047
+    ],
+    "key": "/works/OL1882554W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL225331A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ]
+   },
+   "https://openlibrary.org/authors/OL225331A.json": {
+    "name": "Colleen McCullough",
+    "key": "/authors/OL225331A"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Nineteen Eighty-Four",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780452284234",
+   "isbn10": "0452284236",
+   "openlibrary_edition_key": "OL3705019M",
+   "openlibrary_work_key": "OL1168083W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780452284234.json": {
+    "__redirect": "https://openlibrary.org/books/OL26224448M.json"
+   },
+   "https://openlibrary.org/books/OL26224448M.json": {
+    "title": "Nineteen eighty-four",
+    "subtitle": "a novel",
+    "publish_date": "2003",
+    "publishers": [
+     "Plume"
+    ],
+    "covers": [
+     7898938
+    ],
+    "pagination": "xxvi, 339 p. ;",
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "isbn_10": [
+     "0452284236"
+    ],
+    "key": "/books/OL26224448M",
+    "number_of_pages": 339,
+    "works": [
+     {
+      "key": "/works/OL1168083W"
+     }
+    ],
+    "description": {
+     "type": "/type/text",
+     "value": "Portrays a terrifying vision of life in the future when a totalitarian government, considered a \"Negative Utopia,\" watches over all citizens and directs all activities, becoming more powerful as time goes by."
+    }
+   },
+   "https://openlibrary.org/works/OL1168083W.json": {
+    "description": "Nineteen Eighty-Four: A Novel, often referred to as 1984, is a dystopian social science fiction novel by the English novelist George Orwell (the pen name of Eric Arthur Blair). It was published on 8 June 1949 by Secker & Warburg as Orwell's ninth and final book completed in his lifetime. Thematically, Nineteen Eighty-Four centres on the consequences of totalitarianism, mass surveillance, and repressive regimentation of persons and behaviours within society. Orwell, himself a democratic socialist, modelled the authoritarian government in the novel after Stalinist Russia. More broadly, the novel examines the role of truth and facts within politics and the ways in which they are manipulated.\r\n\r\n----------\t\t\r\nAlso contained in:\t\t\r\n[Novels (Animal Farm / Burmese Days / Clergyman's Daughter / Coming Up for Air / Keep the Aspidistra Flying / Nineteen Eighty-Four)](https://openlibrary.org/works/OL1168045W)\t\t\r\n[Novels (Animal Farm / Nineteen Eighty-Four)](https://openlibrary.org/works/OL1167981W)\r\n[Orwell's Nineteen Eighty-Four: Text, Sources, Criticism](https://openlibrary.org/works/OL1168095W)",
+    "title": "Nineteen Eighty-Four",
+    "key": "/works/OL1168083W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL15318546A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "covers": [
+     9267242,
+     14416004,
+     12804575,
+     8579152,
+     10507965,
+     107837,
+     10096094,
+     10308909,
+     10447490,
+     10483577,
+     10509172,
+     10538061,
+     10856490,
+     10522004,
+     10867263,
+     10867262,
+     11185286,
+     11185285,
+     10740338,
+     10856341,
+     10524811,
+     11377284,
+     11963963,
+     10833087,
+     11384764,
+     12373832,
+     10497578,
+     12255380,
+     12270312,
+     12302903,
+     12359001,
+     12369992,
+     12554163,
+     11317779,
+     12459175,
+     12509941,
+     11394456,
+     -1,
+     11187836,
+     13195444,
+     13459134,
+     13614819,
+     13770046,
+     13009792,
+     13451438,
+     13622349,
+     13873094,
+     14059002,
+     14059003,
+     14254419,
+     14301221,
+     14301222,
+     14301223,
+     14301224,
+     15026601,
+     14934776,
+     14862408,
+     14911098,
+     15196195
+    ]
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Gardens of the moon",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780765348784",
+   "isbn10": "0765348780",
+   "openlibrary_edition_key": "OL24650838M",
+   "openlibrary_work_key": "OL5734756W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780765348784.json": {
+    "__redirect": "https://openlibrary.org/books/OL24369066M.json"
+   },
+   "https://openlibrary.org/books/OL24369066M.json": {
+    "description": {
+     "type": "/type/text",
+     "value": "Fantasy-roman."
+    },
+    "title": "Gardens of the moon",
+    "subtitle": "book one of the Malazan book of the fallen",
+    "authors": [
+     {
+      "key": "/authors/OL1394250A"
+     }
+    ],
+    "publish_date": "2005",
+    "publishers": [
+     "Tor"
+    ],
+    "covers": [
+     6601060
+    ],
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "pagination": "xviii, 666 sider.",
+    "isbn_13": [
+     "9780765348784"
+    ],
+    "isbn_10": [
+     "0765348780"
+    ],
+    "key": "/books/OL24369066M",
+    "number_of_pages": 666,
+    "works": [
+     {
+      "key": "/works/OL5734756W"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL5734756W.json": {
+    "title": "Gardens of the Moon",
+    "covers": [
+     374277,
+     525196,
+     524437,
+     6304201,
+     6601060,
+     6806209,
+     9552848,
+     10543183,
+     6304091,
+     1006091,
+     8635399,
+     8770831,
+     10543108
+    ],
+    "key": "/works/OL5734756W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL1394250A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "description": "The opening chapter in an epic fantasy masterpiece....Bled dry by interminable warfare, infighting and bloody confrontations with Lord Anomander Rake and his Tiste Andii, the vast, sprawling Malazan empire simmers with discontent.Even its imperial legions yearn for some respite. For Sergeant Whiskeyjack and his Bridgeburners and for Tattersail, sole surviving sorceress of the Second Legion, the aftermath of the siege of Pale should have been a time to mourn the dead. But Darujhistan, last of the Free Cities of Genabackis, still holds out - and Empress Lasseen's ambition knows no bounds. However, it seems the empire is not alone in this great game. Sinister forces gather as the gods themselves prepare to play their hand... Conceived and written on an epic scale, Gardens of the Moon is a breathtaking achievement - a novel in which grand design, a dark and complex mythology, wild and wayward magic and a host of enduring characters combine with thrilling, powerful storytelling to resounding effect. Acclaimed by writers, critics and readers alike, here is the opening chapter in what has been hailed a landmark of epic fantasy: the awesome 'The Malazan Book of the Fallen'."
+   },
+   "https://openlibrary.org/authors/OL1394250A.json": {
+    "name": "Steven Erikson",
+    "key": "/authors/OL1394250A"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "The Hobbit",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780547928227",
+   "isbn10": "054792822X",
+   "openlibrary_edition_key": "OL26456609M",
+   "openlibrary_work_key": "OL27482W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780547928227.json": {
+    "__redirect": "https://openlibrary.org/books/OL33891995M.json"
+   },
+   "https://openlibrary.org/books/OL33891995M.json": {
+    "works": [
+     {
+      "key": "/works/OL27482W"
+     }
+    ],
+    "title": "The Hobbit",
+    "publishers": [
+     "Mariner Books"
+    ],
+    "publish_date": "2012",
+    "key": "/books/OL33891995M",
+    "covers": [
+     12003329
+    ],
+    "isbn_10": [
+     "054792822X"
+    ],
+    "isbn_13": [
+     "9780547928227"
+    ],
+    "pagination": "300p.",
+    "physical_format": "Paperback",
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "description": {
+     "type": "/type/text",
+     "value": "Bilbo Baggins is a hobbit who enjoys a comfortable, unambitious life, rarely traveling any farther than his pantry or cellar. But his contentment is disturbed when the wizard Gandalf and a company of dwarves arrive on his doorstep one day to whisk him away on an adventure. They have launched a plot to raid the treasure hoard guarded by Smaug the Magnificent, a large and very dangerous dragon. Bilbo reluctantly joins their quest, unaware that on his journey to the Lonely Mountain he will encounter both a magic ring and a frightening creature known as Gollum.\r\n(back cover)"
+    },
+    "number_of_pages": 300
+   },
+   "https://openlibrary.org/works/OL27482W.json": {
+    "description": "The Hobbit is a tale of high adventure, undertaken by a company of dwarves in search of dragon-guarded gold. A reluctant partner in this perilous quest is Bilbo Baggins, a comfort-loving unambitious hobbit, who surprises even himself by his resourcefulness and skill as a burglar.\r\n\r\nEncounters with trolls, goblins, dwarves, elves, and giant spiders, conversations with the dragon, Smaug, and a rather unwilling presence at the Battle of Five Armies are just some of the adventures that befall Bilbo.\r\n\r\nBilbo Baggins has taken his place among the ranks of the immortals of children’s fiction. Written by Professor Tolkien for his children, The Hobbit met with instant critical acclaim when published.",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL26320A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "key": "/works/OL27482W",
+    "title": "The Hobbit",
+    "covers": [
+     14627509
+    ]
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Queen Amid Ashes",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9798873700691",
+   "isbn10": "8873700691",
+   "openlibrary_edition_key": "OL61329900M",
+   "openlibrary_work_key": "OL44945136W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9798873700691.json": {
+    "__redirect": "https://openlibrary.org/books/OL61329900M.json"
+   },
+   "https://openlibrary.org/books/OL61329900M.json": {
+    "works": [
+     {
+      "key": "/works/OL44945136W"
+     }
+    ],
+    "title": "Queen Amid Ashes",
+    "publishers": [
+     "Independently published"
+    ],
+    "publish_date": "28. Juni 2022",
+    "key": "/books/OL61329900M",
+    "covers": [
+     15170796
+    ],
+    "isbn_13": [
+     "9798873700691"
+    ],
+    "isbn_10": [
+     "8873700691"
+    ],
+    "description": {
+     "type": "/type/text",
+     "value": "**THOUGH THE BATTLE TO SAVE HER PLANET IS OVER, THE WAR NEVER ENDS.**\r\n\r\nHadrian Marlowe is newly a knight of the galaxy-spanning Sollan Empire: a hero who they say slew the alien Prince Aranata Otiolo in single combat; a man they say no man or xenobite can kill.\r\n\r\nActing on the Emperor’s orders, Hadrian has come to the desert planet Thagura and driven off the Cielcin invaders, rescuing in the process the Lady Gadar Malyan, Baroness of that entire world.\r\n\r\nBut not all the fighting is ended. Pockets of inhuman resistance remain on the desert world, and Hadrian the Halfmortal must soon do battle with not only the man-eating alien barbarians, but with something just as terrible: man’s own inhumanity to man."
+    },
+    "number_of_pages": 190
+   },
+   "https://openlibrary.org/works/OL44945136W.json": {
+    "title": "Queen Amid Ashes",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL7539819A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "key": "/works/OL44945136W"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Dune",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780441013593",
+   "isbn10": "0441013597",
+   "openlibrary_edition_key": "OL17952222M",
+   "openlibrary_work_key": "OL893414W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780441013593.json": {
+    "__redirect": "https://openlibrary.org/books/OL7524304M.json"
+   },
+   "https://openlibrary.org/books/OL7524304M.json": {
+    "title": "Dune",
+    "authors": [
+     {
+      "key": "/authors/OL79034A"
+     }
+    ],
+    "publish_date": "August 2, 2005",
+    "publishers": [
+     "Ace Trade"
+    ],
+    "covers": [
+     14565843,
+     284314
+    ],
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "isbn_10": [
+     "0441013597"
+    ],
+    "isbn_13": [
+     "9780441013593"
+    ],
+    "key": "/books/OL7524304M",
+    "number_of_pages": 544,
+    "works": [
+     {
+      "key": "/works/OL893414W"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL893414W.json": {
+    "title": "Dune",
+    "key": "/works/OL893414W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL79034A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "description": "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the \"spice\" melange, a drug capable of extending life and enhancing consciousness. Coveted across the known universe, melange is a prize worth killing for...\r\n\r\nWhen House Atreides is betrayed, the destruction of Paul's family will set the boy on a journey toward a destiny greater than he could ever have imagined. And as he evolves into the mysterious man known as Muad'Dib, he will bring to fruition humankind's most ancient and unattainable dream.\r\n\r\nA stunning blend of adventure and mysticism, environmentalism and politics, Dune won the first Nebula Award, shared the Hugo Award, and formed the basis of what is undoubtedly the grandest epic in science fiction.",
+    "covers": [
+     11481354,
+     12375564,
+     11157826,
+     284314,
+     380097,
+     258358,
+     8015404,
+     1847148,
+     6978883,
+     7910196,
+     8440265,
+     8535871,
+     8570801,
+     8741978,
+     8792030,
+     1009420,
+     1009408,
+     974774,
+     1009426,
+     10358100,
+     4917636,
+     11290747,
+     7508914,
+     8740512,
+     8740672,
+     8742737,
+     8771989,
+     10431758,
+     10500426,
+     7103828,
+     10488703,
+     11481180,
+     8741528,
+     8763616,
+     -1,
+     10368109,
+     10565022,
+     10777069,
+     12410029,
+     12575304,
+     13823878,
+     14488766,
+     13556124,
+     13816755,
+     13916320,
+     13934500,
+     14020316,
+     11944617
+    ]
+   },
+   "https://openlibrary.org/authors/OL79034A.json": {
+    "key": "/authors/OL79034A",
+    "name": "Frank Herbert",
+    "title": "novelist"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Lonesome Dove",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780671683900",
+   "isbn10": "0833518496",
+   "openlibrary_edition_key": "OL8188748M",
+   "openlibrary_work_key": "OL134601W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780671683900.json": {
+    "__redirect": "https://openlibrary.org/books/OL8188748M.json"
+   },
+   "https://openlibrary.org/books/OL8188748M.json": {
+    "publishers": [
+     "Pocket Books"
+    ],
+    "number_of_pages": 945,
+    "isbn_10": [
+     "0833518496",
+     "067168390X"
+    ],
+    "covers": [
+     8376342
+    ],
+    "physical_format": "School & Library Binding",
+    "key": "/books/OL8188748M",
+    "authors": [
+     {
+      "key": "/authors/OL22012A"
+     }
+    ],
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "pagination": "945p.",
+    "title": "Lonesome Dove",
+    "isbn_13": [
+     "9780833518491"
+    ],
+    "publish_date": "2002?",
+    "works": [
+     {
+      "key": "/works/OL134601W"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL134601W.json": {
+    "description": "Lonesome Dove, by Larry McMurtry, the author of Terms of Endearment, is his long-awaited masterpiece, the major noel at last of the American West as it really was.\r\n\r\nA love story, an adventure, an American epic, Lonesome Dove embraces all the West--legend and fact, heroes and outlaws, whores and ladies, Indians and settlers--in a novel that recreates the Central American experience, the most enduring of our national myths.\r\n\r\nSet in the late nineteenth century. Lonesome Dove is the story of a cattle drive from Texas to Montana -- and much more. It is a drive that represents for everybody involved not only a Darin, even a foolhardy, adventure, but a part of the American Dream--the attempt to carve out of the last remaining wilderness a new life.\r\n\r\nAugustus McCrae and W. F. Call are former Texas Rangers, partners and friends who have shared hardship and danger together without ever quite understanding (or wanting to understand) each other's deepest emotions. Gus is the romantic, a reluctant rancher who has a way with women and the sense to leave well enough alone. Call is a driven, demanding man, a natural authority figure with no patience for weakness, and not many of his own. He is obsessed with the dream of creating his own empire, and with the need to conceal a secret sorrow of his own. The two men could hardly be more different, but both are tough, redoubtable fighters who have learned to count on each other, if nothing else. \r\n\r\nCall's dream not only drags Gus along in its wake, but draws in a vast cast of characters:\r\n-Lorena, the whore with the proverbial heart of gold, whom Gus (and almost everyone else) loves, and who. Survives one of the most terrifying experiences any woman could have...\r\n-Elmira, the restless, reluctant wife of a small-time Arkansas sheriff, who runs away from the security of marriage to become part of the great Western adventure...\r\n--Blue Duck, the sinister Indian renegade, one of the most frightening villains in American fiction, whose steely capacity for cruelty affects the lives of everyone in the book...\r\n-Newt, the young cowboy for whom the long and dangerous journey from Texas to Montana is in fact a search for his own identity...\r\n-Jake, the dashing, womanising ex-ranger, a comrade-in-arms of Gus and Call, whose weakness leads him to an unexpected fate...\r\n-July Johnson, husband of Elmira, whose love for her draws him out of his secure life into a kind of hero...\r\n\r\nLonesome Dove seeps from the Rio Grande (where Gus and Call acquire the cattle for their long drive by raiding the Mexicans) to the Montana highlands (where they find themselves besieged by the last, defiant remnants of an older West).\r\n\r\nIt is an epic of love, heroism, loyalty, honour, and betrayal--faultlessly written, unfailingly dramatic. Lonesome Dove is the novel about the West that American literature--and the American reader--has long been waiting for.\r\n--jacket\r\n\r\n\r\n----------\r\nContains:\r\n\r\n - [Lonesome Dove: 2/2](https://openlibrary.org/works/OL134565W)",
+    "title": "Lonesome Dove",
+    "covers": [
+     8376548,
+     7967874
+    ],
+    "key": "/works/OL134601W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL22012A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ]
+   },
+   "https://openlibrary.org/authors/OL22012A.json": {
+    "name": "Larry McMurtry",
+    "key": "/authors/OL22012A"
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Fahrenheit 451",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9781451673319",
+   "isbn10": "1451673310",
+   "openlibrary_edition_key": "OL26295928M",
+   "openlibrary_work_key": "OL103123W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9781451673319.json": {
+    "__redirect": "https://openlibrary.org/books/OL26437043M.json"
+   },
+   "https://openlibrary.org/books/OL26437043M.json": {
+    "description": {
+     "type": "/type/text",
+     "value": "Sixty years after its publication, Ray Bradbury's internationally acclaimed novel Fahrenheit 451 stands as a classic of world literature set in a bleak, dystopian future. Today its message has grown more relevant than ever before.\r\n\r\n\"Fahrenheit 451- The temperature at which book paper catches fire and burns.\"\r\n\r\nGuy Montag is a fireman. His job is to destroy the most illegal of commodities, the printed book, along with the houses in which they are hidden. Montag never questions the destruction and ruin his actions produce, returning each day to his bland life and wife, Mildred, who spends all day with her television \"family.\" But when he meets an eccentric young neighbor, Clarisse, who introduces him to a past where people didn't live in fear and to a present where one sees the world through the ideas in books instead of the mindless chatter of television, Montag begins to question everything he has ever known.\r\n\r\nThe sixtieth-anniversary edition commemorates Ray Bradbury's masterpiece with a new introduction by Neil Gaiman; personal essays on the genesis of the novel by the author; a wealth of critical essays and reviews by Nelson Algren, Harold Bloom, Margaret Atwood, and others; rare manuscript pages and sketches from Ray Bradbury's personal archive; and much more. Here, at last, is the definitive edition of a classic of world literature.\r\n\r\n--back cover"
+    },
+    "title": "Fahrenheit 451",
+    "publish_date": "2013-06",
+    "publishers": [
+     "Simon &  Schuster Paperbacks"
+    ],
+    "covers": [
+     12460599
+    ],
+    "physical_format": "Trade Paperback",
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "pagination": "xvi, 249p.",
+    "isbn_10": [
+     "1451673310"
+    ],
+    "isbn_13": [
+     "9781451673319"
+    ],
+    "key": "/books/OL26437043M",
+    "number_of_pages": 256,
+    "works": [
+     {
+      "key": "/works/OL103123W"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL103123W.json": {
+    "title": "Fahrenheit 451",
+    "key": "/works/OL103123W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL24137A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ],
+    "description": {
+     "type": "/type/text",
+     "value": "Fahrenheit 451 is a 1953 dystopian novel by American writer Ray Bradbury. Often regarded as one of his best works, the novel presents a future American society where books are outlawed and \"firemen\" burn any that are found. The book's tagline explains the title as \"'the temperature at which book paper catches fire, and burns\": the autoignition temperature of paper. The lead character, Guy Montag, is a fireman who becomes disillusioned with his role of censoring literature and destroying knowledge, eventually quitting his job and committing himself to the preservation of literary and cultural writings.\r\n\r\nThe novel has been the subject of interpretations focusing on the historical role of book burning in suppressing dissenting ideas for change. In a 1956 radio interview, Bradbury said that he wrote Fahrenheit 451 because of his concerns at the time (during the McCarthy era) about the threat of book burning in the United States. In later years, he described the book as a commentary on how mass media reduces interest in reading literature.\r\n\r\nIn 1954, Fahrenheit 451 won the American Academy of Arts and Letters Award in Literature and the Commonwealth Club of California Gold Medal. It later won the Prometheus \"Hall of Fame\" Award in 1984 and a \"Retro\" Hugo Award, one of a limited number of Best Novel Retro Hugos ever given, in 2004. Bradbury was honored with a Spoken Word Grammy nomination for his 1976 audiobook version.\r\n\r\n---\r\n\r\nAlso contained in:\r\n\r\n- [451° по Фаренгейту: Рассказы](https://openlibrary.org/works/OL17811384W/Fahrenheit_451_stories)\r\n- [451° по Фаренгейту: повести и рассказы](https://openlibrary.org/works/OL27741633W)\r\n- [Works](https://openlibrary.org/works/OL28185143W)"
+    },
+    "covers": [
+     12993656,
+     13248959,
+     13633165,
+     10489108,
+     12971854,
+     13766795,
+     13995883,
+     13803692,
+     13959051,
+     13959052,
+     14158758,
+     -1
+    ]
+   }
+  }
+ },
+ {
+  "row": {
+   "title": "Rebecca",
+   "source": "openlibrary",
+   "apple_id": null,
+   "isbn13": "9780380730407",
+   "isbn10": "0380730405",
+   "openlibrary_edition_key": "OL7433380M",
+   "openlibrary_work_key": "OL36633W"
+  },
+  "recorded": {
+   "https://openlibrary.org/isbn/9780380730407.json": {
+    "__redirect": "https://openlibrary.org/books/OL22933266M.json"
+   },
+   "https://openlibrary.org/books/OL22933266M.json": {
+    "publishers": [
+     "Avon Books"
+    ],
+    "isbn_10": [
+     "0380730405"
+    ],
+    "pagination": "410 p. ;",
+    "covers": [
+     8765889
+    ],
+    "key": "/books/OL22933266M",
+    "authors": [
+     {
+      "key": "/authors/OL34047A"
+     }
+    ],
+    "isbn_13": [
+     "9780380730407"
+    ],
+    "title": "Rebecca",
+    "number_of_pages": 410,
+    "languages": [
+     {
+      "key": "/languages/eng"
+     }
+    ],
+    "publish_date": "1997",
+    "works": [
+     {
+      "key": "/works/OL36633W"
+     }
+    ]
+   },
+   "https://openlibrary.org/works/OL36633W.json": {
+    "description": "With these words, the reader is ushered into an isolated gray stone mansion on the windswept Cornish coast, as the second Mrs. Maxim de Winter recalls the chilling events that transpired as she began her new life as the young bride of a husband she barely knew. For in every corner of every room were phantoms of a time dead but not forgotten—a past devotedly preserved by the sinister housekeeper, Mrs. Danvers: a suite immaculate and untouched, clothing laid out and ready to be worn, but not by any of the great house's current occupants. With an eerie presentiment of evil tightening her heart, the second Mrs. de Winter walked in the shadow of her mysterious predecessor, determined to uncover the darkest secrets and shattering truths about Maxim's first wife—the late and hauntingly beautiful Rebecca.",
+    "title": "Rebecca",
+    "covers": [
+     8238729,
+     3005652,
+     8847303,
+     9070307,
+     10533922,
+     7271602,
+     7263190,
+     8767961,
+     13525903,
+     14063014,
+     14063013,
+     15049576
+    ],
+    "key": "/works/OL36633W",
+    "authors": [
+     {
+      "author": {
+       "key": "/authors/OL34047A"
+      },
+      "type": {
+       "key": "/type/author_role"
+      }
+     }
+    ]
+   },
+   "https://openlibrary.org/authors/OL34047A.json": {
+    "title": "Dame",
+    "key": "/authors/OL34047A",
+    "name": "Daphne du Maurier"
+   }
+  }
+ }
+]

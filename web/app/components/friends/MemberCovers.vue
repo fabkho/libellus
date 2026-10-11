@@ -6,13 +6,15 @@
 import type { SocialBook } from '~/data/social'
 
 const props = withDefaults(defineProps<{ books: readonly SocialBook[]; size?: 'sm' | 'md'; testid: string }>(), { size: 'md' })
+const { t } = useI18n()
+const shown = computed(() => props.books.map((b) => shownBook(b, t('book.outsideCatalogue'))))
 const width = computed(() => (props.size === 'md' ? 'w-(--size-cover-md)' : 'w-(--size-cover-sm)'))
 </script>
 
 <template>
   <ul class="scrollbar-none -mx-screen flex snap-x scroll-px-screen gap-ms overflow-x-auto px-screen pt-xs pb-xxl -mb-xl" :data-testid="testid">
-    <li v-for="book in books" :key="book.id" class="shrink-0 snap-start" :class="width">
-      <FriendsMemberBookLink :book="book" class="cover-link block rounded-cover" :aria-label="book.title" :data-testid="`${testid}.book`">
+    <li v-for="(book, at) in shown" :key="book.id" class="shrink-0 snap-start" :class="width">
+      <FriendsMemberBookLink :book="books[at]!" class="cover-link block rounded-cover" :aria-label="book.title" :data-testid="`${testid}.book`">
         <UiCover
           :title="book.title"
           :authors="book.authors"

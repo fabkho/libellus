@@ -41,6 +41,9 @@ const label = computed(() =>
   reading.finishBusy ? t('finish.busy') : reading.finishError ? t('finish.retry') : t('finish.action'),
 )
 const reviewId = useId()
+watch(open, (isOpen) => {
+  if (isOpen) spoilers.value = false
+})
 
 const summary = computed(() => {
   const startedOn = entry.value?.latestSession?.startedOn
@@ -94,7 +97,11 @@ const summary = computed(() => {
           :maxlength="REVIEW_MAX_LENGTH"
           :disabled="reading.finishBusy"
           data-testid="finish.review"
-        />
+        >
+          <template #footer>
+            <BookSpoilerSwitch v-model="reading.reviewSpoilers" :disabled="reading.finishBusy" testid="finish.spoilers" />
+          </template>
+        </UiTextArea>
       </div>
 
       <p v-if="reading.finishError" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="finish.error">

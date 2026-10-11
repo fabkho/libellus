@@ -54,9 +54,9 @@ export const useStatsStore = defineStore('stats', () => {
   /**
    * The sheet that was open when the member opened a book from it (what it showed, and how
    * far its list was scrolled), with the page it was on: Back from the book opens it again
-   * (composables/useSheetRestore.ts).
+   * (composables/useSheetRestore.ts). `testid` is the sheet it belongs to: a page with two such sheets (Home) keeps one.
    */
-  const keptSheet = ref<{ page: string; sheet: unknown; scroll: number } | null>(null)
+  const keptSheet = ref<{ testid?: string; page: string; sheet: unknown; scroll: number } | null>(null)
 
   const freshness = createFreshness()
   /** The read on its way: a visit asked while it is gets that one. */

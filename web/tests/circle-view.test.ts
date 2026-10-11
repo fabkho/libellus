@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedEntry, FeedKind } from '@/data/feed'
-import { CARD_DAYS, circleView, type CirclePhrase } from '@/utils/circleView'
+import { CARD_DAYS, circleView, entriesKind, type CirclePhrase } from '@/utils/circleView'
 
 /**
  * What Home's "Your circle" decides before it draws (social v1, U8): which finish gets the card (the
@@ -37,6 +37,11 @@ function entry(member: typeof ANNA, kind: FeedKind, bookId: string, hoursAgo: nu
     book: book(bookId),
     rating: null,
     review: null,
+    spoilers: false,
+    folded: false,
+    sessionId: null,
+    likes: 0,
+    liked: false,
     ...extra,
   }
 }
@@ -65,6 +70,13 @@ describe('the card', () => {
     const view = circleView(feed(finished, reviewed), options)
     expect(view.card).toMatchObject({ verb: 'finished', rating: 16, review: 'Slow, then warm.' })
     expect(view.friends).toEqual([])
+  })
+
+  it('carries the heart of the read and the fold of the review the card shows (social v2a)', () => {
+    const finished = entry(ANNA, 'finished', 'b2', 6, { rating: 16, sessionId: 's1', likes: 3, liked: true })
+    const reviewed = entry(ANNA, 'reviewed', 'b2', 5, { rating: 16, review: 'The end!', spoilers: true, folded: true })
+    expect(circleView(feed(finished, reviewed), options).card).toMatchObject({ sessionId: 's1', likes: 3, liked: true, review: 'The end!', folded: true })
+    expect(circleView(feed(entry(ANNA, 'finished', 'b2', 5)), options).card).toMatchObject({ sessionId: null, likes: 0, liked: false, folded: false })
   })
 
   it('says "reviewed" when only the review is within the week', () => {
@@ -257,5 +269,33 @@ describe('the list', () => {
     expect(view.friends.map((f) => f.member.id)).toEqual(['ben', 'anna', 'tom'])
     // Anna's old finish is no card, so it is her second phrase.
     expect(verbs(view.friends[1]!.phrases)).toEqual(['want', 'finished'])
+  })
+})
+
+describe('what a tap on a member\u2019s row opens', () => {
+  it('holds the reads her sentence names, newest first, a Book once (a finish and its review are one)', () => {
+    const view = circleView(
+      feed(entry(BEN, 'finished', 'b1', 5), entry(BEN, 'reviewed', 'b1', 4, { review: 'x' }), entry(BEN, 'want', 'b2', 8), entry(BEN, 'started', 'b3', 30)),
+      { ...options, now: new Date(NOW.getTime() + 40 * DAY) },
+    )
+    // Her two newest rows are the review (b1) and the finish (b1): one read; b2 is the third, left out of the sentence.
+    expect(view.friends[0]!.entries.map((e) => e.book.id)).toEqual(['b1'])
+  })
+
+  it('of a batch is all of its entries, not only the three covers of the fan', () => {
+    const view = circleView(
+      feed(entry(ANNA, 'want', 'b1', 3), entry(ANNA, 'want', 'b2', 4), entry(ANNA, 'want', 'b3', 5), entry(ANNA, 'want', 'b4', 6)),
+      options,
+    )
+    expect(view.friends[0]!.entries.map((e) => e.book.id)).toEqual(['b1', 'b2', 'b3', 'b4'])
+    expect(view.friends[0]!.books).toHaveLength(3)
+  })
+
+  it('has the kind they share, or none for a mix', () => {
+    const view = circleView(feed(entry(BEN, 'started', 'b1', 1), entry(BEN, 'want', 'b2', 2)), options)
+    expect(entriesKind(view.friends[0]!.entries)).toBeNull()
+    const same = circleView(feed(entry(BEN, 'want', 'b1', 1), entry(BEN, 'want', 'b2', 2)), options)
+    expect(entriesKind(same.friends[0]!.entries)).toBe('want')
+    expect(entriesKind([])).toBeNull()
   })
 })

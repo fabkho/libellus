@@ -19,7 +19,7 @@ onMounted(() => void collections.loadList())
 
 // Collections belong to the Library tab: back always leads there, by history when it came from it.
 function back() {
-  if (window.history.state?.back === '/library') router.back()
+  if (canGoBack(window.history.state)) router.back()
   else void navigateTo('/library')
 }
 </script>

@@ -361,7 +361,14 @@ medium only inside a feed sentence (a feed row, Home's circle rows and its reque
   the first version — a blurred band down past the top bar's row — read too heavy.)
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
   glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
-  screen at the bottom.
+  screen at the bottom, then a quiet **Privacy** line (**Privacy · Imprint** once the imprint is on, `IMPRINT_ENABLED`) (`LegalLinks`: `text-caption` in
+  `inkFaint`, underlined, each link 44 high; the Profile ends with the same line).
+- **Legal text** (`/privacy`, and `/imprint` once it is on; `components/legal/`): a long read, so no cards or colour: the
+  title in `text-large-title`, an h2 per section in `text-callout` medium, body in `text-subhead` `ink`
+  (the lead in `inkMuted`), bullets with an `inkFaint` marker, links in `accentInk` with an underline, bold
+  as `font-medium`. A detail the owner still has to supply is a `[[…]]` mark in `accentSoft` with
+  `accentInk` text. The English | German switch is a compact `UiSegmented`. Printed, it is black on
+  white (the system `CanvasText`) with the bar, the switch and the links left out.
 
 ## Components
 
@@ -372,6 +379,7 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | Component | When |
 |---|---|
 | `UiButton` | Every button that is a pill. `tone`: `primary` (the one lit action of a screen: ink fill), `secondary` (hairline outline), `quiet` (translucent fill; actions on cards like Finish), `plain` (text only), `danger` (destructive). `size`: `lg` 50 (sheets, forms; usually `block`), `md` 40, `sm` 32 (on cards). `to` makes it a link. The touch target never drops below 44 px. `offline` (#15): an action that cannot work without a connection (search, imports, Change edition, a new Collection; since #93 the other writes wait to sync instead) stays in place, disabled, and reads "Offline" with the offline icon instead of its label. |
+| `UiSeeAll` | The control at the right of a section's head that opens the rest of it ("See all 11 ›", "2026 in review ›"): one look everywhere, a hairline-edged pill `buttonSm` high, footnote text in the muted ink, the chevron after it, the 44 px touch box as an invisible `::after`. A `button` (opens a sheet: `dialog` says `aria-haspopup="dialog"`) or, with `to`, a link. The count is part of the label, in the same type as the words (no mono: Next in your series was the reference). Section heads only: not list rows, and not the end card of a sideways row. `aria-label`, `data-testid` and `@click` go to the element. |
 | `UiRoundButton`, `UiTopBar` | Glass round buttons for chrome floating over a cover (back, more) on pushed screens such as book detail. |
 | `UiProgress` | How far through a Book (#39): a hairline bar, the lamp colour (`accent`) for what is read on a faint rule (`hairlineStrong`), `stroke.focus` thick, growing over `standard`. `fraction` 0–1; `label` and `valueText` for assistive tech. The words beside it ("p. 212 of 480", "45 %") are the caller's, in `figures`. |
 | `UiReveal` | Something that is not there until it has something to say (#79: the book page's figures, chart and reading log before progress was tracked). `show` opens its room and fades it in over `standard` (the content under it glides, no jump), closes over `exit`; Reduce Motion a short fade. Carries `data-moving` while moving. |

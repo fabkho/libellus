@@ -1,5 +1,56 @@
 # Changelog
 
+## [1.12.1](https://github.com/fabkho/libellus/compare/v1.12.0...v1.12.1) (2026-10-11)
+
+
+### Fixes
+
+* **import:** match an Apple title that carries its series after a hyphen ([0595747](https://github.com/fabkho/libellus/commit/05957473a66aee4f9d8835e5e071cb572ffeade0))
+* **import:** match an Apple title that carries its series after a hyphen ([ddf2826](https://github.com/fabkho/libellus/commit/ddf282688e703dd6aec216f23993be61f0cd62d1)), closes [#17](https://github.com/fabkho/libellus/issues/17)
+
+## [1.12.0](https://github.com/fabkho/libellus/compare/v1.11.0...v1.12.0) (2026-10-11)
+
+
+### Features
+
+* **social:** Version 2a — likes, spoilers, In your circle, Your reviews, checked Catalogue ([3d84301](https://github.com/fabkho/libellus/commit/3d8430115d971a294445f4ed79c462759ca3ce01))
+
+
+### Fixes
+
+* **book:** the page shows the description a search result brought until the check writes one ([4fb7df4](https://github.com/fabkho/libellus/commit/4fb7df4098096cf3c54d9fa50fc8fb86f0cf8f83))
+* **catalogue-check:** strip tags by walking the text, not by a pattern CodeQL reports ([207b20f](https://github.com/fabkho/libellus/commit/207b20f410e602a8f0e41d08a4593898c9058b3d))
+* **catalogue-check:** strip tags until the text stops changing, and escape every comma ([bf526fa](https://github.com/fabkho/libellus/commit/bf526fa0e8e724f0a250dbf40deecb81836a78e0))
+
+## [1.11.0](https://github.com/fabkho/libellus/compare/v1.10.0...v1.11.0) (2026-10-11)
+
+
+### Features
+
+* **legal:** fill the privacy notice's last placeholders ([9364650](https://github.com/fabkho/libellus/commit/9364650afb48e6040783ba241a5ae40040913606))
+* **legal:** postpone the imprint, ship the privacy notice alone ([712c81b](https://github.com/fabkho/libellus/commit/712c81bd7d1f7e8b6d11b20364cb620a807f7b01))
+* **legal:** privacy notice and imprint (draft text) ([d866535](https://github.com/fabkho/libellus/commit/d86653541debb219db8e2ef6fcbe3c50754ff087))
+
+## [1.10.0](https://github.com/fabkho/libellus/compare/v1.9.2...v1.10.0) (2026-10-11)
+
+
+### Features
+
+* **contact:** report a problem or ask for a feature from Profile ([84d91e1](https://github.com/fabkho/libellus/commit/84d91e11bbae3395b8eeba11a55ad3e38e6304ce))
+* **contact:** report a problem or ask for a feature from Profile ([2a78852](https://github.com/fabkho/libellus/commit/2a7885288556269fe1a7fb419ee3f0355e240b97))
+
+
+### Fixes
+
+* **build:** install the Regal layer with its own workspace ([07d4214](https://github.com/fabkho/libellus/commit/07d4214eaf50f4d0d0f4b481422109598fc1f616))
+
+
+### Performance
+
+* **auth:** draw the sign-in wall's covers after the form, preconnect to the API ([9bc2350](https://github.com/fabkho/libellus/commit/9bc23501159017ab95bba90e1134d26085c5d9fb))
+* **auth:** sign-in wall covers after the form, preconnect to the API ([150acbf](https://github.com/fabkho/libellus/commit/150acbf4ad51a9137553d57577bd56e25c25a479))
+* do not disable certificate validation in the wall measurement script ([827daac](https://github.com/fabkho/libellus/commit/827daac14271caca51eebce36689853f24525e0b))
+
 ## [1.9.2](https://github.com/fabkho/libellus/compare/v1.9.1...v1.9.2) (2026-10-10)
 
 

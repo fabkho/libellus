@@ -114,6 +114,12 @@ export const useReadingStore = defineStore('reading', () => {
   /** Quarter stars, 1–20, or null: unrated. */
   const rating = ref<number | null>(null)
   const review = ref('')
+  /** "Contains spoilers" (social v2a): sent with the review only; off for each new draft. */
+  const reviewSpoilers = ref(false)
+  // The flag goes with the review: emptied, it is off again (its switch is hidden then).
+  watch(review, (text) => {
+    if (!text.trim()) reviewSpoilers.value = false
+  })
   /** How she read it (issue #169): her word as the sheet shows it; null = not said (the edition's default counts). */
   const finishReadAs = ref<ReadAs | null>(null)
   const finishBusy = ref(false)
@@ -129,6 +135,7 @@ export const useReadingStore = defineStore('reading', () => {
     endedOn.value = isoDay()
     rating.value = null
     review.value = ''
+    reviewSpoilers.value = false
     finishReadAs.value = entry.readAs ?? null
   }
 
@@ -149,6 +156,7 @@ export const useReadingStore = defineStore('reading', () => {
         endedOn: endedOn.value,
         rating: rating.value,
         review: review.value,
+        reviewSpoilers: reviewSpoilers.value,
       })
       if (result.error) {
         finishError.value = result.error
@@ -450,6 +458,7 @@ export const useReadingStore = defineStore('reading', () => {
     endedOn,
     rating,
     review,
+    reviewSpoilers,
     finishReadAs,
     finishBusy,
     finishError,

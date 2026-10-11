@@ -3,9 +3,13 @@ import { LOCAL_DATA_PREFIX, type DeviceStorage } from './localData'
 import { isNoAnswer } from './network'
 import {
   cardFromJson,
+  likeFieldsFromJson,
   mapSocialError,
+  reviewFlagsFromJson,
   socialBookFromJson,
+  type LikeFields,
   type MemberCard,
+  type ReviewFlags,
   type SocialBook,
   type SocialErrorCode,
   type SocialResult,
@@ -31,7 +35,7 @@ import {
 
 export type FeedKind = 'started' | 'finished' | 'abandoned' | 'want' | 'reviewed'
 
-export type FeedEntry = {
+type FeedFacts = {
   /** `activity.id`: with `at`, the keyset for the next page. */
   id: string
   /** When it became visible (ISO). */
@@ -45,12 +49,22 @@ export type FeedEntry = {
   book: SocialBook
   /** Quarters, on `finished` and `reviewed` only, and only when she shows ratings. */
   rating: number | null
+  /** Sent even when `folded`: the client hides it behind "Show anyway" (social v2a). */
   review: string | null
 }
+
+/**
+ * One entry of the feed. Social v2a adds `spoilers`/`folded` (the review's flag) and `sessionId`/`likes`/`liked`
+ * (the finished read a like is on; the other kinds have no read: `sessionId` null, no likes).
+ */
+export type FeedEntry = FeedFacts & ReviewFlags & LikeFields
 
 export type FeedRow =
   | { type: 'entry'; entry: FeedEntry }
   | { type: 'batch'; member: MemberCard; kind: FeedKind; day: string | null; entries: FeedEntry[] }
+
+/** What a batch's sheet shows: a member and her reads. `kind`: the one kind of all of them (a batch's, the sheet's title says how many), or null for a mix (her name alone). */
+export type FeedBatchView = { member: MemberCard; kind: FeedKind | null; entries: FeedEntry[] }
 
 /** `day`: the calendar day of `at` as the caller's `dayOf` has it. */
 export type FeedDay = { day: string; rows: FeedRow[] }
@@ -113,6 +127,11 @@ type FeedJson = {
   book: Parameters<typeof socialBookFromJson>[0]
   rating: number | null
   review: string | null
+  spoilers?: boolean | null
+  folded?: boolean | null
+  sessionId?: string | null
+  likes?: number | null
+  liked?: boolean | null
 }
 
 function entryFromJson(json: FeedJson): FeedEntry {
@@ -126,6 +145,8 @@ function entryFromJson(json: FeedJson): FeedEntry {
     book: socialBookFromJson(json.book),
     rating: json.rating ?? null,
     review: json.review ?? null,
+    ...reviewFlagsFromJson(json),
+    ...likeFieldsFromJson(json),
   }
 }
 
@@ -154,7 +175,7 @@ export function createFeed(client: SupabaseClient, { online }: { online: () => b
 // ------------------------------------------------------------------ the device's copy
 
 /** Bumped when the shape changes: an older copy is then ignored, never misread. */
-export const DEVICE_FEED_VERSION = 1
+export const DEVICE_FEED_VERSION = 2
 export const DEVICE_FEED_KEY = `${LOCAL_DATA_PREFIX}feed`
 
 type SavedFeed = { memberId: string; savedAt: string; entries: FeedEntry[] }
