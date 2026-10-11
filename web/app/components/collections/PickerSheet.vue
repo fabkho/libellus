@@ -23,6 +23,11 @@ const open = computed({
   },
 })
 
+// Last edited first, as everywhere, but the rows hold still while the sheet is open: a tap edits a
+// Collection, which would send it to the top under her finger. The order is taken as the sheet opens;
+// a Collection made here goes to the end for now (docs/MOTION.md, "A list changes"; utils/editedOrder.ts).
+const ordered = useEditedOrder(() => collections.list, { arrival: 'last', entered: () => open.value })
+
 // Kept while the sheet slides away, so it does not empty mid-exit.
 const picking = ref(collections.picking)
 watch(
@@ -80,9 +85,9 @@ async function startCreating() {
         {{ t('collections.addsToLibrary') }}
       </p>
 
-      <UiRowGroup v-if="collections.list.length" role="group" :aria-label="t('collections.title')">
+      <UiRowGroup v-if="ordered.length" role="group" :aria-label="t('collections.title')">
         <button
-          v-for="collection in collections.list"
+          v-for="collection in ordered"
           :key="collection.id"
           type="button"
           role="checkbox"
@@ -113,7 +118,7 @@ async function startCreating() {
         </button>
       </UiRowGroup>
 
-      <UiRowGroup :class="collections.list.length && 'mt-ms'">
+      <UiRowGroup :class="ordered.length && 'mt-ms'">
         <button
           v-if="!creating"
           type="button"

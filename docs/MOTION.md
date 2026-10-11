@@ -377,6 +377,13 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   into its row and handing over, the Profile's View Transition: `afterMotion`, `utils/motion.ts`)
   before it is applied, and an entry that did not change stays the same object, so a refresh
   that changed nothing re-renders nothing (`reuseEntries`).
+- **Collections are listed by last edited** (docs/parity.md, Collections): an edit moves a Collection
+  to the top, but a list that is on screen never reorders under her. The Collections page and the
+  picker take their order when they are entered (`useEditedOrder`) and keep it; the page's list holds
+  still under a sheet and changes after it (`useSettled`): a new Collection opens its room at the top
+  (`UiListMotion`, `standard`), the ones below glide down; one that is gone closes its room. The picker
+  adds a new Collection at the end and never moves a row (the sheet may still be rising). Reduce Motion:
+  the list simply changes (checked by eye; no flow).
 - **Change edition's list.** The editions arrive from several sources while the sheet is open. Each
   one that arrives opens its room and fades in over `standard` (`UiListMotion`, as a list that
   changes), so the rows after it, the line under the list and "My edition isn't listed" glide down
