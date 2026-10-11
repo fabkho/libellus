@@ -355,7 +355,14 @@ medium only inside a feed sentence (a feed row, Home's circle rows and its reque
   the first version — a blurred band down past the top bar's row — read too heavy.)
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
   glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
-  screen at the bottom.
+  screen at the bottom, then a quiet **Privacy · Imprint** line (`LegalLinks`: `text-caption` in
+  `inkFaint`, underlined, each link 44 high; the Profile ends with the same line).
+- **Legal text** (`/privacy`, `/imprint`; `components/legal/`): a long read, so no cards or colour: the
+  title in `text-large-title`, an h2 per section in `text-callout` medium, body in `text-subhead` `ink`
+  (the lead in `inkMuted`), bullets with an `inkFaint` marker, links in `accentInk` with an underline, bold
+  as `font-medium`. A detail the owner still has to supply is a `[[…]]` mark in `accentSoft` with
+  `accentInk` text. The English | German switch is a compact `UiSegmented`. Printed, it is black on
+  white (the system `CanvasText`) with the bar, the switch and the links left out.
 
 ## Components
 

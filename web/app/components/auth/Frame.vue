@@ -101,6 +101,8 @@ function afterPaint(run: () => void): () => void {
         <div class="pt-lg text-center text-subhead text-ink-faint">
           <slot name="footer" />
         </div>
+        <!-- Privacy · Imprint: open to everyone, signed out too (utils/publicPath.ts). -->
+        <LegalLinks class="mt-xs" />
       </div>
     </div>
   </main>

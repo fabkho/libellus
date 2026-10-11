@@ -71,11 +71,13 @@ describe('signedOutDestination', () => {
     }
   })
 
-  it('lets the access screens and the public reading pages be', () => {
-    for (const path of ['/sign-in', '/sign-in/', '/sign-up', '/r/some-token', '/r/some-token/book/1']) {
+  it('lets the access screens, the public reading pages and the legal pages be', () => {
+    for (const path of ['/sign-in', '/sign-in/', '/sign-up', '/r/some-token', '/r/some-token/book/1', '/privacy', '/privacy/', '/imprint']) {
       expect(signedOutDestination(at(path), { pending: false, storage: storage() })).toBeUndefined()
     }
     expect(signedOutDestination(at('/verify'), { pending: true, storage: storage() })).toBeUndefined()
+    // Not even a code in the air sends her away from the privacy notice she was reading before she signed up.
+    for (const path of ['/privacy', '/imprint']) expect(signedOutDestination(at(path), { pending: true, storage: storage() })).toBeUndefined()
   })
 
   it('sends a code in the air back to the verify screen, and verify without one to sign-in', () => {

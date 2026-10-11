@@ -58,7 +58,16 @@
     "invitePlaceholder": "Your invite code",
     "submit": "Send code",
     "hasAccount": "Already a member?",
-    "signInLink": "Sign in"
+    "signInLink": "Sign in",
+    "consent": "By creating an account you accept the {privacy}."
+  },
+  "legal": {
+    "privacy": "Privacy",
+    "imprint": "Imprint",
+    "privacyNotice": "privacy notice",
+    "nav": "Legal",
+    "back": "Back",
+    "language": "Language of the text"
   },
   "verify": {
     "title": "Check your email",
