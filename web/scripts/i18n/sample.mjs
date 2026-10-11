@@ -80,7 +80,7 @@ for (const model of models) {
 writeFileSync(join(scratch, 'summary.json'), JSON.stringify({ primary, models: Object.fromEntries(Object.entries(results).map(([m, r]) => [m, { stats: r.check.stats, usage: r.usage, seconds: r.seconds, errors: r.check.errors, warnings: r.check.warnings }])) }, null, 2))
 
 // ---- render docs/i18n/german-sample.md --------------------------------------------------------
-const esc = text => String(text ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')
+const esc = text => String(text ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ')
 const code = text => `\`${esc(text).replace(/`/g, "'")}\``
 const main = results[primary]
 const lines = []
