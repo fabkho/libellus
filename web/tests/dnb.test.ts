@@ -42,7 +42,7 @@ const catalogueBook = (fields: Partial<Book> = {}): Book => ({ ...book({ source:
 const nobody: FetchLike = async (url) => ({
   ok: true,
   status: 200,
-  json: async () => (url.includes('itunes.apple.com') ? { resultCount: 0, results: [] } : { numFound: 0, docs: [] }),
+  json: async () => (new URL(url).hostname === 'itunes.apple.com' ? { resultCount: 0, results: [] } : { numFound: 0, docs: [] }),
 })
 
 describe('the client of the function', () => {
