@@ -281,7 +281,7 @@ ratings. Free, paid for by ads it can mix into results. What that means here:
 
 - **Ads: only if asked for.** Ads come back in Trending, Search and Recent when the request carries the
   ad parameters (`customer_id` and the `ad-min/max-width/height` sizes, plus device fields up to the
-  advertising id). Libellus sends none of them: no ads, and no device data leaves.
+  advertising id). BetterReads sends none of them: no ads, and no device data leaves.
 - **Attribution is required**: KLIPY's brand visible in the picker (their guideline: "Search KLIPY" as the
   field's placeholder, a "Powered by KLIPY" mark) and any credit their results carry. A small line in
   the picker, nothing in the review itself.

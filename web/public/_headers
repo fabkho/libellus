@@ -4,7 +4,7 @@
 
 # Every response. Pages already sends X-Content-Type-Options: nosniff and
 # Referrer-Policy: strict-origin-when-cross-origin; these add the rest.
-# - The camera for the barcode scanner (#92), for Libellus itself only; off: what the app never
+# - The camera for the barcode scanner (#92), for BetterReads itself only; off: what the app never
 #   asks for. (Vibration is not a policy feature, nothing to allow.)
 # - Never framed: everything personal sits behind the sign-in.
 # - The Content-Security-Policy only reports for now (in the browser console): what the app

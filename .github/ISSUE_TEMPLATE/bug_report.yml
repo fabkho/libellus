@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Libellus does not work as it should.
+description: Something in BetterReads does not work as it should.
 labels: [bug]
 body:
   - type: textarea

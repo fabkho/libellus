@@ -13,12 +13,12 @@
   the demo reader (`reader.html`, `reader.js`, `ui/`), `opds.js`, `dict.js`, `footnotes.js`,
   `quote-image.js`, `uri-template.js`, tests.
 
-## Changes (marked "Libellus:" in the code)
+## Changes (marked "BetterReads:" in the code)
 
 1. `view.js`: the PDF branch throws `UnsupportedTypeError` instead of importing `./pdf.js`.
 2. `paginator.js`: `View.render` and `Paginator.render` return while the section's document has
    no body yet (a `ResizeObserver` render during a section load threw in Chromium).
-3. `paginator.js`, `fixed-layout.js`: the page frames' `sandbox` comes from `frame.js` (a Libellus
+3. `paginator.js`, `fixed-layout.js`: the page frames' `sandbox` comes from `frame.js` (a BetterReads
    file): foliate's `allow-same-origin allow-scripts` by default, `allow-same-origin` alone where the
    engine's probe finds that a scriptless frame still gets its events (`reader/engine.ts`,
    `frameSandbox`; WebKit does not, https://bugs.webkit.org/show_bug.cgi?id=218086).

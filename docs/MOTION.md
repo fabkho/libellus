@@ -1,4 +1,4 @@
-# Libellus — Motion Language
+# BetterReads — Motion Language
 
 Motion in D is quiet: things arrive softly and leave quickly, nothing bounces, nothing moves for
 its own sake. Every duration and curve is a token in `design/tokens.json` (`duration.*`,

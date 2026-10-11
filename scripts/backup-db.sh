@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dumps the Libellus database, encrypts it with age on the way out and checks
+# Dumps the BetterReads database, encrypts it with age on the way out and checks
 # the result. The plaintext dump never touches the disk: pg_dump streams into
 # age, and a copy of the same stream goes to `pg_restore --list`, which reads
 # only the archive's table of contents.
@@ -88,7 +88,7 @@ expected="$(q "select n.nspname || '.' || c.relname
 # came from the wrong database or with too few rights.
 for core in auth.users auth.identities public.accounts public.books public.library_entries \
             public.reading_sessions supabase_migrations.schema_migrations; do
-  grep -qxF "$core" <<<"$expected" || { echo "The database has no table $core: is DATABASE_URL the Libellus database?" >&2; exit 1; }
+  grep -qxF "$core" <<<"$expected" || { echo "The database has no table $core: is DATABASE_URL the BetterReads database?" >&2; exit 1; }
 done
 
 # Owners and grants stay in the archive; scripts/restore-backup.sh leaves them out.

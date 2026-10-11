@@ -1,4 +1,4 @@
-// German translation of Libellus with the-i18n-kit (docs/i18n/README.md).
+// German translation of BetterReads with the-i18n-kit (docs/i18n/README.md).
 //
 //   pnpm i18n:translate              translate every key de.json lacks (new keys only; existing ones stay)
 //   pnpm i18n:translate -- --keys a.b,c.d          only these keys

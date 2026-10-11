@@ -75,7 +75,7 @@ test('the privacy notice has no link to the imprint, no postal address and no pl
   }
 })
 
-// Nuxt's own error page has a link of its own ("Go back home") that is not a control of Libellus: these two
+// Nuxt's own error page has a link of its own ("Go back home") that is not a control of BetterReads: these two
 // flows do not ask it for a `data-testid` (e2e/fixtures.ts, everyControlHasATestId).
 const unknownAddress = test.extend({ everyControlHasATestId: [async ({}, use) => use(), { auto: true }] })
 

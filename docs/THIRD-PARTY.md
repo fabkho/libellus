@@ -1,6 +1,6 @@
 # Third-party data, services and code
 
-Libellus is a public repository and talks to services it does not run. This page lists what, why, under
+BetterReads is a public repository and talks to services it does not run. This page lists what, why, under
 which terms it knows of, and what is kept. It is a plain statement of how the code behaves, not legal
 advice; the owner keeps it current when a source is added (the enrichment sources are also in
 [ENRICHMENT.md](ENRICHMENT.md), the hosting in [HOSTING.md](HOSTING.md)).
@@ -9,7 +9,7 @@ advice; the owner keeps it current when a source is added (the enrichment source
 
 | Source | Used for | How it is reached | Terms, as far as the project knows them | Kept |
 | --- | --- | --- | --- | --- |
-| Apple Books (iTunes Search API) | Search results, covers, genre names | Browser (search) and the `enrich` edge function | Apple's [Search API terms](https://performance-partners.apple.com/search-api) allow lookups for linking to and promoting Apple content and ask for attribution; the results are not a database to copy. Libellus stores what a member adds (title, author, cover address), not the catalogue | The Book a member adds; the cover address, not the image |
+| Apple Books (iTunes Search API) | Search results, covers, genre names | Browser (search) and the `enrich` edge function | Apple's [Search API terms](https://performance-partners.apple.com/search-api) allow lookups for linking to and promoting Apple content and ask for attribution; the results are not a database to copy. BetterReads stores what a member adds (title, author, cover address), not the catalogue | The Book a member adds; the cover address, not the image |
 | Open Library | Search results, covers, fallback metadata | Browser (search, covers) and `enrich` | [Open Library](https://openlibrary.org/developers/api) publishes its catalogue records as open data (see its site for the current terms); covers have their own terms and are only linked, never copied | Fields of a Book a member adds |
 | Wikidata | Authors, works, series, genres (`enrich`) | `enrich` edge function, server side | CC0 | Facts (names, series, genres) in the database |
 | Wikipedia and Wikimedia Commons | An author's short intro and portrait (`enrich`) | `enrich` edge function | Wikipedia text is CC BY-SA, a Commons file has its own licence. The app shows the credit (artist, licence, link) the licence asks for, from the stored `credit` ([ENRICHMENT.md](ENRICHMENT.md), "Credits") | The intro, the image address and its credit |
@@ -42,5 +42,5 @@ services above under their own terms. Do not build on them and do not add real m
 | Geist, Geist Mono, Newsreader (`@fontsource/*`) | SIL Open Font License 1.1 | `web/package.json` |
 | Everything else installed from npm | Each package's own licence | `web/pnpm-lock.yaml` |
 
-Libellus's own code is licensed as the [LICENSE](../LICENSE) file says. The 3D shelf (Regal) is a separate layer in
+BetterReads's own code is licensed as the [LICENSE](../LICENSE) file says. The 3D shelf (Regal) is a separate layer in
 its own repository and not part of that licence.

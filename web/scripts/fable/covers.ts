@@ -9,7 +9,7 @@ import { appleArtwork, COVER_LARGE, isbnFromArtwork, plainText } from '../../app
  *
  * Ported from Regal's front resolver (~/code/regal scripts/assets/front.ts:
  * `findApple`, `resolveFront`, `titleScore`, the DNB and Open Library cover
- * URLs), adapted to what Libellus stores: one cover URL with its thumbhash and
+ * URLs), adapted to what BetterReads stores: one cover URL with its thumbhash and
  * two colours, exactly as `add_to_library` gets them (app/data/covers.ts
  * `describeCover`), and Apple's or OpenLibrary's id for the edition.
  *

@@ -1,6 +1,6 @@
 # Contributing
 
-Libellus is a personal project that a few people use every day, and the repository is public: issues
+BetterReads is a personal project that a few people use every day, and the repository is public: issues
 and pull requests are welcome from anyone (a pull request from a fork needs the owner's approval before CI runs, and
 CI for forks runs without secrets). An issue is a bug, something
 that reads wrong, a step in [docs/SETUP.md](docs/SETUP.md) that no longer matches the

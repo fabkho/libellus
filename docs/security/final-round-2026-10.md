@@ -276,7 +276,7 @@ content. It needs the member to be signed in (or sign in later) and to visit any
 `https://libellus.fabkho.dev/share`). **Fix**: (1) in `sw-share.js` and `functions/share.js` refuse a POST whose
 `Sec-Fetch-Site` is `cross-site` or `same-site` (an OS share intent arrives as `none`; **must be verified on a real
 Android Chrome/Edge install, which I could not do**); (2) independent of that, make the take-in explicit:
-`share.vue` lists the file names and sizes and asks "Add N ebook(s) shared to Libellus?", with a cap (20 files, 100 MB
+`share.vue` lists the file names and sizes and asks "Add N ebook(s) shared to BetterReads?", with a cap (20 files, 100 MB
 each). Effort M, model Sonnet (the header check alone is DeepSeek, S).
 
 ### F9. CSP: collect, then enforce (low)
@@ -311,7 +311,7 @@ outbox still holds writes (the offline-first tension that explains today's behav
 | 4.12 | Actions may approve PRs | `gh api actions/permissions/workflow` | `can_approve_pull_request_reviews: true` (no workflow uses it) | low (F20) |
 | 4.13 | Self-hosted runners, webhooks | `gh api actions/runners`, `hooks` | None, none | no issue |
 | 4.14 | CODEOWNERS, SECURITY.md | Files and `ISSUE_TEMPLATE/config.yml` | No CODEOWNERS (not needed with one maintainer; useful once a ruleset exists). `SECURITY.md` points at private vulnerability reporting, which is enabled; no fallback e-mail or response time | no issue (I9) |
-| 4.15 | Licence | `LICENSE`, `web/package.json`, `design/package.json`, `foliate-js` notes | **MIT**, (c) 2026 Fabian Kirchhoff, detected by GitHub. With MIT anyone may copy, sell and fork the code, and MIT grants no trademark right to the name "Libellus". Without a licence the repo would be all rights reserved (viewable and forkable on GitHub only). Fonts are OFL (texts shipped), foliate-js MIT and zip.js BSD-3 are recorded. The Regal shelf is a separate private layer | no issue |
+| 4.15 | Licence | `LICENSE`, `web/package.json`, `design/package.json`, `foliate-js` notes | **MIT**, (c) 2026 Fabian Kirchhoff, detected by GitHub. With MIT anyone may copy, sell and fork the code, and MIT grants no trademark right to the name "BetterReads". Without a licence the repo would be all rights reserved (viewable and forkable on GitHub only). Fonts are OFL (texts shipped), foliate-js MIT and zip.js BSD-3 are recorded. The Regal shelf is a separate private layer | no issue |
 | 4.16 | Data terms of third parties | README, `goodreads-rating/README.md`, fixtures | Nothing states the terms of Apple / Open Library / Wikidata data or that the Apple and Open Library fixtures are test-only recordings; `goodreads-rating` reads Goodreads' public endpoints server-side (no API; their terms forbid automated access) | low (F22) |
 | 4.17 | Stale statements | grep | "the repository is private" in `CONTRIBUTING.md:3`, `README.md:104,137`, `backup.yml:9`, `ci.yml:15`, `docs/TESTING.md:480` | low (F23) |
 | 4.18 | gitleaks on the full history | `gitleaks git` on a mirror clone (all refs, 1,345 commits) and `--no-git` on the working tree; validated against a canary repo (2 findings reported) | **0 findings** in both. No `.env`, keystore, `.pem`, `google-services.json` or service-account file was ever added (only `.env.example`) | no issue |

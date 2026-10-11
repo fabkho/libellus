@@ -10,7 +10,7 @@
 //
 // Everything between <!--[link]--> and <!--[/link]--> is the sign-up link: kept when the instance has
 // LIBELLUS_SITE_URL, dropped whole without it, so a mail without a site URL has no link at all.
-// The subject, `Your Libellus invite`, is the function's (mail.ts).
+// The subject, `Your BetterReads invite`, is the function's (mail.ts).
 
 /** Where the generated module goes, relative to the repo root. */
 export const output = 'supabase/functions/waitlist-invite/invite_mail.generated.mjs'
@@ -31,7 +31,7 @@ export const sample = {
   '{{ .SignUpUrl }}': 'https://libellus.example.org/sign-up',
 }
 
-const WHY = 'You asked for an invite on a Libellus reading page. Here is your code:'
+const WHY = 'You asked for an invite on a BetterReads reading page. Here is your code:'
 const UNTIL = 'It works once, until {{ .ExpiresOn }}.'
 const FOOTER = 'You get this email because you asked for an invite on a reading page. We used your address only to send it.'
 
@@ -39,8 +39,8 @@ export function build(kit) {
   const { eyebrow, paragraph, code, button, space, px, x } = kit
   const gap = (name) => `margin-top:${px(space(name))}`
   return kit.render({
-    title: 'Your Libellus invite',
-    preheader: 'Your Libellus invite code is {{ .Code }}',
+    title: 'Your BetterReads invite',
+    preheader: 'Your BetterReads invite code is {{ .Code }}',
     content: [
       eyebrow('You’re invited'),
       paragraph(WHY, { style: `margin-bottom:${px(space('md'))}` }),
@@ -48,7 +48,7 @@ export function build(kit) {
       // line in a phone's card (390 px wide), and still one run to select.
       code('{{ .Code }}', { size: 30, tracking: 5 }),
       paragraph(UNTIL, { step: 'caption', style: gap('md') }),
-      paragraph(`Open Libellus, choose <strong ${x('c-ink', 'font-weight:600')}>Sign up with a code</strong>, and enter your email and this code.`, {
+      paragraph(`Open BetterReads, choose <strong ${x('c-ink', 'font-weight:600')}>Sign up with a code</strong>, and enter your email and this code.`, {
         style: gap('md'),
       }),
       `<!--[link]--><div style="${gap('lg')}">${button('{{ .SignUpUrl }}', 'Sign up')}</div><!--[/link]-->`,
@@ -68,7 +68,7 @@ export function text() {
     '',
     UNTIL,
     '',
-    'Open Libellus, choose Sign up with a code, and enter your email and this code.',
+    'Open BetterReads, choose Sign up with a code, and enter your email and this code.',
     '<!--[link]-->',
     'Sign up: {{ .SignUpUrl }}',
     '<!--[/link]-->',

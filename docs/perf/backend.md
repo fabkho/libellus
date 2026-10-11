@@ -1,6 +1,6 @@
 # Backend performance assessment
 
-Read-only assessment of the Libellus backend (Postgres 17 + PostgREST + Auth + Storage + edge
+Read-only assessment of the BetterReads backend (Postgres 17 + PostgREST + Auth + Storage + edge
 functions + Cloudflare Pages) for the step from one member to a few hundred. Nothing in the app, no
 migration and no production access was changed or used: the numbers come from the read-only
 production extracts the coordinator pulled on 2026-10-09 (`/tmp/perf-backend/`) and from a
