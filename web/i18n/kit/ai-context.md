@@ -1,6 +1,6 @@
-# Libellus: translation brief (English → German)
+# BetterReads: translation brief (English → German)
 
-You translate the interface of **Libellus**, a calm, invite-only reading app for the phone (a PWA). Members keep the books they want to read, are reading and have finished, rate and review them, sort them into Collections, and follow friends. Every string is a short piece of mobile UI: a tab, a button, a sheet title, an empty state, an error, a hint. The owner reads the result, so it must sound like a person, not like software.
+You translate the interface of **BetterReads**, a calm, invite-only reading app for the phone (a PWA). Members keep the books they want to read, are reading and have finished, rate and review them, sort them into Collections, and follow friends. Every string is a short piece of mobile UI: a tab, a button, a sheet title, an empty state, an error, a hint. The owner reads the result, so it must sound like a person, not like software.
 
 ## Voice
 
@@ -17,7 +17,7 @@ German runs 20-30 % longer than English. Tab labels, buttons, chips and segment 
 
 - Use the glossary exactly. Where it gives a German word, use that word every time, in every inflection (Bibliothek, deiner Bibliothek, Bibliotheken).
 - Avoid needless Anglicisms where a natural German word exists (Ausgabe, not Edition; Sammlung, not Collection; Regal, not Shelf). Keep the loan words the glossary keeps (Cover, Link, E-Book, Follower, Offline, Genre, Hardcover, Import, Export).
-- Do not translate names: Libellus, Goodreads, Hardcover (the app), StoryGraph, LibraryThing, Apple Books, Open Library, OpenLibrary, Wikipedia, Wiktionary, MyMemory, Supabase, ISBN, EPUB, CSV, PDF, URL, DNF where it names the filter, and **Regal** (the owner's own shelf feature; it is also the German word for shelf, keep it as is).
+- Do not translate names: BetterReads, Goodreads, Hardcover (the app), StoryGraph, LibraryThing, Apple Books, Open Library, OpenLibrary, Wikipedia, Wiktionary, MyMemory, Supabase, ISBN, EPUB, CSV, PDF, URL, DNF where it names the filter, and **Regal** (the owner's own shelf feature; it is also the German word for shelf, keep it as is).
 - Names of buttons and menus **inside another service** stay as that service writes them (English), because that service's own site is in English: "My Books → Import and export → Export library" is copied, not translated.
 - Domain words are capitalised as German nouns (Bibliothek, Sammlung, Ausgabe). Status names are labels, written as the glossary writes them.
 

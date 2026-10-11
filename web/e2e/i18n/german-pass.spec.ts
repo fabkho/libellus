@@ -50,7 +50,7 @@ for (const [key, value] of Object.entries(EN)) {
   }
 }
 // Names and words the app keeps on purpose, and what the member's own data and the seeds' texts say.
-const KEPT = new Set(['libellus', 'goodreads', 'hardcover', 'apple books', 'open library', 'isbn', 'epub', 'csv', 'english', 'deutsch'])
+const KEPT = new Set(['betterreads', 'goodreads', 'hardcover', 'apple books', 'open library', 'isbn', 'epub', 'csv', 'english', 'deutsch'])
 const DATA = /Piranesi|Dune|Dispossessed|Ruin|Eden|Lathe|Reviewed|A book written for|A house of tides|A quiet book|Walls, and what|Susanna|Frank Herbert|Le Guin|Gwynne|Steinbeck|Ada Fenn|Clarke/i
 
 function book(title: string, author: string, pages: number | null): BookSnapshot {

@@ -1,4 +1,4 @@
-// The shell every Libellus email shares: page, wordmark, card, footer, the colours and the dark-mode
+// The shell every BetterReads email shares: page, wordmark, card, footer, the colours and the dark-mode
 // block. An email (magic_link.mjs) only says what goes into the card; this file decides how it looks.
 //
 // Mail clients are not browsers: Gmail strips or ignores <style> in places, Outlook's Word engine
@@ -201,7 +201,7 @@ export function createKit(tokens) {
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${maxWidth}px">\n` +
       // header: the wordmark and the tagline, as on the way-in screens
       `<tr><td align="center" style="padding:0 0 ${px(space('xl'))}">` +
-      `<p ${x('c-ink', `margin:0;${wordmark};font-style:italic`)}>libellus</p>` +
+      `<p ${x('c-ink', `margin:0;${wordmark};font-style:italic`)}>betterreads</p>` +
       `<p ${x('c-muted-page', `margin:${px(space('sm'))} 0 0;${type('body')}`)}>The books you read, kept quietly.</p>` +
       `</td></tr>\n` +
       // card

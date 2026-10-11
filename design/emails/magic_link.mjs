@@ -1,6 +1,6 @@
 // The sign-in code: Supabase's "Magic Link" and "Confirm signup" templates, one body for both
 // (docs/SETUP.md, step 1.3). The member types the six digits into the app; there is no link,
-// so there is no {{ .ConfirmationURL }} and no button. The subject, `Your Libellus sign-in code`,
+// so there is no {{ .ConfirmationURL }} and no button. The subject, `Your BetterReads sign-in code`,
 // lives in config.toml and the dashboard, not here.
 
 /** Where the generated file goes, relative to the repo root. */
@@ -17,8 +17,8 @@ export function build(kit) {
   const { eyebrow, paragraph, code, space, px } = kit
   const below = `margin-top:${px(space('md'))}`
   return kit.render({
-    title: 'Your Libellus sign-in code',
-    preheader: 'Your Libellus code is {{ .Token }}',
+    title: 'Your BetterReads sign-in code',
+    preheader: 'Your BetterReads code is {{ .Token }}',
     content: [
       eyebrow('Your sign-in code'),
       paragraph('Enter this code in the app:', { style: `margin-bottom:${px(space('md'))}` }),

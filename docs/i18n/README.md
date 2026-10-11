@@ -1,14 +1,14 @@
-# Translating Libellus (English → German)
+# Translating BetterReads (English → German)
 
-Libellus has one source language, English: `web/i18n/locales/en.json`. German (`de.json`, informal *du*) is produced by **the-i18n-kit** ([fabkho/the-i18n-kit](https://github.com/fabkho/the-i18n-kit), `@the-i18n-kit/cli`) calling the **Gemini API**, then read by a person. Issue #257 has the plan; this folder is how the tooling works.
+BetterReads has one source language, English: `web/i18n/locales/en.json`. German (`de.json`, informal *du*) is produced by **the-i18n-kit** ([fabkho/the-i18n-kit](https://github.com/fabkho/the-i18n-kit), `@the-i18n-kit/cli`) calling the **Gemini API**, then read by a person. Issue #257 has the plan; this folder is how the tooling works.
 
 | File | What it is |
 | --- | --- |
-| `web/i18n-kit.config.ts` | Wires the kit to Libellus: locale folder, the two locales, the context below. No secrets. |
+| `web/i18n-kit.config.ts` | Wires the kit to BetterReads: locale folder, the two locales, the context below. No secrets. |
 | `web/i18n/kit/ai-context.md` | The brief the model gets: voice, length, quotes, placeholders, plurals, gender. Edit it to change how German sounds. |
 | `web/i18n/kit/glossary.json` | Terms never translated, and the German word for each domain term. Edit it to change a word everywhere. |
 | `web/i18n/kit/examples.json` | A few approved English → German pairs the model imitates. |
-| `web/scripts/i18n/run.mjs` | `pnpm i18n:translate` / `i18n:verify` / `i18n:status`: the kit plus the fixes and checks Libellus needs. |
+| `web/scripts/i18n/run.mjs` | `pnpm i18n:translate` / `i18n:verify` / `i18n:status`: the kit plus the fixes and checks BetterReads needs. |
 | `web/scripts/i18n/verify.mjs` | The checks: keys, placeholders, plural forms, links, English left over, length, quotes, gender signs. |
 | `web/tests/i18n-parity.test.ts` | The Vitest parity test (fails when `de.json` and `en.json` drift). |
 | `docs/i18n/german-glossary.md` | The glossary decisions, as a table to correct, and the check against Goodreads' German. |

@@ -361,7 +361,7 @@ system's bar really follows the tag in the installed app is what the phone has t
 
 1. On the phone: Settings → Developer options → USB debugging on; plug in. On the Mac open
    `chrome://inspect/#devices`, tick *Discover USB devices*.
-2. Open Libellus **from its home-screen icon** (installed, standalone) and *inspect* it from the list (the
+2. Open BetterReads **from its home-screen icon** (installed, standalone) and *inspect* it from the list (the
    installed app is listed as its own page; a Chrome tab is the other target to try after).
 3. Open a sheet (Profile → Name). In the Elements panel select the scrim (`[data-testid="accountName.scrim"]`).
    In the Console: `const s = document.querySelector('[data-testid$=".scrim"]'); [s.parentElement.tagName, getComputedStyle(s).position, JSON.stringify(s.getBoundingClientRect()), JSON.stringify(document.documentElement.getBoundingClientRect()), visualViewport.height, innerHeight ]`.

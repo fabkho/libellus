@@ -15,7 +15,7 @@ Deno.test('the mail says why, the code, until when, how, and links to sign up', 
   assertEquals(mail.to, 'reader@example.org')
   assertEquals(mail.subject, SUBJECT)
   for (const part of [mail.text, mail.html]) {
-    assertStringIncludes(part, 'You asked for an invite on a Libellus reading page')
+    assertStringIncludes(part, 'You asked for an invite on a BetterReads reading page')
     assertStringIncludes(part, 'K7QM-X2PA')
     assertStringIncludes(part, 'until 27 October 2026')
     assertStringIncludes(part, 'Sign up with a code')
@@ -24,7 +24,7 @@ Deno.test('the mail says why, the code, until when, how, and links to sign up', 
     assertFalse(part.includes('link]-->'), 'a block marker is left')
   }
   // The designed mail: the shell's wordmark, the code in its cell as one run, the button to sign up.
-  assertStringIncludes(mail.html, '>libellus</p>')
+  assertStringIncludes(mail.html, '>betterreads</p>')
   assertStringIncludes(mail.html, 'user-select:all')
   assertStringIncludes(mail.html, '>K7QM-X2PA</div>')
   assertStringIncludes(mail.html, '<a href="https://libellus.example.org/sign-up"')
@@ -42,7 +42,7 @@ Deno.test('without the instance\'s address the mail has no link at all', () => {
     assertFalse(mail.text.includes('Sign up:'), String(siteUrl))
     assertFalse(mail.html.includes('link]-->'), String(siteUrl))
     // How to use it is still there.
-    assertStringIncludes(mail.text, 'Open Libellus, choose Sign up with a code')
+    assertStringIncludes(mail.text, 'Open BetterReads, choose Sign up with a code')
     assertStringIncludes(mail.html, 'Sign up with a code')
   }
 })
@@ -75,13 +75,13 @@ Deno.test('the plain-text part says what the HTML says, line by line', () => {
   assertEquals(text.split('\n'), [
     'You’re invited',
     '',
-    'You asked for an invite on a Libellus reading page. Here is your code:',
+    'You asked for an invite on a BetterReads reading page. Here is your code:',
     '',
     '    K7QM-X2PA',
     '',
     'It works once, until 27 October 2026.',
     '',
-    'Open Libellus, choose Sign up with a code, and enter your email and this code.',
+    'Open BetterReads, choose Sign up with a code, and enter your email and this code.',
     'Sign up: https://libellus.example.org/sign-up',
     '--',
     'You get this email because you asked for an invite on a reading page. We used your address only to send it.',
@@ -113,7 +113,7 @@ Deno.test('mail counts as configured only with every required secret', () => {
     from: 'invites@example.org',
     fromName: null,
   })
-  assertEquals(smtpConfigFromEnv((name) => ({ ...full, SMTP_FROM_NAME: 'Libellus' })[name])?.fromName, 'Libellus')
+  assertEquals(smtpConfigFromEnv((name) => ({ ...full, SMTP_FROM_NAME: 'BetterReads' })[name])?.fromName, 'BetterReads')
   for (const missing of Object.keys(full)) {
     const env: Record<string, string> = { ...full, [missing]: ' ' }
     assertEquals(smtpConfigFromEnv((name) => env[name]), null, missing)

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Libellus",
+    "name": "BetterReads",
     "tagline": "Die Bücher, die du liest, in aller Ruhe aufbewahrt."
   },
   "common": {
@@ -33,7 +33,7 @@
       "code_invalid": "Dieser Code ist falsch, abgelaufen oder wurde schon genutzt. Fordere einen neuen an.",
       "rate_limited": "Zu viele Versuche. Bitte warte einen Moment.",
       "email_invalid": "Gib eine gültige E-Mail-Adresse ein.",
-      "not_configured": "Libellus fehlt die Backend-Konfiguration.",
+      "not_configured": "BetterReads fehlt die Backend-Konfiguration.",
       "unknown": "Etwas hat nicht geklappt. Versuch es bitte nochmal."
     }
   },
@@ -51,7 +51,7 @@
   },
   "signUp": {
     "title": "Konto erstellen",
-    "intro": "Libellus ist nur mit Einladung zugänglich. Den Code bekommst du von der Person, die dich eingeladen hat.",
+    "intro": "BetterReads ist nur mit Einladung zugänglich. Den Code bekommst du von der Person, die dich eingeladen hat.",
     "emailLabel": "E-Mail",
     "emailPlaceholder": "du{'@'}beispiel.de",
     "inviteLabel": "Einladungscode",
@@ -133,7 +133,7 @@
     "rowNone": "Hinzufügen",
     "avatarLabel": "Profilfoto",
     "title": "Profilfoto",
-    "private": "Du und die Mitglieder, mit denen du verbunden bist, können es sehen: wer dir folgt, wem du folgst, wer angefragt hat, wer deinen Folge-Link geöffnet hat und alle in Libellus, solange dein Konto öffentlich ist. Es wird klein gespeichert, ohne Ort oder Aufnahmezeitpunkt.",
+    "private": "Du und die Mitglieder, mit denen du verbunden bist, können es sehen: wer dir folgt, wem du folgst, wer angefragt hat, wer deinen Folge-Link geöffnet hat und alle in BetterReads, solange dein Konto öffentlich ist. Es wird klein gespeichert, ohne Ort oder Aufnahmezeitpunkt.",
     "choose": "Foto wählen",
     "replace": "Anderes wählen",
     "remove": "Foto entfernen",
@@ -285,11 +285,11 @@
     }
   },
   "share": {
-    "title": "Mit Libellus geteilt",
+    "title": "Mit BetterReads geteilt",
     "finding": "Suche dein Buch …",
     "taking": "Lese dein E-Book ein …",
     "takingMany": "Lese deine E-Books ein … {done} von {total}",
-    "confirmTitle": "{count} mit Libellus geteiltes E-Book hinzufügen? | {count} mit Libellus geteilte E-Books hinzufügen?",
+    "confirmTitle": "{count} mit BetterReads geteiltes E-Book hinzufügen? | {count} mit BetterReads geteilte E-Books hinzufügen?",
     "confirmText": "Füge nur Dateien hinzu, die du teilen wolltest. Sie bleiben auf diesem Gerät.",
     "skipped": "{count} geteilte Datei ist kein EPUB oder zu groß und wird übersprungen. | {count} geteilte Dateien sind keine EPUBs oder zu groß und werden übersprungen.",
     "add": "Hinzufügen",
@@ -323,7 +323,7 @@
     "loadError": "Deine Bücher konnten nicht geladen werden.",
     "retry": "Nochmal versuchen",
     "installHint": {
-      "title": "Libellus auf deinem Home-Bildschirm behalten",
+      "title": "BetterReads auf deinem Home-Bildschirm behalten",
       "text": "Tippe auf „Teilen“, dann auf „Zum Home-Bildschirm“. Öffnet sich wie eine App im Vollbild.",
       "addToHome": "Zum Home-Bildschirm",
       "dismiss": "Schließen"
@@ -516,11 +516,11 @@
       "notBook": "Das sieht nicht nach einem Barcode für ein Buch aus.",
       "looking": "Suche {isbn} …",
       "askingTitle": "Kamera erlauben",
-      "asking": "Libellus nutzt die Kamera nur zum Scannen von Barcodes. Es wird nichts aufgenommen oder gesendet.",
+      "asking": "BetterReads nutzt die Kamera nur zum Scannen von Barcodes. Es wird nichts aufgenommen oder gesendet.",
       "deniedTitle": "Kamerazugriff ist aus",
-      "denied": "Erlaube Libellus die Kamera in den Website-Einstellungen deines Browsers, um Barcodes zu scannen. Du kannst auch nach Titel oder ISBN suchen.",
+      "denied": "Erlaube BetterReads die Kamera in den Website-Einstellungen deines Browsers, um Barcodes zu scannen. Du kannst auch nach Titel oder ISBN suchen.",
       "noneTitle": "Keine Kamera gefunden",
-      "none": "Libellus findet keine Kamera, die es nutzen kann, oder konnte den Barcode-Scanner nicht laden. Suche stattdessen nach Titel oder ISBN.",
+      "none": "BetterReads findet keine Kamera, die es nutzen kann, oder konnte den Barcode-Scanner nicht laden. Suche stattdessen nach Titel oder ISBN.",
       "dismiss": "Schließen",
       "offline": "Du bist offline. Es kann nur deine Bibliothek durchsucht werden."
     }
@@ -1040,11 +1040,11 @@
     "toLibrary": "Zur Bibliothek",
     "another": "Weitere Datei importieren",
     "fileError": {
-      "notSupported": "Dieses Format kann Libellus nicht lesen. Wähle die exportierte CSV von Goodreads oder Hardcover.",
+      "notSupported": "Dieses Format kann BetterReads nicht lesen. Wähle die exportierte CSV von Goodreads oder Hardcover.",
       "notCsv": "Das ist keine CSV-Datei. Sowohl Goodreads als auch Hardcover exportieren als CSV.",
-      "storygraph": "Das ist ein StoryGraph-Export. Den kann Libellus noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
-      "librarything": "Das ist ein LibraryThing-Export. Den kann Libellus noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
-      "bookshelf": "Das ist ein Export der Bookshelf-App. Den kann Libellus noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
+      "storygraph": "Das ist ein StoryGraph-Export. Den kann BetterReads noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
+      "librarything": "Das ist ein LibraryThing-Export. Den kann BetterReads noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
+      "bookshelf": "Das ist ein Export der Bookshelf-App. Den kann BetterReads noch nicht lesen. Exportiere stattdessen von Goodreads oder Hardcover.",
       "missingColumns": "Sieht nach einem Export von {app} aus, aber die Spalte {columns} fehlt. Exportiere die Datei nochmal unverändert. | Sieht nach einem Export von {app} aus, aber die Spalten {columns} fehlen. Exportiere die Datei nochmal unverändert.",
       "empty": "In dieser Datei sind keine Bücher.",
       "unreadable": "Diese Datei konnte nicht gelesen werden.",
@@ -1176,7 +1176,7 @@
     "hint": "Mindestens {min} Zeichen",
     "placeholder": {
       "bug": "Was ist schiefgelaufen? Was hättest du stattdessen erwartet?",
-      "feature": "Was sollte Libellus können?",
+      "feature": "Was sollte BetterReads können?",
       "other": "Was liegt dir auf dem Herzen?"
     },
     "count": "{count} / {max}",
@@ -1284,8 +1284,8 @@
       "scanHint": "Neue Bücher im Ordner? Scanne nochmal.",
       "scanning": "Scanne …",
       "scanningCount": "Scanne … {done} von {total}",
-      "hint": "Wähle einen Unterordner wie Download/Books: Android erlaubt den Download-Ordner selbst nicht. Beim Scannen findet Libellus dort neue EPUBs und behält von jedem eine Kopie auf diesem Gerät.",
-      "error": "Libellus konnte den Ordner nicht lesen. Tippe auf „Scannen“ und erlaube den Zugriff, oder wähle den Ordner nochmal."
+      "hint": "Wähle einen Unterordner wie Download/Books: Android erlaubt den Download-Ordner selbst nicht. Beim Scannen findet BetterReads dort neue EPUBs und behält von jedem eine Kopie auf diesem Gerät.",
+      "error": "BetterReads konnte den Ordner nicht lesen. Tippe auf „Scannen“ und erlaube den Zugriff, oder wähle den Ordner nochmal."
     },
     "report": {
       "share": "Geteilt",
@@ -1297,7 +1297,7 @@
       "failed": "{count} ist kein EPUB | {count} sind keine EPUBs",
       "dismiss": "Schließen"
     },
-    "missed": "Die geteilten Dateien kamen nicht bei Libellus an. Teile sie nochmal.",
+    "missed": "Die geteilten Dateien kamen nicht bei BetterReads an. Teile sie nochmal.",
     "needsYou": "Braucht dich",
     "linked": "Verknüpft",
     "couldBe": "Könnte eines deiner Bücher sein | Könnte eines von {count} deiner Bücher sein",
@@ -1310,9 +1310,9 @@
     "untitled": "Unbenanntes E-Book",
     "empty": {
       "title": "Noch keine E-Books",
-      "text": "Teile EPUB-Dateien mit Libellus oder füge sie über die Optionen eines Buches hinzu."
+      "text": "Teile EPUB-Dateien mit BetterReads oder füge sie über die Optionen eines Buches hinzu."
     },
-    "footer": "E-Book-Dateien bleiben auf diesem Gerät. Libellus lädt sie nie hoch, und beim Abmelden werden sie gelöscht.",
+    "footer": "E-Book-Dateien bleiben auf diesem Gerät. BetterReads lädt sie nie hoch, und beim Abmelden werden sie gelöscht.",
     "chooseSheet": {
       "title": "Welches Buch ist es?"
     },
@@ -1344,7 +1344,7 @@
     "error": {
       "not_epub": "Diese Datei ist kein EPUB.",
       "storage": "Das E-Book konnte auf diesem Gerät nicht gespeichert werden. Gib etwas Speicherplatz frei und versuch es nochmal.",
-      "folder": "Libellus konnte den Ordner nicht lesen. Tippe auf „Scannen“ und erlaube den Zugriff, oder wähle den Ordner nochmal."
+      "folder": "BetterReads konnte den Ordner nicht lesen. Tippe auf „Scannen“ und erlaube den Zugriff, oder wähle den Ordner nochmal."
     }
   },
   "bookEbook": {
@@ -1581,12 +1581,12 @@
     "error": "Die Seite konnte nicht geladen werden.",
     "retry": "Nochmal versuchen",
     "footer": {
-      "tagline": "Libellus — behalte deine Bücher im Blick",
+      "tagline": "BetterReads — behalte deine Bücher im Blick",
       "signUp": "Hast du einen Einladungscode? Registrieren"
     },
     "waitlist": {
       "title": "Dabei sein?",
-      "text": "Libellus ist zurzeit nur mit Einladung zugänglich. Trag deine E-Mail ein und wir schicken dir eine Einladung, sobald ein Platz frei ist.",
+      "text": "BetterReads ist zurzeit nur mit Einladung zugänglich. Trag deine E-Mail ein und wir schicken dir eine Einladung, sobald ein Platz frei ist.",
       "email": "Deine E-Mail",
       "placeholder": "du{'@'}beispiel.de",
       "honeypot": "Dieses Feld leer lassen",
@@ -1878,8 +1878,8 @@
   },
   "followLink": {
     "title": "Dein Folge-Link",
-    "textPrivate": "Schick ihn Freunden in Libellus. Dein Konto ist privat, also fragen sie an und du entscheidest.",
-    "textPublic": "Schick ihn Freunden in Libellus. Dein Konto ist öffentlich, also können sie dir direkt folgen.",
+    "textPrivate": "Schick ihn Freunden in BetterReads. Dein Konto ist privat, also fragen sie an und du entscheidest.",
+    "textPublic": "Schick ihn Freunden in BetterReads. Dein Konto ist öffentlich, also können sie dir direkt folgen.",
     "offline": "Du bist offline. Dein Link wird angezeigt, sobald du wieder online bist.",
     "qrLabel": "QR-Code deines Folge-Links",
     "qrHint": "Lass diesen Code scannen, um dir zu folgen.",
@@ -1892,7 +1892,7 @@
     "renewTitle": "Neuen Link erstellen?",
     "renewText": "Der zuvor geteilte Link funktioniert dann nicht mehr.",
     "renewConfirm": "Neuer Link",
-    "shareText": "Verfolge auf Libellus, was ich lese"
+    "shareText": "Verfolge auf BetterReads, was ich lese"
   },
   "blocked": {
     "title": "Blockiert",

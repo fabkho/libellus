@@ -1,6 +1,6 @@
 /**
  * The invite mail (issue #171): what someone on the waitlist gets when the owner taps Invite. Its
- * design is Libellus' mail shell (wordmark, card, the code cell, light and dark from the tokens),
+ * design is BetterReads' mail shell (wordmark, card, the code cell, light and dark from the tokens),
  * generated from design/emails/invite.mjs into `invite_mail.generated.mjs`: never edit that file or
  * write HTML here; change the design source and run `pnpm emails` in design/ (docs/DEVELOPMENT.md,
  * "Emails"). This module only fills the template's placeholders with the runtime values, HTML-escaped
@@ -20,7 +20,7 @@ export type Mail = {
   html: string
 }
 
-export const SUBJECT = 'Your Libellus invite'
+export const SUBJECT = 'Your BetterReads invite'
 
 /** The day a code stops working, in words ("26 October 2026"); UTC, so a test reads the same anywhere. */
 export function expiryDate(expiresAt: string): string {

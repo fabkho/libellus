@@ -23,7 +23,7 @@ Authorization: Bearer <the owner's access token>   (the app's functions.invoke s
    the function). The database decides: anyone but the instance's owner gets `not_owner` (403).
    The answer is the address and a one-use code valid 14 days: the entry's own code while it is
    unused and unexpired, otherwise a new one (label `waitlist`, never the address).
-3. It sends the mail: Libellus' designed mail (the sign-in code's shell: wordmark, card, the code
+3. It sends the mail: BetterReads' designed mail (the sign-in code's shell: wordmark, card, the code
    in the same code cell, the expiry, how to use it, a Sign up button when `LIBELLUS_SITE_URL` is set;
    light and dark) with a plain-text part of the same words. No tracking pixel, no remote asset, no
    unsubscribe link: a one-off transactional mail she asked for; the wording she agreed to, consent
@@ -43,7 +43,7 @@ No log line carries the address or the code: a failed send logs its kind only (`
 | `SMTP_PORT` | yes | `465` (implicit TLS) or the provider's alternative port, e.g. `2465`/`2587`. Hosted Supabase blocks outgoing 25 and 587. Any port but 465/2465 upgrades with STARTTLS. |
 | `SMTP_USER`, `SMTP_PASS` | yes | The SMTP credentials |
 | `SMTP_FROM` | yes | The sender address, e.g. `invites@example.com` (a domain the service may send for) |
-| `SMTP_FROM_NAME` | no | The sender's name, e.g. `Libellus` |
+| `SMTP_FROM_NAME` | no | The sender's name, e.g. `BetterReads` |
 | `LIBELLUS_SITE_URL` | no | Your app's address; the mail's Sign up button links to `<it>/sign-up`. Unset: the mail has no link, only how to sign up with a code. |
 
 Any of the five required ones missing counts as "mail not configured": the Invite button still
@@ -54,7 +54,7 @@ mints and shows the code. The SMTP client is nodemailer, pinned in `deno.json`, 
 
 `invite_mail.generated.mjs` is generated, never edited: `design/emails/invite.mjs` says what the
 mail holds (its copy, the code cell, the button, the plain-text part) and `design/emails/shell.mjs`
-how every Libellus mail looks, with every colour and size from `design/tokens.json`. The module holds
+how every BetterReads mail looks, with every colour and size from `design/tokens.json`. The module holds
 both parts as strings with placeholders (`{{ .Code }}`, `{{ .ExpiresOn }}`, `{{ .SignUpUrl }}`) and
 the link's block (`<!--[link]-->…<!--[/link]-->`); `mail.ts` fills them at send time, HTML-escaped,
 and drops the block without a site URL. To change it:
@@ -97,7 +97,7 @@ names and `private.instance_owner` holds) and read the mail in Mailpit.
 ```sh
 supabase functions deploy waitlist-invite
 supabase secrets set SMTP_HOST=<smtp host> SMTP_PORT=465 SMTP_USER=<user> SMTP_PASS=<password> \
-  SMTP_FROM=<invites@your domain> SMTP_FROM_NAME=Libellus
+  SMTP_FROM=<invites@your domain> SMTP_FROM_NAME=BetterReads
 supabase secrets set LIBELLUS_SITE_URL=https://<your address>   # optional: the link in the mail
 ```
 

@@ -1,6 +1,6 @@
 # Accessibility
 
-Libellus aims at WCAG 2.2 AA on the web app, in both themes, on a phone first. This file is what was
+BetterReads aims at WCAG 2.2 AA on the web app, in both themes, on a phone first. This file is what was
 checked, the rules the code follows, how to check a change, and what is still missing. The design's
 side of it (tokens, focus, motion) is in [DESIGN.md](DESIGN.md) and [MOTION.md](MOTION.md).
 
@@ -123,7 +123,7 @@ shimmer stops, the tab bar stays.
   critical path gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), in the
   dark theme only: its colours come from the tokens whose contrast is checked in both themes (the table
   under "Contrast"). The reader is not on a critical path and has no scan; its rooms' colours are in the table.
-  A violation that cannot be fixed in Libellus goes in `ALLOWED` in `e2e/support.ts` with its reason
+  A violation that cannot be fixed in BetterReads goes in `ALLOWED` in `e2e/support.ts` with its reason
   — never a rule switched off for a whole page.
 - **The keyboard and the screen reader** are not covered by axe: the second flow in `a11y.spec.ts`
   checks the segments, a sheet's focus and the progress card. For TalkBack, see docs/TESTING.md
@@ -149,7 +149,7 @@ shimmer stops, the tab bar stays.
 - **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
   scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
   each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}
-  details" because Libellus' `BookSheet` fills its `#detail` slot) and stars are read as text.
+  details" because BetterReads' `BookSheet` fills its `#detail` slot) and stars are read as text.
   What is left of Regal's DOM: a Book taken out is a card moved to `<body>`, outside any landmark
   (axe `region`, moderate), and the row's cover-flip is Regal's own.
 - **The reading page** (#171) is read by strangers, signed out, often in a messenger's in-app

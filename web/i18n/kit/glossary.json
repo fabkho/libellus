@@ -1,7 +1,7 @@
 {
   "_readme": "Source of truth for German terms. i18n-kit.config.ts reads it. Edit the German here; run `pnpm i18n:translate` for new keys, add --overwriteStale or delete a key in de.json to redo one. 'preserve' terms are never translated.",
   "preserve": [
-    "Libellus",
+    "BetterReads",
     "Goodreads",
     "Hardcover",
     "StoryGraph",

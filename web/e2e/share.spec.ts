@@ -124,7 +124,7 @@ test('a share asks first: it lists the files, and only Add takes them in', async
     { name: 'dracula.epub', bytes: epub('Dracula') },
   ])
   await expect(page.getByTestId('share.confirm')).toBeVisible()
-  await expect(page.getByTestId('share.confirmTitle')).toHaveText('Add 2 ebooks shared to Libellus?')
+  await expect(page.getByTestId('share.confirmTitle')).toHaveText('Add 2 ebooks shared to BetterReads?')
   await expect(page.getByTestId('share.file')).toHaveCount(2)
   await expect(page.getByTestId('share.files')).toContainText('moby.epub')
   await expect(page.getByTestId('share.files')).toContainText('dracula.epub')
@@ -144,7 +144,7 @@ test('Not now deletes what was shared and imports nothing', async ({ page }) => 
 
   await shareFromTheOs(page, [{ name: 'moby.epub', bytes: epub('Moby-Dick') }])
   await expect(page.getByTestId('share.confirm')).toBeVisible()
-  await expect(page.getByTestId('share.confirmTitle')).toHaveText('Add 1 ebook shared to Libellus?')
+  await expect(page.getByTestId('share.confirmTitle')).toHaveText('Add 1 ebook shared to BetterReads?')
   await page.getByTestId('share.notNow').click()
   await expect(page).toHaveURL(/\/$/)
   expect(await deviceFiles(page)).toEqual({ shared: 0, copies: 0 })

@@ -1,13 +1,13 @@
-# Libellus
+# BetterReads
 
 A calm, mobile-first book tracker you install from the home screen: search a book → **Want to
 read** → **Currently reading** → **Finished**, with the date, a quarter-star rating and a few words.
 Friends can follow what you choose to share, and nothing else: no ads, no trackers. Built web first
 on Nuxt and Supabase, with the docs that make a later Swift/Kotlin port mechanical.
 
-![Libellus on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
+![BetterReads on a phone: Home in the light theme, a Book and the Profile in the dark theme](docs/images/hero.jpg)
 
-Libellus runs as one private, invite-only instance for its owner and a few friends
+BetterReads runs as one private, invite-only instance for its owner and a few friends
 (libellus.fabkho.dev).
 
 ## What it does
@@ -69,7 +69,7 @@ does with your data.
   sections she picks (never her email, notes, highlights or a review she didn't share), sits at an
   unguessable link out of search engines, and dies at once when she makes a new link or turns it off.
 - **The waitlist is the only address a visitor can leave**: a reading page ends in a small form
-  ("Libellus is invite-only for now"); the address is kept only to send an invite, readable only by
+  ("BetterReads is invite-only for now"); the address is kept only to send an invite, readable only by
   the owner and deleted on request. No account is made from the page.
 - **Search stays plain**: the browser asks Apple Books and Open Library directly for the words you
   type, nothing else; the Goodreads rating is looked up by the server, so Goodreads never sees you.
@@ -134,10 +134,10 @@ design tokens, the layout of the repository and everything else for working on t
 
 ## Contributing, security, license
 
-Libellus is a personal project and the repository is public: issues and pull requests are welcome
+BetterReads is a personal project and the repository is public: issues and pull requests are welcome
 ([CONTRIBUTING.md](CONTRIBUTING.md)). Third-party data and services are listed in
 [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md). Please report
 security problems privately ([SECURITY.md](SECURITY.md)).
 
 **License: [MIT](LICENSE).** The 3D shelf (Regal) is a separate layer in its own repository and not part of this
-license; Libellus builds and runs without it.
+license; BetterReads builds and runs without it.

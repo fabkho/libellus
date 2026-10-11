@@ -133,7 +133,7 @@
     "rowNone": "Add",
     "avatarLabel": "Profile photo",
     "title": "Profile photo",
-    "private": "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken.",
+    "private": "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in BetterReads while your account is public. It's saved small, without where or when it was taken.",
     "choose": "Choose a photo",
     "replace": "Choose another",
     "remove": "Remove photo",
@@ -289,7 +289,7 @@
     "finding": "Finding your book…",
     "taking": "Taking in your ebook…",
     "takingMany": "Taking in your ebooks… {done} of {total}",
-    "confirmTitle": "Add {count} ebook shared to Libellus? | Add {count} ebooks shared to Libellus?",
+    "confirmTitle": "Add {count} ebook shared to BetterReads? | Add {count} ebooks shared to BetterReads?",
     "confirmText": "Only add files you chose to share. They stay on this device.",
     "skipped": "{count} shared file is not an EPUB, or too large, and is left out. | {count} shared files are not EPUBs, or too large, and are left out.",
     "add": "Add",
@@ -1176,7 +1176,7 @@
     "hint": "At least {min} characters",
     "placeholder": {
       "bug": "What went wrong? What did you expect to happen instead?",
-      "feature": "What would you like Libellus to do?",
+      "feature": "What would you like BetterReads to do?",
       "other": "What is on your mind?"
     },
     "count": "{count} / {max}",
@@ -1878,8 +1878,8 @@
   },
   "followLink": {
     "title": "Your follow link",
-    "textPrivate": "Send it to friends in Libellus. Your account is private, so they ask and you decide.",
-    "textPublic": "Send it to friends in Libellus. Your account is public, so they can follow you straight away.",
+    "textPrivate": "Send it to friends in BetterReads. Your account is private, so they ask and you decide.",
+    "textPublic": "Send it to friends in BetterReads. Your account is public, so they can follow you straight away.",
     "offline": "You're offline. Your link shows once you're back.",
     "qrLabel": "QR code of your follow link",
     "qrHint": "Let someone scan this to follow you.",
@@ -1892,7 +1892,7 @@
     "renewTitle": "Make a new link?",
     "renewText": "The link you sent before stops working.",
     "renewConfirm": "New link",
-    "shareText": "Follow what I read on Libellus"
+    "shareText": "Follow what I read on BetterReads"
   },
   "blocked": {
     "title": "Blocked",
