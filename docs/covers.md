@@ -147,6 +147,16 @@ Not done here: the Android emulator run the issue mentions (the brief asked for 
 throttling instead); a cover for the rows that have none anywhere (DNB rehosting, or an owner call on
 ranking coverless results lower than equally good matches by more than a tie-break).
 
+## The import's covers meanwhile (cover fill)
+
+An import row a source identified (or whose ISBN the file names) but whose edition has no cover is queued for
+one while the lookup goes on (`data/coverFill.ts`): a sibling edition from the title search, Open Library by
+ISBN in batches (by cover id, which has no per-address limit), then a paced Apple search (one request every 3 s;
+Apple's limit is ~20 a minute, measured), under a circuit breaker and a 10-minute budget; the preview and the
+write never wait for it, and a row that finds nothing stays a quiet "no cover" instead of a review item. Covers are
+only linked, from the hosts the Catalogue allows. Sources, terms, hit rates and the measurement on a real export:
+[plans/cover-sources.md](plans/cover-sources.md); the behaviour: `docs/parity.md`, Import books, *Covers meanwhile*.
+
 ## Sizes the browser can choose (`srcset`, A7)
 
 `UiCover` gives an Apple cover a `srcset` of the same artwork at the neighbouring boxes

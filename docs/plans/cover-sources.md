@@ -87,6 +87,36 @@ that no Wikidata list holds).
 3. **Open Library's by-ISBN cover is rate-limited per address, by id it is not.** One `api/books` call answers
    up to 60 ISBNs with the cover ids (7.4 s for 60); the images are then fetched by id.
 
+## Measured on a real export (counts only)
+
+`web/scripts/import-covers.ts` runs the lookup, the fill and the write of a 709-row Goodreads export on a
+local stack against the live sources, from one residential address (the file stays outside the repository; only
+counts are kept). The lookup itself is not repeatable: Apple refuses a different share of its 1,400–1,900
+requests each run (21–130 refusals), so the Books' covers differ by tens between runs (no cover at all after the
+write: 168 without the fill, then 188, 155 and 117 with it, unpaired). The figures that compare are the ones
+inside one run, before and after the fill on the same lookup (the last run):
+
+| | before the fill | after |
+|---|---:|---:|
+| identified rows (matched, or an ISBN in the file) | 677 | 677 |
+| of them without a cover | 80 | **64** (16 found, all by the Apple search) |
+| "Needs a look", old rule (a match without a cover and every book only the file knew) | 175 | 159 |
+| "Needs a look", new rule (only what nothing identifies) | – | **32** |
+| lookup / fill after the lookup / write | 556 s | 601 s (its budget; in the app it overlaps the preview) / 92 s |
+
+Requests: lookup, Apple 1,888 (21 refused), Open Library 1,236; fill after the lookup, Apple 35 (13 refused, each
+waited out: 30 searches in 10 minutes, 16 found), Open Library 57 `api/books` calls, 0 covers (the lookup had asked
+it by ISBN already); write, `covers.openlibrary.org` 453, `mzstatic.com` 299 (no refusals). The production
+baseline for the same member (an older version of the import): 707 entries, 156 without a cover, 330 Open
+Library, 221 Apple, 65 without ISBN.
+
+What this says: the **review list is the big win** (175 → 32, by the rule, not by covers: a missing cover is
+a note now); the fill itself finds a fifth of the missing covers in ten minutes because Apple, the only source
+here that has them, stays refused after a lookup that sent it ~1,900 requests (an ISBN lookup finds an
+ebook for 2 of 30 German print ISBNs and still costs two requests). The lever left is the lookup's own use of
+Apple (one storefront, no ISBN lookup for print ISBNs): a change of what the lookup finds, not of this PR. Open Library
+by ISBN and sibling editions added nothing here: the lookup had asked Open Library by ISBN already.
+
 ## What was not done
 
 - Inventaire (+6 German books of 30): see above. A follow-up PR needs `private.cover_allowed` to accept
