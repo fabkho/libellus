@@ -8,7 +8,7 @@
 -- caller's own row; the order, the keyset page, the spoiler fold, the likes, no extra field; and who may ask.
 
 begin;
-select plan(56);
+select plan(63);
 
 create schema if not exists tests;
 
@@ -289,6 +289,13 @@ select is(tests.readers((select id from ids where name = 'ben'), (select id from
 select is((tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), null, 2) ->> 'total')::int, 9, 'and the total of all');
 select is(tests.names(tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), null, 1000)), array['Ada','Pat','Cy','Dee','Quin','Dan','Una','Fay','Eve'], 'a limit over fifty is fifty at most (all nine here)');
 select throws_ok($$ select tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), '{"rank": "x"}') $$, '22023', 'after_invalid', 'a cursor that is not one is refused');
+select throws_ok($$ select tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), '{"rank": 1.5, "day": "2026-10-03", "member": "00000000-0000-0000-0000-000000000001"}') $$, '22023', 'after_invalid', 'a rank that is not a whole number is after_invalid, as any cursor that is not one');
+select throws_ok($$ select tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), '{"rank": 1, "day": "not-a-date", "member": "00000000-0000-0000-0000-000000000001"}') $$, '22023', 'after_invalid', 'a day that is no date is after_invalid, as any cursor that is not one');
+select throws_ok($$ select tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), '{"rank": 1, "day": "2026-10-03", "member": "not-a-uuid"}') $$, '22023', 'after_invalid', 'a member that is no uuid is after_invalid, as any cursor that is not one');
+select throws_ok($$ select tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), '{"rank": 10000000000, "day": "2026-10-03", "member": "00000000-0000-0000-0000-000000000001"}') $$, '22023', 'after_invalid', 'a rank out of range is after_invalid, as any cursor that is not one');
+select throws_ok($$ select tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), '[1,2]') $$, '22023', 'after_invalid', 'a cursor that is an array is after_invalid, as any cursor that is not one');
+select is(tests.names(tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), 'null'::jsonb, 2)), array['Ada', 'Pat'], 'a JSON null is no cursor: the first page');
+select is(tests.names(tests.readers((select id from ids where name = 'ben'), (select id from ids where name = 'book'), (select jsonb_build_object('rank', 1, 'day', '2026-10-03', 'member', (select id from ids where name = 'pat'))), 2)), array['Cy', 'Dee'], 'and a good cursor still pages on');
 
 -- ------------------------------------------------------ likes, spoilers, switches
 select tests.act_as((select id from ids where name = 'ben'));

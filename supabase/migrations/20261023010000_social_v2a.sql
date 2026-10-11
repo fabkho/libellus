@@ -66,7 +66,7 @@ create or replace function public.finish_reading(
 returns public.reading_sessions
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_member  uuid := auth.uid();
@@ -134,7 +134,7 @@ create or replace function public.update_session(
 returns public.reading_sessions
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_member   uuid := auth.uid();
@@ -228,7 +228,7 @@ create or replace function public.add_first_session(
 returns void
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   -- Trimmed of spaces and line breaks; a blank review is no review.
@@ -287,7 +287,7 @@ language plpgsql
 security definer
 -- pg_catalog first: a security-definer body must not pick up a function someone
 -- shadowed in public.
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_member uuid := auth.uid();
@@ -340,7 +340,7 @@ create or replace function public.add_manual_book(
 returns public.library_entries
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_member  uuid := auth.uid();
@@ -428,7 +428,7 @@ create or replace function public.sync_write(p_request_id uuid, p_action text, p
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_member  uuid := auth.uid();
@@ -706,7 +706,7 @@ create or replace function private.likes_on_follow_end()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 begin
   delete from public.likes l
@@ -724,7 +724,7 @@ create or replace function private.likes_on_block()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 begin
   delete from public.likes l
@@ -767,7 +767,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_caller uuid := auth.uid();
@@ -863,7 +863,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_caller   uuid := auth.uid();
@@ -1033,7 +1033,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_page   public.reading_pages;
@@ -1104,7 +1104,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_page   public.reading_pages;
@@ -1488,7 +1488,7 @@ create or replace function public.set_private(p_private boolean)
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_member uuid := auth.uid();
@@ -1535,7 +1535,7 @@ create or replace function public.unfollow(p_member uuid)
 returns void
 language plpgsql
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_caller uuid := auth.uid();
@@ -1553,7 +1553,7 @@ create or replace function public.remove_follower(p_member uuid)
 returns void
 language plpgsql
 security definer
-set search_path = pg_catalog, public, private
+set search_path = pg_catalog, public, private, pg_temp
 as $$
 declare
   v_caller uuid := auth.uid();

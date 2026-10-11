@@ -43,16 +43,23 @@ begin
     raise exception 'not_signed_in' using errcode = '42501';
   end if;
 
-  if p_after is not null then
+  -- A JSON null is no cursor (the first page), whether it arrives as SQL null or as jsonb 'null'. Anything else must be
+  -- { rank: whole number, day: date, member: uuid }; a value that is not (1.5, a bad date, a bad uuid) is the same
+  -- after_invalid as a cursor of the wrong shape (the final security pass of social v2a).
+  if p_after is not null and jsonb_typeof(p_after) <> 'null' then
     if jsonb_typeof(p_after) <> 'object'
        or jsonb_typeof(p_after -> 'rank') is distinct from 'number'
        or jsonb_typeof(p_after -> 'day') is distinct from 'string'
        or jsonb_typeof(p_after -> 'member') is distinct from 'string' then
       raise exception 'after_invalid' using errcode = '22023';
     end if;
-    v_rank := (p_after ->> 'rank')::integer;
-    v_dk := (p_after ->> 'day')::date;
-    v_member := (p_after ->> 'member')::uuid;
+    begin
+      v_rank := (p_after ->> 'rank')::integer;
+      v_dk := (p_after ->> 'day')::date;
+      v_member := (p_after ->> 'member')::uuid;
+    exception when others then
+      raise exception 'after_invalid' using errcode = '22023';
+    end;
   end if;
 
   select * into v_book from public.books b where b.id = p_book;

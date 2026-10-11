@@ -17,10 +17,17 @@
  * Pure: no framework, so a native port copies it.
  */
 
-const RATING_ONLY = /^\s*(\d+(?:[.,]\d+)?)\s*(?:\/\s*(5|10))?\s*(?:★|stars?)?\s*$/i
+// The whitespace groups sit in front of a literal each, so none of them is next to another that can match nothing:
+// the match is linear (the first form had three adjacent `\s*`, which V8 backtracks cubically: 2000 spaces took
+// 1.5 s, on every Profile render; the security pass of social v2a). The same language as before.
+const RATING_ONLY = /^\s*(\d+(?:[.,]\d+)?)(?:\s*\/\s*(5|10))?(?:\s*(?:★|stars?))?\s*$/i
+
+/** No rating-only text is longer than this ("4.5/5 stars" with room for spaces): a longer one is not matched at all. */
+const MAX_LENGTH = 40
 
 /** The stars the text says (0–5), or null when it is not a rating-only text. */
 function starsOf(text: string): number | null {
+  if (text.length > MAX_LENGTH) return null
   const match = RATING_ONLY.exec(text)
   if (!match) return null
   const written = Number(match[1]!.replace(',', '.'))
@@ -45,5 +52,5 @@ export function ratingFromReviewText(text: string | null | undefined): number | 
 
 /** A number above 5 with no `/10` that has the shape of a rating-only text: no rating, so it stays a review (reported to the importer). */
 export function looksLikeRatingButIsNot(text: string | null | undefined): boolean {
-  return text != null && RATING_ONLY.test(text) && starsOf(text) === null
+  return text != null && text.length <= MAX_LENGTH && RATING_ONLY.test(text) && starsOf(text) === null
 }
