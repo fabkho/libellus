@@ -2,7 +2,7 @@ import { assertEquals } from '@std/assert'
 import { BUDGET_MS, createHandler, DEFAULT_BATCH, MAX_BATCH } from './handler.ts'
 import { answer, book, fakeClock, memoryStore, testHttp } from './test_support.ts'
 
-const lookup = (ids: string, country: string) => `https://itunes.apple.com/lookup?id=${ids.replace(',', '%2C')}&country=${country}`
+const lookup = (ids: string, country: string) => `https://itunes.apple.com/lookup?id=${ids.replaceAll(',', '%2C')}&country=${country}`
 const ART = 'https://is1-ssl.mzstatic.com/image/thumb/a/b/c.jpg/100x100bb.jpg'
 
 function setup(options: {
