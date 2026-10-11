@@ -220,7 +220,7 @@ async function main() {
     await page.getByTestId('ebooks.folderName').waitFor()
     console.log('folder', await page.getByTestId('ebooks.folderName').innerText(), 'permission', await page.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('betterreads')
+        const req = indexedDB.open('libellus')
         req.onsuccess = () => resolve(req.result)
         req.onerror = () => reject(req.error)
       })

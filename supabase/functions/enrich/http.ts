@@ -3,7 +3,7 @@
  * Wikimedia Commons, Wikipedia, Open Library and Apple Books. Polite by
  * construction:
  *
- *   - identified: `User-Agent: BetterReads/1.0 (private book tracker; +<site>; <contact>)`,
+ *   - identified: `User-Agent: Libellus/1.0 (private book tracker; +<site>; <contact>)`,
  *     as the Wikimedia User-Agent policy asks (a way to reach the operator);
  *   - one request at a time per host, at least `interval` apart (Open Library
  *     and the Wikidata Query Service one a second, Apple one every three
@@ -33,7 +33,7 @@ export class SourceUnavailable extends Error {
 }
 
 /** The default contact the User-Agent names: the project, where its operator can be found. */
-export const DEFAULT_CONTACT = 'https://github.com/fabkho/betterreads'
+export const DEFAULT_CONTACT = 'https://github.com/fabkho/libellus'
 
 /**
  * Who is asking. `site` is the instance's address (function secret
@@ -44,7 +44,7 @@ export function userAgent(site?: string | null, contact?: string | null): string
   const parts = ['private book tracker']
   if (site?.trim()) parts.push(`+${site.trim()}`)
   parts.push(contact?.trim() || DEFAULT_CONTACT)
-  return `BetterReads/1.0 (${parts.join('; ')}) enrich`
+  return `Libellus/1.0 (${parts.join('; ')}) enrich`
 }
 
 /** Minimum pause between two requests to one host, in ms. */

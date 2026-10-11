@@ -6,7 +6,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 
 ## Commands (from `web/`)
 - `pnpm dev` — http://localhost:3020. Needs `.env` (copy `.env.example`) and `supabase start` in the
-  repo root (the betterreads stack, ports 553xx).
+  repo root (the libellus stack, ports 553xx).
 - `pnpm test` — Vitest data-layer suite against the local stack. No mocks.
 - `pnpm e2e` — Playwright, iPhone viewport, WebKit, Reduce Motion on, on the static build served
   like Pages (`e2e/build.ts` + `e2e/serve.mjs`, :4327). `LIBELLUS_E2E_DEV=1` runs it on `nuxt dev`.
@@ -109,6 +109,6 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   (`<pkg>: set this to true or false`): decide `true` or `false`, never commit the stub as is.
   Local and CI both use pnpm 12.
 - Install packages with `pnpm add <pkg>@latest`.
-- The local stack is betterreads' own (`project_id = "betterreads"`, ports 553xx). Never `supabase stop
+- The local stack is libellus' own (`project_id = "libellus"`, ports 553xx). Never `supabase stop
   --all` and never reset another project's database.
 - `web/dist` is a symlink to `.output/public` created by `nuxt generate`.

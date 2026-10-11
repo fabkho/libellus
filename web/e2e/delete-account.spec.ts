@@ -79,7 +79,7 @@ test('a member deletes her account: gone from the database and the device, the a
   // Every local copy is gone; the theme is the device's and stays.
   const local = await page.evaluate(async () => ({
     keys: Object.keys(localStorage).filter((key) => key.startsWith('libellus.')),
-    databases: (await indexedDB.databases()).map((db) => db.name).filter((name) => name === 'betterreads'),
+    databases: (await indexedDB.databases()).map((db) => db.name).filter((name) => name === 'libellus'),
   }))
   expect(local).toEqual({ keys: [], databases: [] })
 

@@ -120,7 +120,7 @@ Deno.test('passes a read failure on', async () => {
 
 Deno.test('finds the owner by address, in any case, over pages of members', async () => {
   const users = Array.from({ length: 1500 }, (_, index) => ({ id: `u-${index}`, email: `member${index}@libellus.test` }))
-  users.push({ id: 'owner', email: 'Owner@BetterReads.test' })
+  users.push({ id: 'owner', email: 'Owner@Libellus.test' })
   const { client } = fakeClient([], users)
   assertEquals(await findMemberId(client, ' owner@libellus.TEST '), 'owner')
   assertEquals(await findMemberId(client, 'nobody@libellus.test'), null)

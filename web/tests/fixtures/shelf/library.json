@@ -2,7 +2,7 @@
   "version": 2,
   "generatedAt": "2026-10-04T07:00:00Z",
   "owner": "Shelf Fixture",
-  "generator": "betterreads tests (synthetic)",
+  "generator": "libellus tests (synthetic)",
   "books": [
     {
       "id": "shelf-01",

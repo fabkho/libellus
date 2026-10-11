@@ -60,7 +60,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "package-name": "betterreads",
+      "package-name": "libellus",
       "changelog-path": "CHANGELOG.md",
       "draft": false,
       "prerelease": false

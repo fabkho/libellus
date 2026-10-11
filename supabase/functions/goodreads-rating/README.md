@@ -35,7 +35,7 @@ How it answers (`handler.ts`):
 4. The answer is stored under the key it was asked with (`found` or `not_found`, with its time) and returned. A failure (Goodreads
    down, slow, refusing, garbled) is never stored: the next page view tries again.
 
-Rate safety (`client.ts`): identified by `User-Agent: BetterReads/1.0 (…)`, at most one Goodreads
+Rate safety (`client.ts`): identified by `User-Agent: Libellus/1.0 (…)`, at most one Goodreads
 request a second per running instance (a soft limit — Supabase may run more than one instance under
 load), a request that would queue longer than 4 s is refused with `busy`, 3 s per request, and one
 lookup per Book at a time (two pages asking at once share it).
@@ -93,7 +93,7 @@ cd supabase/functions/goodreads-rating && deno run --allow-net --allow-write=fix
    `config.toml`; or pass `--no-verify-jwt`).
 3. Secrets: none needed. The hosted runtime provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
    Optional: `supabase secrets set LIBELLUS_SITE_URL=https://books.example.org`, the instance's
-   address, which the `User-Agent` then names (`BetterReads/1.0 (private book tracker; +<address>)`) so
+   address, which the `User-Agent` then names (`Libellus/1.0 (private book tracker; +<address>)`) so
    Goodreads can see who is asking.
 4. Optional: warm the owner's Library with `warm_library.ts` against the hosted URL and its
    service-role key, or let the book pages fill the cache as they are opened.

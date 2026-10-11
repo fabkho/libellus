@@ -101,7 +101,7 @@ export type RegalExportSession = {
   review: string | null
 }
 
-export const REGAL_GENERATOR = 'betterreads'
+export const REGAL_GENERATOR = 'libellus'
 
 const ISBN13 = /^97[89]\d{10}$/
 const ISBN10 = /^\d{9}[\dX]$/

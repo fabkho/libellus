@@ -116,7 +116,7 @@ begin
     into v_request
     using format('https://api.github.com/repos/%s/dispatches', p_repository),
           jsonb_build_object('event_type', p_event_type,
-                             'client_payload', jsonb_build_object('source', 'betterreads', 'at', now())),
+                             'client_payload', jsonb_build_object('source', 'libellus', 'at', now())),
           jsonb_build_object('Authorization', 'Bearer ' || p_token,
                              'Accept', 'application/vnd.github+json',
                              'X-GitHub-Api-Version', '2022-11-28',

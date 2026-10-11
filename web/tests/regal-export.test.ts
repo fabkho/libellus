@@ -151,7 +151,7 @@ describe('exportRegalLibrary', () => {
       ['Stoner', 'read'],
     ])
     const empty = exportRegalLibrary([], { generatedAt: GENERATED_AT })
-    expect(empty).toEqual({ version: 2, generatedAt: GENERATED_AT, generator: 'betterreads', books: [] })
+    expect(empty).toEqual({ version: 2, generatedAt: GENERATED_AT, generator: 'libellus', books: [] })
     expect(validateLibraryFile(empty).ok).toBe(true)
   })
 })

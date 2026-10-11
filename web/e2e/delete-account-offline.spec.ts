@@ -81,6 +81,6 @@ test('offline the row is disabled and says so; a change still waiting is named, 
   await page.getByTestId('deleteAccount.confirm').click()
   await expect(page).toHaveURL(/\/sign-in$/)
   await expect(page.getByTestId('signIn.deleted')).toBeVisible()
-  await expect.poll(() => page.evaluate(async () => (await indexedDB.databases()).map((db) => db.name).filter((name) => name === 'betterreads'))).toEqual([])
+  await expect.poll(() => page.evaluate(async () => (await indexedDB.databases()).map((db) => db.name).filter((name) => name === 'libellus'))).toEqual([])
   expect(await authUserExists(member.email)).toBe(false)
 })

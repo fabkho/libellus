@@ -1,6 +1,6 @@
 -- A waitlist for people who read a reading page and want an invite (issue #171).
 --
--- BetterReads is invite-only and a public reading page (20261011030000_reading_pages.sql)
+-- Libellus is invite-only and a public reading page (20261011030000_reading_pages.sql)
 -- creates no accounts. Where it used to tell a visitor to ask the member for a code,
 -- it now takes her address: "leave your email and we'll send you an invite when
 -- there's room". No e-mail is sent yet (inviting, and a confirmation mail first, is

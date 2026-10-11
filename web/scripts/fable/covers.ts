@@ -32,7 +32,7 @@ import { appleArtwork, COVER_LARGE, isbnFromArtwork, plainText } from '../../app
  * fetch and sharp; tests pass recordings), like the search repository's fetch.
  */
 
-export const USER_AGENT = 'Libellus/0.1 (+https://github.com/fabkho/betterreads)'
+export const USER_AGENT = 'Libellus/0.1 (+https://github.com/fabkho/libellus)'
 
 /** Height a cover should reach before the chain stops looking (Regal front.ts MIN_HEIGHT). */
 export const MIN_HEIGHT = 800

@@ -1,6 +1,6 @@
 # Hosting
 
-BetterReads is static files on **Cloudflare Pages**, project `betterreads`, served at
+BetterReads is static files on **Cloudflare Pages**, project `libellus`, served at
 https://libellus.fabkho.dev. Supabase (eu-central-1) is the backend; the owner's shelf reads
 its library file from `books.fabkho.dev` (R2 bucket `portfolio-books`, published by Regal's
 workflow, docs/OWNER.md "Feeding Regal"). The database is backed up every night into the private R2
@@ -9,7 +9,7 @@ what the repository decides itself.
 
 ## Builds and deployments
 
-Pages builds from GitHub (fabkho/betterreads). Its **production branch is `production`**, which only the
+Pages builds from GitHub (fabkho/libellus). Its **production branch is `production`**, which only the
 release workflow moves: merging the release pull request tags `vX.Y.Z`, pushes the migrations and the
 edge functions, then points `production` at the tag (docs/OPERATIONS.md, "Releases"; a manual run of
 the workflow deploys an older tag again, which is the rollback). Every other branch, `main` included,
@@ -32,7 +32,7 @@ after the branch exists; docs/OPERATIONS.md, "The first release") a push to `mai
 | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | `https://books.fabkho.dev/v2/library.json`, the library file the shelf shows (the build stops without it when `LIBELLUS_REGAL=1`). Production and preview. |
 | `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_PUBLIC_SHELF_OWNER_ID` | Production only. Previews have no backend: they show the signed-out screens and cannot sign in, so a branch never touches production data. |
 
-A deploy is atomic and a rollback is one click (Workers & Pages → betterreads → Deployments →
+A deploy is atomic and a rollback is one click (Workers & Pages → libellus → Deployments →
 ⋯ → Rollback); the next release replaces it. The release workflow's own rollback (an older tag,
 with its edge functions) is in docs/OPERATIONS.md, "Releases". The same commit can be built again with "Retry deployment", which is also how
 a change to the project's settings (below) reaches the live site without a commit.
