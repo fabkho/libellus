@@ -2,7 +2,9 @@
 
 Phase 1 of issue #257. These are the choices the translation will follow. **Correct them here or in `web/i18n/kit/glossary.json` before phase 2**: the model uses `glossary.json` word for word, and a changed word costs nothing now and a review pass later. Voice and rules: `web/i18n/kit/ai-context.md`. Source of the English vocabulary: `en.json` (1,446 keys) and `CONTEXT.md`.
 
-## Decisions I need you to confirm
+## Decisions (D1–D15: confirmed by the owner, 2026-10-11)
+
+The table below is in force as written, with the later changes noted in `german-pass.md` (shorter words where a label did not fit). To change a word: edit `glossary.json`, delete the affected keys from `de.json`, run `pnpm i18n:translate`.
 
 | # | Question | My proposal | Why | Alternatives |
 | --- | --- | --- | --- | --- |
