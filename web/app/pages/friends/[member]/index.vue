@@ -14,7 +14,7 @@
 import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
-import { useMemberProfileStore } from '~/stores/memberProfile'
+import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
 
 definePageMeta({
   layout: 'tabs',
@@ -91,6 +91,8 @@ const library = computed(() => {
   const p = open.value
   return p ? libraryLine(p.counts, (marks) => t('member.library', marks), count) : null
 })
+// You both read, loaded with her profile (the store); an extra section, so no error line: hidden until it has Books.
+const bothRead = computed(() => view.value.bothRead[bothReadKey(null)] ?? [])
 const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 
 // ------------------------------------------------------------------ sheets
@@ -144,7 +146,8 @@ async function withdraw() {
 
 // ⋯: the member sheet (Unfollow · Remove as follower · Block, by the relation). Once one went
 // through, the profile is read again: Unfollow brings back Follow (or the private card), Block leaves
-// nobody to show.
+// nobody to show. The page is scrolled to its top then (smoothly, at once with Reduce Motion), so the hero with
+// its new Follow or Requested shows: she was down the page when she opened ⋯ (owner's note 04.3).
 const moreOpen = ref(false)
 function more() {
   moreOpen.value = true
@@ -152,6 +155,53 @@ function more() {
 function changed() {
   void members.load(id.value)
 }
+const modalShown = useModalShown()
+function scrollToHero() {
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
+}
+/**
+ * Scrolls to the hero once the member sheet has gone. Not before: the page is locked while the sheet is on screen,
+ * and the sheet steps back off its own history entry when it closes (composables/useBackDismiss.ts), whose popstate
+ * the browser answers by putting the page back where it was. So it waits for that popstate (or, when none comes,
+ * a moment) and then scrolls.
+ */
+function scrollAfterSheet() {
+  let stepped = false
+  const onPop = () => (stepped = true)
+  window.addEventListener('popstate', onPop)
+  const scroll = () => {
+    window.removeEventListener('popstate', onPop)
+    requestAnimationFrame(scrollToHero)
+  }
+  const afterSheet = () => {
+    if (stepped) return scroll()
+    const settle = () => {
+      window.removeEventListener('popstate', settle)
+      clearTimeout(fallback)
+      scroll()
+    }
+    const fallback = setTimeout(settle, 600)
+    window.addEventListener('popstate', settle)
+  }
+  if (!modalShown.value) return afterSheet()
+  const stop = watch(modalShown, (shown) => {
+    if (shown) return
+    stop()
+    afterSheet()
+  })
+}
+// What the hero shows of the relation: Unfollow, Remove as follower and Block each change it (the store follows the
+// action at once), and the member sheet may be gone by then (the profile turned into a closed card), so the page
+// watches the relation itself rather than the sheet's `changed`. Not the first answer for a member (`null` before).
+const relation = computed(() => {
+  if (!view.value.loaded) return null
+  const p = view.value.profile
+  return `${id.value}|${p ? `${p.state}|${p.visible}|${p.visible ? p.followsYou : ''}` : 'none'}`
+})
+watch(relation, (now, before) => {
+  if (!now || !before || now.split('|')[0] !== before.split('|')[0]) return
+  scrollAfterSheet()
+})
 
 // The round back: by history when there is one (the feed, People, a follow link), else to the feed.
 function back() {
@@ -181,7 +231,8 @@ function back() {
 
     <!-- The first answer on its way: her place is held, nothing moves when it comes. -->
     <section v-else-if="!view.loaded" class="relative flex flex-col items-center px-xl pt-sm" aria-busy="true" aria-hidden="true">
-      <span class="ring skeleton wave rounded-pill" />
+      <!-- `data-member-avatar-stand-in`: where her avatar flies to while the page is not read yet (plugins/author-transition.client.ts). -->
+      <span class="ring skeleton wave rounded-pill" data-member-avatar-stand-in />
       <span class="line title-line mt-md w-full"><span class="skeleton wave w-1/3" :style="{ '--wave': 0.05 }" /></span>
     </section>
 
@@ -233,13 +284,15 @@ function back() {
           <section class="flex flex-col gap-md pb-xl" data-testid="member.want">
             <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
               <h2 class="eyebrow">{{ t('member.want') }}</h2>
-              <UiButton v-if="blocks.wantAll" tone="quiet" size="sm" :aria-label="t('member.seeAllLabel', { count: count(open.counts.want ?? 0), section: t('member.want') })" data-testid="member.wantAll" @click="wantOpen = true">
-                <span class="figures">{{ t('member.wantAll', { count: count(open.counts.want ?? 0) }) }}</span><UiIcon name="chevron" :size="13" />
-              </UiButton>
+              <UiSeeAll v-if="blocks.wantAll" dialog :aria-label="t('member.seeAllLabel', { count: count(open.counts.want ?? 0), section: t('member.want') })" data-testid="member.wantAll" @click="wantOpen = true">
+                {{ t('member.wantAll', { count: count(open.counts.want ?? 0) }) }}
+              </UiSeeAll>
             </div>
             <FriendsMemberCovers :books="open.want.map((w) => w.book)" size="sm" testid="member.wantBooks" />
           </section>
         </UiReveal>
+
+        <FriendsBothRead class="pb-xl" :items="bothRead" :name="name" />
 
         <div v-if="recordFailed" class="flex flex-col items-center gap-sm pb-xl text-center" data-testid="member.recordError">
           <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>
@@ -256,9 +309,9 @@ function back() {
             <section id="columns" class="flex flex-col gap-md pt-xl">
               <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
                 <h2 class="eyebrow">{{ year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-                <UiButton v-if="!loading && year !== 'all'" tone="quiet" size="sm" :to="`/friends/${id}/${year}`" data-testid="member.inReview">
-                  {{ t('profile.inReview', { year }) }}<UiIcon name="chevron" :size="13" />
-                </UiButton>
+                <UiSeeAll v-if="!loading && year !== 'all'" :to="`/friends/${id}/${year}`" data-testid="member.inReview">
+                  {{ t('profile.inReview', { year }) }}
+                </UiSeeAll>
               </div>
               <ProfileColumns :columns="loading ? null : columns" :placeholders="year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
             </section>
@@ -277,7 +330,7 @@ function back() {
 
         <UiReveal :show="blocks.finished">
           <div class="pb-xl">
-            <FriendsMemberFinished :items="open.finished" :all="blocks.finishedAll" @all="finishedOpen = true" />
+            <FriendsMemberFinished :items="open.finished" :name="name" :member-id="open.member.id" :all="blocks.finishedAll" @all="finishedOpen = true" />
           </div>
         </UiReveal>
 
@@ -298,7 +351,7 @@ function back() {
       @changed="changed"
     />
     <FriendsMemberWantSheet v-model:open="wantOpen" :title="t('member.want')" :items="wantAll" />
-    <FriendsMemberFinishedSheet v-if="open" v-model:open="finishedOpen" :title="t('member.finished')" :items="open.finished" />
+    <FriendsMemberFinishedSheet v-if="open" v-model:open="finishedOpen" :title="t('member.finished')" :items="open.finished" :name="name" :member-id="open.member.id" />
     <ProfileReadsSheet v-model:open="sheetOpen" foreign :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
   </div>
 </template>

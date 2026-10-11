@@ -139,6 +139,63 @@ html[data-glass='off'] *::after {
   letter-spacing: 0;
 }
 
+/*
+ * An icon button in the column at a row's right edge (social v2a: Want to read, the heart; the owner's choice of
+ * the three layouts he was shown). Drawn at --size-target (24 px, WCAG 2.2 AA 2.5.8). Its touch box, the ::after, is
+ * --size-touch wide (the app's 44 px rule) and as tall as the icon plus `--hit-up` above and `--hit-down` below
+ * (10 px each by default: 44 px, centred, for an icon alone). The pair of icons sit a small gap apart; their boxes
+ * split at the midpoint between them (`RowActions` sets `--hit-up` and `--hit-down` on each) and reach outward, so
+ * they never overlap each other or the row above and below. The column is as narrow as the icon.
+ * `aria-disabled` keeps focus where a disabled button would drop it.
+ */
+@utility icon-action {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-target);
+  height: var(--size-target);
+
+  &::after {
+    position: absolute;
+    top: calc(-1 * var(--hit-up, (var(--size-touch) - var(--size-target)) / 2));
+    left: 50%;
+    width: var(--size-touch);
+    height: calc(var(--size-target) + var(--hit-up, (var(--size-touch) - var(--size-target)) / 2) + var(--hit-down, (var(--size-touch) - var(--size-target)) / 2));
+    content: '';
+    transform: translateX(-50%);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+  }
+}
+
+/*
+ * The tap of a whole row (social v2a: a Home circle row and the feed's batch row open their sheet): a button or link
+ * that holds the row's words (or only its fan), its ::after stretched over the row, which must be `relative`. What
+ * else the row has to tap (her avatar, her name) is `relative z-1` above it, so nothing is nested in a link or a
+ * button. The focus ring is drawn on the stretched box, inside the row's edge, so the row's overflow cannot cut it.
+ */
+@utility stretched {
+  &::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::after {
+    outline: var(--stroke-focus) solid var(--color-accent-ink);
+    outline-offset: calc(-1 * var(--stroke-focus));
+    border-radius: var(--radius-sm, 8px);
+  }
+}
+
 /* The small uppercase section label (D's eyebrow). */
 @utility eyebrow {
   font-family: var(--font-mono);
@@ -148,6 +205,34 @@ html[data-glass='off'] *::after {
   font-weight: var(--text-eyebrow--font-weight);
   text-transform: uppercase;
   color: var(--color-ink-faint);
+}
+
+/* A control drawn as small text, no pill (a friend's Want to read, a heart with its count): it never makes its row taller.
+   WCAG 2.2's 24 px target is its own box, pulled back into the row by the negative margin; the app's 44 px (--size-touch)
+   is an invisible box centred on it, at least that wide and tall. Put `padding-block: var(--spacing-xs)` on the line it
+   sits in so the 44 px boxes of neighbouring lines overlap less. */
+@utility tap-text {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  font-size: var(--text-caption);
+  line-height: 1;
+  white-space: nowrap;
+  min-width: calc(var(--spacing-sm) * 3);
+  min-height: calc(var(--spacing-sm) * 3);
+  margin-block: calc(var(--spacing-sm) * -0.75);
+
+  &::after {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: calc(100% + var(--spacing-sm) * 2);
+    min-width: var(--size-touch);
+    height: var(--size-touch);
+    content: '';
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* Book titles: serif, optical sizes on. */
@@ -315,7 +400,9 @@ html[data-glass='off'] *::after {
    sinks); the tab bar does not move and the Profile's pinned top bar only fades.
    Over `standard` into the Profile, over `exit` (on the `standard` curve) back.
    The push to an author's page and back (plugins/author-transition.client.ts,
-   `data-push-transition`, #167) moves the page the same way, with no ring. */
+   `data-push-transition`, #167) moves the page the same way, with no ring; the push to a member's page
+   (social v2a) does too, with her avatar as the ring: the avatar tapped and the hero's are named
+   `member-avatar` by the plugin while it runs (inline, one element in each state). */
 html[data-profile-transition] [data-profile-avatar] {
   view-transition-name: profile-avatar;
 }
@@ -372,7 +459,8 @@ html:is([data-profile-transition='back'], [data-push-transition='back'])::view-t
 }
 /* The groups move and scale by transform alone, from their top left corner
    (scaleInsteadOfResize, utils/viewTransition.ts). */
-html[data-profile-transition]::view-transition-group(*) {
+html[data-profile-transition]::view-transition-group(*),
+html[data-push-transition]::view-transition-group(member-avatar) {
   transform-origin: 0 0;
 }
 /* The loading wave (the Profile's, an author page's) holds still while the page arrives under the

@@ -24,6 +24,7 @@ export type IconName =
   | 'pencil'
   | 'flag'
   | 'bookmark'
+  | 'bookmarkPlus'
   | 'arrow'
   | 'sun'
   | 'moon'
@@ -44,6 +45,7 @@ export type IconName =
   | 'translate'
   | 'define'
   | 'copy'
+  | 'heart'
   | 'share'
   | 'leading0'
   | 'leading1'
@@ -124,6 +126,10 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     <template v-else-if="name === 'pencil'"><path d="M15 5.5 18.5 9 9 18.5H5.5V15z" /></template>
     <template v-else-if="name === 'flag'"><path d="M6 20.5V4.5M6 5h11l-2.5 4 2.5 4H6" /></template>
     <template v-else-if="name === 'bookmark'"><path d="M6.5 5.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v14l-5.5-3.8-5.5 3.8z" /></template>
+    <!-- Want to read: the bookmark with a plus in it (the filled `bookmark`, `fill-current`, is a Book she has). -->
+    <template v-else-if="name === 'bookmarkPlus'">
+      <path d="M6.5 5.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v14l-5.5-3.8-5.5 3.8z" /><path d="M12 8.2v4.6M9.7 10.5h4.6" />
+    </template>
     <template v-else-if="name === 'arrow'"><path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" /></template>
     <template v-else-if="name === 'sun'">
       <circle cx="12" cy="12" r="3.8" />
@@ -188,6 +194,10 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
     </template>
     <!-- The platform's share mark: a tray with an arrow leaving it (sharing a reading page or a Book card, #171). -->
     <template v-else-if="name === 'share'"><path d="M12 14.5v-11M8.5 7 12 3.5 15.5 7" /><path d="M9 10H6.5v10h11V10H15" /></template>
+    <!-- Like: a heart; the like's button fills it (`fill-current`) once pressed. -->
+    <template v-else-if="name === 'heart'">
+      <path d="M12 20c-4.4-3-7.5-5.9-7.5-9.4A4.1 4.1 0 0 1 8.6 6.5c1.4 0 2.7.8 3.4 2 .7-1.2 2-2 3.4-2a4.1 4.1 0 0 1 4.1 4.1c0 3.5-3.1 6.4-7.5 9.4Z" />
+    </template>
     <template v-else-if="name === 'copy'">
       <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" />
     </template>

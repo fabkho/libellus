@@ -14,7 +14,10 @@ import {
   type SocialSection,
 } from '~/data/social'
 import { useSessionStore } from '~/stores/session'
+import { useBookReadersStore } from '~/stores/bookReaders'
+import { useCircleBooksStore } from '~/stores/circleBooks'
 import { useFeedStore } from '~/stores/feed'
+import { useLikesStore } from '~/stores/likes'
 import { useMemberPhotosStore } from '~/stores/memberPhotos'
 import { useMemberProfileStore } from '~/stores/memberProfile'
 import type { RelationChange } from '~/utils/memberProfile'
@@ -98,7 +101,9 @@ export const useSocialStore = defineStore('social', () => {
       if (!r) return
       const result = await r.mine()
       if (take(member, 'load', result, (data) => (mine.value = data))) loadedFor = member
-    })().finally(() => (loadingMine = null))
+    })()
+      .catch(() => undefined)
+      .finally(() => (loadingMine = null))
     return loadingMine
   }
 
@@ -133,7 +138,9 @@ export const useSocialStore = defineStore('social', () => {
       peopleEpoch++
       peopleEnded.value = ended
       take(member, 'people', { data: read, error: null }, (data) => (people.value = data))
-    })().finally(() => (loadingPeople = null))
+    })()
+      .catch(() => undefined)
+      .finally(() => (loadingPeople = null))
     return loadingPeople
   }
 
@@ -174,7 +181,9 @@ export const useSocialStore = defineStore('social', () => {
       const r = repo()
       if (!r) return
       take(member, 'blocked', await r.blocked(), (data) => (blocked.value = data))
-    })().finally(() => (loadingBlocked = null))
+    })()
+      .catch(() => undefined)
+      .finally(() => (loadingBlocked = null))
     return loadingBlocked
   }
 
@@ -254,13 +263,21 @@ export const useSocialStore = defineStore('social', () => {
   /**
    * One place for what a change of relation does to the others (the stores below only keep what they were
    * told): her profile on screen follows the action (`relationChanged`); `left` (unfollow, block, remove as
-   * follower): nothing of her stays on the device (her photo, in memory and in IndexedDB, and what was read
-   * of her profile), and `fromFeed` (she leaves her circle: unfollow, block) her entries leave the feed and
+   * follower): nothing of her stays on the device (her photo, in memory and in IndexedDB, what was read
+   * of her profile, her place in Home's likes row and in the covers' circles), and `fromFeed` (she leaves her circle: unfollow, block) her entries leave the feed and
    * its device copy. Remove as follower leaves the feed alone: whom she follows is unchanged.
    */
   function relation(member: string, what: RelationChange, { left = false, fromFeed = false } = {}) {
     if (fromFeed) useFeedStore().dropMember(member)
-    if (left) useMemberPhotosStore().drop(member)
+    // Her Books' readers: a follow may add someone, so what was read is stale; a member who left goes at once.
+    useBookReadersStore().stale()
+    if (left) {
+      useMemberPhotosStore().drop(member)
+      // Her name and avatar leave Home's likes row (and its device copy), the covers' circles and the hearts tapped on her reads.
+      useLikesStore().dropMember(member)
+      useCircleBooksStore().dropMember(member)
+      useBookReadersStore().dropMember(member)
+    }
     useMemberProfileStore().relationChanged(member, what)
   }
 
@@ -275,6 +292,7 @@ export const useSocialStore = defineStore('social', () => {
   /** What a follow link opens, a member's profile and her whole Want to read: read, nothing kept. */
   const target = async (token: string): Promise<SocialResult<FollowTarget | null>> => repo()?.target(token) ?? { data: null, error: 'unknown' }
   const profile = async (member: string): Promise<SocialResult<MemberProfile | null>> => repo()?.profile(member) ?? { data: null, error: 'unknown' }
+  const bothRead = async (member: string, year: number | null = null) => repo()?.bothRead(member, year) ?? { data: null, error: 'unknown' as const }
   const want = async (member: string) => repo()?.want(member) ?? { data: null, error: 'unknown' as const }
 
   function clearError(action?: SocialAction) {
@@ -335,6 +353,7 @@ export const useSocialStore = defineStore('social', () => {
     block,
     profile,
     want,
+    bothRead,
     clearError,
     reset,
   }

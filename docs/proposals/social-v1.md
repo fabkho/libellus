@@ -187,6 +187,23 @@ friends' Want to read on yours (8), and **a checked Catalogue** (below). Then 2b
 and finding people: 3, 6), then 2c
 (GIFs 9; *Send a book* 5 still a maybe).
 
+**What 2a shipped (owner's review on his phone, October 2026).** The wave above, plus:
+- **Readers on a Book's page (3) moved up from 2b** as *In your circle*: the people she follows who hold the same
+  work, by exactly her profile's privacy rules, under the description and above *More from the author*. Strangers'
+  reviews (6) stay in 2b.
+- **Your reviews** on her own Profile: her written reviews as lit cards in a sideways row above *Years in review*.
+- **A review that is only a number is a rating:** an import takes "4.6" or "5/5" as the rating (rounded down to
+  quarters, over an imported whole-star rating, never over one set in the app) and not as a review; a one-time
+  migration does the same for reads already imported.
+- One layout for Want to read and the heart on every row (an icon column at the row's right edge), one *See all*
+  pill for every section head, and the avatar flying into a member's page like a cover into a Book's.
+- Version 1 debt: the 44 px hit boxes of small controls no longer cover their neighbours, no "0 pages", one
+  avatar request on Home.
+
+2b keeps: strangers' reviews on a Book's page, *Ask to follow* from a reading page, the waitlist invite with a
+follow request (the follow QR code shipped in 2a). The owner decides who may appear to strangers and how much of
+their reviews shows before 2b starts.
+
 **Version 1 debt:** ~~HTTP 404/429 for the named refusals; paging in People~~ (done, social v1.1); an end-to-end
 guard that fails a flow on an uncaught page error; *See all* with its count; one favourite card shared
 by the two year pages; a two-digit batch that wraps; one quiet empty/error block; and the Catalogue

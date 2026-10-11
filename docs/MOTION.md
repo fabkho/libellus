@@ -79,6 +79,14 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   the initials: in the hero it is the button that draws the ring, not the disc inside it, so the
   ring flies with the photo instead of standing at its place from the first frame
   (checked by eye; no flow).
+- **The avatar to a member's page** (social v2a). Tapping a member's avatar or name (the feed's rows and
+  batch rows, Home's card and rows, People, the Readers rows, the likers and circle sheets) moves the page as
+  the push to an author does, and her avatar morphs into the hero's: the avatar tapped and the page's are one
+  element (`view-transition-name: member-avatar`, set inline by `plugins/author-transition.client.ts` while it runs),
+  growing over `standard`; Back shrinks the hero's into the avatar it left from (the first of hers on screen
+  when that one is gone; none on screen: it fades with the page). The year page's Back, a link or a redirect
+  to her page have no avatar to fly and navigate as before. Nothing with Reduce Motion, on a Back the browser
+  animates itself, or without the API.
 - **Push to an author** (#167). Tapping an author (the Book page's author line, a list row's author)
   moves the page as the push to the Profile does, without a ring and with its wave held still the
   same way: the author's page fades in as the

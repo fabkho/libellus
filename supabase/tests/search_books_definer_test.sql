@@ -93,6 +93,7 @@ begin
     return query
       select b.* from public.books b
        where b.isbn13 = v_isbn13
+         and not b.check_failed   -- search_books leaves a Book the check failed out (private.book_shown), whoever else's rows are in the database
        order by b.owner_id is null, b.created_at desc, b.id
        limit v_limit;
     return;
@@ -106,6 +107,7 @@ begin
   return query
     select b.* from public.books b
      where to_tsvector('simple'::regconfig, public.book_search_text(b.title, b.authors)) @@ v_words
+       and not b.check_failed
      order by btrim(public.book_search_text(b.title, '{}')) = v_text desc,
               ts_rank(to_tsvector('simple'::regconfig, public.book_search_text(b.title, b.authors)), v_words) desc,
               b.created_at desc,

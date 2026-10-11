@@ -10,9 +10,14 @@
 // `compact` is Home's: no review. `bare` is the batch sheet's: the avatar line is not repeated, the
 // member is in the sheet's title, and the cover is `size="sm"`. `dayLabel` is the word at the line's end Home puts the day in
 // (the page has day eyebrows instead). `testid` is the row's; the parts add `Member`, `Book`,
-// `Review` and `More` to it.
+// `Review`, `More`, `WantToRead` and `Like` to it. At the row's right edge, a narrow column centred on the
+// cover (FriendsRowActions, the same on Home's card and a member's rows): Want to read on top (on what a friend finished,
+// reviewed or started, not on a Manual book), the heart under it (on a finished read). A review flagged as spoilers that she may not read yet is folded behind
+// *Show anyway* (FriendsReviewFold); the stars stay.
 import type { FeedEntry } from '~/data/feed'
 import { useBookStore } from '~/stores/book'
+import { likeable } from '~/utils/likes'
+import { carriesWantToRead } from '~/utils/wantToRead'
 
 const props = withDefaults(defineProps<{
   entry: FeedEntry
@@ -30,10 +35,13 @@ const books = useBookStore()
 
 const name = computed(() => props.entry.member.name?.trim() || t('member.someone'))
 const verb = computed(() => t(`feed.${feedVerbKey(props.entry.kind, props.entry.again)}`))
-const book = computed(() => props.entry.book)
+const book = computed(() => shownBook(props.entry.book, t('book.outsideCatalogue')))
 const bookPath = computed(() => `/book/${book.value.id}`)
 const authorLine = computed(() => formatAuthors(book.value.authors, t('common.etAl')))
 const showReview = computed(() => Boolean(props.entry.review) && !props.compact)
+// The Want to read button: on what a friend finished, reviewed or started (not on Home's compact rows).
+const showWant = computed(() => carriesWantToRead(props.entry.kind) && !props.compact)
+const showHeart = computed(() => likeable(props.entry) && !props.compact)
 
 // The review: four lines, and `More` only when there is more than four lines of it.
 const review = useTemplateRef<HTMLElement>('review')
@@ -44,13 +52,20 @@ function measure() {
   if (el && !expanded.value) clamped.value = el.scrollHeight > el.clientHeight + 1
 }
 let observer: ResizeObserver | null = null
-onMounted(() => {
-  measure()
-  if (review.value && typeof ResizeObserver !== 'undefined') {
-    observer = new ResizeObserver(measure)
-    observer.observe(review.value)
-  }
-})
+// The review's line is there once it is drawn (a folded one is not, until *Show anyway*): measured and watched from then on.
+watch(
+  review,
+  (el) => {
+    observer?.disconnect()
+    if (!el) return
+    measure()
+    if (typeof ResizeObserver !== 'undefined') {
+      observer ??= new ResizeObserver(measure)
+      observer.observe(el)
+    }
+  },
+  { flush: 'post', immediate: true },
+)
 onBeforeUnmount(() => observer?.disconnect())
 
 /** More goes away once it is pressed: focus moves to the review it opened, so it is not lost (a11y). */
@@ -63,7 +78,7 @@ async function unfold() {
 
 <template>
   <li class="flex items-start gap-ml py-ms" :data-testid="testid">
-    <UiPressLink v-if="!book.manual" :to="bookPath" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
+    <UiPressLink v-if="!book.manual && !book.unverified" :to="bookPath" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
       <UiCover
         decorative
         :title="book.title"
@@ -101,7 +116,7 @@ async function unfold() {
       </div>
 
       <UiPressLink
-        v-if="!book.manual"
+        v-if="!book.manual && !book.unverified"
         :to="bookPath"
         class="reach book-title text-callout py-xxs"
         :data-testid="`${testid}Book`"
@@ -109,10 +124,11 @@ async function unfold() {
       >{{ book.title }}</UiPressLink>
       <span v-else class="book-title text-callout py-xxs" :data-testid="`${testid}Book`">{{ book.title }}</span>
 
-      <p v-if="authorLine" class="text-caption text-ink-muted">{{ authorLine }}</p>
+      <p v-if="authorLine" class="max-w-full min-w-0 truncate py-xs text-caption text-ink-muted">{{ authorLine }}</p>
+      <FriendsLikeError v-if="showHeart" :row="entry" :testid="`${testid}Like`" />
       <UiStars v-if="entry.rating" :quarters="entry.rating" :data-testid="`${testid}Stars`" />
 
-      <template v-if="showReview">
+      <FriendsReviewFold v-if="showReview" :folded="entry.folded" :name="name" :testid="`${testid}Folded`">
         <p
           ref="review"
           tabindex="-1"
@@ -127,8 +143,19 @@ async function unfold() {
           :data-testid="`${testid}More`"
           @click="unfold"
         >{{ t('feed.more') }}</button>
-      </template>
+      </FriendsReviewFold>
     </div>
+
+    <FriendsRowActions
+      :cover="size"
+      :book="showWant ? book : null"
+      :like="showHeart ? entry : null"
+      :name="name"
+      :owner="entry.member.id"
+      :title="book.title"
+      :want-testid="`${testid}WantToRead`"
+      :like-testid="`${testid}Like`"
+    />
   </li>
 </template>
 

@@ -107,12 +107,19 @@ export const useHistoryStore = defineStore('history', () => {
 
   /** The read the Edit sheet is about; null while it is closed. */
   const editing = ref<HistoryTarget | null>(null)
-  const draft = reactive<SessionEdit>({ startedOn: '', endedOn: '', rating: null, review: '', abandonReason: '' })
+  const draft = reactive<SessionEdit>({ startedOn: '', endedOn: '', rating: null, review: '', reviewSpoilers: false, abandonReason: '' })
   const editBusy = ref(false)
   const editError = ref<LibraryErrorCode | null>(null)
 
   // A change of mind is a new try: the last refusal no longer applies.
   watch(draft, () => (editError.value = null))
+  // "Contains spoilers" goes with the review: emptied, the flag is off again (its switch is hidden then).
+  watch(
+    () => draft.review,
+    (text) => {
+      if (!text?.trim()) draft.reviewSpoilers = false
+    },
+  )
 
   function openEdit(entry: LibraryEntry, read: ReadingSession) {
     editing.value = { entry, session: read }

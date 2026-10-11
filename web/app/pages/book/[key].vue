@@ -20,6 +20,7 @@ import { useBookStore } from '~/stores/book'
 import { useEditionStore } from '~/stores/edition'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useLibraryStore } from '~/stores/library'
+import { useSearchStore } from '~/stores/search'
 import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
@@ -35,6 +36,7 @@ const route = useRoute()
 const router = useRouter()
 const books = useBookStore()
 const library = useLibraryStore()
+const search = useSearchStore()
 const reading = useReadingStore()
 // Starting, finishing, DNF and reading again work offline too: they wait to
 // sync (#93). Adding does for a Book from the Catalogue; a search result (its
@@ -141,8 +143,19 @@ const since = computed(() => {
   if (e.status === 'finished' && latest.value?.endedOn) return formatDay(latest.value.endedOn)
   return t('book.addedOn', { date: t('common.dayMonth', dateParts(new Date(e.addedAt), locale.value)) })
 })
-// A Book from the Library comes from a list, which carries none: the device's copy has it (stores/library.ts, `descriptionOf`).
-const description = computed(() => (book.value ? library.descriptionOf(book.value) : null) ?? '')
+/**
+ * What the Book is about. A Book from the Library comes from a list, which carries none: the
+ * device's copy has it (stores/library.ts, `descriptionOf`). A Catalogue Book's description is the
+ * server's to write — only the check reads one at its source (social v2a contract §5) — so until it
+ * has, the page shows what the source already told *this* device: the search result it was opened
+ * from (stores/search.ts, `seenBook`). Shown, not stored: nothing here writes it anywhere, and a
+ * reload without the result asks the source again (stores/book.ts, `resolve`).
+ */
+const description = computed(() => {
+  const shown = book.value
+  if (!shown) return ''
+  return library.descriptionOf(shown) ?? search.seenBook(key.value)?.description ?? ''
+})
 // Long enough to be cut at five lines: then "More" shows the rest.
 const long = computed(() => description.value.length > 320 || description.value.split('\n').length > 5)
 const expanded = ref(false)
@@ -349,6 +362,9 @@ function back() {
         {{ t('book.more') }}
       </button>
     </section>
+
+    <!-- In your circle (social v2a, §1.5): the people she follows who have this Book, under its description and right above More from the author. -->
+    <BookReaders v-if="book" :book="book" />
 
     <BookMoreFromAuthor v-if="book" :book="book" :book-key="key" />
 

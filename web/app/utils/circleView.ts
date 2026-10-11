@@ -41,10 +41,20 @@ export type CircleCard = {
   verb: 'finished' | 'reviewed'
   rating: number | null
   review: string | null
+  /** The review is flagged as spoilers and she has not finished the Book: it is folded behind *Show anyway* (social v2a). */
+  folded: boolean
+  /** The finished read the heart is on (null without one: no heart), its count and whether she liked it (social v2a). */
+  sessionId: string | null
+  likes: number
+  liked: boolean
   at: string
 }
 
-export type CircleFriend = { member: MemberCard; day: string; phrases: CirclePhrase[]; books: SocialBook[] }
+/**
+ * `entries`: every read her sentence names (newest first), what a tap on the row opens: the Book when it is one read, else a
+ * sheet of them (as the feed's batch row opens its sheet). `books` are the covers of the fan.
+ */
+export type CircleFriend = { member: MemberCard; day: string; phrases: CirclePhrase[]; books: SocialBook[]; entries: FeedEntry[] }
 
 export type CircleView = { card: CircleCard | null; friends: CircleFriend[] }
 
@@ -76,12 +86,19 @@ function cardOf(picked: FeedEntry, same: readonly FeedEntry[]): CircleCard {
   // `same` is newest first, the picked one among it: the rating and review are the newest that has one.
   const rated = same.find((entry) => entry.rating)
   const reviewed = same.find((entry) => entry.review)
+  // The finished read the heart is on: the picked entry's, else another entry of the same Book that has one.
+  const read = picked.sessionId ? picked : (same.find((entry) => entry.sessionId) ?? picked)
+  const written = picked.review ? picked : reviewed
   return {
     member: picked.member,
     book: picked.book,
     verb: same.some((entry) => entry.kind === 'finished') ? 'finished' : 'reviewed',
     rating: picked.rating ?? rated?.rating ?? null,
-    review: picked.review ?? reviewed?.review ?? null,
+    review: written?.review ?? null,
+    folded: written?.folded ?? false,
+    sessionId: read.sessionId ?? null,
+    likes: read.likes ?? 0,
+    liked: read.liked ?? false,
     at: picked.at,
   }
 }
@@ -130,8 +147,19 @@ export function circleView(entries: readonly FeedEntry[], options: Options): Cir
     const told = rows.slice(0, CIRCLE_PHRASES)
     const books = new Map<string, SocialBook>()
     for (const row of told) for (const book of booksOf(row)) if (!books.has(book.id)) books.set(book.id, book)
-    return { member, day, phrases: phrasesOf(told), books: [...books.values()].slice(0, CIRCLE_COVERS) }
+    // One read of a Book, however many of her events name it (a finish and its review): the Books her sentence tells of.
+    const entries: FeedEntry[] = []
+    for (const entry of told.flatMap((row) => (row.type === 'entry' ? [row.entry] : row.entries))) {
+      if (!entries.some((kept) => kept.book.id === entry.book.id)) entries.push(entry)
+    }
+    return { member, day, phrases: phrasesOf(told), books: [...books.values()].slice(0, CIRCLE_COVERS), entries }
   })
 
   return { card, friends }
+}
+
+/** The one kind of all of a row's reads ("finished" for every one), or null when they differ: the batch sheet's title says the first, and for a mix only her name. */
+export function entriesKind(entries: readonly FeedEntry[]): FeedEntry['kind'] | null {
+  const first = entries[0]?.kind
+  return first && entries.every((entry) => entry.kind === first) ? first : null
 }

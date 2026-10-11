@@ -51,7 +51,13 @@ How:
 - A cover is named by its title only where it stands alone (Want to read's row, a year's months);
   wherever the title is written beside it the cover is `decorative` (UiCover), so nothing is read
   twice. In the social screens (feed, Home's circle, a member's finished Books) that is one link per
-  Book: the cover's link is `aria-hidden` and out of the tab order, the title is the Book's link.
+  Book: the cover's link is `aria-hidden` and out of the tab order, the title is the Book's link. A member's row
+  that opens a sheet (Home's circle rows, the feed's batch rows) has one button for the row, named by its sentence
+  ("Ida: started Piranesi, 2 days ago"; the fan is `aria-hidden`), stretched over the row (`stretched`, main.css);
+  her avatar and her name are separate, above it: the name is the link to her page, the avatar's link is
+  `aria-hidden` and out of the tab order (a pointer's second way to the same place), so nothing is nested and her
+  page has one link per row. The focus ring is drawn on the stretched box. A row of one openable read is that Book's
+  link instead.
 - A follow request's buttons say whose it is (`Accept {name}`, `Decline {name}`, `Unblock {name}`), and the
   lamp dot on the header's avatar is `aria-hidden` (the avatar's label says a request waits).
 - Text drawn in pieces (dots between facts, a count beside a year, a month's count) is given to
@@ -128,6 +134,18 @@ shimmer stops, the tab bar stays.
 
 ## Known gaps
 
+- **The icon column on a friend's Book row** (social v2a: *Want to read* and the heart, `icon-action` in `main.css`,
+  `RowActions`): the owner chose a narrow column at the row's right edge, centred on the cover, over text-sized
+  controls on the line (which could not have a 44 px box without covering the title or the stars). Each icon is drawn at
+  24 × 24 px (`--size-target`, WCAG 2.2 AA 2.5.8) with a touch box (`--size-touch`, the app's own 44 px rule) centred
+  on it sideways. The two icons are a close pair, 4 px apart (the drawn heart is 18 px), and their boxes split at the midpoint
+  between them and reach outward, the bookmark's up and the heart's down, so they never overlap each other; each is
+  44 px wide and, with room (Home's card, the feed; a heart alone in the Readers rows is centred), 44 px tall. On a member's Recently finished row, whose cover is small (`sm`, 60 px tall) and whose height the column must not
+  grow, the boxes stop at the row's own edge (the 8 px padding above and below it), so they are 38 px tall (44 px wide):
+  the boxes of two rows meet at the border and never overlap, and a tap near a title or the stars is not theirs. The
+  name is hidden text (the icon is drawn), and the heart keeps one constant name with `aria-pressed`. Busy and Offline
+  are `aria-disabled`, not `disabled`, so focus stays; the focus ring is the app's (2 px `accentInk`). The heart's count
+  hangs right under the icon, inside its box where the box is tall enough, and is part of the heart's name.
 - **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
   scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
   each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}

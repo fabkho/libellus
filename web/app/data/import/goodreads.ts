@@ -17,6 +17,7 @@ import {
   missingColumns,
   MissingColumnsError,
   positive,
+  splitRatingReview,
   tidy,
   yearOf,
   type ImportAdapter,
@@ -112,7 +113,10 @@ export function mapGoodreadsRow(row: Row, index: number, today: string): ImportB
     problems.push({ code: 'ratingInvalid' })
     rating = null
   }
-  const review = clipReview(plainText(field(row, 'My Review') || undefined) ?? null, problems)
+  // A review that is only a number is a rating written as text: it is the rating when there is none, not a review.
+  const split = splitRatingReview(plainText(field(row, 'My Review') || undefined) ?? null, rating, problems)
+  rating = split.rating
+  const review = clipReview(split.review, problems)
 
   const shelf = field(row, 'Exclusive Shelf') || 'to-read'
   const shelfName = shelf.toLowerCase()

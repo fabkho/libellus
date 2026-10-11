@@ -99,7 +99,7 @@ function pickGenre(genre: string) {
 
 // Back to the Profile it came from (or to it, opened from an address).
 function back() {
-  if (String(window.history.state?.back ?? '').startsWith('/profile')) router.back()
+  if (canGoBack(window.history.state)) router.back()
   else void navigateTo('/profile')
 }
 </script>

@@ -223,7 +223,7 @@ describe('addManualBook with a Status', () => {
 
 describe('the Add sheets\' draft', () => {
   it('starts on Want to read with nothing chosen', () => {
-    expect(newAddDraft()).toEqual({ status: 'want_to_read', startedOn: '', endedOn: '', rating: null, review: '' })
+    expect(newAddDraft()).toEqual({ status: 'want_to_read', startedOn: '', endedOn: '', rating: null, review: '', reviewSpoilers: false })
     expect(addWithFromDraft(newAddDraft())).toEqual({ status: 'want_to_read' })
   })
 

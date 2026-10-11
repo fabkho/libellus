@@ -85,8 +85,8 @@ export function libraryLine(
 }
 
 /** A Book of hers the member can open: a Manual book is not in the Catalogue, so it opens nothing. */
-export function bookPathOf(book: Pick<SocialBook, 'id' | 'manual'>): string | null {
-  return book.manual ? null : `/book/${book.id}`
+export function bookPathOf(book: Pick<SocialBook, 'id' | 'manual'> & { unverified?: boolean }): string | null {
+  return book.manual || book.unverified ? null : `/book/${book.id}`
 }
 
 /**
@@ -94,8 +94,8 @@ export function bookPathOf(book: Pick<SocialBook, 'id' | 'manual'>): string | nu
  * Manual book (`source` 'manual') is her own and not in the Catalogue, so it opens nothing; on the own
  * Profile every Book opens, her own Manual ones included.
  */
-export function linkOf(book: { id: string; source: string }, foreign: boolean): Pick<SocialBook, 'id' | 'manual'> {
-  return { id: book.id, manual: foreign && book.source === 'manual' }
+export function linkOf(book: { id: string; source: string; unverified?: boolean }, foreign: boolean): Pick<SocialBook, 'id' | 'manual'> & { unverified?: boolean } {
+  return { id: book.id, manual: foreign && book.source === 'manual', unverified: foreign && Boolean(book.unverified) }
 }
 
 /** The year pills' value after her years changed: the one in view if she still has it, else All. */
