@@ -130,8 +130,9 @@ Versioning starts at **1.0.0**: `main` as it was when releases began (`bootstrap
 
 One person runs the instance, the owner, and only the owner sees a few screens: today the
 client error log (Profile → Account → Errors, [Client errors](#client-errors)), the waitlist
-(Profile → Account → Waitlist, [Waitlist](#waitlist)) and Your shelf with Regal. No other member may
-read the error log or the waitlist, whatever the app shows: the database refuses them. Nothing is on
+(Profile → Account → Waitlist, [Waitlist](#waitlist)), the feedback members send from Profile → Contact
+(Profile → Feedback, the table `public.feedback`) and Your shelf with Regal. No other member may
+read the error log, the waitlist or the feedback, whatever the app shows: the database refuses them. Nothing is on
 until the owner is named, once, in two places that have to agree:
 
 1. **The database** knows its owner from one row, `private.instance_owner`, empty after the

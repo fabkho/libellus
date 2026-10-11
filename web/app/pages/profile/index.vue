@@ -222,6 +222,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
         <ProfileSharing class="mb-xl" />
 
         <ProfileAccount @photo="photo?.start()" />
+        <ProfileContactRow />
       </div>
     </Transition>
 
