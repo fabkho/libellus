@@ -146,9 +146,10 @@ describe('the Reado import writes', () => {
 
     const collections = createCollections(member.client)
     const list = (await collections.list()).data!
-    // Hers came first and kept its own spelling: the export's Favourites went onto it.
-    expect(list.map((collection) => [collection.name, collection.count])).toEqual([['favourites', 1], ['2025', 2], ['Ebook TBR', 1]])
-    const year = (await collections.get(list[1]!.id)).data!
+    // Hers kept its own spelling: the export's Favourites went onto it. (The list is by last edited, which the
+    // import's writes bump through the database's trigger, so the test does not rely on an order.)
+    expect(list.map((collection) => [collection.name, collection.count]).sort()).toEqual([['2025', 2], ['Ebook TBR', 1], ['favourites', 1]])
+    const year = (await collections.get(list.find((collection) => collection.name === '2025')!.id)).data!
     expect(year.entries.map((entry) => entry.book.isbn13)).toEqual([plan.books[0]!.isbn13, plan.books[1]!.isbn13])
   })
 
