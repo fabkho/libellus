@@ -1,0 +1,4 @@
+## home: 20 member(s) x 10 rounds (screen = slowest request of the parallel set)
+screen total | | 487.9 | 774.6 | |
+## homeSocial: 20 member(s) x 10 rounds (screen = slowest request of the parallel set)
+screen total | | 1181.1 | 1443.9 | |

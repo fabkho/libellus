@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
+import { createDnb } from '~/data/dnb'
 import { createEditions, type EditionCandidate, type Editions } from '~/data/editions'
 import { isAbort } from '~/data/fetching'
 import { probeImageInBrowser, resolveOwnCover } from '~/data/covers'
@@ -34,18 +35,41 @@ export const useEditionStore = defineStore('edition', () => {
   const session = useSessionStore()
   const search = useSearchStore()
 
+  const searchLanguages = useSearchLanguages()
   let source: Editions | null = null
+  let sourceLanguage = ''
   function repository(): Editions {
+    const languages = searchLanguages()
+    if (sourceLanguage !== languages[0]) source = null
+    sourceLanguage = languages[0] ?? ''
     source ??= createEditions({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: backend ? createCatalogueSearch(backend) : undefined,
+      // German editions Apple Books and Open Library do not know (the library's data, CC0).
+      dnb: backend ? createDnb(backend, { online: () => isOnline() }) : undefined,
     })
     return source
   }
 
   /** The entry the sheet is about; null while it is closed. */
   const changing = ref<LibraryEntry | null>(null)
+  /**
+   * The sheet opened on a Book that is not in her Library (the page `page`, by its key): she
+   * looks at its editions and picks one to see. Nothing is written; `viewing` holds the pick.
+   * Never set together with `changing`.
+   */
+  const browsing = ref<{ page: string; book: Book | BookSnapshot } | null>(null)
+  /**
+   * The edition a Book page that is not in her Library shows in place of its own: local view
+   * state, the page's (it asks `viewOf`) and gone with it (`stopViewing`). Not an entry, not in
+   * the Catalogue, not in the outbox.
+   */
+  const viewing = ref<{ page: string; book: Book | BookSnapshot } | null>(null)
+  /** Whether the sheet is open, for an entry or for a Book to look at. */
+  const active = computed(() => changing.value !== null || browsing.value !== null)
+  /** The Book the editions are looked up for: the entry's, or the one being looked at. */
+  const subject = computed(() => changing.value?.book ?? browsing.value?.book ?? null)
   const candidates = ref<EditionCandidate[]>([])
   /** Some source has not answered yet. */
   const pending = ref(false)
@@ -78,15 +102,15 @@ export const useEditionStore = defineStore('edition', () => {
 
   /** Asks every source for the entry's editions; the list grows as they answer. */
   async function look() {
-    const entry = changing.value
-    if (!entry) return
+    const book = subject.value
+    if (!book) return
     cancel()
     const controller = new AbortController()
     inFlight = controller
     pending.value = true
     failed.value = false
     try {
-      const outcome = await repository().find(entry.book, {
+      const outcome = await repository().find(book, {
         signal: controller.signal,
         onUpdate: (update) => {
           candidates.value = update.candidates
@@ -108,9 +132,25 @@ export const useEditionStore = defineStore('edition', () => {
   }
 
   function open(entry: LibraryEntry) {
+    browsing.value = null
     changing.value = entry
-    candidates.value = [{ book: entry.book, current: true }]
-    picked.value = candidateKey(entry.book)
+    start(entry.book)
+  }
+
+  /**
+   * The same sheet for a Book that is not in her Library (page `page`): the same list of
+   * editions, the shown one first, marked and picked. Picking another and confirming changes
+   * what the page shows (`viewing`) and nothing else.
+   */
+  function browse(page: string, book: Book | BookSnapshot) {
+    changing.value = null
+    browsing.value = { page, book }
+    start(book)
+  }
+
+  function start(book: Book | BookSnapshot) {
+    candidates.value = [{ book, current: true }]
+    picked.value = candidateKey(book)
     error.value = null
     format.value = null
     void look()
@@ -120,6 +160,17 @@ export const useEditionStore = defineStore('edition', () => {
     if (busy.value) return
     cancel()
     changing.value = null
+    browsing.value = null
+  }
+
+  /** The edition page `page` shows in place of its own, if she picked one there. */
+  function viewOf(page: string): Book | BookSnapshot | null {
+    return viewing.value?.page === page ? viewing.value.book : null
+  }
+
+  /** The page is left (or shows another Book): it shows its own edition again. */
+  function stopViewing() {
+    viewing.value = null
   }
 
   function pick(candidate: EditionCandidate) {
@@ -164,6 +215,19 @@ export const useEditionStore = defineStore('edition', () => {
     return format.value !== formatOf(entry.book, entry.formatOverride)
   })
 
+  /**
+   * The format she said, when it goes along with what the action does: another
+   * format than the picked edition's source said (with another edition picked,
+   * it is saved with the change), or than her own edition has (the action
+   * saves it). Null when she has said nothing, or what is already so.
+   */
+  const formatSaid = computed<BookFormat | null>(() => {
+    if (!format.value) return null
+    const found = choice.value
+    if (found) return format.value !== formatOf(found.book) ? format.value : null
+    return formatChanged.value ? format.value : null
+  })
+
   function chooseFormat(value: BookFormat) {
     if (busy.value) return
     format.value = value
@@ -176,10 +240,21 @@ export const useEditionStore = defineStore('edition', () => {
    * entry, or null with `error` set (the sheet stays open to try another).
    */
   async function confirm(): Promise<LibraryEntry | null> {
-    const entry = changing.value
     const candidate = choice.value
+    const looking = browsing.value
+    if (looking) {
+      // Nothing to write: the page shows the edition she picked, until she leaves it.
+      if (!candidate) return null
+      viewing.value = { page: looking.page, book: candidate.book }
+      cancel()
+      browsing.value = null
+      return null
+    }
+    const entry = changing.value
     if (!entry || busy.value || !(candidate || formatChanged.value)) return null
-    const changed = candidate ? await changeTo(entry, candidate.book, format.value) : await setFormat(entry, format.value)
+    // What the row said she is changing to is what she gets: her word, else the format the row
+    // showed (the database keeps it as hers only where it differs from the Book it finds).
+    const changed = candidate ? await changeTo(entry, candidate.book, format.value ?? formatOf(candidate.book)) : await setFormat(entry, format.value)
     if (changed) {
       cancel()
       changing.value = null
@@ -268,6 +343,8 @@ export const useEditionStore = defineStore('edition', () => {
   function reset() {
     cancel()
     changing.value = null
+    browsing.value = null
+    viewing.value = null
     candidates.value = []
     picked.value = null
     error.value = null
@@ -284,6 +361,10 @@ export const useEditionStore = defineStore('edition', () => {
 
   return {
     changing,
+    browsing,
+    viewing,
+    active,
+    subject,
     candidates,
     pending,
     failed,
@@ -295,8 +376,12 @@ export const useEditionStore = defineStore('edition', () => {
     format,
     shownFormat,
     formatChanged,
+    formatSaid,
     isPicked,
     open,
+    browse,
+    viewOf,
+    stopViewing,
     close,
     pick,
     chooseFormat,

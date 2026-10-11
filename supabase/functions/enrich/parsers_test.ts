@@ -8,7 +8,19 @@ import { assertEquals } from '@std/assert'
 import { DEFAULT_CONTACT, userAgent } from './http.ts'
 import { namesMatch, titlesMatch } from './match.ts'
 import { parseSeriesText } from './openlibrary.ts'
-import { kindOf, label, labels, parseOrdinal, parseSeries, parseTime, parseWorks, titleOrder } from './wikidata.ts'
+import {
+  isPartTitle,
+  isSplitVolume,
+  kindOf,
+  label,
+  labels,
+  parseOrdinal,
+  parseSeries,
+  parseTime,
+  parseWorks,
+  titleOrder,
+  withoutSplitVolumes,
+} from './wikidata.ts'
 import { parseImageInfo, plainText } from './wikimedia.ts'
 
 Deno.test("an edition's series text gives a name and a position", () => {
@@ -123,4 +135,47 @@ Deno.test('a title in the first language, then English, then the default label (
   assertEquals(works.map((w) => [w.title, w.titles]), [['Unseen Academicals', { de: 'Der Club der unsichtbaren Gelehrten' }]])
   const series = parseSeries({ results: { bindings: [{ s: { value: 'http://www.wikidata.org/entity/Q54875383' }, label_de: { value: 'Die Zauberer' }, label_mul: { value: 'Unseen University' } }] } }, ['en', 'de'])
   assertEquals(series[0]?.name, 'Unseen University')
+})
+
+Deno.test('a split volume is "<novel>, part N" at a decimal position of the novel\'s series', () => {
+  const novel = { title: 'The Dragonbone Chair', titles: { de: 'Der Drachenbeinthron' } }
+  const part = (title: string) => ({ title, titles: {} })
+  assertEquals(isPartTitle('The Dragonbone Chair, part 1', 'The Dragonbone Chair'), true)
+  assertEquals(isPartTitle('To Green Angel Tower, Part 12', 'To Green Angel Tower'), true)
+  assertEquals(isPartTitle('The Dragonbone Chair, part', 'The Dragonbone Chair'), false)
+  assertEquals(isPartTitle('The Dragonbone Chair, part 1: the sequel', 'The Dragonbone Chair'), false)
+  assertEquals(isPartTitle('The Dragonbone Chair', 'The Dragonbone Chair'), false)
+  assertEquals(isSplitVolume(part('The Dragonbone Chair, part 1'), 1.1, [novel]), true)
+  // The novel's title in another language counts too (a German-first deployment).
+  assertEquals(isSplitVolume(part('Der Drachenbeinthron, part 2'), 1.2, [novel]), true)
+  // A whole position is a novel, whatever it is called.
+  assertEquals(isSplitVolume(part('The Dragonbone Chair, part 1'), 1, [novel]), false)
+  assertEquals(isSplitVolume(part('The Dragonbone Chair, part 1'), null, [novel]), false)
+  // No parent at that position: a decimal alone is a novella between two novels.
+  assertEquals(isSplitVolume(part('A War of Gifts'), 1.5, []), false)
+  assertEquals(isSplitVolume(part('Rapport'), 7.5, [part('Network Effect')]), false)
+  assertEquals(isSplitVolume(part('The Heart of What Was Lost'), 0.5, []), false)
+})
+
+Deno.test('the split volumes of a list are left out, the decimal novellas and everything else stay', () => {
+  const work = (qid: string, title: string, position: number | null, series = 'Q1') => ({
+    qid,
+    title,
+    titles: {},
+    series: [{ series, position, follows: null, followedBy: null }],
+  })
+  const list = [
+    work('Q1', 'The Dragonbone Chair', 1),
+    work('Q2', 'The Dragonbone Chair, part 1', 1.1),
+    work('Q3', 'The Dragonbone Chair, part 2', 1.2),
+    work('Q4', 'Stone of Farewell', 2),
+    work('Q5', 'Stone of Farewell, part 1', 2.1),
+    // A decimal that is a novella, and one named like a part whose novel is in another series.
+    work('Q6', 'A War of Gifts', 1.5, 'Q9'),
+    work('Q7', 'Ender\u2019s Game', 1, 'Q9'),
+    work('Q8', 'The Dragonbone Chair, part 3', 1.3, 'Q10'),
+    work('Q11', 'Rapport', 7.5, 'Q12'),
+    work('Q13', 'The Dragonbone Chair, part 4', null),
+  ]
+  assertEquals(withoutSplitVolumes(list).map((w) => w.qid), ['Q1', 'Q4', 'Q6', 'Q7', 'Q8', 'Q11', 'Q13'])
 })

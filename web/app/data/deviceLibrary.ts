@@ -28,6 +28,7 @@ export const DEVICE_LIBRARY_VERSION = 1
 export const DEVICE_LIBRARY_KEY = `${LOCAL_DATA_PREFIX}library`
 export const DEVICE_COLLECTIONS_KEY = `${LOCAL_DATA_PREFIX}collections`
 export const DEVICE_STATS_KEY = `${LOCAL_DATA_PREFIX}stats`
+export const DEVICE_DESCRIPTIONS_KEY = `${LOCAL_DATA_PREFIX}descriptions`
 
 /**
  * Who the saved Library belongs to: also how the app knows who was signed in
@@ -161,7 +162,26 @@ export function readStats(storage: DeviceStorage, memberId: string): ReadingReco
 }
 
 /**
- * Forgets the saved Library, Collections, reading record and author pages and series
+ * The descriptions of the Books in her Library, by Book id (`''`: the Book has none): what the lists do not
+ * carry (`LIST_BOOK_COLUMNS`), kept apart so a list's save does not write them again. Read when the
+ * Library is, so a Book's page shows its description offline.
+ */
+export type SavedDescriptions = { memberId: string; savedAt: string; descriptions: Record<string, string> }
+
+/** Writes the member's descriptions. Returns whether the storage took it. */
+export function saveDescriptions(storage: DeviceStorage, memberId: string, descriptions: Record<string, string>, savedAt = new Date()): boolean {
+  return write<SavedDescriptions>(storage, DEVICE_DESCRIPTIONS_KEY, { memberId, savedAt: savedAt.toISOString(), descriptions })
+}
+
+/** The saved descriptions, if there are any and they are this member's. */
+export function readDescriptions(storage: DeviceStorage, memberId: string): Record<string, string> | null {
+  const saved = read<SavedDescriptions>(storage, DEVICE_DESCRIPTIONS_KEY)
+  if (!saved || saved.memberId !== memberId || typeof saved.descriptions !== 'object' || !saved.descriptions) return null
+  return saved.descriptions
+}
+
+/**
+ * Forgets the saved Library, Collections, reading record, descriptions and author pages and series
  * (data/enrich/device.ts), and nothing else: for a member
  * who stopped being signed in without signing out here (the session ended on
  * the server). Signing out clears all of `libellus.` instead.
@@ -170,5 +190,6 @@ export function forgetLibrary(storage: DeviceStorage): void {
   storage.removeItem(DEVICE_LIBRARY_KEY)
   storage.removeItem(DEVICE_COLLECTIONS_KEY)
   storage.removeItem(DEVICE_STATS_KEY)
+  storage.removeItem(DEVICE_DESCRIPTIONS_KEY)
   storage.removeItem(DEVICE_ENRICH_KEY)
 }

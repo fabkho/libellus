@@ -91,16 +91,34 @@ Books of the author whose work no source knows are listed under `other`.
 |---|---|---|
 | `forBook(bookId, language?)` | `book_series_info(p_book, p_language)` | `{ overridden, series: BookSeriesPlace[] }` |
 | `series(seriesId, language?)` | `series_works(p_series, p_language)` | one series in order (the series sheet) |
-| `next(limit?, language?)` | `next_in_series(p_limit, p_language)` | Home's row: `[{ series, finished, next: WorkCard }]` |
+| `started(limit?, language?)` | `started_series(p_limit, p_language)` | Home's row: the series she has started and not finished, latest activity first: `[{ series, finished, count?, activeOn?, next: WorkCard }]` (`next_in_series` stays in the database for installed apps still on the older shape) |
+| `muted(limit?, language?)` | `muted_series_list(p_limit, p_language)` | the started series she muted, the same items (not in `started`) |
+| `mute(seriesId)` / `unmute(seriesId)` | `mute_series(p_series)` / `unmute_series(p_series)` | `true`; the whole series, idempotent, `series_not_found` for one she cannot see; online only, not queued |
 | `set(entryId, { name, position })` / `set(entryId, { seriesId, position })` | `set_entry_series` | her correction, then `forBook` |
 | `clear(entryId)` | `set_entry_series(…, null, null, null)` | "in no series" |
 | `reset(entryId)` | `reset_entry_series(p_entry)` | back to the computed series |
+
+`started_series` reads every work that is at least in progress. A series is started when one of its works is
+currently reading or finished (Want to read, or a work given up on, alone does not start it) and listed while one
+of its works is open (not finished, not read now, not given up on); the next open work comes with her status of it.
+`count` is the Catalogue's whole-numbered positions: the total is whatever the Catalogue knows, so a series whose
+every known work is finished is complete however many more may exist.
 
 `BookSeriesPlace` is a series (`id, name, parentId?, parentName?, source, count, works`) with the Book's
 `position` (decimals allowed: 0.5, 2.5) and where the membership comes from (`membership`: `member`,
 `wikidata`, `openlibrary`). The most specific series comes first, so "Book 2 of 9 · The Expanse" reads
 `series[0].position` of `series[0].count` (whole-numbered positions). A Book can be in two (Feet of Clay:
 City Watch 3, Discworld 19).
+
+**Split volumes are not members.** Wikidata files the paperback halves of a long novel as items of its
+series at a decimal ordinal ("The Dragonbone Chair, part 1" = 1.1 … "To Green Angel Tower, Part 4" = 3.4:
+Memory, Sorrow, and Thorn had eleven "books", not three). A work at a decimal position x.y of a series whose
+novel at position x is titled "<its title>, part N" (`isSplitVolume`, wikidata.ts) is not stored as a
+member — not from an author's works, not from a series' works, and a Book that is one keeps its work without
+the place. A decimal alone stays a place (a novella between two novels: Ender's Saga 1.5, The Murderbot
+Diaries 7.5, The Last King of Osten Ard 0.5), and so does a title like "..., part 2" with no such novel in
+its series. `private.drop_split_volumes()` (migration 20261026010000) removes the ones stored before by the
+same rule: the link always, the work only when no Book and no other series needs it.
 
 `next` answers, per series she finished a work of, the first later work she has not finished (with its
 status, so the UI may leave out one she is reading already); the sub-series rather than its parent; most
@@ -140,3 +158,42 @@ docs/parity.md, *Genres*; the author page's genre chips use the same labels (`ge
 ## Not yet
 
 - The outbox does not carry the corrections yet (`sync_write`): they need a connection.
+
+## German editions from the German National Library (`dnb-lookup`)
+
+Where Apple Books and Open Library do not know a German book, the German National Library (DNB, Deutsche
+Nationalbibliothek) often does: its catalogue is open data (CC0: no attribution, no storing limit; the privacy
+policy names it as a courtesy). It gives the *edition*, not the book's life around it: title, authors, ISBN-13,
+publisher, year, language, pages. No cover (the covers its catalogue shows are licensed to libraries and the VLB
+sells them: not usable) and no real genre (a DDC class and `B Belletristik`, see the trial in the draft PR #306).
+It is used in the three places a member meets an unknown German edition, never in the import (the trial showed no
+gain there).
+
+| Where | What happens |
+|---|---|
+| Barcode scan, a typed ISBN in search, a book page opened cold (`createSearch`, `lookupIsbn`) | Asked last and only when the Catalogue, Apple and Open Library found nothing for the ISBN: the edition shows like any other result |
+| My edition isn't listed → ISBN (`createEditions().lookupIsbn`) | The same last resort |
+| Change edition / Choose edition (`createEditions().find`) | Editions of the work by title and first author, only where German is in play (`wantsGerman`); one row per ISBN-13, the facts filled into a row another source has; cover-less rows sort after those with a cover, unless German is the member's language and the edition is German |
+| Adding or picking one (`createLibrary` → `catalogued`) | A member may only add or pick a Catalogue Book, so the function's `book` action first makes it (source `import`, from what the DNB says about the ISBN, with the cover the app resolved or Open Library's) |
+
+### The function
+
+`supabase/functions/dnb-lookup` (README there): `POST { action: 'isbn' | 'editions' | 'book', … }`, a signed-in
+member (or the service role), 30 calls a minute per member (`edge_rate_hit`, bucket `dnb-lookup`), 4 KB bodies. The
+SRU interface (`https://services.dnb.de/sru/dnb`, CQL, record schema `oai_dc`) answers cross-origin reads, so the
+browser could have asked it directly; the function exists for the Catalogue write (`book`), the member limit, one
+breaker and one politeness budget for all members (five requests a second, four seconds each, three failed
+answers in a row rest it for a minute: its converter fails now and then with a diagnostic and HTTP 200). The
+parsing is `web/app/data/dnbRecord.ts` (no imports; Deno and the browser both read it). There is no cache table:
+the data is small, the answers are fast (about 100 ms) and a Catalogue Book is the cache of what was added.
+
+Queries: `num=<ISBN-13>` (an ISBN-10 is converted first); `tit="<title>" and per="<surname>" and (bbg=Aa* or
+bbg=Oa*)` (printed and online books; audio, music and periodicals left out, as are records titled like a reading).
+The title is cleaned for readers: `Titel : Untertitel / Verfasser` → `Titel: Untertitel`, a leading
+`[Original] ; ` and a series that leads the title (`Reihe 1 : Titel`, `Reihe, Band 3: Titel`) dropped; authors
+`Nachname, Vorname [Verfasser]` → `Vorname Nachname`, translators, readers and artists left out.
+
+Checked on a local stack with 15 ISBNs of well-known German classics (Faust, Die Verwandlung, Der Prozess, Werther,
+Effi Briest, Der Sandmann, Michael Kohlhaas, Zarathustra, Die Räuber, Der Schimmelreiter): the 10 that Apple Books
+and Open Library did not know were all found by the library and could be added (a Catalogue Book of source `import`,
+no cover); the 5 they knew were found without asking it.

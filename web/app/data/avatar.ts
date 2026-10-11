@@ -396,3 +396,29 @@ export function memoryAvatarCache(): AvatarCache {
     },
   }
 }
+
+// ------------------------------------------------------- other members' photos
+
+/** How long a failed download of another member's photo waits before the next `photoOf` asks again. */
+export const MEMBER_PHOTO_RETRY_MS = 60_000
+
+/**
+ * What the device does with another member's photo, given the record it keeps
+ * for her (its path, or null for none) and the path her card carries now (null:
+ * she has none, or the caller may not see it: blocked, removed, gone private).
+ * - `none`: nothing kept, nothing to show.
+ * - `keep`: the record is the current photo.
+ * - `fetch`: a photo the device does not have (or an older one): download it and replace the record.
+ * - `delete`: the card shows none, so the record goes: her face must not stay on this device.
+ */
+export type MemberPhotoPlan = 'none' | 'keep' | 'fetch' | 'delete'
+
+export function memberPhotoPlan(kept: string | null, card: string | null): MemberPhotoPlan {
+  if (!card) return kept ? 'delete' : 'none'
+  return kept === card ? 'keep' : 'fetch'
+}
+
+/** A failed download is tried again once a minute has passed (or when it failed for another path). */
+export function mayRetryMemberPhoto(failed: { path: string; at: number } | null, path: string, now: number): boolean {
+  return !failed || failed.path !== path || now - failed.at >= MEMBER_PHOTO_RETRY_MS
+}

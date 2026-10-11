@@ -1,0 +1,52 @@
+$ tsx perf/bundle.ts
+## Entry (index.html: 1 script, 1 stylesheet, 11 modulepreload)
+raw   628.9 KB   gzip   201.2 KB   brotli   176.7 KB   (12 files)
+    167.0 raw    52.4 br  _nuxt/BE7Zge0u.js  nuxt runtime, web-vitals
+    136.6 raw    40.3 br  _nuxt/AvAfgI_h.js  @nuxtjs/i18n + intlify, thumbhash
+    161.9 raw    34.8 br  _nuxt/LJ-jPCQl.js  @supabase/supabase-js
+     78.3 raw    27.2 br  _nuxt/mCIrZfd0.js  
+     52.7 raw     9.4 br  _nuxt/entry.UOPwtION.css  
+     10.7 raw     4.1 br  _nuxt/g5s2k6sE.js  
+      9.8 raw     3.7 br  _nuxt/BFcKBP9f.js  nuxt runtime
+      8.5 raw     3.3 br  _nuxt/C_EemRa5.js  foliate / reader, thumbhash
+      1.4 raw     0.6 br  _nuxt/DEL0tEpd.js  
+      1.0 raw     0.5 br  _nuxt/Dmfvxf9r.js  thumbhash
+      0.7 raw     0.4 br  _nuxt/C6V6eRD2.js  
+      0.2 raw     0.1 br  _nuxt/CiNWxlG3.js  
+
+## Prefetched on every start (<link rel=prefetch>): 0 files, raw     0.0 KB, brotli     0.0 KB
+## All JS and CSS in _nuxt/: 197 files, raw  1901.6 KB, brotli   574.7 KB
+
+## Largest chunks (brotli)
+    167.0 raw    52.4 br  [entry] _nuxt/BE7Zge0u.js  nuxt runtime, web-vitals
+    136.6 raw    40.3 br  [entry] _nuxt/AvAfgI_h.js  @nuxtjs/i18n + intlify, thumbhash
+    161.9 raw    34.8 br  [entry] _nuxt/LJ-jPCQl.js  @supabase/supabase-js
+     91.8 raw    29.4 br  [lazy] _nuxt/m3-Iqux7.js  dompurify, foliate / reader
+     78.3 raw    27.2 br  [entry] _nuxt/mCIrZfd0.js  
+     77.2 raw    21.1 br  [lazy] _nuxt/Bth1co_d.js  foliate / reader, thumbhash
+     66.4 raw    20.7 br  [lazy] _nuxt/C8TB2poD.js  foliate / reader, thumbhash
+     71.7 raw    18.9 br  [lazy] _nuxt/EHII5JnX.js  foliate / reader, thumbhash
+     63.9 raw    17.2 br  [lazy] _nuxt/D9Kqbe5q.js  thumbhash
+     94.4 raw    15.9 br  [lazy] _nuxt/BJDnPcHj.js  zxing-wasm, foliate / reader
+     51.0 raw    13.3 br  [lazy] _nuxt/BkpIUY_z.js  
+     34.8 raw    12.1 br  [lazy] _nuxt/jMpjTGwk.js  
+     35.7 raw    11.3 br  [lazy] _nuxt/zxing.BCC-bIKO.js  zxing-wasm
+     52.7 raw     9.4 br  [entry] _nuxt/entry.UOPwtION.css  
+     32.5 raw     9.1 br  [lazy] _nuxt/D0FuntN8.js  thumbhash
+     21.5 raw     7.2 br  [lazy] _nuxt/8lpad5do.js  
+     24.3 raw     6.7 br  [lazy] _nuxt/B17airhx.js  thumbhash
+     20.3 raw     6.7 br  [lazy] _nuxt/B6S7N4W2.js  foliate / reader
+     20.6 raw     6.2 br  [lazy] _nuxt/Bcpv8xJC.js  foliate / reader
+     18.7 raw     5.4 br  [lazy] _nuxt/DBjUYAWm.js  thumbhash
+
+## Service worker precache: 230 entries, raw  2077.4 KB, as downloaded (brotli, fonts and icons raw)   770.5 KB
+  js      143 files  raw  1746.0 KB  download   535.6 KB
+  css      55 files  raw   123.7 KB  download    29.4 KB
+  font     10 files  raw   163.2 KB  download   163.2 KB
+  icon      4 files  raw    42.9 KB  download    41.7 KB
+  other     3 files  raw     1.5 KB  download     0.6 KB
+
+## HTML: 17 files, 3231, 10, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231, 3231 bytes each
+## Messages chunk: _nuxt/AvAfgI_h.js raw   136.6 KB brotli    40.3 KB [entry]
+
+(font file list omitted: hashed names trip the secret scanner; totals are in docs/perf/bundle.md section 1)

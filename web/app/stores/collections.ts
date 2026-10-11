@@ -4,6 +4,7 @@ import {
   createCollections,
   isValidName,
   MOSAIC_SIZE,
+  sortByEdited,
   type Collection,
   type CollectionErrorCode,
   type Collections,
@@ -12,6 +13,7 @@ import {
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import { readCollections, saveCollections } from '~/data/deviceLibrary'
 import type { LibraryEntry } from '~/data/library'
+import { createFreshness } from '~/utils/fresh'
 import { useLibraryStore } from '~/stores/library'
 import { useSearchStore } from '~/stores/search'
 import { useSessionStore } from '~/stores/session'
@@ -35,7 +37,9 @@ export type Naming = { mode: 'create' } | { mode: 'rename'; id: string }
  * Collections), one Collection's page, which Collections a Book is on (the book
  * page), the collection picker and the name sheet. Every change goes through
  * the repository as one call and shows at once; the list refreshes behind it.
- * Signing out (or another member signing in) forgets all of it.
+ * The Library tab asks for the list when it is shown, but not again within `FRESH_MS` of the
+ * last answer (`loadList({ ifStale })`, utils/fresh.ts), and every change made here forgets
+ * that at once, so the next visit reads what the database has. Signing out (or another member signing in) forgets all of it.
  *
  * The device keeps a copy of the list, the Collections opened here and the
  * memberships it knows (data/deviceLibrary.ts, issue #15), written whenever
@@ -72,9 +76,20 @@ export const useCollectionsStore = defineStore('collections', () => {
   const loadError = ref<CollectionErrorCode | null>(null)
 
   let listing: Promise<void> | null = null
+  const freshness = createFreshness()
 
-  /** Reads the list (again). Asking while a read is on its way waits for that one. */
-  function loadList(): Promise<void> {
+  /**
+   * Reads the list (again). `ifStale`: the Library tab being shown, which a list this fresh stands for;
+   * anything else asks. Asking while a read is on its way waits for that one, which then reads once
+   * more if the ask was a change (`readList`).
+   */
+  function loadList({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
+    if (ifStale) {
+      if (listing) return listing
+      if (loaded.value && !loadError.value && freshness.isFresh()) return Promise.resolve()
+    } else if (listing) {
+      freshness.invalidate()
+    }
     listing ??= readList().finally(() => (listing = null))
     return listing
   }
@@ -85,20 +100,35 @@ export const useCollectionsStore = defineStore('collections', () => {
     // Offline the device's copy stands (with none, it is asked and fails visibly).
     if ((!isOnline() || waiting()) && loaded.value) return
     const member = session.member?.id
+    const ticket = freshness.ask()
     const result = await collections.list()
     if (member !== session.member?.id) return
+    // A change was made meanwhile (or asked for again): this answer may not have it.
+    if (freshness.outdated(ticket)) return readList()
     if (result.error) {
       loadError.value = result.error
       return
     }
     loadError.value = null
-    list.value = result.data
+    list.value = sortByEdited(result.data)
     loaded.value = true
+    freshness.landed(ticket)
   }
 
-  /** The list entry, kept in step with a change made here. */
-  function patchSummary(id: string, change: (summary: CollectionSummary) => CollectionSummary) {
-    list.value = list.value.map((summary) => (summary.id === id ? change(summary) : summary))
+  /**
+   * The list entry, kept in step with a change made here. An `edited` one (a rename, a Book put on it, taken
+   * off it or moved: what the database bumps `updated_at` for) is stamped now and goes to the top at once,
+   * online or not; the screens that are being looked at hold their order meanwhile (`useEditedOrder`).
+   */
+  function patchSummary(id: string, change: (summary: CollectionSummary) => CollectionSummary, edited = true) {
+    freshness.invalidate()
+    const stamp = new Date().toISOString()
+    const next = list.value.map((summary) => {
+      if (summary.id !== id) return summary
+      const changed = change(summary)
+      return edited ? { ...changed, updatedAt: stamp } : changed
+    })
+    list.value = edited ? sortByEdited(next) : next
   }
 
   // -------------------------------------------------------------- one page
@@ -118,7 +148,7 @@ export const useCollectionsStore = defineStore('collections', () => {
       const known = list.value.find((summary) => summary.id === id)
       pages.set(id, {
         phase: 'loading',
-        collection: known ? { id, name: known.name, position: known.position, createdAt: known.createdAt, entries: [] } : null,
+        collection: known ? { id, name: known.name, position: known.position, createdAt: known.createdAt, updatedAt: known.updatedAt, entries: [] } : null,
       })
     }
     const member = session.member?.id
@@ -132,10 +162,12 @@ export const useCollectionsStore = defineStore('collections', () => {
     pages.set(id, result.data ? { phase: 'ready', collection: result.data } : { phase: 'missing', collection: null })
   }
 
-  function setEntries(id: string, entries: LibraryEntry[]) {
+  /** `edited`: the Collection's Books changed (put on, taken off, moved), not just one of them (a new edition). */
+  function setEntries(id: string, entries: LibraryEntry[], edited = true) {
+    freshness.invalidate()
     const current = pages.get(id)
     if (current?.collection) pages.set(id, { ...current, collection: { ...current.collection, entries } })
-    patchSummary(id, (summary) => ({ ...summary, count: entries.length, covers: entries.slice(0, MOSAIC_SIZE).map((e) => e.book) }))
+    patchSummary(id, (summary) => ({ ...summary, count: entries.length, covers: entries.slice(0, MOSAIC_SIZE).map((e) => e.book) }), edited)
   }
 
   // ------------------------------------------------------------- memberships
@@ -165,7 +197,8 @@ export const useCollectionsStore = defineStore('collections', () => {
     if (!isValidName(name)) return { data: null, error: 'name_invalid' }
     const result = await collections.create(name)
     if (result.error) return result
-    list.value = [...list.value.filter((summary) => summary.id !== result.data.id), result.data]
+    freshness.invalidate()
+    list.value = sortByEdited([...list.value.filter((summary) => summary.id !== result.data.id), result.data])
     loaded.value = true
     return result
   }
@@ -188,6 +221,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     const result = await collections.delete(id)
     // Gone already (another device) is as good as deleted.
     if (result.error && result.error !== 'collection_missing') return result.error
+    freshness.invalidate()
     list.value = list.value.filter((summary) => summary.id !== id)
     pages.delete(id)
     for (const [entry, ids] of memberships) memberships.set(entry, ids.filter((other) => other !== id))
@@ -255,7 +289,8 @@ export const useCollectionsStore = defineStore('collections', () => {
   function entryChanged(entry: LibraryEntry) {
     for (const [id, shown] of pages) {
       const entries = shown.collection?.entries ?? []
-      if (entries.some((e) => e.id === entry.id)) setEntries(id, entries.map((e) => (e.id === entry.id ? entry : e)))
+      // Another edition of a Book on it: the cover changes, the Collection was not edited.
+      if (entries.some((e) => e.id === entry.id)) setEntries(id, entries.map((e) => (e.id === entry.id ? entry : e)), false)
     }
     if (loaded.value) void loadList()
   }
@@ -268,7 +303,11 @@ export const useCollectionsStore = defineStore('collections', () => {
     memberships.set(entryId, (memberships.get(entryId) ?? []).filter((other) => other !== id))
     const current = pages.get(id)
     if (current?.collection) setEntries(id, current.collection.entries.filter((e) => e.id !== entryId))
-    else void loadList()
+    else {
+      // Not opened here: its list entry still counts the Book, and it was edited.
+      patchSummary(id, (summary) => ({ ...summary, count: Math.max(0, summary.count - 1) }))
+      void loadList()
+    }
     return null
   }
 
@@ -443,7 +482,8 @@ export const useCollectionsStore = defineStore('collections', () => {
     if (!import.meta.client || !member || loaded.value) return
     const saved = readCollections(window.localStorage, member)
     if (!saved) return
-    list.value = saved.list
+    // A copy from before Collections were listed by last edited has no time of its own: made is the best it has.
+    list.value = sortByEdited(saved.list.map((summary) => ({ ...summary, updatedAt: summary.updatedAt ?? summary.createdAt })))
     for (const collection of saved.collections) pages.set(collection.id, { phase: 'ready', collection })
     for (const [entry, ids] of Object.entries(saved.memberships)) memberships.set(entry, ids)
     loaded.value = true
@@ -469,6 +509,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   // ------------------------------------------------------------------- reset
 
   function reset() {
+    freshness.invalidate()
     list.value = []
     loaded.value = false
     loadError.value = null

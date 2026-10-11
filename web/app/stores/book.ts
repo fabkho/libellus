@@ -112,6 +112,8 @@ export const useBookStore = defineStore('book', () => {
         // What the database says now (a finish on another device, say) replaces
         // what this device knew, unless this device changed the entry since.
         if (resolved.entry) library.remember(resolved.entry, { keys: [key], asked })
+        // The lists carry no description: the page's own read is where the device learns it, for the offline page.
+        if (resolved.entry && resolved.book && 'id' in resolved.book) library.rememberDescription(resolved.book.id, resolved.book.description)
       })
       .finally(() => {
         // A failure is asked again at once (Retry); an answer stands for a moment.

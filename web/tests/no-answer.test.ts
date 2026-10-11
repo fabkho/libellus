@@ -174,6 +174,7 @@ function lent(known: LibraryEntry) {
   const added: QueuedWrite[] = []
   const collection = { id: 'c1', name: 'Favourites', position: 0, createdAt: '', count: 0, covers: [] } as CollectionSummary
   const queue: WriteQueue = {
+    open: () => true,
     holds: () => false,
     entry: (id) => (id === known.id ? known : null),
     entryForBook: (bookId) => (bookId === known.book.id ? known : null),

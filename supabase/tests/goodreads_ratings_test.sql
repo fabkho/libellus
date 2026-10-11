@@ -9,7 +9,7 @@
 -- table holds.
 
 begin;
-select plan(22);
+select plan(23);
 
 create schema if not exists tests;
 
@@ -80,6 +80,11 @@ select throws_ok(
 select throws_ok(
   $$ insert into public.goodreads_ratings (isbn13, status) values ('9781111111113', 'error') $$,
   '23514', null, 'a failure is never stored');
+-- Security round F2: a rating a title search found is never stored under an ISBN a caller named.
+select throws_ok(
+  $$ insert into public.goodreads_ratings (isbn13, status, matched_by, goodreads_id, rating, ratings_count)
+     values ('9781111111113', 'found', 'title', '234225', 4.28, 1200000) $$,
+  '23514', null, 'a rating found by title is refused under an ISBN');
 
 -- ----------------------------------------------------------- a Book's rating
 
@@ -135,9 +140,9 @@ set local role service_role;
 
 select lives_ok(
   $$ insert into public.goodreads_ratings (isbn13, status, matched_by, goodreads_id, rating, ratings_count, reviews_count)
-     values ('9798991234580', 'found', 'title', '32109569', 4.24, 146833, null)
+     values ('9798991234580', 'found', 'isbn', '32109569', 4.24, 146833, null)
      on conflict (isbn13) do update set status = excluded.status $$,
-  'the service role stores a rating found by title, without a review count');
+  'the service role stores a rating found by ISBN');
 select lives_ok(
   $$ update public.goodreads_ratings
         set status = 'found', matched_by = 'isbn', goodreads_id = '1', rating = 3, ratings_count = 2,

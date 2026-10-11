@@ -146,12 +146,12 @@ begin
 end;
 $$;
 
+-- search_books matches against the stored words (20261020020000_search_books_index.sql).
 set local enable_seqscan = off;
 select ok(
-  tests.plan($q$ select 1 from public.books
-                  where to_tsvector('simple'::regconfig, public.book_search_text(title, authors))
-                        @@ public.book_search_query('zopfel') $q$) ~ 'books_search',
-  'the search''s words can be found through the books_search index');
+  tests.plan($q$ select 1 from private.book_search
+                  where words @@ public.book_search_query('zopfel') $q$) ~ 'book_search_words',
+  'the search''s words can be found through the book_search_words index');
 
 select * from finish();
 rollback;

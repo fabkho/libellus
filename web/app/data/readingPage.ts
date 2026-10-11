@@ -40,6 +40,8 @@ export type PublicBook = {
   coverUrl: string | null
   coverThumbhash: string | null
   coverColors: CoverColors | null
+  /** One the server check could not confirm: no title, authors or cover (utils/unverifiedBook.ts). */
+  unverified: boolean
 }
 
 /** This year's figures: counts only, no Books (stats.ts' YearFigures, as far as the page shows them). */
@@ -68,7 +70,8 @@ export type PublicReadingPage = {
   reading?: { book: PublicBook; startedOn: string | null }[]
   year?: PublicYear
   favourites?: { book: PublicBook; rating: number }[]
-  finished?: { book: PublicBook; endedOn: string | null; rating: number | null; review: string | null }[]
+  /** `spoilers`/`folded` (social v2a): the review is flagged, and the visitor may not read it yet (a visitor without a sign-in never may): it is folded behind *Show anyway*. */
+  finished?: { book: PublicBook; endedOn: string | null; rating: number | null; review: string | null; spoilers: boolean; folded: boolean }[]
   shelf?: PublicShelf
 }
 
@@ -80,6 +83,8 @@ export type PublicBookCard = {
   endedOn: string | null
   rating: number | null
   review: string | null
+  spoilers: boolean
+  folded: boolean
 }
 
 /** A Book she shared as a card; `review`: her review goes with it. */
@@ -145,13 +150,14 @@ type SettingsRow = {
 
 type PublicBookRow = {
   id: string
-  title: string
+  title: string | null
   authors: string[] | null
   published_year: number | null
   cover_url: string | null
   cover_thumbhash: string | null
   cover_dominant: string | null
   cover_secondary: string | null
+  unverified?: boolean | null
 }
 
 type PublicPageRow = {
@@ -171,7 +177,7 @@ type PublicPageRow = {
     months: number[]
   }
   favourites?: { book: PublicBookRow; rating: number }[]
-  finished?: { book: PublicBookRow; ended_on: string | null; rating: number | null; review: string | null }[]
+  finished?: { book: PublicBookRow; ended_on: string | null; rating: number | null; review: string | null; spoilers?: boolean | null; folded?: boolean | null }[]
   shelf?: { kind: 'regal' } | { kind: 'covers'; books: PublicBookRow[] }
 }
 
@@ -182,6 +188,8 @@ type PublicCardRow = {
   ended_on: string | null
   rating: number | null
   review: string | null
+  spoilers?: boolean | null
+  folded?: boolean | null
 }
 
 /** Every section on: what a page starts with (the table's defaults). */
@@ -204,12 +212,13 @@ export function settingsFromRow(row: SettingsRow | null): ReadingPageSettings {
 export function publicBookFromRow(row: PublicBookRow): PublicBook {
   return {
     id: row.id,
-    title: row.title,
+    title: row.title ?? '',
     authors: row.authors ?? [],
-    year: row.published_year,
+    year: row.published_year ?? null,
     coverUrl: row.cover_url,
     coverThumbhash: row.cover_thumbhash,
     coverColors: row.cover_dominant && row.cover_secondary ? { dominant: row.cover_dominant, secondary: row.cover_secondary } : null,
+    unverified: Boolean(row.unverified),
   }
 }
 
@@ -233,14 +242,30 @@ export function publicPageFromRow(row: PublicPageRow): PublicReadingPage {
   }
   if (row.favourites) page.favourites = row.favourites.map((f) => ({ book: publicBookFromRow(f.book), rating: f.rating }))
   if (row.finished) {
-    page.finished = row.finished.map((f) => ({ book: publicBookFromRow(f.book), endedOn: f.ended_on, rating: f.rating, review: f.review }))
+    page.finished = row.finished.map((f) => ({
+      book: publicBookFromRow(f.book),
+      endedOn: f.ended_on,
+      rating: f.rating,
+      review: f.review,
+      spoilers: Boolean(f.spoilers),
+      folded: Boolean(f.folded),
+    }))
   }
   if (row.shelf) page.shelf = row.shelf.kind === 'regal' ? { kind: 'regal' } : { kind: 'covers', books: row.shelf.books.map(publicBookFromRow) }
   return page
 }
 
 export function publicCardFromRow(row: PublicCardRow): PublicBookCard {
-  return { name: row.name, book: publicBookFromRow(row.book), status: row.status, endedOn: row.ended_on, rating: row.rating, review: row.review }
+  return {
+    name: row.name,
+    book: publicBookFromRow(row.book),
+    status: row.status,
+    endedOn: row.ended_on,
+    rating: row.rating,
+    review: row.review,
+    spoilers: Boolean(row.spoilers),
+    folded: Boolean(row.folded),
+  }
 }
 
 // ------------------------------------------------------------- the repository

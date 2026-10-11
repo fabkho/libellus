@@ -1,14 +1,16 @@
-import { parseLibraryFile, type LibraryBook } from './export/regalLibraryFile'
+import { parseLibraryFile, type LibraryBook, type RegalLibraryFile } from './export/regalLibraryFile'
 
 /**
- * Your shelf (#23): the owner's Library as the portfolio shows it, read from
- * the published Regal library file (`books.fabkho.dev/v2/library.json`, made
- * from this app's data by `export:regal` and Regal assets). Regal's own
+ * Your shelf (#23): a member's Library as Regal's library document. Everyone's
+ * is built on the device from her own Library (data/memberShelf.ts); the
+ * owner's is the published Regal library file the portfolio shows
+ * (`books.fabkho.dev/v2/library.json`, made from this app's data by
+ * `export:regal` and Regal assets), read here (`createShelf`). Regal's own
  * components draw it in 3D; this is what the app needs before they have
  * loaded and without them: how many Books, which were read in a year, and the
  * colours of their Spines for the pile that stands in while the 3D comes.
  *
- * Who may see it is `utils/shelfOwner.ts`.
+ * Whose shelf is which is `stores/shelf.ts` (`utils/shelfOwner.ts` names the owner).
  *
  * Framework-free: the fetch is handed in, like search's.
  */
@@ -20,7 +22,7 @@ export type ShelfBook = {
   authors: string[]
   /** `YYYY-MM-DD`, the last time it was finished; null when the file doesn't say. */
   dateRead: string | null
-  /** The Spine's colour (`#rrggbb`): its art's average, else its palette's background; null without either. */
+  /** The Spine's colour (`#rrggbb`): the Book's one colour, else its art's average, else its palette's background; null without any. */
   spine: string | null
   /** Page count, which sets a Book's thickness on the shelf; null when unknown. */
   pages: number | null
@@ -44,7 +46,7 @@ function shelfBookOf(book: LibraryBook): ShelfBook {
     title: book.title,
     authors: book.authors,
     dateRead: book.dateRead ?? null,
-    spine: book.assets?.spineColor ?? book.assets?.palette?.background ?? null,
+    spine: book.assets?.color ?? book.assets?.spineColor ?? book.assets?.palette?.background ?? null,
     pages: book.pages ?? null,
   }
 }
@@ -61,10 +63,12 @@ function byDateRead(a: ShelfBook, b: ShelfBook): number {
 export function readShelf(text: string): ShelfResult {
   const parsed = parseLibraryFile(text)
   if (!parsed.ok) return { data: null, error: 'invalid' }
-  return {
-    data: { books: parsed.library.books.map(shelfBookOf).sort(byDateRead), generatedAt: parsed.library.generatedAt },
-    error: null,
-  }
+  return { data: shelfOf(parsed.library), error: null }
+}
+
+/** A library document (a member's, built on the device; or a published file, read) as the shelf the app shows. */
+export function shelfOf(library: RegalLibraryFile): Shelf {
+  return { books: library.books.map(shelfBookOf).sort(byDateRead), generatedAt: library.generatedAt }
 }
 
 /**

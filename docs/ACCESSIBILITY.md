@@ -1,6 +1,6 @@
 # Accessibility
 
-BetterReads aims at WCAG 2.2 AA on the web app, in both themes, on a phone first. This file is what was
+Libellus aims at WCAG 2.2 AA on the web app, in both themes, on a phone first. This file is what was
 checked, the rules the code follows, how to check a change, and what is still missing. The design's
 side of it (tokens, focus, motion) is in [DESIGN.md](DESIGN.md) and [MOTION.md](MOTION.md).
 
@@ -18,10 +18,12 @@ the tab bar that steps away.
 How:
 
 - **axe-core** (WCAG 2.2 A/AA and best practices) through Playwright on every one of those screens
-  and sheets, both themes. Now a flow: `web/e2e/a11y.spec.ts` (and the shelf's in
-  `web/e2e/shelf.spec.ts`; the public reading page, its Book cards, a dead link, the Share sheet and
-  the Book's Share sheet (#171) in `web/e2e/reading-page.spec.ts`, with the waitlist form in its states; the
-  owner's Waitlist in `web/e2e/owner-errors.spec.ts`).
+  and sheets, both themes, when they were audited. Now a flow in **one theme, dark**, for the screens on
+  the critical paths (docs/TESTING.md, "Which flows"): `web/e2e/a11y.spec.ts`; the public reading page, its
+  Book cards, a dead link, the Share sheet and the Book's Share sheet (#171) in
+  `web/e2e/reading-page.spec.ts`, with the waitlist form in its states.
+  The privacy notice (and the imprint, once it is on: `/privacy`, `/imprint`), in English and German, in both themes, in
+  `web/e2e/legal.spec.ts`; each text carries its own `lang`, so a screen reader reads the German in German.
 - **The accessibility tree**: Playwright's ARIA snapshot of each screen, and on the Android emulator
   (`libellus-pixel`, Chrome) the node tree TalkBack reads (`uiautomator dump` with TalkBack on), through
   the core loop: search → Book → Add → Start → Update progress (the wheel) → Finish with a rating →
@@ -48,7 +50,16 @@ How:
   TalkBack turns with a swipe up or down. A drawn rating is `role="img"` named "3.75 of 5 stars".
 - A cover is named by its title only where it stands alone (Want to read's row, a year's months);
   wherever the title is written beside it the cover is `decorative` (UiCover), so nothing is read
-  twice.
+  twice. In the social screens (feed, Home's friends, a member's finished Books) that is one link per
+  Book: the cover's link is `aria-hidden` and out of the tab order, the title is the Book's link. A member's row
+  that opens a sheet (Home's friends rows, the feed's batch rows) has one button for the row, named by its sentence
+  ("Ida: started Piranesi, 2 days ago"; the fan is `aria-hidden`), stretched over the row (`stretched`, main.css);
+  her avatar and her name are separate, above it: the name is the link to her page, the avatar's link is
+  `aria-hidden` and out of the tab order (a pointer's second way to the same place), so nothing is nested and her
+  page has one link per row. The focus ring is drawn on the stretched box. A row of one openable read is that Book's
+  link instead.
+- A follow request's buttons say whose it is (`Accept {name}`, `Decline {name}`, `Unblock {name}`), and the
+  lamp dot on the header's avatar is `aria-hidden` (the avatar's label says a request waits).
 - Text drawn in pieces (dots between facts, a count beside a year, a month's count) is given to
   assistive tech as one phrase: an `aria-label` on the heading or group, or a visually hidden string
   with the drawn pieces hidden.
@@ -107,12 +118,12 @@ shimmer stops, the tab bar stays.
   you go, violations by impact, click one to highlight the elements; also logged to the console) and
   **Nuxt Hints** (`@nuxt/hints`, web vitals, third-party scripts, an HTML check). Open the DevTools
   (Shift + Option + D) and their tabs.
-- **The flow**: `cd web && pnpm exec playwright test e2e/a11y.spec.ts` (and, with Regal,
-  `LIBELLUS_REGAL=1 REGAL_LAYER=… pnpm exec playwright test e2e/shelf.spec.ts`). It fails on any
-  serious or critical axe violation and prints the moderate and minor ones. A new screen or sheet
-  gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), in both themes;
-  the reader's, in its three rooms, is `e2e/a11y-reader.spec.ts` (Chromium).
-  A violation that cannot be fixed in BetterReads goes in `ALLOWED` in `e2e/support.ts` with its reason
+- **The flow**: `cd web && pnpm exec playwright test e2e/a11y.spec.ts`. It fails on any
+  serious or critical axe violation and prints the moderate and minor ones. A new screen or sheet on a
+  critical path gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), in the
+  dark theme only: its colours come from the tokens whose contrast is checked in both themes (the table
+  under "Contrast"). The reader is not on a critical path and has no scan; its rooms' colours are in the table.
+  A violation that cannot be fixed in Libellus goes in `ALLOWED` in `e2e/support.ts` with its reason
   — never a rule switched off for a whole page.
 - **The keyboard and the screen reader** are not covered by axe: the second flow in `a11y.spec.ts`
   checks the segments, a sheet's focus and the progress card. For TalkBack, see docs/TESTING.md
@@ -123,10 +134,22 @@ shimmer stops, the tab bar stays.
 
 ## Known gaps
 
+- **The icon column on a friend's Book row** (social v2a: *Want to read* and the heart, `icon-action` in `main.css`,
+  `RowActions`): the owner chose a narrow column at the row's right edge, centred on the cover, over text-sized
+  controls on the line (which could not have a 44 px box without covering the title or the stars). Each icon is drawn at
+  24 × 24 px (`--size-target`, WCAG 2.2 AA 2.5.8) with a touch box (`--size-touch`, the app's own 44 px rule) centred
+  on it sideways. The two icons are a close pair, 4 px apart (the drawn heart is 18 px), and their boxes split at the midpoint
+  between them and reach outward, the bookmark's up and the heart's down, so they never overlap each other; each is
+  44 px wide and, with room (Home's card, the feed; a heart alone in the Readers rows is centred), 44 px tall. On a member's Recently finished row, whose cover is small (`sm`, 60 px tall) and whose height the column must not
+  grow, the boxes stop at the row's own edge (the 8 px padding above and below it), so they are 38 px tall (44 px wide):
+  the boxes of two rows meet at the border and never overlap, and a tap near a title or the stars is not theirs. The
+  name is hidden text (the icon is drawn), and the heart keeps one constant name with `aria-pressed`. Busy and Offline
+  are `aria-disabled`, not `disabled`, so focus stays; the focus ring is the app's (2 px `accentInk`). The heart's count
+  hangs right under the icon, inside its box where the box is tall enough, and is part of the heart's name.
 - **Regal's row and Stack** (the owner's shelf) are accessible since fabkho/regal#79: the row's
   scroller is a `region`, both render their own hidden Book list (`accessible-list`, one button for
   each Book), a Book taken out is a `role="dialog"` (modal when the row breaks out; named "{title}
-  details" because BetterReads' `BookSheet` fills its `#detail` slot) and stars are read as text.
+  details" because Libellus' `BookSheet` fills its `#detail` slot) and stars are read as text.
   What is left of Regal's DOM: a Book taken out is a card moved to `<body>`, outside any landmark
   (axe `region`, moderate), and the row's cover-flip is Regal's own.
 - **The reading page** (#171) is read by strangers, signed out, often in a messenger's in-app
@@ -138,9 +161,10 @@ shimmer stops, the tab bar stays.
   under the field (`aria-invalid` and `aria-describedby`), a refusal as `role=alert`, "You're on the list"
   as a polite status that takes the form's place, and a honeypot field hidden from assistive tech and out
   of the tab order. The owner's Waitlist page names every trash button with the address it deletes and
-  asks before deleting (`web/e2e/owner-errors.spec.ts`, both themes).
-- **The reader** (#131) is scanned in its three rooms (`e2e/a11y-reader.spec.ts`: the page and its
-  chrome, Aa, Contents, search, the selection's bubble, Translate and Define) in the printed style;
+  asks before deleting.
+- **The reader** (#131) was scanned in its three rooms (the page and its
+  chrome, Aa, Contents, search, the selection's bubble, Translate and Define) in the printed style,
+  once by hand and by a flow since removed (docs/TESTING.md, "Which flows");
   the Classic style's bars and the scroll style's use the same tokens and are not scanned apart.
   Not done by hand: VoiceOver or TalkBack through a book (the page text is the book's own markup,
   inside a frame).
@@ -148,7 +172,7 @@ shimmer stops, the tab bar stays.
   the core loop, but gestures injected through adb are not taken as TalkBack gestures, so swiping
   through a screen and turning the wheel with TalkBack were not done by a person. Worth one manual
   pass on a phone; VoiceOver on iOS was not tried.
-- **Text at 200 %** (the rule is in DESIGN.md, Text size; held by `e2e/large-text.spec.ts`): the
+- **Text at 200 %** (the rule is in DESIGN.md, Text size; checked by hand, no flow): the
   Profile's figures scale down to fit their cell, and a Book's title in a row takes a second line from
   117 % text on a 412 px phone. Authors and meta lines are still cut with an ellipsis (a design choice:
   one line each; the full text is in the accessible name), and so are a sheet's title between Cancel

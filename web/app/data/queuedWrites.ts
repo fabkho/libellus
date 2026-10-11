@@ -1,4 +1,4 @@
-import type { Book } from './books'
+import { sourceKeys, type Book } from './books'
 import type { CollectionSummary } from './collections'
 import { sortEntries, type EntryStatus, type LibraryEntry, type LibraryErrorCode, type ReadingSession } from './library'
 
@@ -33,6 +33,8 @@ export const QUEUED_ACTIONS = [
   'update_progress',
   'update_session',
   'remove_from_library',
+  // Hide a Book from her followers (social v1): one flag on her own entry.
+  'set_entry_hidden',
   'add_to_collection',
   'remove_from_collection',
   'reorder_collection',
@@ -79,8 +81,18 @@ export type QueuedWrite = {
    * behind it are rewritten to them (`outbox.ts`).
    */
   creates?: { entry_id?: string; session_id?: string }
-  /** The Book an add puts in the Library (the device shows it; the call sends its snapshot). */
+  /**
+   * The Book an add puts in the Library (the device shows it; the call sends its snapshot). A
+   * search result that is not in the Catalogue yet is shown as a Book whose `id` is its page key
+   * (`bookKey`: `apple-…`, `ol-…`, `isbn-…`), so every link to it opens its page until the
+   * database answers with the Catalogue's own id.
+   */
   book?: Book
+  /**
+   * An add whose snapshot still has to get its Cover (a search result, optimistic): the outbox
+   * resolves it just before the send (`createOutbox`, `prepare`), so the tap never waits for it.
+   */
+  coverPending?: boolean
 }
 
 /**
@@ -88,6 +100,8 @@ export type QueuedWrite = {
  * whether writes wait now, the device's copy to answer from, and the line itself.
  */
 export type WriteQueue = {
+  /** Whether there is a line to write into (somebody is signed in): an optimistic write needs one, even while nothing waits. */
+  open: () => boolean
   /** Whether a write waits now: offline, or while earlier ones still wait (so they keep their order). */
   holds: () => boolean
   /** One of the member's entries, as the device shows it now. */
@@ -124,6 +138,8 @@ const text = (value: unknown): string | null => (typeof value === 'string' ? val
 const number = (value: unknown): number | null => (typeof value === 'number' ? value : null)
 /** Trimmed; blank is none (as the database stores a review or a reason). */
 const trimmed = (value: unknown): string | null => text(value)?.trim() || null
+/** The spoiler flag of a write's arguments: set, and with a review (as the database stores it). */
+const spoilers = (args: Record<string, unknown>): boolean => args.p_review_spoilers === true && trimmed(args.p_review) !== null
 
 function newSession(id: string, createdAt: string, fields: Partial<ReadingSession> = {}): ReadingSession {
   return {
@@ -133,6 +149,7 @@ function newSession(id: string, createdAt: string, fields: Partial<ReadingSessio
     outcome: null,
     rating: null,
     review: null,
+    reviewSpoilers: false,
     abandonReason: null,
     progressPage: null,
     progressPercent: null,
@@ -155,6 +172,7 @@ export function editedSession(session: ReadingSession, args: Record<string, unkn
     endedOn: session.outcome ? text(args.p_ended_on) : null,
     rating: session.outcome === 'finished' ? number(args.p_rating) : session.rating,
     review: session.outcome === 'finished' ? trimmed(args.p_review) : session.review,
+    reviewSpoilers: session.outcome === 'finished' ? spoilers(args) : Boolean(session.reviewSpoilers),
     abandonReason: session.outcome === 'abandoned' ? trimmed(args.p_abandon_reason) : session.abandonReason,
   }
 }
@@ -183,9 +201,10 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
               outcome: 'finished',
               rating: number(args.p_rating),
               review: trimmed(args.p_review),
+              reviewSpoilers: spoilers(args),
             })
           : null
-    return { id: write.creates.entry_id, status, addedAt: queuedAt, book: write.book, pageCountOverride: null, readAs: null, latestSession }
+    return { id: write.creates.entry_id, status, addedAt: queuedAt, book: write.book, pageCountOverride: null, readAs: null, hidden: false, latestSession }
   }
   if (!entry) return 'entry_not_found'
 
@@ -206,7 +225,7 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
       if (endedOn && session.startedOn && endedOn < session.startedOn) return 'ended_before_started'
       const closed: ReadingSession =
         write.action === 'finish_reading'
-          ? { ...session, endedOn, outcome: 'finished', rating: number(args.p_rating), review: trimmed(args.p_review) }
+          ? { ...session, endedOn, outcome: 'finished', rating: number(args.p_rating), review: trimmed(args.p_review), reviewSpoilers: spoilers(args) }
           : { ...session, endedOn, outcome: 'abandoned', abandonReason: trimmed(args.p_reason) }
       return { ...entry, status: 'finished', latestSession: closed }
     }
@@ -243,9 +262,22 @@ export function applyWrite(entry: LibraryEntry | null, write: QueuedWrite): Libr
     }
     case 'remove_from_library':
       return null
+    case 'set_entry_hidden':
+      // A null leaves it as it is (the database's `coalesce`).
+      return { ...entry, hidden: typeof args.p_hidden === 'boolean' ? args.p_hidden : (entry.hidden ?? false) }
     default:
       return entry
   }
+}
+
+/**
+ * Whether the entry is for the Book an add names: the same Catalogue id, or (a search result
+ * added before the database answered is a Book under its page key) one of the source ids
+ * and the ISBN the entry's Book carries, so a read that already has the added entry does not get it twice.
+ */
+export function holdsBook(entry: LibraryEntry, book: Book | undefined): boolean {
+  if (!book) return false
+  return entry.book.id === book.id || sourceKeys(entry.book).includes(book.id)
 }
 
 /**
@@ -265,7 +297,7 @@ export function applyWrites(
     if (!write.entryId) continue
     const before =
       write.action === 'add_to_library'
-        ? ([...entries.values()].find((entry) => entry.book.id === write.book?.id) ?? null)
+        ? ([...entries.values()].find((entry) => holdsBook(entry, write.book)) ?? null)
         : (entries.get(write.entryId) ?? null)
     const after = applyWrite(before, write)
     if (typeof after === 'string') continue

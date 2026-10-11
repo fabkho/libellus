@@ -42,7 +42,7 @@ export const stack = {
 
 /**
  * The stack's service-role key, asked for only by the fixtures that need what
- * no member can do (a member with a given id: the shelf's owner, e2e/shelf.spec.ts).
+ * no member can do (a member with a given id: the shelf's owner).
  */
 export const serviceRoleKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY ?? localStackValue('SERVICE_ROLE_KEY')
 
@@ -91,6 +91,15 @@ export function uniqueAppleId(): string {
 }
 
 /**
+ * An Open Library edition key of an edition no real Book has, unique per call. `OL[1-9][0-9]{0,11}M`
+ * is what the books table's check and `catalogue_book_for` accept (F17), so a leading `1` keeps a
+ * random tail from spending the fixture on `book_invalid`.
+ */
+export function uniqueEditionKey(): string {
+  return `OL1${uniqueAppleId().slice(3, 11)}M`
+}
+
+/**
  * Removes this run's members (their Library entries go with them) and then the
  * test Books this run put into the Catalogue, now that no Library holds them.
  */
@@ -104,6 +113,9 @@ export async function sweepRun() {
        and not exists (select 1 from public.library_entries e where e.book_id = b.id)`,
     [TEST_PUBLISHER, `% [${runTag()}]`],
   )
+  // The authors and works a flow linked to them (#167), named with the run tag as the Books are.
+  await sql('delete from public.works where title like $1', [`% [${runTag()}]`])
+  await sql('delete from public.authors where name like $1', [`% [${runTag()}]`])
 }
 
 /**

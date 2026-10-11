@@ -26,10 +26,13 @@ const stats = useStatsStore()
 const shelf = useShelfStore()
 
 const reads = computed(() => finishedIn(stats.record?.reads ?? [], props.year))
-const shelfBooks = computed(() => (shelf.isOwner ? shelf.readIn(props.year) : []))
+// The owner's published shelf only: everyone else's sheet is the list of the year's reads (its
+// ratings, its days, each opening its book page), her shelf one tap away on the Profile.
+const ownersRow = computed(() => shelf.available && shelf.source === 'published')
+const shelfBooks = computed(() => (ownersRow.value ? shelf.readIn(props.year) : []))
 // The owner's file is on its way: neither the row nor the list yet.
-const rowPending = computed(() => shelf.isOwner && !shelf.shelf && !shelf.loadError)
-const showList = computed(() => !shelf.isOwner || (!rowPending.value && !shelfBooks.value.length))
+const rowPending = computed(() => ownersRow.value && !shelf.shelf && !shelf.loadError)
+const showList = computed(() => !ownersRow.value || (!rowPending.value && !shelfBooks.value.length))
 
 // The record is read afresh each time the sheet opens (a Finish since the
 // Profile was last open); what is there shows meanwhile. The shelf's file is a
@@ -38,7 +41,7 @@ watch(
   open,
   (isOpen) => {
     if (!isOpen) return
-    void stats.load()
+    void stats.load({ ifStale: true })
     void shelf.load()
   },
   { immediate: true },

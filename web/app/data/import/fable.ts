@@ -1,6 +1,7 @@
 import type { BookSnapshot } from '../books'
 import type { EntryStatus, SessionOutcome } from '../library'
 import { plainText } from '../search'
+import { splitRatingReview } from './rows'
 import {
   applyOverrides,
   isbnLanguage,
@@ -180,12 +181,16 @@ function readOf(record: CorrectedBook, report: ImportReport): ImportSession | nu
     report.unmapped.push({ id: record.id, title: record.title, reason: `ended ${endedOn} before it started ${startedOn}; start date left out` })
     startedOn = null
   }
-  const { quarters, problem } = ratingQuarters(session?.rating)
+  const rated = ratingQuarters(session?.rating)
+  const { problem } = rated
+  // A review that is only a number is a rating written as text: the rating when the record has none, not a review.
+  const split = splitRatingReview(text(session?.review), rated.quarters, [])
+  const quarters = split.rating
   if (problem) report.unmapped.push({ id: record.id, title: record.title, reason: problem })
   if (quarters !== null && outcome !== 'finished') {
     report.unmapped.push({ id: record.id, title: record.title, reason: 'a rating on a read that did not finish; left out' })
   }
-  const review = text(session?.review)
+  const review = split.review
   if (review && outcome === null) {
     report.unmapped.push({ id: record.id, title: record.title, reason: 'a review on an open read; left out' })
   }

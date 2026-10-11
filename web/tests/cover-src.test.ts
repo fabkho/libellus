@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { APPLE_BOX, coverFallbacks, coverSrc, isBlankCover, type CoverSize } from '@/utils/cover'
+import { WALL_COVERS } from '@/components/auth/wall'
+import { APPLE_BOX, COVER_WIDTH, coverFallbacks, coverSizes, coverSrc, coverSrcset, isBlankCover, type CoverSize } from '@/utils/cover'
 
 /**
  * The image a cover asks for at each size (issue #63, docs/covers.md): about
@@ -11,6 +12,7 @@ const APPLE = 'https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/
 const OPENLIBRARY = 'https://covers.openlibrary.org/b/id/8231856-L.jpg'
 /** The tokens' cover widths (`size.cover.*`, tokens.generated.css). */
 const WIDTH: Record<CoverSize, number> = { xs: 30, sm: 40, md: 72, lg: 82, xl: 140 }
+const at = (box: string) => APPLE.replace('600x900bb', `${box}bb`)
 
 describe('the image a cover asks for', () => {
   it('asks Apple for a list row at 120 × 180, not the book page’s 600 × 900', () => {
@@ -55,6 +57,38 @@ describe('the image a cover asks for', () => {
   })
 })
 
+describe('the sizes a cover offers the browser', () => {
+  it('offers Apple artwork at its neighbouring boxes up to the one the size asks for, by width', () => {
+    expect(coverSrcset(APPLE, 'md')).toBe(`${at('120x180')} 120w, ${at('240x360')} 240w`)
+    expect(coverSrcset(APPLE, 'lg')).toBe(coverSrcset(APPLE, 'md'))
+    expect(coverSrcset(coverSrc(APPLE, 'lg'), 'xl')).toBe(`${at('120x180')} 120w, ${at('240x360')} 240w, ${at('600x900')} 600w`)
+  })
+
+  it('offers the same candidates whichever size the URL was asked at', () => {
+    expect(coverSrcset(at('120x180'), 'xl')).toBe(coverSrcset(APPLE, 'xl'))
+  })
+
+  it('has no srcset where one candidate is all there is, or where a width would be a guess', () => {
+    expect(coverSrcset(APPLE, 'xs')).toBeNull() // 120w is the src itself
+    expect(coverSrcset(APPLE, 'sm')).toBeNull()
+    expect(coverSrcset(OPENLIBRARY, 'xl')).toBeNull() // 'M' and 'L' have no fixed width
+    expect(coverSrcset('https://is3-ssl.mzstatic.com/image/thumb/Publication/v4/1.jpg', 'xl')).toBeNull() // no box to vary
+    expect(coverSrcset('https://example.test/cover.png', 'xl')).toBeNull()
+    expect(coverSrcset(null, 'xl')).toBeNull()
+  })
+
+  it.each(Object.keys(WIDTH) as CoverSize[])('says %s renders at its token width', (size) => {
+    expect(COVER_WIDTH[size]).toBe(WIDTH[size])
+    expect(coverSizes(size)).toBe(`${WIDTH[size]}px`)
+  })
+
+  it('never offers a candidate wider than the box its size asks for', () => {
+    for (const size of Object.keys(WIDTH) as CoverSize[]) {
+      for (const [, width] of (coverSrcset(APPLE, size) ?? '').matchAll(/ (\d+)w/g)) expect(Number(width)).toBeLessThanOrEqual(APPLE_BOX[size][0])
+    }
+  })
+})
+
 describe('when a cover’s image fails', () => {
   it('tries OpenLibrary’s cover of the same edition by ISBN, at the same size, a 404 when it has none', () => {
     expect(coverFallbacks({ coverUrl: APPLE, isbn13: '9780593983768' }, 'sm')).toEqual([
@@ -83,5 +117,14 @@ describe('a blank stand-in', () => {
     [115, 180, false],
   ])('%i × %i is blank: %s', (width, height, blank) => {
     expect(isBlankCover(width, height)).toBe(blank)
+  })
+})
+
+describe('the sign-in wall', () => {
+  // The wall draws its covers 82 px wide (`lg`, components/auth/Frame.vue) behind a veil: it asks for
+  // 240 × 360, not the 600 × 900 its URLs carry (about 3× the bytes for nothing a phone can show).
+  it.each(WALL_COVERS.map((book) => [book.title, book.cover]))('%s is asked for at the `lg` box', (_title, cover) => {
+    expect(coverSrc(cover, 'lg')).toBe(cover.replace('600x900bb', '240x360bb'))
+    expect(coverSrc(cover, 'lg')).toMatch(/\/240x360bb\.jpg$/)
   })
 })

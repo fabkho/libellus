@@ -9,10 +9,14 @@
  * the rule is tested on its own (tests/tab-places.test.ts).
  */
 
-/** The tab pages: the places with a tab in the tab bar. */
-export const TAB_ROOTS: readonly string[] = ['/', '/library']
+/**
+ * The tab pages: the places with a tab in the tab bar. `/friends` is one only while the Friends tab is on
+ * (Profile → Friends tab, utils/friendsTab.ts); off, it is a pushed screen (`pushed` in the page's meta,
+ * set by middleware/friends-tab.global.ts), and a pushed page opens at the top and is not remembered.
+ */
+export const TAB_ROOTS: readonly string[] = ['/', '/library', '/friends']
 
-export const isTabRoot = (path: string) => TAB_ROOTS.includes(path)
+export const isTabRoot = (path: string, pushed = false) => !pushed && TAB_ROOTS.includes(path.length > 1 ? path.replace(/\/+$/, '') : path)
 
 export interface ScrollPlace {
   left: number
@@ -22,6 +26,8 @@ export interface ScrollPlace {
 export interface Arrival {
   /** The path being entered. */
   to: string
+  /** The page being entered is a pushed screen, though its path is a tab's (the Friends feed with its tab off). */
+  pushed?: boolean
   /** The page being left is in the signed-in shell (the tabs layout). */
   fromShell: boolean
   /** What the browser saved for this history entry: only on back and forward. */
@@ -32,14 +38,14 @@ export function createTabPlaces() {
   const places = new Map<string, number>()
   return {
     /** A navigation leaves `path` scrolled to `top`: a tab remembers it. */
-    leave(path: string, top: number) {
-      if (isTabRoot(path)) places.set(path, Math.max(0, top))
+    leave(path: string, top: number, pushed = false) {
+      if (isTabRoot(path, pushed)) places.set(path, Math.max(0, top))
     },
     /** Where the page being entered opens. */
-    arrive({ to, fromShell, saved }: Arrival): ScrollPlace {
+    arrive({ to, fromShell, saved, pushed = false }: Arrival): ScrollPlace {
       if (!fromShell) places.clear()
       if (saved) return saved
-      return { left: 0, top: isTabRoot(to) ? (places.get(to) ?? 0) : 0 }
+      return { left: 0, top: isTabRoot(to, pushed) ? (places.get(to) ?? 0) : 0 }
     },
   }
 }

@@ -17,7 +17,9 @@ export interface SheetRestore {
  * binds the returned `restore` to the sheet (`UiSheet`'s `restore`): the sheet
  * then opens as it was left (no rise, no scrim fading in, its list scrolled
  * where it was) rather than as a fresh one does. `testid` is the sheet whose
- * scroll is kept.
+ * scroll is kept, and which sheet the kept place belongs to: a page may have
+ * more than one (Home: the year's Books, a friends row's Books); each puts back
+ * only its own.
  */
 export function useSheetRestore<T>({ testid, sheet, reopen }: { testid: string; sheet: () => T | null; reopen: (kept: T) => void }) {
   const stats = useStatsStore()
@@ -32,13 +34,14 @@ export function useSheetRestore<T>({ testid, sheet, reopen }: { testid: string; 
 
   onBeforeRouteLeave((to) => {
     const open = sheet()
-    stats.keptSheet =
-      open !== null && to.path.startsWith('/book/') ? { page: route.fullPath, sheet: open, scroll: scrollOf() } : null
+    if (open !== null && to.path.startsWith('/book/')) stats.keptSheet = { testid, page: route.fullPath, sheet: open, scroll: scrollOf() }
+    else if (stats.keptSheet?.testid === testid) stats.keptSheet = null
   })
 
   // Mounted afresh, or shown again from the router's cache of pages: either way, once.
   function back() {
     const kept = stats.keptSheet
+    if (!kept || kept.testid !== testid) return
     stats.keptSheet = null
     // Back from the book: this page's history entry points forward to it.
     const fromBook = String(window.history.state?.forward ?? '').startsWith('/book/')

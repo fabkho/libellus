@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/"><version>1.1</version><numberOfRecords>58</numberOfRecords><records><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>[Schätzing] ; Abysses  / Frank Schätzing ; traduit de l'allemand par Danièle Darneau</dc:title>
+  <dc:creator>Schätzing, Frank [Verfasser]</dc:creator>
+  <dc:creator>Darneau, Danièle [Übersetzer]</dc:creator>
+  <dc:publisher>[Paris] : Les Presses de la Cité</dc:publisher>
+  <dc:date>2024</dc:date>
+  <dc:language>fre</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-2-266-34276-6 Broschur</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1336759526</dc:identifier>
+  <dc:subject>830 Deutsche Literatur</dc:subject>
+  <dc:subject>B Belletristik</dc:subject>
+  <dc:format>1237 Seiten</dc:format>
+  <dc:relation>http://d-nb.info/016933494</dc:relation>
+</dc></recordData><recordPosition>1</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>[Schätzing] ; Il quinto giorno : romanzo / Frank Schätzing ; traduzione di Sergio Vicini</dc:title>
+  <dc:creator>Schätzing, Frank [Verfasser]</dc:creator>
+  <dc:creator>Vicini, Sergio [Übersetzer]</dc:creator>
+  <dc:publisher>[Milano] : Nord</dc:publisher>
+  <dc:date>2024</dc:date>
+  <dc:language>ita</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-88-429-3551-3 Broschur</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1321180969</dc:identifier>
+  <dc:subject>830 Deutsche Literatur</dc:subject>
+  <dc:subject>B Belletristik</dc:subject>
+  <dc:format>1032 Seiten</dc:format>
+  <dc:relation>http://d-nb.info/1321493487</dc:relation>
+</dc></recordData><recordPosition>2</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>[Schätzing] ; Abysses / Frank Schätzing ; traduit de l'allemand par Danièle Darneau</dc:title>
+  <dc:creator>Schätzing, Frank [Verfasser]</dc:creator>
+  <dc:publisher>Paris : Les Presses de la Cité</dc:publisher>
+  <dc:date>2023</dc:date>
+  <dc:language>fre</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-2-258-20534-5 Broschur</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1292522607</dc:identifier>
+  <dc:subject>830 Deutsche Literatur</dc:subject>
+  <dc:subject>B Belletristik</dc:subject>
+  <dc:format>884 Seiten</dc:format>
+</dc></recordData><recordPosition>3</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Der Schwarm : Limitierte Hörbuch-Box mit Download-Codes ohne CD. - Ungekürzte Lesung und Hörspiel, inklusive Bonusmaterial und einem besonderen »Der Schwarm«-Briefbeschwerer für Thriller-Fans / Frank Schätzing</dc:title>
+  <dc:creator>Schätzing, Frank [Verfasser]</dc:creator>
+  <dc:creator>Zapatka, Manfred [Erzähler]</dc:creator>
+  <dc:creator>Martin, Thomas Balou [Erzähler]</dc:creator>
+  <dc:creator>Tscharre, Ulrike C. [Erzähler]</dc:creator>
+  <dc:creator>Schätzing, Frank [Erzähler]</dc:creator>
+  <dc:creator>Kaminski, Stefan [Erzähler]</dc:creator>
+  <dc:creator>Wesselburg, Loy [Regisseur]</dc:creator>
+  <dc:publisher>München : Der Hörverlag</dc:publisher>
+  <dc:date>2023</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-3-8445-4904-1 Broschur : EUR 84.03 (DE), EUR 100.00 (DE) (freier Preis), EUR 83.33 (AT), EUR 100.00 (AT) (freier Preis), CHF 130.92, CHF 141.00 (freier Preis)</dc:identifier>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">3-8445-4904-8</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1273487699</dc:identifier>
+  <dc:subject>830 Deutsche Literatur</dc:subject>
+  <dc:subject>B Belletristik</dc:subject>
+  <dc:format>44 Seiten</dc:format>
+</dc></recordData><recordPosition>4</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>[Schätzing] ; Der Schwarm : Roman / Frank Schätzing</dc:title>
+  <dc:creator>Schätzing, Frank [Verfasser]</dc:creator>
+  <dc:publisher>Köln : Kiepenheuer &amp; Witsch</dc:publisher>
+  <dc:date>2023</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-3-462-00510-3 Festeinband: EUR 50.00 (DE), EUR 51.40 (AT)</dc:identifier>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">3-462-00510-3</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1271898152</dc:identifier>
+  <dc:subject>830 Deutsche Literatur</dc:subject>
+  <dc:subject>B Belletristik</dc:subject>
+  <dc:format>1048 Seiten</dc:format>
+  <dc:relation>http://d-nb.info/1058790811</dc:relation>
+</dc></recordData><recordPosition>5</recordPosition></record><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>[Schätzing] ; Sværmen / Frank Schätzing ; på dansk ved Jan Teuber og Lene Teuber</dc:title>
+  <dc:creator>Schätzing, Frank [Verfasser]</dc:creator>
+  <dc:creator>Teuber, Jan [Übersetzer]</dc:creator>
+  <dc:creator>Teuber, Lene [Übersetzer]</dc:creator>
+  <dc:publisher>København : A Mock Book</dc:publisher>
+  <dc:date>2023</dc:date>
+  <dc:language>dan</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-87-93895-63-8 Festeinband</dc:identifier>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">87-93895-63-1</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1306297257</dc:identifier>
+  <dc:subject>830 Deutsche Literatur</dc:subject>
+  <dc:subject>B Belletristik</dc:subject>
+  <dc:format>941 Seiten</dc:format>
+</dc></recordData><recordPosition>6</recordPosition></record></records><nextRecordPosition>7</nextRecordPosition><echoedSearchRetrieveRequest><version>1.1</version><query>tit="Der Schwarm" and per="Schätzing" and (bbg=Aa* or bbg=Oa*)</query><xQuery xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"/><maximumRecords>6</maximumRecords><recordSchema>oai_dc</recordSchema></echoedSearchRetrieveRequest></searchRetrieveResponse>

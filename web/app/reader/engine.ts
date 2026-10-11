@@ -2,8 +2,9 @@
  * The reader's engine (#131 phase 2): foliate-js (`./foliate-js`, MIT; see its
  * VENDORED.md) behind a small, typed surface. Only ever reached through a
  * dynamic `import('~/reader/engine')` from components/reader/Reader.vue, so
- * foliate-js is one lazy chunk of its own (`foliate`, nuxt.config.ts), never in
- * the entry nor in the precache, and only fetched the first time a book opens.
+ * foliate-js is in the lazy `ebook-reader` chunks (nuxt.config.ts), never in
+ * the entry nor in the service worker's precache; they are fetched ahead for a member who has an ebook
+ * (data/reader/prefetch.ts) and kept by a runtime cache.
  *
  * What it adds to foliate: the page's stylesheet from the member's settings and
  * the reader's room; every page sanitized before it loads and shown in a frame

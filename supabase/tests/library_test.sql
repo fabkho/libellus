@@ -46,7 +46,7 @@ select tests.member('max@library.test') as max_id \gset
 
 -- Source ids no real Apple book will have, so the developer's own Catalogue
 -- rows never collide with these.
-\set piranesi '{"title":" Piranesi ","authors":["Susanna Clarke"," "],"source":"apple","apple_id":"990000000001","published_year":2020,"cover_url":"https://example.test/600x900bb.jpg","cover_thumbhash":"1QcSHQRnh493V4dIh4eXh1h4kJUI","cover_dominant":"#3A5F8C","cover_secondary":"#D9C9A0"}'
+\set piranesi '{"title":" Piranesi ","authors":["Susanna Clarke"," "],"source":"apple","apple_id":"990000000001","published_year":2020,"cover_url":"https://is1-ssl.mzstatic.com/image/thumb/p/600x900bb.jpg","cover_thumbhash":"1QcSHQRnh493V4dIh4eXh1h4kJUI","cover_dominant":"#3A5F8C","cover_secondary":"#D9C9A0"}'
 
 -- A Manual book of Max's, as #13 will make them: private to him.
 insert into public.books (title, authors, source, owner_id)

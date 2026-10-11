@@ -1,0 +1,632 @@
+{
+ "engine": "chromium",
+ "url": "https://libellus.fabkho.dev",
+ "startedAt": "2026-10-10T19:36:20.748Z",
+ "loadAtStart": [
+  1.61,
+  2.06,
+  3.73
+ ],
+ "runs": [
+  {
+   "run": 1,
+   "cold": {
+    "shownMs": 2601,
+    "fcp": 2572,
+    "lcp": 5928,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0.0007,
+    "loaf": [
+     {
+      "start": 278,
+      "dur": 725,
+      "block": 0,
+      "render": 2,
+      "scripts": []
+     },
+     {
+      "start": 2467,
+      "dur": 96,
+      "block": 45,
+      "render": 38,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 55ms"
+      ]
+     }
+    ],
+    "requests": 64,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 64,
+    "transferKB": 1061.1,
+    "transferOwnKB": 331,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": false,
+   "warm": {
+    "shownMs": 463,
+    "fcp": 464,
+    "lcp": 464,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [
+     {
+      "start": 398,
+      "dur": 58,
+      "block": 0,
+      "render": 0,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 41ms"
+      ]
+     }
+    ],
+    "requests": 62,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 62,
+    "transferKB": 3.4,
+    "transferOwnKB": 2.7,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com",
+     "cloudflareinsights.com",
+     "ltedflcewdcqtqzcjeyr.supabase.co"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 269
+   }
+  },
+  {
+   "run": 2,
+   "cold": {
+    "shownMs": 2525,
+    "fcp": 2204,
+    "lcp": 5568,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0.0007,
+    "loaf": [
+     {
+      "start": 210,
+      "dur": 671,
+      "block": 0,
+      "render": 3,
+      "scripts": []
+     },
+     {
+      "start": 2102,
+      "dur": 92,
+      "block": 41,
+      "render": 33,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 56ms"
+      ]
+     }
+    ],
+    "requests": 64,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 64,
+    "transferKB": 1061.2,
+    "transferOwnKB": 331,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": false,
+   "warm": {
+    "shownMs": 473,
+    "fcp": 484,
+    "lcp": 484,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [
+     {
+      "start": 413,
+      "dur": 60,
+      "block": 0,
+      "render": 0,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 41ms"
+      ]
+     }
+    ],
+    "requests": 62,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 62,
+    "transferKB": 3.4,
+    "transferOwnKB": 2.7,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com",
+     "cloudflareinsights.com",
+     "ltedflcewdcqtqzcjeyr.supabase.co"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 268
+   }
+  },
+  {
+   "run": 3,
+   "cold": {
+    "shownMs": 2517,
+    "fcp": 2196,
+    "lcp": 5560,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0.0007,
+    "loaf": [
+     {
+      "start": 204,
+      "dur": 672,
+      "block": 0,
+      "render": 2,
+      "scripts": []
+     },
+     {
+      "start": 2096,
+      "dur": 91,
+      "block": 40,
+      "render": 32,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 56ms"
+      ]
+     }
+    ],
+    "requests": 64,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 64,
+    "transferKB": 1061.2,
+    "transferOwnKB": 331.1,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 143,
+    "fcp": 136,
+    "lcp": 136,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 62,
+    "requestsOwn": 35,
+    "fromServiceWorker": 55,
+    "onWire": 6,
+    "transferKB": 0.8,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com",
+     "cloudflareinsights.com",
+     "ltedflcewdcqtqzcjeyr.supabase.co"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 116
+   }
+  },
+  {
+   "run": 4,
+   "cold": {
+    "shownMs": 2511,
+    "fcp": 2172,
+    "lcp": 5552,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0.0007,
+    "loaf": [
+     {
+      "start": 203,
+      "dur": 657,
+      "block": 0,
+      "render": 3,
+      "scripts": []
+     },
+     {
+      "start": 2076,
+      "dur": 88,
+      "block": 37,
+      "render": 32,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 53ms"
+      ]
+     }
+    ],
+    "requests": 66,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 66,
+    "transferKB": 1061.1,
+    "transferOwnKB": 331,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 146,
+    "fcp": 136,
+    "lcp": 136,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 62,
+    "requestsOwn": 35,
+    "fromServiceWorker": 55,
+    "onWire": 6,
+    "transferKB": 0.7,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com",
+     "cloudflareinsights.com",
+     "ltedflcewdcqtqzcjeyr.supabase.co"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 119
+   }
+  },
+  {
+   "run": 5,
+   "cold": {
+    "shownMs": 2528,
+    "fcp": 2192,
+    "lcp": 5576,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0.0007,
+    "loaf": [
+     {
+      "start": 212,
+      "dur": 656,
+      "block": 0,
+      "render": 3,
+      "scripts": []
+     },
+     {
+      "start": 2094,
+      "dur": 91,
+      "block": 40,
+      "render": 33,
+      "scripts": [
+       "resolve-promise:CyfolQEy.js: 54ms"
+      ]
+     }
+    ],
+    "requests": 64,
+    "requestsOwn": 35,
+    "fromServiceWorker": 0,
+    "onWire": 64,
+    "transferKB": 1061,
+    "transferOwnKB": 331,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "cloudflareinsights.com",
+     "is1-ssl.mzstatic.com"
+    ]
+   },
+   "swActive": true,
+   "warm": {
+    "shownMs": 145,
+    "fcp": 136,
+    "lcp": 136,
+    "lcpEl": "img 240x360bb.jpg",
+    "cls": 0,
+    "loaf": [],
+    "requests": 62,
+    "requestsOwn": 35,
+    "fromServiceWorker": 55,
+    "onWire": 6,
+    "transferKB": 0.8,
+    "transferOwnKB": 0,
+    "thirdParty": [
+     "static.cloudflareinsights.com",
+     "is1-ssl.mzstatic.com",
+     "cloudflareinsights.com",
+     "ltedflcewdcqtqzcjeyr.supabase.co"
+    ]
+   },
+   "offline": {
+    "ok": true,
+    "ms": 120
+   }
+  }
+ ],
+ "browser": "chromium 153.0.8010.12",
+ "device": "Pixel 7 (CPU 4x, Slow 4G)",
+ "median": {
+  "cold": {
+   "shownMs": {
+    "median": 2525,
+    "spread": 0.03564356435643564
+   },
+   "fcp": {
+    "median": 2196,
+    "spread": 0.18214936247723132
+   },
+   "lcp": {
+    "median": 5568,
+    "spread": 0.06752873563218391
+   },
+   "cls": {
+    "median": 0.0007,
+    "spread": 0
+   },
+   "requests": {
+    "median": 64,
+    "spread": 0.03125
+   },
+   "fromServiceWorker": {
+    "median": 0,
+    "spread": 0
+   },
+   "onWire": {
+    "median": 64,
+    "spread": 0.03125
+   },
+   "transferKB": {
+    "median": 1061.1,
+    "spread": 0.00018848364904348837
+   }
+  },
+  "warm": {
+   "shownMs": {
+    "median": 146,
+    "spread": 2.26027397260274
+   },
+   "fcp": {
+    "median": 136,
+    "spread": 2.5588235294117645
+   },
+   "lcp": {
+    "median": 136,
+    "spread": 2.5588235294117645
+   },
+   "cls": {
+    "median": 0,
+    "spread": 0
+   },
+   "requests": {
+    "median": 62,
+    "spread": 0
+   },
+   "fromServiceWorker": {
+    "median": 55,
+    "spread": 1
+   },
+   "onWire": {
+    "median": 6,
+    "spread": 9.333333333333334
+   },
+   "transferKB": {
+    "median": 0.8,
+    "spread": 3.375
+   }
+  }
+ },
+ "headers": {
+  "/": {
+   "url": "https://libellus.fabkho.dev/",
+   "status": 200,
+   "cc": "public, max-age=0, must-revalidate",
+   "ce": "br",
+   "cf": "DYNAMIC",
+   "ct": "text/html; charset=utf-8"
+  },
+  "/_nuxt/<hash>.js": {
+   "url": "https://libellus.fabkho.dev/_nuxt/BaNbYf_w.js",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "application/javascript"
+  },
+  "/_nuxt/entry.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/entry.DKKMhmGU.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "MISS",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/beacon.min.js": {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js",
+   "status": 200,
+   "cc": "public, max-age=86400",
+   "ce": "gzip",
+   "ct": "text/javascript;charset=UTF-8"
+  },
+  "/_nuxt/Button.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/Button.C9Z8n98R.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/_nuxt/Frame.<hash>.css": {
+   "url": "https://libellus.fabkho.dev/_nuxt/Frame.CukXiAUr.css",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "ce": "br",
+   "cf": "HIT",
+   "ct": "text/css; charset=utf-8"
+  },
+  "/cdn-cgi/rum": {
+   "url": "https://cloudflareinsights.com/cdn-cgi/rum",
+   "status": 200,
+   "ce": "gzip",
+   "ct": "text/plain"
+  },
+  "/image/thumb/Publication122/v4/ed/e4/63/ede463a3-a899-9d31-ce86-98816dcb7181/9780307414090.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/ed/e4/63/ede463a3-a899-9d31-ce86-98816dcb7181/9780307414090.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16304882, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication112/v4/1b/5d/b0/1b5db081-7488-c533-fb17-8ab7eec1f49e/9780756413057.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication112/v4/1b/5d/b0/1b5db081-7488-c533-fb17-8ab7eec1f49e/9780756413057.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15071950, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication123/v4/09/46/bc/0946bcea-bf39-686e-9b02-66e5ebfcc58e/9780345508553.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/09/46/bc/0946bcea-bf39-686e-9b02-66e5ebfcc58e/9780345508553.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15501983, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication126/v4/4a/c4/3c/4ac43c1a-ccd8-8abf-a18d-3df2232c8180/9780061991127.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/4a/c4/3c/4ac43c1a-ccd8-8abf-a18d-3df2232c8180/9780061991127.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14766669, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication18/v4/cf/40/60/cf406087-2bbf-ed33-73ba-f6e6b2375bd9/mzm.jkfqpgso.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication18/v4/cf/40/60/cf406087-2bbf-ed33-73ba-f6e6b2375bd9/mzm.jkfqpgso.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16275581, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication/62/b5/91/mzi.ioyhzhmc.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication/62/b5/91/mzi.ioyhzhmc.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15670082, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/8b/c8/4a/8bc84a3e-bd3e-cabd-f5e2-a8739f9cad91/9780307781888.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/8b/c8/4a/8bc84a3e-bd3e-cabd-f5e2-a8739f9cad91/9780307781888.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15734857, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/8c/aa/9d/8caa9d7e-fc0c-7e9b-c226-0581f81a9700/1059114320.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/8c/aa/9d/8caa9d7e-fc0c-7e9b-c226-0581f81a9700/1059114320.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14057342, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/2c/2e/b4/2c2eb4b8-6a28-c926-b0ed-03fbd7ed2ce0/1031214040.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16069207, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication122/v4/85/70/2f/85702f34-2982-e2ee-d883-b5ffc3ae0897/9781101658055.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/85/70/2f/85702f34-2982-e2ee-d883-b5ffc3ae0897/9781101658055.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15132368, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication125/v4/bf/1f/bc/bf1fbcda-11b3-4cee-2909-1104ebe422b6/9781590173930.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/bf/1f/bc/bf1fbcda-11b3-4cee-2909-1104ebe422b6/9781590173930.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16428340, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication221/v4/3b/84/cc/3b84ccb0-a252-40be-183b-19b5c098654a/9780061803208.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/3b/84/cc/3b84ccb0-a252-40be-183b-19b5c098654a/9780061803208.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16464608, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication221/v4/c8/bf/b3/c8bfb35c-53b3-7373-ad0e-561c68761d74/9780593983768.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bfb35c-53b3-7373-ad0e-561c68761d74/9780593983768.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15040121, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/13/fb/63/13fb6355-fce2-0e4b-08b7-48452037759a/9780593135211.d.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/13/fb/63/13fb6355-fce2-0e4b-08b7-48452037759a/9780593135211.d.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15915121, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication6/v4/02/7c/aa/027caae8-d826-f17d-30a3-1e75d5bfd187/9781473208735.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication6/v4/02/7c/aa/027caae8-d826-f17d-30a3-1e75d5bfd187/9781473208735.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15091313, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication4/v4/2c/e3/68/2ce3683c-ce5f-866b-072d-952108c35b0c/SANDMAN_v1_PN_cover.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication4/v4/2c/e3/68/2ce3683c-ce5f-866b-072d-952108c35b0c/SANDMAN_v1_PN_cover.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16263591, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication211/v4/d8/83/55/d8835508-3e61-54ec-27e0-b6b4d0c86a76/9780547728247.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/d8/83/55/d8835508-3e61-54ec-27e0-b6b4d0c86a76/9780547728247.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=15777322, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication122/v4/b4/b3/d5/b4b3d5b1-0dd6-abf5-7856-965e628b9fc1/9780547539638.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/b4/b3/d5/b4b3d5b1-0dd6-abf5-7856-965e628b9fc1/9780547539638.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14315874, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication113/v4/b1/c4/35/b1c4350e-2063-d273-2231-853bff00db6e/9780316068796.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication113/v4/b1/c4/35/b1c4350e-2063-d273-2231-853bff00db6e/9780316068796.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=16482788, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/image/thumb/Publication1/v4/10/1f/b7/101fb78b-a06b-3427-8876-773ed9bc8351/9780345539793.jpg/240x360bb.jpg": {
+   "url": "https://is1-ssl.mzstatic.com/image/thumb/Publication1/v4/10/1f/b7/101fb78b-a06b-3427-8876-773ed9bc8351/9780345539793.jpg/240x360bb.jpg",
+   "status": 200,
+   "cc": "max-age=14701062, no-transform",
+   "ct": "image/jpeg"
+  },
+  "/_nuxt/geist-mono-latin-500-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-mono-latin-500-normal.YINYabwD.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/geist-latin-400-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-latin-400-normal.B40WzpMT.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/geist-latin-500-normal.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/geist-latin-500-normal.CTWBw9NS.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  },
+  "/_nuxt/newsreader-latin-400-italic.<hash>.woff2": {
+   "url": "https://libellus.fabkho.dev/_nuxt/newsreader-latin-400-italic.CEihAR-f.woff2",
+   "status": 200,
+   "cc": "public, max-age=31536000, immutable",
+   "cf": "HIT",
+   "ct": "font/woff2"
+  }
+ },
+ "loadAtEnd": [
+  1.13,
+  1.83,
+  3.49
+ ]
+}

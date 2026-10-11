@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { barAfterScroll, barHeld, barShown, INTENT_PX, type BarScroll } from '@/utils/hideOnScroll'
+import { barAfterScroll, barHeld, barShown, INTENT_PX, MIN_END_PX, type BarScroll } from '@/utils/hideOnScroll'
 
 /**
  * The tab bar on a pushed screen (issue #82, utils/hideOnScroll.ts): it hides
  * on a scroll down, shows on a short scroll up, ignores scrolls shorter than
- * the intent, and is always there at the top and the end of the page.
+ * the intent, is always there at the top and the end of the page, and stays on
+ * a page that is only a little longer than the screen (`MIN_END_PX`).
  */
 
 const END = 2000
 
-/** Scrolls through `ys` one event at a time, starting shown at the first. */
-function through(ys: number[], start: BarScroll = barShown(ys[0]!), jump = Infinity): BarScroll {
-  return ys.slice(1).reduce((state, y) => barAfterScroll(state, y, END, INTENT_PX, jump), start)
+/** Scrolls through `ys` one event at a time, starting shown at the first, on a page of `end`. */
+function through(ys: number[], start: BarScroll = barShown(ys[0]!), jump = Infinity, end = END): BarScroll {
+  return ys.slice(1).reduce((state, y) => barAfterScroll(state, y, end, INTENT_PX, jump), start)
 }
 
 describe('barAfterScroll', () => {
@@ -65,6 +66,32 @@ describe('barAfterScroll', () => {
   it('never hides on a page too short to scroll past both edges', () => {
     const short = (y: number) => barAfterScroll(barShown(0), y, 15)
     for (const y of [0, 5, 10, 15]) expect(short(y).hidden).toBe(false)
+  })
+
+  it('never hides on a page only a little longer than the screen', () => {
+    // 500 px past the screen: it scrolls, but the bar is not worth moving for it.
+    const short = MIN_END_PX - 140
+    for (const y of [0, 100, 250, short - INTENT_PX - 1, short - INTENT_PX, short]) {
+      expect(barAfterScroll(barShown(0), y, short).hidden).toBe(false)
+    }
+    // Back and forth over it: still nothing to read that it should make way for.
+    expect(through([0, 120, 300, 180, 320], barShown(0), Infinity, short).hidden).toBe(false)
+  })
+
+  it('hides from `MIN_END_PX` of scroll on, as on any other page', () => {
+    expect(through([100, 200], barShown(100), Infinity, MIN_END_PX).hidden).toBe(true)
+    // One pixel less of page and it stays.
+    expect(through([100, 200], barShown(100), Infinity, MIN_END_PX - 1).hidden).toBe(false)
+  })
+
+  it('starts hiding once later content grows the page past the threshold', () => {
+    const short = through([0, 120, 300], barShown(0), Infinity, 400)
+    expect(short.hidden).toBe(false)
+    // A list loads, the page is long: the next scroll down hides the bar.
+    expect(barAfterScroll(short, 320, MIN_END_PX + 900).hidden).toBe(true)
+    // And a page that shrinks back under the threshold brings it back.
+    expect(through([100, 400]).hidden).toBe(true)
+    expect(barAfterScroll(through([100, 400]), 420, MIN_END_PX - 1).hidden).toBe(false)
   })
 
   it('reads a jump longer than `jump` as no intent: only the anchor moves', () => {

@@ -2,25 +2,28 @@ import { join } from 'node:path'
 import { addVitePlugin, defineNuxtModule } from 'nuxt/kit'
 
 /**
- * Regal, the owner's 3D shelf (#23), as a Nuxt layer: where it comes from, and
- * how it is kept to the places that show it (Profile → Your shelf, its full
- * Stack, and the row in a year in review). Everything else in the app builds, loads and
- * precaches exactly as without it.
+ * Regal, the 3D shelf (#23), as a Nuxt layer: where it comes from, and how it
+ * is kept to the places that show it (Profile → Your shelf, its full Stack,
+ * and the row in a year in review: every member's own shelf, built on the
+ * device). Everything else in the app builds, loads and precaches exactly as
+ * without it, and a member who never opens a shelf never fetches it.
  *
  * Opt-in: only a build with LIBELLUS_REGAL=1 has it (the owner's Cloudflare Pages
  * build and CI). Without the flag the app builds and runs as it would for anyone
  * else: no layer, Your shelf's places are empty stand-ins (`ShelfStage`,
- * `ShelfRow` resolve to app/regal/Absent.vue, the warm-up to app/regal/preload.ts) and nobody is the shelf's owner
+ * `ShelfRow` resolve to app/regal/Absent.vue, the warm-up to app/regal/preload.ts) and nobody has a shelf
  * (`appConfig.regal` is false, stores/shelf.ts).
  *
  * With the flag, where from, like the portfolio: a local checkout when
  * REGAL_LAYER is set (`REGAL_LAYER=/path/to/regal`), otherwise the default
  * branch of the private repo fabkho/regal, downloaded with the token in
  * GIGET_AUTH (a GitHub token that can read it; the Cloudflare Pages build and
- * CI have it), and the library file it shows in NUXT_PUBLIC_REGAL_LIBRARY_SRC.
- * Missing one of them, `nuxt dev` and `nuxt generate` stop with a message saying
- * so; only `nuxt prepare` (the postinstall) goes on without it, so an install
- * works anywhere.
+ * CI have it). Missing both, `nuxt dev` and `nuxt generate` stop with a message
+ * saying so; only `nuxt prepare` (the postinstall) goes on without it, so an
+ * install works anywhere. The owner's published library file
+ * (NUXT_PUBLIC_REGAL_LIBRARY_SRC, the one his portfolio shows) is optional:
+ * with it his shelf is that file; without it his shelf is built on the device
+ * like everyone's.
  *
  * What the layer brings, and where it goes:
  * - Its components (`RegalBooksStage`, `RegalBooksRow`) and composables,
@@ -29,9 +32,9 @@ import { addVitePlugin, defineNuxtModule } from 'nuxt/kit'
  *   they, three.js and TresJS end up in one chunk named `regal`
  *   (nuxt.config.ts, codeSplitting) that the entry never imports: the build
  *   fails if it ever does (below).
- *   The owner's idle warm-up (composables/useShelfPreload.ts) reaches Regal's
- *   `preloadRegal` only by a dynamic `import('#layers/regal/…')`, behind
- *   `shelf.isOwner`, so it too lands in that chunk and nobody else fetches it.
+ *   The warm-up (composables/useShelfPreload.ts: the owner's screens on idle,
+ *   anyone's shelf card when it mounts) reaches Regal's `preloadRegal` only by
+ *   a dynamic `import('#layers/regal/…')`, so it too lands in that chunk.
  * - Its fonts (IBM Plex Mono, Patua One, Antonio): @nuxt/fonts registers them
  *   globally, in the entry stylesheet. Moved out of it: the shelf's stage and
  *   row import that stylesheet themselves, so the @font-face rules arrive with the
@@ -48,22 +51,18 @@ export const REGAL_ENABLED = /^(1|true)$/i.test(process.env.LIBELLUS_REGAL?.trim
 
 /**
  * The published library file Regal shows (NUXT_PUBLIC_REGAL_LIBRARY_SRC; the owner's is the one
- * her portfolio shows, whose CORS allows BetterReads). Empty without Regal.
+ * her portfolio shows, whose CORS allows Libellus). Empty without Regal.
  */
 export const REGAL_LIBRARY_SRC = REGAL_ENABLED ? (process.env.NUXT_PUBLIC_REGAL_LIBRARY_SRC?.trim() ?? '') : ''
 
 const MISSING = [
-  'LIBELLUS_REGAL=1 builds BetterReads with Regal (the owner\'s shelf, #23), and Regal could not be found.',
+  'LIBELLUS_REGAL=1 builds Libellus with Regal (the owner\'s shelf, #23), and Regal could not be found.',
   'Set REGAL_LAYER to a checkout of fabkho/regal (REGAL_LAYER=/path/to/regal),',
   'or GIGET_AUTH to a GitHub token that can read the private repo fabkho/regal',
   '(the Cloudflare Pages build and CI read it from their secrets).',
   'Without LIBELLUS_REGAL the app builds without the shelf.',
 ].join('\n')
 
-const NO_LIBRARY = [
-  'LIBELLUS_REGAL=1 builds BetterReads with Regal (the owner\'s shelf, #23), and it has no library file to show.',
-  'Set NUXT_PUBLIC_REGAL_LIBRARY_SRC to the published file (https://…/v2/library.json).',
-].join('\n')
 
 /** `nuxt prepare` (the postinstall): types only, so it may go on without the layer. */
 const isPrepare = () => process.argv.slice(2).includes('prepare')
@@ -76,10 +75,14 @@ export function regalLayer(): (string | [string, Record<string, unknown>])[] {
     if ((local || auth) && !isPrepare()) console.info('[regal] REGAL_LAYER or GIGET_AUTH is set, LIBELLUS_REGAL is not: building without the shelf.')
     return []
   }
-  if (!REGAL_LIBRARY_SRC && !isPrepare()) throw new Error(`[regal] ${NO_LIBRARY}`)
+  // No published file: every member's shelf is her own, built on the device; the owner's too.
+  if (!REGAL_LIBRARY_SRC && !isPrepare()) console.info('[regal] No NUXT_PUBLIC_REGAL_LIBRARY_SRC: every shelf is built on the device, the owner\'s too.')
   // A trailing slash: a folder, not a package name.
   if (local) return [local.replace(/\/?$/, '/')]
-  if (auth) return [['github:fabkho/regal', { install: true, auth }]]
+  // Regal's own pnpm-workspace.yaml decides its build scripts (`allowBuilds`). The install c12
+  // runs by default ignores that file, and pnpm then refuses to install packages it may not
+  // build (esbuild, unrs-resolver, vue-demi): ERR_PNPM_IGNORED_BUILDS, on a store without them.
+  if (auth) return [['github:fabkho/regal', { install: { ignoreWorkspace: false }, auth }]]
   if (isPrepare()) {
     console.warn(`[regal] ${MISSING}\nPreparing without it: the shelf's components have no types.`)
     return []
@@ -91,7 +94,7 @@ export function regalLayer(): (string | [string, Record<string, unknown>])[] {
 let regalDir: string | null = null
 
 // three.js and what renders it; Regal's components and utilities (its folder);
-// the two BetterReads components that use them, and the fonts' stylesheet they import. Nothing else in
+// the two Libellus components that use them, and the fonts' stylesheet they import. Nothing else in
 // the app imports these.
 const REGAL_PACKAGES = /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:three|three-stdlib|@tresjs|gsap|@vueuse|@monogrid|troika-[^\\/]+|camera-controls|postprocessing|stats-gl|meshoptimizer|bidi-js|webgl-sdf-generator)[\\/]/
 const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue|nuxt-fonts-global\.css/
@@ -123,18 +126,38 @@ function urlTest(body: string): (options: { url: URL; request: Request }) => boo
  * once fetched. Without Regal nothing: no chunk, no file, no routes.
  */
 export function regalAssets() {
-  if (!REGAL_ENABLED || !REGAL_LIBRARY_SRC) return { globIgnores: [] as string[], runtimeCaching: [] }
+  if (!REGAL_ENABLED) return { globIgnores: [] as string[], runtimeCaching: [] }
+  const code = [
+    {
+      // The chunk, its stylesheet and the fonts, as the shelf asks for them. Cache first: the names carry their hash.
+      urlPattern: ({ url }: { url: URL }) => /^\/(_nuxt\/regal\.[^/]+\.(js|css)|_fonts\/[^/]+)$/.test(url.pathname),
+      handler: 'CacheFirst' as const,
+      options: { cacheName: 'libellus-shelf-code', expiration: { maxEntries: 60 } },
+    },
+    {
+      // A member's shelf (built on the device): the covers Regal reads with CORS as textures (the
+      // top of the pile, a Book taken out), from the hosts covers come from. Cache first: a cover at
+      // an address never changes. Only readable answers (an opaque one could not be a texture).
+      urlPattern: ({ request, url }: { request: Request; url: URL }) =>
+        request.mode === 'cors' &&
+        request.destination === '' &&
+        (/(^|\.)mzstatic\.com$/.test(url.hostname) || url.hostname === 'covers.openlibrary.org'),
+      handler: 'CacheFirst' as const,
+      options: {
+        cacheName: 'libellus-shelf-covers',
+        cacheableResponse: { statuses: [200] },
+        expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
+      },
+    },
+  ]
+  const globIgnores = ['**/regal.*.js', '**/regal.*.css', '_fonts/**', 'models/**']
+  if (!REGAL_LIBRARY_SRC) return { globIgnores, runtimeCaching: code }
   const href = JSON.stringify(new URL(REGAL_LIBRARY_SRC).href)
   const origin = JSON.stringify(new URL(REGAL_LIBRARY_SRC).origin)
   return {
-    globIgnores: ['**/regal.*.js', '**/regal.*.css', '_fonts/**', 'models/**'],
+    globIgnores,
     runtimeCaching: [
-      {
-        // The chunk, its stylesheet and the fonts, as the shelf asks for them. Cache first: the names carry their hash.
-        urlPattern: ({ url }: { url: URL }) => /^\/(_nuxt\/regal\.[^/]+\.(js|css)|_fonts\/[^/]+)$/.test(url.pathname),
-        handler: 'CacheFirst' as const,
-        options: { cacheName: 'libellus-shelf-code', expiration: { maxEntries: 60 } },
-      },
+      ...code,
       {
         // The library file: the newest when there is a connection, the last one seen without.
         urlPattern: urlTest(`return url.href === ${href}`),

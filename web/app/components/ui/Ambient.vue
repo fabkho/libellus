@@ -13,6 +13,9 @@ const props = withDefaults(defineProps<{ colors: CoverColors | null; cloth?: str
   shape: 'page',
 })
 
+// The grain's filter and pattern are referenced by id: one pair per instance.
+const grain = useId()
+
 // Two pool colours as whole colours, so a gradient can take them at any alpha.
 const style = computed(() => {
   if (props.cloth) {
@@ -27,7 +30,21 @@ const style = computed(() => {
 
 <template>
   <div class="ambient" :class="`shape-${shape}`" :style="style" aria-hidden="true">
-    <span class="grain" />
+    <!-- The grain is an inline SVG, not a background image: Chrome reports a background image as a
+         Largest Contentful Paint candidate, and this one (a decorative 160 px tile at 7 %) was the
+         page's LCP element, so the number said when the grain painted, not when the content did.
+         The same filter, drawn as a repeating pattern, looks the same. -->
+    <svg class="grain" focusable="false">
+      <defs>
+        <filter :id="`${grain}-noise`">
+          <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch" />
+        </filter>
+        <pattern :id="`${grain}-tile`" width="160" height="160" patternUnits="userSpaceOnUse">
+          <rect width="160" height="160" :filter="`url(#${grain}-noise)`" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" :fill="`url(#${grain}-tile)`" />
+    </svg>
   </div>
 </template>
 
@@ -59,8 +76,9 @@ const style = computed(() => {
 .grain {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0.07;
   mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 </style>

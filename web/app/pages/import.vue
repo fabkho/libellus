@@ -101,7 +101,10 @@ function listed(items: readonly Attention[], action: string): ImportNote[] {
     }
   })
 }
-const attention = computed(() => listed(store.attention, t('import.chooseEdition')))
+// What needs a look for sure (no edition, or one without a cover) is shown; the rest, found with a cover, waits behind a toggle.
+const attention = computed(() => listed(store.attention.filter((item) => item.look), t('import.chooseEdition')))
+const attentionMinor = computed(() => listed(store.attention.filter((item) => !item.look), t('import.chooseEdition')))
+const showMinor = ref(false)
 const choices = computed(() => listed(store.choices, t('import.changeEdition')))
 
 const failures = computed<ImportNote[]>(() =>
@@ -159,10 +162,10 @@ const failures = computed<ImportNote[]>(() =>
         v-if="store.phase === 'matching'"
         class="mt-lg"
         testid="import.matching"
-        :label="t('import.matching', { done: store.progress.done, total: store.progress.total })"
-        :hint="t('import.matchingHint')"
-        :done="store.progress.done"
-        :total="store.progress.total"
+        :label="store.secondPass ? t('import.secondPass', { done: store.secondPass.done, total: store.secondPass.total }) : t('import.matching', { done: store.progress.done, total: store.progress.total })"
+        :hint="store.secondPass ? t('import.secondPassHint') : store.stalled ? t('import.stalledHint') : t('import.matchingHint')"
+        :done="store.secondPass ? store.secondPass.done : store.progress.done"
+        :total="store.secondPass ? store.secondPass.total : store.progress.total"
       />
 
       <template v-else>
@@ -205,6 +208,16 @@ const failures = computed<ImportNote[]>(() =>
         />
       </template>
 
+      <!-- The way out of a long lookup: go on with what is found (the rest is added as the file says). -->
+      <UiButton
+        v-if="store.phase === 'matching' && (store.secondPass || store.stalled)"
+        block
+        class="mt-md"
+        data-testid="import.finishNow"
+        @click="store.finishNow()"
+      >
+        {{ t('import.finishNow') }}
+      </UiButton>
       <UiButton v-if="store.phase === 'matching'" block tone="plain" class="mt-md" data-testid="import.cancel" @click="store.reset()">
         {{ t('import.stop') }}
       </UiButton>
@@ -213,7 +226,27 @@ const failures = computed<ImportNote[]>(() =>
         <h2 class="eyebrow mt-xl flex justify-between" data-testid="import.attention">
           <span>{{ t('import.attention') }}</span><span class="figures">{{ attention.length }}</span>
         </h2>
+        <p class="mt-xxs text-footnote text-ink-faint">{{ t('import.attentionHint') }}</p>
         <ImportNoteList :items="attention" testid="import.attentionList" class="mt-xs" @act="store.openChoice" />
+      </template>
+
+      <!-- Found with a cover: probably fine, so only on request. -->
+      <template v-if="attentionMinor.length">
+        <h2 class="eyebrow mt-xl flex justify-between" data-testid="import.attentionMinor">
+          <span>{{ t('import.attentionMinor') }}</span><span class="figures">{{ attentionMinor.length }}</span>
+        </h2>
+        <p class="mt-xxs text-footnote text-ink-faint">{{ t('import.attentionMinorHint') }}</p>
+        <UiButton
+          block
+          tone="plain"
+          class="mt-xs"
+          :aria-expanded="showMinor"
+          data-testid="import.attentionMinorToggle"
+          @click="showMinor = !showMinor"
+        >
+          {{ t(showMinor ? 'import.attentionMinorHide' : 'import.attentionMinorShow', { count: attentionMinor.length }) }}
+        </UiButton>
+        <ImportNoteList v-if="showMinor" :items="attentionMinor" testid="import.attentionMinorList" class="mt-xs" @act="store.openChoice" />
       </template>
 
       <!-- Books whose edition she chose herself: the preview has her pick, and she can change it. -->

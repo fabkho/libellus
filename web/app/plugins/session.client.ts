@@ -19,8 +19,18 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     // of the session is told again once the renewal reaches the server.
     if (!member && !isOnline()) return
     const wasSignedIn = session.status === 'signedIn'
-    // The store's own sign-in already adopted this member; nothing to do twice.
-    if (member?.id !== session.member?.id) session.adopt(member)
-    if (!member && wasSignedIn) nuxtApp.runWithContext(() => navigateTo('/sign-in'))
+    // The store's own sign-in already adopted this member; nothing to do twice. Another member
+    // than the one the device holds clears the device first (stores/session.ts, signedInAs).
+    // Online, "nobody" is an answer: the session ended (refused renewal, revoked, a sign-out in another
+    // tab). The device forgets what it kept of the member, as signing out does (security round, F11).
+    const settled = member
+      ? member.id !== session.member?.id
+        ? session.signedInAs(member)
+        : null
+      : session.member
+        ? session.sessionEnded()
+        : null
+    // To the sign-in screen once the member is out (the route guard sends a signed-in member away from it).
+    if (!member && wasSignedIn) void Promise.resolve(settled).then(() => nuxtApp.runWithContext(() => navigateTo('/sign-in')))
   })
 })

@@ -63,6 +63,43 @@ const MAX_RETRY_AFTER_MS = 10_000
 const CACHE_MS = 10 * 60 * 1000
 const CACHE_SIZE = 500
 
+/** A response body ran past `maxBytes`: read no further. */
+class ResponseTooLarge extends Error {
+  constructor(readonly limit: number) {
+    super(`response over ${limit} bytes`)
+  }
+}
+
+/** The body as text, read as a stream and abandoned past `limit` bytes (a record from a source we do not control). */
+async function readText(response: Response, limit: number | undefined): Promise<string> {
+  if (!limit || !response.body) return await response.text()
+  const declared = Number(response.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > limit) {
+    await response.body.cancel()
+    throw new ResponseTooLarge(limit)
+  }
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > limit) {
+      await reader.cancel()
+      throw new ResponseTooLarge(limit)
+    }
+    chunks.push(value)
+  }
+  const bytes = new Uint8Array(size)
+  let at = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, at)
+    at += chunk.byteLength
+  }
+  return new TextDecoder().decode(bytes)
+}
+
 export type Http = {
   /**
    * GETs `url` and parses JSON. A 404 answers null; anything else that is not
@@ -78,6 +115,8 @@ export function createHttp(options: {
   timeoutMs?: number
   retries?: number
   intervals?: Record<string, number>
+  /** A response body longer than this is abandoned (the Book is then `unavailable`, not retried at once); none = unlimited. */
+  maxBytes?: number
 }): Http {
   const clock = options.clock ?? realClock
   const timeout = options.timeoutMs ?? REQUEST_TIMEOUT_MS
@@ -112,7 +151,7 @@ export function createHttp(options: {
     const retryAfterHeader = Number(response.headers.get('retry-after'))
     return {
       status: response.status,
-      body: await response.text(),
+      body: await readText(response, options.maxBytes),
       retryAfter: Number.isFinite(retryAfterHeader) && retryAfterHeader > 0 ? retryAfterHeader * 1000 : null,
     }
   }
@@ -125,6 +164,8 @@ export function createHttp(options: {
       try {
         answer = await once(url, accept)
       } catch (error) {
+        // Too big is too big the next time: no retries.
+        if (error instanceof ResponseTooLarge) throw new SourceUnavailable(url, null, error.message)
         lastStatus = null
         lastDetail = error instanceof Error ? error.message : String(error)
         if (attempt < retries) await clock.sleep(1000 * 2 ** attempt)

@@ -1,0 +1,24 @@
+member 1 role authenticated (rows picked: book 20da344b series 997d5f7d author OL107A)
+name | exec ms | plan ms | buffers hit | read
+home.list.want_to_read | 1.39 | 0.73 | 493 | 0
+home.list.finished | 4.16 | 0.64 | 1005 | 0
+home.readInYear | 0.08 | 0.32 | 5 | 0
+home.started_series | 5.90 | 0.00 | 4283 | 0
+home.muted_series_list | 4.77 | 0.01 | 3814 | 0
+library.library_genres | 1.26 | 0.02 | 1964 | 0
+profile.sessions | 2.06 | 0.87 | 392 | 0
+profile.counts | 0.05 | 0.24 | 4 | 0
+profile.progress_days_83d | 0.20 | 0.65 | 34 | 0
+profile.days_since | 0.14 | 0.59 | 10 | 0
+search.title_prefix | 2.07 | 0.02 | 1186 | 0
+search.author | 2.04 | 0.02 | 1186 | 0
+search.two_letters | 2.20 | 0.02 | 1186 | 0
+search.one_match | 1.81 | 0.02 | 1130 | 0
+search.isbn | 0.67 | 0.02 | 683 | 0
+book.series_info | 3.11 | 0.00 | 2667 | 0
+book.authors_of | 0.76 | 0.01 | 800 | 0
+book.genres | 0.90 | 0.01 | 964 | 0
+series.series_works | 2.59 | 0.00 | 2394 | 0
+author.author_page | 5.18 | 0.00 | 3774 | 0
+next.next_in_series | 3.57 | 0.00 | 3396 | 0
+next.my_works | 1.42 | 0.02 | 2321 | 0

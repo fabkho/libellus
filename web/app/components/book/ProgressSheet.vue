@@ -7,8 +7,10 @@
 // (issue #60: an ebook's pages follow the font size) until Done hands back, with
 // how far the wheel has moved ("+24") and Pages | Percent when the Book has a page
 // count. A Book without one counts in percent, with "Count in pages" to give it
-// one. Last, Finish: the progress is saved and the Finish sheet takes over, for
-// the evening the book ends. A refusal stays in the sheet and Save tries again.
+// one. Last, how the read ends, two rows of one group: Finish, for the evening the
+// book ends, and DNF under it, for the one she puts it down (the book page no
+// longer carries either). Each saves the progress first, then its own sheet takes
+// over. A refusal stays in the sheet and Save tries again.
 import { PAGE_CEILING, type ProgressMode } from '~/data/progress'
 import { useReadingStore } from '~/stores/reading'
 import { stepTick } from '~/utils/haptics'
@@ -223,27 +225,35 @@ watch(
         {{ t('book.progress.totalHint') }}
       </p>
 
-      <!-- The evening the book ends: save where she is, then the Finish sheet. -->
-      <div
-        v-if="!editingTotal"
-        class="mt-sm flex items-center justify-between gap-ms rounded-md bg-fill px-inset py-ms edge-faint"
-        data-testid="progress.finishRow"
-      >
-        <span class="flex min-w-0 flex-col gap-xxs">
-          <span class="text-body">{{ t('book.progress.finishedIt') }}</span>
-          <span class="text-caption text-ink-faint" data-testid="progress.finishHint">
-            {{ reading.progressAtEnd ? t('book.progress.reached') : t('book.progress.finishHint') }}
+      <!-- How the read ends, both behind a save of where she is: Finish (the Finish sheet), and
+           under it DNF (the DNF sheet). One group of two rows, their buttons one width. -->
+      <div v-if="!editingTotal" class="mt-sm grid grid-cols-[1fr_auto] overflow-hidden rounded-md bg-fill edge-faint">
+        <div class="end col-span-2 grid grid-cols-subgrid items-center gap-ms px-inset py-ms" data-testid="progress.finishRow">
+          <span class="flex min-w-0 flex-col gap-xxs">
+            <span class="text-body">{{ t('book.progress.finishedIt') }}</span>
+            <span class="text-caption text-ink-faint" data-testid="progress.finishHint">
+              {{ reading.progressAtEnd ? t('book.progress.reached') : t('book.progress.finishHint') }}
+            </span>
           </span>
-        </span>
-        <UiButton
-          :tone="reading.progressAtEnd ? 'primary' : 'quiet'"
-          size="sm"
-          :disabled="reading.progressBusy"
-          data-testid="progress.finish"
-          @click="reading.finishFromProgress()"
-        >
-          <UiIcon name="check" :size="14" bold />{{ t('book.finish') }}
-        </UiButton>
+          <UiButton
+            :tone="reading.progressAtEnd ? 'primary' : 'quiet'"
+            size="sm"
+            :disabled="reading.progressBusy"
+            data-testid="progress.finish"
+            @click="reading.finishFromProgress()"
+          >
+            <UiIcon name="check" :size="14" bold />{{ t('book.finish') }}
+          </UiButton>
+        </div>
+        <div class="end col-span-2 grid grid-cols-subgrid items-center gap-ms px-inset py-ms" data-testid="progress.abandonRow">
+          <span class="flex min-w-0 flex-col gap-xxs">
+            <span class="text-body">{{ t('book.progress.notFinishing') }}</span>
+            <span class="text-caption text-ink-faint" data-testid="progress.abandonHint">{{ t('book.progress.abandonHint') }}</span>
+          </span>
+          <UiButton tone="quiet" size="sm" :disabled="reading.progressBusy" data-testid="progress.abandon" @click="reading.abandonFromProgress()">
+            <UiIcon name="slash" :size="14" />{{ t('book.abandon') }}
+          </UiButton>
+        </div>
       </div>
 
       <p v-if="reading.progressError" class="mt-ms px-xs text-caption text-error" role="alert" data-testid="progress.failure">
@@ -255,6 +265,20 @@ watch(
 </template>
 
 <style scoped>
+/* The ending rows' divider: a hairline inset under the text, as between grouped rows (UiRow). */
+.end {
+  position: relative;
+}
+.end + .end::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--spacing-inset);
+  height: var(--stroke-hairline);
+  content: '';
+  background: var(--color-hairline-strong);
+}
+
 /* − and +: round 44 pt targets on a hairline ring, darker while pressed. */
 .step {
   display: flex;

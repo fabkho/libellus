@@ -1,0 +1,3 @@
+# Libellus is a sign-in app: everything personal is behind it. The sign-in page may be indexed.
+User-agent: *
+Allow: /

@@ -10,12 +10,19 @@
 // that a soft wave crosses corner to corner, the figures beside them
 // placeholders. When the days come, each dot takes its size and tint in
 // place (docs/MOTION.md, Loading).
+//
+// A day that was read is a button (`pick`: the day) that opens the books it was
+// read in; a day not read stays a quiet dot, nothing to press. The button sits
+// over the dot, out of the grid's sizing (absolutely placed in the dot's cell): it
+// covers the cell and half the gaps around it, all the room the grid has, while the
+// dot keeps its size and the grid its shape.
 import { readingDaysSummary, type ReadingDay } from '~/data/stats'
 import { addDays, isoDay, parseDay } from '~/utils/dates'
 
 const props = defineProps<{ days: readonly ReadingDay[] | null; since: string | null }>()
+defineEmits<{ pick: [day: string] }>()
 const { t } = useI18n()
-const { count, weekdayLetter } = useFigures()
+const { count, weekdayLetter, dayLong } = useFigures()
 const { formatDay } = useDays()
 const loading = computed(() => props.days === null)
 const arriving = useArrival(() => loading.value)
@@ -37,6 +44,10 @@ const cells = computed(() => {
 })
 const top = computed(() => Math.max(...cells.value.map((c) => c.pages), 1))
 const size = (pages: number) => (pages === 0 ? 1 : pages < top.value / 3 ? 2 : pages < (top.value * 2) / 3 ? 3 : 4)
+/** A day with a read to open: the days kept before they named their reads (a record on the device) are plain dots until the next load. */
+const opens = (c: ReadingDay) => c.read && (c.reads?.length ?? 0) > 0
+const dayLabel = (c: ReadingDay) =>
+  c.pages > 0 ? t('profile.days.dayRead', { date: dayLong(c.day), count: count(c.pages) }, c.pages) : t('profile.days.dayReadNoPages', { date: dayLong(c.day) })
 const summary = computed(() => readingDaysSummary(props.days ?? [], 30))
 /** How far along the loading wave a day's dot is: from the top left corner to the bottom right. */
 const wave = (i: number) => ((i % 7) + Math.floor(i / 7)) / 12
@@ -52,20 +63,25 @@ const wave = (i: number) => ((i % 7) + Math.floor(i / 7)) / 12
     <div class="flex gap-lg">
       <div
         class="calendar grid shrink-0 grid-cols-7 gap-x-sm gap-y-xs"
-        :role="loading ? undefined : 'img'"
+        :role="loading ? undefined : 'group'"
         :aria-hidden="loading || undefined"
         :aria-label="loading ? undefined : t('profile.days.label', { read: count(summary.read), count: count(summary.count) })"
       >
         <span v-for="c in cells.slice(0, 7)" :key="`w${c.day}`" class="figures text-center text-meta text-ink-ghost" aria-hidden="true">{{ weekdayLetter(c.day) }}</span>
-        <span
-          v-for="(c, i) in cells"
-          :key="c.day"
-          class="cell"
-          :class="[loading ? 'waiting wave' : `s${size(c.pages)}`, c.read && 'read', i === cells.length - 1 && 'today']"
-          :style="loading ? { '--wave': wave(i) } : undefined"
-          aria-hidden="true"
-          :data-read="c.read || undefined"
-        />
+        <template v-for="(c, i) in cells" :key="c.day">
+          <span v-if="!loading && opens(c)" class="slot">
+            <span class="cell" :class="[`s${size(c.pages)}`, 'read', i === cells.length - 1 && 'today']" aria-hidden="true" data-read="true" />
+            <button type="button" class="hit" :aria-label="dayLabel(c)" :data-testid="`profile.day.${c.day}`" @click="$emit('pick', c.day)" />
+          </span>
+          <span
+            v-else
+            class="cell"
+            :class="[loading ? 'waiting wave' : `s${size(c.pages)}`, c.read && 'read', i === cells.length - 1 && 'today']"
+            :style="loading ? { '--wave': wave(i) } : undefined"
+            aria-hidden="true"
+            :data-read="c.read || undefined"
+          />
+        </template>
       </div>
       <div class="flex min-w-0 flex-1 flex-col justify-end gap-md pb-xxs">
         <div class="flex flex-col gap-xxs">
@@ -86,6 +102,21 @@ const wave = (i: number) => ((i % 7) + Math.floor(i / 7)) / 12
 <style scoped>
 .calendar {
   grid-auto-rows: var(--spacing-md);
+}
+/* A day read: the dot in its cell, and over it the button, the cell and half the gaps (x: sm, y: xs) around
+   it, which is all the room the grid has. Placed, not in the flow, so the grid is the size it was. */
+.slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.hit {
+  position: absolute;
+  inset: calc(var(--spacing-xs) / -2) calc(var(--spacing-sm) / -2);
+  border-radius: var(--radius-sm);
+}
+.hit:active {
+  background: var(--color-fill);
 }
 .cell {
   --d: var(--spacing-xs);

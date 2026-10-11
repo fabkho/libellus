@@ -1,12 +1,20 @@
 <script setup lang="ts">
-// "Next in your series" on Home (#167): for a series she finished a Book of,
-// the next one she has not started — a quiet list of up to three, the most
-// recent finish first, each with its place ("Book 4 · City Watch"), her status
-// (Want to read) or "+ Want to read", opening its Book's page. Only when there
-// is one; one she is reading already is a card higher up, so it is left out
-// (utils/enrich.ts, upNextInSeries). The last section of Home, so appearing
-// after the lists moves nothing; kept on the device, so it is there at once
-// (offline too) the next time.
+// "Next in your series" on Home (#167): the series she has started — a work of it
+// she is reading or finished, Want to read alone does not start one — and has not
+// finished, each as the next work still open in it ("Book 3 of 10 · Discworld")
+// with her status of it or "+ Want to read", opening its Book's page. The latest
+// activity first (the database's `started_series`); five at most, and when there
+// are more (or she muted some) a pill, "See all n" with n the series she has open, opens all
+// of them in a sheet (HomeNextSheet). Each row has
+// a "..." (HomeNextMenu: Mute series, online only); a muted series leaves the list with
+// its motion and is found again in the sheet, under "Muted (n)", where it is unmuted.
+// The section stays while she has muted ones, with the same pill, so she can always get
+// to them; it hides only when nothing is started and nothing muted. The last
+// section of Home, so appearing after the lists moves nothing; kept on the device,
+// so it is there at once (offline too) the next time. A change plays like a list's
+// (`UiListMotion`, once the sheet that caused it has gone) and the section, when it
+// has something to say for the first time, opens its room (`UiReveal`).
+import type { StartedSeries } from '~/data/enrich'
 import { useLibraryStore } from '~/stores/library'
 import { useSeriesStore } from '~/stores/series'
 
@@ -14,44 +22,68 @@ const { t } = useI18n()
 const series = useSeriesStore()
 const library = useLibraryStore()
 
-const items = computed(() => upNextInSeries(series.next))
-const placeOf = (position: number | undefined, name: string) => {
-  const n = positionText(position)
-  return n ? t('series.nextPlace', { n, name }) : name
+const started = useSettled(() => startedOnHome(series.started))
+const shown = computed(() => started.value.shown)
+/** How many she muted: the section keeps its eyebrow while there are some, so they can be unmuted. */
+const hidden = useSettled(() => series.muted.length)
+const more = ref(false)
+/** The sheet's lists follow her at once: a mute or an unmute is seen to happen in it, Home follows once it is gone. */
+const sheetItems = computed(() => startedOnHome(series.started).all)
+const menu = ref<StartedSeries | null>(null)
+const menuOpen = ref(false)
+function openMenu(item: StartedSeries) {
+  menu.value = item
+  menuOpen.value = true
 }
 
 // Asked when it mounts (Home shows it once the Library is there) and each time Home is shown again.
 let justMounted = false
 onMounted(() => {
   justMounted = true
-  void series.loadNext()
+  void series.loadStarted({ ifStale: true })
   void nextTick(() => (justMounted = false))
 })
 onActivated(() => {
-  if (!justMounted) void series.loadNext()
+  if (!justMounted) void series.loadStarted({ ifStale: true })
 })
-// A Book finished (or started) elsewhere: what comes next changes.
+// A Book finished (or started) elsewhere: what is open in a series changes.
 watch(
   () => library.finished.length + library.reading.length,
-  () => void series.loadNext(),
+  () => void series.loadStarted(),
+)
+// The sheet closes when it has nothing to list: not more than the section shows, and nothing muted.
+watch(
+  () => started.value.more || hidden.value > 0,
+  (hasSheet) => !hasSheet && (more.value = false),
 )
 </script>
 
 <template>
-  <section v-if="items.length" data-testid="home.nextInSeries">
-    <div class="flex h-(--size-touch) items-center">
-      <h2 class="eyebrow">{{ t('series.next') }}</h2>
-    </div>
-    <ul :aria-label="t('series.next')">
-      <AuthorWorkRow
-        v-for="(item, index) in items"
-        :key="item.series.id"
-        :work="item.next"
-        :place="placeOf(item.next.position, item.series.name)"
-        testid="home.next"
-        :year="false"
-        :eager="index < 3"
-      />
-    </ul>
-  </section>
+  <UiReveal :show="shown.length > 0 || hidden > 0">
+    <section data-testid="home.nextInSeries">
+      <div class="flex h-(--size-touch) items-center justify-between">
+        <h2 class="eyebrow">{{ t('series.next') }}</h2>
+        <UiSeeAll
+          v-if="started.more || hidden > 0"
+          dialog
+          :aria-label="t('series.seeMoreLabel', { count: started.all.length })"
+          data-testid="home.nextMore"
+          @click="more = true"
+        >
+          {{ t('series.seeAll', { count: started.all.length }) }}
+        </UiSeeAll>
+      </div>
+      <UiListMotion tag="ul" :aria-label="t('series.next')">
+        <HomeNextRow
+          v-for="item in shown"
+          :key="`${item.series.id}:${item.next.workId ?? item.next.title}`"
+          :item="item"
+          testid="home.next"
+          @more="openMenu"
+        />
+      </UiListMotion>
+    </section>
+    <HomeNextSheet v-model:open="more" :items="sheetItems" :muted="series.muted" @more="openMenu" />
+    <HomeNextMenu v-model:open="menuOpen" :item="menu" />
+  </UiReveal>
 </template>

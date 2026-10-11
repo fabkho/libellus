@@ -64,6 +64,27 @@ export function timeAt(easing: string, progress: number): number {
   return bezier(x1, x2, (low + high) / 2)
 }
 
+/**
+ * How far (0–1) a `cubic-bezier()` easing has gone at `time` (0–1): the curve
+ * read forwards, for a motion driven frame by frame from script (the hero
+ * cover's lean as it presses in) rather than by the Web Animations API.
+ */
+export function progressAt(easing: string, time: number): number {
+  const t = Math.min(1, Math.max(0, time))
+  const points = /cubic-bezier\(([^)]+)\)/.exec(easing)?.[1]?.split(',').map(Number)
+  if (!points || points.length !== 4 || points.some(Number.isNaN)) return t
+  const [x1, y1, x2, y2] = points as [number, number, number, number]
+  const bezier = (a: number, b: number, s: number) => 3 * a * s * (1 - s) ** 2 + 3 * b * s ** 2 * (1 - s) + s ** 3
+  let low = 0
+  let high = 1
+  for (let step = 0; step < BISECTION_STEPS; step++) {
+    const middle = (low + high) / 2
+    if (bezier(x1, x2, middle) < t) low = middle
+    else high = middle
+  }
+  return bezier(y1, y2, (low + high) / 2)
+}
+
 // ------------------------------------------------------ waiting for motion
 
 /** Things that move on their own clock (the cover's flight, the Profile's View Transition): each says whether it is moving now. */
@@ -101,4 +122,21 @@ export function afterMotion(): Promise<void> {
     }
     requestAnimationFrame(check)
   })
+}
+
+/**
+ * A change that waits for the motion to end: `apply` is called with the value once nothing
+ * moves (at once when nothing does), and a value that arrives while an earlier one still
+ * waits replaces it, so only the newest is ever applied. For what arrives late and would
+ * open its room under a cover in flight (the Book page's series line and Goodreads' rating
+ * landing on the hero's rise), so the two never move at once.
+ */
+export function followAfterMotion<T>(apply: (value: T) => void): (value: T) => void {
+  let latest = 0
+  return (value) => {
+    const mine = ++latest
+    void afterMotion().then(() => {
+      if (mine === latest) apply(value)
+    })
+  }
 }

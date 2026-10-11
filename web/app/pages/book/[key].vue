@@ -2,25 +2,31 @@
 // The book page (D's book-new / book-reading / book-finished): the cover
 // lights the room. Under it the title, the author, the facts in small mono,
 // then the Book's state and the one action it asks for — Add to Library for a
-// Book that is not in the Library, Start reading on Want to read, Finish while
-// it is being read (with Abandon beside it), Read again on a finished Book and
-// Start again on an abandoned one — and what the Book is about. Opened from search (a Catalogue Book by id, or a result that is not
-// in the Catalogue yet by its source id) and from the Library. Where a Book
-// came from is never shown. Under the action, when the member has linked an
-// ebook file on this device (#131), one quiet line says so (BookEbook); with
-// the copy there, Read now is the lit action on Want to read and Reading (the
-// rest steps back beside it) and opens the built-in reader over the page, its
-// cover flying from this one (components/reader/Reader.vue).
-import { formatOf } from '~/data/books'
+// Book that is not in the Library, Start reading on Want to read, Update
+// progress while it is being read (under its progress; Finish and DNF live in
+// that sheet, not here), Read again on a finished Book and Start again on an
+// abandoned one — and what the Book is about. Opened from search (a Catalogue
+// Book by id, or a result that is not in the Catalogue yet by its source id)
+// and from the Library. Where a Book came from is never shown. Under the
+// action, when the member has linked an ebook file on this device (#131), one
+// quiet line says so (BookEbook); with the copy there, Read now is the lit
+// action on Want to read and Reading (Start reading or Update progress steps
+// back under it) and opens the built-in reader over the page, its cover flying
+// from this one (components/reader/Reader.vue). How she read it (Read as, #169)
+// is set in the options sheet.
+import { formatOf, sourceKeys } from '~/data/books'
 import { isNotFinished, type LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useEditionStore } from '~/stores/edition'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useLibraryStore } from '~/stores/library'
+import { useSearchStore } from '~/stores/search'
 import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
+import { onIdle } from '~/utils/idle'
 import { afterMotion } from '~/utils/motion'
+import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
 // One page through a change of edition, though the address changes (utils/bookPageKey.ts).
 definePageMeta({ layout: 'tabs', screen: 'book', pushed: true, key: bookPageKey })
@@ -30,6 +36,7 @@ const route = useRoute()
 const router = useRouter()
 const books = useBookStore()
 const library = useLibraryStore()
+const search = useSearchStore()
 const reading = useReadingStore()
 // Starting, finishing, DNF and reading again work offline too: they wait to
 // sync (#93). Adding does for a Book from the Catalogue; a search result (its
@@ -48,10 +55,35 @@ const followed = ref<string | null>(null)
 const key = computed(() => followed.value ?? routeKey.value)
 watch(routeKey, () => (followed.value = null))
 const page = computed(() => books.page(key.value))
-const book = computed(() => page.value?.book ?? null)
+// A Book that is not in her Library can show another of its editions (Change edition, read only):
+// the page's own Book is what `viewed` stands in for, here and nowhere else (stores/edition.ts, `viewing`).
+const viewed = computed(() => edition.viewOf(routeKey.value))
+const book = computed(() => viewed.value ?? page.value?.book ?? null)
 const entry = computed(() => page.value?.entry ?? null)
 
 watch(key, (value) => books.load(value), { immediate: true })
+
+// What she looked at is gone with the page, or with the Book it was a view of.
+watch(routeKey, () => edition.stopViewing())
+onBeforeUnmount(() => edition.stopViewing())
+// The edition she looks at is in her Library by now (she added it here, or already had it): the page
+// is that entry's, and takes its address as after a change of edition (`editionChanged`).
+watch(
+  () => {
+    const shown = viewed.value
+    if (!shown) return null
+    for (const bookKey of 'id' in shown ? [shown.id] : sourceKeys(shown)) {
+      const held = library.entryForBook(bookKey)
+      if (held) return held
+    }
+    return null
+  },
+  (held) => {
+    if (!held) return
+    edition.stopViewing()
+    editionChanged(held)
+  },
+)
 
 // Change edition animates (docs/MOTION.md, Change edition): the old hero is
 // copied before the page draws the new Book, then turns into it.
@@ -67,6 +99,17 @@ watch(
     if (!move || !shown || !('id' in shown) || shown.id !== move.from) return
     editionChange.capture()
     followed.value = move.to.book.id
+    void nextTick(editionChange.play)
+  },
+  { flush: 'pre' },
+)
+
+// The edition she looks at (a Book that is not in her Library) changes the page the same way.
+watch(
+  () => edition.viewing,
+  (now, before) => {
+    if (!now || now === before || !page.value?.book) return
+    editionChange.capture()
     void nextTick(editionChange.play)
   },
   { flush: 'pre' },
@@ -100,7 +143,19 @@ const since = computed(() => {
   if (e.status === 'finished' && latest.value?.endedOn) return formatDay(latest.value.endedOn)
   return t('book.addedOn', { date: t('common.dayMonth', dateParts(new Date(e.addedAt), locale.value)) })
 })
-const description = computed(() => book.value?.description ?? '')
+/**
+ * What the Book is about. A Book from the Library comes from a list, which carries none: the
+ * device's copy has it (stores/library.ts, `descriptionOf`). A Catalogue Book's description is the
+ * server's to write — only the check reads one at its source (social v2a contract §5) — so until it
+ * has, the page shows what the source already told *this* device: the search result it was opened
+ * from (stores/search.ts, `seenBook`). Shown, not stored: nothing here writes it anywhere, and a
+ * reload without the result asks the source again (stores/book.ts, `resolve`).
+ */
+const description = computed(() => {
+  const shown = book.value
+  if (!shown) return ''
+  return library.descriptionOf(shown) ?? search.seenBook(key.value)?.description ?? ''
+})
 // Long enough to be cut at five lines: then "More" shows the rest.
 const long = computed(() => description.value.length > 320 || description.value.split('\n').length > 5)
 const expanded = ref(false)
@@ -146,6 +201,13 @@ const ebook = computed(() => {
   const record = ebooks.linkFor(entry.value)
   return record && !ebooks.missing.has(record.id) ? record : null
 })
+// With its ebook here, the reader's code is fetched ahead (data/reader/prefetch.ts), so Read now opens it from memory.
+watch(ebook, (record) => record && onIdle(prefetchReader, { timeout: 1500 }), { immediate: true })
+/** Read now: the reader's code first (a no-op once it is in; a tap before it arrived, or after a failed fetch, loads it), then the reader. */
+async function read(target: LibraryEntry) {
+  await loadReader().catch(() => {})
+  reader.open(target)
+}
 const readerOpen = computed(() => Boolean(entry.value && ebook.value && reader.openEntryId === entry.value.id))
 
 /** The entry now has another Book (#41): the page, showing it already, takes its address in place of the old one. */
@@ -168,7 +230,7 @@ function back() {
     <!-- What the old edition was about, over the new text while a change of edition plays. -->
     <div ref="pageWas" class="pointer-events-none absolute inset-0" aria-hidden="true" inert />
     <UiTopBar :back-label="t('book.back')" back-testid="book.back" @back="back">
-      <template v-if="entry" #trailing>
+      <template v-if="book" #trailing>
         <UiRoundButton icon="more" :label="t('book.options')" data-testid="book.options" @click="optionsOpen = true" />
       </template>
     </UiTopBar>
@@ -179,11 +241,14 @@ function back() {
         :title="book.title"
         :authors="book.authors"
         :src="coverSrc(book.coverUrl, 'xl')"
+        :identity="book.isbn13 ?? ('id' in book ? book.id : book.title)"
         :thumbhash="book.coverThumbhash"
         :colors="book.coverColors"
         size="xl"
         glow
         eager
+        priority
+        tilt
         @fallback="coverFallback = $event"
       />
       <h1
@@ -234,42 +299,30 @@ function back() {
       <p v-else class="mt-ms mb-md text-center text-caption text-ink-faint" data-testid="book.notInLibrary">
         {{ t('book.notInLibrary') }}
       </p>
-      <!-- How she read it (#169): hers, not the edition's. -->
-      <BookReadAs v-if="entry" :entry="entry" testid="book.readAs" class="mb-md" />
-
       <BookProgress v-if="entry?.status === 'reading'" :entry="entry" />
 
       <UiButton v-if="!entry" block :offline="addOffline" data-testid="book.add" @click="library.openAdd(book)">
         <UiIcon name="plus" :size="18" bold />{{ t('book.add') }}
       </UiButton>
-      <!-- With the ebook here, reading it is the action; Start, Finish and Abandon step back beside it. -->
+      <!-- With the ebook here, reading it is the action; Start reading or Update progress steps back under it. -->
       <template v-else-if="ebook && (entry.status === 'want_to_read' || entry.status === 'reading')">
-        <UiButton block data-testid="book.read" @click="reader.open(entry)">
+        <UiButton block data-testid="book.read" @click="read(entry)">
           <UiIcon name="read" :size="18" />{{ t('book.read') }}
         </UiButton>
         <UiButton v-if="entry.status === 'want_to_read'" class="mt-sm" tone="quiet" block data-testid="book.start" @click="reading.openStart(entry)">
           <UiIcon name="arrow" :size="18" />{{ t('book.start') }}
         </UiButton>
-        <div v-else class="mt-sm flex gap-ms">
-          <UiButton class="flex-1" tone="quiet" data-testid="book.finish" @click="reading.openFinish(entry)">
-            <UiIcon name="check" :size="18" />{{ t('book.finish') }}
-          </UiButton>
-          <UiButton tone="quiet" data-testid="book.abandon" @click="reading.openAbandon(entry)">
-            {{ t('book.abandon') }}
-          </UiButton>
-        </div>
+        <UiButton v-else class="mt-sm" tone="quiet" block data-testid="book.updateProgress" @click="reading.openProgress(entry)">
+          <UiIcon name="bookmark" :size="18" />{{ t('book.progress.update') }}
+        </UiButton>
       </template>
       <UiButton v-else-if="entry.status === 'want_to_read'" block data-testid="book.start" @click="reading.openStart(entry)">
         <UiIcon name="arrow" :size="18" bold />{{ t('book.start') }}
       </UiButton>
-      <div v-else-if="entry.status === 'reading'" class="flex gap-ms">
-        <UiButton class="flex-1" data-testid="book.finish" @click="reading.openFinish(entry)">
-          <UiIcon name="check" :size="18" bold />{{ t('book.finish') }}
-        </UiButton>
-        <UiButton tone="secondary" data-testid="book.abandon" @click="reading.openAbandon(entry)">
-          {{ t('book.abandon') }}
-        </UiButton>
-      </div>
+      <!-- Being read: moving the bookmark is the action. Finish and DNF wait in its sheet. -->
+      <UiButton v-else-if="entry.status === 'reading'" block data-testid="book.updateProgress" @click="reading.openProgress(entry)">
+        <UiIcon name="bookmark" :size="18" bold />{{ t('book.progress.update') }}
+      </UiButton>
       <!-- Closed: the next read starts a new session; the earlier ones stay. -->
       <UiButton
         v-else
@@ -281,7 +334,7 @@ function back() {
         <UiIcon name="repeat" :size="18" />{{ notFinished ? t('book.startAgain') : t('book.readAgain') }}
       </UiButton>
       <!-- Its ebook on this device, when one is linked (#131); a finished or abandoned Book opens in the reader from here. -->
-      <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="reader.open(entry)" />
+      <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="read(entry)" />
     </div>
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
@@ -289,7 +342,7 @@ function back() {
 
     <BookHistory v-if="entry" :entry="entry" />
     <BookEditSessionSheet />
-    <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" @removed="back" />
+    <BookOptionsSheet v-if="book" v-model:open="optionsOpen" :entry="entry" :shown="book" :page="routeKey" @removed="back" />
     <BookEditionSheet @changed="editionChanged" />
     <!-- The reader, loaded on its first opening (the engine is its own chunk). -->
     <LazyReader v-if="readerOpen && entry && ebook" :entry="entry" :record="ebook" :hero="heroEl" @closed="reader.close()" />
@@ -310,8 +363,14 @@ function back() {
       </button>
     </section>
 
+    <!-- In your friends (social v2a, §1.5): the people she follows who have this Book, under its description and right above More from the author. -->
+    <BookReaders v-if="book" :book="book" />
+
+    <BookMoreFromAuthor v-if="book" :book="book" :book-key="key" />
+
     <div v-if="!book && page?.phase !== 'missing' && page?.phase !== 'error'" class="relative flex flex-col items-center px-xl pt-sm" data-testid="book.loading">
-      <span class="placeholder rounded-cover-lg bg-fill" aria-hidden="true" />
+      <!-- At the hero cover's place and size: a cover flying in lands here and waits for the hero (composables/useBookFlight.ts). -->
+      <span class="placeholder relative rounded-cover-lg bg-fill" aria-hidden="true" data-flight-stand-in />
       <span class="sr-only">{{ t('book.loading') }}</span>
     </div>
 

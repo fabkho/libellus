@@ -7,9 +7,8 @@
 // books rated so), the genres (a row opens the Library filtered by it and the year), the records, the authors read more than once, and the
 // years either side. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
-import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
+import { figuresOf, readsInMonth, readsWithoutPages, readsWithStars, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
-import { useBookStore } from '~/stores/book'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useShelfStore } from '~/stores/shelf'
@@ -23,8 +22,7 @@ const router = useRouter()
 const stats = useStatsStore()
 const bookGenres = useGenresStore()
 const libraryView = useLibraryViewStore()
-const books = useBookStore()
-// Your shelf (#23): the year's Books as Regal's 3D row under the months, for the owner only.
+// Your shelf (#23): the year's Books as Regal's 3D row under the months, everyone's own (stores/shelf.ts).
 const shelf = useShelfStore()
 
 const year = computed(() => Number(route.params.year))
@@ -35,8 +33,8 @@ let showing = false
 function show() {
   if (showing) return
   showing = true
-  void stats.load()
-  void bookGenres.load()
+  void stats.load({ ifStale: true })
+  void bookGenres.load({ ifStale: true })
   void shelf.load()
 }
 onMounted(show)
@@ -50,7 +48,7 @@ const figures = computed(() => figuresOf(reads.value, year.value))
 // any (a new account) keeps its height when the record lands; a first visit opens the block when they come.
 const genresShown = computed(() => (loading.value ? bookGenres.loaded && bookGenres.any : genreFigures.value.genres.length > 0))
 const genreFigures = computed(() => genreFiguresOf(reads.value, year.value, bookGenres.ofEntry))
-const shelfBooks = computed(() => (shelf.isOwner ? shelf.readIn(year.value) : []))
+const shelfBooks = computed(() => (shelf.available ? shelf.readIn(year.value) : []))
 // Until the reading record has come (or could not), the page stands in its final shape with
 // placeholders where the figures and covers go, as the Profile does (docs/MOTION.md, Loading):
 // every month with a cover, a favourite, the ratings, records and authors; whatever the year
@@ -65,18 +63,32 @@ const monthsGoneBy = computed(() => {
   const thisYear = Number(today.slice(0, 4))
   return year.value < thisYear ? 12 : year.value === thisYear ? Number(today.slice(5, 7)) : 0
 })
-// The owner's row: the pile stands in while the library file loads, and closes if the year has no Books in it.
-const shelfShown = computed(() => shelf.isOwner && ((!shelf.shelf && !shelf.loadError) || shelfBooks.value.length > 0))
+// The row: the card stands in while the shelf loads, and closes if the year has no Books in it.
+const shelfShown = computed(() => shelf.available && ((!shelf.shelf && !shelf.loadError) || shelfBooks.value.length > 0))
 const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m + 1, reads: readsInMonth(reads.value, year.value, m + 1) })))
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
 
-// A star row's books; open again on Back from a book opened in it.
+// A star row's books, or the year's reads without a page count; open again on Back from a book opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
-const sheetTitle = computed(() => (shown.value?.kind === 'stars' ? t('profile.sheet.stars', { count: shown.value.star, year: String(shown.value.year) }, shown.value.star) : ''))
-const sheetReads = computed(() => (shown.value?.kind === 'stars' ? readsWithStars(reads.value, shown.value.year, shown.value.star) : []))
+const sheetTitle = computed(() => {
+  const s = shown.value
+  if (!s) return ''
+  if (s.kind === 'pagesMissing') return t('profile.sheet.pagesMissing')
+  return s.kind === 'stars' ? t('profile.sheet.stars', { count: s.star, year: String(s.year) }, s.star) : ''
+})
+const sheetReads = computed(() => {
+  const s = shown.value
+  if (!s) return []
+  if (s.kind === 'stars') return readsWithStars(reads.value, s.year, s.star)
+  return s.kind === 'pagesMissing' ? readsWithoutPages(reads.value, s.year) : []
+})
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
+}
+// The Pages line: the year's reads without a page count.
+function pickPagesMissing() {
+  sheet.value = { kind: 'pagesMissing', year: year.value }
 }
 
 // A genre's row opens the Library's Finished list filtered by it and by this year (#168).
@@ -87,7 +99,7 @@ function pickGenre(genre: string) {
 
 // Back to the Profile it came from (or to it, opened from an address).
 function back() {
-  if (String(window.history.state?.back ?? '').startsWith('/profile')) router.back()
+  if (canGoBack(window.history.state)) router.back()
   else void navigateTo('/profile')
 }
 </script>
@@ -105,7 +117,7 @@ function back() {
     <UiReveal :show="loading || hasYear">
       <!-- No gaps between the blocks: each carries the space before it inside its room, so a block that closes takes its space along. -->
       <div class="relative flex flex-col px-screen pt-lg" :aria-busy="loading || undefined">
-        <ProfileFigures :figures="loading ? null : figures" />
+        <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" />
 
         <ProfileMonthBooks class="pt-xl" :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 
@@ -115,43 +127,7 @@ function back() {
 
         <UiReveal :show="loading || !!figures.favourite">
           <div class="pt-xl">
-            <UiPressLink
-              v-if="figures.favourite"
-              id="favourite"
-              :to="`/book/${figures.favourite.book.id}`"
-              class="relative flex flex-col items-center gap-md overflow-hidden rounded-lg bg-surface-raised px-inset py-lg text-center shadow-raised edge-faint"
-              :class="{ arrive: arriving }"
-              data-testid="yearInReview.favourite"
-              @press="books.prefetch(figures.favourite.book.id)"
-            >
-              <UiAmbient :colors="figures.favourite.book.coverColors" shape="card" />
-              <span class="eyebrow relative">{{ t('profile.year.favourite') }}</span>
-              <UiCover
-                decorative
-                class="relative"
-                :title="figures.favourite.book.title"
-                :authors="figures.favourite.book.authors"
-                :src="coverSrc(figures.favourite.book.coverUrl, 'lg')"
-                :thumbhash="figures.favourite.book.coverThumbhash"
-                :colors="figures.favourite.book.coverColors"
-                size="lg"
-                glow
-              />
-              <span class="relative flex flex-col items-center gap-xs">
-                <span class="book-title text-book-title" data-testid="yearInReview.favouriteTitle">{{ figures.favourite.book.title }}</span>
-                <span class="text-body text-ink-muted">{{ formatAuthors(figures.favourite.book.authors, t('common.etAl')) }}</span>
-                <UiStars :quarters="figures.favourite.rating" size="md" />
-              </span>
-            </UiPressLink>
-            <div v-else class="flex flex-col items-center gap-md rounded-lg bg-surface-raised px-inset py-lg shadow-raised edge-faint" aria-hidden="true">
-              <span class="eyebrow">{{ t('profile.year.favourite') }}</span>
-              <span class="favourite-cover skeleton wave" />
-              <span class="flex w-full flex-col items-center gap-xs">
-                <span class="line title-line"><span class="skeleton wave w-1/2" :style="{ '--wave': 0.05 }" /></span>
-                <span class="line body-line"><span class="skeleton wave w-1/3" :style="{ '--wave': 0.1 }" /></span>
-                <span class="line stars-line"><span class="skeleton wave w-1/4" :style="{ '--wave': 0.15 }" /></span>
-              </span>
-            </div>
+            <ProfileFavourite id="favourite" :read="figures.favourite" :class="{ arrive: arriving }" />
           </div>
         </UiReveal>
 
@@ -206,30 +182,5 @@ function back() {
   line-height: 1;
   font-weight: var(--font-weight-light);
   letter-spacing: var(--text-figure--letter-spacing);
-}
-/* The placeholders while the record loads: the favourite's cover (UiCover `lg`) and its lines
-   at the heights of the text they stand for. */
-.favourite-cover {
-  width: var(--size-cover-lg);
-  aspect-ratio: 2 / 3;
-  border-radius: var(--radius-cover-lg);
-}
-.line {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-}
-.line > * {
-  height: 62%;
-}
-.title-line {
-  height: var(--text-book-title--line-height);
-}
-.body-line {
-  height: var(--text-body--line-height);
-}
-.stars-line {
-  height: var(--text-caption--line-height);
 }
 </style>

@@ -1,0 +1,13 @@
+files 86 raw KB 1047.1 gz KB 345.3 br KB 305.3
+52.4 167.0 /_nuxt/BE7Zge0u.js
+40.3 136.6 /_nuxt/AvAfgI_h.js
+34.8 161.9 /_nuxt/LJ-jPCQl.js
+27.2 78.3 /_nuxt/mCIrZfd0.js
+20.7 66.4 /_nuxt/C8TB2poD.js
+15.9 94.4 /_nuxt/BJDnPcHj.js
+9.4 52.7 /_nuxt/entry.UOPwtION.css
+9.1 32.5 /_nuxt/D0FuntN8.js
+6.7 20.3 /_nuxt/B6S7N4W2.js
+5.4 17.3 /_nuxt/koKDLKVt.js
+5.0 14.9 /_nuxt/BfA1Z20Y.js
+4.8 14.9 /_nuxt/SZ_wTi5w.js

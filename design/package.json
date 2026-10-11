@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "tokens": "node build.mjs",
-    "tokens:check": "node build.mjs --check"
+    "tokens:check": "node build.mjs --check",
+    "emails": "node emails.mjs",
+    "emails:check": "node emails.mjs --check"
   },
   "devDependencies": {
     "style-dictionary": "^5.6.0"

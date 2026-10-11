@@ -6,14 +6,13 @@ name: Database backup
 # then checked. docs/OPERATIONS.md, "Backups", has what is in it, the setup and
 # the restore.
 #
-# The repository is private, and a log still outlives the run, readable by everyone with
-# access to it. Nothing of the database may reach one: the plaintext dump exists only
+# The repository is public, so a log is readable by anyone and outlives the run. Nothing of the database may reach one: the plaintext dump exists only
 # inside the pipe (scripts/backup-db.sh), only the encrypted file touches the disk (the
 # runner's temp folder, removed at the end), nothing is uploaded as an artifact, and the
 # parts of the connection string are masked before anything connects.
 #
-# Without the repository variable BACKUP_AGE_RECIPIENT (a fork, a self-hosted
-# instance that did not set it up) the job is skipped. A failed run is mailed by
+# Without the repository variable BACKUP_AGE_RECIPIENT (backups not set up yet,
+# docs/OPERATIONS.md) the job is skipped. A failed run is mailed by
 # GitHub to whoever last changed the schedule.
 on:
   schedule:
@@ -74,7 +73,7 @@ jobs:
                       print(f"::add-mask::{v}")
           PY
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # pg_dump must be at least the server's version; install exactly that one.
       - name: Server version

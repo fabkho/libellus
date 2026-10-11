@@ -129,11 +129,18 @@ export function createOutbox({
   storage,
   send,
   reachable,
+  prepare,
   now = () => Date.now(),
 }: {
   memberId: string
   storage: OutboxStorage
   send: Send
+  /**
+   * Gets a write ready just before its first send, when it says it is not (`coverPending`: an
+   * optimistic add of a search result, whose Cover is resolved here so the tap never waited
+   * for it): the arguments to send instead. A rejection sends it as it is. Left out, nothing is prepared.
+   */
+  prepare?: (item: OutboxItem) => Promise<Record<string, unknown>>
   /** Whether anything answers at all, asked before a flush sends. Left out, it is taken for granted. */
   reachable?: () => Promise<boolean>
   now?: () => number
@@ -227,6 +234,15 @@ export function createOutbox({
         report.retryAt = item.retryAt
         break
       }
+      if (item.coverPending && prepare) {
+        const ready = await prepare(item).catch(() => null)
+        // The line may have changed meanwhile (a sign-out): only this item is touched.
+        if (state.items[0]?.id !== item.id) continue
+        if (ready) item.args = ready
+        // Once: a send that did not get through is tried again with the Cover it has.
+        item.coverPending = false
+        await persist()
+      }
       let outcome: SendOutcome
       try {
         outcome = await send(item)
@@ -306,8 +322,9 @@ export function createSender(client: SupabaseClient): Send {
     if (!error) return { kind: 'taken', result: (data ?? {}) as Record<string, unknown> }
     if (!status) return { kind: 'unreachable' }
     const code = COLLECTION_ACTIONS.has(item.action) ? mapCollectionError(error) : mapLibraryError(error)
-    // A rule the database named (`entry_not_found` is raised as P0002, which PostgREST answers with a 500) is a
-    // refusal however it is answered: sending it again is refused again, and the writes behind it must not wait.
+    // A rule the database named (`entry_not_found` is raised as P0002, which PostgREST answers with a 500; the
+    // social ones, `set_entry_hidden`'s, as PT404, a 404) is a refusal however it is answered: sending it again is
+    // refused again, and the writes behind it must not wait.
     const named = code !== 'unknown' && code !== 'not_signed_in' && status >= 500
     if (!named && (code === 'not_signed_in' || status >= 500 || status === 401 || status === 408 || status === 429)) {
       return { kind: 'failed', code: code === 'not_signed_in' ? 'unknown' : code }

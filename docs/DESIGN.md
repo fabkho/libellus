@@ -68,6 +68,19 @@ How it works in CSS: `design/build.mjs` writes the light values into Tailwind's 
 dark) { :root:not([data-theme]) }`. Every utility reads the variable, so one class (`bg-surface`,
 `text-ink-muted`, `shadow-float`) is right in both themes. A component never branches on the theme.
 
+## Email
+
+The sign-in code's mail is the app's design in a medium without CSS: the same two rooms (light and
+dark, by `prefers-color-scheme`), the same tokens (`surface` page, `surfaceRaised` card with a
+`hairline` ring and `lg` corners, the `fill` code cell with `md` corners, `ink`/`inkMuted`/`inkFaint`
+text, the lamp `accent` as the short rule under the code, where the app lights the focused cell),
+Newsreader italic for the wordmark, Geist for the copy, Geist Mono for the eyebrow and the code. None
+of these fonts load in a mail client, so each stack carries system fallbacks (Georgia, the system
+sans, `ui-monospace`/Menlo/Consolas) and the mail names no web font. Alpha colours are flattened onto
+the surface they sit on. The code is one piece of text, not six cells, so it copies as one number.
+It is generated from `design/tokens.json` by `design/emails.mjs`; how to build and reuse it is in
+[DEVELOPMENT.md](DEVELOPMENT.md#emails).
+
 ## Tokens
 
 One source, `design/tokens.json`; `cd design && pnpm tokens` writes
@@ -132,6 +145,9 @@ in the precache). Each `text-*` utility sets size, line height, tracking and (wh
 Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every book title,
 `figures` (mono, tabular) for dates, counts and ratings, `eyebrow` for section labels.
 
+A member's name: `text-body` regular in lists of members (People, Requests, Blocked); `text-subhead`
+medium only inside a feed sentence (a feed row, Home's friends rows and its request row).
+
 ### Space, radius, size
 
 - Space: `xxs` 2, `xs` 4, `sm` 8, `ms` 12, `inset` 14 (inside rows and cards), `md` 16, `ml` 20,
@@ -179,7 +195,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   one line with an ellipsis; the full text is in the accessible name. A row has `min-h`, never `h`, and
   its text column `min-w-0`. A large figure (the Profile's) measures itself against its cell
   (`container-type: inline-size`) and takes the size that fits, never wider than its cell. The rule
-  is held by `web/e2e/large-text.spec.ts` (Chromium with its default font size doubled).
+  is checked by hand with the default font size doubled (no flow; docs/TESTING.md, "Which flows").
 - **Safe areas** through utilities only: `screen-inset` (a whole screen), `bar-top` (a bar's
   44 pt controls row starts under the status bar, and at least `barTop` 8 off the top edge where the
   device reports no inset — every browser tab — so it never touches the browser's toolbar; the
@@ -195,11 +211,13 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   `bar` above the page — a mono date eyebrow over the greeting on Home ("Friday · 2 Oct",
   `text-title`), the large title elsewhere (`text-large-title`). Pushed screens with a large
   title (Collections, a Collection, Import) put it on the same row, `bar` under their top bar.
-- **Tab bar** (`ShellTabBar`): a glass capsule of three icons (Home, Library, Search) floating
+- **Tab bar** (`ShellTabBar`): a glass capsule of four icons (Home, Library, Friends, Search; three while the Friends tab is switched off in Profile) floating
   over the content with nothing behind it (no fade, no scroll edge: its own glass, edge and shadow
-  set it apart; it slides away on scroll down), at iOS 26's proportions: 62 tall, 72 per tab (224 wide), 26 px icons, 21 pt off
+  set it apart; it slides away on scroll down), at iOS 26's proportions: 62 tall, 72 per tab (296 wide with the Friends tab, 224 without; still centred and inside a 360 px screen), 26 px icons, 21 pt off
   the screen edge. The current tab is full ink with a bolder stroke and a lamp dot; the others are
-  faint. Search is not a page: it opens the search palette, and the capsule itself turns into it
+  faint. Friends is the people icon (two readers), after Library; its tab opens the feed as a tab page
+  and comes and goes with its switch (Profile → Account → Friends tab, on by default): the capsule,
+  centred, opens or closes about its middle. Search is not a page: it opens the search palette, and the capsule itself turns into it
   and back (MOTION.md, Search morph).
 - **Search palette** (`ShellSearchOverlay`): over the page, which stays put behind it, blurred
   and veiled. The query row is at the bottom (Home and Library at its left, the current one lit;
@@ -208,7 +226,7 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   above the keyboard. Its slot holds `SearchResults` (#6): one list, never naming where a result
   came from (one field, one list; at most one quiet loading state), each row a cover, the serif
   title, the author, the year in mono and a round + (or the Status, if the Book is in the Library).
-- **Tab places**: each tab keeps its place, as iOS tabs do. Home and Library open where they were
+- **Tab places**: each tab keeps its place, as iOS tabs do. Home, Library and Friends open where they were
   left (back and forward use the browser's saved place), and the tab already showing, tapped
   again, scrolls back to its top.
 - **Pushed screens** (the book page): in the tab layout with `pushed: true`, so the tab pages stay
@@ -216,6 +234,13 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   (`UiAmbient`, `UiCover` `glow`). The tab bar and search stay, so search works from every page.
   The top bar is pinned under the safe area (centred on the column on a wide screen) and the
   page scrolls under its glass buttons: an installed app has no edge swipe back.
+- **The book page's action** (owner): one full-width pill per state, always where the eye left
+  it: under the status line, or under the progress block while reading. The lit one is what the
+  state asks for (*Add to Library*, *Start reading*, *Update progress* with the bookmark); with the
+  ebook here *Read now* is lit and the other steps back, quiet, under it; a closed read's *Read
+  again* / *Start again* is quiet, since nothing is asked of it. Ending a read is not on the page:
+  *Finish* and, under it, *DNF* are two grouped rows at the foot of the Update progress sheet (the
+  buttons quiet and one width, Finish lit at the last page). *Read as* is in the options sheet.
 - **Profile** (`pages/profile/index.vue`, issue #78; design round #78, direction D): the avatar in
   every tab's header opens it, a pushed screen lit like a book page (the favourite cover of the
   year in view). B's hero (the initials in a `coverMd` ring, the name, "Reading here since …",
@@ -276,16 +301,22 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
 - **Year in review** (`pages/profile/[year].vue`): pushed from the Profile, lit by the year's
   favourite. The year large (twice `figure`), the four figures, the months as rows of covers with
   their count (an empty month is a dash), the favourite on a lit card, ratings, records, authors,
-  and the years either side (they replace the page, so Back is the Profile). For the owner only, a
-  card under the months with that year's Books as Regal's 3D row, starting at January (its pile
-  standing in while the library file loads). Loads like the Profile: its shape at once, a cover's
+  and the years either side (they replace the page, so Back is the Profile). A card under the
+  months with that year's Books as Regal's 3D row, starting at January, and a quiet Show all to
+  that year's Stack full screen. Loads like the Profile: its shape at once, a cover's
   placeholder in every month gone by.
-- **Your shelf** (`pages/profile/shelf.vue`, #23; the owner's account only, nothing anywhere for
-  anyone else): Regal's 3D Stack of the published library file, the one the portfolio shows. A
-  pushed screen that fills the column (`immersive`: the tab bar steps away) in the **night room in
-  either theme**: the page carries `data-theme="dark"`, so every token takes its Night value inside
-  it, and the status bar takes the room's colour while it is open. A bookcase is an object in a
-  room, like a cover; the lamp-lit dark lets the Spines carry the colour (principle 2). The round
+- **Your shelf** (`pages/profile/shelf.vue`, #23, #214; every member's own, built on the device
+  from her Library; the owner's is the published library file his portfolio shows): Regal's 3D
+  Stack. **One colour per Book**: each Book's Spine and back are flat in its cover's most common
+  colour (`utils/bookColour.ts`: saturation at most 0.55, lightness 0.14–0.84, nudged out of the
+  middle band until the ink reads at 4.5:1), the title and author printed along the Spine in Regal's
+  ink or paper, whichever contrasts more, a quiet title block on the back; the front stays the cover
+  (a Book without one: the Placeholder's cloth, and a front drawn like its back). The pile reads as
+  a bookcase, not as noise: no colour louder than a printed cloth, no type that doesn't read. A
+  pushed screen that fills the column (`immersive`: the tab bar steps away) **in the member's own
+  theme** (it used to force the night room; a member in the dark theme gets it): a bookcase is an
+  object in a room, like a cover, and the room is hers. Nothing read yet: the lamp over the empty
+  shelf (`UiEmptyState`), never an empty room. The round
   back button and the title pinned, the count beside them in mono, the Stack below, its view
   reaching up behind the top bar so the pile starts above the middle. Regal's own parts (the tooltip
   and the Book's detail panel, a card, or on a phone a bottom sheet) wear D's tokens in the room's
@@ -306,19 +337,19 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   Front cover at the right in the lamp colour; no pills), then the title in the book-title style,
   one mono line of facts (author, day, pages), the blurb in four lines and a trailing Goodreads
   link. Regal keeps the container.
-  The Profile shows it as a section like the others ("Your shelf", the count, a quiet Show all only
-  when there are more Books than its row holds) over a raised card filled edge to edge by Regal's
+  The Profile shows it as a section like the others ("Your shelf", the count, a quiet Show all
+  whenever a Book stands on it; nothing read yet: one quiet line in the card's place) over a raised card filled edge to edge by Regal's
   row (`RegalBooksRow`, `regal-themed` in the app's theme): the Stack turned on its side, the newest
   80 Books standing Spines out, a sheet and the month between months. The year in review has the
   same card with that year's Books. The row scrolls sideways under the finger and never traps the
   page's scroll; a Book tapped breaks out over the whole screen, header and tab bar included, and
   Done, Escape, a tap beside it or the system's Back lands it in the row again. The row has no loading
-  step of ours: the owner's screens warm it ahead on idle (Regal's `preloadRegal`: the library file,
+  step of ours: the owner's screens warm it ahead on idle, anyone's card when it mounts (Regal's `preloadRegal`: the library file,
   the 3D code, the first Spines), so it appears with Regal's own intro, the Stack's turned on its side;
   where nothing is drawn yet (a first visit with no head start) the card is its plain surface until the
-  row has its Spines, never slabs, a spinner or a shimmer. Only the shelf page's Stack, which has no
-  intro of its own to wait for, stands in with `ShelfPile`: the Books as flat slabs in their Spines'
-  colours, as thick as they are long.
+  row has its Spines, never slabs, a spinner or a shimmer. The shelf page's Stack the same: the room
+  is its plain surface while the 3D comes, then Regal's entrance (the Stack's settle-in, the Books
+  dropping into place as when the pile is re-sorted) is the arrival.
 - **Scroll bars**: where the platform draws them in the page (desktop browsers; phones lay their
   own over it), a thin ghost-ink thumb (`inkGhost`) on no track, in both themes (`color-scheme`
   follows the theme, so native parts — the date picker, autofill — do too); Safari, without
@@ -332,7 +363,14 @@ Helpers in `main.css`: `book-title` (serif, medium, optical sizes) for every boo
   the first version — a blurred band down past the top bar's row — read too heavy.)
 - **The way in** (`AuthFrame`): a tilted wall of cloth Placeholder covers behind a veil, the lamp
   glow, the serif wordmark and tagline, the screen's eyebrow, its form and the link to the other
-  screen at the bottom.
+  screen at the bottom, then a quiet **Privacy** line (**Privacy · Imprint** once the imprint is on, `IMPRINT_ENABLED`) (`LegalLinks`: `text-caption` in
+  `inkFaint`, underlined, each link 44 high; the Profile ends with the same line).
+- **Legal text** (`/privacy`, and `/imprint` once it is on; `components/legal/`): a long read, so no cards or colour: the
+  title in `text-large-title`, an h2 per section in `text-callout` medium, body in `text-subhead` `ink`
+  (the lead in `inkMuted`), bullets with an `inkFaint` marker, links in `accentInk` with an underline, bold
+  as `font-medium`. A detail the owner still has to supply is a `[[…]]` mark in `accentSoft` with
+  `accentInk` text. The English | German switch is a compact `UiSegmented`. Printed, it is black on
+  white (the system `CanvasText`) with the bar, the switch and the links left out.
 
 ## Components
 
@@ -343,12 +381,13 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | Component | When |
 |---|---|
 | `UiButton` | Every button that is a pill. `tone`: `primary` (the one lit action of a screen: ink fill), `secondary` (hairline outline), `quiet` (translucent fill; actions on cards like Finish), `plain` (text only), `danger` (destructive). `size`: `lg` 50 (sheets, forms; usually `block`), `md` 40, `sm` 32 (on cards). `to` makes it a link. The touch target never drops below 44 px. `offline` (#15): an action that cannot work without a connection (search, imports, Change edition, a new Collection; since #93 the other writes wait to sync instead) stays in place, disabled, and reads "Offline" with the offline icon instead of its label. |
+| `UiSeeAll` | The control at the right of a section's head that opens the rest of it ("See all 11 ›", "2026 in review ›"): one look everywhere, a hairline-edged pill `buttonSm` high, footnote text in the muted ink, the chevron after it, the 44 px touch box as an invisible `::after`. A `button` (opens a sheet: `dialog` says `aria-haspopup="dialog"`) or, with `to`, a link. The count is part of the label, in the same type as the words (no mono: Next in your series was the reference). Section heads only: not list rows, and not the end card of a sideways row. `aria-label`, `data-testid` and `@click` go to the element. |
 | `UiRoundButton`, `UiTopBar` | Glass round buttons for chrome floating over a cover (back, more) on pushed screens such as book detail. |
 | `UiProgress` | How far through a Book (#39): a hairline bar, the lamp colour (`accent`) for what is read on a faint rule (`hairlineStrong`), `stroke.focus` thick, growing over `standard`. `fraction` 0–1; `label` and `valueText` for assistive tech. The words beside it ("p. 212 of 480", "45 %") are the caller's, in `figures`. |
 | `UiReveal` | Something that is not there until it has something to say (#79: the book page's figures, chart and reading log before progress was tracked). `show` opens its room and fades it in over `standard` (the content under it glides, no jump), closes over `exit`; Reduce Motion a short fade. Carries `data-moving` while moving. |
-| `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe, pencil, flag, arrow, sun, moon, signOut, trash (a bin: deleting the account), offline (a cloud struck through: an action that cannot write now), sync (a cloud with an arrow up: changes waiting to sync, #93), ebook (a reader's screen with lines of a page: an ebook file on this device, #131), minus (zooming out the photo's crop, #156; camera is the Photo row's icon too). Decorative; the control carries the label. New icons are drawn on the same grid. |
+| `UiIcon` | The icon set: 24-unit grid, hairline round strokes, `currentColor`. `bold` for the active tab. Names: home, library, search, back, plus, more, close, check, grip, chevron, down, calendar, lock, mail, repeat, slash, stack, globe (the public account), people (two readers: the Friends tab, the feed's People button and the Profile's People row), pencil, flag, arrow, sun, moon, signOut, trash (a bin: deleting the account), offline (a cloud struck through: an action that cannot write now), sync (a cloud with an arrow up: changes waiting to sync, #93), ebook (a reader's screen with lines of a page: an ebook file on this device, #131), minus (zooming out the photo's crop, #156; camera is the Photo row's icon too), bookmark (a ribbon: Update progress, moving her bookmark). Decorative; the control carries the label. New icons are drawn on the same grid. |
 | `UiAvatar` | The member's initials (`utils/initials.ts`) in mono in a hairline ring, or her photo (`photo`, #156) drawn over them in the same ring: the initials stay underneath, so the circle never empties or moves while the photo decodes, and a photo that arrives while it is on screen fades in over `standard`. The tab header shows the 128 px copy; the Profile's hero ring (the `coverMd` width) and the photo sheet the 512 px one. |
-| `UiCover` | Every cover. 2:3, `object-fit: cover` (with `whole`, an image clearly off 2:3 — an ebook file's own cover — is fitted whole, `contain`, over a blurred copy of itself), token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. Its accessible name is the title, unless `decorative`: wherever the title is written beside it (a row, a card, the book page's hero) the cover is left out for assistive tech, so nothing is read twice. |
+| `UiCover` | Every cover. 2:3, `object-fit: cover` (with `whole`, an image clearly off 2:3 — an ebook file's own cover — is fitted whole, `contain`, over a blurred copy of itself), token widths (`size` xs–xl). Shows the thumbhash (or the dominant colour) while loading and fades the image in; spine crease and hairline edge; `glow` adds the lamp light (a blurred copy, or a pool in the precomputed `colors` until there is an image). No image or a broken one → the Placeholder cover (cloth by title, title and author set in type). `eager` for the first covers on screen. Its accessible name is the title, unless `decorative`: wherever the title is written beside it (a row, a card, the book page's hero) the cover is left out for assistive tech, so nothing is read twice. `tilt` (the Book page's hero only): the sheet leans under the finger and comes back flat (MOTION.md, Hero cover). |
 | Photo crop (`ProfilePhoto`, `components/profile/Photo.vue`) | Picking and placing the member's photo (#156), in a `UiSheet` ("Move and scale", Save in the accent): a square of the sheet's width (at most 52 % of the screen's height) on the `fill` surface, the picture under a round mask of the sheet's surface at 72 %, with a `hairlineStrong` circle, so the corners stay visible but quiet; under it − and + round the zoom slider (`accent`), and the hint in `inkFaint`. Dragging in the square never swipes the sheet away (`data-no-swipe`). With a photo the same sheet first shows it in the hero's ring, a line that only she sees it, Choose another (primary) and Remove photo (danger). |
 | `UiAmbient` | The light a cover throws onto its card (`shape="card"`) or page (`shape="page"`), from the cover's precomputed colours. Currently reading cards, book detail. |
 | `UiStars` | A Rating, display only: quarter-filled stars plus the exact mono value ("3.75"). `quarters` 1–20 or null (five empty stars, no value). Sizes sm/md/lg (and `input`, for the rating control). |
@@ -364,7 +403,7 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `UiSearchPrompt` | The search palette at rest inside an empty state; opens the real search overlay. |
 | `UiPressLink` | Every link into a book page (search results, Library rows). Starts on touch-down: preloads the route and emits `press` (start loading the data); a mouse press navigates at once, a finger on its tap, since a touch-down may become a scroll. |
 | `UiIconSegments` | A choice of a few as one row of icon segments (the control of variant D): a radio group, each segment named by its full label, arrow keys move it; the chosen segment widens and unfolds its name beside the icon, the others stay icons. Used by `BookFormatChoice` and `BookReadAs`. |
-| `BookReadAs` | How she read a Book (Book page, options and Finish sheets): the eyebrow over a `UiIconSegments` row of three — physical (a book), ebook (a reader), audiobook (headphones). The lit one is hers, or the edition's format as the default. |
+| `BookReadAs` | How she read a Book (the options and Finish sheets): the eyebrow over a `UiIconSegments` row of three — physical (a book), ebook (a reader), audiobook (headphones). The lit one is hers, or the edition's format as the default. |
 | `BookFormatChoice` | An edition's format (Change edition, "My edition isn't listed"): one row of four icon segments (hardcover, paperback, a reader for ebook, headphones) in the reader's Margins / Line spacing style — a radio group, each segment named by its format, arrow keys move it. The chosen segment widens and unfolds its name beside the icon (a grid column `0fr → 1fr` and a fade over `standard`); the others stay icons. None lit while the format is unknown. |
 | `CodeInput` | The six-digit code: one real input, six drawn cells. |
 

@@ -11,11 +11,12 @@ import {
   type WriteOptions,
 } from './library'
 import { isNoAnswer } from './network'
+import { allPages } from './paging'
 import type { QueuedAction } from './queuedWrites'
 
 /**
  * Collections (issue #1, Library actions → Collections; issue #14): a member's
- * own shelves, in her order, each holding Library entries in her order. The
+ * own shelves, listed by last edited, each holding Library entries in her order. The
  * data-layer contract a native client reimplements against the same database
  * functions. Every change is one RPC; the rules (a name per member, deleting a
  * Collection never deletes an entry, adding a Book that is not in the Library
@@ -28,6 +29,8 @@ export type CollectionSummary = {
   name: string
   position: number
   createdAt: string
+  /** When it was last edited (see `sortByEdited`): the list is in this order. */
+  updatedAt: string
   /** How many Books are on it. */
   count: number
   /** The Books of its first entries, in its order, at most `MOSAIC_SIZE`. */
@@ -40,7 +43,23 @@ export type Collection = {
   name: string
   position: number
   createdAt: string
+  updatedAt: string
   entries: LibraryEntry[]
+}
+
+/**
+ * Collections are listed by last edited, most recently edited first. "Edited": renamed, a Book put on it,
+ * taken off it or moved within it (`collections.updated_at`, kept by triggers; the device bumps its copy at
+ * once for the same changes). Ties are by name (any case), then id, so the order is the same everywhere
+ * and never depends on how the rows arrived. Returns a new array.
+ */
+export function sortByEdited<T extends { id: string; name: string; updatedAt: string }>(collections: readonly T[]): T[] {
+  return [...collections].sort(
+    (a, b) =>
+      Date.parse(b.updatedAt) - Date.parse(a.updatedAt) ||
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  )
 }
 
 /** How many covers a Collection shows in its mosaic. */
@@ -105,7 +124,7 @@ export function isValidName(name: string): boolean {
   return normalised.length > 0 && normalised.length <= NAME_MAX
 }
 
-type CollectionRow = { id: string; name: string; position: number; created_at: string }
+type CollectionRow = { id: string; name: string; position: number; created_at: string; updated_at: string }
 type SummaryRow = CollectionRow & {
   count: { count: number }[]
   firsts: { position: number; entry: { book: BookRow } }[]
@@ -116,13 +135,13 @@ type DetailRow = CollectionRow & { entries: { position: number; entry: EntryRow 
 const ENTRY = ENTRY_COLUMNS
 
 export type Collections = {
-  /** The member's Collections in her order, each with its size and first covers. */
+  /** The member's Collections, last edited first (`sortByEdited`), each with its size and first covers. */
   list: () => Promise<CollectionResult<CollectionSummary[]>>
   /** One Collection with its entries in her order; null when it is not hers (or gone). */
   get: (id: string) => Promise<CollectionResult<Collection | null>>
   /** The ids of the member's Collections an entry is on. */
   memberships: (entryId: string) => Promise<CollectionResult<string[]>>
-  /** Makes an empty Collection at the end of her list. */
+  /** Makes an empty Collection (edited now, so first on her list). */
   create: (name: string) => Promise<CollectionResult<CollectionSummary>>
   rename: (id: string, name: string) => Promise<CollectionResult<CollectionSummary>>
   /** Deletes a Collection. The Books on it stay in the Library. */
@@ -163,7 +182,7 @@ export function createCollections(client: SupabaseClient, { online = () => true,
     return { data: known, error: null }
   }
   function summaryOf(row: CollectionRow, count = 0, covers: Book[] = []): CollectionSummary {
-    return { id: row.id, name: row.name, position: row.position, createdAt: row.created_at, count, covers }
+    return { id: row.id, name: row.name, position: row.position, createdAt: row.created_at, updatedAt: row.updated_at, count, covers }
   }
 
   return {
@@ -171,42 +190,56 @@ export function createCollections(client: SupabaseClient, { online = () => true,
       const { data, error } = await client
         .from('collections')
         .select(
-          'id, name, position, created_at, count:collection_entries(count), ' +
+          'id, name, position, created_at, updated_at, count:collection_entries(count), ' +
             'firsts:collection_entries(position, entry:library_entries!inner(book:books!inner(*)))',
         )
-        .order('position')
+        .order('updated_at', { ascending: false })
+        .order('name')
         .order('position', { referencedTable: 'firsts' })
         .limit(MOSAIC_SIZE, { referencedTable: 'firsts' })
         .returns<SummaryRow[]>()
       if (error) return { data: null, error: mapCollectionError(error) }
       return {
-        data: data.map((row) =>
-          summaryOf(row, row.count[0]?.count ?? 0, row.firsts.map((first) => bookFromRow(first.entry.book))),
+        // The database's order, and the one the device keeps (collation of a tie may differ).
+        data: sortByEdited(
+          data.map((row) => summaryOf(row, row.count[0]?.count ?? 0, row.firsts.map((first) => bookFromRow(first.entry.book)))),
         ),
         error: null,
       }
     },
 
     async get(id) {
-      const { data, error } = await client
-        .from('collections')
-        .select(`id, name, position, created_at, entries:collection_entries(position, entry:library_entries!inner(${ENTRY}))`)
-        .eq('id', id)
-        .order('position', { referencedTable: 'entries' })
-        .maybeSingle<DetailRow>()
-      if (error) {
+      // The entries under the Collection are cut at 1,000 too (max_rows reaches embedded rows), so they are
+      // read page by page, in their position (unique within a Collection), with the Collection's own row
+      // coming back each time (data/paging.ts).
+      const seen: { head: Omit<DetailRow, 'entries'> | null } = { head: null }
+      const pages = await allPages<DetailRow['entries'][number]>(async (from, to) => {
+        const { data, error } = await client
+          .from('collections')
+          .select(`id, name, position, created_at, updated_at, entries:collection_entries(position, entry:library_entries!inner(${ENTRY}))`)
+          .eq('id', id)
+          .order('position', { referencedTable: 'entries' })
+          .range(from, to, { referencedTable: 'entries' })
+          .maybeSingle<DetailRow>()
+        if (error) return { data: null, error }
+        if (data) seen.head = data
+        return { data: data?.entries ?? [], error: null }
+      })
+      if (pages.error) {
         // An id that is not a uuid is simply not one of hers.
-        if (error.code === '22P02') return { data: null, error: null }
-        return { data: null, error: mapCollectionError(error) }
+        if (pages.error.code === '22P02') return { data: null, error: null }
+        return { data: null, error: mapCollectionError(pages.error) }
       }
-      if (!data) return { data: null, error: null }
+      const found = seen.head
+      if (!found) return { data: null, error: null }
       return {
         data: {
-          id: data.id,
-          name: data.name,
-          position: data.position,
-          createdAt: data.created_at,
-          entries: data.entries.map((item) => entryFromRow(item.entry)),
+          id: found.id,
+          name: found.name,
+          position: found.position,
+          createdAt: found.created_at,
+          updatedAt: found.updated_at,
+          entries: pages.data.map((item) => entryFromRow(item.entry)),
         },
         error: null,
       }

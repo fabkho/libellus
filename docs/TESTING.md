@@ -159,6 +159,18 @@ in history; `--theme light|dark`. It writes a strip of the screencast, the fligh
 pnpm tsx e2e/android/flight-return.ts --base http://localhost:3126 --out /tmp/libellus-cover-return --name after --theme dark --network cold
 ```
 
+**The flight after many round-trips** (does it wear?) is a Playwright measurement, `e2e/perf/flight-soak.spec.ts`
+(tagged `@perf`): the config leaves `e2e/perf` out unless `LIBELLUS_E2E_PERF=1`, so no run, local or CI,
+picks it up by accident. Thirty round-trips Home → Book → Back in Chromium (CPU ÷4) or WebKit, per round
+the flight's timings, its dropped and long frames, what it left behind, the document's and the heap's size
+and the stack's requests; `e2e/perf/summarize.ts` makes the tables of docs/MOTION.md ("After many
+flights"). Run on a quiet machine, at least five runs:
+
+```sh
+LIBELLUS_E2E_PERF=1 FLIGHT_OUT=/tmp/flight-soak pnpm exec playwright test e2e/perf --repeat-each 5 --workers 1
+pnpm tsx e2e/perf/summarize.ts /tmp/flight-soak
+```
+
 **Share target and app shortcuts (#91).** Both need a **WebAPK**: Chrome on Android registers a web app
 as a share target and shows its manifest `shortcuts` on a long-press only once Google's server has minted
 an APK for it. On the emulator without a Google account Chrome's Install (⋮ → Add to home screen →
@@ -185,7 +197,8 @@ pnpm tsx e2e/android/ebooks.ts --base http://localhost:3126 --out /tmp/libellus-
 ```
 
 `share1`/`share3` POST one and three EPUBs to `/share` from the installed page itself (`multipart/form-data`,
-real `File`s, through the app's service worker, `public/sw-share.js`): the share sheet entry needs a
+real `File`s, through the app's service worker, `public/sw-share.js`) and then tap *Add* on the confirmation
+the app asks for (security round F4; `e2e/share.spec.ts` covers that flow and a POST from another site): the share sheet entry needs a
 WebAPK, as for #91 above, so a phone with a Google account is where the real share sheet is checked.
 `pick` taps *Choose* in the Ebooks page's Ebook folder row; Android's folder picker opens (the storage
 root and `Download` itself say "Can't use this folder"; open `Download` → `Books` → *Use this folder* →
@@ -334,6 +347,40 @@ much room a sheet has: before the fix in #58 the Finish sheet stood on the keybo
 the top of the screen, its header and Cancel out of reach. `keyboardRoomOf` (the visual viewport's
 height while the keyboard is up) now caps the sheet's height.
 
+## The scrim and the status bar (A6, Android)
+
+On Android the dimming scrim of a sheet stopped at the status bar while the app's own background did not. What
+the code shows: the app is installed as a PWA (`display: standalone`), where the system draws the status bar
+outside the web viewport and colours it from `<meta name="theme-color">`; the background looks full-bleed
+because the tags carry the page's `surface`, while a scrim, a translucent layer inside the viewport, cannot
+paint into the system bar. `position: fixed` going container-relative under a transformed ancestor is not it:
+the scrim is teleported to `<body>`, nothing above it is transformed, filtered or contained, and
+`e2e/sheet-backdrop.spec.ts` (Chromium, Pixel 7) pins its box to the whole visual viewport. The fix is in
+the tags (`utils/statusBarDim.ts`): while a layer is open they take the scrim-blended colour. Whether the
+system's bar really follows the tag in the installed app is what the phone has to say:
+
+1. On the phone: Settings → Developer options → USB debugging on; plug in. On the Mac open
+   `chrome://inspect/#devices`, tick *Discover USB devices*.
+2. Open Libellus **from its home-screen icon** (installed, standalone) and *inspect* it from the list (the
+   installed app is listed as its own page; a Chrome tab is the other target to try after).
+3. Open a sheet (Profile → Name). In the Elements panel select the scrim (`[data-testid="accountName.scrim"]`).
+   In the Console: `const s = document.querySelector('[data-testid$=".scrim"]'); [s.parentElement.tagName, getComputedStyle(s).position, JSON.stringify(s.getBoundingClientRect()), JSON.stringify(document.documentElement.getBoundingClientRect()), visualViewport.height, innerHeight ]`.
+   Expect `BODY`, `fixed`, a box at `top: 0` the height of `<html>`, and the heights equal. For the containing
+   block, walk up: `for (let n = s.parentElement; n; n = n.parentElement) { const c = getComputedStyle(n); if (c.transform !== 'none' || c.filter !== 'none' || c.contain !== 'none') console.log(n.tagName, c.transform, c.filter, c.contain) }` prints nothing.
+4. Read the tags: `[...document.querySelectorAll('meta[name=theme-color]')].map(m => m.content)` with the sheet
+   open (dimmed colours, e.g. `#a19c96` over the light page) and after closing it (`#f4f0e9` / `#0e0c0a`
+   again). Then change one by hand while the sheet is open: `document.querySelector('meta[name=theme-color]').content = '#ff0000'`
+   (a tag whose `media` matches the phone's appearance) and watch the status bar.
+5. Read the result:
+
+| Observed | Meaning | Next |
+| --- | --- | --- |
+| Scrim box = `<html>` box, no transformed ancestor; the status bar tint follows the tag (red test, and the dim on a real sheet) | Cause confirmed: the bar is the tag's, and the dimmed tag fixes it | Nothing: ship `statusBarDim`. |
+| Scrim box = `<html>` box, no ancestor; the bar follows the red tag, but a real sheet leaves it undimmed | The tag is rewritten after we set it (the head manager or another writer), or the scrim token is unreadable (`--color-scrim` empty) | Check `meta.content` during the sheet; fix the writer. |
+| Scrim box = `<html>` box, no ancestor; the bar does **not** follow the tag at all | System restriction (an edge-to-edge window the system draws the bar over, or the TWA's own `statusBarColor`): no web code can change it | Remove `statusBarDim`; the TWA's native `statusBarColor` is the lever (PR #102's wrapper), not the page. |
+| Scrim box starts below `0` or is shorter than `<html>`, or an ancestor is listed | Hypothesis holds: a containing block for `fixed` | Find the ancestor from the list; move the scrim out of it or remove the transform/filter/contain. |
+| Scrim box is full but the area under the status bar is *app* background that stays bright | The page is not drawn under the bar (no `viewport-fit=cover` effect): the bar is a system strip | As the third row. |
+
 ## The barcode scanner (#92)
 
 The scanner needs a camera, which neither Playwright flow nor the Simulator has, so the real devices check
@@ -378,12 +425,11 @@ first load of that origin: use another origin (`localhost` or `127.0.0.1`) after
 
 ## Layout shift (CLS)
 
-Only Chromium counts layout shifts (the Layout Instability API; WebKit has none), so the flows that
-watch them run there: `e2e/layout-shift.spec.ts` puts a Library of 60 Books on a member and, on a phone
-(412 × 915, the CPU slowed 4×), sums the shifts nobody's input explains the way web-vitals does
-(session windows, the largest one): a reload of the Library, its segments, a Book and back with the
-system Back, and search over the Library with Apple answering 800 ms after the last keystroke. Each
-must stay under 0.05.
+Only Chromium counts layout shifts (the Layout Instability API; WebKit has none). The flows that watched
+them (`layout-shift.spec.ts`: a Library of 60 Books on a phone, 412 × 915, the CPU slowed 4×, the shifts nobody's
+input explains summed the way web-vitals does, each scenario under 0.05) were removed with the other layout flows
+("Which flows"): a change that moves the Library, the search palette or a Book page is looked at by hand with
+the recipe below.
 
 The field has the final word. Cloudflare Web Analytics lists the element behind a page's CLS
 (`cumulativeLayoutShiftElement` in the GraphQL dataset `rumWebVitalsEventsAdaptiveGroups`, or Web
@@ -419,35 +465,58 @@ no sheet or list moving, no page on its way to its scroll place), `goto` (an
 address opened once the page is at rest), boxes compared in one `evaluate`
 (e2e/support.ts, e2e/fixtures.ts).
 
+Every flow also fails at its end on an uncaught error of any page of any context it opened (`pageerror`, in `noPageErrors` of e2e/fixtures.ts; Anna's own browser in friends.spec.ts included), listing each with its stack; `EXPECTED_PAGE_ERRORS` there is the allowlist for an error that is the point of a flow, each with its reason, and is empty. A spec imports `test` from `./fixtures`, never from `@playwright/test`, or it has no guard.
+
 Two things a laptop hides and a runner shows (issue #146): the dev server bundles a
 package the first time a page imports it, and the pages open then can be reloaded under
 their flows (`vite.optimizeDeps.include` in `nuxt.config.ts` lists what a later screen reaches first, so
 none is met late; a package that is only imported from a lazy page or a dynamic import
 belongs there), and a page moves under the tap that aims at it. A flow opens the Profile
-with `openProfile` (the record in, nothing moving) and brings the tab bar back with `showTabBar`
-after scrolling to a control. The Profile's account rows used to slide ~150 px down once the record
-said there was nothing finished; it now stands in its final shape from the first frame, and
-`e2e/profile.spec.ts` looks at the rows' place on every frame (with the record held back) to keep it so.
+with `openProfile` (the record in, nothing moving). The Profile's account rows used to slide ~150 px down once
+the record said there was nothing finished; it now stands in its final shape from the first frame (the flow that
+looked at the rows' place on every frame was removed with the layout flows).
 
 ## CI: what runs when
 
-`.github/workflows/ci.yml`. The repository is private, so every job is billed from the account's included
-Actions minutes — 2,000 a month on Free, 3,000 with Pro, shared with the other private repositories — and a
-standard runner has two cores where a public repository's has four. The workflow weighs the minutes as much
-as the wait for a pull request's result; the numbers below were measured on the four-core public runner.
+`.github/workflows/ci.yml`. The repository is public, so standard runners cost no Actions minutes and have four cores (the
+numbers in "Measured" below were taken on that runner). The workflow still weighs the minutes as much as the
+wait for a pull request's result, so a change that can fail cheaply does so before the expensive flows, and
+the runs a fork starts need the owner's approval first.
+
+The flows are the expensive part (about 20 billed minutes for the whole suite in one job, when it was 243
+measured flows and 2,126 s; since 8 October 2026 it is the 29 flows of the critical paths, about 308 s of
+measured flow time, below), so they run **once per release** and nowhere else by default.
+
+### Which flows
+
+End-to-end tests are worth their cost only for **critical paths**, and a flow exists only for one:
+
+1. getting in: sign up with an invite code, the six-digit code, sign in, sign out;
+2. the core loop: search → add → start → update progress → finish;
+3. offline: the app opens offline on its kept Library, and changes made offline sync later;
+4. what leaves the app: the public reading page, a Book card and the waitlist form;
+5. deleting the account;
+6. (when it lands) the social loop.
+
+Everything else is tested where it is cheapest: rules in pgTAP (`supabase/tests/`), logic in Vitest
+(`web/tests/`: pure functions, and repositories against the local stack). Motion and visual polish are not tested
+end to end. A new screen therefore does not get a flow of its own; it gets one only if it is on a path above.
+Accessibility scans (`expectAccessible`) run in **one theme, dark**, for the screens on the critical paths;
+colours come from tokens that docs/ACCESSIBILITY.md already checks in both themes.
 
 | Event | What runs |
 | --- | --- |
-| Pull request | What the changed paths call for (below). **No Playwright flows**: the flows are where the minutes go, and a broken one is caught on `main`, minutes after the merge, where a release reads the result. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
+| Pull request | What the changed paths call for (below). **No Playwright flows**: the flows are where the minutes go. A new push, a force-pushed rebase or a re-run cancels the run still going for that pull request. |
 | Pull request with the label **`full-e2e`** | Those checks, and **every flow**, `@full` included. Adding the label starts that run; every later push keeps it while the label is on. Any other label starts nothing and cancels nothing. |
-| Push to `main` (a merge) | **Every flow**, `@full` included, and the checks the changed paths call for. A regression in an `@full` flow is found here, minutes after the merge, instead of on the pull request. |
-| `workflow_dispatch` | Everything (`gh workflow run CI --ref <branch>`). |
+| Push to `main` (a merge) | The checks the changed paths call for, **no flows**. A regression the checks do not see is found by the flows of the next release (below), or sooner with the label or a manual run. |
+| `workflow_dispatch` | Everything, every flow (`gh workflow run CI --ref <branch>`). |
+| Release (`release.yml`: the push of the release pull request's merge, or a manual run with `migrations` on) | **Every flow**, `@full` included, against the tagged commit, in the `flows` job, before `deploy`. About 20 billed minutes when it was 243 flows, fewer now (29 flows, 308 s; not measured in CI yet), once per release. |
 | Docs only (`*.md`, `docs/**`, `android/**`, `LICENSE`) | No run at all. |
-| The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No run at all. `release.yml` runs instead, and **its deploy waits for main's latest full run** (below). |
+| The release pull request and its merge (`CHANGELOG.md`, `version.txt`, `.release-please-manifest.json` only) | No CI run. `release.yml` runs instead, and **its deploy waits for its own flows** (below). |
 
-There is no nightly run: every merge to `main` already runs the whole suite, and a full run a day would be
-some 900 of the account's included minutes a month — about twice what every other private repository draws
-together.
+There is no nightly run: a full run a day would be some 600 of the account's included minutes a month, and a
+run on every push to `main` about as many again (what the flows cost per merge is what this table was
+changed for). The flows' result is read where it matters, in the release run.
 
 A `what changed` job (about 5 seconds) turns the changed files into the jobs to run (`dorny/paths-filter`).
 Any change under `.github/` runs everything, so CI changes are tested by CI.
@@ -456,26 +525,35 @@ Any change under `.github/` runs everything, so CI changes are tested by CI.
 | --- | --- |
 | `web/**`, `supabase/migrations/**`, `supabase/seed.sql`, `supabase/config.toml` | pgTAP, Vitest and the backup round trip (`backend`), plus the web build for `web/**` |
 | `supabase/tests/**`, `supabase/templates/**`, `scripts/*backup*` | pgTAP, Vitest and the backup round trip |
-| `design/**`, `web/app/assets/css/tokens.generated.css` | Tokens check |
-| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich) | Deno lint, check, test of that function |
+| `design/**`, `web/app/assets/css/tokens.generated.css`, `supabase/templates/**` | Tokens check and emails check (the generated mail is current) |
+| `supabase/functions/<name>/**` (goodreads-rating, regal-export, reading-page-og, enrich, waitlist-invite) | Deno lint, check, test of that function |
 
-On `main` the flows run whatever changed (every run there must say whether the whole suite passes). A
-pull request that touches several of these runs the union. A skipped job is a pass for everything
-downstream, and no branch is protected by required checks, so a skip never blocks a merge.
+A pull request or a push to `main` that touches several of these runs the union. A skipped job is a pass
+for everything downstream, and no branch is protected by required checks, so a skip never blocks a merge.
 
-**Releases wait for the full suite.** `release.yml`'s deploy first runs `scripts/release-e2e-gate.sh`:
-it takes main's latest full CI run (a push or a manual one) for the release's commit, or
-for its nearest ancestor with a run (the release commit itself starts none), waits for it if it is still
-going, and stops the release with a message naming the run unless it passed with its flows run
-(docs/OPERATIONS.md, "Releases").
+**Releases run the full suite themselves.** `release.yml` has a `flows` job between `release-please` and
+`deploy`: it checks out the **tag** (`refs/tags/vX.Y.Z`, for a manual run the `tag` input) and runs the
+same workflow the label and a manual run use (`.github/workflows/e2e.yml`, one shard). `deploy` needs it
+and starts only when it passed: red, and nothing is deployed (docs/OPERATIONS.md, "Releases"). They are
+left out, on purpose, in two cases only: a manual run with `migrations` off (a rollback: the older release
+shipped with them, and a flow failing on an old tag must not hold a rollback back) and a manual run with
+`skip_flows` on (`gh workflow run release.yml -f tag=vX.Y.Z -f migrations=true -f skip_flows=true`, to deploy
+without waiting for them).
+
+The flows are a **reusable workflow** (`e2e.yml`, `workflow_call`) rather than a composite action: what both
+callers share is whole jobs (the shard matrix, the runner, the timeout, the report that merges the shards),
+and an action holds steps only, so each caller would keep those twice. The callers pass `ref` (what to
+test; empty is the calling run's own commit) and `shards` (a JSON list); the called workflow has no
+`concurrency` of its own and reads the caller's secret `GIGET_AUTH` (`secrets: inherit`).
 
 Jobs, and why they are shaped so:
 
 - **`backend`**: pgTAP, Vitest against the stack, and the backup round trip
   (`scripts/test-backup-roundtrip.sh`, docs/OPERATIONS.md "Backups"), on a stack of its own, beside the
   flows rather than in front of them.
-- **`e2e`**, four shards: the flows (`web/e2e`) on the static build, each shard with its own stack.
-- **`statics`**: the checks that take seconds (tokens, `nuxt generate` with and without Regal, the Deno
+- **`e2e`** (`e2e.yml`, called by `ci.yml` for the label and a manual run, by `release.yml` as `flows`; four
+  shards, one in a release): the flows (`web/e2e`) on the static build, each shard with its own stack.
+- **`statics`**: the checks that take seconds (tokens, emails, `nuxt generate` with and without Regal, the Deno
   suites) in one job.
 - **`e2e-report`**: when a shard failed, one HTML report merged from the shards' blob reports, with the
   traces (artifact `playwright-report`).
@@ -486,6 +564,9 @@ uses them) and joins it (`… wait`) once pnpm has installed, the browsers' syst
 app is built: by then it is up. The pnpm store and the Playwright browsers are cached. **Supabase images
 are not cached**: restoring a `docker save` tarball and `docker load` took longer than the pull (about
 125 s against 85 to 90 s), so that was dropped.
+The images are pulled from `ghcr.io` (`SUPABASE_INTERNAL_IMAGE_REGISTRY` in the `backend` and `e2e` jobs) because the
+CLI's default, `public.ecr.aws`, throttled the parallel pulls of the shards (`toomanyrequests: Rate exceeded`);
+`supabase start took N s` in each job's log shows what the start costs.
 
 ### What makes the flows fast
 
@@ -496,7 +577,7 @@ are not cached**: restoring a `docker save` tarball and `docker load` took longe
   it while Supabase starts. `LIBELLUS_E2E_DEV=1` runs the flows on `nuxt dev` instead.
 - **A flow is handed its session.** `signedIn()` signs the member up through the API and puts the session
   into the page's storage before the app boots; the sign-in screens are tested where they are the subject
-  (`auth.spec.ts`, a11y's way in, the share that waits through the sign-in, `core-loop`).
+  (`auth.spec.ts`, a11y's way in, `core-loop`).
 - **Reduce Motion is on** (`reducedMotion: 'reduce'` in `playwright.config.ts`), so no flow waits for a
   sheet or a morph. What is about motion opts back in with `test.use({ reducedMotion: 'no-preference' })`.
 - **Workers follow the cores**: three on the runner's four (two on two cores, where three starved WebKit,
@@ -504,23 +585,43 @@ are not cached**: restoring a `docker save` tarball and `docker load` took longe
 
 ### The `@full` flows
 
-Tagged `@full` (`{ tag: '@full' }` on the test or its `describe`), about 45 % of the flows' time: the axe
-scans (`a11y`, `a11y-reader`, the import card's and the shelf's), the motion and visual specs
-(`book-flight`, `book-flight-android`, `layout-shift`, `library-return`'s frame watch, `sheet-restore`,
-`tab-bar-away`, the search morph, the Profile's frame watches, `no-side-scroll`, `insets`, `large-text`,
-`book-page-polish`), the shelf beyond the owner's row, and the long permutation lists whose rules Vitest
-holds (most of `barcode-scan`, `install-hint`, `share`, `import-offer`, `progress-never-tracked`, `ebooks`;
-`covers`, two of `goodreads`). A new flow is core unless it is one of those kinds. Nothing in CI runs the
-core suite alone any more (the flows left pull requests, above): the tag is what to exclude for a quick
-local pass.
+Tagged `@full` (`{ tag: '@full' }` on the test or its `describe`), about 30 % of the flows' time (7 of the 29
+flows, about 91 s of 308): the axe scans (`a11y`). The motion and visual specs and the long
+permutation lists whose rules Vitest holds are gone (see "Which flows"). A new flow is core unless it is a scan.
+Nothing in CI runs the core suite alone any more (the flows left pull requests, above): the tag is what to
+exclude for a quick local pass.
 
 ```sh
 cd web
-pnpm e2e                          # every flow, what a release waits for on main
+pnpm e2e                          # every flow, what a release runs before it deploys
 pnpm e2e --grep-invert @full      # without the @full flows, for a quick local pass
 pnpm e2e --grep @full             # only the @full flows
 gh pr edit <n> --add-label full-e2e   # every flow on that pull request's CI
 ```
+
+### Disk
+
+A standard runner has little disk (the standard `ubuntu-latest` runner), and the flows put a lot
+on it: the stack's Docker images, WebKit and Chromium, `node_modules` and the pnpm store, the two builds, and
+what Playwright writes while it runs. One job running every flow (`E2E_SHARDS=1`) died of it on 8 October
+2026 (run 37842426225): after about 20 minutes of flows, `WebKit encountered an internal error`, then
+`ENOSPC: no space left on device` when the retries wrote their traces. Four shards spread the same flows over
+four disks and never hit it.
+
+The run printed no `df`, so the share of each part was not measured then. What is known: Playwright's output
+was already small (`trace: 'on-first-retry'`, `screenshot: 'only-on-failure'`, no video; 17 retried tests in
+that run, and the blob report is only uploaded when a shard fails), so the room went to the runner's own
+image, which carries several GB of tools the job never uses. The flows job (`e2e.yml`) therefore:
+
+- **frees them first** (`scripts/ci-disk.sh free`: the Android SDK, .NET, Haskell, Swift, boost, CodeQL,
+  PowerShell and Docker's cached images; the first step after checkout, about a minute at most);
+- **measures** with `scripts/ci-disk.sh`: `df` before and after the clean-up, a report once the stack, the
+  browsers and the build are in place, one after the flows, and a sample of the used disk every two minutes
+  in between (`used / avail / use%` of `/`), with what each part holds (`docker system df`, the Playwright
+  browsers, the pnpm store, `node_modules`, `test-results`, `/tmp`). Read them in the log of the next full run
+  (steps *Free disk the job does not need*, *Disk with the stack…*, *Disk after the flows*) before changing
+  anything else; if the line still climbs by the minute, something the flows write is the culprit and the
+  `/tmp` and `test-results` lines say which.
 
 ### How many shards
 
@@ -536,9 +637,14 @@ cd web && pnpm exec tsx e2e/shard.ts record <run id> && git add e2e/durations.js
 
 Each shard costs its setup (about a minute and a half, most of it the browsers' system libraries and the
 build, with the stack starting behind them) on top of its share of the flows; past four, setup is most of
-a shard. The repository variable `E2E_SHARDS` changes the number without a commit.
+a shard. The repository variable `E2E_SHARDS` changes the number without a commit. With 308 s of flows (29
+flows, 24 of them weighed in `durations.json`) four shards are mostly setup; one or two are probably enough,
+which no run has measured yet.
 
 ### Measured
+
+(Taken when every push to `main` ran the flows; they run once per release now, and an estimate of what
+that costs a month is in the pull request that moved them.)
 
 Wall time of the run and its slowest jobs, from the jobs API (October 2026; runs 37606141210, 37601341246,
 37607066496 before, 37623156029, 37625498536, 37624494494, 37625511464 after):
@@ -553,5 +659,7 @@ Wall time of the run and its slowest jobs, from the jobs API (October 2026; runs
 | … billed minutes | about 6 | about 32 |
 
 The flows' own time fell from about 2,650 test-seconds (CI, two workers) to about 2,130 for the whole
-suite on three workers, of which the core suite is about 1,200. Locally (6 workers) the whole suite went
+suite on three workers, of which the core suite was about 1,200. Cutting the suite to the critical paths
+(8 October 2026) took it from 292 flows in 64 files (243 weighed, 2,126 s) to 29 flows in 13 files (24 weighed,
+308 s; the weights of the flows trimmed since are unmeasured until the next `shard.ts record`). Locally (6 workers) the whole suite went
 from 4.3 minutes on `nuxt dev` to 1.7 on the build.

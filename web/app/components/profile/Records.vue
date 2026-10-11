@@ -7,7 +7,7 @@
 // loading wave (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
-const props = defineProps<{ figures: YearFigures | null }>()
+const props = defineProps<{ figures: YearFigures | null; foreign?: boolean }>()
 const { t } = useI18n()
 const { count } = useFigures()
 const arriving = useArrival(() => !props.figures)
@@ -36,6 +36,7 @@ const records = computed(() => {
         :key="r.key"
         :class="{ arrive: arriving }"
         :read="r.read"
+        :foreign="foreign"
         :label="t(`profile.records.${r.key}`)"
         :figure="r.figure"
         :data-testid="`profile.record.${r.key}`"

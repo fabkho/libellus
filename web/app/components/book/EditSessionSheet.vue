@@ -45,6 +45,9 @@ const label = computed(() =>
   history.editBusy ? t('editSession.busy') : history.editError ? t('editSession.retry') : t('editSession.action'),
 )
 const reviewId = useId()
+watch(open, (isOpen) => {
+  if (isOpen) spoilers.value = false
+})
 const reasonId = useId()
 
 // Deleting a read: the question, and what it costs when it is the only read.
@@ -122,7 +125,11 @@ watch(
             :maxlength="REVIEW_MAX_LENGTH"
             :disabled="history.editBusy"
             data-testid="editSession.review"
-          />
+          >
+            <template #footer>
+              <BookSpoilerSwitch v-model="history.draft.reviewSpoilers" :disabled="history.editBusy" testid="editSession.spoilers" />
+            </template>
+          </UiTextArea>
         </div>
       </template>
 

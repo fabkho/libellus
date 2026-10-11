@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/"><version>1.1</version><numberOfRecords>1</numberOfRecords><records><record><recordSchema>oai_dc</recordSchema><recordPacking>xml</recordPacking><recordData><dc xmlns:dnb="http://d-nb.de/standards/dnbterms" xmlns="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Die Toten, die niemand vermisst : ein Fall für Sebastian Bergman ; Kriminalroman / Hjorth &amp; Rosenfeldt. Aus dem Schwed. von Ursel Allenstein</dc:title>
+  <dc:creator>Hjorth, Michael [Verfasser]</dc:creator>
+  <dc:creator>Rosenfeldt, Hans [Verfasser]</dc:creator>
+  <dc:creator>Allenstein, Ursel [Übersetzer]</dc:creator>
+  <dc:publisher>Reinbek bei Hamburg : Rowohlt Polaris</dc:publisher>
+  <dc:date>2013</dc:date>
+  <dc:language>ger</dc:language>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">978-3-499-26701-7 engl. brosch. : EUR 14.99 (DE), EUR 15.50 (AT), sfr 21.90 (freier Pr.)</dc:identifier>
+  <dc:identifier xmlns:tel="http://krait.kb.nl/coop/tel/handbook/telterms.html" xsi:type="tel:ISBN">3-499-26701-2</dc:identifier>
+  <dc:identifier xsi:type="dnb:IDN">1028105932</dc:identifier>
+  <dc:subject>839 Literatur in anderen germanischen Sprachen</dc:subject>
+  <dc:subject>B Belletristik</dc:subject>
+  <dc:format>622 S.</dc:format>
+</dc></recordData><recordPosition>1</recordPosition></record></records><echoedSearchRetrieveRequest><version>1.1</version><query>num=9783499267017</query><xQuery xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:nil="true"/><maximumRecords>5</maximumRecords><recordSchema>oai_dc</recordSchema></echoedSearchRetrieveRequest></searchRetrieveResponse>

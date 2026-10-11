@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatOf, isbnParts, parseIsbn, type Book, type BookSnapshot } from '@/data/books'
+import { formatOf, isbnParts, parseIsbn, type Book, type BookFormat, type BookSnapshot } from '@/data/books'
 import type { CatalogueSearch } from '@/data/catalogueSearch'
 import { resolveOwnCover } from '@/data/covers'
 import { createEditions, isbnEdition, mergeEditions } from '@/data/editions'
@@ -17,7 +17,7 @@ import { addDays, isoDay } from '@/utils/dates'
 import { appleAnswer } from './support/apple'
 import { signUpMember } from './support/member'
 import { openLibraryAnswer } from './support/openLibrary'
-import { runTitle, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
+import { runTitle, TEST_PUBLISHER, uniqueAppleId, uniqueEditionKey } from './support/stack'
 
 /**
  * "My edition isn't listed" (Change edition). The owner's case: his *I Am
@@ -364,11 +364,38 @@ describe('formats and her own edition in the Library', () => {
     const library = createLibrary(member.client)
     const added = (await library.addToLibrary(edition('I Am Legend'))).data as LibraryEntry
 
-    const printed = edition('I Am Legend (Gollancz)', { source: 'openlibrary', appleId: null, openLibraryEditionKey: `OL${uniqueAppleId().slice(2, 10)}M` })
+    const printed = edition('I Am Legend (Gollancz)', { source: 'openlibrary', appleId: null, openLibraryEditionKey: uniqueEditionKey() })
     const { data, error } = await library.changeEdition(added.id, printed, 'hardcover')
 
     expect(error).toBeNull()
     expect(data).toMatchObject({ id: added.id, formatOverride: 'hardcover', book: { title: printed.title, format: null } })
+  })
+
+  it('saves the format she said for the edition she changes to, and what the row said when she said none', async () => {
+    const member = await signUpMember()
+    const library = createLibrary(member.client)
+    const added = (await library.addToLibrary(edition('I Am Legend'))).data as LibraryEntry
+    const printed = (title: string, format: BookFormat | null) =>
+      edition(title, { source: 'openlibrary', appleId: null, openLibraryEditionKey: uniqueEditionKey(), format })
+
+    // Her word differs from the source's: it is the entry's, the Book keeps what its source said.
+    const said = await library.changeEdition(added.id, printed('I Am Legend (Gollancz)', 'hardcover'), 'paperback')
+    expect(said.data).toMatchObject({ formatOverride: 'paperback', book: { format: 'hardcover' } })
+    expect((await library.entry(added.id)).data).toMatchObject({ formatOverride: 'paperback', book: { format: 'hardcover' } })
+
+    // Her word equals the source's: nothing of her own is stored.
+    const same = await library.changeEdition(added.id, printed('I Am Legend (Orion)', 'hardcover'), 'hardcover')
+    expect(same.data).toMatchObject({ formatOverride: null, book: { format: 'hardcover' } })
+
+    // A row that shows a format the Catalogue's Book of it does not have (another source said it
+    // first): the sheet sends what the row showed, so that is what she has.
+    const known = edition('I Am Legend (Tor)', { source: 'openlibrary', appleId: null, openLibraryEditionKey: uniqueEditionKey(), format: null })
+    await createLibrary((await signUpMember()).client).addToLibrary(known)
+    const row = await library.changeEdition(added.id, { ...known, format: 'audiobook' }, 'audiobook')
+    expect(row.data).toMatchObject({ formatOverride: 'audiobook', book: { format: null } })
+    // The format she says is hers for the edition she has now, and is replaced by the next change.
+    const next = await library.changeEdition(added.id, printed('I Am Legend (Gollancz 2)', null))
+    expect(next.data).toMatchObject({ formatOverride: null, book: { format: null } })
   })
 
   it('makes her own edition, keeps the reads, and shows it to nobody else', async () => {

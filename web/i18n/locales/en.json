@@ -58,7 +58,16 @@
     "invitePlaceholder": "Your invite code",
     "submit": "Send code",
     "hasAccount": "Already a member?",
-    "signInLink": "Sign in"
+    "signInLink": "Sign in",
+    "consent": "By creating an account you accept the {privacy}."
+  },
+  "legal": {
+    "privacy": "Privacy",
+    "imprint": "Imprint",
+    "privacyNotice": "privacy notice",
+    "nav": "Legal",
+    "back": "Back",
+    "language": "Language of the text"
   },
   "verify": {
     "title": "Check your email",
@@ -70,7 +79,8 @@
   },
   "shell": {
     "tabsLabel": "Main navigation",
-    "avatarLabel": "Profile"
+    "avatarLabel": "Profile",
+    "avatarRequest": "Your profile, a follow request is waiting"
   },
   "sync": {
     "chip": "Waiting to sync ({count})",
@@ -99,7 +109,8 @@
       "reorder_collection": "New order",
       "rename_collection": "Renamed",
       "delete_collection": "Deleted",
-      "save_reader_highlight": "Highlight"
+      "save_reader_highlight": "Highlight",
+      "set_entry_hidden": "Visibility to followers"
     }
   },
   "account": {
@@ -122,7 +133,7 @@
     "rowNone": "Add",
     "avatarLabel": "Profile photo",
     "title": "Profile photo",
-    "private": "Only you see it. It's saved small, without where or when it was taken.",
+    "private": "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken.",
     "choose": "Choose a photo",
     "replace": "Choose another",
     "remove": "Remove photo",
@@ -130,7 +141,7 @@
     "file": "Photo file",
     "cropTitle": "Move and scale",
     "hint": "Drag to move it, pinch or use the slider to zoom. With the keys: arrows move, + and − zoom.",
-    "area": "Your photo in the circle",
+    "area": "Your photo among your friends",
     "zoom": "Zoom",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -162,6 +173,7 @@
       "rereads": "{count} read again",
       "dnf": "{count} DNF",
       "pagesMissing": "{count} without a count",
+      "pagesMissingOpen": "{count} without a count: show the books",
       "pagesPerBook": "{count} a book",
       "unrated": "{count} not rated yet",
       "rated": "{count} rated",
@@ -176,7 +188,9 @@
       "since": "since {date}",
       "read": "Days read",
       "perDay": "Pages a day",
-      "label": "Read on {read} of the last {count} days"
+      "label": "Read on {read} of the last {count} days",
+      "dayRead": "{date}, {count} page | {date}, {count} pages",
+      "dayReadNoPages": "{date}, read"
     },
     "ratings": {
       "title": "Ratings",
@@ -215,6 +229,7 @@
       "title": "Account",
       "theme": "Dark mode",
       "glass": "Glass",
+      "friendsTab": "Friends tab",
       "glassLevel": {
         "strong": "Strong",
         "medium": "Medium",
@@ -230,7 +245,7 @@
     },
     "deleteAccount": {
       "title": "Delete your account?",
-      "text": "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and photo, and your sign-in. It can't be undone.",
+      "text": "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and photo, who you follow and who follows you, and your sign-in. It can't be undone.",
       "unsynced": "The change that has not synced yet is lost too. | The {count} changes that have not synced yet are lost too.",
       "action": "Delete account",
       "failed": "Your account could not be deleted, and nothing was removed. Try again."
@@ -246,7 +261,9 @@
       "month": "{month} {year}",
       "stars": "{count} star · {year} | {count} stars · {year}",
       "allYears": "All years",
-      "readIn": "in a day | in {count} days"
+      "readIn": "in a day | in {count} days",
+      "pagesMissing": "Books without a page count",
+      "day": "{weekday} {date}"
     },
     "year": {
       "eyebrow": "Your year in books",
@@ -258,17 +275,30 @@
       "after": "{year}",
       "beforeLabel": "The year before, {year}",
       "afterLabel": "The year after, {year}"
+    },
+    "reviews": {
+      "title": "Your reviews",
+      "all": "See all {count}",
+      "allLabel": "See all {count} of your reviews",
+      "spoilers": "Spoilers",
+      "allCard": "See all"
     }
   },
   "share": {
     "title": "Shared with BetterReads",
     "finding": "Finding your book…",
     "taking": "Taking in your ebook…",
-    "takingMany": "Taking in your ebooks… {done} of {total}"
+    "takingMany": "Taking in your ebooks… {done} of {total}",
+    "confirmTitle": "Add {count} ebook shared to Libellus? | Add {count} ebooks shared to Libellus?",
+    "confirmText": "Only add files you chose to share. They stay on this device.",
+    "skipped": "{count} shared file is not an EPUB, or too large, and is left out. | {count} shared files are not EPUBs, or too large, and are left out.",
+    "add": "Add",
+    "notNow": "Not now"
   },
   "tabs": {
     "home": "Home",
     "library": "Library",
+    "friends": "Friends",
     "search": "Search"
   },
   "home": {
@@ -340,6 +370,7 @@
       "book_invalid": "This book can't be added: it is missing what we need to keep it.",
       "session_invalid": "Those dates, that rating or review don't go with that status.",
       "not_signed_in": "Sign in again to add books.",
+      "catalogue_limit": "You've added a lot of new books today. Try again tomorrow.",
       "unknown": "Something went wrong. Please try again.",
       "entry_not_found": "This book isn't in your Library any more.",
       "already_reading": "You are reading this book already.",
@@ -502,12 +533,15 @@
   },
   "book": {
     "title": "Book",
+    "outsideCatalogue": "Outside the catalogue",
     "back": "Back",
     "pages": "{count} pages",
     "add": "Add to Library",
     "notInLibrary": "Not in your Library yet",
     "addedOn": "Added {date}",
     "about": "About",
+    "authorMore": "More from the author",
+    "authorMoreWorks": "More books by {name}",
     "more": "More",
     "loading": "Loading the book…",
     "missingTitle": "Book not found",
@@ -562,6 +596,8 @@
       "finishedIt": "Finished it?",
       "reached": "That's the last page.",
       "finishHint": "Saves your progress first.",
+      "notFinishing": "Not finishing it?",
+      "abandonHint": "Stops the read where you are.",
       "undo": "Undo",
       "undoLabel": "Undo {change}",
       "saved": "Progress saved, {change}. Undo is beside it for a few seconds.",
@@ -601,6 +637,9 @@
       "hint": "Pick the edition you hold. Your reads, ratings and collections stay with the book.",
       "listLabel": "Editions",
       "current": "Your edition",
+      "shown": "Showing now",
+      "browseHint": "Look at the other editions of this book. Nothing is saved: your Library stays as it is.",
+      "show": "Show",
       "loading": "Looking for other editions…",
       "none": "No other editions found.",
       "failed": "Other editions didn't load.",
@@ -609,8 +648,25 @@
       "busy": "Changing…",
       "save": "Save",
       "saving": "Saving…",
+      "changeAndSave": "Change & save",
       "formatLabel": "Format",
+      "copyFormat": "Format of your copy",
+      "formatSaid": "Your copy will be saved as {format}.",
       "missing": "My edition isn't listed"
+    },
+    "readers": {
+      "title": "Among your friends",
+      "all": "See all {count}",
+      "allLabel": "See all {count} friends who have this book",
+      "finished": "Finished",
+      "reading": "Reading",
+      "abandoned": "Put down",
+      "want": "Wants to read",
+      "loading": "Loading your friends",
+      "sheetTitle": "Among your friends",
+      "more": "Show more",
+      "loadingMore": "Loading more people",
+      "someone": "A reader"
     },
     "goodreads": {
       "ratingLabel": "Rated {rating} out of 5",
@@ -669,7 +725,7 @@
       "pageCount": "Pages"
     },
     "optional": "Optional",
-    "private": "Only you can see this book. It stays out of the shared catalogue.",
+    "private": "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options.",
     "submit": "Add to Library",
     "busy": "Adding…",
     "invalid": {
@@ -714,7 +770,7 @@
     "ownHint": "Same title and author, your copy's details. The cover is generated unless you link an image.",
     "backToIsbn": "Back to the ISBN",
     "coverPlaceholder": "https://…",
-    "private": "Only you can see your edition. It stays out of the shared catalogue.",
+    "private": "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options.",
     "field": {
       "format": "Format",
       "isbn": "ISBN",
@@ -880,7 +936,9 @@
     "addEbook": "Add ebook",
     "replaceEbook": "Replace ebook file",
     "unlinkEbook": "Unlink ebook",
-    "share": "Share"
+    "share": "Share",
+    "hide": "Hide from followers",
+    "hideHint": "Hidden from your followers: not in their feed, not on your profile, not in the figures they see."
   },
   "removeEntry": {
     "title": "Remove “{title}” from your Library?",
@@ -907,6 +965,10 @@
     "reading": "Reading the file…",
     "matching": "Looking up {done} of {total}",
     "matchingHint": "Finding each book's edition and cover. You can leave this page; it keeps going.",
+    "secondPass": "Trying {done} of {total} books again",
+    "secondPassHint": "These weren't found the first time. You can go on now; they are added as your file says, and listed to check.",
+    "stalledHint": "Nothing has answered for a while. You can go on with what is found.",
+    "finishNow": "Go on with what is found",
     "stop": "Choose another file",
     "inFile": "From {app} · no books | From {app} · one book | From {app} · {count} books",
     "statusLabel": "Books by status",
@@ -915,6 +977,11 @@
     "alreadyThere": "Already in your Library",
     "attention": "Needs a look",
     "attentionCount": "{count} of them",
+    "attentionHint": "No edition found, or one without a cover. Check these first.",
+    "attentionMinor": "Probably fine",
+    "attentionMinorHint": "Found with a cover; only a note to read.",
+    "attentionMinorShow": "Show {count} more",
+    "attentionMinorHide": "Hide {count} more",
     "chooseEdition": "Choose edition",
     "changeEdition": "Change edition",
     "actionFor": "{action}: {title}",
@@ -936,11 +1003,13 @@
     "note": {
       "fromFile": "No edition found. Added with what the file says.",
       "unsure": "Couldn't be looked up. Added with what the file says.",
+      "noCover": "Found, but without a cover. Choose another edition if it isn't yours.",
       "otherShelf": "On your shelf “{shelf}”. Added as Want to read.",
       "notFinishedRating": "Rating or review left out: only finished books keep them.",
       "ratingInvalid": "Rating left out: it isn't 1 to 5 stars.",
       "dateInvalid": "A date left out: it isn't a day, or it hasn't come yet.",
       "reviewTooLong": "Review shortened to the 10,000 characters we keep.",
+      "ratingLikeReview": "Its review is only a number above 5, so it stays a review: it isn't read as a rating.",
       "noTitle": "Skipped: it has no title.",
       "duplicate": "Skipped: it is in the file twice.",
       "fromFileIsbn": "Only your file knows this edition. Added as it says, with its ISBN.",
@@ -991,15 +1060,22 @@
     "loadError": "Your shelf could not be loaded.",
     "offline": "You're offline. Your shelf shows once you're back.",
     "retry": "Try again",
+    "noChunk": "Your shelf needs a connection the first time. It opens offline after that.",
+    "empty": {
+      "title": "Nothing on the shelf yet",
+      "text": "The books you finish stand here, each in its cover's colour."
+    },
     "card": {
       "title": "Your shelf",
       "rowLabel": "Your shelf, the newest books",
       "all": "Show all",
-      "allLabel": "Show all {count} book on your shelf | Show all {count} books on your shelf"
+      "allLabel": "Show all {count} book on your shelf | Show all {count} books on your shelf",
+      "empty": "Finish a book and it stands here."
     },
     "year": {
       "title": "On the shelf",
-      "rowLabel": "{year} on your shelf"
+      "rowLabel": "{year} on your shelf",
+      "allLabel": "Show the {count} book of {year} on your shelf | Show the {count} books of {year} on your shelf"
     },
     "detail": {
       "showBack": "Show back",
@@ -1047,7 +1123,7 @@
     "rowValue": "{count} waiting",
     "title": "Waitlist",
     "back": "Back",
-    "intro": "People who asked for an invite on a reading page. Nothing is sent from here: copy the addresses, invite them yourself and mark them. Only you can see this.",
+    "intro": "People who asked for an invite on a reading page. Invite emails one a code to sign up with; or copy the addresses, invite them yourself and mark them. Only you can see this.",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
     "summary": "{waiting} waiting · {invited} invited",
@@ -1055,8 +1131,23 @@
     "copied": "Copied",
     "fromMember": "from {name}’s page",
     "fromPage": "from a reading page",
+    "invite": "Invite",
     "markInvited": "Mark invited",
     "invitedDone": "Invited",
+    "inviteConfirm": {
+      "title": "Send an invite to {email}?",
+      "text": "They get an email with an invite code that works once, for 14 days, and the entry is marked invited.",
+      "action": "Send invite"
+    },
+    "inviteError": "The invite could not be made. Try again.",
+    "code": {
+      "label": "Invite code",
+      "copy": "Copy code",
+      "copied": "Copied",
+      "emailed": "Emailed. Works once, until {date}.",
+      "not_configured": "The email was not sent: mail isn’t set up. Send the code another way; it works once, until {date}.",
+      "send_failed": "The email could not be sent. Send the code another way, or Invite again; it works once, until {date}."
+    },
     "delete": "Delete {email}",
     "confirm": {
       "title": "Delete {email}?",
@@ -1068,6 +1159,66 @@
       "text": "When someone asks for an invite on a reading page, their address shows here."
     },
     "loadError": "The waitlist could not be loaded.",
+    "writeError": "That could not be saved. Try again.",
+    "offline": "You’re offline. This works once you’re back.",
+    "retry": "Try again"
+  },
+  "contact": {
+    "row": "Contact",
+    "title": "Contact",
+    "kindLabel": "What is it about?",
+    "kind": {
+      "bug": "Bug",
+      "feature": "Feature request",
+      "other": "Something else"
+    },
+    "label": "Your message",
+    "hint": "At least {min} characters",
+    "placeholder": {
+      "bug": "What went wrong? What did you expect to happen instead?",
+      "feature": "What would you like Libellus to do?",
+      "other": "What is on your mind?"
+    },
+    "count": "{count} / {max}",
+    "countLabel": "{count} of {max} characters",
+    "context": "We also send the app version and your device type.",
+    "send": "Send",
+    "sending": "Sending…",
+    "retry": "Try again",
+    "offline": "You’re offline.",
+    "error": {
+      "rate_limited": "That’s a lot of messages for now. Please try again in a while.",
+      "invalid": "That message can’t be sent as it is. Check its length and try again.",
+      "unknown": "That didn’t go through. Your text is still here; try again."
+    },
+    "done": {
+      "title": "Thanks, got it.",
+      "text": "I read everything.",
+      "action": "Done"
+    }
+  },
+  "feedback": {
+    "row": "Feedback",
+    "rowNone": "None",
+    "rowValue": "{count} open",
+    "title": "Feedback",
+    "back": "Back",
+    "intro": "What members sent from Contact, newest first. Only you can see this.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "summary": "{open} open · {handled} handled",
+    "anonymous": "A member",
+    "details": "Device details",
+    "markHandled": "Mark handled",
+    "handled": "Handled",
+    "reopen": "Open again",
+    "more": "Show older",
+    "loadingMore": "Loading…",
+    "empty": {
+      "title": "Nothing yet",
+      "text": "When a member writes from Contact, it shows here."
+    },
+    "loadError": "The messages could not be loaded.",
     "writeError": "That could not be saved. Try again.",
     "offline": "You’re offline. This works once you’re back.",
     "retry": "Try again"
@@ -1266,6 +1417,8 @@
         "3": "Airy"
       },
       "justify": "Justify",
+      "justifyOn": "Justified: even edges on both sides, with long words split at the end of a line.",
+      "justifyOff": "Not justified: lines end where the words do, and no word is split.",
       "awake": "Keep the screen on",
       "classic": "Classic mode",
       "awakeOn": "While a book is open the screen stays on.",
@@ -1364,7 +1517,7 @@
     "rowOn": "On",
     "rowOff": "Off",
     "switch": "Reading page",
-    "about": "A page of what you read, for friends: anyone with its link can open it, without signing in. Nobody finds it without the link.",
+    "about": "A page of what you read, for friends: anyone with its link can open it, without signing in. Nobody finds it without the link. Your followers in the app see what you choose under Friends → Privacy.",
     "never": "Never on it: your email address, notes, highlights, or a review you didn’t share.",
     "link": "Your link",
     "share": "Share link",
@@ -1567,6 +1720,17 @@
     "suggested": "Use the suggested series",
     "next": "Next in your series",
     "nextPlace": "Book {n} · {name}",
+    "nextPlaceOf": "Book {n} of {count} · {name}",
+    "seeAll": "See all {count}",
+    "seeMoreLabel": "See all {count} series you have started",
+    "started": "Series you have started",
+    "moreLabel": "More about {name}",
+    "mute": "Mute series",
+    "muteHint": "Hides the whole series from Home. You find it again under Muted, and can unmute it there.",
+    "muted": "Muted ({count})",
+    "mutedList": "Muted series",
+    "unmute": "Unmute",
+    "unmuteLabel": "Unmute {name}",
     "error": {
       "position": "Write the book’s number as 2 or 2.5.",
       "entry_not_found": "This book isn’t in your Library any more.",
@@ -1575,6 +1739,224 @@
       "not_signed_in": "Sign in again to change the series.",
       "offline": "You’re offline. Try again once you’re back.",
       "unknown": "The series couldn’t be saved. Try again."
+    }
+  },
+  "feed": {
+    "title": "Your friends",
+    "peopleLabel": "People",
+    "started": "started",
+    "startedAgain": "started again",
+    "finished": "finished",
+    "abandoned": "didn't finish",
+    "want": "added to Want to read",
+    "reviewed": "reviewed",
+    "batchFinished": "finished {count} books",
+    "batchStarted": "started {count} books",
+    "batchAbandoned": "didn't finish {count} books",
+    "batchWant": "added {count} to Want to read",
+    "batchReviewed": "reviewed {count} books",
+    "batchTitle": "{name} · {count} books",
+    "more": "More",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "emptyTitle": "Reading is better with a friend or two.",
+    "empty": "Send your follow link to the people you'd like here. What they start and finish will show up on this page.",
+    "emptyShare": "Share your follow link",
+    "quietTitle": "Quiet for now.",
+    "quiet": "When the people you follow start or finish a book, it shows here.",
+    "offline": "Offline · as of {time}",
+    "loadOffline": "You're offline. What your friends read shows once you're back.",
+    "loadError": "What your friends read couldn't be loaded.",
+    "retry": "Try again"
+  },
+  "people": {
+    "title": "People",
+    "following": "Following",
+    "followers": "Followers",
+    "requests": "Requests",
+    "askedOn": "asked {when}",
+    "followsYouNow": "follows you now",
+    "accepted": "{name} follows you now.",
+    "declined": "Request from {name} declined.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "acceptLabel": "Accept {name}",
+    "declineLabel": "Decline {name}",
+    "followBack": "Follow back",
+    "moreLabel": "More for {name}",
+    "emptyFollowing": "You don't follow anyone yet.",
+    "emptyFollowers": "Nobody follows you yet.",
+    "unfollow": "Unfollow",
+    "remove": "Remove as follower",
+    "block": "Block",
+    "sheetNote": "{name} isn't told. Block also stops {name} following you again or opening your link.",
+    "blockTitle": "Block {name}?",
+    "blockText": "You stop following each other, and neither of you sees the other's reading.",
+    "blockConfirm": "Block",
+    "offline": "You're offline. People show once you're back.",
+    "loadError": "People couldn't be loaded. Try again.",
+    "retry": "Try again",
+    "error": "That didn't work. Try again."
+  },
+  "member": {
+    "back": "Back",
+    "moreLabel": "More",
+    "since": "Reading here since {month}",
+    "library": "{read} read · {reading} reading · {want} to read",
+    "follow": "Follow",
+    "ask": "Ask to follow",
+    "requested": "Requested",
+    "following": "Following",
+    "withdrawn": "Request withdrawn.",
+    "requestedHint": "Tap to withdraw.",
+    "privateTitle": "Private account",
+    "privateText": "Ask to follow to see what {name} reads. {name} decides; nobody else is told.",
+    "reading": "Currently reading",
+    "want": "Want to read",
+    "wantAll": "See all {count}",
+    "finishedAll": "See all {count}",
+    "seeAllLabel": "See all {count}, {section}",
+    "finished": "Recently finished",
+    "yearEyebrow": "{name} · Year in review",
+    "someone": "A reader",
+    "offline": "You're offline. This profile shows once you're back.",
+    "loadError": "This profile couldn't be loaded.",
+    "retry": "Try again",
+    "bothRead": "You both read",
+    "bothReadHers": "{name}: {rating}"
+  },
+  "follow": {
+    "loading": "Opening…",
+    "missingTitle": "This link isn't here any more.",
+    "missing": "Ask for a new one."
+  },
+  "language": {
+    "row": "Language",
+    "label": "Language of the app"
+  },
+  "friends": {
+    "section": "Friends",
+    "title": "Your friends",
+    "more": "Show more",
+    "askedLine": "asked to follow you",
+    "want": "added {title} to Want to read",
+    "join": " · ",
+    "and": " and ",
+    "accept": "Accept",
+    "decline": "Decline",
+    "declineLabel": "Decline {name}",
+    "acceptLabel": "Accept {name}",
+    "people": "People",
+    "peopleRequests": "No requests | 1 request | {count} requests",
+    "followLink": "Your follow link",
+    "privacy": "Privacy",
+    "private": "Private",
+    "public": "Public"
+  },
+  "privacy": {
+    "title": "Privacy",
+    "done": "Done",
+    "private": "Private account",
+    "privateHint": "You approve each follower. Turn it off and any member with your link can follow you and see what's switched on below.",
+    "sections": "What followers see",
+    "section": {
+      "reading": "Currently reading",
+      "want": "Want to read",
+      "finished": "Finished",
+      "ratings": "Ratings",
+      "reviews": "Reviews",
+      "abandoned": "Did not finish",
+      "year": "Year in review and figures"
+    },
+    "never": "Your reasons for not finishing, your progress and your notes are never shown. Hide a single Book in its options.",
+    "blocked": "Blocked",
+    "blockedNone": "None",
+    "goPublicTitle": "Make your account public?",
+    "goPublicText": "Any member with your link can follow you without asking. People waiting for an answer become followers now.",
+    "goPublicConfirm": "Make public",
+    "error": "That didn't save. Try again."
+  },
+  "followLink": {
+    "title": "Your follow link",
+    "textPrivate": "Send it to friends in Libellus. Your account is private, so they ask and you decide.",
+    "textPublic": "Send it to friends in Libellus. Your account is public, so they can follow you straight away.",
+    "offline": "You're offline. Your link shows once you're back.",
+    "qrLabel": "QR code of your follow link",
+    "qrHint": "Let someone scan this to follow you.",
+    "share": "Share link",
+    "copy": "Copy",
+    "copied": "Copied.",
+    "failed": "Couldn't copy the link. Select it and copy by hand.",
+    "renew": "New link",
+    "renewHint": "A new link stops the old one at once. People who already follow you stay.",
+    "renewTitle": "Make a new link?",
+    "renewText": "The link you sent before stops working.",
+    "renewConfirm": "New link",
+    "shareText": "Follow what I read on Libellus"
+  },
+  "blocked": {
+    "title": "Blocked",
+    "unblock": "Unblock",
+    "unblockLabel": "Unblock {name}",
+    "unblocked": "{name} unblocked.",
+    "empty": "You haven't blocked anyone."
+  },
+  "review": {
+    "spoilers": "Contains spoilers",
+    "folded": "Contains spoilers",
+    "showAnyway": "Show anyway",
+    "spoilersHint": "Friends who haven't finished it see it folded.",
+    "showAnywayLabel": "Show anyway, {name}’s review",
+    "more": "more",
+    "less": "less"
+  },
+  "social": {
+    "wantToRead": {
+      "add": "Want to read",
+      "label": "Add {title} to Want to read",
+      "error": "Couldn't add it. Try again.",
+      "added": "Added to Want to read",
+      "inLabel": "{title}: {where}. Open the book"
+    },
+    "state": {
+      "wantToRead": "On your Want to read",
+      "reading": "Reading",
+      "read": "Read",
+      "notFinished": "Not finished"
+    },
+    "like": {
+      "like": "Like",
+      "unlike": "Remove like",
+      "label": "Like {name}’s read of {title}",
+      "count": "{count} like | {count} likes",
+      "ownLabel": "{count} like on your read of {title}. See who liked it | {count} likes on your read of {title}. See who liked it",
+      "error": "Couldn't save your like. Try again."
+    },
+    "likers": {
+      "title": "Liked by",
+      "empty": "No likes yet.",
+      "loadError": "The likes couldn't be loaded.",
+      "offline": "You're offline. The likes show once you're back.",
+      "loading": "Loading…"
+    },
+    "friends": {
+      "reading": "Also reading: {names}",
+      "want": "Also want to read: {names}",
+      "sheetReading": "Also reading",
+      "sheetWant": "Also want to read",
+      "more": "and {count} more",
+      "names": {
+        "one": "{a}",
+        "two": "{a} and {b}",
+        "three": "{a}, {b} and {c}",
+        "others": "{a}, {b} and {count} other | {a}, {b} and {count} others"
+      }
+    },
+    "likes": {
+      "reviewed": "{names} liked your review of {title}",
+      "finished": "{names} liked that you finished {title}",
+      "read": "{names} liked your read of {title}",
+      "open": "See who liked it"
     }
   }
 }

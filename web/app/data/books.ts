@@ -50,7 +50,13 @@ export type BookSnapshot = {
  * the cached Goodreads rating of its ISBN, when the row was loaded with it
  * (data/goodreads.ts); absent on a copy from before it existed.
  */
-export type Book = BookSnapshot & { id: string; createdAt: string; goodreads?: GoodreadsRating | null }
+export type Book = BookSnapshot & {
+  id: string
+  createdAt: string
+  goodreads?: GoodreadsRating | null
+  /** A Book the server check could not confirm, as another member's record carries it: no title, authors or cover (utils/unverifiedBook.ts). */
+  unverified?: true
+}
 
 /**
  * The format that counts for a Book: the member's own word on her entry's
@@ -71,6 +77,19 @@ export function bookKey(book: Pick<Book, 'id'> | BookSnapshot): string {
   if (book.openLibraryEditionKey) return `ol-${book.openLibraryEditionKey}`
   if (book.isbn13) return `isbn-${book.isbn13}`
   throw new Error('A Book needs an id, a source id or an ISBN to have a page')
+}
+
+/**
+ * Every page key a Book can be reached under besides its id: by the source ids
+ * and the ISBN it carries. An entry added from a search result before the
+ * database answered is under one of them; the Catalogue's Book has them all.
+ */
+export function sourceKeys(book: BookSnapshot): string[] {
+  return [
+    book.appleId ? `apple-${book.appleId}` : null,
+    book.openLibraryEditionKey ? `ol-${book.openLibraryEditionKey}` : null,
+    book.isbn13 ? `isbn-${book.isbn13}` : null,
+  ].filter((key): key is string => key !== null)
 }
 
 export type BookKey =

@@ -15,8 +15,12 @@ POST /functions/v1/enrich
 { "action": "remap" }                    service: apply the current genre mapping to stored signals
 { "action": "status" }                   service: the queue at a glance
 
-200 { … } · 400 action_invalid · 401 unauthorized · 403 forbidden · 404 not_found · 502 source_unavailable
+200 { … } · 400 action_invalid · 401 unauthorized · 403 forbidden · 404 not_found · 429 rate_limited · 502 source_unavailable · 503 busy
 ```
+
+A member's `book` and `author` calls are counted per member (10 a minute, `public.edge_rate_hit`): they spend the
+shared Apple, Open Library and Wikidata budget. The service is not counted; an unreachable counter is a 503.
+The service-role key and `ENRICH_TOKEN` are compared in constant time (`secret.ts`).
 
 ## When it runs
 
@@ -78,7 +82,8 @@ long-term cache: authors, works and series are asked about again after 30 days, 
 - `handler.ts` — the requests. `index.ts` — the wiring.
 - `backfill.ts` — the backfill and coverage report from a terminal.
 - `scenarios.ts`, `fixtures/`, `record_fixtures.ts` — recorded answers for Pratchett (Small Gods),
-  Le Guin (A Wizard of Earthsea), Haldeman (The Forever War) and a Book nobody knows.
+  Le Guin (A Wizard of Earthsea), Haldeman (The Forever War), Williams (The Dragonbone Chair, and its
+  split volume "part 1": the paperback halves are no series members) and a Book nobody knows.
 - `*_test.ts` — unit tests; never call a source (an unrecorded URL fails).
 
 ## Local

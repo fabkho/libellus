@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
+import { createDnb } from '~/data/dnb'
 import type { LibraryEntry } from '~/data/library'
 import { editionKeys, workKey } from '~/data/merge'
 import { useLibraryStore } from '~/stores/library'
@@ -104,13 +105,20 @@ export const useSearchStore = defineStore('search', () => {
     if (seen.size > SEEN_LIMIT) seen.delete(seen.keys().next().value!)
   }
 
+  const searchLanguages = useSearchLanguages()
   let source: Search | null = null
-  /** The search repository, set up for this device's languages (the storefronts follow them). */
+  let sourceLanguage = ''
+  /** The search repository, set up for the app's language, then the device's (the storefronts follow them); made again when the app's changes. */
   function repository(): Search {
+    const languages = searchLanguages()
+    if (sourceLanguage !== languages[0]) source = null
+    sourceLanguage = languages[0] ?? ''
     source ??= createSearch({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: catalogue ?? undefined,
+      // German editions Apple Books and Open Library do not know, by ISBN (the scan, a typed ISBN).
+      dnb: backend ? createDnb(backend, { online: () => isOnline() }) : undefined,
     })
     return source
   }
@@ -270,6 +278,13 @@ export const useSearchStore = defineStore('search', () => {
     if (ownLibrary.value) ownLibrary.value = ownLibrary.value.filter((e) => e.id !== entryId)
     for (const hit of hits.value) {
       if (hit.entry?.id === entryId) hit.entry = null
+    }
+    // The other editions of the Book that said she has one: only while another of its editions is still hers.
+    const own = ownLibrary.value
+    if (!own) return
+    const works = new Set(own.map((entry) => workKey(entry.book)))
+    for (const hit of hits.value) {
+      if (!hit.entry && hit.otherEdition && !works.has(workKey(hit.book))) hit.otherEdition = false
     }
   }
 

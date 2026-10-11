@@ -146,3 +146,170 @@ cold, so the after numbers are, if anything, pessimistic.
 Not done here: the Android emulator run the issue mentions (the brief asked for Chromium with
 throttling instead); a cover for the rows that have none anywhere (DNB rehosting, or an owner call on
 ranking coverless results lower than equally good matches by more than a tie-break).
+
+## Sizes the browser can choose (`srcset`, A7)
+
+`UiCover` gives an Apple cover a `srcset` of the same artwork at the neighbouring boxes
+(`coverSrcset` in `utils/cover.ts`): `120x180bb` (120w), `240x360bb` (240w), `600x900bb` (600w), the
+ones up to the box its size asks for (`APPLE_BOX`), and `sizes` is the size's token width
+(`coverSizes`: 30, 40, 72, 82, 140 px; a cover's width is its size's token alone, no call site
+overrides it, so `sizes` is true everywhere). `src` stays the one `coverSrc` URL (old browsers, and
+what the fallbacks and the book flight key on; the flight reads `currentSrc`). The halo and the
+backing of a fitted image carry the same `srcset`/`sizes`, so all three are one download. Loading
+(`lazy`/`eager`, `fetchpriority`) is unchanged.
+
+- `xs`/`sm` (30, 40 px) have one candidate (120w), so no `srcset`: the single URL stays.
+- `md`/`lg` offer 120w and 240w: a 72 px cover on a 1× screen takes 120w, no longer 240w.
+- `xl` (the book page hero) offers 120w, 240w and 600w: 140 px at 1× takes 240w, at 2× and 3× 600w.
+- OpenLibrary has **no** `srcset`: 'M' and 'L' are maxima ("up to 180 px"), not fixed widths, so a
+  width descriptor would be a guess, and every extra OpenLibrary request is a ~575 ms round trip.
+  It keeps one URL per size (`OPENLIBRARY_SIZE`).
+- Not done on purpose (owner decision): always the largest image downscaled locally, `@nuxt/image`.
+  So a list row and the book page still ask for different boxes; the browser's choice only follows
+  what the screen can show.
+
+## A cover in view stays (A8)
+
+Owner report: a cover sometimes becomes a different image. Found in the code (`UiCover` before the
+guard), in the order they can happen:
+
+1. **Real, the main one.** A mounted `UiCover` whose `src` changes: its `watch` on `props.src`
+   reset `attempt` and `loaded` and showed the new URL. Rows stay mounted (keyed by entry or
+   Book) while a re-sync or a change of edition hands them another `coverUrl`, so the shown
+   cover was replaced by another artwork.
+2. **Real, rarer.** An `error` or blank `load` on an image already shown moved on to
+   `coverFallbacks` (OpenLibrary's cover by ISBN): another artwork. `fallbacks` was not part of the
+   watch, so a stale attempt index also survived a changed list. With `srcset` (A7) a size of the
+   same artwork can fail too, which would have been this path.
+3. **Not a cause of a swap.** `withCover` (`stores/library.ts`) runs only when a Book is added,
+   before the Book has a cover: nothing mounted shows the old one. An add under a mounted cover of
+   the same edition arrives as path 1.
+
+End-state rule, in `utils/cover.ts` (`CoverShowing`; `tests/cover-showing.test.ts` pins each path,
+including the old behaviour as `before`): **once an image of a cover has loaded and is not blank, a
+later `src`, or a fallback, never replaces it with another artwork unless the one in view fails to
+load or comes back blank.**
+
+- Another size of the same artwork (`artworkOf`: Apple's box, OpenLibrary's S/M/L ignored) is not
+  another image: it takes over, the image in view stays until it has loaded. If that size fails,
+  the cover goes back to the size that loaded (no `srcset` again) rather than to a fallback.
+- A newer `src` of another artwork is held (`held`). If the image in view fails, the fallbacks of
+  the old chain are tried first, then the held one, then the Placeholder.
+- The deliberate change is signalled by `identity` (a `UiCover` prop): what the cover is of. Another
+  `identity` starts the cover afresh. Default: title and authors (a different Book at the same
+  mounted `UiCover`). Where a mounted cover changes edition under the same title it is given
+  the edition's ISBN: the book page (`pages/book/[key].vue`, which stays mounted through Change
+  edition), the edition picker's rows (keyed by index), Own edition's found step, and its cover
+  preview (the link itself).
+- Before any image has loaded nothing is held: a new `src` shows as before.
+
+## Covers in "More from the author" (A9)
+
+Owner: one author's row loaded whole, another's showed two covers about a second late. Cause: the
+work cards from `author_page` (`work_card`) carry a cover URL and the edition's ISBN, **no
+thumbhash or colours**, and `AuthorWorkRow` passed neither them nor fallbacks; its rows were lazy
+images in a section that opens with a reveal, so a cover was asked for only when its row was in
+view, and an OpenLibrary one answers in ~575 ms (p90 1.1 s) on top of the author page's own round trip.
+
+- The rows get what the data has: OpenLibrary's cover of the edition by ISBN as a fallback
+  (`workCoverImages`, `coverFallbacks`); a work she has (her Library entry on the device, and that
+  Book's cover is the very image the card names) sits on her Book's thumbhash and colours, any other
+  on the quiet fill every cover without them has. Adding thumbhash/colours to `work_card` would
+  only cover works she owns, which the device already knows, so no migration.
+- The section asks for its covers as soon as her page arrives (`coversToPrefetch` →
+  `new Image()`, at most `MORE_FROM_AUTHOR` = 3, each once, at the row's size), and its rows are
+  `eager`.
+- The source ranking is unchanged: the card's cover is what the page chose (hers, else in her
+  language). There is no data here that Apple has covers for the same works; looking each one up by
+  ISBN on Apple (36 ms against OpenLibrary's 575 ms) would be a follow-up, measured first.
+
+## Lazy images, audited (L1)
+
+Owner: nothing off-screen should be rendered or requested until it is near the viewport. Every
+`<img>` the app can render was read and, for the screens the harness reaches, counted
+(`cd web && pnpm perf:images`: per screen the `<img>` in the DOM, lazy/eager, `decoding`, on screen,
+loaded, cover requests and bytes, the eager ones that load off screen; Chromium, Slow 4G network,
+412 × 915 at 2.625×, seeded Library of 150 entries; the covers answered by `perf/serve.mjs`).
+
+**The browser's distance.** `loading="lazy"` starts an image when it comes within a distance of the
+viewport that Chromium sets by connection type: 1,250 px on 4G or faster, 2,500 px on 3G or slower.
+Measured here (Library, Slow 4G profile, viewport 915 px): the last row requested starts at
+2,161 px from the top of the page, the first one held back at 2,238 px: 915 + 1,250. That is
+17 rows beyond the screen (77 px each) loaded on Library mount, 28 covers (299 KB) in all: 8 eager
+(the rows above the fold), 3 lazy on screen, 17 lazy ahead. Horizontal rows (Home's Up next) work the
+same way on the x axis. Safari and Firefox choose their own distances (not measured: WebKit has no
+throttling in the harness); the app sets none. The two places where a mask or a clipped box defeat
+the browser's look-ahead have their own rule (search results: `useNearView`, above; sections that
+open with a reveal: eager, A9).
+
+Rules the audit settled on: a cover is `eager` only where it is the first screen (Home's reading
+cards and Up next, the Library's first rows, the first of a list inside a sheet that has just
+opened), where it is the page's LCP (the Book page's hero: `eager`, `priority`), where a clipped box
+would keep a lazy image from starting (More from the author's three rows, prefetched in A9), or
+where the cover flight needs the image there (below). Everything else is lazy. Every `UiCover` image
+is `decoding="async"`, in a 2:3 box of a token width (`aspect-2/3`), so no image shifts the layout;
+the plain `<img>`s below are all in boxes of their own size.
+
+**The cover flight** (docs/MOTION.md, `useBookFlight.ts`) needs two things, and lazy loading touches
+neither: the tapped cover is on screen, so its image has started (within the browser's distance by
+construction; before it has loaded the flight shows its thumbhash, as before), and the hero's
+image is `eager` and asked for with `preloadImage` (`fetchpriority="high"`) when the finger goes
+down. The flight's own copies (`snapshot.ts`, `useEditionChange.ts`, `readerFlight.ts`) are made
+`eager`/`sync` by their code. `identity` and the More from the author prefetch are unchanged.
+
+| Image site | Before | After |
+| --- | --- | --- |
+| `UiCover`: the sheet image | lazy / eager by prop, `decoding=async`, `fetchpriority=high` with `priority` | same |
+| `UiCover`: the halo (`glow`) | same URL as the sheet, `decoding` default (sync) | `decoding=async`: its decode no longer blocks a frame |
+| `UiCover`: the backing of a `whole` cover | no `loading`, no `decoding` (eager) | follows `eager`, `decoding=async` |
+| Home: reading cards (`index < 3`) | eager (the LCP is the first one) | same |
+| Home: Up next (`index < 5`) | eager | same: on screen on a phone (8 cold-start covers, 296 KB, all visible) |
+| Home: Next in your series, the Friends feature and rows | eager (`index < 3`, the feature) | **lazy**: the last sections of Home, below the fold; the section's reveal opens when its data is there and the browser starts what is in range |
+| Library: segment rows (`index < 8`), reading cards (`< 4`) | eager; the rest lazy | same (11 rows on a phone: 8 eager, 3 lazy on screen, 17 lazy ahead) |
+| Library: "Collections" link covers (xs) | lazy | same |
+| Profile: favourite, year cards, authors' books (3 each), month books, read rows, public pages | lazy | same (none on the first screen) |
+| Profile year page (`/profile/:year`): month books | lazy | same: 47 `<img>`, 28 on screen, 39 requests |
+| Collections list (mosaics, `index < 4`) and a collection (`index < 10`) | eager | same: on screen (16 and 10) |
+| Search results (the sources' rows) | eager first six (+ `priority`) and rows within a list height (`useNearView`, a mask defeats lazy) | same |
+| Search results: her own Books ("In your Library") | **every row eager**, however many match (an author with 40 Books: 40 requests) | first six, then the rows within a list height, like the others |
+| Edition picker (Book page), Own edition, Edition choice (ebooks), import's done screen | eager / first six, in sheets that mount on open or at the top of a page | same |
+| Author page: works (`index < 4`) | eager in **every** group (a series below the fold asked for 4 covers at once) | eager in the first group only |
+| Book page hero | eager, no priority | eager, `fetchpriority=high` (the page's LCP; the flight preloads it the same way) |
+| More from the author | eager, prefetched (A9) | same |
+| Friends: feed rows (`dayIndex === 0 && index < 4`), member pages, sheets | eager first four of the first day, else lazy | same |
+| Ebooks: waiting rows, candidate sheet, contents sheet, end of book | lazy | same (blob or file covers: no network) |
+| Sign-in wall (`AuthFrame`, 20 plain `<img>` of 82 px in boxes of the wall's size) | the URL's 600 × 900 (≈ 116 KB each), all eager, low priority: 20 requests, 2,319 KB; then (#263) `lg` 240 × 360, the first two rows eager: 20 requests, 737 KB, **before the form was painted**: a cover was the page's LCP (5.6 s in production, 2.2 s without them) | `lg` 240 × 360 (37 KB) on **fifteen** covers (the fourth row lies under a veil that is opaque from 48 % down: 0–2 % of a cover on a phone, ≤ 6 % on a 1080p desktop; its boards stay), asked for after the form is painted and the browser idle (`afterPaint`), low priority, drawn on `<canvas>`es (`WallCover.vue`: a canvas is not an LCP candidate, an `<img>` of 82 px is bigger than the wordmark), faded in over their board; 0 cover requests before the form, 15 / 564 KB after (see Sign-in wall, below) |
+| Avatar (header, Profile, photo editor), author portrait | plain `<img>`, eager, in a 32–72 px circle, first screen; the portrait is the author page's hero | same: first screen, sized box, initials underneath |
+| Photo crop (`profile/Photo.vue`) | an object URL in a box of explicit size | same |
+| CSS: thumbhash under a cover (`background-image: url(data:…)`), film grain (inline SVG), Button gradient | no request | same: no `url()` reaches the network anywhere in `app/` |
+| Shelf (`ShelfRow`, `ShelfStage`) | colours only; Regal (the private layer: its own textures) is not in this repo and not in the build | same |
+| Reader | EPUB images come from the book file (blob URLs, sanitised in `data/reader/markup.ts`): no network | same |
+
+**Sign-in wall, after the form** (`pnpm perf:wall`, `perf/wall.ts`: first launch of `/sign-in`, Pixel 7 profile, `slow4g-4x`, 7 runs per series, two series per build in turn, load 1.4–1.8; medians (min–max); the cover host is the harness's stand-in, so Apple's real latency is not in it):
+
+| | before (v1.9.2) | after |
+| --- | ---: | ---: |
+| LCP | 6,200 ms (`img.cover`) | **2,092 ms** (the wordmark) |
+| Form shown | 2,105 ms | 2,105 ms |
+| Requests / KB asked for by the form's first paint | 48 / 1,025 | 28 / 284 |
+| Cover requests before the form is painted | 20 | **0** |
+| Requests / KB after 8 s | 53 / 1,034 | 48 / 848 (15 covers) |
+
+An `<img>` was tried first (mounted after the form, lazy, low priority, fading in): the form was no longer behind the covers, but each cover (82 px, 100 × 134 with the tilt: 13,462 px²) is a larger LCP candidate than the wordmark (10,168 px²), so LCP moved to the moment the first cover arrived (5.6 s). Hence the canvases. `e2e/sign-in-wall.spec.ts` pins: no cover request starts before the first frame with the form in it, the `lg` size, the wall `aria-hidden` with nothing focusable, the member's focus kept, the fade (and none with Reduce Motion).
+
+Measured with the harness (`slow4g-4x`, 5 runs, medians, load average 3.6–4.0; cover requests and
+bytes from the network log; the first column is the build before this change, the second after):
+
+| | before | after |
+| --- | ---: | ---: |
+| Cold start (Home shown): cover requests / KB | 8 / 296 | 8 / 296 |
+| Warm start | 8 / 296 | 8 / 296 |
+| Library mount (Home → Library, `b1`) | 28 / 301 | 28 / 299 |
+| Library scrolled to the bottom (`b2`) | 26 / 595 | 26 / 590 |
+| Profile open (`b3`) | 13 / 191 | 13 / 191 |
+| Sign-in, signed out (`perf:images`, unthrottled) | 20 / 2,319 | 20 / 737 |
+| Search "the" on a Library of 150 (`perf:list`, her own Books match widely) | 157 / — | 28 / — |
+
+So the signed-in screens did not change: they were lazy already, and the audit's job there was to
+prove it and to find the few exceptions (above). Home's first screen asks for the 8 covers it shows
+and no more; the Library asks for 28 of the 51 images in its DOM, those within 1,250 px.

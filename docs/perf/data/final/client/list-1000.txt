@@ -1,0 +1,50 @@
+$ tsx perf/list.ts --runs 5 --label entries-1000
+
+== list, slow4g-4x, 5 runs, load average at start 6.03 5.16 3.88
+  run 1 l1-library-mount     ready 405 ms  nodes 3428  rows 320  own 0  covers 28  style 69 layout 30 script 34 ms  frames>50 1 worst 267  loaf 1/282 ms (style+layout 8, blocking 228; (none) TimerHandler:setTimeout 267ms)
+  run 1 l2-finished          ready 996 ms  nodes 26612  rows 677  own 0  covers 24  style 213 layout 98 script 14 ms  frames>50 3 worst 767  loaf 2/752 ms (style+layout 19, blocking 721; BH0jUtlZ.js n 691ms | CmQdbIpx.js Response.text.then 54ms)
+  run 1 l3-finished-scroll   ready 20792 ms  nodes 26619  rows 677  own 0  covers 681  style 305 layout 362 script 212 ms  frames>50 182 worst 83  loaf 1/55 ms (style+layout 0, blocking 0; BH0jUtlZ.js n 9ms)
+  run 1 l4-scroll-up         ready 601 ms  nodes 26619  rows 677  own 0  covers 0  style 1 layout 0 script 2 ms  frames>50 0 worst 50  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 1 s1-search-open       ready 197 ms  nodes 26643  rows 677  own 0  covers 0  style 21 layout 1 script 19 ms  frames>50 0 worst 50  loaf 1/55 ms (style+layout 0, blocking 0; BH0jUtlZ.js n 25ms)
+  run 1 s2-search-type       ready 1775 ms  nodes 27227  rows 677  own 0  covers 25  style 180 layout 10 script 22 ms  frames>50 2 worst 200  loaf 2/191 ms (style+layout 6, blocking 176; C_EemRa5.js Response.json.then 268ms)
+  run 1 s3-search-own        ready 1337 ms  nodes 40854  rows 677  own 1000  covers 302  style 347 layout 96 script 58 ms  frames>50 7 worst 967  loaf 7/949 ms (style+layout 149, blocking 1752; BH0jUtlZ.js INPUT.oninput 813ms | C_EemRa5.js Response.json.then 647ms)
+  run 2 l1-library-mount     ready 427 ms  nodes 3428  rows 320  own 0  covers 28  style 79 layout 30 script 31 ms  frames>50 1 worst 300  loaf 1/307 ms (style+layout 10, blocking 252; (none) TimerHandler:setTimeout 289ms)
+  run 2 l2-finished          ready 983 ms  nodes 26612  rows 677  own 0  covers 24  style 199 layout 94 script 11 ms  frames>50 1 worst 767  loaf 2/736 ms (style+layout 18, blocking 693; BH0jUtlZ.js n 676ms | CmQdbIpx.js Response.text.then 44ms)
+  run 2 l3-finished-scroll   ready 21027 ms  nodes 26619  rows 677  own 0  covers 681  style 306 layout 363 script 212 ms  frames>50 189 worst 100  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 2 l4-scroll-up         ready 602 ms  nodes 26619  rows 677  own 0  covers 0  style 1 layout 0 script 2 ms  frames>50 0 worst 50  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 2 s1-search-open       ready 161 ms  nodes 26643  rows 677  own 0  covers 0  style 16 layout 0 script 13 ms  frames>50 0 worst 33  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 2 s2-search-type       ready 2030 ms  nodes 27227  rows 677  own 0  covers 25  style 177 layout 19 script 31 ms  frames>50 2 worst 200  loaf 2/205 ms (style+layout 6, blocking 182; C_EemRa5.js Response.json.then 275ms)
+  run 2 s3-search-own        ready 1382 ms  nodes 40854  rows 677  own 1000  covers 302  style 358 layout 103 script 50 ms  frames>50 7 worst 983  loaf 7/977 ms (style+layout 150, blocking 1742; BH0jUtlZ.js INPUT.oninput 834ms | C_EemRa5.js Response.json.then 628ms)
+  run 3 l1-library-mount     ready 403 ms  nodes 3428  rows 320  own 0  covers 28  style 73 layout 27 script 36 ms  frames>50 1 worst 283  loaf 1/292 ms (style+layout 9, blocking 238; (none) TimerHandler:setTimeout 275ms)
+  run 3 l2-finished          ready 946 ms  nodes 26612  rows 677  own 0  covers 24  style 197 layout 102 script 10 ms  frames>50 2 worst 750  loaf 2/737 ms (style+layout 18, blocking 697; BH0jUtlZ.js n 682ms | CmQdbIpx.js Response.text.then 47ms)
+  run 3 l3-finished-scroll   ready 20702 ms  nodes 26619  rows 677  own 0  covers 681  style 283 layout 366 script 220 ms  frames>50 182 worst 84  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 3 l4-scroll-up         ready 603 ms  nodes 26619  rows 677  own 0  covers 0  style 1 layout 0 script 3 ms  frames>50 0 worst 50  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 3 s1-search-open       ready 172 ms  nodes 26643  rows 677  own 0  covers 0  style 20 layout 1 script 14 ms  frames>50 0 worst 33  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 3 s2-search-type       ready 1995 ms  nodes 27227  rows 677  own 0  covers 25  style 169 layout 16 script 21 ms  frames>50 2 worst 200  loaf 2/191 ms (style+layout 6, blocking 171; C_EemRa5.js Response.json.then 264ms)
+  run 3 s3-search-own        ready 1342 ms  nodes 40854  rows 677  own 1000  covers 302  style 344 layout 100 script 49 ms  frames>50 7 worst 967  loaf 7/956 ms (style+layout 148, blocking 1734; BH0jUtlZ.js INPUT.oninput 822ms | C_EemRa5.js Response.json.then 630ms)
+  run 4 l1-library-mount     ready 388 ms  nodes 3428  rows 320  own 0  covers 28  style 73 layout 29 script 37 ms  frames>50 1 worst 267  loaf 1/276 ms (style+layout 9, blocking 222; (none) TimerHandler:setTimeout 260ms)
+  run 4 l2-finished          ready 982 ms  nodes 26612  rows 677  own 0  covers 24  style 207 layout 110 script 12 ms  frames>50 3 worst 767  loaf 2/748 ms (style+layout 19, blocking 712; BH0jUtlZ.js n 693ms | CmQdbIpx.js Response.text.then 49ms)
+  run 4 l3-finished-scroll   ready 21034 ms  nodes 26619  rows 677  own 0  covers 681  style 292 layout 365 script 225 ms  frames>50 179 worst 100  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 4 l4-scroll-up         ready 601 ms  nodes 26619  rows 677  own 0  covers 0  style 0 layout 0 script 2 ms  frames>50 0 worst 50  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 4 s1-search-open       ready 174 ms  nodes 26643  rows 677  own 0  covers 0  style 14 layout 3 script 19 ms  frames>50 0 worst 33  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 4 s2-search-type       ready 1781 ms  nodes 27227  rows 677  own 0  covers 25  style 162 layout 19 script 23 ms  frames>50 2 worst 200  loaf 2/182 ms (style+layout 5, blocking 159; C_EemRa5.js Response.json.then 253ms)
+  run 4 s3-search-own        ready 1306 ms  nodes 40854  rows 677  own 1000  covers 302  style 348 layout 94 script 47 ms  frames>50 6 worst 950  loaf 5/925 ms (style+layout 134, blocking 1328; BH0jUtlZ.js INPUT.oninput 789ms | CmQdbIpx.js Response.text.then 552ms)
+  run 5 l1-library-mount     ready 408 ms  nodes 3428  rows 320  own 0  covers 28  style 70 layout 27 script 32 ms  frames>50 1 worst 283  loaf 1/283 ms (style+layout 9, blocking 229; (none) TimerHandler:setTimeout 267ms)
+  run 5 l2-finished          ready 957 ms  nodes 26612  rows 677  own 0  covers 24  style 214 layout 99 script 10 ms  frames>50 2 worst 783  loaf 2/765 ms (style+layout 17, blocking 721; BH0jUtlZ.js n 707ms | CmQdbIpx.js Response.text.then 46ms)
+  run 5 l3-finished-scroll   ready 20836 ms  nodes 26619  rows 677  own 0  covers 681  style 308 layout 365 script 219 ms  frames>50 174 worst 83  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 5 l4-scroll-up         ready 603 ms  nodes 26619  rows 677  own 0  covers 0  style 2 layout 0 script 2 ms  frames>50 0 worst 50  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 5 s1-search-open       ready 153 ms  nodes 26643  rows 677  own 0  covers 0  style 20 layout 0 script 14 ms  frames>50 0 worst 33  loaf 0/0 ms (style+layout 0, blocking 0; )
+  run 5 s2-search-type       ready 1793 ms  nodes 27227  rows 677  own 0  covers 25  style 167 layout 15 script 22 ms  frames>50 2 worst 200  loaf 2/192 ms (style+layout 7, blocking 167; C_EemRa5.js Response.json.then 259ms)
+  run 5 s3-search-own        ready 1293 ms  nodes 40854  rows 677  own 1000  covers 302  style 345 layout 89 script 50 ms  frames>50 6 worst 933  loaf 6/925 ms (style+layout 141, blocking 1310; BH0jUtlZ.js INPUT.oninput 797ms | CmQdbIpx.js Response.text.then 527ms)
+
+slow4g-4x, 5 runs, load average at start 6.03 5.16 3.88, medians (~ = spread above 15 %)
+
+| step | ready ms | DOM nodes | Library rows | `<img>` | cover requests | style ms | layout ms | script ms | frames>50 | worst frame ms | LoAF n | LoAF max ms |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Home → Library (the segment she was in) | 405 | 3428 | 320 | 323 | 28 | 73 | 29 | 34~ | 1 | 283 | 1 | 283 |
+| Library → Finished (the longest segment) | 982 | 26612 | 677 | 680 | 24 | 207 | 99~ | 11~ | 2~ | 767 | 2 | 748 |
+| Finished: scroll to the end | 20836 | 26619 | 677 | 680 | 681 | 305 | 365 | 219 | 182 | 84~ | 0 | 0 |
+| Finished: scroll back to the top | 602 | 26619 | 677 | 680 | 0 | 1~ | 0 | 2~ | 0 | 50 | 0 | 0 |
+| Search: open | 172~ | 26643 | 677 | 680 | 0 | 20~ | 1~ | 14~ | 0 | 33~ | 0 | 0 |
+| Search: type "piranesi" | 1793 | 27227 | 677 | 712 | 25 | 169 | 16~ | 22~ | 2 | 200 | 2 | 191 |
+| Search: "the" (her own Books match widely) | 1337 | 40854 | 677 | 1693 | 302 | 347 | 96 | 50~ | 7 | 967 | 7~ | 949 |

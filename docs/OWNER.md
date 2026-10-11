@@ -2,12 +2,12 @@
 
 Tooling that only the owner's instance (libellus.fabkho.dev) uses: bringing the owner's Fable
 history over once, and publishing the owner's Library to Regal, the 3D bookshelf on
-fabkho.dev/books. Nothing here is needed to run or host BetterReads; a fork can ignore this page and
+fabkho.dev/books. Nothing here is needed to run Libellus; anyone not working on these two can ignore this page and
 the files it names (`web/scripts/import-fable.ts`, `web/scripts/fable/`,
 `web/app/data/import/{fable,readingTracker}.ts` for Fable;
 `web/scripts/export-regal.ts`, `web/app/data/export/`, `supabase/functions/regal-export/` and the
 `shelf_publish` migration for Regal). The Regal layer itself is opt-in (`LIBELLUS_REGAL=1`,
-[SELF_HOSTING.md](SELF_HOSTING.md), Optional pieces).
+[SETUP.md](SETUP.md), Optional pieces).
 
 ## The Fable import and the dev seed
 
@@ -44,7 +44,7 @@ Goodreads second opinion on read dates is not part of the import.
 
 [Regal](https://github.com/fabkho/regal), the owner's 3D bookshelf on fabkho.dev/books, reads one
 file: a [Regal library file](https://github.com/fabkho/regal/blob/main/docs/library-file.md)
-(version 2). BetterReads writes it from a member's Library with `web/scripts/export-regal.ts` (#22)
+(version 2). Libellus writes it from a member's Library with `web/scripts/export-regal.ts` (#22)
 and serves the owner's with the edge function `regal-export` (#110), read only: one Book per Library entry (the edition's id as its id), the Status from the latest
 Reading session (`read`, `dnf`, `currently-reading`, `to-read`), the date read, Rating and review
 from the last finished read, the read count, ISBN, pages (the member's own count where she set one), publisher, blurb, the Cover URL and a
@@ -52,7 +52,7 @@ palette from the Cover's colours. The mapping is `web/app/data/export/regal.ts` 
 fixture); the file is checked with Regal's validator, vendored in
 `web/app/data/export/regalLibraryFile.ts` with the Regal commit it came from (run the tests with
 `REGAL_DIR=<regal checkout>` to compare it with Regal's own). Want to read stays out unless
-`--statuses` asks for it. BetterReads has no series, binding or Spine art: Regal assets fills what it
+`--statuses` asks for it. Libellus has no series, binding or Spine art: Regal assets fills what it
 can.
 
 The daily chain runs in the cloud (#110), nothing on a Mac:
@@ -97,20 +97,20 @@ Configuration, all outside the repo:
 By hand, the same file from any stack (read only; never `--publish` by hand while testing):
 
 ```sh
-# 1. BetterReads → library file, keeping the art Regal shows now
+# 1. Libellus → library file, keeping the art Regal shows now
 cd web
 SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… pnpm export:regal --target hosted --confirm-host <project host> \
   --email <owner> --owner Fabian --statuses read --carry-art https://books.fabkho.dev/v2/library.json \
   --out ../.data/regal/library-v2.json
 # 2. in a Regal checkout: Spines, backs, pile copies and colours; --dry-run shows what would be published
-pnpm regal-assets --in <betterreads>/.data/regal/library-v2.json --no-ai --no-model --revalidate --dry-run --publish v2
+pnpm regal-assets --in <libellus>/.data/regal/library-v2.json --no-ai --no-model --revalidate --dry-run --publish v2
 ```
 
 `--carry-art` takes the file that is published now: every exported Book it has (by ISBN-13, else by
-title and first author's surname, so a Book whose edition changed in BetterReads still finds it) keeps
+title and first author's surname, so a Book whose edition changed in Libellus still finds it) keeps
 its published front, Spine, back and colours, so the portfolio's paid AI art survives; a Book it does
-not have gets the BetterReads Cover, and Regal draws its Spine and back (or `regal-assets` without
-`--no-ai` makes them). Published art sticks: a matched Book keeps it when its BetterReads Cover changes.
+not have gets the Libellus Cover, and Regal draws its Spine and back (or `regal-assets` without
+`--no-ai` makes them). Published art sticks: a matched Book keeps it when its Libellus Cover changes.
 The export is deterministic and is not rewritten when only `generatedAt` would change, so Regal
 assets finds every Book in its cache and uploads nothing on a quiet day. `pnpm export:regal --help`
 lists the options (`--statuses`, `--time-zone`, `--generated-at`).

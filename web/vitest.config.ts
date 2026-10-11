@@ -12,10 +12,26 @@ process.env.LIBELLUS_TEST_RUN ??= randomUUID().slice(0, 8)
 // Data-layer suite against the real local Supabase stack (SPEC.md, Testing).
 // Plain Node, no Nuxt runtime: the data layer is framework-free on purpose.
 export default defineConfig({
+  plugins: [
+    {
+      // The feed, likes, library and friendsTab stores read and write the device's copy only `import.meta.client` (the app is an
+      // SPA, so always in the browser); in Node that flag is undefined. Only these stores, so no other test changes.
+      name: 'libellus-stores-are-client',
+      transform: (code, id) => (/\/app\/stores\/(feed|likes|library|friendsTab)\.ts$/.test(id) ? code.replaceAll('import.meta.client', 'true') : null),
+    },
+  ],
   resolve: {
-    alias: { '@': resolve('./app') },
+    // `~` is Nuxt's alias for the same folder: the stores' own imports resolve in tests/social-store.test.ts.
+    alias: {
+      '@': resolve('./app'),
+      '~': resolve('./app'),
+      // As in nuxt.config.ts: the suite exercises the client the app ships.
+      '@supabase/realtime-js': resolve('./app/data/realtimeStub.ts'),
+    },
   },
   test: {
+    // Node loads supabase-js from node_modules as it is, past the alias above: inlined, its import of Realtime resolves to the stub.
+    server: { deps: { inline: [/@supabase\/supabase-js/] } },
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     env: { LIBELLUS_TEST_RUN: process.env.LIBELLUS_TEST_RUN },

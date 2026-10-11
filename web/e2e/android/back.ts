@@ -1,8 +1,8 @@
 /**
  * Real-device check of the system Back with something open (#62): Chrome on
  * the Android emulator, signed in by `smoke.ts` first (same `--out`, it reuses
- * her `member.json`). Not part of CI; `e2e/sheets.spec.ts` covers the same in
- * Playwright with `page.goBack()`.
+ * her `member.json`). Not part of CI, and no Playwright flow covers it
+ * any more: the system Back is checked here, on the device.
  *
  * From one book page to another inside the app, then on the second: Edit read
  * and Back (the sheet closes, the page stays); Edit read and Cancel; the

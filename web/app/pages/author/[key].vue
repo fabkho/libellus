@@ -2,7 +2,8 @@
 // An author's page (#167): the hero (portrait, name, life dates, genres, the
 // Wikipedia intro with its credits), then her works, one entry per work,
 // grouped: each series in reading order ("Book 3"), the novels in no series,
-// and the rest (collections, non-fiction, works without a place). Each work
+// and the rest (collections, non-fiction, works without a place); those two
+// newest first, works without a year last. Each work
 // shows her status or "+ Want to read" and opens its Book's page. Opened by
 // any of the author's keys (Wikidata item, Open Library id, uuid) from the
 // Book page's author line and from a list row's. A pushed screen in the tabs
@@ -12,6 +13,7 @@
 import type { WorkCard } from '~/data/enrich'
 import { useAuthorsStore } from '~/stores/authors'
 import { useLibraryStore } from '~/stores/library'
+import { newestFirst } from '~/utils/enrich'
 
 definePageMeta({ layout: 'tabs', screen: 'author', pushed: true })
 
@@ -47,8 +49,8 @@ const groups = computed<Group[]>(() => {
   if (!p) return []
   return [
     ...p.series.map((s) => ({ id: `series-${s.id}`, title: s.name, parent: s.parentName ?? undefined, works: s.works, places: true })),
-    ...(p.standalone.length ? [{ id: 'standalone', title: t('author.standalone'), works: p.standalone, places: false }] : []),
-    ...(p.other.length ? [{ id: 'other', title: t('author.other'), works: p.other, places: false }] : []),
+    ...(p.standalone.length ? [{ id: 'standalone', title: t('author.standalone'), works: newestFirst(p.standalone), places: false }] : []),
+    ...(p.other.length ? [{ id: 'other', title: t('author.other'), works: newestFirst(p.other), places: false }] : []),
   ]
 })
 const shown = (group: Group) => (opened.has(group.id) || group.works.length <= SHOWN + 2 ? group.works : group.works.slice(0, SHOWN))
@@ -71,7 +73,7 @@ function back() {
       <AuthorHero :author="author" :genres="page?.genres ?? []" :arriving="arriving" />
 
       <div v-if="page" class="relative px-ml" :class="{ arrive: arriving }">
-        <section v-for="group in groups" :key="group.id" class="pt-xl" :data-testid="group.places ? 'author.series' : `author.${group.id}`">
+        <section v-for="(group, g) in groups" :key="group.id" class="pt-xl" :data-testid="group.places ? 'author.series' : `author.${group.id}`">
           <div class="flex min-h-(--size-touch) items-end justify-between gap-md pb-xs">
             <h2 class="min-w-0">
               <span v-if="group.parent" class="eyebrow block text-ink-faint" data-testid="author.seriesParent">{{ group.parent }}</span>
@@ -87,7 +89,7 @@ function back() {
               :place="placeOf(group, work)"
               testid="author.work"
               :author="author?.name"
-              :eager="index < 4"
+              :eager="g === 0 && index < 4"
             />
           </component>
           <button

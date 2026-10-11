@@ -26,7 +26,8 @@ function book(title: string): BookSnapshot {
     language: 'en',
     publisher: TEST_PUBLISHER,
     description: null,
-    coverUrl: 'https://example.org/cover.jpg',
+    // A host the app's covers really come from: a reading page hands out a cover only from those (social v1, S1).
+    coverUrl: 'https://covers.openlibrary.org/b/id/8231856-L.jpg',
     coverThumbhash: null,
     coverColors: { dominant: '#112233', secondary: '#445566' },
     source: 'apple',

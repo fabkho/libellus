@@ -396,6 +396,12 @@ deno_version = 2
 [functions.goodreads-rating]
 verify_jwt = false
 
+# German editions from the German National Library for the barcode scan, the ISBN lookups and the
+# edition picker (supabase/functions/dnb-lookup). The function checks the caller itself (a
+# signed-in member, or the service role), like goodreads-rating.
+[functions.dnb-lookup]
+verify_jwt = false
+
 # The owner's Regal library file for the Regal workflow (issue #110). Its caller
 # has no Supabase key, only the shared secret REGAL_EXPORT_TOKEN, which the
 # function checks itself: supabase/functions/regal-export/README.md.
@@ -418,6 +424,20 @@ static_files = ["./functions/reading-page-og/fonts/*.ttf"]
 # supabase/functions/enrich/README.md.
 [functions.enrich]
 verify_jwt = false
+
+# A checked Catalogue (social v2a): unchecked Catalogue Books read at their source. Only
+# the service-role key or the shared secret CATALOGUE_CHECK_TOKEN (pg_cron's call) pass; the
+# function checks that itself: supabase/functions/catalogue-check/README.md.
+[functions.catalogue-check]
+verify_jwt = false
+
+# The owner's Invite on her Waitlist screen (issue #171). Only a signed-in member's
+# request reaches it (verify_jwt); which member may invite is the database's call,
+# since the function asks it with the caller's own session and holds no service-role
+# key. The mail goes out over SMTP from the function secrets SMTP_*; without them
+# the function still mints and answers the code: supabase/functions/waitlist-invite/README.md.
+[functions.waitlist-invite]
+verify_jwt = true
 
 [analytics]
 # Off, as in Trappist: nothing reads the local logs, and it is one container less.

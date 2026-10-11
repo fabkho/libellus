@@ -29,8 +29,17 @@ export function useFigures() {
   const monthYear = (day: string) => dateFormat(locale.value, { month: 'long', year: 'numeric' }).format(parseDay(day))
   const weekdayLetter = (day: string) => dateFormat(locale.value, { weekday: 'narrow' }).format(parseDay(day))
 
+  const dayParts = (day: string) => ({
+    day: dateFormat(locale.value, { day: 'numeric' }).format(parseDay(day)),
+    month: dateFormat(locale.value, { month: 'long' }).format(parseDay(day)),
+  })
+  /** "12 March", the month long (a day in the calendar's names, no year: it is one of the last weeks). */
+  const dayLong = (day: string) => t('common.dayMonth', dayParts(day))
+  /** "Thursday 12 March", in the member's locale: a day's sheet. */
+  const dayTitle = (day: string) => t('profile.sheet.day', { weekday: dateFormat(locale.value, { weekday: 'long' }).format(parseDay(day)), date: dayLong(day) })
+
   /** "in a day", "in 12 days"; nothing without both dates. */
   const readIn = (read: Pick<StatsRead, 'days'>) => (read.days === null ? '' : t('profile.sheet.readIn', { count: read.days }, read.days))
 
-  return { count, large, percent, stars, monthLong, monthShort, monthLetter, monthYear, weekdayLetter, readIn }
+  return { count, large, percent, stars, monthLong, monthShort, monthLetter, monthYear, weekdayLetter, dayLong, dayTitle, readIn }
 }

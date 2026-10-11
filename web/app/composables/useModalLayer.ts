@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { dimStatusBar } from '~/utils/statusBarDim'
 
 /**
  * What a sheet or a dialog does to the rest of the app while it is open, as on
@@ -68,7 +69,8 @@ function contains(layer: Layer, node: Node | null) {
  * Makes the component a modal layer while `open` is true. `elements` are its
  * scrim and panel (both teleported to `<body>`); `initialFocus` picks what
  * gets focus once it is open (the panel itself, or a field that should have the
- * keyboard at once). `close` is how the layer closes itself: the system Back
+ * keyboard in the opening tap; a sheet whose field waits for its rise names the panel and moves
+ * focus itself later). `close` is how the layer closes itself: the system Back
  * and a change of page call it. Bind `afterLeave` to the panel's
  * `<Transition>`, so the layer counts as shown until it has left.
  */
@@ -88,10 +90,20 @@ export function useModalLayer(
   let layer: Layer | null = null
   let shown = false
 
+  let undim: (() => void) | null = null
+
   function markShown(value: boolean) {
     if (value === shown) return
     shown = value
     shownLayers.value += value ? 1 : -1
+    // The status bar of the installed app is outside the viewport, so the scrim cannot reach it:
+    // it takes the scrim's colour for as long as the layer is on screen (utils/statusBarDim.ts).
+    if (!import.meta.client) return
+    if (value) undim = dimStatusBar()
+    else {
+      undim?.()
+      undim = null
+    }
   }
 
   async function enter() {
@@ -102,9 +114,11 @@ export function useModalLayer(
     markShown(true)
     await nextTick()
     if (layer !== stack.at(-1)) return
-    // Focus first, while the trigger is still reachable, then shut the rest:
-    // a field that took focus in the opening tap (a name sheet) keeps it, so
-    // the keyboard comes up with the sheet.
+    // Focus first, while the trigger is still reachable, then shut the rest.
+    // A field that already has focus keeps it. UiSheet's `initialFocus` names
+    // the panel while its field waits for the rise (stage 1: focus is inside
+    // at once for the trap and VoiceOver; stage 2, in UiSheet, moves it to the
+    // field once the sheet is in place, utils/sheetFocus.ts).
     const target = initialFocus()
     if (!contains(layer, document.activeElement)) target?.focus({ preventScroll: true })
     apply()

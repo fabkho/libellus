@@ -99,10 +99,8 @@ function outcome(read: ReadingSession): string {
             {{ t('history.edit') }}
           </button>
         </div>
-        <p v-if="read.review" class="note mt-xs font-serif text-callout text-ink-muted italic" data-testid="history.review">{{ read.review }}</p>
-        <p v-else-if="read.abandonReason" class="note mt-xs font-serif text-callout text-ink-muted italic" data-testid="history.reason">
-          {{ read.abandonReason }}
-        </p>
+        <UiClampText v-if="read.review" class="mt-xs font-serif text-callout text-ink-muted italic" :text="read.review" testid="history.review" />
+        <UiClampText v-else-if="read.abandonReason" class="mt-xs font-serif text-callout text-ink-muted italic" :text="read.abandonReason" testid="history.reason" />
       </li>
     </ol>
   </section>
@@ -140,12 +138,5 @@ function outcome(read: ReadingSession): string {
 .open .node {
   background: var(--color-accent);
   box-shadow: 0 0 var(--spacing-ms) var(--spacing-xxs) color-mix(in srgb, var(--color-accent) 50%, transparent);
-}
-
-.note {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 </style>

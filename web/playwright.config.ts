@@ -17,21 +17,29 @@ const PORT = Number(process.env.LIBELLUS_E2E_PORT ?? 4327)
 // User flows on a phone-sized viewport. Together with docs/parity.md these are
 // the behavioural reference for any native port (SPEC.md, Testing).
 //
-// In CI (the e2e job in .github/workflows/ci.yml) every run starts on an empty
+// In CI (.github/workflows/e2e.yml, called by ci.yml and release.yml) every run starts on an empty
 // database. Workers follow the runner's cores: the public repository's
 // ubuntu-latest has four, which hold three workers next to the stack; on two
 // cores three workers starved WebKit (taps waited on frames that came too late,
 // #151), so two there. E2E_WORKERS overrides either. A failed test is retried
 // once (locally it fails at once, so a flake is seen), and the first failure
 // leaves a trace and a screenshot. The job runs in shards (`--shard=i/N`, N set
-// in ci.yml and docs/TESTING.md: every shard boots its own stack), each writing
+// in ci.yml, release.yml and docs/TESTING.md: every shard boots its own stack), each writing
 // a blob report that the workflow merges into one HTML report when a shard failed.
 const CI = Boolean(process.env.CI)
 const DEV = Boolean(process.env.LIBELLUS_E2E_DEV)
 const CI_WORKERS = Number(process.env.E2E_WORKERS) || (availableParallelism() >= 4 ? 3 : 2)
 
+// Measurements (e2e/perf, tagged @perf) run only by hand, with LIBELLUS_E2E_PERF=1: they take
+// minutes, drive Chromium with the CPU slowed, and assert nothing a pull request should wait on.
+const PERF = Boolean(process.env.LIBELLUS_E2E_PERF)
+// The German pass (e2e/i18n, docs/i18n/german-pass.md) walks every screen in German at 390 and 360 px, in both
+// themes, and writes screenshots and findings: by hand too, with LIBELLUS_E2E_GERMAN=1.
+const GERMAN = Boolean(process.env.LIBELLUS_E2E_GERMAN)
+
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: [...(PERF ? [] : ['**/perf/**']), ...(GERMAN ? [] : ['**/i18n/**'])],
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
   // Sharding splits by test rather than by file (a few files hold a third of the flows, so
@@ -54,6 +62,8 @@ export default defineConfig({
   use: {
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // No video: it is written for every test while it runs, and the trace says more.
+    video: 'off',
     baseURL: `http://localhost:${PORT}`,
     ...devices['iPhone 15'],
     // WebKit is closest to Safari on iPhone, where BetterReads is mostly used.

@@ -32,8 +32,8 @@ export type GoodreadsFound = {
 export type GoodreadsNotFound = { status: 'not_found' }
 export type GoodreadsAnswer = GoodreadsFound | GoodreadsNotFound
 
-/** The Book being looked up, as the page knows it. */
-export type LookupBook = { isbn13: string; title: string | null; authors: string[] }
+/** The Book being looked up, as the page knows it. Without an ISBN it is found by title and author alone. */
+export type LookupBook = { isbn13: string | null; title: string | null; authors: string[] }
 
 // ---------------------------------------------------------------------- ISBN
 
@@ -234,4 +234,19 @@ export function foundByTitle(result: AutoCompleteBook): GoodreadsFound {
     ratingsCount: result.ratingsCount,
     reviewsCount: null,
   }
+}
+
+/**
+ * What a Book without an ISBN is cached by: its normalised title and its
+ * authors' normalised surnames, sorted ("something wicked this way comes|bradbury").
+ * Derived from exactly what the title search is asked with, so two Books that
+ * would ask the same thing (the same title twice in the Catalogue) share one
+ * answer. Null when there is not enough to ask: no title, or no author (a title
+ * alone never matches, `matchTitle`).
+ */
+export function titleKey(book: Pick<LookupBook, 'title' | 'authors'>): string | null {
+  const title = book.title ? normalise(book.title) : ''
+  const surnames = [...new Set(book.authors.map(surname).filter((s): s is string => Boolean(s)))].sort()
+  if (!title || !surnames.length) return null
+  return `${title}|${surnames.join(',')}`
 }

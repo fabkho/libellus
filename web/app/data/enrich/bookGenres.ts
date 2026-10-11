@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isNoAnswer } from '../network'
+import { allPages } from '../paging'
 import { type GenreId, isGenreId, MAX_GENRES } from './genres'
 import { type EnrichResult, mapError, OFFLINE } from './result'
 
@@ -56,9 +57,12 @@ export function createBookGenres(
     },
 
     async library() {
-      const { data, error } = await client.rpc('library_genres')
+      // One row per entry of her Library: cut at 1,000 without a word if asked for in one request (data/paging.ts).
+      type Row = { entry_id: string; book_id: string; genre_ids: string[]; overridden: boolean }
+      const { data: rows, error } = await allPages<Row>((from, to) =>
+        client.rpc('library_genres').order('entry_id').range(from, to).returns<Row[]>(),
+      )
       if (error) return { data: null, error: mapError(error) }
-      const rows = (data ?? []) as { entry_id: string; book_id: string; genre_ids: string[]; overridden: boolean }[]
       return {
         data: rows.map((r) => ({ entryId: r.entry_id, bookId: r.book_id, genres: known(r.genre_ids), overridden: r.overridden })),
         error: null,

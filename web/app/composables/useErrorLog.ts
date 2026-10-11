@@ -12,8 +12,8 @@ import {
 export const ERROR_LOG_KEY = 'libellus.errorLog'
 /**
  * Development only: `localStorage['libellus-dev:error-log'] = 'send'` makes this
- * dev server send its reports to the stack, like a production build (the flow
- * e2e/error-log.spec.ts sets it). Never cleared by signing out, never read in a build
+ * dev server send its reports to the stack, like a production build (a flow
+ * once set it; tests/error-log.test.ts holds the rules). Never cleared by signing out, never read in a build
  * other than the Playwright flows' (`__LIBELLUS_E2E__`), which behaves as the dev server.
  */
 export const ERROR_LOG_DEV_KEY = 'libellus-dev:error-log'

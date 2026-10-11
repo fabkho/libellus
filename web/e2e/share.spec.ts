@@ -1,211 +1,176 @@
-import { expect, type Page } from '@playwright/test'
-import en from '../i18n/locales/en.json' with { type: 'json' }
-import type { BookSnapshot } from '../app/data/books'
-import { createLibrary } from '../app/data/library'
-import { isoDay } from '../app/utils/dates'
-import { signUpMember } from '../tests/support/member'
-import { emailCooldown, readMailedCode, runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { expect, type BrowserContext, type Page } from '@playwright/test'
+import { buildEpub, MOBY_DICK_GUTENBERG, type EpubSpec } from '../tests/support/epub'
 import { test } from './fixtures'
 import { goto, recordedApple, signedIn, untilStill } from './support'
 
 /**
- * The share target and the app shortcuts (#91). Another app shares a link or
- * text to BetterReads: it opens at /share?title=&text=&url= (the manifest's GET
- * share_target), finds the Book through the same sources as search and goes to
- * its page, replacing /share in the history, or opens the search palette with the
- * words typed in. Signed out, the share waits through the sign-in. The
- * shortcuts open /?search=1 and /?progress=1. With docs/parity.md this is the
- * behavioural reference. The Books are made through the repository (so the
- * Catalogue holds them under an ISBN nobody else has); Apple answers from the
- * recordings.
+ * The share target (#91, #131, security round F4): `POST /share` is answered by the service
+ * worker (public/sw-share.js), which keeps the files shared to the app until the member taps
+ * "Add" on /share. A page on another origin can submit the same form, so the worker refuses a
+ * cross-site POST, and whatever gets through still imports nothing without the tap.
+ *
+ * Chromium with its service worker allowed (every other flow blocks it): the worker is the thing
+ * under test. The attacker's page is answered by a route on a made-up host and posts to the app.
  */
+test.use({
+  browserName: 'chromium',
+  serviceWorkers: 'allow',
+  // The attacker's page has no address of its own the local stack could be reached from.
+  launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'] },
+})
 
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)
 })
 
-/** A valid ISBN-13 nobody has (979…), so the run never meets a real Book or cached rating. */
-async function unusedIsbn13(): Promise<string> {
-  for (;;) {
-    const body = `979${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`
-    const sum = [...body].reduce((total, digit, index) => total + Number(digit) * (index % 2 ? 3 : 1), 0)
-    const isbn = `${body}${(10 - (sum % 10)) % 10}`
-    const taken = await sql(
-      'select 1 from public.books where isbn13 = $1 union all select 1 from public.goodreads_ratings where isbn13 = $1',
-      [isbn],
-    )
-    if (!taken.length) return isbn
-  }
+const epub = (title: string, spec: EpubSpec = MOBY_DICK_GUTENBERG) => Array.from(buildEpub({ ...spec, title }))
+
+/** What the app's own device storage holds: the shared files not taken yet, and the copies taken in. */
+async function deviceFiles(page: Page) {
+  return page.evaluate(async () => {
+    const shared = (await caches.has('libellus-shared-ebooks')) ? (await (await caches.open('libellus-shared-ebooks')).keys()).length : 0
+    const found: string[] = []
+    async function walk(dir: FileSystemDirectoryHandle, prefix: string) {
+      for await (const [name, handle] of (dir as unknown as { entries(): AsyncIterable<[string, FileSystemHandle]> }).entries()) {
+        if (handle.kind === 'directory') await walk(handle as FileSystemDirectoryHandle, `${prefix}${name}/`)
+        else found.push(`${prefix}${name}`)
+      }
+    }
+    try {
+      await walk(await (await navigator.storage.getDirectory()).getDirectoryHandle('ebooks'), 'ebooks/')
+    } catch {
+      // None yet.
+    }
+    return { shared, copies: found.filter((path) => path.endsWith('.epub')).length }
+  })
 }
 
-function book(title: string, isbn13: string | null): BookSnapshot {
-  return {
-    title: runTitle(title),
-    authors: ['Susanna Clarke'],
-    isbn13,
-    isbn10: null,
-    pageCount: 320,
-    year: 2020,
-    language: 'en',
-    publisher: TEST_PUBLISHER,
-    description: null,
-    coverUrl: null,
-    coverThumbhash: null,
-    coverColors: null,
-    source: 'apple',
-    appleId: uniqueAppleId(),
-    openLibraryEditionKey: null,
-    openLibraryWorkKey: null,
-  }
-}
-
-/** ISBN-13 → its ISBN-10 (the Amazon address carries that one). */
-function isbn10Of(isbn13: string): string {
-  const body = isbn13.slice(3, 12)
-  const sum = [...body].reduce((total, digit, index) => total + Number(digit) * (10 - index), 0)
-  const check = (11 - (sum % 11)) % 11
-  return `${body}${check === 10 ? 'X' : check}`
-}
-
-const shareUrl = (params: Record<string, string>) => `/share?${new URLSearchParams(params)}`
-
-/** A share arrives the way Android opens the app: a fresh page load at the share address. */
-async function receive(page: Page, params: Record<string, string>) {
-  await page.goto(shareUrl(params))
-}
-
-test('a link with an ISBN goes straight to the book, and Back does not land on the share', async ({ page }) => {
-  const member = await signedIn(page)
-  const isbn = await unusedIsbn13()
-  const added = (await createLibrary(member.client).addToLibrary(book('Shared ISBN', isbn), { status: 'want_to_read' })).data!
-
-  // Chrome shares the page's address in `text` and its title in `title`; the ISBN-13 is in the address.
-  await receive(page, { title: 'Some Bookshop', text: `https://bookshop.example/p/${isbn}` })
-  await expect(page.getByTestId('book.title')).toHaveText(added.book.title)
-  await expect(page.getByTestId('book.status')).toHaveText(en.status.want_to_read)
-  await expect(page).toHaveURL(new RegExp(`/book/${added.book.id}$`))
-
-  // /share took itself out of the history: Back leaves the app's pages for what was before.
-  await page.goBack()
-  await expect(page).not.toHaveURL(/\/share/)
-  await expect(page).not.toHaveURL(/\/book\//)
-})
-
-test('an Amazon /dp/ link carries the ISBN-10, and so does a /gp/product/ link', { tag: '@full' }, async ({ page }) => {
-  const member = await signedIn(page)
-  // 978…: the only ones that have an ISBN-10. The Catalogue keeps the first Book it was given for an ISBN, so the page is the entry's.
-  const isbn = '9780306406157'
-  const added = (await createLibrary(member.client).addToLibrary(book('Shared Amazon', isbn), { status: 'want_to_read' })).data!
-
-  await receive(page, { text: `Check out this book on Amazon https://www.amazon.com/Some-Title/dp/${isbn10Of(isbn)}/ref=sr_1_1?keywords=x` })
-  await expect(page.getByTestId('book.title')).toBeVisible()
-  await expect(page).toHaveURL(new RegExp(`/book/${added.book.id}$`))
-
-  await receive(page, { url: `https://www.amazon.de/gp/product/${isbn10Of(isbn)}?psc=1` })
-  await expect(page.getByTestId('book.title')).toBeVisible()
-  await expect(page).toHaveURL(new RegExp(`/book/${added.book.id}$`))
-})
-
-test('a Goodreads link finds the Book the Goodreads cache knows by its id', { tag: '@full' }, async ({ page }) => {
-  const member = await signedIn(page)
-  const isbn = await unusedIsbn13()
-  const added = (await createLibrary(member.client).addToLibrary(book('Shared Goodreads', isbn), { status: 'reading', startedOn: isoDay() })).data!
-  const goodreadsId = String(900_000_000 + Math.floor(Math.random() * 99_000_000))
-  await sql(
-    `insert into public.goodreads_ratings (isbn13, status, matched_by, goodreads_id, rating, ratings_count, reviews_count)
-     values ($1, 'found', 'isbn', $2, 4.1, 1000, 100)`,
-    [isbn, goodreadsId],
-  )
-  try {
-    await receive(page, {
-      title: 'Shared Goodreads by Susanna Clarke',
-      text: `Check out Shared Goodreads by Susanna Clarke on Goodreads: https://www.goodreads.com/book/show/${goodreadsId}-shared-goodreads`,
-    })
-    await expect(page.getByTestId('book.title')).toHaveText(added.book.title)
-    await expect(page.getByTestId('book.status')).toHaveText(en.status.reading)
-  } finally {
-    await sql('delete from public.goodreads_ratings where isbn13 = $1', [isbn])
-  }
-})
-
-test('shared title text opens the search palette with the words typed in', async ({ page }) => {
-  await signedIn(page)
-  await receive(page, { text: 'Piranesi' })
-  await expect(page.getByTestId('search.overlay')).toBeVisible()
-  await expect(page.getByTestId('search.query')).toHaveValue('Piranesi')
-  await expect(page.getByTestId('search.result').first()).toBeVisible()
-  // Home is the page behind it, and the share is gone from the address.
-  await expect(page).toHaveURL(/\/$/)
-
-  // Back does not return to /share either.
-  await page.getByTestId('search.cancel').click()
-  await expect(page.getByTestId('search.overlay')).toBeHidden()
-  await page.goBack().catch(() => {})
-  await expect(page).not.toHaveURL(/\/share/)
-})
-
-test('a link to an ISBN no source knows opens the search palette with the shared words', { tag: '@full' }, async ({ page }) => {
-  await signedIn(page)
-  const isbn = await unusedIsbn13()
-  await receive(page, { title: 'A Book Nobody Lists', url: `https://bookshop.example/p?isbn=${isbn}` })
-  await expect(page.getByTestId('search.overlay')).toBeVisible()
-  await expect(page.getByTestId('search.query')).toHaveValue('A Book Nobody Lists')
-})
-
-test('a share that arrives signed out waits through the sign-in and then opens the book', async ({ page }) => {
-  // The member exists already (made through the repository); the browser has no session.
-  const member = await signUpMember()
-  const isbn = await unusedIsbn13()
-  const added = (await createLibrary(member.client).addToLibrary(book('Shared Signed Out', isbn), { status: 'want_to_read' })).data!
-  await emailCooldown()
-
-  await receive(page, { url: `https://bookshop.example/p/${isbn}` })
-  await expect(page).toHaveURL(/\/sign-in$/)
-  await page.getByTestId('signIn.email').fill(member.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
-
-  await expect(page.getByTestId('book.title')).toHaveText(added.book.title)
-  await expect(page).toHaveURL(new RegExp(`/book/${added.book.id}$`))
-})
-
-test('an empty share goes Home', { tag: '@full' }, async ({ page }) => {
-  await signedIn(page)
-  await goto(page, '/share')
-  await expect(page.getByTestId('home.title')).toBeVisible()
-  await expect(page).toHaveURL(/\/$/)
-})
-
-test('the Search shortcut opens the palette on Home, and takes itself off the address', { tag: '@full' }, async ({ page }) => {
-  await signedIn(page)
-  await goto(page, '/?search=1')
-  await expect(page.getByTestId('search.overlay')).toBeVisible()
-  await expect(page.getByTestId('search.query')).toBeFocused()
-  await expect(page).toHaveURL(/\/$/)
-})
-
-test('the Update progress shortcut opens the sheet of the book updated last, or stays on Home when nothing is read', { tag: '@full' }, async ({ page }) => {
-  const member = await signedIn(page)
-  await goto(page, '/?progress=1')
-  await expect(page.getByTestId('home.title')).toBeVisible()
-  await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByTestId('progress')).toBeHidden()
-
-  const library = createLibrary(member.client)
-  const older = (await library.addToLibrary(book('Older Read', null), { status: 'reading', startedOn: isoDay() })).data!
-  const newer = (await library.addToLibrary(book('Newer Read', null), { status: 'reading', startedOn: isoDay() })).data!
-  expect((await library.updateProgress(older.id, { page: 12 }, undefined, isoDay())).error).toBeNull()
-  // Later: the older one is the one updated last.
-  await new Promise((resolve) => setTimeout(resolve, 1100))
-  expect((await library.updateProgress(newer.id, { page: 30 }, undefined, isoDay())).error).toBeNull()
-  await new Promise((resolve) => setTimeout(resolve, 1100))
-  expect((await library.updateProgress(older.id, { page: 40 }, undefined, isoDay())).error).toBeNull()
-
-  await goto(page, '/?progress=1')
-  await expect(page.getByTestId('book.title')).toHaveText(older.book.title)
-  await expect(page.getByTestId('progress')).toBeVisible()
-  await expect(page.getByTestId('progress.wheel')).toHaveAttribute('aria-valuenow', '40')
-  await expect(page).toHaveURL(new RegExp(`/book/${older.book.id}$`))
+/** The app is open, signed in, and its service worker is there to answer a POST. */
+async function ready(page: Page) {
+  await goto(page, '/')
+  await page.evaluate(() => navigator.serviceWorker.ready)
   await untilStill(page)
+}
+
+/**
+ * A page on another origin submits the share target's form with an EPUB, as any site can
+ * (`<form method=post action=…/share enctype=multipart/form-data>`). Returns that page.
+ */
+async function postFromAttacker(context: BrowserContext, target: string, files: { name: string; type: string; bytes: number[] }[]) {
+  const attacker = await context.newPage()
+  await attacker.route('http://attacker.test/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>free ebooks</title><form id="f" method="post" enctype="multipart/form-data"><input data-testid="attacker.file" id="file" type="file" name="ebooks" multiple></form>' }),
+  )
+  await attacker.goto('http://attacker.test/')
+  await attacker.evaluate(
+    ([action, list]) => {
+      const form = document.getElementById('f') as HTMLFormElement
+      const input = document.getElementById('file') as HTMLInputElement
+      const transfer = new DataTransfer()
+      for (const file of list) transfer.items.add(new File([new Uint8Array(file.bytes)], file.name, { type: file.type }))
+      input.files = transfer.files
+      form.action = action
+      form.submit()
+    },
+    [target, files] as const,
+  )
+  return attacker
+}
+
+test('a POST from another site imports nothing into the signed-in member’s device', async ({ page, context, baseURL }) => {
+  await signedIn(page)
+  await ready(page)
+
+  const attacker = await postFromAttacker(context, `${baseURL}/share`, [
+    { name: 'planted.epub', type: 'application/epub+zip', bytes: epub('PLANTED BY ATTACKER') },
+  ])
+  // Before the fix the page went on to /share?ebooks=<id>, took the file in and landed on /ebooks.
+  const imported = await attacker.waitForURL(/\/ebooks/, { timeout: 5_000 }).then(
+    () => true,
+    () => false,
+  )
+  expect(imported).toBe(false)
+  await untilStill(attacker)
+  expect(await deviceFiles(attacker)).toEqual({ shared: 0, copies: 0 })
+})
+
+/**
+ * The OS's share intent, as far as a test can make one: a form the app's own page submits
+ * (`Sec-Fetch-Site: same-origin`; Android's is `none`, which the worker accepts too).
+ */
+async function shareFromTheOs(page: Page, files: { name: string; bytes: number[] }[]) {
+  await page.evaluate(
+    (list) => {
+      const form = Object.assign(document.createElement('form'), { method: 'post', action: '/share', enctype: 'multipart/form-data' })
+      const input = Object.assign(document.createElement('input'), { type: 'file', name: 'ebooks', multiple: true })
+      const transfer = new DataTransfer()
+      for (const file of list) transfer.items.add(new File([new Uint8Array(file.bytes)], file.name, { type: 'application/epub+zip' }))
+      input.files = transfer.files
+      input.setAttribute('data-testid', 'test.shareFiles')
+      form.append(input)
+      document.body.append(form)
+      form.submit()
+    },
+    files,
+  )
+}
+
+test('a share asks first: it lists the files, and only Add takes them in', async ({ page }) => {
+  await signedIn(page)
+  await ready(page)
+
+  await shareFromTheOs(page, [
+    { name: 'moby.epub', bytes: epub('Moby-Dick') },
+    { name: 'dracula.epub', bytes: epub('Dracula') },
+  ])
+  await expect(page.getByTestId('share.confirm')).toBeVisible()
+  await expect(page.getByTestId('share.confirmTitle')).toHaveText('Add 2 ebooks shared to Libellus?')
+  await expect(page.getByTestId('share.file')).toHaveCount(2)
+  await expect(page.getByTestId('share.files')).toContainText('moby.epub')
+  await expect(page.getByTestId('share.files')).toContainText('dracula.epub')
+  // Nothing is in her library before the tap: the files only wait.
+  await expect(page).toHaveURL(/\/share\?ebooks=/)
+  expect(await deviceFiles(page)).toEqual({ shared: 3, copies: 0 })
+
+  await page.getByTestId('share.add').click()
+  await expect(page).toHaveURL(/\/ebooks$/)
+  await expect(page.getByTestId('ebooks.reportLine')).toContainText('2 ebooks')
+  expect(await deviceFiles(page)).toEqual({ shared: 0, copies: 2 })
+})
+
+test('Not now deletes what was shared and imports nothing', async ({ page }) => {
+  await signedIn(page)
+  await ready(page)
+
+  await shareFromTheOs(page, [{ name: 'moby.epub', bytes: epub('Moby-Dick') }])
+  await expect(page.getByTestId('share.confirm')).toBeVisible()
+  await expect(page.getByTestId('share.confirmTitle')).toHaveText('Add 1 ebook shared to Libellus?')
+  await page.getByTestId('share.notNow').click()
+  await expect(page).toHaveURL(/\/$/)
+  expect(await deviceFiles(page)).toEqual({ shared: 0, copies: 0 })
+})
+
+test('a file that is not an EPUB is not offered', async ({ page }) => {
+  await signedIn(page)
+  await ready(page)
+
+  await shareFromTheOs(page, [{ name: 'notes.txt', bytes: Array.from(new TextEncoder().encode('hello')) }])
+  await expect(page).toHaveURL(/\/ebooks\?missed=1$/)
+  await expect(page.getByTestId('ebooks.missed')).toBeVisible()
+  expect(await deviceFiles(page)).toEqual({ shared: 0, copies: 0 })
+})
+
+test('a second share replaces the one still waiting: only the address’s own is offered', async ({ page, context }) => {
+  await signedIn(page)
+  await ready(page)
+
+  // Two shares arrive; only the address's one is shown, the other is deleted on the way.
+  await shareFromTheOs(page, [{ name: 'first.epub', bytes: epub('First') }])
+  await expect(page.getByTestId('share.confirm')).toBeVisible()
+  const other = await context.newPage()
+  await other.goto('/')
+  await shareFromTheOs(other, [{ name: 'second.epub', bytes: epub('Second') }])
+  await expect(other.getByTestId('share.files')).toContainText('second.epub')
+  await expect(other.getByTestId('share.file')).toHaveCount(1)
+  expect(await deviceFiles(other)).toEqual({ shared: 2, copies: 0 })
 })

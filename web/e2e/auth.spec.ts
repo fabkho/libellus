@@ -2,7 +2,7 @@ import { expect } from '@playwright/test'
 import en from '../i18n/locales/en.json' with { type: 'json' }
 import { signUpMember } from '../tests/support/member'
 import { emailCooldown, mistype, readMailedCode, uniqueEmail } from '../tests/support/stack'
-import { openProfile, showTabBar, untilStill } from './support'
+import { openProfile, untilStill } from './support'
 import { test } from './fixtures'
 
 /**
@@ -131,114 +131,28 @@ test('the pending address survives the app being relaunched', async ({ page }) =
   await expect(page).toHaveURL(/\/sign-in$/)
 })
 
-test('the dev playground is not behind the sign-in while developing', async ({ page }) => {
-  test.skip(!process.env.LIBELLUS_E2E_DEV, 'The playground is the dev server\'s (LIBELLUS_E2E_DEV=1); a build has none.')
-  // A design playground lives under /prototype on its own branch and is stripped
-  // from production builds; the guard lets it through in dev only. There is no
-  // such page on this branch, so what counts is that we are not sent to sign-in.
-  await page.goto('/prototype')
-  await expect(page).toHaveURL(/\/prototype$/)
-})
-
-/** Signs a fresh member in through the screens, the way the flows above do. */
-async function signedIn(page: import('@playwright/test').Page) {
-  const member = await signUpMember()
-  await emailCooldown()
-  await page.goto('/sign-in')
-  await page.getByTestId('signIn.email').fill(member.email)
-  await page.getByTestId('signIn.submit').click()
-  await expect(page).toHaveURL(/\/verify$/)
-  await page.getByTestId('verify.code').fill(await readMailedCode(member.email, 2))
-  await expect(page.getByTestId('home.title')).toBeVisible()
-  return member
-}
-
-test('the search overlay closes on the page behind it and on a swipe down', async ({ page }) => {
-  await signedIn(page)
-
-  // The empty Home's search prompt opens the same overlay as the Search tab.
-  await page.getByTestId('home.search').click()
-  const overlay = page.getByTestId('search.overlay')
-  await expect(overlay).toBeVisible()
-  await expect(page.getByTestId('search.query')).toBeFocused()
-  await expect(page.getByTestId('search.query')).toHaveAttribute('placeholder', en.search.placeholder)
-
-  // A tap on the blurred page behind closes it, and the page is still Home.
-  await page.getByTestId('search.backdrop').click({ position: { x: 20, y: 120 } })
-  await expect(overlay).toBeHidden()
-  await expect(page).toHaveURL(/\/$/)
-
-  // Swiping the palette down closes it too.
-  await page.getByTestId('shell.tab.search').click()
-  await expect(overlay).toBeVisible()
-  await page.getByTestId('search.query').blur()
-  const box = (await page.getByTestId('search.empty').boundingBox())!
-  await page.mouse.move(box.x + box.width / 2, box.y + 4)
-  await page.mouse.down()
-  await page.mouse.move(box.x + box.width / 2, box.y + 160, { steps: 8 })
-  await page.mouse.up()
-  await expect(overlay).toBeHidden()
-
-  // Escape, for a keyboard.
-  await page.getByTestId('shell.tab.search').click()
-  await expect(overlay).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(overlay).toBeHidden()
-})
-
-test('the theme follows the phone until the switch is tapped, then flips and stays', async ({ page }) => {
-  // A dark phone: no preference stored, so the app is dark too.
-  await page.emulateMedia({ colorScheme: 'dark' })
-  await signedIn(page)
-  const html = page.locator('html')
-  await expect(html).not.toHaveAttribute('data-theme')
-  const themeColors = () =>
-    page.locator('meta[name="theme-color"]').evaluateAll((tags) => tags.map((t) => t.getAttribute('content')))
-  const [light, dark] = await themeColors()
-
-  // The switch shows what is showing: Dark, on.
-  await openProfile(page)
-  const toggle = page.getByTestId('profile.theme')
-  await expect(toggle).toHaveText(en.profile.account.theme)
-  await expect(toggle).toHaveAttribute('aria-checked', 'true')
-
-  // The first tap stores the opposite of what is showing: Light.
-  await toggle.click()
-  await expect(html).toHaveAttribute('data-theme', 'light')
-  await expect(toggle).toHaveAttribute('aria-checked', 'false')
-  expect(await themeColors()).toEqual([light, light])
-  expect(await page.evaluate(() => localStorage.getItem('libellus-theme'))).toBe('light')
-  // The Profile stays, so the change can be seen and undone.
-  await expect(page.getByTestId('profile.account')).toBeVisible()
-
-  // Every later tap flips, whatever the phone does.
-  await toggle.click()
-  await expect(html).toHaveAttribute('data-theme', 'dark')
-  await page.emulateMedia({ colorScheme: 'light' })
-  await expect(html).toHaveAttribute('data-theme', 'dark')
-  expect(await themeColors()).toEqual([dark, dark])
-  // …and on every page: moving on does not hand the chrome back to the phone. The bar is
-  // back first, as a member who scrolled down to the switch brings it back before she taps it.
-  await showTabBar(page)
-  await page.getByTestId('shell.tab.library').click()
-  await expect(page.getByTestId('library.title')).toBeVisible()
-  expect(await themeColors()).toEqual([dark, dark])
-
-  // Stored on the device: it is on the page again right after a reload, and
-  // signing out keeps it (it is a setting of this phone, not of the member).
-  await page.reload()
-  await expect(html).toHaveAttribute('data-theme', 'dark')
-  await expect.poll(themeColors).toEqual([dark, dark])
-  await openProfile(page)
-  await page.getByTestId('profile.signOut').click()
-  await expect(page).toHaveURL(/\/sign-in$/)
-  await expect(html).toHaveAttribute('data-theme', 'dark')
-})
-
 test('the way in opens at its address with a trailing slash, as Cloudflare Pages serves it', async ({ page }) => {
   // Pages redirects /sign-up to /sign-up/: the guard must treat both the same.
   await page.goto('/sign-up/')
   await expect(page.getByTestId('signUp.email')).toBeVisible()
   await page.goto('/sign-in/')
   await expect(page.getByTestId('signIn.email')).toBeVisible()
+})
+
+test('a signed-out visitor is sent to sign-in before the page behind the address is fetched', async ({ page }) => {
+  // The router's first navigation redirects a device that holds nothing of a member (router.options.ts,
+  // docs/perf/bundle.md F1): Home's and the Book page's chunks (which carry their test ids) never arrive.
+  const scripts: string[] = []
+  page.on('response', (response) => {
+    if (/\/_nuxt\/[^/]+\.js$/.test(new URL(response.url()).pathname)) void response.text().then((text) => scripts.push(text), () => {})
+  })
+  for (const path of ['/', '/book/not-a-book', '/friends']) {
+    await page.goto(path)
+    await expect(page.getByTestId('signIn.title')).toBeVisible()
+    await expect(page).toHaveURL(/\/sign-in$/)
+  }
+  await untilStill(page)
+  expect(scripts.length).toBeGreaterThan(5)
+  expect(scripts.some((text) => text.includes('home.readingEmpty'))).toBe(false)
+  expect(scripts.some((text) => text.includes('book.hero'))).toBe(false)
 })

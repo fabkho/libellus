@@ -11,14 +11,20 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm e2e` — Playwright, iPhone viewport, WebKit, Reduce Motion on, on the static build served
   like Pages (`e2e/build.ts` + `e2e/serve.mjs`, :4327). `LIBELLUS_E2E_DEV=1` runs it on `nuxt dev`.
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
+- `pnpm perf` — the client performance harness (production build, throttled Chromium and WebKit, scripted
+  journeys, a table): `perf/README.md`; findings in `../docs/perf/`. Needs its own throwaway stack, never the shared one.
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo
   fabkho/regal, is opt-in: `LIBELLUS_REGAL=1` plus `REGAL_LAYER=/path/to/regal-checkout` or
   `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
   `NUXT_PUBLIC_REGAL_LIBRARY_SRC` (the published library file). Without the flag `dev`, `e2e` and
   `build` run without it: `ShelfStage`/`ShelfRow` resolve to `app/regal/Absent.vue`, nobody is the
-  shelf's owner, `e2e/shelf.spec.ts` skips. With it, a missing layer or file stops `dev`/`generate`.
+  shelf's owner. With it, a missing layer or file stops `dev`/`generate`.
   Regal stays in its own `regal` chunk, loaded only by `LazyShelfStage` and never precached; the
   build fails if the entry ever imports it.
+  The ebook reader (`components/reader`, foliate-js, DOMPurify) is the `ebook-reader*` chunks, also never
+  precached (`globIgnores`): `data/reader/prefetch.ts` says when they are fetched ahead (a member with an
+  ebook on this device, online, no Save-Data), a CacheFirst rule keeps them. Keep the group's modules apart
+  from the two files imported dynamically (nuxt.config.ts says why), and a prefetch trigger behind `prefetchReader`.
 - No full typechecks (`nuxi typecheck`, `tsc --noEmit`) unless asked. Run the targeted test instead.
 - Never read `.env`. Pass `NUXT_PUBLIC_*` as exported env vars when a command needs them.
 
@@ -51,9 +57,10 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - Accessibility (`../docs/ACCESSIBILITY.md`): WCAG 2.2 AA in both themes. Text only in the text
   tokens (`ink`, `inkMuted`, `inkFaint`, `accentInk`, `error`; never `inkGhost`), a name from
   `en.json` on every icon button, a cover `decorative` where its title is beside it, one `h1` a
-  page, a polite status for what comes and goes. A new screen or sheet gets an `expectAccessible`
-  scan in `e2e/a11y.spec.ts`, both themes. `pnpm dev` shows axe's findings in the DevTools' Nuxt
-  a11y tab.
+  page, a polite status for what comes and goes. A screen or sheet on a critical path (below) gets an
+  `expectAccessible` scan in `e2e/a11y.spec.ts`, in one theme, dark (the design's own room); colours
+  come from tokens that `../docs/ACCESSIBILITY.md` already checks in both themes. `pnpm dev` shows
+  axe's findings in the DevTools' Nuxt a11y tab.
 - Every interactive element (and every element a test reads) gets `data-testid="<screen>.<element>"`
   (`start.title`, `search.query`, `book.finish`). It is the native accessibility identifier too, so
   name it for what it is, not how it looks.
@@ -63,6 +70,15 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - All copy goes through the message file `i18n/locales/en.json` (`t('home.empty')` / `$t(...)`):
   labels, errors, placeholders, `aria-label`s, the document title. No hard-coded strings in
   templates or stores. Keys are `<screen>.<thing>`.
+- Two languages, English and German (issue #257, `docs/i18n/README.md`): a new string is a key in `en.json`
+  and gets its German with `pnpm i18n:translate` (it translates only the keys `de.json` lacks; read the
+  diff, commit both files and `.i18n-kit.lock.json`). The parity test fails on a missing or extra key or a
+  changed `{placeholder}`, `|` form or `@:link`. German is up to half as long again: a label must still fit
+  at 360 px (`LIBELLUS_E2E_GERMAN=1 pnpm exec playwright test e2e/i18n` shows what does not). Dates, numbers
+  and relative times go through `Intl` with the active locale (`utils/intl.ts`), never a hard-coded
+  English format; the order and punctuation around them are copy (`{day}. {month}` in German). The app
+  language is chosen by `utils/locale.ts` (the phone's, or the member's choice on the Profile): never read
+  `navigator.language` for what is shown.
 
 ## Testing seams
 - Database rules: pgTAP in `../supabase/tests/`, acting as a real signed-in member.
@@ -75,7 +91,13 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 ## Definition of done for a screen
 1. Works against the local stack on a phone viewport.
 2. Data behaviour covered in `tests/` where it touches Supabase.
-3. A Playwright flow in `e2e/`.
+3. A Playwright flow in `e2e/` only for a critical path: getting in (sign up with an invite code, the
+   six-digit code, sign in, sign out); the core loop (search → add → start → update progress →
+   finish); offline (the app opens offline on its kept Library, changes made offline sync later);
+   what leaves the app (the public reading page, a Book card, the waitlist form); deleting the
+   account; and, when it lands, the social loop. Everything else is tested where it is cheapest:
+   rules in pgTAP (`../supabase/tests/`), logic in Vitest (`tests/`: pure functions, repositories
+   against the local stack). Motion and visual polish are not tested end to end.
 4. Entry in `../docs/parity.md`: states, actions, copy keys, test IDs, the Playwright flow.
 
 ## Gotchas

@@ -74,6 +74,11 @@ let records: ReadingTrackerBook[]
 let appMade: BookSnapshot
 const appleId = uniqueAppleId()
 
+/** The Apple artwork the looked-up edition wears: a host `private.cover_allowed` lets through. */
+const APPLE_COVER = 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/cc/x/600x900bb.jpg'
+/** Another Apple cover, for the edition the member changes to in the app. */
+const APPLE_EDITION_COVER = 'https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/cc/y/1000x1500bb.jpg'
+
 /** The plan for the records, with the one Apple edition looked up as the cover step would. */
 function planFor(overrides: Overrides = {}): ImportEntry[] {
   return mapFableLibrary(records, overrides).entries.map((entry) =>
@@ -82,7 +87,7 @@ function planFor(overrides: Overrides = {}): ImportEntry[] {
           apple: { id: appleId, via: 'isbn', isbn13: entry.book.isbn13, description: null },
           openLibrary: null,
           dnb: null,
-          cover: { url: 'https://example.com/cover.jpg', source: 'apple', width: 600, height: 900, thumbhash: 'YJqGPQw7sFlslqhFafSE+Q6oJ1h2iHB2Rw', colors: { dominant: '#AA3322', secondary: '#112233' } },
+          cover: { url: APPLE_COVER, source: 'apple', width: 600, height: 900, thumbhash: 'YJqGPQw7sFlslqhFafSE+Q6oJ1h2iHB2Rw', colors: { dominant: '#AA3322', secondary: '#112233' } },
         })
       : entry,
   )
@@ -177,7 +182,7 @@ describe('writeImport', () => {
     const library = createLibrary(member.client)
     const finishedEntries = (await library.entries('finished')).data!
     const onApple = finishedEntries.find((entry) => entry.book.appleId === appleId)!
-    expect(onApple.book).toMatchObject({ source: 'apple', coverUrl: 'https://example.com/cover.jpg', coverColors: { dominant: '#aa3322', secondary: '#112233' } })
+    expect(onApple.book).toMatchObject({ source: 'apple', coverUrl: APPLE_COVER, coverColors: { dominant: '#aa3322', secondary: '#112233' } })
     expect(onApple.latestSession).toMatchObject({ rating: 20 })
     expect(finishedEntries.filter((entry) => entry.book.isbn13 === appMade.isbn13)).toHaveLength(1)
     const manual = finishedEntries.find((entry) => entry.book.title === runTitle('Nowhere else'))!
@@ -226,7 +231,7 @@ describe('writeImport', () => {
     const orchard = (await entryOf(records[1]!.id))!
     const nowhere = (await entryOf(records[6]!.id))!
     const edition = (title: string): BookSnapshot => ({
-      ...appMade, title: runTitle(title), isbn13: testIsbn(), appleId: uniqueAppleId(), coverUrl: 'https://example.com/new.jpg',
+      ...appMade, title: runTitle(title), isbn13: testIsbn(), appleId: uniqueAppleId(), coverUrl: APPLE_EDITION_COVER,
     })
     const orchardEdition = (await library.changeEdition(orchard.id, edition('Book 1, the new edition'))).data!
     const nowhereEdition = (await library.changeEdition(nowhere.id, edition('Nowhere else, found after all'))).data!

@@ -28,13 +28,16 @@
 // with its results moved its boxes upwards with every answer, and the browser
 // counted each answer as a layout shift of the whole palette (CLS 1.0 on the
 // Library, with the shadow as its largest shift).
+import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSearchStore } from '~/stores/search'
 import { paletteLift } from '~/utils/keyboard'
+import { withoutSlash } from '~/utils/signedOutRoute'
 import { contentTop, PALETTE_ROOM, ROOM_ATTRIBUTE } from '~/composables/usePaletteRoom'
 
 const { t } = useI18n()
 const route = useRoute()
 const search = useSearchStore()
+const friendsTab = useFriendsTabStore()
 const chrome = useSearchChrome()
 
 const veil = useTemplateRef<HTMLElement>('veil')
@@ -127,10 +130,9 @@ const rendered = ref(false)
 const closing = ref(false)
 const typing = ref(false)
 
-const PAGES = [
-  { key: 'home', to: '/', icon: 'home' },
-  { key: 'library', to: '/library', icon: 'library' },
-] as const
+// The tab bar's pages (Friends while its setting is on), lit by the one she is on (a slash left on by a reload is the same page).
+const onPage = (to: string) => withoutSlash(route.path) === to
+const PAGES = computed(() => friendsTab.tabs)
 
 function close() {
   scanning.value = false
@@ -537,13 +539,13 @@ onUnmounted(() => {
                 :key="tab.key"
                 :to="tab.to"
                 class="tab"
-                :class="route.path === tab.to ? 'text-ink' : 'text-ink-faint'"
-                :aria-current="route.path === tab.to ? 'page' : undefined"
+                :class="onPage(tab.to) ? 'text-ink' : 'text-ink-faint'"
+                :aria-current="onPage(tab.to) ? 'page' : undefined"
                 :data-testid="`search.tab.${tab.key}`"
               >
-                <UiIcon :name="tab.icon" :bold="route.path === tab.to" />
+                <UiIcon :name="tab.icon" :bold="onPage(tab.to)" />
                 <span class="sr-only">{{ t(`tabs.${tab.key}`) }}</span>
-                <span v-if="route.path === tab.to" class="dot" aria-hidden="true" />
+                <span v-if="onPage(tab.to)" class="dot" aria-hidden="true" />
               </NuxtLink>
               <span class="mr-xs h-lg w-(--stroke-hairline) shrink-0 bg-hairline-strong" aria-hidden="true" />
             </div>

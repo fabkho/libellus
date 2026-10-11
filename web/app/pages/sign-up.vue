@@ -72,6 +72,12 @@ async function submit() {
         <UiIcon name="lock" :size="16" class="mr-xs inline-block align-text-bottom" />
         {{ t('signUp.intro') }}
       </p>
+
+      <i18n-t keypath="signUp.consent" tag="p" scope="global" class="text-center text-caption text-balance text-ink-faint" data-testid="signUp.consent">
+        <template #privacy>
+          <NuxtLink to="/privacy" class="text-ink underline decoration-ink-ghost underline-offset-4" data-testid="signUp.privacy">{{ t('legal.privacyNotice') }}</NuxtLink>
+        </template>
+      </i18n-t>
     </form>
 
     <template #footer>

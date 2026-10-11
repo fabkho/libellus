@@ -50,7 +50,10 @@ target, #91 and #131) that the service worker answers on the device. Only when i
 instead (the very first share right after installing, before the service worker took over) does the
 function answer: a 303 to `/share?title=&text=&url=`, plus `ebooks=missed` when files were shared,
 so the app asks for the share again. It keeps nothing; a `GET /share` is not handled by it and gets
-the static page.
+the static page. A POST that the browser says came from another site (`Sec-Fetch-Site` not
+`same-origin`/`none`, or an `Origin` that is another origin) is sent Home unread, here and in the
+service worker (security round F4: any page can submit that form). Whatever the worker keeps still
+waits for the member's tap on `/share` (Add / Not now); nothing is imported by a POST.
 
 **`web/functions/r/[[path]].js`** — the link previews of a shared reading page (#171). The app
 renders `/r/<token>` and `/r/<token>/book/<id>` in the browser, which is enough for a visitor but
@@ -106,7 +109,7 @@ about a hundred milliseconds of CPU: Pages Functions on the Workers free plan ge
 milliseconds per request, while a Supabase edge function may take two seconds. The stack already
 runs Deno edge functions with their Deno tests in CI, and with the image cached at the edge for a
 day the render happens once per link and version. It is deployed by hand like the others:
-`supabase functions deploy reading-page-og` (docs/OPERATIONS.md, docs/SELF_HOSTING.md).
+`supabase functions deploy reading-page-og` (docs/OPERATIONS.md, docs/SETUP.md).
 
 ## Addresses
 

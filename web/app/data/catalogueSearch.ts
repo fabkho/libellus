@@ -3,6 +3,7 @@ import { parseIsbn } from './books'
 import { abortError } from './fetching'
 import { bookFromRow, ENTRY_COLUMNS, entryFromRow, type BookRow, type EntryRow, type LibraryEntry } from './library'
 import type { Found } from './merge'
+import { allPages } from './paging'
 
 /**
  * The own Catalogue as a search source (issue #1, Search), and the member's
@@ -35,7 +36,10 @@ export function createCatalogueSearch(client: SupabaseClient): CatalogueSearch {
     },
 
     async libraryEntries() {
-      const { data, error } = await client.from('library_entries').select(ENTRY_COLUMNS).returns<EntryRow[]>()
+      // The whole Library, page by page: one request is cut at 1,000 rows without a word (data/paging.ts).
+      const { data, error } = await allPages<EntryRow>((from, to) =>
+        client.from('library_entries').select(ENTRY_COLUMNS).order('id').range(from, to).returns<EntryRow[]>(),
+      )
       if (error) throw new Error(error.message)
       return data.map(entryFromRow)
     },

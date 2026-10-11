@@ -3,6 +3,8 @@ import { createBookGenres, type BookGenresRepository, type EntryGenres } from '~
 import { readDeviceGenres, saveDeviceGenres } from '~/data/enrich/deviceGenres'
 import type { EnrichErrorCode } from '~/data/enrich/result'
 import type { GenreId } from '~/data/enrich/genres'
+import { createFreshness } from '~/utils/fresh'
+import { useLibraryStore } from '~/stores/library'
 import { useLibraryViewStore } from '~/stores/libraryView'
 import { useSessionStore } from '~/stores/session'
 
@@ -24,6 +26,7 @@ export const useGenresStore = defineStore('genres', () => {
   const backend = useBackend()
   const session = useSessionStore()
   const libraryView = useLibraryViewStore()
+  const library = useLibraryStore()
 
   let repository: BookGenresRepository | null = null
   function repo(): BookGenresRepository | null {
@@ -69,31 +72,43 @@ export const useGenresStore = defineStore('genres', () => {
     if (import.meta.client && member) saveDeviceGenres(window.localStorage, member, [...held.value.entries.values()])
   }
 
+  const freshness = createFreshness()
   let loading: Promise<void> | null = null
-  /** Reads the genres of her whole Library (again). Offline it keeps what the device has. */
-  function load(): Promise<void> {
-    loading ??= (async () => {
-      const r = repo()
-      const member = session.member?.id
-      if (!r || !member) return
-      if (!isOnline()) {
-        if (!held.value.loaded) loadError.value = 'offline'
-        return
-      }
-      const result = await r.library()
-      if (member !== session.member?.id) return
-      if (result.error) {
-        loadError.value = result.error
-        return
-      }
-      loadError.value = null
-      // What was asked for on its own (a Book outside her Library) stays.
-      const before = held.value
-      const was = new Set([...before.entries.values()].map((e) => e.bookId))
-      hold(result.data, new Map([...before.books].filter(([id]) => !was.has(id))))
-      save()
-    })().finally(() => (loading = null))
+  /**
+   * Reads the genres of her whole Library (again). Offline it keeps what the device has. `ifStale`: a
+   * visit (Library, Profile), which genres this fresh stand for (utils/fresh.ts); anything else asks.
+   * One read at a time.
+   */
+  function load({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
+    if (ifStale && !loading && held.value.loaded && !loadError.value && freshness.isFresh()) return Promise.resolve()
+    loading ??= read().finally(() => (loading = null))
     return loading
+  }
+
+  async function read(): Promise<void> {
+    const r = repo()
+    const member = session.member?.id
+    if (!r || !member) return
+    if (!isOnline()) {
+      if (!held.value.loaded) loadError.value = 'offline'
+      return
+    }
+    const ticket = freshness.ask()
+    const result = await r.library()
+    if (member !== session.member?.id) return
+    // Her Library or her corrections changed meanwhile: this answer may not have it.
+    if (freshness.outdated(ticket)) return read()
+    if (result.error) {
+      loadError.value = result.error
+      return
+    }
+    loadError.value = null
+    freshness.landed(ticket)
+    // What was asked for on its own (a Book outside her Library) stays.
+    const before = held.value
+    const was = new Set([...before.entries.values()].map((e) => e.bookId))
+    hold(result.data, new Map([...before.books].filter(([id]) => !was.has(id))))
+    save()
   }
 
   /** Asks for one Book's genres (a Catalogue Book, in her Library or not). */
@@ -136,6 +151,8 @@ export const useGenresStore = defineStore('genres', () => {
 
   /** The genres an entry has now, as the database answered, held at once and kept on the device. */
   function keep(entry: { id: string; bookId: string }, genres: GenreId[], hers: boolean) {
+    // A read on its way, or a visit's stamp, predates this: the next read is the database's word.
+    freshness.invalidate()
     const now = held.value
     const row: EntryGenres = { entryId: entry.id, bookId: entry.bookId, genres, overridden: hers }
     const entries = new Map(now.entries).set(entry.id, row)
@@ -146,6 +163,7 @@ export const useGenresStore = defineStore('genres', () => {
   }
 
   function forget() {
+    freshness.invalidate()
     held.value = none
     loadError.value = null
     libraryView.provideGenres(null)
@@ -168,6 +186,9 @@ export const useGenresStore = defineStore('genres', () => {
     },
   )
   restore()
+
+  // Entries came or went (an add, a removal, another edition): the genres held do not have them yet.
+  watch(() => library.roster, freshness.invalidate, { flush: 'sync' })
 
   // Back online with nothing known: ask now.
   const online = useOnline()

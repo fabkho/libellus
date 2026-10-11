@@ -6,10 +6,13 @@ import { isbn10To13 } from './books'
  * work's editions, how many rated it, how many wrote a review, and the book's
  * Goodreads id for the link. Never review texts.
  *
- * Asked on demand by the book page, for any Book with an ISBN (in the Library
- * or not), from the `goodreads-rating` edge function: it answers from the
- * shared cache (`goodreads_ratings`, refreshed after 30 days) or asks Goodreads
- * once, server-side. The browser never talks to Goodreads. A Catalogue Book
+ * Asked on demand by the book page, for any Book with an ISBN or, failing that,
+ * a title and an author (in the Library or not), from the `goodreads-rating` edge function: it answers from the
+ * shared cache (`goodreads_ratings`; a Book without an ISBN, or whose ISBN Goodreads does not
+ * know, by title in a cache only the function reads; a found rating is refreshed after 30 days,
+ * a miss after 7) or asks Goodreads once, server-side. A Manual Book is private to its owner, so
+ * its title and authors are never sent: it is asked by its ISBN alone (public catalogue data) or
+ * not at all. The browser never talks to Goodreads. A Catalogue Book
  * also carries the cached rating in its row (`books.goodreads`, the
  * `goodreads_rating` computed relationship), so a Library loaded once shows it
  * offline too. Framework-free: the store hands in the Supabase client (only
@@ -48,6 +51,24 @@ export function goodreadsIsbn(book: Pick<BookSnapshot, 'isbn13' | 'isbn10'>): st
   return book.isbn13 ?? (book.isbn10 ? isbn10To13(book.isbn10) : null)
 }
 
+/**
+ * What the app remembers a Book's answer by this run: its ISBN-13, or, without
+ * one, its title and first author (the function looks it up by those). Null when
+ * there is nothing to ask with: no ISBN and no author (a title alone never
+ * matches, so the function would refuse it).
+ */
+export function goodreadsKey(
+  book: Pick<BookSnapshot, 'isbn13' | 'isbn10' | 'title' | 'authors'> & { source?: BookSnapshot['source'] },
+): string | null {
+  const isbn13 = goodreadsIsbn(book)
+  if (isbn13) return isbn13
+  // The title of a Manual Book is private: it is not asked about by title.
+  if (book.source === 'manual') return null
+  const author = book.authors.find((a) => a.trim())
+  const title = book.title.trim()
+  return title && author ? `title:${title.toLowerCase()}|${author.trim().toLowerCase()}` : null
+}
+
 /** A rating worth a line: one somebody gave. */
 export function showsRating(rating: GoodreadsRating | null | undefined): rating is GoodreadsRating {
   return Boolean(rating && rating.ratingsCount > 0)
@@ -80,20 +101,21 @@ export type GoodreadsResult =
   | { data: null; error: 'offline' | 'unavailable' }
 
 export type Goodreads = {
-  /** The Book's rating; `data: null` when Goodreads does not know it. Nothing is asked without an ISBN. */
+  /** The Book's rating; `data: null` when Goodreads does not know it. Nothing is asked without an ISBN or an author (a Manual Book: without an ISBN). */
   rating: (book: Book | BookSnapshot) => Promise<GoodreadsResult>
 }
 
 export function createGoodreads(client: FunctionsClient, { online = () => true }: { online?: () => boolean } = {}): Goodreads {
   return {
     async rating(book) {
-      const isbn13 = goodreadsIsbn(book)
-      if (!isbn13) return { data: null, error: null }
+      if (!goodreadsKey(book)) return { data: null, error: null }
       if (!online()) return { data: null, error: 'offline' }
+      // Without an ISBN the function looks the Book up by its title and authors alone; a Manual Book
+      // (private to its owner) only ever sends its ISBN, never its title or authors.
+      const isbn13 = goodreadsIsbn(book)
+      const body = book.source === 'manual' ? { isbn13 } : { ...(isbn13 ? { isbn13 } : {}), title: book.title, authors: book.authors }
       try {
-        const { data, error } = await client.functions.invoke(GOODREADS_FUNCTION, {
-          body: { isbn13, title: book.title, authors: book.authors },
-        })
+        const { data, error } = await client.functions.invoke(GOODREADS_FUNCTION, { body })
         const answer = data as Answer | null
         if (error || !answer || (answer.status !== 'found' && answer.status !== 'not_found'))
           return { data: null, error: 'unavailable' }

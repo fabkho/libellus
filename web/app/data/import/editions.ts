@@ -124,6 +124,31 @@ export function titleQuery(book: Pick<ImportBook, 'title' | 'authors'>): string 
   return [book.title, book.authors[0] ?? ''].join(' ').trim()
 }
 
+const NUMBER_WORDS: Record<string, string> = {
+  one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', ten: '10',
+  eins: '1', zwei: '2', drei: '3', vier: '4', fünf: '5', sechs: '6', sieben: '7', acht: '8', neun: '9', zehn: '10',
+  i: '1', ii: '2', iii: '3', iv: '4', v: '5', vi: '6', vii: '7', viii: '8', ix: '9', x: '10',
+}
+
+/**
+ * The volume a title names ("Heartstopper: Volume Three", "Band 2", "Book II", "Teil 4"): its
+ * number as digits, or null when the title names none. The work title drops what follows a
+ * colon, so the volumes of one series share it; this is what tells them apart.
+ */
+export function volumeOf(title: string): string | null {
+  const match = /\b(?:volume|vol|band|bd|teil|book|buch|part)\.?\s*(\d{1,3}|[a-zäöü]+)\b/i.exec(title.replace(/#/g, ' '))
+  if (!match) return null
+  const word = match[1]!.toLowerCase()
+  return /^\d+$/.test(word) ? String(Number(word)) : (NUMBER_WORDS[word] ?? null)
+}
+
+/** Two titles that name different volumes are not the same book, whatever else they share. */
+export const sameVolume = (a: string, b: string): boolean => {
+  const ours = volumeOf(a)
+  const theirs = volumeOf(b)
+  return !ours || !theirs || ours === theirs
+}
+
 /**
  * Whether a search result is the row's book (another edition is fine): the
  * same title once brackets and subtitles are dropped, and the first author's
@@ -137,6 +162,8 @@ export function isSameWork(row: Pick<ImportBook, 'title' | 'authors'>, found: Pi
   if (/\p{L}/u.test(bare) && !normalize(bare)) return false
   const theirs = workTitle(splitSeriesTitle(found.title).title)
   if (!ours || ours !== theirs) return false
+  // "Heartstopper: Volume Three" is not "Heartstopper: Volume Two": the colon drops the volume from the work title.
+  if (!sameVolume(row.title, found.title)) return false
   const wanted = surname(row.authors[0])
   if (!wanted) return true
   return found.authors.some((name) => surname(name) === wanted)

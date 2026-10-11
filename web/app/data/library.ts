@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Book, BookFormat, BookSnapshot } from './books'
+import { bookKey, type Book, type BookFormat, type BookSnapshot } from './books'
 import type { ReadAs } from './readAs'
 import { ratingFromRow, type GoodreadsRow } from './goodreads'
 import { NO_PROGRESS, type ProgressValue } from './progress'
 import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
 import { isNoAnswer } from './network'
+import { allPages, uniqueById } from './paging'
 import { applyWrite, localId, type QueuedAction, type QueuedWrite, type WriteQueue } from './queuedWrites'
 
 /**
@@ -33,6 +34,8 @@ export type ReadingSession = {
   outcome: SessionOutcome | null
   rating: number | null
   review: string | null
+  /** The review gives the story away (social v2a): members who have not finished the Book see it folded. */
+  reviewSpoilers: boolean
   abandonReason: string | null
   progressPage: number | null
   progressPercent: number | null
@@ -68,6 +71,11 @@ export type LibraryEntry = {
    * default). Absent on a copy from before it existed.
    */
   readAs?: ReadAs | null
+  /**
+   * Kept from her followers (social v1): a hidden entry is gone for everyone but her. Absent on a
+   * copy from before it existed, which reads as `false`; every read from the database has it.
+   */
+  hidden?: boolean
   latestSession: ReadingSession | null
 }
 
@@ -112,6 +120,8 @@ export type LibraryErrorCode =
   /** Edit or delete a read: no such read in the member's Library (gone, or never theirs). */
   | 'session_not_found'
   | 'not_signed_in'
+  /** Add: the member has made the day's 200 new Catalogue Books (the database's `catalogue_limit`, a 429). */
+  | 'catalogue_limit'
   /** The device has no connection: nothing was sent (`WriteOptions`). */
   | 'offline'
   | 'unknown'
@@ -138,6 +148,7 @@ const RAISED_CODES = [
   'read_as_invalid',
   'session_not_found',
   'not_signed_in',
+  'catalogue_limit',
 ] as const satisfies readonly LibraryErrorCode[]
 
 /** The longest review a session keeps (the database's limit too). */
@@ -159,6 +170,8 @@ export type SessionEdit = {
   endedOn: string
   rating: number | null
   review: string
+  /** "Contains spoilers", with the review (a blank review has none). */
+  reviewSpoilers: boolean
   abandonReason: string
 }
 
@@ -169,8 +182,17 @@ export function sessionEditOf(session: ReadingSession): SessionEdit {
     endedOn: session.endedOn ?? '',
     rating: session.rating,
     review: session.review ?? '',
+    reviewSpoilers: Boolean(session.reviewSpoilers),
     abandonReason: session.abandonReason ?? '',
   }
+}
+
+/**
+ * The spoiler flag as the arguments carry it: only when set, and only with a review (a blank review has
+ * none), so a call without a flag is the call as it was before version 2a. The database defaults to false.
+ */
+export function spoilerArguments(review: string | null | undefined, reviewSpoilers: boolean | null | undefined) {
+  return review?.trim() && reviewSpoilers ? { p_review_spoilers: true } : {}
 }
 
 /**
@@ -202,6 +224,7 @@ export function sessionEditArguments(session: ReadingSession, edit: SessionEdit)
     p_rating: session.outcome === 'finished' ? edit.rating : null,
     p_review: session.outcome === 'finished' ? edit.review || null : null,
     p_abandon_reason: session.outcome === 'abandoned' ? edit.abandonReason || null : null,
+    ...(session.outcome === 'finished' ? spoilerArguments(edit.review, edit.reviewSpoilers) : {}),
   }
 }
 
@@ -230,6 +253,8 @@ export type AddWith = {
   endedOn?: string | null
   rating?: number | null
   review?: string | null
+  /** The review contains spoilers (social v2a); only with a review. */
+  reviewSpoilers?: boolean
 }
 
 /**
@@ -243,11 +268,12 @@ export type AddDraft = {
   endedOn: string
   rating: number | null
   review: string
+  reviewSpoilers: boolean
 }
 
 /** A new draft: Want to read, nothing else chosen. */
 export function newAddDraft(): AddDraft {
-  return { status: 'want_to_read', startedOn: '', endedOn: '', rating: null, review: '' }
+  return { status: 'want_to_read', startedOn: '', endedOn: '', rating: null, review: '', reviewSpoilers: false }
 }
 
 /**
@@ -273,6 +299,7 @@ export function addWithFromDraft(draft: AddDraft): AddWith {
       endedOn: draft.endedOn,
       rating: draft.rating,
       review: draft.review,
+      reviewSpoilers: draft.reviewSpoilers,
     }
   }
   return { status: 'want_to_read' }
@@ -298,13 +325,14 @@ export function checkAddDraft(draft: AddDraft, today: string): LibraryErrorCode 
 }
 
 /** `AddWith` as the trailing arguments of `add_to_library` and `add_manual_book`. */
-export function addWithArguments({ status = 'want_to_read', startedOn, endedOn, rating, review }: AddWith) {
+export function addWithArguments({ status = 'want_to_read', startedOn, endedOn, rating, review, reviewSpoilers }: AddWith) {
   return {
     p_status: status,
     p_started_on: startedOn || null,
     p_ended_on: endedOn || null,
     p_rating: rating ?? null,
     p_review: review || null,
+    ...spoilerArguments(review, reviewSpoilers),
   }
 }
 
@@ -321,7 +349,8 @@ export type BookRow = {
   published_year: number | null
   language: string | null
   publisher: string | null
-  description: string | null
+  /** Absent on a row of a list (`LIST_BOOK_COLUMNS` leaves it out): ask for it with `descriptions` or `book`. */
+  description?: string | null
   cover_url: string | null
   cover_thumbhash: string | null
   cover_dominant: string | null
@@ -335,10 +364,26 @@ export type BookRow = {
   created_at: string
   /** The cached Goodreads rating (`goodreads_rating`), when asked for with BOOK_COLUMNS. */
   goodreads?: GoodreadsRow | null
+  /** A Book the server check could not confirm, as the social answers carry it (`member_reading_record`): nothing else of it is known. */
+  unverified?: boolean | null
 }
 
 /** A `books` row with its cached Goodreads rating (issue #69), so a Library kept for offline has it. */
 export const BOOK_COLUMNS = '*, goodreads:goodreads_rating(*)'
+
+/**
+ * A Book as the lists carry it (the three Status lists, the Library read for search, a Collection's
+ * entries, the Profile's reads): every column the screens of a list read, **without the description**.
+ * That is about 65 % of a Book's JSON (1,226 characters on average, perf assessment F4) and only the
+ * book page shows it. The device keeps it apart (`stores/library.ts`, `descriptions`) and the book page
+ * asks for it with `book`. A column added to `books` is added here too: tests/library.test.ts compares
+ * the two lists against the table.
+ */
+export const LIST_BOOK_COLUMNS =
+  'id, title, authors, isbn13, isbn10, page_count, published_year, language, publisher, cover_url, cover_thumbhash, cover_dominant, cover_secondary, source, apple_id, openlibrary_edition_key, openlibrary_work_key, created_at, format, goodreads:goodreads_rating(*)'
+
+/** How many Books' descriptions one request asks for (the ids are in the address). */
+export const DESCRIPTION_BATCH = 40
 
 /** The `reading_sessions` row, as PostgREST returns it. */
 export type SessionRow = {
@@ -349,6 +394,8 @@ export type SessionRow = {
   outcome: SessionOutcome | null
   rating: number | null
   review: string | null
+  /** Absent on a row from before spoiler flags existed (a cached Library). */
+  review_spoilers?: boolean | null
   abandon_reason: string | null
   progress_page: number | null
   progress_percent: number | null
@@ -364,18 +411,21 @@ export type EntryRow = {
   format_override?: BookFormat | null
   /** Absent on a row from before Read as existed (a cached Library). */
   read_as?: ReadAs | null
+  /** Absent on a row from before hiding existed (a cached Library). */
+  hidden?: boolean
   book: BookRow
   latest: SessionRow | null
 }
 
 /** An entry with its Book and its latest session (`latest_session`, a to-one computed relationship). */
-export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, book:books!inner(${BOOK_COLUMNS}), latest:latest_session(*)`
+export const ENTRY_COLUMNS = `id, status, added_at, page_count_override, format_override, read_as, hidden, book:books!inner(${LIST_BOOK_COLUMNS}), latest:latest_session(*)`
 
 export function bookFromRow(row: BookRow): Book {
   return {
     id: row.id,
     createdAt: row.created_at,
-    title: row.title,
+    // A Book that is not shown to the caller has no title (`unverified`): '' is what the screens replace.
+    title: row.title ?? '',
     authors: row.authors ?? [],
     isbn13: row.isbn13,
     isbn10: row.isbn10,
@@ -383,7 +433,8 @@ export function bookFromRow(row: BookRow): Book {
     year: row.published_year,
     language: row.language,
     publisher: row.publisher,
-    description: row.description,
+    // A list's row has none (`LIST_BOOK_COLUMNS`): null here, the device's descriptions know it.
+    description: row.description ?? null,
     coverUrl: row.cover_url,
     coverThumbhash: row.cover_thumbhash,
     coverColors:
@@ -395,6 +446,7 @@ export function bookFromRow(row: BookRow): Book {
     format: row.format ?? null,
     // Undefined rather than null without one, so a Book reads the same as before it existed.
     goodreads: ratingFromRow(row.goodreads) ?? undefined,
+    ...(row.unverified ? { unverified: true as const } : {}),
   }
 }
 
@@ -430,6 +482,7 @@ export function sessionFromRow(row: SessionRow): ReadingSession {
     outcome: row.outcome,
     rating: row.rating,
     review: row.review,
+    reviewSpoilers: row.review_spoilers ?? false,
     abandonReason: row.abandon_reason,
     // `?? null`: a row from before progress existed (a cached Library) has none.
     progressPage: row.progress_page ?? null,
@@ -448,6 +501,7 @@ export function entryFromRow(row: EntryRow): LibraryEntry {
     pageCountOverride: row.page_count_override ?? null,
     formatOverride: row.format_override ?? null,
     readAs: row.read_as ?? null,
+    hidden: row.hidden ?? false,
     latestSession: row.latest ? sessionFromRow(row.latest) : null,
   }
 }
@@ -501,13 +555,27 @@ export function mapLibraryError(failure: { message?: string; code?: string }): L
   return 'unknown'
 }
 
+/**
+ * How an add is made. `optimistic`: the answer is the entry as it will be, at
+ * once, and the call itself waits in the outbox like an offline write (and is
+ * sent right away when the device is online): the same line, order, retries and
+ * refusal handling, so the member never waits for the network to see her Book on
+ * the shelf. What the database refuses afterwards (already in the Library, an
+ * invalid Book) is a failure of the outbox, not an answer here. A search result
+ * that is not in the Catalogue yet can wait this way too: its Cover is resolved
+ * just before it is sent (`QueuedWrite.coverPending`). Left out, an add that
+ * is not held by the line (the device is online and nothing waits) asks the
+ * database and answers with what it said.
+ */
+export type AddHow = { optimistic?: boolean }
+
 export type Library = {
   /**
    * Puts a Book into the member's Library: finds or adds the Catalogue Book and
    * creates the entry with its Status and first read (`AddWith`), in one call.
    * Fails with `already_in_library` the second time.
    */
-  addToLibrary: (book: BookSnapshot, options?: AddWith) => Promise<Result<LibraryEntry>>
+  addToLibrary: (book: BookSnapshot, options?: AddWith, how?: AddHow) => Promise<Result<LibraryEntry>>
   /**
    * Starts the first read of a Want to read entry on a day (`YYYY-MM-DD`, the
    * member's today by default in the caller). Returns the entry, now
@@ -520,7 +588,7 @@ export type Library = {
    */
   finish: (
     entryId: string,
-    finished: { endedOn: string; rating?: number | null; review?: string | null },
+    finished: { endedOn: string; rating?: number | null; review?: string | null; reviewSpoilers?: boolean },
   ) => Promise<Result<LibraryEntry>>
   /**
    * Ends the open read as abandoned on a day, with an optional reason (trimmed;
@@ -607,6 +675,12 @@ export type Library = {
    */
   setReadAs: (entryId: string, readAs: ReadAs | null) => Promise<Result<LibraryEntry>>
   /**
+   * Hides the entry from her followers, or shows it again (social v1): a hidden Book is gone for
+   * everyone but her. Can wait offline like the other writes (`set_entry_hidden` in the outbox);
+   * returns the entry as it will be. Refused `entry_not_found` for an entry that is not hers.
+   */
+  setHidden: (entryId: string, hidden: boolean) => Promise<Result<LibraryEntry>>
+  /**
    * Removes the entry from the Library with its reads and its places on
    * Collections (the Collections and the Book stay).
    */
@@ -627,8 +701,13 @@ export type Library = {
   entry: (entryId: string) => Promise<Result<LibraryEntry | null>>
   /** The member's entry for a Book, or null when it is not in the Library. */
   entryForBook: (bookId: string) => Promise<Result<LibraryEntry | null>>
-  /** A Book the member can see (the Catalogue, or their own Manual book). */
+  /** A Book the member can see (the Catalogue, or their own Manual book), with its description. */
   book: (id: string) => Promise<Result<Book | null>>
+  /**
+   * The descriptions of Books (null where a Book has none), by Book id: what the lists leave out
+   * (`LIST_BOOK_COLUMNS`). Asked in pieces of `DESCRIPTION_BATCH`; the Books the member cannot see are not answered.
+   */
+  descriptions: (bookIds: readonly string[]) => Promise<Result<Map<string, string | null>>>
   /** The Catalogue Book for a source id or ISBN-13, if a member has added it before. */
   catalogueBook: (key: { appleId?: string; isbn13?: string; openLibraryEditionKey?: string }) => Promise<Result<Book | null>>
   /** The member's statuses for a set of Apple ids, for search results. */
@@ -720,15 +799,42 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     return read.data ? { data: read.data, error: null } : { data: null, error: 'entry_not_found' }
   }
 
-  async function addToLibrary(book: BookSnapshot, options: AddWith = {}): Promise<Result<LibraryEntry>> {
+  /**
+   * A German edition only the National Library knows (`data/dnb.ts`: source `import`, no id) is
+   * no Catalogue Book yet, and a member may only add or pick one: the `dnb-lookup` function makes
+   * it, from what the library says about the ISBN. Anything else goes as it is. Null: it could not
+   * be made (the function is not answering, or no longer finds the ISBN).
+   */
+  async function catalogued(book: BookSnapshot): Promise<Book | BookSnapshot | null> {
+    if (book.source !== 'import' || 'id' in book || !book.isbn13) return book
+    try {
+      const { data, error } = await client.functions.invoke('dnb-lookup', {
+        body: {
+          action: 'book',
+          isbn13: book.isbn13,
+          // The cover the app resolved (a thumbhash and colours): the Book is made once, with it.
+          ...(book.coverUrl ? { cover: { coverUrl: book.coverUrl, coverThumbhash: book.coverThumbhash, coverColors: book.coverColors } } : {}),
+        },
+      })
+      const answer = data as { status?: string; book?: BookRow } | null
+      return !error && answer?.status === 'found' && answer.book ? bookFromRow(answer.book) : null
+    } catch {
+      return null
+    }
+  }
+
+  async function addToLibrary(book: BookSnapshot, options: AddWith = {}, { optimistic = false }: AddHow = {}): Promise<Result<LibraryEntry>> {
     // A Catalogue Book can wait: the call needs nothing the device does not hold.
-    // A search result (its Cover still to resolve) or a Manual book cannot.
-    if (queue?.holds()) {
-      const waiting = await queueAdd(book, options)
+    // A search result (its Cover still to resolve) or a Manual book cannot, unless
+    // the add is optimistic: then the search result waits too, its Cover resolved when it is sent.
+    if (queue?.holds() || (optimistic && queue?.open())) {
+      const waiting = await queueAdd(book, options, optimistic)
       if (waiting) return waiting
     }
     if (!online()) return OFFLINE
-    const added = await client.rpc('add_to_library', { p_book: bookToRow(book), ...addWithArguments(options) })
+    const made = await catalogued(book)
+    if (!made) return { data: null, error: 'unknown' }
+    const added = await client.rpc('add_to_library', { p_book: bookToRow(made), ...addWithArguments(options) })
     if (isNoAnswer(added)) return (await queueAdd(book, options)) ?? OFFLINE
     if (added.error) return { data: null, error: mapLibraryError(added.error) }
     // The function returns the entry; the Book comes with it in a second read
@@ -736,27 +842,44 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     return reread((added.data as { id: string }).id)
   }
 
-  /** An add that waits in the outbox, if it can (a Catalogue Book): the entry as it will be. Null: it cannot wait. */
-  async function queueAdd(book: BookSnapshot, options: AddWith): Promise<Result<LibraryEntry> | null> {
-    if (queue && 'id' in book && (book as Book).source !== 'manual') {
-      const known = book as Book
-      if (queue.entryForBook(known.id)) return { data: null, error: 'already_in_library' }
-      const write: QueuedWrite = {
-        action: 'add_to_library',
-        args: { p_book: bookToRow(book), ...addWithArguments(options) },
-        about: known.title,
-        queuedAt: new Date().toISOString(),
-        book: known,
-        creates: { entry_id: localId(), session_id: localId() },
+  /**
+   * An add that waits in the outbox, if it can (a Catalogue Book; a search result
+   * when `optimistic`): the entry as it will be. Null: it cannot wait.
+   */
+  async function queueAdd(book: BookSnapshot, options: AddWith, optimistic = false): Promise<Result<LibraryEntry> | null> {
+    if (!queue || book.source === 'manual') return null
+    // A search result is shown as a Book under its page key until the database gives it its id.
+    const provisional = !('id' in book)
+    // A DNB edition has to be made a Catalogue Book first: that needs the network.
+    if (provisional && book.source === 'import') return null
+    if (provisional && !optimistic) return null
+    let known: Book
+    if (provisional) {
+      // Nothing to name it by (no source id, no ISBN): the database says what is wrong with it.
+      try {
+        known = { ...book, id: bookKey(book), createdAt: new Date().toISOString() }
+      } catch {
+        return null
       }
-      write.entryId = write.creates!.entry_id
-      const after = applyWrite(null, write)
-      if (typeof after === 'string') return { data: null, error: after }
-      if (!after) return { data: null, error: 'unknown' }
-      await queue.add(write)
-      return { data: after, error: null }
+    } else {
+      known = book as Book
     }
-    return null
+    if (queue.entryForBook(known.id)) return { data: null, error: 'already_in_library' }
+    const write: QueuedWrite = {
+      action: 'add_to_library',
+      args: { p_book: bookToRow(known), ...addWithArguments(options) },
+      about: known.title,
+      queuedAt: new Date().toISOString(),
+      book: known,
+      creates: { entry_id: localId(), session_id: localId() },
+      ...(provisional ? { coverPending: true } : {}),
+    }
+    write.entryId = write.creates!.entry_id
+    const after = applyWrite(null, write)
+    if (typeof after === 'string') return { data: null, error: after }
+    if (!after) return { data: null, error: 'unknown' }
+    await queue.add(write)
+    return { data: after, error: null }
   }
 
   return {
@@ -777,8 +900,14 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       return reread(entryId)
     },
 
-    async finish(entryId, { endedOn, rating = null, review = null }) {
-      const args = { p_entry_id: entryId, p_ended_on: endedOn, p_rating: rating, p_review: review }
+    async finish(entryId, { endedOn, rating = null, review = null, reviewSpoilers = false }) {
+      const args = {
+        p_entry_id: entryId,
+        p_ended_on: endedOn,
+        p_rating: rating,
+        p_review: review,
+        ...spoilerArguments(review, reviewSpoilers),
+      }
       const waiting = await queuedEntry('finish_reading', args, entryId)
       if (waiting) return waiting
       if (!online()) return OFFLINE
@@ -822,12 +951,16 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     async progressDays(sessionIds) {
       const days: Record<string, ProgressDay[]> = Object.fromEntries(sessionIds.map((id) => [id, []]))
       if (!sessionIds.length) return { data: days, error: null }
-      const { data, error } = await client
-        .from('reading_progress_days')
-        .select('session_id, day, start_page, start_percent, end_page, end_percent')
-        .in('session_id', [...sessionIds])
-        .order('day')
-        .returns<ProgressDayRow[]>()
+      const { data, error } = await allPages<ProgressDayRow>((from, to) =>
+        client
+          .from('reading_progress_days')
+          .select('session_id, day, start_page, start_percent, end_page, end_percent')
+          .in('session_id', [...sessionIds])
+          .order('session_id')
+          .order('day')
+          .range(from, to)
+          .returns<ProgressDayRow[]>(),
+      )
       if (error) return { data: null, error: mapLibraryError(error) }
       for (const row of data) days[row.session_id]?.push(dayFromRow(row))
       return { data: days, error: null }
@@ -835,9 +968,11 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
 
     async changeEdition(entryId, book, format) {
       if (!online()) return OFFLINE
+      const made = await catalogued(book)
+      if (!made) return { data: null, error: 'unknown' }
       const changed = await client.rpc('change_edition', {
         p_entry_id: entryId,
-        p_book: bookToRow(book),
+        p_book: bookToRow(made),
         ...(format ? { p_format: format } : {}),
       })
       if (isNoAnswer(changed)) return OFFLINE
@@ -894,6 +1029,17 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       return reread(entryId)
     },
 
+    async setHidden(entryId, hidden) {
+      const args = { p_entry: entryId, p_hidden: hidden }
+      const waiting = await queuedEntry('set_entry_hidden', args, entryId)
+      if (waiting) return waiting
+      if (!online()) return OFFLINE
+      const set = await client.rpc('set_entry_hidden', args)
+      if (isNoAnswer(set)) return unansweredEntry('set_entry_hidden', args, entryId)
+      if (set.error) return { data: null, error: mapLibraryError(set.error) }
+      return reread(entryId)
+    },
+
     async removeFromLibrary(entryId) {
       const waiting = await queued('remove_from_library', { p_entry_id: entryId }, entryId)
       if (waiting) return waiting.error ? waiting : { data: null as null, error: null }
@@ -923,13 +1069,17 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     },
 
     async entries(status) {
-      let query = client.from('library_entries').select(ENTRY_COLUMNS).eq('status', status)
-      // Ordered by the latest session's day through the to-one relationship.
-      if (status === 'reading') query = query.order('latest(started_on)', { ascending: false, nullsFirst: false })
-      if (status === 'finished') query = query.order('latest(ended_on)', { ascending: false, nullsFirst: false })
-      const { data, error } = await query.order('added_at', { ascending: false }).returns<EntryRow[]>()
+      // Page by page: the API answers 1,000 rows at most and says nothing when it cuts (data/paging.ts).
+      // Ordered by the latest session's day through the to-one relationship, newest added next, the id
+      // last so the order is total and the pages meet. All or nothing: a failed page is the error.
+      const { data, error } = await allPages<EntryRow>((from, to) => {
+        let query = client.from('library_entries').select(ENTRY_COLUMNS).eq('status', status)
+        if (status === 'reading') query = query.order('latest(started_on)', { ascending: false, nullsFirst: false })
+        if (status === 'finished') query = query.order('latest(ended_on)', { ascending: false, nullsFirst: false })
+        return query.order('added_at', { ascending: false }).order('id').range(from, to).returns<EntryRow[]>()
+      })
       if (error) return { data: null, error: mapLibraryError(error) }
-      return { data: data.map(entryFromRow), error: null }
+      return { data: uniqueById(data).map(entryFromRow), error: null }
     },
 
     async readInYear(year) {
@@ -959,6 +1109,20 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       const { data, error } = await client.from('books').select(BOOK_COLUMNS).eq('id', id).maybeSingle<BookRow>()
       if (error) return { data: null, error: mapLibraryError(error) }
       return { data: data ? bookFromRow(data) : null, error: null }
+    },
+
+    async descriptions(bookIds) {
+      const found = new Map<string, string | null>()
+      for (let at = 0; at < bookIds.length; at += DESCRIPTION_BATCH) {
+        const { data, error } = await client
+          .from('books')
+          .select('id, description')
+          .in('id', bookIds.slice(at, at + DESCRIPTION_BATCH))
+          .returns<{ id: string; description: string | null }[]>()
+        if (error) return { data: null, error: mapLibraryError(error) }
+        for (const row of data) found.set(row.id, row.description)
+      }
+      return { data: found, error: null }
     },
 
     async catalogueBook({ appleId, isbn13, openLibraryEditionKey }) {

@@ -1,0 +1,6 @@
+experiment	entry_brotli_KB	delta_KB	note
+baseline (origin/main, nuxt generate)	177.1	0	harness says 176.7 (rounding)
+i18n bundle.fullInstall=false	175.9	-1.2	measured
+i18n + runtimeOnly + dropMessageCompiler	171.8	-5.3	measured; needs e2e (no runtime-built message strings)
+vite define __VUE_OPTIONS_API__=false (+ devtools/hydration flags, already false by default)	175.5	-1.6	measured; breaks Options API deps if any
+@supabase storage-js + functions-js + iceberg-js stubbed	171.0	-6.1	measured upper bound; real fix must keep avatar upload working

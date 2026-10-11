@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
@@ -11,7 +12,7 @@ const surface: ThemeColors = tokens.color.surface.$value
 
 // What's new (docs/OPERATIONS.md, "Releases"): this build's release, from version.txt and its part
 // of CHANGELOG.md at the repository root (release-please writes both). Read once, at build time;
-// only that release's notes end up in the app. A missing file (a fork that removed them) is no release.
+// only that release's notes end up in the app. A missing file (a checkout without them) is no release.
 const rootFile = (name: string) => {
   try {
     return readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
@@ -25,7 +26,34 @@ const release = releaseNotes(rootFile('CHANGELOG.md'), rootFile('version.txt'))
 // and the home-screen launchers refetch them instead of keeping the old ones.
 const iconVersion = 2
 
-// BetterReads web — the reference app (SPEC.md). Everything personal sits behind
+// The hosts the first screens certainly ask, opened ahead (`app.head.link` below): the API (a returning
+// member's start asks it nine times, a visitor's sign-in once she submits; it is the instance's own host,
+// from the same variable as `runtimeConfig`, so a build without one has no link) and Apple's cover host
+// (the sign-in wall and Home draw covers from it: DNS only, because the wall's covers are asked for after
+// the form is painted and a socket opened at the start would sit idle for seconds). docs/perf/final-round.md, #2.
+const apiOrigin = (() => {
+  try {
+    return new URL(process.env.NUXT_PUBLIC_SUPABASE_URL ?? '').origin
+  } catch {
+    return ''
+  }
+})()
+
+/**
+ * What the ebook reader is made of, for the service worker's sake (it is fetched ahead, not precached: see
+ * `globIgnores` below): the reader's sheets and chrome, foliate-js, the sanitizer, and the font files the
+ * engine names by `?url`. They go into one chunk named `ebook-reader`; the two files the app imports
+ * dynamically (`components/reader/Reader.vue`, `reader/engine.ts`) are named by their address instead
+ * (`isReaderEntry`): a module the bundler is told to group *and* that is dynamically imported gets a facade
+ * chunk that exports the module's namespace object without declaring it (`SyntaxError: Export
+ * 'engine_exports' is not defined in module`, so the reader never opens).
+ */
+const isReaderEntry = (id: string | null | undefined) => /\/app\/(components\/reader\/Reader\.vue|reader\/engine\.ts)(\?|$)/.test(id ?? '')
+const isReaderModule = (id: string) =>
+  !isReaderEntry(id) &&
+  /\/app\/(components\/)?reader\/|\/node_modules\/(\.pnpm\/[^/]+\/node_modules\/)?dompurify\/|\/@fontsource\/[^/]+\/files\/[^?]+\?url$/.test(id)
+
+// Libellus web — the reference app (SPEC.md). Everything personal sits behind
 // the sign-in, so there is nothing to render on the server: SPA, built to
 // static files for Cloudflare Pages.
 export default defineNuxtConfig({
@@ -49,6 +77,16 @@ export default defineNuxtConfig({
   // Playwright run, which sets LIBELLUS_E2E (playwright.config.ts).
   devtools: { enabled: !process.env.LIBELLUS_E2E },
 
+  hooks: {
+    // No `<link rel="prefetch">` for the ~55 route chunks in index.html. The service worker precaches
+    // every one of them on the first launch (pwa.workbox below), so the hints only made the page's
+    // own downloads share the pipe with them: 56 requests and ~45 KB twice on a first launch, and
+    // the entry's long frames doubled. Without them, Slow 4G/4x: 56 fewer requests, cold LoAF
+    // 1,510 -> 770 ms, LCP -200 ms (docs/perf/client-1-startup.md, F-7).
+    'build:manifest': (manifest) => {
+      for (const chunk of Object.values(manifest)) chunk.prefetch = false
+    },
+  },
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', regalContainment],
   // Accessibility and hints in Nuxt DevTools (docs/ACCESSIBILITY.md): `nuxt dev` only, never in a
   // build (both modules also do nothing outside dev, and `$development` keeps them out of the
@@ -63,11 +101,33 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css'],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+      {
+        // The reader's files, for utils/readerChunks.ts: it fetches them before it imports them. Beside Nuxt's own
+        // `builds/` files, which Pages serves with a short cache.
+        name: 'libellus-reader-files',
+        generateBundle(_options: unknown, bundle: Record<string, unknown>) {
+          const files = Object.keys(bundle).filter((file) => /(^|\/)ebook-reader[^/]*\.(js|css)$/.test(file))
+          if (files.length) (this as { emitFile: (file: object) => void }).emitFile({ type: 'asset', fileName: '_nuxt/builds/reader-files.json', source: JSON.stringify(files) })
+        },
+      },
+    ],
+    // supabase-js builds a Realtime client (and the Phoenix socket under it, ~95 KB unminified) in
+    // every client; the app opens no channel. The stub keeps what supabase-js calls on its own
+    // (app/data/realtimeStub.ts). Same alias in vitest.config.ts, so the data-layer suite runs on it.
+    resolve: { alias: { '@supabase/realtime-js': fileURLToPath(new URL('./app/data/realtimeStub.ts', import.meta.url)) } },
     // The Playwright flows' build (e2e/build.ts): the hooks they need that are otherwise the dev
     // server's (the error log's triggers, the reader's engine on window). False in every other
     // build, where the code behind it is dropped.
-    define: { __LIBELLUS_E2E__: JSON.stringify(Boolean(process.env.LIBELLUS_E2E)) },
+    define: {
+      __LIBELLUS_E2E__: JSON.stringify(Boolean(process.env.LIBELLUS_E2E)),
+      // No component in the app, in Nuxt, vue-router, i18n, TresJS or the Regal layer uses the Options
+      // API (`data()`, `methods`, `computed` objects, `mixins`): every component is `<script setup>`.
+      // Vue drops the code that reads those options from its runtime (1.6 KB brotli off the entry,
+      // docs/perf/bundle.md, F4). A dependency that needs it would fail at run time: check before adding one.
+      __VUE_OPTIONS_API__: false,
+    },
     // `nuxt dev` bundles a package the first time a page imports it. A package first met while a
     // member (or a Playwright flow) is already on the page is bundled then: the dev server
     // re-optimizes, and a page open at that moment can be reloaded under its user, so a tap on
@@ -86,12 +146,17 @@ export default defineNuxtConfig({
           codeSplitting: {
             groups: [
               { name: 'zxing', test: /zxing-wasm/ },
+              { name: 'ebook-reader', test: isReaderModule, includeDependenciesRecursively: false },
               // Only what the test names: Regal's modules use the app's Vue and Nuxt, which stay where they are.
               { name: 'regal', test: isRegalModule, includeDependenciesRecursively: false },
             ],
           },
-          chunkFileNames: (chunk: { name: string }) =>
-            chunk.name === 'zxing' || chunk.name === 'regal' ? `_nuxt/${chunk.name}.[hash].js` : '_nuxt/[hash].js',
+          chunkFileNames: (chunk: { name: string; facadeModuleId?: string | null }) =>
+            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'ebook-reader'
+              ? `_nuxt/${chunk.name}.[hash].js`
+              : isReaderEntry(chunk.facadeModuleId)
+                ? '_nuxt/ebook-reader-entry.[hash].js'
+                : '_nuxt/[hash].js',
         },
       },
     },
@@ -102,7 +167,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'en' },
       // The static shell's title, for the moment before the app sets its own from the message file
       // (app.vue): a page without one is announced by its address.
-      title: 'BetterReads',
+      title: 'Libellus',
       meta: [
         // viewport-fit=cover so the installed app can draw under the notch (and
         // Chrome on Android edge to edge, behind its gesture bar); screens pad
@@ -134,12 +199,15 @@ export default defineNuxtConfig({
         { rel: 'apple-touch-icon', href: `/apple-touch-icon.png?v=${iconVersion}` },
         { rel: 'icon', href: `/favicon.svg?v=${iconVersion}`, type: 'image/svg+xml' },
         { rel: 'icon', href: `/favicon.ico?v=${iconVersion}`, sizes: '32x32 16x16' },
+        // `crossorigin`: supabase-js asks with fetch (CORS, no credentials), which uses the anonymous connection pool.
+        ...(apiOrigin ? [{ rel: 'preconnect', href: apiOrigin, crossorigin: 'anonymous' as const }] : []),
+        { rel: 'dns-prefetch', href: 'https://is1-ssl.mzstatic.com' },
       ],
     },
   },
 
   // Every value an instance sets for itself, from NUXT_PUBLIC_* env vars at build time (the table in
-  // docs/SELF_HOSTING.md). All of it ends up in the static files: public by nature, never a secret.
+  // docs/SETUP.md). All of it ends up in the static files: public by nature, never a secret.
   runtimeConfig: {
     public: {
       // NUXT_PUBLIC_SUPABASE_URL / NUXT_PUBLIC_SUPABASE_ANON_KEY (.env).
@@ -171,14 +239,24 @@ export default defineNuxtConfig({
     release,
   },
 
-  // One locale and every string in i18n/locales/en.json, so German is a
-  // mechanical follow-up and a native port maps the keys onto its string
-  // catalogue. No URL prefix: there is only one language to route to.
+  // English (the source: every string is a key of i18n/locales/en.json, which a native port maps onto its
+  // string catalogue) and German (de.json, made with the-i18n-kit: docs/i18n/README.md). No URL prefix: one
+  // address per screen. The language is not detected by the module (detectBrowserLanguage is off): the phone's
+  // language or the member's choice is put on it before the first paint by plugins/locale.client.ts
+  // (utils/locale.ts has the rule). Only the active language's messages are downloaded (lazy files).
   i18n: {
     defaultLocale: 'en',
     strategy: 'no_prefix',
     detectBrowserLanguage: false,
-    locales: [{ code: 'en', language: 'en', file: 'en.json' }],
+    locales: [
+      { code: 'en', language: 'en', file: 'en.json', name: 'English' },
+      { code: 'de', language: 'de-DE', file: 'de.json', name: 'Deutsch' },
+    ],
+    // The messages are compiled at build (the module's Vite plugin turns en.json into AST), so the
+    // client needs no message compiler: `dropMessageCompiler` leaves it out of the entry (−16 KB raw,
+    // −4 KB brotli; `runtimeOnly` alone moved nothing). A string that is not in en.json could not be
+    // compiled on the device: tests/i18n-runtime-only.test.ts pins what the app's messages need.
+    bundle: { dropMessageCompiler: true },
   },
 
   // Installable from the home screen, full-screen once opened from there; the
@@ -188,8 +266,8 @@ export default defineNuxtConfig({
     registerType: 'autoUpdate',
     manifest: {
       id: '/',
-      name: 'BetterReads',
-      short_name: 'BetterReads',
+      name: 'Libellus',
+      short_name: 'Libellus',
       description: 'Your books: what you want to read, what you are reading, what you have read.',
       lang: 'en',
       start_url: '/',
@@ -210,7 +288,7 @@ export default defineNuxtConfig({
         // Alpha only: the launcher tints it when the member turns themed icons on.
         { src: `/icon-monochrome-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
       ],
-      // Sharing to BetterReads from another app. A link or text (issue #91: Goodreads, Amazon, a
+      // Sharing to Libellus from another app. A link or text (issue #91: Goodreads, Amazon, a
       // browser, a bookstore app) opens the app at /share?title=&text=&url= (pages/share.vue),
       // which finds the Book and goes to its page. EPUB files, one or many (issue #131: from the
       // download notification or the file manager), are taken in and linked to Books. A manifest
@@ -275,7 +353,10 @@ export default defineNuxtConfig({
       // fetched when the scanner first opens, and kept by the cache below.
       // Nor is Regal (the owner's shelf, #23): its chunk and styles, its fonts and its model are
       // fetched when the shelf first opens, and kept by the caches below.
-      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', ...regalAssets().globIgnores],
+      // Nor is the ebook reader (components/reader, foliate-js, the sanitizer: the `reader` chunk and its
+      // styles): the app fetches it ahead for a member who has an ebook (data/reader/prefetch.ts) and the
+      // cache below keeps it, so a book opened before opens offline too.
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', '**/ebook-reader*.js', '**/ebook-reader*.css', ...regalAssets().globIgnores],
       runtimeCaching: [
         ...regalAssets().runtimeCaching,
         {
@@ -283,6 +364,13 @@ export default defineNuxtConfig({
           urlPattern: ({ url }) => /\/_nuxt\/zxing[^/]*\.(js|wasm)$/.test(url.pathname),
           handler: 'CacheFirst',
           options: { cacheName: 'libellus-barcode-decoder', expiration: { maxEntries: 4 } },
+        },
+        {
+          // The ebook reader, as the app fetches it ahead or the Book page asks for it. Cache first: the
+          // file's name carries its hash. Two files a release (script, styles): a few releases' worth.
+          urlPattern: ({ url }) => /\/_nuxt\/ebook-reader[^/]*\.(js|css)$/.test(url.pathname),
+          handler: 'CacheFirst',
+          options: { cacheName: 'libellus-reader', expiration: { maxEntries: 6 } },
         },
         {
           // Covers as an <img> asks for them (no-cors: an opaque answer, which

@@ -1,7 +1,8 @@
 # Operations
 
-Looking after the running app: how a release reaches production, what to read where, when something
-went wrong on a member's device, and the nightly backup of the database.
+Looking after the running app: how a release reaches production, who the owner is and what only the
+owner may read, what to read where when something went wrong on a member's device, and the nightly
+backup of the database.
 
 ## Releases
 
@@ -25,14 +26,16 @@ writes the version and the notes from the conventional commits (CONTRIBUTING.md)
    the notes is the commit's subject, so the way to better notes is a better subject. To force a
    version, a commit with a `Release-As: 2.0.0` footer does it.
 3. The push of that merge runs the workflow again. Its first job tags `vX.Y.Z` and creates the GitHub
-   release. Its second job, **deploy**, in the GitHub environment `production`:
-   1. checks that **the full suite passed on `main`** for the release: main's latest CI run for the
-      tagged commit, or for its nearest ancestor with a run (the release commit itself starts none),
-      must be green with its user flows run (`scripts/release-e2e-gate.sh`). Pull requests run no flows;
-      every CI run on `main` runs all of them, the `@full` ones included (docs/TESTING.md, "CI: what runs
-      when"). A run still going is waited for (up to 25 minutes). Red, or none: the
-      deploy stops before anything changed, and says which run to look at. Fix `main` (or re-run a
-      flaky run), then deploy the tag by hand (below).
+   release. Its second job, **flows**, runs every user flow, `@full` ones included, against the tagged commit
+   on a local stack (`.github/workflows/e2e.yml`, one shard: about 20 minutes, billed once per release).
+   Pull requests and pushes to `main` run none (docs/TESTING.md, "CI: what runs when"), so this is the run
+   that reads them all before a release. Red: `deploy` does not start and nothing changed; the tag and the
+   GitHub release exist, but production did not move. A flaky flow: *Re-run failed jobs* on the run. A real
+   break: fix `main`, and the next release carries the fix (a `fix:` commit), or deploy the tag anyway with
+   `skip_flows` (below). Its third job, **deploy**, in the GitHub environment `production`, starts only when
+   `flows` passed:
+   1. checks the tag against `main` and `production` (the tag must be on `main`; `production` only moves
+      forward).
    2. links the hosted project (`SUPABASE_PROJECT_REF`), prints `supabase db push --linked --include-all
       --dry-run` (the migrations it is about to apply), then applies them. A failure stops here: nothing
       else changes.
@@ -65,17 +68,17 @@ In the repository's settings (the workflow does not change them):
 
 | Where | What |
 | --- | --- |
-| Settings → Actions → General → Workflow permissions | **Allow GitHub Actions to create and approve pull requests** on, so release-please can open its pull request. |
+| Settings → Actions → General → Workflow permissions | **Allow GitHub Actions to create and approve pull requests** on, so release-please can open its pull request (the one checkbox also lets Actions approve; how to turn it off: [repository-hardening.md](security/repository-hardening.md), F20). |
 | Settings → Environments → **`production`** | Deployment branches and tags: **Selected branches and tags → `main`** (a manual run from another branch is refused). No reviewers needed: merging the release pull request is the approval. |
 | `production` → environment secret `SUPABASE_ACCESS_TOKEN` | A Supabase personal access token of an account that can manage the project (dashboard → Account → Access Tokens). The CLI uses it for the Management API and to log in to the database with a temporary role, so no database password is needed. |
 | `production` → environment secret `SUPABASE_DB_PASSWORD` (optional) | The database password, only if the temporary role ever fails; the CLI then uses it instead. |
 | `production` → environment variable `SUPABASE_PROJECT_REF` | `ltedflcewdcqtqzcjeyr` |
-| `production` → environment secret `PRODUCTION_DEPLOY_KEY` | The private half of an SSH key whose public half is a **deploy key with write access** (Settings → Deploy keys). It moves the branch `production`: the run's own `GITHUB_TOKEN` stays read-only, and GitHub refuses a `GITHUB_TOKEN` push that brings changed workflow files to a branch. `ssh-keygen -t ed25519 -N '' -C 'betterreads production' -f prod-deploy-key`. |
-| Cloudflare Pages → betterreads → Settings → Builds → Branch control | **Production branch: `production`**. Previews stay on for every other branch, `main` included (`main.libellus-3q1.pages.dev`). |
+| `production` → environment secret `PRODUCTION_DEPLOY_KEY` | The private half of an SSH key whose public half is a **deploy key with write access** (Settings → Deploy keys). It moves the branch `production`: the run's own `GITHUB_TOKEN` stays read-only, and GitHub refuses a `GITHUB_TOKEN` push that brings changed workflow files to a branch. `ssh-keygen -t ed25519 -N '' -C 'libellus production' -f prod-deploy-key`. |
+| Cloudflare Pages → libellus → Settings → Builds → Branch control | **Production branch: `production`**. Previews stay on for every other branch, `main` included (`main.libellus-3q1.pages.dev`). |
 
 Only the deploy job reads the environment's secrets; the release-please job has
 `contents`/`pull-requests`/`issues: write` and nothing else, and both jobs only run in
-`fabkho/betterreads` (never in a fork, never on a pull request). One deploy runs at a time.
+`fabkho/libellus` (never on a pull request). One deploy runs at a time.
 
 ### Deploying a tag by hand: retry and rollback
 
@@ -84,11 +87,15 @@ Actions → Release → **Run workflow** (from `main`), or:
 ```sh
 gh workflow run release.yml -f tag=v1.4.0                       # deploy v1.4.0 again (a retry)
 gh workflow run release.yml -f tag=v1.3.2 -f migrations=false   # roll back to v1.3.2
+gh workflow run release.yml -f tag=v1.5.1 -f skip_flows=true    # deploy v1.5.1 without running the flows first
 ```
 
-The run checks that the tag is on `main` and that its full suite passed there, then does the same
-steps. A rollback to a release older than that check (its runs on `main` ran no user flows) needs
-`-f skip_e2e_gate=true`. A **retry** after a failed run
+The run checks that the tag is on `main`, then does the same steps. The flows (about 20 billed minutes)
+run first for a manual run with `migrations` on, **not** for a rollback (`migrations` off: the older release
+shipped with them, and a flow failing on an old tag must not hold a rollback back), and not with
+`skip_flows` on, the way to deploy without waiting for them (a retry of a deploy that failed after its
+flows passed, for one). A tag older than `scripts/ci-disk.sh` (v1.5.0 and before) cannot run them: use
+`skip_flows` for it. A **retry** after a failed run
 picks up where it failed: the migrations already applied are no longer pending, the functions are
 deployed again, and `production` moves forward or is left where it is.
 
@@ -100,7 +107,7 @@ app then runs on the newer schema, which works as long as migrations are additiv
 migration itself was the mistake, write a new one that undoes it and release that (a `fix:` patch
 release), rather than rolling back.
 
-For the web app alone there is also Pages' one-click rollback (Workers & Pages → betterreads →
+For the web app alone there is also Pages' one-click rollback (Workers & Pages → libellus →
 Deployments → ⋯ → Rollback, docs/HOSTING.md); the next release's push to `production` replaces it.
 
 ### The first release
@@ -119,6 +126,36 @@ Versioning starts at **1.0.0**: `main` as it was when releases began (`bootstrap
    permission was not on yet, that run failed: re-run it, or wait for the next push to `main`).
    Merging it is the first release through the workflow.
 
+## The owner
+
+One person runs the instance, the owner, and only the owner sees a few screens: today the
+client error log (Profile → Account → Errors, [Client errors](#client-errors)), the waitlist
+(Profile → Account → Waitlist, [Waitlist](#waitlist)), the feedback members send from Profile → Contact
+(Profile → Feedback, the table `public.feedback`) and Your shelf with Regal. No other member may
+read the error log, the waitlist or the feedback, whatever the app shows: the database refuses them. Nothing is on
+until the owner is named, once, in two places that have to agree:
+
+1. **The database** knows its owner from one row, `private.instance_owner`, empty after the
+   migrations. In the dashboard's SQL editor, once, after the owner has signed in:
+
+   ```sql
+   update private.instance_owner
+      set owner_id = (select id from auth.users where email = '<the owner's address>');
+   ```
+
+   This is what protects the data: `owner_client_errors`, `owner_client_error_detail` and the
+   `owner_waitlist*` functions raise `not_owner` for every other caller, whatever the app shows. It is
+   not `private.shelf_publish.owner_id` (the Regal shelf's publish trigger; the shelf can be off and
+   the owner still named), though on this instance both are the same person.
+2. **The web build** shows the screens to the member whose auth user id is `NUXT_PUBLIC_SHELF_OWNER_ID`
+   (her id: `select id from auth.users where email = '<the owner's address>'`). It is public like all
+   built configuration, so it only decides what is shown; set it on the Pages project, build again, and
+   the Errors row appears on the owner's Profile.
+
+Left empty, nobody is the owner: no row, no page, and the database refuses every call. The same holds
+for a restored project until the first step is done again (it is in the backup with `private`, but check
+that `private.instance_owner` names the right member).
+
 ## Client errors
 
 Server-side errors are in the Supabase dashboard's logs. What goes wrong in the browser is kept in the
@@ -132,7 +169,7 @@ database's own small log, no third-party service:
 | `chunk` | a chunk of the build that could not be loaded, usually after a deploy (`app:chunkError`, or any error saying so) | the same |
 | `outbox` | a write that waited offline and was refused when it synced: `<action> refused: <code>` | `web/app/stores/sync.ts` |
 | `shelf` | the owner's shelf: the library file could not be fetched or read (`library file unreachable` / `invalid`), or Regal could not show it (`Regal: …`) | `web/app/stores/shelf.ts`, `web/app/components/shelf/` |
-| `vitals` | a Core Web Vital that went badly on a device, with its culprit: `CLS 0.42 on /library`, `INP 410 ms on /book/:key`, `LCP 4.8 s on /` (Web Vitals, below) | `web/app/plugins/vitals.client.ts`, `web/app/data/vitals.ts` |
+| `vitals` | a Core Web Vital that went badly on a device, with its culprit: `CLS 0.42 on /library`, `INP 410 ms on /book/:key`, `LCP 4.8 s on /`, or a stutter: `LoAF 312 ms on /library` (Web Vitals, below) | `web/app/plugins/vitals.client.ts`, `web/app/data/vitals.ts`, `web/app/data/loaf.ts` |
 
 How it works: `web/app/data/errorLog.ts` keeps a short line of reports on the device (in memory and in
 `localStorage`, so a reload after a missing chunk keeps it), folds the same error into one report with a
@@ -193,6 +230,32 @@ was the search palette growing with its results before it kept its room; any oth
 screen whose layout changes after its first frame, which is worth a look. `vitals` rows on a dev
 server only print, like every report (above).
 
+**Stutters (`LoAF`).** Chromium (Android Chrome, desktop Chrome and Edge) also tells the app about each
+**long animation frame**: one frame, from an input or a timer to the next paint, that took
+`POOR_LOAF` = 200 ms or more (`web/app/data/vitals.ts`; the code is `web/app/data/loaf.ts`). It is
+observed once the app is idle like the vitals above, and only there: WebKit (iOS) and Firefox have no
+such entry, so no row comes from them. Not counted: frames in the first 3 s of the page (the start is
+measured on its own) and any while the page is in the background. At most 3 rows per route and 10 per
+page life, and a script in a route is one row however often it stutters. The row is `LoAF 312 ms on
+/library` (the route's pattern, as above) and its stack says what the frame was made of:
+
+- `blocking:` the part of the frame that kept the page from answering input, `render:` and
+  `style/layout:` the time from where rendering and layout began to the frame's end.
+- `scripts:` up to three scripts, the longest first, each as `invoker (function) from /_nuxt/<chunk>.js
+  123 ms`: who called it (`BUTTON.onclick`, `Window.requestAnimationFrame`, `TimerHandler:setTimeout`,
+  a promise), the function, the chunk by its path (query and fragment dropped, another host by its
+  host only) and its time in the frame. A chunk is the build's file name, so it is matched to the
+  `app_version` of the row.
+- `during:` `interaction (click)` when the frame handled a tap or key, `navigation` when the route
+  changed meanwhile; nothing for a timer or an animation. `load state:` as for the vitals.
+
+Reading them against a slow phone: a slow device makes *every* screen stutter a little in the same
+scripts (and the same chunk), so look for a **route** or **function** that comes up on many members and
+devices; a stutter whose `scripts:` is one function of the app, on a few routes, is the app's, a long
+`render:` or `style/layout:` with small scripts is a heavy page (many elements, a big list). Wherever
+the same row comes from one device only, it is that device. Open the chunk of the build, find the
+function and fix or defer it. Elements and text are never reported.
+
 ### Reading them
 
 **In the app, as the owner:** Profile → Account → **Errors** (the row shows how many error groups first
@@ -206,7 +269,7 @@ offline. Only the instance's owner has it: the database answers `owner_client_er
 only to the member named in `private.instance_owner` and raises `not_owner` for anyone else, signed-out
 callers cannot call them at all, and the app shows the row and the page only for the member named by
 `NUXT_PUBLIC_SHELF_OWNER_ID` and asks for nothing otherwise. Both have to name the owner: see
-[SELF_HOSTING.md, The owner](SELF_HOSTING.md#the-owner). A member who is not the owner has no row, the
+[The owner](#the-owner). A member who is not the owner has no row, the
 address `/profile/errors` is a 404, and a call to the functions is refused. The functions give the 30 days
 the log keeps at most (`p_days`, 1 to 30, the app asks for 7) and at most 200 groups.
 
@@ -260,18 +323,31 @@ A reading page ends in a form where a visitor leaves her address to get an invit
 only by `join_waitlist` (granted to `anon`: checked, limited to 5 new entries an hour per salted address and
 100 in all, a honeypot field, the same answer for an address already there) and read only by the owner:
 **Profile → Account → Waitlist** shows who waits (newest first, from whose page), **Copy waiting emails**
-puts the addresses still waiting on the clipboard, comma-separated for a Bcc field, **Mark invited** and
-**Delete** (a request to be forgotten) work on one entry. Same owner as for Errors
-([SELF_HOSTING.md, The owner](SELF_HOSTING.md#the-owner)). **Nothing is mailed:** invite by hand, with an
-invite code from `public.invite_codes`. In SQL:
+puts the addresses still waiting on the clipboard, comma-separated for a Bcc field, **Invite**, **Mark
+invited** and **Delete** (a request to be forgotten) work on one entry. Same owner as for Errors
+([The owner](#the-owner)).
+
+**Invite** (after a Confirm) asks the `waitlist-invite` edge function with the owner's session: the
+database gives the entry a one-use invite code valid 14 days (`owner_waitlist_prepare_invite`; the entry
+keeps it in `invite_code_id` and gets the same one again while it is unused and unexpired; labelled
+`waitlist`, never with the address), the function mails it over SMTP with the sign-up link and then marks the
+entry invited. The owner sees the code with **Copy code** either way. Without the SMTP secrets, or when the
+send fails, nothing is marked and the row says the email was not sent: send the code another way, or Invite
+again later (same code). The function never logs the address or the code. Deploying it and its secrets:
+[SETUP.md, Optional pieces](SETUP.md#optional-pieces) and
+`supabase/functions/waitlist-invite/README.md`. **Mark invited** stays the manual path (an invite sent by
+hand, a code from `scripts/create-invite-code.sh`). In SQL:
 
 ```sql
-select email, created_at, invited_at from private.waitlist order by created_at desc;
+select w.email, w.created_at, w.invited_at, c.code, c.uses, c.expires_at
+  from private.waitlist w left join public.invite_codes c on c.id = w.invite_code_id
+ order by w.created_at desc;
 delete from private.waitlist where email = 'someone@example.org';  -- when she asks
 ```
 
-Sending the invites (and a confirmation mail before an address counts, which Germany recommends) is a
-follow-up through Resend.
+Deleting an entry leaves its code (no address in it) valid until it expires; delete it from
+`public.invite_codes` as well if it should stop working. A confirmation mail before an address counts
+(which Germany recommends) is not part of this.
 
 ## Backups
 
@@ -302,7 +378,7 @@ the same: a cron that stops leaves no red run behind, only a gap in Actions → 
 | `public`: every Library, Book, Reading session, Collection, reader place and highlight (the member's own selected words, #131), invite code, Goodreads cache, … (schema and data) | Storage objects: the members' profile photos in the bucket `avatars` (#156; Covers are links, not files). See below |
 | `private`: the error log, the shelf's publish state, the error log's salt | Vault secrets (`github_dispatch_token`): encrypted with the project's own key, useless anywhere else |
 | `auth.users` and `auth.identities`: the members and their sign-in records, with their ids, so every row that names a member still does | Sign-in sessions, refresh tokens, one-time codes, MFA challenges, the auth audit log: they belong to the project they came from (members sign in again) |
-| The rest of `auth`'s data (MFA factors, SSO, OAuth clients; all empty here) and its schema, restored only by `--mode full` | Auth settings, SMTP, email templates (dashboard; docs/SELF_HOSTING.md) |
+| The rest of `auth`'s data (MFA factors, SSO, OAuth clients; all empty here) and its schema, restored only by `--mode full` | Auth settings, SMTP, email templates (dashboard; docs/SETUP.md) |
 | `supabase_migrations.schema_migrations`: which migrations the data belongs to | Edge functions and their secrets (`supabase/functions/`, `supabase secrets set`) |
 | | `pg_cron` jobs and `pg_net`'s queue: the migrations schedule the jobs again |
 
@@ -328,7 +404,7 @@ row of a deleted account.
 
 ### Setting it up
 
-Once, by the owner (a self-hosted instance the same way, with its own names):
+Once, by the owner:
 
 1. **The age key.** `age-keygen -o libellus-backup.key` writes the key file. Its line
    `# public key: age1…` is the **recipient** (also `age-keygen -y libellus-backup.key`); the line
@@ -374,7 +450,7 @@ object from the dashboard and pass the file.
 
 **Into a fresh Supabase project** (the hosted one is gone or broken):
 
-1. Create the project (region `eu-central-1`) and set it up as docs/SELF_HOSTING.md step 1 says: link, Auth
+1. Create the project (region `eu-central-1`) and set it up as docs/SETUP.md step 1 says: link, Auth
    settings, email templates, SMTP (step 2). `supabase db push` from a checkout that has at least the
    backup's migrations: the restore says which migration the backup ends with and refuses a target that
    lacks any of them. The push also brings back the `pg_cron` jobs.
@@ -475,7 +551,7 @@ key, `citext` in `public` and the open trigger functions were, `supabase/tests/l
 | `authenticated_security_definer_function_executable` (0029) | `owner_client_errors(integer)`, `owner_client_error_detail(text)` | The owner reads the error log in the app (Client errors, above). Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line of the function, before any row is read, so executability by `authenticated` opens nothing. They return groups and counts, never another member's id. |
 | the same (0028) | `log_client_error(…)` | The error log (Client errors, above) has to hear from devices that are signed out: the sign-in screens, a deploy's missing chunks. It only appends to `private.client_errors`, scrubs what it is given, and limits signed-out reports harder (per salted address and in total). |
 | the same (0028) | `join_waitlist(text, text, text)` | A reading page is public, so its waitlist form has to work signed out. It only appends to `private.waitlist`, checks the address, limits callers (5 new entries an hour per salted address, 100 in all) and answers the same whether the address was new or not. Nothing can be read through it. |
-| `authenticated_security_definer_function_executable` (0029) | `owner_waitlist()`, `owner_waitlist_set_invited(uuid[], boolean)`, `owner_waitlist_delete(uuid)` | The owner reads and edits the waitlist in the app. Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line, before any row is touched. |
+| `authenticated_security_definer_function_executable` (0029) | `owner_waitlist()`, `owner_waitlist_set_invited(uuid[], boolean)`, `owner_waitlist_delete(uuid)`, `owner_waitlist_prepare_invite(uuid)` | The owner reads and edits the waitlist in the app. Not granted to `anon`; a signed-in member who is not named in `private.instance_owner` gets `not_owner` (42501) from the first line, before any row is touched. |
 | `rls_enabled_no_policy` (0008, INFO) | `public.invite_codes`, `public.synced_writes`, `private.client_errors`, `private.client_error_salt`, `private.instance_owner`, `private.waitlist`, `private.waitlist_joins` | RLS on with no policy is "nobody reads or writes this through the API". Only the security-definer functions above use these tables. A policy here would open them. |
 | `auth_leaked_password_protection` | Auth | Members sign in with a code sent by e-mail (OTP); nobody has a password, so there is nothing to check against HaveIBeenPwned. |
 | `auth_insufficient_mfa_options` | Auth | The same: the e-mail code is the only factor and there is no password to put a second factor behind. Revisit if passwords ever come. |

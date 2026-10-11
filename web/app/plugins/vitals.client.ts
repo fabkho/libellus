@@ -66,6 +66,8 @@ export default defineNuxtPlugin({
         onCLS(handle, options)
         onINP(handle, options)
         onLCP(handle, options)
+        // Stutters (long animation frames) where the browser reports them (composables/useLoaf.ts).
+        void import('~/composables/useLoaf').then(({ observeLoaf }) => observeLoaf((time) => timeline.at(time))).catch(() => {})
       } catch {
         // No chunk (offline, a deploy replaced it): nothing to measure with this time.
       }

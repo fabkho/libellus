@@ -30,5 +30,11 @@ web/all-blob-reports/
 # (web/scripts/import-fable.ts). Real reading history: never committed.
 .data/
 
-# Wrangler local state (account id, cache)
-.wrangler/
+# Email preview renders (`pnpm email:preview` in web/): screenshots of the templates.
+web/.email-preview/
+
+# i18n dry-run output (web/scripts/i18n/sample.mjs): scratch translations, never committed.
+web/.i18n-sample/
+
+# Screenshots and videos a proof script writes (web/perf/shelf.ts): looked at, never committed.
+/.shots/

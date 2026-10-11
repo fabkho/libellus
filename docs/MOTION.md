@@ -46,7 +46,7 @@ Code that animates with the Web Animations API reads the durations back from the
 (`durationToken`, `utils/motion.ts`) in either unit: the source writes milliseconds, but the built
 stylesheet is minified to the shortest form (`--duration-standard: .25s`). Read as a bare number that
 was a quarter of a millisecond, and every such motion jumped to its end in the built app while the
-dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.spec.ts`).
+dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/android/flight.ts`).
 
 ## Named motions
 
@@ -57,6 +57,10 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
   with Reduce Motion).
+- **Friends tab on or off** (Profile → Account → Friends tab). The tab's width opens or closes to 0
+  under a fade over `standard`, so the capsule (centred on the screen) grows or shrinks about its middle
+  and the tabs beside it slide to their new places; the page does not move. With Reduce Motion it is a swap.
+  (Width is laid out for a 62 px bar, and only while the switch is turned: nothing else of the page is.)
 - **Push to the Profile** (#78). Tapping the avatar in a tab's header grows it into the Profile's
   ring over `standard`, as a cover flies into a book's hero: the Profile fades in as the tab fades
   out (one's opacity the other's complement) and rises `md` into place; the tab bar does not move,
@@ -78,7 +82,15 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   The named element (`data-profile-avatar`) is the whole avatar, the ring, the shadow, the photo and
   the initials: in the hero it is the button that draws the ring, not the disc inside it, so the
   ring flies with the photo instead of standing at its place from the first frame
-  (`e2e/avatar-flight.spec.ts`).
+  (checked by eye; no flow).
+- **The avatar to a member's page** (social v2a). Tapping a member's avatar or name (the feed's rows and
+  batch rows, Home's card and rows, People, the Readers rows, the likers and friends sheets) moves the page as
+  the push to an author does, and her avatar morphs into the hero's: the avatar tapped and the page's are one
+  element (`view-transition-name: member-avatar`, set inline by `plugins/author-transition.client.ts` while it runs),
+  growing over `standard`; Back shrinks the hero's into the avatar it left from (the first of hers on screen
+  when that one is gone; none on screen: it fades with the page). The year page's Back, a link or a redirect
+  to her page have no avatar to fly and navigate as before. Nothing with Reduce Motion, on a Back the browser
+  animates itself, or without the API.
 - **Push to an author** (#167). Tapping an author (the Book page's author line, a list row's author)
   moves the page as the push to the Profile does, without a ring and with its wave held still the
   same way: the author's page fades in as the
@@ -92,6 +104,44 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   Profile's wave, and the page replaces them whole when it comes, so nothing on it moves; opened again,
   it is there from the device's copy. A Book's series line, the first time, opens its room like a
   `Reveal` (Goodreads' line does the same); after that it is there in the first frame.
+  **Late arrivals wait for the cover.** The hero's cover is at the top of the page and nothing that
+  arrives can move it (its box is the stand-in's, and the flight's end, to the pixel: measured on
+  Chromium at 4x CPU and on WebKit), but the series line (about 22 px) and the rating (about 26 px)
+  open their rooms under the title and push the state line and the action down. An answer that came
+  while the cover was still in the air did that on top of the hero's rise, two motions on one
+  stretch of page, so both wait until nothing moves (`useAfterMotion`, `afterMotion`: the flight and
+  its hand-over) and then open their room as above; what the device already knows stands in the
+  first frame. No space is reserved for them: a Book without a series or a rating would carry a gap
+  of that height (`BookGenres` reserves a row only for a Library Book, whose chips are almost
+  always on the device).
+- **Hero cover** (A11, prototype in `docs/prototypes/`). The Book page's hero cover turns to the
+  finger: the touched side comes up towards it, at most 8° at the cover's edge, in perspective. The
+  lean comes in over `instant` (the Press duration) on the `standard` curve, then follows the finger
+  frame by frame; let go, it comes back flat over `standard` (a Web Animation), and a new press
+  mid-way starts from what is on screen. Only the sheet leans (`[data-cover]`); the halo and the pool
+  of light behind it stay where they are. The hero only: no other cover leans (`UiCover`'s `tilt`,
+  `utils/coverTilt.ts`). A vertical move that starts on the cover scrolls the page (`touch-action:
+  pan-y`): the browser takes it, the pointer is cancelled and the cover comes back as on a release; a
+  move that starts sideways keeps it. A long press opens no image menu. The pointer only: the phone's
+  own movement (DeviceOrientation) does nothing, so nothing leans while the page is just held.
+  **With the flight.** A press does nothing while anything moves (`moving()`: the cover's flight, its
+  hand-over, a View Transition) or while the sheet is hidden for a copy flying in its place. Whatever
+  measures the hero next calls `stillCovers()` first: Back (`leaving`, before `heroBoxOf()` and
+  `coverCopy()`; `heroBoxOf` takes out only the page's rise, so a lean would move the box the copy
+  starts from), a push from the book page, Read now and its return, Change edition. The lean is put
+  back at once, with no animation, and the flight measures the cover's own box. **Cost.** One
+  `transform` write per frame (batched in `requestAnimationFrame`), the cover's box read once at the
+  press, `will-change: transform` on the sheet from the press until it is flat again and not
+  otherwise: no layout and no paint per frame, a style recalculation of the sheet alone. Measured in
+  Chromium at CPU 6x (`pnpm perf:flows`, flows `book-tilt`, `book-back-held`, `home-to-book-pressed`):
+  no dropped frame while dragging, about 1 ms of style work per frame at 6x, and the flight in and
+  out unchanged against the build without it.
+- **Collections row** (the Library's way into Collections, A13). With no covers to fan (no
+  Collections, only empty ones, or the list still loading) the row shows bookends in the fan's
+  place. Covers that arrive while the row is on screen (the list loading, a first cover added) fade
+  in over the bookends as they fade out, over `standard`, in place; the last cover gone, the other
+  way. Nothing travels or resizes, and covers the row opens with are simply there. With Reduce
+  Motion, a swap.
 - **Profile photo** (#156). A photo that arrives while its avatar is on screen (the first download,
   a new one saved) fades in over `standard` on the initials under it; one the avatar opens with is
   simply there. The crop's picture follows the finger 1:1 and never animates; its sheet rises and
@@ -145,6 +195,18 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than
   0.5 px/ms, otherwise it settles back (`web/app/composables/useSwipeDown.ts`).
+  **Focus and the keyboard.** In two stages: focus moves into the panel at once (the focus trap and
+  VoiceOver need it), and a sheet's `data-autofocus` field (Collection name, member name, series
+  edit, own edition) takes it only once the rise is over — when `data-moving` clears — so the
+  keyboard does not arrive on its own curve while the panel is still on `sheet` (the panel moves on
+  `keyboard` while the keyboard is up: `lift`). Not `requestAnimationFrame` (one frame, not the
+  rise). Guards: focus the member has put inside the sheet meanwhile is left alone; a sheet that is
+  put back (`restore`) and Reduce Motion (nothing moves) focus the field at once; a fallback timer
+  of `sheet` + 200 ms focuses it if the end-of-rise signal comes late or never (as `afterMotion`'s
+  patience does); closing first drops the wait. `UiSheet`'s `deferFocus` (default true) switches it
+  per sheet; `FIELD_FOCUS_AFTER_RISE` in `web/app/utils/sheetFocus.ts` switches it per platform,
+  and is the one place to flip if iOS does not raise the keyboard from a `focus()` outside the
+  opening tap (`ios: false` brings the old tap-time focus back on iPhone only).
 - **A sheet comes back.** A sheet that leads to a Book page (Home's *Read in 2026*, the Profile's and a
   year in review's rows of Books) is open again when the member returns from that Book by Back (the
   system's or the page's own), and it comes back as if it had simply stayed open under the Book page:
@@ -154,7 +216,7 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   what was open and puts it back: `composables/useSheetRestore.ts`). What plays is the page's: the
   cover flies back over the sheet (the flying layer goes above it, `data-over-sheet`) and lands on its
   row in the sheet. A fresh opening (the tally tapped again) rises as always, and the way out is
-  unchanged. Reduce Motion: as for every sheet, nothing moves either way (`e2e/sheet-restore.spec.ts`).
+  unchanged. Reduce Motion: as for every sheet, nothing moves either way (checked by eye; no flow).
 - **Reveal.** Something that was not there until it had something to say (the book page's figures,
   chart and reading log before any progress was tracked, `UiReveal`) opens its room and fades in over
   `standard`, so what sits under it glides down instead of jumping; it closes over `exit`. Clipped only
@@ -163,6 +225,11 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   Home's small import offer (one to three entries, `HomeImportOffer`) is one: it stands in the first frame when the
   device's Library says so (no opening, nothing moves when the lists arrive) and closes like a Reveal when
   the × is tapped, or when the one question about an import on another device says yes.
+  The Book page's sections below About (`BookSection`: More from the author, Similar books next) are
+  one too, whole (heading and content) in one room: nothing is reserved for them and they have no
+  placeholders, because they sit at the page's foot and start their data only when they near the
+  viewport (one IntersectionObserver on the section's root); they open when the data is in and are
+  not in the page at all when there is nothing to show (offline without a copy, an error, no data).
 - **Search morph.** As iOS 26 and Apple Books do it, the tab bar's capsule turns into the search
   palette (`overlay`, `standard`) and back (`overlayExit`, `standard`):
   - the capsule widens into the palette: its outline grows from the capsule's to the palette's
@@ -243,27 +310,35 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
 
   Interruptible like the search morph: Back tapped while the cover is still flying in turns it
   around from the point on screen, and the same book tapped again while it flies back sends it in
-  again from there; anything else lands the running flight at once. If the book page has not drawn
-  its hero when the flight starts, the cover waits for it (a frame or so, at most `standard`), then
-  fades where it is.
-- **Tab bar away.** On every page (Home, Library, the Profile, a book, Collections, a Collection, Import) the tab bar
+  again from there; anything else lands the running flight at once. A Book this device has not
+  seen yet (an author's work, the next of a series) has no hero for a moment: its page stands a
+  quiet box at the hero cover's place, the cover flies there as to any hero, lands and waits on it,
+  and the hero takes over in the same place once drawn. A page with neither (a public Book card
+  still loading) is waited for a frame or so, at most `standard`, and the cover then fades where
+  it is. What goes wrong, and what the flight does instead, is listed under *How the push to a
+  book is built*.
+- **Tab bar away.** On every page (Home, Library, Friends, the Profile, a book, Collections, a Collection, Import) the tab bar
   slides down past the screen edge and fade out while the member scrolls down, and
   come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
   by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
   as intent only once it has gone 10 px in one direction from where it last turned
   (`utils/hideOnScroll.ts`), and the bar is always there at the top and at the very end of the page.
+  It only makes way where there is something to read for it: a page that scrolls less than `MIN_END_PX`
+  (640, about one screen of the phone) past the fold keeps it, however far down she is (#205).
   It is never away while search opens, is open or closes, while a sheet or
   confirmation is on screen, while a field has the keyboard, or with Reduce Motion on, and focus
   moving into it (a screen reader's, a keyboard's) brings it back: search opened with the bar away puts
   it in its resting place first, with no transition, and the morph grows out of it there. A change
   of page (Back included) brings it back on the way. A screen that fills the room (`immersive`:
   Your shelf, #23) has it away for as long as it shows, the same slide.
-- **Your shelf** (#23). The shelf page's loading pile: its slabs settle in one after another, `standard`
-  each, a third of `instant` apart, from `sm` above; then they hold still (no shimmer, no breathing),
-  and once Regal's Stack has the Library and has drawn, it fades in over `standard` and the slabs fade
-  out over the same, in place. The cards' row (the Profile's, a year in review's, Home's *Read in*
-  sheet) has no stand-in and no fade of ours: the owner's screens warm it on idle, and the card, which
-  keeps its size, is its plain surface until the row has drawn the Spines in view; then Regal's intro
+- **Your shelf** (#23). The shelf page has no stand-in, like the cards: the room is its plain surface
+  while Regal's code comes, and the Stack arrives with Regal's own entrance, the settle-in a re-sort
+  ends with (the Books drop a little into their places from the bottom of the view up; Regal holds it,
+  unseen, up to 0.8 s for the faces in view), not at all with Reduce Motion, where the pile simply
+  stands. The cards' row (the Profile's, a year in review's, Home's *Read in*
+  sheet) has no stand-in and no fade of ours: the owner's screens warm it on idle (anyone's card warms
+  its own when it mounts), and the card, which keeps its size, is its plain surface until the row has
+  drawn the Spines in view; then Regal's intro
   plays, the Stack's turned for a row (each Book pops in a little to the right of its place and slides
   home, cascading from the left, the newest last, 0.7 s; the month sheets, dates, focus label and scroll
   bar fade in as they settle), once per mount and not at all with Reduce Motion, where the row simply
@@ -272,7 +347,11 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   the intro plays where it is seen. The 3D itself moves as Regal decides (the Stack's scroll and flick,
   the row's sideways scroll with the Books tipping towards you as they pass the middle, a Book coming
   out and turning, a Book breaking out of the row to the middle of the screen and landing back where it
-  was shown): Regal's own motion, which honours Reduce Motion itself.
+  was shown): Regal's own motion, which honours Reduce Motion itself. A member's shelf (every Book in
+  its one colour, flat faces) adds no motion of its own: a Book far from the view starts as its plain
+  colour and its title is printed on before it scrolls in (a view height ahead, further ahead in a
+  fling), so a Spine is never seen changing; the low-power and Reduce Motion rules are Regal's Stack
+  rules, unchanged (on-demand frames on phones, no intro or shuffle with Reduce Motion).
 - **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
   changes to another edition: the old cover, title, author and facts (and what the Book is about)
   lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
@@ -284,6 +363,8 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   the new title takes more or fewer lines it slides from where it was to where it is now over
   `standard`. Interruptible: leaving the page or another change ends it at
   once, the new edition in place. Reduce Motion: the cross-fade alone, nothing slides.
+  The same plays for a Book that is not in the Library when she picks another edition to look at
+  (Change edition's read-only form, `edition.viewing`): the page's Book changes, nothing is saved.
 - **A list changes.** Finish, Abandon or Start moves a Book from one list to another: the list on
   screen holds still until the sheet has fallen away (`useSettled`), then the card or row that
   leaves fades over `exit` while its room closes over `standard`, so the ones after it slide up and
@@ -291,19 +372,44 @@ dev server showed it running (`tests/motion.test.ts`, `e2e/book-flight-android.s
   (`UiListMotion`). A change made on another screen (a Start on the book page) plays when the list
   is back on screen. Interruptible: an item reverses from the height it has. A list never moves
   items it measured off the page (a kept-alive tab in the background re-rendering): coming back to a
-  tab shows its list in place (`e2e/library-return.spec.ts`).
+  tab shows its list in place (checked by eye; no flow).
   The lists' quiet refresh when a tab comes back waits for whatever is moving (the cover flying back
   into its row and handing over, the Profile's View Transition: `afterMotion`, `utils/motion.ts`)
   before it is applied, and an entry that did not change stays the same object, so a refresh
   that changed nothing re-renders nothing (`reuseEntries`).
+- **Collections are listed by last edited** (docs/parity.md, Collections): an edit moves a Collection
+  to the top, but a list that is on screen never reorders under her. The Collections page and the
+  picker take their order when they are entered (`useEditedOrder`) and keep it; the page's list holds
+  still under a sheet and changes after it (`useSettled`): a new Collection opens its room at the top
+  (`UiListMotion`, `standard`), the ones below glide down; one that is gone closes its room. The picker
+  adds a new Collection at the end and never moves a row (the sheet may still be rising). Reduce Motion:
+  the list simply changes (checked by eye; no flow).
+- **Change edition's list.** The editions arrive from several sources while the sheet is open. Each
+  one that arrives opens its room and fades in over `standard` (`UiListMotion`, as a list that
+  changes), so the rows after it, the line under the list and "My edition isn't listed" glide down
+  instead of the sheet popping; the current edition is first and picked and never moves (rows are
+  only ever added at the end, so the list is `still`: nothing is moved to a new place, or the
+  sheet's own rise between two renders would be read as every row's move). The line under the list ("Looking for other editions…", "didn't
+  load", "No other editions found") is a `UiReveal`, so it opens and closes its room too. A sheet
+  that opens again starts its list afresh, without animating out what it kept while it slid away.
+  Reduce Motion: the list simply changes (checked by eye; no flow).
 - **Tally mark.** A finish adds a mark to Home's tally: it fades in at full lamp with its glow and
   settles to the others' strength over twice `sheet`. Only a mark added to a count already on
   screen lights up.
+- **Want to read, added in a row.** A row that offers a work (Home's *Next in your series*, its sheet,
+  the author page, the series sheet) has a pill, + Want to read; when the Add sheet is confirmed her status
+  takes its place. The two share one grid cell, so the row keeps its height: the pill fades away over
+  `exit` (to 0.97), and once the Add sheet has fallen away (an animation delay of `sheetExit`) the status
+  fades in and rises the last `xs` over twice `sheet` on the `standard` curve, in the accent colour
+  (`accentInk`) that settles to its quiet one, as the tally's new mark lights and settles. Only a change on
+  screen plays; a row drawn with the status in it just has it. Reduce Motion: no delay, the status is there
+  at once (checked by eye; no flow).
 - **Sheet on the keyboard.** A sheet whose field has the iOS keyboard rides up on it like the search
   palette, over `keyboard` with the `keyboard` curve, and its focused field scrolls into view.
 - **Hover.** With a mouse (only where the device hovers), rows and menu items take the `fill`,
   pills deepen by it, the lit button lets a little of the room through. No transition beyond the
   existing ones.
+- **Sign-in wall.** The cloth boards of the wall behind the way in are there from the first frame; their covers are asked for after the form has been painted (`components/auth/Frame.vue`) and each fades in over its board over `standard`, `opacity` only, when it has been drawn (`WallCover.vue`). Nothing moves with it and nothing waits for it. With Reduce Motion there is no transition: the cover is there at once.
 - **Cover.** The image fades in over its thumbhash or colour over `standard` once decoded; no
   zoom, no slide.
 - **Search results.** A new answer replaces the list in place, best match at the bottom; while a
@@ -398,6 +504,115 @@ the new direction's animation at the time its curve shows the same value (`start
 Not the View Transitions API, for the reasons above: a flight turned around mid-air, a page that keeps
 its scroll and its live state, and covers that land on their own pixels need live elements.
 
+Looked at again when the flight was reported glitchy and sometimes absent (the avatar's View
+Transition felt steadier): recorded frame by frame on a slowed CPU and network, with long Libraries,
+in Chromium and WebKit, the motion itself ran smooth and landed on its pixels; every fault was in
+what flies where (the cases above). A View Transition would need the same answers (which cover
+carries the name, where it lands while the Book loads) and would freeze the screen until the new
+page is drawn, so the FLIP stays.
+
+On a phone the flight is the compositor's, not the main thread's: every part is `transform` or
+`opacity` in Web Animations, which Chromium and WebKit hand to the compositor (iOS Safari to another
+process), so the page's own work mid-flight (a list rendering, a store answering) cannot make it
+stutter. The first frame's hold (`playbackRate` 0, then 1) shows in a Chromium trace as a failure to
+composite (`compositeFailed` 12) but the animation is composited once let go;
+`updatePlaybackRate(1)` instead would keep it on the main thread for good. What the main thread
+still does is the tap's work before the first frame (the page's copy, the measuring) and the
+bookkeeping between frames (landing, the hand-over), so a busy main thread delays the start or the
+hand-over, never the motion. Holding the main thread for 200 ms mid-flight and watching the cover keep moving
+in the frames the compositor sends showed it (a flow, removed with the motion flows; `e2e/android/flight.ts`
+is what is left, on the emulator).
+
+### After many flights
+
+Reported (A10): the avatar's transition stays smooth a hundred times in a row, but after ten to fifteen
+round-trips from Home into a Book and back every transition is glitchy for a while, then recovers.
+`e2e/perf/flight-soak.spec.ts` drives that by hand (tagged `@perf`, only with `LIBELLUS_E2E_PERF=1`,
+never in CI): N round-trips (tap a cover, Back; the next cover each round) in Chromium at 412 × 915 with
+the CPU slowed 4×, or in WebKit; per flight the time from the tap to its first frame, its length, the
+frames it dropped and the long animation frames (LoAF) from the tap to the hand-off; per round, at rest
+and after a garbage collection, what the flight left (`.flight-cover`, `.flight-held`,
+`[data-flight-hidden]`, `data-moving`), `document.getAnimations()`, covers and elements in the
+document, all DOM nodes (detached ones too), listeners and the JS heap, and the stack's requests (how
+many, how many still on their way at each tap, how many failed). `e2e/perf/summarize.ts` turns the
+runs into the tables below.
+
+```sh
+LIBELLUS_E2E_PERF=1 LIBELLUS_E2E_PORT=3103 FLIGHT_OUT=/tmp/flight-soak pnpm exec playwright test e2e/perf --repeat-each 5 --workers 1
+pnpm tsx e2e/perf/summarize.ts /tmp/flight-soak
+```
+
+Measured 10 October 2026 on an M-series Mac (18 cores; the load average 4–9, other agents' builds
+running), 5 runs of 30 round-trips each, every value the median over the runs and [min–max]:
+
+**The flight itself does not wear.** On a local stack (Home with 3 being read, 8 wanted and 12–40 finished
+Books; the Library with 51), rounds 2–11 against the last ten, in Chromium ÷4: tap to first frame
+48 ms [48–64] → 48.5 [48–56], push 300 ms, Back 250 ms both times, 0–4 frames dropped in ten flights
+both times, no long frame after round 1 (which loads the Book page's code), 0 elements left behind in
+any of the 150 rounds, `getAnimations()` 0 at rest, the document's elements constant (347; the
+Library's 309), all DOM nodes constant (886), listeners constant (215), the heap 10 → 11 MB (0.06 MB a
+round, the Book store's pages). WebKit: tap to first frame 58.5 ms → 58, push 273.5 → 273.5, Back 225 →
+224, 0 frames dropped, elements constant. `will-change` is already only on the box in the air
+(`.flight-cover` exists only while it flies; the page's copy carries `will-change: opacity` and leaves
+with it), so scoping it is not an experiment to run.
+
+**What grows is the Library's reads.** Home asks for the whole Library each time it is shown again
+(`onActivated`), so every Back into Home started a read of all three lists, whether or not the last one
+had come back. With 400 finished Books (the finished list ≈ 800 kB) over a phone's connection (300 ms
+round trip, 1.6 Mbit/s, `FLIGHT_NET=slow FLIGHT_FINISHED=400`) a read takes longer than a round-trip,
+so they piled up, shared the bandwidth with the Book page's own reads, and the Book page's reads sent as
+`POST` (`rpc/book_authors_of`, `book_genres`, `book_series_info`, `my_people`, `feed`, …) were cut off
+at 8 s (`WRITE_TIMEOUT_MS`, data/network.ts), which counts the device offline until the probe answers:
+for 7–8 rounds the app asked the stack nothing, then the pile drained and it recovered. The fix
+(`stores/library.ts`, `load`): one load at a time, and one more after it for all that asked meanwhile
+(`tests/library-load.test.ts`).
+
+| per run of 30 rounds (400 Books, slow connection, CPU ÷4) | before | after |
+|---|---|---|
+| most of the stack's requests on their way at a tap | 55–56 | 3–4 |
+| requests cut off (failed) | 22–25 | 0 |
+| rounds that asked the stack nothing (counted offline) | 7–8 | 0 |
+| frames dropped in all 60 flights | 1–6 | 2–4 |
+| long animation frames, ms in all rounds | 72–78 | 67–129 |
+
+The pile never cost the flight a frame in Chromium ÷4 (an 800 kB answer parses in well under a long
+frame there): what it costs is the Book page's content and the app's writes, which a member sees as
+the app going wrong for a while. Not run, as there was a growing quantity to fix and the flight's
+frames do not degrade: `content-visibility` on long lists and deferring heavy sections until the flight
+has landed. Neither has a measurement behind it yet.
+
+**Reading the field log for a flight.** A flight that stutters on a member's phone shows only in the
+LoAF rows of Profile → Account → Errors (docs/OPERATIONS.md, Stutters), and only from Chromium
+(Android): WebKit reports no long animation frames, so an iPhone sends none. A push stutters on
+`/book/:key` (the route has changed when the flight starts), a Back on the page it lands on (`/`,
+`/library`). `during: interaction (click)` is the tap's own frame (the page's copy and the measuring,
+`launch` and `snapshotOf` in the chunk of `useBookFlight`, by the names the build gave them);
+`Window.requestAnimationFrame` with that chunk is the flight's bookkeeping between frames (`track`,
+`land`, `keep`); a script from a store's or a
+page's chunk with `TimerHandler` or a promise is work that landed on the flight. Rows that come in
+bursts on one member after many Book pages, from the stores' chunks, are what this section describes.
+
+### What can go wrong, and what the flight does instead
+
+The flight never animates towards a box that is not on screen or has no size, always ends on the
+live hero (or row) pixel for pixel, and its one fallback is a short fade, never a half state. Each
+case below was a flow in `book-flight.spec.ts`, removed with the motion flows (docs/TESTING.md, "Which
+flows"); the flight's geometry is `tests/flight.test.ts`.
+
+| What happens | Without care | What the flight does |
+|---|---|---|
+| The Book's page is still loading (a Book this device has not seen: an author's work, the next of a series) | No hero to aim at: the cover waited `standard`, then faded where it was. The second time (the page cached) it flew, so it looked as if it worked only sometimes | The page's loading box is a stand-in at the hero cover's place (`data-flight-stand-in`): the cover flies there and lands, waits on it (the hero's image if it came, else the thumbhash), and moves into the hero once that is drawn, staying until the hero's image is in (`wait`, `keep`) |
+| The Book turns out missing or fails to load | — | The waiting copy fades out over `quick` |
+| A page with neither hero nor stand-in (a public Book card loading) | — | The cover waits up to `standard`, then fades where it is |
+| The same Book twice on a page (Home: Want to read and Next in your series) | Back flew into the first one in the page, not the one tapped | The push remembers the cover it left from (`Origin.cover`, a weak reference: the tab page is kept alive); Back flies into that one while it is on screen |
+| A title tapped whose cover is elsewhere (Home's reading card) | The first cover of that Book in the page, even one scrolled away | The nearest cover of that Book on screen; none on screen → the cross-fade |
+| Back mid-flight, or the same Book again while it flies back | Until the turned-around flight started, the router's new page showed at the strength the other page had, with its own cover beside the one in the air (a frame or two of flicker) | The turn-around poses like any departure: the copy of the page being left at the strength the screen showed it, the live page hidden, until the new flight takes over |
+| The new page is slow to draw (its code still loading) | The new page bare before the flight | The pose holds the screen as it was, up to 1 s |
+| The hero's large image is not in yet | The row's small image blown up to the hero's size | The row's image fades to the thumbhash before it is blown up; the large one fades in when decoded (`sharpen`, `fadeSoft`) |
+| The row's image was dropped while the book page was open | A blur or the thumbhash on the row for a moment after Back | The copy stays on the row until the row's image is decoded (`handOff`) |
+| Back (or Read now) while a finger holds the hero cover leaning, or while it comes back flat | The copy would start from the leaned box (`heroBoxOf` takes out only the rise) and jump onto the flat one | The lean is put back at once before anything is measured (`stillCovers`); a press while anything moves does nothing (Hero cover) |
+| iOS Safari's edge swipe, Reduce Motion, a book opened from search, a row scrolled away | — | No flight: the browser's own motion, a cross-fade, or the cover leaves with its page |
+
 ## Reduce Motion
 
 `prefers-reduced-motion: reduce` sets every transition and animation to 1 ms in
@@ -410,11 +625,12 @@ page left cross-fade in place over `standard`, both ways. Change edition is the 
 edition's hero cross-fades into the new one over `standard`, and the content below takes its new
 place at once. The tab bar away does not hide at all: a bar that pops in and out in place
 is more motion than one that stays. The month rows of a year in review do not open: their covers
-stand at rest at once. Your shelf: the pile is there at once and the 3D replaces it
-without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
+stand at rest at once. Your shelf: no entrance, the Stack stands in its place as soon
+as it has drawn. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader
 cross-fades in and out in place), the printed page turns at once, and its search palette
-cross-fades like the app's.
+cross-fades like the app's. The sign-in wall's covers do not fade (they are there at once). The hero cover does not lean: it is a picture like any other, and the
+page scrolls from it.
 
 ## Non-motions
 

@@ -14,6 +14,7 @@ import {
   isMangledIsbn,
   MAX_EXTRA_READS,
   positive,
+  splitRatingReview,
   tidy,
   yearOf,
   type ImportAdapter,
@@ -173,7 +174,10 @@ export function mapHardcoverRow(row: Row, index: number, today: string): ImportB
   }
   // The custom format writes a line break as `\n`; Markdown stays as it is.
   const reviewText = field(row, 'Review').replace(/\\n/g, '\n')
-  const review = clipReview(plainText(reviewText || undefined) ?? null, problems)
+  // A review that is only a number is a rating written as text: it is the rating when there is none, not a review.
+  const split = splitRatingReview(plainText(reviewText || undefined) ?? null, rating, problems)
+  rating = split.rating
+  const review = clipReview(split.review, problems)
 
   let status: EntryStatus
   let session: ImportSession | null = null

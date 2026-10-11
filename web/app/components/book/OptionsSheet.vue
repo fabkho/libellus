@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// The book page's options (D's ⋯ in the top bar; issue #11), for a Book that
-// is in the Library: Change edition (issue #41, opens its sheet) and Remove
-// from Library. Remove does not act at
+// The book page's options (D's ⋯ in the top bar; issue #11). On every Book
+// page: Change edition (issue #41, opens its sheet; for a Book that is not in
+// the Library it only looks at the other editions, nothing is saved, and it is
+// the one row such a Book has). For a Book in the Library also Read as, Share,
+// Hide, Series, the ebook and Remove from Library. Remove does not act at
 // once: the confirmation says what goes with it (the Book's reads and its
 // places on collections; the collections stay), and only its button removes.
 // `removed` fires once the entry is gone, so the page can leave the Book. The
@@ -21,13 +23,16 @@
 //
 // Share (issue #171): the Book's card on her reading page, in its own sheet
 // (SharingBookSheet: with or without her review, the link to share or copy).
-import type { LibraryEntry } from '~/data/library'
+import type { Book, BookSnapshot } from '~/data/books'
+import type { LibraryEntry, LibraryErrorCode } from '~/data/library'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useEditionStore } from '~/stores/edition'
 import { useHistoryStore } from '~/stores/history'
 import { useSeriesStore } from '~/stores/series'
+import { useLibraryStore } from '~/stores/library'
 
-const props = defineProps<{ entry: LibraryEntry | null }>()
+// `shown` is the Book the page shows; `page` its address, which a look at another edition belongs to.
+const props = defineProps<{ entry: LibraryEntry | null; shown: Book | BookSnapshot; page: string }>()
 const emit = defineEmits<{ removed: [] }>()
 const open = defineModel<boolean>('open', { required: true })
 
@@ -47,11 +52,11 @@ const confirming = computed({
 
 // Kept while the sheet and the question slide away, so the book line and the
 // question's title do not empty mid-exit.
-const book = ref(props.entry?.book ?? null)
+const book = ref<Book | BookSnapshot | null>(props.entry?.book ?? props.shown)
 watch(
-  () => props.entry,
-  (entry) => {
-    if (entry) book.value = entry.book
+  () => props.entry?.book ?? props.shown,
+  (shown) => {
+    if (shown) book.value = shown
   },
   { immediate: true },
 )
@@ -64,10 +69,11 @@ function share() {
   sharing.value = true
 }
 
+// A Book that is not in her Library opens the same sheet to look at its editions (nothing is saved).
 function changeEdition() {
-  if (!props.entry) return
   open.value = false
-  edition.open(props.entry)
+  if (props.entry) edition.open(props.entry)
+  else edition.browse(props.page, props.shown)
 }
 
 const series = useSeriesStore()
@@ -82,6 +88,26 @@ function ask() {
   open.value = false
   history.askRemove(props.entry)
 }
+
+const library = useLibraryStore()
+// Hiding waits in the outbox offline, like Finish and Remove, and a queued write the database
+// refuses later is reported by the sync sheet. A call answered right here (the Book was removed on
+// another device, say) is refused in this sheet: the switch does not flip, and the line says why.
+// One call at a time, so a quick second tap cannot leave the older answer last.
+const hiding = ref(false)
+const hideError = ref<LibraryErrorCode | null>(null)
+async function hide(on: boolean) {
+  if (!props.entry || hiding.value) return
+  hiding.value = true
+  hideError.value = null
+  try {
+    const result = await library.setHidden(props.entry, on)
+    if ('error' in result) hideError.value = result.error
+  } finally {
+    hiding.value = false
+  }
+}
+watch(open, (isOpen) => isOpen && (hideError.value = null))
 
 async function remove() {
   if (await history.confirmRemove()) emit('removed')
@@ -130,6 +156,15 @@ async function unlink() {
       <BookReadAs v-if="entry" :entry="entry" testid="bookOptions.readAs" class="mb-md" />
       <UiRowGroup>
         <UiRow v-if="entry" as="button" icon="share" :label="t('bookOptions.share')" data-testid="bookOptions.share" @click="share" />
+        <UiSwitchRow
+          v-if="entry"
+          :model-value="entry.hidden ?? false"
+          icon="lock"
+          :label="t('bookOptions.hide')"
+          testid="bookOptions.hide"
+          :disabled="hiding"
+          @update:model-value="hide"
+        />
         <UiRow
           as="button"
           icon="stack"
@@ -161,6 +196,7 @@ async function unlink() {
           <UiRow v-if="ebook" as="button" icon="close" :label="t('bookOptions.unlinkEbook')" data-testid="bookOptions.unlinkEbook" @click="askUnlink" />
         </template>
         <UiRow
+          v-if="entry"
           as="button"
           icon="close"
           tone="danger"
@@ -169,6 +205,8 @@ async function unlink() {
           @click="ask"
         />
       </UiRowGroup>
+      <p v-if="hideError" class="mt-xs text-footnote text-error" role="alert" data-testid="bookOptions.hideError">{{ t(`library.error.${hideError}`) }}</p>
+      <p v-if="entry?.hidden" class="mt-xs text-footnote text-ink-faint" data-testid="bookOptions.hideHint">{{ t('bookOptions.hideHint') }}</p>
     </div>
   </UiSheet>
 

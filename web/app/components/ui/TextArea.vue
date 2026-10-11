@@ -3,7 +3,9 @@
 // a quiet filled box with the label and its hint on top, the text in the
 // serif italic, a lamp ring while it has the focus. It grows with the text up
 // to a few lines, then scrolls. Attributes (maxlength, data-testid, …) go to
-// the <textarea>.
+// the <textarea>. The `footer` slot is a line at the bottom of the box (a control that belongs to the text,
+// such as the review's "Contains spoilers" switch): it opens (UiReveal) once there is text and closes when
+// the text is gone, so an empty box stays as it was. It sits outside the <label>, so it is not part of the field's name.
 defineOptions({ inheritAttrs: false })
 
 defineProps<{ id: string; label: string; hint?: string }>()
@@ -24,25 +26,29 @@ onMounted(fit)
 </script>
 
 <template>
-  <label
-    :for="id"
-    class="box flex flex-col gap-sm rounded-md bg-fill px-inset pt-ms pb-inset"
-    :class="focused ? 'focused' : 'edge-faint'"
-  >
-    <span class="text-footnote text-ink-muted">
-      {{ label }}<template v-if="hint"><span class="text-ink-faint"> · {{ hint }}</span></template>
-    </span>
-    <textarea
-      :id="id"
-      ref="area"
-      v-model="model"
-      v-bind="$attrs"
-      rows="2"
-      class="area w-full resize-none bg-transparent font-serif text-callout text-ink italic caret-accent outline-none placeholder:text-ink-faint"
-      @focus="focused = true"
-      @blur="focused = false"
-    />
-  </label>
+  <!-- The footer is outside the <label>: a control in it would end up in the textarea's name. A tap on the box's own padding still focuses the text. -->
+  <div class="box flex flex-col gap-sm rounded-md bg-fill px-inset pt-ms pb-inset" :class="focused ? 'focused' : 'edge-faint'" @click.self="area?.focus()">
+    <label :for="id" class="flex flex-col gap-sm">
+      <span class="text-footnote text-ink-muted">
+        {{ label }}<template v-if="hint"><span class="text-ink-faint"> · {{ hint }}</span></template>
+      </span>
+      <textarea
+        :id="id"
+        ref="area"
+        v-model="model"
+        v-bind="$attrs"
+        rows="2"
+        class="area w-full resize-none bg-transparent font-serif text-callout text-ink italic caret-accent outline-none placeholder:text-ink-faint"
+        @focus="focused = true"
+        @blur="focused = false"
+      />
+    </label>
+    <UiReveal v-if="$slots.footer" :show="model.trim().length > 0" class="-mb-xs">
+      <div class="mt-xs flex flex-col border-t border-hairline pt-xs">
+        <slot name="footer" />
+      </div>
+    </UiReveal>
+  </div>
 </template>
 
 <style scoped>

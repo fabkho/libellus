@@ -1,0 +1,32 @@
+{
+  "_readme": "The dry-run sample (docs/i18n/german-sample.md): real keys of en.json chosen to cover every kind of string, plus synthetic ones for what en.json has no instance of yet. Edit and run `node scripts/i18n/sample.mjs`.",
+  "keys": [
+    "common.cancel", "status.want_to_read", "status.reading", "status.finished", "status.notFinished", "rating.none",
+    "profile.account.signOut", "profile.account.delete", "library.view.sortDir.pages.desc", "genre.crime",
+    "sync.syncing", "shelf.count", "profile.records.days", "book.goodreads.ratings", "genre.stats.row", "profile.ratings.row",
+    "home.readInLabel", "collection.moved", "friends.declineLabel", "feed.batchFinished",
+    "book.goodreads.on", "friends.want", "signIn.emailPlaceholder",
+    "sync.waiting", "photo.private", "sharing.about",
+    "auth.error.invite_gone", "library.error.ended_before_started", "home.loadError",
+    "collections.pickerTitle", "genre.sheet.title", "genre.sheet.hint", "ownEdition.title.isbn",
+    "feed.emptyTitle", "feed.empty", "library.segmentEmpty.finished.title", "collection.missingTitle",
+    "book.progress.percent", "reader.where", "common.today", "import.howTo.goodreads", "home.installHint.text",
+    "privacy.goPublicText", "shelf.card.allLabel", "waitlist.code.not_configured", "friends.join", "friends.and"
+  ],
+  "synthetic": {
+    "sample.linked": "Move to @:status.want_to_read",
+    "sample.linkedPlural": "@:status.finished: {count} book | @:status.finished: {count} books"
+  },
+  "kinds": {
+    "plain label": ["common.cancel", "status.want_to_read", "status.reading", "status.finished", "status.notFinished", "rating.none", "profile.account.signOut", "profile.account.delete", "library.view.sortDir.pages.desc", "genre.crime"],
+    "plural": ["sync.syncing", "shelf.count", "profile.records.days", "book.goodreads.ratings", "genre.stats.row", "profile.ratings.row", "sync.waiting", "shelf.card.allLabel", "sample.linkedPlural"],
+    "placeholders": ["home.readInLabel", "collection.moved", "friends.declineLabel", "feed.batchFinished", "common.today", "reader.where", "book.progress.percent"],
+    "slot (i18n-t) and glue": ["book.goodreads.on", "friends.want", "friends.join", "friends.and"],
+    "linked @:": ["sample.linked", "sample.linkedPlural"],
+    "literal {'@'}": ["signIn.emailPlaceholder"],
+    "long sentence": ["sync.waiting", "photo.private", "sharing.about", "privacy.goPublicText", "home.installHint.text", "waitlist.code.not_configured", "import.howTo.goodreads"],
+    "error": ["auth.error.invite_gone", "library.error.ended_before_started", "home.loadError", "waitlist.code.not_configured"],
+    "sheet title and hint": ["collections.pickerTitle", "genre.sheet.title", "genre.sheet.hint", "ownEdition.title.isbn"],
+    "empty state": ["feed.emptyTitle", "feed.empty", "library.segmentEmpty.finished.title", "collection.missingTitle"]
+  }
+}

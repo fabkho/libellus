@@ -5,7 +5,7 @@ import { resolveBookCover, type ProbeImage } from './covers'
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
 import { editionSignature } from './editions'
-import { bookFromRow, rankEditions, titleQuery } from './import/editions'
+import { bookFromRow, rankEditions, sameVolume, titleQuery } from './import/editions'
 import type { ImportBook } from './import/rows'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
@@ -51,6 +51,13 @@ export const IMPORT_CONCURRENCY = 4
 
 /** Rows written per call. */
 export const IMPORT_CHUNK = 10
+
+/**
+ * How long the second pass over the rows nothing was found for may run: a slow
+ * network or a source that refuses everything must not hold the preview back
+ * for an hour. What it has not reached keeps its first answer.
+ */
+export const SECOND_PASS_BUDGET_MS = 240_000
 
 /** How long one source call may take before the row moves on without it. */
 export const LOOKUP_TIMEOUT_MS = 15_000
@@ -125,7 +132,18 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
 
   const outcome = await ask((s) => lookups.search.search(titleQuery(row), { signal: s }))
   if (outcome?.failed) unsure = true
-  const ranked = outcome ? rankEditions(row, outcome.results).map((result) => result.book) : []
+  let ranked = outcome ? rankEditions(row, outcome.results).map((result) => result.book) : []
+  // An author written with initials ("H.D. Carlton") is no word OpenLibrary's text search finds
+  // the book by: asked again with the title and the surname alone (what the match checks anyway).
+  const lastName = surname(row.authors[0])
+  if (!ranked.length && !outcome?.failed && lastName) {
+    const retry = `${row.title} ${lastName}`.trim()
+    if (retry.toLowerCase() !== titleQuery(row).toLowerCase()) {
+      const again = await ask((s) => lookups.search.search(retry, { signal: s }))
+      if (again?.failed) unsure = true
+      if (again) ranked = rankEditions(row, again.results).map((result) => result.book)
+    }
+  }
   const alternatives = ranked.slice(0, ALTERNATIVES_KEPT)
   const same = ranked[0] ?? null
   const own = bookFromRow(row)
@@ -143,6 +161,15 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
 export function fileEdition(row: ImportBook, alternatives: readonly (Book | BookSnapshot)[] = []): Edition {
   const own = bookFromRow(row)
   return { book: own, via: null, unsure: false, ...(own.isbn13 ? { coverFrom: alternatives[0] ?? null } : {}), alternatives: [...alternatives] }
+}
+
+/**
+ * Whether a row of the preview is one to look at for sure: no edition was found
+ * (`fromFile`: added as the file says), or the edition shown has no cover. A
+ * similar edition with a cover is probably fine and only carries its note.
+ */
+export function needsLook(verdict: 'imported' | 'inLibrary' | 'matched' | 'fromFile' | null, shown: Pick<BookSnapshot, 'coverUrl'> | null): boolean {
+  return verdict === 'fromFile' || !shown?.coverUrl
 }
 
 /** One row of the choice sheet: the edition, whether the preview has it now, and whether it is the file's own. */
@@ -199,13 +226,23 @@ export async function eachLimited<T>(
  * A `fetch` that keeps its distance from hosts that count requests: at least
  * `gapMs` between two requests to one host, and a request the host refused
  * for being too many (403, 429, 503) tried twice more, after `retryMs` and
- * twice that. Apple's
+ * twice that; a host that still refuses is left alone for `cooldownMs` (its
+ * requests answer 429 at once), then asked once, and again with the retries
+ * when it answers. Apple's
  * Search API allows only a few requests a minute per address before it starts
  * refusing; a whole Library looked up at once would otherwise lose Apple
  * halfway through.
  */
-export function pacedFetch(fetch: FetchLike, { gapMs, retryMs = 2000 }: { gapMs: Record<string, number>; retryMs?: number }): FetchLike {
+export function pacedFetch(
+  fetch: FetchLike,
+  { gapMs, retryMs = 2000, cooldownMs = 60_000, now = Date.now }: { gapMs: Record<string, number>; retryMs?: number; cooldownMs?: number; now?: () => number },
+): FetchLike {
   const nextAt = new Map<string, number>()
+  /** Hosts that kept refusing: asked no more until then, so a refused host costs no time per request (it cost 6 s each, for an hour). */
+  const blockedUntil = new Map<string, number>()
+  /** Hosts that were blocked and are being tried again: one attempt, no waiting between retries. */
+  const probing = new Set<string>()
+  const refused = (status: number) => [403, 429, 503].includes(status)
   const wait = (ms: number, signal?: AbortSignal) =>
     new Promise<void>((resolve, reject) => {
       if (ms <= 0) return resolve()
@@ -219,21 +256,33 @@ export function pacedFetch(fetch: FetchLike, { gapMs, retryMs = 2000 }: { gapMs:
   async function turn(host: string, signal?: AbortSignal) {
     const gap = gapMs[host]
     if (!gap) return
-    const now = Date.now()
-    const at = Math.max(now, nextAt.get(host) ?? 0)
+    const at = Math.max(now(), nextAt.get(host) ?? 0)
     nextAt.set(host, at + gap)
-    await wait(at - now, signal)
+    await wait(at - now(), signal)
   }
 
   return async (url, init) => {
     const host = new URL(url).hostname
+    if (gapMs[host] && (blockedUntil.get(host) ?? 0) > now()) return { ok: false, status: 429, json: async () => ({}) }
     await turn(host, init?.signal)
     let response = await fetch(url, init)
-    for (const delay of [retryMs, retryMs * 2]) {
-      if (![403, 429, 503].includes(response.status) || !gapMs[host]) break
-      await wait(delay, init?.signal)
-      await turn(host, init?.signal)
-      response = await fetch(url, init)
+    if (gapMs[host] && refused(response.status)) {
+      const delays = probing.has(host) ? [] : [retryMs, retryMs * 2]
+      for (const delay of delays) {
+        await wait(delay, init?.signal)
+        await turn(host, init?.signal)
+        response = await fetch(url, init)
+        if (!refused(response.status)) break
+      }
+      if (refused(response.status)) {
+        // Still refused after the waits: leave the host alone for a while.
+        blockedUntil.set(host, now() + cooldownMs)
+        probing.add(host)
+      } else {
+        probing.delete(host)
+      }
+    } else if (gapMs[host]) {
+      probing.delete(host)
     }
     return response
   }
@@ -305,6 +354,8 @@ export function libraryTitleIndex(
     return (
       candidates.find((entry) => {
         if (siblings.has(entry.id)) return false
+        // Another volume of the same series shares the work title ("Heartstopper: Volume Two").
+        if (!sameVolume(row.title, entry.book.title)) return false
         if (wanted && !entry.book.authors.some((name) => surname(name) === wanted)) return false
         const ended = entry.latestSession?.endedOn
         return !(endedOn && ended && ended !== endedOn)
@@ -428,7 +479,16 @@ export type BookImport = {
   /** Finds every row's edition, a few at a time; `onEdition` as each is found. Rejects only when `signal` aborts. */
   match: (
     rows: readonly ImportBook[],
-    options: { signal?: AbortSignal; onEdition: (index: number, edition: Edition) => void },
+    options: {
+      signal?: AbortSignal
+      onEdition: (index: number, edition: Edition) => void
+      /** The second, slower pass over the rows the first found nothing for: how many it has, and how far it is. */
+      onSecondPass?: (done: number, total: number) => void
+      /** Aborting this ends the second pass only: what the first found stays, the rest keeps its first answer. */
+      secondPassSignal?: AbortSignal
+      /** How long the second pass may run (`SECOND_PASS_BUDGET_MS`). */
+      secondPassBudgetMs?: number
+    },
   ) => Promise<void>
   /**
    * Resolves the Covers and writes the rows, a few per call; `onWritten` with
@@ -443,7 +503,7 @@ export function createBookImport(
   { lookups, probe, online = () => true }: { lookups: Lookups; probe: ProbeImage } & WriteOptions,
 ): BookImport {
   return {
-    async match(rows, { signal, onEdition }) {
+    async match(rows, { signal, onEdition, onSecondPass, secondPassSignal, secondPassBudgetMs = SECOND_PASS_BUDGET_MS }) {
       const retry: number[] = []
       await eachLimited(
         rows,
@@ -457,22 +517,56 @@ export function createBookImport(
       )
       // Once more, slower, for rows nothing found or nothing could be asked
       // about: a source that refused a burst or answered late may answer now.
-      await eachLimited(
-        retry.sort((a, b) => a - b),
-        Math.max(1, IMPORT_CONCURRENCY / 2),
-        async (index) => onEdition(index, await findEdition(rows[index]!, lookups, signal)),
-        signal,
-      )
+      // Counted aloud (`onSecondPass`) and stoppable on its own
+      // (`secondPassSignal`): the first answers are final then.
+      const again = retry.sort((a, b) => a - b)
+      if (!again.length) return
+      const second = new AbortController()
+      const stop = () => second.abort()
+      signal?.addEventListener('abort', stop, { once: true })
+      secondPassSignal?.addEventListener('abort', stop, { once: true })
+      if (secondPassSignal?.aborted) stop()
+      const budget = setTimeout(stop, secondPassBudgetMs)
+      let done = 0
+      onSecondPass?.(0, again.length)
+      try {
+        await eachLimited(
+          again,
+          Math.max(1, IMPORT_CONCURRENCY / 2),
+          async (index) => {
+            const edition = await findEdition(rows[index]!, lookups, second.signal)
+            onEdition(index, edition)
+            onSecondPass?.(++done, again.length)
+          },
+          second.signal,
+        )
+      } catch (error) {
+        // Only the second pass was stopped: the first pass's answers stand.
+        if (signal?.aborted || !second.signal.aborted) throw error
+      } finally {
+        clearTimeout(budget)
+        signal?.removeEventListener('abort', stop)
+        secondPassSignal?.removeEventListener('abort', stop)
+      }
     },
 
     async write(rows, { onWritten }) {
       const outcomes: RowOutcome[] = []
+      // The covers of a chunk are resolved all at once, and those of the next chunk
+      // while this one is written: the image probes (a download and a decode each)
+      // were what made a long import take minutes after "Import" was pressed.
+      const covered = async (start: number): Promise<ImportRow[]> => {
+        const chunk = [...rows.slice(start, start + IMPORT_CHUNK)]
+        await eachLimited(chunk, IMPORT_CHUNK, async (row, index) => {
+          chunk[index] = { ...row, book: await withCover(row.book, probe, row.coverFrom).catch(() => row.book) }
+        })
+        return chunk
+      }
+      let next = rows.length ? covered(0) : null
       for (let start = 0; start < rows.length; start += IMPORT_CHUNK) {
         if (!online()) return { data: null, error: 'offline' }
-        const chunk = [...rows.slice(start, start + IMPORT_CHUNK)]
-        await eachLimited(chunk, IMPORT_CONCURRENCY, async (row, index) => {
-          chunk[index] = { ...row, book: await withCover(row.book, probe, row.coverFrom) }
-        })
+        const chunk = await next!
+        next = start + IMPORT_CHUNK < rows.length ? covered(start + IMPORT_CHUNK) : null
         const written = await writeRows(client, chunk)
         if (written.error) return written
         outcomes.push(...written.data)

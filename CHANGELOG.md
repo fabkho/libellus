@@ -1,5 +1,393 @@
 # Changelog
 
+## [1.14.0](https://github.com/fabkho/libellus/compare/v1.13.0...v1.14.0) (2026-10-11)
+
+
+### Features
+
+* **editions:** German editions from the German National Library for the scan, ISBN lookups and the edition picker ([#307](https://github.com/fabkho/libellus/issues/307)) ([50b1e75](https://github.com/fabkho/libellus/commit/50b1e75fab92af2e139e8c8c2edbbf3db3d08fb6))
+
+
+### Fixes
+
+* **import:** Goodreads import reaches the preview, matches the right volume and edits less to review ([#303](https://github.com/fabkho/libellus/issues/303)) ([a5b6225](https://github.com/fabkho/libellus/commit/a5b6225a3ec541a944dc03b1191389f470a17d6e))
+
+## [1.13.0](https://github.com/fabkho/libellus/compare/v1.12.2...v1.13.0) (2026-10-11)
+
+
+### Features
+
+* **collections:** list Collections by last edited, most recently edited first ([#302](https://github.com/fabkho/libellus/issues/302)) ([a5d1dd8](https://github.com/fabkho/libellus/commit/a5d1dd8fe7982a4c22d3e5c02f012447966e6c3a))
+* **friends:** a Friends tab in the tab bar, on by default, switchable in Profile ([#298](https://github.com/fabkho/libellus/issues/298)) ([3be8542](https://github.com/fabkho/libellus/commit/3be8542b0c6270bb72e2b8966eedb8448eeb328e))
+* **history:** 'more' under a cut review in the reading history ([#301](https://github.com/fabkho/libellus/issues/301)) ([06256a9](https://github.com/fabkho/libellus/commit/06256a977c64747c4a3d36a02212fd06625a17d4))
+* **i18n:** German is registered: phone language, Profile language row, Intl formatting, 390 px pass ([#296](https://github.com/fabkho/libellus/issues/296)) ([7dfc80d](https://github.com/fabkho/libellus/commit/7dfc80d4239927a8b7057205e9c0e253237a996b))
+* **profile:** Your shelf right under the ratings ([#299](https://github.com/fabkho/libellus/issues/299)) ([237b666](https://github.com/fabkho/libellus/commit/237b6669e0e9e69b38def5de24e70bd293c54bff))
+* **shelf:** no loading pile; the Stack arrives with Regal's entrance, like the row ([473d136](https://github.com/fabkho/libellus/commit/473d1368a34edad3cf84b0ce53201ab6eb1d2d66))
+
+
+### Fixes
+
+* **series:** split volumes ("..., part N") are not series members ([#297](https://github.com/fabkho/libellus/issues/297)) ([22f1bb4](https://github.com/fabkho/libellus/commit/22f1bb42be2c8eea4114e8d0c6d705db8e0faa88))
+* **shelf:** a member's shelf waits for her Books' blurbs, so every back is printed with one; her row never shows the published file meanwhile ([284cf28](https://github.com/fabkho/libellus/commit/284cf285fb80c581dbc3f4e9e036d15d8f931e89))
+
+## [1.12.2](https://github.com/fabkho/libellus/compare/v1.12.1...v1.12.2) (2026-10-11)
+
+
+### Fixes
+
+* **test:** give the v2a feed assertions the whole page ([1d8932a](https://github.com/fabkho/libellus/commit/1d8932a8ba27885dde7c1805ebe3b42b5a2428f7))
+* **test:** give the v2a feed assertions the whole page ([78f53d9](https://github.com/fabkho/libellus/commit/78f53d97f01d8c57b192ade8f8da6ec27e2906f9))
+
+## [1.12.1](https://github.com/fabkho/libellus/compare/v1.12.0...v1.12.1) (2026-10-11)
+
+
+### Fixes
+
+* **import:** match an Apple title that carries its series after a hyphen ([0595747](https://github.com/fabkho/libellus/commit/05957473a66aee4f9d8835e5e071cb572ffeade0))
+* **import:** match an Apple title that carries its series after a hyphen ([ddf2826](https://github.com/fabkho/libellus/commit/ddf282688e703dd6aec216f23993be61f0cd62d1)), closes [#17](https://github.com/fabkho/libellus/issues/17)
+
+## [1.12.0](https://github.com/fabkho/libellus/compare/v1.11.0...v1.12.0) (2026-10-11)
+
+
+### Features
+
+* **social:** Version 2a — likes, spoilers, In your circle, Your reviews, checked Catalogue ([3d84301](https://github.com/fabkho/libellus/commit/3d8430115d971a294445f4ed79c462759ca3ce01))
+
+
+### Fixes
+
+* **book:** the page shows the description a search result brought until the check writes one ([4fb7df4](https://github.com/fabkho/libellus/commit/4fb7df4098096cf3c54d9fa50fc8fb86f0cf8f83))
+* **catalogue-check:** strip tags by walking the text, not by a pattern CodeQL reports ([207b20f](https://github.com/fabkho/libellus/commit/207b20f410e602a8f0e41d08a4593898c9058b3d))
+* **catalogue-check:** strip tags until the text stops changing, and escape every comma ([bf526fa](https://github.com/fabkho/libellus/commit/bf526fa0e8e724f0a250dbf40deecb81836a78e0))
+
+## [1.11.0](https://github.com/fabkho/libellus/compare/v1.10.0...v1.11.0) (2026-10-11)
+
+
+### Features
+
+* **legal:** fill the privacy notice's last placeholders ([9364650](https://github.com/fabkho/libellus/commit/9364650afb48e6040783ba241a5ae40040913606))
+* **legal:** postpone the imprint, ship the privacy notice alone ([712c81b](https://github.com/fabkho/libellus/commit/712c81bd7d1f7e8b6d11b20364cb620a807f7b01))
+* **legal:** privacy notice and imprint (draft text) ([d866535](https://github.com/fabkho/libellus/commit/d86653541debb219db8e2ef6fcbe3c50754ff087))
+
+## [1.10.0](https://github.com/fabkho/libellus/compare/v1.9.2...v1.10.0) (2026-10-11)
+
+
+### Features
+
+* **contact:** report a problem or ask for a feature from Profile ([84d91e1](https://github.com/fabkho/libellus/commit/84d91e11bbae3395b8eeba11a55ad3e38e6304ce))
+* **contact:** report a problem or ask for a feature from Profile ([2a78852](https://github.com/fabkho/libellus/commit/2a7885288556269fe1a7fb419ee3f0355e240b97))
+
+
+### Fixes
+
+* **build:** install the Regal layer with its own workspace ([07d4214](https://github.com/fabkho/libellus/commit/07d4214eaf50f4d0d0f4b481422109598fc1f616))
+
+
+### Performance
+
+* **auth:** draw the sign-in wall's covers after the form, preconnect to the API ([9bc2350](https://github.com/fabkho/libellus/commit/9bc23501159017ab95bba90e1134d26085c5d9fb))
+* **auth:** sign-in wall covers after the form, preconnect to the API ([150acbf](https://github.com/fabkho/libellus/commit/150acbf4ad51a9137553d57577bd56e25c25a479))
+* do not disable certificate validation in the wall measurement script ([827daac](https://github.com/fabkho/libellus/commit/827daac14271caca51eebce36689853f24525e0b))
+
+## [1.9.2](https://github.com/fabkho/libellus/compare/v1.9.1...v1.9.2) (2026-10-10)
+
+
+### Fixes
+
+* **security:** a shared ebook is imported only after the member taps Add (F4) ([b17acd3](https://github.com/fabkho/libellus/commit/b17acd33cad1256f9de54759ce732fd7d13a2760))
+* **security:** bound the search_books query to 200 characters (F14) ([1515122](https://github.com/fabkho/libellus/commit/15151224a48a4bffcece8265be222ea89bb12cf6))
+* **security:** Catalogue input: cover host list, Open Library keys, search query bound (F1, F17, F14) ([c1e55e1](https://github.com/fabkho/libellus/commit/c1e55e173dcae3808502ebfaa94be239b63c4b81))
+* **security:** constrain Open Library keys on books (F17) ([cfd4e79](https://github.com/fabkho/libellus/commit/cfd4e7968b106d234ac3cfeb40bd7f3b1a5c26b0))
+* **security:** Dependabot version updates for npm and github-actions (F7) ([bf48c7c](https://github.com/fabkho/libellus/commit/bf48c7ceea5671dd5b20e5e5eacc48d674d6bef2))
+* **security:** docs for a public repository: third-party terms, no 'private repository' statements, neutral wording (F22, F23, F24) ([fdce2bc](https://github.com/fabkho/libellus/commit/fdce2bc5b8f19d01a186129b89067ee852d11f96))
+* **security:** forget every device key and cache on sign-out and on a dead session (F10, F11) ([11d3a23](https://github.com/fabkho/libellus/commit/11d3a23583e2b59cb40c97e41c590b9987e04132))
+* **security:** Goodreads hardening, package B (F2, F3, F15, F16, F18, I1, I2) ([e0d1bb9](https://github.com/fabkho/libellus/commit/e0d1bb93a907aa8fc714786189d8f2e01986d39a))
+* **security:** goodreads-rating cache, bounds, rate limit; close the title cache (F2, F3, F15, F16, I1, I2) ([7c0e992](https://github.com/fabkho/libellus/commit/7c0e992de3cfee488073013fa03c88fc1e5882db))
+* **security:** never ask Goodreads by title for a Manual book (F3) ([f18f087](https://github.com/fabkho/libellus/commit/f18f087edf6e9870a9f83e102614c6f867c14cc6))
+* **security:** no account-wide secret in pull request jobs (F8) ([2727c74](https://github.com/fabkho/libellus/commit/2727c740fc0541d078e6b726d808b0e5d09a9a8b))
+* **security:** per-member rate limit on enrich, constant-time secret check (F16, I1) ([3caab89](https://github.com/fabkho/libellus/commit/3caab890a09f5c1ceb7331c9d50d14d08359b044))
+* **security:** pin third-party actions by full commit SHA (F6) ([85c40d2](https://github.com/fabkho/libellus/commit/85c40d2ca0f8295785294dc61d275c3225df8197))
+* **security:** reading-page-og fetches covers only from the cover hosts, redirects hop by hop (F18) ([834afc2](https://github.com/fabkho/libellus/commit/834afc23f4ac82175cc81577084772e765238672))
+* **security:** refuse a Catalogue cover off the host allow-list (F1) ([fb8bcfe](https://github.com/fabkho/libellus/commit/fb8bcfe2737f41f44bdb88ceeaa3eaf8d02a055a))
+* **security:** repository and public-repo hygiene (F5-F8, F12, F20-F24) ([caa5f89](https://github.com/fabkho/libellus/commit/caa5f89158cf66f6a52adc014b251ff27fb320dd))
+* **security:** robots.txt and .well-known/security.txt (F12) ([82047af](https://github.com/fabkho/libellus/commit/82047af537c3b4c378a713f97d7b476f55482369))
+* **security:** share target confirmation, device data after sign-out and a dead session (F4, F10, F11) ([4e1166d](https://github.com/fabkho/libellus/commit/4e1166d3985b3d63233bd4e1ac2409839623c90f))
+
+## [1.9.1](https://github.com/fabkho/libellus/compare/v1.9.0...v1.9.1) (2026-10-10)
+
+
+### Fixes
+
+* **web:** a failed reader prefetch must not break Read now ([3179f1f](https://github.com/fabkho/libellus/commit/3179f1f9e8a1c4529d0d2b31f1d9334d9beb5cf2))
+* **web:** More from the author shows the author's newest works ([f8e5529](https://github.com/fabkho/libellus/commit/f8e5529c4aec98fc893162ca7b6c575f6ea45298))
+* **web:** More from the author shows the author's newest works ([a1a4a44](https://github.com/fabkho/libellus/commit/a1a4a44f614eac2416686325f9236ced9d858fc7))
+
+
+### Performance
+
+* **web:** bundle trims (F1 sign-in guard, F2 vitals chunk, F4 Options API) ([ea340c9](https://github.com/fabkho/libellus/commit/ea340c92be92e12cc1ecfd7b9bd009fb706818d9))
+* **web:** ebook reader out of the precache, fetched ahead for members with ebooks ([6949cc4](https://github.com/fabkho/libellus/commit/6949cc441b4309d1d5e57382f6b3d5e70c34fcc7))
+* **web:** lazy images audited, message compiler dropped, list measurement scripts ([63dd8b9](https://github.com/fabkho/libellus/commit/63dd8b94b21ecdd238b78021a5ea9dcc8366a04e))
+* **web:** take the ebook reader out of the precache and fetch it ahead for members who use ebooks ([d4a9a37](https://github.com/fabkho/libellus/commit/d4a9a37f483317e125c03df762ba2b02aeb9ad9c))
+
+## [1.9.0](https://github.com/fabkho/libellus/compare/v1.8.0...v1.9.0) (2026-10-10)
+
+
+### Features
+
+* **collections:** bookends instead of a bare rectangle in the Library's Collections row ([d98d3a3](https://github.com/fabkho/libellus/commit/d98d3a358a36d557cf976c0596333036d63bb141))
+* **collections:** bookends instead of a bare rectangle in the Library's Collections row ([565e95a](https://github.com/fabkho/libellus/commit/565e95a95cb72ccf2387bb0fbf8b999455ca2161))
+
+
+### Fixes
+
+* **library:** read every row of the Library past PostgREST's 1,000-row cap ([a59481c](https://github.com/fabkho/libellus/commit/a59481ca03218c1d2b522c9d1f13ad47e256da19))
+
+
+### Performance
+
+* **client:** Profile, genres and Collections list are not refetched on a quick revisit ([93ee2c4](https://github.com/fabkho/libellus/commit/93ee2c430ed6e5de47c378cf59f4b8223c6754ed))
+* page the Library past 1,000 rows, gate Profile/genres/Collections refetches (F4) ([8d890db](https://github.com/fabkho/libellus/commit/8d890db450245fc110e49fce69d5f8f3c1027b4e))
+
+## [1.8.0](https://github.com/fabkho/libellus/compare/v1.7.0...v1.8.0) (2026-10-10)
+
+
+### Features
+
+* **book:** the hero cover leans under the finger ([8e75565](https://github.com/fabkho/libellus/commit/8e755659049703fe7622fb0ebf937fd1fe6f44ba))
+
+
+### Fixes
+
+* **library:** load the Library one read at a time ([c30d65b](https://github.com/fabkho/libellus/commit/c30d65b3356c39d3a9bfab0b17bb91b8174ad8b6))
+* **library:** one Library read at a time; measure the flight over many round-trips (A10) ([fa5a338](https://github.com/fabkho/libellus/commit/fa5a338ab76c748a8b405532b5eb64fe84dd0076))
+
+
+### Performance
+
+* **db:** Home's two series lists from one call (F5) ([e44577f](https://github.com/fabkho/libellus/commit/e44577f9a5d63c99aaec535103bc125d51657557))
+* Library payload and refetch (F4), one call for Home's series (F5) ([f278d3c](https://github.com/fabkho/libellus/commit/f278d3c2cfb1240e498ee1cbd7bb4f4d6ce29608))
+* **web:** decode a cover's thumbhash once, not on every mount ([d763860](https://github.com/fabkho/libellus/commit/d763860ef75ffa099d1a1f0ff376d4d1fafa3a57))
+* **web:** leave Supabase Realtime out of the build ([e76fb96](https://github.com/fabkho/libellus/commit/e76fb9629efed7467bb78fbf7a6f62940b2c2b97))
+* **web:** no prefetch links for the route chunks ([4c117ec](https://github.com/fabkho/libellus/commit/4c117eca18d65c9511c64e1934edca299037f910))
+* **web:** startup bundle and boot fixes (Realtime stub, thumbhash cache, no prefetch, grain) ([3e7c17a](https://github.com/fabkho/libellus/commit/3e7c17ac0c2f2dcf6968d345b6cc4719aad08ee3))
+* **web:** the film grain is an inline SVG, so it is not the LCP element ([173d625](https://github.com/fabkho/libellus/commit/173d625bdd2127ce45f58db0418ee3f363896d49))
+* **web:** the lists leave the description out and a fresh Library is not read again (F4) ([7db03ca](https://github.com/fabkho/libellus/commit/7db03ca350936eaf74a6670bd35ac65079a86636))
+
+## [1.7.0](https://github.com/fabkho/libellus/compare/v1.6.0...v1.7.0) (2026-10-10)
+
+
+### Features
+
+* **covers:** offer Apple covers at their neighbouring sizes with srcset and sizes ([d52d40d](https://github.com/fabkho/libellus/commit/d52d40d2d100e7b24f2fb1b0fa93088da2b3b0f8))
+* **goodreads:** rate Books without an ISBN by title and author ([5ceff67](https://github.com/fabkho/libellus/commit/5ceff67936233a6950860d7a833f46b50eb9bfbe))
+* **goodreads:** rate Books without an ISBN by title and author, misses kept 7 days ([275b601](https://github.com/fabkho/libellus/commit/275b6018a8768ff72885e162b43b518392e580d7))
+* **social:** keyset paging for People's Following and Followers ([57a60d7](https://github.com/fabkho/libellus/commit/57a60d7a23ef634fe4fd0a283045cfc659aa1818))
+* **social:** People loads the next page when the end of a list shows ([6880ea9](https://github.com/fabkho/libellus/commit/6880ea96bbf2f9a122cb7f63727ff31eec9285de))
+* **social:** the member profile's See all say how many, as the shelf's does ([5461a3e](https://github.com/fabkho/libellus/commit/5461a3e5b9440245cf6e30f9afe7f9d138895321))
+* **social:** v1.1 — HTTP codes, People paging, page-error guard, polish ([67545bb](https://github.com/fabkho/libellus/commit/67545bb74752c8fa47751262ace81b00e9c46726))
+* **web:** author page lists standalone and other works newest first ([22c87b6](https://github.com/fabkho/libellus/commit/22c87b68266042b532fc2d28ae65eb22acaf2a8a))
+* **web:** author works newest first; muted series open in place on Home ([65335c6](https://github.com/fabkho/libellus/commit/65335c69349f55bb8d3d4bc3165d5e594c74883d))
+* **web:** Change edition for a Book that is not in the Library ([678d45a](https://github.com/fabkho/libellus/commit/678d45a072fd4bada7b013e733b370e9b8d56cdd))
+* **web:** Change edition for a Book that is not in the Library ([b96c42a](https://github.com/fabkho/libellus/commit/b96c42a21cdba5dcb6db280d609932407c69ea51))
+* **web:** Home's series pill says how many series are open and opens the sheet ([004a4fe](https://github.com/fabkho/libellus/commit/004a4fe08ec0552217fa06685b78c884b2c03eae))
+
+
+### Fixes
+
+* **covers:** a cover in view is not replaced by another artwork unless it fails ([0157deb](https://github.com/fabkho/libellus/commit/0157deb4f34819b2ce6dc52ed9abe8ba00d53fdf))
+* **social:** raise the named refusals with PostgREST's HTTP codes ([f9ef6d6](https://github.com/fabkho/libellus/commit/f9ef6d67b83c559d5fe4954a7df554f747f10c87))
+* **ui:** a sheet's fallback field focus waits for the panel to stop moving ([1a2c9d2](https://github.com/fabkho/libellus/commit/1a2c9d26148b8c62c837acacfff7c2650b143f58))
+* **ui:** dim the Android status bar with a sheet's scrim ([a8b6982](https://github.com/fabkho/libellus/commit/a8b69821843b3e18c959ca8fb63a4d4f5ac8ba18))
+* **ui:** dim the status bar with a sheet's scrim on Android ([fad6570](https://github.com/fabkho/libellus/commit/fad657065f7017dbaaf80d8e8027810252f69787))
+* **web:** a sheet's field takes focus once the sheet has finished rising ([23efb45](https://github.com/fabkho/libellus/commit/23efb451e1827544d810d50fe0a3208bc8060db3))
+* **web:** a sheet's field takes focus once the sheet has finished rising ([c497cb5](https://github.com/fabkho/libellus/commit/c497cb5b094bc5b23380c9b53a132d77c3bff927))
+* **web:** a two-digit batch in the feed keeps to one line at 390 px ([b3a0837](https://github.com/fabkho/libellus/commit/b3a0837512f24425ca338feea3230961a58caa68))
+* **web:** drop the format row's hint from Change edition ([7acb421](https://github.com/fabkho/libellus/commit/7acb421d2ebf1a3a23e737a591c366e586cbe00d))
+* **web:** sheet focus waits for the rise, and the status-bar dim reads 8-digit hex ([4379b39](https://github.com/fabkho/libellus/commit/4379b391928f9afe31c048bf64be40e1294427f9))
+* **web:** the status-bar dim reads the minifier's 8-digit hex ([3443d00](https://github.com/fabkho/libellus/commit/3443d00ef6c4d044957dda0ee3a69de96e971483))
+
+
+### Performance
+
+* **covers:** ready the covers of More from the author before their rows are seen ([dec897f](https://github.com/fabkho/libellus/commit/dec897f78d7a26325bdc6899b3a53ea4af87235b))
+* **covers:** srcset, covers that stay, ready covers in More from the author ([cdf040d](https://github.com/fabkho/libellus/commit/cdf040d43feb7bcd8d82a17914e2fa3e20fc061d))
+* **db:** import title index, social FK indexes, cron log purge, muted list shortcut ([ef2c8af](https://github.com/fabkho/libellus/commit/ef2c8af55e18bf9a86d016c152ba72c26bb16513))
+* **db:** index blocks.blocked_id and follow_link_views.member_id ([ae167d4](https://github.com/fabkho/libellus/commit/ae167d4c756dcddad923d32e4cbba5cb08e0b90b))
+* **db:** index work_title_key(title) for import_books' title match ([7d2c915](https://github.com/fabkho/libellus/commit/7d2c91558ac7ac2ab3a643d0b30c83b79cdabb82))
+* **db:** muted_series_list skips the series chain when nothing is muted ([e0b0f74](https://github.com/fabkho/libellus/commit/e0b0f7466f375934312cf8f001755efa28bada32))
+* **db:** purge pg_cron's run log after 7 days ([ca9af6e](https://github.com/fabkho/libellus/commit/ca9af6e1d20a9d6adf7a59683d7008477aad6e41))
+* **db:** search_books matches against stored, indexed words ([c882b5b](https://github.com/fabkho/libellus/commit/c882b5bdd39181b9aec8b7d8a02c0f6a9fbde9cf))
+* **db:** search_books uses an index (F1): definer function over stored search words ([c06af30](https://github.com/fabkho/libellus/commit/c06af30f68403ad80e9b2eff59b3eb57e080df2a))
+
+## [1.6.0](https://github.com/fabkho/libellus/compare/v1.5.1...v1.6.0) (2026-10-09)
+
+
+### Features
+
+* **book:** more from the author ([3e3eff1](https://github.com/fabkho/libellus/commit/3e3eff13f2a370459113e8d3c99e26d1b7e449fd))
+* **book:** more from the author, a first section below About ([c526ae7](https://github.com/fabkho/libellus/commit/c526ae710fd7411ceba7c5c939698cf1c8ef1c6a))
+* **book:** pick an author's other works for the Book page ([1f34585](https://github.com/fabkho/libellus/commit/1f345854e34dca207c7eb4b5b201911adb55076e))
+* **db:** following, requests and blocking (social v1, D2) ([f4669c2](https://github.com/fabkho/libellus/commit/f4669c22a6ee9d5eb8aa60cca5fd6e7c44de0d5c))
+* **db:** mute a started series ([fda549c](https://github.com/fabkho/libellus/commit/fda549cddd61b7fe9f3a31c953a24025dbd22579))
+* **db:** social settings, follows and blocks (social v1, D1) ([1d9232b](https://github.com/fabkho/libellus/commit/1d9232b1c9d1eb8499913e0d4685cd9d631c5396))
+* **db:** the activity a member's reading writes (social v1, D3) ([4418245](https://github.com/fabkho/libellus/commit/4418245b19f1a82fa91c12f8c7fa73a4df0946d7))
+* **db:** what a member reads of others (social v1, D4) ([f6f9f2e](https://github.com/fabkho/libellus/commit/f6f9f2e9411260b0984a4e59a08aa2cd4ccc18fe))
+* **home:** mute a started series ([6332b31](https://github.com/fabkho/libellus/commit/6332b31a520a896ac445a462778ead9b4a13df42))
+* **home:** mute a started series from its row ([0009a15](https://github.com/fabkho/libellus/commit/0009a15499be81835d7efffe21b4646789c80bcb))
+* **social:** a follow link opens where it should, signed in or not (social v1, U2) ([f24707e](https://github.com/fabkho/libellus/commit/f24707ef0947641962fccb99e13d66d425fbb54f))
+* **social:** a follow request waits at the top of Your circle on Home ([fa4b4ef](https://github.com/fabkho/libellus/commit/fa4b4efdd6ca2263deefa767873c58476d6d96da))
+* **social:** a lamp dot on the avatar while a follow request waits (social v1, U3) ([5bc60e5](https://github.com/fabkho/libellus/commit/5bc60e57eb8775d3c7b25365c5b9002c1a88b087))
+* **social:** a member's figures, from the same rows as one's own (social v1, W3) ([1e5b872](https://github.com/fabkho/libellus/commit/1e5b872ba8b808cca8c852f7512c21974f09c74d))
+* **social:** a member's profile and her year in review (social v1, U4) ([fa07f41](https://github.com/fabkho/libellus/commit/fa07f41442824eb2682ad40ae27dda46af9b94cb))
+* **social:** her figures follow her Ratings switch (social v1, U4) ([6c5455c](https://github.com/fabkho/libellus/commit/6c5455c685400e8d96fa32af31c177eb4bfa61e5))
+* **social:** her privacy and her follow link on the Profile (social v1, U1) ([c472803](https://github.com/fabkho/libellus/commit/c47280302757792d0b2a77371884d92a3099fa34))
+* **social:** hide a Book from followers in its options (social v1, U6) ([0004a8d](https://github.com/fabkho/libellus/commit/0004a8d96f47d1e2744a1f6cd79974a82f30bae5))
+* **social:** hide a Book from followers, offline too (social v1, W3) ([ca082f4](https://github.com/fabkho/libellus/commit/ca082f4580c9fb4d291353bb5efea29b62df14f2))
+* **social:** members' photos in their avatars, and the follow link from the empty feed ([80f4e95](https://github.com/fabkho/libellus/commit/80f4e95719e879333c032725ffb6109cbf805fad))
+* **social:** People, follow requests and blocking (social v1, U3) ([9a48da6](https://github.com/fabkho/libellus/commit/9a48da6fd2304194524bc0a07137e64c5a3b2825))
+* **social:** Recently finished shows the newest 3, See all opens the rest in a sheet ([4fecf20](https://github.com/fabkho/libellus/commit/4fecf20e35cf9d9cb1029abcccb7207a2cf24019))
+* **social:** social v1 — follow friends, see their reading ([02a900c](https://github.com/fabkho/libellus/commit/02a900c6de93b6eb81a2a6279bf3f3c95b741f63))
+* **social:** the ⋯ on a member's profile opens the member sheet ([999291d](https://github.com/fabkho/libellus/commit/999291d38a67ab1f3bb84293dce50caeb0f4f76e))
+* **social:** the blocks of a member's profile (social v1, U4) ([d370edf](https://github.com/fabkho/libellus/commit/d370edfd39b9e43a3748466678a53b452dbd74bc))
+* **social:** the feed page, its rows, batches and sheet (social v1, U5) ([8099e4c](https://github.com/fabkho/libellus/commit/8099e4c42334cbc2eb09882fffe70a7743176c00))
+* **social:** the feed's repository and its batching (social v1, W2) ([ea2dc8e](https://github.com/fabkho/libellus/commit/ea2dc8e3ff36fbdac1868d8465917c5f2ed357fa))
+* **social:** the feed's store and what the screens decide (social v1, U5) ([1d10f57](https://github.com/fabkho/libellus/commit/1d10f578fa2b61940f4b2d68fd7f8a3534759935))
+* **social:** the photos of the people in her circle (social v1, U7) ([b342e5a](https://github.com/fabkho/libellus/commit/b342e5a6260449bfb1c742d8446e8ad1a0786f6c))
+* **social:** the repository of following (social v1, W1) ([54db98e](https://github.com/fabkho/libellus/commit/54db98e1f4434e3c919aeb3b77b7cdebe5330498))
+* **social:** the shapes the social repositories share ([c7546a9](https://github.com/fabkho/libellus/commit/c7546a9db925cb31e5986f580fe34225f21838c6))
+* **social:** the store and rules behind a member's profile (social v1, U4) ([82015e1](https://github.com/fabkho/libellus/commit/82015e18e92ac3fe76d0bf91cee386bc800ef76f))
+* **social:** the store of following and the Friends rows' rules (social v1, U1) ([91f282e](https://github.com/fabkho/libellus/commit/91f282e88f6878cd65f5d71f2660676d22c7e1de))
+* **social:** the words of following and the feed (social v1, W4) ([847acbd](https://github.com/fabkho/libellus/commit/847acbd326a811bd1feddd20552fd80fd8027e0b))
+* **social:** what People and the member sheet decide (social v1, U3) ([d6d462a](https://github.com/fabkho/libellus/commit/d6d462a4b98000701d82cc5e344d18301e36d232))
+* **social:** Your circle as the first row of the Profile's Friends block ([c603f87](https://github.com/fabkho/libellus/commit/c603f87a57a613da4fe2d53e3f1daa44cef2ec0f))
+* **social:** Your circle on Home (social v1, U5) ([faf6a07](https://github.com/fabkho/libellus/commit/faf6a072f452d20f6dc2c53e3ae60c76620f117e))
+* **vitals:** build long animation frame reports ([db8884e](https://github.com/fabkho/libellus/commit/db8884e3e996b6786e962cbf4d03c7745610f17d))
+* **vitals:** observe long animation frames once idle ([be9861a](https://github.com/fabkho/libellus/commit/be9861abb85708cfcfc1251a92492bb810798c28))
+* **vitals:** report long animation frames ([0b7f27c](https://github.com/fabkho/libellus/commit/0b7f27c1e421e0bb5b6ae6096b056a959350e393))
+* **web:** decide Your circle's card and rows in a pure function ([0d177c6](https://github.com/fabkho/libellus/commit/0d177c690133b6b801afe6b578d8aa6b0d32916a))
+* **web:** link Your circle's title to the feed, and show it on an empty Home ([74bac7f](https://github.com/fabkho/libellus/commit/74bac7fec664679eda6700ad70dcc29dc64828cc))
+* **web:** mute and unmute a series in the series repository and store ([478ec20](https://github.com/fabkho/libellus/commit/478ec201928426e583c20a4b258e01d5580e1852))
+* **web:** Your circle on Home as a request, a finished-book card and one row per member ([c6154d3](https://github.com/fabkho/libellus/commit/c6154d3c5404c33f966421f7c11bd5a8e20a8371))
+
+
+### Fixes
+
+* **book:** late series line and Goodreads rating wait for the cover's flight ([d2f81a9](https://github.com/fabkho/libellus/commit/d2f81a956e00e4994609c7dee4b6c92b5dc044a4))
+* **book:** late series line and Goodreads rating wait for the cover's flight ([28b900e](https://github.com/fabkho/libellus/commit/28b900e269b51ecf446120820cc9d68835853705))
+* **db:** close what gate 1 found in the social migrations (social v1, D5) ([ed59977](https://github.com/fabkho/libellus/commit/ed599777d9f746f73b9566d31d94012af12f04dc))
+* **db:** S1 security round, covers of Catalogue Books, follow_target lock, follow before limits ([0bd6698](https://github.com/fabkho/libellus/commit/0bd669830323c4bb5bb5b39e95e3458de91b017a))
+* **db:** social gate 2 — typed covers, follow/block race, avatar folder, reviewed rows ([f3e3d7b](https://github.com/fabkho/libellus/commit/f3e3d7b5194604a37b585384a9d94ac5ef5e04f3))
+* **errors:** a follow link with a trailing slash goes in by its pattern too ([1049552](https://github.com/fabkho/libellus/commit/10495527ae79e59099c60c8652d2a16bae8c18d6))
+* **errors:** report a member's page and a follow link by their pattern (social v1, W5) ([d999ee4](https://github.com/fabkho/libellus/commit/d999ee4082d488aff5ca99d85e8569ba54e71079))
+* **social:** setHidden is the Library store's own function, not inside setReadAs ([e6e91d8](https://github.com/fabkho/libellus/commit/e6e91d87f7369341c2b6b185501d478994b5a255))
+* **vitals:** an interaction frame is one that handled an event ([e1f87a9](https://github.com/fabkho/libellus/commit/e1f87a95f9ed4ece17f112c2dfdb4efa57966d87))
+* **web:** a call that got no answer reads as offline in Following and the feed ([a284c15](https://github.com/fabkho/libellus/commit/a284c159c959931e5b9506af5300aed46c6e74bd))
+* **web:** a feed row's member and title links reach 44 px ([dd5ee51](https://github.com/fabkho/libellus/commit/dd5ee51cd5ddd6699a52f998d1a3692659d91181))
+* **web:** a figures read that failed no longer looks like a dead link ([12f85f6](https://github.com/fabkho/libellus/commit/12f85f6a630792a14886cf3dd34dd139b0949057))
+* **web:** a follower cannot open another member's Manual book from her figures ([d2d6163](https://github.com/fabkho/libellus/commit/d2d616339c6407464c9386e959e2d4b64382af7d))
+* **web:** a people icon in the set, used by the feed's button and the Profile's row ([785a013](https://github.com/fabkho/libellus/commit/785a013bc249c255f1884bf3e66147cfa6ca02c5))
+* **web:** a refresh keeps older feed entries only of the people she follows now ([e5788db](https://github.com/fabkho/libellus/commit/e5788dbdb0eb4b94f30b4232409174547381f473))
+* **web:** a refresh no longer throws when older entries are kept ([9550595](https://github.com/fabkho/libellus/commit/95505954556a092e8bc2cfa19d53aa6f2d652b83))
+* **web:** a relationship change tells the feed and the member's profile ([eab0b7b](https://github.com/fabkho/libellus/commit/eab0b7b2b0a4407b7695b7a141d238da15444fbc))
+* **web:** Accept, Decline and Unblock say whose they are ([0eaf8bc](https://github.com/fabkho/libellus/commit/0eaf8bc5cc4b4e68e065836137ee6e4da7f4d03a))
+* **web:** an open member profile reads again when the app is back online ([a6952a3](https://github.com/fabkho/libellus/commit/a6952a3d8219c20fd4150ad62a1c7512858e91c2))
+* **web:** copy for the hide hint, the ⋯ notes, the batch title and the load error ([217b1da](https://github.com/fabkho/libellus/commit/217b1da0db2af84aefffe7a7b2210009459740a9))
+* **web:** follow link, Privacy switches and Home's friend row read better ([29751c6](https://github.com/fabkho/libellus/commit/29751c68efb9089c36e8a4faf662bf74ed3ac569))
+* **web:** Home's Accept and Decline say when the answer was refused ([29c856c](https://github.com/fabkho/libellus/commit/29c856c3d2f7375fda7ea2fa5ff652e2c822fb9c))
+* **web:** Home's cover is drawn from the lg file; the request's ✕ is a pill button ([0f78ea3](https://github.com/fabkho/libellus/commit/0f78ea3c13ec8f004a8bdd2bb3169a73e2833842))
+* **web:** light a coverless card by its cloth, one phrase for two events of a kind ([4c59db0](https://github.com/fabkho/libellus/commit/4c59db05317bed90a9f595e60c9a8144e520f9eb))
+* **web:** member pages have an h1 in every state, See all is named, names are trimmed ([70033f9](https://github.com/fabkho/libellus/commit/70033f99486602375714d358dc56b82ffb05fc8f))
+* **web:** More hands focus to the review it unfolds ([a3236ba](https://github.com/fabkho/libellus/commit/a3236bafa0aa8821fb8c8ceaf9e572f1b7454490))
+* **web:** nothing of a member stays on the device after block, unfollow or remove ([89b463e](https://github.com/fabkho/libellus/commit/89b463e3d6bc5977bd8f2bc21c5e8bf4d8894739))
+* **web:** offline feed, follow link and Blocked row say so ([a9ffcaa](https://github.com/fabkho/libellus/commit/a9ffcaa742daaf93780fe7bbbb08d6e8ac8e39a2))
+* **web:** one link per Book on a member's profile, and test ids on them ([199c256](https://github.com/fabkho/libellus/commit/199c2563078a68184794b6942ad9610b06466887))
+* **web:** People and Blocked use the lists' hairline; Blocked uses the shared parts ([4759958](https://github.com/fabkho/libellus/commit/475995845a57b16630a586b969896e24c8ba979d))
+* **web:** People says it is offline and every unread part reads again on reconnect ([51bd501](https://github.com/fabkho/libellus/commit/51bd50188f4a63732fe126410cb45a78edbd7b84))
+* **web:** People, a member and Blocked say what an action did and keep focus ([2c7a175](https://github.com/fabkho/libellus/commit/2c7a17502cd57662421c759ceef8eefbedf69c93))
+* **web:** read again once back online after a write that got no answer ([89c9c43](https://github.com/fabkho/libellus/commit/89c9c43994d047965b396167651ea0f9d239a8cf))
+* **web:** the batch sheet's rows are light and the batch row's text column lines up ([9ab40d9](https://github.com/fabkho/libellus/commit/9ab40d9ffd92973c7bcb51dd470cee5eaff567f9))
+* **web:** the error log scrubs any member id and follow token, wherever it stands ([d9240ac](https://github.com/fabkho/libellus/commit/d9240acc970bf239f93aa937481f6e45bf19165a))
+* **web:** the feed and People hold their place while they load ([8b771af](https://github.com/fabkho/libellus/commit/8b771af5b01bfde531e7d1f02b1fc38aff54e0cd))
+* **web:** the feed shows a review once ([a381f9f](https://github.com/fabkho/libellus/commit/a381f9fb4b660c55ce32b1e25efab536e63ff6dc))
+* **web:** the feed's load-more observer arms again on reconnect ([36e2db4](https://github.com/fabkho/libellus/commit/36e2db4e6626025a77d9a0b35de06d5c9ac13588))
+* **web:** the hide switch says when its call was refused, and takes one call at a time ([38cc786](https://github.com/fabkho/libellus/commit/38cc7869fd30eec85df41e9bb1e0e42ede9caa18))
+
+## [1.5.1](https://github.com/fabkho/libellus/compare/v1.5.0...v1.5.1) (2026-10-08)
+
+
+### Fixes
+
+* **e2e:** read the cover's flight time off its animation, not off sampled frames ([5f7b838](https://github.com/fabkho/libellus/commit/5f7b8383c1dc9571fae8579ab07dbd8b321181b7))
+* **e2e:** read the cover's flight time off its animation, not off sampled frames ([27b1401](https://github.com/fabkho/libellus/commit/27b1401ea35b0638a1d7da82eecc8508ee7c3366))
+
+## [1.5.0](https://github.com/fabkho/libellus/compare/v1.4.0...v1.5.0) (2026-10-08)
+
+
+### Features
+
+* **book:** a calmer action area — one action per state, Finish and DNF in Update progress ([db532bb](https://github.com/fabkho/libellus/commit/db532bbd3827f573ec0e931e7cd6b49274087a48))
+* **reader:** say what the Justify switch does ([a91aa02](https://github.com/fabkho/libellus/commit/a91aa021ce7da9f2ac10e9e6ad252b12e74818f5))
+
+
+### Fixes
+
+* **flight:** land on a Book page still loading, fly back into the tapped cover, no flash when turned around ([1af7026](https://github.com/fabkho/libellus/commit/1af702647a164d8958e8e2068f81646dff49d1c8))
+* **tabbar:** do not hide the bar on a page only a little longer than the screen ([9fe6b66](https://github.com/fabkho/libellus/commit/9fe6b667374d96bc64c4421254323ee0932e0375))
+* **tabbar:** keep the bar on a page only a little longer than the screen ([80b2c79](https://github.com/fabkho/libellus/commit/80b2c7911137b4af94a8c4fbbd9eb7f899dcf8af))
+
+## [1.4.0](https://github.com/fabkho/libellus/compare/v1.3.0...v1.4.0) (2026-10-08)
+
+
+### Features
+
+* **data:** add a Book optimistically through the outbox ([9b15b88](https://github.com/fabkho/libellus/commit/9b15b88784d57c572f2e1a8f68468f04443a8b3c))
+* **db:** started_series, the series she has started and not finished ([9b4e81a](https://github.com/fabkho/libellus/commit/9b4e81a01c429e0463ea1608f7e525d0c7d6e163))
+* **edition:** changing edition presets Read as from the new edition's format ([61bf2a6](https://github.com/fabkho/libellus/commit/61bf2a665f467cb81c7fca03af8450c6a17551be))
+* **edition:** the editions move in as the sources answer ([e7b3111](https://github.com/fabkho/libellus/commit/e7b3111e61e2bf926bfe3ccc96bc8ea968b2c358))
+* **edition:** the editions move in, the format row says what it does, Read as follows the edition ([a5d35d1](https://github.com/fabkho/libellus/commit/a5d35d161ef43ce4cf2378130190205186a484db))
+* **edition:** the format row says what it does and goes along with the change ([80509b5](https://github.com/fabkho/libellus/commit/80509b54e8b02015bd9b004af8312d7eae6d7b3f))
+* **home:** the data layer for the series she has started ([d81cfc4](https://github.com/fabkho/libellus/commit/d81cfc42e062f1964d8f03c939d094108d01bdfc))
+* **home:** the series she has started, five at a time, with a See more sheet ([674e7d1](https://github.com/fabkho/libellus/commit/674e7d1a39d7be66defd6e543fda253c608a86a7))
+* **home:** the series she has started, five at a time, with a See more sheet ([dd38584](https://github.com/fabkho/libellus/commit/dd38584c833924718d3c26e6f77e2e8b9e028dc7))
+* **profile:** open the books read on a day from the Reading days ([b61ef57](https://github.com/fabkho/libellus/commit/b61ef57b22bde45c807ca907fa6b6ea88c3b3878))
+* **profile:** open the books read on a day from the Reading days ([c416ec5](https://github.com/fabkho/libellus/commit/c416ec586ff47fbb7598b55933fa27b035c1991a))
+* **profile:** open the books without a page count from the Pages card ([c32fc89](https://github.com/fabkho/libellus/commit/c32fc8910e62a2fcec16a7e2a2c5bedc89994c5d))
+* **profile:** open the books without a page count from the Pages card ([3845e95](https://github.com/fabkho/libellus/commit/3845e959ec3548d6da54d3944c738b954695f7e2))
+* **search:** make adding from the palette optimistic ([203fada](https://github.com/fabkho/libellus/commit/203fada485c7300ba7b1cffec214c05caa986010))
+* **search:** make the palette's add optimistic ([399add6](https://github.com/fabkho/libellus/commit/399add6773acfc7ba1919201606a787a7baeec0a))
+* **stats:** name the reads each reading day was read in ([25eb798](https://github.com/fabkho/libellus/commit/25eb79864888e7694d355ec19e059ffb6281b58b))
+* **stats:** read the books without a page count ([2e15d1d](https://github.com/fabkho/libellus/commit/2e15d1db78e993ecee074b48442b4d10ef06282f))
+
+
+### Fixes
+
+* **db:** give the change-edition read-as migration its own version ([1e0492b](https://github.com/fabkho/libellus/commit/1e0492bc12ee79a202b49347e161fcaab3215cf3))
+* **db:** give the change-edition read-as migration its own version ([7a4c552](https://github.com/fabkho/libellus/commit/7a4c552d08695c7424474340dcc2bde66616143e))
+
+## [1.3.0](https://github.com/fabkho/libellus/compare/v1.2.0...v1.3.0) (2026-10-08)
+
+
+### Features
+
+* **email:** a mail an edge function sends can be generated from the shell ([0a509c6](https://github.com/fabkho/libellus/commit/0a509c665014e055ddd0941db789ddab49201e41))
+* **email:** design the sign-in code mail in the app's look ([ea99e78](https://github.com/fabkho/libellus/commit/ea99e7822cd735a66c8e05ee3050b4ad2d4778b7))
+* **email:** generate the sign-in mail from the design tokens ([4047185](https://github.com/fabkho/libellus/commit/404718569ef03f1bddf01da6dd09cd34d98eaab1))
+* **email:** preview the mail light and dark with Playwright ([3b8073e](https://github.com/fabkho/libellus/commit/3b8073e311e2a4aefcf65c368e91049ac1ba2396))
+* **waitlist:** an Invite button on the owner's Waitlist ([2a0bc4a](https://github.com/fabkho/libellus/commit/2a0bc4a0daba6c6329bef904445e6c18ecd1f41c))
+* **waitlist:** an Invite button that mails a waitlist entry its code ([429ab19](https://github.com/fabkho/libellus/commit/429ab1962b0be07f1dde834fc239c192bd60cbfe))
+* **waitlist:** an invite code per waitlist entry for the owner ([114f0e9](https://github.com/fabkho/libellus/commit/114f0e9e88f1224ec78af760f43be51ec5124535))
+* **waitlist:** invite an entry from the data layer ([80bfe66](https://github.com/fabkho/libellus/commit/80bfe668c78f65af449cba5c715b6f770eadad6f))
+* **waitlist:** the invite mail in Libellus' design ([f84f2a0](https://github.com/fabkho/libellus/commit/f84f2a097d18ca1d3cf1c580a3583564a9ba764a))
+* **waitlist:** the waitlist-invite edge function mails an entry its code ([eac589b](https://github.com/fabkho/libellus/commit/eac589bbd95fb0d5809bf4338d4b7f420c4f060f))
+
+
+### Fixes
+
+* **e2e:** keep Home's greeting out of the avatar flight's ring probe ([28121cd](https://github.com/fabkho/libellus/commit/28121cdff13e7d9f014f4120a206de0d2c647a0f))
+* **e2e:** keep Home's greeting out of the avatar flight's ring probe ([a8611be](https://github.com/fabkho/libellus/commit/a8611beb1a948b8d7fc34277cf81e175b34eebd9))
+* **e2e:** open an address only from a page the app has finished starting ([a50e28e](https://github.com/fabkho/libellus/commit/a50e28e89fe26bd1a0d4acf49382dce8435ac454))
+
 ## [1.2.0](https://github.com/fabkho/libellus/compare/v1.1.0...v1.2.0) (2026-10-07)
 
 

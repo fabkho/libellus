@@ -87,7 +87,7 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
 
           <section v-if="year" aria-labelledby="reading-year" class="flex flex-col gap-md" data-testid="readingPage.year">
             <h2 id="reading-year" class="eyebrow">{{ t('readingPage.year', { year: year.year }) }}</h2>
-            <ProfileFigures :figures="year" />
+            <ProfileFigures still :figures="year" />
             <ProfileColumns still :columns="columns" :lit="year.year === thisYear ? thisMonth : null" testid="readingPage.months" />
           </section>
 
@@ -98,13 +98,14 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
 
           <section v-if="finished.length" aria-labelledby="reading-finished" class="flex flex-col gap-sm" data-testid="readingPage.finishedSection">
             <h2 id="reading-finished" class="eyebrow">{{ t('readingPage.finished') }}</h2>
-            <ReadingFinishedList :items="finished" :token="token" />
+            <ReadingFinishedList :items="finished" :token="token" :name="name" />
           </section>
 
           <section v-if="regal || shelfBooks.length" aria-labelledby="reading-shelf" class="flex flex-col gap-md" data-testid="readingPage.shelf">
             <h2 id="reading-shelf" class="eyebrow">{{ name ? t('readingPage.shelf', { name }) : t('readingPage.shelfNone') }}</h2>
             <ShelfRowCard
               v-if="regal"
+              published
               :limit="SHELF_ROW_LIMIT"
               :label="name ? t('readingPage.shelfRowLabel', { name }) : t('readingPage.shelfRowLabelNone')"
               data-testid="readingPage.shelfRow"

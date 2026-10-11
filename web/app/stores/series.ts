@@ -3,14 +3,18 @@ import {
   createSeries,
   type BookSeries,
   type EnrichErrorCode,
-  type NextInSeries,
   type SeriesCorrection,
   type SeriesInfo,
   type SeriesRepository,
+  type StartedSeries,
 } from '~/data/enrich'
 import { LIMITS, remembered } from '~/data/enrich/device'
 import { useEnrichCopyStore } from '~/stores/enrichCopy'
 import { useSessionStore } from '~/stores/session'
+import { FRESH_MS } from '~/utils/fresh'
+
+/** How many started series Home asks for: all of them, for its sheet. */
+const STARTED_LIMIT = 100
 
 /** What the series sheet shows: a series of the Book, and which Book it was opened from. */
 export type SeriesSheet = { seriesId: string; bookId: string }
@@ -20,8 +24,9 @@ export type SeriesEditing = { entryId: string; bookId: string }
 /**
  * Series (issue #167): the Book page's series line (`book_series_info`), the
  * series sheet with its works and her statuses (`series_works`), Home's "Next
- * in your series" (`next_in_series`) and her own correction of a Book's
- * series and position (set, "in no series", back to the suggested one). What
+ * in your series" (`started_series`: the series she has started and not finished) and her own correction of a Book's
+ * series and position (set, "in no series", back to the suggested one), and
+ * muting a whole series (online only, like her correction). What
  * was read last is kept on the device (stores/enrichCopy.ts), so the line, the
  * sheet and Home's row show offline; corrections need a connection (the
  * repository refuses them offline, the sheet says so).
@@ -84,16 +89,68 @@ export const useSeriesStore = defineStore('series', () => {
 
   // ------------------------------------------------- next in your series
 
-  const next = computed<NextInSeries[]>(() => copy.data.next ?? [])
+  /** The series she has started and not finished, latest activity first, as this device last knew them. */
+  const started = computed<StartedSeries[]>(() => copy.data.started ?? [])
+  /** The started series she muted, as this device last knew them. */
+  const muted = computed<StartedSeries[]>(() => copy.data.muted ?? [])
 
-  async function loadNext() {
+  /** When Home's lists were asked for (`performance.now()`), by the last answer. */
+  let startedAt = -Infinity
+  let startedRunning: Promise<void> | null = null
+
+  /**
+   * Home's "Next in your series" and its muted ones: one call, one evaluation on the server
+   * (data/enrich/series.ts, `startedAndMuted`). `ifStale`: not again while the last answer is
+   * fresh (a visit to Home); a mute, a correction or a Book started or finished asks without it.
+   */
+  function loadStarted({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
+    if (ifStale && (startedRunning || performance.now() - startedAt < FRESH_MS)) return startedRunning ?? Promise.resolve()
+    const run: Promise<void> = fetchStarted().finally(() => {
+      if (startedRunning === run) startedRunning = null
+    })
+    startedRunning = run
+    return run
+  }
+
+  async function fetchStarted() {
     const repo = series()
     if (!repo || !isOnline()) return
     const member = session.member?.id
-    const result = await repo.next(6, language())
-    if (result.error || member !== session.member?.id) return
-    copy.update(() => ({ next: result.data }))
+    const asked = performance.now()
+    const result = await repo.startedAndMuted(STARTED_LIMIT, language())
+    if (member !== session.member?.id) return
+    // A failed ask keeps the device's copy.
+    if (result.error) return
+    startedAt = asked
+    copy.update(() => ({ started: result.data.open, muted: result.data.muted }))
   }
+
+  /** The series being muted or unmuted: one at a time. */
+  const muting = ref<string | null>(null)
+
+  /**
+   * Mutes (or unmutes) a whole series. Online only: nothing is queued, and the device's copy
+   * changes only once the server has answered. Returns the error code, or null when it is done.
+   */
+  async function setMuted(seriesId: string, on: boolean): Promise<EnrichErrorCode | null> {
+    const repo = series()
+    if (!repo || muting.value) return null
+    muting.value = seriesId
+    const member = session.member?.id
+    try {
+      const result = on ? await repo.mute(seriesId) : await repo.unmute(seriesId)
+      if (result.error) return result.error
+      if (member !== session.member?.id) return null
+      // The row moves from one list to the other at once; the lists are then asked again for what the server says.
+      copy.update((c) => moveMuted({ started: c.started ?? [], muted: c.muted ?? [] }, seriesId, on))
+      void loadStarted()
+      return null
+    } finally {
+      muting.value = null
+    }
+  }
+  const mute = (seriesId: string) => setMuted(seriesId, true)
+  const unmute = (seriesId: string) => setMuted(seriesId, false)
 
   // ------------------------------------------------------------- sheets
 
@@ -127,7 +184,7 @@ export const useSeriesStore = defineStore('series', () => {
       }
       keepBook(target.bookId, result.data)
       // Home's row follows her correction.
-      void loadNext()
+      void loadStarted()
       return true
     } finally {
       busy.value = false
@@ -135,6 +192,9 @@ export const useSeriesStore = defineStore('series', () => {
   }
 
   function reset() {
+    startedAt = -Infinity
+    startedRunning = null
+    muting.value = null
     sheet.value = null
     editing.value = null
     busy.value = false
@@ -146,5 +206,5 @@ export const useSeriesStore = defineStore('series', () => {
     (now, before) => now !== before && reset(),
   )
 
-  return { ofBook, loadForBook, info, loadSeries, next, loadNext, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
+  return { ofBook, loadForBook, info, loadSeries, started, muted, loadStarted, muting, mute, unmute, sheet, editing, busy, error, openSheet, openEdit, correct, reset }
 })

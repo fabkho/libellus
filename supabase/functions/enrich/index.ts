@@ -10,8 +10,9 @@
  * a member (only `book` and `author`); anything else is refused.
  */
 import { createClient } from '@supabase/supabase-js'
-import { type Caller, createHandler } from './handler.ts'
+import { type Caller, createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
 import { createHttp, userAgent } from './http.ts'
+import { sameSecret } from './secret.ts'
 import { createSources } from './sources.ts'
 import { createSupabaseStore } from './store.ts'
 
@@ -39,9 +40,19 @@ const handler = createHandler({
   async authorize(request): Promise<Caller> {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
     if (!token) return null
-    if (token === serviceKey || (enrichToken && token === enrichToken)) return 'service'
+    if ((await sameSecret(token, serviceKey)) || (enrichToken && (await sameSecret(token, enrichToken)))) return 'service'
     const { data, error } = await supabase.auth.getUser(token)
-    return !error && data.user ? 'member' : null
+    return !error && data.user ? { member: data.user.id } : null
+  },
+  async throttle(member) {
+    const { data, error } = await supabase.rpc('edge_rate_hit', {
+      p_member: member,
+      p_bucket: 'enrich',
+      p_limit: MEMBER_LIMIT,
+      p_window_seconds: MEMBER_WINDOW_SECONDS,
+    })
+    if (error) throw new Error(error.message)
+    return data === true
   },
 })
 

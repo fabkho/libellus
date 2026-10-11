@@ -14,11 +14,14 @@
  *   { "action": "status" }                  service: the queue at a glance
  *
  *   200 { … what was done … } · 400 action_invalid · 401 unauthorized · 403 forbidden
- *   404 not_found · 405 method_not_allowed · 502 source_unavailable
+ *   404 not_found · 405 method_not_allowed · 429 rate_limited · 502 source_unavailable
+ *   503 busy (the member counter could not be asked)
  *
  * Callers: the service-role key, the shared secret ENRICH_TOKEN (pg_cron's
  * call through pg_net) or a signed-in member's access token (only `book` and
- * `author`, single-flight per key so two pages asking at once share one run).
+ * `author`, single-flight per key so two pages asking at once share one run, and
+ * ten calls a minute per member: every one of them spends the shared Apple, Open
+ * Library and Wikidata budget).
  */
 import { GENRE_MAP_VERSION, mapGenres } from '../../../web/app/data/enrich/genres.ts'
 import { appleGenres, type BookRow, type EnrichContext, enrichAuthor, enrichBook } from './enrich.ts'
@@ -36,12 +39,19 @@ export const CORS: HeadersInit = {
 export const DRAIN_BUDGET_MS = 90_000
 export const DRAIN_BATCH = 4
 
-export type Caller = 'service' | 'member' | null
+/** The service (the service-role key, ENRICH_TOKEN), a signed-in member (by id) or nobody. */
+export type Caller = 'service' | { member: string } | null
+
+/** What a member may ask of `book` and `author` in a minute. */
+export const MEMBER_LIMIT = 10
+export const MEMBER_WINDOW_SECONDS = 60
 
 export type HandlerDeps = {
   store: Store
   sources: Sources
   authorize: (request: Request) => Promise<Caller>
+  /** Counts one `book` or `author` call of a member; false when she is over her limit. */
+  throttle?: (member: string) => Promise<boolean>
   now?: () => number
   budgetMs?: number
   log?: (message: string) => void
@@ -138,6 +148,21 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
     }
   }
 
+  /** A response when this member may not ask now (over her limit, or the counter is down); null when she may. */
+  async function refuse(caller: NonNullable<Caller>): Promise<Response | null> {
+    if (caller === 'service' || !deps.throttle) return null
+    try {
+      if (await deps.throttle(caller.member)) return null
+    } catch (error) {
+      log(`enrich: rate limit check failed: ${error}`)
+      return json(503, { error: 'busy' })
+    }
+    return new Response(JSON.stringify({ error: 'rate_limited' }), {
+      status: 429,
+      headers: { ...CORS, 'content-type': 'application/json', 'retry-after': String(MEMBER_WINDOW_SECONDS) },
+    })
+  }
+
   return async (request) => {
     if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
     if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' })
@@ -169,6 +194,8 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
         case 'book': {
           const bookId = typeof body.bookId === 'string' ? body.bookId : ''
           if (!/^[0-9a-f-]{36}$/i.test(bookId)) return json(400, { error: 'action_invalid' })
+          const refused = await refuse(caller)
+          if (refused) return refused
           if (!(await deps.store.request(bookId))) return json(404, { error: 'not_found' })
           return json(200, await once(`book:${bookId}`, async () => {
             // The request queued it (or found it queued); claiming takes it unless a run already has.
@@ -178,6 +205,8 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
         }
         case 'author': {
           const key = typeof body.key === 'string' ? body.key.trim() : ''
+          const refused = await refuse(caller)
+          if (refused) return refused
           const author = key ? await deps.store.authorByKey(key) : null
           if (!author) return json(404, { error: 'not_found' })
           if (!author.wikidata_id && !author.openlibrary_key) return json(200, { refreshed: false })

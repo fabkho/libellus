@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { bookKey, type Book, type BookSnapshot } from '~/data/books'
+import { bookKey, parseBookKey, sourceKeys, type Book, type BookSnapshot } from '~/data/books'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
-import { forgetLibrary, readLibrary, saveLibrary } from '~/data/deviceLibrary'
+import { forgetLibrary, readDescriptions, readLibrary, saveDescriptions, saveLibrary } from '~/data/deviceLibrary'
 import {
   addWithFromDraft,
   checkAddDraft,
@@ -18,6 +18,7 @@ import { applyWrites } from '~/data/queuedWrites'
 import { reuseEntries } from '~/data/reuseEntries'
 import type { ReadAs } from '~/data/readAs'
 import { isoDay } from '~/utils/dates'
+import { FRESH_MS } from '~/utils/fresh'
 import { onIdle } from '~/utils/idle'
 import { afterMotion } from '~/utils/motion'
 import { useSearchStore } from '~/stores/search'
@@ -43,6 +44,17 @@ export const ADDABLE_STATUSES: readonly EntryStatus[] = ['want_to_read', 'readin
  * every load and change, read back when the store is set up, so the app opens
  * on the last-loaded Library, connection or not. Offline nothing is asked for;
  * the lists refresh by themselves once the connection is back.
+ *
+ * Home and Library ask for the lists when their tab is shown, but not again while what
+ * they hold is fresh (`FRESH_MS`, `load({ ifStale })`): a change made on this device is in the
+ * lists already, and a change made elsewhere is read at the next visit after the window. A forced
+ * `load()` (back online, the outbox drained, an import) never waits for it.
+ *
+ * The lists leave the description out (`LIST_BOOK_COLUMNS`): it is 65 % of a Book's JSON and only
+ * the book page shows it. The device keeps the descriptions of the Books in the Library apart
+ * (`descriptions`, `descriptionOf`): filled from the book page, from what an older copy still holds
+ * and, once the Library is loaded and the browser idle, by a request for the ones it lacks, so an
+ * owned Book's page reads in full offline.
  *
  * Offline the changes still happen (issue #93): they wait in the outbox
  * (stores/sync.ts) and the entry moves as if the database had answered. Every
@@ -85,16 +97,62 @@ export const useLibraryStore = defineStore('library', () => {
 
   /** When this device last changed the Library (`performance.now()`): reads asked for before it are stale. */
   let lastChange = -Infinity
+  /**
+   * What the stores that keep a window of freshness of their own (stores/stats.ts, stores/genres.ts)
+   * watch to know a change of hers is not in what they hold yet. `changes` goes up with any change to
+   * an entry made on this device (a write, a removal, the outbox drained: `touch`); what another device
+   * changed is read at the next visit after the window, as for the lists. `roster` only when entries came or went or one now has another Book (what the genres
+   * are keyed by). Plain counters: the reader does not care how far, only that it moved.
+   */
+  const changes = ref(0)
+  const roster = ref(0)
+  function touch({ rosterToo = true } = {}) {
+    changes.value++
+    if (rosterToo) roster.value++
+  }
   /** When the lists showing were asked for (`performance.now()`), by the last load that landed. */
   let loadedAt = -Infinity
+  /** The load on its way, and the one that follows it for whoever asked meanwhile (`load`). */
+  let loading: Promise<void> | null = null
+  let following: Promise<void> | null = null
 
   /**
-   * Asks for the three lists and shows them. While something moves (the cover
-   * flying back into its row, the Profile's View Transition) the answer waits
-   * for it to end before it is applied, so re-rendering the lists does not
-   * land on a frame of it; the first load is applied at once.
+   * Asks for the three lists and shows them. One at a time: a screen that comes
+   * back while a load is on its way (Home, each time a Book page is closed) does
+   * not start another; one more load follows the one on its way, for all that
+   * asked meanwhile, so every ask is answered by lists asked for after it.
+   * Without that each return to Home started its own read of the whole Library,
+   * and on a slow connection they piled up faster than they came in: 55 at once
+   * after a dozen round-trips with 400 Books (e2e/perf/flight-soak.spec.ts),
+   * sharing the bandwidth with the Book page's own reads, whose writes-as-POST
+   * then timed out and put the app offline until the pile had drained.
    */
-  async function load() {
+  function load({ ifStale = false }: { ifStale?: boolean } = {}): Promise<void> {
+    if (ifStale) {
+      // Home and Library asking for a visit: lists that are fresh stand, and a load on its way is the answer.
+      if (loading) return loading
+      if (loaded.value && !loadError.value && performance.now() - loadedAt < FRESH_MS) return Promise.resolve()
+    }
+    if (!loading) {
+      loading = fetchLists().finally(() => (loading = null))
+      return loading
+    }
+    following ??= loading
+      .catch(() => undefined)
+      .then(() => {
+        following = null
+        return load()
+      })
+    return following
+  }
+
+  /**
+   * One load. While something moves (the cover flying back into its row, the
+   * Profile's View Transition) the answer waits for it to end before it is
+   * applied, so re-rendering the lists does not land on a frame of it; the
+   * first load is applied at once.
+   */
+  async function fetchLists(): Promise<void> {
     const repo = library()
     if (!repo) return
     // Offline the device's copy is all there is; asking would only fail. (With
@@ -106,7 +164,7 @@ export const useLibraryStore = defineStore('library', () => {
     if (member !== session.member?.id) return
     // An add, start or finish landed while the lists were on their way: they
     // may not have it yet, so ask again rather than show the older state.
-    if (lastChange > asked) return load()
+    if (lastChange > asked) return fetchLists()
     const failed = results.find((result) => result.error)
     if (failed) {
       loadError.value = failed.error
@@ -116,9 +174,11 @@ export const useLibraryStore = defineStore('library', () => {
       await afterMotion()
       // Another member meanwhile, or a newer answer already shown.
       if (member !== session.member?.id || asked < loadedAt) return
-      if (lastChange > asked) return load()
+      if (lastChange > asked) return fetchLists()
     }
     loadError.value = null
+    // What the lists on screen know that the new ones do not (a snapshot's description, an older copy's).
+    keepDescriptionsOf(STATUSES.flatMap((status) => lists[status]))
     // The writes still waiting, laid over what the database has (issue #93).
     const merged = applyWrites(
       { want_to_read: results[0]!.data!, reading: results[1]!.data!, finished: results[2]!.data! },
@@ -127,16 +187,44 @@ export const useLibraryStore = defineStore('library', () => {
     // What did not change stays the object it was, and a list that did not change the
     // list it was: the screens re-render only what changed, nothing on most refreshes.
     let changed = !loaded.value
+    const before = STATUSES.flatMap((status) => lists[status])
     for (const status of STATUSES) {
       const next = reuseEntries(lists[status], merged[status])
       if (next === lists[status]) continue
       lists[status] = next
       changed = true
     }
+    if (changed) reconcile(before)
     for (const entry of STATUSES.flatMap((status) => lists[status])) if (entryByKey.get(entry.book.id) !== entry) remember(entry)
     loaded.value = true
     loadedAt = asked
     if (changed) save()
+    fillDescriptions()
+  }
+
+  /**
+   * After a read replaced the lists: what the screens learned from the entries that are gone
+   * (a write the database refused, an add whose entry now has the database's id) they learn
+   * again. The pages and search's results forget a gone entry; one that took its place
+   * (the same Book, now with the database's ids) is what they show from here, under the page
+   * key the other one was reached by. So a refused add leaves no mark on its result, no page
+   * keeping an entry that is not there, and a synced one is the entry the database has.
+   */
+  function reconcile(before: LibraryEntry[]) {
+    const now = STATUSES.flatMap((status) => lists[status])
+    const ids = new Set(now.map((entry) => entry.id))
+    const gone = before.filter((entry) => !ids.has(entry.id))
+    if (!gone.length) return
+    const known = new Set(before.map((entry) => entry.id))
+    const arrived = now.filter((entry) => !known.has(entry.id))
+    for (const entry of gone) {
+      const keys = [...entryByKey].filter(([, held]) => held.id === entry.id).map(([key]) => key)
+      for (const key of keys) entryByKey.delete(key)
+      search.markRemoved(entry.id)
+      const successor = arrived.find((next) => keys.some((key) => key === next.book.id || sourceKeys(next.book).includes(key)))
+      if (successor) remember(successor, { keys })
+    }
+    for (const entry of arrived) search.markAdded(entry)
   }
 
   /**
@@ -162,10 +250,13 @@ export const useLibraryStore = defineStore('library', () => {
     return null
   }
 
-  /** The member's entry for a Book as the device shows it. */
+  /**
+   * The member's entry for a Book as the device shows it: by the Catalogue id, or by a page key
+   * (an entry added from a search result shows under its page key until the database answers).
+   */
   function entryForBook(bookId: string): LibraryEntry | null {
     for (const status of STATUSES) {
-      const found = lists[status].find((entry) => entry.book.id === bookId)
+      const found = lists[status].find((entry) => entry.book.id === bookId || sourceKeys(entry.book).includes(bookId))
       if (found) return found
     }
     return null
@@ -179,21 +270,27 @@ export const useLibraryStore = defineStore('library', () => {
   const readInYearOf = ref(Number(isoDay().slice(0, 4)))
 
   let countAsks = 0
+  /** When the count showing was asked for (`performance.now()`); a count from the device's copy is as good as none. */
+  let countedAt = -Infinity
 
   /** Counts this year's finished sessions (data/library.ts, `readInYear`): one call. */
-  async function loadReadInYear() {
+  async function loadReadInYear({ ifStale = false }: { ifStale?: boolean } = {}) {
     const repo = library()
     if (!repo) return
     const member = session.member?.id
     const year = Number(isoDay().slice(0, 4))
+    // A count this fresh stands (a finish on this device asks for a new one itself).
+    if (ifStale && readInYear.value !== null && readInYearOf.value === year && performance.now() - countedAt < FRESH_MS) return
     const ask = ++countAsks
     if (!isOnline()) return
+    const asked = performance.now()
     const result = await repo.readInYear(year)
     // Another member, or a newer count asked for meanwhile (a finish): that one wins.
     if (member !== session.member?.id || ask !== countAsks) return
     if (result.error) return
     readInYearOf.value = year
     readInYear.value = result.data
+    countedAt = asked
     save()
   }
 
@@ -221,9 +318,12 @@ export const useLibraryStore = defineStore('library', () => {
    */
   function entryChanged(entry: LibraryEntry, ...keys: string[]) {
     lastChange = performance.now()
+    const was = entryById(entry.id)
+    touch({ rosterToo: !was || was.book.id !== entry.book.id })
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entry.id)
     lists[entry.status] = sortEntries([entry, ...lists[entry.status]])
     remember(entry, { keys })
+    keepDescriptionsOf([entry])
     search.markAdded(entry)
     save()
     // A finish adds to the year's count. Only a count Home has shown is kept
@@ -249,6 +349,7 @@ export const useLibraryStore = defineStore('library', () => {
    */
   function entryRemoved(entryId: string) {
     lastChange = performance.now()
+    touch()
     for (const status of STATUSES) lists[status] = lists[status].filter((e) => e.id !== entryId)
     for (const [key, known] of entryByKey) if (known.id === entryId) entryByKey.delete(key)
     search.markRemoved(entryId)
@@ -275,6 +376,20 @@ export const useLibraryStore = defineStore('library', () => {
     return { entry: changed }
   }
 
+  /**
+   * Hides the entry from her followers, or shows it again (social v1). Waits in the outbox
+   * offline, so it does not need the connection. Returns the entry, or null with the code.
+   */
+  async function setHidden(entry: LibraryEntry, hidden: boolean): Promise<{ entry: LibraryEntry } | { error: LibraryErrorCode }> {
+    const repo = library()
+    if (!repo) return { error: 'unknown' }
+    const result = await repo.setHidden(entry.id, hidden)
+    if (result.error) return { error: result.error }
+    const changed = { ...(entryById(entry.id) ?? entry), hidden: result.data.hidden ?? hidden }
+    entryChanged(changed)
+    return { entry: changed }
+  }
+
   // ---------------------------------------------------------------- Add sheet
 
   /** The Book the Add sheet is about; null while it is closed. */
@@ -283,11 +398,25 @@ export const useLibraryStore = defineStore('library', () => {
   const addDraft = reactive<AddDraft>(newAddDraft())
   const addBusy = ref(false)
   const addError = ref<LibraryErrorCode | null>(null)
+  /** The sheet was opened from search's results: confirming shows the entry at once and the outbox sends it (`confirmAdd`). */
+  let addOptimistic = false
 
   // A change of mind is a new try: the last refusal no longer applies.
   watch(addDraft, () => (addError.value = null))
+  // "Contains spoilers" goes with the review: emptied, the flag is off again (its switch is hidden then).
+  watch(
+    () => addDraft.review,
+    (text) => {
+      if (!text.trim()) addDraft.reviewSpoilers = false
+    },
+  )
 
-  function openAdd(book: BookSnapshot | Book) {
+  /**
+   * Opens the Add sheet for a Book. `optimistic` (the search palette's +): confirming does not
+   * wait for the network, see `confirmAdd`.
+   */
+  function openAdd(book: BookSnapshot | Book, { optimistic = false }: { optimistic?: boolean } = {}) {
+    addOptimistic = optimistic
     adding.value = book
     Object.assign(addDraft, newAddDraft())
     addError.value = null
@@ -318,6 +447,12 @@ export const useLibraryStore = defineStore('library', () => {
    * its thumbhash and colours; the Placeholder cover if none will). One
    * database call does the rest (the entry and, for Currently reading and
    * Finished, its first read). Returns the entry, or null with `addError` set.
+   *
+   * From search's results (`openAdd`, `optimistic`) none of that is waited for: the add goes
+   * into the outbox like an offline write (data/library.ts, `AddHow`), the entry is in its list,
+   * the result's mark has flipped and the sheet is shut as soon as it is there, and the outbox
+   * sends it (resolving the Cover first) right away. What the database refuses comes back as a
+   * failure in the sync sheet and the entry goes away again (`reconcile`).
    */
   async function confirmAdd(): Promise<LibraryEntry | null> {
     const book = adding.value
@@ -326,9 +461,15 @@ export const useLibraryStore = defineStore('library', () => {
     // A day the database would refuse is told before anything is sent (or a cover looked up).
     addError.value = checkAddDraft(addDraft, isoDay())
     if (addError.value) return null
+    // Only while there is a line to write into (somebody signed in): else it asks the database as before.
+    const optimistic = addOptimistic && sync.queue.open()
     addBusy.value = true
     try {
-      const result = await repo.addToLibrary(await withCover(book), addWithFromDraft(addDraft))
+      const result = await repo.addToLibrary(
+        optimistic ? { ...book } : await withCover(book),
+        addWithFromDraft(addDraft),
+        { optimistic },
+      )
       if (result.error) {
         addError.value = result.error
         return null
@@ -340,6 +481,140 @@ export const useLibraryStore = defineStore('library', () => {
     } finally {
       addBusy.value = false
     }
+  }
+
+  /**
+   * The *Want to read* button on another member's Book (social v2a): adds a Catalogue Book as Want to
+   * read at once, no sheet. `known` is the Book as a page already loaded it; without it the Book is
+   * asked for (online only: the add needs the source ids and the ISBN the social answers do not carry).
+   * A Catalogue Book add waits in the outbox offline like any other (data/library.ts, `addToLibrary`).
+   * Refused for a Manual book. Returns the entry, or the code.
+   */
+  async function addWantToRead(id: string, known: BookSnapshot | Book | null = null): Promise<{ entry: LibraryEntry } | { error: LibraryErrorCode }> {
+    const repo = library()
+    if (!repo) return { error: 'unknown' }
+    if (entryForBook(id)) return { error: 'already_in_library' }
+    let book = known && 'id' in known ? known : null
+    if (!book) {
+      if (!isOnline()) return { error: 'offline' }
+      const found = await repo.book(id)
+      if (found.error) return { error: found.error }
+      if (!found.data) return { error: 'unknown' }
+      book = found.data
+    }
+    if (book.source === 'manual') return { error: 'book_invalid' }
+    const result = await repo.addToLibrary(await withCover(book), {})
+    if (result.error) return { error: result.error }
+    entryChanged(result.data, bookKey(book))
+    return { entry: result.data }
+  }
+
+  // ----------------------------------------------------------- descriptions
+
+  /**
+   * The description of each Book in the Library, by Book id (`''`: it has none). The lists leave it
+   * out (`LIST_BOOK_COLUMNS`); the book page reads it from here when its Book has none of its own
+   * (`descriptionOf`). Shallow: a Book's text is set once.
+   */
+  const descriptions = shallowReactive(new Map<string, string>())
+
+  let descriptionsRead = false
+  /** The device's descriptions, read the first time something needs them (not at start: it is a few hundred KB to parse). */
+  function readDeviceDescriptions() {
+    if (descriptionsRead) return
+    descriptionsRead = true
+    const member = session.member?.id
+    if (!import.meta.client || !member) return
+    const kept = readDescriptions(window.localStorage, member)
+    if (kept) for (const [id, text] of Object.entries(kept)) if (!descriptions.has(id)) descriptions.set(id, text)
+  }
+
+  /** The description of a Book as the device knows it, null when it has none or is not known yet. */
+  function descriptionOf(book: Pick<Book, 'description'> & { id?: string }): string | null {
+    if (book.description) return book.description
+    readDeviceDescriptions()
+    return (book.id ? descriptions.get(book.id) : undefined) || null
+  }
+
+  /** What the database said about a Book's description (null: none), once it did. */
+  function rememberDescription(bookId: string, description: string | null | undefined) {
+    if (description === undefined) return
+    readDeviceDescriptions()
+    const text = description ?? ''
+    if (descriptions.get(bookId) === text) return
+    descriptions.set(bookId, text)
+    saveDescriptionsLater()
+  }
+
+  /** The descriptions the entries carry (a snapshot's, an older device copy's): kept, not asked for again. */
+  function keepDescriptionsOf(entries: readonly LibraryEntry[]) {
+    for (const entry of entries) if (entry.book.description) rememberDescription(entry.book.id, entry.book.description)
+  }
+
+  let fetchingDescriptions: Promise<void> | null = null
+  /**
+   * Asks now for the descriptions of the Library's Catalogue Books that the device does not hold
+   * yet (all of them the first time, a few hundred KB in pieces; then only the ones added since),
+   * and settles once they are kept. One request at a time: a second ask while one is on its way
+   * waits for it. Offline, or with nothing missing, it settles at once. The shelf waits for it
+   * before it builds a member's Books (stores/shelf.ts), so each back carries its blurb.
+   */
+  function ensureDescriptions(): Promise<void> {
+    if (!import.meta.client || !isOnline()) return Promise.resolve()
+    fetchingDescriptions ??= (async () => {
+      const member = session.member?.id
+      const repo = library()
+      if (!repo || !member) return
+      readDeviceDescriptions()
+      const missing = STATUSES.flatMap((status) => lists[status])
+        .map((entry) => entry.book.id)
+        .filter((id) => !descriptions.has(id) && parseBookKey(id)?.kind === 'catalogue')
+      if (!missing.length) return
+      const result = await repo.descriptions(missing)
+      if (result.error || member !== session.member?.id) return
+      for (const id of missing) rememberDescription(id, result.data.get(id) ?? null)
+    })().finally(() => (fetchingDescriptions = null))
+    return fetchingDescriptions
+  }
+
+  let fillWaiting = false
+  /**
+   * Once the browser is idle, the descriptions the device lacks (`ensureDescriptions`), so an
+   * owned Book reads in full offline without the lists carrying them.
+   */
+  function fillDescriptions() {
+    if (fillWaiting || !import.meta.client || !isOnline()) return
+    fillWaiting = true
+    onIdle(
+      () => {
+        fillWaiting = false
+        void ensureDescriptions()
+      },
+      { timeout: 5000, fallback: 2500 },
+    )
+  }
+
+  let savingDescriptions: (() => void) | null = null
+  function saveDescriptionsLater() {
+    if (!import.meta.client) return
+    savingDescriptions?.()
+    savingDescriptions = onIdle(
+      () => {
+        savingDescriptions = null
+        writeDescriptions()
+      },
+      { timeout: 4000, fallback: 1500 },
+    )
+  }
+
+  /** The descriptions of the Books she has, now. Only once the Library was loaded (else nothing is known to drop). */
+  function writeDescriptions() {
+    const member = session.member
+    if (!import.meta.client || !member || !loaded.value) return
+    const have = new Set(STATUSES.flatMap((status) => lists[status]).map((entry) => entry.book.id))
+    const kept: Record<string, string> = {}
+    for (const [id, text] of descriptions) if (have.has(id)) kept[id] = text
+    saveDescriptions(window.localStorage, member.id, kept)
   }
 
   // ------------------------------------------------------- the device's copy
@@ -366,6 +641,11 @@ export const useLibraryStore = defineStore('library', () => {
 
   /** The waiting write, now (the page is hidden or going away). */
   function flushSave() {
+    if (savingDescriptions) {
+      savingDescriptions()
+      savingDescriptions = null
+      writeDescriptions()
+    }
     if (!saving) return
     saving()
     saving = null
@@ -395,6 +675,8 @@ export const useLibraryStore = defineStore('library', () => {
     if (!saved) return
     for (const status of STATUSES) lists[status] = saved.lists[status]
     for (const entry of STATUSES.flatMap((status) => lists[status])) remember(entry)
+    // A copy from before the lists left the description out still has them: kept, so they are not asked for.
+    keepDescriptionsOf(STATUSES.flatMap((status) => lists[status]))
     // Last year's tally is no answer to this year's question.
     if (saved.readInYear?.year === readInYearOf.value) readInYear.value = saved.readInYear.count
     loaded.value = true
@@ -403,7 +685,12 @@ export const useLibraryStore = defineStore('library', () => {
   function reset() {
     saving?.()
     saving = null
+    savingDescriptions?.()
+    savingDescriptions = null
+    descriptions.clear()
+    descriptionsRead = false
     loadedAt = -Infinity
+    countedAt = -Infinity
     for (const status of STATUSES) lists[status] = []
     loaded.value = false
     loadError.value = null
@@ -451,18 +738,25 @@ export const useLibraryStore = defineStore('library', () => {
     loaded,
     loadError,
     load,
+    changes,
+    roster,
+    touch,
     rebase,
     entryById,
     entryForBook,
     readInYear,
     readInYearOf,
     loadReadInYear,
+    descriptionOf,
+    ensureDescriptions,
+    rememberDescription,
     entryByKey,
     remember,
     entryChanged,
     editionChanged,
     entryRemoved,
     setReadAs,
+    setHidden,
     withCover,
     adding,
     addDraft,
@@ -471,6 +765,7 @@ export const useLibraryStore = defineStore('library', () => {
     openAdd,
     closeAdd,
     confirmAdd,
+    addWantToRead,
     reset,
   }
 })

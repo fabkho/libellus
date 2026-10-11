@@ -10,7 +10,7 @@ import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
  * The enrichment data layer (issues #166–#168) against the local stack, as
  * real signed-in members: a Book's genres (computed, hers, reset), its series
  * (the most specific first, her correction by name, "in no series", reset),
- * Home's next in series, the author page with her statuses, a Book's linked
+ * Home's started series, the author page with her statuses, a Book's linked
  * authors; writes refused offline before anything is sent.
  *
  * What the `enrich` edge function would store is stored the same way here, by
@@ -139,12 +139,101 @@ describe('series', () => {
     expect(breq.works[2]!.edition?.isbn13).toBe('9780316246682')
   })
 
-  it('next in her series: the one after the last she finished, named by the sub-series', async () => {
+  it('started series: the one she finished, its next open work named by the sub-series, with her status of it', async () => {
     const { member } = await reader()
-    const next = (await createSeries(member.client).next()).data!
-    expect(next.map((n) => [n.series.name, n.finished.position, n.next.title, n.next.entry?.status])).toEqual([
-      [runTitle('Breq'), 1, runTitle('Ancillary Sword'), 'want_to_read'],
+    const started = (await createSeries(member.client).started()).data!
+    expect(started.map((s) => [s.series.name, s.finished, s.count, s.activeOn, s.next.title, s.next.position, s.next.entry?.status])).toEqual([
+      [runTitle('Breq'), 1, 3, '2026-09-01', runTitle('Ancillary Sword'), 2, 'want_to_read'],
     ])
+  })
+
+  it('a series is started by reading its first book, and Want to read alone does not start it', async () => {
+    const reading = await signUpMember()
+    const library = createLibrary(reading.client)
+    const one = (await library.addToLibrary(book('Ancillary Justice'), { status: 'reading', startedOn: '2026-09-05' })).data!
+    await enrich(one.book.id, WORKS.one, 'Ancillary Justice', inSeries(1, 1), ['sci-fi'])
+    expect((await createSeries(reading.client).started()).data!.map((s) => [s.series.name, s.finished, s.activeOn, s.next.title, s.next.entry?.status ?? null]))
+      .toEqual([[runTitle('Breq'), 0, '2026-09-05', 'Ancillary Sword', null]])
+
+    const wanting = await signUpMember()
+    const wanted = (await createLibrary(wanting.client).addToLibrary(book('Ancillary Justice'))).data!
+    await enrich(wanted.book.id, WORKS.one, 'Ancillary Justice', inSeries(1, 1), ['sci-fi'])
+    expect(await createSeries(wanting.client).started()).toEqual({ data: [], error: null })
+  })
+
+  it('is hers alone', async () => {
+    await reader()
+    const other = await signUpMember()
+    expect(await createSeries(other.client).started()).toEqual({ data: [], error: null })
+  })
+
+  it('she mutes a whole started series, finds it in the muted list and unmutes it; it stays muted when she reads on', async () => {
+    const { member, two } = await reader()
+    const series = createSeries(member.client)
+    const breq = (await series.started()).data![0]!.series.id
+
+    expect(await series.muted()).toEqual({ data: [], error: null })
+    expect(await series.mute(breq)).toEqual({ data: true, error: null })
+    expect(await series.mute(breq)).toEqual({ data: true, error: null })
+    expect(await series.started()).toEqual({ data: [], error: null })
+    const muted = (await series.muted()).data!
+    expect(muted.map((s) => [s.series.name, s.finished, s.next.title])).toEqual([[runTitle('Breq'), 1, runTitle('Ancillary Sword')]])
+
+    // Reading the next work of it does not unmute it; the muted item moves on.
+    await createLibrary(member.client).startReading(two.id, '2026-09-10')
+    expect((await series.started()).data).toEqual([])
+    expect((await series.muted()).data!.map((s) => s.next.title)).toEqual(['Ancillary Mercy'])
+
+    expect(await series.unmute(breq)).toEqual({ data: true, error: null })
+    expect(await series.unmute(breq)).toEqual({ data: true, error: null })
+    expect((await series.started()).data!.map((s) => s.series.name)).toEqual([runTitle('Breq')])
+    expect(await series.muted()).toEqual({ data: [], error: null })
+  })
+
+  it('startedAndMuted answers both Home lists in one call: what started and muted answer, item for item', async () => {
+    const { member, two } = await reader()
+    const series = createSeries(member.client)
+    const breq = (await series.started()).data![0]!.series.id
+
+    // Nothing muted: everything open, nothing muted.
+    const before = (await series.startedAndMuted()).data!
+    expect(before.open).toEqual((await series.started()).data)
+    expect(before.muted).toEqual([])
+
+    // Muted: it moves to the other side, and each side is what its own function says.
+    await series.mute(breq)
+    const muted = (await series.startedAndMuted()).data!
+    expect(muted.open).toEqual((await series.started()).data)
+    expect(muted.muted).toEqual((await series.muted()).data)
+    expect(muted.muted.map((s) => s.series.name)).toEqual([runTitle('Breq')])
+    expect(muted.open).toEqual([])
+
+    // The limit cuts each side by itself, and the answers follow her reading.
+    await createLibrary(member.client).startReading(two.id, '2026-09-10')
+    expect((await series.startedAndMuted(1)).data).toEqual({ open: (await series.started(1)).data, muted: (await series.muted(1)).data })
+    expect((await series.startedAndMuted()).data!.muted.map((s) => s.next.title)).toEqual(['Ancillary Mercy'])
+
+    // Somebody else's mutes are not hers to see.
+    const other = await signUpMember()
+    expect((await createSeries(other.client).startedAndMuted()).data).toEqual({ open: [], muted: [] })
+  })
+
+  it('a mute is hers alone, an unknown series is refused, and offline nothing is sent', async () => {
+    const { member } = await reader()
+    const breq = (await createSeries(member.client).started()).data![0]!.series.id
+    await createSeries(member.client).mute(breq)
+
+    const other = await signUpMember()
+    expect(await createSeries(other.client).muted()).toEqual({ data: [], error: null })
+    expect((await createSeries(other.client).mute(crypto.randomUUID())).error).toBe('series_not_found')
+    expect((await createSeries(other.client).unmute(crypto.randomUUID())).error).toBe('series_not_found')
+    await createSeries(other.client).unmute(breq)
+    expect((await createSeries(member.client).muted()).data).toHaveLength(1)
+
+    const offline = createSeries(member.client, { online: () => false })
+    expect(await offline.mute(breq)).toEqual({ data: null, error: 'offline' })
+    expect(await offline.unmute(breq)).toEqual({ data: null, error: 'offline' })
+    expect((await createSeries(member.client).muted()).data).toHaveLength(1)
   })
 
   it('she corrects a series by name, says "in no series", and resets; offline nothing is sent', async () => {
