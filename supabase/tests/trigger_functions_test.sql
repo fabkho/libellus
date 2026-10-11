@@ -10,7 +10,7 @@
 -- each trigger still does its job.
 
 begin;
-select plan(26);
+select plan(30);
 
 create schema if not exists tests;
 
@@ -56,7 +56,7 @@ select set_eq(
       where n.nspname = 'public' and p.prorettype = 'trigger'::regtype $$,
   $$ values ('handle_new_user'), ('handle_user_confirmed'), ('library_entries_derive_status'),
             ('reading_sessions_update_status'), ('reading_sessions_no_future_dates'),
-            ('collection_entries_same_member') $$,
+            ('collection_entries_same_member'), ('collections_touch'), ('collection_entries_touch') $$,
   'these are all the trigger functions in public');
 
 select is_empty(
@@ -137,13 +137,13 @@ select throws_ok(format($$ select tests.call_as('authenticated', %L) $$, 'public
   '42501', format('permission denied for function %s', f), format('authenticated cannot call %s', f))
 from unnest(array['handle_new_user', 'handle_user_confirmed', 'library_entries_derive_status',
                   'reading_sessions_update_status', 'reading_sessions_no_future_dates',
-                  'collection_entries_same_member']) as f;
+                  'collection_entries_same_member', 'collections_touch', 'collection_entries_touch']) as f;
 
 select throws_ok(format($$ select tests.call_as('anon', %L) $$, 'public.' || f || '()'),
   '42501', format('permission denied for function %s', f), format('anon cannot call %s', f))
 from unnest(array['handle_new_user', 'handle_user_confirmed', 'library_entries_derive_status',
                   'reading_sessions_update_status', 'reading_sessions_no_future_dates',
-                  'collection_entries_same_member']) as f;
+                  'collection_entries_same_member', 'collections_touch', 'collection_entries_touch']) as f;
 
 select * from finish();
 rollback;
