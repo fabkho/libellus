@@ -215,7 +215,7 @@ const photo = useTemplateRef<{ start: () => void }>('photo')
           <div class="pb-xl" />
         </UiReveal>
 
-        <ProfileShelf v-if="shelf.isOwner" class="mb-xl" />
+        <ProfileShelf v-if="shelf.available" class="mb-xl" />
 
         <!-- Friends (social v1): who follows her, her follow link, her privacy. -->
         <ProfileFriends class="mb-xl" />
