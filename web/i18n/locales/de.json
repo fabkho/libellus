@@ -490,8 +490,12 @@
     "close": "Suche schließen",
     "clear": "Leeren",
     "empty": "Finde ein Buch über Titel, Autor oder ISBN.",
+    "emptyTarget": "Finde ein Buch für „{name}“.",
+    "targetNote": "Ein Buch, das noch nicht in deiner Bibliothek ist, kommt auf „Möchte ich lesen“ und in „{name}“.",
     "loadingShelves": "Regale durchsuchen …",
     "add": "{title} zu deiner Bibliothek hinzufügen",
+    "addTo": "{title} zu „{name}“ hinzufügen",
+    "onCollection": "In dieser Sammlung",
     "noResultsTitle": "Keine Bücher gefunden",
     "noResults": "Nichts zu „{query}“ gefunden.",
     "noResultsHint": "Prüfe die Schreibweise oder suche nach der ISBN deiner Ausgabe. Oder füge es manuell hinzu; selbst hinzugefügte Bücher bleiben privat.",
@@ -859,15 +863,38 @@
   "collection": {
     "back": "Zurück",
     "more": "Sammlungsoptionen",
+    "add": "Bücher hinzufügen",
     "count": "{count} Buch | {count} Bücher",
     "order": "deine Reihenfolge",
+    "sortBy": "Sortieren: {sort}",
+    "sortedHint": "Vorübergehend sortiert. Wähle „Deine Reihenfolge“, um Bücher wieder zu verschieben.",
+    "sort": {
+      "title": "Sortieren nach",
+      "key": {
+        "order": "Deine Reihenfolge",
+        "title": "Titel",
+        "author": "Autor",
+        "year": "Jahr",
+        "added": "Hinzugefügt"
+      },
+      "dir": {
+        "text": {
+          "asc": "A bis Z",
+          "desc": "Z bis A"
+        },
+        "date": {
+          "asc": "Älteste zuerst",
+          "desc": "Neueste zuerst"
+        }
+      }
+    },
     "rename": "Umbenennen",
     "delete": "Sammlung löschen",
     "deleting": "Wird gelöscht …",
     "deleteConfirm": "„{name}“ löschen?",
     "deleteKeeps": "Die Bücher darin bleiben in deiner Bibliothek.",
     "emptyTitle": "Noch nichts in dieser Sammlung",
-    "empty": "Finde ein Buch und wähle „Zu Sammlung hinzufügen“ auf der Buchseite.",
+    "empty": "Suche ein Buch, um es in diese Sammlung zu legen.",
     "move": "{title} verschieben",
     "moveHint": "Ziehe es an die gewünschte Stelle oder nutze die Pfeiltasten.",
     "lifted": "{title} angehoben.",

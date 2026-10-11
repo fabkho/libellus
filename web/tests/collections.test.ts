@@ -257,6 +257,29 @@ describe('the list and one Collection', () => {
     expect(read.entries).toEqual([entry])
     expect((await collections.get('not-a-uuid')).data).toBeNull()
   })
+
+  it('reads when each entry was put on the Collection, which is not when it joined the Library', async () => {
+    const ida = await signUpMember()
+    const collections = createCollections(ida.client)
+    const library = createLibrary(ida.client)
+    const scifi = (await collections.create('Sci-fi')).data!
+    const first = (await collections.addEntry(scifi.id, book('Always Coming Home'))).data!
+    // In the Library before it is on the Collection: its Library time is earlier than its Collection time.
+    const owned = (await library.addToLibrary(book('The Dispossessed'))).data!
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const second = (await collections.addEntry(scifi.id, owned.book)).data!
+
+    const read = (await collections.get(scifi.id)).data!
+    expect(Object.keys(read.addedAt!).sort()).toEqual([first.id, second.id].sort())
+    const stamp = (id: string) => Date.parse(read.addedAt![id]!)
+    expect(stamp(second.id)).toBeGreaterThan(stamp(first.id))
+    expect(stamp(second.id)).toBeGreaterThan(Date.parse(owned.addedAt))
+    // Reordering moves the Book, not the time it was put on.
+    await collections.reorder(scifi.id, [second.id, first.id])
+    const moved = (await collections.get(scifi.id)).data!
+    expect(moved.entries.map((e) => e.id)).toEqual([second.id, first.id])
+    expect(moved.addedAt).toEqual(read.addedAt)
+  })
 })
 
 describe('removeEntry and reorder', () => {

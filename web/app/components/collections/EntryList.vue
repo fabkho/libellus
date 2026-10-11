@@ -7,12 +7,13 @@
 // button, too: with it focused, the arrow keys move the Book one place up or
 // down (Home / End: to the top or the end), and a live region says where it
 // went. On a phone, holding a row still lifts it as well. Tapping a row opens
-// the book page.
+// the book page. `sorted` (the page shows a sort of her order, not her order): the rows are not for
+// moving then, so there is no grip (nothing to focus or drag) and holding a row does nothing.
 import type { LibraryEntry } from '~/data/library'
 import { useBookStore } from '~/stores/book'
 import { useCollectionsStore } from '~/stores/collections'
 
-const props = defineProps<{ collectionId: string; entries: readonly LibraryEntry[] }>()
+const props = defineProps<{ collectionId: string; entries: readonly LibraryEntry[]; sorted?: boolean }>()
 
 const { t } = useI18n()
 const collections = useCollectionsStore()
@@ -109,7 +110,7 @@ let swallowClick = false
 
 function onRowPointerdown(event: PointerEvent, index: number) {
   swallowClick = false
-  if (event.pointerType === 'mouse' || drag.value || settling.value) return
+  if (props.sorted || event.pointerType === 'mouse' || drag.value || settling.value) return
   cancelHold()
   const element = event.currentTarget as HTMLElement
   const { pointerId, clientX, clientY } = event
@@ -320,6 +321,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
         :key="entry.id"
         class="row relative flex items-center gap-ms rounded-md pl-sm"
         :class="[
+          sorted && 'pr-sm',
           drag?.index === index && 'lifted',
           drag && drag.index !== index && 'making-room',
           drag?.index === index && settling && 'settling',
@@ -359,6 +361,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
           </span>
         </UiPressLink>
         <button
+          v-if="!sorted"
           type="button"
           class="grip flex size-(--size-touch) shrink-0 items-center justify-center rounded-pill disabled:opacity-50"
           :class="drag?.index === index ? 'text-ink' : 'text-ink-ghost'"
@@ -374,7 +377,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
         </button>
       </li>
     </ol>
-    <p :id="hintId" class="sr-only">{{ t('collection.moveHint') }}</p>
+    <p v-if="!sorted" :id="hintId" class="sr-only">{{ t('collection.moveHint') }}</p>
     <p class="sr-only" aria-live="polite" data-testid="collection.announcement">{{ announcement }}</p>
   </div>
 </template>
