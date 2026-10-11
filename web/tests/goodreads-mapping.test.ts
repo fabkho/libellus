@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { bookFromRow, isSameWork, titleQuery } from '@/data/import/editions'
+import { bookFromRow, isSameWork, titleQuery, volumeOf } from '@/data/import/editions'
 import { goodreadsKey, parseGoodreads } from '@/data/import/goodreads'
 import { countByStatus, importDay, isbnPair, MissingColumnsError, type ImportBook } from '@/data/import/rows'
 
@@ -80,11 +80,12 @@ describe('parseGoodreads', () => {
     })
   })
 
-  it('opens a read for a book being read, started on the day it was added', () => {
+  it('opens a read for a book being read, started on the day of the import (Date Added is when it was shelved, not begun)', () => {
     expect(byKey('goodreads:1003')).toMatchObject({
       status: 'reading',
       pageCount: null,
-      session: { startedOn: '2025-08-01', endedOn: null, outcome: null, rating: null, review: null },
+      session: { startedOn: TODAY, endedOn: null, outcome: null, rating: null, review: null },
+      addedOn: '2025-08-01',
     })
   })
 
@@ -148,7 +149,7 @@ describe('parseGoodreads', () => {
       session: { endedOn: null, rating: null },
       problems: [{ code: 'dateInvalid' }, { code: 'ratingInvalid' }],
     })
-    // No usable Date Added: the read started today.
+    // A usable Date Added or not: the read started today.
     expect(now).toMatchObject({ session: { startedOn: TODAY }, problems: [{ code: 'dateInvalid' }] })
   })
 
@@ -200,5 +201,23 @@ describe('the pieces', () => {
     expect(isSameWork(row, { title: 'The Lantern Keeper (Harbour Lights Book 2)', authors: ['M. Okafor'] })).toBe(true)
     expect(isSameWork(row, { title: 'The Lantern Keeper', authors: ['Someone Else'] })).toBe(false)
     expect(isSameWork(row, { title: 'The Lantern Keeper Companion', authors: ['Mira Okafor'] })).toBe(false)
+  })
+
+  it('does not take another volume of a series for the same book (the colon drops the volume from the work title)', () => {
+    const three = { title: 'Heartstopper: Volume Three', authors: ['Alice Oseman'] }
+    expect(isSameWork(three, { title: 'Heartstopper: Volume Two', authors: ['Alice Oseman'] })).toBe(false)
+    expect(isSameWork(three, { title: 'Heartstopper: Volume 3', authors: ['Alice Oseman'] })).toBe(true)
+    expect(isSameWork(three, { title: 'Heartstopper', authors: ['Alice Oseman'] })).toBe(true)
+    expect(isSameWork({ title: 'Der Schwarm: Band 2', authors: ['Frank Schätzing'] }, { title: 'Der Schwarm: Band 1', authors: ['Frank Schätzing'] })).toBe(false)
+  })
+
+  it('reads the volume a title names, and nothing from words that only look like one', () => {
+    expect(volumeOf('Heartstopper: Volume Three')).toBe('3')
+    expect(volumeOf('Heartstopper, Vol. 2')).toBe('2')
+    expect(volumeOf('Die Chroniken, Teil 04')).toBe('4')
+    expect(volumeOf('Book II')).toBe('2')
+    expect(volumeOf('Part of Your World')).toBeNull()
+    expect(volumeOf('The Book of Dust')).toBeNull()
+    expect(volumeOf('Dune')).toBeNull()
   })
 })
