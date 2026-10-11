@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.12.0](https://github.com/fabkho/libellus/compare/v1.11.0...v1.12.0) (2026-10-11)
+
+
+### Features
+
+* **social:** Version 2a — likes, spoilers, In your circle, Your reviews, checked Catalogue ([3d84301](https://github.com/fabkho/libellus/commit/3d8430115d971a294445f4ed79c462759ca3ce01))
+
+
+### Fixes
+
+* **book:** the page shows the description a search result brought until the check writes one ([4fb7df4](https://github.com/fabkho/libellus/commit/4fb7df4098096cf3c54d9fa50fc8fb86f0cf8f83))
+* **catalogue-check:** strip tags by walking the text, not by a pattern CodeQL reports ([207b20f](https://github.com/fabkho/libellus/commit/207b20f410e602a8f0e41d08a4593898c9058b3d))
+* **catalogue-check:** strip tags until the text stops changing, and escape every comma ([bf526fa](https://github.com/fabkho/libellus/commit/bf526fa0e8e724f0a250dbf40deecb81836a78e0))
+
 ## [1.11.0](https://github.com/fabkho/libellus/compare/v1.10.0...v1.11.0) (2026-10-11)
 
 
