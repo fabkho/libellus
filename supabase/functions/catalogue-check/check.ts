@@ -94,8 +94,26 @@ export function keyOf(value: string | null | undefined, shape: RegExp): string |
 
 // ------------------------------------------------------------------ text
 
-/** One tag: `<…>`, and nothing inside it that is a bracket again. */
-const TAG = /<[^<>]*>/g
+/** One pass of the tag rule: `<…>` goes, and a `<` that opens no tag is text. Read, not matched. */
+function dropTags(text: string): string {
+  let out = ''
+  let index = 0
+  while (index < text.length) {
+    const open = text.indexOf('<', index)
+    if (open === -1) return out + text.slice(index)
+    const close = text.indexOf('>', open + 1)
+    const inner = text.indexOf('<', open + 1)
+    // `/<[^<>]*>/g` leaves a `<` with no `>` before the next `<` alone: it is text, and the next one may open a tag.
+    if (close === -1 || (inner !== -1 && inner < close)) {
+      out += text.slice(index, open + 1)
+      index = open + 1
+      continue
+    }
+    out += text.slice(index, open)
+    index = close + 1
+  }
+  return out
+}
 
 /**
  * A string with every tag gone.
@@ -103,10 +121,13 @@ const TAG = /<[^<>]*>/g
  * One pass is not enough: `<scr<script>ipt>` loses its inner `<script>` and what is left of the
  * outer one — `<scr` and `ipt>` — joins up into `<script>`, a tag again ("incomplete
  * multi-character sanitization", CodeQL). So the pass repeats until the string stops changing.
+ *
+ * The pass walks the text (`indexOf`) instead of running `/<[^<>]*>/g`: CodeQL reports that
+ * sanitizer wherever it stands, the loop around it included, so the walk is the way to be whole.
  */
 function stripTags(html: string): string {
-  let text = html.replace(TAG, '')
-  for (let pass = text.replace(TAG, ''); pass !== text; pass = text.replace(TAG, '')) text = pass
+  let text = dropTags(html)
+  for (let pass = dropTags(text); pass !== text; pass = dropTags(text)) text = pass
   return text
 }
 

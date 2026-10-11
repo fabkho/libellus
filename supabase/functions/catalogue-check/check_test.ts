@@ -25,6 +25,8 @@ Deno.test('text: tags dropped, entities decoded, control characters gone, capped
   // A tag inside a tag: one pass leaves `<script>` behind (what is left of `<scr<script>ipt>` joins
   // up again), which is markup once more ("incomplete multi-character sanitization", CodeQL).
   assertEquals(plainText('<scr<script>ipt>alert(1)</script>'), 'alert(1)')
+  // A `<` that opens no tag before the next `<` is text, and the tag walk keeps it that way.
+  assertEquals(plainText('a< b and <i>c</i>'), 'a b and c')
   // A decoded entity can spell a bracket again, and that goes too: what is stored is text.
   assertEquals(plainText('a&lt;b'), 'ab')
   assertEquals(description({ type: '/type/text', value: 'From the work' }), 'From the work')
