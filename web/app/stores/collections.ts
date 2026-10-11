@@ -10,6 +10,12 @@ import {
   type Collections,
   type CollectionSummary,
 } from '~/data/collections'
+import {
+  COLLECTION_ORDER,
+  readCollectionSort,
+  saveCollectionSort,
+  type CollectionSort,
+} from '~/data/collectionSort'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import { readCollections, saveCollections } from '~/data/deviceLibrary'
 import type { LibraryEntry } from '~/data/library'
@@ -240,8 +246,12 @@ export const useCollectionsStore = defineStore('collections', () => {
     const entry = result.data
     memberships.set(entry.id, [...new Set([...(memberships.get(entry.id) ?? []), id])])
     const current = pages.get(id)
-    if (current?.collection) setEntries(id, [...current.collection.entries.filter((e) => e.id !== entry.id), entry])
-    else
+    if (current?.collection) {
+      // "Date added" has its time at once (the device's clock; the database's replaces it at the next read),
+      // set before the entries so a view sorted by it finds it when the Book arrives.
+      pages.set(id, { ...current, collection: { ...current.collection, addedAt: { ...current.collection.addedAt, [entry.id]: new Date().toISOString() } } })
+      setEntries(id, [...current.collection.entries.filter((e) => e.id !== entry.id), entry])
+    } else
       patchSummary(id, (summary) => ({
         ...summary,
         count: summary.count + 1,
@@ -346,6 +356,27 @@ export const useCollectionsStore = defineStore('collections', () => {
       .catch(() => {
         reorderError.value = 'unknown'
       })
+  }
+
+  // --------------------------------------------------------------------- sort
+
+  /**
+   * How the Books inside a Collection are shown (data/collectionSort.ts): her saved order or a sort of
+   * it, one choice for every Collection, remembered per member on this device and read back when the
+   * store is set up, so a page that opens sorted is sorted from its first paint. A view only: the saved
+   * order is never written by it.
+   */
+  const sort = ref<CollectionSort>(COLLECTION_ORDER)
+
+  function restoreSort() {
+    const member = session.member?.id
+    sort.value = import.meta.client && member ? readCollectionSort(window.localStorage, member) : COLLECTION_ORDER
+  }
+
+  function setSort(next: CollectionSort) {
+    sort.value = next
+    const member = session.member?.id
+    if (import.meta.client && member) saveCollectionSort(window.localStorage, member, next)
   }
 
   // ------------------------------------------------------------------ picker
@@ -527,9 +558,11 @@ export const useCollectionsStore = defineStore('collections', () => {
       if (now === before) return
       reset()
       restore()
+      restoreSort()
     },
   )
   restore()
+  restoreSort()
 
   return {
     list,
@@ -549,6 +582,8 @@ export const useCollectionsStore = defineStore('collections', () => {
     removeEntry,
     reorderError,
     move,
+    sort,
+    setSort,
     picking,
     pickerBusy,
     pickerError,

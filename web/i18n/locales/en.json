@@ -492,8 +492,12 @@
     "close": "Close search",
     "clear": "Clear",
     "empty": "Find a book by its title, author or ISBN.",
+    "emptyTarget": "Find a book to put on “{name}”.",
+    "targetNote": "A book that isn't in your Library yet goes onto Want to read, and onto “{name}”.",
     "loadingShelves": "Looking through the shelves…",
     "add": "Add {title} to your Library",
+    "addTo": "Add {title} to {name}",
+    "onCollection": "On this collection",
     "noResultsTitle": "No books found",
     "noResults": "Nothing for “{query}”.",
     "noResultsHint": "Check the spelling, or search the ISBN of the edition you hold. Or add it by hand; books you add yourself stay private.",
@@ -861,15 +865,38 @@
   "collection": {
     "back": "Back",
     "more": "Collection options",
+    "add": "Add books",
     "count": "{count} book | {count} books",
     "order": "your order",
+    "sortBy": "Sort: {sort}",
+    "sortedHint": "Sorted for now. Choose “Your order” to move books again.",
+    "sort": {
+      "title": "Sort by",
+      "key": {
+        "order": "Your order",
+        "title": "Title",
+        "author": "Author",
+        "year": "Year",
+        "added": "Date added"
+      },
+      "dir": {
+        "text": {
+          "asc": "A to Z",
+          "desc": "Z to A"
+        },
+        "date": {
+          "asc": "Oldest first",
+          "desc": "Newest first"
+        }
+      }
+    },
     "rename": "Rename",
     "delete": "Delete collection",
     "deleting": "Deleting…",
     "deleteConfirm": "Delete “{name}”?",
     "deleteKeeps": "The books on it stay in your Library.",
     "emptyTitle": "Nothing on this shelf yet",
-    "empty": "Find a book and choose Add to collection on its page.",
+    "empty": "Search for a book to put it on this collection.",
     "move": "Move {title}",
     "moveHint": "Drag to move it, or use the arrow keys.",
     "lifted": "{title} lifted.",

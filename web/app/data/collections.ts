@@ -45,6 +45,11 @@ export type Collection = {
   createdAt: string
   updatedAt: string
   entries: LibraryEntry[]
+  /**
+   * When each entry was put on this Collection (`collection_entries.added_at`), by entry id: what "Date
+   * added" sorts by. Missing on a copy the device saved before it was read; the next read has it.
+   */
+  addedAt?: Record<string, string>
 }
 
 /**
@@ -129,7 +134,7 @@ type SummaryRow = CollectionRow & {
   count: { count: number }[]
   firsts: { position: number; entry: { book: BookRow } }[]
 }
-type DetailRow = CollectionRow & { entries: { position: number; entry: EntryRow }[] }
+type DetailRow = CollectionRow & { entries: { position: number; added_at: string; entry: EntryRow }[] }
 
 // An entry as the Library reads it: its Book and its latest session.
 const ENTRY = ENTRY_COLUMNS
@@ -216,7 +221,7 @@ export function createCollections(client: SupabaseClient, { online = () => true,
       const pages = await allPages<DetailRow['entries'][number]>(async (from, to) => {
         const { data, error } = await client
           .from('collections')
-          .select(`id, name, position, created_at, updated_at, entries:collection_entries(position, entry:library_entries!inner(${ENTRY}))`)
+          .select(`id, name, position, created_at, updated_at, entries:collection_entries(position, added_at, entry:library_entries!inner(${ENTRY}))`)
           .eq('id', id)
           .order('position', { referencedTable: 'entries' })
           .range(from, to, { referencedTable: 'entries' })
@@ -240,6 +245,7 @@ export function createCollections(client: SupabaseClient, { online = () => true,
           createdAt: found.created_at,
           updatedAt: found.updated_at,
           entries: pages.data.map((item) => entryFromRow(item.entry)),
+          addedAt: Object.fromEntries(pages.data.map((item) => [item.entry.id, item.added_at])),
         },
         error: null,
       }

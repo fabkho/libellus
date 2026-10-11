@@ -23,6 +23,9 @@ import {
  */
 export type SearchHit = { key: string; book: BookSnapshot | Book; entry: LibraryEntry | null; otherEdition: boolean }
 
+/** The Collection a search puts its Books on (`search.target`). */
+export type SearchTarget = { id: string; name: string }
+
 /**
  * idle: nothing to search yet (the query is too short) · loading: a query is
  * waiting out the debounce or some source has not answered yet · done: every
@@ -57,6 +60,12 @@ export const useSearchStore = defineStore('search', () => {
    * asks which edition, and a Book she adds is linked to it. Until it closes.
    */
   const linking = ref(false)
+  /**
+   * Search was opened by a Collection's + (pages/collections/[id].vue): a Book she picks goes onto that
+   * Collection (`add_to_collection`, a new one on Want to read first) instead of through the Add sheet.
+   * Until it closes. Rows already on it show a check.
+   */
+  const target = ref<SearchTarget | null>(null)
 
   /**
    * Her own Library entries the query is about, the group the list starts with
@@ -221,8 +230,9 @@ export const useSearchStore = defineStore('search', () => {
     void run(text)
   })
 
-  function open({ linking: forFile = false }: { linking?: boolean } = {}) {
+  function open({ linking: forFile = false, collection = null }: { linking?: boolean; collection?: SearchTarget | null } = {}) {
     linking.value = forFile
+    target.value = collection
     isOpen.value = true
     library = null
     void libraryEntries()
@@ -232,6 +242,7 @@ export const useSearchStore = defineStore('search', () => {
   function close() {
     isOpen.value = false
     linking.value = false
+    target.value = null
     query.value = ''
   }
 
@@ -301,5 +312,5 @@ export const useSearchStore = defineStore('search', () => {
     ownLibrary.value = null
   }
 
-  return { isOpen, query, hits, own, others, linking, phase, answered, outdated, fromLibrary, open, close, findByIsbn, seenBook, markAdded, markRemoved, reset, repository }
+  return { isOpen, query, hits, own, others, linking, target, phase, answered, outdated, fromLibrary, open, close, findByIsbn, seenBook, markAdded, markRemoved, reset, repository }
 })

@@ -10,10 +10,13 @@
 // the result for the ebook file (`pick`) instead of a link to its page: one of
 // her Books links the file to it, another edition of one asks which edition,
 // a new one opens the Add sheet. Its name says so ("Link the ebook to …").
+// `target` (search opened by a Collection's +): the + puts the Book on that Collection ("Add … to
+// {name}"), also one already in the Library; one that is on it says so instead of the + (`onTarget`).
+// `adding` holds the + while its call is on its way. Offline only a Book in the Library can be added.
 import { useBookStore } from '~/stores/book'
 import type { SearchHit } from '~/stores/search'
 
-const props = defineProps<{ hit: SearchHit; eager?: boolean; priority?: boolean; linking?: boolean }>()
+const props = defineProps<{ hit: SearchHit; eager?: boolean; priority?: boolean; linking?: boolean; target?: string | null; onTarget?: boolean; adding?: boolean }>()
 defineEmits<{ add: []; pick: [] }>()
 
 const { t } = useI18n()
@@ -28,6 +31,15 @@ const pickLabel = computed(() => {
   if (props.hit.entry) return t('search.linkTo', { title })
   if (props.hit.otherEdition) return t('search.linkOtherEdition', { title })
   return t('search.addAndLink', { title })
+})
+
+/** The +: held while offline (a Book in the Library can still go onto a Collection, #93) or while its add is on its way. */
+const addDisabled = computed(() => Boolean(props.adding) || (!online.value && !(props.target && props.hit.entry)))
+const addLabel = computed(() => {
+  const title = props.hit.book.title
+  if (!online.value && !(props.target && props.hit.entry)) return t('common.offline')
+  if (props.target) return t('search.addTo', { title, name: props.target })
+  return props.linking && props.hit.otherEdition ? pickLabel.value : t('search.add', { title })
 })
 </script>
 
@@ -72,18 +84,18 @@ const pickLabel = computed(() => {
     </component>
 
     <span
-      v-if="hit.entry"
+      v-if="target ? onTarget : hit.entry"
       class="flex shrink-0 items-center gap-xs px-sm text-footnote text-ink-faint"
       data-testid="search.resultStatus"
     >
-      <UiIcon name="check" :size="13" bold />{{ t(`status.${hit.entry.status}`) }}
+      <UiIcon name="check" :size="13" bold />{{ target ? t('search.onCollection') : t(`status.${hit.entry!.status}`) }}
     </span>
     <button
       v-else
       type="button"
       class="flex size-(--size-touch) shrink-0 items-center justify-center text-ink disabled:opacity-50"
-      :disabled="!online"
-      :aria-label="online ? (linking && hit.otherEdition ? pickLabel : t('search.add', { title: hit.book.title })) : t('common.offline')"
+      :disabled="addDisabled"
+      :aria-label="addLabel"
       data-testid="search.add"
       @click="$emit('add')"
     >
