@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.1](https://github.com/fabkho/libellus/compare/v1.12.0...v1.12.1) (2026-10-11)
+
+
+### Fixes
+
+* **import:** match an Apple title that carries its series after a hyphen ([0595747](https://github.com/fabkho/libellus/commit/05957473a66aee4f9d8835e5e071cb572ffeade0))
+* **import:** match an Apple title that carries its series after a hyphen ([ddf2826](https://github.com/fabkho/libellus/commit/ddf282688e703dd6aec216f23993be61f0cd62d1)), closes [#17](https://github.com/fabkho/libellus/issues/17)
+
 ## [1.12.0](https://github.com/fabkho/libellus/compare/v1.11.0...v1.12.0) (2026-10-11)
 
 
