@@ -49,12 +49,19 @@ async function booksFor(prefix: string, count: number, offset: number): Promise<
       n,
       pages: 120 + ((n * 97) % 680),
       format: FORMATS[n % FORMATS.length]!,
-      isbn13: `978${String(660000000 + n).padStart(9, '0')}${n % 10}`,
+      isbn13: isbn13(n),
       ...colours,
       thumbhash: Buffer.from(rgbaToThumbHash(pixels.width, pixels.height, pixels.data)).toString('base64'),
     })
   }
   return out
+}
+
+/** A valid ISBN-13 (its check digit right), so the back's barcode prints. */
+function isbn13(n: number): string {
+  const body = `978${String(660000000 + n).padStart(9, '0')}`
+  const sum = [...body].reduce((total, digit, i) => total + Number(digit) * (i % 2 ? 3 : 1), 0)
+  return body + ((10 - (sum % 10)) % 10)
 }
 
 const client = new pg.Client({ connectionString: env.dbUrl })
@@ -107,6 +114,14 @@ try {
         ],
       )
     }
+    // The blurb the back prints (an insert's description is the catalogue's to set: books_no_client_description).
+    await q(
+      `update public.books set description = title || ' is ' || authors[1] || '''s quiet novel about a town that keeps its secrets. ' ||
+         'Over one long summer a stranger arrives, the harbour freezes early and three families learn what they owe each other. ' ||
+         'Told in short chapters that move between the shore and the hills, it is a book about weather, memory and staying.'
+        where id = any($1::uuid[])`,
+      [books.map((b) => b.id)],
+    )
     const entries = books.map((b, i) => ({ b, i, id: uuid(`${key}:entry:${i}`) }))
     await q(
       `insert into public.library_entries (id, member_id, book_id, added_at)
