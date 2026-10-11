@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { bookKey, type Book, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
+import { createDnb } from '~/data/dnb'
 import type { LibraryEntry } from '~/data/library'
 import { editionKeys, workKey } from '~/data/merge'
 import { useLibraryStore } from '~/stores/library'
@@ -21,6 +22,9 @@ import {
  * edition of it instead.
  */
 export type SearchHit = { key: string; book: BookSnapshot | Book; entry: LibraryEntry | null; otherEdition: boolean }
+
+/** The Collection a search puts its Books on (`search.target`). */
+export type SearchTarget = { id: string; name: string }
 
 /**
  * idle: nothing to search yet (the query is too short) · loading: a query is
@@ -56,6 +60,12 @@ export const useSearchStore = defineStore('search', () => {
    * asks which edition, and a Book she adds is linked to it. Until it closes.
    */
   const linking = ref(false)
+  /**
+   * Search was opened by a Collection's + (pages/collections/[id].vue): a Book she picks goes onto that
+   * Collection (`add_to_collection`, a new one on Want to read first) instead of through the Add sheet.
+   * Until it closes. Rows already on it show a check.
+   */
+  const target = ref<SearchTarget | null>(null)
 
   /**
    * Her own Library entries the query is about, the group the list starts with
@@ -104,13 +114,20 @@ export const useSearchStore = defineStore('search', () => {
     if (seen.size > SEEN_LIMIT) seen.delete(seen.keys().next().value!)
   }
 
+  const searchLanguages = useSearchLanguages()
   let source: Search | null = null
-  /** The search repository, set up for this device's languages (the storefronts follow them). */
+  let sourceLanguage = ''
+  /** The search repository, set up for the app's language, then the device's (the storefronts follow them); made again when the app's changes. */
   function repository(): Search {
+    const languages = searchLanguages()
+    if (sourceLanguage !== languages[0]) source = null
+    sourceLanguage = languages[0] ?? ''
     source ??= createSearch({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: catalogue ?? undefined,
+      // German editions Apple Books and Open Library do not know, by ISBN (the scan, a typed ISBN).
+      dnb: backend ? createDnb(backend, { online: () => isOnline() }) : undefined,
     })
     return source
   }
@@ -213,8 +230,9 @@ export const useSearchStore = defineStore('search', () => {
     void run(text)
   })
 
-  function open({ linking: forFile = false }: { linking?: boolean } = {}) {
+  function open({ linking: forFile = false, collection = null }: { linking?: boolean; collection?: SearchTarget | null } = {}) {
     linking.value = forFile
+    target.value = collection
     isOpen.value = true
     library = null
     void libraryEntries()
@@ -224,6 +242,7 @@ export const useSearchStore = defineStore('search', () => {
   function close() {
     isOpen.value = false
     linking.value = false
+    target.value = null
     query.value = ''
   }
 
@@ -293,5 +312,5 @@ export const useSearchStore = defineStore('search', () => {
     ownLibrary.value = null
   }
 
-  return { isOpen, query, hits, own, others, linking, phase, answered, outdated, fromLibrary, open, close, findByIsbn, seenBook, markAdded, markRemoved, reset, repository }
+  return { isOpen, query, hits, own, others, linking, target, phase, answered, outdated, fromLibrary, open, close, findByIsbn, seenBook, markAdded, markRemoved, reset, repository }
 })

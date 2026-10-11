@@ -653,7 +653,7 @@ function describeRange(engine: ReaderEngine, doc: Document, range: Range, custom
 }
 
 /**
- * A book's scripts never run as Libellus. foliate's frames are of the app's
+ * A book's scripts never run as BetterReads. foliate's frames are of the app's
  * origin (it lays out, selects and listens inside them), so three layers keep
  * an EPUB from anywhere out of the member's session:
  * - its script files are never loaded, and every page, SVG and stylesheet is

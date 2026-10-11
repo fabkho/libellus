@@ -43,7 +43,7 @@ const OUT = process.env.FLIGHT_OUT
 const FINISHED = Number(process.env.FLIGHT_FINISHED ?? 40)
 /** `slow`: the stack answers over a phone's connection (300 ms there and back, 1.6 Mbit/s down), as the DevTools protocol slows it. */
 const NET = process.env.FLIGHT_NET === 'slow' ? 'slow' : 'local'
-// WebKit (Safari's engine, where Libellus is mostly used) has no CPU slowdown, heap or Long Animation Frames: its frames' gaps and the document's counts still tell.
+// WebKit (Safari's engine, where BetterReads is mostly used) has no CPU slowdown, heap or Long Animation Frames: its frames' gaps and the document's counts still tell.
 const BROWSER = process.env.FLIGHT_BROWSER === 'webkit' ? 'webkit' : 'chromium'
 
 test.use({

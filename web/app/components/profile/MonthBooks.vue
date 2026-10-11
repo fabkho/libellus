@@ -116,7 +116,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <style scoped>
 .month + .month {
-  border-top: var(--stroke-hairline) solid var(--color-hairline);
+  border-top: var(--stroke-hairline) solid var(--color-hairline-strong);
 }
 /* A month's cover while the record loads (UiCover `sm`). */
 .cover-skeleton {

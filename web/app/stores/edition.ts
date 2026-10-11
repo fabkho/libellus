@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { formatOf, type Book, type BookFormat, type BookSnapshot } from '~/data/books'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
+import { createDnb } from '~/data/dnb'
 import { createEditions, type EditionCandidate, type Editions } from '~/data/editions'
 import { isAbort } from '~/data/fetching'
 import { probeImageInBrowser, resolveOwnCover } from '~/data/covers'
@@ -34,12 +35,19 @@ export const useEditionStore = defineStore('edition', () => {
   const session = useSessionStore()
   const search = useSearchStore()
 
+  const searchLanguages = useSearchLanguages()
   let source: Editions | null = null
+  let sourceLanguage = ''
   function repository(): Editions {
+    const languages = searchLanguages()
+    if (sourceLanguage !== languages[0]) source = null
+    sourceLanguage = languages[0] ?? ''
     source ??= createEditions({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: backend ? createCatalogueSearch(backend) : undefined,
+      // German editions Apple Books and Open Library do not know (the library's data, CC0).
+      dnb: backend ? createDnb(backend, { online: () => isOnline() }) : undefined,
     })
     return source
   }

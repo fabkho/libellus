@@ -1,4 +1,5 @@
 import { toValue, watch, type MaybeRefOrGetter } from 'vue'
+import type { RegalLibraryFile } from '~/data/export/regalLibraryFile'
 import { useShelfStore } from '~/stores/shelf'
 import { onIdle } from '~/utils/idle'
 
@@ -6,10 +7,11 @@ import { onIdle } from '~/utils/idle'
 let queue: Promise<void> = Promise.resolve()
 
 /**
- * Warms the row a card is about to show (`year`: that year's, else the Profile's newest `SHELF_ROW_LIMIT`).
- * Called on idle by `useShelfPreload`, and by the card itself once it is a screen away (ShelfRowCard).
+ * Warms the row a card is about to show (`year`: that year's, else the Profile's newest `SHELF_ROW_LIMIT`;
+ * `library`: a member's shelf built on the device, else the owner's published file).
+ * Called on idle by `useShelfPreload`, and by the card itself when it mounts (ShelfRowCard).
  */
-export function warmShelfRow(year: number | null): void {
+export function warmShelfRow(year: number | null, library: RegalLibraryFile | null = null): void {
   queue = queue.then(async () => {
     try {
       // A dynamic import, so Regal stays out of the entry (regal.config.ts): this is the `regal` chunk, fetched here.
@@ -18,6 +20,7 @@ export function warmShelfRow(year: number | null): void {
       // card's component for the chunk, which brings Regal's fonts with it (shelf/Row.vue).
       await preloadRegal({
         ...(year === null ? { limit: SHELF_ROW_LIMIT } : { year }),
+        ...(library ? { library } : {}),
         chunk: () => import('~/components/shelf/Row.vue'),
       })
     } catch {
@@ -36,14 +39,17 @@ export function warmShelfRow(year: number | null): void {
  * Profile (the year in view, or the latest, whose review is one tap away).
  * `year` is that year's row; none, the Profile's.
  *
- * For the owner only (`shelf.isOwner`): for anyone else nothing is imported or
- * fetched. On idle, so it never competes with the screen that is opening, and
- * once per row (Regal shares calls with the same options).
+ * For the owner's published shelf only (`shelf.source`): his screens warm it
+ * from anywhere, as before. Everyone else's shelf costs nothing until a screen
+ * that shows it opens (the Profile's card, a year in review, Your shelf): the
+ * card warms its own row when it mounts. On idle, so it never competes with
+ * the screen that is opening, and once per row (Regal shares calls with the
+ * same options).
  */
 export function useShelfPreload(year: MaybeRefOrGetter<number | null | undefined> = null) {
   const shelf = useShelfStore()
   watch(
-    [() => shelf.isOwner, () => toValue(year) ?? null],
+    [() => shelf.available && shelf.source === 'published', () => toValue(year) ?? null],
     ([owner, rowYear], _before, onCleanup) => {
       if (!owner) return
       onCleanup(onIdle(() => warmShelfRow(rowYear)))

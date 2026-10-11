@@ -264,7 +264,7 @@ down. The flight's own copies (`snapshot.ts`, `useEditionChange.ts`, `readerFlig
 | `UiCover`: the backing of a `whole` cover | no `loading`, no `decoding` (eager) | follows `eager`, `decoding=async` |
 | Home: reading cards (`index < 3`) | eager (the LCP is the first one) | same |
 | Home: Up next (`index < 5`) | eager | same: on screen on a phone (8 cold-start covers, 296 KB, all visible) |
-| Home: Next in your series, Circle feature and friends | eager (`index < 3`, the feature) | **lazy**: the last sections of Home, below the fold; the section's reveal opens when its data is there and the browser starts what is in range |
+| Home: Next in your series, the Friends feature and rows | eager (`index < 3`, the feature) | **lazy**: the last sections of Home, below the fold; the section's reveal opens when its data is there and the browser starts what is in range |
 | Library: segment rows (`index < 8`), reading cards (`< 4`) | eager; the rest lazy | same (11 rows on a phone: 8 eager, 3 lazy on screen, 17 lazy ahead) |
 | Library: "Collections" link covers (xs) | lazy | same |
 | Profile: favourite, year cards, authors' books (3 each), month books, read rows, public pages | lazy | same (none on the first screen) |
@@ -282,7 +282,7 @@ down. The flight's own copies (`snapshot.ts`, `useEditionChange.ts`, `readerFlig
 | Avatar (header, Profile, photo editor), author portrait | plain `<img>`, eager, in a 32–72 px circle, first screen; the portrait is the author page's hero | same: first screen, sized box, initials underneath |
 | Photo crop (`profile/Photo.vue`) | an object URL in a box of explicit size | same |
 | CSS: thumbhash under a cover (`background-image: url(data:…)`), film grain (inline SVG), Button gradient | no request | same: no `url()` reaches the network anywhere in `app/` |
-| Shelf (`ShelfPile`, `ShelfRow`) | colours only; Regal (the private layer: its own textures) is not in this repo and not in the build | same |
+| Shelf (`ShelfRow`, `ShelfStage`) | colours only; Regal (the private layer: its own textures) is not in this repo and not in the build | same |
 | Reader | EPUB images come from the book file (blob URLs, sanitised in `data/reader/markup.ts`): no network | same |
 
 **Sign-in wall, after the form** (`pnpm perf:wall`, `perf/wall.ts`: first launch of `/sign-in`, Pixel 7 profile, `slow4g-4x`, 7 runs per series, two series per build in turn, load 1.4–1.8; medians (min–max); the cover host is the harness's stand-in, so Apple's real latency is not in it):

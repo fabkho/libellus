@@ -1,5 +1,51 @@
 # Changelog
 
+## [1.14.0](https://github.com/fabkho/libellus/compare/v1.13.0...v1.14.0) (2026-10-11)
+
+
+### Features
+
+* **editions:** German editions from the German National Library for the scan, ISBN lookups and the edition picker ([#307](https://github.com/fabkho/libellus/issues/307)) ([50b1e75](https://github.com/fabkho/libellus/commit/50b1e75fab92af2e139e8c8c2edbbf3db3d08fb6))
+
+
+### Fixes
+
+* **import:** Goodreads import reaches the preview, matches the right volume and edits less to review ([#303](https://github.com/fabkho/libellus/issues/303)) ([a5b6225](https://github.com/fabkho/libellus/commit/a5b6225a3ec541a944dc03b1191389f470a17d6e))
+
+## [1.13.0](https://github.com/fabkho/libellus/compare/v1.12.2...v1.13.0) (2026-10-11)
+
+
+### Features
+
+* **collections:** list Collections by last edited, most recently edited first ([#302](https://github.com/fabkho/libellus/issues/302)) ([a5d1dd8](https://github.com/fabkho/libellus/commit/a5d1dd8fe7982a4c22d3e5c02f012447966e6c3a))
+* **friends:** a Friends tab in the tab bar, on by default, switchable in Profile ([#298](https://github.com/fabkho/libellus/issues/298)) ([3be8542](https://github.com/fabkho/libellus/commit/3be8542b0c6270bb72e2b8966eedb8448eeb328e))
+* **history:** 'more' under a cut review in the reading history ([#301](https://github.com/fabkho/libellus/issues/301)) ([06256a9](https://github.com/fabkho/libellus/commit/06256a977c64747c4a3d36a02212fd06625a17d4))
+* **i18n:** German is registered: phone language, Profile language row, Intl formatting, 390 px pass ([#296](https://github.com/fabkho/libellus/issues/296)) ([7dfc80d](https://github.com/fabkho/libellus/commit/7dfc80d4239927a8b7057205e9c0e253237a996b))
+* **profile:** Your shelf right under the ratings ([#299](https://github.com/fabkho/libellus/issues/299)) ([237b666](https://github.com/fabkho/libellus/commit/237b6669e0e9e69b38def5de24e70bd293c54bff))
+* **shelf:** no loading pile; the Stack arrives with Regal's entrance, like the row ([473d136](https://github.com/fabkho/libellus/commit/473d1368a34edad3cf84b0ce53201ab6eb1d2d66))
+
+
+### Fixes
+
+* **series:** split volumes ("..., part N") are not series members ([#297](https://github.com/fabkho/libellus/issues/297)) ([22f1bb4](https://github.com/fabkho/libellus/commit/22f1bb42be2c8eea4114e8d0c6d705db8e0faa88))
+* **shelf:** a member's shelf waits for her Books' blurbs, so every back is printed with one; her row never shows the published file meanwhile ([284cf28](https://github.com/fabkho/libellus/commit/284cf285fb80c581dbc3f4e9e036d15d8f931e89))
+
+## [1.12.2](https://github.com/fabkho/libellus/compare/v1.12.1...v1.12.2) (2026-10-11)
+
+
+### Fixes
+
+* **test:** give the v2a feed assertions the whole page ([1d8932a](https://github.com/fabkho/libellus/commit/1d8932a8ba27885dde7c1805ebe3b42b5a2428f7))
+* **test:** give the v2a feed assertions the whole page ([78f53d9](https://github.com/fabkho/libellus/commit/78f53d97f01d8c57b192ade8f8da6ec27e2906f9))
+
+## [1.12.1](https://github.com/fabkho/libellus/compare/v1.12.0...v1.12.1) (2026-10-11)
+
+
+### Fixes
+
+* **import:** match an Apple title that carries its series after a hyphen ([0595747](https://github.com/fabkho/libellus/commit/05957473a66aee4f9d8835e5e071cb572ffeade0))
+* **import:** match an Apple title that carries its series after a hyphen ([ddf2826](https://github.com/fabkho/libellus/commit/ddf282688e703dd6aec216f23993be61f0cd62d1)), closes [#17](https://github.com/fabkho/libellus/issues/17)
+
 ## [1.12.0](https://github.com/fabkho/libellus/compare/v1.11.0...v1.12.0) (2026-10-11)
 
 

@@ -14,10 +14,10 @@ import type { LibraryEntry } from '~/data/library'
 import { pageCountOf, progressFraction, progressOf, progressReachedEnd } from '~/data/progress'
 import { useBookStore } from '~/stores/book'
 import { useReadingStore } from '~/stores/reading'
-import type { CircleGroup } from '~/utils/circle'
+import type { FriendsGroup } from '~/utils/friendsNames'
 
-// `circle`: the followed members reading the same Book now (social v2a, FriendsCircleAvatars), on the cover's lower edge.
-const props = defineProps<{ entry: LibraryEntry; eager?: boolean; circle?: CircleGroup | null }>()
+// `friends`: the followed members reading the same Book now (social v2a, FriendsAlsoAvatars), on the cover's lower edge.
+const props = defineProps<{ entry: LibraryEntry; eager?: boolean; friends?: FriendsGroup | null }>()
 
 const { t, n } = useI18n()
 const { formatDay, dayOfRead } = useDays()
@@ -75,13 +75,13 @@ function act() {
         />
       </UiPressLink>
       <!-- Beside the cover's link, not in it: a button inside a link is not a thing. -->
-      <FriendsCircleAvatars
-        v-if="circle?.members.length"
-        :members="circle.members"
-        :more="circle.more"
+      <FriendsAlsoAvatars
+        v-if="friends?.members.length"
+        :members="friends.members"
+        :more="friends.more"
         kind="reading"
         testid="home.readingWith"
-        class="absolute bottom-xs left-1/2 z-10 flex -translate-x-1/2 [--circle-ring:var(--color-surface-raised)]"
+        class="absolute bottom-xs left-1/2 z-10 flex -translate-x-1/2 [--friends-ring:var(--color-surface-raised)]"
       />
     </div>
     <div class="relative flex min-w-0 flex-1 flex-col pt-xxs">

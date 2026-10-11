@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The account, at the end of the Profile (issue #78; what the avatar menu held
-// before): the address over grouped rows — Name (its sheet), Book links (its sheet, #116), the Dark mode
+// before): the address over grouped rows — Name (its sheet, opened by the page: the hero's name opens it too), Book links (its sheet, #116), the Dark mode
 // switch (docs/DESIGN.md, Themes: the first tap stores the opposite of what
 // shows), Import books, Install app (Android's Chrome only, once it has offered the
 // install: composables/useInstallHint.ts), Sign out, Delete account. Signing out deletes the writes still waiting
@@ -23,6 +23,7 @@
 // chrome is on this device — Strong, Medium, Off (no transparency at all), a segmented choice in
 // the row — to compare on a phone.
 import { useAvatarStore } from '~/stores/avatar'
+import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useGlassStore } from '~/stores/glass'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useSessionStore } from '~/stores/session'
@@ -33,7 +34,7 @@ import { useWaitlistStore } from '~/stores/waitlist'
 import { useThemeStore } from '~/stores/theme'
 import { GLASS_LEVELS, type GlassLevel } from '~/utils/glass'
 
-const emit = defineEmits<{ photo: [] }>()
+const emit = defineEmits<{ photo: []; name: [] }>()
 const { t } = useI18n()
 const session = useSessionStore()
 const avatar = useAvatarStore()
@@ -42,7 +43,6 @@ const isDark = computed({
   get: () => theme.theme === 'dark',
   set: (dark: boolean) => dark !== (theme.theme === 'dark') && theme.toggle(),
 })
-const naming = ref(false)
 // Book links (#116): her own, how many; read when the Profile opens.
 const linking = ref(false)
 const links = useLinkTemplatesStore()
@@ -54,6 +54,10 @@ onMounted(() => void errors.load())
 // Waitlist (#171): the owner's too, with the same guard.
 const waitlist = useWaitlistStore()
 onMounted(() => void waitlist.load())
+// Friends tab: the feed in the tab bar, on until she turns it off (stores/friendsTab.ts).
+const friendsTab = useFriendsTabStore()
+const showFriendsTab = computed({ get: () => friendsTab.enabled, set: (on: boolean) => friendsTab.set(on) })
+
 // Glass: the owner's, like Errors.
 const glass = useGlassStore()
 const glassLevel = computed({ get: () => glass.level, set: (level: GlassLevel) => glass.set(level) })
@@ -154,7 +158,7 @@ const whatsNew = useWhatsNew()
         <UiAvatar v-else-if="avatar.small" :initials="''" :photo="avatar.small" data-testid="profile.photoValue" />
         <span v-else class="text-ink-faint" data-testid="profile.photoValue">{{ t('photo.rowNone') }}</span>
       </UiRow>
-      <UiRow as="button" icon="pencil" :label="t('account.name')" chevron data-testid="profile.name" @click="naming = true">
+      <UiRow as="button" icon="pencil" :label="t('account.name')" chevron data-testid="profile.name" @click="emit('name')">
         <span :class="session.member?.name ? 'text-ink-muted' : 'text-ink-faint'" data-testid="profile.nameValue">{{ session.member?.name ?? t('account.nameNone') }}</span>
       </UiRow>
       <UiRow as="button" icon="globe" :label="t('links.row')" chevron data-testid="profile.links" @click="linking = true">
@@ -175,6 +179,7 @@ const whatsNew = useWhatsNew()
         <span v-else-if="waitlist.waitingCount !== null" class="text-ink-faint" data-testid="profile.waitlistValue">{{ t('waitlist.rowNone') }}</span>
       </UiRow>
       <UiSwitchRow v-model="isDark" :icon="isDark ? 'moon' : 'sun'" :label="t('profile.account.theme')" testid="profile.theme" />
+      <ProfileLanguage />
       <UiRow v-if="errors.isOwner" icon="stack" :label="t('profile.account.glass')">
         <template #trailing>
           <UiSegmented v-model="glassLevel" compact :options="glassOptions" :label="t('profile.account.glass')" testid="profile.glass" />
@@ -192,6 +197,7 @@ const whatsNew = useWhatsNew()
         data-testid="profile.install"
         @click="installApp.install()"
       />
+      <UiSwitchRow v-model="showFriendsTab" icon="people" :label="t('profile.account.friendsTab')" testid="profile.friendsTab" />
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
       <UiRow
         as="button"
@@ -215,7 +221,6 @@ const whatsNew = useWhatsNew()
     >
       {{ t('profile.account.version', { version: whatsNew.notes.version }) }} · <span class="text-accent-ink">{{ t('profile.account.whatsNew') }}</span>
     </button>
-    <ShellNameSheet v-model:open="naming" />
     <ProfileLinksSheet v-model:open="linking" />
     <UiConfirm
       v-model:open="asking"

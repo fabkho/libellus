@@ -36,6 +36,7 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 import sharp from 'sharp'
 import { appleAnswer } from '../tests/support/apple.ts'
 import { openLibraryAnswer } from '../tests/support/openLibrary.ts'
+import { coverJpeg, PROOF_COVER, proofCovers } from './shelfCovers.ts'
 
 const port = Number(process.argv[2] ?? process.env.PERF_APP_PORT ?? 3101)
 process.argv[2] = String(port)
@@ -102,6 +103,15 @@ async function jpeg(n, w, h) {
 const covers = new Map()
 async function coverResponse(req, res) {
   const url = new URL(req.url ?? '/', 'https://is1-ssl.mzstatic.com')
+  // Your shelf's proof covers (perf/shelfCovers.ts): real-looking fronts, drawn once per size.
+  const proof = PROOF_COVER.exec(url.pathname)
+  if (proof) {
+    const cover = proofCovers(1000).find((c) => c.n === Number(proof[1]))
+    if (!cover) return void res.writeHead(404).end()
+    const body = await coverJpeg(cover, Number(proof[2]), Number(proof[3]))
+    res.writeHead(200, { 'content-type': 'image/jpeg', 'content-length': body.length, 'cache-control': 'public, max-age=31536000', 'access-control-allow-origin': '*', 'timing-allow-origin': '*' })
+    return void res.end(body)
+  }
   const match = /\/perf\/(\d+)\/[^/]+\/(\d+)x(\d+)bb\.jpg$/.exec(url.pathname)
   // Any other Apple artwork (the sign-in wall's real URLs): a cover too, numbered by its path.
   const other = match ? null : /\/(\d+)x(\d+)bb\.jpg$/.exec(url.pathname)

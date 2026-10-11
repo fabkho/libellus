@@ -2,7 +2,7 @@ import { DEVICE_FEED_KEY, FEED_PAGE, type FeedEntry, type FeedKind } from '../da
 import { daysBetween } from './dates'
 
 /**
- * What the feed page and Home's circle decide before they draw (social v1, U5): which words a day
+ * What the feed page and Home's friends decide before they draw (social v1, U5): which words a day
  * gets, which empty state shows, how a refreshed first page joins the pages already loaded, and
  * how the device's copy is dated. Pure, so the tests pin it and a native port copies it.
  */

@@ -671,8 +671,8 @@ New keys (English as written; `{name}` etc. are i18n parameters):
   },
   "followLink": {
     "title": "Your follow link",
-    "textPrivate": "Send it to friends in Libellus. Your account is private, so they ask and you decide.",
-    "textPublic": "Send it to friends in Libellus. Your account is public, so they can follow you straight away.",
+    "textPrivate": "Send it to friends in BetterReads. Your account is private, so they ask and you decide.",
+    "textPublic": "Send it to friends in BetterReads. Your account is public, so they can follow you straight away.",
     "offline": "You're offline. Your link shows once you're back.",
     "share": "Share link",
     "copy": "Copy",
@@ -683,7 +683,7 @@ New keys (English as written; `{name}` etc. are i18n parameters):
     "renewTitle": "Make a new link?",
     "renewText": "The link you sent before stops working.",
     "renewConfirm": "New link",
-    "shareText": "Follow what I read on Libellus"
+    "shareText": "Follow what I read on BetterReads"
   },
   "blocked": {
     "title": "Blocked",
@@ -704,7 +704,7 @@ Changed keys:
 
 | Key | New English |
 |---|---|
-| `photo.private` | "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in Libellus while your account is public. It's saved small, without where or when it was taken." |
+| `photo.private` | "You and the members you're connected to see it: who follows you, who you follow, who asked to, who opened your follow link, and everyone in BetterReads while your account is public. It's saved small, without where or when it was taken." |
 | `manual.private` | "It stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options." |
 | `ownEdition.private` | "Your edition stays out of the shared catalogue. Your followers see it with your reads; hide it from them in the Book's options." |
 | `profile.deleteAccount.text` | "This permanently deletes your Library, reading sessions, ratings, reviews, collections, your name and photo, who you follow and who follows you, and your sign-in. It can't be undone." |

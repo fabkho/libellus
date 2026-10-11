@@ -1,4 +1,4 @@
-# Libellus — Spec Sheet (v1, 2026-10-02)
+# BetterReads — Spec Sheet (v1, 2026-10-02)
 
 > A mobile-first book tracker that nails one loop: **search → add → start → finish**. Personal first,
 > ready for a handful of invited people later (the first invitee comes from Goodreads).
@@ -9,7 +9,7 @@ is issue [#1](https://github.com/fabkho/libellus/issues/1). The words used here 
 
 ## 1. Goals
 
-- Find a book fast (Apple Books, OpenLibrary and Libellus' own Catalogue in parallel), put it on
+- Find a book fast (Apple Books, OpenLibrary and BetterReads' own Catalogue in parallel), put it on
   *Want to read*, mark when reading starts, and on finishing record the date, a quarter-star rating
   and a few words — on the phone, in a few taps, with sharp covers.
 - Re-reads and abandoned attempts are first-class: every read is a Reading session with its own dates.
@@ -18,7 +18,7 @@ is issue [#1](https://github.com/fabkho/libellus/issues/1). The words used here 
 - Replace Fable: import its history once, then delete it.
 - Built so a later Swift/Kotlin port is mechanical (the Trappist strategy).
 - Social, version 1 (follows by link, a feed on Home, private accounts by default): members see what
-  their circle reads, and each decides what her followers see ([docs/proposals/social-v1.md](docs/proposals/social-v1.md)).
+  their friends read, and each decides what her followers see ([docs/proposals/social-v1.md](docs/proposals/social-v1.md)).
 
 Non-goals (v1): likes, notifications, people search or suggestions (social v2, see docs/proposals/social-v1.md), a
 work/edition hierarchy, fuzzy dates, a "Paused" state, open sign-up, Sign in with Apple/Google, page
@@ -136,9 +136,9 @@ Refusals are stable `raise` messages the client maps to codes (`already_reading`
          Search  → an overlay over the current page, never a page: one merged list, sources never shown
          any book → Book detail (cover, metadata, primary action, reading history, collections)
          Profile → Share: her reading page (on/off, its link, its sections); Book → ⋯ → Share: its card
-         Home    → Your circle: a follow request, one card of a finish this week, a row per followed member
-         Home    → Your circle → Show more → /friends (her circle's feed, newest first) → People (followers, requests)
-         Profile → Friends: Your circle, People, Your follow link, Privacy (the seven switches, Blocked)
+         Home    → Your friends: a follow request, one card of a finish this week, a row per followed member
+         Home    → Your friends → Show more → /friends (her friends' feed, newest first) → People (followers, requests)
+         Profile → Friends: Your friends, People, Your follow link, Privacy (the seven switches, Blocked)
          /f/<token> (her follow link) → a member's profile: /friends/<member> and /friends/<member>/<year>
 (public) /r/<token> her reading page · /r/<token>/book/<id> a Book card — anyone with the link, no sign-in;
          both end in the waitlist form
@@ -263,7 +263,7 @@ upload and barcode scanning, quotes and notes, a custom domain, the native decis
   is copied into the origin private file system, so reading it needs no permission and works offline;
   the picked folder is only for finding files (Android asks for its permission again every session).
   Files come from the share sheet, the folder (Scan) and Add ebook on a Book page; matching tries the
-  ISBN, then title and first author, and leaves the rest to the member. Libellus never downloads books
+  ISBN, then title and first author, and leaves the rest to the member. BetterReads never downloads books
   or names where they come from.
 
 ## 9. Testing

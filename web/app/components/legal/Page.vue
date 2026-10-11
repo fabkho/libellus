@@ -8,15 +8,15 @@ import { useSessionStore } from '~/stores/session'
 // off the tab bar (UiTopBar with Back), the text in English and in German on the same page with a
 // small switch. Open to everyone, signed in or not (utils/publicPath.ts), and part of the precached
 // app, so it opens offline too. The language is `?lang=` when the address names one (a link from the
-// other page, or one you send), else the device's: the text is chosen before the first paint, so
+// other page, or one you send), else the app's language (German or English, utils/locale.ts): the text is chosen before the first paint, so
 // nothing moves. A draft banner shows while a placeholder is still in the text.
 const props = defineProps<{ page: LegalPage }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const session = useSessionStore()
 
-const lang = ref<LegalLang>(legalLangOf(route.query.lang, import.meta.client ? navigator.languages : []))
+const lang = ref<LegalLang>(legalLangOf(route.query.lang, [locale.value]))
 const text = computed(() => LEGAL_DOCUMENTS[props.page][lang.value])
 const draft = computed(() => placeholdersOf(LEGAL_DOCUMENTS[props.page]).length > 0)
 const DRAFT: Record<LegalLang, string> = {

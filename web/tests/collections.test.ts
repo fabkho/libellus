@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
-import { createCollections, isValidName, normaliseName } from '@/data/collections'
+import { createCollections, isValidName, normaliseName, sortByEdited } from '@/data/collections'
 import { createLibrary } from '@/data/library'
 import { signUpMember } from './support/member'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from './support/stack'
@@ -45,7 +45,7 @@ describe('names', () => {
 })
 
 describe('create, rename, delete', () => {
-  it('creates Collections at the end of her list, one per name', async () => {
+  it('creates Collections, the newest first on her list, one per name', async () => {
     const ida = await signUpMember()
     const collections = createCollections(ida.client)
 
@@ -55,9 +55,10 @@ describe('create, rename, delete', () => {
     const gifts = await collections.create('Gifts')
 
     const list = (await collections.list()).data!
-    expect(list.map((c) => c.name)).toEqual(['Sci-fi', 'Gifts'])
-    expect(list[0]!.id).toBe(scifi.data!.id)
-    expect(list[1]!.id).toBe(gifts.data!.id)
+    // Last edited first: a new Collection is edited when it is made.
+    expect(list.map((c) => c.name)).toEqual(['Gifts', 'Sci-fi'])
+    expect(list[0]!.id).toBe(gifts.data!.id)
+    expect(list[1]!.id).toBe(scifi.data!.id)
 
     expect((await collections.create('SCI-FI')).error).toBe('name_taken')
     expect((await collections.create('  ')).error).toBe('name_invalid')
@@ -90,6 +91,74 @@ describe('create, rename, delete', () => {
     expect((await collections.get(gifts.id)).data).toBeNull()
     expect((await library.entryForBook(entry.book.id)).data?.id).toBe(entry.id)
     expect((await collections.delete(gifts.id)).error).toBe('collection_missing')
+  })
+})
+
+describe('the list is last edited first', () => {
+  it('moves a Collection to the top when it is renamed, or a Book is put on it, taken off it or moved within it', async () => {
+    const ida = await signUpMember()
+    const collections = createCollections(ida.client)
+    const library = createLibrary(ida.client)
+    const first = (await collections.create('First')).data!
+    const second = (await collections.create('Second')).data!
+    const third = (await collections.create('Third')).data!
+    const names = async () => (await collections.list()).data!.map((c) => c.name)
+    expect(await names()).toEqual(['Third', 'Second', 'First'])
+
+    await collections.rename(first.id, 'First, renamed')
+    expect(await names()).toEqual(['First, renamed', 'Third', 'Second'])
+
+    const one = (await library.addToLibrary(book('Tehanu'))).data!
+    const two = (await library.addToLibrary(book('The Farthest Shore'))).data!
+    await collections.addEntry(second.id, one.book)
+    expect(await names()).toEqual(['Second', 'First, renamed', 'Third'])
+
+    await collections.addEntry(third.id, one.book)
+    await collections.addEntry(third.id, two.book)
+    await collections.addEntry(second.id, two.book)
+    expect(await names()).toEqual(['Second', 'Third', 'First, renamed'])
+
+    await collections.reorder(third.id, [two.id, one.id])
+    expect(await names()).toEqual(['Third', 'Second', 'First, renamed'])
+
+    await collections.removeEntry(second.id, one.id)
+    expect(await names()).toEqual(['Second', 'Third', 'First, renamed'])
+
+    // Reading one Collection (or its page) edits nothing.
+    await collections.get(first.id)
+    expect(await names()).toEqual(['Second', 'Third', 'First, renamed'])
+    const times = (await collections.list()).data!.map((c) => Date.parse(c.updatedAt))
+    expect(times).toEqual([...times].sort((a, b) => b - a))
+  })
+})
+
+describe('sortByEdited', () => {
+  const c = (id: string, name: string, updatedAt: string) => ({ id, name, updatedAt })
+
+  it('puts the latest edit first', () => {
+    const sorted = sortByEdited([c('a', 'A', '2026-10-01T10:00:00Z'), c('b', 'B', '2026-10-03T10:00:00Z'), c('c', 'C', '2026-10-02T10:00:00Z')])
+    expect(sorted.map((x) => x.id)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('breaks a tie by name, in any case, then by id, whatever order the rows come in', () => {
+    const at = '2026-10-01T10:00:00Z'
+    const rows = [c('3', 'sci-fi', at), c('1', 'Gifts', at), c('2', 'Sci-Fi', at), c('4', 'Äpfel', at)]
+    const expected = sortByEdited(rows).map((x) => x.id)
+    expect(expected).toEqual(['4', '1', '2', '3'])
+    expect(sortByEdited([...rows].reverse()).map((x) => x.id)).toEqual(expected)
+    expect(sortByEdited([rows[2]!, rows[0]!, rows[3]!, rows[1]!]).map((x) => x.id)).toEqual(expected)
+  })
+
+  it('compares instants, not strings (offsets and fractions)', () => {
+    const sorted = sortByEdited([c('a', 'A', '2026-10-01T12:00:00+02:00'), c('b', 'B', '2026-10-01T09:00:00.500000+00:00')])
+    expect(sorted.map((x) => x.id)).toEqual(['a', 'b'])
+  })
+
+  it('returns a new array and leaves the input alone', () => {
+    const input = [c('a', 'A', '2026-10-01T10:00:00Z'), c('b', 'B', '2026-10-02T10:00:00Z')]
+    const copy = [...input]
+    expect(sortByEdited(input)).not.toBe(input)
+    expect(input).toEqual(copy)
   })
 })
 
@@ -187,6 +256,29 @@ describe('the list and one Collection', () => {
     expect(read).toMatchObject({ id: scifi.id, name: 'Sci-fi' })
     expect(read.entries).toEqual([entry])
     expect((await collections.get('not-a-uuid')).data).toBeNull()
+  })
+
+  it('reads when each entry was put on the Collection, which is not when it joined the Library', async () => {
+    const ida = await signUpMember()
+    const collections = createCollections(ida.client)
+    const library = createLibrary(ida.client)
+    const scifi = (await collections.create('Sci-fi')).data!
+    const first = (await collections.addEntry(scifi.id, book('Always Coming Home'))).data!
+    // In the Library before it is on the Collection: its Library time is earlier than its Collection time.
+    const owned = (await library.addToLibrary(book('The Dispossessed'))).data!
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const second = (await collections.addEntry(scifi.id, owned.book)).data!
+
+    const read = (await collections.get(scifi.id)).data!
+    expect(Object.keys(read.addedAt!).sort()).toEqual([first.id, second.id].sort())
+    const stamp = (id: string) => Date.parse(read.addedAt![id]!)
+    expect(stamp(second.id)).toBeGreaterThan(stamp(first.id))
+    expect(stamp(second.id)).toBeGreaterThan(Date.parse(owned.addedAt))
+    // Reordering moves the Book, not the time it was put on.
+    await collections.reorder(scifi.id, [second.id, first.id])
+    const moved = (await collections.get(scifi.id)).data!
+    expect(moved.entries.map((e) => e.id)).toEqual([second.id, first.id])
+    expect(moved.addedAt).toEqual(read.addedAt)
   })
 })
 

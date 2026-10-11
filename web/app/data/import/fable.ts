@@ -20,7 +20,7 @@ import {
 /**
  * The pure mapping step of the Fable import (issue #17): the reading-tracker
  * records (`reading list --json`) plus the owner's overrides → the Books,
- * Library entries and Reading sessions Libellus stores. No I/O: covers, the
+ * Library entries and Reading sessions BetterReads stores. No I/O: covers, the
  * Catalogue lookup and the writes come after (web/scripts/fable/).
  *
  * The rules, in order:
@@ -312,7 +312,7 @@ function readLanguageOf(record: CorrectedBook): ReadLanguage {
 }
 
 /**
- * Maps the reading-tracker records and the overrides to what Libellus stores.
+ * Maps the reading-tracker records and the overrides to what BetterReads stores.
  * Pure: the same input always gives the same plan.
  */
 export function mapFableLibrary(raw: readonly ReadingTrackerBook[], overrides: Overrides = {}): ImportPlan {

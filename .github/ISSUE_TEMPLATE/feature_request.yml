@@ -1,5 +1,5 @@
 name: Idea
-description: Something Libellus could do. Please read SPEC.md's non-goals first.
+description: Something BetterReads could do. Please read SPEC.md's non-goals first.
 labels: [enhancement]
 body:
   - type: textarea

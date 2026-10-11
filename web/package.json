@@ -13,6 +13,10 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "email:preview": "node scripts/preview-email.mjs",
+    "i18n:translate": "node scripts/i18n/run.mjs translate",
+    "i18n:verify": "node scripts/i18n/run.mjs verify",
+    "i18n:status": "node scripts/i18n/run.mjs status",
+    "i18n:sample": "node scripts/i18n/sample.mjs",
     "e2e:build": "tsx e2e/build.ts",
     "import:fable": "tsx scripts/import-fable.ts",
     "import:reado": "tsx scripts/import-reado.ts",
@@ -31,7 +35,9 @@
     "perf:flows": "tsx perf/flows.ts",
     "perf:images": "tsx perf/images.ts",
     "perf:list": "tsx perf/list.ts",
-    "perf:layers": "tsx perf/layers.ts"
+    "perf:layers": "tsx perf/layers.ts",
+    "perf:shelf-seed": "tsx perf/shelf-seed.ts",
+    "perf:shelf": "tsx perf/shelf.ts"
   },
   "dependencies": {
     "@fontsource/geist": "^5.3.0",

@@ -393,11 +393,11 @@ what a phone's memory system and GPU do; record exactly this, once per phone.
 
 **Android (about 6 minutes).** Settings → About → tap *Build number* ×7 → Developer options → USB debugging;
 cable to the Mac; `adb devices`; Chrome → `chrome://inspect/#devices` → *Discover USB devices* → inspect the
-installed Libellus PWA ("web app"). In DevTools → Performance: CPU and Network *No throttling* (it is the real
+installed BetterReads PWA ("web app"). In DevTools → Performance: CPU and Network *No throttling* (it is the real
 CPU), tick *Screenshots* and *Web Vitals*; the phone on battery saver off, brightness fixed, other apps closed.
 Record **four** short recordings (record → do it → stop, 5–10 s each), in this order, and export each (⌘S):
 
-1. **Cold start**: force-stop (Settings → Apps → Libellus → Force stop), arm *Record*, open from the icon.
+1. **Cold start**: force-stop (Settings → Apps → BetterReads → Force stop), arm *Record*, open from the icon.
    `android-cold.json`. Look at: LCP marker, the long frame at the start (the 672 ms entry parse measured
    at 4x), when Home's first cover is there.
 2. **Library**: Home → Library tab → open *Finished* (the 99-row segment) → scroll to the bottom and back.
@@ -423,7 +423,7 @@ two longest (*Copy* in the group's detail).
 
 **iPhone (about 3 minutes, same hand).** Settings → Apps → Safari → Advanced → *Web Inspector* on; Mac Safari →
 Settings → Advanced → *Show features for web developers*. Open the app **from the Home Screen icon**
-(standalone), cable, Trust; Safari → Develop → *the iPhone* → *Libellus*. Timelines: tick *JavaScript & Events*,
+(standalone), cable, Trust; Safari → Develop → *the iPhone* → *BetterReads*. Timelines: tick *JavaScript & Events*,
 *Layout & Rendering*, *CPU*, *Memory*, *Screenshots*. Record **cold start** (swipe away in the App Switcher, reopen)
 and **Library → Finished → scroll**, **Profile open**; export each (*File → Export Timeline Recording…*).
 Look at *Layout & Rendering* (red frames, long Layout/Style bars), the longest *JavaScript & Events* task,

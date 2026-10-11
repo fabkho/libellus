@@ -1,0 +1,7848 @@
+{
+  "version": 2,
+  "sourceLocale": "en",
+  "entries": {
+    "default": {
+      "abandon.action": {
+        "a8d9138ddca12d7b": [
+          "de"
+        ]
+      },
+      "abandon.busy": {
+        "84ea5abb0e954cd3": [
+          "de"
+        ]
+      },
+      "abandon.endedOn": {
+        "9bbe0e03045865b8": [
+          "de"
+        ]
+      },
+      "abandon.optional": {
+        "ec91fdd9256cb75a": [
+          "de"
+        ]
+      },
+      "abandon.reason": {
+        "f81ab834de5f8491": [
+          "de"
+        ]
+      },
+      "abandon.reasonPlaceholder": {
+        "3e45fb2746eae255": [
+          "de"
+        ]
+      },
+      "abandon.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "abandon.title": {
+        "a8d9138ddca12d7b": [
+          "de"
+        ]
+      },
+      "account.clear": {
+        "1837bb1e113de14a": [
+          "de"
+        ]
+      },
+      "account.error.offline": {
+        "b258186ad617e999": [
+          "de"
+        ]
+      },
+      "account.error.rate_limited": {
+        "9bc986636a6ade31": [
+          "de"
+        ]
+      },
+      "account.error.unknown": {
+        "f84899be68a0a50b": [
+          "de"
+        ]
+      },
+      "account.name": {
+        "dcd1d5223f73b3a9": [
+          "de"
+        ]
+      },
+      "account.nameHint": {
+        "c9a4794c70fe3cae": [
+          "de"
+        ]
+      },
+      "account.nameLabel": {
+        "702ef921ed1d89bf": [
+          "de"
+        ]
+      },
+      "account.nameNone": {
+        "9fd728c66c9a256b": [
+          "de"
+        ]
+      },
+      "account.namePlaceholder": {
+        "59be71333c960fd0": [
+          "de"
+        ]
+      },
+      "account.nameTitle": {
+        "2c6b2e253c01fb2e": [
+          "de"
+        ]
+      },
+      "account.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "add.action": {
+        "b95ee0500183e00c": [
+          "de"
+        ]
+      },
+      "add.busy": {
+        "c6de6f45c827f464": [
+          "de"
+        ]
+      },
+      "add.clearStarted": {
+        "65694197d46a6f02": [
+          "de"
+        ]
+      },
+      "add.datesLabel": {
+        "78963905f399ce6f": [
+          "de"
+        ]
+      },
+      "add.endedOn": {
+        "ca7a1817035e85f1": [
+          "de"
+        ]
+      },
+      "add.needs.finished": {
+        "0b552e6e7cbf59f1": [
+          "de"
+        ]
+      },
+      "add.needs.reading": {
+        "8169693101a4536c": [
+          "de"
+        ]
+      },
+      "add.needs.want_to_read": {
+        "8a4da1c8f2cdb4f4": [
+          "de"
+        ]
+      },
+      "add.notSet": {
+        "4895f73177ab5d67": [
+          "de"
+        ]
+      },
+      "add.optional": {
+        "ec91fdd9256cb75a": [
+          "de"
+        ]
+      },
+      "add.review": {
+        "aff0766a5290e117": [
+          "de"
+        ]
+      },
+      "add.reviewPlaceholder": {
+        "b7b99940e9a5dac4": [
+          "de"
+        ]
+      },
+      "add.startedOn": {
+        "ff69fc2b9b41e4a8": [
+          "de"
+        ]
+      },
+      "add.statusLabel": {
+        "920e413c7d411b61": [
+          "de"
+        ]
+      },
+      "add.title": {
+        "b95ee0500183e00c": [
+          "de"
+        ]
+      },
+      "app.name": {
+        "0bc5ba9b8f84a124": [
+          "de"
+        ]
+      },
+      "app.tagline": {
+        "87e32c7b0328148a": [
+          "de"
+        ]
+      },
+      "auth.error.code_invalid": {
+        "022b2fe7075df3ab": [
+          "de"
+        ]
+      },
+      "auth.error.email_invalid": {
+        "8a966af884a06484": [
+          "de"
+        ]
+      },
+      "auth.error.invite_exhausted": {
+        "a000075374965db6": [
+          "de"
+        ]
+      },
+      "auth.error.invite_expired": {
+        "cf986b48af457361": [
+          "de"
+        ]
+      },
+      "auth.error.invite_gone": {
+        "d377ab513a2a05bc": [
+          "de"
+        ]
+      },
+      "auth.error.invite_invalid": {
+        "3fe3fd6875450e2a": [
+          "de"
+        ]
+      },
+      "auth.error.invite_required": {
+        "93ab2b3c161ae630": [
+          "de"
+        ]
+      },
+      "auth.error.not_configured": {
+        "d2ece6c917091ff8": [
+          "de"
+        ]
+      },
+      "auth.error.rate_limited": {
+        "65857f50102ed43d": [
+          "de"
+        ]
+      },
+      "auth.error.unknown": {
+        "3ccd9d6586ef9143": [
+          "de"
+        ]
+      },
+      "author.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "author.born": {
+        "11e3655f07bb2da4": [
+          "de"
+        ]
+      },
+      "author.count": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "author.died": {
+        "a5796de370757425": [
+          "de"
+        ]
+      },
+      "author.error": {
+        "156a1291468a2ef0": [
+          "de"
+        ]
+      },
+      "author.errorTitle": {
+        "f241c465a5b0eb3b": [
+          "de"
+        ]
+      },
+      "author.find": {
+        "822b2ae4542bc74b": [
+          "de"
+        ]
+      },
+      "author.findLabel": {
+        "00490ad05b22415c": [
+          "de"
+        ]
+      },
+      "author.fromWikipedia": {
+        "a6bf4f669780a97d": [
+          "de"
+        ]
+      },
+      "author.genres": {
+        "3561abfe8067f3c1": [
+          "de"
+        ]
+      },
+      "author.lived": {
+        "ce06971d90cee6dc": [
+          "de"
+        ]
+      },
+      "author.loading": {
+        "7df0b4feeab360c1": [
+          "de"
+        ]
+      },
+      "author.missing": {
+        "4f14bd025854c159": [
+          "de"
+        ]
+      },
+      "author.missingTitle": {
+        "b346f2325d605833": [
+          "de"
+        ]
+      },
+      "author.more": {
+        "d47d7cb0e4f8fd2b": [
+          "de"
+        ]
+      },
+      "author.noWorks": {
+        "d98a84c7378b36ad": [
+          "de"
+        ]
+      },
+      "author.offline": {
+        "4bb86c2da1e095fa": [
+          "de"
+        ]
+      },
+      "author.offlineTitle": {
+        "58420f1c06d0225a": [
+          "de"
+        ]
+      },
+      "author.other": {
+        "908e625832f5b436": [
+          "de"
+        ]
+      },
+      "author.photo": {
+        "d84eebada93efee1": [
+          "de"
+        ]
+      },
+      "author.photoBy": {
+        "274ad18dd92d4288": [
+          "de"
+        ]
+      },
+      "author.reading": {
+        "463816d07097e1a7": [
+          "de"
+        ]
+      },
+      "author.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "author.showAll": {
+        "a6c3860c56d7523f": [
+          "de"
+        ]
+      },
+      "author.standalone": {
+        "d3912a5967d47abc": [
+          "de"
+        ]
+      },
+      "author.title": {
+        "d95082a2ee57f3e4": [
+          "de"
+        ]
+      },
+      "author.want": {
+        "34e323c9f58a1676": [
+          "de"
+        ]
+      },
+      "author.wantLabel": {
+        "6e54e9e5d4c72786": [
+          "de"
+        ]
+      },
+      "blocked.empty": {
+        "3aac05abe9c268fc": [
+          "de"
+        ]
+      },
+      "blocked.title": {
+        "18f2a0947f9d6523": [
+          "de"
+        ]
+      },
+      "blocked.unblock": {
+        "712da63171e0c9de": [
+          "de"
+        ]
+      },
+      "blocked.unblockLabel": {
+        "9043cce87428b2b9": [
+          "de"
+        ]
+      },
+      "blocked.unblocked": {
+        "07863823f1fd3600": [
+          "de"
+        ]
+      },
+      "book.abandon": {
+        "73bfb0b10ea6b04a": [
+          "de"
+        ]
+      },
+      "book.about": {
+        "4efca0d10c5feb8e": [
+          "de"
+        ]
+      },
+      "book.add": {
+        "b95ee0500183e00c": [
+          "de"
+        ]
+      },
+      "book.addedOn": {
+        "e7bbba62018aab28": [
+          "de"
+        ]
+      },
+      "book.authorMore": {
+        "bda0b75b213c00ee": [
+          "de"
+        ]
+      },
+      "book.authorMoreWorks": {
+        "74b9de128b1ab10b": [
+          "de"
+        ]
+      },
+      "book.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "book.edition.action": {
+        "c0bf75bd78bf9572": [
+          "de"
+        ]
+      },
+      "book.edition.browseHint": {
+        "37596d671de63367": [
+          "de"
+        ]
+      },
+      "book.edition.busy": {
+        "92a0c89d7c3768df": [
+          "de"
+        ]
+      },
+      "book.edition.changeAndSave": {
+        "9dc1b3d5891eeded": [
+          "de"
+        ]
+      },
+      "book.edition.copyFormat": {
+        "f26eb2df28059368": [
+          "de"
+        ]
+      },
+      "book.edition.current": {
+        "ba54b78e540f090f": [
+          "de"
+        ]
+      },
+      "book.edition.failed": {
+        "84a07a229555e39e": [
+          "de"
+        ]
+      },
+      "book.edition.formatLabel": {
+        "2f343666aaa88c44": [
+          "de"
+        ]
+      },
+      "book.edition.formatSaid": {
+        "96ac1d65cb133502": [
+          "de"
+        ]
+      },
+      "book.edition.hint": {
+        "03ced4e2ff682f68": [
+          "de"
+        ]
+      },
+      "book.edition.listLabel": {
+        "c6a48dcca4f722c8": [
+          "de"
+        ]
+      },
+      "book.edition.loading": {
+        "1fc629a831cfc2c9": [
+          "de"
+        ]
+      },
+      "book.edition.missing": {
+        "f52cba96ba2051a5": [
+          "de"
+        ]
+      },
+      "book.edition.none": {
+        "b710345d4fccf5da": [
+          "de"
+        ]
+      },
+      "book.edition.open": {
+        "49c58f0480c7a3cf": [
+          "de"
+        ]
+      },
+      "book.edition.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "book.edition.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "book.edition.saving": {
+        "23e39291d6135814": [
+          "de"
+        ]
+      },
+      "book.edition.show": {
+        "0df6f1cad36c49da": [
+          "de"
+        ]
+      },
+      "book.edition.shown": {
+        "5c75cf589f2cdb6d": [
+          "de"
+        ]
+      },
+      "book.edition.title": {
+        "49c58f0480c7a3cf": [
+          "de"
+        ]
+      },
+      "book.error": {
+        "481859b689b0d0d9": [
+          "de"
+        ]
+      },
+      "book.errorTitle": {
+        "5ed0028e00d02ca4": [
+          "de"
+        ]
+      },
+      "book.finish": {
+        "a6c7a84baa6750fc": [
+          "de"
+        ]
+      },
+      "book.format.audiobook": {
+        "8716cb3d8010144e": [
+          "de"
+        ]
+      },
+      "book.format.ebook": {
+        "571a0211e8501143": [
+          "de"
+        ]
+      },
+      "book.format.hardcover": {
+        "90f89e50c212acdf": [
+          "de"
+        ]
+      },
+      "book.format.paperback": {
+        "18caa8e460cbb292": [
+          "de"
+        ]
+      },
+      "book.formatFact.audiobook": {
+        "3d85bd51dc4d93ee": [
+          "de"
+        ]
+      },
+      "book.formatFact.ebook": {
+        "f69f0580a78ff1aa": [
+          "de"
+        ]
+      },
+      "book.formatFact.hardcover": {
+        "0613fca7d73bbda0": [
+          "de"
+        ]
+      },
+      "book.formatFact.paperback": {
+        "f4aa10252d0c3a54": [
+          "de"
+        ]
+      },
+      "book.goodreads.name": {
+        "7acf32567a4af700": [
+          "de"
+        ]
+      },
+      "book.goodreads.on": {
+        "12eb4d25c52aefe4": [
+          "de"
+        ]
+      },
+      "book.goodreads.ratingLabel": {
+        "75f2889749310e25": [
+          "de"
+        ]
+      },
+      "book.goodreads.ratings": {
+        "25561648326ab265": [
+          "de"
+        ]
+      },
+      "book.goodreads.reviews": {
+        "52b20687d2731031": [
+          "de"
+        ]
+      },
+      "book.links.label": {
+        "33758d7162ebaece": [
+          "de"
+        ]
+      },
+      "book.links.less": {
+        "ae5239ec63f28cd4": [
+          "de"
+        ]
+      },
+      "book.links.more": {
+        "d47d7cb0e4f8fd2b": [
+          "de"
+        ]
+      },
+      "book.links.moreLabel": {
+        "1bdb1b193d318405": [
+          "de"
+        ]
+      },
+      "book.loading": {
+        "a1a6d02b23b3b493": [
+          "de"
+        ]
+      },
+      "book.missing": {
+        "1f368f47e83b12f2": [
+          "de"
+        ]
+      },
+      "book.missingTitle": {
+        "2192ffc6605307ab": [
+          "de"
+        ]
+      },
+      "book.more": {
+        "d47d7cb0e4f8fd2b": [
+          "de"
+        ]
+      },
+      "book.notInLibrary": {
+        "f52d20eb27c5aa14": [
+          "de"
+        ]
+      },
+      "book.options": {
+        "077f42456a7a66bd": [
+          "de"
+        ]
+      },
+      "book.outsideCatalogue": {
+        "06411ab22d881707": [
+          "de"
+        ]
+      },
+      "book.pages": {
+        "d46e57d6ac42cf6a": [
+          "de"
+        ]
+      },
+      "book.progress.abandonHint": {
+        "0ef53adf05f90310": [
+          "de"
+        ]
+      },
+      "book.progress.amountPages": {
+        "81fa02f1659ba1ed": [
+          "de"
+        ]
+      },
+      "book.progress.amountPercent": {
+        "73c06356a8cafb0f": [
+          "de"
+        ]
+      },
+      "book.progress.atEndLine": {
+        "39cf55d615c97180": [
+          "de"
+        ]
+      },
+      "book.progress.busy": {
+        "23e39291d6135814": [
+          "de"
+        ]
+      },
+      "book.progress.chartLabel": {
+        "ba3c7eb3a6ae4a94": [
+          "de"
+        ]
+      },
+      "book.progress.dayToday": {
+        "2b065c7c9ce466e5": [
+          "de"
+        ]
+      },
+      "book.progress.dayYesterday": {
+        "566181254b293aa6": [
+          "de"
+        ]
+      },
+      "book.progress.days": {
+        "b0b9c1c62ed96e31": [
+          "de"
+        ]
+      },
+      "book.progress.done": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "book.progress.endLine": {
+        "795b8e7b314dbc55": [
+          "de"
+        ]
+      },
+      "book.progress.figureAddPages": {
+        "825c88652130c969": [
+          "de"
+        ]
+      },
+      "book.progress.figureDay": {
+        "087fcff3ea6449b0": [
+          "de"
+        ]
+      },
+      "book.progress.figureDaysUnit": {
+        "ab51004e9d71a485": [
+          "de"
+        ]
+      },
+      "book.progress.figureDone": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "book.progress.figureLeft": {
+        "58eb9032e3bb83f0": [
+          "de"
+        ]
+      },
+      "book.progress.figureNone": {
+        "d4f85d36757c12f0": [
+          "de"
+        ]
+      },
+      "book.progress.figureOwn": {
+        "9376e120e05b360e": [
+          "de"
+        ]
+      },
+      "book.progress.figurePage": {
+        "0a30a815d67d7dd2": [
+          "de"
+        ]
+      },
+      "book.progress.figurePages": {
+        "bfa062de040f55a1": [
+          "de"
+        ]
+      },
+      "book.progress.figureRead": {
+        "9b9a8d05a7ec353b": [
+          "de"
+        ]
+      },
+      "book.progress.figureToGo": {
+        "9d856d902ec0af56": [
+          "de"
+        ]
+      },
+      "book.progress.finishHint": {
+        "c360551c7383383a": [
+          "de"
+        ]
+      },
+      "book.progress.finishedIt": {
+        "9d17f01d343f8bb1": [
+          "de"
+        ]
+      },
+      "book.progress.gainPages": {
+        "ecadd87ff0e5d0aa": [
+          "de"
+        ]
+      },
+      "book.progress.gainPercent": {
+        "0dd0e7f238978246": [
+          "de"
+        ]
+      },
+      "book.progress.label": {
+        "3cd8929748f2cc21": [
+          "de"
+        ]
+      },
+      "book.progress.lastTime": {
+        "07aef1c3339daaff": [
+          "de"
+        ]
+      },
+      "book.progress.lastTimeLine": {
+        "2c676accaac0912f": [
+          "de"
+        ]
+      },
+      "book.progress.less": {
+        "0b5bf8ad6382bad2": [
+          "de"
+        ]
+      },
+      "book.progress.logEnd": {
+        "59588c7a2fbe390d": [
+          "de"
+        ]
+      },
+      "book.progress.logTitle": {
+        "666374e58ae35ae1": [
+          "de"
+        ]
+      },
+      "book.progress.lossPages": {
+        "66bbbdfb6a52e8ea": [
+          "de"
+        ]
+      },
+      "book.progress.lossPercent": {
+        "6d6071923e622d2f": [
+          "de"
+        ]
+      },
+      "book.progress.mode.page": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "book.progress.mode.percent": {
+        "716d633b125adb76": [
+          "de"
+        ]
+      },
+      "book.progress.modeLabel": {
+        "6d9ca04b5373ad60": [
+          "de"
+        ]
+      },
+      "book.progress.more": {
+        "08c3eb64a827631b": [
+          "de"
+        ]
+      },
+      "book.progress.none": {
+        "1bd6c3aa48813703": [
+          "de"
+        ]
+      },
+      "book.progress.notFinishing": {
+        "2a1cb9e06e5a0cdf": [
+          "de"
+        ]
+      },
+      "book.progress.notStarted": {
+        "4fa64b486feba456": [
+          "de"
+        ]
+      },
+      "book.progress.notStartedNoCount": {
+        "caf3f7a0d531fb7b": [
+          "de"
+        ]
+      },
+      "book.progress.notStartedPercent": {
+        "c89cc0b6cba3e667": [
+          "de"
+        ]
+      },
+      "book.progress.paceLine": {
+        "5af8832df20a4880": [
+          "de"
+        ]
+      },
+      "book.progress.page": {
+        "cc3dd113c9e7b390": [
+          "de"
+        ]
+      },
+      "book.progress.pageLabel": {
+        "0a30a815d67d7dd2": [
+          "de"
+        ]
+      },
+      "book.progress.pageOnly": {
+        "59588c7a2fbe390d": [
+          "de"
+        ]
+      },
+      "book.progress.perDay": {
+        "3e5c349bc2ed886b": [
+          "de"
+        ]
+      },
+      "book.progress.perDayPercent": {
+        "3f3483354743945d": [
+          "de"
+        ]
+      },
+      "book.progress.percent": {
+        "bb8ddd3591649943": [
+          "de"
+        ]
+      },
+      "book.progress.percentLabel": {
+        "4a985a9b97ec2208": [
+          "de"
+        ]
+      },
+      "book.progress.reached": {
+        "042718ee98e00481": [
+          "de"
+        ]
+      },
+      "book.progress.readIn": {
+        "9dffa529e8f60f6a": [
+          "de"
+        ]
+      },
+      "book.progress.readPerDayPages": {
+        "2f80ecc50a553ab6": [
+          "de"
+        ]
+      },
+      "book.progress.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "book.progress.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "book.progress.saved": {
+        "41854642b8466af3": [
+          "de"
+        ]
+      },
+      "book.progress.theEnd": {
+        "e0a1d6943ae22b1e": [
+          "de"
+        ]
+      },
+      "book.progress.title": {
+        "e08dc19e0c25bc2a": [
+          "de"
+        ]
+      },
+      "book.progress.totalCount": {
+        "3585ecb231b0233b": [
+          "de"
+        ]
+      },
+      "book.progress.totalEdit": {
+        "c91ddeb449ee85af": [
+          "de"
+        ]
+      },
+      "book.progress.totalEdition": {
+        "b0f73b18901663db": [
+          "de"
+        ]
+      },
+      "book.progress.totalHint": {
+        "d991bc26561d85f4": [
+          "de"
+        ]
+      },
+      "book.progress.totalOf": {
+        "3cb85ddf61c0e56f": [
+          "de"
+        ]
+      },
+      "book.progress.totalPercent": {
+        "90d681946acab1a3": [
+          "de"
+        ]
+      },
+      "book.progress.totalTitle": {
+        "5d4901b6b2897e86": [
+          "de"
+        ]
+      },
+      "book.progress.undo": {
+        "a8283ade31856f71": [
+          "de"
+        ]
+      },
+      "book.progress.undoLabel": {
+        "ff5a70065b6b77d8": [
+          "de"
+        ]
+      },
+      "book.progress.update": {
+        "e08dc19e0c25bc2a": [
+          "de"
+        ]
+      },
+      "book.progress.updateShort": {
+        "c1c1009d3f37ec05": [
+          "de"
+        ]
+      },
+      "book.progress.wheelHint": {
+        "b75a4523d3f55e8f": [
+          "de"
+        ]
+      },
+      "book.read": {
+        "20d8b246c1ccf97a": [
+          "de"
+        ]
+      },
+      "book.readAgain": {
+        "d8cb92fa7b9e99b5": [
+          "de"
+        ]
+      },
+      "book.readers.abandoned": {
+        "771937bb313fa7fe": [
+          "de"
+        ]
+      },
+      "book.readers.all": {
+        "9a10f0e903d8f78a": [
+          "de"
+        ]
+      },
+      "book.readers.allLabel": {
+        "3dc47cc317ca935b": [
+          "de"
+        ]
+      },
+      "book.readers.finished": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "book.readers.loading": {
+        "a1a16dbb5c54aad2": [
+          "de"
+        ]
+      },
+      "book.readers.loadingMore": {
+        "009ab86975c8148d": [
+          "de"
+        ]
+      },
+      "book.readers.more": {
+        "f5c9bd131486e793": [
+          "de"
+        ]
+      },
+      "book.readers.reading": {
+        "463816d07097e1a7": [
+          "de"
+        ]
+      },
+      "book.readers.sheetTitle": {
+        "bd32c1d127f58050": [
+          "de"
+        ]
+      },
+      "book.readers.someone": {
+        "6352afe3255298b4": [
+          "de"
+        ]
+      },
+      "book.readers.title": {
+        "bd32c1d127f58050": [
+          "de"
+        ]
+      },
+      "book.readers.want": {
+        "902cdb87016e1c21": [
+          "de"
+        ]
+      },
+      "book.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "book.since": {
+        "6d9d7e8c49807a46": [
+          "de"
+        ]
+      },
+      "book.start": {
+        "79f199280c521841": [
+          "de"
+        ]
+      },
+      "book.startAgain": {
+        "962e64b761961fe0": [
+          "de"
+        ]
+      },
+      "book.title": {
+        "909cb81127c5e194": [
+          "de"
+        ]
+      },
+      "bookEbook.adding": {
+        "b9e20eea785b395d": [
+          "de"
+        ]
+      },
+      "bookEbook.another.action": {
+        "a6a32dbc5618ea39": [
+          "de"
+        ]
+      },
+      "bookEbook.another.text": {
+        "dc3133a7e60386c7": [
+          "de"
+        ]
+      },
+      "bookEbook.another.title": {
+        "4b4a979965f3c0a1": [
+          "de"
+        ]
+      },
+      "bookEbook.line": {
+        "2fd21799bd24d631": [
+          "de"
+        ]
+      },
+      "bookEbook.missing": {
+        "94026faa94c97c93": [
+          "de"
+        ]
+      },
+      "bookEbook.missingHint": {
+        "16a8e3e8f4b5cc39": [
+          "de"
+        ]
+      },
+      "bookEbook.unlink.action": {
+        "1c3a51386d01fd5e": [
+          "de"
+        ]
+      },
+      "bookEbook.unlink.text": {
+        "1075199ad19cb81c": [
+          "de"
+        ]
+      },
+      "bookEbook.unlink.title": {
+        "6c2ea9f010395873": [
+          "de"
+        ]
+      },
+      "bookOptions.addEbook": {
+        "ef63be476572068c": [
+          "de"
+        ]
+      },
+      "bookOptions.hide": {
+        "44bbe71b07dd352d": [
+          "de"
+        ]
+      },
+      "bookOptions.hideHint": {
+        "df11707e6d72aa41": [
+          "de"
+        ]
+      },
+      "bookOptions.remove": {
+        "8025a3afd65f1cd0": [
+          "de"
+        ]
+      },
+      "bookOptions.replaceEbook": {
+        "9bdb2282d024ba8a": [
+          "de"
+        ]
+      },
+      "bookOptions.share": {
+        "29887a5ff9846ccc": [
+          "de"
+        ]
+      },
+      "bookOptions.title": {
+        "d0db8b5e364b6989": [
+          "de"
+        ]
+      },
+      "bookOptions.unlinkEbook": {
+        "7e589bf17564d69e": [
+          "de"
+        ]
+      },
+      "collection.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "collection.count": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "collection.delete": {
+        "e734ac69a61060f7": [
+          "de"
+        ]
+      },
+      "collection.deleteConfirm": {
+        "8e13216a05b75255": [
+          "de"
+        ]
+      },
+      "collection.deleteKeeps": {
+        "95c7646ab7136be6": [
+          "de"
+        ]
+      },
+      "collection.deleting": {
+        "43b5894c3e4e2b24": [
+          "de"
+        ]
+      },
+      "collection.dropped": {
+        "c7380f65eba6443a": [
+          "de"
+        ]
+      },
+      "collection.empty": {
+        "3ca011537f71596b": [
+          "de"
+        ]
+      },
+      "collection.emptyTitle": {
+        "e774ad67d61ae36b": [
+          "de"
+        ]
+      },
+      "collection.error": {
+        "481859b689b0d0d9": [
+          "de"
+        ]
+      },
+      "collection.errorTitle": {
+        "fb9ee49e640011d1": [
+          "de"
+        ]
+      },
+      "collection.lifted": {
+        "16f642685a8f102b": [
+          "de"
+        ]
+      },
+      "collection.missing": {
+        "992276f72e41846e": [
+          "de"
+        ]
+      },
+      "collection.missingTitle": {
+        "6b1364e8313fdb22": [
+          "de"
+        ]
+      },
+      "collection.more": {
+        "1a1a005db8a78a57": [
+          "de"
+        ]
+      },
+      "collection.move": {
+        "712febd1883d7b61": [
+          "de"
+        ]
+      },
+      "collection.moveHint": {
+        "bc737515446f3c7c": [
+          "de"
+        ]
+      },
+      "collection.moved": {
+        "ca452dfe33ea3b05": [
+          "de"
+        ]
+      },
+      "collection.order": {
+        "27f0d486b628d862": [
+          "de"
+        ]
+      },
+      "collection.rename": {
+        "3064d79a295cefe4": [
+          "de"
+        ]
+      },
+      "collection.reorderError": {
+        "ee28aac8e29db833": [
+          "de"
+        ]
+      },
+      "collection.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "collection.toCollections": {
+        "16a2d21226eb751a": [
+          "de"
+        ]
+      },
+      "collections.addTo": {
+        "d0baec111c5ae234": [
+          "de"
+        ]
+      },
+      "collections.addsToLibrary": {
+        "2c8f1a3f29fec6ef": [
+          "de"
+        ]
+      },
+      "collections.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "collections.count": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "collections.create": {
+        "4759498ac2a719c6": [
+          "de"
+        ]
+      },
+      "collections.done": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "collections.empty": {
+        "74700d8f244701b6": [
+          "de"
+        ]
+      },
+      "collections.emptyTitle": {
+        "3a164eb526ab6031": [
+          "de"
+        ]
+      },
+      "collections.error.already_in_collection": {
+        "1d18ec283057c516": [
+          "de"
+        ]
+      },
+      "collections.error.book_invalid": {
+        "a2fb6a9861c8635b": [
+          "de"
+        ]
+      },
+      "collections.error.collection_missing": {
+        "1cd49fe5a1e0036b": [
+          "de"
+        ]
+      },
+      "collections.error.name_invalid": {
+        "e70aa14fc3bcfc30": [
+          "de"
+        ]
+      },
+      "collections.error.name_taken": {
+        "64683b874c14661b": [
+          "de"
+        ]
+      },
+      "collections.error.not_in_collection": {
+        "3230db8d3c47b41b": [
+          "de"
+        ]
+      },
+      "collections.error.not_signed_in": {
+        "c293e69029ac10cc": [
+          "de"
+        ]
+      },
+      "collections.error.offline": {
+        "b258186ad617e999": [
+          "de"
+        ]
+      },
+      "collections.error.order_mismatch": {
+        "d0b491876a59b883": [
+          "de"
+        ]
+      },
+      "collections.error.unknown": {
+        "3ccd9d6586ef9143": [
+          "de"
+        ]
+      },
+      "collections.intro": {
+        "385b29fd0f4186a3": [
+          "de"
+        ]
+      },
+      "collections.loadError": {
+        "b01358cdd63a65a3": [
+          "de"
+        ]
+      },
+      "collections.nameLabel": {
+        "dcd1d5223f73b3a9": [
+          "de"
+        ]
+      },
+      "collections.namePlaceholder": {
+        "41400cefab51a582": [
+          "de"
+        ]
+      },
+      "collections.new": {
+        "cefd66fedb8ddd87": [
+          "de"
+        ]
+      },
+      "collections.pickerTitle": {
+        "d0baec111c5ae234": [
+          "de"
+        ]
+      },
+      "collections.rename": {
+        "c85ad641affadab9": [
+          "de"
+        ]
+      },
+      "collections.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "collections.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "collections.title": {
+        "9f9feade761d22f3": [
+          "de"
+        ]
+      },
+      "common.cancel": {
+        "19766ed6ccb2f4a3": [
+          "de"
+        ]
+      },
+      "common.chooseDay": {
+        "e6346cbfa06fbe0c": [
+          "de"
+        ]
+      },
+      "common.dayMonth": {
+        "1849a2eea6b2158d": [
+          "de"
+        ]
+      },
+      "common.dayMonthYear": {
+        "ade39ee8d0ff6312": [
+          "de"
+        ]
+      },
+      "common.etAl": {
+        "f39ecede1ba7c71b": [
+          "de"
+        ]
+      },
+      "common.listSeparator": {
+        "0a07f659461970d8": [
+          "de"
+        ]
+      },
+      "common.offline": {
+        "a1794783aab72d20": [
+          "de"
+        ]
+      },
+      "common.today": {
+        "d0d776fc322df93b": [
+          "de"
+        ]
+      },
+      "common.yesterday": {
+        "6bb498d2e65d3cd9": [
+          "de"
+        ]
+      },
+      "contact.context": {
+        "ebd2f741c53187f3": [
+          "de"
+        ]
+      },
+      "contact.count": {
+        "52b4998c4b2db9d0": [
+          "de"
+        ]
+      },
+      "contact.countLabel": {
+        "9fbe29bedb7b98ed": [
+          "de"
+        ]
+      },
+      "contact.done.action": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "contact.done.text": {
+        "0acc43b7f57867c2": [
+          "de"
+        ]
+      },
+      "contact.done.title": {
+        "942d6c2fca4f8672": [
+          "de"
+        ]
+      },
+      "contact.error.invalid": {
+        "4adea15e9045d0c4": [
+          "de"
+        ]
+      },
+      "contact.error.rate_limited": {
+        "dee627337c03c1fa": [
+          "de"
+        ]
+      },
+      "contact.error.unknown": {
+        "a8f181f9ef2aa5a7": [
+          "de"
+        ]
+      },
+      "contact.hint": {
+        "48ff8fe4eeda11b5": [
+          "de"
+        ]
+      },
+      "contact.kind.bug": {
+        "703a5028367b34d8": [
+          "de"
+        ]
+      },
+      "contact.kind.feature": {
+        "89ee3fcc460b5443": [
+          "de"
+        ]
+      },
+      "contact.kind.other": {
+        "cc72843144841a6f": [
+          "de"
+        ]
+      },
+      "contact.kindLabel": {
+        "4cbf3cccb52a562e": [
+          "de"
+        ]
+      },
+      "contact.label": {
+        "7a057bd996a32915": [
+          "de"
+        ]
+      },
+      "contact.offline": {
+        "0c228b572dd1f0f7": [
+          "de"
+        ]
+      },
+      "contact.placeholder.bug": {
+        "dc6d0984f244b40f": [
+          "de"
+        ]
+      },
+      "contact.placeholder.feature": {
+        "c6154bdebdce92ed": [
+          "de"
+        ]
+      },
+      "contact.placeholder.other": {
+        "36078cc506059053": [
+          "de"
+        ]
+      },
+      "contact.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "contact.row": {
+        "2b5c3d26721ae9c3": [
+          "de"
+        ]
+      },
+      "contact.send": {
+        "f6f4688ff23d50c6": [
+          "de"
+        ]
+      },
+      "contact.sending": {
+        "b8ed5279e897be5d": [
+          "de"
+        ]
+      },
+      "contact.title": {
+        "2b5c3d26721ae9c3": [
+          "de"
+        ]
+      },
+      "deleteSession.action": {
+        "002435512c2ac89d": [
+          "de"
+        ]
+      },
+      "deleteSession.busy": {
+        "43b5894c3e4e2b24": [
+          "de"
+        ]
+      },
+      "deleteSession.only": {
+        "4b28d24898c39546": [
+          "de"
+        ]
+      },
+      "deleteSession.text": {
+        "38de8ee5348dc5d4": [
+          "de"
+        ]
+      },
+      "deleteSession.title": {
+        "f1b59fe98e447c43": [
+          "de"
+        ]
+      },
+      "ebooks.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "ebooks.choose": {
+        "cbaa1f71904dd0de": [
+          "de"
+        ]
+      },
+      "ebooks.chooseSheet.title": {
+        "0a811bde46da45ad": [
+          "de"
+        ]
+      },
+      "ebooks.copies": {
+        "903265ac0743f4ed": [
+          "de"
+        ]
+      },
+      "ebooks.copySheet.current": {
+        "bfda026e6c598dde": [
+          "de"
+        ]
+      },
+      "ebooks.copySheet.keep": {
+        "4f4f6d202f4c46e9": [
+          "de"
+        ]
+      },
+      "ebooks.copySheet.replace": {
+        "614aba0d9189f962": [
+          "de"
+        ]
+      },
+      "ebooks.copySheet.replaceHint": {
+        "3e024d6f3749a314": [
+          "de"
+        ]
+      },
+      "ebooks.copySheet.this": {
+        "eb43df97d62bac4b": [
+          "de"
+        ]
+      },
+      "ebooks.copySheet.title": {
+        "aea36126970e27c8": [
+          "de"
+        ]
+      },
+      "ebooks.copyWhy": {
+        "3fe54e43082211c6": [
+          "de"
+        ]
+      },
+      "ebooks.couldBe": {
+        "4a47123205e4c1f5": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.action": {
+        "a6a32dbc5618ea39": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.busy": {
+        "cb916c41e26b3f89": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.found": {
+        "f1a5acc45eed2ced": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.foundAction": {
+        "7e6fe1051fb0fbe2": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.hint": {
+        "4f752f5a77de445f": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.mine": {
+        "ba54b78e540f090f": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.mineAction": {
+        "09dd37caffd7f1a9": [
+          "de"
+        ]
+      },
+      "ebooks.editionSheet.title": {
+        "854d1d00418ac683": [
+          "de"
+        ]
+      },
+      "ebooks.empty.text": {
+        "7cec9bc2ebe87dab": [
+          "de"
+        ]
+      },
+      "ebooks.empty.title": {
+        "63909bffeacb73b3": [
+          "de"
+        ]
+      },
+      "ebooks.error.folder": {
+        "c012d5d45740d18c": [
+          "de"
+        ]
+      },
+      "ebooks.error.not_epub": {
+        "ad03707af044cfe9": [
+          "de"
+        ]
+      },
+      "ebooks.error.storage": {
+        "79c5870fd0f4dec5": [
+          "de"
+        ]
+      },
+      "ebooks.find": {
+        "3633937b5de0d490": [
+          "de"
+        ]
+      },
+      "ebooks.folder.choose": {
+        "c7f937836f5d82d5": [
+          "de"
+        ]
+      },
+      "ebooks.folder.error": {
+        "c012d5d45740d18c": [
+          "de"
+        ]
+      },
+      "ebooks.folder.hint": {
+        "f710a8a01cb52852": [
+          "de"
+        ]
+      },
+      "ebooks.folder.label": {
+        "2772757722a524d0": [
+          "de"
+        ]
+      },
+      "ebooks.folder.scan": {
+        "ea1c510d1ddb7264": [
+          "de"
+        ]
+      },
+      "ebooks.folder.scanAgain": {
+        "3d04584dff38e94e": [
+          "de"
+        ]
+      },
+      "ebooks.folder.scanHint": {
+        "e5b400c317d833d2": [
+          "de"
+        ]
+      },
+      "ebooks.folder.scanned": {
+        "67801a7941014ed2": [
+          "de"
+        ]
+      },
+      "ebooks.folder.scanning": {
+        "38d96da6e8b253d2": [
+          "de"
+        ]
+      },
+      "ebooks.folder.scanningCount": {
+        "9a99f7cdd29478a0": [
+          "de"
+        ]
+      },
+      "ebooks.footer": {
+        "b68d5515631694d0": [
+          "de"
+        ]
+      },
+      "ebooks.ignore": {
+        "fce77c34d3fec987": [
+          "de"
+        ]
+      },
+      "ebooks.intro": {
+        "62b877263544f796": [
+          "de"
+        ]
+      },
+      "ebooks.keep": {
+        "1c215e3e8c7c07a3": [
+          "de"
+        ]
+      },
+      "ebooks.linked": {
+        "bfda026e6c598dde": [
+          "de"
+        ]
+      },
+      "ebooks.linkedNote": {
+        "c856e02ced8b380b": [
+          "de"
+        ]
+      },
+      "ebooks.mark": {
+        "7f6a52180abffe21": [
+          "de"
+        ]
+      },
+      "ebooks.missed": {
+        "4a45fea9112b20ab": [
+          "de"
+        ]
+      },
+      "ebooks.missing": {
+        "6be36ca49ee85210": [
+          "de"
+        ]
+      },
+      "ebooks.missingHint": {
+        "782bdab20f65a5ff": [
+          "de"
+        ]
+      },
+      "ebooks.needsYou": {
+        "74b6abdf59690fdf": [
+          "de"
+        ]
+      },
+      "ebooks.noMatch": {
+        "f52d20eb27c5aa14": [
+          "de"
+        ]
+      },
+      "ebooks.replace": {
+        "95e154398a4bc009": [
+          "de"
+        ]
+      },
+      "ebooks.report.copies": {
+        "88cebd9685fbd963": [
+          "de"
+        ]
+      },
+      "ebooks.report.dismiss": {
+        "48845bff334a50a5": [
+          "de"
+        ]
+      },
+      "ebooks.report.failed": {
+        "4cecc48d3449fba2": [
+          "de"
+        ]
+      },
+      "ebooks.report.folder": {
+        "e9b3b6cd499aaf35": [
+          "de"
+        ]
+      },
+      "ebooks.report.linked": {
+        "15c93bcf2635fad2": [
+          "de"
+        ]
+      },
+      "ebooks.report.needsYou": {
+        "1b7f6c153c39e5b1": [
+          "de"
+        ]
+      },
+      "ebooks.report.share": {
+        "e3c4b39d6d501347": [
+          "de"
+        ]
+      },
+      "ebooks.report.total": {
+        "308e24c648205b3a": [
+          "de"
+        ]
+      },
+      "ebooks.title": {
+        "436cef3e10e58070": [
+          "de"
+        ]
+      },
+      "ebooks.undo": {
+        "a8283ade31856f71": [
+          "de"
+        ]
+      },
+      "ebooks.untitled": {
+        "3bd612f12aa988f8": [
+          "de"
+        ]
+      },
+      "editSession.action": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "editSession.busy": {
+        "23e39291d6135814": [
+          "de"
+        ]
+      },
+      "editSession.clearStarted": {
+        "65694197d46a6f02": [
+          "de"
+        ]
+      },
+      "editSession.delete": {
+        "329f09259c9f74f9": [
+          "de"
+        ]
+      },
+      "editSession.finishedOn": {
+        "ca7a1817035e85f1": [
+          "de"
+        ]
+      },
+      "editSession.notSet": {
+        "4895f73177ab5d67": [
+          "de"
+        ]
+      },
+      "editSession.optional": {
+        "ec91fdd9256cb75a": [
+          "de"
+        ]
+      },
+      "editSession.reason": {
+        "f81ab834de5f8491": [
+          "de"
+        ]
+      },
+      "editSession.reasonPlaceholder": {
+        "2772e9dd6524ce3d": [
+          "de"
+        ]
+      },
+      "editSession.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "editSession.review": {
+        "aff0766a5290e117": [
+          "de"
+        ]
+      },
+      "editSession.reviewPlaceholder": {
+        "b7b99940e9a5dac4": [
+          "de"
+        ]
+      },
+      "editSession.startedOn": {
+        "ff69fc2b9b41e4a8": [
+          "de"
+        ]
+      },
+      "editSession.stoppedOn": {
+        "9bbe0e03045865b8": [
+          "de"
+        ]
+      },
+      "editSession.title": {
+        "53707b7cd67320e1": [
+          "de"
+        ]
+      },
+      "feed.abandoned": {
+        "39544c4c681a25ba": [
+          "de"
+        ]
+      },
+      "feed.batchAbandoned": {
+        "5d585c5155f3e2d0": [
+          "de"
+        ]
+      },
+      "feed.batchFinished": {
+        "13d84b8b473c193c": [
+          "de"
+        ]
+      },
+      "feed.batchReviewed": {
+        "585353f835b4d35d": [
+          "de"
+        ]
+      },
+      "feed.batchStarted": {
+        "a3d30bd8568fa94b": [
+          "de"
+        ]
+      },
+      "feed.batchTitle": {
+        "0ff3648ca765b612": [
+          "de"
+        ]
+      },
+      "feed.batchWant": {
+        "a23d1d9cfe068244": [
+          "de"
+        ]
+      },
+      "feed.empty": {
+        "e6b7aac66a85631d": [
+          "de"
+        ]
+      },
+      "feed.emptyShare": {
+        "9352d0bdb040a75f": [
+          "de"
+        ]
+      },
+      "feed.emptyTitle": {
+        "999bc5cefa539f20": [
+          "de"
+        ]
+      },
+      "feed.finished": {
+        "05343e9845302eb7": [
+          "de"
+        ]
+      },
+      "feed.loadError": {
+        "aa1baa4098bb6470": [
+          "de"
+        ]
+      },
+      "feed.loadOffline": {
+        "6b1847d47142d269": [
+          "de"
+        ]
+      },
+      "feed.more": {
+        "d47d7cb0e4f8fd2b": [
+          "de"
+        ]
+      },
+      "feed.offline": {
+        "91333649d7ad7b56": [
+          "de"
+        ]
+      },
+      "feed.peopleLabel": {
+        "7db20897053bb278": [
+          "de"
+        ]
+      },
+      "feed.quiet": {
+        "e3de2665260345ac": [
+          "de"
+        ]
+      },
+      "feed.quietTitle": {
+        "4d40af43a10f1365": [
+          "de"
+        ]
+      },
+      "feed.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "feed.reviewed": {
+        "e4f934f321eb76c9": [
+          "de"
+        ]
+      },
+      "feed.started": {
+        "03494afd4248c42f": [
+          "de"
+        ]
+      },
+      "feed.startedAgain": {
+        "c2f610f097afff48": [
+          "de"
+        ]
+      },
+      "feed.title": {
+        "ee393a425e2e6184": [
+          "de"
+        ]
+      },
+      "feed.today": {
+        "2b065c7c9ce466e5": [
+          "de"
+        ]
+      },
+      "feed.want": {
+        "75e7a8209bb5d61a": [
+          "de"
+        ]
+      },
+      "feed.yesterday": {
+        "566181254b293aa6": [
+          "de"
+        ]
+      },
+      "feedback.anonymous": {
+        "239ee7bae236ce21": [
+          "de"
+        ]
+      },
+      "feedback.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "feedback.details": {
+        "e6e61542c2352c7a": [
+          "de"
+        ]
+      },
+      "feedback.empty.text": {
+        "31a7cb5bd9935936": [
+          "de"
+        ]
+      },
+      "feedback.empty.title": {
+        "5beceebdcca4fddb": [
+          "de"
+        ]
+      },
+      "feedback.handled": {
+        "1e7536d56c45d9cd": [
+          "de"
+        ]
+      },
+      "feedback.intro": {
+        "0ed8e1f89d21229f": [
+          "de"
+        ]
+      },
+      "feedback.loadError": {
+        "71a7d01100e5887c": [
+          "de"
+        ]
+      },
+      "feedback.loadingMore": {
+        "ba3bbbe10d8bef66": [
+          "de"
+        ]
+      },
+      "feedback.markHandled": {
+        "27ac061b7a367d12": [
+          "de"
+        ]
+      },
+      "feedback.more": {
+        "ade7cb14889bb343": [
+          "de"
+        ]
+      },
+      "feedback.offline": {
+        "7d3072f2eecdb0ae": [
+          "de"
+        ]
+      },
+      "feedback.refresh": {
+        "0e91610117029a62": [
+          "de"
+        ]
+      },
+      "feedback.refreshing": {
+        "1c0def7be0607b96": [
+          "de"
+        ]
+      },
+      "feedback.reopen": {
+        "ecae00bf50d90e8b": [
+          "de"
+        ]
+      },
+      "feedback.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "feedback.row": {
+        "aac77df347205252": [
+          "de"
+        ]
+      },
+      "feedback.rowNone": {
+        "dc937b59892604f5": [
+          "de"
+        ]
+      },
+      "feedback.rowValue": {
+        "63e90135eb037198": [
+          "de"
+        ]
+      },
+      "feedback.summary": {
+        "0721ba225119f362": [
+          "de"
+        ]
+      },
+      "feedback.title": {
+        "aac77df347205252": [
+          "de"
+        ]
+      },
+      "feedback.writeError": {
+        "e85087279418923c": [
+          "de"
+        ]
+      },
+      "finish.action": {
+        "a6c7a84baa6750fc": [
+          "de"
+        ]
+      },
+      "finish.busy": {
+        "47e17128395595fb": [
+          "de"
+        ]
+      },
+      "finish.endedOn": {
+        "ca7a1817035e85f1": [
+          "de"
+        ]
+      },
+      "finish.optional": {
+        "ec91fdd9256cb75a": [
+          "de"
+        ]
+      },
+      "finish.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "finish.review": {
+        "aff0766a5290e117": [
+          "de"
+        ]
+      },
+      "finish.reviewPlaceholder": {
+        "b7b99940e9a5dac4": [
+          "de"
+        ]
+      },
+      "finish.title": {
+        "6a52f6e0c64a79b2": [
+          "de"
+        ]
+      },
+      "follow.loading": {
+        "c926c2c50e65d5a5": [
+          "de"
+        ]
+      },
+      "follow.missing": {
+        "af305bedb5a7f58e": [
+          "de"
+        ]
+      },
+      "follow.missingTitle": {
+        "92694dbf1b13b73e": [
+          "de"
+        ]
+      },
+      "followLink.copied": {
+        "d249818eccabb507": [
+          "de"
+        ]
+      },
+      "followLink.copy": {
+        "e21f935f11d7e966": [
+          "de"
+        ]
+      },
+      "followLink.failed": {
+        "eb67bddf203ee1cc": [
+          "de"
+        ]
+      },
+      "followLink.offline": {
+        "4e50c4f4288f6f4a": [
+          "de"
+        ]
+      },
+      "followLink.qrHint": {
+        "d334b6cb226b9121": [
+          "de"
+        ]
+      },
+      "followLink.qrLabel": {
+        "2aaedc4e716b499e": [
+          "de"
+        ]
+      },
+      "followLink.renew": {
+        "98ee0dfb338d5bfc": [
+          "de"
+        ]
+      },
+      "followLink.renewConfirm": {
+        "98ee0dfb338d5bfc": [
+          "de"
+        ]
+      },
+      "followLink.renewHint": {
+        "e22fc8ce03fb31b7": [
+          "de"
+        ]
+      },
+      "followLink.renewText": {
+        "18c12d26a768bdc4": [
+          "de"
+        ]
+      },
+      "followLink.renewTitle": {
+        "e1bf95200dc717cf": [
+          "de"
+        ]
+      },
+      "followLink.share": {
+        "712a4823ccb996b0": [
+          "de"
+        ]
+      },
+      "followLink.shareText": {
+        "b156bf12ab9fe879": [
+          "de"
+        ]
+      },
+      "followLink.textPrivate": {
+        "a4b2b6ea414e9bb2": [
+          "de"
+        ]
+      },
+      "followLink.textPublic": {
+        "69fd5bd5e1a1a37c": [
+          "de"
+        ]
+      },
+      "followLink.title": {
+        "3e3152d86b1f63ef": [
+          "de"
+        ]
+      },
+      "friends.accept": {
+        "89713b9c9c1b8f65": [
+          "de"
+        ]
+      },
+      "friends.acceptLabel": {
+        "d849f8ae1c0b59ed": [
+          "de"
+        ]
+      },
+      "friends.and": {
+        "e3ee915a8e8c7aa0": [
+          "de"
+        ]
+      },
+      "friends.askedLine": {
+        "f273ee23584d6d9d": [
+          "de"
+        ]
+      },
+      "friends.decline": {
+        "a2d285b352873457": [
+          "de"
+        ]
+      },
+      "friends.declineLabel": {
+        "c80f86e5660f4297": [
+          "de"
+        ]
+      },
+      "friends.followLink": {
+        "3e3152d86b1f63ef": [
+          "de"
+        ]
+      },
+      "friends.join": {
+        "588da410532073f8": [
+          "de"
+        ]
+      },
+      "friends.more": {
+        "f5c9bd131486e793": [
+          "de"
+        ]
+      },
+      "friends.people": {
+        "7db20897053bb278": [
+          "de"
+        ]
+      },
+      "friends.peopleRequests": {
+        "55d30453cdf0fb39": [
+          "de"
+        ]
+      },
+      "friends.privacy": {
+        "54a57c3147c49f33": [
+          "de"
+        ]
+      },
+      "friends.private": {
+        "c63eb6720c6e8849": [
+          "de"
+        ]
+      },
+      "friends.public": {
+        "591935b15b1c88e2": [
+          "de"
+        ]
+      },
+      "friends.section": {
+        "bd104d1b98d03227": [
+          "de"
+        ]
+      },
+      "friends.title": {
+        "ee393a425e2e6184": [
+          "de"
+        ]
+      },
+      "friends.want": {
+        "20ed7a5990a38cb3": [
+          "de"
+        ]
+      },
+      "genre.biography": {
+        "d9af92d0adfe4c22": [
+          "de"
+        ]
+      },
+      "genre.book.add": {
+        "4bee359187776e0d": [
+          "de"
+        ]
+      },
+      "genre.book.edit": {
+        "464c4ffd019e1e96": [
+          "de"
+        ]
+      },
+      "genre.book.editLabel": {
+        "9c2dcac25f48645a": [
+          "de"
+        ]
+      },
+      "genre.book.label": {
+        "3561abfe8067f3c1": [
+          "de"
+        ]
+      },
+      "genre.classics": {
+        "731b1bb35cb14591": [
+          "de"
+        ]
+      },
+      "genre.crime": {
+        "f5a90b613ec3d0d1": [
+          "de"
+        ]
+      },
+      "genre.essays": {
+        "1dab827afc358f01": [
+          "de"
+        ]
+      },
+      "genre.fantasy": {
+        "542855513e4f74d0": [
+          "de"
+        ]
+      },
+      "genre.graphic": {
+        "695416aad5826b0f": [
+          "de"
+        ]
+      },
+      "genre.historical": {
+        "1bc6cb21844d825f": [
+          "de"
+        ]
+      },
+      "genre.history": {
+        "0e76960093379060": [
+          "de"
+        ]
+      },
+      "genre.horror": {
+        "271a22f75d73e13f": [
+          "de"
+        ]
+      },
+      "genre.literary": {
+        "4c54304cd5127706": [
+          "de"
+        ]
+      },
+      "genre.nonfiction": {
+        "6dee8f453595edeb": [
+          "de"
+        ]
+      },
+      "genre.philosophy": {
+        "7f3d81eb0817c1bf": [
+          "de"
+        ]
+      },
+      "genre.poetry": {
+        "a6f10bde1cb3b4d0": [
+          "de"
+        ]
+      },
+      "genre.romance": {
+        "3bc3567a7fc6511a": [
+          "de"
+        ]
+      },
+      "genre.sci-fi": {
+        "d8e023f42eabf49a": [
+          "de"
+        ]
+      },
+      "genre.science": {
+        "9d948c73e0ad7a5a": [
+          "de"
+        ]
+      },
+      "genre.self-help": {
+        "17dd46d52165910a": [
+          "de"
+        ]
+      },
+      "genre.sheet.chosen": {
+        "1adbdc29617ec26b": [
+          "de"
+        ]
+      },
+      "genre.sheet.error": {
+        "ef134497bcbca221": [
+          "de"
+        ]
+      },
+      "genre.sheet.hint": {
+        "01fa940fb51bafe7": [
+          "de"
+        ]
+      },
+      "genre.sheet.reset": {
+        "303a0a2a6e28ec23": [
+          "de"
+        ]
+      },
+      "genre.sheet.resetting": {
+        "3a70da028d3435eb": [
+          "de"
+        ]
+      },
+      "genre.sheet.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "genre.sheet.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "genre.sheet.saving": {
+        "23e39291d6135814": [
+          "de"
+        ]
+      },
+      "genre.sheet.title": {
+        "3561abfe8067f3c1": [
+          "de"
+        ]
+      },
+      "genre.short-stories": {
+        "306f0c3996737d1a": [
+          "de"
+        ]
+      },
+      "genre.stats.placed": {
+        "f306b02ad8e38562": [
+          "de"
+        ]
+      },
+      "genre.stats.row": {
+        "3f4301c760fff2f9": [
+          "de"
+        ]
+      },
+      "genre.stats.title": {
+        "3561abfe8067f3c1": [
+          "de"
+        ]
+      },
+      "genre.stats.without": {
+        "2a6a88b2ac6f9772": [
+          "de"
+        ]
+      },
+      "genre.thriller": {
+        "9360404e4f35ac20": [
+          "de"
+        ]
+      },
+      "genre.ya": {
+        "8b8769ae25ed13ed": [
+          "de"
+        ]
+      },
+      "history.count": {
+        "b684a027f491ce2b": [
+          "de"
+        ]
+      },
+      "history.day": {
+        "6b4801b0922a9814": [
+          "de"
+        ]
+      },
+      "history.days": {
+        "b0b9c1c62ed96e31": [
+          "de"
+        ]
+      },
+      "history.edit": {
+        "464c4ffd019e1e96": [
+          "de"
+        ]
+      },
+      "history.editLabel": {
+        "2313fe21ea84567f": [
+          "de"
+        ]
+      },
+      "history.endedOn": {
+        "4bd7cb306184620c": [
+          "de"
+        ]
+      },
+      "history.loadError": {
+        "e82191fc46a5bb8f": [
+          "de"
+        ]
+      },
+      "history.nth": {
+        "ecf758cc2d10519b": [
+          "de"
+        ]
+      },
+      "history.ordinal.fifth": {
+        "757e964d8cf625bb": [
+          "de"
+        ]
+      },
+      "history.ordinal.first": {
+        "7539648066eeeb13": [
+          "de"
+        ]
+      },
+      "history.ordinal.fourth": {
+        "324619a2e3ed0628": [
+          "de"
+        ]
+      },
+      "history.ordinal.second": {
+        "c79edb2b00787883": [
+          "de"
+        ]
+      },
+      "history.ordinal.third": {
+        "809210905603010d": [
+          "de"
+        ]
+      },
+      "history.range": {
+        "603aaefffcd2060b": [
+          "de"
+        ]
+      },
+      "history.readingNow": {
+        "09bec08b044ba898": [
+          "de"
+        ]
+      },
+      "history.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "history.since": {
+        "1550794b36af0a94": [
+          "de"
+        ]
+      },
+      "history.startedOn": {
+        "4dc652c2f9735390": [
+          "de"
+        ]
+      },
+      "history.thisRead": {
+        "ac48a4f2927d5137": [
+          "de"
+        ]
+      },
+      "history.title": {
+        "faf3288d5b9fe2b4": [
+          "de"
+        ]
+      },
+      "history.undated": {
+        "8a4da1c8f2cdb4f4": [
+          "de"
+        ]
+      },
+      "home.empty": {
+        "de6ac9da9a05a636": [
+          "de"
+        ]
+      },
+      "home.emptyTitle": {
+        "e86a1d63ede22466": [
+          "de"
+        ]
+      },
+      "home.greeting.afternoon": {
+        "d325e1bbfd1c5681": [
+          "de"
+        ]
+      },
+      "home.greeting.afternoonNamed": {
+        "098b14b2b67d02e1": [
+          "de"
+        ]
+      },
+      "home.greeting.evening": {
+        "15a421e4cf7651fe": [
+          "de"
+        ]
+      },
+      "home.greeting.eveningNamed": {
+        "ad0f406d68e68ab2": [
+          "de"
+        ]
+      },
+      "home.greeting.morning": {
+        "90a90a48e23dcc51": [
+          "de"
+        ]
+      },
+      "home.greeting.morningNamed": {
+        "fd482bb74b459465": [
+          "de"
+        ]
+      },
+      "home.importOffer.action": {
+        "82b4a71bc5a3c6ef": [
+          "de"
+        ]
+      },
+      "home.importOffer.dismiss": {
+        "33e538a6bda4368f": [
+          "de"
+        ]
+      },
+      "home.importOffer.text": {
+        "d608a9b18cfc57d4": [
+          "de"
+        ]
+      },
+      "home.importOffer.title": {
+        "4dcff1dcbb9cc3c5": [
+          "de"
+        ]
+      },
+      "home.installHint.addToHome": {
+        "e1090dd0b82630c8": [
+          "de"
+        ]
+      },
+      "home.installHint.dismiss": {
+        "48845bff334a50a5": [
+          "de"
+        ]
+      },
+      "home.installHint.text": {
+        "4138fc05aa490310": [
+          "de"
+        ]
+      },
+      "home.installHint.title": {
+        "e94966b386ecd776": [
+          "de"
+        ]
+      },
+      "home.loadError": {
+        "bc68fe4b4e1774f1": [
+          "de"
+        ]
+      },
+      "home.readIn": {
+        "1613836489b02bd0": [
+          "de"
+        ]
+      },
+      "home.readInLabel": {
+        "1eed308e07536765": [
+          "de"
+        ]
+      },
+      "home.reading": {
+        "af73520be6badf74": [
+          "de"
+        ]
+      },
+      "home.readingEmpty": {
+        "a937d4063a4363a2": [
+          "de"
+        ]
+      },
+      "home.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "home.seeAll": {
+        "9a10f0e903d8f78a": [
+          "de"
+        ]
+      },
+      "home.today": {
+        "11fa3798e2b03cca": [
+          "de"
+        ]
+      },
+      "home.upNext": {
+        "34e323c9f58a1676": [
+          "de"
+        ]
+      },
+      "home.yearInReview": {
+        "813760120caf9ab1": [
+          "de"
+        ]
+      },
+      "import.actionFor": {
+        "edc480cc94718e0d": [
+          "de"
+        ]
+      },
+      "import.added": {
+        "6b02e0d363a4af1c": [
+          "de"
+        ]
+      },
+      "import.alreadyThere": {
+        "d26abc814e9893d8": [
+          "de"
+        ]
+      },
+      "import.another": {
+        "60850b365662615c": [
+          "de"
+        ]
+      },
+      "import.app.goodreads": {
+        "7acf32567a4af700": [
+          "de"
+        ]
+      },
+      "import.app.hardcover": {
+        "90f89e50c212acdf": [
+          "de"
+        ]
+      },
+      "import.attention": {
+        "5ce96f1220a648e0": [
+          "de"
+        ]
+      },
+      "import.attentionCount": {
+        "fc70e900fde90a99": [
+          "de"
+        ]
+      },
+      "import.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "import.changeEdition": {
+        "49c58f0480c7a3cf": [
+          "de"
+        ]
+      },
+      "import.choices": {
+        "0ecda0421ac7d200": [
+          "de"
+        ]
+      },
+      "import.choose": {
+        "6e67be51ca4fad1e": [
+          "de"
+        ]
+      },
+      "import.chooseEdition": {
+        "a72a6370fd0a4b6d": [
+          "de"
+        ]
+      },
+      "import.doneNothing": {
+        "0226a3c03ceafc39": [
+          "de"
+        ]
+      },
+      "import.doneText": {
+        "3e5f178ea5664dd1": [
+          "de"
+        ]
+      },
+      "import.doneTitle": {
+        "53f897566be5dfdb": [
+          "de"
+        ]
+      },
+      "import.edition.action": {
+        "c7f937836f5d82d5": [
+          "de"
+        ]
+      },
+      "import.edition.current": {
+        "bdfbc65e37fa2cf3": [
+          "de"
+        ]
+      },
+      "import.edition.file": {
+        "d9d0a6c0f894bfb3": [
+          "de"
+        ]
+      },
+      "import.edition.hint": {
+        "b6f4172a08ecb441": [
+          "de"
+        ]
+      },
+      "import.edition.none": {
+        "b710345d4fccf5da": [
+          "de"
+        ]
+      },
+      "import.edition.offline": {
+        "ad6fff554beafcb2": [
+          "de"
+        ]
+      },
+      "import.edition.title": {
+        "a72a6370fd0a4b6d": [
+          "de"
+        ]
+      },
+      "import.failed": {
+        "a37f7e6bfe00fe20": [
+          "de"
+        ]
+      },
+      "import.fileError.bookshelf": {
+        "7be0e55e8d11605f": [
+          "de"
+        ]
+      },
+      "import.fileError.empty": {
+        "a82c9ec2abd55d48": [
+          "de"
+        ]
+      },
+      "import.fileError.librarything": {
+        "9e15bcc7c1ae2065": [
+          "de"
+        ]
+      },
+      "import.fileError.missingColumns": {
+        "7648420679d68530": [
+          "de"
+        ]
+      },
+      "import.fileError.notCsv": {
+        "5f3c7f53755c10f2": [
+          "de"
+        ]
+      },
+      "import.fileError.notSupported": {
+        "4127e07ea4bc06d9": [
+          "de"
+        ]
+      },
+      "import.fileError.storygraph": {
+        "ae2746b054993f9d": [
+          "de"
+        ]
+      },
+      "import.fileError.unknown": {
+        "3ccd9d6586ef9143": [
+          "de"
+        ]
+      },
+      "import.fileError.unreadable": {
+        "6053962159b9cd25": [
+          "de"
+        ]
+      },
+      "import.fromFile": {
+        "679e58bf68b44c6e": [
+          "de"
+        ]
+      },
+      "import.howTo.goodreads": {
+        "5f701b5d51812aae": [
+          "de"
+        ]
+      },
+      "import.howTo.hardcover": {
+        "e59ff3326fa6a6e0": [
+          "de"
+        ]
+      },
+      "import.howToTitle": {
+        "b209b775f6ccf468": [
+          "de"
+        ]
+      },
+      "import.importing": {
+        "c757cf200452199f": [
+          "de"
+        ]
+      },
+      "import.importingHint": {
+        "696db145e3aa0914": [
+          "de"
+        ]
+      },
+      "import.inFile": {
+        "ccba06e141ad86f0": [
+          "de"
+        ]
+      },
+      "import.kept": {
+        "d26abc814e9893d8": [
+          "de"
+        ]
+      },
+      "import.listsText": {
+        "bb5a3045fb6a31d6": [
+          "de"
+        ]
+      },
+      "import.listsTitle": {
+        "b3d21ebfbaf7b043": [
+          "de"
+        ]
+      },
+      "import.matched": {
+        "d2cc8df600d0d6cc": [
+          "de"
+        ]
+      },
+      "import.matching": {
+        "961911afe0cdd44a": [
+          "de"
+        ]
+      },
+      "import.matchingHint": {
+        "5182605401329d58": [
+          "de"
+        ]
+      },
+      "import.menuItem": {
+        "82b4a71bc5a3c6ef": [
+          "de"
+        ]
+      },
+      "import.notReached": {
+        "b0ff5f57b4a8dd9a": [
+          "de"
+        ]
+      },
+      "import.note.abandonedRating": {
+        "23471851cf4f2859": [
+          "de"
+        ]
+      },
+      "import.note.byTitle": {
+        "bc95a9e87a2c314e": [
+          "de"
+        ]
+      },
+      "import.note.byTitleEdition": {
+        "ffb777eedbe04a28": [
+          "de"
+        ]
+      },
+      "import.note.chosen": {
+        "6355d0eea681e712": [
+          "de"
+        ]
+      },
+      "import.note.chosenInLibrary": {
+        "0b8f614df65168a7": [
+          "de"
+        ]
+      },
+      "import.note.dateInvalid": {
+        "1d2bd0328a1fe6c9": [
+          "de"
+        ]
+      },
+      "import.note.duplicate": {
+        "c126eebf0128dd38": [
+          "de"
+        ]
+      },
+      "import.note.earlierReads": {
+        "51981af2cd8d9195": [
+          "de"
+        ]
+      },
+      "import.note.extraReads": {
+        "88f4ef518e15150e": [
+          "de"
+        ]
+      },
+      "import.note.fromFile": {
+        "271c003204de3c0a": [
+          "de"
+        ]
+      },
+      "import.note.fromFileIsbn": {
+        "e44a50fc5b5fad70": [
+          "de"
+        ]
+      },
+      "import.note.isbnMangled": {
+        "e517af23c7469e63": [
+          "de"
+        ]
+      },
+      "import.note.noTitle": {
+        "3ad5dde96da0b486": [
+          "de"
+        ]
+      },
+      "import.note.notFinishedRating": {
+        "a665c9df5d710921": [
+          "de"
+        ]
+      },
+      "import.note.notShelved": {
+        "cb21fca67a3779d2": [
+          "de"
+        ]
+      },
+      "import.note.otherShelf": {
+        "636198a5806f002a": [
+          "de"
+        ]
+      },
+      "import.note.paused": {
+        "b04b7733c9055862": [
+          "de"
+        ]
+      },
+      "import.note.ratingInvalid": {
+        "4b717894abc0b8eb": [
+          "de"
+        ]
+      },
+      "import.note.ratingLikeReview": {
+        "c86ed907ee560e57": [
+          "de"
+        ]
+      },
+      "import.note.reviewTooLong": {
+        "4efbbf04de50ffa7": [
+          "de"
+        ]
+      },
+      "import.note.unsure": {
+        "2dcc9d6d39cf114a": [
+          "de"
+        ]
+      },
+      "import.nothingToImport": {
+        "586826a5f7d1c9e2": [
+          "de"
+        ]
+      },
+      "import.pickText": {
+        "3d7192993c888aee": [
+          "de"
+        ]
+      },
+      "import.pickTitle": {
+        "a59c92aefec0ac49": [
+          "de"
+        ]
+      },
+      "import.reading": {
+        "d905ae652ee4bcfb": [
+          "de"
+        ]
+      },
+      "import.shelfCount": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "import.shelvesText": {
+        "bb5a3045fb6a31d6": [
+          "de"
+        ]
+      },
+      "import.shelvesTitle": {
+        "e70d4cca9d5a522c": [
+          "de"
+        ]
+      },
+      "import.start": {
+        "ec882bb382782cd4": [
+          "de"
+        ]
+      },
+      "import.statusLabel": {
+        "51ebe8355d229e62": [
+          "de"
+        ]
+      },
+      "import.stop": {
+        "26eac8f8c95b6a86": [
+          "de"
+        ]
+      },
+      "import.stopped": {
+        "fddb283ada1099a5": [
+          "de"
+        ]
+      },
+      "import.title": {
+        "82b4a71bc5a3c6ef": [
+          "de"
+        ]
+      },
+      "import.toLibrary": {
+        "fdfa9195b2903d57": [
+          "de"
+        ]
+      },
+      "import.untitled": {
+        "9b199b63dbe4e3fe": [
+          "de"
+        ]
+      },
+      "language.label": {
+        "52287063fce8efa2": [
+          "de"
+        ]
+      },
+      "language.row": {
+        "a4fe65264ef7dbb3": [
+          "de"
+        ]
+      },
+      "legal.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "legal.imprint": {
+        "d198ed30d09ba8c6": [
+          "de"
+        ]
+      },
+      "legal.language": {
+        "c44e73f515649836": [
+          "de"
+        ]
+      },
+      "legal.nav": {
+        "4787eaf7c938045f": [
+          "de"
+        ]
+      },
+      "legal.privacy": {
+        "54a57c3147c49f33": [
+          "de"
+        ]
+      },
+      "legal.privacyNotice": {
+        "f18dccf66b7c5e5b": [
+          "de"
+        ]
+      },
+      "library.added": {
+        "e7bbba62018aab28": [
+          "de"
+        ]
+      },
+      "library.empty": {
+        "f3183c4774e005b5": [
+          "de"
+        ]
+      },
+      "library.emptyTitle": {
+        "e3176dfa0978ed1f": [
+          "de"
+        ]
+      },
+      "library.error.already_finished": {
+        "144abb55b3ce76a3": [
+          "de"
+        ]
+      },
+      "library.error.already_in_library": {
+        "fdfdda030b73274c": [
+          "de"
+        ]
+      },
+      "library.error.already_reading": {
+        "1a5bc1ab06c82baf": [
+          "de"
+        ]
+      },
+      "library.error.book_invalid": {
+        "8871be26c9433e8f": [
+          "de"
+        ]
+      },
+      "library.error.catalogue_limit": {
+        "9ae6fdb3058f7705": [
+          "de"
+        ]
+      },
+      "library.error.date_in_future": {
+        "cb26366944d873fe": [
+          "de"
+        ]
+      },
+      "library.error.date_invalid": {
+        "d0fe7e9621e51f50": [
+          "de"
+        ]
+      },
+      "library.error.edition_in_library": {
+        "5a05411d1451d100": [
+          "de"
+        ]
+      },
+      "library.error.ended_before_started": {
+        "1fd7436d3b5835a6": [
+          "de"
+        ]
+      },
+      "library.error.entry_not_found": {
+        "f439e1225c9d3184": [
+          "de"
+        ]
+      },
+      "library.error.isbn_invalid": {
+        "aac9e7b9c7b4e02e": [
+          "de"
+        ]
+      },
+      "library.error.never_read": {
+        "205d639f6c883c33": [
+          "de"
+        ]
+      },
+      "library.error.not_reading": {
+        "84cf01fff39aca65": [
+          "de"
+        ]
+      },
+      "library.error.not_signed_in": {
+        "499a01af806bba9c": [
+          "de"
+        ]
+      },
+      "library.error.offline": {
+        "b258186ad617e999": [
+          "de"
+        ]
+      },
+      "library.error.progress_invalid": {
+        "6eb99fd820238c32": [
+          "de"
+        ]
+      },
+      "library.error.rating_invalid": {
+        "61e574e796a46425": [
+          "de"
+        ]
+      },
+      "library.error.read_as_invalid": {
+        "5bdc819e7fb3dbc1": [
+          "de"
+        ]
+      },
+      "library.error.reason_too_long": {
+        "f041cae1530be81c": [
+          "de"
+        ]
+      },
+      "library.error.review_too_long": {
+        "ad0df33bbec34b5a": [
+          "de"
+        ]
+      },
+      "library.error.session_invalid": {
+        "1c1aae7e0a2e369f": [
+          "de"
+        ]
+      },
+      "library.error.session_not_found": {
+        "a4315f1ed41f682d": [
+          "de"
+        ]
+      },
+      "library.error.unknown": {
+        "3ccd9d6586ef9143": [
+          "de"
+        ]
+      },
+      "library.loadError": {
+        "0473b6a33cc97b4f": [
+          "de"
+        ]
+      },
+      "library.notFinishedOn": {
+        "3d16b5f8bc45a758": [
+          "de"
+        ]
+      },
+      "library.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "library.segment.finished": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "library.segment.reading": {
+        "463816d07097e1a7": [
+          "de"
+        ]
+      },
+      "library.segment.want_to_read": {
+        "34e323c9f58a1676": [
+          "de"
+        ]
+      },
+      "library.segmentEmpty.finished.text": {
+        "b72ae9d1eb5f0539": [
+          "de"
+        ]
+      },
+      "library.segmentEmpty.finished.title": {
+        "c6472f27bea3b293": [
+          "de"
+        ]
+      },
+      "library.segmentEmpty.reading.text": {
+        "ef181aac2e583769": [
+          "de"
+        ]
+      },
+      "library.segmentEmpty.reading.title": {
+        "ee475ba7f2d3d294": [
+          "de"
+        ]
+      },
+      "library.segmentEmpty.want_to_read.text": {
+        "86e96dbf847980cb": [
+          "de"
+        ]
+      },
+      "library.segmentEmpty.want_to_read.title": {
+        "682c5853d706be5b": [
+          "de"
+        ]
+      },
+      "library.segmentsLabel": {
+        "920e413c7d411b61": [
+          "de"
+        ]
+      },
+      "library.title": {
+        "dc20b3d5d2cddf82": [
+          "de"
+        ]
+      },
+      "library.undated": {
+        "6c43e8399a11d714": [
+          "de"
+        ]
+      },
+      "library.view.apply": {
+        "31e392d1c0378bec": [
+          "de"
+        ]
+      },
+      "library.view.author.none": {
+        "a5ffebcca393b048": [
+          "de"
+        ]
+      },
+      "library.view.author.search": {
+        "4d515b04df1c5cb9": [
+          "de"
+        ]
+      },
+      "library.view.chipsLabel": {
+        "213a9822c38a965c": [
+          "de"
+        ]
+      },
+      "library.view.clear": {
+        "83b12c2216efb4fd": [
+          "de"
+        ]
+      },
+      "library.view.clearAll": {
+        "29a390f9237e3c84": [
+          "de"
+        ]
+      },
+      "library.view.count": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "library.view.countOf": {
+        "072c6dfc6af6680f": [
+          "de"
+        ]
+      },
+      "library.view.empty.clear": {
+        "7179ea0035fca783": [
+          "de"
+        ]
+      },
+      "library.view.empty.text": {
+        "feb594365d5d0753": [
+          "de"
+        ]
+      },
+      "library.view.empty.title": {
+        "965b516df3baab79": [
+          "de"
+        ]
+      },
+      "library.view.facet.author": {
+        "d95082a2ee57f3e4": [
+          "de"
+        ]
+      },
+      "library.view.facet.genre": {
+        "6da795a8664f37f6": [
+          "de"
+        ]
+      },
+      "library.view.facet.pages": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "library.view.facet.rating": {
+        "9f29530464f730bd": [
+          "de"
+        ]
+      },
+      "library.view.facet.readAs": {
+        "7d2d6d5a04d49901": [
+          "de"
+        ]
+      },
+      "library.view.facet.status": {
+        "920e413c7d411b61": [
+          "de"
+        ]
+      },
+      "library.view.facet.year": {
+        "da785406db5fd896": [
+          "de"
+        ]
+      },
+      "library.view.filter": {
+        "638e249f4a15ebb8": [
+          "de"
+        ]
+      },
+      "library.view.label": {
+        "06df7c654f2b71f4": [
+          "de"
+        ]
+      },
+      "library.view.pages.chip": {
+        "a77e85f97cd1e6c2": [
+          "de"
+        ]
+      },
+      "library.view.pages.chipMax": {
+        "dfef10f8742f4888": [
+          "de"
+        ]
+      },
+      "library.view.pages.chipMin": {
+        "527f7aab5e6d9357": [
+          "de"
+        ]
+      },
+      "library.view.pages.max": {
+        "f4b06ef6d3c81436": [
+          "de"
+        ]
+      },
+      "library.view.pages.maxPlaceholder": {
+        "a1a5936d3b0f8a69": [
+          "de"
+        ]
+      },
+      "library.view.pages.min": {
+        "218197693424e015": [
+          "de"
+        ]
+      },
+      "library.view.pages.minPlaceholder": {
+        "dea79332147ffe1f": [
+          "de"
+        ]
+      },
+      "library.view.rating.min": {
+        "3fda3cc3ef0963a2": [
+          "de"
+        ]
+      },
+      "library.view.rating.top": {
+        "090550a899b73d2c": [
+          "de"
+        ]
+      },
+      "library.view.rating.unrated": {
+        "f5ad0871124734e1": [
+          "de"
+        ]
+      },
+      "library.view.readAs.audiobook": {
+        "8716cb3d8010144e": [
+          "de"
+        ]
+      },
+      "library.view.readAs.ebook": {
+        "571a0211e8501143": [
+          "de"
+        ]
+      },
+      "library.view.readAs.physical": {
+        "a89383f1a4302676": [
+          "de"
+        ]
+      },
+      "library.view.readAs.unset": {
+        "4895f73177ab5d67": [
+          "de"
+        ]
+      },
+      "library.view.removeChip": {
+        "31a344e4dcb4b58c": [
+          "de"
+        ]
+      },
+      "library.view.sheetTitle": {
+        "638e249f4a15ebb8": [
+          "de"
+        ]
+      },
+      "library.view.showCount": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "library.view.sort": {
+        "bec69036aa27e7fa": [
+          "de"
+        ]
+      },
+      "library.view.sortBy": {
+        "fddc0db93af5fc1e": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.author.asc": {
+        "790e831a32e5ab6f": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.author.desc": {
+        "efe8139e05c66d1f": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.dateAdded.asc": {
+        "6e2ebdab3c02a3e6": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.dateAdded.desc": {
+        "ffb6f5764bddb68c": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.dateRead.asc": {
+        "6e2ebdab3c02a3e6": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.dateRead.desc": {
+        "ffb6f5764bddb68c": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.pages.asc": {
+        "3db1a0ff2aaa6f72": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.pages.desc": {
+        "3120900a474e1bb6": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.rating.asc": {
+        "5e17c5e895d32fdd": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.rating.desc": {
+        "fa616fee600f3df9": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.title.asc": {
+        "790e831a32e5ab6f": [
+          "de"
+        ]
+      },
+      "library.view.sortDir.title.desc": {
+        "efe8139e05c66d1f": [
+          "de"
+        ]
+      },
+      "library.view.sortKey.author": {
+        "d95082a2ee57f3e4": [
+          "de"
+        ]
+      },
+      "library.view.sortKey.dateAdded": {
+        "3321b9f6e65c542a": [
+          "de"
+        ]
+      },
+      "library.view.sortKey.dateRead": {
+        "2c8b466978b44fe0": [
+          "de"
+        ]
+      },
+      "library.view.sortKey.dateStarted": {
+        "28c1f76fb9eaaa05": [
+          "de"
+        ]
+      },
+      "library.view.sortKey.pages": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "library.view.sortKey.rating": {
+        "9f29530464f730bd": [
+          "de"
+        ]
+      },
+      "library.view.sortKey.title": {
+        "7e8cd2056da73a7f": [
+          "de"
+        ]
+      },
+      "library.view.sortTitle": {
+        "c9129025bd3ff652": [
+          "de"
+        ]
+      },
+      "library.view.status.finished": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "library.view.status.notFinished": {
+        "b621bb5610d17361": [
+          "de"
+        ]
+      },
+      "library.yearHeading": {
+        "0f596954a4f020c3": [
+          "de"
+        ]
+      },
+      "links.add": {
+        "dfe9ca4d0f96ed0a": [
+          "de"
+        ]
+      },
+      "links.down": {
+        "b2722e0bb5972562": [
+          "de"
+        ]
+      },
+      "links.empty": {
+        "a8b2a6032ee077d6": [
+          "de"
+        ]
+      },
+      "links.error.label_long": {
+        "88a8b97df4618c81": [
+          "de"
+        ]
+      },
+      "links.error.label_missing": {
+        "070351e3bfb6696c": [
+          "de"
+        ]
+      },
+      "links.error.link_templates_invalid": {
+        "f680d9946e4f7ba0": [
+          "de"
+        ]
+      },
+      "links.error.offline": {
+        "b258186ad617e999": [
+          "de"
+        ]
+      },
+      "links.error.placeholder_unknown": {
+        "ff1220dd0d27122e": [
+          "de"
+        ]
+      },
+      "links.error.unknown": {
+        "9b18836fc1909bf7": [
+          "de"
+        ]
+      },
+      "links.error.url_invalid": {
+        "226ffb741dafb5d6": [
+          "de"
+        ]
+      },
+      "links.error.url_long": {
+        "88a8b97df4618c81": [
+          "de"
+        ]
+      },
+      "links.first": {
+        "949e2895c415ae0f": [
+          "de"
+        ]
+      },
+      "links.intro": {
+        "c83c22aff7dfa50e": [
+          "de"
+        ]
+      },
+      "links.labelLabel": {
+        "0e66373f45dcf3dd": [
+          "de"
+        ]
+      },
+      "links.labelPlaceholder": {
+        "11e9037f6de21cf3": [
+          "de"
+        ]
+      },
+      "links.placeholders": {
+        "9e1765bfb6b7a584": [
+          "de"
+        ]
+      },
+      "links.position": {
+        "8fbbf6ca04a70895": [
+          "de"
+        ]
+      },
+      "links.remove": {
+        "57ce3c2ced60637f": [
+          "de"
+        ]
+      },
+      "links.row": {
+        "98689b74c8c67d0a": [
+          "de"
+        ]
+      },
+      "links.rowNone": {
+        "dc937b59892604f5": [
+          "de"
+        ]
+      },
+      "links.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "links.title": {
+        "98689b74c8c67d0a": [
+          "de"
+        ]
+      },
+      "links.up": {
+        "fd8c7294bc77ccc8": [
+          "de"
+        ]
+      },
+      "links.urlExample": {
+        "effe236eeccd10d3": [
+          "de"
+        ]
+      },
+      "links.urlLabel": {
+        "56ef8f20955f2564": [
+          "de"
+        ]
+      },
+      "manual.action": {
+        "9fd728c66c9a256b": [
+          "de"
+        ]
+      },
+      "manual.busy": {
+        "c6de6f45c827f464": [
+          "de"
+        ]
+      },
+      "manual.coverNote": {
+        "879514bf8e5cf327": [
+          "de"
+        ]
+      },
+      "manual.error.already_in_library": {
+        "fdfdda030b73274c": [
+          "de"
+        ]
+      },
+      "manual.error.book_invalid": {
+        "a25e4de4c08af351": [
+          "de"
+        ]
+      },
+      "manual.error.isbn_invalid": {
+        "d4e2ee3af448d141": [
+          "de"
+        ]
+      },
+      "manual.error.not_signed_in": {
+        "499a01af806bba9c": [
+          "de"
+        ]
+      },
+      "manual.error.unknown": {
+        "3ccd9d6586ef9143": [
+          "de"
+        ]
+      },
+      "manual.field.author": {
+        "d95082a2ee57f3e4": [
+          "de"
+        ]
+      },
+      "manual.field.isbn": {
+        "623c18690950532a": [
+          "de"
+        ]
+      },
+      "manual.field.pageCount": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "manual.field.title": {
+        "7e8cd2056da73a7f": [
+          "de"
+        ]
+      },
+      "manual.invalid.author": {
+        "8d557b3e9b5683b2": [
+          "de"
+        ]
+      },
+      "manual.invalid.isbn": {
+        "d4e2ee3af448d141": [
+          "de"
+        ]
+      },
+      "manual.invalid.pageCount": {
+        "b336a8425a7d3a19": [
+          "de"
+        ]
+      },
+      "manual.invalid.title": {
+        "c734590a5072c13f": [
+          "de"
+        ]
+      },
+      "manual.optional": {
+        "59be71333c960fd0": [
+          "de"
+        ]
+      },
+      "manual.private": {
+        "557ca3ed1fb274c3": [
+          "de"
+        ]
+      },
+      "manual.submit": {
+        "b95ee0500183e00c": [
+          "de"
+        ]
+      },
+      "manual.title": {
+        "c1bc31e43240f88c": [
+          "de"
+        ]
+      },
+      "member.ask": {
+        "4024a738abed9d3e": [
+          "de"
+        ]
+      },
+      "member.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "member.bothRead": {
+        "dd61ab0103b62754": [
+          "de"
+        ]
+      },
+      "member.bothReadHers": {
+        "01bfd4477c1f0931": [
+          "de"
+        ]
+      },
+      "member.finished": {
+        "92d2aeacf211ecfa": [
+          "de"
+        ]
+      },
+      "member.finishedAll": {
+        "9a10f0e903d8f78a": [
+          "de"
+        ]
+      },
+      "member.follow": {
+        "641d1ef657bdfd9f": [
+          "de"
+        ]
+      },
+      "member.following": {
+        "344b4271ca012d18": [
+          "de"
+        ]
+      },
+      "member.library": {
+        "2b28ac17cd131502": [
+          "de"
+        ]
+      },
+      "member.loadError": {
+        "5640451c66f8b3e8": [
+          "de"
+        ]
+      },
+      "member.moreLabel": {
+        "d47d7cb0e4f8fd2b": [
+          "de"
+        ]
+      },
+      "member.offline": {
+        "4d20eff90697245a": [
+          "de"
+        ]
+      },
+      "member.privateText": {
+        "c59a2074d6109cd2": [
+          "de"
+        ]
+      },
+      "member.privateTitle": {
+        "8f4de740d11aa789": [
+          "de"
+        ]
+      },
+      "member.reading": {
+        "af73520be6badf74": [
+          "de"
+        ]
+      },
+      "member.requested": {
+        "2d9e28289facab94": [
+          "de"
+        ]
+      },
+      "member.requestedHint": {
+        "dbf1ae8c356b912a": [
+          "de"
+        ]
+      },
+      "member.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "member.seeAllLabel": {
+        "7b70397fb6b510d4": [
+          "de"
+        ]
+      },
+      "member.since": {
+        "4ed24ae5f935af06": [
+          "de"
+        ]
+      },
+      "member.someone": {
+        "6352afe3255298b4": [
+          "de"
+        ]
+      },
+      "member.want": {
+        "34e323c9f58a1676": [
+          "de"
+        ]
+      },
+      "member.wantAll": {
+        "9a10f0e903d8f78a": [
+          "de"
+        ]
+      },
+      "member.withdrawn": {
+        "1bff35c41cdf13d8": [
+          "de"
+        ]
+      },
+      "member.yearEyebrow": {
+        "2eee6afd6dcfe9a2": [
+          "de"
+        ]
+      },
+      "ownEdition.backToIsbn": {
+        "07b5b5c451f6554c": [
+          "de"
+        ]
+      },
+      "ownEdition.busy": {
+        "23e39291d6135814": [
+          "de"
+        ]
+      },
+      "ownEdition.coverPlaceholder": {
+        "ab04e20ed4f2c025": [
+          "de"
+        ]
+      },
+      "ownEdition.error.book_invalid": {
+        "35346ec1e7d4ec01": [
+          "de"
+        ]
+      },
+      "ownEdition.error.isbn_invalid": {
+        "d4e2ee3af448d141": [
+          "de"
+        ]
+      },
+      "ownEdition.failed": {
+        "53e061f575e8df2d": [
+          "de"
+        ]
+      },
+      "ownEdition.field.coverUrl": {
+        "b62cee9371b0d56f": [
+          "de"
+        ]
+      },
+      "ownEdition.field.format": {
+        "2f343666aaa88c44": [
+          "de"
+        ]
+      },
+      "ownEdition.field.isbn": {
+        "623c18690950532a": [
+          "de"
+        ]
+      },
+      "ownEdition.field.language": {
+        "a4fe65264ef7dbb3": [
+          "de"
+        ]
+      },
+      "ownEdition.field.pageCount": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "ownEdition.field.publisher": {
+        "21378545892f1fe2": [
+          "de"
+        ]
+      },
+      "ownEdition.field.year": {
+        "89f6832560dec0b7": [
+          "de"
+        ]
+      },
+      "ownEdition.invalid.coverUrl": {
+        "639932c907008d33": [
+          "de"
+        ]
+      },
+      "ownEdition.invalid.format": {
+        "69d4424981bf302a": [
+          "de"
+        ]
+      },
+      "ownEdition.invalid.isbn": {
+        "d4e2ee3af448d141": [
+          "de"
+        ]
+      },
+      "ownEdition.invalid.pageCount": {
+        "b336a8425a7d3a19": [
+          "de"
+        ]
+      },
+      "ownEdition.invalid.publisher": {
+        "ef1934e02bfedecf": [
+          "de"
+        ]
+      },
+      "ownEdition.invalid.year": {
+        "29a88cb74dcad2c4": [
+          "de"
+        ]
+      },
+      "ownEdition.isbnHint": {
+        "b5504c033fe0e8ef": [
+          "de"
+        ]
+      },
+      "ownEdition.isbnIs": {
+        "9a660143f7f7bdaa": [
+          "de"
+        ]
+      },
+      "ownEdition.isbnPlaceholder": {
+        "3aa92bb97f6ff2a2": [
+          "de"
+        ]
+      },
+      "ownEdition.lookUp": {
+        "504101bcda9ef600": [
+          "de"
+        ]
+      },
+      "ownEdition.looking": {
+        "a84f1079ee0ed68d": [
+          "de"
+        ]
+      },
+      "ownEdition.lookingFor": {
+        "f9d6176700e61763": [
+          "de"
+        ]
+      },
+      "ownEdition.makeOwn": {
+        "89808359acf1eb37": [
+          "de"
+        ]
+      },
+      "ownEdition.noIsbn": {
+        "ab194d9dbc60541a": [
+          "de"
+        ]
+      },
+      "ownEdition.notFound": {
+        "77f67971964bc5b2": [
+          "de"
+        ]
+      },
+      "ownEdition.notThis": {
+        "11011faff71a08db": [
+          "de"
+        ]
+      },
+      "ownEdition.offline": {
+        "00d85c1f12f246d5": [
+          "de"
+        ]
+      },
+      "ownEdition.ownHint": {
+        "874289bcd9f82d9d": [
+          "de"
+        ]
+      },
+      "ownEdition.private": {
+        "88a5db9710fd6e8a": [
+          "de"
+        ]
+      },
+      "ownEdition.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "ownEdition.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "ownEdition.saveLong": {
+        "181fbce85f0b910a": [
+          "de"
+        ]
+      },
+      "ownEdition.scan": {
+        "36628a0cdd7a5fed": [
+          "de"
+        ]
+      },
+      "ownEdition.title.found": {
+        "ba54b78e540f090f": [
+          "de"
+        ]
+      },
+      "ownEdition.title.isbn": {
+        "3bb91778f445f68e": [
+          "de"
+        ]
+      },
+      "ownEdition.title.own": {
+        "abbf59b709b345cc": [
+          "de"
+        ]
+      },
+      "ownEdition.use": {
+        "c36d819e7bc6d2b7": [
+          "de"
+        ]
+      },
+      "ownEdition.useLong": {
+        "52b4829fc5da016f": [
+          "de"
+        ]
+      },
+      "ownerErrors.all": {
+        "a52ace420f2175d0": [
+          "de"
+        ]
+      },
+      "ownerErrors.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.copied": {
+        "8d525e5f158b9afe": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.copy": {
+        "e21f935f11d7e966": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.device": {
+        "6ba0bdeccb426d7b": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.firstSeen": {
+        "32fbd28bce07040c": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.installed": {
+        "989eda033773c2a3": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.lastSeen": {
+        "21fd79c7de52e1cf": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.members": {
+        "1044a4c056d0d685": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.online": {
+        "f3d2bffa4784860e": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.routes": {
+        "2c5b669bcdeb51bf": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.signedOut": {
+        "80c6e7caffee367d": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.stack": {
+        "47d52c8d7cdef185": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.stackError": {
+        "3c5d4a19dba0e561": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.stackLoading": {
+        "0b9f63dfdc9e86c2": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.stackNone": {
+        "dccb3abe4e40bbd5": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.times": {
+        "0c0fd31c67d41499": [
+          "de"
+        ]
+      },
+      "ownerErrors.detail.versions": {
+        "6a3fe8876b563b46": [
+          "de"
+        ]
+      },
+      "ownerErrors.empty.text": {
+        "859d5db2dc3c99a4": [
+          "de"
+        ]
+      },
+      "ownerErrors.empty.title": {
+        "c39b9c7acc7228cf": [
+          "de"
+        ]
+      },
+      "ownerErrors.filterLabel": {
+        "facb2103af5d6d8d": [
+          "de"
+        ]
+      },
+      "ownerErrors.intro": {
+        "0b5c848e2707909e": [
+          "de"
+        ]
+      },
+      "ownerErrors.kind.chunk": {
+        "1617de94ce51908c": [
+          "de"
+        ]
+      },
+      "ownerErrors.kind.error": {
+        "54a0e8c17ebb21a1": [
+          "de"
+        ]
+      },
+      "ownerErrors.kind.outbox": {
+        "3f00927a719345ed": [
+          "de"
+        ]
+      },
+      "ownerErrors.kind.shelf": {
+        "338c8ac89226e2ed": [
+          "de"
+        ]
+      },
+      "ownerErrors.kind.unhandledrejection": {
+        "c2cf6fd1f5c595b9": [
+          "de"
+        ]
+      },
+      "ownerErrors.kind.vitals": {
+        "85ff45d0c4780fe5": [
+          "de"
+        ]
+      },
+      "ownerErrors.kind.vue": {
+        "b111a2a2185caed7": [
+          "de"
+        ]
+      },
+      "ownerErrors.loadError": {
+        "799d7b781b67b8b9": [
+          "de"
+        ]
+      },
+      "ownerErrors.members": {
+        "62aea8b5c52627b0": [
+          "de"
+        ]
+      },
+      "ownerErrors.new": {
+        "18fdd549b2ed367a": [
+          "de"
+        ]
+      },
+      "ownerErrors.refresh": {
+        "0e91610117029a62": [
+          "de"
+        ]
+      },
+      "ownerErrors.refreshing": {
+        "1c0def7be0607b96": [
+          "de"
+        ]
+      },
+      "ownerErrors.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "ownerErrors.row": {
+        "cb702378f31507ef": [
+          "de"
+        ]
+      },
+      "ownerErrors.rowNew": {
+        "b925225a44d3e704": [
+          "de"
+        ]
+      },
+      "ownerErrors.rowNone": {
+        "dc937b59892604f5": [
+          "de"
+        ]
+      },
+      "ownerErrors.times": {
+        "816c0b505ef0ed3a": [
+          "de"
+        ]
+      },
+      "ownerErrors.title": {
+        "cb702378f31507ef": [
+          "de"
+        ]
+      },
+      "people.accept": {
+        "89713b9c9c1b8f65": [
+          "de"
+        ]
+      },
+      "people.acceptLabel": {
+        "d849f8ae1c0b59ed": [
+          "de"
+        ]
+      },
+      "people.accepted": {
+        "0d4dddc3f406a8a3": [
+          "de"
+        ]
+      },
+      "people.askedOn": {
+        "aca9d93bbbaca6ad": [
+          "de"
+        ]
+      },
+      "people.block": {
+        "211d0bb8cf4f5b52": [
+          "de"
+        ]
+      },
+      "people.blockConfirm": {
+        "211d0bb8cf4f5b52": [
+          "de"
+        ]
+      },
+      "people.blockText": {
+        "ffb35da61c0a86f9": [
+          "de"
+        ]
+      },
+      "people.blockTitle": {
+        "c8f5c7726467fb07": [
+          "de"
+        ]
+      },
+      "people.decline": {
+        "a2d285b352873457": [
+          "de"
+        ]
+      },
+      "people.declineLabel": {
+        "c80f86e5660f4297": [
+          "de"
+        ]
+      },
+      "people.declined": {
+        "d393649a8a6c3e0b": [
+          "de"
+        ]
+      },
+      "people.emptyFollowers": {
+        "0b768487d1a7214d": [
+          "de"
+        ]
+      },
+      "people.emptyFollowing": {
+        "27b712b595629cb2": [
+          "de"
+        ]
+      },
+      "people.error": {
+        "d010a8621f3358d1": [
+          "de"
+        ]
+      },
+      "people.followBack": {
+        "0adbdcc0b8e217aa": [
+          "de"
+        ]
+      },
+      "people.followers": {
+        "a145ab342a4a3b94": [
+          "de"
+        ]
+      },
+      "people.following": {
+        "344b4271ca012d18": [
+          "de"
+        ]
+      },
+      "people.followsYouNow": {
+        "bdcf578ae4600b71": [
+          "de"
+        ]
+      },
+      "people.loadError": {
+        "cf2249af59cd24ea": [
+          "de"
+        ]
+      },
+      "people.moreLabel": {
+        "f608d3348f5f91d5": [
+          "de"
+        ]
+      },
+      "people.offline": {
+        "74919476184d9e88": [
+          "de"
+        ]
+      },
+      "people.remove": {
+        "57e5f85d00c323fd": [
+          "de"
+        ]
+      },
+      "people.requests": {
+        "ada27592c9578e90": [
+          "de"
+        ]
+      },
+      "people.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "people.sheetNote": {
+        "a8843ba6f88f0171": [
+          "de"
+        ]
+      },
+      "people.title": {
+        "7db20897053bb278": [
+          "de"
+        ]
+      },
+      "people.unfollow": {
+        "778d568e88192d0f": [
+          "de"
+        ]
+      },
+      "photo.area": {
+        "f9dc12f41ecdd2ae": [
+          "de"
+        ]
+      },
+      "photo.avatarLabel": {
+        "ac8a73189fe33c72": [
+          "de"
+        ]
+      },
+      "photo.choose": {
+        "118fb65601f78178": [
+          "de"
+        ]
+      },
+      "photo.cropTitle": {
+        "d463e9040e0c36e0": [
+          "de"
+        ]
+      },
+      "photo.error.missing": {
+        "868529e996f49b7e": [
+          "de"
+        ]
+      },
+      "photo.error.not_signed_in": {
+        "29a5aca7553a066b": [
+          "de"
+        ]
+      },
+      "photo.error.offline": {
+        "b258186ad617e999": [
+          "de"
+        ]
+      },
+      "photo.error.too_large": {
+        "5db5459980026db7": [
+          "de"
+        ]
+      },
+      "photo.error.unknown": {
+        "f95c2648d0db095e": [
+          "de"
+        ]
+      },
+      "photo.error.unreadable": {
+        "5a11bd64189bd42a": [
+          "de"
+        ]
+      },
+      "photo.file": {
+        "94ea3446e40e693d": [
+          "de"
+        ]
+      },
+      "photo.hint": {
+        "221b2cf827f2dabf": [
+          "de"
+        ]
+      },
+      "photo.private": {
+        "b624ec79c280370b": [
+          "de"
+        ]
+      },
+      "photo.remove": {
+        "f46512ab2099fb0c": [
+          "de"
+        ]
+      },
+      "photo.removed": {
+        "db1f634ce2b9d7ca": [
+          "de"
+        ]
+      },
+      "photo.removing": {
+        "d4b09919ec929f15": [
+          "de"
+        ]
+      },
+      "photo.replace": {
+        "8a2bca07ae99c58f": [
+          "de"
+        ]
+      },
+      "photo.row": {
+        "d84eebada93efee1": [
+          "de"
+        ]
+      },
+      "photo.rowNone": {
+        "9fd728c66c9a256b": [
+          "de"
+        ]
+      },
+      "photo.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "photo.saved": {
+        "75e8f86f059fff67": [
+          "de"
+        ]
+      },
+      "photo.saving": {
+        "23e39291d6135814": [
+          "de"
+        ]
+      },
+      "photo.title": {
+        "ac8a73189fe33c72": [
+          "de"
+        ]
+      },
+      "photo.zoom": {
+        "509c517ede79fef0": [
+          "de"
+        ]
+      },
+      "photo.zoomIn": {
+        "0e47f09a748fa132": [
+          "de"
+        ]
+      },
+      "photo.zoomOut": {
+        "bc7b631a689b45ca": [
+          "de"
+        ]
+      },
+      "privacy.blocked": {
+        "18f2a0947f9d6523": [
+          "de"
+        ]
+      },
+      "privacy.blockedNone": {
+        "dc937b59892604f5": [
+          "de"
+        ]
+      },
+      "privacy.done": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "privacy.error": {
+        "660b102c659bccc3": [
+          "de"
+        ]
+      },
+      "privacy.goPublicConfirm": {
+        "81f879eaea93c979": [
+          "de"
+        ]
+      },
+      "privacy.goPublicText": {
+        "613efab67a84da25": [
+          "de"
+        ]
+      },
+      "privacy.goPublicTitle": {
+        "e3fbff10dc39a3e2": [
+          "de"
+        ]
+      },
+      "privacy.never": {
+        "906bd476fc7a2d25": [
+          "de"
+        ]
+      },
+      "privacy.private": {
+        "8f4de740d11aa789": [
+          "de"
+        ]
+      },
+      "privacy.privateHint": {
+        "2d75386707105346": [
+          "de"
+        ]
+      },
+      "privacy.section.abandoned": {
+        "4b1f06cea9a4d190": [
+          "de"
+        ]
+      },
+      "privacy.section.finished": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "privacy.section.ratings": {
+        "ff862693daa8356e": [
+          "de"
+        ]
+      },
+      "privacy.section.reading": {
+        "af73520be6badf74": [
+          "de"
+        ]
+      },
+      "privacy.section.reviews": {
+        "84cb7871b741c32e": [
+          "de"
+        ]
+      },
+      "privacy.section.want": {
+        "34e323c9f58a1676": [
+          "de"
+        ]
+      },
+      "privacy.section.year": {
+        "ddd8f07eef37e61d": [
+          "de"
+        ]
+      },
+      "privacy.sections": {
+        "ff88412db131183a": [
+          "de"
+        ]
+      },
+      "privacy.title": {
+        "54a57c3147c49f33": [
+          "de"
+        ]
+      },
+      "profile.account.delete": {
+        "a2e20a33570001ae": [
+          "de"
+        ]
+      },
+      "profile.account.ebooks": {
+        "436cef3e10e58070": [
+          "de"
+        ]
+      },
+      "profile.account.ebooksNeedYou": {
+        "1b7f6c153c39e5b1": [
+          "de"
+        ]
+      },
+      "profile.account.glass": {
+        "82c268188cd66576": [
+          "de"
+        ]
+      },
+      "profile.account.glassLevel.medium": {
+        "8e588cd187741f1c": [
+          "de"
+        ]
+      },
+      "profile.account.glassLevel.off": {
+        "ca7981b46ecf2c17": [
+          "de"
+        ]
+      },
+      "profile.account.glassLevel.strong": {
+        "30a04fdcb6bb10b0": [
+          "de"
+        ]
+      },
+      "profile.account.install": {
+        "ac5837f30e8de829": [
+          "de"
+        ]
+      },
+      "profile.account.signOut": {
+        "48f0d3d397d49f13": [
+          "de"
+        ]
+      },
+      "profile.account.theme": {
+        "9b7878aef90b527c": [
+          "de"
+        ]
+      },
+      "profile.account.title": {
+        "7e1b0d5641f2640c": [
+          "de"
+        ]
+      },
+      "profile.account.version": {
+        "a18745121bb8af6d": [
+          "de"
+        ]
+      },
+      "profile.account.whatsNew": {
+        "135e912e89054ffa": [
+          "de"
+        ]
+      },
+      "profile.all": {
+        "a52ace420f2175d0": [
+          "de"
+        ]
+      },
+      "profile.authors.count": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "profile.authors.rating": {
+        "ed683793e1a42f45": [
+          "de"
+        ]
+      },
+      "profile.authors.title": {
+        "88fe2d25fa2e8c3d": [
+          "de"
+        ]
+      },
+      "profile.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "profile.byMonth": {
+        "4d4f2d90ccb650e0": [
+          "de"
+        ]
+      },
+      "profile.byYear": {
+        "090dc468e82e6caa": [
+          "de"
+        ]
+      },
+      "profile.columnLabel": {
+        "141835a90fdf5c54": [
+          "de"
+        ]
+      },
+      "profile.days.dayRead": {
+        "ca9578357d77ec0d": [
+          "de"
+        ]
+      },
+      "profile.days.dayReadNoPages": {
+        "3fa2fe57b7b10d18": [
+          "de"
+        ]
+      },
+      "profile.days.label": {
+        "4e218375c5056eb5": [
+          "de"
+        ]
+      },
+      "profile.days.perDay": {
+        "1bea9fc265022268": [
+          "de"
+        ]
+      },
+      "profile.days.read": {
+        "7b58a63c1b1cb251": [
+          "de"
+        ]
+      },
+      "profile.days.since": {
+        "5d9267d05d5214b0": [
+          "de"
+        ]
+      },
+      "profile.days.title": {
+        "57be4685ec41c4f2": [
+          "de"
+        ]
+      },
+      "profile.deleteAccount.action": {
+        "a2e20a33570001ae": [
+          "de"
+        ]
+      },
+      "profile.deleteAccount.failed": {
+        "1f3d0e2d4e97d1bc": [
+          "de"
+        ]
+      },
+      "profile.deleteAccount.text": {
+        "cb613de817770342": [
+          "de"
+        ]
+      },
+      "profile.deleteAccount.title": {
+        "e3b4e711266eb759": [
+          "de"
+        ]
+      },
+      "profile.deleteAccount.unsynced": {
+        "a45b99a39e3d7335": [
+          "de"
+        ]
+      },
+      "profile.empty.text": {
+        "b1b5c40639ad8551": [
+          "de"
+        ]
+      },
+      "profile.empty.title": {
+        "5a095c416257c262": [
+          "de"
+        ]
+      },
+      "profile.figures.average": {
+        "b38ae2c5b84529e8": [
+          "de"
+        ]
+      },
+      "profile.figures.books": {
+        "9da7f76bc81d2f4e": [
+          "de"
+        ]
+      },
+      "profile.figures.daysABook": {
+        "79ce896f01c769db": [
+          "de"
+        ]
+      },
+      "profile.figures.dnf": {
+        "984e6921ec13c25c": [
+          "de"
+        ]
+      },
+      "profile.figures.pages": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "profile.figures.pagesMissing": {
+        "5bce162c3848cc3d": [
+          "de"
+        ]
+      },
+      "profile.figures.pagesMissingOpen": {
+        "adc3d0eddfc1d9c9": [
+          "de"
+        ]
+      },
+      "profile.figures.pagesPerBook": {
+        "cd1b75ac87afaa44": [
+          "de"
+        ]
+      },
+      "profile.figures.rated": {
+        "96c3d74f9e898615": [
+          "de"
+        ]
+      },
+      "profile.figures.rereads": {
+        "60cda6555ed5a5ca": [
+          "de"
+        ]
+      },
+      "profile.figures.unrated": {
+        "8b949d1789294738": [
+          "de"
+        ]
+      },
+      "profile.figures.usually": {
+        "8c42804b00896e58": [
+          "de"
+        ]
+      },
+      "profile.inReview": {
+        "da19ab495361c69e": [
+          "de"
+        ]
+      },
+      "profile.library": {
+        "f35fb39ebe990a2f": [
+          "de"
+        ]
+      },
+      "profile.loadError": {
+        "0c11b2e7b68c760b": [
+          "de"
+        ]
+      },
+      "profile.offline": {
+        "7d843cc5f5746db7": [
+          "de"
+        ]
+      },
+      "profile.ratings.notYet": {
+        "c62623e55852cfc2": [
+          "de"
+        ]
+      },
+      "profile.ratings.rated": {
+        "96c3d74f9e898615": [
+          "de"
+        ]
+      },
+      "profile.ratings.row": {
+        "5699faf5a014cf20": [
+          "de"
+        ]
+      },
+      "profile.ratings.title": {
+        "ff862693daa8356e": [
+          "de"
+        ]
+      },
+      "profile.records.days": {
+        "963e4ad5da392686": [
+          "de"
+        ]
+      },
+      "profile.records.longest": {
+        "802803c7888480fc": [
+          "de"
+        ]
+      },
+      "profile.records.pages": {
+        "c8aecd918e161135": [
+          "de"
+        ]
+      },
+      "profile.records.quickest": {
+        "a14a2fff8d0e3b64": [
+          "de"
+        ]
+      },
+      "profile.records.shortest": {
+        "3be807632d673d43": [
+          "de"
+        ]
+      },
+      "profile.records.slowest": {
+        "e6a3c8c3ff7c84c1": [
+          "de"
+        ]
+      },
+      "profile.records.title": {
+        "47a84e92d5b225ee": [
+          "de"
+        ]
+      },
+      "profile.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "profile.reviews.all": {
+        "9a10f0e903d8f78a": [
+          "de"
+        ]
+      },
+      "profile.reviews.allCard": {
+        "d7a8c446069a0585": [
+          "de"
+        ]
+      },
+      "profile.reviews.allLabel": {
+        "c3da1c70c8eece65": [
+          "de"
+        ]
+      },
+      "profile.reviews.spoilers": {
+        "7d9cbde5321771e9": [
+          "de"
+        ]
+      },
+      "profile.reviews.title": {
+        "d9058ab5c9016a86": [
+          "de"
+        ]
+      },
+      "profile.sheet.allYears": {
+        "a0f09510650034a0": [
+          "de"
+        ]
+      },
+      "profile.sheet.day": {
+        "c48107bd4cb59fc7": [
+          "de"
+        ]
+      },
+      "profile.sheet.month": {
+        "d2d73eec68ca8afd": [
+          "de"
+        ]
+      },
+      "profile.sheet.pagesMissing": {
+        "1d3bcaae7425c3e8": [
+          "de"
+        ]
+      },
+      "profile.sheet.readIn": {
+        "d80365417e14b862": [
+          "de"
+        ]
+      },
+      "profile.sheet.stars": {
+        "31c6c2367c0a96e9": [
+          "de"
+        ]
+      },
+      "profile.signOutUnsynced.failed": {
+        "2f3a6552226c4677": [
+          "de"
+        ]
+      },
+      "profile.signOutUnsynced.signOut": {
+        "bb14a8b64e824f9c": [
+          "de"
+        ]
+      },
+      "profile.signOutUnsynced.syncFirst": {
+        "1d6fe0e44b6f7b34": [
+          "de"
+        ]
+      },
+      "profile.signOutUnsynced.syncing": {
+        "8a046cc90ab0a981": [
+          "de"
+        ]
+      },
+      "profile.signOutUnsynced.text": {
+        "e3b84c440ea943f5": [
+          "de"
+        ]
+      },
+      "profile.signOutUnsynced.title": {
+        "0a6696bca5b012a1": [
+          "de"
+        ]
+      },
+      "profile.since": {
+        "6f9dc1585d93d75b": [
+          "de"
+        ]
+      },
+      "profile.title": {
+        "d696a35bdd1883da": [
+          "de"
+        ]
+      },
+      "profile.year.after": {
+        "918a999d102e829c": [
+          "de"
+        ]
+      },
+      "profile.year.afterLabel": {
+        "69c77eb01fd2bdf0": [
+          "de"
+        ]
+      },
+      "profile.year.before": {
+        "918a999d102e829c": [
+          "de"
+        ]
+      },
+      "profile.year.beforeLabel": {
+        "e98c54449a74d4f8": [
+          "de"
+        ]
+      },
+      "profile.year.eyebrow": {
+        "3d6e58ba71379550": [
+          "de"
+        ]
+      },
+      "profile.year.favourite": {
+        "e3ee91c1d7fc15f3": [
+          "de"
+        ]
+      },
+      "profile.year.monthLabel": {
+        "3524b2535e17ef0e": [
+          "de"
+        ]
+      },
+      "profile.year.months": {
+        "09ca7551b3e90626": [
+          "de"
+        ]
+      },
+      "profile.year.other": {
+        "3dc60b9a1a5ce683": [
+          "de"
+        ]
+      },
+      "profile.years.books": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "profile.years.favourite": {
+        "e39b24993c31d7bb": [
+          "de"
+        ]
+      },
+      "profile.years.title": {
+        "7b3398ef829d3e7c": [
+          "de"
+        ]
+      },
+      "profile.yearsLabel": {
+        "89f6832560dec0b7": [
+          "de"
+        ]
+      },
+      "rating.clear": {
+        "83b12c2216efb4fd": [
+          "de"
+        ]
+      },
+      "rating.hint": {
+        "053480d802222205": [
+          "de"
+        ]
+      },
+      "rating.label": {
+        "138d1dc1dc829bb9": [
+          "de"
+        ]
+      },
+      "rating.none": {
+        "f5ad0871124734e1": [
+          "de"
+        ]
+      },
+      "rating.optional": {
+        "59be71333c960fd0": [
+          "de"
+        ]
+      },
+      "rating.outOf": {
+        "37b89da52ead43f3": [
+          "de"
+        ]
+      },
+      "rating.title": {
+        "9f29530464f730bd": [
+          "de"
+        ]
+      },
+      "readAs.audiobook": {
+        "8716cb3d8010144e": [
+          "de"
+        ]
+      },
+      "readAs.ebook": {
+        "571a0211e8501143": [
+          "de"
+        ]
+      },
+      "readAs.fromEdition": {
+        "7a722087992dbfd2": [
+          "de"
+        ]
+      },
+      "readAs.hint": {
+        "71491f1410059319": [
+          "de"
+        ]
+      },
+      "readAs.label": {
+        "7d2d6d5a04d49901": [
+          "de"
+        ]
+      },
+      "readAs.offline": {
+        "a1794783aab72d20": [
+          "de"
+        ]
+      },
+      "readAs.physical": {
+        "a89383f1a4302676": [
+          "de"
+        ]
+      },
+      "reader.back": {
+        "c4cf026844b47149": [
+          "de"
+        ]
+      },
+      "reader.behind": {
+        "15c31654f2627ae7": [
+          "de"
+        ]
+      },
+      "reader.contents": {
+        "437aea62a5bd6ad4": [
+          "de"
+        ]
+      },
+      "reader.contentsSheet.none": {
+        "9efe003190c89fa3": [
+          "de"
+        ]
+      },
+      "reader.contentsSheet.otherCopy.color": {
+        "97826b22a3ccfb2d": [
+          "de"
+        ]
+      },
+      "reader.contentsSheet.otherCopy.note": {
+        "f4da7ca104ca0882": [
+          "de"
+        ]
+      },
+      "reader.contentsSheet.otherCopy.remove": {
+        "043bff5c0bb9e7e0": [
+          "de"
+        ]
+      },
+      "reader.contentsSheet.otherCopy.title": {
+        "b11bd1723630794a": [
+          "de"
+        ]
+      },
+      "reader.contentsSheet.title": {
+        "437aea62a5bd6ad4": [
+          "de"
+        ]
+      },
+      "reader.define.busy": {
+        "c99997d22de9077a": [
+          "de"
+        ]
+      },
+      "reader.define.credit": {
+        "0cb0f8ae6917bb11": [
+          "de"
+        ]
+      },
+      "reader.define.error.failed": {
+        "f6254cd6c58df5ff": [
+          "de"
+        ]
+      },
+      "reader.define.error.offline": {
+        "f0291a82587b2579": [
+          "de"
+        ]
+      },
+      "reader.define.error.quota": {
+        "f6254cd6c58df5ff": [
+          "de"
+        ]
+      },
+      "reader.define.none": {
+        "3515a96e87300c0c": [
+          "de"
+        ]
+      },
+      "reader.define.title": {
+        "73a5f5b59101cf3d": [
+          "de"
+        ]
+      },
+      "reader.define.translate": {
+        "8fe147696fbf47f3": [
+          "de"
+        ]
+      },
+      "reader.end.back": {
+        "20f508b4f84521a7": [
+          "de"
+        ]
+      },
+      "reader.end.close": {
+        "b3046e8bb332fdc3": [
+          "de"
+        ]
+      },
+      "reader.end.eyebrow": {
+        "9ed608538508dad5": [
+          "de"
+        ]
+      },
+      "reader.end.finish": {
+        "a6c7a84baa6750fc": [
+          "de"
+        ]
+      },
+      "reader.end.finished": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "reader.end.pages": {
+        "d46e57d6ac42cf6a": [
+          "de"
+        ]
+      },
+      "reader.failed": {
+        "e372fcc0335c7130": [
+          "de"
+        ]
+      },
+      "reader.find.clear": {
+        "83b12c2216efb4fd": [
+          "de"
+        ]
+      },
+      "reader.find.close": {
+        "55656b5e434f4c06": [
+          "de"
+        ]
+      },
+      "reader.find.count": {
+        "5813ed727e90abfa": [
+          "de"
+        ]
+      },
+      "reader.find.countSoFar": {
+        "580539e484927940": [
+          "de"
+        ]
+      },
+      "reader.find.fromStart": {
+        "597ae11665bad234": [
+          "de"
+        ]
+      },
+      "reader.find.idle": {
+        "2e40538575dc457a": [
+          "de"
+        ]
+      },
+      "reader.find.label": {
+        "408b499fd25b23c9": [
+          "de"
+        ]
+      },
+      "reader.find.next": {
+        "c6c1c9a9c8543f1e": [
+          "de"
+        ]
+      },
+      "reader.find.none": {
+        "3495ce36cf7f523f": [
+          "de"
+        ]
+      },
+      "reader.find.noneDetail": {
+        "da28383fe908a0c1": [
+          "de"
+        ]
+      },
+      "reader.find.noneHint": {
+        "bef71b2ae9751e7e": [
+          "de"
+        ]
+      },
+      "reader.hoursBook": {
+        "f5774dcc825c64ef": [
+          "de"
+        ]
+      },
+      "reader.menu.colors.lamp": {
+        "c98e85f249002f03": [
+          "de"
+        ]
+      },
+      "reader.menu.colors.rose": {
+        "618d663af0f1ec88": [
+          "de"
+        ]
+      },
+      "reader.menu.colors.sage": {
+        "7e5d4325a44714fc": [
+          "de"
+        ]
+      },
+      "reader.menu.colors.sky": {
+        "05f514fae7ca5710": [
+          "de"
+        ]
+      },
+      "reader.menu.copied": {
+        "8d525e5f158b9afe": [
+          "de"
+        ]
+      },
+      "reader.menu.copy": {
+        "e21f935f11d7e966": [
+          "de"
+        ]
+      },
+      "reader.menu.define": {
+        "73a5f5b59101cf3d": [
+          "de"
+        ]
+      },
+      "reader.menu.endHandle": {
+        "6a81a0c60e0a78a1": [
+          "de"
+        ]
+      },
+      "reader.menu.highlight": {
+        "07ccd15df32aa7e2": [
+          "de"
+        ]
+      },
+      "reader.menu.highlightIn": {
+        "97826b22a3ccfb2d": [
+          "de"
+        ]
+      },
+      "reader.menu.label": {
+        "55a62ed859cc0a15": [
+          "de"
+        ]
+      },
+      "reader.menu.remove": {
+        "c3812fc4acb861d5": [
+          "de"
+        ]
+      },
+      "reader.menu.search": {
+        "49c266baaaa70981": [
+          "de"
+        ]
+      },
+      "reader.menu.startHandle": {
+        "f60e10d551fb8329": [
+          "de"
+        ]
+      },
+      "reader.menu.translate": {
+        "8fe147696fbf47f3": [
+          "de"
+        ]
+      },
+      "reader.minutesBook": {
+        "5e3213a4793a26c9": [
+          "de"
+        ]
+      },
+      "reader.minutesChapter": {
+        "abd39732b0803957": [
+          "de"
+        ]
+      },
+      "reader.missing": {
+        "f9fbc3ca664e96b8": [
+          "de"
+        ]
+      },
+      "reader.nextChapter": {
+        "4344dde797b69c1d": [
+          "de"
+        ]
+      },
+      "reader.page": {
+        "cc3dd113c9e7b390": [
+          "de"
+        ]
+      },
+      "reader.pageOnly": {
+        "59588c7a2fbe390d": [
+          "de"
+        ]
+      },
+      "reader.percent": {
+        "bb8ddd3591649943": [
+          "de"
+        ]
+      },
+      "reader.search": {
+        "95110cecd26a94f4": [
+          "de"
+        ]
+      },
+      "reader.setHere": {
+        "7e8a222f50f2f4d0": [
+          "de"
+        ]
+      },
+      "reader.slider.back": {
+        "5f86ed23b6ce7541": [
+          "de"
+        ]
+      },
+      "reader.slider.done": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "reader.slider.label": {
+        "abe7ffc8d99ce70d": [
+          "de"
+        ]
+      },
+      "reader.slider.page": {
+        "0a30a815d67d7dd2": [
+          "de"
+        ]
+      },
+      "reader.text": {
+        "b0ffa9ca68887cd6": [
+          "de"
+        ]
+      },
+      "reader.theEnd": {
+        "9ed608538508dad5": [
+          "de"
+        ]
+      },
+      "reader.translate.busy": {
+        "e72799b809825c5c": [
+          "de"
+        ]
+      },
+      "reader.translate.define": {
+        "73a5f5b59101cf3d": [
+          "de"
+        ]
+      },
+      "reader.translate.device": {
+        "1b5b3a5460f5832a": [
+          "de"
+        ]
+      },
+      "reader.translate.error.failed": {
+        "9f183eed3f5af2c8": [
+          "de"
+        ]
+      },
+      "reader.translate.error.offline": {
+        "9da8fa47a940ef88": [
+          "de"
+        ]
+      },
+      "reader.translate.error.quota": {
+        "d30d5748de08cdf8": [
+          "de"
+        ]
+      },
+      "reader.translate.into": {
+        "f83edd8c38bdfbf5": [
+          "de"
+        ]
+      },
+      "reader.translate.service": {
+        "f06d2fb606bcb665": [
+          "de"
+        ]
+      },
+      "reader.translate.title": {
+        "8fe147696fbf47f3": [
+          "de"
+        ]
+      },
+      "reader.type.awake": {
+        "24c4f08d7db8a080": [
+          "de"
+        ]
+      },
+      "reader.type.awakeOff": {
+        "44d3524fd3638074": [
+          "de"
+        ]
+      },
+      "reader.type.awakeOn": {
+        "01c893cae8e79b52": [
+          "de"
+        ]
+      },
+      "reader.type.classic": {
+        "80addbd9b45ed5c6": [
+          "de"
+        ]
+      },
+      "reader.type.classicOff": {
+        "afb1c15e15bb1b67": [
+          "de"
+        ]
+      },
+      "reader.type.classicOn": {
+        "1a6066a8ad4c9475": [
+          "de"
+        ]
+      },
+      "reader.type.dark": {
+        "60acc53f13a5d1bf": [
+          "de"
+        ]
+      },
+      "reader.type.justify": {
+        "f3bd3473d7d87bc0": [
+          "de"
+        ]
+      },
+      "reader.type.justifyOff": {
+        "fd3dcac43ef00894": [
+          "de"
+        ]
+      },
+      "reader.type.justifyOn": {
+        "36162767d1a016b2": [
+          "de"
+        ]
+      },
+      "reader.type.larger": {
+        "13b3946395824ca9": [
+          "de"
+        ]
+      },
+      "reader.type.layout": {
+        "a511909161e1b84f": [
+          "de"
+        ]
+      },
+      "reader.type.light": {
+        "dbcd5e7bb7a0f538": [
+          "de"
+        ]
+      },
+      "reader.type.marginNames.0": {
+        "c7be191c1586ad46": [
+          "de"
+        ]
+      },
+      "reader.type.marginNames.1": {
+        "ba227109ba7edbb4": [
+          "de"
+        ]
+      },
+      "reader.type.marginNames.2": {
+        "a7248eeb45eb1ce2": [
+          "de"
+        ]
+      },
+      "reader.type.marginNames.3": {
+        "147170e793c6e58f": [
+          "de"
+        ]
+      },
+      "reader.type.margins": {
+        "eea8d245aa44171c": [
+          "de"
+        ]
+      },
+      "reader.type.pages": {
+        "9046da16aea909ba": [
+          "de"
+        ]
+      },
+      "reader.type.room": {
+        "911ea89c43d9dbb8": [
+          "de"
+        ]
+      },
+      "reader.type.sans": {
+        "b3c18129f841744d": [
+          "de"
+        ]
+      },
+      "reader.type.scroll": {
+        "291873e31ccb2289": [
+          "de"
+        ]
+      },
+      "reader.type.sepia": {
+        "7464e26f387097b3": [
+          "de"
+        ]
+      },
+      "reader.type.serif": {
+        "1b5e747e5031cb30": [
+          "de"
+        ]
+      },
+      "reader.type.sizeOf": {
+        "d243f9c7f1293d2e": [
+          "de"
+        ]
+      },
+      "reader.type.smaller": {
+        "d13cae54a48032e3": [
+          "de"
+        ]
+      },
+      "reader.type.spacing": {
+        "0db45da1214b07cf": [
+          "de"
+        ]
+      },
+      "reader.type.spacingNames.0": {
+        "ce0cc8415d939a3a": [
+          "de"
+        ]
+      },
+      "reader.type.spacingNames.1": {
+        "22c9f955e3deef55": [
+          "de"
+        ]
+      },
+      "reader.type.spacingNames.2": {
+        "a7248eeb45eb1ce2": [
+          "de"
+        ]
+      },
+      "reader.type.spacingNames.3": {
+        "c1674c5e1ab04f52": [
+          "de"
+        ]
+      },
+      "reader.type.title": {
+        "71988c4d8e0803ba": [
+          "de"
+        ]
+      },
+      "reader.type.typeface": {
+        "3a8c10765dd5ce76": [
+          "de"
+        ]
+      },
+      "reader.where": {
+        "f026d59168f4bee2": [
+          "de"
+        ]
+      },
+      "readingPage.card.back": {
+        "c6b984df758c1acd": [
+          "de"
+        ]
+      },
+      "readingPage.card.backNone": {
+        "8756e0aed7dae48d": [
+          "de"
+        ]
+      },
+      "readingPage.card.finished": {
+        "abc40f11fc74e26c": [
+          "de"
+        ]
+      },
+      "readingPage.card.finishedUndated": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "readingPage.card.rating": {
+        "978f9a48a54e38b4": [
+          "de"
+        ]
+      },
+      "readingPage.card.ratingNone": {
+        "9f29530464f730bd": [
+          "de"
+        ]
+      },
+      "readingPage.card.reading": {
+        "09bec08b044ba898": [
+          "de"
+        ]
+      },
+      "readingPage.card.review": {
+        "1ae51952b5c057d1": [
+          "de"
+        ]
+      },
+      "readingPage.card.reviewNone": {
+        "aff0766a5290e117": [
+          "de"
+        ]
+      },
+      "readingPage.card.want": {
+        "902cdb87016e1c21": [
+          "de"
+        ]
+      },
+      "readingPage.error": {
+        "eeeacd584bb2b154": [
+          "de"
+        ]
+      },
+      "readingPage.favourites": {
+        "d97d51d37092b10c": [
+          "de"
+        ]
+      },
+      "readingPage.finished": {
+        "92d2aeacf211ecfa": [
+          "de"
+        ]
+      },
+      "readingPage.footer.signUp": {
+        "20de177ba6640b2a": [
+          "de"
+        ]
+      },
+      "readingPage.footer.tagline": {
+        "d6259938a64ee72e": [
+          "de"
+        ]
+      },
+      "readingPage.loading": {
+        "1b900980644b0f4a": [
+          "de"
+        ]
+      },
+      "readingPage.missing.text": {
+        "22eb3bd70f335196": [
+          "de"
+        ]
+      },
+      "readingPage.missing.title": {
+        "a55cdc862742c4e1": [
+          "de"
+        ]
+      },
+      "readingPage.nothing": {
+        "99a81df25fee3e0c": [
+          "de"
+        ]
+      },
+      "readingPage.offline": {
+        "e9a1ff8cdebe46e2": [
+          "de"
+        ]
+      },
+      "readingPage.reading": {
+        "af73520be6badf74": [
+          "de"
+        ]
+      },
+      "readingPage.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "readingPage.shelf": {
+        "5a61af1c8520bced": [
+          "de"
+        ]
+      },
+      "readingPage.shelfNone": {
+        "b596bc5c0556320a": [
+          "de"
+        ]
+      },
+      "readingPage.shelfRowLabel": {
+        "f24044b211f58bf0": [
+          "de"
+        ]
+      },
+      "readingPage.shelfRowLabelNone": {
+        "644b1a6cd353b5ef": [
+          "de"
+        ]
+      },
+      "readingPage.title": {
+        "c6b984df758c1acd": [
+          "de"
+        ]
+      },
+      "readingPage.titleNone": {
+        "44a458b9ed0f4487": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.consent": {
+        "cce87927856326c0": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.doneText": {
+        "c093993d44a5be19": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.doneTitle": {
+        "ce5dabf66a979cff": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.email": {
+        "33fe95ce02091218": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.error": {
+        "63866557cbecf15a": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.honeypot": {
+        "7a98b652df9fc0c8": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.invalid": {
+        "ee587fc4e343e88a": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.join": {
+        "6a16124b654c7660": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.joining": {
+        "6bbb89ee5d48b326": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.placeholder": {
+        "cf0a9acc80212017": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.rateLimited": {
+        "88bc1d6a54441b85": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.text": {
+        "4cff04266806fb6c": [
+          "de"
+        ]
+      },
+      "readingPage.waitlist.title": {
+        "f5e14c2820384230": [
+          "de"
+        ]
+      },
+      "readingPage.year": {
+        "8931eeee00278512": [
+          "de"
+        ]
+      },
+      "removeEntry.action": {
+        "8025a3afd65f1cd0": [
+          "de"
+        ]
+      },
+      "removeEntry.busy": {
+        "d4b09919ec929f15": [
+          "de"
+        ]
+      },
+      "removeEntry.text": {
+        "dfc7746f4222a57d": [
+          "de"
+        ]
+      },
+      "removeEntry.title": {
+        "7589f13c11408ce5": [
+          "de"
+        ]
+      },
+      "review.folded": {
+        "9b5dcfaccbe43c72": [
+          "de"
+        ]
+      },
+      "review.showAnyway": {
+        "3175b05f8140f78b": [
+          "de"
+        ]
+      },
+      "review.showAnywayLabel": {
+        "8377eba982d7a80b": [
+          "de"
+        ]
+      },
+      "review.spoilers": {
+        "9b5dcfaccbe43c72": [
+          "de"
+        ]
+      },
+      "review.spoilersHint": {
+        "00fc6be49bce2b59": [
+          "de"
+        ]
+      },
+      "search.add": {
+        "221992a34960135c": [
+          "de"
+        ]
+      },
+      "search.addAndLink": {
+        "8e2b1a9bea1f90ff": [
+          "de"
+        ]
+      },
+      "search.addManually": {
+        "c1bc31e43240f88c": [
+          "de"
+        ]
+      },
+      "search.clear": {
+        "83b12c2216efb4fd": [
+          "de"
+        ]
+      },
+      "search.close": {
+        "55656b5e434f4c06": [
+          "de"
+        ]
+      },
+      "search.empty": {
+        "743b1ee5330ea16f": [
+          "de"
+        ]
+      },
+      "search.failed": {
+        "481859b689b0d0d9": [
+          "de"
+        ]
+      },
+      "search.failedTitle": {
+        "eaebda2a605bad5b": [
+          "de"
+        ]
+      },
+      "search.hint": {
+        "a3359750cad0d63d": [
+          "de"
+        ]
+      },
+      "search.inLibrary": {
+        "10372090212bc576": [
+          "de"
+        ]
+      },
+      "search.linkOtherEdition": {
+        "1f8990eba6a2647e": [
+          "de"
+        ]
+      },
+      "search.linkTo": {
+        "818f733df6075b0f": [
+          "de"
+        ]
+      },
+      "search.loadingShelves": {
+        "e4ebe21d57027c9f": [
+          "de"
+        ]
+      },
+      "search.noResults": {
+        "6e0dc2021e8caf70": [
+          "de"
+        ]
+      },
+      "search.noResultsHint": {
+        "bbead8bbb7a53c30": [
+          "de"
+        ]
+      },
+      "search.noResultsTitle": {
+        "410966a665ef4df1": [
+          "de"
+        ]
+      },
+      "search.offlineNoResults": {
+        "86bfbbe06adfbc4a": [
+          "de"
+        ]
+      },
+      "search.offlineNote": {
+        "7ee78e87592fd937": [
+          "de"
+        ]
+      },
+      "search.otherEdition": {
+        "c6fa0a27caddc808": [
+          "de"
+        ]
+      },
+      "search.placeholder": {
+        "2831c0a2eb3b904a": [
+          "de"
+        ]
+      },
+      "search.scan.asking": {
+        "cad7446aaff9cc70": [
+          "de"
+        ]
+      },
+      "search.scan.askingTitle": {
+        "c4794f3a95ed42de": [
+          "de"
+        ]
+      },
+      "search.scan.close": {
+        "929d4aafa630ff10": [
+          "de"
+        ]
+      },
+      "search.scan.denied": {
+        "973a53b4a555e5f1": [
+          "de"
+        ]
+      },
+      "search.scan.deniedTitle": {
+        "470dd58a9db8e81b": [
+          "de"
+        ]
+      },
+      "search.scan.dismiss": {
+        "7d9eb7acb13e2462": [
+          "de"
+        ]
+      },
+      "search.scan.hint": {
+        "c07e33089075fa40": [
+          "de"
+        ]
+      },
+      "search.scan.looking": {
+        "118989b0f183455c": [
+          "de"
+        ]
+      },
+      "search.scan.none": {
+        "28596fd3b75390fa": [
+          "de"
+        ]
+      },
+      "search.scan.noneTitle": {
+        "36abc25bd7c8b116": [
+          "de"
+        ]
+      },
+      "search.scan.notBook": {
+        "398881c8967b3c05": [
+          "de"
+        ]
+      },
+      "search.scan.offline": {
+        "b1bae582dbc26571": [
+          "de"
+        ]
+      },
+      "search.scan.open": {
+        "d5b6f0c5f6ced6a4": [
+          "de"
+        ]
+      },
+      "search.scan.title": {
+        "d5b6f0c5f6ced6a4": [
+          "de"
+        ]
+      },
+      "search.scan.torchOff": {
+        "4a43493344ab82b1": [
+          "de"
+        ]
+      },
+      "search.scan.torchOn": {
+        "c2186ee8452f7850": [
+          "de"
+        ]
+      },
+      "search.title": {
+        "49c266baaaa70981": [
+          "de"
+        ]
+      },
+      "series.book": {
+        "0c717313a1fa4701": [
+          "de"
+        ]
+      },
+      "series.bookOf": {
+        "7db9d5a4a9b24417": [
+          "de"
+        ]
+      },
+      "series.correct": {
+        "e32bff2c309039fa": [
+          "de"
+        ]
+      },
+      "series.count": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "series.editHint": {
+        "f3cb27520d8a6bcd": [
+          "de"
+        ]
+      },
+      "series.editTitle": {
+        "a8295e08ff7a961c": [
+          "de"
+        ]
+      },
+      "series.error.entry_not_found": {
+        "bbcc991d54000305": [
+          "de"
+        ]
+      },
+      "series.error.invalid": {
+        "5c1426404a706928": [
+          "de"
+        ]
+      },
+      "series.error.not_signed_in": {
+        "cc22c9026b264029": [
+          "de"
+        ]
+      },
+      "series.error.offline": {
+        "6b48826ce7aca4fe": [
+          "de"
+        ]
+      },
+      "series.error.position": {
+        "06dddeee6ed8c529": [
+          "de"
+        ]
+      },
+      "series.error.series_not_found": {
+        "773748de85df9b73": [
+          "de"
+        ]
+      },
+      "series.error.unknown": {
+        "ea0b8a0fcb517248": [
+          "de"
+        ]
+      },
+      "series.mine": {
+        "9ab6eef859358924": [
+          "de"
+        ]
+      },
+      "series.moreLabel": {
+        "0b877f0ef81505fb": [
+          "de"
+        ]
+      },
+      "series.mute": {
+        "b56f7ba6d78ce5f2": [
+          "de"
+        ]
+      },
+      "series.muteHint": {
+        "9dcd54c9e1ba43ab": [
+          "de"
+        ]
+      },
+      "series.muted": {
+        "ca4d62d3ce27d5ae": [
+          "de"
+        ]
+      },
+      "series.mutedList": {
+        "a65eb0f78a48d809": [
+          "de"
+        ]
+      },
+      "series.nameLabel": {
+        "a8295e08ff7a961c": [
+          "de"
+        ]
+      },
+      "series.namePlaceholder": {
+        "dcd1d5223f73b3a9": [
+          "de"
+        ]
+      },
+      "series.next": {
+        "cf9069866e881078": [
+          "de"
+        ]
+      },
+      "series.nextPlace": {
+        "cd2d962d64f9da48": [
+          "de"
+        ]
+      },
+      "series.nextPlaceOf": {
+        "16daa16aeb366a41": [
+          "de"
+        ]
+      },
+      "series.none": {
+        "ec74a767223080c7": [
+          "de"
+        ]
+      },
+      "series.optionsRow": {
+        "a8295e08ff7a961c": [
+          "de"
+        ]
+      },
+      "series.partOf": {
+        "150a6d65ace0fa54": [
+          "de"
+        ]
+      },
+      "series.positionLabel": {
+        "909cb81127c5e194": [
+          "de"
+        ]
+      },
+      "series.positionPlaceholder": {
+        "4b0febabd9ef2908": [
+          "de"
+        ]
+      },
+      "series.save": {
+        "1509f561f2416598": [
+          "de"
+        ]
+      },
+      "series.seeAll": {
+        "9a10f0e903d8f78a": [
+          "de"
+        ]
+      },
+      "series.seeMoreLabel": {
+        "921d44bd59643e31": [
+          "de"
+        ]
+      },
+      "series.started": {
+        "5ffb8c7354a12cd9": [
+          "de"
+        ]
+      },
+      "series.suggested": {
+        "1ce60adcdc1262bd": [
+          "de"
+        ]
+      },
+      "series.thisBook": {
+        "965df472a78b0925": [
+          "de"
+        ]
+      },
+      "series.unmute": {
+        "ce4ee4efc5e324fc": [
+          "de"
+        ]
+      },
+      "series.unmuteLabel": {
+        "e3f865c04a80bfd6": [
+          "de"
+        ]
+      },
+      "share.add": {
+        "9fd728c66c9a256b": [
+          "de"
+        ]
+      },
+      "share.confirmText": {
+        "3b5185912148fc1c": [
+          "de"
+        ]
+      },
+      "share.confirmTitle": {
+        "a39b1a5d12502b10": [
+          "de"
+        ]
+      },
+      "share.finding": {
+        "92ac2adc58c193f0": [
+          "de"
+        ]
+      },
+      "share.notNow": {
+        "a0e63d7c7125d29a": [
+          "de"
+        ]
+      },
+      "share.skipped": {
+        "55bfd5183c6633d7": [
+          "de"
+        ]
+      },
+      "share.taking": {
+        "88812130dfc0b10f": [
+          "de"
+        ]
+      },
+      "share.takingMany": {
+        "5ce07e0f9c67d188": [
+          "de"
+        ]
+      },
+      "share.title": {
+        "0973eefaade3d00b": [
+          "de"
+        ]
+      },
+      "sharing.about": {
+        "d97c87d850565766": [
+          "de"
+        ]
+      },
+      "sharing.book.copied": {
+        "d12860c21e78baa5": [
+          "de"
+        ]
+      },
+      "sharing.book.copy": {
+        "dbf362d4f210c780": [
+          "de"
+        ]
+      },
+      "sharing.book.off": {
+        "ec29588116eb4ac8": [
+          "de"
+        ]
+      },
+      "sharing.book.review": {
+        "4a3a0983aa2cb483": [
+          "de"
+        ]
+      },
+      "sharing.book.reviewNote": {
+        "cf27538d66248328": [
+          "de"
+        ]
+      },
+      "sharing.book.share": {
+        "29887a5ff9846ccc": [
+          "de"
+        ]
+      },
+      "sharing.book.title": {
+        "e0f8a1d2bdf294ff": [
+          "de"
+        ]
+      },
+      "sharing.book.turnOn": {
+        "c2953086f678b9ed": [
+          "de"
+        ]
+      },
+      "sharing.copied": {
+        "d12860c21e78baa5": [
+          "de"
+        ]
+      },
+      "sharing.copy": {
+        "dbf362d4f210c780": [
+          "de"
+        ]
+      },
+      "sharing.error.entry_not_found": {
+        "d41a062537f789d6": [
+          "de"
+        ]
+      },
+      "sharing.error.not_signed_in": {
+        "3b58d10fa5c4e7cf": [
+          "de"
+        ]
+      },
+      "sharing.error.offline": {
+        "6b48826ce7aca4fe": [
+          "de"
+        ]
+      },
+      "sharing.error.reading_page_off": {
+        "032531c2ddade3ad": [
+          "de"
+        ]
+      },
+      "sharing.error.reading_page_sections_invalid": {
+        "fe0c8657046f7d0d": [
+          "de"
+        ]
+      },
+      "sharing.error.unknown": {
+        "fe0c8657046f7d0d": [
+          "de"
+        ]
+      },
+      "sharing.link": {
+        "0afdb9bcf849a7f0": [
+          "de"
+        ]
+      },
+      "sharing.loadError": {
+        "ff6b84330e2920bb": [
+          "de"
+        ]
+      },
+      "sharing.never": {
+        "4f7c3735b22ed740": [
+          "de"
+        ]
+      },
+      "sharing.open": {
+        "af0303342a01d272": [
+          "de"
+        ]
+      },
+      "sharing.renew": {
+        "98ee0dfb338d5bfc": [
+          "de"
+        ]
+      },
+      "sharing.renewConfirm.action": {
+        "98ee0dfb338d5bfc": [
+          "de"
+        ]
+      },
+      "sharing.renewConfirm.text": {
+        "2470e16c4d0b4078": [
+          "de"
+        ]
+      },
+      "sharing.renewConfirm.title": {
+        "e1bf95200dc717cf": [
+          "de"
+        ]
+      },
+      "sharing.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "sharing.reviews": {
+        "2d11e2b88c6e950c": [
+          "de"
+        ]
+      },
+      "sharing.row": {
+        "2da2032ec442ca29": [
+          "de"
+        ]
+      },
+      "sharing.rowOff": {
+        "ca7981b46ecf2c17": [
+          "de"
+        ]
+      },
+      "sharing.rowOn": {
+        "130011756125313c": [
+          "de"
+        ]
+      },
+      "sharing.sections.favourites": {
+        "d97d51d37092b10c": [
+          "de"
+        ]
+      },
+      "sharing.sections.finished": {
+        "92d2aeacf211ecfa": [
+          "de"
+        ]
+      },
+      "sharing.sections.reading": {
+        "af73520be6badf74": [
+          "de"
+        ]
+      },
+      "sharing.sections.shelf": {
+        "fee11e0d4ebadc2c": [
+          "de"
+        ]
+      },
+      "sharing.sections.title": {
+        "af10cddda2dca08e": [
+          "de"
+        ]
+      },
+      "sharing.sections.year": {
+        "98597183c8c66328": [
+          "de"
+        ]
+      },
+      "sharing.share": {
+        "712a4823ccb996b0": [
+          "de"
+        ]
+      },
+      "sharing.switch": {
+        "2da2032ec442ca29": [
+          "de"
+        ]
+      },
+      "sharing.title": {
+        "29887a5ff9846ccc": [
+          "de"
+        ]
+      },
+      "shelf.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "shelf.card.all": {
+        "2150d8df37e48957": [
+          "de"
+        ]
+      },
+      "shelf.card.allLabel": {
+        "0a866916edff81bb": [
+          "de"
+        ]
+      },
+      "shelf.card.empty": {
+        "3b8d804bd3fba827": [
+          "de"
+        ]
+      },
+      "shelf.card.rowLabel": {
+        "061d4a76dc21c14b": [
+          "de"
+        ]
+      },
+      "shelf.card.title": {
+        "fee11e0d4ebadc2c": [
+          "de"
+        ]
+      },
+      "shelf.count": {
+        "28ab11ae4b4a1153": [
+          "de"
+        ]
+      },
+      "shelf.detail.backCover": {
+        "f3bb8e04712e8dcf": [
+          "de"
+        ]
+      },
+      "shelf.detail.done": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "shelf.detail.frontCover": {
+        "8f5987b3c302708b": [
+          "de"
+        ]
+      },
+      "shelf.detail.goodreads": {
+        "7acf32567a4af700": [
+          "de"
+        ]
+      },
+      "shelf.detail.putBack": {
+        "4a0ee41d777b4ec4": [
+          "de"
+        ]
+      },
+      "shelf.detail.reading": {
+        "09bec08b044ba898": [
+          "de"
+        ]
+      },
+      "shelf.detail.showBack": {
+        "a305a51f782f224b": [
+          "de"
+        ]
+      },
+      "shelf.detail.showFront": {
+        "4d15860b1bd88609": [
+          "de"
+        ]
+      },
+      "shelf.empty.text": {
+        "dc81de53485d1699": [
+          "de"
+        ]
+      },
+      "shelf.empty.title": {
+        "e86a1d63ede22466": [
+          "de"
+        ]
+      },
+      "shelf.loadError": {
+        "12d4f05b1884f788": [
+          "de"
+        ]
+      },
+      "shelf.loading": {
+        "403ca9c2e21e8667": [
+          "de"
+        ]
+      },
+      "shelf.noChunk": {
+        "0d98e794887ec4ab": [
+          "de"
+        ]
+      },
+      "shelf.offline": {
+        "8a6d244675048dfb": [
+          "de"
+        ]
+      },
+      "shelf.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "shelf.title": {
+        "fee11e0d4ebadc2c": [
+          "de"
+        ]
+      },
+      "shelf.year.allLabel": {
+        "5273a29b2cd466e5": [
+          "de"
+        ]
+      },
+      "shelf.year.rowLabel": {
+        "da8b4e161138e63c": [
+          "de"
+        ]
+      },
+      "shelf.year.title": {
+        "767804da84093a95": [
+          "de"
+        ]
+      },
+      "shelf.yearCount": {
+        "5b21a98d1e23c20c": [
+          "de"
+        ]
+      },
+      "shell.avatarLabel": {
+        "d696a35bdd1883da": [
+          "de"
+        ]
+      },
+      "shell.avatarRequest": {
+        "34224c06d3174572": [
+          "de"
+        ]
+      },
+      "shell.tabsLabel": {
+        "eb355944b92d1058": [
+          "de"
+        ]
+      },
+      "signIn.accountDeleted": {
+        "4b16ee59a5869f56": [
+          "de"
+        ]
+      },
+      "signIn.configInvalidUrl": {
+        "b9e8d06846b389a0": [
+          "de"
+        ]
+      },
+      "signIn.configMissing": {
+        "18862bb2defaa3d9": [
+          "de"
+        ]
+      },
+      "signIn.emailLabel": {
+        "969ccbd3cf6300ec": [
+          "de"
+        ]
+      },
+      "signIn.emailPlaceholder": {
+        "cf0a9acc80212017": [
+          "de"
+        ]
+      },
+      "signIn.intro": {
+        "126cae4d85a15775": [
+          "de"
+        ]
+      },
+      "signIn.noAccount": {
+        "dbc447bc8f1bd5c2": [
+          "de"
+        ]
+      },
+      "signIn.signUpLink": {
+        "5e2b8e96503d722e": [
+          "de"
+        ]
+      },
+      "signIn.submit": {
+        "66a5b4090d14cb41": [
+          "de"
+        ]
+      },
+      "signIn.title": {
+        "bfd402b2f6f38125": [
+          "de"
+        ]
+      },
+      "signUp.consent": {
+        "78bb4d5c20120038": [
+          "de"
+        ]
+      },
+      "signUp.emailLabel": {
+        "969ccbd3cf6300ec": [
+          "de"
+        ]
+      },
+      "signUp.emailPlaceholder": {
+        "cf0a9acc80212017": [
+          "de"
+        ]
+      },
+      "signUp.hasAccount": {
+        "1bfe9d213dcf19c5": [
+          "de"
+        ]
+      },
+      "signUp.intro": {
+        "686fd1f22a5f6aa8": [
+          "de"
+        ]
+      },
+      "signUp.inviteLabel": {
+        "c6a8991eaa527880": [
+          "de"
+        ]
+      },
+      "signUp.invitePlaceholder": {
+        "ab4c6f332ee50fef": [
+          "de"
+        ]
+      },
+      "signUp.signInLink": {
+        "bfd402b2f6f38125": [
+          "de"
+        ]
+      },
+      "signUp.submit": {
+        "66a5b4090d14cb41": [
+          "de"
+        ]
+      },
+      "signUp.title": {
+        "9e709348f582d44e": [
+          "de"
+        ]
+      },
+      "social.friends.more": {
+        "1a2612705dd79784": [
+          "de"
+        ]
+      },
+      "social.friends.names.one": {
+        "460c3a93211614ac": [
+          "de"
+        ]
+      },
+      "social.friends.names.others": {
+        "a8936a93011321d8": [
+          "de"
+        ]
+      },
+      "social.friends.names.three": {
+        "f8faca5686bc0afa": [
+          "de"
+        ]
+      },
+      "social.friends.names.two": {
+        "04f767bd4e604159": [
+          "de"
+        ]
+      },
+      "social.friends.reading": {
+        "e9dbe617006a852f": [
+          "de"
+        ]
+      },
+      "social.friends.sheetReading": {
+        "6f219edd8d8d2ffc": [
+          "de"
+        ]
+      },
+      "social.friends.sheetWant": {
+        "e91eee4bb33a0870": [
+          "de"
+        ]
+      },
+      "social.friends.want": {
+        "d59ec4bcbb8c1c44": [
+          "de"
+        ]
+      },
+      "social.like.count": {
+        "12f1e406a835a581": [
+          "de"
+        ]
+      },
+      "social.like.error": {
+        "1e6cfeef2ff1a3be": [
+          "de"
+        ]
+      },
+      "social.like.label": {
+        "f393e7c9c8f98b27": [
+          "de"
+        ]
+      },
+      "social.like.like": {
+        "64f915cb8bfcf2d0": [
+          "de"
+        ]
+      },
+      "social.like.ownLabel": {
+        "ba53a8e5bc23a601": [
+          "de"
+        ]
+      },
+      "social.like.unlike": {
+        "c6a73a43a98f5265": [
+          "de"
+        ]
+      },
+      "social.likers.empty": {
+        "93135d7870b1b785": [
+          "de"
+        ]
+      },
+      "social.likers.loadError": {
+        "da21f99f97c289cf": [
+          "de"
+        ]
+      },
+      "social.likers.loading": {
+        "ba3bbbe10d8bef66": [
+          "de"
+        ]
+      },
+      "social.likers.offline": {
+        "6255ed4fd6aa9ca6": [
+          "de"
+        ]
+      },
+      "social.likers.title": {
+        "0a3347fba8283928": [
+          "de"
+        ]
+      },
+      "social.likes.finished": {
+        "29e63bf5a7777637": [
+          "de"
+        ]
+      },
+      "social.likes.open": {
+        "4c363865c3b3eda7": [
+          "de"
+        ]
+      },
+      "social.likes.read": {
+        "4dabe30e3d18ed11": [
+          "de"
+        ]
+      },
+      "social.likes.reviewed": {
+        "ab09bd5cba6dad33": [
+          "de"
+        ]
+      },
+      "social.state.notFinished": {
+        "b621bb5610d17361": [
+          "de"
+        ]
+      },
+      "social.state.read": {
+        "9b9a8d05a7ec353b": [
+          "de"
+        ]
+      },
+      "social.state.reading": {
+        "463816d07097e1a7": [
+          "de"
+        ]
+      },
+      "social.state.wantToRead": {
+        "aa94c1ec86e08cfd": [
+          "de"
+        ]
+      },
+      "social.wantToRead.add": {
+        "34e323c9f58a1676": [
+          "de"
+        ]
+      },
+      "social.wantToRead.added": {
+        "f7165cf5a161e3e4": [
+          "de"
+        ]
+      },
+      "social.wantToRead.error": {
+        "45b8c2f25364b879": [
+          "de"
+        ]
+      },
+      "social.wantToRead.inLabel": {
+        "a2e2eb75a0fae5c6": [
+          "de"
+        ]
+      },
+      "social.wantToRead.label": {
+        "6e54e9e5d4c72786": [
+          "de"
+        ]
+      },
+      "start.action": {
+        "79f199280c521841": [
+          "de"
+        ]
+      },
+      "start.actionAgain": {
+        "d8cb92fa7b9e99b5": [
+          "de"
+        ]
+      },
+      "start.actionRestart": {
+        "962e64b761961fe0": [
+          "de"
+        ]
+      },
+      "start.busy": {
+        "bbe5fc3b9ef39f99": [
+          "de"
+        ]
+      },
+      "start.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "start.startedOn": {
+        "ff69fc2b9b41e4a8": [
+          "de"
+        ]
+      },
+      "start.title": {
+        "79f199280c521841": [
+          "de"
+        ]
+      },
+      "start.titleAgain": {
+        "d8cb92fa7b9e99b5": [
+          "de"
+        ]
+      },
+      "start.titleRestart": {
+        "962e64b761961fe0": [
+          "de"
+        ]
+      },
+      "status.finished": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "status.notFinished": {
+        "73bfb0b10ea6b04a": [
+          "de"
+        ]
+      },
+      "status.reading": {
+        "af73520be6badf74": [
+          "de"
+        ]
+      },
+      "status.want_to_read": {
+        "34e323c9f58a1676": [
+          "de"
+        ]
+      },
+      "sync.action.abandon_reading": {
+        "4b1f06cea9a4d190": [
+          "de"
+        ]
+      },
+      "sync.action.add_to_collection": {
+        "3c1c53ea88b36950": [
+          "de"
+        ]
+      },
+      "sync.action.add_to_library": {
+        "b513419d82693b36": [
+          "de"
+        ]
+      },
+      "sync.action.delete_collection": {
+        "b48ff39c2e0f5451": [
+          "de"
+        ]
+      },
+      "sync.action.finish_reading": {
+        "7804f7a79a9eee32": [
+          "de"
+        ]
+      },
+      "sync.action.read_again": {
+        "a54f24f70ecdf583": [
+          "de"
+        ]
+      },
+      "sync.action.remove_from_collection": {
+        "ddcfdf56451597f8": [
+          "de"
+        ]
+      },
+      "sync.action.remove_from_library": {
+        "463541875842ddd1": [
+          "de"
+        ]
+      },
+      "sync.action.rename_collection": {
+        "05487af3f074b4f3": [
+          "de"
+        ]
+      },
+      "sync.action.reorder_collection": {
+        "d634ac9f84db3306": [
+          "de"
+        ]
+      },
+      "sync.action.save_reader_highlight": {
+        "07ccd15df32aa7e2": [
+          "de"
+        ]
+      },
+      "sync.action.set_entry_hidden": {
+        "6a9686dcdc965ae1": [
+          "de"
+        ]
+      },
+      "sync.action.start_reading": {
+        "578d23a8101bd717": [
+          "de"
+        ]
+      },
+      "sync.action.update_progress": {
+        "4664827f8e890192": [
+          "de"
+        ]
+      },
+      "sync.action.update_session": {
+        "2c95b6fc3300c424": [
+          "de"
+        ]
+      },
+      "sync.allSynced": {
+        "0223a0949d0aa8c7": [
+          "de"
+        ]
+      },
+      "sync.chip": {
+        "bf372cf8d41745cf": [
+          "de"
+        ]
+      },
+      "sync.chipFailed": {
+        "14ecc120455931bc": [
+          "de"
+        ]
+      },
+      "sync.chipLabel": {
+        "e822aee177d364ff": [
+          "de"
+        ]
+      },
+      "sync.dismissLabel": {
+        "5d9de9cb0bb27fa0": [
+          "de"
+        ]
+      },
+      "sync.failedItem": {
+        "e1072e3bd13789d5": [
+          "de"
+        ]
+      },
+      "sync.failedNote": {
+        "708d55ffeae8fd7a": [
+          "de"
+        ]
+      },
+      "sync.failedTitle": {
+        "eb60e4360b216c30": [
+          "de"
+        ]
+      },
+      "sync.pendingTitle": {
+        "6e293a8c009e0011": [
+          "de"
+        ]
+      },
+      "sync.syncing": {
+        "6918f832cc8df01c": [
+          "de"
+        ]
+      },
+      "sync.title": {
+        "8d261a372fde1461": [
+          "de"
+        ]
+      },
+      "sync.waiting": {
+        "c177c9a48369eeba": [
+          "de"
+        ]
+      },
+      "tabs.home": {
+        "3a78695388b38b5c": [
+          "de"
+        ]
+      },
+      "tabs.library": {
+        "dc20b3d5d2cddf82": [
+          "de"
+        ]
+      },
+      "tabs.search": {
+        "49c266baaaa70981": [
+          "de"
+        ]
+      },
+      "verify.changeEmail": {
+        "687da8b89baf2c10": [
+          "de"
+        ]
+      },
+      "verify.codeLabel": {
+        "3bcb66ee1a6feaf5": [
+          "de"
+        ]
+      },
+      "verify.resend": {
+        "9200fc2f31ae11ab": [
+          "de"
+        ]
+      },
+      "verify.resendIn": {
+        "21984bacf2c4a8b6": [
+          "de"
+        ]
+      },
+      "verify.sentTo": {
+        "680fa8568e07966b": [
+          "de"
+        ]
+      },
+      "verify.title": {
+        "7732287944e204a9": [
+          "de"
+        ]
+      },
+      "waitlist.back": {
+        "76900f1bfd16c8d4": [
+          "de"
+        ]
+      },
+      "waitlist.code.copied": {
+        "8d525e5f158b9afe": [
+          "de"
+        ]
+      },
+      "waitlist.code.copy": {
+        "49a0053f3b0d5045": [
+          "de"
+        ]
+      },
+      "waitlist.code.emailed": {
+        "08d9c7120fdb3d4c": [
+          "de"
+        ]
+      },
+      "waitlist.code.label": {
+        "c6a8991eaa527880": [
+          "de"
+        ]
+      },
+      "waitlist.code.not_configured": {
+        "6d62d66622e07d2d": [
+          "de"
+        ]
+      },
+      "waitlist.code.send_failed": {
+        "4a7d46da144c9395": [
+          "de"
+        ]
+      },
+      "waitlist.confirm.action": {
+        "e2d0a54968ead24e": [
+          "de"
+        ]
+      },
+      "waitlist.confirm.text": {
+        "c1ee3920640508c2": [
+          "de"
+        ]
+      },
+      "waitlist.confirm.title": {
+        "1746b8d1d1de5869": [
+          "de"
+        ]
+      },
+      "waitlist.copied": {
+        "8d525e5f158b9afe": [
+          "de"
+        ]
+      },
+      "waitlist.copy": {
+        "dd9dcc799207974d": [
+          "de"
+        ]
+      },
+      "waitlist.delete": {
+        "058a32c42077013a": [
+          "de"
+        ]
+      },
+      "waitlist.empty.text": {
+        "24c95939103f0db6": [
+          "de"
+        ]
+      },
+      "waitlist.empty.title": {
+        "33fab39bd72276f6": [
+          "de"
+        ]
+      },
+      "waitlist.fromMember": {
+        "fd02dc0a43f23d43": [
+          "de"
+        ]
+      },
+      "waitlist.fromPage": {
+        "5f4ab0cdd09b9ce5": [
+          "de"
+        ]
+      },
+      "waitlist.intro": {
+        "4e125f2b1df4808c": [
+          "de"
+        ]
+      },
+      "waitlist.invite": {
+        "1fd9ae1607aa3d80": [
+          "de"
+        ]
+      },
+      "waitlist.inviteConfirm.action": {
+        "76a13f805cdc1b8b": [
+          "de"
+        ]
+      },
+      "waitlist.inviteConfirm.text": {
+        "ff4261643e9554b2": [
+          "de"
+        ]
+      },
+      "waitlist.inviteConfirm.title": {
+        "e7cf833660278d34": [
+          "de"
+        ]
+      },
+      "waitlist.inviteError": {
+        "de4bbf37dfa33d68": [
+          "de"
+        ]
+      },
+      "waitlist.invitedDone": {
+        "63b17becd812dfd3": [
+          "de"
+        ]
+      },
+      "waitlist.loadError": {
+        "cd240375f8752994": [
+          "de"
+        ]
+      },
+      "waitlist.markInvited": {
+        "24b10e6517332f05": [
+          "de"
+        ]
+      },
+      "waitlist.offline": {
+        "7d3072f2eecdb0ae": [
+          "de"
+        ]
+      },
+      "waitlist.refresh": {
+        "0e91610117029a62": [
+          "de"
+        ]
+      },
+      "waitlist.refreshing": {
+        "1c0def7be0607b96": [
+          "de"
+        ]
+      },
+      "waitlist.retry": {
+        "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "waitlist.row": {
+        "ec08d977c68ea61d": [
+          "de"
+        ]
+      },
+      "waitlist.rowNone": {
+        "3fad99b521aa8f8e": [
+          "de"
+        ]
+      },
+      "waitlist.rowValue": {
+        "15c46d8024fd85cd": [
+          "de"
+        ]
+      },
+      "waitlist.summary": {
+        "6cd8cccc70fe13dc": [
+          "de"
+        ]
+      },
+      "waitlist.title": {
+        "ec08d977c68ea61d": [
+          "de"
+        ]
+      },
+      "waitlist.writeError": {
+        "e85087279418923c": [
+          "de"
+        ]
+      },
+      "whatsNew.done": {
+        "11a6767d5674c7e4": [
+          "de"
+        ]
+      },
+      "whatsNew.none": {
+        "2d8544a775cc4797": [
+          "de"
+        ]
+      },
+      "whatsNew.section.breaking": {
+        "2a6141e43be0c212": [
+          "de"
+        ]
+      },
+      "whatsNew.section.features": {
+        "18fdd549b2ed367a": [
+          "de"
+        ]
+      },
+      "whatsNew.section.fixes": {
+        "1246fc93bca00b90": [
+          "de"
+        ]
+      },
+      "whatsNew.section.performance": {
+        "8d0160c0d84236dd": [
+          "de"
+        ]
+      },
+      "whatsNew.title": {
+        "99e113fcc50958de": [
+          "de"
+        ]
+      },
+      "whatsNew.version": {
+        "a18745121bb8af6d": [
+          "de"
+        ]
+      }
+    }
+  }
+}

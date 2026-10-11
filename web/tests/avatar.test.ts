@@ -32,7 +32,7 @@ import { authUserExists, newClient, sql } from './support/stack'
 // ------------------------------------------------------------------ fixtures
 
 const GPS_EXIF = {
-  IFD0: { Make: 'Libellus Test Camera', Model: 'Pocket', Copyright: 'Ida' },
+  IFD0: { Make: 'BetterReads Test Camera', Model: 'Pocket', Copyright: 'Ida' },
   IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '52/1 31/1 12/1', GPSLongitudeRef: 'E', GPSLongitude: '13/1 24/1 36/1' },
 }
 const XMP = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/" dc:creator="Ida"/></rdf:RDF></x:xmpmeta>'
@@ -138,7 +138,7 @@ describe('the photo made on the device', () => {
     const photo = await phonePhoto()
     expect(metadataIn(new Uint8Array(photo))).toEqual(expect.arrayContaining(['exif', 'xmp']))
     const exif = (await sharp(photo).metadata()).exif!
-    expect(exif.toString('latin1')).toContain('Libellus Test Camera')
+    expect(exif.toString('latin1')).toContain('BetterReads Test Camera')
     // The GPS IFD's pointer (tag 0x8825), in either byte order.
     expect(exif.includes(Buffer.from([0x88, 0x25])) || exif.includes(Buffer.from([0x25, 0x88]))).toBe(true)
 
@@ -156,7 +156,7 @@ describe('the photo made on the device', () => {
       expect(meta.exif).toBeUndefined()
       expect(meta.xmp).toBeUndefined()
       expect(meta.icc).toBeUndefined()
-      expect(Buffer.from(bytes).toString('latin1')).not.toContain('Libellus Test Camera')
+      expect(Buffer.from(bytes).toString('latin1')).not.toContain('BetterReads Test Camera')
     }
   })
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// In your circle, on a Book's page (social v2a, contract §1.5; the component and its ids are still `Readers`): the people she follows who
+// In your friends, on a Book's page (social v2a, contract §1.5; the component and its ids are still `Readers`): the people she follows who
 // have the same work (any edition: reading it, finished, put down or wanting it), each in her most relevant state and as far as her profile shows it, finished
 // with a review first. The first `READERS_SHOWN` rows, then *See all {count}* at the right of the eyebrow, which
 // opens the sheet with all of them (BookReadersSheet). Only people she follows: a strangers' part (reviews of

@@ -1,6 +1,6 @@
-# Developing Libellus
+# Developing BetterReads
 
-How to run, test and change Libellus on your machine. What it is and how the owner's instance is set
+How to run, test and change BetterReads on your machine. What it is and how the owner's instance is set
 up: [README](../README.md) and [SETUP.md](SETUP.md). Rules for code changes:
 [web/AGENTS.md](../web/AGENTS.md); domain words: [CONTEXT.md](../CONTEXT.md).
 
@@ -102,7 +102,7 @@ round (#4); docs/DESIGN.md says what each token is for.
 ### Emails
 
 The sign-in code's mail (`supabase/templates/magic_link.html`) wears the same tokens, but a mail
-client is not a browser, so the file is **generated**: `design/emails/` holds the shell every Libellus
+client is not a browser, so the file is **generated**: `design/emails/` holds the shell every BetterReads
 mail shares (`shell.mjs`: wordmark, card, footer, the light colours inlined, the dark-mode block, the
 type and spacing from `tokens.json`) and what each mail says (`magic_link.mjs`). `design/emails.mjs`
 writes the result, and CI fails when it differs from the committed file, as it does for the tokens.
@@ -146,7 +146,7 @@ Supabase's local Auth reads the templates when the stack starts, so after changi
 
 ### Signing in locally
 
-Libellus is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
+BetterReads is invite-only, and `supabase start` / `supabase db reset` seed what local work needs:
 
 | What | Value |
 | --- | --- |
@@ -178,12 +178,20 @@ Members cannot read, create or change invite codes (RLS and revoked grants, cove
 
 Studio at http://127.0.0.1:55323, the local mailbox (sign-in codes, in the designed mail) at http://127.0.0.1:55324.
 
+## Strings in two languages
+
+Every string is a key in `web/i18n/locales/en.json`; German is `de.json`. Add the key to `en.json`, then run `pnpm i18n:translate`
+in `web/` (needs `GEMINI_API_KEY` in your shell): it translates only the keys `de.json` lacks, with the-i18n-kit and the context in
+`web/i18n/kit/`, and checks the result. Read the `de.json` diff, then commit both files and `web/.i18n-kit.lock.json`. The
+parity test (`tests/i18n-parity.test.ts`) fails when a key, a `{placeholder}`, a plural form or a link differs. How, what
+it costs and how to review: [docs/i18n/README.md](i18n/README.md).
+
 ## Layout
 
 ```
 web/          Nuxt 4 SPA + PWA — the reference app (rules: web/AGENTS.md)
   app/data/     framework-free repositories and the Supabase client factory
-  i18n/locales/ en.json, every string the UI shows
+  i18n/locales/ en.json (the source of every string the UI shows) and de.json (German, made with the-i18n-kit)
   tests/        Vitest data-layer suite against the local stack
   e2e/          Playwright flows, iPhone viewport in WebKit
   scripts/      readme-shots.ts (the README's screenshots); import-fable.ts and export-regal.ts are
@@ -195,7 +203,7 @@ design/       tokens.json + the Style Dictionary build (Tailwind theme CSS, Swif
 supabase/     config (ports 553xx, email template), migrations, seed, pgTAP tests, edge functions
 docs/         SETUP.md, DEVELOPMENT.md (this), TESTING.md, DESIGN.md (design guideline),
               MOTION.md (motion), parity.md (per-screen behaviour), covers.md, OWNER.md (the owner's
-              instance only), agents/ (how agents use the issue tracker)
+              instance only), i18n/ (translating: docs/i18n/README.md), agents/ (how agents use the issue tracker)
 SPEC.md       condensed spec; CONTEXT.md the domain glossary
 ```
 

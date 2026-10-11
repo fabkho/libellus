@@ -78,7 +78,7 @@ export default {
     if (isBookPath(to.path) && isBookPath(from.path) && bookPageOf(String(to.params.key)) === bookPageOf(String(from.params.key)))
       return false
     const place = () =>
-      tabPlaces.arrive({ to: to.path, fromShell: from.meta.layout === 'tabs', saved: savedPosition ?? null })
+      tabPlaces.arrive({ to: to.path, fromShell: from.meta.layout === 'tabs', saved: savedPosition ?? null, pushed: Boolean(to.meta.pushed) })
     if (from === START_LOCATION) return place()
 
     const nuxtApp = useNuxtApp()

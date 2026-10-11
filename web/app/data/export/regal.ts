@@ -14,7 +14,7 @@ import {
  * byte for byte (`generatedAt` aside), so Regal assets (`pnpm regal-assets`)
  * finds every Book it has seen before and rebuilds nothing.
  *
- * A Libellus Book is one edition, which is what Regal calls a Book too, so one
+ * A BetterReads Book is one edition, which is what Regal calls a Book too, so one
  * Library entry is one Book in the file:
  *
  * - `id` is the Book's id (the edition, not the entry): stable across exports
@@ -35,7 +35,7 @@ import {
  * - Cover: `assets.front` is the Cover URL (http(s) only), `assets.palette` is
  *   made from the Cover's two precomputed colours (`coverPalette`). The
  *   thumbhash has no place in the format and is left out.
- * - Left out, because Libellus does not know them: `seriesTitle` (the title
+ * - Left out, because BetterReads does not know them: `seriesTitle` (the title
  *   is stored as the source gives it), `binding`, `originalYear`, `genre`,
  *   `quotes`, `reviewHasSpoiler`, Spine and back art. Regal assets fills what
  *   it can (art, pile copies, colours, a blurb where `description` is missing).
@@ -177,11 +177,22 @@ export function exportRegalLibrary(entries: readonly RegalExportEntry[], options
   }
 }
 
+/** One formatter per zone: making one costs more than formatting with it (a member's shelf builds 1,000 days at once). */
+const dayFormats = new Map<string, Intl.DateTimeFormat>()
+function dayFormat(timeZone: string): Intl.DateTimeFormat {
+  let format = dayFormats.get(timeZone)
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+    dayFormats.set(timeZone, format)
+  }
+  return format
+}
+
 /** An instant (ISO date-time) as the calendar day it falls on in a time zone, `YYYY-MM-DD`. */
 export function dayIn(instant: string, timeZone: string): string | null {
   const date = new Date(instant)
   if (Number.isNaN(date.getTime())) return null
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+  const parts = dayFormat(timeZone).formatToParts(date)
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
   return `${part('year')}-${part('month')}-${part('day')}`
 }

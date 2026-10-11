@@ -70,6 +70,15 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - All copy goes through the message file `i18n/locales/en.json` (`t('home.empty')` / `$t(...)`):
   labels, errors, placeholders, `aria-label`s, the document title. No hard-coded strings in
   templates or stores. Keys are `<screen>.<thing>`.
+- Two languages, English and German (issue #257, `docs/i18n/README.md`): a new string is a key in `en.json`
+  and gets its German with `pnpm i18n:translate` (it translates only the keys `de.json` lacks; read the
+  diff, commit both files and `.i18n-kit.lock.json`). The parity test fails on a missing or extra key or a
+  changed `{placeholder}`, `|` form or `@:link`. German is up to half as long again: a label must still fit
+  at 360 px (`LIBELLUS_E2E_GERMAN=1 pnpm exec playwright test e2e/i18n` shows what does not). Dates, numbers
+  and relative times go through `Intl` with the active locale (`utils/intl.ts`), never a hard-coded
+  English format; the order and punctuation around them are copy (`{day}. {month}` in German). The app
+  language is chosen by `utils/locale.ts` (the phone's, or the member's choice on the Profile): never read
+  `navigator.language` for what is shown.
 
 ## Testing seams
 - Database rules: pgTAP in `../supabase/tests/`, acting as a real signed-in member.

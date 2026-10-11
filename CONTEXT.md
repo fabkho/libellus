@@ -1,6 +1,6 @@
-# Libellus — Domain glossary
+# BetterReads — Domain glossary
 
-The words Libellus uses for its domain, in code, copy, tests and issues alike. Terms only; how they
+The words BetterReads uses for its domain, in code, copy, tests and issues alike. Terms only; how they
 are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 
 - **Member** — a signed-in user.
@@ -38,7 +38,7 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
 - **Read in <year>** — the count of finished sessions with an end date in the current year,
   re-reads included.
 - **Profile** — the member's page behind the avatar: her reading in figures (by year or all years), her
-  Friends (Your circle, People, Your follow link, Privacy) and her account.
+  Friends (Your friends, People, Your follow link, Privacy) and her account.
 - **Year in review** — one calendar year of the Profile on a page of its own: its finished reads by
   month, its favourite, its records.
 - **Follower** — a Member who follows another Member, once accepted (a Follow request) or at once (a Public
@@ -52,7 +52,7 @@ are stored and enforced is in [SPEC.md](SPEC.md) and issue #1.
   Follow request. Her switches still apply.
 - **Follow link** — a Member's link (`/f/<token>`, 128 random bits) that opens her profile for a signed-in
   visitor, who may then follow her or ask to. A new link kills the old one at once; followers stay.
-- **Circle** — the Members a Member follows, and what they read: *Your circle* on Home and the feed. Not
+- **Friends** — the Members a Member follows, and what they read: *Your friends* on Home and the feed (it was called "Circle" / "Your circle"; the database functions `circle_reading`, `circle_want`, `circle_of` and the data layer that mirrors them (`circleReading`, `circleWant`, `CircleBook`) keep the old word, because renaming a deployed RPC would break installed apps). Not
   her followers.
 - **Hidden from followers** — a Book a Member hides from her followers (the Book's ⋯): gone from their
   feed, her profile, her counts and her figures. It stays in her own Library and figures.

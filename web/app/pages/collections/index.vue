@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Collections (D's collections), reached from the Library tab: every
 // Collection as a small lit mosaic of its first covers, its name and how many
-// Books are on it, in her order; "New collection" at the end and in the top
+// Books are on it, last edited first; "New collection" at the end and in the top
 // bar. A pushed screen in the tab layout, so the Library stays alive under it.
 import { useCollectionsStore } from '~/stores/collections'
 
@@ -16,6 +16,11 @@ const online = useOnline()
 useHead({ title: () => `${t('collections.title')} · ${t('app.name')}` })
 
 onMounted(() => void collections.loadList())
+
+// Last edited first. The order is taken when the page is entered and then holds still (a Collection
+// edited on the way out of a sheet or on another screen moves when she is back, or, a new one, in
+// view of her once the sheet has gone: `useEditedOrder`, docs/MOTION.md, "A list changes").
+const ordered = useEditedOrder(() => collections.list, { arrival: 'first', settle: true })
 
 // Collections belong to the Library tab: back always leads there, by history when it came from it.
 function back() {
@@ -44,9 +49,9 @@ function back() {
       <p class="mt-xs text-subhead text-ink-muted">{{ t('collections.intro') }}</p>
     </header>
 
-    <div v-if="collections.loaded && collections.list.length" class="px-screen pt-ms" data-testid="collections.list">
+    <UiListMotion v-if="collections.loaded && ordered.length" class="px-screen pt-ms" data-testid="collections.list">
       <NuxtLink
-        v-for="(collection, index) in collections.list"
+        v-for="(collection, index) in ordered"
         :key="collection.id"
         :to="`/collections/${collection.id}`"
         class="item flex items-center gap-ml py-ms active:opacity-70"
@@ -63,6 +68,7 @@ function back() {
       </NuxtLink>
 
       <button
+        key="new"
         type="button"
         class="item flex w-full items-center gap-ml py-ms text-left text-ink-muted disabled:opacity-50"
         :disabled="!online"
@@ -72,7 +78,7 @@ function back() {
         <span class="new flex shrink-0 items-center justify-center rounded-md text-ink-faint"><UiIcon :name="online ? 'plus' : 'offline'" :size="22" /></span>
         <span class="text-body">{{ online ? t('collections.new') : t('common.offline') }}</span>
       </button>
-    </div>
+    </UiListMotion>
 
     <UiEmptyState
       v-else-if="collections.loaded"

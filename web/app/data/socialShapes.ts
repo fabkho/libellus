@@ -116,7 +116,7 @@ export function likeFieldsFromJson(json: LikeFieldsJson): LikeFields {
 /** What `like` and `unlike` answer: the count now, and whether the caller likes it. */
 export type LikeResult = { likes: number; liked: boolean }
 
-/** Home's "Your circle": one of her reads that was liked lately. `at`: the newest like (ISO). */
+/** Home's "Your friends": one of her reads that was liked lately. `at`: the newest like (ISO). */
 export type RecentLike = { session: string; book: SocialBook; likers: MemberCard[]; count: number; at: string }
 
 type BookJsonOf = Parameters<typeof socialBookFromJson>[0]

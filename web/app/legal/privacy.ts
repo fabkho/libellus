@@ -10,7 +10,7 @@ import type { LegalDocument } from './types'
 export const PRIVACY: LegalDocument = {
   en: {
     title: 'Privacy notice',
-    lead: 'Libellus is a small book-tracking app, run as an invite-only beta. This notice says what it does with your data, who else is involved, and what you can do about it.',
+    lead: 'BetterReads is a small book-tracking app, run as an invite-only beta. This notice says what it does with your data, who else is involved, and what you can do about it.',
     version: 'Version: 11 October 2026',
     sections: [
       {
@@ -19,7 +19,7 @@ export const PRIVACY: LegalDocument = {
         blocks: [
           { p: 'Responsible under the GDPR is:' },
           { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `Email: ${EMAIL_LINK}`] },
-          { p: 'I run Libellus alone, as a private, non-commercial project. There is no data protection officer; none is required. Members can also write to me through Contact in their Profile.' + (IMPRINT_ENABLED ? ' The [imprint](/imprint) has the same details.' : '') },
+          { p: 'I run BetterReads alone, as a private, non-commercial project. There is no data protection officer; none is required. Members can also write to me through Contact in their Profile.' + (IMPRINT_ENABLED ? ' The [imprint](/imprint) has the same details.' : '') },
         ],
       },
       {
@@ -62,7 +62,7 @@ export const PRIVACY: LegalDocument = {
         id: 'recipients',
         heading: 'Who receives data',
         blocks: [
-          { p: 'I use these services to run Libellus. Each processes data on my behalf, under the data processing terms the provider offers. I sell no data, and the app has no advertising and no third-party tracking.' },
+          { p: 'I use these services to run BetterReads. Each processes data on my behalf, under the data processing terms the provider offers. I sell no data, and the app has no advertising and no third-party tracking.' },
           {
             ul: [
               '**Supabase** (the database, sign-in, profile photo storage and server functions): the project runs in the EU region eu-central-1 (Frankfurt, Germany). It holds everything you save in the app and your email address. The provider is Supabase Pte. Ltd., Singapore.',
@@ -79,12 +79,12 @@ export const PRIVACY: LegalDocument = {
         id: 'lookups',
         heading: 'Book lookups and other services your device or my server asks',
         blocks: [
-          { p: 'To find books, covers and facts about them, Libellus asks public book services. Each gets only what it needs to answer, and none gets your account.' },
+          { p: 'To find books, covers and facts about them, BetterReads asks public book services. Each gets only what it needs to answer, and none gets your account.' },
           {
             ul: [
               '**Apple (iTunes Search) and Open Library**: your browser asks them directly for the words you type into search (from two characters on) or the ISBN you scan, and loads the covers. They therefore see your IP address and what you searched for. A book you imported keeps the cover address of its source, so that host sees your IP address when the cover is shown.',
               '**Wikimedia Commons**: author portraits on author pages are loaded by your browser, so Wikimedia sees your IP address.',
-              '**Wikidata, Wikipedia, Open Library, Apple and Goodreads, asked by my server and never by your device**: facts about a book or author, short introductions and the Goodreads community rating, looked up by title, author or ISBN. No member data goes with a lookup, and Goodreads never sees you.',
+              '**Wikidata, Wikipedia, Open Library, Apple, the German National Library and Goodreads, asked by my server and never by your device**: facts about a book or author, short introductions, German editions (the library’s catalogue data is open, CC0) and the Goodreads community rating, looked up by title, author or ISBN. No member data goes with a lookup, and Goodreads never sees you.',
               '**The ebook reader**: Translate and Define send only the words you select to MyMemory (translated.net), unless your browser translates on the device by itself, and to the English Wiktionary. The ebook itself never leaves your device.',
               '**My own shelf**: a view only I have loads a file from my own domain, books.fabkho.dev. It holds no member data.',
             ],
@@ -95,7 +95,7 @@ export const PRIVACY: LegalDocument = {
         id: 'storage',
         heading: 'Cookies and storage on your device',
         blocks: [
-          { p: 'Libellus sets no cookies. It uses your device’s storage (local storage, IndexedDB and the installed app’s cache) for what it needs to work: your sign-in session, the offline copy of your Library, changes waiting to sync, linked ebook files, covers, the app’s own files and your theme choice. This is strictly necessary for the app you asked for, so there is no cookie banner. Cloudflare Web Analytics needs no cookie and no storage.' },
+          { p: 'BetterReads sets no cookies. It uses your device’s storage (local storage, IndexedDB and the installed app’s cache) for what it needs to work: your sign-in session, the offline copy of your Library, changes waiting to sync, linked ebook files, covers, the app’s own files and your theme choice. This is strictly necessary for the app you asked for, so there is no cookie banner. Cloudflare Web Analytics needs no cookie and no storage.' },
         ],
       },
       {
@@ -128,14 +128,14 @@ export const PRIVACY: LegalDocument = {
         id: 'security',
         heading: 'Security',
         blocks: [
-          { p: 'Every connection uses HTTPS. The database itself limits who may read what (row-level security): you read your own Library, reviews and Collections, and other members only what the follow and sharing rules let them see. There are no passwords to leak. Backups are encrypted before they leave the build server. The code is public, so anyone can check it, and security reports are handled privately (see SECURITY.md in the repository). Libellus is a free beta run by one person: it has no security certification, and I cannot promise that nothing will ever go wrong. If a breach affects you, I will tell you and the authority as the law requires.' },
+          { p: 'Every connection uses HTTPS. The database itself limits who may read what (row-level security): you read your own Library, reviews and Collections, and other members only what the follow and sharing rules let them see. There are no passwords to leak. Backups are encrypted before they leave the build server. The code is public, so anyone can check it, and security reports are handled privately (see SECURITY.md in the repository). BetterReads is a free beta run by one person: it has no security certification, and I cannot promise that nothing will ever go wrong. If a breach affects you, I will tell you and the authority as the law requires.' },
         ],
       },
       {
         id: 'children',
         heading: 'Children',
         blocks: [
-          { p: 'Libellus is not for people under 16. Please do not create an account if you are younger. If I learn that someone under 16 has an account, I delete it.' },
+          { p: 'BetterReads is not for people under 16. Please do not create an account if you are younger. If I learn that someone under 16 has an account, I delete it.' },
         ],
       },
       {
@@ -149,7 +149,7 @@ export const PRIVACY: LegalDocument = {
   },
   de: {
     title: 'Datenschutzerklärung',
-    lead: 'Libellus ist eine kleine App, mit der man seine gelesenen Bücher festhält, und läuft als Beta nur mit Einladung. Hier steht, was die App mit deinen Daten macht, wer sonst beteiligt ist und was du dagegen oder dafür tun kannst.',
+    lead: 'BetterReads ist eine kleine App, mit der man seine gelesenen Bücher festhält, und läuft als Beta nur mit Einladung. Hier steht, was die App mit deinen Daten macht, wer sonst beteiligt ist und was du dagegen oder dafür tun kannst.',
     version: 'Stand: 11. Oktober 2026',
     sections: [
       {
@@ -158,7 +158,7 @@ export const PRIVACY: LegalDocument = {
         blocks: [
           { p: 'Verantwortlich im Sinne der DSGVO ist:' },
           { lines: ['Fabian Kirchhoff', ...(IMPRINT_ENABLED ? [X.address] : []), `E-Mail: ${EMAIL_LINK}`] },
-          { p: 'Ich betreibe Libellus allein, als privates Projekt ohne Gewinnabsicht. Einen Datenschutzbeauftragten gibt es nicht; er ist nicht vorgeschrieben. Mitglieder können mir auch über „Kontakt“ in ihrem Profil schreiben.' + (IMPRINT_ENABLED ? ' Dieselben Angaben stehen im [Impressum](/imprint).' : '') },
+          { p: 'Ich betreibe BetterReads allein, als privates Projekt ohne Gewinnabsicht. Einen Datenschutzbeauftragten gibt es nicht; er ist nicht vorgeschrieben. Mitglieder können mir auch über „Kontakt“ in ihrem Profil schreiben.' + (IMPRINT_ENABLED ? ' Dieselben Angaben stehen im [Impressum](/imprint).' : '') },
         ],
       },
       {
@@ -201,7 +201,7 @@ export const PRIVACY: LegalDocument = {
         id: 'recipients',
         heading: 'Wer Daten erhält',
         blocks: [
-          { p: 'Diese Dienste setze ich ein, um Libellus zu betreiben. Jeder verarbeitet Daten in meinem Auftrag, auf Grundlage der Auftragsverarbeitungsbedingungen, die der Anbieter anbietet. Ich verkaufe keine Daten, und die App hat keine Werbung und kein Tracking durch Dritte.' },
+          { p: 'Diese Dienste setze ich ein, um BetterReads zu betreiben. Jeder verarbeitet Daten in meinem Auftrag, auf Grundlage der Auftragsverarbeitungsbedingungen, die der Anbieter anbietet. Ich verkaufe keine Daten, und die App hat keine Werbung und kein Tracking durch Dritte.' },
           {
             ul: [
               '**Supabase** (Datenbank, Anmeldung, Speicher für Profilfotos und Serverfunktionen): Das Projekt läuft in der EU-Region eu-central-1 (Frankfurt, Deutschland). Dort liegt alles, was du in der App speicherst, und deine E-Mail-Adresse. Anbieter ist Supabase Pte. Ltd., Singapur.',
@@ -218,12 +218,12 @@ export const PRIVACY: LegalDocument = {
         id: 'lookups',
         heading: 'Buchabfragen und andere Dienste, die dein Gerät oder mein Server fragt',
         blocks: [
-          { p: 'Um Bücher, Cover und Angaben dazu zu finden, fragt Libellus öffentliche Buchdienste. Jeder bekommt nur, was er für die Antwort braucht, und keiner bekommt dein Konto.' },
+          { p: 'Um Bücher, Cover und Angaben dazu zu finden, fragt BetterReads öffentliche Buchdienste. Jeder bekommt nur, was er für die Antwort braucht, und keiner bekommt dein Konto.' },
           {
             ul: [
               '**Apple (iTunes Search) und Open Library**: Dein Browser fragt sie direkt nach den Wörtern, die du in die Suche tippst (ab zwei Zeichen), oder nach der ISBN, die du scannst, und lädt die Cover. Sie sehen deshalb deine IP-Adresse und wonach du gesucht hast. Ein importiertes Buch behält die Cover-Adresse seiner Quelle; dieser Server sieht deine IP-Adresse, wenn das Cover angezeigt wird.',
               '**Wikimedia Commons**: Porträts von Autorinnen und Autoren auf deren Seiten lädt dein Browser, Wikimedia sieht dabei deine IP-Adresse.',
-              '**Wikidata, Wikipedia, Open Library, Apple und Goodreads, gefragt von meinem Server und nie von deinem Gerät**: Angaben zu einem Buch oder einer Autorin, kurze Vorstellungen und die Goodreads-Bewertung der Community, nachgeschlagen mit Titel, Autor oder ISBN. Zu einer Abfrage gehören keine Mitgliedsdaten, und Goodreads sieht dich nie.',
+              '**Wikidata, Wikipedia, Open Library, Apple, die Deutsche Nationalbibliothek und Goodreads, gefragt von meinem Server und nie von deinem Gerät**: Angaben zu einem Buch oder einer Autorin, kurze Vorstellungen, deutsche Ausgaben (die Katalogdaten der Bibliothek sind offen, CC0) und die Goodreads-Bewertung der Community, nachgeschlagen mit Titel, Autor oder ISBN. Zu einer Abfrage gehören keine Mitgliedsdaten, und Goodreads sieht dich nie.',
               '**Der Ebook-Reader**: Übersetzen und Nachschlagen schicken nur die Wörter, die du auswählst, an MyMemory (translated.net), sofern dein Browser nicht von selbst auf dem Gerät übersetzt, und an das englische Wiktionary. Das Ebook selbst verlässt dein Gerät nie.',
               '**Mein eigenes Regal**: Eine Ansicht, die nur ich habe, lädt eine Datei von meiner eigenen Domain books.fabkho.dev. Sie enthält keine Mitgliedsdaten.',
             ],
@@ -234,7 +234,7 @@ export const PRIVACY: LegalDocument = {
         id: 'storage',
         heading: 'Cookies und Speicher auf deinem Gerät',
         blocks: [
-          { p: 'Libellus setzt keine Cookies. Es nutzt den Speicher deines Geräts (Local Storage, IndexedDB und den Cache der installierten App) für das, was zum Funktionieren nötig ist: deine Anmeldung, die Offline-Kopie deiner Bibliothek, Änderungen, die auf den Abgleich warten, verknüpfte Ebook-Dateien, Cover, die Dateien der App selbst und deine Designwahl. Das ist für die App, die du angefragt hast, unbedingt erforderlich, deshalb gibt es kein Cookie-Banner. Cloudflare Web Analytics braucht weder Cookie noch Speicher.' },
+          { p: 'BetterReads setzt keine Cookies. Es nutzt den Speicher deines Geräts (Local Storage, IndexedDB und den Cache der installierten App) für das, was zum Funktionieren nötig ist: deine Anmeldung, die Offline-Kopie deiner Bibliothek, Änderungen, die auf den Abgleich warten, verknüpfte Ebook-Dateien, Cover, die Dateien der App selbst und deine Designwahl. Das ist für die App, die du angefragt hast, unbedingt erforderlich, deshalb gibt es kein Cookie-Banner. Cloudflare Web Analytics braucht weder Cookie noch Speicher.' },
         ],
       },
       {
@@ -267,14 +267,14 @@ export const PRIVACY: LegalDocument = {
         id: 'security',
         heading: 'Sicherheit',
         blocks: [
-          { p: 'Jede Verbindung läuft über HTTPS. Die Datenbank selbst begrenzt, wer was lesen darf (Row-Level-Security): Du liest deine eigene Bibliothek, Rezensionen und Sammlungen, andere Mitglieder nur das, was ihnen die Regeln für Folgen und Teilen zeigen. Es gibt keine Passwörter, die abhandenkommen könnten. Sicherungen werden verschlüsselt, bevor sie den Build-Server verlassen. Der Code ist öffentlich, also kann ihn jeder prüfen, und Sicherheitsmeldungen werden vertraulich behandelt (siehe SECURITY.md im Repository). Libellus ist eine kostenlose Beta, betrieben von einer Person: Es gibt keine Sicherheitszertifizierung, und ich kann nicht versprechen, dass nie etwas schiefgeht. Betrifft dich eine Datenpanne, sage ich dir und der Aufsichtsbehörde Bescheid, wie es das Gesetz verlangt.' },
+          { p: 'Jede Verbindung läuft über HTTPS. Die Datenbank selbst begrenzt, wer was lesen darf (Row-Level-Security): Du liest deine eigene Bibliothek, Rezensionen und Sammlungen, andere Mitglieder nur das, was ihnen die Regeln für Folgen und Teilen zeigen. Es gibt keine Passwörter, die abhandenkommen könnten. Sicherungen werden verschlüsselt, bevor sie den Build-Server verlassen. Der Code ist öffentlich, also kann ihn jeder prüfen, und Sicherheitsmeldungen werden vertraulich behandelt (siehe SECURITY.md im Repository). BetterReads ist eine kostenlose Beta, betrieben von einer Person: Es gibt keine Sicherheitszertifizierung, und ich kann nicht versprechen, dass nie etwas schiefgeht. Betrifft dich eine Datenpanne, sage ich dir und der Aufsichtsbehörde Bescheid, wie es das Gesetz verlangt.' },
         ],
       },
       {
         id: 'children',
         heading: 'Kinder',
         blocks: [
-          { p: 'Libellus ist nicht für Personen unter 16 Jahren. Bitte leg kein Konto an, wenn du jünger bist. Erfahre ich, dass jemand unter 16 ein Konto hat, lösche ich es.' },
+          { p: 'BetterReads ist nicht für Personen unter 16 Jahren. Bitte leg kein Konto an, wenn du jünger bist. Erfahre ich, dass jemand unter 16 ein Konto hat, lösche ich es.' },
         ],
       },
       {

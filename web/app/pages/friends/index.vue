@@ -2,8 +2,14 @@
 // The feed (social v1, §C 14–20; the mocks' screens 2–4): what the people she follows did, newest
 // first, under day eyebrows (Today, Yesterday, Monday, 3 Oct), thirty at a time and more as she
 // scrolls near the end. Each entry is a FeedRow, three or more of one kind by one member and day a
-// FeedBatch that opens its sheet. The People button at the top right opens People. Pushed from
-// Home's "Your circle" (Show more), in the tab layout, so Home stays alive under it.
+// FeedBatch that opens its sheet. The People button at the top right opens People.
+//
+// One page, two ways to be reached (middleware/friends-tab.global.ts sets `pushed` for each visit):
+// the Friends tab, on by default (Profile → Account → Friends tab): a tab page with the tab layout's
+// header (the title, the avatar, People beside it as `headerAction`), kept alive with its own place
+// like Home and Library. With the tab off, the pushed screen it was: its own top bar (Back, People)
+// and large title, reached from Home's "Your friends" (Show more), the Profile's Friends row and a
+// member's page, in the tab layout so what was under it stays alive.
 //
 // The device's copy shows at once and the load refreshes it; offline there is only the copy, under
 // a line that says when it is from. Pull to refresh is the browser's own. Empty: following nobody
@@ -12,12 +18,18 @@
 import type { FeedRow } from '~/data/feed'
 import { useFeedStore } from '~/stores/feed'
 
-definePageMeta({ layout: 'tabs', screen: 'friends', pushed: true })
+definePageMeta({
+  layout: 'tabs',
+  screen: 'friends',
+  tab: 'friends',
+  headerAction: { icon: 'people', label: 'feed.peopleLabel', to: '/friends/people', testid: 'friends.people' },
+})
 
 type Batch = Extract<FeedRow, { type: 'batch' }>
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const pushed = computed(() => Boolean(useRoute().meta.pushed))
 const feed = useFeedStore()
 const online = useOnline()
 const { label } = useFeedDay()
@@ -25,9 +37,15 @@ const { label } = useFeedDay()
 useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
 
 onMounted(() => void feed.refresh())
+// Kept alive as a tab: coming back asks again (the first activation is the mount's, above).
+let shown = false
+onActivated(() => {
+  if (shown) void feed.refresh()
+  shown = true
+})
 
-// The feed is reached from Home (Your circle ›), the Profile's Friends row and a member's page: back is to wherever she
-// came from, scroll kept (as People's); Home only for a feed opened directly (utils/back.ts).
+// Pushed (the tab is off): reached from Home (Your friends ›), the Profile's Friends row and a member's page: back is to
+// wherever she came from, scroll kept (as People's); Home only for a feed opened directly (utils/back.ts).
 function back() {
   if (canGoBack(window.history.state)) router.back()
   else void navigateTo('/')
@@ -87,16 +105,19 @@ watch(
 </script>
 
 <template>
-  <div class="relative min-h-dvh" data-testid="friends">
-    <UiTopBar :back-label="t('member.back')" back-testid="friends.back" @back="back">
-      <template #trailing>
-        <UiRoundButton icon="people" :label="t('feed.peopleLabel')" data-testid="friends.people" @click="navigateTo('/friends/people')" />
-      </template>
-    </UiTopBar>
+  <div class="relative min-h-dvh" :class="!pushed && '-mx-screen'" data-testid="friends">
+    <!-- As a tab the layout's main has the side margins already: the page keeps its own (as pushed) and steps out of them. -->
+    <template v-if="pushed">
+      <UiTopBar :back-label="t('member.back')" back-testid="friends.back" @back="back">
+        <template #trailing>
+          <UiRoundButton icon="people" :label="t('feed.peopleLabel')" data-testid="friends.people" @click="navigateTo('/friends/people')" />
+        </template>
+      </UiTopBar>
 
-    <header class="px-screen pt-bar">
-      <h1 class="text-large-title" data-testid="friends.title">{{ t('feed.title') }}</h1>
-    </header>
+      <header class="px-screen pt-bar">
+        <h1 class="text-large-title" data-testid="friends.title">{{ t('feed.title') }}</h1>
+      </header>
+    </template>
 
     <!-- The copy this device holds, when it cannot ask for a newer one. -->
     <div role="status">

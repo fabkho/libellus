@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // One of her reviews as a lit card in Your reviews' sideways row (social v2a, owner's refinement): the raised panel
-// lit by the Book's own cover (UiLitCard, as Home's circle card), the cover at the left (`md`, flying into the
+// lit by the Book's own cover (UiLitCard, as Home's friends card), the cover at the left (`md`, flying into the
 // Book's page from the touch-down), at the right the title in the serif, her stars and the day, the quiet
 // "Spoilers" tag when she flagged it, and her review in the serif italic folded at four lines. No avatar or name:
 // it is hers, so never folded for spoilers. The cards of a row are as tall as the tallest, so *More* does not

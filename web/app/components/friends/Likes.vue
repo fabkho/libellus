@@ -5,7 +5,7 @@
 // null) or a Manual book, which a follower cannot open. The error line is `role=alert`, under the row's text
 // (`errorLine`: whether the row draws it, so a row with two of these draws it once).
 // Props: `row` (`sessionId`, `likes`, `liked`), `name` and `owner` (the member whose read it is: her id, so her hearts go
-// when she leaves the circle), `title`, `testid`. Test ids: `<testid>`, `<testid>.count`, `<testid>.error`.
+// when she leaves the friends), `title`, `testid`. Test ids: `<testid>`, `<testid>.count`, `<testid>.error`.
 import { useLikesStore } from '~/stores/likes'
 import { likeable } from '~/utils/likes'
 

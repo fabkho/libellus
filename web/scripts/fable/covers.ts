@@ -9,7 +9,7 @@ import { appleArtwork, COVER_LARGE, isbnFromArtwork, plainText } from '../../app
  *
  * Ported from Regal's front resolver (~/code/regal scripts/assets/front.ts:
  * `findApple`, `resolveFront`, `titleScore`, the DNB and Open Library cover
- * URLs), adapted to what Libellus stores: one cover URL with its thumbhash and
+ * URLs), adapted to what BetterReads stores: one cover URL with its thumbhash and
  * two colours, exactly as `add_to_library` gets them (app/data/covers.ts
  * `describeCover`), and Apple's or OpenLibrary's id for the edition.
  *
@@ -94,7 +94,10 @@ export function titleCores(title: string | undefined): string[] {
   const main = bare.split(/:|\s[–—]\s/)[0]!.trim()
   // Also what follows a colon, when it is a title of its own: Apple's "The Sandman Vol. 1: Preludes & Nocturnes".
   const subtitle = bare.includes(':') ? bare.slice(bare.indexOf(':') + 1).trim() : ''
-  const cores = [bare, main, ...(comparable(subtitle).length >= 8 ? [subtitle] : [])].map(comparable)
+  // And what follows a spaced hyphen, when it is a title of its own: Apple's "Red Rising - Im Haus der Feinde"
+  // is "Im Haus der Feinde" with its series in front.
+  const series = / - /.test(bare) ? bare.slice(bare.lastIndexOf(' - ') + 3).trim() : ''
+  const cores = [bare, main, ...(comparable(subtitle).length >= 8 ? [subtitle] : []), ...(comparable(series).length >= 8 ? [series] : [])].map(comparable)
   for (const core of [...cores]) {
     const bareArticle = core.replace(/^(the|a|an|der|die|das)(?=[a-z0-9]{3})/, '')
     if (bareArticle !== core) cores.push(bareArticle)

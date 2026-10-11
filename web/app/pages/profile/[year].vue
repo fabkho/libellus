@@ -22,7 +22,7 @@ const router = useRouter()
 const stats = useStatsStore()
 const bookGenres = useGenresStore()
 const libraryView = useLibraryViewStore()
-// Your shelf (#23): the year's Books as Regal's 3D row under the months, for the owner only.
+// Your shelf (#23): the year's Books as Regal's 3D row under the months, everyone's own (stores/shelf.ts).
 const shelf = useShelfStore()
 
 const year = computed(() => Number(route.params.year))
@@ -48,7 +48,7 @@ const figures = computed(() => figuresOf(reads.value, year.value))
 // any (a new account) keeps its height when the record lands; a first visit opens the block when they come.
 const genresShown = computed(() => (loading.value ? bookGenres.loaded && bookGenres.any : genreFigures.value.genres.length > 0))
 const genreFigures = computed(() => genreFiguresOf(reads.value, year.value, bookGenres.ofEntry))
-const shelfBooks = computed(() => (shelf.isOwner ? shelf.readIn(year.value) : []))
+const shelfBooks = computed(() => (shelf.available ? shelf.readIn(year.value) : []))
 // Until the reading record has come (or could not), the page stands in its final shape with
 // placeholders where the figures and covers go, as the Profile does (docs/MOTION.md, Loading):
 // every month with a cover, a favourite, the ratings, records and authors; whatever the year
@@ -63,8 +63,8 @@ const monthsGoneBy = computed(() => {
   const thisYear = Number(today.slice(0, 4))
   return year.value < thisYear ? 12 : year.value === thisYear ? Number(today.slice(5, 7)) : 0
 })
-// The owner's row: the pile stands in while the library file loads, and closes if the year has no Books in it.
-const shelfShown = computed(() => shelf.isOwner && ((!shelf.shelf && !shelf.loadError) || shelfBooks.value.length > 0))
+// The row: the card stands in while the shelf loads, and closes if the year has no Books in it.
+const shelfShown = computed(() => shelf.available && ((!shelf.shelf && !shelf.loadError) || shelfBooks.value.length > 0))
 const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m + 1, reads: readsInMonth(reads.value, year.value, m + 1) })))
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)

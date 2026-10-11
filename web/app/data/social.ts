@@ -135,7 +135,7 @@ export interface Social {
   unlike(session: string): Promise<SocialResult<LikeResult>>
   /** Who liked her own finished read, newest first (anyone else's: `not_found`). */
   sessionLikers(session: string): Promise<SocialResult<MemberCard[]>>
-  /** Home's Your circle: her reads liked in the last week, newest like first, five at most. */
+  /** Home's Your friends: her reads liked in the last week, newest like first, five at most. */
   myRecentLikes(): Promise<SocialResult<RecentLike[]>>
   /** The Books she and the member both finished (her editions, newest of hers first); `year`: her reads ended that year. `[]` when she may not see them. */
   bothRead(member: string, year?: number | null): Promise<SocialResult<BothRead[]>>

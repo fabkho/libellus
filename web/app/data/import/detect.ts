@@ -14,7 +14,7 @@ import {
 
 /**
  * Which app wrote a file (issue #111): the member drops any supported export
- * and Libellus tells by its header, never by asking. Each adapter names the
+ * and BetterReads tells by its header, never by asking. Each adapter names the
  * columns that point to its app with a weight (3: only that app writes it;
  * goodreads.ts, hardcover.ts); a header scores the sum of the ones it has, in
  * any order and case. The best score from `MIN_SCORE` up decides; a header
@@ -27,7 +27,7 @@ import {
  * A new app is one more adapter in `ADAPTERS`.
  */
 
-/** Every app whose export Libellus reads, in the order the Import page names them. */
+/** Every app whose export BetterReads reads, in the order the Import page names them. */
 export const ADAPTERS: readonly ImportAdapter[] = [goodreadsAdapter, hardcoverAdapter]
 
 export const SUPPORTED_SOURCES: readonly ImportSource[] = ADAPTERS.map((adapter) => adapter.source)

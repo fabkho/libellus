@@ -115,6 +115,28 @@ describe('lookupEdition', () => {
     expect(withLookup(book, found).book).toMatchObject({ source: 'openlibrary', isbn13: '9783000000010', openLibraryEditionKey: 'OL123M', openLibraryWorkKey: 'OL9W', appleId: null })
   })
 
+  it("finds a German volume Apple lists under its series: 'Red Rising - Im Haus der Feinde' is 'Im Haus der Feinde'", async () => {
+    const SERIES = 'https://is1-ssl.mzstatic.com/image/thumb/Publication60/v4/5b/fa/0d/x/mzm.abc.jpg/100x100bb.jpg'
+    const { deps } = sources(
+      {
+        'https://itunes.apple.com/search': {
+          results: [
+            { trackId: 5, trackName: 'Das Haus der Fugger', artistName: 'Ada Example', artworkUrl100: SERIES },
+            { trackId: 6, trackName: 'Red Rising - Im Haus der Feinde', artistName: 'Ada Example', artworkUrl100: SERIES },
+          ],
+        },
+      },
+      { 'https://is1-ssl.mzstatic.com/image/thumb/Publication60/v4/5b/fa/0d/x/mzm.abc.jpg/600x900bb.jpg': picture(600, 900) },
+    )
+    const book = entry({ title: 'Im Haus der Feinde', isbn13: '9783453534421' })
+    expect(book.readLanguage).toBe('de')
+    const found = await lookupEdition(book, deps)
+    // Another edition (the ebook) than the paperback read: it lends its cover, the Book keeps its own ISBN.
+    expect(found.apple).toMatchObject({ id: '6', via: 'search' })
+    expect(found.cover).toMatchObject({ source: 'apple', height: 900 })
+    expect(withLookup(book, found).book).toMatchObject({ isbn13: '9783453534421', appleId: null, coverUrl: expect.stringContaining('600x900bb') })
+  })
+
   it("tries the owner's pinned cover first and takes it at any size", async () => {
     const { deps } = sources({}, { 'https://example.com/pinned.jpg': picture(300, 450) })
     const book = mapFableLibrary([record({ isbn13: '9780000000026' })], { books: { 'rec-1': { coverUrl: 'https://example.com/pinned.jpg' } } }).entries[0]!
@@ -178,6 +200,11 @@ describe('titleScore', () => {
     expect(titleScore('Glass Orchard', 'The Glass Orchard')).toBe(2)
     expect(titleScore('The Sandman Vol. 1: Preludes & Nocturnes (New Edition)', 'Preludes & Nocturnes')).toBe(2)
     expect(titleScore('The Glass Orchard Trilogy Box Set', 'The Glass Orchard')).toBe(1)
+    // Apple puts the series in front of a German volume's title, after a plain hyphen.
+    expect(titleScore('Red Rising - Im Haus der Feinde', 'Im Haus der Feinde')).toBe(2)
+    expect(titleScore('Red Rising - Tag der Entscheidung', 'Tag der Entscheidung')).toBe(2)
+    expect(titleScore('Red Rising - Im Haus der Feinde', 'Red Rising')).toBe(1)
+    expect(titleScore('Red Rising - Im Haus der Feinde', 'Tag der Entscheidung')).toBe(0)
     expect(titleScore('The Copper Field', 'The Glass Orchard')).toBe(0)
   })
 })

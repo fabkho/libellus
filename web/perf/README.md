@@ -122,14 +122,14 @@ The harness cannot know what the owner's phone does. This is the session that te
 1. **Phone**: Settings → About → tap *Build number* seven times → Developer options → USB debugging
    on. Plug it into the Mac. Accept the RSA prompt. `adb devices` lists it.
 2. **Mac**: Chrome → `chrome://inspect/#devices` → tick *Discover USB devices*. The installed
-   Libellus PWA appears as its own entry under the phone ("Libellus", type *web app*); a tab
+   BetterReads PWA appears as its own entry under the phone ("BetterReads", type *web app*); a tab
    in Chrome appears too. Click *inspect* on the PWA.
 3. In its DevTools: **Performance** tab → the gear: CPU *No throttling* (it is the real CPU), Network
    *No throttling*, tick *Screenshots* and *Web Vitals*. Close other apps on the phone, put it on
    battery saver *off*, brightness fixed.
 4. Record the three worst journeys, each as its own recording (record → do it on the phone → stop,
    the timeline is 5–10 s):
-   - **Cold start**: force-stop the PWA (Settings → Apps → Libellus → Force stop), start recording
+   - **Cold start**: force-stop the PWA (Settings → Apps → BetterReads → Force stop), start recording
      from DevTools' *Reload page* (⌘⇧E) or relaunch from the icon with *Record* armed.
    - **Library**: Home → Library tab → scroll slowly to the bottom and back up.
    - **Profile**: Home → avatar → the figures → back. (Or search: tap Search, type a title, results.)
@@ -153,11 +153,11 @@ Needs a Mac, the iPhone, a cable, Safari with the Develop menu.
 2. Install the app from Safari (Share → Add to Home Screen), open it **from the Home Screen icon**
    (standalone, not in a Safari tab: the service worker, the safe areas and the process model differ).
 3. Cable in, unlock the phone, *Trust this computer*. Mac Safari → **Develop** → *\<the iPhone\>* →
-   *Libellus* (it lists the open web apps under the phone's name).
+   *BetterReads* (it lists the open web apps under the phone's name).
 4. Web Inspector → **Timelines**: tick *JavaScript & Events*, *Layout & Rendering*, *CPU*, *Memory*
    and *Screenshots*; untick Network & Storage unless a request is in question.
 5. Press record (●), do one journey on the phone, stop. The three to record: cold start (swipe the app
-   away in the App Switcher first, then reopen it with the recording armed from *Develop → Libellus*
+   away in the App Switcher first, then reopen it with the recording armed from *Develop → BetterReads*
    once it is up, or note its start in the Network timeline), Library scroll, Profile open and back.
 6. Look at: *Layout & Rendering* (red frames and the long *Layout*/*Style* bars), *JavaScript & Events*
    (the longest tasks), *CPU* (thermal state shown), *Memory* (peak). Export each timeline:

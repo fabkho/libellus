@@ -2,8 +2,10 @@
 // Regal's row (the layer's RegalBooksRow, #23): the Stack turned on its side,
 // one horizontal row of Spines for a card (the Profile's Your shelf, a year in
 // review). Like `ShelfStage`, only ever loaded through `LazyShelfRow`, so it
-// and Regal stay in the `regal` chunk (regal.config.ts) that only the owner's
-// screens fetch; it brings Regal's fonts with it.
+// and Regal stay in the `regal` chunk (regal.config.ts) that only the shelf's
+// screens fetch; it brings Regal's fonts with it. `library`: a member's own
+// shelf, handed to Regal as a document (nothing fetched); none: the owner's
+// published file.
 //
 // The row scrolls sideways under the finger and lets the page scroll up and
 // down. A Book tapped breaks out: it comes to the middle of the whole screen,
@@ -23,6 +25,7 @@
 // app's sheets, where the shelf page's Stack (ShelfStage) uses D's pills.
 import '#build/nuxt-fonts-global.css'
 import '~/assets/css/regal-themed.css'
+import type { RegalLibraryFile } from '~/data/export/regalLibraryFile'
 
 const props = defineProps<{
   /** Only the Books finished in this year, starting at January; null for the newest of all. */
@@ -31,6 +34,8 @@ const props = defineProps<{
   limit?: number | null
   /** What the row is, for assistive technology. */
   label?: string
+  /** A member's own shelf, built on the device (stores/shelf.ts `document`); null: the published file. */
+  library?: RegalLibraryFile | null
 }>()
 
 // A row mounted again after a failed read (the Profile's Try again) reads the file afresh: Regal
@@ -44,8 +49,8 @@ watch(error, (problem) => {
 </script>
 
 <template>
-  <RegalBooksRow class="shelf-row regal-themed" theme="auto" inspect="viewport" :year="props.year ?? null" :limit="props.limit ?? null" :label="props.label ?? ''" :back-button="false" rotate="turntable">
-    <!-- The whole details, Libellus' own (BookSheet): Regal keeps the container, its fade and the Book's gestures. -->
+  <RegalBooksRow class="shelf-row regal-themed" theme="auto" inspect="viewport" :year="props.year ?? null" :limit="props.limit ?? null" :label="props.label ?? ''" :library="props.library ?? null" :back-button="false" rotate="turntable">
+    <!-- The whole details, BetterReads' own (BookSheet): Regal keeps the container, its fade and the Book's gestures. -->
     <template #detail="{ book, close, flip, face, sheet }">
       <ShelfBookSheet :book="book" :face="face" :sheet="sheet" @close="close" @flip="flip" />
     </template>

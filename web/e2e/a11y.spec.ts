@@ -259,7 +259,7 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await closeSheet(page, 'profileReviews')
   })
 
-  test('the social screens: Your circle on Home with its likes and the likers sheet, the feed, People, a member and her year, the follow link, Privacy and the member sheet', async ({ page }) => {
+  test('the social screens: Your friends on Home with its likes and the likers sheet, the feed, People, a member and her year, the follow link, Privacy and the member sheet', async ({ page }) => {
     // Eight scans and four members: longer than a usual flow.
     test.slow()
     const anna = await signedIn(page)
@@ -285,12 +285,12 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await sql(`update public.activity set visible_at = now() - interval '1 second' where member_id = any($1)`, [[ida.id, cleo.id, anna.id]])
     const link = (await ben.client.rpc('my_social')).data.link as string
 
-    // Home: the request, the card and the rows of Your circle.
+    // Home: the request, the card and the rows of Your friends.
     await page.reload()
-    await expect(page.getByTestId('home.circleRequest')).toBeVisible()
-    await expect(page.getByTestId('home.circleFeature')).toBeVisible()
-    await expect(page.getByTestId('home.circleFriend').first()).toBeVisible()
-    await expectAccessible(page, 'Home with Your circle')
+    await expect(page.getByTestId('home.friendsRequest')).toBeVisible()
+    await expect(page.getByTestId('home.friendsFeature')).toBeVisible()
+    await expect(page.getByTestId('home.friendsRow').first()).toBeVisible()
+    await expectAccessible(page, 'Home with Your friends')
     await expect(page.getByTestId('home.like')).toHaveCount(1)
     await openSheet(page, 'home.like', 'likers')
     await expect(page.getByTestId('likers.row')).toHaveCount(1)
@@ -298,7 +298,7 @@ test.describe('accessibility, dark', { tag: '@full' }, () => {
     await closeSheet(page, 'likers')
 
     // The feed.
-    await page.getByTestId('home.circleTitle').click()
+    await page.getByTestId('home.friendsTitle').click()
     await expect(page.getByTestId('friends.entry').first()).toBeVisible()
     await expectAccessible(page, 'the feed')
 

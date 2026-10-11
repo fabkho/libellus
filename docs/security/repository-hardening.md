@@ -164,7 +164,7 @@ on this repository, behind the `production` ruleset above.
 
 ## Licence
 
-The repository carries the MIT licence (`LICENSE`, added in "chore: license Libellus under MIT"; README says so). No
+The repository carries the MIT licence (`LICENSE`, added in "chore: license BetterReads under MIT"; README says so). No
 licence file was added or changed in this round. If the owner prefers "all rights reserved" while the project is a
 public beta, that is a replacement of `LICENSE` and of the README sentence, not an addition; it is the owner's
 decision and was **not** made here.

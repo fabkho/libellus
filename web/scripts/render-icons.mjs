@@ -1,4 +1,4 @@
-// Renders Libellus' app icons into public/ (issues #15, #86): `node scripts/render-icons.mjs`.
+// Renders BetterReads' app icons into public/ (issues #15, #86): `node scripts/render-icons.mjs`.
 //
 // The sources are the three SVGs in design/icons/app/ (two ribbons, see its README): the mark is
 // already drawn as paths, so nothing here needs a font. Rendered by Playwright's Chromium (already

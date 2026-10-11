@@ -4,11 +4,18 @@ import {
   createCollections,
   isValidName,
   MOSAIC_SIZE,
+  sortByEdited,
   type Collection,
   type CollectionErrorCode,
   type Collections,
   type CollectionSummary,
 } from '~/data/collections'
+import {
+  COLLECTION_ORDER,
+  readCollectionSort,
+  saveCollectionSort,
+  type CollectionSort,
+} from '~/data/collectionSort'
 import { probeImageInBrowser, resolveBookCover } from '~/data/covers'
 import { readCollections, saveCollections } from '~/data/deviceLibrary'
 import type { LibraryEntry } from '~/data/library'
@@ -109,15 +116,25 @@ export const useCollectionsStore = defineStore('collections', () => {
       return
     }
     loadError.value = null
-    list.value = result.data
+    list.value = sortByEdited(result.data)
     loaded.value = true
     freshness.landed(ticket)
   }
 
-  /** The list entry, kept in step with a change made here. */
-  function patchSummary(id: string, change: (summary: CollectionSummary) => CollectionSummary) {
+  /**
+   * The list entry, kept in step with a change made here. An `edited` one (a rename, a Book put on it, taken
+   * off it or moved: what the database bumps `updated_at` for) is stamped now and goes to the top at once,
+   * online or not; the screens that are being looked at hold their order meanwhile (`useEditedOrder`).
+   */
+  function patchSummary(id: string, change: (summary: CollectionSummary) => CollectionSummary, edited = true) {
     freshness.invalidate()
-    list.value = list.value.map((summary) => (summary.id === id ? change(summary) : summary))
+    const stamp = new Date().toISOString()
+    const next = list.value.map((summary) => {
+      if (summary.id !== id) return summary
+      const changed = change(summary)
+      return edited ? { ...changed, updatedAt: stamp } : changed
+    })
+    list.value = edited ? sortByEdited(next) : next
   }
 
   // -------------------------------------------------------------- one page
@@ -137,7 +154,7 @@ export const useCollectionsStore = defineStore('collections', () => {
       const known = list.value.find((summary) => summary.id === id)
       pages.set(id, {
         phase: 'loading',
-        collection: known ? { id, name: known.name, position: known.position, createdAt: known.createdAt, entries: [] } : null,
+        collection: known ? { id, name: known.name, position: known.position, createdAt: known.createdAt, updatedAt: known.updatedAt, entries: [] } : null,
       })
     }
     const member = session.member?.id
@@ -151,11 +168,12 @@ export const useCollectionsStore = defineStore('collections', () => {
     pages.set(id, result.data ? { phase: 'ready', collection: result.data } : { phase: 'missing', collection: null })
   }
 
-  function setEntries(id: string, entries: LibraryEntry[]) {
+  /** `edited`: the Collection's Books changed (put on, taken off, moved), not just one of them (a new edition). */
+  function setEntries(id: string, entries: LibraryEntry[], edited = true) {
     freshness.invalidate()
     const current = pages.get(id)
     if (current?.collection) pages.set(id, { ...current, collection: { ...current.collection, entries } })
-    patchSummary(id, (summary) => ({ ...summary, count: entries.length, covers: entries.slice(0, MOSAIC_SIZE).map((e) => e.book) }))
+    patchSummary(id, (summary) => ({ ...summary, count: entries.length, covers: entries.slice(0, MOSAIC_SIZE).map((e) => e.book) }), edited)
   }
 
   // ------------------------------------------------------------- memberships
@@ -186,7 +204,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     const result = await collections.create(name)
     if (result.error) return result
     freshness.invalidate()
-    list.value = [...list.value.filter((summary) => summary.id !== result.data.id), result.data]
+    list.value = sortByEdited([...list.value.filter((summary) => summary.id !== result.data.id), result.data])
     loaded.value = true
     return result
   }
@@ -228,8 +246,12 @@ export const useCollectionsStore = defineStore('collections', () => {
     const entry = result.data
     memberships.set(entry.id, [...new Set([...(memberships.get(entry.id) ?? []), id])])
     const current = pages.get(id)
-    if (current?.collection) setEntries(id, [...current.collection.entries.filter((e) => e.id !== entry.id), entry])
-    else
+    if (current?.collection) {
+      // "Date added" has its time at once (the device's clock; the database's replaces it at the next read),
+      // set before the entries so a view sorted by it finds it when the Book arrives.
+      pages.set(id, { ...current, collection: { ...current.collection, addedAt: { ...current.collection.addedAt, [entry.id]: new Date().toISOString() } } })
+      setEntries(id, [...current.collection.entries.filter((e) => e.id !== entry.id), entry])
+    } else
       patchSummary(id, (summary) => ({
         ...summary,
         count: summary.count + 1,
@@ -277,7 +299,8 @@ export const useCollectionsStore = defineStore('collections', () => {
   function entryChanged(entry: LibraryEntry) {
     for (const [id, shown] of pages) {
       const entries = shown.collection?.entries ?? []
-      if (entries.some((e) => e.id === entry.id)) setEntries(id, entries.map((e) => (e.id === entry.id ? entry : e)))
+      // Another edition of a Book on it: the cover changes, the Collection was not edited.
+      if (entries.some((e) => e.id === entry.id)) setEntries(id, entries.map((e) => (e.id === entry.id ? entry : e)), false)
     }
     if (loaded.value) void loadList()
   }
@@ -290,7 +313,11 @@ export const useCollectionsStore = defineStore('collections', () => {
     memberships.set(entryId, (memberships.get(entryId) ?? []).filter((other) => other !== id))
     const current = pages.get(id)
     if (current?.collection) setEntries(id, current.collection.entries.filter((e) => e.id !== entryId))
-    else void loadList()
+    else {
+      // Not opened here: its list entry still counts the Book, and it was edited.
+      patchSummary(id, (summary) => ({ ...summary, count: Math.max(0, summary.count - 1) }))
+      void loadList()
+    }
     return null
   }
 
@@ -329,6 +356,27 @@ export const useCollectionsStore = defineStore('collections', () => {
       .catch(() => {
         reorderError.value = 'unknown'
       })
+  }
+
+  // --------------------------------------------------------------------- sort
+
+  /**
+   * How the Books inside a Collection are shown (data/collectionSort.ts): her saved order or a sort of
+   * it, one choice for every Collection, remembered per member on this device and read back when the
+   * store is set up, so a page that opens sorted is sorted from its first paint. A view only: the saved
+   * order is never written by it.
+   */
+  const sort = ref<CollectionSort>(COLLECTION_ORDER)
+
+  function restoreSort() {
+    const member = session.member?.id
+    sort.value = import.meta.client && member ? readCollectionSort(window.localStorage, member) : COLLECTION_ORDER
+  }
+
+  function setSort(next: CollectionSort) {
+    sort.value = next
+    const member = session.member?.id
+    if (import.meta.client && member) saveCollectionSort(window.localStorage, member, next)
   }
 
   // ------------------------------------------------------------------ picker
@@ -465,7 +513,8 @@ export const useCollectionsStore = defineStore('collections', () => {
     if (!import.meta.client || !member || loaded.value) return
     const saved = readCollections(window.localStorage, member)
     if (!saved) return
-    list.value = saved.list
+    // A copy from before Collections were listed by last edited has no time of its own: made is the best it has.
+    list.value = sortByEdited(saved.list.map((summary) => ({ ...summary, updatedAt: summary.updatedAt ?? summary.createdAt })))
     for (const collection of saved.collections) pages.set(collection.id, { phase: 'ready', collection })
     for (const [entry, ids] of Object.entries(saved.memberships)) memberships.set(entry, ids)
     loaded.value = true
@@ -509,9 +558,11 @@ export const useCollectionsStore = defineStore('collections', () => {
       if (now === before) return
       reset()
       restore()
+      restoreSort()
     },
   )
   restore()
+  restoreSort()
 
   return {
     list,
@@ -531,6 +582,8 @@ export const useCollectionsStore = defineStore('collections', () => {
     removeEntry,
     reorderError,
     move,
+    sort,
+    setSort,
     picking,
     pickerBusy,
     pickerError,

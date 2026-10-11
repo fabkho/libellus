@@ -1,6 +1,6 @@
 # Setting up the owner's instance
 
-How the one Libellus instance (libellus.fabkho.dev) is put together, as steps its owner takes once:
+How the one BetterReads instance (libellus.fabkho.dev) is put together, as steps its owner takes once:
 a Supabase project for the data and sign-in, and the web app as static files on Cloudflare Pages.
 Both are on free tiers that are plenty for a handful of readers. The same steps stand up a
 replacement when the hosted project is gone ([OPERATIONS.md, Restoring](OPERATIONS.md#restoring));
@@ -45,7 +45,7 @@ Run everything below from the repository's root unless it says otherwise.
    on in every Supabase project; there is nothing to set up in the dashboard, and the photos are not
    in the nightly backup ([OPERATIONS.md](OPERATIONS.md#backups)).
    `supabase/seed.sql` (the local dev invite and member) is **not** pushed: it only runs locally.
-3. **Auth settings** (Authentication in the dashboard). Libellus signs in with a six-digit code,
+3. **Auth settings** (Authentication in the dashboard). BetterReads signs in with a six-digit code,
    never a link, so the code stays inside the installed app.
    - *Sign In / Providers → Email*: Email enabled; **Confirm email on**; **Email OTP length 6**;
      Email OTP expiration 3600 seconds. Every other provider off.
@@ -56,10 +56,10 @@ Run everything below from the repository's root unless it says otherwise.
      `https://<project>.pages.dev` if that address is used too) under Redirect URLs. The codes don't
      use links, but Supabase builds a few addresses from these.
    - *Emails → Templates*: for **Magic Link** and for **Confirm signup**, subject
-     `Your Libellus sign-in code` and the body of `supabase/templates/magic_link.html` (it shows
+     `Your BetterReads sign-in code` and the body of `supabase/templates/magic_link.html` (it shows
      `{{ .Token }}`, the six digits, and no link). Both need it: the first mail of a sign-up is the
      confirmation, every later one the magic link. Supabase lets you edit the templates once
-     custom SMTP is set up (step 2). The body is a designed mail (Libellus' wordmark, colours and
+     custom SMTP is set up (step 2). The body is a designed mail (BetterReads' wordmark, colours and
      code cell, light and dark), so paste the whole file, from `<!doctype html>` to `</html>`, into
      the dashboard's HTML source field, not a rewrite of it. It is generated from
      `design/tokens.json` (`cd design && pnpm emails`; [DEVELOPMENT.md](DEVELOPMENT.md#emails)): when
@@ -79,7 +79,7 @@ the dashboard.
 Supabase's built-in mail only delivers to the project's team members and only a few an hour, so
 real members need an SMTP server of the owner's: *Authentication → Emails → SMTP Settings* → Enable
 custom SMTP, with the provider's host, port, user and password, a **sender address** on a domain
-verified with that provider (e.g. `books@example.org`) and a **sender name** (e.g. `Libellus`).
+verified with that provider (e.g. `books@example.org`) and a **sender name** (e.g. `BetterReads`).
 Then set the templates (step 1.3). Send yourself a code from the app (step 5) to check it arrives.
 
 ## 3. The web app on Cloudflare Pages
@@ -122,7 +122,7 @@ else: it uses relative addresses and asks Supabase at the URL it was built with.
 
 ## 5. The first account
 
-Libellus is invite-only, so the first code comes from the service-role key, on the owner's machine:
+BetterReads is invite-only, so the first code comes from the service-role key, on the owner's machine:
 
 ```sh
 export SUPABASE_URL=https://<ref>.supabase.co
@@ -133,7 +133,7 @@ scripts/create-invite-code.sh --label "me"                 # one use, 14 days; p
 Open the address, **Sign up** with the owner's email and the code, and type the six digits from the mail.
 The code is spent once the address is proved. More are made the same way for the people invited
 (`--uses 5 --days 30`, `--code HELLO-BOOKS`, `--days 0` for never expiring); `--help` says the rest.
-A code with many uses and no expiry, shared openly, is as close to open sign-up as Libellus gets.
+A code with many uses and no expiry, shared openly, is as close to open sign-up as BetterReads gets.
 
 Install it: Share → Add to Home Screen on an iPhone, Install app in Chrome on Android. Then name the
 owner, in the database and in the web build, once ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)).
@@ -174,7 +174,7 @@ hosted Supabase blocks outgoing ports 25 and 587, so use 465 or the provider's a
 ```sh
 supabase functions deploy waitlist-invite                        # verify_jwt = true comes from supabase/config.toml
 supabase secrets set SMTP_HOST=<smtp host> SMTP_PORT=465 SMTP_USER=<user> SMTP_PASS=<password> \
-  SMTP_FROM=<invites@the domain> SMTP_FROM_NAME=Libellus      # SMTP_FROM_NAME is optional
+  SMTP_FROM=<invites@the domain> SMTP_FROM_NAME=BetterReads      # SMTP_FROM_NAME is optional
 supabase secrets set LIBELLUS_SITE_URL=https://<the address>    # optional: the sign-up link in the mail
 ```
 
@@ -224,9 +224,10 @@ Content-Security-Policy in `web/public/_headers` names both hosts and allows the
 it carries its own `script-src 'none'` policy, and its frame runs no script where the browser allows
 that (not WebKit), so a crafted EPUB cannot act as the member (`web/app/data/reader/markup.ts`).
 
-**Regal, the 3D shelf** is the owner's Nuxt layer (its own repository, fabkho/regal); the app builds without it and loses
-nothing else. It needs `LIBELLUS_REGAL=1`, a way to download it (`GIGET_AUTH`, any GitHub token; CI uses the run's own read-only token), a
-published library file and the owner's user id (table below). Its data feed (`regal-export`, the
+**Regal, the 3D shelf** (Your shelf, every member's own) is a Nuxt layer (its own repository, fabkho/regal); the app builds without it and loses
+nothing else. It needs `LIBELLUS_REGAL=1` and a way to download it (`GIGET_AUTH`, any GitHub token; CI uses the run's own read-only token;
+`REGAL_LAYER=<checkout>` for a local one). A member's shelf is built on her device from her Library: nothing to publish, nothing stored or sent.
+Optional, for the owner's portfolio: a published library file and the owner's user id (table below), and its data feed (`regal-export`, the
 `shelf_publish` trigger with `pg_net` and a Vault secret) does nothing until configured:
 [OWNER.md](OWNER.md).
 
@@ -256,10 +257,10 @@ are off until set.
 | Web build env | `NUXT_PUBLIC_SUPABASE_ANON_KEY` | none (required) | Its anon (publishable) key. Public. |
 | Web build env | `NODE_VERSION` (Pages) | Pages' default | `24`. |
 | Web build env | `NUXT_PUBLIC_LINK_TEMPLATES` | empty | Book links for every member, JSON (above). Public. |
-| Web build env | `LIBELLUS_REGAL` | unset (off) | `1` builds with the owner's Regal layer. Owner only. |
-| Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal (CI: the run's own `github.token`), or a local checkout. Owner only. |
-| Web build env | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | empty | The published library file Regal shows. Required with `LIBELLUS_REGAL=1`. Owner only. |
-| Web build env | `NUXT_PUBLIC_SHELF_OWNER_ID` | empty (nobody) | The auth user id of the instance's owner: sees the Errors row and page, and Your shelf with Regal ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)). Owner only. |
+| Web build env | `LIBELLUS_REGAL` | unset (off) | `1` builds with the Regal layer: Your shelf for every member. |
+| Web build env | `GIGET_AUTH` or `REGAL_LAYER` | unset | Where Regal comes from: a GitHub token that can read fabkho/regal (CI: the run's own `github.token`), or a local checkout. With `LIBELLUS_REGAL=1`. |
+| Web build env | `NUXT_PUBLIC_REGAL_LIBRARY_SRC` | empty | The owner's published library file: his shelf is that file (the portfolio's); unset, his shelf is built on the device like everyone's. Owner only. |
+| Web build env | `NUXT_PUBLIC_SHELF_OWNER_ID` | empty (nobody) | The auth user id of the instance's owner: sees the Errors row and page, and his published shelf with Regal ([OPERATIONS.md, The owner](OPERATIONS.md#the-owner)). Owner only. |
 | Supabase Auth | Site URL, Redirect URLs | `http://127.0.0.1:3020` locally | The instance's address (step 1.3, 4). |
 | Supabase Auth | Confirm email, Email OTP length | on, 6 | As in `supabase/config.toml` (step 1.3). |
 | Supabase Auth | User sign-ups | on | Leave on; invite codes gate sign-up in the database. |
@@ -275,7 +276,7 @@ are off until set.
 | GitHub Actions secrets | `SUPABASE_DB_URL`, `R2_BACKUP_ACCESS_KEY_ID`, `R2_BACKUP_SECRET_ACCESS_KEY` | unset | Nightly backups: the session pooler's connection string, an R2 token for the bucket. Optional ([OPERATIONS.md](OPERATIONS.md#backups)). |
 | GitHub Actions variables | `BACKUP_AGE_RECIPIENT`, `CLOUDFLARE_ACCOUNT_ID`, `BACKUP_R2_BUCKET`, `BACKUP_MIN_BYTES` | unset (backup skipped), `libellus-backups`, `50000` | Nightly backups: the owner's age public key, where the bucket is. |
 | Restore script | `LIBELLUS_PRODUCTION_REF` | the instance's project ref | The project `scripts/restore-backup.sh` refuses without `--i-know`: set it to the new ref after the project is replaced. |
-| Source | App name, icons, colours | Libellus, "Night Reader" | Not settings: `web/nuxt.config.ts` (`pwa.manifest`), `web/i18n/locales/en.json` (`app.name`), `design/tokens.json`, `design/icons/`. |
+| Source | App name, icons, colours | BetterReads, "Night Reader" | Not settings: `web/nuxt.config.ts` (`pwa.manifest`), `web/i18n/locales/en.json` (`app.name`), `design/tokens.json`, `design/icons/`. |
 
 `web/.env.example` lists the web build's variables for local work.
 

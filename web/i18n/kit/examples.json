@@ -1,0 +1,13 @@
+[
+  { "key": "tabs.library", "de": "Bibliothek", "note": "a tab label: one word, no full stop" },
+  { "key": "friends.title", "de": "Deine Freunde", "note": "'Your friends': a section title, informal possessive" },
+  { "key": "home.emptyTitle", "de": "Noch nichts im Regal", "note": "an empty-state headline: quiet, no full stop" },
+  { "key": "signIn.intro", "de": "Wir schicken dir einen sechsstelligen Code per E-Mail. Kein Passwort.", "note": "informal du, short sentences, full stops" },
+  { "key": "library.error.offline", "de": "Du bist offline. Es wurde nichts gespeichert.", "note": "an error: what happened, no blame" },
+  { "key": "history.count", "de": "{count} Lektüre | {count} Lektüren", "note": "plural: two forms, {count} in each" },
+  { "key": "home.greeting.morningNamed", "de": "Guten Morgen, {name}", "note": "placeholder kept, no full stop" },
+  { "key": "feed.quietTitle", "de": "Gerade ruhig.", "note": "keeps the source's full stop" },
+  { "key": "abandon.reasonPlaceholder", "de": "Warum legst du es weg?", "note": "a question in du" },
+  { "key": "profile.figures.pagesPerBook", "de": "{count} pro Buch" },
+  { "key": "collection.deleteKeeps", "de": "Die Bücher darin bleiben in deiner Bibliothek.", "note": "Library = Bibliothek, informal possessive" }
+]

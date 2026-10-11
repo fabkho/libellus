@@ -1,4 +1,4 @@
-# Libellus — Motion Language
+# BetterReads — Motion Language
 
 Motion in D is quiet: things arrive softly and leave quickly, nothing bounces, nothing moves for
 its own sake. Every duration and curve is a token in `design/tokens.json` (`duration.*`,
@@ -57,6 +57,10 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
   with Reduce Motion).
+- **Friends tab on or off** (Profile → Account → Friends tab). The tab's width opens or closes to 0
+  under a fade over `standard`, so the capsule (centred on the screen) grows or shrinks about its middle
+  and the tabs beside it slide to their new places; the page does not move. With Reduce Motion it is a swap.
+  (Width is laid out for a 62 px bar, and only while the switch is turned: nothing else of the page is.)
 - **Push to the Profile** (#78). Tapping the avatar in a tab's header grows it into the Profile's
   ring over `standard`, as a cover flies into a book's hero: the Profile fades in as the tab fades
   out (one's opacity the other's complement) and rises `md` into place; the tab bar does not move,
@@ -80,7 +84,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   ring flies with the photo instead of standing at its place from the first frame
   (checked by eye; no flow).
 - **The avatar to a member's page** (social v2a). Tapping a member's avatar or name (the feed's rows and
-  batch rows, Home's card and rows, People, the Readers rows, the likers and circle sheets) moves the page as
+  batch rows, Home's card and rows, People, the Readers rows, the likers and friends sheets) moves the page as
   the push to an author does, and her avatar morphs into the hero's: the avatar tapped and the page's are one
   element (`view-transition-name: member-avatar`, set inline by `plugins/author-transition.client.ts` while it runs),
   growing over `standard`; Back shrinks the hero's into the avatar it left from (the first of hers on screen
@@ -313,7 +317,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   still loading) is waited for a frame or so, at most `standard`, and the cover then fades where
   it is. What goes wrong, and what the flight does instead, is listed under *How the push to a
   book is built*.
-- **Tab bar away.** On every page (Home, Library, the Profile, a book, Collections, a Collection, Import) the tab bar
+- **Tab bar away.** On every page (Home, Library, Friends, the Profile, a book, Collections, a Collection, Import) the tab bar
   slides down past the screen edge and fade out while the member scrolls down, and
   come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
   by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
@@ -327,12 +331,14 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   it in its resting place first, with no transition, and the morph grows out of it there. A change
   of page (Back included) brings it back on the way. A screen that fills the room (`immersive`:
   Your shelf, #23) has it away for as long as it shows, the same slide.
-- **Your shelf** (#23). The shelf page's loading pile: its slabs settle in one after another, `standard`
-  each, a third of `instant` apart, from `sm` above; then they hold still (no shimmer, no breathing),
-  and once Regal's Stack has the Library and has drawn, it fades in over `standard` and the slabs fade
-  out over the same, in place. The cards' row (the Profile's, a year in review's, Home's *Read in*
-  sheet) has no stand-in and no fade of ours: the owner's screens warm it on idle, and the card, which
-  keeps its size, is its plain surface until the row has drawn the Spines in view; then Regal's intro
+- **Your shelf** (#23). The shelf page has no stand-in, like the cards: the room is its plain surface
+  while Regal's code comes, and the Stack arrives with Regal's own entrance, the settle-in a re-sort
+  ends with (the Books drop a little into their places from the bottom of the view up; Regal holds it,
+  unseen, up to 0.8 s for the faces in view), not at all with Reduce Motion, where the pile simply
+  stands. The cards' row (the Profile's, a year in review's, Home's *Read in*
+  sheet) has no stand-in and no fade of ours: the owner's screens warm it on idle (anyone's card warms
+  its own when it mounts), and the card, which keeps its size, is its plain surface until the row has
+  drawn the Spines in view; then Regal's intro
   plays, the Stack's turned for a row (each Book pops in a little to the right of its place and slides
   home, cascading from the left, the newest last, 0.7 s; the month sheets, dates, focus label and scroll
   bar fade in as they settle), once per mount and not at all with Reduce Motion, where the row simply
@@ -341,7 +347,11 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   the intro plays where it is seen. The 3D itself moves as Regal decides (the Stack's scroll and flick,
   the row's sideways scroll with the Books tipping towards you as they pass the middle, a Book coming
   out and turning, a Book breaking out of the row to the middle of the screen and landing back where it
-  was shown): Regal's own motion, which honours Reduce Motion itself.
+  was shown): Regal's own motion, which honours Reduce Motion itself. A member's shelf (every Book in
+  its one colour, flat faces) adds no motion of its own: a Book far from the view starts as its plain
+  colour and its title is printed on before it scrolls in (a view height ahead, further ahead in a
+  fling), so a Spine is never seen changing; the low-power and Reduce Motion rules are Regal's Stack
+  rules, unchanged (on-demand frames on phones, no intro or shuffle with Reduce Motion).
 - **Change edition.** The book page stays the same page (and where it was scrolled) when its entry
   changes to another edition: the old cover, title, author and facts (and what the Book is about)
   lie over the new ones, and once the Change edition sheet has fallen away and the new cover's
@@ -367,6 +377,13 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   into its row and handing over, the Profile's View Transition: `afterMotion`, `utils/motion.ts`)
   before it is applied, and an entry that did not change stays the same object, so a refresh
   that changed nothing re-renders nothing (`reuseEntries`).
+- **Collections are listed by last edited** (docs/parity.md, Collections): an edit moves a Collection
+  to the top, but a list that is on screen never reorders under her. The Collections page and the
+  picker take their order when they are entered (`useEditedOrder`) and keep it; the page's list holds
+  still under a sheet and changes after it (`useSettled`): a new Collection opens its room at the top
+  (`UiListMotion`, `standard`), the ones below glide down; one that is gone closes its room. The picker
+  adds a new Collection at the end and never moves a row (the sheet may still be rising). Reduce Motion:
+  the list simply changes (checked by eye; no flow).
 - **Change edition's list.** The editions arrive from several sources while the sheet is open. Each
   one that arrives opens its room and fades in over `standard` (`UiListMotion`, as a list that
   changes), so the rows after it, the line under the list and "My edition isn't listed" glide down
@@ -608,8 +625,8 @@ page left cross-fade in place over `standard`, both ways. Change edition is the 
 edition's hero cross-fades into the new one over `standard`, and the content below takes its new
 place at once. The tab bar away does not hide at all: a bar that pops in and out in place
 is more motion than one that stays. The month rows of a year in review do not open: their covers
-stand at rest at once. Your shelf: the pile is there at once and the 3D replaces it
-without a fade. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
+stand at rest at once. Your shelf: no entrance, the Stack stands in its place as soon
+as it has drawn. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader
 cross-fades in and out in place), the printed page turns at once, and its search palette
 cross-fades like the app's. The sign-in wall's covers do not fade (they are there at once). The hero cover does not lean: it is a picture like any other, and the

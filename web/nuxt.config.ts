@@ -53,7 +53,7 @@ const isReaderModule = (id: string) =>
   !isReaderEntry(id) &&
   /\/app\/(components\/)?reader\/|\/node_modules\/(\.pnpm\/[^/]+\/node_modules\/)?dompurify\/|\/@fontsource\/[^/]+\/files\/[^?]+\?url$/.test(id)
 
-// Libellus web — the reference app (SPEC.md). Everything personal sits behind
+// BetterReads web — the reference app (SPEC.md). Everything personal sits behind
 // the sign-in, so there is nothing to render on the server: SPA, built to
 // static files for Cloudflare Pages.
 export default defineNuxtConfig({
@@ -167,7 +167,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'en' },
       // The static shell's title, for the moment before the app sets its own from the message file
       // (app.vue): a page without one is announced by its address.
-      title: 'Libellus',
+      title: 'BetterReads',
       meta: [
         // viewport-fit=cover so the installed app can draw under the notch (and
         // Chrome on Android edge to edge, behind its gesture bar); screens pad
@@ -239,14 +239,19 @@ export default defineNuxtConfig({
     release,
   },
 
-  // One locale and every string in i18n/locales/en.json, so German is a
-  // mechanical follow-up and a native port maps the keys onto its string
-  // catalogue. No URL prefix: there is only one language to route to.
+  // English (the source: every string is a key of i18n/locales/en.json, which a native port maps onto its
+  // string catalogue) and German (de.json, made with the-i18n-kit: docs/i18n/README.md). No URL prefix: one
+  // address per screen. The language is not detected by the module (detectBrowserLanguage is off): the phone's
+  // language or the member's choice is put on it before the first paint by plugins/locale.client.ts
+  // (utils/locale.ts has the rule). Only the active language's messages are downloaded (lazy files).
   i18n: {
     defaultLocale: 'en',
     strategy: 'no_prefix',
     detectBrowserLanguage: false,
-    locales: [{ code: 'en', language: 'en', file: 'en.json' }],
+    locales: [
+      { code: 'en', language: 'en', file: 'en.json', name: 'English' },
+      { code: 'de', language: 'de-DE', file: 'de.json', name: 'Deutsch' },
+    ],
     // The messages are compiled at build (the module's Vite plugin turns en.json into AST), so the
     // client needs no message compiler: `dropMessageCompiler` leaves it out of the entry (−16 KB raw,
     // −4 KB brotli; `runtimeOnly` alone moved nothing). A string that is not in en.json could not be
@@ -261,8 +266,8 @@ export default defineNuxtConfig({
     registerType: 'autoUpdate',
     manifest: {
       id: '/',
-      name: 'Libellus',
-      short_name: 'Libellus',
+      name: 'BetterReads',
+      short_name: 'BetterReads',
       description: 'Your books: what you want to read, what you are reading, what you have read.',
       lang: 'en',
       start_url: '/',
@@ -283,7 +288,7 @@ export default defineNuxtConfig({
         // Alpha only: the launcher tints it when the member turns themed icons on.
         { src: `/icon-monochrome-512.png?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
       ],
-      // Sharing to Libellus from another app. A link or text (issue #91: Goodreads, Amazon, a
+      // Sharing to BetterReads from another app. A link or text (issue #91: Goodreads, Amazon, a
       // browser, a bookstore app) opens the app at /share?title=&text=&url= (pages/share.vue),
       // which finds the Book and goes to its page. EPUB files, one or many (issue #131: from the
       // download notification or the file manager), are taken in and linked to Books. A manifest

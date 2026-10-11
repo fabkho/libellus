@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Regal's 3D Stack (the layer's RegalBooksStage, #23) in Libellus' night room.
+// Regal's 3D Stack (the layer's RegalBooksStage, #23) in BetterReads' night room.
 // The only component that touches Regal: always loaded through
 // `LazyShelfStage`, so it, Regal, three.js and TresJS are one chunk (`regal`,
 // regal.config.ts) that only the shelf's places ever fetch, and the service
@@ -14,14 +14,17 @@
 // room it stands in. It fills the box
 // it is put in (a positioned one).
 import '#build/nuxt-fonts-global.css'
-// Libellus' look for Regal's tooltip and Book detail panel: the `regal-themed` class
+// BetterReads' look for Regal's tooltip and Book detail panel: the `regal-themed` class
 // (with `theme="auto"`), in a stylesheet of its own so it travels with the regal chunk.
 import '~/assets/css/regal-themed.css'
+import type { RegalLibraryFile } from '~/data/export/regalLibraryFile'
 import { goodreadsUrl } from '~/utils/goodreads'
 
 const props = defineProps<{
   /** Only the Books finished in this year; null for all of them. */
   year?: number | null
+  /** A member's own shelf, built on the device (stores/shelf.ts `document`); null: the published file. */
+  library?: RegalLibraryFile | null
 }>()
 const emit = defineEmits<{
   /** The Library is in and the Stack is drawing it (or Regal is showing why it can't). */
@@ -66,7 +69,7 @@ defineExpose({
 </script>
 
 <template>
-  <RegalBooksStage class="shelf-stage regal-themed" theme="auto">
+  <RegalBooksStage class="shelf-stage regal-themed" theme="auto" :library="props.library ?? null">
     <!-- Regal's panel takes D's tokens (regal-themed.css); two parts of it are D's own components, which no
          token can make: the meta line in the eyebrow's mono, and the actions as D's pills. Regal keeps the
          frame, the sheet and the Book's own controls (a drag, a click, Escape). Regal main, without these

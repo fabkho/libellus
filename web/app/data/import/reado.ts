@@ -7,7 +7,7 @@ import { isbnLanguage, toIsbn13, type ReadLanguage } from './readingTracker'
 /**
  * The Reado import, stage 1: the app's own data export (Settings → the export
  * the owner found in the iOS app; `schemaVersion: 1`) → the Books, Library
- * entries, Reading sessions and Collections Libellus stores. Pure: no I/O.
+ * entries, Reading sessions and Collections BetterReads stores. Pure: no I/O.
  * Titles, covers and the writes come after (web/scripts/reado/,
  * web/scripts/import-reado.ts). Mirrors the Fable import (fable.ts).
  *
@@ -19,7 +19,7 @@ import { isbnLanguage, toIsbn13, type ReadLanguage } from './readingTracker'
  *   - a 64-hex `p_id` (the shelves in `userObject.lists`, `newJournal`,
  *     `customBooks`, `posts`), which cannot be turned into an ISBN from the
  *     export alone.
- * Only the ISBN-keyed books can become Libellus Books in stage 1 (the title
+ * Only the ISBN-keyed books can become BetterReads Books in stage 1 (the title
  * comes from the ISBN lookup the app's search already has). A `p_id` is
  * attached to an ISBN only on hard evidence (`bridgePIds`): the ISBN printed
  * on the shelf item (`source.extra`), or a dated reading event that exists
@@ -51,7 +51,7 @@ import { isbnLanguage, toIsbn13, type ReadLanguage } from './readingTracker'
  * 4. A book on `_read` with no event at all is a finished read with no days;
  *    one on `_reading` without any start day cannot be Currently reading (a
  *    read needs a start) and is Want to read, reported.
- * 5. Ratings are Reado stars in half steps (1–5) → Libellus quarters, exactly:
+ * 5. Ratings are Reado stars in half steps (1–5) → BetterReads quarters, exactly:
  *    4.5 stars → 18 (the Fable import's rule, fable.ts `ratingQuarters`).
  *    Journal rating first, then the `customBooks` rating, then the review's.
  *    Only a finished read keeps one. A review (`posts.message`) of an attached
@@ -69,7 +69,7 @@ import { isbnLanguage, toIsbn13, type ReadLanguage } from './readingTracker'
  *
  * - 461 `p_id`-only books: 692 shelf items (267 on `_read`, 86 on `_stack`), 257
  *   finish dates, 135 ratings, 101 reviews, and 2 684 progress entries (pages per
- *   day; Libellus has no per-day progress import). Counted by reason in
+ *   day; BetterReads has no per-day progress import). Counted by reason in
  *   `report.unattachable`, listed in the run's report for a later p_id → ISBN bridge.
  * - 49 Kindle ASIN books (20 finished, 19 rated): no ISBN, no lookup.
  * - 66 of the 262 planned ISBN books (41 finished, 35 rated) have no title on Apple
@@ -250,7 +250,7 @@ export function parseReadoExport(jsonText: string): ReadoExport {
 
 // ------------------------------------------------------------------- helpers
 
-/** Half-star Reado ratings as Libellus quarters, exactly: 4.5 → 18. Off the half-star grid or outside 1–5 is not guessed. */
+/** Half-star Reado ratings as BetterReads quarters, exactly: 4.5 → 18. Off the half-star grid or outside 1–5 is not guessed. */
 export function ratingQuarters(stars: number | null | undefined): { quarters: number | null; problem: string | null } {
   if (stars == null || stars === 0) return { quarters: null, problem: null }
   const quarters = stars * 4
@@ -524,7 +524,7 @@ const statusOf = (sessions: readonly ImportSession[]): EntryStatus =>
   sessions.length === 0 ? 'want_to_read' : sessions.some((session) => session.outcome === null) ? 'reading' : 'finished'
 
 /**
- * Maps a parsed export to what Libellus stores, and reports what it could not
+ * Maps a parsed export to what BetterReads stores, and reports what it could not
  * attach. Pure: the same export always gives the same plan.
  */
 export function mapReadoExport(exp: ReadoExport, options: ReadoOptions = {}): ReadoPlan {

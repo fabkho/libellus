@@ -2,10 +2,11 @@
  * The Regal library file, version 2: its types and its validator, vendored from
  * Regal (fabkho/regal, `shared/types/libraryFile.ts` and
  * `shared/library/libraryFile.ts` at commit e1842aa9445481f2572d438e94491c3e21a6ae40,
- * "Merge pull request #44: Regal assets"). The format is Regal's
- * (docs/library-file.md there); Libellus only produces it (`regal.ts`).
+ * "Merge pull request #44: Regal assets", plus `assets.color` from fabkho/regal#82
+ * (flat faces)). The format is Regal's
+ * (docs/library-file.md there); BetterReads only produces it (`regal.ts`).
  *
- * A port, not an import: Libellus' CI has no Regal checkout. Only the parts a
+ * A port, not an import: BetterReads' CI has no Regal checkout. Only the parts a
  * producer needs are here (the types, `validateLibraryFile`, `parseLibraryFile`,
  * `formatLibraryFileErrors`); Regal's mapping onto its own Book is left out.
  * The checks and their messages are Regal's, line for line, so Regal's
@@ -102,6 +103,11 @@ export type LibraryBookAssets = {
   palette?: LibraryPalette | null
   /** Average colour of the Spine art, `#rrggbb`. */
   spineColor?: string | null
+  /**
+   * The Book's one colour, `#rrggbb`: without Spine/back art Regal draws both
+   * flat in it (flat faces; the front stays the Cover). BetterReads' member shelves set it.
+   */
+  color?: string | null
   /** Faces that are photos of the owner's copy: drawn as they are. */
   photoFaces?: LibraryBookFace[] | null
   /** How the faces were made; informational. */
@@ -244,6 +250,7 @@ function checkAssets(check: Checker, assets: unknown, path: string) {
     }
   }
   check.optionalColour(assets.spineColor, `${path}.spineColor`)
+  check.optionalColour(assets.color, `${path}.color`)
 
   const photoFaces = assets.photoFaces
   if (photoFaces != null) {

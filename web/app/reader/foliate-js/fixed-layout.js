@@ -85,7 +85,7 @@ export class FixedLayout extends HTMLElement {
         })
         // `allow-scripts` is needed for events because of WebKit bug
         // https://bugs.webkit.org/show_bug.cgi?id=218086
-        // Libellus: the sandbox comes from ./frame.js (scriptless where the browser allows it).
+        // BetterReads: the sandbox comes from ./frame.js (scriptless where the browser allows it).
         iframe.setAttribute('sandbox', frame.sandbox)
         iframe.setAttribute('scrolling', 'no')
         iframe.setAttribute('part', 'filter')

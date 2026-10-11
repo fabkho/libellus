@@ -8,6 +8,7 @@ import {
   fileEdition,
   libraryIndex,
   libraryTitleIndex,
+  needsLook,
   importedKeys,
   pacedFetch,
   type BookImport,
@@ -38,6 +39,10 @@ import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
 import { isoDay } from '~/utils/dates'
 import { writeImportHint } from '~/utils/importHint'
+import { clearMatches, readMatches, writeMatches, type StoredMatch } from '~/utils/importMatches'
+
+/** No book answered for this long while looking up: the screen offers to go on with what is there. */
+const STALL_MS = 45_000
 
 /**
  * pick: no file yet · reading: the file is being read · matching: editions
@@ -50,7 +55,7 @@ export type ImportPhase = 'pick' | 'reading' | 'matching' | 'preview' | 'importi
  * Why a file could not be used. Copy: `import.fileError.<code>`. `notCsv`: a
  * spreadsheet or anything else that is no text table; `notSupported`: a CSV
  * no supported app wrote; `storygraph`, `librarything`, `bookshelf`: another
- * app's CSV, told by its header, which Libellus does not read yet;
+ * app's CSV, told by its header, which BetterReads does not read yet;
  * `missingColumns`: a supported app's export without columns its rows need
  * (`fileErrorDetail` says which app and which columns).
  */
@@ -89,6 +94,12 @@ export type Attention = {
   edition: Edition['book'] | null
   /** Her edition is hers to choose (Choose edition): matched by title or only from the file. */
   choose: boolean
+  /**
+   * Whether it is a book to look at for sure: no edition was found (it is added as the file says),
+   * the edition found has no cover, or the row was skipped. The other rows only carry a note
+   * (found by its title with a cover, a custom shelf …) and the screen keeps them behind a toggle.
+   */
+  look: boolean
   /** The edition she chose, as it will be written: its language, year and pages show on the row. */
   held?: Edition['book']
   notes: (
@@ -98,6 +109,7 @@ export type Attention = {
     | { code: 'fromFile' }
     | { code: 'fromFileIsbn' }
     | { code: 'unsure' }
+    | { code: 'noCover' }
     | { code: 'byTitle'; year: number | null; language: string | null }
   )[]
 }
@@ -151,23 +163,34 @@ export const useImportStore = defineStore('import', () => {
   let ownedUnderAnyEdition: ReturnType<typeof libraryTitleIndex> = () => null
 
   const progress = reactive({ done: 0, total: 0 })
+  /** The second, slower pass over the books nothing was found for: null while the first pass runs or when there is none. */
+  const secondPass = ref<{ done: number; total: number } | null>(null)
+  /** No answer for a while: the screen offers to go on with what is there (`finishNow`). */
+  const stalled = ref(false)
+  let lastAnswerAt = 0
+  let stallTimer: ReturnType<typeof setInterval> | null = null
   const outcomes = shallowRef<RowOutcome[]>([])
   const writeError = ref<LibraryErrorCode | null>(null)
 
   /** Rows whose edition she chose herself, by index: the match does not touch them again. */
   const chosen = shallowRef(new Set<number>())
+  const searchLanguages = useSearchLanguages()
   let repository: BookImport | null = null
+  let repositoryLanguage = ''
   let catalogue: ReturnType<typeof createCatalogueSearch> | null = null
   function importer(): BookImport | null {
     if (!backend) return null
     catalogue ??= createCatalogueSearch(backend)
+    const languages = searchLanguages()
+    if (repositoryLanguage !== languages[0]) repository = null
+    repositoryLanguage = languages[0] ?? ''
     repository ??= createBookImport(backend, {
       lookups: {
         catalogue,
         search: createSearch({
           // Apple refuses a burst; a little room between its requests keeps it answering.
           fetch: pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } }),
-          languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+          languages,
           catalogue,
         }),
       },
@@ -246,13 +269,17 @@ export const useImportStore = defineStore('import', () => {
       if (verdict === 'matched' && edition?.via === 'title') {
         notes.push({ code: 'byTitle', year: edition.book.year, language: edition.book.language })
       }
+      // Found, but without a cover: the one sign that the edition may be the wrong one.
+      if (verdict === 'matched' && !edition?.book.coverUrl) notes.push({ code: 'noCover' })
       notes.push(...book.problems)
       const shown = verdict === 'matched' || edition?.coverFrom ? (edition?.coverFrom ?? edition?.book ?? null) : null
-      const choose = Boolean(edition) && (verdict === 'fromFile' || (verdict === 'matched' && edition?.via === 'title'))
-      if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, choose, notes })
+      const choose = Boolean(edition) && (verdict === 'fromFile' || (verdict === 'matched' && (edition?.via === 'title' || !edition?.book.coverUrl)))
+      // No match at all, or a match without a cover, is the bad sign; a similar edition with a cover is probably fine.
+      const look = needsLook(verdict, shown)
+      if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, choose, look, notes })
     }
     for (const row of skipped.value) {
-      list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], edition: null, choose: false, notes: [row.problem] })
+      list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], edition: null, choose: false, look: true, notes: [row.problem] })
     }
     return list
   })
@@ -268,6 +295,7 @@ export const useImportStore = defineStore('import', () => {
         authors: book.authors,
         edition: edition.coverFrom ?? edition.book,
         choose: true,
+        look: false,
         held: edition.book,
         notes: [{ code: verdict === 'inLibrary' ? 'chosenInLibrary' : 'chosen' }, ...book.problems],
       })
@@ -277,9 +305,30 @@ export const useImportStore = defineStore('import', () => {
 
   // ------------------------------------------------------------------ actions
 
+  function stopWatching() {
+    if (stallTimer) clearInterval(stallTimer)
+    stallTimer = null
+    stalled.value = false
+    secondPass.value = null
+  }
+
+  /** Marks that something answered, and starts watching for the opposite while the lookup runs. */
+  function answered() {
+    lastAnswerAt = Date.now()
+    stalled.value = false
+  }
+  function watchForStall() {
+    answered()
+    if (!import.meta.client) return
+    stallTimer = setInterval(() => {
+      if (Date.now() - lastAnswerAt > STALL_MS) stalled.value = true
+    }, 5000)
+  }
+
   function reset() {
     lookup?.abort()
     lookup = null
+    stopWatching()
     stopChoosing()
     chosen.value = new Set()
     phase.value = 'pick'
@@ -300,6 +349,53 @@ export const useImportStore = defineStore('import', () => {
     outcomes.value = []
     writeError.value = null
     version.value++
+  }
+
+  /**
+   * Every looked-up row ends with an edition: one nothing answered for (the lookup was
+   * stopped, or it never got to it) is the file's own row, marked as not looked up.
+   * A row never stays "pending": it is Added from the file and needs a look.
+   */
+  function settle(pending: { book: ImportBook; index: number }[]) {
+    for (const { book, index } of pending) {
+      if (editions.value[index]) continue
+      const edition: Edition = { ...fileEdition(book), unsure: true }
+      editions.value[index] = edition
+      verdicts.value[index] = verdictOf(book, edition)
+    }
+    version.value++
+  }
+  let looking: { book: ImportBook; index: number }[] = []
+
+  // What the lookup found for sure, kept on the device every few rows: a reload loses no lookups.
+  const matchMemory = new Map<string, StoredMatch>()
+  let unsaved = 0
+  function keepMatches() {
+    unsaved = 0
+    const memberId = session.member?.id
+    if (import.meta.client && memberId && matchMemory.size) writeMatches(window.localStorage, memberId, matchMemory)
+  }
+  function remember(key: string, edition: Edition) {
+    // A row nothing was found for, or that could not be asked, is asked again next time.
+    if (!edition.via || edition.unsure) return
+    matchMemory.set(key, { book: edition.book as unknown as StoredMatch['book'], via: edition.via, coverFrom: (edition.coverFrom ?? null) as StoredMatch['coverFrom'] })
+    if (++unsaved >= 25) keepMatches()
+  }
+
+  /**
+   * Goes on to the preview with what the lookup has found: the rest is added as the
+   * file says and listed as "needs a look". For a lookup that stalls or that she
+   * does not want to wait for; the books can be chosen again in the preview.
+   */
+  function finishNow() {
+    if (phase.value !== 'matching') return
+    const controller = lookup
+    lookup = null
+    controller?.abort()
+    settle(looking)
+    stopWatching()
+    keepMatches()
+    phase.value = 'preview'
   }
 
   /** Reads the file and looks its books up. */
@@ -351,15 +447,34 @@ export const useImportStore = defineStore('import', () => {
     verdicts.value = parsed.books.map((book) => verdictOf(book, null))
 
     // Rows decided already (imported before, or hers under another edition) are not looked up.
-    const pending = parsed.books.map((book, index) => ({ book, index })).filter(({ index }) => verdicts.value[index] === null)
-    progress.total = pending.length
-    progress.done = 0
+    const undecided = parsed.books.map((book, index) => ({ book, index })).filter(({ index }) => verdicts.value[index] === null)
+    // What an earlier lookup of this file found for sure (kept on this device) is not looked up again.
+    const memberId = session.member?.id
+    const remembered = import.meta.client && memberId ? readMatches(window.localStorage, memberId) : new Map<string, StoredMatch>()
+    matchMemory.clear()
+    for (const [key, match] of remembered) matchMemory.set(key, match)
+    const pending = undecided.filter(({ book, index }) => {
+      const match = remembered.get(book.key)
+      if (!match) return true
+      editions.value[index] = {
+        book: match.book as unknown as Edition['book'],
+        via: match.via,
+        unsure: false,
+        ...(match.coverFrom ? { coverFrom: match.coverFrom as unknown as Edition['book'] } : {}),
+      }
+      verdicts.value[index] = verdictOf(book, editions.value[index]!)
+      return false
+    })
+    progress.total = undecided.length
+    progress.done = undecided.length - pending.length
     phase.value = 'matching'
     version.value++
 
     const controller = new AbortController()
     lookup = controller
+    looking = pending
     const found = new Set<number>()
+    watchForStall()
     try {
       await repo.match(
         pending.map(({ book }) => book),
@@ -373,17 +488,26 @@ export const useImportStore = defineStore('import', () => {
               found.add(at)
               progress.done++
             }
+            remember(parsed.books[at]!.key, edition)
+            answered()
             version.value++
+          },
+          onSecondPass(done, total) {
+            secondPass.value = { done, total }
+            answered()
           },
         },
       )
     } catch (error) {
       if (isAbort(error)) return
-      throw error
+      // Whatever went wrong, the lookup ends: what was found stands, the rest is the file's own.
     } finally {
       if (lookup === controller) lookup = null
     }
     if (controller.signal.aborted) return
+    settle(pending)
+    stopWatching()
+    keepMatches()
     phase.value = 'preview'
   }
 
@@ -393,12 +517,16 @@ export const useImportStore = defineStore('import', () => {
   const choosing = ref<EditionChoosing | null>(null)
   let asking: AbortController | null = null
   let editionSource: ReturnType<typeof createEditions> | null = null
+  let editionSourceLanguage = ''
 
   /** Its own lookup of a work's editions, as the Book page's Change edition has (`data/editions.ts`). */
   function editionsLookup() {
+    const languages = searchLanguages()
+    if (editionSourceLanguage !== languages[0]) editionSource = null
+    editionSourceLanguage = languages[0] ?? ''
     editionSource ??= createEditions({
       fetch: (url, init) => fetch(url, init),
-      languages: import.meta.client ? (navigator.languages ?? [navigator.language]) : [],
+      languages,
       catalogue: backend ? (catalogue ??= createCatalogueSearch(backend)) : undefined,
     })
     return editionSource
@@ -580,6 +708,7 @@ export const useImportStore = defineStore('import', () => {
       },
     })
     if (written.error) writeError.value = written.error
+    else if (import.meta.client) clearMatches(window.localStorage)
     phase.value = 'done'
     // Home stops offering the import to her (utils/importHint.ts).
     if (import.meta.client && session.member && outcomes.value.some((outcome) => outcome.outcome === 'added' || outcome.outcome === 'imported'))
@@ -647,6 +776,9 @@ export const useImportStore = defineStore('import', () => {
     useEdition,
     choosingBook,
     progress,
+    secondPass,
+    stalled,
+    finishNow,
     outcomes,
     writeError,
     added,

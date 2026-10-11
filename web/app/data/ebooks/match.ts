@@ -50,7 +50,7 @@ const TRAILING_JUNK =
   /\s*[([{]\s*(?:\d{1,4}|(?:1[5-9]|20)\d{2}\b[^)\]}]*|[^()[\]{}]*(?:#|\b(?:book|band|bd\.?|vol\.?|volume|tome|teil)\s*)\s*\d+(?:\.\d+)?|z-?lib(?:\.org)?|libgen(?:\.\w+)?|anna'?s archive|retail|epub ?\d?|e-?book|calibre|kindle|mobi|converted|v ?\d+(?:\.\d+)*|copy)\s*[)\]}]\s*$/i
 
 /**
- * The title as Libellus shows and matches a file's: `cleanText`, then without
+ * The title as BetterReads shows and matches a file's: `cleanText`, then without
  * what file names and download sites leave on it — underscores for spaces, a
  * `.epub` ending, trailing brackets with a year, a counter, a series number or
  * a site's name ("Harry Potter und der Halbblutprinz (2005)(1)" → "Harry

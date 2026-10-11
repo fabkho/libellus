@@ -5,7 +5,8 @@
 //
 // Each tab page names its header in its page meta:
 //   definePageMeta({ layout: 'tabs', screen: 'home', titleSize: 'title', dated: true, greeting: true })
-// `screen` is the test-ID prefix and the copy key (`<screen>.title`).
+// `screen` is the test-ID prefix and the copy key (`<screen>.title`). `tab: 'friends'` marks a page that is
+// a tab only while its setting is on (middleware/friends-tab.global.ts decides `pushed` for each visit).
 // A pushed screen (`pushed: true`, the book page) draws its own top bar over
 // its cover's light instead of the header, edge to edge; the tab bar and
 // search stay, so search works from every page (the bar steps away while any
@@ -39,6 +40,10 @@ onMounted(() => {
 
 const screen = computed(() => String(route.meta.screen ?? 'home'))
 const pushed = computed(() => Boolean(route.meta.pushed))
+// A tab's own button beside the avatar (`headerAction` in its page meta: the Friends tab's People).
+const headerAction = computed(
+  () => route.meta.headerAction as { icon: 'people'; label: string; to: string; testid: string } | undefined,
+)
 const titleSize = computed(() => (route.meta.titleSize === 'title' ? 'title' : 'large'))
 // Home (`greeting: true`) is headed by a greeting for the time of day, not by its name.
 const { now, greeting } = useGreeting()
@@ -61,7 +66,11 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
          which the browser counted as a layout shift of the whole page (Collections → Back: 0.12). A
          header of its own for each tab, for the same reason: Home's (with its date) is taller. -->
     <main class="clear-tab-bar flex-1" :class="!pushed && 'px-screen'" data-flight="page">
-      <ShellHeader v-if="!pushed" :key="screen" :screen="screen" :title="title" :size="titleSize" :eyebrow="eyebrow" class="-mx-screen pb-lg" />
+      <ShellHeader v-if="!pushed" :key="screen" :screen="screen" :title="title" :size="titleSize" :eyebrow="eyebrow" class="-mx-screen pb-lg">
+        <template v-if="headerAction" #actions>
+          <UiRoundButton :icon="headerAction.icon" :label="t(headerAction.label)" :data-testid="headerAction.testid" @click="navigateTo(headerAction.to)" />
+        </template>
+      </ShellHeader>
       <slot />
     </main>
 

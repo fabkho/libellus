@@ -148,10 +148,10 @@ export const COLLECT = () => {
   }
 }
 
-/** A session for the seeded member, made as the sign-in's last step would (admin link → verifyOtp); no mailed code. */
-export async function memberSession(): Promise<Record<string, string>> {
+/** A session for the seeded member (or another seeded address), made as the sign-in's last step would (admin link → verifyOtp); no mailed code. */
+export async function memberSession(email: string = MEMBER_EMAIL): Promise<Record<string, string>> {
   const admin = createClient(env.supabaseUrl, env.serviceKey, { auth: { persistSession: false } })
-  const link = await admin.auth.admin.generateLink({ type: 'magiclink', email: MEMBER_EMAIL })
+  const link = await admin.auth.admin.generateLink({ type: 'magiclink', email })
   if (link.error) throw new Error(`no session: ${link.error.message} (did you run pnpm perf:seed?)`)
   const store: Record<string, string> = {}
   const storage = {

@@ -600,7 +600,7 @@ version 1 ships, in both themes, are in [`social/`](social/) (`mock.html`, `v1-*
   ─────────────────────────────────────────
   YOUR FOLLOW LINK
   libellus.fabkho.dev/f/Xq3…        [Share]
-  Anyone in Libellus you send it to can follow you.
+  Anyone in BetterReads you send it to can follow you.
   New link                                   ›
 ```
 

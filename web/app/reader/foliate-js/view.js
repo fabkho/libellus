@@ -104,7 +104,7 @@ export const makeBook = async file => {
         }
     }
     else if (await isPDF(file)) {
-        // Libellus: PDF is out of scope (#131); pdf.js and PDF.js are not vendored.
+        // BetterReads: PDF is out of scope (#131); pdf.js and PDF.js are not vendored.
         throw new UnsupportedTypeError('PDF')
     }
     else {

@@ -5,7 +5,7 @@
 //   - with EPUB files (`ebooks`, one or many): they are kept in Cache Storage
 //     (`libellus-shared-ebooks`, under /__shared/<id>/<n>, with their names, types and
 //     sizes in /__shared/<id>/meta) and the app opens at /share?ebooks=<id>, which lists
-//     them and asks "Add N ebooks shared to Libellus?". Only the member's tap there takes
+//     them and asks "Add N ebooks shared to BetterReads?". Only the member's tap there takes
 //     them in (copies them into the device's own storage, links them to Books) and removes
 //     them from the cache; "Not now" removes them without. Nothing is uploaded: the files
 //     never leave the device.

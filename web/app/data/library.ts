@@ -799,6 +799,30 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     return read.data ? { data: read.data, error: null } : { data: null, error: 'entry_not_found' }
   }
 
+  /**
+   * A German edition only the National Library knows (`data/dnb.ts`: source `import`, no id) is
+   * no Catalogue Book yet, and a member may only add or pick one: the `dnb-lookup` function makes
+   * it, from what the library says about the ISBN. Anything else goes as it is. Null: it could not
+   * be made (the function is not answering, or no longer finds the ISBN).
+   */
+  async function catalogued(book: BookSnapshot): Promise<Book | BookSnapshot | null> {
+    if (book.source !== 'import' || 'id' in book || !book.isbn13) return book
+    try {
+      const { data, error } = await client.functions.invoke('dnb-lookup', {
+        body: {
+          action: 'book',
+          isbn13: book.isbn13,
+          // The cover the app resolved (a thumbhash and colours): the Book is made once, with it.
+          ...(book.coverUrl ? { cover: { coverUrl: book.coverUrl, coverThumbhash: book.coverThumbhash, coverColors: book.coverColors } } : {}),
+        },
+      })
+      const answer = data as { status?: string; book?: BookRow } | null
+      return !error && answer?.status === 'found' && answer.book ? bookFromRow(answer.book) : null
+    } catch {
+      return null
+    }
+  }
+
   async function addToLibrary(book: BookSnapshot, options: AddWith = {}, { optimistic = false }: AddHow = {}): Promise<Result<LibraryEntry>> {
     // A Catalogue Book can wait: the call needs nothing the device does not hold.
     // A search result (its Cover still to resolve) or a Manual book cannot, unless
@@ -808,7 +832,9 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
       if (waiting) return waiting
     }
     if (!online()) return OFFLINE
-    const added = await client.rpc('add_to_library', { p_book: bookToRow(book), ...addWithArguments(options) })
+    const made = await catalogued(book)
+    if (!made) return { data: null, error: 'unknown' }
+    const added = await client.rpc('add_to_library', { p_book: bookToRow(made), ...addWithArguments(options) })
     if (isNoAnswer(added)) return (await queueAdd(book, options)) ?? OFFLINE
     if (added.error) return { data: null, error: mapLibraryError(added.error) }
     // The function returns the entry; the Book comes with it in a second read
@@ -824,6 +850,8 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     if (!queue || book.source === 'manual') return null
     // A search result is shown as a Book under its page key until the database gives it its id.
     const provisional = !('id' in book)
+    // A DNB edition has to be made a Catalogue Book first: that needs the network.
+    if (provisional && book.source === 'import') return null
     if (provisional && !optimistic) return null
     let known: Book
     if (provisional) {
@@ -940,9 +968,11 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
 
     async changeEdition(entryId, book, format) {
       if (!online()) return OFFLINE
+      const made = await catalogued(book)
+      if (!made) return { data: null, error: 'unknown' }
       const changed = await client.rpc('change_edition', {
         p_entry_id: entryId,
-        p_book: bookToRow(book),
+        p_book: bookToRow(made),
         ...(format ? { p_format: format } : {}),
       })
       if (isNoAnswer(changed)) return OFFLINE

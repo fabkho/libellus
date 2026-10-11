@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The install hint on Home (issue #94): iOS has no install prompt, so in
-// Safari on an iPhone or iPad, until Libellus is on the Home Screen, a quiet
+// Safari on an iPhone or iPad, until BetterReads is on the Home Screen, a quiet
 // card says how — a line, and a tiny drawing of what Safari shows: the Share
 // button, then its "Add to Home Screen" row. Its × hides it for a week
 // (utils/installHint.ts has the rules); installed, it is gone for good. The

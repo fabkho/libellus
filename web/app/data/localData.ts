@@ -12,7 +12,7 @@ export type DeviceStorage = KeyValueStorage & {
 }
 
 /**
- * Everything Libellus keeps on the device itself starts with this, so signing
+ * Everything BetterReads keeps on the device itself starts with this, so signing
  * out can find it without knowing every feature: the pending sign-in address
  * and the offline Library (`data/deviceLibrary.ts`, #15). A feature that
  * caches something names its keys `libellus.<thing>`; nothing else has to change.
@@ -171,7 +171,7 @@ async function emptyStores(factory: IDBFactory, name: string, keep: readonly str
  * expiry list the service worker keeps for them (`workbox-expiration`, a URL and a time each).
  * Not `libellus-reader` and `libellus-barcode-decoder`: those are the app's own files, the
  * same for everyone, and keeping them is what lets a book open offline. Nothing of the
- * ebook files was ever uploaded, so this is the only copy Libellus had. Resolves either way.
+ * ebook files was ever uploaded, so this is the only copy BetterReads had. Resolves either way.
  */
 export async function clearLocalFiles({
   storage,

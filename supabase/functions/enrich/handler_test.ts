@@ -16,8 +16,11 @@ const ALL = Object.keys(SCENARIOS) as ScenarioName[]
 function setup(options: { fetch?: FetchLike; books?: ScenarioName[]; throttle?: (member: string) => Promise<boolean> } = {}) {
   const time = fakeClock()
   const recorded = recordedFetch(ALL)
-  // Rowling's author answers were not recorded (her scenario counts her as fetched).
-  const memory = createMemoryStore((options.books ?? ALL.filter((n) => n !== 'rowling-feuerkelch')).map((name) => SCENARIOS[name]))
+  // Rowling's author answers were not recorded (her scenario counts her as fetched); the Williams
+  // scenarios are for enrich_test.ts.
+  const memory = createMemoryStore(
+    (options.books ?? ALL.filter((n) => n !== 'rowling-feuerkelch' && !n.startsWith('williams-'))).map((name) => SCENARIOS[name]),
+  )
   const logs: string[] = []
   const handler = createHandler({
     store: memory.store,

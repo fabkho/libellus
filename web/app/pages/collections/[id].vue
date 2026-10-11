@@ -1,9 +1,14 @@
 <script setup lang="ts">
 // One Collection (D's collection): its Books in her order under the first
 // cover's light, numbered like a reading list, each with a grip to drag it
-// elsewhere (or arrow keys on the grip). Rename and delete live behind the
-// more button in the top bar. A pushed screen in the tab layout.
+// elsewhere (or arrow keys on the grip). A round + in the top bar opens the Book search aimed at this
+// Collection (the same palette as everywhere: a Book she picks goes onto it); rename and delete live
+// behind the more button. A sort pill shows the same Books by title, author, year or date added, a view
+// only (no grips while it is on, her saved order is untouched, the choice is remembered on the device).
+// A pushed screen in the tab layout.
+import { isSavedOrder, sortCollectionEntries } from '~/data/collectionSort'
 import { useCollectionsStore } from '~/stores/collections'
+import { useSearchStore } from '~/stores/search'
 
 definePageMeta({ layout: 'tabs', screen: 'collection', pushed: true })
 
@@ -11,6 +16,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const collections = useCollectionsStore()
+const search = useSearchStore()
 // Renaming, deleting and reordering work offline too: they wait to sync (#93).
 
 const id = computed(() => String(route.params.id))
@@ -19,6 +25,39 @@ const collection = computed(() => page.value?.collection ?? null)
 const entries = computed(() => collection.value?.entries ?? [])
 
 watch(id, (value) => void collections.loadCollection(value), { immediate: true })
+
+// ------------------------------------------------------------------- sort
+
+const sorted = computed(() => !isSavedOrder(collections.sort))
+const sortOpen = ref(false)
+/**
+ * The order a sort shows, as entry ids: taken when the sort is chosen, the page entered, or Books come
+ * on or go off it, and held otherwise, so a Book that changes under her eyes (a new edition) never moves
+ * the list (docs/MOTION.md: nothing moves while she looks). Her saved order is `entries` itself.
+ */
+const heldIds = ref<string[]>([])
+const idsKey = computed(() => entries.value.map((entry) => entry.id).join())
+watch(
+  [() => collections.sort, id, idsKey],
+  () => {
+    heldIds.value = sortedEntries().map((entry) => entry.id)
+  },
+  { immediate: true },
+)
+function sortedEntries() {
+  return sortCollectionEntries(entries.value, collections.sort, collection.value?.addedAt)
+}
+const shown = computed(() => {
+  if (!sorted.value) return entries.value
+  const byId = new Map(entries.value.map((entry) => [entry.id, entry]))
+  return heldIds.value.flatMap((entryId) => byId.get(entryId) ?? [])
+})
+const sortName = computed(() => t(`collection.sort.key.${collections.sort.key}`))
+
+/** The + in the top bar: search, aimed at this Collection. */
+function addBooks() {
+  if (collection.value) search.open({ collection: { id: collection.value.id, name: collection.value.name } })
+}
 
 useHead({ title: () => (collection.value ? `${collection.value.name} · ${t('app.name')}` : t('app.name')) })
 
@@ -67,6 +106,7 @@ async function confirmDelete() {
     <UiAmbient :colors="entries[0]?.book.coverColors ?? null" />
     <UiTopBar :back-label="t('collection.back')" back-testid="collection.back" @back="back">
       <template v-if="collection && page?.phase !== 'missing'" #trailing>
+        <UiRoundButton icon="plus" :label="t('collection.add')" data-testid="collection.add" @click="addBooks" />
         <UiRoundButton icon="more" :label="t('collection.more')" data-testid="collection.more" @click="optionsOpen = true" />
       </template>
     </UiTopBar>
@@ -76,7 +116,15 @@ async function confirmDelete() {
         <h1 class="book-title text-large-title text-balance wrap-anywhere" data-testid="collection.title">{{ collection.name }}</h1>
         <p class="mt-xs text-caption text-ink-muted" data-testid="collection.summary">
 {{ t('collection.count', { count: entries.length }, entries.length) }}
-          <template v-if="entries.length > 1"> · {{ t('collection.order') }}</template>
+          <template v-if="entries.length > 1 && !sorted"> · {{ t('collection.order') }}</template>
+        </p>
+        <div v-if="entries.length > 1" class="mt-ms flex min-h-(--size-button-sm) items-center gap-sm">
+          <UiPill :pressed="sorted" data-testid="collection.sort" @click="sortOpen = true">
+            {{ t('collection.sortBy', { sort: sortName }) }}
+          </UiPill>
+        </div>
+        <p v-if="sorted && entries.length > 1" class="mt-xs text-caption text-ink-muted" data-testid="collection.sortedHint">
+          {{ t('collection.sortedHint') }}
         </p>
       </header>
 
@@ -84,7 +132,13 @@ async function confirmDelete() {
         {{ t('collection.reorderError') }}
       </p>
 
-      <CollectionsEntryList v-if="entries.length" :collection-id="collection.id" :entries="entries" class="relative px-ms pt-ms" />
+      <CollectionsEntryList
+        v-if="entries.length"
+        :collection-id="collection.id"
+        :entries="shown"
+        :sorted="sorted"
+        class="relative px-ms pt-ms"
+      />
 
       <UiEmptyState
         v-else-if="page?.phase === 'ready'"
@@ -93,7 +147,7 @@ async function confirmDelete() {
         :text="t('collection.empty')"
         class="relative pt-lg"
       >
-        <UiSearchPrompt testid="collection.search" />
+        <UiSearchPrompt testid="collection.search" :collection="{ id: collection.id, name: collection.name }" />
       </UiEmptyState>
     </template>
 
@@ -146,6 +200,7 @@ async function confirmDelete() {
       </div>
     </UiSheet>
 
+    <CollectionsSortSheet v-model:open="sortOpen" :sort="collections.sort" @choose="collections.setSort" />
     <CollectionsNameSheet />
   </div>
 </template>
