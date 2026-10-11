@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// Your shelf (#23): the owner's Library as Regal's 3D Stack, the one the
-// portfolio shows (the same published library file: editions, dates, ratings,
-// the art). Only the owner's account has it (runtimeConfig shelfOwnerId,
-// stores/shelf.ts); for anyone else the address is a page that doesn't exist
-// (`validate`, the same 404 as any unknown address) and nothing links here.
+// Your shelf (#23): the member's Library as Regal's 3D Stack. Everyone's own,
+// built on the device from her Library (stores/shelf.ts `document`, handed to
+// Regal as a document: nothing fetched, nothing published), each Book's Spine
+// and back in its cover's one colour; the owner's is the published library
+// file his portfolio shows. In a build without Regal the address is a page
+// that doesn't exist (`validate`, the same 404 as any unknown address).
 //
 // A pushed screen in the tab layout that fills it: the night room in either
 // theme (`data-theme="dark"` on the page, so every token takes its Night value
@@ -15,13 +16,15 @@
 // that is out away first.
 //
 // Loading: the Books as a pile of slabs in their Spines' colours (ShelfPile),
-// at once from the library file, while Regal and three.js come
-// (`LazyShelfStage`, the `regal` chunk); the 3D fades in over it. The file
-// can't be read: why, and Try again (offline: when the connection is back).
+// at once from the device's Library (or the owner's file), while Regal and
+// three.js come (`LazyShelfStage`, the `regal` chunk); the 3D fades in over
+// it. Nothing finished yet: the lamp over the empty shelf, no empty room. The
+// Library (or the file) can't be read: why, and Try again (offline: when the
+// connection is back). Regal's chunk can't be had (offline before it was ever
+// fetched): a quiet word, no crash; once fetched it is kept for offline.
 // `?year=2025` (a year in review's stack, opened full screen): that year only.
+import { describeError, isChunkError } from '~/data/errorLog'
 import { applyPreference } from '~/utils/theme'
-import { isShelfOwner } from '~/utils/shelfOwner'
-import { useSessionStore } from '~/stores/session'
 import { useShelfStore } from '~/stores/shelf'
 import { useThemeStore } from '~/stores/theme'
 
@@ -30,9 +33,9 @@ definePageMeta({
   screen: 'shelf',
   pushed: true,
   immersive: true,
-  // Runs in the app's entry, before this page's chunk loads: the session and the config only.
-  // A build without Regal (appConfig.regal, regal.config.ts) has no shelf for anyone.
-  validate: () => useAppConfig().regal === true && isShelfOwner(useSessionStore().member?.id, useRuntimeConfig().public.shelfOwnerId),
+  // Runs in the app's entry, before this page's chunk loads: the config only (the tab layout is
+  // signed in already). A build without Regal (appConfig.regal, regal.config.ts) has no shelf.
+  validate: () => useAppConfig().regal === true,
 })
 
 const { t } = useI18n()
@@ -58,6 +61,15 @@ const countText = computed(() =>
 
 // The 3D has drawn: the pile hands over to it.
 const ready = ref(false)
+/** Nothing finished or being read yet: the empty state, not an empty room. */
+const empty = computed(() => !!shelf.shelf && books.value.length === 0)
+// Regal's chunk could not be had (offline before it was ever fetched): a quiet word instead of the 3D.
+const noChunk = ref(false)
+onErrorCaptured((error) => {
+  if (!isChunkError(describeError(error).message)) return true
+  noChunk.value = true
+  return false
+})
 const stage = ref<{ picked: boolean; putAway: () => void } | null>(null)
 
 onMounted(() => {
@@ -93,12 +105,20 @@ function back() {
         <!-- Regal's Stack starts with the top of the pile in the middle of its view. Its view reaches
              up behind the top bar, so the pile starts above the middle and fills the rest, and a
              Book taken out stands clear of the card about it at the bottom. -->
-        <div v-if="shelf.shelf" class="lift absolute inset-x-0 bottom-0">
-          <LazyShelfStage ref="stage" :year="year" class="room-3d" :class="ready && 'ready'" data-testid="shelf.stage" @ready="ready = true" />
+        <div v-if="shelf.shelf && !empty && !noChunk" class="lift absolute inset-x-0 bottom-0">
+          <LazyShelfStage ref="stage" :year="year" :library="shelf.document" class="room-3d" :class="ready && 'ready'" data-testid="shelf.stage" @ready="ready = true" />
         </div>
 
+        <div v-if="empty" class="absolute inset-0 flex flex-col justify-center pb-xxl" data-testid="shelf.emptyState">
+          <UiEmptyState screen="shelf" :title="t('shelf.empty.title')" :text="t('shelf.empty.text')" />
+        </div>
+
+        <p v-else-if="noChunk" class="absolute inset-0 flex items-center justify-center px-xl text-center text-subhead text-ink-muted" data-testid="shelf.noChunk">
+          {{ t('shelf.noChunk') }}
+        </p>
+
         <Transition name="hand-over">
-          <div v-if="!ready && !(shelf.loadError && !shelf.shelf)" class="pointer-events-none absolute inset-0 flex items-center justify-center px-xxl" data-testid="shelf.loading">
+          <div v-if="!ready && !empty && !noChunk && !(shelf.loadError && !shelf.shelf)" class="pointer-events-none absolute inset-0 flex items-center justify-center px-xxl" data-testid="shelf.loading">
             <ShelfPile :books="books" :limit="22" class="w-full" />
             <span class="sr-only" aria-live="polite">{{ t('shelf.loading') }}</span>
           </div>

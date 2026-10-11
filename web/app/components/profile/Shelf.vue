@@ -1,15 +1,15 @@
 <script setup lang="ts">
-// Your shelf on the Profile (#23): the owner's, and only hers (the Profile
-// renders it for the owner alone, stores/shelf.ts). Like the Profile's other
+// Your shelf on the Profile (#23): every member's own (stores/shelf.ts: her
+// Library, built on the device; the owner's published file). Like the Profile's other
 // sections: "Your shelf" with how many Books stand on it, and under it a card
 // with the newest of them as Regal's row (ShelfRowCard), up to SHELF_ROW_LIMIT.
-// A Book tapped there breaks out to the whole screen. With more Books than the
-// row holds, Show all opens the whole shelf, the full-screen Stack
-// (/profile/shelf); below that the row is all of it, and nothing links there.
-// Before the library file has come the section is there without its count, and
-// the card its plain surface (the row appears with its intro, nothing loading
-// shows: the shell has warmed it, useShelfPreload); when it can't be read, the
-// card says why and tries again (offline: once the connection is back, stores/shelf.ts).
+// A Book tapped there breaks out to the whole screen. Show all opens the whole
+// shelf, the full-screen Stack (/profile/shelf), whenever a Book stands on it.
+// Before the shelf has come the section is there without its count, and the
+// card its plain surface (the row appears with its intro, nothing loading
+// shows); when it can't be read, the card says why and tries again (offline:
+// once the connection is back, stores/shelf.ts). Nothing finished yet: a quiet
+// line in the card's place, no empty row.
 import { useShelfStore } from '~/stores/shelf'
 
 const { t } = useI18n()
@@ -17,7 +17,10 @@ const { count } = useFigures()
 const shelf = useShelfStore()
 
 const books = computed(() => shelf.shelf?.books ?? [])
-const more = computed(() => books.value.length > SHELF_ROW_LIMIT)
+// The whole shelf, the full-screen Stack, is one tap away whenever there is a Book on it (#214: it
+// used to show only above the row's cap, which left most shelves without a way in).
+const more = computed(() => books.value.length > 0)
+const empty = computed(() => !!shelf.shelf && books.value.length === 0)
 </script>
 
 <template>
@@ -41,6 +44,9 @@ const more = computed(() => books.value.length > SHELF_ROW_LIMIT)
         {{ t('shelf.retry') }}
       </UiButton>
     </div>
+    <p v-else-if="empty" class="rounded-lg bg-surface-raised px-xl py-xl text-center text-subhead text-ink-muted shadow-raised edge-faint" data-testid="profile.shelfEmpty">
+      {{ t('shelf.card.empty') }}
+    </p>
     <ShelfRowCard v-else :limit="SHELF_ROW_LIMIT" :label="t('shelf.card.rowLabel')" data-testid="profile.shelfRow" />
   </section>
 </template>

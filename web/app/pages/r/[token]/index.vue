@@ -105,6 +105,7 @@ const light = computed(() => (reading.value[0] ?? finished.value[0] ?? favourite
             <h2 id="reading-shelf" class="eyebrow">{{ name ? t('readingPage.shelf', { name }) : t('readingPage.shelfNone') }}</h2>
             <ShelfRowCard
               v-if="regal"
+              published
               :limit="SHELF_ROW_LIMIT"
               :label="name ? t('readingPage.shelfRowLabel', { name }) : t('readingPage.shelfRowLabelNone')"
               data-testid="readingPage.shelfRow"
