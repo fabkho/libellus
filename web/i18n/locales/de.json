@@ -182,7 +182,6 @@
     },
     "byMonth": "Nach Monat",
     "byYear": "Nach Jahr",
-    "inReview": "Jahresrückblick {year}",
     "columnLabel": "{label}: {count}",
     "days": {
       "title": "Lesetage",
@@ -210,6 +209,8 @@
     },
     "authors": {
       "title": "Autoren, zu denen du zurückkehrst",
+      "titleOf": "Autoren, zu denen {name} zurückkehrt",
+      "titleNeutral": "Meistgelesene Autoren",
       "count": "{count} Buch | {count} Bücher",
       "rating": "Durchschnittlich {rating} Sterne"
     },

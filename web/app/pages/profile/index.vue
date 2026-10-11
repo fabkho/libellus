@@ -173,9 +173,6 @@ const naming = ref(false)
             <section id="columns" class="flex flex-col gap-md pt-xl">
               <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
                 <h2 class="eyebrow">{{ stats.year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-                <UiSeeAll v-if="!loading && stats.year !== 'all'" :to="`/profile/${stats.year}`" data-testid="profile.inReview">
-                  {{ t('profile.inReview', { year: stats.year }) }}
-                </UiSeeAll>
               </div>
               <ProfileColumns :columns="loading ? null : columns" :placeholders="stats.year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
             </section>

@@ -182,7 +182,6 @@
     },
     "byMonth": "By month",
     "byYear": "By year",
-    "inReview": "{year} in review",
     "columnLabel": "{label}: {count}",
     "days": {
       "title": "Reading days",
@@ -210,6 +209,8 @@
     },
     "authors": {
       "title": "Authors you return to",
+      "titleOf": "Authors {name} returns to",
+      "titleNeutral": "Most-read authors",
       "count": "{count} book | {count} books",
       "rating": "{rating} stars on average"
     },
