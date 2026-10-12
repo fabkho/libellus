@@ -13,8 +13,11 @@
 //
 // Env (the Pages project, production only): NUXT_PUBLIC_SUPABASE_URL and
 // NUXT_PUBLIC_SUPABASE_ANON_KEY. A preview deployment has no backend, so there is nothing to ask:
-// the shell goes out as it is, noindex like every answer here. Copy is English literals: a Pages
-// Function has no i18n, and only crawlers read it.
+// the shell goes out as it is, noindex like every answer here. A Pages Function has no i18n and only
+// crawlers read it, so the words come from app/utils/previewText.ts (English and German, shared with the
+// image function): `?lang=de` on the address, which the app adds to the links of a member who uses German,
+// picks German; anything else is English, so links made before this one preview as they did.
+import { previewLang, previewText } from '../../app/utils/previewText.ts'
 
 /** `/r/<token>`, `/r/<token>/og.png`, `/r/<token>/book/<id>`, `/r/<token>/book/<id>/og.png`. */
 const ADDRESS = /^\/r\/([A-Za-z0-9_-]{22})(?:\/book\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?(\/og\.png)?\/?$/i
@@ -53,25 +56,27 @@ export async function onRequest(context) {
   if (!match) return await onNoSuchAddress(context, url)
 
   const [, token, book, image] = match
+  const lang = previewLang(url.searchParams.get('lang'))
   const supabaseUrl = (env.NUXT_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '')
   const anonKey = env.NUXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
   const backend = supabaseUrl && anonKey ? { url: supabaseUrl, key: anonKey } : null
 
-  if (image) return await onImage(context, { token, book, backend })
+  if (image) return await onImage(context, { token, book, backend, lang })
 
   const data = backend ? await readPage(backend, token, book) : undefined
   // undefined: nothing was asked (a preview) or the database could not answer. The shell goes out
   // as a plain page then; the app asks again in the browser.
   const shell = await appShell(context)
-  const head = data === undefined ? '' : data === null ? notFoundTags() : tagsFor(data, { url, token, book, payload: await version(data) })
-  return html(shell, inject(await shell.text(), head, titleFor(data, book)), data === null ? 404 : 200)
+  const head = data === undefined ? '' : data === null ? notFoundTags(lang) : tagsFor(data, { url, token, book, lang, payload: await version(data) })
+  return html(shell, inject(await shell.text(), head, titleFor(data, book, lang)), data === null ? 404 : 200)
 }
 
 /** `/r/<anything that is not a token>`: a 404, with the shell unless a picture was asked for. */
 async function onNoSuchAddress(context, url) {
   if (/\/og\.png\/?$/i.test(url.pathname)) return new Response('Not found', { status: 404, headers: noIndex() })
   const shell = await appShell(context)
-  return html(shell, inject(await shell.text(), notFoundTags(), titleFor(null)), 404)
+  const lang = previewLang(url.searchParams.get('lang'))
+  return html(shell, inject(await shell.text(), notFoundTags(lang), titleFor(null, null, lang)), 404)
 }
 
 // ------------------------------------------------------------------------------------ the image
@@ -81,7 +86,7 @@ async function onNoSuchAddress(context, url) {
  * first, so a renewed link stops serving its image immediately, and the answer is kept at the
  * edge under an address that carries the hash of what it shows, so a changed page gets a new one.
  */
-async function onImage(context, { token, book, backend }) {
+async function onImage(context, { token, book, backend, lang }) {
   const { request, env, waitUntil } = context
   const url = new URL(request.url)
   // No backend (a preview deployment): there is no page to draw, so the app's own icon stands in.
@@ -91,7 +96,7 @@ async function onImage(context, { token, book, backend }) {
   if (data === null || data === undefined) return new Response('Not found', { status: 404, headers: noIndex() })
 
   const payload = await version(data)
-  const canonical = new URL(`${imagePath(token, book)}?v=${payload}`, `https://${url.host}`).toString()
+  const canonical = new URL(`${imagePath(token, book)}?v=${payload}${lang === 'de' ? '&lang=de' : ''}`, `https://${url.host}`).toString()
   // `caches` is missing in Node (the tests) and on *.pages.dev; then every request renders again.
   const cache = typeof caches !== 'undefined' ? caches.default : null
   const hit = cache ? await cache.match(canonical) : null
@@ -100,6 +105,7 @@ async function onImage(context, { token, book, backend }) {
   const asked = new URL(`${backend.url}/functions/v1/reading-page-og`)
   asked.searchParams.set('token', token)
   if (book) asked.searchParams.set('book', book)
+  if (lang === 'de') asked.searchParams.set('lang', 'de')
   let rendered = null
   try {
     rendered = await fetch(asked.toString(), {
@@ -192,25 +198,26 @@ const property = (name, content) => `<meta property="${name}" content="${escapeH
 /** A shared link is never a search result: hers to hand out, not to be found. */
 const noIndexTag = () => meta('robots', 'noindex, nofollow')
 
-function notFoundTags() {
-  return noIndexTag() + property('og:title', 'BetterReads') + property('og:description', 'This reading page is not here any more.')
+function notFoundTags(lang) {
+  return noIndexTag() + property('og:title', 'BetterReads') + property('og:description', previewText(lang).notFoundText)
 }
 
 /** What a crawler shows for the link: the title, a line about it, and the image. */
-function tagsFor(data, { url, token, book, payload }) {
-  const image = new URL(`${imagePath(token, book)}?v=${payload}`, `https://${url.host}`).toString()
-  const page = new URL(`/r/${token}${book ? `/book/${book}` : ''}`, `https://${url.host}`).toString()
+function tagsFor(data, { url, token, book, lang, payload }) {
+  const suffix = lang === 'de' ? '&lang=de' : ''
+  const image = new URL(`${imagePath(token, book)}?v=${payload}${suffix}`, `https://${url.host}`).toString()
+  const page = new URL(`/r/${token}${book ? `/book/${book}` : ''}${suffix ? '?lang=de' : ''}`, `https://${url.host}`).toString()
   return [
     noIndexTag(),
-    property('og:title', ogTitle(data, book)),
-    property('og:description', description(data, book)),
+    property('og:title', ogTitle(data, book, lang)),
+    property('og:description', description(data, book, lang)),
     property('og:type', book ? 'article' : 'website'),
     property('og:site_name', 'BetterReads'),
     property('og:url', page),
     property('og:image', image),
     property('og:image:width', String(IMAGE.width)),
     property('og:image:height', String(IMAGE.height)),
-    property('og:image:alt', ogTitle(data, book)),
+    property('og:image:alt', ogTitle(data, book, lang)),
     meta('twitter:card', 'summary_large_image'),
   ].join('')
 }
@@ -223,56 +230,58 @@ function imagePath(token, book) {
 const firstName = (data) => (typeof data?.name === 'string' ? data.name.trim() : '')
 
 /** "<Title> by <Author>" for a card, "<Name>'s reading" for a page. */
-function ogTitle(data, book) {
+function ogTitle(data, book, lang) {
+  const say = previewText(lang)
   if (book) {
     const author = (data?.book?.authors ?? []).find((name) => name && name.trim())
-    return author ? `${data.book.title} by ${author}` : String(data?.book?.title ?? 'A book')
+    return author ? say.bookByAuthor(String(data.book.title), author) : String(data?.book?.title ?? say.aBook)
   }
-  const name = firstName(data)
-  return name ? `${name}’s reading` : 'A reading page'
+  return say.pageTitle(firstName(data))
 }
 
 /** The browser tab's title, and what a plain link list shows. */
-function titleFor(data, book) {
+function titleFor(data, book, lang) {
   if (data === undefined) return null
-  if (data === null) return 'Not found · BetterReads'
-  return `${ogTitle(data, book)} · BetterReads`
+  if (data === null) return `${previewText(lang).notFoundTitle} · BetterReads`
+  return `${ogTitle(data, book, lang)} · BetterReads`
 }
 
 /** A Rating in whole and half stars, as a sentence says it: "4½ stars", "5 stars", "1 star". */
-function stars(quarters) {
+function stars(quarters, lang) {
   if (typeof quarters !== 'number' || quarters < 1 || quarters > 20) return null
   const halves = Math.round(quarters / 2)
   const whole = Math.floor(halves / 2)
   const value = `${whole || ''}${halves % 2 ? '½' : ''}` || '½'
-  return `${value} ${value === '1' ? 'star' : 'stars'}`
+  return previewText(lang).starsText(value)
 }
 
 /** One short line under the title: what she is reading, her year, her Rating, her review. */
-function description(data, book) {
-  if (book) return cardDescription(data)
+function description(data, book, lang) {
+  if (book) return cardDescription(data, lang)
+  const say = previewText(lang)
   const parts = []
   const reading = data?.reading?.[0]?.book?.title
-  if (reading) parts.push(`Reading ${reading}`)
+  if (reading) parts.push(say.readingNow(reading))
   const year = data?.year
-  if (year && year.books > 0) parts.push(`${year.books} ${year.books === 1 ? 'book' : 'books'} in ${year.year}`)
+  if (year && year.books > 0) parts.push(say.booksInYear(year.books, year.year))
   const finished = data?.finished?.length ?? 0
-  if (!parts.length && finished) parts.push(`${finished} ${finished === 1 ? 'book' : 'books'} finished`)
+  if (!parts.length && finished) parts.push(say.booksFinished(finished))
   const name = firstName(data)
-  if (!parts.length) parts.push(name ? `Books ${name} has read` : 'A shelf of books')
+  if (!parts.length) parts.push(name ? say.booksNameHasRead(name) : say.shelfOfBooks)
   return parts.join(' · ')
 }
 
-function cardDescription(data) {
-  const name = firstName(data) || 'She'
-  const rating = stars(data?.rating)
+function cardDescription(data, lang) {
+  const say = previewText(lang)
+  const name = firstName(data) || say.anonymousName
+  const rating = stars(data?.rating, lang)
   const line = rating
-    ? `${name} rated it ${rating}`
+    ? say.rated(name, rating)
     : data?.status === 'reading'
-      ? `${name} is reading it`
+      ? say.isReading(name)
       : data?.status === 'want_to_read'
-        ? `${name} wants to read it`
-        : `${name} finished it`
+        ? say.wantsToRead(name)
+        : say.finished(name)
   // A review flagged as spoilers is folded for every visitor without a sign-in, and a crawler is one: it stays out of the preview.
   const review = typeof data?.review === 'string' && data?.folded !== true ? data.review.replace(/\s+/g, ' ').trim() : ''
   if (!review) return `${line}.`

@@ -156,6 +156,46 @@ describe('the page behind a link', () => {
     expect(html).toMatch(new RegExp(`<meta property="og:image" content="${SITE}/r/${token}/book/${bookId}/og.png\\?v=[0-9a-f]{16}">`))
   })
 
+  it('writes the preview in German when the link says lang=de, and in English for anything else', async () => {
+    const { token, bookId, title, readingTitle } = await sharedPage()
+
+    const page = await (await onRequest(context(`/r/${token}?lang=de`))).text()
+    expect(page).toContain('<meta property="og:title" content="Ada liest">')
+    expect(page).toContain('<title>Ada liest · BetterReads</title>')
+    expect(page).toMatch(
+      new RegExp(`<meta property="og:description" content="Liest ${escapeForRegExp(readingTitle)} · 1 Buch in ${new Date().getFullYear()}">`),
+    )
+    // The picture's address carries the language, so the German picture is its own thing at the edge.
+    expect(page).toMatch(new RegExp(`<meta property="og:image" content="${SITE}/r/${token}/og.png\\?v=[0-9a-f]{16}&amp;lang=de">`))
+    expect(page).toContain(`<meta property="og:url" content="${SITE}/r/${token}?lang=de">`)
+
+    const card = await (await onRequest(context(`/r/${token}/book/${bookId}?lang=de`))).text()
+    expect(card).toContain(`<meta property="og:title" content="${title} von Susanna Clarke">`)
+    expect(card).toContain('Ada hat es mit 4½ Sternen bewertet')
+    expect(card).not.toContain('rated it')
+
+    for (const lang of ['', 'fr', 'DE', 'en']) {
+      const english = await (await onRequest(context(`/r/${token}?lang=${lang}`))).text()
+      expect(english, lang).toContain('<meta property="og:title" content="Ada’s reading">')
+      expect(english, lang).not.toContain('lang=de')
+    }
+  })
+
+  it('asks the picture function for the German picture only when the address says so', async () => {
+    const { token } = await sharedPage()
+    const asked: string[] = []
+    standInRenderer(() => new Response(new Uint8Array([137, 80, 78, 71]), { headers: { 'content-type': 'image/png' } }))
+    const real = globalThis.fetch
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      if (url.includes('/functions/v1/reading-page-og')) asked.push(url)
+      return real(input as RequestInfo, init)
+    })
+    await onRequest(context(`/r/${token}/og.png?lang=de`))
+    await onRequest(context(`/r/${token}/og.png`))
+    expect(asked.map((url) => new URL(url).searchParams.get('lang'))).toEqual(['de', null])
+  })
+
   it('is gone the moment she renews the link: the old address is a 404', async () => {
     const { member, token } = await sharedPage()
     await member.client.rpc('renew_reading_page_link')

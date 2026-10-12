@@ -172,3 +172,18 @@ Deno.test('a page holding unverified Books draws, in every section that shows a 
   assertEquals(pngSize(await png(response)), { width: 1200, height: 630 })
   assertEquals(logs, [])
 })
+
+Deno.test('lang=de draws the page and the card with German words: another picture, the same size', async () => {
+  const english = await png(await setup({ page: page(), cover: 'png' }).handler(ask(`?token=${TOKEN}`)))
+  const german = await png(await setup({ page: page(), cover: 'png' }).handler(ask(`?token=${TOKEN}&lang=de`)))
+  assertEquals(pngSize(german), { width: 1200, height: 630 })
+  assert(english.length !== german.length || english.some((byte, i) => byte !== german[i]), 'the German picture is the English one')
+  // Anything but de is English, byte for byte.
+  const other = await png(await setup({ page: page(), cover: 'png' }).handler(ask(`?token=${TOKEN}&lang=fr`)))
+  assertEquals(other, english)
+
+  const cardEnglish = await png(await setup({ card: card(), cover: 'png' }).handler(ask(`?token=${TOKEN}&book=${BOOK}`)))
+  const cardGerman = await png(await setup({ card: card(), cover: 'png' }).handler(ask(`?token=${TOKEN}&book=${BOOK}&lang=de`)))
+  assertEquals(pngSize(cardGerman), { width: 1200, height: 630 })
+  assert(cardEnglish.length !== cardGerman.length || cardEnglish.some((byte, i) => byte !== cardGerman[i]), 'the German card is the English one')
+})
