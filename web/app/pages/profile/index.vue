@@ -11,6 +11,7 @@
 // the years in review do not change with the pills. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
+import type { GenreId } from '~/data/enrich/genres'
 import { figuresOf, readingSinceOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useGenresStore } from '~/stores/genres'
@@ -100,10 +101,11 @@ const columns = computed(() =>
 )
 const lit = computed(() => (stats.year === 'all' ? (years.value.includes(thisYear) ? thisYear : null) : stats.year === thisYear ? thisMonth : null))
 
-// The sheet of a month's books, a star row's, the reads without a page count, or a day's; open again on Back from a book
+// The sheet of a month's books, a star row's, the reads without a page count, a day's, an author's reads of
+// the period in view, a genre's or the ones not rated yet (#12, #16, #15, #14); open again on Back from a book
 // opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
-const { title: sheetTitle, reads: sheetReads, withYear: sheetWithYear } = useStatsSheet(shown, () => reads.value, () => stats.record?.days ?? [])
+const { title: sheetTitle, reads: sheetReads, withYear: sheetWithYear } = useStatsSheet(shown, () => reads.value, () => stats.record?.days ?? [], bookGenres.ofEntry)
 
 function pickColumn(key: number) {
   if (stats.year === 'all') return void router.push(`/profile/${key}`)
@@ -121,10 +123,24 @@ function pickStars(star: number) {
 function pickPagesMissing() {
   sheet.value = { kind: 'pagesMissing', year: stats.year }
 }
-// A genre's row opens the Library's Finished list filtered by it (and by the year in view).
-function pickGenre(genre: string) {
-  libraryView.showGenre('finished', genre, stats.year === 'all' ? null : String(stats.year))
+// A genre's row opens that genre's reads (#16), and the sheet keeps the old way on: "Show in Library" opens
+// the Library's Finished list filtered by it (and by the year in view).
+function pickGenre(genre: GenreId) {
+  sheet.value = { kind: 'genre', year: stats.year, genre }
+}
+function showGenreInLibrary() {
+  const s = shown.value
+  if (s?.kind !== 'genre') return
+  libraryView.showGenre('finished', s.genre, s.year === 'all' ? null : String(s.year))
   void navigateTo('/library')
+}
+// An author's row opens her reads of the period in view (#12).
+function pickAuthor(name: string) {
+  sheet.value = { kind: 'author', year: stats.year, name }
+}
+// The Average's "N not rated yet" and the Ratings' "N not yet": the reads not rated yet (#14, #15).
+function pickUnrated() {
+  sheet.value = { kind: 'unrated', year: stats.year }
 }
 
 // The Profile belongs to whatever tab it was opened from: back by history when there is one.
@@ -153,7 +169,7 @@ const naming = ref(false)
           <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
             <div class="flex flex-col gap-md">
               <ProfileYearPills v-model="stats.year" :years="years" :loading="loading" />
-              <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" />
+              <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
             </div>
 
             <section id="columns" class="flex flex-col gap-md pt-xl">
@@ -167,7 +183,7 @@ const naming = ref(false)
               <ProfileDays class="pt-xl" :days="stats.record?.days ?? null" :since="stats.record?.daysSince ?? null" @pick="pickDay" />
             </UiReveal>
             <UiReveal :show="loading || figures.rated > 0">
-              <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+              <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" @unrated="pickUnrated" />
             </UiReveal>
             <!-- Your shelf, the Profile's eye-catcher, right under the ratings: below the fold when the page opens, so its card is never seen before its Books are drawn. -->
             <ProfileShelf v-if="shelf.available" class="pt-xl" />
@@ -178,7 +194,7 @@ const naming = ref(false)
               <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />
             </UiReveal>
             <UiReveal :show="loading || figures.authors.length > 0">
-              <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" />
+              <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" @pick="pickAuthor" />
             </UiReveal>
             <!-- Your reviews (social v2a): lit cards in a sideways row, from her Library on the device; above the years in review. -->
             <ProfileReviews />
@@ -217,7 +233,14 @@ const naming = ref(false)
       </div>
     </Transition>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="sheetWithYear" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="sheetWithYear">
+      <!-- A genre's sheet keeps the old way into the Library one tap away (#16). -->
+      <template v-if="shown?.kind === 'genre'" #foot>
+        <div class="flex justify-end pt-xs">
+          <UiButton tone="plain" size="sm" class="-mr-sm" data-testid="profile.genreInLibrary" @click="showGenreInLibrary">{{ t('genre.stats.inLibrary') }}<UiIcon name="chevron" :size="15" /></UiButton>
+        </div>
+      </template>
+    </ProfileReadsSheet>
     <ProfilePhoto ref="photo" />
     <ShellNameSheet v-model:open="naming" />
   </div>

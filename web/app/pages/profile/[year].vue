@@ -7,6 +7,7 @@
 // books rated so), the genres (a row opens the Library filtered by it and the year), the records, the authors read more than once, and the
 // years either side. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
+import type { GenreId } from '~/data/enrich/genres'
 import { figuresOf, readsInMonth, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useGenresStore } from '~/stores/genres'
@@ -69,9 +70,10 @@ const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m +
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
 
-// A star row's books, or the year's reads without a page count; open again on Back from a book opened in it.
+// A star row's books, the year's reads without a page count, an author's reads of the year, a genre's or the
+// ones not rated yet (#12, #16, #15, #14); open again on Back from a book opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
-const { title: sheetTitle, reads: sheetReads } = useStatsSheet(shown, () => reads.value)
+const { title: sheetTitle, reads: sheetReads } = useStatsSheet(shown, () => reads.value, undefined, bookGenres.ofEntry)
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
 }
@@ -80,10 +82,24 @@ function pickPagesMissing() {
   sheet.value = { kind: 'pagesMissing', year: year.value }
 }
 
-// A genre's row opens the Library's Finished list filtered by it and by this year (#168).
-function pickGenre(genre: string) {
-  libraryView.showGenre('finished', genre, String(year.value))
+// A genre's row opens that genre's reads of the year (#16), and the sheet keeps the old way on: "Show in
+// Library" opens the Library's Finished list filtered by it and by this year (#168).
+function pickGenre(genre: GenreId) {
+  sheet.value = { kind: 'genre', year: year.value, genre }
+}
+function showGenreInLibrary() {
+  const s = shown.value
+  if (s?.kind !== 'genre') return
+  libraryView.showGenre('finished', s.genre, String(year.value))
   void navigateTo('/library')
+}
+// An author's row opens her reads of the year (#12).
+function pickAuthor(name: string) {
+  sheet.value = { kind: 'author', year: year.value, name }
+}
+// The Average's "N not rated yet" and the Ratings' "N not yet": the reads of the year not rated yet (#14, #15).
+function pickUnrated() {
+  sheet.value = { kind: 'unrated', year: year.value }
 }
 
 // Back to the Profile it came from (or to it, opened from an address).
@@ -106,7 +122,7 @@ function back() {
     <UiReveal :show="loading || hasYear">
       <!-- No gaps between the blocks: each carries the space before it inside its room, so a block that closes takes its space along. -->
       <div class="relative flex flex-col px-screen pt-lg" :aria-busy="loading || undefined">
-        <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" />
+        <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
 
         <ProfileMonthBooks class="pt-xl" :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 
@@ -121,7 +137,7 @@ function back() {
         </UiReveal>
 
         <UiReveal :show="loading || figures.rated > 0">
-          <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+          <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" @unrated="pickUnrated" />
         </UiReveal>
         <UiReveal :show="genresShown">
           <ProfileGenres class="pt-xl" :figures="loading ? null : genreFigures" :limit="3" @pick="pickGenre" />
@@ -130,7 +146,7 @@ function back() {
           <ProfileRecords class="pt-xl" :figures="loading ? null : figures" />
         </UiReveal>
         <UiReveal :show="loading || figures.authors.length > 0">
-          <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" :limit="3" />
+          <ProfileAuthors class="pt-xl" :figures="loading ? null : figures" :limit="3" @pick="pickAuthor" />
         </UiReveal>
 
         <div class="pt-xl">
@@ -161,7 +177,14 @@ function back() {
       </div>
     </UiReveal>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads">
+      <!-- A genre's sheet keeps the old way into the Library one tap away (#16). -->
+      <template v-if="shown?.kind === 'genre'" #foot>
+        <div class="flex justify-end pt-xs">
+          <UiButton tone="plain" size="sm" class="-mr-sm" data-testid="yearInReview.genreInLibrary" @click="showGenreInLibrary">{{ t('genre.stats.inLibrary') }}<UiIcon name="chevron" :size="15" /></UiButton>
+        </div>
+      </template>
+    </ProfileReadsSheet>
   </div>
 </template>
 

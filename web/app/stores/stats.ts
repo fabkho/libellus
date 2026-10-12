@@ -1,14 +1,21 @@
 import { defineStore } from 'pinia'
+import type { GenreId } from '~/data/enrich/genres'
 import type { LibraryErrorCode } from '~/data/library'
 import { readStats, saveStats } from '~/data/deviceLibrary'
 import { createStats, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
 
-/** A sheet of the Profile or a year in review: a month's books, a star row's, the reads without a page count, or a day's. */
+/**
+ * A sheet of the Profile or a year in review: a month's books, a star row's, the reads without a page count, a
+ * day's, an author's reads of the period, a genre's, or the reads not rated yet (#12, #16, #15, #14).
+ */
 export type ProfileSheet =
   | { kind: 'month'; year: number; month: number }
   | { kind: 'stars'; year: StatsYear; star: number }
   | { kind: 'pagesMissing'; year: StatsYear }
   | { kind: 'day'; day: string }
+  | { kind: 'author'; year: StatsYear; name: string }
+  | { kind: 'genre'; year: StatsYear; genre: GenreId }
+  | { kind: 'unrated'; year: StatsYear }
 import { isoDay } from '~/utils/dates'
 import { createFreshness } from '~/utils/fresh'
 import { afterTransition } from '~/utils/viewTransition'

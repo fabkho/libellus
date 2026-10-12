@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
-import type { ReadingDay, StatsRead } from '@/data/stats'
+import type { GenreId } from '@/data/enrich/genres'
+import { readsByAuthor, readsOfGenre, readsUnrated, type ReadingDay, type StatsRead } from '@/data/stats'
 import { moreRows, nextPage, openingRows, ROWS_PAGE } from '@/utils/pageRows'
 import { statsSheetReads, statsSheetWithYear } from '@/utils/statsSheet'
 
@@ -9,12 +10,12 @@ import { statsSheetReads, statsSheetWithYear } from '@/utils/statsSheet'
  * (utils/statsSheet.ts, used by the Profile, a year in review and a member's two pages) and the pages the long ones
  * come in (utils/pageRows.ts). Nothing here needs the stack.
  */
-function read(id: string, ended: string | null, over: Partial<StatsRead> & { pages?: number | null } = {}): StatsRead {
-  const { pages = 300, ...rest } = over
+function read(id: string, ended: string | null, over: Partial<StatsRead> & { pages?: number | null; author?: string } = {}): StatsRead {
+  const { pages = 300, author, ...rest } = over
   return {
     sessionId: id,
     entryId: id,
-    book: { id, title: id, authors: [], pageCount: pages, coverUrl: null, createdAt: '2026-01-01T00:00:00.000Z' } as unknown as StatsRead['book'] & BookSnapshot,
+    book: { id, title: id, authors: author ? [author] : [], pageCount: pages, coverUrl: null, createdAt: '2026-01-01T00:00:00.000Z' } as unknown as StatsRead['book'] & BookSnapshot,
     startedOn: null,
     endedOn: ended,
     outcome: 'finished',
@@ -59,6 +60,55 @@ describe('statsSheetReads', () => {
     expect(ids(statsSheetReads({ kind: 'day', day: '2025-03-02' }, reads, days))).toEqual(['March'])
     expect(statsSheetReads({ kind: 'day', day: '2025-03-02' }, reads)).toEqual([])
   })
+
+  it('routes an author\'s, a genre\'s and the unrated sheet to their selector', () => {
+    const books = [read('Ada', '2025-03-02', { author: 'Ada Fenn', rating: 16 }), read('Ben', '2025-03-30', { author: 'Ben Yu' })]
+    const ofEntry = (entryId: string): readonly GenreId[] | undefined => (entryId === 'Ada' ? ['sci-fi'] : undefined)
+    expect(ids(statsSheetReads({ kind: 'author', year: 2025, name: 'Ada Fenn' }, books))).toEqual(['Ada'])
+    expect(ids(statsSheetReads({ kind: 'genre', year: 2025, genre: 'sci-fi' }, books, [], ofEntry))).toEqual(['Ada'])
+    expect(ids(statsSheetReads({ kind: 'unrated', year: 2025 }, books))).toEqual(['Ben'])
+  })
+})
+
+/**
+ * The books behind one figure (data/stats.ts), each selector the very reads its figure counts: an author's
+ * reads of the period, a genre's and the ones not rated yet. The record's order (oldest end first).
+ */
+describe('readsByAuthor, readsOfGenre and readsUnrated', () => {
+  const reads = [
+    read('Ada old', '2024-03-02', { author: 'Ada Fenn' }),
+    read('Ada', '2025-03-02', { author: 'Ada Fenn', rating: 16 }),
+    read('Ada again', '2025-03-20', { author: 'Ada Fenn', rating: 20, nth: 2 }),
+    read('Ada abandoned', '2025-04-01', { author: 'Ada Fenn', outcome: 'abandoned', nth: 0 }),
+    read('Ben', '2025-04-04', { author: 'Ben Yu' }),
+  ]
+  // The genres of an entry (the member's, else the computed ones). `Ben`'s are not known (not asked for
+  // yet), so it is in no genre's list.
+  const genres: Record<string, readonly GenreId[]> = {
+    'Ada old': ['sci-fi'],
+    Ada: ['sci-fi', 'classics'],
+    'Ada again': ['sci-fi'],
+    'Ada abandoned': ['sci-fi'],
+  }
+  const ofEntry = (entryId: string) => genres[entryId]
+
+  it('an author\'s reads of the period: a re-read one read each, an abandoned one never', () => {
+    expect(ids(readsByAuthor(reads, 2025, 'Ada Fenn'))).toEqual(['Ada again', 'Ada'])
+    expect(ids(readsByAuthor(reads, 'all', 'Ada Fenn'))).toEqual(['Ada again', 'Ada', 'Ada old'])
+    expect(ids(readsByAuthor(reads, 2025, 'Nobody'))).toEqual([])
+  })
+
+  it('a genre\'s reads of the period: a read whose genres are not known in none, a genre read by nobody empty', () => {
+    expect(ids(readsOfGenre(reads, 2025, 'sci-fi', ofEntry))).toEqual(['Ada again', 'Ada'])
+    expect(ids(readsOfGenre(reads, 2025, 'classics', ofEntry))).toEqual(['Ada'])
+    expect(ids(readsOfGenre(reads, 'all', 'sci-fi', ofEntry))).toEqual(['Ada again', 'Ada', 'Ada old'])
+    expect(ids(readsOfGenre(reads, 2025, 'crime', ofEntry))).toEqual([])
+  })
+
+  it('the reads not rated yet: what the figure counts, an abandoned one never', () => {
+    expect(ids(readsUnrated(reads, 2025))).toEqual(['Ben'])
+    expect(ids(readsUnrated(reads, 'all'))).toEqual(['Ben', 'Ada old'])
+  })
 })
 
 describe('statsSheetWithYear', () => {
@@ -69,6 +119,10 @@ describe('statsSheetWithYear', () => {
     expect(statsSheetWithYear({ kind: 'month', year: 2025, month: 3 })).toBe(false)
     expect(statsSheetWithYear({ kind: 'day', day: '2025-03-02' })).toBe(false)
     expect(statsSheetWithYear(null)).toBe(false)
+    expect(statsSheetWithYear({ kind: 'author', year: 'all', name: 'Ada Fenn' })).toBe(true)
+    expect(statsSheetWithYear({ kind: 'genre', year: 'all', genre: 'sci-fi' })).toBe(true)
+    expect(statsSheetWithYear({ kind: 'unrated', year: 'all' })).toBe(true)
+    expect(statsSheetWithYear({ kind: 'author', year: 2025, name: 'Ada Fenn' })).toBe(false)
   })
 })
 

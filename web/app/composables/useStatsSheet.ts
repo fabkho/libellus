@@ -1,3 +1,4 @@
+import type { GenreId } from '~/data/enrich/genres'
 import type { ReadingDay, StatsRead } from '~/data/stats'
 import type { ProfileSheet } from '~/stores/stats'
 import { statsSheetReads, statsSheetWithYear } from '~/utils/statsSheet'
@@ -8,12 +9,14 @@ import { statsSheetReads, statsSheetWithYear } from '~/utils/statsSheet'
  * member's two pages bind these to `ProfileReadsSheet` instead of each keeping its own switch; a new figure that opens
  * a list is one case there and one title here.
  *
- * `reads` are the page's closed reads, `days` the Profile's reading days (a member's page has none).
+ * `reads` are the page's closed reads, `days` the Profile's reading days (a member's page has none) and `ofEntry`
+ * the genres of an entry (a genre's sheet; a page without one lists no genre's books).
  */
 export function useStatsSheet(
   shown: Ref<ProfileSheet | null>,
   reads: () => readonly StatsRead[],
   days: () => readonly ReadingDay[] = () => [],
+  ofEntry: (entryId: string) => readonly GenreId[] | undefined = () => undefined,
 ) {
   const { t } = useI18n()
   const { monthLong, dayTitle } = useFigures()
@@ -30,9 +33,15 @@ export function useStatsSheet(
         return t('profile.sheet.pagesMissing')
       case 'stars':
         return t('profile.sheet.stars', { count: s.star, year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) }, s.star)
+      case 'author':
+        return t('profile.sheet.author', { name: s.name, year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) })
+      case 'genre':
+        return t('profile.sheet.genre', { genre: t(`genre.${s.genre}`), year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) })
+      case 'unrated':
+        return t('profile.sheet.unrated')
     }
   })
-  const sheetReads = computed(() => statsSheetReads(shown.value, reads(), days()))
+  const sheetReads = computed(() => statsSheetReads(shown.value, reads(), days(), ofEntry))
   const withYear = computed(() => statsSheetWithYear(shown.value))
 
   return { title, reads: sheetReads, withYear }
