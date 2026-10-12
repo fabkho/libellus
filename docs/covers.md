@@ -170,7 +170,7 @@ ebook usually wears the print cover). Best first:
 2. **ebook**: the same work's ebook at Apple Books (`isSameWork`, the language rule), the row's storefront first.
 3. **sameWork**: another edition of the same work (a sibling edition, an Open Library work's cover).
 4. **goodreads**: Goodreads' cover for the row's title: a last resort, only for a Goodreads file's rows and a manual
-   "find a cover" action (not built in this change, see the PR).
+   "Find a cover" action ([below](#goodreads-the-last-resort)).
 5. **placeholder**: no image: `cover_url` stays null and `UiCover` draws the cloth (by title), so a real cover found
    later replaces it with no flag. Pixel height inside a kind: Apple 900, Open Library `-L` 500, Goodreads 500, Google 128.
 
@@ -185,6 +185,31 @@ Book that landed without a cover gets the one the fill found when a member who h
 A cover found by the lookup is read where it is kept: an Open Library cover is probed at `-L`, not at its 180 px
 `-M`. A narrow book's `-M` is under the 150 px floor (`MIN_COVER_SIDE`), and 19 of 708 books of one real import
 lost a cover the lookup had found at the write for that reason.
+
+#### Goodreads, the last resort
+
+What: for a Goodreads export's rows that nothing else found a cover for (about half of the cover-less rows of a real
+export are Manual books, no ISBN, so no other source can know them) and for the import preview's manual **Find a cover**,
+the cover Goodreads shows for the book. The `goodreads-rating` function (`supabase/functions/goodreads-rating`) asks the
+keyless `book/auto_complete` search it already uses for the community rating, once, with `cover: true`; the hit with the
+file's own Goodreads book id is taken as it is (it is that very edition), else the same-work rule decides. The answer is the
+`imageUrl` without its size token (`._SY75_` off: the ~332x500 original) at `i.gr-assets.com`, which allows CORS, so the
+browser reads the pixels for the thumbhash like for any cover. Measured on 78 cover-less rows of a real export: 75 got a
+same-work cover from it, and the file's book id was among the results for 63.
+
+Why last: the ranking above. The stage runs after the Apple lane and only for a row with no cover and no fallback, one
+ask every 1.6 s (the function's own limit, 40 a minute in a bucket of its own), under the fill's budget, given up after 3
+failures in a row. Only linked: the address is the whole of what is stored (`books.cover_url`, and `cover_url` next to the
+rating in the function's answer cache); no description, page count or rating of the hit is kept or told on this path.
+
+Flag: `GOODREADS_COVERS` in `web/app/data/coverRank.ts`, one line. `false` removes the stage and the button; no call is made.
+
+Terms risk: Goodreads retired its API in 2020 and its terms forbid automated access. The endpoint is unofficial, and the
+community rating already uses it server side (`docs/THIRD-PARTY.md`); using the cover is also a hotlink to its image CDN.
+Owner-accepted risk, decided before merge (the PR says so). If Goodreads objects: set the flag to `false`, drop
+`i.gr-assets.com` from `private.cover_allowed` (a migration; `cover_shown` then hides the address on the social surfaces
+too), and those Books show the cloth cover (UiCover draws it for a cover that does not load), a better source filling in
+later by itself. Nothing was copied, so there is nothing to delete.
 
 ## Sizes the browser can choose (`srcset`, A7)
 
