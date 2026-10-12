@@ -1,6 +1,6 @@
 Title: Collections: a visibility switch, and her visible Collections on her profile
 Labels: feature, priority:low
-Package: WP-12 · items #6, #2 · tier P3 · size M–L · model Sonnet · depends on: WP-11, WP-10, the BetterReads rename · wave 2
+Package: WP-12 · items #6, #2 · tier P3 · size M–L · model Sonnet · depends on: WP-11, WP-10, WP-25 (report flow), WP-26 (text rule), the BetterReads rename · wave 3
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/12-collection-visibility-app.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/12-collection-visibility-app.md)
 Plan: docs/plans/backlog-execution.md
 
@@ -25,5 +25,6 @@ With the model from WP-11, the member needs a switch per Collection and follower
 - [ ] Vitest repository tests against the local stack; `tests/member-profile.test.ts` updated.
 
 ## Notes
+- Public launch (revision 2): a visible Collection's name is content strangers can see. Making a Collection visible runs its name through WP-26's `private.public_text_ok` (no URLs, no control characters); WP-25 gets a "Collection" report reason and an owner action that makes it private again. Private by default, opt-in per Collection, no bulk "make all visible".
 - Edits the privacy notice: start after the BetterReads rename has merged.
 - Owner questions: a page (recommended) or a sheet for her Collection; where on her profile?

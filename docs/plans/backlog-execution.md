@@ -1,4 +1,4 @@
-# Backlog execution plan: 27 items, 23 work packages
+# Backlog execution plan: 27 items, 27 work packages (revision 2: public launch)
 
 **DRAFT, not merged, no issues created.** This file is a plan, not a spec. It checks the owner's backlog of 27
 items (grouped by Gemini; that grouping was not used) against the code on `origin/main` at `2b3faf91`
@@ -11,64 +11,190 @@ repo (`fabkho/regal`, `origin/main` `3376fce`) for #26. Nothing was run and no s
 numbers are from `2b3faf91`. Item numbers **#1–#27** are the owner's, from the list quoted in the
 [appendix](#appendix-the-backlog-as-received).
 
+**Revision 2.** The owner says the app opens to the public next week: anyone can sign up, with no invite.
+Revision 1 assumed an invite-only, friends-based app. §2 lists what that assumption held up in the code. Every
+verdict that leaned on it was redone, and four launch packages were added (WP-24 to WP-27).
+
+## Launch-critical vs can wait
+
+**Launch-critical (before or on launch day):**
+- **WP-24** Open sign-up safely:
+  - the invite gate off;
+  - a captcha on every request that sends an email;
+  - email capacity checked (every sign-in is an email);
+  - a per-member cap on photo files;
+  - the age line at sign-up.
+- **WP-25** A Report flow for members (name, photo, reviews) and the owner's minimal handling. This is the
+  notice-and-action path a public service with user content needs.
+- **WP-27** Legal and operations texts:
+  - drop "invite-only beta" from the privacy notice;
+  - add reports;
+  - community rules;
+  - a moderation runbook.
+- **WP-02** The iOS shelf bug. The app is "mostly used on iPhone" (`web/playwright.config.ts:69`), so new members
+  would meet it on day one.
+
+**Launch week, strongly recommended:**
+- **WP-26** Name rules enforced on the server (reserved names such as the app's and the owner's, no
+  control, bidi or zero-width characters, no URLs). It closes impersonation for every way a name is set,
+  including direct calls to the auth API.
+
+**Can wait (unchanged or later):**
+- Everything else in waves 1–4: profile and stats polish, Collections sorting, the feed.
+
+**Gated behind WP-25 and WP-26 (they create content strangers can see):**
+- WP-12 (visible Collections).
+- WP-16 (bio).
+- WP-21 (Collection covers; now P4).
+- WP-22 (social links; the owner wants them: a real package, P2, after WP-25 and WP-26).
+
+**Wave 1 is unchanged and safe.** WP-01, 02, 03, 04 and 10 are running and none creates new content visible to
+strangers.
+- **WP-03** (tap the name to edit it) adds a shortcut to the existing name sheet and its client cleanup
+  (`cleanName`, `web/app/data/auth.ts:58-61`). It needs no guard of its own. The server-side policy (WP-26)
+  covers every path, because a client can already set any name through the auth API.
+
 ---
 
 ## 1. Summary table
 
-Tiers: **P0** bugs · **P1** easy wins · **P2** medium · **P3** hard · **P4** refactor, long-term or parked.
+Tiers: **P0** bugs and launch blockers · **P1** easy wins and launch-week safeguards · **P2** medium · **P3** hard ·
+**P4** refactor, long-term or parked.
 GitHub labels: **priority:high** = P0–P2, **priority:low** = P3–P4.
-Models: **Opus** = `anthropic/claude-opus-5-5` (debugging or a design-critical DB model) · **Sonnet** = the default ·
-**Haiku** = mechanical (DeepSeek works too).
+Models: **Opus** = `anthropic/claude-opus-5-5` (debugging, the sign-up gate, a design-critical DB model) · **Sonnet** =
+the default · **Haiku** = mechanical (DeepSeek works too).
+**Bold** rows are new or changed in revision 2.
 
 | ID | Title | Items | Tier | Size | Model | Depends on | Wave |
 |---|---|---|---|---|---|---|---|
-| WP-01 | Profile quick fixes: a member's "Authors" label, no "in review" pill at the chart, stronger month rules | #1, #11a, #24 | P0 | S | Haiku | none | 1 |
-| WP-02 | iOS: the shelf's row and Stack do not scroll (Regal) | #26 | P0 | M | Opus | none | 1 |
-| WP-03 | Tap your name on the Profile to edit it | #3 | P1 | S | Sonnet | none | 1 |
-| WP-04 | Compact rows in the Friends feed | #18 | P1 | S–M | Sonnet | none (owner design pick) | 1 |
+| WP-01 | Profile quick fixes: a member's "Authors" label, no "in review" pill at the chart, stronger month rules | #1, #11a, #24 | P0 | S | Haiku | none | 1 (running) |
+| WP-02 | iOS: the shelf's row and Stack do not scroll (Regal) | #26 | P0 (launch-critical) | M | Opus | none | 1 (running) |
+| WP-03 | Tap your name on the Profile to edit it | #3 | P1 | S | Sonnet | none | 1 (running) |
+| WP-04 | Compact rows in the Friends feed | #18 | P1 | S–M | Sonnet | none (owner design pick) | 1 (running) |
 | WP-05 | One paginated books sheet for the stats | #17 (+ dedup refactor) | P1 | M | Sonnet | WP-01 | 2 |
 | WP-06 | Tappable stats: an author's books, a genre's books, the unrated books | #12, #16, #15, #14 (part 1) | P1 | M | Sonnet | WP-05 | 3 |
 | WP-07 | Rate books straight from the unrated sheet | #14 (part 2) | P2 | M | Sonnet | WP-06 | 4 |
 | WP-08 | Chart by month or by week, with a range navigator | #11b, #11c | P2 | M | Sonnet | WP-06 | 4 |
 | WP-09 | Year in review: every five-star book, not one favourite | #25 | P2 | M | Sonnet | WP-01 | 2 |
-| WP-10 | Collection page: a + to add from search, and sorting | #10, #9 | P2 | M | Sonnet | none | 1 |
-| WP-11 | Collection visibility, database (one model for private and public) | #6, #2 | P3 | L | Opus | none (SQL chain head) | 1 (filler) |
-| WP-12 | Collection visibility, app: the switch, and her collections on her profile | #6, #2 | P3 | M–L | Sonnet | WP-11, WP-10 | 2 |
+| WP-10 | Collection page: a + to add from search, and sorting | #10, #9 | P2 | M | Sonnet | none | 1 (running) |
+| WP-11 | Collection visibility, database (private by default, opt-in per Collection) | #6, #2 | P3 | L | Opus | none (SQL chain head) | 1 (filler) |
+| **WP-12** | Collection visibility, app: the switch, and her collections on her profile | #6, #2 | P3 | M–L | Sonnet | WP-11, WP-10, **WP-25, WP-26** | **3** |
 | WP-13 | Refactor: a reusable drag-to-reorder list (from `EntryList.vue`) | enabler for #7 | P4 | M | Sonnet | WP-10 | 2 |
-| WP-14 | Manual order of Collections next to "last edited" (sort mode) | #7 | P3 | L | Sonnet | WP-12, WP-13 | 3 |
+| **WP-14** | Manual order of Collections next to "last edited" (sort mode) | #7 | P3 | L | Sonnet | WP-12, WP-13 | **4** |
 | WP-15 | Grid or list in the Library, with each status's date line | #20, #21 | P3 | L | Sonnet | WP-10 | 2 |
-| WP-16 | A short bio under the name | #4 | P3 | M | Sonnet | WP-11, WP-03, WP-12 | 3 |
-| WP-17 | On Hold, database: a paused open session | #23 | P3 | L | Opus | WP-11, WP-14, WP-16 | 4 |
-| WP-18 | On Hold, app: every screen that knows a status | #23 | P3 | L | Sonnet | WP-17, WP-15 | 5 |
-| WP-19 | On Hold, importers (Goodreads, Hardcover, Fable, Reado) | #23 | P3 | S–M | Haiku | WP-18, PR #294 | 6 |
+| **WP-16** | A short bio under the name | #4 | P3 | M | Sonnet | WP-11, WP-03, WP-12, **WP-25, WP-26** | **4** |
+| **WP-17** | On Hold, database: a paused open session | #23 | P3 | L | Opus | WP-11, WP-14, WP-16 | **5** |
+| **WP-18** | On Hold, app: every screen that knows a status | #23 | P3 | L | Sonnet | WP-17, WP-15 | **6** |
+| **WP-19** | On Hold, importers (Goodreads, Hardcover, Fable, Reado) | #23 | P3 | S–M | Haiku | WP-18, PR #294 | **7** |
 | WP-20 | Pages read across books: a chart with week, month and custom ranges | #13 | P3 | L | Sonnet | WP-08 | 5 |
-| WP-21 | A collection's own cover image | #8 | P3 | L | Sonnet | WP-12, WP-14 | 5 |
-| WP-22 | Social links on the profile (**parked, not recommended**) | #5 | P4 | M | Sonnet | WP-16 | parked |
-| WP-23 | Follower counts (**parked**: the follower system exists) | #19 | P4 | M | Sonnet | none | parked |
+| **WP-21** | A collection's own cover image (**parked unless members ask; upload safeguards required**) | #8 | **P4** | L | Sonnet | WP-12, WP-14, **WP-25** | **parked** |
+| **WP-22** | **Social links: allow-listed platforms, handles only, visibility setting (owner decision: wanted)** | #5 | **P2** | M | Sonnet | **WP-25, WP-26, WP-27** (parallel with WP-16; see the package) | **3** |
+| **WP-23** | Follower counts (**parked; a self-only variant is offered**) | #19 | P4 | S (self-only) / M | Sonnet | none | parked |
+| **WP-24** | **Open sign-up safely: invite gate off, captcha, email capacity, photo cap, age line** | launch | **P0** | M | **Opus** | none (check whether the owner's launch work already covers it) | **1 (launch)** |
+| **WP-25** | **Report a member (name, photo, reviews) and the owner's minimal handling** | launch (#4, #5, #2, #8 prerequisite) | **P0** | M | Sonnet (Opus review of the SQL) | none | **1 (launch)** |
+| **WP-26** | **Name rules on the server and a shared text rule for public content** | launch (#3 guard, #4, #2, #5 prerequisite) | **P1** | M | Sonnet (Opus review: an `auth.users` trigger) | WP-03 | **2** |
+| **WP-27** | **Launch texts: privacy notice, community rules, moderation runbook** | launch | **P0** | S–M | Sonnet (the owner reviews the legal text) | none (after the BetterReads rename, or it does the legal-text swap itself) | **1 (launch)** |
 
-**Counts:** P0 2 · P1 4 · P2 4 · P3 10 · P4 3 (one enabler refactor, two parked) = 23 packages.
-**priority:high** has 10, **priority:low** has 13.
+**Counts:** P0 5 · P1 5 · P2 5 · P3 9 · P4 3 (one enabler refactor, two parked) = 27 packages.
+**priority:high** has 15, **priority:low** has 12.
+
+**What changed from revision 1:**
+- New: WP-24, WP-25, WP-26 and WP-27.
+- WP-21 moves from P3 to P4, parked.
+- WP-22 (social links) moves from parked to **P2, wave 3**: the owner decided they are wanted.
+- WP-12 and WP-16 now wait for WP-25 and WP-26, which moves them and the On Hold chain one wave later.
+- The verdicts on #5, #8 and #19 are rewritten without the invite-only argument (§3, §4).
 
 **Items with no package of their own:**
-- **#22** (a loading animation on filters): recommended **not** to do; see §3.
+- **#22** (a loading animation on filters): recommended **not** to do; see §4.
 - **#27** (high-resolution Goodreads covers): **already true on `main`**; what is left belongs to the running
-  `feat/import-cover-backfill` work, see §3.
+  `feat/import-cover-backfill` work, see §4.
 - **#15** is mostly shipped; its remainder rides in WP-06.
 - **#21** is mostly shipped; its remainder rides in WP-15.
 
 ---
 
-## 2. Verdicts at a glance
+## 2. Public launch (next week): what changes
+
+From the code: every place that depends on the app being invite-only today, and what it means for the backlog.
+
+### 2.1 What is invite-only today
+
+- **The sign-up gate is in the database.**
+  - `public.signup_invite(p_meta, p_lock)` raises `invite_code_required`, `invite_code_invalid`, `_expired` or
+    `_exhausted` (`supabase/migrations/20261002190000_invites_and_accounts.sql`, about lines 75–105).
+  - The triggers on `auth.users` judge the invite twice: on insert, which rolls a refused sign-up back, and on
+    confirmation, which uses up the code.
+  - `invite_code_status(p_code)` is the form's pre-flight.
+  - The client sends `data: { invite_code }` with `signInWithOtp({ shouldCreateUser: true })` (`web/app/data/auth.ts:167-178`).
+  - Sign-in for an unknown address uses `shouldCreateUser: false` (`:141-146`), so no mail goes to an address that is
+    not a member.
+- **Consequence of opening it:** today, a sign-up without a valid code never sends a mail. Once the gate is off,
+  **anyone can make the app send a code to any address.**
+  - That costs email quota and sender reputation, and enables email bombing.
+  - No captcha is configured: `[auth.captcha]` is commented out in `supabase/config.toml:216-220`, and nothing in
+    `web/app` mentions one.
+- **The waitlist exists only because of invites:**
+  - the reading page's form (`components/reading/Waitlist.vue`);
+  - `join_waitlist` for `anon` (5 an hour per address, 100 in all; `docs/OPERATIONS.md` → Waitlist);
+  - the owner's Waitlist page (`pages/profile/waitlist.vue`);
+  - the `waitlist-invite` edge function.
+  - At launch the form becomes a "Sign up" link, and the waitlist is retired or kept only for the addresses already
+    on it.
+- **The texts say invite-only:**
+  - the privacy notice's lead: "run as an invite-only beta" (`web/app/legal/privacy.ts:13`);
+  - the account data includes "the invite code you signed up with" (`:32`);
+  - the waitlist (`:37`, `:55`, `:111`);
+  - `SPEC.md:17,41` ("Invite-only accounts").
+
+### 2.2 What protects members today, and what is missing
+
+| Area | Today (evidence) | Gap at public launch |
+|---|---|---|
+| **Report** | **None.** No report flow for profiles, names, photos, reviews or anything else. The only channel is the member's Contact sheet: `public.feedback`, kinds `bug \| feature \| other`, 10–2,000 characters, 5 an hour and 20 a day (`20261024010000_feedback.sql:4,29-30`), read by the owner at `/profile/feedback`. | A public service hosting member content needs a notice-and-action path (the EU Digital Services Act, Art. 16, applies to every hosting service; the owner should confirm the scope against `docs/legal-checklist.md`). **WP-25**, launch-critical. |
+| **Block, private accounts** | `block()` and `unblock()` (`20261017020000_social_follows.sql`). Accounts are **private by default** (`social_settings.private boolean not null default true`, `20261017010000_social_settings.sql:62`). Sections `show_*` default true, but on a private account only accepted followers see them. | Enough for one member protecting herself. Not a way to tell the owner. |
+| **Discoverability** | **No search by name, no directory, no suggestions**: a deliberate decision, "they show who is a member" (`docs/proposals/social-v1.md:273`). A profile opens only through her follow link (`/f/<token>`, 128 random bits) or an existing follow or request (`private.reachable`). The book page's readers list only members she follows. The public reading page and shared book cards (`/r/<token>`) are open to anyone holding the link. | Strangers cannot browse profiles. They reach a member only through a link she shared. A **public account's** link posted publicly lets anyone follow at once and see every section she leaves on. Keep it that way: no name search in this backlog. |
+| **Display names (#3)** | Free text in `user_metadata.name`, written by GoTrue (`session.setName` → `auth.updateUser`). The client trims it and caps it at 40 (`cleanName`, `data/auth.ts:58-61`). The server only does `left(btrim(name), 40)` when reading (`private.member_name`, `20261017010000_social_settings.sql:258-265`). Not unique. | **Impersonation:** anyone can call herself the app's name, "Support" or the owner's name, and use bidi, zero-width or control characters or a URL. The UI is not a guard, because the auth API is public. **WP-26**. |
+| **Photos** | Private bucket `avatars`, 256 KB, webp/jpeg, path pinned to `<uid>/<32 hex>(-128).(webp\|jpg)` (`20261009120000_avatars.sql:46-63`), shown to members who are `reachable`. **No cap on the number of files per member**: the insert policy accepts any new 32-hex name. | Storage abuse on the Free plan (1 GB of files); offensive images with no report path. A per-member file cap in WP-24 and "photo" as a report reason in WP-25. Photos are re-encoded on the device (`utils/avatarRaster.ts`), which drops EXIF. |
+| **Reviews (feed, profile, reading page)** | Up to 10,000 characters (`reading_sessions_review_present`, `20261003102707_reading_sessions.sql:69`). Followers see them in the feed and on her profile; a shared review or reading page is visible to anyone with the link. | User content strangers can see once accounts are public or links travel. Covered by WP-25 (report the member, with "a review" as the reason). Reporting a single review lands after WP-04, which changes `FeedRow.vue`. |
+| **Collection names** | 1–80 characters, private today (`collections_name_present`, `20261003110515_collections.sql:29`). | Content strangers can see only once WP-12 lets her make one visible. WP-12 is gated on WP-25 and WP-26. |
+| **Follows at scale** | Per follower: 30 follow calls an hour, 150 follows, 20 pending requests (`20261017020000_social_follows.sql`, about lines 114–121). Likes: 300 an hour (`20261025010000_social_v2a.sql:1170`). | There is no limit on how many requests a member *receives*, and no "decline all". Watch, not build: requests only come from people who hold her link. |
+| **Feed (#18)** | Only from members she follows, after a 10-minute settle window (social v1). | Strangers in her feed only if she follows them. Compact rows (WP-04) help more once members follow more people; no safety change. |
+| **Rate limits** | Follows, likes, feedback, waitlist and the client-error log have limits (above, `docs/OPERATIONS.md` → Client errors). **None** on Library writes, Collections, reviews, photo files or sign-up attempts beyond GoTrue's own (`supabase/config.toml` `[auth.rate_limit]`: `sign_in_sign_ups = 30` and `email_sent = 2` locally; the hosted values are in the dashboard). | Email and photos are capped in WP-24. Other per-member write caps can wait: watch the database size first. |
+| **Email (Resend)** | The notice names Resend for sign-in codes, invites and notification emails (`privacy.ts:71`). Sign-in is a six-digit code with **no password**, so **every sign-in is an email**, not only every sign-up. Supabase Auth sends through the owner's SMTP (`docs/SETUP.md`, step 2); the project's email rate limit is a dashboard setting. | **Launch-critical capacity check (WP-24):** Resend's plan quota and Supabase Auth's email rate limit, both in their dashboards. A small hourly limit is spent within the first hour of a launch, and then nobody can sign in. |
+| **Supabase plan** | The **Free plan** (`docs/OPERATIONS.md:354`, `docs/SETUP.md:234`). Covers are linked, not stored (`docs/covers.md`). Realtime is not used (`web/app/data/realtimeStub.ts`). | The Free plan's database, file storage, egress and monthly-active-user quotas, as published by Supabase (verify on the dashboard). Photos are the only stored files today; Collection covers (#8) would add more, which is one more reason WP-21 is parked. Set a usage alert and decide the upgrade point (WP-27 runbook). |
+| **Minors** | The notice says "not for under 16" and the account is deleted when known (`privacy.ts:138`, DE `:277`); `docs/legal-checklist.md:64` calls 16 "a choice". The sign-up asks nothing. | One line at sign-up, "I am 16 or older" (WP-24), with the copy in WP-27. No age verification. |
+| **GDPR** | The notice lists name, photo, reading data, Friends, reading page, waitlist and logs (`privacy.ts:30-40`). | Reports (who reported whom, why, what was done) are a new data category (WP-27). Bio (#4), links (#5) and covers (#8) each add one when they land (in WP-16, WP-22, WP-21). |
+| **German** | Every screen is bilingual; parity is enforced by `tests/i18n-parity.test.ts`. | New strings: report reasons and confirmations, the age line, name-rule errors, community rules, the sign-up without a code. All in EN and DE, per `docs/i18n/german-glossary.md`. |
+| **Cost** | The Free plan; Resend; Cloudflare Pages. | Resend and Supabase are the two meters that move with sign-ins. WP-27's runbook names the thresholds. |
+
+### 2.3 What this does to the backlog
+
+| Item | Revision 1 | Revision 2 |
+|---|---|---|
+| #3 inline name edit (WP-03) | P1 | **Unchanged and safe:** a shortcut to the existing sheet. WP-26 adds server-side name rules for every path. |
+| #4 bio (WP-16) | P3, after WP-11 and WP-12 | **P3, now gated** on WP-25 (report, with "bio" as a reason) and WP-26 (the text rule: length, no URLs, no control characters). Worth more after launch (strangers decide whether to follow), so keep it, but not before the safeguards. |
+| #5 social links (WP-22) | Parked, partly "little value in an invite-only app" | **Owner decision: wanted. P2, a real package in wave 3.** Built only in the safe shape: allow-listed platforms, a validated handle or ID per platform (no free URLs), the app builds the URL, `rel="noopener noreferrer nofollow ugc"` with an external-link mark, a visibility setting (default *followers only*), a "links" report reason (WP-25), the privacy notice. After WP-25, WP-26 and WP-27. |
+| #2 / #6 visible Collections (WP-11, WP-12) | P3 | **P3**. The model stays **private by default, opt-in per Collection**, which is now a hard rule, not a preference. WP-12 is gated on WP-25 and WP-26 (a Collection name becomes content others see). |
+| #8 Collection cover upload (WP-21) | P3, last | **P4, parked unless members ask.** Uploaded images strangers can see, with no automated moderation, on a 1 GB Free plan. If kept: 256 KB, webp/jpeg only, re-encoded on the device (drops EXIF), path pinned per member, one file per Collection plus a per-member cap, "cover" as a report reason, and the owner can remove it. |
+| #19 counts (WP-23) | Parked | **Still parked for public counts**. They leak the size of a private member's circle, invite comparison and are inflated by bots. **New:** a self-only variant (her own Following, Followers and Requests counts on People, never shown to others) is S, leaks nothing, and can be done any time. |
+| #18 feed (WP-04) | P1 | P1, more useful once members follow more people. |
+| All stats and Collections polish | unchanged | unchanged. |
+
+---
+
+## 3. Verdicts at a glance
 
 | Verdict | Items |
 |---|---|
 | **Already done, or mostly** | **#15**: star rows already open a sheet (`components/profile/Ratings.vue:30-46`, `pages/profile/index.vue:130-132`, parity "Tap a star row → a sheet"); only "N not yet" is missing. **#19**: follows, requests, private and public accounts, blocks and the follow link have all shipped (migrations `20261017010000`…`20261025010000`); only counts are missing, and they were left out on purpose. **#21**: list rows already show each status's date: Want "Added {date}" (`components/library/EntryRow.vue:74`), Finished the day it ended, DNF "DNF · {date}", Currently reading "Since {date} · day {n}" (`components/library/ReadingCard.vue:21`). **#27**: covers are already stored large (Apple 600×900, Open Library `-L`: `data/covers.ts:178-185`, asserted in `tests/covers.test.ts:149,153-154`). |
 | **Premise wrong or partly wrong** | **#11a**: the chart itself never links to the Year in review; the link is the "{year} in review ›" pill beside the chart's title (`pages/profile/index.vue:174-176`). Under All, the year columns also go there (`:122-123`). **#12**: authors are plain rows with no tap at all (`components/profile/Authors.vue:24-31`); an author page (`/author/[key]`) also exists as an alternative target. **#9**: there is no publication *date*, only `books.published_year`. "Date added" means two things: to the Library (`addedAt`) or to the Collection (`collection_entries.added_at`, which the app does not read today). **#22**: there is nothing to wait for: filters are a synchronous `computed` over the device's copy (`pages/library.vue:79-80`). **#27**: the Goodreads CSV has no image column at all (`tests/fixtures/goodreads/library_export.csv:1`), so no `._SY75_` tokens exist to strip. **#6**: every Collection is already private (RLS `collections_own`, `20261003110515_collections.sql:96-100`); the real work is a visibility model, which #2 needs anyway. |
-| **Recommended not to do (or parked)** | **#5** social links: phishing and abuse surface, no report flow, a new data category in the privacy notice, little value in an invite-only, friends-based app (WP-22 parked; a safe shape is given if wanted). **#19** counts: deliberately excluded by social v1 (`docs/proposals/social-v1.md:30,95`; `pages/friends/people.vue:8` "No counts anywhere"); revisit with a bigger user base (WP-23 parked). **#22** spinner: it would be fake latency (see above). **#8** custom cover: doable but costly (storage bucket, account deletion, moderation once Collections can be seen by followers); last in line, see WP-21. |
+| **Recommended not to do (or parked)** | **#19** public counts: deliberately excluded by social v1 (`docs/proposals/social-v1.md:30,95`; `pages/friends/people.vue:8` "No counts anywhere"). They would leak the size of a private member's circle; a self-only variant is offered (WP-23). **#22** spinner: it would be fake latency (see above). **#8** cover upload: images strangers can see, with no automated moderation, on a Free plan; P4, parked unless members ask (WP-21). |
+| **Owner decisions after revision 2** | **#5** social links: **wanted**. A real package (WP-22, P2, wave 3) in the safe shape, after the report flow (WP-25), the text rule (WP-26) and the launch texts (WP-27). |
 
 ---
 
-## 3. Item by item
+## 4. Item by item
 
 Each item covers four things: **exists?** · **premise** · **size, files, risk** · **depends on**. The tier
 reason is on the last line.
@@ -132,18 +258,28 @@ reason is on the last line.
   - Moderation: text that strangers can read on public accounts, with no report flow. It needs a hard length
     limit, plain-text rendering and no autolinking.
   - GDPR: a new data category.
-- **Tier:** P3; worth doing with those limits.
+- **Tier:** P3; worth doing with those limits. Revision 2: worth more after launch, because strangers decide
+  whether to follow from it. It is **gated on WP-25** ("bio" as a report reason) **and WP-26** (the shared text
+  rule, no URLs).
 
 **#5 Social and external profile links.**
 - **Exists?** Not at all. `components/profile/LinksSheet.vue` and `link_templates` are a different feature: the
   member's own book-link templates, which never leave the database (`20261006090000_link_templates.sql`).
 - **Size:** M.
-- **Risk:** outbound links shown to strangers are a phishing vector, with no report flow and a new privacy
-  category.
-- **Verdict:** **not recommended.** If the owner insists: *handles only* for an allow-list of platforms, with the
-  app building the URL (so a member cannot point a link anywhere), `rel="noopener noreferrer nofollow ugc"`,
-  shown only to those `private.visible` allows, and placed after WP-16 (the same hero and profile plumbing).
-- **Tier:** P4, parked (WP-22).
+- **Risk:** outbound links shown to strangers are a phishing and spam vector, with no report flow today
+  (WP-25 adds one) and a new privacy category.
+- **Verdict (revision 2, public launch, owner decision):** **wanted, and built in a safe shape.** The invite-only
+  argument no longer holds. Public sign-up raises the value (readers bring audiences from Instagram and TikTok) and
+  the incentive for throwaway accounts to plant links, so the shape is strict:
+  - A validated *handle or canonical ID* per allow-listed platform. No free URLs: a member cannot point a link
+    anywhere.
+  - The app builds the URL, with `rel="noopener noreferrer nofollow ugc"` and an external-link mark.
+  - A visibility setting.
+  - "Links" as a report reason.
+  - The privacy notice.
+  - After WP-25, WP-26 and WP-27; in parallel with WP-16 (the bio). Full design in §7, WP-22.
+- **Tier:** P2 (WP-22). Owner decision after revision 2: social links are wanted. The safe shape above is now the
+  package; the platforms, formats and visibility are in §7, WP-22.
 
 ### Collections and visibility
 
@@ -175,8 +311,15 @@ reason is on the last line.
   (`20261009120000_avatars.sql`).
 - **Size:** L: a new bucket and policies, `collections.cover_path`, purging on account and Collection deletion,
   crop and raster reuse (`utils/crop.ts`, `utils/avatarRaster.ts`).
-- **Risk:** once Collections can be seen (#2), uploaded images reach followers (moderation).
-- **Tier:** P3, last in line; worth questioning (WP-21).
+- **Risk:** once Collections can be seen (#2), uploaded images reach followers. After the public launch the
+  uploaders are strangers too, there is no automated image moderation, and the Free plan holds 1 GB of files.
+- **Tier (revision 2):** **P4, parked unless members ask** (WP-21).
+- **If kept, it needs all of these:**
+  - 256 KB, webp/jpeg only.
+  - Re-encoded on the device like the photo (`utils/avatarRaster.ts`), which strips EXIF.
+  - The path pinned to `<uid>/<collection>/…`.
+  - One file per Collection, plus a per-member cap in the insert policy.
+  - "Cover" as a report reason (WP-25), and an owner action to remove it.
 
 **#9 Sort inside a Collection.**
 - **Exists?** Not at all. Entries come in `position` order (`data/collections.ts:219`).
@@ -284,8 +427,13 @@ reason is on the last line.
 - **Premise:** mostly wrong. The follower system has shipped:
   - `follows`, requests, blocks and the follow link (`20261017010000_social_settings.sql`, `20261017020000_social_follows.sql`).
   - The People page with Following, Followers and Requests (`pages/friends/people.vue`).
-- **Counts:** shown nowhere, by design (see §2).
-- **Tier:** P4, parked (WP-23).
+- **Counts:** shown nowhere, by design (see §3).
+- **Revision 2 (public launch):** public counts are still not worth it.
+  - On a private account they leak the size of her circle to anyone who can see the card.
+  - They invite comparison, and throwaway accounts inflate them.
+  - A **self-only** variant is cheap and leaks nothing: her own Following, Followers and Requests counts on People,
+    never shown to anyone else.
+- **Tier:** P4, parked (WP-23; the self-only variant can be pulled forward at any time).
 
 ### List views and filters
 
@@ -301,7 +449,7 @@ reason is on the last line.
 - **Tier:** P3 (WP-15).
 
 **#21 "Reading since" in every view.**
-- **Already done in the list views** (see §2). In a grid it comes with the grid cell, and "Reading since" only
+- **Already done in the list views** (see §3). In a grid it comes with the grid cell, and "Reading since" only
   applies to Currently reading, which #20 excludes from the grid.
 - **Tier:** carried in WP-15.
 
@@ -318,7 +466,7 @@ reason is on the last line.
   `library_entries_derive_status`).
 - **The consistent model:** a **paused open session** (`reading_sessions.paused_on`) that derives a new status
   value `paused`. Not a client-written entry status: the trigger would overwrite it.
-- **Size:** L, split into three packages (WP-17, WP-18, WP-19). Every place it touches is in §4.4.
+- **Size:** L, split into three packages (WP-17, WP-18, WP-19). Every place it touches is in §5.4.
 - **Tier:** P3.
 
 ### Year in review
@@ -342,7 +490,7 @@ reason is on the last line.
 
 **#26 iOS: the 3D Stack and row cannot be scrolled.**
 - **Exists?** No iOS-specific handling anywhere in Regal. Both surfaces scroll by JavaScript on pointer events,
-  with native touch scrolling switched off. The analysis is in §4.5.
+  with native touch scrolling switched off. The analysis is in §5.5.
 - **Size:** M, mostly diagnosis.
 - **Where the fix belongs:** in **Regal**.
 - **Tier:** P0 (WP-02).
@@ -364,9 +512,9 @@ reason is on the last line.
 
 ---
 
-## 4. Shared designs (decided once, used by several packages)
+## 5. Shared designs (decided once, used by several packages)
 
-### 4.1 One books sheet (#12, #14, #15, #16, #17, and #11's week sheet)
+### 5.1 One books sheet (#12, #14, #15, #16, #17, and #11's week sheet)
 
 Today there is one sheet component, `ProfileReadsSheet` (props `title`, `reads`, `withYear`, `foreign`, `testid`,
 `restore`; slots `top` and `foot`), with `ProfileReadRow` rows. Back after opening a book restores the sheet
@@ -389,11 +537,12 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
   - No RPC: the rows are already on the device.
 - **Row slots:** a per-row action slot for WP-07's inline rating; nothing else changes in the row.
 
-### 4.2 One visibility model for Collections (#2, #6, later #8)
+### 5.2 One visibility model for Collections (#2, #6, later #8)
 
 - **Column:** `collections.visibility text not null default 'private' check (visibility in ('private','followers'))`.
   Text with a check, not an enum, so a later `'page'` (the public reading page) is a one-line change.
-- **Default:** private for every existing and new Collection. Sharing is opt-in per Collection.
+- **Default:** private for every existing and new Collection. Sharing is opt-in per Collection. After the public
+  launch (revision 2) this is a hard rule, not a preference: no bulk "make all visible".
 - **Who sees it:** whoever `private.visible(caller, owner)` allows (a public account, or an accepted follower),
   never a requester, a blocked member or a stranger to a private account. This is the same rule as her other
   sections.
@@ -408,7 +557,7 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
 - **No new section switch** in `social_settings`: the per-Collection opt-in is the switch. This is an open
   question for the owner (WP-11).
 
-### 4.3 Manual order next to "last edited" (#7 vs #302)
+### 5.3 Manual order next to "last edited" (#7 vs #302)
 
 - **Sort mode** per member: `recent` (default; exactly #302) or `manual`.
 - **Storage (recommended):**
@@ -426,7 +575,7 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
   follow it.
 - **Held order:** `useEditedOrder` (`utils/editedOrder.ts`) applies to `recent` only.
 
-### 4.4 On Hold: every place it touches (#23)
+### 5.4 On Hold: every place it touches (#23)
 
 **Model:**
 - `reading_sessions.paused_on date null`, with check `paused_on is null or outcome is null` (open sessions only).
@@ -493,7 +642,7 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
   client can call `pause_reading`. Alternatively, WP-17's RPCs stay ungranted until WP-18 is released.
 - The migration on its own is inert: nothing pauses until the app's button exists.
 
-### 4.5 #26: what is known about the iOS scroll bug
+### 5.5 #26: what is known about the iOS scroll bug
 
 **Where the code comes from:**
 - Libellus builds Regal from a local checkout (`REGAL_LAYER`) or from the **default branch of `fabkho/regal`,
@@ -549,7 +698,7 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
 
 ---
 
-## 5. Ordering constraints (read before dispatching anything)
+## 6. Ordering constraints (read before dispatching anything)
 
 1. **The BetterReads rename** (`rename/betterreads`, 111 files, not merged).
    - New copy never writes the app's name. Where a string must name the app, it waits for the rename, then uses
@@ -561,7 +710,7 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
      name.
 2. **PR #294** (Reado import, open) adds an importer and a status mapping. WP-19 comes after it, and any migration
    numbered here is rebased past whatever #294 adds.
-3. **`feat/import-cover-backfill`** (running) owns covers in the import; #27 is not dispatched separately (§3).
+3. **`feat/import-cover-backfill`** (running) owns covers in the import; #27 is not dispatched separately (§4).
 4. **Migrations** start after `20261026020000_collections_updated_at.sql`. Each package picks its timestamp when it
    is written, later than the latest on `main` at that moment.
 5. **SQL functions are redefined in full** (`create or replace` with the whole body). Two open PRs that redefine
@@ -569,17 +718,29 @@ times**: in `pages/profile/index.vue:111-142`, `pages/profile/[year].vue`, `page
    - **One package at a time per function**, each starting from the latest definition on `main`.
    - The chain: `sync_write` (WP-14 → WP-17); `member_profile` and `private.my_social_json` (WP-11 if a section
      switch is chosen → WP-16 → WP-17); `public_reading_page` and `feed` (WP-17); `delete_my_account` (WP-21).
-   - This is why the LOW chain is long (§7).
+   - This is why the LOW chain is long (§8).
 6. **Tests:** Vitest (`web/tests/`, repositories against the local stack) and pgTAP (`supabase/tests/`). Playwright
    runs **locally only** (the iPhone 15 WebKit project); no package adds e2e to CI. No full typechecks.
 7. **German:** every new key in `en.json` and `de.json`. `tests/i18n-parity.test.ts` enforces parity; translate with
    `pnpm i18n:translate` under `web/i18n/kit/glossary.json` (decisions in `docs/i18n/german-glossary.md`: Autor
    with no gender sign, "Lese ich" short form, …). Check 390 px for German length (`docs/i18n/german-pass.md`).
 8. **Parity:** every screen change updates its `docs/parity.md` section (states, actions, keys, IDs).
+9. **Public launch (revision 2).**
+   - The launch packages (WP-24, WP-25, WP-27) start now, beside the running wave 1. None of them touches a
+     wave-1 file:
+     - WP-24 touches the sign-up and auth path, the avatars policy and the waitlist.
+     - WP-25 touches the member sheet, the feedback table and the owner inbox.
+     - WP-27 touches only legal and docs files.
+   - The rule from now on: **no package that shows member-written content to others** merges before WP-25 and
+     WP-26. That covers WP-12 (Collection names), WP-16 (bio), WP-21 (images) and WP-22 (links).
+   - **WP-24 may overlap the owner's own launch work** (opening sign-up is a launch task in itself). The
+     coordinator checks before dispatching it; whatever is already covered drops out of its scope.
+   - The **rename and the launch** both change the privacy notice. WP-27 either waits for the rename or does the
+     legal-text name swap itself, so the notice is reviewed once.
 
 ---
 
-## 6. Work packages
+## 7. Work packages
 
 Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 
@@ -611,7 +772,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 
 ### WP-02 iOS shelf scrolling (#26). P0 · M · Opus · wave 1 · **in the Regal repo**
 - **Why its own package:** another repository, a diagnosis loop with the owner's phone, and no Libellus files
-  unless hypothesis 3 holds (§4.5).
+  unless hypothesis 3 holds (§5.5).
 - **Steps:**
   1. In a fresh worktree of `fabkho/regal` at `origin/main`, add a diagnostics overlay behind `?touchdebug`. It
      shows the pointer and touch event sequence (`type`, `pointerType`, `buttons`, cancels), the computed
@@ -633,7 +794,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 - **Open questions:** which iOS version? Safari tab, home-screen app, or both? Which screens exactly? Did it ever
   work on iOS? Pin Regal in Libellus?
 
-### WP-03 Tap the name to edit it (#3). P1 · S · Sonnet · wave 1
+### WP-03 Tap the name to edit it (#3). P1 · S · Sonnet · wave 1 (running; revision 2: safe as is, the server-side name rule is WP-26)
 - **Files:**
   - `components/profile/Hero.vue:57`: a button inside the `h1`, with the `profile.title` test ID kept.
   - `components/profile/Account.vue:162,225`: share the open state, or move `ShellNameSheet` up.
@@ -791,7 +952,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   the Library)?
 
 ### WP-11 Collection visibility, database (#6, #2). P3 · L · Opus · wave 1 (filler; the SQL chain head)
-- **Scope:** §4.2: the column, `set_collection_visibility`, `member_collections`, `member_collection`. No
+- **Scope:** §5.2: the column, `set_collection_visibility`, `member_collections`, `member_collection`. No
   `sync_write` change.
 - **Files:** a new `supabase/migrations/2026…_collection_visibility.sql` and
   `supabase/tests/collection_visibility_test.sql`.
@@ -808,7 +969,12 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 - **Open questions:** private by default (recommended)? A section switch in Privacy as well? Ever on the public
   reading page?
 
-### WP-12 Collection visibility, app (#6, #2). P3 · M–L · Sonnet · wave 2 (after WP-11, WP-10; after the rename)
+### WP-12 Collection visibility, app (#6, #2). P3 · M–L · Sonnet · wave 3 (after WP-11, WP-10, **WP-25, WP-26**; after the rename)
+- **Revision 2:**
+  - A visible Collection's name is content strangers can see (on public accounts, or once links travel).
+  - Making a Collection visible therefore runs the name through WP-26's text rule (no URLs, no control
+    characters), and WP-25 gets a "Collection" report reason with an owner action to make it private again.
+  - Private by default, opt-in per Collection: no bulk "make all visible".
 - **Files:**
   - The Collection's options sheet in `pages/collections/[id].vue` (a "Visible to followers" switch, online only).
   - A visibility mark on rows in `pages/collections/index.vue`.
@@ -835,8 +1001,8 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   announcements); parity unchanged.
 - **Open questions:** none.
 
-### WP-14 Manual order of Collections (#7). P3 · L · Sonnet · wave 3 (after WP-12, WP-13)
-- **Scope:** §4.3.
+### WP-14 Manual order of Collections (#7). P3 · L · Sonnet · wave 4 (after WP-12, WP-13)
+- **Scope:** §5.3.
 - **Files:**
   - A migration (`reorder_collections`, a `sync_write` action) and pgTAP.
   - `data/collections.ts`, `stores/collections.ts`, `data/queuedWrites.ts`.
@@ -875,7 +1041,13 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
 - **Open questions:** per status or one layout for all? The Collection page too (only while sorted, since drag
   stays a list)? A duration ("for 12 days") instead of a date?
 
-### WP-16 A short bio (#4). P3 · M · Sonnet · wave 3 (after WP-11, WP-03, WP-12; after the rename)
+### WP-16 A short bio (#4). P3 · M · Sonnet · wave 4 (after WP-11, WP-03, WP-12, **WP-25, WP-26**; after the rename)
+- **Revision 2:**
+  - `set_bio` uses WP-26's shared rule: at most 160 characters, no URLs, e-mail addresses or phone numbers (the
+    spam pattern), no control, bidi or zero-width characters.
+  - WP-25 gets a "bio" reason and an owner action that clears it.
+  - No profanity list: false positives (the "Scunthorpe" problem) in two languages, and the report flow is the
+    answer.
 - **Files:**
   - A migration: `accounts.bio text check (char_length(bio) <= 160)`; `set_bio` (trim, collapse whitespace, no control
     characters, null when blank); returned in `member_profile` and the own social JSON; pgTAP.
@@ -897,8 +1069,8 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - Who sees it: whoever sees her profile (recommended), or also on a private account's card, like the photo?
   - The German word.
 
-### WP-17 On Hold, database (#23). P3 · L · Opus · wave 4 (after WP-11, WP-14, WP-16)
-- **Scope:** §4.4, database: two migration files, `pause_reading` and `resume_reading`, `sync_write` actions, and
+### WP-17 On Hold, database (#23). P3 · L · Opus · wave 5 (after WP-11, WP-14, WP-16)
+- **Scope:** §5.4, database: two migration files, `pause_reading` and `resume_reading`, `sync_write` actions, and
   every function listed there.
 - **German:** none.
 - **Tests:** a new `supabase/tests/paused_test.sql`, plus updates where existing tests enumerate statuses.
@@ -908,7 +1080,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - `circle_reading` and the feed leave paused out.
   - `member_profile` counts follow the chosen section.
 - **Acceptance:**
-  - Every function in §4.4 is reviewed, with a test or a note.
+  - Every function in §5.4 is reviewed, with a test or a note.
   - The migration is inert for existing data.
   - The RPCs are granted only when WP-18's tolerant client has shipped (or they go in that release).
 - **Open questions:**
@@ -917,8 +1089,8 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - A feed event (recommended: none)?
   - Can a book be added straight as On hold?
 
-### WP-18 On Hold, app (#23). P3 · L · Sonnet (Opus review) · wave 5 (after WP-17, WP-15)
-- **Scope:** §4.4, app; every file listed.
+### WP-18 On Hold, app (#23). P3 · L · Sonnet (Opus review) · wave 6 (after WP-17, WP-15)
+- **Scope:** §5.4, app; every file listed.
 - **Recommended UI:**
   - Paused Books as a quiet section at the end of the Currently reading segment, not a fourth segment: four segments
     do not fit 390 px in German (`docs/i18n/german-glossary.md` D3 already shortens "Lese ich").
@@ -937,7 +1109,7 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - `CONTEXT.md` and parity updated.
 - **Open questions:** a section or a segment? Do paused count in the Profile's Library line? Shown on the shelf?
 
-### WP-19 On Hold, importers (#23). P3 · S–M · Haiku · wave 6 (after WP-18, PR #294)
+### WP-19 On Hold, importers (#23). P3 · S–M · Haiku · wave 7 (after WP-18, PR #294)
 - **Files:** `data/import/goodreads.ts:80` (`on-hold`, `paused`, `on hold` shelves become a paused open read),
   `hardcover.ts` (its Paused status, if it has one), `fable.ts`, `rows.ts`, `components/import/Counts.vue`, the Reado
   mapping from #294, `import_books` (if WP-17 has not already taught it).
@@ -962,7 +1134,13 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - Loads only when opened.
 - **Open questions:** where on the Profile (it may replace Reading days' figures)? The custom range's maximum?
 
-### WP-21 A Collection's own cover (#8). P3 · L · Sonnet · wave 5 (after WP-12, WP-14)
+### WP-21 A Collection's own cover (#8). P4 · L · Sonnet · **parked unless members ask** (after WP-12, WP-14, WP-25)
+- **Revision 2 prerequisites, if un-parked:**
+  - 256 KB, webp/jpeg, re-encoded on the device (drops EXIF).
+  - A path pinned per member and Collection; one file per Collection; a per-member cap in the insert policy.
+  - Followers see it only on a visible Collection.
+  - A "cover" report reason, and an owner action that deletes the file.
+  - The storage budget checked against the Free plan.
 - **Files:**
   - A migration: a private bucket `collection-covers` with avatar-style policies; `collections.cover_path`;
     `set_collection_cover`; `delete_my_account` (latest in `20261009120000_avatars.sql`) extended; pgTAP.
@@ -978,50 +1156,291 @@ Each package also has an issue draft in `backlog-issues/NN-slug.md`.
   - Deleting the Collection or the account leaves no file.
 - **Open question:** is this worth the cost at all? Recommended: only once #2 is live and members ask for it.
 
-### WP-22 Social links (#5). P4 · parked · not recommended
-The safe shape, if wanted:
-- Handles for an allow-list of platforms (Instagram, TikTok, YouTube, plus book platforms the owner names); the app
-  builds the URLs.
-- At most four.
-- `rel="noopener noreferrer nofollow ugc"`.
-- Shown only where `private.visible` allows.
-- In the privacy notice.
-- After WP-16.
+### WP-22 Social links (#5). P2 · M · Sonnet · wave 3 (after WP-25, WP-26, WP-27; after the rename) · owner decision: wanted
+- **Why this shape:** after the public launch, links reach strangers, and a free URL field is a phishing and spam
+  tool. So members store only a **validated handle or canonical ID per allow-listed platform**, and the app builds
+  every outgoing URL itself.
+- **Platforms (owner's list).** The formats are starting points; the worker checks each platform's current rules in
+  the PR and writes them down.
 
-### WP-23 Follower counts (#19). P4 · parked
-Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). If they ever come back:
-- Counts for herself first.
-- Then on profiles, only where `private.visible` allows, and never for blocked members.
-- An RPC, not a widened RLS.
+  | Platform | Stored | URL the app builds | Format to check |
+  |---|---|---|---|
+  | Instagram | handle | `https://www.instagram.com/<handle>/` | `[A-Za-z0-9._]{1,30}`, no leading, trailing or double dot |
+  | TikTok | handle | `https://www.tiktok.com/@<handle>` | `[A-Za-z0-9._]{2,24}`, no trailing dot |
+  | YouTube | handle, or channel id | `https://www.youtube.com/@<handle>` / `…/channel/<id>` | handle `[A-Za-z0-9._-]{3,30}`; id `UC[A-Za-z0-9_-]{22}` |
+  | Goodreads | numeric user id | `https://www.goodreads.com/user/show/<id>` | `[0-9]{1,12}` |
+  | StoryGraph | username | `https://app.thestorygraph.com/profile/<username>` | to verify |
+  | Hardcover | username | `https://hardcover.app/@<username>` | to verify |
+  | Fable | username | the profile URL Fable uses | to verify |
+
+  Letterboxd is films, so it does not fit a books app. Bluesky or Threads are possible additions (owner question).
+  A pasted profile URL is parsed **on the device**, only for that platform's own hosts, into the handle. The server
+  never accepts a URL.
+- **Database (one migration):**
+  - **Table** `public.member_links (member_id → accounts on delete cascade, platform text check in (…), handle
+    text, position smallint, updated_at)`, primary key `(member_id, platform)`: one per platform, at most seven.
+    RLS: select own only.
+  - **Visibility** lives in `public.member_link_settings (member_id pk, visibility text check in
+    ('everyone','followers','me') default 'followers')`. It is its own table on purpose: it touches neither
+    `social_settings` nor `private.my_social_json`, and so stays out of the SQL chain.
+  - **Write** `set_member_links(p_links jsonb, p_visibility text)`:
+    - per-platform regex and length checks, with WP-26's `private.public_text_ok` as the base;
+    - online only, like every social write;
+    - **10 calls an hour** (a calls table, the follow pattern);
+    - errors `link_invalid:<platform>`, `rate_limited`.
+  - **Read** `member_links(p_member)`, security definer:
+    - `me`: only herself;
+    - `followers`: herself and accepted followers;
+    - `everyone`: whoever may see her profile (`private.visible`);
+    - never across a block.
+  - **Owner action** `owner_clear_member_links(member)` for WP-25.
+- **Recommended default visibility: followers only.**
+  - On a private account that is the people she accepted.
+  - On a public account it keeps links from strangers who only opened her link and did not follow.
+  - "Everyone" is her explicit choice.
+  - Not on the public reading page (`/r/<token>`) for now.
+- **App:**
+  - An Account row "Links" opens a sheet: one field per platform with the fixed prefix shown ("instagram.com/"),
+    paste-a-URL extraction, and the visibility as a segmented control.
+  - A row of platform marks under the name in `components/profile/Hero.vue` and `components/friends/MemberHero.vue`.
+    The marks are the app's own monochrome glyphs or text chips, no third-party icon kit.
+  - Each mark is a link: `target="_blank" rel="noopener noreferrer nofollow ugc"`, an external-link indicator, and the
+    accessible name "{platform}: {handle}, opens {platform}".
+  - Data layer in `data/social.ts` (or a new `data/memberLinks.ts`).
+- **Report path:** WP-25 gets the reason "links" and the owner action above.
+- **Privacy notice (EN and DE):** a new optional category, "links to your profiles on other platforms": the handles
+  she enters, who sees them (her setting), deletable at any time, deleted with the account. Opening one takes the
+  viewer to a third party with its own privacy policy, with no referrer sent.
+- **Account deletion and export:**
+  - Deletion: the cascade from `accounts`/`auth.users` covers it (pgTAP).
+  - Export: there is no member-facing data export today; `data/export/memberLibrary.ts` is the Library export for
+    Regal. Add the links to any future GDPR export.
+- **German:** `account.links` ("Links"), `links.title` ("Your profiles elsewhere" / "Deine Profile anderswo"),
+  `links.placeholder`, `links.pasteHint`, `links.invalid.<platform>`,
+  `links.visibility.everyone|followers|me` ("Everyone who can see your profile" / "Alle, die dein Profil sehen";
+  "Followers only" / "Nur Follower"; "Only me" / "Nur ich"), `links.opens` ("Opens {platform}" / "Öffnet
+  {platform}"). Platform names stay brand names.
+- **Shared profile-edit UI with WP-16?** No. Bio and links each get their own sheet and Account row, and links use
+  their own table and RPC, so **WP-22 and WP-16 can run in parallel**. They only meet in disjoint hunks of the two
+  heroes and `Account.vue` (≈). A single "Edit profile" sheet can merge them later. WP-22 is wave 3 and WP-16 is
+  wave 4, because WP-16 also waits for WP-12.
+- **Tests:**
+  - pgTAP: accept and reject lists per platform; a URL is refused; seven-link cap; rate limit; each visibility case
+    (me, followers, everyone, requester, stranger, blocked both ways); the deletion cascade; the owner action refuses
+    non-owners.
+  - Vitest: the paste parser and URL builder per platform, including other hosts and `javascript:` refused.
+  - Playwright locally only.
+- **Acceptance:**
+  - She adds an Instagram handle and a Goodreads id, picks a visibility, and the right people (and only they) see two
+    marks under her name that open the canonical profile URLs in a new tab.
+  - A pasted `https://www.instagram.com/name/?igsh=…` is stored as `name`.
+  - Any non-allow-listed host or free URL is refused, client and server.
+  - Report → "links" reaches the owner, who can clear them.
+  - The privacy notice names the category in EN and DE.
+- **Size and model:** M; Sonnet.
+- **Open questions:** Add Bluesky or Threads? Default visibility (recommended: followers only)? Show on the
+  reading page later?
+
+### WP-23 Follower counts (#19). P4 · parked (revision 2: a self-only variant offered)
+Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). After the public launch:
+- **Self-only (S, any time):** her own Following, Followers and Requests counts on People (`pages/friends/people.vue`),
+  from her own rows. Never shown to anyone else; no new privacy surface.
+- **Public counts (M, still parked):**
+  - They leak the size of a private member's circle, invite comparison and get inflated by throwaway accounts.
+  - If they ever come back: only where `private.visible` allows, never for blocked members, through an RPC rather
+    than a wider RLS, with pgTAP for each case.
+
+### WP-24 Open sign-up safely (launch). P0 · M · Opus · launch wave (start now)
+- **Why:** the invite gate is the app's only brake on sign-ups and on mail sent to unknown addresses (§2.1). Removing
+  it without a replacement lets anyone make the app mail any address, and nothing caps photo uploads.
+- **Check first:** whether the owner's launch work already opens sign-up; then only the remaining items stay.
+- **Files and scope:**
+  - **The gate:** a migration that turns `public.signup_invite` and its `auth.users` triggers into
+    "invite optional". A setting such as `private.signup_mode` (`open` | `invite`) keeps the owner able to close
+    sign-up again in one statement during an incident. An invite code given anyway is still recorded
+    (`accounts.invite_code_id`). pgTAP: both modes, and the confirmation trigger.
+  - **Sign-up screen:** no code field in open mode (`web/app/pages/sign-up.vue`, `data/auth.ts:167-178`, the
+    `invite_*` error mapping `:84-87`), plus the line "I am 16 or older" as a required check
+    (`signUp.ageConfirm`).
+  - **Captcha:** Cloudflare Turnstile through Supabase Auth's captcha (`[auth.captcha]` in `supabase/config.toml`,
+    `provider = "turnstile"`). The token goes with every `signInWithOtp` call, sign-in and sign-up alike, because both
+    send mail. The site key is in the build config; the secret is in the Supabase dashboard. Add it to
+    `docs/SETUP.md`.
+  - **Email capacity (owner dashboard steps, written into `docs/OPERATIONS.md`):**
+    - Supabase Auth's email rate limit and per-address frequency.
+    - Resend's plan quota and domain warm-up.
+    - The arithmetic: every sign-in is a mail.
+  - **Photo cap:** the `avatars` insert policy also requires fewer than N objects in her folder (for example 4:
+    two sizes, old and new during a swap), so a member cannot fill the bucket.
+  - **Waitlist at launch:** the reading page's form (`components/reading/Waitlist.vue`) becomes a "Sign up" link.
+    `join_waitlist`, the Waitlist page and `waitlist-invite` stay for the addresses already waiting, or are retired
+    (owner's call).
+  - `SPEC.md` (Access) and `docs/parity.md` (Sign up, Verify, Waitlist).
+- **German:** `signUp.ageConfirm` ("I am 16 or older" / "Ich bin mindestens 16 Jahre alt"), captcha error copy, the
+  sign-up intro without "invite-only" (`signUp.intro`).
+- **Tests:**
+  - pgTAP: open mode, invite mode, the confirmation trigger, the avatar cap.
+  - Vitest: the auth repository with the captcha token passed.
+  - Playwright locally only: the sign-up flow (`e2e/auth.spec.ts`).
+- **Acceptance:**
+  - A new address signs up without a code.
+  - Without a valid captcha token no mail is sent.
+  - A fifth photo object is refused.
+  - The owner can switch back to invite-only with one statement (written in OPERATIONS).
+  - The age line is required.
+  - The email budget is written down with the dashboard values.
+- **Open questions:**
+  - Keep invite codes at all (for example to skip the captcha)?
+  - What happens to the waitlist?
+  - Turnstile or hCaptcha (Turnstile matches Cloudflare Pages)?
+
+### WP-25 Report a member, and the owner's minimal handling (launch). P0 · M · Sonnet (Opus review of the SQL) · launch wave
+- **Why:** there is no way to report anything (§2.2). After the launch, names, photos and reviews come from
+  strangers. The owner needs to hear about abuse, and members need a way to say it.
+- **Scope (phase 1, no wave-1 file touched):**
+  - **Where:**
+    - "Report" in the member sheet's ⋯ (`components/friends/MemberSheet.vue`, from her profile and from People).
+    - Reasons: *name*, *photo*, *a review*, *spam*, *someone under 16*, *other*.
+    - An optional note of up to 500 characters.
+    - After sending, the sheet offers **Block {name}** (the existing `block()`).
+  - **Where reports go:** reuse `public.feedback`, with a new kind `report` and
+    `context = { target_member, reason, target_kind, target_id }`. It brings its RLS, its rate limit (5 an hour,
+    20 a day; `20261024010000_feedback.sql:4`) and the owner's inbox (`/profile/feedback`, a "Reports" filter) with
+    it. A table of its own is a later refactor if volume asks for one.
+  - **The owner's minimal handling** (owner-only functions, `private.is_instance_owner()`):
+    - `owner_clear_member_name(member)`: clears `raw_user_meta_data.name`.
+    - `owner_remove_member_photo(member)`: deletes her avatar objects and clears `accounts.avatar_path`.
+    - `owner_clear_review(session)`: clears the review text and keeps the read.
+    - Banning an account goes through the Supabase dashboard (Auth → Users → ban), written in the runbook (WP-27).
+    - Every owner action is logged (who, what, when) for the statement of reasons.
+  - **Phase 2 (after WP-04):** "Report" on a single review row in the feed and on her profile. Later reasons are
+    added by WP-12 (Collection), WP-16 (bio), WP-22 (links) and WP-21 (cover).
+- **German:** `report.title` ("Report {name}" / "{name} melden"), `report.reason.*`, `report.note`, `report.sent`
+  ("Thanks. The owner reads every report." / "Danke. Jede Meldung wird gelesen."), `report.block`.
+- **Tests:**
+  - pgTAP: a member can file a report and cannot read others' reports.
+  - pgTAP: owner functions refuse non-owners; the rate limit; clearing a name, photo or review.
+  - Vitest: the repository.
+- **Acceptance:**
+  - From any member's profile, Report → reason → Send arrives in the owner's inbox with the target and reason.
+  - The reported member never learns who reported her.
+  - The owner can clear a name, photo or review from the inbox with one action each; the change shows everywhere
+    (feed, profile, reading page).
+  - The privacy notice covers reports (WP-27).
+- **Open questions:**
+  - Is the owner the only moderator?
+  - Tell the reported member what was removed and why (recommended: a short email, by hand at first)?
+  - Is "someone under 16" a reason?
+
+### WP-26 Name rules and a shared text rule (launch week). P1 · M · Sonnet (Opus review) · wave 2 (after WP-03)
+- **Why:** a name is free text written through the public auth API (§2.2); the client's `cleanName` is not a
+  guard. Bio (WP-16), visible Collection names (WP-12) and links (WP-22) need the same rule.
+- **Scope:**
+  - **`private.public_text_ok(text, max_len, allow_urls)`**, one SQL helper:
+    - trims and collapses whitespace;
+    - refuses control, bidi-override and zero-width characters;
+    - refuses URLs, e-mail addresses and phone-number patterns unless allowed;
+    - checks the length.
+    - Unit-tested in pgTAP with EN and DE examples.
+  - **Names:**
+    - A `BEFORE UPDATE OF raw_user_meta_data` trigger on `auth.users` refuses a *changed* name that breaks the rule
+      or is reserved. Reserved means the app's names (Libellus, BetterReads), "admin", "support", "team",
+      "moderator", "official" and the owner's name, compared case- and accent-folded.
+    - The trigger acts only when the name changes, so a sign-in, which also updates `auth.users`, never fails on an
+      old name.
+    - `private.member_name` also sanitizes on read, so old names display safely.
+  - **Client:** `cleanName` mirrors the rule; the name sheet shows the refusal (`account.nameError.*`).
+  - WP-03's shortcut uses the same sheet, so nothing else changes.
+- **German:** `account.nameError.reserved` ("This name is reserved." / "Dieser Name ist reserviert."),
+  `account.nameError.invalid`.
+- **Tests:**
+  - pgTAP: the helper; the trigger refuses reserved and bidi names on change and lets a sign-in through for a
+    legacy name.
+  - Vitest: `cleanName`.
+- **Acceptance:**
+  - Setting "BetterReads Support" or a name with U+202E is refused, both through the app and through a direct
+    `auth.updateUser`.
+  - Existing members still sign in.
+  - The helper is ready for WP-12, WP-16 and WP-22.
+- **Open questions:**
+  - The reserved list?
+  - Should names be unique (recommended: no)?
+
+### WP-27 Launch texts: privacy notice, community rules, moderation runbook (launch). P0 · S–M · Sonnet (the owner reviews) · launch wave
+- **Scope (docs and legal texts only):**
+  - **Privacy notice** (`web/app/legal/privacy.ts`, EN and DE, with a new version date):
+    - drop "run as an invite-only beta" (`:13`);
+    - invite code becomes optional (`:32`);
+    - the waitlist lines (`:37`, `:55`, `:111`) as WP-24 decides;
+    - add **reports**: what is stored, who reads it, how long it is kept, and the legal basis (legitimate interest /
+      legal obligation);
+    - the age line consistent with the sign-up check;
+    - the captcha provider (Cloudflare Turnstile) as a processor.
+  - **Community rules:** a short page (EN and DE, the same `legal/` machinery). What is not allowed (impersonation,
+    harassment, spam, sexual content, minors), what the owner can do (clear a name, photo or review; suspend), and
+    how to report. Linked from sign-up and from the report sheet.
+  - **`docs/OPERATIONS.md`, a moderation runbook:**
+    - read reports;
+    - each owner action;
+    - ban and unban in the Supabase dashboard;
+    - how to tell a member why;
+    - the incident switch back to invite-only (WP-24);
+    - the Supabase and Resend usage thresholds, and when to upgrade.
+  - **`docs/legal-checklist.md`:** the DSA notice-and-action item, the age decision and the new processor.
+  - `SPEC.md`: Access and the out-of-scope list (`:24` lists "open sign-up" as out of scope).
+- **Ordering:** after the BetterReads rename has merged, or it does the legal-text name swap itself.
+  `tests/legal.test.ts` must stay green (no placeholders).
+- **Acceptance:**
+  - No "invite-only" claim is left in user-facing legal text.
+  - Reports and the captcha are in the notice in both languages.
+  - The community rules page exists and is linked.
+  - The runbook covers every owner action WP-25 adds.
+- **Open questions:** Is a postal address needed before a public launch (`docs/legal-checklist.md:17`
+  recommends it)? How long are reports kept (recommended: 12 months after handling)?
 
 ---
 
-## 7. Waves, hotspots and the critical path
+## 8. Waves, hotspots and the critical path
 
 **Waves** (packages in one wave touch disjoint files, or the same file in disjoint hunks, marked ≈):
 
-| Wave | HIGH (priority:high) | LOW (fills spare capacity) |
-|---|---|---|
-| 1 | WP-01, WP-02, WP-03 (≈ `pages/profile/index.vue` with WP-01), WP-04, WP-10 | WP-11 |
-| 2 | WP-05 (← WP-01), WP-09 (← WP-01) | WP-12 (← WP-11, WP-10; after the rename), WP-13 (← WP-10), WP-15 (← WP-10) |
-| 3 | WP-06 (← WP-05) | WP-14 (← WP-12, WP-13), WP-16 (← WP-11, WP-03, WP-12) |
-| 4 | WP-07 (← WP-06), WP-08 (← WP-06) | WP-17 (← WP-11, WP-14, WP-16) |
-| 5 | none | WP-18 (← WP-17, WP-15), WP-20 (← WP-08), WP-21 (← WP-12, WP-14) |
-| 6 | none | WP-19 (← WP-18, PR #294) |
+| Wave | LAUNCH (start now) | HIGH (priority:high) | LOW (fills spare capacity) |
+|---|---|---|---|
+| 1 | WP-24, WP-25, WP-27 | WP-01, WP-02, WP-03 (≈ `pages/profile/index.vue` with WP-01), WP-04, WP-10 (all running, unchanged) | WP-11 |
+| 2 | WP-26 (← WP-03) | WP-05 (← WP-01), WP-09 (← WP-01) | WP-13 (← WP-10), WP-15 (← WP-10) |
+| 3 | none | WP-06 (← WP-05), **WP-22** (← WP-25, WP-26, WP-27; after the rename) | WP-12 (← WP-11, WP-10, WP-25, WP-26; after the rename) |
+| 4 | none | WP-07 (← WP-06), WP-08 (← WP-06) | WP-14 (← WP-12, WP-13), WP-16 (← WP-11, WP-03, WP-12, WP-25, WP-26) |
+| 5 | none | none | WP-17 (← WP-11, WP-14, WP-16), WP-20 (← WP-08) |
+| 6 | none | none | WP-18 (← WP-17, WP-15) |
+| 7 | none | none | WP-19 (← WP-18, PR #294) |
+| parked | none | none | WP-21 (← WP-12, WP-14, WP-25), WP-23 (the self-only variant any time) |
 
-**First wave, in this order if capacity is short:**
-1. **WP-02** (Opus; the longest loop, because it waits on the owner's iPhone).
-2. **WP-01** (Haiku, an hour; it unblocks WP-05 and WP-09).
-3. **WP-10** (it unblocks WP-13 and WP-15).
-4. **WP-03**.
-5. **WP-04**: its PR waits on the owner's design pick anyway.
+**Why the launch wave does not collide with wave 1:**
+- WP-24 touches the sign-up and auth files, the avatars policy, the waitlist and `supabase/config.toml`.
+- WP-25 touches `components/friends/MemberSheet.vue`, the feedback migration and functions, and
+  `pages/profile/feedback.vue`.
+- WP-27 touches `web/app/legal/*`, `docs/OPERATIONS.md`, `docs/legal-checklist.md` and `SPEC.md`.
+- None of these is a wave-1 file.
+- The only overlaps are among the launch packages: WP-24 and WP-27 share `SPEC.md` (different sections) and WP-27's
+  privacy text follows WP-24's waitlist decision.
+- WP-25's single-review report waits for WP-04 (`FeedRow.vue`).
+
+**Launch wave, in this order if capacity is short:**
+1. **WP-24** (Opus): the gate and the email budget decide whether launch day works at all.
+2. **WP-25**: the report path.
+3. **WP-27**: texts. Its legal review by the owner is the long pole, so start it early.
+
+**First wave (running), unchanged:** WP-02, WP-01, WP-10, WP-03, WP-04.
 
 **Critical paths:**
+- **LAUNCH:** WP-24 ∥ WP-25 ∥ WP-27 in wave 1, then WP-26 in wave 2. With the iOS fix (WP-02), that is the launch
+  set.
 - **HIGH:** WP-01 → WP-05 → WP-06 → WP-07 ∥ WP-08. Four waves; all of priority:high is done after wave 4.
-- **Overall:** WP-11 → WP-12 → WP-14 → WP-17 → WP-18 → WP-19. Six waves, set by the SQL functions that are redefined
-  in full (`sync_write`, `member_profile`) and the Collections files. WP-19 is also gated by PR #294.
+- **Overall:** WP-11 → WP-12 → WP-14 → WP-17 → WP-18 → WP-19. Seven waves now: WP-12 waits one wave for WP-25 and
+  WP-26. The chain is set by the SQL functions that are redefined in full (`sync_write`, `member_profile`) and the
+  Collections files; WP-19 is also gated by PR #294.
 - If the owner wants **On Hold sooner**, WP-17 can move to the head of the SQL chain (before WP-11, WP-14 and WP-16),
-  and those then rebase onto it.
+  and those then rebase onto it. It creates no public content, so the launch gate does not apply to it.
 
 **Shared-file hotspots** (who touches what):
 
@@ -1037,8 +1456,14 @@ Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). If they
 | `pages/collections/[id].vue` | WP-10, WP-12, WP-21 |
 | `components/collections/EntryList.vue` | WP-10, WP-13, WP-18 |
 | `pages/library.vue`, `ViewBar.vue`, `EntryRow.vue`, `data/libraryView.ts` | WP-10 (`SortSheet`), WP-15, WP-18 |
-| `components/profile/Hero.vue`, `components/friends/MemberHero.vue`, `Account.vue` | WP-03, WP-16, (WP-22) |
-| `web/app/legal/privacy.ts` | WP-12, WP-16, (WP-21, WP-22) |
+| `components/profile/Hero.vue`, `components/friends/MemberHero.vue`, `Account.vue` | WP-03, WP-16, WP-22 (≈ WP-16 and WP-22: disjoint hunks, a line each in the heroes, a row each in Account) |
+| `web/app/legal/privacy.ts` | WP-27 (launch), then WP-12, WP-22 (≈, different bullets), WP-16, (WP-21) |
+| `web/app/pages/sign-up.vue`, `data/auth.ts` (sign-in and sign-up), `supabase/config.toml` | WP-24 |
+| `data/auth.ts` (`cleanName`), `components/shell/NameSheet.vue` | WP-26 (WP-03 only opens the sheet) |
+| `components/friends/MemberSheet.vue`, `pages/profile/feedback.vue`, `public.feedback` | WP-25 |
+| `SPEC.md`, `docs/OPERATIONS.md`, `docs/legal-checklist.md` | WP-24 (SETUP and OPERATIONS steps), WP-27 |
+| SQL `signup_invite` and the `auth.users` triggers, the avatars policies | WP-24; WP-26 adds an `auth.users` update trigger (serialize the two migrations) |
+| SQL `private.member_name` | WP-26 |
 | SQL `sync_write` | WP-14, WP-17 |
 | SQL `member_profile`, `private.my_social_json` | WP-11 (only with a section switch), WP-16, WP-17 |
 | SQL `public_reading_page`, `feed`, `circle_reading`, `book_readers` | WP-17 |
@@ -1047,7 +1472,7 @@ Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). If they
 
 ---
 
-## 8. Open questions for the owner (by package)
+## 9. Open questions for the owner (by package)
 
 - **WP-01:** a named ("Authors {name} returns to") or neutral ("Most-read authors") label? Remove the pill on member
   profiles too?
@@ -1070,7 +1495,14 @@ Counts were deliberately left out (`docs/proposals/social-v1.md:30,95`). If they
 - **WP-19:** which shelf names?
 - **WP-20:** its place on the Profile; the custom range's maximum?
 - **WP-21:** do it at all?
-- **WP-22, WP-23:** confirm parked.
+- **WP-22:** the platform list (add Bluesky or Threads?); the default visibility (recommended: followers only); show
+  links on the public reading page (recommended: not now)?
+- **WP-23:** build the self-only counts now? Keep public counts parked?
+- **WP-24:** is open sign-up already part of the owner's launch work? Keep invite codes? The waitlist's fate?
+  Turnstile? The email budget (the Resend plan, Supabase's email rate limit)?
+- **WP-25:** is the owner the only moderator? Tell members why content was removed? Is "under 16" a reason?
+- **WP-26:** the reserved-name list; unique names (recommended: no)?
+- **WP-27:** a postal address before launch; how long reports are kept; community rules wording (owner's voice)?
 
 ---
 

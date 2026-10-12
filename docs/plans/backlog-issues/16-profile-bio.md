@@ -1,6 +1,6 @@
 Title: Profile: a short bio under the name
 Labels: feature, priority:low
-Package: WP-16 · item #4 · tier P3 · size M · model Sonnet · depends on: WP-11, WP-03, WP-12, the BetterReads rename · wave 3
+Package: WP-16 · item #4 · tier P3 · size M · model Sonnet · depends on: WP-11, WP-03, WP-12, WP-25 (report flow), WP-26 (text rule), the BetterReads rename · wave 4
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/16-profile-bio.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/16-profile-bio.md)
 Plan: docs/plans/backlog-execution.md
 
@@ -24,6 +24,7 @@ There is no bio: `accounts` holds only id, invite code, creation time and the av
 - [ ] pgTAP (length, blank → null, visibility); Vitest repository.
 
 ## Notes
+- Public launch (revision 2): `set_bio` uses WP-26's shared rule (≤ 160, no URLs, e-mail addresses or phone numbers, no control/bidi/zero-width characters); WP-25 gets a "bio" reason and an owner action that clears it. No profanity list (false positives in two languages); the report flow is the answer.
 - No report flow exists (only block): length limit and plain text are the moderation.
 - Redefines `member_profile` in full: serialize with WP-11 (if it adds a section) and WP-17.
 - Owner questions: length; line breaks; who sees it (followers, or also a private account's card like the photo); the German label.

@@ -1,7 +1,7 @@
 Title: Collections: an uploaded cover instead of the four-cover mosaic
-Labels: feature, priority:low
-Package: WP-21 · item #8 · tier P3 (last in line; worth questioning) · size L · model Sonnet · depends on: WP-12, WP-14 · wave 5
-Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/21-collection-cover-image.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/21-collection-cover-image.md)
+Labels: feature, priority:low, needs-decision
+Package: WP-21 · item #8 · tier P4 (parked unless members ask) · size L · model Sonnet · depends on: WP-12, WP-14, WP-25 · parked
+Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/21-collection-cover-image.md)" --label feature --label priority:low --label needs-decision --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/21-collection-cover-image.md)
 Plan: docs/plans/backlog-execution.md
 
 ---
@@ -22,5 +22,6 @@ A Collection's face is always its first four covers (`web/app/components/collect
 - [ ] pgTAP for policies and deletion; Vitest for the raster.
 
 ## Notes
+- Public launch (revision 2): uploaders and viewers can be strangers, there is no automated image moderation, and the Free plan holds 1 GB of files. Parked unless members ask. If un-parked, all of: 256 KB, webp/jpeg only, re-encoded on the device (strips EXIF, as `utils/avatarRaster.ts` does for photos), path pinned per member and Collection, one file per Collection and a per-member cap in the insert policy, a "cover" report reason with an owner action that deletes the file.
 - Uploaded images reach followers once Collections can be visible: moderation risk without a report flow.
 - Owner question: worth it? Recommended only once #2 is live and members ask.
