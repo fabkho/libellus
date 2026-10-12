@@ -254,8 +254,8 @@ describe('the Goodreads stage of the cover fill', () => {
     expect(stopped.asked).toEqual([])
   })
 
-  it('an address that is no cover (too small, one flat colour) is passed over', async () => {
-    const { fill, found } = setup({ probe: async () => ({ ...GOOD, width: 40, height: 60 }) })
+  it('an address that is no cover (a stray pixel, one flat colour) is passed over', async () => {
+    const { fill, found } = setup({ probe: async () => ({ ...GOOD, width: 20, height: 30 }) })
     fill.add(wanted(1))
     fill.holdSearch(false)
     await fill.settled(1000)
