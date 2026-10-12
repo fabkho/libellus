@@ -35,7 +35,7 @@ const authorsTitle = computed(() => {
         :class="{ arrive: arriving }"
         data-testid="profile.author"
       >
-        <button type="button" class="row flex min-h-(--size-touch) w-full items-center gap-md py-xs text-left" @click="$emit('pick', author.name)">
+        <button type="button" class="row flex min-h-(--size-touch) w-full items-center gap-md py-xs text-left" data-testid="profile.authorRow" @click="$emit('pick', author.name)">
           <span class="fan relative flex shrink-0" aria-hidden="true">
             <UiCover
               v-for="(book, i) in author.books.slice(0, 3)"
