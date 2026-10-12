@@ -7,6 +7,7 @@ import {
   describeCover,
   isPlaceholderImage,
   MIN_COVER_SIDE,
+  PREFERRED_COVER_SIDE,
   resolveBookCover,
   resolveCover,
   type Pixels,
@@ -119,6 +120,9 @@ describe('which images will do as a Cover', () => {
   it('not one too small, nor one of a single flat colour', () => {
     expect(coverVerdict(image(200, 300))).toBe('ok')
     expect(coverVerdict(image(MIN_COVER_SIDE - 1, 300))).toBe('tooSmall')
+    expect(coverVerdict(image(MIN_COVER_SIDE, 60))).toBe('low')
+    expect(coverVerdict(image(PREFERRED_COVER_SIDE - 1, 300))).toBe('low')
+    expect(coverVerdict(image(PREFERRED_COVER_SIDE, 300))).toBe('ok')
     expect(coverVerdict(image(1, 1))).toBe('tooSmall')
     expect(coverVerdict(blank(400, 600))).toBe('placeholder')
     expect(isPlaceholderImage(painted(10, 15, [[[200, 100, 50], 1]]))).toBe(true)
@@ -135,9 +139,22 @@ describe('resolving a Cover when a Book enters the Catalogue', () => {
     expect(probe.read).toHaveLength(1)
   })
 
-  it('passes over artwork too small, and asks Apple for the edition by ISBN', async () => {
-    const probe = probes({
+  it('keeps a low-resolution cover when nothing better exists, and takes a better one when the chain finds it', async () => {
+    const low = probes({ [APPLE.replace('600x900bb', '300x450bb')]: image(100, 150) })
+    const alone = await resolveBookCover(book({ coverUrl: APPLE, isbn13: null }), { probe: low })
+    expect(alone.coverUrl).toBe(APPLE)
+    expect(alone.coverThumbhash).toBeTruthy()
+    const better = probes({
       [APPLE.replace('600x900bb', '300x450bb')]: image(100, 150),
+      [APPLE_BY_ISBN.replace('100x100bb', '300x450bb')]: image(300, 450),
+    })
+    const cover = await resolveBookCover(book({ coverUrl: APPLE }), { probe: better, lookupAppleIsbn: async () => ({ coverUrl: APPLE_BY_ISBN }) })
+    expect(cover.coverUrl).toBe(APPLE_BY_ISBN.replace('100x100bb', '600x900bb'))
+  })
+
+  it('still passes over a stray pixel and goes on to Apple for the edition by ISBN', async () => {
+    const probe = probes({
+      [APPLE.replace('600x900bb', '300x450bb')]: image(20, 30),
       [APPLE_BY_ISBN.replace('100x100bb', '300x450bb')]: image(300, 450),
     })
     const asked: string[] = []
