@@ -16,6 +16,15 @@
  * their own edition facts, and a better cover replaces a lent one.
  * Framework-free; no I/O.
  */
+/**
+ * The one-line off switch of the last-resort Goodreads cover source (docs/covers.md, "Goodreads, the last
+ * resort"): a Goodreads file's rows without a cover, and the import preview's manual "find a cover", ask the
+ * `goodreads-rating` function for the book's cover at Goodreads' image host and link it (never copied).
+ * Goodreads' API was retired in 2020 and its terms forbid automated access: the endpoint the function uses is
+ * unofficial, an owner-accepted risk. `false`: no stage, no button, not one call; every other cover is as it was.
+ */
+export const GOODREADS_COVERS = true
+
 export type CoverKind = 'exact' | 'ebook' | 'sameWork' | 'goodreads' | 'placeholder'
 
 /** Best first. */

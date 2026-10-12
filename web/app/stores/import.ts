@@ -3,6 +3,7 @@ import { createCatalogueSearch } from '~/data/catalogueSearch'
 import type { Book, BookSnapshot } from '~/data/books'
 import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, type CoverFound } from '~/data/coverFill'
 import { probeImageInBrowser } from '~/data/covers'
+import { createGoodreadsCover } from '~/data/goodreadsCover'
 import {
   createBookImport,
   editionChoices,
@@ -233,7 +234,9 @@ export const useImportStore = defineStore('import', () => {
       !edition.book.coverUrl &&
       !edition.coverFrom?.coverUrl
     if (!wanted) return fill.drop(book.key)
-    fill.add({ key: book.key, row: book, book: edition.book, alternatives: edition.alternatives })
+    // A Goodreads file's row carries the file's own book id (its key): the last-resort Goodreads cover stage asks only about those.
+    const goodreadsId = /^goodreads:(\d{1,20})$/.exec(book.key)?.[1]
+    fill.add({ key: book.key, row: book, book: edition.book, alternatives: edition.alternatives, ...(goodreadsId ? { goodreadsId } : {}) })
   }
 
   /** The fill found a cover: it goes on the row's edition (its own, or the cover its ISBN-only Book borrows), in the preview and in what the write will take. */
@@ -248,6 +251,12 @@ export const useImportStore = defineStore('import', () => {
     version.value++
   }
 
+  let goodreadsCover: ReturnType<typeof createGoodreadsCover> | null = null
+  function goodreadsCovers() {
+    if (!backend) return null
+    return (goodreadsCover ??= createGoodreadsCover(backend, { online: isOnline }))
+  }
+
   function startFill() {
     stopFill()
     if (!liveFetch || !searcher) return
@@ -256,6 +265,12 @@ export const useImportStore = defineStore('import', () => {
       search: searcher,
       probe: probeImageInBrowser,
       hostBlockedFor: (host) => liveFetch?.blockedFor(host) ?? 0,
+      goodreads: async (query) => {
+        const answer = await goodreadsCovers()?.find(query)
+        // Not asked (offline, refused, over the limit): a failure the stage's breaker counts.
+        if (!answer) throw new Error('goodreads cover unavailable')
+        return answer.coverUrl
+      },
       onFound: (key, found) => {
         if (fill === own) coverFound(key, found)
       },
