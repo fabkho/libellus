@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { createCoverFill, COVER_FILL_GOODREADS_GAP_MS, GOODREADS_FAILURES, mergeCover, type CoverFound, type CoverWanted } from '@/data/coverFill'
-import { coverKindOf, kindRank, GOODREADS_COVERS } from '@/data/kindRank'
+import { coverKindOf, kindRank, GOODREADS_COVERS } from '@/data/coverRank'
 import { verifyCover, type ProbeImage } from '@/data/covers'
 import type { FetchLike } from '@/data/fetching'
 import { createGoodreadsCover } from '@/data/goodreadsCover'
@@ -142,6 +142,15 @@ describe('the Goodreads stage of the cover fill', () => {
     expect(fill.calls().goodreads).toBe(0)
   })
 
+  it('asks for a Goodreads row whatever its Book is, a Manual book (no ISBN, nothing found) included', async () => {
+    const { fill, found, asked } = setup()
+    fill.add(wanted(7, { book: { isbn13: null, isbn10: null }, row: { ...wanted(7).row, isbn13: null } }))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(asked.map((q) => q.goodreadsBookId)).toEqual(['7'])
+    expect(found['goodreads:7']?.kind).toBe('goodreads')
+  })
+
   it('never asks about a row of another file (no Goodreads book id)', async () => {
     const { fill, found, asked } = setup()
     fill.add(wanted(1, { key: 'storygraph:1', goodreadsId: undefined }))
@@ -223,6 +232,7 @@ describe('the Goodreads stage of the cover fill', () => {
     const { fill } = setup({
       ...time,
       budgetMs: 2000,
+      searchGapMs: 0,
       goodreads: async (query) => {
         calls++
         time.wait(5000)
