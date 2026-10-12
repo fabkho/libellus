@@ -15,6 +15,7 @@ import { figuresOf, readsInMonth, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
 import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
+import { useProfileLinksStore } from '~/stores/profileLinks'
 
 definePageMeta({
   layout: 'tabs',
@@ -27,6 +28,9 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const members = useMemberProfileStore()
+// Her profile links (WP-22): what she shows to the signed-in member, read with her profile.
+const profileLinks = useProfileLinksStore()
+const memberLinks = computed(() => profileLinks.forMember(id.value))
 const online = useOnline()
 const { count, monthLong, monthLetter } = useFigures()
 
@@ -51,13 +55,21 @@ function show() {
   if (showing) return
   showing = true
   void members.load(id.value)
+  void profileLinks.loadFor(id.value)
 }
 onMounted(show)
 onActivated(show)
 onDeactivated(() => (showing = false))
-watch(id, () => void members.load(id.value))
+watch(id, () => {
+  void members.load(id.value)
+  void profileLinks.loadFor(id.value)
+})
 // Back online while the page is open: a Requested or Follow it shows, or figures it missed, may be old.
-watch(online, (now) => now && showing && void members.load(id.value))
+watch(online, (now) => {
+  if (!now || !showing) return
+  void members.load(id.value)
+  void profileLinks.loadFor(id.value)
+})
 
 // ------------------------------------------------------------------ her reading, in figures
 const thisYear = Number(isoDay().slice(0, 4))
@@ -143,6 +155,7 @@ function more() {
 }
 function changed() {
   void members.load(id.value)
+  void profileLinks.loadFor(id.value)
 }
 const modalShown = useModalShown()
 function scrollToHero() {
@@ -189,6 +202,8 @@ const relation = computed(() => {
 })
 watch(relation, (now, before) => {
   if (!now || !before || now.split('|')[0] !== before.split('|')[0]) return
+  // Following or being accepted changes what she shows to this member.
+  void profileLinks.loadFor(id.value)
   scrollAfterSheet()
 })
 
@@ -253,7 +268,7 @@ function back() {
 
     <!-- A profile she may see. -->
     <template v-else-if="open && blocks">
-      <FriendsMemberHero ref="hero" :card="open.member" :since="open.since" :library="library" />
+      <FriendsMemberHero ref="hero" :card="open.member" :since="open.since" :library="library" :links="memberLinks" />
 
       <div class="relative flex flex-col px-screen pt-lg">
         <div v-if="canFollow" class="flex flex-col gap-sm pb-xl">

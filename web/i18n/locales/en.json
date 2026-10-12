@@ -1161,6 +1161,42 @@
       "unknown": "Your links could not be saved. Try again."
     }
   },
+  "socialLinks": {
+    "row": "Profile links",
+    "rowNone": "None",
+    "title": "Your profiles elsewhere",
+    "intro": "Optional. Type your handle or paste the link to your profile. Only the handle is kept, and the app builds the link itself. Who sees them is up to you.",
+    "placeholder": "{prefix}{example}",
+    "save": "Save",
+    "remove": "Remove {platform}",
+    "listLabel": "Profiles elsewhere",
+    "menu": "Socials",
+    "menuLabel": "Socials, {count} link | Socials, {count} links",
+    "opens": "{platform}: {handle}. Opens {platform} in a new tab",
+    "visibility": {
+      "label": "Who sees my links",
+      "followers": "Followers",
+      "everyone": "Everyone",
+      "me": "Only me",
+      "hint": {
+        "followers": "Only people who follow you. Everyone else sees nothing.",
+        "everyone": "Everyone who can see your profile. On a private account that is your followers.",
+        "me": "Nobody else sees them."
+      }
+    },
+    "invalid": {
+      "goodreads": "Use the number from your Goodreads profile link, like goodreads.com/user/show/12345678.",
+      "reado": "Use your Reado username, or the link to your Reado profile.",
+      "youtube": "Use a handle like {'@'}name, a channel link, or a channel ID that starts with UC.",
+      "instagram": "Use your Instagram username (letters, numbers, dots and underscores), or the link to your profile.",
+      "tiktok": "Use your TikTok username (2 to 24 letters, numbers, dots and underscores), or the link to your profile."
+    },
+    "error": {
+      "offline": "You're offline. Nothing was saved.",
+      "rate_limited": "Too many changes just now. Try again in a while.",
+      "unknown": "Your links could not be saved. Try again."
+    }
+  },
   "waitlist": {
     "row": "Waitlist",
     "rowNone": "Nobody",

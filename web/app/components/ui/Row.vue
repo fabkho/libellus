@@ -2,7 +2,8 @@
 // One row in a RowGroup: an optional icon, the label, the value on the right
 // (or a placeholder), an optional chevron. 48 px tall, a hairline divider
 // inset under the text from the second row on. `as` makes it a button or a
-// link (`to`); interactive rows need a data-testid from the caller.
+// link (`to`); `href` makes it a plain anchor to somewhere outside the app (the caller sets `target` and
+// `rel`, which fall through); interactive rows need a data-testid from the caller.
 import type { RouteLocationRaw } from 'vue-router'
 import type { IconName } from './Icon.vue'
 
@@ -16,22 +17,24 @@ const props = withDefaults(
     mono?: boolean
     tone?: 'default' | 'danger'
     to?: RouteLocationRaw
+    href?: string
     as?: 'div' | 'button'
   }>(),
-  { value: undefined, placeholder: undefined, icon: undefined, chevron: false, mono: false, tone: 'default', to: undefined, as: 'div' },
+  { value: undefined, placeholder: undefined, icon: undefined, chevron: false, mono: false, tone: 'default', to: undefined, href: undefined, as: 'div' },
 )
 
 const NuxtLink = resolveComponent('NuxtLink')
-const tag = computed(() => (props.to ? NuxtLink : props.as))
+const tag = computed(() => (props.to ? NuxtLink : props.href ? 'a' : props.as))
 </script>
 
 <template>
   <component
     :is="tag"
     :to="to"
-    :type="as === 'button' && !to ? 'button' : undefined"
+    :href="href"
+    :type="as === 'button' && !to && !href ? 'button' : undefined"
     class="ui-row relative flex min-h-(--size-row) w-full items-center gap-ms px-inset text-left text-body"
-    :class="[tone === 'danger' ? 'text-error' : 'text-ink', (as === 'button' || to) && 'not-disabled:hover:bg-fill active:bg-fill-strong']"
+    :class="[tone === 'danger' ? 'text-error' : 'text-ink', (as === 'button' || to || href) && 'not-disabled:hover:bg-fill active:bg-fill-strong']"
   >
     <UiIcon v-if="icon" :name="icon" :size="18" :class="tone === 'danger' ? '' : 'text-ink-faint'" />
     <span class="shrink-0" :class="value !== undefined || placeholder ? 'text-ink-muted' : ''">{{ label }}</span>
