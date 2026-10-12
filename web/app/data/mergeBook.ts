@@ -76,7 +76,7 @@ export type MergeField =
   | 'openLibraryEditionKey'
   | 'openLibraryWorkKey'
 
-export type FieldProvenance = { source: MergeSource; /** The edition itself gave it (else the work's). */ exact: boolean; /** Covers: how good (data/coverRank.ts). */ kind?: CoverKind }
+export type FieldProvenance = { source: MergeSource; /** Which candidate (its place in the list given) the value is from. */ from: number; /** The edition itself gave it (else the work's). */ exact: boolean; /** Covers: how good (data/coverRank.ts). */ kind?: CoverKind }
 
 export type Provenance = Partial<Record<MergeField, FieldProvenance>> & {
   /** Sources that had a description we may not store. */
@@ -203,6 +203,7 @@ function choose<T>(field: MergeField, picks: Pick<T>[], same: (a: T, b: T) => bo
 
 const provenanceOf = (pick: Pick<unknown>, kind?: CoverKind): FieldProvenance => ({
   source: pick.candidate.source,
+  from: pick.index,
   exact: pick.candidate.exact,
   ...(kind ? { kind } : {}),
 })
