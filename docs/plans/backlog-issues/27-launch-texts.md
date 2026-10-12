@@ -1,10 +1,12 @@
 Title: Launch: privacy notice, community rules and a moderation runbook
-Labels: documentation, priority:high, launch
-Package: WP-27 · launch (revision 2) · tier P0 · size S–M · model Sonnet (the owner reviews the legal text) · depends on: none (after the BetterReads rename, or it does the legal-text name swap itself) · launch wave (start now)
-Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/27-launch-texts.md)" --label documentation --label priority:high --label launch --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/27-launch-texts.md)
+Labels: priority:low (tracked in #331)
+Package: WP-27 · launch (revision 2) · tier postponed (#331) · size S–M · model Sonnet (the owner reviews the legal text) · depends on: none (after the BetterReads rename, or it does the legal-text name swap itself) · postponed
+Create: do not; this package is tracked in issue #331 (https://github.com/fabkho/libellus/issues/331).
 Plan: docs/plans/backlog-execution.md
 
 ---
+**Status: postponed with open sign-up, bundled in issue #331 (https://github.com/fabkho/libellus/issues/331). Do not create a separate issue and do not start until the owner opens #331.**
+
 ## Problem
 The legal and operations texts assume an invite-only beta: "run as an invite-only beta" (`web/app/legal/privacy.ts:13`), the invite code as account data (`:32`), the waitlist (`:37`, `:55`, `:111`), `SPEC.md:17,41` and the out-of-scope "open sign-up" (`SPEC.md:24`). Reports (WP-25) and a captcha (WP-24) are new processing; there are no community rules and no moderation runbook.
 

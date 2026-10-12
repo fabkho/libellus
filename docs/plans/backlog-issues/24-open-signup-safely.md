@@ -1,12 +1,14 @@
 Title: Launch: open sign-up safely (invite gate off, captcha, email budget, photo cap, age line)
-Labels: feature, priority:high, launch
-Package: WP-24 · launch (revision 2) · tier P0 · size M · model Opus · depends on: none (check first whether the owner's launch work already covers it) · launch wave (start now)
-Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/24-open-signup-safely.md)" --label feature --label priority:high --label launch --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/24-open-signup-safely.md)
+Labels: priority:low (tracked in #331)
+Package: WP-24 · launch (revision 2) · tier postponed (#331) · size M · model Opus · depends on: none (check first whether the owner's launch work already covers it) · postponed
+Create: do not; this package is tracked in issue #331 (https://github.com/fabkho/libellus/issues/331).
 Plan: docs/plans/backlog-execution.md
 
 ---
+**Status: postponed with open sign-up, bundled in issue #331 (https://github.com/fabkho/libellus/issues/331). Do not create a separate issue and do not start until the owner opens #331.**
+
 ## Problem
-The app opens to the public next week. Today the invite gate is the only brake on sign-ups and on mail to unknown addresses:
+When the owner opens sign-up (#331, postponed). Today the invite gate is the only brake on sign-ups and on mail to unknown addresses:
 - `public.signup_invite` and its `auth.users` triggers refuse a sign-up without a valid code and roll the auth user back, so no code is mailed (`supabase/migrations/20261002190000_invites_and_accounts.sql`). The client passes `data: { invite_code }` (`web/app/data/auth.ts:167-178`); sign-in uses `shouldCreateUser: false` (`:141-146`).
 - No captcha: `[auth.captcha]` is commented out (`supabase/config.toml:216-220`).
 - Sign-in is a six-digit code, no password: **every sign-in is an email** (Resend, per `web/app/legal/privacy.ts:71`), through Supabase Auth's email rate limit.
@@ -14,7 +16,7 @@ The app opens to the public next week. Today the invite gate is the only brake o
 - The notice says "not for under 16" (`privacy.ts:138`), but sign-up asks nothing.
 
 ## Scope
-- **Gate:** "invite optional" via a setting (e.g. `private.signup_mode` = `open` | `invite`) read by `signup_invite`, so the owner can close sign-up again with one statement in an incident; a code given anyway is still recorded (`accounts.invite_code_id`).
+- **Gate:** a `signup_mode` setting (`open` | `invite`, **default `invite`**, so merging changes nothing until the owner flips it) read by `signup_invite`, so the owner can close sign-up again with one statement in an incident; a code given anyway is still recorded (`accounts.invite_code_id`).
 - **Sign-up screen** (`web/app/pages/sign-up.vue`): no code field in open mode; a required "I am 16 or older" check.
 - **Captcha:** Cloudflare Turnstile via Supabase Auth captcha (`provider = "turnstile"`); the token on every `signInWithOtp` call (sign-in and sign-up both send mail). `docs/SETUP.md`: site key (build config) and secret (Supabase dashboard).
 - **Email budget** (owner dashboard steps written into `docs/OPERATIONS.md`): Supabase Auth email rate limit and per-address frequency, Resend plan quota and domain warm-up, the arithmetic (every sign-in is a mail).

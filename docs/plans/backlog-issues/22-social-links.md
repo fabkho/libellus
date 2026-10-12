@@ -1,14 +1,16 @@
 Title: Profile: links to her profiles on other platforms (allow-listed, handles only, with a visibility setting)
 Labels: feature, priority:high
-Package: WP-22 · item #5 · tier P2 (owner decision: wanted) · size M · model Sonnet · depends on: WP-25 (report flow), WP-26 (text rule), WP-27 (launch privacy notice), the BetterReads rename · wave 3 · can run in parallel with WP-16 (bio)
+Package: WP-22 · item #5 · tier P2 (owner decision: wanted) · size M · model Sonnet · depends on: none now (handles are regex-checked, no free text) · wave 1 · safe while invite-only; revisit before open sign-up (#331: the "links" report reason comes with WP-25)
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/22-social-links.md)" --label feature --label priority:high --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/22-social-links.md)
 Plan: docs/plans/backlog-execution.md
 
 ---
+**Safe while invite-only; revisit before open sign-up (#331):** it must have its report reason (WP-25) and, for free text, WP-26's text rule before sign-up opens.
+
 ## Problem
 Members want to point to their profiles elsewhere: Instagram, TikTok, YouTube and the book platforms. Nothing like it exists today. `components/profile/LinksSheet.vue` and `link_templates` are a different feature: the member's private book-link templates.
 
-After the public launch these links reach strangers, and a free URL field is a phishing and spam tool. So members store only a **validated handle or canonical ID per allow-listed platform**, and the app builds every outgoing URL itself.
+These links can reach strangers (on public accounts now, and everyone once sign-up opens, #331), and a free URL field is a phishing and spam tool. So members store only a **validated handle or canonical ID per allow-listed platform**, and the app builds every outgoing URL itself.
 
 ## Scope
 
