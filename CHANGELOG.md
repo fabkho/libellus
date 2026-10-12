@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.17.0](https://github.com/fabkho/libellus/compare/v1.16.0...v1.17.0) (2026-10-12)
+
+
+### Features
+
+* **i18n:** German outside the app shell: mails, link previews, manifest, lock ([#324](https://github.com/fabkho/libellus/issues/324)) ([844f632](https://github.com/fabkho/libellus/commit/844f63294691f6810c87afb2bbcc920a03759c59))
+* **import:** covers: lost-at-write fix, one ranking (ebook route), low-res accepted, fill for Catalogue and Manual books ([#326](https://github.com/fabkho/libellus/issues/326)) ([438b0d9](https://github.com/fabkho/libellus/commit/438b0d9f61014ff3bb13e5f0de531633b8aced28))
+
 ## [1.16.0](https://github.com/fabkho/libellus/compare/v1.15.1...v1.16.0) (2026-10-12)
 
 
