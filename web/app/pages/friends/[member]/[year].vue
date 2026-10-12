@@ -5,7 +5,7 @@
 // side. Never her reading days or a progress. Lit by the year's favourite cover. Back to her profile.
 // Opened from her profile (a year's column, "<year> in review", a year's card) or from an address: then her
 // profile is read first (stores/memberProfile.ts), as it is for the profile itself.
-import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
+import { figuresOf, readsInMonth, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, memberBlocks } from '~/utils/memberProfile'
 import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
@@ -76,11 +76,7 @@ const after = computed(() => [...years.value].reverse().find((y) => y > year.val
 
 // A star row's books, as on the Profile; open again on Back from a book opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
-const sheetTitle = computed(() => {
-  const s = shown.value
-  return s?.kind === 'stars' ? t('profile.sheet.stars', { count: s.star, year: String(s.year) }, s.star) : ''
-})
-const sheetReads = computed(() => (shown.value?.kind === 'stars' ? readsWithStars(reads.value, shown.value.year, shown.value.star) : []))
+const { title: sheetTitle, reads: sheetReads } = useStatsSheet(shown, () => reads.value)
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
 }

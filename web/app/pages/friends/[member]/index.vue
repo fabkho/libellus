@@ -11,7 +11,7 @@
 //    blocks, fed from her record. Never her reading days, a progress, an account row or a shelf.
 // A Book opens its page with the cover flying into it, a Manual book opens nothing (it is not in the
 // Catalogue). Read each time the page shows (stores/memberProfile.ts), online only.
-import { figuresOf, readsInMonth, readsWithStars, yearsOf } from '~/data/stats'
+import { figuresOf, readsInMonth, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
 import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
@@ -100,18 +100,7 @@ const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const wantOpen = ref(false)
 const finishedOpen = ref(false)
-const sheetTitle = computed(() => {
-  const s = shown.value
-  if (!s) return ''
-  if (s.kind === 'month') return t('profile.sheet.month', { month: monthLong(s.month), year: s.year })
-  return s.kind === 'stars' ? t('profile.sheet.stars', { count: s.star, year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) }, s.star) : ''
-})
-const sheetReads = computed(() => {
-  const s = shown.value
-  if (!s) return []
-  if (s.kind === 'month') return readsInMonth(reads.value, s.year, s.month)
-  return s.kind === 'stars' ? readsWithStars(reads.value, s.year, s.star) : []
-})
+const { title: sheetTitle, reads: sheetReads, withYear: sheetWithYear } = useStatsSheet(shown, () => reads.value)
 function pickColumn(key: number) {
   if (year.value === 'all') return void router.push(`/friends/${id.value}/${key}`)
   sheet.value = { kind: 'month', year: year.value, month: key }
@@ -349,7 +338,7 @@ function back() {
     />
     <FriendsMemberWantSheet v-model:open="wantOpen" :title="t('member.want')" :items="wantAll" />
     <FriendsMemberFinishedSheet v-if="open" v-model:open="finishedOpen" :title="t('member.finished')" :items="open.finished" :name="name" :member-id="open.member.id" />
-    <ProfileReadsSheet v-model:open="sheetOpen" foreign :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
+    <ProfileReadsSheet v-model:open="sheetOpen" foreign :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="sheetWithYear" />
   </div>
 </template>
 

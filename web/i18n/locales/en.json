@@ -265,6 +265,8 @@
       "allYears": "All years",
       "readIn": "in a day | in {count} days",
       "pagesMissing": "Books without a page count",
+      "showMore": "Show {count} more",
+      "empty": "No books here yet.",
       "day": "{weekday} {date}"
     },
     "year": {
