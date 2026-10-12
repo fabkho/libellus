@@ -7,6 +7,7 @@
 import { assertEquals, assertThrows } from '@std/assert'
 import {
   type AutoCompleteBook,
+  GoodreadsBlocked,
   goodreadsCoverUrl,
   matchTitle,
   normalise,
@@ -50,6 +51,30 @@ Deno.test('a failing or garbled review counts answer throws, so it is never stor
   assertThrows(() => parseReviewCounts('9780061803208', 200, '<html>'))
   assertThrows(() => parseReviewCounts('9780061803208', 200, '{"nope":1}'))
   assertThrows(() => parseReviewCounts('9780061803208', 200, '{"books":[{"isbn13":"9780061803208"}]}'))
+})
+
+Deno.test('blocked: 403, 429, 503, a 202, an empty or non-JSON body, or another JSON shape is a block, not a miss', () => {
+  const blocked = (run: () => unknown, status: number, kind: string) => {
+    const error = assertThrows(run, GoodreadsBlocked)
+    assertEquals([error.status, error.kind], [status, kind])
+  }
+  for (const status of [403, 429, 503]) {
+    blocked(() => parseReviewCounts('9780061803208', status, 'x'), status, 'status')
+    blocked(() => parseAutoComplete(status, '[]'), status, 'status')
+  }
+  blocked(() => parseReviewCounts('9780061803208', 202, '{"books":[]}'), 202, 'empty')
+  blocked(() => parseAutoComplete(202, ''), 202, 'empty')
+  blocked(() => parseReviewCounts('9780061803208', 200, ''), 200, 'empty')
+  blocked(() => parseAutoComplete(200, '  '), 200, 'empty')
+  blocked(() => parseReviewCounts('9780061803208', 200, '<html>Are you a robot?</html>'), 200, 'not_json')
+  blocked(() => parseAutoComplete(200, '<html>'), 200, 'not_json')
+  blocked(() => parseReviewCounts('9780061803208', 200, '{"nope":1}'), 200, 'shape')
+  blocked(() => parseReviewCounts('9780061803208', 200, 'null'), 200, 'shape')
+  blocked(() => parseAutoComplete(200, '{"nope":1}'), 200, 'shape')
+  // Not blocks: a plain miss, an ordinary failure.
+  assertEquals(parseReviewCounts('9780061803208', 404, 'No books match those ISBNs.'), { status: 'not_found' })
+  assertEquals(parseAutoComplete(200, '[]'), [])
+  assertThrows(() => parseAutoComplete(500, 'oops'), Error, 'auto_complete answered 500')
 })
 
 Deno.test('a title search: each book with its id, title, author, average and ratings', () => {

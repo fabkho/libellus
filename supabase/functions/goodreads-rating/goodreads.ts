@@ -18,6 +18,32 @@
 
 export const GOODREADS_ORIGIN = 'https://www.goodreads.com'
 
+/**
+ * Goodreads is turning us away, as opposed to not knowing a book or failing once: what it answered
+ * (`status`) and how it was wrong (`kind`). Never cached; the handler opens its breaker on it (handler.ts).
+ *  - `status`: HTTP 403, 429 or 503
+ *  - `empty`: a 202, or an empty body
+ *  - `not_json`: a body that is not JSON (a challenge or login page)
+ *  - `shape`: JSON that is not what the endpoint answers
+ */
+export type BlockedKind = 'status' | 'empty' | 'not_json' | 'shape'
+export class GoodreadsBlocked extends Error {
+  constructor(readonly status: number, readonly kind: BlockedKind) {
+    super(`goodreads_blocked (${status}, ${kind})`)
+  }
+}
+
+/** The JSON of an answer that must be one: throws `GoodreadsBlocked` for a block sign, else returns it. */
+function readJson(status: number, body: string): unknown {
+  if (status === 403 || status === 429 || status === 503) throw new GoodreadsBlocked(status, 'status')
+  if (status === 202 || !body.trim()) throw new GoodreadsBlocked(status, 'empty')
+  try {
+    return JSON.parse(body)
+  } catch {
+    throw new GoodreadsBlocked(status, 'not_json')
+  }
+}
+
 /** What the edge function stores and answers for an ISBN. */
 export type GoodreadsFound = {
   status: 'found'
@@ -81,19 +107,15 @@ export function reviewCountsUrl(isbn13: string): string {
 /**
  * The answer to a review counts request for one ISBN-13. `status` and `body`
  * as the response had them: a 404 is "no such ISBN" (a miss), a 200 must name
- * the ISBN; anything else throws (an error, never stored).
+ * the ISBN; anything else throws (an error, never stored); a sign that Goodreads
+ * is turning us away (`GoodreadsBlocked`) throws too.
  */
 export function parseReviewCounts(isbn13: string, status: number, body: string): GoodreadsAnswer {
   if (status === 404) return { status: 'not_found' }
-  if (status !== 200) throw new Error(`review_counts answered ${status}`)
-  let json: unknown
-  try {
-    json = JSON.parse(body)
-  } catch {
-    throw new Error('review_counts answered something that is not JSON')
-  }
-  const books = (json as { books?: unknown })?.books
-  if (!Array.isArray(books)) throw new Error('review_counts answered without books')
+  if (status !== 200 && ![202, 403, 429, 503].includes(status)) throw new Error(`review_counts answered ${status}`)
+  const json = readJson(status, body)
+  const books = (json as { books?: unknown } | null)?.books
+  if (!Array.isArray(books)) throw new GoodreadsBlocked(status, 'shape')
   const book = books.find(
     (b) => b && typeof b === 'object' && ((b as Record<string, unknown>).isbn13 === isbn13 || books.length === 1),
   ) as Record<string, unknown> | undefined
@@ -158,14 +180,9 @@ export function autoCompleteUrl(query: string): string {
 
 /** The books a title search found, in Goodreads' order. Throws when the answer is not one. */
 export function parseAutoComplete(status: number, body: string): AutoCompleteBook[] {
-  if (status !== 200) throw new Error(`auto_complete answered ${status}`)
-  let json: unknown
-  try {
-    json = JSON.parse(body)
-  } catch {
-    throw new Error('auto_complete answered something that is not JSON')
-  }
-  if (!Array.isArray(json)) throw new Error('auto_complete answered something that is not a list')
+  if (status !== 200 && ![202, 403, 429, 503].includes(status)) throw new Error(`auto_complete answered ${status}`)
+  const json = readJson(status, body)
+  if (!Array.isArray(json)) throw new GoodreadsBlocked(status, 'shape')
   const books: AutoCompleteBook[] = []
   for (const item of json) {
     if (!item || typeof item !== 'object') continue

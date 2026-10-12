@@ -10,7 +10,7 @@
 import { assert, assertEquals } from '@std/assert'
 import { titleKey } from './goodreads.ts'
 import { createGoodreads, type FetchLike, USER_AGENT } from './client.ts'
-import { BUCKETS, type CachedAnswer, createHandler, MAX_AGE_MS, MAX_BODY_BYTES, MAX_KEY_CHARS, NOT_FOUND_MAX_AGE_MS } from './handler.ts'
+import { BREAKER_MS, BUCKETS, type CachedAnswer, createHandler, MAX_AGE_MS, MAX_BODY_BYTES, MAX_KEY_CHARS, NOT_FOUND_MAX_AGE_MS } from './handler.ts'
 import { fakeClock, recordedFetch, recording } from './test_support.ts'
 
 const SMALL_GODS = { isbn13: '9780061803208', title: 'Small Gods', authors: ['Terry Pratchett'] }
@@ -647,4 +647,117 @@ Deno.test('cover: Goodreads failing is a 502 and nothing is stored; a cover with
   assertEquals((await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).status, 502)
   assertEquals(store.size, 0)
   assertEquals((await handler(ask({ isbn13: SMALL_GODS.isbn13, cover: true }))).status, 400)
+})
+
+// ------------------------------------------------------------------ blocked
+
+const BLOCKS: { name: string; response: () => Response; status: number; kind: string }[] = [
+  { name: '403', response: () => new Response('forbidden', { status: 403 }), status: 403, kind: 'status' },
+  { name: '429', response: () => new Response('slow down', { status: 429 }), status: 429, kind: 'status' },
+  { name: '503', response: () => new Response('later', { status: 503 }), status: 503, kind: 'status' },
+  { name: 'a 202', response: () => new Response('', { status: 202 }), status: 202, kind: 'empty' },
+  { name: 'an empty body', response: () => new Response('', { status: 200 }), status: 200, kind: 'empty' },
+  { name: 'HTML', response: () => new Response('<html>robot?</html>', { status: 200 }), status: 200, kind: 'not_json' },
+  { name: 'another JSON shape', response: () => new Response('{"nope":1}', { status: 200 }), status: 200, kind: 'shape' },
+]
+
+for (const block of BLOCKS) {
+  for (const route of ['rating', 'cover'] as const) {
+    Deno.test(`blocked: ${block.name} on the ${route} route opens the breaker for 10 minutes, one log line, nothing cached`, async () => {
+      let calls = 0
+      const { handler, store, time, logs } = setup({
+        fetch: () => {
+          calls++
+          return Promise.resolve(block.response())
+        },
+      })
+      const book = route === 'cover' ? { ...SANDMAN_NO_ISBN, cover: true } : SMALL_GODS
+      const first = await handler(ask(book))
+      assertEquals(first.status, 200)
+      assertEquals(await first.json(), { status: 'blocked', retryAfterSeconds: 600 })
+      assertEquals(store.size, 0)
+      assertEquals(calls, 1)
+      const lines = logs.filter((line) => line.startsWith('goodreads_blocked '))
+      assertEquals(lines.length, 1)
+      assertEquals(JSON.parse(lines[0]!.slice('goodreads_blocked '.length)), {
+        status: block.status,
+        kind: block.kind,
+        at: new Date(time.now()).toISOString(),
+      })
+
+      // Open: no call, whatever the Book, the same answer, no further log line, a shrinking wait.
+      time.advance(BREAKER_MS - 60_000)
+      for (const other of [book, NOBODY, { ...NOBODY, cover: true }]) {
+        const again = await handler(ask(other))
+        assertEquals(await again.json(), { status: 'blocked', retryAfterSeconds: 60 })
+      }
+      assertEquals(calls, 1)
+      assertEquals(logs.filter((line) => line.startsWith('goodreads_blocked ')).length, 1)
+      assertEquals(store.size, 0)
+    })
+  }
+}
+
+Deno.test('blocked: the breaker closes after 10 minutes, Goodreads is asked again, a new block is a new line', async () => {
+  let blocked = true
+  const recorded = recordedFetch()
+  let calls = 0
+  const { handler, time, logs, store } = setup({
+    fetch: (url, init) => {
+      calls++
+      return blocked ? Promise.resolve(new Response('no', { status: 403 })) : recorded.fetch(url, init)
+    },
+  })
+  assertEquals((await (await handler(ask(SMALL_GODS))).json()).status, 'blocked')
+  time.advance(BREAKER_MS - 1)
+  assertEquals((await (await handler(ask(SMALL_GODS))).json()).status, 'blocked')
+  assertEquals(calls, 1)
+
+  time.advance(1)
+  blocked = false
+  const body = await (await handler(ask(SMALL_GODS))).json()
+  assertEquals([body.status, body.goodreadsId], ['found', '6388978'])
+  assertEquals(calls, 2)
+  assertEquals(store.size, 1)
+
+  blocked = true
+  time.advance(MAX_AGE_MS + 1) // the cached rating is stale, so Goodreads is asked, and blocks again
+  assertEquals((await (await handler(ask(SMALL_GODS))).json()).status, 'blocked')
+  assertEquals(logs.filter((line) => line.startsWith('goodreads_blocked ')).length, 2)
+})
+
+Deno.test('blocked: a fresh cached answer is still given while the breaker is open; a plain miss and a 404 open nothing', async () => {
+  let calls = 0
+  let blocked = false
+  const recorded = recordedFetch()
+  const { handler, logs, store } = setup({
+    fetch: (url, init) => {
+      calls++
+      return blocked ? Promise.resolve(new Response('no', { status: 403 })) : recorded.fetch(url, init)
+    },
+  })
+  // A 404 is a miss (stored), not a block.
+  assertEquals((await (await handler(ask({ isbn13: NOBODY.isbn13 }))).json()).status, 'not_found')
+  assertEquals(logs, [])
+  assertEquals((await (await handler(ask(SMALL_GODS))).json()).status, 'found')
+  blocked = true
+  assertEquals((await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).json()).status, 'blocked')
+  const before = calls
+  assertEquals((await (await handler(ask(SMALL_GODS))).json()).status, 'found')
+  assertEquals(calls, before)
+  assertEquals(store.has(SANDMAN_KEY), false)
+})
+
+Deno.test('blocked: two lookups at once that both meet the block open the breaker once', async () => {
+  const { handler, logs } = setup({ fetch: () => Promise.resolve(new Response('no', { status: 403 })), maxWaitMs: 5000 })
+  const answers = await Promise.all([ask(SMALL_GODS), ask({ ...SANDMAN_NO_ISBN, cover: true })].map(async (r) => (await handler(r)).json()))
+  assertEquals(answers.map((a) => a.status), ['blocked', 'blocked'])
+  assertEquals(logs.filter((line) => line.startsWith('goodreads_blocked ')).length, 1)
+})
+
+Deno.test('blocked: our own busy and a plain failure (500) are not blocks', async () => {
+  const failing = setup({ fetch: () => Promise.resolve(new Response('upstream', { status: 500 })) })
+  assertEquals((await failing.handler(ask(SMALL_GODS))).status, 502)
+  assertEquals(failing.logs.filter((line) => line.startsWith('goodreads_blocked ')).length, 0)
+  assertEquals((await failing.handler(ask(SMALL_GODS))).status, 502) // asked again, no breaker
 })

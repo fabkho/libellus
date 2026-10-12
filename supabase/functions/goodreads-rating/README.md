@@ -12,6 +12,7 @@ POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terr
 200 { "status": "found", "goodreadsId": "6388978", "rating": 4.32, "ratingsCount": 137875,
       "reviewsCount": 6116, "matchedBy": "isbn", "checkedAt": "…" }
 200 { "status": "not_found", "checkedAt": "…" }
+200 { "status": "blocked", "retryAfterSeconds": 600 }      # Goodreads is turning us away; see "Blocked"
 400 isbn_invalid · 400 book_unidentified (no ISBN, and no title or no author) · 401 unauthorized · 413 payload_too_large (over 16 KB) · 429 rate_limited (a member: 20 calls a minute, a cover ask 40) · 502 goodreads_unavailable · 503 busy
 ```
 
@@ -64,6 +65,23 @@ How it answers (`handler.ts`):
    `matchTitle`). No review count then.
 4. The answer is stored under the key it was asked with (`found` or `not_found`, with its time) and returned. A failure (Goodreads
    down, slow, refusing, garbled) is never stored: the next page view tries again.
+
+### Blocked (the breaker)
+
+Goodreads can switch the keyless endpoints off at any time. These count as a **block** (`GoodreadsBlocked`,
+`goodreads.ts`), distinct from a miss (404, no match) and from our own `busy`: HTTP 403, 429 or 503; a 202 or an
+empty body; a body that is not JSON; JSON that is not the endpoint's shape (no `books`, not a list). A block is
+never cached. It opens a **breaker for 10 minutes** (`BREAKER_MS`, the handler's injected `now`, per running
+instance): no request goes to Goodreads meanwhile, and a lookup that would need one answers
+`200 { "status": "blocked", "retryAfterSeconds": n }` (HTTP 200 so the client reads it; the rating line stays
+without a rating, a cover ask gets none). An answer the cache already has is still given. Each opening writes ONE
+line to the function log, the one to alert on:
+
+```
+goodreads_blocked {"status":403,"kind":"status","at":"2026-10-04T10:00:00.000Z"}     # kind: status | empty | not_json | shape
+```
+
+(`status` is what Goodreads answered.) A plain 500 or a timeout is still `502 goodreads_unavailable` and opens nothing.
 
 Rate safety (`client.ts`): identified by `User-Agent: Libellus/1.0 (…)`, at most one Goodreads
 request a second per running instance (a soft limit — Supabase may run more than one instance under

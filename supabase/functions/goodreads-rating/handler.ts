@@ -11,6 +11,7 @@
  *
  *   200 { status: 'found', goodreadsId, rating, ratingsCount, reviewsCount, matchedBy, checkedAt }
  *   200 { status: 'not_found', checkedAt }
+ *   200 { status: 'blocked', retryAfterSeconds }
  *   400 { error: 'isbn_invalid' | 'book_unidentified' } · 401 { error: 'unauthorized' }
  *   413 { error: 'payload_too_large' } · 429 { error: 'rate_limited' }
  *   503 { error: 'busy' } · 502 { error: 'goodreads_unavailable' }
@@ -41,6 +42,13 @@
  * rule hit is cached (the caller names the title: an id may not decide what the
  * cache says about it). A cached found row that never asked for a cover is asked
  * once more; a cover Goodreads does not have is cached as the empty string.
+ * Blocked: Goodreads answering 403, 429 or 503, a 202 or an empty body, something that is not
+ * JSON, or JSON of another shape (`GoodreadsBlocked`, goodreads.ts) is a block, not a miss and not
+ * our own `busy`. It is never cached. It opens a breaker for BREAKER_MS (10 minutes, the injected
+ * clock): while it is open no request goes to Goodreads, and a lookup that would need one is answered
+ * `200 { status: 'blocked', retryAfterSeconds }` (200, so the client reads it; an answer the cache
+ * has is still given). Each opening writes ONE line, `goodreads_blocked {"status":403,"kind":"status","at":"…"}`
+ * (Supabase function logs: alert on it).
  * Everything it talks to comes in from outside (index.ts wires the
  * real ones), so the tests drive it with recordings.
  */
@@ -48,6 +56,7 @@ import type { Goodreads } from './client.ts'
 import { GoodreadsBusy } from './client.ts'
 import {
   foundByTitle,
+  GoodreadsBlocked,
   type GoodreadsAnswer,
   type LookupBook,
   matchTitle,
@@ -73,6 +82,8 @@ export type RatingsCache = {
 
 /** A found rating is good for this long; then Goodreads is asked again. */
 export const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+/** After a block, Goodreads is left alone this long. */
+export const BREAKER_MS = 10 * 60 * 1000
 /** A miss is asked again sooner: Goodreads may learn the book, or the matching improve. */
 export const NOT_FOUND_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -236,6 +247,27 @@ export function createHandler(deps: {
   const log = deps.log ?? ((message) => console.error(message))
   /** Lookups running now, by ISBN and title key: a second page asking for the same Book waits for the first. */
   const inFlight = new Map<string, Promise<CachedAnswer>>()
+  /** When the breaker closes again; 0 while it was never opened. */
+  let blockedUntil = 0
+  const isOpen = () => now() < blockedUntil
+
+  /** Goodreads, behind the breaker: no call while it is open; a block opens it (one log line) and is rethrown. */
+  async function guarded<T>(call: () => Promise<T>): Promise<T> {
+    if (isOpen()) throw new GoodreadsBlocked(0, 'status')
+    try {
+      return await call()
+    } catch (error) {
+      if (error instanceof GoodreadsBlocked && !isOpen()) {
+        blockedUntil = now() + BREAKER_MS
+        log(`goodreads_blocked ${JSON.stringify({ status: error.status, kind: error.kind, at: new Date(now()).toISOString() })}`)
+      }
+      throw error
+    }
+  }
+  const goodreads: Goodreads = {
+    reviewCounts: (isbn13) => guarded(() => deps.goodreads.reviewCounts(isbn13)),
+    autoComplete: (query) => guarded(() => deps.goodreads.autoComplete(query)),
+  }
 
   /**
    * An answer from the cache while it is fresh, else one Goodreads gives, stored with its time. A found
@@ -270,7 +302,7 @@ export function createHandler(deps: {
       if (row.status === 'found' ? row.coverUrl !== undefined : !goodreadsBookId) return row
     }
     const query = titleQuery(book)
-    const results = query && book.authors.length ? await deps.goodreads.autoComplete(query) : []
+    const results = query && book.authors.length ? await goodreads.autoComplete(query) : []
     const byRule = matchTitle(book, results)
     const hit = pickByBookId(results, goodreadsBookId) ?? byRule
     const checkedAt = new Date(now()).toISOString()
@@ -287,12 +319,12 @@ export function createHandler(deps: {
     let miss: CachedAnswer | null = null
     if (book.isbn13) {
       const isbn13 = book.isbn13
-      const found = await cached({ isbn13 }, () => deps.goodreads.reviewCounts(isbn13))
+      const found = await cached({ isbn13 }, () => goodreads.reviewCounts(isbn13))
       if (found.status === 'found') return found
       miss = found
     }
     if (!key) return miss!
-    return await cached({ titleKey: key }, () => byTitle(book, deps.goodreads))
+    return await cached({ titleKey: key }, () => byTitle(book, goodreads))
   }
 
   return async (request) => {
@@ -324,6 +356,9 @@ export function createHandler(deps: {
     try {
       return json(200, view(await running, cover))
     } catch (error) {
+      if (error instanceof GoodreadsBlocked) {
+        return json(200, { status: 'blocked', retryAfterSeconds: Math.max(1, Math.ceil((blockedUntil - now()) / 1000)) })
+      }
       if (error instanceof GoodreadsBusy) return json(503, { error: 'busy' })
       log(`goodreads-rating: ${id.slice(0, MAX_LOG_KEY_CHARS)} failed: ${error}`)
       return json(502, { error: 'goodreads_unavailable' })
