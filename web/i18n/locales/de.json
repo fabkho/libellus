@@ -700,6 +700,7 @@
       "moreLabel": "Weitere Links zu diesem Buch"
     },
     "read": "Jetzt lesen",
+    "readFailed": "Dieses Buch konnte nicht geöffnet werden. Nochmal versuchen.",
     "format": {
       "hardcover": "Hardcover",
       "paperback": "Taschenbuch",

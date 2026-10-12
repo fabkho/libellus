@@ -203,9 +203,21 @@ const ebook = computed(() => {
 })
 // With its ebook here, the reader's code is fetched ahead (data/reader/prefetch.ts), so Read now opens it from memory.
 watch(ebook, (record) => record && onIdle(prefetchReader, { timeout: 1500 }), { immediate: true })
-/** Read now: the reader's code first (a no-op once it is in; a tap before it arrived, or after a failed fetch, loads it), then the reader. */
+/**
+ * Read now: the reader's code first (a no-op once it is in; a tap before it arrived, or after a failed fetch, loads
+ * it), then the reader. The code that cannot come in (offline with nothing cached, or a build left behind by a
+ * release) is said out loud: the tap used to do nothing at all, the reader's component being the very code that
+ * could not load. A later tap tries again.
+ */
+const readFailed = ref(false)
 async function read(target: LibraryEntry) {
-  await loadReader().catch(() => {})
+  try {
+    await loadReader()
+  } catch {
+    readFailed.value = true
+    return
+  }
+  readFailed.value = false
   reader.open(target)
 }
 const readerOpen = computed(() => Boolean(entry.value && ebook.value && reader.openEntryId === entry.value.id))
@@ -335,6 +347,8 @@ function back() {
       </UiButton>
       <!-- Its ebook on this device, when one is linked (#131); a finished or abandoned Book opens in the reader from here. -->
       <BookEbook v-if="entry" :entry="entry" :read="Boolean(ebook) && entry.status !== 'want_to_read' && entry.status !== 'reading'" @read="read(entry)" />
+      <!-- The reader's code could not be brought in (docs/perf/bundle.md F6): say so, where a tap used to do nothing. -->
+      <p v-if="readFailed" class="mt-sm text-center text-caption text-error" role="alert" data-testid="book.readFailed">{{ t('book.readFailed') }}</p>
     </div>
 
     <BookProgressLog v-if="entry?.status === 'reading'" :entry="entry" />
