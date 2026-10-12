@@ -179,6 +179,7 @@
       "pagesMissingOpen": "{count} without a count: show the books",
       "pagesPerBook": "{count} a book",
       "unrated": "{count} not rated yet",
+      "unratedOpen": "{count} not rated yet: show the books",
       "rated": "{count} rated",
       "usually": "usually, start to finish"
     },
@@ -198,6 +199,7 @@
       "title": "Ratings",
       "rated": "{count} rated",
       "notYet": "{count} not yet",
+      "notYetOpen": "{count} not yet: show the books",
       "row": "{star} star: {count} | {star} stars: {count}"
     },
     "records": {
@@ -269,7 +271,10 @@
       "pagesMissing": "Books without a page count",
       "showMore": "Show {count} more",
       "empty": "No books here yet.",
-      "day": "{weekday} {date}"
+      "day": "{weekday} {date}",
+      "author": "{name} · {year}",
+      "genre": "{genre} · {year}",
+      "unrated": "Not rated yet"
     },
     "year": {
       "eyebrow": "Your year in books",
@@ -1747,7 +1752,8 @@
       "title": "Genres",
       "placed": "Of {count} book | Of {count} books",
       "without": "{count} without a genre",
-      "row": "{genre}: {percent} of your books, {count} book | {genre}: {percent} of your books, {count} books"
+      "row": "{genre}: {percent} of your books, {count} book | {genre}: {percent} of your books, {count} books",
+      "inLibrary": "Show in Library"
     }
   },
   "author": {

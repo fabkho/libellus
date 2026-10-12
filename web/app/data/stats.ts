@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book } from './books'
+import type { GenreId } from './enrich/genres'
 import { LIST_BOOK_COLUMNS, bookFromRow, mapLibraryError, type BookRow, type Result, type SessionOutcome } from './library'
 import { allPages } from './paging'
 import { pageCountOf } from './progress'
@@ -248,6 +249,33 @@ export function readsWithStars(reads: readonly StatsRead[], year: StatsYear, sta
  */
 export function readsWithoutPages(reads: readonly StatsRead[], year: StatsYear = 'all'): StatsRead[] {
   return finishedIn(reads, year).filter((r) => r.pages === null)
+}
+
+/**
+ * The finished reads of a year (or all) by the author named (the Book's first author, as the authors figure
+ * groups them), newest end first: exactly the reads behind that author's row (#12). Re-reads come as one read
+ * each, an abandoned read never.
+ */
+export function readsByAuthor(reads: readonly StatsRead[], year: StatsYear, name: string): StatsRead[] {
+  return finishedIn(reads, year).filter((r) => r.book.authors[0] === name)
+}
+
+/**
+ * The finished reads of a year (or all) whose Book is in the genre (its entry's genres, hers where she
+ * corrected them, else the computed ones), newest end first: exactly the reads behind that genre's bar (#16).
+ * A read whose genres are not known (`ofEntry` answers undefined) is in no genre's list.
+ */
+export function readsOfGenre(reads: readonly StatsRead[], year: StatsYear, genre: GenreId, ofEntry: (entryId: string) => readonly GenreId[] | undefined): StatsRead[] {
+  return finishedIn(reads, year).filter((r) => (ofEntry(r.entryId) ?? []).includes(genre))
+}
+
+/**
+ * The finished reads of a year (or all) with no Rating: exactly what `unrated` counts, in the same order
+ * (newest end first), so the line and the sheet it opens can never disagree (#14, #15). An abandoned read
+ * is never among them.
+ */
+export function readsUnrated(reads: readonly StatsRead[], year: StatsYear = 'all'): StatsRead[] {
+  return finishedIn(reads, year).filter((r) => r.rating === null)
 }
 
 function median(values: number[]): number | null {

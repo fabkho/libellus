@@ -8,6 +8,7 @@ import type { YearFigures } from '~/data/stats'
 
 // `foreign`: another member's profile, so the title names her (`name`) instead of saying "you".
 const props = withDefaults(defineProps<{ figures: YearFigures | null; limit?: number; foreign?: boolean; name?: string }>(), { limit: 4, foreign: false, name: undefined })
+defineEmits<{ pick: [name: string] }>()
 const { t } = useI18n()
 const { count, stars } = useFigures()
 const arriving = useArrival(() => !props.figures)
@@ -24,40 +25,42 @@ const authorsTitle = computed(() => {
       <ProfileRowPlaceholder v-for="i in limit" :key="i" :wave="(i - 1) * 0.15" fan />
     </template>
     <div v-else role="list" class="flex flex-col gap-xs">
-      <!-- A list for assistive tech, each author one item: the name, then how many and the rating in
-           words ("9 books, 4.6 stars on average"); the figure and the ★ are drawn for the eye. -->
+      <!-- A list for assistive tech, each author one item, the item a button that opens the author's reads of
+           the period in view (#12): the name, then how many and the rating in words ("9 books, 4.6 stars on
+           average"); the figure and the ★ are drawn for the eye. -->
       <div
         v-for="author in figures?.authors.slice(0, limit) ?? []"
         :key="author.name"
         role="listitem"
-        class="flex items-center gap-md py-xs"
         :class="{ arrive: arriving }"
         data-testid="profile.author"
       >
-        <span class="fan relative flex shrink-0" aria-hidden="true">
-          <UiCover
-            v-for="(book, i) in author.books.slice(0, 3)"
-            :key="book.id"
-            :style="{ '--i': i }"
-            :title="book.title"
-            :authors="book.authors"
-            :src="coverSrc(book.coverUrl, 'sm')"
-            :thumbhash="book.coverThumbhash"
-            :colors="book.coverColors"
-            size="sm"
-          />
-        </span>
-        <span class="flex min-w-0 flex-1 flex-col gap-xs">
-          <span class="truncate text-body" data-testid="profile.authorName">{{ author.name }}</span>
-          <span class="ticks" aria-hidden="true"><span v-for="i in author.count" :key="i" class="tick" :class="{ fifth: i % 5 === 0 }" /></span>
-        </span>
-        <span class="sr-only">
-          {{ t('profile.authors.count', { count: count(author.count) }, author.count) }}<template v-if="author.rating !== null">{{ t('common.listSeparator') }}{{ t('profile.authors.rating', { rating: stars(author.rating) }) }}</template>
-        </span>
-        <span class="flex shrink-0 flex-col items-end gap-xxs" aria-hidden="true">
-          <span class="text-title tabular-nums" data-testid="profile.authorCount">{{ count(author.count) }}</span>
-          <span v-if="author.rating !== null" class="figures text-meta text-ink-faint">★ {{ stars(author.rating) }}</span>
-        </span>
+        <button type="button" class="row flex min-h-(--size-touch) w-full items-center gap-md py-xs text-left" @click="$emit('pick', author.name)">
+          <span class="fan relative flex shrink-0" aria-hidden="true">
+            <UiCover
+              v-for="(book, i) in author.books.slice(0, 3)"
+              :key="book.id"
+              :style="{ '--i': i }"
+              :title="book.title"
+              :authors="book.authors"
+              :src="coverSrc(book.coverUrl, 'sm')"
+              :thumbhash="book.coverThumbhash"
+              :colors="book.coverColors"
+              size="sm"
+            />
+          </span>
+          <span class="flex min-w-0 flex-1 flex-col gap-xs">
+            <span class="truncate text-body" data-testid="profile.authorName">{{ author.name }}</span>
+            <span class="ticks" aria-hidden="true"><span v-for="i in author.count" :key="i" class="tick" :class="{ fifth: i % 5 === 0 }" /></span>
+          </span>
+          <span class="sr-only">
+            {{ t('profile.authors.count', { count: count(author.count) }, author.count) }}<template v-if="author.rating !== null">{{ t('common.listSeparator') }}{{ t('profile.authors.rating', { rating: stars(author.rating) }) }}</template>
+          </span>
+          <span class="flex shrink-0 flex-col items-end gap-xxs" aria-hidden="true">
+            <span class="text-title tabular-nums" data-testid="profile.authorCount">{{ count(author.count) }}</span>
+            <span v-if="author.rating !== null" class="figures text-meta text-ink-faint">★ {{ stars(author.rating) }}</span>
+          </span>
+        </button>
       </div>
     </div>
   </section>
@@ -86,5 +89,14 @@ const authorsTitle = computed(() => {
 }
 .tick.fifth {
   margin-right: var(--spacing-xs);
+}
+/* The quiet press of a tappable figure (Genres.vue, Ratings.vue). */
+button.row:active {
+  background: var(--color-fill);
+}
+@media (hover: hover) {
+  button.row:hover {
+    background: var(--color-fill);
+  }
 }
 </style>

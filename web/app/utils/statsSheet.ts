@@ -1,4 +1,5 @@
-import { readsInMonth, readsOnDay, readsWithoutPages, readsWithStars, type ReadingDay, type StatsRead } from '~/data/stats'
+import { readsByAuthor, readsInMonth, readsOnDay, readsOfGenre, readsUnrated, readsWithoutPages, readsWithStars, type ReadingDay, type StatsRead } from '~/data/stats'
+import type { GenreId } from '~/data/enrich/genres'
 import type { ProfileSheet } from '~/stores/stats'
 
 /**
@@ -7,9 +8,10 @@ import type { ProfileSheet } from '~/stores/stats'
  * (composables/useStatsSheet.ts). Framework-free, so Vitest drives it.
  *
  * `reads` are the closed reads of the page's member (a year in review: that year's), `days` the reading days of the
- * Profile (a member's page has none: a day's sheet is only ever opened there).
+ * Profile (a member's page has none: a day's sheet is only ever opened there), `ofEntry` the genres of an entry
+ * (a genre's sheet; a page without one lists no genre's books).
  */
-export function statsSheetReads(sheet: ProfileSheet | null, reads: readonly StatsRead[], days: readonly ReadingDay[] = []): StatsRead[] {
+export function statsSheetReads(sheet: ProfileSheet | null, reads: readonly StatsRead[], days: readonly ReadingDay[] = [], ofEntry: (entryId: string) => readonly GenreId[] | undefined = () => undefined): StatsRead[] {
   if (!sheet) return []
   switch (sheet.kind) {
     case 'month':
@@ -20,6 +22,12 @@ export function statsSheetReads(sheet: ProfileSheet | null, reads: readonly Stat
       return readsWithoutPages(reads, sheet.year)
     case 'stars':
       return readsWithStars(reads, sheet.year, sheet.star)
+    case 'author':
+      return readsByAuthor(reads, sheet.year, sheet.name)
+    case 'genre':
+      return readsOfGenre(reads, sheet.year, sheet.genre, ofEntry)
+    case 'unrated':
+      return readsUnrated(reads, sheet.year)
   }
 }
 

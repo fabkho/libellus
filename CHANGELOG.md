@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.18.1](https://github.com/fabkho/libellus/compare/v1.18.0...v1.18.1) (2026-10-12)
+
+
+### Fixes
+
+* **auth:** clear the code-sent cooldown when a member deletes her account ([#336](https://github.com/fabkho/libellus/issues/336)) ([c5bfdad](https://github.com/fabkho/libellus/commit/c5bfdadbb55917c09998de483dbfda1f73ca6f71))
+
+## [1.18.0](https://github.com/fabkho/libellus/compare/v1.17.0...v1.18.0) (2026-10-12)
+
+
+### Features
+
+* **import:** Goodreads as the last-resort cover source (flagged, owner decides on terms) ([#327](https://github.com/fabkho/libellus/issues/327)) ([0a07d1c](https://github.com/fabkho/libellus/commit/0a07d1ca97dd7be8c2eb56569dd3462df8913256))
+* **import:** mergeSources, the field-level merge with provenance (one module, Vitest) ([#328](https://github.com/fabkho/libellus/issues/328)) ([d2162d1](https://github.com/fabkho/libellus/commit/d2162d1ebc98cb1e0e07f09f04ee7d3e1dd56773))
+
+
+### Fixes
+
+* sign-in 'code just sent' cooldown, shelf Try again ([#332](https://github.com/fabkho/libellus/issues/332)) ([b21f9d4](https://github.com/fabkho/libellus/commit/b21f9d4ab8266b4c1005808794265a29809270fc))
+
 ## [1.17.0](https://github.com/fabkho/libellus/compare/v1.16.0...v1.17.0) (2026-10-12)
 
 

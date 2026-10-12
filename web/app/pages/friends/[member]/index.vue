@@ -108,7 +108,8 @@ const bothRead = computed(() => view.value.bothRead[bothReadKey(null)] ?? [])
 const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 
 // ------------------------------------------------------------------ sheets
-// A month's books or a star row's, as on the Profile; the whole Want to read; all her finished Books.
+// A month's books, a star row's, an author's reads of the period, the reads without a page count or the ones
+// not rated yet, as on the Profile (#12, #15, #14); the whole Want to read; all her finished Books.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const wantOpen = ref(false)
 const finishedOpen = ref(false)
@@ -119,6 +120,19 @@ function pickColumn(key: number) {
 }
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
+}
+// An author's row opens her reads of the period in view (#12).
+function pickAuthor(name: string) {
+  sheet.value = { kind: 'author', year: year.value, name }
+}
+// The Average's "N not rated yet" and the Ratings' "N not yet": her reads not rated yet (#14, #15); the figures
+// carry no such line for a caller she hides her ratings from (utils/memberProfile.ts).
+function pickUnrated() {
+  sheet.value = { kind: 'unrated', year: year.value }
+}
+// The Pages line: her reads of the period without a page count.
+function pickPagesMissing() {
+  sheet.value = { kind: 'pagesMissing', year: year.value }
 }
 
 // ------------------------------------------------------------------ actions
@@ -307,7 +321,7 @@ function back() {
           <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
             <div class="flex flex-col gap-md">
               <ProfileYearPills v-model="year" :years="years" :loading="loading" />
-              <ProfileFigures :figures="loading ? null : figures" still />
+              <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
             </div>
 
             <section id="columns" class="flex flex-col gap-md pt-xl">
@@ -318,13 +332,13 @@ function back() {
             </section>
 
             <UiReveal :show="blocks.ratings && (loading || figures.rated > 0)">
-              <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+              <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" @unrated="pickUnrated" />
             </UiReveal>
             <UiReveal :show="loading || hasRecords">
               <ProfileRecords class="pt-xl" foreign :figures="loading ? null : figures" />
             </UiReveal>
             <UiReveal :show="loading || figures.authors.length > 0">
-              <ProfileAuthors class="pt-xl" foreign :name="card?.name?.trim() || undefined" :figures="loading ? null : figures" />
+              <ProfileAuthors class="pt-xl" foreign :name="card?.name?.trim() || undefined" :figures="loading ? null : figures" @pick="pickAuthor" />
             </UiReveal>
           </div>
         </UiReveal>

@@ -37,8 +37,9 @@ import { PENDING_SIGN_IN_KEY } from '@/utils/signedOutRoute'
 
 /**
  * What the device keeps of a member and what forgets it (security round, F10 and F11): signing out,
- * a session that died by itself and another member signing in on the same device. Pure: the
- * browser's storages are in memory here, and one `forgetMemberData` is what the session store runs.
+ * deleting the account, a session that died by itself and another member signing in on the same
+ * device. Pure: the browser's storages are in memory here, and one `forgetMemberData` is what the
+ * session store runs.
  */
 
 function storage(): DeviceStorage & { keys: () => string[]; all: () => string } {
@@ -196,6 +197,27 @@ describe('signing out (F10)', () => {
     const caches = cacheStorage(['libellus-covers', 'libellus-portraits', 'libellus-reader'])
     await clearLocalFiles({ caches })
     expect([...caches.held]).toEqual(['libellus-reader'])
+  })
+})
+
+describe('deleting the account (#101)', () => {
+  it('clears when a code was last mailed as well: nothing of hers outlives the account', async () => {
+    const device = memberAUsedTheDevice()
+    keepCodeSent(device.local, { who: whoIs(A.email), at: Date.now(), used: true })
+
+    await forgetMemberData(device.env, { accountDeleted: true })
+
+    expect(device.local.keys()).toEqual(DEVICE_SETTINGS)
+    expect(device.local.all()).not.toMatch(/ADA|ada\.private|PRIVATE/i)
+  })
+
+  it('keeps what a plain keep list names, but never the code that was mailed', async () => {
+    const device = memberAUsedTheDevice()
+    keepCodeSent(device.local, { who: whoIs(A.email), at: Date.now(), used: true })
+
+    await forgetMemberData(device.env, { accountDeleted: true, keep: WAITING })
+
+    expect(device.local.keys()).toEqual([...DEVICE_SETTINGS, ...WAITING].sort())
   })
 })
 

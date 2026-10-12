@@ -179,6 +179,7 @@
       "pagesMissingOpen": "{count} ohne Seitenzahl: Bücher anzeigen",
       "pagesPerBook": "{count} pro Buch",
       "unrated": "{count} noch nicht bewertet",
+      "unratedOpen": "{count} noch nicht bewertet: Bücher anzeigen",
       "rated": "{count} bewertet",
       "usually": "meist Start bis Ende"
     },
@@ -198,6 +199,7 @@
       "title": "Bewertungen",
       "rated": "{count} bewertet",
       "notYet": "{count} noch nicht",
+      "notYetOpen": "{count} noch nicht: Bücher anzeigen",
       "row": "{star} Stern: {count} | {star} Sterne: {count}"
     },
     "records": {
@@ -269,7 +271,10 @@
       "pagesMissing": "Bücher ohne Seitenzahl",
       "showMore": "{count} weitere anzeigen",
       "empty": "Hier ist noch kein Buch.",
-      "day": "{weekday}, {date}"
+      "day": "{weekday}, {date}",
+      "author": "{name} · {year}",
+      "genre": "{genre} · {year}",
+      "unrated": "Noch nicht bewertet"
     },
     "year": {
       "eyebrow": "Dein Lesejahr",
@@ -1747,7 +1752,8 @@
       "title": "Genres",
       "placed": "Von {count} Buch | Von {count} Büchern",
       "without": "{count} ohne Genre",
-      "row": "{genre}: {percent} deiner Bücher, {count} Buch | {genre}: {percent} deiner Bücher, {count} Bücher"
+      "row": "{genre}: {percent} deiner Bücher, {count} Buch | {genre}: {percent} deiner Bücher, {count} Bücher",
+      "inLibrary": "In der Bibliothek zeigen"
     }
   },
   "author": {
