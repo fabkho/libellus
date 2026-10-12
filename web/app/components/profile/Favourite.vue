@@ -1,22 +1,24 @@
 <script setup lang="ts">
 // The favourites of a year in review (backlog #25): `reads` are the year's five-star Books, newest first
 // (`YearFigures.favourites`; with none, the top-rated read alone). One read is the favourite's card, lit by
-// its cover; several are a sideways row of covers (the reading page's `ReadingCoverRow`, no card around
-// it), each opening its Book with the cover flying in, the page's light still the first cover's. One
-// component for the Profile's own year page and for a member's (social v1, U4): `foreign` is the member's,
-// where a Manual book is hers alone and opens nothing (as in MonthBooks); `testid` names the card, its
-// title is `<testid>Title`, the row `<testid>s`. With `reads` null, the placeholders hold its place in
-// the loading wave (docs/MOTION.md, Loading); with none, nothing. Attributes (`id`, `class`) land on the
-// card or the row, not on the placeholders.
+// its cover; several are a sideways row of covers (the reading page's `ReadingCoverRow`, no card around it),
+// each opening its Book with the cover flying in, the page's light still the first cover's; its title is
+// yours, or hers by name (`name`). One component for the Profile's own year page and for a member's
+// (social v1, U4): `foreign` is the member's, where a Manual book is hers alone and opens nothing (as in
+// MonthBooks); `testid` names the card, its title is `<testid>Title`, the row `<testid>s`. With `reads`
+// null, the placeholders hold its place in the loading wave (docs/MOTION.md, Loading); with none, nothing.
+// Attributes (`id`, `class`) land on the card or the row, not on the placeholders.
 import type { StatsRead } from '~/data/stats'
 import { useBookStore } from '~/stores/book'
 import { bookPathOf } from '~/utils/memberProfile'
 
 defineOptions({ inheritAttrs: false })
-const props = withDefaults(defineProps<{ reads: readonly StatsRead[] | null; foreign?: boolean; testid?: string }>(), { foreign: false, testid: 'yearInReview.favourite' })
+const props = withDefaults(defineProps<{ reads: readonly StatsRead[] | null; foreign?: boolean; name?: string; testid?: string }>(), { foreign: false, name: undefined, testid: 'yearInReview.favourite' })
 const { t } = useI18n()
 const books = useBookStore()
 const headingId = useId()
+// The row's title: yours, hers by name, or neutral on a member's page that has no name to give.
+const rowTitle = computed(() => (!props.foreign ? t('profile.year.favourites') : props.name ? t('profile.year.favouritesOf', { name: props.name }) : t('profile.year.favouritesNeutral')))
 const read = computed(() => (props.reads?.length === 1 ? props.reads[0]! : null))
 const row = computed(() => (props.reads && props.reads.length > 1 ? props.reads.map((r) => ({ book: r.book })) : null))
 const to = (book: { id: string }) => {
@@ -53,7 +55,7 @@ const to = (book: { id: string }) => {
     </span>
   </FriendsMemberBookLink>
   <section v-else-if="row" v-bind="$attrs" class="flex flex-col gap-md" :aria-labelledby="headingId" :data-testid="`${testid}s`">
-    <h2 :id="headingId" class="eyebrow">{{ t('profile.year.favourites', { count: row.length }) }}</h2>
+    <h2 :id="headingId" class="eyebrow">{{ rowTitle }}</h2>
     <ReadingCoverRow :items="row" :testid="`${testid}sRow`" :link-to="to" @press="books.prefetch" />
   </section>
   <div v-else-if="!reads" class="flex flex-col items-center gap-md rounded-lg bg-surface-raised px-inset py-lg shadow-raised edge-faint" aria-hidden="true">
