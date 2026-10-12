@@ -166,7 +166,7 @@ const fill = createCoverFill({
 function wantCover(index: number) {
   const book = books[index]!
   const edition = editions[index]!
-  const wanted = !edition.unsure && !('id' in edition.book) && edition.book.source !== 'manual' && !hasCover(edition)
+  const wanted = !edition.unsure && !hasCover(edition)
   if (mode === 'before') return
   if (wanted) fill.add({ key: book.key, row: book, book: edition.book, alternatives: edition.alternatives })
   else fill.drop(book.key)
