@@ -236,6 +236,36 @@ cache (`cover_url`) still serves what it already knows while the breaker is open
 To switch route for good: set `GOODREADS_COVERS` to `false` (stage and button gone, no call), and, if the address host must go too, drop
 `i.gr-assets.com` from `private.cover_allowed` in a migration (as under *Terms risk*).
 
+### One merge for the facts: `mergeSources` (`data/mergeBook.ts`)
+
+The cover ranking above is one field of a general rule: ask several sources about the same book (cheap first, stop when
+`isComplete`), then merge **field by field** into the best Book, with provenance. Pure and table-driven
+(`SOURCE_RANK` per field), Vitest `tests/merge-book.test.ts`.
+
+- **Work fields** (title, authors, language, description, cover) may come from any candidate the caller checked is the same
+  work (`isSameWork`): the work's ebook at Apple, another print edition at Open Library. **Edition fields** (ISBN, pages, year,
+  publisher, format, source ids) only from the candidate that *is* the edition: an ebook's page count never lands on the
+  paperback. How "her row says paperback, the matched Book is the ebook" works: the Book may be the ebook edition (its
+  cover, language, description); the entry keeps her own edition facts, which already exist: `page_count_override` (the
+  file's pages), `format_override` / `read_as` (the format she says), the file's ISBN as an `import` Book. Nothing new.
+- A value that is not plausible (0 pages, a year of 1066, a wrong check digit, a cover over http, a three-word description)
+  is no value and never replaces a good one; where several plausible values exist the one most sources agree on wins, then
+  the better-ranked source, then the earlier (stable ties; put the Book's own record first and what it has stays).
+- Cover: kind (`coverRank.ts`), then pixel height (Apple 900, Open Library `-L` 500, Goodreads 500, Google 128, or the probed
+  height), then the earlier; its thumbhash and colours travel with it. Resolution only ranks real covers, it never rejects one.
+- Description: only from sources whose terms let it be stored (Apple, Open Library, DNB, the Catalogue: not Google, not
+  Goodreads, listed as `withheld`), the book's language before a longer one in another.
+- ISBN first: `collectIsbn` gives the ISBN to ask every other source with (the file's, else any source's: an exact one first,
+  an ISBN-10 converted), so the pipeline is: ISBN known, ask all sources by ISBN; none, find the work by title and author,
+  collect an ISBN from any hit, then ask by ISBN.
+
+Wired now: the import's match borrows a cover by this ranking (`coverLender` in `data/bookImport.ts`: the work's ebook before
+another print edition, in the row's language; before, `alternatives[0]` was taken even without a cover). Measured effect on
+a real export: none (no row had an alternative with a cover); it is the one place that decides from now on. **Follow-up,
+not done:** Search and the barcode scan keep their chain (`data/merge.ts`, first source wins, `fillIn`); they would hand
+their per-source answers for one ISBN to `mergeSources` instead; the cover fill would build its `CoverFound` from
+`coverKindOfCandidate`; the server job for the import runs the same module.
+
 ## Sizes the browser can choose (`srcset`, A7)
 
 `UiCover` gives an Apple cover a `srcset` of the same artwork at the neighbouring boxes
