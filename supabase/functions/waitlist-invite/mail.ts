@@ -10,7 +10,7 @@
  * and the wording she agreed to (consent text '2026-10') says the address is used "only to send you an
  * invite". The plain-text part says the same.
  */
-import { html as HTML_TEMPLATE, text as TEXT_TEMPLATE } from './invite_mail.generated.mjs'
+import { html as HTML_TEMPLATES, text as TEXT_TEMPLATES } from './invite_mail.generated.mjs'
 
 /** One mail as the mailer sends it. */
 export type Mail = {
@@ -20,11 +20,31 @@ export type Mail = {
   html: string
 }
 
-export const SUBJECT = 'Your BetterReads invite'
+/** The languages the mail is written in: the app's own. */
+export type MailLocale = 'en' | 'de'
 
-/** The day a code stops working, in words ("26 October 2026"); UTC, so a test reads the same anywhere. */
-export function expiryDate(expiresAt: string): string {
-  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(expiresAt))
+/**
+ * The language of the mail: the one the person's page was in when she joined the waitlist
+ * (`private.waitlist.locale`, answered by `owner_waitlist_prepare_invite`). German for `de`; anything else, and
+ * no value, is English. The request is the owner's, so nothing of hers (her `Accept-Language`) says what the
+ * recipient reads.
+ */
+export function mailLocale(locale: string | null | undefined): MailLocale {
+  return locale === 'de' ? 'de' : 'en'
+}
+
+export const SUBJECTS: Record<MailLocale, string> = {
+  en: 'Your BetterReads invite',
+  de: 'Deine BetterReads-Einladung',
+}
+/** The English subject, for callers that do not choose a language. */
+export const SUBJECT = SUBJECTS.en
+
+const DATE_LOCALES: Record<MailLocale, string> = { en: 'en-GB', de: 'de-DE' }
+
+/** The day a code stops working, in words ("26 October 2026", "26. Oktober 2026"); UTC, so a test reads the same anywhere. */
+export function expiryDate(expiresAt: string, locale: MailLocale = 'en'): string {
+  return new Intl.DateTimeFormat(DATE_LOCALES[locale], { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(expiresAt))
 }
 
 /**
@@ -73,15 +93,23 @@ export function fillTemplate(
   return out.replace(/\{\{ \.(\w+) \}\}/g, (_, name: string) => escape(values[name]))
 }
 
-export function inviteMail({ to, code, expiresAt, siteUrl }: { to: string; code: string; expiresAt: string; siteUrl: string | null }): Mail {
+export function inviteMail({ to, code, expiresAt, siteUrl, locale }: {
+  to: string
+  code: string
+  expiresAt: string
+  siteUrl: string | null
+  /** What the entry holds (`private.waitlist.locale`); anything but `de` is English. */
+  locale?: string | null
+}): Mail {
+  const language = mailLocale(locale)
   const link = signUpUrl(siteUrl)
-  const values = { Code: code, ExpiresOn: expiryDate(expiresAt), SignUpUrl: link ?? '' }
+  const values = { Code: code, ExpiresOn: expiryDate(expiresAt, language), SignUpUrl: link ?? '' }
   const blocks = { link: link !== null }
   return {
     to,
-    subject: SUBJECT,
-    html: fillTemplate(HTML_TEMPLATE, values, { blocks, escape: escapeHtml }),
-    text: fillTemplate(TEXT_TEMPLATE, values, { blocks }),
+    subject: SUBJECTS[language],
+    html: fillTemplate(HTML_TEMPLATES[language], values, { blocks, escape: escapeHtml }),
+    text: fillTemplate(TEXT_TEMPLATES[language], values, { blocks }),
   }
 }
 

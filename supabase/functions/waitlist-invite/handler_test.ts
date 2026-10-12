@@ -17,7 +17,7 @@ const EXPIRES = '2026-10-27T09:00:00.000Z'
 const TOKEN = 'Bearer owner-access-token'
 
 type Plan = {
-  prepare?: () => Promise<{ email: string; code: string; expiresAt: string }>
+  prepare?: () => Promise<{ email: string; code: string; expiresAt: string; locale?: string | null }>
   setInvited?: () => Promise<void>
   mailer?: Mailer | null
   siteUrl?: string | null
@@ -72,6 +72,19 @@ Deno.test('an invite is prepared as the caller, mailed, then marked invited', as
   assertStringIncludes(sent[0].text, CODE)
   assertStringIncludes(sent[0].text, 'https://libellus.example.org/sign-up')
   assertEquals(response.headers.get('access-control-allow-origin'), '*')
+})
+
+Deno.test('the mail is in the language the entry holds, whoever asks and in whatever language', async () => {
+  const german = setup({ prepare: () => Promise.resolve({ email: EMAIL, code: CODE, expiresAt: EXPIRES, locale: 'de' }) })
+  // The owner's own request says English: it must not decide the recipient's language.
+  const response = await german.handler(invite(undefined, { authorization: TOKEN, 'accept-language': 'en-GB' }))
+  assertEquals(response.status, 200)
+  assertEquals(german.sent[0].subject, 'Deine BetterReads-Einladung')
+  assertStringIncludes(german.sent[0].text, 'bis zum 27. Oktober 2026')
+
+  const unknown = setup({ prepare: () => Promise.resolve({ email: EMAIL, code: CODE, expiresAt: EXPIRES, locale: null }) })
+  await unknown.handler(invite(undefined, { authorization: TOKEN, 'accept-language': 'de-DE' }))
+  assertEquals(unknown.sent[0].subject, 'Your BetterReads invite')
 })
 
 Deno.test('without SMTP the code comes back, nothing is sent and the entry stays waiting', async () => {

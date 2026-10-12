@@ -478,10 +478,15 @@ enabled = true
 # confirmations on, the first mail of a signup is the confirmation and every
 # later one the magic link. Both have to carry the same six digits, or half the
 # flow would hand out a link.
+#
+# German: Auth has one template per kind of mail, not per request, but it renders the file and the
+# subject as Go templates with the account's `user_metadata` as `.Data`. The app keeps
+# `user_metadata.locale` ('en' | 'de') up to date (web/app/data/auth.ts), so both branch on it: `de`
+# is German, anything else English (docs/i18n/README.md, "Mails").
 [auth.email.template.magic_link]
-subject = "Your BetterReads sign-in code"
+subject = '{{ if eq (index .Data "locale") "de" }}Dein BetterReads-Anmeldecode{{ else }}Your BetterReads sign-in code{{ end }}'
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
-subject = "Your BetterReads sign-in code"
+subject = '{{ if eq (index .Data "locale") "de" }}Dein BetterReads-Anmeldecode{{ else }}Your BetterReads sign-in code{{ end }}'
 content_path = "./supabase/templates/magic_link.html"

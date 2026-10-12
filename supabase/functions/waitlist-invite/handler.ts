@@ -36,7 +36,8 @@ const CORS = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** What `owner_waitlist_prepare_invite` answers. */
-export type PreparedInvite = { email: string; code: string; expiresAt: string }
+/** `locale` is the language of the page she joined from (`de` or `en`), null when unknown: the mail's language. */
+export type PreparedInvite = { email: string; code: string; expiresAt: string; locale?: string | null }
 
 /**
  * Why the database said no: the caller is not the owner, or the entry is gone; anything else is
@@ -134,7 +135,7 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
     if (!deps.mailer) return json(200, answer({ emailed: false, reason: 'not_configured' }))
 
     try {
-      await deps.mailer.send(inviteMail({ to: invite.email, code: invite.code, expiresAt: invite.expiresAt, siteUrl: deps.siteUrl }))
+      await deps.mailer.send(inviteMail({ to: invite.email, code: invite.code, expiresAt: invite.expiresAt, siteUrl: deps.siteUrl, locale: invite.locale }))
     } catch (error) {
       log(`waitlist-invite: sending failed (${failureKind(error)})`)
       return json(200, answer({ emailed: false, reason: 'send_failed' }))

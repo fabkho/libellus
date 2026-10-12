@@ -6,7 +6,7 @@
  *   cd supabase/functions/waitlist-invite && deno task test
  */
 import { assertEquals, assertFalse, assertStringIncludes, assertThrows } from '@std/assert'
-import { escapeHtml, expiryDate, fillTemplate, implicitTls, inviteMail, signUpUrl, smtpConfigFromEnv, SUBJECT } from './mail.ts'
+import { escapeHtml, expiryDate, fillTemplate, implicitTls, inviteMail, mailLocale, signUpUrl, smtpConfigFromEnv, SUBJECT, SUBJECTS } from './mail.ts'
 
 const base = { to: 'reader@example.org', code: 'K7QM-X2PA', expiresAt: '2026-10-27T09:00:00Z' }
 
@@ -18,7 +18,7 @@ Deno.test('the mail says why, the code, until when, how, and links to sign up', 
     assertStringIncludes(part, 'You asked for an invite on a BetterReads reading page')
     assertStringIncludes(part, 'K7QM-X2PA')
     assertStringIncludes(part, 'until 27 October 2026')
-    assertStringIncludes(part, 'Sign up with a code')
+    assertStringIncludes(part, 'Sign up')
     assertStringIncludes(part, 'We used your address only to send it')
     assertFalse(part.includes('{{'), 'a placeholder is left')
     assertFalse(part.includes('link]-->'), 'a block marker is left')
@@ -42,8 +42,8 @@ Deno.test('without the instance\'s address the mail has no link at all', () => {
     assertFalse(mail.text.includes('Sign up:'), String(siteUrl))
     assertFalse(mail.html.includes('link]-->'), String(siteUrl))
     // How to use it is still there.
-    assertStringIncludes(mail.text, 'Open BetterReads, choose Sign up with a code')
-    assertStringIncludes(mail.html, 'Sign up with a code')
+    assertStringIncludes(mail.text, 'Open BetterReads, choose Sign up,')
+    assertStringIncludes(mail.html, 'choose <strong')
   }
 })
 
@@ -81,7 +81,7 @@ Deno.test('the plain-text part says what the HTML says, line by line', () => {
     '',
     'It works once, until 27 October 2026.',
     '',
-    'Open BetterReads, choose Sign up with a code, and enter your email and this code.',
+    'Open BetterReads, choose Sign up, and enter your email and this code.',
     'Sign up: https://libellus.example.org/sign-up',
     '--',
     'You get this email because you asked for an invite on a reading page. We used your address only to send it.',
@@ -95,6 +95,7 @@ Deno.test('the sign-up address and the expiry date', () => {
   assertEquals(signUpUrl('ftp://example.org'), null)
   assertEquals(signUpUrl(undefined), null)
   assertEquals(expiryDate('2026-10-27T23:30:00Z'), '27 October 2026')
+  assertEquals(expiryDate('2026-10-27T23:30:00Z', 'de'), '27. Oktober 2026')
 })
 
 Deno.test('mail counts as configured only with every required secret', () => {
@@ -122,4 +123,46 @@ Deno.test('mail counts as configured only with every required secret', () => {
     assertEquals(smtpConfigFromEnv((name) => ({ ...full, SMTP_PORT: port })[name]), null, port)
   }
   assertEquals([465, 2465, 2587, 587].map(implicitTls), [true, true, false, false])
+})
+
+// ------------------------------------------------------------------ the language (German group B of #257)
+
+Deno.test('the language is German for de and English for everything else', () => {
+  assertEquals(['de', 'en', 'fr', '', null, undefined, 'DE', 'de-AT'].map(mailLocale), ['de', 'en', 'en', 'en', 'en', 'en', 'en', 'en'])
+})
+
+Deno.test('a mail for a German entry is German, from subject to date, with the same code and link', () => {
+  const mail = inviteMail({ ...base, siteUrl: 'https://libellus.example.org/', locale: 'de' })
+  assertEquals(mail.subject, 'Deine BetterReads-Einladung')
+  assertEquals(mail.subject, SUBJECTS.de)
+  for (const part of [mail.text, mail.html]) {
+    assertStringIncludes(part, 'Du hast auf einer BetterReads-Leseseite um eine Einladung gebeten')
+    assertStringIncludes(part, 'K7QM-X2PA')
+    assertStringIncludes(part, 'bis zum 27. Oktober 2026')
+    assertStringIncludes(part, 'Registrieren')
+    assertStringIncludes(part, 'Wir haben deine Adresse nur dafür verwendet')
+    assertFalse(part.includes('You asked'), 'English is left in the German mail')
+    assertFalse(part.includes('{{'), 'a placeholder is left')
+    assertFalse(part.includes('link]-->'), 'a block marker is left')
+  }
+  assertStringIncludes(mail.html, '<html lang="de"')
+  assertStringIncludes(mail.html, 'Die Bücher, die du liest, in aller Ruhe aufbewahrt.')
+  assertStringIncludes(mail.html, '<a href="https://libellus.example.org/sign-up"')
+  assertStringIncludes(mail.text, 'Registrieren: https://libellus.example.org/sign-up')
+})
+
+Deno.test('the German mail without a site address has no link either', () => {
+  const mail = inviteMail({ ...base, siteUrl: null, locale: 'de' })
+  assertFalse(mail.html.includes('<a '))
+  assertFalse(mail.text.includes('http'))
+  assertStringIncludes(mail.text, 'Öffne BetterReads, wähle Registrieren und gib deine E-Mail-Adresse und diesen Code ein.')
+})
+
+Deno.test('an entry with no language, or one the app does not speak, gets the English mail', () => {
+  for (const locale of [undefined, null, 'en', 'fr', '']) {
+    const mail = inviteMail({ ...base, siteUrl: null, locale })
+    assertEquals(mail.subject, SUBJECT, String(locale))
+    assertStringIncludes(mail.html, '<html lang="en"')
+    assertStringIncludes(mail.text, 'You asked for an invite')
+  }
 })
