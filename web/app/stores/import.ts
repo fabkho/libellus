@@ -224,13 +224,11 @@ export const useImportStore = defineStore('import', () => {
     const edition = editions.value[index]
     if (!fill || !book || !edition) return
     const verdict = verdicts.value[index]
-    // A Catalogue Book keeps the cover it has (the database never changes it); a member's pick is hers.
+    // A Catalogue Book without a cover gets the one found when the import is written (`fill_book_covers`); a member's pick is hers.
     const wanted =
       (verdict === 'matched' || verdict === 'fromFile') &&
       !chosen.value.has(index) &&
       !edition.unsure &&
-      !('id' in edition.book) &&
-      edition.book.source !== 'manual' &&
       !edition.book.coverUrl &&
       !edition.coverFrom?.coverUrl
     if (!wanted) return fill.drop(book.key)
@@ -780,6 +778,7 @@ export const useImportStore = defineStore('import', () => {
       collections: chosenShelves(book),
       book: edition!.book,
       coverFrom: edition!.coverFrom ?? null,
+      coverFilled: edition!.filled,
     }))
     progress.total = pending.length
 
@@ -792,7 +791,7 @@ export const useImportStore = defineStore('import', () => {
       },
       refresh(row) {
         const edition = editions.value[at.get(row.key) ?? -1]
-        return edition ? { ...row, book: edition.book, coverFrom: edition.coverFrom ?? null } : row
+        return edition ? { ...row, book: edition.book, coverFrom: edition.coverFrom ?? null, coverFilled: edition.filled } : row
       },
     })
     stopFill()

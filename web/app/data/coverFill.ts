@@ -1,7 +1,8 @@
 import type { Book, BookSnapshot } from './books'
+import { coverKindOf, kindRank, type CoverKind } from './coverRank'
 import { verifyCover, type ProbeImage, type ResolvedCover } from './covers'
 import { abortError, type FetchLike } from './fetching'
-import { languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions'
+import { isSameWork, languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions'
 import type { ImportBook } from './import/rows'
 import type { Search } from './search'
 import type { Edition } from './bookImport'
@@ -57,8 +58,9 @@ export type CoverWanted = {
   alternatives?: readonly (Book | BookSnapshot)[]
 }
 
-export type CoverSource = 'sibling' | 'openlibrary' | 'search'
-export type CoverFound = ResolvedCover & { coverUrl: string; source: CoverSource }
+export type CoverSource = 'sibling' | 'openlibrary' | 'work' | 'search'
+/** `kind`: edition-exact, the work's ebook or another edition of the work (data/coverRank.ts: the one ranking). */
+export type CoverFound = ResolvedCover & { coverUrl: string; source: CoverSource; kind: CoverKind }
 
 export type CoverFillProgress = {
   /** Rows queued, rows answered (found or not), rows with a cover now. */
@@ -67,7 +69,7 @@ export type CoverFillProgress = {
   found: number
 }
 
-export type CoverFillCalls = { openlibrary: number; search: number; probe: number }
+export type CoverFillCalls = { openlibrary: number; work: number; search: number; probe: number }
 
 export type CoverFill = {
   /** Queues a row; one already queued (same key) is kept as it is. */
@@ -102,10 +104,12 @@ export type CoverFillOptions = {
   wait?: (ms: number, signal?: AbortSignal) => Promise<void>
 }
 
-type Item = { wanted: CoverWanted; attempts: number; done: boolean; ol: Promise<string | null> }
+/** `fallback`: the cover another edition of the work gave, reported at once; a better kind (the ebook) replaces it when it turns up. */
+type Item = { wanted: CoverWanted; attempts: number; done: boolean; ol: Promise<string | null>; second: boolean; fallback: CoverFound | null }
 
 const APPLE_HOST = 'itunes.apple.com'
 const OPENLIBRARY_API = 'https://openlibrary.org/api/books'
+const OPENLIBRARY_SEARCH = 'https://openlibrary.org/search.json'
 const OPENLIBRARY_COVERS = /^https:\/\/covers\.openlibrary\.org\/b\/id\/\d+-[SML]\.jpg$/
 
 const defaultWait = (ms: number, signal?: AbortSignal) =>
@@ -135,14 +139,21 @@ export function siblingCovers(wanted: CoverWanted): string[] {
 /**
  * The edition with the found cover on it: on its Book when a source found the edition itself, as the
  * cover its Book borrows (`coverFrom`) when only the file knows it (the ISBN is hers, the image another
- * edition's). Null when it has a cover already (the member's own pick, or another way found one first).
+ * edition's). Null when it has a cover already (the member's own pick, or another way found one first), unless
+ * the cover is one the fill gave it and this one is of a better kind (the ebook for another print edition's).
  */
-export function mergeCover(edition: Edition, found: ResolvedCover): Edition | null {
-  if (edition.book.coverUrl || edition.coverFrom?.coverUrl) return null
+export function mergeCover(edition: Edition, found: ResolvedCover & { kind?: CoverKind }): Edition | null {
+  if (edition.book.coverUrl || edition.coverFrom?.coverUrl) {
+    // Only what the fill found itself is replaced, and only by a better kind (the ranking, data/coverRank.ts).
+    const better = edition.filled && edition.coverKind && found.kind && kindRank(found.kind) < kindRank(edition.coverKind)
+    if (!better) return null
+  }
   const cover = { coverUrl: found.coverUrl, coverThumbhash: found.coverThumbhash, coverColors: found.coverColors }
-  return edition.via
-    ? { ...edition, book: { ...edition.book, ...cover } as Edition['book'] }
-    : { ...edition, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
+  const kind = found.kind ? { coverKind: found.kind } : {}
+  // A Manual book (no edition found, no ISBN) wears it itself: nothing else is hers to lend it.
+  return edition.via || edition.book.source === 'manual'
+    ? { ...edition, filled: true, ...kind, book: { ...edition.book, ...cover } as Edition['book'] }
+    : { ...edition, filled: true, ...kind, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
 }
 
 const withIn = <T>(promise: Promise<T>, ms: number): Promise<T> =>
@@ -175,7 +186,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     now = Date.now,
     wait = defaultWait,
   } = options
-  const calls: CoverFillCalls = { openlibrary: 0, search: 0, probe: 0 }
+  const calls: CoverFillCalls = { openlibrary: 0, work: 0, search: 0, probe: 0 }
   const probe: ProbeImage = (url) => {
     calls.probe++
     return options.probe(url)
@@ -193,14 +204,24 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     if (answered >= items.size || stopped) for (const waiter of [...waiters]) waiter()
   }
 
-  function finish(item: Item, cover: CoverFound | null) {
+  function finish(item: Item, best: CoverFound | null) {
     if (item.done) return
     item.done = true
     answered++
-    if (cover && !stopped) {
-      found++
-      onFound(item.wanted.key, cover)
+    if (best && !stopped) {
+      // A cover reported before (the fallback) is already counted: the better one replaces it.
+      if (!item.fallback) found++
+      onFound(item.wanted.key, best)
     }
+    report()
+  }
+
+  /** Another edition's cover: reported now (the preview and the write take what is found by then), and replaced if the work's ebook is found. */
+  function offer(item: Item, cover: CoverFound | null) {
+    if (!cover || stopped || item.done) return
+    item.fallback = cover
+    found++
+    onFound(item.wanted.key, cover)
     report()
   }
 
@@ -213,7 +234,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     }
   }
   const asFound = (cover: ResolvedCover | null, source: CoverSource): CoverFound | null =>
-    cover?.coverUrl ? { ...cover, coverUrl: cover.coverUrl, source } : null
+    cover?.coverUrl ? { ...cover, coverUrl: cover.coverUrl, source, kind: coverKindOf(source, cover.coverUrl) } : null
 
   // ---------------------------------------------------- Open Library, batched
 
@@ -284,24 +305,78 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     }
   }
 
+  // ----------------------------------------------- Open Library, the work's covers
+
+  let workFailures = 0
+  let workPausedUntil = 0
+
+  /**
+   * The cover of another edition of the row's work: Open Library's search by title and author (the
+   * structured one, which does not trip over initials in an author's name), the first document that is
+   * the same work, in the row's language where it says, and has a cover. Its address is by cover id.
+   */
+  async function openLibraryWork(item: Item): Promise<string | null> {
+    const { row } = item.wanted
+    if (stopped || workFailures >= LANE_FAILURES || now() < workPausedUntil || !row.title) return null
+    calls.work++
+    try {
+      const response = await withIn(
+        fetch(
+          `${OPENLIBRARY_SEARCH}?${new URLSearchParams({ title: row.title, author: row.authors[0] ?? '', fields: 'key,title,author_name,cover_i,language', limit: '12' })}`,
+          { signal: controller.signal },
+        ),
+        COVER_CALL_TIMEOUT_MS,
+      )
+      if (!response.ok) {
+        const seconds = Number(response.headers?.get('retry-after'))
+        if (Number.isFinite(seconds) && seconds > 0) workPausedUntil = now() + Math.min(seconds, 60) * 1000
+        throw new Error(`openlibrary.org answered ${response.status}`)
+      }
+      const body = (await response.json()) as { docs?: { title?: string; author_name?: string[]; cover_i?: number; language?: string[] }[] }
+      workFailures = 0
+      const wanted = languageCode(row.language) ?? titleLanguage(row.title)
+      const doc = (body.docs ?? []).find(
+        (found) =>
+          found.cover_i &&
+          found.cover_i > 0 &&
+          isSameWork(row, { title: found.title ?? '', authors: found.author_name ?? [] }) &&
+          // The work's languages: a German row is not given a cover whose editions are all English.
+          (!wanted || !found.language?.length || found.language.some((code) => languageCode(code) === wanted)),
+      )
+      return doc ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null
+    } catch {
+      workFailures++
+      return null
+    }
+  }
+
   // ------------------------------------------------- the lane over the items
 
   const lane: Item[] = []
   let active = 0
 
   async function check(item: Item) {
-    // 1. A sibling edition the title search already found.
-    for (const url of siblingCovers(item.wanted).slice(0, 3)) {
-      const cover = asFound(await verified(url), 'sibling')
-      if (cover) return finish(item, cover)
-    }
-    // 2. Open Library, asked for with the rows that came with it.
+    // The ranking (data/coverRank.ts): the very edition, then the work's ebook, then another edition.
+    // 1. Open Library by the row's ISBN, asked for with the rows that came with it: the edition itself.
     const url = await item.ol
     if (url) {
       const cover = asFound(await verified(url), 'openlibrary')
       if (cover) return finish(item, cover)
     }
-    // 3. Everything else: the paced search.
+    // 2. A sibling edition the title search already found: no request. Apple's are ebooks (taken); the others wait.
+    for (const sibling of siblingCovers(item.wanted).slice(0, 3)) {
+      const cover = asFound(await verified(sibling), 'sibling')
+      if (!cover) continue
+      if (cover.kind === 'ebook') return finish(item, cover)
+      if (!item.fallback) offer(item, cover)
+    }
+    // 3. The work's other editions at Open Library (a search by title and author, the cover of the best fit):
+    //    kept as the fallback, the ebook is still asked for.
+    if (!item.fallback) {
+      const work = await openLibraryWork(item)
+      if (work) offer(item, asFound(await verified(work), 'work'))
+    }
+    // 4. The work's ebook: the paced search at Apple Books, the row's storefront first; it replaces the fallback.
     if (stopped) return finish(item, null)
     searchQueue.push(item)
     void runSearch()
@@ -376,7 +451,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     calls.search++
     let outcome: Awaited<ReturnType<Search['searchCovers']>> | null = null
     try {
-      outcome = await withIn(search.searchCovers(titleQuery(row), { signal: controller.signal }), COVER_CALL_TIMEOUT_MS)
+      outcome = await withIn(search.searchCovers(titleQuery(row), { signal: controller.signal, storefront: item.second ? 1 : 0 }), COVER_CALL_TIMEOUT_MS)
     } catch {
       if (stopped) return finish(item, null)
     }
@@ -403,13 +478,19 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       const cover = asFound(await verified(book.coverUrl as string), 'search')
       if (cover) return finish(item, cover)
     }
+    // Not in the first storefront: the second one is asked once the first has been through every row.
+    if (!item.second) {
+      item.second = true
+      searchQueue.push(item)
+      return
+    }
     finish(item, null)
   }
 
   return {
     add(wanted) {
       if (stopped || items.has(wanted.key)) return
-      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null) }
+      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null), second: false, fallback: null }
       items.set(wanted.key, item)
       item.ol = requestOpenLibrary(item)
       lane.push(item)

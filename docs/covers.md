@@ -150,12 +150,50 @@ ranking coverless results lower than equally good matches by more than a tie-bre
 ## The import's covers meanwhile (cover fill)
 
 An import row a source identified (or whose ISBN the file names) but whose edition has no cover is queued for
-one while the lookup goes on (`data/coverFill.ts`): a sibling edition from the title search, Open Library by
-ISBN in batches (by cover id, which has no per-address limit), then a paced Apple search (one request every 3 s;
-Apple's limit is ~20 a minute, measured), under a circuit breaker and a 10-minute budget; the preview and the
-write never wait for it, and a row that finds nothing stays a quiet "no cover" instead of a review item. Covers are
-only linked, from the hosts the Catalogue allows. Sources, terms, hit rates and the measurement on a real export:
-[plans/cover-sources.md](plans/cover-sources.md); the behaviour: `docs/parity.md`, Import books, *Covers meanwhile*.
+one while the lookup goes on (`data/coverFill.ts`). The ranking decides the order (below): Open Library by ISBN in
+batches (by cover id, which has no per-address limit) is the edition itself; a sibling edition from the title
+search and Open Library's search by title and author (the work's other editions) are reported at once, as
+another edition's cover; then a paced Apple Books search (one request every 3 s, the row's storefront first and
+the other once the first has been through every row; Apple's limit is ~20 a minute, measured) looks for the
+work's **ebook**, which replaces the other edition's cover when it is found. All under a circuit breaker and a
+10-minute budget; the preview and the write never wait for it, and a row that finds nothing stays a quiet "no
+cover" instead of a review item. Covers are only linked, from the hosts the Catalogue allows. Sources, terms, hit
+rates and the measurement on a real export: [plans/cover-sources.md](plans/cover-sources.md); the behaviour:
+`docs/parity.md`, Import books, *Covers meanwhile*.
+
+### The ranking: one rule (`data/coverRank.ts`)
+
+Owner decision: the work's ebook is a first-class route, not a last resort (the APIs know ebooks best; a publisher's
+ebook usually wears the print cover). Best first:
+
+1. **exact**: the very edition: its Apple artwork, Open Library's cover for its ISBN.
+2. **ebook**: the same work's ebook at Apple Books (`isSameWork`, the language rule), the row's storefront first.
+3. **sameWork**: another edition of the same work (a sibling edition, an Open Library work's cover).
+4. **goodreads**: Goodreads' cover for the row's title: a last resort, only for a Goodreads file's rows and a manual
+   "find a cover" action (not built in this change, see the PR).
+5. **placeholder**: no image: `cover_url` stays null and `UiCover` draws the cloth (by title), so a real cover found
+   later replaces it with no flag. Pixel height inside a kind: Apple 900, Open Library `-L` 500, Goodreads 500, Google 128.
+
+Anything but `exact` is *lent*: the Book and the entry keep their own edition facts (ISBN, pages, binding), the
+cover is only borrowed, and a better kind found later replaces it (`mergeCover`; a cover the member chose herself
+is never replaced). A print and an ebook cover can differ (tie-in, anniversary editions, re-releases), which is why
+the ebook is taken only when the edition's own cover is missing, and why the edition picker still offers the other
+editions' covers. Apple covers stay linked, never copied. The Catalogue keeps the first snapshot of a Book, so a
+Book that landed without a cover gets the one the fill found when a member who holds it imports it
+(`fill_book_covers`: only a Book the member holds, only an allow-listed host, never replaces).
+
+A cover found by the lookup is read where it is kept: an Open Library cover is probed at `-L`, not at its 180 px
+`-M`. A narrow book's `-M` was under the old 150 px floor, and 19 of 708 books of one real import
+lost a cover the lookup had found at the write for that reason.
+
+**A low-resolution cover is better than none** (owner rule). The only floor is a sanity one: under 40 px on the short side
+(`MIN_COVER_SIDE`) or one flat colour is no cover. From 40 to 149 px (`PREFERRED_COVER_SIDE`) a cover is accepted when nothing
+better exists: the chain keeps it as the fallback while it looks on, and the fill reports it like any other. Resolution is
+only a tie-breaker between real covers (`COVER_HEIGHT`, higher wins inside one kind of the ranking), never a reason to
+reject the only one. A better kind found later (the fill, a later import, the check, another member's import through
+`fill_book_covers`) replaces a cover the fill gave. The UI shows covers scaled by CSS with the thumbhash behind them, so a
+small one is soft but not broken. Measurements count a cover of any size as found and report those under 300 px high
+separately.
 
 ## Sizes the browser can choose (`srcset`, A7)
 
