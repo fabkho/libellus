@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { betterCover, COVER_KINDS, coverKindOf, coverRank, isLent } from '@/data/coverRank'
+import { betterCover, COVER_KINDS, coverKindOf, kindRank, isLent } from '@/data/coverRank'
 
 /** The one ranking of covers (data/coverRank.ts): pure, so a table is the whole test. */
 describe('the cover ranking', () => {

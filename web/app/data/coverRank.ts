@@ -24,13 +24,13 @@ export const COVER_KINDS: readonly CoverKind[] = ['exact', 'ebook', 'sameWork', 
 /** Pixel height each source's cover has once asked for large (docs/covers.md): the tie-break inside one kind. */
 export const COVER_HEIGHT = { apple: 900, openlibrary: 500, goodreads: 500, google: 128 } as const
 
-export function coverRank(kind: CoverKind): number {
+export function kindRank(kind: CoverKind): number {
   return COVER_KINDS.indexOf(kind)
 }
 
 /** The better of two kinds (the first on a tie: a cover found stays). */
 export function betterCover(a: CoverKind, b: CoverKind): CoverKind {
-  return coverRank(b) < coverRank(a) ? b : a
+  return kindRank(b) < kindRank(a) ? b : a
 }
 
 /** What the fill's source says about the kind of cover it found. */
