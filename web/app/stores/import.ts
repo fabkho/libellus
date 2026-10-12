@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import type { Book, BookSnapshot } from '~/data/books'
 import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, type CoverFound } from '~/data/coverFill'
-import { probeImageInBrowser } from '~/data/covers'
+import { GOODREADS_COVERS } from '~/data/coverRank'
+import { probeImageInBrowser, verifyCover } from '~/data/covers'
 import { createGoodreadsCover } from '~/data/goodreadsCover'
 import {
   createBookImport,
@@ -105,6 +106,8 @@ export type Attention = {
    * (found by its title, a missing cover, a custom shelf …) and the screen keeps them behind a toggle.
    */
   look: boolean
+  /** The row has no cover and the last-resort "Find a cover" (Goodreads) may be asked for it. */
+  findCover?: boolean
   /** The edition she chose, as it will be written: its language, year and pages show on the row. */
   held?: Edition['book']
   notes: (
@@ -257,6 +260,32 @@ export const useImportStore = defineStore('import', () => {
     return (goodreadsCover ??= createGoodreadsCover(backend, { online: isOnline }))
   }
 
+  /** "Find a cover" on one row (any file): asked now, one row, not through the fill's lane. */
+  const coverSearch = ref<{ key: string; state: 'asking' | 'found' | 'none' | 'failed' } | null>(null)
+
+  /**
+   * Asks the Goodreads function for this row's cover (a Goodreads file's row with its book id), checks the image
+   * like the fill does, and puts it on the row like `coverFound`. Nothing is written: the preview takes it.
+   */
+  async function findCover(key: string) {
+    if (!GOODREADS_COVERS || phase.value !== 'preview' || coverSearch.value?.state === 'asking') return
+    const index = indexOf(key)
+    const book = books.value[index]
+    if (!book || !editions.value[index]) return
+    const mine = { key, state: 'asking' as const }
+    coverSearch.value = mine
+    const settle = (state: 'found' | 'none' | 'failed') => {
+      if (coverSearch.value === mine) coverSearch.value = { key, state }
+    }
+    const goodreadsBookId = /^goodreads:(\d{1,20})$/.exec(key)?.[1] ?? null
+    const answer = await goodreadsCovers()?.find({ title: book.title, authors: book.authors, goodreadsBookId })
+    if (!answer) return settle('failed')
+    const cover = answer.coverUrl ? await verifyCover(answer.coverUrl, { probe: probeImageInBrowser }).catch(() => null) : null
+    if (!cover?.coverUrl || coverSearch.value !== mine) return settle('none')
+    coverFound(key, { ...cover, coverUrl: cover.coverUrl, source: 'goodreads', kind: 'goodreads' })
+    settle('found')
+  }
+
   function startFill() {
     stopFill()
     if (!liveFetch || !searcher) return
@@ -359,7 +388,9 @@ export const useImportStore = defineStore('import', () => {
       const choose = Boolean(edition) && (verdict === 'fromFile' || (verdict === 'matched' && (edition?.via === 'title' || !edition?.book.coverUrl)))
       // Nothing identifies it, or a source could not be asked, is the bad sign; a match without a cover is a quiet note.
       const look = needsLook(verdict, shown, { isbn13: edition?.book.isbn13 ?? book.isbn13, unsure: edition?.unsure })
-      if (notes.length) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, choose, look, notes })
+      const findCover = GOODREADS_COVERS && (verdict === 'matched' || verdict === 'fromFile') && !(edition?.coverFrom?.coverUrl ?? edition?.book.coverUrl)
+      // The row whose cover was just found stays, so its status ("Cover found.") is read where it was asked.
+      if (notes.length || findCover || coverSearch.value?.key === book.key) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, choose, look, notes, ...(findCover ? { findCover } : {}) })
     }
     for (const row of skipped.value) {
       list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], edition: null, choose: false, look: true, notes: [row.problem] })
@@ -414,6 +445,7 @@ export const useImportStore = defineStore('import', () => {
     stopFill()
     stopWatching()
     stopChoosing()
+    coverSearch.value = null
     chosen.value = new Set()
     phase.value = 'pick'
     fileName.value = null
@@ -874,6 +906,8 @@ export const useImportStore = defineStore('import', () => {
     isPicked,
     pick,
     openChoice,
+    findCover,
+    coverSearch,
     retryChoice,
     closeChoice,
     confirmChoice,

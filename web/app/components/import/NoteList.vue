@@ -20,10 +20,12 @@ export type ImportNote = {
   notes: readonly string[]
   /** A button under the notes ("Choose edition") and the name a screen reader gives it ("Choose edition: Piranesi"). */
   action?: { label: string; name: string }
+  /** A quiet second button ("Find a cover"), and what its last try said (a polite status, empty until there is one). */
+  find?: { label: string; name: string; busy: boolean; status: string }
 }
 
 defineProps<{ items: readonly ImportNote[]; testid: string }>()
-const emit = defineEmits<{ act: [key: string] }>()
+const emit = defineEmits<{ act: [key: string]; find: [key: string] }>()
 
 const { t } = useI18n()
 const authorLine = (authors: readonly string[]) => formatAuthors([...authors], t('common.etAl'))
@@ -65,6 +67,20 @@ const authorLine = (authors: readonly string[]) => formatAuthors([...authors], t
         >
           {{ item.action.label }}
         </UiButton>
+        <template v-if="item.find">
+          <UiButton
+            tone="plain"
+            size="sm"
+            class="mt-xs self-start"
+            :disabled="item.find.busy"
+            :aria-label="item.find.name"
+            :data-testid="`${testid}.findCover`"
+            @click="emit('find', item.key)"
+          >
+            {{ item.find.label }}
+          </UiButton>
+          <span class="text-footnote text-ink-muted" role="status" :data-testid="`${testid}.findCoverStatus`">{{ item.find.status }}</span>
+        </template>
       </div>
     </li>
   </ul>

@@ -84,6 +84,13 @@ function noteText(note: Attention['notes'][number]): string {
   }
 }
 
+/** The quiet "Find a cover" button of a row without one, with what its last try said. */
+function findCoverOf(key: string, title: string): NonNullable<ImportNote['find']> {
+  const label = t('import.findCover.action')
+  const search = store.coverSearch?.key === key ? store.coverSearch.state : null
+  return { label, name: t('import.actionFor', { action: label, title }), busy: search === 'asking' || !online.value, status: search ? t(`import.findCover.${search}`) : '' }
+}
+
 /** A book of the preview as a row: its cover, its notes, and, once every book is looked up, the button that opens Choose edition. */
 function listed(items: readonly Attention[], action: string): ImportNote[] {
   return items.map((item) => {
@@ -98,6 +105,7 @@ function listed(items: readonly Attention[], action: string): ImportNote[] {
         ? { facts: editionFacts(item.held, { locale: locale.value, pages: (count) => t('book.pages', { count }), format: (format) => t(`book.formatFact.${format}`) }) }
         : {}),
       ...(item.choose && store.phase === 'preview' ? { action: { label: action, name: t('import.actionFor', { action, title }) } } : {}),
+      ...(item.findCover && store.phase === 'preview' ? { find: findCoverOf(item.key, title) } : {}),
     }
   })
 }
@@ -236,7 +244,7 @@ const failures = computed<ImportNote[]>(() =>
           <span>{{ t('import.attention') }}</span><span class="figures">{{ attention.length }}</span>
         </h2>
         <p class="mt-xxs text-footnote text-ink-faint">{{ t('import.attentionHint') }}</p>
-        <ImportNoteList :items="attention" testid="import.attentionList" class="mt-xs" @act="store.openChoice" />
+        <ImportNoteList :items="attention" testid="import.attentionList" class="mt-xs" @act="store.openChoice" @find="store.findCover" />
       </template>
 
       <!-- Found with a cover: probably fine, so only on request. -->
@@ -255,7 +263,7 @@ const failures = computed<ImportNote[]>(() =>
         >
           {{ t(showMinor ? 'import.attentionMinorHide' : 'import.attentionMinorShow', { count: attentionMinor.length }) }}
         </UiButton>
-        <ImportNoteList v-if="showMinor" :items="attentionMinor" testid="import.attentionMinorList" class="mt-xs" @act="store.openChoice" />
+        <ImportNoteList v-if="showMinor" :items="attentionMinor" testid="import.attentionMinorList" class="mt-xs" @act="store.openChoice" @find="store.findCover" />
       </template>
 
       <!-- Books whose edition she chose herself: the preview has her pick, and she can change it. -->
