@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.15.0](https://github.com/fabkho/libellus/compare/v1.14.0...v1.15.0) (2026-10-11)
+
+
+### Features
+
+* **collections:** a + on the Collection page to add from search, and a sort for its books ([#313](https://github.com/fabkho/libellus/issues/313)) ([a9ec02d](https://github.com/fabkho/libellus/commit/a9ec02d70f92e0dd93740bc4f8f873b7e535a5f2))
+* **friends:** compact feed rows, three lines beside a 40 px cover ([#314](https://github.com/fabkho/libellus/issues/314)) ([8729daa](https://github.com/fabkho/libellus/commit/8729daa048c83b96c4399d5ab9345cf74683fad4))
+* **import:** fill missing covers in the background while the import runs ([#315](https://github.com/fabkho/libellus/issues/315)) ([fa46650](https://github.com/fabkho/libellus/commit/fa466500757e53ce3cad0209addcbb310162c268))
+* **import:** Reado import, stage 1 (finished pile, shelves, Collections) ([#294](https://github.com/fabkho/libellus/issues/294)) ([6530ad0](https://github.com/fabkho/libellus/commit/6530ad08a3ab71f11f6a0b6059f8a45846fed8bb))
+* **profile:** tap your name on the Profile to edit it ([#310](https://github.com/fabkho/libellus/issues/310)) ([14a71eb](https://github.com/fabkho/libellus/commit/14a71ebcbbb61f7d59713d189c85871287fb8093))
+
+
+### Fixes
+
+* **profile:** name the member in her authors title, drop the in-review pill ([#309](https://github.com/fabkho/libellus/issues/309)) ([e90f699](https://github.com/fabkho/libellus/commit/e90f69953afe84a51f19940ae379af53dea797b6))
+
 ## [1.14.0](https://github.com/fabkho/libellus/compare/v1.13.0...v1.14.0) (2026-10-11)
 
 
