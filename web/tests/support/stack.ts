@@ -6,6 +6,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 // Relative rather than through the `@` alias: the Playwright suite will import
 // these helpers too, and it resolves modules without Vitest's alias config.
 import { createSupabaseClient, type SessionStorage } from '../../app/data/createSupabaseClient'
+import { CODE_COOLDOWN_MS } from '../../app/utils/codeCooldown'
 
 /**
  * Reads one value from `supabase status -o env`, run in the repo root. The anon
@@ -234,10 +235,11 @@ export async function mailCount(email: string): Promise<number> {
 
 /**
  * GoTrue refuses a second mail to the same address inside
- * `auth.email.max_frequency` (1s locally, supabase/config.toml). Tests that ask
- * for another code for an address they have just written to wait it out.
+ * `auth.email.max_frequency` (20s, like the hosted project: supabase/config.toml, CODE_COOLDOWN_MS in the app).
+ * Tests that ask for another code for an address they have just written to wait it out
+ * (a test that does so twice needs a timeout of its own above `testTimeout`).
  */
-export const emailCooldown = () => sleep(1_500)
+export const emailCooldown = () => sleep(CODE_COOLDOWN_MS + 500)
 
 /**
  * Reads the six-digit code out of the newest mail to an address the way a

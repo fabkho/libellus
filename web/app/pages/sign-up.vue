@@ -19,7 +19,8 @@ const INVITE_ERRORS = ['invite_required', 'invite_invalid', 'invite_expired', 'i
 const inviteError = computed(() =>
   session.error && INVITE_ERRORS.includes(session.error) ? session.error : null,
 )
-const emailError = computed(() => (session.error && !inviteError.value ? session.error : null))
+// `code_just_sent` goes on to the code step (stores/session.ts), where it is worded with the seconds left.
+const emailError = computed(() => (session.error && session.error !== 'code_just_sent' && !inviteError.value ? session.error : null))
 
 async function submit() {
   const next = await session.submitSignUp({ email: email.value, inviteCode: inviteCode.value, locale: localeOfTag(locale.value) ?? 'en' })

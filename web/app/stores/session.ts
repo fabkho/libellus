@@ -4,6 +4,7 @@ import { readSavedMember } from '~/data/deviceLibrary'
 import { forgetMemberData, otherMemberHere } from '~/data/localData'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSyncStore } from '~/stores/sync'
+import { keepCodeSent, recentCode, stepFor, whoIs, type CodeSent } from '~/utils/codeCooldown'
 import { PENDING_FOLLOW_KEY } from '~/utils/pendingFollow'
 import { PENDING_SHARE_KEY } from '~/utils/pendingShare'
 import { PENDING_SIGN_IN_KEY } from '~/utils/signedOutRoute'
@@ -35,6 +36,12 @@ export const useSessionStore = defineStore('session', () => {
   const pending = ref<PendingCode | null>(null)
   const error = ref<AuthErrorCode | null>(null)
   const busy = ref(false)
+  /**
+   * The last code mailed from this device while the server's window for another is open
+   * (utils/codeCooldown.ts), or null. Read from the device on `restore`; the sign-in and verify
+   * screens count it down.
+   */
+  const lastCode = ref<CodeSent | null>(null)
   /** The member is ending the session herself (sign out, delete account): the session listener leaves the clearing to those. */
   let signingOut = false
 
@@ -68,6 +75,13 @@ export const useSessionStore = defineStore('session', () => {
     } finally {
       busy.value = false
     }
+  }
+
+  /** A code to `email` went out (or the server says one just did): the window opens now, or at `at`. */
+  function noteCode(email: string, { at = Date.now(), used = false }: { at?: number; used?: boolean } = {}) {
+    const sent: CodeSent = { who: whoIs(email), at, used }
+    lastCode.value = sent
+    if (import.meta.client) keepCodeSent(window.localStorage, sent)
   }
 
   function readPending(): PendingCode | null {
@@ -112,6 +126,7 @@ export const useSessionStore = defineStore('session', () => {
   /** Run by the session plugin before the first route resolves. */
   async function restore() {
     pending.value = readPending()
+    lastCode.value = import.meta.client ? recentCode(window.localStorage) : null
     const client = auth()
     if (!client) {
       status.value = 'signedOut'
@@ -169,19 +184,45 @@ export const useSessionStore = defineStore('session', () => {
     await forgetDevice({ sessionEnded: true })
   }
 
-  /** The sign-in screen: the address alone decides which screen comes next. */
+  /**
+   * The server mailed a code to `address` a moment ago (our own record or its refusal says so): that
+   * code still works, so the member goes on to enter it, told so (`code_just_sent`) when it was the
+   * refusal that said it. No second mail is asked for.
+   */
+  function codeAlreadySent(address: string, flow: PendingCode['flow'], at: number) {
+    setPending({ email: address, flow, sentAt: at })
+    return 'verify' as const
+  }
+
+  /**
+   * The sign-in screen: the address alone decides which screen comes next. A code mailed to it less
+   * than 20 s ago (signing out and in again) is not asked for twice: its step comes straight away, or,
+   * if that code was already used, nothing happens until the window is over (the screen's button
+   * counts it down, so this is the belt to its braces).
+   */
   async function submitEmail(email: string): Promise<'verify' | 'signUp' | null> {
     const address = email.trim()
+    const recent = import.meta.client ? recentCode(window.localStorage) : null
+    const step = stepFor(recent, address)
+    if (step === 'wait') return null
+    if (step === 'enter' && recent && !busy.value) {
+      error.value = null
+      return codeAlreadySent(address, 'signIn', recent.at)
+    }
     return await run(async (client) => {
       const result = await client.requestCode(address)
       if (result.kind === 'error') {
         error.value = result.code
-        return null
+        if (result.code !== 'code_just_sent') return null
+        // Mailed from somewhere else, or before this device remembered: the window began at most 20 s ago.
+        noteCode(address)
+        return codeAlreadySent(address, 'signIn', Date.now())
       }
       if (result.kind === 'unknownEmail') {
         signUpEmail.value = address
         return 'signUp'
       }
+      noteCode(address)
       setPending({ email: address, flow: 'signIn', sentAt: Date.now() })
       return 'verify'
     })
@@ -193,8 +234,11 @@ export const useSessionStore = defineStore('session', () => {
       const result = await client.requestSignUpCode({ email: address, inviteCode: input.inviteCode, locale: input.locale })
       if (result.error) {
         error.value = result.error
-        return null
+        if (result.error !== 'code_just_sent') return null
+        noteCode(address)
+        return codeAlreadySent(address, 'signUp', Date.now())
       }
+      noteCode(address)
       setPending({ email: address, flow: 'signUp', sentAt: Date.now() })
       return 'verify'
     })
@@ -210,6 +254,8 @@ export const useSessionStore = defineStore('session', () => {
         return false
       }
       signUpEmail.value = ''
+      // Spent: signing in again inside the window must not be sent back to a code that no longer works.
+      noteCode(address, { at: pending.value?.sentAt ?? Date.now(), used: true })
       const next = await client.currentMember()
       if (next) await signedInAs(next)
       else adopt(null)
@@ -229,8 +275,14 @@ export const useSessionStore = defineStore('session', () => {
       const result = await client.requestCode(current.email)
       if (result.kind !== 'sent') {
         error.value = result.kind === 'error' ? result.code : 'unknown'
+        // The code mailed a moment ago stands: the window runs on from now.
+        if (error.value === 'code_just_sent') {
+          noteCode(current.email)
+          setPending({ ...current, sentAt: Date.now() })
+        }
         return false
       }
+      noteCode(current.email)
       setPending({ ...current, sentAt: Date.now() })
       return true
     })
@@ -372,6 +424,7 @@ export const useSessionStore = defineStore('session', () => {
     signUpEmail,
     error,
     busy,
+    lastCode,
     adopt,
     signedInAs,
     sessionEnded,

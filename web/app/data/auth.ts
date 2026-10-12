@@ -21,7 +21,13 @@ export type AuthErrorCode =
    * (`otp_expired`) on purpose, so the endpoint cannot be used to probe codes.
    */
   | 'code_invalid'
-  /** Another mail was asked for too soon (the resend button tapped twice). */
+  /**
+   * Another code was asked for inside the window the server allows one in (a resend tapped
+   * twice, a sign-in right after a sign-out): the one just mailed still works. The screens
+   * word it with the seconds left (`utils/codeCooldown.ts`).
+   */
+  | 'code_just_sent'
+  /** Too many requests, or too many mails for the project at once: wait a moment. */
   | 'rate_limited'
   | 'email_invalid'
   /** The build has no Supabase URL or key. */
@@ -95,6 +101,15 @@ export function mapAuthError(failure: AuthFailure): AuthErrorCode {
   // where it goes stale in between.
   if (m.includes('database error saving new user')) return 'invite_invalid'
 
+  // One mail per address per `max_frequency`: GoTrue words it "For security purposes, you can only
+  // request this after N seconds" under `over_email_send_rate_limit`, the same code it gives the
+  // project-wide hourly cap ("email rate limit exceeded"), which is not the member's to wait out.
+  if (
+    (failure.code === 'over_email_send_rate_limit' && !m.includes('email rate limit exceeded')) ||
+    (!failure.code && m.includes('for security purposes'))
+  ) {
+    return 'code_just_sent'
+  }
   if (
     failure.code === 'over_email_send_rate_limit' ||
     failure.code === 'over_request_rate_limit' ||
