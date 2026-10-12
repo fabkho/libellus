@@ -13,6 +13,7 @@ BetterReads has one source language, English: `web/i18n/locales/en.json`. German
 | `web/tests/i18n-parity.test.ts` | The Vitest parity test (fails when `de.json` and `en.json` drift). |
 | `docs/i18n/german-glossary.md` | The glossary decisions, as a table to correct, and the check against Goodreads' German. |
 | `docs/i18n/german-pass.md` | The German pass: every main screen in German at 390 and 360 px, in both themes, and what it found. |
+| `docs/i18n/german-group-b.md` | German outside the app shell: which language each mail, link preview and the manifest uses and why, the audit of server text, the legal pages, the lock, the read-through. |
 | `docs/i18n/german-review.md` | How the first full translation was reviewed: what was changed, what is still open. |
 | `web/i18n/locales/de.json`, `web/.i18n-kit.lock.json` | The German messages and the kit's record of which English each was made from (commit both). |
 | `docs/i18n/german-sample.md` | The dry run: 49 strings, English and German side by side, three models compared. |

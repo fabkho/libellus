@@ -40,4 +40,4 @@ After the fixes the scan finds nothing German's fault at 390 or 360 in either th
 - **Meaning and grammar.** The scan finds cut-off and English text; #8, #10 and #11 were found by reading the screenshots. A second reader of the screens is still worth an hour (docs/i18n/german-review.md).
 - **Plurals and cases that the seeded data does not reach** (a count of 0 or 2 in a place the seed has 1 or 3), the Android and iOS system keyboards, a long member name, a very long book title (data, truncated by design), text-size settings of the system, and Regal's own English.
 - **What a member's phone shows that Playwright's WebKit does not**: the iOS date picker's own language follows the phone, not the app (the browser's native `<input type="date">`).
-- **The emails, the function messages, the PWA manifest and the offline page**: group B of issue #257, not started.
+- **The emails, the function messages, the PWA manifest and the offline page**: group B of issue #257, see `docs/i18n/german-group-b.md`.
