@@ -5,6 +5,11 @@ one tap gets a one-use invite code for the entry, mails it to the address with t
 marks the entry invited and shows the owner the code, so she can also send it another way.
 
 ```
+The mail is written in the language of the page the person joined the waitlist from (`private.waitlist.locale`,
+`de` or `en`, sent by the app with the address and kept; null is English): `owner_waitlist_prepare_invite` answers
+it with the code and `mail.ts` chooses the subject, the date format and the template from it. The owner's own
+request (her `Accept-Language`) never decides: it says nothing about the recipient.
+
 POST /functions/v1/waitlist-invite        { "id": "<waitlist entry uuid>" }
 Authorization: Bearer <the owner's access token>   (the app's functions.invoke sends it)
 

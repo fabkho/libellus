@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { MailLocale } from '~/data/auth'
 
 /**
  * The waitlist (supabase/migrations/20261011040000_waitlist.sql and 20261013010000_waitlist_invite.sql,
@@ -118,9 +119,11 @@ export type Waitlist = {
   /**
    * Leaves an address on the waitlist from a reading page: `token` is the page's (the database finds whose page it
    * was, and keeps nothing of the token), `website` the honeypot field, which stays empty for a person.
-   * The answer is the same for an address that was already there.
+   * `locale` is the language the page was shown in: the entry keeps it so the invite mail, sent later by the owner,
+   * is written in it (supabase/migrations/20261026040000_waitlist_locale.sql). The answer is the same for an
+   * address that was already there.
    */
-  join: (email: string, token: string | null, website?: string) => Promise<{ error: JoinErrorCode | null }>
+  join: (email: string, token: string | null, website?: string, locale?: MailLocale | null) => Promise<{ error: JoinErrorCode | null }>
   /** The owner's list, newest first. */
   list: () => Promise<WaitlistResult<WaitlistEntry[]>>
   /**
@@ -150,9 +153,9 @@ async function inviteError(error: unknown): Promise<'not_owner' | 'unknown'> {
 
 export function createWaitlist(client: WaitlistClient, { online = () => true }: { online?: () => boolean } = {}): Waitlist {
   return {
-    async join(email, token, website = '') {
+    async join(email, token, website = '', locale = null) {
       if (!online()) return { error: 'offline' }
-      const { error } = await client.rpc('join_waitlist', { p_email: email, p_token: token, p_website: website })
+      const { error } = await client.rpc('join_waitlist', { p_email: email, p_token: token, p_website: website, p_locale: locale })
       return { error: error ? joinError(error) : null }
     },
 

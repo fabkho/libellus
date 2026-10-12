@@ -30,7 +30,7 @@ function refusal(error: { code?: string; message?: string }): DatabaseRefusal {
   return new DatabaseRefusal('failed', error.code ?? 'failed')
 }
 
-type PreparedRow = { email: string; code: string; expires_at: string }
+type PreparedRow = { email: string; code: string; expires_at: string; locale?: string | null }
 
 Deno.serve(createHandler({
   database(authorization) {
@@ -44,7 +44,7 @@ Deno.serve(createHandler({
         if (error) throw refusal(error)
         const row = (data as PreparedRow[] | null)?.[0]
         if (!row) throw new DatabaseRefusal('failed')
-        return { email: row.email, code: row.code, expiresAt: row.expires_at }
+        return { email: row.email, code: row.code, expiresAt: row.expires_at, locale: row.locale ?? null }
       },
       async setInvited(id) {
         const { error } = await supabase.rpc('owner_waitlist_set_invited', { p_ids: [id], p_invited: true })

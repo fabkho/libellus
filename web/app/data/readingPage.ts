@@ -104,6 +104,15 @@ export function readingPagePath(token: string): string {
   return `/r/${token}`
 }
 
+/**
+ * The address as it is handed out (copied, shared): a member who uses German adds `?lang=de`, so the link
+ * preview a messenger makes from it, and its picture, are written in German (utils/previewText.ts). The page
+ * a visitor opens is drawn in her own language either way. English, or no language, leaves the address alone.
+ */
+export function sharedPath(path: string, locale: string | null | undefined): string {
+  return locale === 'de' ? `${path}?lang=de` : path
+}
+
 /** A Book card's address on this origin. */
 export function bookCardPath(token: string, bookId: string): string {
   return `/r/${token}/book/${bookId}`

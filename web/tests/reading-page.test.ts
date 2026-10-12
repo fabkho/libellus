@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { createLibrary } from '@/data/library'
-import { bookCardPath, createReadingPages, readingPagePath, READING_PAGE_TOKEN } from '@/data/readingPage'
+import { bookCardPath, createReadingPages, readingPagePath, READING_PAGE_TOKEN, sharedPath } from '@/data/readingPage'
 import { isoDay } from '@/utils/dates'
 import { copyLink, shareLink } from '@/utils/shareLink'
 import { signUpMember } from './support/member'
@@ -147,5 +147,11 @@ describe('handing a link over', () => {
     expect(await shareLink(link, { clipboard })).toBe('copied')
     expect(copied).toEqual([link.url, link.url])
     expect(await copyLink(link.url, {})).toBe('failed')
+  })
+
+  it('hands a German member\'s link out with its language, so the preview is German; English links stay as they are', () => {
+    expect(sharedPath('/r/abc', 'de')).toBe('/r/abc?lang=de')
+    expect(sharedPath('/r/abc/book/1', 'de')).toBe('/r/abc/book/1?lang=de')
+    for (const locale of ['en', 'fr', '', null, undefined]) expect(sharedPath('/r/abc', locale)).toBe('/r/abc')
   })
 })

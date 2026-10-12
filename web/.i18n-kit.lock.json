@@ -174,7 +174,7 @@
         ]
       },
       "app.name": {
-        "0bc5ba9b8f84a124": [
+        "cc8843464ee26c46": [
           "de"
         ]
       },
@@ -219,7 +219,7 @@
         ]
       },
       "auth.error.not_configured": {
-        "d2ece6c917091ff8": [
+        "f9d7a6c6eeea566e": [
           "de"
         ]
       },
@@ -1218,6 +1218,11 @@
           "de"
         ]
       },
+      "collection.add": {
+        "2e62be59e5707c94": [
+          "de"
+        ]
+      },
       "collection.back": {
         "76900f1bfd16c8d4": [
           "de"
@@ -1254,7 +1259,7 @@
         ]
       },
       "collection.empty": {
-        "3ca011537f71596b": [
+        "d77c856814464d5d": [
           "de"
         ]
       },
@@ -1325,6 +1330,66 @@
       },
       "collection.retry": {
         "d8b8392e2c542950": [
+          "de"
+        ]
+      },
+      "collection.sort.dir.date.asc": {
+        "6e2ebdab3c02a3e6": [
+          "de"
+        ]
+      },
+      "collection.sort.dir.date.desc": {
+        "ffb6f5764bddb68c": [
+          "de"
+        ]
+      },
+      "collection.sort.dir.text.asc": {
+        "790e831a32e5ab6f": [
+          "de"
+        ]
+      },
+      "collection.sort.dir.text.desc": {
+        "efe8139e05c66d1f": [
+          "de"
+        ]
+      },
+      "collection.sort.key.added": {
+        "3321b9f6e65c542a": [
+          "de"
+        ]
+      },
+      "collection.sort.key.author": {
+        "d95082a2ee57f3e4": [
+          "de"
+        ]
+      },
+      "collection.sort.key.order": {
+        "f159e18f1328d9a0": [
+          "de"
+        ]
+      },
+      "collection.sort.key.title": {
+        "7e8cd2056da73a7f": [
+          "de"
+        ]
+      },
+      "collection.sort.key.year": {
+        "89f6832560dec0b7": [
+          "de"
+        ]
+      },
+      "collection.sort.title": {
+        "c9129025bd3ff652": [
+          "de"
+        ]
+      },
+      "collection.sortBy": {
+        "fddc0db93af5fc1e": [
+          "de"
+        ]
+      },
+      "collection.sortedHint": {
+        "a69a7ae037a4a1df": [
           "de"
         ]
       },
@@ -1604,7 +1669,7 @@
         ]
       },
       "contact.placeholder.feature": {
-        "c6154bdebdce92ed": [
+        "867317416de2a474": [
           "de"
         ]
       },
@@ -1764,7 +1829,7 @@
         ]
       },
       "ebooks.empty.text": {
-        "7cec9bc2ebe87dab": [
+        "6dd1bac6fbcb99ad": [
           "de"
         ]
       },
@@ -1774,7 +1839,7 @@
         ]
       },
       "ebooks.error.folder": {
-        "c012d5d45740d18c": [
+        "33c43dcca191ce10": [
           "de"
         ]
       },
@@ -1799,7 +1864,7 @@
         ]
       },
       "ebooks.folder.error": {
-        "c012d5d45740d18c": [
+        "33c43dcca191ce10": [
           "de"
         ]
       },
@@ -1844,7 +1909,7 @@
         ]
       },
       "ebooks.footer": {
-        "b68d5515631694d0": [
+        "5e249f38fd316a1c": [
           "de"
         ]
       },
@@ -1879,7 +1944,7 @@
         ]
       },
       "ebooks.missed": {
-        "4a45fea9112b20ab": [
+        "4c63695dfd36fe8b": [
           "de"
         ]
       },
@@ -2394,17 +2459,17 @@
         ]
       },
       "followLink.shareText": {
-        "b156bf12ab9fe879": [
+        "bb20a02ddc6087b5": [
           "de"
         ]
       },
       "followLink.textPrivate": {
-        "a4b2b6ea414e9bb2": [
+        "f0db44ff898a0a13": [
           "de"
         ]
       },
       "followLink.textPublic": {
-        "69fd5bd5e1a1a37c": [
+        "30aedde9a19246d3": [
           "de"
         ]
       },
@@ -2864,7 +2929,7 @@
         ]
       },
       "home.installHint.title": {
-        "e94966b386ecd776": [
+        "f45660310e719c50": [
           "de"
         ]
       },
@@ -2958,6 +3023,31 @@
           "de"
         ]
       },
+      "import.attentionHint": {
+        "0b5931c3fb55caa4": [
+          "de"
+        ]
+      },
+      "import.attentionMinor": {
+        "4b3fcf05a4cf1aa3": [
+          "de"
+        ]
+      },
+      "import.attentionMinorHide": {
+        "24eb7db53ff79fcd": [
+          "de"
+        ]
+      },
+      "import.attentionMinorHint": {
+        "2e5a474c38caa714": [
+          "de"
+        ]
+      },
+      "import.attentionMinorShow": {
+        "e372f20a52883cff": [
+          "de"
+        ]
+      },
       "import.back": {
         "76900f1bfd16c8d4": [
           "de"
@@ -2980,6 +3070,11 @@
       },
       "import.chooseEdition": {
         "a72a6370fd0a4b6d": [
+          "de"
+        ]
+      },
+      "import.coverFill": {
+        "7e578b5ae1c089d6": [
           "de"
         ]
       },
@@ -3039,7 +3134,7 @@
         ]
       },
       "import.fileError.bookshelf": {
-        "7be0e55e8d11605f": [
+        "0058c317b5493d98": [
           "de"
         ]
       },
@@ -3049,7 +3144,7 @@
         ]
       },
       "import.fileError.librarything": {
-        "9e15bcc7c1ae2065": [
+        "5037e48eb228acf1": [
           "de"
         ]
       },
@@ -3064,12 +3159,12 @@
         ]
       },
       "import.fileError.notSupported": {
-        "4127e07ea4bc06d9": [
+        "676763c5d2f77da9": [
           "de"
         ]
       },
       "import.fileError.storygraph": {
-        "ae2746b054993f9d": [
+        "37c74f25911af799": [
           "de"
         ]
       },
@@ -3080,6 +3175,11 @@
       },
       "import.fileError.unreadable": {
         "6053962159b9cd25": [
+          "de"
+        ]
+      },
+      "import.finishNow": {
+        "1cb253e8f27def5f": [
           "de"
         ]
       },
@@ -3218,6 +3318,11 @@
           "de"
         ]
       },
+      "import.note.noCover": {
+        "af66fec6365bfdf7": [
+          "de"
+        ]
+      },
       "import.note.noTitle": {
         "3ad5dde96da0b486": [
           "de"
@@ -3283,6 +3388,16 @@
           "de"
         ]
       },
+      "import.secondPass": {
+        "bf1b45f332fe1073": [
+          "de"
+        ]
+      },
+      "import.secondPassHint": {
+        "76784656c544519a": [
+          "de"
+        ]
+      },
       "import.shelfCount": {
         "28ab11ae4b4a1153": [
           "de"
@@ -3295,6 +3410,11 @@
       },
       "import.shelvesTitle": {
         "e70d4cca9d5a522c": [
+          "de"
+        ]
+      },
+      "import.stalledHint": {
+        "1021d29c472e1965": [
           "de"
         ]
       },
@@ -4839,7 +4959,7 @@
         ]
       },
       "photo.private": {
-        "b624ec79c280370b": [
+        "c62bc0d3733377f6": [
           "de"
         ]
       },
@@ -5018,6 +5138,11 @@
           "de"
         ]
       },
+      "profile.account.friendsTab": {
+        "c882211cbcb324ca": [
+          "de"
+        ]
+      },
       "profile.account.glass": {
         "82c268188cd66576": [
           "de"
@@ -5085,6 +5210,16 @@
       },
       "profile.authors.title": {
         "88fe2d25fa2e8c3d": [
+          "de"
+        ]
+      },
+      "profile.authors.titleNeutral": {
+        "804d3de14353c122": [
+          "de"
+        ]
+      },
+      "profile.authors.titleOf": {
+        "89e31b6f70956221": [
           "de"
         ]
       },
@@ -5165,6 +5300,11 @@
       },
       "profile.deleteAccount.unsynced": {
         "a45b99a39e3d7335": [
+          "de"
+        ]
+      },
+      "profile.editName": {
+        "3ad8e641c33d11de": [
           "de"
         ]
       },
@@ -6164,7 +6304,7 @@
         ]
       },
       "readingPage.footer.tagline": {
-        "d6259938a64ee72e": [
+        "3ec9f0362b91b420": [
           "de"
         ]
       },
@@ -6294,7 +6434,7 @@
         ]
       },
       "readingPage.waitlist.text": {
-        "4cff04266806fb6c": [
+        "e2962c33a553d4ca": [
           "de"
         ]
       },
@@ -6333,6 +6473,16 @@
           "de"
         ]
       },
+      "review.less": {
+        "4fdd3b6201a22c78": [
+          "de"
+        ]
+      },
+      "review.more": {
+        "187897ce0afcf20b": [
+          "de"
+        ]
+      },
       "review.showAnyway": {
         "3175b05f8140f78b": [
           "de"
@@ -6368,6 +6518,11 @@
           "de"
         ]
       },
+      "search.addTo": {
+        "d814051612540aec": [
+          "de"
+        ]
+      },
       "search.clear": {
         "83b12c2216efb4fd": [
           "de"
@@ -6380,6 +6535,11 @@
       },
       "search.empty": {
         "743b1ee5330ea16f": [
+          "de"
+        ]
+      },
+      "search.emptyTarget": {
+        "f894c918a9635b9b": [
           "de"
         ]
       },
@@ -6443,6 +6603,11 @@
           "de"
         ]
       },
+      "search.onCollection": {
+        "823203336efb96b1": [
+          "de"
+        ]
+      },
       "search.otherEdition": {
         "c6fa0a27caddc808": [
           "de"
@@ -6454,7 +6619,7 @@
         ]
       },
       "search.scan.asking": {
-        "cad7446aaff9cc70": [
+        "d0e03cd21fe43965": [
           "de"
         ]
       },
@@ -6469,7 +6634,7 @@
         ]
       },
       "search.scan.denied": {
-        "973a53b4a555e5f1": [
+        "5bfe73042384b2e5": [
           "de"
         ]
       },
@@ -6494,7 +6659,7 @@
         ]
       },
       "search.scan.none": {
-        "28596fd3b75390fa": [
+        "6875f5b141588aab": [
           "de"
         ]
       },
@@ -6530,6 +6695,11 @@
       },
       "search.scan.torchOn": {
         "c2186ee8452f7850": [
+          "de"
+        ]
+      },
+      "search.targetNote": {
+        "9939722236361e75": [
           "de"
         ]
       },
@@ -6734,7 +6904,7 @@
         ]
       },
       "share.confirmTitle": {
-        "a39b1a5d12502b10": [
+        "a47e9fd3b91e4c9c": [
           "de"
         ]
       },
@@ -6764,7 +6934,7 @@
         ]
       },
       "share.title": {
-        "0973eefaade3d00b": [
+        "450ff200e633e908": [
           "de"
         ]
       },
@@ -7184,7 +7354,7 @@
         ]
       },
       "signUp.intro": {
-        "686fd1f22a5f6aa8": [
+        "9f8b27400f5db58c": [
           "de"
         ]
       },
@@ -7575,6 +7745,11 @@
       },
       "sync.waiting": {
         "c177c9a48369eeba": [
+          "de"
+        ]
+      },
+      "tabs.friends": {
+        "bd104d1b98d03227": [
           "de"
         ]
       },

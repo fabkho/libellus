@@ -4,6 +4,7 @@
  *
  *   GET /functions/v1/reading-page-og?token=<token>              the page
  *   GET /functions/v1/reading-page-og?token=<token>&book=<uuid>  one Book's card
+ *   …&lang=de                                                    the words on the picture in German (else English)
  *
  *   200 image/png, 1200×630, cached for a day
  *   404 the token is unknown (off, renewed) or the Book is not published
@@ -16,6 +17,7 @@
  * tests render both images without a network.
  */
 import { type PublicBookCard, type PublicReadingPage, TOKEN, UUID } from './page.ts'
+import { previewLang } from '../../../web/app/utils/previewText.ts'
 import { type FetchLike, renderCard, renderPage, type RenderDeps } from './render.ts'
 
 const CORS = {
@@ -43,7 +45,7 @@ function text(status: number, body: string): Response {
 export function createHandler(deps: HandlerDeps): (request: Request) => Promise<Response> {
   const fetchImpl: FetchLike = deps.fetch ?? ((input, init) => fetch(input, init))
   const log = deps.log ?? ((message: string) => console.error(message))
-  const render: RenderDeps = { fetch: fetchImpl, coverTimeoutMs: deps.coverTimeoutMs }
+  const baseDeps: RenderDeps = { fetch: fetchImpl, coverTimeoutMs: deps.coverTimeoutMs }
 
   /** One of the two public functions, with the anon key, as a visitor would. */
   async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T | null> {
@@ -67,6 +69,7 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
     const params = new URL(request.url).searchParams
     const token = params.get('token') ?? ''
     const book = params.get('book')
+    const render: RenderDeps = { ...baseDeps, lang: previewLang(params.get('lang')) }
     // A token or a Book id that cannot exist is answered like one that does not:
     // a link preview never learns the difference.
     if (!TOKEN.test(token) || (book !== null && !UUID.test(book))) return text(404, 'not_found')

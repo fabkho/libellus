@@ -13,6 +13,7 @@
 import satori from 'satori'
 import { initWasm, Resvg } from '@resvg/resvg-wasm'
 import { encodeBase64 } from '@std/encoding/base64'
+import { type PreviewLang, previewText } from '../../../web/app/utils/previewText.ts'
 import {
   bookTitle,
   clamp,
@@ -74,6 +75,8 @@ export type RenderDeps = {
   fetch?: FetchLike
   /** A cover that takes longer than this is left out and the block stands in. */
   coverTimeoutMs?: number
+  /** The language of the words on the picture (`?lang=` of the address); English when absent. */
+  lang?: PreviewLang
 }
 
 // --------------------------------------------------------------------- fonts
@@ -255,7 +258,7 @@ function eyebrow(text: string, size = 20): Node {
  * One cover: the image when it arrived, otherwise a block in the Book's own
  * colour with its title on it, the way the app draws a Book without a cover.
  */
-function cover(book: PublicBook, src: string | null, width: number): Node {
+function cover(book: PublicBook, src: string | null, width: number, lang: PreviewLang = 'en'): Node {
   const height = Math.round(width * 1.5)
   // An unverified Book: no colours of its own, the cloth Placeholder with the one string on it, as the web draws it.
   const outside = isOutside(book)
@@ -289,7 +292,7 @@ function cover(book: PublicBook, src: string | null, width: number): Node {
         lineHeight: 1.15,
         color: C.clothInk,
       },
-      children: clamp(bookTitle(book), 42),
+      children: clamp(bookTitle(book, lang), 42),
     }),
   })
 }
@@ -313,7 +316,7 @@ export async function renderPage(page: PublicReadingPage, deps: RenderDeps = {})
     children: [
       el('div', {
         style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-        children: [wordmark(), eyebrow('Reading page')],
+        children: [wordmark(), eyebrow(previewText(deps.lang).readingPageLabel)],
       }),
       el('div', {
         style: {
@@ -325,15 +328,15 @@ export async function renderPage(page: PublicReadingPage, deps: RenderDeps = {})
           color: C.ink,
           marginTop: 40,
         },
-        children: clamp(pageTitle(page.name), 42),
+        children: clamp(pageTitle(page.name, deps.lang), 42),
       }),
       el('div', {
         style: { display: 'flex', fontFamily: 'Geist Mono', fontWeight: 500, fontSize: 24, color: C.inkMuted, marginTop: 16 },
-        children: clamp(pageSummary(page), 64),
+        children: clamp(pageSummary(page, deps.lang), 64),
       }),
       el('div', {
         style: { display: 'flex', gap: 20, marginTop: 'auto' },
-        children: books.map((book, i) => cover(book, sources[i] ?? null, 196)),
+        children: books.map((book, i) => cover(book, sources[i] ?? null, 196, deps.lang)),
       }),
     ],
   })
@@ -363,18 +366,18 @@ export async function renderCard(card: PublicBookCard, deps: RenderDeps = {}): P
       children: [
         el('div', {
           style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-          children: [wordmark(32), eyebrow(name ? `${name}’s reading` : 'A reading page', 18)],
+          children: [wordmark(32), eyebrow(pageTitle(name, deps.lang), 18)],
         }),
         el('div', {
           style: { display: 'flex', alignItems: 'center', gap: 56, marginTop: 'auto', marginBottom: 'auto' },
           children: [
-            cover(card.book, src, 252),
+            cover(card.book, src, 252, deps.lang),
             el('div', {
               style: { display: 'flex', flexDirection: 'column', width: 700 },
               children: [
                 el('div', {
                   style: { display: 'flex', fontFamily: 'Newsreader', fontWeight: 500, fontSize: 58, lineHeight: 1.1, color: C.ink },
-                  children: clamp(bookTitle(card.book), 70),
+                  children: clamp(bookTitle(card.book, deps.lang), 70),
                 }),
                 author
                   ? el('div', {
@@ -393,7 +396,7 @@ export async function renderCard(card: PublicBookCard, deps: RenderDeps = {}): P
                       }),
                     ],
                   })
-                  : eyebrow(statusLine(card), 22),
+                  : eyebrow(statusLine(card, deps.lang), 22),
                 review
                   ? el('div', {
                     style: {

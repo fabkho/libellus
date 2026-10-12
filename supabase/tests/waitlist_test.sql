@@ -13,7 +13,7 @@
 -- @waitlist.pgtap.test), never about how many rows a table holds.
 
 begin;
-select plan(72);
+select plan(80);
 
 create schema if not exists tests;
 
@@ -60,9 +60,9 @@ $$;
 
 -- Past the API's walls: the row of an address, as the owner of the schema sees it.
 create or replace function tests.entry(p_email text)
-returns table (email text, source text, source_member_id uuid, consent_text_version text, invited_at timestamptz, created_at timestamptz)
+returns table (email text, source text, source_member_id uuid, consent_text_version text, invited_at timestamptz, created_at timestamptz, locale text)
 language sql security definer as $$
-  select w.email::text, w.source, w.source_member_id, w.consent_text_version, w.invited_at, w.created_at
+  select w.email::text, w.source, w.source_member_id, w.consent_text_version, w.invited_at, w.created_at, w.locale
     from private.waitlist w where w.email = p_email::extensions.citext
 $$;
 
@@ -107,8 +107,8 @@ select ok((select token from tokens where name = 'ada') ~ '^[A-Za-z0-9_-]{22}$',
 
 -- ----------------------------------------------------------------- what is built
 
-select ok(has_function_privilege('anon', 'public.join_waitlist(text, text, text)', 'execute'), 'anon may join (the page is public)');
-select ok(has_function_privilege('authenticated', 'public.join_waitlist(text, text, text)', 'execute'), 'and so may a signed-in member');
+select ok(has_function_privilege('anon', 'public.join_waitlist(text, text, text, text)', 'execute'), 'anon may join (the page is public)');
+select ok(has_function_privilege('authenticated', 'public.join_waitlist(text, text, text, text)', 'execute'), 'and so may a signed-in member');
 select ok(not has_function_privilege('anon', 'public.owner_waitlist()', 'execute'), 'anon is not granted the owner''s list');
 select ok(not has_function_privilege('anon', 'public.owner_waitlist_set_invited(uuid[], boolean)', 'execute'), 'nor marking');
 select ok(not has_function_privilege('anon', 'public.owner_waitlist_delete(uuid)', 'execute'), 'nor deleting');
@@ -180,6 +180,16 @@ select is(tests.entries('limit6@waitlist.pgtap.test'), 0::bigint, 'the sixth was
 select tests.act_anon('198.51.100.21');
 select is(public.join_waitlist('limit6@waitlist.pgtap.test'), 'joined', 'another address has its own limit');
 select is(public.join_waitlist('limit6@waitlist.pgtap.test'), 'joined', 'and its repeats cost nothing');
+
+-- The language of the page she joined from (German group B of #257): only de and en are kept.
+select is(public.join_waitlist('lang-de@waitlist.pgtap.test', null, null, 'de'), 'joined', 'a page in German joins');
+select is((select locale from tests.entry('lang-de@waitlist.pgtap.test')), 'de', 'and the entry keeps de');
+select is(public.join_waitlist('lang-en@waitlist.pgtap.test', null, null, ' EN '), 'joined', 'a page in English, in other letters, joins');
+select is((select locale from tests.entry('lang-en@waitlist.pgtap.test')), 'en', 'and the entry keeps en');
+select is(public.join_waitlist('lang-fr@waitlist.pgtap.test', null, null, 'fr'), 'joined', 'another language joins all the same');
+select is((select locale from tests.entry('lang-fr@waitlist.pgtap.test')), null, 'and is kept as unknown, never as an error');
+select is(public.join_waitlist('lang-none@waitlist.pgtap.test'), 'joined', 'a build that sends no language joins as before');
+select is((select locale from tests.entry('lang-none@waitlist.pgtap.test')), null, 'with an unknown one');
 reset role;
 
 -- All callers together: 100 an hour.
@@ -223,7 +233,7 @@ reset role;
 
 select tests.act_as((select ada from ids));
 
-select is((select count(*)::int from public.owner_waitlist() where email like '%@waitlist.pgtap.test'), 11,
+select is((select count(*)::int from public.owner_waitlist() where email like '%@waitlist.pgtap.test'), 15,
           'the owner reads the list: this test''s entries');
 select is((select member_name from public.owner_waitlist() where email = 'new.reader@waitlist.pgtap.test'), 'Ada',
           'with the first name of the member whose page it was');

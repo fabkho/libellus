@@ -65,7 +65,12 @@ Run everything below from the repository's root unless it says otherwise.
      `design/tokens.json` (`cd design && pnpm emails`; [DEVELOPMENT.md](DEVELOPMENT.md#emails)): when
      the design or its copy changes, paste the new file again into both templates. The subject lives
      only in the dashboard (and in `supabase/config.toml` for the local stack); the file does not
-     carry it. `cd web && pnpm email:preview` shows how it looks, with a sample code, before it is pasted.
+     carry it. **The mail is German or English** (the file holds both, as one Go template that branches
+     on `{{ index .Data "locale" }}`), so the subject is a template too, the one in `supabase/config.toml`
+     (`{{ if eq (index .Data "locale") "de" }}Dein Anmeldecode für BetterReads{{ else }}Your BetterReads
+     sign-in code{{ end }}`): paste that line, not a plain subject. Auth renders subjects as templates in
+     the local stack (checked); send yourself a code from the hosted project once to see the subject is
+     not shown with the `{{ … }}` in it, and if it is, use the plain English subject until it renders. `cd web && pnpm email:preview` shows how it looks, with a sample code, before it is pasted.
 4. **Keys.** *Project Settings → API keys*: the **Project URL** and the **anon** (publishable) key
    go into the web app (step 3); they are public, the database's row-level security decides what
    they can do. The **service_role** (secret) key is only for the owner's scripts (step 5): never put

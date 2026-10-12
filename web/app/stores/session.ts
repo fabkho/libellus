@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type Member } from '~/data/auth'
+import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type MailLocale, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
 import { forgetMemberData, otherMemberHere } from '~/data/localData'
 import { useFriendsTabStore } from '~/stores/friendsTab'
@@ -187,10 +187,10 @@ export const useSessionStore = defineStore('session', () => {
     })
   }
 
-  async function submitSignUp(input: { email: string; inviteCode: string }): Promise<'verify' | null> {
+  async function submitSignUp(input: { email: string; inviteCode: string; locale?: MailLocale }): Promise<'verify' | null> {
     const address = input.email.trim()
     return await run(async (client) => {
-      const result = await client.requestSignUpCode({ email: address, inviteCode: input.inviteCode })
+      const result = await client.requestSignUpCode({ email: address, inviteCode: input.inviteCode, locale: input.locale })
       if (result.error) {
         error.value = result.error
         return null
@@ -278,6 +278,15 @@ export const useSessionStore = defineStore('session', () => {
 
   function clearNameError() {
     nameError.value = null
+  }
+
+  /**
+   * The account's mail language follows the language the app shows (data/auth.ts, `saveLocale`): called
+   * when a member is signed in and whenever the language changes. Quiet: nothing is shown on a failure.
+   */
+  async function saveLocale(locale: MailLocale) {
+    if (status.value !== 'signedIn' || !isOnline()) return
+    await auth()?.saveLocale(locale)
   }
 
   /**
@@ -377,6 +386,7 @@ export const useSessionStore = defineStore('session', () => {
     nameError,
     setName,
     clearNameError,
+    saveLocale,
     signOut,
     deleting,
     accountDeleted,

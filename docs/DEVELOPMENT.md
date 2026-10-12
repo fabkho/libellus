@@ -114,6 +114,13 @@ cd ../web && pnpm email:preview     # renders each template with a sample code a
                                     # phone and desktop width, light and dark → web/.email-preview/ (gitignored)
 ```
 
+**Languages.** A mail speaks English and German: its module exports `languages = ['en', 'de']` and
+`build(kit, lang)`. The sign-in code's file holds both as one Go template (`{{ if eq (index .Data "locale") "de" }}`
+German `{{ else }}` English `{{ end }}`, because Supabase has one template per kind of mail and renders
+it with the account's `user_metadata` as `.Data`); the invite's module exports `html` and `text` as `{ en, de }`
+for the function to choose from. The preview shows each language. A mail never has a tagline under the
+wordmark, and the app's name stands alone in the copy (never "BetterReads-Code"): reword instead.
+
 Edit the shell or a mail's copy, never the HTML. The build also checks the mail: 4.5:1 for every
 text colour in both schemes, no image, font, link or script to fetch, a `lang`, a `<title>`, the
 dark block, under 20 KB (Gmail clips at about 102 KB), and what the mail's file says it must or must

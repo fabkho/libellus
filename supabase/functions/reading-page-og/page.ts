@@ -21,12 +21,14 @@ export type PublicBook = {
   unverified?: boolean | null
 }
 
+import { type PreviewLang, previewText } from '../../../web/app/utils/previewText.ts'
+
 /** What the app says for an unverified Book (i18n `book.outsideCatalogue`), as the web draws it. */
 export const OUTSIDE_CATALOGUE = 'Outside the catalogue'
 
 /** The title an image draws: the Book's own, or "Outside the catalogue" for one without (an unverified Book). */
-export function bookTitle(book: PublicBook): string {
-  return book.title?.trim() || OUTSIDE_CATALOGUE
+export function bookTitle(book: PublicBook, lang: PreviewLang = 'en'): string {
+  return book.title?.trim() || previewText(lang).outsideCatalogue
 }
 
 /** A Book without a title is drawn on the cloth Placeholder, as the web draws it. */
@@ -84,9 +86,8 @@ export const TOKEN = /^[A-Za-z0-9_-]{22}$/
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Her name on the image, or the page without one. "Ada's reading". */
-export function pageTitle(name: string | null | undefined): string {
-  const trimmed = (name ?? '').trim()
-  return trimmed ? `${trimmed}’s reading` : 'A reading page'
+export function pageTitle(name: string | null | undefined, lang: PreviewLang = 'en'): string {
+  return previewText(lang).pageTitle((name ?? '').trim())
 }
 
 /**
@@ -117,19 +118,16 @@ export function pageCovers(page: PublicReadingPage, limit: number): PublicBook[]
  * finished — only the parts her page actually shows. Mono on the image, so it
  * stays short.
  */
-export function pageSummary(page: PublicReadingPage): string {
+export function pageSummary(page: PublicReadingPage, lang: PreviewLang = 'en'): string {
+  const say = previewText(lang)
   const parts: string[] = []
   const reading = page.reading?.[0]
-  if (reading) parts.push(isOutside(reading.book) ? 'Reading a book outside the catalogue' : `Reading ${bookTitle(reading.book)}`)
-  if (page.year && page.year.books > 0) parts.push(`${page.year.books} ${plural(page.year.books, 'book')} in ${page.year.year}`)
+  if (reading) parts.push(isOutside(reading.book) ? say.readingOutside : say.readingNow(bookTitle(reading.book, lang)))
+  if (page.year && page.year.books > 0) parts.push(say.booksInYear(page.year.books, page.year.year))
   const finished = page.finished?.length ?? 0
-  if (!parts.length && finished) parts.push(`${finished} ${plural(finished, 'book')} finished`)
-  if (!parts.length) parts.push('A shelf to look at')
+  if (!parts.length && finished) parts.push(say.booksFinished(finished))
+  if (!parts.length) parts.push(say.shelfToLookAt)
   return parts.join(' · ')
-}
-
-function plural(count: number, word: string): string {
-  return count === 1 ? word : `${word}s`
 }
 
 /** The first author, the only one an image has room for. */
@@ -141,10 +139,11 @@ export function firstAuthor(book: PublicBook): string | null {
  * What the card says instead of stars when there is no Rating: where the Book
  * stands in her Library.
  */
-export function statusLine(card: PublicBookCard): string {
-  if (card.status === 'reading') return 'Reading now'
-  if (card.status === 'want_to_read') return 'Wants to read'
-  return 'Finished'
+export function statusLine(card: PublicBookCard, lang: PreviewLang = 'en'): string {
+  const say = previewText(lang)
+  if (card.status === 'reading') return say.statusReading
+  if (card.status === 'want_to_read') return say.statusWant
+  return say.statusFinished
 }
 
 /** A Rating in stars, 1–20 quarters. `null` when she did not rate the read. */

@@ -108,3 +108,25 @@ Deno.test('an unverified Book is "Outside the catalogue", with no title of its o
   const sections = { reading: true, year: false, favourites: false, finished: false, shelf: false }
   assertEquals(pageSummary({ name: null, sections, reading: [{ book: unverified, started_on: null }] }), 'Reading a book outside the catalogue')
 })
+
+// ------------------------------------------------------------------ the language (German group B of #257)
+
+Deno.test('the words on the page image are German with lang de, English with anything else', () => {
+  assertEquals(pageTitle('Ada', 'de'), 'Ada liest')
+  assertEquals(pageTitle(null, 'de'), 'Eine Leseseite')
+  assertEquals(pageSummary(page(), 'de'), 'Liest Piranesi · 12 Bücher in 2026')
+  const sections = { reading: false, year: false, favourites: false, finished: false, shelf: false }
+  assertEquals(pageSummary({ name: null, sections }, 'de'), 'Ein Regal zum Stöbern')
+  assertEquals(pageSummary({ name: null, sections, year: { ...page().year!, books: 1 } }, 'de'), '1 Buch in 2026')
+  assertEquals(pageSummary({ name: null, sections, finished: page().finished }, 'de'), `${page().finished!.length} ${page().finished!.length === 1 ? 'Buch' : 'Bücher'} gelesen`)
+  assertEquals(pageSummary(page()), 'Reading Piranesi · 12 books in 2026', 'no language is English')
+})
+
+Deno.test('the card says where the Book stands in German, and an unverified Book is outside the catalogue', () => {
+  const card = (status: PublicBookCard['status']) => ({ status } as PublicBookCard)
+  assertEquals(['reading', 'want_to_read', 'finished'].map((s) => statusLine(card(s as PublicBookCard['status']), 'de')), ['Liest gerade', 'Möchte es lesen', 'Gelesen'])
+  assertEquals(['reading', 'want_to_read', 'finished'].map((s) => statusLine(card(s as PublicBookCard['status']))), ['Reading now', 'Wants to read', 'Finished'])
+  const unverified = { id: 'x', title: null } as unknown as PublicBook
+  assertEquals(bookTitle(unverified, 'de'), 'Außerhalb des Katalogs')
+  assertEquals(bookTitle(unverified), OUTSIDE_CATALOGUE)
+})

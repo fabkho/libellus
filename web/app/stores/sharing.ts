@@ -3,6 +3,7 @@ import {
   bookCardPath,
   createReadingPages,
   readingPagePath,
+  sharedPath,
   type ReadingPageErrorCode,
   type ReadingPages,
   type ReadingPageSection,
@@ -22,6 +23,8 @@ import { useSessionStore } from '~/stores/session'
 export const useSharingStore = defineStore('sharing', () => {
   const backend = useBackend()
   const session = useSessionStore()
+  // The language the member sees: a link she hands out previews in it (data/readingPage.ts, sharedPath).
+  const i18n = useNuxtApp().$i18n
 
   let repository: ReadingPages | null = null
   function repo(): ReadingPages | null {
@@ -87,11 +90,11 @@ export const useSharingStore = defineStore('sharing', () => {
 
   /** The page's address on this origin, and whole (for the Share sheet and the clipboard); null while it is off. */
   const pagePath = computed(() => (settings.value?.token ? readingPagePath(settings.value.token) : null))
-  const pageUrl = computed(() => (pagePath.value ? absolute(pagePath.value) : null))
+  const pageUrl = computed(() => (pagePath.value ? absolute(sharedPath(pagePath.value, i18n.locale.value)) : null))
 
   /** A Book card's whole address; null while the page is off. */
   function cardUrl(bookId: string): string | null {
-    return settings.value?.token ? absolute(bookCardPath(settings.value.token, bookId)) : null
+    return settings.value?.token ? absolute(sharedPath(bookCardPath(settings.value.token, bookId), i18n.locale.value)) : null
   }
 
   /** How she shared a Book (null: not as a card); read when its Share sheet opens. */
