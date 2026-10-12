@@ -32,6 +32,7 @@ import {
 import { IMPORT_HINT_KEY, readImportHint, writeImportHint } from '@/utils/importHint'
 import { PENDING_FOLLOW_KEY } from '@/utils/pendingFollow'
 import { PENDING_SHARE_KEY } from '@/utils/pendingShare'
+import { CODE_SENT_KEY, keepCodeSent, whoIs } from '@/utils/codeCooldown'
 import { PENDING_SIGN_IN_KEY } from '@/utils/signedOutRoute'
 
 /**
@@ -167,6 +168,16 @@ describe('signing out (F10)', () => {
     // The app's own files are the same for everyone and stay: a book opens offline after the next sign-in too.
     expect([...device.caches.held].sort()).toEqual(['libellus-barcode-decoder', 'libellus-reader'])
     expect(device.local.all()).not.toMatch(/ADA|ada\.private|PRIVATE/i)
+  })
+
+  it('keeps when a code was last mailed, for the 20 s window of the server that it describes, with no address in it', async () => {
+    const device = memberAUsedTheDevice()
+    keepCodeSent(device.local, { who: whoIs(A.email), at: Date.now(), used: true })
+
+    await forgetMemberData(device.env)
+
+    expect(device.local.keys()).toEqual([...DEVICE_SETTINGS, CODE_SENT_KEY].sort())
+    expect(device.local.all()).not.toMatch(/ada/i)
   })
 
   it('names the member-keyed keys outside the prefix as their owners do', () => {

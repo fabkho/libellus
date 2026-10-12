@@ -1,3 +1,5 @@
+import { CODE_SENT_KEY } from '../utils/codeCooldown'
+
 /** The slice of the Storage interface the app needs; `window.localStorage` fits. */
 export type KeyValueStorage = {
   readonly length: number
@@ -221,14 +223,16 @@ export type DeviceEnvironment = {
  * the caches of what she browsed and their expiry list (`clearLocalFiles`). `sessionEnded` is a
  * session that died by itself: the keys named in `keep` (the sign-in or share that waits) and the
  * outbox stay, as her unsynced writes are not lost by a token that expired; her own sign-out, deleting
- * her account and another member signing in clear all of it. The one place that knows the list, run
+ * her account and another member signing in clear all of it but when a code was last mailed
+ * (`CODE_SENT_KEY`: a fingerprint and a time, gone after the 20 s window it describes, and the server's
+ * limit, not hers: signing in again right after signing out must not ask for a second mail). The one place that knows the list, run
  * by `stores/session.ts` and by tests/device-data.test.ts.
  */
 export async function forgetMemberData(
   { storage, indexedDB, caches, files }: DeviceEnvironment,
   { sessionEnded = false, keep = [], memberId = null }: { sessionEnded?: boolean; keep?: readonly string[]; memberId?: string | null } = {},
 ): Promise<void> {
-  clearLocalData(storage, { keep: sessionEnded ? keep : [] })
+  clearLocalData(storage, { keep: sessionEnded ? [...keep, CODE_SENT_KEY] : [CODE_SENT_KEY] })
   if (indexedDB) await clearLocalDatabase(indexedDB, LOCAL_DATABASE, { keep: sessionEnded ? ['outbox'] : [] })
   await clearLocalFiles({ storage: files, caches, databases: indexedDB })
   // The outbox that stays is hers: if another member signs in, it goes (`otherMemberHere`).

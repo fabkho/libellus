@@ -12,8 +12,39 @@ POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terr
 200 { "status": "found", "goodreadsId": "6388978", "rating": 4.32, "ratingsCount": 137875,
       "reviewsCount": 6116, "matchedBy": "isbn", "checkedAt": "…" }
 200 { "status": "not_found", "checkedAt": "…" }
-400 isbn_invalid · 400 book_unidentified (no ISBN, and no title or no author) · 401 unauthorized · 413 payload_too_large (over 16 KB) · 429 rate_limited (a member: 20 calls a minute) · 502 goodreads_unavailable · 503 busy
+200 { "status": "blocked", "retryAfterSeconds": 600 }      # Goodreads is turning us away; see "Blocked"
+400 isbn_invalid · 400 book_unidentified (no ISBN, and no title or no author) · 401 unauthorized · 413 payload_too_large (over 16 KB) · 429 rate_limited (a member: 20 calls a minute, a cover ask 40) · 502 goodreads_unavailable · 503 busy
 ```
+
+### The cover (last resort, flagged)
+
+```
+POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terry Pratchett"], "cover": true, "goodreadsBookId": "…" }
+
+200 { "status": "found", "goodreadsId": "…", "coverUrl": "https://i.gr-assets.com/…/6388978.jpg", "rating": …, … }
+200 { "status": "not_found", "goodreadsId": null, "coverUrl": null, "checkedAt": "…" }
+429 rate_limited (a member: 40 cover calls a minute, a bucket of its own)
+```
+
+Goodreads is a last-resort cover source of the import and the manual "find a cover" action
+(`docs/covers.md`, *Goodreads, the last resort*; the web app's `GOODREADS_COVERS` flag is its off switch).
+`cover: true` makes it a title request (an ISBN, if sent, is ignored): one `auto_complete` search, and
+`coverUrl` is the hit's `imageUrl` without its size token (`._SY75_`, a ~332x500 original), only when it is
+`https://i.gr-assets.com/…` exactly (`goodreadsCoverUrl` in `goodreads.ts`; a `nophoto` stand-in is `null`).
+`goodreadsBookId` (the id of a Goodreads export's row) prefers the hit with exactly that id: it IS that edition,
+so no title check; without it, or when Goodreads does not return it, the same-work rule (`matchTitle`) decides.
+Only a rule hit is cached (the caller names the title, so an id may not decide what the cache says about it); a
+fresh cached row answers with its cover, and a found row that never asked for one is searched once more. The
+cover is only linked, never copied; no description, page count or other field of the hit is kept or told.
+
+- Cache: `cover_url` on `goodreads_title_ratings` (and `goodreads_ratings`): null = not asked, `''` = Goodreads has
+  none, else the address (migration `20261027020000_goodreads_cover.sql`). A rating request never answers it, and a
+  rating refresh leaves the column alone.
+- Rate: the bucket `goodreads-cover` (40 a minute, `BUCKETS` in `handler.ts`), apart from `goodreads-rating`'s 20,
+  so an import of ~100 rows does not use up the book page's allowance. The 1 request a second and the busy
+  refusal of `client.ts` are unchanged.
+- The Catalogue's allow-list (`private.cover_allowed`, migration `20261027030000_goodreads_cover_allowed.sql`)
+  takes `i.gr-assets.com` so the cover can be written to a Book (`fill_book_covers`, the import).
 
 How it answers (`handler.ts`):
 
@@ -35,6 +66,23 @@ How it answers (`handler.ts`):
 4. The answer is stored under the key it was asked with (`found` or `not_found`, with its time) and returned. A failure (Goodreads
    down, slow, refusing, garbled) is never stored: the next page view tries again.
 
+### Blocked (the breaker)
+
+Goodreads can switch the keyless endpoints off at any time. These count as a **block** (`GoodreadsBlocked`,
+`goodreads.ts`), distinct from a miss (404, no match) and from our own `busy`: HTTP 403, 429 or 503; a 202 or an
+empty body; a body that is not JSON; JSON that is not the endpoint's shape (no `books`, not a list). A block is
+never cached. It opens a **breaker for 10 minutes** (`BREAKER_MS`, the handler's injected `now`, per running
+instance): no request goes to Goodreads meanwhile, and a lookup that would need one answers
+`200 { "status": "blocked", "retryAfterSeconds": n }` (HTTP 200 so the client reads it; the rating line stays
+without a rating, a cover ask gets none). An answer the cache already has is still given. Each opening writes ONE
+line to the function log, the one to alert on:
+
+```
+goodreads_blocked {"status":403,"kind":"status","at":"2026-10-04T10:00:00.000Z"}     # kind: status | empty | not_json | shape
+```
+
+(`status` is what Goodreads answered.) A plain 500 or a timeout is still `502 goodreads_unavailable` and opens nothing.
+
 Rate safety (`client.ts`): identified by `User-Agent: Libellus/1.0 (…)`, at most one Goodreads
 request a second per running instance (a soft limit — Supabase may run more than one instance under
 load), a request that would queue longer than 4 s is refused with `busy`, 3 s per request, and one
@@ -52,7 +100,7 @@ caller itself (`index.ts`), which works with either kind of API key.
 
 ## Files
 
-- `goodreads.ts` — pure: parsing both endpoints, ISBN, normalising, matching. No I/O.
+- `goodreads.ts` — pure: parsing both endpoints, ISBN, normalising, matching, the cover address. No I/O.
 - `client.ts` — the only way to Goodreads: user agent, limit, timeout. `fetch` and clock injected.
 - `handler.ts` — the request/response logic, cache and dedupe. Everything injected.
 - `index.ts` — the wiring: supabase-js with the service role, `Deno.serve`.
@@ -87,8 +135,8 @@ cd supabase/functions/goodreads-rating && deno run --allow-net --allow-write=fix
 
 ## Deploy (hosted)
 
-1. Migration: `supabase db push` (adds `goodreads_ratings`, `goodreads_rating(books)` and
-   `goodreads_title_ratings`; nothing else changes).
+1. Migration: `supabase db push` (adds `goodreads_ratings`, `goodreads_rating(books)`,
+   `goodreads_title_ratings`, their `cover_url` and Goodreads' image host on the cover allow-list).
 2. Function: `supabase functions deploy goodreads-rating` (reads `verify_jwt = false` from
    `config.toml`; or pass `--no-verify-jwt`).
 3. Secrets: none needed. The hosted runtime provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.

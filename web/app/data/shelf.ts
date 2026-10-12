@@ -93,12 +93,17 @@ export function createShelf({ src, fetch, online }: ShelfSource) {
     /**
      * Reads the library file. Offline too: the service worker keeps the last one
      * it saw (nuxt.config.ts), so only a fetch that fails is offline.
+     *
+     * `fresh` is the retry after a failure: the browser may be holding the failed answer (a CORS
+     * refusal is cached like any response, and asking again is answered from it without a
+     * request), so it goes to the network and replaces what the cache holds (`reload`; Regal
+     * reads the same file through that cache).
      */
-    async load(): Promise<ShelfResult> {
+    async load({ fresh = false }: { fresh?: boolean } = {}): Promise<ShelfResult> {
       let text: string
       try {
         // Credentials stay home: the file is public, and its host allows the app's origin.
-        const response = await fetch(src, { credentials: 'omit' })
+        const response = await fetch(src, fresh ? { credentials: 'omit', cache: 'reload' } : { credentials: 'omit' })
         if (!response.ok) return { data: null, error: 'unreachable' }
         text = await response.text()
       } catch {

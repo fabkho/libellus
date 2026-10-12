@@ -18,6 +18,32 @@
 
 export const GOODREADS_ORIGIN = 'https://www.goodreads.com'
 
+/**
+ * Goodreads is turning us away, as opposed to not knowing a book or failing once: what it answered
+ * (`status`) and how it was wrong (`kind`). Never cached; the handler opens its breaker on it (handler.ts).
+ *  - `status`: HTTP 403, 429 or 503
+ *  - `empty`: a 202, or an empty body
+ *  - `not_json`: a body that is not JSON (a challenge or login page)
+ *  - `shape`: JSON that is not what the endpoint answers
+ */
+export type BlockedKind = 'status' | 'empty' | 'not_json' | 'shape'
+export class GoodreadsBlocked extends Error {
+  constructor(readonly status: number, readonly kind: BlockedKind) {
+    super(`goodreads_blocked (${status}, ${kind})`)
+  }
+}
+
+/** The JSON of an answer that must be one: throws `GoodreadsBlocked` for a block sign, else returns it. */
+function readJson(status: number, body: string): unknown {
+  if (status === 403 || status === 429 || status === 503) throw new GoodreadsBlocked(status, 'status')
+  if (status === 202 || !body.trim()) throw new GoodreadsBlocked(status, 'empty')
+  try {
+    return JSON.parse(body)
+  } catch {
+    throw new GoodreadsBlocked(status, 'not_json')
+  }
+}
+
 /** What the edge function stores and answers for an ISBN. */
 export type GoodreadsFound = {
   status: 'found'
@@ -28,6 +54,11 @@ export type GoodreadsFound = {
   ratingsCount: number
   /** Ratings with a written review; null when the title search found it (it does not say). */
   reviewsCount: number | null
+  /**
+   * The edition's cover address at Goodreads' CDN (`goodreadsCoverUrl`), only ever asked for by a `cover` request.
+   * `undefined`: nobody asked yet; `null`: asked, Goodreads has none (a stand-in image counts as none).
+   */
+  coverUrl?: string | null
 }
 export type GoodreadsNotFound = { status: 'not_found' }
 export type GoodreadsAnswer = GoodreadsFound | GoodreadsNotFound
@@ -76,19 +107,15 @@ export function reviewCountsUrl(isbn13: string): string {
 /**
  * The answer to a review counts request for one ISBN-13. `status` and `body`
  * as the response had them: a 404 is "no such ISBN" (a miss), a 200 must name
- * the ISBN; anything else throws (an error, never stored).
+ * the ISBN; anything else throws (an error, never stored); a sign that Goodreads
+ * is turning us away (`GoodreadsBlocked`) throws too.
  */
 export function parseReviewCounts(isbn13: string, status: number, body: string): GoodreadsAnswer {
   if (status === 404) return { status: 'not_found' }
-  if (status !== 200) throw new Error(`review_counts answered ${status}`)
-  let json: unknown
-  try {
-    json = JSON.parse(body)
-  } catch {
-    throw new Error('review_counts answered something that is not JSON')
-  }
-  const books = (json as { books?: unknown })?.books
-  if (!Array.isArray(books)) throw new Error('review_counts answered without books')
+  if (status !== 200 && ![202, 403, 429, 503].includes(status)) throw new Error(`review_counts answered ${status}`)
+  const json = readJson(status, body)
+  const books = (json as { books?: unknown } | null)?.books
+  if (!Array.isArray(books)) throw new GoodreadsBlocked(status, 'shape')
   const book = books.find(
     (b) => b && typeof b === 'object' && ((b as Record<string, unknown>).isbn13 === isbn13 || books.length === 1),
   ) as Record<string, unknown> | undefined
@@ -112,6 +139,39 @@ export type AutoCompleteBook = {
   author: string
   rating: number
   ratingsCount: number
+  /** The cover's address without a size token (`goodreadsCoverUrl`); null when it has none. */
+  coverUrl: string | null
+}
+
+/** The only host a cover address may name: Goodreads' image CDN. */
+export const GOODREADS_IMAGE_HOST = 'i.gr-assets.com'
+
+/**
+ * The full-size cover address for an `imageUrl` of an auto_complete hit, or null when it is none: the
+ * size token (`._SY75_`, `._SX50_`, …) before the extension is stripped (the bare address is the ~332x500
+ * original), only https at exactly `i.gr-assets.com` is taken (no port, no credentials), query and
+ * fragment are dropped, and Goodreads' stand-in (`nophoto`) is no cover. What it returns is only linked,
+ * never copied (docs/covers.md, "Goodreads, the last resort").
+ */
+export function goodreadsCoverUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string' || raw.length > 500) return null
+  let url: URL
+  try {
+    url = new URL(raw.trim())
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'https:' || url.hostname !== GOODREADS_IMAGE_HOST || url.port || url.username || url.password) {
+    return null
+  }
+  if (/nophoto/i.test(url.pathname) || !/\.(jpe?g|png|webp)$/i.test(url.pathname)) return null
+  const path = url.pathname.replace(/(?:\._[A-Z]{1,3}\d+_)+(?=\.[A-Za-z]+$)/, '')
+  return `https://${GOODREADS_IMAGE_HOST}${path}`
+}
+
+/** The result Goodreads gave for exactly this book id (the very edition: no title check), if it gave it. */
+export function pickByBookId(results: AutoCompleteBook[], id: string | null): AutoCompleteBook | null {
+  return (id && results.find((result) => result.bookId === id)) || null
 }
 
 export function autoCompleteUrl(query: string): string {
@@ -120,14 +180,9 @@ export function autoCompleteUrl(query: string): string {
 
 /** The books a title search found, in Goodreads' order. Throws when the answer is not one. */
 export function parseAutoComplete(status: number, body: string): AutoCompleteBook[] {
-  if (status !== 200) throw new Error(`auto_complete answered ${status}`)
-  let json: unknown
-  try {
-    json = JSON.parse(body)
-  } catch {
-    throw new Error('auto_complete answered something that is not JSON')
-  }
-  if (!Array.isArray(json)) throw new Error('auto_complete answered something that is not a list')
+  if (status !== 200 && ![202, 403, 429, 503].includes(status)) throw new Error(`auto_complete answered ${status}`)
+  const json = readJson(status, body)
+  if (!Array.isArray(json)) throw new GoodreadsBlocked(status, 'shape')
   const books: AutoCompleteBook[] = []
   for (const item of json) {
     if (!item || typeof item !== 'object') continue
@@ -139,7 +194,15 @@ export function parseAutoComplete(status: number, body: string): AutoCompleteBoo
     const title = typeof b.title === 'string' ? b.title : ''
     const bare = typeof b.bookTitleBare === 'string' ? b.bookTitleBare : title
     if (!id || average === null || ratings === null || typeof author !== 'string' || !bare) continue
-    books.push({ bookId: id, title: title || bare, bookTitleBare: bare, author, rating: average, ratingsCount: ratings })
+    books.push({
+      bookId: id,
+      title: title || bare,
+      bookTitleBare: bare,
+      author,
+      rating: average,
+      ratingsCount: ratings,
+      coverUrl: goodreadsCoverUrl(b.imageUrl),
+    })
   }
   return books
 }
@@ -224,8 +287,8 @@ export function matchTitle(book: LookupBook, results: AutoCompleteBook[]): AutoC
   return null
 }
 
-/** A title search result as what the function stores. */
-export function foundByTitle(result: AutoCompleteBook): GoodreadsFound {
+/** A title search result as what the function stores; its cover only when it was asked for (`cover`). */
+export function foundByTitle(result: AutoCompleteBook, cover = false): GoodreadsFound {
   return {
     status: 'found',
     matchedBy: 'title',
@@ -233,6 +296,7 @@ export function foundByTitle(result: AutoCompleteBook): GoodreadsFound {
     rating: result.rating,
     ratingsCount: result.ratingsCount,
     reviewsCount: null,
+    ...(cover ? { coverUrl: result.coverUrl } : {}),
   }
 }
 

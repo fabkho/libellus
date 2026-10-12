@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSessionStore } from '~/stores/session'
+import { secondsLeft, stepFor } from '~/utils/codeCooldown'
 
 // The whole entry: an address, nothing else. Whether it leads to a code or to
 // the invite step is the backend's answer, not a choice the member has to make.
@@ -8,6 +9,17 @@ const session = useSessionStore()
 const email = ref('')
 
 onMounted(() => session.clearError())
+
+// The code she signed in with a moment ago is spent, and the server mails one per address per 20 s: the button
+// counts it down rather than asking for a mail that would be refused. (A code not yet used is not waited for:
+// submitting goes straight to its step, stores/session.ts.)
+const now = useClock()
+const waitSeconds = computed(() => {
+  const last = session.lastCode
+  return last?.used && stepFor(last, email.value, now.value) === 'wait' ? secondsLeft(last.at, now.value) : 0
+})
+// The refusal that sends her on to the code step is worded there, not here.
+const failure = computed(() => (session.error && session.error !== 'code_just_sent' ? t(`auth.error.${session.error}`) : null))
 
 // "Your account was deleted" (#101): said once, until she asks for a code.
 const deleted = computed(() => session.accountDeleted)
@@ -51,7 +63,7 @@ async function submit() {
         id="sign-in-email"
         v-model="email"
         :label="t('signIn.emailLabel')"
-        :error="session.error ? t(`auth.error.${session.error}`) : null"
+        :error="failure"
         error-testid="signIn.error"
         type="email"
         inputmode="email"
@@ -65,8 +77,8 @@ async function submit() {
         data-testid="signIn.email"
       />
 
-      <UiButton type="submit" block :disabled="session.busy" data-testid="signIn.submit">
-        {{ t('signIn.submit') }}
+      <UiButton type="submit" block :disabled="session.busy || waitSeconds > 0" data-testid="signIn.submit">
+        <span class="tabular-nums">{{ waitSeconds > 0 ? t('signIn.submitIn', { seconds: waitSeconds }) : t('signIn.submit') }}</span>
       </UiButton>
 
       <p class="text-center text-caption text-balance text-ink-faint">

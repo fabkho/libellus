@@ -170,7 +170,7 @@ ebook usually wears the print cover). Best first:
 2. **ebook**: the same work's ebook at Apple Books (`isSameWork`, the language rule), the row's storefront first.
 3. **sameWork**: another edition of the same work (a sibling edition, an Open Library work's cover).
 4. **goodreads**: Goodreads' cover for the row's title: a last resort, only for a Goodreads file's rows and a manual
-   "find a cover" action (not built in this change, see the PR).
+   "Find a cover" action ([below](#goodreads-the-last-resort)).
 5. **placeholder**: no image: `cover_url` stays null and `UiCover` draws the cloth (by title), so a real cover found
    later replaces it with no flag. Pixel height inside a kind: Apple 900, Open Library `-L` 500, Goodreads 500, Google 128.
 
@@ -194,6 +194,47 @@ reject the only one. A better kind found later (the fill, a later import, the ch
 `fill_book_covers`) replaces a cover the fill gave. The UI shows covers scaled by CSS with the thumbhash behind them, so a
 small one is soft but not broken. Measurements count a cover of any size as found and report those under 300 px high
 separately.
+
+#### Goodreads, the last resort
+
+What: for a Goodreads export's rows that nothing else found a cover for (about half of the cover-less rows of a real
+export are Manual books, no ISBN, so no other source can know them) and for the import preview's manual **Find a cover**,
+the cover Goodreads shows for the book. The `goodreads-rating` function (`supabase/functions/goodreads-rating`) asks the
+keyless `book/auto_complete` search it already uses for the community rating, once, with `cover: true`; the hit with the
+file's own Goodreads book id is taken as it is (it is that very edition), else the same-work rule decides. The answer is the
+`imageUrl` without its size token (`._SY75_` off: the ~332x500 original) at `i.gr-assets.com`, which allows CORS, so the
+browser reads the pixels for the thumbhash like for any cover. Measured on 78 cover-less rows of a real export: 75 got a
+same-work cover from it, and the file's book id was among the results for 63.
+
+Why last: the ranking above. The stage runs after the Apple lane and only for a row with no cover and no fallback, one
+ask every 1.6 s (the function's own limit, 40 a minute in a bucket of its own), under the fill's budget, given up after 3
+failures in a row. Only linked: the address is the whole of what is stored (`books.cover_url`, and `cover_url` next to the
+rating in the function's answer cache); no description, page count or rating of the hit is kept or told on this path.
+
+Flag: `GOODREADS_COVERS` in `web/app/data/coverRank.ts`, one line. `false` removes the stage and the button; no call is made.
+
+Terms risk: Goodreads retired its API in 2020 and its terms forbid automated access. The endpoint is unofficial, and the
+community rating already uses it server side (`docs/THIRD-PARTY.md`); using the cover is also a hotlink to its image CDN.
+Owner-accepted risk, decided before merge (the PR says so). If Goodreads objects: set the flag to `false`, drop
+`i.gr-assets.com` from `private.cover_allowed` (a migration; `cover_shown` then hides the address on the social surfaces
+too), and those Books show the cloth cover (UiCover draws it for a cover that does not load), a better source filling in
+later by itself. Nothing was copied, so there is nothing to delete.
+
+Blocked: Goodreads can switch the keyless endpoints off or start refusing us, and we must see it and carry on. The function
+(`goodreads-rating`) calls it a block, not a miss and not its own `busy`, when `auto_complete` or `review_counts` answers HTTP
+403, 429 or 503, a 202 or an empty body, a body that is not JSON, or JSON of another shape. A block is never cached. It opens a
+function-level breaker for 10 minutes: no request goes to Goodreads meanwhile, and a lookup that needs one answers
+`{ status: 'blocked', retryAfterSeconds }` (HTTP 200, so the client reads it; the book page's rating line then simply stays without
+a rating). Each opening writes exactly one line to the function log, **the one to alert on**:
+`goodreads_blocked {"status":403,"kind":"status","at":"…"}` (Supabase dashboard, Edge Functions, `goodreads-rating`, Logs; `kind` is
+`status`, `empty`, `not_json` or `shape`). In the app the client reads `'blocked'` (`data/goodreadsCover.ts`); the fill's Goodreads
+stage gives its lane up at once, not after three failures, and calls `onBlocked` once, which the import store turns into ONE
+`errorLog` entry, `goodreads cover source blocked` (kind `error`, the owner's error list; repeats fold into a count). No toast, no
+copy: the rows go on without a Goodreads cover and show the cloth, and the manual **Find a cover** answers the same quiet "No cover
+found." a miss does. Nothing is lost: a Book whose cover came earlier keeps it (`fill_book_covers`), and the function's own answer
+cache (`cover_url`) still serves what it already knows while the breaker is open. When the breaker closes, the next ask tries again.
+To switch route for good: set `GOODREADS_COVERS` to `false` (stage and button gone, no call), and, if the address host must go too, drop
+`i.gr-assets.com` from `private.cover_allowed` in a migration (as under *Terms risk*).
 
 ### One merge for the facts: `mergeSources` (`data/mergeBook.ts`)
 

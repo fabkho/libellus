@@ -12,7 +12,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createGoodreads, userAgent } from './client.ts'
 import type { GoodreadsAnswer } from './goodreads.ts'
-import { type CacheKey, type CachedAnswer, type Caller, createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
+import { BUCKETS, type CacheKey, type CachedAnswer, type Caller, createHandler } from './handler.ts'
 import { sameSecret } from './secret.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
@@ -32,6 +32,8 @@ type Row = {
   rating: number | string | null
   ratings_count: number | null
   reviews_count: number | null
+  /** null: never asked for a cover; '': asked, Goodreads has none. */
+  cover_url?: string | null
   checked_at: string
 }
 
@@ -44,6 +46,7 @@ function fromRow(row: Row): CachedAnswer {
     rating: Number(row.rating),
     ratingsCount: row.ratings_count!,
     reviewsCount: row.reviews_count,
+    ...(row.cover_url == null ? {} : { coverUrl: row.cover_url || null }),
     checkedAt: row.checked_at,
   }
 }
@@ -65,6 +68,8 @@ function toRow(key: CacheKey, answer: GoodreadsAnswer & { checkedAt: string }): 
     rating: found?.rating ?? null,
     ratings_count: found?.ratingsCount ?? null,
     reviews_count: found?.reviewsCount ?? null,
+    // A rating refresh that never asked for a cover leaves the stored one alone (the column is not in the upsert).
+    ...(found?.coverUrl !== undefined ? { cover_url: found?.coverUrl ?? '' } : answer.status === 'not_found' ? { cover_url: null } : {}),
     checked_at: answer.checkedAt,
   }
 }
@@ -90,12 +95,12 @@ const handler = createHandler({
     const { data, error } = await supabase.auth.getUser(token)
     return !error && data.user ? { member: data.user.id } : null
   },
-  async throttle(member) {
+  async throttle(member, bucket) {
     const { data, error } = await supabase.rpc('edge_rate_hit', {
       p_member: member,
-      p_bucket: 'goodreads-rating',
-      p_limit: MEMBER_LIMIT,
-      p_window_seconds: MEMBER_WINDOW_SECONDS,
+      p_bucket: bucket,
+      p_limit: BUCKETS[bucket].limit,
+      p_window_seconds: BUCKETS[bucket].windowSeconds,
     })
     if (error) throw new Error(error.message)
     return data === true
