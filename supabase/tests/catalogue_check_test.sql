@@ -219,8 +219,8 @@ select public.catalogue_check_save((select id from ids where name = 'b_open'), j
   'title', 'Open Book', 'authors', jsonb_build_array('Fine', 5), 'description', null,
   'cover_url', 'https://evil.example/cover.jpg'));
 select is((select (title, authors, description, cover_url, checked_at is not null)::text from public.books where id = (select id from ids where name = 'b_open')),
-  '("Open Book",{},,,t)',
-  'authors not all text and a cover off the sources'' hosts are not kept, and the source''s empty description clears the first member''s: a verified Book is the source''s alone');
+  '("Open Book","{""An Author""}",,,t)',
+  'authors not all text are not the source''s (the Book keeps the first member''s), a cover off the sources'' hosts is no cover, and the source''s empty description clears the first member''s: the description is the source''s alone');
 
 select throws_ok($q$select public.catalogue_check_save(gen_random_uuid(), '[]')$q$, '22023', 'result_invalid',
   'a result that is not an object is refused');

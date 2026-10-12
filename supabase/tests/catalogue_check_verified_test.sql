@@ -1,14 +1,17 @@
--- A verified Book is the source's, all of it (social v2a contract §5; review MEDIUM 3):
+-- A verified Book is the source's where the source speaks, and keeps its own where it does not
+-- (social v2a contract §5; review MEDIUM 3; 20261026030000_catalogue_check_keeps.sql):
 --   supabase test db
 --
--- catalogue_check_save writes the authors, cover, description, publisher, language and format the
--- source gave, and nothing where it gave none: nothing of what the first member sent stays that the
--- source did not say. Pages and year are the source's, else the member's own only when plausible.
+-- catalogue_check_save writes the authors, cover, publisher, language and format the source gave, and
+-- keeps the Book's own (an import's, a cover fill's, a sibling edition's) where it gave none. The
+-- cover's thumbhash and colours go with a different cover and stay with the same one. The description
+-- is the source's alone: written when it has one, null when not. Pages and year are the source's, else
+-- the member's own only when plausible.
 -- The stored title must be the source's by work_title_key (the second lock of the identity check): a
 -- Book the source names otherwise is marked failed and nothing is written.
 
 begin;
-select plan(37);
+select plan(44);
 
 create schema if not exists tests;
 
@@ -74,20 +77,25 @@ insert into ids values
   ('facts',  (public.add_to_library(tests.snap('Facts Book') || '{"publisher":"Her Press","language":"de","format":"hardcover","page_count":300,"published_year":1999}', 'want_to_read', null)).id),
   ('odd',    (public.add_to_library(tests.snap('Odd Book') || '{"page_count":99999,"published_year":2099}', 'want_to_read', null)).id),
   ('same',   (public.add_to_library(tests.snap('Same Cover Book') || '{"cover_url":"https://is1-ssl.mzstatic.com/image/thumb/x/600x900bb.jpg"}', 'want_to_read', null)).id),
+  -- A Book with a cover on the allow-list (and its hash and colours) and every other column filled.
+  ('keep',   (public.add_to_library(tests.snap('Keep Book') || '{"cover_url":"https://covers.openlibrary.org/b/id/7-L.jpg","publisher":"Her Press","language":"de","format":"hardcover","page_count":300,"published_year":1999}', 'want_to_read', null)).id),
+  ('swap',   (public.add_to_library(tests.snap('Swap Book') || '{"cover_url":"https://covers.openlibrary.org/b/id/8-L.jpg","publisher":"Her Press","language":"de","format":"hardcover"}', 'want_to_read', null)).id),
+  ('noauth', (public.add_to_library(tests.snap('No Author Book'), 'want_to_read', null)).id),
   ('other',  (public.add_to_library(tests.snap('Other Book'), 'want_to_read', null)).id);
 
 reset role;
-insert into ids select 'b_' || name, tests.book_of(id) from ids where name in ('bare', 'facts', 'odd', 'same', 'other');
+insert into ids select 'b_' || name, tests.book_of(id) from ids where name in ('bare', 'facts', 'odd', 'same', 'other', 'keep', 'swap', 'noauth');
+update public.books set authors = '{}' where id = (select id from ids where name = 'b_noauth');
 
 -- ------------------------------------------------ a source that says only the title
 
 select is(public.catalogue_check_save((select id from ids where name = 'b_bare'), '{"title":"Bare Book"}'), true,
   'a save with a title and nothing else is a save');
 select is((select (authors, description, cover_url, cover_thumbhash, cover_dominant, cover_secondary)::text from public.books where id = (select id from ids where name = 'b_bare')),
-  '({},,,,,)',
-  'no authors, no description, no cover (and no hash or colours of it) stay of the first member''s');
+  '("{""An Author""}",,,,,)',
+  'her authors stay, and no description does: her blurb is gone, a cover of hers off the allow-list was never kept');
 select is((select (publisher, language, format)::text from public.books where id = (select id from ids where name = 'b_bare')),
-  '(,,)', 'nor her publisher, language or format');
+  '("Her Press",de,hardcover)', 'her publisher, language and format stay too: the source said none');
 select is((select (page_count, published_year)::text from public.books where id = (select id from ids where name = 'b_bare')),
   '(300,1999)', 'but her page count and year stay while they are plausible');
 select ok((select checked_at is not null and not check_failed from public.books where id = (select id from ids where name = 'b_bare')),
@@ -118,7 +126,7 @@ select public.catalogue_check_save((select id from ids where name = 'b_other'), 
   'title', 'Other Book', 'publisher', repeat('p', 201), 'language', 'English', 'format', 'scroll',
   'page_count', 1000000, 'published_year', 12));
 select is((select (publisher, language, format, page_count, published_year)::text from public.books where id = (select id from ids where name = 'b_other')),
-  '(,,,,)', 'a publisher too long, a language that is not a code, a format it is not, 1 000 000 pages and the year 12 are not stored');
+  '(,,ebook,,)', 'a publisher too long, a language that is not a code, a format it is not, 1 000 000 pages and the year 12 are not stored (the Book keeps the format it had)');
 
 -- ----------------------------------------------------- the same picture keeps its hash
 
@@ -127,6 +135,28 @@ select public.catalogue_check_save((select id from ids where name = 'b_same'), j
 select is((select (cover_url, cover_thumbhash, cover_dominant, cover_secondary)::text from public.books where id = (select id from ids where name = 'b_same')),
   '(https://is1-ssl.mzstatic.com/image/thumb/x/600x900bb.jpg,abc,#112233,#445566)',
   'a cover that is the one she sent keeps its thumbhash and colours');
+
+-- ------------------------- a source with no cover, publisher, language or format: the Book keeps its own
+
+select is(public.catalogue_check_save((select id from ids where name = 'b_keep'), '{"title":"Keep Book","publisher":null,"language":null,"format":null,"description":null}'), true,
+  'a save whose source says none of cover, publisher, language, format');
+select is((select (cover_url, cover_thumbhash, cover_dominant, cover_secondary)::text from public.books where id = (select id from ids where name = 'b_keep')),
+  '(https://covers.openlibrary.org/b/id/7-L.jpg,abc,#112233,#445566)', 'the stored cover stays, with its thumbhash and colours');
+select is((select (publisher, language, format)::text from public.books where id = (select id from ids where name = 'b_keep')),
+  '("Her Press",de,hardcover)', 'and so do the publisher, language and format');
+select is((select (page_count, published_year, description)::text from public.books where id = (select id from ids where name = 'b_keep')),
+  '(300,1999,)', 'pages and year stay as before, and the description is the source''s (none): null');
+
+-- A different cover replaces the stored one and drops what described the old picture; the rest stays.
+select public.catalogue_check_save((select id from ids where name = 'b_swap'), '{"title":"Swap Book","cover_url":"https://covers.openlibrary.org/b/id/9-L.jpg","description":"New blurb"}');
+select is((select (cover_url, cover_thumbhash, cover_dominant, cover_secondary, description)::text from public.books where id = (select id from ids where name = 'b_swap')),
+  '(https://covers.openlibrary.org/b/id/9-L.jpg,,,,"New blurb")', 'a source cover that differs replaces the cover and clears its thumbhash and colours; the description is the source''s');
+select is((select (publisher, language, format)::text from public.books where id = (select id from ids where name = 'b_swap')),
+  '("Her Press",de,hardcover)', 'while the publisher, language and format the source did not give stay');
+
+-- No authors from the source and none stored: '{}'.
+select public.catalogue_check_save((select id from ids where name = 'b_noauth'), '{"title":"No Author Book"}');
+select is((select authors::text from public.books where id = (select id from ids where name = 'b_noauth')), '{}', 'no authors from either side is the empty list');
 
 -- ------------------------------------------------------------- the title lock
 

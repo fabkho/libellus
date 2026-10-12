@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.1](https://github.com/fabkho/libellus/compare/v1.15.0...v1.15.1) (2026-10-12)
+
+
+### Fixes
+
+* **catalogue:** the check keeps what a Book has when its source says nothing ([#317](https://github.com/fabkho/libellus/issues/317)) ([a5c92e9](https://github.com/fabkho/libellus/commit/a5c92e9310da169033391ed5bea7263b0a09a1db))
+* **friends:** feed rows keep 24 px targets ([#318](https://github.com/fabkho/libellus/issues/318)) ([4ffbc7d](https://github.com/fabkho/libellus/commit/4ffbc7d527b000a5f4c563edb1230abb18366605))
+
 ## [1.15.0](https://github.com/fabkho/libellus/compare/v1.14.0...v1.15.0) (2026-10-11)
 
 
