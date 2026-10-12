@@ -28,7 +28,20 @@
  * failure is never stored. Two pages asking for the same Book at once share one
  * lookup. A body over 16 KB is refused, each author is cut to 200 characters,
  * a title key over 400 is not asked, and a member is held to a number of calls
- * a minute. Everything it talks to comes in from outside (index.ts wires the
+ * a minute.
+ *
+ * A request with `cover: true` (and optionally `goodreadsBookId`, the id of the
+ * Goodreads file's own row) asks for the book's Goodreads cover, a last-resort
+ * cover source (docs/covers.md): it is a title request (an ISBN, if sent, is
+ * ignored), the answer gains `coverUrl` (`goodreadsCoverUrl`: the linked address at
+ * Goodreads' image host, or null) and `goodreadsId`, and the member is counted in
+ * its own bucket (`goodreads-cover`, 40 a minute), so an import of a hundred rows
+ * does not use up the ratings' 20. The hit with the given id is taken as it is (it
+ * IS that edition); without one, the same-work rule decides (`matchTitle`). Only a
+ * rule hit is cached (the caller names the title: an id may not decide what the
+ * cache says about it). A cached found row that never asked for a cover is asked
+ * once more; a cover Goodreads does not have is cached as the empty string.
+ * Everything it talks to comes in from outside (index.ts wires the
  * real ones), so the tests drive it with recordings.
  */
 import type { Goodreads } from './client.ts'
@@ -39,6 +52,7 @@ import {
   type LookupBook,
   matchTitle,
   parseIsbn13,
+  pickByBookId,
   titleKey,
   titleQuery,
 } from './goodreads.ts'
@@ -91,6 +105,12 @@ export const MAX_KEY_CHARS = 400
 /** What a member may ask in a minute (the function's own upstream budget is one request a second). */
 export const MEMBER_LIMIT = 20
 export const MEMBER_WINDOW_SECONDS = 60
+/** Calls a member may make per bucket in a window: the cover asks have their own, larger one (an import's rows). */
+export const BUCKETS = {
+  'goodreads-rating': { limit: MEMBER_LIMIT, windowSeconds: MEMBER_WINDOW_SECONDS },
+  'goodreads-cover': { limit: 40, windowSeconds: MEMBER_WINDOW_SECONDS },
+} as const
+export type Bucket = keyof typeof BUCKETS
 
 /** Searches Goodreads for a Book by its title and first author. */
 async function byTitle(book: LookupBook, goodreads: Goodreads): Promise<GoodreadsAnswer> {
@@ -99,6 +119,9 @@ async function byTitle(book: LookupBook, goodreads: Goodreads): Promise<Goodread
   const match = matchTitle(book, await goodreads.autoComplete(query))
   return match ? foundByTitle(match) : { status: 'not_found' }
 }
+
+/** A request's whole question: the Book, and whether (and for which Goodreads edition) it wants the cover. */
+type Question = { book: LookupBook; cover: boolean; goodreadsBookId: string | null }
 
 /** The request's text, or null when it is longer than MAX_BODY_BYTES (read only as far as that). */
 async function boundedText(request: Request): Promise<string | null> {
@@ -129,15 +152,19 @@ async function boundedText(request: Request): Promise<string | null> {
 
 type ReadError = { error: 'isbn_invalid' | 'book_unidentified' | 'payload_too_large' }
 
+const isTrue = (value: unknown) => value === true || value === 'true' || value === '1'
+
 /** What the request asks about, from the query string or a JSON body. */
-async function readBook(request: Request): Promise<LookupBook | ReadError> {
-  let isbn: unknown, title: unknown, authors: unknown
+async function readBook(request: Request): Promise<Question | ReadError> {
+  let isbn: unknown, title: unknown, authors: unknown, cover: unknown, bookId: unknown
   if (request.method === 'GET') {
     if (request.url.length > MAX_BODY_BYTES) return { error: 'payload_too_large' }
     const params = new URL(request.url).searchParams
     isbn = params.get('isbn') ?? params.get('isbn13')
     title = params.get('title')
     authors = params.getAll('author')
+    cover = params.get('cover')
+    bookId = params.get('goodreadsBookId')
   } else {
     const text = await boundedText(request)
     if (text === null) return { error: 'payload_too_large' }
@@ -150,9 +177,13 @@ async function readBook(request: Request): Promise<LookupBook | ReadError> {
     isbn = body.isbn13 ?? body.isbn
     title = body.title
     authors = body.authors
+    cover = body.cover
+    bookId = body.goodreadsBookId
   }
-  // No ISBN at all is a Book found by title and author; one that is not valid is refused.
-  const given = typeof isbn === 'string' && isbn.trim() ? isbn : null
+  const wantsCover = isTrue(cover)
+  const goodreadsBookId = typeof bookId === 'number' ? String(bookId) : bookId
+  // No ISBN at all is a Book found by title and author; one that is not valid is refused. A cover is asked by title.
+  const given = !wantsCover && typeof isbn === 'string' && isbn.trim() ? isbn : null
   const isbn13 = parseIsbn13(given)
   if (given && !isbn13) return { error: 'isbn_invalid' }
   const book: LookupBook = {
@@ -172,7 +203,20 @@ async function readBook(request: Request): Promise<LookupBook | ReadError> {
     book.title = null
     book.authors = []
   } else if (!isbn13 && !key) return { error: 'book_unidentified' }
-  return book
+  return {
+    book,
+    cover: wantsCover,
+    goodreadsBookId: wantsCover && typeof goodreadsBookId === 'string' && /^\d{1,20}$/.test(goodreadsBookId) ? goodreadsBookId : null,
+  }
+}
+
+/** What the caller is told: the cover only when it asked for one, and then always (null: Goodreads has none). */
+function view(answer: CachedAnswer, cover: boolean): Record<string, unknown> {
+  const { coverUrl, ...rest } = answer.status === 'found' ? answer : { ...answer, coverUrl: undefined }
+  if (!cover) return rest
+  return answer.status === 'found'
+    ? { ...rest, coverUrl: coverUrl || null }
+    : { ...rest, goodreadsId: null, coverUrl: null }
 }
 
 /** The member (or the service role, `member: null`) a request comes from. */
@@ -184,7 +228,7 @@ export function createHandler(deps: {
   /** The signed-in member (or the service role) the request comes from; null for anybody else. */
   authorize: (request: Request) => Promise<Caller | null>
   /** Counts one call of a member; false when she is over her limit. Not asked for the service role. */
-  throttle?: (member: string) => Promise<boolean>
+  throttle?: (member: string, bucket: Bucket) => Promise<boolean>
   now?: () => number
   log?: (message: string) => void
 }): (request: Request) => Promise<Response> {
@@ -213,6 +257,32 @@ export function createHandler(deps: {
     return fresh
   }
 
+  /**
+   * The Goodreads cover for a Book: from the title cache while it is fresh and says what a cover asks (a
+   * found row that never asked is asked once more), else from one title search, where the hit with the
+   * given id wins over the same-work rule. Only the rule's own hit is stored.
+   */
+  async function coverAnswer(book: LookupBook, key: string, goodreadsBookId: string | null): Promise<CachedAnswer> {
+    const cacheKey = { titleKey: key }
+    const row = await deps.cache.get(cacheKey)
+    if (row && now() - Date.parse(row.checkedAt) < (row.status === 'found' ? MAX_AGE_MS : NOT_FOUND_MAX_AGE_MS)) {
+      // A found row that has been asked for its cover answers it; a miss stays a miss unless an id may find it.
+      if (row.status === 'found' ? row.coverUrl !== undefined : !goodreadsBookId) return row
+    }
+    const query = titleQuery(book)
+    const results = query && book.authors.length ? await deps.goodreads.autoComplete(query) : []
+    const byRule = matchTitle(book, results)
+    const hit = pickByBookId(results, goodreadsBookId) ?? byRule
+    const checkedAt = new Date(now()).toISOString()
+    const stored: CachedAnswer = { ...(byRule ? foundByTitle(byRule, true) : { status: 'not_found' as const }), checkedAt }
+    try {
+      await deps.cache.put(cacheKey, stored)
+    } catch (error) {
+      log(`goodreads-rating: storing ${keyId(cacheKey).slice(0, MAX_LOG_KEY_CHARS)} failed: ${error}`)
+    }
+    return hit ? { ...foundByTitle(hit, true), checkedAt } : stored
+  }
+
   async function answer(book: LookupBook, key: string | null): Promise<CachedAnswer> {
     let miss: CachedAnswer | null = null
     if (book.isbn13) {
@@ -230,12 +300,13 @@ export function createHandler(deps: {
     if (request.method !== 'GET' && request.method !== 'POST') return json(405, { error: 'method_not_allowed' })
     const caller = await deps.authorize(request)
     if (!caller) return json(401, { error: 'unauthorized' })
-    const book = await readBook(request)
-    if ('error' in book) return json(book.error === 'payload_too_large' ? 413 : 400, { error: book.error })
+    const question = await readBook(request)
+    if ('error' in question) return json(question.error === 'payload_too_large' ? 413 : 400, { error: question.error })
+    const { book, cover, goodreadsBookId } = question
     if (caller.member && deps.throttle) {
       let allowed: boolean
       try {
-        allowed = await deps.throttle(caller.member)
+        allowed = await deps.throttle(caller.member, cover ? 'goodreads-cover' : 'goodreads-rating')
       } catch (error) {
         log(`goodreads-rating: rate limit check failed: ${error}`)
         return json(503, { error: 'busy' })
@@ -243,15 +314,15 @@ export function createHandler(deps: {
       if (!allowed) return json(429, { error: 'rate_limited' }, { 'retry-after': String(MEMBER_WINDOW_SECONDS) })
     }
     const key = titleKey(book)
-    const id = `${book.isbn13 ?? ''}|${key ?? ''}`
+    const id = `${book.isbn13 ?? ''}|${key ?? ''}${cover ? `|cover:${goodreadsBookId ?? ''}` : ''}`
 
     let running = inFlight.get(id)
     if (!running) {
-      running = answer(book, key).finally(() => inFlight.delete(id))
+      running = (cover ? coverAnswer(book, key!, goodreadsBookId) : answer(book, key)).finally(() => inFlight.delete(id))
       inFlight.set(id, running)
     }
     try {
-      return json(200, await running)
+      return json(200, view(await running, cover))
     } catch (error) {
       if (error instanceof GoodreadsBusy) return json(503, { error: 'busy' })
       log(`goodreads-rating: ${id.slice(0, MAX_LOG_KEY_CHARS)} failed: ${error}`)

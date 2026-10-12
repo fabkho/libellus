@@ -28,6 +28,11 @@ export type GoodreadsFound = {
   ratingsCount: number
   /** Ratings with a written review; null when the title search found it (it does not say). */
   reviewsCount: number | null
+  /**
+   * The edition's cover address at Goodreads' CDN (`goodreadsCoverUrl`), only ever asked for by a `cover` request.
+   * `undefined`: nobody asked yet; `null`: asked, Goodreads has none (a stand-in image counts as none).
+   */
+  coverUrl?: string | null
 }
 export type GoodreadsNotFound = { status: 'not_found' }
 export type GoodreadsAnswer = GoodreadsFound | GoodreadsNotFound
@@ -112,6 +117,39 @@ export type AutoCompleteBook = {
   author: string
   rating: number
   ratingsCount: number
+  /** The cover's address without a size token (`goodreadsCoverUrl`); null when it has none. */
+  coverUrl: string | null
+}
+
+/** The only host a cover address may name: Goodreads' image CDN. */
+export const GOODREADS_IMAGE_HOST = 'i.gr-assets.com'
+
+/**
+ * The full-size cover address for an `imageUrl` of an auto_complete hit, or null when it is none: the
+ * size token (`._SY75_`, `._SX50_`, …) before the extension is stripped (the bare address is the ~332x500
+ * original), only https at exactly `i.gr-assets.com` is taken (no port, no credentials), query and
+ * fragment are dropped, and Goodreads' stand-in (`nophoto`) is no cover. What it returns is only linked,
+ * never copied (docs/covers.md, "Goodreads, the last resort").
+ */
+export function goodreadsCoverUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string' || raw.length > 500) return null
+  let url: URL
+  try {
+    url = new URL(raw.trim())
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'https:' || url.hostname !== GOODREADS_IMAGE_HOST || url.port || url.username || url.password) {
+    return null
+  }
+  if (/nophoto/i.test(url.pathname) || !/\.(jpe?g|png|webp)$/i.test(url.pathname)) return null
+  const path = url.pathname.replace(/(?:\._[A-Z]{1,3}\d+_)+(?=\.[A-Za-z]+$)/, '')
+  return `https://${GOODREADS_IMAGE_HOST}${path}`
+}
+
+/** The result Goodreads gave for exactly this book id (the very edition: no title check), if it gave it. */
+export function pickByBookId(results: AutoCompleteBook[], id: string | null): AutoCompleteBook | null {
+  return (id && results.find((result) => result.bookId === id)) || null
 }
 
 export function autoCompleteUrl(query: string): string {
@@ -139,7 +177,15 @@ export function parseAutoComplete(status: number, body: string): AutoCompleteBoo
     const title = typeof b.title === 'string' ? b.title : ''
     const bare = typeof b.bookTitleBare === 'string' ? b.bookTitleBare : title
     if (!id || average === null || ratings === null || typeof author !== 'string' || !bare) continue
-    books.push({ bookId: id, title: title || bare, bookTitleBare: bare, author, rating: average, ratingsCount: ratings })
+    books.push({
+      bookId: id,
+      title: title || bare,
+      bookTitleBare: bare,
+      author,
+      rating: average,
+      ratingsCount: ratings,
+      coverUrl: goodreadsCoverUrl(b.imageUrl),
+    })
   }
   return books
 }
@@ -224,8 +270,8 @@ export function matchTitle(book: LookupBook, results: AutoCompleteBook[]): AutoC
   return null
 }
 
-/** A title search result as what the function stores. */
-export function foundByTitle(result: AutoCompleteBook): GoodreadsFound {
+/** A title search result as what the function stores; its cover only when it was asked for (`cover`). */
+export function foundByTitle(result: AutoCompleteBook, cover = false): GoodreadsFound {
   return {
     status: 'found',
     matchedBy: 'title',
@@ -233,6 +279,7 @@ export function foundByTitle(result: AutoCompleteBook): GoodreadsFound {
     rating: result.rating,
     ratingsCount: result.ratingsCount,
     reviewsCount: null,
+    ...(cover ? { coverUrl: result.coverUrl } : {}),
   }
 }
 

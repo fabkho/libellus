@@ -8,8 +8,9 @@
  *   cd supabase/functions/goodreads-rating && deno test
  */
 import { assert, assertEquals } from '@std/assert'
+import { titleKey } from './goodreads.ts'
 import { createGoodreads, type FetchLike, USER_AGENT } from './client.ts'
-import { type CachedAnswer, createHandler, MAX_AGE_MS, MAX_BODY_BYTES, MAX_KEY_CHARS, NOT_FOUND_MAX_AGE_MS } from './handler.ts'
+import { BUCKETS, type CachedAnswer, createHandler, MAX_AGE_MS, MAX_BODY_BYTES, MAX_KEY_CHARS, NOT_FOUND_MAX_AGE_MS } from './handler.ts'
 import { fakeClock, recordedFetch, recording } from './test_support.ts'
 
 const SMALL_GODS = { isbn13: '9780061803208', title: 'Small Gods', authors: ['Terry Pratchett'] }
@@ -28,7 +29,7 @@ function setup(
     authorized?: boolean
     maxWaitMs?: number
     timeoutMs?: number
-    throttle?: (member: string) => Promise<boolean>
+    throttle?: (member: string, bucket: string) => Promise<boolean>
   } = {},
 ) {
   const time = fakeClock()
@@ -61,7 +62,10 @@ function setup(
   return { handler, store, time, asked: recorded.asked, logs }
 }
 
-function ask(book: { isbn13?: string; title?: string; authors?: string[] }, token = 'member') {
+function ask(
+  book: { isbn13?: string; title?: string; authors?: string[]; cover?: boolean; goodreadsBookId?: string },
+  token = 'member',
+) {
   return new Request('http://localhost/goodreads-rating', {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -501,4 +505,146 @@ Deno.test('F16: when the counter cannot be asked the answer is 503, never an unl
   assertEquals([response.status, await response.json()], [503, { error: 'busy' }])
   assertEquals(asked.length, 0)
   assertEquals(logs.length, 1)
+})
+
+// -------------------------------- the Goodreads cover (a last-resort cover source)
+
+const SANDMAN_NO_ISBN = { title: SANDMAN.title, authors: SANDMAN.authors }
+const SANDMAN_KEY = `title:${titleKey(SANDMAN_NO_ISBN)}`
+const SANDMAN_COVER = 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1312279891i/25102.jpg'
+const ABSOLUTE_COVER = 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1558896137i/10864102.jpg'
+
+Deno.test('cover: a title request answers the cover without its size token and the Goodreads id; an ISBN is ignored', async () => {
+  const { handler, asked, store } = setup()
+  const body = await (await handler(ask({ ...SANDMAN, cover: true }))).json()
+  assertEquals([body.status, body.goodreadsId, body.coverUrl], ['found', '25102', SANDMAN_COVER])
+  assertEquals(asked.map((a) => new URL(a.url).pathname), ['/book/auto_complete'])
+  const row = store.get(SANDMAN_KEY)
+  assert(row?.status === 'found' && row.coverUrl === SANDMAN_COVER)
+  assertEquals(store.has(SANDMAN.isbn13), false)
+})
+
+Deno.test('cover: an ISBN that is not valid does not matter, the title is asked', async () => {
+  const { handler } = setup()
+  const response = await handler(ask({ ...SANDMAN_NO_ISBN, isbn13: 'nonsense', cover: true }))
+  assertEquals(response.status, 200)
+  assertEquals((await response.json()).coverUrl, SANDMAN_COVER)
+})
+
+Deno.test('cover: the result with the given Goodreads book id is taken, whatever its title; the cache keeps the rule\'s hit', async () => {
+  const { handler, store } = setup()
+  const body = await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true, goodreadsBookId: '10864102' }))).json()
+  // "The Absolute Sandman, Volume 5" is not the Book's title: only the id makes it the answer.
+  assertEquals([body.status, body.goodreadsId, body.coverUrl], ['found', '10864102', ABSOLUTE_COVER])
+  const row = store.get(SANDMAN_KEY)
+  assert(row?.status === 'found' && row.goodreadsId === '25102' && row.coverUrl === SANDMAN_COVER)
+})
+
+Deno.test('cover: an id Goodreads does not return falls back to the same-work rule', async () => {
+  const { handler } = setup()
+  const body = await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true, goodreadsBookId: '999' }))).json()
+  assertEquals([body.goodreadsId, body.coverUrl], ['25102', SANDMAN_COVER])
+})
+
+Deno.test('cover: a title that matches nothing, and an id that is not there, is not_found with no cover', async () => {
+  const { handler, store } = setup()
+  const body = await (await handler(ask({ ...NOBODY, cover: true, goodreadsBookId: '5' }))).json()
+  assertEquals([body.status, body.goodreadsId, body.coverUrl], ['not_found', null, null])
+  assertEquals(store.get(`title:${titleKey(NOBODY)}`)?.status, 'not_found')
+})
+
+Deno.test('cover: an image Goodreads stands in for (nophoto) is no cover, and that is cached as "none"', async () => {
+  const { handler, asked, store } = setup()
+  const book = { ...SANDMAN_NO_ISBN, cover: true, goodreadsBookId: '210810558' }
+  const body = await (await handler(ask(book))).json()
+  assertEquals([body.status, body.goodreadsId, body.coverUrl], ['found', '210810558', null])
+  // The id's edition is not the rule's hit; the rule's hit (25102) is what is stored.
+  const row = store.get(SANDMAN_KEY)
+  assert(row?.status === 'found' && row.coverUrl === SANDMAN_COVER)
+  // A book whose own stored hit has no cover: asked once, then answered as "none" without Goodreads.
+  store.set(SANDMAN_KEY, { ...row!, coverUrl: null } as CachedAnswer)
+  asked.length = 0
+  assertEquals((await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).json()).coverUrl, null)
+  assertEquals(asked.length, 0)
+})
+
+Deno.test('cover: a cached found row that never asked for a cover is refreshed once, then answered from the cache', async () => {
+  const { handler, asked, store } = setup()
+  assertEquals((await (await handler(ask(SANDMAN_NO_ISBN))).json()).coverUrl, undefined)
+  const plain = store.get(SANDMAN_KEY)
+  assert(plain?.status === 'found' && plain.coverUrl === undefined)
+  assertEquals(asked.length, 1)
+
+  const body = await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).json()
+  assertEquals(body.coverUrl, SANDMAN_COVER)
+  assertEquals(asked.length, 2)
+  const refreshed = store.get(SANDMAN_KEY)
+  assert(refreshed?.status === 'found' && refreshed.coverUrl === SANDMAN_COVER)
+
+  assertEquals((await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).json()).coverUrl, SANDMAN_COVER)
+  assertEquals(asked.length, 2)
+})
+
+Deno.test('cover: a cached miss is asked again when an id may find the book, not otherwise', async () => {
+  const { handler, asked, store } = setup()
+  store.set(SANDMAN_KEY, { status: 'not_found', checkedAt: new Date(Date.parse('2026-10-04T10:00:00Z')).toISOString() })
+  assertEquals((await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).json()).status, 'not_found')
+  assertEquals(asked.length, 0)
+  const body = await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true, goodreadsBookId: '10864102' }))).json()
+  assertEquals([asked.length, body.coverUrl], [1, ABSOLUTE_COVER])
+})
+
+Deno.test('cover: a rating request never tells the cover (and a refresh writes none: index.ts leaves the column alone)', async () => {
+  const { handler, store, time } = setup()
+  await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))
+  const body = await (await handler(ask(SANDMAN_NO_ISBN))).json()
+  assertEquals('coverUrl' in body, false)
+  // Stale: the rating path asks again and writes an answer without a cover (the table keeps what it has).
+  time.advance(MAX_AGE_MS + 1000)
+  const refreshed = await (await handler(ask(SANDMAN_NO_ISBN))).json()
+  assertEquals('coverUrl' in refreshed, false)
+  const row = store.get(SANDMAN_KEY)
+  assert(row?.status === 'found' && row.coverUrl === undefined)
+})
+
+Deno.test('cover: GET with cover=1 and goodreadsBookId; a malformed id is dropped', async () => {
+  const { handler } = setup()
+  const url = (id: string) =>
+    `http://localhost/goodreads-rating?cover=1&goodreadsBookId=${id}&title=${encodeURIComponent(SANDMAN.title)}&author=Neil%20Gaiman`
+  const get = (id: string) => handler(new Request(url(id), { headers: { authorization: 'Bearer member' } }))
+  assertEquals((await (await get('10864102')).json()).goodreadsId, '10864102')
+  assertEquals((await (await get('1; drop')).json()).goodreadsId, '25102')
+})
+
+Deno.test('cover: its own rate bucket (goodreads-cover), apart from the ratings\'', async () => {
+  const counted: [string, string][] = []
+  const { handler } = setup({
+    throttle: (member, bucket) => {
+      counted.push([member, bucket])
+      return Promise.resolve(bucket !== 'goodreads-cover' || counted.filter(([, b]) => b === bucket).length <= 2)
+    },
+  })
+  assertEquals((await handler(ask(SMALL_GODS))).status, 200)
+  assertEquals((await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).status, 200)
+  assertEquals((await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).status, 200)
+  const over = await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))
+  assertEquals([over.status, await over.json()], [429, { error: 'rate_limited' }])
+  // The ratings' own bucket is not used up by the covers.
+  assertEquals((await handler(ask(SMALL_GODS))).status, 200)
+  assertEquals(counted.map(([, b]) => b), [
+    'goodreads-rating',
+    'goodreads-cover',
+    'goodreads-cover',
+    'goodreads-cover',
+    'goodreads-rating',
+  ])
+  assertEquals(BUCKETS['goodreads-cover'], { limit: 40, windowSeconds: 60 })
+  assertEquals(BUCKETS['goodreads-rating'].limit, 20)
+})
+
+Deno.test('cover: Goodreads failing is a 502 and nothing is stored; a cover without a title is no Book', async () => {
+  const { handler, store } = setup({ fetch: () => Promise.reject(new Error('down')) })
+  assertEquals((await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).status, 502)
+  assertEquals(store.size, 0)
+  assertEquals((await handler(ask({ isbn13: SMALL_GODS.isbn13, cover: true }))).status, 400)
 })
