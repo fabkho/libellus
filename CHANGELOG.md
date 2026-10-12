@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.19.0](https://github.com/fabkho/libellus/compare/v1.18.1...v1.19.0) (2026-10-12)
+
+
+### Features
+
+* **profile:** links to her profiles on other platforms (Goodreads, Reado, YouTube, Instagram, TikTok) ([#339](https://github.com/fabkho/libellus/issues/339)) ([f915e6e](https://github.com/fabkho/libellus/commit/f915e6e67c81d917117b0e3f56cb0473e99b290c))
+* **profile:** tap an author, a genre or "not rated yet" for those books ([#12](https://github.com/fabkho/libellus/issues/12), [#16](https://github.com/fabkho/libellus/issues/16), [#15](https://github.com/fabkho/libellus/issues/15), [#14](https://github.com/fabkho/libellus/issues/14)) ([#335](https://github.com/fabkho/libellus/issues/335)) ([50b2c82](https://github.com/fabkho/libellus/commit/50b2c822ed60f311593549d1d5de5b1908e53cbd))
+
+
+### Fixes
+
+* **profile:** a test id on the tappable author rows ([#340](https://github.com/fabkho/libellus/issues/340)) ([896ed99](https://github.com/fabkho/libellus/commit/896ed998a13f9b44b709ce5a31edc9c76040c67f))
+
 ## [1.18.1](https://github.com/fabkho/libellus/compare/v1.18.0...v1.18.1) (2026-10-12)
 
 
