@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage } from './covers'
+import type { CoverKind } from './coverRank'
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
 import { editionSignature } from './editions'
@@ -74,6 +75,8 @@ export type Edition = {
   coverFrom?: Book | BookSnapshot | null
   /** The cover fill found its cover (data/coverFill.ts): for a Catalogue Book it is handed to `fill_book_covers` once written. */
   filled?: boolean
+  /** Which kind of cover the fill gave it (data/coverRank.ts): a better kind found later replaces it. */
+  coverKind?: CoverKind
   /**
    * The other editions of the row's work its title search found, best fit
    * first (the order the match was picked in): what the preview offers when

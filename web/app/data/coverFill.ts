@@ -1,4 +1,5 @@
 import type { Book, BookSnapshot } from './books'
+import { coverKindOf, coverRank, type CoverKind } from './coverRank'
 import { verifyCover, type ProbeImage, type ResolvedCover } from './covers'
 import { abortError, type FetchLike } from './fetching'
 import { isSameWork, languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions'
@@ -58,7 +59,8 @@ export type CoverWanted = {
 }
 
 export type CoverSource = 'sibling' | 'openlibrary' | 'work' | 'search'
-export type CoverFound = ResolvedCover & { coverUrl: string; source: CoverSource }
+/** `kind`: edition-exact, the work's ebook or another edition of the work (data/coverRank.ts: the one ranking). */
+export type CoverFound = ResolvedCover & { coverUrl: string; source: CoverSource; kind: CoverKind }
 
 export type CoverFillProgress = {
   /** Rows queued, rows answered (found or not), rows with a cover now. */
@@ -102,7 +104,8 @@ export type CoverFillOptions = {
   wait?: (ms: number, signal?: AbortSignal) => Promise<void>
 }
 
-type Item = { wanted: CoverWanted; attempts: number; done: boolean; ol: Promise<string | null>; second: boolean }
+/** `fallback`: the cover another edition of the work gave, reported at once; a better kind (the ebook) replaces it when it turns up. */
+type Item = { wanted: CoverWanted; attempts: number; done: boolean; ol: Promise<string | null>; second: boolean; fallback: CoverFound | null }
 
 const APPLE_HOST = 'itunes.apple.com'
 const OPENLIBRARY_API = 'https://openlibrary.org/api/books'
@@ -136,14 +139,20 @@ export function siblingCovers(wanted: CoverWanted): string[] {
 /**
  * The edition with the found cover on it: on its Book when a source found the edition itself, as the
  * cover its Book borrows (`coverFrom`) when only the file knows it (the ISBN is hers, the image another
- * edition's). Null when it has a cover already (the member's own pick, or another way found one first).
+ * edition's). Null when it has a cover already (the member's own pick, or another way found one first), unless
+ * the cover is one the fill gave it and this one is of a better kind (the ebook for another print edition's).
  */
-export function mergeCover(edition: Edition, found: ResolvedCover): Edition | null {
-  if (edition.book.coverUrl || edition.coverFrom?.coverUrl) return null
+export function mergeCover(edition: Edition, found: ResolvedCover & { kind?: CoverKind }): Edition | null {
+  if (edition.book.coverUrl || edition.coverFrom?.coverUrl) {
+    // Only what the fill found itself is replaced, and only by a better kind (the ranking, data/coverRank.ts).
+    const better = edition.filled && edition.coverKind && found.kind && coverRank(found.kind) < coverRank(edition.coverKind)
+    if (!better) return null
+  }
   const cover = { coverUrl: found.coverUrl, coverThumbhash: found.coverThumbhash, coverColors: found.coverColors }
+  const kind = found.kind ? { coverKind: found.kind } : {}
   return edition.via
-    ? { ...edition, filled: true, book: { ...edition.book, ...cover } as Edition['book'] }
-    : { ...edition, filled: true, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
+    ? { ...edition, filled: true, ...kind, book: { ...edition.book, ...cover } as Edition['book'] }
+    : { ...edition, filled: true, ...kind, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
 }
 
 const withIn = <T>(promise: Promise<T>, ms: number): Promise<T> =>
@@ -194,14 +203,24 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     if (answered >= items.size || stopped) for (const waiter of [...waiters]) waiter()
   }
 
-  function finish(item: Item, cover: CoverFound | null) {
+  function finish(item: Item, best: CoverFound | null) {
     if (item.done) return
     item.done = true
     answered++
-    if (cover && !stopped) {
-      found++
-      onFound(item.wanted.key, cover)
+    if (best && !stopped) {
+      // A cover reported before (the fallback) is already counted: the better one replaces it.
+      if (!item.fallback) found++
+      onFound(item.wanted.key, best)
     }
+    report()
+  }
+
+  /** Another edition's cover: reported now (the preview and the write take what is found by then), and replaced if the work's ebook is found. */
+  function offer(item: Item, cover: CoverFound | null) {
+    if (!cover || stopped || item.done) return
+    item.fallback = cover
+    found++
+    onFound(item.wanted.key, cover)
     report()
   }
 
@@ -214,7 +233,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     }
   }
   const asFound = (cover: ResolvedCover | null, source: CoverSource): CoverFound | null =>
-    cover?.coverUrl ? { ...cover, coverUrl: cover.coverUrl, source } : null
+    cover?.coverUrl ? { ...cover, coverUrl: cover.coverUrl, source, kind: coverKindOf(source, cover.coverUrl) } : null
 
   // ---------------------------------------------------- Open Library, batched
 
@@ -336,24 +355,27 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   let active = 0
 
   async function check(item: Item) {
-    // 1. A sibling edition the title search already found.
-    for (const url of siblingCovers(item.wanted).slice(0, 3)) {
-      const cover = asFound(await verified(url), 'sibling')
-      if (cover) return finish(item, cover)
-    }
-    // 2. Open Library, asked for with the rows that came with it.
+    // The ranking (data/coverRank.ts): the very edition, then the work's ebook, then another edition.
+    // 1. Open Library by the row's ISBN, asked for with the rows that came with it: the edition itself.
     const url = await item.ol
     if (url) {
       const cover = asFound(await verified(url), 'openlibrary')
       if (cover) return finish(item, cover)
     }
-    // 3. The work's other editions at Open Library (a search by title and author, the cover of the best fit).
-    const work = await openLibraryWork(item)
-    if (work) {
-      const cover = asFound(await verified(work), 'work')
-      if (cover) return finish(item, cover)
+    // 2. A sibling edition the title search already found: no request. Apple's are ebooks (taken); the others wait.
+    for (const sibling of siblingCovers(item.wanted).slice(0, 3)) {
+      const cover = asFound(await verified(sibling), 'sibling')
+      if (!cover) continue
+      if (cover.kind === 'ebook') return finish(item, cover)
+      if (!item.fallback) offer(item, cover)
     }
-    // 4. Everything else: the paced search.
+    // 3. The work's other editions at Open Library (a search by title and author, the cover of the best fit):
+    //    kept as the fallback, the ebook is still asked for.
+    if (!item.fallback) {
+      const work = await openLibraryWork(item)
+      if (work) offer(item, asFound(await verified(work), 'work'))
+    }
+    // 4. The work's ebook: the paced search at Apple Books, the row's storefront first; it replaces the fallback.
     if (stopped) return finish(item, null)
     searchQueue.push(item)
     void runSearch()
@@ -467,7 +489,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   return {
     add(wanted) {
       if (stopped || items.has(wanted.key)) return
-      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null), second: false }
+      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null), second: false, fallback: null }
       items.set(wanted.key, item)
       item.ol = requestOpenLibrary(item)
       lane.push(item)
