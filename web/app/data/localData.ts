@@ -222,17 +222,19 @@ export type DeviceEnvironment = {
  * (`clearLocalData`), the IndexedDB database (outbox, ebook records, profile photo), the ebook files,
  * the caches of what she browsed and their expiry list (`clearLocalFiles`). `sessionEnded` is a
  * session that died by itself: the keys named in `keep` (the sign-in or share that waits) and the
- * outbox stay, as her unsynced writes are not lost by a token that expired; her own sign-out, deleting
- * her account and another member signing in clear all of it but when a code was last mailed
+ * outbox stay, as her unsynced writes are not lost by a token that expired; her own sign-out and
+ * another member signing in clear all of it but when a code was last mailed
  * (`CODE_SENT_KEY`: a fingerprint and a time, gone after the 20 s window it describes, and the server's
- * limit, not hers: signing in again right after signing out must not ask for a second mail). The one place that knows the list, run
+ * limit, not hers: signing in again right after signing out must not ask for a second mail), while
+ * deleting her account (`accountDeleted`) clears that key too and keeps only what `keep` names,
+ * as nothing of hers outlives the account. The one place that knows the list, run
  * by `stores/session.ts` and by tests/device-data.test.ts.
  */
 export async function forgetMemberData(
   { storage, indexedDB, caches, files }: DeviceEnvironment,
-  { sessionEnded = false, keep = [], memberId = null }: { sessionEnded?: boolean; keep?: readonly string[]; memberId?: string | null } = {},
+  { sessionEnded = false, keep = [], memberId = null, accountDeleted = false }: { sessionEnded?: boolean; keep?: readonly string[]; memberId?: string | null; accountDeleted?: boolean } = {},
 ): Promise<void> {
-  clearLocalData(storage, { keep: sessionEnded ? [...keep, CODE_SENT_KEY] : [CODE_SENT_KEY] })
+  clearLocalData(storage, { keep: accountDeleted ? keep : sessionEnded ? [...keep, CODE_SENT_KEY] : [CODE_SENT_KEY] })
   if (indexedDB) await clearLocalDatabase(indexedDB, LOCAL_DATABASE, { keep: sessionEnded ? ['outbox'] : [] })
   await clearLocalFiles({ storage: files, caches, databases: indexedDB })
   // The outbox that stays is hers: if another member signs in, it goes (`otherMemberHere`).

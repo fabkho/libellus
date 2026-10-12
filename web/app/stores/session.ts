@@ -362,8 +362,10 @@ export const useSessionStore = defineStore('session', () => {
    * kept), the outbox and her ebook records in IndexedDB, her ebook files, the covers and
    * portraits she browsed, the pending address. `sessionEnded`: her session died by itself, so
    * what waits for the next sign-in (the address, a share, a follow) and her unsynced writes stay.
+   * `accountDeleted`: she deleted her account, so nothing of hers stays at all: not what waits for a
+   * sign-in, a share or a follow, and not even the code last mailed.
    */
-  async function forgetDevice({ sessionEnded = false }: { sessionEnded?: boolean } = {}) {
+  async function forgetDevice({ sessionEnded = false, accountDeleted = false }: { sessionEnded?: boolean; accountDeleted?: boolean } = {}) {
     if (import.meta.client) {
       const memberId = member.value?.id ?? readSavedMember(window.localStorage)?.id ?? null
       useSyncStore().close()
@@ -374,7 +376,7 @@ export const useSessionStore = defineStore('session', () => {
           caches: typeof caches === 'undefined' ? null : caches,
           files: navigator.storage,
         },
-        { sessionEnded, memberId, keep: [PENDING_SIGN_IN_KEY, PENDING_SHARE_KEY, PENDING_FOLLOW_KEY] },
+        { sessionEnded, accountDeleted, memberId, keep: accountDeleted ? [] : [PENDING_SIGN_IN_KEY, PENDING_SHARE_KEY, PENDING_FOLLOW_KEY] },
       )
       // The Friends tab setting went with the rest: back to its default, on.
       useFriendsTabStore().reload()
@@ -393,7 +395,8 @@ export const useSessionStore = defineStore('session', () => {
   /**
    * Deletes the member's account on the server (`createAuth.deleteAccount`),
    * then does what signing out does: the outbox is discarded with the rest of
-   * what the device cached (the theme stays). Returns why it did not happen,
+   * what the device cached (the theme stays), and the code last mailed goes too,
+   * as nothing of hers outlives the account. Returns why it did not happen,
    * or null when it did; on a failure nothing was removed anywhere.
    */
   async function deleteAccount(): Promise<DeleteAccountError | null> {
@@ -404,7 +407,7 @@ export const useSessionStore = defineStore('session', () => {
     try {
       const result = await client.deleteAccount({ online: isOnline })
       if (result.error) return result.error
-      await forgetDevice()
+      await forgetDevice({ accountDeleted: true })
       accountDeleted.value = true
       return null
     } finally {
