@@ -180,6 +180,19 @@ async function unfold() {
   content: '';
   transform: translateY(-50%);
 }
+.reach-who,
+.reach-title {
+  /* WCAG 2.2's 24 px target is the link's own box (axe does not count the ::after); the 2 px over its 22 px line are
+     taken back by the negative margins, so the row keeps its compact height. */
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  margin-block: -1px;
+}
+/* Above the title's 44 px box, which reaches up under it by the 1 px: axe counts a target another one covers as obscured. */
+.reach-who {
+  z-index: 1;
+}
 /* Her name and the title are two lines, one under the other: two 44 px boxes cannot both be centred on them. The name's box
    reaches up into the row's padding and down 4 px past its line; the title's starts there and reaches down (over the authors
    line, which is not a target): each is 44 px tall and neither covers the other. */
