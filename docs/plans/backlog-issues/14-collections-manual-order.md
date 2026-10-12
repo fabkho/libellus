@@ -1,6 +1,6 @@
 Title: Collections: your own order next to "last edited"
 Labels: feature, priority:low
-Package: WP-14 · item #7 · tier P3 · size L · model Sonnet · depends on: WP-12, WP-13 · wave 3
+Package: WP-14 · item #7 · tier P3 · size L · model Sonnet · depends on: WP-12, WP-13 · wave 4
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/14-collections-manual-order.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/14-collections-manual-order.md)
 Plan: docs/plans/backlog-execution.md
 

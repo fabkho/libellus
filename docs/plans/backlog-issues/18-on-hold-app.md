@@ -1,12 +1,12 @@
 Title: On Hold, app: pause and resume a book, and every screen that shows a status
 Labels: feature, priority:low
-Package: WP-18 · item #23 · tier P3 · size L · model Sonnet (Opus review) · depends on: WP-17, WP-15 · wave 5
+Package: WP-18 · item #23 · tier P3 · size L · model Sonnet (Opus review) · depends on: WP-17, WP-15 · wave 6
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/18-on-hold-app.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/18-on-hold-app.md)
 Plan: docs/plans/backlog-execution.md
 
 ---
 ## Problem
-With the paused status from WP-17, every place in the app that knows a status needs it (list in `docs/plans/backlog-execution.md` §4.4).
+With the paused status from WP-17, every place in the app that knows a status needs it (list in `docs/plans/backlog-execution.md` §5.4).
 
 ## Scope (recommended UI)
 - Paused Books as a quiet section at the end of the Currently reading segment (a fourth segment does not fit 390 px in German).
