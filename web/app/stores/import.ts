@@ -229,7 +229,6 @@ export const useImportStore = defineStore('import', () => {
       (verdict === 'matched' || verdict === 'fromFile') &&
       !chosen.value.has(index) &&
       !edition.unsure &&
-      edition.book.source !== 'manual' &&
       !edition.book.coverUrl &&
       !edition.coverFrom?.coverUrl
     if (!wanted) return fill.drop(book.key)

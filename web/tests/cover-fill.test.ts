@@ -599,6 +599,13 @@ describe('merging a found cover', () => {
     expect(merged.coverFrom?.coverUrl).toBe(OL(5))
   })
 
+  it('puts the cover on a Manual book itself: nothing else is hers to lend it', () => {
+    const edition: Edition = { book: snapshot({ source: 'manual', isbn13: null }), via: null, unsure: false }
+    const next = mergeCover(edition, { coverUrl: APPLE(1), coverThumbhash: 'b', coverColors: null })!
+    expect(next.book.coverUrl).toBe(APPLE(1))
+    expect(next.coverFrom).toBeUndefined()
+  })
+
   it('leaves an edition that has a cover alone', () => {
     expect(mergeCover(edition({ book: snapshot({ coverUrl: OL(1) }) }), found)).toBeNull()
     expect(mergeCover(edition({ via: null, coverFrom: snapshot({ coverUrl: OL(1) }) }), found)).toBeNull()

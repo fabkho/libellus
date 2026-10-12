@@ -150,7 +150,8 @@ export function mergeCover(edition: Edition, found: ResolvedCover & { kind?: Cov
   }
   const cover = { coverUrl: found.coverUrl, coverThumbhash: found.coverThumbhash, coverColors: found.coverColors }
   const kind = found.kind ? { coverKind: found.kind } : {}
-  return edition.via
+  // A Manual book (no edition found, no ISBN) wears it itself: nothing else is hers to lend it.
+  return edition.via || edition.book.source === 'manual'
     ? { ...edition, filled: true, ...kind, book: { ...edition.book, ...cover } as Edition['book'] }
     : { ...edition, filled: true, ...kind, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
 }
