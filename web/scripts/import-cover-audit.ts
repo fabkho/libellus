@@ -44,13 +44,22 @@ const seconds = (from: number) => Math.round((performance.now() - from) / 100) /
 // ------------------------------------------------------------------ requests, counted per host
 
 type KindCount = { requests: number; hits: number; refused: number; serverErrors: number; failed: number; ms: number }
+
+/** The host of a URL, '' when it cannot be parsed: a host check never sees that string. */
+const hostOf = (url: string): string => {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return ''
+  }
+}
 const kinds: Record<string, KindCount> = {}
 const kindOf = (url: string): string => {
   const u = new URL(url)
   if (u.hostname === 'itunes.apple.com') return `apple.${u.pathname.slice(1)}${u.searchParams.get('isbn') ? '.isbn' : ''}${u.pathname === '/search' ? '.title' : ''}.${u.searchParams.get('country') ?? '?'}`
   if (u.hostname === 'openlibrary.org') return `openlibrary.${u.pathname.startsWith('/search.json') ? 'search' : u.pathname.startsWith('/isbn/') ? 'isbn-record' : u.pathname.startsWith('/api/books') ? 'api-books' : u.pathname.startsWith('/works/') ? 'work' : 'other'}`
   if (u.hostname === 'covers.openlibrary.org') return `covers.openlibrary.${u.pathname.startsWith('/b/isbn/') ? 'by-isbn' : 'by-id'}`
-  if (u.hostname.endsWith('mzstatic.com')) return 'apple.artwork'
+  if (u.hostname === 'mzstatic.com' || u.hostname.endsWith('.mzstatic.com')) return 'apple.artwork'
   if (u.hostname === 'services.dnb.de') return 'dnb.sru'
   return u.hostname
 }
@@ -312,12 +321,13 @@ const sizes = { openLibrary: [] as Size[], apple: [] as Size[], originals: [] as
 for (const { cover_url: url } of pool) {
   const size = await sizeOf(url)
   if (!size) continue
-  if (url.includes('openlibrary.org')) {
+  const host = hostOf(url)
+  if (host === 'openlibrary.org' || host.endsWith('.openlibrary.org')) {
     sizes.openLibrary.push(size)
     // The unsuffixed original: what Open Library keeps (the `-L` size is capped at 500 px high).
     const original = await sizeOf(url.replace(/-[SML]\.jpg/, '.jpg').replace('?default=false', ''))
     if (original) sizes.originals.push({ ...original, absurd: original.height > 4000 || original.width / original.height > 1.5 || original.width / original.height < 0.25 })
-  } else if (url.includes('mzstatic.com')) sizes.apple.push(size)
+  } else if (host === 'mzstatic.com' || host.endsWith('.mzstatic.com')) sizes.apple.push(size)
 }
 const histogram = (list: Size[]) => {
   const out: Record<string, number> = { '<400': 0, '400-499': 0, '500-699': 0, '>=700': 0 }
