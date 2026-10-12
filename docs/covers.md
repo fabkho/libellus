@@ -183,8 +183,17 @@ Book that landed without a cover gets the one the fill found when a member who h
 (`fill_book_covers`: only a Book the member holds, only an allow-listed host, never replaces).
 
 A cover found by the lookup is read where it is kept: an Open Library cover is probed at `-L`, not at its 180 px
-`-M`. A narrow book's `-M` is under the 150 px floor (`MIN_COVER_SIDE`), and 19 of 708 books of one real import
+`-M`. A narrow book's `-M` was under the old 150 px floor, and 19 of 708 books of one real import
 lost a cover the lookup had found at the write for that reason.
+
+**A low-resolution cover is better than none** (owner rule). The only floor is a sanity one: under 40 px on the short side
+(`MIN_COVER_SIDE`) or one flat colour is no cover. From 40 to 149 px (`PREFERRED_COVER_SIDE`) a cover is accepted when nothing
+better exists: the chain keeps it as the fallback while it looks on, and the fill reports it like any other. Resolution is
+only a tie-breaker between real covers (`COVER_HEIGHT`, higher wins inside one kind of the ranking), never a reason to
+reject the only one. A better kind found later (the fill, a later import, the check, another member's import through
+`fill_book_covers`) replaces a cover the fill gave. The UI shows covers scaled by CSS with the thumbhash behind them, so a
+small one is soft but not broken. Measurements count a cover of any size as found and report those under 300 px high
+separately.
 
 ## Sizes the browser can choose (`srcset`, A7)
 

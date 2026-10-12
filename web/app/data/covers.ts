@@ -130,8 +130,22 @@ export const loadPixelsInBrowser: LoadPixels = (url) =>
 export type ProbedImage = { width: number; height: number; pixels: Pixels }
 export type ProbeImage = (url: string) => Promise<ProbedImage | null>
 
-/** An image smaller than this on its short side is a thumbnail, not a Cover. */
-export const MIN_COVER_SIDE = 150
+/**
+ * Owner rule: a low-resolution cover is better than none. Under this many pixels
+ * on its short side an image is a stray pixel or a broken icon, not a Cover: the
+ * only floor (and the flat-colour check below).
+ */
+export const MIN_COVER_SIDE = 40
+
+/**
+ * An image under this on its short side is a real cover of low resolution: taken
+ * when nothing better exists (the chain goes on looking and keeps it as the
+ * fallback), and replaced by a better one when one shows up later.
+ */
+export const PREFERRED_COVER_SIDE = 150
+
+/** What the Apple artwork is read at: a copy small enough to be quick, big enough for a thumbhash. */
+const APPLE_PROBE = { width: PREFERRED_COVER_SIDE * 2, height: PREFERRED_COVER_SIDE * 3 }
 
 /**
  * True for an image of one flat colour: the blank stand-in a source sends when
@@ -151,9 +165,11 @@ export function isPlaceholderImage(pixels: Pixels): boolean {
 }
 
 /** Whether a read image will do as a Cover. */
-export function coverVerdict(image: ProbedImage): 'ok' | 'tooSmall' | 'placeholder' {
-  if (Math.min(image.width, image.height) < MIN_COVER_SIDE) return 'tooSmall'
-  return isPlaceholderImage(image.pixels) ? 'placeholder' : 'ok'
+export function coverVerdict(image: ProbedImage): 'ok' | 'low' | 'tooSmall' | 'placeholder' {
+  const side = Math.min(image.width, image.height)
+  if (side < MIN_COVER_SIDE) return 'tooSmall'
+  if (isPlaceholderImage(image.pixels)) return 'placeholder'
+  return side < PREFERRED_COVER_SIDE ? 'low' : 'ok'
 }
 
 /** The cover fields of a Book entering the Catalogue. `coverUrl` null: the Placeholder cover. */
@@ -176,13 +192,13 @@ const OPENLIBRARY_COVERS = /^https:\/\/covers\.openlibrary\.org\//
 function appleCandidate(url: string): CoverCandidate {
   return {
     url: appleArtwork(url, COVER_LARGE.width, COVER_LARGE.height),
-    probe: appleArtwork(url, MIN_COVER_SIDE * 2, MIN_COVER_SIDE * 3),
+    probe: appleArtwork(url, APPLE_PROBE.width, APPLE_PROBE.height),
   }
 }
 
 function openLibraryCandidate(url: string): CoverCandidate {
   // Read at the size it is kept at: 'M' is at most 180 px wide, so a cover of a narrow
-  // book read at 'M' came out under MIN_COVER_SIDE and was dropped (19 of 708 books
+  // book read at 'M' came out under 150 px and was dropped (19 of 708 books
   // of one real import lost a cover found by the lookup).
   const large = openLibraryCoverAt(url, 'L')
   return { url: large, probe: large }
@@ -207,9 +223,10 @@ function within<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMEOUT>
  * 3. OpenLibrary's cover by the cover id it came with;
  * 4. OpenLibrary's cover by its ISBN.
  *
- * An image that is too small (MIN_COVER_SIDE) or of one flat colour is
- * passed over. The one that will do is kept as a large URL with its thumbhash
- * and colours. If none will do, the Book gets the Placeholder cover (no URL) —
+ * An image under MIN_COVER_SIDE or of one flat colour is passed over. One of low
+ * resolution (under PREFERRED_COVER_SIDE) is kept as the fallback while the chain
+ * looks for a better one: low-res beats the Placeholder. The one that will do is
+ * kept as a large URL with its thumbhash and colours. If none will do, the Book gets the Placeholder cover (no URL) —
  * unless its own image just could not be read in time, which is no reason to
  * throw it away: then it goes in without thumbhash and colours.
  */
@@ -221,6 +238,8 @@ export async function resolveBookCover(book: BookSnapshot, sources: CoverSources
   const ownCandidate =
     own && APPLE_CDN.test(own) ? appleCandidate(own) : own && OPENLIBRARY_COVERS.test(own) ? openLibraryCandidate(own) : null
   let unreadOwn: string | null = null
+  /** The first image of low resolution: taken only if nothing better turns up. */
+  let low: ResolvedCover | null = null
 
   async function attempt(candidate: CoverCandidate | null): Promise<ResolvedCover | null> {
     if (!candidate || tried.has(candidate.url) || remaining() <= 0) return null
@@ -235,9 +254,15 @@ export async function resolveBookCover(book: BookSnapshot, sources: CoverSources
       if (candidate.url === ownCandidate?.url) unreadOwn = candidate.url
       return null
     }
-    if (!image || coverVerdict(image) !== 'ok') return null
+    const verdict = image ? coverVerdict(image) : null
+    if (!image || (verdict !== 'ok' && verdict !== 'low')) return null
     const { thumbhash, colors } = describeCover(image.pixels)
-    return { coverUrl: candidate.url, coverThumbhash: thumbhash, coverColors: colors }
+    const resolved = { coverUrl: candidate.url, coverThumbhash: thumbhash, coverColors: colors }
+    if (verdict === 'low') {
+      low ??= resolved
+      return null
+    }
+    return resolved
   }
 
   const steps: (() => Promise<CoverCandidate | null>)[] = [
@@ -262,7 +287,7 @@ export async function resolveBookCover(book: BookSnapshot, sources: CoverSources
     const resolved = await attempt(await step())
     if (resolved) return resolved
   }
-  return { coverUrl: unreadOwn, coverThumbhash: null, coverColors: null }
+  return low ?? { coverUrl: unreadOwn, coverThumbhash: null, coverColors: null }
 }
 
 /**
@@ -270,7 +295,7 @@ export async function resolveBookCover(book: BookSnapshot, sources: CoverSources
  * thumbhash and colours: for a cover somebody else's lookup named (the import's
  * cover fill, data/coverFill.ts), where there is no chain to walk. Apple's
  * artwork and Open Library's covers are asked for at the sizes the chain uses;
- * any other address is read as it is. Null when it will not do; an image that
+ * any other address is read as it is. Null when it will not do (a stray pixel, a flat colour; a low-resolution cover does: it is better than none); an image that
  * could not be read in time (offline, a timeout) is kept without thumbhash and
  * colours, as the chain keeps its own.
  */
@@ -283,7 +308,8 @@ export async function verifyCover(url: string, sources: Pick<CoverSources, 'prob
     image = TIMEOUT
   }
   if (image === TIMEOUT) return { coverUrl: candidate.url, coverThumbhash: null, coverColors: null }
-  if (!image || coverVerdict(image) !== 'ok') return null
+  const verdict = image ? coverVerdict(image) : null
+  if (!image || (verdict !== 'ok' && verdict !== 'low')) return null
   const { thumbhash, colors } = describeCover(image.pixels)
   return { coverUrl: candidate.url, coverThumbhash: thumbhash, coverColors: colors }
 }
