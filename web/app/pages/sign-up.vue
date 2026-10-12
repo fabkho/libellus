@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useSessionStore } from '~/stores/session'
+import { localeOfTag } from '~/utils/locale'
 
 // BetterReads is invite-only: an address and the invite code that lets it in. The
 // database judges the code (and again when the address is proved); the form
 // asks first so a wrong code fails against the field that caused it.
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const session = useSessionStore()
 
 // Arrives prefilled when the sign-in screen found no account for the address.
@@ -21,7 +22,7 @@ const inviteError = computed(() =>
 const emailError = computed(() => (session.error && !inviteError.value ? session.error : null))
 
 async function submit() {
-  const next = await session.submitSignUp({ email: email.value, inviteCode: inviteCode.value })
+  const next = await session.submitSignUp({ email: email.value, inviteCode: inviteCode.value, locale: localeOfTag(locale.value) ?? 'en' })
   if (next === 'verify') await navigateTo('/verify')
 }
 </script>

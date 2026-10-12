@@ -243,7 +243,7 @@ describe('inviting', () => {
 
       const first = await owner.client.rpc('owner_waitlist_prepare_invite', { p_id: id })
       expect(first.error).toBeNull()
-      expect(first.data).toEqual([{ email: address, code: expect.stringMatching(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/), expires_at: expect.any(String) }])
+      expect(first.data).toEqual([{ email: address, code: expect.stringMatching(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/), expires_at: expect.any(String), locale: null }])
       const again = await owner.client.rpc('owner_waitlist_prepare_invite', { p_id: id })
       expect(again.data).toEqual(first.data)
       // Preparing does not mark her invited: the function does that once the mail went out.

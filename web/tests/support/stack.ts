@@ -262,6 +262,25 @@ export async function readMailedCode(email: string, nth = 1, timeoutMs = 10_000)
   throw new Error(`No mail arrived for ${email} within ${timeoutMs}ms`)
 }
 
+/**
+ * The newest mail to an address as a member would see it: subject, the plain text and the HTML's `lang`.
+ * Pass how many mails the box should hold by then (`nth`), as `readMailedCode` does.
+ */
+export async function readMail(email: string, nth = 1, timeoutMs = 10_000): Promise<{ subject: string; text: string; html: string }> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const messages = await mailboxFor(email)
+    const [latest] = messages
+    if (latest && messages.length >= nth) {
+      const response = await fetch(`${stack.mailUrl}/api/v1/message/${latest.ID}`)
+      const body = (await response.json()) as { Subject: string; Text: string; HTML: string }
+      return { subject: body.Subject, text: body.Text, html: body.HTML }
+    }
+    await sleep(200)
+  }
+  throw new Error(`No mail arrived for ${email} within ${timeoutMs}ms`)
+}
+
 /** Anything but the code that was sent, for the mistyped-code case. */
 export function mistype(code: string): string {
   return code

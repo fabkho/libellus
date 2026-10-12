@@ -9,6 +9,7 @@ import {
   type WaitlistEntry,
   type WaitlistErrorCode,
 } from '~/data/waitlist'
+import type { MailLocale } from '~/data/auth'
 import { isShelfOwner } from '~/utils/shelfOwner'
 import { useSessionStore } from '~/stores/session'
 
@@ -44,10 +45,10 @@ export const useWaitlistStore = defineStore('waitlist', () => {
   // ------------------------------------------------------------- the visitor
 
   /** Leaves an address from the reading page `token` belongs to; null when it went through. */
-  async function join(email: string, token: string | null, website = ''): Promise<JoinErrorCode | null> {
+  async function join(email: string, token: string | null, website = '', locale: MailLocale | null = null): Promise<JoinErrorCode | null> {
     const r = repo()
     if (!r) return 'unknown'
-    return (await r.join(email, token, website)).error
+    return (await r.join(email, token, website, locale)).error
   }
 
   // --------------------------------------------------------------- the owner

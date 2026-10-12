@@ -135,6 +135,7 @@ jobs:
             og:
               - *ci
               - 'supabase/functions/reading-page-og/**'
+              - 'web/app/utils/previewText.ts'
             enrich:
               - *ci
               - 'supabase/functions/enrich/**'

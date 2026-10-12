@@ -48,6 +48,9 @@ export type CodeRequest =
  */
 export type Member = { id: string; email: string; name?: string }
 
+/** The languages a mail is written in (the app's own: utils/locale.ts). */
+export type MailLocale = 'en' | 'de'
+
 /** The longest name the greeting takes. */
 export const MEMBER_NAME_MAX = 40
 
@@ -154,9 +157,16 @@ export function createAuth(client: SupabaseClient) {
     async requestSignUpCode({
       email,
       inviteCode,
+      locale,
     }: {
       email: string
       inviteCode: string
+      /**
+       * The language the app shows now. It goes into the new account's metadata, which is what the code's
+       * mail is written from: Auth ignores `data` for an address that already has an account, so this is
+       * the only moment a first mail can be German, and `saveLocale` keeps it right afterwards.
+       */
+      locale?: MailLocale
     }): Promise<AuthResult> {
       const code = inviteCode.trim()
       if (!code) return { error: 'invite_required' }
@@ -175,7 +185,7 @@ export function createAuth(client: SupabaseClient) {
 
       const { error } = await client.auth.signInWithOtp({
         email: email.trim(),
-        options: { shouldCreateUser: true, data: { invite_code: code } },
+        options: { shouldCreateUser: true, data: locale ? { invite_code: code, locale } : { invite_code: code } },
       })
       return { error: error ? mapAuthError(error) : null }
     },
@@ -235,6 +245,26 @@ export function createAuth(client: SupabaseClient) {
       const { data, error } = await client.auth.updateUser({ data: { name: cleanName(name) } })
       if (error) return { member: null, error: mapAuthError(error) }
       return { member: memberOf(data.user), error: null }
+    },
+
+    /**
+     * Keeps the account's mail language right: `user_metadata.locale`, the key the sign-in code's template
+     * branches on (supabase/templates/magic_link.html). The language itself is a setting of the device
+     * (utils/locale.ts); this copies it to the account, so a sign-in code asked for from a signed-out device
+     * comes in the language the member last used. Reads the session on the device first and asks the network
+     * only when the account holds another value, so a start costs nothing once it is in step. Never throws:
+     * offline or refused, the next start tries again.
+     */
+    async saveLocale(locale: MailLocale): Promise<'saved' | 'unchanged' | 'failed'> {
+      try {
+        const { data } = await client.auth.getSession()
+        if (!data.session) return 'failed'
+        if (data.session.user.user_metadata?.locale === locale) return 'unchanged'
+        const { error } = await client.auth.updateUser({ data: { locale } })
+        return error ? 'failed' : 'saved'
+      } catch {
+        return 'failed'
+      }
     },
 
     /** Ends the session on this device and revokes it on the server. */

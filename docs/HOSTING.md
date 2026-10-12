@@ -95,7 +95,16 @@ review she shared), `og:url`, `og:image` and its size, `twitter:card`, and `noin
   the pull request's preview, `curl -s <deployment>/r/<token> | grep cloudflareinsights`), so a
   visit to a reading page is counted like any page load, without cookies.
 
-Everything else stays static, and only `/share` and `/r/*` invoke a Function.
+**`web/functions/manifest.webmanifest.js`** (German group B of #257) — the web app manifest, in German for a German
+browser. A manifest has no per-language members, but the browser asks for it with its own `Accept-Language` at install
+and at every update check: the Function answers the built file untouched, and, when the browser's first language the app
+speaks is German, the same file with `lang: de`, a German `description` and German shortcut names (`app/utils/manifestText.ts`;
+`name` and `short_name` are the brand and never change). It sets `Vary: Accept-Language` and `Cache-Control: no-cache` itself
+(`_headers` does not reach it), and hands the asset back as it is when it cannot read it. Not verified on Cloudflare itself
+(no production access here): after the first deploy, `curl -H 'Accept-Language: de' https://<site>/manifest.webmanifest` should
+say `"lang":"de"`.
+
+Everything else stays static, and only `/share`, `/r/*` and `/manifest.webmanifest` invoke a Function.
 
 ## The reading page's Open Graph image
 

@@ -11,7 +11,7 @@
 -- the rows this test made (addresses end in @invite.pgtap.test).
 
 begin;
-select plan(35);
+select plan(40);
 
 create schema if not exists tests;
 
@@ -90,7 +90,7 @@ create temp table ids on commit drop as
          tests.member('wli-bo@libellus.test') as bo;
 grant select on ids to public;
 -- The codes this test got back, by name.
-create temp table got (name text primary key, code text, expires_at timestamptz, email text) on commit drop;
+create temp table got (name text primary key, code text, expires_at timestamptz, email text, locale text) on commit drop;
 grant all on got to public;
 
 insert into private.waitlist (email, consent_text_version)
@@ -100,6 +100,7 @@ values ('first@invite.pgtap.test', '2026-10'), ('second@invite.pgtap.test', '202
 
 select has_column('private', 'waitlist', 'invite_code_id', 'an entry keeps the code minted for it');
 select fk_ok('private', 'waitlist', 'invite_code_id', 'public', 'invite_codes', 'id', 'which is an invite code');
+select has_column('private', 'waitlist', 'locale', 'an entry keeps the language of the page it was joined from');
 select ok(has_function_privilege('authenticated', 'public.owner_waitlist_prepare_invite(uuid)', 'execute'),
           'a signed-in member may call it (the owner check is inside)');
 select ok(not has_function_privilege('anon', 'public.owner_waitlist_prepare_invite(uuid)', 'execute'), 'anon is not granted it');
@@ -135,9 +136,10 @@ select tests.act_as((select ada from ids));
 select throws_ok($$select * from public.owner_waitlist_prepare_invite(gen_random_uuid())$$,
                  'P0002', 'waitlist_entry_not_found', 'an id that is no entry is refused, and says so');
 
-insert into got select 'first', p.code, p.expires_at, p.email
+insert into got select 'first', p.code, p.expires_at, p.email, p.locale
   from public.owner_waitlist_prepare_invite(tests.entry_id('first@invite.pgtap.test')) p;
 select is((select email from got where name = 'first'), 'first@invite.pgtap.test', 'the owner gets the entry''s address');
+select is((select locale from got where name = 'first'), null, 'and no language when the entry has none (the mail is English then)');
 select ok((select code from got where name = 'first') ~ '^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$', 'and a fresh code, XXXX-XXXX');
 select is((select expires_at from got where name = 'first'), now() + interval '14 days', 'valid for 14 days');
 reset role;
@@ -205,6 +207,16 @@ select throws_ok(format(
     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
             'wli-second@libellus.test', jsonb_build_object('invite_code', %L), now(), now(), now())$$,
   (select code from got where name = 'after delete')), null, null, 'a second address is refused it');
+
+-- The language of her page comes back with the code, for the mail to be written in it.
+insert into private.waitlist (email, consent_text_version, locale) values ('third@invite.pgtap.test', '2026-10', 'de');
+select tests.act_as((select ada from ids));
+select is((select p.locale from public.owner_waitlist_prepare_invite(tests.entry_id('third@invite.pgtap.test')) p), 'de',
+          'an entry from a German page answers de');
+reset role;
+select throws_ok($$update private.waitlist set locale = 'fr' where email = 'third@invite.pgtap.test'$$, '23514', null,
+                 'a language the app does not speak cannot be stored');
+select is((select w.locale from private.waitlist w where w.email = 'third@invite.pgtap.test'), 'de', 'and the entry keeps its own');
 
 -- Marking stays what it was: the function calls it after the mail went out.
 select tests.act_as((select ada from ids));

@@ -11,10 +11,11 @@
 // button says Offline, #15).
 import { looksLikeEmail } from '~/data/waitlist'
 import { useWaitlistStore } from '~/stores/waitlist'
+import { localeOfTag } from '~/utils/locale'
 
 const props = defineProps<{ token: string | null }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useWaitlistStore()
 const online = useOnline()
 const id = useId()
@@ -33,7 +34,7 @@ async function submit() {
     return
   }
   sending.value = true
-  const error = await store.join(email.value.trim(), props.token, website.value)
+  const error = await store.join(email.value.trim(), props.token, website.value, localeOfTag(locale.value))
   sending.value = false
   if (error === 'offline') return
   if (error) {
