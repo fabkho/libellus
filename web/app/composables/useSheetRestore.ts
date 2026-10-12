@@ -1,8 +1,13 @@
 import { useStatsStore } from '~/stores/stats'
 
-/** How a sheet is put back (components/ui/Sheet.vue, `restore`): where its list was scrolled. */
+/**
+ * How a sheet is put back (components/ui/Sheet.vue, `restore`): where its list was scrolled and, for a list that
+ * comes in pages (components/profile/ReadsSheet.vue), how many of its rows were drawn, so the scroll lands on the row
+ * it was left on.
+ */
 export interface SheetRestore {
   scroll: number
+  shown?: number
 }
 
 /**
@@ -28,13 +33,15 @@ export function useSheetRestore<T>({ testid, sheet, reopen }: { testid: string; 
 
   const scrollOf = () =>
     document.querySelector<HTMLElement>(`[data-testid="${testid}"] [data-sheet-body]`)?.scrollTop ?? 0
+  /** The rows drawn in the sheet's list (`<testid>.list`): undefined for a sheet without one. */
+  const rowsOf = () => document.querySelector(`[data-testid="${testid}"] [data-testid="${testid}.list"]`)?.childElementCount
 
   // Once the sheet is closed again, the next opening is a fresh one.
   watch(sheet, (now) => now === null && (restore.value = null), { flush: 'sync' })
 
   onBeforeRouteLeave((to) => {
     const open = sheet()
-    if (open !== null && to.path.startsWith('/book/')) stats.keptSheet = { testid, page: route.fullPath, sheet: open, scroll: scrollOf() }
+    if (open !== null && to.path.startsWith('/book/')) stats.keptSheet = { testid, page: route.fullPath, sheet: open, scroll: scrollOf(), shown: rowsOf() }
     else if (stats.keptSheet?.testid === testid) stats.keptSheet = null
   })
 
@@ -46,7 +53,7 @@ export function useSheetRestore<T>({ testid, sheet, reopen }: { testid: string; 
     // Back from the book: this page's history entry points forward to it.
     const fromBook = String(window.history.state?.forward ?? '').startsWith('/book/')
     if (!kept || kept.page !== route.fullPath || !fromBook) return
-    restore.value = { scroll: kept.scroll }
+    restore.value = { scroll: kept.scroll, shown: kept.shown }
     reopen(kept.sheet as T)
   }
   onMounted(back)

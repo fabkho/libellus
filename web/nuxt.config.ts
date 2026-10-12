@@ -99,6 +99,16 @@ export default defineNuxtConfig({
     // components in. Web vitals, third-party scripts and the HTML check stay on.
     hints: { features: { hydration: false, lazyLoad: false } },
   },
+  // The dev-only pages under `app/pages/prototype/` (a sheet opened with 200 invented Books for screenshots): their routes
+  // are dropped before a build, so none of it is bundled, precached or reachable (the route guard lets `/prototype` through
+  // in dev alone, middleware/auth.global.ts).
+  $production: {
+    hooks: {
+      'pages:extend': (pages: { path: string }[]) => {
+        for (let i = pages.length - 1; i >= 0; i--) if (pages[i]!.path.startsWith('/prototype')) pages.splice(i, 1)
+      },
+    },
+  },
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [

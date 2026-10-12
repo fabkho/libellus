@@ -265,11 +265,16 @@
       "allYears": "Alle Jahre",
       "readIn": "an einem Tag | in {count} Tagen",
       "pagesMissing": "Bücher ohne Seitenzahl",
+      "showMore": "{count} weitere anzeigen",
+      "empty": "Hier ist noch kein Buch.",
       "day": "{weekday}, {date}"
     },
     "year": {
       "eyebrow": "Dein Lesejahr",
       "favourite": "Favorit",
+      "favourites": "Deine Lieblingsbücher",
+      "favouritesOf": "Lieblingsbücher von {name}",
+      "favouritesNeutral": "Lieblingsbücher",
       "months": "Monate",
       "monthLabel": "{month}: keine Bücher | {month}: {count} Buch | {month}: {count} Bücher",
       "other": "Andere Jahre",

@@ -28,6 +28,10 @@ function watchScripts(page: Page) {
 const GERMAN_MARKER = de.shelf.loadError
 const ENGLISH_MARKER = en.shelf.loadError
 const lang = (page: Page) => page.evaluate(() => document.documentElement.lang)
+// <html lang> is written by the head manager (app.vue, `useHead`), which draws into the document one timer after
+// the screen's words (unhead's debounced renderer: `setTimeout(…, 0)`). A read right after a word shows can come
+// first on a slow runner, so the attribute is waited for like any other thing on screen.
+const htmlLang = (page: Page) => expect.poll(() => lang(page), { message: '<html lang>' })
 const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), LOCALE_KEY)
 
 test('the two message files differ in what the checks look for', () => {
@@ -41,7 +45,7 @@ test.describe('an English phone', () => {
     const scripts = watchScripts(page)
     await page.goto('/sign-in')
     await expect(page.getByTestId('signIn.title')).toHaveText(en.signIn.title)
-    expect(await lang(page)).toBe('en')
+    await htmlLang(page).toBe('en')
     expect(scripts.has(ENGLISH_MARKER)).toBe(true)
     expect(scripts.has(GERMAN_MARKER)).toBe(false)
     expect(await stored(page)).toBeNull()
@@ -60,7 +64,7 @@ test.describe('an English phone', () => {
     // Applied now: the rows of the page are German, <html lang> is de, the page was not reloaded.
     await expect(row).toContainText(de.language.row)
     await expect(page.getByTestId('profile.contact')).toContainText(de.contact.row)
-    expect(await lang(page)).toBe('de')
+    await htmlLang(page).toBe('de')
     expect(await page.evaluate(() => performance.timeOrigin)).toBe(loaded)
     expect(await stored(page)).toBe('de')
     // Each option is named in its own language, whatever language the app is in.
@@ -70,7 +74,7 @@ test.describe('an English phone', () => {
     // A reload on an English phone stays German: the choice beats the phone.
     await page.reload()
     await expect(page.getByTestId('profile.language')).toContainText(de.language.row)
-    expect(await lang(page)).toBe('de')
+    await htmlLang(page).toBe('de')
 
     // Signing out does not forget it: the way in speaks German too.
     await page.getByTestId('profile.signOut').scrollIntoViewIfNeeded()
@@ -87,9 +91,9 @@ test.describe('a German phone', () => {
     const scripts = watchScripts(page)
     await page.goto('/sign-in')
     await expect(page.getByTestId('signIn.title')).toHaveText(de.signIn.title)
-    // German from the first drawing: <html lang> is de as soon as the title shows, never en first.
-    expect(await lang(page)).toBe('de')
-    expect(await page.title()).toBe(de.app.name)
+    // German from the first drawing (English is never downloaded, below): <html lang> and the title follow the shell.
+    await htmlLang(page).toBe('de')
+    await expect(page).toHaveTitle(de.app.name)
     expect(scripts.has(GERMAN_MARKER)).toBe(true)
     expect(scripts.has(ENGLISH_MARKER)).toBe(false)
     // Nothing was chosen, so nothing is stored: the phone keeps deciding.
@@ -104,11 +108,11 @@ test.describe('a German phone', () => {
     await expect(page.getByTestId('profile.languageChoice.de')).toHaveAttribute('aria-checked', 'true')
     await page.getByTestId('profile.languageChoice.en').click()
     await expect(page.getByTestId('profile.language')).toContainText(en.language.row)
-    expect(await lang(page)).toBe('en')
+    await htmlLang(page).toBe('en')
     await page.reload()
     await untilStill(page)
     await expect(page.getByTestId('profile.language')).toContainText(en.language.row)
-    expect(await lang(page)).toBe('en')
+    await htmlLang(page).toBe('en')
     expect(await stored(page)).toBe('en')
   })
 
