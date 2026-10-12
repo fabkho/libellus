@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.1](https://github.com/fabkho/libellus/compare/v1.18.0...v1.18.1) (2026-10-12)
+
+
+### Fixes
+
+* **auth:** clear the code-sent cooldown when a member deletes her account ([#336](https://github.com/fabkho/libellus/issues/336)) ([c5bfdad](https://github.com/fabkho/libellus/commit/c5bfdadbb55917c09998de483dbfda1f73ca6f71))
+
 ## [1.18.0](https://github.com/fabkho/libellus/compare/v1.17.0...v1.18.0) (2026-10-12)
 
 
