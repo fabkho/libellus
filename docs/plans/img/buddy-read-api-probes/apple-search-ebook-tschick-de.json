@@ -1,0 +1,58 @@
+{
+  "url": "https://itunes.apple.com/search?term=tschick+herrndorf&media=ebook&country=de",
+  "resultCount": 2,
+  "results": [
+    {
+      "trackName": "Tschick",
+      "kind": "ebook",
+      "trackId": 419816131,
+      "keys": [
+        "artistId",
+        "artistIds",
+        "artistName",
+        "artistViewUrl",
+        "artworkUrl100",
+        "artworkUrl60",
+        "averageUserRating",
+        "currency",
+        "description",
+        "formattedPrice",
+        "genreIds",
+        "genres",
+        "kind",
+        "price",
+        "releaseDate",
+        "trackCensoredName",
+        "trackId",
+        "trackName",
+        "trackViewUrl",
+        "userRatingCount"
+      ]
+    },
+    {
+      "trackName": "Tschick von Wolfgang Herrndorf",
+      "kind": "ebook",
+      "trackId": 1387877825,
+      "keys": [
+        "artistId",
+        "artistIds",
+        "artistName",
+        "artistViewUrl",
+        "artworkUrl100",
+        "artworkUrl60",
+        "currency",
+        "description",
+        "formattedPrice",
+        "genreIds",
+        "genres",
+        "kind",
+        "price",
+        "releaseDate",
+        "trackCensoredName",
+        "trackId",
+        "trackName",
+        "trackViewUrl"
+      ]
+    }
+  ]
+}

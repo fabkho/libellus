@@ -1,0 +1,197 @@
+{
+  "sample": "search.json?q=subject:fiction&sort=random, cover_edition_key of each work",
+  "n": 38,
+  "with_toc": 0,
+  "editions": [
+    {
+      "key": "/books/OL27346610M",
+      "title": "Cold Blood",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL24322431M",
+      "title": "Blackout",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL39218895M",
+      "title": "Booking the Crook",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL7543019M",
+      "title": "Send in MS Teeny Wonderful",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL8189133M",
+      "title": "Following the Mystery Man",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL7433311M",
+      "title": "Durable Goods",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL22994035M",
+      "title": "Kogda korolʹ gubit Frant︠s︡ii︠u︡",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL31881865M",
+      "title": "Wings of the morning",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL35323545M",
+      "title": "Noddy and the treasure map",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL13153148M",
+      "title": "Cuentos de momias para ninos (Con Los Pelos De Punta)",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL9401341M",
+      "title": "Night Whispers",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL31881735M",
+      "title": "TIM",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL6901685M",
+      "title": "Lost girl",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL24087537M",
+      "title": "The Assassin",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL10590225M",
+      "title": "The Tarot Reader's Daughter",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL26832692M",
+      "title": "Brother",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL11227646M",
+      "title": "Waldo, Tell Me Where's Grandpa (Waldo, Tell Me about)",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL2555710M",
+      "title": "Shorty",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL27199006M",
+      "title": "Rock-a-bye romp",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL28517524M",
+      "title": "Ruby's War",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL10670612M",
+      "title": "A Question of Honor",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL3401232M",
+      "title": "Codex Derynianus II",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL26474032M",
+      "title": "A temporary courtship",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL32152301M",
+      "title": "Virtually challenged",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL27150204M",
+      "title": "Joe Victim",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL24749793M",
+      "title": "The spyglass tree",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL24745471M",
+      "title": "Chimney sweeps",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL39808695M",
+      "title": "Nasty love",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL2210251M",
+      "title": "Hartman's game",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL8053724M",
+      "title": "Majestic Descending",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL24611930M",
+      "title": "Helping Hand",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL37865047M",
+      "title": "Chance",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL24800459M",
+      "title": "Bridge to courage",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL800157M",
+      "title": "The rainbow fields",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL3393512M",
+      "title": "Matt goes to Mars",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL24750328M",
+      "title": "The trolls",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL26430208M",
+      "title": "Hammers slammers",
+      "toc": 0
+    },
+    {
+      "key": "/books/OL16636367M",
+      "title": "The emperor's painting",
+      "toc": 0
+    }
+  ]
+}

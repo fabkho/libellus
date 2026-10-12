@@ -1,0 +1,20 @@
+Calls: curl "https://services.dnb.de/sru/dnb?version=1.1&operation=searchRetrieve&query=isbn%3D<ISBN>&recordSchema=MARC21-xml&maximumRecords=3"  (MARC 856 $3 = link label)
+Title queries: same endpoint with query=<q>&maximumRecords=100; counts records whose 856 says "Inhaltsverzeichnis" (per= matches any person incl. secondary literature)
+9783596294312 was meant as a Kafka probe but is a Buddenbrooks ISBN; kept as a positive TOC example.
+
+9783499241000: records=1
+  856 [('m', 'X:MVB'), ('q', 'text/html'), ('u', 'https://services.dnb.de/plus/idn/983400806/blurb/'), ('3', 'Inhaltstext')]
+  245 ['&#152;Die&#156; Vermessung der Welt']
+9783499256356: records=1
+  856 [('m', 'X:MVB'), ('q', 'text/html'), ('u', 'https://services.dnb.de/plus/idn/1011962799/blurb/'), ('3', 'Inhaltstext')]
+  245 ['Tschick']
+9783596294312: records=8
+  856 [('m', 'B:DE-101'), ('q', 'application/pdf'), ('u', 'https://d-nb.info/1362379786/04'), ('3', 'Inhaltsverzeichnis')]
+  856 [('m', 'B:DE-101'), ('q', 'application/pdf'), ('u', 'https://d-nb.info/940637227/04'), ('3', 'Inhaltsverzeichnis')]
+  856 [('m', 'B:DE-101'), ('q', 'application/pdf'), ('u', 'https://d-nb.info/931096979/04'), ('3', 'Inhaltsverzeichnis')]
+  245 ['Buddenbrooks']
+  245 ['Buddenbrooks']
+  245 ['Buddenbrooks']
+query=tit%3DProcess%20and%20per%3DKafka numberOfRecords=556 records_with_Inhaltsverzeichnis_856/fetched=7 100
+query=tit%3DProzess%20and%20per%3DKafka numberOfRecords=732 records_with_Inhaltsverzeichnis_856/fetched=20 100
+query=tit%3DHobbit%20and%20per%3DTolkien numberOfRecords=199 records_with_Inhaltsverzeichnis_856/fetched=57 100

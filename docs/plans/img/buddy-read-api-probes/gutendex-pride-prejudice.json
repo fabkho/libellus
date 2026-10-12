@@ -1,0 +1,43 @@
+{
+  "count": 6,
+  "results": [
+    {
+      "id": 1342,
+      "title": "Pride and Prejudice",
+      "languages": [
+        "en"
+      ],
+      "download_count": 190246,
+      "formats": {
+        "text/html": "https://www.gutenberg.org/ebooks/1342.html.images",
+        "application/epub+zip": "https://www.gutenberg.org/ebooks/1342.epub3.images",
+        "text/plain; charset=utf-8": "https://www.gutenberg.org/ebooks/1342.txt.utf-8"
+      }
+    },
+    {
+      "id": 42671,
+      "title": "Pride and Prejudice",
+      "languages": [
+        "en"
+      ],
+      "download_count": 33256,
+      "formats": {
+        "text/html": "https://www.gutenberg.org/ebooks/42671.html.images",
+        "application/epub+zip": "https://www.gutenberg.org/ebooks/42671.epub3.images",
+        "text/plain; charset=utf-8": "https://www.gutenberg.org/ebooks/42671.txt.utf-8"
+      }
+    },
+    {
+      "id": 26301,
+      "title": "Pride and Prejudice",
+      "languages": [
+        "en"
+      ],
+      "download_count": 9593,
+      "formats": {
+        "text/plain; charset=us-ascii": "https://www.gutenberg.org/files/26301/26301-readme.txt",
+        "text/html": "https://www.gutenberg.org/files/26301/26301-index.html"
+      }
+    }
+  ]
+}

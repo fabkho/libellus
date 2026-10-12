@@ -1,0 +1,59 @@
+{
+  "resultCount": 2,
+  "results": [
+    {
+      "trackName": "Project Hail Mary",
+      "kind": "ebook",
+      "trackId": 1526997052,
+      "keys": [
+        "artistId",
+        "artistIds",
+        "artistName",
+        "artistViewUrl",
+        "artworkUrl100",
+        "artworkUrl60",
+        "averageUserRating",
+        "currency",
+        "description",
+        "formattedPrice",
+        "genreIds",
+        "genres",
+        "kind",
+        "price",
+        "releaseDate",
+        "trackCensoredName",
+        "trackId",
+        "trackName",
+        "trackViewUrl",
+        "userRatingCount"
+      ]
+    },
+    {
+      "trackName": "Project Hail Mary",
+      "kind": "ebook",
+      "trackId": 6445358697,
+      "keys": [
+        "artistId",
+        "artistIds",
+        "artistName",
+        "artistViewUrl",
+        "artworkUrl100",
+        "artworkUrl60",
+        "averageUserRating",
+        "currency",
+        "description",
+        "formattedPrice",
+        "genreIds",
+        "genres",
+        "kind",
+        "price",
+        "releaseDate",
+        "trackCensoredName",
+        "trackId",
+        "trackName",
+        "trackViewUrl",
+        "userRatingCount"
+      ]
+    }
+  ]
+}

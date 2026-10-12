@@ -1,0 +1,104 @@
+{
+ "source": "https://gutenberg.pglaf.org/cache/epub/69327/pg69327.epub",
+ "ncx": "OEBPS/toc.ncx",
+ "navpoints_total": 18,
+ "depth_counts": {
+  "1": 14,
+  "2": 4
+ },
+ "labels_starting_chapter": 0,
+ "first_15": [
+  {
+   "depth": 1,
+   "label": "ERSTES KAPITEL VERHAFTUNG · GESPRÄCH MIT FRAU GRUBACH · DANN FRÄULEIN BÜRSTNER",
+   "src": "7136272849151507255_69327-h-1.htm.html#pgepubid00000"
+  },
+  {
+   "depth": 1,
+   "label": "ZWEITES KAPITEL ERSTE UNTERSUCHUNG",
+   "src": "7136272849151507255_69327-h-2.htm.html#pgepubid00001"
+  },
+  {
+   "depth": 1,
+   "label": "DRITTES KAPITEL IM LEEREN SITZUNGSSAAL · DER STUDENT · DIE KANZLEIEN",
+   "src": "7136272849151507255_69327-h-3.htm.html#pgepubid00002"
+  },
+  {
+   "depth": 1,
+   "label": "VIERTES KAPITEL DIE FREUNDIN DES FRÄULEIN BÜRSTNER",
+   "src": "7136272849151507255_69327-h-4.htm.html#pgepubid00003"
+  },
+  {
+   "depth": 1,
+   "label": "FÜNFTES KAPITEL DER PRÜGLER",
+   "src": "7136272849151507255_69327-h-5.htm.html#pgepubid00004"
+  },
+  {
+   "depth": 1,
+   "label": "SECHSTES KAPITEL DER ONKEL · LENI",
+   "src": "7136272849151507255_69327-h-6.htm.html#pgepubid00005"
+  },
+  {
+   "depth": 1,
+   "label": "SIEBENTES KAPITEL ADVOKAT · FABRIKANT · MALER",
+   "src": "7136272849151507255_69327-h-7.htm.html#pgepubid00006"
+  },
+  {
+   "depth": 1,
+   "label": "ACHTES KAPITEL KAUFMANN BLOCK · KÜNDIGUNG DES ADVOKATEN",
+   "src": "7136272849151507255_69327-h-10.htm.html#pgepubid00007"
+  },
+  {
+   "depth": 1,
+   "label": "NEUNTES KAPITEL IM DOM",
+   "src": "7136272849151507255_69327-h-11.htm.html#pgepubid00008"
+  },
+  {
+   "depth": 1,
+   "label": "ZEHNTES KAPITEL ENDE",
+   "src": "7136272849151507255_69327-h-12.htm.html#pgepubid00009"
+  },
+  {
+   "depth": 1,
+   "label": "NACHWORT",
+   "src": "7136272849151507255_69327-h-13.htm.html#pgepubid00010"
+  },
+  {
+   "depth": 1,
+   "label": "Inhaltsverzeichnis",
+   "src": "7136272849151507255_69327-h-13.htm.html#toc"
+  },
+  {
+   "depth": 1,
+   "label": "Kolophon",
+   "src": "7136272849151507255_69327-h-13.htm.html#pgepubid00011"
+  },
+  {
+   "depth": 2,
+   "label": "Verfügbarkeit",
+   "src": "7136272849151507255_69327-h-13.htm.html#pgepubid00012"
+  },
+  {
+   "depth": 2,
+   "label": "Metadaten",
+   "src": "7136272849151507255_69327-h-13.htm.html#pgepubid00013"
+  }
+ ],
+ "last_3": [
+  {
+   "depth": 2,
+   "label": "Überblick der Revisionen",
+   "src": "7136272849151507255_69327-h-13.htm.html#pgepubid00014"
+  },
+  {
+   "depth": 2,
+   "label": "Korrekturen",
+   "src": "7136272849151507255_69327-h-13.htm.html#pgepubid00015"
+  },
+  {
+   "depth": 1,
+   "label": "THE FULL PROJECT GUTENBERG™ LICENSE",
+   "src": "7136272849151507255_69327-h-13.htm.html#pg-footer-heading"
+  }
+ ]
+}
