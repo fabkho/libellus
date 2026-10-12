@@ -201,6 +201,21 @@ describe('handing found covers to the Catalogue', () => {
     ])
   })
 
+  it('hands a Goodreads cover the same way, so the next member never asks Goodreads for that Book (a Manual book keeps its own)', async () => {
+    calls.length = 0
+    const GR = (n: number) => `https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1682494830i/${n}.jpg`
+    const catalogueBook = { ...snapshot(2), id: 'b2', createdAt: '', coverUrl: GR(2), coverThumbhash: 'h2', coverColors: null } as never
+    const rows: ImportRow[] = [
+      withCoverUrl(1, { coverUrl: GR(1) }),
+      { ...rowOf(2), book: catalogueBook, coverFilled: true },
+      withCoverUrl(4, { source: 'manual', isbn13: null, coverUrl: GR(4) }),
+    ]
+    await importer(client()).write(rows, { onWritten: () => {} })
+    const fills = calls.filter((call) => call.name === 'fill_book_covers')
+    expect(fills).toHaveLength(1)
+    expect(fills[0]!.args.p_covers?.map((cover) => cover.cover_url)).toEqual([GR(1), GR(2)])
+  })
+
   it('writes the import whatever that call says', async () => {
     calls.length = 0
     const result = await importer(client(true)).write([withCoverUrl(1)], { onWritten: () => {} })

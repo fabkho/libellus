@@ -15,10 +15,11 @@ const GOODREADS_COVER_ADDRESS = /^https:\/\/i\.gr-assets\.com\/[^\s?#]+$/
 export type GoodreadsCoverQuery = { title: string; authors: string[]; goodreadsBookId?: string | null }
 
 /**
- * `{ coverUrl }` once Goodreads answered (`coverUrl: null`: it has no cover for this book), `null` when it could
- * not be asked: offline, refused, over the member's limit, unreachable. Never throws.
+ * `{ coverUrl }` once Goodreads answered (`coverUrl: null`: it has no cover for this book), `'blocked'` when the
+ * function says Goodreads is turning it away (`status: 'blocked'`, its 10-minute breaker; a miss is not that),
+ * `null` when it could not be asked: offline, refused, over the member's limit, unreachable. Never throws.
  */
-export type GoodreadsCoverResult = { coverUrl: string | null } | null
+export type GoodreadsCoverResult = { coverUrl: string | null } | 'blocked' | null
 
 export type GoodreadsCover = {
   find: (query: GoodreadsCoverQuery) => Promise<GoodreadsCoverResult>
@@ -33,6 +34,7 @@ export function createGoodreadsCover(client: FunctionsClient, { online = () => t
           body: { title, authors, cover: true, ...(goodreadsBookId ? { goodreadsBookId } : {}) },
         })
         const answer = data as { status?: unknown; coverUrl?: unknown } | null
+        if (!error && answer?.status === 'blocked') return 'blocked'
         if (error || !answer || (answer.status !== 'found' && answer.status !== 'not_found')) return null
         const coverUrl = typeof answer.coverUrl === 'string' && GOODREADS_COVER_ADDRESS.test(answer.coverUrl) ? answer.coverUrl : null
         return { coverUrl }

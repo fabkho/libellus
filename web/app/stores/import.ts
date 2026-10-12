@@ -259,6 +259,14 @@ export const useImportStore = defineStore('import', () => {
     return (goodreadsCover ??= createGoodreadsCover(backend, { online: isOnline }))
   }
 
+  /**
+   * Goodreads is turning the function away (the function's breaker is open): one entry in the error log, no toast; the
+   * rows go on without a Goodreads cover, the cloth stands in. The log folds a repeat into a count.
+   */
+  function goodreadsBlocked() {
+    reportError('error', 'goodreads cover source blocked')
+  }
+
   /** "Find a cover" on one row (any file): asked now, one row, not through the fill's lane. */
   const coverSearch = ref<{ key: string; state: 'asking' | 'found' | 'none' | 'failed' } | null>(null)
 
@@ -279,6 +287,11 @@ export const useImportStore = defineStore('import', () => {
     const goodreadsBookId = /^goodreads:(\d{1,20})$/.exec(key)?.[1] ?? null
     const answer = await goodreadsCovers()?.find({ title: book.title, authors: book.authors, goodreadsBookId })
     if (!answer) return settle('failed')
+    // Blocked: the same quiet "no cover found" a miss gets, and the owner's log hears of it.
+    if (answer === 'blocked') {
+      goodreadsBlocked()
+      return settle('none')
+    }
     const cover = answer.coverUrl ? await verifyCover(answer.coverUrl, { probe: probeImageInBrowser }).catch(() => null) : null
     if (!cover?.coverUrl || coverSearch.value !== mine) return settle('none')
     coverFound(key, { ...cover, coverUrl: cover.coverUrl, source: 'goodreads', kind: 'goodreads' })
@@ -297,8 +310,9 @@ export const useImportStore = defineStore('import', () => {
         const answer = await goodreadsCovers()?.find(query)
         // Not asked (offline, refused, over the limit): a failure the stage's breaker counts.
         if (!answer) throw new Error('goodreads cover unavailable')
-        return answer.coverUrl
+        return answer === 'blocked' ? answer : answer.coverUrl
       },
+      onBlocked: goodreadsBlocked,
       onFound: (key, found) => {
         if (fill === own) coverFound(key, found)
       },

@@ -31,8 +31,8 @@ import type { Edition } from './bookImport'
  *    stopped for good after a run of failures or when its `budgetMs` is spent;
  * 4. **Goodreads**, a last resort (flagged: `GOODREADS_COVERS`, docs/covers.md), only for a row of a Goodreads file
  *    (`goodreadsId`, the file's own book id) that has no cover and no fallback after the Apple lane: one ask at a
- *    time, one every `goodreadsGapMs`, under the same budget, stopped for good after `GOODREADS_FAILURES` in a row.
- *    Its cover is ranked below every other kind, so it never replaces one.
+ *    time, one every `goodreadsGapMs`, under the same budget, stopped for good after `GOODREADS_FAILURES` in a row, and at once, with `onBlocked` told, when Goodreads says
+ *    it is blocking us (`'blocked'`). Its cover is ranked below every other kind, so it never replaces one.
  *
  * A cover is only linked: the address and its thumbhash are kept, never the image
  * (docs/THIRD-PARTY.md). Framework-free; `fetch`, the search and the image probe come
@@ -109,10 +109,14 @@ export type CoverFillOptions = {
   /** How long a host stays refused, in ms (`pacedFetch(…).blockedFor`); the search lane waits it out. */
   hostBlockedFor?: (host: string) => number
   /**
-   * Asks for the Goodreads cover of a row (`data/goodreadsCover.ts`): its address, or null when Goodreads has none.
+   * Asks for the Goodreads cover of a row (`data/goodreadsCover.ts`): its address, or null when Goodreads has none,
+   * or `'blocked'` when Goodreads is turning the function away: the stage gives its lane up at once (not after
+   * `GOODREADS_FAILURES`) and `onBlocked` is called, once.
    * Rejects when it could not ask (offline, refused, over its limit): that counts toward the stage's breaker.
    */
-  goodreads?: (query: { title: string; authors: string[]; goodreadsBookId: string | null }) => Promise<string | null>
+  goodreads?: (query: { title: string; authors: string[]; goodreadsBookId: string | null }) => Promise<string | null | 'blocked'>
+  /** Goodreads said it is blocking us (once per fill, however many rows were in flight). The rows go on without it. */
+  onBlocked?: () => void
   /** Whether the Goodreads stage runs at all: `GOODREADS_COVERS` (data/coverRank.ts), the one off switch. */
   goodreadsCovers?: boolean
   goodreadsGapMs?: number
@@ -202,6 +206,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     budgetMs = COVER_FILL_BUDGET_MS,
     searchGapMs = COVER_FILL_SEARCH_GAP_MS,
     goodreads,
+    onBlocked,
     goodreadsCovers = GOODREADS_COVERS,
     goodreadsGapMs = COVER_FILL_GOODREADS_GAP_MS,
     parallel = COVER_FILL_PARALLEL,
@@ -516,11 +521,12 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   const goodreadsQueue: Item[] = []
   let goodreadsRunning = false
   let goodreadsFailures = 0
+  let goodreadsBlocked = false
   let goodreadsNextAt = 0
 
   /** The Goodreads stage is open: switched on, wired, not given up, the budget not spent. */
   const goodreadsOpen = () =>
-    goodreadsCovers && Boolean(goodreads) && !stopped && goodreadsFailures < GOODREADS_FAILURES && !(deadline !== null && now() >= deadline)
+    goodreadsCovers && Boolean(goodreads) && !stopped && !goodreadsBlocked && goodreadsFailures < GOODREADS_FAILURES && !(deadline !== null && now() >= deadline)
 
   /**
    * Where an item goes once the search lane is through with it: a row of a Goodreads file with no cover at all (the
@@ -567,7 +573,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   async function askGoodreads(item: Item) {
     const { row, goodreadsId } = item.wanted
     calls.goodreads++
-    let url: string | null
+    let url: string | null | 'blocked'
     try {
       url = await withIn(goodreads!({ title: row.title, authors: row.authors, goodreadsBookId: goodreadsId ?? null }), COVER_CALL_TIMEOUT_MS)
     } catch {
@@ -575,6 +581,18 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       return finish(item, null)
     }
     goodreadsFailures = 0
+    if (url === 'blocked') {
+      // Given up at once, for the rest of this fill; told once (another ask in flight cannot tell it twice).
+      if (!goodreadsBlocked && !stopped) {
+        goodreadsBlocked = true
+        try {
+          onBlocked?.()
+        } catch {
+          /* a reporter that fails must not stop the fill */
+        }
+      }
+      return finish(item, null)
+    }
     if (!url || stopped) return finish(item, null)
     finish(item, asFound(await verified(url), 'goodreads'))
   }

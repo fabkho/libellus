@@ -197,6 +197,41 @@ describe('the Goodreads stage of the cover fill', () => {
     expect(at[2]! - at[1]!).toBeGreaterThanOrEqual(COVER_FILL_GOODREADS_GAP_MS)
   })
 
+  it('gives its lane up AT ONCE on blocked (not after three failures), tells onBlocked once, and the rows go on without a cover', async () => {
+    let blocked = 0
+    const { fill, found, asked } = setup({
+      goodreads: async (query) => (asked.push(query), 'blocked'),
+      onBlocked: () => void blocked++,
+    })
+    for (const n of [1, 2, 3, 4]) fill.add(wanted(n))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(asked).toHaveLength(1)
+    expect(blocked).toBe(1)
+    expect(found).toEqual({})
+    expect(fill.calls().goodreads).toBe(1)
+    expect(fill.progress()).toEqual({ total: 4, done: 4, found: 0 })
+    // A row added later is not asked either.
+    fill.add(wanted(5))
+    await fill.settled(1000)
+    expect(asked).toHaveLength(1)
+    expect(blocked).toBe(1)
+  })
+
+  it('a failing onBlocked does not stop the fill', async () => {
+    const { fill, asked } = setup({
+      goodreads: async (query) => (asked.push(query), 'blocked'),
+      onBlocked: () => {
+        throw new Error('log down')
+      },
+    })
+    fill.add(wanted(1))
+    fill.add(wanted(2))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(fill.progress().done).toBe(2)
+  })
+
   it('gives up after three failures in a row; a success in between resets the count', async () => {
     let calls = 0
     const { fill, found } = setup({
@@ -321,6 +356,14 @@ describe('createGoodreadsCover (the function\'s client)', () => {
     expect(await createGoodreadsCover(offline.client).find({ title: ' ', authors: ['A'] })).toBeNull()
     expect(await createGoodreadsCover(offline.client).find({ title: 'T', authors: [] })).toBeNull()
     expect(offline.calls).toEqual([])
+  })
+
+  it('answers "blocked" when the function says Goodreads is turning it away; a miss is not that', async () => {
+    const book = { title: 'Der Roman', authors: ['Anna Autorin'] }
+    expect(await createGoodreadsCover(invoker({ data: { status: 'blocked', retryAfterSeconds: 600 }, error: null }).client).find(book)).toBe('blocked')
+    expect(await createGoodreadsCover(invoker({ data: { status: 'not_found', coverUrl: null }, error: null }).client).find(book)).toEqual({ coverUrl: null })
+    // An error response is still "could not ask", whatever it carries.
+    expect(await createGoodreadsCover(invoker({ data: { status: 'blocked' }, error: new Error('x') }).client).find(book)).toBeNull()
   })
 
   it('takes only an address at i.gr-assets.com: any other is no cover', async () => {

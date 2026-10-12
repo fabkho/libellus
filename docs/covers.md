@@ -220,6 +220,22 @@ Owner-accepted risk, decided before merge (the PR says so). If Goodreads objects
 too), and those Books show the cloth cover (UiCover draws it for a cover that does not load), a better source filling in
 later by itself. Nothing was copied, so there is nothing to delete.
 
+Blocked: Goodreads can switch the keyless endpoints off or start refusing us, and we must see it and carry on. The function
+(`goodreads-rating`) calls it a block, not a miss and not its own `busy`, when `auto_complete` or `review_counts` answers HTTP
+403, 429 or 503, a 202 or an empty body, a body that is not JSON, or JSON of another shape. A block is never cached. It opens a
+function-level breaker for 10 minutes: no request goes to Goodreads meanwhile, and a lookup that needs one answers
+`{ status: 'blocked', retryAfterSeconds }` (HTTP 200, so the client reads it; the book page's rating line then simply stays without
+a rating). Each opening writes exactly one line to the function log, **the one to alert on**:
+`goodreads_blocked {"status":403,"kind":"status","at":"…"}` (Supabase dashboard, Edge Functions, `goodreads-rating`, Logs; `kind` is
+`status`, `empty`, `not_json` or `shape`). In the app the client reads `'blocked'` (`data/goodreadsCover.ts`); the fill's Goodreads
+stage gives its lane up at once, not after three failures, and calls `onBlocked` once, which the import store turns into ONE
+`errorLog` entry, `goodreads cover source blocked` (kind `error`, the owner's error list; repeats fold into a count). No toast, no
+copy: the rows go on without a Goodreads cover and show the cloth, and the manual **Find a cover** answers the same quiet "No cover
+found." a miss does. Nothing is lost: a Book whose cover came earlier keeps it (`fill_book_covers`), and the function's own answer
+cache (`cover_url`) still serves what it already knows while the breaker is open. When the breaker closes, the next ask tries again.
+To switch route for good: set `GOODREADS_COVERS` to `false` (stage and button gone, no call), and, if the address host must go too, drop
+`i.gr-assets.com` from `private.cover_allowed` in a migration (as under *Terms risk*).
+
 ## Sizes the browser can choose (`srcset`, A7)
 
 `UiCover` gives an Apple cover a `srcset` of the same artwork at the neighbouring boxes
