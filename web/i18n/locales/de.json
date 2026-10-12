@@ -994,7 +994,7 @@
     "reading": "Datei wird gelesen …",
     "matching": "Suche {done} von {total}",
     "matchingHint": "Sucht Ausgabe und Cover für jedes Buch. Du kannst diese Seite verlassen; es läuft weiter.",
-    "coverFill": "Fehlende Cover werden gesucht: {done} von {total} gefragt, {found} gefunden. Das läuft im Hintergrund weiter.",
+    "coverFill": "Fehlende Cover werden gesucht: {done} von {total} abgefragt, {found} gefunden. Das läuft im Hintergrund weiter.",
     "secondPass": "{done} von {total} Büchern werden erneut gesucht",
     "secondPassHint": "Diese wurden beim ersten Mal nicht gefunden. Du kannst jetzt weitermachen: Sie werden so übernommen, wie deine Datei sie nennt, und zum Prüfen aufgelistet.",
     "stalledHint": "Seit einer Weile antwortet nichts. Du kannst mit dem Gefundenen weitermachen.",
