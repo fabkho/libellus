@@ -49,7 +49,7 @@ Ten screens read in German (sign-in, Home top, Book being read, Friends feed, Pr
 
 - **Inconsistent:** Home says "Noch offen" under the reading card, the Book page says "Nicht begonnen" for the same state (`book.progress.none` vs the Home key).
 - **Clumsy:** the Profile's library line puts a count before a status name: "1 LESE ICH GERADE · 1 MÖCHTE ICH LESEN".
-- **Still English:** Regal's own strings on the shelf (the private layer), the book titles and authors of the member's data, the Goodreads/Hardcover export instructions (on purpose), the "usually, start to finish" line is German here but English in the English app at 360.
+- **Still English:** Regal's own strings on the shelf (the private layer), the book titles and authors of the member's data, and the Goodreads/Hardcover export instructions (on purpose).
 - **The sign-in screen still shows `app.tagline`** ("Die Bücher, die du liest, in aller Ruhe aufbewahrt." / "The books you read, kept quietly.") under the wordmark: the owner said he does not want a tagline in the mails; whether the app keeps it is his call.
 
 ## The 20 phrases most worth the owner's eye
