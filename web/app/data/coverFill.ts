@@ -1,7 +1,7 @@
 import type { Book, BookSnapshot } from './books'
 import { verifyCover, type ProbeImage, type ResolvedCover } from './covers'
 import { abortError, type FetchLike } from './fetching'
-import { languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions'
+import { isSameWork, languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions'
 import type { ImportBook } from './import/rows'
 import type { Search } from './search'
 import type { Edition } from './bookImport'
@@ -57,7 +57,7 @@ export type CoverWanted = {
   alternatives?: readonly (Book | BookSnapshot)[]
 }
 
-export type CoverSource = 'sibling' | 'openlibrary' | 'search'
+export type CoverSource = 'sibling' | 'openlibrary' | 'work' | 'search'
 export type CoverFound = ResolvedCover & { coverUrl: string; source: CoverSource }
 
 export type CoverFillProgress = {
@@ -67,7 +67,7 @@ export type CoverFillProgress = {
   found: number
 }
 
-export type CoverFillCalls = { openlibrary: number; search: number; probe: number }
+export type CoverFillCalls = { openlibrary: number; work: number; search: number; probe: number }
 
 export type CoverFill = {
   /** Queues a row; one already queued (same key) is kept as it is. */
@@ -102,10 +102,11 @@ export type CoverFillOptions = {
   wait?: (ms: number, signal?: AbortSignal) => Promise<void>
 }
 
-type Item = { wanted: CoverWanted; attempts: number; done: boolean; ol: Promise<string | null> }
+type Item = { wanted: CoverWanted; attempts: number; done: boolean; ol: Promise<string | null>; second: boolean }
 
 const APPLE_HOST = 'itunes.apple.com'
 const OPENLIBRARY_API = 'https://openlibrary.org/api/books'
+const OPENLIBRARY_SEARCH = 'https://openlibrary.org/search.json'
 const OPENLIBRARY_COVERS = /^https:\/\/covers\.openlibrary\.org\/b\/id\/\d+-[SML]\.jpg$/
 
 const defaultWait = (ms: number, signal?: AbortSignal) =>
@@ -141,8 +142,8 @@ export function mergeCover(edition: Edition, found: ResolvedCover): Edition | nu
   if (edition.book.coverUrl || edition.coverFrom?.coverUrl) return null
   const cover = { coverUrl: found.coverUrl, coverThumbhash: found.coverThumbhash, coverColors: found.coverColors }
   return edition.via
-    ? { ...edition, book: { ...edition.book, ...cover } as Edition['book'] }
-    : { ...edition, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
+    ? { ...edition, filled: true, book: { ...edition.book, ...cover } as Edition['book'] }
+    : { ...edition, filled: true, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
 }
 
 const withIn = <T>(promise: Promise<T>, ms: number): Promise<T> =>
@@ -175,7 +176,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     now = Date.now,
     wait = defaultWait,
   } = options
-  const calls: CoverFillCalls = { openlibrary: 0, search: 0, probe: 0 }
+  const calls: CoverFillCalls = { openlibrary: 0, work: 0, search: 0, probe: 0 }
   const probe: ProbeImage = (url) => {
     calls.probe++
     return options.probe(url)
@@ -284,6 +285,51 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     }
   }
 
+  // ----------------------------------------------- Open Library, the work's covers
+
+  let workFailures = 0
+  let workPausedUntil = 0
+
+  /**
+   * The cover of another edition of the row's work: Open Library's search by title and author (the
+   * structured one, which does not trip over initials in an author's name), the first document that is
+   * the same work, in the row's language where it says, and has a cover. Its address is by cover id.
+   */
+  async function openLibraryWork(item: Item): Promise<string | null> {
+    const { row } = item.wanted
+    if (stopped || workFailures >= LANE_FAILURES || now() < workPausedUntil || !row.title) return null
+    calls.work++
+    try {
+      const response = await withIn(
+        fetch(
+          `${OPENLIBRARY_SEARCH}?${new URLSearchParams({ title: row.title, author: row.authors[0] ?? '', fields: 'key,title,author_name,cover_i,language', limit: '12' })}`,
+          { signal: controller.signal },
+        ),
+        COVER_CALL_TIMEOUT_MS,
+      )
+      if (!response.ok) {
+        const seconds = Number(response.headers?.get('retry-after'))
+        if (Number.isFinite(seconds) && seconds > 0) workPausedUntil = now() + Math.min(seconds, 60) * 1000
+        throw new Error(`openlibrary.org answered ${response.status}`)
+      }
+      const body = (await response.json()) as { docs?: { title?: string; author_name?: string[]; cover_i?: number; language?: string[] }[] }
+      workFailures = 0
+      const wanted = languageCode(row.language) ?? titleLanguage(row.title)
+      const doc = (body.docs ?? []).find(
+        (found) =>
+          found.cover_i &&
+          found.cover_i > 0 &&
+          isSameWork(row, { title: found.title ?? '', authors: found.author_name ?? [] }) &&
+          // The work's languages: a German row is not given a cover whose editions are all English.
+          (!wanted || !found.language?.length || found.language.some((code) => languageCode(code) === wanted)),
+      )
+      return doc ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null
+    } catch {
+      workFailures++
+      return null
+    }
+  }
+
   // ------------------------------------------------- the lane over the items
 
   const lane: Item[] = []
@@ -301,7 +347,13 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       const cover = asFound(await verified(url), 'openlibrary')
       if (cover) return finish(item, cover)
     }
-    // 3. Everything else: the paced search.
+    // 3. The work's other editions at Open Library (a search by title and author, the cover of the best fit).
+    const work = await openLibraryWork(item)
+    if (work) {
+      const cover = asFound(await verified(work), 'work')
+      if (cover) return finish(item, cover)
+    }
+    // 4. Everything else: the paced search.
     if (stopped) return finish(item, null)
     searchQueue.push(item)
     void runSearch()
@@ -376,7 +428,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     calls.search++
     let outcome: Awaited<ReturnType<Search['searchCovers']>> | null = null
     try {
-      outcome = await withIn(search.searchCovers(titleQuery(row), { signal: controller.signal }), COVER_CALL_TIMEOUT_MS)
+      outcome = await withIn(search.searchCovers(titleQuery(row), { signal: controller.signal, storefront: item.second ? 1 : 0 }), COVER_CALL_TIMEOUT_MS)
     } catch {
       if (stopped) return finish(item, null)
     }
@@ -403,13 +455,19 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       const cover = asFound(await verified(book.coverUrl as string), 'search')
       if (cover) return finish(item, cover)
     }
+    // Not in the first storefront: the second one is asked once the first has been through every row.
+    if (!item.second) {
+      item.second = true
+      searchQueue.push(item)
+      return
+    }
     finish(item, null)
   }
 
   return {
     add(wanted) {
       if (stopped || items.has(wanted.key)) return
-      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null) }
+      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null), second: false }
       items.set(wanted.key, item)
       item.ol = requestOpenLibrary(item)
       lane.push(item)

@@ -142,7 +142,7 @@ export type AppleSource = {
   /** Free text, every storefront at once, the first storefront's answers first. */
   search: (text: string, signal?: AbortSignal) => Promise<Found[]>
   /** Free text in the first storefront only: one request, for a lookup that has to spare Apple's per-address limit (the import's cover fill). */
-  searchFirst: (text: string, signal?: AbortSignal) => Promise<Found[]>
+  searchFirst: (text: string, signal?: AbortSignal, storefront?: 0 | 1) => Promise<Found[]>
   /** The editions with this ISBN-13 (each carries it). Rejects when no storefront answered. */
   lookupIsbn: (isbn13: string, signal?: AbortSignal) => Promise<Found[]>
   /** One edition by its track id; null when no storefront sells it. Rejects when none answered. */
@@ -181,8 +181,8 @@ export function createApple(options: { fetch: FetchLike; languages: readonly str
     search: (text, signal) =>
       everywhere('search', { term: text, media: 'ebook', entity: 'ebook', limit: String(STOREFRONT_LIMIT) }, signal),
 
-    async searchFirst(text, signal) {
-      const items = await ask('search', { term: text, media: 'ebook', entity: 'ebook', limit: String(STOREFRONT_LIMIT), country: storefronts[0] }, signal)
+    async searchFirst(text, signal, storefront = 0) {
+      const items = await ask('search', { term: text, media: 'ebook', entity: 'ebook', limit: String(STOREFRONT_LIMIT), country: storefronts[storefront] }, signal)
       return items.flatMap((item) => {
         const book = snapshotFromApple(item)
         return book ? [{ book, source: 'apple' as const, popularity: item.userRatingCount ?? 0 }] : []

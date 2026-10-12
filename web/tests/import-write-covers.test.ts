@@ -160,6 +160,61 @@ describe('writing with covers found meanwhile', () => {
   })
 })
 
+describe('handing found covers to the Catalogue', () => {
+  type Call = { name: string; args: { p_covers?: Record<string, unknown>[]; p_rows?: { key: string }[] } }
+  const calls: Call[] = []
+  const client = (failFill = false) =>
+    ({
+      rpc: async (name: string, args: Call['args']) => {
+        calls.push({ name, args })
+        if (name === 'fill_book_covers') {
+          if (failFill) throw new Error('rpc down')
+          return { data: 0, error: null }
+        }
+        return { data: args.p_rows!.map((row) => ({ key: row.key, outcome: row.key === 'goodreads:3' ? 'failed' : 'added', entry_id: 'e', error: row.key === 'goodreads:3' ? 'book_invalid' : undefined })), error: null }
+      },
+    }) as unknown as SupabaseClient
+  const importer = (c: SupabaseClient) =>
+    createBookImport(c, { lookups: { catalogue: { search: async () => [] }, search: { search: async () => ({ results: [], pending: false, failed: false }), lookupIsbn: async () => null } }, probe: async () => null })
+  const withCoverUrl = (n: number, over: Partial<BookSnapshot> = {}): ImportRow => ({
+    ...rowOf(n),
+    book: { ...snapshot(n), coverUrl: `https://covers.openlibrary.org/b/id/${n}-L.jpg`, coverThumbhash: 'hash', coverColors: { dominant: '#112233', secondary: '#445566' }, ...over },
+  })
+
+  it('hands the covers of what was written to fill_book_covers once: snapshots by ISBN, a Catalogue Book only when the fill found its cover, never a failed row or a Manual book', async () => {
+    calls.length = 0
+    const catalogueBook = { ...snapshot(2), id: 'b2', createdAt: '', coverUrl: 'https://covers.openlibrary.org/b/id/2-L.jpg', coverThumbhash: 'h2', coverColors: null } as never
+    const rows: ImportRow[] = [
+      withCoverUrl(1),
+      { ...rowOf(2), book: catalogueBook, coverFilled: true },
+      withCoverUrl(3),
+      withCoverUrl(4, { source: 'manual', isbn13: null }),
+      { ...rowOf(5), book: { ...catalogueBook, id: 'b5' } },
+    ]
+    const result = await importer(client()).write(rows, { onWritten: () => {} })
+    expect(result.error).toBeNull()
+    const fills = calls.filter((call) => call.name === 'fill_book_covers')
+    expect(fills).toHaveLength(1)
+    expect(fills[0]!.args.p_covers).toEqual([
+      { isbn13: snapshot(1).isbn13, cover_url: 'https://covers.openlibrary.org/b/id/1-L.jpg', cover_thumbhash: 'hash', cover_dominant: '#112233', cover_secondary: '#445566' },
+      { book_id: 'b2', cover_url: 'https://covers.openlibrary.org/b/id/2-L.jpg', cover_thumbhash: 'h2', cover_dominant: null, cover_secondary: null },
+    ])
+  })
+
+  it('writes the import whatever that call says', async () => {
+    calls.length = 0
+    const result = await importer(client(true)).write([withCoverUrl(1)], { onWritten: () => {} })
+    expect(result.error).toBeNull()
+    expect(result.data?.[0]?.outcome).toBe('added')
+  })
+
+  it('asks for nothing when no written row has a cover', async () => {
+    calls.length = 0
+    await importer(client()).write([{ ...rowOf(1), book: { ...snapshot(1), coverUrl: null } }], { onWritten: () => {} })
+    expect(calls.filter((call) => call.name === 'fill_book_covers')).toHaveLength(0)
+  })
+})
+
 describe('needsLook', () => {
   const cover = { coverUrl: 'https://example.test/c.jpg' }
   it('is true when nothing identifies the row: no edition found and no ISBN in the file, whatever the cover', () => {

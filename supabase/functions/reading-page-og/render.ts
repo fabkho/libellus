@@ -48,6 +48,17 @@ const C = {
   cloth: '#3b2430',
 } as const
 
+/**
+ * The Placeholder cover's six cloths (tokens `color.cloth1…6`) and which one a title gets: the same rule as
+ * web/app/utils/cover.ts `clothOf`, so a Book without a cover is the same colour in the image as in the app.
+ */
+export const CLOTHS = ['#3b2430', '#22303f', '#2c3a2e', '#4a3220', '#30293f', '#4a2624'] as const
+export function clothFor(title: string): string {
+  let hash = 0
+  for (const char of title) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  return CLOTHS[hash % CLOTHS.length]!
+}
+
 /** A satori layout node. Written by hand: no JSX, no React in this function. */
 type Node = {
   type: string
@@ -248,7 +259,7 @@ function cover(book: PublicBook, src: string | null, width: number): Node {
   const height = Math.round(width * 1.5)
   // An unverified Book: no colours of its own, the cloth Placeholder with the one string on it, as the web draws it.
   const outside = isOutside(book)
-  const dominant = outside ? C.cloth : (book.cover_dominant ?? C.raised)
+  const dominant = outside ? C.cloth : (book.cover_dominant ?? clothFor(bookTitle(book)))
   const style = {
     display: 'flex',
     width,

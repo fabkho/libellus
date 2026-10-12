@@ -185,7 +185,7 @@ describe('Open Library in batches', () => {
 
   it('gives the lane up after a run of failed calls and asks no more', async () => {
     let calls = 0
-    const failing: FetchLike = async () => (calls++, { ok: false, status: 503, json: async () => ({}) })
+    const failing: FetchLike = async (url) => (url.includes('/api/books') && calls++, { ok: false, status: 503, json: async () => ({}) })
     const fill = createCoverFill({ fetch: failing, search: noSearch, probe: goodProbe, onFound: () => {}, batchWaitMs: 0, batch: 1, wait: clock().wait })
     for (let n = 1; n <= LANE_FAILURES + 4; n++) fill.add(wanted(n))
     fill.holdSearch(false)
@@ -196,8 +196,8 @@ describe('Open Library in batches', () => {
   it('stays away from Open Library for the time it names in Retry-After', async () => {
     let calls = 0
     let time = 0
-    const refusing: FetchLike = async () => (
-      calls++,
+    const refusing: FetchLike = async (url) => (
+      url.includes('/api/books') && calls++,
       { ok: false, status: 429, json: async () => ({}), headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '30' : null) } }
     )
     const fill = createCoverFill({ fetch: refusing, search: noSearch, probe: goodProbe, onFound: () => {}, batchWaitMs: 0, batch: 1, now: () => time, wait: clock().wait })
@@ -422,8 +422,83 @@ describe('the paced search', () => {
     fill.drop('goodreads:1')
     fill.holdSearch(false)
     await fill.settled(1000)
-    expect(searched).toBe(1)
+    // The row that stayed: the first storefront, then the second.
+    expect(searched).toBe(2)
     expect(fill.progress().total).toBe(1)
+  })
+})
+
+describe('the work\'s other editions at Open Library', () => {
+  const searchJson = (docs: unknown[], seen: string[] = []): FetchLike => async (url) => {
+    seen.push(url)
+    return { ok: true, status: 200, json: async () => (url.includes('/search.json') ? { docs } : {}) }
+  }
+  const w = wanted(1, { title: 'Der Roman 1', language: 'de' })
+
+  it('takes the cover of the same work with a cover id, in the row\'s language, from the structured search', async () => {
+    const seen: string[] = []
+    const { found: filled, onFound } = collect()
+    const fill = createCoverFill({
+      fetch: searchJson(
+        [
+          { title: 'Ein anderes Buch', author_name: ['Anna Autorin'], cover_i: 9, language: ['ger'] },
+          { title: 'The Novel 1', author_name: ['Anna Autorin'], cover_i: 8, language: ['eng'] },
+          { title: 'Der Roman 1', author_name: ['Anna Autorin'], cover_i: 0, language: ['ger'] },
+          { title: 'Der Roman 1', author_name: ['Anna Autorin'], cover_i: 77, language: ['eng', 'ger'] },
+        ],
+        seen,
+      ),
+      search: noSearch,
+      probe: goodProbe,
+      onFound,
+      batchWaitMs: 0,
+    })
+    fill.add(w)
+    await fill.settled(1000)
+    expect(filled[w.key]).toMatchObject({ source: 'work', coverUrl: OL(77) })
+    const asked = new URL(seen.find((url) => url.includes('/search.json'))!)
+    expect(asked.searchParams.get('title')).toBe('Der Roman 1')
+    expect(asked.searchParams.get('author')).toBe('Anna Autorin')
+    expect(fill.calls().work).toBe(1)
+  })
+
+  it('does not take a cover whose work has only editions in another language', async () => {
+    const { found: filled, onFound } = collect()
+    const fill = createCoverFill({
+      fetch: searchJson([{ title: 'Der Roman 1', author_name: ['Anna Autorin'], cover_i: 5, language: ['eng'] }]),
+      search: noSearch,
+      probe: goodProbe,
+      onFound,
+      batchWaitMs: 0,
+      ...clock(),
+    })
+    fill.add(w)
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(filled).toEqual({})
+  })
+
+  it('asks the second Apple storefront for a row the first did not know, and only then gives it up', async () => {
+    const storefronts: (number | undefined)[] = []
+    const { found: filled, onFound } = collect()
+    const fill = createCoverFill({
+      fetch: openLibrary({}),
+      search: {
+        searchCovers: async (_query: string, options?: { storefront?: 0 | 1 }) => {
+          storefronts.push(options?.storefront)
+          return { results: options?.storefront === 1 ? [{ book: snapshot({ title: 'Der Roman 1', authors: ['Anna Autorin'], coverUrl: APPLE(1), source: 'apple' }) }] : [], pending: false, failed: false } as never
+        },
+      },
+      probe: goodProbe,
+      onFound,
+      batchWaitMs: 0,
+      ...clock(),
+    })
+    fill.add(wanted(1))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(storefronts).toEqual([0, 1])
+    expect(filled['goodreads:1']?.source).toBe('search')
   })
 })
 
@@ -433,6 +508,7 @@ describe('merging a found cover', () => {
 
   it('puts the cover on the Book of an edition a source found', () => {
     const merged = mergeCover(edition({}), found)!
+    expect(merged.filled).toBe(true)
     expect(merged.book.coverUrl).toBe(OL(5))
     expect(merged.book.coverThumbhash).toBe('abc')
     expect(merged.coverFrom).toBeUndefined()

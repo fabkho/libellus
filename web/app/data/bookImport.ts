@@ -72,6 +72,8 @@ export type Edition = {
   unsure: boolean
   /** Another edition of the same work, whose cover the file's own Book takes when its ISBN finds none. */
   coverFrom?: Book | BookSnapshot | null
+  /** The cover fill found its cover (data/coverFill.ts): for a Catalogue Book it is handed to `fill_book_covers` once written. */
+  filled?: boolean
   /**
    * The other editions of the row's work its title search found, best fit
    * first (the order the match was picked in): what the preview offers when
@@ -414,6 +416,8 @@ export type ImportRow = Pick<ImportBook, 'key' | 'status' | 'session' | 'addedOn
     book: Book | BookSnapshot
     collections?: readonly string[]
     coverFrom?: Book | BookSnapshot | null
+    /** The cover came from the cover fill (see `Edition.filled`). */
+    coverFilled?: boolean
   }
 
 export type RowOutcome = {
@@ -488,6 +492,38 @@ export async function importedKeys(client: SupabaseClient): Promise<Result<Map<s
       if (SUPPORTED_SOURCES.some((source) => row.import_key.startsWith(`${source}:`))) keys.set(row.import_key, row.id)
     }
     if (data.length < page) return { data: keys, error: null }
+  }
+}
+
+/** How many covers one `fill_book_covers` call takes. */
+const COVER_FILL_CALL = 200
+
+/**
+ * A Catalogue Book that entered without a cover keeps none for every member after her (the Catalogue
+ * keeps the first snapshot): a cover this import found, or resolved for a Book that was there bare, is
+ * handed to `fill_book_covers`, which gives it to a Book without one only (a cover that is there stays), if
+ * she holds the Book and the address is on the allow-list. A failure here costs nothing: the import is written.
+ */
+export async function fillCatalogueCovers(client: SupabaseClient, books: readonly (Book | BookSnapshot)[]): Promise<void> {
+  const covers = books.flatMap((book) =>
+    book.source === 'manual' || !book.coverUrl || (!('id' in book) && !book.isbn13)
+      ? []
+      : [
+          {
+            ...('id' in book ? { book_id: book.id } : { isbn13: book.isbn13 }),
+            cover_url: book.coverUrl,
+            cover_thumbhash: book.coverThumbhash,
+            cover_dominant: book.coverColors?.dominant ?? null,
+            cover_secondary: book.coverColors?.secondary ?? null,
+          },
+        ],
+  )
+  for (let from = 0; from < covers.length; from += COVER_FILL_CALL) {
+    try {
+      await client.rpc('fill_book_covers', { p_covers: covers.slice(from, from + COVER_FILL_CALL) })
+    } catch {
+      /* a cover is a nicety: the rows are written */
+    }
   }
 }
 
@@ -606,17 +642,26 @@ export function createBookImport(
         })
         return chunk
       }
+      // The covers of the rows written, for the Catalogue Books that have none yet (`fillCatalogueCovers`).
+      const coverOf = new Map<string, Book | BookSnapshot>()
+      const settle = async (result: Result<RowOutcome[]>): Promise<Result<RowOutcome[]>> => {
+        const failed = new Set(outcomes.filter((outcome) => outcome.outcome === 'failed').map((outcome) => outcome.key))
+        await fillCatalogueCovers(client, [...coverOf].filter(([key]) => !failed.has(key)).map(([, book]) => book))
+        return result
+      }
       let next = rows.length ? covered(0) : null
       for (let start = 0; start < rows.length; start += IMPORT_CHUNK) {
-        if (!online()) return { data: null, error: 'offline' }
+        if (!online()) return settle({ data: null, error: 'offline' })
         const chunk = await next!
         next = start + IMPORT_CHUNK < rows.length ? covered(start + IMPORT_CHUNK) : null
         const written = await writeRows(client, chunk)
-        if (written.error) return written
+        if (written.error) return settle(written)
         outcomes.push(...written.data)
+        // A snapshot may have met a Catalogue Book that is bare; a Catalogue Book only gets what the fill found for it.
+        for (const row of chunk) if (row.book.coverUrl && (!('id' in row.book) || row.coverFilled)) coverOf.set(row.key, row.book)
         onWritten(written.data)
       }
-      return { data: outcomes, error: null }
+      return settle({ data: outcomes, error: null })
     },
   }
 }
