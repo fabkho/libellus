@@ -15,7 +15,7 @@ Deno.test('the mail says why, the code, until when, how, and links to sign up', 
   assertEquals(mail.to, 'reader@example.org')
   assertEquals(mail.subject, SUBJECT)
   for (const part of [mail.text, mail.html]) {
-    assertStringIncludes(part, 'You asked for an invite on a BetterReads reading page')
+    assertStringIncludes(part, 'You asked for an invite to BetterReads')
     assertStringIncludes(part, 'K7QM-X2PA')
     assertStringIncludes(part, 'until 27 October 2026')
     assertStringIncludes(part, 'Sign up')
@@ -75,7 +75,7 @@ Deno.test('the plain-text part says what the HTML says, line by line', () => {
   assertEquals(text.split('\n'), [
     'You’re invited',
     '',
-    'You asked for an invite on a BetterReads reading page. Here is your code:',
+    'You asked for an invite to BetterReads. Here is your code:',
     '',
     '    K7QM-X2PA',
     '',
@@ -133,10 +133,10 @@ Deno.test('the language is German for de and English for everything else', () =>
 
 Deno.test('a mail for a German entry is German, from subject to date, with the same code and link', () => {
   const mail = inviteMail({ ...base, siteUrl: 'https://libellus.example.org/', locale: 'de' })
-  assertEquals(mail.subject, 'Deine BetterReads-Einladung')
+  assertEquals(mail.subject, 'Deine Einladung zu BetterReads')
   assertEquals(mail.subject, SUBJECTS.de)
   for (const part of [mail.text, mail.html]) {
-    assertStringIncludes(part, 'Du hast auf einer BetterReads-Leseseite um eine Einladung gebeten')
+    assertStringIncludes(part, 'Du hast um eine Einladung zu BetterReads gebeten')
     assertStringIncludes(part, 'K7QM-X2PA')
     assertStringIncludes(part, 'bis zum 27. Oktober 2026')
     assertStringIncludes(part, 'Registrieren')
@@ -146,7 +146,7 @@ Deno.test('a mail for a German entry is German, from subject to date, with the s
     assertFalse(part.includes('link]-->'), 'a block marker is left')
   }
   assertStringIncludes(mail.html, '<html lang="de"')
-  assertStringIncludes(mail.html, 'Die Bücher, die du liest, in aller Ruhe aufbewahrt.')
+  assertFalse(mail.html.includes('aller Ruhe'), 'no tagline under the wordmark')
   assertStringIncludes(mail.html, '<a href="https://libellus.example.org/sign-up"')
   assertStringIncludes(mail.text, 'Registrieren: https://libellus.example.org/sign-up')
 })

@@ -35,8 +35,8 @@ const COPY = {
     footer: "If this wasn't you, you can ignore this email.",
   },
   de: {
-    title: 'Dein BetterReads-Anmeldecode',
-    preheader: 'Dein BetterReads-Code lautet {{ .Token }}',
+    title: 'Dein Anmeldecode für BetterReads',
+    preheader: 'Dein Code für BetterReads lautet {{ .Token }}',
     eyebrow: 'Dein Anmeldecode',
     enter: 'Gib diesen Code in der App ein:',
     valid: 'Der Code gilt eine Stunde und kann einmal verwendet werden.',

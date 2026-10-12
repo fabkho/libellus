@@ -484,9 +484,9 @@ enabled = true
 # `user_metadata.locale` ('en' | 'de') up to date (web/app/data/auth.ts), so both branch on it: `de`
 # is German, anything else English (docs/i18n/README.md, "Mails").
 [auth.email.template.magic_link]
-subject = '{{ if eq (index .Data "locale") "de" }}Dein BetterReads-Anmeldecode{{ else }}Your BetterReads sign-in code{{ end }}'
+subject = '{{ if eq (index .Data "locale") "de" }}Dein Anmeldecode für BetterReads{{ else }}Your BetterReads sign-in code{{ end }}'
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
-subject = '{{ if eq (index .Data "locale") "de" }}Dein BetterReads-Anmeldecode{{ else }}Your BetterReads sign-in code{{ end }}'
+subject = '{{ if eq (index .Data "locale") "de" }}Dein Anmeldecode für BetterReads{{ else }}Your BetterReads sign-in code{{ end }}'
 content_path = "./supabase/templates/magic_link.html"

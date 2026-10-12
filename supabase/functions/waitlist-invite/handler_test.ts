@@ -79,7 +79,7 @@ Deno.test('the mail is in the language the entry holds, whoever asks and in what
   // The owner's own request says English: it must not decide the recipient's language.
   const response = await german.handler(invite(undefined, { authorization: TOKEN, 'accept-language': 'en-GB' }))
   assertEquals(response.status, 200)
-  assertEquals(german.sent[0].subject, 'Deine BetterReads-Einladung')
+  assertEquals(german.sent[0].subject, 'Deine Einladung zu BetterReads')
   assertStringIncludes(german.sent[0].text, 'bis zum 27. Oktober 2026')
 
   const unknown = setup({ prepare: () => Promise.resolve({ email: EMAIL, code: CODE, expiresAt: EXPIRES, locale: null }) })

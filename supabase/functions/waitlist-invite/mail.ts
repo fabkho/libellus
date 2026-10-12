@@ -35,7 +35,7 @@ export function mailLocale(locale: string | null | undefined): MailLocale {
 
 export const SUBJECTS: Record<MailLocale, string> = {
   en: 'Your BetterReads invite',
-  de: 'Deine BetterReads-Einladung',
+  de: 'Deine Einladung zu BetterReads',
 }
 /** The English subject, for callers that do not choose a language. */
 export const SUBJECT = SUBJECTS.en

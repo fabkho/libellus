@@ -23,7 +23,7 @@ describe('the sign-in code mail', () => {
     expect(await createAuth(newClient()).requestSignUpCode({ email: plain, inviteCode: await createInviteCode({ maxUses: 1 }) })).toEqual({ error: null })
 
     const de = await readMail(german)
-    expect(de.subject).toBe('Dein BetterReads-Anmeldecode')
+    expect(de.subject).toBe('Dein Anmeldecode für BetterReads')
     expect(de.html).toContain('<html lang="de"')
     expect(de.text).toContain('Gib diesen Code in der App ein')
     expect(de.text).toMatch(/\b\d{6}\b/)
@@ -54,7 +54,7 @@ describe('the sign-in code mail', () => {
     // A signed-out phone asks for a code: German now.
     await emailCooldown()
     expect(await createAuth(newClient()).requestCode(email)).toEqual({ kind: 'sent' })
-    expect((await readMail(email, 2)).subject).toBe('Dein BetterReads-Anmeldecode')
+    expect((await readMail(email, 2)).subject).toBe('Dein Anmeldecode für BetterReads')
 
     // And back.
     expect(await auth.saveLocale('en')).toBe('saved')

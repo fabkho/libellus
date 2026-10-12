@@ -14,11 +14,6 @@ import { contrast, flatten } from './color.mjs'
 
 const SCHEMES = ['light', 'dark']
 
-/** The line under the wordmark, in each language a mail speaks: the app's `app.tagline` (web/i18n/locales). */
-const TAGLINE = {
-  en: 'The books you read, kept quietly.',
-  de: 'Die Bücher, die du liest, in aller Ruhe aufbewahrt.',
-}
 const px = (n) => `${Number(n.toFixed(2))}px`
 
 /**
@@ -205,10 +200,9 @@ export function createKit(tokens) {
       `<td align="center" style="padding:${px(space('xxl'))} ${px(space('screen'))}">\n` +
       `<!--[if mso]><table role="presentation" width="${maxWidth}" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->\n` +
       `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${maxWidth}px">\n` +
-      // header: the wordmark and the tagline, as on the way-in screens
+      // header: the wordmark alone (no tagline: a mail just says the name)
       `<tr><td align="center" style="padding:0 0 ${px(space('xl'))}">` +
       `<p ${x('c-ink', `margin:0;${wordmark};font-style:italic`)}>betterreads</p>` +
-      `<p ${x('c-muted-page', `margin:${px(space('sm'))} 0 0;${type('body')}`)}>${TAGLINE[lang] ?? TAGLINE.en}</p>` +
       `</td></tr>\n` +
       // card
       `<tr><td ${x('bg-card bc-hair', `border:1px solid;border-radius:${px(radius('lg'))};padding:${px(space('lg'))}`)} bgcolor="${palette.light.card}">\n${content}\n</td></tr>\n` +
