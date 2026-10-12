@@ -15,6 +15,14 @@
  * Only the local stack. The member is removed after (and her Catalogue Books unless `--keep`).
  */
 import { readFileSync } from 'node:fs'
+import {
+  autoCompleteUrl,
+  foundByTitle,
+  matchTitle,
+  parseAutoComplete,
+  pickByBookId,
+  titleQuery as goodreadsQuery,
+} from '../../supabase/functions/goodreads-rating/goodreads.ts'
 import { parseArgs } from 'node:util'
 import sharp from 'sharp'
 import { createAuth } from '../app/data/auth'
@@ -148,7 +156,7 @@ const books = parsed.books
 const editions: (Edition | null)[] = books.map(() => null)
 /** What the lookup gave each row, before any fill: the row's first look at a cover. */
 const lookedUp: (Edition | null)[] = books.map(() => null)
-const foundBy: Record<CoverSource, number> = { sibling: 0, openlibrary: 0, work: 0, search: 0 }
+const foundBy: Record<CoverSource, number> = { sibling: 0, openlibrary: 0, work: 0, search: 0, goodreads: 0 }
 
 const identified = (edition: Edition, isbn13: string | null) =>
   !edition.unsure && ((Boolean(edition.via) && edition.book.source !== 'import') || (!edition.via && Boolean(isbn13)))
@@ -161,6 +169,17 @@ const fill = createCoverFill({
   probe,
   hostBlockedFor: (host) => live.blockedFor(host),
   budgetMs: Number(args['budget-seconds']) * 1000,
+  // The `goodreads-rating` function's cover path run in this process (its pure parts, no cache, no auth): a live call, paced by the fill.
+  goodreads: async ({ title, authors, goodreadsBookId }) => {
+    const query = goodreadsQuery({ isbn13: null, title, authors })
+    if (!query || !authors.length) return null
+    const response = await fetch(autoCompleteUrl(query), { headers: { 'user-agent': 'Libellus/1.0 (private book tracker; audit)', accept: 'application/json' } })
+    const text = await response.text()
+    if (response.status === 403 || response.status === 429 || response.status === 503 || response.status === 202) return 'blocked'
+    const results = parseAutoComplete(response.status, text)
+    const hit = pickByBookId(results, goodreadsBookId) ?? matchTitle({ isbn13: null, title, authors }, results)
+    return hit ? foundByTitle(hit, true).coverUrl ?? null : null
+  },
   onFound(key, found) {
     if (mode === 'before') return
     const index = books.findIndex((book) => book.key === key)
@@ -177,7 +196,8 @@ function wantCover(index: number) {
   const edition = editions[index]!
   const wanted = !edition.unsure && !hasCover(edition)
   if (mode === 'before') return
-  if (wanted) fill.add({ key: book.key, row: book, book: edition.book, alternatives: edition.alternatives })
+  const goodreadsId = /^goodreads:(\d{1,20})$/.exec(book.key)?.[1]
+  if (wanted) fill.add({ key: book.key, row: book, book: edition.book, alternatives: edition.alternatives, ...(goodreadsId ? { goodreadsId } : {}) })
   else fill.drop(book.key)
 }
 
@@ -253,7 +273,8 @@ const [library] = await sql<Record<string, number>>(
           count(distinct b.id) filter (where b.cover_url is null)::int as no_cover,
           count(distinct b.id) filter (where b.cover_url like 'https://covers.openlibrary.org/%')::int as cover_open_library,
           count(distinct b.id) filter (where b.cover_url like '%mzstatic.com/%')::int as cover_apple,
-          count(distinct b.id) filter (where b.cover_url is not null and b.cover_url not like 'https://covers.openlibrary.org/%' and b.cover_url not like '%mzstatic.com/%')::int as cover_other,
+          count(distinct b.id) filter (where b.cover_url like 'https://i.gr-assets.com/%')::int as cover_goodreads,
+          count(distinct b.id) filter (where b.cover_url is not null and b.cover_url not like 'https://covers.openlibrary.org/%' and b.cover_url not like '%mzstatic.com/%' and b.cover_url not like 'https://i.gr-assets.com/%')::int as cover_other,
           count(distinct b.id) filter (where b.cover_url is not null and b.cover_thumbhash is null)::int as cover_without_thumbhash,
           count(distinct b.id) filter (where b.isbn13 is null)::int as no_isbn,
           count(distinct b.id) filter (where b.page_count is null)::int as no_pages,
