@@ -26,6 +26,7 @@ export type IconName =
   | 'bookmark'
   | 'bookmarkPlus'
   | 'arrow'
+  | 'external'
   | 'sun'
   | 'moon'
   | 'signOut'
@@ -131,6 +132,8 @@ withDefaults(defineProps<{ name: IconName; size?: number; bold?: boolean }>(), {
       <path d="M6.5 5.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v14l-5.5-3.8-5.5 3.8z" /><path d="M12 8.2v4.6M9.7 10.5h4.6" />
     </template>
     <template v-else-if="name === 'arrow'"><path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" /></template>
+    <!-- A link that leaves the app (profile links, WP-22): an arrow out of the top right corner of a square. -->
+    <template v-else-if="name === 'external'"><path d="M10 6H7.5A1.5 1.5 0 0 0 6 7.5v9A1.5 1.5 0 0 0 7.5 18h9a1.5 1.5 0 0 0 1.5-1.5V14M13 5.5h5.5V11M18.2 5.8 11 13" /></template>
     <template v-else-if="name === 'sun'">
       <circle cx="12" cy="12" r="3.8" />
       <path d="M12 3.5v1.8M12 18.7v1.8M3.5 12h1.8M18.7 12h1.8M6 6l1.3 1.3M16.7 16.7 18 18M6 18l1.3-1.3M16.7 7.3 18 6" />

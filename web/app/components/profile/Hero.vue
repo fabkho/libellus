@@ -10,6 +10,7 @@
 // one (#156), over the initials; tapping it is the way to add or change it
 // (`photo`, components/profile/Photo.vue), disabled offline like every write.
 import { useAvatarStore } from '~/stores/avatar'
+import { useProfileLinksStore } from '~/stores/profileLinks'
 import { useSessionStore } from '~/stores/session'
 
 const props = withDefaults(
@@ -34,6 +35,10 @@ const initials = computed(() => initialsOf(session.member?.email ?? '', session.
 const avatar = useAvatarStore()
 onMounted(() => void avatar.load())
 const online = useOnline()
+// Her profile links (WP-22) under the library line, once they are known: one quiet "Socials" chip that opens them.
+const profileLinks = useProfileLinksStore()
+onMounted(() => void profileLinks.load())
+const ownLinks = computed(() => profileLinks.own?.links ?? [])
 // Safari does not focus a button when it is tapped, and the sheet gives focus back to what had it
 // when it opened (composables/useModalLayer.ts): so the name takes it first and gets it back.
 function editName(event: MouseEvent) {
@@ -83,6 +88,9 @@ const shown = computed(() => session.member?.name ?? session.member?.email ?? ''
     <p v-else class="eyebrow mt-sm" :class="{ arrive: arriving }" data-testid="profile.library">
       {{ t('profile.library', { read: count(read), reading: count(reading), want: count(want) }) }}
     </p>
+    <UiReveal :show="ownLinks.length > 0" class="mt-xs w-full">
+      <ProfileSocialMenu :links="ownLinks" testid="profile.socials" />
+    </UiReveal>
   </section>
 </template>
 

@@ -11,7 +11,7 @@ export const PRIVACY: LegalDocument = {
   en: {
     title: 'Privacy notice',
     lead: 'BetterReads is a small book-tracking app, run as an invite-only beta. This notice says what it does with your data, who else is involved, and what you can do about it.',
-    version: 'Version: 26 October 2026',
+    version: 'Version: 28 October 2026',
     sections: [
       {
         id: 'responsible',
@@ -31,6 +31,7 @@ export const PRIVACY: LegalDocument = {
             ul: [
               '**Your account.** Your email address (to send you sign-in codes and to tell accounts apart), the invite code you signed up with, the language you use in the app (German or English, so that your sign-in code arrives in it), and when the account was made. There is no password: you sign in with a six-digit code sent by email. Supabase Auth also keeps technical details of your sign-ins, such as the time, your IP address and your browser, to secure sessions.',
               '**Your name and photo (optional).** A name you choose and a profile photo. The photo is cut square and shrunk on your device before it is uploaded to a private storage space, and is shown only to people who may see your profile.',
+              '**Links to your other profiles (optional).** If you add them: a handle or ID for each of Goodreads, Reado, YouTube, Instagram and TikTok, never a free link (the app builds the address itself). They are shown only as you choose (to your followers, which is the default, to everyone who can see your profile, or to nobody but you), you can change or delete them at any time, and they go with your account. Opening one takes you to that platform, which has its own privacy policy; your browser sends it no referrer.',
               '**Your reading data.** The books in your Library and their status, your reading sessions (start and end dates, finished or given up, a rating, a review, the reason if you stopped), your progress, your Collections, page counts and editions you set yourself, your own list of book links, and the reading places and highlights (the words you select) you keep in the ebook reader. If you import a Goodreads or Hardcover export, the file is read in your browser and only the resulting books and reads are stored.',
               '**Friends (only if you use them).** Whom you follow and who follows you, follow requests, people you block, your privacy settings (private or public account, what followers may see), your follow link and a record of who opened it, and the activity (for example that you finished a book) your accepted followers see.',
               '**Your reading page (only if you turn it on).** A page of your reading at a link only you hand out. It shows the sections you pick, never your email address, notes, highlights or a review you did not share. Anyone with the link can open it without signing in.',
@@ -51,7 +52,7 @@ export const PRIVACY: LegalDocument = {
           {
             ul: [
               'The account, sign-in, your Library, Friends, your reading page and the emails with sign-in codes: providing the app you signed up for, Art. 6(1)(b) GDPR.',
-              'What you show to others (a public account, accepted followers, a reading page, a shared review) happens only because you switch it on or accept a request, and you can switch it off again at any time. Where you decide to publish something, the legal basis is also your consent, Art. 6(1)(a) GDPR, which you withdraw by switching it off.',
+              'What you show to others (a public account, accepted followers, profile links, a reading page, a shared review) happens only because you switch it on or accept a request, and you can switch it off again at any time. Where you decide to publish something, the legal basis is also your consent, Art. 6(1)(a) GDPR, which you withdraw by switching it off.',
               'The waitlist: your consent, Art. 6(1)(a) GDPR. You give me the address so that I can invite you, and I delete it when you ask.',
               'The error and performance log, page-load statistics, hosting logs, encrypted backups and security measures: my legitimate interest in an app that runs, is secure and can be restored after a loss, Art. 6(1)(f) GDPR.',
             ],
@@ -104,7 +105,7 @@ export const PRIVACY: LegalDocument = {
         blocks: [
           {
             ul: [
-              '**Your account and everything in it**: until you delete the account (Profile, then Delete account). It is then removed from the database at once: your Library, reading sessions, ratings, reviews, Collections, name, photo, follows, follow requests, blocks, activity and sign-in.',
+              '**Your account and everything in it**: until you delete the account (Profile, then Delete account). It is then removed from the database at once: your Library, reading sessions, ratings, reviews, Collections, name, photo, profile links, follows, follow requests, blocks, activity and sign-in.',
               '**Backups**: a nightly encrypted backup is deleted after 35 days, so a deleted account has left the backups within 35 days. Profile photos are not part of the backups.',
               '**Error and performance log**: 30 days; a member’s rows go with her account.',
               '**A sign-up that is never confirmed**: removed after a day.',
@@ -150,7 +151,7 @@ export const PRIVACY: LegalDocument = {
   de: {
     title: 'Datenschutzerklärung',
     lead: 'BetterReads ist eine kleine App, mit der man seine gelesenen Bücher festhält, und läuft als Beta nur mit Einladung. Hier steht, was die App mit deinen Daten macht, wer sonst beteiligt ist und was du dagegen oder dafür tun kannst.',
-    version: 'Stand: 26. Oktober 2026',
+    version: 'Stand: 28. Oktober 2026',
     sections: [
       {
         id: 'responsible',
@@ -170,6 +171,7 @@ export const PRIVACY: LegalDocument = {
             ul: [
               '**Dein Konto.** Deine E-Mail-Adresse (um dir Anmeldecodes zu schicken und Konten zu unterscheiden), der Einladungscode, mit dem du dich angemeldet hast, die Sprache, die du in der App nutzt (Deutsch oder Englisch, damit dein Anmeldecode in ihr ankommt), und wann das Konto angelegt wurde. Es gibt kein Passwort: Du meldest dich mit einem sechsstelligen Code an, der per E-Mail kommt. Supabase Auth speichert außerdem technische Angaben zu deinen Anmeldungen, etwa die Zeit, deine IP-Adresse und deinen Browser, um Sitzungen zu schützen.',
               '**Dein Name und dein Foto (freiwillig).** Ein Name, den du selbst wählst, und ein Profilfoto. Das Foto wird auf deinem Gerät quadratisch zugeschnitten und verkleinert, bevor es in einen privaten Speicher hochgeladen wird, und nur Personen gezeigt, die dein Profil sehen dürfen.',
+              '**Links zu deinen anderen Profilen (freiwillig).** Wenn du sie hinzufügst: ein Name oder eine Kennung für jeweils Goodreads, Reado, YouTube, Instagram und TikTok, nie ein frei wählbarer Link (die App baut die Adresse selbst). Sie werden nur gezeigt, wie du es einstellst (deinen Followern, das ist die Voreinstellung, allen, die dein Profil sehen dürfen, oder niemandem außer dir), du kannst sie jederzeit ändern oder löschen, und sie verschwinden mit deinem Konto. Ein Klick öffnet die jeweilige Plattform, die eine eigene Datenschutzerklärung hat; dein Browser sendet ihr keinen Referrer.',
               '**Deine Lesedaten.** Die Bücher in deiner Bibliothek und ihr Status, deine Lesevorgänge (Anfangs- und Enddatum, beendet oder abgebrochen, eine Bewertung, eine Rezension, bei Abbruch der Grund), dein Lesefortschritt, deine Sammlungen, von dir gesetzte Seitenzahlen und Ausgaben, deine eigene Liste mit Buchlinks sowie die Leseorte und Markierungen (die Wörter, die du auswählst), die du im Ebook-Reader behältst. Importierst du einen Export von Goodreads oder Hardcover, wird die Datei in deinem Browser gelesen und nur das Ergebnis, also Bücher und Lesevorgänge, gespeichert.',
               '**Freunde (nur wenn du sie nutzt).** Wem du folgst und wer dir folgt, Folgeanfragen, Personen, die du blockierst, deine Datenschutz-Einstellungen (privates oder öffentliches Konto, was Follower sehen dürfen), dein Folge-Link und ein Vermerk, wer ihn geöffnet hat, sowie die Aktivität (zum Beispiel, dass du ein Buch beendet hast), die deine akzeptierten Follower sehen.',
               '**Deine Leseseite (nur wenn du sie einschaltest).** Eine Seite über dein Lesen unter einem Link, den nur du weitergibst. Sie zeigt die Abschnitte, die du auswählst, nie deine E-Mail-Adresse, Notizen, Markierungen oder eine Rezension, die du nicht geteilt hast. Jede Person mit dem Link kann sie ohne Anmeldung öffnen.',
@@ -190,7 +192,7 @@ export const PRIVACY: LegalDocument = {
           {
             ul: [
               'Konto, Anmeldung, deine Bibliothek, Freunde, deine Leseseite und die E-Mails mit Anmeldecodes: die Bereitstellung der App, für die du dich angemeldet hast, Art. 6 Abs. 1 lit. b DSGVO.',
-              'Was du anderen zeigst (ein öffentliches Konto, akzeptierte Follower, eine Leseseite, eine geteilte Rezension), geschieht nur, weil du es einschaltest oder eine Anfrage annimmst, und du kannst es jederzeit wieder ausschalten. Wo du dich entscheidest, etwas zu veröffentlichen, ist Rechtsgrundlage außerdem deine Einwilligung, Art. 6 Abs. 1 lit. a DSGVO, die du widerrufst, indem du es ausschaltest.',
+              'Was du anderen zeigst (ein öffentliches Konto, akzeptierte Follower, Profil-Links, eine Leseseite, eine geteilte Rezension), geschieht nur, weil du es einschaltest oder eine Anfrage annimmst, und du kannst es jederzeit wieder ausschalten. Wo du dich entscheidest, etwas zu veröffentlichen, ist Rechtsgrundlage außerdem deine Einwilligung, Art. 6 Abs. 1 lit. a DSGVO, die du widerrufst, indem du es ausschaltest.',
               'Die Warteliste: deine Einwilligung, Art. 6 Abs. 1 lit. a DSGVO. Du gibst mir die Adresse, damit ich dich einladen kann, und ich lösche sie, wenn du es möchtest.',
               'Das Fehler- und Leistungsprotokoll, die Seitenaufruf-Statistik, Hosting-Protokolle, verschlüsselte Sicherungen und Sicherheitsmaßnahmen: mein berechtigtes Interesse an einer App, die läuft, sicher ist und nach einem Verlust wiederhergestellt werden kann, Art. 6 Abs. 1 lit. f DSGVO.',
             ],
@@ -243,7 +245,7 @@ export const PRIVACY: LegalDocument = {
         blocks: [
           {
             ul: [
-              '**Dein Konto und alles darin**: bis du das Konto löschst (Profil, dann Konto löschen). Es wird dann sofort aus der Datenbank entfernt: deine Bibliothek, Lesevorgänge, Bewertungen, Rezensionen, Sammlungen, dein Name, dein Foto, Follows, Folgeanfragen, Blockierungen, Aktivität und die Anmeldung.',
+              '**Dein Konto und alles darin**: bis du das Konto löschst (Profil, dann Konto löschen). Es wird dann sofort aus der Datenbank entfernt: deine Bibliothek, Lesevorgänge, Bewertungen, Rezensionen, Sammlungen, dein Name, dein Foto, Profil-Links, Follows, Folgeanfragen, Blockierungen, Aktivität und die Anmeldung.',
               '**Sicherungen**: Eine nächtliche verschlüsselte Sicherung wird nach 35 Tagen gelöscht, ein gelöschtes Konto ist also nach spätestens 35 Tagen aus den Sicherungen verschwunden. Profilfotos sind nicht Teil der Sicherungen.',
               '**Fehler- und Leistungsprotokoll**: 30 Tage; die Zeilen eines Mitglieds verschwinden mit seinem Konto.',
               '**Eine Anmeldung, die nie bestätigt wird**: wird nach einem Tag entfernt.',

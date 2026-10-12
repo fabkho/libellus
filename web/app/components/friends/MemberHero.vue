@@ -5,9 +5,11 @@
 // shows. A new component beside the Profile's own Hero (components/profile/Hero.vue), which stays hers:
 // it is the signed-in member's, its ring is the button for her photo and it reads the placeholders of
 // her own record. The slot is for what goes under the name (a private account's lock and text).
+import type { ProfileLink } from '~/data/profileLinks'
 import type { MemberCard } from '~/data/social'
 
-const props = defineProps<{ card: MemberCard; since?: string | null; library?: string | null }>()
+// `links`: her profile links (WP-22), only what she shows to this member; none, no chips.
+const props = defineProps<{ card: MemberCard; since?: string | null; library?: string | null; links?: readonly ProfileLink[] }>()
 
 const { t } = useI18n()
 const { monthYear } = useFigures()
@@ -27,6 +29,7 @@ defineExpose({ focus: () => title.value?.focus({ preventScroll: true }) })
     <h1 ref="title" tabindex="-1" class="mt-md max-w-full truncate text-title" data-testid="member.name">{{ name }}</h1>
     <p v-if="since" class="mt-xs text-body text-ink-muted" data-testid="member.since">{{ t('member.since', { month: monthYear(since) }) }}</p>
     <p v-if="library" class="eyebrow mt-sm" data-testid="member.library">{{ library }}</p>
+    <ProfileSocialMenu v-if="links?.length" :links="links" testid="member.socials" class="mt-xs" />
     <slot />
   </section>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The account, at the end of the Profile (issue #78; what the avatar menu held
-// before): the address over grouped rows — Name (its sheet, opened by the page: the hero's name opens it too), Book links (its sheet, #116), the Dark mode
+// before): the address over grouped rows — Name (its sheet, opened by the page: the hero's name opens it too), Book links (its sheet, #116), Profile links (her profiles on other platforms, WP-22, components/profile/SocialLinksSheet.vue), the Dark mode
 // switch (docs/DESIGN.md, Themes: the first tap stores the opposite of what
 // shows), Import books, Install app (Android's Chrome only, once it has offered the
 // install: composables/useInstallHint.ts), Sign out, Delete account. Signing out deletes the writes still waiting
@@ -29,6 +29,7 @@ import { useEbooksStore } from '~/stores/ebooks'
 import { useSessionStore } from '~/stores/session'
 import { useSyncStore } from '~/stores/sync'
 import { useLinkTemplatesStore } from '~/stores/linkTemplates'
+import { useProfileLinksStore } from '~/stores/profileLinks'
 import { useOwnerErrorsStore } from '~/stores/ownerErrors'
 import { useWaitlistStore } from '~/stores/waitlist'
 import { useThemeStore } from '~/stores/theme'
@@ -48,6 +49,11 @@ const linking = ref(false)
 const links = useLinkTemplatesStore()
 const linkCount = computed(() => links.own?.length ?? 0)
 onMounted(() => void links.load())
+// Profile links (WP-22): her profiles on other platforms, how many; read when the Profile opens.
+const socialLinking = ref(false)
+const profileLinks = useProfileLinksStore()
+const socialCount = computed(() => profileLinks.own?.links.length ?? 0)
+onMounted(() => void profileLinks.load())
 // Errors (the owner's, and nobody else's: the store neither asks nor shows for another member).
 const errors = useOwnerErrorsStore()
 onMounted(() => void errors.load())
@@ -164,6 +170,9 @@ const whatsNew = useWhatsNew()
       <UiRow as="button" icon="globe" :label="t('links.row')" chevron data-testid="profile.links" @click="linking = true">
         <span :class="linkCount ? 'figures text-ink-muted' : 'text-ink-faint'" data-testid="profile.linksValue">{{ linkCount || t('links.rowNone') }}</span>
       </UiRow>
+      <UiRow as="button" icon="people" :label="t('socialLinks.row')" chevron data-testid="profile.socialLinks" @click="socialLinking = true">
+        <span :class="socialCount ? 'figures text-ink-muted' : 'text-ink-faint'" data-testid="profile.socialLinksValue">{{ socialCount || t('socialLinks.rowNone') }}</span>
+      </UiRow>
       <UiRow v-if="errors.isOwner" to="/profile/errors" icon="flag" :label="t('ownerErrors.row')" chevron data-testid="profile.errors">
         <span
           v-if="errors.fresh"
@@ -222,6 +231,7 @@ const whatsNew = useWhatsNew()
       {{ t('profile.account.version', { version: whatsNew.notes.version }) }} · <span class="text-accent-ink">{{ t('profile.account.whatsNew') }}</span>
     </button>
     <ProfileLinksSheet v-model:open="linking" />
+    <ProfileSocialLinksSheet v-model:open="socialLinking" />
     <UiConfirm
       v-model:open="asking"
       :title="t('profile.signOutUnsynced.title', { count: unsynced }, unsynced)"

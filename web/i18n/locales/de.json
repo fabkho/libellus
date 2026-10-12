@@ -1166,6 +1166,42 @@
       "unknown": "Deine Links konnten nicht gespeichert werden. Versuch es nochmal."
     }
   },
+  "socialLinks": {
+    "row": "Profil-Links",
+    "rowNone": "Keine",
+    "title": "Deine Profile anderswo",
+    "intro": "Freiwillig. Gib deinen Namen ein oder füge den Link zu deinem Profil ein. Gespeichert wird nur der Name, den Link baut die App selbst. Wer sie sieht, bestimmst du.",
+    "placeholder": "{prefix}{example}",
+    "save": "Speichern",
+    "remove": "{platform} entfernen",
+    "listLabel": "Profile anderswo",
+    "menu": "Socials",
+    "menuLabel": "Socials, {count} Link | Socials, {count} Links",
+    "opens": "{platform}: {handle}. Öffnet {platform} in einem neuen Tab",
+    "visibility": {
+      "label": "Wer meine Links sieht",
+      "followers": "Follower",
+      "everyone": "Alle",
+      "me": "Nur ich",
+      "hint": {
+        "followers": "Nur Personen, die dir folgen. Alle anderen sehen nichts.",
+        "everyone": "Alle, die dein Profil sehen. Bei einem privaten Konto sind das deine Follower.",
+        "me": "Niemand sonst sieht sie."
+      }
+    },
+    "invalid": {
+      "goodreads": "Gib die Nummer aus deinem Goodreads-Profillink ein, etwa goodreads.com/user/show/12345678.",
+      "reado": "Gib deinen Reado-Benutzernamen ein oder den Link zu deinem Reado-Profil.",
+      "youtube": "Gib einen Namen wie {'@'}name ein, einen Kanal-Link oder eine Kanal-ID, die mit UC beginnt.",
+      "instagram": "Gib deinen Instagram-Benutzernamen ein (Buchstaben, Zahlen, Punkte und Unterstriche) oder den Link zu deinem Profil.",
+      "tiktok": "Gib deinen TikTok-Benutzernamen ein (2 bis 24 Buchstaben, Zahlen, Punkte und Unterstriche) oder den Link zu deinem Profil."
+    },
+    "error": {
+      "offline": "Du bist offline. Es wurde nichts gespeichert.",
+      "rate_limited": "Gerade zu viele Änderungen. Versuche es gleich noch einmal.",
+      "unknown": "Deine Links konnten nicht gespeichert werden. Versuche es noch einmal."
+    }
+  },
   "waitlist": {
     "row": "Warteliste",
     "rowNone": "Niemand",
