@@ -61,7 +61,8 @@ describe('the sign-in code mail', () => {
     await emailCooldown()
     expect(await createAuth(newClient()).requestCode(email)).toEqual({ kind: 'sent' })
     expect((await readMail(email, 3)).subject).toBe('Your BetterReads sign-in code')
-  })
+    // Two waits of the mail window (emailCooldown) and the mails between them.
+  }, 90_000)
 
   it('does not ask for a language when nobody is signed in, and never throws', async () => {
     expect(await createAuth(newClient()).saveLocale('de')).toBe('failed')

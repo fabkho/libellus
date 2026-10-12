@@ -41,7 +41,7 @@ const empty = computed(() => !!shelf.shelf && books.value.length === 0)
     >
       <p class="text-subhead text-ink-muted">{{ shelf.loadError === 'offline' ? t('shelf.offline') : t('shelf.loadError') }}</p>
       <UiButton v-if="shelf.loadError !== 'offline'" tone="secondary" size="md" :disabled="shelf.loading" data-testid="profile.shelfRetry" @click="shelf.load()">
-        {{ t('shelf.retry') }}
+        {{ shelf.loading ? t('shelf.loading') : t('shelf.retry') }}
       </UiButton>
     </div>
     <p v-else-if="empty" class="rounded-lg bg-surface-raised px-xl py-xl text-center text-subhead text-ink-muted shadow-raised edge-faint" data-testid="profile.shelfEmpty">

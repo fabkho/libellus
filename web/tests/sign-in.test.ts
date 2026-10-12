@@ -78,7 +78,7 @@ describe('signing in with a mailed code', () => {
     await emailCooldown()
     expect(await auth.requestCode(member.email)).toEqual({ kind: 'sent' })
 
-    // The verify screen's resend button, tapped again straight away.
-    expect(await auth.requestCode(member.email)).toEqual({ kind: 'error', code: 'rate_limited' })
+    // The verify screen's resend button, tapped again straight away: the code just mailed still works.
+    expect(await auth.requestCode(member.email)).toEqual({ kind: 'error', code: 'code_just_sent' })
   })
 })

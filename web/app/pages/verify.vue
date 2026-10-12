@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSessionStore } from '~/stores/session'
+import { secondsLeft } from '~/utils/codeCooldown'
 
 const { t } = useI18n()
 const session = useSessionStore()
@@ -7,22 +8,22 @@ const session = useSessionStore()
 const code = ref('')
 const input = useTemplateRef<{ focus: () => void }>('codeInput')
 
-const RESEND_AFTER_MS = 60_000
-const now = ref(Date.now())
-let ticker: ReturnType<typeof setInterval> | undefined
-
-const secondsUntilResend = computed(() => {
-  const sentAt = session.pending?.sentAt ?? 0
-  return Math.max(0, Math.ceil((sentAt + RESEND_AFTER_MS - now.value) / 1000))
-})
+// One mail per address per 20 s (utils/codeCooldown.ts): the button counts the window down from the last send.
+const now = useClock()
+const secondsUntilResend = computed(() => secondsLeft(session.pending?.sentAt ?? 0, now.value))
 
 onMounted(() => {
-  session.clearError()
-  ticker = setInterval(() => (now.value = Date.now()), 1_000)
+  // "A code was sent a moment ago" (a second ask refused, stores/session.ts) is what she arrives with: it stays.
+  if (session.error !== 'code_just_sent') session.clearError()
   input.value?.focus()
 })
 
-onUnmounted(() => clearInterval(ticker))
+// Said while the window is open; once she may ask again it has done its job.
+const failure = computed(() => {
+  if (!session.error) return null
+  if (session.error === 'code_just_sent') return secondsUntilResend.value > 0 ? t('auth.error.code_just_sent', { seconds: secondsUntilResend.value }) : null
+  return t(`auth.error.${session.error}`)
+})
 
 // Typing the sixth digit is the submit: nobody wants to reach for a button with
 // the code still in their head.
@@ -75,12 +76,12 @@ async function changeEmail() {
         id="verify-code"
         ref="codeInput"
         v-model="code"
-        :invalid="Boolean(session.error)"
+        :invalid="Boolean(session.error) && session.error !== 'code_just_sent'"
         data-testid="verify.code"
       />
 
-      <p v-if="session.error" class="text-footnote text-error" data-testid="verify.error">
-        {{ t(`auth.error.${session.error}`) }}
+      <p v-if="failure" class="text-footnote text-error" data-testid="verify.error">
+        {{ failure }}
       </p>
     </form>
 
