@@ -68,6 +68,9 @@ export type ReadingRecord = {
 /** How many days the reading days look back over: five weeks and then some, so a Monday-first calendar fits. */
 export const DAYS_SHOWN = 42
 
+/** A Rating of exactly five stars, in quarters. */
+export const FIVE_STARS = 20
+
 /** The whole-star row a Rating counts in: 4.75 is a four, 0.25 a one. */
 export function starOf(rating: number): number {
   return Math.max(1, Math.floor(rating / 4))
@@ -201,6 +204,12 @@ export type YearFigures = {
   authors: AuthorFigure[]
   /** The best rated read, the latest on a tie. */
   favourite: StatsRead | null
+  /**
+   * Every five-star Book of the year (exactly 5.00, `FIVE_STARS`; a 4.75 is a four), newest end first, a
+   * Book once even when two of its reads got five. With none, the top-rated read alone (`favourite`);
+   * empty only when nothing is rated. `favourites[0]` is always `favourite`.
+   */
+  favourites: StatsRead[]
 }
 
 const yearOf = (read: StatsRead) => (read.endedOn ? Number(read.endedOn.slice(0, 4)) : null)
@@ -246,6 +255,19 @@ function median(values: number[]): number | null {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
   return sorted.length % 2 ? sorted[mid]! : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2)
+}
+
+/**
+ * The rated reads best first, newest end first on a tie. With `fives`, only the five-star ones (a Book
+ * once, by its newest read), falling back to the single top-rated read when there is none.
+ */
+function favouritesOf(rated: readonly StatsRead[], fives = false): StatsRead[] {
+  const best = [...rated].sort((a, b) => b.rating! - a.rating! || (b.endedOn ?? '').localeCompare(a.endedOn ?? ''))
+  if (!fives) return best
+  const top = best.filter((r) => r.rating === FIVE_STARS)
+  if (!top.length) return best.slice(0, 1)
+  const seen = new Set<string>()
+  return top.filter((r) => !seen.has(r.book.id) && seen.add(r.book.id))
 }
 
 export function figuresOf(reads: readonly StatsRead[], year: StatsYear): YearFigures {
@@ -295,7 +317,8 @@ export function figuresOf(reads: readonly StatsRead[], year: StatsYear): YearFig
     rereads: finished.filter((r) => r.nth > 1).length,
     abandoned: reads.filter((r) => r.outcome === 'abandoned' && inYear(year)(r)).length,
     authors,
-    favourite: [...rated].sort((a, b) => b.rating! - a.rating! || (b.endedOn ?? '').localeCompare(a.endedOn ?? ''))[0] ?? null,
+    favourite: favouritesOf(rated)[0] ?? null,
+    favourites: favouritesOf(rated, true),
   }
 }
 

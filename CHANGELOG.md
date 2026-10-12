@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.16.0](https://github.com/fabkho/libellus/compare/v1.15.1...v1.16.0) (2026-10-12)
+
+
+### Features
+
+* **profile:** the reads sheet shows its rows in pages and one switch says what each sheet lists ([#322](https://github.com/fabkho/libellus/issues/322)) ([c3c42fa](https://github.com/fabkho/libellus/commit/c3c42fa5e642818412f5c074234195bc10bf34f9))
+* **profile:** the year in review shows every five-star book, not one favourite ([#321](https://github.com/fabkho/libellus/issues/321)) ([632ffa4](https://github.com/fabkho/libellus/commit/632ffa4ec63e430d8d743fba11c13b06a6f3af16))
+
+
+### Fixes
+
+* **e2e:** wait for &lt;html lang&gt; and for requests in flight, the two races that stopped release 1.15.1 ([#320](https://github.com/fabkho/libellus/issues/320)) ([61328b0](https://github.com/fabkho/libellus/commit/61328b0ba8a32c5996b0e89c0a956278cc7c6f21))
+
 ## [1.15.1](https://github.com/fabkho/libellus/compare/v1.15.0...v1.15.1) (2026-10-12)
 
 

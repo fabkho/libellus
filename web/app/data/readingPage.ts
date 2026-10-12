@@ -143,6 +143,7 @@ export function yearFigures(year: PublicYear): YearFigures {
     abandoned: 0,
     authors: [],
     favourite: null,
+    favourites: [],
   }
 }
 

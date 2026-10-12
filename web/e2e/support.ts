@@ -221,11 +221,17 @@ export async function openProfile(page: Page) {
  * (a `page.goto` a moment after the one before it),
  * and why `untilStill` waits for the app: a load from here is a load from a page
  * that is done.
+ *
+ * Done also means no request in flight (`networkidle`): a load that cuts one off (Home's feed
+ * and its likes, the avatar, the stats) makes WebKit report "Fetch API cannot load … due to access
+ * control checks" as an uncaught error of the page, handled or not, and the fixture fails the
+ * flow for it (friends.spec.ts and friends-tab.spec.ts on a slow runner, release 1.15.1).
  */
 export async function goto(page: Page, url: string) {
   await untilStill(page)
   const layers = () => page.evaluate(() => (history.state as { libellusLayer?: number } | null)?.libellusLayer ?? 0)
   await expect.poll(layers).toBe(0)
+  await page.waitForLoadState('networkidle')
   await page.goto(url)
 }
 
