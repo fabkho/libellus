@@ -3,6 +3,8 @@ import type { Book, BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage } from './covers'
 import type { CoverKind } from './coverRank'
+import { languageFits } from './coverFill'
+import { type Candidate, mergeSources } from './mergeBook'
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
 import { editionSignature } from './editions'
@@ -86,6 +88,26 @@ export type Edition = {
   alternatives?: (Book | BookSnapshot)[]
 }
 
+/**
+ * The edition of the same work whose cover `base` borrows when its own has none:
+ * the merge's pick (data/mergeBook.ts, the one cover ranking: the work's ebook
+ * before another print edition), in the row's language. Null when `base` has a
+ * cover or no alternative has one. Pure.
+ */
+export function coverLender(
+  row: Pick<ImportBook, 'title' | 'language'>,
+  base: Book | BookSnapshot,
+  alternatives: readonly (Book | BookSnapshot)[],
+): Book | BookSnapshot | null {
+  if (base.coverUrl) return null
+  const usable = alternatives.filter((book) => book.coverUrl && languageFits(row, book))
+  if (!usable.length) return null
+  const candidate = (book: Book | BookSnapshot, exact: boolean): Candidate => ({ source: book.source, book, exact })
+  const { provenance } = mergeSources([candidate(base, true), ...usable.map((book) => candidate(book, false))])
+  const at = provenance.cover?.from
+  return at ? (usable[at - 1] ?? null) : null
+}
+
 /** Alternatives kept per row (a file can be thousands of rows). */
 export const ALTERNATIVES_KEPT = 20
 
@@ -153,7 +175,7 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
   const same = ranked[0] ?? null
   const own = bookFromRow(row)
   // An ISBN no source knows is still the edition she shelved: hers, with the work's cover.
-  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: same, alternatives }
+  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: coverLender(row, own, alternatives) ?? same, alternatives }
   if (same) return { book: same, via: 'title', unsure: false, alternatives }
   return { book: own, via: null, unsure, alternatives }
 }
@@ -165,7 +187,7 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
  */
 export function fileEdition(row: ImportBook, alternatives: readonly (Book | BookSnapshot)[] = []): Edition {
   const own = bookFromRow(row)
-  return { book: own, via: null, unsure: false, ...(own.isbn13 ? { coverFrom: alternatives[0] ?? null } : {}), alternatives: [...alternatives] }
+  return { book: own, via: null, unsure: false, ...(own.isbn13 ? { coverFrom: coverLender(row, own, alternatives) ?? alternatives[0] ?? null } : {}), alternatives: [...alternatives] }
 }
 
 /**

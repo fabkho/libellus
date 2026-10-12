@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import type { BookSnapshot } from '@/data/books'
+import { coverLender } from '@/data/bookImport'
 import { type Candidate, collectIsbn, isComplete, mergeSources, STORABLE_DESCRIPTION } from '@/data/mergeBook'
 
 /**
@@ -25,16 +27,16 @@ describe('merging the same book from several sources', () => {
   it('takes each field from the best source for it, and says where it came from', () => {
     const { book, provenance } = mergeSources([openLibrary, apple, dnb])
     expect(book).toMatchObject({ title: 'Das Wintermeer', isbn13: ISBN, pageCount: 320, year: 2021, language: 'de', publisher: 'Heyne', description: LONG })
-    expect(provenance.pageCount).toEqual({ source: 'dnb', exact: true })
-    expect(provenance.year).toEqual({ source: 'dnb', exact: true })
-    expect(provenance.language).toEqual({ source: 'dnb', exact: true })
-    expect(provenance.description).toEqual({ source: 'apple', exact: false })
+    expect(provenance.pageCount).toEqual({ source: 'dnb', from: 2, exact: true })
+    expect(provenance.year).toEqual({ source: 'dnb', from: 2, exact: true })
+    expect(provenance.language).toEqual({ source: 'dnb', from: 2, exact: true })
+    expect(provenance.description).toEqual({ source: 'apple', from: 1, exact: false })
   })
 
   it('takes the edition\'s own cover over a sharper one of another edition: edition-exact beats the work\'s ebook', () => {
     const { book, provenance } = mergeSources([openLibrary, apple])
     expect(book.coverUrl).toBe(OL_COVER)
-    expect(provenance.cover).toEqual({ source: 'openlibrary', exact: true, kind: 'exact' })
+    expect(provenance.cover).toEqual({ source: 'openlibrary', from: 0, exact: true, kind: 'exact' })
   })
 
   it('takes the work\'s ebook cover when the edition has none, over another print edition and Goodreads', () => {
@@ -161,5 +163,44 @@ describe('knowing when to stop asking', () => {
     const merged = mergeSources([from('openlibrary', { isbn13: ISBN, pageCount: 320, language: 'ger', coverUrl: OL_COVER }, { exact: true })])
     expect(isComplete(merged)).toBe(true)
     expect(isComplete(mergeSources([from('openlibrary', { isbn13: ISBN, pageCount: 320, language: 'ger' }, { exact: true }), from('apple', { coverUrl: APPLE_COVER })]))).toBe(false)
+  })
+})
+
+describe('the import borrows a cover by the same ranking', () => {
+  const row = { title: 'Das Wintermeer', language: 'de' }
+  const book = (over: Partial<BookSnapshot>): BookSnapshot => ({
+    title: 'Das Wintermeer',
+    authors: ['Anna Autorin'],
+    isbn13: null,
+    isbn10: null,
+    pageCount: null,
+    year: null,
+    language: null,
+    publisher: null,
+    description: null,
+    coverUrl: null,
+    coverThumbhash: null,
+    coverColors: null,
+    source: 'openlibrary',
+    appleId: null,
+    openLibraryEditionKey: null,
+    openLibraryWorkKey: null,
+    ...over,
+  })
+
+  it('lends the work\'s ebook (Apple) over another print edition, whatever order they came in', () => {
+    const print = book({ coverUrl: OL_COVER })
+    const ebook = book({ coverUrl: APPLE_COVER, source: 'apple' })
+    expect(coverLender(row, book({ isbn13: ISBN, source: 'import' }), [print, ebook])).toBe(ebook)
+    expect(coverLender(row, book({ isbn13: ISBN, source: 'import' }), [ebook, print])).toBe(ebook)
+  })
+
+  it('lends the first one with a cover, skips a bare one and one in another language, and nothing when the Book has its own', () => {
+    const bare = book({ source: 'apple' })
+    const english = book({ title: 'The Winter Sea', coverUrl: OL_OTHER, language: 'en' })
+    const print = book({ coverUrl: OL_COVER })
+    expect(coverLender(row, book({ source: 'import' }), [bare, english, print])).toBe(print)
+    expect(coverLender(row, book({ source: 'import' }), [bare, english])).toBeNull()
+    expect(coverLender(row, book({ source: 'import', coverUrl: OL_COVER }), [print])).toBeNull()
   })
 })
