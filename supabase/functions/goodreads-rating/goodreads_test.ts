@@ -7,11 +7,14 @@
 import { assertEquals, assertThrows } from '@std/assert'
 import {
   type AutoCompleteBook,
+  GoodreadsBlocked,
+  goodreadsCoverUrl,
   matchTitle,
   normalise,
   parseAutoComplete,
   parseIsbn13,
   parseReviewCounts,
+  pickByBookId,
   surname,
   titleForms,
   titleQuery,
@@ -50,6 +53,30 @@ Deno.test('a failing or garbled review counts answer throws, so it is never stor
   assertThrows(() => parseReviewCounts('9780061803208', 200, '{"books":[{"isbn13":"9780061803208"}]}'))
 })
 
+Deno.test('blocked: 403, 429, 503, a 202, an empty or non-JSON body, or another JSON shape is a block, not a miss', () => {
+  const blocked = (run: () => unknown, status: number, kind: string) => {
+    const error = assertThrows(run, GoodreadsBlocked)
+    assertEquals([error.status, error.kind], [status, kind])
+  }
+  for (const status of [403, 429, 503]) {
+    blocked(() => parseReviewCounts('9780061803208', status, 'x'), status, 'status')
+    blocked(() => parseAutoComplete(status, '[]'), status, 'status')
+  }
+  blocked(() => parseReviewCounts('9780061803208', 202, '{"books":[]}'), 202, 'empty')
+  blocked(() => parseAutoComplete(202, ''), 202, 'empty')
+  blocked(() => parseReviewCounts('9780061803208', 200, ''), 200, 'empty')
+  blocked(() => parseAutoComplete(200, '  '), 200, 'empty')
+  blocked(() => parseReviewCounts('9780061803208', 200, '<html>Are you a robot?</html>'), 200, 'not_json')
+  blocked(() => parseAutoComplete(200, '<html>'), 200, 'not_json')
+  blocked(() => parseReviewCounts('9780061803208', 200, '{"nope":1}'), 200, 'shape')
+  blocked(() => parseReviewCounts('9780061803208', 200, 'null'), 200, 'shape')
+  blocked(() => parseAutoComplete(200, '{"nope":1}'), 200, 'shape')
+  // Not blocks: a plain miss, an ordinary failure.
+  assertEquals(parseReviewCounts('9780061803208', 404, 'No books match those ISBNs.'), { status: 'not_found' })
+  assertEquals(parseAutoComplete(200, '[]'), [])
+  assertThrows(() => parseAutoComplete(500, 'oops'), Error, 'auto_complete answered 500')
+})
+
 Deno.test('a title search: each book with its id, title, author, average and ratings', () => {
   const { status, body } = recording('auto-complete-we-are-legion')
   assertEquals(parseAutoComplete(status, body), [
@@ -60,6 +87,7 @@ Deno.test('a title search: each book with its id, title, author, average and rat
       author: 'Dennis E. Taylor',
       rating: 4.24,
       ratingsCount: 146833,
+      coverUrl: 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1474344826i/32109569.jpg',
     },
   ])
   assertEquals(parseAutoComplete(200, recording('auto-complete-nothing').body), [])
@@ -129,6 +157,7 @@ Deno.test('no match: another author, another title, no author at all, or nobody 
     author: 'Susanna Clarke',
     rating: 4.2,
     ratingsCount: 100,
+    coverUrl: null,
   }
   const book = { isbn13: '9780000000002', title: 'Piranesi', authors: ['Susanna Clarke'] }
   assertEquals(matchTitle(book, [result])?.bookId, '1')
@@ -137,4 +166,57 @@ Deno.test('no match: another author, another title, no author at all, or nobody 
   assertEquals(matchTitle({ ...book, title: 'Piranesi Returns' }, [result]), null)
   assertEquals(matchTitle({ ...book, authors: [] }, [result]), null)
   assertEquals(matchTitle(book, [{ ...result, ratingsCount: 0 }]), null)
+})
+
+// ------------------------------------------------------------------- covers
+
+Deno.test('a cover address: the size token is stripped, the full-size original is linked', () => {
+  assertEquals(
+    goodreadsCoverUrl('https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1682494830i/131743446._SY75_.jpg'),
+    'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1682494830i/131743446.jpg',
+  )
+  assertEquals(
+    goodreadsCoverUrl('https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1558896137i/10864102._SX50_.jpg'),
+    'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1558896137i/10864102.jpg',
+  )
+  // Already full size, or with a query: only the path is kept.
+  assertEquals(goodreadsCoverUrl('https://i.gr-assets.com/images/x/1.jpg?t=1#a'), 'https://i.gr-assets.com/images/x/1.jpg')
+})
+
+Deno.test('a cover address: https at exactly i.gr-assets.com, or no cover', () => {
+  const path = '/images/S/compressed.photo.goodreads.com/books/1i/2._SY75_.jpg'
+  for (const bad of [
+    `http://i.gr-assets.com${path}`,
+    `https://s.gr-assets.com${path}`,
+    `https://i.gr-assets.com.evil.com${path}`,
+    `https://i.gr-assets.com@evil.example${path}`,
+    `https://evil.example@i.gr-assets.com${path}`,
+    `https://i.gr-assets.com:8443${path}`,
+    `https://evil.example/?u=https://i.gr-assets.com${path}`,
+    'javascript:alert(1)',
+    'not a url',
+    '',
+    null,
+    undefined,
+    42,
+  ]) {
+    assertEquals(goodreadsCoverUrl(bad), null, String(bad))
+  }
+})
+
+Deno.test('a Goodreads stand-in (nophoto) image is no cover', () => {
+  assertEquals(
+    goodreadsCoverUrl('https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/nophoto/book/111x148._SX50_.png'),
+    null,
+  )
+  // The recorded search has such hits next to real ones.
+  const sandman = parseAutoComplete(200, recording('auto-complete-sandman').body)
+  assertEquals(sandman.map((b) => b.coverUrl === null), [false, false, true, true])
+})
+
+Deno.test('a result by its Goodreads book id, exactly; none for an unknown or missing id', () => {
+  const sandman = parseAutoComplete(200, recording('auto-complete-sandman').body)
+  assertEquals(pickByBookId(sandman, '10864102')?.bookId, '10864102')
+  assertEquals(pickByBookId(sandman, '999'), null)
+  assertEquals(pickByBookId(sandman, null), null)
 })

@@ -390,7 +390,9 @@ export default defineNuxtConfig({
           urlPattern: ({ request, url }) =>
             request.destination === 'image' &&
             request.mode === 'no-cors' &&
-            (/(^|\.)mzstatic\.com$/.test(url.hostname) || url.hostname === 'covers.openlibrary.org'),
+            (/(^|\.)mzstatic\.com$/.test(url.hostname) ||
+              url.hostname === 'covers.openlibrary.org' ||
+              url.hostname === 'i.gr-assets.com'),
           handler: 'CacheFirst',
           options: {
             cacheName: 'libellus-covers',

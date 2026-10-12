@@ -1022,6 +1022,13 @@
     "chooseEdition": "Choose edition",
     "changeEdition": "Change edition",
     "actionFor": "{action}: {title}",
+    "findCover": {
+      "action": "Find a cover",
+      "asking": "Looking for a cover…",
+      "found": "Cover found.",
+      "none": "No cover found.",
+      "failed": "Couldn't look for a cover. Try again later."
+    },
     "choices": "Your choices",
     "edition": {
       "title": "Choose edition",

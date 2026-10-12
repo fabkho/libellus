@@ -1022,6 +1022,13 @@
     "chooseEdition": "Ausgabe wählen",
     "changeEdition": "Ausgabe ändern",
     "actionFor": "{action}: {title}",
+    "findCover": {
+      "action": "Cover suchen",
+      "asking": "Cover wird gesucht …",
+      "found": "Cover gefunden.",
+      "none": "Kein Cover gefunden.",
+      "failed": "Die Suche nach einem Cover hat nicht geklappt. Versuche es später noch einmal."
+    },
     "choices": "Deine Auswahl",
     "edition": {
       "title": "Ausgabe wählen",
