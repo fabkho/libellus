@@ -117,7 +117,7 @@ function back() {
         <div v-if="shelf.loadError && !shelf.shelf" class="absolute inset-0 flex flex-col items-center justify-center gap-md px-xl text-center" data-testid="shelf.error">
           <p class="text-subhead text-ink-muted">{{ shelf.loadError === 'offline' ? t('shelf.offline') : t('shelf.loadError') }}</p>
           <UiButton v-if="shelf.loadError !== 'offline'" tone="secondary" size="md" :disabled="shelf.loading" data-testid="shelf.retry" @click="shelf.load()">
-            {{ t('shelf.retry') }}
+            {{ shelf.loading ? t('shelf.loading') : t('shelf.retry') }}
           </UiButton>
         </div>
       </div>
