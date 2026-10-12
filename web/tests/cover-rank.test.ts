@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { betterCover, COVER_KINDS, coverKindOf, coverRank, isLent } from '@/data/coverRank'
+import { betterCover, COVER_KINDS, coverKindOf, kindRank, isLent } from '@/data/coverRank'
 
 /** The one ranking of covers (data/coverRank.ts): pure, so a table is the whole test. */
 describe('the cover ranking', () => {
   it('goes edition-exact, the work\'s ebook, another edition, Goodreads, the cloth', () => {
     expect(COVER_KINDS).toEqual(['exact', 'ebook', 'sameWork', 'goodreads', 'placeholder'])
-    expect(COVER_KINDS.map(coverRank)).toEqual([0, 1, 2, 3, 4])
+    expect(COVER_KINDS.map(kindRank)).toEqual([0, 1, 2, 3, 4])
   })
 
   it('has the better of two kinds win, and the first on a tie', () => {

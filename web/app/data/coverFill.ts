@@ -1,5 +1,5 @@
 import type { Book, BookSnapshot } from './books'
-import { coverKindOf, coverRank, GOODREADS_COVERS, type CoverKind } from './coverRank'
+import { coverKindOf, GOODREADS_COVERS, kindRank, type CoverKind } from './coverRank'
 import { verifyCover, type ProbeImage, type ResolvedCover } from './covers'
 import { abortError, type FetchLike } from './fetching'
 import { isSameWork, languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions'
@@ -166,7 +166,7 @@ export function siblingCovers(wanted: CoverWanted): string[] {
 export function mergeCover(edition: Edition, found: ResolvedCover & { kind?: CoverKind }): Edition | null {
   if (edition.book.coverUrl || edition.coverFrom?.coverUrl) {
     // Only what the fill found itself is replaced, and only by a better kind (the ranking, data/coverRank.ts).
-    const better = edition.filled && edition.coverKind && found.kind && coverRank(found.kind) < coverRank(edition.coverKind)
+    const better = edition.filled && edition.coverKind && found.kind && kindRank(found.kind) < kindRank(edition.coverKind)
     if (!better) return null
   }
   const cover = { coverUrl: found.coverUrl, coverThumbhash: found.coverThumbhash, coverColors: found.coverColors }

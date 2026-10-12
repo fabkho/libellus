@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { createCoverFill, COVER_FILL_GOODREADS_GAP_MS, GOODREADS_FAILURES, mergeCover, type CoverFound, type CoverWanted } from '@/data/coverFill'
-import { coverKindOf, coverRank, GOODREADS_COVERS } from '@/data/coverRank'
+import { coverKindOf, kindRank, GOODREADS_COVERS } from '@/data/kindRank'
 import { verifyCover, type ProbeImage } from '@/data/covers'
 import type { FetchLike } from '@/data/fetching'
 import { createGoodreadsCover } from '@/data/goodreadsCover'
@@ -91,8 +91,8 @@ describe('the Goodreads stage of the cover fill', () => {
   it('is the flag: on by default (the owner decides before merge), and a Goodreads cover ranks below the work\'s other editions', () => {
     expect(GOODREADS_COVERS).toBe(true)
     expect(coverKindOf('goodreads', GR(1))).toBe('goodreads')
-    expect(coverRank('goodreads')).toBeGreaterThan(coverRank('sameWork'))
-    expect(coverRank('goodreads')).toBeLessThan(coverRank('placeholder'))
+    expect(kindRank('goodreads')).toBeGreaterThan(kindRank('sameWork'))
+    expect(kindRank('goodreads')).toBeLessThan(kindRank('placeholder'))
   })
 
   it('asks for a Goodreads file\'s row that nothing else found a cover for, with its title, authors and book id', async () => {
