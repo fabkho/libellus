@@ -153,19 +153,27 @@ describe('resolving a Cover when a Book enters the Catalogue', () => {
     const byId = 'https://covers.openlibrary.org/b/id/15155469-L.jpg'
     const byIsbn = 'https://covers.openlibrary.org/b/isbn/9783641264864-L.jpg?default=false'
     const probe = probes({
-      'https://covers.openlibrary.org/b/id/15155469-M.jpg': blank(180, 270),
-      'https://covers.openlibrary.org/b/isbn/9783641264864-M.jpg?default=false': image(180, 270),
+      [byId]: blank(330, 500),
+      [byIsbn]: image(330, 500),
     })
     const cover = await resolveBookCover(book({ source: 'openlibrary', appleId: null, coverUrl: byId }), {
       probe,
       lookupAppleIsbn: async () => null,
     })
-    expect(probe.read).toEqual([
-      'https://covers.openlibrary.org/b/id/15155469-M.jpg',
-      'https://covers.openlibrary.org/b/isbn/9783641264864-M.jpg?default=false',
-    ])
+    expect(probe.read).toEqual([byId, byIsbn])
     expect(cover.coverUrl).toBe(byIsbn)
     expect(cover.coverThumbhash).toBeTruthy()
+  })
+
+  it("reads an OpenLibrary cover at the size it keeps: a narrow book's 'M' is under 150 px and was dropped", async () => {
+    const byId = 'https://covers.openlibrary.org/b/id/15155469-L.jpg'
+    const probe = probes({
+      [byId]: image(330, 500),
+      'https://covers.openlibrary.org/b/id/15155469-M.jpg': image(145, 218),
+    })
+    const cover = await resolveBookCover(book({ source: 'openlibrary', appleId: null, coverUrl: byId }), { probe })
+    expect(cover.coverUrl).toBe(byId)
+    expect(probe.read).toEqual([byId])
   })
 
   it('falls back to the Placeholder cover when no image will do', async () => {

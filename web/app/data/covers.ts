@@ -181,7 +181,11 @@ function appleCandidate(url: string): CoverCandidate {
 }
 
 function openLibraryCandidate(url: string): CoverCandidate {
-  return { url: openLibraryCoverAt(url, 'L'), probe: openLibraryCoverAt(url, 'M') }
+  // Read at the size it is kept at: 'M' is at most 180 px wide, so a cover of a narrow
+  // book read at 'M' came out under MIN_COVER_SIDE and was dropped (19 of 708 books
+  // of one real import lost a cover found by the lookup).
+  const large = openLibraryCoverAt(url, 'L')
+  return { url: large, probe: large }
 }
 
 const TIMEOUT = Symbol('timeout')
@@ -250,7 +254,7 @@ export async function resolveBookCover(book: BookSnapshot, sources: CoverSources
     async () => (own && OPENLIBRARY_COVERS.test(own) ? openLibraryCandidate(own) : null),
     async () =>
       book.isbn13
-        ? { url: openLibraryIsbnCover(book.isbn13, 'L'), probe: openLibraryIsbnCover(book.isbn13, 'M') }
+        ? { url: openLibraryIsbnCover(book.isbn13, 'L'), probe: openLibraryIsbnCover(book.isbn13, 'L') }
         : null,
   ]
 
