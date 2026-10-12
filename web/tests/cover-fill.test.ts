@@ -309,21 +309,25 @@ describe('the paced search', () => {
     expect(fill.progress()).toEqual({ total: 1, done: 1, found: 0 })
   })
 
-  it('skips a cover that is too small or flat', async () => {
-    const small: ProbeImage = async () => ({ ...GOOD, width: 80, height: 120 })
-    const { found: filled, onFound } = collect()
-    const fill = createCoverFill({
-      fetch: openLibrary({}),
-      search: { searchCovers: async () => ({ results: [found(1)], pending: false, failed: false }) as never },
-      probe: small,
-      onFound,
-      batchWaitMs: 0,
-      ...clock(),
-    })
-    fill.add(wanted(1))
-    fill.holdSearch(false)
-    await fill.settled(1000)
-    expect(filled).toEqual({})
+  it('skips a stray pixel, takes a low-resolution cover: it is better than none', async () => {
+    const run = async (size: { width: number; height: number }) => {
+      const probe: ProbeImage = async () => ({ ...GOOD, ...size })
+      const { found: filled, onFound } = collect()
+      const fill = createCoverFill({
+        fetch: openLibrary({}),
+        search: { searchCovers: async () => ({ results: [found(1)], pending: false, failed: false }) as never },
+        probe,
+        onFound,
+        batchWaitMs: 0,
+        ...clock(),
+      })
+      fill.add(wanted(1))
+      fill.holdSearch(false)
+      await fill.settled(1000)
+      return filled
+    }
+    expect(await run({ width: 20, height: 30 })).toEqual({})
+    expect(await run({ width: 80, height: 120 })).toHaveProperty(['goodreads:1', 'kind'], 'ebook')
   })
 
   it('pauses with a growing pause after a failed search, asks a row once more, then gives the lane up', async () => {
