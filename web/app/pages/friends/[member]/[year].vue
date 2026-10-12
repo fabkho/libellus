@@ -122,9 +122,9 @@ function back() {
 
           <ProfileMonthBooks class="pt-xl" foreign :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 
-          <UiReveal :show="loading || !!figures.favourite">
+          <UiReveal :show="loading || figures.favourites.length > 0">
             <div class="pt-xl" :class="{ arrive: arriving }">
-              <ProfileFavourite foreign testid="memberYear.favourite" :read="loading ? null : figures.favourite" />
+              <ProfileFavourite foreign testid="memberYear.favourite" :reads="loading ? null : figures.favourites" />
             </div>
           </UiReveal>
 

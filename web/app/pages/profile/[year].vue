@@ -125,9 +125,9 @@ function back() {
           <ShelfYearRow class="pt-xl" :year="year" :books="shelfBooks" />
         </UiReveal>
 
-        <UiReveal :show="loading || !!figures.favourite">
+        <UiReveal :show="loading || figures.favourites.length > 0">
           <div class="pt-xl">
-            <ProfileFavourite id="favourite" :read="figures.favourite" :class="{ arrive: arriving }" />
+            <ProfileFavourite id="favourite" :reads="figures.favourites.length ? figures.favourites : null" :class="{ arrive: arriving }" />
           </div>
         </UiReveal>
 

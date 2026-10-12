@@ -270,6 +270,7 @@
     "year": {
       "eyebrow": "Dein Lesejahr",
       "favourite": "Favorit",
+      "favourites": "Fünf Sterne · {count}",
       "months": "Monate",
       "monthLabel": "{month}: keine Bücher | {month}: {count} Buch | {month}: {count} Bücher",
       "other": "Andere Jahre",
