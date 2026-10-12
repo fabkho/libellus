@@ -8,7 +8,7 @@ Plan: docs/plans/backlog-execution.md
 ## Problem
 The backlog lists a "follower system and social counts" for later. The follower system has shipped (follows, requests, private and public accounts, blocks, the follow link: `supabase/migrations/20261017010000_social_settings.sql`, `20261017020000_social_follows.sql`; People with Following / Followers / Requests, `web/app/pages/friends/people.vue`). Counts are shown nowhere, deliberately: `docs/proposals/social-v1.md:30,95`, `pages/friends/people.vue:8` ("No counts anywhere").
 
-## Revision 2 (public launch)
+## If sign-up opens (#331)
 - **Self-only counts (S, any time):** her own Following, Followers and Requests counts on People, from her own rows, never shown to anyone else. No new privacy surface.
 - **Public counts stay parked:** on a private account they leak the size of her circle to anyone who can see her card; they invite comparison; throwaway accounts inflate them.
 

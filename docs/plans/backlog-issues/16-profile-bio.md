@@ -1,10 +1,12 @@
 Title: Profile: a short bio under the name
 Labels: feature, priority:low
-Package: WP-16 · item #4 · tier P3 · size M · model Sonnet · depends on: WP-11, WP-03, WP-12, WP-25 (report flow), WP-26 (text rule), the BetterReads rename · wave 4
+Package: WP-16 · item #4 · tier P3 · size M · model Sonnet · depends on: WP-03 ✓, WP-26 (text rule); after WP-17 (member_profile) · wave 4 · safe while invite-only; revisit before open sign-up (#331)
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/16-profile-bio.md)" --label feature --label priority:low --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/16-profile-bio.md)
 Plan: docs/plans/backlog-execution.md
 
 ---
+**Safe while invite-only; revisit before open sign-up (#331):** it must have its report reason (WP-25) and, for free text, WP-26's text rule before sign-up opens.
+
 ## Problem
 There is no bio: `accounts` holds only id, invite code, creation time and the avatar (`20261002190000_invites_and_accounts.sql`, `20261009120000_avatars.sql`).
 

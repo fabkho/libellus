@@ -1,12 +1,14 @@
 Title: Launch: report a member (name, photo, reviews) and the owner's minimal handling
-Labels: feature, priority:high, launch
-Package: WP-25 · launch (revision 2); prerequisite for #2, #4, #5, #8 · tier P0 · size M · model Sonnet (Opus review of the SQL) · depends on: none · launch wave (start now)
-Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/25-report-flow.md)" --label feature --label priority:high --label launch --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/25-report-flow.md)
+Labels: priority:low (tracked in #331)
+Package: WP-25 · launch (revision 2); prerequisite for #2, #4, #5, #8 · tier postponed (#331) · size M · model Sonnet (Opus review of the SQL) · depends on: none · postponed
+Create: do not; this package is tracked in issue #331 (https://github.com/fabkho/libellus/issues/331).
 Plan: docs/plans/backlog-execution.md
 
 ---
+**Status: postponed with open sign-up, bundled in issue #331 (https://github.com/fabkho/libellus/issues/331). Do not create a separate issue and do not start until the owner opens #331.**
+
 ## Problem
-There is no way to report anything. Members can only block (`block()`, `20261017020000_social_follows.sql`) or write to the owner through the Contact sheet (`public.feedback`, kinds `bug | feature | other`, `20261024010000_feedback.sql`). After the public launch, names, photos and reviews come from strangers; a hosting service with member content needs a notice-and-action path (EU DSA Art. 16; confirm against `docs/legal-checklist.md`).
+There is no way to report anything. Members can only block (`block()`, `20261017020000_social_follows.sql`) or write to the owner through the Contact sheet (`public.feedback`, kinds `bug | feature | other`, `20261024010000_feedback.sql`). Once sign-up opens, names, photos and reviews come from strangers; a hosting service with member content needs a notice-and-action path (EU DSA Art. 16; confirm against `docs/legal-checklist.md`).
 
 ## Scope (phase 1: no wave-1 file touched)
 - **Report a member:** "Report" in the member sheet's ⋯ (`web/app/components/friends/MemberSheet.vue`, reached from her profile and People). Reasons: name, photo, a review, spam, someone under 16, other; optional note ≤ 500 characters. After sending, offer **Block {name}** (existing `block()`).

@@ -1,10 +1,12 @@
 Title: Collections: an uploaded cover instead of the four-cover mosaic
 Labels: feature, priority:low, needs-decision
-Package: WP-21 · item #8 · tier P4 (parked unless members ask) · size L · model Sonnet · depends on: WP-12, WP-14, WP-25 · parked
+Package: WP-21 · item #8 · tier P4 (parked unless members ask) · size L · model Sonnet · depends on: WP-12, WP-14, WP-25 · parked · safe only while invite-only; revisit before open sign-up (#331)
 Create (only when the owner says so): gh issue create --title "$(sed -n 's/^Title: //p' docs/plans/backlog-issues/21-collection-cover-image.md)" --label feature --label priority:low --label needs-decision --body-file <(sed '1,/^---$/d' docs/plans/backlog-issues/21-collection-cover-image.md)
 Plan: docs/plans/backlog-execution.md
 
 ---
+**Safe while invite-only; revisit before open sign-up (#331):** it must have its report reason (WP-25) and, for free text, WP-26's text rule before sign-up opens.
+
 ## Problem
 A Collection's face is always its first four covers (`web/app/components/collections/Mosaic.vue`).
 
