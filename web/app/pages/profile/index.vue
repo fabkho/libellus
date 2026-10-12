@@ -11,7 +11,7 @@
 // the years in review do not change with the pills. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
-import { figuresOf, readsInMonth, readsOnDay, readsWithoutPages, readsWithStars, readingSinceOf, yearsOf } from '~/data/stats'
+import { figuresOf, readingSinceOf, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryStore } from '~/stores/library'
@@ -29,7 +29,7 @@ const bookGenres = useGenresStore()
 const libraryView = useLibraryViewStore()
 // Your shelf (#23): the owner's card, and nobody else's.
 const shelf = useShelfStore()
-const { monthLong, monthLetter, dayTitle } = useFigures()
+const { monthLong, monthLetter } = useFigures()
 
 useHead({ title: () => `${t('profile.title')} · ${t('app.name')}` })
 // Loaded each time the page shows: opened afresh, or shown again from the
@@ -103,21 +103,7 @@ const lit = computed(() => (stats.year === 'all' ? (years.value.includes(thisYea
 // The sheet of a month's books, a star row's, the reads without a page count, or a day's; open again on Back from a book
 // opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
-const sheetTitle = computed(() => {
-  const s = shown.value
-  if (!s) return ''
-  if (s.kind === 'month') return t('profile.sheet.month', { month: monthLong(s.month), year: s.year })
-  if (s.kind === 'pagesMissing') return t('profile.sheet.pagesMissing')
-  if (s.kind === 'day') return dayTitle(s.day)
-  return t('profile.sheet.stars', { count: s.star, year: s.year === 'all' ? t('profile.sheet.allYears') : String(s.year) }, s.star)
-})
-const sheetReads = computed(() => {
-  const s = shown.value
-  if (!s) return []
-  if (s.kind === 'month') return readsInMonth(reads.value, s.year, s.month)
-  if (s.kind === 'day') return readsOnDay(stats.record?.days ?? [], s.day)
-  return s.kind === 'pagesMissing' ? readsWithoutPages(reads.value, s.year) : readsWithStars(reads.value, s.year, s.star)
-})
+const { title: sheetTitle, reads: sheetReads, withYear: sheetWithYear } = useStatsSheet(shown, () => reads.value, () => stats.record?.days ?? [])
 
 function pickColumn(key: number) {
   if (stats.year === 'all') return void router.push(`/profile/${key}`)
@@ -231,7 +217,7 @@ const naming = ref(false)
       </div>
     </Transition>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="shown?.kind !== 'day' && shown?.year === 'all'" />
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="sheetWithYear" />
     <ProfilePhoto ref="photo" />
     <ShellNameSheet v-model:open="naming" />
   </div>

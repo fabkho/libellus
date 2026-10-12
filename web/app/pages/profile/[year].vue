@@ -7,7 +7,7 @@
 // books rated so), the genres (a row opens the Library filtered by it and the year), the records, the authors read more than once, and the
 // years either side. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
-import { figuresOf, readsInMonth, readsWithoutPages, readsWithStars, yearsOf } from '~/data/stats'
+import { figuresOf, readsInMonth, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { useGenresStore } from '~/stores/genres'
 import { useLibraryViewStore } from '~/stores/libraryView'
@@ -71,18 +71,7 @@ const after = computed(() => [...years.value].reverse().find((y) => y > year.val
 
 // A star row's books, or the year's reads without a page count; open again on Back from a book opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
-const sheetTitle = computed(() => {
-  const s = shown.value
-  if (!s) return ''
-  if (s.kind === 'pagesMissing') return t('profile.sheet.pagesMissing')
-  return s.kind === 'stars' ? t('profile.sheet.stars', { count: s.star, year: String(s.year) }, s.star) : ''
-})
-const sheetReads = computed(() => {
-  const s = shown.value
-  if (!s) return []
-  if (s.kind === 'stars') return readsWithStars(reads.value, s.year, s.star)
-  return s.kind === 'pagesMissing' ? readsWithoutPages(reads.value, s.year) : []
-})
+const { title: sheetTitle, reads: sheetReads } = useStatsSheet(shown, () => reads.value)
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
 }
