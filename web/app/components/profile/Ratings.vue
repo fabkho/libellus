@@ -1,14 +1,15 @@
 <script setup lang="ts">
 // How the Ratings fall (issue #78): one row per whole star, 5 down to 1 (a
 // 4.75 counts as four), the stars, a bar in the star colour on a hairline, the
-// count. A row with books is a button: it opens the books rated so. While
+// count. A row with books is a button: it opens the books rated so, and the
+// "N not yet" over the rows opens the reads not rated yet (#15, #14). While
 // the reading record loads (`figures` null) the five rows stand with their
 // stars, their empty bars in the loading wave; when the counts come, each bar
 // fills to its share (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
 
 const props = defineProps<{ figures: YearFigures | null }>()
-defineEmits<{ pick: [star: number] }>()
+defineEmits<{ pick: [star: number]; unrated: [] }>()
 const { t } = useI18n()
 const { count } = useFigures()
 const loading = computed(() => !props.figures)
@@ -22,7 +23,13 @@ const top = computed(() => Math.max(...rows.value.map((b) => b.count), 1))
     <div class="flex items-baseline justify-between gap-md">
       <h2 class="eyebrow">{{ t('profile.ratings.title') }}</h2>
       <span v-if="figures" class="figures text-meta text-ink-faint" :class="{ arrive: arriving }">
-        {{ t('profile.ratings.rated', { count: count(figures.rated) }) }}<template v-if="figures.unrated"> · {{ t('profile.ratings.notYet', { count: count(figures.unrated) }) }}</template>
+        {{ t('profile.ratings.rated', { count: count(figures.rated) }) }}<template v-if="figures.unrated"> · <button
+          type="button"
+          class="line -mx-xxs rounded-sm px-xxs"
+          :aria-label="t('profile.ratings.notYetOpen', { count: count(figures.unrated) })"
+          data-testid="profile.notYet"
+          @click="$emit('unrated')"
+        >{{ t('profile.ratings.notYet', { count: count(figures.unrated) }) }}</button></template>
       </span>
       <span v-else class="summary flex items-center" aria-hidden="true"><span class="skeleton wave" /></span>
     </div>
@@ -61,11 +68,13 @@ const top = computed(() => Math.max(...rows.value.map((b) => b.count), 1))
   width: calc(var(--spacing-xxxl) + var(--spacing-xl));
   height: 62%;
 }
-.row:not(:disabled):active {
+.row:not(:disabled):active,
+.line:active {
   background: var(--color-fill);
 }
 @media (hover: hover) {
-  .row:not(:disabled):hover {
+  .row:not(:disabled):hover,
+  .line:hover {
     background: var(--color-fill);
   }
 }

@@ -74,11 +74,25 @@ const months = computed(() => Array.from({ length: 12 }, (_, m) => ({ month: m +
 const before = computed(() => years.value.find((y) => y < year.value) ?? null)
 const after = computed(() => [...years.value].reverse().find((y) => y > year.value) ?? null)
 
-// A star row's books, as on the Profile; open again on Back from a book opened in it.
+// A star row's books, an author's reads of her year, the reads without a page count or the ones not rated
+// yet, as on the Profile (#12, #15, #14); open again on Back from a book opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const { title: sheetTitle, reads: sheetReads } = useStatsSheet(shown, () => reads.value)
 function pickStars(star: number) {
   sheet.value = { kind: 'stars', year: year.value, star }
+}
+// An author's row opens her reads of the year (#12).
+function pickAuthor(name: string) {
+  sheet.value = { kind: 'author', year: year.value, name }
+}
+// Her reads of the year not rated yet (#14, #15); the figures carry no such line for a caller she hides her
+// ratings from (utils/memberProfile.ts).
+function pickUnrated() {
+  sheet.value = { kind: 'unrated', year: year.value }
+}
+// The Pages line: her reads of the year without a page count.
+function pickPagesMissing() {
+  sheet.value = { kind: 'pagesMissing', year: year.value }
 }
 
 // Back to her profile it came from (or to it, opened from an address).
@@ -114,7 +128,7 @@ function back() {
       <UiReveal :show="loading || hasYear">
         <!-- No gaps between the blocks: each carries the space before it inside its room, so a block that closes takes its space along. -->
         <div class="relative flex flex-col px-screen pt-lg" :aria-busy="loading || undefined">
-          <ProfileFigures :figures="loading ? null : figures" still />
+          <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
 
           <ProfileMonthBooks class="pt-xl" foreign :months="months" :loading="loading" :gone-by="monthsGoneBy" />
 
@@ -125,13 +139,13 @@ function back() {
           </UiReveal>
 
           <UiReveal :show="!!blocks?.ratings && (loading || figures.rated > 0)">
-            <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" />
+            <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" @unrated="pickUnrated" />
           </UiReveal>
           <UiReveal :show="loading || hasRecords">
             <ProfileRecords class="pt-xl" foreign :figures="loading ? null : figures" />
           </UiReveal>
           <UiReveal :show="loading || figures.authors.length > 0">
-            <ProfileAuthors class="pt-xl" foreign :name="view.profile?.member.name?.trim() || undefined" :figures="loading ? null : figures" :limit="3" />
+            <ProfileAuthors class="pt-xl" foreign :name="view.profile?.member.name?.trim() || undefined" :figures="loading ? null : figures" :limit="3" @pick="pickAuthor" />
           </UiReveal>
 
           <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" />

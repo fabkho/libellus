@@ -3,9 +3,10 @@
 // the DNF under it), Pages (with the reads without a count, or the pages a
 // book; a dash when no Book has a count, never "0": utils/pagesFigure.ts), the Average Rating (with the ones not rated yet) and the Days a book
 // (the median from start to finish). Between hairlines, two by two. The reads
-// without a count are a button where a page can open their sheet (the Profile
-// and a year in review; `still` on a reading page, #171, whose visitor has
-// none). While the reading record loads (`figures` null) the grid stands as it
+// without a count and the ones not rated yet are buttons where a page can open
+// their sheets (the Profile, a year in review and a member's figures, #14;
+// `still` on a reading page, #171, whose visitor has none). While the record
+// loads (`figures` null) the grid stands as it
 // will be, its labels in place and a placeholder in the wave where each figure
 // goes; the figures arrive into it (docs/MOTION.md, Loading).
 import type { YearFigures } from '~/data/stats'
@@ -13,12 +14,12 @@ import type { YearFigures } from '~/data/stats'
 const props = withDefaults(
   defineProps<{
     figures: YearFigures | null
-    /** Only the figures, nothing to open (a reading page, #171): the line stays plain text. */
+    /** Only the figures, nothing to open (a reading page, #171): the lines stay plain text. */
     still?: boolean
   }>(),
   { still: false },
 )
-defineEmits<{ pagesMissing: [] }>()
+defineEmits<{ pagesMissing: []; unrated: [] }>()
 const { t } = useI18n()
 const { count, large, stars } = useFigures()
 const arriving = useArrival(() => !props.figures)
@@ -32,6 +33,9 @@ const booksLine = computed(() => {
 /** The reads without a count, and whether the line can open them (nothing to open on a reading page). */
 const pagesMissing = computed(() => props.figures?.pagesMissing ?? 0)
 const pagesMissingOpens = computed(() => !props.still && pagesMissing.value > 0)
+/** The reads not rated yet, and whether the Average's line can open them (#14). */
+const unrated = computed(() => props.figures?.unrated ?? 0)
+const unratedOpens = computed(() => !props.still && unrated.value > 0)
 const pagesLine = computed(() => {
   const f = props.figures
   if (!f) return ''
@@ -74,7 +78,8 @@ const cells = computed(() => {
       </dd>
       <dd v-else class="value text-figure tabular-nums" :class="{ arrive: arriving }" :style="{ '--chars': String(cell.value).length }" :data-testid="`profile.${cell.key}`">{{ cell.value }}</dd>
       <dd class="figures truncate text-meta text-ink-faint" :class="{ arrive: arriving }" :data-testid="cell.lineTestid">
-        <!-- The reads without a count open their sheet; a page without one (a reading page, #171) keeps the plain line. -->
+        <!-- The reads without a count and the ones not rated yet open their sheets; a page that opens
+             nothing (a reading page, #171) keeps the plain line. -->
         <button
           v-if="cell.key === 'pages' && pagesMissingOpens"
           type="button"
@@ -82,6 +87,17 @@ const cells = computed(() => {
           :aria-label="t('profile.figures.pagesMissingOpen', { count: count(pagesMissing) })"
           data-testid="profile.pagesMissing"
           @click="$emit('pagesMissing')"
+        >
+          <span class="min-w-0 truncate">{{ cell.line }}</span>
+          <UiIcon name="chevron" :size="13" />
+        </button>
+        <button
+          v-else-if="cell.key === 'average' && unratedOpens"
+          type="button"
+          class="line -mx-xs flex max-w-full items-center gap-xxs rounded-sm px-xs"
+          :aria-label="t('profile.figures.unratedOpen', { count: count(unrated) })"
+          data-testid="profile.unrated"
+          @click="$emit('unrated')"
         >
           <span class="min-w-0 truncate">{{ cell.line }}</span>
           <UiIcon name="chevron" :size="13" />
@@ -101,7 +117,7 @@ const cells = computed(() => {
 .cell > :last-child {
   min-height: var(--text-meta--line-height);
 }
-/* The Pages line where it opens a sheet: the quiet press of a tappable figure (Ratings.vue, Columns.vue). */
+/* A figure's line where it opens a sheet: the quiet press of a tappable figure (Ratings.vue, Columns.vue). */
 .line:active {
   background: var(--color-fill);
 }
