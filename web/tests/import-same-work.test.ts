@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
-import { isNearWork, isSameWork, rankEditions, sameAuthor, sameTitle } from '@/data/import/editions'
+import { isNearWork, isSameWork, otherLanguage, rankEditions, sameAuthor, sameTitle, titleLanguage } from '@/data/import/editions'
 
 /**
  * When two records are one book (issue #111): `sameTitle` (a series prefix
@@ -193,5 +193,28 @@ describe('rankEditions', () => {
   it('ranks an edition with a cover before one without, all else equal', () => {
     const ranked = rankEditions(row, [book('no-cover'), book('cover', { coverUrl: 'https://covers.example/cold-water.jpg' })])
     expect(ranked.map((result) => result.id)).toEqual(['cover', 'no-cover'])
+  })
+})
+
+describe('what is not the book', () => {
+  it('a summary, study guide or workbook sold under its title is not the book', () => {
+    const row = { title: 'Bleak House', authors: ['Charles Dickens'] }
+    expect(isSameWork(row, { title: 'Bleak House (a Concise and Precise Summary)', authors: ['Charles Dickens'] })).toBe(false)
+    expect(isSameWork(row, { title: 'Bleak House: Study Guide', authors: ['Charles Dickens'] })).toBe(false)
+    expect(isSameWork({ title: 'Bleak House: Study Guide', authors: ['Charles Dickens'] }, { title: 'Bleak House: Study Guide', authors: ['Charles Dickens'] })).toBe(true)
+  })
+
+  it('a French edition of a row that names no language is a translation, ranked last', () => {
+    expect(titleLanguage('Cold Water : Une romance de Noël irrésistible')).toBe('fr')
+    expect(titleLanguage('Cold Water (édition française)')).toBe('fr')
+    expect(titleLanguage('The Cold Water (Svensk utgåva)')).toBe('sv')
+    expect(titleLanguage('Cold Water (German Edition)')).toBe('de')
+    expect(otherLanguage({ title: 'The Cold Water', language: null }, { title: 'The Cold Water', language: 'pol' })).toBe(true)
+    const row = { title: 'Cold Water', authors: ['Greta Mueller'], pageCount: null, year: null, binding: 'Kindle Edition' }
+    const french = { title: 'Cold Water : Une romance de Noël', authors: ['Greta Mueller'], language: null, pageCount: null, year: null, source: 'apple' as const, coverUrl: 'https://example.test/fr.jpg' }
+    const plain = { ...french, title: 'Cold Water', coverUrl: 'https://example.test/en.jpg' }
+    expect(otherLanguage(row, french)).toBe(true)
+    expect(otherLanguage(row, plain)).toBe(false)
+    expect(rankEditions(row, [{ book: french }, { book: plain }]).map(({ book }) => book.coverUrl)).toEqual(['https://example.test/en.jpg', 'https://example.test/fr.jpg'])
   })
 })

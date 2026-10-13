@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createBookImport, findEdition, IMPORT_CHUNK, needsLook, pacedFetch, type ImportRow } from '@/data/bookImport'
+import { createBookImport, findEdition, IMPORT_CHUNK, needsLook, pacedFetch, type Edition, type ImportRow } from '@/data/bookImport'
 import type { FetchLike } from '@/data/fetching'
 import type { BookSnapshot } from '@/data/books'
 
@@ -299,6 +299,29 @@ describe('the second pass of a lookup', () => {
     // No source could be asked the first time: all three are asked again, and every answer is reported again.
     expect(counts).toEqual(['0/3', '1/3', '2/3', '3/3'])
     expect(editions).toBe(6)
+  })
+
+  it('asks again about a match found while Apple was refused, and takes the ebook the second time', async () => {
+    const edition = (source: 'openlibrary' | 'apple') => ({
+      title: 'Bleak House', authors: ['Author'], isbn13: null, isbn10: null, pageCount: null, year: null, language: null, publisher: null,
+      description: null, coverUrl: `https://example.test/${source}.jpg`, coverThumbhash: null, coverColors: null, source,
+      appleId: source === 'apple' ? '1' : null, openLibraryEditionKey: source === 'openlibrary' ? 'OL1M' : null, openLibraryWorkKey: null,
+    })
+    let appleAnswers = false
+    const search = async (_query: string, options: { sources?: readonly string[] }) => {
+      const apple = options.sources?.includes('apple')
+      if (apple && !appleAnswers) return { results: [] as never[], pending: false, failed: true, editions: [], unanswered: ['apple'] }
+      return { results: [] as never[], pending: false, failed: false, editions: [edition(apple ? 'apple' : 'openlibrary')], unanswered: [] }
+    }
+    const importer = importerWith(search as never)
+    const kindle = { ...(book(1) as object), title: 'Bleak House', binding: 'Kindle Edition' } as never
+    const answers: Edition[] = []
+    await importer.match([kindle], { onEdition: (_index, found) => void answers.push(found), onSecondPass: () => void (appleAnswers = true) })
+    // The print edition with its cover will do (any format): no row to look at, but asked again for the ebook.
+    expect(answers.map((found) => [found.book.source, found.unsure, found.retry ?? false])).toEqual([
+      ['openlibrary', false, true],
+      ['apple', false, false],
+    ])
   })
 
   it('asks nothing again about a row every source answered: "nothing found" is final', async () => {

@@ -111,6 +111,18 @@ describe('findEdition', () => {
     ])
   })
 
+  it('met only a translation, it asks the Open Library work for an edition in the row\'s language', async () => {
+    const german = snapshot({ title: 'The Old Man and the Sea', authors: ['Ernest Hemingway'], source: 'openlibrary', appleId: null, openLibraryEditionKey: 'OL5M', openLibraryWorkKey: 'OL9W', language: 'ger', coverUrl: 'https://example.test/de.jpg' })
+    const english = { ...german, openLibraryEditionKey: 'OL6M', language: 'eng', coverUrl: 'https://example.test/en.jpg' }
+    const asked: string[] = []
+    const edition = await findEdition(row({ title: 'The Old Man and the Sea', authors: ['Ernest Hemingway'], isbn13: null }), {
+      ...lookups({ search: async () => outcome([german]) }),
+      search: { lookupIsbn: async () => null, search: async () => outcome([german]), workEditions: async (work) => (asked.push(work.key), [english]) },
+    })
+    expect(asked).toEqual(['OL9W'])
+    expect(edition.book.coverUrl).toBe('https://example.test/en.jpg')
+  })
+
   it('takes the Apple ebook of the work for an ebook row, not the print edition beside it', async () => {
     const print = snapshot({
       title: 'Moby Dick',
@@ -155,17 +167,32 @@ describe('findEdition', () => {
     expect(edition.unsure).toBe(true)
   })
 
-  it('found while Apple was refused: an ebook row is not settled (unsure), a print row is', async () => {
+  it('found while Apple was refused: a print edition with a cover will do for an ebook row (any format), asked again for the ebook', async () => {
     const print = snapshot({ source: 'openlibrary', appleId: null, openLibraryEditionKey: 'OL3M', coverUrl: 'https://example.test/house.jpg' })
     const refused = lookups({ search: async () => outcome([print], ['apple']) })
 
     const kindle = await findEdition(row({ title: 'Bleak House', authors: ['Charles Dickens'], binding: 'Kindle Edition', isbn13: null }), refused)
-    expect(kindle.via).toBe('title')
-    expect(kindle.unsure).toBe(true)
+    expect(kindle).toMatchObject({ via: 'title', unsure: false, retry: true })
 
     const hardcover = await findEdition(row({ title: 'Bleak House', authors: ['Charles Dickens'], binding: 'Hardcover', isbn13: null }), refused)
     expect(hardcover.via).toBe('title')
     expect(hardcover.unsure).toBe(false)
+    expect(hardcover.retry).toBeUndefined()
+  })
+
+  it('found while Apple was refused, without a cover anywhere: unsure (a source may have one)', async () => {
+    const bare = snapshot({ source: 'openlibrary', appleId: null, openLibraryEditionKey: 'OL4M', coverUrl: null })
+    const edition = await findEdition(row({ title: 'Bleak House', authors: ['Charles Dickens'], binding: 'Hardcover', isbn13: null }), lookups({ search: async () => outcome([bare], ['apple']) }))
+    expect(edition).toMatchObject({ via: 'title', unsure: true })
+  })
+
+  it('an ISBN lookup that was refused: the title match stands and is asked again for the very edition', async () => {
+    const print = snapshot({ source: 'openlibrary', appleId: null, openLibraryEditionKey: 'OL3M', coverUrl: 'https://example.test/house.jpg' })
+    const edition = await findEdition(
+      row({ title: 'Bleak House', authors: ['Charles Dickens'], binding: 'Hardcover', isbn13: isbn('979000000110') }),
+      lookups({ lookupIsbn: async () => Promise.reject(new Error('429')), search: async () => outcome([print]) }),
+    )
+    expect(edition).toMatchObject({ via: 'title', unsure: false, retry: true })
   })
 
   it('a Goodreads row nothing anywhere found for takes its Goodreads cover as the last resort', async () => {

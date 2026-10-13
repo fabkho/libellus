@@ -85,6 +85,12 @@ export type Edition = {
   via: 'isbn' | 'title' | null
   /** Some lookup could not be asked (no answer in time, or every source failed): a better edition may exist. */
   unsure: boolean
+  /**
+   * A source did not answer while the row was matched to an edition that will do (a cover, the row's language, any
+   * format): it is asked again in the second pass for a better one (its ebook, its very edition), but the match
+   * stands and is no row to look at (owner rule: any format, a real Book before none).
+   */
+  retry?: boolean
   /** Another edition of the same work, whose cover the file's own Book takes when its ISBN finds none. */
   coverFrom?: Book | BookSnapshot | null
   /** The cover fill found its cover (data/coverFill.ts): for a Catalogue Book it is handed to `fill_book_covers` once written. */
@@ -261,6 +267,22 @@ export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?
   return { same, near: nearEditions(row, pool).map(({ book }) => book), incomplete }
 }
 
+/**
+ * When the work was found only in another language than the row's (Open Library's search names one edition a work,
+ * in the device's language first, so an English row may meet only its German translation), the Open Library work's
+ * editions are asked once (one request, no per-address limit) and ranked in: the row's own language may be there.
+ */
+async function inRowLanguage(row: ImportBook, found: TitleCandidates, lookups: Lookups, ask: Ask): Promise<TitleCandidates> {
+  const best = found.same[0]
+  const work = found.same.find((book) => book.openLibraryWorkKey)?.openLibraryWorkKey
+  if (!best || !otherLanguage(row, best) || !work || !lookups.search.workEditions) return found
+  const editions = await ask((s) => lookups.search.workEditions!({ key: work, authors: row.authors }, { signal: s }))
+  if (!editions?.length) return found
+  const seen = new Set(found.same.flatMap((book) => editionKeys(book)))
+  const more = editions.filter((book) => !editionKeys(book).some((key) => seen.has(key)))
+  return { ...found, same: rankEditions(row, [...found.same, ...more].map((book) => ({ book }))).map(({ book }) => book) }
+}
+
 /** Finds the edition of one row (see the steps above), with its work's raw genre labels. Rejects only when `signal` aborts. */
 export async function findEdition(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
   return withGenres(await editionOf(row, lookups, signal))
@@ -282,9 +304,11 @@ async function editionOf(row: ImportBook, lookups: Lookups, signal?: AbortSignal
   // The very edition, with its own cover: nothing more to ask.
   if (exact?.coverUrl) return { book: exact, via: 'isbn', unsure: false }
 
-  const found = await titleCandidates(row, lookups, signal)
+  const titled = await titleCandidates(row, lookups, signal)
   // An ISBN lookup that could not be told is asked again at the end; the work found meanwhile stands.
   const pending = unsure
+  // The work's other editions are a nicety: one that does not come in time makes the row no less sure.
+  const found = await inRowLanguage(row, titled, lookups, asker(lookups, signal, () => {}))
   const alternatives = found.same.slice(0, ALTERNATIVES_KEPT)
   const near = found.near.slice(0, NEAR_KEPT)
   if (exact) {
@@ -297,7 +321,14 @@ async function editionOf(row: ImportBook, lookups: Lookups, signal?: AbortSignal
     // A real Book of the work, any format, before the file's own row (also for an ISBN no source knows). Found while
     // a source did not answer, it stands only when nothing better can come: its own cover, the row's language, and
     // for an ebook row an Apple Books edition (Apple refusing is how a Kindle row ended on a print edition).
-    return withLentCover({ book: best, via: 'title', unsure: pending || (found.incomplete && !settled(row, best)), alternatives, near }, coverLender(row, best, alternatives))
+    // Found while a source did not answer: it stands when it will do (a cover shown, the row's language: any format is
+    // fine), and is asked again for better (the exact edition, the ebook); without that, the row is unsure.
+    const waiting = pending || found.incomplete
+    const matched = withLentCover({ book: best, via: 'title', unsure: false, alternatives, near }, coverLender(row, best, alternatives))
+    const willDo = Boolean((matched.coverFrom ?? matched.book).coverUrl) && !otherLanguage(row, best)
+    if (!waiting) return matched
+    if (!willDo) return { ...matched, unsure: true }
+    return pending || !settled(row, best) ? { ...matched, retry: true } : matched
   }
   const edition: Edition = { book: bookFromRow(row), via: null, unsure: pending || found.incomplete, alternatives, near }
   if (edition.unsure || !lookups.goodreads || row.source !== 'goodreads') return edition
@@ -886,7 +917,7 @@ export function createBookImport(
           if (row.isbn13) await primed
           const edition = await findEdition(row, lookups, signal)
           // Only what a source could not be asked about is asked again: a row every source answered is final.
-          if (edition.unsure) retry.push(index)
+          if (edition.unsure || edition.retry) retry.push(index)
           first.set(index, edition)
           onEdition(index, edition)
         },
@@ -913,9 +944,9 @@ export function createBookImport(
           async (index) => {
             await pause(lookups.busyFor?.() ?? 0, second.signal)
             const edition = await findEdition(rows[index]!, lookups, second.signal)
-            // A second answer that is no better (unsure again, and the first had found the work) leaves the first.
+            // A second answer that is no better (unsure again, or nothing, where the first had found the work) leaves the first.
             const before = first.get(index)
-            if (!(edition.unsure && before?.via && !edition.via)) onEdition(index, edition)
+            if (!(before?.via && (edition.unsure || !edition.via))) onEdition(index, edition)
             onSecondPass?.(++done, again.length)
           },
           second.signal,

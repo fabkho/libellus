@@ -44,6 +44,8 @@ export function languageCode(value: string | null | undefined): string | null {
   const named: Record<string, string> = {
     english: 'en', eng: 'en', german: 'de', deutsch: 'de', ger: 'de', deu: 'de', french: 'fr', fre: 'fr', fra: 'fr',
     spanish: 'es', spa: 'es', italian: 'it', ita: 'it', dutch: 'nl', dut: 'nl', nld: 'nl', portuguese: 'pt', por: 'pt',
+    polish: 'pl', pol: 'pl', swedish: 'sv', swe: 'sv', danish: 'da', dan: 'da', norwegian: 'no', nor: 'no', finnish: 'fi',
+    fin: 'fi', hungarian: 'hu', hun: 'hu', czech: 'cs', cze: 'cs', ces: 'cs', russian: 'ru', rus: 'ru', turkish: 'tr', tur: 'tr',
   }
   if (named[text]) return named[text]
   const short = /^([a-z]{2})(?:[-_][a-z]+)?$/.exec(text)
@@ -57,13 +59,38 @@ export function languageCode(value: string | null | undefined): string | null {
  * whose row says no language.
  */
 export function titleLanguage(title: string): string | null {
+  // An edition that says its language in brackets ("(Svensk utgåva)", "(German Edition)", "(édition française)").
+  for (const [, aside] of title.matchAll(/[([]([^()[\]]*)[)\]]/g)) {
+    if (!EDITION_WORD.test(aside!)) continue
+    const named = aside!.toLowerCase().split(/[^\p{L}]+/u).find((word) => EDITION_LANGUAGES[word])
+    if (named) return EDITION_LANGUAGES[named]!
+  }
   const words = title.toLowerCase().split(/[^\p{L}]+/u)
-  const german = /[äöüß]/i.test(title) || words.some((word) => GERMAN_WORDS.has(word))
-  const english = words.some((word) => ENGLISH_WORDS.has(word))
-  return german === english ? null : german ? 'de' : 'en'
+  const told = [
+    ['de', /[äöüß]/i.test(title) || words.some((word) => GERMAN_WORDS.has(word))],
+    ['en', words.some((word) => ENGLISH_WORDS.has(word))],
+    // French only to tell a translation apart ("… : Une romance de Noël", "(édition française)"): the app reads German and English.
+    ['fr', words.some((word) => FRENCH_WORDS.has(word))],
+  ] as const
+  const said = told.filter(([, yes]) => yes)
+  return said.length === 1 ? said[0]![0] : null
 }
 const GERMAN_WORDS = new Set(['der', 'die', 'das', 'und', 'von', 'des', 'dem', 'den', 'ein', 'eine', 'einer', 'im', 'mit', 'zum', 'zur', 'auf', 'aus', 'nicht'])
 const ENGLISH_WORDS = new Set(['the', 'of', 'and', 'a', 'an', 'to', 'with', 'from', 'for', 'is', 'my'])
+const FRENCH_WORDS = new Set(['une', 'les', 'et', 'pour', 'avec', 'dans', 'aux', 'sur', 'française', 'français', 'édition'])
+
+/** "Edition" in the words publishers put in brackets after a title. */
+const EDITION_WORD = /edition|édition|utgåva|ausgabe|edición|edizione|wydanie|udgave|utgave|kiadás|uitgave/i
+/** The language an edition's bracket names, by its word for it. */
+const EDITION_LANGUAGES: Record<string, string> = {
+  english: 'en', german: 'de', deutsche: 'de', deutsch: 'de', french: 'fr', française: 'fr', français: 'fr', spanish: 'es',
+  española: 'es', español: 'es', italian: 'it', italiana: 'it', polish: 'pl', polskie: 'pl', polska: 'pl', swedish: 'sv',
+  svensk: 'sv', danish: 'da', dansk: 'da', norwegian: 'no', norsk: 'no', dutch: 'nl', nederlandse: 'nl', portuguese: 'pt',
+  portuguesa: 'pt', hungarian: 'hu', magyar: 'hu',
+}
+
+/** The languages the app is in (German, English): a row that says none is most likely in one of them. */
+const APP_LANGUAGES: readonly string[] = ['de', 'en']
 
 /** A Binding or format that is an ebook (`Kindle Edition`, `ebook`, `Nook`): an Apple Books edition is the closest there is. */
 export const isEbookBinding = (value: string | null | undefined) => /kindle|e-?book|nook|epub|digital/i.test(value ?? '')
@@ -86,7 +113,9 @@ function rowLanguage(row: Pick<FitRow, 'title' | 'language' | 'isbn13'>): string
 export function otherLanguage(row: Pick<FitRow, 'title' | 'language' | 'isbn13'>, found: Pick<BookSnapshot, 'title' | 'language'>): boolean {
   const wanted = rowLanguage(row)
   const theirs = languageCode(found.language) ?? titleLanguage(found.title)
-  return Boolean(wanted && theirs && wanted !== theirs)
+  if (!theirs) return false
+  // A row that says no language is most likely in one of the app's: a French edition of it is a translation.
+  return wanted ? wanted !== theirs : !APP_LANGUAGES.includes(theirs)
 }
 
 /**
@@ -101,6 +130,7 @@ export function editionFit(row: FitRow, found: Fitted): number {
   const wanted = rowLanguage(row)
   const theirs = languageCode(found.language) ?? titleLanguage(found.title)
   if (wanted && theirs) fit += wanted === theirs ? 4 : -4
+  else if (theirs && !APP_LANGUAGES.includes(theirs)) fit -= 4
   const pages = row.pageCount
   if (pages && found.pageCount) {
     const off = Math.abs(pages - found.pageCount) / pages
@@ -189,10 +219,14 @@ export const sameVolume = (a: string, b: string): boolean => {
 /** A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1". Dropped from a title's forms. */
 const VOLUME_MARK = /\bt(?=\d)\d{1,3}\b|\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\.?\s*\d{1,3}\b|#\s*\d{1,3}\b/gi
 
-/** One title names a volume after the first and the other none. */
-const laterVolume = (a: string, b: string) => {
-  const [ours, theirs] = [volumeOf(a), volumeOf(b)]
-  return (ours === null) !== (theirs === null) && Number(ours ?? theirs) > 1
+/**
+ * The found title names a volume after the first (outside brackets, where a series' place is only an aside: "Title
+ * (Series Book 2)") and the row's names none: the row is the book the series is named after. The other way round is
+ * not refused: a source may leave a volume out of its title ("Harbour Lights" for "Harbour Lights: Volume Three").
+ */
+const laterVolume = (row: string, found: string) => {
+  const unbracketed = (title: string) => title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')
+  return volumeOf(unbracketed(row)) === null && Number(volumeOf(unbracketed(found))) > 1
 }
 
 /** Whether a title carries a volume's number ("Tome 02", "Buch 3", "#2", "T01"). */
@@ -239,8 +273,8 @@ export function sameTitle(a: string, b: string): boolean {
   const ours = titleForms(a)
   const theirs = titleForms(b)
   if (!ours.full || !theirs.full) return false
-  // The same words once the volume is dropped: not when only one names a volume, and a later one ("Heartstopper" is
-  // not "Heartstopper: Volume Three", "Harbour Lights" not "Harbour Lights - Buch 3": a series' name is its first book's).
+  // The same words once the volume is dropped: not when only one names a volume, and a later one ("Harbour Lights" is
+  // not "Harbour Lights: Volume Three", nor "Harbour Lights - Buch 3": a series' name is its first book's).
   if ((ours.main && ours.main === theirs.main) || ours.full === theirs.full) return !laterVolume(a, b)
   const wholeOurs = [ours.full, ours.main]
   const wholeTheirs = [theirs.full, theirs.main]
@@ -294,9 +328,12 @@ export function sameAuthor(a: string, b: string): boolean {
  * Goodreads series aside), not another volume (`sameVolume`), and the first
  * author among the result's authors (`sameAuthor`: spelling, umlauts and a
  * typo aside). A title in another script whose brackets name the work
- * (`Θνητοί Θεοί (Altered Carbon)`) is a translation, not the same book.
+ * (`Θνητοί Θεοί (Altered Carbon)`) is a translation, not the same book; a summary, study guide or workbook
+ * sold under the book's title is not the book.
  */
 export function isSameWork(row: Pick<ImportBook, 'title' | 'authors'>, found: Pick<BookSnapshot, 'title' | 'authors'>): boolean {
+  // "Title (a Concise and Precise Summary)" is not the book, whatever its title and author say.
+  if (COMPANION.test(found.title) && !COMPANION.test(row.title)) return false
   const bare = splitSeriesTitle(found.title).title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')
   if (/\p{L}/u.test(bare) && !normalize(bare)) return false
   if (!sameTitle(row.title, found.title)) return false
@@ -306,6 +343,9 @@ export function isSameWork(row: Pick<ImportBook, 'title' | 'authors'>, found: Pi
   if (!wanted || !surname(wanted)) return true
   return found.authors.some((name) => sameAuthor(wanted, name))
 }
+
+/** A book about a book, sold under its title: a summary, a study guide, a workbook. */
+const COMPANION = /\b(?:summary|summaries|zusammenfassung|study guide|workbook|sparknotes|cliffsnotes|analysis of)\b/i
 
 /** The words of a title that say something (four letters or more). */
 const telling = (title: string) => titleForms(title).full.split(' ').filter((word) => word.length >= 4)

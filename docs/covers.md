@@ -254,6 +254,11 @@ The cover ranking above is one field of a general rule: ask several sources abou
   the better-ranked source, then the earlier (stable ties; put the Book's own record first and what it has stays).
 - Cover: kind (`coverRank.ts`), then pixel height (Apple 900, Open Library `-L` 500, Goodreads 500, Google 128, or the probed
   height), then the earlier; its thumbhash and colours travel with it. Resolution only ranks real covers, it never rejects one.
+- Genre labels (`mergeGenreLabels`, `Merged.genres`): a work field, raw: the union of what every candidate's source calls
+  the book's genres (Apple's genre names, "Books" dropped; Open Library's subjects; at most 20 per answer), one per
+  normalised spelling, each with the sources and candidates that named it, the most agreed first, at most 30. Not mapped
+  onto the app's genre list and not stored yet (the enrich function maps and stores genres server side): the import's match
+  carries them (`Edition.genres`) so storing them is one change later.
 - Description: only from sources whose terms let it be stored (Apple, Open Library, DNB, the Catalogue: not Google, not
   Goodreads, listed as `withheld`), the book's language before a longer one in another.
 - ISBN first: `collectIsbn` gives the ISBN to ask every other source with (the file's, else any source's: an exact one first,
