@@ -92,8 +92,19 @@ export const MAX_TITLE_CHARS = 300
 /** What a member may ask in a minute (the function's own upstream budget is five requests a second). */
 export const MEMBER_LIMIT = 30
 export const MEMBER_WINDOW_SECONDS = 60
+/**
+ * What one import may ask in a minute: its one question per row adds up over a file (a row can cost
+ * two calls), past what a member browsing needs. Its own bucket (`purpose: 'import'`), so an import
+ * never spends the scan's and the picker's budget; the upstream pace (five requests a second to the
+ * DNB, one instance) is shared all the same.
+ */
+export const IMPORT_LIMIT = 120
+/** What one call is counted against: the member's own budget, or the import's (its own bucket). */
+export type Budget = { bucket: string; limit: number }
+export const MEMBER_BUDGET: Budget = { bucket: 'dnb-lookup', limit: MEMBER_LIMIT }
+export const IMPORT_BUDGET: Budget = { bucket: 'dnb-lookup-import', limit: IMPORT_LIMIT }
 
-type Body = { action?: unknown; isbn13?: unknown; isbn?: unknown; title?: unknown; authors?: unknown; cover?: unknown }
+type Body = { action?: unknown; isbn13?: unknown; isbn?: unknown; title?: unknown; authors?: unknown; cover?: unknown; purpose?: unknown }
 
 async function readBody(request: Request): Promise<Body | 'too_large' | 'invalid'> {
   const declared = Number(request.headers.get('content-length'))
@@ -114,8 +125,8 @@ export function createHandler(deps: {
   /** The cover Open Library has for an ISBN-13 (its URL), or null; never rejects. */
   cover: (isbn13: string) => Promise<string | null>
   authorize: (request: Request) => Promise<Caller | null>
-  /** Counts one call of a member; false when she is over her limit. Not asked for the service role. */
-  throttle?: (member: string) => Promise<boolean>
+  /** Counts one call of a member against a budget (`MEMBER_BUDGET`, or `IMPORT_BUDGET` for `purpose: 'import'`); false when she is over its limit. Not asked for the service role. */
+  throttle?: (member: string, budget: Budget) => Promise<boolean>
   log?: (message: string) => void
 }): (request: Request) => Promise<Response> {
   const log = deps.log ?? ((message) => console.error(message))
@@ -136,20 +147,20 @@ export function createHandler(deps: {
     if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' })
     const caller = await deps.authorize(request)
     if (!caller) return json(401, { error: 'unauthorized' })
+    const body = await readBody(request)
+    if (body === 'too_large') return json(413, { error: 'payload_too_large' })
+    if (body === 'invalid') return json(400, { error: 'book_unidentified' })
+    // Counted once the body is read: the budget a call counts against is named in it (`purpose: 'import'`).
     if (caller.member && deps.throttle) {
       let allowed: boolean
       try {
-        allowed = await deps.throttle(caller.member)
+        allowed = await deps.throttle(caller.member, body.purpose === 'import' ? IMPORT_BUDGET : MEMBER_BUDGET)
       } catch (error) {
         log(`dnb-lookup: throttle failed: ${error}`)
         return json(502, { error: 'dnb_unavailable' })
       }
       if (!allowed) return json(429, { error: 'rate_limited' })
     }
-
-    const body = await readBody(request)
-    if (body === 'too_large') return json(413, { error: 'payload_too_large' })
-    if (body === 'invalid') return json(400, { error: 'book_unidentified' })
 
     try {
       switch (body.action) {

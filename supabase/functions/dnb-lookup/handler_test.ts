@@ -1,7 +1,7 @@
 // deno-lint-ignore-file require-await -- the stand-ins answer from memory, as the real ones do over the network
 import { assert, assertEquals } from '@std/assert'
 import { createDnb } from './client.ts'
-import { type BookRow, type Catalogue, createHandler, MEMBER_LIMIT, readCover } from './handler.ts'
+import { type BookRow, type Budget, type Catalogue, createHandler, IMPORT_LIMIT, MEMBER_LIMIT, readCover } from './handler.ts'
 import { fakeClock, fixture, recordedFetch } from './test_support.ts'
 
 const MEMBER = '11111111-1111-4111-8111-111111111111'
@@ -14,7 +14,7 @@ function bookRow(fields: Partial<BookRow> = {}): BookRow {
   }
 }
 
-function setup(options: { cover?: string | null; known?: BookRow | null; throttle?: () => Promise<boolean>; fetch?: ReturnType<typeof recordedFetch> } = {}) {
+function setup(options: { cover?: string | null; known?: BookRow | null; throttle?: (member: string, budget: Budget) => Promise<boolean>; fetch?: ReturnType<typeof recordedFetch> } = {}) {
   const recorded = options.fetch ?? recordedFetch()
   const inserted: unknown[] = []
   const catalogue: Catalogue = {
@@ -132,6 +132,18 @@ Deno.test(`a member over her limit (${MEMBER_LIMIT} a minute) gets 429 and nothi
   const response = await call({ action: 'isbn', isbn13: '9783499267017' })
   assertEquals(response.status, 429)
   assertEquals(recorded.asked.length, 0)
+})
+
+Deno.test('a member is counted against her budget, an import (`purpose: "import"`) against its own', async () => {
+  const budgets: Budget[] = []
+  const { call } = setup({ throttle: async (_member, budget) => (budgets.push(budget), true) })
+  await call({ action: 'isbn', isbn13: '9783499267017' })
+  await call({ action: 'editions', title: 'Der Schwarm', authors: ['Frank Schätzing'], purpose: 'import' })
+  assertEquals(budgets, [
+    { bucket: 'dnb-lookup', limit: MEMBER_LIMIT },
+    { bucket: 'dnb-lookup-import', limit: IMPORT_LIMIT },
+  ])
+  assert(MEMBER_LIMIT < IMPORT_LIMIT, 'an import asks a row at a time, far more than a member browsing')
 })
 
 Deno.test('when the DNB cannot answer: 502, and nothing is made', async () => {

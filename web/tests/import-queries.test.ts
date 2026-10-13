@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FREE_SOURCES, mainTitle, questionsFor, spelledOut } from '@/data/import/queries'
+import { dnbQuestion, FREE_SOURCES, mainTitle, questionsFor, spelledOut } from '@/data/import/queries'
 
 /**
  * The questions the import asks about a row (issue #111): the ladder of query
@@ -84,5 +84,13 @@ describe('spelledOut', () => {
   it('writes umlauts and ß out the way an ASCII catalogue spells them', () => {
     expect(spelledOut('Größe Übel')).toBe('Groesse Uebel')
     expect(spelledOut('Greta Müller')).toBe('Greta Mueller')
+  })
+})
+
+describe('dnbQuestion', () => {
+  it('is the main title and the first author: what the National Library is asked', () => {
+    expect(dnbQuestion({ title: 'Cold Water: A Novel', authors: ['Greta Müller', 'Anna Bramley'] })).toEqual({ title: 'Cold Water', authors: ['Greta Müller'] })
+    expect(dnbQuestion({ title: 'Cold Water (Harbour Lights, #1)', authors: ['Melville'] })).toEqual({ title: 'Cold Water', authors: ['Melville'] })
+    expect(dnbQuestion({ title: 'Moby Dick', authors: [] })).toEqual({ title: 'Moby Dick', authors: [] })
   })
 })

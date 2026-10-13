@@ -105,6 +105,15 @@ function rowLanguage(row: Pick<FitRow, 'title' | 'language' | 'isbn13'>): string
 }
 
 /**
+ * Whether a row is probably German and the National Library worth asking early for it (the import's
+ * title ladder, data/bookImport.ts): its ISBN's registration group (978-3: Germany, Austria,
+ * Switzerland), the file's language, or its title's little words. It need not be sure: the DNB is
+ * our own function (about 100 ms), and a row it does not know costs one question. Pure.
+ */
+export function probablyGerman(row: Pick<FitRow, 'title' | 'language' | 'isbn13'>): boolean {
+  return isbnLanguage(row.isbn13) === 'de' || languageCode(row.language) === 'de' || titleLanguage(row.title) === 'de'
+}
+/**
  * Whether an edition is in another language than the row's, both known (the file's or told from the titles and
  * the ISBN, as `editionFit` ranks them): a translation of her book, the same work but not what she read. The match
  * may still take it when the work has nothing else (a real Book before the file's own row), but the row is then

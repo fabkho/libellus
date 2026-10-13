@@ -4,6 +4,7 @@ import type { Book, BookSnapshot } from '~/data/books'
 import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, type CoverFound } from '~/data/coverFill'
 import { GOODREADS_COVERS } from '~/data/coverRank'
 import { probeImageInBrowser, verifyCover } from '~/data/covers'
+import { createDnb, DNB_IMPORT_GAP_MS } from '~/data/dnb'
 import { createGoodreadsCover } from '~/data/goodreadsCover'
 import {
   createBookImport,
@@ -191,11 +192,14 @@ export const useImportStore = defineStore('import', () => {
     // Apple refuses a burst; a little room between its requests keeps it answering.
     liveFetch ??= pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } })
     if (!repository) {
-      searcher = createSearch({ fetch: liveFetch, languages, catalogue })
+      // The National Library (data/dnb.ts): the ISBN fallback and the title ladder's one question, on the import's own budget (`purpose`) and pace (`gapMs`).
+      const dnb = createDnb(backend, { online: isOnline, purpose: 'import', gapMs: DNB_IMPORT_GAP_MS })
+      searcher = createSearch({ fetch: liveFetch, languages, catalogue, dnb })
       const live = liveFetch
       const lookups: Lookups = {
         catalogue,
         search: searcher,
+        dnb,
         // The paced host's cooldown: the second pass waits it out instead of meeting another refusal.
         busyFor: () => live.blockedFor('itunes.apple.com'),
         // The last resort for a Goodreads file's row no source knows (flagged): Goodreads' cover of her book id, checked.

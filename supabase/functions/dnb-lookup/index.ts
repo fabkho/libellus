@@ -10,7 +10,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { DnbEdition } from '../../../web/app/data/dnbRecord.ts'
 import { createDnb, userAgent } from './client.ts'
-import { type BookRow, type Caller, createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
+import { type BookRow, type Budget, type Caller, createHandler, MEMBER_WINDOW_SECONDS } from './handler.ts'
 import { sameSecret } from './secret.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
@@ -78,11 +78,11 @@ const handler = createHandler({
     const { data, error } = await supabase.auth.getUser(token)
     return !error && data.user ? { member: data.user.id } : null
   },
-  async throttle(member) {
+  async throttle(member, budget: Budget) {
     const { data, error } = await supabase.rpc('edge_rate_hit', {
       p_member: member,
-      p_bucket: 'dnb-lookup',
-      p_limit: MEMBER_LIMIT,
+      p_bucket: budget.bucket,
+      p_limit: budget.limit,
       p_window_seconds: MEMBER_WINDOW_SECONDS,
     })
     if (error) throw new Error(error.message)
