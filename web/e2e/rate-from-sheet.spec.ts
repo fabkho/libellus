@@ -7,7 +7,7 @@ import { createLibrary } from '../app/data/library'
 import { addDays, isoDay } from '../app/utils/dates'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { openProfile, recordedApple, signedIn, untilStill } from './support'
+import { expectAccessible, openProfile, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * Rating a Book from the unrated sheet (issue #14, part 2): "3 not rated yet" opens the sheet, every
@@ -84,6 +84,7 @@ test('the unrated sheet rates in place: rows leave, figures follow, Undo takes o
     await expect(first.getByTestId(`profileReads.rate.${star}`)).toHaveAttribute('aria-label', /Piranesi/)
     await expect(first.getByTestId(`profileReads.rate.${star}`)).toHaveAttribute('aria-label', new RegExp(`\\b${star} star`))
   }
+  await expectAccessible(page, 'the unrated sheet')
 
   // Four stars: the row leaves the list and the pill says so, with Undo.
   await first.getByTestId('profileReads.rate.4').click()
