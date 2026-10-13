@@ -404,6 +404,13 @@ verify_jwt = false
 [functions.dnb-lookup]
 verify_jwt = false
 
+# The import's Open Library asks, identified and paced (supabase/functions/openlibrary): the
+# function checks the caller itself (a signed-in member, or the service role), like
+# goodreads-rating. Its OPENLIBRARY_CONTACT secret (the contact address Open Library is given)
+# is set on deploy, never in this file: supabase/functions/openlibrary/README.md.
+[functions.openlibrary]
+verify_jwt = false
+
 # The owner's Regal library file for the Regal workflow (issue #110). Its caller
 # has no Supabase key, only the shared secret REGAL_EXPORT_TOKEN, which the
 # function checks itself: supabase/functions/regal-export/README.md.
