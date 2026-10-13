@@ -11,7 +11,10 @@
  * storage just means nothing is kept.
  */
 
-export const IMPORT_MATCHES_KEY = 'libellus.import-matches'
+/** `.v2`: the matches of the one-pool lookup (data/bookImport.ts); what the earlier lookup kept is asked again, not reused. */
+export const IMPORT_MATCHES_KEY = 'libellus.import-matches.v2'
+/** Where the earlier lookup kept its answers: removed with the current ones. */
+const LEGACY_KEYS = ['libellus.import-matches']
 export const IMPORT_MATCHES_DAYS = 7
 /** At most this many rows are kept (a Library export is a few thousand books at most). */
 export const IMPORT_MATCHES_MAX = 3000
@@ -49,6 +52,7 @@ export function writeMatches(storage: Pick<MatchStorage, 'setItem' | 'removeItem
       ]),
     )
     storage.setItem(IMPORT_MATCHES_KEY, JSON.stringify({ member, at: now, rows: kept } satisfies Stored))
+    for (const key of LEGACY_KEYS) storage.removeItem(key)
   } catch {
     try {
       storage.removeItem(IMPORT_MATCHES_KEY)
@@ -61,6 +65,7 @@ export function writeMatches(storage: Pick<MatchStorage, 'setItem' | 'removeItem
 export function clearMatches(storage: Pick<MatchStorage, 'removeItem'>): void {
   try {
     storage.removeItem(IMPORT_MATCHES_KEY)
+    for (const key of LEGACY_KEYS) storage.removeItem(key)
   } catch {
     /* nothing to clear */
   }

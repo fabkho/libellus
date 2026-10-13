@@ -156,10 +156,11 @@ search and Open Library's search by title and author (the work's other editions)
 another edition's cover; then a paced Apple Books search (one request every 3 s, the row's storefront first and
 the other once the first has been through every row; Apple's limit is ~20 a minute, measured) looks for the
 work's **ebook**, which replaces the other edition's cover when it is found. All under a circuit breaker and a
-10-minute budget; the preview and the write never wait for it, and a row that finds nothing stays a quiet "no
-cover" instead of a review item. Covers are only linked, from the hosts the Catalogue allows. Sources, terms, hit
-rates and the measurement on a real export: [plans/cover-sources.md](plans/cover-sources.md); the behaviour:
-`docs/parity.md`, Import books, *Covers meanwhile*.
+10-minute budget; the preview and the write never wait for it, and a row that finds nothing stays under "Needs a
+look" (a row shown without a cover is never "probably fine": owner rule, since the import-quality fix), drawn with
+the cloth. Covers are only linked, from the hosts the Catalogue allows. Sources, terms, hit rates and the
+measurement on a real export: [plans/cover-sources.md](plans/cover-sources.md); the behaviour: `docs/parity.md`,
+Import books, *Covers meanwhile*.
 
 ### The ranking: one rule (`data/coverRank.ts`)
 
@@ -260,8 +261,13 @@ The cover ranking above is one field of a general rule: ask several sources abou
   collect an ISBN from any hit, then ask by ISBN.
 
 Wired now: the import's match borrows a cover by this ranking (`coverLender` in `data/bookImport.ts`: the work's ebook before
-another print edition, in the row's language; before, `alternatives[0]` was taken even without a cover). Measured effect on
-a real export: none (no row had an alternative with a cover); it is the one place that decides from now on. **Follow-up,
+another print edition, in the row's language; before, `alternatives[0]` was taken even without a cover). Since the
+import-quality fix ([plans/import-quality.md](plans/import-quality.md)) the cover is lent **at match time**, as the cover fill
+would give it (`withLentCover` = `mergeCover`, kind `sibling`): the match's pool holds every edition each source named (the
+work's ebook and its print edition both, not one per book as Search lists them), so an exact edition without a cover, or a
+title match without one, wears the work's best cover before the preview shows it, and the cover fill only looks for what is
+still missing. Choose edition shares that pool and ranking (`choiceCandidates`), so the covers it offers are the ones the
+match chose from. A row shown without any cover is "Needs a look" (owner rule), never "Probably fine". **Follow-up,
 not done:** Search and the barcode scan keep their chain (`data/merge.ts`, first source wins, `fillIn`); they would hand
 their per-source answers for one ISBN to `mergeSources` instead; the cover fill would build its `CoverFound` from
 `coverKindOfCandidate`; the server job for the import runs the same module.

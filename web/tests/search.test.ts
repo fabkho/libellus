@@ -656,14 +656,14 @@ describe('what the member already has', () => {
 describe('a query', () => {
   it('answers an empty list when nothing matches', async () => {
     const outcome = await createSearch({ fetch: recorded(), languages: ['en-US'] }).search('qxzvwlmbrt')
-    expect(outcome).toEqual({ results: [], pending: false, failed: false })
+    expect(outcome).toEqual({ results: [], pending: false, failed: false, editions: [], unanswered: [] })
   })
 
   it('does not ask anything when it is too short', async () => {
     const fetch = recorded()
     const lib = catalogue([])
     const outcome = await createSearch({ fetch, languages: ['en-US'], catalogue: lib }).search(' p ')
-    expect(outcome).toEqual({ results: [], pending: false, failed: false })
+    expect(outcome).toEqual({ results: [], pending: false, failed: false, editions: [], unanswered: [] })
     expect(fetch.asked).toEqual([])
     expect(lib.asked).toEqual([])
   })
@@ -735,7 +735,33 @@ describe('when a source fails', () => {
       languages: ['en-US'],
       catalogue: catalogue('failing'),
     }).search('Piranesi')
-    expect(outcome).toEqual({ results: [], pending: false, failed: true })
+    expect(outcome).toMatchObject({ results: [], pending: false, failed: true, editions: [] })
+    expect([...outcome.unanswered!].sort()).toEqual(['apple', 'catalogue', 'openlibrary'])
+  })
+
+  it('names the sources that failed, so an empty answer from the others is not taken for "nothing found"', async () => {
+    const outcome = await createSearch({
+      fetch: recorded({ failing: ['us', 'gb'] }),
+      languages: ['en-US'],
+      catalogue: catalogue('failing'),
+    }).search('Piranesi')
+    expect(outcome.failed).toBe(false)
+    expect([...outcome.unanswered!].sort()).toEqual(['apple', 'catalogue'])
+    // Every edition the answering source named, one each: not one per book as `results`.
+    expect(outcome.editions!.length).toBeGreaterThanOrEqual(outcome.results.length)
+  })
+
+  it('names Apple when one storefront did not answer, and still lists what the other found', async () => {
+    const outcome = await createSearch({ fetch: recorded({ failing: ['gb'] }), languages: ['en-US'] }).search('Piranesi')
+    expect(outcome.failed).toBe(false)
+    expect(outcome.unanswered).toEqual(['apple'])
+    expect(outcome.results.some((hit) => hit.book.source === 'apple')).toBe(true)
+  })
+
+  it('a strict ISBN lookup that finds nothing while a storefront did not answer is no "not found"', async () => {
+    const search = createSearch({ fetch: recorded({ failing: ['gb'] }), languages: ['en-US'] })
+    await expect(search.lookupIsbn('9790000000001', { strict: true })).rejects.toThrow()
+    await expect(search.lookupIsbn('9790000000001')).resolves.toBeNull()
   })
 })
 

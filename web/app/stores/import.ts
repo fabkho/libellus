@@ -11,7 +11,7 @@ import {
   fileEdition,
   libraryIndex,
   libraryTitleIndex,
-  needsLook,
+  reviewOf,
   importedKeys,
   pacedFetch,
   type PacedFetch,
@@ -19,11 +19,12 @@ import {
   type Edition,
   type EditionChoice,
   type ImportRow,
+  type Lookups,
+  type ReviewNote,
   type RowOutcome,
 } from '~/data/bookImport'
-import { appendEditions, createEditions } from '~/data/editions'
+import { appendEditions } from '~/data/editions'
 import { decodeExport, NotACsvFileError } from '~/data/import/csv'
-import { editionFit } from '~/data/import/editions'
 import { parseExport } from '~/data/import/detect'
 import {
   countByStatus,
@@ -31,7 +32,6 @@ import {
   UnknownExportError,
   type ImportBook,
   type ImportFile,
-  type ImportProblem,
   type ImportSource,
   type SkippedRow,
 } from '~/data/import/rows'
@@ -110,16 +110,7 @@ export type Attention = {
   findCover?: boolean
   /** The edition she chose, as it will be written: its language, year and pages show on the row. */
   held?: Edition['book']
-  notes: (
-    | ImportProblem
-    | { code: 'chosen' }
-    | { code: 'chosenInLibrary' }
-    | { code: 'fromFile' }
-    | { code: 'fromFileIsbn' }
-    | { code: 'unsure' }
-    | { code: 'noCover' }
-    | { code: 'byTitle'; year: number | null; language: string | null }
-  )[]
+  notes: ReviewNote[]
 }
 
 /** The Choose edition sheet's state: the row it is about, what it offers, and the pick. */
@@ -201,8 +192,30 @@ export const useImportStore = defineStore('import', () => {
     liveFetch ??= pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } })
     if (!repository) {
       searcher = createSearch({ fetch: liveFetch, languages, catalogue })
+      const live = liveFetch
+      const lookups: Lookups = {
+        catalogue,
+        search: searcher,
+        // The paced host's cooldown: the second pass waits it out instead of meeting another refusal.
+        busyFor: () => live.blockedFor('itunes.apple.com'),
+        // The last resort for a Goodreads file's row no source knows (flagged): Goodreads' cover of her book id, checked.
+        ...(GOODREADS_COVERS
+          ? {
+              goodreads: async (query) => {
+                const answer = await goodreadsCovers()?.find(query)
+                if (answer === 'blocked') {
+                  goodreadsBlocked()
+                  return 'blocked'
+                }
+                if (!answer?.coverUrl) return null
+                const cover = await verifyCover(answer.coverUrl, { probe: probeImageInBrowser }).catch(() => null)
+                return cover?.coverUrl ? cover : null
+              },
+            }
+          : {}),
+      }
       repository = createBookImport(backend, {
-        lookups: { catalogue, search: searcher },
+        lookups,
         probe: probeImageInBrowser,
         online: isOnline,
       })
@@ -386,24 +399,22 @@ export const useImportStore = defineStore('import', () => {
     const list: Attention[] = []
     for (const [index, { book, edition, verdict }] of rows.value.entries()) {
       if (verdict === 'imported' || verdict === 'inLibrary' || chosen.value.has(index)) continue
-      const notes: Attention['notes'] = []
-      if (verdict === 'fromFile') {
-        notes.push(edition?.unsure ? { code: 'unsure' } : edition?.book.isbn13 ? { code: 'fromFileIsbn' } : { code: 'fromFile' })
-      }
-      // Found by title: another edition of the work, which she may want to change after.
-      if (verdict === 'matched' && edition?.via === 'title') {
-        notes.push({ code: 'byTitle', year: edition.book.year, language: edition.book.language })
-      }
-      // Found, but without a cover (the fill looks for one in the background): only a note.
-      if (verdict === 'matched' && !edition?.book.coverUrl) notes.push({ code: 'noCover' })
-      notes.push(...book.problems)
-      const shown = verdict === 'matched' || edition?.coverFrom ? (edition?.coverFrom ?? edition?.book ?? null) : null
-      const choose = Boolean(edition) && (verdict === 'fromFile' || (verdict === 'matched' && (edition?.via === 'title' || !edition?.book.coverUrl)))
-      // Nothing identifies it, or a source could not be asked, is the bad sign; a match without a cover is a quiet note.
-      const look = needsLook(verdict, shown, { isbn13: edition?.book.isbn13 ?? book.isbn13, unsure: edition?.unsure })
-      const findCover = GOODREADS_COVERS && (verdict === 'matched' || verdict === 'fromFile') && !(edition?.coverFrom?.coverUrl ?? edition?.book.coverUrl)
+      if (!edition || (verdict !== 'matched' && verdict !== 'fromFile')) continue
+      // The one rule of the preview (data/bookImport.ts): a row without a cover, or that nothing identifies, needs a look.
+      const review = reviewOf(book, edition, verdict === 'matched')
+      const findCover = GOODREADS_COVERS && !review.shown?.coverUrl
       // The row whose cover was just found stays, so its status ("Cover found.") is read where it was asked.
-      if (notes.length || findCover || coverSearch.value?.key === book.key) list.push({ key: book.key, title: book.title, authors: book.authors, edition: shown, choose, look, notes, ...(findCover ? { findCover } : {}) })
+      if (review.tier !== 'quiet' || findCover || coverSearch.value?.key === book.key)
+        list.push({
+          key: book.key,
+          title: book.title,
+          authors: book.authors,
+          edition: review.shown,
+          choose: review.choose,
+          look: review.tier === 'needsLook',
+          notes: review.notes,
+          ...(findCover ? { findCover } : {}),
+        })
     }
     for (const row of skipped.value) {
       list.push({ key: `skipped:${row.row}`, title: row.title, authors: [], edition: null, choose: false, look: true, notes: [row.problem] })
@@ -652,21 +663,6 @@ export const useImportStore = defineStore('import', () => {
   /** The sheet is about this row; null while it is closed. */
   const choosing = ref<EditionChoosing | null>(null)
   let asking: AbortController | null = null
-  let editionSource: ReturnType<typeof createEditions> | null = null
-  let editionSourceLanguage = ''
-
-  /** Its own lookup of a work's editions, as the Book page's Change edition has (`data/editions.ts`). */
-  function editionsLookup() {
-    const languages = searchLanguages()
-    if (editionSourceLanguage !== languages[0]) editionSource = null
-    editionSourceLanguage = languages[0] ?? ''
-    editionSource ??= createEditions({
-      fetch: (url, init) => fetch(url, init),
-      languages,
-      catalogue: backend ? (catalogue ??= createCatalogueSearch(backend)) : undefined,
-    })
-    return editionSource
-  }
 
   function indexOf(key: string): number {
     return books.value.findIndex((book) => book.key === key)
@@ -678,21 +674,20 @@ export const useImportStore = defineStore('import', () => {
     choosing.value = null
   }
 
-  /** The work OpenLibrary files the row under: the edition's own key, else any edition the match found says. */
-  const workKeyOf = (edition: Edition) =>
-    edition.book.openLibraryWorkKey ?? edition.alternatives?.find((book) => book.openLibraryWorkKey)?.openLibraryWorkKey ?? null
-
   /**
-   * Asks the sources for the row's editions (title and first author, as the
-   * Book page does) once the sheet is open. Their finds are added behind what
-   * the match found, best fit to the row first, and never move a row that is
-   * shown. A lookup of the work needs the network: offline there is none, and
-   * the sheet says so.
+   * Asks the sources for the row's editions once the sheet is open: the
+   * match's own pool, questions and ranking (`BookImport.candidates`: every
+   * question of the ladder, the Open Library work's editions, the paced
+   * `fetch` the lookup and the cover fill share, so a busy Apple is waited for,
+   * not met with a refusal). Their finds are added behind what the match found,
+   * in that ranking, and never move a row that is shown. A lookup of the work
+   * needs the network: offline there is none, and the sheet says so.
    */
   async function lookForEditions(index: number) {
     const book = books.value[index]
     const edition = editions.value[index]
-    if (!book || !edition || !isOnline()) return
+    const repo = importer()
+    if (!book || !edition || !repo || !isOnline()) return
     asking?.abort()
     const controller = new AbortController()
     asking = controller
@@ -700,27 +695,16 @@ export const useImportStore = defineStore('import', () => {
     if (!now) return
     now.pending = true
     now.failed = false
-    const wanted = { ...fileEdition(book).book, openLibraryWorkKey: workKeyOf(edition), id: '', createdAt: '' }
-    const update = (found: EditionChoice[], pending: boolean, failed: boolean) => {
+    try {
+      const outcome = await repo.candidates(book, edition, { signal: controller.signal })
       const sheet = choosing.value
       if (!sheet || asking !== controller) return
-      const fresh = found
-        .filter((choice) => !choice.current)
-        .map((choice, order) => ({ choice, order, fit: editionFit(book, choice.book) }))
-        .sort((a, b) => b.fit - a.fit || a.order - b.order)
-        .map(({ choice }) => choice)
+      const fresh: EditionChoice[] = outcome.editions.map((found) => ({ book: found, current: false }))
       const merged = appendEditions(sheet.rows, [...sheet.rows.filter((row) => row.current), ...fresh])
       // A row keeps its place and what it is (the file's own row).
       sheet.rows = merged.map((row, at) => (sheet.rows[at]?.file ? { ...row, file: true } : row))
-      sheet.pending = pending
-      sheet.failed = failed
-    }
-    try {
-      const outcome = await editionsLookup().find(wanted, {
-        signal: controller.signal,
-        onUpdate: (found) => update(found.candidates, found.pending, found.failed),
-      })
-      update(outcome.candidates, false, outcome.failed)
+      sheet.pending = false
+      sheet.failed = outcome.failed
     } catch (thrown) {
       if (isAbort(thrown)) return
       if (asking === controller && choosing.value) {
