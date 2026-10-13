@@ -1,4 +1,4 @@
-import { isValidIsbn13, type BookSnapshot } from './books'
+import { isValidIsbn13, withLabels, type BookSnapshot } from './books'
 import { decodeEntities } from './entities'
 import { abortError, getJson, type FetchLike } from './fetching'
 import type { Found } from './merge'
@@ -47,6 +47,8 @@ export type AppleItem = {
   artworkUrl100?: string
   artworkUrl60?: string
   userRatingCount?: number
+  /** Apple's genre names ("Romance", "Fantasy"); "Books", the storefront's root, says nothing and is dropped. */
+  genres?: string[]
 }
 
 const ARTWORK_SIZE = /\/\d+x\d+bb\.(?:jpg|jpeg|png|webp)$/
@@ -131,6 +133,7 @@ export function snapshotFromApple(item: AppleItem): BookSnapshot | null {
     openLibraryEditionKey: null,
     openLibraryWorkKey: null,
     format: 'ebook',
+    ...withLabels(item.genres?.filter((genre) => genre !== 'Books')),
   }
 }
 

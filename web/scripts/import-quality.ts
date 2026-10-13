@@ -348,6 +348,13 @@ const report = {
   withoutCover: count((row) => !row.shownCover),
   zeroCandidateRows: count((row) => row.zeroCandidates),
   unsure: count((row) => row.edition.unsure),
+  // Raw genre labels the lookup collected (not stored yet): rows with at least one, and per source that gave one.
+  genres: {
+    rows: count((row) => Boolean(row.edition.genres?.length)),
+    bySource: Object.fromEntries(
+      ['apple', 'openlibrary', 'catalogue'].map((source) => [source, count((row) => Boolean(row.edition.genres?.some((genre) => genre.sources.includes(source as never))))]),
+    ),
+  },
   causes: by((row) => row.cause),
   causesOfNeedsLook: by((row) => (row.tier === 'needsLook' ? row.cause : 'notNeedsLook')),
   picker: openPicker

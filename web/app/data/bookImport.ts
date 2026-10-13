@@ -4,7 +4,7 @@ import type { CatalogueSearch } from './catalogueSearch'
 import { resolveBookCover, type ProbeImage, type ResolvedCover } from './covers'
 import { coverKindOf, type CoverKind } from './coverRank'
 import { languageFits, mergeCover } from './coverFill'
-import { type Candidate, mergeSources } from './mergeBook'
+import { type Candidate, type GenreLabel, type MergeSource, mergeGenreLabels, mergeSources } from './mergeBook'
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
 import { editionSignature } from './editions'
@@ -102,6 +102,19 @@ export type Edition = {
   near?: (Book | BookSnapshot)[]
   /** Only Goodreads knew the book (the file's own book id): its cover, and nothing else, came from there. */
   goodreadsOnly?: boolean
+  /**
+   * The raw genre labels the sources gave the edition and its work's other editions (`mergeGenreLabels`, with their
+   * sources): collected for the Book, not stored yet and not mapped onto the app's genre list.
+   */
+  genres?: GenreLabel[]
+}
+
+/** The edition with the genre labels of its Book and its work's other editions merged on it (`Edition.genres`). Pure. */
+export function withGenres(edition: Edition): Edition {
+  // The alternatives hold the edition itself when it was found by title: each Book once.
+  const books = [...new Set([edition.book, ...(edition.alternatives ?? [])])]
+  const genres = mergeGenreLabels(books.map((book) => ({ source: book.source as MergeSource, book, exact: book === edition.book })))
+  return genres.length ? { ...edition, genres } : edition
 }
 
 /**
@@ -248,8 +261,12 @@ export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?
   return { same, near: nearEditions(row, pool).map(({ book }) => book), incomplete }
 }
 
-/** Finds the edition of one row (see the steps above). Rejects only when `signal` aborts. */
+/** Finds the edition of one row (see the steps above), with its work's raw genre labels. Rejects only when `signal` aborts. */
 export async function findEdition(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
+  return withGenres(await editionOf(row, lookups, signal))
+}
+
+async function editionOf(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
   let unsure = false
   const ask = asker(lookups, signal, () => (unsure = true))
 

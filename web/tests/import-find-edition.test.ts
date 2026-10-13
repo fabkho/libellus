@@ -101,6 +101,16 @@ function lookups(answers: {
 }
 
 describe('findEdition', () => {
+  it('carries the raw genre labels of the edition and its work\'s other editions, with their sources', async () => {
+    const apple = snapshot({ title: 'Moby Dick', authors: ['Herman Melville'], coverUrl: 'https://example.test/e.jpg', genreLabels: ['Classics'] })
+    const print = snapshot({ title: 'Moby Dick', authors: ['Herman Melville'], source: 'openlibrary', appleId: null, openLibraryEditionKey: 'OL2M', genreLabels: ['Whaling', 'classics'] })
+    const edition = await findEdition(row({ title: 'Moby Dick', authors: ['Herman Melville'], binding: 'Kindle Edition', isbn13: null }), lookups({ search: async () => outcome([print, apple]) }))
+    expect(edition.genres).toEqual([
+      { label: 'Classics', sources: ['apple', 'openlibrary'], from: [0, 1] },
+      { label: 'Whaling', sources: ['openlibrary'], from: [1] },
+    ])
+  })
+
   it('takes the Apple ebook of the work for an ebook row, not the print edition beside it', async () => {
     const print = snapshot({
       title: 'Moby Dick',

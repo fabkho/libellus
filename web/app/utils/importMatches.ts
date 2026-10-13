@@ -28,7 +28,8 @@ export type MatchStorage = {
   removeItem: (key: string) => void
 }
 
-const lean = (book: Record<string, unknown>) => ({ ...book, description: null })
+/** Without the long text and the raw genre labels (collected for later, not kept on the device). */
+const lean = (book: Record<string, unknown>) => ({ ...book, description: null, genreLabels: undefined })
 
 /** The rows this device found for the member that are not older than a week; empty for anything unreadable. */
 export function readMatches(storage: Pick<MatchStorage, 'getItem'>, member: string, now = Date.now()): Map<string, StoredMatch> {

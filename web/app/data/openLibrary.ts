@@ -1,4 +1,4 @@
-import { isbn10To13, isValidIsbn10, isValidIsbn13, type BookFormat, type BookSnapshot } from './books'
+import { isbn10To13, isValidIsbn10, isValidIsbn13, withLabels, type BookFormat, type BookSnapshot } from './books'
 import { abortError, getJson, type FetchLike } from './fetching'
 import type { Found } from './merge'
 
@@ -34,6 +34,7 @@ export const OPENLIBRARY_FIELDS = [
   'editions.language',
   'editions.publish_date',
   'editions.publisher',
+  'subject',
 ].join(',')
 
 type OpenLibraryEdition = {
@@ -57,6 +58,8 @@ export type OpenLibraryDoc = {
   ratings_count?: number
   readinglog_count?: number
   editions?: { docs?: OpenLibraryEdition[] }
+  /** The work's subjects, free text ("Fiction, romance, contemporary", "nyt:…"): raw genre labels. */
+  subject?: string[]
 }
 
 export type OpenLibraryCoverSize = 'S' | 'M' | 'L'
@@ -151,6 +154,7 @@ export function snapshotFromOpenLibrary(doc: OpenLibraryDoc, isbn13?: string): B
     appleId: null,
     openLibraryEditionKey: editionKey,
     openLibraryWorkKey: bareKey(doc.key),
+    ...withLabels(doc.subject),
   }
 }
 

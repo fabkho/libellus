@@ -43,7 +43,23 @@ export type BookSnapshot = {
    * absent when it did not (OpenLibrary's `physical_format` mostly is empty).
    */
   format?: BookFormat | null
+  /**
+   * What the source calls the book's genres, raw and in its own words (Apple's genre names, Open Library's
+   * subjects): collected by the import and merged with their sources (`mergeGenreLabels`, data/mergeBook.ts), not
+   * stored yet and not mapped onto the app's genre list (data/enrich/genres.ts does that server side). Absent when
+   * the source named none.
+   */
+  genreLabels?: string[]
 }
+
+/** A source's raw genre labels as a snapshot carries them: none, or at most `GENRE_LABELS_KEPT`. */
+export function withLabels(labels: readonly string[] | undefined): { genreLabels?: string[] } {
+  const kept = (labels ?? []).map((label) => label.trim()).filter(Boolean).slice(0, GENRE_LABELS_KEPT)
+  return kept.length ? { genreLabels: kept } : {}
+}
+
+/** Raw genre labels kept per source answer (Open Library names dozens of subjects for a popular work). */
+export const GENRE_LABELS_KEPT = 20
 
 /**
  * A Book in the database: the Catalogue, or a member's Manual book. `goodreads`:
