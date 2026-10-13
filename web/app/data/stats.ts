@@ -278,6 +278,16 @@ export function readsUnrated(reads: readonly StatsRead[], year: StatsYear = 'all
   return finishedIn(reads, year).filter((r) => r.rating === null)
 }
 
+/**
+ * The reads with one of them rated (or un-rated again, `rating` null): the record a Rating made in the
+ * unrated sheet leaves behind (#14), before the member's sessions are read again. Everything on the
+ * Profile follows from it at once (the figures, the unrated list) without a reload; the database is
+ * the authority once the write lands (offline it waits in the outbox, issue #93).
+ */
+export function withRating(reads: readonly StatsRead[], sessionId: string, rating: number | null): StatsRead[] {
+  return reads.map((read) => (read.sessionId === sessionId ? { ...read, rating } : read))
+}
+
 function median(values: number[]): number | null {
   if (!values.length) return null
   const sorted = [...values].sort((a, b) => a - b)

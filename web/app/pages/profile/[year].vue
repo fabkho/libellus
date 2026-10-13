@@ -177,7 +177,7 @@ function back() {
       </div>
     </UiReveal>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads">
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :quick-rate="shown?.kind === 'unrated'">
       <!-- A genre's sheet keeps the old way into the Library one tap away (#16). -->
       <template v-if="shown?.kind === 'genre'" #foot>
         <div class="flex justify-end pt-xs">

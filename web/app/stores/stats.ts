@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import type { GenreId } from '~/data/enrich/genres'
 import type { LibraryErrorCode } from '~/data/library'
 import { readStats, saveStats } from '~/data/deviceLibrary'
-import { createStats, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
+import { createStats, withRating, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
 
 /**
  * A sheet of the Profile or a year in review: a month's books, a star row's, the reads without a page count, a
@@ -21,6 +21,7 @@ import { createFreshness } from '~/utils/fresh'
 import { afterTransition } from '~/utils/viewTransition'
 import { useLibraryStore } from '~/stores/library'
 import { useSessionStore } from '~/stores/session'
+import { useSyncStore } from '~/stores/sync'
 
 /**
  * The Profile's reading record (issue #78, data/stats.ts) and what the Profile
@@ -32,8 +33,11 @@ import { useSessionStore } from '~/stores/session'
  * edit of a read, a removal, the outbox drained) forgets that at once, so the next
  * visit shows it; Retry and a member change always ask. A load that fails
  * keeps the last record on screen (offline it is not asked for). Signing out
- * (or another member signing in) forgets all of it. Read only: nothing here
- * writes.
+ * keeps the last record on screen (offline it is not asked for). Signing out
+ * (or another member signing in) forgets all of it. Nothing here writes to the
+ * database: a Rating made in the unrated sheet (#14) is laid over the record
+ * (`rated`) and its device copy at once, and the next read of the sessions
+ * replaces it with what the database has.
  *
  * The device keeps the last record (data/deviceLibrary.ts, `saveStats`),
  * written after every load and read back when the store is set up, so the
@@ -46,6 +50,7 @@ export const useStatsStore = defineStore('stats', () => {
   const backend = useBackend()
   const session = useSessionStore()
   const library = useLibraryStore()
+  const sync = useSyncStore()
 
   let repository: Stats | null = null
   function stats(): Stats | null {
@@ -85,6 +90,9 @@ export const useStatsStore = defineStore('stats', () => {
   async function read() {
     const repo = stats()
     if (!repo) return
+    // While writes wait to sync (issue #93) the record shown stands: the database has not got them
+    // yet, and a Rating made in the unrated sheet would look undone until they land.
+    if (sync.holds() && record.value) return
     if (!isOnline()) {
       if (!record.value) loadError.value = 'offline'
       return
@@ -112,6 +120,18 @@ export const useStatsStore = defineStore('stats', () => {
     }
   }
 
+  /**
+   * A Rating made in the unrated sheet (#14): it lands in the record at once, so the figures and the
+   * list behind the sheet follow without a reload — on the device copy too, so it survives offline.
+   * The next read of the member's sessions is the authority again.
+   */
+  function rated(sessionId: string, rating: number | null) {
+    const kept = record.value
+    if (!kept) return
+    record.value = { ...kept, reads: withRating(kept.reads, sessionId, rating) }
+    const member = session.member?.id
+    if (import.meta.client && member) saveStats(window.localStorage, member, record.value)
+  }
   function reset() {
     freshness.invalidate()
     record.value = null
@@ -146,5 +166,5 @@ export const useStatsStore = defineStore('stats', () => {
     if (now && loadError.value === 'offline') void load()
   })
 
-  return { record, loadError, year, keptSheet, load, reset }
+  return { record, loadError, year, keptSheet, load, rated, reset }
 })

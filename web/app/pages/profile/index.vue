@@ -233,7 +233,7 @@ const naming = ref(false)
       </div>
     </Transition>
 
-    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="sheetWithYear">
+    <ProfileReadsSheet v-model:open="sheetOpen" :restore="restore" :title="sheetTitle" :reads="sheetReads" :with-year="sheetWithYear" :quick-rate="shown?.kind === 'unrated'">
       <!-- A genre's sheet keeps the old way into the Library one tap away (#16). -->
       <template v-if="shown?.kind === 'genre'" #foot>
         <div class="flex justify-end pt-xs">

@@ -158,6 +158,41 @@ export const useHistoryStore = defineStore('history', () => {
       editBusy.value = false
     }
   }
+  /**
+   * Rates one read alone (the unrated sheet's quick stars, issue #14): the Edit sheet's save with
+   * the Rating as its one change. `update_session` takes the whole state of the read, not a patch,
+   * so the read as the device has it goes along — the history's copy (read fresh when there is a
+   * connection), else the entry's own latest read, which is what a rating made offline is built on
+   * (it waits in the outbox like every other write, issue #93). Whether the Rating was written (or
+   * queued): a read nothing on the device names is left alone.
+   */
+  async function rateSession(entryId: string, sessionId: string, rating: number | null): Promise<boolean> {
+    const repo = library.library()
+    if (!repo) return false
+    let read = sessions.get(entryId)?.find((one) => one.id === sessionId)
+    if (!read) {
+      if (!sync.holds()) await load(entryId)
+      read = sessions.get(entryId)?.find((one) => one.id === sessionId)
+    }
+    if (!read) {
+      const latest = library.entryById(entryId)?.latestSession
+      read = latest?.id === sessionId ? latest : null
+    }
+    if (!read) return false
+    const edit = { ...sessionEditOf(read), rating }
+    const result = await repo.updateSession(entryId, read, edit)
+    if (result.error) return false
+    library.entryChanged(result.data)
+    // Shown at once, and kept while it waits to sync (offline, issue #93); online the read below replaces it.
+    const shown = sessions.get(entryId)
+    if (shown) {
+      const edited = editedSession(read, sessionEditArguments(read, edit))
+      sessions.set(entryId, shown.map((one) => (one.id === edited.id ? edited : one)))
+    }
+    void load(entryId)
+    recount()
+    return true
+  }
 
   // ---------------------------------------------------------- Delete a read
 
@@ -278,6 +313,7 @@ export const useHistoryStore = defineStore('history', () => {
     openEdit,
     closeEdit,
     confirmEdit,
+    rateSession,
     deleting,
     deleteBusy,
     deleteError,

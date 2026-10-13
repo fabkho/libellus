@@ -274,7 +274,12 @@
       "day": "{weekday}, {date}",
       "author": "{name} · {year}",
       "genre": "{genre} · {year}",
-      "unrated": "Noch nicht bewertet"
+      "unrated": "Noch nicht bewertet",
+      "rateLabel": "{title} bewerten",
+      "rateStars": "{title}: mit {count} Stern bewerten | {title}: mit {count} Sternen bewerten",
+      "rated": "Mit {count} Stern bewertet | Mit {count} Sternen bewertet",
+      "undo": "Rückgängig",
+      "emptyRated": "Alles bewertet"
     },
     "year": {
       "eyebrow": "Dein Lesejahr",

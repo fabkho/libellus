@@ -115,7 +115,9 @@ vi.mock('~/stores/session', () => ({ useSessionStore: () => session }))
 vi.mock('~/stores/library', () => ({ useLibraryStore: () => libraryStub }))
 vi.mock('~/stores/libraryView', () => ({ useLibraryViewStore: () => ({ provideGenres: () => {} }) }))
 vi.mock('~/stores/search', () => ({ useSearchStore: () => ({ repository: () => ({}) }) }))
-vi.mock('~/stores/sync', () => ({ useSyncStore: () => ({ pending: 0, queue: { open: () => false } }) }))
+/** What the sync store tells the others (`stores/sync.ts`): `pending`, the write queue, and `holds` — whether a write waits to sync — which a test can turn on. */
+const syncStub = { pending: 0, waiting: false, queue: { open: () => false }, holds: () => syncStub.waiting }
+vi.mock('~/stores/sync', () => ({ useSyncStore: () => syncStub }))
 
 function stubNuxt() {
   vi.stubGlobal('ref', ref)
@@ -139,6 +141,7 @@ beforeEach(() => {
   session.member = { id: 'ada', email: 'ada@x.test' }
   libraryStub.changes = 0
   libraryStub.roster = 0
+  syncStub.waiting = false
   Object.assign(calls, { record: 0, genres: 0, list: 0, genresWrites: 0 })
   recordAnswer = async () => ({ data: emptyRecord(), error: null })
   genresAnswer = async () => ({ data: [{ entryId: 'e1', bookId: 'b1', genres: ['fantasy'], overridden: false }], error: null })
@@ -240,6 +243,23 @@ describe('the Profile\'s record (stores/stats.ts)', () => {
     await vi.advanceTimersByTimeAsync(0)
     await stats.load({ ifStale: true })
     expect(calls.record).toBe(2)
+  })
+  it('a Rating waiting to sync stands: while writes wait, a visit asks nothing and does not undo it', async () => {
+    const stats = await store()
+    recordAnswer = async () => ({ data: { ...emptyRecord(), reads: [{ sessionId: 's1', entryId: 'e1', rating: null, outcome: 'finished' }] }, error: null })
+    await stats.load({ ifStale: true })
+    // Her Rating from the unrated sheet (#14) waits in the outbox (#93): the database does not have it yet.
+    stats.rated('s1', 16)
+    libraryStub.changes++
+    syncStub.waiting = true
+    await stats.load({ ifStale: true })
+    expect(calls.record).toBe(1)
+    expect(stats.record?.reads[0]?.rating).toBe(16)
+    // Once the line has been sent, the next visit reads the database's word again.
+    syncStub.waiting = false
+    await stats.load({ ifStale: true })
+    expect(calls.record).toBe(2)
+    expect(stats.record?.reads[0]?.rating).toBeNull()
   })
 })
 

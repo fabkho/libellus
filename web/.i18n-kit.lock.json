@@ -5498,6 +5498,11 @@
           "de"
         ]
       },
+      "profile.sheet.emptyRated": {
+        "b326c3f2773f5a93": [
+          "de"
+        ]
+      },
       "profile.sheet.month": {
         "d2d73eec68ca8afd": [
           "de"
@@ -5508,6 +5513,21 @@
           "de"
         ]
       },
+      "profile.sheet.rateLabel": {
+        "d26c6ccdcb52970b": [
+          "de"
+        ]
+      },
+      "profile.sheet.rateStars": {
+        "4fdb453183f228b1": [
+          "de"
+        ]
+      },
+      "profile.sheet.rated": {
+        "8397932265509270": [
+          "de"
+        ]
+      },
       "profile.sheet.readIn": {
         "d80365417e14b862": [
           "de"
@@ -5515,6 +5535,11 @@
       },
       "profile.sheet.stars": {
         "31c6c2367c0a96e9": [
+          "de"
+        ]
+      },
+      "profile.sheet.undo": {
+        "a8283ade31856f71": [
           "de"
         ]
       },
