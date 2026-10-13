@@ -53,7 +53,7 @@ export type MergeSource = 'catalogue' | 'apple' | 'openlibrary' | 'dnb' | 'impor
 /** What one source said about the book. Absent, null and empty mean "nothing". */
 export type Candidate = {
   source: MergeSource
-  book: Partial<Pick<BookSnapshot, 'title' | 'authors' | 'isbn13' | 'isbn10' | 'pageCount' | 'year' | 'language' | 'publisher' | 'description' | 'coverUrl' | 'coverThumbhash' | 'coverColors' | 'format' | 'appleId' | 'openLibraryEditionKey' | 'openLibraryWorkKey'>>
+  book: Partial<Pick<BookSnapshot, 'title' | 'authors' | 'isbn13' | 'isbn10' | 'pageCount' | 'year' | 'language' | 'publisher' | 'description' | 'coverUrl' | 'coverThumbhash' | 'coverColors' | 'format' | 'appleId' | 'openLibraryEditionKey' | 'openLibraryWorkKey' | 'genreLabels'>>
   /** The edition that was asked for (same ISBN-13, or the one the caller picked as the Book): the only one that gives edition fields. */
   exact: boolean
   /** The cover's pixel height when it was read; else the source's usual (`COVER_HEIGHT`). */
@@ -86,7 +86,15 @@ export type Provenance = Partial<Record<MergeField, FieldProvenance>> & {
 export type Merged = {
   book: Pick<BookSnapshot, 'title' | 'authors' | 'isbn13' | 'isbn10' | 'pageCount' | 'year' | 'language' | 'publisher' | 'description' | 'coverUrl' | 'coverThumbhash' | 'coverColors' | 'format' | 'appleId' | 'openLibraryEditionKey' | 'openLibraryWorkKey'>
   provenance: Provenance
+  /** The sources' raw genre labels, merged (`mergeGenreLabels`): collected, not stored yet. */
+  genres: GenreLabel[]
 }
+
+/** One raw genre label as the sources named it: its first spelling, and every source (and candidate) that named it. */
+export type GenreLabel = { label: string; sources: MergeSource[]; from: number[] }
+
+/** Raw genre labels a merged Book keeps. */
+export const GENRE_LABELS_MERGED = 30
 
 export type MergeContext = {
   /** The language the book is in (ISO 639-1/-2 or a name), when known: ranks descriptions. Else the merged `language`. */
@@ -358,7 +366,35 @@ export function mergeSources(candidates: readonly Candidate[], context: MergeCon
       openLibraryWorkKey,
     },
     provenance,
+    genres: mergeGenreLabels(candidates),
   }
+}
+
+/**
+ * The genre labels of every candidate (a work field: any same-work candidate may give them), raw: the union,
+ * deduplicated by their normalised spelling ("Fiction / Romance" and "fiction, romance" are one), each with the
+ * sources and candidates that named it; the label more sources agree on first, then the order found. No mapping:
+ * the closed genre list is the enrich function's (data/enrich/genres.ts). Pure.
+ */
+export function mergeGenreLabels(candidates: readonly Candidate[]): GenreLabel[] {
+  const byKey = new Map<string, GenreLabel & { order: number }>()
+  candidates.forEach((candidate, index) => {
+    for (const raw of candidate.book.genreLabels ?? []) {
+      const label = clean(raw)
+      const key = label ? normalised(label) : ''
+      if (!label || !key) continue
+      const known = byKey.get(key)
+      if (!known) byKey.set(key, { label, sources: [candidate.source], from: [index], order: byKey.size })
+      else {
+        if (!known.sources.includes(candidate.source)) known.sources.push(candidate.source)
+        if (!known.from.includes(index)) known.from.push(index)
+      }
+    }
+  })
+  return [...byKey.values()]
+    .sort((a, b) => b.sources.length - a.sources.length || b.from.length - a.from.length || a.order - b.order)
+    .slice(0, GENRE_LABELS_MERGED)
+    .map(({ label, sources, from }) => ({ label, sources, from }))
 }
 
 // ------------------------------------------------------------------ ISBN first

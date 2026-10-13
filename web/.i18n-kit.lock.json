@@ -3029,7 +3029,7 @@
         ]
       },
       "import.attentionHint": {
-        "0b5931c3fb55caa4": [
+        "41d9ddc6f8dca96d": [
           "de"
         ]
       },
@@ -3044,7 +3044,7 @@
         ]
       },
       "import.attentionMinorHint": {
-        "2e5a474c38caa714": [
+        "bae48ca6ef7d9568": [
           "de"
         ]
       },
@@ -3370,6 +3370,11 @@
       },
       "import.note.unsure": {
         "2dcc9d6d39cf114a": [
+          "de"
+        ]
+      },
+      "import.note.unsureFound": {
+        "69cc4024d3621724": [
           "de"
         ]
       },

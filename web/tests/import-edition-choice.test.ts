@@ -83,18 +83,31 @@ describe('the editions a row can be chosen from', () => {
     expect(edition.alternatives).toEqual([german, english])
   })
 
-  it('keeps them for a row only its ISBN knows, and for a row nothing was found for (none then)', async () => {
+  it('takes the work\'s edition for a row whose ISBN no source knows (a real Book before the file\'s own row), and keeps none when nothing was found', async () => {
     const known = await findEdition(row({ isbn13: '9790000001022' }), lookupsFinding(english))
-    expect(known).toMatchObject({ via: null, coverFrom: english, alternatives: [english] })
+    expect(known).toMatchObject({ via: 'title', book: english, alternatives: [english] })
     const none = await findEdition(row(), lookupsFinding(other))
     expect(none).toMatchObject({ via: null, alternatives: [] })
   })
 
-  it('keeps none for a row found by its ISBN: that edition is the one she shelved', async () => {
-    const lookups: Lookups = { ...lookupsFinding(english), search: { ...lookupsFinding(english).search, lookupIsbn: async () => english } }
+  it('asks nothing more for a row found by its ISBN with a cover: that edition is the one she shelved', async () => {
+    const covered = { ...english, coverUrl: 'https://example.test/own.jpg' }
+    let searched = 0
+    const lookups: Lookups = {
+      catalogue: { search: async () => [] },
+      search: { lookupIsbn: async () => covered, search: async () => (searched++, { results: [], pending: false, failed: false }) },
+    }
     const edition = await findEdition(row({ isbn13: '9781526622419' }), lookups)
-    expect(edition).toMatchObject({ via: 'isbn' })
+    expect(edition).toMatchObject({ via: 'isbn', book: covered })
     expect(edition.alternatives).toBeUndefined()
+    expect(searched).toBe(0)
+  })
+
+  it('lends the edition found by its ISBN the cover of its work when it has none: the ebook first', async () => {
+    const ebook = snapshot({ source: 'apple', appleId: '42', language: 'en', coverUrl: 'https://is1-ssl.mzstatic.com/image/thumb/a/600x900bb.jpg' })
+    const lookups: Lookups = { ...lookupsFinding(english, ebook), search: { ...lookupsFinding(english, ebook).search, lookupIsbn: async () => english } }
+    const edition = await findEdition(row({ isbn13: '9781526622419' }), lookups)
+    expect(edition).toMatchObject({ via: 'isbn', filled: true, coverKind: 'ebook', book: { isbn13: '9781526622419', coverUrl: ebook.coverUrl } })
   })
 
   it('opens on the edition the preview has, then the file\'s own row, then the match\'s other editions', async () => {
@@ -110,18 +123,22 @@ describe('the editions a row can be chosen from', () => {
     expect(choices[1]!.book).toMatchObject({ source: 'manual', isbn13: null, pageCount: 288 })
   })
 
-  it('a row only from the file has its own row as the current one, once, and wears the cover it borrows', async () => {
-    const work = snapshot({ language: 'en', coverUrl: 'https://example.test/c.jpg', coverThumbhash: 'abc' })
+  it('offers the file\'s own row second, wearing the cover of the work it would borrow; alone and current when nothing was found', async () => {
+    const work = snapshot({ language: 'en', coverUrl: 'https://example.test/c.jpg', coverThumbhash: 'abc', openLibraryEditionKey: 'OL3M' })
     const book = row({ isbn13: '9790000001022' })
     const edition = await findEdition(book, lookupsFinding(work))
     const choices = editionChoices(book, edition)
     expect(choices.map(({ current, file }) => [current, Boolean(file)])).toEqual([
-      [true, true],
-      [false, false],
+      [true, false],
+      [false, true],
     ])
-    expect(choices[0]!.book).toMatchObject({ source: 'import', isbn13: '9790000001022', coverUrl: 'https://example.test/c.jpg' })
+    expect(choices[1]!.book).toMatchObject({ source: 'import', isbn13: '9790000001022', coverUrl: 'https://example.test/c.jpg' })
     // Picked, it is still the import Book of its ISBN; the cover is lent only when it is written.
     expect(fileEdition(book, [work])).toMatchObject({ via: null, coverFrom: work, book: { source: 'import', coverUrl: null } })
+
+    const alone = row({ title: 'Nowhere To Be Found' })
+    const nothing = await findEdition(alone, lookupsFinding(work))
+    expect(editionChoices(alone, nothing).map(({ current, file }) => [current, Boolean(file)])).toEqual([[true, true]])
   })
 
   it('leaves out an edition that looks like one already listed', () => {

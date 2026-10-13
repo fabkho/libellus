@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createBookImport, findEdition, IMPORT_CHUNK, needsLook, pacedFetch, type ImportRow } from '@/data/bookImport'
+import { createBookImport, findEdition, IMPORT_CHUNK, needsLook, pacedFetch, type Edition, type ImportRow } from '@/data/bookImport'
 import type { FetchLike } from '@/data/fetching'
 import type { BookSnapshot } from '@/data/books'
 
@@ -240,14 +240,21 @@ describe('needsLook', () => {
   it('is true when a source could not be asked: a better edition may exist', () => {
     expect(needsLook('fromFile', null, { isbn13: '9783453441088', unsure: true })).toBe(true)
   })
-  it('is false for a row the file names by its ISBN, with or without a cover', () => {
-    expect(needsLook('fromFile', null, { isbn13: '9783453441088' })).toBe(false)
+  it('is false for a row the file names by its ISBN that shows a cover, true without one (no cover is never "probably fine")', () => {
     expect(needsLook('fromFile', cover, { isbn13: '9783453441088' })).toBe(false)
+    expect(needsLook('fromFile', null, { isbn13: '9783453441088' })).toBe(true)
   })
-  it('is false for a match: no cover is a quiet note, not a review item', () => {
+  it('is false for a match that shows a cover (its own, or one its work lent it), true for one without', () => {
     expect(needsLook('matched', cover)).toBe(false)
-    expect(needsLook('matched', { coverUrl: null })).toBe(false)
-    expect(needsLook('matched', null)).toBe(false)
+    expect(needsLook('matched', { coverUrl: null })).toBe(true)
+    expect(needsLook('matched', null)).toBe(true)
+  })
+  it('is false for a row only Goodreads knows by the file\'s own book id, when it shows Goodreads\' cover', () => {
+    expect(needsLook('fromFile', cover, { goodreadsOnly: true })).toBe(false)
+    expect(needsLook('fromFile', null, { goodreadsOnly: true })).toBe(true)
+  })
+  it('is true for a match while a source could not be asked about it', () => {
+    expect(needsLook('matched', cover, { unsure: true })).toBe(true)
   })
   it('is true for a row not looked up yet', () => {
     expect(needsLook(null, null)).toBe(true)
@@ -269,32 +276,70 @@ describe('the second pass of a lookup', () => {
     })
   }
 
+  /** A source that refuses (every source failed) until `answering` says otherwise, then answers `then`. */
+  function refusingFirst(then: (signal?: AbortSignal) => Promise<{ results: never[]; pending: boolean; failed: boolean }>) {
+    const state = { answering: false }
+    const search = async (_query: string, { signal }: { signal?: AbortSignal }) =>
+      state.answering ? then(signal) : { results: [] as never[], pending: false, failed: true }
+    return { state, search }
+  }
+
   it('is counted, and its answers arrive per book', async () => {
-    const importer = importerWith(async () => ({ results: [], pending: false, failed: false }))
+    const { state, search } = refusingFirst(async () => ({ results: [], pending: false, failed: false }))
+    const importer = importerWith(search)
     const counts: string[] = []
     let editions = 0
     await importer.match([book(1), book(2), book(3)], {
       onEdition: () => void editions++,
-      onSecondPass: (done, total) => counts.push(`${done}/${total}`),
+      onSecondPass: (done, total) => {
+        state.answering = true
+        counts.push(`${done}/${total}`)
+      },
     })
-    // Nothing found the first time: all three are asked again, and every answer is reported again.
+    // No source could be asked the first time: all three are asked again, and every answer is reported again.
     expect(counts).toEqual(['0/3', '1/3', '2/3', '3/3'])
     expect(editions).toBe(6)
   })
 
-  it('ends when its own signal aborts, keeping the first answers, and the match resolves', async () => {
-    let calls = 0
-    const importer = importerWith(async (_query, { signal }) => {
-      calls++
-      if (calls <= 2) return { results: [], pending: false, failed: false }
-      // The second pass hangs until it is stopped.
-      return new Promise((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('stopped'))))
+  it('asks again about a match found while Apple was refused, and takes the ebook the second time', async () => {
+    const edition = (source: 'openlibrary' | 'apple') => ({
+      title: 'Bleak House', authors: ['Author'], isbn13: null, isbn10: null, pageCount: null, year: null, language: null, publisher: null,
+      description: null, coverUrl: `https://example.test/${source}.jpg`, coverThumbhash: null, coverColors: null, source,
+      appleId: source === 'apple' ? '1' : null, openLibraryEditionKey: source === 'openlibrary' ? 'OL1M' : null, openLibraryWorkKey: null,
     })
+    let appleAnswers = false
+    const search = async (_query: string, options: { sources?: readonly string[] }) => {
+      const apple = options.sources?.includes('apple')
+      if (apple && !appleAnswers) return { results: [] as never[], pending: false, failed: true, editions: [], unanswered: ['apple'] }
+      return { results: [] as never[], pending: false, failed: false, editions: [edition(apple ? 'apple' : 'openlibrary')], unanswered: [] }
+    }
+    const importer = importerWith(search as never)
+    const kindle = { ...(book(1) as object), title: 'Bleak House', binding: 'Kindle Edition' } as never
+    const answers: Edition[] = []
+    await importer.match([kindle], { onEdition: (_index, found) => void answers.push(found), onSecondPass: () => void (appleAnswers = true) })
+    // The print edition with its cover will do (any format): no row to look at, but asked again for the ebook.
+    expect(answers.map((found) => [found.book.source, found.unsure, found.retry ?? false])).toEqual([
+      ['openlibrary', false, true],
+      ['apple', false, false],
+    ])
+  })
+
+  it('asks nothing again about a row every source answered: "nothing found" is final', async () => {
+    const importer = importerWith(async () => ({ results: [], pending: false, failed: false }))
+    const counts: string[] = []
+    await importer.match([book(1), book(2)], { onEdition: () => {}, onSecondPass: (done, total) => counts.push(`${done}/${total}`) })
+    expect(counts).toEqual([])
+  })
+
+  it('ends when its own signal aborts, keeping the first answers, and the match resolves', async () => {
+    const { state, search } = refusingFirst((signal) => new Promise((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('stopped')))))
+    const importer = importerWith(search)
     const stop = new AbortController()
     const seen: number[] = []
     const started = importer.match([book(1), book(2)], {
       onEdition: (index) => void seen.push(index),
       onSecondPass: (done) => {
+        state.answering = true
         if (done === 0) setTimeout(() => stop.abort(), 20)
       },
       secondPassSignal: stop.signal,
@@ -304,19 +349,34 @@ describe('the second pass of a lookup', () => {
   })
 
   it('ends by itself after its budget, so a stalled source cannot hold the preview back', async () => {
-    let calls = 0
-    const importer = importerWith(async (_query, { signal }) => {
-      calls++
-      if (calls <= 1) return { results: [], pending: false, failed: false }
-      return new Promise((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('stopped'))))
-    })
+    const { state, search } = refusingFirst((signal) => new Promise((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('stopped')))))
+    const importer = importerWith(search)
     const started = performance.now()
-    await importer.match([book(1)], { onEdition: () => {}, secondPassBudgetMs: 30 })
+    await importer.match([book(1)], { onEdition: () => {}, onSecondPass: () => void (state.answering = true), secondPassBudgetMs: 30 })
     expect(performance.now() - started).toBeLessThan(2000)
   })
 
+  it('waits until a paced host lets us back before asking again', async () => {
+    const { state, search } = refusingFirst(async () => ({ results: [], pending: false, failed: false }))
+    let busy = 120
+    const importer = createBookImport(client, {
+      lookups: { catalogue: { search: async () => [] }, search: { search, lookupIsbn: async () => null }, busyFor: () => busy },
+      probe: async () => null,
+    })
+    const started = performance.now()
+    await importer.match([book(1)], {
+      onEdition: () => {},
+      onSecondPass: (done) => {
+        state.answering = true
+        if (done === 1) busy = 0
+      },
+    })
+    expect(performance.now() - started).toBeGreaterThanOrEqual(100)
+  })
+
   it('still rejects when the whole lookup is aborted', async () => {
-    const importer = importerWith(async () => ({ results: [], pending: false, failed: false }))
+    const { search } = refusingFirst(async () => ({ results: [], pending: false, failed: false }))
+    const importer = importerWith(search)
     const all = new AbortController()
     const run = importer.match([book(1)], { signal: all.signal, onEdition: () => {}, onSecondPass: () => all.abort() })
     await expect(run).rejects.toMatchObject({ name: 'AbortError' })
@@ -423,12 +483,13 @@ describe('finding an edition by title', () => {
         lookupIsbn: async () => null,
         search: async (query: string) => {
           asked.push(query)
-          return { results: query === 'Haunting Adeline carlton' ? [found] : [], pending: false, failed: false } as never
+          return { results: query === 'Haunting Adeline Carlton' ? [found] : [], pending: false, failed: false } as never
         },
       },
     }
     const edition = await findEdition(row, lookups as never)
-    expect(asked).toEqual(['Haunting Adeline H.D. Carlton', 'Haunting Adeline carlton'])
+    // Each question goes to the free sources first, then to Apple while they found nothing that settles the row.
+    expect([...new Set(asked)]).toEqual(['Haunting Adeline H.D. Carlton', 'Haunting Adeline Carlton'])
     expect(edition.via).toBe('title')
   })
 

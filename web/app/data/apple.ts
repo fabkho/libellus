@@ -1,4 +1,4 @@
-import { isValidIsbn13, type BookSnapshot } from './books'
+import { isValidIsbn13, withLabels, type BookSnapshot } from './books'
 import { decodeEntities } from './entities'
 import { abortError, getJson, type FetchLike } from './fetching'
 import type { Found } from './merge'
@@ -47,6 +47,8 @@ export type AppleItem = {
   artworkUrl100?: string
   artworkUrl60?: string
   userRatingCount?: number
+  /** Apple's genre names ("Romance", "Fantasy"); "Books", the storefront's root, says nothing and is dropped. */
+  genres?: string[]
 }
 
 const ARTWORK_SIZE = /\/\d+x\d+bb\.(?:jpg|jpeg|png|webp)$/
@@ -131,6 +133,7 @@ export function snapshotFromApple(item: AppleItem): BookSnapshot | null {
     openLibraryEditionKey: null,
     openLibraryWorkKey: null,
     format: 'ebook',
+    ...withLabels(item.genres?.filter((genre) => genre !== 'Books')),
   }
 }
 
@@ -139,12 +142,21 @@ export function snapshotFromApple(item: AppleItem): BookSnapshot | null {
 const API = 'https://itunes.apple.com'
 
 export type AppleSource = {
-  /** Free text, every storefront at once, the first storefront's answers first. */
-  search: (text: string, signal?: AbortSignal) => Promise<Found[]>
+  /**
+   * Free text, every storefront at once, the first storefront's answers first. `partial` when a storefront did not
+   * answer (its editions, an ebook only it sells, are not known): the Search screen shows what came, the import asks again.
+   */
+  search: (text: string, signal?: AbortSignal) => Promise<Found[] & { partial?: boolean }>
   /** Free text in the first storefront only: one request, for a lookup that has to spare Apple's per-address limit (the import's cover fill). */
   searchFirst: (text: string, signal?: AbortSignal, storefront?: 0 | 1) => Promise<Found[]>
-  /** The editions with this ISBN-13 (each carries it). Rejects when no storefront answered. */
-  lookupIsbn: (isbn13: string, signal?: AbortSignal) => Promise<Found[]>
+  /** The editions with this ISBN-13 (each carries it). Rejects when no storefront answered; `partial` when one did not. */
+  lookupIsbn: (isbn13: string, signal?: AbortSignal) => Promise<Found[] & { partial?: boolean }>
+  /**
+   * The editions of many ISBN-13s in one request a storefront (the lookup takes them comma-separated). A result
+   * carries the ISBN its artwork is named after, if any: which of the asked it is is the caller's to tell. Rejects
+   * when a storefront did not answer, so a miss is a miss in every one.
+   */
+  lookupIsbns: (isbns: readonly string[], signal?: AbortSignal) => Promise<Found[]>
   /** One edition by its track id; null when no storefront sells it. Rejects when none answered. */
   lookupId: (appleId: string, signal?: AbortSignal) => Promise<BookSnapshot | null>
 }
@@ -163,11 +175,11 @@ export function createApple(options: { fetch: FetchLike; languages: readonly str
    * Every storefront at once; their answers in storefront order. A storefront
    * that fails is left out; it rejects only when none answered.
    */
-  async function everywhere(path: string, params: Record<string, string>, signal?: AbortSignal): Promise<Found[]> {
+  async function everywhere(path: string, params: Record<string, string>, signal?: AbortSignal): Promise<Found[] & { partial?: boolean }> {
     const answers = await Promise.allSettled(storefronts.map((country) => ask(path, { ...params, country }, signal)))
     if (signal?.aborted) throw abortError()
     if (answers.every((answer) => answer.status === 'rejected')) throw new Error('No storefront answered')
-    return answers.flatMap((answer) =>
+    const found: Found[] & { partial?: boolean } = answers.flatMap((answer) =>
       answer.status === 'fulfilled'
         ? answer.value.flatMap((item) => {
             const book = snapshotFromApple(item)
@@ -175,6 +187,8 @@ export function createApple(options: { fetch: FetchLike; languages: readonly str
           })
         : [],
     )
+    if (answers.some((answer) => answer.status === 'rejected')) found.partial = true
+    return found
   }
 
   return {
@@ -190,10 +204,20 @@ export function createApple(options: { fetch: FetchLike; languages: readonly str
     },
 
     async lookupIsbn(isbn13, signal) {
-      return (await everywhere('lookup', { isbn: isbn13 }, signal)).map((found) => ({
-        ...found,
-        book: { ...found.book, isbn13 },
-      }))
+      const answer = await everywhere('lookup', { isbn: isbn13 }, signal)
+      const found: Found[] & { partial?: boolean } = answer.map((one) => ({ ...one, book: { ...one.book, isbn13 } }))
+      if (answer.partial) found.partial = true
+      return found
+    },
+
+    async lookupIsbns(isbns, signal) {
+      const answers = await Promise.all(storefronts.map((country) => ask('lookup', { isbn: isbns.join(','), country }, signal)))
+      return answers.flatMap((items) =>
+        items.flatMap((item) => {
+          const book = snapshotFromApple(item)
+          return book ? [{ book, source: 'apple' as const, popularity: item.userRatingCount ?? 0 }] : []
+        }),
+      )
     },
 
     async lookupId(appleId, signal) {

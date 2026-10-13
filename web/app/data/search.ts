@@ -1,10 +1,10 @@
-import { parseIsbn, type BookSnapshot } from './books'
+import { parseIsbn, type Book, type BookSnapshot } from './books'
 import { createApple } from './apple'
 import type { Dnb } from './dnb'
 import type { CatalogueSearch } from './catalogueSearch'
 import { abortError, type FetchLike } from './fetching'
 import type { LibraryEntry } from './library'
-import { isbn13Of, MATCH, matchQuality, mergeResults, normalise, SOURCE_ORDER, workKey, type Found, type SearchResult, type SourceName } from './merge'
+import { editionKeys, isbn13Of, MATCH, matchQuality, mergeResults, normalise, SOURCE_ORDER, workKey, type Found, type SearchResult, type SourceName } from './merge'
 import { createOpenLibrary } from './openLibrary'
 
 /**
@@ -32,9 +32,20 @@ export const SEARCH_DEBOUNCE_MS = 220
 /**
  * What one query found so far. `pending`: some source has not answered yet.
  * `failed`: every source that was asked failed, so the list says so instead
- * of "nothing found".
+ * of "nothing found". `editions`: every edition the sources named, one per
+ * edition (an ISBN or a source id), not one per book as `results`: what the
+ * import chooses an edition from. `unanswered`: the sources that failed (a
+ * refusal, a timeout, an error) or answered only in part (an Apple storefront
+ * that did not): what they have is not known, which is no "nothing found" (the
+ * import asks again later).
  */
-export type SearchOutcome = { results: SearchResult[]; pending: boolean; failed: boolean }
+export type SearchOutcome = {
+  results: SearchResult[]
+  pending: boolean
+  failed: boolean
+  editions?: (BookSnapshot | Book)[]
+  unanswered?: SourceName[]
+}
 
 export type SearchOptions = {
   signal?: AbortSignal
@@ -42,7 +53,15 @@ export type SearchOptions = {
   library?: readonly LibraryEntry[] | Promise<readonly LibraryEntry[]>
   /** Called with the merged list each time a source answers (or fails), the last time with `pending: false`. */
   onUpdate?: (outcome: SearchOutcome) => void
+  /** Only these sources (all when left out): the import asks Apple only the questions that can change its answer. */
+  sources?: readonly SourceName[]
 }
+
+/** One row of a batch lookup by ISBN: its ISBN, and what tells a result of the batch apart as its edition (title, authors). */
+export type IsbnRow = { isbn13: string; title: string; authors: readonly string[] }
+
+/** How many ISBNs one Apple lookup asks for at once (measured: 40 answer in one request, the same hits as 40 lookups). */
+export const APPLE_ISBN_BATCH = 40
 
 export type Search = {
   /**
@@ -60,12 +79,40 @@ export type Search = {
   searchCovers: (query: string, options?: { signal?: AbortSignal; storefront?: 0 | 1 }) => Promise<{ results: { book: BookSnapshot }[]; pending: false; failed: boolean }>
   /** One Apple Book by its track id: a book page opened cold. Null when no storefront has it; rejects when none answered. */
   lookupApple: (appleId: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
-  /** One edition by ISBN-13: Apple Books first, then OpenLibrary. Null or a rejection as `lookupApple`. */
-  lookupIsbn: (isbn13: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
+  /**
+   * One edition by ISBN-13: Apple Books first, then OpenLibrary. Null or a rejection as `lookupApple`; with
+   * `strict`, also a rejection when nothing was found and one of them did not answer (a refusal is no "not found").
+   */
+  lookupIsbn: (isbn13: string, options?: { signal?: AbortSignal; strict?: boolean }) => Promise<BookSnapshot | null>
+  /**
+   * Asks Apple for many ISBNs at once (`APPLE_ISBN_BATCH` a request, both storefronts) and keeps the answers,
+   * so `lookupIsbn` and `lookupAppleIsbn` of those ISBNs ask Apple nothing more: a whole file's ISBNs cost a few
+   * dozen requests instead of two each. A result whose artwork names its ISBN is that ISBN's; another is the
+   * edition of the batch's row whose work it is (`belongs`). A batch that fails, or a result two rows could own,
+   * leaves those ISBNs to their own lookup. Never rejects (but on abort).
+   */
+  primeIsbns: (rows: readonly IsbnRow[], belongs: (row: IsbnRow, book: BookSnapshot) => boolean, options?: { signal?: AbortSignal }) => Promise<void>
   /** One Apple Book by ISBN-13 (its artwork is the best cover there is). Null when Apple has none. */
   lookupAppleIsbn: (isbn13: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
   /** One OpenLibrary edition by its key (`OL61022665M`). Null or a rejection as `lookupApple`. */
   lookupOpenLibrary: (editionKey: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
+  /** The editions of an Open Library work (`OL45883W`), with the work's authors: every edition Choose edition can offer. */
+  workEditions: (work: { key: string; authors: readonly string[] }, options?: { signal?: AbortSignal }) => Promise<BookSnapshot[]>
+}
+
+/** Every edition the sources named, in source order, each once (its ISBN or a source id): what `editions` holds. */
+function everyEdition(answers: Partial<Record<SourceName, readonly Found[]>>): (Book | BookSnapshot)[] {
+  const seen = new Set<string>()
+  const out: (Book | BookSnapshot)[] = []
+  for (const source of SOURCE_ORDER) {
+    for (const { book } of answers[source] ?? []) {
+      const keys = editionKeys(book)
+      if (keys.some((key) => seen.has(key))) continue
+      for (const key of keys) seen.add(key)
+      out.push(book)
+    }
+  }
+  return out
 }
 
 export function createSearch(options: {
@@ -102,14 +149,15 @@ export function createSearch(options: {
     }
   }
 
-  async function search(query: string, { signal, library = [], onUpdate }: SearchOptions = {}): Promise<SearchOutcome> {
+  async function search(query: string, { signal, library = [], onUpdate, sources: only }: SearchOptions = {}): Promise<SearchOutcome> {
     const text = query.trim()
-    if (text.length < MIN_QUERY_LENGTH) return { results: [], pending: false, failed: false }
+    if (text.length < MIN_QUERY_LENGTH) return { results: [], pending: false, failed: false, editions: [], unanswered: [] }
 
     const sources = asks(text)
-    const names = SOURCE_ORDER.filter((name) => sources[name])
+    const names = SOURCE_ORDER.filter((name) => sources[name] && (!only || only.includes(name)))
     const answers: Partial<Record<SourceName, Found[]>> = {}
     const failures = new Set<SourceName>()
+    const partial = new Set<SourceName>()
     // The Library only marks results; if it cannot be read, nothing is marked.
     const entries = Promise.resolve(library).catch(() => [] as readonly LibraryEntry[])
 
@@ -119,6 +167,8 @@ export function createSearch(options: {
         results: mergeResults(text, answers, await entries),
         pending: answered < names.length,
         failed: failures.size === names.length,
+        editions: everyEdition(answers),
+        unanswered: [...new Set([...failures, ...partial])],
       }
     }
 
@@ -127,7 +177,10 @@ export function createSearch(options: {
     const answerOf = (name: SourceName, ask: Ask | undefined = sources[name]) =>
       (ask ? ask(signal) : Promise.resolve([] as Found[]))
         .then(
-          (found) => void (answers[name] = found),
+          (found: Found[] & { partial?: boolean }) => {
+            answers[name] = found
+            if (found.partial) partial.add(name)
+          },
           () => void failures.add(name),
         )
         .then(() => {
@@ -149,8 +202,50 @@ export function createSearch(options: {
     return outcome()
   }
 
+  /** What a batch lookup (`primeIsbns`) found per ISBN: its Apple edition, or null when Apple surely has none. */
+  const primed = new Map<string, BookSnapshot | null>()
+
   async function lookupAppleIsbn(isbn13: string, { signal }: { signal?: AbortSignal } = {}) {
+    if (primed.has(isbn13)) return primed.get(isbn13) ?? null
     return (await apple.lookupIsbn(isbn13, signal))[0]?.book ?? null
+  }
+
+  async function primeIsbns(rows: readonly IsbnRow[], belongs: (row: IsbnRow, book: BookSnapshot) => boolean, { signal }: { signal?: AbortSignal } = {}) {
+    const unique = [...new Map(rows.filter((row) => !primed.has(row.isbn13)).map((row) => [row.isbn13, row])).values()]
+    for (let from = 0; from < unique.length; from += APPLE_ISBN_BATCH) {
+      if (signal?.aborted) throw abortError()
+      const batch = unique.slice(from, from + APPLE_ISBN_BATCH)
+      const asked = new Set(batch.map((row) => row.isbn13))
+      let found: Found[]
+      try {
+        found = await apple.lookupIsbns([...asked], signal)
+      } catch {
+        if (signal?.aborted) throw abortError()
+        // Not answered (refused, unreachable): these ISBNs are asked one by one, as before.
+        continue
+      }
+      const owned = new Map<string, BookSnapshot>()
+      const unsure = new Set<string>()
+      let orphan = false
+      for (const { book } of found) {
+        // The artwork of most editions is named after their ISBN: that ISBN's edition for sure.
+        const named = book.isbn13 && asked.has(book.isbn13) ? book.isbn13 : null
+        const owners = named ? [named] : batch.filter((row) => belongs(row, book)).map((row) => row.isbn13)
+        if (owners.length === 1) {
+          if (!owned.has(owners[0]!)) owned.set(owners[0]!, { ...book, isbn13: owners[0]! })
+        } else if (owners.length) {
+          // Two rows of one work: either may be its edition, so both are asked on their own.
+          for (const isbn13 of owners) unsure.add(isbn13)
+        } else {
+          orphan = true
+        }
+      }
+      for (const isbn13 of asked) {
+        if (owned.has(isbn13) && !unsure.has(isbn13)) primed.set(isbn13, owned.get(isbn13)!)
+        // A result nobody could be told to own may be any unanswered ISBN's: those are asked on their own.
+        else if (!unsure.has(isbn13) && !orphan) primed.set(isbn13, null)
+      }
+    }
   }
 
   return {
@@ -165,9 +260,16 @@ export function createSearch(options: {
     },
     lookupApple: (appleId, { signal } = {}) => apple.lookupId(appleId, signal),
     lookupAppleIsbn,
-    async lookupIsbn(isbn13, { signal } = {}) {
+    primeIsbns,
+    async lookupIsbn(isbn13, { signal, strict = false } = {}) {
       const [fromApple, fromOpenLibrary] = await Promise.allSettled([
-        lookupAppleIsbn(isbn13, { signal }),
+        strict && !primed.has(isbn13)
+          ? apple.lookupIsbn(isbn13, signal).then((found) => {
+              // Strict: a storefront that did not answer may sell it; nothing found is not "Apple has none".
+              if (!found.length && found.partial) throw new Error('A storefront did not answer')
+              return found[0]?.book ?? null
+            })
+          : lookupAppleIsbn(isbn13, { signal }),
         openLibrary.lookupIsbn(isbn13, signal),
       ])
       if (signal?.aborted) throw abortError()
@@ -183,9 +285,14 @@ export function createSearch(options: {
         }
       }
       if (fromApple.status === 'rejected' && fromOpenLibrary.status === 'rejected') throw fromApple.reason
+      // Strict: one of them did not answer, so "neither has it" cannot be told.
+      if (strict && (fromApple.status === 'rejected' || fromOpenLibrary.status === 'rejected')) {
+        throw fromApple.status === 'rejected' ? fromApple.reason : (fromOpenLibrary as PromiseRejectedResult).reason
+      }
       return null
     },
     lookupOpenLibrary: (editionKey, { signal } = {}) => openLibrary.lookupEdition(editionKey, signal),
+    workEditions: (work, { signal } = {}) => openLibrary.workEditions(work, signal),
   }
 }
 

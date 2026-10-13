@@ -389,14 +389,14 @@ describe('findEdition', () => {
     expect(none).toMatchObject({ via: null, unsure: false, book: { title: 'Jonathan Strange', source: 'import', isbn13: '9790000001022' } })
   })
 
-  it('keeps the edition of an ISBN no source knows, and lends it the cover of the work a title search finds (#111)', async () => {
+  it('matches an ISBN no source knows to its work\'s edition a title search finds: a real Book before the file\'s own row', async () => {
     const work = snapshot({ title: 'Piranesi', authors: ['Susanna Clarke'], coverUrl: 'https://example.test/piranesi.jpg' })
     const search: Lookups['search'] = {
       lookupIsbn: async () => null,
       search: async () => ({ results: [{ book: work, entry: null, otherEdition: false }], pending: false, failed: false }),
     }
     const edition = await findEdition(row({ isbn13: '9790000001022', pageCount: 245 }), { catalogue: { search: async () => [] }, search })
-    expect(edition).toMatchObject({ via: null, book: { source: 'import', isbn13: '9790000001022', pageCount: 245 }, coverFrom: work })
+    expect(edition).toMatchObject({ via: 'title', unsure: false, book: work })
   })
 
   it('without an ISBN, picks among the same work the edition the file itself describes: its Binding and page count (#111)', async () => {

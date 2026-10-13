@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
 import { coverLender } from '@/data/bookImport'
-import { type Candidate, collectIsbn, isComplete, mergeSources, STORABLE_DESCRIPTION } from '@/data/mergeBook'
+import { snapshotFromApple } from '@/data/apple'
+import { type Candidate, collectIsbn, isComplete, mergeGenreLabels, mergeSources, STORABLE_DESCRIPTION } from '@/data/mergeBook'
+import { snapshotFromOpenLibrary } from '@/data/openLibrary'
 
 /**
  * The field-level merge (data/mergeBook.ts): one book from several sources' answers.
@@ -202,5 +204,32 @@ describe('the import borrows a cover by the same ranking', () => {
     expect(coverLender(row, book({ source: 'import' }), [bare, english, print])).toBe(print)
     expect(coverLender(row, book({ source: 'import' }), [bare, english])).toBeNull()
     expect(coverLender(row, book({ source: 'import', coverUrl: OL_COVER }), [print])).toBeNull()
+  })
+})
+
+describe('raw genre labels (collected, not stored yet)', () => {
+  it('unites every candidate\'s labels, one per spelling, with the sources that named them; agreed ones first', () => {
+    const { genres } = mergeSources([
+      { source: 'apple', exact: true, book: { title: 'Bleak House', genreLabels: ['Classics', 'Fiction & Literature'] } },
+      { source: 'openlibrary', exact: false, book: { title: 'Bleak House', genreLabels: ['fiction  & literature', 'London (England)', 'Classics'] } },
+      { source: 'openlibrary', exact: false, book: { title: 'Bleak House', genreLabels: ['Classics', ' '] } },
+    ])
+    expect(genres).toEqual([
+      { label: 'Classics', sources: ['apple', 'openlibrary'], from: [0, 1, 2] },
+      { label: 'Fiction & Literature', sources: ['apple', 'openlibrary'], from: [0, 1] },
+      { label: 'London (England)', sources: ['openlibrary'], from: [1] },
+    ])
+  })
+
+  it('maps nothing onto the app\'s genre list and is empty when no source named any', () => {
+    expect(mergeGenreLabels([{ source: 'apple', exact: true, book: { title: 'Bleak House' } }])).toEqual([])
+    expect(mergeGenreLabels([{ source: 'apple', exact: true, book: { genreLabels: ['Mysteries & Thrillers'] } }])[0]!.label).toBe('Mysteries & Thrillers')
+  })
+
+  it('carries what Apple and Open Library call a book\'s genres on their snapshots, raw', () => {
+    expect(snapshotFromApple({ kind: 'ebook', trackId: 1, trackName: 'Bleak House', genres: ['Classics', 'Books'] })?.genreLabels).toEqual(['Classics'])
+    expect(snapshotFromApple({ kind: 'ebook', trackId: 1, trackName: 'Bleak House' })).not.toHaveProperty('genreLabels')
+    const doc = { key: '/works/OL1W', title: 'Bleak House', cover_edition_key: 'OL1M', subject: ['Fiction', 'London (England)'] }
+    expect(snapshotFromOpenLibrary(doc)?.genreLabels).toEqual(['Fiction', 'London (England)'])
   })
 })

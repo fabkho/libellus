@@ -1,19 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
-import { resolveBookCover, type ProbeImage } from './covers'
-import type { CoverKind } from './coverRank'
-import { languageFits } from './coverFill'
-import { type Candidate, mergeSources } from './mergeBook'
+import { resolveBookCover, type ProbeImage, type ResolvedCover } from './covers'
+import { coverKindOf, type CoverKind } from './coverRank'
+import { languageFits, mergeCover } from './coverFill'
+import { type Candidate, type GenreLabel, type MergeSource, mergeGenreLabels, mergeSources } from './mergeBook'
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
 import { editionSignature } from './editions'
-import { bookFromRow, rankEditions, sameVolume, titleQuery } from './import/editions'
-import type { ImportBook } from './import/rows'
+import { bookFromRow, editionFit, isEbookBinding, isSameWork, nearEditions, otherLanguage, rankEditions, sameVolume } from './import/editions'
+import { FREE_SOURCES, questionsFor } from './import/queries'
+import type { ImportBook, ImportProblem } from './import/rows'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
-import { editionKeys, normalise } from './merge'
-import type { Search } from './search'
+import { editionKeys, normalise, type SourceName } from './merge'
+import type { Search, SearchOutcome } from './search'
 
 /**
  * Importing an export in the app (issues #40, #111), after the file is read
@@ -21,23 +22,34 @@ import type { Search } from './search'
  * data/import/rows.ts): finding each book's edition the way search does, and
  * writing the rows. Nothing here knows which app wrote the file.
  *
- * Finding an edition, per row, the first that answers (#111: the exact edition
- * the member shelved, not just the same work):
+ * Finding an edition, per row (the import-quality fix: as many rows as can be
+ * matched to a real Book, any format, an ebook as good as print; one pool of
+ * candidates and one ranking for the match and Choose edition):
  *   1. by its ISBN: the Catalogue (a Book some member added before), then
- *      Apple Books, then OpenLibrary;
- *   2. a title + author search over all three, taking the result of the same
- *      work (`isSameWork`) whose edition fits the row best (`pickEdition`:
- *      the file's language (else told from the title), page count, format,
+ *      Apple Books (asked for the whole file's ISBNs in a few batch requests
+ *      first, `primeIsbns`), then OpenLibrary. An exact edition with its own
+ *      cover is the match, nothing more is asked;
+ *   2. the work by its title (`titleCandidates`): a ladder of questions
+ *      (data/import/queries.ts: title and author, then without subtitle or
+ *      series prefix, umlauts written out, the title alone, the name turned)
+ *      until one finds the row's work (`isSameWork`) with a cover. Every
+ *      edition each source names is a candidate (not one per book, as search
+ *      shows them), ranked by `rankEditions` (language, format, cover, pages,
  *      year; all from the file itself, no app's book pages, #155);
- *   3. the file's own fields: an `import` Book keyed by its ISBN, or without
- *      one a Manual book of the member's (`bookFromRow`). A row whose ISBN no
- *      source knows stays that exact edition even when a title search finds
- *      the work: the work's edition only lends it its cover (`coverFrom`).
- * Rows are looked up a few at a time (`concurrency`), each source call with a
- * deadline, so a slow network slows the import down instead of stopping it; a
- * row nothing was found for is tried once more at the end (a source may have
- * refused a burst or answered too late), then falls back to step 3, and says
- * so when a source could not be asked (`unsure`).
+ *   3. the match: the exact edition, else the best same-work edition (`via:
+ *      'title'`, even when the file has an ISBN no source knows: a real Book
+ *      before the file's own row; her pages and format stay on her entry). An
+ *      edition without a cover borrows the best one of its work (`coverLender`:
+ *      the work's ebook before another print edition), as the cover fill would;
+ *   4. nothing: the file's own fields, an `import` Book keyed by its ISBN or a
+ *      Manual book of the member's (`bookFromRow`), with Goodreads' cover of
+ *      the file's own book id as the last resort (`lookups.goodreads`).
+ * A source that did not answer (a refusal, an error, no answer in time) is not
+ * "nothing found": the row is `unsure` and asked again at the end (once the
+ * paced host lets us back, `busyFor`); an unsure row is never remembered as a
+ * miss. Rows are looked up a few at a time (`concurrency`), each source call
+ * with a deadline, so a slow network slows the import down instead of
+ * stopping it.
  *
  * Writing: the Cover of each Book that is new to the Catalogue is resolved
  * first (as on add, data/covers.ts), then a few rows go to `import_books` per
@@ -73,6 +85,12 @@ export type Edition = {
   via: 'isbn' | 'title' | null
   /** Some lookup could not be asked (no answer in time, or every source failed): a better edition may exist. */
   unsure: boolean
+  /**
+   * A source did not answer while the row was matched to an edition that will do (a cover, the row's language, any
+   * format): it is asked again in the second pass for a better one (its ebook, its very edition), but the match
+   * stands and is no row to look at (owner rule: any format, a real Book before none).
+   */
+  retry?: boolean
   /** Another edition of the same work, whose cover the file's own Book takes when its ISBN finds none. */
   coverFrom?: Book | BookSnapshot | null
   /** The cover fill found its cover (data/coverFill.ts): for a Catalogue Book it is handed to `fill_book_covers` once written. */
@@ -81,11 +99,28 @@ export type Edition = {
   coverKind?: CoverKind
   /**
    * The other editions of the row's work its title search found, best fit
-   * first (the order the match was picked in): what the preview offers when
-   * the member chooses another edition herself. Kept only for a row not found
-   * by its ISBN; at most `ALTERNATIVES_KEPT`.
+   * first (`rankEditions`, the order the match was picked in): what the preview
+   * offers when the member chooses another edition herself, and where a cover
+   * is borrowed from; at most `ALTERNATIVES_KEPT`.
    */
   alternatives?: (Book | BookSnapshot)[]
+  /** What the sources found close to the row without being its work for sure (`nearEditions`): Choose edition lists them last. */
+  near?: (Book | BookSnapshot)[]
+  /** Only Goodreads knew the book (the file's own book id): its cover, and nothing else, came from there. */
+  goodreadsOnly?: boolean
+  /**
+   * The raw genre labels the sources gave the edition and its work's other editions (`mergeGenreLabels`, with their
+   * sources): collected for the Book, not stored yet and not mapped onto the app's genre list.
+   */
+  genres?: GenreLabel[]
+}
+
+/** The edition with the genre labels of its Book and its work's other editions merged on it (`Edition.genres`). Pure. */
+export function withGenres(edition: Edition): Edition {
+  // The alternatives hold the edition itself when it was found by title: each Book once.
+  const books = [...new Set([edition.book, ...(edition.alternatives ?? [])])]
+  const genres = mergeGenreLabels(books.map((book) => ({ source: book.source as MergeSource, book, exact: book === edition.book })))
+  return genres.length ? { ...edition, genres } : edition
 }
 
 /**
@@ -108,12 +143,42 @@ export function coverLender(
   return at ? (usable[at - 1] ?? null) : null
 }
 
+/**
+ * An edition with the cover of `lender` lent to it, as the cover fill gives one
+ * (`mergeCover`: on a found edition's Book, as `coverFrom` of the file's own
+ * row), of the kind the ranking calls it (the work's ebook, another edition).
+ * The edition itself when there is nothing to lend. Pure.
+ */
+export function withLentCover(edition: Edition, lender: Book | BookSnapshot | null): Edition {
+  if (!lender?.coverUrl) return edition
+  const lent = mergeCover(edition, {
+    coverUrl: lender.coverUrl,
+    coverThumbhash: lender.coverThumbhash,
+    coverColors: lender.coverColors,
+    kind: coverKindOf('sibling', lender.coverUrl),
+  })
+  return lent ?? edition
+}
+
 /** Alternatives kept per row (a file can be thousands of rows). */
 export const ALTERNATIVES_KEPT = 20
 
+/** Near finds kept per row, for Choose edition. */
+export const NEAR_KEPT = 10
+
+/** What the last-resort Goodreads stage is asked with: a Goodreads file's row and its book id. */
+export type GoodreadsQuery = { title: string; authors: string[]; goodreadsBookId: string | null }
+
 export type Lookups = {
   catalogue: Pick<CatalogueSearch, 'search'>
-  search: Pick<Search, 'lookupIsbn' | 'search'>
+  search: Pick<Search, 'lookupIsbn' | 'search'> & Partial<Pick<Search, 'primeIsbns' | 'workEditions'>>
+  /**
+   * Goodreads' cover of a Goodreads file's row nothing else found a cover for (flagged: data/coverRank.ts,
+   * `GOODREADS_COVERS`), already checked to be an image: the cover, null for none, 'blocked' when Goodreads turns us away.
+   */
+  goodreads?: (query: GoodreadsQuery, signal?: AbortSignal) => Promise<ResolvedCover | null | 'blocked'>
+  /** How long a paced source asks to be left alone now (ms): the second pass waits it out before asking again. */
+  busyFor?: () => number
   timeoutMs?: number
 }
 
@@ -131,53 +196,147 @@ async function withDeadline<T>(ms: number, outer: AbortSignal | undefined, task:
   }
 }
 
-/** Finds the edition of one row (see the steps above). Rejects only when `signal` aborts. */
-export async function findEdition(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
+/** One source call of a row's lookup: its answer, or null when it gave none in time (and the lookup is then unsure). */
+type Ask = <T>(task: (signal: AbortSignal) => Promise<T>) => Promise<T | null>
+
+function asker(lookups: Lookups, signal: AbortSignal | undefined, onMiss: () => void): Ask {
   const timeout = lookups.timeoutMs ?? LOOKUP_TIMEOUT_MS
-  let unsure = false
-  async function ask<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T | null> {
+  return async (task) => {
     try {
       return await withDeadline(timeout, signal, task)
     } catch {
       if (signal?.aborted) throw abortError()
-      unsure = true
+      onMiss()
       return null
     }
   }
+}
+
+/**
+ * An edition of the row's work nothing a source could add would beat: its own cover, the row's language, and for an
+ * ebook row an Apple Books edition (the closest to a Kindle edition there is). Pure.
+ */
+export function settled(row: Pick<ImportBook, 'title' | 'language' | 'isbn13' | 'binding'>, book: Book | BookSnapshot): boolean {
+  return Boolean(book.coverUrl) && !otherLanguage(row, book) && (!isEbookBinding(row.binding) || book.source === 'apple')
+}
+
+/** What the title ladder found for a row: its work's editions best first, what is close to it, and whether a source could not be asked. */
+export type TitleCandidates = { same: (Book | BookSnapshot)[]; near: (Book | BookSnapshot)[]; incomplete: boolean }
+
+/**
+ * The row's work by its title, the ONE candidate pool of the match and Choose
+ * edition: the questions of data/import/queries.ts in order, each to the
+ * sources it names (the free ones first, Apple only while they leave the row
+ * unsettled: `settled`), every edition they name kept once, until the row's work
+ * (`isSameWork`) turns up with a cover (`all`: every question, for Choose
+ * edition). A source that does not answer makes the result `incomplete`, never
+ * empty for sure.
+ */
+export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?: AbortSignal, { all = false }: { all?: boolean } = {}): Promise<TitleCandidates> {
+  let incomplete = false
+  const ask = asker(lookups, signal, () => (incomplete = true))
+  const pool: { book: Book | BookSnapshot }[] = []
+  const seen = new Set<string>()
+  const held = new Set<Book | BookSnapshot>()
+  let same: (Book | BookSnapshot)[] = []
+  const put = (outcome: SearchOutcome | null) => {
+    if (!outcome) return
+    if (outcome.failed || outcome.unanswered?.length) incomplete = true
+    for (const book of outcome.editions ?? outcome.results.map((result) => result.book)) {
+      // One candidate per edition (its ISBN or a source id); one without any is itself.
+      const keys = editionKeys(book)
+      if (held.has(book) || keys.some((key) => seen.has(key))) continue
+      for (const key of keys) seen.add(key)
+      held.add(book)
+      pool.push({ book })
+    }
+    same = rankEditions(row, pool).map(({ book }) => book)
+  }
+  const asking = (query: string, sources: readonly SourceName[]) => ask((s) => lookups.search.search(query, { signal: s, sources }))
+  for (const question of questionsFor(row)) {
+    if (question.sources) {
+      put(await asking(question.query, question.sources))
+    } else {
+      // The free sources first; Apple (its per-address limit is the import's scarcest thing) only when they leave
+      // something to find: the work with a cover, in the row's language, and an ebook row's Apple ebook.
+      put(await asking(question.query, FREE_SOURCES))
+      if (all || !same.some((book) => settled(row, book))) put(await asking(question.query, ['apple']))
+    }
+    if (!all && same.some((book) => book.coverUrl)) break
+  }
+  return { same, near: nearEditions(row, pool).map(({ book }) => book), incomplete }
+}
+
+/**
+ * When the work was found only in another language than the row's (Open Library's search names one edition a work,
+ * in the device's language first, so an English row may meet only its German translation), the Open Library work's
+ * editions are asked once (one request, no per-address limit) and ranked in: the row's own language may be there.
+ */
+async function inRowLanguage(row: ImportBook, found: TitleCandidates, lookups: Lookups, ask: Ask): Promise<TitleCandidates> {
+  const best = found.same[0]
+  const work = found.same.find((book) => book.openLibraryWorkKey)?.openLibraryWorkKey
+  if (!best || !otherLanguage(row, best) || !work || !lookups.search.workEditions) return found
+  const editions = await ask((s) => lookups.search.workEditions!({ key: work, authors: row.authors }, { signal: s }))
+  if (!editions?.length) return found
+  const seen = new Set(found.same.flatMap((book) => editionKeys(book)))
+  const more = editions.filter((book) => !editionKeys(book).some((key) => seen.has(key)))
+  return { ...found, same: rankEditions(row, [...found.same, ...more].map((book) => ({ book }))).map(({ book }) => book) }
+}
+
+/** Finds the edition of one row (see the steps above), with its work's raw genre labels. Rejects only when `signal` aborts. */
+export async function findEdition(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
+  return withGenres(await editionOf(row, lookups, signal))
+}
+
+async function editionOf(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
+  let unsure = false
+  const ask = asker(lookups, signal, () => (unsure = true))
 
   async function byIsbn(isbn: string): Promise<Book | BookSnapshot | null> {
     const stored = await ask((s) => lookups.catalogue.search(isbn, s))
     const known = stored?.find((found) => found.book.isbn13 === isbn)
     if (known) return known.book
-    return ask((s) => lookups.search.lookupIsbn(isbn, { signal: s }))
+    // Strict: Apple refusing while Open Library has nothing is no "not found".
+    return ask((s) => lookups.search.lookupIsbn(isbn, { signal: s, strict: true }))
   }
 
-  if (row.isbn13) {
-    const exact = await byIsbn(row.isbn13)
-    if (exact) return { book: exact, via: 'isbn', unsure: false }
-  }
+  const exact = row.isbn13 ? await byIsbn(row.isbn13) : null
+  // The very edition, with its own cover: nothing more to ask.
+  if (exact?.coverUrl) return { book: exact, via: 'isbn', unsure: false }
 
-  const outcome = await ask((s) => lookups.search.search(titleQuery(row), { signal: s }))
-  if (outcome?.failed) unsure = true
-  let ranked = outcome ? rankEditions(row, outcome.results).map((result) => result.book) : []
-  // An author written with initials ("H.D. Carlton") is no word OpenLibrary's text search finds
-  // the book by: asked again with the title and the surname alone (what the match checks anyway).
-  const lastName = surname(row.authors[0])
-  if (!ranked.length && !outcome?.failed && lastName) {
-    const retry = `${row.title} ${lastName}`.trim()
-    if (retry.toLowerCase() !== titleQuery(row).toLowerCase()) {
-      const again = await ask((s) => lookups.search.search(retry, { signal: s }))
-      if (again?.failed) unsure = true
-      if (again) ranked = rankEditions(row, again.results).map((result) => result.book)
-    }
+  const titled = await titleCandidates(row, lookups, signal)
+  // An ISBN lookup that could not be told is asked again at the end; the work found meanwhile stands.
+  const pending = unsure
+  // The work's other editions are a nicety: one that does not come in time makes the row no less sure.
+  const found = await inRowLanguage(row, titled, lookups, asker(lookups, signal, () => {}))
+  const alternatives = found.same.slice(0, ALTERNATIVES_KEPT)
+  const near = found.near.slice(0, NEAR_KEPT)
+  if (exact) {
+    // The very edition, without a cover of its own: the work's best one is lent (its ebook first). Its edition is
+    // sure; a cover still missing is the cover fill's to find (data/coverFill.ts), the row a look meanwhile.
+    return withLentCover({ book: exact, via: 'isbn', unsure: false, alternatives, near }, coverLender(row, exact, alternatives))
   }
-  const alternatives = ranked.slice(0, ALTERNATIVES_KEPT)
-  const same = ranked[0] ?? null
-  const own = bookFromRow(row)
-  // An ISBN no source knows is still the edition she shelved: hers, with the work's cover.
-  if (own.isbn13) return { book: own, via: null, unsure, coverFrom: coverLender(row, own, alternatives) ?? same, alternatives }
-  if (same) return { book: same, via: 'title', unsure: false, alternatives }
-  return { book: own, via: null, unsure, alternatives }
+  const best = found.same[0]
+  if (best) {
+    // A real Book of the work, any format, before the file's own row (also for an ISBN no source knows). Found while
+    // a source did not answer, it stands only when nothing better can come: its own cover, the row's language, and
+    // for an ebook row an Apple Books edition (Apple refusing is how a Kindle row ended on a print edition).
+    // Found while a source did not answer: it stands when it will do (a cover shown, the row's language: any format is
+    // fine), and is asked again for better (the exact edition, the ebook); without that, the row is unsure.
+    const waiting = pending || found.incomplete
+    const matched = withLentCover({ book: best, via: 'title', unsure: false, alternatives, near }, coverLender(row, best, alternatives))
+    const willDo = Boolean((matched.coverFrom ?? matched.book).coverUrl) && !otherLanguage(row, best)
+    if (!waiting) return matched
+    if (!willDo) return { ...matched, unsure: true }
+    return pending || !settled(row, best) ? { ...matched, retry: true } : matched
+  }
+  const edition: Edition = { book: bookFromRow(row), via: null, unsure: pending || found.incomplete, alternatives, near }
+  if (edition.unsure || !lookups.goodreads || row.source !== 'goodreads') return edition
+  // The last resort: Goodreads' cover of the file's own book (its id, else its title and author).
+  const answer = await ask((s) => lookups.goodreads!({ title: row.title, authors: row.authors, goodreadsBookId: row.sourceId }, s))
+  if (!answer || answer === 'blocked') return edition
+  const covered = mergeCover(edition, { ...answer, kind: 'goodreads' })
+  return covered ? { ...covered, goodreadsOnly: true } : edition
 }
 
 /**
@@ -191,23 +350,74 @@ export function fileEdition(row: ImportBook, alternatives: readonly (Book | Book
 }
 
 /**
- * Whether a row of the preview is one to look at for sure: nothing identifies it
- * (no source knows its edition and the file has no ISBN for it, or a source could
- * not be asked: a better edition may exist), or it is not looked up yet. A row a
- * source found, or whose ISBN the file names, is identified: a missing cover is a
- * quiet note (`import.note.noCover`), never a review item. The cover fill
- * (data/coverFill.ts) looks for it in the background and the Book is added
- * without one when none is found; the wrong edition would not show in its cover
- * anyway, the member sees the edition's facts when she opens Choose edition.
+ * Whether a row of the preview is one to look at for sure ("Needs a look"):
+ *  - nothing identifies it: no source knows its edition and the file has no
+ *    ISBN for it (unless Goodreads knows the file's own book id: `goodreadsOnly`);
+ *  - a source could not be asked (`unsure`): a better edition may exist;
+ *  - it shows no cover (owner rule: a row without a cover is never "probably
+ *    fine"): neither its own nor one the cover ranking lent it from its work
+ *    (`coverFrom`, `shown`). The cover fill (data/coverFill.ts) goes on looking
+ *    in the background, and a row it finds one for moves out of the list;
+ *  - it is not looked up yet.
+ * Everything else (found by its ISBN or by its title, an ISBN the file names
+ * with a cover) is at most a note ("Probably fine"). Pure.
  */
 export function needsLook(
   verdict: 'imported' | 'inLibrary' | 'matched' | 'fromFile' | null,
   shown: Pick<BookSnapshot, 'coverUrl'> | null,
-  row: { isbn13?: string | null; unsure?: boolean } = {},
+  row: { isbn13?: string | null; unsure?: boolean; goodreadsOnly?: boolean } = {},
 ): boolean {
-  if (verdict === 'fromFile') return !row.isbn13 || Boolean(row.unsure)
-  if (verdict === 'matched') return false
+  if (row.unsure) return true
+  if (verdict === 'fromFile' && !row.isbn13 && !row.goodreadsOnly) return true
   return !shown?.coverUrl
+}
+
+/** What the preview says about a row: from the file's own data (`ImportProblem`) or from its match. Copy: `import.note.<code>`. */
+export type ReviewNote =
+  | ImportProblem
+  | { code: 'chosen' }
+  | { code: 'chosenInLibrary' }
+  | { code: 'fromFile' }
+  | { code: 'fromFileIsbn' }
+  | { code: 'unsure' }
+  | { code: 'unsureFound' }
+  | { code: 'noCover' }
+  | { code: 'byTitle'; year: number | null; language: string | null }
+
+/** Where a row of the preview goes: not listed (`quiet`), "Probably fine" (a note to read) or "Needs a look". */
+export type ReviewTier = 'quiet' | 'probablyFine' | 'needsLook'
+
+export type RowReview = {
+  tier: ReviewTier
+  /** The edition whose cover the row shows: the one it will be added as, or the one it borrows its cover from. */
+  shown: Book | BookSnapshot | null
+  /** Her edition is hers to choose (Choose edition): matched by title, without a cover, or only from the file. */
+  choose: boolean
+  notes: ReviewNote[]
+}
+
+/**
+ * THE rule of the preview for one row the lookup answered, for the screen and
+ * the measurement alike (`matched`: a source's edition; else the file's own
+ * row): its notes, the cover it shows, whether Choose edition is offered, and
+ * its tier (`needsLook`). Pure.
+ */
+export function reviewOf(book: Pick<ImportBook, 'title' | 'isbn13' | 'language' | 'problems'>, edition: Edition, matched: boolean): RowReview {
+  const verdict = matched ? 'matched' : 'fromFile'
+  const notes: ReviewNote[] = []
+  if (!matched) notes.push(edition.unsure ? { code: 'unsure' } : edition.book.isbn13 ? { code: 'fromFileIsbn' } : { code: 'fromFile' })
+  // Found by title: another edition of the work, which she may want to change after.
+  if (matched && edition.via === 'title') notes.push({ code: 'byTitle', year: edition.book.year, language: edition.book.language })
+  // Found, while a source could not be asked about its ISBN: asked again, a better edition may come.
+  if (matched && edition.unsure) notes.push({ code: 'unsureFound' })
+  const shown = edition.coverFrom ?? edition.book
+  if (matched && !shown.coverUrl) notes.push({ code: 'noCover' })
+  notes.push(...book.problems)
+  // Found by title in another language than hers (a translation): the work's own edition may be missing, so she looks.
+  const translated = matched && edition.via === 'title' && otherLanguage(book, edition.book)
+  const look = translated || needsLook(verdict, shown, { isbn13: edition.book.isbn13 ?? book.isbn13, unsure: edition.unsure, goodreadsOnly: edition.goodreadsOnly })
+  const choose = !matched || edition.via === 'title' || !shown.coverUrl
+  return { tier: look ? 'needsLook' : notes.length ? 'probablyFine' : 'quiet', shown, choose, notes }
 }
 
 /** One row of the choice sheet: the edition, whether the preview has it now, and whether it is the file's own. */
@@ -216,8 +426,9 @@ export type EditionChoice = { book: Book | BookSnapshot; current: boolean; file?
 /**
  * What a member can choose between for a row at first (before the edition
  * search adds its finds): the edition the preview has now (marked), the row as
- * the file has it, then the editions its match found, best fit first. One row
- * per look: an edition shown already, or one that looks like one, is left out.
+ * the file has it, then the editions of its work the match found, best fit
+ * first (`rankEditions`), then what was close to it (`near`). One row per
+ * look: an edition shown already, or one that looks like one, is left out.
  * The file's own row wears the cover of the edition it borrows (`coverFrom`),
  * so it shows what she gets. Pure.
  */
@@ -232,7 +443,7 @@ export function editionChoices(row: ImportBook, edition: Edition): EditionChoice
     : [{ book: edition.book, current: true }, { book: lent(inFile.book, inFile.coverFrom), current: false, file: true }]
   const keys = new Set(choices.flatMap(({ book }) => editionKeys(book)))
   const looks = new Set(choices.map(({ book }) => editionSignature(book)))
-  for (const book of alternatives) {
+  for (const book of [...alternatives, ...(edition.near ?? [])]) {
     const found = editionKeys(book)
     if (found.some((key) => keys.has(key)) || looks.has(editionSignature(book))) continue
     for (const key of found) keys.add(key)
@@ -573,6 +784,82 @@ export async function withCover(
   return { ...book, ...(lent.coverUrl ? lent : own) }
 }
 
+/** Waits `ms` (nothing for 0), or rejects when `signal` aborts. */
+function pause(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(abortError())
+    if (ms <= 0) return resolve()
+    const timer = setTimeout(resolve, ms)
+    signal?.addEventListener('abort', () => (clearTimeout(timer), reject(abortError())), { once: true })
+  })
+}
+
+/** What Choose edition offers beyond the match's own finds: its work's editions, best first, then the close ones. `failed`: a source could not be asked and nothing is there. */
+export type ChoiceCandidates = { editions: (Book | BookSnapshot)[]; failed: boolean }
+
+/**
+ * Choose edition's list for a row, from the match's own pool and ranking: every
+ * question of the ladder (`titleCandidates`), then the Open Library work's
+ * editions (the edition's work, else one its finds name); the row's work best
+ * first (`rankEditions`), the work's editions under another title (a
+ * translation) after them, then what is close (`nearEditions`). Rejects only
+ * when `signal` aborts.
+ */
+export async function choiceCandidates(row: ImportBook, edition: Edition, lookups: Lookups, signal?: AbortSignal): Promise<ChoiceCandidates> {
+  const found = await titleCandidates(row, lookups, signal, { all: true })
+  const work =
+    edition.book.openLibraryWorkKey ?? [...(edition.alternatives ?? []), ...found.same].find((book) => book.openLibraryWorkKey)?.openLibraryWorkKey ?? null
+  let fromWork: BookSnapshot[] = []
+  let workFailed = false
+  if (work && lookups.search.workEditions) {
+    try {
+      fromWork = await lookups.search.workEditions({ key: work, authors: row.authors }, { signal })
+    } catch {
+      if (signal?.aborted) throw abortError()
+      workFailed = true
+    }
+  }
+  const same = rankEditions(row, [...found.same, ...fromWork].map((book) => ({ book }))).map(({ book }) => book)
+  const translated = fromWork
+    .filter((book) => !same.includes(book))
+    .map((book, order) => ({ book, order, fit: editionFit(row, book) }))
+    .sort((a, b) => b.fit - a.fit || a.order - b.order)
+    .map(({ book }) => book)
+  const seen = new Set<string>()
+  const editions = [...same, ...translated, ...found.near].filter((book) => {
+    const keys = editionKeys(book)
+    if (keys.some((key) => seen.has(key))) return false
+    for (const key of keys) seen.add(key)
+    return true
+  })
+  return { editions, failed: !editions.length && (found.incomplete || workFailed) }
+}
+
+/** Title questions whose answers one import keeps (a file of 709 rows asks about 2,000). */
+export const ANSWERS_KEPT = 5000
+
+/**
+ * The lookups with the title questions' answers kept: a question every source
+ * answered is not asked again within the import (the second pass, Choose
+ * edition's ladder), so Apple's per-address limit is spent once per question.
+ * An answer with a source missing is not kept: asking again is the point.
+ */
+export function rememberingAnswers(lookups: Lookups): Lookups {
+  const kept = new Map<string, SearchOutcome>()
+  const search: Lookups['search']['search'] = async (query, options = {}) => {
+    const key = `${(options.sources ?? []).join(',')}|${query.trim().toLowerCase().replace(/\s+/g, ' ')}`
+    const known = kept.get(key)
+    if (known) return known
+    const outcome = await lookups.search.search(query, options)
+    if (!outcome.failed && !outcome.unanswered?.length) {
+      if (kept.size >= ANSWERS_KEPT) kept.delete(kept.keys().next().value!)
+      kept.set(key, outcome)
+    }
+    return outcome
+  }
+  return { ...lookups, search: { ...lookups.search, search } }
+}
+
 export type BookImport = {
   /** Finds every row's edition, a few at a time; `onEdition` as each is found. Rejects only when `signal` aborts. */
   match: (
@@ -580,7 +867,7 @@ export type BookImport = {
     options: {
       signal?: AbortSignal
       onEdition: (index: number, edition: Edition) => void
-      /** The second, slower pass over the rows the first found nothing for: how many it has, and how far it is. */
+      /** The second, slower pass over the rows a source could not be asked about: how many it has, and how far it is. */
       onSecondPass?: (done: number, total: number) => void
       /** Aborting this ends the second pass only: what the first found stays, the rest keeps its first answer. */
       secondPassSignal?: AbortSignal
@@ -588,6 +875,8 @@ export type BookImport = {
       secondPassBudgetMs?: number
     },
   ) => Promise<void>
+  /** Choose edition's finds for a row, through the same lookups, pool and ranking as the match (`choiceCandidates`). */
+  candidates: (row: ImportBook, edition: Edition, options?: { signal?: AbortSignal }) => Promise<ChoiceCandidates>
   /**
    * Resolves the Covers and writes the rows, a few per call; `onWritten` with
    * each call's outcomes. A call that fails ends the import with its error
@@ -605,25 +894,39 @@ export type BookImport = {
 
 export function createBookImport(
   client: SupabaseClient,
-  { lookups, probe, online = () => true }: { lookups: Lookups; probe: ProbeImage } & WriteOptions,
+  { lookups: given, probe, online = () => true }: { lookups: Lookups; probe: ProbeImage } & WriteOptions,
 ): BookImport {
+  const lookups = rememberingAnswers(given)
   return {
     async match(rows, { signal, onEdition, onSecondPass, secondPassSignal, secondPassBudgetMs = SECOND_PASS_BUDGET_MS }) {
       const retry: number[] = []
+      const first = new Map<number, Edition>()
+      // Apple's answers for every ISBN of the file, a few batch requests at once (instead of two requests a row).
+      const isbnRows = rows.flatMap((row) => (row.isbn13 ? [{ isbn13: row.isbn13, title: row.title, authors: row.authors }] : []))
+      const primed =
+        lookups.search.primeIsbns && isbnRows.length
+          ? lookups.search.primeIsbns(isbnRows, (row, book) => isSameWork(row, book), { signal }).catch(() => {})
+          : Promise.resolve()
+      // The rows without an ISBN first: they need no batch answer and are looked up while it comes.
+      const order = rows.map((_, index) => index).sort((a, b) => Number(Boolean(rows[a]!.isbn13)) - Number(Boolean(rows[b]!.isbn13)) || a - b)
       await eachLimited(
-        rows,
+        order,
         IMPORT_CONCURRENCY,
-        async (row, index) => {
+        async (index) => {
+          const row = rows[index]!
+          if (row.isbn13) await primed
           const edition = await findEdition(row, lookups, signal)
-          if (edition.unsure || !edition.via) retry.push(index)
+          // Only what a source could not be asked about is asked again: a row every source answered is final.
+          if (edition.unsure || edition.retry) retry.push(index)
+          first.set(index, edition)
           onEdition(index, edition)
         },
         signal,
       )
-      // Once more, slower, for rows nothing found or nothing could be asked
-      // about: a source that refused a burst or answered late may answer now.
-      // Counted aloud (`onSecondPass`) and stoppable on its own
-      // (`secondPassSignal`): the first answers are final then.
+      // Once more, slower, for rows a source could not be asked about (it
+      // refused a burst, answered late or failed), once the paced host lets us
+      // back (`busyFor`). Counted aloud (`onSecondPass`) and stoppable on its
+      // own (`secondPassSignal`): the first answers are final then.
       const again = retry.sort((a, b) => a - b)
       if (!again.length) return
       const second = new AbortController()
@@ -639,8 +942,11 @@ export function createBookImport(
           again,
           Math.max(1, IMPORT_CONCURRENCY / 2),
           async (index) => {
+            await pause(lookups.busyFor?.() ?? 0, second.signal)
             const edition = await findEdition(rows[index]!, lookups, second.signal)
-            onEdition(index, edition)
+            // A second answer that is no better (unsure again, or nothing, where the first had found the work) leaves the first.
+            const before = first.get(index)
+            if (!(before?.via && (edition.unsure || !edition.via))) onEdition(index, edition)
             onSecondPass?.(++done, again.length)
           },
           second.signal,
@@ -653,6 +959,9 @@ export function createBookImport(
         signal?.removeEventListener('abort', stop)
         secondPassSignal?.removeEventListener('abort', stop)
       }
+    },
+    async candidates(row, edition, { signal } = {}) {
+      return choiceCandidates(row, edition, lookups, signal)
     },
 
     async write(rows, { onWritten, refresh }) {
