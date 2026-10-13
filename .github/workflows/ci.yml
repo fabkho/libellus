@@ -85,6 +85,7 @@ jobs:
       tokens: ${{ steps.decide.outputs.tokens }}
       goodreads: ${{ steps.decide.outputs.goodreads }}
       dnb: ${{ steps.decide.outputs.dnb }}
+      openlibrary: ${{ steps.decide.outputs.openlibrary }}
       regal: ${{ steps.decide.outputs.regal }}
       og: ${{ steps.decide.outputs.og }}
       enrich: ${{ steps.decide.outputs.enrich }}
@@ -128,6 +129,9 @@ jobs:
               - *ci
               - 'supabase/functions/dnb-lookup/**'
               - 'web/app/data/dnbRecord.ts'
+            openlibrary:
+              - *ci
+              - 'supabase/functions/openlibrary/**'
             regal:
               - *ci
               - 'supabase/functions/regal-export/**'
@@ -157,6 +161,7 @@ jobs:
           FILTER_TOKENS: ${{ steps.filter.outputs.tokens }}
           FILTER_GOODREADS: ${{ steps.filter.outputs.goodreads }}
           FILTER_DNB: ${{ steps.filter.outputs.dnb }}
+          FILTER_OPENLIBRARY: ${{ steps.filter.outputs.openlibrary }}
           FILTER_REGAL: ${{ steps.filter.outputs.regal }}
           FILTER_OG: ${{ steps.filter.outputs.og }}
           FILTER_ENRICH: ${{ steps.filter.outputs.enrich }}
@@ -172,6 +177,7 @@ jobs:
           tokens=$(on "$FILTER_TOKENS")
           goodreads=$(on "$FILTER_GOODREADS")
           dnb=$(on "$FILTER_DNB")
+          openlibrary=$(on "$FILTER_OPENLIBRARY")
           regal=$(on "$FILTER_REGAL")
           og=$(on "$FILTER_OG")
           enrich=$(on "$FILTER_ENRICH")
@@ -192,7 +198,7 @@ jobs:
           {
             echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
-            echo "goodreads=$goodreads"; echo "dnb=$dnb"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"
+            echo "goodreads=$goodreads"; echo "dnb=$dnb"; echo "openlibrary=$openlibrary"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"
           } | tee -a "$GITHUB_OUTPUT"
 
   # Database rules (pgTAP), the web data layer (Vitest) and the backup round trip
@@ -350,7 +356,7 @@ jobs:
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
-        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true'
+        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.openlibrary == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true'
         with:
           deno-version: v2.x
 
@@ -367,6 +373,13 @@ jobs:
       - name: dnb-lookup function (Deno lint, check, test)
         if: ${{ !cancelled() && needs.changes.outputs.dnb == 'true' }}
         working-directory: supabase/functions/dnb-lookup
+        run: deno lint && deno check *.ts && deno task test
+
+      # The openlibrary edge function: the import's Open Library asks through it (identified
+      # to Open Library, paced), on recorded answers and stand-ins. Nothing is fetched live.
+      - name: openlibrary function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.openlibrary == 'true' }}
+        working-directory: supabase/functions/openlibrary
         run: deno lint && deno check *.ts && deno task test
 
       # The regal-export edge function (#110): the owner's Regal library file, on a
