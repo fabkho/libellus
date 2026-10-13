@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.1](https://github.com/fabkho/libellus/compare/v1.19.0...v1.19.1) (2026-10-13)
+
+
+### Fixes
+
+* **reader:** Read now on a build a release left behind says the book could not be opened ([#341](https://github.com/fabkho/libellus/issues/341)) ([cfea6d6](https://github.com/fabkho/libellus/commit/cfea6d65c241c735b6aced8c586013ea9f2870cd))
+
 ## [1.19.0](https://github.com/fabkho/libellus/compare/v1.18.1...v1.19.0) (2026-10-12)
 
 
