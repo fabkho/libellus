@@ -225,6 +225,22 @@ describe('a National Library edition has no cover of its own', () => {
     expect(review.tier).not.toBe('needsLook')
   })
 
+  it('the same edition named twice keeps its cover (its twin at Apple is the same ISBN)', async () => {
+    // What the measurement showed: the coverless National Library edition entered the pool first and its
+    // covered twin (the very ISBN at Apple) was dropped as the same edition, so the row showed no cover.
+    const twin = snapshot({ title: 'Der Schwarm', authors: ['Frank Schätzing'], isbn13: SCHWARM.isbn13, source: 'apple', appleId: '9001', language: 'ger', coverUrl: 'https://example.test/schwarm.jpg' })
+    const book = row({ ...german, isbn13: SCHWARM.isbn13 })
+    const edition = await findEdition(book, {
+      catalogue: { search: async () => [] },
+      search: { lookupIsbn: async () => snapshotFromDnbEdition(SCHWARM), search: async () => outcome([twin]) },
+      dnb: { editions: async () => [snapshotFromDnbEdition(SCHWARM)] },
+    })
+    expect(edition.via).toBe('isbn')
+    expect(edition.book.source).toBe('dnb')
+    expect(edition.alternatives?.[0]).toMatchObject({ source: 'dnb', coverUrl: 'https://example.test/schwarm.jpg' })
+    expect(reviewOf(book, edition, true).shown?.coverUrl).toBe('https://example.test/schwarm.jpg')
+  })
+
   it('without one to borrow it is a row to look at (the existing rule)', async () => {
     const edition = await findEdition(german, lookupsWith([]))
     expect(edition.book).toBe(bare)

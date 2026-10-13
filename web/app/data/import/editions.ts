@@ -113,6 +113,7 @@ function rowLanguage(row: Pick<FitRow, 'title' | 'language' | 'isbn13'>): string
 export function probablyGerman(row: Pick<FitRow, 'title' | 'language' | 'isbn13'>): boolean {
   return isbnLanguage(row.isbn13) === 'de' || languageCode(row.language) === 'de' || titleLanguage(row.title) === 'de'
 }
+
 /**
  * Whether an edition is in another language than the row's, both known (the file's or told from the titles and
  * the ISBN, as `editionFit` ranks them): a translation of her book, the same work but not what she read. The match

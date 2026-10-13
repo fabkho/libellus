@@ -249,17 +249,25 @@ export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?
   let incomplete = false
   const ask = asker(lookups, signal, () => (incomplete = true))
   const pool: { book: Book | BookSnapshot }[] = []
-  const seen = new Set<string>()
+  const seen = new Map<string, { book: Book | BookSnapshot }>()
   const held = new Set<Book | BookSnapshot>()
   let same: (Book | BookSnapshot)[] = []
   const keep = (found: readonly (Book | BookSnapshot)[]) => {
     for (const book of found) {
-      // One candidate per edition (its ISBN or a source id); one without any is itself.
+      if (held.has(book)) continue
+      // One candidate per edition (its ISBN or a source id); one without any is itself. The same edition
+      // named twice (the National Library's record and Apple's of one ISBN) keeps the cover either has: a
+      // DNB edition has none of its own, its covered twin is the same edition, not a second candidate.
       const keys = editionKeys(book)
-      if (held.has(book) || keys.some((key) => seen.has(key))) continue
-      for (const key of keys) seen.add(key)
+      const known = keys.map((key) => seen.get(key)).find((entry): entry is { book: Book | BookSnapshot } => entry !== undefined)
+      if (known) {
+        if (!known.book.coverUrl && book.coverUrl) known.book = { ...known.book, coverUrl: book.coverUrl, coverThumbhash: book.coverThumbhash, coverColors: book.coverColors }
+        continue
+      }
+      const entry = { book }
+      for (const key of keys) seen.set(key, entry)
       held.add(book)
-      pool.push({ book })
+      pool.push(entry)
     }
     same = rankEditions(row, pool).map(({ book }) => book)
   }
