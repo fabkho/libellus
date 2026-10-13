@@ -5,6 +5,7 @@ import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, ty
 import { GOODREADS_COVERS } from '~/data/coverRank'
 import { probeImageInBrowser, verifyCover } from '~/data/covers'
 import { createDnb, DNB_IMPORT_GAP_MS } from '~/data/dnb'
+import { accessTokenOf, viaOwnServer } from '~/data/openLibraryProxy'
 import { createGoodreadsCover } from '~/data/goodreadsCover'
 import {
   createBookImport,
@@ -45,6 +46,7 @@ import { useSessionStore } from '~/stores/session'
 import { isoDay } from '~/utils/dates'
 import { writeImportHint } from '~/utils/importHint'
 import { clearMatches, readMatches, writeMatches, type StoredMatch } from '~/utils/importMatches'
+import { parseAppConfig } from '~/utils/appConfig'
 
 /** No book answered for this long while looking up: the screen offers to go on with what is there. */
 const STALL_MS = 45_000
@@ -184,13 +186,24 @@ export const useImportStore = defineStore('import', () => {
   let liveFetch: PacedFetch | null = null
   let searcher: Search | null = null
   function importer(): BookImport | null {
-    if (!backend) return null
+    const config = parseAppConfig(useRuntimeConfig().public)
+    if (!backend || !config.ok) return null
     catalogue ??= createCatalogueSearch(backend)
     const languages = searchLanguages()
     if (repositoryLanguage !== languages[0]) repository = null
     repositoryLanguage = languages[0] ?? ''
-    // Apple refuses a burst; a little room between its requests keeps it answering.
-    liveFetch ??= pacedFetch((url, init) => fetch(url, init), { gapMs: { 'itunes.apple.com': 250 } })
+    // Apple refuses a burst; a little room between its requests keeps it answering. The import's Open Library
+    // goes through the `openlibrary` function (identified to Open Library, about 3/s) and falls back to direct
+    // at 1/s if the function ever fails (data/openLibraryProxy.ts). The gap's host key is the URL the caller
+    // asked with, so `openlibrary.org` paces both ways and the function's share is ~3/s.
+    liveFetch ??= pacedFetch(
+      viaOwnServer((url, init) => fetch(url, init), {
+        functionUrl: `${config.config.supabaseUrl}/functions/v1/openlibrary`,
+        apikey: config.config.supabaseAnonKey,
+        token: accessTokenOf(backend),
+      }),
+      { gapMs: { 'itunes.apple.com': 250, 'openlibrary.org': 340 } },
+    )
     if (!repository) {
       // The National Library (data/dnb.ts): the ISBN fallback and the title ladder's one question, on the import's own budget (`purpose`) and pace (`gapMs`).
       const dnb = createDnb(backend, { online: isOnline, purpose: 'import', gapMs: DNB_IMPORT_GAP_MS })

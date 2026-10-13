@@ -15,6 +15,10 @@
  *   [LIBELLUS_IMPORT_FILL_SECONDS=600]           the cover fill's budget (0: no fill)
  *   [LIBELLUS_IMPORT_PICKER=1]                   open Choose edition on every row that needs a look
  *   [LIBELLUS_IMPORT_APPLE_OUTAGE=90:20]         Apple refuses (429) for 20 s every 90 s, as it does on a bad day
+ *   [LIBELLUS_IMPORT_OPENLIBRARY=proxy|direct]   the import's Open Library through the `openlibrary` function (the
+ *                                                store's wiring, default) or direct as before it; the report says
+ *                                                which way ran and whether the function failed over to direct
+ *   [LIBELLUS_IMPORT_OPENLIBRARY_URL=…]          the function's address (default `${SUPABASE_URL}/functions/v1/openlibrary`)
  *   SUPABASE_URL=… SUPABASE_DB_URL=… MAILPIT_URL=… pnpm tsx scripts/import-quality.ts
  *
  * Runs on the code it finds: on a checkout before the import-quality fix it measures the old lookup and its
@@ -43,6 +47,7 @@ import { createEditions } from '../app/data/editions'
 import type { FetchLike } from '../app/data/fetching'
 import { parseExport } from '../app/data/import/detect'
 import type { ImportBook } from '../app/data/import/rows'
+import { viaOwnServer } from '../app/data/openLibraryProxy'
 import { createSearch } from '../app/data/search'
 import { createInviteCode, newClient, readMailedCode, sql, uniqueEmail } from '../tests/support/stack'
 
@@ -116,7 +121,10 @@ const network: FetchLike = async (url, init) => {
       return { ok: false, status: 429, json: async () => ({}), headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '10' : null) } }
     }
   }
-  return fetch(url, { ...init, headers: { 'User-Agent': 'libellus-import-quality/1.0' } })
+  return fetch(url, {
+    ...init,
+    headers: { ...(init as { headers?: Record<string, string> } | undefined)?.headers, 'User-Agent': 'libellus-import-quality/1.0' },
+  })
 }
 
 async function probe(url: string): Promise<ProbedImage | null> {
@@ -164,8 +172,21 @@ if (verified.error) throw new Error(`verification failed: ${verified.error}`)
 const member = await auth.currentMember()
 if (!member) throw new Error('no session')
 
-// As the import store wires it (stores/import.ts: `importer`, `startFill`, the Choose edition lookup).
-const paced = pacedFetch(network, { gapMs: { 'itunes.apple.com': 250 } })
+// As the import store wires it (stores/import.ts: `importer`, `startFill`, the Choose edition lookup). The
+// import's Open Library goes through the `openlibrary` function (identified, ~3/s) and falls back to direct at
+// 1/s when the function fails (`LIBELLUS_IMPORT_OPENLIBRARY=direct` measures the direct way before it).
+const routed = (process.env.LIBELLUS_IMPORT_OPENLIBRARY ?? 'proxy') !== 'direct'
+const functionUrl = process.env.LIBELLUS_IMPORT_OPENLIBRARY_URL ?? `${process.env.SUPABASE_URL}/functions/v1/openlibrary`
+const proxy = routed
+  ? viaOwnServer(network, {
+      functionUrl,
+      apikey: process.env.SUPABASE_ANON_KEY,
+      token: async () => (await client.auth.getSession()).data.session?.access_token ?? null,
+    })
+  : null
+const paced = pacedFetch(proxy ?? network, {
+  gapMs: routed ? { 'itunes.apple.com': 250, 'openlibrary.org': 340 } : { 'itunes.apple.com': 250 },
+})
 const live = Object.assign(observed(paced), { blockedFor: paced.blockedFor })
 const catalogue = createCatalogueSearch(client)
 // The National Library (data/dnb.ts), as the import store wires it: the ISBN fallback and the title
@@ -353,6 +374,7 @@ const by = (key: (row: (typeof rows)[number]) => string) =>
 const report = {
   code: fixed ? 'fix' : 'before',
   rows: books.length,
+  openlibrary: { routed: routed ? 'proxy' : 'direct', fallback: proxy?.fallbackActive() ?? false },
   appleOutage: outageEvery ? `${outageFor}s every ${outageEvery}s` : null,
   seconds: { lookup: lookupSeconds, total: seconds() },
   apple,

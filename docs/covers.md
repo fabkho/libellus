@@ -160,7 +160,9 @@ work's **ebook**, which replaces the other edition's cover when it is found. All
 look" (a row shown without a cover is never "probably fine": owner rule, since the import-quality fix), drawn with
 the cloth. Covers are only linked, from the hosts the Catalogue allows. Sources, terms, hit rates and the
 measurement on a real export: [plans/cover-sources.md](plans/cover-sources.md); the behaviour: `docs/parity.md`,
-Import books, *Covers meanwhile*.
+Import books, *Covers meanwhile*. The fill's `api/books` and title searches ride the import's fetch through the
+`openlibrary` function (identified, about 3 requests a second; [supabase/functions/openlibrary/README.md](../supabase/functions/openlibrary/README.md));
+cover images stay direct.
 
 ### The ranking: one rule (`data/coverRank.ts`)
 

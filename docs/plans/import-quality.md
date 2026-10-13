@@ -38,6 +38,11 @@ only Goodreads knows them.
 
 ## What changed
 
+- **The import's Open Library goes through our own server** (later, same fix series; `supabase/functions/openlibrary`,
+  `web/app/data/openLibraryProxy.ts`): identified to Open Library (its published limits are 1 request a second
+  unidentified, 3 identified), about 3 requests a second, falling back to direct at 1/s when the function fails.
+  `web/scripts/import-quality.ts` measures either way (`LIBELLUS_IMPORT_OPENLIBRARY=proxy|direct`); details:
+  `supabase/functions/openlibrary/README.md`.
 - **One rule for "the same book"** (`data/import/editions.ts`): `titleForms`/`sameTitle` (full title, main title
   before a colon, head and tail around a dash, bar or "N." separator, volume marks dropped; two volumes of one series
   are not the same; a series' later volume is not the book named after the series), `sameAuthor` (surname, "Last,
