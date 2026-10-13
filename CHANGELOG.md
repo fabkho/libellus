@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/fabkho/libellus/compare/v1.19.1...v1.20.0) (2026-10-13)
+
+
+### Features
+
+* **profile:** rate a book from the unrated sheet ([#346](https://github.com/fabkho/libellus/issues/346)) ([29b1268](https://github.com/fabkho/libellus/commit/29b1268e2ef126232775039a91653a60f4943f35))
+
 ## [1.19.1](https://github.com/fabkho/libellus/compare/v1.19.0...v1.19.1) (2026-10-13)
 
 
