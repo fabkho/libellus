@@ -274,7 +274,12 @@
       "day": "{weekday} {date}",
       "author": "{name} · {year}",
       "genre": "{genre} · {year}",
-      "unrated": "Not rated yet"
+      "unrated": "Not rated yet",
+      "rateLabel": "Rate {title}",
+      "rateStars": "{title}: rate {count} star | {title}: rate {count} stars",
+      "rated": "Rated {count} star | Rated {count} stars",
+      "undo": "Undo",
+      "emptyRated": "Everything rated"
     },
     "year": {
       "eyebrow": "Your year in books",
