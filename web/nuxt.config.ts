@@ -114,12 +114,19 @@ export default defineNuxtConfig({
     plugins: [
       tailwindcss(),
       {
-        // The reader's files, for utils/readerChunks.ts: it fetches them before it imports them. Beside Nuxt's own
-        // `builds/` files, which Pages serves with a short cache.
+        // The reader's files, for utils/readerChunks.ts: it fetches them before it imports them, and the list it
+        // fetches by is written into the app's own code here. Never the site's current list: after a release that
+        // is the newest build's, and the guard would bless files this build's `import()` never asks for.
         name: 'libellus-reader-files',
-        generateBundle(_options: unknown, bundle: Record<string, unknown>) {
+        generateBundle(_options: unknown, bundle: Record<string, { type: string; code: string }>) {
           const files = Object.keys(bundle).filter((file) => /(^|\/)ebook-reader[^/]*\.(js|css)$/.test(file))
-          if (files.length) (this as { emitFile: (file: object) => void }).emitFile({ type: 'asset', fileName: '_nuxt/builds/reader-files.json', source: JSON.stringify(files) })
+          if (!files.length) return
+          const marker = '__LIBELLUS_READER_FILES__'
+          // The JSON text, escaped for whichever string literal the minifier left the marker in.
+          const written = JSON.stringify(files).replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll("'", "\\'")
+          for (const chunk of Object.values(bundle)) {
+            if (chunk.type === 'chunk' && chunk.code.includes(marker)) chunk.code = chunk.code.replaceAll(marker, written)
+          }
         },
       },
     ],
