@@ -145,3 +145,77 @@ kept answers are what keep its use down (1,437 requests instead of 2,318).
 Apple's lookup answers 40 ISBNs a request; one batch per 40 rows and storefront replaces two requests per row. Asking
 the free sources first and Apple only for what they leave unsettled is what keeps a whole file under Apple's limit;
 a job on a server address meets the same limit, once for every member.
+
+## The DNB in the match (13 Oct 2026)
+
+Owner decision: the German National Library (DNB) joins the import's matching — the earlier "only for the barcode
+scan and the Book page picker" rule is lifted (docs/parity.md, *Import books: the DNB step*). Counts only, the same
+200-row subset, the same script and the same local stack; her file stays local. The DNB answers the ISBN fallback
+and asks its one question per row (early for a probably German row, last for any other), on its own budget
+(`purpose: 'import'`, 120 calls a minute) and pace (500 ms between calls).
+
+**The DNB's effect, Apple answering everything** (13 Oct; "after" is the DNB before the twin-cover fix below):
+
+| Subset, 200 rows | before (#348) | after (with the DNB) |
+|---|---:|---:|
+| matched automatically to a real Book | 169 | **176** |
+| … of them matched via the DNB | 0 | **59** |
+| … by ISBN / by title | 20 / 149 | **74** / 102 |
+| unmatched (only the file's own row) | 31 | **24** |
+| … of them with an ISBN in the file | 6 | 4 |
+| needs a look | 1 | 12 |
+| rows whose title search found no candidate | 23 | 16 |
+| Choose edition: no edition | 0 of 8 | 0 of 37 |
+| DNB calls (answered / refused) | — | 227 / 0 |
+| lookup | 151 s | 189 s |
+
+**What the measurement found and this branch fixes:** the coverless DNB record entered the one candidate pool first
+and its covered twin at Apple (the very ISBN) was dropped as the same edition, so a row matched to the right German
+edition showed no cover at all. The pool's representative of an edition now takes the cover either record has
+(`keep`, data/bookImport.ts; the test `the same edition named twice keeps its cover`). Nothing is invented: the
+twin's own cover.
+
+**The final code, 14 Oct** (Apple refused from its ~285th request on in both runs — a day of measuring from the
+address; the before run the same morning answered every request, 416, and repeated its 13 Oct counts to the row):
+
+| Subset, 200 rows | before (#348) | after, fill 120 s | after, fill 600 s (the store's) |
+|---|---:|---:|---:|
+| matched automatically to a real Book | 169 | **176** | **176** |
+| … of them matched via the DNB | 0 | **59** | **59** |
+| … by ISBN / by title | 20 / 149 | 74 / 102 | 74 / 102 |
+| unmatched (only the file's own row) | 31 | **24** | **24** |
+| … of them with an ISBN in the file | 6 | 4 | 4 |
+| needs a look | 1 | 31 | **0** |
+| matched, shown without a cover | 0 | 31 | **0** |
+| rows whose title search found no candidate | 23 | 16 | 16 |
+| Choose edition opened: no edition | 0 of 8 | 0 of 36 | 0 of 42 |
+| DNB calls (answered / refused) | — | 237 / 0 | 253 / 0 |
+| Apple requests (refused) | 416 (0) | 551 (269) | 670 (378) |
+| lookup | 151 s | 228 s | 239 s |
+
+The needs-a-look column is the cover fill's, not the match's: a DNB edition has no cover of its own, so a row it
+matched waits for the work's cover (its covered twin, a sibling edition, Open Library by ISBN, the Goodreads stage).
+At the store's real budget — 10 minutes, the 600 s column here — every row of the subset ends with a cover and
+nothing to look at; a 120 s fill leaves the rows the refusals had already slowed down. The extra Apple requests are
+the price of the rows the picker opens (36–42 against 8) and of a ladder that keeps looking for a cover for a DNB
+match.
+
+**The full 709-row file, final code, fill 600 s** (13–14 Oct; the Mac slept through the night, so its lookup time
+is nothing to measure):
+
+| Full file, 709 rows | after (this PR) |
+|---|---:|
+| matched automatically to a real Book | **685** |
+| … by ISBN / by title | 460 / 225 |
+| … of them matched via the DNB | **59** |
+| unmatched (only the file's own row) | **24**, all of them a book only Goodreads knows (4 with an ISBN in the file) |
+| needs a look | **0** |
+| matched, shown without a cover | 0 |
+| rows whose title search found no candidate | 16 |
+| Choose edition opened: no edition | 0 of 28 |
+| DNB calls (answered / refused) | 323 / 46 (the refusals came while the machine was asleep) |
+
+Against the fix's own full run (#348: 658 matched, 51 unmatched — 13 of them Goodreads-only and 38 unsure from
+Apple's refusals, 52 to look at): the DNB matched 27 of those 51 (the German ISBNs and the German-only titles
+Apple and Open Library do not know), and the twin-cover fix with the fill's real budget took the rest of the rows
+to a cover and a "Probably fine".
