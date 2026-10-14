@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.1](https://github.com/fabkho/libellus/compare/v1.21.0...v1.21.1) (2026-10-14)
+
+
+### Fixes
+
+* **covers:** one Book, one cover: a row and the Book's page always show the same picture ([#352](https://github.com/fabkho/libellus/issues/352)) ([66f8eb6](https://github.com/fabkho/libellus/commit/66f8eb699a9af4e9fcc15f7cedac0da70b28fdf8))
+
 ## [1.21.0](https://github.com/fabkho/libellus/compare/v1.20.0...v1.21.0) (2026-10-14)
 
 
