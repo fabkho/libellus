@@ -184,7 +184,6 @@ const errorText = computed(() => {
           :authors="found.authors"
           :src="coverSrc(found.coverUrl, 'md')"
           :identity="found.isbn13 ?? found.title"
-          :fallbacks="coverFallbacks(found, 'md')"
           :thumbhash="found.coverThumbhash"
           :colors="found.coverColors"
           size="md"

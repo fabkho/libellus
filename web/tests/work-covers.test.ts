@@ -1,31 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { coversToPrefetch, workCoverImages } from '@/utils/enrich'
+import { coversToPrefetch, workCover } from '@/utils/enrich'
 
 /**
- * The covers a work's row asks for, and the ones "More from the author" asks
- * for ahead of its rows (A9, docs/covers.md). A work card has a cover URL and
- * an edition with an ISBN, no thumbhash or colours.
+ * The cover a work's row shows, and the ones "More from the author" asks for
+ * ahead of its rows (A9, docs/covers.md). A work card has a cover URL and an
+ * edition with an ISBN, no thumbhash or colours. What it tries when the image
+ * fails is UiCover's, the same artwork at its other sizes (tests/cover-src.test.ts).
  */
 
 const APPLE = 'https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bfb35c/9780593983768.d.jpg/600x900bb.jpg'
 const OL = 'https://covers.openlibrary.org/b/id/8231856-L.jpg'
-const edition = (isbn13: string | null, cover_url: string | null = null) => ({ title: null, isbn13, openlibrary_edition_key: null, cover_url })
 
-describe('the images a work row asks for', () => {
-  it('asks the row’s size, and falls back to OpenLibrary’s cover of the edition by ISBN', () => {
-    expect(workCoverImages({ coverUrl: APPLE, edition: edition('9780593983768') }, 'sm')).toEqual({
-      src: APPLE.replace('600x900bb', '120x180bb'),
-      fallbacks: ['https://covers.openlibrary.org/b/isbn/9780593983768-M.jpg?default=false'],
-    })
-  })
-
-  it('takes the edition’s cover when the work has none of its own', () => {
-    expect(workCoverImages({ edition: edition(null, OL) }, 'sm')).toEqual({ src: 'https://covers.openlibrary.org/b/id/8231856-M.jpg', fallbacks: [] })
-  })
-
-  it('has no fallback without an ISBN, and nothing without a cover', () => {
-    expect(workCoverImages({ coverUrl: OL, edition: edition(null) }, 'sm').fallbacks).toEqual([])
-    expect(workCoverImages({}, 'sm')).toEqual({ src: null, fallbacks: [] })
+describe('the cover a work row shows', () => {
+  it('is the card’s (work_card chose it for what the row opens), and none where the card has none', () => {
+    expect(workCover({ coverUrl: APPLE })).toBe(APPLE)
+    // Her Book, or the Catalogue's, has no cover: its page shows the Placeholder, so the row does too,
+    // whatever cover the edition's record names.
+    expect(workCover({ coverUrl: undefined })).toBeNull()
+    expect(workCover({})).toBeNull()
   })
 })
 

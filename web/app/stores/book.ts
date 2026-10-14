@@ -30,6 +30,21 @@ export const useBookStore = defineStore('book', () => {
   const search = useSearchStore()
   const pages = reactive(new Map<string, BookPage>())
   const loading = new Map<string, Promise<void>>()
+  /**
+   * The cover the row a page was opened from showed, by page key (a work's row on an author page, in a
+   * series or in More from the author: `seedCover`). A Book that is not in the Catalogue yet is what a
+   * source says of it, and a source asked again may name another picture of the same edition (Apple's
+   * artwork by ISBN, where the row showed Open Library's): the page shows the row's (null: the
+   * Placeholder it showed), so the two never differ (docs/plans/covers-consistency.md). A Catalogue
+   * Book is shown as stored: the row showed that one too (`work_card`).
+   */
+  const rowCovers = new Map<string, string | null>()
+
+  function withRowCover(key: string, book: BookSnapshot): BookSnapshot {
+    if (!rowCovers.has(key)) return book
+    const coverUrl = rowCovers.get(key) ?? null
+    return coverUrl === book.coverUrl ? book : { ...book, coverUrl, coverThumbhash: null, coverColors: null }
+  }
 
   /** The page, with the member's entry as it changed on this device since the page loaded (an add, a start, a finish). */
   function page(key: string): BookPage | null {
@@ -71,7 +86,7 @@ export const useBookStore = defineStore('book', () => {
     }
     if (seen) return { phase: 'ready', book: seen, entry: null, error: null }
 
-    // Opened from a link or after a reload: ask the source again.
+    // Opened from a link, a work's row or after a reload: ask the source again (the row's cover stays the cover).
     try {
       const source = search.repository()
       const book =
@@ -80,7 +95,7 @@ export const useBookStore = defineStore('book', () => {
           : parsed.kind === 'openlibrary'
             ? await source.lookupOpenLibrary(parsed.editionKey)
             : await source.lookupIsbn(parsed.isbn13)
-      return { phase: book ? 'ready' : 'missing', book, entry: null, error: null }
+      return { phase: book ? 'ready' : 'missing', book: book && withRowCover(key, book), entry: null, error: null }
     } catch {
       return { phase: 'error', book: null, entry: null, error: 'unknown' }
     }
@@ -130,6 +145,16 @@ export const useBookStore = defineStore('book', () => {
     if (!pages.has(key)) void load(key)
   }
 
+  /**
+   * The row that opens `key` shows `coverUrl` (null: the Placeholder): the page shows it too, for a Book
+   * not in the Catalogue (`rowCovers`). Called from the touch-down, before the page is asked for.
+   */
+  function seedCover(key: string, coverUrl: string | null) {
+    rowCovers.set(key, coverUrl)
+    const found = pages.get(key)
+    if (found?.book && !('id' in found.book)) pages.set(key, { ...found, book: withRowCover(key, found.book) })
+  }
+
   /** The entry left the Library (removed here): its pages show the Book as one to add again. */
   function dropEntry(entryId: string) {
     for (const [key, loaded] of pages) if (loaded.entry?.id === entryId) pages.set(key, { ...loaded, entry: null })
@@ -138,6 +163,7 @@ export const useBookStore = defineStore('book', () => {
   function reset() {
     pages.clear()
     loading.clear()
+    rowCovers.clear()
   }
 
   // The entries on these pages are the member's: another member starts afresh.
@@ -149,5 +175,5 @@ export const useBookStore = defineStore('book', () => {
     },
   )
 
-  return { page, load, prefetch, dropEntry, reset }
+  return { page, load, prefetch, seedCover, dropEntry, reset }
 })

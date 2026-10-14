@@ -15,10 +15,11 @@
 // Placeholder is showing (the page's glow then takes the cloth's colour).
 // The sheet (`data-cover`: image or cloth, without the glow) is what flies
 // between a list and the book page (composables/useBookFlight.ts).
-// `fallbacks` are tried in turn when the image fails or comes back blank (a
-// source's 1 × 1 stand-in), before the Placeholder. Once an image is in view
-// it stays: a later `src` of another artwork or a fallback never swaps it
-// unless it fails (utils/cover.ts, `CoverShowing`; docs/covers.md).
+// When the image fails or comes back blank (a source's 1 × 1 stand-in) the same
+// artwork is tried at its other sizes (`coverChain`), then the Placeholder: one
+// Book, one cover, so a row and the Book's page never show two pictures. A new
+// `src` of another artwork is the Book's cover changing: the cover follows it
+// (utils/cover.ts, `CoverShowing`; docs/plans/covers-consistency.md).
 // `whole` (an ebook file's own cover, #131: files carry covers of any shape):
 // an image clearly off the book's 2:3 (more than WHOLE_TOLERANCE either way)
 // is shown whole, fitted into the slot (object-fit: contain), on a blurred
@@ -27,6 +28,7 @@
 // `tilt` (the Book page's hero only): the sheet leans under the finger and comes back flat
 // (utils/coverTilt.ts; docs/MOTION.md, Hero cover). Off with Reduce Motion and while anything moves.
 import {
+  coverChain,
   coverFailed,
   coverInputChanged,
   coverNow,
@@ -44,12 +46,9 @@ const props = withDefaults(
     title: string
     authors?: readonly string[]
     src?: string | null
-    /** The images to try, in order, after `src` fails or is blank. */
-    fallbacks?: readonly string[]
     /**
-     * What the cover is of: an edition's ISBN, say. While an image of it is in view, a new `src` of
-     * another artwork (a re-synced cover, a fallback) does not replace it, unless it fails; another
-     * `identity` is a deliberate change of cover and does. Default: the title and authors.
+     * What the cover is of: an edition's ISBN, say. Another `identity` starts the cover afresh,
+     * even at the same artwork (a change of edition). Default: the title and authors.
      */
     identity?: string
     thumbhash?: string | null
@@ -71,7 +70,7 @@ const props = withDefaults(
     /** The sheet leans under the finger (the Book page's hero). */
     tilt?: boolean
   }>(),
-  { authors: () => [], src: null, fallbacks: () => [], thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false, decorative: false, whole: false, tilt: false },
+  { authors: () => [], src: null, thumbhash: null, colors: null, size: 'sm', glow: false, eager: false, priority: false, decorative: false, whole: false, tilt: false },
 )
 
 /** How far an image's shape may be from 2:3 (as a share of it) and still fill the slot when `whole`. */
@@ -94,9 +93,9 @@ const RADII = { xs: 'rounded-cover-sm', sm: 'rounded-cover-sm', md: 'rounded-cov
 const loaded = ref(false)
 /** The showing image is of another shape than 2:3 and `whole`: fitted, not cropped. */
 const fitted = ref(false)
-/** What shows: `src`, then each of `fallbacks` after one that failed or came back blank; an image in view stays (`CoverShowing`). */
+/** What shows: `src`, then the same artwork at its other sizes after one that failed or came back blank (`coverChain`, `CoverShowing`). */
 const identityKey = computed(() => props.identity ?? `${props.title}\n${props.authors.join('\n')}`)
-const input = () => ({ src: props.src, fallbacks: props.fallbacks, identity: identityKey.value })
+const input = () => ({ src: props.src, fallbacks: coverChain(props.src, props.size).filter((url) => url !== props.src), identity: identityKey.value })
 const showing = ref(startCover(input()))
 const current = computed(() => coverNow(showing.value))
 const attempt = computed(() => showing.value.attempt)
@@ -108,9 +107,8 @@ function settle() {
   fitted.value = false
 }
 
-// The fallbacks are a new array on every render of a parent: it is what is in them that counts.
 watch(
-  () => [props.src ?? '', props.fallbacks.join('\n'), identityKey.value].join('\0'),
+  () => [props.src ?? '', props.size, identityKey.value].join('\0'),
   () => {
     showing.value = coverInputChanged(showing.value, input())
     settle()
