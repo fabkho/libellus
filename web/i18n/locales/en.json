@@ -247,7 +247,13 @@
       "ebooks": "Ebooks",
       "ebooksNeedYou": "{count} needs you | {count} need you",
       "version": "Version {version}",
-      "whatsNew": "What's new"
+      "whatsNew": "What's new",
+      "update": "Check for new version",
+      "updateChecking": "Checking…",
+      "updateCurrent": "You have the latest version.",
+      "updateAvailable": "An update is ready.",
+      "updateFailed": "That did not work. Check your connection and try again.",
+      "updateShow": "Show"
     },
     "deleteAccount": {
       "title": "Delete your account?",
@@ -1716,6 +1722,13 @@
       "performance": "Faster",
       "fixes": "Fixed"
     }
+  },
+  "update": {
+    "title": "New version available",
+    "text": "A short restart brings you the latest.",
+    "action": "Update now",
+    "later": "Later",
+    "busy": "Updating…"
   },
   "genre": {
     "sci-fi": "Science fiction",
