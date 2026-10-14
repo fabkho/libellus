@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/fabkho/libellus/compare/v1.21.1...v1.22.0) (2026-10-14)
+
+
+### Features
+
+* **app:** a new release is offered, never swapped in under the page ([#354](https://github.com/fabkho/libellus/issues/354)) ([e68b43f](https://github.com/fabkho/libellus/commit/e68b43f4be4bfa767b920332c86e3a016248e722))
+
 ## [1.21.1](https://github.com/fabkho/libellus/compare/v1.21.0...v1.21.1) (2026-10-14)
 
 
