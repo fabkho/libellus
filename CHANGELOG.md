@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.21.0](https://github.com/fabkho/libellus/compare/v1.20.0...v1.21.0) (2026-10-14)
+
+
+### Features
+
+* **import:** the German National Library in the import's match ([#351](https://github.com/fabkho/libellus/issues/351)) ([40aded2](https://github.com/fabkho/libellus/commit/40aded2cbb6a2009b47e9ba282513c254fcd87ef))
+* **import:** the import's Open Library through our own server, identified and paced ([#349](https://github.com/fabkho/libellus/issues/349)) ([40f504d](https://github.com/fabkho/libellus/commit/40f504d88a84d3b72619e5e4a52877ec38b73aac))
+
+
+### Fixes
+
+* **import:** match as many rows as possible to a real Book, a refusal is no miss, no cover is never probably fine ([#348](https://github.com/fabkho/libellus/issues/348)) ([bf826bf](https://github.com/fabkho/libellus/commit/bf826bffb525769af8b0150a422043dcaa42bd83))
+
 ## [1.20.0](https://github.com/fabkho/libellus/compare/v1.19.1...v1.20.0) (2026-10-13)
 
 
