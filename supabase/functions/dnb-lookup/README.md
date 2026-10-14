@@ -1,7 +1,8 @@
 # dnb-lookup
 
 German editions from the German National Library (DNB, Deutsche Nationalbibliothek) for the barcode scan, the
-ISBN lookups and the edition picker. CC0 data: no attribution, no storing limit. It has no covers and no genres
+ISBN lookups, the edition picker and the import's match (docs/ENRICHMENT.md). CC0 data: no attribution, no storing
+limit. It has no covers and no genres
 (an Open Library cover by ISBN is added where there is one). The app side is `web/app/data/dnb.ts`; docs/ENRICHMENT.md
 says where it is used and why.
 
@@ -18,7 +19,10 @@ POST /functions/v1/dnb-lookup   { "action": "book",     "isbn13": "9783499267017
 ```
 
 - **Who**: a signed-in member's access token or the service-role key (`verify_jwt` is off, supabase/config.toml; the
-  function checks the caller). A member may call it 30 times a minute (`edge_rate_hit`, bucket `dnb-lookup`).
+  function checks the caller). A member may call it 30 times a minute (`edge_rate_hit`, bucket `dnb-lookup`; the scan,
+  the picker, adding a Book), an import 120 a minute: its body says `purpose: 'import'` and is counted in its own
+  bucket (`dnb-lookup-import`), and the import paces its calls 500 ms apart (`createDnb`'s `gapMs`) so a whole file
+  meets no refusal.
 - **`book`** makes the Catalogue Book (source `import`, found again by its ISBN-13) from what the DNB says about the
   ISBN, never from what the caller sends. A member may only add or pick a Catalogue Book (`add_to_library`,
   `change_edition` refuse an `import` snapshot that matches none), so this is what makes a German edition only the

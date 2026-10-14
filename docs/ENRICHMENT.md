@@ -166,8 +166,9 @@ Nationalbibliothek) often does: its catalogue is open data (CC0: no attribution,
 policy names it as a courtesy). It gives the *edition*, not the book's life around it: title, authors, ISBN-13,
 publisher, year, language, pages. No cover (the covers its catalogue shows are licensed to libraries and the VLB
 sells them: not usable) and no real genre (a DDC class and `B Belletristik`, see the trial in the draft PR #306).
-It is used in the three places a member meets an unknown German edition, never in the import (the trial showed no
-gain there).
+It is used in the four places a member meets an unknown German edition: the barcode scan and the ISBN lookups, the
+edition picker, and the import's match (owner decision 13 Oct 2026 lifted the earlier "only scan and Book page
+picker" rule; what it does for the import is measured in docs/plans/import-quality.md).
 
 | Where | What happens |
 |---|---|
@@ -175,11 +176,14 @@ gain there).
 | My edition isn't listed → ISBN (`createEditions().lookupIsbn`) | The same last resort |
 | Change edition / Choose edition (`createEditions().find`) | Editions of the work by title and first author, only where German is in play (`wantsGerman`); one row per ISBN-13, the facts filled into a row another source has; cover-less rows sort after those with a cover, unless German is the member's language and the edition is German |
 | Adding or picking one (`createLibrary` → `catalogued`) | A member may only add or pick a Catalogue Book, so the function's `book` action first makes it (source `import`, from what the DNB says about the ISBN, with the cover the app resolved or Open Library's) |
+| The import's match (`createSearch`'s ISBN step, `titleCandidates`, data/bookImport.ts) | The last resort of the ISBN lookup above, and the title ladder's ONE question (`dnbQuestion`, data/import/queries.ts: the main title and the first author) — asked **early** for a row that is probably German (ISBN group 978-3, the file's language, or the title's little words: `probablyGerman`), **last** for any other row the ladder found no covered edition of its work for, never for a row the ladder settled. Its editions join the one candidate pool (source `dnb`, written to the Catalogue as `import`: `book_source` has no `dnb`) with no cover of their own (the work's best is lent, or the row stays one to look at). A refusal is "not asked" (the row is `unsure`), never "nothing found". The import passes `purpose: 'import'` (its own 120-a-minute bucket) and paces itself 500 ms between calls |
 
 ### The function
 
 `supabase/functions/dnb-lookup` (README there): `POST { action: 'isbn' | 'editions' | 'book', … }`, a signed-in
-member (or the service role), 30 calls a minute per member (`edge_rate_hit`, bucket `dnb-lookup`), 4 KB bodies. The
+member (or the service role), 30 calls a minute per member (`edge_rate_hit`, bucket `dnb-lookup`: the scan, the
+picker, adding a Book), 120 for an import (`purpose: 'import'`, bucket `dnb-lookup-import`, its own budget), 4 KB
+bodies. The
 SRU interface (`https://services.dnb.de/sru/dnb`, CQL, record schema `oai_dc`) answers cross-origin reads, so the
 browser could have asked it directly; the function exists for the Catalogue write (`book`), the member limit, one
 breaker and one politeness budget for all members (five requests a second, four seconds each, three failed

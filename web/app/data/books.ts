@@ -6,7 +6,12 @@ import type { GoodreadsRating } from './goodreads'
  * repositories build on it, and a native port copies it 1:1.
  */
 
-export type BookSource = 'apple' | 'openlibrary' | 'manual' | 'import'
+/**
+ * Where a snapshot came from. `dnb` (the National Library, data/dnb.ts) is only the app's own
+ * word for it: the Catalogue has no `dnb` value (`public.book_source`), so a DNB edition is
+ * written as `import`, as the `dnb-lookup` function writes it (`bookToRow`, data/library.ts).
+ */
+export type BookSource = 'apple' | 'openlibrary' | 'manual' | 'import' | 'dnb'
 
 /** What an edition is, as the database names it (`book_format`). */
 export type BookFormat = 'hardcover' | 'paperback' | 'ebook' | 'audiobook'

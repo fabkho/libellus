@@ -450,7 +450,7 @@ export function bookFromRow(row: BookRow): Book {
   }
 }
 
-/** A snapshot as the `p_book` argument of `add_to_library`: the `books` columns by name. */
+/** A snapshot as the `p_book` argument of `add_to_library`: the `books` columns by name (a National Library edition as source `import`). */
 export function bookToRow(book: BookSnapshot): Omit<BookRow, 'id' | 'created_at' | 'goodreads'> {
   return {
     title: book.title,
@@ -466,7 +466,8 @@ export function bookToRow(book: BookSnapshot): Omit<BookRow, 'id' | 'created_at'
     cover_thumbhash: book.coverThumbhash,
     cover_dominant: book.coverColors?.dominant ?? null,
     cover_secondary: book.coverColors?.secondary ?? null,
-    source: book.source,
+    // The National Library's edition is written as `import` (`book_source` has no `dnb`), as the `dnb-lookup` function writes it.
+    source: book.source === 'dnb' ? 'import' : book.source,
     apple_id: book.appleId,
     openlibrary_edition_key: book.openLibraryEditionKey,
     openlibrary_work_key: book.openLibraryWorkKey,
@@ -800,13 +801,13 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
   }
 
   /**
-   * A German edition only the National Library knows (`data/dnb.ts`: source `import`, no id) is
+   * A German edition only the National Library knows (`data/dnb.ts`: source `dnb`, no id) is
    * no Catalogue Book yet, and a member may only add or pick one: the `dnb-lookup` function makes
    * it, from what the library says about the ISBN. Anything else goes as it is. Null: it could not
    * be made (the function is not answering, or no longer finds the ISBN).
    */
   async function catalogued(book: BookSnapshot): Promise<Book | BookSnapshot | null> {
-    if (book.source !== 'import' || 'id' in book || !book.isbn13) return book
+    if ((book.source !== 'import' && book.source !== 'dnb') || 'id' in book || !book.isbn13) return book
     try {
       const { data, error } = await client.functions.invoke('dnb-lookup', {
         body: {
@@ -851,7 +852,7 @@ export function createLibrary(client: SupabaseClient, { online = () => true, que
     // A search result is shown as a Book under its page key until the database gives it its id.
     const provisional = !('id' in book)
     // A DNB edition has to be made a Catalogue Book first: that needs the network.
-    if (provisional && book.source === 'import') return null
+    if (provisional && (book.source === 'import' || book.source === 'dnb')) return null
     if (provisional && !optimistic) return null
     let known: Book
     if (provisional) {

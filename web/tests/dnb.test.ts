@@ -46,8 +46,8 @@ const nobody: FetchLike = async (url) => ({
 })
 
 describe('the client of the function', () => {
-  it('maps an edition to the snapshot the app shows: source import, no id, the function\'s cover', () => {
-    expect(snapshotFromDnbEdition(BERGMAN)).toMatchObject({ title: 'Die Toten, die niemand vermisst', isbn13: '9783499267017', pageCount: 622, year: 2013, language: 'ger', publisher: 'Rowohlt Polaris', source: 'import', coverUrl: 'https://covers.openlibrary.org/b/isbn/9783499267017-L.jpg', description: null })
+  it('maps an edition to the snapshot the app shows: source dnb (written to the Catalogue as import), no id, the function\'s cover', () => {
+    expect(snapshotFromDnbEdition(BERGMAN)).toMatchObject({ title: 'Die Toten, die niemand vermisst', isbn13: '9783499267017', pageCount: 622, year: 2013, language: 'ger', publisher: 'Rowohlt Polaris', source: 'dnb', coverUrl: 'https://covers.openlibrary.org/b/isbn/9783499267017-L.jpg', description: null })
     expect(snapshotFromDnbEdition(SCHWARM).coverUrl).toBeNull()
     expect(snapshotFromDnbEdition(SCHWARM)).not.toHaveProperty('id')
   })
@@ -69,6 +69,22 @@ describe('the client of the function', () => {
     const { client, calls } = functionsAnswering(() => ({ status: 'not_found' }))
     await expect(createDnb(client, { online: () => false }).lookupIsbn('9783499267017')).rejects.toThrow('offline')
     expect(calls).toEqual([])
+  })
+
+  it('an import says so (purpose) and paces its calls (gapMs)', async () => {
+    const { client, calls } = functionsAnswering((body) => (body.action === 'isbn' ? { status: 'not_found' } : { status: 'ok', editions: [] }))
+    const dnb = createDnb(client, { purpose: 'import', gapMs: 30 })
+    const started = performance.now()
+    await Promise.all([
+      dnb.editions({ title: 'Der Schwarm', authors: ['Frank Schätzing'] }),
+      dnb.lookupIsbn('9783499267017'),
+      dnb.editions({ title: 'Moby Dick', authors: ['Herman Melville'] }),
+    ])
+    expect(calls.map((body) => body.purpose)).toEqual(['import', 'import', 'import'])
+    // One `gapMs` between two starts: three calls take two gaps (a little slack for the clock).
+    expect(performance.now() - started).toBeGreaterThanOrEqual(55)
+    await createDnb(client).lookupIsbn('9783499267017')
+    expect(calls[3]).toEqual({ action: 'isbn', isbn13: '9783499267017' })
   })
 })
 

@@ -41,6 +41,7 @@ import * as bookImport from '../app/data/bookImport'
 import { createBookImport, editionChoices, needsLook, pacedFetch, type Edition } from '../app/data/bookImport'
 import { createCatalogueSearch } from '../app/data/catalogueSearch'
 import { createCoverFill, mergeCover } from '../app/data/coverFill'
+import { createDnb, DNB_IMPORT_GAP_MS } from '../app/data/dnb'
 import { verifyCover, type ProbedImage } from '../app/data/covers'
 import { createEditions } from '../app/data/editions'
 import type { FetchLike } from '../app/data/fetching'
@@ -188,7 +189,25 @@ const paced = pacedFetch(proxy ?? network, {
 })
 const live = Object.assign(observed(paced), { blockedFor: paced.blockedFor })
 const catalogue = createCatalogueSearch(client)
-const searcher = createSearch({ fetch: live, languages, catalogue })
+// The National Library (data/dnb.ts), as the import store wires it: the ISBN fallback and the title
+// ladder's one question, on the import's own budget (`purpose`) and pace (`gapMs`); every call counted.
+const dnbCalls = { asked: 0, answered: 0, refused: 0 }
+const rawDnb = createDnb(client, { purpose: 'import', gapMs: DNB_IMPORT_GAP_MS })
+function counted<T>(task: () => Promise<T>): Promise<T> {
+  dnbCalls.asked++
+  return task().then(
+    (answer) => (dnbCalls.answered++, answer),
+    (error) => {
+      dnbCalls.refused++
+      throw error
+    },
+  )
+}
+const dnb = {
+  lookupIsbn: (isbn13: string, options?: { signal?: AbortSignal }) => counted(() => rawDnb.lookupIsbn(isbn13, options)),
+  editions: (book: { title: string; authors: string[] }, options?: { signal?: AbortSignal }) => counted(() => rawDnb.editions(book, options)),
+}
+const searcher = createSearch({ fetch: live, languages, catalogue, dnb })
 function tagged<T>(what: Call['what'], query: string, task: () => Promise<T>): Promise<T> {
   const call: Call = { what, query, requests: [] }
   calls.push(call)
@@ -205,6 +224,7 @@ const search = {
 const lookups = {
   catalogue: { search: (text: string, signal?: AbortSignal) => tagged('catalogue', text, () => catalogue.search(text, signal)) },
   search,
+  dnb,
   busyFor: () => live.blockedFor('itunes.apple.com'),
   goodreads: (query: { title: string; authors: string[]; goodreadsBookId: string | null }) =>
     tagged('goodreads', query.title, async () => {
@@ -358,9 +378,11 @@ const report = {
   appleOutage: outageEvery ? `${outageFor}s every ${outageEvery}s` : null,
   seconds: { lookup: lookupSeconds, total: seconds() },
   apple,
+  dnb: dnbCalls,
   matchedAutomatically: count((row) => matched(row.edition)),
   matchedByIsbn: count((row) => matched(row.edition) && row.edition.via === 'isbn'),
   matchedByTitle: count((row) => matched(row.edition) && row.edition.via === 'title'),
+  matchedViaDnb: count((row) => matched(row.edition) && row.edition.book.source === 'dnb'),
   unmatched: count((row) => !matched(row.edition)),
   unmatchedWithFileIsbn: count((row) => !matched(row.edition) && Boolean(row.book.isbn13)),
   needsLook: count((row) => row.tier === 'needsLook'),

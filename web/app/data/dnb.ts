@@ -5,17 +5,29 @@ import { abortError } from './fetching'
 /**
  * German editions from the German National Library (DNB), asked of the `dnb-lookup` edge function
  * (supabase/functions/dnb-lookup): what Apple Books and Open Library do not know of a German book,
- * for the barcode scan and the ISBN lookups (`lookupIsbn`) and for the edition picker (`editions`).
- * The data is CC0 (no attribution, no storing limit); it has no covers (the function adds an Open
- * Library cover by ISBN where there is one) and no genres. The browser never talks to the DNB.
+ * for the barcode scan and the ISBN lookups (`lookupIsbn`), for the edition picker (`editions`) and
+ * for the import's match (data/bookImport.ts: the title ladder's one DNB question, and the ISBN
+ * fallback of `createSearch`). The data is CC0 (no attribution, no storing limit); it has no covers
+ * of its own (the function adds an Open Library cover by ISBN where there is one) and no genres.
+ * The browser never talks to the DNB.
  *
- * A DNB edition is a snapshot of source `import`: a member may only add a Catalogue Book, so when
- * one is added or picked, the library repository (data/library.ts `catalogued`) asks the function
- * for its `book` action, which makes the Catalogue Book from what the DNB says about the ISBN,
- * never from what the app sends. Where a result came from never reaches the member. Framework-free: the store hands in the Supabase client (only its `functions`).
+ * A DNB edition is a snapshot of source `dnb` in the app, written to the Catalogue as source
+ * `import` (its `book_source` has no `dnb`; `bookToRow`, data/library.ts): a member may only add a
+ * Catalogue Book, so when one is added or picked, the library repository (data/library.ts
+ * `catalogued`) asks the function for its `book` action, which makes the Catalogue Book from what
+ * the DNB says about the ISBN, never from what the app sends. Where a result came from never
+ * reaches the member. Framework-free: the store hands in the Supabase client (only its `functions`).
+ *
+ * Two budgets keep the function's upstream polite (supabase/functions/dnb-lookup/README.md): a
+ * member 30 calls a minute (the scan and the picker), an import 120 (`purpose: 'import'`, its own
+ * bucket). An import paces itself to the same 120 (`gapMs`: 500 ms between calls) so a whole file
+ * meets no refusal.
  */
 
 export const DNB_FUNCTION = 'dnb-lookup'
+
+/** The import's own pace between two calls: 500 ms is 120 a minute, its budget in the function (supabase/functions/dnb-lookup/README.md). */
+export const DNB_IMPORT_GAP_MS = 500
 
 /** The part of the Supabase client this needs: `functions.invoke`. */
 export type FunctionsClient = {
@@ -24,7 +36,7 @@ export type FunctionsClient = {
   }
 }
 
-/** One DNB edition as the snapshot the app shows: no id, no cover of its own (the function's Open Library cover, if any). */
+/** One DNB edition as the snapshot the app shows: source `dnb`, no id, no cover of its own (the function's Open Library cover, if any). */
 export function snapshotFromDnbEdition(edition: DnbEdition): BookSnapshot {
   return {
     title: edition.title,
@@ -39,7 +51,7 @@ export function snapshotFromDnbEdition(edition: DnbEdition): BookSnapshot {
     coverUrl: edition.coverUrl ?? null,
     coverThumbhash: null,
     coverColors: null,
-    source: 'import',
+    source: 'dnb',
     appleId: null,
     openLibraryEditionKey: null,
     openLibraryWorkKey: null,
@@ -53,14 +65,39 @@ export type Dnb = {
   editions: (book: Pick<BookSnapshot, 'title' | 'authors'>, options?: { signal?: AbortSignal }) => Promise<BookSnapshot[]>
 }
 
-export function createDnb(client: FunctionsClient, { online = () => true }: { online?: () => boolean } = {}): Dnb {
+export type DnbOptions = {
+  online?: () => boolean
+  /** Who is asking, for the function's budgets (supabase/functions/dnb-lookup/README.md): an import says so and gets its own, larger bucket. */
+  purpose?: 'import'
+  /** At least this many milliseconds between two calls (0: right away). An import paces itself to its budget: 500 ms is 120 a minute. */
+  gapMs?: number
+}
+
+export function createDnb(client: FunctionsClient, { online = () => true, purpose, gapMs = 0 }: DnbOptions = {}): Dnb {
+  /** Calls start one `gapMs` apart, in the order they were made (a whole file asks one per row). */
+  let nextAt = 0
+  let queue: Promise<void> = Promise.resolve()
+  function paced<T>(task: () => Promise<T>): Promise<T> {
+    if (!gapMs) return task()
+    const turn = queue.then(async () => {
+      const hold = nextAt - Date.now()
+      if (hold > 0) await new Promise((resolve) => setTimeout(resolve, hold))
+      nextAt = Date.now() + gapMs
+    })
+    queue = turn.catch(() => {})
+    return turn.then(task)
+  }
+
   async function call(body: Record<string, unknown>, signal?: AbortSignal): Promise<Record<string, unknown>> {
     if (!online()) throw new Error('offline')
-    const { data, error } = await client.functions.invoke(DNB_FUNCTION, { body })
-    if (signal?.aborted) throw abortError()
-    const answer = data as Record<string, unknown> | null
-    if (error || !answer || typeof answer.status !== 'string') throw new Error('dnb unavailable')
-    return answer
+    return paced(async () => {
+      if (signal?.aborted) throw abortError()
+      const { data, error } = await client.functions.invoke(DNB_FUNCTION, { body: purpose ? { ...body, purpose } : body })
+      if (signal?.aborted) throw abortError()
+      const answer = data as Record<string, unknown> | null
+      if (error || !answer || typeof answer.status !== 'string') throw new Error('dnb unavailable')
+      return answer
+    })
   }
 
   return {

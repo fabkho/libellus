@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Book, BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
+import type { Dnb } from './dnb'
 import { resolveBookCover, type ProbeImage, type ResolvedCover } from './covers'
 import { coverKindOf, type CoverKind } from './coverRank'
 import { languageFits, mergeCover } from './coverFill'
@@ -8,8 +9,8 @@ import { type Candidate, type GenreLabel, type MergeSource, mergeGenreLabels, me
 import { abortError, type FetchLike } from './fetching'
 import { SUPPORTED_SOURCES } from './import/detect'
 import { editionSignature } from './editions'
-import { bookFromRow, editionFit, isEbookBinding, isSameWork, nearEditions, otherLanguage, rankEditions, sameVolume } from './import/editions'
-import { FREE_SOURCES, questionsFor } from './import/queries'
+import { bookFromRow, editionFit, isEbookBinding, isSameWork, nearEditions, otherLanguage, probablyGerman, rankEditions, sameVolume } from './import/editions'
+import { dnbQuestion, FREE_SOURCES, questionsFor } from './import/queries'
 import type { ImportBook, ImportProblem } from './import/rows'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
@@ -27,12 +28,15 @@ import type { Search, SearchOutcome } from './search'
  * candidates and one ranking for the match and Choose edition):
  *   1. by its ISBN: the Catalogue (a Book some member added before), then
  *      Apple Books (asked for the whole file's ISBNs in a few batch requests
- *      first, `primeIsbns`), then OpenLibrary. An exact edition with its own
+ *      first, `primeIsbns`), then OpenLibrary, then the National
+ *      Library (data/dnb.ts: a German edition only it knows). An exact edition with its own
  *      cover is the match, nothing more is asked;
  *   2. the work by its title (`titleCandidates`): a ladder of questions
  *      (data/import/queries.ts: title and author, then without subtitle or
  *      series prefix, umlauts written out, the title alone, the name turned)
- *      until one finds the row's work (`isSameWork`) with a cover. Every
+ *      until one finds the row's work (`isSameWork`) with a cover; the
+ *      National Library's one question is asked early for a row that is
+ *      probably German, last for any other. Every
  *      edition each source names is a candidate (not one per book, as search
  *      shows them), ranked by `rankEditions` (language, format, cover, pages,
  *      year; all from the file itself, no app's book pages, #155);
@@ -173,6 +177,11 @@ export type Lookups = {
   catalogue: Pick<CatalogueSearch, 'search'>
   search: Pick<Search, 'lookupIsbn' | 'search'> & Partial<Pick<Search, 'primeIsbns' | 'workEditions'>>
   /**
+   * The German National Library (data/dnb.ts), the import's one question per row (data/import/queries.ts
+   * `dnbQuestion`): early for a row that is probably German, last for any other row nothing else found.
+   */
+  dnb?: Pick<Dnb, 'editions'>
+  /**
    * Goodreads' cover of a Goodreads file's row nothing else found a cover for (flagged: data/coverRank.ts,
    * `GOODREADS_COVERS`), already checked to be an image: the cover, null for none, 'blocked' when Goodreads turns us away.
    */
@@ -214,10 +223,12 @@ function asker(lookups: Lookups, signal: AbortSignal | undefined, onMiss: () => 
 
 /**
  * An edition of the row's work nothing a source could add would beat: its own cover, the row's language, and for an
- * ebook row an Apple Books edition (the closest to a Kindle edition there is). Pure.
+ * ebook row an Apple Books edition (the closest to a Kindle edition there is). A National Library edition never
+ * settles a row: its cover is not its own (the function's Open Library cover by ISBN, or one lent to it), so a
+ * source may still have the edition's own. Pure.
  */
 export function settled(row: Pick<ImportBook, 'title' | 'language' | 'isbn13' | 'binding'>, book: Book | BookSnapshot): boolean {
-  return Boolean(book.coverUrl) && !otherLanguage(row, book) && (!isEbookBinding(row.binding) || book.source === 'apple')
+  return Boolean(book.coverUrl) && book.source !== 'dnb' && !otherLanguage(row, book) && (!isEbookBinding(row.binding) || book.source === 'apple')
 }
 
 /** What the title ladder found for a row: its work's editions best first, what is close to it, and whether a source could not be asked. */
@@ -229,30 +240,58 @@ export type TitleCandidates = { same: (Book | BookSnapshot)[]; near: (Book | Boo
  * sources it names (the free ones first, Apple only while they leave the row
  * unsettled: `settled`), every edition they name kept once, until the row's work
  * (`isSameWork`) turns up with a cover (`all`: every question, for Choose
- * edition). A source that does not answer makes the result `incomplete`, never
- * empty for sure.
+ * edition). The National Library is asked its one question EARLY for a row that
+ * is probably German and LAST for any other row the ladder found no covered
+ * edition for. A source that does not answer makes the result `incomplete`,
+ * never empty for sure.
  */
 export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?: AbortSignal, { all = false }: { all?: boolean } = {}): Promise<TitleCandidates> {
   let incomplete = false
   const ask = asker(lookups, signal, () => (incomplete = true))
   const pool: { book: Book | BookSnapshot }[] = []
-  const seen = new Set<string>()
+  const seen = new Map<string, { book: Book | BookSnapshot }>()
   const held = new Set<Book | BookSnapshot>()
   let same: (Book | BookSnapshot)[] = []
-  const put = (outcome: SearchOutcome | null) => {
-    if (!outcome) return
-    if (outcome.failed || outcome.unanswered?.length) incomplete = true
-    for (const book of outcome.editions ?? outcome.results.map((result) => result.book)) {
-      // One candidate per edition (its ISBN or a source id); one without any is itself.
+  const keep = (found: readonly (Book | BookSnapshot)[]) => {
+    for (const book of found) {
+      if (held.has(book)) continue
+      // One candidate per edition (its ISBN or a source id); one without any is itself. The same edition
+      // named twice (the National Library's record and Apple's of one ISBN) keeps the cover either has: a
+      // DNB edition has none of its own, its covered twin is the same edition, not a second candidate.
       const keys = editionKeys(book)
-      if (held.has(book) || keys.some((key) => seen.has(key))) continue
-      for (const key of keys) seen.add(key)
+      const known = keys.map((key) => seen.get(key)).find((entry): entry is { book: Book | BookSnapshot } => entry !== undefined)
+      if (known) {
+        if (!known.book.coverUrl && book.coverUrl) known.book = { ...known.book, coverUrl: book.coverUrl, coverThumbhash: book.coverThumbhash, coverColors: book.coverColors }
+        continue
+      }
+      const entry = { book }
+      for (const key of keys) seen.set(key, entry)
       held.add(book)
-      pool.push({ book })
+      pool.push(entry)
     }
     same = rankEditions(row, pool).map(({ book }) => book)
   }
+  const put = (outcome: SearchOutcome | null) => {
+    if (!outcome) return
+    if (outcome.failed || outcome.unanswered?.length) incomplete = true
+    keep(outcome.editions ?? outcome.results.map((result) => result.book))
+  }
   const asking = (query: string, sources: readonly SourceName[]) => ask((s) => lookups.search.search(query, { signal: s, sources }))
+  // The National Library's one question (data/import/queries.ts `dnbQuestion`): early for a row that is
+  // probably German (its editions come with the free sources, before Apple is asked anything), last for
+  // any other row the ladder found no covered edition of its work for. Its refusal is "not asked"
+  // (`incomplete`), never "nothing found"; its editions join the one pool, with no cover of their own.
+  const aboutDnb = dnbQuestion(row)
+  let askedDnb = false
+  const askDnb = async () => {
+    if (askedDnb || !aboutDnb || !lookups.dnb) return
+    askedDnb = true
+    const found = await ask((s) => lookups.dnb!.editions({ title: aboutDnb.title, authors: [...aboutDnb.authors] }, { signal: s }))
+    if (found) keep(found)
+    else incomplete = true
+  }
+  const german = probablyGerman(row)
+  if (german) await askDnb()
   for (const question of questionsFor(row)) {
     if (question.sources) {
       put(await asking(question.query, question.sources))
@@ -264,6 +303,7 @@ export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?
     }
     if (!all && same.some((book) => book.coverUrl)) break
   }
+  if (!german && (all || !same.some((book) => book.coverUrl))) await askDnb()
   return { same, near: nearEditions(row, pool).map(({ book }) => book), incomplete }
 }
 

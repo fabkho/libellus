@@ -109,3 +109,15 @@ export function questionsFor(row: QueryRow, strategies: readonly QueryStrategy[]
   }
   return out
 }
+
+/**
+ * The one question the National Library is asked about a row (data/dnb.ts `editions`): its main
+ * title, without a subtitle or series prefix, and its first author. Not one of the ladder's
+ * strategies: it is asked EARLY for a row that is probably German (`probablyGerman`,
+ * data/import/editions.ts) and LAST for any other row the ladder found no covered edition for
+ * (`titleCandidates`, data/bookImport.ts says when).
+ */
+export function dnbQuestion(row: QueryRow): { title: string; authors: readonly string[] } | null {
+  const title = mainTitle(row.title)
+  return title ? { title, authors: row.authors.slice(0, 1) } : null
+}

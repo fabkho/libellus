@@ -80,8 +80,10 @@ export type Search = {
   /** One Apple Book by its track id: a book page opened cold. Null when no storefront has it; rejects when none answered. */
   lookupApple: (appleId: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
   /**
-   * One edition by ISBN-13: Apple Books first, then OpenLibrary. Null or a rejection as `lookupApple`; with
-   * `strict`, also a rejection when nothing was found and one of them did not answer (a refusal is no "not found").
+   * One edition by ISBN-13: Apple Books first, then OpenLibrary, then the National Library (a German
+   * edition they do not know). Null or a rejection as `lookupApple`; with `strict`, also a rejection when
+   * nothing was found and one of them (the National Library included) did not answer (a refusal is no
+   * "not found": it is "not asked").
    */
   lookupIsbn: (isbn13: string, options?: { signal?: AbortSignal; strict?: boolean }) => Promise<BookSnapshot | null>
   /**
@@ -275,19 +277,24 @@ export function createSearch(options: {
       if (signal?.aborted) throw abortError()
       if (fromApple.status === 'fulfilled' && fromApple.value) return fromApple.value
       if (fromOpenLibrary.status === 'fulfilled' && fromOpenLibrary.value[0]) return fromOpenLibrary.value[0].book
-      // A German edition neither knows (a book page opened cold, after a reload): the National Library.
+      // A German edition neither knows (a book page opened cold, after a reload; the import's ISBN step): the National Library.
+      let dnbUnanswered = false
       if (options.dnb) {
         try {
           const german = await options.dnb.lookupIsbn(isbn13, { signal })
           if (german) return german
         } catch {
           if (signal?.aborted) throw abortError()
+          // Its refusal is no "not found": whether it has the ISBN cannot be told.
+          dnbUnanswered = true
         }
       }
       if (fromApple.status === 'rejected' && fromOpenLibrary.status === 'rejected') throw fromApple.reason
-      // Strict: one of them did not answer, so "neither has it" cannot be told.
-      if (strict && (fromApple.status === 'rejected' || fromOpenLibrary.status === 'rejected')) {
-        throw fromApple.status === 'rejected' ? fromApple.reason : (fromOpenLibrary as PromiseRejectedResult).reason
+      // Strict: one of them (or the National Library) did not answer, so "neither has it" cannot be told.
+      if (strict && (dnbUnanswered || fromApple.status === 'rejected' || fromOpenLibrary.status === 'rejected')) {
+        if (fromApple.status === 'rejected') throw fromApple.reason
+        if (fromOpenLibrary.status === 'rejected') throw (fromOpenLibrary as PromiseRejectedResult).reason
+        throw new Error('The National Library did not answer')
       }
       return null
     },
