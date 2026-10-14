@@ -58,7 +58,6 @@ const addLabel = computed(() => {
         :title="hit.book.title"
         :authors="hit.book.authors"
         :src="coverSrc(hit.book.coverUrl, 'sm')"
-        :fallbacks="coverFallbacks(hit.book, 'sm')"
         :thumbhash="hit.book.coverThumbhash"
         :colors="hit.book.coverColors"
         size="sm"

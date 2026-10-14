@@ -37,7 +37,6 @@ const online = useOnline()
 const PressLink = resolveComponent('UiPressLink')
 
 const key = computed(() => workBookKey(props.work))
-const images = computed(() => workCoverImages(props.work, 'sm'))
 /** Her entry as this device knows it now, else as the page was read. */
 const live = computed(() => {
   const bookId = props.work.entry?.bookId
@@ -63,6 +62,15 @@ function find() {
   search.query = [props.work.title, props.author].filter(Boolean).join(' ')
 }
 
+// The Book's page shows the cover this row shows (one Book, one cover: a source asked again could name
+// another picture for the same edition), and is asked for from the touch-down.
+function press() {
+  const k = key.value
+  if (!k) return
+  books.seedCover(k, workCover(props.work))
+  books.prefetch(k)
+}
+
 // "+ Want to read": the edition's Book (the Catalogue's, else what a source says of it), then the Add sheet.
 const opening = ref(false)
 async function want() {
@@ -70,6 +78,7 @@ async function want() {
   if (!k || opening.value) return
   opening.value = true
   try {
+    books.seedCover(k, workCover(props.work))
     await books.load(k)
     const found = books.page(k)
     if (found?.book && !found.entry) library.openAdd(found.book)
@@ -89,9 +98,9 @@ async function want() {
       class="flex min-w-0 flex-1 items-center gap-inset py-sm"
       :data-testid="key ? `${testid}Link` : undefined"
       :aria-current="current ? 'page' : undefined"
-      @press="key && books.prefetch(key)"
+      @press="press"
     >
-      <UiCover decorative :title="work.title" :src="images.src" :fallbacks="images.fallbacks" :thumbhash="owned?.coverThumbhash" :colors="owned?.coverColors" size="sm" :eager="eager" :class="notFinished && 'dimmed'" />
+      <UiCover decorative :title="work.title" :src="coverSrc(workCover(work), 'sm')" :thumbhash="owned?.coverThumbhash" :colors="owned?.coverColors" size="sm" :eager="eager" :class="notFinished && 'dimmed'" />
       <span class="flex min-w-0 flex-1 flex-col gap-xxs">
         <span class="book-title title-wrap text-body-large" :data-testid="`${testid}Title`">{{ work.title }}</span>
         <span v-if="meta || current" class="figures flex items-center gap-xs text-meta text-ink-faint">

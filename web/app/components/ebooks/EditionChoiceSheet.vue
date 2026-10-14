@@ -90,7 +90,6 @@ const action = computed(() => {
             :title="row.book.title"
             :authors="row.book.authors"
             :src="coverSrc(row.book.coverUrl, 'sm')"
-            :fallbacks="coverFallbacks(row.book, 'sm')"
             :thumbhash="row.book.coverThumbhash"
             :colors="row.book.coverColors"
             size="sm"

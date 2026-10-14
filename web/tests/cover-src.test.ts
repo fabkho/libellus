@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { WALL_COVERS } from '@/components/auth/wall'
-import { APPLE_BOX, COVER_WIDTH, coverFallbacks, coverSizes, coverSrc, coverSrcset, isBlankCover, type CoverSize } from '@/utils/cover'
+import { APPLE_BOX, artworkOf, COVER_WIDTH, coverChain, coverSizes, coverSrc, coverSrcset, isBlankCover, type CoverSize } from '@/utils/cover'
 
 /**
  * The image a cover asks for at each size (issue #63, docs/covers.md): about
  * three times its width on Apple's CDN, OpenLibrary's 'M' for the small ones;
- * what it tries when that fails, and what counts as a blank stand-in.
+ * what it tries when that fails (the same artwork at its other sizes), and what
+ * counts as a blank stand-in.
  */
 
 const APPLE = 'https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/c8/bf/b3/c8bfb35c-53b3-7373-ad0e-561c68761d74/9780593983768.d.jpg/600x900bb.jpg'
@@ -89,21 +90,28 @@ describe('the sizes a cover offers the browser', () => {
   })
 })
 
-describe('when a cover’s image fails', () => {
-  it('tries OpenLibrary’s cover of the same edition by ISBN, at the same size, a 404 when it has none', () => {
-    expect(coverFallbacks({ coverUrl: APPLE, isbn13: '9780593983768' }, 'sm')).toEqual([
-      'https://covers.openlibrary.org/b/isbn/9780593983768-M.jpg?default=false',
-    ])
-    expect(coverFallbacks({ coverUrl: OPENLIBRARY, isbn13: '9780593983768' }, 'xl')).toEqual([
-      'https://covers.openlibrary.org/b/isbn/9780593983768-L.jpg?default=false',
-    ])
+describe('when a cover’s image fails (one Book, one cover)', () => {
+  it('tries the same artwork at the stored size, then at a row’s, never another picture', () => {
+    expect(coverChain(APPLE, 'sm')).toEqual([at('120x180'), at('600x900')])
+    expect(coverChain(APPLE, 'md')).toEqual([at('240x360'), at('600x900'), at('120x180')])
+    expect(coverChain(APPLE, 'xl')).toEqual([at('600x900'), at('120x180')])
+    expect(coverChain(OPENLIBRARY, 'sm')).toEqual(['https://covers.openlibrary.org/b/id/8231856-M.jpg', OPENLIBRARY])
+    expect(coverChain(OPENLIBRARY, 'xl')).toEqual([OPENLIBRARY, 'https://covers.openlibrary.org/b/id/8231856-M.jpg'])
+    for (const size of ['xs', 'sm', 'md', 'lg', 'xl'] as const) {
+      for (const url of [APPLE, OPENLIBRARY]) expect(new Set(coverChain(url, size).map(artworkOf))).toEqual(new Set([artworkOf(url)]))
+    }
   })
 
-  it('tries nothing more without an ISBN, for a Book without an image, or when the image is that very one', () => {
-    expect(coverFallbacks({ coverUrl: APPLE, isbn13: null }, 'sm')).toEqual([])
-    expect(coverFallbacks({ coverUrl: null, isbn13: '9780593983768' }, 'sm')).toEqual([])
-    const byIsbn = 'https://covers.openlibrary.org/b/isbn/9780593983768-L.jpg?default=false'
-    expect(coverFallbacks({ coverUrl: byIsbn, isbn13: '9780593983768' }, 'sm')).toEqual([])
+  it('is the same whichever size the URL was asked at, so a row and the Book’s page share it', () => {
+    expect(coverChain(at('120x180'), 'xl')).toEqual(coverChain(APPLE, 'xl'))
+    expect(coverChain('https://covers.openlibrary.org/b/id/8231856-M.jpg', 'xl')).toEqual(coverChain(OPENLIBRARY, 'xl'))
+  })
+
+  it('is the image alone where a source has one size (a Goodreads cover, an ebook’s own), and nothing without one', () => {
+    const goodreads = 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1/1.jpg'
+    expect(coverChain(goodreads, 'sm')).toEqual([goodreads])
+    expect(coverChain('blob:https://betterreads.de/0f1e', 'xl')).toEqual(['blob:https://betterreads.de/0f1e'])
+    expect(coverChain(null, 'sm')).toEqual([])
   })
 })
 
