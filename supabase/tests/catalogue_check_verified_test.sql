@@ -2,9 +2,9 @@
 -- (social v2a contract §5; review MEDIUM 3; 20261026030000_catalogue_check_keeps.sql):
 --   supabase test db
 --
--- catalogue_check_save writes the authors, cover, publisher, language and format the source gave, and
--- keeps the Book's own (an import's, a cover fill's, a sibling edition's) where it gave none. The
--- cover's thumbhash and colours go with a different cover and stay with the same one. The description
+-- catalogue_check_save writes the authors, publisher, language and format the source gave, and keeps the
+-- Book's own (an import's, a cover fill's, a sibling edition's) where it gave none; the cover only where the
+-- Book has none (20261029020000_check_keeps_cover.sql), its thumbhash and colours staying with it. The description
 -- is the source's alone: written when it has one, null when not. Pages and year are the source's, else
 -- the member's own only when plausible.
 -- The stored title must be the source's by work_title_key (the second lock of the identity check): a
@@ -147,10 +147,11 @@ select is((select (publisher, language, format)::text from public.books where id
 select is((select (page_count, published_year, description)::text from public.books where id = (select id from ids where name = 'b_keep')),
   '(300,1999,)', 'pages and year stay as before, and the description is the source''s (none): null');
 
--- A different cover replaces the stored one and drops what described the old picture; the rest stays.
+-- A different cover from the source does not replace the stored one (one Book, one cover:
+-- 20261029020000_check_keeps_cover.sql): it keeps its thumbhash and colours; the rest is as before.
 select public.catalogue_check_save((select id from ids where name = 'b_swap'), '{"title":"Swap Book","cover_url":"https://covers.openlibrary.org/b/id/9-L.jpg","description":"New blurb"}');
 select is((select (cover_url, cover_thumbhash, cover_dominant, cover_secondary, description)::text from public.books where id = (select id from ids where name = 'b_swap')),
-  '(https://covers.openlibrary.org/b/id/9-L.jpg,,,,"New blurb")', 'a source cover that differs replaces the cover and clears its thumbhash and colours; the description is the source''s');
+  '(https://covers.openlibrary.org/b/id/8-L.jpg,abc,#112233,#445566,"New blurb")', 'a source cover that differs leaves the Book''s cover, with its thumbhash and colours; the description is the source''s');
 select is((select (publisher, language, format)::text from public.books where id = (select id from ids where name = 'b_swap')),
   '("Her Press",de,hardcover)', 'while the publisher, language and format the source did not give stay');
 
