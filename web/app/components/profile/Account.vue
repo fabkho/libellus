@@ -22,6 +22,7 @@
 // Glass (the owner's account only, stores/glass.ts), under Dark mode: how glassy the floating
 // chrome is on this device — Strong, Medium, Off (no transparency at all), a segmented choice in
 // the row — to compare on a phone.
+import { useAppUpdateStore, type UpdateResult } from '~/stores/appUpdate'
 import { useAvatarStore } from '~/stores/avatar'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useGlassStore } from '~/stores/glass'
@@ -88,6 +89,25 @@ function askSignOut() {
   else void signOut()
 }
 const installApp = useInstallHint()
+
+// A new release of the installed app (stores/appUpdate.ts, docs/parity.md "App update"): the row under
+// Install app looks now, and says what it found under the rows. Nothing here writes, so being offline is
+// only ever the look's own answer ("that did not work").
+const appUpdate = useAppUpdateStore()
+/** The line under the rows, by what the last look found. */
+const UPDATE_RESULT: Record<UpdateResult, string> = {
+  idle: '',
+  checking: 'profile.account.updateChecking',
+  current: 'profile.account.updateCurrent',
+  available: 'profile.account.updateAvailable',
+  failed: 'profile.account.updateFailed',
+}
+
+/** "Check for new version": look now, say what it found, and offer the sheet when there is something. */
+async function checkForUpdate() {
+  if (appUpdate.checking) return
+  if ((await appUpdate.check({ manual: true })) === 'available') appUpdate.reopen()
+}
 
 const ebooks = useEbooksStore()
 const ebooksValue = computed(() => {
@@ -206,6 +226,16 @@ const whatsNew = useWhatsNew()
         data-testid="profile.install"
         @click="installApp.install()"
       />
+      <UiRow
+        as="button"
+        icon="repeat"
+        :label="t('profile.account.update')"
+        data-testid="profile.update"
+        @click="checkForUpdate"
+      >
+        <span v-if="appUpdate.checking" class="text-ink-faint" data-testid="profile.updateValue">{{ t('profile.account.updateChecking') }}</span>
+        <span v-else-if="whatsNew.notes.version" class="figures text-ink-muted" data-testid="profile.updateValue">{{ whatsNew.notes.version }}</span>
+      </UiRow>
       <UiSwitchRow v-model="showFriendsTab" icon="people" :label="t('profile.account.friendsTab')" testid="profile.friendsTab" />
       <UiRow as="button" icon="signOut" :label="t('profile.account.signOut')" data-testid="profile.signOut" @click="askSignOut" />
       <UiRow
@@ -221,6 +251,28 @@ const whatsNew = useWhatsNew()
         <span v-if="!online" class="text-ink-muted">{{ t('common.offline') }}</span>
       </UiRow>
     </UiRowGroup>
+    <!-- What the last look for a new version found (stores/appUpdate.ts); "Show" brings the sheet back
+         after "Later". Politeness per result: a failure is an alert, everything else is a status. -->
+    <div v-if="appUpdate.result !== 'idle'" class="flex items-center justify-between gap-sm px-inset">
+      <p
+        class="text-caption"
+        :class="appUpdate.result === 'failed' ? 'text-error' : 'text-ink-muted'"
+        :role="appUpdate.result === 'failed' ? 'alert' : 'status'"
+        :data-result="appUpdate.result"
+        data-testid="profile.updateResult"
+      >
+        {{ t(UPDATE_RESULT[appUpdate.result]) }}
+      </p>
+      <UiButton
+        v-if="appUpdate.available && !appUpdate.sheetOpen"
+        size="sm"
+        tone="secondary"
+        data-testid="profile.updateShow"
+        @click="appUpdate.reopen()"
+      >
+        {{ t('profile.account.updateShow') }}
+      </UiButton>
+    </div>
     <button
       v-if="whatsNew.notes.version"
       type="button"

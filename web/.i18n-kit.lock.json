@@ -5193,6 +5193,36 @@
           "de"
         ]
       },
+      "profile.account.update": {
+        "6a311f181607c959": [
+          "de"
+        ]
+      },
+      "profile.account.updateAvailable": {
+        "0a766f63a95d648e": [
+          "de"
+        ]
+      },
+      "profile.account.updateChecking": {
+        "ec963ffc911b8401": [
+          "de"
+        ]
+      },
+      "profile.account.updateCurrent": {
+        "03c9dea7a0935c2a": [
+          "de"
+        ]
+      },
+      "profile.account.updateFailed": {
+        "34d97dcc2a5c8154": [
+          "de"
+        ]
+      },
+      "profile.account.updateShow": {
+        "0df6f1cad36c49da": [
+          "de"
+        ]
+      },
       "profile.account.version": {
         "a18745121bb8af6d": [
           "de"
@@ -7800,6 +7830,31 @@
       },
       "tabs.search": {
         "49c266baaaa70981": [
+          "de"
+        ]
+      },
+      "update.action": {
+        "63bf045213cebbaf": [
+          "de"
+        ]
+      },
+      "update.busy": {
+        "dfe40efe921fe88e": [
+          "de"
+        ]
+      },
+      "update.later": {
+        "73b6e48a1b552d11": [
+          "de"
+        ]
+      },
+      "update.text": {
+        "737d55d789906638": [
+          "de"
+        ]
+      },
+      "update.title": {
+        "5f2c8067cc3f3b28": [
           "de"
         ]
       },

@@ -73,6 +73,13 @@ export default defineNuxtConfig({
     // over it: it talks to the local stack and keeps the test hooks (__LIBELLUS_E2E__ below).
     ...(process.env.LIBELLUS_E2E ? { output: { dir: '.output-e2e' } } : {}),
   },
+  // Nuxt asks the server for the build id every hour and hard-reloads the page when another one is
+  // deployed (`experimental.checkOutdatedBuildInterval`, on by default). Off: that reload landed on the
+  // old service worker's precached shell (`navigateFallback: '/'` answers from the precache until the new
+  // worker is active), so it served the old build again — a reload nobody could explain and that never
+  // brought the release. The app looks for a new release itself instead and asks first
+  // (plugins/app-update.client.ts, utils/appUpdate.ts, docs/parity.md "App update").
+  experimental: { checkOutdatedBuildInterval: false },
   // The devtools badge floats over the tab bar and swallows taps in the
   // Playwright run, which sets LIBELLUS_E2E (playwright.config.ts).
   devtools: { enabled: !process.env.LIBELLUS_E2E },
@@ -280,7 +287,11 @@ export default defineNuxtConfig({
   // app shell is precached and the covers are cached as they are seen (#15).
   // The icons are rendered from design/icons/app/*.svg by scripts/render-icons.mjs.
   pwa: {
-    registerType: 'autoUpdate',
+    // `prompt`: a new service worker installs and then waits; the app says so ("New version available",
+    // stores/appUpdate.ts) and activates it when she says "Update now". `autoUpdate` swapped the worker
+    // under the running page and reloaded it unasked — and a page that kept running against files the
+    // release had pruned was exactly the stale-shell silence of #341 (utils/readerChunks.ts).
+    registerType: 'prompt',
     manifest: {
       id: '/',
       name: 'BetterReads',
@@ -349,6 +360,10 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
+      // A first install takes the page over at once (and, after "Update now", the new worker claims it):
+      // background sync and the app's own caches work without a reload. `skipWaiting` stays off, which is
+      // what `prompt` is for: a waiting worker only takes over when she says so.
+      clientsClaim: true,
       navigateFallback: '/',
       // A member's public reading page and its Book cards (#171) always come from the network: the
       // Pages Function in front of them (functions/r/[[path]].js) puts the link preview's tags into
