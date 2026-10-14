@@ -112,7 +112,9 @@ OpenLibrary's latency is left there.
 2. A cover whose image fails or loads smaller than 16 px on a side (`isBlankCover`) falls back to
    OpenLibrary's cover of the same ISBN (`coverFallbacks`, `default=false`), then the Placeholder.
    None of the sampled images needed it; it is there for the 404s of withdrawn artwork and
-   OpenLibrary's 1 × 1 GIF.
+   OpenLibrary's 1 × 1 GIF. **Since replaced** ([plans/covers-consistency.md](plans/covers-consistency.md),
+   one Book, one cover): a failed size falls back to the same artwork at its other sizes
+   (`coverChain`), never to another picture; `coverFallbacks` is gone.
 3. Merging picks, among the editions of one book, the first with a cover on Apple's CDN, then the
    first with any cover; among equally good matches a book with a cover ranks above one without.
    In the sample only 1 of 82 coverless picks had a covered sibling, so the share of rows without any
@@ -193,8 +195,9 @@ lost a cover the lookup had found at the write for that reason.
 (`MIN_COVER_SIDE`) or one flat colour is no cover. From 40 to 149 px (`PREFERRED_COVER_SIDE`) a cover is accepted when nothing
 better exists: the chain keeps it as the fallback while it looks on, and the fill reports it like any other. Resolution is
 only a tie-breaker between real covers (`COVER_HEIGHT`, higher wins inside one kind of the ranking), never a reason to
-reject the only one. A better kind found later (the fill, a later import, the check, another member's import through
-`fill_book_covers`) replaces a cover the fill gave. The UI shows covers scaled by CSS with the thumbhash behind them, so a
+reject the only one. A better kind found later (the fill, a later import) replaces a cover the fill gave before it is
+written; once a Book has a cover the server keeps it (`fill_book_covers` and the check fill a missing one only:
+[plans/covers-consistency.md](plans/covers-consistency.md)). The UI shows covers scaled by CSS with the thumbhash behind them, so a
 small one is soft but not broken. Measurements count a cover of any size as found and report those under 300 px high
 separately.
 
@@ -298,9 +301,16 @@ backing of a fitted image carry the same `srcset`/`sizes`, so all three are one 
   It keeps one URL per size (`OPENLIBRARY_SIZE`).
 - Not done on purpose (owner decision): always the largest image downscaled locally, `@nuxt/image`.
   So a list row and the book page still ask for different boxes; the browser's choice only follows
-  what the screen can show.
+  what the screen can show. They are the same picture (measured: 185 of 185 stored covers), and a box
+  that fails falls back to the others of the same artwork (`coverChain`,
+  [plans/covers-consistency.md](plans/covers-consistency.md)).
 
 ## A cover in view stays (A8)
+
+**Replaced** by *one Book, one cover* ([plans/covers-consistency.md](plans/covers-consistency.md)): holding
+on to the first artwork is what let a row kept alive (Home, the Library) show the device's old cover while
+the Book's page showed the new one. A mounted cover now follows its Book; another size of the artwork in
+view still takes over only once it has loaded. What follows is the history.
 
 Owner report: a cover sometimes becomes a different image. Found in the code (`UiCover` before the
 guard), in the order they can happen:
@@ -344,7 +354,8 @@ images in a section that opens with a reveal, so a cover was asked for only when
 view, and an OpenLibrary one answers in ~575 ms (p90 1.1 s) on top of the author page's own round trip.
 
 - The rows get what the data has: OpenLibrary's cover of the edition by ISBN as a fallback
-  (`workCoverImages`, `coverFallbacks`); a work she has (her Library entry on the device, and that
+  (`workCoverImages`, `coverFallbacks`; both gone since one Book, one cover: a row's cover is the one of
+  the edition it opens, and its page shows that cover, [plans/covers-consistency.md](plans/covers-consistency.md)); a work she has (her Library entry on the device, and that
   Book's cover is the very image the card names) sits on her Book's thumbhash and colours, any other
   on the quiet fill every cover without them has. Adding thumbhash/colours to `work_card` would
   only cover works she owns, which the device already knows, so no migration.

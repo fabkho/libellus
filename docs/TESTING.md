@@ -171,6 +171,17 @@ LIBELLUS_E2E_PERF=1 FLIGHT_OUT=/tmp/flight-soak pnpm exec playwright test e2e/pe
 pnpm tsx e2e/perf/summarize.ts /tmp/flight-soak
 ```
 
+**One Book, one cover** (a list row and the Book's page show the same picture,
+[plans/covers-consistency.md](plans/covers-consistency.md)) is a local flow, `e2e/covers/consistency.spec.ts`: the
+config leaves `e2e/covers` out unless `LIBELLUS_E2E_COVERS=1`, so CI never runs it. Four seeded cases (More from the
+author, a work's row whose source names another picture, a cover the Catalogue changed under a kept-alive Library row, a
+row's size answering 503 once), each comparing the artwork the row shows with the page's. `LIBELLUS_COVERS_SHOTS=<dir>`
+writes each row and page as a picture:
+
+```sh
+LIBELLUS_E2E_COVERS=1 LIBELLUS_COVERS_SHOTS=/tmp/covers pnpm exec playwright test e2e/covers
+```
+
 **Share target and app shortcuts (#91).** Both need a **WebAPK**: Chrome on Android registers a web app
 as a share target and shows its manifest `shortcuts` on a long-press only once Google's server has minted
 an APK for it. On the emulator without a Google account Chrome's Install (⋮ → Add to home screen →
