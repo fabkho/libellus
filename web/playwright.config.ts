@@ -36,13 +36,13 @@ const PERF = Boolean(process.env.LIBELLUS_E2E_PERF)
 // The German pass (e2e/i18n, docs/i18n/german-pass.md) walks every screen in German at 390 and 360 px, in both
 // themes, and writes screenshots and findings: by hand too, with LIBELLUS_E2E_GERMAN=1.
 const GERMAN = Boolean(process.env.LIBELLUS_E2E_GERMAN)
-// One Book, one cover (e2e/covers, docs/plans/covers-consistency.md): the seeded cases where a row and the Book's
-// page could show two covers, by hand only, with LIBELLUS_E2E_COVERS=1 (never in CI).
-const COVERS = Boolean(process.env.LIBELLUS_E2E_COVERS)
+// One Book, one cover (e2e/covers, docs/plans/covers-consistency.md) is not gated: its four seeded
+// cases are the only guard for "a list row and the Book's page show the same cover", and they cost
+// about 8 seconds. They run wherever the flows run (the release run and a `full-e2e` pull request).
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: [...(PERF ? [] : ['**/perf/**']), ...(GERMAN ? [] : ['**/i18n/**']), ...(COVERS ? [] : ['**/covers/**'])],
+  testIgnore: [...(PERF ? [] : ['**/perf/**']), ...(GERMAN ? [] : ['**/i18n/**'])],
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
   // Sharding splits by test rather than by file (a few files hold a third of the flows, so
