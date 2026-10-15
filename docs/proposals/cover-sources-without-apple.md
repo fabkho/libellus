@@ -70,7 +70,7 @@ what the terms say.
 | Inventaire `api/entities?action=by-uris` | 1 request per ISBN | **0** | 0 | 0 | 131 | – |
 | Wikidata `P18` by ISBN-13 (`P212`) | 1 SPARQL query per ISBN | **0** | 0 | 0 | 131 | – |
 | LibraryThing covers API | needs a dev key | *not tested* | | | | |
-| Hardcover API | needs a token | *not tested* | | | | |
+| **Hardcover API** (`editions` by ISBN-13, the 34 residue rows of Chain A) | a PAT with `read:catalog` | **11 of 34** usable (≥ 300 px); 11 thumbnails only (98–128 px wide); 12 with no edition | 1 request per ISBN, 1/s; 22 of 34 have an edition | |
 | ISBNdb, Syndetics, Penguin Random House, VLB REST API, publisher/retailer CDNs | paid or contract | *not tested* | | | | |
 
 What this says:
@@ -294,7 +294,7 @@ free-only run used it for none of them.**
 | **Literal** | none for reads | new: 1 POST per ISBN (a GraphQL body), 1/s | 131 POSTs ≈ 2.2 minutes |
 | Amazon | – | – | **not recommended** (see Q4) |
 | LibraryThing | a dev key, **which sits in the URL path** → a function secret, and every image URL carries it | new | 1,000 covers a day per key; not tested: no key was made, and the endpoint is no longer documented |
-| Hardcover | a token → a function secret | new | 5,000/day, 60/min; not tested: no token was made |
+| Hardcover | a PAT (`read:catalog` only) → a function secret | new | 5,000/day, 60/min, burst 10; 34 lookups for the residue |
 | VLB REST API | OAuth2 credentials per data recipient + a cover authorisation | new, and its tokens may not be exposed | a contract with MVB |
 
 ## Risks
@@ -367,7 +367,7 @@ archived-original upgrade on Open Library is a sharper picture on 197 rows for f
 - **Why the free-only run ended with only 72 Goodreads covers is inferred**, not observed: the
   numbers are consistent with the Apple search lane's 3 s pacing spending the fill's 600 s budget
   before the Goodreads queue is reached, but the run's own logs were not re-read for this file.
-- **LibraryThing and Hardcover are described, not measured** — no dev key and no token were made,
+- **LibraryThing is described, not measured; Hardcover was measured on the 34 residue rows only** (11 usable covers, counts only). No dev key was made for LibraryThing,
   and creating accounts is not this task's call.
 - **Amazon's and DNB's sample numbers were not eyeballed**, only stand-in-checked (both were 0
   stand-ins there, and every cover on the 131 rows of both was looked at).
@@ -381,5 +381,5 @@ Counts only here; the per-row scripts and the images stayed in the gitignored
 every number above). Re-checked in this pass: `analyze2.py` (coverage, sizes, chains), `ol_original.py`
 (the archived-original numbers), and the Goodreads, DNB, Literal and Google result files; all matched. `rows.py`,
 `verify.py` and `sources.py` are not in the gitignored directory of this worktree and were not re-run.
-Not tested in either pass: retailer CDNs, ISBNdb, Syndetics, Penguin Random House, Hardcover and LibraryThing (no token or key). They are a measurement, not a proposal: they read the Apple-off run's audit
+Hardcover was measured on the 34 Chain-A residue rows (11 usable covers ≥ 300 px, 11 thumbnails, 12 without an edition); its images are user uploads and their licence is not tested. Not tested: retailer CDNs, ISBNdb, Syndetics, Penguin Random House and LibraryThing. They are a measurement, not a proposal: they read the Apple-off run's audit
 from a local path and name the member's books, so they are not part of this branch.
