@@ -11,9 +11,9 @@ import { handSession, sessionStorageInMemory, untilStill } from '../support'
 /**
  * One Book, one cover (docs/plans/covers-consistency.md): a list row and the Book's page show the
  * same image, whatever the row is (her Library, More from the author) and whatever happened to the
- * cover meanwhile (the Catalogue changed it, a size of it failed once). Local only, by hand
- * (`LIBELLUS_E2E_COVERS=1 pnpm e2e e2e/covers`), not in CI: it seeds the cases the analysis found
- * and compares, per case, the image the row shows with the one the page shows.
+ * cover meanwhile (the Catalogue changed it, a size of it failed once). It seeds the cases the
+ * analysis found, and compares per case the image the row shows with the one the page shows. It runs
+ * in CI, with the other flows (docs/TESTING.md); on its own: `pnpm e2e e2e/covers`.
  *
  * The covers are drawn here, one colour and letter per cover id, so a screenshot says which is which.
  * `LIBELLUS_COVERS_SHOTS=<dir>` writes each case's row and page there.

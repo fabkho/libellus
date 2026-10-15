@@ -129,8 +129,8 @@ service worker the failed answer is opaque, so it is kept as if it were a cover,
 
 ## Reproduced locally
 
-`web/e2e/covers/consistency.spec.ts` (WebKit, iPhone 15, production build, seeded local stack; by hand:
-`LIBELLUS_E2E_COVERS=1`). Each picture: before on the left, after on the right; the row on top, its page
+`web/e2e/covers/consistency.spec.ts` (WebKit, iPhone 15, production build, seeded local stack; no gate, it runs in CI
+with the other flows). Each picture: before on the left, after on the right; the row on top, its page
 below. Covers drawn per cover id (A, B, C, D).
 
 | Case | Before | After |
@@ -207,7 +207,7 @@ Tests: `web/tests/cover-showing.test.ts` (the rule, rewritten), `web/tests/cover
 (`coverChain`), `web/tests/work-covers.test.ts`, `web/tests/book-row-cover.test.ts` (`seedCover`),
 `supabase/tests/work_card_opens_cover_test.sql` (work_card's order), `supabase/tests/check_keeps_cover_test.sql` (the check keeps a cover),
 `supabase/tests/catalogue_check_verified_test.sql` (its swap assertion now pins the new rule), and the
-local flow `web/e2e/covers/consistency.spec.ts` (fails on the old code in all four cases, passes now).
+flow `web/e2e/covers/consistency.spec.ts`, which runs with the other flows (fails on the old code in all four cases, passes now).
 
 ## Migration and cost
 
