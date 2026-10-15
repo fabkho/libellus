@@ -1,0 +1,37 @@
+{
+  "url": "https://archive.org/metadata/derkleinehobbit0000tolk",
+  "title": "Der kleine Hobbit",
+  "language": "ger",
+  "access": "true",
+  "toc_like_metadata_keys": [
+    "autocrop_version"
+  ],
+  "files_total": 34,
+  "toc_or_struct_files": [
+    {
+      "name": "derkleinehobbit0000tolk.epub",
+      "format": "EPUB",
+      "size": "1371360"
+    },
+    {
+      "name": "derkleinehobbit0000tolk_djvu.txt",
+      "format": "DjVuTXT",
+      "size": "619730"
+    },
+    {
+      "name": "derkleinehobbit0000tolk_lcp.epub",
+      "format": "LCP Encrypted EPUB",
+      "size": "1414828"
+    },
+    {
+      "name": "derkleinehobbit0000tolk_page_numbers.json",
+      "format": "Page Numbers JSON",
+      "size": "57438"
+    },
+    {
+      "name": "derkleinehobbit0000tolk_scandata.xml",
+      "format": "Scandata",
+      "size": "365147"
+    }
+  ]
+}

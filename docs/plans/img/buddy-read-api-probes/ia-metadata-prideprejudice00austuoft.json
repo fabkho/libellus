@@ -1,0 +1,30 @@
+{
+  "url": "https://archive.org/metadata/prideprejudice00austuoft",
+  "title": "Pride and prejudice",
+  "language": "eng",
+  "access": null,
+  "toc_like_metadata_keys": [],
+  "files_total": 26,
+  "toc_or_struct_files": [
+    {
+      "name": "prideprejudice00austuoft.epub",
+      "format": "EPUB",
+      "size": "1594721"
+    },
+    {
+      "name": "prideprejudice00austuoft_djvu.txt",
+      "format": "DjVuTXT",
+      "size": "832396"
+    },
+    {
+      "name": "prideprejudice00austuoft_page_numbers.json",
+      "format": "Page Numbers JSON",
+      "size": "97458"
+    },
+    {
+      "name": "scandata.zip",
+      "format": "Scribe Scandata ZIP",
+      "size": "101448236"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+ "source": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub",
+ "nav_file": "epub/toc.xhtml",
+ "nav_entries": 65,
+ "chapter_entries": 61,
+ "first_12": [
+  {
+   "href": "text/titlepage.xhtml",
+   "label": "Titlepage"
+  },
+  {
+   "href": "text/imprint.xhtml",
+   "label": "Imprint"
+  },
+  {
+   "href": "text/chapter-1.xhtml",
+   "label": "I"
+  },
+  {
+   "href": "text/chapter-2.xhtml",
+   "label": "II"
+  },
+  {
+   "href": "text/chapter-3.xhtml",
+   "label": "III"
+  },
+  {
+   "href": "text/chapter-4.xhtml",
+   "label": "IV"
+  },
+  {
+   "href": "text/chapter-5.xhtml",
+   "label": "V"
+  },
+  {
+   "href": "text/chapter-6.xhtml",
+   "label": "VI"
+  },
+  {
+   "href": "text/chapter-7.xhtml",
+   "label": "VII"
+  },
+  {
+   "href": "text/chapter-8.xhtml",
+   "label": "VIII"
+  },
+  {
+   "href": "text/chapter-9.xhtml",
+   "label": "IX"
+  },
+  {
+   "href": "text/chapter-10.xhtml",
+   "label": "X"
+  }
+ ],
+ "last_3": [
+  {
+   "href": "text/chapter-61.xhtml",
+   "label": "LXI"
+  },
+  {
+   "href": "text/colophon.xhtml",
+   "label": "Colophon"
+  },
+  {
+   "href": "text/uncopyright.xhtml",
+   "label": "Uncopyright"
+  }
+ ]
+}

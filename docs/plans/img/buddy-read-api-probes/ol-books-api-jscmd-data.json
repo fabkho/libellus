@@ -1,0 +1,18 @@
+{
+  "ISBN:9780547928227": {
+    "title": "The Hobbit",
+    "toc": 0,
+    "ebooks": [
+      {
+        "preview_url": "https://archive.org/details/hobbitortherebac0000tolk_y8a9",
+        "availability": "restricted",
+        "formats": {}
+      }
+    ]
+  },
+  "ISBN:9780593135204": {
+    "title": "Project Hail Mary",
+    "toc": 0,
+    "ebooks": null
+  }
+}

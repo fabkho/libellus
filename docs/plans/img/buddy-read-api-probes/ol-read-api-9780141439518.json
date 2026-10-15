@@ -1,0 +1,35 @@
+{
+  "url": "https://openlibrary.org/api/volumes/brief/isbn/9780141439518.json",
+  "records": [
+    {
+      "publishDates": [
+        "2003"
+      ],
+      "data_toc": 0,
+      "details_toc": 0
+    }
+  ],
+  "items_total": 202,
+  "items": [
+    {
+      "status": "full access",
+      "itemURL": "http://www.archive.org/stream/prideprejudice0000jane_h2f2"
+    },
+    {
+      "status": "full access",
+      "itemURL": "http://www.archive.org/stream/prideprejudiceno00aust_1"
+    },
+    {
+      "status": "full access",
+      "itemURL": "http://www.archive.org/stream/prideprejudice00austuoft"
+    },
+    {
+      "status": "full access",
+      "itemURL": "http://www.archive.org/stream/prideandprejudi02austgoog"
+    },
+    {
+      "status": "full access",
+      "itemURL": "http://www.archive.org/stream/austensnovels05aust"
+    }
+  ]
+}
