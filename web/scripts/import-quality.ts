@@ -11,10 +11,14 @@
  *
  *   LIBELLUS_IMPORT_CSV=/path/export.csv \
  *   [LIBELLUS_IMPORT_KEYS=/path/keys.txt]        only these row keys, one a line (a subset to iterate on)
- *   [LIBELLUS_IMPORT_AUDIT=/path/audit.json]     the per-row audit (local only: it names the books)
+ *   [LIBELLUS_IMPORT_AUDIT=/path/audit.json]     the per-row audit (local only: it names the books, the cover each
+ *                                                row shows and where that cover came from)
  *   [LIBELLUS_IMPORT_FILL_SECONDS=600]           the cover fill's budget (0: no fill)
  *   [LIBELLUS_IMPORT_PICKER=1]                   open Choose edition on every row that needs a look
  *   [LIBELLUS_IMPORT_APPLE_OUTAGE=90:20]         Apple refuses (429) for 20 s every 90 s, as it does on a bad day
+ *   [LIBELLUS_IMPORT_APPLE=off]                 Apple is never asked and never counts as refused (its own empty
+ *                                                answer comes back, so no row is "unsure" because of it): the free
+ *                                                sources have to settle every row, as for a server-side job
  *   [LIBELLUS_IMPORT_OPENLIBRARY=proxy|direct]   the import's Open Library through the `openlibrary` function (the
  *                                                store's wiring, default) or direct as before it; the report says
  *                                                which way ran and whether the function failed over to direct
@@ -46,6 +50,7 @@ import { verifyCover, type ProbedImage } from '../app/data/covers'
 import { createEditions } from '../app/data/editions'
 import type { FetchLike } from '../app/data/fetching'
 import { parseExport } from '../app/data/import/detect'
+import { workTitle } from '../app/data/import/readingTracker'
 import type { ImportBook } from '../app/data/import/rows'
 import { viaOwnServer } from '../app/data/openLibraryProxy'
 import { createSearch } from '../app/data/search'
@@ -60,6 +65,8 @@ process.env.LIBELLUS_TEST_RUN ??= 'quality'
 const fillSeconds = Number(process.env.LIBELLUS_IMPORT_FILL_SECONDS ?? 600)
 const openPicker = process.env.LIBELLUS_IMPORT_PICKER === '1'
 const [outageEvery, outageFor] = (process.env.LIBELLUS_IMPORT_APPLE_OUTAGE ?? '').split(':').map(Number)
+/** Apple off: no request leaves, and Apple's own empty answer comes back, so nothing reads it as a refusal. */
+const appleOff = (process.env.LIBELLUS_IMPORT_APPLE ?? 'on').trim().toLowerCase() === 'off'
 const languages = ['de-DE', 'en-US']
 const today = new Date().toISOString().slice(0, 10)
 const started = performance.now()
@@ -73,7 +80,7 @@ type Request = { host: string; kind: string; status: number; results: number | n
 type Call = { what: 'catalogue' | 'isbn' | 'title' | 'picker' | 'goodreads'; query: string; requests: Request[]; error?: string }
 const tag = new AsyncLocalStorage<Call>()
 /** Apple's answers as the app sees them (any call, tagged or not): how many, and when it first refused. */
-const apple = { sent: 0, firstRefusal: null as { at: number; after: number } | null }
+const apple = { sent: 0, firstRefusal: null as { at: number; after: number } | null, off: appleOff, answeredOff: 0 }
 const calls: Call[] = []
 
 const kindOf = (url: URL) =>
@@ -105,7 +112,7 @@ function observed(inner: FetchLike): FetchLike {
       }
     }
     call?.requests.push({ host: where.hostname, kind: kindOf(where), status: response.status, results })
-    if (where.hostname === 'itunes.apple.com') {
+    if (where.hostname === 'itunes.apple.com' && !appleOff) {
       apple.sent++
       if (response.status !== 200 && apple.firstRefusal === null) apple.firstRefusal = { at: seconds(), after: apple.sent - 1 }
     }
@@ -113,12 +120,23 @@ function observed(inner: FetchLike): FetchLike {
   }
 }
 
-/** The network, with Apple's bad days played back on demand: a window of refusals every so often (`LIBELLUS_IMPORT_APPLE_OUTAGE`). */
+/**
+ * The network, with Apple's bad days played back on demand: a window of refusals every so often
+ * (`LIBELLUS_IMPORT_APPLE_OUTAGE`). With `LIBELLUS_IMPORT_APPLE=off` Apple is never asked: its own empty
+ * answer comes back instead, so no lookup reads a source that is off as one that refused (the import would
+ * then call the row unsure and ask again): the free sources have to settle the row.
+ */
 const network: FetchLike = async (url, init) => {
-  if (outageEvery && outageFor && new URL(url).hostname === 'itunes.apple.com') {
-    const at = (performance.now() - started) / 1000
-    if (at % outageEvery >= outageEvery - outageFor) {
-      return { ok: false, status: 429, json: async () => ({}), headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '10' : null) } }
+  if (new URL(url).hostname === 'itunes.apple.com') {
+    if (appleOff) {
+      apple.answeredOff++
+      return { ok: true, status: 200, json: async () => ({ resultCount: 0, results: [] }), headers: { get: () => null } }
+    }
+    if (outageEvery && outageFor) {
+      const at = (performance.now() - started) / 1000
+      if (at % outageEvery >= outageEvery - outageFor) {
+        return { ok: false, status: 429, json: async () => ({}), headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '10' : null) } }
+      }
     }
   }
   return fetch(url, {
@@ -429,9 +447,23 @@ if (process.env.LIBELLUS_IMPORT_AUDIT) {
         binding: row.book.binding,
         tier: row.tier,
         cover: row.shownCover,
+        // The cover the row shows and where it is from (`coverFrom` is the edition whose picture is lent), for the
+        // size measurement of the assessment: local only, like everything in this file.
+        coverUrl: row.shownCover ? (row.edition.coverFrom ?? row.edition.book).coverUrl : null,
+        coverKind: row.edition.coverKind ?? null,
+        coverFilled: row.edition.filled ?? false,
+        coverSource: row.shownCover ? (row.edition.coverFrom ?? row.edition.book).source : null,
+        language: row.book.language,
         via: row.edition.via,
         source: row.edition.book.source,
         matchedTitle: matched(row.edition) ? row.edition.book.title : null,
+        matchedIsbn: matched(row.edition) ? (row.edition.book.isbn13 ?? null) : null,
+        matchedSource: matched(row.edition) ? row.edition.book.source : null,
+        matchedFormat: matched(row.edition) ? (row.edition.book.format ?? null) : null,
+        matchedWork: matched(row.edition) ? workTitle(row.edition.book.title) : null,
+        matchedEdition: matched(row.edition)
+          ? (row.edition.book.isbn13 ?? row.edition.book.openLibraryEditionKey ?? row.edition.book.appleId ?? row.edition.book.title)
+          : null,
         matchedLanguage: matched(row.edition) ? row.edition.book.language : null,
         unsure: row.edition.unsure,
         alternatives: row.edition.alternatives?.length ?? 0,
