@@ -186,6 +186,15 @@
     "byMonth": "Nach Monat",
     "byYear": "Nach Jahr",
     "columnLabel": "{label}: {count}",
+    "byWeek": "Nach Woche",
+    "chartMode": {
+      "label": "Diagramm nach",
+      "months": "Monate",
+      "weeks": "Wochen"
+    },
+    "prevRange": "Vorheriger Zeitraum",
+    "nextRange": "Nächster Zeitraum",
+    "weekLabel": "KW {week}",
     "days": {
       "title": "Lesetage",
       "since": "seit {date}",
@@ -271,6 +280,8 @@
     "retry": "Nochmal versuchen",
     "sheet": {
       "month": "{month} {year}",
+      "week": "Woche vom {date}",
+      "period": "Zeitraum wählen",
       "stars": "{count} Stern · {year} | {count} Sterne · {year}",
       "allYears": "Alle Jahre",
       "readIn": "an einem Tag | in {count} Tagen",
