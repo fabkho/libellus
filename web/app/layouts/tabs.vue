@@ -82,6 +82,7 @@ onUnmounted(() => window.removeEventListener('scroll', measureScroll))
     />
     <ShellBookFlight />
     <ShellTabBar />
+    <ShellImportStatus />
     <ShellSearchOverlay><SearchResults /></ShellSearchOverlay>
     <BookAddSheet />
     <BookManualSheet />

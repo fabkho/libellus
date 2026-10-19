@@ -80,11 +80,11 @@ select is((select relrowsecurity from pg_class where oid = 'public.import_queue'
 select ok(not has_table_privilege('anon', 'public.import_queue', 'select, insert, update, delete')
           and not has_table_privilege('authenticated', 'public.import_queue', 'select, insert, update, delete'),
           'neither a visitor nor a member is granted anything on it');
-select ok(not has_function_privilege('anon', 'public.import_slot_take(text, integer)', 'execute')
+select ok(not has_function_privilege('anon', 'public.import_slot_take(text, integer, text)', 'execute')
           and not has_function_privilege('anon', 'public.import_slot_beat(text, integer)', 'execute')
           and not has_function_privilege('anon', 'public.import_slot_leave(text)', 'execute'),
           'a visitor calls none of the three');
-select ok(has_function_privilege('authenticated', 'public.import_slot_take(text, integer)', 'execute')
+select ok(has_function_privilege('authenticated', 'public.import_slot_take(text, integer, text)', 'execute')
           and has_function_privilege('authenticated', 'public.import_slot_beat(text, integer)', 'execute')
           and has_function_privilege('authenticated', 'public.import_slot_leave(text)', 'execute'),
           'a member calls them');

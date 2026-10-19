@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BEAT_MS,
   createImportQueue,
+  deviceOf,
   holderOf,
   POLL_MS,
   readSlot,
@@ -77,12 +78,13 @@ function server(replies: Partial<Record<'import_slot_take' | 'import_slot_beat' 
 }
 
 const HOLDER = 'device:11111111-2222-3333-4444-555555555555'
+const DEVICE = 'dev-99999999-8888-7777-6666-555555555555'
 
 function setup(replies: Parameters<typeof server>[0], extra: { onLost?: () => void } = {}) {
   const clock = manualClock()
   const api = server(replies)
   const statuses: QueueStatus[] = []
-  const base = createImportQueue({ rpc: api.rpc, holder: HOLDER, scheduler: clock.scheduler, onStatus: (status) => statuses.push(status) })
+  const base = createImportQueue({ rpc: api.rpc, holder: HOLDER, device: DEVICE, scheduler: clock.scheduler, onStatus: (status) => statuses.push(status) })
   // The holder of the slot says what it wants to hear when the slot goes (as `runWithSlot` does).
   const queue = { ...base, acquire: (rows: number, signal?: AbortSignal) => base.acquire(rows, signal, extra.onLost) }
   return { clock, api, statuses, queue }
@@ -96,7 +98,7 @@ describe('taking the slot', () => {
     })
     await expect(queue.acquire(120)).resolves.toBe('slot')
     expect(queue.holding()).toBe(true)
-    expect(api.calls).toEqual([{ name: 'import_slot_take', args: { p_holder: HOLDER, p_rows: 120 } }])
+    expect(api.calls).toEqual([{ name: 'import_slot_take', args: { p_holder: HOLDER, p_rows: 120, p_device: DEVICE } }])
     expect(statuses.at(-1)).toBeNull()
 
     queue.progress(40)

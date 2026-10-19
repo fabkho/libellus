@@ -5,7 +5,8 @@ import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, ty
 import { GOODREADS_COVERS } from '~/data/coverRank'
 import { probeImageInBrowser, verifyCover } from '~/data/covers'
 import { createDnb, DNB_IMPORT_GAP_MS } from '~/data/dnb'
-import { createImportQueue, holderOf, runWithSlot, type ImportQueue, type QueueStatus } from '~/data/importQueue'
+import { indexedDbImportFiles, memoryImportFiles, type ImportFileKeeper } from '~/data/importFile'
+import { createImportQueue, deviceOf, holderOf, runWithSlot, type ImportQueue, type QueueStatus } from '~/data/importQueue'
 import { accessTokenOf, viaOwnServer } from '~/data/openLibraryProxy'
 import { createGoodreadsCover } from '~/data/goodreadsCover'
 import {
@@ -48,6 +49,7 @@ import { isoDay } from '~/utils/dates'
 import { writeImportHint } from '~/utils/importHint'
 import { clearMatches, readMatches, writeMatches, type StoredMatch } from '~/utils/importMatches'
 import { parseAppConfig } from '~/utils/appConfig'
+import { importAmbient } from '~/utils/importProgress'
 
 /** No book answered for this long while looking up: the screen offers to go on with what is there. */
 const STALL_MS = 45_000
@@ -150,6 +152,13 @@ export type OfferedShelf = { name: string; count: number; chosen: boolean }
  * (the phone slept, the connection went) pauses the lookups, takes a place in line again and goes on with the
  * books that are left. The write is database calls only and takes no slot; the cover fill after the lookups
  * runs under Open Library's shared pace (supabase/functions/openlibrary), not the slot.
+ *
+ * **Closing the app pauses the import and opening it again continues it** (data/importFile.ts): the file is kept
+ * on the device (IndexedDB, per member) from the moment it is read until the lookups end, and again while the write
+ * runs; on the next start (`resume`) the store finds it, reads it as if she had chosen it, takes a place in line
+ * and looks up the books that are left (what was found is kept in `utils/importMatches.ts`). The preview is not kept: a
+ * cut-off write comes back as a preview, and Import writes the books that are not added yet. `ambient` says what
+ * the rest of the app shows meanwhile (components/shell/ImportStatus.vue).
  */
 export const useImportStore = defineStore('import', () => {
   const backend = useBackend()
@@ -370,20 +379,44 @@ export const useImportStore = defineStore('import', () => {
 
   let lookup: AbortController | null = null
 
+  /** The kept file of the import (data/importFile.ts): in IndexedDB, or in memory where there is none. */
+  let keeper: ImportFileKeeper | null = null
+  function files(): ImportFileKeeper {
+    return (keeper ??= import.meta.client && 'indexedDB' in window ? indexedDbImportFiles(window.indexedDB) : memoryImportFiles())
+  }
+  /** The file being imported, as read: kept again when the write starts. */
+  let readFile: { name: string; bytes: ArrayBuffer } | null = null
+  /** Whose file `readFile` is kept under. */
+  function keepFile(file: { name: string; bytes: ArrayBuffer } | null) {
+    const memberId = session.member?.id
+    if (!file || !memberId) return
+    void files().write(memberId, file).catch(() => {})
+  }
+  function forgetFile(memberId = session.member?.id) {
+    if (memberId) void files().clear(memberId).catch(() => {})
+  }
+
   /** The device's side of the import queue (data/importQueue.ts), made when the first import asks. */
   let slots: ImportQueue | null = null
   function slotQueue(): ImportQueue {
     return (slots ??= createImportQueue({
       rpc: (name, args) => backend!.rpc(name, args),
-      // One name per tab for its life: a reload finds its own place again, her other device is another holder.
+      // One name per run of the app (a tab's life); her other device is another holder, the same device is told apart by `device`.
       holder: holderOf(import.meta.client ? window.sessionStorage : null, () => crypto.randomUUID()),
+      // The device's id outlives the app being closed: opened again here, the import takes its own place back at once.
+      device: deviceOf(import.meta.client ? window.localStorage : null, () => crypto.randomUUID()),
       onStatus: (status) => {
         queued.value = status
       },
     }))
   }
-  // The app comes back to the front: the queue asks (or beats) now, a sleeping phone may have lost its place.
-  if (import.meta.client) document.addEventListener('visibilitychange', () => !document.hidden && slots?.nudge())
+  // The app comes back to the front: the queue asks (or beats) now, a sleeping phone may have lost its place. Going to the
+  // background, what the lookups found is kept at once (not only every 25 rows): the app may not come back before it is closed.
+  if (import.meta.client)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) slots?.nudge()
+      else if (phase.value === 'matching') keepMatches()
+    })
 
   // ------------------------------------------------------------------ preview
 
@@ -508,11 +541,14 @@ export const useImportStore = defineStore('import', () => {
     }, 5000)
   }
 
-  function reset() {
+  /** `keepFile`: the member changed, or a new file is being chosen: the kept file stays (it is the member's, not this screen's). */
+  function reset({ keepFile: keepKept = false }: { keepFile?: boolean } = {}) {
     // Aborting the lookup also leaves the line when it is still waiting; a held slot is given up.
     lookup?.abort()
     lookup = null
     void slots?.release()
+    if (!keepKept) forgetFile()
+    readFile = null
     stopFill()
     stopWatching()
     stopChoosing()
@@ -583,6 +619,7 @@ export const useImportStore = defineStore('import', () => {
     settle(looking)
     stopWatching()
     keepMatches()
+    forgetFile()
     fill?.holdSearch(false)
     phase.value = 'preview'
   }
@@ -591,15 +628,18 @@ export const useImportStore = defineStore('import', () => {
   async function choose(file: File) {
     const repo = importer()
     if (!repo || !catalogue || phase.value === 'importing') return
-    reset()
+    reset({ keepFile: true })
     fileName.value = file.name
     phase.value = 'reading'
 
     let parsed: ImportFile
+    let bytes: ArrayBuffer
     try {
+      bytes = await file.arrayBuffer()
       // Whichever supported app wrote it: told by its header (data/import/detect.ts).
-      parsed = parseExport(decodeExport(new Uint8Array(await file.arrayBuffer())), isoDay())
+      parsed = parseExport(decodeExport(new Uint8Array(bytes)), isoDay())
     } catch (error) {
+      forgetFile()
       if (error instanceof MissingColumnsError) fileErrorDetail.value = { source: error.source, columns: error.missing }
       fileError.value =
         error instanceof NotACsvFileError
@@ -614,6 +654,7 @@ export const useImportStore = defineStore('import', () => {
     }
     source.value = parsed.source
     if (!parsed.books.length) {
+      forgetFile()
       fileError.value = 'empty'
       phase.value = 'pick'
       return
@@ -626,6 +667,9 @@ export const useImportStore = defineStore('import', () => {
       phase.value = 'pick'
       return
     }
+    // Kept from here until the lookups end: an app closed meanwhile finds its file again (`resume`).
+    readFile = { name: file.name, bytes }
+    keepFile(readFile)
     importedBefore = keys.data
     owned = libraryIndex(library)
     ownedUnderAnyEdition = libraryTitleIndex(library, keys.data)
@@ -671,57 +715,63 @@ export const useImportStore = defineStore('import', () => {
     const todo = () => pending.filter(({ index }) => !found.has(index))
     let foundBefore = 0
     const queue = slotQueue()
-    let outcome: 'finished' | 'cancelled'
+    let outcome: 'finished' | 'cancelled' = 'finished'
     try {
-      outcome = await runWithSlot(queue, {
-        rows: () => todo().length,
-        signal: controller.signal,
-        // Nothing is being looked up while she waits for a turn: no stall to watch for.
-        onWait: stopWatching,
-        onTurn() {
-          // Her turn. The lookups start, and so does the cover fill (its Open Library asks for the rows kept from before too).
-          if (!fill) {
-            startFill()
-            for (const index of keptRows) wantCover(index)
-          }
-          foundBefore = found.size
-          watchForStall()
-        },
-        async run(signal) {
-          const rest = todo()
-          try {
-            await repo.match(
-              rest.map(({ book }) => book),
-              {
-                signal,
-                onEdition(index, edition) {
-                  const at = rest[index]!.index
-                  editions.value[at] = edition
-                  verdicts.value[at] = verdictOf(parsed.books[at]!, edition)
-                  if (!found.has(at)) {
-                    found.add(at)
-                    progress.done++
-                    // The others in line see how far she is.
-                    queue.progress(found.size - foundBefore)
-                  }
-                  remember(parsed.books[at]!.key, edition)
-                  answered()
-                  version.value++
-                  // An identified row without a cover is looked at in the background, while the lookup goes on.
-                  wantCover(at)
+      /** Her turn (or nothing to wait for): the cover fill starts, with its Open Library asks for the rows kept from before too. */
+      const begin = () => {
+        if (fill) return
+        startFill()
+        for (const index of keptRows) wantCover(index)
+      }
+      // Everything already answered (a file looked up before): no place in line for nothing.
+      if (!todo().length) begin()
+      else {
+        outcome = await runWithSlot(queue, {
+          rows: () => todo().length,
+          signal: controller.signal,
+          // Nothing is being looked up while she waits for a turn: no stall to watch for.
+          onWait: stopWatching,
+          onTurn() {
+            begin()
+            foundBefore = found.size
+            watchForStall()
+          },
+          async run(signal) {
+            const rest = todo()
+            try {
+              await repo.match(
+                rest.map(({ book }) => book),
+                {
+                  signal,
+                  onEdition(index, edition) {
+                    const at = rest[index]!.index
+                    editions.value[at] = edition
+                    verdicts.value[at] = verdictOf(parsed.books[at]!, edition)
+                    if (!found.has(at)) {
+                      found.add(at)
+                      progress.done++
+                      // The others in line see how far she is.
+                      queue.progress(found.size - foundBefore)
+                    }
+                    remember(parsed.books[at]!.key, edition)
+                    answered()
+                    version.value++
+                    // An identified row without a cover is looked at in the background, while the lookup goes on.
+                    wantCover(at)
+                  },
+                  onSecondPass(done, total) {
+                    secondPass.value = { done, total }
+                    answered()
+                  },
                 },
-                onSecondPass(done, total) {
-                  secondPass.value = { done, total }
-                  answered()
-                },
-              },
-            )
-          } catch (error) {
-            if (isAbort(error)) throw error
-            // Whatever went wrong, the lookup ends: what was found stands, the rest is the file's own.
-          }
-        },
-      })
+              )
+            } catch (error) {
+              if (isAbort(error)) throw error
+              // Whatever went wrong, the lookup ends: what was found stands, the rest is the file's own.
+            }
+          },
+        })
+      }
     } catch {
       // Whatever went wrong, the lookups end in the preview with what was found: the queue is never what stops an import.
       outcome = controller.signal.aborted ? 'cancelled' : 'finished'
@@ -734,6 +784,8 @@ export const useImportStore = defineStore('import', () => {
     settle(pending)
     stopWatching()
     keepMatches()
+    // The lookups are done: the file is only kept again if she presses Import (a write that is cut off).
+    forgetFile()
     fill?.holdSearch(false)
     phase.value = 'preview'
   }
@@ -879,6 +931,8 @@ export const useImportStore = defineStore('import', () => {
     const repo = importer()
     if (!repo || phase.value !== 'preview') return
     stopChoosing()
+    // The write is quick but not instant: a closed app picks the file up again (`resume`) and comes back to the preview.
+    keepFile(readFile)
     // Pressed while covers are still being asked for: a short grace, then the write takes what is there.
     phase.value = 'importing'
     progress.total = toImport.value.length
@@ -922,6 +976,8 @@ export const useImportStore = defineStore('import', () => {
     stopFill()
     if (written.error) writeError.value = written.error
     else if (import.meta.client) clearMatches(window.localStorage)
+    forgetFile()
+    readFile = null
     phase.value = 'done'
     // Home stops offering the import to her (utils/importHint.ts).
     if (import.meta.client && session.member && outcomes.value.some((outcome) => outcome.outcome === 'added' || outcome.outcome === 'imported'))
@@ -931,13 +987,36 @@ export const useImportStore = defineStore('import', () => {
   }
 
   // Another member, or nobody: nothing of the last one's file stays.
+  let resuming = false
   const session = useSessionStore()
   watch(
     () => session.member?.id,
     (now, before) => {
-      if (now !== before) reset()
+      if (now === before) return
+      reset({ keepFile: true })
+      void resume(now)
     },
+    { immediate: true },
   )
+
+  /**
+   * The app was closed while an import's lookups ran: the file is still here (data/importFile.ts), so it is read as if
+   * she had chosen it again. The books the lookups already found are kept (`utils/importMatches.ts`), so only the rest
+   * takes a place in line. Only when nothing else is going on in this store.
+   */
+  async function resume(memberId: string | undefined) {
+    if (!memberId || !import.meta.client || resuming || phase.value !== 'pick') return
+    resuming = true
+    try {
+      const kept = await files().read(memberId)
+      if (!kept || session.member?.id !== memberId || phase.value !== 'pick') return
+      await choose(new File([kept.bytes], kept.name, { type: 'text/csv' }))
+    } catch {
+      // Nothing kept, or storage that would not answer: she chooses the file again, as before.
+    } finally {
+      resuming = false
+    }
+  }
 
   const added = computed(() => outcomes.value.filter((outcome) => outcome.outcome === 'added').length)
   const kept = computed(
@@ -958,6 +1037,10 @@ export const useImportStore = defineStore('import', () => {
       .sort((a, b) => Number(Boolean(b.coverUrl)) - Number(Boolean(a.coverUrl)))
       .slice(0, 5)
   })
+  /** What the rest of the app says about the import while it runs (components/shell/ImportStatus.vue). */
+  const ambient = computed(() =>
+    importAmbient({ phase: phase.value, queued: queued.value, progress, coverProgress: coverProgress.value, added: added.value }),
+  )
   /** Rows the import did not reach (a call failed or the connection went). */
   const notReached = computed(() => (phase.value === 'done' ? Math.max(0, progress.total - outcomes.value.length) : 0))
 
@@ -992,6 +1075,7 @@ export const useImportStore = defineStore('import', () => {
     choosingBook,
     progress,
     queued,
+    ambient,
     secondPass,
     coverProgress,
     stalled,
