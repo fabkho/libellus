@@ -10,7 +10,11 @@
  * The answer is handed back as it came (status, body, `content-type`, `Retry-After`): the caller
  * parses what it parsed before the function was in between.
  */
-export const REQUEST_TIMEOUT_MS = 12_000
+/**
+ * Open Library answers in 0.5–1.3 s (an occasional slow one is transient), so 10 s is a wide margin, and it
+ * leaves the import's 15 s call deadline room for one retry through the function (10 s + backoff + ~1 s).
+ */
+export const REQUEST_TIMEOUT_MS = 10_000
 /** At most three requests a second per running instance (the identified tier). */
 export const MIN_INTERVAL_MS = 340
 export const MAX_RETRY_AFTER_MS = 30_000

@@ -40,7 +40,7 @@ only Goodreads knows them.
 
 - **The import's Open Library goes through our own server** (later, same fix series; `supabase/functions/openlibrary`,
   `web/app/data/openLibraryProxy.ts`): identified to Open Library (its published limits are 1 request a second
-  unidentified, 3 identified), about 3 requests a second, falling back to direct at 1/s when the function fails.
+  unidentified, 3 identified), about 3 requests a second, falling back to direct at 1/s after 3 failures in a row (one timeout is retried through the function), and back to the function after 60 s.
   `web/scripts/import-quality.ts` measures either way (`LIBELLUS_IMPORT_OPENLIBRARY=proxy|direct`); details:
   `supabase/functions/openlibrary/README.md`.
 - **One rule for "the same book"** (`data/import/editions.ts`): `titleForms`/`sameTitle` (full title, main title
