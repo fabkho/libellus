@@ -6,7 +6,7 @@
 // with its own test IDs (`testid`) and two slots around the list: `top`, above
 // the rows (the owner's row of that year's Books), and `foot`, under them.
 // A Book opened from it and Back from there: the sheet is open again, as it was
-// left, which `restore` says (components/ui/Sheet.vue).
+// left, which `restore` says (`UiSheet`).
 //
 // The one sheet for a list of Books behind a figure (the Profile's, a year in review's, a member's and Home's
 // tally): a header slot (`top`) and a footer (`foot`) around the rows, and the rows in pages. The first 30 are
@@ -26,7 +26,7 @@
 // Right after one, a pill at the foot offers Undo for 5 s, as Home's card offers it (ReadingCard.vue); rated the
 // last of them away and the sheet says so (`profile.sheet.emptyRated`).
 import type { StatsRead } from '~/data/stats'
-import type { SheetRestore } from '~/composables/useSheetRestore'
+import type { SheetRestore } from '#ui/utils/sheetRestore'
 import { moreRows, nextPage, openingRows } from '~/utils/pageRows'
 import { useHistoryStore } from '~/stores/history'
 import { useStatsStore } from '~/stores/stats'

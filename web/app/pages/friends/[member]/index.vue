@@ -177,7 +177,7 @@ function scrollToHero() {
 }
 /**
  * Scrolls to the hero once the member sheet has gone. Not before: the page is locked while the sheet is on screen,
- * and the sheet steps back off its own history entry when it closes (composables/useBackDismiss.ts), whose popstate
+ * and the sheet steps back off its own history entry when it closes (useBackDismiss, the UI base's), whose popstate
  * the browser answers by putting the page back where it was. So it waits for that popstate (or, when none comes,
  * a moment) and then scrolls.
  */

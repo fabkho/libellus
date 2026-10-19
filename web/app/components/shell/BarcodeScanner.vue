@@ -14,14 +14,14 @@
 // States: asking (the permission prompt is up) · scanning · denied (explains,
 // and closes) · no camera. Offline the scan still works; it says the Library
 // is all that can be searched. Closed by its ✕, Escape, the system Back
-// (useBackDismiss.ts), a change of page, or the app going to the background —
+// (the UI base's useBackDismiss), a change of page, or the app going to the background —
 // and then the camera is off: every track is stopped. Reduce Motion: the scan
 // line holds still.
 //
 // With `pick` (a sheet's ISBN field: Change edition's "My edition isn't
 // listed") the scanner only reads: the ISBN found goes to `pick` and the
 // scanner closes, nothing is looked up. It is then a layer of its own over the
-// sheet (useModalLayer.ts), and Escape closes only the scanner.
+// sheet (the UI base's useModalLayer), and Escape closes only the scanner.
 import { tick } from '~/utils/haptics'
 import { useSearchStore } from '~/stores/search'
 

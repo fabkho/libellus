@@ -1,13 +1,14 @@
-import type { Page } from '@playwright/test'
+import { devices, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { openProfile, signedIn } from './support'
 
 /**
- * Where focus is while a sheet rises (UiSheet, utils/sheetFocus.ts): on the
- * panel at once (the trap and VoiceOver), on the `data-autofocus` field only
- * once `data-moving` has cleared, so the keyboard does not arrive mid-rise.
- * The sheet is the Profile's Name sheet (`accountName`). The rules and the
- * fallback timer are in tests/sheet-focus.test.ts.
+ * Where focus is while a sheet rises (the UI base's UiSheet and utils/sheetFocus.ts): on Android and the
+ * desktop on the panel at once (the trap and VoiceOver), on the `data-autofocus` field only once
+ * `data-moving` has cleared, so the keyboard does not arrive mid-rise. On an iPhone the field takes it in
+ * the opening tap (`FIELD_FOCUS_AFTER_RISE.ios` false: iOS raises the keyboard only for a focus inside the
+ * tap). The sheet is the Profile's Name sheet (`accountName`). The rules and the fallback timer are the
+ * base's tests (tests/sheet-focus.test.ts in fabkho/ui).
  */
 
 /** Records every focus move with whether the panel was still moving at that moment. */
@@ -29,8 +30,9 @@ async function recordFocus(page: Page) {
 const focusLog = (page: Page) =>
   page.evaluate(() => (window as unknown as { __focusLog: { target: string | null; moving: boolean }[] }).__focusLog)
 
-test.describe('a rising sheet, motion on', () => {
-  test.use({ reducedMotion: 'no-preference' })
+test.describe('a rising sheet on Android, motion on', () => {
+  // A Pixel's browser: a device whose field waits for the rise (the flows' WebKit is an iPhone, whose field does not).
+  test.use({ userAgent: devices['Pixel 7'].userAgent, reducedMotion: 'no-preference' })
 
   test('the panel holds focus while it rises, the field takes it after data-moving clears', async ({ page }) => {
     await signedIn(page)
@@ -81,6 +83,26 @@ test.describe('a rising sheet, motion on', () => {
     await page.waitForTimeout(900)
     await expect(page.getByTestId('accountName.input')).toHaveCount(0)
     await expect(page.locator('input:focus')).toHaveCount(0)
+  })
+})
+
+test.describe('a rising sheet on an iPhone, motion on', () => {
+  test.use({ reducedMotion: 'no-preference' })
+
+  test('the field takes focus in the opening tap, while the sheet still rises', async ({ page }) => {
+    await signedIn(page)
+    await openProfile(page)
+    await recordFocus(page)
+
+    await page.getByTestId('profile.name').click()
+    const sheet = page.getByTestId('accountName')
+    await expect(sheet).toHaveAttribute('data-moving', 'true')
+    await expect(page.getByTestId('accountName.input')).toBeFocused()
+
+    // The field was the first thing in the sheet to take focus, and it took it during the rise.
+    const log = (await focusLog(page)).filter((entry) => entry.target?.startsWith('accountName'))
+    expect(log[0]?.target).toBe('accountName.input')
+    expect(log[0]?.moving).toBe(true)
   })
 })
 

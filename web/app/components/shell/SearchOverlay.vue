@@ -9,7 +9,7 @@
 // then the slot shows a line saying search is coming.
 //
 // Closed by Cancel, a tap on the page behind, swiping the palette down, Escape,
-// the system Back (Android's back gesture, useBackDismiss.ts), or going to
+// the system Back (Android's back gesture, the UI base's useBackDismiss), or going to
 // another page.
 //
 // Motion (docs/MOTION.md, Search morph): the tab bar's capsule turns into the

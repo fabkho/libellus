@@ -2,7 +2,7 @@ import type { ProfileSheet } from '~/stores/stats'
 
 /**
  * The sheet of a month's books or a star row's, on the Profile or a year in
- * review (issue #78). Any change of page closes a sheet (components/ui/Sheet.vue);
+ * review (issue #78). Any change of page closes a sheet (`UiSheet`, the UI base's);
  * this one comes back, as it was left, when the member returns from a Book
  * opened from it (composables/useSheetRestore.ts).
  *

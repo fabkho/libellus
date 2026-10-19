@@ -207,7 +207,7 @@ export async function openProfile(page: Page) {
 /**
  * Opens an address the way a member types it in, once the page she is on has come
  * to rest: the app up and nothing moving (`untilStill`), and no sheet's own history
- * entry left on top of the page's (composables/useBackDismiss.ts). A sheet that has
+ * entry left on top of the page's (the UI base's useBackDismiss, `history.state.uiLayer`). A sheet that has
  * just closed steps back off its entry a moment later, and WebKit loses a page load
  * that starts during that step back: `load` never comes, or its driver reports an
  * internal error (seen in CI).
@@ -229,7 +229,7 @@ export async function openProfile(page: Page) {
  */
 export async function goto(page: Page, url: string) {
   await untilStill(page)
-  const layers = () => page.evaluate(() => (history.state as { libellusLayer?: number } | null)?.libellusLayer ?? 0)
+  const layers = () => page.evaluate(() => (history.state as { uiLayer?: number } | null)?.uiLayer ?? 0)
   await expect.poll(layers).toBe(0)
   await page.waitForLoadState('networkidle')
   await page.goto(url)

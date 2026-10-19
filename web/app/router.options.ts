@@ -1,10 +1,9 @@
 import type { RouterConfig } from '@nuxt/schema'
-import { createWebHistory, START_LOCATION, type RouteLocationNormalized } from 'vue-router'
+import { START_LOCATION, type RouteLocationNormalized } from 'vue-router'
 import { useNuxtApp, useRouter } from '#imports'
 import { bookPageOf } from '~/utils/bookPageKey'
 import { isBookPath } from '~/utils/flight'
 import { tabPlaces, untilReachable, type PageWatch, type ScrollPlace } from '~/utils/tabPlaces'
-import { keepsForeignLayers, listenForBack } from '~/composables/useBackDismiss'
 import { knownSignedOut, signedOutDestination } from '~/utils/signedOutRoute'
 
 // Where a page opens (Nuxt's own scroll behaviour, plus the tabs' places):
@@ -64,13 +63,10 @@ export default {
     }
     return routes.map((route) => ({ ...route, beforeEnter: [early, ...(route.beforeEnter ? [route.beforeEnter].flat() : [])] }))
   },
-  // Nuxt's own history, with the Back that closes a sheet listening before the
-  // router does (composables/useBackDismiss.ts), and that lets a Back off another
-  // layer's entry (Regal's row, a Book broken out) pass the router by.
-  history: (base) => {
-    listenForBack()
-    return keepsForeignLayers(createWebHistory(base))
-  },
+  // No `history` here: the shared UI base's router.options.ts brings Nuxt's own history with the Back that closes
+  // a sheet listening before the router does, and that lets a Back off another layer's entry (Regal's row, a Book
+  // broken out) pass the router by (its composables/useBackDismiss.ts). Nuxt merges the two files, the base's first;
+  // a second history here would put a second Back listener beside it.
   scrollBehavior(to, from, savedPosition) {
     // Same page (a query or hash change): stay put.
     if (to.path === from.path) return false

@@ -13,12 +13,12 @@
 // whoever has no row, and for the owner while her row is not there: the file
 // has none of that year's Books, or could not be read).
 import { finishedIn } from '~/data/stats'
-import type { SheetRestore } from '~/composables/useSheetRestore'
+import type { SheetRestore } from '#ui/utils/sheetRestore'
 import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
 
 const open = defineModel<boolean>('open', { required: true })
-// Back from a Book opened from it: open again as it was left (components/ui/Sheet.vue).
+// Back from a Book opened from it: open again as it was left (`UiSheet`'s `restore`).
 const props = withDefaults(defineProps<{ year: number; restore?: SheetRestore | null }>(), { restore: null })
 
 const { t } = useI18n()

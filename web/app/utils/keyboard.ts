@@ -1,6 +1,6 @@
 /**
  * The geometry behind following the on-screen keyboard (composables/useKeyboardInset.ts,
- * components/ui/Sheet.vue, components/shell/SearchOverlay.vue). Pure, so a native port copies it and the tests pin it.
+ * components/shell/SearchOverlay.vue; the UI base's UiSheet has its own copy). Pure, so a native port copies it and the tests pin it.
  *
  * Two models meet here. iOS lays the keyboard over the page: the layout viewport
  * (where `position: fixed` things sit) keeps its height and only the visual
