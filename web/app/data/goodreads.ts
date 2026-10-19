@@ -117,6 +117,7 @@ export function createGoodreads(client: FunctionsClient, { online = () => true }
       try {
         const { data, error } = await client.functions.invoke(GOODREADS_FUNCTION, { body })
         const answer = data as Answer | null
+        // `unsure` (the title search answered an empty list: unknown book or a soft throttle, nothing cached) is not "no rating" either.
         if (error || !answer || (answer.status !== 'found' && answer.status !== 'not_found'))
           return { data: null, error: 'unavailable' }
         if (answer.status === 'not_found') return { data: null, error: null }

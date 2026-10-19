@@ -12,7 +12,7 @@
  *   200 { status: 'found', goodreadsId, rating, ratingsCount, reviewsCount, matchedBy, checkedAt }
  *   200 { status: 'not_found', checkedAt }
  *   200 { status: 'blocked', retryAfterSeconds }
- *   200 { status: 'unsure', retryAfterSeconds }   (a cover request only: every search answered an empty list)
+ *   200 { status: 'unsure', retryAfterSeconds }   (every search answered an empty list: a cover request's, or the rating's title search)
  *   400 { error: 'isbn_invalid' | 'book_unidentified' } · 401 { error: 'unauthorized' }
  *   413 { error: 'payload_too_large' } · 429 { error: 'rate_limited' }
  *   503 { error: 'busy' } · 502 { error: 'goodreads_unavailable' }
@@ -28,7 +28,9 @@
  * stored under the title key and never under the ISBN: the title comes from the
  * caller, so it must not decide what every other member sees for that ISBN. A
  * failure is never stored. Two pages asking for the same Book at once share one
- * lookup. A body over 16 KB is refused, each author is cut to 200 characters,
+ * lookup. **An empty list is no miss on the rating route either:** `auto_complete` answers `[]` for an unknown book and when it
+ * throttles softly alike, so a title search that answered `[]` is `unsure` (answered, never stored); only a list with books in
+ * it, none of them this Book's, is a miss (an ISBN's 404 from `review_counts` stays a miss). A body over 16 KB is refused, each author is cut to 200 characters,
  * a title key over 400 is not asked, and a member is held to a number of calls
  * a minute.
  *
@@ -134,11 +136,17 @@ export const BUCKETS = {
 } as const
 export type Bucket = keyof typeof BUCKETS
 
-/** Searches Goodreads for a Book by its title and first author. */
-async function byTitle(book: LookupBook, goodreads: Goodreads): Promise<GoodreadsAnswer> {
+/**
+ * Searches Goodreads for a Book by its title and first author. An empty list is `unsure`, not a miss (as the cover
+ * search's, cover.ts): `auto_complete` answers `[]` for an unknown book and when it throttles softly alike, and a
+ * miss is cached for a week. Only a list with books in it that none of them is this Book's is a miss.
+ */
+async function byTitle(book: LookupBook, goodreads: Goodreads): Promise<GoodreadsAnswer | Unsure> {
   const query = titleQuery(book)
   if (!query || !book.authors.length) return { status: 'not_found' }
-  const match = matchTitle(book, await goodreads.autoComplete(query))
+  const results = await goodreads.autoComplete(query)
+  if (!results.length) return { status: 'unsure' }
+  const match = matchTitle(book, results)
   return match ? foundByTitle(match) : { status: 'not_found' }
 }
 
@@ -290,13 +298,16 @@ export function createHandler(deps: {
    * An answer from the cache while it is fresh, else one Goodreads gives, stored with its time. A found
    * row under an ISBN that a title search made (the old code wrote those) counts as no row.
    */
-  async function cached(key: CacheKey, ask: () => Promise<GoodreadsAnswer>): Promise<CachedAnswer> {
+  async function cached(key: CacheKey, ask: () => Promise<GoodreadsAnswer | Unsure>): Promise<CachedAnswer | Unsure> {
     const row = await deps.cache.get(key)
     const usable = row && !('isbn13' in key && row.status === 'found' && row.matchedBy !== 'isbn')
     if (usable && now() - Date.parse(row.checkedAt) < (row.status === 'found' ? MAX_AGE_MS : NOT_FOUND_MAX_AGE_MS)) {
       return row
     }
-    const fresh: CachedAnswer = { ...(await ask()), checkedAt: new Date(now()).toISOString() }
+    const asked = await ask()
+    // Not a miss, not a hit: stored nowhere, so the next ask goes to Goodreads again.
+    if (asked.status === 'unsure') return asked
+    const fresh: CachedAnswer = { ...asked, checkedAt: new Date(now()).toISOString() }
     try {
       await deps.cache.put(key, fresh)
     } catch (error) {
@@ -343,8 +354,8 @@ export function createHandler(deps: {
     return search.hit ? { ...foundByTitle(search.hit, true), checkedAt } : stored!
   }
 
-  async function answer(book: LookupBook, key: string | null): Promise<CachedAnswer> {
-    let miss: CachedAnswer | null = null
+  async function answer(book: LookupBook, key: string | null): Promise<CachedAnswer | Unsure> {
+    let miss: CachedAnswer | Unsure | null = null
     if (book.isbn13) {
       const isbn13 = book.isbn13
       const found = await cached({ isbn13 }, () => goodreads.reviewCounts(isbn13))

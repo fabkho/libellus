@@ -21,6 +21,10 @@
  *                                                sources have to settle every row, as for a server-side job
  *   [LIBELLUS_IMPORT_WRITE=1]                      after the lookup and the fill, write the rows as the import does (`import_books`):
  *                                                the Catalogue is filled for the next run (the throwaway member goes, the Books stay)
+ *   [LIBELLUS_IMPORT_UPGRADE=1]                    with WRITE=1: after the write, the one-time Apple cover upgrade (data/coverUpgrade.ts) works off
+ *                                                the list of the books the write added, as the app does (the same paced Apple `fetch`, 40 ISBNs a
+ *                                                batch, then a title search every 3 s); the report counts the covers (none, under and over 300 px
+ *                                                high) before and after, the Apple requests it made and its time
  *   [LIBELLUS_IMPORT_BASELINE=/path/report.json]   a previous run's report (stdout JSON): the report then says how many
  *                                                external calls this run saved against it
  *   [LIBELLUS_IMPORT_OPENLIBRARY=proxy|direct]   the import's Open Library through the `openlibrary` function (the
@@ -41,6 +45,9 @@ import * as bookImport from '../app/data/bookImport'
 import { createBookImport, editionChoices, needsLook, pacedFetch, type Edition, type ImportRow, type RowOutcome } from '../app/data/bookImport'
 import { createCatalogueSearch } from '../app/data/catalogueSearch'
 import { createCoverFill, mergeCover } from '../app/data/coverFill'
+import { runCoverUpgrade, UPGRADE_MIN_HEIGHT, type UpgradeCounters } from '../app/data/coverUpgrade'
+import { createUpgradeCatalogue } from '../app/data/coverUpgradeCatalogue'
+import { importedEntryIds, makeUpgradeList } from '../app/utils/coverUpgradeList'
 import { createDnb, DNB_IMPORT_GAP_MS } from '../app/data/dnb'
 import { createGoodreadsCover, type GoodreadsCoverQuery } from '../app/data/goodreadsCover'
 import { verifyCover, type ProbedImage } from '../app/data/covers'
@@ -62,6 +69,7 @@ process.env.LIBELLUS_TEST_RUN ??= 'quality'
 const fillSeconds = Number(process.env.LIBELLUS_IMPORT_FILL_SECONDS ?? 600)
 const openPicker = process.env.LIBELLUS_IMPORT_PICKER === '1'
 const writeRows = process.env.LIBELLUS_IMPORT_WRITE === '1'
+const upgradeCovers = writeRows && process.env.LIBELLUS_IMPORT_UPGRADE === '1'
 const [outageEvery, outageFor] = (process.env.LIBELLUS_IMPORT_APPLE_OUTAGE ?? '').split(':').map(Number)
 /** Apple off: no request leaves, and Apple's own empty answer comes back, so nothing reads it as a refusal. */
 const appleOff = (process.env.LIBELLUS_IMPORT_APPLE ?? 'on').trim().toLowerCase() === 'off'
@@ -357,6 +365,7 @@ fill.stop()
 
 // The import's write (stores/import.ts `importNow`): the Books of the rows enter the Catalogue, so the next run asks it first.
 const written: Record<string, number> = {}
+const writtenOutcomes: RowOutcome[] = []
 if (writeRows) {
   const pending: ImportRow[] = books.map((book, index) => ({
     key: book.key,
@@ -374,10 +383,75 @@ if (writeRows) {
     coverFrom: editions[index]!.coverFrom ?? null,
     coverFilled: editions[index]!.filled,
   }))
-  const outcomes: RowOutcome[] = []
+  const outcomes = writtenOutcomes
   const result = await repository.write(pending, { onWritten: (chunk) => void outcomes.push(...chunk) })
   if (result.error) console.error(`import-quality: the write stopped: ${result.error}`)
   for (const { outcome } of outcomes) written[outcome] = (written[outcome] ?? 0) + 1
+}
+
+// ----------------------------------------------- the one-time Apple cover upgrade (stores/import.ts `startUpgrade`)
+
+/** The covers of the books the import added, by how high they are: counts only. */
+async function coverCounts(entryIds: string[]) {
+  const covers = await sql<{ cover_url: string | null }>(
+    'select b.cover_url from public.library_entries e join public.books b on b.id = e.book_id where e.id = any($1)',
+    [entryIds],
+  )
+  const heights: (number | null)[] = []
+  let next = 0
+  await Promise.all(
+    Array.from({ length: 8 }, async () => {
+      for (let row = covers[next++]; row; row = covers[next++]) {
+        if (!row.cover_url) heights.push(null)
+        else heights.push((await probe(row.cover_url).catch(() => null))?.height ?? 0)
+      }
+    }),
+  )
+  return {
+    books: heights.length,
+    withoutCover: heights.filter((height) => height === null).length,
+    under300: heights.filter((height) => height !== null && height < UPGRADE_MIN_HEIGHT).length,
+    atLeast300: heights.filter((height) => height !== null && height >= UPGRADE_MIN_HEIGHT).length,
+  }
+}
+let upgradeReport: Record<string, unknown> | null = null
+if (upgradeCovers) {
+  const upgradeStart = seconds()
+  const entryIds = importedEntryIds(writtenOutcomes, new Set())
+  const db = createUpgradeCatalogue(client)
+  const before = await coverCounts(entryIds)
+  const list = makeUpgradeList('quality', (await db.rowsForEntries(entryIds)) ?? [])
+  const appleBefore = external.apple
+  let counters: UpgradeCounters | null = null
+  let run: { done: boolean; paused: boolean } | null = null
+  const worked = { asked: 0 }
+  if (list) {
+    run = await runCoverUpgrade(list, {
+      search: searcher,
+      probe,
+      currentCovers: db.currentCovers,
+      write: db.write,
+      hostBlockedFor: (host) => live.blockedFor(host),
+    })
+    counters = list.counters
+    worked.asked = list.rows.filter((row) => row.result).length
+  }
+  const upgradeSeconds = seconds() - upgradeStart
+  const after = await coverCounts(entryIds)
+  // A second run over the same list: nothing may be asked.
+  const appleAfter = external.apple
+  const second = list ? await runCoverUpgrade(list, { search: searcher, probe, currentCovers: db.currentCovers, write: db.write, hostBlockedFor: (host) => live.blockedFor(host) }) : null
+  upgradeReport = {
+    listed: list?.rows.length ?? 0,
+    run,
+    counters,
+    results: list ? Object.fromEntries(['upgraded', 'none', 'skipped', 'open'].map((name) => [name, list.rows.filter((row) => (row.result ?? 'open') === name).length])) : null,
+    appleRequests: appleAfter - appleBefore,
+    secondRun: { appleRequests: external.apple - appleAfter, run: second },
+    seconds: upgradeSeconds,
+    before,
+    after,
+  }
 }
 
 // ------------------------------------------------------------------------------------- causes, per row
@@ -456,6 +530,7 @@ const report = {
       }
     : null,
   written: writeRows ? written : null,
+  upgrade: upgradeReport,
   openlibrary: { routed: routed ? 'proxy' : 'direct', fallback: proxy?.fallbackActive() ?? false, ...(proxy ? { function: { ...proxy.stats(), directSeconds: Math.round(proxy.stats().directMs / 100) / 10 } } : {}) },
   appleOutage: outageEvery ? `${outageFor}s every ${outageEvery}s` : null,
   seconds: { lookup: lookupSeconds, total: seconds() },

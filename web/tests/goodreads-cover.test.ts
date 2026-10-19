@@ -118,17 +118,21 @@ describe('the Goodreads stage of the cover fill', () => {
     expect(fill.progress()).toEqual({ total: 1, done: 1, found: 1 })
   })
 
-  it('comes after the Apple search lane: it is held until the lane is released', async () => {
-    const { fill, asked } = setup()
+  it('has its own lane: it does not wait for the Apple search lane (held until the lookups end) nor for its pace', async () => {
+    const { fill, found, asked } = setup()
     fill.add(wanted(1))
-    await fill.settled(30)
-    expect(asked).toEqual([])
+    // The Apple lane is still held; Goodreads asks anyway and the row has its cover already.
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(asked).toHaveLength(1)
+    expect(found['goodreads:1']).toMatchObject({ source: 'goodreads' })
+    // The row is answered once Apple's lane is through with it as well.
+    expect(fill.progress()).toEqual({ total: 1, done: 0, found: 1 })
     fill.holdSearch(false)
     await fill.settled(1000)
-    expect(asked).toHaveLength(1)
+    expect(fill.progress()).toEqual({ total: 1, done: 1, found: 1 })
   })
 
-  it('is asked only when nothing else found a cover: Open Library, a sibling, the work and the ebook win', async () => {
+  it('is asked only for a row with no cover after the lookups (Open Library, a sibling, the work); the ebook found later still wins', async () => {
     const olFetch: FetchLike = async (url) =>
       url.includes('/api/books')
         ? ({ ok: true, status: 200, json: async () => ({ 'ISBN:9783453000019': { cover: { large: OL(7) } } }) } as never)
@@ -148,9 +152,11 @@ describe('the Goodreads stage of the cover fill', () => {
     expect(found['goodreads:1']?.source).toBe('openlibrary')
     // A sibling edition's cover is the fallback: the row has a cover, Goodreads is not asked.
     expect(found['goodreads:2']?.kind).toBe('sameWork')
-    expect(found['goodreads:3']?.source).toBe('search')
-    expect(asked).toEqual([])
-    expect(fill.calls().goodreads).toBe(0)
+    // The row nothing else covered asked Goodreads in its own lane, at once; Apple's ebook, found after, replaced it.
+    expect(found['goodreads:3']).toMatchObject({ source: 'search', kind: 'ebook' })
+    expect(asked.map((query) => query.goodreadsBookId)).toEqual(['3'])
+    expect(fill.calls().goodreads).toBe(1)
+    expect(fill.progress()).toEqual({ total: 3, done: 3, found: 3 })
   })
 
   it('asks for a Goodreads row whatever its Book is, a Manual book (no ISBN, nothing found) included', async () => {
@@ -337,12 +343,13 @@ describe('the Goodreads stage of the cover fill', () => {
     expect(Object.keys(found)).toEqual(['goodreads:5'])
   })
 
-  it('stops with the fill and honours the budget', async () => {
+  it('stops with the fill and honours its own budget (the time the lane has worked, not Apple\'s)', async () => {
     const time = clock()
     let calls = 0
     const { fill } = setup({
       ...time,
-      budgetMs: 2000,
+      budgetMs: 1_000_000,
+      goodreadsBudgetMs: 2000,
       searchGapMs: 0,
       goodreads: async (query) => {
         calls++
@@ -363,6 +370,59 @@ describe('the Goodreads stage of the cover fill', () => {
     stopped.fill.holdSearch(false)
     await stopped.fill.settled(50)
     expect(stopped.asked).toEqual([])
+  })
+
+  it('is not behind Apple\'s budget: an Apple lane that spent its 600 s leaves Goodreads its own', async () => {
+    const time = clock()
+    const { fill, asked } = setup({
+      ...time,
+      budgetMs: 1,
+      // Each Apple search takes longer than its whole budget: the lane is given up after the first.
+      search: { searchCovers: async () => (time.wait(10_000), { results: [], pending: false, failed: false }) },
+    })
+    for (const n of [1, 2, 3, 4, 5]) fill.add(wanted(n))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(asked.map((query) => query.goodreadsBookId).sort()).toEqual(['1', '2', '3', '4', '5'])
+    expect(fill.progress()).toEqual({ total: 5, done: 5, found: 5 })
+  })
+
+  it('idle time with nothing to ask is not spent: rows that arrive late are still asked', async () => {
+    const time = clock()
+    const { fill, asked } = setup({ ...time, goodreadsBudgetMs: 10_000 })
+    fill.add(wanted(1))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    time.wait(3_600_000)
+    fill.add(wanted(2))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(asked.map((query) => query.goodreadsBookId)).toEqual(['1', '2'])
+  })
+
+  it('takes the row out of the Goodreads queue unasked when Apple found its cover first', async () => {
+    const hit = { results: [{ book: snapshot({ title: 'Der Roman 2', coverUrl: APPLE(2), source: 'apple' }) }], pending: false, failed: false }
+    let appleAnswered!: () => void
+    const answered = new Promise<void>((resolve) => (appleAnswered = resolve))
+    const { fill, found, asked } = setup({
+      searchGapMs: 0,
+      // The first Goodreads ask is slow (row 1); Apple has found row 2 by the time it is over.
+      goodreads: async (query) => (asked.push(query), await answered, GR(Number(query.goodreadsBookId))),
+      search: {
+        searchCovers: async (query: string) => {
+          if (!query.includes('Roman 2')) return { results: [], pending: false, failed: false }
+          setTimeout(appleAnswered, 0)
+          return hit
+        },
+      } as never,
+    })
+    fill.holdSearch(false)
+    fill.add(wanted(1))
+    fill.add(wanted(2))
+    await fill.settled(1000)
+    expect(asked.map((query) => query.goodreadsBookId)).toEqual(['1'])
+    expect(found['goodreads:2']).toMatchObject({ source: 'search', kind: 'ebook' })
+    expect(found['goodreads:1']).toMatchObject({ source: 'goodreads' })
+    expect(fill.progress()).toEqual({ total: 2, done: 2, found: 2 })
   })
 
   it('an address that is no cover (a stray pixel, one flat colour) is passed over', async () => {

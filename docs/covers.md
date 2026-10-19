@@ -157,8 +157,9 @@ batches (by cover id, which has no per-address limit) is the edition itself; a s
 search and Open Library's search by title and author (the work's other editions) are reported at once, as
 another edition's cover; then a paced Apple Books search (one request every 3 s, the row's storefront first and
 the other once the first has been through every row; Apple's limit is ~20 a minute, measured) looks for the
-work's **ebook**, which replaces the other edition's cover when it is found. All under a circuit breaker and a
-10-minute budget; the preview and the write never wait for it, and a row that finds nothing stays under "Needs a
+work's **ebook**, which replaces the other edition's cover when it is found. A row of a Goodreads file with no cover by then goes
+to Goodreads in **its own lane** at the same time (own pace, own budget: *Goodreads, the last resort*). All under a circuit breaker and
+budgets (Apple's 10 minutes, Goodreads' 15 minutes of work); the preview and the write never wait for it, and a row that finds nothing stays under "Needs a
 look" (a row shown without a cover is never "probably fine": owner rule, since the import-quality fix), drawn with
 the cloth. Covers are only linked, from the hosts the Catalogue allows. Sources, terms, hit rates and the
 measurement on a real export: [plans/cover-sources.md](plans/cover-sources.md); the behaviour: `docs/parity.md`,
@@ -239,6 +240,10 @@ failure toward the lane's three, and the fill's Goodreads lane asks the row once
 `later` in a row hold the whole lane for 15 s (a throttle, not three unknown books). A genuinely unknown book therefore answers
 `unsure` twice and then shows no cover, at the price of up to 10 requests; nothing wrong is ever cached.
 
+The **rating** route has the same rule (#366): the title search behind a rating answering `[]` is `unsure` (answered, never stored, the
+rating line asks again when it is next shown), not a miss that is cached for a week; only a list with books in it, none of them the
+Book's, is `not_found`. An ISBN's own 404 from `review_counts` stays a miss.
+
 **Measured** (19 Oct 2026; one real 709-row Goodreads export, Apple off as for a server job, local stack, counts only;
 `web/scripts/import-quality.ts` with `LIBELLUS_IMPORT_APPLE=off` runs the app's own Goodreads client against the local function):
 
@@ -264,10 +269,15 @@ edition, and all 9 are the same work by a manual check (a missing leading articl
 mark spelled another way); the first version of the rule took one companion book
 ("World of …" for the book it is about) and was tightened (see above), so wrong matches stay at 0.
 
-Why last: the ranking above. The stage runs after the Apple lane and only for a row with no cover and no fallback, one
-ask every 1.6 s (the function's own limit, 40 a minute in a bucket of its own; a lookup is one call of the bucket however many
-searches it makes), under the fill's budget, given up after 3
-failures in a row. Only linked: the address is the whole of what is stored (`books.cover_url`, and `cover_url` next to the
+Why last: the ranking above (its cover is the lowest kind, so Apple's ebook replaces it and nothing is ever replaced by it). The
+stage is **its own lane**, not behind Apple's (#366): a row with no cover and no fallback once Open Library, its siblings and the
+work's other editions have been through it goes to Goodreads at once, while the Apple lane (held until the lookups end, one search
+per 3 s, a second storefront pass) goes on beside it. One ask every 1.6 s (the function's own limit, 40 a minute in a bucket of its
+own; a lookup is one call of the bucket however many searches it makes), under **its own budget**, `COVER_FILL_GOODREADS_BUDGET_MS`
+(15 minutes of work: the time the lane is asking or pacing, not idle time with nothing queued), given up after 3 failures in a row.
+A Goodreads cover found while Apple's search is still to come is shown as the row's cover (a fallback) and replaced if Apple finds
+the ebook; a row Apple covered before Goodreads' turn comes is taken out of its queue unasked. Why: in the app the lane waited behind
+Apple's two storefront passes and shared their 600 s, and asked **34 of 160** eligible rows (PR #372); alone, the same rows took 229 s. Only linked: the address is the whole of what is stored (`books.cover_url`, and `cover_url` next to the
 rating in the function's answer cache); no description, page count or rating of the hit is kept or told on this path.
 
 Flag: `GOODREADS_COVERS` in `web/app/data/coverRank.ts`, one line. `false` removes the stage and the button; no call is made.
@@ -294,6 +304,67 @@ found." a miss does. Nothing is lost: a Book whose cover came earlier keeps it (
 cache (`cover_url`) still serves what it already knows while the breaker is open. When the breaker closes, the next ask tries again.
 To switch route for good: set `GOODREADS_COVERS` to `false` (stage and button gone, no call), and, if the address host must go too, drop
 `i.gr-assets.com` from `private.cover_allowed` in a migration (as under *Terms risk*).
+
+### The Apple upgrade: one time, after an import, on the device (#366)
+
+An import ends with covers that are small (Open Library's, under 300 px high), only linked (Goodreads') or missing; Apple has
+the large ones and its limit is per address, so on the member's device it is hers alone. When the import is written
+(`stores/import.ts`, `startUpgrade`), a **work list** is made of the Catalogue Books **that import added** (outcome `added`)
+and works off in the background (`data/coverUpgrade.ts`, `runCoverUpgrade`):
+
+- **Never:** a book she held, had imported before or added herself by search, scan or Choose edition (not an `added` row of this
+  import), a row whose edition she picked in the preview, a Manual book or a book that is hers alone (`owner_id`), a book whose
+  cover is Apple's already (another member's upgrade, the check). Her entry's own cover choice is another Book and is never
+  reached: only the Catalogue Book is written.
+- **Steps:** (1) read the Catalogue's covers again (a gone Book or an Apple cover is `skipped`); (2) measure a cover that is
+  neither Apple's nor Goodreads' (a Goodreads cover counts as `COVER_HEIGHT.goodreads`, linked and never owned; no cover as 0): 300 px
+  high or more is `skipped` without asking Apple; (3) Apple **by ISBN**, 40 a request (`primeIsbns`; an ISBN the import's own
+  lookup asked already costs nothing, `primedApple`); (4) Apple **by title** for the rest, one search every 3 s (the app's Apple
+  pace), the row's storefront first, then the other, the best-fitting ebook of the same work in the book's language (`rankEditions`,
+  `languageFits`).
+- **Only larger:** the artwork is read at 600 × 900; it is taken if at least 300 px high and higher than the cover it replaces.
+- **Written** to the Catalogue Book through `fill_book_covers` (migration `20261101010000`): the item says `replaces` (the cover that
+  was seen); the Book takes the new cover only if it still has exactly that one (compare-and-swap: a cover another member put there
+  meanwhile stays, a second run changes nothing), only if the new one is Apple's artwork, only on a Catalogue Book she holds.
+- **One time, idempotent:** each row ends `upgraded`, `none` (Apple has nothing better) or `skipped` and is never asked again; a
+  list with every row ended is **dropped from the device** (`utils/coverUpgradeList.ts`): it never runs again, adding books later
+  does not restart it, only a new import makes a new list (for its own books). A second run over a list asks Apple nothing.
+- **Where the list lives: on the device** (`localStorage`, per member, next to what the import keeps of its lookups), not on the
+  server: Apple's limit is per address, so the device that ran the import is the one that asks, and nothing about it needs sharing. A
+  list is let go after 60 days. Resumable: it is saved after every batch; a closed app pauses it and the next open continues.
+- **Refusals pause quietly:** after 3 refusals in a row the run stops (the `Retry-After` is waited out between them), the list stays,
+  it is tried again after ten minutes while the app is open and on the next start. Nothing is shown.
+- **When:** only on the start screen and the summary, never during an import (Apple is needed there first); a new import stops it.
+- **Not in the progress pill (#371).** A "sharpening covers" phase would sit above the tab bar for many minutes on every screen and
+  come back after every app open, for a nicety that fails silently by design; it is not shown at all.
+- Counters (per list, summed over its resumes): asked, upgraded, no better cover, skipped, refused, and the Apple requests made.
+
+Tests: `web/tests/cover-upgrade.test.ts` (only larger, idempotence, no restart, a new import's own list, resume, refusals, pace),
+`web/tests/cover-upgrade-db.test.ts` (the real Catalogue: only the import's books, a book she added herself untouched, a second member
+finds it done, compare-and-swap), `supabase/tests/fill_book_covers_test.sql`.
+
+**Measured** (19 Oct 2026; the 709-row Goodreads export, **Apple on**, local stack, one residential address, counts only;
+`LIBELLUS_IMPORT_WRITE=1 LIBELLUS_IMPORT_UPGRADE=1 pnpm tsx scripts/import-quality.ts`). Apple refused this address early in both
+runs (from its 88th and 17th request of the lookup: a hot address), so the upgrade ran under refusals and paused; its counts are lower bounds.
+
+| | run 1 (cold Catalogue) | run 2 (same file again, Catalogue first) |
+|---|---:|---:|
+| books written (`added`) | 708 | 708 |
+| Goodreads lane: asked / found | 62 / 62 | 8 / 8 |
+| listed for the upgrade (cover not Apple's) | 501 | 486 |
+| skipped (300 px+ already, or Apple's) | 381 | 375 |
+| asked at Apple / upgraded / no better cover / still open | 54 / 3 / 1 / 116 | 192 / 49 / 36 / 26 |
+| covers 300 px+, before → after the first pass | 615 → 618 | 576 → 630 |
+| covers under 300 px, before → after | 27 → 27 | 81 → 27 |
+| books without any cover, before → after | 66 → 63 | 51 → 51 |
+| Apple requests of the first pass | 11 (paused by refusals) | 12 (paused), 126 more in the pass that followed |
+| time of the first pass | 324 s | 253 s |
+
+With Apple answering (run 2) the pass lifted 54 books from under 300 px to 300 px or more and left 27 small ones (Apple had nothing
+larger of the same work). The books without any cover stay without: they are rows no source identified, and the upgrade does not search
+Apple by the file's title for them. Under a refusing address (run 1) it does what it can and pauses. "Before → after" counts are probed
+over the network and move by a few books between runs. The Goodreads lane asked every eligible row in run 1 and found all 62 (PR #372: 34 of
+160 asked in the app).
 
 ### One merge for the facts: `mergeSources` (`data/mergeBook.ts`)
 

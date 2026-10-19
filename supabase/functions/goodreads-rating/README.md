@@ -94,7 +94,9 @@ How it answers (`handler.ts`):
    the first result whose normalised title (as given, without parentheses, or before a subtitle)
    equals the Book's, or the fuzzy rule takes (`web/app/data/titleMatch.ts`), and whose author's surname is one
    of the Book's authors' (`goodreads.ts`, `matchTitle`). No review count then. An empty list answers
-   `not_found` here (the rating line is not the cover lane: no retry).
+   `unsure` here, as on the cover route (it is the same soft throttle: an unknown book and a throttled ask look alike): nothing is
+   stored, one request, no retry (the rating line asks again the next time it is shown). Only a list with books in it, none of
+   them this Book's, is `not_found`.
 4. The answer is stored under the key it was asked with (`found` or `not_found`, with its time) and returned. A failure (Goodreads
    down, slow, refusing, garbled) is never stored: the next page view tries again.
 
