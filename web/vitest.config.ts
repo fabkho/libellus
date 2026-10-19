@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
@@ -25,6 +26,8 @@ export default defineConfig({
     alias: {
       '@': resolve('./app'),
       '~': resolve('./app'),
+      // The shared UI base, as Nuxt aliases it (its nuxt.config.ts): the checkout `UI_LAYER` names, or the package.
+      '#ui': process.env.UI_LAYER ? pathResolve(process.env.UI_LAYER) : resolve('./node_modules/@fabkho/ui'),
       // As in nuxt.config.ts: the suite exercises the client the app ships.
       '@supabase/realtime-js': resolve('./app/data/realtimeStub.ts'),
     },

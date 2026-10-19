@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { rgbaToThumbHash } from 'thumbhash'
-import { formatAuthors } from '@/utils/books'
-import { CLOTH_COUNT, NEUTRAL_GLOW, clothOf, glowOf, thumbhashDataUrl } from '@/utils/cover'
+import { CLOTH_COUNT, NEUTRAL_GLOW, clothOf, formatAuthors, glowOf } from '#ui/utils/cloth'
+import { thumbhashDataUrl } from '@/utils/thumbhash'
 import { ratingText, starFills } from '@/utils/rating'
 
 describe('a rating', () => {

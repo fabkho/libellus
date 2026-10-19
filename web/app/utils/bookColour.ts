@@ -1,6 +1,6 @@
 import { thumbHashToAverageRGBA } from 'thumbhash'
 import type { CoverColors } from '../data/books'
-import { clothOf } from './cover'
+import { clothOf } from '#ui/utils/cloth'
 
 /**
  * A Book's one colour on Your shelf (the owner's rule: "take the most common

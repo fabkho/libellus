@@ -408,10 +408,11 @@ Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app fr
 | `BookFormatChoice` | An edition's format (Change edition, "My edition isn't listed"): one row of four icon segments (hardcover, paperback, a reader for ebook, headphones) in the reader's Margins / Line spacing style — a radio group, each segment named by its format, arrow keys move it. The chosen segment widens and unfolds its name beside the icon (a grid column `0fr → 1fr` and a fade over `standard`); the others stay icons. None lit while the format is unknown. |
 | `CodeInput` | The six-digit code: one real input, six drawn cells. |
 
-Utilities that go with them: `utils/cover.ts` (`clothOf`, `glowOf`, `thumbhashDataUrl`, `coverSrc`
-— the image size to load for a cover size, from Apple's stored large URL), `utils/preload.ts`
+Utilities that go with them: the UI base's `utils/cloth.ts` (`clothOf`, `glowOf`, `formatAuthors`,
+`isBlankCover`), `utils/thumbhash.ts` (`thumbhashDataUrl`, decoded once per hash), `utils/cover.ts`
+(`coverSrc` — the image size to load for a cover size, from Apple's stored large URL), `utils/preload.ts`
 (`preloadImage`, the first covers of a list),
-`utils/rating.ts` (`ratingText`, `starFills`), `utils/books.ts` (`formatAuthors`),
+`utils/rating.ts` (`ratingText`, `starFills`),
 `utils/dates.ts`, all framework-free and tested in `web/tests/cover-and-rating.test.ts`.
 
 Writing a component: Tailwind utilities from the generated theme first; where a utility cannot say

@@ -7,7 +7,8 @@ import { thumbHashToDataURL } from 'thumbhash'
  * page, and a Library of 150 mounts 150 of them at once. The decode (base64, DCT, a PNG with its
  * CRC and Adler checksums) is ~0.2 ms at 1x and 29 ms of a Library mount at 4x, so the answer is
  * kept by hash: a small least-recently-used map (a PNG data URL is ~0.4 KB, so 512 are ~200 KB).
- * Framework-free: `utils/cover.ts` re-exports it, a native port has its own.
+ * Framework-free; a native port has its own. The shared UI base has a `thumbhashDataUrl` too (its utils/cloth.ts),
+ * without the cache: this one, the app's, is the one auto-imported, until the base keeps what it decoded.
  */
 const CAPACITY = 512
 const decoded = new Map<string, string | null>()

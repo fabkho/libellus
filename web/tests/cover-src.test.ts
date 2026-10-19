@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { WALL_COVERS } from '@/components/auth/wall'
-import { APPLE_BOX, artworkOf, COVER_WIDTH, coverChain, coverSizes, coverSrc, coverSrcset, isBlankCover, type CoverSize } from '@/utils/cover'
+import { isBlankCover } from '#ui/utils/cloth'
+import { APPLE_BOX, artworkOf, COVER_WIDTH, coverChain, coverSizes, coverSrc, coverSrcset, type CoverSize } from '@/utils/cover'
 
 /**
  * The image a cover asks for at each size (issue #63, docs/covers.md): about

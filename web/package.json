@@ -37,7 +37,7 @@
     "perf:list": "tsx perf/list.ts",
     "perf:layers": "tsx perf/layers.ts",
     "perf:shelf-seed": "tsx perf/shelf-seed.ts",
-    "perf:shelf": "tsx perf/shelf.ts"
+    "perf:shelf": "tsx --tsconfig .nuxt/tsconfig.json perf/shelf.ts"
   },
   "dependencies": {
     "@fabkho/ui": "github:fabkho/ui#v0.3.0",
