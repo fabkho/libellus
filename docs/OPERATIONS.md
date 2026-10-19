@@ -536,6 +536,20 @@ recomputed from its stored signals, no source is asked. Members' own genres are 
 **In the backup**: everything (`public` and `private`), the queue included; not the Vault secret
 `enrich_token` (set it again after a restore, Restoring above).
 
+## The import queue and the shared pace
+
+Two small tables keep the import and its upstreams from running into their limits (`supabase/migrations/20261030010000_edge_pace.sql`, `20261030020000_import_queue.sql`):
+
+- **`import_queue`**: one row per member whose import is running (`started_at` set, at most one) or waiting. A row whose
+  `beat_at` is older than 75 seconds is swept by the next call and the slot goes to the oldest waiting. Look: `select
+  member_id, holder, rows, done, started_at, beat_at from import_queue order by started_at nulls last, joined_at;` (service role
+  or the SQL editor). **If an import is stuck for good** (it should not be: the heartbeat expires): `delete from
+  import_queue where started_at is not null;` and the next in line starts at their next poll (5 s). Turning the queue
+  off: nothing to deploy; an app that cannot reach the three `import_slot_*` functions goes on without a slot.
+- **`edge_pace`**: one row per upstream (`openlibrary`, `dnb`): `next_at` is when the next request may go out. A
+  `next_at` far in the future (an upstream's `Retry-After`, capped at a minute in the function) clears itself; to clear it by
+  hand: `update edge_pace set next_at = now();`.
+
 ## Supabase advisors: what we accept and why
 
 The dashboard's Security Advisor (also `get_advisors` over MCP, or `supabase db advisors`) lists a

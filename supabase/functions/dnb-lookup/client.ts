@@ -1,10 +1,12 @@
 /**
  * The function's only way to the German National Library (DNB): its SRU interface, asked politely
- * (identified, at most five requests a second per running instance, four seconds each) behind a
+ * (identified, at most five requests a second across every instance — the shared pace, ../_shared/pace.ts,
+ * or this instance's own queue when none is given —, four seconds each) behind a
  * circuit breaker: its converter fails now and then with a diagnostic and HTTP 200, which a status
  * check does not see, so three failed answers in a row rest the source for a minute. `fetch` and
  * the clock come in from outside, so the tests answer from recordings and never wait for real.
  */
+import { localPace, type Pace } from '../_shared/pace.ts'
 import {
   DNB_LIMIT,
   type DnbRecord,
@@ -17,6 +19,8 @@ import {
 
 export const REQUEST_TIMEOUT_MS = 4000
 export const MIN_INTERVAL_MS = 200
+/** The longest a request waits for its turn at the shared pace; a turn further away is 503 `busy` with a `Retry-After`. */
+export const PACE_MAX_WAIT_MS = 3000
 export const FAILURES_BEFORE_REST = 3
 export const REST_MS = 60_000
 
@@ -43,19 +47,17 @@ export type Dnb = {
   byTitle: (title: string, author: string) => Promise<DnbRecord[]>
 }
 
-export function createDnb(options: { fetch: FetchLike; clock?: Clock; userAgent?: string; timeoutMs?: number }): Dnb {
+export function createDnb(options: { fetch: FetchLike; clock?: Clock; userAgent?: string; timeoutMs?: number; pace?: Pace }): Dnb {
   const clock = options.clock ?? realClock
   const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS
-  let nextAt = 0
+  const pace = options.pace ?? localPace({ gapMs: MIN_INTERVAL_MS, clock })
   let failures = 0
   let restUntil = 0
 
   async function ask(query: string, limit: number): Promise<DnbRecord[]> {
     if (restUntil > clock.now()) throw new DnbUnavailable('resting')
-    // Requests queue behind each other, MIN_INTERVAL_MS apart.
-    const at = Math.max(clock.now(), nextAt)
-    nextAt = at + MIN_INTERVAL_MS
-    if (at > clock.now()) await clock.sleep(at - clock.now())
+    // The turn comes first (a wait, or `PaceBusy` when it is too far away), then the request.
+    await pace.take()
     try {
       const response = await options.fetch(sruUrl(query, limit), {
         headers: { 'user-agent': options.userAgent ?? userAgent(), accept: 'text/xml' },

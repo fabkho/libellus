@@ -10,7 +10,9 @@
 // them with a running count, and a summary leads to the Library. Importing
 // the same file again adds nothing. A book matched by its title or only from
 // the file offers Choose edition: the Change edition sheet of the Book page, the
-// pick replacing its edition in the preview only (stores/import.ts). A pushed screen in the tab layout.
+// pick replacing its edition in the preview only (stores/import.ts). One import looks its books up at a time, across
+// all members: when another is running, the lookups wait in line (how many are ahead, a rough wait; leaving the line
+// is the one button) and start by themselves when it is their turn. A pushed screen in the tab layout.
 import type { ImportNote } from '~/components/import/NoteList.vue'
 import { SUPPORTED_SOURCES } from '~/data/import/detect'
 import { editionFacts } from '~/data/editions'
@@ -115,6 +117,15 @@ const attentionMinor = computed(() => listed(store.attention.filter((item) => !i
 const showMinor = ref(false)
 const choices = computed(() => listed(store.choices, t('import.changeEdition')))
 
+/** Waiting for the turn: how many imports are ahead and a rough wait (a guess, in whole minutes), or that her own import runs on another device. */
+const queueText = computed(() => {
+  const queued = store.queued
+  if (!queued) return null
+  if (queued.kind === 'elsewhere') return { line: t('import.queueElsewhere'), wait: '' }
+  const minutes = queued.waitSeconds === null ? null : Math.round(queued.waitSeconds / 60)
+  return { line: t('import.queueAhead', { count: queued.ahead }, queued.ahead), wait: minutes === null ? '' : t('import.queueWait', { count: minutes }, minutes) }
+})
+
 const failures = computed<ImportNote[]>(() =>
   store.failed.map((failure) => ({
     key: failure.key,
@@ -175,8 +186,15 @@ const failures = computed<ImportNote[]>(() =>
         {{ t('import.coverFill', { done: store.coverProgress.done, total: store.coverProgress.total, found: store.coverProgress.found }) }}
       </p>
 
+      <!-- Another import has the slot: this one waits in line and starts by itself. -->
+      <section v-if="store.phase === 'matching' && queueText" class="mt-lg flex flex-col gap-sm" role="status" data-testid="import.queued">
+        <p class="text-caption text-ink" data-testid="import.queued.label">{{ queueText.line }}</p>
+        <p v-if="queueText.wait" class="figures text-footnote text-ink-muted" data-testid="import.queued.wait">{{ queueText.wait }}</p>
+        <p class="text-footnote text-ink-faint">{{ t('import.queueHint') }}</p>
+      </section>
+
       <ImportProgress
-        v-if="store.phase === 'matching'"
+        v-else-if="store.phase === 'matching'"
         class="mt-lg"
         testid="import.matching"
         :label="store.secondPass ? t('import.secondPass', { done: store.secondPass.done, total: store.secondPass.total }) : t('import.matching', { done: store.progress.done, total: store.progress.total })"
@@ -236,7 +254,7 @@ const failures = computed<ImportNote[]>(() =>
         {{ t('import.finishNow') }}
       </UiButton>
       <UiButton v-if="store.phase === 'matching'" block tone="plain" class="mt-md" data-testid="import.cancel" @click="store.reset()">
-        {{ t('import.stop') }}
+        {{ store.queued?.kind === 'waiting' ? t('import.queueLeave') : t('import.stop') }}
       </UiButton>
 
       <template v-if="attention.length">

@@ -128,10 +128,12 @@ jobs:
             dnb:
               - *ci
               - 'supabase/functions/dnb-lookup/**'
+              - 'supabase/functions/_shared/**'
               - 'web/app/data/dnbRecord.ts'
             openlibrary:
               - *ci
               - 'supabase/functions/openlibrary/**'
+              - 'supabase/functions/_shared/**'
             regal:
               - *ci
               - 'supabase/functions/regal-export/**'

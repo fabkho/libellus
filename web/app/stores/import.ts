@@ -5,6 +5,7 @@ import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, ty
 import { GOODREADS_COVERS } from '~/data/coverRank'
 import { probeImageInBrowser, verifyCover } from '~/data/covers'
 import { createDnb, DNB_IMPORT_GAP_MS } from '~/data/dnb'
+import { createImportQueue, holderOf, runWithSlot, type ImportQueue, type QueueStatus } from '~/data/importQueue'
 import { accessTokenOf, viaOwnServer } from '~/data/openLibraryProxy'
 import { createGoodreadsCover } from '~/data/goodreadsCover'
 import {
@@ -139,6 +140,16 @@ export type OfferedShelf = { name: string; count: number; chosen: boolean }
  * a few rows at a time and the screen fills in as they come
  * (data/bookImport.ts); the writes are one database call per few rows.
  * Offline, choosing a file and importing are disabled (issue #15).
+ *
+ * **One import at a time, across all members** (data/importQueue.ts, the `import_queue` table): Open Library
+ * and the other sources answer a few requests a second, and two imports only make each other time out. Reading
+ * the file needs no slot. The lookups do: once the file is read, the import takes the slot or a place in line
+ * (`queued` says where: how many imports are ahead, a rough wait) and starts by itself when it is its turn.
+ * It holds the slot through the lookups, beating so the others know it is alive, and gives it up on reaching
+ * the preview, on "Go on with what is found", or on cancel (which also leaves the line). A slot lost half way
+ * (the phone slept, the connection went) pauses the lookups, takes a place in line again and goes on with the
+ * books that are left. The write is database calls only and takes no slot; the cover fill after the lookups
+ * runs under Open Library's shared pace (supabase/functions/openlibrary), not the slot.
  */
 export const useImportStore = defineStore('import', () => {
   const backend = useBackend()
@@ -165,6 +176,8 @@ export const useImportStore = defineStore('import', () => {
   let ownedUnderAnyEdition: ReturnType<typeof libraryTitleIndex> = () => null
 
   const progress = reactive({ done: 0, total: 0 })
+  /** While the lookups wait for their turn: how many imports are ahead and a rough wait, or that her own import runs on another device. */
+  const queued = ref<QueueStatus>(null)
   /** The second, slower pass over the books nothing was found for: null while the first pass runs or when there is none. */
   const secondPass = ref<{ done: number; total: number } | null>(null)
   /** No answer for a while: the screen offers to go on with what is there (`finishNow`). */
@@ -357,6 +370,21 @@ export const useImportStore = defineStore('import', () => {
 
   let lookup: AbortController | null = null
 
+  /** The device's side of the import queue (data/importQueue.ts), made when the first import asks. */
+  let slots: ImportQueue | null = null
+  function slotQueue(): ImportQueue {
+    return (slots ??= createImportQueue({
+      rpc: (name, args) => backend!.rpc(name, args),
+      // One name per tab for its life: a reload finds its own place again, her other device is another holder.
+      holder: holderOf(import.meta.client ? window.sessionStorage : null, () => crypto.randomUUID()),
+      onStatus: (status) => {
+        queued.value = status
+      },
+    }))
+  }
+  // The app comes back to the front: the queue asks (or beats) now, a sleeping phone may have lost its place.
+  if (import.meta.client) document.addEventListener('visibilitychange', () => !document.hidden && slots?.nudge())
+
   // ------------------------------------------------------------------ preview
 
   /**
@@ -481,8 +509,10 @@ export const useImportStore = defineStore('import', () => {
   }
 
   function reset() {
+    // Aborting the lookup also leaves the line when it is still waiting; a held slot is given up.
     lookup?.abort()
     lookup = null
+    void slots?.release()
     stopFill()
     stopWatching()
     stopChoosing()
@@ -549,6 +579,7 @@ export const useImportStore = defineStore('import', () => {
     const controller = lookup
     lookup = null
     controller?.abort()
+    void slots?.release()
     settle(looking)
     stopWatching()
     keepMatches()
@@ -611,7 +642,8 @@ export const useImportStore = defineStore('import', () => {
     const remembered = import.meta.client && memberId ? readMatches(window.localStorage, memberId) : new Map<string, StoredMatch>()
     matchMemory.clear()
     for (const [key, match] of remembered) matchMemory.set(key, match)
-    startFill()
+    // The cover fill starts with the lookups (once it is this import's turn), not before: it asks Open Library too.
+    const keptRows: number[] = []
     const pending = undecided.filter(({ book, index }) => {
       const match = remembered.get(book.key)
       if (!match) return true
@@ -622,8 +654,8 @@ export const useImportStore = defineStore('import', () => {
         ...(match.coverFrom ? { coverFrom: match.coverFrom as unknown as Edition['book'] } : {}),
       }
       verdicts.value[index] = verdictOf(book, editions.value[index]!)
-      // Rows kept from an earlier run that still have no cover go on looking for one.
-      wantCover(index)
+      // Rows kept from an earlier run that still have no cover go on looking for one (once the fill has started).
+      keptRows.push(index)
       return false
     })
     progress.total = undecided.length
@@ -635,39 +667,70 @@ export const useImportStore = defineStore('import', () => {
     lookup = controller
     looking = pending
     const found = new Set<number>()
-    watchForStall()
+    /** What no answer came for yet: all of it, or what is left after a slot that went half way. */
+    const todo = () => pending.filter(({ index }) => !found.has(index))
+    let foundBefore = 0
+    const queue = slotQueue()
+    let outcome: 'finished' | 'cancelled'
     try {
-      await repo.match(
-        pending.map(({ book }) => book),
-        {
-          signal: controller.signal,
-          onEdition(index, edition) {
-            const at = pending[index]!.index
-            editions.value[at] = edition
-            verdicts.value[at] = verdictOf(parsed.books[at]!, edition)
-            if (!found.has(at)) {
-              found.add(at)
-              progress.done++
-            }
-            remember(parsed.books[at]!.key, edition)
-            answered()
-            version.value++
-            // An identified row without a cover is looked at in the background, while the lookup goes on.
-            wantCover(at)
-          },
-          onSecondPass(done, total) {
-            secondPass.value = { done, total }
-            answered()
-          },
+      outcome = await runWithSlot(queue, {
+        rows: () => todo().length,
+        signal: controller.signal,
+        // Nothing is being looked up while she waits for a turn: no stall to watch for.
+        onWait: stopWatching,
+        onTurn() {
+          // Her turn. The lookups start, and so does the cover fill (its Open Library asks for the rows kept from before too).
+          if (!fill) {
+            startFill()
+            for (const index of keptRows) wantCover(index)
+          }
+          foundBefore = found.size
+          watchForStall()
         },
-      )
-    } catch (error) {
-      if (isAbort(error)) return
-      // Whatever went wrong, the lookup ends: what was found stands, the rest is the file's own.
+        async run(signal) {
+          const rest = todo()
+          try {
+            await repo.match(
+              rest.map(({ book }) => book),
+              {
+                signal,
+                onEdition(index, edition) {
+                  const at = rest[index]!.index
+                  editions.value[at] = edition
+                  verdicts.value[at] = verdictOf(parsed.books[at]!, edition)
+                  if (!found.has(at)) {
+                    found.add(at)
+                    progress.done++
+                    // The others in line see how far she is.
+                    queue.progress(found.size - foundBefore)
+                  }
+                  remember(parsed.books[at]!.key, edition)
+                  answered()
+                  version.value++
+                  // An identified row without a cover is looked at in the background, while the lookup goes on.
+                  wantCover(at)
+                },
+                onSecondPass(done, total) {
+                  secondPass.value = { done, total }
+                  answered()
+                },
+              },
+            )
+          } catch (error) {
+            if (isAbort(error)) throw error
+            // Whatever went wrong, the lookup ends: what was found stands, the rest is the file's own.
+          }
+        },
+      })
+    } catch {
+      // Whatever went wrong, the lookups end in the preview with what was found: the queue is never what stops an import.
+      outcome = controller.signal.aborted ? 'cancelled' : 'finished'
     } finally {
       if (lookup === controller) lookup = null
     }
-    if (controller.signal.aborted) return
+    if (outcome === 'cancelled' || controller.signal.aborted) return
+    // The lookups are over: the slot goes to the next in line, whatever the preview takes her to do.
+    void queue.release()
     settle(pending)
     stopWatching()
     keepMatches()
@@ -928,6 +991,7 @@ export const useImportStore = defineStore('import', () => {
     useEdition,
     choosingBook,
     progress,
+    queued,
     secondPass,
     coverProgress,
     stalled,

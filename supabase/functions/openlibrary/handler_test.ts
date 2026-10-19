@@ -1,5 +1,6 @@
 // deno-lint-ignore-file require-await -- the stand-ins answer from memory, as the real ones do over the network
 import { assertEquals } from '@std/assert'
+import { PaceBusy } from '../_shared/pace.ts'
 import { createOpenLibrary, userAgent } from './client.ts'
 import { type Caller, createHandler, MAX_QUERY_BYTES } from './handler.ts'
 import { fakeClock, recordedFetch } from './test_support.ts'
@@ -141,4 +142,22 @@ Deno.test('GET only, and the preflight the browser sends', async () => {
   assertEquals(preflight.status, 204)
   assertEquals(preflight.headers.get('access-control-allow-origin'), '*')
   assertEquals(preflight.headers.get('access-control-allow-methods'), 'GET, OPTIONS')
+})
+
+Deno.test('a turn too far away is 503 busy with a Retry-After the client waits out, and nothing is asked', async () => {
+  const recorded = recordedFetch()
+  const handler = createHandler({
+    openlibrary: createOpenLibrary({
+      fetch: recorded.fetch,
+      clock: fakeClock().clock,
+      userAgent: AGENT,
+      pace: { take: () => Promise.reject(new PaceBusy(3)), hold: () => Promise.resolve() },
+    }),
+    authorize: async () => ({ member: MEMBER }),
+  })
+  const response = await handler(new Request('https://x.test/functions/v1/openlibrary?path=%2Fsearch.json&q=moby', { method: 'GET', headers: { authorization: 'Bearer member' } }))
+  assertEquals(response.status, 503)
+  assertEquals(response.headers.get('retry-after'), '3')
+  assertEquals(await response.json(), { error: 'busy', retry_after: 3 })
+  assertEquals(recorded.asked.length, 0)
 })

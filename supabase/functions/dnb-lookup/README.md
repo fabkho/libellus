@@ -30,8 +30,10 @@ POST /functions/v1/dnb-lookup   { "action": "book",     "isbn13": "9783499267017
   Apple's CDN or Open Library, a thumbhash and two `#rrggbb` colours, anything else is left out), else Open Library's by
   ISBN when it has one (`HEAD`, nothing downloaded).
 - **The DNB** (`client.ts`): SRU (`https://services.dnb.de/sru/dnb`, CQL, `oai_dc`), identified by `User-Agent:
-  Libellus/1.0 (…)` (`LIBELLUS_SITE_URL` adds where the instance lives), at most five requests a second per running
-  instance, four seconds each, and a breaker: three failed answers in a row (a converter diagnostic arrives with HTTP
+  Libellus/1.0 (…)` (`LIBELLUS_SITE_URL` adds where the instance lives), at most five requests a second **across every
+  instance** (one shared pace booked in Postgres, `edge_pace_take('dnb', 200, 3000)`, `../_shared/pace.ts`; a turn more than
+  3 s away answers 503 `busy` with a `Retry-After`, the database out of reach falls back to this instance's own queue),
+  four seconds each, and a breaker: three failed answers in a row (a converter diagnostic arrives with HTTP
   200) rest it for a minute. A failure is never stored; the answer is 502 `dnb_unavailable` and the app shows nothing.
 - **Parsing** is `web/app/data/dnbRecord.ts` (shared with the app; no imports of its own).
 - No cache table: the DNB answers in about 100 ms and the Catalogue keeps what was added.

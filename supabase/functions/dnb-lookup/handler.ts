@@ -13,6 +13,7 @@
  *   200 { status: 'found', book }         book: the Catalogue Book (made now if it was not there), a `books` row
  *   400 { error: 'isbn_invalid' | 'book_unidentified' | 'action_unknown' } · 401 { error: 'unauthorized' }
  *   413 { error: 'payload_too_large' } · 429 { error: 'rate_limited' } · 502 { error: 'dnb_unavailable' }
+ *   503 { error: 'busy', retry_after } with a Retry-After: the shared pace's next turn is further away than a call waits
  *
  * `book` is what makes an edition the DNB alone knows addable: a member may only add a Catalogue
  * Book (an `import` snapshot that matches none is refused by the database), so the function
@@ -20,6 +21,7 @@
  * the caller sends). A failure is never stored. Everything it talks to comes in from outside
  * (index.ts wires the real ones), so the tests drive it with recordings.
  */
+import { PaceBusy } from '../_shared/pace.ts'
 import { type DnbEdition, editionFromRecord, toIsbn13 } from '../../../web/app/data/dnbRecord.ts'
 import { type Dnb, DnbUnavailable } from './client.ts'
 
@@ -80,8 +82,8 @@ const CORS = {
   'access-control-allow-methods': 'POST, OPTIONS',
 }
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'content-type': 'application/json; charset=utf-8' } })
+function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'content-type': 'application/json; charset=utf-8', ...headers } })
 }
 
 /** Longest request body taken: an ISBN, or a title and a few names. */
@@ -201,6 +203,10 @@ export function createHandler(deps: {
           return json(400, { error: 'action_unknown' })
       }
     } catch (error) {
+      // The shared pace's turn is further away than a caller waits: 503 with the seconds to come back after.
+      if (error instanceof PaceBusy) {
+        return json(503, { error: 'busy', retry_after: error.retryAfterSeconds }, { 'retry-after': String(error.retryAfterSeconds) })
+      }
       if (!(error instanceof DnbUnavailable)) log(`dnb-lookup: ${body.action} failed: ${error}`)
       return json(502, { error: 'dnb_unavailable' })
     }

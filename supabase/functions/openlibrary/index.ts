@@ -1,7 +1,8 @@
 /**
  * The `openlibrary` edge function: handler.ts over the real Open Library (client.ts: identified
- * by `User-Agent: Libellus/1.0 (<contact>)`, at most three requests a second per running
- * instance, a deadline under the client's), with the member check and the per-member budget.
+ * by `User-Agent: Libellus/1.0 (<contact>)`, at most three requests a second across every
+ * instance and member: one pace booked in Postgres (../_shared/pace.ts), a deadline under the
+ * client's), with the member check and the per-member budget.
  * README.md says how to run and deploy it.
  *
  * `verify_jwt` is off (supabase/config.toml): the function checks the caller itself, so it works
@@ -14,7 +15,8 @@
  * import on the lower limit, and Open Library asks for a way to reach whoever runs the client.
  */
 import { createClient } from '@supabase/supabase-js'
-import { createOpenLibrary, userAgent } from './client.ts'
+import { sharedPace } from '../_shared/pace.ts'
+import { createOpenLibrary, MIN_INTERVAL_MS, PACE_MAX_WAIT_MS, userAgent } from './client.ts'
 import { type Caller, createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
 import { sameSecret } from './secret.ts'
 
@@ -32,6 +34,13 @@ const handler = createHandler({
   openlibrary: createOpenLibrary({
     fetch: (input, init) => fetch(input, init),
     userAgent: userAgent(contact),
+    // One pace for every instance and member (a turn booked in Postgres, supabase/migrations/20261030010000_edge_pace.sql).
+    pace: sharedPace({
+      rpc: (name, args) => supabase.rpc(name, args),
+      bucket: 'openlibrary',
+      gapMs: MIN_INTERVAL_MS,
+      maxWaitMs: PACE_MAX_WAIT_MS,
+    }),
   }),
   async authorize(request): Promise<Caller | null> {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()

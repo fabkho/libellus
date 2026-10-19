@@ -6,7 +6,7 @@ import { isAbort, type FetchLike } from './fetching'
  * one (`User-Agent: Libellus/1.0 (<contact>)`); a browser cannot set its User-Agent, and the
  * import asks far more than one a second. So the import's Open Library requests are rewritten to
  * the `openlibrary` edge function (supabase/functions/openlibrary: signed-in members only, an
- * allow-list of paths, the identified User-Agent, three requests a second per instance), and the
+ * allow-list of paths, the identified User-Agent, three requests a second across every instance), and the
  * rest — Apple, and every cover image (`covers.openlibrary.org`, whose `b/id/…` has no limit) —
  * goes out as it always did. The Search screen and the Book page are not the import: they keep
  * talking to Open Library direct.
