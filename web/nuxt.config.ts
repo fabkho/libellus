@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
-import { uiLayerAlias, uiLayerHolds, uiLayers, uiLayerSource } from './ui.config'
+import { uiLayer, uiLayerHolds } from './ui.config'
 import { isRegalModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
@@ -60,8 +60,7 @@ const isReaderModule = (id: string) =>
 export default defineNuxtConfig({
   // Regal, the owner's 3D shelf (#23): a Nuxt layer, only with LIBELLUS_REGAL=1 (regal.config.ts says
   // where it comes from and how it is kept to the shelf's pages).
-  extends: [...uiLayers(), ...regalLayer()],
-  alias: uiLayerAlias(),
+  extends: [uiLayer(), ...regalLayer()],
   compatibilityDate: '2026-10-02',
   ssr: false,
   nitro: {
@@ -122,7 +121,6 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [
-      uiLayerSource(),
       tailwindcss(),
       {
         // The reader's files, for utils/readerChunks.ts: it fetches them before it imports them, and the list it
@@ -162,7 +160,8 @@ export default defineNuxtConfig({
     // Profile → Import (papaparse) or a sign-in in another tab ends where it started (issue #146).
     // These are the packages the app reaches only from a later screen or a lazy import; bundled at
     // start-up, none is met late. Dev only: a build never asks.
-    optimizeDeps: { include: ['@supabase/supabase-js', 'thumbhash', 'fflate', 'papaparse', 'zxing-wasm/reader'] },
+    // `@fabkho/ui > thumbhash` is the shared base's one runtime dependency (its `utils/cloth.ts`), found through the package.
+    optimizeDeps: { include: ['@supabase/supabase-js', 'thumbhash', '@fabkho/ui > thumbhash', 'fflate', 'papaparse', 'zxing-wasm/reader'] },
     build: {
       rolldownOptions: {
         output: {

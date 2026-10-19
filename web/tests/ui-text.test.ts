@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { UI_TEXT_KEYS, uiTextOf } from '../app/utils/uiText'
 
@@ -8,6 +9,9 @@ import { UI_TEXT_KEYS, uiTextOf } from '../app/utils/uiText'
  * plugins/ui-text.ts; the base's README, "Copy"). The base never imports the app's copy, so nothing
  * but this test notices a word it adds that the app does not translate.
  */
+
+/** The base: the installed package, or the checkout `UI_LAYER` names. */
+const layer = process.env.UI_LAYER ? resolve(process.env.UI_LAYER) : fileURLToPath(new URL('../node_modules/@fabkho/ui', import.meta.url))
 
 const read = (name: string) => JSON.parse(readFileSync(new URL(`../i18n/locales/${name}.json`, import.meta.url), 'utf8')) as Record<string, unknown>
 const lookup = (messages: Record<string, unknown>, key: string) =>
@@ -29,9 +33,9 @@ describe('the base’s words', () => {
     expect(de.cancel).not.toBe(en.cancel)
   })
 
-  // Only where the base is extended from a checkout (`UI_LAYER`, ui.config.ts): its `app.config.ts` is the list.
-  it.skipIf(!process.env.UI_LAYER || !existsSync(join(process.env.UI_LAYER ?? '', 'app.config.ts')))('cover every word the base’s app config declares', () => {
-    const config = readFileSync(join(process.env.UI_LAYER!, 'app.config.ts'), 'utf8')
+  // The base's `app.config.ts` is the list (the installed package, or the checkout `UI_LAYER` names: ui.config.ts).
+  it('cover every word the base’s app config declares', () => {
+    const config = readFileSync(join(layer, 'app.config.ts'), 'utf8')
     const block = /text:\s*\{([\s\S]*?)\n\s{4}\},/.exec(config)?.[1] ?? ''
     const declared = [...block.matchAll(/^\s*([A-Za-z]\w*):/gm)].map((match) => match[1]!)
     expect(declared.length).toBeGreaterThan(0)

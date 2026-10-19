@@ -8,12 +8,13 @@ import { describe, expect, it } from 'vitest'
  * (ui.config.ts; the plan's risk "Duplicate resolution", docs/ui-layer-plan.md §6 in fabkho/trappist). Nuxt
  * decides, and it has got this wrong before (a layer's composable beat the project's in 4.4.0 and 4.4.2,
  * nuxt/nuxt#34838), so what it resolved is read back from the files it writes
- * (`.nuxt/imports.d.ts`, `.nuxt/components.d.ts`) after `UI_LAYER=… nuxt prepare` (the `postinstall` step,
- * run with the variable). Skipped where the base is not extended: there is nothing to shadow.
+ * (`.nuxt/imports.d.ts`, `.nuxt/components.d.ts`) after `nuxt prepare` (the `postinstall` step; with the same `UI_LAYER` as the run, if one is set). Skipped
+ * only while the files hold no trace of the base (a `.nuxt` made before it was extended).
  */
 
 const web = fileURLToPath(new URL('..', import.meta.url))
-const layer = process.env.UI_LAYER ? resolve(process.env.UI_LAYER) : ''
+/** The base: the installed package, or the checkout `UI_LAYER` names (ui.config.ts). */
+const layer = process.env.UI_LAYER ? resolve(process.env.UI_LAYER) : join(web, 'node_modules/@fabkho/ui')
 const imports = join(web, '.nuxt/imports.d.ts')
 const components = join(web, '.nuxt/components.d.ts')
 const prepared = () => existsSync(imports) && existsSync(components) && readFileSync(imports, 'utf8').includes('useUiText')
@@ -32,7 +33,7 @@ const exported = (dirs: string[]) => {
   return names
 }
 
-describe.skipIf(!layer)('the shared UI base does not take over what the app has', () => {
+describe('the shared UI base does not take over what the app has', () => {
   const app = [join(web, 'app/composables'), join(web, 'app/utils')]
   const base = [join(layer, 'composables'), join(layer, 'utils')]
 
