@@ -2107,6 +2107,7 @@
         "label": "Message",
         "placeholder": "Message",
         "send": "Send",
+        "actions": "Message actions",
         "photo": "Photo",
         "photoLabel": "Send a photo from your gallery",
         "gif": "GIF",

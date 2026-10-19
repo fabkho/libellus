@@ -27,6 +27,7 @@ export const UI_TEXT_KEYS = {
   'chat.composer.label': 'uiText.chat.composer.label',
   'chat.composer.placeholder': 'uiText.chat.composer.placeholder',
   'chat.composer.send': 'uiText.chat.composer.send',
+  'chat.composer.actions': 'uiText.chat.composer.actions',
   'chat.composer.photo': 'uiText.chat.composer.photo',
   'chat.composer.photoLabel': 'uiText.chat.composer.photoLabel',
   'chat.composer.gif': 'uiText.chat.composer.gif',

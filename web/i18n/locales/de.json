@@ -2107,6 +2107,7 @@
         "label": "Nachricht",
         "placeholder": "Nachricht",
         "send": "Senden",
+        "actions": "Nachrichtenaktionen",
         "photo": "Foto",
         "photoLabel": "Ein Foto aus deiner Galerie senden",
         "gif": "GIF",
