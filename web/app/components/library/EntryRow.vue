@@ -34,6 +34,7 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
   <div class="relative">
     <UiPressLink
       :to="`/book/${entry.book.id}`"
+      v-on="flightOf(`/book/${entry.book.id}`)"
       class="row flex items-center gap-inset py-sm"
       data-testid="library.entry"
       @press="books.prefetch(entry.book.id)"

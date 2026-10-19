@@ -30,6 +30,7 @@ const since = computed(() => {
     <UiAmbient :colors="entry.book.coverColors" shape="card" />
     <UiPressLink
       :to="`/book/${entry.book.id}`"
+      v-on="flightOf(`/book/${entry.book.id}`)"
       class="relative flex min-w-0 flex-1 items-center gap-inset"
       data-testid="library.entry"
       @press="books.prefetch(entry.book.id)"

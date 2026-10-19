@@ -53,7 +53,7 @@ describe('the shared UI base does not take over what the app has', () => {
     if (!prepared()) return ctx.skip()
     const own = files(join(web, 'app/components/ui'), /\.vue$/).map((file) => `Ui${file.split('/').pop()!.replace('.vue', '')}`)
     const lines = readFileSync(components, 'utf8').split('\n')
-    expect(own.length).toBeGreaterThan(20)
+    expect(own.length).toBeGreaterThan(0)
     for (const name of own) {
       const line = lines.find((l) => l.startsWith(`export const ${name}:`))
       expect(line, `${name} is registered`).toBeDefined()

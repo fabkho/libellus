@@ -26,6 +26,7 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
       <div v-for="(entry, index) in shown" :key="entry.id" class="relative shrink-0">
         <UiPressLink
           :to="`/book/${entry.book.id}`"
+          v-on="flightOf(`/book/${entry.book.id}`)"
           :aria-label="entry.book.title"
           class="block"
           data-testid="home.upNextEntry"

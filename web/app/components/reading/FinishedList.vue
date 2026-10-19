@@ -17,7 +17,7 @@ const { formatDay } = useDays()
 <template>
   <ul class="flex flex-col" data-testid="readingPage.finished">
     <li v-for="item in items" :key="item.book.id">
-      <component :is="item.book.unverified ? 'span' : PressLink" :to="item.book.unverified ? undefined : bookCardPath(token, item.book.id)" class="row flex items-start gap-inset py-sm" data-testid="readingPage.finishedBook">
+      <component :is="item.book.unverified ? 'span' : PressLink" :to="item.book.unverified ? undefined : bookCardPath(token, item.book.id)" v-on="flightOf(item.book.unverified ? null : bookCardPath(token, item.book.id))" class="row flex items-start gap-inset py-sm" data-testid="readingPage.finishedBook">
         <UiCover
           decorative
           :title="shown(item.book).title"

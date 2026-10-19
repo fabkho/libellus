@@ -67,6 +67,7 @@ async function unfold() {
     <UiPressLink
       v-if="!book.manual && !book.unverified"
       :to="bookPath"
+      v-on="flightOf(bookPath)"
       class="relative shrink-0"
       tabindex="-1"
       aria-hidden="true"
@@ -91,6 +92,7 @@ async function unfold() {
       <UiPressLink
         v-if="!book.manual && !book.unverified"
         :to="bookPath"
+        v-on="flightOf(bookPath)"
         class="reach book-title text-callout"
         data-testid="home.friendsFeature.title"
         @press="books.prefetch(book.id)"

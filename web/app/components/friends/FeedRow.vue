@@ -80,7 +80,7 @@ async function unfold() {
 
 <template>
   <li class="flex items-start gap-ms py-inset [--row-pad:var(--spacing-inset)]" :data-testid="testid">
-    <UiPressLink v-if="!book.manual && !book.unverified" :to="bookPath" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
+    <UiPressLink v-if="!book.manual && !book.unverified" :to="bookPath" v-on="flightOf(bookPath)" class="shrink-0" tabindex="-1" aria-hidden="true" @press="books.prefetch(book.id)">
       <UiCover
         decorative
         :title="book.title"
@@ -121,6 +121,7 @@ async function unfold() {
       <UiPressLink
         v-if="!book.manual && !book.unverified"
         :to="bookPath"
+        v-on="flightOf(bookPath)"
         class="reach reach-title book-title min-w-(--size-touch) text-callout"
         :data-testid="`${testid}Book`"
         @press="books.prefetch(book.id)"

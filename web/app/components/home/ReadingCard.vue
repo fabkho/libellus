@@ -62,7 +62,7 @@ function act() {
   >
     <UiAmbient :colors="entry.book.coverColors" shape="card" />
     <div class="relative shrink-0 self-start">
-      <UiPressLink :to="`/book/${entry.book.id}`" class="relative block" tabindex="-1" aria-hidden="true" @press="books.prefetch(entry.book.id)">
+      <UiPressLink :to="`/book/${entry.book.id}`" v-on="flightOf(`/book/${entry.book.id}`)" class="relative block" tabindex="-1" aria-hidden="true" @press="books.prefetch(entry.book.id)">
         <UiCover
           :title="entry.book.title"
           :authors="entry.book.authors"
@@ -85,7 +85,7 @@ function act() {
       />
     </div>
     <div class="relative flex min-w-0 flex-1 flex-col pt-xxs">
-      <UiPressLink :to="`/book/${entry.book.id}`" class="flex flex-col gap-xs" data-testid="home.entry" @press="books.prefetch(entry.book.id)">
+      <UiPressLink :to="`/book/${entry.book.id}`" v-on="flightOf(`/book/${entry.book.id}`)" class="flex flex-col gap-xs" data-testid="home.entry" @press="books.prefetch(entry.book.id)">
         <span class="book-title line-clamp-2 text-book-title" data-testid="home.entryTitle">{{ entry.book.title }}</span>
         <span class="flex min-w-0 items-center gap-xs">
           <span class="truncate text-body text-ink-muted">{{ authorLine }}</span>
