@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { UI_TEXT_KEYS, uiTextOf } from '../app/utils/uiText'
 
@@ -17,13 +18,29 @@ const read = (name: string) => JSON.parse(readFileSync(new URL(`../i18n/locales/
 const lookup = (messages: Record<string, unknown>, key: string) =>
   key.split('.').reduce<unknown>((at, part) => (typeof at === 'object' && at !== null ? (at as Record<string, unknown>)[part] : undefined), messages)
 
+/** The leaves of a nested word object, dotted: `chat.reply.you`. */
+const leavesOf = (words: Record<string, unknown>, prefix = ''): Array<[string, unknown]> =>
+  Object.entries(words).flatMap(([key, value]) =>
+    typeof value === 'object' && value !== null ? leavesOf(value as Record<string, unknown>, `${prefix}${key}.`) : [[`${prefix}${key}`, value]],
+  )
+
+/** The base's `ui.text` as it declares it, evaluated from its `app.config.ts` (types stripped, `defineAppConfig` is identity). */
+const declaredWords = (): string[] => {
+  const source = readFileSync(join(layer, 'app.config.ts'), 'utf8')
+  const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
+  const mod = { exports: {} as { default?: { ui: { text: Record<string, unknown> } } } }
+  new Function('module', 'exports', 'defineAppConfig', js)(mod, mod.exports, (config: unknown) => config)
+  return leavesOf(mod.exports.default!.ui.text).map(([path]) => path)
+}
+
 describe('the base’s words', () => {
   for (const locale of ['en', 'de']) {
     it(`come out of every message in ${locale}`, () => {
       const messages = read(locale)
       const words = uiTextOf((key) => String(lookup(messages, key) ?? `MISSING ${key}`))
-      expect(Object.values(words).filter((word) => word === '' || word.startsWith('MISSING'))).toEqual([])
-      expect(Object.keys(words).sort()).toEqual(Object.keys(UI_TEXT_KEYS).sort())
+      const values = leavesOf(words).map(([, value]) => String(value))
+      expect(values.filter((word) => word === '' || word.startsWith('MISSING'))).toEqual([])
+      expect(leavesOf(words).map(([path]) => path).sort()).toEqual(Object.keys(UI_TEXT_KEYS).sort())
     })
   }
 
@@ -31,14 +48,18 @@ describe('the base’s words', () => {
     const en = uiTextOf((key) => String(lookup(read('en'), key)))
     const de = uiTextOf((key) => String(lookup(read('de'), key)))
     expect(de.cancel).not.toBe(en.cancel)
+    expect(de.chat.reply).not.toEqual(en.chat.reply)
   })
 
-  // The base's `app.config.ts` is the list (the installed package, or the checkout `UI_LAYER` names: ui.config.ts).
+  // The base's `app.config.ts` is the list (the installed package, or the checkout `UI_LAYER` names). Every word
+  // it declares has a line here. The chat's words are checked the same way once the base declares them (`chat.*`
+  // arrived with the chat, after the pinned tag): until then the pinned base has none to check.
   it('cover every word the base’s app config declares', () => {
-    const config = readFileSync(join(layer, 'app.config.ts'), 'utf8')
-    const block = /text:\s*\{([\s\S]*?)\n\s{4}\},/.exec(config)?.[1] ?? ''
-    const declared = [...block.matchAll(/^\s*([A-Za-z]\w*):/gm)].map((match) => match[1]!)
+    const declared = declaredWords()
     expect(declared.length).toBeGreaterThan(0)
-    expect(Object.keys(UI_TEXT_KEYS).sort()).toEqual(declared.sort())
+    const keys = Object.keys(UI_TEXT_KEYS)
+    expect(declared.filter((path) => !keys.includes(path))).toEqual([])
+    const declaredChat = declared.filter((path) => path.startsWith('chat.'))
+    if (declaredChat.length > 0) expect(keys.filter((path) => path.startsWith('chat.')).sort()).toEqual(declaredChat.sort())
   })
 })

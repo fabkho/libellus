@@ -2088,5 +2088,111 @@
       "read": "{names} gefällt deine Lektüre von {title}",
       "open": "Ansehen, wem es gefällt"
     }
+  },
+  "uiText": {
+    "chat": {
+      "locale": "de",
+      "today": "Heute",
+      "yesterday": "Gestern",
+      "loading": "Unterhaltung wird geladen",
+      "offline": "Keine Verbindung. Wir versuchen es gleich noch einmal.",
+      "olderLoading": "Frühere Nachrichten werden geladen",
+      "olderFailed": "Frühere Nachrichten konnten nicht geladen werden.",
+      "olderRetry": "Erneut versuchen",
+      "read": "Gelesen",
+      "sending": "Wird gesendet …",
+      "failed": "Nicht gesendet. Tippen, um es erneut zu versuchen.",
+      "retryHint": "Tippen, um es erneut zu versuchen.",
+      "composer": {
+        "label": "Nachricht",
+        "placeholder": "Nachricht",
+        "send": "Senden",
+        "photo": "Foto",
+        "photoLabel": "Ein Foto aus deiner Galerie senden",
+        "gif": "GIF",
+        "gifLabel": "Ein GIF suchen und senden"
+      },
+      "reply": {
+        "you": "Du",
+        "voice": "🎤 Sprachnachricht",
+        "gif": "GIF",
+        "photo": "Foto",
+        "gone": "Nicht mehr verfügbar",
+        "bar": "Antworten",
+        "cancel": "Antwort verwerfen",
+        "deleted": "Nachricht gelöscht",
+        "show": "{name}: {preview}. Zur Nachricht"
+      },
+      "media": {
+        "photo": "Foto",
+        "photoMine": "Dein Foto",
+        "gif": "GIF",
+        "gifMine": "Dein GIF",
+        "open": "Groß ansehen",
+        "loading": "Bild wird geladen",
+        "photoRemoved": "Foto entfernt",
+        "gifRemoved": "GIF entfernt",
+        "unavailable": "Bild gerade nicht verfügbar"
+      },
+      "voice": {
+        "record": "Sprachnachricht aufnehmen",
+        "recording": "Aufnahme läuft",
+        "stopped": "Aufnahme beendet",
+        "timer": "{elapsed} von {max}",
+        "cancel": "Aufnahme verwerfen",
+        "send": "Sprachnachricht senden",
+        "limit": "So lang kann eine Aufnahme höchstens sein. Du kannst sie jetzt senden.",
+        "problems": {
+          "denied": "Dein Mikrofon ist für diese App ausgeschaltet. Erlaube den Zugriff in den Geräte- oder Browser-Einstellungen und versuche es erneut.",
+          "none": "Wir finden kein Mikrofon auf deinem Gerät.",
+          "busy": "Ein anderes Programm nutzt dein Mikrofon. Schließe es und versuche es erneut.",
+          "unsupported": "Dieser Browser kann keine Sprachnachrichten aufnehmen.",
+          "failed": "Die Aufnahme hat nicht funktioniert. Bitte versuche es erneut."
+        },
+        "bubble": {
+          "mine": "Deine Sprachnachricht",
+          "theirs": "Sprachnachricht",
+          "play": "Abspielen",
+          "pause": "Pause",
+          "loading": "Sprachnachricht wird geladen",
+          "removed": "Sprachnachricht entfernt",
+          "unplayable": "Dein Gerät kann diese Sprachnachricht nicht abspielen.",
+          "playFailed": "Abspielen hat nicht funktioniert. Tippen, um es erneut zu versuchen.",
+          "position": "{now} von {total}"
+        }
+      },
+      "gifPicker": {
+        "title": "GIF senden",
+        "search": "GIFs suchen",
+        "feedsLabel": "GIF-Themen",
+        "results": "Für „{q}“",
+        "none": "Kein GIF für „{q}“.",
+        "more": "Mehr laden",
+        "loading": "GIFs werden geladen",
+        "pick": "GIF {n} senden",
+        "pickTitled": "GIF senden: {title}",
+        "retry": "Erneut versuchen"
+      },
+      "reactions": {
+        "bar": "Reaktion wählen",
+        "open": "Reagieren",
+        "names": {
+          "heart": "Herz",
+          "laughing": "Lachen",
+          "surprised": "Überrascht",
+          "sad": "Traurig",
+          "fire": "Feuer"
+        },
+        "pick": "Mit {name} reagieren",
+        "takeBack": "{name} zurücknehmen",
+        "byYou": "{name} von dir",
+        "byOther": "{name} von der anderen Person",
+        "byBoth": "{name} von euch beiden",
+        "byMany": "{name} von {count}",
+        "pill": "Reaktionen: {parts}",
+        "copy": "Kopieren",
+        "copied": "Kopiert"
+      }
+    }
   }
 }

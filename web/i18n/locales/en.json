@@ -2088,5 +2088,111 @@
       "read": "{names} liked your read of {title}",
       "open": "See who liked it"
     }
+  },
+  "uiText": {
+    "chat": {
+      "locale": "en",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "loading": "Loading the conversation",
+      "offline": "No connection. We will try again in a moment.",
+      "olderLoading": "Loading earlier messages",
+      "olderFailed": "Earlier messages could not be loaded.",
+      "olderRetry": "Try again",
+      "read": "Read",
+      "sending": "Sending …",
+      "failed": "Not sent. Tap to try again.",
+      "retryHint": "Tap to try again.",
+      "composer": {
+        "label": "Message",
+        "placeholder": "Message",
+        "send": "Send",
+        "photo": "Photo",
+        "photoLabel": "Send a photo from your gallery",
+        "gif": "GIF",
+        "gifLabel": "Find and send a GIF"
+      },
+      "reply": {
+        "you": "You",
+        "voice": "🎤 Voice message",
+        "gif": "GIF",
+        "photo": "Photo",
+        "gone": "No longer available",
+        "bar": "Reply",
+        "cancel": "Discard reply",
+        "deleted": "Message deleted",
+        "show": "{name}: {preview}. Go to message"
+      },
+      "media": {
+        "photo": "Photo",
+        "photoMine": "Your photo",
+        "gif": "GIF",
+        "gifMine": "Your GIF",
+        "open": "View large",
+        "loading": "Loading picture",
+        "photoRemoved": "Photo removed",
+        "gifRemoved": "GIF removed",
+        "unavailable": "Picture not available right now"
+      },
+      "voice": {
+        "record": "Record a voice message",
+        "recording": "Recording",
+        "stopped": "Recording stopped",
+        "timer": "{elapsed} of {max}",
+        "cancel": "Discard recording",
+        "send": "Send voice message",
+        "limit": "That is as long as a recording can be. You can send it now.",
+        "problems": {
+          "denied": "Your microphone is turned off for this app. Allow it in your device or browser settings and try again.",
+          "none": "We cannot find a microphone on your device.",
+          "busy": "Something else is using your microphone. Close it and try again.",
+          "unsupported": "This browser cannot record voice messages.",
+          "failed": "The recording did not work. Please try again."
+        },
+        "bubble": {
+          "mine": "Your voice message",
+          "theirs": "Voice message",
+          "play": "Play",
+          "pause": "Pause",
+          "loading": "Loading voice message",
+          "removed": "Voice message removed",
+          "unplayable": "Your device cannot play this voice message.",
+          "playFailed": "Playing did not work. Tap to try again.",
+          "position": "{now} of {total}"
+        }
+      },
+      "gifPicker": {
+        "title": "Send a GIF",
+        "search": "Search GIFs",
+        "feedsLabel": "GIF topics",
+        "results": "For “{q}”",
+        "none": "No GIF for “{q}”.",
+        "more": "Load more",
+        "loading": "Loading GIFs",
+        "pick": "Send GIF {n}",
+        "pickTitled": "Send GIF: {title}",
+        "retry": "Try again"
+      },
+      "reactions": {
+        "bar": "Choose a reaction",
+        "open": "React",
+        "names": {
+          "heart": "Heart",
+          "laughing": "Laughing",
+          "surprised": "Surprised",
+          "sad": "Sad",
+          "fire": "Fire"
+        },
+        "pick": "React with {name}",
+        "takeBack": "Take back {name}",
+        "byYou": "{name} from you",
+        "byOther": "{name} from them",
+        "byBoth": "{name} from both of you",
+        "byMany": "{name} from {count}",
+        "pill": "Reactions: {parts}",
+        "copy": "Copy",
+        "copied": "Copied"
+      }
+    }
   }
 }
