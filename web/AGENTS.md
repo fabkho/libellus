@@ -13,12 +13,13 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
 - `pnpm perf` — the client performance harness (production build, throttled Chromium and WebKit, scripted
   journeys, a table): `perf/README.md`; findings in `../docs/perf/`. Needs its own throwaway stack, never the shared one.
-- **The shared UI base** (fabkho/ui, a Nuxt layer; plan: `docs/ui-layer-plan.md` in fabkho/trappist) is wired in, and
-  nothing uses it yet: `UI_LAYER=/path/to/ui-checkout` extends it (`ui.config.ts`; without it the app builds and tests
-  as before, until `@fabkho/ui` is a dependency). The app's own `components/ui/*`, composables and utils with the base's
-  names win; `ui.config.ts` also holds back the base's plugins and `router.options.ts` (the Back is this app's own). The
-  base's words (`ui.text`) are set from the messages by `plugins/ui-text.ts`; a word the base adds needs a line in
-  `utils/uiText.ts` (`tests/ui-text.test.ts`).
+- **The shared UI base** (fabkho/ui, a Nuxt layer; `@fabkho/ui` pinned to a tag in `package.json`, never a branch; plan:
+  `docs/ui-layer-plan.md` in fabkho/trappist) is extended and nothing uses it yet. `UI_LAYER=/path/to/ui-checkout`
+  points the app at a local checkout instead (`ui.config.ts`; `#ui`, which `main.css` imports its stylesheet by, follows
+  it). The app's own `components/ui/*`, composables and utils with the base's names win (`tests/ui-layer-shadow.test.ts`);
+  `ui.config.ts` also holds back the base's plugins and `router.options.ts` (the Back is this app's own) until wave 6a.
+  The base's words (`ui.text`) are set from the messages by `plugins/ui-text.ts`; a word the base adds needs a line in
+  `utils/uiText.ts` (`tests/ui-text.test.ts`), a variable it reads needs a token (`tests/ui-layer.test.ts`).
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo
   fabkho/regal, is opt-in: `LIBELLUS_REGAL=1` plus `REGAL_LAYER=/path/to/regal-checkout` or
   `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
