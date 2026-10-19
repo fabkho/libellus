@@ -12,6 +12,7 @@
  *   200 { status: 'found', goodreadsId, rating, ratingsCount, reviewsCount, matchedBy, checkedAt }
  *   200 { status: 'not_found', checkedAt }
  *   200 { status: 'blocked', retryAfterSeconds }
+ *   200 { status: 'unsure', retryAfterSeconds }   (a cover request only: every search answered an empty list)
  *   400 { error: 'isbn_invalid' | 'book_unidentified' } · 401 { error: 'unauthorized' }
  *   413 { error: 'payload_too_large' } · 429 { error: 'rate_limited' }
  *   503 { error: 'busy' } · 502 { error: 'goodreads_unavailable' }
@@ -33,15 +34,20 @@
  *
  * A request with `cover: true` (and optionally `goodreadsBookId`, the id of the
  * Goodreads file's own row) asks for the book's Goodreads cover, a last-resort
- * cover source (docs/covers.md): it is a title request (an ISBN, if sent, is
- * ignored), the answer gains `coverUrl` (`goodreadsCoverUrl`: the linked address at
+ * cover source (docs/covers.md): it needs the title and an author, may carry the ISBN-13
+ * (an invalid one is dropped), the answer gains `coverUrl` (`goodreadsCoverUrl`: the linked address at
  * Goodreads' image host, or null) and `goodreadsId`, and the member is counted in
  * its own bucket (`goodreads-cover`, 40 a minute), so an import of a hundred rows
- * does not use up the ratings' 20. The hit with the given id is taken as it is (it
- * IS that edition); without one, the same-work rule decides (`matchTitle`). Only a
- * rule hit is cached (the caller names the title: an id may not decide what the
- * cache says about it). A cached found row that never asked for a cover is asked
- * once more; a cover Goodreads does not have is cached as the empty string.
+ * does not use up the ratings' 20; the lookup, however many searches it makes, is one call. The searches
+ * run in order, the first accepted hit ends it (cover.ts): the ISBN-13, the whole title with the author, the main
+ * title with the surname. The hit with the given id wins in any of them (it IS that edition); an ISBN's result
+ * is taken when its author fits; else the same-work rule decides (`matchTitle`, the fuzzy title rule included).
+ * Only a title rule's hit is cached (the caller names the title and the ISBN: neither may decide what the cache says
+ * for others), and a miss only when Goodreads answered a list at all. A cached found row that never asked for a
+ * cover is asked once more; a cover Goodreads does not have is cached as the empty string.
+ * An empty list is not a miss: `auto_complete` answers `[]` both for an unknown book and when it throttles softly.
+ * When every search answered `[]`, even after two retries (cover.ts), the answer is
+ * `200 { status: 'unsure', retryAfterSeconds }`: not stored, and not "Goodreads has none": the client asks again later.
  * Blocked: Goodreads answering 403, 429 or 503, a 202 or an empty body, something that is not
  * JSON, or JSON of another shape (`GoodreadsBlocked`, goodreads.ts) is a block, not a miss and not
  * our own `busy`. It is never cached. It opens a breaker for BREAKER_MS (10 minutes, the injected
@@ -53,7 +59,8 @@
  * real ones), so the tests drive it with recordings.
  */
 import type { Goodreads } from './client.ts'
-import { GoodreadsBusy } from './client.ts'
+import { GoodreadsBusy, realClock } from './client.ts'
+import { searchCover } from './cover.ts'
 import {
   foundByTitle,
   GoodreadsBlocked,
@@ -61,13 +68,15 @@ import {
   type LookupBook,
   matchTitle,
   parseIsbn13,
-  pickByBookId,
   titleKey,
   titleQuery,
 } from './goodreads.ts'
 
 /** A row of `goodreads_ratings`: an answer and when Goodreads gave it. */
 export type CachedAnswer = GoodreadsAnswer & { checkedAt: string }
+
+/** A cover search whose every query answered an empty list: not a miss, never stored (cover.ts). */
+type Unsure = { status: 'unsure' }
 
 /**
  * What an answer is cached by: the ISBN-13 (`goodreads_ratings`), or, for a
@@ -80,6 +89,8 @@ export type RatingsCache = {
   put: (key: CacheKey, answer: CachedAnswer) => Promise<void>
 }
 
+/** What a client is told to wait before asking again after an `unsure` cover search. */
+export const UNSURE_RETRY_SECONDS = 30
 /** A found rating is good for this long; then Goodreads is asked again. */
 export const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 /** After a block, Goodreads is left alone this long. */
@@ -193,10 +204,11 @@ async function readBook(request: Request): Promise<Question | ReadError> {
   }
   const wantsCover = isTrue(cover)
   const goodreadsBookId = typeof bookId === 'number' ? String(bookId) : bookId
-  // No ISBN at all is a Book found by title and author; one that is not valid is refused. A cover is asked by title.
-  const given = !wantsCover && typeof isbn === 'string' && isbn.trim() ? isbn : null
+  // No ISBN at all is a Book found by title and author; one that is not valid is refused. A cover request takes an
+  // ISBN as one more search before the title's, and drops one that is not valid: the title is asked anyway.
+  const given = typeof isbn === 'string' && isbn.trim() ? isbn : null
   const isbn13 = parseIsbn13(given)
-  if (given && !isbn13) return { error: 'isbn_invalid' }
+  if (given && !isbn13 && !wantsCover) return { error: 'isbn_invalid' }
   const book: LookupBook = {
     isbn13,
     title: typeof title === 'string' && title.trim() ? title.trim().slice(0, 500) : null,
@@ -210,10 +222,11 @@ async function readBook(request: Request): Promise<Question | ReadError> {
   const key = titleKey(book)
   // A title key the table would refuse is never asked: with an ISBN the title is left out, without one it is no Book.
   if (key && key.length > MAX_KEY_CHARS) {
-    if (!isbn13) return { error: 'book_unidentified' }
+    // A cover is asked by title: without one it is no Book, whatever the ISBN.
+    if (!isbn13 || wantsCover) return { error: 'book_unidentified' }
     book.title = null
     book.authors = []
-  } else if (!isbn13 && !key) return { error: 'book_unidentified' }
+  } else if (wantsCover ? !key : !isbn13 && !key) return { error: 'book_unidentified' }
   return {
     book,
     cover: wantsCover,
@@ -222,7 +235,8 @@ async function readBook(request: Request): Promise<Question | ReadError> {
 }
 
 /** What the caller is told: the cover only when it asked for one, and then always (null: Goodreads has none). */
-function view(answer: CachedAnswer, cover: boolean): Record<string, unknown> {
+function view(answer: CachedAnswer | Unsure, cover: boolean): Record<string, unknown> {
+  if (answer.status === 'unsure') return { status: 'unsure', retryAfterSeconds: UNSURE_RETRY_SECONDS }
   const { coverUrl, ...rest } = answer.status === 'found' ? answer : { ...answer, coverUrl: undefined }
   if (!cover) return rest
   return answer.status === 'found'
@@ -241,12 +255,15 @@ export function createHandler(deps: {
   /** Counts one call of a member; false when she is over her limit. Not asked for the service role. */
   throttle?: (member: string, bucket: Bucket) => Promise<boolean>
   now?: () => number
+  /** Waits (a cover search retries an all-empty answer after a pause); the real clock's when not given. */
+  sleep?: (ms: number) => Promise<void>
   log?: (message: string) => void
 }): (request: Request) => Promise<Response> {
   const now = deps.now ?? (() => Date.now())
+  const sleep = deps.sleep ?? realClock.sleep
   const log = deps.log ?? ((message) => console.error(message))
   /** Lookups running now, by ISBN and title key: a second page asking for the same Book waits for the first. */
-  const inFlight = new Map<string, Promise<CachedAnswer>>()
+  const inFlight = new Map<string, Promise<CachedAnswer | Unsure>>()
   /** When the breaker closes again; 0 while it was never opened. */
   let blockedUntil = 0
   const isOpen = () => now() < blockedUntil
@@ -290,29 +307,40 @@ export function createHandler(deps: {
   }
 
   /**
-   * The Goodreads cover for a Book: from the title cache while it is fresh and says what a cover asks (a
-   * found row that never asked is asked once more), else from one title search, where the hit with the
-   * given id wins over the same-work rule. Only the rule's own hit is stored.
+   * The Goodreads cover for a Book: from the title cache while it is fresh and says what a cover asks (a found row
+   * that never asked is asked once more), else from the searches of cover.ts: the ISBN, the whole title, the main
+   * title; the hit with the given id wins over the rule's. Only the title rule's hit is stored, and a miss only when
+   * Goodreads answered a list at all; all-empty answers are `unsure` and stored nowhere.
    */
-  async function coverAnswer(book: LookupBook, key: string, goodreadsBookId: string | null): Promise<CachedAnswer> {
+  async function coverAnswer(book: LookupBook, key: string, goodreadsBookId: string | null): Promise<CachedAnswer | Unsure> {
     const cacheKey = { titleKey: key }
     const row = await deps.cache.get(cacheKey)
     if (row && now() - Date.parse(row.checkedAt) < (row.status === 'found' ? MAX_AGE_MS : NOT_FOUND_MAX_AGE_MS)) {
-      // A found row that has been asked for its cover answers it; a miss stays a miss unless an id may find it.
-      if (row.status === 'found' ? row.coverUrl !== undefined : !goodreadsBookId) return row
+      // A found row that has been asked for its cover answers it; a miss stays a miss unless an id or an ISBN may find it.
+      if (row.status === 'found' ? row.coverUrl !== undefined : !goodreadsBookId && !book.isbn13) return row
     }
-    const query = titleQuery(book)
-    const results = query && book.authors.length ? await goodreads.autoComplete(query) : []
-    const byRule = matchTitle(book, results)
-    const hit = pickByBookId(results, goodreadsBookId) ?? byRule
+    const search = await searchCover(book, goodreadsBookId, { autoComplete: goodreads.autoComplete, sleep, now })
+    // One line when Goodreads answered an empty list (the soft throttle shows here; no title or ISBN in it).
+    if (search.empty) {
+      const outcome = search.unsure ? 'unsure' : search.hit ? 'found' : 'not_found'
+      log(`goodreads_cover_empty ${JSON.stringify({ requests: search.asked, empty: search.empty, outcome })}`)
+    }
+    if (search.unsure) return { status: 'unsure' }
     const checkedAt = new Date(now()).toISOString()
-    const stored: CachedAnswer = { ...(byRule ? foundByTitle(byRule, true) : { status: 'not_found' as const }), checkedAt }
-    try {
-      await deps.cache.put(cacheKey, stored)
-    } catch (error) {
-      log(`goodreads-rating: storing ${keyId(cacheKey).slice(0, MAX_LOG_KEY_CHARS)} failed: ${error}`)
+    // What a title rule found, or that Goodreads answered and had none; a hit only an id or an ISBN found is not the rule's to store.
+    const stored: CachedAnswer | null = search.byRule
+      ? { ...foundByTitle(search.byRule, true), checkedAt }
+      : search.hit
+        ? null
+        : { status: 'not_found', checkedAt }
+    if (stored) {
+      try {
+        await deps.cache.put(cacheKey, stored)
+      } catch (error) {
+        log(`goodreads-rating: storing ${keyId(cacheKey).slice(0, MAX_LOG_KEY_CHARS)} failed: ${error}`)
+      }
     }
-    return hit ? { ...foundByTitle(hit, true), checkedAt } : stored
+    return search.hit ? { ...foundByTitle(search.hit, true), checkedAt } : stored!
   }
 
   async function answer(book: LookupBook, key: string | null): Promise<CachedAnswer> {

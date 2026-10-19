@@ -1,6 +1,9 @@
 import type { BookSnapshot } from '../books'
+import { COMPANION, fuzzyTitleMatch, sameVolume, volumeOf } from '../titleMatch'
 import { isbnLanguage, normalize, splitSeriesTitle, surname, workTitle } from './readingTracker'
 import type { ImportBook } from './rows'
+
+export { sameVolume, volumeOf }
 
 /**
  * Which edition an import row stands for (issue #111), whatever app wrote the
@@ -201,31 +204,6 @@ export function titleQuery(book: Pick<ImportBook, 'title' | 'authors'>): string 
   return [book.title, book.authors[0] ?? ''].join(' ').trim()
 }
 
-const NUMBER_WORDS: Record<string, string> = {
-  one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', ten: '10',
-  eins: '1', zwei: '2', drei: '3', vier: '4', fünf: '5', sechs: '6', sieben: '7', acht: '8', neun: '9', zehn: '10',
-  i: '1', ii: '2', iii: '3', iv: '4', v: '5', vi: '6', vii: '7', viii: '8', ix: '9', x: '10',
-}
-
-/**
- * The volume a title names ("Heartstopper: Volume Three", "Band 2", "Book II", "Teil 4", "Tome 02"): its
- * number as digits, or null when the title names none. The work title drops what follows a
- * colon, so the volumes of one series share it; this is what tells them apart.
- */
-export function volumeOf(title: string): string | null {
-  const match = /\b(?:volume|vol|band|bd|teil|book|buch|part|tome)\.?\s*(\d{1,3}|[a-zäöü]+)\b/i.exec(title.replace(/#/g, ' '))
-  if (!match) return null
-  const word = match[1]!.toLowerCase()
-  return /^\d+$/.test(word) ? String(Number(word)) : (NUMBER_WORDS[word] ?? null)
-}
-
-/** Two titles that name different volumes are not the same book, whatever else they share. */
-export const sameVolume = (a: string, b: string): boolean => {
-  const ours = volumeOf(a)
-  const theirs = volumeOf(b)
-  return !ours || !theirs || ours === theirs
-}
-
 /** A volume's mark inside a series title: "T01", "Tome 01", "Band 2", "Book 3", "Vol. 4", "#1". Dropped from a title's forms. */
 const VOLUME_MARK = /\bt(?=\d)\d{1,3}\b|\b(?:tome|band|bd|book|buch|teil|vol|volume|part|folge)\.?\s*\d{1,3}\b|#\s*\d{1,3}\b/gi
 
@@ -346,16 +324,18 @@ export function isSameWork(row: Pick<ImportBook, 'title' | 'authors'>, found: Pi
   if (COMPANION.test(found.title) && !COMPANION.test(row.title)) return false
   const bare = splitSeriesTitle(found.title).title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')
   if (/\p{L}/u.test(bare) && !normalize(bare)) return false
-  if (!sameTitle(row.title, found.title)) return false
+  const wanted = row.authors[0]
+  const named = Boolean(wanted && surname(wanted))
+  const byAuthor = named && found.authors.some((name) => sameAuthor(wanted!, name))
+  // A title worded a little differently (a word more or less, a credit after it) counts only with the author (data/titleMatch.ts).
+  if (!sameTitle(row.title, found.title) && !(LOOSE_TITLES && fuzzyTitleMatch(row.title, found.title, byAuthor))) return false
   // "Heartstopper: Volume Three" is not "Heartstopper: Volume Two": the colon drops the volume from the work title.
   if (!sameVolume(row.title, found.title)) return false
-  const wanted = row.authors[0]
-  if (!wanted || !surname(wanted)) return true
-  return found.authors.some((name) => sameAuthor(wanted, name))
+  return !named || byAuthor
 }
 
-/** A book about a book, sold under its title: a summary, a study guide, a workbook. */
-const COMPANION = /\b(?:summary|summaries|zusammenfassung|study guide|workbook|sparknotes|cliffsnotes|analysis of)\b/i
+/** Whether `isSameWork` also takes the fuzzy title rule (data/titleMatch.ts), with the author. */
+const LOOSE_TITLES = true
 
 /** The words of a title that say something (four letters or more). */
 const telling = (title: string) => titleForms(title).full.split(' ').filter((word) => word.length >= 4)

@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/auto_complete?format=json&q=A%20Jingle%20Bell%20Mingle%20Julie%20Murphy",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": "[{\"imageUrl\":\"https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/nophoto/book/111x148._SX50_.png\",\"bookId\":\"253403547\",\"workId\":\"204000844\",\"bookUrl\":\"/book/show/253403547-a-jingle-bell-mingle-by-julie-murphy-and-sierra-simone\",\"from_search\":true,\"from_srp\":true,\"qid\":\"t3YOSFxg15\",\"rank\":1,\"title\":\"A Jingle Bell Mingle by Julie Murphy and Sierra Simone\",\"bookTitleBare\":\"A Jingle Bell Mingle by Julie Murphy and Sierra Simone\",\"numPages\":null,\"avgRating\":\"3.58\",\"ratingsCount\":14733,\"author\":{\"id\":6433278,\"name\":\"Julie   Murphy\",\"isGoodreadsAuthor\":true,\"profileUrl\":\"https://www.goodreads.com/author/show/6433278.Julie_Murphy\",\"worksListUrl\":\"https://www.goodreads.com/author/list/6433278.Julie_Murphy\"},\"kcrPreviewUrl\":null,\"description\":{\"html\":\"When there\\u0026apos;s no vacancy at the inn, what ensues when you, your possibly possessed cat, and your surly one-night stand become roommates? Six months ago, part-time adult film ac…\",\"truncated\":true,\"fullContentUrl\":\"https://www.goodreads.com/book/show/253403547-a-jingle-bell-mingle-by-julie-murphy-and-sierra-simone\"}}]"
+}

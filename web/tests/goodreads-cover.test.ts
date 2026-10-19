@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { BookSnapshot } from '@/data/books'
-import { createCoverFill, COVER_FILL_GOODREADS_GAP_MS, GOODREADS_FAILURES, mergeCover, type CoverFound, type CoverWanted } from '@/data/coverFill'
+import {
+  createCoverFill,
+  COVER_FILL_GOODREADS_GAP_MS,
+  GOODREADS_FAILURES,
+  GOODREADS_LATER_PAUSE_MS,
+  GOODREADS_LATER_RUN,
+  GOODREADS_LATER_TRIES,
+  GOODREADS_RETRY_AFTER_MS,
+  mergeCover,
+  type CoverFound,
+  type CoverWanted,
+} from '@/data/coverFill'
 import { coverKindOf, kindRank, GOODREADS_COVERS } from '@/data/coverRank'
 import { verifyCover, type ProbeImage } from '@/data/covers'
 import type { FetchLike } from '@/data/fetching'
@@ -71,7 +82,7 @@ function clock() {
 
 function setup(options: Partial<Parameters<typeof createCoverFill>[0]> = {}) {
   const found: Record<string, CoverFound> = {}
-  const asked: { title: string; authors: string[]; goodreadsBookId: string | null }[] = []
+  const asked: { title: string; authors: string[]; isbn13: string | null; goodreadsBookId: string | null }[] = []
   const time = clock()
   const fill = createCoverFill({
     fetch: noFetch,
@@ -100,7 +111,7 @@ describe('the Goodreads stage of the cover fill', () => {
     fill.add(wanted(42))
     fill.holdSearch(false)
     await fill.settled(1000)
-    expect(asked).toEqual([{ title: 'Der Roman 42', authors: ['Anna Autorin'], goodreadsBookId: '42' }])
+    expect(asked).toEqual([{ title: 'Der Roman 42', authors: ['Anna Autorin'], isbn13: null, goodreadsBookId: '42' }])
     expect(found['goodreads:42']).toMatchObject({ coverUrl: GR(42), source: 'goodreads', kind: 'goodreads' })
     expect(found['goodreads:42']?.coverThumbhash).toBeTruthy()
     expect(fill.calls().goodreads).toBe(1)
@@ -251,6 +262,71 @@ describe('the Goodreads stage of the cover fill', () => {
     expect(GOODREADS_FAILURES).toBe(3)
   })
 
+  it('sends the row\'s ISBN-13 with the ask (the search\'s first query), the row\'s own, else the Book\'s', async () => {
+    const { fill, asked } = setup()
+    fill.add(wanted(1, { row: { ...wanted(1).row, isbn13: '9783865527127' } }))
+    fill.add(wanted(2, { book: { isbn13: '9783453321540', isbn10: null } }))
+    fill.add(wanted(3))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(asked.map((q) => [q.goodreadsBookId, q.isbn13]).sort()).toEqual([
+      ['1', '9783865527127'],
+      ['2', '9783453321540'],
+      ['3', null],
+    ])
+  })
+
+  it('"later" (the function\'s empty lists) is no failure and no "none": the row is asked once more, after the others', async () => {
+    const calls: string[] = []
+    const answers: Record<string, ('later' | string | null)[]> = { '1': ['later', 'cover'], '2': ['cover'], '3': ['later', 'later'] }
+    const { fill, found, time } = setup({
+      goodreads: async (query) => {
+        calls.push(query.goodreadsBookId!)
+        const answer = answers[query.goodreadsBookId!]!.shift()!
+        return answer === 'cover' ? GR(Number(query.goodreadsBookId)) : answer
+      },
+    })
+    for (const n of [1, 2, 3]) fill.add(wanted(n))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    // 1 later then found, 2 found, 3 later twice: given up, no more tries (the rows reach the lane in no fixed order).
+    expect([...calls].sort()).toEqual(['1', '1', '2', '3', '3'])
+    expect(GOODREADS_LATER_TRIES).toBe(1)
+    expect(Object.keys(found).sort()).toEqual(['goodreads:1', 'goodreads:2'])
+    expect(fill.calls().goodreads).toBe(5)
+    expect(fill.progress()).toEqual({ total: 3, done: 3, found: 2 })
+    // The second ask of a row waits at least the retry delay.
+    expect(time.waited.some((ms) => ms >= GOODREADS_RETRY_AFTER_MS - COVER_FILL_GOODREADS_GAP_MS * 3)).toBe(true)
+  })
+
+  it('"later" never counts toward the three failures: a long run of them does not close the stage', async () => {
+    let calls = 0
+    const { fill, found } = setup({
+      goodreads: async (query) => (calls++ < 8 ? 'later' : GR(Number(query.goodreadsBookId))),
+    })
+    for (const n of [1, 2, 3, 4, 5, 6]) fill.add(wanted(n))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    // Eight asks answer later, then every ask is a cover: no row is lost to a stage that closed.
+    expect(calls).toBeGreaterThanOrEqual(10)
+    expect(Object.keys(found).length).toBeGreaterThanOrEqual(3)
+    expect(GOODREADS_FAILURES).toBe(3)
+  })
+
+  it('a run of "later" answers holds the whole stage for a while (it is throttling, not three unknown books)', async () => {
+    const at: number[] = []
+    const { fill, time } = setup({
+      goodreads: async () => (at.push(time.now()), 'later'),
+    })
+    for (const n of [1, 2, 3, 4]) fill.add(wanted(n))
+    fill.holdSearch(false)
+    await fill.settled(1000)
+    expect(GOODREADS_LATER_RUN).toBe(3)
+    // After the third in a row, the fourth waits out the pause.
+    expect(at[3]! - at[2]!).toBeGreaterThanOrEqual(GOODREADS_LATER_PAUSE_MS)
+    expect(at[1]! - at[0]!).toBeLessThan(GOODREADS_LATER_PAUSE_MS)
+  })
+
   it('a book Goodreads has no cover for is no failure: the next row is asked', async () => {
     let calls = 0
     const { fill, found } = setup({ goodreads: async (query) => (calls++ < 4 ? null : GR(Number(query.goodreadsBookId))) })
@@ -338,6 +414,23 @@ describe('createGoodreadsCover (the function\'s client)', () => {
     const answer = await createGoodreadsCover(client).find({ title: 'Der Roman', authors: ['Anna Autorin'], goodreadsBookId: '5' })
     expect(answer).toEqual({ coverUrl: GR(5) })
     expect(calls).toEqual([{ name: 'goodreads-rating', body: { title: 'Der Roman', authors: ['Anna Autorin'], cover: true, goodreadsBookId: '5' } }])
+  })
+
+  it('sends the ISBN-13 when the row has one (the function\'s first search), and leaves it out otherwise', async () => {
+    const { client, calls } = invoker({ data: { status: 'found', goodreadsId: '5', coverUrl: GR(5) }, error: null })
+    await createGoodreadsCover(client).find({ title: 'Der Roman', authors: ['Anna Autorin'], isbn13: '9783865527127', goodreadsBookId: '5' })
+    await createGoodreadsCover(client).find({ title: 'Der Roman', authors: ['Anna Autorin'], isbn13: null })
+    expect(calls.map((c) => c.body)).toEqual([
+      { title: 'Der Roman', authors: ['Anna Autorin'], cover: true, isbn13: '9783865527127', goodreadsBookId: '5' },
+      { title: 'Der Roman', authors: ['Anna Autorin'], cover: true },
+    ])
+  })
+
+  it('answers "later" when the function is unsure (every search answered an empty list): neither a cover nor "none"', async () => {
+    const book = { title: 'Der Roman', authors: ['Anna Autorin'] }
+    expect(await createGoodreadsCover(invoker({ data: { status: 'unsure', retryAfterSeconds: 30 }, error: null }).client).find(book)).toBe('later')
+    // An error response is still "could not ask".
+    expect(await createGoodreadsCover(invoker({ data: { status: 'unsure' }, error: new Error('x') }).client).find(book)).toBeNull()
   })
 
   it('leaves the book id out when there is none', async () => {

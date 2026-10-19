@@ -16,6 +16,8 @@
  * Only the rating, the two counts and the book id are kept; never review texts.
  */
 
+import { fuzzyTitleMatch, normaliseTitle, sameBookKind } from '../../../web/app/data/titleMatch.ts'
+
 export const GOODREADS_ORIGIN = 'https://www.goodreads.com'
 
 /**
@@ -209,19 +211,8 @@ export function parseAutoComplete(status: number, body: string): AutoCompleteBoo
 
 // ------------------------------------------------------------------ matching
 
-/** Lower case, accents and punctuation gone, `&` as "and", spaces collapsed. */
-export function normalise(text: string): string {
-  return text
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    // Letters NFKD does not take apart.
-    .replace(/[łđøßæœ]/g, (c) => ({ ł: 'l', đ: 'd', ø: 'o', ß: 'ss', æ: 'ae', œ: 'oe' })[c]!)
-    .replace(/&/g, ' and ')
-    .replace(/['’`]/g, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-}
+/** Lower case, accents and punctuation gone, `&` as "and", spaces collapsed (data/titleMatch.ts, shared with the app). */
+export const normalise = normaliseTitle
 
 /**
  * The forms a title is known by: as given, without a parenthesis (Goodreads'
@@ -281,10 +272,56 @@ export function matchTitle(book: LookupBook, results: AutoCompleteBook[]): AutoC
   for (const result of results) {
     const theirs = surname(result.author)
     if (!theirs || !surnames.has(theirs) || result.ratingsCount === 0) continue
+    // The title's forms drop a dash part ("Blood & Roses - Buch 3" is also "Blood & Roses"): another volume, or a
+    // summary, is not the book whatever its forms say.
+    if (!sameBookKind(book.title, result.bookTitleBare) && !sameBookKind(book.title, result.title)) continue
     const resultForms = new Set([...titleForms(result.bookTitleBare), ...titleForms(result.title)])
     for (const form of forms) if (resultForms.has(form)) return result
   }
+  // Else the title worded a little differently, with the author (data/titleMatch.ts: a credit after it, a word more or
+  // less; never another volume, a summary or a book that merely begins like it).
+  for (const result of results) {
+    const theirs = surname(result.author)
+    if (!theirs || !surnames.has(theirs) || result.ratingsCount === 0) continue
+    if (fuzzyTitleMatch(book.title, result.bookTitleBare, true) || fuzzyTitleMatch(book.title, result.title, true)) return result
+  }
   return null
+}
+
+/**
+ * The result of an ISBN-13 search that is this Book: the first one by an author with one of the Book's surnames.
+ * The title is not compared: the ISBN names the edition, and a translation or a re-titled edition wears another
+ * title. The author is, so a stray number match never passes. A Book without authors never matches.
+ */
+export function matchIsbnResult(book: LookupBook, results: AutoCompleteBook[]): AutoCompleteBook | null {
+  const surnames = new Set(book.authors.map(surname).filter((s): s is string => Boolean(s)))
+  if (!surnames.size) return null
+  return results.find((result) => surnames.has(surname(result.author) ?? '')) ?? null
+}
+
+/** Where a cover search query comes from: the ISBN-13, the whole title with the first author, or the main title with the surname. */
+export type CoverQuery = { kind: 'isbn' | 'title' | 'short'; q: string }
+
+/** "Callie Hart", or "Hart, Callie" read in order. */
+function authorName(name: string): string {
+  const comma = /^([^,]+),\s*([^,]+)$/.exec(name.trim())
+  return (comma && !/^(jr|sr|ii|iii|iv)\.?$/i.test(comma[2]!.trim()) ? `${comma[2]} ${comma[1]}` : name).replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * The searches for a Book's cover, most exact first: its ISBN-13; its whole title (the series aside dropped, a
+ * volume mark kept: "… - Buch 2") with its first author's name; its main title (`titleQuery`: before a subtitle
+ * or series dash) with the surname. A form that asks what an earlier one asked is left out.
+ */
+export function coverQueries(book: LookupBook): CoverQuery[] {
+  const queries: CoverQuery[] = []
+  if (book.isbn13) queries.push({ kind: 'isbn', q: book.isbn13 })
+  const whole = book.title?.replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim()
+  const first = book.authors.find((name) => name.trim())
+  if (whole && first) queries.push({ kind: 'title', q: `${whole} ${authorName(first)}` })
+  const short = titleQuery(book)
+  if (short && !queries.some((query) => query.kind !== 'isbn' && normalise(query.q) === normalise(short))) queries.push({ kind: 'short', q: short })
+  return queries
 }
 
 /** A title search result as what the function stores; its cover only when it was asked for (`cover`). */

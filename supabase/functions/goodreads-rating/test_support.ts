@@ -14,6 +14,17 @@ const NAMES = [
   'auto-complete-we-are-legion',
   'auto-complete-sandman',
   'auto-complete-nothing',
+  'auto-complete-blood-roses-isbn-1',
+  'auto-complete-blood-roses-isbn-3',
+  'auto-complete-blood-roses-short',
+  'auto-complete-blood-roses-buch-1',
+  'auto-complete-blood-roses-buch-2',
+  'auto-complete-crown-bones-isbn',
+  'auto-complete-crown-bones-title',
+  'auto-complete-crown-bones-short',
+  'auto-complete-fall-to-forgive',
+  'auto-complete-jingle-bell-mingle',
+  'auto-complete-sandman-full',
 ] as const
 export type FixtureName = (typeof NAMES)[number]
 

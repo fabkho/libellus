@@ -19,23 +19,54 @@ POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terr
 ### The cover (last resort, flagged)
 
 ```
-POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terry Pratchett"], "cover": true, "goodreadsBookId": "…" }
+POST /functions/v1/goodreads-rating   { "title": "Small Gods", "authors": ["Terry Pratchett"], "isbn13": "9780061803208", "cover": true, "goodreadsBookId": "…" }
 
 200 { "status": "found", "goodreadsId": "…", "coverUrl": "https://i.gr-assets.com/…/6388978.jpg", "rating": …, … }
 200 { "status": "not_found", "goodreadsId": null, "coverUrl": null, "checkedAt": "…" }
+200 { "status": "unsure", "retryAfterSeconds": 30 }      every search answered an empty list: not a miss, not stored
 429 rate_limited (a member: 40 cover calls a minute, a bucket of its own)
 ```
 
 Goodreads is a last-resort cover source of the import and the manual "find a cover" action
 (`docs/covers.md`, *Goodreads, the last resort*; the web app's `GOODREADS_COVERS` flag is its off switch).
-`cover: true` makes it a title request (an ISBN, if sent, is ignored): one `auto_complete` search, and
+`cover: true` needs the title and an author; the ISBN-13 is optional (an invalid one is dropped). The lookup is ONE
+call of the member's bucket however many searches it makes, and runs them in this order, **stopping at the first
+accepted hit** (`cover.ts`, `searchCover`; the queries are `coverQueries` in `goodreads.ts`):
+
+1. `auto_complete?q=<ISBN-13>`: the first result by one of the Book's authors, whatever its title (the ISBN names the
+   edition; a translation wears another title). The author is still compared, so a stray number match never passes.
+2. `q=<whole title> <first author's name>` (the series aside dropped, a volume mark kept: `… - Buch 2 Callie Hart`):
+   `matchTitle`.
+3. `q=<main title> <surname>` (before a subtitle or series dash; skipped when it equals the one above): `matchTitle`.
+
+In every result set the hit with exactly `goodreadsBookId` (the id of a Goodreads export's row) wins: it IS that
+edition, so no title check. `matchTitle` takes, in Goodreads' order, a result by an author with one of the Book's
+surnames whose title has one of the Book's title forms (as given, without parentheses, before a subtitle), and
+else one the fuzzy title rule takes (`web/app/data/titleMatch.ts`, shared with the import's `isSameWork`: a credit
+after the title, a word more or less, `&`/accents/punctuation; never without the author, never another volume,
+a summary or study guide, never a book that only begins like it: three words at least, at most two more, none a
+number). Another volume is refused in the exact forms too (`sameBookKind`): `Blood & Roses - Buch 1` is not
+`Blood & Roses - Buch 3`, and the series' bare name is only its first book's.
+
 `coverUrl` is the hit's `imageUrl` without its size token (`._SY75_`, a ~332x500 original), only when it is
 `https://i.gr-assets.com/…` exactly (`goodreadsCoverUrl` in `goodreads.ts`; a `nophoto` stand-in is `null`).
-`goodreadsBookId` (the id of a Goodreads export's row) prefers the hit with exactly that id: it IS that edition,
-so no title check; without it, or when Goodreads does not return it, the same-work rule (`matchTitle`) decides.
-Only a rule hit is cached (the caller names the title, so an id may not decide what the cache says about it); a
-fresh cached row answers with its cover, and a found row that never asked for one is searched once more. The
-cover is only linked, never copied; no description, page count or other field of the hit is kept or told.
+Only a title rule's hit is cached (the caller names the title and the ISBN: neither may decide what the cache says for
+others), a miss only when Goodreads answered a list at all; a fresh cached row answers with its cover (a cached miss
+is asked again when an id or an ISBN is sent: that is a new question), and a found row that never asked for a cover
+is searched once more. The cover is only linked, never copied; no description, page count or other field of the hit
+is kept or told.
+
+**An empty list is not a miss.** `auto_complete` answers `[]` (200, an empty JSON list) for a book it does not know
+and also when it throttles softly (measured: 29 of 34 asks in a row on a real export). One answer cannot tell the two
+apart, so the rule is: a query that answered a non-empty list proves Goodreads is answering, and when no query
+accepted a hit after that it is a miss (cached 7 days). When EVERY query answered `[]`, the first one is asked again
+after 1.5 s and again after 3 s (`RETRY_DELAYS_MS`; inside `MAX_SEARCH_MS`, 12 s; a retry that answers a list takes
+the search on through the other queries once more). If nothing answered a list even then, the answer is
+`unsure`: nothing is stored (a throttled ask never becomes a week-long "no cover") and the client asks the row again
+later (`data/coverFill.ts`). The price: a book Goodreads really does not know costs up to 5 requests per ask, and is
+asked again at most once by the client. A 202 or an empty body stays a block (breaker, below), not `unsure`. One log
+line, `goodreads_cover_empty {"requests":3,"empty":2,"outcome":"unsure"}` (no title, no ISBN), is written
+whenever a search saw an empty list: a rising count is the throttle.
 
 - Cache: `cover_url` on `goodreads_title_ratings` (and `goodreads_ratings`): null = not asked, `''` = Goodreads has
   none, else the address (migration `20261027020000_goodreads_cover.sql`). A rating request never answers it, and a
@@ -61,8 +92,9 @@ How it answers (`handler.ts`):
 3. On a miss (stored under the ISBN), or straight away without an ISBN, with a title and an author
    (and the title key's own cache, first): `book/auto_complete?format=json&q=<main title> <surname>`,
    the first result whose normalised title (as given, without parentheses, or before a subtitle)
-   equals the Book's and whose author's surname is one of the Book's authors' (`goodreads.ts`,
-   `matchTitle`). No review count then.
+   equals the Book's, or the fuzzy rule takes (`web/app/data/titleMatch.ts`), and whose author's surname is one
+   of the Book's authors' (`goodreads.ts`, `matchTitle`). No review count then. An empty list answers
+   `not_found` here (the rating line is not the cover lane: no retry).
 4. The answer is stored under the key it was asked with (`found` or `not_found`, with its time) and returned. A failure (Goodreads
    down, slow, refusing, garbled) is never stored: the next page view tries again.
 
@@ -100,7 +132,9 @@ caller itself (`index.ts`), which works with either kind of API key.
 
 ## Files
 
-- `goodreads.ts` — pure: parsing both endpoints, ISBN, normalising, matching, the cover address. No I/O.
+- `goodreads.ts` — pure: parsing both endpoints, ISBN, normalising, matching, the cover queries and address. No I/O.
+  Imports `web/app/data/titleMatch.ts` (the fuzzy title rule; no imports of its own, like `dnbRecord.ts`).
+- `cover.ts` — the cover search: which queries, in which order, what an empty list means. `auto_complete` and `sleep` injected.
 - `client.ts` — the only way to Goodreads: user agent, limit, timeout. `fetch` and clock injected.
 - `handler.ts` — the request/response logic, cache and dedupe. Everything injected.
 - `index.ts` — the wiring: supabase-js with the service role, `Deno.serve`.

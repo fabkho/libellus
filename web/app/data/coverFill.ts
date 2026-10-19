@@ -60,6 +60,16 @@ export const COVER_CALL_TIMEOUT_MS = 20_000
 export const COVER_FILL_GOODREADS_GAP_MS = 1600
 /** Failed Goodreads asks in a row after which that stage is given up. */
 export const GOODREADS_FAILURES = 3
+/**
+ * `'later'`: the function's searches all answered an empty list (Goodreads does not know the book, or throttles softly;
+ * data/goodreadsCover.ts). It is no failure and no "none": the row is asked once more (`GOODREADS_LATER_TRIES`) after the
+ * others, no sooner than `GOODREADS_RETRY_AFTER_MS`; and a run of `GOODREADS_LATER_RUN` such answers in a row
+ * (it is throttling, not a few unknown books) holds the whole stage for `GOODREADS_LATER_PAUSE_MS`.
+ */
+export const GOODREADS_LATER_TRIES = 1
+export const GOODREADS_RETRY_AFTER_MS = 10_000
+export const GOODREADS_LATER_RUN = 3
+export const GOODREADS_LATER_PAUSE_MS = 15_000
 
 /** A row that wants a cover: what the file says, the edition it has now and the same work's other editions. */
 export type CoverWanted = {
@@ -111,10 +121,11 @@ export type CoverFillOptions = {
   /**
    * Asks for the Goodreads cover of a row (`data/goodreadsCover.ts`): its address, or null when Goodreads has none,
    * or `'blocked'` when Goodreads is turning the function away: the stage gives its lane up at once (not after
-   * `GOODREADS_FAILURES`) and `onBlocked` is called, once.
+   * `GOODREADS_FAILURES`) and `onBlocked` is called, once; or `'later'` (every search answered an empty list: see
+   * `GOODREADS_LATER_TRIES`): asked again after the others, never counted a failure.
    * Rejects when it could not ask (offline, refused, over its limit): that counts toward the stage's breaker.
    */
-  goodreads?: (query: { title: string; authors: string[]; goodreadsBookId: string | null }) => Promise<string | null | 'blocked'>
+  goodreads?: (query: { title: string; authors: string[]; isbn13: string | null; goodreadsBookId: string | null }) => Promise<string | null | 'blocked' | 'later'>
   /** Goodreads said it is blocking us (once per fill, however many rows were in flight). The rows go on without it. */
   onBlocked?: () => void
   /** Whether the Goodreads stage runs at all: `GOODREADS_COVERS` (data/coverRank.ts), the one off switch. */
@@ -130,7 +141,17 @@ export type CoverFillOptions = {
 }
 
 /** `fallback`: the cover another edition of the work gave, reported at once; a better kind (the ebook) replaces it when it turns up. */
-type Item = { wanted: CoverWanted; attempts: number; done: boolean; ol: Promise<string | null>; second: boolean; fallback: CoverFound | null }
+type Item = {
+  wanted: CoverWanted
+  attempts: number
+  done: boolean
+  ol: Promise<string | null>
+  second: boolean
+  fallback: CoverFound | null
+  /** Goodreads said `'later'` this many times, and not before when it may be asked again. */
+  later?: number
+  notBefore?: number
+}
 
 const APPLE_HOST = 'itunes.apple.com'
 const OPENLIBRARY_API = 'https://openlibrary.org/api/books'
@@ -523,6 +544,8 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   let goodreadsFailures = 0
   let goodreadsBlocked = false
   let goodreadsNextAt = 0
+  /** `'later'` answers in a row. */
+  let goodreadsLaterRun = 0
 
   /** The Goodreads stage is open: switched on, wired, not given up, the budget not spent. */
   const goodreadsOpen = () =>
@@ -550,7 +573,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
           continue
         }
         // Paced: serial, one ask every `goodreadsGapMs`.
-        const at = Math.max(now(), goodreadsNextAt)
+        const at = Math.max(now(), goodreadsNextAt, item.notBefore ?? 0)
         goodreadsNextAt = at + goodreadsGapMs
         await wait(at - now(), controller.signal)
         if (item.done) continue
@@ -573,14 +596,27 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   async function askGoodreads(item: Item) {
     const { row, goodreadsId } = item.wanted
     calls.goodreads++
-    let url: string | null | 'blocked'
+    let url: string | null | 'blocked' | 'later'
     try {
-      url = await withIn(goodreads!({ title: row.title, authors: row.authors, goodreadsBookId: goodreadsId ?? null }), COVER_CALL_TIMEOUT_MS)
+      url = await withIn(
+        goodreads!({ title: row.title, authors: row.authors, isbn13: row.isbn13 ?? item.wanted.book.isbn13 ?? null, goodreadsBookId: goodreadsId ?? null }),
+        COVER_CALL_TIMEOUT_MS,
+      )
     } catch {
       if (!stopped) goodreadsFailures++
       return finish(item, null)
     }
     goodreadsFailures = 0
+    if (url === 'later') {
+      // Not a miss and not a failure: once more, after the others; and a run of them holds the stage a while.
+      if (++goodreadsLaterRun >= GOODREADS_LATER_RUN) goodreadsNextAt = Math.max(goodreadsNextAt, now() + GOODREADS_LATER_PAUSE_MS)
+      if (stopped || (item.later ?? 0) >= GOODREADS_LATER_TRIES) return finish(item, null)
+      item.later = (item.later ?? 0) + 1
+      item.notBefore = now() + GOODREADS_RETRY_AFTER_MS
+      goodreadsQueue.push(item)
+      return
+    }
+    goodreadsLaterRun = 0
     if (url === 'blocked') {
       // Given up at once, for the rest of this fill; told once (another ask in flight cannot tell it twice).
       if (!goodreadsBlocked && !stopped) {

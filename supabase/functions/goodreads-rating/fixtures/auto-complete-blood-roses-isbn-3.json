@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/auto_complete?format=json&q=9783865527363",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": "[{\"imageUrl\":\"https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1549552344i/43883077._SY75_.jpg\",\"bookId\":\"43883077\",\"workId\":\"41150269\",\"bookUrl\":\"/book/show/43883077-blood-roses---buch-3\",\"from_search\":true,\"from_srp\":true,\"qid\":\"MHgZtrLU4j\",\"rank\":1,\"title\":\"Blood \\u0026 Roses - Buch 3 (German Edition)\",\"bookTitleBare\":\"Blood \\u0026 Roses - Buch 3\",\"numPages\":124,\"avgRating\":\"4.36\",\"ratingsCount\":11245,\"author\":{\"id\":7771953,\"name\":\"Callie Hart\",\"isGoodreadsAuthor\":true,\"profileUrl\":\"https://www.goodreads.com/author/show/7771953.Callie_Hart\",\"worksListUrl\":\"https://www.goodreads.com/author/list/7771953.Callie_Hart\"},\"kcrPreviewUrl\":null,\"description\":{\"html\":\"Seit zwei Jahren suche ich meine Schwester. Sie ist in der Gewalt von Menschenhändlern. \\u003cbr/\\u003eIch habe Zeth um Hilfe gebeten. Doch damit habe ich ihn selbst in Lebensgefahr gebracht…\",\"truncated\":true,\"fullContentUrl\":\"https://www.goodreads.com/book/show/43883077-blood-roses---buch-3\"}}]"
+}

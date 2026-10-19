@@ -179,7 +179,7 @@ export const ALTERNATIVES_KEPT = 20
 export const NEAR_KEPT = 10
 
 /** What the last-resort Goodreads stage is asked with: a Goodreads file's row and its book id. */
-export type GoodreadsQuery = { title: string; authors: string[]; goodreadsBookId: string | null }
+export type GoodreadsQuery = { title: string; authors: string[]; isbn13: string | null; goodreadsBookId: string | null }
 
 export type Lookups = {
   catalogue: Pick<CatalogueSearch, 'search'>
@@ -437,7 +437,7 @@ async function editionOf(row: ImportBook, lookups: Lookups, signal?: AbortSignal
   const edition: Edition = { book: bookFromRow(row), via: null, unsure: pending || found.incomplete, alternatives, near }
   if (edition.unsure || !lookups.goodreads || row.source !== 'goodreads') return edition
   // The last resort: Goodreads' cover of the file's own book (its id, else its title and author).
-  const answer = await ask((s) => lookups.goodreads!({ title: row.title, authors: row.authors, goodreadsBookId: row.sourceId }, s))
+  const answer = await ask((s) => lookups.goodreads!({ title: row.title, authors: row.authors, isbn13: row.isbn13, goodreadsBookId: row.sourceId }, s))
   if (!answer || answer === 'blocked') return edition
   const covered = mergeCover(edition, { ...answer, kind: 'goodreads' })
   return covered ? { ...covered, goodreadsOnly: true } : edition
