@@ -126,7 +126,7 @@ Deno.test('a Goodreads stub without ratings falls back to the title search as we
 })
 
 Deno.test('a miss is stored and not asked about again for 7 days', async () => {
-  const { handler, asked, store, time } = setup()
+  const { handler, asked, store, time } = setup({ extra: NOBODY_LISTED })
   assertEquals((await (await handler(ask(NOBODY))).json()).status, 'not_found')
   assertEquals(store.get(NOBODY.isbn13)?.status, 'not_found')
   assertEquals(store.get(NOBODY_KEY)?.status, 'not_found')
@@ -176,7 +176,7 @@ const NOBODY_KEY = 'title:qxzvbnm wplkjhg|zzyzx'
 Deno.test('a miss is asked again after 7 days, a found rating only after 30', async () => {
   assertEquals(NOT_FOUND_MAX_AGE_MS, 7 * DAY)
   assertEquals(MAX_AGE_MS, 30 * DAY)
-  const { handler, asked, store, time } = setup()
+  const { handler, asked, store, time } = setup({ extra: NOBODY_LISTED })
   const miss: CachedAnswer = { status: 'not_found', checkedAt: new Date(time.now() - 6 * DAY).toISOString() }
   store.set(NOBODY.isbn13, miss)
   store.set(NOBODY_KEY, miss)
@@ -223,7 +223,7 @@ Deno.test('a Book without an ISBN is found by title and author, cached by its ti
 })
 
 Deno.test('a Book without an ISBN that Goodreads does not know is a miss, stored and kept for 7 days', async () => {
-  const { handler, asked, store, time } = setup()
+  const { handler, asked, store, time } = setup({ extra: NOBODY_LISTED })
   const body = await (await handler(ask(NOBODY_NO_ISBN))).json()
   assertEquals(body.status, 'not_found')
   assertEquals(asked.length, 1)
@@ -525,6 +525,8 @@ const answerLike = (name: Parameters<typeof recording>[0]) => () =>
 /** `auto_complete`'s soft throttle: 200 and an empty list. */
 const emptyList = () => new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } })
 /** The whole-title search answers the list that holds the Absolute edition's id (an edition the title rule does not take). */
+/** The title search for NOBODY answers a list (another book's): Goodreads is answering and has not this one, a real miss. */
+const NOBODY_LISTED = { [autoCompleteUrl('Qxzvbnm Wplkjhg Zzyzx')]: answerLike('auto-complete-sandman') }
 const withAbsolute = { [SANDMAN_FULL]: answerLike('auto-complete-sandman') }
 
 Deno.test('cover: without an ISBN the whole title with the first author is asked first; the answer has the cover without its size token and the Goodreads id', async () => {
@@ -822,6 +824,34 @@ Deno.test('cover `[]`: an unsure answer is asked again at the next request (noth
   assert(time.now() - Date.parse('2026-10-04T10:00:00Z') <= 12_000)
   empty = false
   assertEquals((await (await handler(ask({ ...FALL, cover: true }))).json()).status, 'found')
+})
+
+Deno.test('ratings `[]`: the title search answering an empty list is "unsure", not a miss: nothing is cached for the title, and the next ask goes to Goodreads again', async () => {
+  // NOBODY by title alone: the recording is `[]` (a book Goodreads does not know, or a soft throttle: the two look alike).
+  const { handler, asked, store } = setup()
+  const body = await (await handler(ask(NOBODY_NO_ISBN))).json()
+  assertEquals(body, { status: 'unsure', retryAfterSeconds: 30 })
+  assertEquals(asked.length, 1)
+  assertEquals(store.size, 0)
+  assertEquals((await (await handler(ask(NOBODY_NO_ISBN))).json()).status, 'unsure')
+  assertEquals(asked.length, 2) // asked again: no miss was kept
+})
+
+Deno.test('ratings `[]`: an ISBN Goodreads does not know (a 404, a real miss) is stored under the ISBN; the title search behind it answering `[]` is unsure and stored nowhere', async () => {
+  const { handler, asked, store } = setup()
+  const body = await (await handler(ask(NOBODY))).json()
+  assertEquals(body.status, 'unsure')
+  assertEquals(asked.map((a) => new URL(a.url).pathname), ['/book/review_counts.json', '/book/auto_complete'])
+  assertEquals(store.get(NOBODY.isbn13)?.status, 'not_found')
+  assertEquals(store.has(NOBODY_KEY), false)
+})
+
+Deno.test('ratings `[]`: a list that does not hold the Book is still a miss, cached; a list that holds it is found', async () => {
+  const { handler, store } = setup({ extra: NOBODY_LISTED })
+  assertEquals((await (await handler(ask(NOBODY_NO_ISBN))).json()).status, 'not_found')
+  assertEquals(store.get(NOBODY_KEY)?.status, 'not_found')
+  const found = await (await setup().handler(ask(LEGION_NO_ISBN))).json()
+  assertEquals(found.status, 'found')
 })
 
 Deno.test('cover `[]`: a 202 or an empty body is still a block (breaker), not unsure', async () => {

@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { createCatalogueSearch } from '~/data/catalogueSearch'
 import type { Book, BookSnapshot } from '~/data/books'
 import { createCoverFill, mergeCover, type CoverFill, type CoverFillProgress, type CoverFound } from '~/data/coverFill'
+import { runCoverUpgrade, type UpgradeList } from '~/data/coverUpgrade'
+import { createUpgradeCatalogue, type UpgradeCatalogue } from '~/data/coverUpgradeCatalogue'
 import { GOODREADS_COVERS } from '~/data/coverRank'
 import { probeImageInBrowser, verifyCover } from '~/data/covers'
 import { createDnb, DNB_IMPORT_GAP_MS } from '~/data/dnb'
@@ -48,6 +50,7 @@ import { useSessionStore } from '~/stores/session'
 import { isoDay } from '~/utils/dates'
 import { writeImportHint } from '~/utils/importHint'
 import { clearMatches, readMatches, writeMatches, type StoredMatch } from '~/utils/importMatches'
+import { importedEntryIds, makeUpgradeList, readUpgradeLists, writeUpgradeLists } from '~/utils/coverUpgradeList'
 import { parseAppConfig } from '~/utils/appConfig'
 import { importAmbient } from '~/utils/importProgress'
 
@@ -55,6 +58,8 @@ import { importAmbient } from '~/utils/importProgress'
 const STALL_MS = 45_000
 /** Import is pressed: the cover fill's rows still being asked get this long before the write starts; what is not in by then follows if it can. */
 const COVER_GRACE_MS = 3000
+/** An Apple upgrade that paused (a refusal) is tried again after this long, while the app stays open. */
+const UPGRADE_RETRY_MS = 600_000
 
 /**
  * pick: no file yet · reading: the file is being read · matching: editions
@@ -378,6 +383,106 @@ export const useImportStore = defineStore('import', () => {
       },
     }))
   }
+
+  // ------------------------------------------------------- the Apple upgrade, after the import
+
+  /**
+   * The one-time Apple cover upgrade (data/coverUpgrade.ts, issue #366): when an import is written, the Catalogue Books that import
+   * ADDED (not one she held, added or picked an edition for) whose cover is small, linked or missing are listed on this device
+   * (utils/coverUpgradeList.ts); the list is worked off in the background, once, and resumes on the next app start until it is.
+   * It runs only while nothing else needs Apple: on the start screen and the summary (`phase`), never during an import. Nothing of
+   * it is shown: no pill, no error; an Apple refusal pauses it and it tries again later.
+   */
+  let upgradeCatalogue: UpgradeCatalogue | null = null
+  let upgrading = false
+  let upgradeAbort: AbortController | null = null
+  let upgradeRetry: ReturnType<typeof setTimeout> | null = null
+  /** Lists that paused this session (Apple refused): not asked again until the retry. */
+  const upgradePaused = new Set<string>()
+
+  const storage = () => (import.meta.client ? window.localStorage : null)
+
+  function stopUpgrade() {
+    upgradeAbort?.abort()
+    upgradeAbort = null
+    if (upgradeRetry) clearTimeout(upgradeRetry)
+    upgradeRetry = null
+    upgradePaused.clear()
+  }
+
+  /** Keeps one list as it is now (a worked-off one is dropped: done for good). */
+  function keepUpgradeList(list: UpgradeList) {
+    const member = session.member?.id
+    const store = storage()
+    if (!member || !store) return
+    writeUpgradeLists(store, member, [...readUpgradeLists(store, member).filter((kept) => kept.id !== list.id), list])
+  }
+
+  /** Works the member's lists off, one after the other, and resolves when there is none left to try. Guarded: one run at a time. */
+  async function continueUpgrade() {
+    const member = session.member?.id
+    const store = storage()
+    if (upgrading || !member || !store || !backend || !isOnline() || (phase.value !== 'pick' && phase.value !== 'done')) return
+    if (!readUpgradeLists(store, member).some((list) => !upgradePaused.has(list.id))) return
+    // The searcher and the paced `fetch` are the import's own (one Apple pace for everything the import asks).
+    importer()
+    if (!searcher || !liveFetch) return
+    upgrading = true
+    const controller = new AbortController()
+    upgradeAbort = controller
+    const paced = liveFetch
+    const search = searcher
+    upgradeCatalogue ??= createUpgradeCatalogue(backend)
+    const covers = upgradeCatalogue
+    try {
+      for (;;) {
+        const list = readUpgradeLists(store, member).find((one) => !upgradePaused.has(one.id))
+        if (!list || controller.signal.aborted) break
+        const run = await runCoverUpgrade(list, {
+          search,
+          probe: probeImageInBrowser,
+          currentCovers: covers.currentCovers,
+          write: covers.write,
+          hostBlockedFor: (host) => paced.blockedFor(host),
+          signal: controller.signal,
+          onSave: keepUpgradeList,
+        })
+        keepUpgradeList(list)
+        if (run.paused && !controller.signal.aborted) {
+          // Apple refused (or the Catalogue could not be reached): quietly, later.
+          upgradePaused.add(list.id)
+          upgradeRetry ??= setTimeout(() => {
+            upgradeRetry = null
+            upgradePaused.clear()
+            void continueUpgrade()
+          }, UPGRADE_RETRY_MS)
+        }
+      }
+    } finally {
+      upgrading = false
+      if (upgradeAbort === controller) upgradeAbort = null
+    }
+    // Stopped for an import that was cancelled before this run let go: nothing else will start it again.
+    if (controller.signal.aborted) void continueUpgrade()
+  }
+
+  /**
+   * The import is written: its list is made from the new entries it added (`entryIds`, her own picks left out) and worked off. A
+   * list is only made from an import's own `added` rows, so a later import, or a book she adds, never makes or restarts one.
+   */
+  async function startUpgrade(entryIds: string[]) {
+    const member = session.member?.id
+    const store = storage()
+    if (!member || !store || !backend || !entryIds.length) return void continueUpgrade()
+    upgradeCatalogue ??= createUpgradeCatalogue(backend)
+    const rows = await upgradeCatalogue.rowsForEntries(entryIds).catch(() => null)
+    const list = rows && session.member?.id === member ? makeUpgradeList(`import-${Date.now().toString(36)}-${entryIds.length}`, rows) : null
+    if (list) keepUpgradeList(list)
+    void continueUpgrade()
+  }
+
+  // Nothing else needs Apple on the start screen and in the summary; any other phase (reading, lookups, preview, write) does.
+  watch(phase, (now) => (now === 'pick' || now === 'done' ? void continueUpgrade() : stopUpgrade()))
 
   let lookup: AbortController | null = null
 
@@ -980,12 +1085,17 @@ export const useImportStore = defineStore('import', () => {
     else if (import.meta.client) clearMatches(window.localStorage)
     forgetFile()
     readFile = null
+    // The Books this import added, without the rows she picked an edition for herself (the Apple upgrade works on those alone).
+    const picked = new Set([...chosen.value].map((index) => books.value[index]?.key))
+    const addedEntries = importedEntryIds(outcomes.value, picked)
     phase.value = 'done'
     // Home stops offering the import to her (utils/importHint.ts).
     if (import.meta.client && session.member && outcomes.value.some((outcome) => outcome.outcome === 'added' || outcome.outcome === 'imported'))
       writeImportHint(window.localStorage, session.member.id, 'imported')
     // The Library shows the new books the next time it is opened.
     void libraryStore.load()
+    // The one-time Apple cover upgrade: a list of the books this import added, worked off in the background.
+    void startUpgrade(addedEntries)
   }
 
   // Another member, or nobody: nothing of the last one's file stays.
@@ -995,8 +1105,11 @@ export const useImportStore = defineStore('import', () => {
     () => session.member?.id,
     (now, before) => {
       if (now === before) return
+      stopUpgrade()
+      upgradePaused.clear()
       reset({ keepFile: true })
-      void resume(now)
+      // An import cut off by a closed app goes on first; else the upgrade left unfinished does (it waits for any import).
+      void resume(now).finally(() => void continueUpgrade())
     },
     { immediate: true },
   )

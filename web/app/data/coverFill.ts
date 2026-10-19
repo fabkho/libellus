@@ -30,17 +30,29 @@ import type { Edition } from './bookImport'
  *    held back (`holdSearch`) until the lookup is over, while the import's own first pass needs Apple more, and
  *    stopped for good after a run of failures or when its `budgetMs` is spent;
  * 4. **Goodreads**, a last resort (flagged: `GOODREADS_COVERS`, docs/covers.md), only for a row of a Goodreads file
- *    (`goodreadsId`, the file's own book id) that has no cover and no fallback after the Apple lane: one ask at a
- *    time, one every `goodreadsGapMs`, under the same budget, stopped for good after `GOODREADS_FAILURES` in a row, and at once, with `onBlocked` told, when Goodreads says
- *    it is blocking us (`'blocked'`). Its cover is ranked below every other kind, so it never replaces one.
+ *    (`goodreadsId`, the file's own book id) that has no cover (not even a sibling's or the work's) after the first three
+ *    steps. It has **its own lane, own pace and own budget**, not behind Apple's: the row goes there as soon as the steps
+ *    above found nothing, while the Apple lane (held until the lookups end, one search every `searchGapMs`, its second
+ *    storefront pass) goes on in parallel. One ask at a time, one every `goodreadsGapMs` (the function's bucket is
+ *    `goodreads-cover`, 40 a minute); `goodreadsBudgetMs` is the time the lane has been working (idle time with nothing to
+ *    ask does not count; Apple's budget is not shared); stopped for good after `GOODREADS_FAILURES` in a row, and at
+ *    once, with `onBlocked` told, when Goodreads says it is blocking us (`'blocked'`). Its cover is ranked below every other
+ *    kind: it is reported as the row's cover when found (a fallback), and the Apple lane's ebook still replaces it; a row
+ *    Apple found a cover for first is never asked at Goodreads at all.
  *
  * A cover is only linked: the address and its thumbhash are kept, never the image
  * (docs/THIRD-PARTY.md). Framework-free; `fetch`, the search and the image probe come
  * in from outside, so the tests answer from recordings and no test calls a live API.
  */
 
-/** How long the search lane may run once it is released; what it has not reached stays without a cover. */
+/** How long the Apple search lane may run once it is released; what it has not reached stays without a cover. */
 export const COVER_FILL_BUDGET_MS = 600_000
+/**
+ * How long the Goodreads lane may work (its own, not Apple's): 600 s was shared with Apple's two storefront passes and only
+ * 34 of 160 eligible rows were asked (PR #372); alone, at one ask every 1.6 s, 126 of 126 took 229 s. Counted as the time
+ * the lane is working, so a long lookup that feeds it slowly does not use it up.
+ */
+export const COVER_FILL_GOODREADS_BUDGET_MS = 900_000
 /** Rows checked at once against siblings and Open Library's answer. */
 export const COVER_FILL_PARALLEL = 4
 /** The least time between two searches: Apple's documented 20 calls a minute, one request a search. */
@@ -131,6 +143,8 @@ export type CoverFillOptions = {
   /** Whether the Goodreads stage runs at all: `GOODREADS_COVERS` (data/coverRank.ts), the one off switch. */
   goodreadsCovers?: boolean
   goodreadsGapMs?: number
+  /** The Goodreads lane's own budget (`COVER_FILL_GOODREADS_BUDGET_MS`); `budgetMs` is the Apple lane's. */
+  goodreadsBudgetMs?: number
   budgetMs?: number
   searchGapMs?: number
   parallel?: number
@@ -148,6 +162,9 @@ type Item = {
   ol: Promise<string | null>
   second: boolean
   fallback: CoverFound | null
+  /** The Apple lane is through with the row (answered or given up), and the Goodreads lane (never asked for: true from the start). */
+  searchOver: boolean
+  goodreadsOver: boolean
   /** Goodreads said `'later'` this many times, and not before when it may be asked again. */
   later?: number
   notBefore?: number
@@ -226,10 +243,11 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     hostBlockedFor,
     budgetMs = COVER_FILL_BUDGET_MS,
     searchGapMs = COVER_FILL_SEARCH_GAP_MS,
-    goodreads,
+    goodreads: goodreadsFn,
     onBlocked,
     goodreadsCovers = GOODREADS_COVERS,
     goodreadsGapMs = COVER_FILL_GOODREADS_GAP_MS,
+    goodreadsBudgetMs = COVER_FILL_GOODREADS_BUDGET_MS,
     parallel = COVER_FILL_PARALLEL,
     batch = OPENLIBRARY_BATCH,
     batchWaitMs = OPENLIBRARY_BATCH_WAIT_MS,
@@ -426,8 +444,15 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       const work = await openLibraryWork(item)
       if (work) offer(item, asFound(await verified(work), 'work'))
     }
-    // 4. The work's ebook: the paced search at Apple Books, the row's storefront first; it replaces the fallback.
     if (stopped) return finish(item, null)
+    // 4. Goodreads, in its own lane (its own pace and budget): only a Goodreads file's row with no cover at all by now,
+    //    not waiting for Apple. A row Apple finds a cover for first is taken out of its queue unasked.
+    if (item.wanted.goodreadsId && !item.fallback && goodreadsOpen()) {
+      item.goodreadsOver = false
+      goodreadsQueue.push(item)
+      void runGoodreads()
+    }
+    // 5. The work's ebook: the paced search at Apple Books, the row's storefront first; it replaces the fallback.
     searchQueue.push(item)
     void runSearch()
   }
@@ -467,7 +492,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
         if (item.done) continue
         deadline ??= now() + budgetMs
         if (searchOver()) {
-          afterSearch(item)
+          searchEnded(item)
           continue
         }
         // Paced: one search every `searchGapMs`, never into a host that is refused, never during a pause.
@@ -481,7 +506,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
           break
         }
         if (searchOver()) {
-          afterSearch(item)
+          searchEnded(item)
           continue
         }
         await searchFor(item)
@@ -493,7 +518,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     }
     if (searchQueue.length && !held && !stopped) void runSearch()
     // A lane that ended with rows it will not reach answers them now.
-    if (searchOver() || stopped) for (const item of searchQueue.splice(0)) afterSearch(item)
+    if (searchOver() || stopped) for (const item of searchQueue.splice(0)) searchEnded(item)
   }
 
   async function searchFor(item: Item) {
@@ -517,7 +542,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       failures++
       pausedUntil = now() + Math.min(60_000, 5000 * 2 ** failures)
       if (item.attempts++ < 1 && !searchOver()) searchQueue.push(item)
-      else afterSearch(item)
+      else searchEnded(item)
       return
     }
     failures = 0
@@ -534,7 +559,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       searchQueue.push(item)
       return
     }
-    afterSearch(item)
+    searchEnded(item)
   }
 
   // ------------------------------------------------ Goodreads, the last resort
@@ -547,29 +572,43 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   /** `'later'` answers in a row. */
   let goodreadsLaterRun = 0
 
-  /** The Goodreads stage is open: switched on, wired, not given up, the budget not spent. */
-  const goodreadsOpen = () =>
-    goodreadsCovers && Boolean(goodreads) && !stopped && !goodreadsBlocked && goodreadsFailures < GOODREADS_FAILURES && !(deadline !== null && now() >= deadline)
+  /** Time the lane has worked (asking or pacing), asks over; idle time with nothing queued is not counted. */
+  let goodreadsSpent = 0
+  let goodreadsSince: number | null = null
+  const goodreadsUsed = () => goodreadsSpent + (goodreadsSince === null ? 0 : now() - goodreadsSince)
 
-  /**
-   * Where an item goes once the search lane is through with it: a row of a Goodreads file with no cover at all (the
-   * kinds above Goodreads, a fallback, are never replaced by it) goes on to Goodreads; any other is answered.
-   */
-  function afterSearch(item: Item) {
-    if (item.done) return
-    if (!item.wanted.goodreadsId || item.fallback || !goodreadsOpen()) return finish(item, null)
-    goodreadsQueue.push(item)
-    void runGoodreads()
+  /** The Goodreads lane is open: switched on, wired, not given up, its own budget not spent. */
+  const goodreadsOpen = () =>
+    goodreadsCovers && Boolean(goodreadsFn) && !stopped && !goodreadsBlocked && goodreadsFailures < GOODREADS_FAILURES && goodreadsUsed() < goodreadsBudgetMs
+
+  /** The Apple lane is through with the row: it is answered once the Goodreads lane is too (and not before: its ask may still find a cover). */
+  function searchEnded(item: Item) {
+    item.searchOver = true
+    settle(item)
+  }
+
+  /** The Goodreads lane is through with the row, with a cover or without. */
+  function goodreadsEnded(item: Item, cover: CoverFound | null) {
+    item.goodreadsOver = true
+    // Below every other kind: shown now as the row's cover, replaced if Apple's ebook is found after it.
+    offer(item, cover)
+    settle(item)
+  }
+
+  /** A row is answered when both lanes are through with it. */
+  function settle(item: Item) {
+    if (!item.done && item.searchOver && item.goodreadsOver) finish(item, null)
   }
 
   async function runGoodreads() {
     if (goodreadsRunning) return
     goodreadsRunning = true
+    goodreadsSince = now()
     try {
       for (let item = goodreadsQueue.shift(); item; item = goodreadsQueue.shift()) {
         if (item.done) continue
         if (!goodreadsOpen()) {
-          finish(item, null)
+          goodreadsEnded(item, null)
           continue
         }
         // Paced: serial, one ask every `goodreadsGapMs`.
@@ -578,7 +617,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
         await wait(at - now(), controller.signal)
         if (item.done) continue
         if (!goodreadsOpen()) {
-          finish(item, null)
+          goodreadsEnded(item, null)
           continue
         }
         await askGoodreads(item)
@@ -587,9 +626,11 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       /* stopped */
     } finally {
       goodreadsRunning = false
+      goodreadsSpent = goodreadsUsed()
+      goodreadsSince = null
     }
-    // A stage that ended with rows it will not reach answers them now.
-    if (!goodreadsOpen()) for (const item of goodreadsQueue.splice(0)) finish(item, null)
+    // A lane that ended with rows it will not reach answers them now.
+    if (!goodreadsOpen()) for (const item of goodreadsQueue.splice(0)) goodreadsEnded(item, null)
     else if (goodreadsQueue.length) void runGoodreads()
   }
 
@@ -599,18 +640,20 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     let url: string | null | 'blocked' | 'later'
     try {
       url = await withIn(
-        goodreads!({ title: row.title, authors: row.authors, isbn13: row.isbn13 ?? item.wanted.book.isbn13 ?? null, goodreadsBookId: goodreadsId ?? null }),
+        goodreadsFn!({ title: row.title, authors: row.authors, isbn13: row.isbn13 ?? item.wanted.book.isbn13 ?? null, goodreadsBookId: goodreadsId ?? null }),
         COVER_CALL_TIMEOUT_MS,
       )
     } catch {
       if (!stopped) goodreadsFailures++
-      return finish(item, null)
+      return goodreadsEnded(item, null)
     }
     goodreadsFailures = 0
+    // Apple found the row's cover in the meantime: nothing to do with the answer.
+    if (item.done) return
     if (url === 'later') {
       // Not a miss and not a failure: once more, after the others; and a run of them holds the stage a while.
       if (++goodreadsLaterRun >= GOODREADS_LATER_RUN) goodreadsNextAt = Math.max(goodreadsNextAt, now() + GOODREADS_LATER_PAUSE_MS)
-      if (stopped || (item.later ?? 0) >= GOODREADS_LATER_TRIES) return finish(item, null)
+      if (stopped || (item.later ?? 0) >= GOODREADS_LATER_TRIES) return goodreadsEnded(item, null)
       item.later = (item.later ?? 0) + 1
       item.notBefore = now() + GOODREADS_RETRY_AFTER_MS
       goodreadsQueue.push(item)
@@ -627,16 +670,18 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
           /* a reporter that fails must not stop the fill */
         }
       }
-      return finish(item, null)
+      return goodreadsEnded(item, null)
     }
-    if (!url || stopped) return finish(item, null)
-    finish(item, asFound(await verified(url), 'goodreads'))
+    if (!url || stopped) return goodreadsEnded(item, null)
+    const cover = asFound(await verified(url), 'goodreads')
+    // Apple found the row's cover while this was on its way: that one stays (it ranks above).
+    goodreadsEnded(item, item.done ? null : cover)
   }
 
   return {
     add(wanted) {
       if (stopped || items.has(wanted.key)) return
-      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null), second: false, fallback: null }
+      const item: Item = { wanted, attempts: 0, done: false, ol: Promise.resolve(null), second: false, fallback: null, searchOver: false, goodreadsOver: true }
       items.set(wanted.key, item)
       item.ol = requestOpenLibrary(item)
       lane.push(item)

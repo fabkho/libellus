@@ -4,7 +4,7 @@
 --   supabase test db
 
 begin;
-select plan(14);
+select plan(24);
 set local client_min_messages = warning;
 
 create schema if not exists tests;
@@ -109,6 +109,65 @@ select throws_ok($$ select public.fill_book_covers('{"not":"an array"}'::jsonb) 
 reset role;
 select tests.act_as(null);
 select throws_ok($$ select public.fill_book_covers('[]'::jsonb) $$, '28000', null, 'signed out is refused');
+
+-- ------------------------------------------- the import's one-time Apple upgrade (`replaces`, 20261101010000)
+
+reset role;
+insert into public.books (title, authors, source, isbn13, cover_url) values ('Small One', '{A}', 'import', '9783000000066', 'https://covers.openlibrary.org/b/id/11-L.jpg') returning id as small_one \gset
+insert into public.books (title, authors, source, isbn13, cover_url) values ('Linked One', '{A}', 'import', '9783000000073', 'https://i.gr-assets.com/images/S/books/1i/5.jpg') returning id as linked_one \gset
+insert into public.books (title, authors, source, isbn13, cover_url) values ('Else Not Hers', '{A}', 'import', '9783000000080', 'https://covers.openlibrary.org/b/id/12-L.jpg') returning id as else_not_hers \gset
+insert into public.library_entries (member_id, book_id) values (:'ida_id', :'small_one'), (:'ida_id', :'linked_one');
+insert into public.library_entries (member_id, book_id) values (:'max_id', :'else_not_hers');
+select tests.act_as(:'ida_id');
+
+select is(
+  public.fill_book_covers(jsonb_build_array(jsonb_build_object(
+    'book_id', :'small_one', 'cover_url', 'https://is1-ssl.mzstatic.com/image/thumb/x/600x900bb.jpg',
+    'replaces', 'https://covers.openlibrary.org/b/id/11-L.jpg'))),
+  1, 'an upgrade replaces the cover the caller saw with an Apple artwork');
+reset role;
+select is((select cover_url from public.books where id = :'small_one'), 'https://is1-ssl.mzstatic.com/image/thumb/x/600x900bb.jpg', 'the Book has the Apple cover');
+select tests.act_as(:'ida_id');
+
+select is(
+  public.fill_book_covers(jsonb_build_array(jsonb_build_object(
+    'book_id', :'small_one', 'cover_url', 'https://is1-ssl.mzstatic.com/image/thumb/y/600x900bb.jpg',
+    'replaces', 'https://covers.openlibrary.org/b/id/11-L.jpg'))),
+  0, 'the same upgrade twice changes nothing: the Book no longer has the cover it replaces');
+
+select is(
+  public.fill_book_covers(jsonb_build_array(jsonb_build_object(
+    'book_id', :'linked_one', 'cover_url', 'https://is1-ssl.mzstatic.com/image/thumb/z/600x900bb.jpg',
+    'replaces', 'https://covers.openlibrary.org/b/id/999-L.jpg'))),
+  0, 'a cover that is not the one the caller saw (another member upgraded it, or it changed) stays');
+
+select is(
+  public.fill_book_covers(jsonb_build_array(jsonb_build_object(
+    'book_id', :'linked_one', 'cover_url', 'https://covers.openlibrary.org/b/id/77-L.jpg',
+    'replaces', 'https://i.gr-assets.com/images/S/books/1i/5.jpg'))),
+  0, 'an upgrade is only ever Apple artwork: another host is not a larger cover');
+
+select is(
+  public.fill_book_covers(jsonb_build_array(jsonb_build_object(
+    'book_id', :'else_not_hers', 'cover_url', 'https://is1-ssl.mzstatic.com/image/thumb/w/600x900bb.jpg',
+    'replaces', 'https://covers.openlibrary.org/b/id/12-L.jpg'))),
+  0, 'a Book she does not hold is not hers to upgrade');
+
+select is(
+  public.fill_book_covers(jsonb_build_array(jsonb_build_object(
+    'book_id', :'manual_one', 'cover_url', 'https://is1-ssl.mzstatic.com/image/thumb/w/600x900bb.jpg',
+    'replaces', 'https://covers.openlibrary.org/b/id/12-L.jpg'))),
+  0, 'a Manual book is not a Catalogue Book: never upgraded');
+
+select is(
+  public.fill_book_covers(jsonb_build_array(jsonb_build_object(
+    'isbn13', '9783000000073', 'cover_url', 'https://is1-ssl.mzstatic.com/image/thumb/z/600x900bb.jpg',
+    'cover_thumbhash', 'YJqGPQw7sFlslqhFafSE+Q6oJ1h2iHB2Rg==',
+    'replaces', 'https://i.gr-assets.com/images/S/books/1i/5.jpg'))),
+  1, 'a linked Goodreads cover is replaced by the Apple one (the snapshot named by its ISBN)');
+reset role;
+select is((select cover_thumbhash from public.books where id = :'linked_one'), 'YJqGPQw7sFlslqhFafSE+Q6oJ1h2iHB2Rg==', 'with the new thumbhash');
+select is((select cover_url from public.books where id = :'has_one'), 'https://covers.openlibrary.org/b/id/1-L.jpg', 'a cover without `replaces` is still never replaced');
 
 select * from finish();
 rollback;

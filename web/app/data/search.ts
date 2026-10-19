@@ -91,9 +91,15 @@ export type Search = {
    * so `lookupIsbn` and `lookupAppleIsbn` of those ISBNs ask Apple nothing more: a whole file's ISBNs cost a few
    * dozen requests instead of two each. A result whose artwork names its ISBN is that ISBN's; another is the
    * edition of the batch's row whose work it is (`belongs`). A batch that fails, or a result two rows could own,
-   * leaves those ISBNs to their own lookup. Never rejects (but on abort).
+   * leaves those ISBNs to their own lookup. Never rejects (but on abort). `failed`: a batch was not answered (refused,
+   * unreachable): the cover upgrade (data/coverUpgrade.ts) stops there instead of asking those ISBNs one by one.
    */
-  primeIsbns: (rows: readonly IsbnRow[], belongs: (row: IsbnRow, book: BookSnapshot) => boolean, options?: { signal?: AbortSignal }) => Promise<void>
+  primeIsbns: (rows: readonly IsbnRow[], belongs: (row: IsbnRow, book: BookSnapshot) => boolean, options?: { signal?: AbortSignal }) => Promise<{ failed: boolean }>
+  /**
+   * What `primeIsbns` found for an ISBN-13 without a request: its Apple edition, null when Apple surely has none, `undefined`
+   * when it was not answered (never asked, a failed batch, or two rows of one work that may each own it).
+   */
+  primedApple: (isbn13: string) => BookSnapshot | null | undefined
   /** One Apple Book by ISBN-13 (its artwork is the best cover there is). Null when Apple has none. */
   lookupAppleIsbn: (isbn13: string, options?: { signal?: AbortSignal }) => Promise<BookSnapshot | null>
   /** One OpenLibrary edition by its key (`OL61022665M`). Null or a rejection as `lookupApple`. */
@@ -214,6 +220,7 @@ export function createSearch(options: {
 
   async function primeIsbns(rows: readonly IsbnRow[], belongs: (row: IsbnRow, book: BookSnapshot) => boolean, { signal }: { signal?: AbortSignal } = {}) {
     const unique = [...new Map(rows.filter((row) => !primed.has(row.isbn13)).map((row) => [row.isbn13, row])).values()]
+    let failed = false
     for (let from = 0; from < unique.length; from += APPLE_ISBN_BATCH) {
       if (signal?.aborted) throw abortError()
       const batch = unique.slice(from, from + APPLE_ISBN_BATCH)
@@ -224,6 +231,7 @@ export function createSearch(options: {
       } catch {
         if (signal?.aborted) throw abortError()
         // Not answered (refused, unreachable): these ISBNs are asked one by one, as before.
+        failed = true
         continue
       }
       const owned = new Map<string, BookSnapshot>()
@@ -248,6 +256,7 @@ export function createSearch(options: {
         else if (!unsure.has(isbn13) && !orphan) primed.set(isbn13, null)
       }
     }
+    return { failed }
   }
 
   return {
@@ -263,6 +272,7 @@ export function createSearch(options: {
     lookupApple: (appleId, { signal } = {}) => apple.lookupId(appleId, signal),
     lookupAppleIsbn,
     primeIsbns,
+    primedApple: (isbn13) => primed.get(isbn13),
     async lookupIsbn(isbn13, { signal, strict = false } = {}) {
       const [fromApple, fromOpenLibrary] = await Promise.allSettled([
         strict && !primed.has(isbn13)
