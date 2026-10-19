@@ -186,6 +186,7 @@ const empty = computed(() => ebooks.loaded && !ebooks.records.some((r) => r.stat
           <li v-for="{ record, entry, missing } in linkedRows" :key="record.id">
             <UiPressLink
               :to="entry ? `/book/${entry.book.id}` : `/book/${record.bookId}`"
+              v-on="flightOf(entry ? `/book/${entry.book.id}` : `/book/${record.bookId}`)"
               class="flex items-center gap-inset py-sm"
               data-testid="ebooks.linkedRow"
             >

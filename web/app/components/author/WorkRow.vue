@@ -95,6 +95,7 @@ async function want() {
     <component
       :is="key ? PressLink : 'div'"
       v-bind="key ? { to: `/book/${key}` } : {}"
+      v-on="flightOf(key ? `/book/${key}` : null)"
       class="flex min-w-0 flex-1 items-center gap-inset py-sm"
       :data-testid="key ? `${testid}Link` : undefined"
       :aria-current="current ? 'page' : undefined"

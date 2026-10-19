@@ -52,6 +52,7 @@ const PressLink = resolveComponent('UiPressLink')
         <component
           :is="single ? PressLink : 'button'"
           v-bind="single ? { to: `/book/${single.id}` } : { type: 'button', 'aria-haspopup': 'dialog' }"
+          v-on="flightOf(single ? `/book/${single.id}` : null)"
           class="stretched flex items-center justify-between gap-sm text-left"
           data-testid="home.friendsRow.open"
           @press="single && books.prefetch(single.id)"

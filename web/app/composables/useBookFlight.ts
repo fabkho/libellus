@@ -359,7 +359,7 @@ function hide(flight: Flight, cover: HTMLElement | null) {
 
 /**
  * A finger (or the mouse) went down on a link to a book page: called by
- * UiPressLink on the press, before the tap is known to be one. The book page's
+ * UiPressLink on the press (`flightOf`), before the tap is known to be one. The book page's
  * cover image (the hero's size, not the row's) starts loading now, so it is
  * usually in by the time the cover flies and it flies sharp (`sharpen`).
  */
@@ -381,7 +381,7 @@ function sharpSrcOf(cover: Element | null): string | null {
   return coverSrc(image?.currentSrc || image?.src, 'xl')
 }
 
-/** A tap on a link to a book page: called by UiPressLink before it navigates. */
+/** A tap on a link to a book page: called by UiPressLink (`flightOf`) before it navigates. */
 export function launch(link: HTMLElement, to: string) {
   if (!layers || !router || !import.meta.client) return
   const path = router.resolve(to).path
@@ -410,6 +410,16 @@ export function launch(link: HTMLElement, to: string) {
     sharpSrc: sharpSrcOf(cover),
   }
   pose(pending)
+}
+
+/**
+ * What a link to a book page (the base's `UiPressLink`) hands the flight: `v-on="flightOf(path)"`. The link says
+ * `press` on touch-down and `navigate` just before it takes its destination, each with its element; this is the
+ * app's side of both. No address (a book that opens nothing), no listeners.
+ */
+export function flightOf(to: string | null | undefined) {
+  if (!to) return {}
+  return { press: (link: HTMLElement) => prepare(link, to), navigate: (link: HTMLElement) => launch(link, to) }
 }
 
 /**

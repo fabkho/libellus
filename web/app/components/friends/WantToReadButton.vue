@@ -80,6 +80,7 @@ async function add() {
     v-else-if="state?.kind === 'have'"
     ref="control"
     :to="`/book/${book.id}`"
+    v-on="flightOf(`/book/${book.id}`)"
     class="icon-action text-ink-faint"
     :data-testid="testid"
     @press="books.prefetch(book.id)"

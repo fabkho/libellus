@@ -12,6 +12,6 @@ const to = computed(() => bookPathOf(props.book))
 </script>
 
 <template>
-  <UiPressLink v-if="to" :to="to" @press="books.prefetch(book.id)"><slot /></UiPressLink>
+  <UiPressLink v-if="to" :to="to" v-on="flightOf(to)" @press="books.prefetch(book.id)"><slot /></UiPressLink>
   <span v-else><slot /></span>
 </template>

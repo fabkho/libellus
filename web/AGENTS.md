@@ -22,6 +22,11 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   Vitest alias follow it). The app's own `components/ui/*`, composables and utils with the base's names win
   (`tests/ui-layer-shadow.test.ts`); `ui.config.ts` says which of the base's plugins run (`touch-active`) and why the
   other two are held.
+  The controls are the base's too (wave 6b): `UiButton`, `UiRoundButton`, `UiPill`, `UiSegmented`, `UiSwitch`, `UiField`,
+  `UiIconSegments`, `UiPressLink`. A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app:
+  `v-on="flightOf(path)"` (`composables/useBookFlight.ts`). Kept here until the base has what they need: `UiIcon` (three
+  drawings differ from the base's: `people`, `heart`, `external`), `UiTextArea` (its `footer` slot) and `UiSwitchRow` (the
+  base's draws through its own `UiRow` and `UiIcon`, so the Friends row's `people` would change; it goes with `UiRow`).
   The base's words (`ui.text`) are set from the messages by `plugins/ui-text.ts`; a word the base adds needs a line in
   `utils/uiText.ts` (`tests/ui-text.test.ts`), a variable it reads needs a token (`tests/ui-layer.test.ts`).
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo

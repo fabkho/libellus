@@ -35,7 +35,7 @@ const size = computed(() => (props.compact ? 'md' : 'lg'))
 <template>
   <ul class="scrollbar-none -mx-screen flex snap-x scroll-px-screen gap-ms overflow-x-auto px-screen pb-xs" :data-testid="testid">
     <li v-for="item in items" :key="item.book.id" class="shrink-0 snap-start" :class="compact ? 'w-(--size-cover-md)' : 'w-(--size-cover-lg)'">
-      <component :is="target(item.book) ? PressLink : 'span'" :to="target(item.book) ?? undefined" class="cover-link flex flex-col gap-xs rounded-cover" :data-testid="`${testid}.book`" @press="emit('press', item.book.id)">
+      <component :is="target(item.book) ? PressLink : 'span'" :to="target(item.book) ?? undefined" v-on="flightOf(target(item.book))" class="cover-link flex flex-col gap-xs rounded-cover" :data-testid="`${testid}.book`" @press="emit('press', item.book.id)">
         <UiCover
           :decorative="!compact"
           :title="shown(item.book).title"

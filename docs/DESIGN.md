@@ -374,7 +374,7 @@ medium only inside a feed sentence (a feed row, Home's friends rows and its requ
 
 ## Components
 
-Base components live in `web/app/components/ui/` (`<UiButton>`, …), the app frame in `shell/` and
+Base components come from the UI base (fabkho/ui, `<UiButton>`, …; the app's own are in `web/app/components/ui/`, `web/AGENTS.md` says which), the app frame in `shell/` and
 `auth/`. They use tokens only, take their copy from the caller or `en.json`, and pass
 `data-testid` (and other attributes) through to their interactive element.
 

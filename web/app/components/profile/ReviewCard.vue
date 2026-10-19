@@ -40,7 +40,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <UiLitCard v-slot="{ onFallback }" :colors="book.coverColors" :title="book.title" class="card flex items-start gap-ms p-inset" :data-testid="testid">
-    <UiPressLink :to="path" class="relative shrink-0" tabindex="-1" aria-hidden="true" :data-testid="`${testid}.cover`" @press="books.prefetch(book.id)">
+    <UiPressLink :to="path" v-on="flightOf(path)" class="relative shrink-0" tabindex="-1" aria-hidden="true" :data-testid="`${testid}.cover`" @press="books.prefetch(book.id)">
       <UiCover
         decorative
         :title="book.title"
@@ -55,7 +55,7 @@ onBeforeUnmount(() => observer?.disconnect())
       />
     </UiPressLink>
     <div class="relative flex min-w-0 flex-1 flex-col items-start gap-xs">
-      <UiPressLink :to="path" class="reach book-title line-clamp-2 min-w-0 text-callout break-words" :data-testid="`${testid}.book`" @press="books.prefetch(book.id)">
+      <UiPressLink :to="path" v-on="flightOf(path)" class="reach book-title line-clamp-2 min-w-0 text-callout break-words" :data-testid="`${testid}.book`" @press="books.prefetch(book.id)">
         <span :data-testid="`${testid}.title`">{{ book.title }}</span>
       </UiPressLink>
       <div class="figures flex flex-wrap items-center gap-x-sm gap-y-xxs text-meta whitespace-nowrap text-ink-faint">

@@ -48,6 +48,7 @@ const addLabel = computed(() => {
     <component
       :is="linking ? 'button' : PressLink"
       v-bind="linking ? { type: 'button', 'aria-label': pickLabel } : { to: `/book/${hit.key}` }"
+      v-on="flightOf(linking ? null : `/book/${hit.key}`)"
       class="flex min-w-0 flex-1 items-center gap-ms py-xs pl-md text-left active:bg-fill-strong"
       data-testid="search.result"
       @press="book.prefetch(hit.key)"

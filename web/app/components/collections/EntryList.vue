@@ -336,6 +336,7 @@ async function onKeydown(event: KeyboardEvent, index: number) {
       >
         <UiPressLink
           :to="`/book/${entry.book.id}`"
+          v-on="flightOf(`/book/${entry.book.id}`)"
           class="flex min-w-0 flex-1 items-center gap-ms py-sm"
           data-testid="collection.entryLink"
           @press="books.prefetch(entry.book.id)"

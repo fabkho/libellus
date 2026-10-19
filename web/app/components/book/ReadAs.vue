@@ -8,7 +8,7 @@
 // connection (the segments are disabled and say Offline otherwise).
 import { readAsOf, READ_AS, type ReadAs } from '~/data/readAs'
 import type { LibraryEntry } from '~/data/library'
-import type { IconSegment } from '~/components/ui/IconSegments.vue'
+import type { IconSegment } from '#ui/components/ui/IconSegments.vue'
 import { useLibraryStore } from '~/stores/library'
 
 const props = defineProps<{ entry: LibraryEntry; testid: string }>()
