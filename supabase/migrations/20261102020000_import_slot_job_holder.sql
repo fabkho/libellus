@@ -33,7 +33,8 @@ begin
   values (v_member, p_holder, p_rows, p_device)
   on conflict (member_id) do update
     set holder = excluded.holder, rows = excluded.rows, device = excluded.device, beat_at = clock_timestamp()
-    where q.holder = excluded.holder or (excluded.device is not null and q.device = excluded.device);
+    where q.holder not like 'job:%'
+      and (q.holder = excluded.holder or (excluded.device is not null and q.device = excluded.device));
   perform private.import_slot_sweep();
   return query select * from private.import_slot_state(v_member, p_holder);
 end

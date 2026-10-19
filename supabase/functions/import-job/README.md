@@ -55,7 +55,7 @@ when they are missing: `pg_cron is not here` / `import-job-tick could not be sch
 ## Limits
 
 `start_import_job` refuses: more than 5 MB of rows (`rows_invalid`), a second start within 2 minutes
-(`import_too_soon`), and while her device import still holds a place in the queue (`device_import_running`: the app
+(`import_too_soon`: it fires within 2 minutes after ANY previous job, finished or cancelled too, so part 3's UI must show it), and while her device import still holds a place in the queue (`device_import_running`: the app
 leaves the place with `import_slot_leave` first). Cancelling deletes the job's rows. Member-triggered kicks (start,
 cancel) are debounced like the tick's. The holder `job:<id>` is reserved: `import_slot_take/beat/leave` refuse it.
 

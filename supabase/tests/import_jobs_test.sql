@@ -5,7 +5,7 @@
 -- 20261102010000_import_jobs.sql.
 
 begin;
-select plan(93);
+select plan(94);
 
 create schema if not exists tests;
 insert into public.invite_codes (code, label, max_uses) values ('T-JOBS', 'import jobs test', 10);
@@ -320,6 +320,13 @@ select ok(not private.import_job_due(), 'not when the place is another member''s
 set local role service_role;
 select is((select count(*)::int from public.import_job_claim('c-5')), 0, 'nor claimed');
 reset role;
+
+-- A device asking from the job's own device does not take the job's place over.
+update public.import_queue set device = 'dev-x' where holder = 'job:' || :'job4';
+select tests.act_as(:'ada');
+select public.import_slot_take('device:ada-2', 5, 'dev-x');
+reset role;
+select is((select holder from public.import_queue where member_id = :'ada'), 'job:' || :'job4', 'a device import of the same device does not swap the holder of a job''s place');
 
 select * from finish();
 rollback;
