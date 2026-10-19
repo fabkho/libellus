@@ -12,6 +12,9 @@ export const UI_TEXT_KEYS = {
   cancel: 'common.cancel',
   offline: 'common.offline',
   etAl: 'common.etAl',
+  // UiClampText's button: lower case, as the app's own ClampText says it under a review (`review.more`).
+  more: 'uiText.more',
+  less: 'uiText.less',
   'chat.locale': 'uiText.chat.locale',
   'chat.today': 'uiText.chat.today',
   'chat.yesterday': 'uiText.chat.yesterday',
@@ -102,7 +105,7 @@ export const UI_TEXT_KEYS = {
 export type UiTextPath = keyof typeof UI_TEXT_KEYS
 
 /** `ui.text` as the base declares it: a word is a string, the chat's words sit under `chat`. */
-export type UiText = { cancel: string; offline: string; etAl: string; chat: Record<string, unknown> } & Record<string, unknown>
+export type UiText = { cancel: string; offline: string; etAl: string; more: string; less: string; chat: Record<string, unknown> } & Record<string, unknown>
 
 /** Sets `value` at a dotted `path` in `target`, creating the nested objects on the way (`chat.reply.you`). */
 export const setPath = (target: Record<string, unknown>, path: string, value: string): void => {

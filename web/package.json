@@ -40,7 +40,7 @@
     "perf:shelf": "tsx perf/shelf.ts"
   },
   "dependencies": {
-    "@fabkho/ui": "github:fabkho/ui#v0.2.0",
+    "@fabkho/ui": "github:fabkho/ui#v0.3.0",
     "@fontsource/geist": "^5.3.0",
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/newsreader": "^5.3.0",

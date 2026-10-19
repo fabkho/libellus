@@ -2090,6 +2090,8 @@
     }
   },
   "uiText": {
+    "more": "more",
+    "less": "less",
     "chat": {
       "locale": "en",
       "today": "Today",
