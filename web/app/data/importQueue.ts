@@ -94,6 +94,30 @@ export function holderOf(storage: Pick<Storage, 'getItem' | 'setItem'> | null, m
   return holder
 }
 
+/**
+ * This DEVICE's id, made once and kept in `localStorage` (not per tab: it must outlive the app being closed). The server
+ * stores it with the place: the same member asking from the same device again, in a new run of the app, takes her own
+ * place back at once instead of waiting out its 75 s (supabase/migrations/20261031010000_import_queue_device.sql).
+ */
+export function deviceOf(storage: Pick<Storage, 'getItem' | 'setItem'> | null, make: () => string): string | null {
+  const key = 'libellus.import-device'
+  const valid = (value: string | null | undefined): value is string => Boolean(value && /^dev-[A-Za-z0-9-]{8,56}$/.test(value))
+  try {
+    const kept = storage?.getItem(key)
+    if (valid(kept)) return kept
+  } catch {
+    // Storage refused: no device id, so only the same run reclaims its place.
+    return null
+  }
+  const device = `dev-${make()}`
+  try {
+    storage?.setItem(key, device)
+  } catch {
+    return null
+  }
+  return device
+}
+
 export type ImportQueue = {
   /**
    * Resolves when it is this import's turn: `'slot'` (the slot is hers, beating until `release`) or `'open'` (the queue
@@ -114,8 +138,10 @@ export type ImportQueue = {
 
 export function createImportQueue(options: {
   rpc: QueueRpc
-  /** This device's name in the queue (`holderOf`). */
+  /** This run's name in the queue (`holderOf`). */
   holder: string
+  /** This device's id (`deviceOf`), sent when a place is taken: the same device in a new run takes its place back at once. */
+  device?: string | null
   scheduler?: Scheduler
   /** The status while waiting changes (also back to null when her turn comes). */
   onStatus?: (status: QueueStatus) => void
@@ -204,7 +230,7 @@ export function createImportQueue(options: {
           let slot: SlotState
           try {
             // Asking again from the same device keeps its place in line and tells the server it is still here.
-            slot = await call('import_slot_take', { p_rows: rows })
+            slot = await call('import_slot_take', { p_rows: rows, ...(options.device ? { p_device: options.device } : {}) })
           } catch {
             // The first call failing is "no queue" (offline, not deployed): the import goes on without. Later, ask again.
             if (first) {

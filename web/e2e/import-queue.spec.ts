@@ -123,8 +123,20 @@ test('the import shows on the other screens, and a closed app picks it up where 
   await page.reload()
   await expect(page.getByTestId('shell.import')).toHaveAttribute('data-kind', 'queued')
 
-  // The other import ends; the lookups run and the preview waits: "ready to check".
+  // The app is closed for good while it HAS the slot: the old run's place stays in the database (a dead holder, its beat fresh).
+  // Opened again on the same device it takes that place back at once, it does not wait 75 s and is never "on another device".
   await sql('delete from public.import_queue where member_id = $1', [other.id])
+  await sql(`update public.import_queue set holder = 'device:closed-app-0001', started_at = now(), beat_at = now() where member_id = $1`, [member.id])
+  const device = await page.evaluate(() => localStorage.getItem('libellus.import-device'))
+  expect(device).toMatch(/^dev-/)
+  expect((await sql<{ device: string }>('select device from public.import_queue where member_id = $1', [member.id]))[0]!.device).toBe(device)
+  await page.reload()
+  await expect(page.getByTestId('shell.import')).toHaveAttribute('data-kind', /matching|covers|ready/, { timeout: 10_000 })
+  const taken = await sql<{ holder: string }>('select holder from public.import_queue where member_id = $1', [member.id])
+  // Either still looking up (its place, now the new run's) or already done with it: never the dead run's.
+  expect(taken.every((row) => row.holder !== 'device:closed-app-0001')).toBe(true)
+
+  // The lookups run and the preview waits: "ready to check".
   await expect(page.getByTestId('shell.import')).toHaveAttribute('data-kind', /matching|covers|ready/, { timeout: 15_000 })
   await expect(page.getByTestId('shell.import')).toHaveAttribute('data-kind', /ready|covers/, { timeout: 45_000 })
   // Nothing of the file is kept once the lookups are over.

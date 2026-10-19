@@ -6,7 +6,7 @@ import { GOODREADS_COVERS } from '~/data/coverRank'
 import { probeImageInBrowser, verifyCover } from '~/data/covers'
 import { createDnb, DNB_IMPORT_GAP_MS } from '~/data/dnb'
 import { indexedDbImportFiles, memoryImportFiles, type ImportFileKeeper } from '~/data/importFile'
-import { createImportQueue, holderOf, runWithSlot, type ImportQueue, type QueueStatus } from '~/data/importQueue'
+import { createImportQueue, deviceOf, holderOf, runWithSlot, type ImportQueue, type QueueStatus } from '~/data/importQueue'
 import { accessTokenOf, viaOwnServer } from '~/data/openLibraryProxy'
 import { createGoodreadsCover } from '~/data/goodreadsCover'
 import {
@@ -401,8 +401,10 @@ export const useImportStore = defineStore('import', () => {
   function slotQueue(): ImportQueue {
     return (slots ??= createImportQueue({
       rpc: (name, args) => backend!.rpc(name, args),
-      // One name per tab for its life: a reload finds its own place again, her other device is another holder.
+      // One name per run of the app (a tab's life); her other device is another holder, the same device is told apart by `device`.
       holder: holderOf(import.meta.client ? window.sessionStorage : null, () => crypto.randomUUID()),
+      // The device's id outlives the app being closed: opened again here, the import takes its own place back at once.
+      device: deviceOf(import.meta.client ? window.localStorage : null, () => crypto.randomUUID()),
       onStatus: (status) => {
         queued.value = status
       },
