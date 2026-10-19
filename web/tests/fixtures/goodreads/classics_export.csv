@@ -1,0 +1,63 @@
+Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,Publisher,Binding,Number of Pages,Year Published,Original Publication Year,Date Read,Date Added,Bookshelves,Bookshelves with positions,Exclusive Shelf,My Review,Spoiler,Private Notes,Read Count,Owned Copies
+3001,Pride and Prejudice,Jane Austen,"Austen, Jane",,"=""""","=""9780141439518""",4,,Paperback,,,,2024/01/01,2023/12/01,,,read,,,,1,0
+3002,Emma,Jane Austen,"Austen, Jane",,"=""""","=""""",4,,Paperback,,,,2024/01/02,2023/12/01,,,read,,,,1,0
+3003,Persuasion,Jane Austen,"Austen, Jane",,"=""""","=""""",4,,Paperback,,,,2024/01/03,2023/12/01,,,read,,,,1,0
+3004,Sense and Sensibility,Jane Austen,"Austen, Jane",,"=""""","=""""",4,,Paperback,,,,2024/01/04,2023/12/01,,,read,,,,1,0
+3005,Nineteen Eighty-Four,George Orwell,"Orwell, George",,"=""""","=""9780451524935""",4,,Paperback,,,,2024/01/05,2023/12/01,,,read,,,,1,0
+3006,Animal Farm,George Orwell,"Orwell, George",,"=""""","=""""",4,,Paperback,,,,2024/01/06,2023/12/01,,,read,,,,1,0
+3007,The Great Gatsby,F. Scott Fitzgerald,"Fitzgerald, F. Scott",,"=""""","=""9780743273565""",4,,Paperback,,,,2024/01/07,2023/12/01,,,read,,,,1,0
+3008,To Kill a Mockingbird,Harper Lee,"Lee, Harper",,"=""""","=""9780061120084""",4,,Paperback,,,,2024/01/08,2023/12/01,,,read,,,,1,0
+3009,Moby-Dick,Herman Melville,"Melville, Herman",,"=""""","=""9780142437247""",4,,Paperback,,,,2024/01/09,2023/12/01,,,read,,,,1,0
+3010,"Bartleby, the Scrivener",Herman Melville,"Melville, Herman",,"=""""","=""""",4,,Paperback,,,,2024/01/10,2023/12/01,,,read,,,,1,0
+3011,Jane Eyre,Charlotte Brontë,"Brontë, Charlotte",,"=""""","=""9780141441146""",4,,Paperback,,,,2024/01/11,2023/12/01,,,read,,,,1,0
+3012,Wuthering Heights,Emily Brontë,"Brontë, Emily",,"=""""","=""9780141439556""",4,,Paperback,,,,2024/01/12,2023/12/01,,,read,,,,1,0
+3013,Frankenstein,Mary Shelley,"Shelley, Mary",,"=""""","=""9780141439471""",4,,Paperback,,,,2024/01/13,2023/12/01,,,read,,,,1,0
+3014,Dracula,Bram Stoker,"Stoker, Bram",,"=""""","=""9780141439846""",4,,Paperback,,,,2024/01/14,2023/12/01,,,read,,,,1,0
+3015,The Picture of Dorian Gray,Oscar Wilde,"Wilde, Oscar",,"=""""","=""9780141439570""",4,,Paperback,,,,2024/01/15,2023/12/01,,,read,,,,1,0
+3016,Great Expectations,Charles Dickens,"Dickens, Charles",,"=""""","=""""",4,,Paperback,,,,2024/01/16,2023/12/01,,,read,,,,1,0
+3017,Bleak House,Charles Dickens,"Dickens, Charles",,"=""""","=""""",4,,Paperback,,,,2024/01/17,2023/12/01,,,read,,,,1,0
+3018,Hard Times,Charles Dickens,"Dickens, Charles",,"=""""","=""""",4,,Paperback,,,,2024/01/18,2023/12/01,,,read,,,,1,0
+3019,Oliver Twist,Charles Dickens,"Dickens, Charles",,"=""""","=""""",4,,Paperback,,,,2024/01/19,2023/12/01,,,read,,,,1,0
+3020,A Tale of Two Cities,Charles Dickens,"Dickens, Charles",,"=""""","=""""",4,,Paperback,,,,2024/01/20,2023/12/01,,,read,,,,1,0
+3021,Middlemarch,George Eliot,"Eliot, George",,"=""""","=""""",4,,Paperback,,,,2024/01/21,2023/12/01,,,read,,,,1,0
+3022,Silas Marner,George Eliot,"Eliot, George",,"=""""","=""""",4,,Paperback,,,,2024/01/22,2023/12/01,,,read,,,,1,0
+3023,Tess of the d'Urbervilles,Thomas Hardy,"Hardy, Thomas",,"=""""","=""""",4,,Paperback,,,,2024/01/23,2023/12/01,,,read,,,,1,0
+3024,Far from the Madding Crowd,Thomas Hardy,"Hardy, Thomas",,"=""""","=""""",4,,Paperback,,,,2024/01/24,2023/12/01,,,read,,,,1,0
+3025,Heart of Darkness,Joseph Conrad,"Conrad, Joseph",,"=""""","=""""",4,,Paperback,,,,2024/01/25,2023/12/01,,,read,,,,1,0
+3026,Lord Jim,Joseph Conrad,"Conrad, Joseph",,"=""""","=""""",4,,Paperback,,,,2024/01/26,2023/12/01,,,read,,,,1,0
+3027,Treasure Island,Robert Louis Stevenson,"Stevenson, Robert Louis",,"=""""","=""""",4,,Paperback,,,,2024/01/27,2023/12/01,,,read,,,,1,0
+3028,Strange Case of Dr Jekyll and Mr Hyde,Robert Louis Stevenson,"Stevenson, Robert Louis",,"=""""","=""""",4,,Paperback,,,,2024/01/28,2023/12/01,,,read,,,,1,0
+3029,The Time Machine,H. G. Wells,"Wells, H. G.",,"=""""","=""""",4,,Paperback,,,,2024/01/01,2023/12/01,,,read,,,,1,0
+3030,The War of the Worlds,H. G. Wells,"Wells, H. G.",,"=""""","=""""",4,,Paperback,,,,2024/01/02,2023/12/01,,,read,,,,1,0
+3031,Alice's Adventures in Wonderland,Lewis Carroll,"Carroll, Lewis",,"=""""","=""""",4,,Paperback,,,,2024/01/03,2023/12/01,,,read,,,,1,0
+3032,The Adventures of Tom Sawyer,Mark Twain,"Twain, Mark",,"=""""","=""""",4,,Paperback,,,,2024/01/04,2023/12/01,,,read,,,,1,0
+3033,Adventures of Huckleberry Finn,Mark Twain,"Twain, Mark",,"=""""","=""""",4,,Paperback,,,,2024/01/05,2023/12/01,,,read,,,,1,0
+3034,Walden,Henry David Thoreau,"Thoreau, Henry David",,"=""""","=""""",4,,Paperback,,,,2024/01/06,2023/12/01,,,read,,,,1,0
+3035,The Scarlet Letter,Nathaniel Hawthorne,"Hawthorne, Nathaniel",,"=""""","=""""",4,,Paperback,,,,2024/01/07,2023/12/01,,,read,,,,1,0
+3036,Little Women,Louisa May Alcott,"Alcott, Louisa May",,"=""""","=""""",4,,Paperback,,,,2024/01/08,2023/12/01,,,read,,,,1,0
+3037,Anna Karenina,Leo Tolstoy,"Tolstoy, Leo",,"=""""","=""""",4,,Paperback,,,,2024/01/09,2023/12/01,,,read,,,,1,0
+3038,Crime and Punishment,Fyodor Dostoevsky,"Dostoevsky, Fyodor",,"=""""","=""""",4,,Paperback,,,,2024/01/10,2023/12/01,,,read,,,,1,0
+3039,The Brothers Karamazov,Fyodor Dostoevsky,"Dostoevsky, Fyodor",,"=""""","=""""",4,,Paperback,,,,2024/01/11,2023/12/01,,,read,,,,1,0
+3040,Les Misérables,Victor Hugo,"Hugo, Victor",,"=""""","=""""",4,,Paperback,,,,2024/01/12,2023/12/01,,,read,,,,1,0
+3041,Die Verwandlung,Franz Kafka,"Kafka, Franz",,"=""""","=""""",4,,Paperback,,,,2024/01/13,2023/12/01,,,read,,,,1,0
+3042,Der Prozess,Franz Kafka,"Kafka, Franz",,"=""""","=""""",4,,Paperback,,,,2024/01/14,2023/12/01,,,read,,,,1,0
+3043,Das Schloss,Franz Kafka,"Kafka, Franz",,"=""""","=""""",4,,Paperback,,,,2024/01/15,2023/12/01,,,read,,,,1,0
+3044,Faust,Johann Wolfgang von Goethe,"Goethe, Johann Wolfgang von",,"=""""","=""""",4,,Paperback,,,,2024/01/16,2023/12/01,,,read,,,,1,0
+3045,Die Leiden des jungen Werthers,Johann Wolfgang von Goethe,"Goethe, Johann Wolfgang von",,"=""""","=""""",4,,Paperback,,,,2024/01/17,2023/12/01,,,read,,,,1,0
+3046,Siddhartha,Hermann Hesse,"Hesse, Hermann",,"=""""","=""""",4,,Paperback,,,,2024/01/18,2023/12/01,,,read,,,,1,0
+3047,Der Steppenwolf,Hermann Hesse,"Hesse, Hermann",,"=""""","=""""",4,,Paperback,,,,2024/01/19,2023/12/01,,,read,,,,1,0
+3048,Der Zauberberg,Thomas Mann,"Mann, Thomas",,"=""""","=""""",4,,Paperback,,,,2024/01/20,2023/12/01,,,read,,,,1,0
+3049,Buddenbrooks,Thomas Mann,"Mann, Thomas",,"=""""","=""""",4,,Paperback,,,,2024/01/21,2023/12/01,,,read,,,,1,0
+3050,Tod in Venedig,Thomas Mann,"Mann, Thomas",,"=""""","=""""",4,,Paperback,,,,2024/01/22,2023/12/01,,,read,,,,1,0
+3051,Im Westen nichts Neues,Erich Maria Remarque,"Remarque, Erich Maria",,"=""""","=""""",4,,Paperback,,,,2024/01/23,2023/12/01,,,read,,,,1,0
+3052,Das Parfum,Patrick Süskind,"Süskind, Patrick",,"=""""","=""""",4,,Paperback,,,,2024/01/24,2023/12/01,,,read,,,,1,0
+3053,Effi Briest,Theodor Fontane,"Fontane, Theodor",,"=""""","=""""",4,,Paperback,,,,2024/01/25,2023/12/01,,,read,,,,1,0
+3054,Der Schimmelreiter,Theodor Storm,"Storm, Theodor",,"=""""","=""""",4,,Paperback,,,,2024/01/26,2023/12/01,,,read,,,,1,0
+3055,Schachnovelle,Stefan Zweig,"Zweig, Stefan",,"=""""","=""""",4,,Paperback,,,,2024/01/27,2023/12/01,,,read,,,,1,0
+3056,Die Räuber,Friedrich Schiller,"Schiller, Friedrich",,"=""""","=""""",4,,Paperback,,,,2024/01/28,2023/12/01,,,read,,,,1,0
+3057,Woyzeck,Georg Büchner,"Büchner, Georg",,"=""""","=""""",4,,Paperback,,,,2024/01/01,2023/12/01,,,read,,,,1,0
+3058,Der Sandmann,E. T. A. Hoffmann,"Hoffmann, E. T. A.",,"=""""","=""""",4,,Paperback,,,,2024/01/02,2023/12/01,,,read,,,,1,0
+3059,Die Blechtrommel,Günter Grass,"Grass, Günter",,"=""""","=""""",4,,Paperback,,,,2024/01/03,2023/12/01,,,read,,,,1,0
+3060,Emil und die Detektive,Erich Kästner,"Kästner, Erich",,"=""""","=""""",4,,Paperback,,,,2024/01/04,2023/12/01,,,read,,,,1,0
+3061,Momo,Michael Ende,"Ende, Michael",,"=""""","=""""",4,,Paperback,,,,2024/01/05,2023/12/01,,,read,,,,1,0
+3062,Die unendliche Geschichte,Michael Ende,"Ende, Michael",,"=""""","=""""",4,,Paperback,,,,2024/01/06,2023/12/01,,,read,,,,1,0

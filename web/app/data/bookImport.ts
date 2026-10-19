@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Book, BookSnapshot } from './books'
+import { parseIsbn, type Book, type BookSnapshot } from './books'
 import type { CatalogueSearch } from './catalogueSearch'
 import type { Dnb } from './dnb'
 import { resolveBookCover, type ProbeImage, type ResolvedCover } from './covers'
@@ -14,7 +14,7 @@ import { dnbQuestion, FREE_SOURCES, questionsFor } from './import/queries'
 import type { ImportBook, ImportProblem } from './import/rows'
 import { surname, workTitle } from './import/readingTracker'
 import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
-import { editionKeys, normalise, type SourceName } from './merge'
+import { editionKeys, normalise, type Found, type SourceName } from './merge'
 import type { Search, SearchOutcome } from './search'
 
 /**
@@ -25,13 +25,19 @@ import type { Search, SearchOutcome } from './search'
  *
  * Finding an edition, per row (the import-quality fix: as many rows as can be
  * matched to a real Book, any format, an ebook as good as print; one pool of
- * candidates and one ranking for the match and Choose edition):
+ * candidates and one ranking for the match and Choose edition). The Catalogue
+ * (a Book some member imported or added before) is the FIRST source, for an ISBN
+ * and for a title alike: a row it answers sure (`catalogueFirst`) costs no
+ * Apple, Open Library or National Library call.
  *   1. by its ISBN: the Catalogue (a Book some member added before), then
  *      Apple Books (asked for the whole file's ISBNs in a few batch requests
  *      first, `primeIsbns`), then OpenLibrary, then the National
  *      Library (data/dnb.ts: a German edition only it knows). An exact edition with its own
  *      cover is the match, nothing more is asked;
- *   2. the work by its title (`titleCandidates`): a ladder of questions
+ *   2. the work by its title: first the Catalogue alone (`catalogueFirst`: the
+ *      ladder's first two questions); the work with a cover, in the row's
+ *      language and a fitting edition (`settled`) ends the row there. Else
+ *      `titleCandidates`: a ladder of questions
  *      (data/import/queries.ts: title and author, then without subtitle or
  *      series prefix, umlauts written out, the title alone, the name turned)
  *      until one finds the row's work (`isSameWork`) with a cover; the
@@ -110,6 +116,8 @@ export type Edition = {
   alternatives?: (Book | BookSnapshot)[]
   /** What the sources found close to the row without being its work for sure (`nearEditions`): Choose edition lists them last. */
   near?: (Book | BookSnapshot)[]
+  /** The Catalogue alone settled the row: no other source was asked about it (`catalogueFirst`, or its ISBN found there with a cover). */
+  catalogueOnly?: boolean
   /** Only Goodreads knew the book (the file's own book id): its cover, and nothing else, came from there. */
   goodreadsOnly?: boolean
   /**
@@ -307,6 +315,44 @@ export async function titleCandidates(row: ImportBook, lookups: Lookups, signal?
   return { same, near: nearEditions(row, pool).map(({ book }) => book), incomplete }
 }
 
+/** How many of the title ladder's first questions the Catalogue is asked before any other source (`catalogueFirst`). */
+export const CATALOGUE_QUESTIONS = 2
+
+/** What the Catalogue alone knows of a row's work: its Books, and the one that settles the row (or null). */
+export type CatalogueFirst = { books: (Book | BookSnapshot)[]; same: (Book | BookSnapshot)[]; near: (Book | BookSnapshot)[]; sure: Book | BookSnapshot | null }
+
+/**
+ * The Catalogue is the import's first source (owner decision 2026-10-19): a Book any member imported or added
+ * before never costs an Apple, Open Library or National Library call. The ladder's first questions
+ * (`CATALOGUE_QUESTIONS`: title and author, then the main title and surname) are asked of the Catalogue alone;
+ * the work's best fit (`rankEditions`, the one ranking) settles the row when it is `settled`: its own cover, the row's
+ * language, an ebook row's Apple edition, never a National Library record, never a member's Manual book (hers
+ * alone). Anything less (no cover, another language, nothing) does not settle it: the row goes on to the full
+ * ladder exactly as before, whose first question asks the Catalogue again with the other sources (so its Books
+ * join the pool there; one more call to our own database, nothing external). The Catalogue not answering is no
+ * "unsure": the ladder asks it again. Rejects only when `signal` aborts.
+ */
+export async function catalogueFirst(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<CatalogueFirst> {
+  const ask = asker(lookups, signal, () => {})
+  const books: (Book | BookSnapshot)[] = []
+  const answer = (sure: Book | BookSnapshot | null): CatalogueFirst => {
+    const pool = books.map((book) => ({ book }))
+    return { books, same: rankEditions(row, pool).map(({ book }) => book), near: nearEditions(row, pool).map(({ book }) => book), sure }
+  }
+  for (const { query } of questionsFor(row).slice(0, CATALOGUE_QUESTIONS)) {
+    const found = await ask((s) => lookups.catalogue.search(query, s))
+    for (const { book } of found ?? []) {
+      // One Book once, the same Book named by both questions.
+      if (books.some((held) => ('id' in held && 'id' in book ? held.id === book.id : held === book))) continue
+      books.push(book)
+    }
+    // Her Manual books are hers alone: they join the pool, they never settle a row.
+    const best = rankEditions(row, books.filter((book) => book.source !== 'manual').map((book) => ({ book })))[0]?.book
+    if (best && settled(row, best)) return answer(best)
+  }
+  return answer(null)
+}
+
 /**
  * When the work was found only in another language than the row's (Open Library's search names one edition a work,
  * in the device's language first, so an English row may meet only its German translation), the Open Library work's
@@ -330,23 +376,41 @@ export async function findEdition(row: ImportBook, lookups: Lookups, signal?: Ab
 
 async function editionOf(row: ImportBook, lookups: Lookups, signal?: AbortSignal): Promise<Edition> {
   let unsure = false
+  /** A source other than the Catalogue was asked for this row. */
+  let external = false
   const ask = asker(lookups, signal, () => (unsure = true))
 
   async function byIsbn(isbn: string): Promise<Book | BookSnapshot | null> {
     const stored = await ask((s) => lookups.catalogue.search(isbn, s))
     const known = stored?.find((found) => found.book.isbn13 === isbn)
     if (known) return known.book
+    external = true
     // Strict: Apple refusing while Open Library has nothing is no "not found".
     return ask((s) => lookups.search.lookupIsbn(isbn, { signal: s, strict: true }))
   }
 
   const exact = row.isbn13 ? await byIsbn(row.isbn13) : null
   // The very edition, with its own cover: nothing more to ask.
-  if (exact?.coverUrl) return { book: exact, via: 'isbn', unsure: false }
-
-  const titled = await titleCandidates(row, lookups, signal)
+  if (exact?.coverUrl) return { book: exact, via: 'isbn', unsure: false, ...(!external ? { catalogueOnly: true } : {}) }
   // An ISBN lookup that could not be told is asked again at the end; the work found meanwhile stands.
   const pending = unsure
+
+  // The Catalogue first, by title: its own edition of the row's work, with a cover and in her language, settles the
+  // row with nothing else asked: not the other sources' ladder, and not the work's other editions (Choose edition asks
+  // for those itself, when it is opened: `choiceCandidates`). For an ISBN the Catalogue holds without a cover, the
+  // Catalogue's covered edition of the work is what lends it.
+  const catalogued = await catalogueFirst(row, lookups, signal)
+  if (catalogued.sure) {
+    const alternatives = catalogued.same.slice(0, ALTERNATIVES_KEPT)
+    const near = catalogued.near.slice(0, NEAR_KEPT)
+    if (exact) {
+      return withLentCover({ book: exact, via: 'isbn', unsure: false, alternatives, near, ...(!external ? { catalogueOnly: true } : {}) }, coverLender(row, exact, alternatives))
+    }
+    const matched: Edition = { book: catalogued.sure, via: 'title', unsure: false, alternatives, near, ...(!external ? { catalogueOnly: true } : {}) }
+    return pending ? { ...matched, retry: true } : matched
+  }
+
+  const titled = await titleCandidates(row, lookups, signal)
   // The work's other editions are a nicety: one that does not come in time makes the row no less sure.
   const found = await inRowLanguage(row, titled, lookups, asker(lookups, signal, () => {}))
   const alternatives = found.same.slice(0, ALTERNATIVES_KEPT)
@@ -897,7 +961,20 @@ export function rememberingAnswers(lookups: Lookups): Lookups {
     }
     return outcome
   }
-  return { ...lookups, search: { ...lookups.search, search } }
+  // The Catalogue's answer for an ISBN is kept too: `match` asks for the whole file's ISBNs before it primes Apple
+  // with the ones the Catalogue lacks, and each row's own lookup then meets the same answer.
+  const isbns = new Map<string, Found[]>()
+  const catalogue: Lookups['catalogue']['search'] = async (query, signal) => {
+    const isbn = parseIsbn(query)
+    if (!isbn) return lookups.catalogue.search(query, signal)
+    const known = isbns.get(isbn)
+    if (known) return known
+    const found = await lookups.catalogue.search(query, signal)
+    if (isbns.size >= ANSWERS_KEPT) isbns.delete(isbns.keys().next().value!)
+    isbns.set(isbn, found)
+    return found
+  }
+  return { ...lookups, catalogue: { ...lookups.catalogue, search: catalogue }, search: { ...lookups.search, search } }
 }
 
 export type BookImport = {
@@ -941,12 +1018,20 @@ export function createBookImport(
     async match(rows, { signal, onEdition, onSecondPass, secondPassSignal, secondPassBudgetMs = SECOND_PASS_BUDGET_MS }) {
       const retry: number[] = []
       const first = new Map<number, Edition>()
-      // Apple's answers for every ISBN of the file, a few batch requests at once (instead of two requests a row).
+      // Apple's answers for every ISBN of the file, a few batch requests at once (instead of two requests a row):
+      // not for an ISBN the Catalogue holds with a cover, which settles its row without Apple (`catalogueOnly`).
       const isbnRows = rows.flatMap((row) => (row.isbn13 ? [{ isbn13: row.isbn13, title: row.title, authors: row.authors }] : []))
-      const primed =
-        lookups.search.primeIsbns && isbnRows.length
-          ? lookups.search.primeIsbns(isbnRows, (row, book) => isSameWork(row, book), { signal }).catch(() => {})
-          : Promise.resolve()
+      const primed = (async () => {
+        if (!lookups.search.primeIsbns || !isbnRows.length) return
+        const ask = asker(lookups, signal, () => {})
+        const held = isbnRows.map(() => false)
+        await eachLimited(isbnRows, IMPORT_CONCURRENCY, async (row, index) => {
+          const found = await ask((s) => lookups.catalogue.search(row.isbn13, s))
+          held[index] = Boolean(found?.some(({ book }) => book.isbn13 === row.isbn13 && book.coverUrl))
+        })
+        const unknown = isbnRows.filter((_, index) => !held[index])
+        if (unknown.length) await lookups.search.primeIsbns(unknown, (row, book) => isSameWork(row, book), { signal })
+      })().catch(() => {})
       // The rows without an ISBN first: they need no batch answer and are looked up while it comes.
       const order = rows.map((_, index) => index).sort((a, b) => Number(Boolean(rows[a]!.isbn13)) - Number(Boolean(rows[b]!.isbn13)) || a - b)
       await eachLimited(

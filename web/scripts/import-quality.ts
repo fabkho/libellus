@@ -15,6 +15,10 @@
  *   [LIBELLUS_IMPORT_FILL_SECONDS=600]           the cover fill's budget (0: no fill)
  *   [LIBELLUS_IMPORT_PICKER=1]                   open Choose edition on every row that needs a look
  *   [LIBELLUS_IMPORT_APPLE_OUTAGE=90:20]         Apple refuses (429) for 20 s every 90 s, as it does on a bad day
+ *   [LIBELLUS_IMPORT_WRITE=1]                      after the lookup and the fill, write the rows as the import does (`import_books`):
+ *                                                the Catalogue is filled for the next run (the throwaway member goes, the Books stay)
+ *   [LIBELLUS_IMPORT_BASELINE=/path/report.json]   a previous run's report (stdout JSON): the report then says how many
+ *                                                external calls this run saved against it
  *   [LIBELLUS_IMPORT_OPENLIBRARY=proxy|direct]   the import's Open Library through the `openlibrary` function (the
  *                                                store's wiring, default) or direct as before it; the report says
  *                                                which way ran and whether the function failed over to direct
@@ -38,7 +42,7 @@ import {
 } from '../../supabase/functions/goodreads-rating/goodreads.ts'
 import { createAuth } from '../app/data/auth'
 import * as bookImport from '../app/data/bookImport'
-import { createBookImport, editionChoices, needsLook, pacedFetch, type Edition } from '../app/data/bookImport'
+import { createBookImport, editionChoices, needsLook, pacedFetch, type Edition, type ImportRow, type RowOutcome } from '../app/data/bookImport'
 import { createCatalogueSearch } from '../app/data/catalogueSearch'
 import { createCoverFill, mergeCover } from '../app/data/coverFill'
 import { createDnb, DNB_IMPORT_GAP_MS } from '../app/data/dnb'
@@ -59,6 +63,7 @@ if (!file) {
 process.env.LIBELLUS_TEST_RUN ??= 'quality'
 const fillSeconds = Number(process.env.LIBELLUS_IMPORT_FILL_SECONDS ?? 600)
 const openPicker = process.env.LIBELLUS_IMPORT_PICKER === '1'
+const writeRows = process.env.LIBELLUS_IMPORT_WRITE === '1'
 const [outageEvery, outageFor] = (process.env.LIBELLUS_IMPORT_APPLE_OUTAGE ?? '').split(':').map(Number)
 const languages = ['de-DE', 'en-US']
 const today = new Date().toISOString().slice(0, 10)
@@ -75,6 +80,8 @@ const tag = new AsyncLocalStorage<Call>()
 /** Apple's answers as the app sees them (any call, tagged or not): how many, and when it first refused. */
 const apple = { sent: 0, firstRefusal: null as { at: number; after: number } | null }
 const calls: Call[] = []
+/** Every request that left for a source outside our own stack, tagged or not (the cover fill's included). */
+const external = { apple: 0, openlibrary: 0, goodreads: 0 }
 
 const kindOf = (url: URL) =>
   url.hostname === 'itunes.apple.com'
@@ -88,6 +95,8 @@ function observed(inner: FetchLike): FetchLike {
   return async (url, init) => {
     const call = tag.getStore()
     const where = new URL(url)
+    if (where.hostname === 'itunes.apple.com') external.apple++
+    else if (where.hostname === 'openlibrary.org') external.openlibrary++
     let response: Awaited<ReturnType<FetchLike>>
     try {
       response = await inner(url, init)
@@ -146,6 +155,7 @@ async function probe(url: string): Promise<ProbedImage | null> {
 async function goodreadsCover({ title, authors, goodreadsBookId }: { title: string; authors: string[]; goodreadsBookId?: string | null }) {
   const query = goodreadsQuery({ isbn13: null, title, authors })
   if (!query || !authors.length) return null
+  external.goodreads++
   const response = await fetch(autoCompleteUrl(query), { headers: { 'user-agent': 'Libellus/1.0 (private book tracker; audit)', accept: 'application/json' } })
   const text = await response.text()
   if ([202, 403, 429, 503].includes(response.status)) return 'blocked' as const
@@ -320,6 +330,31 @@ if (openPicker) {
 if (fillSeconds) await fill.settled(fillSeconds * 1000 + 60_000)
 fill.stop()
 
+// The import's write (stores/import.ts `importNow`): the Books of the rows enter the Catalogue, so the next run asks it first.
+const written: Record<string, number> = {}
+if (writeRows) {
+  const pending: ImportRow[] = books.map((book, index) => ({
+    key: book.key,
+    title: book.title,
+    authors: book.authors,
+    status: book.status,
+    session: book.session,
+    extraReads: book.extraReads,
+    earlierReads: book.earlierReads,
+    pageCount: book.pageCount,
+    otherKeys: book.otherKeys,
+    addedOn: book.addedOn,
+    collections: [],
+    book: editions[index]!.book,
+    coverFrom: editions[index]!.coverFrom ?? null,
+    coverFilled: editions[index]!.filled,
+  }))
+  const outcomes: RowOutcome[] = []
+  const result = await repository.write(pending, { onWritten: (chunk) => void outcomes.push(...chunk) })
+  if (result.error) console.error(`import-quality: the write stopped: ${result.error}`)
+  for (const { outcome } of outcomes) written[outcome] = (written[outcome] ?? 0) + 1
+}
+
 // ------------------------------------------------------------------------------------- causes, per row
 
 /** The calls the lookup made for one row: its ISBN, the title questions that begin with its title, its Goodreads ask. */
@@ -349,6 +384,9 @@ function causeOf(book: ImportBook, edition: Edition, own: Call[]): string {
 
 // ------------------------------------------------------------------------------------------- the counts
 
+const baseline = process.env.LIBELLUS_IMPORT_BASELINE
+  ? (JSON.parse(readFileSync(process.env.LIBELLUS_IMPORT_BASELINE, 'utf8')) as { rows: number; external: { apple: number; openlibrary: number; dnb: number; goodreads: number; total: number } })
+  : null
 const rows = books.map((book, index) => {
   const edition = editions[index]!
   const first = lookedUp[index]!
@@ -359,6 +397,7 @@ const rows = books.map((book, index) => {
   return {
     book,
     edition,
+    first,
     tier,
     shownCover,
     cause: causeOf(book, first, own),
@@ -374,6 +413,24 @@ const by = (key: (row: (typeof rows)[number]) => string) =>
 const report = {
   code: fixed ? 'fix' : 'before',
   rows: books.length,
+  // The Catalogue as the first source: rows it settled alone (nothing external asked for them), and what left for the others.
+  catalogue: {
+    settledAlone: count((row) => Boolean((row.first as { catalogueOnly?: boolean }).catalogueOnly)),
+    settledAloneByIsbn: count((row) => Boolean((row.first as { catalogueOnly?: boolean }).catalogueOnly) && row.first.via === 'isbn'),
+    settledAloneByTitle: count((row) => Boolean((row.first as { catalogueOnly?: boolean }).catalogueOnly) && row.first.via === 'title'),
+  },
+  external: { ...external, dnb: dnbCalls.asked, total: external.apple + external.openlibrary + external.goodreads + dnbCalls.asked },
+  externalCallsSaved: baseline
+    ? {
+        total: baseline.external.total - (external.apple + external.openlibrary + external.goodreads + dnbCalls.asked),
+        apple: baseline.external.apple - external.apple,
+        openlibrary: baseline.external.openlibrary - external.openlibrary,
+        dnb: baseline.external.dnb - dnbCalls.asked,
+        goodreads: baseline.external.goodreads - external.goodreads,
+        againstRows: baseline.rows,
+      }
+    : null,
+  written: writeRows ? written : null,
   openlibrary: { routed: routed ? 'proxy' : 'direct', fallback: proxy?.fallbackActive() ?? false, ...(proxy ? { function: { ...proxy.stats(), directSeconds: Math.round(proxy.stats().directMs / 100) / 10 } } : {}) },
   appleOutage: outageEvery ? `${outageFor}s every ${outageEvery}s` : null,
   seconds: { lookup: lookupSeconds, total: seconds() },
@@ -434,6 +491,7 @@ if (process.env.LIBELLUS_IMPORT_AUDIT) {
         matchedTitle: matched(row.edition) ? row.edition.book.title : null,
         matchedLanguage: matched(row.edition) ? row.edition.book.language : null,
         unsure: row.edition.unsure,
+        catalogueOnly: Boolean((row.first as { catalogueOnly?: boolean }).catalogueOnly),
         alternatives: row.edition.alternatives?.length ?? 0,
         cause: row.cause,
         zeroCandidates: row.zeroCandidates,
