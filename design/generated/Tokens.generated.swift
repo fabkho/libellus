@@ -77,7 +77,6 @@ enum Tokens {
     enum Opacity {
         static let glow = Themed<CGFloat>(light: 0.5, dark: 1)
         static let halo = Themed<CGFloat>(light: 0.4, dark: 0.45)
-        static let announce = Themed<CGFloat>(light: 0.5, dark: 1)
     }
 
     enum Blur {
@@ -112,6 +111,7 @@ enum Tokens {
         static let cover: CGFloat = 3.5
         static let coverLg: CGFloat = 5
         static let sm: CGFloat = 8
+        static let tail: CGFloat = 6
         static let md: CGFloat = 14
         static let field: CGFloat = 18
         static let lg: CGFloat = 20
@@ -149,6 +149,10 @@ enum Tokens {
         static let starInput: CGFloat = 44
         static let ratingThumb: CGFloat = 24
         static let checkbox: CGFloat = 22
+        static let composer: CGFloat = 52
+        static let reaction: CGFloat = 24
+        static let field: CGFloat = 52
+        static let avatarXl: CGFloat = 96
         static let coverXxs: CGFloat = 24
         static let coverXs: CGFloat = 30
         static let coverSm: CGFloat = 40
@@ -208,6 +212,7 @@ enum Tokens {
         static let keyboard: TimeInterval = 0.25
         static let caret: TimeInterval = 1.1
         static let wave: TimeInterval = 1.6
+        static let gentle: TimeInterval = 0.45
     }
 
     enum Easing {

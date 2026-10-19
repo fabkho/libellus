@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@fabkho/ui':
-        specifier: github:fabkho/ui#v0.1.0
-        version: https://codeload.github.com/fabkho/ui/tar.gz/fe47d354260169435afdd0f94775bd345a3a6b83(50bcc405f7a73d80b2b627a6e0ac61ff)
+        specifier: github:fabkho/ui#v0.2.0
+        version: https://codeload.github.com/fabkho/ui/tar.gz/450d9ca3ecc8a55f29a942cf399bdeb120006e48(50bcc405f7a73d80b2b627a6e0ac61ff)
       '@fontsource/geist':
         specifier: ^5.3.0
         version: 5.3.0
@@ -1099,9 +1099,9 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/fe47d354260169435afdd0f94775bd345a3a6b83':
-    resolution: {gitHosted: true, integrity: sha512-xUVMHF2XnpbIcaQwTlp6DHkEfWW/s/RksIz+NVCadHXsFg/yA6kgdOHQJP14AlqBzHvuGPX/CKXTq2gj6/eTzA==, tarball: https://codeload.github.com/fabkho/ui/tar.gz/fe47d354260169435afdd0f94775bd345a3a6b83}
-    version: 0.1.0
+  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/450d9ca3ecc8a55f29a942cf399bdeb120006e48':
+    resolution: {gitHosted: true, integrity: sha512-0IWDkNBZ7tq6054U3VF0DtHR+A5jNzSCblF5iEYx3X2Nk8o7N64Wez/kpB5caOakcDH+m5KAxiuZtdwwz8qdzg==, tarball: https://codeload.github.com/fabkho/ui/tar.gz/450d9ca3ecc8a55f29a942cf399bdeb120006e48}
+    version: 0.2.0
     peerDependencies:
       nuxt: ^4.5.2
       vue: ^3.5.43
@@ -7201,7 +7201,7 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/fe47d354260169435afdd0f94775bd345a3a6b83(50bcc405f7a73d80b2b627a6e0ac61ff)':
+  '@fabkho/ui@https://codeload.github.com/fabkho/ui/tar.gz/450d9ca3ecc8a55f29a942cf399bdeb120006e48(50bcc405f7a73d80b2b627a6e0ac61ff)':
     dependencies:
       nuxt: 4.6.1(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7(supports-color@10.2.2)))(@oxc-project/types@0.152.0)(@rollup/plugin-babel@6.1.0(@babel/core@7.29.7(supports-color@10.2.2))(rollup@4.64.0)(supports-color@10.2.2))(@types/node@26.6.4)(@vue/compiler-sfc@3.5.43)(acorn@8.18.0)(confbox@0.3.1)(db0@0.3.4)(dotenv@17.4.2)(esbuild@0.28.2)(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(giget@3.3.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(magicast@0.5.5)(mlly@1.8.2)(optionator@0.9.4)(oxc-parser@0.141.0)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.43(typescript@6.0.3)))(rolldown@1.2.12)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.12)(rollup@4.64.0))(rollup@4.64.0)(srvx@0.11.22)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.15)(typescript@6.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(yaml@2.9.1)
       thumbhash: 0.1.1

@@ -84,6 +84,7 @@
   --radius-cover: 3.5px;
   --radius-cover-lg: 5px;
   --radius-sm: 8px;
+  --radius-tail: 6px;
   --radius-md: 14px;
   --radius-field: 18px;
   --radius-lg: 20px;
@@ -165,7 +166,6 @@
   --elevation-sheet: 0 -20px 50px rgb(60 40 20 / 0.16);
   --opacity-glow: 0.5;
   --opacity-halo: 0.4;
-  --opacity-announce: 0.5;
   --size-touch: 44px;
   --size-target: 24px;
   --size-max-content: 480px;
@@ -194,6 +194,10 @@
   --size-star-input: 44px;
   --size-rating-thumb: 24px;
   --size-checkbox: 22px;
+  --size-composer: 52px;
+  --size-reaction: 24px;
+  --size-field: 52px;
+  --size-avatar-xl: 96px;
   --size-cover-xxs: 24px;
   --size-cover-xs: 30px;
   --size-cover-sm: 40px;
@@ -216,6 +220,7 @@
   --duration-keyboard: 250ms;
   --duration-caret: 1100ms;
   --duration-wave: 1600ms;
+  --duration-gentle: 450ms;
 }
 
 /* Dark, chosen in the avatar menu. */
@@ -255,7 +260,6 @@
   --elevation-sheet: 0 -20px 50px rgb(0 0 0 / 0.4);
   --opacity-glow: 1;
   --opacity-halo: 0.45;
-  --opacity-announce: 1;
 }
 
 /* Dark, from the device, while no theme has been chosen. */
@@ -296,7 +300,6 @@
     --elevation-sheet: 0 -20px 50px rgb(0 0 0 / 0.4);
     --opacity-glow: 1;
     --opacity-halo: 0.45;
-    --opacity-announce: 1;
   }
 }
 
@@ -337,7 +340,6 @@
   --elevation-sheet: 0 -20px 50px rgb(60 40 20 / 0.16);
   --opacity-glow: 0.5;
   --opacity-halo: 0.4;
-  --opacity-announce: 0.5;
 }
 
 /* Sepia, the reader's third room (#131): its own values, the light ones where it has none. */
@@ -377,5 +379,4 @@
   --elevation-sheet: 0 -20px 50px rgb(80 50 15 / 0.18);
   --opacity-glow: 0.5;
   --opacity-halo: 0.4;
-  --opacity-announce: 0.5;
 }
