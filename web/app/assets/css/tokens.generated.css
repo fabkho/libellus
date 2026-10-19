@@ -166,7 +166,6 @@
   --elevation-sheet: 0 -20px 50px rgb(60 40 20 / 0.16);
   --opacity-glow: 0.5;
   --opacity-halo: 0.4;
-  --opacity-announce: 0.5;
   --size-touch: 44px;
   --size-target: 24px;
   --size-max-content: 480px;
@@ -261,7 +260,6 @@
   --elevation-sheet: 0 -20px 50px rgb(0 0 0 / 0.4);
   --opacity-glow: 1;
   --opacity-halo: 0.45;
-  --opacity-announce: 1;
 }
 
 /* Dark, from the device, while no theme has been chosen. */
@@ -302,7 +300,6 @@
     --elevation-sheet: 0 -20px 50px rgb(0 0 0 / 0.4);
     --opacity-glow: 1;
     --opacity-halo: 0.45;
-    --opacity-announce: 1;
   }
 }
 
@@ -343,7 +340,6 @@
   --elevation-sheet: 0 -20px 50px rgb(60 40 20 / 0.16);
   --opacity-glow: 0.5;
   --opacity-halo: 0.4;
-  --opacity-announce: 0.5;
 }
 
 /* Sepia, the reader's third room (#131): its own values, the light ones where it has none. */
@@ -383,5 +379,4 @@
   --elevation-sheet: 0 -20px 50px rgb(80 50 15 / 0.18);
   --opacity-glow: 0.5;
   --opacity-halo: 0.4;
-  --opacity-announce: 0.5;
 }

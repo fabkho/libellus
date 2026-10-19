@@ -77,7 +77,6 @@ enum Tokens {
     enum Opacity {
         static let glow = Themed<CGFloat>(light: 0.5, dark: 1)
         static let halo = Themed<CGFloat>(light: 0.4, dark: 0.45)
-        static let announce = Themed<CGFloat>(light: 0.5, dark: 1)
     }
 
     enum Blur {
