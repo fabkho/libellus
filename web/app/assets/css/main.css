@@ -16,6 +16,15 @@
 @import '@fontsource/newsreader/latin-500.css';
 @import '@fontsource/newsreader/latin-400-italic.css';
 
+/* The shared UI base's stylesheet (fabkho/ui, assets/css/ui.css): its utilities, base styles, keyframes and
+   Reduce Motion rule, resolved against the tokens above. Before this file's own rules on purpose: where both
+   define a utility or a rule, the app's later one wins, so nothing here changes until a wave of the switch
+   (docs/ui-layer-plan.md in fabkho/trappist, §5) deletes the app's copy. `#ui` is the base's alias (its
+   nuxt.config.ts); where the base is not extended yet (no `UI_LAYER`, ui.config.ts) it names an empty file.
+   The Tailwind `@source` for the base's components is added by ui.config.ts (`uiLayerSource`) while the base
+   sits outside node_modules; the follow-up that pins the package writes it here. */
+@import '#ui/assets/css/ui.css';
+
 /* The notch and the home indicator are the device's, not the design system's:
    read once here, and only the utilities below use them, so no screen inlines
    env() itself. (A screenshot run stands in a phone's insets by overriding

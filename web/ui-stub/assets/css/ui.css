@@ -1,0 +1,2 @@
+/* Stands where the shared UI base's stylesheet will be while the base is not extended (ui.config.ts: no
+   `UI_LAYER`). Empty on purpose; deleted with the temporary `uiLayers()` when `@fabkho/ui` is a dependency. */

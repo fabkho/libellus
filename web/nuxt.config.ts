@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
+import { uiLayerAlias, uiLayerHolds, uiLayers, uiLayerSource } from './ui.config'
 import { isRegalModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
@@ -59,7 +60,8 @@ const isReaderModule = (id: string) =>
 export default defineNuxtConfig({
   // Regal, the owner's 3D shelf (#23): a Nuxt layer, only with LIBELLUS_REGAL=1 (regal.config.ts says
   // where it comes from and how it is kept to the shelf's pages).
-  extends: regalLayer(),
+  extends: [...uiLayers(), ...regalLayer()],
+  alias: uiLayerAlias(),
   compatibilityDate: '2026-10-02',
   ssr: false,
   nitro: {
@@ -85,6 +87,7 @@ export default defineNuxtConfig({
   devtools: { enabled: !process.env.LIBELLUS_E2E },
 
   hooks: {
+    ...uiLayerHolds,
     // No `<link rel="prefetch">` for the ~55 route chunks in index.html. The service worker precaches
     // every one of them on the first launch (pwa.workbox below), so the hints only made the page's
     // own downloads share the pipe with them: 56 requests and ~45 KB twice on a first launch, and
@@ -119,6 +122,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [
+      uiLayerSource(),
       tailwindcss(),
       {
         // The reader's files, for utils/readerChunks.ts: it fetches them before it imports them, and the list it
