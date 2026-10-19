@@ -194,7 +194,7 @@ export const useImportStore = defineStore('import', () => {
     repositoryLanguage = languages[0] ?? ''
     // Apple refuses a burst; a little room between its requests keeps it answering. The import's Open Library
     // goes through the `openlibrary` function (identified to Open Library, about 3/s) and falls back to direct
-    // at 1/s if the function ever fails (data/openLibraryProxy.ts). The gap's host key is the URL the caller
+    // at 1/s after 3 failures in a row, for 60 s (data/openLibraryProxy.ts). The gap's host key is the URL the caller
     // asked with, so `openlibrary.org` paces both ways and the function's share is ~3/s.
     liveFetch ??= pacedFetch(
       viaOwnServer((url, init) => fetch(url, init), {

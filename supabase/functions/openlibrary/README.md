@@ -18,7 +18,7 @@ GET /functions/v1/openlibrary?path=/api/books&bibkeys=ISBN:…&jscmd=data&format
 
 200/404/…  Open Library's own status and JSON body, as it is (with its `Retry-After` when it names one)
 400 path_missing · path_not_allowed · query_too_large (over 2 KB) · 401 unauthorized · 405 method_not_allowed
-429 rate_limited (a member: 360 calls a minute) · 502 openlibrary_unavailable · 504 openlibrary_timeout (12 s)
+429 rate_limited (a member: 360 calls a minute) · 502 openlibrary_unavailable · 504 openlibrary_timeout (10 s)
 ```
 
 - **Who**: a signed-in member's access token or the service-role key (`verify_jwt` is off,
@@ -43,12 +43,16 @@ GET /functions/v1/openlibrary?path=/api/books&bibkeys=ISBN:…&jscmd=data&format
   `Retry-After` pass through to the caller unchanged, so the client's `pacedFetch` backs off.
 - **A refusal of the server address** (upstream 403 or 429) is one log line in the owner's log —
   `openlibrary_refused {"status":…,"path":"…"}` — like `goodreads_blocked`, so a block is visible.
-- **Failures**: Open Library unreachable → 502 `openlibrary_unavailable`; no answer in 12 s (under
-  the client's 15 s) → 504 `openlibrary_timeout`; an answer over 2 MB is not passed on (502).
-  The client reads all of these as "the function failed" and goes **direct to Open Library at 1
-  request a second for the rest of the import** (`viaOwnServer`, web/app/data/openLibraryProxy.ts):
-  a blocked server address must never stop an import. The same fallback covers 401 (a lapsed
-  token) and a 429 that asks for more than a minute.
+- **Failures**: Open Library unreachable → 502 `openlibrary_unavailable`; no answer in 10 s (under
+  the client's 15 s, so one retry fits) → 504 `openlibrary_timeout`; an answer over 2 MB is not passed on (502).
+  The client reads one such failure as **a failed request, not a broken function** (`viaOwnServer`,
+  web/app/data/openLibraryProxy.ts): it asks again through the function after 0.5 s, then 1 s (a
+  `Retry-After` respected), and only **3 failures in a row** send the import **direct to Open Library
+  at 1 request a second**. 401 (a lapsed token) and a 429 asking for more than a minute go direct at
+  once: a blocked server address must never stop an import. Direct is not for the rest of the run:
+  after 60 s one request tries the function again, and on an answer the import is back on the
+  function's pace. The import's counters (`stats()`: failures, retries, fallbacks, recoveries, direct
+  requests and time) are printed by `web/scripts/import-quality.ts`.
 - **What does not go through here**: Apple (the import's other source), Search, the Book page's
   Change edition sheet, and every cover image. They talk to their hosts direct, as before.
 
@@ -60,7 +64,7 @@ supabase functions serve openlibrary --env-file <file with OPENLIBRARY_CONTACT=�
 
 Deploy: `supabase functions deploy openlibrary --no-verify-jwt` with the rest of the functions,
 then `supabase secrets set OPENLIBRARY_CONTACT=…`. Turning the routing off: do not deploy the
-function (or unset its secret) — the import then runs direct at 1 request a second, which is what
+function (or unset its secret) — the import then falls back to direct at 1 request a second (after 3 failures), which is what
 it can always fall back on — or take `viaOwnServer` back out of `importer()`
 (`web/app/stores/import.ts`) and keep `pacedFetch(…, { gapMs: { 'openlibrary.org': 1000 } })`.
 

@@ -174,7 +174,7 @@ if (!member) throw new Error('no session')
 
 // As the import store wires it (stores/import.ts: `importer`, `startFill`, the Choose edition lookup). The
 // import's Open Library goes through the `openlibrary` function (identified, ~3/s) and falls back to direct at
-// 1/s when the function fails (`LIBELLUS_IMPORT_OPENLIBRARY=direct` measures the direct way before it).
+// 1/s after 3 failures in a row (and back after 60 s; the report counts both) (`LIBELLUS_IMPORT_OPENLIBRARY=direct` measures the direct way before it).
 const routed = (process.env.LIBELLUS_IMPORT_OPENLIBRARY ?? 'proxy') !== 'direct'
 const functionUrl = process.env.LIBELLUS_IMPORT_OPENLIBRARY_URL ?? `${process.env.SUPABASE_URL}/functions/v1/openlibrary`
 const proxy = routed
@@ -374,7 +374,7 @@ const by = (key: (row: (typeof rows)[number]) => string) =>
 const report = {
   code: fixed ? 'fix' : 'before',
   rows: books.length,
-  openlibrary: { routed: routed ? 'proxy' : 'direct', fallback: proxy?.fallbackActive() ?? false },
+  openlibrary: { routed: routed ? 'proxy' : 'direct', fallback: proxy?.fallbackActive() ?? false, ...(proxy ? { function: { ...proxy.stats(), directSeconds: Math.round(proxy.stats().directMs / 100) / 10 } } : {}) },
   appleOutage: outageEvery ? `${outageFor}s every ${outageEvery}s` : null,
   seconds: { lookup: lookupSeconds, total: seconds() },
   apple,
