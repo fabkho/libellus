@@ -1,6 +1,6 @@
 /**
  * The `openlibrary` client against stand-in answers: identified (the User-Agent carries the
- * contact), paced at three requests a second per instance, a `Retry-After` held, a deadline and
+ * contact), paced at three requests a second (its own queue when no shared pace is given), a `Retry-After` held, a deadline and
  * an answer size cap. Nothing here reaches the network: the answers are fixtures/ recordings or
  * stubs.
  */

@@ -1,5 +1,6 @@
 // deno-lint-ignore-file require-await -- the stand-ins answer from memory, as the real ones do over the network
 import { assert, assertEquals } from '@std/assert'
+import { PaceBusy } from '../_shared/pace.ts'
 import { createDnb } from './client.ts'
 import { type BookRow, type Budget, type Catalogue, createHandler, IMPORT_LIMIT, MEMBER_LIMIT, readCover } from './handler.ts'
 import { fakeClock, fixture, recordedFetch } from './test_support.ts'
@@ -179,4 +180,19 @@ Deno.test('readCover leaves out what the Catalogue does not take', () => {
   assertEquals(readCover({ coverUrl: 'https://covers.openlibrary.org/b/isbn/1-L.jpg', coverThumbhash: '<script>', coverColors: { dominant: 'red', secondary: '#445566' } }), {
     coverUrl: 'https://covers.openlibrary.org/b/isbn/1-L.jpg', coverThumbhash: null, dominant: null, secondary: null,
   })
+})
+
+Deno.test('a turn too far away at the shared pace is 503 busy with a Retry-After, and nothing is asked', async () => {
+  const recorded = recordedFetch()
+  const handler = createHandler({
+    dnb: createDnb({ fetch: recorded.fetch, clock: fakeClock().clock, pace: { take: () => Promise.reject(new PaceBusy(2)), hold: () => Promise.resolve() } }),
+    catalogue: { find: async () => null, insert: async () => bookRow() },
+    cover: async () => null,
+    authorize: async () => ({ member: MEMBER }),
+  })
+  const response = await handler(new Request('https://x.test/functions/v1/dnb-lookup', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer member' }, body: JSON.stringify({ action: 'isbn', isbn13: '9783499267017' }) }))
+  assertEquals(response.status, 503)
+  assertEquals(response.headers.get('retry-after'), '2')
+  assertEquals(await response.json(), { error: 'busy', retry_after: 2 })
+  assertEquals(recorded.asked.length, 0)
 })

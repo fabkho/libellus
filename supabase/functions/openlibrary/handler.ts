@@ -2,9 +2,10 @@
  * The `openlibrary` edge function's request handling: who may call (a signed-in member or the
  * service role), which Open Library paths may be asked (an allow-list; the host is ours to pick,
  * never the caller's), and the answer passed back as Open Library gave it. The upstream itself is
- * `client.ts` (identified, at most three requests a second per running instance); README.md says
- * how to run and deploy it.
+ * `client.ts` (identified, at most three requests a second across every instance: the shared pace,
+ * `../_shared/pace.ts`); README.md says how to run and deploy it.
  */
+import { PaceBusy } from '../_shared/pace.ts'
 import { type OpenLibrary, OpenLibraryUnavailable } from './client.ts'
 
 /** The member (or the service role, `member: null`) a request comes from. */
@@ -83,6 +84,10 @@ export function createHandler(deps: {
     try {
       answer = await deps.openlibrary.ask(path, passedOn)
     } catch (error) {
+      // The turn is further away than the client will wait: say when to come back (the client reads 503 + Retry-After).
+      if (error instanceof PaceBusy) {
+        return json(503, { error: 'busy', retry_after: error.retryAfterSeconds }, { 'retry-after': String(error.retryAfterSeconds) })
+      }
       if (error instanceof OpenLibraryUnavailable) {
         return error.kind === 'timeout'
           ? json(504, { error: 'openlibrary_timeout' })

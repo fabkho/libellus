@@ -37,10 +37,22 @@ GET /functions/v1/openlibrary?path=/api/books&bibkeys=ISBN:…&jscmd=data&format
   refuses to start (an unidentified proxy would quietly keep the import on the 1/s tier, and
   Open Library asks for a way to reach whoever runs the client). Set it on deploy:
   `supabase secrets set OPENLIBRARY_CONTACT=you@example.com`.
-- **The pace**: at most three requests a second per running instance (a small in-memory queue,
-  `client.ts`; edge instances are separate, accepted at today's scale and documented here). An
-  upstream `Retry-After` (403/429/503) holds the queue that long, capped at 30 s. 429 and
-  `Retry-After` pass through to the caller unchanged, so the client's `pacedFetch` backs off.
+- **The pace**: at most three requests a second **across every function instance and every member**.
+  Supabase runs more than one instance under load, and an in-memory queue only keeps its own instance's
+  distance, so N instances asked N times as fast from one address. Every request now books its turn in
+  Postgres first (`edge_pace_take('openlibrary', 340, 4000)`, table `edge_pace`,
+  `supabase/migrations/20261030010000_edge_pace.sql`; the shared code is `../_shared/pace.ts`, the
+  DNB function uses it too): the turns are 340 ms apart however many instances ask, and a request whose turn
+  is not yet there **sleeps until it is** (at most `PACE_MAX_WAIT_MS` = 4 s, so that wait plus Open Library's 10 s
+  stays under the import's 15 s call deadline). A turn further away is not booked: the function answers
+  **503 `busy` with `Retry-After: N`** (N whole seconds until a turn would be within 4 s), nothing is asked of
+  Open Library, and the app's `pacedFetch` already reads a 503 with `Retry-After` as "too many requests"
+  (waits, tries twice more, then leaves the host alone for a while). One import runs at a time (the import
+  queue, below), so this is rare: it means other traffic (Search, the Change edition sheet, the cover fill) is
+  queued past 4 s. An upstream `Retry-After` (403/429/503) holds the pace for **every** instance
+  (`edge_pace_hold`, capped at 30 s). 429 and `Retry-After` pass through to the caller unchanged. If the
+  database cannot be reached the request takes a turn in this instance's own queue (`localPace`, the old
+  behaviour) and one log line says so: a database hiccup never stops the import.
 - **A refusal of the server address** (upstream 403 or 429) is one log line in the owner's log —
   `openlibrary_refused {"status":…,"path":"…"}` — like `goodreads_blocked`, so a block is visible.
 - **Failures**: Open Library unreachable → 502 `openlibrary_unavailable`; no answer in 10 s (under
@@ -58,7 +70,7 @@ GET /functions/v1/openlibrary?path=/api/books&bibkeys=ISBN:…&jscmd=data&format
 
 ```
 cd supabase/functions/openlibrary
-deno lint && deno check *.ts && deno task test      # recorded answers in fixtures/, nothing is fetched
+deno lint && deno check *.ts && deno task test      # recorded answers in fixtures/, nothing is fetched; pace_test.ts: the shared pace
 supabase functions serve openlibrary --env-file <file with OPENLIBRARY_CONTACT=…>
 ```
 

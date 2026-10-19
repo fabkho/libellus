@@ -9,7 +9,8 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import type { DnbEdition } from '../../../web/app/data/dnbRecord.ts'
-import { createDnb, userAgent } from './client.ts'
+import { sharedPace } from '../_shared/pace.ts'
+import { createDnb, MIN_INTERVAL_MS, PACE_MAX_WAIT_MS, userAgent } from './client.ts'
 import { type BookRow, type Budget, type Caller, createHandler, MEMBER_WINDOW_SECONDS } from './handler.ts'
 import { sameSecret } from './secret.ts'
 
@@ -29,7 +30,12 @@ async function catalogueBook(isbn13: string): Promise<BookRow | null> {
 }
 
 const handler = createHandler({
-  dnb: createDnb({ fetch: (input, init) => fetch(input, init), userAgent: agent }),
+  dnb: createDnb({
+    fetch: (input, init) => fetch(input, init),
+    userAgent: agent,
+    // Five requests a second across every instance (a turn booked in Postgres, supabase/migrations/20261030010000_edge_pace.sql).
+    pace: sharedPace({ rpc: (name, args) => supabase.rpc(name, args), bucket: 'dnb', gapMs: MIN_INTERVAL_MS, maxWaitMs: PACE_MAX_WAIT_MS }),
+  }),
   catalogue: {
     find: catalogueBook,
     async insert(edition: DnbEdition, cover) {
