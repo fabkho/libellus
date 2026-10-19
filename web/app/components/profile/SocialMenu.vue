@@ -25,7 +25,7 @@ const rows = computed(() =>
 )
 
 // Safari does not focus a button when it is tapped, and the sheet gives focus back to what had it when it
-// opened (composables/useModalLayer.ts): so the chip takes it first.
+// opened (useModalLayer, the UI base's): so the chip takes it first.
 function show(event: MouseEvent) {
   ;(event.currentTarget as HTMLElement).focus({ preventScroll: true })
   open.value = true

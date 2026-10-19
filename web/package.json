@@ -37,10 +37,10 @@
     "perf:list": "tsx perf/list.ts",
     "perf:layers": "tsx perf/layers.ts",
     "perf:shelf-seed": "tsx perf/shelf-seed.ts",
-    "perf:shelf": "tsx perf/shelf.ts"
+    "perf:shelf": "tsx --tsconfig .nuxt/tsconfig.json perf/shelf.ts"
   },
   "dependencies": {
-    "@fabkho/ui": "github:fabkho/ui#v0.2.0",
+    "@fabkho/ui": "github:fabkho/ui#v0.3.0",
     "@fontsource/geist": "^5.3.0",
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/newsreader": "^5.3.0",

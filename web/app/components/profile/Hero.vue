@@ -40,7 +40,7 @@ const profileLinks = useProfileLinksStore()
 onMounted(() => void profileLinks.load())
 const ownLinks = computed(() => profileLinks.own?.links ?? [])
 // Safari does not focus a button when it is tapped, and the sheet gives focus back to what had it
-// when it opened (composables/useModalLayer.ts): so the name takes it first and gets it back.
+// when it opened (useModalLayer, the UI base's): so the name takes it first and gets it back.
 function editName(event: MouseEvent) {
   ;(event.currentTarget as HTMLElement).focus({ preventScroll: true })
   emit('name')

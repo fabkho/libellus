@@ -13,7 +13,7 @@ import {
   SHELF_PAPER,
   thumbhashAverage,
 } from '../app/utils/bookColour'
-import { clothOf } from '../app/utils/cover'
+import { clothOf } from '#ui/utils/cloth'
 
 /**
  * The owner's rule for Your shelf (utils/bookColour.ts): one colour per Book,

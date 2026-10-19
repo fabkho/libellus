@@ -16,18 +16,30 @@ const inUiLayer = (path: string) => {
 }
 
 /**
- * What the base brings that is not a component, and that Nuxt would otherwise switch on now: its plugins and
- * its `router.options.ts`. Nothing switches yet (until wave 6a of the plan), so both are held back here. The app's own
- * `touch-active` plugin and `history` option do the same work; the base's `no-focus-zoom` (`maximum-scale=1`
- * on iOS) and `stranded-viewport` (the keyboard's leftovers) would change what members get. Each is put back,
- * deliberately, in the wave that needs it: the router option and the history key with `Sheet` and `Confirm`
- * (wave 6a), the plugins one by one.
+ * The base's plugins this app runs: one of each behaviour, never the app's and the base's side by side.
+ *
+ * - `touch-active` (press feedback on iPhone): the base's. It is the app's own plugin, word for word, so the app's
+ *   copy went (wave 6a).
+ * - `no-focus-zoom` (`maximum-scale=1` on iOS): held. Safari zooms in on a field set under 16 px; BetterReads' fields
+ *   are 17 and 19 px (`text-callout`, `text-input`), so nothing here zooms, and the tag would only add what axe reads
+ *   as a zoom limit (WCAG 1.4.4, `meta-viewport`). Bookretreats needs it for its 15 px composer: once BetterReads
+ *   takes the base's composer, it comes back with it.
+ * - `stranded-viewport` (iOS 26's viewport left panned or shrunk after the keyboard): held. Nothing reports
+ *   the bug in BetterReads, and its own `float-bottom` (main.css, over the base's) does not read `--viewport-pan`: the tab bar would
+ *   stay where it is while the base's sheets moved. It comes with the tab bar and the floating chrome (wave 6b on).
+ */
+const BASE_PLUGINS = ['touch-active']
+
+const isBasePlugin = (src: string) => BASE_PLUGINS.some((name) => new RegExp(`/plugins/${name}\\.client\\.[jt]s$`).test(src))
+
+/**
+ * What the base brings that is not a component, and that Nuxt would otherwise switch on: its plugins, of which only
+ * `BASE_PLUGINS` run. Its `router.options.ts` runs since wave 6a, with its `UiSheet`, `UiConfirm` and back dismissal:
+ * the app's own `history` option went in the same change (app/router.options.ts), so the system Back is listened to
+ * once.
  */
 export const uiLayerHolds: NonNullable<NuxtConfig['hooks']> = {
   'app:resolve'(app) {
-    app.plugins = app.plugins.filter((plugin) => !inUiLayer(plugin.src))
-  },
-  'pages:routerOptions'(context) {
-    context.files = context.files.filter((file) => !inUiLayer(file.path))
+    app.plugins = app.plugins.filter((plugin) => !inUiLayer(plugin.src) || isBasePlugin(plugin.src))
   },
 }

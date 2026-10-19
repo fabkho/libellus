@@ -14,10 +14,14 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm perf` — the client performance harness (production build, throttled Chromium and WebKit, scripted
   journeys, a table): `perf/README.md`; findings in `../docs/perf/`. Needs its own throwaway stack, never the shared one.
 - **The shared UI base** (fabkho/ui, a Nuxt layer; `@fabkho/ui` pinned to a tag in `package.json`, never a branch; plan:
-  `docs/ui-layer-plan.md` in fabkho/trappist) is extended and nothing uses it yet. `UI_LAYER=/path/to/ui-checkout`
-  points the app at a local checkout instead (`ui.config.ts`; `#ui`, which `main.css` imports its stylesheet by, follows
-  it). The app's own `components/ui/*`, composables and utils with the base's names win (`tests/ui-layer-shadow.test.ts`);
-  `ui.config.ts` also holds back the base's plugins and `router.options.ts` (the Back is this app's own) until wave 6a.
+  `docs/ui-layer-plan.md` in fabkho/trappist) is extended, and the app switches to it component by component. The
+  overlay stack is the base's (wave 6a): `UiSheet`, `UiConfirm`, `useModalLayer`, `useBackDismiss`, `utils/sheetFocus.ts`,
+  its `router.options.ts` (the system Back, history key `uiLayer`; the app's own `router.options.ts` has no `history`)
+  and the cover's cloth helpers (`utils/cloth.ts`; the sources stay in `utils/cover.ts`). `UI_LAYER=/path/to/ui-checkout`
+  points the app at a local checkout instead (`ui.config.ts`; `#ui`, which `main.css` imports its stylesheet by, and the
+  Vitest alias follow it). The app's own `components/ui/*`, composables and utils with the base's names win
+  (`tests/ui-layer-shadow.test.ts`); `ui.config.ts` says which of the base's plugins run (`touch-active`) and why the
+  other two are held.
   The base's words (`ui.text`) are set from the messages by `plugins/ui-text.ts`; a word the base adds needs a line in
   `utils/uiText.ts` (`tests/ui-text.test.ts`), a variable it reads needs a token (`tests/ui-layer.test.ts`).
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo

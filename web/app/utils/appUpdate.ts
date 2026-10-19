@@ -73,7 +73,7 @@ export function isTyping(active: Element | null): boolean {
 
 /**
  * The sheet may rise: nobody is typing and no layer of the app is on screen. `modalOpen` is
- * `useModalShown()` (composables/useModalLayer.ts): a sheet, a confirm, the search palette or the reader —
+ * `useModalShown()` (the UI base's composables/useModalLayer.ts): a sheet, a confirm, the search palette or the reader —
  * the reader is a modal layer too (components/reader/Reader.vue), so a new version never interrupts a book.
  */
 export function canInterrupt(now: { typing: boolean; modalOpen: boolean }): boolean {

@@ -52,7 +52,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
 
 - **Press.** Buttons scale to 0.97 over `instant`; no colour flash. Rows darken to `fillStrong`
   while pressed. Safari on iOS applies `:active` only under a touch listener: one passive no-op
-  `touchstart` on the document does it (`plugins/touch-active.client.ts`).
+  `touchstart` on the document does it (the UI base's `plugins/touch-active.client.ts`).
 - **Tab.** The new tab's icon goes full ink and its lamp dot fades in over `quick`; the old one
   recedes. The page itself swaps without a transition (tabs are places, not a sequence), at the
   place it was left. The tab already showing, tapped again, scrolls smoothly to its top (at once
@@ -194,7 +194,9 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
 - **Sheet.** Rises from below the screen edge (`translateY(100%)` → 0) over `sheet` with the
   `sheet` curve; the scrim fades in alongside. Leaves over `sheetExit` with `exit`. Swipe down on
   it: it follows the finger, and closes when dragged more than 80 px or flicked faster than
-  0.5 px/ms, otherwise it settles back (`web/app/composables/useSwipeDown.ts`).
+  0.5 px/ms, otherwise it settles back (the UI base's `composables/useSwipeDown.ts`, `utils/sheetDrag.ts`).
+  A finger does it the iOS way (`useSheetTouch`): a drag that starts in the sheet's scrolled list
+  scrolls it until it is at the top, and from there the same drag moves the sheet.
   **Focus and the keyboard.** In two stages: focus moves into the panel at once (the focus trap and
   VoiceOver need it), and a sheet's `data-autofocus` field (Collection name, member name, series
   edit, own edition) takes it only once the rise is over — when `data-moving` clears — so the
@@ -204,9 +206,11 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   put back (`restore`) and Reduce Motion (nothing moves) focus the field at once; a fallback timer
   of `sheet` + 200 ms focuses it if the end-of-rise signal comes late or never (as `afterMotion`'s
   patience does); closing first drops the wait. `UiSheet`'s `deferFocus` (default true) switches it
-  per sheet; `FIELD_FOCUS_AFTER_RISE` in `web/app/utils/sheetFocus.ts` switches it per platform,
-  and is the one place to flip if iOS does not raise the keyboard from a `focus()` outside the
-  opening tap (`ios: false` brings the old tap-time focus back on iPhone only).
+  per sheet; `FIELD_FOCUS_AFTER_RISE` in the UI base's `utils/sheetFocus.ts` switches it per
+  platform. It ships `{ ios: false, elsewhere: true }`: on an iPhone the field takes focus in the
+  opening tap (iOS raises the keyboard only for a `focus()` inside the member's gesture, and no
+  iPhone has shown it raised from a deferred one yet), everywhere else after the rise. Flipping
+  `ios` to true defers on iPhone too, once a device check shows the keyboard still comes up.
 - **A sheet comes back.** A sheet that leads to a Book page (Home's *Read in 2026*, the Profile's and a
   year in review's rows of Books) is open again when the member returns from that Book by Back (the
   system's or the page's own), and it comes back as if it had simply stayed open under the Book page:

@@ -1,20 +1,13 @@
+import type { SheetRestore } from '#ui/utils/sheetRestore'
 import { useStatsStore } from '~/stores/stats'
 
-/**
- * How a sheet is put back (components/ui/Sheet.vue, `restore`): where its list was scrolled and, for a list that
- * comes in pages (components/profile/ReadsSheet.vue), how many of its rows were drawn, so the scroll lands on the row
- * it was left on.
- */
-export interface SheetRestore {
-  scroll: number
-  shown?: number
-}
+export type { SheetRestore }
 
 /**
  * A sheet that leads to a Book page comes back (issue #78, and Home's "Read in
  * 2026"): a Book opened from it, and Back from that Book returns to the page with
  * the sheet open again, as an iOS sheet stays under the screen pushed from it.
- * Any change of page closes a sheet (components/ui/Sheet.vue), so the page
+ * Any change of page closes a sheet (`UiSheet`, the UI base's), so the page
  * keeps what was open and puts it back. Only Back from that Book does — the
  * page opened any other way starts without it.
  *

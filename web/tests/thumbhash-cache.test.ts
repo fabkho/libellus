@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { rgbaToThumbHash } from 'thumbhash'
 import { clearThumbhashCache, thumbhashCacheSize, thumbhashDataUrl } from '@/utils/thumbhash'
-import { thumbhashDataUrl as fromCover } from '@/utils/cover'
+import { thumbhashDataUrl as fromBase } from '#ui/utils/cloth'
 
 /** A distinct valid thumbhash: a 4x4 image of one colour. */
 function hashOf(seed: number): string {
@@ -16,14 +16,14 @@ describe('the thumbhash decoder', () => {
     vi.restoreAllMocks()
   })
 
-  it('gives a PNG data URL, nothing for no hash or a bad one, and cover.ts has the same function', () => {
+  it('gives a PNG data URL, nothing for no hash or a bad one, and the same image the shared UI base decodes', () => {
     const hash = hashOf(1)
     expect(thumbhashDataUrl(hash)).toMatch(/^data:image\/png;base64,/)
     expect(thumbhashDataUrl(null)).toBeNull()
     expect(thumbhashDataUrl(undefined)).toBeNull()
     expect(thumbhashDataUrl('')).toBeNull()
     expect(thumbhashDataUrl('***')).toBeNull()
-    expect(fromCover(hash)).toBe(thumbhashDataUrl(hash))
+    expect(fromBase(hash)).toBe(thumbhashDataUrl(hash))
   })
 
   it('decodes a hash once: the second ask is the first answer', () => {

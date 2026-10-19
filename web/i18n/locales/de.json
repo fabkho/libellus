@@ -2090,6 +2090,8 @@
     }
   },
   "uiText": {
+    "more": "mehr",
+    "less": "weniger",
     "chat": {
       "locale": "de",
       "today": "Heute",
