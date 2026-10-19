@@ -84,6 +84,7 @@
   --radius-cover: 3.5px;
   --radius-cover-lg: 5px;
   --radius-sm: 8px;
+  --radius-tail: 6px;
   --radius-md: 14px;
   --radius-field: 18px;
   --radius-lg: 20px;
@@ -194,6 +195,10 @@
   --size-star-input: 44px;
   --size-rating-thumb: 24px;
   --size-checkbox: 22px;
+  --size-composer: 52px;
+  --size-reaction: 24px;
+  --size-field: 52px;
+  --size-avatar-xl: 96px;
   --size-cover-xxs: 24px;
   --size-cover-xs: 30px;
   --size-cover-sm: 40px;
@@ -216,6 +221,7 @@
   --duration-keyboard: 250ms;
   --duration-caret: 1100ms;
   --duration-wave: 1600ms;
+  --duration-gentle: 450ms;
 }
 
 /* Dark, chosen in the avatar menu. */
