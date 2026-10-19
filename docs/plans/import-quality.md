@@ -53,6 +53,23 @@ only Goodreads knows them.
   cover. Each question goes to the Catalogue and Open Library first and to Apple only while the row is not settled
   (`settled`: a cover, the row's language, an Apple edition for an ebook row); the spelled-out, title-only and
   surname-first questions never go to Apple.
+- **The Catalogue is the first source** (`catalogueFirst`, owner decision 2026-10-19): a row whose work any member
+  imported or added before is asked of the Catalogue alone first (the ladder's first two questions, title and author,
+  then main title and surname). Its best fit (`rankEditions`) settles the row when it is `settled`: a cover, the row's
+  language, an Apple edition for an ebook row, never a National Library record or a member's Manual book. Then no Apple,
+  Open Library or National Library call is made for the row, and neither is `inRowLanguage`'s work-editions fetch
+  (`Edition.catalogueOnly`); Choose edition asks for the work's other editions itself when it is opened
+  (`choiceCandidates`), so nothing is fetched per row at import time. Anything less (no cover, another language,
+  another author spelling) goes down the ladder as before. By ISBN: a Catalogue Book with the ISBN and a cover ends the
+  row; one without a cover borrows the cover of the Catalogue's other edition of the work before any source is asked;
+  Apple's batch by ISBN (`primeIsbns`) is asked only for the ISBNs the Catalogue does not hold with a cover.
+  `import-quality.ts` reports `catalogue.settledAlone` and `external` (requests to Apple, Open Library, the National
+  Library, Goodreads); with `LIBELLUS_IMPORT_WRITE=1` it writes the rows (filling the Catalogue), with
+  `LIBELLUS_IMPORT_BASELINE=<report>` it reports `externalCallsSaved`. Measured on `web/tests/fixtures/goodreads/classics_export.csv`
+  (62 public classics, 10 with an ISBN), local stack, no cover fill: empty Catalogue 110 external calls (30 Apple, 65
+  Open Library, 15 National Library), 66 s; second import of the same file 59 of 62 rows settled by the Catalogue alone,
+  13 external calls (97 saved), 10 s. The three others fall through as designed (an author spelled "Tolstoy" for the
+  Catalogue's "Tolstoi", a Catalogue Book with no cover, one the sources named differently).
 - **One pool, one ranking**: every edition each source names is a candidate (`SearchOutcome.editions`), ranked by
   `rankEditions` (language, ebook for an ebook row, a cover, pages, year). The match takes the exact edition, else
   the best edition of the work, also for an ISBN no source knows; a cover is lent at match time (`coverLender`,
