@@ -1,6 +1,9 @@
 import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
-import { openProfile, signedIn } from './support'
+import { createLibrary } from '../app/data/library'
+import { addDays, isoDay } from '../app/utils/dates'
+import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
+import { goto, openProfile, signedIn, untilStill } from './support'
 
 /**
  * The scrim of a sheet and the Android status bar (utils/statusBarDim.ts, issue A6).
@@ -58,4 +61,48 @@ test('the scrim covers the whole viewport and the status bar takes its colour wh
   await page.getByTestId('accountName.cancel').click()
   await expect(scrim).toHaveCount(0)
   expect(await tags()).toEqual(before)
+})
+
+test('a confirmation over a sheet dims the status bar once more, and closing it gives the sheet’s shade back', async ({ page }) => {
+  const member = await signedIn(page)
+  const added = await createLibrary(member.client).addToLibrary(
+    {
+      title: runTitle('Dimmed'),
+      authors: ['Ada Fenn'],
+      isbn13: null,
+      isbn10: null,
+      pageCount: 200,
+      year: 2001,
+      language: 'en',
+      publisher: TEST_PUBLISHER,
+      description: null,
+      coverUrl: null,
+      coverThumbhash: null,
+      coverColors: null,
+      source: 'apple',
+      appleId: uniqueAppleId(),
+      openLibraryEditionKey: null,
+      openLibraryWorkKey: null,
+    },
+    { status: 'finished', startedOn: addDays(isoDay(), -9), endedOn: addDays(isoDay(), -3) },
+  )
+  await goto(page, `/book/${added.data!.book.id}`)
+  await untilStill(page)
+  const tags = () => page.evaluate(() => [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map((m) => m.content))
+  const before = await tags()
+
+  await page.getByTestId('history.edit').first().click()
+  await expect(page.getByTestId('editSession')).toBeVisible()
+  const sheet = await tags()
+  sheet.forEach((colour, i) => expect(colour).not.toBe(before[i]))
+
+  // One scrim per layer, as the page under them: the bar is darker again than under the sheet alone.
+  await page.getByTestId('editSession.delete').click()
+  await expect(page.getByTestId('deleteSession')).toBeVisible()
+  const both = await tags()
+  both.forEach((colour, i) => expect(colour).not.toBe(sheet[i]))
+
+  await page.getByTestId('deleteSession.cancel').click()
+  await expect(page.getByTestId('deleteSession')).toHaveCount(0)
+  expect(await tags()).toEqual(sheet)
 })
