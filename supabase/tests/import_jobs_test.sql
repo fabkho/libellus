@@ -5,7 +5,7 @@
 -- 20261102010000_import_jobs.sql.
 
 begin;
-select plan(67);
+select plan(93);
 
 create schema if not exists tests;
 insert into public.invite_codes (code, label, max_uses) values ('T-JOBS', 'import jobs test', 10);
@@ -44,11 +44,21 @@ create or replace function tests.expire_lease(p_job uuid)
 returns void language sql security definer as $$
   update public.import_jobs set lease_until = now() - interval '1 second' where id = p_job
 $$;
+create or replace function tests.age_jobs(p_member uuid)
+returns void language sql security definer as $$
+  update public.import_jobs set created_at = created_at - interval '1 hour' where member_id = p_member
+$$;
+create or replace function tests.big_rows(p_n integer)
+returns jsonb language sql as $$
+  select jsonb_agg(jsonb_build_object('key', 'big:' || i, 'pad', repeat(md5(i::text), 590)))
+    from generate_series(1, p_n) i
+$$;
 grant usage on schema tests to authenticated, service_role;
 grant execute on all functions in schema tests to authenticated, service_role;
 
 select tests.member('ada@jobs.pgtap.test') as ada \gset
 select tests.member('bo@jobs.pgtap.test') as bo \gset
+select tests.member('cy@jobs.pgtap.test') as cy \gset
 
 -- --------------------------------------------------------------- the shape
 
@@ -80,6 +90,15 @@ select throws_ok($$ select public.start_import_job('[]'::jsonb, 'goodreads') $$,
 select throws_ok($$ select public.start_import_job('[{"title": "no key"}]'::jsonb, 'goodreads') $$, '22023', 'rows_invalid', 'a row needs its key');
 select throws_ok($$ select public.start_import_job('[{"key": "a"}, {"key": "a"}]'::jsonb, 'goodreads') $$, '22023', 'rows_invalid', 'keys are unique');
 select throws_ok($$ select public.start_import_job(tests.rows(1), 'Good Reads') $$, '22023', 'source_invalid', 'the source is a plain name');
+select throws_ok(format($$ select public.start_import_job(tests.big_rows(300), 'goodreads') $$), '22023', 'rows_invalid', 'the rows together are capped (5 MB)');
+-- The holder 'job:' is the job's own: a device cannot take, beat or leave a place under that name.
+select throws_ok($$ select public.import_slot_take('job:' || gen_random_uuid()::text, 5, 'dev-phone') $$, '22023', 'holder_invalid', 'a device cannot take a place held for a job');
+select throws_ok($$ select public.import_slot_beat('job:abc') $$, '22023', 'holder_invalid', 'nor beat one');
+select throws_ok($$ select public.import_slot_leave('job:abc') $$, '22023', 'holder_invalid', 'nor leave one');
+-- Her device import still holds a place: the job does not take it over.
+select public.import_slot_take('device:ada-1', 5, 'dev-ada');
+select throws_ok($$ select public.start_import_job(tests.rows(1), 'goodreads') $$, '55000', 'device_import_running', 'no job while her device import holds a place');
+select public.import_slot_leave('device:ada-1');
 select public.start_import_job(tests.rows(5), 'goodreads', 'dev-phone', 2) as job \gset
 select is((select count(*)::int from public.import_job_rows where job_id = :'job'), 5, 'her rows are stored with the job');
 select is((select row(state, total, already, device)::text from public.import_jobs where id = :'job'), '(queued,5,2,dev-phone)',
@@ -110,6 +129,7 @@ set local role service_role;
 select is((select count(*)::int from public.import_job_claim('runner-1')), 1, 'the runner claims the job with the slot');
 select is(tests.job(:'job'), 'running,0,0,0,0,0,runner-1', 'running, leased to runner-1');
 select is((select count(*)::int from public.import_job_claim('runner-2')), 0, 'a second runner gets nothing while the lease holds');
+select is((select count(*)::int from public.import_job_claim('runner-1')), 0, 'nor the same runner id again: the lease holds against anyone, whatever the id');
 select is((select string_agg(idx::text, ',' order by idx) from public.import_job_take_rows(:'job', 'runner-1', 3)), '0,1,2',
           'rows come in file order');
 select is((select count(*)::int from public.import_job_take_rows(:'job', 'runner-2', 3)), 0, 'a runner without the lease takes nothing');
@@ -158,6 +178,14 @@ select tests.act_as(:'bo');
 select public.import_slot_leave('device:bo-1');
 reset role;
 select tests.act_as(:'ada');
+select throws_ok($$ select public.start_import_job(tests.rows(1), 'goodreads') $$, '55000', 'import_too_soon', 'one start per member per 2 minutes');
+reset role;
+select tests.age_jobs(:'ada');
+-- Books for the search below: Bo's own Manual book, a Catalogue Book the check failed, and a plain Catalogue Book.
+insert into public.books (title, authors, source, owner_id) values ('Almanac Secret Of Bo', '{Bo Writer}', 'manual', :'bo');
+insert into public.books (title, authors, source, check_failed, checked_at) values ('Almanac Planted', '{Some Faker}', 'openlibrary', true, now());
+insert into public.books (title, authors, source, isbn13) values ('Almanac Plain', '{Pat Plain}', 'openlibrary', '9780306406157');
+select tests.act_as(:'ada');
 select public.start_import_job(
   '[{"key": "goodreads:91", "title": "Notes Nobody Printed"}, {"key": "goodreads:92", "title": "Second"}]'::jsonb,
   'goodreads') as job3 \gset
@@ -186,12 +214,20 @@ select throws_ok(format($$ select public.import_job_write(%L, 'runner-x', 1, '{"
                  '55000', 'lease_lost', 'a runner without the lease writes nothing');
 select is((select count(*)::int from public.import_job_search_books(:'job3', 'runner-w', 'Notes Nobody Printed')), 1,
           'the Catalogue search sees her own Manual book, as she does');
+-- Not Bo's Manual book, not the Catalogue Book the check failed: only what she could read through the table herself.
+select is((select string_agg(title, ',' order by title) from public.import_job_search_books(:'job3', 'runner-w', 'Almanac')), 'Almanac Plain',
+          'the Catalogue search shows her neither another member''s Manual book nor a failed Catalogue Book');
+select is((select count(*)::int from public.import_job_search_books(:'job3', 'runner-w', 'Almanac Secret Of Bo')), 0,
+          'not even by its exact title');
+select is(public.import_job_save_row(:'job3', 'runner-w', 1, '{"verdict": "matched"}'), true, 'a result without an outcome or a tier is saved');
+select is(tests.job(:'job3'), 'running,1,0,0,0,0,runner-w', 'and counts as neither (no NULL in the counts)');
 select is((select count(*)::int from public.import_job_fill_covers(:'job3', 'runner-w', '[]'::jsonb)), 1, 'covers are filled as her');
 reset role;
 select tests.act_as(:'ada');
 select is(public.cancel_import_job(:'job3'), true, 'she cancels her job');
 reset role;
 select is((select state from public.import_jobs where id = :'job3'), 'cancelled', 'cancelled, what is written stays');
+select is((select count(*)::int from public.import_job_rows where job_id = :'job3'), 0, 'her rows go with the cancel');
 set local role service_role;
 select is(public.import_job_save_row(:'job3', 'runner-w', 1, '{"outcome": "added"}'), false, 'the runner is told to stop');
 reset role;
@@ -220,6 +256,8 @@ select tests.expire_lease(:'job2');
 set local role service_role;
 select public.import_job_claim('r-d');
 select is((select string_agg(idx::text, ',') from public.import_job_take_rows(:'job2', 'r-d', 5)), '1', 'the poison row is not handed out a fourth time');
+select is((select string_agg(title, ',' order by title) from public.import_job_search_books(:'job2', 'r-d', 'Almanac')), 'Almanac Plain,Almanac Secret Of Bo',
+          'her own Manual book is hers to find (the control of the search test above)');
 select is((select row(outcome, error)::text from public.import_job_rows where job_id = :'job2' and idx = 0), '(failed,gave_up)', 'it is given up');
 
 -- A chunk that fails as a whole pauses the job and frees the slot.
@@ -236,6 +274,52 @@ select is(tests.place(:'bo'), 'job:' || :'job2' || ',true,1', 'when it is time t
 update public.import_jobs set state = 'running', progress_at = now() - interval '31 minutes' where id = :'job2';
 select private.import_job_tick();
 select is((select row(state, error)::text from public.import_jobs where id = :'job2'), '(failed,stalled)', 'a stalled job fails');
+
+-- After a crash the rows come one at a time; a row given up keeps the outcome its write recorded.
+select tests.act_as(:'cy');
+select public.start_import_job(tests.rows(5), 'goodreads') as job4 \gset
+reset role;
+set local role service_role;
+select public.import_job_claim('c-1');
+select is((select count(*)::int from public.import_job_take_rows(:'job4', 'c-1', 5)), 5, 'a first chunk takes the batch');
+reset role;
+select tests.expire_lease(:'job4');
+set local role service_role;
+select public.import_job_claim('c-2');
+select is((select count(*)::int from public.import_job_take_rows(:'job4', 'c-2', 5)), 5, 'and after one crash still the batch');
+reset role;
+select tests.expire_lease(:'job4');
+-- Row 4 was written (the outcome recorded) by a runner that then died three times over.
+update public.import_job_rows set outcome = 'added', attempts = 3, taken_by = 'c-2' where job_id = :'job4' and idx = 4;
+set local role service_role;
+select public.import_job_claim('c-3');
+select is((select string_agg(idx::text, ',') from public.import_job_take_rows(:'job4', 'c-3', 5)), '0',
+          'after two crashes the suspects come one at a time');
+select is(tests.job(:'job4'), 'running,1,1,0,0,1,c-3', 'the written row given up counts as added, not failed');
+select is((select row(outcome, error, tier)::text from public.import_job_rows where job_id = :'job4' and idx = 4), '(added,gave_up,needsLook)',
+          'it keeps its outcome, and is left for her to look at');
+select is((select string_agg(idx::text, ',') from public.import_job_take_rows(:'job4', 'c-3', 5)), '1', 'the next suspect, alone');
+select is(public.import_job_release(:'job4', 'c-3', 'sources_unavailable'), 'paused', 'the chunk fails as a whole');
+reset role;
+
+-- A job that waited starts its 30 minutes at the claim.
+update public.import_jobs set not_before = now() - interval '1 second', progress_at = now() - interval '2 hours' where id = :'job4';
+select private.import_job_tick();
+set local role service_role;
+select is((select count(*)::int from public.import_job_claim('c-4')), 1, 'queued again, claimed');
+reset role;
+select ok((select progress_at >= now() from public.import_jobs where id = :'job4'), 'its progress clock starts at the claim, not when it was queued');
+
+-- A place held under another member's name does not make a chunk due or claimable.
+set local role service_role;
+select is(public.import_job_release(:'job4', 'c-4'), 'more', 'chunk over, rows left');
+reset role;
+select ok(private.import_job_due(), 'the job holding the slot is due');
+update public.import_queue set member_id = :'ada' where holder = 'job:' || :'job4';
+select ok(not private.import_job_due(), 'not when the place is another member''s');
+set local role service_role;
+select is((select count(*)::int from public.import_job_claim('c-5')), 0, 'nor claimed');
+reset role;
 
 select * from finish();
 rollback;

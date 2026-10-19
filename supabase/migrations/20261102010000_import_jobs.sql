@@ -18,7 +18,7 @@
 --
 --   import_job_claim(runner)        the job holding the queue's slot, leased to this runner for 170 s (longer than
 --                                   a function can live, so a dead runner's lease always runs out); nothing while
---                                   another runner's lease is valid: never two runners on one job
+--                                   any lease is valid (the runner id must be unique per invocation): never two runners on one job
 --   import_job_take_rows(job, runner, n)
 --                                   the next n pending rows (first pass in file order, then the second pass); a row
 --                                   handed out three times without being saved (it kills the runner) is given up
@@ -53,7 +53,9 @@
 --   select vault.create_secret('<the IMPORT_JOB_TOKEN function secret>', 'import_job_token');
 --
 -- Refusals: not_signed_in (42501), rows_invalid / source_invalid / device_invalid / already_invalid / languages_invalid (22023),
--- import_running (55000: she has a live job), job_unknown (P0002).
+-- import_running (55000: she has a live job), device_import_running (55000: her device import still holds a place in the
+-- queue: it leaves first, import_slot_leave), import_too_soon (55000: one start per member per 2 minutes), job_unknown (P0002).
+-- Rows: at most 10000, 20 kB each and 5 MB together (rows_invalid); they are deleted when she cancels.
 
 create schema if not exists private;
 
@@ -191,8 +193,8 @@ begin
 end
 $$;
 
--- The job takes her place in line (or the slot), as holder 'job:<id>'. Her own place from a device import is taken
--- over: a job she started supersedes it. Under the queue's lock.
+-- The job takes her place in line (or the slot), as holder 'job:<id>'. start_import_job refuses while a device import
+-- of hers holds a place, so the conflict branch only ever refreshes the job's own place. Under the queue's lock.
 create function private.import_job_enqueue(p_job uuid)
 returns void
 language plpgsql
@@ -258,7 +260,7 @@ as $$
   select exists (
     select 1
       from public.import_jobs j
-      join public.import_queue q on q.holder = 'job:' || j.id::text and q.started_at is not null
+      join public.import_queue q on q.holder = 'job:' || j.id::text and q.member_id = j.member_id and q.started_at is not null
      where j.state in ('queued', 'running')
        and (j.lease_until is null or j.lease_until < now())
   )
@@ -322,7 +324,8 @@ declare
   v_count integer;
 begin
   if v_member is null then raise exception 'not_signed_in' using errcode = '42501'; end if;
-  if p_rows is null or jsonb_typeof(p_rows) <> 'array' or jsonb_array_length(p_rows) not between 1 and 10000 then
+  if p_rows is null or jsonb_typeof(p_rows) <> 'array' or jsonb_array_length(p_rows) not between 1 and 10000
+     or pg_column_size(p_rows) > 5000000 then
     raise exception 'rows_invalid' using errcode = '22023';
   end if;
   if p_source is null or p_source !~ '^[a-z]{1,20}$' then raise exception 'source_invalid' using errcode = '22023'; end if;
@@ -347,8 +350,18 @@ begin
   end if;
 
   perform pg_advisory_xact_lock(hashtext('import_queue'));
+  perform private.import_slot_sweep();
   if exists (select 1 from public.import_jobs where member_id = v_member and state in ('queued', 'running', 'paused')) then
     raise exception 'import_running' using errcode = '55000';
+  end if;
+  -- Her device import still holds a place (the slot or a place in line): it has to leave first (import_slot_leave),
+  -- so a job never takes over a place whose import is still writing on the device.
+  if exists (select 1 from public.import_queue where member_id = v_member and holder not like 'job:%') then
+    raise exception 'device_import_running' using errcode = '55000';
+  end if;
+  -- One start per member per 2 minutes (every start stores up to 5 MB and calls the function).
+  if exists (select 1 from public.import_jobs where member_id = v_member and created_at > now() - interval '2 minutes') then
+    raise exception 'import_too_soon' using errcode = '55000';
   end if;
   insert into public.import_jobs (member_id, device, source, languages, total, already)
   values (v_member, p_device, p_source, p_languages, jsonb_array_length(p_rows), p_already)
@@ -357,7 +370,8 @@ begin
   select v_job, (r.ord - 1)::integer, r.value ->> 'key', r.value
     from jsonb_array_elements(p_rows) with ordinality as r (value, ord);
   perform private.import_job_enqueue(v_job);
-  perform private.import_job_kick(true);
+  -- Member-triggered: held back by the debounce (the tick, every minute, is the safety net).
+  perform private.import_job_kick(false);
   return v_job;
 end
 $$;
@@ -380,7 +394,9 @@ begin
    where id = p_job and member_id = v_member and state in ('queued', 'running', 'paused');
   if not found then return false; end if;
   perform private.import_job_dequeue(p_job);
-  perform private.import_job_kick(true);
+  -- Her rows name her books: nothing is left to look up, so they go with the cancel.
+  delete from public.import_job_rows where job_id = p_job;
+  perform private.import_job_kick(false);
   return true;
 end
 $$;
@@ -407,7 +423,8 @@ $$;
 
 -- ------------------------------------------------------------ runner
 
--- The job holding the slot, leased to `p_runner`; nothing when no job has the slot or another runner's lease is valid.
+-- The job holding the slot, leased to `p_runner`; nothing when no job has the slot or any lease is valid
+-- (the same runner id too: a runner id is unique per invocation, the lease is what keeps two apart).
 create function public.import_job_claim(p_runner text, p_lease_seconds integer default 170)
 returns setof public.import_jobs
 language plpgsql
@@ -425,13 +442,13 @@ begin
   perform private.import_slot_sweep();
   select j.* into v_job
     from public.import_jobs j
-    join public.import_queue q on q.holder = 'job:' || j.id::text and q.started_at is not null
+    join public.import_queue q on q.holder = 'job:' || j.id::text and q.member_id = j.member_id and q.started_at is not null
    where j.state in ('queued', 'running')
    for update of j;
   if v_job.id is null then return; end if;
-  if v_job.lease_until is not null and v_job.lease_until >= now() and v_job.runner is distinct from p_runner then return; end if;
+  if v_job.lease_until is not null and v_job.lease_until >= now() then return; end if;
   -- The last chunk saved nothing: one stall more (five in a row: given up). A first claim is no stall.
-  if v_job.claimed_at is not null and v_job.progress_at < v_job.claimed_at then
+  if v_job.claimed_at is not null and v_job.progress_at <= v_job.claimed_at then
     v_job.stalls := v_job.stalls + 1;
   else
     v_job.stalls := 0;
@@ -447,7 +464,9 @@ begin
     update public.import_jobs
        set state = 'running', started_at = coalesce(started_at, now()), runner = p_runner, claimed_at = now(),
            lease_until = now() + make_interval(secs => greatest(30, least(coalesce(p_lease_seconds, 170), 600))),
-           chunks = chunks + 1, stalls = v_job.stalls, not_before = null
+           chunks = chunks + 1, stalls = v_job.stalls, not_before = null,
+           -- A job that waited (queued, paused) has had no chance to progress: its 30 minutes start now.
+           progress_at = case when v_job.state = 'running' then progress_at else now() end
      where id = v_job.id
     returning *;
 end
@@ -464,7 +483,9 @@ as $$
 $$;
 
 -- The next rows to work on: pending ones not with this runner already, the first pass in file order before the
--- second. A row handed out three times without being saved killed its runners: it is given up (failed, no write).
+-- second. A row handed out three times without being saved killed its runners: it is given up (failed unless its write
+-- was recorded: that outcome stands). After a crash (rows handed out twice already) the suspects come one at a time,
+-- so the row that kills its runner is found alone and the others of its batch are not blamed.
 create function public.import_job_take_rows(p_job uuid, p_runner text, p_limit integer default 8)
 returns table (idx integer, key text, payload jsonb, pass smallint, attempts smallint)
 language plpgsql
@@ -474,28 +495,39 @@ set search_path = pg_catalog, public
 as $$
 declare
   v_gave_up integer;
+  v_added integer;
+  v_kept integer;
+  v_failed integer;
+  v_suspects boolean;
 begin
   if not private.import_job_held(p_job, p_runner) then return; end if;
   with gone as (
     update public.import_job_rows r
-       set state = 'done', outcome = 'failed', error = 'gave_up', tier = 'needsLook', taken_by = null, done_at = now()
+       set state = 'done', outcome = coalesce(r.outcome, 'failed'), error = coalesce(r.error, 'gave_up'), tier = 'needsLook',
+           taken_by = null, done_at = now()
      where r.job_id = p_job and r.state = 'pending' and r.attempts >= 3 and r.taken_by is distinct from p_runner
-    returning 1
+    returning r.outcome
   )
-  select count(*) into v_gave_up from gone;
+  select count(*), count(*) filter (where outcome = 'added'), count(*) filter (where outcome in ('imported', 'in_library')),
+         count(*) filter (where outcome = 'failed')
+    into v_gave_up, v_added, v_kept, v_failed from gone;
   if v_gave_up > 0 then
+    -- A row whose write was recorded counts as what it came to, not as failed.
     update public.import_jobs
-       set done = done + v_gave_up, failed = failed + v_gave_up, needs_look = needs_look + v_gave_up, progress_at = now()
+       set done = done + v_gave_up, added = added + v_added, kept = kept + v_kept, failed = failed + v_failed,
+           needs_look = needs_look + v_gave_up, progress_at = clock_timestamp()
      where id = p_job;
   end if;
   update public.import_jobs set lease_until = greatest(lease_until, now() + interval '170 seconds') where id = p_job;
+  v_suspects := exists (select 1 from public.import_job_rows r
+                         where r.job_id = p_job and r.state = 'pending' and r.taken_by is distinct from p_runner and r.attempts >= 2);
   return query
     with next as (
       select r.job_id, r.idx
         from public.import_job_rows r
        where r.job_id = p_job and r.state = 'pending' and r.taken_by is distinct from p_runner
-       order by r.pass, r.idx
-       limit greatest(1, least(coalesce(p_limit, 8), 50))
+       order by (v_suspects and r.attempts >= 2) desc, r.pass, r.idx
+       limit case when v_suspects then 1 else greatest(1, least(coalesce(p_limit, 8), 50)) end
        for update
     )
     update public.import_job_rows r
@@ -529,7 +561,7 @@ begin
   if v_row.state = 'done' then return true; end if;
   if coalesce((p_result ->> 'defer')::boolean, false) and v_row.pass = 0 then
     update public.import_job_rows set pass = 1, taken_by = null, attempts = 0 where job_id = p_job and idx = p_idx;
-    update public.import_jobs set progress_at = now() where id = p_job;
+    update public.import_jobs set progress_at = clock_timestamp() where id = p_job;
     return true;
   end if;
   update public.import_job_rows
@@ -546,11 +578,12 @@ begin
   returning outcome into v_outcome;
   update public.import_jobs
      set done = done + 1,
-         added = added + (v_outcome = 'added')::integer,
-         kept = kept + (v_outcome in ('imported', 'in_library'))::integer,
-         failed = failed + (v_outcome = 'failed')::integer,
-         needs_look = needs_look + (v_tier = 'needsLook')::integer,
-         progress_at = now(),
+         -- A result without an outcome or a tier counts as neither (a NULL would void the count).
+         added = added + coalesce((v_outcome = 'added')::integer, 0),
+         kept = kept + coalesce((v_outcome in ('imported', 'in_library'))::integer, 0),
+         failed = failed + coalesce((v_outcome = 'failed')::integer, 0),
+         needs_look = needs_look + coalesce((v_tier = 'needsLook')::integer, 0),
+         progress_at = clock_timestamp(),
          lease_until = greatest(lease_until, now() + interval '170 seconds')
    where id = p_job
   returning done, member_id into v_done, v_member;
@@ -684,7 +717,10 @@ begin
 end
 $$;
 
--- The Catalogue search as the member sees it (her own Manual books among the Catalogue's).
+-- The Catalogue search as the member sees it (her own Manual books among the Catalogue's). `search_books` applies the
+-- `books_readable` rule itself (it is SECURITY DEFINER, with `auth.uid()` = the member here); this wrapper applies it
+-- again, word for word (20261025020000_catalogue_check.sql), because it hands rows to a caller that is not her: another
+-- member's Manual book, or a Catalogue Book the check failed and she does not hold, must never come back.
 create function public.import_job_search_books(p_job uuid, p_runner text, p_query text, p_limit integer default 20)
 returns setof public.books
 language plpgsql
@@ -694,8 +730,15 @@ set search_path = pg_catalog, public
 as $$
 declare
   v_before text[] := private.import_job_as_member(p_job, p_runner);
+  v_member uuid := (select member_id from public.import_jobs where id = p_job);
 begin
-  return query select * from public.search_books(p_query, p_limit);
+  return query
+    select b.*
+      from public.search_books(p_query, p_limit) b
+     where b.owner_id = v_member
+        or (b.owner_id is null
+            and (not b.check_failed
+                 or exists (select 1 from public.library_entries e where e.member_id = v_member and e.book_id = b.id)));
   perform private.import_job_as_caller(v_before);
 end
 $$;
@@ -798,10 +841,10 @@ begin
     begin
       perform cron.schedule('import-job-tick', '* * * * *', 'select private.import_job_tick()');
     exception when others then
-      raise notice 'import-job-tick could not be scheduled (%)', sqlerrm;
+      raise warning 'import-job-tick could not be scheduled (%): jobs run only while a chunk kicks the next one; nothing re-kicks a dead runner or queues a paused job again', sqlerrm;
     end;
   else
-    raise notice 'pg_cron is not here: import jobs run only when a chunk kicks the next one';
+    raise warning 'pg_cron is not here: import jobs run only while a chunk kicks the next one; nothing re-kicks a dead runner or queues a paused job again (enable pg_cron, then schedule import-job-tick: see supabase/functions/import-job/README.md)';
   end if;
 end;
 $$;
