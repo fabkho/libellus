@@ -411,6 +411,12 @@ verify_jwt = false
 [functions.openlibrary]
 verify_jwt = false
 
+# The import as a server job (#329): one chunk per call, from the database (pg_net, its Vault secret
+# import_job_token) or the owner (the service-role key). The function checks the caller itself:
+# supabase/functions/import-job/README.md.
+[functions.import-job]
+verify_jwt = false
+
 # The owner's Regal library file for the Regal workflow (issue #110). Its caller
 # has no Supabase key, only the shared secret REGAL_EXPORT_TOKEN, which the
 # function checks itself: supabase/functions/regal-export/README.md.
