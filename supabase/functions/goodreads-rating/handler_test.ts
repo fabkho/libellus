@@ -8,7 +8,7 @@
  *   cd supabase/functions/goodreads-rating && deno test
  */
 import { assert, assertEquals } from '@std/assert'
-import { titleKey } from './goodreads.ts'
+import { autoCompleteUrl, titleKey } from './goodreads.ts'
 import { createGoodreads, type FetchLike, USER_AGENT } from './client.ts'
 import { BREAKER_MS, BUCKETS, type CachedAnswer, createHandler, MAX_AGE_MS, MAX_BODY_BYTES, MAX_KEY_CHARS, NOT_FOUND_MAX_AGE_MS } from './handler.ts'
 import { fakeClock, recordedFetch, recording } from './test_support.ts'
@@ -30,10 +30,12 @@ function setup(
     maxWaitMs?: number
     timeoutMs?: number
     throttle?: (member: string, bucket: string) => Promise<boolean>
+    /** Answers for URLs nobody recorded (or instead of a recording), by URL. */
+    extra?: Record<string, () => Response | Promise<Response>>
   } = {},
 ) {
   const time = fakeClock()
-  const recorded = recordedFetch()
+  const recorded = recordedFetch(options.extra)
   const store = new Map<string, CachedAnswer>()
   const logs: string[] = []
   const handler = createHandler({
@@ -57,6 +59,7 @@ function setup(
     },
     throttle: options.throttle,
     now: time.now,
+    sleep: time.clock.sleep,
     log: (message) => logs.push(message),
   })
   return { handler, store, time, asked: recorded.asked, logs }
@@ -513,15 +516,24 @@ const SANDMAN_NO_ISBN = { title: SANDMAN.title, authors: SANDMAN.authors }
 const SANDMAN_KEY = `title:${titleKey(SANDMAN_NO_ISBN)}`
 const SANDMAN_COVER = 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1312279891i/25102.jpg'
 const ABSOLUTE_COVER = 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1558896137i/10864102.jpg'
+/** The whole-title search of the Sandman book (the first a cover request without an ISBN makes) and its short one. */
+const SANDMAN_FULL = autoCompleteUrl('The Sandman, Vol. 5: A Game of You Neil Gaiman')
 
-Deno.test('cover: a title request answers the cover without its size token and the Goodreads id; an ISBN is ignored', async () => {
+/** A Goodreads answer made of a recording's body, for another query's URL. */
+const answerLike = (name: Parameters<typeof recording>[0]) => () =>
+  new Response(recording(name).body, { status: 200, headers: { 'content-type': 'application/json' } })
+/** `auto_complete`'s soft throttle: 200 and an empty list. */
+const emptyList = () => new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } })
+/** The whole-title search answers the list that holds the Absolute edition's id (an edition the title rule does not take). */
+const withAbsolute = { [SANDMAN_FULL]: answerLike('auto-complete-sandman') }
+
+Deno.test('cover: without an ISBN the whole title with the first author is asked first; the answer has the cover without its size token and the Goodreads id', async () => {
   const { handler, asked, store } = setup()
-  const body = await (await handler(ask({ ...SANDMAN, cover: true }))).json()
+  const body = await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).json()
   assertEquals([body.status, body.goodreadsId, body.coverUrl], ['found', '25102', SANDMAN_COVER])
-  assertEquals(asked.map((a) => new URL(a.url).pathname), ['/book/auto_complete'])
+  assertEquals(asked.map((a) => a.url), [SANDMAN_FULL])
   const row = store.get(SANDMAN_KEY)
   assert(row?.status === 'found' && row.coverUrl === SANDMAN_COVER)
-  assertEquals(store.has(SANDMAN.isbn13), false)
 })
 
 Deno.test('cover: an ISBN that is not valid does not matter, the title is asked', async () => {
@@ -532,7 +544,7 @@ Deno.test('cover: an ISBN that is not valid does not matter, the title is asked'
 })
 
 Deno.test('cover: the result with the given Goodreads book id is taken, whatever its title; the cache keeps the rule\'s hit', async () => {
-  const { handler, store } = setup()
+  const { handler, store } = setup({ extra: withAbsolute })
   const body = await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true, goodreadsBookId: '10864102' }))).json()
   // "The Absolute Sandman, Volume 5" is not the Book's title: only the id makes it the answer.
   assertEquals([body.status, body.goodreadsId, body.coverUrl], ['found', '10864102', ABSOLUTE_COVER])
@@ -546,9 +558,12 @@ Deno.test('cover: an id Goodreads does not return falls back to the same-work ru
   assertEquals([body.goodreadsId, body.coverUrl], ['25102', SANDMAN_COVER])
 })
 
-Deno.test('cover: a title that matches nothing, and an id that is not there, is not_found with no cover', async () => {
-  const { handler, store } = setup()
-  const body = await (await handler(ask({ ...NOBODY, cover: true, goodreadsBookId: '5' }))).json()
+const NOBODY_FULL = autoCompleteUrl('Qxzvbnm Wplkjhg Ann Zzyzx')
+
+Deno.test('cover: a title that matches nothing, and an id that is not there, is not_found with no cover when Goodreads answered a list', async () => {
+  // Goodreads answers books, none of them this one: a miss.
+  const { handler, store } = setup({ extra: { [NOBODY_FULL]: answerLike('auto-complete-we-are-legion') } })
+  const body = await (await handler(ask({ ...NOBODY, isbn13: undefined, cover: true, goodreadsBookId: '5' }))).json()
   assertEquals([body.status, body.goodreadsId, body.coverUrl], ['not_found', null, null])
   assertEquals(store.get(`title:${titleKey(NOBODY)}`)?.status, 'not_found')
 })
@@ -585,13 +600,18 @@ Deno.test('cover: a cached found row that never asked for a cover is refreshed o
   assertEquals(asked.length, 2)
 })
 
-Deno.test('cover: a cached miss is asked again when an id may find the book, not otherwise', async () => {
-  const { handler, asked, store } = setup()
+Deno.test('cover: a cached miss is asked again when an id or an ISBN may find the book, not otherwise', async () => {
+  const { handler, asked, store } = setup({ extra: withAbsolute })
   store.set(SANDMAN_KEY, { status: 'not_found', checkedAt: new Date(Date.parse('2026-10-04T10:00:00Z')).toISOString() })
   assertEquals((await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).json()).status, 'not_found')
   assertEquals(asked.length, 0)
   const body = await (await handler(ask({ ...SANDMAN_NO_ISBN, cover: true, goodreadsBookId: '10864102' }))).json()
   assertEquals([asked.length, body.coverUrl], [1, ABSOLUTE_COVER])
+  // An ISBN asks again too: its search is a new question.
+  const byIsbn = setup({ extra: { [autoCompleteUrl(SANDMAN.isbn13)]: answerLike('auto-complete-sandman') } })
+  byIsbn.store.set(SANDMAN_KEY, { status: 'not_found', checkedAt: new Date(Date.parse('2026-10-04T10:00:00Z')).toISOString() })
+  const found = await (await byIsbn.handler(ask({ ...SANDMAN, cover: true }))).json()
+  assertEquals([byIsbn.asked.length, found.status, found.goodreadsId], [1, 'found', '25102'])
 })
 
 Deno.test('cover: a rating request never tells the cover (and a refresh writes none: index.ts leaves the column alone)', async () => {
@@ -608,12 +628,19 @@ Deno.test('cover: a rating request never tells the cover (and a refresh writes n
 })
 
 Deno.test('cover: GET with cover=1 and goodreadsBookId; a malformed id is dropped', async () => {
-  const { handler } = setup()
+  const { handler } = setup({ extra: withAbsolute })
   const url = (id: string) =>
     `http://localhost/goodreads-rating?cover=1&goodreadsBookId=${id}&title=${encodeURIComponent(SANDMAN.title)}&author=Neil%20Gaiman`
   const get = (id: string) => handler(new Request(url(id), { headers: { authorization: 'Bearer member' } }))
   assertEquals((await (await get('10864102')).json()).goodreadsId, '10864102')
   assertEquals((await (await get('1; drop')).json()).goodreadsId, '25102')
+})
+
+Deno.test('cover: GET with isbn takes the ISBN for the cover search', async () => {
+  const { handler, asked } = setup({ extra: { [autoCompleteUrl(CROWN.isbn13)]: answerLike('auto-complete-crown-bones-isbn') } })
+  const url = `http://localhost/goodreads-rating?cover=1&isbn=${CROWN.isbn13}&title=${encodeURIComponent(CROWN.title)}&author=${encodeURIComponent(CROWN.authors[0]!)}`
+  const body = await (await handler(new Request(url, { headers: { authorization: 'Bearer member' } }))).json()
+  assertEquals([asked.length, body.goodreadsId], [1, '59478256'])
 })
 
 Deno.test('cover: its own rate bucket (goodreads-cover), apart from the ratings\'', async () => {
@@ -642,11 +669,166 @@ Deno.test('cover: its own rate bucket (goodreads-cover), apart from the ratings\
   assertEquals(BUCKETS['goodreads-rating'].limit, 20)
 })
 
+Deno.test('cover: a many-search lookup is still ONE call of the member\'s bucket', async () => {
+  const counted: string[] = []
+  const { handler, asked } = setup({
+    throttle: (_member, bucket) => {
+      counted.push(bucket)
+      return Promise.resolve(true)
+    },
+    extra: { [autoCompleteUrl(CROWN.isbn13)]: emptyList },
+  })
+  await handler(ask({ ...CROWN, cover: true }))
+  assert(asked.length >= 3)
+  assertEquals(counted, ['goodreads-cover'])
+})
+
 Deno.test('cover: Goodreads failing is a 502 and nothing is stored; a cover without a title is no Book', async () => {
   const { handler, store } = setup({ fetch: () => Promise.reject(new Error('down')) })
   assertEquals((await handler(ask({ ...SANDMAN_NO_ISBN, cover: true }))).status, 502)
   assertEquals(store.size, 0)
   assertEquals((await handler(ask({ isbn13: SMALL_GODS.isbn13, cover: true }))).status, 400)
+})
+
+// ------------------------------------------------ the cover search: ISBN first, full title, short title
+
+const CROWN = { isbn13: '9783453321540', title: 'Crown and Bones', authors: ['Jennifer L. Armentrout'] }
+const CROWN_KEY = `title:${titleKey(CROWN)}`
+const CROWN_COVER = 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1635512998i/59478256.jpg'
+const ROSES_1 = { isbn13: '9783865527127', title: 'Blood & Roses - Buch 1', authors: ['Callie Hart'] }
+const ROSES_2 = { title: 'Blood & Roses - Buch 2', authors: ['Callie Hart'] }
+const ROSES_3 = { isbn13: '9783865527363', title: 'Blood & Roses - Buch 3', authors: ['Callie Hart'] }
+const FALL = { title: 'A Fall to Forgive', authors: ['Morgane Moncomble'] }
+const JINGLE = { title: 'A Jingle Bell Mingle', authors: ['Julie Murphy'] }
+
+const paths = (asked: { url: string }[]) => asked.map((a) => decodeURIComponent(new URL(a.url).searchParams.get('q') ?? ''))
+
+Deno.test('cover search: the ISBN-13 is asked first and its hit ends the search (the title search ranks other books)', async () => {
+  const { handler, asked, store } = setup()
+  const body = await (await handler(ask({ ...CROWN, cover: true }))).json()
+  assertEquals([body.status, body.goodreadsId, body.coverUrl], ['found', '59478256', CROWN_COVER])
+  assertEquals(paths(asked), [CROWN.isbn13])
+  // The ISBN came from the caller: it never decides what the title cache says for everybody.
+  assertEquals(store.size, 0)
+})
+
+Deno.test('cover search: the same book without its ISBN is a miss, asked by its whole title and then its main title', async () => {
+  const { handler, asked, store } = setup()
+  const body = await (await handler(ask({ title: CROWN.title, authors: CROWN.authors, cover: true }))).json()
+  assertEquals([body.status, body.goodreadsId, body.coverUrl], ['not_found', null, null])
+  assertEquals(paths(asked), ['Crown and Bones Jennifer L. Armentrout', 'Crown and Bones Armentrout'])
+  assertEquals(store.get(CROWN_KEY)?.status, 'not_found')
+})
+
+Deno.test('cover search: an ISBN Goodreads does not know goes on to the whole title', async () => {
+  const { handler, asked } = setup({ extra: { [autoCompleteUrl(ROSES_2.title)]: emptyList } })
+  // Buch 2 has no ISBN in the file: the whole title (a volume mark kept) finds it exactly.
+  const body = await (await handler(ask({ ...ROSES_2, cover: true }))).json()
+  assertEquals([body.status, body.goodreadsId], ['found', '45730013'])
+  assertEquals(paths(asked), ['Blood & Roses - Buch 2 Callie Hart'])
+  // An ISBN that answers nothing is passed over.
+  const second = setup({ extra: { [autoCompleteUrl('9783865527165')]: emptyList } })
+  const again = await (await second.handler(ask({ ...ROSES_2, isbn13: '9783865527165', cover: true }))).json()
+  assertEquals([again.goodreadsId, paths(second.asked)], ['45730013', ['9783865527165', 'Blood & Roses - Buch 2 Callie Hart']])
+})
+
+Deno.test('cover search: Blood & Roses Buch 1 and Buch 3 are found by their ISBN, not taken for each other', async () => {
+  const { handler, asked } = setup()
+  const one = await (await handler(ask({ ...ROSES_1, cover: true }))).json()
+  const three = await (await handler(ask({ ...ROSES_3, cover: true }))).json()
+  assertEquals([one.goodreadsId, three.goodreadsId], ['42832296', '43883077'])
+  assertEquals(paths(asked), [ROSES_1.isbn13, ROSES_3.isbn13])
+  // Without an ISBN: Buch 3's whole title is searched; the answer for Buch 1 is not Buch 3's (nor the other way round).
+  const noIsbn = setup({ extra: { [autoCompleteUrl('Blood & Roses - Buch 3 Callie Hart')]: answerLike('auto-complete-blood-roses-buch-1') } })
+  const body = await (await noIsbn.handler(ask({ title: ROSES_3.title, authors: ROSES_3.authors, cover: true }))).json()
+  assertEquals(body.status === 'found', false)
+})
+
+Deno.test('cover search: a title Goodreads words a little differently is found with the author (a word more, a credit after it)', async () => {
+  const { handler, asked, store } = setup()
+  const fall = await (await handler(ask({ ...FALL, cover: true }))).json()
+  assertEquals([fall.status, fall.goodreadsId], ['found', '244201756'])
+  const jingle = await (await handler(ask({ ...JINGLE, cover: true }))).json()
+  // Goodreads shows its stand-in for this book: found, with no cover.
+  assertEquals([jingle.status, jingle.goodreadsId, jingle.coverUrl], ['found', '253403547', null])
+  assertEquals(paths(asked), ['A Fall to Forgive Morgane Moncomble', 'A Jingle Bell Mingle Julie Murphy'])
+  assertEquals(store.size, 2)
+  // …and only with the author: another surname is no match.
+  const stranger = setup({ extra: { [autoCompleteUrl('A Fall to Forgive Anna Other')]: answerLike('auto-complete-fall-to-forgive'), [autoCompleteUrl('A Fall to Forgive Other')]: emptyList } })
+  const other = await (await stranger.handler(ask({ ...FALL, authors: ['Anna Other'], cover: true }))).json()
+  assertEquals(other.status, 'not_found')
+})
+
+Deno.test('cover search: the first accepted hit ends it; a miss asks the next query only', async () => {
+  const { handler, asked } = setup({ extra: { [autoCompleteUrl('Blood & Roses - Buch 3 Callie Hart')]: answerLike('auto-complete-blood-roses-buch-1') } })
+  // Buch 3, no ISBN: whole title (nothing accepted: Buch 1's list) then the main title (the English series: no Buch 3).
+  const body = await (await handler(ask({ title: ROSES_3.title, authors: ROSES_3.authors, cover: true }))).json()
+  assertEquals(body.status, 'not_found')
+  assertEquals(paths(asked), ['Blood & Roses - Buch 3 Callie Hart', 'Blood & Roses Hart'])
+})
+
+// ----------------------------------------------- an empty list is not a miss
+
+Deno.test('cover `[]`: every query answering an empty list is "unsure": retried with growing waits, never stored, never "not found"', async () => {
+  const empty = { [autoCompleteUrl('Qxzvbnm Wplkjhg Ann Zzyzx')]: emptyList, [autoCompleteUrl('Qxzvbnm Wplkjhg Zzyzx')]: emptyList }
+  const { handler, asked, store, time } = setup({ extra: empty })
+  const response = await handler(ask({ title: NOBODY.title, authors: NOBODY.authors, cover: true }))
+  assertEquals(response.status, 200)
+  assertEquals(await response.json(), { status: 'unsure', retryAfterSeconds: 30 })
+  // Two queries, then the first again after 1.5 s and 3 s.
+  assertEquals(paths(asked), ['Qxzvbnm Wplkjhg Ann Zzyzx', 'Qxzvbnm Wplkjhg Zzyzx', 'Qxzvbnm Wplkjhg Ann Zzyzx', 'Qxzvbnm Wplkjhg Ann Zzyzx'])
+  assert(time.slept.includes(1500) && time.slept.includes(3000))
+  assertEquals(store.size, 0)
+})
+
+Deno.test('cover `[]`: a throttled first answer is retried and the book found', async () => {
+  let calls = 0
+  const full = autoCompleteUrl('A Fall to Forgive Morgane Moncomble')
+  const { handler, asked, store, time } = setup({
+    extra: {
+      [full]: () => (++calls <= 2 ? emptyList() : answerLike('auto-complete-fall-to-forgive')()),
+      [autoCompleteUrl('A Fall to Forgive Moncomble')]: emptyList,
+    },
+  })
+  const body = await (await handler(ask({ ...FALL, cover: true }))).json()
+  assertEquals([body.status, body.goodreadsId], ['found', '244201756'])
+  // full (empty), short (empty), full again after 1.5 s (a list: found).
+  assertEquals(paths(asked).length, 4)
+  assert(time.slept.includes(1500))
+  assert(store.get(`title:${titleKey(FALL)}`)?.status === 'found')
+})
+
+Deno.test('cover `[]`: a query that answered a list proves Goodreads is answering: the other `[]` is a real miss, cached', async () => {
+  const { handler, asked, store } = setup({ extra: { [autoCompleteUrl('Crown and Bones Armentrout')]: emptyList } })
+  // Whole title answers the English series (no match); the main title answers `[]`.
+  const body = await (await handler(ask({ title: CROWN.title, authors: CROWN.authors, cover: true }))).json()
+  assertEquals(body.status, 'not_found')
+  assertEquals(asked.length, 2) // no retry
+  assertEquals(store.get(CROWN_KEY)?.status, 'not_found')
+})
+
+Deno.test('cover `[]`: an unsure answer is asked again at the next request (nothing was cached); the retries stay inside the search budget', async () => {
+  let empty = true
+  const full = autoCompleteUrl('A Fall to Forgive Morgane Moncomble')
+  const { handler, store, time } = setup({
+    extra: {
+      [full]: () => (empty ? emptyList() : answerLike('auto-complete-fall-to-forgive')()),
+      [autoCompleteUrl('A Fall to Forgive Moncomble')]: () => (empty ? emptyList() : answerLike('auto-complete-fall-to-forgive')()),
+    },
+  })
+  assertEquals((await (await handler(ask({ ...FALL, cover: true }))).json()).status, 'unsure')
+  assertEquals(store.size, 0)
+  // Well inside what a call may take (the client gives one 20 s).
+  assert(time.now() - Date.parse('2026-10-04T10:00:00Z') <= 12_000)
+  empty = false
+  assertEquals((await (await handler(ask({ ...FALL, cover: true }))).json()).status, 'found')
+})
+
+Deno.test('cover `[]`: a 202 or an empty body is still a block (breaker), not unsure', async () => {
+  const { handler, logs } = setup({ fetch: () => Promise.resolve(new Response('', { status: 202 })) })
+  const body = await (await handler(ask({ ...FALL, cover: true }))).json()
+  assertEquals(body.status, 'blocked')
+  assertEquals(logs.filter((line) => line.startsWith('goodreads_blocked ')).length, 1)
 })
 
 // ------------------------------------------------------------------ blocked

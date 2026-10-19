@@ -7,8 +7,10 @@
 import { assertEquals, assertThrows } from '@std/assert'
 import {
   type AutoCompleteBook,
+  coverQueries,
   GoodreadsBlocked,
   goodreadsCoverUrl,
+  matchIsbnResult,
   matchTitle,
   normalise,
   parseAutoComplete,
@@ -219,4 +221,68 @@ Deno.test('a result by its Goodreads book id, exactly; none for an unknown or mi
   assertEquals(pickByBookId(sandman, '10864102')?.bookId, '10864102')
   assertEquals(pickByBookId(sandman, '999'), null)
   assertEquals(pickByBookId(sandman, null), null)
+})
+
+// ----------------------------------------------------- the cover search's queries
+
+Deno.test('cover queries: the ISBN-13, the whole title with the first author, the main title with the surname', () => {
+  assertEquals(
+    coverQueries({ isbn13: '9783865527127', title: 'Blood & Roses - Buch 1 (Blood & Roses, #1)', authors: ['Callie Hart', 'Someone Else'] }),
+    [
+      { kind: 'isbn', q: '9783865527127' },
+      { kind: 'title', q: 'Blood & Roses - Buch 1 Callie Hart' },
+      { kind: 'short', q: 'Blood & Roses Hart' },
+    ],
+  )
+  // No ISBN; a catalogue's "Surname, First" is read in order; a title with nothing to cut is asked once, not twice.
+  assertEquals(coverQueries({ isbn13: null, title: 'Piranesi', authors: ['Clarke, Susanna'] }), [
+    { kind: 'title', q: 'Piranesi Susanna Clarke' },
+    { kind: 'short', q: 'Piranesi Clarke' },
+  ])
+  assertEquals(coverQueries({ isbn13: null, title: 'Dune', authors: ['Hart'] }).map((q) => q.kind), ['title'])
+  assertEquals(coverQueries({ isbn13: null, title: ' ', authors: [] }), [])
+})
+
+Deno.test('an ISBN search result is taken by its author, whatever its title; no author, no match', () => {
+  const crown = parseAutoComplete(200, recording('auto-complete-crown-bones-isbn').body)
+  const book = { isbn13: '9783453321540', title: 'A Translated Title', authors: ['Jennifer L. Armentrout'] }
+  assertEquals(matchIsbnResult(book, crown)?.bookId, '59478256')
+  assertEquals(matchIsbnResult({ ...book, authors: ['Somebody Else'] }, crown), null)
+  assertEquals(matchIsbnResult({ ...book, authors: [] }, crown), null)
+})
+
+Deno.test('the six cover cases: what the main-title search ranks, and what the title rule takes', () => {
+  const roses = parseAutoComplete(200, recording('auto-complete-blood-roses-short').body)
+  const hart = ['Callie Hart']
+  // The English series only: not Buch 2, not Buch 3 (the other volumes' titles never meet).
+  assertEquals(matchTitle({ isbn13: null, title: 'Blood & Roses - Buch 2', authors: hart }, roses), null)
+  assertEquals(matchTitle({ isbn13: null, title: 'Blood & Roses - Buch 3', authors: hart }, roses), null)
+  // Buch 1 against Buch 3's list, and the other way round: another volume is not the book.
+  const buch1 = parseAutoComplete(200, recording('auto-complete-blood-roses-buch-1').body)
+  const buch2 = parseAutoComplete(200, recording('auto-complete-blood-roses-buch-2').body)
+  assertEquals(matchTitle({ isbn13: null, title: 'Blood & Roses - Buch 3', authors: hart }, buch1), null)
+  assertEquals(matchTitle({ isbn13: null, title: 'Blood & Roses - Buch 1', authors: hart }, buch2), null)
+  assertEquals(matchTitle({ isbn13: null, title: 'Blood & Roses - Buch 2', authors: hart }, buch2)?.bookId, '45730013')
+  // The Crown and Bones whole-title list is the English series' books: none is it.
+  const crown = parseAutoComplete(200, recording('auto-complete-crown-bones-title').body)
+  assertEquals(matchTitle({ isbn13: null, title: 'Crown and Bones', authors: ['Jennifer L. Armentrout'] }, crown), null)
+  // The fuzzy rule: a word more, a credit after the title (with the author only).
+  const fall = parseAutoComplete(200, recording('auto-complete-fall-to-forgive').body)
+  assertEquals(matchTitle({ isbn13: null, title: 'A Fall to Forgive', authors: ['Morgane Moncomble'] }, fall)?.bookId, '244201756')
+  assertEquals(matchTitle({ isbn13: null, title: 'A Fall to Forgive', authors: ['Anna Other'] }, fall), null)
+  const jingle = parseAutoComplete(200, recording('auto-complete-jingle-bell-mingle').body)
+  assertEquals(matchTitle({ isbn13: null, title: 'A Jingle Bell Mingle', authors: ['Julie Murphy'] }, jingle)?.bookId, '253403547')
+})
+
+Deno.test('a later volume, a summary and a translation are not the book, in the exact forms either', () => {
+  const result = (title: string): AutoCompleteBook => ({
+    bookId: '1', title, bookTitleBare: title, author: 'Callie Hart', rating: 4, ratingsCount: 10, coverUrl: null,
+  })
+  const row = (title: string) => ({ isbn13: null, title, authors: ['Callie Hart'] })
+  assertEquals(matchTitle(row('Blood & Roses - Buch 1'), [result('Blood & Roses - Buch 3')]), null)
+  assertEquals(matchTitle(row('Blood & Roses'), [result('Blood & Roses - Buch 3')]), null)
+  assertEquals(matchTitle(row('Blood & Roses - Buch 3'), [result('Blood & Roses')]), null)
+  assertEquals(matchTitle(row('Blood & Roses'), [result('Blood & Roses: Summary')]), null)
+  assertEquals(matchTitle(row('Blood & Roses'), [result('Θνητοί Θεοί (Blood & Roses)')]), null)
+  assertEquals(matchTitle(row('Blood & Roses - Buch 1'), [result('Blood & Roses - Buch 1')])?.bookId, '1')
 })

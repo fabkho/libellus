@@ -210,7 +210,7 @@ describe('findEdition', () => {
     expect(edition.via).toBeNull()
     expect(edition.goodreadsOnly).toBe(true)
     expect(edition.coverFrom?.coverUrl ?? edition.book.coverUrl).toBe('https://example.test/c.jpg')
-    expect(asked).toEqual([{ title: 'The Quiet Harbour', authors: ['Lena Marsh'], goodreadsBookId: '42' }])
+    expect(asked).toEqual([{ title: 'The Quiet Harbour', authors: ['Lena Marsh'], isbn13: null, goodreadsBookId: '42' }])
   })
 
   it('does not ask Goodreads for a row a source refused (unsure): a better edition may come', async () => {

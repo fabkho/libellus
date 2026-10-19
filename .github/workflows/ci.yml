@@ -125,6 +125,7 @@ jobs:
             goodreads:
               - *ci
               - 'supabase/functions/goodreads-rating/**'
+              - 'web/app/data/titleMatch.ts'
             dnb:
               - *ci
               - 'supabase/functions/dnb-lookup/**'
@@ -364,6 +365,7 @@ jobs:
 
       # The goodreads-rating edge function (#69): its parsing, matching, cache and
       # rate limit, on recorded Goodreads answers.
+      # It imports web/app/data/titleMatch.ts (the fuzzy title rule, shared with the import), so this checks that stays runnable by Deno.
       - name: goodreads-rating function (Deno lint, check, test)
         if: ${{ !cancelled() && needs.changes.outputs.goodreads == 'true' }}
         working-directory: supabase/functions/goodreads-rating

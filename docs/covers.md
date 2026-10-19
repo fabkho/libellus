@@ -206,14 +206,67 @@ separately.
 What: for a Goodreads export's rows that nothing else found a cover for (about half of the cover-less rows of a real
 export are Manual books, no ISBN, so no other source can know them) and for the import preview's manual **Find a cover**,
 the cover Goodreads shows for the book. The `goodreads-rating` function (`supabase/functions/goodreads-rating`) asks the
-keyless `book/auto_complete` search it already uses for the community rating, once, with `cover: true`; the hit with the
-file's own Goodreads book id is taken as it is (it is that very edition), else the same-work rule decides. The answer is the
+keyless `book/auto_complete` search it already uses for the community rating, with `cover: true`, **in this order, the first
+accepted hit ending it**: the row's ISBN-13 (the client sends it; the result by one of the book's authors is taken whatever its
+title, the ISBN names the edition); the whole title with the first author's name (`Blood & Roses - Buch 2 Callie Hart`); the main
+title with the surname (before a subtitle or series dash). The hit with the file's own Goodreads book id is taken as it is
+in whichever result set it appears (it is that very edition); otherwise the same-work rule decides: the title's forms, or the
+fuzzy title rule (`web/app/data/titleMatch.ts`) with the author's surname. The answer is the
 `imageUrl` without its size token (`._SY75_` off: the ~332x500 original) at `i.gr-assets.com`, which allows CORS, so the
 browser reads the pixels for the thumbhash like for any cover. Measured on 78 cover-less rows of a real export: 75 got a
-same-work cover from it, and the file's book id was among the results for 63.
+same-work cover from it, and the file's book id was among the results for 63. The ISBN-first order and the fuzzy rule exist
+because the main-title search alone cut a series' volume down to the series' name ("Blood & Roses - Buch 1" asked as
+"Blood & Roses Hart" meets only the English series) and ranked other books for a title Goodreads words differently
+("A Fall to Forgive" is "A Fall to Forgive You", "A Jingle Bell Mingle" is "… by Julie Murphy and Sierra Simone").
+
+**The fuzzy title rule** (`web/app/data/titleMatch.ts`, pure, tested in `web/tests/title-match.test.ts`; one rule for every
+title-based search): `&`/and, accents, punctuation, a series aside, a volume mark, a credit after the title and a trailing "A Novel"
+are normalised away; two titles are one when they are equal, or one is the other plus one word after it ("A Fall to Forgive
+You") or a little word before it ("The Lantern in the Quiet Sea"), or they have the same telling words but one. Always together
+with the author (the caller says whether the surname matched). Never another volume (two named volumes must be equal; an unnamed
+side only stands for the first: "Blood & Roses - Buch 1" is not "Buch 3", nor "Buch 3" the series' bare name), never a summary,
+study guide or companion (nor `Coloring Book`, `Journal`, `Boxed Set`, nor "World of …" / "The Art of …" before the title), never a
+book that only begins like it (the shorter title needs three words; "Dune" is not "Dune Messiah"; a number or roman numeral added is
+a volume), never a translation in another script. It is used by Goodreads' `matchTitle` and, as a second chance after `sameTitle`, by the
+import's `isSameWork` (`web/app/data/import/editions.ts`, the flag `LOOSE_TITLES`; measured below).
+
+**An empty list is not a miss.** `auto_complete` answers `[]` (200) for a book it does not know **and** when it throttles softly
+(29 of 34 asks in a row on a real export, which a first version counted and cached as 7-day misses). The function therefore
+never reads a lone `[]` as "none": a query that answered a list proves Goodreads is answering, so no accepted hit after that is a
+miss (cached 7 days); when EVERY query answered `[]` the first is asked again after 1.5 s and 3 s, and if it is still `[]` the
+answer is `{ status: 'unsure' }`, stored nowhere. The client reads it as `'later'` (`data/goodreadsCover.ts`): no cover now, no
+failure toward the lane's three, and the fill's Goodreads lane asks the row once more after the others (no sooner than 10 s); three
+`later` in a row hold the whole lane for 15 s (a throttle, not three unknown books). A genuinely unknown book therefore answers
+`unsure` twice and then shows no cover, at the price of up to 10 requests; nothing wrong is ever cached.
+
+**Measured** (19 Oct 2026; one real 709-row Goodreads export, Apple off as for a server job, local stack, counts only;
+`web/scripts/import-quality.ts` with `LIBELLUS_IMPORT_APPLE=off` runs the app's own Goodreads client against the local function):
+
+| Apple off | before | after |
+|---|---:|---:|
+| matched to a real Book | 667 | 671 |
+| unmatched (only the file's row; every one has a Goodreads cover) | 42 | 38 |
+| matched rows without a cover (= rows without any cover) | 131 | 126 |
+| covers of 300 px or more (all rows / matched rows) | 463 / 424 | 469 / 434 |
+| covers by source (Open Library incl. DNB-matched / Goodreads) | 506 / 72 | 512 / 71 |
+| Goodreads asks (first pass + fill lane) / hits / none / `later` | n/a | 72 (38 + 34) / 71 / 1 / 0 |
+| lookups that saw an empty list / retried / unsure | n/a | 6 / 0 / 0 (no throttle that day; the rule is tested on recordings) |
+| run time (lookup + 600 s fill) | 1,255 s | 1,245 s |
+
+The client lane barely moves the numbers because **its limits cap it, not Goodreads**: every row first passes the Apple search lane
+twice (two storefronts, one search per 3 s, also with Apple off) and only then reaches Goodreads, all under the shared 600 s budget, so the
+lane asked **34 of the 160 eligible rows (21%)**. The same 126 rows that stayed without a cover, asked one at a time with no budget and no
+failure cap (what a server job does; 1.6 s apart, `unsure` retried up to 3 times) **all 126 got a Goodreads cover, in 229 s, each by its ISBN in
+one request** (0 `unsure`, 0 retries). Goodreads' covers measured 63 of 71 at 300 px or more in the run, so about 110 of those 126 would also clear
+the 300 px bar. Of the 96 rows Apple's covers saved at that bar (PR #359), 4 are now covered by the capped lane and, by the same count, about 90
+by an uncapped one. `isSameWork` with the fuzzy rule (`LOOSE_TITLES`) against without it, same day, lookup only: 667 → 671 matched, 9 rows changed their
+edition, and all 9 are the same work by a manual check (a missing leading article, a credit after the title, a "Special Edition", a volume
+mark spelled another way); the first version of the rule took one companion book
+("World of …" for the book it is about) and was tightened (see above), so wrong matches stay at 0.
 
 Why last: the ranking above. The stage runs after the Apple lane and only for a row with no cover and no fallback, one
-ask every 1.6 s (the function's own limit, 40 a minute in a bucket of its own), under the fill's budget, given up after 3
+ask every 1.6 s (the function's own limit, 40 a minute in a bucket of its own; a lookup is one call of the bucket however many
+searches it makes), under the fill's budget, given up after 3
 failures in a row. Only linked: the address is the whole of what is stored (`books.cover_url`, and `cover_url` next to the
 rating in the function's answer cache); no description, page count or rating of the hit is kept or told on this path.
 

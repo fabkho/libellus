@@ -11,10 +11,14 @@
  *
  *   LIBELLUS_IMPORT_CSV=/path/export.csv \
  *   [LIBELLUS_IMPORT_KEYS=/path/keys.txt]        only these row keys, one a line (a subset to iterate on)
- *   [LIBELLUS_IMPORT_AUDIT=/path/audit.json]     the per-row audit (local only: it names the books)
+ *   [LIBELLUS_IMPORT_AUDIT=/path/audit.json]     the per-row audit (local only: it names the books, the cover each
+ *                                                row shows and where that cover came from)
  *   [LIBELLUS_IMPORT_FILL_SECONDS=600]           the cover fill's budget (0: no fill)
  *   [LIBELLUS_IMPORT_PICKER=1]                   open Choose edition on every row that needs a look
  *   [LIBELLUS_IMPORT_APPLE_OUTAGE=90:20]         Apple refuses (429) for 20 s every 90 s, as it does on a bad day
+ *   [LIBELLUS_IMPORT_APPLE=off]                 Apple is never asked and never counts as refused (its own empty
+ *                                                answer comes back, so no row is "unsure" because of it): the free
+ *                                                sources have to settle every row, as for a server-side job
  *   [LIBELLUS_IMPORT_WRITE=1]                      after the lookup and the fill, write the rows as the import does (`import_books`):
  *                                                the Catalogue is filled for the next run (the throwaway member goes, the Books stay)
  *   [LIBELLUS_IMPORT_BASELINE=/path/report.json]   a previous run's report (stdout JSON): the report then says how many
@@ -32,24 +36,18 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { readFileSync, writeFileSync } from 'node:fs'
 import sharp from 'sharp'
-import {
-  autoCompleteUrl,
-  foundByTitle,
-  matchTitle,
-  parseAutoComplete,
-  pickByBookId,
-  titleQuery as goodreadsQuery,
-} from '../../supabase/functions/goodreads-rating/goodreads.ts'
 import { createAuth } from '../app/data/auth'
 import * as bookImport from '../app/data/bookImport'
 import { createBookImport, editionChoices, needsLook, pacedFetch, type Edition, type ImportRow, type RowOutcome } from '../app/data/bookImport'
 import { createCatalogueSearch } from '../app/data/catalogueSearch'
 import { createCoverFill, mergeCover } from '../app/data/coverFill'
 import { createDnb, DNB_IMPORT_GAP_MS } from '../app/data/dnb'
+import { createGoodreadsCover, type GoodreadsCoverQuery } from '../app/data/goodreadsCover'
 import { verifyCover, type ProbedImage } from '../app/data/covers'
 import { createEditions } from '../app/data/editions'
 import type { FetchLike } from '../app/data/fetching'
 import { parseExport } from '../app/data/import/detect'
+import { workTitle } from '../app/data/import/readingTracker'
 import type { ImportBook } from '../app/data/import/rows'
 import { viaOwnServer } from '../app/data/openLibraryProxy'
 import { createSearch } from '../app/data/search'
@@ -65,6 +63,8 @@ const fillSeconds = Number(process.env.LIBELLUS_IMPORT_FILL_SECONDS ?? 600)
 const openPicker = process.env.LIBELLUS_IMPORT_PICKER === '1'
 const writeRows = process.env.LIBELLUS_IMPORT_WRITE === '1'
 const [outageEvery, outageFor] = (process.env.LIBELLUS_IMPORT_APPLE_OUTAGE ?? '').split(':').map(Number)
+/** Apple off: no request leaves, and Apple's own empty answer comes back, so nothing reads it as a refusal. */
+const appleOff = (process.env.LIBELLUS_IMPORT_APPLE ?? 'on').trim().toLowerCase() === 'off'
 const languages = ['de-DE', 'en-US']
 const today = new Date().toISOString().slice(0, 10)
 const started = performance.now()
@@ -78,7 +78,7 @@ type Request = { host: string; kind: string; status: number; results: number | n
 type Call = { what: 'catalogue' | 'isbn' | 'title' | 'picker' | 'goodreads'; query: string; requests: Request[]; error?: string }
 const tag = new AsyncLocalStorage<Call>()
 /** Apple's answers as the app sees them (any call, tagged or not): how many, and when it first refused. */
-const apple = { sent: 0, firstRefusal: null as { at: number; after: number } | null }
+const apple = { sent: 0, firstRefusal: null as { at: number; after: number } | null, off: appleOff, answeredOff: 0 }
 const calls: Call[] = []
 /** Every request that left for a source outside our own stack, tagged or not (the cover fill's included). */
 const external = { apple: 0, openlibrary: 0, goodreads: 0 }
@@ -114,7 +114,7 @@ function observed(inner: FetchLike): FetchLike {
       }
     }
     call?.requests.push({ host: where.hostname, kind: kindOf(where), status: response.status, results })
-    if (where.hostname === 'itunes.apple.com') {
+    if (where.hostname === 'itunes.apple.com' && !appleOff) {
       apple.sent++
       if (response.status !== 200 && apple.firstRefusal === null) apple.firstRefusal = { at: seconds(), after: apple.sent - 1 }
     }
@@ -122,12 +122,23 @@ function observed(inner: FetchLike): FetchLike {
   }
 }
 
-/** The network, with Apple's bad days played back on demand: a window of refusals every so often (`LIBELLUS_IMPORT_APPLE_OUTAGE`). */
+/**
+ * The network, with Apple's bad days played back on demand: a window of refusals every so often
+ * (`LIBELLUS_IMPORT_APPLE_OUTAGE`). With `LIBELLUS_IMPORT_APPLE=off` Apple is never asked: its own empty
+ * answer comes back instead, so no lookup reads a source that is off as one that refused (the import would
+ * then call the row unsure and ask again): the free sources have to settle the row.
+ */
 const network: FetchLike = async (url, init) => {
-  if (outageEvery && outageFor && new URL(url).hostname === 'itunes.apple.com') {
-    const at = (performance.now() - started) / 1000
-    if (at % outageEvery >= outageEvery - outageFor) {
-      return { ok: false, status: 429, json: async () => ({}), headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '10' : null) } }
+  if (new URL(url).hostname === 'itunes.apple.com') {
+    if (appleOff) {
+      apple.answeredOff++
+      return { ok: true, status: 200, json: async () => ({ resultCount: 0, results: [] }), headers: { get: () => null } }
+    }
+    if (outageEvery && outageFor) {
+      const at = (performance.now() - started) / 1000
+      if (at % outageEvery >= outageEvery - outageFor) {
+        return { ok: false, status: 429, json: async () => ({}), headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '10' : null) } }
+      }
     }
   }
   return fetch(url, {
@@ -151,19 +162,6 @@ async function probe(url: string): Promise<ProbedImage | null> {
   }
 }
 
-/** The `goodreads-rating` function's cover path run in this process (its pure parts, no cache): one live call. */
-async function goodreadsCover({ title, authors, goodreadsBookId }: { title: string; authors: string[]; goodreadsBookId?: string | null }) {
-  const query = goodreadsQuery({ isbn13: null, title, authors })
-  if (!query || !authors.length) return null
-  external.goodreads++
-  const response = await fetch(autoCompleteUrl(query), { headers: { 'user-agent': 'Libellus/1.0 (private book tracker; audit)', accept: 'application/json' } })
-  const text = await response.text()
-  if ([202, 403, 429, 503].includes(response.status)) return 'blocked' as const
-  const results = parseAutoComplete(response.status, text)
-  const hit = pickByBookId(results, goodreadsBookId ?? null) ?? matchTitle({ isbn13: null, title, authors }, results)
-  return hit ? (foundByTitle(hit, true).coverUrl ?? null) : null
-}
-
 // ------------------------------------------------------------------- the file, the member, the app's wiring
 
 const parsed = parseExport(readFileSync(file, 'utf8'), today)
@@ -181,6 +179,26 @@ const verified = await auth.verifyCode(email, await readMailedCode(email))
 if (verified.error) throw new Error(`verification failed: ${verified.error}`)
 const member = await auth.currentMember()
 if (!member) throw new Error('no session')
+
+/**
+ * The Goodreads cover path as the app runs it: the app's own client (data/goodreadsCover.ts) asks the local
+ * `goodreads-rating` function as this member, which searches the live Goodreads (ISBN, whole title, main title; an
+ * empty list is retried). Every ask is counted by what the function answered; counts only, never a title.
+ */
+const goodreadsClient = createGoodreadsCover(client as never)
+const goodreads = { asks: 0, found: 0, foundNoCover: 0, noneFound: 0, later: 0, blocked: 0, couldNotAsk: 0 }
+async function askGoodreads(query: GoodreadsCoverQuery) {
+  goodreads.asks++
+  // One ask is one call of the function; its upstream requests are the function's (a lookup is 1 to 5).
+  external.goodreads++
+  const answer = await goodreadsClient.find(query)
+  if (!answer) goodreads.couldNotAsk++
+  else if (answer === 'blocked') goodreads.blocked++
+  else if (answer === 'later') goodreads.later++
+  else if (answer.coverUrl) goodreads.found++
+  else goodreads.noneFound++
+  return answer
+}
 
 // As the import store wires it (stores/import.ts: `importer`, `startFill`, the Choose edition lookup). The
 // import's Open Library goes through the `openlibrary` function (identified, ~3/s) and falls back to direct at
@@ -236,11 +254,13 @@ const lookups = {
   search,
   dnb,
   busyFor: () => live.blockedFor('itunes.apple.com'),
-  goodreads: (query: { title: string; authors: string[]; goodreadsBookId: string | null }) =>
+  goodreads: (query: { title: string; authors: string[]; isbn13: string | null; goodreadsBookId: string | null }) =>
     tagged('goodreads', query.title, async () => {
-      const url = await goodreadsCover(query)
-      if (!url || url === 'blocked') return url
-      return verifyCover(url, { probe }).catch(() => null)
+      const answer = await askGoodreads(query)
+      if (answer === 'blocked') return answer
+      // 'later' (an empty list) is no cover now; the fill's Goodreads lane asks the row again.
+      if (!answer || answer === 'later' || !answer.coverUrl) return null
+      return verifyCover(answer.coverUrl, { probe }).catch(() => null)
     }),
 }
 const repository = createBookImport(client, { lookups: lookups as never, probe })
@@ -254,7 +274,12 @@ const fill = createCoverFill({
   probe,
   hostBlockedFor: (host) => live.blockedFor(host),
   budgetMs: fillSeconds * 1000,
-  goodreads: async (query) => goodreadsCover(query),
+  goodreads: async (query) => {
+    const answer = await askGoodreads(query)
+    // Not asked (offline, refused, over the limit): a failure the stage's breaker counts, as in the store.
+    if (!answer) throw new Error('goodreads cover unavailable')
+    return answer === 'blocked' || answer === 'later' ? answer : answer.coverUrl
+  },
   onFound(key, found) {
     const index = books.findIndex((book) => book.key === key)
     const next = editions[index] && mergeCover(editions[index]!, found)
@@ -436,6 +461,7 @@ const report = {
   seconds: { lookup: lookupSeconds, total: seconds() },
   apple,
   dnb: dnbCalls,
+  goodreads: { ...goodreads, fillAsks: fill.calls().goodreads },
   matchedAutomatically: count((row) => matched(row.edition)),
   matchedByIsbn: count((row) => matched(row.edition) && row.edition.via === 'isbn'),
   matchedByTitle: count((row) => matched(row.edition) && row.edition.via === 'title'),
@@ -486,9 +512,23 @@ if (process.env.LIBELLUS_IMPORT_AUDIT) {
         binding: row.book.binding,
         tier: row.tier,
         cover: row.shownCover,
+        // The cover the row shows and where it is from (`coverFrom` is the edition whose picture is lent), for the
+        // size measurement of the assessment: local only, like everything in this file.
+        coverUrl: row.shownCover ? (row.edition.coverFrom ?? row.edition.book).coverUrl : null,
+        coverKind: row.edition.coverKind ?? null,
+        coverFilled: row.edition.filled ?? false,
+        coverSource: row.shownCover ? (row.edition.coverFrom ?? row.edition.book).source : null,
+        language: row.book.language,
         via: row.edition.via,
         source: row.edition.book.source,
         matchedTitle: matched(row.edition) ? row.edition.book.title : null,
+        matchedIsbn: matched(row.edition) ? (row.edition.book.isbn13 ?? null) : null,
+        matchedSource: matched(row.edition) ? row.edition.book.source : null,
+        matchedFormat: matched(row.edition) ? (row.edition.book.format ?? null) : null,
+        matchedWork: matched(row.edition) ? workTitle(row.edition.book.title) : null,
+        matchedEdition: matched(row.edition)
+          ? (row.edition.book.isbn13 ?? row.edition.book.openLibraryEditionKey ?? row.edition.book.appleId ?? row.edition.book.title)
+          : null,
         matchedLanguage: matched(row.edition) ? row.edition.book.language : null,
         unsure: row.edition.unsure,
         catalogueOnly: Boolean((row.first as { catalogueOnly?: boolean }).catalogueOnly),

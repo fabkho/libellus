@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/auto_complete?format=json&q=Blood%20%26%20Roses%20-%20Buch%202%20Callie%20Hart",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": "[{\"imageUrl\":\"https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1557734437i/45730013._SY75_.jpg\",\"bookId\":\"45730013\",\"workId\":\"40718699\",\"bookUrl\":\"/book/show/45730013-blood-roses---buch-2\",\"from_search\":true,\"from_srp\":true,\"qid\":\"lxqbTTn3KI\",\"rank\":1,\"title\":\"Blood \\u0026 Roses - Buch 2\",\"bookTitleBare\":\"Blood \\u0026 Roses - Buch 2\",\"numPages\":0,\"avgRating\":\"4.25\",\"ratingsCount\":12596,\"author\":{\"id\":7771953,\"name\":\"Callie Hart\",\"isGoodreadsAuthor\":true,\"profileUrl\":\"https://www.goodreads.com/author/show/7771953.Callie_Hart\",\"worksListUrl\":\"https://www.goodreads.com/author/list/7771953.Callie_Hart\"},\"kcrPreviewUrl\":null,\"description\":{\"html\":\"Zeth Mayfair is pretty much the very last thing I need in my life. And yet with every breath I take he becomes more engrained in every aspect of it:\\u003cbr/\\u003e\\u003cbr/\\u003eHe has a key to my house. \\u003cbr/\\u003e\\u003cbr/\\u003eH…\",\"truncated\":true,\"fullContentUrl\":\"https://www.goodreads.com/book/show/45730013-blood-roses---buch-2\"}}]"
+}

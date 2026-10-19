@@ -246,7 +246,8 @@ export const useImportStore = defineStore('import', () => {
                   goodreadsBlocked()
                   return 'blocked'
                 }
-                if (!answer?.coverUrl) return null
+                // 'later' (an empty list: unknown, or throttled) is no cover now; the fill's Goodreads lane asks the row again.
+                if (!answer || answer === 'later' || !answer.coverUrl) return null
                 const cover = await verifyCover(answer.coverUrl, { probe: probeImageInBrowser }).catch(() => null)
                 return cover?.coverUrl ? cover : null
               },
@@ -337,8 +338,9 @@ export const useImportStore = defineStore('import', () => {
       if (coverSearch.value === mine) coverSearch.value = { key, state }
     }
     const goodreadsBookId = /^goodreads:(\d{1,20})$/.exec(key)?.[1] ?? null
-    const answer = await goodreadsCovers()?.find({ title: book.title, authors: book.authors, goodreadsBookId })
-    if (!answer) return settle('failed')
+    const answer = await goodreadsCovers()?.find({ title: book.title, authors: book.authors, isbn13: book.isbn13, goodreadsBookId })
+    // Not asked (offline, over the limit), or Goodreads cannot say yet ('later': an empty list): the button may be pressed again.
+    if (!answer || answer === 'later') return settle('failed')
     // Blocked: the same quiet "no cover found" a miss gets, and the owner's log hears of it.
     if (answer === 'blocked') {
       goodreadsBlocked()
@@ -362,7 +364,7 @@ export const useImportStore = defineStore('import', () => {
         const answer = await goodreadsCovers()?.find(query)
         // Not asked (offline, refused, over the limit): a failure the stage's breaker counts.
         if (!answer) throw new Error('goodreads cover unavailable')
-        return answer === 'blocked' ? answer : answer.coverUrl
+        return answer === 'blocked' || answer === 'later' ? answer : answer.coverUrl
       },
       onBlocked: goodreadsBlocked,
       onFound: (key, found) => {

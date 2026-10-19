@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/auto_complete?format=json&q=A%20Fall%20to%20Forgive%20Morgane%20Moncomble",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": "[{\"imageUrl\":\"https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1772656444i/244201756._SY75_.jpg\",\"bookId\":\"244201756\",\"workId\":\"145240346\",\"bookUrl\":\"/book/show/244201756-a-fall-to-forgive-you\",\"from_search\":true,\"from_srp\":true,\"qid\":\"KKGodrFqUG\",\"rank\":1,\"title\":\"A Fall to Forgive You (Seasons, #1)\",\"bookTitleBare\":\"A Fall to Forgive You\",\"numPages\":445,\"avgRating\":\"4.29\",\"ratingsCount\":39632,\"author\":{\"id\":17153450,\"name\":\"Morgane Moncomble\",\"isGoodreadsAuthor\":true,\"profileUrl\":\"https://www.goodreads.com/author/show/17153450.Morgane_Moncomble\",\"worksListUrl\":\"https://www.goodreads.com/author/list/17153450.Morgane_Moncomble\"},\"kcrPreviewUrl\":null,\"description\":{\"html\":\"\\u003cstrong\\u003eInternational bestselling author Morgane Moncomble is the #3 fiction author in all of France. This new adult romance features a fast-paced story and emotionally gripping roman…\\u003c/strong\\u003e\",\"truncated\":true,\"fullContentUrl\":\"https://www.goodreads.com/book/show/244201756-a-fall-to-forgive-you\"}}]"
+}

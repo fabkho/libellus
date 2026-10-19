@@ -1,0 +1,6 @@
+{
+  "url": "https://www.goodreads.com/book/auto_complete?format=json&q=9783453321540",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": "[{\"imageUrl\":\"https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1635512998i/59478256._SY75_.jpg\",\"bookId\":\"59478256\",\"workId\":\"86127489\",\"bookUrl\":\"/book/show/59478256-crown-and-bones\",\"from_search\":true,\"from_srp\":true,\"qid\":\"KZTxyWCcdf\",\"rank\":1,\"title\":\"Crown and Bones (Liebe kennt keine Grenzen, #3)\",\"bookTitleBare\":\"Crown and Bones\",\"numPages\":768,\"avgRating\":\"4.15\",\"ratingsCount\":491148,\"author\":{\"id\":4476934,\"name\":\"Jennifer L. Armentrout\",\"isGoodreadsAuthor\":true,\"profileUrl\":\"https://www.goodreads.com/author/show/4476934.Jennifer_L_Armentrout\",\"worksListUrl\":\"https://www.goodreads.com/author/list/4476934.Jennifer_L_Armentrout\"},\"kcrPreviewUrl\":null,\"description\":{\"html\":\"Niemals hätte die Auserwählte Poppy gedacht, einmal die große Liebe zu finden. Doch bevor sie und Prinz Casteel ihr Glück genießen können, müssen sie Casteels Bruder aus seine…\",\"truncated\":true,\"fullContentUrl\":\"https://www.goodreads.com/book/show/59478256-crown-and-bones\"}}]"
+}
