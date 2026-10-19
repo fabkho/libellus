@@ -129,6 +129,7 @@ enum Tokens {
         static let qr: CGFloat = 192
         static let tab: CGFloat = 72
         static let tabBar: CGFloat = 62
+        static let tabCompact: CGFloat = 62
         static let tabIcon: CGFloat = 26
         static let button: CGFloat = 50
         static let buttonMd: CGFloat = 40
@@ -146,6 +147,8 @@ enum Tokens {
         static let starLg: CGFloat = 24
         static let starInput: CGFloat = 44
         static let ratingThumb: CGFloat = 24
+        static let checkbox: CGFloat = 22
+        static let coverXxs: CGFloat = 24
         static let coverXs: CGFloat = 30
         static let coverSm: CGFloat = 40
         static let coverMd: CGFloat = 72
