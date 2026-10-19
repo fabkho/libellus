@@ -13,6 +13,7 @@ import { readSummaryOf } from '~/data/progressDays'
 import { useReadingStore } from '~/stores/reading'
 
 const { t, n } = useI18n()
+const { relativeDay } = useDays()
 const reading = useReadingStore()
 const online = useOnline()
 // Starting, finishing and DNF work offline too: they wait to sync (#93).
@@ -74,6 +75,8 @@ const summary = computed(() => {
       <UiRowGroup>
         <UiDateRow
           v-model="reading.endedOn"
+          :text="reading.endedOn ? relativeDay(reading.endedOn) : undefined"
+          :placeholder="t('common.chooseDay')"
           :label="t('finish.endedOn')"
           :min="entry.latestSession?.startedOn ?? undefined"
           :max="today"

@@ -393,7 +393,7 @@ Base components come from the UI base (fabkho/ui, `<UiButton>`, …; the app's o
 | `UiAmbient` | The light a cover throws onto its card (`shape="card"`) or page (`shape="page"`), from the cover's precomputed colours. Currently reading cards, book detail. |
 | `UiStars` | A Rating, display only: quarter-filled stars plus the exact mono value ("3.75"). `quarters` 1–20 or null (five empty stars, no value). Sizes sm/md/lg (and `input`, for the rating control). |
 | `UiRatingInput` | Setting a Rating (D's finish sheet): the value large in the accent (or "Not rated"), five `input` stars, a rail of quarter notches with a thumb. Drag snaps to the nearest quarter, a tap sets the whole star, Clear or a drag off the first star empties it. A `slider` for the keyboard (arrows a quarter, Page Up/Down a star, Home/End) and assistive tech. `v-model` quarters or null; `testid` on the slider, `<testid>.clear`, `<testid>.value`. Geometry in `utils/rating.ts` (`ratingX`, `quartersAt`, `wholeStarsAt`). Marked `data-no-swipe`, so a sheet never takes a drag across it for a swipe down. |
-| `UiDateRow` | A day in a `UiRowGroup`: calendar icon, label, the day in words ("Today · 3 Oct", via `useDays`), chevron; an invisible native `<input type="date">` covers the row, so a tap opens the platform's picker. `v-model` `YYYY-MM-DD`; `min`/`max`; `invalid` turns the value error-coloured. |
+| `UiDateRow` | A day in a `UiRowGroup`: calendar icon, label, the day in words ("Today · 3 Oct": the caller's `text`, from `useDays`), chevron; an invisible native `<input type="date">` covers the row, so a tap opens the platform's picker. `v-model` `YYYY-MM-DD`; `min`/`max`; `invalid` turns the value error-coloured, puts a struck-through calendar before it and sets `aria-invalid`; the set day is in the muted ink. |
 | `UiTextArea` | A few lines of the member's own words (a review): a filled box with label and hint, the text in the serif italic, an accent ring while focused, growing with the text. |
 | `UiBookLine` | The book a sheet is about: small cover, serif title, author. First thing in a book's sheet. |
 | `UiRowGroup` + `UiRow` | Grouped rows (forms in sheets, settings-like lists): label, value or placeholder, optional icon, chevron, mono value; `as="button"` or `to` when tappable. |
@@ -409,7 +409,7 @@ Base components come from the UI base (fabkho/ui, `<UiButton>`, …; the app's o
 | `CodeInput` | The six-digit code: one real input, six drawn cells. |
 
 Utilities that go with them: the UI base's `utils/cloth.ts` (`clothOf`, `glowOf`, `formatAuthors`,
-`isBlankCover`), `utils/thumbhash.ts` (`thumbhashDataUrl`, decoded once per hash), `utils/cover.ts`
+`isBlankCover`), `thumbhashDataUrl` (decoded once per hash, in the same file), `utils/cover.ts`
 (`coverSrc` — the image size to load for a cover size, from Apple's stored large URL), `utils/preload.ts`
 (`preloadImage`, the first covers of a list),
 `utils/rating.ts` (`ratingText`, `starFills`),

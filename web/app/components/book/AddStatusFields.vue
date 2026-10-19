@@ -16,6 +16,7 @@ const draft = defineModel<AddDraft>({ required: true })
 const props = defineProps<{ testid: string; error?: string | null; busy?: boolean }>()
 
 const { t } = useI18n()
+const { relativeDay } = useDays()
 
 // The member's today, asked when drawn: a sheet left open past midnight moves on.
 const today = () => isoDay()
@@ -55,6 +56,8 @@ function choose(status: AddDraft['status']) {
       <UiRowGroup>
         <UiDateRow
           v-model="draft.startedOn"
+          :text="draft.startedOn ? relativeDay(draft.startedOn) : undefined"
+          :placeholder="t('common.chooseDay')"
           :label="t('add.startedOn')"
           :max="today()"
           :invalid="dayError"
@@ -68,6 +71,7 @@ function choose(status: AddDraft['status']) {
       <UiRowGroup>
         <UiDateRow
           v-model="draft.startedOn"
+          :text="draft.startedOn ? relativeDay(draft.startedOn) : undefined"
           :label="t('add.startedOn')"
           :placeholder="t('add.notSet')"
           :max="draft.endedOn || today()"
@@ -76,6 +80,8 @@ function choose(status: AddDraft['status']) {
         />
         <UiDateRow
           v-model="draft.endedOn"
+          :text="draft.endedOn ? relativeDay(draft.endedOn) : undefined"
+          :placeholder="t('common.chooseDay')"
           :label="t('add.endedOn')"
           :min="draft.startedOn || undefined"
           :max="today()"

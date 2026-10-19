@@ -13,6 +13,7 @@ import { ABANDON_REASON_MAX_LENGTH, REVIEW_MAX_LENGTH } from '~/data/library'
 import { useHistoryStore } from '~/stores/history'
 
 const { t } = useI18n()
+const { relativeDay } = useDays()
 const history = useHistoryStore()
 // Saving works offline too: it waits to sync (#93). Deleting a read changes
 // which read decides the Status, from reads the device may not all hold:
@@ -84,8 +85,9 @@ watch(
       <UiRowGroup>
         <UiDateRow
           v-model="history.draft.startedOn"
+          :text="history.draft.startedOn ? relativeDay(history.draft.startedOn) : undefined"
           :label="t('editSession.startedOn')"
-          :placeholder="outcome ? t('editSession.notSet') : undefined"
+          :placeholder="outcome ? t('editSession.notSet') : t('common.chooseDay')"
           :max="(outcome ? history.draft.endedOn : '') || today"
           :invalid="dateError"
           testid="editSession.started"
@@ -93,6 +95,7 @@ watch(
         <UiDateRow
           v-if="outcome"
           v-model="history.draft.endedOn"
+          :text="history.draft.endedOn ? relativeDay(history.draft.endedOn) : undefined"
           :label="t(outcome === 'finished' ? 'editSession.finishedOn' : 'editSession.stoppedOn')"
           :placeholder="t('editSession.notSet')"
           :min="history.draft.startedOn || undefined"

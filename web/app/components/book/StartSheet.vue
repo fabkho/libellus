@@ -11,6 +11,7 @@ const TITLE_KEYS = { start: 'start.title', again: 'start.titleAgain', restart: '
 const ACTION_KEYS = { start: 'start.action', again: 'start.actionAgain', restart: 'start.actionRestart' } as const
 
 const { t } = useI18n()
+const { relativeDay } = useDays()
 const reading = useReadingStore()
 // Starting, finishing and DNF work offline too: they wait to sync (#93).
 
@@ -53,6 +54,8 @@ const label = computed(() =>
       <UiRowGroup>
         <UiDateRow
           v-model="reading.startedOn"
+          :text="reading.startedOn ? relativeDay(reading.startedOn) : undefined"
+          :placeholder="t('common.chooseDay')"
           :label="t('start.startedOn')"
           :max="today"
           :invalid="reading.startError === 'date_in_future' || reading.startError === 'date_invalid'"

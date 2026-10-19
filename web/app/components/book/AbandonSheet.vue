@@ -9,6 +9,7 @@ import { ABANDON_REASON_MAX_LENGTH } from '~/data/library'
 import { useReadingStore } from '~/stores/reading'
 
 const { t } = useI18n()
+const { relativeDay } = useDays()
 const reading = useReadingStore()
 // Starting, finishing and DNF work offline too: they wait to sync (#93).
 
@@ -52,6 +53,8 @@ const reasonId = useId()
       <UiRowGroup>
         <UiDateRow
           v-model="reading.abandonedOn"
+          :text="reading.abandonedOn ? relativeDay(reading.abandonedOn) : undefined"
+          :placeholder="t('common.chooseDay')"
           :label="t('abandon.endedOn')"
           :min="entry.latestSession?.startedOn ?? undefined"
           :max="today"
