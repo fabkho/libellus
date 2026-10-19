@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.23.0](https://github.com/fabkho/libellus/compare/v1.22.0...v1.23.0) (2026-10-19)
+
+
+### Features
+
+* **import:** Goodreads cover search by ISBN first, whole title, then short title; empty lists never cached; shared fuzzy title rule ([#372](https://github.com/fabkho/libellus/issues/372)) ([fe9a583](https://github.com/fabkho/libellus/commit/fe9a583e14cee79f39af49a5eadd5770c8ba826e))
+* **import:** Goodreads covers in their own lane; one-time Apple cover upgrade after an import ([#366](https://github.com/fabkho/libellus/issues/366)) ([#374](https://github.com/fabkho/libellus/issues/374)) ([5b7b58e](https://github.com/fabkho/libellus/commit/5b7b58ef999159c96305e05467970084d90b659d))
+* **import:** one import at a time, one shared Open Library pace ([#368](https://github.com/fabkho/libellus/issues/368)) ([6bfc79e](https://github.com/fabkho/libellus/commit/6bfc79eec9759a90c39c9d654013e641a4f574f8))
+* **import:** the Catalogue is the first source, by title and by ISBN ([#364](https://github.com/fabkho/libellus/issues/364)) ([45f8cac](https://github.com/fabkho/libellus/commit/45f8cac82148cb0913f7b951dca6f222b7ea0ab9))
+* **import:** the import's progress on every screen, and a closed app picks it up again ([#371](https://github.com/fabkho/libellus/issues/371)) ([2c08a97](https://github.com/fabkho/libellus/commit/2c08a97ad655ad058008750db5faf19a4ddd51e9))
+
+
+### Fixes
+
+* **import:** one Open Library timeout is retried through the function; direct fallback after 3 failures, back after 60 s ([#362](https://github.com/fabkho/libellus/issues/362)) ([33e6df3](https://github.com/fabkho/libellus/commit/33e6df393cc9f02d8f3e5986692201712e97f658))
+
 ## [1.22.0](https://github.com/fabkho/libellus/compare/v1.21.1...v1.22.0) (2026-10-14)
 
 
