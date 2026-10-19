@@ -12,7 +12,9 @@
 // the file offers Choose edition: the Change edition sheet of the Book page, the
 // pick replacing its edition in the preview only (stores/import.ts). One import looks its books up at a time, across
 // all members: when another is running, the lookups wait in line (how many are ahead, a rough wait; leaving the line
-// is the one button) and start by themselves when it is their turn. A pushed screen in the tab layout.
+// is the one button) and start by themselves when it is their turn. She can use the app meanwhile: every other screen shows a
+// small pill with the import's progress (components/shell/ImportStatus.vue), the screen stays on while the lookups run (useScreenWake),
+// and closing the app pauses the import, which continues when it is opened again (stores/import.ts). A pushed screen in the tab layout.
 import type { ImportNote } from '~/components/import/NoteList.vue'
 import { SUPPORTED_SOURCES } from '~/data/import/detect'
 import { editionFacts } from '~/data/editions'
@@ -26,6 +28,8 @@ const router = useRouter()
 const store = useImportStore()
 // Choosing a file looks books up and importing writes: offline neither can (#15).
 const online = useOnline()
+// The screen stays on while the lookups run and this page shows: a phone that turns it off puts the import in the background (data/screenWake.ts).
+useScreenWake(() => store.phase === 'matching' || store.phase === 'importing')
 
 useHead({ title: () => `${t('import.title')} · ${t('app.name')}` })
 
