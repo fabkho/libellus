@@ -9,7 +9,7 @@ name: CI
 #   push to main      the checks the changed paths call for, and no flows: the
 #                     flows run once per release, in the release's own run, before
 #                     anything is deployed (release.yml, `flows`)
-#   workflow_dispatch everything, every flow (a manual full run)
+#   workflow_dispatch everything, every flow (a manual full run); `-f flows=false` the checks only
 #
 # The flows are the one reusable workflow e2e.yml, called from here and from
 # release.yml. They are ~20 runner minutes on the two-core
@@ -40,6 +40,11 @@ on:
       - 'version.txt'
       - '.release-please-manifest.json'
   workflow_dispatch:
+    inputs:
+      flows:
+        description: 'Run the Playwright user flows (web/e2e) as well'
+        type: boolean
+        default: true
 
 # One run per pull request: a push, a force-pushed rebase or a re-run cancels
 # the one before it. A run on main (or a manual one) has its own group per
@@ -177,6 +182,8 @@ jobs:
           FILTER_INVITE: ${{ steps.filter.outputs.invite }}
           FILTER_IMPORTJOB: ${{ steps.filter.outputs.importjob }}
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
+          # A manual run has every flow unless it says flows=false (the UI base bump does: ui-bump.yml).
+          INPUT_FLOWS: ${{ inputs.flows }}
         run: |
           all=false
           if [ "$EVENT" = workflow_dispatch ]; then all=true; fi
@@ -197,7 +204,7 @@ jobs:
           # "CI: what runs when"). The flows are where the minutes go: a push to main does not
           # run them either, a release does (release.yml). Every flow, @full included.
           e2e=false
-          if [ "$EVENT" = workflow_dispatch ]; then e2e=true; fi
+          if [ "$EVENT" = workflow_dispatch ] && [ "$INPUT_FLOWS" != false ]; then e2e=true; fi
           if [ "$EVENT" = pull_request ] && [ "$FULL_E2E_LABEL" = true ]; then e2e=true; fi
 
           # One e2e job per shard.

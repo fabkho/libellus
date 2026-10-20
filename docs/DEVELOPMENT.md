@@ -218,3 +218,18 @@ CI (`.github/workflows/ci.yml`) runs on pull requests, for the paths they change
 against a local stack, `nuxt generate`, and the generated-tokens and generated-emails checks. A push to `main` runs
 the same checks; docs-only changes run nothing. The Playwright flows run in the release run, or on a pull request
 labelled `full-e2e` (docs/TESTING.md, "CI: what runs when").
+
+### The UI base bump
+
+`.github/workflows/ui-bump.yml` runs on Mondays (05:23 UTC) and by hand. It reads the tag `web/package.json` pins for
+`@fabkho/ui` (`github:fabkho/ui#vX.Y.Z`) and the newest non-draft, non-pre-release of `fabkho/ui`. If that release is
+newer, `.github/scripts/ui-bump.sh` runs `pnpm add -E "@fabkho/ui@github:fabkho/ui#<tag>"`, checks that only
+`web/package.json` and `web/pnpm-lock.yaml` changed, and opens `chore(web): bump @fabkho/ui to <tag>` on
+`chore/ui-bump-<tag>` with the release notes in the body. Nothing newer, or a branch that already has a pull request
+(open or closed): nothing happens. No secret: `GITHUB_TOKEN` opens the pull request (`fabkho/ui` is public).
+
+A pull request opened with `GITHUB_TOKEN` starts no workflow, so the job dispatches the checks of `ci.yml` on its
+branch (`gh workflow run ci.yml --ref <branch> -f flows=false`, the one event a `GITHUB_TOKEN` may start). The Playwright
+flows stay out of it: a bump is reviewed like a release candidate, and the release run gates it (`release.yml`).
+Dispatched by hand, `ci.yml` keeps its meaning (every flow); `-f flows=false` is the checks only. The owner reviews and
+merges; the bump is never automatic. If the dispatch fails, run `gh workflow run CI --ref chore/ui-bump-<tag> -f flows=false`.
