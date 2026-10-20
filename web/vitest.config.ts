@@ -27,8 +27,8 @@ export default defineConfig({
     alias: {
       '@': resolve('./app'),
       '~': resolve('./app'),
-      // The shared UI base, as Nuxt aliases it (its nuxt.config.ts): the checkout `UI_LAYER` names, or the package.
-      '#ui': process.env.UI_LAYER ? pathResolve(process.env.UI_LAYER) : resolve('./node_modules/@fabkho/ui'),
+      // The shared UI base, as Nuxt aliases it (`#layers/ui`, its layer's name; plain Node does not know it): the checkout `UI_LAYER` names, or the package.
+      '#layers/ui': process.env.UI_LAYER ? pathResolve(process.env.UI_LAYER) : resolve('./node_modules/@fabkho/ui'),
       // As in nuxt.config.ts: the suite exercises the client the app ships.
       '@supabase/realtime-js': resolve('./app/data/realtimeStub.ts'),
       // The real client, for the one place that loads it (realtime.config.ts).

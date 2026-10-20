@@ -35,7 +35,7 @@ const exported = (dirs: string[]) => {
 
 describe('the shared UI base does not take over what the app has', () => {
   const app = [join(web, 'app/composables'), join(web, 'app/utils')]
-  const base = [join(layer, 'composables'), join(layer, 'utils')]
+  const base = [join(layer, 'app/composables'), join(layer, 'app/utils')]
 
   it('keeps every auto-import the app exports pointing at the app', (ctx) => {
     if (!prepared()) return ctx.skip()

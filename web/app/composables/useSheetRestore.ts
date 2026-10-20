@@ -1,4 +1,4 @@
-import type { SheetRestore } from '#ui/utils/sheetRestore'
+import type { SheetRestore } from '#layers/ui/app/utils/sheetRestore'
 import { useStatsStore } from '~/stores/stats'
 
 export type { SheetRestore }

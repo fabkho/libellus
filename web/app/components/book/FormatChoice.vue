@@ -10,7 +10,7 @@
 // (`<testid>Help`) that says what the row does; the group is described by it
 // and it is announced politely as it changes.
 import { BOOK_FORMATS, type BookFormat } from '~/data/books'
-import type { IconSegment } from '#ui/components/ui/IconSegments.vue'
+import type { IconSegment } from '#layers/ui/app/components/ui/IconSegments.vue'
 
 defineProps<{
   value: BookFormat | null

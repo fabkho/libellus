@@ -13,7 +13,7 @@
 // whoever has no row, and for the owner while her row is not there: the file
 // has none of that year's Books, or could not be read).
 import { finishedIn } from '~/data/stats'
-import type { SheetRestore } from '#ui/utils/sheetRestore'
+import type { SheetRestore } from '#layers/ui/app/utils/sheetRestore'
 import { useShelfStore } from '~/stores/shelf'
 import { useStatsStore } from '~/stores/stats'
 

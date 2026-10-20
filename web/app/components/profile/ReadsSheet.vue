@@ -26,7 +26,7 @@
 // Right after one, a pill at the foot offers Undo for 5 s, as Home's card offers it (ReadingCard.vue); rated the
 // last of them away and the sheet says so (`profile.sheet.emptyRated`).
 import type { StatsRead } from '~/data/stats'
-import type { SheetRestore } from '#ui/utils/sheetRestore'
+import type { SheetRestore } from '#layers/ui/app/utils/sheetRestore'
 import { moreRows, nextPage, openingRows } from '~/utils/pageRows'
 import { useHistoryStore } from '~/stores/history'
 import { useStatsStore } from '~/stores/stats'
