@@ -19,8 +19,7 @@
 /* The shared UI base's stylesheet (@fabkho/ui, app/assets/css/ui.css): its utilities, base styles, keyframes and
    Reduce Motion rule, resolved against the tokens above; it carries the Tailwind `@source` for its components.
    Before this file's own rules on purpose: where both define a utility or a rule, the app's later one wins, so
-   nothing here changes until a wave of the switch (docs/ui-layer-plan.md in fabkho/trappist, §5) deletes the
-   app's copy. `#layers/ui` is the base's alias (Nuxt makes it of the layer's name): the installed package, or the checkout
+   so the app's own rules win over the base's where both exist. `#layers/ui` is the base's alias (Nuxt makes it of the layer's name): the installed package, or the checkout
    `UI_LAYER` names (ui.config.ts). */
 @import '#layers/ui/app/assets/css/ui.css';
 
