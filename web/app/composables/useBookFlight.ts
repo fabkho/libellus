@@ -58,9 +58,9 @@ import {
   type Channels,
   type Towards,
 } from '~/utils/flight'
-import { addMover, durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { addMover, durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
-import { stillCovers } from '~/utils/coverTilt'
+import { stillCovers } from '#layers/ui/app/utils/coverTilt'
 import { coverSrc } from '~/utils/cover'
 import { preloadImage } from '~/utils/preload'
 

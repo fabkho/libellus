@@ -25,7 +25,7 @@ import { useReaderStore } from '~/stores/reader'
 import { useReadingStore } from '~/stores/reading'
 import { bookPageKey, followEdition } from '~/utils/bookPageKey'
 import { onIdle } from '~/utils/idle'
-import { afterMotion } from '~/utils/motion'
+import { afterMotion } from '#layers/ui/app/utils/motion'
 import { loadReader, prefetchReader } from '~/utils/readerChunks'
 
 // One page through a change of edition, though the address changes (utils/bookPageKey.ts).

@@ -4,26 +4,15 @@ import { layerOverrides } from '@fabkho/ui/testing/overrides.mjs'
 
 /**
  * Nuxt gives this app's own files priority over the shared UI base's (ui.config.ts): `app/components/ui/Cover.vue`
- * is `UiCover`, and the base's copy is never loaded. That is wanted for the files below, the app's own copies that
- * the waves of the switch (docs/ui-layer-plan.md §5) have not deleted yet, and a bug for a forgotten one: any other
- * component, composable or util of the app that has the name of one of the base's fails this test. The base logs the
- * same list in dev (`[@fabkho/ui] UiCover is overridden by the app …`). Add a file here only on purpose, and remove
- * it when the app's copy goes.
+ * would be `UiCover`, and the base's copy never loaded. That is wanted only for a file that does something the base
+ * cannot, and the base is told what it would need (no fork); any other component, composable or util of the app that has the
+ * name of one of the base's fails this test. The base logs the same list in dev (`[@fabkho/ui] UiCover is overridden
+ * by the app …`). Add a file here only on purpose, and remove it when the app's copy goes. Since fabkho/ui v0.6.0 the
+ * list is empty: the app's `Cover`, `Ambient`, motion, cover tilt, keyboard, haptics, hide-on-scroll, swipe-down and
+ * arrival copies are gone, and `utils/cover.ts` keeps only the sources (the base's `ui.cover` takes them from the app
+ * config).
  */
-const INTENDED = [
-  'components/ui/Ambient.vue',
-  'components/ui/Cover.vue',
-  'composables/useArrival.ts',
-  'composables/useHideOnScroll.ts',
-  'composables/useKeyboardInset.ts',
-  'composables/useSwipeDown.ts',
-  'utils/cover.ts',
-  'utils/coverTilt.ts',
-  'utils/haptics.ts',
-  'utils/hideOnScroll.ts',
-  'utils/keyboard.ts',
-  'utils/motion.ts',
-]
+const INTENDED: string[] = []
 
 describe('what the app replaces of the shared UI base', () => {
   it('is the intended list and nothing else', () => {

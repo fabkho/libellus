@@ -20,8 +20,9 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   and the cover's cloth helpers (`utils/cloth.ts`; the sources stay in `utils/cover.ts`). `UI_LAYER=/path/to/ui-checkout`
   points the app at a local checkout instead (`ui.config.ts`; `#layers/ui`, which `main.css` imports its stylesheet by, and the
   Vitest alias follow it). The app's own `components/ui/*`, composables and utils with the base's names win
-  (`tests/ui-layer-shadow.test.ts`; the allow-list of intended overrides, the app's own copies of `UiAmbient`, `UiCover` and the motion, keyboard and haptics utils and composables, is in `tests/ui-layer-overrides.test.ts`); `ui.config.ts` says which of the base's plugins run (`touch-active`) and why the
-  other two are held.
+  (`tests/ui-layer-shadow.test.ts`; the allow-list of intended overrides, `tests/ui-layer-overrides.test.ts`, is empty:
+  nothing of the app replaces the base's); `ui.config.ts` says which of the base's plugins run (`touch-active`,
+  `stranded-viewport`) and why `no-focus-zoom` is held.
   The controls are the base's too (wave 6b): `UiButton`, `UiRoundButton`, `UiPill`, `UiSegmented`, `UiSwitch`, `UiField`,
   `UiIconSegments`, `UiPressLink`. A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app:
   `v-on="flightOf(path)"` (`composables/useBookFlight.ts`).
@@ -33,12 +34,14 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   `ui.icons` in `app/app.config.ts`; every other name is the base's), `UiTextArea` (its `footer` slot), `UiRow`,
   `UiSwitchRow` (an external link row is `as="a"` with `href`), `UiListMotion` (`still`) and `UiAvatar` (decorative:
   the link or button around it names it; pass `label` only where an avatar stands alone) are the base's.
-  `app/components/ui/` holds only the domain components (`BookLine`, `RatingInput`, `SearchPrompt`, `Stars`, `LitCard`)
-  and what needs a base change first: `UiCover` (the sources and the showing state: `identity`, `srcset`/`sizes` by the
-  cover's size, `coverChain`, `utils/cover.ts`) and `UiAmbient` (the grain as an inline SVG, not a `background-image`:
-  Chrome counts the image as the LCP element, `../docs/perf/client-1-startup.md` F-12). `utils/coverTilt.ts` and
-  `utils/motion.ts` stay with them: the app's flights register with `addMover` in the app's `utils/motion.ts`, and a
-  cover that leans has to ask the same list.
+  `app/components/ui/` holds only the domain components (`BookLine`, `RatingInput`, `SearchPrompt`, `Stars`, `LitCard`).
+  The last copies went with fabkho/ui v0.6.0: `UiCover` (the app's sources are `ui.cover.sources` and
+  `ui.cover.artworkOf` in `app/app.config.ts`, from `utils/cover.ts`), `UiAmbient` (`ui.ambient.grain: 'inline'`, the
+  grain as an inline SVG: Chrome counts a `background-image` as the LCP element, `../docs/perf/client-1-startup.md`
+  F-12), the motion and cover-tilt utils (`#layers/ui/app/utils/motion`, so the app's flights and a leaning cover share
+  one `addMover` list), the keyboard, haptics, hide-on-scroll, swipe-down and arrival helpers. Bottom chrome of the app's
+  own (reader bars and toasts, import status) subtracts `--viewport-pan` from its `bottom` (`stranded-viewport`,
+  `tests/viewport-pan.test.ts`); use `float-bottom` or `screen-bottom` for a new one. Nothing stays local on purpose.
   What the base's components can do, and how to use them: its `README.md`
   (`node_modules/@fabkho/ui/README.md`, https://github.com/fabkho/ui). Look there before writing a component.
   The base's words (`ui.text`) are set from the messages by `plugins/ui-text.ts`; a word the base adds needs a line in

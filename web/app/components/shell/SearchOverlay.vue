@@ -30,7 +30,7 @@
 // Library, with the shadow as its largest shift).
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSearchStore } from '~/stores/search'
-import { paletteLift } from '~/utils/keyboard'
+import { paletteLift } from '#layers/ui/app/utils/keyboard'
 import { withoutSlash } from '~/utils/signedOutRoute'
 import { contentTop, PALETTE_ROOM, ROOM_ATTRIBUTE } from '~/composables/usePaletteRoom'
 

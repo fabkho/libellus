@@ -170,7 +170,7 @@ const emptyText = computed(() => props.empty ?? (rateable.value ? t('profile.she
 <style scoped>
 /* The pill over the sheet's foot: the reader's toast (components/reader/Reader.vue). */
 .toast {
-  bottom: calc(var(--safe-area-bottom) + var(--spacing-md));
+  bottom: calc(var(--safe-area-bottom) + var(--spacing-md) - var(--viewport-pan, 0px));
 }
 .toast-enter-active {
   transition: opacity var(--duration-quick) var(--ease-standard);

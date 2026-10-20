@@ -5,7 +5,7 @@
  * it is tested on its own (tests/flight.test.ts); the motion itself is in
  * composables/useBookFlight.ts.
  */
-import { timeAt } from './motion'
+import { timeAt } from '#layers/ui/app/utils/motion'
 
 /** An element's box on screen, in CSS pixels from the viewport's top left. */
 export interface Box {

@@ -17,8 +17,8 @@
 // a cross-fade in place. SearchOverlay's palette is wired to the catalogue's
 // store and the tab bar's Home and Library, so this is a faithful copy; the
 // two could become one UiPalette later.
-import { durationToken, easingToken, prefersReducedMotion, timeAt } from '~/utils/motion'
-import { paletteLift } from '~/utils/keyboard'
+import { durationToken, easingToken, prefersReducedMotion, timeAt } from '#layers/ui/app/utils/motion'
+import { paletteLift } from '#layers/ui/app/utils/keyboard'
 import { SEARCH_DEBOUNCE_MS } from '~/data/search'
 import type { ReaderEngine, SearchHit } from '~/reader/engine'
 

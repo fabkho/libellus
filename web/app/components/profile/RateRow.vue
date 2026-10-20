@@ -7,7 +7,7 @@
 // the ones before it; `busy` holds this row's stars while its Rating is on its
 // way, so nothing lands twice under a finger. The star shape is UiStars'.
 import type { StatsRead } from '~/data/stats'
-import { tick } from '~/utils/haptics'
+import { tick } from '#layers/ui/app/utils/haptics'
 
 const props = withDefaults(defineProps<{ read: StatsRead; testid?: string; busy?: boolean }>(), { testid: undefined, busy: false })
 const emit = defineEmits<{ rate: [stars: number] }>()

@@ -22,7 +22,7 @@
 // listed") the scanner only reads: the ISBN found goes to `pick` and the
 // scanner closes, nothing is looked up. It is then a layer of its own over the
 // sheet (the UI base's useModalLayer), and Escape closes only the scanner.
-import { tick } from '~/utils/haptics'
+import { tick } from '#layers/ui/app/utils/haptics'
 import { useSearchStore } from '~/stores/search'
 
 const open = defineModel<boolean>('open', { required: true })

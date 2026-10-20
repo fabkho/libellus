@@ -6,7 +6,7 @@
 // or Clear leaves it empty (a Rating is optional). A slider for assistive
 // tech and the keyboard: arrows step a quarter, Page Up/Down a star, Home
 // clears, End is five stars. `v-model` is the stored quarters, 1–20, or null.
-import { isRatingStep, tick } from '~/utils/haptics'
+import { isRatingStep, tick } from '#layers/ui/app/utils/haptics'
 import { MAX_QUARTERS, quartersAt, ratingText, ratingX, stepQuarters, wholeStarsAt } from '~/utils/rating'
 
 const model = defineModel<number | null>({ required: true })

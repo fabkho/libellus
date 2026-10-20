@@ -13,7 +13,7 @@
 // (only the bars stand in); when the counts come, every bar grows from where
 // the wave left it to its own height (docs/MOTION.md, Loading), and the
 // counts and labels arrive over them.
-import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
 const props = withDefaults(
   defineProps<{

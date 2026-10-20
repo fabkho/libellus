@@ -11,7 +11,7 @@ the browser reports about its viewports and insets next to each one.
 The same emulator is where TalkBack is checked (docs/ACCESSIBILITY.md, "Checking a change").
 
 Run it after any change to the safe-area utilities in `main.css` (`--bar-top`, `--float-bottom`), the
-tab bar, the top bars, the sheets, the search palette, `useKeyboardInset` or the viewport meta.
+tab bar, the top bars, the sheets, the search palette, the base's `useKeyboardInset` or the viewport meta.
 
 ## The Android emulator (once)
 

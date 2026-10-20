@@ -25,7 +25,7 @@ import { useCollectionsStore } from '~/stores/collections'
 import { useManualStore } from '~/stores/manual'
 import { useSearchStore, type SearchHit } from '~/stores/search'
 import { SEARCH_DEBOUNCE_MS } from '~/data/search'
-import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
 const { t } = useI18n()
 const search = useSearchStore()
