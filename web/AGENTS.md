@@ -24,16 +24,31 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   other two are held.
   The controls are the base's too (wave 6b): `UiButton`, `UiRoundButton`, `UiPill`, `UiSegmented`, `UiSwitch`, `UiField`,
   `UiIconSegments`, `UiPressLink`. A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app:
-  `v-on="flightOf(path)"` (`composables/useBookFlight.ts`). Kept here until the base has what they need: `UiIcon` (three
-  drawings differ from the base's: `people`, `heart`, `external`), `UiTextArea` (its `footer` slot), `UiRow` and
-  `UiSwitchRow` (the base's `UiRow` draws its icon through the base's `UiIcon`, so the three `people` rows would change;
-  they go with `UiIcon`), and `UiListMotion` (its `still` prop).
+  `v-on="flightOf(path)"` (`composables/useBookFlight.ts`).
   The layout and content pieces are the base's too (wave 6c): `UiRowGroup`, `UiTopBar`, `UiEmptyState`, `UiProgress`,
   `UiReveal`, `UiSeeAll`, `UiClampText` (its words are `ui.text.more` / `less`) and `UiDateRow` (the day in words is the
   caller's: `:text="relativeDay(day)"`, `:placeholder`). The status bar's dim per layer follows `useModalDepth`
   (`plugins/status-bar-dim.client.ts`); `thumbhashDataUrl` is the base's (`utils/cloth.ts`, cached).
+  The switch is finished (wave 6d): `UiIcon` (BetterReads' own drawings of `people`, `heart` and `external` are
+  `ui.icons` in `app/app.config.ts`; every other name is the base's), `UiTextArea` (its `footer` slot), `UiRow`,
+  `UiSwitchRow` (an external link row is `as="a"` with `href`), `UiListMotion` (`still`) and `UiAvatar` (decorative:
+  the link or button around it names it; pass `label` only where an avatar stands alone) are the base's.
+  `app/components/ui/` holds only the domain components (`BookLine`, `RatingInput`, `SearchPrompt`, `Stars`, `LitCard`)
+  and what needs a base change first: `UiCover` (the sources and the showing state: `identity`, `srcset`/`sizes` by the
+  cover's size, `coverChain`, `utils/cover.ts`) and `UiAmbient` (the grain as an inline SVG, not a `background-image`:
+  Chrome counts the image as the LCP element, `../docs/perf/client-1-startup.md` F-12). `utils/coverTilt.ts` and
+  `utils/motion.ts` stay with them: the app's flights register with `addMover` in the app's `utils/motion.ts`, and a
+  cover that leans has to ask the same list.
+  What the base's components can do, and how to use them: its `README.md`
+  (`node_modules/@fabkho/ui/README.md`, https://github.com/fabkho/ui). Look there before writing a component.
   The base's words (`ui.text`) are set from the messages by `plugins/ui-text.ts`; a word the base adds needs a line in
   `utils/uiText.ts` (`tests/ui-text.test.ts`), a variable it reads needs a token (`tests/ui-layer.test.ts`).
+- **Portable by default** (the plan's §3, wave 7): a component that could ever be generic is written so that it moves to
+  the base by copying the file. No app state in a presentational component (no `~/stores`, Pinia, Supabase or i18n calls:
+  data and copy come in by props, slots or `ui.text`); no `~/utils` or `~/composables` that touch app state (pure helpers
+  are fine); role names, not domain names (`SearchPalette`, not `BookSearchPalette`); styling only through the token CSS
+  variables; one component, one file, with its own props and emits types. It holds for new and touched components. A
+  component of the app that is generic, and that the base does not have, is a base change, not a local copy to keep.
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo
   fabkho/regal, is opt-in: `LIBELLUS_REGAL=1` plus `REGAL_LAYER=/path/to/regal-checkout` or
   `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
@@ -71,7 +86,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   `tokens.generated.css`. Tailwind's default palette, radii, shadows and type scale are switched off.
 - The design system is direction D "Night Reader": `../docs/DESIGN.md` (token roles, type,
   components, the theme rule) and `../docs/MOTION.md`. Build screens from the base components in
-  `app/components/ui/` (`UiButton`, `UiSheet`, `UiCover`, `UiStars`, `UiRow`, …) and the shell in
+  `app/components/ui/` (`UiButton`, `UiSheet`, `UiCover`, `UiStars`, `UiRow`, …; the base's, except the domain ones: see above) and the shell in
   `app/components/shell/`. Every token has a light and a dark value, so a component never branches
   on the theme and never uses `dark:` variants. Book titles are `book-title` (serif); dates and
   figures `figures` (mono).

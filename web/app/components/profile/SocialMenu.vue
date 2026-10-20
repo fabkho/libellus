@@ -52,6 +52,7 @@ function show(event: MouseEvent) {
           <UiRow
             v-for="row in rows"
             :key="row.platform"
+            as="a"
             :href="row.href"
             target="_blank"
             :rel="SOCIAL_LINK_REL"
