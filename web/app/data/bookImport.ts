@@ -1,21 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { parseIsbn, type Book, type BookSnapshot } from './books'
-import type { CatalogueSearch } from './catalogueSearch'
-import type { Dnb } from './dnb'
-import { resolveBookCover, type ProbeImage, type ResolvedCover } from './covers'
-import { coverKindOf, type CoverKind } from './coverRank'
-import { languageFits, mergeCover } from './coverFill'
-import { type Candidate, type GenreLabel, type MergeSource, mergeGenreLabels, mergeSources } from './mergeBook'
-import { abortError, type FetchLike } from './fetching'
-import { SUPPORTED_SOURCES } from './import/detect'
-import { editionSignature } from './editions'
-import { bookFromRow, editionFit, isEbookBinding, isSameWork, nearEditions, otherLanguage, probablyGerman, rankEditions, sameVolume } from './import/editions'
-import { dnbQuestion, FREE_SOURCES, questionsFor } from './import/queries'
-import type { ImportBook, ImportProblem } from './import/rows'
-import { surname, workTitle } from './import/readingTracker'
-import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library'
-import { editionKeys, normalise, type Found, type SourceName } from './merge'
-import type { Search, SearchOutcome } from './search'
+import { parseIsbn, type Book, type BookSnapshot } from './books.ts'
+import type { CatalogueSearch } from './catalogueSearch.ts'
+import type { Dnb } from './dnb.ts'
+import { resolveBookCover, type ProbeImage, type ResolvedCover } from './covers.ts'
+import { coverKindOf, type CoverKind } from './coverRank.ts'
+import { languageFits, mergeCover } from './coverFill.ts'
+import { type Candidate, type GenreLabel, type MergeSource, mergeGenreLabels, mergeSources } from './mergeBook.ts'
+import { abortError, type FetchLike } from './fetching.ts'
+import { SUPPORTED_SOURCES } from './import/detect.ts'
+import { editionSignature } from './editions.ts'
+import { bookFromRow, editionFit, isEbookBinding, isSameWork, nearEditions, otherLanguage, probablyGerman, rankEditions, sameVolume } from './import/editions.ts'
+import { dnbQuestion, FREE_SOURCES, questionsFor } from './import/queries.ts'
+import type { ImportBook, ImportProblem } from './import/rows.ts'
+import { surname, workTitle } from './import/readingTracker.ts'
+import { bookToRow, mapLibraryError, type LibraryEntry, type LibraryErrorCode, type Result, type WriteOptions } from './library.ts'
+import { editionKeys, normalise, type Found, type SourceName } from './merge.ts'
+import type { Search, SearchOutcome } from './search.ts'
 
 /**
  * Importing an export in the app (issues #40, #111), after the file is read
@@ -759,6 +759,14 @@ export type ImportRow = Pick<ImportBook, 'key' | 'status' | 'session' | 'addedOn
     /** The cover came from the cover fill (see `Edition.filled`). */
     coverFilled?: boolean
   }
+
+/**
+ * Found as an edition a source knows. A Catalogue Book that another member's import made from her file (`import`) is
+ * no better known than this file's own row: it counts as from the file. Pure.
+ */
+export function isMatched(edition: Pick<Edition, 'via' | 'book'>): boolean {
+  return Boolean(edition.via) && edition.book.source !== 'import'
+}
 
 export type RowOutcome = {
   key: string

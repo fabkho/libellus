@@ -1,5 +1,5 @@
-import type { Book } from './books'
-import type { ReadingSession } from './library'
+import type { Book } from './books.ts'
+import type { ReadingSession } from './library.ts'
 
 /**
  * Reading progress (issue #39), the client side of `update_progress`: how far

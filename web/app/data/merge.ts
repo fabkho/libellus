@@ -1,5 +1,5 @@
-import { isbn10To13, isValidIsbn10, type Book, type BookSnapshot } from './books'
-import type { LibraryEntry } from './library'
+import { isbn10To13, isValidIsbn10, type Book, type BookSnapshot } from './books.ts'
+import type { LibraryEntry } from './library.ts'
 
 /**
  * One list out of three sources (issue #1, Search): the own Catalogue, Apple

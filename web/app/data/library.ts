@@ -1,12 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { bookKey, type Book, type BookFormat, type BookSnapshot } from './books'
-import type { ReadAs } from './readAs'
-import { ratingFromRow, type GoodreadsRow } from './goodreads'
-import { NO_PROGRESS, type ProgressValue } from './progress'
-import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays'
-import { isNoAnswer } from './network'
-import { allPages, uniqueById } from './paging'
-import { applyWrite, localId, type QueuedAction, type QueuedWrite, type WriteQueue } from './queuedWrites'
+import { bookKey, type Book, type BookFormat, type BookSnapshot } from './books.ts'
+import type { ReadAs } from './readAs.ts'
+import { ratingFromRow, type GoodreadsRow } from './goodreads.ts'
+import { NO_PROGRESS, type ProgressValue } from './progress.ts'
+import { dayFromRow, type ProgressDay, type ProgressDayRow } from './progressDays.ts'
+import { isNoAnswer } from './network.ts'
+import { allPages, uniqueById } from './paging.ts'
+import { applyWrite, localId, type QueuedAction, type QueuedWrite, type WriteQueue } from './queuedWrites.ts'
 
 /**
  * The Library actions (issue #1, Library actions): the data-layer contract a

@@ -1,4 +1,4 @@
-import type { ProgressMode, ProgressValue } from './progress'
+import type { ProgressMode, ProgressValue } from './progress.ts'
 
 /**
  * Progress by day (issue #68, phase 2 of design round #65's direction D): how far

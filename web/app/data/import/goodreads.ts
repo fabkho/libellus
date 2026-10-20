@@ -1,7 +1,7 @@
-import type { EntryStatus } from '../library'
-import { plainText } from '../apple'
-import { readCsv, canonicalRows, type Row } from './csv'
-import { normalize, splitSeriesTitle } from './readingTracker'
+import type { EntryStatus } from '../library.ts'
+import { plainText } from '../apple.ts'
+import { readCsv, canonicalRows, type Row } from './csv.ts'
+import { normalize, splitSeriesTitle } from './readingTracker.ts'
 import {
   clipReview,
   collectionNames,
@@ -26,7 +26,7 @@ import {
   type ImportProblem,
   type ImportSession,
   type SkippedRow,
-} from './rows'
+} from './rows.ts'
 
 /**
  * The Goodreads adapter of the import (issues #40, #111): one row of a

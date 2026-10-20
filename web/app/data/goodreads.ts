@@ -1,5 +1,5 @@
-import type { Book, BookSnapshot } from './books'
-import { isbn10To13 } from './books'
+import type { Book, BookSnapshot } from './books.ts'
+import { isbn10To13 } from './books.ts'
 
 /**
  * Goodreads' community rating of a Book (issue #69): the average over all the

@@ -1,11 +1,11 @@
-import type { Book, BookSnapshot } from './books'
-import { coverKindOf, GOODREADS_COVERS, kindRank, type CoverKind } from './coverRank'
-import { verifyCover, type ProbeImage, type ResolvedCover } from './covers'
-import { abortError, type FetchLike } from './fetching'
-import { isSameWork, languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions'
-import type { ImportBook } from './import/rows'
-import type { Search } from './search'
-import type { Edition } from './bookImport'
+import type { Book, BookSnapshot } from './books.ts'
+import { coverKindOf, GOODREADS_COVERS, kindRank, type CoverKind } from './coverRank.ts'
+import { verifyCover, type ProbeImage, type ResolvedCover } from './covers.ts'
+import { abortError, type FetchLike } from './fetching.ts'
+import { isSameWork, languageCode, rankEditions, titleLanguage, titleQuery } from './import/editions.ts'
+import type { ImportBook } from './import/rows.ts'
+import type { Search } from './search.ts'
+import type { Edition } from './bookImport.ts'
 
 /**
  * Covers for the import's rows that have none (docs/plans/cover-sources.md): a row a

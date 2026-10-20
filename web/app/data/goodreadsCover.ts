@@ -1,4 +1,4 @@
-import { GOODREADS_FUNCTION, type FunctionsClient } from './goodreads'
+import { GOODREADS_FUNCTION, type FunctionsClient } from './goodreads.ts'
 
 /**
  * A book's Goodreads cover, the last-resort cover source (docs/covers.md, "Goodreads, the last resort"; the flag

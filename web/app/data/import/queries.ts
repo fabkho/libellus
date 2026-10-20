@@ -1,6 +1,6 @@
-import type { SourceName } from '../merge'
-import { normalize } from './readingTracker'
-import type { ImportBook } from './rows'
+import type { SourceName } from '../merge.ts'
+import { normalize } from './readingTracker.ts'
+import type { ImportBook } from './rows.ts'
 
 /**
  * How the import asks the sources for a row's book by its title (issue #111,

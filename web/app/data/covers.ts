@@ -1,7 +1,7 @@
 import { rgbaToThumbHash } from 'thumbhash'
-import { appleArtwork, COVER_LARGE } from './apple'
-import type { BookSnapshot, CoverColors } from './books'
-import { openLibraryCoverAt, openLibraryIsbnCover } from './openLibrary'
+import { appleArtwork, COVER_LARGE } from './apple.ts'
+import type { BookSnapshot, CoverColors } from './books.ts'
+import { openLibraryCoverAt, openLibraryIsbnCover } from './openLibrary.ts'
 
 /**
  * A Cover is resolved once, when its Book enters the Catalogue (issue #1,

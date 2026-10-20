@@ -1,7 +1,7 @@
-import { isValidIsbn13, withLabels, type BookSnapshot } from './books'
-import { decodeEntities } from './entities'
-import { abortError, getJson, type FetchLike } from './fetching'
-import type { Found } from './merge'
+import { isValidIsbn13, withLabels, type BookSnapshot } from './books.ts'
+import { decodeEntities } from './entities.ts'
+import { abortError, getJson, type FetchLike } from './fetching.ts'
+import type { Found } from './merge.ts'
 
 /**
  * Apple Books, one of the three sources behind search (issue #1, Search): the

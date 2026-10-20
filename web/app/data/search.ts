@@ -1,11 +1,11 @@
-import { parseIsbn, type Book, type BookSnapshot } from './books'
-import { createApple } from './apple'
-import type { Dnb } from './dnb'
-import type { CatalogueSearch } from './catalogueSearch'
-import { abortError, type FetchLike } from './fetching'
-import type { LibraryEntry } from './library'
-import { editionKeys, isbn13Of, MATCH, matchQuality, mergeResults, normalise, SOURCE_ORDER, workKey, type Found, type SearchResult, type SourceName } from './merge'
-import { createOpenLibrary } from './openLibrary'
+import { parseIsbn, type Book, type BookSnapshot } from './books.ts'
+import { createApple } from './apple.ts'
+import type { Dnb } from './dnb.ts'
+import type { CatalogueSearch } from './catalogueSearch.ts'
+import { abortError, type FetchLike } from './fetching.ts'
+import type { LibraryEntry } from './library.ts'
+import { editionKeys, isbn13Of, MATCH, matchQuality, mergeResults, normalise, SOURCE_ORDER, workKey, type Found, type SearchResult, type SourceName } from './merge.ts'
+import { createOpenLibrary } from './openLibrary.ts'
 
 /**
  * Finding Books (issue #1, Search): one query, three sources at once — the own
@@ -19,9 +19,9 @@ import { createOpenLibrary } from './openLibrary'
  * answer from recordings and never call a live API.
  */
 
-export { appleArtwork, COVER_LARGE, isbnFromArtwork, plainText, splitAuthors, storefrontsFor } from './apple'
-export { isAbort, type FetchLike } from './fetching'
-export type { SearchResult } from './merge'
+export { appleArtwork, COVER_LARGE, isbnFromArtwork, plainText, splitAuthors, storefrontsFor } from './apple.ts'
+export { isAbort, type FetchLike } from './fetching.ts'
+export type { SearchResult } from './merge.ts'
 
 /** Below this many characters nothing is asked: one letter matches everything. */
 export const MIN_QUERY_LENGTH = 2

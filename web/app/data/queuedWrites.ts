@@ -1,6 +1,6 @@
-import { sourceKeys, type Book } from './books'
-import type { CollectionSummary } from './collections'
-import { sortEntries, type EntryStatus, type LibraryEntry, type LibraryErrorCode, type ReadingSession } from './library'
+import { sourceKeys, type Book } from './books.ts'
+import type { CollectionSummary } from './collections.ts'
+import { sortEntries, type EntryStatus, type LibraryEntry, type LibraryErrorCode, type ReadingSession } from './library.ts'
 
 /**
  * Save offline, sync later (issue #93): which writes may wait on the device, and

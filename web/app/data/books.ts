@@ -1,4 +1,4 @@
-import type { GoodreadsRating } from './goodreads'
+import type { GoodreadsRating } from './goodreads.ts'
 
 /**
  * The Book as the client sees it (CONTEXT.md: Book, Catalogue, Cover), and the

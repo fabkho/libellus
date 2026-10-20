@@ -1,7 +1,7 @@
-import type { BookFormat, BookSnapshot, CoverColors } from './books'
-import { isValidIsbn10, isValidIsbn13, isbn10To13 } from './books'
-import { type CoverKind, COVER_HEIGHT, kindRank } from './coverRank'
-import { languageCode, titleLanguage } from './import/editions'
+import type { BookFormat, BookSnapshot, CoverColors } from './books.ts'
+import { isValidIsbn10, isValidIsbn13, isbn10To13 } from './books.ts'
+import { type CoverKind, COVER_HEIGHT, kindRank } from './coverRank.ts'
+import { languageCode, titleLanguage } from './import/editions.ts'
 
 /**
  * One place that decides which source's value a Book field gets: ask several
@@ -184,7 +184,7 @@ const normalised = (text: string): string =>
 
 // ------------------------------------------------------------------ choosing
 
-type Pick<T> = { value: T; candidate: Candidate; index: number }
+type FieldPick<T> = { value: T; candidate: Candidate; index: number }
 
 const rankIn = (field: MergeField, source: MergeSource): number => {
   const at = SOURCE_RANK[field].indexOf(source)
@@ -192,8 +192,8 @@ const rankIn = (field: MergeField, source: MergeSource): number => {
 }
 
 /** The value most plausible candidates agree on; ties go to the better-ranked source, then the earlier. */
-function choose<T>(field: MergeField, picks: Pick<T>[], same: (a: T, b: T) => boolean = (a, b) => a === b): Pick<T> | null {
-  let best: { pick: Pick<T>; agree: number } | null = null
+function choose<T>(field: MergeField, picks: FieldPick<T>[], same: (a: T, b: T) => boolean = (a, b) => a === b): FieldPick<T> | null {
+  let best: { pick: FieldPick<T>; agree: number } | null = null
   for (const pick of picks) {
     const agree = picks.filter((other) => same(other.value, pick.value)).length
     if (
@@ -209,7 +209,7 @@ function choose<T>(field: MergeField, picks: Pick<T>[], same: (a: T, b: T) => bo
   return best?.pick ?? null
 }
 
-const provenanceOf = (pick: Pick<unknown>, kind?: CoverKind): FieldProvenance => ({
+const provenanceOf = (pick: FieldPick<unknown>, kind?: CoverKind): FieldProvenance => ({
   source: pick.candidate.source,
   from: pick.index,
   exact: pick.candidate.exact,
@@ -247,7 +247,7 @@ export function mergeSources(candidates: readonly Candidate[], context: MergeCon
   const maxYear = context.maxYear ?? 2100
   const provenance: Provenance = {}
   const indexed = candidates.map((candidate, index) => ({ candidate, index }))
-  const ofField = <T>(field: MergeField, read: (candidate: Candidate) => T | null): Pick<T>[] =>
+  const ofField = <T>(field: MergeField, read: (candidate: Candidate) => T | null): FieldPick<T>[] =>
     indexed
       .filter(({ candidate }) => !EDITION_FIELDS.includes(field) || candidate.exact)
       .flatMap(({ candidate, index }) => {
@@ -255,7 +255,7 @@ export function mergeSources(candidates: readonly Candidate[], context: MergeCon
         return value === null || value === undefined ? [] : [{ value, candidate, index }]
       })
 
-  const set = <T>(field: MergeField, picks: Pick<T>[], same?: (a: T, b: T) => boolean): T | null => {
+  const set = <T>(field: MergeField, picks: FieldPick<T>[], same?: (a: T, b: T) => boolean): T | null => {
     const won = choose(field, picks, same)
     if (!won) return null
     provenance[field] = provenanceOf(won)
@@ -320,7 +320,7 @@ export function mergeSources(candidates: readonly Candidate[], context: MergeCon
   const descriptions = ofField('description', (candidate) =>
     STORABLE_DESCRIPTION.includes(candidate.source) ? plausibleDescription(candidate.book.description, title) : null,
   )
-  const inLanguage = (pick: Pick<string>) => {
+  const inLanguage = (pick: FieldPick<string>) => {
     const theirs = languageCode(pick.candidate.book.language) ?? titleLanguage(pick.candidate.book.title ?? '')
     return !wanted || !theirs || theirs === wanted
   }

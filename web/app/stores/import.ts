@@ -19,6 +19,7 @@ import {
   libraryTitleIndex,
   reviewOf,
   importedKeys,
+  isMatched,
   pacedFetch,
   type PacedFetch,
   type BookImport,
@@ -532,7 +533,7 @@ export const useImportStore = defineStore('import', () => {
    * member's import made from her file (`import`) is no better known than
    * this file's own row: it counts as from the file.
    */
-  const matchedEdition = (edition: Edition) => Boolean(edition.via) && edition.book.source !== 'import'
+  const matchedEdition = (edition: Edition) => isMatched(edition)
 
   function verdictOf(book: ImportBook, edition: Edition | null): RowVerdict | null {
     if (importedBefore.has(book.key)) return 'imported'

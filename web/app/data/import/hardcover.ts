@@ -1,7 +1,7 @@
-import type { EntryStatus } from '../library'
-import { plainText } from '../apple'
-import type { Row } from './csv'
-import { normalize, splitSeriesTitle } from './readingTracker'
+import type { EntryStatus } from '../library.ts'
+import { plainText } from '../apple.ts'
+import type { Row } from './csv.ts'
+import { normalize, splitSeriesTitle } from './readingTracker.ts'
 import {
   clipReview,
   collectionNames,
@@ -23,8 +23,8 @@ import {
   type ImportRead,
   type ImportSession,
   type SkippedRow,
-} from './rows'
-import { languageCode } from './editions'
+} from './rows.ts'
+import { languageCode } from './editions.ts'
 
 /**
  * The Hardcover adapter of the import (issue #111): one row of a Hardcover
