@@ -476,7 +476,7 @@ no sheet or list moving, no page on its way to its scroll place), `goto` (an
 address opened once the page is at rest), boxes compared in one `evaluate`
 (e2e/support.ts, e2e/fixtures.ts).
 
-Every flow also fails at its end on an uncaught error of any page of any context it opened (`pageerror`, in `noPageErrors` of e2e/fixtures.ts; Anna's own browser in friends.spec.ts included), listing each with its stack; `EXPECTED_PAGE_ERRORS` there is the allowlist for an error that is the point of a flow, each with its reason, and is empty. A spec imports `test` from `./fixtures`, never from `@playwright/test`, or it has no guard.
+Every flow also fails at its end on an uncaught error of any page of any context it opened (`pageerror`, in `noPageErrors` of e2e/fixtures.ts; Anna's own browser in friends.spec.ts included), listing each with its stack; `EXPECTED_PAGE_ERRORS` there is the allowlist for an error that is the point of a flow, each with its reason, and is empty. One error is excused without an entry, and only as WebKit writes it: `Fetch API cannot load … due to access control checks.` for a URL no request of that page ever reached the network for, which is the request WebKit refuses itself as the document goes (a flow navigating away with a read in flight; `REFUSED_BEFORE_SENT`, 20 October 2026). A same URL the browser did ask and the answer did not come back for still fails the flow. A spec imports `test` from `./fixtures`, never from `@playwright/test`, or it has no guard.
 
 Two things a laptop hides and a runner shows (issue #146): the dev server bundles a
 package the first time a page imports it, and the pages open then can be reloaded under

@@ -99,6 +99,24 @@ function tapsWaitForSheets(page: Page) {
  */
 const EXPECTED_PAGE_ERRORS: { match: RegExp; why: string }[] = []
 
+/**
+ * WebKit's words for a request it refused itself, before the stack ever saw it: "Fetch API cannot load
+ * <url> due to access control checks." They read like CORS and are not (WebKit labels every request that
+ * fails synchronously as an access-control error): the one it refuses that way is a request made while the
+ * document is already on its way out, so a flow that navigates away from a screen with a read in flight
+ * gets one per read. Playwright then reports it as an uncaught error even though the app caught the promise
+ * (stores/appUpdate.ts: a look that learns nothing is not a failure), so it is nothing a member sees and
+ * nothing the flow did wrong. Seen with the import flow, whose first screen is left while Home's feed and
+ * the update check are still reading (release v1.24.2, run 39472178084: the pill's reopen flow failed
+ * twice on it, `/_nuxt/builds/latest.json`, `/rest/v1/rpc/feed`, `/rest/v1/rpc/my_recent_likes`).
+ *
+ * Excused only for a URL no request of that page ever reached the network for (`reached` below: Playwright
+ * reports every request the browser made, cancelled ones included). The answer that does not come back —
+ * the CORS failure this wording really names — is a request the browser did make, and it still fails the
+ * flow.
+ */
+const REFUSED_BEFORE_SENT = /^Fetch API cannot load (\S+) due to access control checks\.$/
+
 export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void; noPageErrors: void }>({
   stillSheets: [
     async ({ page }, use) => {
@@ -114,12 +132,18 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
       // one's message and stack. A feed refresh once threw on every load and the suite passed (social v1).
       const thrown: string[] = []
       const watch = (ctx: BrowserContext) => {
-        const onPage = (page: Page) =>
+        // The URLs this page's own requests reached the network with, for `REFUSED_BEFORE_SENT`.
+        const reached = new Set<string>()
+        const onPage = (page: Page) => {
+          page.on('request', (request) => reached.add(request.url()))
           page.on('pageerror', (error) => {
             const text = error.stack || `${error.name}: ${error.message}`
             if (EXPECTED_PAGE_ERRORS.some(({ match }) => match.test(text))) return
+            const refused = REFUSED_BEFORE_SENT.exec(error.message)?.[1]
+            if (refused && !reached.has(refused)) return
             thrown.push(`${page.url()}\n${text}`)
           })
+        }
         for (const page of ctx.pages()) onPage(page)
         ctx.on('page', onPage)
       }
