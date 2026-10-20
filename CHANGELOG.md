@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.24.2](https://github.com/fabkho/libellus/compare/v1.24.1...v1.24.2) (2026-10-20)
+
+
+### Fixes
+
+* **a11y:** reader controls and page turns without a tap or swipe, large text in the wheel and Add sheet, no orientation lock, axe in the light room too ([#394](https://github.com/fabkho/libellus/issues/394)) ([69e0abc](https://github.com/fabkho/libellus/commit/69e0abcca9edb2a04582182e360848cfe9f80992))
+* **functions:** the service role's secret key is read from apikey, so the import job's Goodreads and DNB asks are answered in production ([#396](https://github.com/fabkho/libellus/issues/396)) ([b5e6031](https://github.com/fabkho/libellus/commit/b5e60310ece656e7c541fa1d0330277536618fda))
+* **import:** the job's progress reaches the page when Realtime starts late ([#397](https://github.com/fabkho/libellus/issues/397)) ([fd2f249](https://github.com/fabkho/libellus/commit/fd2f249d80a81caf04496990d0bd6e715975bfb4))
+
 ## [1.24.1](https://github.com/fabkho/libellus/compare/v1.24.0...v1.24.1) (2026-10-20)
 
 
