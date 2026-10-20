@@ -4,7 +4,7 @@
 // and a mono bubble says the page; let go to jump there. A small tick marks the
 // page saved in BetterReads. A native range input underneath, so the keyboard and
 // assistive tech get a slider for free. A light tick per page passed (Android).
-import { stepTick } from '~/utils/haptics'
+import { stepTick } from '#layers/ui/app/utils/haptics'
 
 const props = defineProps<{ fraction: number; pages: number | null; saved: number | null }>()
 const emit = defineEmits<{ scrub: [fraction: number] }>()

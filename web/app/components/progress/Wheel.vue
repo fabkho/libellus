@@ -17,8 +17,8 @@
 // or down and reads with its value text; a `spinbutton` became an edit box that
 // TalkBack could not turn): arrows ±1 (up is more), Page Up/Down ±10, Home/End
 // the ends, a digit or Enter starts typing.
-import { stepTick } from '~/utils/haptics'
-import { prefersReducedMotion } from '~/utils/motion'
+import { stepTick } from '#layers/ui/app/utils/haptics'
+import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { FOLLOW_MS, TAP_MS, TAP_SLOP_PX, decayAt, flingTarget, releaseSpeed, rubberBand, tappedRow, valueAt } from '~/utils/wheel'
 
 const props = withDefaults(

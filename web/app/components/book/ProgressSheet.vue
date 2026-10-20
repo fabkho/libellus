@@ -13,7 +13,7 @@
 // over. A refusal stays in the sheet and Save tries again.
 import { PAGE_CEILING, type ProgressMode } from '~/data/progress'
 import { useReadingStore } from '~/stores/reading'
-import { stepTick } from '~/utils/haptics'
+import { stepTick } from '#layers/ui/app/utils/haptics'
 
 const { t, n } = useI18n()
 const reading = useReadingStore()

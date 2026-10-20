@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AT_BOOK, AT_LIST, isBookPath, isCardPath, isFlightPath, lerpBox, onScreen, startAt, transformFrom, valueOf } from '../app/utils/flight'
-import { timeAt } from '../app/utils/motion'
+import { timeAt } from '#layers/ui/app/utils/motion'
 
 /**
  * The arithmetic of the cover's flight into the book page and back

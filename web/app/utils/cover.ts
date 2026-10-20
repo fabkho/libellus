@@ -3,9 +3,11 @@ import { appleArtwork } from '../data/apple'
 import { openLibraryCoverAt } from '../data/openLibrary'
 
 /**
- * Where a cover's image comes from, and what a mounted cover (components/ui/Cover.vue) shows: the sources' sizes
- * (Apple's CDN, Open Library), the chain of sizes a cover tries, and the state it moves through. Framework-free, so a
- * native port copies them and tests/cover-src.test.ts and tests/cover-showing.test.ts pin them.
+ * Where a cover's image comes from: the sources' sizes (Apple's CDN, Open Library), the chain of sizes a cover tries
+ * and which URLs are one artwork. Framework-free, so a native port copies them and tests/cover-src.test.ts pins them.
+ * `UiCover` (the base) asks for them through `ui.cover.sources` and `ui.cover.artworkOf` in `app/app.config.ts`; the
+ * state a mounted cover moves through (`startCover`, `coverFailed`, …) is the base's `utils/coverShowing.ts`
+ * (tests/cover-showing.test.ts).
  *
  * What a cover draws without its sources (the cloth of a Placeholder cover, the light it throws into the room, the
  * author line, a blank stand-in) is the shared UI base's: `utils/cloth.ts` there (`clothOf`, `glowOf`,
@@ -104,84 +106,4 @@ export function coverChain(url: string | null | undefined, size: CoverSize): str
  */
 export function artworkOf(url: string): string {
   return openLibraryCoverAt(appleArtwork(url, 1, 1), 'M')
-}
-
-/**
- * What a mounted cover (UiCover) shows, as a state it moves through; framework
- * free, so the rule is pinned by tests/cover-showing.test.ts and a native port
- * copies it. The rule: **a cover shows its Book's cover, and follows it**. One
- * Book, one cover (docs/plans/covers-consistency.md): a list row that stays
- * mounted (Home and the Library are kept alive) and the Book's page, mounted
- * later, show the same picture because both show what the Book says now. A new
- * `src` of another artwork (a refresh, a cover the Catalogue filled, another
- * edition) starts the cover afresh; another size of the artwork in view is no
- * other image (`artworkOf`): it takes over once it has loaded. A size that fails
- * moves on to the same artwork's other sizes (`coverChain`), then the Placeholder.
- * (Until this rule a cover in view held on to its first artwork, A8 in
- * docs/covers.md: that is what let a kept-alive row and a fresh page differ.)
- */
-export interface CoverShowing {
-  /** The sources to try in order: `src`, then the same artwork at its other sizes. */
-  chain: readonly string[]
-  /** Which of `chain` is in the image. */
-  attempt: number
-  /** What the cover is of; a change of it starts the cover afresh, even at the same artwork. */
-  identity: string
-  /** The image in view (loaded, not blank), or null while none is. */
-  shown: string | null
-  /** Whether the image may offer its sizes (`srcset`); not after a size of it failed. */
-  srcset: boolean
-}
-
-/** What a cover is asked to show. */
-export interface CoverInput {
-  src: string | null | undefined
-  /** The same artwork at other sizes, to try in turn when `src` fails (`coverChain`). */
-  fallbacks: readonly string[]
-  identity: string
-}
-
-const chainOf = ({ src, fallbacks }: CoverInput): readonly string[] => (src ? [...new Set([src, ...fallbacks])] : [])
-
-/** A cover that shows nothing yet, set to try `input`. */
-export function startCover(input: CoverInput): CoverShowing {
-  return { chain: chainOf(input), attempt: 0, identity: input.identity, shown: null, srcset: true }
-}
-
-/** The source in the image now, or null: the Placeholder. */
-export function coverNow(state: CoverShowing): string | null {
-  return state.chain[state.attempt] ?? null
-}
-
-/** The cover is asked to show something else (`src`, `fallbacks` or `identity` changed). */
-export function coverInputChanged(state: CoverShowing, input: CoverInput): CoverShowing {
-  if (state.shown === null || input.identity !== state.identity) return startCover(input)
-  const chain = chainOf(input)
-  if (chain.length === state.chain.length && chain.every((url, index) => url === state.chain[index])) return state
-  // Another size of what is in view: the same cover, swapped for the size once it has loaded.
-  if (chain.length && artworkOf(chain[0]!) === artworkOf(state.shown)) return { ...state, chain, attempt: 0, srcset: true }
-  // Another artwork, or none: the Book's cover is another now, here as everywhere else it shows.
-  return startCover(input)
-}
-
-/** An image loaded and is not blank: `url` (the image's `currentSrc`) is in view. */
-export function coverShown(state: CoverShowing, url: string): CoverShowing {
-  return { ...state, shown: url }
-}
-
-/**
- * The image at `url` (its `currentSrc`) failed or came back blank. A size of
- * the artwork in view failing leaves that artwork in view, at the size that
- * loaded. The one in view failing, or one before any was, moves to the next
- * size of the same artwork, then the Placeholder.
- */
-export function coverFailed(state: CoverShowing, url: string): CoverShowing {
-  const shown = state.shown
-  if (shown !== null && url !== shown && artworkOf(url) === artworkOf(shown)) {
-    const rest = state.chain.slice(state.attempt + 1).filter((next) => next !== shown)
-    return { ...state, chain: [shown, ...rest], attempt: 0, srcset: false }
-  }
-  const attempt = state.attempt + 1
-  if (attempt < state.chain.length) return { ...state, attempt, shown: null, srcset: true }
-  return { ...state, attempt, shown: null }
 }

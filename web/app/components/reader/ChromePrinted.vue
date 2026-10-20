@@ -5,8 +5,8 @@
 // middle floats a small glass capsule up, as the tab bar floats elsewhere in
 // the app — Back, where you are, Search, Contents, Aa; the search palette
 // grows out of it (Search.vue).
-import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
-import { stepTick, tick } from '~/utils/haptics'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
+import { stepTick, tick } from '#layers/ui/app/utils/haptics'
 import type { ChromeInfo } from '~/utils/readerChrome'
 
 const props = defineProps<{
@@ -398,7 +398,7 @@ function onCapsuleClick(event: MouseEvent) {
   visibility: hidden;
 }
 .capsule-wrap {
-  bottom: var(--float-bottom);
+  bottom: calc(var(--float-bottom) - var(--viewport-pan, 0px));
 }
 .capsule {
   touch-action: none;

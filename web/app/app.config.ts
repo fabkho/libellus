@@ -1,9 +1,25 @@
+import { artworkOf, coverChain, coverSizes, coverSrcset, type CoverSize } from './utils/cover'
+
 // The UI base's `ui.icons` (fabkho/ui, README, "Icon drawings"): the drawings BetterReads keeps of its own, over
 // the base's. A name left out is the base's drawing. Three differ (every name of the set was diffed against the
 // base's, 2026-10-20); the base keeps Bookretreats' hand for them. Stroke, size and colour are the base's `UiIcon`'s,
 // so these are only the shapes on the 24-unit grid. docs/DESIGN.md, Icons.
 export default defineAppConfig({
   ui: {
+    // The one rule for every `UiCover` (the base's `ui.cover`, README): where a cover's sizes come from. Apple's and
+    // Open Library's URLs, the chain of sizes tried when one fails and the `srcset` are the app's; a prop of the
+    // cover wins. `artworkOf` says which URLs are one artwork at other sizes (utils/cover.ts).
+    cover: {
+      sources: (src: string, size: string) => ({
+        fallbacks: coverChain(src, size as CoverSize).filter((url) => url !== src),
+        srcset: coverSrcset(src, size as CoverSize),
+        sizes: coverSizes(size as CoverSize),
+      }),
+      artworkOf,
+    },
+    // The film grain as an inline SVG, not a `background-image`: Chrome counts the image as the LCP element
+    // (docs/perf/client-1-startup.md F-12).
+    ambient: { grain: 'inline' as const },
     icons: {
       // Two readers: a head and shoulders, and a second one behind it to the right.
       people: '<circle cx="9.5" cy="8.5" r="3" /><path d="M4 19c.4-3.2 2.5-5 5.5-5s5.1 1.8 5.5 5" /><path d="M15.5 5.7a3 3 0 0 1 0 5.6M17.5 14.3c1.4.6 2.3 2.1 2.5 4.2" />',

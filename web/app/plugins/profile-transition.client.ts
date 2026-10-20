@@ -1,5 +1,5 @@
 import type { RouteLocationNormalized } from 'vue-router'
-import { prefersReducedMotion } from '~/utils/motion'
+import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { tabPlaces } from '~/utils/tabPlaces'
 import { holdWhileTransitioning, scaleInsteadOfResize } from '~/utils/viewTransition'
 

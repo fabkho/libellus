@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { followAfterMotion } from '~/utils/motion'
+import { followAfterMotion } from '#layers/ui/app/utils/motion'
 
 /**
  * `source` as a screen shows it: it follows the source, but a change waits until

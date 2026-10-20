@@ -38,7 +38,7 @@ watch(
 <style scoped>
 /* Above the tab bar, where it floats (or would). */
 .note-place {
-  bottom: calc(var(--float-bottom) + var(--size-tab-bar) + var(--spacing-sm));
+  bottom: calc(var(--float-bottom) + var(--size-tab-bar) + var(--spacing-sm) - var(--viewport-pan, 0px));
 }
 
 .note-enter-active {

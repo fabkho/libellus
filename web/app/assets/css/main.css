@@ -79,11 +79,6 @@
   padding-right: var(--safe-area-right);
 }
 
-/* Floating chrome at the bottom (the tab bar, the search palette). */
-@utility float-bottom {
-  bottom: var(--float-bottom);
-}
-
 /* Room under a tab's content so its end scrolls clear of the floating tab bar:
    the bar's top edge and `xxl` more. */
 @utility clear-tab-bar {

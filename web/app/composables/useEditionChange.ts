@@ -17,8 +17,8 @@
  * running one at once, the new Book in place.
  */
 import type { Ref } from 'vue'
-import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
-import { stillCovers } from '~/utils/coverTilt'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
+import { stillCovers } from '#layers/ui/app/utils/coverTilt'
 
 interface Parts {
   /** The page's root: the ambient light is its first child. */

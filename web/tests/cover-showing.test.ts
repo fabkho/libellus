@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  artworkOf,
-  coverChain,
-  coverFailed,
-  coverInputChanged,
-  coverNow,
-  coverShown,
-  startCover,
-  type CoverInput,
-  type CoverShowing,
-} from '@/utils/cover'
+import { artworkOf, coverChain } from '@/utils/cover'
+import { coverFailed, coverInputChanged, coverNow, coverShown, startCover, type CoverInput, type CoverShowing } from '#layers/ui/app/utils/coverShowing'
 
 /**
  * One Book, one cover (docs/plans/covers-consistency.md): a mounted cover shows
@@ -33,7 +24,7 @@ const input = (src: string | null, size: 'sm' | 'xl' = 'sm', identity = '9780593
 /** A cover with its image loaded and in view, then given `more`. */
 function inView(url = SMALL, ...more: CoverInput[]): CoverShowing {
   let state = coverShown(startCover(input(url)), url)
-  for (const next of more) state = coverInputChanged(state, next)
+  for (const next of more) state = coverInputChanged(state, next, artworkOf)
   return state
 }
 
@@ -58,7 +49,7 @@ describe('a mounted cover follows its Book', () => {
 
   it('stays as it is when the same chain comes again (a parent re-rendered)', () => {
     const state = inView(SMALL)
-    expect(coverInputChanged(state, input(SMALL))).toBe(state)
+    expect(coverInputChanged(state, input(SMALL), artworkOf)).toBe(state)
   })
 
   it('starts afresh when what the cover is of changes, even at the same artwork (a change of edition)', () => {
@@ -70,29 +61,29 @@ describe('a mounted cover follows its Book', () => {
 
 describe('a size that fails is the same picture at another size', () => {
   it('moves from a row’s size to the stored one, never to another picture or the Placeholder first', () => {
-    const state = coverFailed(startCover(input(SMALL)), SMALL)
+    const state = coverFailed(startCover(input(SMALL)), SMALL, artworkOf)
     expect(coverNow(state)).toBe(LARGE)
   })
 
   it('moves from the page’s size to a row’s, so the page shows what the row shows', () => {
-    const state = coverFailed(startCover(input(LARGE, 'xl')), LARGE)
+    const state = coverFailed(startCover(input(LARGE, 'xl')), LARGE, artworkOf)
     expect(coverNow(state)).toBe(SMALL)
   })
 
   it('does the same for Open Library’s M and L (a 503 from its archive for one of them)', () => {
     const m = 'https://covers.openlibrary.org/b/id/8231856-M.jpg'
     const l = 'https://covers.openlibrary.org/b/id/8231856-L.jpg'
-    expect(coverNow(coverFailed(startCover(input(m)), m))).toBe(l)
-    expect(coverNow(coverFailed(startCover(input(l, 'xl')), l))).toBe(m)
+    expect(coverNow(coverFailed(startCover(input(m)), m, artworkOf))).toBe(l)
+    expect(coverNow(coverFailed(startCover(input(l, 'xl')), l, artworkOf))).toBe(m)
   })
 
   it('ends in the Placeholder only when every size of it failed', () => {
-    const state = coverFailed(coverFailed(startCover(input(SMALL)), SMALL), LARGE)
+    const state = coverFailed(coverFailed(startCover(input(SMALL)), SMALL, artworkOf), LARGE, artworkOf)
     expect(coverNow(state)).toBeNull()
   })
 
   it('leaves the artwork in view when another size of it fails (a srcset pick that 404s)', () => {
-    const state = coverFailed(inView(SMALL, input(LARGE, 'xl')), LARGE)
+    const state = coverFailed(inView(SMALL, input(LARGE, 'xl')), LARGE, artworkOf)
     expect(coverNow(state)).toBe(SMALL)
     expect(state.shown).toBe(SMALL)
     expect(state.srcset).toBe(false) // it does not offer the sizes again
@@ -100,7 +91,7 @@ describe('a size that fails is the same picture at another size', () => {
   })
 
   it('moves on from the image in view when it fails itself, to its other size', () => {
-    const state = coverFailed(inView(SMALL), SMALL)
+    const state = coverFailed(inView(SMALL), SMALL, artworkOf)
     expect(coverNow(state)).toBe(LARGE)
     expect(state.shown).toBeNull()
   })

@@ -93,7 +93,7 @@ const said = computed(() => (shown.value && ambient.value ? t(`import.ambient.sa
 <style scoped>
 /* Above the tab bar, where it floats (or would). */
 .place {
-  bottom: calc(var(--float-bottom) + var(--size-tab-bar) + var(--spacing-sm));
+  bottom: calc(var(--float-bottom) + var(--size-tab-bar) + var(--spacing-sm) - var(--viewport-pan, 0px));
 }
 
 .track {

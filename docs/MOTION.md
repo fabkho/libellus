@@ -43,7 +43,7 @@ its own sake. Every duration and curve is a token in `design/tokens.json` (`dura
 Swift gets the same values (`Tokens.Duration`, `Tokens.Easing` as `TimingCurve`).
 
 Code that animates with the Web Animations API reads the durations back from the CSS variables
-(`durationToken`, `utils/motion.ts`) in either unit: the source writes milliseconds, but the built
+(`durationToken`, the UI base's `utils/motion.ts`) in either unit: the source writes milliseconds, but the built
 stylesheet is minified to the shortest form (`--duration-standard: .25s`). Read as a bare number that
 was a quarter of a millisecond, and every such motion jumped to its end in the built app while the
 dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/android/flight.ts`).
@@ -120,7 +120,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   frame by frame; let go, it comes back flat over `standard` (a Web Animation), and a new press
   mid-way starts from what is on screen. Only the sheet leans (`[data-cover]`); the halo and the pool
   of light behind it stay where they are. The hero only: no other cover leans (`UiCover`'s `tilt`,
-  `utils/coverTilt.ts`). A vertical move that starts on the cover scrolls the page (`touch-action:
+  the UI base's `utils/coverTilt.ts`). A vertical move that starts on the cover scrolls the page (`touch-action:
   pan-y`): the browser takes it, the pointer is cancelled and the cover comes back as on a release; a
   move that starts sideways keeps it. A long press opens no image menu. The pointer only: the phone's
   own movement (DeviceOrientation) does nothing, so nothing leans while the page is just held.
@@ -172,7 +172,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   behind the one before, so the wave travels across a row of figures, down the star rows,
   corner to corner across the calendar; the chart's bars rise and fall in it the same way
   (`transform` alone). When the record comes, the figures, lines and covers arrive in place:
-  they fade in and rise the last `xs` over `standard` (`arrive`, `useArrival`); each bar grows
+  they fade in and rise the last `xs` over `standard` (`arrive`, the UI base's `useArrival`); each bar grows
   from where the wave left it to its own height over `standard` (Web Animations from the measured
   height), the calendar's dots grow and tint into their days, the rating bars fill. A section
   the record turns out not to have (Reading days without days kept, Ratings with nothing rated,
@@ -326,7 +326,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   come back on a short scroll up — away over `exit` with the `exit` curve, back over `standard` —
   by `transform` and `opacity` alone, so the page under it is never laid out again. The scroll counts
   as intent only once it has gone 10 px in one direction from where it last turned
-  (`utils/hideOnScroll.ts`), and the bar is always there at the top and at the very end of the page.
+  (the UI base's `utils/hideOnScroll.ts`), and the bar is always there at the top and at the very end of the page.
   It only makes way where there is something to read for it: a page that scrolls less than `MIN_END_PX`
   (640, about one screen of the phone) past the fold keeps it, however far down she is (#205).
   It is never away while search opens, is open or closes, while a sheet or
@@ -378,7 +378,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   items it measured off the page (a kept-alive tab in the background re-rendering): coming back to a
   tab shows its list in place (checked by eye; no flow).
   The lists' quiet refresh when a tab comes back waits for whatever is moving (the cover flying back
-  into its row and handing over, the Profile's View Transition: `afterMotion`, `utils/motion.ts`)
+  into its row and handing over, the Profile's View Transition: `afterMotion`, the UI base's `utils/motion.ts`)
   before it is applied, and an entry that did not change stays the same object, so a refresh
   that changed nothing re-renders nothing (`reuseEntries`).
 - **Collections are listed by last edited** (docs/parity.md, Collections): an edit moves a Collection
@@ -461,7 +461,7 @@ Everything is one Web Animations timeline per direction (`element.animate`, keyf
 when a direction starts, `fill: both`), cancelled once it has landed, so nothing keeps a layer or
 a `will-change` while the palette sits open. An interruption reads the progress on screen
 (`getComputedTiming().progress`), finds the time at which the other direction's curve shows the
-same progress (`timeAt` in `web/app/utils/motion.ts`) and starts there. Durations and curves are
+same progress (`timeAt` in the UI base's `utils/motion.ts`) and starts there. Durations and curves are
 read from the token variables, so the script carries no numbers of its own.
 
 Why not the View Transitions API: Safari has same-document view transitions (18+), but they
@@ -503,7 +503,7 @@ Each part — the cover's travel, the book page, the list — is a channel whose
 towards the book page it shows. All of them are Web Animations (`fill: both`) cancelled once landed;
 an interruption reads each channel's value off the screen (`getComputedTiming().progress`) and starts
 the new direction's animation at the time its curve shows the same value (`startAt`, built on
-`timeAt` in `web/app/utils/motion.ts`), exactly as the search morph turns around.
+`timeAt` in the UI base's `utils/motion.ts`), exactly as the search morph turns around.
 
 Not the View Transitions API, for the reasons above: a flight turned around mid-air, a page that keeps
 its scroll and its live state, and covers that land on their own pixels need live elements.

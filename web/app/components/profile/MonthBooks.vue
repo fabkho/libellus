@@ -12,7 +12,7 @@
 // on opening (docs/MOTION.md, Loading).
 import type { StatsRead } from '~/data/stats'
 import { linkOf } from '~/utils/memberProfile'
-import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { coverDelay, rowDelay, SLIDE } from '~/utils/monthIntro'
 
 const props = withDefaults(defineProps<{ months: { month: number, reads: StatsRead[] }[], loading?: boolean, goneBy?: number, foreign?: boolean }>(), { loading: false, goneBy: 12, foreign: false })

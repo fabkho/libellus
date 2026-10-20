@@ -55,7 +55,7 @@ const place = computed(() =>
   <Transition name="bottom">
     <footer
       v-if="shown"
-      class="glass safe-bottom fixed inset-x-0 bottom-0 z-30 border-t-(length:--stroke-hairline) border-hairline"
+      class="glass safe-bottom fixed inset-x-0 screen-bottom z-30 border-t-(length:--stroke-hairline) border-hairline"
       :class="search === 'palette' && 'invisible'"
       data-reader-morph="capsule"
       data-testid="reader.bottom"
@@ -120,7 +120,7 @@ const place = computed(() =>
   top: calc(var(--bar-top) + var(--spacing-xs));
 }
 .next {
-  bottom: var(--float-bottom);
+  bottom: calc(var(--float-bottom) - var(--viewport-pan, 0px));
 }
 .fade-enter-active {
   transition: opacity var(--duration-standard) var(--ease-standard);

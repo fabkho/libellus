@@ -25,9 +25,9 @@ import { ProgressWriter, progressAt } from '~/data/reader/progress'
 import { MARGINS, type ReaderTheme } from '~/data/reader/settings'
 import type { Highlight, HighlightColor } from '~/data/reader/device'
 import { REST, fitBox, poseOf, ratioOf, readerCoverCopy, rectOf } from '~/utils/readerFlight'
-import { stillCovers } from '~/utils/coverTilt'
+import { stillCovers } from '#layers/ui/app/utils/coverTilt'
 import type { ChromeInfo } from '~/utils/readerChrome'
-import { durationToken, easingToken, prefersReducedMotion } from '~/utils/motion'
+import { durationToken, easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import type { Box, Layout, PageColors, ReaderEngine, Relocation, Selection } from '~/reader/engine'
 import { useEbooksStore } from '~/stores/ebooks'
 import { useReaderStore } from '~/stores/reader'
@@ -1008,7 +1008,7 @@ function nextChapter() {
   bottom: var(--safe-area-bottom);
 }
 .toast {
-  bottom: calc(var(--float-bottom) + var(--spacing-xxl));
+  bottom: calc(var(--float-bottom) + var(--spacing-xxl) - var(--viewport-pan, 0px));
 }
 .toast-enter-active {
   transition: opacity var(--duration-quick) var(--ease-standard);

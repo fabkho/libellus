@@ -24,11 +24,12 @@ const inUiLayer = (path: string) => {
  *   are 17 and 19 px (`text-callout`, `text-input`), so nothing here zooms, and the tag would only add what axe reads
  *   as a zoom limit (WCAG 1.4.4, `meta-viewport`). Bookretreats needs it for its 15 px composer: once BetterReads
  *   takes the base's composer, it comes back with it.
- * - `stranded-viewport` (iOS 26's viewport left panned or shrunk after the keyboard): held. Nothing reports
- *   the bug in BetterReads, and its own `float-bottom` (main.css, over the base's) does not read `--viewport-pan`: the tab bar would
- *   stay where it is while the base's sheets moved. It comes with the tab bar and the floating chrome (wave 6b on).
+ * - `stranded-viewport` (iOS 26's viewport left panned or shrunk after the keyboard): the base's. Its `--viewport-pan` is
+ *   read by everything fixed at the bottom: the base's tab bar, palette and sheets (`float-bottom`, `screen-bottom`), and
+ *   BetterReads' own (the reader's bars and toasts, the import status, the link note), which subtract it from their
+ *   `bottom` (tests/viewport-pan.test.ts keeps them to it).
  */
-const BASE_PLUGINS = ['touch-active']
+const BASE_PLUGINS = ['touch-active', 'stranded-viewport']
 
 const isBasePlugin = (src: string) => BASE_PLUGINS.some((name) => new RegExp(`/plugins/${name}\\.client\\.[jt]s$`).test(src))
 

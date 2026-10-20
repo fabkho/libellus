@@ -3,7 +3,7 @@
  * back, plugins/profile-transition.client.ts). Framework-free.
  */
 
-import { addMover } from './motion'
+import { addMover } from '#layers/ui/app/utils/motion'
 
 let running: Promise<void> | null = null
 addMover(() => running !== null)
