@@ -7,10 +7,11 @@
  * measured at ~16 ms of isolate CPU a row), and `work` is told the hard `deadline` its batch has to end by. Then the job is released: done when no row is pending, else the
  * next chunk is kicked at once by the database (pg_net); a chunk that failed as a whole pauses the job.
  *
- * Two phases, each in chunks: the match (`work`), and once no row is left to match the cover stage (`cover`: its own
- * phase, rows taken by `takeCoverRows`, each step saved by `saveCover`). The job is done when every row has its cover
- * decision. A cover batch may end the chunk waiting (`context.waitUntil`: Goodreads blocked): the job pauses until
- * then, with no fault, and goes on in a later chunk.
+ * Three phases, each in chunks: the match (`work`); once no row is left to match the cover stage (`cover`: its own
+ * phase, rows taken by `takeCoverRows`, each step saved by `saveCover`); once every row has its cover decision the write
+ * (`write`: rows taken by `takeWriteRows`, each written to the member's Library and saved by `saveWrite`). The job is done
+ * when every row has its outcome (added / kept / failed). A cover batch may end the chunk waiting (`context.waitUntil`:
+ * Goodreads blocked): the job pauses until then, with no fault, and goes on in a later chunk.
  *
  * Idempotent per row: a row is saved once (`import_job_save_row` ignores a second save), its write is recorded with
  * the write (`import_job_write`), and a runner that dies leaves its rows pending: the next claim (after the lease
@@ -53,6 +54,8 @@ export type RowResult =
     /** The address of the cover the match shows (`cover` is not `none`), and its size when the address says it. */
     cover_url?: string | null
     cover_size?: CoverSize | null
+    /** What the write needs of the match (`WriteChoice`, write.ts): the Book the row is written with. Saved with the row (`match_book`). */
+    write?: unknown
   }
 
 export type CoverSize = 'S' | 'M' | 'L'
@@ -66,6 +69,26 @@ export type CoverResult =
   | { source: 'none' }
   | { next: 'goodreads' }
   | { retry: true; wait_seconds: number }
+
+/**
+ * A row for the write phase: the file's row, what the match chose to write (`match_book`), the cover the job decided for it
+ * and the outcome when its write was recorded already (a runner died after writing it).
+ */
+export type WriteRow = {
+  idx: number
+  key: string
+  payload: Record<string, unknown>
+  match_book: unknown
+  cover_source: 'edition' | 'lent' | 'openlibrary' | 'goodreads' | 'none' | null
+  cover_url: string | null
+  cover_size: CoverSize | null
+  outcome: WrittenOutcome | null
+}
+
+export type WrittenOutcome = 'added' | 'imported' | 'in_library' | 'failed'
+
+/** A row `import_books` could not even be asked about: failed, with the reason (`import_job_save_write`). */
+export type WriteFailure = { outcome: 'failed'; error: string }
 
 export type ReleaseState = 'done' | 'more' | 'paused' | 'gone'
 
@@ -81,6 +104,10 @@ export type Store = {
   takeCoverRows: (job: string, runner: string, limit: number) => Promise<CoverRow[]>
   /** Answers whether to go on, as `saveRow`. */
   saveCover: (job: string, runner: string, idx: number, result: CoverResult) => Promise<boolean>
+  /** The next rows to write (never before every row is matched and has its cover decision). */
+  takeWriteRows: (job: string, runner: string, limit: number) => Promise<WriteRow[]>
+  /** Marks a row written (its outcome was recorded with the write; `failure` records one for a row that could not be written at all). Answers whether to go on. */
+  saveWrite: (job: string, runner: string, idx: number, failure?: WriteFailure) => Promise<boolean>
 }
 
 export type WorkContext = {
@@ -93,6 +120,8 @@ export type WorkContext = {
   stopped: () => boolean
   /** Saves one row's cover step; answers whether to go on. */
   saveCover: (idx: number, result: CoverResult) => Promise<boolean>
+  /** Marks one row written (the write phase); answers whether to go on. */
+  saveWrite: (idx: number, failure?: WriteFailure) => Promise<boolean>
   /** Ends the chunk after this batch and pauses the job until `untilMs` (epoch ms on the clock): a source said to wait. */
   waitUntil: (untilMs: number) => void
 }
@@ -103,6 +132,9 @@ export type Work = (job: Job, rows: JobRow[], context: WorkContext) => Promise<v
 /** Decides the cover of a batch of matched rows (covers.ts), saving each step (`context.saveCover`). Rejects only when the whole batch failed. */
 export type CoverWork = (job: Job, rows: CoverRow[], context: WorkContext) => Promise<void>
 
+/** Writes a batch of rows to the member's Library and the Catalogue Books' covers (write.ts), saving each (`context.saveWrite`). Rejects only when the whole batch failed. */
+export type WriteWork = (job: Job, rows: WriteRow[], context: WorkContext) => Promise<void>
+
 /** What one chunk did: its state, how many rows it saved in how many batches, and its wall clock. */
 export type ChunkResult = { state: 'idle' | ReleaseState; job?: string; saved: number; batches: number; ms?: number; error?: string }
 
@@ -111,6 +143,8 @@ export async function runChunk(options: {
   work: Work
   /** The cover stage, after every row is matched; without it the stage is not run (the rows keep waiting for it). */
   cover?: CoverWork
+  /** The write phase, after every row has its cover decision; without it the phase is not run (the rows keep waiting for it). */
+  write?: WriteWork
   runner: string
   clock?: Clock
   budgetMs?: number
@@ -121,6 +155,7 @@ export async function runChunk(options: {
 }): Promise<ChunkResult> {
   const { store, work, runner } = options
   const coverWork = options.cover
+  const writeWork = options.write
   const clock = options.clock ?? realClock
   const budgetMs = options.budgetMs ?? CHUNK_BUDGET_MS
   const deadlineMs = options.deadlineMs ?? CHUNK_DEADLINE_MS
@@ -154,6 +189,13 @@ export async function runChunk(options: {
       else stop = true
       return go
     },
+    async saveWrite(idx, failure) {
+      if (stop) return false
+      const go = await store.saveWrite(job.id, runner, idx, failure)
+      if (go) saved++
+      else stop = true
+      return go
+    },
     waitUntil(untilMs) {
       waitUntil = Math.max(waitUntil ?? 0, untilMs)
     },
@@ -170,12 +212,20 @@ export async function runChunk(options: {
         continue
       }
       // Every row is matched (or taken): the cover stage, its own phase, in chunks like the match.
-      if (!coverWork) break
-      const covers = await store.takeCoverRows(job.id, runner, limit)
-      if (!covers.length) break
+      const covers = coverWork ? await store.takeCoverRows(job.id, runner, limit) : []
+      if (covers.length) {
+        batches++
+        taken += covers.length
+        await coverWork!(job, covers, context)
+        continue
+      }
+      // Every row has its cover decision (or is waiting for its retry): the write phase, the third, in chunks like the others.
+      if (!coverWork || !writeWork) break
+      const writes = await store.takeWriteRows(job.id, runner, limit)
+      if (!writes.length) break
       batches++
-      taken += covers.length
-      await coverWork(job, covers, context)
+      taken += writes.length
+      await writeWork(job, writes, context)
     }
   } catch (thrown) {
     error = thrown instanceof Error ? thrown.message : String(thrown)

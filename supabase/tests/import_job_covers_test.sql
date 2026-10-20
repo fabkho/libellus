@@ -2,7 +2,7 @@
 -- (edition / lent) or by the stage (Open Library, then Goodreads, else none); the stage starts when every row is matched,
 -- Open Library's step before Goodreads', a retry waits for its time, a job with nothing due (or told to wait) pauses
 -- without a fault, a row handed out three times unsaved is given up, and the job is done when every row has its cover
--- decision. The runner's side (chunks, retries, answers) is Deno (supabase/functions/import-job/covers_test.ts).
+-- decision (and its outcome, the write phase). The runner's side (chunks, retries, answers) is Deno (supabase/functions/import-job/covers_test.ts).
 
 begin;
 select plan(54);
@@ -48,6 +48,16 @@ $$;
 create or replace function tests.expire_lease(p_job uuid)
 returns void language sql security definer as $$
   update public.import_jobs set lease_until = now() - interval '1 second' where id = p_job
+$$;
+-- The write phase is part 4's (import_job_write_test.sql); here a job's rows are just written so the job can finish.
+create or replace function tests.write_all(p_job uuid, p_runner text)
+returns void language plpgsql security definer as $$
+declare v_row record;
+begin
+  for v_row in select idx from public.import_job_take_write_rows(p_job, p_runner, 50) loop
+    perform public.import_job_save_write(p_job, p_runner, v_row.idx, '{"outcome": "added"}');
+  end loop;
+end;
 $$;
 create or replace function tests.age_jobs(p_member uuid)
 returns void language sql security definer as $$
@@ -143,6 +153,7 @@ set local role service_role;
 select is((select count(*)::int from public.import_job_claim('r4')), 1, 'queued again and claimed');
 select is((select string_agg(idx::text, ',') from public.import_job_take_cover_rows(:'job', 'r4', 5)), '3', 'the row is due now');
 select public.import_job_save_cover(:'job', 'r4', 3, '{"source": "none"}');
+select tests.write_all(:'job', 'r4');
 select is(public.import_job_release(:'job', 'r4'), 'done', 'every row has its cover decision: done');
 reset role;
 select is(tests.covers(:'job'), '1,1,1,1,2', 'by source: 1 edition, 1 lent, 1 Open Library, 1 Goodreads, 2 without');
@@ -184,6 +195,7 @@ select is((select count(*)::int from public.import_job_claim('b2')), 1, 'after t
 select is((select count(*)::int from public.import_job_take_cover_rows(:'job2', 'b2', 5)), 2, 'and its rows are asked');
 select public.import_job_save_cover(:'job2', 'b2', 0, '{"source": "goodreads", "url": "https://i.gr-assets.com/images/S/x/books/1l/3.jpg"}');
 select public.import_job_save_cover(:'job2', 'b2', 1, '{"source": "none"}');
+select tests.write_all(:'job2', 'b2');
 select is(public.import_job_release(:'job2', 'b2'), 'done', 'done');
 reset role;
 select is(tests.covers(:'job2'), '0,0,0,1,1', 'one Goodreads cover, one without');
@@ -209,6 +221,7 @@ select is(tests.row_cover(:'job3', 0), 'done,none,-,-,0', 'it is given up: decid
 select is(tests.covers(:'job3'), '0,0,0,0,1', 'and counted');
 set local role service_role;
 select public.import_job_save_cover(:'job3', 'p1', 1, '{"source": "none"}');
+select tests.write_all(:'job3', 'p1');
 select is(public.import_job_release(:'job3', 'p1'), 'done', 'the job does not wait for it');
 
 -- A row given up in the match has its cover decided too, so the job can finish.
