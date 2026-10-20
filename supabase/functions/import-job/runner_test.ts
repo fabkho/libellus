@@ -139,10 +139,12 @@ Deno.test('the last batch is cut to the rows left of the chunk', async () => {
 Deno.test('a refused save (cancelled, or the lease went to another runner) stops the chunk and releases nothing', async () => {
   const clock = fakeClock()
   const { store, released, saved } = memoryStore(6, { refuseSaveAt: 3 })
-  const result = await runChunk({ store, work: savingWork(clock), runner: 'r', clock, batchRows: 2, log: quiet })
+  const logged: string[] = []
+  const result = await runChunk({ store, work: savingWork(clock), runner: 'r', clock, batchRows: 2, log: (message) => logged.push(message) })
   assertEquals(result.state, 'gone')
   assertEquals(saved.length, 3)
   assertEquals(released.length, 0)
+  assertEquals(logged.filter((line) => line.includes('chunk gone')).length, 1, 'a lost lease is in the log (the acceptance run counts it)')
 })
 
 Deno.test('a deferred row stays pending for the second pass', async () => {
