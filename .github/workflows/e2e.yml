@@ -53,7 +53,7 @@ jobs:
   # e2e-report merges them into one HTML report.
   e2e:
     name: user flows (shard ${{ matrix.shard }}/${{ strategy.job-total }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -115,7 +115,9 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-webkit-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          # ubuntu-24.04 is the image label the shards run on (runner.os alone
+          # can't tell image versions apart), so a future image change misses this cache.
+          key: playwright-webkit-chromium-${{ runner.os }}-ubuntu-24.04-${{ steps.playwright.outputs.version }}
 
       - name: Install WebKit, Chromium and their system libraries
         working-directory: web
