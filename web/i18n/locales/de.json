@@ -616,7 +616,7 @@
       "lossPages": "−{count}",
       "lossPercent": "−{count} %",
       "totalOf": "von {count}",
-      "totalEdit": "Seiten insgesamt: {count}. Ändern",
+      "totalEdit": "von {count}, Seiten insgesamt. Ändern",
       "totalCount": "In Seiten zählen",
       "totalTitle": "Seiten in deiner Ausgabe",
       "totalHint": "Zähle die Seiten deiner Ausgabe oder nimm die deines Readers.",
@@ -1563,6 +1563,12 @@
       "back": "Zurück zur letzten Seite",
       "finished": "Gelesen",
       "close": "Buch schließen"
+    },
+    "assist": {
+      "label": "Lese-Werkzeuge",
+      "controls": "Steuerung des Lesers zeigen",
+      "previous": "Vorherige Seite",
+      "next": "Nächste Seite"
     }
   },
   "readAs": {
@@ -2044,6 +2050,7 @@
       "olderRetry": "Erneut versuchen",
       "read": "Gelesen",
       "sending": "Wird gesendet …",
+      "incoming": "Neue Nachricht von {name}",
       "failed": "Nicht gesendet. Tippen, um es erneut zu versuchen.",
       "retryHint": "Tippen, um es erneut zu versuchen.",
       "composer": {

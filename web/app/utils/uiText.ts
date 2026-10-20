@@ -25,6 +25,7 @@ export const UI_TEXT_KEYS = {
   'chat.olderRetry': 'uiText.chat.olderRetry',
   'chat.read': 'uiText.chat.read',
   'chat.sending': 'uiText.chat.sending',
+  'chat.incoming': 'uiText.chat.incoming',
   'chat.failed': 'uiText.chat.failed',
   'chat.retryHint': 'uiText.chat.retryHint',
   'chat.composer.label': 'uiText.chat.composer.label',

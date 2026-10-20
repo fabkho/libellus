@@ -39,7 +39,7 @@ function choose(status: AddDraft['status']) {
       type="button"
       role="radio"
       :aria-checked="draft.status === status"
-      class="option relative flex h-(--size-button) w-full items-center gap-ms px-inset text-left text-body"
+      class="option relative flex min-h-(--size-button) w-full items-center gap-ms px-inset py-xs text-left text-body"
       :class="draft.status === status ? 'text-ink' : 'text-ink-muted'"
       :data-testid="`${testid}.status.${status}`"
       @click="choose(status)"

@@ -352,9 +352,25 @@ export const ALLOWED: { rule: string; where: string; reason: string }[] = [
 const allowed = (rule: string, node: { target: string; html: string }) =>
   ALLOWED.some((a) => a.rule === rule && (node.target.includes(a.where) || node.html.includes(a.where)))
 
-/** Scans the page as it is now (once nothing moves) and fails on a serious or critical violation. */
+/** Both rooms: a scan in the page's own colour scheme first, then in the other (the design's own room is dark). */
+const SCHEMES = ['dark', 'light'] as const
+
+/**
+ * Scans the page as it is now (once nothing moves), in the dark room and in the light one, and fails on a
+ * serious or critical violation. The text tokens are checked in both rooms by the contrast table in
+ * docs/ACCESSIBILITY.md; this is what catches a light-room regression in markup, names, focus or colour.
+ */
 export async function expectAccessible(page: Page, where: string) {
   await untilStill(page)
+  const own = (await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)) ? 'dark' : 'light'
+  for (const scheme of [own, ...SCHEMES.filter((one) => one !== own)]) {
+    if (scheme !== own) await page.emulateMedia({ colorScheme: scheme })
+    await scan(page, `${where} (${scheme})`)
+  }
+  await page.emulateMedia({ colorScheme: own })
+}
+
+async function scan(page: Page, where: string) {
   // Lists fade in over `standard` after they have their room; axe reads colours as drawn. Endless
   // animations (a caret, the loading shimmer) never finish and are not waited for.
   // Until none is left, not only the first lot: under Reduce Motion a transition that declares its

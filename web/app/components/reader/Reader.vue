@@ -320,6 +320,14 @@ function onOverscroll(direction: 1 | -1) {
   void turn(direction)
 }
 
+/** The assistive "controls" button: the capsule or bars show, and the focus goes to Back, the first of them. */
+async function toggleControls() {
+  chrome.value = !chrome.value
+  if (!chrome.value) return
+  await nextTick()
+  root.value?.querySelector<HTMLElement>('[data-testid="reader.back"]')?.focus()
+}
+
 function onSwipe(direction: 1 | -1) {
   // The paginator turns pages under the finger itself; only past the last page is ours.
   if (mode.value === 'b' || !ready.value) return
@@ -870,6 +878,17 @@ function nextChapter() {
       :data-chapter="loc?.sectionIndex"
     >
       <span ref="probe" class="bar-top safe-bottom pointer-events-none fixed top-0 left-0 opacity-0" aria-hidden="true" />
+      <!-- The page turns and the controls, for a screen reader and a keyboard: the capsule only comes with a tap in the
+           middle, and a page turns with a tap at its edge or a swipe (WCAG 2.5.1). Out of sight until one has the focus. -->
+      <div role="group" :aria-label="t('reader.assist.label')" data-testid="reader.assist">
+        <button type="button" class="assist" :aria-expanded="chrome && ready" data-testid="reader.assist.controls" @click="toggleControls">
+          {{ t('reader.assist.controls') }}
+        </button>
+        <template v-if="mode !== 'b'">
+          <button type="button" class="assist" data-testid="reader.assist.previous" @click="turn(-1)">{{ t('reader.assist.previous') }}</button>
+          <button type="button" class="assist" data-testid="reader.assist.next" @click="turn(1)">{{ t('reader.assist.next') }}</button>
+        </template>
+      </div>
       <div ref="page" class="absolute inset-0">
         <div ref="host" class="page-host absolute inset-x-0" data-testid="reader.page" />
       </div>
@@ -1002,6 +1021,32 @@ function nextChapter() {
 </template>
 
 <style scoped>
+/* The assistive buttons (turn the page, show the controls): out of sight, a pill at the top while one has the focus. */
+.assist {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.assist:focus-visible {
+  top: calc(var(--bar-top) + var(--spacing-sm));
+  left: 50%;
+  z-index: 40;
+  width: auto;
+  height: auto;
+  min-height: var(--size-touch);
+  padding: 0 var(--spacing-md);
+  overflow: visible;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-float);
+  clip-path: none;
+  color: var(--color-ink);
+  outline: var(--stroke-focus) solid var(--color-accent);
+  transform: translateX(-50%);
+}
 /* The book's page lies between the status bar and the gesture bar; its own bands are only the text's. */
 .page-host {
   top: var(--safe-area-top);

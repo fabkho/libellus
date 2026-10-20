@@ -43,7 +43,7 @@ const { t, n } = useI18n()
 const drum = useTemplateRef<HTMLElement>('drum')
 const input = useTemplateRef<HTMLInputElement>('input')
 
-/** One row's height in px: the touch size, read once the wheel is on screen. */
+/** One row's height in px: the touch size, or the figures' line at large text; read from the drum, which is five rows high. */
 const row = ref(44)
 const last = computed(() => Math.max(0, props.max - props.min))
 const indexOf = (value: number) => Math.min(Math.max(value - props.min, 0), last.value)
@@ -53,9 +53,16 @@ const pos = ref(indexOf(model.value))
 /** The value last given out, so a change from outside can be told from our own. */
 let emitted = model.value
 
+/** The text size can change under the wheel (a larger font setting), so the row is read again when the drum resizes. */
+let drumWatcher: ResizeObserver | null = null
 onMounted(() => {
-  row.value = Number.parseFloat(getComputedStyle(drum.value!).getPropertyValue('--size-touch')) || row.value
+  const measure = () => (row.value = (drum.value?.clientHeight ?? 0) / 5 || row.value)
+  measure()
+  if (typeof ResizeObserver === 'undefined') return
+  drumWatcher = new ResizeObserver(measure)
+  drumWatcher.observe(drum.value!)
 })
+onBeforeUnmount(() => drumWatcher?.disconnect())
 
 /**
  * Moves the drum. When the member moves it, a new number at the centre is given
@@ -270,7 +277,7 @@ function rowStyle(i: number) {
 </script>
 
 <template>
-  <div class="relative" :class="disabled && 'opacity-50'">
+  <div class="wheel relative" :class="disabled && 'opacity-50'">
     <div
       ref="drum"
       class="drum relative"
@@ -330,8 +337,13 @@ function rowStyle(i: number) {
 </template>
 
 <style scoped>
+/* A row is the touch size, and at least the figures' own line: at large text (WCAG 1.4.4) the digits are taller than
+   44 px, and the rows grow with them instead of drawing over each other. At the normal size it is the touch size. */
+.wheel {
+  --wheel-row: max(var(--size-touch), var(--text-figure--line-height));
+}
 .drum {
-  height: calc(var(--size-touch) * 5);
+  height: calc(var(--wheel-row) * 5);
   overflow: hidden;
   cursor: ns-resize;
   outline: none;
@@ -351,7 +363,7 @@ function rowStyle(i: number) {
   top: 50%;
   right: 0;
   left: 0;
-  height: calc(var(--size-touch) + var(--spacing-sm));
+  height: calc(var(--wheel-row) + var(--spacing-sm));
   border-block: var(--stroke-hairline) solid var(--color-hairline-strong);
   border-radius: var(--radius-sm);
   background: var(--color-fill);
@@ -364,14 +376,14 @@ function rowStyle(i: number) {
   right: 0;
   left: 0;
   display: flex;
-  height: var(--size-touch);
-  margin-top: calc(var(--size-touch) / -2);
+  height: var(--wheel-row);
+  margin-top: calc(var(--wheel-row) / -2);
   align-items: center;
   justify-content: center;
   font-size: var(--text-figure);
   font-weight: 300;
   letter-spacing: var(--text-figure--letter-spacing);
-  line-height: var(--size-touch);
+  line-height: var(--wheel-row);
   pointer-events: none;
   backface-visibility: hidden;
   will-change: transform;
@@ -399,7 +411,7 @@ function rowStyle(i: number) {
   top: 50%;
   right: var(--spacing-sm);
   left: var(--spacing-sm);
-  height: var(--size-touch);
+  height: var(--wheel-row);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-accent);

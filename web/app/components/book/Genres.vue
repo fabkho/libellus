@@ -45,7 +45,7 @@ watch(bookId, () => (sheetOpen.value = false))
           <button
             type="button"
             class="link text-meta text-ink-faint"
-            :aria-label="t('genre.book.editLabel')"
+            :aria-label="list.length ? t('genre.book.editLabel') : undefined"
             data-testid="book.genresEdit"
             @click="sheetOpen = true"
           >

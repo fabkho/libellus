@@ -94,7 +94,7 @@ function act() {
         <span v-if="!readingDays.hasHistory.value" class="figures mt-xs text-meta text-ink-faint" data-testid="home.entrySince">{{ since }}</span>
       </UiPressLink>
       <div v-if="readingDays.hasHistory.value" class="mt-sm flex items-end gap-sm" data-testid="home.days">
-        <span class="figures truncate text-meta text-ink-faint" data-testid="home.pace">{{ readingDays.paceLine.value ?? since }}</span>
+        <span class="figures text-meta text-ink-faint wrap-anywhere" data-testid="home.pace">{{ readingDays.paceLine.value ?? since }}</span>
       </div>
       <div class="mt-auto pt-md">
         <UiProgress
@@ -105,7 +105,7 @@ function act() {
         />
       </div>
       <div class="flex items-center justify-between gap-ms pt-xs">
-        <p class="min-w-0 truncate text-meta" data-testid="home.progress">
+        <p class="min-w-0 text-meta wrap-anywhere" data-testid="home.progress">
           <span v-if="atEnd" class="text-body text-ink" data-testid="home.theEnd">{{ t('book.progress.theEnd') }}</span>
           <template v-else>
             <span class="figures" :class="progress ? 'text-ink-muted' : 'text-ink-faint'" data-testid="home.progressValue">{{ words.value }}</span>

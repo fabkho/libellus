@@ -10,9 +10,9 @@ import { endFromBook, expectAccessible, goto, openProfile, recordedApple, signed
 /**
  * Accessibility (docs/ACCESSIBILITY.md): axe-core over the screens and sheets of the critical paths
  * (the way in, Home and the search, a Book with Start, Update progress, Finish and Add, the Library,
- * the Profile), in the dark room only (the design's own; the text tokens are checked in both
- * themes by their contrast table in docs/ACCESSIBILITY.md), on a phone (412 × 915, the Pixel the
- * Android checks use). A serious or critical violation fails the flow; the
+ * the Profile), in the dark room and in the light one (`expectAccessible` scans both; the design's own
+ * room is dark, so a test starts there), on a phone (412 × 915, the Pixel the Android checks use). The ebook
+ * reader, in its three rooms, is scanned in e2e/reader.spec.ts (it needs Chromium). A serious or critical violation fails the flow; the
  * moderate and minor ones are printed, not failed (the DevTools' Nuxt a11y tab
  * shows them while developing). The scan is `expectAccessible` (e2e/support.ts);
  * a violation that is known and cannot be fixed here goes in its ALLOWED with the
