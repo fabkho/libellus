@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.24.0](https://github.com/fabkho/libellus/compare/v1.23.0...v1.24.0) (2026-10-20)
+
+
+### Features
+
+* **import:** the import as a server job, part 1: jobs, rows and the chunk runner ([#329](https://github.com/fabkho/libellus/issues/329)) ([#379](https://github.com/fabkho/libellus/issues/379)) ([2aeeaeb](https://github.com/fabkho/libellus/commit/2aeeaeba400d9d29e55c2e3f2bdc80d799680180))
+* **import:** the import as a server job, part 2: the shared matching and the server matching worker ([#329](https://github.com/fabkho/libellus/issues/329)) ([#382](https://github.com/fabkho/libellus/issues/382)) ([67c6a69](https://github.com/fabkho/libellus/commit/67c6a692e20d397d39f300eff4d74354a550d234))
+* **import:** the import as a server job, part 3: the cover stage ([#329](https://github.com/fabkho/libellus/issues/329)) ([#385](https://github.com/fabkho/libellus/issues/385)) ([13d02b5](https://github.com/fabkho/libellus/commit/13d02b5df83ef49a10565e4022a21e19dfda7cb6))
+* **import:** the import as a server job, part 4: the write phase ([#329](https://github.com/fabkho/libellus/issues/329)) ([#386](https://github.com/fabkho/libellus/issues/386)) ([9a0db34](https://github.com/fabkho/libellus/commit/9a0db34c1596a278166f2af921287507c77f0aca))
+* **import:** the import as a server job, part 5: the app switches to the server job ([#329](https://github.com/fabkho/libellus/issues/329)) ([#387](https://github.com/fabkho/libellus/issues/387)) ([a8178a8](https://github.com/fabkho/libellus/commit/a8178a8a43b396e02b513c875bb5787270559c91))
+* sheets, confirms and the system Back come from the UI base (wave 6a) ([#375](https://github.com/fabkho/libellus/issues/375)) ([2d79ca6](https://github.com/fabkho/libellus/commit/2d79ca66c04e2f85f858c02107458162254db349))
+
 ## [1.23.0](https://github.com/fabkho/libellus/compare/v1.22.0...v1.23.0) (2026-10-19)
 
 
