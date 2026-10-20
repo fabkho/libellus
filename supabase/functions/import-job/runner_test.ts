@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert'
-import { type CoverResult, type CoverRow, type CoverWork, type Job, type JobRow, type ReleaseState, type RowResult, runChunk, type Store, type Work } from './runner.ts'
+import { type CoverResult, type CoverRow, type CoverWork, type Job, type JobRow, type ReleaseState, type RowResult, runChunk, type Store, type Work, type WriteFailure, type WriteRow, type WriteWork } from './runner.ts'
 
 const JOB: Job = { id: 'job-1', member_id: 'ada', source: 'goodreads', languages: ['de-DE'], total: 5, done: 0 }
 
@@ -15,6 +15,10 @@ function memoryStore(total: number, { refuseSaveAt = -1, noJob = false } = {}) {
   const coverPending = new Map<number, CoverRow>()
   const coverTaken = new Set<number>()
   const coverSaved: { idx: number; result: CoverResult }[] = []
+  // The write phase: rows saved without an outcome wait here until written (never before every row is matched and covered).
+  const writePending = new Map<number, WriteRow>()
+  const writeTaken = new Set<number>()
+  const writeSaved: { idx: number; failure?: WriteFailure }[] = []
   const store: Store = {
     claim: () => Promise.resolve(noJob ? null : JOB),
     takeRows(_job, _runner, limit) {
@@ -27,6 +31,7 @@ function memoryStore(total: number, { refuseSaveAt = -1, noJob = false } = {}) {
       saved.push({ idx, result })
       if (!('defer' in result)) {
         pending.delete(idx)
+        if (!result.outcome) writePending.set(idx, { idx, key: `goodreads:${idx}`, payload: { key: `goodreads:${idx}` }, match_book: null, cover_source: null, cover_url: null, cover_size: null, outcome: null })
         if (result.cover === 'none') coverPending.set(idx, { idx, key: `goodreads:${idx}`, payload: { key: `goodreads:${idx}` }, edition: null, cover_state: 'pending', cover_tries: 0 })
       }
       return Promise.resolve(true)
@@ -42,15 +47,27 @@ function memoryStore(total: number, { refuseSaveAt = -1, noJob = false } = {}) {
       if (!('retry' in result)) coverPending.delete(idx)
       return Promise.resolve(true)
     },
+    takeWriteRows(_job, _runner, limit) {
+      if (pending.size || coverPending.size) return Promise.resolve([])
+      const rows = [...writePending.values()].filter((row) => !writeTaken.has(row.idx)).slice(0, limit)
+      for (const row of rows) writeTaken.add(row.idx)
+      return Promise.resolve(rows)
+    },
+    saveWrite(_job, _runner, idx, failure) {
+      writeSaved.push(failure ? { idx, failure } : { idx })
+      writePending.delete(idx)
+      return Promise.resolve(true)
+    },
     release(_job, _runner, error, waitUntil) {
       released.push(waitUntil ? { error, waitUntil } : { error })
       for (const idx of taken) taken.delete(idx)
       for (const idx of coverTaken) coverTaken.delete(idx)
-      const state: ReleaseState = error || waitUntil ? 'paused' : pending.size || coverPending.size ? 'more' : 'done'
+      for (const idx of writeTaken) writeTaken.delete(idx)
+      const state: ReleaseState = error || waitUntil ? 'paused' : pending.size || coverPending.size || writePending.size ? 'more' : 'done'
       return Promise.resolve(state)
     },
   }
-  return { store, saved, released, pending, coverPending, coverSaved }
+  return { store, saved, released, pending, coverPending, coverSaved, writePending, writeSaved }
 }
 
 /** A clock that only moves when the work says so. */
@@ -161,6 +178,11 @@ Deno.test('a batch that fails after rows were saved goes on at once (no pause)',
   assertEquals(released, [{ error: null }])
 })
 
+/** Writes every row of the batch (the database records the outcome with the write; the runner saves the row). */
+const writingRows: WriteWork = async (_job, rows, context) => {
+  for (const row of rows) await context.saveWrite(row.idx)
+}
+
 const NEEDS_COVER: RowResult = { verdict: 'fromFile', tier: 'needsLook', outcome: null, cover: 'none' }
 
 /** Matches every row as one that needs a cover, and decides every cover as Open Library's. */
@@ -187,20 +209,22 @@ Deno.test('the cover stage is its own phase: it starts when no row is left to ma
   assertEquals(order, ['match 0,1', 'match 2,3', 'match 4', 'cover 0,1', 'cover 2,3', 'cover 4'])
   assertEquals(saved.length, 5)
   assertEquals(coverSaved.length, 5)
-  assertEquals(result.state, 'done', 'done only when every row has its cover decision')
+  assertEquals(result.state, 'more', 'not done with the covers alone: every row still has to be written')
   assertEquals(result.saved, 10)
 })
 
 Deno.test('rows still to cover keep the job going: more, and the next chunk takes them', async () => {
   const clock = fakeClock()
   const { store, coverPending } = memoryStore(4)
-  const first = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, runner: 'r', clock, batchRows: 2, maxRows: 4, log: quiet })
+  const first = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write: writingRows, runner: 'r', clock, batchRows: 2, maxRows: 4, log: quiet })
   // The chunk's rows (4) were all spent on the match: the covers wait.
   assertEquals(first.state, 'more')
   assertEquals(coverPending.size, 4)
-  const second = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, runner: 'r', clock, batchRows: 2, maxRows: 4, log: quiet })
-  assertEquals(second.state, 'done')
+  const second = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write: writingRows, runner: 'r', clock, batchRows: 2, maxRows: 4, log: quiet })
+  assertEquals(second.state, 'more', 'the rows are covered; the write waits for its chunk')
   assertEquals(coverPending.size, 0)
+  const third = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write: writingRows, runner: 'r', clock, batchRows: 2, maxRows: 4, log: quiet })
+  assertEquals(third.state, 'done')
 })
 
 Deno.test('without a cover stage the rows keep waiting for it (the job is not done)', async () => {
@@ -246,4 +270,68 @@ Deno.test('a refused cover save stops the chunk and releases nothing', async () 
   const result = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, runner: 'r', clock, maxRows: 100, log: quiet })
   assertEquals(result.state, 'gone')
   assertEquals(released.length, 0)
+})
+
+Deno.test('the write is its own phase: after every row is matched and covered, in the same chunk when there is time; done when every row has its outcome', async () => {
+  const clock = fakeClock()
+  const { store, writeSaved, writePending } = memoryStore(5)
+  const order: string[] = []
+  const write: WriteWork = async (job, rows, context) => {
+    order.push(`write ${rows.map((row) => row.idx)}`)
+    await writingRows(job, rows, context)
+  }
+  const cover: CoverWork = async (job, rows, context) => {
+    order.push(`cover ${rows.map((row) => row.idx)}`)
+    await decidingCovers(job, rows, context)
+  }
+  const result = await runChunk({ store, work: matchingWithoutCovers, cover, write, runner: 'r', clock, batchRows: 2, maxRows: 100, log: quiet })
+  assertEquals(order, ['cover 0,1', 'cover 2,3', 'cover 4', 'write 0,1', 'write 2,3', 'write 4'])
+  assertEquals(writeSaved.map((save) => save.idx), [0, 1, 2, 3, 4])
+  assertEquals(writePending.size, 0)
+  assertEquals(result.state, 'done')
+  assertEquals(result.saved, 15)
+})
+
+Deno.test('rows still to write keep the job going: more, and the next chunk takes them (resumable)', async () => {
+  const clock = fakeClock()
+  const { store, writeSaved } = memoryStore(4)
+  // 4 rows matched and 4 covered use the chunk's 8 rows; the write waits for the next chunk.
+  const first = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write: writingRows, runner: 'r', clock, batchRows: 2, maxRows: 8, log: quiet })
+  assertEquals(first.state, 'more')
+  assertEquals(writeSaved.length, 0)
+  const second = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write: writingRows, runner: 'r', clock, batchRows: 2, maxRows: 3, log: quiet })
+  assertEquals(second.state, 'more')
+  assertEquals(writeSaved.length, 3)
+  const third = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write: writingRows, runner: 'r', clock, batchRows: 2, maxRows: 3, log: quiet })
+  assertEquals(third.state, 'done')
+  assertEquals(writeSaved.map((save) => save.idx), [0, 1, 2, 3])
+})
+
+Deno.test('without a write phase the rows keep waiting for it (the job is not done)', async () => {
+  const clock = fakeClock()
+  const { store, writePending } = memoryStore(3)
+  const result = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, runner: 'r', clock, log: quiet })
+  assertEquals(result.state, 'more')
+  assertEquals(writePending.size, 3)
+})
+
+Deno.test('a refused write save stops the chunk and releases nothing', async () => {
+  const clock = fakeClock()
+  const { store, released } = memoryStore(2)
+  store.saveWrite = () => Promise.resolve(false)
+  const result = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write: writingRows, runner: 'r', clock, maxRows: 100, log: quiet })
+  assertEquals(result.state, 'gone')
+  assertEquals(released.length, 0)
+})
+
+Deno.test('a write batch that fails before saving anything pauses the job, like the others', async () => {
+  const clock = fakeClock()
+  const { store, released } = memoryStore(2)
+  const write: WriteWork = () => Promise.reject(new Error('import_job_write: connection reset'))
+  // The first chunk only matches and covers (its rows are spent); the second one's write batch fails with nothing saved.
+  await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write, runner: 'r', clock, maxRows: 4, log: quiet })
+  released.length = 0
+  const result = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, write, runner: 'r', clock, maxRows: 100, log: quiet })
+  assertEquals(result.state, 'paused')
+  assertEquals(released[0]!.error, 'import_job_write: connection reset')
 })

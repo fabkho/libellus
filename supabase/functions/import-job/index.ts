@@ -1,6 +1,6 @@
 /**
  * The `import-job` edge function: one chunk of the import job holding the import queue's slot (runner.ts), its rows
- * matched by work.ts with the app's own import code (web/app/data), through the sources of sources.ts. README.md says how it runs, chains and is deployed.
+ * matched by work.ts with the app's own import code (web/app/data), through the sources of sources.ts, then given their covers (covers.ts) and written to the member's Library (write.ts). README.md says how it runs, chains and is deployed.
  *
  * `verify_jwt` is off (supabase/config.toml): the function checks the caller itself. The database's kick carries the
  * `IMPORT_JOB_TOKEN` secret (the Vault's `import_job_token`); the service-role key passes too (a run by hand).
@@ -19,6 +19,7 @@ import { sameSecret } from './secret.ts'
 import { jobFetch, jobSources } from './sources.ts'
 import { createStore, memberCalls } from './store.ts'
 import { createWork } from './work.ts'
+import { createWriteWork } from './write.ts'
 
 /** The longest a job's Open Library request waits for its turn (the app's own wait is 4 s: the job is in no hurry). */
 export const JOB_PACE_MAX_WAIT_MS = 10_000
@@ -67,6 +68,8 @@ const cover = createCoverWork({
   goodreads: createGoodreadsCover(functions),
   pace: sharedPace({ rpc, bucket: 'goodreads-cover', gapMs: GOODREADS_GAP_MS, maxWaitMs: GOODREADS_PACE_MAX_WAIT_MS }),
 })
+// The write phase (write.ts): every row to the member's Library through the app's own `import_books` and `fill_book_covers`, as her.
+const write = createWriteWork({ member: (job, runner) => memberCalls(rpc, job.id, runner) })
 const store = createStore(rpc)
 
 Deno.serve(createHandler({
@@ -74,5 +77,5 @@ Deno.serve(createHandler({
     if (await sameSecret(token, serviceKey)) return true
     return jobToken !== null && (await sameSecret(token, jobToken))
   },
-  run: () => runChunk({ store, work, cover, runner: `fn:${crypto.randomUUID()}` }),
+  run: () => runChunk({ store, work, cover, write, runner: `fn:${crypto.randomUUID()}` }),
 }))

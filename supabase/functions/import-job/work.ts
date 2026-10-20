@@ -9,9 +9,8 @@
  * The cover the match shows (the edition's own, or a sibling edition's lent by `coverLender`) is the row's cover decision,
  * saved with it; a row without one goes on to the cover stage (covers.ts: its own phase, after every row is matched).
  *
- * Not here yet (the next pieces of the job): the write (`import_job_write`, `fill_book_covers`). Until it is in, a saved
- * row says what the match found and nothing is written (`outcome` is null), so the function is not deployed for members
- * before it is.
+ * The match writes nothing (`outcome` is null): what it chose to write is saved with the row (`write`, choice.ts) and the
+ * write phase (write.ts: its own phase, after the cover stage) writes every row to the member's Library.
  *
  * The rows a batch does not reach before its deadline stay pending (the next chunk takes them).
  */
@@ -25,6 +24,7 @@ import {
 } from '../../../web/app/data/bookImport.ts'
 import type { Book, BookSnapshot } from '../../../web/app/data/books.ts'
 import type { ImportBook } from '../../../web/app/data/import/rows.ts'
+import { writeChoice } from './choice.ts'
 import { coverSizeOf } from './cover_size.ts'
 import type { Job, JobRow, RowResult, Work, WorkContext } from './runner.ts'
 
@@ -85,7 +85,7 @@ function summary(book: Book | BookSnapshot, edition: Edition, review: ReturnType
   }
 }
 
-/** What a matched row is saved as (`RowResult`): nothing is written yet, so no outcome. `cover` `none` sends the row on to the cover stage (covers.ts). Pure. */
+/** What a matched row is saved as (`RowResult`): nothing is written yet, so no outcome (the write phase's). `cover` `none` sends the row on to the cover stage (covers.ts). Pure. */
 export function matchResult({ edition, matched, review }: Matched): Extract<RowResult, { verdict: unknown }> {
   const shown = (edition.coverFrom ?? edition.book).coverUrl
   const cover: 'own' | 'lent' | 'goodreads' | 'none' = !shown
@@ -101,6 +101,8 @@ export function matchResult({ edition, matched, review }: Matched): Extract<RowR
     tier: review.tier,
     outcome: null,
     edition: summary(edition.book, edition, review),
+    // What the write phase writes the row with (the Book, the borrowed cover): choice.ts.
+    write: writeChoice(edition),
     cover,
     // The address of the cover shown, so the row's cover decision (edition / lent) is whole when the match is saved.
     ...(shown ? { cover_url: shown, cover_size: coverSizeOf(shown) } : {}),

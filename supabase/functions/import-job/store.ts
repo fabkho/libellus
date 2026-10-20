@@ -4,7 +4,7 @@
  * Catalogue search, the write and the cover fill, each run as the job's member and only for the runner holding the
  * lease) is `MemberCalls`.
  */
-import type { CoverResult, CoverRow, Job, JobRow, ReleaseState, RowResult, Store } from './runner.ts'
+import type { CoverResult, CoverRow, Job, JobRow, ReleaseState, RowResult, Store, WriteRow } from './runner.ts'
 
 /** The slice of the Supabase client this needs (a service-role client). */
 export type Rpc = (name: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>
@@ -40,6 +40,12 @@ export function createStore(rpc: Rpc): Store {
     },
     async saveCover(job, runner, idx, result: CoverResult) {
       return (await call<boolean>(rpc, 'import_job_save_cover', { p_job: job, p_runner: runner, p_idx: idx, p_result: result })) === true
+    },
+    async takeWriteRows(job, runner, limit) {
+      return (await call<WriteRow[] | null>(rpc, 'import_job_take_write_rows', { p_job: job, p_runner: runner, p_limit: limit })) ?? []
+    },
+    async saveWrite(job, runner, idx, failure) {
+      return (await call<boolean>(rpc, 'import_job_save_write', { p_job: job, p_runner: runner, p_idx: idx, p_result: failure ?? null })) === true
     },
   }
 }

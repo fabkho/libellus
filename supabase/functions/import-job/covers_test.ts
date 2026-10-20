@@ -45,6 +45,7 @@ function world(options: { failOpenLibrary?: boolean; goodreads?: (body: Record<s
     runner: 'r',
     deadline: clock.time + deadlineIn,
     save: () => Promise.resolve(true),
+    saveWrite: () => Promise.resolve(true),
     saveCover: (idx, result) => {
       if (options.refuse) return Promise.resolve(false)
       saves.push({ idx, result })

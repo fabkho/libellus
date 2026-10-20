@@ -37,6 +37,7 @@ function world(options: { failOpenLibrary?: boolean } = {}) {
       return Promise.resolve(true)
     },
     saveCover: () => Promise.resolve(!refuse),
+    saveWrite: () => Promise.resolve(!refuse),
     waitUntil: () => {},
     stopped: () => refuse,
   })
@@ -140,4 +141,6 @@ Deno.test('an edition without a cover borrows its work\'s (coverLender, mergeCov
   assertEquals(result.cover_url, 'https://covers.openlibrary.org/b/id/10226290-L.jpg')
   assertEquals(result.cover_size, 'L')
   assertEquals((result.edition as EditionSummary).book.coverUrl, result.cover_url, 'the review shows the lent cover')
+  // What the write phase needs of the match is saved with the row (choice.ts): the Catalogue Book by id, the borrowed cover, the fill.
+  assertEquals((result.write as { filled: boolean }).filled, true)
 })

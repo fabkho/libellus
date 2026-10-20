@@ -74,9 +74,8 @@ the ISBN, the title ladder over Open Library (direct, identified with `OPENLIBRA
 A row's result (`matchResult`) is its verdict (`matched` / `fromFile`), the preview's review tier (`reviewOf`), the
 edition summary and the cover it shows (`own` / `lent` / `none`); `outcome` is null.
 
-**Not here yet** (the next pieces): the write (`import_job_write`, `import_job_fill_covers`). Until it is in, a saved row
-only says what the match found and decided for its cover, and nothing is written, so the function is not deployed for
-members yet.
+The match writes nothing (`outcome` is null): it saves what it chose to write with the row (`match_book`, `choice.ts`) and
+the write phase (below) writes every row.
 
 ## The cover stage (`covers.ts`)
 
@@ -110,6 +109,38 @@ and colours come later with the Library's cover. The job's counters, `import_job
 cover_openlibrary / cover_goodreads / cover_none` (their sum is the rows decided), say how many rows have a cover by source
 and how many have none. A row handed out three times without being saved is given up (`none`).
 
+## The write phase (`write.ts`, `choice.ts`)
+
+Its own phase, after every row is matched and has its cover decision, chunked and resumable like the others
+(`import_job_take_write_rows` hands rows out, never before the cover stage is through; `import_job_save_write` marks one
+written). Owner decision 2026-10-19: **no review step, every row is written** to the member's Library, exactly as the app's
+import writes it:
+
+- the row is the app's `ImportRow` (`choice.ts` `importRowOf`): the match's Book (a Catalogue Book / her Manual book by id, or
+  a source's snapshot), else the file's own row (an `import` Book, a Goodreads-only Book with its Goodreads cover), with the
+  cover the job decided (`cover_url`); `importArguments` (`web/app/data/bookImport.ts`) makes the `import_books` argument of
+  it, so statuses, dates, ratings, reads and shelves (the Collections she kept, uploaded with the row) are the app's one
+  mapping, not a copy;
+- one row at a time through `import_job_write` (`import_books` as the member): the outcome (`added` / `imported` /
+  `in_library` / `failed` + reason) is recorded on the row **in the same transaction** as the write;
+- then the covers: Catalogue Books that got a cover in the job (Open Library's, Goodreads', a sibling edition's lent one;
+  a snapshot's cover for the Catalogue Book of its ISBN) go to `fill_book_covers` as the member
+  (`fillCatalogueCovers`, the app's own rule of which). It gives a cover to a Book she holds **that has none**, from an
+  allow-listed address, only: a cover another member's upgrade put there, another edition's cover and her own cover choice
+  (another Book / entry) are never overwritten. The job never sends `replaces` (the #374 compare-and-swap is for Apple's
+  artwork, and the device's one-time upgrade does that later); a failure costs nothing, as in the app;
+- then `import_job_save_write` marks the row written and counts its outcome.
+
+**Counters** (`import_jobs.added / kept / failed`): rows by outcome, each counted once, by whoever sets the row's
+`write_state` to `done` (`kept` = imported + in_library: already in her Library). `added + kept + failed` is the rows
+written; `done` is still the rows matched. **The job is `done` when every row has its outcome** (`import_job_release`).
+
+**Idempotent per row**: a row already written answers its recorded outcome (a second `import_job_write` writes nothing, a
+second save counts nothing); a row handed out three times without being saved is given up (failed `gave_up`, unless its
+write was recorded: that outcome stands), the suspects after a crash come one at a time. A row `import_job_write` refuses
+(`row_invalid`) is failed with that reason; any other error fails the batch (the chunk pauses with backoff). A job that is
+done, failed (stalled) or cancelled gives its place in the queue up (`import_job_dequeue`).
+
 ## As the member
 
 The job writes for a member who is not in the app, through the very functions the app calls (`search_books`,
@@ -139,7 +170,7 @@ Without them nothing is kicked (the local stack, CI): jobs wait in line.
 deno lint && deno check *.ts && deno task test
 ```
 
-The runner on an in-memory store and an injected clock; the batch (`work_test.ts`) and the cover stage (`covers_test.ts`) on
+The runner on an in-memory store and an injected clock; the batch (`work_test.ts`), the cover stage (`covers_test.ts`) and the write phase (`write_test.ts`: stubbed member calls) on
 Open Library's recorded answers (`fixtures/openlibrary.json`, `record_fixtures.ts`) and the `goodreads-rating` function's
 recorded answers (found / unsure / blocked / none / not answering). The database side is pgTAP
-(`supabase/tests/import_jobs_test.sql`, `import_job_covers_test.sql`).
+(`supabase/tests/import_jobs_test.sql`, `import_job_covers_test.sql`, `import_job_write_test.sql`: it includes a second run of the same file writing nothing).
