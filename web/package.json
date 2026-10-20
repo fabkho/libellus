@@ -40,7 +40,7 @@
     "perf:shelf": "tsx --tsconfig .nuxt/tsconfig.json perf/shelf.ts"
   },
   "dependencies": {
-    "@fabkho/ui": "github:fabkho/ui#0dd3f95f981640a89154d27b19b5d9c6f3f7d208",
+    "@fabkho/ui": "github:fabkho/ui#v0.6.0",
     "@fontsource/geist": "^5.3.0",
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/newsreader": "^5.3.0",
