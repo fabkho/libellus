@@ -18,8 +18,8 @@ POST /functions/v1/dnb-lookup   { "action": "book",     "isbn13": "9783499267017
 400 isbn_invalid · book_unidentified · action_unknown · 401 unauthorized · 413 payload_too_large · 429 rate_limited · 502 dnb_unavailable
 ```
 
-- **Who**: a signed-in member's access token or the service-role key (`verify_jwt` is off, supabase/config.toml; the
-  function checks the caller). A member may call it 30 times a minute (`edge_rate_hit`, bucket `dnb-lookup`; the scan,
+- **Who**: a signed-in member's access token or the service-role key, on `apikey` or as the bearer token (`verify_jwt`
+  is off, supabase/config.toml; the function checks the caller: `_shared/caller.ts`). A member may call it 30 times a minute (`edge_rate_hit`, bucket `dnb-lookup`; the scan,
   the picker, adding a Book), an import 120 a minute: its body says `purpose: 'import'` and is counted in its own
   bucket (`dnb-lookup-import`), and the import paces its calls 500 ms apart (`createDnb`'s `gapMs`) so a whole file
   meets no refusal.

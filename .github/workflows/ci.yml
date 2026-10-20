@@ -131,6 +131,7 @@ jobs:
             goodreads:
               - *ci
               - 'supabase/functions/goodreads-rating/**'
+              - 'supabase/functions/_shared/**'
               - 'web/app/data/titleMatch.ts'
             dnb:
               - *ci
@@ -162,6 +163,7 @@ jobs:
             importjob:
               - *ci
               - 'supabase/functions/import-job/**'
+              - 'supabase/functions/_shared/**'
               - 'web/app/data/**'
               - 'web/app/utils/**'
 
@@ -377,6 +379,13 @@ jobs:
         if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.openlibrary == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true' || needs.changes.outputs.importjob == 'true'
         with:
           deno-version: v2.x
+
+      # The edge functions' shared modules: who is calling (caller.ts: the service-role key on `apikey`, production's
+      # `sb_secret_…` key, or as the bearer token; a member's access token) and the shared pace (pace.ts).
+      - name: shared function modules (Deno lint, check, test)
+        if: ${{ !cancelled() && (needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.openlibrary == 'true') }}
+        working-directory: supabase/functions/_shared
+        run: deno lint && deno check *.ts && deno task test
 
       # The goodreads-rating edge function (#69): its parsing, matching, cache and
       # rate limit, on recorded Goodreads answers.
