@@ -1,6 +1,7 @@
 import { expect, test as base, type BrowserContext, type Locator, type Page } from '@playwright/test'
 import { appleCover } from '../tests/support/apple'
-import { isLocalAddress, isRefusalOfTheLeavingPage } from './refusedRead'
+import { stack } from '../tests/support/stack'
+import { isLocalAddress, isOwnRefusal } from './refusedRead'
 
 /**
  * Where the flows may go: the app itself and the local stack, nothing else. A
@@ -100,39 +101,12 @@ function tapsWaitForSheets(page: Page) {
  */
 const EXPECTED_PAGE_ERRORS: { match: RegExp; why: string }[] = []
 
-/** When each page last started going (its last navigation or its close): what a refusal is measured against. */
-const going = new WeakMap<Page, number>()
-
 /**
- * The page went away, so the reads it still had in flight are refused by the browser itself, and
- * `isRefusalOfTheLeavingPage` (e2e/refusedRead.ts) says when such a refusal is exactly that and may be
- * excused: WebKit's own wording, an address of this app, and the refusal came with the page going. Marked
- * twice over, because a document can also go without the flow asking for it: at the call of every
- * navigation Playwright offers, and at every navigation it reports for the main frame (a `window.location`
- * the app set itself), plus the page's close.
+ * The origins a refusal may name and still be this app's own: the app the flows are served and the
+ * local stack it reads, exactly (see `isOwnRefusal`, e2e/refusedRead.ts). Asked of the run, so a moved
+ * `LIBELLUS_E2E_PORT` or another stack is not mistaken for a host that has no business being read.
  */
-function watchThePageGoing(page: Page) {
-  // Playwright's own Page, once for the worker: each method marks the page it was called on, then is itself.
-  const proto = Object.getPrototypeOf(page) as Record<string, (...args: never[]) => unknown> & { __marksLeaving?: true }
-  if (!proto.__marksLeaving) {
-    for (const name of ['goto', 'reload', 'goBack', 'goForward', 'close']) {
-      const method = proto[name]!
-      proto[name] = function (this: Page, ...args: never[]) {
-        going.set(this, Date.now())
-        return method.apply(this, args)
-      }
-    }
-    proto.__marksLeaving = true
-  }
-  // Its document's own request, which is when the navigation starts for a page that navigated itself; then
-  // the commit Playwright reports, which is where that request ends.
-  page.on('request', (request) => {
-    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) going.set(page, Date.now())
-  })
-  page.on('framenavigated', (frame) => {
-    if (frame === page.mainFrame()) going.set(page, Date.now())
-  })
-}
+const ownOrigins = (baseURL: string) => [new URL(baseURL).origin, new URL(stack.url).origin]
 
 export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void; noPageErrors: void }>({
   stillSheets: [
@@ -143,19 +117,19 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
     { auto: true },
   ],
   noPageErrors: [
-    async ({ context, browser }, use) => {
+    async ({ context, browser, baseURL }, use) => {
       // An uncaught exception of any page (`pageerror`: Playwright reports an uncaught throw and an
       // unhandled rejection there, not as a `console` error) fails the test at its end, with each
       // one's message and stack. A feed refresh once threw on every load and the suite passed (social v1).
       const thrown: string[] = []
+      const own = ownOrigins(baseURL!)
       const watch = (ctx: BrowserContext) => {
         const onPage = (page: Page) => {
-          watchThePageGoing(page)
           page.on('pageerror', (error) => {
             const text = error.stack || `${error.name}: ${error.message}`
             if (EXPECTED_PAGE_ERRORS.some(({ match }) => match.test(text))) return
-            // WebKit refusing this app's own read as the page left: nothing failed, nothing a member sees.
-            if (isRefusalOfTheLeavingPage(text, Date.now(), going.get(page) ?? null)) return
+            // WebKit refusing a read of this app's own: nothing failed, nothing a member sees.
+            if (isOwnRefusal(text, own)) return
             thrown.push(`${page.url()}\n${text}`)
           })
         }

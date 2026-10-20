@@ -4,7 +4,7 @@ import en from '../i18n/locales/en.json' with { type: 'json' }
 import de from '../i18n/locales/de.json' with { type: 'json' }
 import { sql } from '../tests/support/stack'
 import { test } from './fixtures'
-import { expectAccessible, signedIn } from './support'
+import { expectAccessible, expectNoSideScroll, goto, signedIn } from './support'
 
 /**
  * "Notify me when it's done" on the import page (Web Push, stores/importPush.ts, docs/parity.md): offered once her job is live, never
@@ -80,7 +80,7 @@ async function pushBrowser(page: Page, { permission = 'default', answer = 'grant
 const asked = (page: Page) => page.evaluate(() => (window as unknown as { __push: { asked: number; subscribed: number } }).__push)
 
 async function startImport(page: Page) {
-  await page.goto('/import')
+  await goto(page, '/import')
   await expect(page.getByTestId('import.choose')).toBeVisible()
   // Nothing about notifications before there is a job to be told about.
   await expect(page.getByTestId('import.notify')).toHaveCount(0)
@@ -157,17 +157,18 @@ test('where the browser says no, she is told so and has no button', async ({ pag
   await shot(page, 'notify-blocked')
 })
 
-test('in German, on a 390 px phone, the words fit', async ({ page }) => {
+test('in German, on a phone, the words fit', async ({ page }) => {
   await pushBrowser(page)
   await page.addInitScript(() => localStorage.setItem('libellus-locale', 'de'))
   await signedIn(page)
-  await page.goto('/import')
+  await goto(page, '/import')
   await page.getByTestId('import.file').setInputFiles({ name: 'goodreads.csv', mimeType: 'text/csv', buffer: FILE })
   await expect(page.getByTestId('import.running')).toBeVisible()
   await expect(page.getByTestId('import.notify.enable')).toHaveText(de.import.notify.ask)
-  const box = await page.getByTestId('import.notify.enable').boundingBox()
-  expect(box!.x).toBeGreaterThanOrEqual(0)
-  expect(box!.x + box!.width).toBeLessThanOrEqual(390)
+  // The longest of the locales' words, on the flows' phone: the page does not move sideways and no
+  // element or word of it sticks out (e2e/support.ts, the design's own rule — docs/DESIGN.md), which
+  // a literal box against a device's width (393 px, not 390) would not have caught.
+  await expectNoSideScroll(page, 'import running, notify offered, German')
   await shot(page, 'notify-ask-de')
 })
 
