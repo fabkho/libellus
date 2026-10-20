@@ -3,11 +3,16 @@ import type { BookSnapshot } from '@/data/books'
 import type { Edition } from '@/data/bookImport'
 import {
   COVER_FILL_SEARCH_GAP_MS,
+  coverFromBooksAnswer,
+  coverFromWorkAnswer,
+  coverIsbns,
   createCoverFill,
   LANE_FAILURES,
   languageFits,
   mergeCover,
   OPENLIBRARY_BATCH,
+  openLibraryBooksUrl,
+  openLibraryWorkUrl,
   SEARCH_FAILURES,
   siblingCovers,
   type CoverFound,
@@ -613,5 +618,38 @@ describe('merging a found cover', () => {
   it('leaves an edition that has a cover alone', () => {
     expect(mergeCover(edition({ book: snapshot({ coverUrl: OL(1) }) }), found)).toBeNull()
     expect(mergeCover(edition({ via: null, coverFrom: snapshot({ coverUrl: OL(1) }) }), found)).toBeNull()
+  })
+})
+
+// What the import job's cover stage (supabase/functions/import-job/covers.ts) shares with the fill: Open Library's requests and its answers' readers.
+describe('Open Library requests and answers, shared with the import job', () => {
+  it('names the ISBNs of a row once each, the file\'s and the edition\'s', () => {
+    expect(coverIsbns({ row: { isbn13: '9781635575637', isbn10: null }, book: { isbn13: '9781635575637', isbn10: '1635575630' } })).toEqual(['9781635575637', '1635575630'])
+    expect(coverIsbns({ row: { isbn13: null, isbn10: null }, book: { isbn13: null, isbn10: null } })).toEqual([])
+  })
+
+  it('asks api/books for every ISBN in one call, and the work\'s search by title and first author', () => {
+    expect(openLibraryBooksUrl(['1', '2'])).toBe('https://openlibrary.org/api/books?bibkeys=ISBN%3A1%2CISBN%3A2&jscmd=data&format=json')
+    const url = new URL(openLibraryWorkUrl({ title: 'Piranesi', authors: ['Susanna Clarke', 'Other'] }))
+    expect(url.pathname).toBe('/search.json')
+    expect(url.searchParams.get('title')).toBe('Piranesi')
+    expect(url.searchParams.get('author')).toBe('Susanna Clarke')
+  })
+
+  it('reads the large cover of the first ISBN that has one, and only an Open Library cover address', () => {
+    const answer = { 'ISBN:1': {}, 'ISBN:2': { cover: { large: OL(22), medium: OL(23) } } }
+    expect(coverFromBooksAnswer(answer, ['1', '2'])).toBe(OL(22))
+    expect(coverFromBooksAnswer({ 'ISBN:1': { cover: { large: 'https://evil.example/c.jpg' } } }, ['1'])).toBeNull()
+    expect(coverFromBooksAnswer(null, ['1'])).toBeNull()
+  })
+
+  it('reads the work\'s cover: the first document of the same work with a cover, in the row\'s language', () => {
+    const row = { title: 'Piranesi', authors: ['Susanna Clarke'], language: 'en' }
+    expect(coverFromWorkAnswer(row, { docs: [{ title: 'Piranesi', author_name: ['Susanna Clarke'], cover_i: 10226290, language: ['ita', 'eng'] }] })).toBe(
+      'https://covers.openlibrary.org/b/id/10226290-L.jpg',
+    )
+    expect(coverFromWorkAnswer(row, { docs: [{ title: 'Piranesi', author_name: ['Susanna Clarke'], cover_i: 1, language: ['ger'] }] })).toBeNull()
+    expect(coverFromWorkAnswer(row, { docs: [{ title: 'Piranesi', author_name: ['Susanna Clarke'] }] })).toBeNull()
+    expect(coverFromWorkAnswer(row, null)).toBeNull()
   })
 })

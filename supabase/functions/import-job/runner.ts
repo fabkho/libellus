@@ -7,6 +7,11 @@
  * measured at ~16 ms of isolate CPU a row), and `work` is told the hard `deadline` its batch has to end by. Then the job is released: done when no row is pending, else the
  * next chunk is kicked at once by the database (pg_net); a chunk that failed as a whole pauses the job.
  *
+ * Two phases, each in chunks: the match (`work`), and once no row is left to match the cover stage (`cover`: its own
+ * phase, rows taken by `takeCoverRows`, each step saved by `saveCover`). The job is done when every row has its cover
+ * decision. A cover batch may end the chunk waiting (`context.waitUntil`: Goodreads blocked): the job pauses until
+ * then, with no fault, and goes on in a later chunk.
+ *
  * Idempotent per row: a row is saved once (`import_job_save_row` ignores a second save), its write is recorded with
  * the write (`import_job_write`), and a runner that dies leaves its rows pending: the next claim (after the lease
  * ran out) takes them again. Framework-free: the store, the work and the clock come in from outside.
@@ -45,7 +50,22 @@ export type RowResult =
     error?: string | null
     edition?: unknown
     cover?: 'own' | 'lent' | 'goodreads' | 'none'
+    /** The address of the cover the match shows (`cover` is not `none`), and its size when the address says it. */
+    cover_url?: string | null
+    cover_size?: CoverSize | null
   }
+
+export type CoverSize = 'S' | 'M' | 'L'
+
+/** A row for the cover stage: the row, the match's edition, and which step it is in (Open Library, then Goodreads) and how often it was asked. */
+export type CoverRow = { idx: number; key: string; payload: Record<string, unknown>; edition: unknown; cover_state: 'pending' | 'goodreads'; cover_tries: number }
+
+/** What a row's cover step came to (`import_job_save_cover`): decided, sent on to Goodreads, or to be asked again after `wait_seconds`. */
+export type CoverResult =
+  | { source: 'openlibrary' | 'goodreads'; url: string; size?: CoverSize | null }
+  | { source: 'none' }
+  | { next: 'goodreads' }
+  | { retry: true; wait_seconds: number }
 
 export type ReleaseState = 'done' | 'more' | 'paused' | 'gone'
 
@@ -55,7 +75,12 @@ export type Store = {
   takeRows: (job: string, runner: string, limit: number) => Promise<JobRow[]>
   /** Answers whether to go on (false: cancelled, or the lease is another runner's). */
   saveRow: (job: string, runner: string, idx: number, result: RowResult) => Promise<boolean>
-  release: (job: string, runner: string, error?: string | null) => Promise<ReleaseState>
+  /** `waitUntil` (epoch ms): the chunk ends waiting (Goodreads blocked), the job pauses until then, with no fault. */
+  release: (job: string, runner: string, error?: string | null, waitUntil?: number | null) => Promise<ReleaseState>
+  /** The next rows to decide a cover for (never before every row is matched; Open Library's step before Goodreads'). */
+  takeCoverRows: (job: string, runner: string, limit: number) => Promise<CoverRow[]>
+  /** Answers whether to go on, as `saveRow`. */
+  saveCover: (job: string, runner: string, idx: number, result: CoverResult) => Promise<boolean>
 }
 
 export type WorkContext = {
@@ -64,12 +89,19 @@ export type WorkContext = {
   deadline: number
   /** Saves one row; answers whether to go on. */
   save: (idx: number, result: RowResult) => Promise<boolean>
-  /** True once a save was refused: start nothing new. */
+  /** True once a save was refused, or the chunk was told to wait: start nothing new. */
   stopped: () => boolean
+  /** Saves one row's cover step; answers whether to go on. */
+  saveCover: (idx: number, result: CoverResult) => Promise<boolean>
+  /** Ends the chunk after this batch and pauses the job until `untilMs` (epoch ms on the clock): a source said to wait. */
+  waitUntil: (untilMs: number) => void
 }
 
 /** Looks a batch of rows up and writes them, saving each (or deferring it). Rejects only when the whole batch failed. */
 export type Work = (job: Job, rows: JobRow[], context: WorkContext) => Promise<void>
+
+/** Decides the cover of a batch of matched rows (covers.ts), saving each step (`context.saveCover`). Rejects only when the whole batch failed. */
+export type CoverWork = (job: Job, rows: CoverRow[], context: WorkContext) => Promise<void>
 
 /** What one chunk did: its state, how many rows it saved in how many batches, and its wall clock. */
 export type ChunkResult = { state: 'idle' | ReleaseState; job?: string; saved: number; batches: number; ms?: number; error?: string }
@@ -77,6 +109,8 @@ export type ChunkResult = { state: 'idle' | ReleaseState; job?: string; saved: n
 export async function runChunk(options: {
   store: Store
   work: Work
+  /** The cover stage, after every row is matched; without it the stage is not run (the rows keep waiting for it). */
+  cover?: CoverWork
   runner: string
   clock?: Clock
   budgetMs?: number
@@ -86,6 +120,7 @@ export async function runChunk(options: {
   log?: (message: string) => void
 }): Promise<ChunkResult> {
   const { store, work, runner } = options
+  const coverWork = options.cover
   const clock = options.clock ?? realClock
   const budgetMs = options.budgetMs ?? CHUNK_BUDGET_MS
   const deadlineMs = options.deadlineMs ?? CHUNK_DEADLINE_MS
@@ -100,6 +135,7 @@ export async function runChunk(options: {
   let batches = 0
   let taken = 0
   let stop = false
+  let waitUntil: number | null = null
   let error: string | undefined
   const context: WorkContext = {
     runner,
@@ -111,15 +147,35 @@ export async function runChunk(options: {
       else stop = true
       return go
     },
-    stopped: () => stop,
+    async saveCover(idx, result) {
+      if (stop) return false
+      const go = await store.saveCover(job.id, runner, idx, result)
+      if (go) saved++
+      else stop = true
+      return go
+    },
+    waitUntil(untilMs) {
+      waitUntil = Math.max(waitUntil ?? 0, untilMs)
+    },
+    stopped: () => stop || waitUntil !== null,
   }
   try {
-    while (!stop && clock.now() - started < budgetMs && taken < maxRows) {
-      const rows = await store.takeRows(job.id, runner, Math.min(batchRows, maxRows - taken))
-      if (!rows.length) break
+    while (!context.stopped() && clock.now() - started < budgetMs && taken < maxRows) {
+      const limit = Math.min(batchRows, maxRows - taken)
+      const rows = await store.takeRows(job.id, runner, limit)
+      if (rows.length) {
+        batches++
+        taken += rows.length
+        await work(job, rows, context)
+        continue
+      }
+      // Every row is matched (or taken): the cover stage, its own phase, in chunks like the match.
+      if (!coverWork) break
+      const covers = await store.takeCoverRows(job.id, runner, limit)
+      if (!covers.length) break
       batches++
-      taken += rows.length
-      await work(job, rows, context)
+      taken += covers.length
+      await coverWork(job, covers, context)
     }
   } catch (thrown) {
     error = thrown instanceof Error ? thrown.message : String(thrown)
@@ -129,7 +185,7 @@ export async function runChunk(options: {
   const took = () => ({ ms: clock.now() - started })
   if (stop) return { state: 'gone', job: job.id, saved, batches, ...took() }
   // A chunk that failed after saving rows goes on at once (a passing hiccup); one that saved nothing pauses the job.
-  const state = await store.release(job.id, runner, error && saved === 0 ? error.slice(0, 500) : null)
+  const state = await store.release(job.id, runner, error && saved === 0 ? error.slice(0, 500) : null, waitUntil)
   log(`import-job: ${job.id} chunk ${state}: ${saved} rows in ${batches} batches, ${clock.now() - started} ms`)
   return { state, job: job.id, saved, batches, ...took(), ...(error ? { error } : {}) }
 }

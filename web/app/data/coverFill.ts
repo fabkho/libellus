@@ -219,6 +219,49 @@ export function mergeCover(edition: Edition, found: ResolvedCover & { kind?: Cov
     : { ...edition, filled: true, ...kind, coverFrom: { ...(edition.coverFrom ?? edition.book), ...cover } as Edition['book'] }
 }
 
+/** The ISBNs a row asks Open Library's `api/books` by: the file's and the edition's, ISBN-13 and -10, each once. */
+export const coverIsbns = (wanted: Pick<CoverWanted, 'row' | 'book'>): string[] =>
+  [...new Set([wanted.row.isbn13, wanted.book.isbn13, wanted.row.isbn10, wanted.book.isbn10].filter((isbn): isbn is string => Boolean(isbn)))]
+
+/** The address of Open Library's `api/books` for these ISBNs (up to `OPENLIBRARY_BATCH` rows' in one call). */
+export const openLibraryBooksUrl = (isbns: readonly string[]): string =>
+  `${OPENLIBRARY_API}?${new URLSearchParams({ bibkeys: isbns.map((isbn) => `ISBN:${isbn}`).join(','), jscmd: 'data', format: 'json' })}`
+
+export type OpenLibraryBooksAnswer = Record<string, { cover?: { large?: string; medium?: string } } | undefined>
+
+/** The cover (by its id) `api/books` has for the first of `isbns` that has one, else null. Pure. */
+export function coverFromBooksAnswer(answer: OpenLibraryBooksAnswer | null | undefined, isbns: readonly string[]): string | null {
+  for (const isbn of isbns) {
+    const cover = answer?.[`ISBN:${isbn}`]?.cover
+    const candidate = cover?.large ?? cover?.medium
+    if (candidate && OPENLIBRARY_COVERS.test(candidate)) return candidate
+  }
+  return null
+}
+
+/** The address of Open Library's structured search for the row's work (title and first author). */
+export const openLibraryWorkUrl = (row: Pick<CoverWanted['row'], 'title' | 'authors'>): string =>
+  `${OPENLIBRARY_SEARCH}?${new URLSearchParams({ title: row.title, author: row.authors[0] ?? '', fields: 'key,title,author_name,cover_i,language', limit: '12' })}`
+
+export type OpenLibraryWorkAnswer = { docs?: { title?: string; author_name?: string[]; cover_i?: number; language?: string[] }[] }
+
+/**
+ * The cover (by its id) of another edition of the row's work: the first search document that is the same work, in the
+ * row's language where it says, and has a cover. Pure.
+ */
+export function coverFromWorkAnswer(row: Pick<CoverWanted['row'], 'title' | 'authors' | 'language'>, body: OpenLibraryWorkAnswer | null | undefined): string | null {
+  const wanted = languageCode(row.language) ?? titleLanguage(row.title)
+  const doc = (body?.docs ?? []).find(
+    (found) =>
+      found.cover_i &&
+      found.cover_i > 0 &&
+      isSameWork(row, { title: found.title ?? '', authors: found.author_name ?? [] }) &&
+      // The work's languages: a German row is not given a cover whose editions are all English.
+      (!wanted || !found.language?.length || found.language.some((code) => languageCode(code) === wanted)),
+  )
+  return doc ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null
+}
+
 const withIn = <T>(promise: Promise<T>, ms: number): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('no answer in time')), ms)
@@ -311,8 +354,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
   let openLibraryFailures = 0
   let openLibraryPausedUntil = 0
 
-  const isbnsOf = (wanted: CoverWanted) =>
-    [...new Set([wanted.row.isbn13, wanted.book.isbn13, wanted.row.isbn10, wanted.book.isbn10].filter((isbn): isbn is string => Boolean(isbn)))]
+  const isbnsOf = coverIsbns
 
   function requestOpenLibrary(item: Item): Promise<string | null> {
     if (openLibraryFailures >= LANE_FAILURES || !isbnsOf(item.wanted).length) return Promise.resolve(null)
@@ -340,14 +382,9 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     if (stopped || openLibraryFailures >= LANE_FAILURES || now() < openLibraryPausedUntil) return none()
     const keys = [...new Set(taken.flatMap(({ item }) => isbnsOf(item.wanted)))]
     calls.openlibrary++
-    let answer: Record<string, { cover?: { large?: string; medium?: string } } | undefined>
+    let answer: OpenLibraryBooksAnswer
     try {
-      const response = await withIn(
-        fetch(`${OPENLIBRARY_API}?${new URLSearchParams({ bibkeys: keys.map((isbn) => `ISBN:${isbn}`).join(','), jscmd: 'data', format: 'json' })}`, {
-          signal: controller.signal,
-        }),
-        COVER_CALL_TIMEOUT_MS,
-      )
+      const response = await withIn(fetch(openLibraryBooksUrl(keys), { signal: controller.signal }), COVER_CALL_TIMEOUT_MS)
       if (!response.ok) {
         const seconds = Number(response.headers?.get('retry-after'))
         if (Number.isFinite(seconds) && seconds > 0) openLibraryPausedUntil = now() + Math.min(seconds, 60) * 1000
@@ -360,16 +397,7 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
       return none()
     }
     for (const { item, resolve } of taken) {
-      let url: string | null = null
-      for (const isbn of isbnsOf(item.wanted)) {
-        const cover = answer?.[`ISBN:${isbn}`]?.cover
-        const candidate = cover?.large ?? cover?.medium
-        if (candidate && OPENLIBRARY_COVERS.test(candidate)) {
-          url = candidate
-          break
-        }
-      }
-      resolve(url)
+      resolve(coverFromBooksAnswer(answer, isbnsOf(item.wanted)))
     }
   }
 
@@ -388,30 +416,15 @@ export function createCoverFill(options: CoverFillOptions): CoverFill {
     if (stopped || workFailures >= LANE_FAILURES || now() < workPausedUntil || !row.title) return null
     calls.work++
     try {
-      const response = await withIn(
-        fetch(
-          `${OPENLIBRARY_SEARCH}?${new URLSearchParams({ title: row.title, author: row.authors[0] ?? '', fields: 'key,title,author_name,cover_i,language', limit: '12' })}`,
-          { signal: controller.signal },
-        ),
-        COVER_CALL_TIMEOUT_MS,
-      )
+      const response = await withIn(fetch(openLibraryWorkUrl(row), { signal: controller.signal }), COVER_CALL_TIMEOUT_MS)
       if (!response.ok) {
         const seconds = Number(response.headers?.get('retry-after'))
         if (Number.isFinite(seconds) && seconds > 0) workPausedUntil = now() + Math.min(seconds, 60) * 1000
         throw new Error(`openlibrary.org answered ${response.status}`)
       }
-      const body = (await response.json()) as { docs?: { title?: string; author_name?: string[]; cover_i?: number; language?: string[] }[] }
+      const body = (await response.json()) as OpenLibraryWorkAnswer
       workFailures = 0
-      const wanted = languageCode(row.language) ?? titleLanguage(row.title)
-      const doc = (body.docs ?? []).find(
-        (found) =>
-          found.cover_i &&
-          found.cover_i > 0 &&
-          isSameWork(row, { title: found.title ?? '', authors: found.author_name ?? [] }) &&
-          // The work's languages: a German row is not given a cover whose editions are all English.
-          (!wanted || !found.language?.length || found.language.some((code) => languageCode(code) === wanted)),
-      )
-      return doc ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null
+      return coverFromWorkAnswer(row, body)
     } catch {
       workFailures++
       return null

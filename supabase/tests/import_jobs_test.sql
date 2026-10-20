@@ -5,7 +5,7 @@
 -- 20261102010000_import_jobs.sql.
 
 begin;
-select plan(94);
+select plan(98);
 
 create schema if not exists tests;
 insert into public.invite_codes (code, label, max_uses) values ('T-JOBS', 'import jobs test', 10);
@@ -76,7 +76,7 @@ select ok(has_function_privilege('authenticated', 'public.start_import_job(jsonb
 select ok(not has_function_privilege('authenticated', 'public.import_job_claim(text, integer)', 'execute')
           and not has_function_privilege('authenticated', 'public.import_job_save_row(uuid, text, integer, jsonb)', 'execute')
           and not has_function_privilege('authenticated', 'public.import_job_take_rows(uuid, text, integer)', 'execute')
-          and not has_function_privilege('authenticated', 'public.import_job_release(uuid, text, text)', 'execute')
+          and not has_function_privilege('authenticated', 'public.import_job_release(uuid, text, text, timestamptz)', 'execute')
           and has_function_privilege('service_role', 'public.import_job_claim(text, integer)', 'execute')
           and has_function_privilege('service_role', 'public.import_job_save_row(uuid, text, integer, jsonb)', 'execute'),
           'only the service role runs a job');
@@ -166,7 +166,12 @@ select is((select string_agg(idx::text || ':' || pass, ',' order by pass, idx) f
           'runner-3 resumes the row runner-2 never saved, then the second pass');
 select is(public.import_job_save_row(:'job', 'runner-3', 4, '{"verdict": "matched", "tier": "probablyFine", "outcome": "added"}'), true, 'saves 4');
 select is(public.import_job_save_row(:'job', 'runner-3', 2, '{"verdict": "matched", "tier": "quiet", "outcome": "failed", "error": "write_failed"}'), true, 'saves the deferred row');
-select is(public.import_job_release(:'job', 'runner-3'), 'done', 'nothing pending: done');
+-- Row 1 matched without a cover: the job is not done until its cover is decided (import_job_covers_test.sql has the stage).
+select is(public.import_job_release(:'job', 'runner-3'), 'more', 'every row matched, one still without its cover decision: not done');
+select is((select count(*)::int from public.import_job_claim('runner-4')), 1, 'the next chunk');
+select is((select string_agg(idx::text, ',') from public.import_job_take_cover_rows(:'job', 'runner-4', 5)), '1', 'the cover stage takes that row');
+select is(public.import_job_save_cover(:'job', 'runner-4', 1, '{"source": "none"}'), true, 'and decides it');
+select is(public.import_job_release(:'job', 'runner-4'), 'done', 'nothing pending, every cover decided: done');
 select is(tests.job(:'job'), 'done,5,3,1,1,1,-', 'every row once: 3 added, 1 kept, 1 failed, 1 to look at');
 reset role;
 select is(tests.place(:'ada'), null, 'a finished job leaves the line');

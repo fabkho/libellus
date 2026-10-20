@@ -9,8 +9,10 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import type { FunctionsClient } from '../../../web/app/data/goodreads.ts'
+import { createGoodreadsCover } from '../../../web/app/data/goodreadsCover.ts'
 import { sharedPace } from '../_shared/pace.ts'
 import { createOpenLibrary, MIN_INTERVAL_MS, userAgent } from '../openlibrary/client.ts'
+import { createCoverWork, GOODREADS_GAP_MS } from './covers.ts'
 import { createHandler } from './handler.ts'
 import { runChunk } from './runner.ts'
 import { sameSecret } from './secret.ts'
@@ -20,6 +22,8 @@ import { createWork } from './work.ts'
 
 /** The longest a job's Open Library request waits for its turn (the app's own wait is 4 s: the job is in no hurry). */
 export const JOB_PACE_MAX_WAIT_MS = 10_000
+/** The longest a Goodreads cover ask waits for its turn (`edge_pace` bucket `goodreads-cover`, one ask every GOODREADS_GAP_MS). */
+export const GOODREADS_PACE_MAX_WAIT_MS = 10_000
 
 const url = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -56,6 +60,13 @@ const work = createWork({
     }).lookups
   },
 })
+// The cover stage (covers.ts): Open Library through the same fetch as the match, Goodreads' cover route as the service role
+// (the `goodreads-rating` function does not count the service role against a member's bucket), one ask every 1.6 s for everybody.
+const cover = createCoverWork({
+  fetch: sourcesFetch,
+  goodreads: createGoodreadsCover(functions),
+  pace: sharedPace({ rpc, bucket: 'goodreads-cover', gapMs: GOODREADS_GAP_MS, maxWaitMs: GOODREADS_PACE_MAX_WAIT_MS }),
+})
 const store = createStore(rpc)
 
 Deno.serve(createHandler({
@@ -63,5 +74,5 @@ Deno.serve(createHandler({
     if (await sameSecret(token, serviceKey)) return true
     return jobToken !== null && (await sameSecret(token, jobToken))
   },
-  run: () => runChunk({ store, work, runner: `fn:${crypto.randomUUID()}` }),
+  run: () => runChunk({ store, work, cover, runner: `fn:${crypto.randomUUID()}` }),
 }))

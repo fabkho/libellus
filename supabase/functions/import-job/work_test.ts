@@ -3,7 +3,9 @@ import type { ImportBook } from '../../../web/app/data/import/rows.ts'
 import type { Job, JobRow, RowResult, WorkContext } from './runner.ts'
 import { APPLE_OFF_ANSWER, jobFetch, jobSources } from './sources.ts'
 import { emptyCatalogue, functions, NOBODY, PIRANESI, recordedOpenLibrary } from './test_support.ts'
-import { createWork, type EditionSummary, matchRow } from './work.ts'
+import { coverLender, type Edition, withLentCover } from '../../../web/app/data/bookImport.ts'
+import type { Book } from '../../../web/app/data/books.ts'
+import { createWork, type EditionSummary, matchResult, matchRow } from './work.ts'
 
 const JOB: Job = { id: 'job-1', member_id: 'ada', source: 'goodreads', languages: ['de-DE', 'en-US'], total: 2, done: 0 }
 
@@ -34,6 +36,8 @@ function world(options: { failOpenLibrary?: boolean } = {}) {
       saves.push({ idx, result })
       return Promise.resolve(true)
     },
+    saveCover: () => Promise.resolve(!refuse),
+    waitUntil: () => {},
     stopped: () => refuse,
   })
   return { work, lookups, saves, asked, upstream, counted, invoked: fns.invoked, context, refuseSaves: () => (refuse = true) }
@@ -54,6 +58,8 @@ Deno.test('a row its ISBN finds at Open Library with a cover: matched, nothing t
   assertEquals(edition.book.source, 'openlibrary')
   assertEquals(edition.book.isbn13, PIRANESI.isbn13)
   assert(edition.book.coverUrl?.startsWith('https://covers.openlibrary.org/'))
+  assertEquals(result.cover_url, edition.book.coverUrl, 'the cover decision carries the address (the stage has nothing to do for this row)')
+  assertEquals(result.cover_size, 'L')
   assert(w.asked.length > 0, 'Open Library was asked (through the shared pace)')
 })
 
@@ -64,6 +70,7 @@ Deno.test('a row no source knows: the file\'s own row, one to look at', async ()
   assertEquals(result.verdict, 'fromFile')
   assertEquals(result.tier, 'needsLook')
   assertEquals(result.cover, 'none')
+  assertEquals(result.cover_url, undefined, 'no cover: the row goes on to the cover stage')
   assertEquals((result.edition as EditionSummary).book.title, NOBODY.title)
   assert(w.invoked.some((call) => call.name === 'dnb-lookup'), 'the National Library is asked after Open Library')
   assert(!w.invoked.some((call) => call.name === 'goodreads-rating'), 'Goodreads is not asked (the cover stage does that)')
@@ -121,4 +128,16 @@ Deno.test('a refused save stops the batch: no row after it is started', async ()
   await w.work(JOB, [jobRow(PIRANESI, 0), jobRow(NOBODY, 1)], w.context())
   assertEquals(w.saves.length, 0)
   assertEquals(w.asked.length, 0)
+})
+
+Deno.test('an edition without a cover borrows its work\'s (coverLender, mergeCover): the row\'s cover is decided as lent, with the address', () => {
+  const book = (fields: Partial<Book>) => ({ id: null, source: 'openlibrary', title: 'Piranesi', authors: ['Susanna Clarke'], isbn13: null, language: 'en', coverUrl: null, coverThumbhash: null, coverColors: null, ...fields }) as unknown as Book
+  const exact = book({ isbn13: PIRANESI.isbn13 })
+  const sibling = book({ isbn13: '9781526622426', coverUrl: 'https://covers.openlibrary.org/b/id/10226290-L.jpg' })
+  const edition: Edition = withLentCover({ book: exact, via: 'isbn', unsure: false, alternatives: [sibling], near: [] }, coverLender(PIRANESI, exact, [sibling]))
+  const result = matchResult({ row: jobRow(PIRANESI, 0), book: PIRANESI, edition, matched: true, review: { tier: 'quiet', choose: false, notes: [] } as never })
+  assertEquals(result.cover, 'lent')
+  assertEquals(result.cover_url, 'https://covers.openlibrary.org/b/id/10226290-L.jpg')
+  assertEquals(result.cover_size, 'L')
+  assertEquals((result.edition as EditionSummary).book.coverUrl, result.cover_url, 'the review shows the lent cover')
 })

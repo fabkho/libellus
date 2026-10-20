@@ -6,9 +6,12 @@
  * "once more, at the end"). What a row came to (`matchResult`: the verdict, the preview's review tier, the edition it
  * found) is saved on its row.
  *
- * Not here yet (the next pieces of the job): the cover stage between the match and the save, and the write
- * (`import_job_write`, `fill_book_covers`). Until they are in, a saved row says what the match found and nothing is
- * written (`outcome` is null), so the function is not deployed for members before they are.
+ * The cover the match shows (the edition's own, or a sibling edition's lent by `coverLender`) is the row's cover decision,
+ * saved with it; a row without one goes on to the cover stage (covers.ts: its own phase, after every row is matched).
+ *
+ * Not here yet (the next pieces of the job): the write (`import_job_write`, `fill_book_covers`). Until it is in, a saved
+ * row says what the match found and nothing is written (`outcome` is null), so the function is not deployed for members
+ * before it is.
  *
  * The rows a batch does not reach before its deadline stay pending (the next chunk takes them).
  */
@@ -22,6 +25,7 @@ import {
 } from '../../../web/app/data/bookImport.ts'
 import type { Book, BookSnapshot } from '../../../web/app/data/books.ts'
 import type { ImportBook } from '../../../web/app/data/import/rows.ts'
+import { coverSizeOf } from './cover_size.ts'
 import type { Job, JobRow, RowResult, Work, WorkContext } from './runner.ts'
 
 /**
@@ -81,27 +85,30 @@ function summary(book: Book | BookSnapshot, edition: Edition, review: ReturnType
   }
 }
 
-/** What a matched row is saved as (`RowResult`): nothing is written yet, so no outcome. Pure. */
+/** What a matched row is saved as (`RowResult`): nothing is written yet, so no outcome. `cover` `none` sends the row on to the cover stage (covers.ts). Pure. */
 export function matchResult({ edition, matched, review }: Matched): Extract<RowResult, { verdict: unknown }> {
   const shown = (edition.coverFrom ?? edition.book).coverUrl
   const cover: 'own' | 'lent' | 'goodreads' | 'none' = !shown
     ? 'none'
     : edition.goodreadsOnly || edition.coverKind === 'goodreads'
     ? 'goodreads'
-    : edition.book.coverUrl
-    ? 'own'
-    : 'lent'
+    // `mergeCover` puts a lent cover on a found edition's Book itself (`filled`) and on the file's own row as `coverFrom`.
+    : edition.filled || !edition.book.coverUrl
+    ? 'lent'
+    : 'own'
   return {
     verdict: matched ? 'matched' : 'fromFile',
     tier: review.tier,
     outcome: null,
     edition: summary(edition.book, edition, review),
     cover,
+    // The address of the cover shown, so the row's cover decision (edition / lent) is whole when the match is saved.
+    ...(shown ? { cover_url: shown, cover_size: coverSizeOf(shown) } : {}),
   }
 }
 
 /** Runs `task` over `items`, at most `limit` at once. */
-async function eachLimited<T>(items: readonly T[], limit: number, task: (item: T) => Promise<void>): Promise<void> {
+export async function eachLimited<T>(items: readonly T[], limit: number, task: (item: T) => Promise<void>): Promise<void> {
   let next = 0
   const worker = async () => {
     while (next < items.length) await task(items[next++]!)
