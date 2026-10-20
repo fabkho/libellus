@@ -233,7 +233,10 @@ export async function runChunk(options: {
   }
   // A refused save: the job was cancelled or another runner has it now; it is not this runner's to release.
   const took = () => ({ ms: clock.now() - started })
-  if (stop) return { state: 'gone', job: job.id, saved, batches, ...took() }
+  if (stop) {
+    log(`import-job: ${job.id} chunk gone (lease lost or job cancelled): ${saved} rows in ${batches} batches`)
+    return { state: 'gone', job: job.id, saved, batches, ...took() }
+  }
   // A chunk that failed after saving rows goes on at once (a passing hiccup); one that saved nothing pauses the job.
   const state = await store.release(job.id, runner, error && saved === 0 ? error.slice(0, 500) : null, waitUntil)
   log(`import-job: ${job.id} chunk ${state}: ${saved} rows in ${batches} batches, ${clock.now() - started} ms`)

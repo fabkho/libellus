@@ -158,6 +158,7 @@ export function createCoverWork(deps: CoverDeps): CoverWork {
       if (answer === 'blocked') {
         // Blocked: the stage waits for the job, the row is not charged and is asked again when the job goes on.
         context.waitUntil(now() + GOODREADS_BLOCK_PAUSE_MS)
+        log('import-job: goodreads blocked, the job waits')
         return
       }
       if (answer === null) {

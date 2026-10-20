@@ -38,7 +38,8 @@ function world(options: { failOpenLibrary?: boolean; goodreads?: (body: Record<s
   const turns = { taken: 0 }
   const pace: Pace = options.pace ?? { take: () => (turns.taken++, Promise.resolve()), hold: () => Promise.resolve() }
   const clock = { time: 5_000_000 }
-  const work = createCoverWork({ fetch: fetch as FetchLike, goodreads, pace, now: () => clock.time, log: () => {} })
+  const logged: string[] = []
+  const work = createCoverWork({ fetch: fetch as FetchLike, goodreads, pace, now: () => clock.time, log: (message) => logged.push(message) })
   const saves: { idx: number; result: CoverResult }[] = []
   const waits: number[] = []
   const context = (deadlineIn = 120_000): WorkContext => ({
@@ -54,7 +55,7 @@ function world(options: { failOpenLibrary?: boolean; goodreads?: (body: Record<s
     waitUntil: (until) => waits.push(until),
     stopped: () => Boolean(options.refuse) || waits.length > 0,
   })
-  return { work, saves, waits, invoked, asked, turns, clock, context }
+  return { work, saves, waits, invoked, asked, turns, clock, context, logged }
 }
 
 const resultOf = (saves: { idx: number; result: CoverResult }[], idx: number) => saves.findLast((save) => save.idx === idx)?.result
@@ -150,6 +151,7 @@ Deno.test('Goodreads blocked: the stage waits for the job (not for good), the ro
   assertEquals(w.waits.length > 0, true)
   assertEquals(w.waits[0], w.clock.time + GOODREADS_BLOCK_PAUSE_MS)
   assert(w.invoked.length <= 2, 'the asks in flight are all there were')
+  assert(w.logged.some((line) => line.includes('goodreads blocked')), 'the block is in the log (the acceptance run counts it)')
 })
 
 Deno.test('Goodreads not answering at all: the batch fails as a whole (the job backs off), no row is charged', async () => {

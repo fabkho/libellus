@@ -38,7 +38,18 @@ const supabase = createClient(url, serviceKey, {
 })
 const rpc = (name: string, args: Record<string, unknown>) => supabase.rpc(name, args)
 // The app's data layer takes the slice of the client it calls (`functions.invoke`).
-const functions = supabase as unknown as FunctionsClient
+// Counted, for the chunk's log (`import-job: asked {...}`): the functions the job asks, by name, and how many failed.
+const functionCalls: Record<string, number> = {}
+const functions: FunctionsClient = {
+  functions: {
+    async invoke(name, options) {
+      functionCalls[name] = (functionCalls[name] ?? 0) + 1
+      const answer = await (supabase as unknown as FunctionsClient).functions.invoke(name, options)
+      if (answer.error) functionCalls[`${name}:error`] = (functionCalls[`${name}:error`] ?? 0) + 1
+      return answer
+    },
+  },
+}
 const agent = userAgent(contact)
 
 // One pace for every instance and member (a turn booked in Postgres), shared with the `openlibrary` function.
@@ -48,7 +59,7 @@ const openLibrary = createOpenLibrary({
   pace: sharedPace({ rpc, bucket: 'openlibrary', gapMs: MIN_INTERVAL_MS, maxWaitMs: JOB_PACE_MAX_WAIT_MS }),
 })
 const upstream = (input: string, init?: RequestInit) => fetch(input, init)
-const { fetch: sourcesFetch } = jobFetch({ openLibrary, fetch: upstream, userAgent: agent })
+const { fetch: sourcesFetch, asked } = jobFetch({ openLibrary, fetch: upstream, userAgent: agent })
 
 const work = createWork({
   lookups(job, runner) {
@@ -77,5 +88,14 @@ Deno.serve(createHandler({
     if (await sameSecret(token, serviceKey)) return true
     return jobToken !== null && (await sameSecret(token, jobToken))
   },
-  run: () => runChunk({ store, work, cover, write, runner: `fn:${crypto.randomUUID()}` }),
+  async run() {
+    const before: Record<string, number> = { ...asked, ...functionCalls }
+    const result = await runChunk({ store, work, cover, write, runner: `fn:${crypto.randomUUID()}` })
+    // What this chunk asked upstream (the acceptance run adds them up: web/scripts/import-job-acceptance.ts).
+    const now: Record<string, number> = { ...asked, ...functionCalls }
+    const delta: Record<string, number> = {}
+    for (const [name, count] of Object.entries(now)) if (count - (before[name] ?? 0) > 0) delta[name] = count - (before[name] ?? 0)
+    console.log(`import-job: asked ${JSON.stringify(delta)}`)
+    return result
+  },
 }))

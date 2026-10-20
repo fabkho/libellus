@@ -164,6 +164,35 @@ select vault.create_secret('<the same IMPORT_JOB_TOKEN>', 'import_job_token');
 
 Without them nothing is kicked (the local stack, CI): jobs wait in line.
 
+## Acceptance run (a real export, the real job path)
+
+`web/scripts/import-job-acceptance.ts` takes a real export through the job exactly as production runs it, on a LOCAL stack, against the live
+sources: it signs up a throwaway member, uploads the rows the app's own parser makes of the file (`start_import_job`), and then only
+watches: the database re-triggers the function's chunks (pg_net after every chunk, pg_cron's tick as the safety net), the job matches,
+decides the covers, writes, and is done. Nothing of the matching, cover or write code runs in the script. It prints **counts only** (rows,
+matched / from file, added / kept / failed, Library entries **without a cover** by cause, covers by source, seconds per phase, chunks,
+re-triggers, lease losses, upstream asks per source as the function logs them) and exits **1** when the job is not done in time, a write
+failed or more than `LIBELLUS_ACCEPT_MAX_NO_COVER` (default 5) Library entries end without a cover. The owner's criterion is close to 0.
+
+```
+# 1. a stack of your own (never commit supabase/config.toml): its own project_id and ports, and the function's two secrets
+#      project_id = "libellus-acceptance"   ports 5xxx0–5xxx9
+#      [edge_runtime.secrets]
+#      OPENLIBRARY_CONTACT = "you@example.com"
+#      IMPORT_JOB_TOKEN = "<a long random string>"
+supabase start
+# 2. the run (SUPABASE_URL, SUPABASE_DB_URL, MAILPIT_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: `supabase status -o env`)
+cd web && LIBELLUS_IMPORT_CSV=/path/to/export.csv IMPORT_JOB_TOKEN=<the same token> pnpm tsx scripts/import-job-acceptance.ts
+```
+
+It points the database at the function (`private.import_job_settings.function_url`, default `http://kong:8000/functions/v1/import-job`: the
+API gateway inside the stack's Docker network) and puts the token into the Vault, as Deploy says; `LIBELLUS_ACCEPT_KICK=manual` posts the
+`run` action from the script instead. `LIBELLUS_ACCEPT_LIMIT=40` is a smoke run of the file's first rows. A run takes about as long as a
+real import (the Open Library pace is 3 requests a second, Goodreads' covers one ask every 1.6 s): 20–30 minutes for 700 rows. The Catalogue
+keeps the Books a run writes (as production's does), so a second run of the same file is quicker and matches differently: measure on an empty one
+(`delete from public.books` of Books no Library holds). The function logs, per chunk, what it asked upstream (`import-job: asked {…}`);
+the script adds them up from the edge runtime container's log.
+
 ## Tests
 
 ```
