@@ -50,7 +50,8 @@ export type ImportPhase = 'pick' | 'reading' | 'starting' | 'job'
  * up, decides their covers and writes them, while she uses the app, or closes it. There is no review step and no choice to
  * make: "Choose edition" lives on each Book's own page. What the screen and the pill show is the JOB's state (utils/importProgress.ts),
  * live over Supabase Realtime (data/importJobWatch.ts, data/importJobFeed.ts): the real client is loaded only while a job of hers is
- * live, and the app reads the job once when it opens and again after every reconnect. Nothing polls.
+ * live, and the app reads the job once when it opens and again after every reconnect and when the server has her changes subscribed. Nothing polls;
+ * the one fallback is the silence net (a read when the socket said nothing for 30 s while the job is live, data/importJobWatch.ts).
  *
  * A done job makes the one-time Apple cover upgrade's list on this device (stores/coverUpgrade.ts) from the books it added.
  */
