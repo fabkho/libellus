@@ -17,8 +17,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { sharedPace } from '../_shared/pace.ts'
 import { createOpenLibrary, MIN_INTERVAL_MS, PACE_MAX_WAIT_MS, userAgent } from './client.ts'
-import { type Caller, createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
-import { sameSecret } from './secret.ts'
+import { createHandler, MEMBER_LIMIT, MEMBER_WINDOW_SECONDS } from './handler.ts'
+import { createCallerCheck } from '../_shared/caller.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -42,13 +42,14 @@ const handler = createHandler({
       maxWaitMs: PACE_MAX_WAIT_MS,
     }),
   }),
-  async authorize(request): Promise<Caller | null> {
-    const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
-    if (!token) return null
-    if (await sameSecret(token, serviceKey)) return { member: null }
-    const { data, error } = await supabase.auth.getUser(token)
-    return !error && data.user ? { member: data.user.id } : null
-  },
+  // The service role on `apikey` (production's `sb_secret_…` key) or as the bearer token, else a member: _shared/caller.ts.
+  authorize: createCallerCheck({
+    serviceKey,
+    async member(token) {
+      const { data, error } = await supabase.auth.getUser(token)
+      return !error && data.user ? data.user.id : null
+    },
+  }),
   async throttle(member) {
     const { data, error } = await supabase.rpc('edge_rate_hit', {
       p_member: member,

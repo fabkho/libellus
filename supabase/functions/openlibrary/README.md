@@ -21,8 +21,8 @@ GET /functions/v1/openlibrary?path=/api/books&bibkeys=ISBN:…&jscmd=data&format
 429 rate_limited (a member: 360 calls a minute) · 502 openlibrary_unavailable · 504 openlibrary_timeout (10 s)
 ```
 
-- **Who**: a signed-in member's access token or the service-role key (`verify_jwt` is off,
-  supabase/config.toml; the function checks the caller itself). A member may ask 360 times a
+- **Who**: a signed-in member's access token or the service-role key, on `apikey` or as the bearer token
+  (`verify_jwt` is off, supabase/config.toml; the function checks the caller itself: `_shared/caller.ts`). A member may ask 360 times a
   minute (`edge_rate_hit`, bucket `openlibrary`), so one member cannot starve the others; the
   service role is not counted (the server-side import, #329).
 - **The path** is checked against an allow-list (`ALLOWED_PATHS`, `handler.ts`) — the paths the

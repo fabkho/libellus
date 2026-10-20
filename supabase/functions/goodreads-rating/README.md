@@ -126,10 +126,11 @@ Bounds: a body (or address) over 16 KB is refused (413), an author name is cut t
 key over 400 is not asked (with an ISBN the title is left out; without one it is no Book), log lines
 carry at most 120 characters of a key, and a member is held to 20 calls a minute (the service role is
 not): `public.edge_rate_hit` counts them in `edge_rate_limits`, and an unreachable counter is a 503.
-The service-role key is compared in constant time (`secret.ts`).
+The service-role key is compared in constant time (`_shared/caller.ts`).
 
-Callers: a signed-in member's access token, or the service-role key (`warm_library.ts`). The anon
-key is refused. `verify_jwt` is off in `supabase/config.toml` because the function checks the
+Callers: a signed-in member's access token, or the service-role key (`warm_library.ts`, the import job) on the
+`apikey` header or as the bearer token (production's `sb_secret_…` key arrives on `apikey` only: the platform swaps a
+`Bearer sb_…` for a JWT it mints; `_shared/caller.ts`). The anon key is refused. `verify_jwt` is off in `supabase/config.toml` because the function checks the
 caller itself (`index.ts`), which works with either kind of API key.
 
 ## Files

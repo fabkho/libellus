@@ -64,7 +64,8 @@ for (const [index, { book }] of entries.entries()) {
   const started = performance.now()
   const response = await fetch(`${url}/functions/v1/goodreads-rating`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    // The key on `apikey` too: a production `sb_secret_…` key on `Authorization` alone never reaches the function (_shared/caller.ts).
+    headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
     body: JSON.stringify({ ...(isbn13 ? { isbn13 } : {}), title: book.title, authors: book.authors }),
   })
   const body = await response.json()
