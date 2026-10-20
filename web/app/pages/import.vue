@@ -8,12 +8,14 @@
 // other screen shows (components/shell/ImportStatus.vue). Importing the same file again adds nothing. A pushed screen in the tab layout.
 import { SUPPORTED_SOURCES } from '~/data/import/detect'
 import { useImportStore } from '~/stores/import'
+import { useImportPushStore } from '~/stores/importPush'
 
 definePageMeta({ layout: 'tabs', screen: 'import', pushed: true })
 
 const { t } = useI18n()
 const router = useRouter()
 const store = useImportStore()
+const push = useImportPushStore()
 const words = useImportWords()
 // Choosing a file uploads its books and starting again writes: offline neither can (#15).
 const online = useOnline()
@@ -58,6 +60,9 @@ const fileErrorText = computed(() => {
   return t('import.fileError.missingColumns', { app: t(`import.app.${detail.source}`), columns }, detail.columns.length)
 })
 const startErrorText = computed(() => (store.startError ? t(`import.startError.${store.startError}`) : ''))
+
+// "Notify me when it's done" (stores/importPush.ts): where this browser stands is read here; nothing is asked until she taps.
+onMounted(() => void push.check())
 
 // The result is seen once she has read it here: it is not told again on the pill.
 onBeforeUnmount(() => {
@@ -115,6 +120,15 @@ async function cancel() {
         <p v-if="hint" class="text-footnote text-ink-muted" data-testid="import.hint">{{ hint }}</p>
         <p class="text-footnote text-ink-faint">{{ t('import.serverNote') }}</p>
       </div>
+      <ImportNotify
+        :view="push.view"
+        :busy="push.busy"
+        :problem="push.problem"
+        :said="push.said"
+        :offline="!online"
+        @enable="push.enable()"
+        @disable="push.disable()"
+      />
       <UiButton block tone="plain" class="mt-lg" :offline="!online" :disabled="store.busy" data-testid="import.cancel" @click="confirming = true">
         {{ t('import.cancel') }}
       </UiButton>

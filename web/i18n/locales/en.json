@@ -1018,6 +1018,19 @@
     "reading": "Reading the file…",
     "starting": "Sending your books…",
     "serverNote": "Your import runs on our server. You can close BetterReads; we'll finish it.",
+    "notify": {
+      "ask": "Notify me when it's done",
+      "askHint": "One notification when your import ends. Nothing else.",
+      "on": "We'll notify you when it's done.",
+      "off": "Turn off",
+      "blocked": "Notifications for BetterReads are blocked in this browser's settings.",
+      "install": "To be notified on an iPhone or iPad, add BetterReads to your Home Screen first (iOS 16.4 or later): tap Share, then Add to Home Screen.",
+      "failed": "Couldn't turn notifications on. Try again.",
+      "say": {
+        "on": "You'll be notified when your import is done.",
+        "off": "Notification turned off."
+      }
+    },
     "queuedHint": "Imports run one at a time. Yours starts by itself.",
     "pausedHint": "A source isn't answering right now. We'll go on by ourselves.",
     "cancel": "Cancel import",

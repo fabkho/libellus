@@ -1,6 +1,9 @@
 import { stack } from '../tests/support/stack'
 import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID } from './shelfOwner'
 
+/** A VAPID public key only the flows use (its private half was thrown away): the import page offers "Notify me when it's done" in a build that has one. */
+export const E2E_VAPID_PUBLIC_KEY = 'BLNU2HLFzBoPIM5lorRHGIBkthRYbR6nOlCx6wCKiMx-vhl-igE9WOuu907g0EaDBDAmRsAa0gvBr_un3DPnRkc'
+
 /** Where the flows' build and its server put their output (nuxt.config.ts, nitro.output.dir with LIBELLUS_E2E). */
 export const E2E_OUTPUT = new URL('../.output-e2e/public/', import.meta.url)
 
@@ -19,5 +22,7 @@ export function appEnv(): Record<string, string> {
     NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
     // The library file Regal shows, in a build with it (LIBELLUS_REGAL=1): the address SHELF_LIBRARY_SRC names (e2e/shelfOwner.ts).
     NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
+    // The import's Web Push button (e2e/import-push.spec.ts).
+    NUXT_PUBLIC_VAPID_PUBLIC_KEY: E2E_VAPID_PUBLIC_KEY,
   }
 }

@@ -1,0 +1,5 @@
+# Public values only, flagged by the generic-api-key rule (git commit's pre-commit scan prints these fingerprints):
+# the RFC 8291 appendix A example (a published test vector) and a VAPID PUBLIC key made for the tests (its private half was thrown away).
+supabase/functions/import-job/webpush_test.ts:generic-api-key:54
+web/tests/import-push-store.test.ts:generic-api-key:13
+web/tests/push-subscription.test.ts:generic-api-key:30

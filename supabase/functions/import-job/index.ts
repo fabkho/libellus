@@ -14,12 +14,14 @@ import { sharedPace } from '../_shared/pace.ts'
 import { createOpenLibrary, MIN_INTERVAL_MS, userAgent } from '../openlibrary/client.ts'
 import { createCoverWork, GOODREADS_GAP_MS } from './covers.ts'
 import { createHandler } from './handler.ts'
+import { createNotify, createPushStore, type PushDb } from './push.ts'
 import { runChunk } from './runner.ts'
 import { sameSecret } from './secret.ts'
 import { jobFetch, jobSources } from './sources.ts'
 import { createStore, memberCalls } from './store.ts'
 import { createWork } from './work.ts'
 import { createWriteWork } from './write.ts'
+import { sendPush, type Vapid } from './webpush.ts'
 
 /** The longest a job's Open Library request waits for its turn (the app's own wait is 4 s: the job is in no hurry). */
 export const JOB_PACE_MAX_WAIT_MS = 10_000
@@ -83,11 +85,26 @@ const cover = createCoverWork({
 const write = createWriteWork({ member: (job, runner) => memberCalls(rpc, job.id, runner) })
 const store = createStore(rpc)
 
+// "Import done" as a Web Push (push.ts): only with a VAPID key pair (README.md, "Web Push"); without one the `notify` action
+// answers `off` and claims nothing, so a key set later still tells the jobs that ended in the last 15 minutes.
+const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')?.trim()
+const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')?.trim()
+const vapidSubject = Deno.env.get('VAPID_SUBJECT')?.trim()
+const vapid: Vapid | null = vapidPublic && vapidPrivate && vapidSubject ? { publicKey: vapidPublic, privateKey: vapidPrivate, subject: vapidSubject } : null
+if (!vapid) console.warn('import-job: no VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT: no Web Push is sent')
+const notify = vapid
+  ? createNotify({
+      store: createPushStore(supabase as unknown as PushDb),
+      send: (target, payload) => sendPush(target, payload, { vapid, urgency: 'high' }),
+    })
+  : undefined
+
 Deno.serve(createHandler({
   async authorize(token) {
     if (await sameSecret(token, serviceKey)) return true
     return jobToken !== null && (await sameSecret(token, jobToken))
   },
+  notify,
   async run() {
     const before: Record<string, number> = { ...asked, ...functionCalls }
     const result = await runChunk({ store, work, cover, write, runner: `fn:${crypto.randomUUID()}` })

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { createAuth, type Auth, type AuthErrorCode, type DeleteAccountError, type MailLocale, type Member } from '~/data/auth'
 import { readSavedMember } from '~/data/deviceLibrary'
 import { forgetMemberData, otherMemberHere } from '~/data/localData'
+import { browserPort, disablePush, readPushChoice } from '~/data/pushSubscription'
 import { useFriendsTabStore } from '~/stores/friendsTab'
 import { useSyncStore } from '~/stores/sync'
 import { keepCodeSent, recentCode, stepFor, whoIs, type CodeSent } from '~/utils/codeCooldown'
@@ -349,11 +350,24 @@ export const useSessionStore = defineStore('session', () => {
   async function signOut() {
     signingOut = true
     try {
+      await stopPush()
       await auth()?.signOut()
       await forgetDevice()
     } finally {
       signingOut = false
     }
+  }
+
+  /**
+   * This browser stops telling her ("Notify me when it's done", data/pushSubscription.ts): the push subscription is hers while she is
+   * signed in, so it ends before the session does (the server's row is deleted with her session; a few seconds at most).
+   */
+  async function stopPush() {
+    if (typeof window === 'undefined' || !readPushChoice(window.localStorage)) return
+    const client = useBackend()
+    const port = browserPort()
+    if (!client || !port) return
+    await Promise.race([disablePush(client, port), new Promise<void>((done) => setTimeout(done, 3000))])
   }
 
   /**
