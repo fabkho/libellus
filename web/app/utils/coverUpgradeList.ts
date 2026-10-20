@@ -2,10 +2,10 @@ import { emptyCounters, isDone, type UpgradeList, type UpgradeRow } from '../dat
 
 /**
  * Where the one-time Apple cover upgrade's work lists live (data/coverUpgrade.ts, issue #366): on the device, per member, in
- * `localStorage`, next to what the import keeps of its own lookups (utils/importMatches.ts). Apple's limit is per address, so the
+ * `localStorage`. Apple's limit is per address, so the
  * device that ran the import is the one that asks; nothing of it goes to the server but the covers themselves (`fill_book_covers`).
  *
- * One list per import, made when that import is written and holding only the Catalogue Books it added. A list that is worked off
+ * One list per import, made when the import's server job is done (stores/coverUpgrade.ts) and holding only the Catalogue Books it added. A list that is worked off
  * is removed (`done for good`: nothing here can start it again; a later import makes a new one, for its own books). A list not
  * worked off is kept until it is (an app closed meanwhile continues on the next start), but not past `UPGRADE_LIST_DAYS`, and a full
  * storage just means nothing is kept. Framework-free, so Vitest pins it in plain Node.

@@ -13,24 +13,19 @@ import {
   type OwnEditionField,
 } from '~/data/ownEdition'
 import { useEditionStore } from '~/stores/edition'
-import { useImportStore } from '~/stores/import'
 import { useSessionStore } from '~/stores/session'
 
 /**
- * "My edition isn't listed" (Change edition, and the import's Choose edition):
+ * "My edition isn't listed" (Change edition on the Book page; the import has no choose-edition step, the job takes its own):
  * the step after the list of editions. She types (or scans) her copy's ISBN and
  * every source is asked for it (data/editions.ts, `lookupIsbn`); the edition
  * found is shown with its facts and taken with "Use this edition". When no
  * source knows it, she makes her own edition (data/ownEdition.ts): its format,
  * and its year, publisher, pages, language and cover if she likes.
  *
- * What taking it does is the host's: on the Book page the entry changes to it
- * (stores/edition.ts, with the format she said); in the import the preview's
- * row takes it, nothing is written until the import runs.
+ * Taking it changes the entry to it (stores/edition.ts, with the format she said).
  */
-export type OwnEditionTarget =
-  | { kind: 'entry'; entry: LibraryEntry }
-  | { kind: 'import'; key: string; book: BookSnapshot }
+export type OwnEditionTarget = { kind: 'entry'; entry: LibraryEntry }
 
 /** isbn: typing or looking up · found: an edition the sources know · own: her own edition's form. */
 export type OwnEditionStep = 'isbn' | 'found' | 'own'
@@ -38,7 +33,6 @@ export type OwnEditionStep = 'isbn' | 'found' | 'own'
 export const useOwnEditionStore = defineStore('ownEdition', () => {
   const backend = useBackend()
   const edition = useEditionStore()
-  const imports = useImportStore()
   const session = useSessionStore()
 
   const searchLanguages = useSearchLanguages()
@@ -80,12 +74,8 @@ export const useOwnEditionStore = defineStore('ownEdition', () => {
 
   let asking: AbortController | null = null
 
-  /** The Book whose edition she is looking for: the entry's, or the import row as the file has it. */
-  const book = computed<BookSnapshot | null>(() => {
-    const now = target.value
-    if (!now) return null
-    return now.kind === 'entry' ? now.entry.book : now.book
-  })
+  /** The Book whose edition she is looking for: the entry's. */
+  const book = computed<BookSnapshot | null>(() => target.value?.entry.book ?? null)
 
   /** The found edition's format as the sheet shows it: what she said, else what its source said. */
   const foundFormat = computed<BookFormat | null>(() => format.value ?? (found.value ? formatOf(found.value) : null))
@@ -110,7 +100,7 @@ export const useOwnEditionStore = defineStore('ownEdition', () => {
     lookFailed.value = false
     found.value = null
     format.value = null
-    Object.assign(draft, newOwnEditionDraft(next.kind === 'entry' ? next.entry.book : next.book))
+    Object.assign(draft, newOwnEditionDraft(next.entry.book))
     clearInvalid()
     error.value = null
   }
@@ -202,19 +192,13 @@ export const useOwnEditionStore = defineStore('ownEdition', () => {
   }
 
   /**
-   * Takes the found edition. On the Book page the entry changes to it with
-   * the format she said (the edition it already has: only her format is
-   * saved); in the import the row takes it. True when it was taken.
+   * Takes the found edition: the entry changes to it with the format she said
+   * (the edition it already has: only her format is saved).
    */
-  async function useFound(): Promise<LibraryEntry | true | null> {
+  async function useFound(): Promise<LibraryEntry | null> {
     const now = target.value
     const picked = found.value
     if (!now || !picked || busy.value) return null
-    if (now.kind === 'import') {
-      imports.useEdition(now.key, picked)
-      target.value = null
-      return true
-    }
     busy.value = true
     error.value = null
     try {
@@ -234,12 +218,10 @@ export const useOwnEditionStore = defineStore('ownEdition', () => {
   }
 
   /**
-   * Makes her own edition from the form: on the Book page the entry moves to
-   * it; in the import the row takes it (the import makes it). What is wrong
-   * is marked and nothing is sent. Returns the entry (Book page), true
-   * (import), or null.
+   * Makes her own edition from the form: the entry moves to it. What is wrong
+   * is marked and nothing is sent. Returns the entry, or null.
    */
-  async function saveOwn(): Promise<LibraryEntry | true | null> {
+  async function saveOwn(): Promise<LibraryEntry | null> {
     const now = target.value
     const book_ = book.value
     if (!now || !book_ || busy.value) return null
@@ -250,11 +232,6 @@ export const useOwnEditionStore = defineStore('ownEdition', () => {
       return null
     }
     const snapshot = ownEditionSnapshot(book_, draft)
-    if (now.kind === 'import') {
-      imports.useEdition(now.key, snapshot)
-      target.value = null
-      return true
-    }
     busy.value = true
     error.value = null
     try {

@@ -570,8 +570,8 @@ Jobs, and why they are shaped so:
   traces (artifact `playwright-report`).
 
 Every job that needs the local stack starts it **in the background** (`scripts/ci-supabase.sh start`,
-without Studio, imgproxy, the edge runtime, logs, vector, postgres-meta, realtime and the pooler: nothing
-uses them) and joins it (`… wait`) once pnpm has installed, the browsers' system libraries are in and the
+without Studio, imgproxy, the edge runtime, logs, vector, postgres-meta and the pooler: nothing
+uses them; Realtime is started, the import flow follows its job over it) and joins it (`… wait`) once pnpm has installed, the browsers' system libraries are in and the
 app is built: by then it is up. The pnpm store and the Playwright browsers are cached. **Supabase images
 are not cached**: restoring a `docker save` tarball and `docker load` took longer than the pull (about
 125 s against 85 to 90 s), so that was dropped.

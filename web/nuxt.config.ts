@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
 import { uiLayer, uiLayerHolds } from './ui.config'
 import { isRegalModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
+import { REALTIME_CLIENT, REALTIME_STUB } from './realtime.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
 // colour from the same token source as the CSS: the room's surface, per theme.
@@ -140,9 +140,11 @@ export default defineNuxtConfig({
       },
     ],
     // supabase-js builds a Realtime client (and the Phoenix socket under it, ~95 KB unminified) in
-    // every client; the app opens no channel. The stub keeps what supabase-js calls on its own
+    // every client; it never opens a channel. The stub keeps what supabase-js calls on its own
     // (app/data/realtimeStub.ts). Same alias in vitest.config.ts, so the data-layer suite runs on it.
-    resolve: { alias: { '@supabase/realtime-js': fileURLToPath(new URL('./app/data/realtimeStub.ts', import.meta.url)) } },
+    // The import job's live feed is the one user of the real client, loaded only while a job is live:
+    // `#realtime-client` (realtime.config.ts, data/importJobFeed.ts).
+    resolve: { alias: { '@supabase/realtime-js': REALTIME_STUB, '#realtime-client': REALTIME_CLIENT } },
     // The Playwright flows' build (e2e/build.ts): the hooks they need that are otherwise the dev
     // server's (the error log's triggers, the reader's engine on window). False in every other
     // build, where the code behind it is dropped.
@@ -174,12 +176,15 @@ export default defineNuxtConfig({
             groups: [
               { name: 'zxing', test: /zxing-wasm/ },
               { name: 'ebook-reader', test: isReaderModule, includeDependenciesRecursively: false },
+              // The real Realtime client (and its Phoenix socket), for the import job's live feed (data/importJobFeed.ts): one chunk,
+              // only imported while a job of hers is live, left out of the precache. The app's own client is built with the stub.
+              { name: 'realtime', test: /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@supabase\/(?:realtime-js|phoenix)\//, includeDependenciesRecursively: false },
               // Only what the test names: Regal's modules use the app's Vue and Nuxt, which stay where they are.
               { name: 'regal', test: isRegalModule, includeDependenciesRecursively: false },
             ],
           },
           chunkFileNames: (chunk: { name: string; facadeModuleId?: string | null }) =>
-            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'ebook-reader'
+            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
               ? `_nuxt/${chunk.name}.[hash].js`
               : isReaderEntry(chunk.facadeModuleId)
                 ? '_nuxt/ebook-reader-entry.[hash].js'
@@ -391,7 +396,8 @@ export default defineNuxtConfig({
       // Nor is the ebook reader (components/reader, foliate-js, the sanitizer: the `reader` chunk and its
       // styles): the app fetches it ahead for a member who has an ebook (data/reader/prefetch.ts) and the
       // cache below keeps it, so a book opened before opens offline too.
-      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', '**/ebook-reader*.js', '**/ebook-reader*.css', ...regalAssets().globIgnores],
+      // Nor is the real Realtime client (`realtime`, the import job's live feed): it is fetched while a job of hers is live.
+      globIgnores: ['**/_payload.json', '**/200.html', '**/404.html', '**/zxing*.js', '**/zxing_reader*.wasm', '**/ebook-reader*.js', '**/ebook-reader*.css', '**/realtime.*.js', ...regalAssets().globIgnores],
       runtimeCaching: [
         ...regalAssets().runtimeCaching,
         {

@@ -1,206 +1,181 @@
 import { describe, expect, it } from 'vitest'
-import { IMPORT_FILE_DAYS, IMPORT_FILE_MAX_BYTES, memoryImportFiles } from '@/data/importFile'
-import { createScreenWake, type VisibilitySource, type WakeLockApi } from '@/data/screenWake'
-import { ambientFraction, importAmbient, type ImportAmbientInput } from '@/utils/importProgress'
+import { hasSeen, isLive, jobOf, languagesOf, markSeen, SEEN_JOBS_KEY, TELL_FINISHED_DAYS, worthShowing, deviceOf, type ImportJob } from '@/data/importJob'
+import { uploadRow } from '@/data/importUpload'
+import type { ImportBook } from '@/data/import/rows'
+import { ambientFraction, importAmbient } from '@/utils/importProgress'
 
 /**
- * The import seen from the rest of the app (utils/importProgress.ts: what the pill above the tab bar says in each
- * state), the file kept so that a closed app resumes the import (data/importFile.ts) and the screen kept on while
- * the lookups run (data/screenWake.ts). Fakes only: nothing here needs a browser.
+ * The import job as the app shows it (data/importJob.ts, utils/importProgress.ts): the server's row as the app's job, what the pill
+ * and the import page say in each state, which finished job is told once, and what the device uploads of a row. Fakes only.
  */
 
-const input = (over: Partial<ImportAmbientInput>): ImportAmbientInput => ({
-  phase: 'pick',
-  queued: null,
-  progress: { done: 0, total: 0 },
-  coverProgress: null,
+const row = (over: Record<string, unknown> = {}) => ({
+  id: 'job-1',
+  state: 'running',
+  total: 100,
+  done: 0,
   added: 0,
+  kept: 0,
+  failed: 0,
+  already: 0,
+  cover_edition: 0,
+  cover_lent: 0,
+  cover_openlibrary: 0,
+  cover_goodreads: 0,
+  cover_none: 0,
+  error: null,
+  finished_at: null,
   ...over,
+})
+const job = (over: Record<string, unknown> = {}): ImportJob => jobOf(row(over))!
+
+describe('the server row as the app\'s job', () => {
+  it('counts the phases: rows matched, rows with a cover decision (every source), rows written', () => {
+    const now = job({ done: 100, cover_edition: 40, cover_lent: 5, cover_openlibrary: 20, cover_goodreads: 3, cover_none: 7, added: 50, kept: 10, failed: 1 })
+    expect(now).toMatchObject({ total: 100, matched: 100, covered: 75, written: 61, added: 50, failed: 1 })
+  })
+
+  it('kept is the books that were there already, with the rows the device did not even upload', () => {
+    expect(job({ state: 'done', kept: 4, already: 6 }).kept).toBe(10)
+  })
+
+  it('is nothing for what is not a job (a change without a state, an unknown state)', () => {
+    expect(jobOf(null)).toBeNull()
+    expect(jobOf({ id: 'x' })).toBeNull()
+    expect(jobOf(row({ state: 'sleeping' }))).toBeNull()
+  })
+
+  it('is live while it queues, runs or is paused', () => {
+    for (const state of ['queued', 'running', 'paused']) expect(isLive(job({ state }))).toBe(true)
+    for (const state of ['done', 'failed', 'cancelled']) expect(isLive(job({ state }))).toBe(false)
+    expect(isLive(null)).toBe(false)
+  })
 })
 
 describe('what the app says about the import', () => {
-  it('says nothing before a file is read, or while one is being read', () => {
-    expect(importAmbient(input({ phase: 'pick' }))).toBeNull()
-    expect(importAmbient(input({ phase: 'reading' }))).toBeNull()
+  it('says nothing without a job, or for a cancelled one', () => {
+    expect(importAmbient(null)).toBeNull()
+    expect(importAmbient(job({ state: 'cancelled' }))).toBeNull()
   })
 
-  it('the lookups: how many of how many', () => {
-    expect(importAmbient(input({ phase: 'matching', progress: { done: 120, total: 340 } }))).toEqual({ kind: 'matching', done: 120, total: 340 })
+  it('waiting in line: how many are ahead (and no count of books)', () => {
+    expect(importAmbient(job({ state: 'queued' }), 2)).toEqual({ kind: 'queued', ahead: 2 })
+    expect(importAmbient(job({ state: 'queued' }))).toEqual({ kind: 'queued', ahead: 0 })
   })
 
-  it('waiting in line: how many are ahead (and no count of books); her own import elsewhere is its own state', () => {
-    expect(importAmbient(input({ phase: 'matching', progress: { done: 0, total: 340 }, queued: { kind: 'waiting', ahead: 2 } }))).toEqual({ kind: 'queued', ahead: 2 })
-    expect(importAmbient(input({ phase: 'matching', queued: { kind: 'elsewhere' } }))).toEqual({ kind: 'elsewhere' })
+  it('a paused job says so (it goes on by itself)', () => {
+    expect(importAmbient(job({ state: 'paused', done: 10 }))).toEqual({ kind: 'paused' })
   })
 
-  it('the write, then the cover fill that goes on after the lookups, then "ready" once the covers are in', () => {
-    expect(importAmbient(input({ phase: 'importing', progress: { done: 30, total: 90 } }))).toEqual({ kind: 'importing', done: 30, total: 90 })
-    expect(importAmbient(input({ phase: 'preview', coverProgress: { done: 4, total: 20 } }))).toEqual({ kind: 'covers', done: 4, total: 20 })
-    expect(importAmbient(input({ phase: 'preview', coverProgress: { done: 20, total: 20 } }))).toEqual({ kind: 'ready' })
-    expect(importAmbient(input({ phase: 'preview', coverProgress: null }))).toEqual({ kind: 'ready' })
-    expect(importAmbient(input({ phase: 'preview', coverProgress: { done: 0, total: 0 } }))).toEqual({ kind: 'ready' })
+  it('a running job: the first phase that is not through every row', () => {
+    expect(importAmbient(job({ done: 40 }))).toEqual({ kind: 'matching', done: 40, total: 100 })
+    expect(importAmbient(job({ done: 100, cover_edition: 30, cover_none: 5 }))).toEqual({ kind: 'covers', done: 35, total: 100 })
+    expect(importAmbient(job({ done: 100, cover_edition: 100, added: 20, kept: 5 }))).toEqual({ kind: 'writing', done: 25, total: 100 })
   })
 
-  it('done carries how many books were added', () => {
-    expect(importAmbient(input({ phase: 'done', added: 12 }))).toEqual({ kind: 'done', added: 12 })
-    expect(importAmbient(input({ phase: 'done', added: 0 }))).toEqual({ kind: 'done', added: 0 })
+  it('done carries what was added, kept and failed; failed says it stopped', () => {
+    expect(importAmbient(job({ state: 'done', done: 100, added: 12, kept: 3, already: 1, failed: 2 }))).toEqual({ kind: 'done', added: 12, kept: 4, failed: 2 })
+    expect(importAmbient(job({ state: 'done' }))).toEqual({ kind: 'done', added: 0, kept: 0, failed: 0 })
+    expect(importAmbient(job({ state: 'failed' }))).toEqual({ kind: 'failed' })
   })
 
-  it('the thin bar: a fraction for what has a count, none for waiting, ready and done', () => {
+  it('the thin bar: a fraction for what has a count, none for waiting, paused, done and failed', () => {
     expect(ambientFraction({ kind: 'matching', done: 50, total: 200 })).toBe(0.25)
-    expect(ambientFraction({ kind: 'importing', done: 5, total: 0 })).toBe(0)
+    expect(ambientFraction({ kind: 'writing', done: 5, total: 0 })).toBe(0)
     expect(ambientFraction({ kind: 'covers', done: 9, total: 3 })).toBe(1)
-    for (const none of [{ kind: 'queued', ahead: 1 }, { kind: 'elsewhere' }, { kind: 'ready' }, { kind: 'done', added: 3 }] as const) expect(ambientFraction(none)).toBeNull()
+    for (const none of [{ kind: 'queued', ahead: 1 }, { kind: 'paused' }, { kind: 'failed' }, { kind: 'done', added: 3, kept: 0, failed: 0 }] as const) expect(ambientFraction(none)).toBeNull()
   })
 })
 
-describe('the file kept for a closed app', () => {
-  const bytes = (n: number) => new Uint8Array(n).fill(65).buffer
-  const DAY = 86_400_000
+describe('a finished job is told once', () => {
+  const memory = () => {
+    const items = new Map<string, string>()
+    return { getItem: (key: string) => items.get(key) ?? null, setItem: (key: string, value: string) => void items.set(key, value) }
+  }
+  const NOW = Date.parse('2026-11-05T12:00:00Z')
+  const ended = (daysAgo: number) => new Date(NOW - daysAgo * 86_400_000).toISOString()
 
-  it('keeps one file per member, and gives it back with its name', async () => {
-    const keeper = memoryImportFiles()
-    await keeper.write('ada', { name: 'goodreads.csv', bytes: bytes(10) }, 1_000)
-    await keeper.write('bo', { name: 'other.csv', bytes: bytes(5) }, 1_000)
-    expect((await keeper.read('ada', 2_000))?.name).toBe('goodreads.csv')
-    expect((await keeper.read('ada', 2_000))?.bytes.byteLength).toBe(10)
-    expect((await keeper.read('bo', 2_000))?.name).toBe('other.csv')
-    expect(await keeper.read('cy', 2_000)).toBeNull()
+  it('a live job is always shown; a done or failed one only when it ended lately and was not seen', () => {
+    const none = () => false
+    expect(worthShowing(job({ state: 'running' }), none, NOW)).toBe(true)
+    expect(worthShowing(job({ state: 'done', finished_at: ended(0.1) }), none, NOW)).toBe(true)
+    expect(worthShowing(job({ state: 'failed', finished_at: ended(1) }), none, NOW)).toBe(true)
+    expect(worthShowing(job({ state: 'done', finished_at: ended(TELL_FINISHED_DAYS + 1) }), none, NOW)).toBe(false)
+    expect(worthShowing(job({ state: 'done', finished_at: ended(0.1) }), () => true, NOW)).toBe(false)
+    expect(worthShowing(job({ state: 'cancelled', finished_at: ended(0.1) }), none, NOW)).toBe(false)
   })
 
-  it('forgets it when asked, and after a week', async () => {
-    const keeper = memoryImportFiles()
-    await keeper.write('ada', { name: 'a.csv', bytes: bytes(10) }, 0)
-    expect(await keeper.read('ada', IMPORT_FILE_DAYS * DAY)).not.toBeNull()
-    expect(await keeper.read('ada', IMPORT_FILE_DAYS * DAY + 1)).toBeNull()
-    await keeper.write('ada', { name: 'a.csv', bytes: bytes(10) }, 0)
-    await keeper.clear('ada')
-    expect(await keeper.read('ada', 1)).toBeNull()
+  it('what she has seen is kept on the device, a few jobs back', () => {
+    const storage = memory()
+    expect(hasSeen(storage, 'a')).toBe(false)
+    markSeen(storage, 'a')
+    expect(hasSeen(storage, 'a')).toBe(true)
+    for (let at = 0; at < 30; at++) markSeen(storage, `job-${at}`)
+    expect(hasSeen(storage, 'a')).toBe(false)
+    expect(hasSeen(storage, 'job-29')).toBe(true)
+    expect(JSON.parse(storage.getItem(SEEN_JOBS_KEY)!)).toHaveLength(20)
   })
 
-  it('does not keep what is far larger than any export, nor an empty file', async () => {
-    const keeper = memoryImportFiles()
-    await keeper.write('ada', { name: 'huge.csv', bytes: bytes(IMPORT_FILE_MAX_BYTES + 1) }, 0)
-    expect(await keeper.read('ada', 1)).toBeNull()
-    await keeper.write('ada', { name: 'empty.csv', bytes: bytes(0) }, 0)
-    expect(await keeper.read('ada', 1)).toBeNull()
-  })
-
-  it('a second file replaces the first', async () => {
-    const keeper = memoryImportFiles()
-    await keeper.write('ada', { name: 'one.csv', bytes: bytes(3) }, 0)
-    await keeper.write('ada', { name: 'two.csv', bytes: bytes(4) }, 0)
-    expect((await keeper.read('ada', 1))?.name).toBe('two.csv')
+  it('storage that fails or holds rubbish tells nothing and breaks nothing', () => {
+    const broken = { getItem: () => 'not json', setItem: () => { throw new Error('full') } }
+    expect(hasSeen(broken, 'a')).toBe(false)
+    expect(() => markSeen(broken, 'a')).not.toThrow()
+    expect(hasSeen(null, 'a')).toBe(false)
   })
 })
 
-describe('the screen kept on while the lookups run', () => {
-  function page(state = 'visible') {
-    const listeners = new Set<() => void>()
-    const doc: VisibilitySource & { state: string } = {
-      state,
-      get visibilityState() {
-        return this.state
-      },
-      addEventListener: (_type, listener) => void listeners.add(listener),
-      removeEventListener: (_type, listener) => void listeners.delete(listener),
-    }
-    return {
-      doc,
-      listeners: () => listeners.size,
-      /** The page is hidden or shown again (the browser lets the lock go when it is hidden). */
-      set(next: string) {
-        doc.state = next
-        for (const listener of [...listeners]) listener()
-      },
-    }
-  }
-  function lockApi(options: { refuse?: boolean } = {}) {
-    const log = { requested: 0, released: 0 }
-    const api: WakeLockApi = {
-      async request() {
-        log.requested++
-        if (options.refuse) throw new DOMException('Not allowed', 'NotAllowedError')
-        return { release: async () => void log.released++ }
-      },
-    }
-    return { api, log }
-  }
-  const settle = async () => {
-    for (let n = 0; n < 10; n++) await Promise.resolve()
-  }
-
-  it('asks for the lock when wanted, and lets it go when not', async () => {
-    const { api, log } = lockApi()
-    const wake = createScreenWake(api, page().doc)
-    wake.want(true)
-    await settle()
-    expect(wake.held()).toBe(true)
-    expect(log).toEqual({ requested: 1, released: 0 })
-    wake.want(true)
-    await settle()
-    expect(log.requested).toBe(1)
-    wake.want(false)
-    await settle()
-    expect(wake.held()).toBe(false)
-    expect(log.released).toBe(1)
+describe('what the device sends of itself', () => {
+  it('only the languages the server takes, at most five', () => {
+    expect(languagesOf(['en', 'de-AT', 'fra', 'x', 'english', 'it', 'es', 'pt'])).toEqual(['en', 'de-AT', 'fra', 'it', 'es'])
   })
 
-  it('asks again when the page comes back from the background (the browser dropped the lock), but only while wanted', async () => {
-    const { api, log } = lockApi()
-    const { doc, set } = page()
-    const wake = createScreenWake(api, doc)
-    wake.want(true)
-    await settle()
-    set('hidden')
-    set('visible')
-    await settle()
-    expect(log.requested).toBe(2)
-    expect(wake.held()).toBe(true)
-    wake.want(false)
-    set('hidden')
-    set('visible')
-    await settle()
-    expect(log.requested).toBe(2)
+  it('one id, made once and kept', () => {
+    const items = new Map<string, string>()
+    const storage = { getItem: (key: string) => items.get(key) ?? null, setItem: (key: string, value: string) => void items.set(key, value) }
+    const first = deviceOf(storage, () => 'abcdef123456')
+    expect(first).toBe('dev-abcdef123456')
+    expect(deviceOf(storage, () => 'other-one-12345')).toBe(first)
+    expect(deviceOf(null, () => 'abcdef123456')).toBe('dev-abcdef123456')
+  })
+})
+
+describe('the row that goes up', () => {
+  const book = (over: Partial<ImportBook> = {}): ImportBook => ({
+    source: 'goodreads',
+    key: 'goodreads:1',
+    sourceId: '1',
+    row: 1,
+    title: 'Dune',
+    series: null,
+    authors: ['Frank Herbert'],
+    isbn13: null,
+    isbn10: null,
+    pageCount: null,
+    year: null,
+    originalYear: null,
+    binding: null,
+    language: null,
+    publisher: null,
+    shelf: 'read',
+    shelves: ['sci-fi', 'Sci-Fi', 'favourites'],
+    status: 'finished',
+    session: { startedOn: null, endedOn: '2026-01-02', outcome: 'finished', rating: 16, review: 'Loved it.' },
+    earlierReads: [],
+    extraReads: 0,
+    otherKeys: [],
+    addedOn: null,
+    problems: [],
+    ...over,
   })
 
-  it('does not ask while the page is hidden; the lock comes when it is shown', async () => {
-    const { api, log } = lockApi()
-    const { doc, set } = page('hidden')
-    const wake = createScreenWake(api, doc)
-    wake.want(true)
-    await settle()
-    expect(log.requested).toBe(0)
-    set('visible')
-    await settle()
-    expect(log.requested).toBe(1)
+  it('keeps every other shelf as a Collection (there is no step left to decline one in)', () => {
+    expect(uploadRow(book())).toMatchObject({ key: 'goodreads:1', title: 'Dune', collections: ['sci-fi', 'Sci-Fi', 'favourites'] })
   })
 
-  it('a refusal (battery saver) or a browser without the API changes nothing: the screen turns off as usual', async () => {
-    const refused = lockApi({ refuse: true })
-    const wake = createScreenWake(refused.api, page().doc)
-    wake.want(true)
-    await settle()
-    expect(wake.held()).toBe(false)
-    const none = createScreenWake(undefined, page().doc)
-    none.want(true)
-    await settle()
-    expect(none.held()).toBe(false)
-  })
-
-  it('a lock granted after it was no longer wanted is let go at once; dispose lets go and stops listening', async () => {
-    let grant: (value: { release: () => Promise<void> }) => void = () => {}
-    let released = 0
-    const api: WakeLockApi = { request: () => new Promise((resolve) => (grant = resolve)) }
-    const { doc, listeners } = page()
-    const wake = createScreenWake(api, doc)
-    wake.want(true)
-    wake.want(false)
-    grant({ release: async () => void released++ })
-    await settle()
-    expect(released).toBe(1)
-    expect(wake.held()).toBe(false)
-    wake.dispose()
-    expect(listeners()).toBe(0)
+  it('a runaway review is dropped rather than refused: one row over the server\'s 20 kB would refuse the whole file', () => {
+    const long = uploadRow(book({ session: { startedOn: null, endedOn: '2026-01-02', outcome: 'finished', rating: 16, review: 'x'.repeat(30_000) } }))
+    expect((long.session as { review: string | null; rating: number }).review).toBeNull()
+    expect((long.session as { rating: number }).rating).toBe(16)
+    expect(JSON.stringify(long).length).toBeLessThan(15_000)
   })
 })

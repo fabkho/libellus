@@ -2988,23 +2988,93 @@
           "de"
         ]
       },
-      "import.actionFor": {
-        "edc480cc94718e0d": [
-          "de"
-        ]
-      },
       "import.added": {
         "6b02e0d363a4af1c": [
           "de"
         ]
       },
-      "import.alreadyThere": {
-        "d26abc814e9893d8": [
+      "import.ambient.covers": {
+        "a3b29d87c7337a05": [
           "de"
         ]
       },
-      "import.another": {
-        "60850b365662615c": [
+      "import.ambient.dismiss": {
+        "48845bff334a50a5": [
+          "de"
+        ]
+      },
+      "import.ambient.done": {
+        "b191b35fb868d6eb": [
+          "de"
+        ]
+      },
+      "import.ambient.doneFailed": {
+        "cd8f5051cba3686a": [
+          "de"
+        ]
+      },
+      "import.ambient.doneKept": {
+        "df41af026929996e": [
+          "de"
+        ]
+      },
+      "import.ambient.failed": {
+        "7606e592ec013b98": [
+          "de"
+        ]
+      },
+      "import.ambient.matching": {
+        "27cc01313cb36524": [
+          "de"
+        ]
+      },
+      "import.ambient.paused": {
+        "662b38ccf9dbd725": [
+          "de"
+        ]
+      },
+      "import.ambient.queued": {
+        "09614fd7ecb044b9": [
+          "de"
+        ]
+      },
+      "import.ambient.say.covers": {
+        "c628ee85393ebb1e": [
+          "de"
+        ]
+      },
+      "import.ambient.say.done": {
+        "3dfc52448695b57a": [
+          "de"
+        ]
+      },
+      "import.ambient.say.failed": {
+        "3103f38ae12faf8d": [
+          "de"
+        ]
+      },
+      "import.ambient.say.matching": {
+        "50ed90d7d4ef94fc": [
+          "de"
+        ]
+      },
+      "import.ambient.say.paused": {
+        "23cbc11f90ce89f9": [
+          "de"
+        ]
+      },
+      "import.ambient.say.queued": {
+        "d900eae53f1c0ea6": [
+          "de"
+        ]
+      },
+      "import.ambient.say.writing": {
+        "26fa5bc988f5b241": [
+          "de"
+        ]
+      },
+      "import.ambient.writing": {
+        "856b1ec4f144bb12": [
           "de"
         ]
       },
@@ -3018,53 +3088,23 @@
           "de"
         ]
       },
-      "import.attention": {
-        "5ce96f1220a648e0": [
-          "de"
-        ]
-      },
-      "import.attentionCount": {
-        "fc70e900fde90a99": [
-          "de"
-        ]
-      },
-      "import.attentionHint": {
-        "41d9ddc6f8dca96d": [
-          "de"
-        ]
-      },
-      "import.attentionMinor": {
-        "4b3fcf05a4cf1aa3": [
-          "de"
-        ]
-      },
-      "import.attentionMinorHide": {
-        "24eb7db53ff79fcd": [
-          "de"
-        ]
-      },
-      "import.attentionMinorHint": {
-        "bae48ca6ef7d9568": [
-          "de"
-        ]
-      },
-      "import.attentionMinorShow": {
-        "e372f20a52883cff": [
-          "de"
-        ]
-      },
       "import.back": {
         "76900f1bfd16c8d4": [
           "de"
         ]
       },
-      "import.changeEdition": {
-        "49c58f0480c7a3cf": [
+      "import.cancel": {
+        "6dd6cafb0d3f5ef8": [
           "de"
         ]
       },
-      "import.choices": {
-        "0ecda0421ac7d200": [
+      "import.cancelText": {
+        "afa8fa3afcba2eae": [
+          "de"
+        ]
+      },
+      "import.cancelTitle": {
+        "5268245d7f4f08d6": [
           "de"
         ]
       },
@@ -3073,13 +3113,8 @@
           "de"
         ]
       },
-      "import.chooseEdition": {
-        "a72a6370fd0a4b6d": [
-          "de"
-        ]
-      },
-      "import.coverFill": {
-        "7e578b5ae1c089d6": [
+      "import.chooseAgain": {
+        "192582e57cbecc59": [
           "de"
         ]
       },
@@ -3098,43 +3133,18 @@
           "de"
         ]
       },
-      "import.edition.action": {
-        "c7f937836f5d82d5": [
-          "de"
-        ]
-      },
-      "import.edition.current": {
-        "bdfbc65e37fa2cf3": [
-          "de"
-        ]
-      },
-      "import.edition.file": {
-        "d9d0a6c0f894bfb3": [
-          "de"
-        ]
-      },
-      "import.edition.hint": {
-        "b6f4172a08ecb441": [
-          "de"
-        ]
-      },
-      "import.edition.none": {
-        "b710345d4fccf5da": [
-          "de"
-        ]
-      },
-      "import.edition.offline": {
-        "ad6fff554beafcb2": [
-          "de"
-        ]
-      },
-      "import.edition.title": {
-        "a72a6370fd0a4b6d": [
-          "de"
-        ]
-      },
       "import.failed": {
         "a37f7e6bfe00fe20": [
+          "de"
+        ]
+      },
+      "import.failedText": {
+        "80e2384f350caadf": [
+          "de"
+        ]
+      },
+      "import.failedTitle": {
+        "ef251b416e35a7da": [
           "de"
         ]
       },
@@ -3183,16 +3193,6 @@
           "de"
         ]
       },
-      "import.finishNow": {
-        "1cb253e8f27def5f": [
-          "de"
-        ]
-      },
-      "import.fromFile": {
-        "679e58bf68b44c6e": [
-          "de"
-        ]
-      },
       "import.howTo.goodreads": {
         "5f701b5d51812aae": [
           "de"
@@ -3208,48 +3208,8 @@
           "de"
         ]
       },
-      "import.importing": {
-        "c757cf200452199f": [
-          "de"
-        ]
-      },
-      "import.importingHint": {
-        "696db145e3aa0914": [
-          "de"
-        ]
-      },
-      "import.inFile": {
-        "ccba06e141ad86f0": [
-          "de"
-        ]
-      },
       "import.kept": {
         "d26abc814e9893d8": [
-          "de"
-        ]
-      },
-      "import.listsText": {
-        "bb5a3045fb6a31d6": [
-          "de"
-        ]
-      },
-      "import.listsTitle": {
-        "b3d21ebfbaf7b043": [
-          "de"
-        ]
-      },
-      "import.matched": {
-        "d2cc8df600d0d6cc": [
-          "de"
-        ]
-      },
-      "import.matching": {
-        "961911afe0cdd44a": [
-          "de"
-        ]
-      },
-      "import.matchingHint": {
-        "5182605401329d58": [
           "de"
         ]
       },
@@ -3258,128 +3218,13 @@
           "de"
         ]
       },
-      "import.notReached": {
-        "b0ff5f57b4a8dd9a": [
-          "de"
-        ]
-      },
-      "import.note.abandonedRating": {
-        "23471851cf4f2859": [
-          "de"
-        ]
-      },
-      "import.note.byTitle": {
-        "bc95a9e87a2c314e": [
-          "de"
-        ]
-      },
-      "import.note.byTitleEdition": {
-        "ffb777eedbe04a28": [
-          "de"
-        ]
-      },
-      "import.note.chosen": {
-        "6355d0eea681e712": [
-          "de"
-        ]
-      },
-      "import.note.chosenInLibrary": {
-        "0b8f614df65168a7": [
-          "de"
-        ]
-      },
-      "import.note.dateInvalid": {
-        "1d2bd0328a1fe6c9": [
-          "de"
-        ]
-      },
-      "import.note.duplicate": {
-        "c126eebf0128dd38": [
-          "de"
-        ]
-      },
-      "import.note.earlierReads": {
-        "51981af2cd8d9195": [
-          "de"
-        ]
-      },
-      "import.note.extraReads": {
-        "88f4ef518e15150e": [
-          "de"
-        ]
-      },
-      "import.note.fromFile": {
-        "271c003204de3c0a": [
-          "de"
-        ]
-      },
-      "import.note.fromFileIsbn": {
-        "e44a50fc5b5fad70": [
-          "de"
-        ]
-      },
-      "import.note.isbnMangled": {
-        "e517af23c7469e63": [
-          "de"
-        ]
-      },
-      "import.note.noCover": {
-        "af66fec6365bfdf7": [
-          "de"
-        ]
-      },
-      "import.note.noTitle": {
-        "3ad5dde96da0b486": [
-          "de"
-        ]
-      },
-      "import.note.notFinishedRating": {
-        "a665c9df5d710921": [
-          "de"
-        ]
-      },
-      "import.note.notShelved": {
-        "cb21fca67a3779d2": [
-          "de"
-        ]
-      },
-      "import.note.otherShelf": {
-        "636198a5806f002a": [
-          "de"
-        ]
-      },
-      "import.note.paused": {
-        "b04b7733c9055862": [
-          "de"
-        ]
-      },
-      "import.note.ratingInvalid": {
-        "4b717894abc0b8eb": [
-          "de"
-        ]
-      },
-      "import.note.ratingLikeReview": {
-        "c86ed907ee560e57": [
-          "de"
-        ]
-      },
-      "import.note.reviewTooLong": {
-        "4efbbf04de50ffa7": [
-          "de"
-        ]
-      },
-      "import.note.unsure": {
-        "2dcc9d6d39cf114a": [
-          "de"
-        ]
-      },
-      "import.note.unsureFound": {
-        "69cc4024d3621724": [
-          "de"
-        ]
-      },
-      "import.nothingToImport": {
+      "import.nothingNew": {
         "586826a5f7d1c9e2": [
+          "de"
+        ]
+      },
+      "import.pausedHint": {
+        "050183dc4fa72653": [
           "de"
         ]
       },
@@ -3393,58 +3238,68 @@
           "de"
         ]
       },
+      "import.queuedHint": {
+        "b6226f7b747e0b8f": [
+          "de"
+        ]
+      },
       "import.reading": {
         "d905ae652ee4bcfb": [
           "de"
         ]
       },
-      "import.secondPass": {
-        "bf1b45f332fe1073": [
+      "import.retry": {
+        "d8b8392e2c542950": [
           "de"
         ]
       },
-      "import.secondPassHint": {
-        "76784656c544519a": [
+      "import.retrying": {
+        "bbe5fc3b9ef39f99": [
           "de"
         ]
       },
-      "import.shelfCount": {
-        "28ab11ae4b4a1153": [
+      "import.serverNote": {
+        "6b476ba4e7539208": [
           "de"
         ]
       },
-      "import.shelvesText": {
-        "bb5a3045fb6a31d6": [
+      "import.startError.device_import_running": {
+        "e587a3064b1c3d4d": [
           "de"
         ]
       },
-      "import.shelvesTitle": {
-        "e70d4cca9d5a522c": [
+      "import.startError.import_running": {
+        "23b417a4f68ce4c6": [
           "de"
         ]
       },
-      "import.stalledHint": {
-        "1021d29c472e1965": [
+      "import.startError.import_too_soon": {
+        "4a1763b34a113d00": [
           "de"
         ]
       },
-      "import.start": {
-        "ec882bb382782cd4": [
+      "import.startError.job_unknown": {
+        "423e903fb19061d2": [
           "de"
         ]
       },
-      "import.statusLabel": {
-        "51ebe8355d229e62": [
+      "import.startError.offline": {
+        "0559b1043b94a0d3": [
           "de"
         ]
       },
-      "import.stop": {
-        "26eac8f8c95b6a86": [
+      "import.startError.rows_invalid": {
+        "f12efc9cf278b947": [
           "de"
         ]
       },
-      "import.stopped": {
-        "fddb283ada1099a5": [
+      "import.startError.unknown": {
+        "3ccd9d6586ef9143": [
+          "de"
+        ]
+      },
+      "import.starting": {
+        "6285e702ebfbdb99": [
           "de"
         ]
       },
@@ -3455,11 +3310,6 @@
       },
       "import.toLibrary": {
         "fdfa9195b2903d57": [
-          "de"
-        ]
-      },
-      "import.untitled": {
-        "9b199b63dbe4e3fe": [
           "de"
         ]
       },

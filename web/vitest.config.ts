@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { REALTIME_CLIENT } from './realtime.config.ts'
 
 const resolve = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
@@ -30,6 +31,8 @@ export default defineConfig({
       '#ui': process.env.UI_LAYER ? pathResolve(process.env.UI_LAYER) : resolve('./node_modules/@fabkho/ui'),
       // As in nuxt.config.ts: the suite exercises the client the app ships.
       '@supabase/realtime-js': resolve('./app/data/realtimeStub.ts'),
+      // The real client, for the one place that loads it (realtime.config.ts).
+      '#realtime-client': REALTIME_CLIENT,
     },
   },
   test: {

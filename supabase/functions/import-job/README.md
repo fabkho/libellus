@@ -174,3 +174,17 @@ The runner on an in-memory store and an injected clock; the batch (`work_test.ts
 Open Library's recorded answers (`fixtures/openlibrary.json`, `record_fixtures.ts`) and the `goodreads-rating` function's
 recorded answers (found / unsure / blocked / none / not answering). The database side is pgTAP
 (`supabase/tests/import_jobs_test.sql`, `import_job_covers_test.sql`, `import_job_write_test.sql`: it includes a second run of the same file writing nothing).
+
+## The app (part 5)
+
+The app has no import code of its own any more: `web/app/data/importUpload.ts` reads the file on the device and leaves out what is
+there already (`already`), `start_import_job` uploads the rest, and the pill and the import page show the job's own state
+(`web/app/data/importJob*.ts`, `stores/import.ts`): queued (`import_job_place`: how many imports are ahead), paused, matching `done`/`total`,
+covers (the sum of the `cover_*` counters), writing (`added + kept + failed`), done (`added`, `kept` + `already`, `failed`), failed. **Live over
+Supabase Realtime** (Postgres changes on her own `import_jobs` row; RLS select-own, the table is in the publication): the real
+`@supabase/realtime-js` is loaded only while a job of hers is live, the app reads the job once when it opens and after every
+reconnect, and nothing polls. A failed job is retried from its own rows (`retry_import_job`, `supabase/migrations/20261105010000_import_job_retry.sql`:
+a new job from the rows without an outcome, no file needed); a done job's `entry_id`s (outcome `added`) are the books the device's one-time Apple
+cover upgrade works on. The member-side refusals are shown: `import_too_soon` ("You can start another import in a minute."),
+`device_import_running`, `import_running`, `rows_invalid`.
+
