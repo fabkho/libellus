@@ -74,9 +74,41 @@ the ISBN, the title ladder over Open Library (direct, identified with `OPENLIBRA
 A row's result (`matchResult`) is its verdict (`matched` / `fromFile`), the preview's review tier (`reviewOf`), the
 edition summary and the cover it shows (`own` / `lent` / `none`); `outcome` is null.
 
-**Not here yet** (the next pieces): the cover stage (`createCoverFill`, Goodreads' cover and its lookup of a Goodreads
-row no source knows, the image probe) and the write (`import_job_write`, `import_job_fill_covers`). Until they are in,
-a saved row only says what the match found and nothing is written, so the function is not deployed for members yet.
+**Not here yet** (the next pieces): the write (`import_job_write`, `import_job_fill_covers`). Until it is in, a saved row
+only says what the match found and decided for its cover, and nothing is written, so the function is not deployed for
+members yet.
+
+## The cover stage (`covers.ts`)
+
+Its own phase, after every row is matched, chunked and resumable like the match: `import_job_take_cover_rows` hands out
+rows (nothing before the last row is matched), the runner's `cover` work decides them, `import_job_save_cover` saves
+each step. The job is **done when every row has its cover decision** (`import_job_rows.cover_state = 'done'`). Rows
+without a cover decision are the only ones the stage ever sees; a row's `cover_source` says by whom it was decided:
+
+| source | how |
+| --- | --- |
+| `edition` | the matched edition's own cover (decided when the match is saved) |
+| `lent` | a cover another edition of its work lends (`coverLender` / `mergeCover`, the app's rules, applied by the match) |
+| `openlibrary` | step 1 of the stage: `api/books` by the row's ISBNs (24 rows in one call), else a title + author search for another edition of the work (the cover fill's own request addresses and answer readers, `web/app/data/coverFill.ts`), on the shared Open Library pace |
+| `goodreads` | step 2, only once step 1 is through for EVERY row: every row still without a cover that has a title and an author, ISBN first, then the full title, then the short title (`goodreads-rating`'s cover route, `createGoodreadsCover`); one ask every 1.6 s on the shared pace (`edge_pace` bucket `goodreads-cover`) |
+| `none` | nothing found, or given up |
+
+**Apple is never asked** here (its one-time upgrade runs on the device, #374).
+
+Goodreads has **no time budget and no "three failures and stop"**: an `unsure` answer (every search came back empty:
+unknown, or throttled softly) or a failed ask is retried later in the job, up to 3 tries at least 30 s apart (a later chunk;
+the third gives `none`); `found` with no cover or `not_found` is final; `blocked` **pauses the job** for 10 minutes
+(`context.waitUntil` → `import_job_release(…, p_wait_until)`: it gives the slot up, the tick queues it again, no fault, no
+stall) and goes on in a later chunk, the row not charged; a batch in which nothing at all was answered fails as a whole
+(the runner's pause with backoff). Rows waiting for their retry with nothing else due pause the job the same way (no
+hot loop of empty chunks). An Open Library call that fails asks the row once more in the next chunk, then goes on to Goodreads.
+
+Stored per row: `cover_url` (the address, never the image), `cover_source`, `cover_size` (`S`/`M`/`L`, only when the
+address says it: Open Library's `-L.jpg`, Goodreads' `…l/`). **No image probe**: decoding an image and its thumbhash cost
+CPU the Free plan's 2 s does not have (the old WIP's probe was removed for that), so the stage reads no image; the thumbhash
+and colours come later with the Library's cover. The job's counters, `import_jobs.cover_edition / cover_lent /
+cover_openlibrary / cover_goodreads / cover_none` (their sum is the rows decided), say how many rows have a cover by source
+and how many have none. A row handed out three times without being saved is given up (`none`).
 
 ## As the member
 
@@ -107,5 +139,7 @@ Without them nothing is kicked (the local stack, CI): jobs wait in line.
 deno lint && deno check *.ts && deno task test
 ```
 
-The runner on an in-memory store and an injected clock; the batch (`work_test.ts`) on Open Library's recorded answers
-(`fixtures/openlibrary.json`, `record_fixtures.ts`) and stand-in functions. The database side is pgTAP (`supabase/tests/import_jobs_test.sql`).
+The runner on an in-memory store and an injected clock; the batch (`work_test.ts`) and the cover stage (`covers_test.ts`) on
+Open Library's recorded answers (`fixtures/openlibrary.json`, `record_fixtures.ts`) and the `goodreads-rating` function's
+recorded answers (found / unsure / blocked / none / not answering). The database side is pgTAP
+(`supabase/tests/import_jobs_test.sql`, `import_job_covers_test.sql`).

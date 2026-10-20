@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert'
-import { type Job, type JobRow, type ReleaseState, type RowResult, runChunk, type Store, type Work } from './runner.ts'
+import { type CoverResult, type CoverRow, type CoverWork, type Job, type JobRow, type ReleaseState, type RowResult, runChunk, type Store, type Work } from './runner.ts'
 
 const JOB: Job = { id: 'job-1', member_id: 'ada', source: 'goodreads', languages: ['de-DE'], total: 5, done: 0 }
 
@@ -9,8 +9,12 @@ function memoryStore(total: number, { refuseSaveAt = -1, noJob = false } = {}) {
     Array.from({ length: total }, (_, idx) => [idx, { idx, key: `goodreads:${idx}`, payload: { key: `goodreads:${idx}` }, pass: 0, attempts: 0 }]),
   )
   const saved: { idx: number; result: RowResult }[] = []
-  const released: { error: string | null | undefined }[] = []
+  const released: { error: string | null | undefined; waitUntil?: number | null }[] = []
   const taken = new Set<number>()
+  // The cover stage: rows saved with `cover: 'none'` wait here for their cover decision.
+  const coverPending = new Map<number, CoverRow>()
+  const coverTaken = new Set<number>()
+  const coverSaved: { idx: number; result: CoverResult }[] = []
   const store: Store = {
     claim: () => Promise.resolve(noJob ? null : JOB),
     takeRows(_job, _runner, limit) {
@@ -21,17 +25,32 @@ function memoryStore(total: number, { refuseSaveAt = -1, noJob = false } = {}) {
     saveRow(_job, _runner, idx, result) {
       if (saved.length === refuseSaveAt) return Promise.resolve(false)
       saved.push({ idx, result })
-      if (!('defer' in result)) pending.delete(idx)
+      if (!('defer' in result)) {
+        pending.delete(idx)
+        if (result.cover === 'none') coverPending.set(idx, { idx, key: `goodreads:${idx}`, payload: { key: `goodreads:${idx}` }, edition: null, cover_state: 'pending', cover_tries: 0 })
+      }
       return Promise.resolve(true)
     },
-    release(_job, _runner, error) {
-      released.push({ error })
+    takeCoverRows(_job, _runner, limit) {
+      if (pending.size) return Promise.resolve([])
+      const rows = [...coverPending.values()].filter((row) => !coverTaken.has(row.idx)).slice(0, limit)
+      for (const row of rows) coverTaken.add(row.idx)
+      return Promise.resolve(rows)
+    },
+    saveCover(_job, _runner, idx, result) {
+      coverSaved.push({ idx, result })
+      if (!('retry' in result)) coverPending.delete(idx)
+      return Promise.resolve(true)
+    },
+    release(_job, _runner, error, waitUntil) {
+      released.push(waitUntil ? { error, waitUntil } : { error })
       for (const idx of taken) taken.delete(idx)
-      const state: ReleaseState = error ? 'paused' : pending.size ? 'more' : 'done'
+      for (const idx of coverTaken) coverTaken.delete(idx)
+      const state: ReleaseState = error || waitUntil ? 'paused' : pending.size || coverPending.size ? 'more' : 'done'
       return Promise.resolve(state)
     },
   }
-  return { store, saved, released, pending }
+  return { store, saved, released, pending, coverPending, coverSaved }
 }
 
 /** A clock that only moves when the work says so. */
@@ -140,4 +159,91 @@ Deno.test('a batch that fails after rows were saved goes on at once (no pause)',
   const result = await runChunk({ store, work, runner: 'r', clock, batchRows: 2, log: quiet })
   assertEquals(result.state, 'more')
   assertEquals(released, [{ error: null }])
+})
+
+const NEEDS_COVER: RowResult = { verdict: 'fromFile', tier: 'needsLook', outcome: null, cover: 'none' }
+
+/** Matches every row as one that needs a cover, and decides every cover as Open Library's. */
+const matchingWithoutCovers: Work = async (_job, rows, context) => {
+  for (const row of rows) await context.save(row.idx, NEEDS_COVER)
+}
+const decidingCovers: CoverWork = async (_job, rows, context) => {
+  for (const row of rows) await context.saveCover(row.idx, { source: 'openlibrary', url: `https://covers.openlibrary.org/b/id/${row.idx}-L.jpg`, size: 'L' })
+}
+
+Deno.test('the cover stage is its own phase: it starts when no row is left to match, in the same chunk when there is time', async () => {
+  const clock = fakeClock()
+  const { store, saved, coverSaved } = memoryStore(5)
+  const order: string[] = []
+  const work: Work = async (job, rows, context) => {
+    order.push(`match ${rows.map((row) => row.idx)}`)
+    await matchingWithoutCovers(job, rows, context)
+  }
+  const cover: CoverWork = async (job, rows, context) => {
+    order.push(`cover ${rows.map((row) => row.idx)}`)
+    await decidingCovers(job, rows, context)
+  }
+  const result = await runChunk({ store, work, cover, runner: 'r', clock, batchRows: 2, maxRows: 100, log: quiet })
+  assertEquals(order, ['match 0,1', 'match 2,3', 'match 4', 'cover 0,1', 'cover 2,3', 'cover 4'])
+  assertEquals(saved.length, 5)
+  assertEquals(coverSaved.length, 5)
+  assertEquals(result.state, 'done', 'done only when every row has its cover decision')
+  assertEquals(result.saved, 10)
+})
+
+Deno.test('rows still to cover keep the job going: more, and the next chunk takes them', async () => {
+  const clock = fakeClock()
+  const { store, coverPending } = memoryStore(4)
+  const first = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, runner: 'r', clock, batchRows: 2, maxRows: 4, log: quiet })
+  // The chunk's rows (4) were all spent on the match: the covers wait.
+  assertEquals(first.state, 'more')
+  assertEquals(coverPending.size, 4)
+  const second = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, runner: 'r', clock, batchRows: 2, maxRows: 4, log: quiet })
+  assertEquals(second.state, 'done')
+  assertEquals(coverPending.size, 0)
+})
+
+Deno.test('without a cover stage the rows keep waiting for it (the job is not done)', async () => {
+  const clock = fakeClock()
+  const { store, coverPending } = memoryStore(3)
+  const result = await runChunk({ store, work: matchingWithoutCovers, runner: 'r', clock, log: quiet })
+  assertEquals(result.state, 'more')
+  assertEquals(coverPending.size, 3)
+})
+
+Deno.test('a cover batch that asks to wait ends the chunk and releases the job until then, with no fault', async () => {
+  const clock = fakeClock()
+  const { store, released, coverPending } = memoryStore(4)
+  let batches = 0
+  const cover: CoverWork = async (_job, rows, context) => {
+    batches++
+    await context.saveCover(rows[0]!.idx, { source: 'none' })
+    context.waitUntil(clock.now() + 600_000)
+  }
+  const result = await runChunk({ store, work: matchingWithoutCovers, cover, runner: 'r', clock, batchRows: 2, maxRows: 100, log: quiet })
+  assertEquals(batches, 1, 'no batch after the wait was asked for')
+  assertEquals(result.state, 'paused')
+  assertEquals(released, [{ error: null, waitUntil: clock.now() + 600_000 }])
+  assertEquals(coverPending.size, 3)
+})
+
+Deno.test('a cover batch that fails before saving anything pauses the job, like the match', async () => {
+  const clock = fakeClock()
+  const { store, released } = memoryStore(2)
+  const cover: CoverWork = () => Promise.reject(new Error('goodreads-rating did not answer'))
+  // The first chunk only matches (its rows are spent); the second one's cover batch fails with nothing saved.
+  await runChunk({ store, work: matchingWithoutCovers, cover, runner: 'r', clock, maxRows: 2, log: quiet })
+  released.length = 0
+  const result = await runChunk({ store, work: matchingWithoutCovers, cover, runner: 'r', clock, maxRows: 100, log: quiet })
+  assertEquals(result.state, 'paused')
+  assertEquals(released[0]!.error, 'goodreads-rating did not answer')
+})
+
+Deno.test('a refused cover save stops the chunk and releases nothing', async () => {
+  const clock = fakeClock()
+  const { store, released } = memoryStore(2)
+  store.saveCover = () => Promise.resolve(false)
+  const result = await runChunk({ store, work: matchingWithoutCovers, cover: decidingCovers, runner: 'r', clock, maxRows: 100, log: quiet })
+  assertEquals(result.state, 'gone')
+  assertEquals(released.length, 0)
 })

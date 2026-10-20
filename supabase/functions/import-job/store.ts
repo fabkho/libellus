@@ -4,7 +4,7 @@
  * Catalogue search, the write and the cover fill, each run as the job's member and only for the runner holding the
  * lease) is `MemberCalls`.
  */
-import type { Job, JobRow, ReleaseState, RowResult, Store } from './runner.ts'
+import type { CoverResult, CoverRow, Job, JobRow, ReleaseState, RowResult, Store } from './runner.ts'
 
 /** The slice of the Supabase client this needs (a service-role client). */
 export type Rpc = (name: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>
@@ -27,8 +27,19 @@ export function createStore(rpc: Rpc): Store {
     async saveRow(job, runner, idx, result: RowResult) {
       return (await call<boolean>(rpc, 'import_job_save_row', { p_job: job, p_runner: runner, p_idx: idx, p_result: result })) === true
     },
-    async release(job, runner, error) {
-      return await call<ReleaseState>(rpc, 'import_job_release', { p_job: job, p_runner: runner, p_error: error ?? null })
+    async release(job, runner, error, waitUntil) {
+      return await call<ReleaseState>(rpc, 'import_job_release', {
+        p_job: job,
+        p_runner: runner,
+        p_error: error ?? null,
+        p_wait_until: waitUntil ? new Date(waitUntil).toISOString() : null,
+      })
+    },
+    async takeCoverRows(job, runner, limit) {
+      return (await call<CoverRow[] | null>(rpc, 'import_job_take_cover_rows', { p_job: job, p_runner: runner, p_limit: limit })) ?? []
+    },
+    async saveCover(job, runner, idx, result: CoverResult) {
+      return (await call<boolean>(rpc, 'import_job_save_cover', { p_job: job, p_runner: runner, p_idx: idx, p_result: result })) === true
     },
   }
 }

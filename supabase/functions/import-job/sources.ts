@@ -37,7 +37,7 @@ export type UpstreamFetch = (url: string, init?: { signal?: AbortSignal; headers
 const abortError = () => Object.assign(new Error('aborted'), { name: 'AbortError' })
 
 /** Resolves with `task`, or rejects at once when `signal` aborts (the task's answer is then dropped). */
-function abortable<T>(task: Promise<T>, signal?: AbortSignal): Promise<T> {
+export function abortable<T>(task: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return task
   if (signal.aborted) return Promise.reject(abortError())
   return new Promise((resolve, reject) => {
