@@ -7,7 +7,7 @@ import { UPGRADE_LISTS_KEY } from '../app/utils/coverUpgradeList'
 import { signUpMember } from '../tests/support/member'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { expectAccessible, goto, signedIn } from './support'
+import { expectAccessible, goto, reopen, signedIn } from './support'
 
 /**
  * The import runs on the server (proposal #329, docs/parity.md "The import as a server job"): the member picks the file, the app reads it
@@ -55,15 +55,30 @@ async function runnerEnds(jobId: string) {
 
 /**
  * Realtime as a project whose Realtime was idle served it (20 October 2026): Playwright stands between the page and the stack's
- * socket. The join is answered at once, but the server's `postgres_changes` do not reach the page while `deaf`, and with
- * `holdSystem` its word that her changes are subscribed (`system`, "Subscribed to PostgreSQL") is kept back until `release()`.
+ * socket. The join is answered at once, but the server's `postgres_changes` do not reach the page while `deaf` (the default: the
+ * flows about a socket that heard nothing), and with `holdSystem` its word that her changes are subscribed (`system`, "Subscribed
+ * to PostgreSQL") is kept back until `release()`. A flow that changes the job and expects the page to see it passes `deaf: false`
+ * and waits for that word first (`whenSubscribed`).
  * `sockets` counts the sockets the page opened (a reconnect is one more), `missed` the changes that did not reach it; `joinedAt` is
  * when the join of her channel was answered.
+ *
+ * `subscribed` counts the sockets that were told it, once each (a reconnect's socket is one more), so `whenSubscribed` can ask
+ * whether the feed that is up is the one that knows.
+ *
+ * Her context, not this page: the pill's flow closes the app and opens it again, and the feed of the page that comes after is the
+ * same feed — its socket has to be watched too.
  */
-async function realtimeBetween(page: Page, { holdSystem = false } = {}) {
-  const gate = { sockets: 0, deaf: true, holdSystem, held: [] as string[], subscribed: 0, missed: 0, joinedAt: null as number | null, release: () => {} }
-  await page.routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => {
+async function realtimeBetween(page: Page, { holdSystem = false, deaf = true } = {}) {
+  const gate = { sockets: 0, deaf, holdSystem, held: [] as string[], subscribed: 0, missed: 0, joinedAt: null as number | null, release: () => {} }
+  await page.context().routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => {
     gate.sockets++
+    // This socket's one word that her changes are subscribed: said once, whenever it comes (the server says it again on a rejoin).
+    let said = false
+    const heard = () => {
+      if (said) return
+      said = true
+      gate.subscribed++
+    }
     const server = ws.connectToServer()
     // What the page sends goes on untouched; what the server sends is looked at (Phoenix v2: [join_ref, ref, topic, event, payload]).
     server.onMessage((message) => {
@@ -79,7 +94,7 @@ async function realtimeBetween(page: Page, { holdSystem = false } = {}) {
       if (event === 'postgres_changes' && gate.deaf) return void gate.missed++
       if (event === 'system' && typeof message === 'string') {
         if (gate.holdSystem) return void gate.held.push(message)
-        gate.subscribed++
+        heard()
       }
       ws.send(message)
       if (event === 'phx_reply' && typeof topic === 'string' && topic.startsWith('realtime:import-job:')) gate.joinedAt ??= Date.now()
@@ -88,7 +103,7 @@ async function realtimeBetween(page: Page, { holdSystem = false } = {}) {
       gate.deaf = false
       gate.holdSystem = false
       for (const message of gate.held.splice(0)) {
-        gate.subscribed++
+        heard()
         ws.send(message)
       }
     }
@@ -96,11 +111,35 @@ async function realtimeBetween(page: Page, { holdSystem = false } = {}) {
   return gate
 }
 
+/** The gate as a flow has it (the page whose feed it watches is only where the route was registered). */
+type FeedGate = Awaited<ReturnType<typeof realtimeBetween>>
+
+/**
+ * Waits for the feed's own ready signal: the server's word that her `postgres_changes` are subscribed (`system`,
+ * `{"extension":"postgres_changes","status":"ok"}`, data/importJobFeed.ts — what the watch reads the job on). The join's reply is
+ * not it: the server sets her changes up after it, so a change made in between is never pushed, and the page learns of it only
+ * from the read that follows that word. A change the flow makes before it can be lost until the silence net reads again 30 s
+ * later: the release run of v1.25.0 (39497401199) waited ten seconds like that for a stopped job, on "a job that stopped is
+ * tried again". Every change the flow makes lands after this word, so the page is told, and nothing waits on a sleep.
+ *
+ * `sockets` is how many the flow has already let go by: the app opened again opens another, and a flow that has just reopened it
+ * waits for that one's word, not for the one the page before it had.
+ */
+async function whenSubscribed(feed: FeedGate, sockets = 0) {
+  await expect
+    .poll(() => (feed.sockets > sockets ? feed.subscribed === feed.sockets : false), {
+      message: 'the app is subscribed to her job changes',
+      timeout: 20_000,
+    })
+    .toBe(true)
+}
+
 test.afterEach(async () => {
   await sql(`delete from public.import_queue where holder = 'device:someone-else-0001'`)
 })
 
 test('she picks a file and watches the server: in line, looking up, covers, adding, done: live, with no review step', async ({ page }) => {
+  const feed = await realtimeBetween(page, { deaf: false })
   const member = await signedIn(page)
   const other = await someoneElseRuns()
   await chooseTheFile(page)
@@ -119,7 +158,8 @@ test('she picks a file and watches the server: in line, looking up, covers, addi
   // One polite status says the phase, and not the counts.
   await expect(page.getByTestId('import.say')).toHaveText(en.import.ambient.say.queued)
 
-  // It is the server's turn: the page follows over Realtime, without a reload.
+  // It is the server's turn, and the page's socket is subscribed to her changes before it is: the page follows over Realtime, without a reload.
+  await whenSubscribed(feed)
   await sql('delete from public.import_queue where member_id = $1', [other.id])
   await runnerSets(job.id, `state = 'running', done = 3`)
   await expect(running).toHaveAttribute('data-kind', 'matching')
@@ -153,31 +193,35 @@ test('she picks a file and watches the server: in line, looking up, covers, addi
 })
 
 test('the pill is back after the app is closed and opened again: the job went on without it, and its end is told once', async ({ page }) => {
+  const feed = await realtimeBetween(page, { deaf: false })
   const member = await signedIn(page)
   await chooseTheFile(page)
   await expect(page.getByTestId('import.running')).toBeVisible()
+  await whenSubscribed(feed)
   const job = await jobOf(member.id)
 
-  // The app is closed (a reload) while the job runs on the server.
+  // The app is closed while the job runs on the server, and opened again on the Library.
   await page.getByTestId('shell.tab.library').click()
   await runnerSets(job.id, `state = 'running', done = 2`)
   await expect(page.getByTestId('shell.import')).toHaveAttribute('data-kind', 'matching')
-  await page.reload()
-  await expect(page.getByTestId('shell.import')).toHaveAttribute('data-kind', 'matching')
-  // The one read at start, then the socket: it goes on live.
+  const opened = feed.sockets
+  let app = await reopen(page)
+  await expect(app.getByTestId('shell.import')).toHaveAttribute('data-kind', 'matching')
+  // The one read at start, then the socket of the page that has just opened: it goes on live.
+  await whenSubscribed(feed, opened)
   await runnerSets(job.id, `done = 5`)
-  await expect(page.getByTestId('shell.import.label')).toHaveText(en.import.ambient.matching.replace('{done}', '5').replace('{total}', String(job.total)))
+  await expect(app.getByTestId('shell.import.label')).toHaveText(en.import.ambient.matching.replace('{done}', '5').replace('{total}', String(job.total)))
 
   // It ends while the app is closed.
   await runnerSets(job.id, `state = 'done', finished_at = now(), added = 4`)
   await sql(`delete from public.import_queue where holder = 'job:' || $1`, [job.id])
-  await page.reload()
-  await expect(page.getByTestId('shell.import')).toHaveAttribute('data-kind', 'done')
-  await page.getByTestId('shell.import.dismiss').click()
-  await expect(page.getByTestId('shell.import')).toHaveCount(0)
+  app = await reopen(app)
+  await expect(app.getByTestId('shell.import')).toHaveAttribute('data-kind', 'done')
+  await app.getByTestId('shell.import.dismiss').click()
+  await expect(app.getByTestId('shell.import')).toHaveCount(0)
   // Seen: not told again.
-  await page.reload()
-    await expect(page.getByTestId('shell.import')).toHaveCount(0)
+  app = await reopen(app)
+  await expect(app.getByTestId('shell.import')).toHaveCount(0)
 })
 
 test('the job moves in the moment between the join and the server subscribing her changes: the page reads it then (it stayed on "Starting soon")', async ({ page }) => {
@@ -253,9 +297,12 @@ test('another start within two minutes says so; cancelling stops the job', async
 })
 
 test('a job that stopped is tried again from its own rows, with no file', async ({ page }) => {
+  const feed = await realtimeBetween(page, { deaf: false })
   const member = await signedIn(page)
   await chooseTheFile(page)
   await expect(page.getByTestId('import.running')).toBeVisible()
+  // The page is subscribed before the job is stopped: the change that stops it is pushed, not missed (whenSubscribed).
+  await whenSubscribed(feed)
   const job = await jobOf(member.id)
 
   // The server gave up (long ago enough for another start).
