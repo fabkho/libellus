@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { WALL_COVERS } from '@/components/auth/wall'
-import { isBlankCover } from '#ui/utils/cloth'
+import { isBlankCover } from '#layers/ui/app/utils/cloth'
 import { APPLE_BOX, artworkOf, COVER_WIDTH, coverChain, coverSizes, coverSrc, coverSrcset, type CoverSize } from '@/utils/cover'
 
 /**

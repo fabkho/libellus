@@ -26,7 +26,7 @@ const leavesOf = (words: Record<string, unknown>, prefix = ''): Array<[string, u
 
 /** The base's `ui.text` as it declares it, evaluated from its `app.config.ts` (types stripped, `defineAppConfig` is identity). */
 const declaredWords = (): string[] => {
-  const source = readFileSync(join(layer, 'app.config.ts'), 'utf8')
+  const source = readFileSync(join(layer, 'app/app.config.ts'), 'utf8')
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
   const mod = { exports: {} as { default?: { ui: { text: Record<string, unknown> } } } }
   new Function('module', 'exports', 'defineAppConfig', js)(mod, mod.exports, (config: unknown) => config)

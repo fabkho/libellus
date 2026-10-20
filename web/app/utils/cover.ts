@@ -10,7 +10,7 @@ import { openLibraryCoverAt } from '../data/openLibrary'
  * What a cover draws without its sources (the cloth of a Placeholder cover, the light it throws into the room, the
  * author line, a blank stand-in) is the shared UI base's: `utils/cloth.ts` there (`clothOf`, `glowOf`,
  * `formatAuthors`, `isBlankCover`, and the thumbhash placeholder `thumbhashDataUrl`, which keeps what it decoded:
- * auto-imported, or from `#ui/utils/cloth`).
+ * auto-imported, or from `#layers/ui/app/utils/cloth`).
  */
 
 /** A cover's two precomputed colours, `#rrggbb`, resolved once with the cover (data/books.ts). */

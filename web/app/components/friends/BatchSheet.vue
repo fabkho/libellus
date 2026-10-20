@@ -9,7 +9,7 @@
 // to read") the title is her name alone and each row says what she did, with her avatar and name (which open her
 // page) as in the feed.
 import type { FeedBatchView } from '~/data/feed'
-import type { SheetRestore } from '#ui/utils/sheetRestore'
+import type { SheetRestore } from '#layers/ui/app/utils/sheetRestore'
 
 const open = defineModel<boolean>('open', { required: true })
 const props = defineProps<{ batch: FeedBatchView; dayLabel: string; restore?: SheetRestore | null }>()

@@ -38,7 +38,7 @@ import {
   startCover,
   type CoverColors,
 } from '~/utils/cover'
-import { isBlankCover } from '#ui/utils/cloth'
+import { isBlankCover } from '#layers/ui/app/utils/cloth'
 import { attachCoverTilt } from '~/utils/coverTilt'
 
 const props = withDefaults(

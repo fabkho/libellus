@@ -18,9 +18,9 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   overlay stack is the base's (wave 6a): `UiSheet`, `UiConfirm`, `useModalLayer`, `useBackDismiss`, `utils/sheetFocus.ts`,
   its `router.options.ts` (the system Back, history key `uiLayer`; the app's own `router.options.ts` has no `history`)
   and the cover's cloth helpers (`utils/cloth.ts`; the sources stay in `utils/cover.ts`). `UI_LAYER=/path/to/ui-checkout`
-  points the app at a local checkout instead (`ui.config.ts`; `#ui`, which `main.css` imports its stylesheet by, and the
+  points the app at a local checkout instead (`ui.config.ts`; `#layers/ui`, which `main.css` imports its stylesheet by, and the
   Vitest alias follow it). The app's own `components/ui/*`, composables and utils with the base's names win
-  (`tests/ui-layer-shadow.test.ts`); `ui.config.ts` says which of the base's plugins run (`touch-active`) and why the
+  (`tests/ui-layer-shadow.test.ts`; the allow-list of intended overrides, the app's own copies of `UiAmbient`, `UiCover` and the motion, keyboard and haptics utils and composables, is in `tests/ui-layer-overrides.test.ts`); `ui.config.ts` says which of the base's plugins run (`touch-active`) and why the
   other two are held.
   The controls are the base's too (wave 6b): `UiButton`, `UiRoundButton`, `UiPill`, `UiSegmented`, `UiSwitch`, `UiField`,
   `UiIconSegments`, `UiPressLink`. A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app:

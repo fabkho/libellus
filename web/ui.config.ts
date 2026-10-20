@@ -4,7 +4,7 @@ import type { NuxtConfig } from 'nuxt/schema'
 /**
  * Where the shared UI base comes from (fabkho/ui, the `@fabkho/ui` dependency pinned to a tag in package.json; plan:
  * docs/ui-layer-plan.md in fabkho/trappist, §3). One form for every app: `extends: uiLayer()`;
- * `UI_LAYER=/path/to/ui` points the app at a local checkout instead (the same override as `REGAL_LAYER`; `#ui`,
+ * `UI_LAYER=/path/to/ui` points the app at a local checkout instead (the same override as `REGAL_LAYER`; `#layers/ui`,
  * which main.css imports the stylesheet by, follows it).
  */
 export const uiLayer = () => process.env.UI_LAYER || '@fabkho/ui'
