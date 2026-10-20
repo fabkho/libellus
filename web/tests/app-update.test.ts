@@ -255,9 +255,10 @@ describe('the service worker setup', () => {
     expect(config).toMatch(/checkOutdatedBuildInterval:\s*false/)
   })
 
-  it('keeps background sync and the share target in the generated worker', () => {
-    expect(config).toMatch(/importScripts:\s*\['\/sw-sync\.js', '\/sw-share\.js'\]/)
+  it('keeps background sync, the share target and Web Push in the generated worker', () => {
+    expect(config).toMatch(/importScripts:\s*\['\/sw-sync\.js', '\/sw-share\.js', '\/sw-push\.js'\]/)
     expect(read('../public/sw-sync.js')).toContain("addEventListener('sync'")
+    expect(read('../public/sw-push.js')).toContain("addEventListener('push'")
   })
 
   it('keeps the reader’s chunks out of the precache (#341: they are fetched, and guarded, when they are needed)', () => {
@@ -284,7 +285,7 @@ describe('the Cloudflare Pages headers (public/_headers)', () => {
   // never learn that a release is waiting (docs/parity.md "App update"). Live on libellus.fabkho.dev,
   // read 2026-10-14: `curl -sI https://libellus.fabkho.dev/sw.js` answers `cache-control: no-cache`.
   it('revalidates the worker, what it imports and the manifest every time', () => {
-    for (const path of ['/sw.js', '/sw-sync.js', '/sw-share.js', '/manifest.webmanifest']) {
+    for (const path of ['/sw.js', '/sw-sync.js', '/sw-share.js', '/sw-push.js', '/manifest.webmanifest']) {
       expect(rules[path]?.['Cache-Control'], path).toBe('no-cache')
     }
   })

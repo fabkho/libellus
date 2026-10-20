@@ -257,6 +257,9 @@ export default defineNuxtConfig({
       // (NUXT_PUBLIC_LINK_TEMPLATES, JSON: [{ "label": …, "url": … }]; utils/linkTemplates.ts).
       // Public like everything here; a member's own links are hers alone (data/linkTemplates.ts).
       linkTemplates: '',
+      // The VAPID public key of the import's Web Push ("Notify me when it's done", NUXT_PUBLIC_VAPID_PUBLIC_KEY; the private half is
+      // the `import-job` function's secret, supabase/functions/import-job/README.md). Empty: the import page does not offer it.
+      vapidPublicKey: '',
     },
   },
 
@@ -380,8 +383,9 @@ export default defineNuxtConfig({
       // keeps for the app is never one carrying somebody's page.
       navigateFallbackDenylist: [/^\/r(\/|$)/],
       // Background Sync wakes the open app to send the outbox (#93, public/sw-sync.js); the share
-      // target's POST is answered by public/sw-share.js (#91, #131).
-      importScripts: ['/sw-sync.js', '/sw-share.js'],
+      // target's POST is answered by public/sw-share.js (#91, #131); a Web Push ("Import done") is shown, and its tap
+      // opened, by public/sw-push.js.
+      importScripts: ['/sw-sync.js', '/sw-share.js', '/sw-push.js'],
       // The module's defaults only pick up the build-meta JSON under `nuxt generate`;
       // the app shell, chunks and fonts have to be listed to be precached. Only
       // woff2 (the latin subsets main.css imports), never the woff fallbacks;

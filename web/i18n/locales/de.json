@@ -1018,6 +1018,19 @@
     "reading": "Datei wird gelesen …",
     "starting": "Sende deine Bücher…",
     "serverNote": "Dein Import läuft auf unserem Server. Du kannst BetterReads schließen; wir machen ihn fertig.",
+    "notify": {
+      "ask": "Benachrichtige mich, wenn es fertig ist",
+      "askHint": "Eine Benachrichtigung, wenn dein Import endet. Sonst nichts.",
+      "on": "Wir benachrichtigen dich, wenn es fertig ist.",
+      "off": "Ausschalten",
+      "blocked": "Benachrichtigungen für BetterReads sind in den Einstellungen dieses Browsers blockiert.",
+      "install": "Um auf iPhone oder iPad benachrichtigt zu werden, füge BetterReads zuerst deinem Home-Bildschirm hinzu (ab iOS 16.4): Tippe auf „Teilen“, dann auf „Zum Home-Bildschirm“.",
+      "failed": "Benachrichtigungen konnten nicht eingeschaltet werden. Versuch es nochmal.",
+      "say": {
+        "on": "Du wirst benachrichtigt, wenn dein Import fertig ist.",
+        "off": "Benachrichtigung ausgeschaltet."
+      }
+    },
     "queuedHint": "Importe laufen nacheinander. Deiner startet von selbst.",
     "pausedHint": "Eine Quelle antwortet gerade nicht. Wir machen von selbst weiter.",
     "cancel": "Import abbrechen",

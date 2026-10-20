@@ -11,6 +11,13 @@ POST /functions/v1/import-job   { "action": "run" }       one chunk of the job t
 401 unauthorized · 405 method_not_allowed · 400 action_invalid · 500 failed
 ```
 
+```
+POST /functions/v1/import-job   { "action": "notify", "job": "<uuid>" }       the job's Web Push (below)
+
+200 { "state": "claimed" | "taken", "sent", "gone", "refused", "later" } · 200 { "state": "off" } (no VAPID key set)
+400 job_invalid · 401 unauthorized · 500 failed
+```
+
 Callers: the database (pg_net, `private.import_job_kick`) with the Vault secret `import_job_token`, or the owner with
 the service-role key. Members never call it.
 
@@ -148,6 +155,55 @@ The job writes for a member who is not in the app, through the very functions th
 claims for their own call only, and only for the runner holding the job's lease (the member comes from the job row,
 never from the caller).
 
+## Web Push: "Import done" (`push.ts`, `webpush.ts`)
+
+The member is told she can close BetterReads, so she is told when it is over. On the import page, while her job is live, a button
+"Notify me when it's done" asks the browser's permission (on her tap, never on load), subscribes that browser with the VAPID public
+key and saves the subscription (`save_push_subscription`: the Push service's address, the browser's `p256dh` key and `auth`
+secret; the table `push_subscriptions`, own rows only). The worker (`web/public/sw-push.js`) shows the message and opens `/import` when she
+taps it.
+
+**Sending.** A trigger on `import_jobs` (`private.import_job_ended`, `20261106010000_push_subscriptions.sql`) fires when a job turns
+`done` or `failed` (those states are set in the release, the claim's stall check and the minute tick, so it is the table that is
+watched, not the runner) and, if she has a subscription, calls this function through pg_net with `{"action": "notify", "job"}`: the
+same address and the same Vault secret as the import's own kick (`private.import_push_kick`). The function:
+
+1. claims the job's push (`import_job_claim_push`: sets `import_jobs.notified_at` once, answers what the job came to; **one push a
+   job**, however often it is kicked, whatever runs twice) and reads her subscriptions;
+2. sends one message to each browser, in the language she agreed in (`messageOf`: "Import done" / "12 books added to your
+   Library · 4 kept · 2 failed", "Import stopped" / "Your import stopped — tap to try again"; the German is `Import fertig` …),
+   encrypted for it (`webpush.ts`: RFC 8291 `aes128gcm`, VAPID RFC 8292, WebCrypto only; the test decrypts what it sends and checks the
+   RFC's own example byte for byte);
+3. **a 404 or 410 from the Push service deletes the subscription** (the browser is gone); a 201 sets `last_ok_at`; a refusal (403 for a
+   bad key, 400) is logged and changes nothing; when **nobody** could be reached for a reason that passes (a timeout, a 429, a 5xx)
+   the claim is given back (`import_job_unclaim_push`) and pg_cron's `import-job-push` (every minute, jobs that ended 1 to 15 minutes
+   ago and are still unclaimed) kicks it again.
+
+Without the three secrets the function answers `{"state": "off"}` and claims nothing (the local stack, a project that did not set
+them): a key set later still tells the jobs that ended in the last 15 minutes.
+
+**iOS.** Web Push on an iPhone or iPad needs **iOS 16.4 or later and BetterReads on the Home Screen** (Share → Add to Home
+Screen): Safari tabs have no push, and the app says so ("To be notified on an iPhone or iPad, add BetterReads to your Home Screen first")
+instead of offering the button. Every push **must** show a notification there (`userVisibleOnly`, and the worker shows one even for a
+message it cannot read), or iOS revokes the subscription. The Push service is Apple's `web.push.apple.com`: the VAPID `sub` must be a
+`mailto:` or https address, or it answers 403. Android Chrome and desktop browsers need nothing but the permission. No notification
+without the Home Screen app; an installed app also gets none while the device is off for longer than the message's TTL (24 h).
+
+**Secrets and deploy** (the private key goes in the project's secrets and nowhere else: not in git, not in a PR, not in the app):
+
+```
+cd supabase/functions/import-job && deno run vapid_keys.ts            # prints VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY (a new pair is a new start:
+                                                                      # subscriptions made with another public key stop working)
+supabase secrets set VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:<owner address>
+supabase db push                                                      # 20261106010000_push_subscriptions.sql (the release workflow does it)
+supabase functions deploy import-job                                  # the same function, `verify_jwt` stays off (supabase/config.toml)
+```
+
+and the app's build gets the **public** key (`NUXT_PUBLIC_VAPID_PUBLIC_KEY=<public>`, Cloudflare Pages' build variables, docs/SETUP.md): without
+it the import page does not offer the button. The import's `function_url` and `import_job_token` (Deploy, below) are what the push
+kick uses too: nothing else to set. The sender's check by hand, for a job that ended: `curl -X POST <function_url> -H "Authorization:
+Bearer <service-role key>" -d '{"action":"notify","job":"<uuid>"}'` (it claims the job's push, so it sends once).
+
 ## Deploy
 
 ```
@@ -199,7 +255,8 @@ the script adds them up from the edge runtime container's log.
 deno lint && deno check *.ts && deno task test
 ```
 
-The runner on an in-memory store and an injected clock; the batch (`work_test.ts`), the cover stage (`covers_test.ts`) and the write phase (`write_test.ts`: stubbed member calls) on
+The runner on an in-memory store and an injected clock; the push (`push_test.ts`: a stubbed Push service, 410 deletes, one push a job; `webpush_test.ts`: the
+encryption against the RFC's example and a receiver written out on its own, the VAPID token verified with the public key); the batch (`work_test.ts`), the cover stage (`covers_test.ts`) and the write phase (`write_test.ts`: stubbed member calls) on
 Open Library's recorded answers (`fixtures/openlibrary.json`, `record_fixtures.ts`) and the `goodreads-rating` function's
 recorded answers (found / unsure / blocked / none / not answering). The database side is pgTAP
 (`supabase/tests/import_jobs_test.sql`, `import_job_covers_test.sql`, `import_job_write_test.sql`: it includes a second run of the same file writing nothing).
