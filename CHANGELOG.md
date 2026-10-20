@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.1](https://github.com/fabkho/libellus/compare/v1.24.0...v1.24.1) (2026-10-20)
+
+
+### Fixes
+
+* **ci:** pin the user flows to Ubuntu 24.04; the browser cache key names the image ([#390](https://github.com/fabkho/libellus/issues/390)) ([0f19adb](https://github.com/fabkho/libellus/commit/0f19adb5efe49e49981e0348fb67b05ffb25f00c))
+
 ## [1.24.0](https://github.com/fabkho/libellus/compare/v1.23.0...v1.24.0) (2026-10-20)
 
 
