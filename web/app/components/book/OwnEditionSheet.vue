@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // "My edition isn't listed" (stores/ownEdition.ts), the step after Change
-// edition's list (and the import's Choose edition). Three steps in one sheet:
+// edition's list. Three steps in one sheet:
 //
 // - ISBN: her copy's ISBN, typed (ISBN-10 or -13, hyphens and spaces as she
 //   likes; the check digit must add up) or scanned (the camera button, the
@@ -15,8 +15,7 @@
 //
 // The action at the top right is the step's (Use · Save; the ISBN step has none: its
 // Look up is the button under the field, not repeated in the header), as is the
-// button at the bottom. Writes need the connection on the Book page (#15);
-// the import writes nothing here. `changed` fires with the entry once it has
+// button at the bottom. Writes need the connection (#15). `changed` fires with the entry once it has
 // the new edition (the Book page moves to its address).
 import { editionFacts } from '~/data/editions'
 import type { BookFormat } from '~/data/books'
@@ -39,8 +38,8 @@ const open = computed({
   },
 })
 
-/** On the Book page every step that writes needs the connection; the import's only the lookup does. */
-const writes = computed(() => own.target?.kind === 'entry')
+/** Every step that writes needs the connection. */
+const writes = computed(() => own.target !== null)
 const isbnId = useId()
 
 const title = computed(() => t(`ownEdition.title.${own.step}`))
@@ -60,7 +59,7 @@ const actionDisabled = computed(() => {
 async function act() {
   if (own.step === 'isbn') return own.lookup()
   const done = own.step === 'found' ? await own.useFound() : await own.saveOwn()
-  if (done && done !== true) emit('changed', done)
+  if (done) emit('changed', done)
 }
 
 function scanned(isbn13: string) {

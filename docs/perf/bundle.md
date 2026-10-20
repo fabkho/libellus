@@ -70,7 +70,7 @@ sign is a build warning, `Duplicated imports "thumbhashDataUrl"` from `app/utils
 | Nuxt runtime, vue, vue-router, unhead | first paint | eager | no (required) |
 | vue-i18n + message compiler + messages | first paint | compiler and messages eager (waterfall for messages) | compiler: no (see F5). messages: needed, but preload them |
 | supabase-js umbrella (storage, functions, iceberg) | first paint (the client is built at boot) | no; storage used by `avatar.ts`, ebooks files, session | storage/functions could be built lazily (F3) |
-| Realtime | not used | stubbed by PR #254 | done |
+| Realtime | only the import job's live feed (#329): `data/importJobFeed.ts` | the client is built with the stub (PR #254); the real `@supabase/realtime-js` is its own `realtime` chunk (57 KB raw), imported while a job of hers is live and left out of the precache | done |
 | Home components on `/` | Home only | lazy, but fetched at `/` before the sign-in redirect | no: F1 |
 | vitals (web-vitals, `data/vitals.ts`) | after load | idle `import()` | yes, but its helper chunk drags in papaparse (F2) |
 | papaparse, import store, OwnEditionSheet | Profile → Import, a book's edition sheet | lazy by route, but pulled by the vitals helper | yes once F2 is fixed |

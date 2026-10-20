@@ -1,35 +1,22 @@
 <script setup lang="ts">
-// Import books (issues #40, #111): an export from Goodreads or Hardcover into
-// the member's Library; which app wrote it is told by its header, she never
-// picks one. Reached from the Profile's account rows (issue #78). One line names
-// the apps it reads, with how to export from each; then the file is
-// read on the device and every book's edition looked up (the count runs as
-// they come in), a preview says what would happen (how many per Status, how
-// many matched an edition, her other shelves offered as Collections, which
-// books need a look — with the cover of the edition each will be), *Import N books* writes
-// them with a running count, and a summary leads to the Library. Importing
-// the same file again adds nothing. A book matched by its title or only from
-// the file offers Choose edition: the Change edition sheet of the Book page, the
-// pick replacing its edition in the preview only (stores/import.ts). One import looks its books up at a time, across
-// all members: when another is running, the lookups wait in line (how many are ahead, a rough wait; leaving the line
-// is the one button) and start by themselves when it is their turn. She can use the app meanwhile: every other screen shows a
-// small pill with the import's progress (components/shell/ImportStatus.vue), the screen stays on while the lookups run (useScreenWake),
-// and closing the app pauses the import, which continues when it is opened again (stores/import.ts). A pushed screen in the tab layout.
-import type { ImportNote } from '~/components/import/NoteList.vue'
+// Import books (issues #40, #111): an export from Goodreads or Hardcover into the member's Library; which app wrote it is told by
+// its header, she never picks one. Reached from the Profile's account rows (issue #78). One line names the apps it reads, with how
+// to export from each; she chooses the file, the app reads it on the device and sends its books to the server, and from then on
+// this page only shows the server's job (proposal #329): waiting in line, looking the books up, finding covers, adding them, done.
+// "Your import runs on our server. You can close BetterReads; we'll finish it." There is nothing to review and nothing to choose:
+// "Choose edition" is on each Book's own page. The job is live over Realtime (stores/import.ts); the same words are on the pill every
+// other screen shows (components/shell/ImportStatus.vue). Importing the same file again adds nothing. A pushed screen in the tab layout.
 import { SUPPORTED_SOURCES } from '~/data/import/detect'
-import { editionFacts } from '~/data/editions'
-import { languageCode } from '~/data/import/editions'
-import { useImportStore, type Attention } from '~/stores/import'
+import { useImportStore } from '~/stores/import'
 
 definePageMeta({ layout: 'tabs', screen: 'import', pushed: true })
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const router = useRouter()
 const store = useImportStore()
-// Choosing a file looks books up and importing writes: offline neither can (#15).
+const words = useImportWords()
+// Choosing a file uploads its books and starting again writes: offline neither can (#15).
 const online = useOnline()
-// The screen stays on while the lookups run and this page shows: a phone that turns it off puts the import in the background (data/screenWake.ts).
-useScreenWake(() => store.phase === 'matching' || store.phase === 'importing')
 
 useHead({ title: () => `${t('import.title')} · ${t('app.name')}` })
 
@@ -50,94 +37,37 @@ function picked(event: Event) {
   if (file) void store.choose(file)
 }
 
-const picking = computed(() => store.phase === 'pick' || store.phase === 'reading')
-/** "From Hardcover · 312 books": the app the file was told to be from, and how many books it holds. */
-const fileTitle = computed(() =>
-  t('import.inFile', { count: store.books.length, app: store.source ? t(`import.app.${store.source}`) : '' }, store.books.length),
-)
+const ambient = computed(() => store.ambient)
+const job = computed(() => store.job)
+const kind = computed(() => ambient.value?.kind ?? null)
+const running = computed(() => kind.value === 'queued' || kind.value === 'paused' || kind.value === 'matching' || kind.value === 'covers' || kind.value === 'writing')
+const progress = computed(() => {
+  const now = ambient.value
+  return now && (now.kind === 'matching' || now.kind === 'covers' || now.kind === 'writing') ? now : null
+})
+const label = computed(() => (ambient.value ? words(ambient.value) : ''))
+const hint = computed(() => (kind.value === 'queued' ? t('import.queuedHint') : kind.value === 'paused' ? t('import.pausedHint') : ''))
+// One polite status that names the phase, never the counts (which change with every book).
+const said = computed(() => (kind.value ? t(`import.ambient.say.${kind.value}`) : ''))
+
+const picking = computed(() => store.phase !== 'job' || !job.value)
 const fileErrorText = computed(() => {
   const detail = store.fileErrorDetail
   if (store.fileError !== 'missingColumns' || !detail) return store.fileError ? t(`import.fileError.${store.fileError}`) : ''
   const columns = detail.columns.map((name) => `“${name}”`).join(', ')
   return t('import.fileError.missingColumns', { app: t(`import.app.${detail.source}`), columns }, detail.columns.length)
 })
+const startErrorText = computed(() => (store.startError ? t(`import.startError.${store.startError}`) : ''))
 
-/** `de` → "German", in the app's language; null when there is none to name. */
-function languageName(code: string | null): string | null {
-  const short = languageCode(code)
-  if (!short) return null
-  try {
-    return new Intl.DisplayNames([locale.value], { type: 'language' }).of(short) ?? null
-  } catch {
-    return null
-  }
-}
-
-function noteText(note: Attention['notes'][number]): string {
-  switch (note.code) {
-    case 'otherShelf':
-      return t('import.note.otherShelf', { shelf: note.shelf })
-    case 'extraReads':
-      return t('import.note.extraReads', { count: note.count }, note.count)
-    case 'earlierReads':
-      return t('import.note.earlierReads', { count: note.count }, note.count)
-    case 'byTitle': {
-      const edition = [note.year, languageName(note.language)].filter(Boolean).join(', ')
-      return edition ? t('import.note.byTitleEdition', { edition }) : t('import.note.byTitle')
-    }
-    default:
-      return t(`import.note.${note.code}`)
-  }
-}
-
-/** The quiet "Find a cover" button of a row without one, with what its last try said. */
-function findCoverOf(key: string, title: string): NonNullable<ImportNote['find']> {
-  const label = t('import.findCover.action')
-  const search = store.coverSearch?.key === key ? store.coverSearch.state : null
-  return { label, name: t('import.actionFor', { action: label, title }), busy: search === 'asking' || !online.value, status: search ? t(`import.findCover.${search}`) : '' }
-}
-
-/** A book of the preview as a row: its cover, its notes, and, once every book is looked up, the button that opens Choose edition. */
-function listed(items: readonly Attention[], action: string): ImportNote[] {
-  return items.map((item) => {
-    const title = item.title || t('import.untitled')
-    return {
-      key: item.key,
-      title,
-      authors: item.authors,
-      cover: item.edition ? { url: item.edition.coverUrl, thumbhash: item.edition.coverThumbhash, colors: item.edition.coverColors } : null,
-      notes: item.notes.map(noteText),
-      ...(item.held
-        ? { facts: editionFacts(item.held, { locale: locale.value, pages: (count) => t('book.pages', { count }), format: (format) => t(`book.formatFact.${format}`) }) }
-        : {}),
-      ...(item.choose && store.phase === 'preview' ? { action: { label: action, name: t('import.actionFor', { action, title }) } } : {}),
-      ...(item.findCover && store.phase === 'preview' ? { find: findCoverOf(item.key, title) } : {}),
-    }
-  })
-}
-// What needs a look for sure (no edition, or one without a cover) is shown; the rest, found with a cover, waits behind a toggle.
-const attention = computed(() => listed(store.attention.filter((item) => item.look), t('import.chooseEdition')))
-const attentionMinor = computed(() => listed(store.attention.filter((item) => !item.look), t('import.chooseEdition')))
-const showMinor = ref(false)
-const choices = computed(() => listed(store.choices, t('import.changeEdition')))
-
-/** Waiting for the turn: how many imports are ahead and a rough wait (a guess, in whole minutes), or that her own import runs on another device. */
-const queueText = computed(() => {
-  const queued = store.queued
-  if (!queued) return null
-  if (queued.kind === 'elsewhere') return { line: t('import.queueElsewhere'), wait: '' }
-  const minutes = queued.waitSeconds === null ? null : Math.round(queued.waitSeconds / 60)
-  return { line: t('import.queueAhead', { count: queued.ahead }, queued.ahead), wait: minutes === null ? '' : t('import.queueWait', { count: minutes }, minutes) }
+// The result is seen once she has read it here: it is not told again on the pill.
+onBeforeUnmount(() => {
+  if (store.job?.state === 'done') store.acknowledge()
 })
 
-const failures = computed<ImportNote[]>(() =>
-  store.failed.map((failure) => ({
-    key: failure.key,
-    title: failure.book?.title ?? failure.key,
-    authors: failure.book?.authors ?? [],
-    notes: [t(`library.error.${failure.error === 'key_invalid' || !failure.error ? 'unknown' : failure.error}`)],
-  })),
-)
+const confirming = ref(false)
+async function cancel() {
+  await store.cancel()
+}
 </script>
 
 <template>
@@ -148,205 +78,88 @@ const failures = computed<ImportNote[]>(() =>
       <h1 class="text-large-title" data-testid="import.title">{{ t('import.title') }}</h1>
     </header>
 
-    <input
-      ref="input"
-      type="file"
-      accept=".csv,text/csv"
-      class="hidden"
-      data-testid="import.file"
-      @change="picked"
-    />
+    <input ref="input" type="file" accept=".csv,text/csv" class="hidden" data-testid="import.file" @change="picked" />
+
+    <!-- The job's phase, said once per phase for assistive tech; the counts below are not read out. -->
+    <p class="sr-only" role="status" data-testid="import.say">{{ said }}</p>
 
     <!-- Pick: where the file comes from, and the one way forward. -->
     <UiEmptyState v-if="picking" screen="import" :title="t('import.pickTitle')" :text="t('import.pickText')" class="px-screen pt-md">
-      <UiButton
-        block
-        :offline="!online"
-        :disabled="store.phase === 'reading'"
-        data-testid="import.choose"
-        @click="pick"
-      >
-        {{ store.phase === 'reading' ? t('import.reading') : t('import.choose') }}
+      <UiButton block :offline="!online" :disabled="store.phase !== 'pick'" data-testid="import.choose" @click="pick">
+        {{ store.phase === 'reading' ? t('import.reading') : store.phase !== 'pick' ? t('import.starting') : t('import.choose') }}
       </UiButton>
       <p v-if="store.fileError" class="mt-ms text-center text-caption text-error" role="alert" data-testid="import.fileError">
         {{ fileErrorText }}
       </p>
+      <p v-else-if="store.startError" class="mt-ms text-center text-caption text-error" role="alert" data-testid="import.startError" :data-code="store.startError">
+        {{ startErrorText }}
+      </p>
+      <p v-else-if="store.nothingNew" class="mt-ms text-center text-caption text-ink-muted" role="status" data-testid="import.nothing">
+        {{ t('import.nothingNew') }}
+      </p>
       <ImportHowTo :sources="SUPPORTED_SOURCES" class="mt-xl" />
     </UiEmptyState>
 
-    <!-- Looking up, preview, importing: the file and what is in it. -->
-    <section v-else-if="store.phase !== 'done'" class="px-screen pt-lg pb-xl" data-testid="import.preview">
-      <p class="eyebrow truncate" data-testid="import.fileName">{{ store.fileName }}</p>
-      <p class="book-title mt-xs text-headline" data-testid="import.inFile" :data-source="store.source">{{ fileTitle }}</p>
-
-      <ImportCounts :counts="store.byStatus" class="mt-md" />
-
-      <!-- Covers for identified books that have none, asked for in the background: quiet, and gone once answered. -->
-      <p
-        v-if="store.coverProgress && store.coverProgress.done < store.coverProgress.total"
-        class="figures mt-sm text-footnote text-ink-faint"
-        data-testid="import.covers"
-      >
-        {{ t('import.coverFill', { done: store.coverProgress.done, total: store.coverProgress.total, found: store.coverProgress.found }) }}
-      </p>
-
-      <!-- Another import has the slot: this one waits in line and starts by itself. -->
-      <section v-if="store.phase === 'matching' && queueText" class="mt-lg flex flex-col gap-sm" role="status" data-testid="import.queued">
-        <p class="text-caption text-ink" data-testid="import.queued.label">{{ queueText.line }}</p>
-        <p v-if="queueText.wait" class="figures text-footnote text-ink-muted" data-testid="import.queued.wait">{{ queueText.wait }}</p>
-        <p class="text-footnote text-ink-faint">{{ t('import.queueHint') }}</p>
-      </section>
-
+    <!-- Running: where the server's job stands. Nothing to do but wait, or close the app. -->
+    <section v-else-if="running" class="px-screen pt-lg pb-xl" data-testid="import.running" :data-kind="kind">
       <ImportProgress
-        v-else-if="store.phase === 'matching'"
-        class="mt-lg"
-        testid="import.matching"
-        :label="store.secondPass ? t('import.secondPass', { done: store.secondPass.done, total: store.secondPass.total }) : t('import.matching', { done: store.progress.done, total: store.progress.total })"
-        :hint="store.secondPass ? t('import.secondPassHint') : store.stalled ? t('import.stalledHint') : t('import.matchingHint')"
-        :done="store.secondPass ? store.secondPass.done : store.progress.done"
-        :total="store.secondPass ? store.secondPass.total : store.progress.total"
+        v-if="progress"
+        testid="import.progress"
+        :label="label"
+        :hint="t('import.serverNote')"
+        :done="progress.done"
+        :total="progress.total"
       />
-
-      <template v-else>
-        <UiRowGroup class="mt-lg">
-          <UiRow :label="t('import.matched')" :value="String(store.matched)" mono data-testid="import.matched" />
-          <UiRow :label="t('import.fromFile')" :value="String(store.fromFile)" mono data-testid="import.fromFile" />
-          <UiRow :label="t('import.alreadyThere')" :value="String(store.alreadyThere)" mono data-testid="import.alreadyThere" />
-        </UiRowGroup>
-
-        <ImportProgress
-          v-if="store.phase === 'importing'"
-          class="mt-lg"
-          testid="import.importing"
-          :label="t('import.importing', { done: store.progress.done, total: store.progress.total })"
-          :hint="t('import.importingHint')"
-          :done="store.progress.done"
-          :total="store.progress.total"
-        />
-        <div v-else class="mt-lg flex flex-col gap-xs">
-          <UiButton
-            v-if="store.toImport.length"
-            block
-            :offline="!online"
-            data-testid="import.start"
-            @click="store.start()"
-          >
-            {{ t('import.start', { count: store.toImport.length }, store.toImport.length) }}
-          </UiButton>
-          <p v-else class="text-subhead text-ink-muted" data-testid="import.nothing">{{ t('import.nothingToImport') }}</p>
-          <UiButton block tone="plain" data-testid="import.another" @click="store.reset()">{{ t('import.stop') }}</UiButton>
-        </div>
-
-        <ImportShelves
-          v-if="store.shelves.length && store.toImport.length"
-          class="mt-xl"
-          :shelves="store.shelves"
-          :kind="store.source === 'hardcover' ? 'lists' : 'shelves'"
-          :disabled="store.phase === 'importing'"
-          @toggle="store.toggleShelf"
-        />
-      </template>
-
-      <!-- The way out of a long lookup: go on with what is found (the rest is added as the file says). -->
-      <UiButton
-        v-if="store.phase === 'matching' && (store.secondPass || store.stalled)"
-        block
-        class="mt-md"
-        data-testid="import.finishNow"
-        @click="store.finishNow()"
-      >
-        {{ t('import.finishNow') }}
+      <div v-else class="flex flex-col gap-sm">
+        <p class="figures text-caption text-ink" data-testid="import.progress.label">{{ label }}</p>
+        <p v-if="hint" class="text-footnote text-ink-muted" data-testid="import.hint">{{ hint }}</p>
+        <p class="text-footnote text-ink-faint">{{ t('import.serverNote') }}</p>
+      </div>
+      <UiButton block tone="plain" class="mt-lg" :offline="!online" :disabled="store.busy" data-testid="import.cancel" @click="confirming = true">
+        {{ t('import.cancel') }}
       </UiButton>
-      <UiButton v-if="store.phase === 'matching'" block tone="plain" class="mt-md" data-testid="import.cancel" @click="store.reset()">
-        {{ store.queued?.kind === 'waiting' ? t('import.queueLeave') : t('import.stop') }}
-      </UiButton>
+      <UiConfirm
+        v-model:open="confirming"
+        :title="t('import.cancelTitle')"
+        :text="t('import.cancelText')"
+        :action="t('import.cancel')"
+        :busy="store.busy"
+        testid="import.cancelConfirm"
+        @confirm="cancel().then(() => (confirming = false))"
+      />
+    </section>
 
-      <template v-if="attention.length">
-        <h2 class="eyebrow mt-xl flex justify-between" data-testid="import.attention">
-          <span>{{ t('import.attention') }}</span><span class="figures">{{ attention.length }}</span>
-        </h2>
-        <p class="mt-xxs text-footnote text-ink-faint">{{ t('import.attentionHint') }}</p>
-        <ImportNoteList :items="attention" testid="import.attentionList" class="mt-xs" @act="store.openChoice" @find="store.findCover" />
-      </template>
-
-      <!-- Found with a cover: probably fine, so only on request. -->
-      <template v-if="attentionMinor.length">
-        <h2 class="eyebrow mt-xl flex justify-between" data-testid="import.attentionMinor">
-          <span>{{ t('import.attentionMinor') }}</span><span class="figures">{{ attentionMinor.length }}</span>
-        </h2>
-        <p class="mt-xxs text-footnote text-ink-faint">{{ t('import.attentionMinorHint') }}</p>
-        <UiButton
-          block
-          tone="plain"
-          class="mt-xs"
-          :aria-expanded="showMinor"
-          data-testid="import.attentionMinorToggle"
-          @click="showMinor = !showMinor"
-        >
-          {{ t(showMinor ? 'import.attentionMinorHide' : 'import.attentionMinorShow', { count: attentionMinor.length }) }}
+    <!-- Failed: the server gave up. Its rows are kept, so trying again needs no file. -->
+    <section v-else-if="kind === 'failed'" class="px-screen pt-lg pb-xl" data-testid="import.failedJob">
+      <p class="book-title text-headline" data-testid="import.failedTitle">{{ t('import.failedTitle') }}</p>
+      <p class="mt-sm text-subhead text-ink-muted">{{ t('import.failedText') }}</p>
+      <p v-if="store.startError" class="mt-ms text-caption text-error" role="alert" data-testid="import.startError" :data-code="store.startError">
+        {{ startErrorText }}
+      </p>
+      <div class="mt-lg flex flex-col gap-xs">
+        <UiButton block :offline="!online" :disabled="store.busy" data-testid="import.retry" @click="store.retry()">
+          {{ store.busy ? t('import.retrying') : t('import.retry') }}
         </UiButton>
-        <ImportNoteList v-if="showMinor" :items="attentionMinor" testid="import.attentionMinorList" class="mt-xs" @act="store.openChoice" @find="store.findCover" />
-      </template>
-
-      <!-- Books whose edition she chose herself: the preview has her pick, and she can change it. -->
-      <template v-if="choices.length">
-        <h2 class="eyebrow mt-xl flex justify-between" data-testid="import.choices">
-          <span>{{ t('import.choices') }}</span><span class="figures">{{ choices.length }}</span>
-        </h2>
-        <ImportNoteList :items="choices" testid="import.choicesList" class="mt-xs" @act="store.openChoice" />
-      </template>
-
-      <ImportEditionSheet />
+        <UiButton block tone="plain" data-testid="import.chooseAgain" @click="store.acknowledge()">{{ t('import.chooseAgain') }}</UiButton>
+      </div>
     </section>
 
     <!-- Done: what was added, what was there already, what was not. -->
-    <section v-else class="px-screen pt-lg pb-xl" data-testid="import.done">
-      <div v-if="store.addedCovers.length" class="pile mb-lg flex" aria-hidden="true" data-testid="import.doneCovers">
-        <UiCover
-          v-for="book in store.addedCovers"
-          :key="book.title + (book.isbn13 ?? '')"
-          :title="book.title"
-          :authors="book.authors"
-          :src="coverSrc(book.coverUrl, 'md')"
-          :thumbhash="book.coverThumbhash"
-          :colors="book.coverColors"
-          size="md"
-          eager
-        />
-      </div>
-      <p class="eyebrow truncate">{{ store.fileName }}</p>
-      <p class="book-title mt-xs text-headline" data-testid="import.doneTitle">
-        {{ t('import.doneTitle', { count: store.added }, store.added) }}
+    <section v-else-if="job && kind === 'done'" class="px-screen pt-lg pb-xl" data-testid="import.done">
+      <p class="book-title text-headline" data-testid="import.doneTitle">
+        {{ t('import.doneTitle', { count: job.added }, job.added) }}
       </p>
-      <p class="mt-sm text-subhead text-ink-muted">{{ store.added ? t('import.doneText') : t('import.doneNothing') }}</p>
+      <p class="mt-sm text-subhead text-ink-muted">{{ job.added ? t('import.doneText') : t('import.doneNothing') }}</p>
 
       <UiRowGroup class="mt-lg">
-        <UiRow :label="t('import.added')" :value="String(store.added)" mono data-testid="import.added" />
-        <UiRow :label="t('import.kept')" :value="String(store.kept)" mono data-testid="import.kept" />
-        <UiRow v-if="failures.length" :label="t('import.failed')" :value="String(failures.length)" mono data-testid="import.failedCount" />
-        <UiRow v-if="store.notReached" :label="t('import.notReached')" :value="String(store.notReached)" mono data-testid="import.notReached" />
+        <UiRow :label="t('import.added')" :value="String(job.added)" mono data-testid="import.added" />
+        <UiRow :label="t('import.kept')" :value="String(job.kept)" mono data-testid="import.kept" />
+        <UiRow v-if="job.failed" :label="t('import.failed')" :value="String(job.failed)" mono data-testid="import.failedCount" />
       </UiRowGroup>
-
-      <p v-if="store.writeError" class="mt-ms text-caption text-error" role="alert" data-testid="import.stopped">
-        {{ t('import.stopped', { reason: t(`library.error.${store.writeError}`) }) }}
-      </p>
 
       <div class="mt-lg flex flex-col gap-xs">
         <UiButton block to="/library" data-testid="import.toLibrary">{{ t('import.toLibrary') }}</UiButton>
-        <UiButton block tone="plain" data-testid="import.again" @click="store.reset()">{{ t('import.another') }}</UiButton>
       </div>
-
-      <template v-if="failures.length">
-        <h2 class="eyebrow mt-xl">{{ t('import.failed') }}</h2>
-        <ImportNoteList :items="failures" testid="import.failedList" class="mt-xs" />
-      </template>
     </section>
   </div>
 </template>
-
-<style scoped>
-/* The first covers of what was just added, overlapping like a short pile on a table. */
-.pile > * + * {
-  margin-left: calc(-1 * var(--spacing-ms));
-}
-</style>

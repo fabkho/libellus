@@ -26,7 +26,7 @@ export const PROBE_TIMEOUT_MS = 4_000
  * as a POST and an import is a long batch, so a few seconds of silence is not
  * the end of them.
  */
-const UNTIMED_RPC = new Set(['search_books', 'import_books', 'invite_code_status'])
+const UNTIMED_RPC = new Set(['search_books', 'import_books', 'invite_code_status', 'start_import_job', 'retry_import_job'])
 
 /** True when a database call got no answer at all: the fetch failed or was cut off (supabase-js reports status 0). */
 export function isNoAnswer(result: { error: unknown; status?: number }): boolean {

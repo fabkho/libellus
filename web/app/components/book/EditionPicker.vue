@@ -5,8 +5,7 @@
 // edition first, marked; a tap picks one (the lamp check moves to it) and the
 // sheet's action takes it. Where the editions come from and what the action
 // does is its host's: the Book page's Change edition (BookEditionSheet: the
-// entry changes to the edition) and the import's Choose edition
-// (ImportEditionSheet: the preview's row takes it). The list grows while the
+// entry changes to the edition). The list grows while the
 // sources answer, new rows only ever added at the end, each opening its room
 // and fading in while the ones after it (the status line, "My edition isn't
 // listed") glide down (UiListMotion, docs/MOTION.md, "Change edition's list";

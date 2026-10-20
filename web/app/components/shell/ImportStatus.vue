@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // The import, from every other screen: a small pill above the tab bar (raised surface, `edge`, like the note after
-// Find book linked a file) says what it is doing while it runs, "Looking up books · 120 of 340", "Waiting in
-// line · 2 ahead", "Adding books …", the cover fill after the lookups, and "Import ready to check" once the preview waits; a
-// thin bar along its foot shows how far it is. A tap goes back to the import page. When the books are written it says
-// "Import done · 12 books added" for a few seconds (a tap opens the summary, the × clears it). Not on the import
-// page itself, which shows all of this larger, nor while search has the bar's place. Closing the app pauses the
-// import; stores/import.ts resumes it on the next start.
+// Find book linked a file) says what the server's import job is doing while it runs, "Looking up books · 120 of 340",
+// "Waiting in line · 2 ahead", "Finding covers …", "Adding books …", and, once it is over, "Import done · 12 books
+// added" (with the books that were there already and the ones that failed when there are some) or "Import stopped ·
+// try again"; a thin bar along its foot shows how far the running phase is. It is the JOB's state, live over Realtime
+// (stores/import.ts): closing the app does not stop it, and the pill is there again when the app is opened. A tap goes to
+// the import page. "Done" stays a few seconds when nobody touches it (the × clears it for good). Not on the import page itself,
+// which shows all of this larger, nor while search has the bar's place.
 //
 // For assistive tech: one polite status that names the phase (never the counts, which change every second), so
 // a screen reader hears the import start, wait, add and finish once each. The pill itself is a link whose name
@@ -21,41 +22,36 @@ const { t } = useI18n()
 const route = useRoute()
 const store = useImportStore()
 const chrome = useSearchChrome()
-
-const dismissed = ref(false)
-let dismissTimer: ReturnType<typeof setTimeout> | null = null
-watch(
-  () => store.phase,
-  (phase) => {
-    if (dismissTimer) clearTimeout(dismissTimer)
-    dismissTimer = null
-    dismissed.value = false
-    if (phase === 'done') dismissTimer = setTimeout(() => (dismissed.value = true), DONE_MS)
-  },
-)
-onUnmounted(() => dismissTimer && clearTimeout(dismissTimer))
+const words = useImportWords()
 
 const onImportPage = computed(() => withoutSlash(route.path) === '/import')
 const ambient = computed(() => store.ambient)
+
+// "Done" goes by itself after a while: seen, unless she is reading it on the import page.
+const dismissed = ref(false)
+let dismissTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => ambient.value?.kind,
+  (kind) => {
+    if (dismissTimer) clearTimeout(dismissTimer)
+    dismissTimer = null
+    dismissed.value = false
+    if (kind === 'done')
+      dismissTimer = setTimeout(() => {
+        dismissed.value = true
+        if (!onImportPage.value) store.acknowledge()
+      }, DONE_MS)
+  },
+  { immediate: true },
+)
+onUnmounted(() => dismissTimer && clearTimeout(dismissTimer))
+
 const shown = computed(() => Boolean(ambient.value) && !onImportPage.value && chrome.value === 'tabs' && !(ambient.value?.kind === 'done' && dismissed.value))
 // Kept while it fades away.
 const last = shallowRef<ImportAmbient | null>(null)
 watch(ambient, (now) => now && (last.value = now), { immediate: true })
 
-function words(now: ImportAmbient): string {
-  switch (now.kind) {
-    case 'queued':
-      return t('import.ambient.queued', { count: now.ahead })
-    case 'matching':
-    case 'importing':
-    case 'covers':
-      return t(`import.ambient.${now.kind}`, { done: now.done, total: now.total })
-    case 'done':
-      return t('import.ambient.done', { count: now.added }, now.added)
-    default:
-      return t(`import.ambient.${now.kind}`)
-  }
-}
+const over = computed(() => last.value?.kind === 'done' || last.value?.kind === 'failed')
 const label = computed(() => (last.value ? words(last.value) : ''))
 const fraction = computed(() => (last.value ? ambientFraction(last.value) : null))
 // Said once per phase: the kind, not the counts.
@@ -74,15 +70,15 @@ const said = computed(() => (shown.value && ambient.value ? t(`import.ambient.sa
       >
         <NuxtLink to="/import" class="flex min-h-(--size-button) min-w-0 items-center gap-sm py-xs pr-md pl-md" data-testid="shell.import.open">
           <UiIcon :name="last.kind === 'done' ? 'check' : 'import'" :size="15" class="shrink-0 text-ink-faint" />
-          <span class="min-w-0 truncate text-ink tabular-nums" data-testid="shell.import.label">{{ label }}</span>
+          <span class="min-w-0 text-ink tabular-nums" :class="over ? 'text-pretty py-xxs leading-snug' : 'truncate'" data-testid="shell.import.label">{{ label }}</span>
         </NuxtLink>
         <button
-          v-if="last.kind === 'done'"
+          v-if="over"
           type="button"
           class="-ml-xs flex size-(--size-touch) shrink-0 items-center justify-center text-ink-faint"
           :aria-label="t('import.ambient.dismiss')"
           data-testid="shell.import.dismiss"
-          @click="dismissed = true"
+          @click="store.acknowledge()"
         >
           <UiIcon name="close" :size="14" />
         </button>

@@ -12,16 +12,17 @@
 # exit status go to $RUNNER_TEMP, where `wait` reads them.
 #
 # Only what the suites use is started: the database, auth, the API (kong,
-# PostgREST), the mail catcher (the sign-in code is read out of it) and storage.
-# Nothing in the app or the suites uses realtime, and the pooler is off in
-# config.toml. Not for local use: there, `supabase start` in the repository root.
+# PostgREST), the mail catcher (the sign-in code is read out of it), storage and realtime
+# (the import job's live feed, web/e2e/import-job.spec.ts: the pill and the import page follow
+# the member's job over a WebSocket). The pooler is off in config.toml. Not for local use: there,
+# `supabase start` in the repository root.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 dir="${RUNNER_TEMP:-/tmp}"
 log="$dir/supabase-start.log"
 status="$dir/supabase-start.status"
-EXCLUDE=studio,imgproxy,edge-runtime,logflare,vector,postgres-meta,realtime,supavisor
+EXCLUDE=studio,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor
 
 case "${1:-}" in
   start)

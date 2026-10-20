@@ -26,7 +26,7 @@ export const LOCAL_DATA_PREFIX = 'libellus.'
  * database, `libellus`, with a store per feature (the outbox of writes waiting
  * to sync, `data/outbox.ts`, #93; the ebook files linked to Books and the
  * picked ebook folder, `data/ebooks/`, #131; her profile photo, `data/avatar.ts`,
- * #156; the file of an import still looking its books up, `data/importFile.ts`). A feature that needs one adds its
+ * #156). A feature that needs one adds its
  * store to `LOCAL_STORES` and raises `LOCAL_DATABASE_VERSION`; every feature
  * opens the database through `openLocalDatabase`, so they agree on its version.
  */
@@ -42,10 +42,14 @@ export const LOCAL_STORES: Record<string, IDBObjectStoreParameters & { indexes?:
   ebookFolders: {},
   // The member's profile photo, its two files (key: the member's id).
   avatars: {},
-  // The file of an import whose lookups are running (key: the member's id): a closed app picks them up again (`data/importFile.ts`).
-  importFiles: {},
 }
-export const LOCAL_DATABASE_VERSION = 4
+export const LOCAL_DATABASE_VERSION = 5
+
+/**
+ * Stores an earlier version made that nothing uses any more, deleted when the database is upgraded: `importFiles` kept the file
+ * of an import whose lookups ran on the device (#371); the server runs the import now (#329), the device keeps no file.
+ */
+const RETIRED_STORES: readonly string[] = ['importFiles']
 
 /**
  * Opens the device's database, creating the stores it lacks. Another tab
@@ -57,6 +61,7 @@ export function openLocalDatabase(factory: IDBFactory, { name = LOCAL_DATABASE, 
     const req = factory.open(name, LOCAL_DATABASE_VERSION)
     req.onupgradeneeded = () => {
       const db = req.result
+      for (const store of RETIRED_STORES) if (db.objectStoreNames.contains(store)) db.deleteObjectStore(store)
       for (const [store, { indexes, ...options }] of Object.entries(LOCAL_STORES)) {
         if (db.objectStoreNames.contains(store)) continue
         const created = db.createObjectStore(store, options)

@@ -137,6 +137,9 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 4. Entry in `../docs/parity.md`: states, actions, copy keys, test IDs, the Playwright flow.
 
 ## Gotchas
+- Realtime: the app's Supabase client is built with `@supabase/realtime-js` aliased to a stub (`app/data/realtimeStub.ts`, bundle size). The import job's live feed
+  (`data/importJobFeed.ts`) is the one place that loads the real client, as `import('#realtime-client')` (`realtime.config.ts`: its own `realtime` chunk, not precached), only while
+  a job of hers is live. A new Realtime use goes through that door, never through `client.channel()` (the stub throws); keep it lazy and off the entry.
 - Tailwind v4 only rescans sources when CSS changes. After adding classes in a component, run
   `touch app/assets/css/main.css` or the new utilities are missing in dev.
 - pnpm 11+ fails an install on dependency build scripts nobody approved (`ERR_PNPM_IGNORED_BUILDS`).
