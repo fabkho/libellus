@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { jobOf, type ImportJob, type JobResult } from '@/data/importJob'
-import { createRealtimePort, type FeedChannel, type FeedClient, type FeedClientOptions, type FeedHandlers, type JobFeedPort, type OpenFeed } from '@/data/importJobFeed'
+import { createRealtimePort, type FeedChannel, type FeedClient, type FeedClientOptions, type FeedHandlers, type FeedSystemMessage, type JobFeedPort, type OpenFeed } from '@/data/importJobFeed'
 import { createJobWatch } from '@/data/importJobWatch'
 import { RealtimeClient as RealClient } from '#realtime-client'
 
@@ -121,10 +121,75 @@ describe('live', () => {
     await settle()
     expect(now.state.reads).toBe(3)
     expect(now.last()?.job?.matched).toBe(60)
-    // Time passes: nothing asks.
-    now.tick(10 * 60_000)
+    // Time passes while the socket talks (a running job changes once per saved row): nothing asks.
+    for (let second = 0; second < 10 * 60; second += 10) {
+      now.feed.change({ done: 60 + second / 10 })
+      now.tick(10_000)
+    }
     await settle()
     expect(now.state.reads).toBe(3)
+  })
+
+  it('the silence net: a live job and a socket that said nothing for 30 s: one read, and one more only after another 30 s of silence', async () => {
+    // The page that stayed on "Starting soon" (20 October 2026): the join's read saw the job queued, the server ran it, and the socket
+    // was deaf (a cold change stream waiting for its replication slot), so nothing came.
+    const now = setup(job({ state: 'queued' }))
+    await now.watch.check()
+    now.feed.subscribed()
+    await settle()
+    expect(now.state.reads).toBe(2)
+    now.state.latest = job({ state: 'running', done: 58 })
+    now.tick(29_999)
+    await settle()
+    expect(now.state.reads).toBe(2)
+    now.tick(1)
+    await settle()
+    expect(now.state.reads).toBe(3)
+    expect(now.last()?.job).toMatchObject({ state: 'running', matched: 58 })
+    // Still silent: another read, 30 s after the last one, and none in between.
+    now.state.latest = job({ state: 'running', done: 120 })
+    now.tick(15_000)
+    await settle()
+    expect(now.state.reads).toBe(3)
+    now.tick(15_000)
+    await settle()
+    expect(now.state.reads).toBe(4)
+    expect(now.last()?.job?.matched).toBe(120)
+    // The socket speaks again: every change pushes the net back.
+    now.feed.change({ done: 121 })
+    now.tick(20_000)
+    now.feed.change({ done: 122 })
+    now.tick(20_000)
+    await settle()
+    expect(now.state.reads).toBe(4)
+  })
+
+  it('a read that a change overtook is not shown: the change is newer (the job ended meanwhile, and the stale read would stay)', async () => {
+    const now = setup(job({ state: 'queued' }))
+    await now.watch.check()
+    // The read leaves while the job is queued; before it is back, the server says the job failed.
+    now.feed.subscribed()
+    now.feed.change({ state: 'failed', error: 'stalled', finished_at: new Date().toISOString() })
+    await settle()
+    expect(now.state.reads).toBe(2)
+    expect(now.last()?.job?.state).toBe('failed')
+    expect(now.feed.log.closes).toBe(1)
+  })
+
+  it('the silence net is off when no job is followed: the job ended, or the watch stopped', async () => {
+    const ended = setup(job())
+    await ended.watch.check()
+    ended.feed.change({ state: 'done', done: 100, added: 100, finished_at: new Date().toISOString() })
+    ended.tick(10 * 60_000)
+    await settle()
+    expect(ended.state.reads).toBe(1)
+
+    const stopped = setup(job())
+    await stopped.watch.check()
+    stopped.watch.stop()
+    stopped.tick(10 * 60_000)
+    await settle()
+    expect(stopped.state.reads).toBe(1)
   })
 
   it('coalesces the counts the server pushes: at most one a throttle, the last one wins', async () => {
@@ -230,6 +295,7 @@ describe('the Realtime adapter', () => {
     const seen = { endpoint: '', options: null as FeedClientOptions | null, topic: '', authBeforeChannel: false, filter: null as unknown, removed: 0, disconnected: 0 }
     let onChange: (payload: { new?: unknown }) => void = () => {}
     let onStatus: (status: string) => void = () => {}
+    let onSystem: (message: FeedSystemMessage) => void = () => {}
     class Client implements FeedClient {
       constructor(endpoint: string, options: FeedClientOptions) {
         seen.endpoint = endpoint
@@ -241,9 +307,12 @@ describe('the Realtime adapter', () => {
       channel(topic: string): FeedChannel {
         seen.topic = topic
         const channel: FeedChannel = {
-          on(_type, filter, callback) {
-            seen.filter = filter
-            onChange = callback
+          on(type: 'postgres_changes' | 'system', filter: unknown, callback: (payload: never) => void) {
+            if (type === 'system') onSystem = callback as (message: FeedSystemMessage) => void
+            else {
+              seen.filter = filter
+              onChange = callback as (payload: { new?: unknown }) => void
+            }
             return channel
           },
           subscribe(callback) {
@@ -260,7 +329,13 @@ describe('the Realtime adapter', () => {
         seen.disconnected++
       }
     }
-    return { seen, Client, change: (payload: { new?: unknown }) => onChange(payload), status: (status: string) => onStatus(status) }
+    return {
+      seen,
+      Client,
+      change: (payload: { new?: unknown }) => onChange(payload),
+      status: (status: string) => onStatus(status),
+      system: (message: FeedSystemMessage) => onSystem(message),
+    }
   }
 
   const handlers = () => {
@@ -302,6 +377,22 @@ describe('the Realtime adapter', () => {
     expect(log.changes).toEqual([{ id: 'job-1' }])
   })
 
+  it('says "subscribed" again when the server has her Postgres changes subscribed, a moment after the join, and for nothing else it says', async () => {
+    // The join's reply comes first; the server sets the subscription up after it, and a change in between is never pushed
+    // (the job of 20 October 2026 went running 0.6 s after the join's read). Realtime says so: { extension, status: 'ok' }.
+    const stub = stubClient()
+    const port = createRealtimePort({ url: 'https://abc.supabase.co', anonKey: 'anon', token: async () => 'jwt', load: async () => ({ RealtimeClient: stub.Client }) })
+    const { log, given } = handlers()
+    await port.open('ada', given)
+    stub.status('SUBSCRIBED')
+    expect(log.subscribed).toBe(1)
+    stub.system({ message: 'Subscribed to PostgreSQL', status: 'ok', extension: 'postgres_changes' })
+    expect(log.subscribed).toBe(2)
+    stub.system({ message: 'Subscribing to PostgreSQL failed', status: 'error', extension: 'postgres_changes' })
+    stub.system({ message: 'ok', status: 'ok', extension: 'broadcast' })
+    expect(log.subscribed).toBe(2)
+  })
+
   it('close removes the channel and the socket, once, and nothing arrives after it', async () => {
     const stub = stubClient()
     const port = createRealtimePort({ url: 'https://abc.supabase.co', anonKey: 'anon', token: async () => null, load: async () => ({ RealtimeClient: stub.Client }) })
@@ -313,6 +404,7 @@ describe('the Realtime adapter', () => {
     expect(stub.seen).toMatchObject({ removed: 1, disconnected: 1 })
     stub.change({ new: { id: 'late' } })
     stub.status('SUBSCRIBED')
+    stub.system({ status: 'ok', extension: 'postgres_changes' })
     expect(log).toMatchObject({ changes: [], subscribed: 0 })
   })
 

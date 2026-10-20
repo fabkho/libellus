@@ -9,9 +9,16 @@ import type { JobFeedPort, OpenFeed } from './importJobFeed'
  *   - `port`: the live feed (data/importJobFeed.ts), opened ONLY while a job of hers is live and closed the moment it ends.
  *
  * `check()` is the first look: one read, no socket; a live job opens the feed. The feed says it is subscribed on the first
- * connect and after every reconnect, and each time the watch reads once (a change between the drop and the rejoin is not
- * pushed again). There is no timer that asks: nothing polls. The server updates the job once per saved row, so the changes that
+ * connect, after every reconnect and when the server has her Postgres changes subscribed (a moment after the join), and each time
+ * the watch reads once (a change in between is not pushed again). The server updates the job once per saved row, so the changes that
  * come in are coalesced, at most one a `throttleMs`, the last one winning; a job that ends is told at once.
+ *
+ * Nothing polls. The one timer that reads is the silence net, a fallback for a deaf socket: while a job is live and the feed has said
+ * nothing for `silenceMs` (30 s), one read, and every change heard pushes it back. A running job changes once per saved row, so a
+ * feed that works never stays that silent. One that is open may still be deaf: on a project whose Realtime was idle, the change
+ * stream waits for its replication slot, and every open transaction holds that up (production, 20 October 2026: the pg_net worker
+ * that chains the import's chunks held it for most of a minute, and the page stayed on "Starting soon"); or the phone put the socket
+ * to sleep without closing it.
  */
 
 export type JobWatchDeps = {
@@ -26,6 +33,8 @@ export type JobWatchDeps = {
   onJob: (job: ImportJob | null, ahead: number) => void
   /** Coalescing of the changes the server pushes (ms); 0 passes each one on. */
   throttleMs?: number
+  /** The silence net (ms): no word from the feed this long while a job is live, one read. */
+  silenceMs?: number
   after?: (ms: number, fn: () => void) => () => void
   now?: () => number
 }
@@ -44,9 +53,11 @@ export type JobWatch = {
 }
 
 const THROTTLE_MS = 400
+const SILENCE_MS = 30_000
 
 export function createJobWatch(deps: JobWatchDeps): JobWatch {
   const throttleMs = deps.throttleMs ?? THROTTLE_MS
+  const silenceMs = deps.silenceMs ?? SILENCE_MS
   const now = deps.now ?? (() => Date.now())
   const after =
     deps.after ??
@@ -64,6 +75,9 @@ export function createJobWatch(deps: JobWatchDeps): JobWatch {
   let pending: ImportJob | null = null
   let cancelFlush: (() => void) | null = null
   let lastFlush = -Infinity
+  let cancelSilence: (() => void) | null = null
+  /** Counts the changes the feed delivered: a read that a change overtook is older than what is on show. */
+  let changes = 0
 
   function drop() {
     cancelFlush?.()
@@ -71,7 +85,24 @@ export function createJobWatch(deps: JobWatchDeps): JobWatch {
     pending = null
   }
 
+  function quiet() {
+    cancelSilence?.()
+    cancelSilence = null
+  }
+
+  /** The feed said something (a change, or a read was just made): the silence net starts over, while the job is live and followed. */
+  function heard() {
+    quiet()
+    if (!feed || !isLive(current)) return
+    const mine = epoch
+    cancelSilence = after(silenceMs, () => {
+      cancelSilence = null
+      if (mine === epoch) void sync()
+    })
+  }
+
   function closeFeed() {
+    quiet()
     drop()
     const closing = feed
     feed = null
@@ -95,16 +126,24 @@ export function createJobWatch(deps: JobWatchDeps): JobWatch {
     return true
   }
 
-  /** The one read on every (re)connect. */
+  /** The one read on every (re)connect (and the silence net's). */
   async function sync(): Promise<void> {
     const mine = epoch
-    const read = await deps.read()
-    if (mine !== epoch || !read.data) return
-    const job = read.data
-    // The job being followed is shown whatever became of it (cancelled included); another is shown when it is worth it.
-    if (job.id !== current?.id && !deps.worth(job)) return
-    if (!(await place(job, mine))) return
-    show(job)
+    const before = changes
+    try {
+      const read = await deps.read()
+      if (mine !== epoch || !read.data) return
+      const job = read.data
+      // The job being followed is shown whatever became of it (cancelled included); another is shown when it is worth it.
+      if (job.id !== current?.id && !deps.worth(job)) return
+      if (!(await place(job, mine))) return
+      // A change came in while the read was on its way: the feed works and what it said is newer (the read may have seen the job
+      // queued, the change says it failed, and the feed is closed by then: the stale read would stay on show for good).
+      if (changes !== before) return
+      show(job)
+    } finally {
+      if (mine === epoch) heard()
+    }
   }
 
   function flush() {
@@ -119,6 +158,8 @@ export function createJobWatch(deps: JobWatchDeps): JobWatch {
   function onChange(row: unknown) {
     const job = jobOf(row)
     if (!job) return
+    changes++
+    heard()
     // An old job's last word never replaces a live one on show.
     if (current && current.id !== job.id && isLive(current) && !isLive(job)) return
     // What the member must not miss (a state change, the end, a new job) is told at once; a count that moved is coalesced.
@@ -148,7 +189,10 @@ export function createJobWatch(deps: JobWatchDeps): JobWatch {
       })
       .then((opened) => {
         if (mine !== epoch || !isLive(current)) opened.close()
-        else feed = opened
+        else {
+          feed = opened
+          heard()
+        }
       })
       .catch(() => {
         // The socket could not be loaded or opened: the job runs on regardless, and the next start of the app reads it.

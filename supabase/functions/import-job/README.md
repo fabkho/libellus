@@ -212,7 +212,7 @@ there already (`already`), `start_import_job` uploads the rest, and the pill and
 covers (the sum of the `cover_*` counters), writing (`added + kept + failed`), done (`added`, `kept` + `already`, `failed`), failed. **Live over
 Supabase Realtime** (Postgres changes on her own `import_jobs` row; RLS select-own, the table is in the publication): the real
 `@supabase/realtime-js` is loaded only while a job of hers is live, the app reads the job once when it opens and after every
-reconnect, and nothing polls. A failed job is retried from its own rows (`retry_import_job`, `supabase/migrations/20261105010000_import_job_retry.sql`:
+reconnect (and when Realtime says her Postgres changes are subscribed), and nothing polls: the one fallback is a read when the socket has said nothing for 30 s while the job is live (a deaf socket, see `web/app/data/importJobWatch.ts`). A failed job is retried from its own rows (`retry_import_job`, `supabase/migrations/20261105010000_import_job_retry.sql`:
 a new job from the rows without an outcome, no file needed); a done job's `entry_id`s (outcome `added`) are the books the device's one-time Apple
 cover upgrade works on. The member-side refusals are shown: `import_too_soon` ("You can start another import in a minute."),
 `device_import_running`, `import_running`, `rows_invalid`.

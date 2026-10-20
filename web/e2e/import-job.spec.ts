@@ -12,7 +12,8 @@ import { expectAccessible, signedIn } from './support'
 /**
  * The import runs on the server (proposal #329, docs/parity.md "The import as a server job"): the member picks the file, the app reads it
  * on the device and sends its books up, and from then on the page and the pill show the JOB: waiting in line, looking the books up,
- * finding covers, adding them, done, or stopped (and tried again). Live over Realtime, no reload, no polling. The flows play the
+ * finding covers, adding them, done, or stopped (and tried again). Live over Realtime, no reload, no polling (one fallback: a read when
+ * the socket said nothing for 30 s while the job is live, for a socket that is open but deaf). The flows play the
  * runner (the `import-job` edge function) with SQL: the stack has no function kicked, so the job waits in line until a flow moves it.
  */
 
@@ -44,6 +45,55 @@ async function chooseTheFile(page: Page) {
 const jobOf = async (memberId: string) => (await sql<{ id: string; total: number; state: string }>('select id, total, state from public.import_jobs where member_id = $1 order by created_at desc limit 1', [memberId]))[0]!
 async function runnerSets(jobId: string, set: string) {
   await sql(`update public.import_jobs set ${set} where id = $1`, [jobId])
+}
+
+/** The job is over and out of the line, so the next flow's job is not behind it. */
+async function runnerEnds(jobId: string) {
+  await runnerSets(jobId, `state = 'done', finished_at = now()`)
+  await sql(`delete from public.import_queue where holder = 'job:' || $1`, [jobId])
+}
+
+/**
+ * Realtime as a project whose Realtime was idle served it (20 October 2026): Playwright stands between the page and the stack's
+ * socket. The join is answered at once, but the server's `postgres_changes` do not reach the page while `deaf`, and with
+ * `holdSystem` its word that her changes are subscribed (`system`, "Subscribed to PostgreSQL") is kept back until `release()`.
+ * `sockets` counts the sockets the page opened (a reconnect is one more), `missed` the changes that did not reach it; `joinedAt` is
+ * when the join of her channel was answered.
+ */
+async function realtimeBetween(page: Page, { holdSystem = false } = {}) {
+  const gate = { sockets: 0, deaf: true, holdSystem, held: [] as string[], subscribed: 0, missed: 0, joinedAt: null as number | null, release: () => {} }
+  await page.routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => {
+    gate.sockets++
+    const server = ws.connectToServer()
+    // What the page sends goes on untouched; what the server sends is looked at (Phoenix v2: [join_ref, ref, topic, event, payload]).
+    server.onMessage((message) => {
+      let event: unknown = null
+      let topic: unknown = null
+      if (typeof message === 'string') {
+        try {
+          const frame = JSON.parse(message) as unknown[]
+          topic = frame[2]
+          event = frame[3]
+        } catch {}
+      }
+      if (event === 'postgres_changes' && gate.deaf) return void gate.missed++
+      if (event === 'system' && typeof message === 'string') {
+        if (gate.holdSystem) return void gate.held.push(message)
+        gate.subscribed++
+      }
+      ws.send(message)
+      if (event === 'phx_reply' && typeof topic === 'string' && topic.startsWith('realtime:import-job:')) gate.joinedAt ??= Date.now()
+    })
+    gate.release = () => {
+      gate.deaf = false
+      gate.holdSystem = false
+      for (const message of gate.held.splice(0)) {
+        gate.subscribed++
+        ws.send(message)
+      }
+    }
+  })
+  return gate
 }
 
 test.afterEach(async () => {
@@ -128,6 +178,63 @@ test('the pill is back after the app is closed and opened again: the job went on
   // Seen: not told again.
   await page.reload()
     await expect(page.getByTestId('shell.import')).toHaveCount(0)
+})
+
+test('the job moves in the moment between the join and the server subscribing her changes: the page reads it then (it stayed on "Starting soon")', async ({ page }) => {
+  // 20 October 2026, production: the join's read saw the job queued, the job went running 0.6 s later, before the server had her
+  // changes subscribed, and that change was never pushed. Here the server's word that it is subscribed is held back meanwhile.
+  const realtime = await realtimeBetween(page, { holdSystem: true })
+  // When the page read her job (each read is the job's one row).
+  const reads: number[] = []
+  page.on('response', (response) => {
+    if (response.url().includes('/rest/v1/import_jobs?')) reads.push(Date.now())
+  })
+  const member = await signedIn(page)
+  await chooseTheFile(page)
+  const running = page.getByTestId('import.running')
+  await expect(running).toHaveAttribute('data-kind', 'queued')
+  const job = await jobOf(member.id)
+  // Joined, and the join's read made (it saw the job queued); the server is still setting her changes up: the runner starts the job now.
+  await expect.poll(() => realtime.joinedAt !== null && reads.some((at) => at >= realtime.joinedAt!)).toBe(true)
+  await expect.poll(() => realtime.held.length).toBeGreaterThan(0)
+  await runnerSets(job.id, `state = 'running', done = 3`)
+  await expect.poll(() => realtime.missed).toBeGreaterThan(0)
+
+  // The server says her changes are subscribed: the page reads the job once and shows it as it is.
+  realtime.release()
+  const label = page.getByTestId('import.progress.label')
+  await expect(running).toHaveAttribute('data-kind', 'matching')
+  await expect(label).toHaveText(en.import.ambient.matching.replace('{done}', '3').replace('{total}', String(job.total)))
+  // Live from then on, on the same socket.
+  await runnerSets(job.id, `done = 5`)
+  await expect(label).toHaveText(en.import.ambient.matching.replace('{done}', '5').replace('{total}', String(job.total)))
+  expect(realtime.sockets).toBe(1)
+  await runnerEnds(job.id)
+})
+
+test('a socket that is open but deaf: after 30 s with no word the page reads the job once (the silence net, not a poll)', async ({ page }) => {
+  // The page's own clock, so the 30 s pass at once (time otherwise runs as it does).
+  await page.clock.install()
+  const realtime = await realtimeBetween(page)
+  const member = await signedIn(page)
+  await chooseTheFile(page)
+  const running = page.getByTestId('import.running')
+  await expect(running).toHaveAttribute('data-kind', 'queued')
+  const job = await jobOf(member.id)
+  await expect.poll(() => realtime.subscribed).toBeGreaterThan(0)
+
+  // The server runs the job; none of it reaches the page.
+  await runnerSets(job.id, `state = 'running', done = 3`)
+  await expect.poll(() => realtime.missed).toBeGreaterThan(0)
+  await page.clock.fastForward('00:10')
+  await expect(running).toHaveAttribute('data-kind', 'queued')
+  // 30 s of silence: one read.
+  await page.clock.fastForward('00:21')
+  await expect(running).toHaveAttribute('data-kind', 'matching')
+  await expect(page.getByTestId('import.progress.label')).toHaveText(en.import.ambient.matching.replace('{done}', '3').replace('{total}', String(job.total)))
+  // It was the net's read, not a reconnect.
+  expect(realtime.sockets).toBe(1)
+  await runnerEnds(job.id)
 })
 
 test('another start within two minutes says so; cancelling stops the job', async ({ page }) => {
