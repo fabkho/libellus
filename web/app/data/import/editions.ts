@@ -1,7 +1,7 @@
-import type { BookSnapshot } from '../books'
-import { COMPANION, fuzzyTitleMatch, sameVolume, volumeOf } from '../titleMatch'
-import { isbnLanguage, normalize, splitSeriesTitle, surname, workTitle } from './readingTracker'
-import type { ImportBook } from './rows'
+import type { BookSnapshot } from '../books.ts'
+import { COMPANION, fuzzyTitleMatch, sameVolume, volumeOf } from '../titleMatch.ts'
+import { isbnLanguage, normalize, splitSeriesTitle, surname, workTitle } from './readingTracker.ts'
+import type { ImportBook } from './rows.ts'
 
 export { sameVolume, volumeOf }
 
@@ -319,7 +319,7 @@ export function sameAuthor(a: string, b: string): boolean {
  * (`Θνητοί Θεοί (Altered Carbon)`) is a translation, not the same book; a summary, study guide or workbook
  * sold under the book's title is not the book.
  */
-export function isSameWork(row: Pick<ImportBook, 'title' | 'authors'>, found: Pick<BookSnapshot, 'title' | 'authors'>): boolean {
+export function isSameWork(row: Pick<ImportBook, 'title'> & { authors: readonly string[] }, found: Pick<BookSnapshot, 'title' | 'authors'>): boolean {
   // "Title (a Concise and Precise Summary)" is not the book, whatever its title and author say.
   if (COMPANION.test(found.title) && !COMPANION.test(row.title)) return false
   const bare = splitSeriesTitle(found.title).title.replace(/\s*[([][^()[\]]*[)\]]/g, ' ')

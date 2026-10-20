@@ -2,8 +2,9 @@
  * One chunk of an import job (supabase/migrations/20261102010000_import_jobs.sql): claim the job that holds the import
  * queue's slot (a lease, never two runners on one job), take its pending rows a batch at a time, let `work` look them
  * up and write them (it saves each row as it is done), and stop in time: an edge function lives 150 s and has 2 s of
- * CPU (Supabase Free), so no new batch starts after `budgetMs` of wall clock or `cpuBudgetMs` of CPU, and `work` is
- * told the hard `deadline` its batch has to end by. Then the job is released: done when no row is pending, else the
+ * CPU (Supabase Free), so no new batch starts after `budgetMs` of wall clock or once `maxRows` rows were taken (the
+ * edge runtime has no CPU clock to read: `process.cpuUsage()` answers zeros there, so the CPU is budgeted by rows,
+ * measured at ~16 ms of isolate CPU a row), and `work` is told the hard `deadline` its batch has to end by. Then the job is released: done when no row is pending, else the
  * next chunk is kicked at once by the database (pg_net); a chunk that failed as a whole pauses the job.
  *
  * Idempotent per row: a row is saved once (`import_job_save_row` ignores a second save), its write is recorded with
@@ -15,8 +16,12 @@
 export const CHUNK_BUDGET_MS = 90_000
 /** The hard end a batch is told: what it has not finished by then stays pending for the next chunk. */
 export const CHUNK_DEADLINE_MS = 125_000
-/** No new batch after this much CPU time (the limit is 2 s; a batch's parsing and image decoding is ~0.2–0.4 s). */
-export const CHUNK_CPU_BUDGET_MS = 1300
+/**
+ * No new batch once this many rows were taken: the CPU limit is 2 s, and a row costs ~16 ms of isolate CPU (measured on
+ * the member's file: the lookups' requests and JSON, the ranking, a cover's decode and thumbhash), so 48 rows are
+ * ~0.8 s, with room for a slower machine and the function's start.
+ */
+export const CHUNK_MAX_ROWS = 48
 /** Rows taken at once: enough for one Open Library `api/books` call of the cover fill (25). */
 export const BATCH_ROWS = 24
 
@@ -66,18 +71,17 @@ export type WorkContext = {
 /** Looks a batch of rows up and writes them, saving each (or deferring it). Rejects only when the whole batch failed. */
 export type Work = (job: Job, rows: JobRow[], context: WorkContext) => Promise<void>
 
-export type ChunkResult = { state: 'idle' | ReleaseState; job?: string; saved: number; batches: number; error?: string }
+/** What one chunk did: its state, how many rows it saved in how many batches, and its wall clock. */
+export type ChunkResult = { state: 'idle' | ReleaseState; job?: string; saved: number; batches: number; ms?: number; error?: string }
 
 export async function runChunk(options: {
   store: Store
   work: Work
   runner: string
   clock?: Clock
-  /** CPU time used so far (ms), where the platform can say; the chunk ends before the limit. */
-  cpu?: () => number | null
   budgetMs?: number
   deadlineMs?: number
-  cpuBudgetMs?: number
+  maxRows?: number
   batchRows?: number
   log?: (message: string) => void
 }): Promise<ChunkResult> {
@@ -85,20 +89,16 @@ export async function runChunk(options: {
   const clock = options.clock ?? realClock
   const budgetMs = options.budgetMs ?? CHUNK_BUDGET_MS
   const deadlineMs = options.deadlineMs ?? CHUNK_DEADLINE_MS
-  const cpuBudgetMs = options.cpuBudgetMs ?? CHUNK_CPU_BUDGET_MS
+  const maxRows = options.maxRows ?? CHUNK_MAX_ROWS
   const batchRows = options.batchRows ?? BATCH_ROWS
   const log = options.log ?? ((message: string) => console.log(message))
 
   const job = await store.claim(runner)
   if (!job) return { state: 'idle', saved: 0, batches: 0 }
   const started = clock.now()
-  const cpuAtStart = options.cpu?.() ?? null
-  const cpuUsed = () => {
-    const now = options.cpu?.() ?? null
-    return now === null || cpuAtStart === null ? 0 : now - cpuAtStart
-  }
   let saved = 0
   let batches = 0
+  let taken = 0
   let stop = false
   let error: string | undefined
   const context: WorkContext = {
@@ -114,10 +114,11 @@ export async function runChunk(options: {
     stopped: () => stop,
   }
   try {
-    while (!stop && clock.now() - started < budgetMs && cpuUsed() < cpuBudgetMs) {
-      const rows = await store.takeRows(job.id, runner, batchRows)
+    while (!stop && clock.now() - started < budgetMs && taken < maxRows) {
+      const rows = await store.takeRows(job.id, runner, Math.min(batchRows, maxRows - taken))
       if (!rows.length) break
       batches++
+      taken += rows.length
       await work(job, rows, context)
     }
   } catch (thrown) {
@@ -125,9 +126,10 @@ export async function runChunk(options: {
     log(`import-job: chunk of ${job.id} failed: ${error}`)
   }
   // A refused save: the job was cancelled or another runner has it now; it is not this runner's to release.
-  if (stop) return { state: 'gone', job: job.id, saved, batches }
+  const took = () => ({ ms: clock.now() - started })
+  if (stop) return { state: 'gone', job: job.id, saved, batches, ...took() }
   // A chunk that failed after saving rows goes on at once (a passing hiccup); one that saved nothing pauses the job.
   const state = await store.release(job.id, runner, error && saved === 0 ? error.slice(0, 500) : null)
-  log(`import-job: ${job.id} chunk ${state}: ${saved} rows in ${batches} batches, ${clock.now() - started} ms, ${Math.round(cpuUsed())} ms CPU`)
-  return { state, job: job.id, saved, batches, ...(error ? { error } : {}) }
+  log(`import-job: ${job.id} chunk ${state}: ${saved} rows in ${batches} batches, ${clock.now() - started} ms`)
+  return { state, job: job.id, saved, batches, ...took(), ...(error ? { error } : {}) }
 }

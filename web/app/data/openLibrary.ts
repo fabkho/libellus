@@ -1,6 +1,6 @@
-import { isbn10To13, isValidIsbn10, isValidIsbn13, withLabels, type BookFormat, type BookSnapshot } from './books'
-import { abortError, getJson, type FetchLike } from './fetching'
-import type { Found } from './merge'
+import { isbn10To13, isValidIsbn10, isValidIsbn13, withLabels, type BookFormat, type BookSnapshot } from './books.ts'
+import { abortError, getJson, type FetchLike } from './fetching.ts'
+import type { Found } from './merge.ts'
 
 /**
  * OpenLibrary, one of the three sources behind search (issue #1, Search): its

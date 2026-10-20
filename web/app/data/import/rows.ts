@@ -1,9 +1,9 @@
-import { isRatingOnlyReview, looksLikeRatingButIsNot, ratingFromReviewText } from '../../utils/ratingReview'
-import { isValidIsbn10, isValidIsbn13, isbn10To13 } from '../books'
-import type { EntryStatus } from '../library'
-import { REVIEW_MAX_LENGTH } from '../library'
-import type { Row } from './csv'
-import { surname, workTitle } from './readingTracker'
+import { isRatingOnlyReview, looksLikeRatingButIsNot, ratingFromReviewText } from '../../utils/ratingReview.ts'
+import { isValidIsbn10, isValidIsbn13, isbn10To13 } from '../books.ts'
+import type { EntryStatus } from '../library.ts'
+import { REVIEW_MAX_LENGTH } from '../library.ts'
+import type { Row } from './csv.ts'
+import { surname, workTitle } from './readingTracker.ts'
 
 /**
  * The normalised import row (issue #111): what any supported app's export says

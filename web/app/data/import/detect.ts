@@ -1,6 +1,6 @@
-import { canonicalRows, readCsv } from './csv'
-import { goodreadsAdapter } from './goodreads'
-import { hardcoverAdapter } from './hardcover'
+import { canonicalRows, readCsv } from './csv.ts'
+import { goodreadsAdapter } from './goodreads.ts'
+import { hardcoverAdapter } from './hardcover.ts'
 import {
   mapRows,
   missingColumns,
@@ -10,7 +10,7 @@ import {
   type ImportFile,
   type ImportSource,
   type OtherApp,
-} from './rows'
+} from './rows.ts'
 
 /**
  * Which app wrote a file (issue #111): the member drops any supported export

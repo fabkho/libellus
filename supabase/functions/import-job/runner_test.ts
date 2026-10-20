@@ -67,7 +67,7 @@ Deno.test('a small job is done in one chunk, batch by batch', async () => {
   const { store, saved, released } = memoryStore(5)
   const seen: { deadline: number }[] = []
   const result = await runChunk({ store, work: savingWork(clock, 1000, seen), runner: 'r', clock, batchRows: 2, log: quiet })
-  assertEquals(result, { state: 'done', job: 'job-1', saved: 5, batches: 3 })
+  assertEquals(result, { state: 'done', job: 'job-1', saved: 5, batches: 3, ms: 5000 })
   assertEquals(saved.map((row) => row.idx), [0, 1, 2, 3, 4])
   assertEquals(released, [{ error: null }])
   assertEquals(seen[0]!.deadline, 1_000_000 + 125_000, 'the batch is told the hard end')
@@ -83,24 +83,21 @@ Deno.test('no new batch after the wall-clock budget: released with rows left, th
   assertEquals(saved.length, 6)
 })
 
-Deno.test('no new batch after the CPU budget', async () => {
+Deno.test('no new batch once the chunk took its rows (the CPU is budgeted by rows)', async () => {
   const clock = fakeClock()
-  let cpu = 100
-  const { store } = memoryStore(10)
-  const work: Work = async (_job, rows, context) => {
-    for (const row of rows) await context.save(row.idx, ADDED)
-    cpu += 700
-  }
-  const result = await runChunk({ store, work, runner: 'r', clock, cpu: () => cpu, cpuBudgetMs: 1300, batchRows: 2, log: quiet })
-  assertEquals(result.batches, 2, 'after 1.4 s of CPU no third batch')
+  const { store, saved } = memoryStore(100)
+  const result = await runChunk({ store, work: savingWork(clock), runner: 'r', clock, batchRows: 24, maxRows: 48, log: quiet })
+  assertEquals(result.batches, 2)
+  assertEquals(saved.length, 48)
   assertEquals(result.state, 'more')
 })
 
-Deno.test('a platform without a CPU reading runs on the wall clock alone', async () => {
+Deno.test('the last batch is cut to the rows left of the chunk', async () => {
   const clock = fakeClock()
-  const { store } = memoryStore(4)
-  const result = await runChunk({ store, work: savingWork(clock), runner: 'r', clock, cpu: () => null, batchRows: 2, log: quiet })
-  assertEquals(result.state, 'done')
+  const { store, saved } = memoryStore(100)
+  const result = await runChunk({ store, work: savingWork(clock), runner: 'r', clock, batchRows: 24, maxRows: 30, log: quiet })
+  assertEquals(result.batches, 2)
+  assertEquals(saved.length, 30)
 })
 
 Deno.test('a refused save (cancelled, or the lease went to another runner) stops the chunk and releases nothing', async () => {

@@ -1,6 +1,6 @@
-import type { BookSnapshot } from './books'
-import type { DnbEdition } from './dnbRecord'
-import { abortError } from './fetching'
+import type { BookSnapshot } from './books.ts'
+import type { DnbEdition } from './dnbRecord.ts'
+import { abortError } from './fetching.ts'
 
 /**
  * German editions from the German National Library (DNB), asked of the `dnb-lookup` edge function

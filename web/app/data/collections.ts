@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Book, BookSnapshot } from './books'
+import type { Book, BookSnapshot } from './books.ts'
 import {
   bookFromRow,
   bookToRow,
@@ -9,10 +9,10 @@ import {
   type EntryRow,
   type LibraryEntry,
   type WriteOptions,
-} from './library'
-import { isNoAnswer } from './network'
-import { allPages } from './paging'
-import type { QueuedAction } from './queuedWrites'
+} from './library.ts'
+import { isNoAnswer } from './network.ts'
+import { allPages } from './paging.ts'
+import type { QueuedAction } from './queuedWrites.ts'
 
 /**
  * Collections (issue #1, Library actions → Collections; issue #14): a member's

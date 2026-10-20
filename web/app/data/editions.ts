@@ -1,10 +1,10 @@
-import { formatOf, type Book, type BookFormat, type BookSnapshot } from './books'
-import { createApple } from './apple'
-import type { Dnb } from './dnb'
-import type { CatalogueSearch } from './catalogueSearch'
-import { abortError, type FetchLike } from './fetching'
-import { editionKeys, normalise } from './merge'
-import { createOpenLibrary, openLibraryLanguage } from './openLibrary'
+import { formatOf, type Book, type BookFormat, type BookSnapshot } from './books.ts'
+import { createApple } from './apple.ts'
+import type { Dnb } from './dnb.ts'
+import type { CatalogueSearch } from './catalogueSearch.ts'
+import { abortError, type FetchLike } from './fetching.ts'
+import { editionKeys, normalise } from './merge.ts'
+import { createOpenLibrary, openLibraryLanguage } from './openLibrary.ts'
 
 /**
  * The editions a Library entry can change to (issue #41): the other editions

@@ -1,9 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { parseIsbn } from './books'
-import { abortError } from './fetching'
-import { bookFromRow, ENTRY_COLUMNS, entryFromRow, type BookRow, type EntryRow, type LibraryEntry } from './library'
-import type { Found } from './merge'
-import { allPages } from './paging'
+import { parseIsbn } from './books.ts'
+import { abortError } from './fetching.ts'
+import { bookFromRow, ENTRY_COLUMNS, entryFromRow, type BookRow, type EntryRow, type LibraryEntry } from './library.ts'
+import type { Found } from './merge.ts'
+import { allPages } from './paging.ts'
 
 /**
  * The own Catalogue as a search source (issue #1, Search), and the member's
