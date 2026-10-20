@@ -204,6 +204,14 @@ export async function openProfile(page: Page) {
   await untilStill(page)
 }
 
+/** The page she is on has come to rest: the app up and nothing moving, no sheet's history entry on top of it, nothing in flight. */
+async function atRest(page: Page) {
+  await untilStill(page)
+  const layers = () => page.evaluate(() => (history.state as { uiLayer?: number } | null)?.uiLayer ?? 0)
+  await expect.poll(layers).toBe(0)
+  await page.waitForLoadState('networkidle')
+}
+
 /**
  * Opens an address the way a member types it in, once the page she is on has come
  * to rest: the app up and nothing moving (`untilStill`), and no sheet's own history
@@ -228,11 +236,31 @@ export async function openProfile(page: Page) {
  * flow for it (friends.spec.ts and friends-tab.spec.ts on a slow runner, release 1.15.1).
  */
 export async function goto(page: Page, url: string) {
-  await untilStill(page)
-  const layers = () => page.evaluate(() => (history.state as { uiLayer?: number } | null)?.uiLayer ?? 0)
-  await expect.poll(layers).toBe(0)
-  await page.waitForLoadState('networkidle')
+  await atRest(page)
   await page.goto(url)
+}
+
+/**
+ * The app opened again, the way a member does it: the tab she had is gone and a new one starts at the address
+ * she left, on the same device (what the app keeps in localStorage and the session are the context's). Not
+ * `page.reload()`: WebKit loses a load that begins while the page it replaces still has work in flight — the
+ * reason `goto` waits for a page at rest — and the release run of v1.25.0 (39497401199) hung on exactly that:
+ * `page.reload` waited the whole minute of the flow's timeout for a `load` that never came, the Library still
+ * on screen, while the job's socket was open under it. A new document is also what a closed and reopened app
+ * is, and it starts the service worker's life rather than interrupting it.
+ *
+ * `page.route` dies with the page, so a flow that needs its own answers after this asks for them again on the page
+ * it gets back; the context's own (e2e/fixtures.ts: the recordings' covers, the refused hosts, the untagged-control
+ * watch) are on the context and stay.
+ */
+export async function reopen(page: Page, address = page.url()): Promise<Page> {
+  const context = page.context()
+  await untilStill(page)
+  await page.close()
+  const opened = await context.newPage()
+  await opened.goto(address)
+  await untilStill(opened)
+  return opened
 }
 
 /**
