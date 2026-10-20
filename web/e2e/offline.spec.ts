@@ -6,7 +6,7 @@ import { createLibrary } from '../app/data/library'
 import { isoDay } from '../app/utils/dates'
 import { runTitle, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { keepShell } from './offlineShell'
-import { goto, openProfile, recordedApple, signedIn } from './support'
+import { goto, openProfile, signedIn } from './support'
 
 /**
  * Offline (#15): the member loads her Library online, the device loses its
@@ -35,13 +35,15 @@ test.use({
   launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'] },
 })
 
-// The page goes on loading the app's files up to the flow's last step (the
-// sign-in page, after signing out). A request still in `keepShell`'s hands when
-// the flow ends is cut off as its context closes: `route.fetch` then finds its
-// answer gone ("Response has been disposed") and fails a flow that passed. The
-// routes are dropped before the context closes, and a handler cut off there is
-// no error.
+// The page goes on loading the app's files up to the flow's last step (the sign-in page, after
+// signing out), and that page asks for the wall's covers as it draws. A request still in a route's
+// hands when the routes are dropped is continued underneath its handler by Playwright and its
+// answer then lands on a route that is gone ("route.fulfill: Route is already handled!", run
+// 39480808919); a route cut off as the context closes is the other way round (`route.fetch` finds
+// its answer gone, "Response has been disposed", #72). So the flow ends on a page that has drawn,
+// and then the routes are dropped before the context closes, with nothing of the page's in flight.
 test.afterEach(async ({ page }) => {
+  if (!page.isClosed()) await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {})
   await page.unrouteAll({ behavior: 'ignoreErrors' })
 })
 
@@ -68,7 +70,6 @@ function book(title: string, author: string): BookSnapshot {
 }
 
 test('the Library opens offline, online-only actions say so, and search finds her own books', async ({ page, baseURL }) => {
-  await recordedApple(page)
   const network = await keepShell(page, baseURL!)
   const member = await signedIn(page)
 
@@ -167,4 +168,7 @@ test('the Library opens offline, online-only actions say so, and search finds he
   await page.getByTestId('profile.signOut').click()
   await expect(page).toHaveURL(/\/sign-in$/)
   expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('libellus.')))).toEqual([])
+  // The wall the flow ends on draws its covers as it appears (components/auth/Frame.vue): the flow
+  // waits for them, so the page it hands over has nothing in flight for the routes to be dropped under.
+  await expect(page.locator('.wall canvas.cover-in').first()).toBeVisible()
 })

@@ -7,7 +7,7 @@ import { UPGRADE_LISTS_KEY } from '../app/utils/coverUpgradeList'
 import { signUpMember } from '../tests/support/member'
 import { runTitle, sql, TEST_PUBLISHER, uniqueAppleId } from '../tests/support/stack'
 import { test } from './fixtures'
-import { expectAccessible, signedIn } from './support'
+import { expectAccessible, goto, signedIn } from './support'
 
 /**
  * The import runs on the server (proposal #329, docs/parity.md "The import as a server job"): the member picks the file, the app reads it
@@ -37,7 +37,7 @@ async function someoneElseRuns() {
 }
 
 async function chooseTheFile(page: Page) {
-  await page.goto('/import')
+  await goto(page, '/import')
   await page.getByTestId('import.file').setInputFiles({ name: 'goodreads.csv', mimeType: 'text/csv', buffer: FILE })
 }
 

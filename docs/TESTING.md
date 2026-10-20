@@ -476,7 +476,7 @@ no sheet or list moving, no page on its way to its scroll place), `goto` (an
 address opened once the page is at rest), boxes compared in one `evaluate`
 (e2e/support.ts, e2e/fixtures.ts).
 
-Every flow also fails at its end on an uncaught error of any page of any context it opened (`pageerror`, in `noPageErrors` of e2e/fixtures.ts; Anna's own browser in friends.spec.ts included), listing each with its stack; `EXPECTED_PAGE_ERRORS` there is the allowlist for an error that is the point of a flow, each with its reason, and is empty. A spec imports `test` from `./fixtures`, never from `@playwright/test`, or it has no guard.
+Every flow also fails at its end on an uncaught error of any page of any context it opened (`pageerror`, in `noPageErrors` of e2e/fixtures.ts; Anna's own browser in friends.spec.ts included), listing each with its stack; `EXPECTED_PAGE_ERRORS` there is the allowlist for an error that is the point of a flow, each with its reason, and is empty. One error is excused without an entry, and only as WebKit writes it: `Fetch API cannot load … due to access control checks.` for an address of this app itself — the origin the flows are served from (`baseURL`) or the local stack they read (`stack.url`) — which is how WebKit reports a read it refused, and which it does for the reads the app still had in flight when a document went (a navigation, a reload, a close) and for the ones a flow itself cut off (`context.setOffline`, a `route.abort`). Only the wording and the origin decide it, never when it came: WebKit refuses these reads at a navigation, at a reload, at a close, at an offline toggle and at a route's abort, and the two-second window around a navigation or a close that this replaces did not cover run 39480808919's (`isOwnRefusal`, e2e/refusedRead.ts, and `tests/refused-read.test.ts` for both sides of it). A refusal of another host — the origin a CORS failure really names — fails the flow, and so does any other uncaught error from any origin. A spec imports `test` from `./fixtures`, never from `@playwright/test`, or it has no guard.
 
 Two things a laptop hides and a runner shows (issue #146): the dev server bundles a
 package the first time a page imports it, and the pages open then can be reloaded under
@@ -585,7 +585,9 @@ CLI's default, `public.ecr.aws`, throttled the parallel pulls of the shards (`to
   configuration, into `.output-e2e`), served by `web/e2e/serve.mjs` the way Cloudflare Pages serves it
   (`_headers`, `_redirects`, a folder's page with the trailing slash, the nearest `404.html`, else the SPA
   fallback, and the Pages Functions in `web/functions`). The build needs nothing of the stack, so CI makes
-  it while Supabase starts. `LIBELLUS_E2E_DEV=1` runs the flows on `nuxt dev` instead.
+  it while Supabase starts. `LIBELLUS_E2E_DEV=1` runs the flows on `nuxt dev` instead. The build bakes
+  the flows' own VAPID public key (`web/e2e/pushKey.ts`): a build without one hides the import's "Notify me
+  when it's done" (`stores/importPush.ts`), and `import-push.spec.ts` drives that button.
 - **A flow is handed its session.** `signedIn()` signs the member up through the API and puts the session
   into the page's storage before the app boots; the sign-in screens are tested where they are the subject
   (`auth.spec.ts`, a11y's way in, `core-loop`).

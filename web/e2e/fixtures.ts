@@ -1,5 +1,7 @@
 import { expect, test as base, type BrowserContext, type Locator, type Page } from '@playwright/test'
 import { appleCover } from '../tests/support/apple'
+import { stack } from '../tests/support/stack'
+import { isLocalAddress, isOwnRefusal } from './refusedRead'
 
 /**
  * Where the flows may go: the app itself and the local stack, nothing else. A
@@ -7,7 +9,7 @@ import { appleCover } from '../tests/support/apple'
  * (e2e/support.ts, recordedApple) is refused and fails the test, so a flow can
  * never reach a live Apple, OpenLibrary or CDN, in CI or on a laptop.
  */
-const isLocal = (url: URL) => ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+const isLocal = isLocalAddress
 
 // The cover CDNs. A Catalogue that already holds Books (a developer's, the
 // sign-in wall's covers) points at them; they answer the recorded stand-in.
@@ -99,6 +101,13 @@ function tapsWaitForSheets(page: Page) {
  */
 const EXPECTED_PAGE_ERRORS: { match: RegExp; why: string }[] = []
 
+/**
+ * The origins a refusal may name and still be this app's own: the app the flows are served and the
+ * local stack it reads, exactly (see `isOwnRefusal`, e2e/refusedRead.ts). Asked of the run, so a moved
+ * `LIBELLUS_E2E_PORT` or another stack is not mistaken for a host that has no business being read.
+ */
+const ownOrigins = (baseURL: string) => [new URL(baseURL).origin, new URL(stack.url).origin]
+
 export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void; noPageErrors: void }>({
   stillSheets: [
     async ({ page }, use) => {
@@ -108,18 +117,22 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
     { auto: true },
   ],
   noPageErrors: [
-    async ({ context, browser }, use) => {
+    async ({ context, browser, baseURL }, use) => {
       // An uncaught exception of any page (`pageerror`: Playwright reports an uncaught throw and an
       // unhandled rejection there, not as a `console` error) fails the test at its end, with each
       // one's message and stack. A feed refresh once threw on every load and the suite passed (social v1).
       const thrown: string[] = []
+      const own = ownOrigins(baseURL!)
       const watch = (ctx: BrowserContext) => {
-        const onPage = (page: Page) =>
+        const onPage = (page: Page) => {
           page.on('pageerror', (error) => {
             const text = error.stack || `${error.name}: ${error.message}`
             if (EXPECTED_PAGE_ERRORS.some(({ match }) => match.test(text))) return
+            // WebKit refusing a read of this app's own: nothing failed, nothing a member sees.
+            if (isOwnRefusal(text, own)) return
             thrown.push(`${page.url()}\n${text}`)
           })
+        }
         for (const page of ctx.pages()) onPage(page)
         ctx.on('page', onPage)
       }
