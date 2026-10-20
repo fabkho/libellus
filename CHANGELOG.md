@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.25.0](https://github.com/fabkho/libellus/compare/v1.24.2...v1.25.0) (2026-10-20)
+
+
+### Features
+
+* **import:** tell her by Web Push when the server import is done or stopped ([#398](https://github.com/fabkho/libellus/issues/398)) ([95964b6](https://github.com/fabkho/libellus/commit/95964b6118debaae8a46560af1f6faf6b7934b72))
+
+
+### Fixes
+
+* **e2e:** the flows excuse WebKit's refused reads as a page goes, and the push build carries its VAPID key ([#400](https://github.com/fabkho/libellus/issues/400)) ([7d8ffd7](https://github.com/fabkho/libellus/commit/7d8ffd76c58481e144aedf0a76e6fbac8910bcde))
+
 ## [1.24.2](https://github.com/fabkho/libellus/compare/v1.24.1...v1.24.2) (2026-10-20)
 
 
