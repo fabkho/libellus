@@ -309,7 +309,7 @@ export default defineNuxtConfig({
       start_url: '/',
       scope: '/',
       display: 'standalone',
-      orientation: 'portrait',
+      // No `orientation`: the installed app turns with the phone (WCAG 1.3.4), the layout is a centred column.
       // The manifest has no media queries (Chrome on Android doesn't support the
       // draft's user_preferences), so the splash Android draws while the app
       // starts takes one colour for everyone: the night room. The ribbons icon

@@ -2,7 +2,7 @@ import { expect } from '@playwright/test'
 import { METAMORPHOSIS_GUTENBERG, type EpubSpec } from '../tests/support/epub'
 import { test } from './fixtures'
 import { openReader, shelve, withEbook } from './readerSupport'
-import { recordedApple, signedIn } from './support'
+import { expectAccessible, recordedApple, signedIn, untilStill } from './support'
 
 /**
  * The built-in reader (#131, phase 2), on the iPhone viewport. Chromium: the
@@ -152,3 +152,45 @@ for (const frames of ['scriptless', 'scripted'] as const) {
     expect(violations.filter((v) => /font-src|style-src|img-src/.test(v))).toEqual([])
   })
 }
+
+// ------------------------------------------------------------------ accessibility
+
+/**
+ * The controls and the page turns have a button each, without a tap in the middle or a swipe (WCAG 2.5.1), and the
+ * reader, its Aa sheet and its three rooms (sepia, light, dark) have no violation (`expectAccessible` scans the
+ * light and the dark colour scheme of the page, each).
+ */
+test('the controls and the page turns have buttons; sepia, light and dark have no violation', async ({ page }) => {
+  test.slow()
+  await page.setViewportSize({ width: 412, height: 915 })
+  const member = await signedIn(page)
+  const entry = await shelve(member, 'Metamorphosis', 'reading')
+  await withEbook(page, entry)
+  const reader = await openReader(page)
+  await untilStill(page)
+
+  await expect(page.getByTestId('reader.capsule')).toHaveCount(0)
+  // Out of sight and out of the pointer's reach (a screen reader's activation and the keyboard get there, a finger does not need to).
+  await page.getByTestId('reader.assist.controls').focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByTestId('reader.capsule')).toBeVisible()
+  await expect(page.getByTestId('reader.back')).toBeFocused()
+  const before = await reader.getAttribute('data-fraction')
+  await page.getByTestId('reader.assist.next').focus()
+  await page.keyboard.press('Enter')
+  await expect.poll(() => reader.getAttribute('data-fraction')).not.toBe(before)
+  await page.getByTestId('reader.assist.previous').focus()
+  await page.keyboard.press('Enter')
+  await expect.poll(() => reader.getAttribute('data-fraction')).toBe(before)
+
+  await expectAccessible(page, 'the reader, sepia')
+  await page.getByTestId('reader.type').click()
+  await expect(page.getByTestId('readerType')).toBeVisible()
+  await untilStill(page)
+  await expectAccessible(page, 'the reader’s Aa sheet')
+  for (const room of ['light', 'dark'] as const) {
+    await page.getByTestId(`readerType.theme.${room}`).click()
+    await untilStill(page)
+    await expectAccessible(page, `the reader, ${room}`)
+  }
+})

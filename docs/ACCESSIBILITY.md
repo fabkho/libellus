@@ -18,8 +18,8 @@ the tab bar that steps away.
 How:
 
 - **axe-core** (WCAG 2.2 A/AA and best practices) through Playwright on every one of those screens
-  and sheets, both themes, when they were audited. Now a flow in **one theme, dark**, for the screens on
-  the critical paths (docs/TESTING.md, "Which flows"): `web/e2e/a11y.spec.ts`; the public reading page, its
+  and sheets, both themes, when they were audited. Now a flow, **dark and light** (each screen is scanned in the
+  dark room and then in the light one), for the screens on the critical paths (docs/TESTING.md, "Which flows"): `web/e2e/a11y.spec.ts`; the public reading page, its
   Book cards, a dead link, the Share sheet and the Book's Share sheet (#171) in
   `web/e2e/reading-page.spec.ts`, with the waitlist form in its states.
   The privacy notice (and the imprint, once it is on: `/privacy`, `/imprint`), in English and German, in both themes, in
@@ -120,9 +120,10 @@ shimmer stops, the tab bar stays.
   (Shift + Option + D) and their tabs.
 - **The flow**: `cd web && pnpm exec playwright test e2e/a11y.spec.ts`. It fails on any
   serious or critical axe violation and prints the moderate and minor ones. A new screen or sheet on a
-  critical path gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), in the
-  dark theme only: its colours come from the tokens whose contrast is checked in both themes (the table
-  under "Contrast"). The reader is not on a critical path and has no scan; its rooms' colours are in the table.
+  critical path gets a scan there (`expectAccessible(page, '<where>')` from `e2e/support.ts`), which scans
+  the dark colour scheme and the light one. The reader is scanned in its three rooms (sepia, light, dark) in
+  `e2e/reader.spec.ts` (it needs Chromium), with its assistive buttons: the controls and the page turns
+  without a tap in the middle or a swipe (WCAG 2.5.1).
   A violation that cannot be fixed in BetterReads goes in `ALLOWED` in `e2e/support.ts` with its reason
   — never a rule switched off for a whole page.
 - **The keyboard and the screen reader** are not covered by axe: the second flow in `a11y.spec.ts`
@@ -175,9 +176,10 @@ shimmer stops, the tab bar stays.
 - **Text at 200 %** (the rule is in DESIGN.md, Text size; checked by hand, no flow): the
   Profile's figures scale down to fit their cell, and a Book's title in a row takes a second line from
   117 % text on a 412 px phone. Authors and meta lines are still cut with an ellipsis (a design choice:
-  one line each; the full text is in the accessible name), and so are a sheet's title between Cancel
-  and its action ("Start rea…" at 200 %), a date row's value ("Today · 6") and the Profile's name;
-  those would need a two-line sheet header and rows that stack. The wrap follows the browser's
+  one line each; the full text is in the accessible name), and so are a date row's value ("Today · 6") and
+  the Profile's name; those would need rows that stack. A sheet's title now wraps between Cancel and its
+  action (fabkho/ui#24), the Home card's lines wrap, the progress wheel's rows and the Add sheet's status
+  rows grow with the text instead of drawing over each other. The wrap follows the browser's
   default font size (Android's text size, a browser's own setting or zoom); iOS Dynamic Type does not
   change `rem` for a web page, so nothing moves there. On a wide screen the OS text size alone does
   not narrow the viewport in `rem` enough to trigger it (browser zoom does).

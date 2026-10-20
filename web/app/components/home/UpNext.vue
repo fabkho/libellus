@@ -27,7 +27,7 @@ const shown = computed(() => props.entries.slice(0, SHOWN))
         <UiPressLink
           :to="`/book/${entry.book.id}`"
           v-on="flightOf(`/book/${entry.book.id}`)"
-          :aria-label="entry.book.title"
+          :aria-label="[entry.book.title, ...entry.book.authors].join(' ')"
           class="block"
           data-testid="home.upNextEntry"
           @press="books.prefetch(entry.book.id)"

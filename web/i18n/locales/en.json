@@ -616,7 +616,7 @@
       "lossPages": "−{count}",
       "lossPercent": "−{count} %",
       "totalOf": "of {count}",
-      "totalEdit": "Total pages: {count}. Change",
+      "totalEdit": "of {count}, total pages. Change",
       "totalCount": "Count in pages",
       "totalTitle": "Pages in your copy",
       "totalHint": "Count the pages of your copy, or use your reader's total.",
@@ -1563,6 +1563,12 @@
       "back": "Back to the last page",
       "finished": "Finished",
       "close": "Close the book"
+    },
+    "assist": {
+      "label": "Reader tools",
+      "controls": "Show the reader controls",
+      "previous": "Previous page",
+      "next": "Next page"
     }
   },
   "readAs": {
@@ -2044,6 +2050,7 @@
       "olderRetry": "Try again",
       "read": "Read",
       "sending": "Sending …",
+      "incoming": "New message from {name}",
       "failed": "Not sent. Tap to try again.",
       "retryHint": "Tap to try again.",
       "composer": {
