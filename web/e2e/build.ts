@@ -5,6 +5,7 @@
 //
 //   pnpm e2e:build
 import { execFileSync } from 'node:child_process'
+import { E2E_VAPID_PUBLIC_KEY } from './pushKey'
 import { SHELF_LIBRARY_SRC, SHELF_OWNER_ID } from './shelfOwner'
 
 /**
@@ -22,6 +23,9 @@ const env = {
   ...STACK_STAND_INS,
   NUXT_PUBLIC_SHELF_OWNER_ID: SHELF_OWNER_ID,
   NUXT_PUBLIC_REGAL_LIBRARY_SRC: SHELF_LIBRARY_SRC,
+  // The import's Web Push ("Notify me when it's done", e2e/import-push.spec.ts): a build without the key
+  // hides the button (stores/importPush.ts), and the key is the build's to bake, not the stack's.
+  NUXT_PUBLIC_VAPID_PUBLIC_KEY: E2E_VAPID_PUBLIC_KEY,
 }
 console.log("Building the flows' app")
 execFileSync('./node_modules/.bin/nuxt', ['generate'], {

@@ -1,5 +1,6 @@
 import { expect, test as base, type BrowserContext, type Locator, type Page } from '@playwright/test'
 import { appleCover } from '../tests/support/apple'
+import { isLocalAddress, isRefusalOfTheLeavingPage } from './refusedRead'
 
 /**
  * Where the flows may go: the app itself and the local stack, nothing else. A
@@ -7,7 +8,7 @@ import { appleCover } from '../tests/support/apple'
  * (e2e/support.ts, recordedApple) is refused and fails the test, so a flow can
  * never reach a live Apple, OpenLibrary or CDN, in CI or on a laptop.
  */
-const isLocal = (url: URL) => ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+const isLocal = isLocalAddress
 
 // The cover CDNs. A Catalogue that already holds Books (a developer's, the
 // sign-in wall's covers) points at them; they answer the recorded stand-in.
@@ -99,23 +100,39 @@ function tapsWaitForSheets(page: Page) {
  */
 const EXPECTED_PAGE_ERRORS: { match: RegExp; why: string }[] = []
 
+/** When each page last started going (its last navigation or its close): what a refusal is measured against. */
+const going = new WeakMap<Page, number>()
+
 /**
- * WebKit's words for a request it refused itself, before the stack ever saw it: "Fetch API cannot load
- * <url> due to access control checks." They read like CORS and are not (WebKit labels every request that
- * fails synchronously as an access-control error): the one it refuses that way is a request made while the
- * document is already on its way out, so a flow that navigates away from a screen with a read in flight
- * gets one per read. Playwright then reports it as an uncaught error even though the app caught the promise
- * (stores/appUpdate.ts: a look that learns nothing is not a failure), so it is nothing a member sees and
- * nothing the flow did wrong. Seen with the import flow, whose first screen is left while Home's feed and
- * the update check are still reading (release v1.24.2, run 39472178084: the pill's reopen flow failed
- * twice on it, `/_nuxt/builds/latest.json`, `/rest/v1/rpc/feed`, `/rest/v1/rpc/my_recent_likes`).
- *
- * Excused only for a URL no request of that page ever reached the network for (`reached` below: Playwright
- * reports every request the browser made, cancelled ones included). The answer that does not come back —
- * the CORS failure this wording really names — is a request the browser did make, and it still fails the
- * flow.
+ * The page went away, so the reads it still had in flight are refused by the browser itself, and
+ * `isRefusalOfTheLeavingPage` (e2e/refusedRead.ts) says when such a refusal is exactly that and may be
+ * excused: WebKit's own wording, an address of this app, and the refusal came with the page going. Marked
+ * twice over, because a document can also go without the flow asking for it: at the call of every
+ * navigation Playwright offers, and at every navigation it reports for the main frame (a `window.location`
+ * the app set itself), plus the page's close.
  */
-const REFUSED_BEFORE_SENT = /^Fetch API cannot load (\S+) due to access control checks\.$/
+function watchThePageGoing(page: Page) {
+  // Playwright's own Page, once for the worker: each method marks the page it was called on, then is itself.
+  const proto = Object.getPrototypeOf(page) as Record<string, (...args: never[]) => unknown> & { __marksLeaving?: true }
+  if (!proto.__marksLeaving) {
+    for (const name of ['goto', 'reload', 'goBack', 'goForward', 'close']) {
+      const method = proto[name]!
+      proto[name] = function (this: Page, ...args: never[]) {
+        going.set(this, Date.now())
+        return method.apply(this, args)
+      }
+    }
+    proto.__marksLeaving = true
+  }
+  // Its document's own request, which is when the navigation starts for a page that navigated itself; then
+  // the commit Playwright reports, which is where that request ends.
+  page.on('request', (request) => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) going.set(page, Date.now())
+  })
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) going.set(page, Date.now())
+  })
+}
 
 export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void; stillSheets: void; noPageErrors: void }>({
   stillSheets: [
@@ -132,15 +149,13 @@ export const test = base.extend<{ noLiveApis: void; everyControlHasATestId: void
       // one's message and stack. A feed refresh once threw on every load and the suite passed (social v1).
       const thrown: string[] = []
       const watch = (ctx: BrowserContext) => {
-        // The URLs this page's own requests reached the network with, for `REFUSED_BEFORE_SENT`.
-        const reached = new Set<string>()
         const onPage = (page: Page) => {
-          page.on('request', (request) => reached.add(request.url()))
+          watchThePageGoing(page)
           page.on('pageerror', (error) => {
             const text = error.stack || `${error.name}: ${error.message}`
             if (EXPECTED_PAGE_ERRORS.some(({ match }) => match.test(text))) return
-            const refused = REFUSED_BEFORE_SENT.exec(error.message)?.[1]
-            if (refused && !reached.has(refused)) return
+            // WebKit refusing this app's own read as the page left: nothing failed, nothing a member sees.
+            if (isRefusalOfTheLeavingPage(text, Date.now(), going.get(page) ?? null)) return
             thrown.push(`${page.url()}\n${text}`)
           })
         }
