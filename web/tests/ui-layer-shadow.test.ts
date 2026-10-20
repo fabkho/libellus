@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * The app's own components, composables and utils keep winning over the shared UI base's of the same name
- * (ui.config.ts; the plan's risk "Duplicate resolution", docs/ui-layer-plan.md §6 in fabkho/trappist). Nuxt
+ * (ui.config.ts; the base's README, "Duplicate resolution"). Nuxt
  * decides, and it has got this wrong before (a layer's composable beat the project's in 4.4.0 and 4.4.2,
  * nuxt/nuxt#34838), so what it resolved is read back from the files it writes
  * (`.nuxt/imports.d.ts`, `.nuxt/components.d.ts`) after `nuxt prepare` (the `postinstall` step; with the same `UI_LAYER` as the run, if one is set). Skipped

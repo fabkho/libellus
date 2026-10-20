@@ -13,45 +13,30 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
 - `pnpm build` / `pnpm generate` — `nuxt generate` to `.output/public`.
 - `pnpm perf` — the client performance harness (production build, throttled Chromium and WebKit, scripted
   journeys, a table): `perf/README.md`; findings in `../docs/perf/`. Needs its own throwaway stack, never the shared one.
-- **The shared UI base** (fabkho/ui, a Nuxt layer; `@fabkho/ui` pinned to a tag in `package.json`, never a branch; plan:
-  `docs/ui-layer-plan.md` in fabkho/trappist) is extended, and the app switches to it component by component. The
-  overlay stack is the base's (wave 6a): `UiSheet`, `UiConfirm`, `useModalLayer`, `useBackDismiss`, `utils/sheetFocus.ts`,
-  its `router.options.ts` (the system Back, history key `uiLayer`; the app's own `router.options.ts` has no `history`)
-  and the cover's cloth helpers (`utils/cloth.ts`; the sources stay in `utils/cover.ts`). `UI_LAYER=/path/to/ui-checkout`
-  points the app at a local checkout instead (`ui.config.ts`; `#layers/ui`, which `main.css` imports its stylesheet by, and the
-  Vitest alias follow it). The app's own `components/ui/*`, composables and utils with the base's names win
-  (`tests/ui-layer-shadow.test.ts`; the allow-list of intended overrides, `tests/ui-layer-overrides.test.ts`, is empty:
-  nothing of the app replaces the base's); `ui.config.ts` says which of the base's plugins run (`touch-active`,
-  `stranded-viewport`) and why `no-focus-zoom` is held.
-  The controls are the base's too (wave 6b): `UiButton`, `UiRoundButton`, `UiPill`, `UiSegmented`, `UiSwitch`, `UiField`,
-  `UiIconSegments`, `UiPressLink`. A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app:
-  `v-on="flightOf(path)"` (`composables/useBookFlight.ts`).
-  The layout and content pieces are the base's too (wave 6c): `UiRowGroup`, `UiTopBar`, `UiEmptyState`, `UiProgress`,
-  `UiReveal`, `UiSeeAll`, `UiClampText` (its words are `ui.text.more` / `less`) and `UiDateRow` (the day in words is the
-  caller's: `:text="relativeDay(day)"`, `:placeholder`). The status bar's dim per layer follows `useModalDepth`
-  (`plugins/status-bar-dim.client.ts`); `thumbhashDataUrl` is the base's (`utils/cloth.ts`, cached).
-  The switch is finished (wave 6d): `UiIcon` (BetterReads' own drawings of `people`, `heart` and `external` are
-  `ui.icons` in `app/app.config.ts`; every other name is the base's), `UiTextArea` (its `footer` slot), `UiRow`,
-  `UiSwitchRow` (an external link row is `as="a"` with `href`), `UiListMotion` (`still`) and `UiAvatar` (decorative:
-  the link or button around it names it; pass `label` only where an avatar stands alone) are the base's.
-  `app/components/ui/` holds only the domain components (`BookLine`, `RatingInput`, `SearchPrompt`, `Stars`, `LitCard`).
-  The last copies went with fabkho/ui v0.6.0: `UiCover` (the app's sources are `ui.cover.sources` and
-  `ui.cover.artworkOf` in `app/app.config.ts`, from `utils/cover.ts`), `UiAmbient` (`ui.ambient.grain: 'inline'`, the
-  grain as an inline SVG: Chrome counts a `background-image` as the LCP element, `../docs/perf/client-1-startup.md`
-  F-12), the motion and cover-tilt utils (`#layers/ui/app/utils/motion`, so the app's flights and a leaning cover share
-  one `addMover` list), the keyboard, haptics, hide-on-scroll, swipe-down and arrival helpers. Bottom chrome of the app's
-  own (reader bars and toasts, import status) subtracts `--viewport-pan` from its `bottom` (`stranded-viewport`,
-  `tests/viewport-pan.test.ts`); use `float-bottom` or `screen-bottom` for a new one. Nothing stays local on purpose.
-  What the base's components can do, and how to use them: its `README.md`
-  (`node_modules/@fabkho/ui/README.md`, https://github.com/fabkho/ui). Look there before writing a component.
-  The base's words (`ui.text`) are set from the messages by `plugins/ui-text.ts`; a word the base adds needs a line in
-  `utils/uiText.ts` (`tests/ui-text.test.ts`), a variable it reads needs a token (`tests/ui-layer.test.ts`).
-- **Portable by default** (the plan's §3, wave 7): a component that could ever be generic is written so that it moves to
-  the base by copying the file. No app state in a presentational component (no `~/stores`, Pinia, Supabase or i18n calls:
-  data and copy come in by props, slots or `ui.text`); no `~/utils` or `~/composables` that touch app state (pure helpers
-  are fine); role names, not domain names (`SearchPalette`, not `BookSearchPalette`); styling only through the token CSS
-  variables; one component, one file, with its own props and emits types. It holds for new and touched components. A
-  component of the app that is generic, and that the base does not have, is a base change, not a local copy to keep.
+- **The shared UI base** (fabkho/ui, a Nuxt layer; `@fabkho/ui` pinned to a tag in `package.json`, never a branch) is
+  the app's UI kit. Its components, props, slots, states and accessibility are documented in Storybook
+  (https://fabkho.github.io/ui/) and its README (`node_modules/@fabkho/ui/README.md`). Look there before writing a
+  component. The app takes from the base everything with the base's name; nothing of the app replaces it
+  (`tests/ui-layer-shadow.test.ts`; the allow-list of intended overrides, `tests/ui-layer-overrides.test.ts`, is empty).
+  - `UI_LAYER=/path/to/ui-checkout` points the app at a local checkout (`ui.config.ts`; `#layers/ui`, which `main.css`
+    imports its stylesheet by, and the Vitest alias follow it).
+  - `ui.config.ts` says which of the base's plugins run (`touch-active`, `stranded-viewport`) and why `no-focus-zoom`
+    is held.
+  - App-set values live in `app/app.config.ts`: `ui.text` (words set from the messages by `plugins/ui-text.ts`; a word
+    the base adds needs a line in `utils/uiText.ts`, `tests/ui-text.test.ts`; a variable it reads needs a token,
+    `tests/ui-layer.test.ts`), `ui.icons` (BetterReads' own drawings of `people`, `heart`, `external`), `ui.cover`
+    (sources and artwork) and `ui.ambient.grain: 'inline'` (the grain as an inline SVG, not a `background-image`, which
+    Chrome counts as the LCP element: `../docs/perf/client-1-startup.md` F-12).
+  - Cover helpers, motion and cover-tilt utils, keyboard, haptics, hide-on-scroll and swipe-down come from the base
+    (`#layers/ui/app/utils/motion`, so the app's flights and a leaning cover share one `addMover` list). Do not copy them.
+  - Bottom chrome of the app's own (reader bars, toasts, import status) subtracts `--viewport-pan` from its `bottom`
+    (`stranded-viewport`, `tests/viewport-pan.test.ts`); use `float-bottom` or `screen-bottom` for a new one.
+  - A link that flies a cover (`UiPressLink` to a book page) gets the flight from the app: `v-on="flightOf(path)"`
+    (`composables/useBookFlight.ts`).
+- **Portable by default** (rules: the base README): a component that could ever be generic is written so it moves to
+  the base by copying the file. A presentational component holds no app state (no `~/stores`, Pinia, Supabase or i18n
+  calls: data and copy come in by props, slots or `ui.text`); pure helpers are fine, `~/utils` and `~/composables` that touch app
+  state stay in the app; role names, not domain names; tokens only; one component, one file.
 - **Regal** (the owner's shelf, #23; `regal.config.ts`), a Nuxt layer from the private repo
   fabkho/regal, is opt-in: `LIBELLUS_REGAL=1` plus `REGAL_LAYER=/path/to/regal-checkout` or
   `GIGET_AUTH=<a GitHub token that can read it>` (CI and Cloudflare Pages have the secret) and
