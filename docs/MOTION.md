@@ -88,7 +88,11 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   the photo to decode; while it runs the avatar's own fade-in is off (`main.css`), so a Back into a header that
   is new does not capture initials. The ring's two snapshots are not cross-faded (two scaled bitmaps of one
   photo smear): only the larger one is shown, the Profile's (the new one on the push, the old one on Back), and
-  the group alone moves and scales it. A new state that is still not in after 600 ms skips the transition
+  the group alone moves and scales it. The ring's group keyframes are not read from the browser (WebKit's group
+  positions and `getKeyframes()` have been wrong, with a scrolled page especially): the plugin measures the ring itself
+  (`getBoundingClientRect`, viewport coordinates: the old one before the old state is taken, the new one when the new
+  state is, after the scroll and the photo's decode) and sets the keyframes from the two, a translate and one uniform
+  scale (`groupKeyframes`); without a usable box (not drawn, off screen) it falls back to the browser's. A new state that is still not in after 600 ms skips the transition
   (the page just changes) instead of freezing the screen. Seen on a real iPhone only; no flow.
 - **The avatar to a member's page** (social v2a). Tapping a member's avatar or name (the feed's rows and
   batch rows, Home's card and rows, People, the Readers rows, the likers and friends sheets) moves the page as

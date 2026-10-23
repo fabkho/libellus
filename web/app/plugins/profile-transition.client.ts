@@ -1,7 +1,7 @@
 import type { RouteLocationNormalized } from 'vue-router'
-import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
+import { easingToken, prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { tabPlaces } from '~/utils/tabPlaces'
-import { createBrowserAnimation, holdWhileTransitioning, imagesDecoded, scaleInsteadOfResize } from '~/utils/viewTransition'
+import { createBrowserAnimation, groupKeyframes, holdWhileTransitioning, imagesDecoded, scaleInsteadOfResize, visibleRect, type Rect } from '~/utils/viewTransition'
 
 /**
  * Push to the Profile and back (docs/MOTION.md, Push to the Profile; issue
@@ -26,7 +26,8 @@ import { createBrowserAnimation, holdWhileTransitioning, imagesDecoded, scaleIns
  * - The new state waits (briefly) for the photo in the ring to decode, so the ring is not captured as
  *   initials with the photo popping in after. The ring in both places is the same plain round photo, no
  *   padding or shadow around it, so the group scales uniformly, and only one of its two snapshots is shown
- *   (the larger, main.css): no cross-fade of two scaled bitmaps.
+ *   (the larger, main.css): no cross-fade of two scaled bitmaps. The ring's group keyframes come from boxes
+ *   measured here (`groupKeyframes`), not from the browser's (WebKit's are unreliable), with the browser's as the fallback.
  * - No transition with Reduce Motion, in a browser without the API (it just
  *   navigates), or on a Back the browser has animated itself (iOS Safari's edge
  *   swipe: `hasUAVisualTransition`).
@@ -50,6 +51,13 @@ const DECODE_MS = 250
 /** What says the new page is in: the Profile's root, or a tab's header. */
 const PROFILE_PAGE = '[data-testid="profile"]'
 const TAB_HEADER = '[data-testid="shell.header"]'
+/** The named ring in each place: the header's avatar, and the Profile's. */
+const HEADER_RING = '[data-testid="shell.avatar"] [data-profile-avatar]'
+const PROFILE_RING = `${PROFILE_PAGE} [data-profile-avatar]`
+/** The ring's group (main.css names it `profile-avatar`). */
+const RING_GROUP = '::view-transition-group(profile-avatar)'
+
+const viewport = () => ({ width: window.innerWidth, height: window.innerHeight })
 
 /** Calls `then` once `selector` is in the document: now, or as soon as it is added. */
 function whenIn(selector: string, then: () => void) {
@@ -84,7 +92,7 @@ export default defineNuxtPlugin(() => {
   )
 
   /** The transition waiting for its new state: `release` takes it, `skip` gives it up (the page just changes). */
-  type Pending = { to: RouteLocationNormalized; release: () => void; skip: () => void }
+  type Pending = { to: RouteLocationNormalized; release: () => void; skip: () => void; ring: { old: Rect | null; next: Rect | null } }
   let pending: Pending | null = null
   /** The transition whose names are on the page (a later one takes over from a skipped one). */
   let current: object | null = null
@@ -106,6 +114,9 @@ export default defineNuxtPlugin(() => {
     clearNames()
     const me = {}
     current = me
+    // The ring's old box, measured by us (viewport coordinates) before the old state is taken; the new one is
+    // measured when the new state is (afterEach below). They make the ring's group's keyframes.
+    const ring = { old: visibleRect(document.querySelectorAll(direction === 'push' ? HEADER_RING : PROFILE_RING), viewport()), next: null as Rect | null }
     root.dataset.profileTransition = direction
     let captured!: () => void
     const oldCaptured = new Promise<void>((resolve) => (captured = resolve))
@@ -123,7 +134,7 @@ export default defineNuxtPlugin(() => {
       transition?.skipTransition()
       release()
     }
-    const entry: Pending = { to, release, skip }
+    const entry: Pending = { to, release, skip, ring }
     pending = entry
     transition = document.startViewTransition(() => {
       captured()
@@ -137,13 +148,18 @@ export default defineNuxtPlugin(() => {
       clearNames()
     }
     holdWhileTransitioning(transition.finished)
-    // Skipped (another took over) is not an error here: the page has changed all the same.
+    // Every promise has a handler: a transition another one took over (Safari rejects with an AbortError), or that
+    // was skipped, is not an error here, the page has changed all the same; the names are cleaned in every outcome.
     transition.ready.then(() => {
+      const own = groupKeyframes(ring.old, ring.next, easingToken('standard'))
       for (const animation of root.getAnimations({ subtree: true })) {
         const effect = animation.effect
-        if (effect instanceof KeyframeEffect && effect.pseudoElement?.startsWith('::view-transition-group(')) scaleInsteadOfResize(effect)
+        if (!(effect instanceof KeyframeEffect) || !effect.pseudoElement?.startsWith('::view-transition-group(')) continue
+        if (own && effect.pseudoElement === RING_GROUP) effect.setKeyframes(own)
+        else scaleInsteadOfResize(effect)
       }
     }, () => {})
+    transition.updateCallbackDone.catch(() => {})
     void transition.finished.then(done, done)
     // The page swaps only once the old state is on its picture.
     return oldCaptured
@@ -170,14 +186,17 @@ export default defineNuxtPlugin(() => {
       if (pending !== waiting) return
       window.scrollTo(place.left, place.top)
       const avatars = document.querySelectorAll<HTMLElement>('[data-profile-avatar]')
-      const header = document.querySelector<HTMLElement>('[data-testid="shell.avatar"] [data-profile-avatar]')
+      const header = document.querySelector<HTMLElement>(HEADER_RING)
       if (header) {
         const box = header.getBoundingClientRect()
         if (box.bottom <= 0 || box.top >= window.innerHeight) header.style.setProperty('view-transition-name', 'none')
       }
       // The ring's photo decoded first: otherwise the new state is the initials and the photo pops in on the landed ring.
       void imagesDecoded(avatars, DECODE_MS).then(() => {
-        if (pending === waiting) waiting.release()
+        if (pending !== waiting) return
+        // The new box, as the new state will be taken (the page is at its place, the photo decoded).
+        waiting.ring.next = visibleRect(document.querySelectorAll(direction === 'push' ? PROFILE_RING : HEADER_RING), viewport())
+        waiting.release()
       })
     })
   })
