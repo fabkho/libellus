@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Genres mock-up 6: the Genres chart drills into tags</title>
+<link rel="stylesheet" href="base.css" />
+<style>
+  .prof { position: absolute; inset: 0; padding: 70px 20px 0; }
+  .grow { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; margin-top: 14px; }
+  .bar { grid-column: 1 / -1; height: 2px; background: var(--color-hairline); } .bar i { display: block; height: 100%; background: var(--color-ink-muted); }
+  .scroller { display: flex; gap: 8px; overflow: hidden; margin: 0 -20px; padding: 0 20px; }
+  .read { display: flex; align-items: center; gap: 12px; min-height: 64px; }
+  .read + .read { border-top: 0.5px solid var(--color-hairline); }
+  .read .cover.sm { width: 34px; }
+  .stars { color: var(--color-star); font-size: 11px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><span class="mono" style="font-size:12px;letter-spacing:2px">▪▪▪ ▮</span></div>
+  <div class="prof">
+    <h3 class="eyebrow">Genres</h3>
+    <p class="caption faint" style="margin-top:6px">Of 96 books</p>
+    <div class="grow"><span class="body">Romance</span><span class="mono caption muted">43 %</span><span class="bar"><i style="width:43%"></i></span></div>
+    <div class="grow"><span class="body">Fantasy</span><span class="mono caption muted">19 %</span><span class="bar"><i style="width:19%"></i></span></div>
+  </div>
+  <div class="scrim"></div>
+  <section class="sheet" style="top:150px">
+    <div class="grabber"></div>
+    <div class="head"><span></span><span class="title">Romance · 2026</span><button class="action" style="color:var(--color-ink-muted);font-weight:400">Done</button></div>
+    <div class="body" style="padding-top:10px">
+      <div class="scroller">
+        <span class="pill on">All<span class="count">41</span></span>
+        <span class="pill">New adult<span class="count">19</span></span>
+        <span class="pill">Enemies to lovers<span class="count">12</span></span>
+        <span class="pill">Slow burn<span class="count">9</span></span>
+        <span class="pill">Christmas<span class="count">8</span></span>
+      </div>
+      <p class="footnote faint" style="margin:10px 0 4px">Tags of these books, most common first.</p>
+      <div class="read"><div class="cover sm c6"><span class="t">The Winter Pact</span><span class="a">Mara Ellis</span></div><div style="flex:1"><p class="serif callout">The Winter Pact</p><p class="caption faint">Mara Ellis</p></div><span class="stars">★★★★☆</span></div>
+      <div class="read"><div class="cover sm c2"><span class="t">Snowed In at Larkspur Lane</span><span class="a">Jo Whitcombe</span></div><div style="flex:1"><p class="serif callout">Snowed In at Larkspur Lane</p><p class="caption faint">Jo Whitcombe</p></div><span class="stars">★★★★★</span></div>
+      <div class="read"><div class="cover sm c5"><span class="t">Ice &amp; Ember</span><span class="a">Kit Laurent</span></div><div style="flex:1"><p class="serif callout">Ice &amp; Ember</p><p class="caption faint">Kit Laurent</p></div><span class="stars">★★★☆☆</span></div>
+      <div class="read"><div class="cover sm c4"><span class="t">A Duke for December</span><span class="a">Henrietta Vale</span></div><div style="flex:1"><p class="serif callout">A Duke for December</p><p class="caption faint">Henrietta Vale</p></div><span class="stars">★★★★☆</span></div>
+      <div class="read"><div class="cover sm c1"><span class="t">Hollow Crown</span><span class="a">Selene Marsh</span></div><div style="flex:1"><p class="serif callout">Hollow Crown</p><p class="caption faint">Selene Marsh</p></div><span class="stars">★★★★☆</span></div>
+      <div class="read"><div class="cover sm c3"><span class="t">Second Spring</span><span class="a">Ana Ferreira</span></div><div style="flex:1"><p class="serif callout">Second Spring</p><p class="caption faint">Ana Ferreira</p></div><span class="stars">★★★★★</span></div>
+    </div>
+  </section>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>
