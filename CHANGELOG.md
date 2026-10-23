@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.25.1](https://github.com/fabkho/libellus/compare/v1.25.0...v1.25.1) (2026-10-23)
+
+
+### Fixes
+
+* **e2e:** the import flows wait for the feed's own subscription, and the app is reopened as a document ([#401](https://github.com/fabkho/libellus/issues/401)) ([b831f4a](https://github.com/fabkho/libellus/commit/b831f4a37dd7fc18659a4216554ebba2ad14ee32))
+* **web:** the author name on a Book page always links to her page ([#404](https://github.com/fabkho/libellus/issues/404)) ([35a60fa](https://github.com/fabkho/libellus/commit/35a60faff21c9d062308aa3c8bb92cd3b40ce76c))
+* **web:** the avatar's push to the Profile captures its photo in one shape and no longer freezes or skips ([#403](https://github.com/fabkho/libellus/issues/403)) ([1437d8d](https://github.com/fabkho/libellus/commit/1437d8dd461b4ea2ceeb849891b9eb15a110d7ae))
+
 ## [1.25.0](https://github.com/fabkho/libellus/compare/v1.24.2...v1.25.0) (2026-10-20)
 
 
