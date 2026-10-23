@@ -7,11 +7,12 @@
 // While the reading record loads (`loading`) the two lines under the name
 // are placeholders; the "since" line closes if it turns out to have nothing
 // to say (docs/MOTION.md, Loading). The ring shows her photo where she has
-// one (#156), over the initials; tapping it is the way to add or change it
+// one (#156), over the initials (the header's small copy first, the large one once the push has landed); tapping it is the way to add or change it
 // (`photo`, components/profile/Photo.vue), disabled offline like every write.
 import { useAvatarStore } from '~/stores/avatar'
 import { useProfileLinksStore } from '~/stores/profileLinks'
 import { useSessionStore } from '~/stores/session'
+import { afterTransition } from '~/utils/viewTransition'
 
 const props = withDefaults(
   defineProps<{
@@ -34,6 +35,9 @@ const { count, monthYear } = useFigures()
 const initials = computed(() => initialsOf(session.member?.email ?? '', session.member?.name))
 const avatar = useAvatarStore()
 onMounted(() => void avatar.load())
+// The large copy is decoded only once the push has landed (`afterTransition`): not under the moving ring.
+const sharp = ref(false)
+onMounted(() => void afterTransition().then(() => (sharp.value = true)))
 const online = useOnline()
 // Her profile links (WP-22) under the library line, once they are known: one quiet "Socials" chip that opens them.
 const profileLinks = useProfileLinksStore()
@@ -56,15 +60,22 @@ const shown = computed(() => session.member?.name ?? session.member?.email ?? ''
       :aria-label="t('photo.avatarLabel')"
       :disabled="!online"
       data-testid="profile.avatar"
-      data-profile-avatar
       @click="emit('photo')"
     >
+      <!-- The ring's shadow lies under the photo and fades in with the page: only the plain round photo
+           is named for the View Transition (the header's avatar is the same shape), so the two scale uniformly. -->
+      <span class="pointer-events-none absolute inset-0 rounded-pill shadow-cover" aria-hidden="true" />
       <span
-        class="figures relative flex size-full items-center justify-center overflow-hidden rounded-pill bg-surface-raised text-title text-ink-muted shadow-cover"
+        class="figures relative flex size-full items-center justify-center overflow-hidden rounded-pill bg-surface-raised text-title text-ink-muted"
         aria-hidden="true"
+        data-profile-avatar
       >
         <span data-testid="profile.initials">{{ initials }}</span>
-        <img v-if="avatar.large" :src="avatar.large" alt="" draggable="false" class="absolute inset-0 size-full object-cover" data-testid="profile.avatarPhoto" />
+        <!-- The header's photo (the small copy), drawn as the Profile opens: its picture is already decoded there,
+             so the new state of the push has it, where the large one would pop in after. -->
+        <img v-if="avatar.small" :src="avatar.small" alt="" draggable="false" class="absolute inset-0 size-full object-cover" data-testid="profile.avatarSeed" />
+        <!-- The large copy over it once the transition (if any) has landed: the same picture, sharper. -->
+        <img v-if="sharp && avatar.large" :src="avatar.large" alt="" draggable="false" class="absolute inset-0 size-full object-cover" data-testid="profile.avatarPhoto" />
         <span class="pointer-events-none absolute inset-0 rounded-pill edge" />
       </span>
     </button>
