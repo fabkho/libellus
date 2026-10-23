@@ -30,6 +30,52 @@ export function afterTransition(): Promise<void> {
   return running ?? Promise.resolve()
 }
 
+/**
+ * Resolves once every photo inside `scopes` is decoded (a decode that fails counts: the picture is what it is),
+ * or after `limitMs`, whichever comes first, so a transition's new state is not taken with a photo still arriving.
+ * Never rejects; resolves at once with nothing to wait for.
+ */
+export function imagesDecoded(scopes: Iterable<ParentNode>, limitMs: number): Promise<void> {
+  const decoding: Promise<unknown>[] = []
+  for (const scope of scopes) for (const image of scope.querySelectorAll('img')) decoding.push(image.decode().catch(() => {}))
+  if (decoding.length === 0) return Promise.resolve()
+  return new Promise((resolve) => {
+    const limit = setTimeout(resolve, limitMs)
+    void Promise.all(decoding).then(() => {
+      clearTimeout(limit)
+      resolve()
+    })
+  })
+}
+
+/**
+ * Whether the browser animated the Back it just did (iOS Safari's edge swipe: `popstate.hasUAVisualTransition`).
+ * The popstate only says so; the router's guards, where the transition starts, come later, and a popstate the
+ * router never navigates for (a history entry a sheet owns) has no guard at all. So the answer is taken once, and
+ * only while fresh: one that was never taken must not stand in for the next navigation (a tap on the avatar
+ * would then get no animation).
+ */
+export function createBrowserAnimation(now: () => number = () => performance.now(), staleMs = 1500) {
+  let at: number | null = null
+  const fresh = () => at !== null && now() - at <= staleMs
+  return {
+    /** A popstate came, with the browser's answer. */
+    noted(animated: boolean) {
+      at = animated ? now() : null
+    },
+    /** Whether the browser animated the Back now going on, the answer kept (for a second reader that comes before `take`). */
+    peek(): boolean {
+      return fresh()
+    },
+    /** Whether the navigation now starting is the one the browser animated; asking uses the answer up. */
+    take(): boolean {
+      const animated = fresh()
+      at = null
+      return animated
+    },
+  }
+}
+
 /** The slice of a group's keyframe this reads (width, height and transform as computed strings). */
 type GroupFrame = { width?: string | number | null; height?: string | number | null; transform?: string | null; easing?: string }
 

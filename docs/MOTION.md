@@ -79,10 +79,16 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   `utils/viewTransition.ts`): the same pixels, run by the compositor. The loading wave holds still
   until it has landed, and the reading record that comes in meanwhile is applied after it
   (`afterTransition`), so the page is not set up again under the moving ring.
-  The named element (`data-profile-avatar`) is the whole avatar, the ring, the shadow, the photo and
-  the initials: in the hero it is the button that draws the ring, not the disc inside it, so the
-  ring flies with the photo instead of standing at its place from the first frame
-  (checked by eye; no flow).
+  The named element (`data-profile-avatar`) is the plain round photo, in both places: the header's avatar,
+  and in the hero the disc inside the ring button, without its shadow (that lies in a sibling under it and
+  fades in with the page). Both snapshots are then the same circle, so the group's scale is uniform
+  (no squish from a padded or shadowed box), and the ring's shadow does not stand at its place from the first
+  frame. The photo is in the new state: the hero draws the header's small copy at once (already decoded there)
+  and the large one over it only after the transition has landed, and the new state waits (up to 250 ms) for
+  the photo to decode; while it runs the avatar's own fade-in is off (`main.css`), so a Back into a header that
+  is new does not capture initials. The Profile's code is fetched on idle and at the first touch of the avatar;
+  a new state that is still not in after 600 ms skips the transition (the page just changes) instead of freezing
+  the screen. Seen on a real iPhone only; no flow.
 - **The avatar to a member's page** (social v2a). Tapping a member's avatar or name (the feed's rows and
   batch rows, Home's card and rows, People, the Readers rows, the likers and friends sheets) moves the page as
   the push to an author does, and her avatar morphs into the hero's: the avatar tapped and the page's are one

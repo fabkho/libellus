@@ -63,6 +63,7 @@ import { coverCopy, snapshotOf, type Snapshot } from '~/utils/snapshot'
 import { stillCovers } from '#layers/ui/app/utils/coverTilt'
 import { coverSrc } from '~/utils/cover'
 import { preloadImage } from '~/utils/preload'
+import { createBrowserAnimation } from '~/utils/viewTransition'
 
 /** The part of the shell that is the page: `main`, the tab page's header in it (layouts/tabs.vue; a public reading page's own, layouts/reading.vue). */
 const PAGE = '[data-flight="page"]'
@@ -184,7 +185,7 @@ let releaseHold: ((gently?: boolean) => void) | null = null
 /** The pose a departure put up (its copy of the page being left, if it added one) and its safety timer. */
 let posed: { root: HTMLElement | null; timer: number } | null = null
 /** The last Back was a swipe the browser already animated (iOS Safari's edge swipe): no flight on top of it. */
-let browserAnimatedBack = false
+const browserAnimation = createBrowserAnimation(() => performance.now(), 3000)
 /** The history position (vue-router's `history.state.position`) of the page showing. */
 let entryPosition: number | null = null
 // Work that can wait waits for a flight: from the tap until the copy has handed over to its row or hero (`afterMotion`).
@@ -368,6 +369,8 @@ export function prepare(link: HTMLElement, to: string) {
   const path = router.resolve(to).path
   if (!isFlightPath(path) || path === router.currentRoute.value.path) return
   preloadImage(sharpSrcOf(tappedOn(link, path)))
+  // The book page's code too: the page being left stands in for it (`pose`) only for so long.
+  void preloadRouteComponents(path).catch(() => {})
 }
 
 /** The cover a tap on `link` flies: its own, else the nearest cover of the same Book on screen (a Home card's title). */
@@ -505,7 +508,7 @@ function leaving(to: RouteLocationNormalized, from: RouteLocationNormalized) {
     sharpSrc: null,
   }
   // A swipe the browser animated has already shown the list: nothing to hold.
-  if (!browserAnimatedBack) pose(pending)
+  if (!browserAnimation.peek()) pose(pending)
 }
 
 /**
@@ -555,8 +558,7 @@ function start(to: RouteLocationNormalized, from: RouteLocationNormalized, posit
   const departure = pending
   pending = null
   // The browser animated this Back itself (its edge swipe): the page is simply there.
-  const swiped = departure?.towards === 'list' && browserAnimatedBack
-  browserAnimatedBack = false
+  const swiped = browserAnimation.take() && departure?.towards === 'list'
   // Superseded by a newer navigation before it was drawn: that one's flight (or none) follows.
   const current = router?.currentRoute.value.fullPath === to.fullPath
   const fits =
@@ -1037,7 +1039,7 @@ export function installBookFlight(app: Router, mounted: Layers): () => void {
   app.options.scrollBehavior = scrollBehavior
   // Read when the flight starts, long after the popstate (the router's guards and the new page come first).
   const onPopstate = (event: PopStateEvent) => {
-    browserAnimatedBack = Boolean((event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition)
+    browserAnimation.noted(Boolean((event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition))
   }
   window.addEventListener('popstate', onPopstate, { capture: true })
   const stopLeaving = app.beforeEach((to, from) => {

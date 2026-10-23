@@ -408,6 +408,12 @@ html[data-glass='off'] *::after {
 html[data-profile-transition] [data-profile-avatar] {
   view-transition-name: profile-avatar;
 }
+/* The photo in the ring is simply there while it runs: the avatar's own fade-in for a photo that mounts with it
+   (on Back, the tab's header is new) would otherwise put the new state's ring on initials and fade the photo in on top of it. */
+html[data-profile-transition] [data-profile-avatar] img {
+  opacity: 1 !important;
+  transition: none !important;
+}
 html:is([data-profile-transition], [data-push-transition]) [data-testid='shell.tabs'] {
   view-transition-name: tab-bar;
 }
