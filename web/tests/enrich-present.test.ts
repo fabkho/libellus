@@ -6,10 +6,12 @@ import { DEVICE_ENRICH_KEY, emptyCopy, readEnrichCopy, remembered, saveEnrichCop
 import {
   authorInitials,
   authorParts,
+  creditedAuthors,
   isCurrentWork,
   moreFromAuthor,
   lifeSpan,
   moveMuted,
+  needsBuilding,
   newestFirst,
   parsePosition,
   positionText,
@@ -218,6 +220,54 @@ describe('the author line', () => {
     expect(rowAuthorKey([gaiman, pratchett])).toBe('Q46248')
     expect(rowAuthorKey([])).toBeNull()
     expect(rowAuthorKey(undefined)).toBeNull()
+  })
+})
+
+describe('the author line of a Book the Catalogue has no authors for', () => {
+  const hit = (ref: string | null, name: string, key: string, id = `id-${key}`) => ({ ref, position: 1, name, authorId: id, key })
+  const card = hit('OL25161A', 'Orson Scott Card', 'Q217110')
+
+  it('links a name by the Open Library id the search gave it, to the row that id names', () => {
+    const linked = creditedAuthors(['Orson Scott Card'], { 'Orson Scott Card': 'OL25161A' }, [card])
+    expect(linked).toEqual([{ position: 1, name: 'Orson Scott Card', authorId: 'id-Q217110', key: 'Q217110' }])
+    expect(authorParts(['Orson Scott Card'], linked, 'et al.')).toEqual([{ text: 'Orson Scott Card', key: 'Q217110' }])
+  })
+
+  it('links the id itself when no row has it yet: her page builds the row when it opens', () => {
+    const linked = creditedAuthors(['Ann Leckie'], { 'Ann Leckie': 'OL7351690A' }, [])
+    expect(authorParts(['Ann Leckie'], linked, 'et al.')).toEqual([{ text: 'Ann Leckie', key: 'OL7351690A' }])
+    expect(needsBuilding('OL7351690A')).toBe(true)
+    expect(needsBuilding('Q217110')).toBe(false)
+    expect(needsBuilding('OL7351690W')).toBe(false)
+    expect(needsBuilding('OL1A; drop')).toBe(false)
+  })
+
+  it('links a work opened from an author\'s page by the authors of its work, however the edition spells her', () => {
+    const work = hit(null, 'Orson Scott Card', 'Q217110')
+    expect(authorParts(['O. S. Card'], creditedAuthors(['O. S. Card'], {}, [work]), 'et al.')).toEqual([{ text: 'O. S. Card', key: 'Q217110' }])
+    // Two credited names do not guess: only the one that is an author of the work links.
+    expect(authorParts(['Orson Scott Card', 'A. Translator'], creditedAuthors(['Orson Scott Card', 'A. Translator'], {}, [work]), 'et al.')).toEqual([
+      { text: 'Orson Scott Card', key: 'Q217110' },
+      { text: ' & ', separator: true },
+      { text: 'A. Translator' },
+    ])
+  })
+
+  it('links a name by the author row of that name, accents and dots aside', () => {
+    const lem = hit('Stanisław Lem', 'Stanislaw Lem', 'Q42')
+    expect(authorParts(['Stanisław Lem'], creditedAuthors(['Stanisław Lem'], {}, [lem]), 'et al.')).toEqual([{ text: 'Stanisław Lem', key: 'Q42' }])
+  })
+
+  it('keeps the id over the work and the name, and leaves a name nothing answers as text', () => {
+    const other = hit(null, 'Someone Else', 'Q1')
+    const linked = creditedAuthors(['Orson Scott Card', 'Nobody Known'], { 'Orson Scott Card': 'OL25161A' }, [other, card])
+    expect(linked.map((a) => [a.position, a.key])).toEqual([[1, 'Q217110']])
+    expect(authorParts(['Orson Scott Card', 'Nobody Known'], linked, 'et al.')).toEqual([
+      { text: 'Orson Scott Card', key: 'Q217110' },
+      { text: ' & ', separator: true },
+      { text: 'Nobody Known' },
+    ])
+    expect(creditedAuthors(['Nobody Known'], {}, [])).toEqual([])
   })
 })
 

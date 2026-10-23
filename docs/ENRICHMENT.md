@@ -44,11 +44,20 @@ offline with `offline`), tested in `web/tests/enrich.test.ts`.
 | `page(key, language?)` | `author_page(p_author, p_language)` | `AuthorPage` or null |
 | `forBook(bookId)` | `book_authors_of(p_book)` | `[{ position, name, authorId, key }]`, credit order |
 | `forBooks(bookIds)` | `book_authors_for(p_books)` | the same for many Books at once, by Book id (a list's rows) |
-| `refresh(key)` | `enrich` function, `{"action":"author"}` | whether it fetched again (only when stale) |
+| `forCredits({ workKey, names, keys })` | `authors_by_ref(p_work, p_names, p_keys)` | the authors of a Book the Catalogue has none for: `[{ ref, position, name, authorId, key }]`, by Open Library author id (`ref` the id), by the authors of the Book's work (`ref` null), by credited name (`ref` the name) |
+| `refresh(key)` | `enrich` function, `{"action":"author"}` | whether it fetched again (only when stale); for an Open Library id no row has yet, builds the row |
 
 The author page is opened by any of the author's keys: a Wikidata item (`/author/Q46248`), an Open
 Library id (`/author/OL25712A`) or the row's uuid; `forBook` gives the key a Book page links to. Only the
 Book's real authors are linked: a translator or an introducer the edition credits is not.
+
+The author name on a Book page always links where a key can be had, in the Catalogue or not
+(`AuthorLine`, `creditedAuthors` in `web/app/utils/enrich.ts`): the Catalogue's linked authors first; a
+Book with none (a search result, a work opened from an author's page, one nobody has enriched) asks
+`forCredits` by what the page knows — the Open Library author ids the search gave (`BookSnapshot.authorKeys`),
+the Book's Open Library work, the credited names — and a name nothing answers stays plain text. An Open
+Library id no `authors` row has yet is linked by the id; opening that page asks the `enrich` function to
+build the row from Open Library (only Open Library ids it knows; no Wikidata item or invented key).
 
 ```ts
 AuthorPage = {

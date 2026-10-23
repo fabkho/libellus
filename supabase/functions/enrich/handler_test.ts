@@ -90,6 +90,24 @@ Deno.test('a member asks for one Book: that Book is enriched now, an unknown one
   assertEquals(unknown.status, 404)
 })
 
+Deno.test('an Open Library author no row has yet is built on request; one Open Library does not know, or another id, is 404', async () => {
+  const recorded = recordedFetch(ALL)
+  const unknown: FetchLike = (url, init) =>
+    url.includes('openlibrary.org/authors/OL1A') ? Promise.resolve(new Response('{}', { status: 404 })) : recorded.fetch(url, init)
+  const { handler, memory } = setup({ fetch: unknown, books: [] })
+
+  const built = await handler(post({ action: 'author', key: 'OL25712A' }, 'member'))
+  assertEquals([built.status, await built.json()], [200, { refreshed: true }])
+  const self = memory.saved.flatMap((p) => p.authors).find((a) => a.openlibrary === 'OL25712A')
+  assertEquals([self?.name, self?.fetched], ['Terry Pratchett', true])
+
+  assertEquals((await handler(post({ action: 'author', key: 'OL1A' }, 'member'))).status, 404)
+  // Only Open Library ids are built on demand: a Wikidata item or a made-up key is not.
+  assertEquals((await handler(post({ action: 'author', key: 'Q46248' }, 'member'))).status, 404)
+  assertEquals((await handler(post({ action: 'author', key: 'OL25712A; drop' }, 'member'))).status, 404)
+  assertEquals(memory.saved.length, 1)
+})
+
 // ----------------------------------------- security round F16: a limit per member
 
 Deno.test('F16: a member over her limit gets 429 on book and author before any work; the service is not counted', async () => {
