@@ -1,0 +1,17 @@
+{
+  "query": "SELECT (COUNT(DISTINCT ?work) AS ?works) (COUNT(?ch) AS ?chapters) WHERE { ?ch wdt:P31 wd:Q1980247; wdt:P361 ?work . }",
+  "result": [
+    {
+      "works": {
+        "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+        "type": "literal",
+        "value": "2108"
+      },
+      "chapters": {
+        "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+        "type": "literal",
+        "value": "10013"
+      }
+    }
+  ]
+}

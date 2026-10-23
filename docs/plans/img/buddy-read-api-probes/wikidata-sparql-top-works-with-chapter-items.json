@@ -1,0 +1,80 @@
+{
+  "query": "SELECT ?work ?workLabel (COUNT(?ch) AS ?n) WHERE { ?ch wdt:P31 wd:Q1980247; wdt:P361 ?work . SERVICE wikibase:label { bd:serviceParam wikibase:language \"en,de\". } } GROUP BY ?work ?workLabel ORDER BY DESC(?n) LIMIT 15",
+  "top": [
+    {
+      "work": "http://www.wikidata.org/entity/Q5232904",
+      "label": "The Gospel as Revealed to Me",
+      "n": "652"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q19104951",
+      "label": "Three Hundred Æsop's Fables",
+      "n": "309"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q114677209",
+      "label": "IV : The Third Year of the Public Life",
+      "n": "227"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q19019429",
+      "label": "Fables of Æsop and Other Eminent Mythologists",
+      "n": "196"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q114677206",
+      "label": "III : The Second Year of the Public Life",
+      "n": "171"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q70761009",
+      "label": "Water Margin (120-chapter edition)",
+      "n": "121"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q8265",
+      "label": "Dream of the Red Chamber",
+      "n": "120"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q70806",
+      "label": "The Romance of the Three Kingdoms",
+      "n": "120"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q110655971",
+      "label": "Æsop's fables: A New Translation",
+      "n": "102"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q70784",
+      "label": "Journey to the West",
+      "n": "101"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q114677205",
+      "label": "II : The First Year of the Public Life",
+      "n": "101"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q107361090",
+      "label": "Xinke Xiuxiang Piping Jin Ping Mei",
+      "n": "100"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q69964966",
+      "label": "Eine Geschichte des Universums in 100 Sternen",
+      "n": "100"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q1336310",
+      "label": "Investiture of the Gods",
+      "n": "100"
+    },
+    {
+      "work": "http://www.wikidata.org/entity/Q183157",
+      "label": "The Brothers Karamazov",
+      "n": "96"
+    }
+  ]
+}
