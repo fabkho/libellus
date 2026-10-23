@@ -44,6 +44,12 @@ export type BookSnapshot = {
   openLibraryEditionKey: string | null
   openLibraryWorkKey: string | null
   /**
+   * Open Library author ids by credited name, as the search named them (`author_key` beside `author_name`):
+   * what the Book page links an author the Catalogue and the author pages do not know yet by. Not stored;
+   * absent when the source gave none (Apple, an edition record).
+   */
+  authorKeys?: Record<string, string>
+  /**
    * Hardcover, paperback, ebook or audiobook, as the source said it; null or
    * absent when it did not (OpenLibrary's `physical_format` mostly is empty).
    */

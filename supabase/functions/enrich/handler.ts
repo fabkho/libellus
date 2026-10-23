@@ -7,7 +7,8 @@
  *   { "action": "drain", "limit"?: n }      service: work through the queue for up to
  *                                           `budgetMs` (90 s), then refresh stale authors
  *   { "action": "book", "bookId": "…" }     member or service: enrich one Catalogue Book now
- *   { "action": "author", "key": "Q46248" } member or service: refresh one author if stale
+ *   { "action": "author", "key": "Q46248" } member or service: refresh one author if stale (an Open
+ *                                           Library id no row has yet is built on the spot)
  *   { "action": "backfill", "limit"?: n }   service: queue every Book never enriched
  *   { "action": "remap" }                   service: apply the current genre mapping to
  *                                           every Book an older one computed (no source asked)
@@ -56,6 +57,9 @@ export type HandlerDeps = {
   budgetMs?: number
   log?: (message: string) => void
 }
+
+/** An Open Library author id, as `authors.openlibrary_key` holds it. */
+const OPEN_LIBRARY_AUTHOR = /^OL[1-9][0-9]{0,11}A$/
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'content-type': 'application/json' } })
@@ -208,7 +212,14 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
           const refused = await refuse(caller)
           if (refused) return refused
           const author = key ? await deps.store.authorByKey(key) : null
-          if (!author) return json(404, { error: 'not_found' })
+          if (!author) {
+            // An Open Library author nobody has opened yet (a search result names her, and her Book page
+            // links to her): built now from Open Library (and the Wikidata item it links to) and stored.
+            // Only Open Library ids, and only ones Open Library knows: no member can make a row up.
+            if (!OPEN_LIBRARY_AUTHOR.test(key) || !(await deps.sources.olAuthor(key))) return json(404, { error: 'not_found' })
+            await once(`author:${key}`, async () => deps.store.save(await enrichAuthor({ openlibrary: key, name: '' }, ctx)))
+            return json(200, { refreshed: true })
+          }
           if (!author.wikidata_id && !author.openlibrary_key) return json(200, { refreshed: false })
           const ref = { wikidata: author.wikidata_id, openlibrary: author.openlibrary_key, name: author.name }
           if (await deps.store.authorFresh(ref)) return json(200, { refreshed: false })

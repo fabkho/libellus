@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
-import { createAuthors, type AuthorPage, type AuthorsRepository, type BookAuthor } from '~/data/enrich'
+import { createAuthors, type AuthorPage, type AuthorsRepository, type BookAuthor, type CreditsAsk } from '~/data/enrich'
 import { LIMITS, remembered } from '~/data/enrich/device'
 import { useEnrichCopyStore } from '~/stores/enrichCopy'
 import { useSessionStore } from '~/stores/session'
+import { creditedAuthors, needsBuilding } from '~/utils/enrich'
 
 /**
  * loading: nothing to show yet · ready: the page · missing: no author has
@@ -77,13 +78,29 @@ export const useAuthorsStore = defineStore('authors', () => {
         if (!page(key)?.page) pages.set(key, { phase: result.error === 'offline' ? 'offline' : 'error', page: null })
         return
       }
-      if (!result.data) {
+      let data = result.data
+      // An Open Library author the Book page linked by her id and no row has yet (a search result named her):
+      // the function builds the row from Open Library, then the page is read again. Online only, once a session.
+      if (!data && needsBuilding(key) && !refreshed.has(key)) {
+        refreshed.add(key)
+        const built = await repo.refresh(key)
+        if (built.data && member === session.member?.id) {
+          const again = await repo.page(key, language())
+          if (again.error) {
+            if (!page(key)?.page) pages.set(key, { phase: again.error === 'offline' ? 'offline' : 'error', page: null })
+            return
+          }
+          data = again.data
+        }
+      }
+      if (member !== session.member?.id) return
+      if (!data) {
         pages.set(key, { phase: 'missing', page: null })
         return
       }
-      keep(key, result.data)
+      keep(key, data)
       // Old or never fully fetched: the function asks the sources again (polite: once a session), then it is read again.
-      if (result.data.stale && !refreshed.has(key)) {
+      if (data.stale && !refreshed.has(key)) {
         refreshed.add(key)
         const again = await repo.refresh(key)
         if (again.data && member === session.member?.id) {
@@ -146,7 +163,42 @@ export const useAuthorsStore = defineStore('authors', () => {
     copy.update((c) => ({ bookAuthors: { ...c.bookAuthors, [bookId]: result.data } }))
   }
 
+  // ------------------------------------- the authors of a Book the Catalogue has none of
+
+  const credited = reactive(new Map<string, BookAuthor[]>())
+  const creditsLoading = new Map<string, Promise<void>>()
+  /** What a Book's credits are asked and kept under: the work, the names and the ids the search gave. */
+  const creditsKey = (ask: CreditsAsk) => JSON.stringify([ask.workKey, ask.names, Object.entries(ask.keys)])
+
+  /** The linked authors worked out for a Book's credits this session (undefined: not asked, or nothing to ask with). */
+  function ofCredits(ask: CreditsAsk): BookAuthor[] | undefined {
+    return credited.get(creditsKey(ask))
+  }
+
+  /**
+   * A Book that is not in the Catalogue (or whose authors nobody has linked) has no linked authors to ask for
+   * by its id: its author line asks by what the page knows instead (utils/enrich.ts, `creditedAuthors`). Online only;
+   * a Book is asked once a session, and nothing of it is kept on the device (the Catalogue's rows are).
+   */
+  function loadForCredits(ask: CreditsAsk): Promise<void> {
+    const id = creditsKey(ask)
+    const repo = authors()
+    if (!repo || !ask.names.length || credited.has(id) || !isOnline()) return Promise.resolve()
+    const running = creditsLoading.get(id)
+    if (running) return running
+    const member = session.member?.id
+    const task = (async () => {
+      const result = await repo.forCredits(ask)
+      if (result.error || member !== session.member?.id) return
+      credited.set(id, creditedAuthors(ask.names, ask.keys, result.data))
+    })().finally(() => creditsLoading.delete(id))
+    creditsLoading.set(id, task)
+    return task
+  }
+
   function reset() {
+    credited.clear()
+    creditsLoading.clear()
     pages.clear()
     loading.clear()
     refreshed.clear()
@@ -159,5 +211,5 @@ export const useAuthorsStore = defineStore('authors', () => {
     (now, before) => now !== before && reset(),
   )
 
-  return { page, load, ofBook, want, loadForBook, reset }
+  return { page, load, ofBook, want, loadForBook, ofCredits, loadForCredits, reset }
 })

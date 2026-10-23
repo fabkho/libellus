@@ -57,11 +57,22 @@ export type AuthorPage = {
 
 export type BookAuthor = { position: number; name: string; authorId: string; key: string }
 
+/**
+ * What the Book page knows of a Book's credits when the Catalogue does not know its authors: the Open Library
+ * work, the credited names and the Open Library author ids the search gave for them.
+ */
+export type CreditsAsk = { workKey: string | null; names: readonly string[]; keys: Readonly<Record<string, string>> }
+
+/** One hit of `authors_by_ref`: `ref` is the Open Library id or the credited name it answers, null for the work's own authors. */
+export type CreditHit = { ref: string | null; position: number; name: string; authorId: string; key: string }
+
 export type AuthorsRepository = {
   /** The author page, or null when no author has that key. */
   page: (key: string, language?: string) => Promise<EnrichResult<AuthorPage | null>>
   /** A Book's linked authors in credit order (translators and introducers are not linked). */
   forBook: (bookId: string) => Promise<EnrichResult<BookAuthor[]>>
+  /** The authors of a Book that may not be in the Catalogue, by its work, its credited names and their ids. */
+  forCredits: (ask: CreditsAsk) => Promise<EnrichResult<CreditHit[]>>
   /** Many Books' linked authors at once (a list's rows), by Book id; a Book with none is left out. */
   forBooks: (bookIds: readonly string[]) => Promise<EnrichResult<Record<string, BookAuthor[]>>>
   /** Asks the enrich function to fetch the author again if the cache is stale. Answers whether it did. */
@@ -103,6 +114,20 @@ export function createAuthors(
       const rows = (data ?? []) as { credit_position: number; name: string; author_id: string; author_key: string }[]
       return {
         data: rows.map((r) => ({ position: r.credit_position, name: r.name, authorId: r.author_id, key: r.author_key })),
+        error: null,
+      }
+    },
+
+    async forCredits(ask) {
+      const { data, error } = await client.rpc('authors_by_ref', {
+        p_work: ask.workKey,
+        p_names: [...ask.names],
+        p_keys: [...new Set(Object.values(ask.keys))],
+      })
+      if (error) return { data: null, error: mapError(error) }
+      const rows = (data ?? []) as { ref: string | null; credit_position: number; name: string; author_id: string; author_key: string }[]
+      return {
+        data: rows.map((r) => ({ ref: r.ref, position: r.credit_position, name: r.name, authorId: r.author_id, key: r.author_key })),
         error: null,
       }
     },

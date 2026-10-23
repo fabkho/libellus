@@ -274,7 +274,13 @@ function back() {
         {{ book.title }}
       </h1>
       <!-- The author line, each linked author a link to her page, and the series line under it (#167). -->
-      <AuthorLine class="mt-xs max-w-full" :names="book.authors" :book-id="catalogueId" />
+      <AuthorLine
+        class="mt-xs max-w-full"
+        :names="book.authors"
+        :book-id="catalogueId"
+        :work-key="book.openLibraryWorkKey"
+        :author-keys="book.authorKeys"
+      />
       <SeriesLine :book-id="catalogueId" :entry="entry" />
       <p v-if="facts.length" class="eyebrow mt-sm flex items-center gap-sm" data-testid="book.facts">
         <!-- Drawn with dots between them; assistive tech reads them as one phrase with commas, or they run

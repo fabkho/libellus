@@ -1,23 +1,46 @@
 <script setup lang="ts">
 // The Book page's author line (#167): the names the edition credits, as
 // before ("Terry Pratchett & Neil Gaiman", "Ann Leckie et al."), each one that
-// is a linked author of the Book a link to her page. The links come from the
-// Book's linked authors (asked when the page opens, kept on the device), so a
-// Book nobody has enriched, or one not in the Catalogue yet, reads as plain
-// text. Translators and introducers are never linked.
+// can be linked a link to her page. Always, whether or not the Book is in the
+// Catalogue: the Catalogue's linked authors come first (asked when the page
+// opens, kept on the device); a Book it has none for (a search result, a work
+// opened from an author's page, one nobody has enriched) asks by what the page
+// knows instead: the Open Library author ids the search gave, the Book's work,
+// the credited names (stores/authors.ts `loadForCredits`). Only a name no
+// source can place stays plain text. Translators and introducers are never
+// linked by the Catalogue's rows; a name asked for by itself links to an author
+// of that name.
 import { useAuthorsStore } from '~/stores/authors'
 
-const props = defineProps<{ names: readonly string[]; bookId: string | null }>()
+const props = defineProps<{
+  names: readonly string[]
+  bookId: string | null
+  /** The Book's Open Library work key, if it has one. */
+  workKey?: string | null
+  /** Open Library author ids by credited name, as the search gave them. */
+  authorKeys?: Readonly<Record<string, string>>
+}>()
 
 const { t } = useI18n()
 const authors = useAuthorsStore()
 
+const credits = computed(() => ({ workKey: props.workKey ?? null, names: props.names, keys: props.authorKeys ?? {} }))
+// The Catalogue's own links, then (when it has none) the credits asked for by what the page knows.
 watch(
-  () => props.bookId,
-  (id) => id && void authors.loadForBook(id),
+  () => [props.bookId, JSON.stringify(credits.value)],
+  async () => {
+    const { bookId } = props
+    if (bookId) await authors.loadForBook(bookId)
+    if (bookId !== props.bookId) return
+    if (!(bookId && authors.ofBook(bookId)?.length)) void authors.loadForCredits(credits.value)
+  },
   { immediate: true },
 )
-const parts = computed(() => authorParts(props.names, (props.bookId && authors.ofBook(props.bookId)) || [], t('common.etAl')))
+const linked = computed(() => {
+  const own = props.bookId ? authors.ofBook(props.bookId) : undefined
+  return own?.length ? own : (authors.ofCredits(credits.value) ?? [])
+})
+const parts = computed(() => authorParts(props.names, linked.value, t('common.etAl')))
 </script>
 
 <template>

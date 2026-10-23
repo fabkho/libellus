@@ -21,6 +21,7 @@ export const OPENLIBRARY_FIELDS = [
   'key',
   'title',
   'author_name',
+  'author_key',
   'first_publish_year',
   'cover_i',
   'cover_edition_key',
@@ -52,6 +53,8 @@ export type OpenLibraryDoc = {
   key?: string
   title?: string
   author_name?: string[]
+  /** Open Library's author ids, in the order of `author_name`. */
+  author_key?: string[]
   first_publish_year?: number
   cover_i?: number
   cover_edition_key?: string
@@ -127,6 +130,22 @@ function isbnsOf(list: string[] | undefined): { isbn13: string | null; isbn10: s
 }
 
 /**
+ * The ids of a search result's authors by credited name. Open Library lists `author_key` beside `author_name`
+ * in one order; where the two lists differ in length they cannot be paired and no id is kept.
+ */
+export function authorKeysOf(doc: Pick<OpenLibraryDoc, 'author_name' | 'author_key'>): Record<string, string> | undefined {
+  const names = doc.author_name ?? []
+  const keys = doc.author_key ?? []
+  if (!names.length || names.length !== keys.length) return undefined
+  const found: Record<string, string> = {}
+  names.forEach((name, i) => {
+    const key = keys[i]?.trim()
+    if (name.trim() && key && /^OL[1-9][0-9]{0,11}A$/.test(key)) found[name.trim()] ??= key
+  })
+  return Object.keys(found).length ? found : undefined
+}
+
+/**
  * One OpenLibrary work as the snapshot of its best edition. Null without a
  * title or without an edition to name it by (it could not be added).
  */
@@ -154,6 +173,7 @@ export function snapshotFromOpenLibrary(doc: OpenLibraryDoc, isbn13?: string): B
     appleId: null,
     openLibraryEditionKey: editionKey,
     openLibraryWorkKey: bareKey(doc.key),
+    ...(authorKeysOf(doc) ? { authorKeys: authorKeysOf(doc) } : {}),
     ...withLabels(doc.subject),
   }
 }

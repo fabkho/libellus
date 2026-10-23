@@ -263,6 +263,10 @@ describe('the author page', () => {
       [one.book.id]: [linked],
     })
     expect(await authors.forBooks([])).toEqual({ data: {}, error: null })
+    // A Book the Catalogue does not know (a search result, a work from an author's page): its credited name finds her all the same.
+    expect((await authors.forCredits({ workKey: null, names: ['ann  LECKIE-test', 'Nobody Known'], keys: {} })).data).toEqual([
+      { ref: 'ann  LECKIE-test', position: 1, name: 'Ann Leckie-Test', authorId: expect.any(String), key: AUTHOR },
+    ])
     const page = (await authors.page(AUTHOR)).data!
     expect(page.author).toMatchObject({
       key: AUTHOR,

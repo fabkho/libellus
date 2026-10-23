@@ -258,6 +258,17 @@ describe('searching OpenLibrary', () => {
     })
   })
 
+  it('keeps the author ids by credited name, and none where the lists cannot be paired', () => {
+    const doc = { key: '/works/OL1W', title: 'Speaker for the Dead', editions: { docs: [{ key: '/books/OL2M' }] } }
+    expect(snapshotFromOpenLibrary({ ...doc, author_name: ['Orson Scott Card', 'Aaron Johnston'], author_key: ['OL25161A', 'OL6916325A'] })).toMatchObject({
+      authors: ['Orson Scott Card', 'Aaron Johnston'],
+      authorKeys: { 'Orson Scott Card': 'OL25161A', 'Aaron Johnston': 'OL6916325A' },
+    })
+    expect(snapshotFromOpenLibrary({ ...doc, author_name: ['A', 'B'], author_key: ['OL1A'] })).not.toHaveProperty('authorKeys')
+    expect(snapshotFromOpenLibrary({ ...doc, author_name: ['A'], author_key: ['not-a-key'] })).not.toHaveProperty('authorKeys')
+    expect(snapshotFromOpenLibrary({ ...doc, author_name: ['A'] })).not.toHaveProperty('authorKeys')
+  })
+
   it('drops catalogue punctuation from titles and converts a lone ISBN-10', () => {
     expect(cleanTitle('Piranesi.')).toBe('Piranesi')
     expect(cleanTitle('Emma /')).toBe('Emma')

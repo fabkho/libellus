@@ -1,4 +1,4 @@
-import type { AuthorHero, AuthorPage, BookAuthor, LifeDate } from '~/data/enrich/authors'
+import type { AuthorHero, AuthorPage, BookAuthor, CreditHit, LifeDate } from '~/data/enrich/authors'
 import type { BookSeriesPlace, StartedSeries } from '~/data/enrich/series'
 import type { WorkCard } from '~/data/enrich/works'
 import { coverSrc, type CoverSize } from './cover'
@@ -192,6 +192,39 @@ export function authorParts(names: readonly string[], linked: readonly BookAutho
   if (names.length === 1) return [part(names[0]!)]
   if (names.length === 2) return [part(names[0]!), { text: ' & ', separator: true }, part(names[1]!)]
   return [part(names[0]!), { text: ` ${etAl}`, separator: true }]
+}
+
+/**
+ * The linked authors of a Book the Catalogue knows none of (a search result, a work opened from an author's
+ * page), one per credited name that can be linked, in credit order; `authorParts` then links the names. For
+ * each name, the first that answers:
+ *   1. the Open Library id the search gave for it: the author row it names (its page), else the id itself
+ *      (the page builds a row for it when it opens, see `needsBuilding`);
+ *   2. an author of the Book's work whose name it is;
+ *   3. the author row of that name (the one with the most works where several share it).
+ * A Book with one credited name and one author of its work is that author, however the edition spells her
+ * ("T. Pratchett"). A name nothing answers stays out: plain text, the one case that stays so.
+ */
+export function creditedAuthors(names: readonly string[], keys: Readonly<Record<string, string>>, hits: readonly CreditHit[]): BookAuthor[] {
+  const keyFor = (name: string) => Object.entries(keys).find(([n]) => sameName(n, name))?.[1]
+  const ofWork = hits.filter((h) => h.ref === null)
+  const found: BookAuthor[] = []
+  names.forEach((name, i) => {
+    const position = i + 1
+    const key = keyFor(name)
+    const byKey = key ? hits.find((h) => h.ref === key) : undefined
+    if (key) return void found.push({ position, name, authorId: byKey?.authorId ?? '', key: byKey?.key ?? key })
+    const byWork = ofWork.find((h) => sameName(h.name, name))
+    const byName = hits.find((h) => h.ref !== null && sameName(h.ref, name))
+    const hit = byWork ?? byName ?? (names.length === 1 && ofWork.length === 1 ? ofWork[0] : undefined)
+    if (hit) found.push({ position, name, authorId: hit.authorId, key: hit.key })
+  })
+  return found
+}
+
+/** An Open Library author id: the one kind of key an author page can build a row for. */
+export function needsBuilding(key: string): boolean {
+  return /^OL[1-9][0-9]{0,11}A$/.test(key)
 }
 
 /** The author a list row's author line opens: the first linked author in credit order, if any. */
