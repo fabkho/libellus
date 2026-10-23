@@ -1,7 +1,6 @@
 import type { RouteLocationNormalized } from 'vue-router'
 import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 import { tabPlaces } from '~/utils/tabPlaces'
-import { onIdle } from '~/utils/idle'
 import { createBrowserAnimation, holdWhileTransitioning, imagesDecoded, scaleInsteadOfResize } from '~/utils/viewTransition'
 
 /**
@@ -24,10 +23,10 @@ import { createBrowserAnimation, holdWhileTransitioning, imagesDecoded, scaleIns
  *   ring lands where the avatar will be.
  * - Back into a tab whose avatar is scrolled out of view: the ring fades out
  *   with the Profile instead of flying off the screen.
- * - The Profile's code is fetched ahead, on idle and again at the first touch of the avatar, so the page
- *   is not frozen waiting for it; the new state waits (briefly) for the photo in the ring to decode, so the
- *   ring is not captured as initials with the photo popping in after (and the ring in both places is the
- *   same plain round photo, no padding or shadow around it, so the group scales uniformly).
+ * - The new state waits (briefly) for the photo in the ring to decode, so the ring is not captured as
+ *   initials with the photo popping in after. The ring in both places is the same plain round photo, no
+ *   padding or shadow around it, so the group scales uniformly, and only one of its two snapshots is shown
+ *   (the larger, main.css): no cross-fade of two scaled bitmaps.
  * - No transition with Reduce Motion, in a browser without the API (it just
  *   navigates), or on a Back the browser has animated itself (iOS Safari's edge
  *   swipe: `hasUAVisualTransition`).
@@ -42,8 +41,7 @@ type Direction = 'push' | 'back'
 const PROFILE = '/profile'
 /**
  * The longest the new state may keep the page frozen (a slow first load of the Profile's code): a safety net, not a
- * wait. Past it the transition is skipped and the page just changes. The Profile's code is fetched ahead
- * (below), so the new page is normally in within a frame or two.
+ * wait. Past it the transition is skipped and the page just changes (the new state would be the old page).
  */
 const LIMIT_MS = 600
 /** The longest the new state waits for the avatar's photo to decode, inside `LIMIT_MS`. */
@@ -84,16 +82,6 @@ export default defineNuxtPlugin(() => {
     (event) => browserAnimation.noted(Boolean((event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition)),
     { capture: true },
   )
-
-  // The Profile's code ahead of the tap: on idle once the app is up, and at the first touch of the
-  // avatar (the tap that follows has the rest of the press to finish it).
-  const preload = () => void preloadRouteComponents(PROFILE).catch(() => {})
-  onNuxtReady(() => {
-    onIdle(preload, { timeout: 4000, fallback: 2000 })
-    document.addEventListener('pointerdown', (event) => {
-      if (event.target instanceof Element && event.target.closest('[data-testid="shell.avatar"]')) preload()
-    }, { capture: true, passive: true })
-  })
 
   /** The transition waiting for its new state: `release` takes it, `skip` gives it up (the page just changes). */
   type Pending = { to: RouteLocationNormalized; release: () => void; skip: () => void }

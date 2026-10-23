@@ -414,6 +414,25 @@ html[data-profile-transition] [data-profile-avatar] img {
   opacity: 1 !important;
   transition: none !important;
 }
+/* The ring's two snapshots are the same photo at two sizes: cross-faded they smear two scaled bitmaps.
+   One is shown, the larger (the Profile's ring: the new one on the push, the old one on Back), and the
+   group alone moves and scales it. Both fill the group (same round shape, same aspect). */
+html[data-profile-transition='push']::view-transition-old(profile-avatar) {
+  animation: none;
+  opacity: 0;
+}
+html[data-profile-transition='push']::view-transition-new(profile-avatar) {
+  animation: none;
+  opacity: 1;
+}
+html[data-profile-transition='back']::view-transition-old(profile-avatar) {
+  animation: none;
+  opacity: 1;
+}
+html[data-profile-transition='back']::view-transition-new(profile-avatar) {
+  animation: none;
+  opacity: 0;
+}
 html:is([data-profile-transition], [data-push-transition]) [data-testid='shell.tabs'] {
   view-transition-name: tab-bar;
 }

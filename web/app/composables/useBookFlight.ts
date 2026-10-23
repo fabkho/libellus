@@ -369,8 +369,6 @@ export function prepare(link: HTMLElement, to: string) {
   const path = router.resolve(to).path
   if (!isFlightPath(path) || path === router.currentRoute.value.path) return
   preloadImage(sharpSrcOf(tappedOn(link, path)))
-  // The book page's code too: the page being left stands in for it (`pose`) only for so long.
-  void preloadRouteComponents(path).catch(() => {})
 }
 
 /** The cover a tap on `link` flies: its own, else the nearest cover of the same Book on screen (a Home card's title). */

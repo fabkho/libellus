@@ -86,9 +86,10 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   frame. The photo is in the new state: the hero draws the header's small copy at once (already decoded there)
   and the large one over it only after the transition has landed, and the new state waits (up to 250 ms) for
   the photo to decode; while it runs the avatar's own fade-in is off (`main.css`), so a Back into a header that
-  is new does not capture initials. The Profile's code is fetched on idle and at the first touch of the avatar;
-  a new state that is still not in after 600 ms skips the transition (the page just changes) instead of freezing
-  the screen. Seen on a real iPhone only; no flow.
+  is new does not capture initials. The ring's two snapshots are not cross-faded (two scaled bitmaps of one
+  photo smear): only the larger one is shown, the Profile's (the new one on the push, the old one on Back), and
+  the group alone moves and scales it. A new state that is still not in after 600 ms skips the transition
+  (the page just changes) instead of freezing the screen. Seen on a real iPhone only; no flow.
 - **The avatar to a member's page** (social v2a). Tapping a member's avatar or name (the feed's rows and
   batch rows, Home's card and rows, People, the Readers rows, the likers and friends sheets) moves the page as
   the push to an author does, and her avatar morphs into the hero's: the avatar tapped and the page's are one
