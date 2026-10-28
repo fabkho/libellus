@@ -1,135 +1,84 @@
-# WP-08 · The chart by month or by week, with a navigator — a clickable prototype
+# WP-08 · The chart by month or by week, with a navigator — the chosen capsule
 
-**DO NOT MERGE.** A throwaway design round for the Profile chart's Week/Month switch and range
+**DO NOT MERGE.** A throwaway design prototype for the Profile chart's Week/Month switch and range
 navigator (backlog #11b/#11c). Nothing here is wired to the reading record and no production code
 changed: the prototype is one dev-only page (`web/app/pages/prototype/chart-nav.vue`, the route is
 dropped from every build, `web/nuxt.config.ts` `$production`) on a fake record with today pinned to
 17 Jun 2026 and a first finish on 3 Sep 2024. The chart and the books sheet are the production
 components (`ProfileColumns`, `ProfileReadsSheet`) on the app's tokens; the dashed mono bar on top is
-prototype chrome (variant, theme, language).
+prototype chrome (theme, language).
 
-Open it with `pnpm dev`, then `/prototype/chart-nav`. Query: `?variant=A|B|C|D|E|F|G&mode=months|weeks&lang=en|de`
-(plus `&year=2024` or `&weeks=2025-06-23` to open on another window).
+Open it with `pnpm dev`, then `/prototype/chart-nav`. Query: `?mode=months|weeks&lang=en|de`.
 
-## What every variant shows
+Seven control layouts were compared over the round (A–G; the earlier ones live in this PR's
+history). The chosen one, now the only one in the prototype:
 
-- **Months · Weeks** switch (default Months). Months: 12 columns, the year. Weeks: 13 columns (a
-  quarter, ISO weeks, Monday first, by the day each read ended), the last 13 weeks to start.
-- **Navigator**: previous/next with the current period label ("2026" / "23. März – 21. Juni 2026"),
-  `aria-label` on both arrows, `aria-live` on the label. Months step a year, weeks a quarter.
-  Both ends stop: no window before her first finish, none after today (the arrow is disabled).
-  D and E draw every window at once instead (a strip, a rail), so stepping is a tap on the
-  neighbour and the ends are where the strip or rail stops; their period label is `aria-live` too.
-  F and G put the switch and the stepper in one row (round three, below).
-- **A bar opens that period's books** in the existing sheet ("Mai 2026", "Woche vom 16. März").
-- **The figures under the chart follow the window** (Books, Pages, Average), as does the chart's
-  text alternative (a visually hidden line naming every column and its count).
-- Every control keeps the 44 px target, Reduce Motion is the components' own, and the whole thing
-  runs at 390 and 360 px in both themes.
+## The capsule: the mode and the navigator in one row
 
-| Variant | Control layout | Shots |
-|---|---|---|
-| **A** | The segmented Months/Weeks switch above the chart, by its title; the arrows beside the period label, above the chart. | [months 390 light](shots/chart-nav-a-months-390-light.png) · [months 390 dark](shots/chart-nav-a-months-390-dark.png) · [weeks 390 dark](shots/chart-nav-a-weeks-390-dark.png) · [weeks 360 light](shots/chart-nav-a-weeks-360-light.png) · [sheet](shots/chart-nav-a-sheet-390-light.png) |
-| **B** | The same switch; the arrows below the chart, and a swipe on the chart moves the window (`pan-y`, the page still scrolls). | [months 390 light](shots/chart-nav-b-months-390-light.png) · [months 390 dark](shots/chart-nav-b-months-390-dark.png) · [weeks 360 dark](shots/chart-nav-b-weeks-360-dark.png) |
-| **C** | One pill ("Nach Monat · 2026 ⌄") that opens a period picker sheet: the switch on top, every period with its count, the one in view lit. No arrows. | [months 390 light](shots/chart-nav-c-months-390-light.png) · [picker months](shots/chart-nav-c-picker-390-light.png) · [picker weeks 390 dark](shots/chart-nav-c-picker-390-dark.png) · [months 360 dark](shots/chart-nav-c-months-360-dark.png) |
-| **D** | **Timeline.** The switch by the title as in A; under the chart, her whole record as a strip of micro-bars (one per month or week), the window a brush framed on it. Tap a stretch of the strip or scrub along it and the chart follows live; the period label rides under the brush. Year ticks over the strip; time outside the record (before the first finish, after today) is a dotted line, today's bucket lamp-coloured. No arrows: the strip simply ends where the record does. ← → step the window from the keyboard. | [months 390 light](shots/chart-nav-d-months-390-light.png) · [weeks 390 dark](shots/chart-nav-d-weeks-390-dark.png) · [weeks 360 light](shots/chart-nav-d-weeks-360-light.png) · [earliest end 360 dark](shots/chart-nav-d-earliest-360-dark.png) |
-| **E** | **Tabs and a chip rail.** The mode is two tabs in the title line ("NACH MONAT · NACH WOCHE", the active one underlined in the lamp colour) — no separate title, no segmented control. Under it one rail of chips, every period with its count ("2025 43", "KW 26–38 10"), oldest left, the one in view filled. One tap jumps anywhere. Months fit (three chips, set against the right edge); weeks scroll sideways, the year a sticky label the next year pushes out, the edges fading only where more chips hide — so the ends show as an edge that does not fade. | [months 390 light](shots/chart-nav-e-months-390-light.png) · [weeks 390 dark](shots/chart-nav-e-weeks-390-dark.png) · [weeks mid-rail 360 light](shots/chart-nav-e-weeks-360-light.png) · [a week's books 360 dark](shots/chart-nav-e-sheet-360-dark.png) |
-| **F** | **One row, arrows at the edges.** ‹ pinned to the row's left edge, › to its right; between them the segmented switch (A's, a little tighter: `px-sm`), held against the left arrow so it never moves under the finger that taps it, and the period label centred in what is left. Months: "2026" in the subhead size. Weeks: the full date range kept, stacked in two short meta-size lines ("23. März –" over "21. Juni 2026"); across a year end the year is written once, on the end ("22. Dez. –" over "22. März 2026"), because "22. Dez. 2025 –" does not fit at 360 px. A disabled end is the quiet arrow at half strength, as in A. No title row: the switch names the mode. | [months 390 light](shots/chart-nav-f-months-390-light.png) · [weeks 390 dark](shots/chart-nav-f-weeks-390-dark.png) · [weeks 360 light (the tight case)](shots/chart-nav-f-weeks-360-light.png) · [year end 360 dark](shots/chart-nav-f-crossyear-360-dark.png) |
-| **G** | **One capsule.** The switch and the stepper fused into one 44 px pill the width of the chart: the inactive mode is a plain word segment ("Wochen"), the active one is inked and *is* the stepper — ‹ 2026 › or ‹ KW 13–25 · 2026 › (across a year end "KW 52–12 · 2025/26"). Tap the word and the ink moves over to it. The label stays in the subhead size and only shrinks where it would not fit (English, a year end, 360 px); the weeks' full dates move under the axis as the chart's caption ("23. März – 21. Juni 2026", meta, muted). A disabled end is the arrow faded to 30 % on the ink. Bonus: B's swipe on the chart steps the window, except a swipe that starts within 24 px of a screen edge (iOS's back-swipe zone); and for 0.4 s after a mode change the arrows ignore taps, since an arrow now sits where the tapped word was. | [months 390 light](shots/chart-nav-g-months-390-light.png) · [weeks 390 dark](shots/chart-nav-g-weeks-390-dark.png) · [weeks 360 light (the tight case)](shots/chart-nav-g-weeks-360-light.png) · [earliest end 360 dark](shots/chart-nav-g-earliest-360-dark.png) |
+One pill row. The **inactive mode is a plain word** ("Monate" / "Wochen"); the **inked one is the
+stepper** — ‹ the window › — so the switch and the year/week control are the same object. The weeks'
+full dates ride under the chart as its caption; the capsule names the window short ("KW 13–25 · 2026"
+/ "2026", across a year end "KW 52–12 · 2025/26").
 
-## Recommendation: G (revised after round three)
+- **Motion (as asked): the tab-select feel of `UiIconSegments`** (`components/ui/IconSegments.vue`,
+  docs/MOTION.md `standard`). Switching modes unfolds the picked side exactly where a chosen segment
+  unfolds its name: a grid column 0fr → 1fr with the fade over it, the inked surface fading in, the
+  halves reflowing on `flex-grow` (1 → 2.3). The word folds away as the stepper takes its place.
+  [mid-switch frame](shots/chart-nav-g-switch-midway-390-light.png).
+- **Stepping** slides the window's label in from the side the window came from (`quick`), the arrows
+  never moving; a swipe on the chart steps too, except within 24 px of the screen edges (iOS's
+  back-swipe keeps those).
+- **The ends stop**: no window before her actual first finish (taken from the data, not a nominal
+  date), none after today; the arrow there is disabled and faded.
+- **A bar opens that period's books** in the existing sheet ("Mai 2026" / "Woche vom 16. März").
+- **The figures under the chart** (Books, Pages, Average) and the chart's text alternative follow the
+  window. 44 px targets; Reduce Motion is the app's own (main.css); 390 and 360 px, light and dark,
+  EN and DE.
 
-The owner liked A and B's direction — a plain switch and a stepper, nothing hidden — but not A's two
-stacked rows. Round three asked one question: can the switch and the stepper share **one row** at
-360 px, with "23. März – 21. Juni 2026" in it? Two answers:
+| Shot | |
+|---|---|
+| Weeks, 390, light | [chart-nav-g-weeks-390-light](shots/chart-nav-g-weeks-390-light.png) |
+| Weeks, 390, dark | [chart-nav-g-weeks-390-dark](shots/chart-nav-g-weeks-390-dark.png) |
+| Months, 390, light | [chart-nav-g-months-390-light](shots/chart-nav-g-months-390-light.png) |
+| Months, 390, dark | [chart-nav-g-months-390-dark](shots/chart-nav-g-months-390-dark.png) |
+| Weeks, 360 (the tight case) | [chart-nav-g-weeks-360-light](shots/chart-nav-g-weeks-360-light.png) |
+| Months, 360, dark | [chart-nav-g-months-360-dark](shots/chart-nav-g-months-360-dark.png) |
+| The books sheet | [chart-nav-g-sheet-390-light](shots/chart-nav-g-sheet-390-light.png) |
+| Mid-switch (the unfold) | [chart-nav-g-switch-midway-390-light](shots/chart-nav-g-switch-midway-390-light.png) |
 
-**F says yes by shrinking the label.** It is the honest A in one row: the arrows at the edges stay put
-whatever the mode or label (good for repeated stepping), the switch never moves, and the weeks keep
-their full human dates. But the price lands on the wrong element: the period, the thing the row is
-about, becomes the smallest type on it (11 px, two lines) next to a switch in 13 px, and the row reads
-as four loose parts. It fits at 360 px with 12 px to spare in German — no headroom for a longer locale.
+## Why the capsule, over the others
 
-**G says yes by fusing.** One object instead of four: the inked segment is both "this mode" and "this
-period", so the switch costs one word, not a whole segmented control, and the label keeps the subhead
-size. The week numbers in the capsule match the axis right under it, and the human date range is not
-lost — it is the chart's caption, where a reader looks after reading the bars. It is the most compact
-layout of all seven (one 44 px row, A has two), it keeps A's predictable ‹ › and its visible disabled
-ends, and its swipe no longer fights the back-swipe. Its costs: the pattern (a segment that turns into
-a stepper) is less familiar than a segmented control and should be checked on a phone; the inactive
-word must read as tappable (it has the 44 px target but no outline of its own); the caption adds a
-meta line under the chart in weeks only, so the figures shift by one line when the mode changes; and
-an arrow moving under the finger after a mode change needed a 0.4 s guard.
-
-**Against E, the round-two winner**, G trades E's one-tap jump to any period (and the counts on the
-chips) for one row instead of two, a stable control that never scrolls, and the owner's preferred
-‹ › model. With her record — three years, eight quarters — stepping is at most a few taps, so the jump
-is worth less than the row. E stays the better answer if the record grows long or WP-20's custom range
-arrives (a chip is easier to add than a fourth state in a capsule).
-
-Suggested cut: **G as drawn.** Fallback: F if the fused capsule tests poorly (it is the safest one-row
-layout, just plainer); E if the owner wants every period visible after all. A, B, C and D are retired:
-A and F show that a separate segmented control and a full date range cannot both sit in one 360 px row
-at a comfortable size, B's swipe is now G's guarded bonus, C hides the navigator, D adds a second chart.
-
-### Round two, kept for the record: E over D
-
-Round one (A–C) did not land, and the reason is the same in all three: each spends a whole row on
-a control that only says one thing. A stacks two rows above the chart (title + switch, then
-‹ label ›) and still only steps one window at a time, with a dead arrow at both ends; B moves the
-arrows below and adds a swipe that meets iOS's back-swipe on a pushed page; C is compact but buries
-the navigator behind a tap.
-
-**E fixes that by letting the controls be the content.** The tabs *are* the title, so the mode costs
-no row of its own; the chips *are* the navigator and the picker at once — every period visible, its
-count on it, one tap to any of them (C's jump without the sheet, A's visibility without the arrows).
-There is no disabled state to draw: the rail starts at her first window and ends at today's, and the
-edge that does not fade says so. No gesture on the chart, no new chart, and it is the only layout
-that scales cleanly to a custom range (WP-20 adds one chip). Two rows total above the chart, as A,
-but both carry information. Its costs: in weeks only about three chips show at 360 px, so an older
-quarter is a sideways scroll away (the sticky year keeps the place); the chip names weeks by number
-("KW 26–38"), which matches the columns but is less human than A's date range (the sheet title and
-the text alternative carry the dates). Stepping one window is tapping the neighbour chip.
-
-**D is the most expressive.** The overview-plus-detail strip shows the whole record
-at once — where she read a lot, where the gaps are, where the window sits in it — and the scrub feels
-good; the ends are self-evident (the dotted line before the first finish). But it is a second chart
-under the chart: about 100 px more, and in weeks 91 hairline bars that read as texture rather than
-data at 360 px. Its scrub is a horizontal drag too, though inset 20 px from the edge and only on a
-44 px strip, so it does not fight the back-swipe the way B's full-width chart did. Worth keeping in
-mind for a longer history (several years on Months) or for WP-20's pages chart.
+A (switch above, arrows beside the label) and B (arrows below) spent two rows on what the capsule
+says in one; C hid the navigator behind a tap; D (a scrubbable mini-timeline) was the most expressive
+but read as a second chart — 91 weekly bars of noise at 360 px; E (tabs + chip rail) was the runner-up
+and still wins for a very long record or a custom range, since every period is one tap. The capsule
+keeps the navigator visible and the whole control to one 44 px row, and the inked-half-as-stepper
+gives the mode switch its motion for free (the ink surface is the thing that moves).
 
 ## What the real implementation would cost (about two days)
 
 - `data/stats.ts`: `weeksOf`/`readsInWeek` on `endedOn` (ISO weeks, Monday first through
-  `utils/dates.ts`), the window model (13 weeks / a year, both ends), `readsInWindow` for the figures;
-  Vitest for a week across New Year, ISO week 53, a read without an end date, DST and a non-European
-  time zone. The bucketing in the prototype's page is the shape (not production code).
+  `utils/dates.ts`), the window model (13 weeks / a year, both ends, the left end from the first
+  finish in the data), `readsInWindow` for the figures; Vitest for a week across New Year, ISO week
+  53, a read without an end date, DST and a non-European time zone. The prototype's bucketing is the
+  shape (not production code).
 - `stores/stats.ts`: mode and window kept across a trip to a book; `ProfileSheet` a `week` kind plus
-  its title in `useStatsSheet`/`utils/statsSheet.ts` (this is where WP-07's parallel edit to
-  `ReadsSheet.vue` rows must not be disturbed — one small case, no row changes).
+  its title in `useStatsSheet`/`utils/statsSheet.ts` (one small case, keeping clear of WP-07's
+  parallel `ReadsSheet.vue` row work — no row changes here).
 - `components/profile/Columns.vue` needs nothing (any columns go in; 13 already fit at 360 px).
-- The chosen control as one component, the figures following the window, the text alternative,
-  loading/empty/offline states, German strings (the keys this PR adds are the planned copy, EN and
-  DE already in `web/i18n/locales/`), `docs/parity.md`, one local Playwright flow and screenshots.
+- The capsule as one component (the fold/unfold is `UiIconSegments`' own technique), the label slide
+  on step, the swipe with the edge guard, the caption, loading/empty/offline states, the German
+  strings (the keys this PR adds are the planned copy, EN and DE in `web/i18n/locales/`),
+  `docs/parity.md`, one local Playwright flow, screenshots.
 - Member profiles: the same chart exists there today (`pages/friends/[member]/index.vue`), so the
-  real change mirrors it read-only — no new member data.
+  real change mirrors it read-only.
 
 ## Open questions for the owner
 
 1. The week window: 13 weeks (a quarter, as here) or 12? And does ‹ › step the whole window (as here)
    or one week at a time?
-2. Remember the mode and position between visits, or always open on Months of the current year?
-3. Weeks on a member's profile too (the chart is there today), and does the year pill set stay the
-   outer scope (a window never crosses a picked year) or do the weeks span freely?
-4. Is the copy right: "Week 12" / "KW 12" as a column name, "Week of {date}" / "Woche vom {date}" as
-   the sheet title? (E reuses the same key for its chips: "KW 13–25" / "Week 13–25".)
-5. G, F or E (see the recommendation): one fused capsule with ‹ ›, a plainer one-row layout with the
-   full dates in small type, or one tap to a named period?
-6. G: week numbers in the control and the dates as the chart's caption — or should the dates be the
-   label and the numbers stay on the axis only (they do not fit together in one row at 360 px)?
-7. G's swipe on the chart: keep it (it leaves the 24 px edges to iOS's back-swipe) or drop it?
-
-For the real implementation, take the left end from the data, as this prototype now does: the earliest
-window is the one that holds her actual first finish (not a nominal start date), and `earliestWeekStart()`
-must stop at that window — a first draft stepped one window late and derived the bound from a nominal
-date, which would have left an early first finish outside every week window.
+2. The capsule names weeks "KW 13–25 · 2026" and the caption tells the dates — right division, or
+   should the capsule carry the dates and the caption go?
+3. Remember the mode and position between visits, or always open on Months of the current year?
+4. Weeks on a member's profile too, and does a picked year still scope the windows (a window never
+   crosses a picked year) or do the weeks span freely?
