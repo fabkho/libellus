@@ -1,4 +1,4 @@
-import { readsByAuthor, readsInMonth, readsOnDay, readsOfGenre, readsUnrated, readsWithoutPages, readsWithStars, type ReadingDay, type StatsRead } from '~/data/stats'
+import { readsByAuthor, readsInMonth, readsInWeek, readsOnDay, readsOfGenre, readsUnrated, readsWithoutPages, readsWithStars, type ReadingDay, type StatsRead } from '~/data/stats'
 import type { GenreId } from '~/data/enrich/genres'
 import type { ProfileSheet } from '~/stores/stats'
 
@@ -16,6 +16,8 @@ export function statsSheetReads(sheet: ProfileSheet | null, reads: readonly Stat
   switch (sheet.kind) {
     case 'month':
       return readsInMonth(reads, sheet.year, sheet.month)
+    case 'week':
+      return readsInWeek(reads, sheet.start)
     case 'day':
       return readsOnDay(days, sheet.day)
     case 'pagesMissing':
@@ -32,9 +34,11 @@ export function statsSheetReads(sheet: ProfileSheet | null, reads: readonly Stat
 }
 
 /**
- * Whether a row names its year: a sheet over every year (the All pill) carries it, as does nothing else — a day and
- * a month are one year already.
+ * Whether a row names its year: a sheet over every year (the All pill) carries it, and so does a week's (a window of
+ * weeks may cross a year end) — a day and a month are one year already.
  */
 export function statsSheetWithYear(sheet: ProfileSheet | null): boolean {
-  return !!sheet && sheet.kind !== 'day' && sheet.kind !== 'month' && sheet.year === 'all'
+  if (!sheet) return false
+  if (sheet.kind === 'week') return true
+  return sheet.kind !== 'day' && sheet.kind !== 'month' && sheet.year === 'all'
 }

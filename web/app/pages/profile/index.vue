@@ -4,11 +4,10 @@
 // book page and lit by a cover: the favourite of the year in view (this
 // year's under All). Under the hero, the year pills (All first, the default)
 // and everything they scope: the four figures (the Pages line opens the reads
-// without a page count), the books by year (All; a year
-// opens its review) or by month (a month opens its books, "<year> in review"
-// the year), the ratings (a row opens the books rated so), the genres (a row opens the
-// Library filtered by it, #168), the records and the authors read more than once. The reading days (this year and All) and
-// the years in review do not change with the pills. The account at the end:
+// without a page count), the ratings (a row opens the books rated so), the genres (a row opens the
+// Library filtered by it, #168), the records and the authors read more than once. The chart by month or by week
+// (WP-08, components/profile/Chart.vue: a bar opens that month's or week's books) keeps its own window, as do the
+// reading days (this year and All) and the years in review: the pills do not change them. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
 import type { GenreId } from '~/data/enrich/genres'
@@ -30,7 +29,6 @@ const bookGenres = useGenresStore()
 const libraryView = useLibraryViewStore()
 // Your shelf (#23): the owner's card, and nobody else's.
 const shelf = useShelfStore()
-const { monthLong, monthLetter } = useFigures()
 
 useHead({ title: () => `${t('profile.title')} · ${t('app.name')}` })
 // Loaded each time the page shows: opened afresh, or shown again from the
@@ -50,7 +48,6 @@ onActivated(show)
 onDeactivated(() => (showing = false))
 
 const thisYear = Number(isoDay().slice(0, 4))
-const thisMonth = Number(isoDay().slice(5, 7))
 const reads = computed(() => stats.record?.reads ?? [])
 const years = computed(() => yearsOf(reads.value))
 // A year in review is one tap away (the year in view, or under All the latest): for the owner, its row is warmed on idle.
@@ -92,25 +89,12 @@ const booksRead = computed(() => new Set(reads.value.filter((r) => r.outcome ===
 const since = computed(() => readingSinceOf(reads.value))
 const light = computed(() => (stats.year === 'all' ? figuresOf(reads.value, thisYear).favourite ?? all.value.favourite : figures.value.favourite)?.book.coverColors ?? null)
 
-const columns = computed(() =>
-  figures.value.columns.map((c) =>
-    stats.year === 'all'
-      ? { ...c, label: `’${String(c.key).slice(2)}`, name: String(c.key) }
-      : { ...c, label: monthLetter(c.key), name: monthLong(c.key) },
-  ),
-)
-const lit = computed(() => (stats.year === 'all' ? (years.value.includes(thisYear) ? thisYear : null) : stats.year === thisYear ? thisMonth : null))
-
 // The sheet of a month's books, a star row's, the reads without a page count, a day's, an author's reads of
 // the period in view, a genre's or the ones not rated yet (#12, #16, #15, #14); open again on Back from a book
 // opened in it.
 const { sheet, shown, open: sheetOpen, restore } = useProfileSheet()
 const { title: sheetTitle, reads: sheetReads, withYear: sheetWithYear } = useStatsSheet(shown, () => reads.value, () => stats.record?.days ?? [], bookGenres.ofEntry)
 
-function pickColumn(key: number) {
-  if (stats.year === 'all') return void router.push(`/profile/${key}`)
-  sheet.value = { kind: 'month', year: stats.year, month: key }
-}
 // A day of the reading days that was read: the reads it was read in (the very ones its dot stands for).
 function pickDay(day: string) {
   sheet.value = { kind: 'day', day }
@@ -172,12 +156,8 @@ const naming = ref(false)
               <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
             </div>
 
-            <section id="columns" class="flex flex-col gap-md pt-xl">
-              <div class="flex h-(--size-button-sm) items-center justify-between gap-md">
-                <h2 class="eyebrow">{{ stats.year === 'all' ? t('profile.byYear') : t('profile.byMonth') }}</h2>
-              </div>
-              <ProfileColumns :columns="loading ? null : columns" :placeholders="stats.year === 'all' ? 4 : 12" :lit="lit" testid="profile.columns" @pick="pickColumn" />
-            </section>
+            <!-- The chart by month or by week, with its own window (it does not follow the year pills). -->
+            <ProfileChart v-model="stats.chart" class="pt-xl" :reads="reads" :loading="loading" @pick="(s) => (sheet = s)" />
 
             <UiReveal :show="loading || daysShown">
               <ProfileDays class="pt-xl" :days="stats.record?.days ?? null" :since="stats.record?.daysSince ?? null" @pick="pickDay" />

@@ -2,14 +2,16 @@ import { defineStore } from 'pinia'
 import type { GenreId } from '~/data/enrich/genres'
 import type { LibraryErrorCode } from '~/data/library'
 import { readStats, saveStats } from '~/data/deviceLibrary'
+import { defaultRange, type ChartRange } from '~/data/statsChart'
 import { createStats, withRating, type ReadingRecord, type Stats, type StatsYear } from '~/data/stats'
 
 /**
- * A sheet of the Profile or a year in review: a month's books, a star row's, the reads without a page count, a
+ * A sheet of the Profile or a year in review: a month's books, a week's (`start` its Monday), a star row's, the reads without a page count, a
  * day's, an author's reads of the period, a genre's, or the reads not rated yet (#12, #16, #15, #14).
  */
 export type ProfileSheet =
   | { kind: 'month'; year: number; month: number }
+  | { kind: 'week'; start: string }
   | { kind: 'stars'; year: StatsYear; star: number }
   | { kind: 'pagesMissing'; year: StatsYear }
   | { kind: 'day'; day: string }
@@ -63,6 +65,12 @@ export const useStatsStore = defineStore('stats', () => {
   const loadError = ref<LibraryErrorCode | null>(null)
   /** The year in the pills: All, or a year with a finished read. */
   const year = ref<StatsYear>('all')
+  /**
+   * The chart's mode and window (data/statsChart.ts), months of this year to begin with: kept, like the year, while
+   * the member opens a book from a bar's sheet and comes back; forgotten with the rest when she signs out. The page
+   * holds it to the ends of the record it is shown with (`clampRange`).
+   */
+  const chart = ref<ChartRange>(defaultRange(isoDay()))
   /**
    * The sheet that was open when the member opened a book from it (what it showed, and how
    * far its list was scrolled, and how many of its rows were drawn: `shown`), with the page it was on: Back from the book opens it again
@@ -137,6 +145,7 @@ export const useStatsStore = defineStore('stats', () => {
     record.value = null
     loadError.value = null
     year.value = 'all'
+    chart.value = defaultRange(isoDay())
     keptSheet.value = null
   }
 
@@ -166,5 +175,5 @@ export const useStatsStore = defineStore('stats', () => {
     if (now && loadError.value === 'offline') void load()
   })
 
-  return { record, loadError, year, keptSheet, load, rated, reset }
+  return { record, loadError, year, chart, keptSheet, load, rated, reset }
 })

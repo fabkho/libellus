@@ -2,9 +2,11 @@ import { defineStore } from 'pinia'
 import { createMemberStats, type MemberRecord, type MemberStats } from '~/data/memberStats'
 import type { BothRead, MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
 import type { StatsYear } from '~/data/stats'
+import { defaultRange, type ChartRange } from '~/data/statsChart'
 import { useSessionStore } from '~/stores/session'
 import { useSocialStore } from '~/stores/social'
 import { profileAfter, yearIn, type RelationChange } from '~/utils/memberProfile'
+import { isoDay } from '~/utils/dates'
 import { createRereads } from '~/utils/rereads'
 
 /** Her whole Want to read, newest first (*See all*). */
@@ -32,6 +34,8 @@ export type MemberView = {
   bothRead: Record<string, BothRead[]>
   /** The year in the pills. */
   year: StatsYear
+  /** The chart's mode and window (data/statsChart.ts): kept while the member opens a book from a bar's sheet and comes back. */
+  chart: ChartRange
   /** The last refusal of reading her, with no copy to show instead: `offline`, or something else (a retry). */
   error: SocialErrorCode | null
   /** The first answer has come (the profile, or that there is none). */
@@ -50,6 +54,7 @@ const fresh = (): MemberView => ({
   want: null,
   bothRead: {},
   year: 'all',
+  chart: defaultRange(isoDay()),
   error: null,
   loaded: false,
   busy: false,
@@ -158,6 +163,11 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     patch(id, { year })
   }
 
+  /** The chart's mode and window. */
+  function setChart(id: string, chart: ChartRange) {
+    patch(id, { chart })
+  }
+
   /** Follow, or ask to: then her profile is read again (a public account opens at once). */
   async function follow(id: string): Promise<boolean> {
     return change(id, () => social.follow(id))
@@ -224,5 +234,5 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     for (const [id, view] of Object.entries(views.value)) if (view.error === 'offline' && !view.loaded) void load(id)
   })
 
-  return { views, viewOf, load, loadBothRead, setYear, follow, withdraw, relationChanged, forget }
+  return { views, viewOf, load, loadBothRead, setYear, setChart, follow, withdraw, relationChanged, forget }
 })
