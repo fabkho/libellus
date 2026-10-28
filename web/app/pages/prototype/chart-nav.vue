@@ -6,7 +6,7 @@
 // the production components (ProfileColumns, ProfileReadsSheet) on the app's tokens; the prototype
 // chrome is the dashed mono bar on top.
 //
-// Three control layouts to compare:
+// The control layouts to compare:
 //   A · the segmented Months/Weeks switch above the chart, the arrows beside the period label;
 //   B · the same switch, the arrows below the chart, and a swipe on the chart moves the window;
 //   C · one pill ("By month · 2026 ⌄") that opens a period picker sheet holding the switch and the periods;
@@ -14,8 +14,14 @@
 //       tap or scrub the strip to move it, the period label rides under the brush;
 //   E · the mode as two tabs in the title line, every period a chip in one rail above the chart (one tap,
 //       the rail scrolls sideways when the weeks' chips overflow, its edges fade where more chips hide).
+// Round three, A/B's controls in ONE row (the owner's direction):
+//   F · the arrows pinned to the row's edges, a compact switch and the period label between them; the
+//       weeks' long date range stacks into two short lines (from – / to) so nothing is dropped;
+//   G · one capsule: the inactive mode a plain segment, the active one inked and turned into the stepper
+//       (‹ 2026 › / ‹ KW 13–25 · 2026 ›); the weeks' full dates move under the chart as its caption, and a
+//       swipe on the chart steps the window, except where it starts within 24 px of a screen edge.
 // A bar opens that period's books in the existing sheet. The figures under the chart and the
-// chart's text alternative follow the window. Query: ?variant=A|B|C|D|E&mode=months|weeks&lang=en|de.
+// chart's text alternative follow the window. Query: ?variant=A|B|C|D|E|F|G&mode=months|weeks&lang=en|de.
 import type { StatsRead } from '~/data/stats'
 import { addDays, daysBetween, isoDay, parseDay } from '~/utils/dates'
 import { dateFormat } from '~/utils/intl'
@@ -163,7 +169,7 @@ const EARLIEST_WEEK_START = earliestWeekStart()
 
 const route = useRoute()
 const mode = ref<'months' | 'weeks'>(route.query.mode === 'weeks' ? 'weeks' : 'months')
-const VARIANTS = ['A', 'B', 'C', 'D', 'E'] as const
+const VARIANTS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const
 type Variant = (typeof VARIANTS)[number]
 const variant = ref<Variant>(VARIANTS.includes(String(route.query.variant) as Variant) ? (String(route.query.variant) as Variant) : 'A')
 const year = ref(Number(route.query.year) || THIS_YEAR)
@@ -197,10 +203,39 @@ function periodLabelOf(start: string): string {
   return `${left} – ${dayMonth.format(parseDay(end))} ${end.slice(0, 4)}`
 }
 const periodLabel = computed(() => (mode.value === 'months' ? String(year.value) : periodLabelOf(weekStart.value)))
+
+/**
+ * F: the weeks' date range as two short lines, "23. März –" over "21. Juni 2026". The year only once, on the
+ * end ("22. Dez. –" over "22. März 2026" across a year end, as a printed range reads): with it on both lines the
+ * longest start ("22. Dez. 2025 –") does not fit between the switch and the arrow at 360 px.
+ */
+const rangeLines = computed<[string, string]>(() => {
+  const start = weekStart.value
+  const end = addDays(start, 7 * WEEKS_SHOWN - 1)
+  const dayMonth = dateFormat(locale.value, { day: 'numeric', month: 'short' })
+  return [`${dayMonth.format(parseDay(start))} –`, `${dayMonth.format(parseDay(end))} ${end.slice(0, 4)}`]
+})
+/** G: the window named by its week numbers and year ("KW 13–25 · 2026", across a year end "KW 52–12 · 2025/26"). */
+const shortLabel = computed(() => {
+  if (mode.value === 'months') return String(year.value)
+  const first = columns.value[0]!
+  const last = columns.value[columns.value.length - 1]!
+  const from = first.start.slice(0, 4)
+  const to = last.end.slice(0, 4)
+  return `${t('profile.weekLabel', { week: `${first.label}–${last.label}` })} · ${from === to ? to : `${from}/${to.slice(2)}`}`
+})
 const modeTitle = computed(() => (mode.value === 'months' ? t('profile.byMonth') : t('profile.byWeek')))
+
+/** G: when the inked segment changes sides, an arrow lands where the tapped mode name was; a second tap that
+ * quick (a double tap, an impatient finger) must not step the window it just opened. */
+let switchedAt = 0
+function stepAfterSwitch(step: () => void) {
+  if (Date.now() - switchedAt > 400) step()
+}
 
 function setMode(next: 'months' | 'weeks') {
   if (mode.value === next) return
+  switchedAt = Date.now()
   mode.value = next
   if (next === 'months') year.value = Math.min(Math.max(year.value, FIRST_YEAR), THIS_YEAR)
   else weekStart.value = newestWeekStart
@@ -370,9 +405,13 @@ function railCentre(smooth: boolean) {
 watch([variant, mode, windowIndex], (_now, [prevVariant, prevMode]) => nextTick(() => railCentre(prevVariant === 'E' && prevMode === mode.value)), { flush: 'post' })
 onMounted(() => nextTick(() => railCentre(false)))
 
-// Variant B: a swipe on the chart moves the window (the page still scrolls: `pan-y`).
+// Variant B: a swipe on the chart moves the window (the page still scrolls: `pan-y`). G the same, but a
+// swipe that starts within 24 px of either screen edge is left alone: that is iOS's back-swipe.
+const EDGE = 24
+const swipes = computed(() => variant.value === 'B' || variant.value === 'G')
 let dragFrom: number | null = null
 function dragStart(event: PointerEvent) {
+  if (variant.value === 'G' && (event.clientX < EDGE || event.clientX > window.innerWidth - EDGE)) return
   dragFrom = event.clientX
 }
 function dragEnd(event: PointerEvent) {
@@ -432,6 +471,41 @@ function dragEnd(event: PointerEvent) {
         <UiIcon name="down" :size="14" />
       </button>
 
+      <!-- F: one row. The arrows at its edges, the compact switch and the period label between them. -->
+      <div v-else-if="variant === 'F'" class="flex h-(--size-touch) items-center gap-sm" data-testid="proto.row">
+        <UiButton tone="quiet" size="sm" class="w-(--size-button-sm) px-0!" :disabled="!canPrev" :aria-label="t('profile.prevRange')" data-testid="proto.prev" @click="prev"><UiIcon name="back" :size="15" /></UiButton>
+        <!-- The switch stays put against the left arrow (it never moves under the finger that taps it); the label centres in what is left. -->
+        <div class="flex min-w-0 flex-1 items-center gap-sm">
+          <div role="group" :aria-label="t('profile.chartMode.label')" class="segmented inline-flex shrink-0 rounded-pill border border-hairline-strong p-xxs">
+            <button type="button" class="target figures rounded-pill px-sm text-caption" :class="mode === 'months' ? 'bg-ink text-on-ink' : 'text-ink-muted'" :aria-pressed="mode === 'months'" data-testid="proto.mode.months" @click="setMode('months')">{{ t('profile.chartMode.months') }}</button>
+            <button type="button" class="target figures rounded-pill px-sm text-caption" :class="mode === 'weeks' ? 'bg-ink text-on-ink' : 'text-ink-muted'" :aria-pressed="mode === 'weeks'" data-testid="proto.mode.weeks" @click="setMode('weeks')">{{ t('profile.chartMode.weeks') }}</button>
+          </div>
+          <span class="flex min-w-0 flex-1 justify-center">
+            <span class="stack figures min-w-0" aria-live="polite" data-testid="proto.period">
+              <span v-if="mode === 'months'" class="text-subhead">{{ periodLabel }}</span>
+              <template v-else>
+                <span class="sr-only">{{ periodLabel }}</span>
+                <span class="line" aria-hidden="true">{{ rangeLines[0] }}</span>
+                <span class="line" aria-hidden="true">{{ rangeLines[1] }}</span>
+              </template>
+            </span>
+          </span>
+        </div>
+        <UiButton tone="quiet" size="sm" class="w-(--size-button-sm) px-0!" :disabled="!canNext" :aria-label="t('profile.nextRange')" data-testid="proto.next" @click="next"><UiIcon name="chevron" :size="15" /></UiButton>
+      </div>
+
+      <!-- G: one capsule. The inactive mode a plain segment; the active one inked, and it is the stepper. -->
+      <div v-else-if="variant === 'G'" role="group" :aria-label="t('profile.chartMode.label')" class="capsule flex h-(--size-touch) rounded-pill border border-hairline-strong p-xxs" data-testid="proto.capsule">
+        <template v-for="m in ['months', 'weeks'] as const" :key="m">
+          <div v-if="mode === m" class="active flex min-w-0 flex-1 items-center rounded-pill bg-ink px-xxs text-on-ink" :data-testid="`proto.mode.${m}`">
+            <button type="button" class="step target flex h-full shrink-0 justify-center" :disabled="!canPrev" :aria-label="t('profile.prevRange')" data-testid="proto.prev" @click="stepAfterSwitch(prev)"><UiIcon name="back" :size="15" /></button>
+            <span class="fit figures min-w-0 flex-1 text-center" aria-live="polite" data-testid="proto.period"><span class="sr-only">{{ m === 'months' ? t('profile.byMonth') : t('profile.byWeek') }} · </span><span class="whitespace-nowrap" :style="{ '--chars': shortLabel.length }">{{ shortLabel }}</span></span>
+            <button type="button" class="step target flex h-full shrink-0 justify-center" :disabled="!canNext" :aria-label="t('profile.nextRange')" data-testid="proto.next" @click="stepAfterSwitch(next)"><UiIcon name="chevron" :size="15" /></button>
+          </div>
+          <button v-else type="button" class="target figures shrink-0 rounded-pill px-ms text-caption text-ink-muted" :aria-pressed="false" :data-testid="`proto.mode.${m}`" @click="setMode(m)">{{ t(`profile.chartMode.${m}`) }}</button>
+        </template>
+      </div>
+
       <!-- E: the mode as two tabs in the title line; every period a chip in one rail. -->
       <template v-else-if="variant === 'E'">
         <div role="tablist" :aria-label="t('profile.chartMode.label')" class="flex items-center gap-lg">
@@ -472,9 +546,12 @@ function dragEnd(event: PointerEvent) {
       </template>
 
       <!-- The chart (production Columns); in B a swipe moves the window. -->
-      <div :style="variant === 'B' ? { touchAction: 'pan-y' } : undefined" @pointerdown="variant === 'B' && dragStart($event)" @pointerup="variant === 'B' && dragEnd($event)">
+      <div :style="swipes ? { touchAction: 'pan-y' } : undefined" @pointerdown="swipes && dragStart($event)" @pointerup="swipes && dragEnd($event)">
         <ProfileColumns :columns="columns" :lit="lit" :placeholders="WEEKS_SHOWN" testid="proto.columns" @pick="pick" />
       </div>
+
+      <!-- G: the weeks' full dates, as the chart's caption under its axis (the capsule names them by number). -->
+      <p v-if="variant === 'G' && mode === 'weeks'" class="figures -mt-xs text-center text-meta text-ink-muted" aria-hidden="true" data-testid="proto.caption">{{ periodLabel }}</p>
 
       <!-- B: the arrows below the chart. -->
       <div v-if="variant === 'B'" class="flex items-center justify-center gap-sm">
@@ -589,6 +666,46 @@ function dragEnd(event: PointerEvent) {
 }
 .segmented .target {
   height: var(--size-button-sm);
+}
+/* F: the weeks' range stacked, from over to, in the meta size; the months' year stays one subhead line. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+}
+.stack .line {
+  font-size: var(--text-meta);
+  line-height: var(--text-meta--line-height);
+}
+/* G: the capsule. The active segment's arrows are drawn 32 px wide on the ink (44 px targets); a disabled end fades out. */
+.capsule .target {
+  height: 100%;
+}
+.capsule .step {
+  width: var(--size-button-sm);
+  border-radius: var(--radius-pill);
+  transition: opacity var(--duration-quick) var(--ease-standard);
+}
+/* The label keeps the subhead size and shrinks only where it would not fit (a year end at 360 px in English):
+   Geist Mono's advance is 0.6 em, so the room over its characters gives the size, as the figures cells do. */
+.capsule .fit {
+  container-type: inline-size;
+  line-height: var(--text-subhead--line-height);
+}
+.capsule .fit > :last-child {
+  font-size: min(var(--text-subhead), calc((100cqi - var(--spacing-md)) / (var(--chars) * 0.6)));
+}
+.capsule .step::after {
+  right: auto;
+  left: 50%;
+  width: var(--size-touch);
+  transform: translate(-50%, -50%);
+}
+.capsule .step:disabled {
+  opacity: 0.3;
+}
+.capsule .step:not(:disabled):active {
+  background: color-mix(in srgb, var(--color-on-ink) 14%, transparent);
 }
 /* D: the timeline strip. Each window a segment of micro-bars, the brush a frame sliding over it. */
 .tick {
