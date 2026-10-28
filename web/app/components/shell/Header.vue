@@ -25,6 +25,15 @@ const session = useSessionStore()
 const initials = computed(() => initialsOf(session.member?.email ?? '', session.member?.name))
 const avatar = useAvatarStore()
 onMounted(() => void avatar.load())
+// A header that mounts with her photo already known (every tab switch makes a new one: `:key` in layouts/tabs.vue) draws it
+// from the first frame, never the initials first: UiAvatar's own mount fades the photo in over them once WebKit has decoded the
+// blob. The store publishes `small` decoded (stores/avatar.ts), so there is nothing to wait for. A photo that comes or changes
+// while this header is on screen (the first download, a new photo) is not "settled": the avatar's own fade-in stays for it.
+const photoSettled = ref(Boolean(avatar.small))
+watch(
+  () => avatar.small,
+  () => (photoSettled.value = false),
+)
 
 const social = useSocialStore()
 const online = useOnline()
@@ -53,7 +62,7 @@ onUnmounted(() => document.removeEventListener('visibilitychange', refreshReques
           data-testid="shell.avatar"
         >
           <span class="relative flex">
-            <UiAvatar :initials="initials" :photo="avatar.small" data-profile-avatar />
+            <UiAvatar :initials="initials" :photo="avatar.small" :data-photo-settled="photoSettled && avatar.small ? '' : undefined" data-profile-avatar />
             <Transition name="dot">
               <span v-if="requestWaits" class="request-dot pointer-events-none absolute rounded-pill bg-accent" aria-hidden="true" data-testid="shell.avatarDot" />
             </Transition>
