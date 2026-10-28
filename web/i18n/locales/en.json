@@ -1913,7 +1913,11 @@
     "loadError": "This profile couldn't be loaded.",
     "retry": "Try again",
     "bothRead": "You both read",
-    "bothReadHers": "{name}: {rating}"
+    "bothReadHers": "{name}: {rating}",
+    "bothReadEyebrow": "You both read · {count}",
+    "bothReadAgree": "You agree on {agree} of {of}",
+    "bothReadDisagree": "{title}: {name} {hers}, you {mine}",
+    "bothReadFirst": "{name} read {count} of them first"
   },
   "follow": {
     "loading": "Opening…",

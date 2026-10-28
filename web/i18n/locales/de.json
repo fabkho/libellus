@@ -1913,7 +1913,11 @@
     "loadError": "Das Profil konnte nicht geladen werden.",
     "retry": "Nochmal versuchen",
     "bothRead": "Beide gelesen",
-    "bothReadHers": "{name}: {rating}"
+    "bothReadHers": "{name}: {rating}",
+    "bothReadEyebrow": "Beide gelesen · {count}",
+    "bothReadAgree": "Einig bei {agree} von {of}",
+    "bothReadDisagree": "{title}: {name} {hers}, du {mine}",
+    "bothReadFirst": "{name} hat {count} davon zuerst gelesen"
   },
   "follow": {
     "loading": "Wird geöffnet …",
