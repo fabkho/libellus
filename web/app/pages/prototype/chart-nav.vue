@@ -213,6 +213,18 @@ function stepAfterSwitch(step: () => void) {
   if (Date.now() - switchedAt > 400) step()
 }
 
+/** The arrow under the finger (or the mouse button), from the moment it goes down: `:active` alone
+ * comes too late on touch — Chromium sets it only once the tap is recognised, after the finger has
+ * lifted, so a held arrow showed nothing. `:active` still covers the keyboard (Space). A press the
+ * guard above will swallow shows nothing either. */
+const pressing = ref<string | null>(null)
+function press(which: string) {
+  if (Date.now() - switchedAt > 400) pressing.value = which
+}
+function release() {
+  pressing.value = null
+}
+
 function setMode(next: 'months' | 'weeks') {
   if (mode.value === next) return
   switchedAt = Date.now()
@@ -320,14 +332,42 @@ function dragEnd(event: PointerEvent) {
           <span class="ctl unfold" :class="{ closed: mode !== m }" :inert="mode !== m || undefined">
             <span class="clip">
               <span class="stepper">
-                <button type="button" class="step target" :disabled="!canPrev" :aria-label="t('profile.prevRange')" :data-testid="mode === m ? 'proto.prev' : undefined" @click="stepAfterSwitch(prev)"><UiIcon name="back" :size="15" /></button>
+                <button
+                  type="button"
+                  class="step target"
+                  :class="{ pressing: pressing === `${m}.prev` }"
+                  :disabled="!canPrev"
+                  :aria-label="t('profile.prevRange')"
+                  :data-testid="mode === m ? 'proto.prev' : undefined"
+                  @pointerdown="press(`${m}.prev`)"
+                  @pointerup="release"
+                  @pointercancel="release"
+                  @pointerleave="release"
+                  @click="stepAfterSwitch(prev)"
+                >
+                  <UiIcon name="back" :size="15" />
+                </button>
                 <span class="fit figures" aria-live="polite" :data-testid="mode === m ? 'proto.period' : undefined">
                   <span class="sr-only">{{ m === 'months' ? t('profile.byMonth') : t('profile.byWeek') }} · </span>
                   <Transition :name="stepDir > 0 ? 'step-fwd' : 'step-back'" mode="out-in">
                     <span :key="shortLabel" class="whitespace-nowrap" :style="{ '--chars': shortLabel.length }">{{ shortLabel }}</span>
                   </Transition>
                 </span>
-                <button type="button" class="step target" :disabled="!canNext" :aria-label="t('profile.nextRange')" :data-testid="mode === m ? 'proto.next' : undefined" @click="stepAfterSwitch(next)"><UiIcon name="chevron" :size="15" /></button>
+                <button
+                  type="button"
+                  class="step target"
+                  :class="{ pressing: pressing === `${m}.next` }"
+                  :disabled="!canNext"
+                  :aria-label="t('profile.nextRange')"
+                  :data-testid="mode === m ? 'proto.next' : undefined"
+                  @pointerdown="press(`${m}.next`)"
+                  @pointerup="release"
+                  @pointercancel="release"
+                  @pointerleave="release"
+                  @click="stepAfterSwitch(next)"
+                >
+                  <UiIcon name="chevron" :size="15" />
+                </button>
               </span>
             </span>
           </span>
@@ -435,6 +475,11 @@ function dragEnd(event: PointerEvent) {
   overflow: hidden;
   white-space: nowrap;
 }
+/* The stepper fills the half's height (not the label's line): the clip around it would otherwise cut
+   the arrows' 32 px press dot to a 21 px band. */
+.ctl {
+  align-self: stretch;
+}
 .pick {
   height: 100%;
   color: var(--color-ink-muted);
@@ -484,8 +529,10 @@ function dragEnd(event: PointerEvent) {
 .step:disabled {
   opacity: 0.3;
 }
-.step:not(:disabled):active::before {
+/* Pressed, the dot is there at once (as a row's fill, Columns); let go, it fades over `quick`. */
+.step:not(:disabled):is(:active, .pressing)::before {
   background: color-mix(in srgb, var(--color-on-ink) 14%, transparent);
+  transition: none;
 }
 /* The label keeps the subhead size and shrinks only where it would not fit (a year end at 360 px in
    English): Geist Mono's advance is 0.6 em, so the room over its characters gives the size, as the
