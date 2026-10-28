@@ -29,7 +29,7 @@ function sentence(item: BothRead): string {
 <template>
   <ul :class="visible ? 'flex flex-col' : 'sr-only'" :aria-label="t('member.bothReadLabel', { name })" data-testid="member.bothRead.list">
     <li v-for="item in items" :key="item.book.id" data-testid="member.bothRead.item">
-      <FriendsMemberBookLink :book="item.book" class="flex min-h-(--size-touch) items-center py-xs" :aria-label="sentence(item)">
+      <FriendsMemberBookLink :book="item.book" class="flex min-h-(--size-touch) items-center py-xs" :aria-label="sentence(item)" data-testid="member.bothRead.item.link">
         <span class="flex min-w-0 flex-1 flex-col">
           <span class="book-title text-body">{{ shown(item).title }}</span>
           <span v-if="shown(item).authors.length" class="text-footnote text-ink-muted">{{ shown(item).authors.join(', ') }}</span>

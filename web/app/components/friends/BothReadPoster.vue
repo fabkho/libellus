@@ -28,12 +28,12 @@ const front = computed(() => props.items[index.value] ?? props.items[0]!)
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-md" data-testid="member.bothRead.poster">
+  <div class="flex flex-col items-center" data-testid="member.bothRead.poster">
     <ul class="stage relative w-full" :aria-label="t('member.bothReadLabel', { name })">
       <li
         v-for="entry in drawn"
         :key="entry.item.book.id"
-        class="slot absolute top-0 left-1/2"
+        class="slot absolute left-1/2"
         :style="{ '--x': entry.slot.x, '--s': entry.slot.scale, '--o': entry.slot.opacity, zIndex: 3 - Math.abs(entry.i - index) }"
       >
         <FriendsMemberBookLink
@@ -74,25 +74,39 @@ const front = computed(() => props.items[index.value] ?? props.items[0]!)
       </li>
     </ul>
 
-    <FriendsBothReadCaption :item="front" :card="card" :name="name" />
+    <!-- The caption overlaps the stage as the reel's own slot does, so the poster and the reel are the one height. -->
+    <FriendsBothReadCaption class="caption" :item="front" :card="card" :name="name" />
 
     <!-- Where in the row the front Book is; the words are the list's and the live line's. -->
-    <div v-if="items.length > 1" class="flex items-center justify-center gap-xs" aria-hidden="true">
-      <span v-for="(_, i) in items" :key="i" class="size-(--spacing-sm) rounded-pill" :class="i === index ? 'bg-ink' : 'bg-ink-ghost'" />
+    <div class="dots flex items-center justify-center gap-xs" aria-hidden="true">
+      <template v-if="items.length > 1">
+        <span v-for="(_, i) in items" :key="i" class="size-(--spacing-sm) rounded-pill" :class="i === index ? 'bg-ink' : 'bg-ink-ghost'" />
+      </template>
     </div>
     <p class="sr-only" aria-live="polite">{{ t('member.bothReadSlide', { n: index + 1, count: items.length }) }}</p>
   </div>
 </template>
 
 <style scoped>
-/* The stage is as tall as the front cover (2:3) with room for its shadow; every slot is placed from the middle by
-   `--x` (in front-cover widths), scaled by `--s`, dimmed by `--o`: the reel's pose at rest. */
+/* The poster is the reel's height to the pixel, so the card does not change size when the canvas takes over (WebKit
+   showed it): the stage as tall as Regal's (`--regal-reel-height`), the covers in its middle, the caption pulled up
+   over its foot by Regal's own overlap (`--regal-reel-overlap`), and a controls row the height of Regal's (its pause
+   button's row) holding the dots. Every slot is placed from the middle by `--x` (in front-cover widths), scaled by
+   `--s`, dimmed by `--o`: the reel's pose at rest. */
 .stage {
-  height: calc(var(--size-cover-xl) * 1.5 + var(--spacing-md));
-  padding-top: var(--spacing-xs);
+  height: var(--regal-reel-height, 330px);
+}
+.caption {
+  margin-top: calc(-1 * var(--regal-reel-overlap, 46px));
+  min-height: var(--regal-reel-overlap, 46px);
+}
+.dots {
+  min-height: calc(var(--spacing-lg) + var(--spacing-xs));
+  margin-top: var(--spacing-xxs);
 }
 .slot {
-  transform: translateX(-50%) translateX(calc(var(--size-cover-xl) * var(--x))) scale(var(--s));
+  top: 50%;
+  transform: translate(-50%, -50%) translateX(calc(var(--size-cover-xl) * var(--x))) scale(var(--s));
   opacity: var(--o);
   transition:
     transform var(--duration-standard) var(--ease-standard),

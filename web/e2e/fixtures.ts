@@ -57,9 +57,6 @@ const WATCH_CONTROLS = () => {
       // row's hidden Book list, whose buttons are Regal's `accessible-list`; the reel's pause button and its
       // dots in "You both read", which are the layer's `RegalBooksReel` too) are the layer's.
       if (el.closest('.regal-books-row, .row-card__details, .regal-book-list, .regal-books-reel')) continue
-      // "You both read"'s text list: every item is a link inside `[data-testid=member.bothRead.item]`, which is
-      // how a flow taps it; the anchor itself takes no test id (the section's `BothReadList.vue`).
-      if (el.closest('[data-testid="member.bothRead.list"]')) continue
       seen.add(el)
       ;(window as unknown as { __untaggedControl(d: string): void }).__untaggedControl(describe(el))
     }

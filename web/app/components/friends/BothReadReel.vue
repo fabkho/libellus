@@ -19,7 +19,7 @@
 // Book's page (the cross-fade, no cover flight from the canvas in v1) is safe in it.
 //  - `items`  the Books of the reel (reelItems), newest of hers first.
 //  - `name`   her name; `card` her member card (her avatar in the pills).
-// Emits `ready` (the first frame is drawn with the covers in view: the poster fades out), `focus` (the index of the
+// Emits `mounted` (the chunk is in and the reel is on the page), `ready` (the first frame is drawn with the covers in view: the poster fades out), `focus` (the index of the
 // Book in front, to keep the poster's in step for the day the reel goes) and `manual`.
 import '#build/nuxt-fonts-global.css'
 import '~/assets/css/regal-themed.css'
@@ -27,8 +27,10 @@ import { bothReadReelDocument, sameReelBooks } from '~/data/bothReadReel'
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { bookPathOf } from '~/utils/memberProfile'
 
-const props = defineProps<{ items: readonly BothRead[]; name: string; card: MemberCard | null }>()
-const emit = defineEmits<{ ready: []; focus: [index: number]; manual: [] }>()
+const props = defineProps<{ items: readonly BothRead[]; name: string; card: MemberCard | null; autoplay?: boolean }>()
+const emit = defineEmits<{ mounted: []; ready: []; focus: [index: number]; manual: [] }>()
+// The component has come (the chunk is in): the poster stops being a control from here to `ready`, never before.
+onMounted(() => emit('mounted'))
 
 const { t } = useI18n()
 const byId = computed(() => new Map(props.items.map((item) => [item.book.id, item])))
@@ -47,7 +49,8 @@ watch(
 const labels = computed(() => ({
   pause: t('member.bothReadPause'),
   play: t('member.bothReadPlay'),
-  slide: t('member.bothReadSlide'),
+  // Regal fills `{n}` and `{count}` itself (fillLabel): vue-i18n would put an empty string for a placeholder given no value, so they are handed back as they are.
+  slide: t('member.bothReadSlide', { n: '{n}', count: '{count}' }),
   keys: t('member.bothReadKeys'),
   open: t('member.bothReadOpen'),
   showBack: t('shelf.detail.showBack'),
@@ -72,6 +75,7 @@ function onOpen(event: { id: string }) {
     :label="t('member.bothReadLabel', { name })"
     :labels="labels"
     :accessible-list="false"
+    :autoplay="autoplay ?? true"
     @ready="emit('ready')"
     @focus="(event) => emit('focus', event.index)"
     @manual="emit('manual')"

@@ -348,7 +348,7 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   Your shelf, #23) has it away for as long as it shows, the same slide.
 - **You both read** (a member's profile; docs/plans/shared-books-slideshow.md, B and H; `components/friends/BothRead*.vue`,
   Regal's `RegalBooksReel`). An exception to "nothing moves for its own sake", granted by the owner (variation A,
-  the Reel, exactly as mocked): after the section has come into view once per visit, the Books stand on an arc
+  the Reel, exactly as mocked): after the section has come into view, once per app session for each friend (coming back to her page finds it resting), the Books stand on an arc
   and the one in front changes by itself, one round of 3.2 s beats (0.8 s move on `standard`, 2.4 s hold), then it
   rests on the newest Book and stays still. It stops at once on any swipe, tap or key (Manual: only Play on the pause
   button starts it again, also after the detail closes; Regal's own button), off screen, in a hidden tab and when the page is kept

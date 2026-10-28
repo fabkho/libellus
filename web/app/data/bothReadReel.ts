@@ -18,6 +18,12 @@ import type { BothRead } from './socialShapes'
  * Her edition is the one shown (as the row did). A Book the check could not confirm (`unverified`) carries no
  * title, authors or cover: the one string `outside` stands in as the title, the Book gets its Placeholder's
  * colour and no image (`shownBook`). Pure and framework-free: a native port copies it.
+ *
+ * The unverified branch stays though `both_read` cannot return such a Book today (W6, docs/plans/shared-books-w6-verification.md,
+ * W6-7): `private.book_shown` shows a `check_failed` Book to every member who holds it, and `both_read` matches only
+ * Books the caller holds, so it arrives with its real title. The branch is the data layer's guarantee, not a
+ * case of the screen: whatever a later database rule lets through as `unverified` (no title, authors or cover) is
+ * never given to Regal, and `tests/both-read-reel.test.ts` pins that. It costs one `shownBook` call.
  */
 
 /** Books in the reel: the newest of hers; the text list shows all of them (the plan's G, question 6). */

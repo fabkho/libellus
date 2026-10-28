@@ -41,8 +41,13 @@ async function tapFrontBook(page: import('@playwright/test').Page) {
       await expect(reel).toHaveAttribute('data-mode', 'detail', { timeout: 3000 })
       return
     } catch {
-      // The reel was moving: it is Manual now, and it stands still for the next tap.
+      // The reel was moving: it is Manual now, and it stands still for the next tap. A tap that lands between two Books
+      // (it hit no Book) takes the reel over where it is, which can be halfway between two (Regal's `takeOver`, no snap):
+      // an arrow key steps it onto a Book, as a member would swipe it.
       await page.waitForTimeout(600)
+      await reel.focus()
+      await page.keyboard.press('ArrowRight')
+      await page.waitForTimeout(1200)
     }
   }
   await expect(reel).toHaveAttribute('data-mode', 'detail')
@@ -71,6 +76,12 @@ test.describe('You both read, in 3D', () => {
     // links of their own: wait for the canvas to have it before touching the Books.
     await expect(page.getByTestId('member.bothRead.poster')).toHaveAttribute('aria-hidden', 'true', { timeout: 30_000 })
     await expect(reel).toHaveAttribute('data-book-count', '12')
+    // The poster and the reel are never both there: the reel is what a screen reader meets, the poster is out of reach.
+    await expect(page.getByTestId('member.bothRead.poster')).toHaveAttribute('inert', '')
+    await expect(page.locator('.regal-books-reel')).not.toHaveAttribute('aria-hidden', 'true')
+    await expect(page.locator('.regal-books-reel')).not.toHaveAttribute('inert', '')
+    // Each slide is named with its place ("1 of 12, Title, Author"): Regal fills {n} and {count} in our label.
+    await expect(reel.locator('[aria-roledescription="slide"]')).toHaveAttribute('aria-label', /^\d+ of 12, /)
     // WCAG 2.2.2: what moves on its own can be paused, and the button says what it does.
     await expect(page.getByRole('button', { name: 'Pause slideshow' })).toBeVisible()
 
@@ -137,6 +148,10 @@ test.describe('You both read, in 3D', () => {
     await expect(page).toHaveURL(new RegExp(`/book/${bookId}$`))
     await page.goBack()
     await expect(page).toHaveURL(new RegExp(`${friend.id}$`))
-    await expect(reel).toHaveAttribute('data-picked', '')
+    // Her page again: the round plays once per app session for her, so the reel finds itself resting (Play plays it).
+    await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator(REEL)).toHaveAttribute('data-picked', '')
+    await page.waitForTimeout(1500)
+    await expect(page.locator(REEL), 'a return visit does not replay the round').not.toHaveAttribute('data-mode', 'playing')
   })
 })
