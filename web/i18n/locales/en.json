@@ -186,15 +186,6 @@
     "byMonth": "By month",
     "byYear": "By year",
     "columnLabel": "{label}: {count}",
-    "byWeek": "By week",
-    "chartMode": {
-      "label": "Chart by",
-      "months": "Months",
-      "weeks": "Weeks"
-    },
-    "prevRange": "Previous period",
-    "nextRange": "Next period",
-    "weekLabel": "Week {week}",
     "days": {
       "title": "Reading days",
       "since": "since {date}",
@@ -280,8 +271,6 @@
     "retry": "Try again",
     "sheet": {
       "month": "{month} {year}",
-      "week": "Week of {date}",
-      "period": "Choose a period",
       "stars": "{count} star · {year} | {count} stars · {year}",
       "allYears": "All years",
       "readIn": "in a day | in {count} days",
