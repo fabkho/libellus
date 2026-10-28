@@ -1,6 +1,8 @@
 # You both read, as a slideshow
 
-> **Plan only. Nothing here is built.** The owner reviews it before any code is written.
+> **Plan only. Nothing here is built.** The owner reviewed the first round: **A · Reel, exactly as
+> mocked**, plus manual takeover and the Stack's detail mode. Section **H** (at the end) holds his
+> decisions, the refined spec and the proposed worker split; it overrides A–G where they differ.
 
 Owner's idea (condensed): steal one from Fable. On another member's profile Fable shows the books
 *both* of them read, in 3D, animating by itself through the books like a slideshow (reference: its
@@ -480,3 +482,81 @@ Regal CI runs lint, typecheck, unit tests; its e2e stays local (`AGENTS.md`).
 9. **Pin Regal** in Libellus from now on?
 10. **The portfolio:** should `RegalBooksReel` also serve fabkho.dev/books (a reel of favourites)? It
     decides how generic the Regal API must be.
+
+---
+
+## H. Second round: the owner's decisions, the refined spec, the worker split
+
+### Decided by the owner
+
+- **Variation A · Reel, exactly as in `img/shared-books-a-reel.jpg`.** Two slight variations were tried
+  and rejected (A2 "close shelf": neighbours pressed together Spine out, pills on the front Book's
+  corners; A3 "glide": never stops, slows at each Book). No changes to A's look or timing.
+- **Manual takeover:** as soon as a swipe is registered, the auto-animation stops and the reel is driven
+  by hand.
+- **Detail mode exactly as on Regal's Stack:** tap the Book in front (also while the reel is playing):
+  it comes out, is focused, and the Stack's detail bottom sheet opens, the same sheet and behaviour.
+
+### Defaults proposed to the owner (not contradicted; the orchestrator may confirm them with him)
+
+1. After a manual swipe the reel **stays manual** for this visit (no resume on idle); Play on the
+   pause button is the only way back.
+2. A swipe **follows the finger 1:1; a flick glides and snaps to a Book** (Regal's row drag and fling,
+   `utils/row/touchDrag.ts`), a tick per Book on Android. Not one-Book-per-swipe paging.
+3. A tap on a **neighbour** brings it to the front; a second tap opens its detail.
+4. The sheet's **content** is the one Libellus gives Regal's Stack on Your shelf (`components/shelf/Stage.vue`:
+   Regal's panel with `#detail-meta` and `#detail-actions`), adapted: meta = author · her stars · your
+   stars; actions Show back / Put back / **Open book** (`/book/<id>`, instead of Goodreads). **No blurb**
+   (`both_read` carries none). Open question: extend `both_read` with the edition's catalogue blurb
+   (public catalogue data, not hers; a migration + pgTAP)?
+5. After the detail closes the reel **stays manual** (a tap is a takeover too).
+6. Wide screens (> 560 px): the Stack's **details card** at the bottom right, as the Stack does there.
+
+### The refined behaviour
+
+| State | Entered by | Left by |
+|---|---|---|
+| **Playing** | the reel first in view (once per visit), or Play | a horizontal drag past Regal's axis slop (`dragAxis`, `ROW_TOUCH_SLOP` 8 px; a vertical drag still scrolls the page), a tap, the pause button, arrow keys → **Manual**; off screen / hidden tab / end of the first round → rests |
+| **Manual** | the above | Play only |
+| **Detail** | tap on the Book in front | Put back, sheet dragged down, tap beside the Book, Escape, system Back → **Manual** |
+
+- A drag that starts mid-move catches the reel where it is (no snap back to a beat).
+- **Detail, as the Stack:** the canvas **breaks out** to a fixed box over the viewport (the 330 px card
+  has no room for the Stack's sheet), using the row's break-out (`components/row/Card.vue` `breakOut`,
+  `landBack`, `inspect="viewport"`: same pixels on break-out, page veiled and not scrolling); the Book
+  comes out to the Inspect pose above the sheet (`utils/books/inspect.ts`, `INSPECT_FILL` 0.52, the
+  phone band), the Stack's `BooksDetails` sheet rises (`utils/books/sheet.ts`, ≤ 560 px), the caption
+  under the front Book morphs into the sheet's title (`useLabelMorph`), haptics `out` `[10, 45, 18]` /
+  `back` `[10]`. Tap or Show back turns it (flat back), drag spins, sideways flick turns over; Put
+  back, drag down (`settleDrag`), tap beside, Escape and the system Back put it back into its place in
+  the reel. In Libellus the system Back closes it first and never leaves the profile (as Your shelf's
+  row, `useBackDismiss`). Reduce Motion: no flight, the sheet and the Book appear in place (the Stack's
+  rule).
+- **Open book** puts the Book back at once and pushes the Book page with the cross-fade (no cover
+  flight from the canvas in v1).
+- The pause button stays (WCAG 2.2.2); in Manual it reads Play.
+
+### What the Stack's detail mode needs in Regal first
+
+`BooksDetails` (and `useLabelMorph`, `useCardSwap`, `useDialogFocus` around it) read the **global** Pick
+(`composables/useBookPick.ts`, `useState('book-pick')`), shared by the Stage, the sidebar and the
+accessible list. The row has its own Pick (its `RowContext`). The reel must have its own too: a Book
+taken out of a friend's reel must not count as out on Your shelf kept alive (`<KeepAlive>`), and her
+edition's id can equal yours. So: a pick context provided by the hosting view (provide/inject), the
+Stack keeping the shared one as its default. Behaviour of the Stack must not change.
+
+### Proposed worker split (the orchestrator decides tiers and models)
+
+| # | Work | Repo | Depends on | Suggested tier |
+|---|---|---|---|---|
+| W1 | Pick context for `BooksDetails` / morph / card swap / dialog focus; Stack unchanged (unit tests, `scripts/pick-fuzz.mjs`) | Regal | — | hard-ish: Sonnet 5.5 high (Opus debugger on call) |
+| W2 | Reel pure modules + unit tests: A's layout and beat (`utils/reel/layout.ts`, `timeline.ts`), the state machine (`state.ts`), drag/fling/snap (`drag.ts`) | Regal | — | normal |
+| W3 | Reel 3D: `components/reel/{Card,Scene,Books}.vue`, `components/regal/BooksReel.vue` (events `ready`, `focus`, `manual`, `open`; `#tooltip` + the detail slots), break-out + Stack details on its own pick, `/dev/reel`, playground, `docs/nuxt-layer.md`, README, `CONTEXT.md`; dev page served on the owner's Wi-Fi for **gate 1** | Regal | W1, W2 | hard: Sonnet 5.5 high or Opus |
+| W4 | Libellus section: `data/bothReadReel.ts` (+ key-whitelist privacy test), `components/friends/{BothRead,BothReadReel,BothReadPoster,BothReadList}.vue`, `regal.config.ts` chunk entries, Back handling, en/de keys (`pnpm i18n:translate`, glossary D11), `docs/{parity,MOTION,ACCESSIBILITY}.md`; against W3's branch via `REGAL_LAYER`, then Regal `main` | Libellus | starts early; finishes after W3 merges | normal |
+| W5 | Shared figures line (E 1–3), `utils/sharedFigures.ts` + tests + en/de | Libellus | — | normal |
+| W6 | Verification: own throwaway Supabase on 55720–55729, seeds with 0/1/2/12/300 shared Books, Playwright local filmstrips + swipe takeover + detail + Back + Reduce Motion, `web/perf` numbers vs F's budgets; **gate 2** (owner on his phone) | Libellus | W4 | normal |
+| — | Review of each PR; CI fixes; CI watching | both | each PR | reviewer agent; DeepSeek for CI fixes; a cheap watcher |
+
+**Order:** W1 ∥ W2 ∥ W5 ∥ W4 (its Regal-free parts) → W1 and W2 merge in Regal (additive: nothing uses
+them yet) → W3 → gate 1 → W3 merges (Libellus builds from Regal `main`, unpinned) → W4 finishes → W6 →
+gate 2 → W4 and W5 merge.
