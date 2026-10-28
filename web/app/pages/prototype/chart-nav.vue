@@ -457,8 +457,16 @@ function dragEnd(event: PointerEvent) {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-pill);
+  /* The press follows the half's own radius: each arrow rounds on the end it sits at,
+     square where it meets the label, so the highlight ends in the inked pill's curve. */
+  border-radius: 0;
   transition: opacity var(--duration-quick) var(--ease-standard);
+}
+.step:first-child {
+  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+}
+.step:last-child {
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
 }
 .step::after {
   inset: 0 auto;
