@@ -416,13 +416,17 @@ function dragEnd(event: PointerEvent) {
 .unfold {
   display: grid;
   min-width: 0;
+  /* Open, a half fills its segment: the whole inactive half is one tap target. */
+  flex: 1 1 0;
   grid-template-columns: 1fr;
   opacity: 1;
   transition:
+    flex-grow var(--duration-standard) var(--ease-standard),
     grid-template-columns var(--duration-standard) var(--ease-standard),
     opacity var(--duration-standard) var(--ease-standard);
 }
 .unfold.closed {
+  flex-grow: 0;
   grid-template-columns: 0fr;
   opacity: 0;
 }
@@ -438,6 +442,7 @@ function dragEnd(event: PointerEvent) {
 .word {
   display: block;
   padding-inline: var(--spacing-ms);
+  text-align: center;
 }
 .stepper {
   display: flex;
@@ -472,6 +477,7 @@ function dragEnd(event: PointerEvent) {
 .fit {
   display: flex;
   min-width: 0;
+  flex: 1;
   justify-content: center;
   line-height: var(--text-subhead--line-height);
 }
