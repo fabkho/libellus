@@ -414,6 +414,15 @@ html[data-profile-transition] [data-profile-avatar] img {
   opacity: 1 !important;
   transition: none !important;
 }
+/* The header's avatar that mounted with her photo known (components/shell/Header.vue): the photo is there from the first
+   frame (decoded by the store), so UiAvatar's mount fade (`opacity-0` until `load`) and the initials under it are not shown. */
+[data-profile-avatar][data-photo-settled] {
+  color: transparent;
+}
+[data-profile-avatar][data-photo-settled] img {
+  opacity: 1 !important;
+  transition: none !important;
+}
 /* The ring's two snapshots are the same photo at two sizes: cross-faded they smear two scaled bitmaps.
    One is shown, the larger (the Profile's ring: the new one on the push, the old one on Back), and the
    group alone moves and scales it. Both fill the group (same round shape, same aspect). */

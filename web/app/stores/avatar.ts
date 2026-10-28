@@ -11,6 +11,10 @@ import {
 } from '~/data/avatar'
 import { useSessionStore } from '~/stores/session'
 
+/** How long a decode may hold a photo back; how long an old object URL outlives the one that replaced it. */
+const DECODE_MS = 1500
+const REVOKE_MS = 2000
+
 /**
  * The member's profile photo (issue #156, data/avatar.ts) as the avatars show
  * it: `small` for the tab header's, `large` for the Profile's ring and the
@@ -46,12 +50,55 @@ export const useAvatarStore = defineStore('avatar', () => {
   const saving = ref(false)
   const error = ref<AvatarErrorCode | null>(null)
 
-  function show(photo: CachedAvatar | null) {
-    if (large.value) URL.revokeObjectURL(large.value)
-    if (small.value) URL.revokeObjectURL(small.value)
-    path.value = photo?.path ?? null
-    large.value = photo ? URL.createObjectURL(photo.large) : null
-    small.value = photo ? URL.createObjectURL(photo.small) : null
+  /**
+   * A blob's object URL, once its picture is decoded. WebKit decodes a blob image on its own time: a header that
+   * mounts with a URL it has not decoded yet draws the initials for a frame or more first (every tab switch
+   * mounts a new header). Decoded here, once, and the `Image` handed back to be kept (a reference keeps the
+   * bitmap in the engine's cache for every avatar that later shows the URL). A decode that fails or hangs does
+   * not hold the photo back: it is shown as it always was.
+   */
+  async function decoded(blob: Blob, keepers: HTMLImageElement[]): Promise<string> {
+    const url = URL.createObjectURL(blob)
+    if (typeof Image === 'undefined') return url
+    const image = new Image()
+    image.src = url
+    keepers.push(image)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const giveUp = new Promise<void>((resolve) => (timer = setTimeout(resolve, DECODE_MS)))
+    await Promise.race([image.decode().catch(() => {}), giveUp])
+    clearTimeout(timer)
+    return url
+  }
+
+  /** The decoded images of the photo on screen: only the reference matters. */
+  let held: HTMLImageElement[] = []
+  /** Which `show` is the latest: a photo still decoding when another one came (or she signed out) is dropped. */
+  let latest = 0
+
+  /**
+   * Shows `photo` (null: the initials, at once). The new URLs are published together and decoded; the old ones
+   * are revoked only after that, and a moment later still (`REVOKE_MS`), so no avatar (a kept-alive page's, one
+   * mid-render) ever points at a URL that is gone.
+   */
+  async function show(photo: CachedAvatar | null): Promise<void> {
+    const ticket = ++latest
+    let next: { path: string; large: string; small: string } | null = null
+    const keepers: HTMLImageElement[] = []
+    if (photo) {
+      const [nextSmall, nextLarge] = await Promise.all([decoded(photo.small, keepers), decoded(photo.large, keepers)])
+      if (ticket !== latest) {
+        // Another photo (or none) came while this one decoded: it was never on screen.
+        for (const url of [nextSmall, nextLarge]) URL.revokeObjectURL(url)
+        return
+      }
+      next = { path: photo.path, large: nextLarge, small: nextSmall }
+    }
+    const before = [large.value, small.value]
+    held = keepers
+    path.value = next?.path ?? null
+    large.value = next?.large ?? null
+    small.value = next?.small ?? null
+    for (const url of before) if (url) setTimeout(() => URL.revokeObjectURL(url), REVOKE_MS)
   }
 
   async function keep(memberId: string, photo: CachedAvatar | null) {
@@ -72,7 +119,7 @@ export const useAvatarStore = defineStore('avatar', () => {
       if (now === before) return
       loadedFor = null
       error.value = null
-      show(null)
+      void show(null)
     },
   )
 
@@ -83,7 +130,7 @@ export const useAvatarStore = defineStore('avatar', () => {
     loading ??= (async () => {
       if (!path.value) {
         const kept = await cache().read(member).catch(() => null)
-        if (kept && member === session.member?.id && !path.value) show(kept)
+        if (kept && member === session.member?.id && !path.value) await show(kept)
       }
       const r = repo()
       if (!r || !isOnline()) return
@@ -93,7 +140,7 @@ export const useAvatarStore = defineStore('avatar', () => {
       const next = current.data.path
       if (next === path.value) return
       if (!next) {
-        show(null)
+        await show(null)
         return void (await keep(member, null))
       }
       const files = await r.download(next)
@@ -101,11 +148,11 @@ export const useAvatarStore = defineStore('avatar', () => {
       if (files.error) {
         // Gone from the bucket: initials. Anything else: what was shown stays, asked again next time.
         if (files.error !== 'missing') return void (loadedFor = null)
-        show(null)
+        await show(null)
         return void (await keep(member, null))
       }
       const photo = { path: next, ...files.data }
-      show(photo)
+      await show(photo)
       await keep(member, photo)
     })().finally(() => (loading = null))
     return loading
@@ -126,7 +173,7 @@ export const useAvatarStore = defineStore('avatar', () => {
       }
       if (member !== session.member?.id) return false
       const photo = { path: result.data.path!, large: files.large, small: files.small }
-      show(photo)
+      await show(photo)
       loadedFor = member
       await keep(member, photo)
       return true
@@ -149,7 +196,7 @@ export const useAvatarStore = defineStore('avatar', () => {
         return false
       }
       if (member !== session.member?.id) return false
-      show(null)
+      await show(null)
       loadedFor = member
       await keep(member, null)
       return true
