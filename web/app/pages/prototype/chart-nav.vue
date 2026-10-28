@@ -457,16 +457,24 @@ function dragEnd(event: PointerEvent) {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  /* The press follows the half's own radius: each arrow rounds on the end it sits at,
-     square where it meets the label, so the highlight ends in the inked pill's curve. */
-  border-radius: 0;
   transition: opacity var(--duration-quick) var(--ease-standard);
 }
-.step:first-child {
-  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+/* The press: a round dot under the arrow, fully round as the selected half's tile
+   (the same `radius-pill`), not a shape of its own. */
+.step::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--size-button-sm);
+  height: var(--size-button-sm);
+  border-radius: var(--radius-pill);
+  content: '';
+  transform: translate(-50%, -50%);
+  transition: background-color var(--duration-quick) var(--ease-standard);
 }
-.step:last-child {
-  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+/* The arrow's icon stays above the press dot (both are positioned; the dot is the earlier one). */
+.step :deep(svg) {
+  position: relative;
 }
 .step::after {
   inset: 0 auto;
@@ -476,7 +484,7 @@ function dragEnd(event: PointerEvent) {
 .step:disabled {
   opacity: 0.3;
 }
-.step:not(:disabled):active {
+.step:not(:disabled):active::before {
   background: color-mix(in srgb, var(--color-on-ink) 14%, transparent);
 }
 /* The label keeps the subhead size and shrinks only where it would not fit (a year end at 360 px in
