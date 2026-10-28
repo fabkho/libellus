@@ -1913,7 +1913,17 @@
     "loadError": "This profile couldn't be loaded.",
     "retry": "Try again",
     "bothRead": "You both read",
-    "bothReadHers": "{name}: {rating}"
+    "bothReadHers": "{name}: {rating}",
+    "bothReadMine": "You: {rating}",
+    "bothReadYou": "You",
+    "bothReadLabel": "Books you and {name} both read",
+    "bothReadPause": "Pause slideshow",
+    "bothReadPlay": "Play slideshow",
+    "bothReadSlide": "{n} of {count}",
+    "bothReadItem": "{title} by {author}",
+    "bothReadList": "Show as a list",
+    "bothReadListHide": "Hide the list",
+    "bothReadOpen": "Open book"
   },
   "follow": {
     "loading": "Opening…",

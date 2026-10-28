@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { addVitePlugin, defineNuxtModule } from 'nuxt/kit'
 
@@ -26,15 +27,20 @@ import { addVitePlugin, defineNuxtModule } from 'nuxt/kit'
  * like everyone's.
  *
  * What the layer brings, and where it goes:
- * - Its components (`RegalBooksStage`, `RegalBooksRow`) and composables,
- *   auto-imported. Only `components/shelf/Stage.vue` and `Row.vue` use them,
- *   and only through an async import (`LazyShelfStage`, `LazyShelfRow`), so
+ * - Its components (`RegalBooksStage`, `RegalBooksRow`, `RegalBooksReel`) and composables,
+ *   auto-imported. Only `components/shelf/Stage.vue` and `Row.vue` and
+ *   `components/friends/BothReadReel.vue` use them, and only through an async import
+ *   (`LazyShelfStage`, `LazyShelfRow`, `LazyFriendsBothReadReel`), so
  *   they, three.js and TresJS end up in one chunk named `regal`
  *   (nuxt.config.ts, codeSplitting) that the entry never imports: the build
  *   fails if it ever does (below).
  *   The warm-up (composables/useShelfPreload.ts: the owner's screens on idle,
  *   anyone's shelf card when it mounts) reaches Regal's `preloadRegal` only by
  *   a dynamic `import('#layers/regal/…')`, so it too lands in that chunk.
+ * - The reel ("You both read" on a member's profile, docs/plans/shared-books-slideshow.md) needs a Regal
+ *   that has `RegalBooksReel` (`app/components/regal/BooksReel.vue`). A layer without it is a Regal
+ *   from before the reel: `BothReadReel` resolves to the same empty stand-in, `appConfig.regalReel` is
+ *   false and the section stays on its poster, so the app builds and works until the reel is merged.
  * - Its fonts (IBM Plex Mono, Patua One, Antonio): @nuxt/fonts registers them
  *   globally, in the entry stylesheet. Moved out of it: the shelf's stage and
  *   row import that stylesheet themselves, so the @font-face rules arrive with the
@@ -97,9 +103,19 @@ let regalDir: string | null = null
 // the two BetterReads components that use them, and the fonts' stylesheet they import. Nothing else in
 // the app imports these.
 const REGAL_PACKAGES = /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:three|three-stdlib|@tresjs|gsap|@vueuse|@monogrid|troika-[^\\/]+|camera-controls|postprocessing|stats-gl|meshoptimizer|bidi-js|webgl-sdf-generator)[\\/]/
-const SHELF_STAGE = /[\\/]app[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue|nuxt-fonts-global\.css/
+const SHELF_STAGE = /[\\/]app[\\/]components[\\/](?:shelf[\\/](?:Stage|Row)|friends[\\/]BothReadReel)\.vue|nuxt-fonts-global\.css/
 /** The two components themselves, however they are imported (`~/components/shelf/Row.vue`, an absolute path). */
 const SHELF_COMPONENT = /[\\/]components[\\/]shelf[\\/](?:Stage|Row)\.vue$/
+/** The reel's component ("You both read"): the only file of the section that imports Regal. */
+const REEL_COMPONENT = /[\\/]components[\\/]friends[\\/]BothReadReel\.vue$/
+
+/** Where a Regal that has the reel keeps it (W3, fabkho/regal: `RegalBooksReel`). */
+export const REGAL_REEL_FILE = 'app/components/regal/BooksReel.vue'
+
+/** Whether the layer in `dir` has `RegalBooksReel`: a Regal from before the reel has not, and the section keeps its poster. */
+export function regalHasReel(dir: string | null): boolean {
+  return dir !== null && existsSync(join(dir, REGAL_REEL_FILE))
+}
 
 /** Whether a module belongs in the `regal` chunk (nuxt.config.ts, codeSplitting). */
 export function isRegalModule(id: string): boolean {
@@ -196,15 +212,20 @@ export const regalContainment = defineNuxtModule({
     // draw it (Regal's components and composables, the fonts' stylesheet) resolve to an empty
     // stand-in, and the owner's warm-up (composables/useShelfPreload.ts, `#layers/regal/…`) to one
     // that does nothing. Nobody reaches either then anyway (appConfig.regal, stores/shelf.ts).
-    if (!REGAL_ENABLED) {
+    // The reel's component is the same stand-in where Regal has no `RegalBooksReel` yet (a Regal
+    // from before it, or none); `appConfig.regalReel` tells the section, which then keeps its poster.
+    const reel = REGAL_ENABLED && regalHasReel(regalDir)
+    nuxt.options.appConfig.regalReel = reel
+    if (!REGAL_ENABLED || !reel) {
       const absent = join(nuxt.options.srcDir, 'regal', 'Absent.vue')
       const noPreload = join(nuxt.options.srcDir, 'regal', 'preload.ts')
       addVitePlugin({
         name: 'libellus-without-regal',
         enforce: 'pre',
         resolveId(source) {
-          if (/^#layers\/regal\/app\/utils\/preload(\.ts)?$/.test(source)) return noPreload
-          if (SHELF_COMPONENT.test(source)) return absent
+          if (!REGAL_ENABLED && /^#layers\/regal\/app\/utils\/preload(\.ts)?$/.test(source)) return noPreload
+          if (!REGAL_ENABLED && SHELF_COMPONENT.test(source)) return absent
+          if (REEL_COMPONENT.test(source)) return absent
           return null
         },
       })
@@ -246,7 +267,7 @@ export const regalContainment = defineNuxtModule({
           const chunk = manifest[id]
           if (!chunk) return
           if (/(^|\/)regal\.[^/]+\.js$/.test(chunk.file)) {
-            throw new Error(`[regal] The app's entry loads the regal chunk up front (${[...path, id].join(' → ')}). Import Regal only through LazyShelfStage or LazyShelfRow.`)
+            throw new Error(`[regal] The app's entry loads the regal chunk up front (${[...path, id].join(' → ')}). Import Regal only through LazyShelfStage, LazyShelfRow or LazyFriendsBothReadReel.`)
           }
           for (const next of chunk.imports ?? []) walk(next, [...path, id])
         }

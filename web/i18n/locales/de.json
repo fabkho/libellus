@@ -1913,7 +1913,17 @@
     "loadError": "Das Profil konnte nicht geladen werden.",
     "retry": "Nochmal versuchen",
     "bothRead": "Beide gelesen",
-    "bothReadHers": "{name}: {rating}"
+    "bothReadHers": "{name}: {rating}",
+    "bothReadMine": "Du: {rating}",
+    "bothReadYou": "Du",
+    "bothReadLabel": "Bücher, die du und {name} beide gelesen habt",
+    "bothReadPause": "Diashow anhalten",
+    "bothReadPlay": "Diashow abspielen",
+    "bothReadSlide": "{n} von {count}",
+    "bothReadItem": "{title} von {author}",
+    "bothReadList": "Als Liste zeigen",
+    "bothReadListHide": "Liste ausblenden",
+    "bothReadOpen": "Buch öffnen"
   },
   "follow": {
     "loading": "Wird geöffnet …",

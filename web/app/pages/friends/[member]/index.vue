@@ -310,7 +310,7 @@ function back() {
           </section>
         </UiReveal>
 
-        <FriendsBothRead class="pb-xl" :items="bothRead" :name="name" />
+        <FriendsBothRead class="pb-xl" :items="bothRead" :name="name" :member="card" reel />
 
         <div v-if="recordFailed" class="flex flex-col items-center gap-sm pb-xl text-center" data-testid="member.recordError">
           <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>

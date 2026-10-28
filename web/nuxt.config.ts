@@ -270,6 +270,9 @@ export default defineNuxtConfig({
     // Whether this build has Regal (LIBELLUS_REGAL=1): fixed at build time, unlike runtimeConfig,
     // so no env var can point the app at a shelf the build doesn't have (stores/shelf.ts).
     regal: REGAL_ENABLED,
+    // Whether that Regal has the reel (`RegalBooksReel`, "You both read"): decided by the layer's files, set by the
+    // containment module (regal.config.ts); without it the section stays on its poster.
+    regalReel: false,
     // The release this build is and its notes for members (utils/changelog.ts, composables/useWhatsNew.ts).
     release,
   },
