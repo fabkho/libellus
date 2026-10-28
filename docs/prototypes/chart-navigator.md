@@ -91,7 +91,7 @@ the weeks' chips by month range ("Mär–Jun") under the sticky year; A stays th
    the sheet title? (E reuses the same key for its chips: "KW 13–25" / "Week 13–25".)
 5. E or D (see the recommendation): one tap to a named period, or a scrubbable overview of the record?
 
-A note for the real implementation: the prototype's `earliestWeekStart()` stops one window late — it
-steps back to the window holding her first finish, then returns the one after it. With this fake
-record no read is lost (her September finishes fall after 23 Sep), but a first finish early in a
-window would be left outside every week window. Left as is here (shared by all five variants).
+For the real implementation, take the left end from the data, as this prototype now does: the earliest
+window is the one that holds her actual first finish (not a nominal start date), and `earliestWeekStart()`
+must stop at that window — a first draft stepped one window late and derived the bound from a nominal
+date, which would have left an early first finish outside every week window.

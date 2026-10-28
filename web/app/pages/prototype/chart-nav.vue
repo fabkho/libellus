@@ -147,7 +147,9 @@ function weeksOf(all: readonly StatsRead[], startMonday: string): Bucket[] {
 const THIS_YEAR = Number(TODAY.slice(0, 4))
 const FIRST_YEAR = Number(FIRST.slice(0, 4))
 const todayMonday = mondayOf(TODAY)
-const firstMonday = mondayOf(FIRST)
+/** Her actual first finish in the fake record (the generator drops days before `FIRST`): the left end of every window. */
+const firstFinish = reads.value.reduce((min, r) => (r.endedOn !== null && r.endedOn < min ? r.endedOn : min), TODAY)
+const firstMonday = mondayOf(firstFinish)
 /** The newest window holds the last `WEEKS_SHOWN` weeks: it ends with the week today sits in. */
 const newestWeekStart = addDays(todayMonday, -7 * (WEEKS_SHOWN - 1))
 
@@ -155,7 +157,7 @@ const newestWeekStart = addDays(todayMonday, -7 * (WEEKS_SHOWN - 1))
 function earliestWeekStart(): string {
   let start = newestWeekStart
   while (firstMonday < start) start = addDays(start, -7 * WEEKS_SHOWN)
-  return addDays(start, 7 * WEEKS_SHOWN)
+  return start
 }
 const EARLIEST_WEEK_START = earliestWeekStart()
 
