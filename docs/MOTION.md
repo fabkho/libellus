@@ -351,13 +351,13 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   the Reel, exactly as mocked): after the section has come into view once per visit, the Books stand on an arc
   and the one in front changes by itself, one round of 3.2 s beats (0.8 s move on `standard`, 2.4 s hold), then it
   rests on the newest Book and stays still. It stops at once on any swipe, tap or key (Manual: only Play on the pause
-  button starts it again, also after the detail closes), off screen, in a hidden tab and when the page is kept
+  button starts it again, also after the detail closes; Regal's own button), off screen, in a hidden tab and when the page is kept
   alive away. A swipe follows the finger 1:1 and a flick glides and snaps to a Book (Regal's row drag); a vertical drag
   still scrolls the page. The pills and the caption under the Book in front come in over `standard` once landed and
   leave over `exit` before the next move. A tap on the front Book takes it out as Your shelf's row does (Inspect
   pose, the sheet over `sheet`, the caption morphing into the sheet's title). The poster under it (the covers
   drawn flat) changes the front Book over `standard` (transform and opacity) and cross-fades with the canvas over
-  `standard` when the 3D has its first frame. The pause button (WCAG 2.2.2) is a control, not a motion.
+  `standard` when the 3D has its first frame. Regal's pause button (WCAG 2.2.2) is a control, not a motion. A reel that rests off screen goes on when it is back in view.
   Reduce Motion: no 3D at all (not even fetched), no auto-play, no glide: the poster, where a neighbour tapped
   comes to the front at once.
 - **Your shelf** (#23). The shelf page has no stand-in, like the cards: the room is its plain surface

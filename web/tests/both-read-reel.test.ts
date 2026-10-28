@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BOTH_READ_REEL_LIMIT, REEL_ASSET_KEYS, REEL_BOOK_KEYS, bothReadReelDocument, reelItems } from '../app/data/bothReadReel'
+import { BOTH_READ_REEL_LIMIT, REEL_ASSET_KEYS, REEL_BOOK_KEYS, bothReadReelDocument, reelItems, sameReelBooks } from '../app/data/bothReadReel'
 import { validateLibraryFile } from '../app/data/export/regalLibraryFile'
 import type { BothRead } from '../app/data/socialShapes'
 import { bookColour } from '../app/utils/bookColour'
@@ -106,5 +106,25 @@ describe('bothReadReelDocument', () => {
 
   it('is empty for no Books', () => {
     expect(docOf([]).books).toEqual([])
+  })
+})
+
+describe('sameReelBooks', () => {
+  it('holds when the same answer arrives again, whatever the time or the array', () => {
+    const items = [item(), item()]
+    const first = bothReadReelDocument(items, { outside: OUTSIDE, generatedAt: '2026-10-28T09:00:00Z' })
+    const again = bothReadReelDocument(structuredClone(items), { outside: OUTSIDE, generatedAt: '2026-10-28T09:05:00Z' })
+    expect(sameReelBooks(first, again)).toBe(true)
+  })
+  it('breaks when a Book, its cover or the order changes', () => {
+    const items = [item(), item()]
+    const base = docOf(items)
+    expect(sameReelBooks(base, docOf([items[1]!, items[0]!]))).toBe(false)
+    expect(sameReelBooks(base, docOf([items[0]!]))).toBe(false)
+    expect(sameReelBooks(base, docOf([items[0]!, item({ coverUrl: null })]))).toBe(false)
+  })
+  it('changes with the language of the one string an unverified Book shows', () => {
+    const items = [item({ unverified: true })]
+    expect(sameReelBooks(docOf(items), bothReadReelDocument(items, { outside: 'Außerhalb des Katalogs' }))).toBe(false)
   })
 })

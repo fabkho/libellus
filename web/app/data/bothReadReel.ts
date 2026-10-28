@@ -78,3 +78,12 @@ export function bothReadReelDocument(items: readonly BothRead[], options: BothRe
     books: reelItems(items, options.limit).map((item) => reelBook(item.book, options.outside)),
   }
 }
+
+/**
+ * Whether two documents show the same Books (`generatedAt` aside). Regal takes a new `library` object as another
+ * Library and starts the reel over, so the section keeps the object it has until the Books really change
+ * (the profile is read again each time it shows: the same answer arrives as a new array).
+ */
+export function sameReelBooks(a: RegalLibraryFile, b: RegalLibraryFile): boolean {
+  return JSON.stringify(a.books) === JSON.stringify(b.books)
+}

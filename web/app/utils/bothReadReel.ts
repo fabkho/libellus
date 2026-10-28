@@ -4,7 +4,7 @@
  * Pure: the section reads the world (build, motion setting, WebGL, Save-Data, the view) and asks here.
  */
 export type ReelGate = {
-  /** The build has Regal and its reel (`appConfig.regal` and `appConfig.regalReel`, regal.config.ts). */
+  /** The build has Regal (`appConfig.regal`, LIBELLUS_REGAL=1, regal.config.ts). */
   built: boolean
   /** Books in the reel: one is a poster only, two or more can move. */
   count: number

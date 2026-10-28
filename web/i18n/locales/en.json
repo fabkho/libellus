@@ -1923,7 +1923,12 @@
     "bothReadItem": "{title} by {author}",
     "bothReadList": "Show as a list",
     "bothReadListHide": "Hide the list",
-    "bothReadOpen": "Open book"
+    "bothReadOpen": "Open book",
+    "bothReadKeys": "Left and right arrow keys move the slideshow, Enter takes the Book out",
+    "bothReadEyebrow": "You both read · {count}",
+    "bothReadAgree": "You agree on {agree} of {of}",
+    "bothReadDisagree": "{title}: {name} {hers}, you {mine}",
+    "bothReadFirst": "{name} read {count} of them first"
   },
   "follow": {
     "loading": "Opening…",

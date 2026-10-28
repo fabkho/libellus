@@ -1923,7 +1923,12 @@
     "bothReadItem": "{title} von {author}",
     "bothReadList": "Als Liste zeigen",
     "bothReadListHide": "Liste ausblenden",
-    "bothReadOpen": "Buch öffnen"
+    "bothReadOpen": "Buch öffnen",
+    "bothReadKeys": "Mit den Pfeiltasten links und rechts blätterst du, mit der Eingabetaste nimmst du das Buch heraus",
+    "bothReadEyebrow": "Beide gelesen · {count}",
+    "bothReadAgree": "Einig bei {agree} von {of}",
+    "bothReadDisagree": "{title}: {name} {hers}, du {mine}",
+    "bothReadFirst": "{name} hat {count} davon zuerst gelesen"
   },
   "follow": {
     "loading": "Wird geöffnet …",

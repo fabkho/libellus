@@ -8,15 +8,17 @@
 //             where the loading rules hold; without `reel` (her year page) the row of covers it always was.
 // The slideshow is the reel's pose drawn flat (`FriendsBothReadPoster`, shown at once and for good where the 3D never
 // comes), the 3D (`LazyFriendsBothReadReel`, the only file that imports Regal) fading in over it when its first frame
-// is drawn, a pause button (WCAG 2.2.2: anything that moves by itself longer than 5 s has one; in Manual it reads
-// Play), and the text list (`FriendsBothReadList`): always there for a screen reader, shown to everyone by "Show as
-// a list". The 3D mounts only when `reelWanted` says so (the build has the reel, two Books or more, no Reduce Motion,
-// WebGL, no Save-Data, the section within a viewport of the screen, the browser idle). One round, then it rests; a
-// swipe, a tap or a key takes it over (Manual): only Play resumes it. Not drawn without Books.
-// Test ids: `member.bothRead` (the section), `member.bothRead.book`, `member.bothRead.hers`, `member.bothRead.toggle`
-// (pause / play), `member.bothRead.listToggle`.
+// is drawn, the shared figures line, and the text list (`FriendsBothReadList`): always there for a screen reader,
+// shown to everyone by "Show as a list". The pause button (WCAG 2.2.2), the dots, the manual takeover (a swipe, a tap or
+// a key: only Play resumes), the Book taken out with the Stack's details and the system Back are Regal's (its reel
+// plays one round once per visit, then rests). The 3D mounts only when `reelWanted` says so (Regal in the build, two Books
+// or more, no Reduce Motion, WebGL, no Save-Data, the section within a viewport of the screen, the browser idle).
+// Not drawn without Books.
+// Test ids: `member.bothRead` (the section), `member.bothRead.book`, `member.bothRead.hers`,
+// `member.bothRead.figures`, `member.bothRead.disagree`, `member.bothRead.listToggle`.
 import { BOTH_READ_REEL_LIMIT, reelItems } from '~/data/bothReadReel'
 import type { BothRead, MemberCard } from '~/data/socialShapes'
+import { sharedFiguresOf } from '~/utils/sharedFigures'
 import { hasWebgl, reelWanted, saveDataOn } from '~/utils/bothReadReel'
 import { onIdle } from '~/utils/idle'
 import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
@@ -38,8 +40,8 @@ watch(
 )
 
 const appConfig = useAppConfig()
-// Regal and its reel are in this build (regal.config.ts decides `regalReel` from the layer: no reel, no 3D).
-const built = appConfig.regal === true && appConfig.regalReel === true
+// Regal is in this build (LIBELLUS_REGAL=1, regal.config.ts); without it the section is the poster.
+const built = appConfig.regal === true
 
 const root = ref<HTMLElement | null>(null)
 const near = ref(false)
@@ -67,12 +69,30 @@ const reelReady = ref(false)
 watch(mountReel, (now) => {
   if (!now) reelReady.value = false
 })
-// Playing: the first round, once per visit. Manual (a swipe, a tap, a key: `manual`) and the pause button end it; only Play
-// begins it again. A page kept alive off screen rests (Regal also rests off screen and in a hidden tab).
-const playing = ref(true)
-const active = ref(true)
-onActivated(() => (active.value = true))
-onDeactivated(() => (active.value = false))
+
+// ------------------------------------------------------------------ the figures line (plan E 1-3)
+const figures = computed(() => sharedFiguresOf(props.items))
+/** "You agree on 7 of 9 · Lena read 8 of them first": the parts that have something to say. */
+const figuresLine = computed(() => {
+  const { agreement, firstCount } = figures.value
+  return [
+    agreement ? t('member.bothReadAgree', { agree: agreement.agree, of: agreement.of }) : null,
+    firstCount ? t('member.bothReadFirst', { name: props.name, count: firstCount }) : null,
+  ].filter((part): part is string => part !== null)
+})
+const disagree = computed(() => {
+  const found = figures.value.disagreement
+  if (!found) return null
+  return {
+    book: found.book,
+    text: t('member.bothReadDisagree', {
+      title: shown(found.book).title,
+      name: props.name,
+      hers: ratingText(found.hers),
+      mine: ratingText(found.mine),
+    }),
+  }
+})
 
 // ------------------------------------------------------------------ the list
 const listOpen = ref(false)
@@ -80,39 +100,35 @@ const listOpen = ref(false)
 
 <template>
   <section v-if="items.length" ref="root" class="flex flex-col gap-md" data-testid="member.bothRead">
-    <h2 class="eyebrow">{{ t('member.bothRead') }}</h2>
+    <h2 class="eyebrow">{{ reel ? t('member.bothReadEyebrow', { count: figures.count }) : t('member.bothRead') }}</h2>
 
-    <!-- The slideshow: the poster at once, the 3D over it when it has its first frame. -->
+    <!-- The slideshow: the poster at once, the 3D over it (the same grid cell, so the card does not change size) when it has its first frame. -->
     <template v-if="reel">
-      <div class="relative">
+      <div class="grid">
         <FriendsBothReadPoster
           v-model:index="front"
           :items="slides"
           :name="name"
           :card="member ?? null"
-          class="transition-opacity duration-standard ease-standard motion-reduce:transition-none"
+          class="min-w-0 [grid-area:1/1] transition-opacity duration-standard ease-standard motion-reduce:transition-none"
           :class="reelReady && 'opacity-0'"
           :inert="reelReady"
           :aria-hidden="reelReady ? 'true' : undefined"
         />
         <LazyFriendsBothReadReel
           v-if="mountReel"
-          v-model:index="front"
           :items="slides"
           :name="name"
           :card="member ?? null"
-          :playing="playing && active"
+          class="min-w-0 [grid-area:1/1]"
           @ready="reelReady = true"
-          @manual="playing = false"
+          @focus="front = $event"
         />
-        <UiRoundButton
-          v-if="reelReady"
-          :icon="playing ? 'pause' : 'play'"
-          :label="playing ? t('member.bothReadPause') : t('member.bothReadPlay')"
-          class="absolute top-0 right-0 z-10"
-          data-testid="member.bothRead.toggle"
-          @click="playing = !playing"
-        />
+      </div>
+
+      <div v-if="figuresLine.length || disagree" class="flex flex-col items-center gap-xs text-center text-subhead text-ink-muted" data-testid="member.bothRead.figures">
+        <p v-if="figuresLine.length">{{ figuresLine.join(' · ') }}</p>
+        <FriendsMemberBookLink v-if="disagree" :book="disagree.book" class="text-footnote text-accent-ink" data-testid="member.bothRead.disagree">{{ disagree.text }}</FriendsMemberBookLink>
       </div>
 
       <div class="flex justify-center">
