@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.2](https://github.com/fabkho/libellus/compare/v1.25.1...v1.25.2) (2026-10-28)
+
+
+### Fixes
+
+* **web:** the header avatar shows her photo from the first frame after a tab switch ([#409](https://github.com/fabkho/libellus/issues/409)) ([dcd8759](https://github.com/fabkho/libellus/commit/dcd8759daba787fc2a6709551215494a9e1f584e))
+
 ## [1.25.1](https://github.com/fabkho/libellus/compare/v1.25.0...v1.25.1) (2026-10-23)
 
 
