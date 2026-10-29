@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { BOTH_READ_REEL_LIMIT, REEL_ASSET_KEYS, REEL_BOOK_KEYS, bothReadReelDocument, reelItems, sameReelBooks } from '../app/data/bothReadReel'
+import { BOTH_READ_REEL_LIMIT, REEL_ASSET_KEYS, REEL_BOOK_HEIGHT, REEL_BOOK_KEYS, bothReadReelDocument, reelItems, sameReelBooks } from '../app/data/bothReadReel'
+import { coverFor } from '../app/utils/coverSize'
 import { validateLibraryFile } from '../app/data/export/regalLibraryFile'
 import type { BothRead } from '../app/data/socialShapes'
 import { bookColour } from '../app/utils/bookColour'
@@ -65,12 +66,28 @@ describe('bothReadReelDocument', () => {
     expect(doc.books[0]).toMatchObject({ title: items[0]!.book.title, authors: ['A. Writer', 'B. Writer'] })
   })
 
-  it('draws the cover at xl in front and md in the pile; the colour is the Book’s one colour', () => {
+  it('asks for every cover with coverFor, at the Book\'s height times the pixel ratio: one address for the front and the rest', () => {
     const only = item()
-    const [book] = docOf([only]).books
-    expect(book!.assets!.front).toContain('600x900')
-    expect(book!.assets!.pile!.front).toContain('240x360')
-    expect(book!.assets!.color).toBe(bookColour(only.book).colour)
+    for (const dpr of [1, 2, 3]) {
+      const [book] = bothReadReelDocument([only], { outside: OUTSIDE, covers: { dpr } }).books
+      expect(book!.assets!.front).toBe(coverFor(only.book.coverUrl, { height: REEL_BOOK_HEIGHT, dpr }))
+      expect(book!.assets!.pile, 'no second copy: the poster, the preload and the textures name the one address').toBeUndefined()
+      expect(book!.assets!.color).toBe(bookColour(only.book).colour)
+    }
+    // 300 px tall is 200 px wide: the 240 box at 1×, 400 → 480 at 2×, 600 at 3×.
+    expect(bothReadReelDocument([only], { outside: OUTSIDE }).books[0]!.assets!.front).toContain('240x360')
+    expect(bothReadReelDocument([only], { outside: OUTSIDE, covers: { dpr: 2 } }).books[0]!.assets!.front).toContain('480x720')
+    expect(bothReadReelDocument([only], { outside: OUTSIDE, covers: { dpr: 3 } }).books[0]!.assets!.front).toContain('600x900')
+  })
+
+  it('on a Pages build the covers come through our own cache, on the page\'s origin, CORS-clean for the canvas', () => {
+    const only = item()
+    const front = bothReadReelDocument([only], { outside: OUTSIDE, covers: { dpr: 2, proxy: true, origin: 'https://libellus.example' } }).books[0]!.assets!.front!
+    const url = new URL(front)
+    expect(url.origin + url.pathname).toBe('https://libellus.example/cover')
+    expect(url.searchParams.get('u')).toBe(only.book.coverUrl)
+    expect(url.searchParams.get('w')).toBe('480')
+    expect(front).toBe(coverFor(only.book.coverUrl, { height: REEL_BOOK_HEIGHT, dpr: 2, proxy: true, origin: 'https://libellus.example' }))
   })
 
   it('a Book without a cover has no image and its Placeholder’s colour', () => {

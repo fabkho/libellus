@@ -75,11 +75,13 @@ const picture = computed(() => Boolean(props.reel) && built && !chunkFailed.valu
 // The library document Regal's reel takes (ids, titles, authors, cover URLs, colours: data/bothReadReel.ts): ONE stable
 // object, held here until the Books really change (a new object is another Library: the reel starts over), so the covers
 // asked for below and the reel the card mounts are about the same Library.
-const library = shallowRef(bothReadReelDocument(slides.value, { outside: t('book.outsideCatalogue') }))
+const covers = useReelCovers()
+const coverProxy = useCoverProxy()
+const library = shallowRef(bothReadReelDocument(slides.value, { outside: t('book.outsideCatalogue'), covers }))
 watch(
   () => [slides.value, t('book.outsideCatalogue')] as const,
   ([list, outside]) => {
-    const next = bothReadReelDocument(list, { outside })
+    const next = bothReadReelDocument(list, { outside, covers })
     if (!sameReelBooks(library.value, next)) library.value = next
   },
 )
@@ -194,7 +196,7 @@ const listOpen = ref(false)
           <UiCover
             :title="shown(item.book).title"
             :authors="shown(item.book).authors"
-            :src="coverSrc(shown(item.book).coverUrl, 'md')"
+            :src="coverSrc(shown(item.book).coverUrl, 'md', coverProxy)"
             :thumbhash="shown(item.book).coverThumbhash"
             :colors="shown(item.book).coverColors"
             size="md"

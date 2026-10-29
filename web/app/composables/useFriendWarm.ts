@@ -18,6 +18,7 @@ export function useFriendWarm() {
   const members = useMemberProfileStore()
   const nuxtApp = useNuxtApp()
   const built = useAppConfig().regal === true
+  const covers = useReelCovers()
   const played = useState<Record<string, true>>('both-read-played', () => ({}))
 
   async function warmFriend(id: string): Promise<void> {
@@ -25,7 +26,7 @@ export function useFriendWarm() {
     const items = await members.prefetchBothRead(id)
     if (!built || !items?.length || saveDataOn()) return
     prefetchBothReadReel(true)
-    const document = bothReadReelDocument(reelItems(items, BOTH_READ_REEL_LIMIT), { outside: nuxtApp.$i18n.t('book.outsideCatalogue') })
+    const document = bothReadReelDocument(reelItems(items, BOTH_READ_REEL_LIMIT), { outside: nuxtApp.$i18n.t('book.outsideCatalogue'), covers })
     preloadReelCovers(document, { autoplay: !played.value[id], reducedMotion: prefersReducedMotion() })
   }
 

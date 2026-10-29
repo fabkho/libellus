@@ -1,5 +1,5 @@
 import { bookColour } from '../utils/bookColour'
-import { coverSrc } from '../utils/cover'
+import { coverFor, type CoverFor } from '../utils/coverSize'
 import { shownBook } from '../utils/unverifiedBook'
 import { LIBRARY_FILE_VERSION, type LibraryBook, type RegalLibraryFile } from './export/regalLibraryFile'
 import type { BothRead } from './socialShapes'
@@ -9,7 +9,7 @@ import type { BothRead } from './socialShapes'
  * turned into the in-memory library document `RegalBooksReel` takes, and nothing else.
  *
  * **What reaches Regal is a whitelist.** A friend's data crosses into the canvas only here, and only these keys:
- * a Book's `id`, `title`, `authors`, `status` (always `read`) and its `assets` (`front`, `pile.front`, `color`).
+ * a Book's `id`, `title`, `authors`, `status` (always `read`) and its `assets` (`front`: the cover at the reel's size, and `color`).
  * Never her rating, the day she finished, the caller's own read, a page count, a blurb or a review, even where
  * the answer carries them: the pills and the sheet's meta line are drawn by Libellus from its own `BothRead`
  * (by Book id) through the reel's slots. `tests/both-read-reel.test.ts` pins the keys, so a later change that
@@ -41,7 +41,17 @@ export type BothReadReelOptions = {
   limit?: number
   /** `generatedAt`: default now. */
   generatedAt?: string
+  /** How the covers are asked for: the device's pixel ratio, and our own cache's address (`proxy`, with the page's `origin`). */
+  covers?: Pick<CoverFor, 'dpr' | 'proxy' | 'origin'>
 }
+
+/**
+ * How tall a Book stands in the reel, in CSS pixels (Regal's stage is 330 px, the Books about 300 of it): the size every
+ * cover is asked for, the Book in front and the others alike, so the poster, the still, the preload and the canvas's
+ * textures all name the one address and each cover is downloaded once. (`utils/coverSize.ts`: the smallest width that
+ * is sharp at the device's pixel ratio; the Book taken out is looked at from this copy too.)
+ */
+export const REEL_BOOK_HEIGHT = 300
 
 /** The Books the reel (and its poster) show: hers newest first, each Book once, the first `limit`. */
 export function reelItems(items: readonly BothRead[], limit: number = BOTH_READ_REEL_LIMIT): BothRead[] {
@@ -57,11 +67,10 @@ export function reelItems(items: readonly BothRead[], limit: number = BOTH_READ_
 }
 
 /** One Book of the document, from nothing but the Book `both_read` gives (and `outside` for an unverified one). */
-export function reelBook(book: BothRead['book'], outside: string): LibraryBook {
+export function reelBook(book: BothRead['book'], outside: string, covers: BothReadReelOptions['covers'] = {}): LibraryBook {
   const shown = shownBook(book, outside)
-  // The cover as the app stores it: the front at `xl` (the Book in front), a small copy for the rest.
-  const front = coverSrc(shown.coverUrl, 'xl')
-  const small = coverSrc(shown.coverUrl, 'md')
+  // The cover at the size the reel draws it (`REEL_BOOK_HEIGHT`), one address for every use: no separate pile copy.
+  const front = coverFor(shown.coverUrl, { height: REEL_BOOK_HEIGHT, ...covers })
   return {
     id: book.id,
     title: shown.title,
@@ -69,7 +78,6 @@ export function reelBook(book: BothRead['book'], outside: string): LibraryBook {
     status: 'read',
     assets: {
       ...(front ? { front } : {}),
-      ...(front && small && small !== front ? { pile: { front: small } } : {}),
       color: bookColour(shown).colour,
     },
   }
@@ -81,7 +89,7 @@ export function bothReadReelDocument(items: readonly BothRead[], options: BothRe
     version: LIBRARY_FILE_VERSION,
     generatedAt: options.generatedAt ?? new Date().toISOString(),
     generator: 'libellus-both-read',
-    books: reelItems(items, options.limit).map((item) => reelBook(item.book, options.outside)),
+    books: reelItems(items, options.limit).map((item) => reelBook(item.book, options.outside, options.covers)),
   }
 }
 
