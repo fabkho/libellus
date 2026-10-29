@@ -41,7 +41,7 @@ a change to the project's settings (below) reaches the live site without a commi
 
 Pages builds `web/functions/` beside the output by itself (no setting), and generates the
 `_routes.json` that decides which addresses invoke a Function from the files it finds there: with
-the two below, `include` is `["/share", "/r/*"]` and everything else stays a free static request.
+the ones below (`/share`, `/r/*`, `/manifest.webmanifest`, `/cover`), everything else stays a free static request.
 Nitro's `cloudflare-pages-static` preset writes no `_routes.json` of its own, so nothing overrides
 that (checked with `npx wrangler pages functions build --output-routes-path`).
 
@@ -105,6 +105,43 @@ speaks is German, the same file with `lang: de`, a German `description` and Germ
 say `"lang":"de"`.
 
 Everything else stays static, and only `/share`, `/r/*` and `/manifest.webmanifest` invoke a Function.
+
+## The cover cache
+
+**`web/functions/cover.js`** answers `/cover?u=<cover URL>&w=<width>`: our own cache in front of the two cover
+hosts (Apple's `*.mzstatic.com` and `covers.openlibrary.org`). Open Library's covers take 0.7–3 s (a redirect
+to archive.org and a storage host of its own); a cover at an address never changes, so the first request pays
+and the rest are answered from Cloudflare's Cache API (`caches.default`) in a few milliseconds. The answer
+always carries `Access-Control-Allow-Origin: *` (a WebGL texture needs a CORS-clean image, so does a canvas read),
+`Cache-Control: public, max-age=31536000, immutable` and the image's own `Content-Type`.
+
+- **An allowlist, not a proxy.** `parseCoverRequest` (`web/app/utils/coverSize.ts`, which the browser builds
+  addresses with and the Function enforces) accepts `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg` and
+  `https://covers.openlibrary.org/b/<id|isbn|olid|oclc|lccn>/<key>-<S|M|L>.jpg[?default=false]`, and the widths
+  120, 240, 360, 480 and 600 only (each width is an entry; no width asks for any size). Anything else is a 400
+  with `no-store`, and no host is asked. The sized address (Apple's `<w>x<1.5w>bb`, Open Library's `-M` up to
+  180 px, else `-L`) is computed here from `u` and `w`, and is the cache key: a stored `-L` and a `-M`, a
+  600×900 and a 120×180 `u`, are one entry at one width.
+- **When the host fails.** A cover in the cache is served as it is; one older than 30 days is served and
+  fetched again behind the answer (stale-while-revalidate), the old copy kept (and left alone for an hour)
+  when the host does not answer. A cover not in the cache and not fetchable is a 502 (404 for a cover the
+  host says it has not) with `no-store`: the app never keeps it, and its chain tries the host's own address
+  next (`coverChain`, `web/app/utils/cover.ts`), so the cache is never the reason a cover is missing. The
+  host's answer must be an image under 2 MB, from the host (or Open Library's archive.org) after redirects.
+- **No paid feature.** Only `caches.default` and `fetch`: no Cloudflare Images / Image Resizing (sizes are the
+  hosts' own), no KV, R2 or Workers paid plan. What it uses up is the Workers **free plan's 100,000 Function
+  requests a day** (docs above: only `/cover`, `/share`, `/r/*` and the manifest are Function requests; every
+  other file is a free static one). Past it Pages answers the Function's addresses with an error, not a
+  bill, and the chain falls back to the hosts' own covers. A device that has a cover in its service worker's
+  `libellus-cover-cache` (CacheFirst, 300 entries, 180 days, emptied on sign-out with the other member
+  caches) does not ask again.
+- **In the app.** `runtimeConfig.public.coverProxy` (`NUXT_PUBLIC_COVER_PROXY`, `on`/`off`; unset: on in a
+  Cloudflare Pages build, `CF_PAGES`, else off, so `nuxt dev`, the e2e build and a static host without Functions
+  ask the hosts directly). `coverSrc(url, size, useCoverProxy())` is the app's covers through it (the Library's rows, `EntryRow`);
+  `coverFor(url, { height, dpr, proxy })` is a cover at a size no token names (`coverSize.ts`).
+- **Check it locally.** `pnpm dlx wrangler pages dev <a folder with an index.html> --port 3110` from `web/`
+  (it serves `functions/` and a real `caches.default`), then `curl -si 'http://127.0.0.1:3110/cover?u=<encoded cover URL>&w=240'`:
+  `X-Cover-Cache: miss`, then `hit`. Tests: `tests/cover-size.test.ts`, `tests/cover-function.test.ts`.
 
 ## The reading page's Open Graph image
 

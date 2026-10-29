@@ -1,6 +1,7 @@
 import type { CoverColors } from '../data/books'
 import { appleArtwork } from '../data/apple'
 import { openLibraryCoverAt } from '../data/openLibrary'
+import { coverIsCacheable, coverProxyUrl, unproxied } from './coverSize'
 
 /**
  * Where a cover's image comes from: the sources' sizes (Apple's CDN, Open Library), the chain of sizes a cover tries
@@ -40,16 +41,25 @@ export const APPLE_BOX: Record<CoverSize, readonly [number, number]> = {
 /** OpenLibrary's size for each: 'M' (180 px wide) up to `md`, 'L' (about 330 px) above. 'S' (38 px) is too small for any. */
 export const OPENLIBRARY_SIZE: Record<CoverSize, 'M' | 'L'> = { xs: 'M', sm: 'M', md: 'M', lg: 'L', xl: 'L' }
 
+/** The width asked of our cache for each Open Library size (utils/coverSize.ts: up to 180 px is 'M', above 'L'; its widths are 120, 240, …). */
+const OPENLIBRARY_PROXY_WIDTH = { M: 120, L: 240 } as const
+
 /**
  * The image to load for a cover shown at `size`. Apple's CDN renders any size
  * from the stored large URL, so a list row does not download the book page's
  * image; OpenLibrary has three sizes; other sources come as they are.
+ *
+ * `proxy`: through our own cache (`/cover?u=…&w=…`, functions/cover.js, utils/coverSize.ts) instead of the
+ * host's address, for the hosts it serves; any other cover as it is. An address of ours given as `url`
+ * is read as the cover it asks for, so `coverSrc(currentSrc, 'xl')` is the host's large one either way.
  */
-export function coverSrc(url: string | null | undefined, size: CoverSize): string | null {
+export function coverSrc(url: string | null | undefined, size: CoverSize, proxy = false): string | null {
   if (!url) return null
+  const stored = unproxied(url)
   const [width, height] = APPLE_BOX[size]
-  if (/mzstatic\.com\//.test(url)) return appleArtwork(url, width, height)
-  return openLibraryCoverAt(url, OPENLIBRARY_SIZE[size])
+  const direct = /mzstatic\.com\//.test(stored) ? appleArtwork(stored, width, height) : openLibraryCoverAt(stored, OPENLIBRARY_SIZE[size])
+  if (!proxy || !coverIsCacheable(stored)) return direct
+  return coverProxyUrl(stored, /mzstatic\.com\//.test(stored) ? width : OPENLIBRARY_PROXY_WIDTH[OPENLIBRARY_SIZE[size]])
 }
 
 /** The tokens' cover widths in CSS px (`size.cover.*`, tokens.generated.css): what each size renders at, at every call site (the width is the size's token alone). */
@@ -69,11 +79,15 @@ const APPLE_WIDTHS = [...new Set(Object.values(APPLE_BOX).map(([width]) => width
  * trip (docs/covers.md). A size with one candidate (`xs`, `sm`) has no srcset:
  * `coverSrc` is it. Null when there is none.
  */
-export function coverSrcset(url: string | null | undefined, size: CoverSize): string | null {
-  if (!url || !/mzstatic\.com\//.test(url) || appleArtwork(url, 1, 1) === url) return null
+export function coverSrcset(src: string | null | undefined, size: CoverSize): string | null {
+  if (!src) return null
+  // Offered the way `src` is: through our cache when `src` is an address of it.
+  const url = unproxied(src)
+  const proxy = url !== src
+  if (!/mzstatic\.com\//.test(url) || appleArtwork(url, 1, 1) === url) return null
   const widths = APPLE_WIDTHS.filter((width) => width <= APPLE_BOX[size][0])
   if (widths.length < 2) return null
-  return widths.map((width) => `${appleArtwork(url, width, width * 1.5)} ${width}w`).join(', ')
+  return widths.map((width) => `${proxy ? coverProxyUrl(url, width) : appleArtwork(url, width, width * 1.5)} ${width}w`).join(', ')
 }
 
 /** The `sizes` of a cover's `srcset`: its token width, a fixed one (the cover never grows with its container). */
@@ -96,7 +110,10 @@ export function coverSizes(size: CoverSize): string {
 export function coverChain(url: string | null | undefined, size: CoverSize): string[] {
   const own = coverSrc(url, size)
   if (!own) return []
-  return [...new Set([own, coverSrc(own, 'xl')!, coverSrc(own, 'sm')!])]
+  const direct = [...new Set([own, coverSrc(own, 'xl')!, coverSrc(own, 'sm')!])]
+  // Asked through our cache: its answer first, and when the cache is down (a 502, a host without the Function) the host's own
+  // addresses, the same artwork, so the cache is never the reason a cover is missing.
+  return unproxied(url!) !== url ? [...new Set([coverSrc(url, size, true)!, ...direct])] : direct
 }
 
 /**
@@ -105,5 +122,5 @@ export function coverChain(url: string | null | undefined, size: CoverSize): str
  * to the member, at another size; two of another are another image.
  */
 export function artworkOf(url: string): string {
-  return openLibraryCoverAt(appleArtwork(url, 1, 1), 'M')
+  return openLibraryCoverAt(appleArtwork(unproxied(url), 1, 1), 'M')
 }

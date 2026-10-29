@@ -7,7 +7,8 @@ spent, and Open Library has no cover for many German ISBNs. This file is the evi
 sources it uses. Measured on 11 October 2026 from one residential address (the member's own address is the one
 that counts: the app calls these hosts from her browser).
 
-The rule of the project stands (`docs/THIRD-PARTY.md`): a cover is **linked, never copied**; the Catalogue
+The rule of the project stands (`docs/THIRD-PARTY.md`): a cover is **linked, never copied into our storage** (since 29 Oct 2026 the image is also cached at our edge, `/cover`, an
+owner-accepted risk: THIRD-PARTY.md, "Cover cache"); the Catalogue
 stores the address, and `private.cover_allowed` (migration `20261022010000`) lets a Book's cover live only on
 `covers.openlibrary.org`, `*.mzstatic.com` and `books.fabkho.dev`. Any other host is a migration, a CSP change
 and a service-worker change (see *What was not done*).
