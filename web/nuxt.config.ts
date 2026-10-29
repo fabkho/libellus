@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
 import { uiLayer, uiLayerHolds } from './ui.config'
-import { isRegalModule, isRegalShelfModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
+import { isRegalModule, isRegalPreloadModule, isRegalShelfModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 import { REALTIME_CLIENT, REALTIME_STUB } from './realtime.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
@@ -182,12 +182,13 @@ export default defineNuxtConfig({
               // Only what the test names: Regal's modules use the app's Vue and Nuxt, which stay where they are.
               // Two chunks (regal.config.ts, `isRegalShelfModule`): the shelf's own (`regal`) first, then the rest, which a
               // friend's reel needs alone (`regal-reel`).
+              { name: 'regal-preload', test: isRegalPreloadModule, includeDependenciesRecursively: false },
               { name: 'regal', test: isRegalShelfModule, includeDependenciesRecursively: false },
               { name: 'regal-reel', test: isRegalModule, includeDependenciesRecursively: false },
             ],
           },
           chunkFileNames: (chunk: { name: string; facadeModuleId?: string | null }) =>
-            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'regal-reel' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
+            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'regal-reel' || chunk.name === 'regal-preload' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
               ? `_nuxt/${chunk.name}.[hash].js`
               : isReaderEntry(chunk.facadeModuleId)
                 ? '_nuxt/ebook-reader-entry.[hash].js'

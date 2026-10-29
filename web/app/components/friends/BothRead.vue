@@ -4,8 +4,8 @@
 //  - `items`  the answer (BothRead[], newest of hers first).
 //  - `name`   her name, for the screen reader's labels.
 //  - `member` her card (her avatar in the pills); only with `reel`.
-//  - `pending` her answer is on its way (profile only): the section holds its final box, heading and card, as a quiet
-//             placeholder without covers, and nothing moves when it comes; it closes if there turns out to be nothing.
+//  - `pending` her answer is on its way (profile only): the section holds its final box, heading and card, as empty
+//             paper (the reel's own stage is too until its covers are in), and nothing moves when it comes; it closes if there turns out to be nothing.
 //  - `reel`   the profile's slideshow (docs/plans/shared-books-slideshow.md): Regal's reel; without `reel` (her year
 //             page) the row of covers it always was.
 // The slideshow is Regal's alone (`LazyFriendsBothReadReel`, the only file that imports Regal), and it is in place from
@@ -23,11 +23,12 @@
 // Not drawn without Books.
 // Test ids: `member.bothRead` (the section), `member.bothRead.reel` / `.still`, `member.bothRead.book`,
 // `member.bothRead.hers`, `member.bothRead.figures`, `member.bothRead.disagree`, `member.bothRead.listToggle`.
-import { BOTH_READ_REEL_LIMIT, bothReadReelDocument, reelItems, reelPreloadUrls } from '~/data/bothReadReel'
+import { BOTH_READ_REEL_LIMIT, bothReadReelDocument, reelItems, sameReelBooks } from '~/data/bothReadReel'
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { sharedFiguresOf } from '~/utils/sharedFigures'
 import { isChunkError, describeError } from '~/data/errorLog'
-import { hasWebgl, preloadCovers, reelWanted, saveDataOn } from '~/utils/bothReadReel'
+import { hasWebgl, reelWanted, saveDataOn } from '~/utils/bothReadReel'
+import { preloadReelCovers } from '~/utils/regalReelPreload'
 import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
 const props = defineProps<{ items: readonly BothRead[]; name: string; member?: MemberCard | null; reel?: boolean; pending?: boolean }>()
@@ -71,16 +72,17 @@ const live = computed(() => reelWanted({ built, count: slides.value.length, ...g
 const mountRegal = computed(() => Boolean(props.reel) && built && slides.value.length > 0 && !chunkFailed.value)
 /** There is a picture; without one (no Regal in the build, no chunk) the list is open and has no toggle. */
 const picture = computed(() => Boolean(props.reel) && built && !chunkFailed.value)
-// The first covers, as soon as the answer is known: in the browser's cache by the time Regal's chunk has drawn them.
-if (props.reel && built) {
-  watch(
-    slides,
-    (list) => {
-      if (list.length) preloadCovers(reelPreloadUrls(bothReadReelDocument(list, { outside: t('book.outsideCatalogue') })))
-    },
-    { immediate: true },
-  )
-}
+// The library document Regal's reel takes (ids, titles, authors, cover URLs, colours: data/bothReadReel.ts): ONE stable
+// object, held here until the Books really change (a new object is another Library: the reel starts over), so the covers
+// asked for below and the reel the card mounts are about the same Library.
+const library = shallowRef(bothReadReelDocument(slides.value, { outside: t('book.outsideCatalogue') }))
+watch(
+  () => [slides.value, t('book.outsideCatalogue')] as const,
+  ([list, outside]) => {
+    const next = bothReadReelDocument(list, { outside })
+    if (!sameReelBooks(library.value, next)) library.value = next
+  },
+)
 onMounted(() => {
   if (!props.reel || !built) return
   // Reduce Motion switched on or off while the page is open: the reel gives way to the still and back.
@@ -98,6 +100,19 @@ const playedKey = props.member?.id ?? ''
 const autoplay = !played.value[playedKey]
 const markPlayed = () => {
   if (!played.value[playedKey]) played.value = { ...played.value, [playedKey]: true }
+}
+
+// The covers of the reel's first frame, asked for as soon as her answer is in: before Regal's reel chunk has arrived
+// (Regal's `preloadReelCovers`: light, no three.js), with the reel's own `autoplay` and `reduced-motion`, which decide
+// which Books its first frame shows. The reel's canvas takes these bytes, its first frame finds them in the cache.
+if (props.reel && built) {
+  watch(
+    [library, () => gate.reducedMotion],
+    ([doc, reducedMotion]) => {
+      if (doc.books.length) preloadReelCovers(doc, { autoplay, reducedMotion })
+    },
+    { immediate: true },
+  )
 }
 
 // ------------------------------------------------------------------ the figures line (plan E 1-3)
@@ -132,12 +147,13 @@ const listOpen = ref(false)
   <section v-if="items.length || (pending && reel && picture)" class="flex flex-col gap-sm" :aria-busy="!items.length || undefined" data-testid="member.bothRead">
     <h2 class="eyebrow">{{ reel && items.length ? t('member.bothReadEyebrow', { count: figures.count }) : t('member.bothRead') }}</h2>
 
-    <!-- The slideshow is Regal's alone and in place from its first frame (its own, drawn from the same Books): nothing of ours under or over it, no wait for it. The card holds the height it will have (`--both-read-reel-height`, main.css) from the first paint, with a quiet block, no covers, where the answer or Regal's chunk is not in yet; the reel's own height replaces it. -->
+    <!-- The slideshow is Regal's alone and in place from its first frame (its own, drawn from the same Books): nothing of ours under or over it, no wait for it. The card holds the height it will have (`--both-read-reel-height`, main.css) from the first paint, as empty paper (the reel's own stage is empty paper too until its covers are in, then its Books pop in: nothing of ours to take down, no cover before them) where the answer or Regal's chunk is not in yet; the reel's own height replaces it. -->
     <template v-if="reel">
       <div v-if="picture" class="min-w-0" :class="!reelIn && 'min-h-(--both-read-reel-height)'">
         <LazyFriendsBothReadReel
           v-if="items.length && mountRegal"
           :items="slides"
+          :library="library"
           :name="name"
           :card="member ?? null"
           :autoplay="autoplay"
@@ -147,7 +163,6 @@ const listOpen = ref(false)
           @focus="markPlayed"
           @manual="markPlayed"
         />
-        <div v-if="!reelIn" class="skeleton wave h-(--both-read-reel-height) w-full rounded-md" aria-hidden="true" />
       </div>
 
       <template v-if="items.length">

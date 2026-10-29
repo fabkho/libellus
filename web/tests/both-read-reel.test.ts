@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BOTH_READ_REEL_LIMIT, REEL_ASSET_KEYS, REEL_BOOK_KEYS, bothReadReelDocument, reelItems, reelPreloadUrls, sameReelBooks } from '../app/data/bothReadReel'
+import { BOTH_READ_REEL_LIMIT, REEL_ASSET_KEYS, REEL_BOOK_KEYS, bothReadReelDocument, reelItems, sameReelBooks } from '../app/data/bothReadReel'
 import { validateLibraryFile } from '../app/data/export/regalLibraryFile'
 import type { BothRead } from '../app/data/socialShapes'
 import { bookColour } from '../app/utils/bookColour'
@@ -126,28 +126,5 @@ describe('sameReelBooks', () => {
   it('changes with the language of the one string an unverified Book shows', () => {
     const items = [item({ unverified: true })]
     expect(sameReelBooks(docOf(items), bothReadReelDocument(items, { outside: 'Außerhalb des Katalogs' }))).toBe(false)
-  })
-})
-
-describe('reelPreloadUrls (the covers to warm before the reel is there)', () => {
-  const doc = (count: number) => ({
-    version: 1,
-    generatedAt: '',
-    generator: '',
-    books: Array.from({ length: count }, (_, i) => ({ id: `b${i}`, title: `T${i}`, authors: [], status: 'read', assets: { front: `https://x/${i}-xl.jpg`, pile: { front: `https://x/${i}-md.jpg` } } })),
-  }) as never
-  it('takes the five Books the arc starts with: the last two and the first three, by the copy the canvas reads', () => {
-    expect(reelPreloadUrls(doc(12))).toEqual([
-      'https://x/11-md.jpg',
-      'https://x/10-md.jpg',
-      'https://x/0-md.jpg',
-      'https://x/1-md.jpg',
-      'https://x/2-md.jpg',
-      'https://x/11-xl.jpg',
-    ])
-  })
-  it('takes every Book of a short reel, once each, and nothing for none', () => {
-    expect(reelPreloadUrls(doc(2)).slice(0, 2)).toEqual(['https://x/0-md.jpg', 'https://x/1-md.jpg'])
-    expect(reelPreloadUrls(doc(0))).toEqual([])
   })
 })

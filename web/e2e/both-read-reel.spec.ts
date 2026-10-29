@@ -69,21 +69,24 @@ test.describe('You both read, in 3D', () => {
   test('it is in place from the first frame, holds its box from the first paint, and nothing moves when the canvas takes over', async ({ page }) => {
     test.slow()
     // Sampled every frame from before the app starts: the section's box (heading and card) from its first frame on,
-    // the chart under it, the caption's height as the Books change, and what the reel's first frame is.
+    // the chart under it, the caption's height as the Books change, which Book is in front, and the reel's first look.
+    // Regal's entrance is `pop`: the stage stands at its final size, empty, and the Books pop in once their covers are in.
     await page.addInitScript(() => {
-      type Sample = { height: number; books: string[]; front: string | null; pills: number }
+      type Sample = { height: number; front: string | null; title: string; resting: string | null }
       const w = window as unknown as {
-        __reel: { first?: Sample; ready?: Sample; sawOwnPoster: boolean; section: number[]; chart: number[]; caption: number[] }
+        __reel: { first?: Sample; ready?: Sample; own: boolean; poster: boolean; section: number[]; chart: number[]; caption: number[]; fronts: string[] }
       }
-      w.__reel = { sawOwnPoster: false, section: [], chart: [], caption: [] }
+      w.__reel = { own: false, poster: false, section: [], chart: [], caption: [], fronts: [] }
       const sample = (): Sample => ({
         height: document.querySelector('.regal-books-reel')!.getBoundingClientRect().height,
-        books: [...document.querySelectorAll('[data-reel-poster] [data-book]')].map((el) => el.getAttribute('data-book') ?? ''),
         front: document.querySelector('.reel-card')?.getAttribute('data-front') ?? null,
-        pills: document.querySelectorAll('[data-testid="member.bothRead.caption"] [role="img"]').length,
+        title: document.querySelector('.reel-card [data-testid="member.bothRead.title"]')?.textContent ?? '',
+        resting: document.querySelector('.reel-card')?.getAttribute('data-resting') ?? null,
       })
       const tick = () => {
-        if (document.querySelector('[data-testid="member.bothRead.poster"]')) w.__reel.sawOwnPoster = true
+        // A poster of the section's own, or any first frame other than Regal's: never.
+        if (document.querySelector('[data-testid="member.bothRead.poster"]')) w.__reel.own = true
+        if (document.querySelector('[data-reel-poster]')) w.__reel.poster = true
         const section = document.querySelector('[data-testid="member.bothRead"]')
         // Not while a block of the page is still opening its room (UiReveal): the boxes glide then, as every block's does.
         if (section && !document.querySelector('.reveal[data-moving]')) {
@@ -93,45 +96,48 @@ test.describe('You both read, in 3D', () => {
           const caption = document.querySelector('[data-testid="member.bothRead.caption"]')
           if (caption) w.__reel.caption.push(Math.round(caption.getBoundingClientRect().height))
         }
-        if (!w.__reel.first && document.querySelector('.regal-books-reel [data-reel-poster] [data-book]')) w.__reel.first = sample()
+        const front = document.querySelector('.reel-card')?.getAttribute('data-front')
+        if (front && w.__reel.fronts[w.__reel.fronts.length - 1] !== front) w.__reel.fronts.push(front)
+        if (!w.__reel.first && document.querySelector('.regal-books-reel .reel-card')) w.__reel.first = sample()
         if (!w.__reel.ready && document.querySelector('.reel-card--ready')) w.__reel.ready = sample()
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
     })
     const viewer = await signedIn(page)
-    // Covers on all but one Book (a Placeholder among them), and the LAST Book, the one a playing reel opens on, rated
-    // by neither of them: its caption has no pills row, which once made the card 50 px shorter at the first frame than
-    // once the canvas took over (the next Book's caption had pills).
-    const friend = await friendWithSharedBooks(viewer, 12, { covers: true, coverless: [1], unrated: [11] })
+    // Covers on all but one Book (a Placeholder among them), and the NEWEST Book, the one the reel opens on, rated by
+    // neither of them: its caption has no pills row, which once made the card 50 px shorter at the first frame than
+    // once the next Book (rated) was in front.
+    const friend = await friendWithSharedBooks(viewer, 12, { covers: true, coverless: [1], unrated: [0] })
     await page.goto(friendPath(friend))
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
     if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
 
+    // The section stands below the fold on a phone: the reel plays when a third of it is in view.
+    await page.getByTestId('member.bothRead').scrollIntoViewIfNeeded()
     await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
-    await page.waitForFunction(() => Boolean((window as unknown as { __reel: { ready?: unknown } }).__reel.ready))
-    // A beat or two, so the caption has been through other Books.
-    await page.waitForTimeout(7000)
-    type Seen = { first?: { height: number; books: string[]; front: string | null; pills: number }; ready?: { height: number; front: string | null; pills: number }; sawOwnPoster: boolean; section: number[]; chart: number[]; caption: number[] }
+    // Let the arc go through a few Books (no sleep: the Books in front are sampled), so the caption has been through
+    // the unrated one, the Placeholder and rated ones.
+    await page.waitForFunction(() => (window as unknown as { __reel: { fronts: string[] } }).__reel.fronts.length >= 4, undefined, { timeout: 30_000 })
+    type Sample = { height: number; front: string | null; title: string; resting: string | null }
+    type Seen = { first?: Sample; ready?: Sample; own: boolean; poster: boolean; section: number[]; chart: number[]; caption: number[]; fronts: string[] }
     const seen = await page.evaluate(() => (window as unknown as { __reel: Seen }).__reel)
     const spread = (values: number[]) => (values.length ? Math.max(...values) - Math.min(...values) : 0)
-    expect(seen.sawOwnPoster, 'a poster of the section, drawn at any time').toBe(false)
-    expect(seen.first, "Regal's first frame was in the page before the canvas").toBeTruthy()
-    // Regal draws at most five Books at its start: the arc around the Book in front, never the 12.
-    expect(seen.first!.books.length).toBeGreaterThan(0)
-    expect(seen.first!.books.length).toBeLessThanOrEqual(5)
-    // The first frame puts a Book in front, the caption is the one of that Book (the unrated last one has no pills),
-    // and the card is the height it has with a rated Book in front: the fixed-height caption.
-    // (A reel that plays opens on its last Book, Regal's docs/nuxt-layer.md: index 11 of 12, the unrated one.)
-    expect(seen.first!.front, "the first frame's front Book: the last of the 12").toBe('11')
-    expect(seen.first!.pills, 'the unrated Book in front has no pills row content').toBe(0)
-    // The section holds its final box from its first paint (the placeholder, the reel's first frame, the canvas: one
-    // height) and the chart under it never moves; no height change at the handover, and no band.
+    expect(seen.own, 'a poster of the section, drawn at any time').toBe(false)
+    expect(seen.poster, "a poster before the canvas: Regal's entrance is `pop`, an empty stage at its final size").toBe(false)
+    expect(seen.first, "the reel's card was in the page before the canvas took over").toBeTruthy()
+    // Every first frame starts on the first Book (index 0, the newest of hers), whether it plays or not.
+    expect(seen.first!.front, "the first frame's front Book").toBe('0')
+    expect(seen.ready!.front, 'still on the first Book when the canvas takes over').toBe('0')
+    expect(seen.ready!.title, "the caption is the first Book's").toMatch(/^Shared 1 \[/)
+    expect(seen.fronts.slice(0, 2), 'the beat then brings the next Book forward').toEqual(['0', '1'])
+    // The section holds its final box from its first paint (the held placeholder, the reel's empty stage, the canvas:
+    // one height) and the chart under it never moves; no height change at the handover, and no band.
     expect(Math.abs(seen.ready!.height - seen.first!.height)).toBeLessThanOrEqual(1)
     expect(seen.section.length).toBeGreaterThan(10)
     expect(spread(seen.section), 'the section changed height while it loaded').toBeLessThanOrEqual(1)
     expect(spread(seen.chart), 'the chart under the section moved').toBeLessThanOrEqual(1)
-    // Whatever the Book in front, the caption is the same height.
+    // Whatever the Book in front (the unrated first one has no pills), the caption is the same height.
     expect(spread(seen.caption), 'the caption changed height between Books').toBeLessThanOrEqual(1)
   })
 

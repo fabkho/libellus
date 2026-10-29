@@ -15,7 +15,7 @@
 // What Regal gets is `bothReadReelDocument` (data/bothReadReel.ts): ids, titles, authors, absolute cover URLs
 // (`assets.front`, a small `pile.front`), the Book's colour as the tone under a cover that is not in yet, and
 // nothing of hers. It must be a STABLE object (a new one is another Library: the reel starts over), so it is held
-// here until the Books really change (`sameReelBooks`). The pills and the caption under the Book in front are ours
+// by the section until the Books really change (`sameReelBooks`). The pills and the caption under the Book in front are ours
 // (`#tooltip`: FriendsBothReadCaption, from our own `BothRead` by Book id); so is the sheet's content
 // (`#detail-meta`, `#detail-actions`): the Stack's on Your shelf, adapted: her stars · your stars under Regal's title and author line; Show back /
 // Put back / Open book. No blurb (`both_read` has none). Regal draws the pause button (WCAG 2.2.2), the dots and its
@@ -24,7 +24,9 @@
 // leaves the profile. So there is NO `useBackDismiss` here: a second handler would close it twice.
 // Open book: Regal puts the Book back at once and emits `open`, after its history entry is gone, so the push to the
 // Book's page (the cross-fade, no cover flight from the canvas in v1) is safe in it.
-//  - `items`          the Books of the reel (reelItems), newest of hers first.
+//  - `items`          the Books of the reel (reelItems), newest of hers first (for the pills, by Book id).
+//  - `library`        the document Regal draws, ONE stable object the section holds (`bothReadReelDocument`); the same
+//                     object is what its covers were asked for with (`preloadReelCovers`).
 //  - `name`           her name; `card` her member card (her avatar in the pills).
 //  - `autoplay`       whether the round plays (once per visit; the section decides). The still follows it too.
 //  - `reducedMotion`  the section's reading of Reduce Motion, handed to Regal explicitly.
@@ -33,27 +35,17 @@
 // the Book in front) and `manual` (the reader took over); the still emits neither of the last two.
 import '#build/nuxt-fonts-global.css'
 import '~/assets/css/regal-themed.css'
-import { bothReadReelDocument, sameReelBooks } from '~/data/bothReadReel'
+import type { RegalLibraryFile } from '~/data/export/regalLibraryFile'
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { bookPathOf } from '~/utils/memberProfile'
 
-const props = defineProps<{ items: readonly BothRead[]; name: string; card: MemberCard | null; autoplay?: boolean; reducedMotion?: boolean; still?: boolean }>()
+const props = defineProps<{ items: readonly BothRead[]; library: RegalLibraryFile; name: string; card: MemberCard | null; autoplay?: boolean; reducedMotion?: boolean; still?: boolean }>()
 const emit = defineEmits<{ mounted: []; focus: [index: number]; manual: [] }>()
 // The component is on the page (the chunk is in): the section stops holding the space for it. Nothing else waits for it.
 onMounted(() => emit('mounted'))
 
 const { t } = useI18n()
 const byId = computed(() => new Map(props.items.map((item) => [item.book.id, item])))
-
-const build = () => bothReadReelDocument(props.items, { outside: t('book.outsideCatalogue') })
-const library = shallowRef(build())
-watch(
-  () => [props.items, t('book.outsideCatalogue')] as const,
-  () => {
-    const next = build()
-    if (!sameReelBooks(library.value, next)) library.value = next
-  },
-)
 
 // Regal's own words (the pause button, "Book {n} of {count}", the keys hint, the details' actions) in the app's language.
 const labels = computed(() => ({
@@ -83,7 +75,7 @@ function onOpen(event: { id: string }) {
     class="both-read-reel regal-themed"
     data-testid="member.bothRead.still"
     theme="auto"
-    :library="library"
+    :library="props.library"
     :label="t('member.bothReadLabel', { name })"
     :labels="labels"
     :autoplay="autoplay ?? true"
@@ -99,7 +91,7 @@ function onOpen(event: { id: string }) {
     data-testid="member.bothRead.reel"
     theme="auto"
     rotate="turntable"
-    :library="library"
+    :library="props.library"
     :label="t('member.bothReadLabel', { name })"
     :labels="labels"
     :accessible-list="false"

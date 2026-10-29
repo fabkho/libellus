@@ -93,24 +93,3 @@ export function bothReadReelDocument(items: readonly BothRead[], options: BothRe
 export function sameReelBooks(a: RegalLibraryFile, b: RegalLibraryFile): boolean {
   return JSON.stringify(a.books) === JSON.stringify(b.books)
 }
-
-/**
- * The images the reel's first frame draws, to fetch as soon as the answer is known (before Regal's chunk is in): the
- * Books of the arc at its start, five at most (the last Book in front with the first coming in, two beside it), by
- * the copy the canvas reads (`pile.front`, else `front`). The reel plays one round from its last Book to its first;
- * a reel of two or three Books has ends and starts on the first. Pure; the section hands them to the browser.
- */
-export function reelPreloadUrls(document: RegalLibraryFile): string[] {
-  const books = document.books
-  const count = books.length
-  if (count === 0) return []
-  const wanted = count <= 5 ? books.map((_, i) => i) : [count - 1, count - 2, 0, 1, 2]
-  const urls: string[] = []
-  const add = (url: string | undefined | null) => {
-    if (url && !urls.includes(url)) urls.push(url)
-  }
-  for (const i of wanted) add(books[i]?.assets?.pile?.front ?? books[i]?.assets?.front)
-  // The Book in front is drawn from its own front when it is looked at closer.
-  add(books[wanted[0]!]?.assets?.front)
-  return urls
-}
