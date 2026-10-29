@@ -3,14 +3,19 @@
 // and her rating) and yours, then the Book's title and author. A pill is absent when its rating is: hers where she
 // shows no ratings (`hers.rating` null), yours where you gave none. Pills are drawn here by Libellus from its own
 // `BothRead`, never by Regal: the reel's `#tooltip` slot places this under the front Book, the poster puts it under
-// its own. Drawing only; the section hands in the item, her card and her name.
+// its own. Drawing only; the section hands in the item, her card and her name. `link`: the title and author are a
+// link to the Book's page (the still, which has no events of its own, and where the caption is what a tap can reach).
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { useAvatarStore } from '~/stores/avatar'
 import { useSessionStore } from '~/stores/session'
+import { bookPathOf } from '~/utils/memberProfile'
 
-const props = defineProps<{ item: BothRead; card: MemberCard | null; name: string }>()
+const props = defineProps<{ item: BothRead; card: MemberCard | null; name: string; link?: boolean }>()
 const { t } = useI18n()
 
+const PressLink = resolveComponent('UiPressLink')
+/** Where the title leads (`link` only): null for a Manual book or an unverified one, which open nothing. */
+const to = computed(() => (props.link ? bookPathOf(props.item.book) : null))
 const shown = computed(() => shownBook(props.item.book, t('book.outsideCatalogue')))
 const hers = computed(() => t('member.bothReadHers', { name: props.name, rating: ratingText(props.item.hers.rating) }))
 const mine = computed(() => t('member.bothReadMine', { rating: ratingText(props.item.mine.rating) }))
@@ -35,9 +40,9 @@ onMounted(() => void avatar.load())
         <span class="figures text-subhead" aria-hidden="true">{{ ratingText(item.mine.rating) }}</span>
       </span>
     </div>
-    <div class="flex max-w-full flex-col gap-xxs px-screen">
+    <component :is="to ? PressLink : 'div'" :to="to ?? undefined" class="flex max-w-full flex-col gap-xxs px-screen" :class="to && 'pointer-events-auto'">
       <p class="book-title text-headline text-balance" data-testid="member.bothRead.title">{{ shown.title }}</p>
       <p v-if="shown.authors.length" class="text-subhead text-ink-muted">{{ shown.authors.join(', ') }}</p>
-    </div>
+    </component>
   </div>
 </template>

@@ -1,12 +1,19 @@
 <script setup lang="ts">
-// "You both read" in 3D: Regal's reel (the layer's RegalBooksReel, docs/plans/shared-books-slideshow.md, D and H;
-// Regal's docs/nuxt-layer.md, RegalBooksReel) in BetterReads' room. The only component of the section that touches
-// Regal: always loaded through `LazyFriendsBothReadReel`, so it, Regal, three.js and TresJS are one chunk (`regal`,
-// regal.config.ts) that the section fetches only when the loading rules hold (utils/bothReadReel.ts, `reelWanted`),
-// never precached. In a build without Regal, `regal.config.ts` resolves this file to the empty stand-in
-// (app/regal/Absent.vue) and the section never mounts it: the poster stays.
+// "You both read" through Regal: the layer's RegalBooksReel (docs/plans/shared-books-slideshow.md, D and H; Regal's
+// docs/nuxt-layer.md, RegalBooksReel) in BetterReads' room, or, for the fallbacks, RegalBooksReelStill (the same first
+// frame, no canvas). The only component of the section that touches Regal: always loaded through
+// `LazyFriendsBothReadReel`, so it, Regal, three.js and TresJS are one chunk (`regal`, regal.config.ts) that the
+// section fetches only when it is near the screen, never precached. In a build without Regal, `regal.config.ts`
+// resolves this file to the empty stand-in (app/regal/Absent.vue) and the section never mounts it.
 //
-// What Regal gets is `bothReadReelDocument` (data/bothReadReel.ts): ids, titles, authors, covers, colours, and
+// NOTHING of ours is drawn over or under the reel while it loads. The reel draws its own first frame (the Books at the
+// places, turns and sizes the canvas will draw, the pills and caption of the Book in front, from our `#tooltip`), then
+// the canvas takes over in place and the intro plays: there is no poster, skeleton or other composition of ours to
+// take down, and nothing here waits for `ready`. `still` is for the fallbacks where the live reel is not mounted
+// (no WebGL, Reduce Motion, Save-Data, an error): the same first frame as a still, tappable through its caption.
+//
+// What Regal gets is `bothReadReelDocument` (data/bothReadReel.ts): ids, titles, authors, absolute cover URLs
+// (`assets.front`, a small `pile.front`), the Book's colour as the tone under a cover that is not in yet, and
 // nothing of hers. It must be a STABLE object (a new one is another Library: the reel starts over), so it is held
 // here until the Books really change (`sameReelBooks`). The pills and the caption under the Book in front are ours
 // (`#tooltip`: FriendsBothReadCaption, from our own `BothRead` by Book id); so is the sheet's content
@@ -17,19 +24,22 @@
 // leaves the profile. So there is NO `useBackDismiss` here: a second handler would close it twice.
 // Open book: Regal puts the Book back at once and emits `open`, after its history entry is gone, so the push to the
 // Book's page (the cross-fade, no cover flight from the canvas in v1) is safe in it.
-//  - `items`  the Books of the reel (reelItems), newest of hers first.
-//  - `name`   her name; `card` her member card (her avatar in the pills).
-// Emits `mounted` (the chunk is in and the reel is on the page), `ready` (the first frame is drawn with the covers in view: the poster fades out), `focus` (the index of the
-// Book in front, to keep the poster's in step for the day the reel goes) and `manual`.
+//  - `items`          the Books of the reel (reelItems), newest of hers first.
+//  - `name`           her name; `card` her member card (her avatar in the pills).
+//  - `autoplay`       whether the round plays (once per visit; the section decides). The still follows it too.
+//  - `reducedMotion`  the section's reading of Reduce Motion, handed to Regal explicitly.
+//  - `still`          the fallback: RegalBooksReelStill instead of the live reel.
+// Emits `mounted` (the chunk is in and this is on the page: the section's placeholder space goes), `focus` (the index of
+// the Book in front) and `manual` (the reader took over); the still emits neither of the last two.
 import '#build/nuxt-fonts-global.css'
 import '~/assets/css/regal-themed.css'
 import { bothReadReelDocument, sameReelBooks } from '~/data/bothReadReel'
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { bookPathOf } from '~/utils/memberProfile'
 
-const props = defineProps<{ items: readonly BothRead[]; name: string; card: MemberCard | null; autoplay?: boolean }>()
-const emit = defineEmits<{ mounted: []; ready: []; focus: [index: number]; manual: [] }>()
-// The component has come (the chunk is in): the poster stops being a control from here to `ready`, never before.
+const props = defineProps<{ items: readonly BothRead[]; name: string; card: MemberCard | null; autoplay?: boolean; reducedMotion?: boolean; still?: boolean }>()
+const emit = defineEmits<{ mounted: []; focus: [index: number]; manual: [] }>()
+// The component is on the page (the chunk is in): the section stops holding the space for it. Nothing else waits for it.
 onMounted(() => emit('mounted'))
 
 const { t } = useI18n()
@@ -67,8 +77,26 @@ function onOpen(event: { id: string }) {
 </script>
 
 <template>
-  <RegalBooksReel
+  <!-- The fallback: the reel's first frame as a still, the same pills and caption (the title opens the Book: the still has no events). -->
+  <RegalBooksReelStill
+    v-if="still"
     class="both-read-reel regal-themed"
+    data-testid="member.bothRead.still"
+    theme="auto"
+    :library="library"
+    :label="t('member.bothReadLabel', { name })"
+    :labels="labels"
+    :autoplay="autoplay ?? true"
+    :reduced-motion="reducedMotion"
+  >
+    <template #tooltip="{ book }">
+      <FriendsBothReadCaption v-if="byId.get(book.id)" :item="byId.get(book.id)!" :card="card" :name="name" link />
+    </template>
+  </RegalBooksReelStill>
+  <RegalBooksReel
+    v-else
+    class="both-read-reel regal-themed"
+    data-testid="member.bothRead.reel"
     theme="auto"
     rotate="turntable"
     :library="library"
@@ -76,7 +104,7 @@ function onOpen(event: { id: string }) {
     :labels="labels"
     :accessible-list="false"
     :autoplay="autoplay ?? true"
-    @ready="emit('ready')"
+    :reduced-motion="reducedMotion"
     @focus="(event) => emit('focus', event.index)"
     @manual="emit('manual')"
     @open="onOpen"
@@ -120,7 +148,8 @@ function onOpen(event: { id: string }) {
 </template>
 
 <style scoped>
-/* A Book broken out is drawn over the whole screen, above the header and the tab bar (z 20), the search and a
+/* The reel and the still are as tall as their own stage and slot (`--regal-reel-height`, `--regal-reel-overlap`): nothing
+   here sets a height, so the card is the reel's and does not change at the handover. A Book broken out is drawn over the whole screen, above the header and the tab bar (z 20), the search and a
    cover's flight (45), under the barcode scanner (80): as Your shelf's row. The details sit one above. A row inside
    a sheet sets `--shelf-row-z`. */
 .both-read-reel {

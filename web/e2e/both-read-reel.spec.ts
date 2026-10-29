@@ -17,9 +17,13 @@ import { signedIn } from './support'
  * `data-front`, `data-book-count`, and the pause button's name) rather than its internals, so a change in
  * Regal's markup and wording is what a failure here means.
  *
- * Chromium with motion: the suite's WebKit at Reduce Motion never mounts the reel (that is
- * e2e/both-read.spec.ts's poster). It skips itself where the flows' build has no Regal (LIBELLUS_REGAL, the
- * variable e2e/build.ts is told) or the browser no WebGL, where the poster is the right answer.
+ * It is in place from its first frame (Regal's own, in the page as soon as the component is: the Books at the
+ * places the canvas draws them), the canvas takes over in the same pixels and the card does not change size; the
+ * section draws no poster of its own (the owner's rule: never covers or positions that are not the final rendering).
+ *
+ * Chromium with motion: the suite's WebKit at Reduce Motion never mounts the live reel (that is
+ * e2e/both-read.spec.ts's still). It skips itself where the flows' build has no Regal (LIBELLUS_REGAL, the
+ * variable e2e/build.ts is told) or the browser no WebGL, where Regal's still is the right answer.
  */
 
 test.use({ browserName: 'chromium', reducedMotion: 'no-preference' })
@@ -62,22 +66,64 @@ async function reelPossible(page: Page): Promise<boolean> {
 }
 
 test.describe('You both read, in 3D', () => {
+  test('it is in place from the first frame and the card keeps its size when the canvas takes over', async ({ page }) => {
+    test.slow()
+    // Sampled every frame from before the app starts: what the reel's first frame is (its Books, the card's height)
+    // and what it is once the canvas has taken over.
+    await page.addInitScript(() => {
+      type Sample = { height: number; books: string[]; sectionHeight: number }
+      const w = window as unknown as { __reel: { first?: Sample; ready?: Sample; sawOwnPoster: boolean } }
+      w.__reel = { sawOwnPoster: false }
+      const sample = (): Sample => ({
+        height: document.querySelector('.regal-books-reel')!.getBoundingClientRect().height,
+        books: [...document.querySelectorAll('[data-reel-poster] [data-book]')].map((el) => el.getAttribute('data-book') ?? ''),
+        sectionHeight: document.querySelector('[data-testid="member.bothRead"]')!.getBoundingClientRect().height,
+      })
+      const tick = () => {
+        if (document.querySelector('[data-testid="member.bothRead.poster"]')) w.__reel.sawOwnPoster = true
+        if (!w.__reel.first && document.querySelector('.regal-books-reel [data-reel-poster] [data-book]')) w.__reel.first = sample()
+        if (!w.__reel.ready && document.querySelector('.reel-card--ready')) w.__reel.ready = sample()
+        requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
+    const viewer = await signedIn(page)
+    const friend = await friendWithSharedBooks(viewer, 12)
+    await page.goto(friendPath(friend))
+    await expect(page.getByTestId('member.bothRead')).toBeVisible()
+    if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
+
+    await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
+    await page.waitForFunction(() => Boolean((window as unknown as { __reel: { ready?: unknown } }).__reel.ready))
+    const seen = await page.evaluate(
+      () => (window as unknown as { __reel: { first?: { height: number; books: string[]; sectionHeight: number }; ready?: { height: number; books: string[]; sectionHeight: number }; sawOwnPoster: boolean } }).__reel,
+    )
+    expect(seen.sawOwnPoster, 'a poster of the section, drawn at any time').toBe(false)
+    expect(seen.first, "Regal's first frame was in the page before the canvas").toBeTruthy()
+    // Regal draws at most five Books at its start: the arc around the Book in front, never the 12.
+    expect(seen.first!.books.length).toBeGreaterThan(0)
+    expect(seen.first!.books.length).toBeLessThanOrEqual(5)
+    // No height change at the handover, and no band: the card is the reel's own height.
+    expect(Math.abs(seen.ready!.height - seen.first!.height)).toBeLessThanOrEqual(1)
+    expect(Math.abs(seen.ready!.sectionHeight - seen.first!.sectionHeight)).toBeLessThanOrEqual(1)
+  })
+
   test('it plays, a swipe takes it over, and only Play brings it back', async ({ page }) => {
     test.slow()
     const viewer = await signedIn(page)
     const friend = await friendWithSharedBooks(viewer, 12)
     await page.goto(friendPath(friend))
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
-    if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the poster stands in')
+    if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
 
     const reel = page.locator(REEL)
     await expect(reel).toHaveAttribute('data-mode', 'playing', { timeout: 30_000 })
-    // Until the canvas has drawn its first frame the poster stands in for it, and the poster's covers are
-    // links of their own: wait for the canvas to have it before touching the Books.
-    await expect(page.getByTestId('member.bothRead.poster')).toHaveAttribute('aria-hidden', 'true', { timeout: 30_000 })
+    // Until the canvas has taken over, Regal's own first frame is what shows and nothing of it takes input: wait for
+    // the canvas before touching the Books. The section has no poster of its own, before or after.
+    await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId('member.bothRead.poster')).toHaveCount(0)
     await expect(reel).toHaveAttribute('data-book-count', '12')
-    // The poster and the reel are never both there: the reel is what a screen reader meets, the poster is out of reach.
-    await expect(page.getByTestId('member.bothRead.poster')).toHaveAttribute('inert', '')
+    // The reel is what a screen reader meets: nothing of it is hidden or inert.
     await expect(page.locator('.regal-books-reel')).not.toHaveAttribute('aria-hidden', 'true')
     await expect(page.locator('.regal-books-reel')).not.toHaveAttribute('inert', '')
     // Each slide is named with its place ("1 of 12, Title, Author"): Regal fills {n} and {count} in our label.
@@ -111,13 +157,12 @@ test.describe('You both read, in 3D', () => {
     const friend = await friendWithSharedBooks(viewer, 12)
     await page.goto(friendPath(friend))
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
-    if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the poster stands in')
+    if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
 
     const reel = page.locator(REEL)
     await expect(reel).toHaveAttribute('data-mode', 'playing', { timeout: 30_000 })
-    // Until the canvas has drawn its first frame the poster stands in for it, and the poster's covers are
-    // links of their own: wait for the canvas to have it before touching the Books.
-    await expect(page.getByTestId('member.bothRead.poster')).toHaveAttribute('aria-hidden', 'true', { timeout: 30_000 })
+    // Regal's own first frame takes no input: wait for the canvas to have taken over before touching the Books.
+    await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
     // A tap on the Book in front takes it out, also mid-play (the owner's decision).
     await tapFrontBook(page)
     const picked = (await reel.getAttribute('data-picked'))!

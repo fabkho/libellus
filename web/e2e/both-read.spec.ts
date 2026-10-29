@@ -2,39 +2,49 @@ import { expect, test } from './fixtures'
 import { friendPath, friendWithSharedBooks } from './bothRead'
 import { signedIn } from './support'
 
+const BUILD_HAS_REGAL = /^(1|true)$/i.test(process.env.LIBELLUS_REGAL?.trim() ?? '')
+
 /**
- * "You both read" on a member's page, with the reel standing down (docs/plans/shared-books-slideshow.md, H):
- * the section is the Books the viewer and she both finished, drawn as the reel's resting pose — the poster —
- * with the text list under it, whenever the 3D cannot hold. This suite runs WebKit with Reduce Motion, which
- * is one of those reasons, so what is here is what most phones see most of the time.
+ * "You both read" on a member's page, with the live reel standing down (docs/plans/shared-books-slideshow.md, H):
+ * wherever the 3D cannot hold, the section is Regal's own still (`RegalBooksReelStill`, the reel's first frame
+ * without the canvas, with our pills and caption) with the text list under it, never a composition of our own.
+ * This suite runs WebKit with Reduce Motion, which is one of those reasons, so what is here is what most phones
+ * see most of the time. A build without Regal (the flows' default) has no picture at all: the list is open.
  *
  * What a member would notice, and what these flows guard: no shared Book is no section (not an empty one);
- * one shared Book is the poster, never the 3D, and the ~350 KB chunk the reel lives in is not fetched; the
- * count above says how many they both read; and every one of them is in the list, a screen reader's and a
- * member's who chose "Show as a list".
+ * one shared Book is the still, never the live 3D; the count above says how many they both read; and every one
+ * of them is in the list, a screen reader's and a member's who chose "Show as a list".
  *
  * The reel itself is e2e/both-read-reel.spec.ts: Chromium, with motion.
  */
 
 test.describe('You both read', () => {
-  test('no shared Book is no section, one is the poster and never the 3D, and it is in the list', async ({ page }) => {
+  test('no shared Book is no section, one is the still and never the live 3D, and it is in the list', async ({ page }) => {
     const viewer = await signedIn(page)
     const friend = await friendWithSharedBooks(viewer, 1)
 
-    // The chunk the reel lives in, if the section ever asks for it: ~350 KB on a phone.
-    const regal: string[] = []
-    page.on('request', (request) => {
-      if (/_nuxt\/regal\.[^/]+\.js$/.test(request.url())) regal.push(request.url())
-    })
-
     await page.goto(friendPath(friend))
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
-    await expect(page.getByTestId('member.bothRead.poster')).toBeVisible()
     await expect(page.getByTestId('member.bothRead.list')).toBeAttached()
     await expect(page.getByTestId('member.bothRead.item')).toHaveCount(1)
-    // Reduce Motion (the suite's) is one of the loading rules: the poster, and no 3D under it.
-    await expect(page.locator('.reel-card'), 'the reel, drawn for one Book').toHaveCount(0)
-    expect(regal, 'the regal chunk, fetched for a section that stays flat').toEqual([])
+    // The section draws no poster of its own, in any build.
+    await expect(page.getByTestId('member.bothRead.poster')).toHaveCount(0)
+    // Reduce Motion (the suite's) is one of the loading rules: no live 3D.
+    await expect(page.locator('.reel-card'), 'the live reel, drawn for one Book').toHaveCount(0)
+    if (BUILD_HAS_REGAL) {
+      // Regal's still: its first frame, the same pills and caption, the title a link to the Book; no canvas.
+      const still = page.getByTestId('member.bothRead.still')
+      await expect(still).toBeVisible()
+      await expect(still.locator('canvas')).toHaveCount(0)
+      await expect(still.getByTestId('member.bothRead.title')).toBeVisible()
+      await expect(still.locator('a[href*="/book/"]')).toHaveCount(1)
+      await expect(page.getByTestId('member.bothRead.listToggle')).toBeVisible()
+    } else {
+      // No Regal in the build: no picture; the list is open and has no toggle.
+      await expect(page.getByTestId('member.bothRead.still')).toHaveCount(0)
+      await expect(page.getByTestId('member.bothRead.listToggle')).toHaveCount(0)
+      await expect(page.getByTestId('member.bothRead.item').first()).toBeVisible()
+    }
 
     // A member with nothing shared: no section at all.
     const stranger = await friendWithSharedBooks(viewer, 0)
@@ -50,7 +60,7 @@ test.describe('You both read', () => {
     await page.goto(friendPath(friend))
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
     await expect(page.getByTestId('member.bothRead.item')).toHaveCount(300)
-    // The eyebrow counts what both read, not what the poster draws of it.
+    // The eyebrow counts what both read, not what the reel draws of it.
     await expect(page.getByTestId('member.bothRead').getByRole('heading')).toContainText('300')
   })
 })

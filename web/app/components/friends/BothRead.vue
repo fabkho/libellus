@@ -4,24 +4,27 @@
 //  - `items`  the answer (BothRead[], newest of hers first).
 //  - `name`   her name, for the screen reader's labels.
 //  - `member` her card (her avatar in the pills); only with `reel`.
-//  - `reel`   the profile's slideshow (docs/plans/shared-books-slideshow.md): the poster, and over it Regal's 3D reel
-//             where the loading rules hold; without `reel` (her year page) the row of covers it always was.
-// The slideshow is the reel's pose drawn flat (`FriendsBothReadPoster`, shown at once and for good where the 3D never
-// comes), the 3D (`LazyFriendsBothReadReel`, the only file that imports Regal) fading in over it when its first frame
-// is drawn, the shared figures line, and the text list (`FriendsBothReadList`): always there for a screen reader,
-// shown to everyone by "Show as a list". The pause button (WCAG 2.2.2), the dots, the manual takeover (a swipe, a tap or
-// a key: only Play resumes), the Book taken out with the Stack's details and the system Back are Regal's (its reel
-// plays one round once per visit, then rests). The 3D mounts only when `reelWanted` says so (Regal in the build, two Books
-// or more, no Reduce Motion, WebGL, no Save-Data, the section within a viewport of the screen, the browser idle).
+//  - `reel`   the profile's slideshow (docs/plans/shared-books-slideshow.md): Regal's reel; without `reel` (her year
+//             page) the row of covers it always was.
+// The slideshow is Regal's alone (`LazyFriendsBothReadReel`, the only file that imports Regal), and it is in place from
+// its first frame: the reel draws its own (the Books at the places the canvas will draw them, our pills and caption in
+// its `#tooltip`), the canvas takes over in the same pixels, then the intro plays. This file draws nothing over or
+// under it while it loads and waits for nothing (`ready` only means the canvas took over). Where the live reel is not
+// mounted (no WebGL, Reduce Motion, Save-Data, one Book, an error) the same component draws Regal's still, the reel's
+// first frame without the canvas. Only a build without Regal, or a chunk that cannot be had, has no picture: the list
+// is then open. Also here: the shared figures line, and the text list (`FriendsBothReadList`), always there for a
+// screen reader, shown to everyone by "Show as a list". The pause button (WCAG 2.2.2), the dots, the manual takeover (a
+// swipe, a tap or a key: only Play resumes), the Book taken out with the Stack's details and the system Back are
+// Regal's (its reel plays one round once per visit, then rests). The component is mounted once the section is within
+// a viewport of the screen (the chunk is fetched then, not before).
 // Not drawn without Books.
-// Test ids: `member.bothRead` (the section), `member.bothRead.book`, `member.bothRead.hers`,
-// `member.bothRead.figures`, `member.bothRead.disagree`, `member.bothRead.listToggle`.
+// Test ids: `member.bothRead` (the section), `member.bothRead.reel` / `.still`, `member.bothRead.book`,
+// `member.bothRead.hers`, `member.bothRead.figures`, `member.bothRead.disagree`, `member.bothRead.listToggle`.
 import { BOTH_READ_REEL_LIMIT, reelItems } from '~/data/bothReadReel'
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { sharedFiguresOf } from '~/utils/sharedFigures'
 import { isChunkError, describeError } from '~/data/errorLog'
 import { hasWebgl, reelWanted, saveDataOn } from '~/utils/bothReadReel'
-import { onIdle } from '~/utils/idle'
 import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
 const props = defineProps<{ items: readonly BothRead[]; name: string; member?: MemberCard | null; reel?: boolean }>()
@@ -30,48 +33,47 @@ const { t } = useI18n()
 const shown = (book: BothRead['book']) => shownBook(book, t('book.outsideCatalogue'))
 
 // ------------------------------------------------------------------ the slideshow
-/** The Books the poster and the reel show: the newest of hers; the list below has them all. */
+/** The Books the reel shows: the newest of hers; the list below has them all. */
 const slides = computed(() => reelItems(props.items, BOTH_READ_REEL_LIMIT))
-const front = ref(0)
-watch(
-  () => slides.value.length,
-  (count) => {
-    if (front.value >= count) front.value = Math.max(0, count - 1)
-  },
-)
 
 const appConfig = useAppConfig()
-// Regal is in this build (LIBELLUS_REGAL=1, regal.config.ts); without it the section is the poster.
+// Regal is in this build (LIBELLUS_REGAL=1, regal.config.ts); without it the section is the figures and the list.
 const built = appConfig.regal === true
 
 const root = ref<HTMLElement | null>(null)
-// Once near the screen, once idle: neither goes back (a reel that unmounted as she scrolled away would load again).
-const near = ref(false)
-const idle = ref(false)
-const gate = reactive({ webgl: false, saveData: false, reducedMotion: true })
-/** The reel's chunk could not be had (offline before it was ever fetched) or its component failed: the poster stays, and is usable. */
-const reelFailed = ref(false)
-onErrorCaptured((error) => {
-  if (!isChunkError(describeError(error).message)) return true
-  reelFailed.value = true
-  return false
+// What the browser can and wants, read once before the first frame (the app is client-rendered: no server HTML to differ
+// from), so the reel or the still is the right one from the start and never swaps for the other.
+const gate = reactive({
+  webgl: import.meta.client && props.reel && built ? hasWebgl() : false,
+  saveData: import.meta.client ? saveDataOn() : false,
+  reducedMotion: import.meta.client ? prefersReducedMotion() : true,
 })
-/** Everything but the view and the browser's idleness says yes: the chunk may be fetched ahead. */
-const reelAllowed = computed(() => reelWanted({ built, count: slides.value.length, near: true, idle: true, ...gate }) && !reelFailed.value)
-let fetchedAhead = false
-function fetchAhead() {
-  if (fetchedAhead || !reelAllowed.value) return
-  fetchedAhead = true
-  // The component's own chunk (regal.config.ts puts it with Regal's), so the idle mount below finds it there.
-  void import('~/components/friends/BothReadReel.vue').catch(() => (fetchedAhead = false))
-}
+// Once near the screen, the component is mounted (and the chunk fetched); it does not go back (a reel that unmounted as
+// she scrolled away would load again).
+const near = ref(false)
+/** The reel (or the still) is on the page: its own height is the card's; until then the space it will take is held. */
+const reelIn = ref(false)
+/** The chunk could not be had (offline before it was ever fetched): nothing of Regal can be drawn. */
+const chunkFailed = ref(false)
+/** The live reel threw: the still takes its place. */
+const reelErrored = ref(false)
+onErrorCaptured((error) => {
+  if (isChunkError(describeError(error).message)) {
+    chunkFailed.value = true
+    return false
+  }
+  // Reported as ever; the still takes the reel's place (an error in the still itself is not answered by itself).
+  if (live.value) reelErrored.value = true
+  return true
+})
+/** Regal's live reel: every loading rule holds. Otherwise its still. */
+const live = computed(() => reelWanted({ built, count: slides.value.length, ...gate }) && !reelErrored.value)
+/** Regal's component (reel or still) is drawn: the build has Regal, there is a Book, and the chunk is to come or here. */
+const mountRegal = computed(() => Boolean(props.reel) && built && slides.value.length > 0 && !chunkFailed.value)
+/** There is a picture; without one (no Regal in the build, no chunk) the list is open and has no toggle. */
+const picture = computed(() => Boolean(props.reel) && built && !chunkFailed.value)
 onMounted(() => {
   if (!props.reel || !built) return
-  gate.webgl = hasWebgl()
-  gate.saveData = saveDataOn()
-  gate.reducedMotion = prefersReducedMotion()
-  // Short timeouts: the reel is the section; waiting seconds for the browser to be idle shows the poster for longer.
-  const stopIdle = onIdle(() => (idle.value = true), { timeout: 400, fallback: 200 })
   const observer =
     typeof IntersectionObserver === 'undefined'
       ? null
@@ -80,37 +82,19 @@ onMounted(() => {
             if (!entries.some((e) => e.isIntersecting)) return
             near.value = true
             observer?.disconnect()
-            fetchAhead()
           },
           { rootMargin: '100% 0px' },
         )
   if (observer && root.value) observer.observe(root.value)
-  else {
-    near.value = true
-    fetchAhead()
-  }
+  else near.value = true
+  // Reduce Motion switched on or off while the page is open: the reel gives way to the still and back.
+  const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+  const onMotion = () => (gate.reducedMotion = prefersReducedMotion())
+  media.addEventListener('change', onMotion)
   onBeforeUnmount(() => {
-    stopIdle()
     observer?.disconnect()
+    media.removeEventListener('change', onMotion)
   })
-})
-const mountReel = computed(() =>
-  Boolean(props.reel) && !reelFailed.value && reelWanted({ built, count: slides.value.length, near: near.value, idle: idle.value, ...gate }),
-)
-
-/** The reel component has arrived and is on the page (hidden); `reelReady`: it has drawn its first frame and is what shows. */
-const reelMounted = ref(false)
-const reelReady = ref(false)
-watch(mountReel, (now) => {
-  if (!now) reelMounted.value = reelReady.value = false
-})
-// A reel that has arrived and never draws (a lost context, a refused one) must not leave the poster dead: after 10 s it is dropped.
-watch(reelMounted, (mounted, _before, onCleanup) => {
-  if (!mounted || reelReady.value) return
-  const timer = setTimeout(() => {
-    if (!reelReady.value) reelFailed.value = true
-  }, 10_000)
-  onCleanup(() => clearTimeout(timer))
 })
 
 // The round plays once per app session for each friend (docs/plans/shared-books-slideshow.md, H: "once per visit"): coming
@@ -155,34 +139,19 @@ const listOpen = ref(false)
   <section v-if="items.length" ref="root" class="flex flex-col gap-md" data-testid="member.bothRead">
     <h2 class="eyebrow">{{ reel ? t('member.bothReadEyebrow', { count: figures.count }) : t('member.bothRead') }}</h2>
 
-    <!-- The slideshow: the poster at once, the 3D over it (the same grid cell, so the card does not change size) when it has its first frame. -->
+    <!-- The slideshow is Regal's alone and in place from its first frame (its own, drawn from the same Books): nothing of ours under or over it, no wait for it, no height of ours (the card is the reel's own, the minimum only holds about its space until its chunk is in). Where the live reel is not mounted, its still. -->
     <template v-if="reel">
-      <div class="grid">
-        <!-- The poster stays until the canvas has its first frame, and is a control until the reel has arrived (a tap while the chunk downloads opens the Book as ever); from then to `ready` it is not: a tap there must reach neither its covers' links nor its buttons. -->
-        <FriendsBothReadPoster
-          v-model:index="front"
-          :items="slides"
-          :name="name"
-          :card="member ?? null"
-          class="min-w-0 [grid-area:1/1] transition-opacity duration-standard ease-standard motion-reduce:transition-none"
-          :class="reelReady && 'opacity-0'"
-          :inert="reelMounted"
-          :aria-hidden="reelReady ? 'true' : undefined"
-        />
-        <!-- The reel is mounted (so it can load and draw) but unseen and out of reach until `ready`: never both UIs at once. -->
+      <div v-if="picture" class="min-w-0" :class="!reelIn && 'min-h-[calc(var(--regal-reel-height,330px)+80px)]'">
         <LazyFriendsBothReadReel
-          v-if="mountReel"
+          v-if="near && mountRegal"
           :items="slides"
           :name="name"
           :card="member ?? null"
           :autoplay="autoplay"
-          class="min-w-0 [grid-area:1/1] transition-opacity duration-standard ease-standard motion-reduce:transition-none"
-          :class="!reelReady && 'pointer-events-none opacity-0'"
-          :inert="!reelReady"
-          :aria-hidden="reelReady ? undefined : 'true'"
-          @mounted="reelMounted = true"
-          @ready="reelReady = true"
-          @focus="(index: number) => { front = index; markPlayed() }"
+          :reduced-motion="gate.reducedMotion"
+          :still="!live"
+          @mounted="reelIn = true"
+          @focus="markPlayed"
           @manual="markPlayed"
         />
       </div>
@@ -192,12 +161,12 @@ const listOpen = ref(false)
         <FriendsMemberBookLink v-if="disagree" :book="disagree.book" class="text-footnote text-accent-ink" data-testid="member.bothRead.disagree">{{ disagree.text }}</FriendsMemberBookLink>
       </div>
 
-      <div class="flex justify-center">
+      <div v-if="picture" class="flex justify-center">
         <UiButton tone="plain" size="sm" :aria-expanded="listOpen" data-testid="member.bothRead.listToggle" @click="listOpen = !listOpen">
           {{ listOpen ? t('member.bothReadListHide') : t('member.bothReadList') }}
         </UiButton>
       </div>
-      <FriendsBothReadList :items="items" :name="name" :visible="listOpen" />
+      <FriendsBothReadList :items="items" :name="name" :visible="listOpen || !picture" />
     </template>
 
     <!-- Her year page: the row of covers, her stars under each. -->
