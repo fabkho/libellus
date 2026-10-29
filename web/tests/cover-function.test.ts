@@ -37,10 +37,10 @@ const hostAnswers = (bytes: Uint8Array = JPEG, init: ResponseInit & { url?: stri
 }
 
 type Waited = Promise<unknown>[]
-function call(query: string, method = 'GET') {
+function call(query: string, method = 'GET', headers: Record<string, string> = {}, env: Record<string, string> = {}) {
   const waited: Waited = []
-  const request = new Request(`${SITE}/cover${query}`, { method })
-  const promise = onRequest({ request, waitUntil: (p: Promise<unknown>) => void waited.push(p) } as never)
+  const request = new Request(`${SITE}/cover${query}`, { method, headers })
+  const promise = onRequest({ request, env, waitUntil: (p: Promise<unknown>) => void waited.push(p) } as never)
   return { promise, settled: async () => { const response = await promise; await Promise.all(waited); return response } }
 }
 const ask = (u: string, w: string | number) => `?${new URLSearchParams({ u, w: String(w) })}`
@@ -89,12 +89,12 @@ describe('a cover not in the cache yet', () => {
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(JPEG)
   })
 
-  it('goes out for any page to read, for a year, as the image it is', async () => {
-    const response = await call(ask(OL, 240)).settled()
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
+  it('goes out for this app\'s pages to read, for a year, as the image it is', async () => {
+    const response = await call(ask(OL, 240), 'GET', { Origin: SITE }).settled()
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(SITE)
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable')
     expect(response.headers.get('Content-Type')).toBe('image/jpeg')
-    expect(response.headers.get('Cross-Origin-Resource-Policy')).toBe('cross-origin')
+    expect(response.headers.get('Cross-Origin-Resource-Policy')).toBe('same-site')
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
     expect(response.headers.get('X-Cover-Cache')).toBe('miss')
     expect(response.headers.has('x-cover-stored-at')).toBe(false)
@@ -107,7 +107,7 @@ describe('a cover not in the cache yet', () => {
     const [key, stored] = cache.put.mock.calls[0]!
     expect(new URL(key.url).searchParams.get('v')).toBe(APPLE.replace('600x900bb', '240x360bb'))
     expect(stored.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable')
-    expect(stored.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(stored.headers.has('Access-Control-Allow-Origin'), 'CORS is the asker\'s, not the stored copy\'s').toBe(false)
   })
 
   it('is one entry for the two spellings of the cover at a width', async () => {
@@ -122,11 +122,11 @@ describe('a cover in the cache', () => {
   it('comes from it and asks no host', async () => {
     await call(ask(APPLE, 240)).settled()
     fetchMock.mockClear()
-    const response = await call(ask(APPLE, 240)).settled()
+    const response = await call(ask(APPLE, 240), 'GET', { Origin: SITE }).settled()
     expect(response.status).toBe(200)
     expect(fetchMock).not.toHaveBeenCalled()
     expect(response.headers.get('X-Cover-Cache')).toBe('hit')
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(SITE)
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable')
     expect(response.headers.has('x-cover-stored-at')).toBe(false)
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(JPEG)
@@ -203,7 +203,6 @@ describe('a host that does not give a cover', () => {
     const response = await call(ask(OL, 240)).settled()
     expect(response.status).toBe(status)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
     expect(cache.put).not.toHaveBeenCalled()
   })
 
@@ -221,8 +220,43 @@ describe('a host that does not give a cover', () => {
 describe('without a cache (a local server)', () => {
   it('still answers, from the host every time', async () => {
     vi.stubGlobal('caches', undefined)
-    const response = await call(ask(APPLE, 120)).settled()
+    const response = await call(ask(APPLE, 120), 'GET', { Origin: SITE }).settled()
     expect(response.status).toBe(200)
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(SITE)
+  })
+})
+
+describe('who may ask (a guard against other sites, not against a flood: that is a Cloudflare rate-limiting rule)', () => {
+  it('answers this app\'s own pages: Origin or Referer naming this host, or neither', async () => {
+    expect((await call(ask(APPLE, 240), 'GET', { Origin: SITE }).settled()).status).toBe(200)
+    expect((await call(ask(APPLE, 240), 'GET', { Referer: `${SITE}/friends/x` }).settled()).status).toBe(200)
+    expect((await call(ask(APPLE, 240)).settled()).status).toBe(200)
+    // A direct image load names no Origin and sends no CORS answer it would not use.
+    expect((await call(ask(APPLE, 240), 'GET', { Referer: `${SITE}/` }).settled()).headers.has('Access-Control-Allow-Origin')).toBe(false)
+  })
+
+  it('refuses another site\'s page, with no CORS and nothing stored or fetched', async () => {
+    for (const headers of [{ Origin: 'https://evil.example' }, { Referer: 'https://evil.example/page' }, { Origin: 'null' }, { Origin: SITE, Referer: 'https://evil.example/' }, { Referer: 'not an address' }]) {
+      const response = await call(ask(APPLE, 240), 'GET', headers).settled()
+      expect(response.status, JSON.stringify(headers)).toBe(403)
+      expect(response.headers.has('Access-Control-Allow-Origin')).toBe(false)
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+    }
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(cache.put).not.toHaveBeenCalled()
+  })
+
+  it('answers the origins the project lists (a preview, a second domain), CORS for that origin alone', async () => {
+    const env = { COVER_ALLOWED_ORIGINS: 'https://libellus-preview.pages.dev, https://staging.example' }
+    const response = await call(ask(APPLE, 240), 'GET', { Origin: 'https://libellus-preview.pages.dev' }, env).settled()
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://libellus-preview.pages.dev')
+    expect((await call(ask(APPLE, 240), 'GET', { Origin: 'https://other.pages.dev' }, env).settled()).status).toBe(403)
+  })
+
+  it('never sends * and varies on Origin, so a copy kept for one page is not read as another\'s', async () => {
+    const response = await call(ask(APPLE, 240), 'GET', { Origin: SITE }).settled()
+    expect(response.headers.get('Access-Control-Allow-Origin')).not.toBe('*')
+    expect(response.headers.get('Vary')).toBe('Origin')
   })
 })

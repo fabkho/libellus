@@ -100,7 +100,11 @@ export function coverIsCacheable(url: string | null | undefined): boolean {
  */
 export function coverProxyUrl(url: string, pixels: number, origin = ''): string {
   if (!known(url)) return url
-  const query = new URLSearchParams({ u: url, w: String(coverWidthFor(pixels)) })
+  // `u` is the cover at the sized address the edge keys its cache by (`parseCoverRequest` computes the same from `u` and
+  // `w`), so two spellings of one cover (a stored `-L` and a `-M`, a 600x900 and a 120x180) are one address here too:
+  // the browser's and the service worker's cache keys match the edge's.
+  const width = coverWidthFor(pixels)
+  const query = new URLSearchParams({ u: coverVariant(url, width), w: String(width) })
   return `${origin}${COVER_PROXY_PATH}?${query}`
 }
 

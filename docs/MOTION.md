@@ -346,6 +346,20 @@ dev server showed it running (`tests/motion.test.ts`, and on the emulator `e2e/a
   it in its resting place first, with no transition, and the morph grows out of it there. A change
   of page (Back included) brings it back on the way. A screen that fills the room (`immersive`:
   Your shelf, #23) has it away for as long as it shows, the same slide.
+- **You both read** (a member's profile; docs/plans/shared-books-slideshow.md, B and H; `components/friends/BothRead*.vue`,
+  Regal's `RegalBooksReel`). An exception to "nothing moves for its own sake", granted by the owner (variation A,
+  the Reel, exactly as mocked): after the section has come into view, once per app session for each friend (coming back to her page finds it resting), the Books stand on an arc
+  and the one in front changes by itself, one round of 3.2 s beats (0.8 s move on `standard`, 2.4 s hold), then it
+  rests on the newest Book and stays still. It stops at once on any swipe, tap or key (Manual: only Play on the pause
+  button starts it again, also after the detail closes; Regal's own button), off screen, in a hidden tab and when the page is kept
+  alive away. A swipe follows the finger 1:1 and a flick glides and snaps to a Book (Regal's row drag); a vertical drag
+  still scrolls the page. The pills and the caption under the Book in front come in over `standard` once landed and
+  leave over `exit` before the next move. A tap on the front Book takes it out as Your shelf's row does (Inspect
+  pose, the sheet over `sheet`, the caption morphing into the sheet's title). The poster under it (the covers
+  drawn flat) changes the front Book over `standard` (transform and opacity) and cross-fades with the canvas over
+  `standard` when the 3D has its first frame. Regal's pause button (WCAG 2.2.2) is a control, not a motion. A reel that rests off screen goes on when it is back in view.
+  Reduce Motion: no 3D at all (not even fetched), no auto-play, no glide: the poster, where a neighbour tapped
+  comes to the front at once.
 - **Your shelf** (#23). The shelf page has no stand-in, like the cards: the room is its plain surface
   while Regal's code comes, and the Stack arrives with Regal's own entrance, the settle-in a re-sort
   ends with (the Books drop a little into their places from the bottom of the view up; Regal holds it,
@@ -639,7 +653,7 @@ not touch). The push to a book is another: no cover flies and nothing rises, the
 page left cross-fade in place over `standard`, both ways. Change edition is the third: the old
 edition's hero cross-fades into the new one over `standard`, and the content below takes its new
 place at once. The tab bar away does not hide at all: a bar that pops in and out in place
-is more motion than one that stays. The month rows of a year in review do not open: their covers
+is more motion than one that stays. You both read: no 3D, no auto-play, the poster changes its front Book at once. The month rows of a year in review do not open: their covers
 stand at rest at once. Your shelf: no entrance, the Stack stands in its place as soon
 as it has drawn. The Profile's loading: the placeholders stand still (no wave; the chart's bars at
 half their wave), and the figures replace them at once. The reader: no cover flies (the reader

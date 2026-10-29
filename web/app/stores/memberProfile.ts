@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { forgetBothRead, readBothRead, sameBothRead, saveBothRead } from '~/data/bothReadDevice'
 import { createMemberStats, type MemberRecord, type MemberStats } from '~/data/memberStats'
 import type { BothRead, MemberProfile, SocialBook, SocialErrorCode } from '~/data/social'
 import type { StatsYear } from '~/data/stats'
@@ -30,6 +31,8 @@ export type MemberView = {
    * An extra section: never an error, a refusal or being offline leaves what was read, or nothing.
    */
   bothRead: Record<string, BothRead[]>
+  /** The answer for "You both read" is on its way and none is held yet: the page holds the section's box meanwhile. */
+  bothReadLoading: boolean
   /** The year in the pills. */
   year: StatsYear
   /** The last refusal of reading her, with no copy to show instead: `offline`, or something else (a retry). */
@@ -49,6 +52,7 @@ const fresh = (): MemberView => ({
   recordError: null,
   want: null,
   bothRead: {},
+  bothReadLoading: false,
   year: 'all',
   error: null,
   loaded: false,
@@ -61,8 +65,13 @@ const fresh = (): MemberView => ({
  * (`social.profile`), her reading record (`createMemberStats(...).record`), her whole Want to read
  * (`social.want`, for *See all*) and the year in the pills. Read each time the page shows, online
  * only: offline the last copy this session loaded stays on screen, or the page says it is offline.
- * Nothing is kept on the device: signing out, or another member signing in, forgets every copy. Read
- * only apart from Follow, Ask to follow and its withdrawal, which are the social store's and are
+ * Nothing of her is kept on the device but the last "You both read" answer per friend (`data/bothReadDevice.ts`,
+ * a whitelist under `libellus.`, this member's, bounded; it goes when her finished section goes off, her profile
+ * closes or the relation ends, and with the rest on signing out): her section is drawn from it at once on a return
+ * visit and read afresh behind it. Signing out, or another member signing in, forgets every other copy. That answer
+ * can also be asked for before her page opens (`prefetchBothRead`: a tap on a friend, a row that comes into view):
+ * one request in flight per friend, which the page's own read then takes instead of asking again; held in memory
+ * only, and shown only once her profile says it is hers to show. Read only apart from Follow, Ask to follow and its withdrawal, which are the social store's and are
  * followed by a fresh read of her profile (a follow of a public account opens it at once).
  */
 export const useMemberProfileStore = defineStore('memberProfile', () => {
@@ -80,6 +89,40 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
 
   /** Members whose follow or withdrawal got no answer: her profile is read again when back online. */
   const rereads = createRereads<string>()
+
+  /**
+   * "You both read" asked for ahead of her page (`prefetchBothRead`, or the page's own load, started in parallel with her
+   * profile), one answer per friend for `ASKED_FOR_MS`: a tap, a row in view and the page itself all reuse it, so
+   * a tap a minute after her row warmed does not fetch it again. Held in this store only (forgotten with the member),
+   * a few friends at most; never shown by itself.
+   */
+  const asked = new Map<string, { at: number; answer: ReturnType<typeof social.bothRead> }>()
+  const ASKED_FOR_MS = 3 * 60_000
+  const ASKED_KEEP = 12
+  /** The answer for all her years: the one asked for lately, else a request of its own (and kept for the next). */
+  function askBothRead(id: string) {
+    const held = asked.get(id)
+    if (held && Date.now() - held.at < ASKED_FOR_MS) return held.answer
+    const answer = social.bothRead(id, null)
+    // A refusal or a connection that dropped is not kept: the next ask tries again.
+    void answer.then((result) => {
+      if (result.error && asked.get(id)?.answer === answer) asked.delete(id)
+    })
+    asked.delete(id)
+    asked.set(id, { at: Date.now(), answer })
+    while (asked.size > ASKED_KEEP) asked.delete(asked.keys().next().value as string)
+    return answer
+  }
+  /**
+   * Starts asking for the Books you both read with her, before her page is open (a tap on her, her row coming into
+   * view). Online only; one request per friend however many ask. Resolves with the answer (null: offline or nothing
+   * came), which the caller may use to warm what it draws (the reel's covers). Nothing is shown from it by itself.
+   */
+  async function prefetchBothRead(id: string): Promise<BothRead[] | null> {
+    if (!isOnline() || !session.member) return null
+    const answer = await askBothRead(id)
+    return answer.error ? null : answer.data
+  }
 
   const views = ref<Record<string, MemberView>>({})
   /** Bumped when the member changes: an answer that began before it is thrown away. */
@@ -102,6 +145,9 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       if (!had.loaded) patch(id, { error: 'offline' })
       return
     }
+    // Her answer for "You both read" starts with her profile, not after it: the database refuses what is not hers to show
+    // (it answers nothing then), and nothing of it is used before her profile says it is (below).
+    if (year === null && member) void askBothRead(id)
     const answer = await social.profile(id)
     if (run !== generation || member !== session.member?.id) return
     if (answer.error) {
@@ -112,8 +158,15 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     const profile = answer.data
     if (!profile) return patch(id, { ...fresh(), loaded: true })
     const open = profile.visible
+    const mine = session.member?.id
     const wantsRecord = open && profile.sections.year && profile.sections.finished
     const wantsAll = open && profile.sections.want && (profile.counts.want ?? 0) > profile.want.length
+    const finished = open && profile.sections.finished
+    // Hers to show only while her finished section is on and the profile open: otherwise her copy on this device goes too.
+    if (!finished) asked.delete(id)
+    if (!finished && mine && import.meta.client) forgetBothRead(window.localStorage, mine, id)
+    // The device's copy of the answer, in the same render as the profile: the section is there at once, read afresh behind it.
+    const copy = finished && year === null && !viewOf(id).bothRead[bothReadKey(year)] && mine && import.meta.client ? readBothRead(window.localStorage, mine, id, new Date()) : null
     patch(id, {
       profile,
       error: null,
@@ -125,17 +178,33 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       ...(open && !profile.sections.year ? { record: null } : {}),
       ...(open && !wantsAll ? { want: null } : {}),
       // "You both read" is hers to show only while her finished section is on and the profile open (privacy review L4).
-      ...(open && profile.sections.finished ? {} : { bothRead: {} }),
+      ...(finished ? (copy ? { bothRead: { ...viewOf(id).bothRead, [bothReadKey(year)]: copy } } : {}) : { bothRead: {} }),
+      // Pending from the same render as the profile (no frame between), when an answer is asked for and none is held.
+      bothReadLoading: finished && !viewOf(id).bothRead[bothReadKey(year)] && !copy,
     })
     await Promise.all([wantsRecord ? loadRecord(id, run) : null, wantsAll ? loadWant(id, run) : null, open && profile.sections.finished ? loadBothRead(id, year, run) : null])
   }
 
   /** "You both read" with her, for all her years or one (the year page): online only, nothing shown on a refusal. */
   async function loadBothRead(id: string, year: number | null, run = generation): Promise<void> {
-    if (!isOnline()) return
-    const answer = await social.bothRead(id, year)
-    if (run !== generation || answer.error) return
-    patch(id, { bothRead: { ...viewOf(id).bothRead, [bothReadKey(year)]: answer.data } })
+    if (!isOnline()) return patch(id, { bothReadLoading: false })
+    const mine = session.member?.id
+    const answer = await (year === null ? askBothRead(id) : social.bothRead(id, year))
+    if (run !== generation) return
+    if (answer.error) {
+      // A refusal (not a connection that dropped) says it is not hers to show: nothing stays, here or on the device.
+      if (answer.error !== 'offline' && year === null) {
+        if (mine && import.meta.client) forgetBothRead(window.localStorage, mine, id)
+        return patch(id, { ...(viewOf(id).bothRead.all ? { bothRead: { ...viewOf(id).bothRead, all: [] } } : {}), bothReadLoading: false })
+      }
+      return patch(id, { bothReadLoading: false })
+    }
+    const key = bothReadKey(year)
+    const held = viewOf(id).bothRead[key]
+    if (year === null && mine && import.meta.client && !(held && answer.data && sameBothRead(held, answer.data))) saveBothRead(window.localStorage, mine, id, answer.data ?? [], new Date())
+    // The same Books and ratings as the copy on screen: nothing is replaced (the reel keeps its Library, nothing redraws).
+    if (held && answer.data && sameBothRead(held, answer.data)) return patch(id, { bothReadLoading: false })
+    patch(id, { bothRead: { ...viewOf(id).bothRead, [key]: answer.data }, bothReadLoading: false })
   }
 
   async function loadRecord(id: string, run: number) {
@@ -197,6 +266,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     // She is blocked, unfollowed or no longer follows her: nothing of what was read of her stays (her figures,
     // her Want to read, her year), the view is only what the action's answer makes of her profile.
     if (change.kind === 'block' || change.kind === 'unfollow' || change.kind === 'removeFollower') {
+      if (session.member && import.meta.client) forgetBothRead(window.localStorage, session.member.id, id)
       views.value = { ...views.value, [id]: { ...fresh(), loaded: true, profile } }
       return
     }
@@ -208,6 +278,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
   function forget() {
     generation++
     views.value = {}
+    asked.clear()
     rereads.clear()
   }
 
@@ -224,5 +295,5 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
     for (const [id, view] of Object.entries(views.value)) if (view.error === 'offline' && !view.loaded) void load(id)
   })
 
-  return { views, viewOf, load, loadBothRead, setYear, follow, withdraw, relationChanged, forget }
+  return { views, viewOf, load, loadBothRead, prefetchBothRead, setYear, follow, withdraw, relationChanged, forget }
 })

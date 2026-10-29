@@ -15,6 +15,7 @@ import { figuresOf, readsInMonth, yearsOf } from '~/data/stats'
 import { isoDay } from '~/utils/dates'
 import { figuresWithRatings, libraryLine, memberBlocks } from '~/utils/memberProfile'
 import { bothReadKey, useMemberProfileStore } from '~/stores/memberProfile'
+import { prefetchBothReadReel } from '~/utils/bothReadReel'
 import { useProfileLinksStore } from '~/stores/profileLinks'
 
 definePageMeta({
@@ -105,6 +106,11 @@ const library = computed(() => {
 })
 // You both read, loaded with her profile (the store); an extra section, so no error line: hidden until it has Books.
 const bothRead = computed(() => view.value.bothRead[bothReadKey(null)] ?? [])
+/** Her answer is on its way and she has finished something (so there may be Books you both read): the section holds its box. */
+const bothReadPending = computed(() => view.value.bothReadLoading && !bothRead.value.length && open.value?.counts.read !== 0)
+const bothReadShown = computed(() => bothRead.value.length > 0 || bothReadPending.value)
+// Regal's chunk (the reel, and its still for the fallbacks) starts coming as the page opens, not when the section is drawn.
+prefetchBothReadReel(useAppConfig().regal === true)
 const wantAll = computed(() => view.value.want ?? open.value?.want ?? [])
 
 // ------------------------------------------------------------------ sheets
@@ -310,12 +316,15 @@ function back() {
           </section>
         </UiReveal>
 
-        <FriendsBothRead class="pb-xl" :items="bothRead" :name="name" />
-
         <div v-if="recordFailed" class="flex flex-col items-center gap-sm pb-xl text-center" data-testid="member.recordError">
           <p class="text-subhead text-ink-muted">{{ view.recordError === 'offline' ? t('member.offline') : t('member.loadError') }}</p>
           <UiButton v-if="view.recordError !== 'offline'" tone="secondary" size="md" data-testid="member.recordRetry" @click="members.load(id)">{{ t('member.retry') }}</UiButton>
         </div>
+
+        <!-- Her figures are off: the section has no grid to stand under, and stands where they would have been. -->
+        <UiReveal v-if="!blocks.figures" :show="bothReadShown">
+          <FriendsBothRead class="pb-xl" :items="bothRead" :name="name" :member="card" :pending="bothReadPending" reel />
+        </UiReveal>
 
         <UiReveal :show="blocks.figures">
           <div class="flex flex-col pb-xl" :aria-busy="loading || undefined">
@@ -323,6 +332,11 @@ function back() {
               <ProfileYearPills v-model="year" :years="years" :loading="loading" />
               <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
             </div>
+
+            <!-- Directly under the figures' grid, above the chart: the Books you both read (the same place wherever her figures are off, below). -->
+            <UiReveal :show="bothReadShown">
+              <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" :member="card" :pending="bothReadPending" reel />
+            </UiReveal>
 
             <section id="columns" class="flex flex-col gap-md pt-xl">
               <div class="flex h-(--size-button-sm) items-center justify-between gap-md">

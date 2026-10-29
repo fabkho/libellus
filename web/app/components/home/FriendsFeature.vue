@@ -16,6 +16,8 @@ import { useBookStore } from '~/stores/book'
 import { likeable } from '~/utils/likes'
 
 const props = defineProps<{ card: FriendsCard; eager?: boolean }>()
+// Her "You both read" asked for as her name comes into view (composables/useFriendWarm.ts).
+useFriendLinksInView()
 
 const { t } = useI18n()
 const books = useBookStore()
