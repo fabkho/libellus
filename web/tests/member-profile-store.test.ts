@@ -129,7 +129,21 @@ describe('You both read (social v2a)', () => {
     bothAnswer = { data: null, error: 'unknown' }
     const members = await store()
     await members.load('ida')
-    expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, error: null, recordError: null, loaded: true })
+    expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, error: null, recordError: null, loaded: true, bothReadLoading: false })
+  })
+
+  it('is pending from the render the profile arrives in until her answer is in, so the page holds the section\'s box', async () => {
+    bothAnswer = { data: [read], error: null }
+    const members = await store()
+    expect(members.viewOf('ida').bothReadLoading).toBe(false)
+    const loading = members.load('ida')
+    await Promise.resolve()
+    await loading
+    expect(members.viewOf('ida')).toMatchObject({ bothRead: { all: [read] }, bothReadLoading: false })
+    // A copy already held is not asked for again as pending: the section stays as it is while it is read afresh.
+    const again = members.load('ida')
+    expect(members.viewOf('ida').bothReadLoading).toBe(false)
+    await again
   })
 
   it('is cleared once her finished section is off, or her profile closes (privacy review L4)', async () => {

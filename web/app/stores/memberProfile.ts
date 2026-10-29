@@ -30,6 +30,8 @@ export type MemberView = {
    * An extra section: never an error, a refusal or being offline leaves what was read, or nothing.
    */
   bothRead: Record<string, BothRead[]>
+  /** The answer for "You both read" is on its way and none is held yet: the page holds the section's box meanwhile. */
+  bothReadLoading: boolean
   /** The year in the pills. */
   year: StatsYear
   /** The last refusal of reading her, with no copy to show instead: `offline`, or something else (a retry). */
@@ -49,6 +51,7 @@ const fresh = (): MemberView => ({
   recordError: null,
   want: null,
   bothRead: {},
+  bothReadLoading: false,
   year: 'all',
   error: null,
   loaded: false,
@@ -126,16 +129,19 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       ...(open && !wantsAll ? { want: null } : {}),
       // "You both read" is hers to show only while her finished section is on and the profile open (privacy review L4).
       ...(open && profile.sections.finished ? {} : { bothRead: {} }),
+      // Pending from the same render as the profile (no frame between), when an answer is asked for and none is held.
+      bothReadLoading: open && profile.sections.finished && !viewOf(id).bothRead[bothReadKey(year)],
     })
     await Promise.all([wantsRecord ? loadRecord(id, run) : null, wantsAll ? loadWant(id, run) : null, open && profile.sections.finished ? loadBothRead(id, year, run) : null])
   }
 
   /** "You both read" with her, for all her years or one (the year page): online only, nothing shown on a refusal. */
   async function loadBothRead(id: string, year: number | null, run = generation): Promise<void> {
-    if (!isOnline()) return
+    if (!isOnline()) return patch(id, { bothReadLoading: false })
     const answer = await social.bothRead(id, year)
-    if (run !== generation || answer.error) return
-    patch(id, { bothRead: { ...viewOf(id).bothRead, [bothReadKey(year)]: answer.data } })
+    if (run !== generation) return
+    if (answer.error) return patch(id, { bothReadLoading: false })
+    patch(id, { bothRead: { ...viewOf(id).bothRead, [bothReadKey(year)]: answer.data }, bothReadLoading: false })
   }
 
   async function loadRecord(id: string, run: number) {

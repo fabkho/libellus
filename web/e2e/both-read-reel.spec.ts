@@ -66,21 +66,31 @@ async function reelPossible(page: Page): Promise<boolean> {
 }
 
 test.describe('You both read, in 3D', () => {
-  test('it is in place from the first frame and the card keeps its size when the canvas takes over', async ({ page }) => {
+  test('it is in place from the first frame, holds its box from the first paint, and nothing moves when the canvas takes over', async ({ page }) => {
     test.slow()
-    // Sampled every frame from before the app starts: what the reel's first frame is (its Books, the card's height)
-    // and what it is once the canvas has taken over.
+    // Sampled every frame from before the app starts: the section's box (heading and card) from its first frame on,
+    // the chart under it, the caption's height as the Books change, and what the reel's first frame is.
     await page.addInitScript(() => {
-      type Sample = { height: number; books: string[]; sectionHeight: number }
-      const w = window as unknown as { __reel: { first?: Sample; ready?: Sample; sawOwnPoster: boolean } }
-      w.__reel = { sawOwnPoster: false }
+      type Sample = { height: number; books: string[] }
+      const w = window as unknown as {
+        __reel: { first?: Sample; ready?: Sample; sawOwnPoster: boolean; section: number[]; chart: number[]; caption: number[] }
+      }
+      w.__reel = { sawOwnPoster: false, section: [], chart: [], caption: [] }
       const sample = (): Sample => ({
         height: document.querySelector('.regal-books-reel')!.getBoundingClientRect().height,
         books: [...document.querySelectorAll('[data-reel-poster] [data-book]')].map((el) => el.getAttribute('data-book') ?? ''),
-        sectionHeight: document.querySelector('[data-testid="member.bothRead"]')!.getBoundingClientRect().height,
       })
       const tick = () => {
         if (document.querySelector('[data-testid="member.bothRead.poster"]')) w.__reel.sawOwnPoster = true
+        const section = document.querySelector('[data-testid="member.bothRead"]')
+        // Not while a block of the page is still opening its room (UiReveal): the boxes glide then, as every block's does.
+        if (section && !document.querySelector('.reveal[data-moving]')) {
+          w.__reel.section.push(Math.round(section.getBoundingClientRect().height))
+          const chart = document.querySelector('[data-testid="profile.columns"]')
+          if (chart) w.__reel.chart.push(Math.round(chart.getBoundingClientRect().top - section.getBoundingClientRect().bottom))
+          const caption = document.querySelector('[data-testid="member.bothRead.caption"]')
+          if (caption) w.__reel.caption.push(Math.round(caption.getBoundingClientRect().height))
+        }
         if (!w.__reel.first && document.querySelector('.regal-books-reel [data-reel-poster] [data-book]')) w.__reel.first = sample()
         if (!w.__reel.ready && document.querySelector('.reel-card--ready')) w.__reel.ready = sample()
         requestAnimationFrame(tick)
@@ -95,17 +105,24 @@ test.describe('You both read, in 3D', () => {
 
     await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
     await page.waitForFunction(() => Boolean((window as unknown as { __reel: { ready?: unknown } }).__reel.ready))
-    const seen = await page.evaluate(
-      () => (window as unknown as { __reel: { first?: { height: number; books: string[]; sectionHeight: number }; ready?: { height: number; books: string[]; sectionHeight: number }; sawOwnPoster: boolean } }).__reel,
-    )
+    // A beat or two, so the caption has been through other Books.
+    await page.waitForTimeout(7000)
+    type Seen = { first?: { height: number; books: string[] }; ready?: { height: number }; sawOwnPoster: boolean; section: number[]; chart: number[]; caption: number[] }
+    const seen = await page.evaluate(() => (window as unknown as { __reel: Seen }).__reel)
+    const spread = (values: number[]) => (values.length ? Math.max(...values) - Math.min(...values) : 0)
     expect(seen.sawOwnPoster, 'a poster of the section, drawn at any time').toBe(false)
     expect(seen.first, "Regal's first frame was in the page before the canvas").toBeTruthy()
     // Regal draws at most five Books at its start: the arc around the Book in front, never the 12.
     expect(seen.first!.books.length).toBeGreaterThan(0)
     expect(seen.first!.books.length).toBeLessThanOrEqual(5)
-    // No height change at the handover, and no band: the card is the reel's own height.
+    // The section holds its final box from its first paint (the placeholder, the reel's first frame, the canvas: one
+    // height) and the chart under it never moves; no height change at the handover, and no band.
     expect(Math.abs(seen.ready!.height - seen.first!.height)).toBeLessThanOrEqual(1)
-    expect(Math.abs(seen.ready!.sectionHeight - seen.first!.sectionHeight)).toBeLessThanOrEqual(1)
+    expect(seen.section.length).toBeGreaterThan(10)
+    expect(spread(seen.section), 'the section changed height while it loaded').toBeLessThanOrEqual(1)
+    expect(spread(seen.chart), 'the chart under the section moved').toBeLessThanOrEqual(1)
+    // Whatever the Book in front, the caption is the same height.
+    expect(spread(seen.caption), 'the caption changed height between Books').toBeLessThanOrEqual(1)
   })
 
   test('it plays, a swipe takes it over, and only Play brings it back', async ({ page }) => {

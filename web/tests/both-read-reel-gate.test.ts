@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasWebgl, reelWanted, saveDataOn, type ReelGate } from '../app/utils/bothReadReel'
+import { hasWebgl, preloadCovers, reelWanted, saveDataOn, type ReelGate } from '../app/utils/bothReadReel'
 
 const ok: ReelGate = { built: true, count: 12, reducedMotion: false, webgl: true, saveData: false }
 
@@ -26,5 +26,21 @@ describe('environment checks', () => {
     expect(hasWebgl({ createElement: () => ({ getContext: (kind: string) => (kind === 'webgl' ? {} : null) }) } as unknown as Document)).toBe(true)
     expect(hasWebgl({ createElement: () => ({ getContext: () => null }) } as unknown as Document)).toBe(false)
     expect(hasWebgl({ createElement: () => { throw new Error('no') } } as unknown as Document)).toBe(false)
+  })
+})
+
+describe('preloadCovers', () => {
+  it('asks for each address once, with CORS as the canvas reads them, and never throws', () => {
+    const made: { src?: string; crossOrigin?: string }[] = []
+    const make = () => {
+      const image = {} as { src?: string; crossOrigin?: string }
+      made.push(image)
+      return image as unknown as HTMLImageElement
+    }
+    preloadCovers(['https://x/a.jpg', 'https://x/b.jpg', 'https://x/a.jpg'], make)
+    preloadCovers(['https://x/b.jpg'], make)
+    expect(made.map((m) => m.src)).toEqual(['https://x/a.jpg', 'https://x/b.jpg'])
+    expect(made.every((m) => m.crossOrigin === 'anonymous')).toBe(true)
+    expect(() => preloadCovers(['https://x/c.jpg'], () => { throw new Error('no Image') })).not.toThrow()
   })
 })

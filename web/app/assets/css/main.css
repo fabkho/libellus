@@ -44,6 +44,19 @@
      so nothing of the capsule may go into it; with no inset at all (a desktop
      browser, Chrome's keyboard up) that is `floatAbove` off the edge. */
   --float-bottom: calc(var(--safe-area-bottom) + var(--spacing-float-above));
+  /* "You both read" (components/friends/BothReadCaption.vue, BothRead.vue): what stands under the Book in front is
+     always the same height, whichever Book it is (the pills' row, the title on two lines, the author on one), so the
+     reel's card never changes height as the Books change, and the section can hold its final box before the reel is
+     there: Regal's stage and slot (`--regal-reel-height`, `--regal-reel-overlap`), our caption, and Regal's row of
+     dots and the pause button (28 px, 2 px above). */
+  --both-read-pills-height: 2.5rem;
+  --both-read-caption-height: calc(
+    var(--both-read-pills-height) + var(--spacing-sm) + 2 * var(--text-headline--line-height) + var(--spacing-xxs) +
+      var(--text-subhead--line-height)
+  );
+  --both-read-reel-height: calc(
+    var(--regal-reel-height, 330px) - var(--regal-reel-overlap, 46px) + var(--both-read-caption-height) + 30px
+  );
 }
 
 /* iOS (only WebKit on an iPhone or iPad knows -webkit-touch-callout) draws its

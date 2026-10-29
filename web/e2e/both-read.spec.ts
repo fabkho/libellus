@@ -53,6 +53,19 @@ test.describe('You both read', () => {
     await expect(page.getByTestId('member.bothRead')).toHaveCount(0)
   })
 
+  test('the section stands directly under the figures grid and above the by-year chart, with one Book as with many', async ({ page }) => {
+    const viewer = await signedIn(page)
+    const friend = await friendWithSharedBooks(viewer, 2)
+    await page.goto(friendPath(friend))
+    await expect(page.getByTestId('member.bothRead')).toBeVisible()
+    const top = async (id: string) => (await page.getByTestId(id).boundingBox())!.y
+    const figures = await top('profile.figures')
+    const section = await top('member.bothRead')
+    const chart = await top('profile.columns')
+    expect(section, 'under the figures grid').toBeGreaterThan(figures)
+    expect(section, 'above the chart').toBeLessThan(chart)
+  })
+
   test('three hundred shared Books: the count says three hundred, the list has all of them', async ({ page }) => {
     test.slow()
     const viewer = await signedIn(page)
