@@ -55,6 +55,8 @@
     var(--both-read-pills-height) + var(--spacing-sm) + 2 * var(--text-headline--line-height) + var(--spacing-xxs) +
       var(--text-subhead--line-height)
   );
+  /* The figures under the card: the agreement line and, under it, the Book she and you disagree on. */
+  --both-read-figures-height: calc(var(--text-subhead--line-height) + var(--spacing-xs) + var(--text-footnote--line-height));
   --both-read-reel-height: calc(
     var(--regal-reel-height, 330px) - var(--regal-reel-overlap, calc(46px + var(--regal-reel-rise, 40px))) +
       var(--both-read-caption-height) + 30px

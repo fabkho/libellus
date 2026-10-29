@@ -33,6 +33,7 @@ export async function friendWithSharedBooks(
     covers = false,
     unrated = [],
     coverless = [],
+    disagree = [],
   }: {
     name?: string
     /** The Books carry a cover (a cover CDN address, which the flows answer with a picture); default none, the Placeholder. */
@@ -41,6 +42,8 @@ export async function friendWithSharedBooks(
     unrated?: number[]
     /** With `covers`: indexes of Books that carry none, as the Catalogue has some. */
     coverless?: number[]
+    /** Indexes of Books she rated far below you (a disagreement of more than half a star, which the section names under its figures). */
+    disagree?: number[]
   } = {},
 ): Promise<TestMember> {
   const friend = await signUpMember()
@@ -84,7 +87,7 @@ export async function friendWithSharedBooks(
       await sql(
         `insert into public.reading_sessions (entry_id, started_on, ended_on, outcome, rating)
          values ($1, current_date - $2::int, current_date - $3::int, 'finished', $4)`,
-        [entry!.id, daysAgo + 14, daysAgo, unrated.includes(index) ? null : member === friend.id ? 18 : 20],
+        [entry!.id, daysAgo + 14, daysAgo, unrated.includes(index) ? null : member === friend.id ? (disagree.includes(index) ? 8 : 18) : 20],
       )
     }
   }

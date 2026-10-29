@@ -88,9 +88,11 @@ test.describe('You both read, in 3D', () => {
         if (document.querySelector('[data-testid="member.bothRead.poster"]')) w.__reel.own = true
         if (document.querySelector('[data-reel-poster]')) w.__reel.poster = true
         const section = document.querySelector('[data-testid="member.bothRead"]')
-        // Not while a block of the page is still opening its room (UiReveal): the boxes glide then, as every block's does.
+        // The section's own box, from the very first frame it exists in (the room it opens in, UiReveal, glides; the box
+        // inside it does not: it is its final size from the first paint).
+        if (section) w.__reel.section.push(Math.round(section.getBoundingClientRect().height))
+        // What is under it is measured once the page has stopped gliding: the boxes move then, as every block's does.
         if (section && !document.querySelector('.reveal[data-moving]')) {
-          w.__reel.section.push(Math.round(section.getBoundingClientRect().height))
           const chart = document.querySelector('[data-testid="profile.columns"]')
           if (chart) w.__reel.chart.push(Math.round(chart.getBoundingClientRect().top - section.getBoundingClientRect().bottom))
           const caption = document.querySelector('[data-testid="member.bothRead.caption"]')
@@ -105,10 +107,11 @@ test.describe('You both read, in 3D', () => {
       requestAnimationFrame(tick)
     })
     const viewer = await signedIn(page)
-    // Covers on all but one Book (a Placeholder among them), and the NEWEST Book, the one the reel opens on, rated by
+    // A disagreement (the Book she rated far below you: a second line under the figures, which the held box has room for
+    // before her answer is known: it once grew 20 px when it came), covers on all but one Book (a Placeholder among them), and the NEWEST Book, the one the reel opens on, rated by
     // neither of them: its caption has no pills row, which once made the card 50 px shorter at the first frame than
     // once the next Book (rated) was in front.
-    const friend = await friendWithSharedBooks(viewer, 12, { covers: true, coverless: [1], unrated: [0] })
+    const friend = await friendWithSharedBooks(viewer, 12, { covers: true, coverless: [1], unrated: [0], disagree: [3] })
     await page.goto(friendPath(friend))
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
     if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
@@ -116,6 +119,7 @@ test.describe('You both read, in 3D', () => {
     // The section stands below the fold on a phone: the reel plays when a third of it is in view.
     await page.getByTestId('member.bothRead').scrollIntoViewIfNeeded()
     await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId('member.bothRead.disagree'), 'the disagreement line the held box has room for').toBeVisible()
     // Let the arc go through a few Books (no sleep: the Books in front are sampled), so the caption has been through
     // the unrated one, the Placeholder and rated ones.
     await page.waitForFunction(() => (window as unknown as { __reel: { fronts: string[] } }).__reel.fronts.length >= 4, undefined, { timeout: 30_000 })
@@ -135,6 +139,7 @@ test.describe('You both read, in 3D', () => {
     // one height) and the chart under it never moves; no height change at the handover, and no band.
     expect(Math.abs(seen.ready!.height - seen.first!.height)).toBeLessThanOrEqual(1)
     expect(seen.section.length).toBeGreaterThan(10)
+    // From the very first sampled frame (the held placeholder) to the last (the canvas, the beats): one height.
     expect(spread(seen.section), 'the section changed height while it loaded').toBeLessThanOrEqual(1)
     expect(spread(seen.chart), 'the chart under the section moved').toBeLessThanOrEqual(1)
     // Whatever the Book in front (the unrated first one has no pills), the caption is the same height.

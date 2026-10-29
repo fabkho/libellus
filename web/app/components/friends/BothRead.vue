@@ -166,9 +166,11 @@ const listOpen = ref(false)
       </div>
 
       <template v-if="items.length">
-        <div v-if="figuresLine.length || disagree" class="flex flex-col items-center gap-xs text-center text-subhead text-ink-muted" data-testid="member.bothRead.figures">
+        <!-- Always two lines high (the figures line, and the Book you disagree on: `--both-read-figures-height`, main.css): whether
+             there is a disagreement is not known before her answer, and the box the section held while it came is this one. -->
+        <div v-if="figuresLine.length || disagree" class="flex min-h-(--both-read-figures-height) flex-col items-center gap-xs text-center text-subhead text-ink-muted" data-testid="member.bothRead.figures">
           <p v-if="figuresLine.length">{{ figuresLine.join(' · ') }}</p>
-          <FriendsMemberBookLink v-if="disagree" :book="disagree.book" class="text-footnote text-accent-ink" data-testid="member.bothRead.disagree">{{ disagree.text }}</FriendsMemberBookLink>
+          <FriendsMemberBookLink v-if="disagree" :book="disagree.book" class="max-w-full truncate text-footnote text-accent-ink" data-testid="member.bothRead.disagree">{{ disagree.text }}</FriendsMemberBookLink>
         </div>
 
         <div v-if="picture" class="flex justify-center">
@@ -180,7 +182,7 @@ const listOpen = ref(false)
       </template>
       <!-- Where the figures line and the list button will stand: held with the card, so nothing under it moves. -->
       <template v-else>
-        <div class="h-(--text-subhead--line-height)" aria-hidden="true" />
+        <div class="h-(--both-read-figures-height)" aria-hidden="true" />
         <div class="h-(--size-button-sm)" aria-hidden="true" />
       </template>
     </template>
