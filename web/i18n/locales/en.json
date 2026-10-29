@@ -1925,6 +1925,7 @@
     "bothReadListHide": "Hide the list",
     "bothReadOpen": "Open book",
     "bothReadKeys": "Left and right arrow keys move the slideshow, Enter takes the Book out",
+    "bothReadLoading": "Loading books",
     "bothReadEyebrow": "You both read · {count}",
     "bothReadAgree": "You agree on {agree} of {of}",
     "bothReadDisagree": "{title}: {name} {hers}, you {mine}",

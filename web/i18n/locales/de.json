@@ -1925,6 +1925,7 @@
     "bothReadListHide": "Liste ausblenden",
     "bothReadOpen": "Buch öffnen",
     "bothReadKeys": "Mit den Pfeiltasten links und rechts blätterst du, mit der Eingabetaste nimmst du das Buch heraus",
+    "bothReadLoading": "Bücher werden geladen",
     "bothReadEyebrow": "Beide gelesen · {count}",
     "bothReadAgree": "Einig bei {agree} von {of}",
     "bothReadDisagree": "{title}: {name} {hers}, du {mine}",

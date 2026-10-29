@@ -74,9 +74,9 @@ test.describe('You both read, in 3D', () => {
     await page.addInitScript(() => {
       type Sample = { height: number; front: string | null; title: string; resting: string | null }
       const w = window as unknown as {
-        __reel: { first?: Sample; ready?: Sample; own: boolean; poster: boolean; section: number[]; chart: number[]; caption: number[]; fronts: string[] }
+        __reel: { first?: Sample; ready?: Sample; own: boolean; poster: boolean; section: number[]; chart: number[]; caption: number[]; fronts: string[]; statuses: number; ringNames: string[]; ours: boolean }
       }
-      w.__reel = { own: false, poster: false, section: [], chart: [], caption: [], fronts: [] }
+      w.__reel = { own: false, poster: false, section: [], chart: [], caption: [], fronts: [], statuses: 0, ringNames: [], ours: false }
       const sample = (): Sample => ({
         height: document.querySelector('.regal-books-reel')!.getBoundingClientRect().height,
         front: document.querySelector('.reel-card')?.getAttribute('data-front') ?? null,
@@ -88,6 +88,17 @@ test.describe('You both read, in 3D', () => {
         if (document.querySelector('[data-testid="member.bothRead.poster"]')) w.__reel.own = true
         if (document.querySelector('[data-reel-poster]')) w.__reel.poster = true
         const section = document.querySelector('[data-testid="member.bothRead"]')
+        // The loading ring is Regal's (role=status on its empty stage, named by our labels.loading): at most one, and
+        // nothing of ours that spins or shimmers in the section (no skeleton, no spinner).
+        if (section) {
+          const statuses = section.querySelectorAll('[role="status"]')
+          w.__reel.statuses = Math.max(w.__reel.statuses, statuses.length)
+          for (const status of statuses) {
+            const name = status.getAttribute('aria-label') ?? status.textContent ?? ''
+            if (name && !w.__reel.ringNames.includes(name)) w.__reel.ringNames.push(name)
+          }
+          if (section.querySelector('.skeleton, .wave, [data-spinner], .spinner')) w.__reel.ours = true
+        }
         // The section's own box, from the very first frame it exists in (the room it opens in, UiReveal, glides; the box
         // inside it does not: it is its final size from the first paint).
         if (section) w.__reel.section.push(Math.round(section.getBoundingClientRect().height))
@@ -124,11 +135,15 @@ test.describe('You both read, in 3D', () => {
     // the unrated one, the Placeholder and rated ones.
     await page.waitForFunction(() => (window as unknown as { __reel: { fronts: string[] } }).__reel.fronts.length >= 4, undefined, { timeout: 30_000 })
     type Sample = { height: number; front: string | null; title: string; resting: string | null }
-    type Seen = { first?: Sample; ready?: Sample; own: boolean; poster: boolean; section: number[]; chart: number[]; caption: number[]; fronts: string[] }
+    type Seen = { first?: Sample; ready?: Sample; own: boolean; poster: boolean; section: number[]; chart: number[]; caption: number[]; fronts: string[]; statuses: number; ringNames: string[]; ours: boolean }
     const seen = await page.evaluate(() => (window as unknown as { __reel: Seen }).__reel)
     const spread = (values: number[]) => (values.length ? Math.max(...values) - Math.min(...values) : 0)
     expect(seen.own, 'a poster of the section, drawn at any time').toBe(false)
     expect(seen.poster, "a poster before the canvas: Regal's entrance is `pop`, an empty stage at its final size").toBe(false)
+    // One ring at most (Regal's, with our words), and no spinner, skeleton or shimmer of the section's own to double it up.
+    expect(seen.statuses, 'status regions in the section while it loaded').toBeLessThanOrEqual(1)
+    expect(seen.ringNames.filter((name) => name !== 'Loading books'), "a status that is not Regal's ring, in our words").toEqual([])
+    expect(seen.ours, 'a skeleton or spinner of the section\'s own').toBe(false)
     expect(seen.first, "the reel's card was in the page before the canvas took over").toBeTruthy()
     // Every first frame starts on the first Book (index 0, the newest of hers), whether it plays or not.
     expect(seen.first!.front, "the first frame's front Book").toBe('0')
@@ -144,6 +159,27 @@ test.describe('You both read, in 3D', () => {
     expect(spread(seen.chart), 'the chart under the section moved').toBeLessThanOrEqual(1)
     // Whatever the Book in front (the unrated first one has no pills), the caption is the same height.
     expect(spread(seen.caption), 'the caption changed height between Books').toBeLessThanOrEqual(1)
+  })
+
+  test("while its covers come the empty stage shows Regal's ring in our words, once, and it goes when the Books pop in", async ({ page }) => {
+    test.slow()
+    // The covers are slow (a second and a half each): the stage stays empty long enough for the ring (after 250 ms).
+    await page.route(/mzstatic\.com/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await route.fallback()
+    })
+    const viewer = await signedIn(page)
+    const friend = await friendWithSharedBooks(viewer, 6, { covers: true })
+    await page.goto(friendPath(friend))
+    await expect(page.getByTestId('member.bothRead')).toBeVisible()
+    if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
+    await page.getByTestId('member.bothRead').scrollIntoViewIfNeeded()
+    // role=status, its words visually hidden (Regal's `regal-visually-hidden`): found by its text.
+    const ring = page.getByTestId('member.bothRead').locator('[role="status"]', { hasText: 'Loading books' })
+    await expect(ring, 'Regal\'s ring, worded by our labels.loading').toBeAttached({ timeout: 15_000 })
+    await expect(ring).toHaveCount(1)
+    await expect(page.locator('.reel-card--ready')).toBeVisible({ timeout: 30_000 })
+    await expect(ring, 'gone once the Books pop in').toHaveCount(0, { timeout: 10_000 })
   })
 
   test('it plays, a swipe takes it over, and only Play brings it back', async ({ page }) => {

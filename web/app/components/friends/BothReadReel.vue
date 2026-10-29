@@ -54,6 +54,8 @@ const labels = computed(() => ({
   // Regal fills `{n}` and `{count}` itself (fillLabel): vue-i18n would put an empty string for a placeholder given no value, so they are handed back as they are.
   slide: t('member.bothReadSlide', { n: '{n}', count: '{count}' }),
   keys: t('member.bothReadKeys'),
+  // The ring on the reel's empty stage while its covers come (Regal's, role=status): the section draws no spinner of its own.
+  loading: t('member.bothReadLoading'),
   open: t('member.bothReadOpen'),
   showBack: t('shelf.detail.showBack'),
   showFront: t('shelf.detail.showFront'),
