@@ -400,7 +400,9 @@ export default defineNuxtConfig({
       // The barcode decoder (a script chunk and a 0.9 MB module) is not part of the app shell: it is
       // fetched when the scanner first opens, and kept by the cache below.
       // Nor is Regal (the owner's shelf, #23): its chunk and styles, its fonts and its model are
-      // fetched when the shelf first opens, and kept by the caches below.
+      // fetched when the shelf first opens, and kept by the caches below. The reel chunk of a friend's "You both read"
+      // (`regal-reel`, ~285 KB br) is left out of the precache on purpose too, and kept warm across releases only for
+      // members who used it (plugins/regal-reel-warm.client.ts): a precache entry is every member's download at every update.
       // Nor is the ebook reader (components/reader, foliate-js, the sanitizer: the `reader` chunk and its
       // styles): the app fetches it ahead for a member who has an ebook (data/reader/prefetch.ts) and the
       // cache below keeps it, so a book opened before opens offline too.

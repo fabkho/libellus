@@ -39,6 +39,8 @@ useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
 onMounted(() => void feed.refresh())
 // The reel of a friend's page, fetched ahead once idle (composables/usePrefetchBothReadReel.ts).
 usePrefetchBothReadReel()
+// Her "You both read" asked for as her row comes into view (composables/useFriendWarm.ts).
+useFriendLinksInView()
 // Kept alive as a tab: coming back asks again (the first activation is the mount's, above).
 let shown = false
 onActivated(() => {

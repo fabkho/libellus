@@ -66,6 +66,61 @@ test.describe('You both read', () => {
     expect(section, 'above the chart').toBeLessThan(chart)
   })
 
+  test('her row in People asks for the Books you both read before her page opens, and the tap and the page reuse that one request', async ({ page }) => {
+    const viewer = await signedIn(page)
+    const friend = await friendWithSharedBooks(viewer, 3)
+    const asked: number[] = []
+    let navigatedAt = 0
+    page.on('request', (request) => {
+      if (/\/rpc\/both_read/.test(request.url())) asked.push(Date.now())
+    })
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame() && frame.url().includes(`/friends/${friend.id}`)) navigatedAt ||= Date.now()
+    })
+    await page.goto('/friends/people')
+    const link = page.locator(`a[href="/friends/${friend.id}"]`).first()
+    await expect(link).toBeVisible()
+    // Her row came into view: the browser's idle time asks for her answer, before anyone has tapped.
+    await expect.poll(() => asked.length, { message: 'both_read asked for as her row came into view' }).toBe(1)
+    // Then the tap (pointer down, then up) and her page: no second request, and the page has her section.
+    await link.click()
+    await expect(page.getByTestId('member.bothRead')).toBeVisible()
+    await page.waitForTimeout(800)
+    expect(asked, 'one request for her answer however it was asked for').toHaveLength(1)
+    expect(navigatedAt, 'asked before her page opened').toBeGreaterThan(asked[0]!)
+  })
+
+  test('a return visit draws her section from the device at once, and the fresh answer, equal, changes nothing on screen', async ({ page }) => {
+    const viewer = await signedIn(page)
+    const friend = await friendWithSharedBooks(viewer, 3)
+    await page.goto(friendPath(friend))
+    await expect(page.getByTestId('member.bothRead.item')).toHaveCount(3)
+    // The copy is on the device: whitelisted keys, this member's.
+    const kept = await page.evaluate(() => localStorage.getItem('libellus.bothRead'))
+    expect(kept).toContain(friend.id)
+    expect(kept).not.toMatch(/email|password/i)
+
+    // Her answer, slow, on the next visit (a fresh page: the store is empty, only the device has her).
+    let release!: () => void
+    const held = new Promise<void>((resolve) => (release = resolve))
+    await page.route(/\/rpc\/both_read/, async (route) => {
+      await held
+      await route.continue()
+    })
+    await page.goto('/')
+    await page.goto(friendPath(friend))
+    await expect(page.getByTestId('member.hero')).toBeVisible()
+    await expect(page.getByTestId('member.bothRead'), 'drawn from the device while her answer is on its way').toBeVisible()
+    await expect(page.getByTestId('member.bothRead.item')).toHaveCount(3)
+    const before = await page.getByTestId('member.bothRead').boundingBox()
+    release()
+    await page.waitForTimeout(800)
+    expect(await page.getByTestId('member.bothRead').boundingBox(), 'an equal answer changes nothing').toEqual(before)
+
+    // Signing out takes it away with the rest of what the device kept.
+    await page.unroute(/\/rpc\/both_read/)
+  })
+
   test('three hundred shared Books: the count says three hundred, the list has all of them', async ({ page }) => {
     test.slow()
     const viewer = await signedIn(page)
