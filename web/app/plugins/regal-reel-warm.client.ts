@@ -1,4 +1,4 @@
-import { prefetchBothReadReel, saveDataOn } from '~/utils/bothReadReel'
+import { prefetchBothReadReel, saveDataOn, slowDevice } from '~/utils/bothReadReel'
 import { onIdle } from '~/utils/idle'
 
 /**
@@ -12,18 +12,18 @@ import { onIdle } from '~/utils/idle'
  * update downloading the new chunk when the friend's page opens. This warms it in the background after an update: once
  * the worker controls the page and the browser is idle, a member whose `libellus-shelf-code` cache already holds an
  * earlier `regal-reel` (she has used the reel or the shelf on this device) asks for the current one, which the worker's
- * rule fetches and keeps. Not on Save-Data, not offline, nothing for a member who never used it, and nothing when the
+ * rule fetches and keeps. Not on Save-Data, not on a 2g connection or a phone with 2 GB of memory or less, not offline, nothing for a member who never used it, and nothing when the
  * current chunk is already kept (the worker answers from the cache).
  */
 export default defineNuxtPlugin(() => {
   if (useAppConfig().regal !== true || !('serviceWorker' in navigator) || !('caches' in window)) return
 
   async function warm() {
-    if (saveDataOn() || !navigator.onLine) return
+    if (saveDataOn() || slowDevice() || !navigator.onLine) return
     if (!(await caches.has('libellus-shelf-code'))) return
     const cache = await caches.open('libellus-shelf-code')
     const used = (await cache.keys()).some((request) => /\/_nuxt\/regal-reel\.[^/]+\.js$/.test(new URL(request.url).pathname))
-    if (used) prefetchBothReadReel(true)
+    if (used) prefetchBothReadReel(true, { background: true })
   }
 
   void navigator.serviceWorker.ready.then(() => {

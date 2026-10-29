@@ -178,7 +178,8 @@ export function regalAssets() {
       // The chunk, its stylesheet and the fonts, as the shelf asks for them. Cache first: the names carry their hash.
       urlPattern: ({ url }: { url: URL }) => /^\/(_nuxt\/regal(?:-[a-z]+)?\.[^/]+\.(js|css)|_fonts\/[^/]+)$/.test(url.pathname),
       handler: 'CacheFirst' as const,
-      options: { cacheName: 'libellus-shelf-code', expiration: { maxEntries: 60 } },
+      // Thirty days since last use: the hash in a name never comes back, so a release's 1.2 MB reel chunk goes once the next one is in use.
+      options: { cacheName: 'libellus-shelf-code', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true } },
     },
     {
       // A member's shelf (built on the device): the covers Regal reads with CORS as textures (the

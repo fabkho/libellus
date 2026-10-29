@@ -42,3 +42,12 @@ function sentence(item: BothRead): string {
     </li>
   </ul>
 </template>
+
+<style scoped>
+/* Up to 300 rows, always in the page (a screen reader's list): the browser skips laying out and painting the ones off
+   screen and keeps them in the accessibility tree (`auto`), at the height of a row until they are drawn. */
+li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--size-touch);
+}
+</style>

@@ -182,8 +182,6 @@ function watchEnd() {
   observer.observe(end.value)
 }
 onMounted(watchEnd)
-// The reel of a friend's page, fetched ahead once idle (composables/usePrefetchBothReadReel.ts).
-usePrefetchBothReadReel()
 // Her "You both read" asked for as her row comes into view (composables/useFriendWarm.ts).
 useFriendLinksInView()
 onBeforeUnmount(() => observer?.disconnect())

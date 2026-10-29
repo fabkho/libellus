@@ -112,8 +112,16 @@ Everything else stays static, and only `/share`, `/r/*` and `/manifest.webmanife
 hosts (Apple's `*.mzstatic.com` and `covers.openlibrary.org`). Open Library's covers take 0.7–3 s (a redirect
 to archive.org and a storage host of its own); a cover at an address never changes, so the first request pays
 and the rest are answered from Cloudflare's Cache API (`caches.default`) in a few milliseconds. The answer
-always carries `Access-Control-Allow-Origin: *` (a WebGL texture needs a CORS-clean image, so does a canvas read),
-`Cache-Control: public, max-age=31536000, immutable` and the image's own `Content-Type`.
+carries `Cache-Control: public, max-age=31536000, immutable`, the image's own `Content-Type`, `Vary: Origin` and, for
+a page that names itself by `Origin`, `Access-Control-Allow-Origin` for that origin (never `*`; the app's own pages
+load it same-origin, a WebGL texture needs a CORS-clean image, so does a canvas read).
+
+- **Who may ask.** A request that carries an `Origin` or a `Referer` (an `<img>` sends the page as `Referer`) must name
+  this host or an origin in the Pages project's `COVER_ALLOWED_ORIGINS` variable (comma-separated: a second domain,
+  a preview), otherwise it is a 403 with `no-store`, no CORS, and no host asked. A request with neither (curl) is
+  not judged. **That keeps other sites from embedding our cache, no more. The guard against a flood burning the 100,000
+  Function requests a day (shared with `/r` and `/share`) is a Cloudflare rate-limiting rule on `/cover`** (Security →
+  WAF → Rate limiting rules, by IP, on the path), which no code in a Function can be; set it up in the dashboard.
 
 - **An allowlist, not a proxy.** `parseCoverRequest` (`web/app/utils/coverSize.ts`, which the browser builds
   addresses with and the Function enforces) accepts `https://<n>.mzstatic.com/image/thumb/…/<w>x<h>bb.jpg` and

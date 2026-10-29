@@ -81,14 +81,16 @@ describe('the device copy of You both read', () => {
     expect(readBothRead(storage, 'ada', 'ida', NOW)).toBeNull()
   })
 
-  it('is bounded: the least recently saved friends go, an answer too long to keep is not kept', () => {
+  it('is bounded: the least recently saved friends go, a longer answer keeps its newest Books', () => {
     const storage = memory()
     for (let i = 0; i < BOTH_READ_FRIENDS + 2; i++) saveBothRead(storage, 'ada', `f${i}`, [read(i)], new Date(NOW.getTime() + i * 1000))
     expect(readBothRead(storage, 'ada', 'f0', NOW)).toBeNull()
     expect(readBothRead(storage, 'ada', 'f1', NOW)).toBeNull()
     expect(readBothRead(storage, 'ada', `f${BOTH_READ_FRIENDS + 1}`, NOW)).not.toBeNull()
-    saveBothRead(storage, 'ada', 'big', Array.from({ length: BOTH_READ_BOOKS + 1 }, (_, i) => read(i)), NOW)
-    expect(readBothRead(storage, 'ada', 'big', NOW)).toBeNull()
+    saveBothRead(storage, 'ada', 'big', Array.from({ length: BOTH_READ_BOOKS + 50 }, (_, i) => read(i)), new Date(NOW.getTime() + 60_000))
+    const big = readBothRead(storage, 'ada', 'big', NOW)!
+    expect(big).toHaveLength(BOTH_READ_BOOKS)
+    expect(big[0]!.book.id).toBe('b0')
   })
 
   it('goes when asked (her section went off), and an empty answer keeps nothing', () => {
@@ -110,6 +112,25 @@ describe('the device copy of You both read', () => {
     expect(saveBothRead(storage, 'ada', 'ida', [read(2)], NOW)).toBe(false)
     expect(readBothRead(storage, 'ada', 'ida', NOW)).toBeNull()
     expect(() => readBothRead({ ...storage, getItem: () => { throw new Error('off') } }, 'ada', 'ida', NOW)).not.toThrow()
+  })
+
+  it('writes nothing for an answer equal to the copy, renews its age after a day, and writes a change at once', () => {
+    const storage = memory()
+    let writes = 0
+    const set = storage.setItem
+    storage.setItem = (key, value) => {
+      writes++
+      set(key, value)
+    }
+    saveBothRead(storage, 'ada', 'ida', [read(1)], NOW)
+    expect(writes).toBe(1)
+    saveBothRead(storage, 'ada', 'ida', [read(1)], new Date(NOW.getTime() + 3_600_000))
+    expect(writes, 'equal and fresh: untouched').toBe(1)
+    saveBothRead(storage, 'ada', 'ida', [read(1)], new Date(NOW.getTime() + 25 * 3_600_000))
+    expect(writes, 'equal, a day old: the age is renewed').toBe(2)
+    saveBothRead(storage, 'ada', 'ida', [read(2)], new Date(NOW.getTime() + 25 * 3_600_000 + 1000))
+    expect(writes, 'changed: written').toBe(3)
+    expect(readBothRead(storage, 'ada', 'ida', NOW)?.[0]?.book.id).toBe('b2')
   })
 
   it('knows two answers are the same (a fresh answer equal to the copy changes nothing)', () => {

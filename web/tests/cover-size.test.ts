@@ -106,8 +106,15 @@ describe('the address of our cache', () => {
     const address = coverProxyUrl(APPLE, 400)
     expect(address.startsWith('/cover?')).toBe(true)
     const query = new URL(address, 'https://libellus.test').searchParams
-    expect(query.get('u')).toBe(APPLE)
+    // `u` is the cover at the sized address the edge keys by, so the browser's and the worker's cache keys match it.
+    expect(query.get('u')).toBe(apple('480x720'))
     expect(query.get('w')).toBe('480')
+  })
+
+  it('is one address for the spellings of one cover at a width (the browser caches it once, as the edge does)', () => {
+    expect(coverProxyUrl(APPLE, 400)).toBe(coverProxyUrl(apple('120x180'), 400))
+    expect(coverProxyUrl(OL, 100)).toBe(coverProxyUrl('https://covers.openlibrary.org/b/id/8231856-M.jpg', 100))
+    expect(coverProxyUrl(OL, 100)).not.toBe(coverProxyUrl(OL, 300))
   })
 
   it('goes on the origin it is given', () => {
@@ -116,8 +123,8 @@ describe('the address of our cache', () => {
 
   it('is read back as the cover it asks for, by the Function and by the app', () => {
     const address = coverFor(APPLE, { height: 300, dpr: 2, proxy: true })!
-    expect(unproxied(address)).toBe(APPLE)
-    expect(unproxied(`https://libellus.fabkho.dev${address}`)).toBe(APPLE)
+    expect(unproxied(address)).toBe(apple('480x720'))
+    expect(unproxied(`https://libellus.fabkho.dev${address}`)).toBe(apple('480x720'))
     expect(unproxied(APPLE)).toBe(APPLE)
     expect(parseCoverRequest(new URL(address, 'https://x.test').searchParams)).toEqual({ source: apple('480x720'), width: 480 })
   })

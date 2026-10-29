@@ -27,7 +27,7 @@ import { BOTH_READ_REEL_LIMIT, bothReadReelDocument, reelItems, sameReelBooks } 
 import type { BothRead, MemberCard } from '~/data/socialShapes'
 import { sharedFiguresOf } from '~/utils/sharedFigures'
 import { isChunkError, describeError } from '~/data/errorLog'
-import { hasWebgl, reelWanted, saveDataOn } from '~/utils/bothReadReel'
+import { reelWanted, saveDataOn, webglAvailable } from '~/utils/bothReadReel'
 import { preloadReelCovers } from '~/utils/regalReelPreload'
 import { prefersReducedMotion } from '#layers/ui/app/utils/motion'
 
@@ -47,7 +47,7 @@ const built = appConfig.regal === true
 // What the browser can and wants, read once before the first frame (the app is client-rendered: no server HTML to differ
 // from), so the reel or the still is the right one from the start and never swaps for the other.
 const gate = reactive({
-  webgl: import.meta.client && props.reel && built ? hasWebgl() : false,
+  webgl: import.meta.client && props.reel && built ? webglAvailable() : false,
   saveData: import.meta.client ? saveDataOn() : false,
   reducedMotion: import.meta.client ? prefersReducedMotion() : true,
 })

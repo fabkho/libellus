@@ -25,12 +25,17 @@ let answer: MemberProfile | null = followed
 let bothAnswer: { data: unknown[] | null; error: string | null } = { data: [], error: null }
 /** While set, `both_read` does not answer until it is released: the moments between her profile and her answer. */
 let bothGate: Promise<void> | null = null
+/** While set, her profile does not answer until it is released. */
+let answerGate: Promise<void> | null = null
 const bothCalls: (number | null)[] = []
 let recordAnswer: { data: unknown; error: unknown; status: number } = { data: null, error: null, status: 200 }
 vi.mock('~/stores/session', () => ({ useSessionStore: () => reactive({ member: { id: 'ada' } }) }))
 vi.mock('~/stores/social', () => ({
   useSocialStore: () => ({
-    profile: async () => ({ data: answer, error: null }),
+    profile: async () => {
+      if (answerGate) await answerGate
+      return { data: answer, error: null }
+    },
     want: async () => ({ data: null, error: null }),
     bothRead: async (_id: string, year: number | null) => {
       bothCalls.push(year)
@@ -72,9 +77,11 @@ async function store() {
 }
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   bothAnswer = { data: [], error: null }
   bothGate = null
+  answerGate = null
   bothCalls.length = 0
   recordAnswer = { data: null, error: null, status: 200 }
 })
@@ -187,12 +194,16 @@ describe('You both read (social v2a)', () => {
     answer = followed
   })
 
-  it('is not asked for a profile that hides her finished Books', async () => {
+  it('uses nothing of the answer asked for with her profile when the profile hides her finished Books', async () => {
+    bothAnswer = { data: [{ book: { id: 'b' } }], error: null }
     answer = { ...followed, sections: { ...OPEN, finished: false } }
     const members = await store()
     await members.load('ida')
     answer = followed
-    expect(bothCalls).toEqual([])
+    expect(members.viewOf('ida')).toMatchObject({ bothRead: {}, bothReadLoading: false })
+    // And it is not kept for a later warm to find.
+    expect(await members.prefetchBothRead('ida')).not.toBeNull()
+    expect(bothCalls).toEqual([null, null])
   })
 })
 
@@ -202,7 +213,8 @@ describe('You both read, asked for ahead and kept on the device', () => {
     for (let i = 0; i < 10; i++) await Promise.resolve()
   }
 
-  it('asks once for a friend however many ask before and while her page opens, and the page takes that answer', async () => {
+  it('asks once for a friend however many ask before and while her page opens, and for a few minutes after', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
     bothAnswer = { data: [read], error: null }
     const members = await store()
     const [a, b] = await Promise.all([members.prefetchBothRead('ida'), members.prefetchBothRead('ida')])
@@ -211,8 +223,39 @@ describe('You both read, asked for ahead and kept on the device', () => {
     await members.load('ida')
     expect(bothCalls).toEqual([null])
     expect(members.viewOf('ida').bothRead).toEqual({ all: [read] })
-    // The answer was taken: a later read of her page asks again.
+    // A tap, or another read of her page, a minute later: still her answer, no second request.
+    vi.setSystemTime(Date.now() + 60_000)
+    await members.prefetchBothRead('ida')
     await members.load('ida')
+    expect(bothCalls).toEqual([null])
+    // Past its few minutes it is asked for again.
+    vi.setSystemTime(Date.now() + 4 * 60_000)
+    await members.load('ida')
+    expect(bothCalls).toEqual([null, null])
+  })
+
+  it('starts her answer with her profile, not after it', async () => {
+    bothAnswer = { data: [read], error: null }
+    let release!: () => void
+    const held = new Promise<void>((resolve) => (release = resolve))
+    const members = await store()
+    answerGate = held
+    const loading = members.load('ida')
+    await settle()
+    expect(bothCalls, 'both_read asked while the profile is still on its way').toEqual([null])
+    release()
+    await loading
+    expect(bothCalls).toEqual([null])
+    expect(members.viewOf('ida').bothRead).toEqual({ all: [read] })
+  })
+
+  it('does not keep a failed answer: the next ask tries again', async () => {
+    bothAnswer = { data: null, error: 'offline' }
+    const members = await store()
+    expect(await members.prefetchBothRead('ida')).toBeNull()
+    await settle()
+    bothAnswer = { data: [read], error: null }
+    expect(await members.prefetchBothRead('ida')).toEqual([read])
     expect(bothCalls).toEqual([null, null])
   })
 
@@ -249,7 +292,9 @@ describe('You both read, asked for ahead and kept on the device', () => {
     release()
     await loading
     expect(again.viewOf('ida').bothRead.all).toBe(shown)
-    // Changed Books replace it.
+    // Changed Books replace it (her answer asked for again once the last has lapsed).
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(Date.now() + 4 * 60_000)
     bothGate = null
     bothAnswer = { data: [read, { ...read, book: { ...read.book, id: 'c' } }], error: null }
     await again.load('ida')
@@ -262,10 +307,13 @@ describe('You both read, asked for ahead and kept on the device', () => {
     const members = await store()
     await members.load('ida')
     expect(data.size).toBe(1)
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(Date.now() + 4 * 60_000)
     bothAnswer = { data: null, error: 'unknown' }
     await members.load('ida')
     expect(data.size).toBe(0)
     expect(members.viewOf('ida').bothRead.all).toEqual([])
+    vi.setSystemTime(Date.now() + 8 * 60_000)
     bothAnswer = { data: [read], error: null }
     await members.load('ida')
     expect(data.size).toBe(1)

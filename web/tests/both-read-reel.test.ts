@@ -85,7 +85,8 @@ describe('bothReadReelDocument', () => {
     const front = bothReadReelDocument([only], { outside: OUTSIDE, covers: { dpr: 2, proxy: true, origin: 'https://libellus.example' } }).books[0]!.assets!.front!
     const url = new URL(front)
     expect(url.origin + url.pathname).toBe('https://libellus.example/cover')
-    expect(url.searchParams.get('u')).toBe(only.book.coverUrl)
+    // The cover at the sized address the edge keys its cache by (utils/coverSize.ts), not the stored spelling.
+    expect(url.searchParams.get('u')).toContain('480x720')
     expect(url.searchParams.get('w')).toBe('480')
     expect(front).toBe(coverFor(only.book.coverUrl, { height: REEL_BOOK_HEIGHT, dpr: 2, proxy: true, origin: 'https://libellus.example' }))
   })

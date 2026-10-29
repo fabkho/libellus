@@ -13,8 +13,9 @@ import type { BothRead, SocialBook } from './socialShapes'
  * `unverified`); for each side the rating and the day. `saveBothRead` builds every record from those keys alone, so a
  * field the answer may carry one day (a review, a blurb, her address) is never written, and `readBothRead` rebuilds the
  * same way from what it reads (a foreign or torn value is as good as none). Bounded: at most `BOTH_READ_FRIENDS` friends
- * (the least recently saved go first) and `BOTH_READ_BOOKS` Books each (an answer longer than that is not kept: a
- * copy that is a part of it would show a count and a list that are not hers). The copy goes when she turns her
+ * (the least recently saved go first) and `BOTH_READ_BOOKS` Books each (the newest of an answer longer than that:
+ * the screen shows the copy at once, and the fresh answer, all of it, replaces it as it comes). An answer equal to the
+ * copy is not written again (the storage is touched at most once a day for it, to keep the copy's age). The copy goes when she turns her
  * finished section off, closes her profile, or the relation ends (the store says so: `forgetBothRead`).
  * Framework-free.
  */
@@ -90,13 +91,22 @@ function writeAll(storage: DeviceStorage, data: Saved): boolean {
   }
 }
 
-/** Keeps the answer for this friend (newest first, as read); an answer too long to keep whole removes her copy. */
+/** How long an equal answer leaves the copy as it is before its age is renewed. */
+const RENEW_AFTER_MS = DAY_MS
+
+/**
+ * Keeps the answer for this friend (newest first, as read; the first `BOTH_READ_BOOKS` of a longer one). Returns whether
+ * the storage is as asked: an answer equal to the copy that is less than a day old writes nothing.
+ */
 export function saveBothRead(storage: DeviceStorage, memberId: string, friendId: string, items: readonly BothRead[], now: Date): boolean {
   const held = readAll(storage)
   const data: Saved = held && held.memberId === memberId ? held : { memberId, friends: {} }
-  if (!items.length || items.length > BOTH_READ_BOOKS) delete data.friends[friendId]
+  if (!items.length) delete data.friends[friendId]
   else {
-    data.friends[friendId] = { savedAt: now.toISOString(), items: items.flatMap((item) => bothReadOf(item) ?? []) }
+    const kept = items.slice(0, BOTH_READ_BOOKS).flatMap((item) => bothReadOf(item) ?? [])
+    const before = data.friends[friendId]
+    if (before && Array.isArray(before.items) && sameBothRead(before.items, kept) && now.getTime() - new Date(before.savedAt).getTime() < RENEW_AFTER_MS) return true
+    data.friends[friendId] = { savedAt: now.toISOString(), items: kept }
     const newest = Object.entries(data.friends).sort(([, a], [, b]) => b.savedAt.localeCompare(a.savedAt))
     for (const [id] of newest.slice(BOTH_READ_FRIENDS)) delete data.friends[id]
   }

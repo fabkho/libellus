@@ -17,6 +17,13 @@
 // fetchable is a 502 with `no-store`, which the app (and the service worker) never keep: the app's chain
 // then tries the host's own address (utils/cover.ts, `coverChain`).
 //
+// Who may ask: a request that names where it comes from (`Origin`, or `Referer` as an `<img>` sends it) must name
+// this app (the host the request was made to: the custom domain, or a Pages preview's own) or an origin listed in
+// `COVER_ALLOWED_ORIGINS` (a comma-separated variable of the Pages project); CORS is sent for that origin alone,
+// never `*`. This stops other sites from embedding our cache, nothing more: a request with neither header (curl) passes
+// it. THE REAL GUARD against burning the Pages Functions pool (100k requests a day, shared with /r and /share) is a
+// Cloudflare rate-limiting rule on `/cover` (docs/HOSTING.md, "The cover cache"), which no code in a Function can be.
+//
 // Not cached here: anything that is not an image or is over MAX_BYTES (a cover is 10–150 KB).
 import { parseCoverRequest } from '../app/utils/coverSize.ts'
 
@@ -33,11 +40,34 @@ const ORIGIN_HOST = /^(?:[a-z0-9-]+\.mzstatic\.com|covers\.openlibrary\.org|(?:[
 /** The header that remembers when a cover was fetched (the stored copy's, never sent on). */
 const STORED_AT = 'x-cover-stored-at'
 
-/** The headers every answer carries: readable from any page (a texture needs CORS), never sniffed. */
-const BASE = { 'Access-Control-Allow-Origin': '*', 'Cross-Origin-Resource-Policy': 'cross-origin', 'X-Content-Type-Options': 'nosniff' }
+/** The headers every answer carries: never sniffed, and not for another site's page to embed. */
+const BASE = { 'Cross-Origin-Resource-Policy': 'same-site', 'X-Content-Type-Options': 'nosniff', Vary: 'Origin' }
 
 const failure = (status, message) =>
   new Response(message, { status, headers: { ...BASE, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
+
+/** The origin of a header value (`Origin`, or a `Referer`'s address); null when it is not an address (`null`, junk). */
+const originOf = (value) => {
+  try {
+    return new URL(value).origin
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Whether the request comes from this app: no `Origin` and no `Referer` (a direct load, curl: nothing to judge), or each
+ * one it carries is this host's own origin or one of `env.COVER_ALLOWED_ORIGINS`. Returns the origin to answer with CORS
+ * (the page's, when it named itself by `Origin`), `''` for none needed, or `false` for a request from another site.
+ */
+function sender(request, url, env) {
+  const allowed = new Set([url.origin, ...String(env?.COVER_ALLOWED_ORIGINS ?? '').split(',').map((entry) => entry.trim()).filter(Boolean)])
+  const origin = request.headers.get('Origin')
+  const referer = request.headers.get('Referer')
+  if (origin !== null && !allowed.has(origin)) return false
+  if (referer !== null && !allowed.has(originOf(referer))) return false
+  return origin ?? ''
+}
 
 /** The cover from the host, as bytes and a type; null when it is not a usable image. */
 async function fromHost(source) {
@@ -66,12 +96,19 @@ async function fromHost(source) {
 const answer = (bytes, type, extra = {}) =>
   new Response(bytes, { status: 200, headers: { ...BASE, 'Content-Type': type, 'Cache-Control': `public, max-age=${MAX_AGE}, immutable`, ...extra } })
 
+/** The answer for this sender: CORS for the page that named itself (its own origin, never `*`). */
+function forSender(response, origin) {
+  if (origin) response.headers.set('Access-Control-Allow-Origin', origin)
+  return response
+}
+
 /** The cached copy as it goes out: without the book-keeping header, with the answer's source named (for measuring, DevTools). */
-function sent(stored, how) {
+function sent(stored, how, origin) {
   const headers = new Headers(stored.headers)
   headers.delete(STORED_AT)
+  headers.delete('Access-Control-Allow-Origin')
   headers.set('X-Cover-Cache', how)
-  return new Response(stored.body, { status: 200, headers })
+  return forSender(new Response(stored.body, { status: 200, headers }), origin)
 }
 
 /** How long a copy the host would not renew is left alone before it is tried again. */
@@ -88,9 +125,11 @@ async function refresh(cache, key, source, old) {
   return cache.put(key, answer(await old.arrayBuffer(), type, { [STORED_AT]: String(Date.now() - REFRESH_AFTER + RETRY_AFTER) }))
 }
 
-export async function onRequest({ request, waitUntil }) {
+export async function onRequest({ request, waitUntil, env }) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return failure(405, 'Method not allowed')
   const url = new URL(request.url)
+  const origin = sender(request, url, env)
+  if (origin === false) return failure(403, 'Not for this site')
   const wanted = parseCoverRequest(url.searchParams)
   if (!wanted) return failure(400, 'Not a cover we serve')
 
@@ -103,13 +142,13 @@ export async function onRequest({ request, waitUntil }) {
     const age = Date.now() - Number(stored.headers.get(STORED_AT) ?? 0)
     if (age > REFRESH_AFTER) {
       waitUntil(refresh(cache, key, wanted.source, stored.clone()).catch(() => {}))
-      return sent(stored, 'stale')
+      return sent(stored, 'stale', origin)
     }
-    return sent(stored, 'hit')
+    return sent(stored, 'hit', origin)
   }
 
   const fresh = await fromHost(wanted.source)
   if (fresh.status !== 200) return failure(fresh.status, fresh.status === 404 ? 'No such cover' : 'The cover host did not answer')
   if (cache) waitUntil(cache.put(key, answer(fresh.bytes, fresh.type, { [STORED_AT]: String(Date.now()) })).catch(() => {}))
-  return answer(fresh.bytes, fresh.type, { 'X-Cover-Cache': 'miss' })
+  return forSender(answer(fresh.bytes, fresh.type, { 'X-Cover-Cache': 'miss' }), origin)
 }
