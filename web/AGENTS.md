@@ -43,7 +43,7 @@ so keep its behaviour explicit and its layers clean. Domain words: `../CONTEXT.m
   `NUXT_PUBLIC_REGAL_LIBRARY_SRC` (the published library file). Without the flag `dev`, `e2e` and
   `build` run without it: `ShelfStage`/`ShelfRow` resolve to `app/regal/Absent.vue`, nobody is the
   shelf's owner. With it, a missing layer or file stops `dev`/`generate`.
-  Regal stays in its own `regal` chunk, loaded only by `LazyShelfStage` and never precached; the
+  Regal stays in its own chunks (`regal-reel`: the reel of "You both read", three.js and what they draw with, which a friend's page fetches alone, and the feed and People fetch ahead on idle; `regal`: only the shelf's Stack, Row and Bookcase), loaded only by `LazyShelfStage`, `LazyShelfRow` and `LazyFriendsBothReadReel` and never precached; the
   build fails if the entry ever imports it.
   The ebook reader (`components/reader`, foliate-js, DOMPurify) is the `ebook-reader*` chunks, also never
   precached (`globIgnores`): `data/reader/prefetch.ts` says when they are fetched ahead (a member with an

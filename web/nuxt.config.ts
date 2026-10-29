@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { themeBootScript, type ThemeColors } from './app/utils/theme'
 import { releaseNotes } from './app/utils/changelog'
 import { uiLayer, uiLayerHolds } from './ui.config'
-import { isRegalModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
+import { isRegalModule, isRegalShelfModule, regalAssets, regalContainment, regalLayer, REGAL_ENABLED, REGAL_LIBRARY_SRC } from './regal.config'
 import { REALTIME_CLIENT, REALTIME_STUB } from './realtime.config'
 
 // The browser chrome, the installed app's status bar and its splash take their
@@ -180,11 +180,14 @@ export default defineNuxtConfig({
               // only imported while a job of hers is live, left out of the precache. The app's own client is built with the stub.
               { name: 'realtime', test: /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@supabase\/(?:realtime-js|phoenix)\//, includeDependenciesRecursively: false },
               // Only what the test names: Regal's modules use the app's Vue and Nuxt, which stay where they are.
-              { name: 'regal', test: isRegalModule, includeDependenciesRecursively: false },
+              // Two chunks (regal.config.ts, `isRegalShelfModule`): the shelf's own (`regal`) first, then the rest, which a
+              // friend's reel needs alone (`regal-reel`).
+              { name: 'regal', test: isRegalShelfModule, includeDependenciesRecursively: false },
+              { name: 'regal-reel', test: isRegalModule, includeDependenciesRecursively: false },
             ],
           },
           chunkFileNames: (chunk: { name: string; facadeModuleId?: string | null }) =>
-            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
+            chunk.name === 'zxing' || chunk.name === 'regal' || chunk.name === 'regal-reel' || chunk.name === 'ebook-reader' || chunk.name === 'realtime'
               ? `_nuxt/${chunk.name}.[hash].js`
               : isReaderEntry(chunk.facadeModuleId)
                 ? '_nuxt/ebook-reader-entry.[hash].js'

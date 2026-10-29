@@ -37,6 +37,8 @@ const { label } = useFeedDay()
 useHead({ title: () => `${t('feed.title')} · ${t('app.name')}` })
 
 onMounted(() => void feed.refresh())
+// The reel of a friend's page, fetched ahead once idle (composables/usePrefetchBothReadReel.ts).
+usePrefetchBothReadReel()
 // Kept alive as a tab: coming back asks again (the first activation is the mount's, above).
 let shown = false
 onActivated(() => {

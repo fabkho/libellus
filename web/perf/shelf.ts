@@ -208,7 +208,7 @@ async function measure(browser: Browser) {
   await cdp.send('Performance.enable')
   const regalRequests: string[] = []
   page.on('request', (request) => {
-    if (/\/_nuxt\/regal\.[^/]+\.js$/.test(request.url())) regalRequests.push(request.url())
+    if (/\/_nuxt\/regal(?:-reel)?\.[^/]+\.js$/.test(request.url())) regalRequests.push(request.url())
   })
 
   // Home and the Library tab first: a member who never opens a shelf fetches nothing of it.
@@ -224,7 +224,7 @@ async function measure(browser: Browser) {
     return info ? gl!.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown'
   })
   // The precache: the service worker's list never names the 3D.
-  numbers.regalInPrecache = await page.evaluate(async () => (await (await fetch('/sw.js')).text()).match(/regal\.[\w-]+\.js/g)?.length ?? 0)
+  numbers.regalInPrecache = await page.evaluate(async () => (await (await fetch('/sw.js')).text()).match(/regal(?:-reel)?\.[\w-]+\.js/g)?.length ?? 0)
 
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
   const heapBefore = (await cdp.send('Runtime.getHeapUsage')) as { usedSize: number }

@@ -71,7 +71,7 @@ test.describe('You both read, in 3D', () => {
     // Sampled every frame from before the app starts: the section's box (heading and card) from its first frame on,
     // the chart under it, the caption's height as the Books change, and what the reel's first frame is.
     await page.addInitScript(() => {
-      type Sample = { height: number; books: string[] }
+      type Sample = { height: number; books: string[]; front: string | null; pills: number }
       const w = window as unknown as {
         __reel: { first?: Sample; ready?: Sample; sawOwnPoster: boolean; section: number[]; chart: number[]; caption: number[] }
       }
@@ -79,6 +79,8 @@ test.describe('You both read, in 3D', () => {
       const sample = (): Sample => ({
         height: document.querySelector('.regal-books-reel')!.getBoundingClientRect().height,
         books: [...document.querySelectorAll('[data-reel-poster] [data-book]')].map((el) => el.getAttribute('data-book') ?? ''),
+        front: document.querySelector('.reel-card')?.getAttribute('data-front') ?? null,
+        pills: document.querySelectorAll('[data-testid="member.bothRead.caption"] [role="img"]').length,
       })
       const tick = () => {
         if (document.querySelector('[data-testid="member.bothRead.poster"]')) w.__reel.sawOwnPoster = true
@@ -98,7 +100,10 @@ test.describe('You both read, in 3D', () => {
       requestAnimationFrame(tick)
     })
     const viewer = await signedIn(page)
-    const friend = await friendWithSharedBooks(viewer, 12)
+    // Covers on all but one Book (a Placeholder among them), and the LAST Book, the one a playing reel opens on, rated
+    // by neither of them: its caption has no pills row, which once made the card 50 px shorter at the first frame than
+    // once the canvas took over (the next Book's caption had pills).
+    const friend = await friendWithSharedBooks(viewer, 12, { covers: true, coverless: [1], unrated: [11] })
     await page.goto(friendPath(friend))
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
     if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
@@ -107,7 +112,7 @@ test.describe('You both read, in 3D', () => {
     await page.waitForFunction(() => Boolean((window as unknown as { __reel: { ready?: unknown } }).__reel.ready))
     // A beat or two, so the caption has been through other Books.
     await page.waitForTimeout(7000)
-    type Seen = { first?: { height: number; books: string[] }; ready?: { height: number }; sawOwnPoster: boolean; section: number[]; chart: number[]; caption: number[] }
+    type Seen = { first?: { height: number; books: string[]; front: string | null; pills: number }; ready?: { height: number; front: string | null; pills: number }; sawOwnPoster: boolean; section: number[]; chart: number[]; caption: number[] }
     const seen = await page.evaluate(() => (window as unknown as { __reel: Seen }).__reel)
     const spread = (values: number[]) => (values.length ? Math.max(...values) - Math.min(...values) : 0)
     expect(seen.sawOwnPoster, 'a poster of the section, drawn at any time').toBe(false)
@@ -115,6 +120,11 @@ test.describe('You both read, in 3D', () => {
     // Regal draws at most five Books at its start: the arc around the Book in front, never the 12.
     expect(seen.first!.books.length).toBeGreaterThan(0)
     expect(seen.first!.books.length).toBeLessThanOrEqual(5)
+    // The first frame puts a Book in front, the caption is the one of that Book (the unrated last one has no pills),
+    // and the card is the height it has with a rated Book in front: the fixed-height caption.
+    // (A reel that plays opens on its last Book, Regal's docs/nuxt-layer.md: index 11 of 12, the unrated one.)
+    expect(seen.first!.front, "the first frame's front Book: the last of the 12").toBe('11')
+    expect(seen.first!.pills, 'the unrated Book in front has no pills row content').toBe(0)
     // The section holds its final box from its first paint (the placeholder, the reel's first frame, the canvas: one
     // height) and the chart under it never moves; no height change at the handover, and no band.
     expect(Math.abs(seen.ready!.height - seen.first!.height)).toBeLessThanOrEqual(1)
@@ -133,6 +143,8 @@ test.describe('You both read, in 3D', () => {
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
     if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
 
+    // The section stands under the figures grid, below the fold on a phone: the reel plays when a third of it is in view.
+    await page.getByTestId('member.bothRead').scrollIntoViewIfNeeded()
     const reel = page.locator(REEL)
     await expect(reel).toHaveAttribute('data-mode', 'playing', { timeout: 30_000 })
     // Until the canvas has taken over, Regal's own first frame is what shows and nothing of it takes input: wait for
@@ -176,6 +188,8 @@ test.describe('You both read, in 3D', () => {
     await expect(page.getByTestId('member.bothRead')).toBeVisible()
     if (!(await reelPossible(page))) test.skip(true, 'no Regal in this build, or no WebGL here: the still stands in')
 
+    // The section stands under the figures grid, below the fold on a phone: the reel plays when a third of it is in view.
+    await page.getByTestId('member.bothRead').scrollIntoViewIfNeeded()
     const reel = page.locator(REEL)
     await expect(reel).toHaveAttribute('data-mode', 'playing', { timeout: 30_000 })
     // Regal's own first frame takes no input: wait for the canvas to have taken over before touching the Books.

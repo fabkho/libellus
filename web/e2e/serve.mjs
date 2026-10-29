@@ -11,6 +11,7 @@
 // `ASSETS` for the static files.
 import { createServer } from 'node:http'
 import { readdir, readFile, stat } from 'node:fs/promises'
+import { brotliCompressSync, constants as zlib } from 'node:zlib'
 import { extname, join, normalize, relative, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -201,8 +202,17 @@ const server = createServer(async (req, res) => {
     const headers = {}
     // The static files' policy and the /r/ Function's own alike.
     response.headers.forEach((value, name) => (headers[name] = /^content-security-policy/.test(name) ? withStack(value) : value))
+    let payload = req.method === 'HEAD' ? undefined : Buffer.from(await response.arrayBuffer())
+    // E2E_BROTLI=1 answers text files compressed as Pages does (a throttled load of the built app, for the numbers of
+    // docs/plans/shared-books-slideshow.md); the flows themselves are served plain.
+    if (process.env.E2E_BROTLI && payload && /\bbr\b/.test(String(req.headers['accept-encoding'])) && /^(text\/|application\/(javascript|json))/.test(headers['content-type'] ?? '')) {
+      payload = brotliCompressSync(payload, { params: { [zlib.BROTLI_PARAM_QUALITY]: 5 } })
+      headers['content-encoding'] = 'br'
+      headers.vary = 'accept-encoding'
+      delete headers['content-length']
+    }
     res.writeHead(response.status, headers)
-    res.end(req.method === 'HEAD' ? undefined : Buffer.from(await response.arrayBuffer()))
+    res.end(payload)
   } catch (error) {
     console.error(error)
     res.writeHead(500).end(String(error))

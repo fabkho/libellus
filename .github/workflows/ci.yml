@@ -352,13 +352,14 @@ jobs:
         working-directory: web
         run: test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest && grep -q '^/sw.js$' .output/public/_headers
 
-      # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23).
+      # Regal (three.js, the shelf's fonts) is fetched when the shelf opens, never precached (#23): two chunks, `regal`
+      # (the shelf's own) and `regal-reel` (the rest, which a friend's "You both read" needs alone).
       - name: Regal is built apart and left out of the precache
         if: ${{ !cancelled() && needs.changes.outputs.web == 'true' && env.LIBELLUS_REGAL == '1' }}
         working-directory: web
         run: |
-          ls .output/public/_nuxt/regal.*.js
-          ! grep -oE '"(_nuxt/regal\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
+          ls .output/public/_nuxt/regal.*.js .output/public/_nuxt/regal-reel.*.js
+          ! grep -oE '"(_nuxt/regal(-reel)?\.[^"]*|_fonts/[^"]*|models/[^"]*)"' .output/public/sw.js
 
       # The build without the Regal layer (docs/SETUP.md): no Regal, no GIGET_AUTH. It has to build, and
       # nothing of the shelf may be left in it. Pull requests only; the build is the cheap part.
@@ -372,7 +373,7 @@ jobs:
         run: |
           pnpm build
           test -f .output/public/sw.js && test -f .output/public/manifest.webmanifest
-          ! ls .output/public/_nuxt/regal.*.js 2>/dev/null
+          ! ls .output/public/_nuxt/regal.*.js .output/public/_nuxt/regal-reel.*.js 2>/dev/null
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5

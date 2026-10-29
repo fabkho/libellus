@@ -182,6 +182,8 @@ function watchEnd() {
   observer.observe(end.value)
 }
 onMounted(watchEnd)
+// The reel of a friend's page, fetched ahead once idle (composables/usePrefetchBothReadReel.ts).
+usePrefetchBothReadReel()
 onBeforeUnmount(() => observer?.disconnect())
 // A page of rows that still leaves the mark in view must ask for the next one: observe it afresh. So must
 // the other list being shown and the connection coming back: `loadMorePeople` does nothing offline, and an

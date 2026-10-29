@@ -30,9 +30,11 @@ import { addVitePlugin, defineNuxtModule } from 'nuxt/kit'
  *   auto-imported. Only `components/shelf/Stage.vue` and `Row.vue` and
  *   `components/friends/BothReadReel.vue` use them, and only through an async import
  *   (`LazyShelfStage`, `LazyShelfRow`, `LazyFriendsBothReadReel`), so
- *   they, three.js and TresJS end up in one chunk named `regal`
- *   (nuxt.config.ts, codeSplitting) that the entry never imports: the build
- *   fails if it ever does (below).
+ *   they, three.js and TresJS end up in two chunks (nuxt.config.ts, codeSplitting)
+ *   that the entry never imports: `regal-reel` (the reel, its still, three.js,
+ *   TresJS and what they draw with: all that a friend's "You both read"
+ *   fetches) and `regal` (what only the shelf's Stack, Row and Bookcase use,
+ *   `isRegalShelfModule`); the build fails if the entry ever imports either (below).
  *   The warm-up (composables/useShelfPreload.ts: the owner's screens on idle,
  *   anyone's shelf card when it mounts) reaches Regal's `preloadRegal` only by
  *   a dynamic `import('#layers/regal/…')`, so it too lands in that chunk.
@@ -102,11 +104,24 @@ const SHELF_STAGE = /[\\/]app[\\/]components[\\/](?:shelf[\\/](?:Stage|Row)|frie
 /** The components themselves (the shelf's Stage and Row, the reel of "You both read"), however they are imported (`~/components/shelf/Row.vue`, an absolute path). */
 const SHELF_COMPONENT = /[\\/]components[\\/](?:shelf[\\/](?:Stage|Row)|friends[\\/]BothReadReel)\.vue$/
 
-/** Whether a module belongs in the `regal` chunk (nuxt.config.ts, codeSplitting). */
+/** Whether a module belongs in one of the Regal chunks (`regal` or `regal-reel`; nuxt.config.ts, codeSplitting). */
 export function isRegalModule(id: string): boolean {
   if (!REGAL_ENABLED) return false
   if (REGAL_PACKAGES.test(id) || SHELF_STAGE.test(id)) return true
   return regalDir !== null && id.startsWith(regalDir)
+}
+
+/**
+ * What only the shelf's Stack, Row and Bookcase use, and the reel of "You both read" never does: their components and
+ * utilities (Regal's `row`, `stack`, `bookcase` and `stage` component folders, the Stack's meshes, the Stage, Row, Sidebar and Filters
+ * components), and the shelf's own Stage and Row (gsap, three-stdlib and stats-gl stay with the reel: its details and TresJS use them). They are the `regal` chunk; the rest of Regal
+ * (the reel, the still, what both draw with, three.js and TresJS) is the `regal-reel` chunk, which a friend's page
+ * fetches alone (nuxt.config.ts puts this group first, so the first match wins). The shelf fetches both.
+ */
+const SHELF_ONLY =
+  /[\\/]app[\\/](?:components[\\/](?:row|stack|bookcase|stage|showcase|dev)[\\/]|components[\\/]books[\\/]Meshes\.vue|components[\\/]regal[\\/]Books(?:Stage|Row|Sidebar|Filters)\.vue|components[\\/]LibraryStage\.vue|components[\\/]shelf[\\/](?:Stage|Row)\.vue)/
+export function isRegalShelfModule(id: string): boolean {
+  return isRegalModule(id) && SHELF_ONLY.test(id)
 }
 
 /** The @nuxt/fonts stylesheet with Regal's global @font-face rules (imported by ShelfStage and ShelfRow). */
@@ -151,7 +166,7 @@ export function regalAssets() {
       },
     },
   ]
-  const globIgnores = ['**/regal.*.js', '**/regal.*.css', '_fonts/**', 'models/**']
+  const globIgnores = ['**/regal.*.js', '**/regal.*.css', '**/regal-reel.*.js', '**/regal-reel.*.css', '_fonts/**', 'models/**']
   if (!REGAL_LIBRARY_SRC) return { globIgnores, runtimeCaching: code }
   const href = JSON.stringify(new URL(REGAL_LIBRARY_SRC).href)
   const origin = JSON.stringify(new URL(REGAL_LIBRARY_SRC).origin)
@@ -246,7 +261,7 @@ export const regalContainment = defineNuxtModule({
           seen.add(id)
           const chunk = manifest[id]
           if (!chunk) return
-          if (/(^|\/)regal\.[^/]+\.js$/.test(chunk.file)) {
+          if (/(^|\/)regal(?:-reel)?\.[^/]+\.js$/.test(chunk.file)) {
             throw new Error(`[regal] The app's entry loads the regal chunk up front (${[...path, id].join(' → ')}). Import Regal only through LazyShelfStage, LazyShelfRow or LazyFriendsBothReadReel.`)
           }
           for (const next of chunk.imports ?? []) walk(next, [...path, id])

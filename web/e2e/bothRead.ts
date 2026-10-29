@@ -28,7 +28,20 @@ async function name(id: string, name: string) {
 export async function friendWithSharedBooks(
   viewer: TestMember,
   count: number,
-  { name: herName = 'Ida' }: { name?: string } = {},
+  {
+    name: herName = 'Ida',
+    covers = false,
+    unrated = [],
+    coverless = [],
+  }: {
+    name?: string
+    /** The Books carry a cover (a cover CDN address, which the flows answer with a picture); default none, the Placeholder. */
+    covers?: boolean
+    /** Indexes (newest of hers first, 0 …) of Books neither of them rated: no pills row in their caption. The reel opens on the LAST. */
+    unrated?: number[]
+    /** With `covers`: indexes of Books that carry none, as the Catalogue has some. */
+    coverless?: number[]
+  } = {},
 ): Promise<TestMember> {
   const friend = await signUpMember()
   await name(friend.id, herName)
@@ -50,9 +63,15 @@ export async function friendWithSharedBooks(
   const titles = Array.from({ length: count }, (_, index) => runTitle(`Shared ${index + 1}`))
   for (const [index, title] of titles.entries()) {
     const [book] = await sql<{ id: string }>(
-      `insert into public.books (title, authors, publisher, source, openlibrary_edition_key, format)
-       values ($1, $2, $3, 'openlibrary', $4, 'paperback') returning id`,
-      [title, [`Author ${index + 1}`], TEST_PUBLISHER, uniqueEditionKey()],
+      `insert into public.books (title, authors, publisher, source, openlibrary_edition_key, format, cover_url)
+       values ($1, $2, $3, 'openlibrary', $4, 'paperback', $5) returning id`,
+      [
+        title,
+        [`Author ${index + 1}`],
+        TEST_PUBLISHER,
+        uniqueEditionKey(),
+        covers && !coverless.includes(index) ? `https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/aa/bb/${uniqueEditionKey()}.jpg/600x900bb.jpg` : null,
+      ],
     )
     for (const [member, daysAgo] of [
       [friend.id, index + 2],
@@ -65,7 +84,7 @@ export async function friendWithSharedBooks(
       await sql(
         `insert into public.reading_sessions (entry_id, started_on, ended_on, outcome, rating)
          values ($1, current_date - $2::int, current_date - $3::int, 'finished', $4)`,
-        [entry!.id, daysAgo + 14, daysAgo, member === friend.id ? 18 : 20],
+        [entry!.id, daysAgo + 14, daysAgo, unrated.includes(index) ? null : member === friend.id ? 18 : 20],
       )
     }
   }
