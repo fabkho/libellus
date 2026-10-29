@@ -176,7 +176,7 @@ async function emptyStores(factory: IDBFactory, name: string, keep: readonly str
  * of her ebook files in the origin private file system (`ebooks/`, `data/ebooks/files.ts`), any
  * ebook shared to the app that was not taken in yet (the service worker's cache,
  * `public/sw-share.js`), the covers and portraits her browsing kept (`libellus-covers`,
- * `libellus-portraits`: the addresses of what she looked at, search results included) and the
+ * `libellus-cover-cache`, `libellus-portraits`: the addresses of what she looked at, search results included) and the
  * expiry list the service worker keeps for them (`workbox-expiration`, a URL and a time each).
  * Not `libellus-reader` and `libellus-barcode-decoder`: those are the app's own files, the
  * same for everyone, and keeping them is what lets a book open offline. Nothing of the
@@ -211,7 +211,7 @@ export async function clearLocalFiles({
 export const SHARED_EBOOKS_CACHE = 'libellus-shared-ebooks'
 
 /** The service worker's caches of what the member looked at (nuxt.config.ts, workbox runtimeCaching). */
-export const MEMBER_CACHES: readonly string[] = [SHARED_EBOOKS_CACHE, 'libellus-covers', 'libellus-portraits']
+export const MEMBER_CACHES: readonly string[] = [SHARED_EBOOKS_CACHE, 'libellus-covers', 'libellus-cover-cache', 'libellus-portraits']
 
 /** Workbox's list of when each cached address was used last, for every cache's expiry. */
 export const EXPIRATION_DATABASE = 'workbox-expiration'

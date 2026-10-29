@@ -27,6 +27,7 @@ const latest = computed(() => props.entry.latestSession)
 const notFinished = computed(() => isNotFinished(props.entry))
 const authors = useAuthorsStore()
 onMounted(() => authors.want(props.entry.book.id))
+const coverProxy = useCoverProxy()
 const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id)))
 </script>
 
@@ -43,7 +44,7 @@ const authorKey = computed(() => rowAuthorKey(authors.ofBook(props.entry.book.id
         decorative
         :title="entry.book.title"
         :authors="entry.book.authors"
-        :src="coverSrc(entry.book.coverUrl, 'sm')"
+        :src="coverSrc(entry.book.coverUrl, 'sm', coverProxy)"
         :thumbhash="entry.book.coverThumbhash"
         :colors="entry.book.coverColors"
         size="sm"

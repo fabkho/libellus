@@ -260,6 +260,9 @@ export default defineNuxtConfig({
       // The VAPID public key of the import's Web Push ("Notify me when it's done", NUXT_PUBLIC_VAPID_PUBLIC_KEY; the private half is
       // the `import-job` function's secret, supabase/functions/import-job/README.md). Empty: the import page does not offer it.
       vapidPublicKey: '',
+      // Covers through our own cache (`/cover`, functions/cover.js; composables/useCoverProxy.ts): 'on' / 'off'
+      // (NUXT_PUBLIC_COVER_PROXY). Unset: on in a Cloudflare Pages build (CF_PAGES, where the Function is), else off.
+      coverProxy: process.env.NUXT_PUBLIC_COVER_PROXY ?? (process.env.CF_PAGES ? 'on' : 'off'),
     },
   },
 
@@ -436,6 +439,20 @@ export default defineNuxtConfig({
             // Bounded: the oldest covers go first, and everything goes before
             // the browser runs out of room for the rest of the app.
             expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
+          },
+        },
+        {
+          // Covers through our own cache (`/cover`, functions/cover.js, a Pages Function): same origin, so a real
+          // answer (a status 200, readable by a texture's CORS read too), never an opaque one. Cache first: the
+          // address names the cover and its width, and the answer never changes. Only a 200 is kept (a 502 is
+          // `no-store`, and a Pages deployment without the Function answers the app shell, HTML, which is not an
+          // image). Fewer than the host's own: a cover is one entry here at most per width.
+          urlPattern: ({ request, url }) => url.pathname === '/cover' && url.origin === self.location.origin && request.destination !== 'document',
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'libellus-cover-cache',
+            cacheableResponse: { statuses: [200], headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+            expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
           },
         },
         {

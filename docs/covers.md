@@ -580,3 +580,13 @@ bytes from the network log; the first column is the build before this change, th
 So the signed-in screens did not change: they were lazy already, and the audit's job there was to
 prove it and to find the few exceptions (above). Home's first screen asks for the 8 covers it shows
 and no more; the Library asks for 28 of the 51 images in its DOM, those within 1,250 px.
+
+## The cover cache (29 Oct 2026)
+
+`web/functions/cover.js` (docs/HOSTING.md, "The cover cache") answers `/cover?u=<cover URL>&w=<width>` from Cloudflare's Cache API.
+Measured locally (`wrangler pages dev` on :3110, real Apple and Open Library covers, `curl` from a home connection): the
+host numbers are indicative; the cached ones are the Function's own time, on Cloudflare's edge they are about the same or lower.
+Apple's artwork: ~100 ms warm, 0.5 s at a size its edge has not rendered yet; `/cover` first 25–150 ms, cached 2–3 ms.
+Open Library's `-L` through its redirect chain: 0.8–3.0 s; `/cover` first 0.7–1.6 s, cached 2–3 ms. At the size a 300 px
+reel card at 2× needs (480 px wide) an Apple cover is 49–131 KB instead of the stored 600 × 900's 71–195 KB; a list row's
+120 × 180 is 7–12 KB.
