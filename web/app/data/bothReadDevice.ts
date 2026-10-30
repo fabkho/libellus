@@ -1,5 +1,6 @@
 import { LOCAL_DATA_PREFIX, type DeviceStorage } from './localData'
 import type { BothRead, SocialBook } from './socialShapes'
+import { ownCopy } from '../utils/ownCoverPath'
 
 /**
  * The device's copy of "You both read" (docs/plans/shared-books-slideshow.md): the last answer of `both_read` for each
@@ -9,7 +10,7 @@ import type { BothRead, SocialBook } from './socialShapes'
  * and of this version's shape (an older one reads as none, never misread).
  *
  * **What is kept is a whitelist**, as what reaches Regal is (`data/bothReadReel.ts`): for a Book its id, title, authors,
- * year, cover address, thumbhash and colours, and the two flags the app needs to draw and open it (`manual`,
+ * year, cover address, the key and widths of our stored copy, thumbhash and colours, and the two flags the app needs to draw and open it (`manual`,
  * `unverified`); for each side the rating and the day. `saveBothRead` builds every record from those keys alone, so a
  * field the answer may carry one day (a review, a blurb, her address) is never written, and `readBothRead` rebuilds the
  * same way from what it reads (a foreign or torn value is as good as none). Bounded: at most `BOTH_READ_FRIENDS` friends
@@ -38,6 +39,7 @@ function bookOf(value: unknown): SocialBook | null {
   const book = value as Partial<SocialBook> | null
   if (!book || typeof book.id !== 'string' || typeof book.title !== 'string') return null
   const colors = book.coverColors
+  const copy = ownCopy(book.coverKey, book.coverWidths)
   return {
     id: book.id,
     title: book.title,
@@ -46,6 +48,8 @@ function bookOf(value: unknown): SocialBook | null {
     coverUrl: text(book.coverUrl),
     coverThumbhash: text(book.coverThumbhash),
     coverColors: colors && typeof colors.dominant === 'string' && typeof colors.secondary === 'string' ? { dominant: colors.dominant, secondary: colors.secondary } : null,
+    coverKey: copy?.coverKey ?? null,
+    coverWidths: copy?.coverWidths ?? null,
     manual: book.manual === true,
     unverified: book.unverified === true,
   }

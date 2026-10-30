@@ -267,6 +267,10 @@ export default defineNuxtConfig({
       // Covers through our own cache (`/cover`, functions/cover.js; composables/useCoverProxy.ts): 'on' / 'off'
       // (NUXT_PUBLIC_COVER_PROXY). Unset: on in a Cloudflare Pages build (CF_PAGES, where the Function is), else off.
       coverProxy: process.env.NUXT_PUBLIC_COVER_PROXY ?? (process.env.CF_PAGES ? 'on' : 'off'),
+      // Our own stored copies of covers (`/c/<cover_key>/<width>`, functions/c/[[path]].js; utils/coverRef.ts,
+      // composables/useCoverHosts.ts, docs/plans/owned-covers.md): 'on' / 'off' (NUXT_PUBLIC_OWN_COVERS). Unset: off, in every
+      // build, Pages or not: the owner turns it on (a rebuild) once the bucket is bound and the covers are stored.
+      ownCovers: process.env.NUXT_PUBLIC_OWN_COVERS ?? 'off',
     },
   },
 

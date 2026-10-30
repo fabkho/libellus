@@ -4,6 +4,7 @@ import {
   BOTH_READ_FRIENDS,
   BOTH_READ_KEEP_DAYS,
   DEVICE_BOTH_READ_KEY,
+  DEVICE_BOTH_READ_VERSION,
   bothReadOf,
   forgetBothRead,
   readBothRead,
@@ -29,9 +30,11 @@ function memory(): DeviceStorage & { data: Map<string, string> } {
   }
 }
 
+const KEY = 'c0ffeec0ffeec0ffeec0ffeec0ffeec0'
+
 const read = (n: number, extra: Record<string, unknown> = {}): BothRead =>
   ({
-    book: { id: `b${n}`, title: `T${n}`, authors: ['A'], year: 2020, coverUrl: `https://is1-ssl.mzstatic.com/${n}.jpg`, coverThumbhash: 'th', coverColors: { dominant: '#aaaaaa', secondary: '#bbbbbb' }, manual: false, unverified: false, ...extra },
+    book: { id: `b${n}`, title: `T${n}`, authors: ['A'], year: 2020, coverUrl: `https://is1-ssl.mzstatic.com/${n}.jpg`, coverThumbhash: 'th', coverColors: { dominant: '#aaaaaa', secondary: '#bbbbbb' }, coverKey: KEY, coverWidths: [120, 240, 360, 600], manual: false, unverified: false, ...extra },
     mine: { rating: 16, endedOn: '2025-01-02' },
     hers: { rating: null, endedOn: '2025-01-01' },
     ...extra,
@@ -64,8 +67,24 @@ describe('the device copy of You both read', () => {
     expect(raw).not.toMatch(/secret|example\.com|pages|review|email/)
     const [item] = readBothRead(storage, 'ada', 'ida', NOW)!
     expect(Object.keys(item!).sort()).toEqual(['book', 'hers', 'mine'])
-    expect(Object.keys(item!.book).sort()).toEqual(['authors', 'coverColors', 'coverThumbhash', 'coverUrl', 'id', 'manual', 'title', 'unverified', 'year'])
+    expect(Object.keys(item!.book).sort()).toEqual(['authors', 'coverColors', 'coverKey', 'coverThumbhash', 'coverUrl', 'coverWidths', 'id', 'manual', 'title', 'unverified', 'year'])
     expect(Object.keys(item!.mine).sort()).toEqual(['endedOn', 'rating'])
+  })
+
+  it('keeps the key and widths of the stored copy, checked: junk is as good as none, and an older copy without them reads as none', () => {
+    const storage = memory()
+    saveBothRead(storage, 'ada', 'ida', [read(1), read(2, { coverKey: 'not-a-key' }), read(3, { coverWidths: ['wide', 5, 99999] }), read(4, { coverKey: null, coverWidths: null })], NOW)
+    const items = readBothRead(storage, 'ada', 'ida', NOW)!
+    expect(items[0]!.book).toMatchObject({ coverKey: KEY, coverWidths: [120, 240, 360, 600] })
+    expect(items[1]!.book).toMatchObject({ coverKey: null, coverWidths: null })
+    expect(items[2]!.book, 'a key with no usable width is no copy').toMatchObject({ coverKey: null, coverWidths: null })
+    expect(items[3]!.book).toMatchObject({ coverKey: null, coverWidths: null })
+    // A v1 copy written before the fields existed is still this shape: its Books read without a copy (the fallback chain).
+    const old = read(5) as unknown as { book: Record<string, unknown> }
+    delete old.book.coverKey
+    delete old.book.coverWidths
+    storage.setItem(DEVICE_BOTH_READ_KEY, JSON.stringify({ version: DEVICE_BOTH_READ_VERSION, data: { memberId: 'ada', friends: { ida: { savedAt: NOW.toISOString(), items: [old] } } } }))
+    expect(readBothRead(storage, 'ada', 'ida', NOW)![0]!.book).toMatchObject({ id: 'b5', coverKey: null, coverWidths: null })
   })
 
   it('is ignored when old, of another version, torn or foreign', () => {

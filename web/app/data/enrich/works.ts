@@ -15,6 +15,12 @@ export type WorkCard = {
   /** Its place in the series it is listed under. */
   position?: number
   coverUrl?: string
+  /**
+   * Our stored copy of that same cover (utils/coverRef.ts): the key and widths of the Book the card shows, absent where the
+   * cover is the work's or the edition's own (it has no copy) and in a copy written before they existed.
+   */
+  coverKey?: string
+  coverWidths?: number[]
   genres?: string[]
   /** A representative edition in the asked language: what "+ Want to read" can add by ISBN. */
   edition?: { title: string | null; isbn13: string | null; openlibrary_edition_key: string | null; cover_url: string | null }

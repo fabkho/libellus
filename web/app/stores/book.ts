@@ -43,7 +43,7 @@ export const useBookStore = defineStore('book', () => {
   function withRowCover(key: string, book: BookSnapshot): BookSnapshot {
     if (!rowCovers.has(key)) return book
     const coverUrl = rowCovers.get(key) ?? null
-    return coverUrl === book.coverUrl ? book : { ...book, coverUrl, coverThumbhash: null, coverColors: null }
+    return coverUrl === book.coverUrl ? book : { ...book, coverUrl, coverThumbhash: null, coverColors: null, coverKey: null, coverWidths: null }
   }
 
   /** The page, with the member's entry as it changed on this device since the page loaded (an add, a start, a finish). */

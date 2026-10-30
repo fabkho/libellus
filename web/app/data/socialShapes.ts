@@ -1,4 +1,5 @@
 import type { Book } from './books'
+import { ownCopy } from '../utils/ownCoverPath'
 
 /**
  * Social v1 (docs/proposals/social-v1-contract.md): the shapes the social repositories share
@@ -52,7 +53,7 @@ export function cardFromJson(json: CardJson): MemberCard {
 }
 
 /** A Book as the social answers carry it. `manual`: a Manual book, which a follower cannot open. */
-export type SocialBook = Pick<Book, 'id' | 'title' | 'authors' | 'year' | 'coverUrl' | 'coverThumbhash' | 'coverColors'> & {
+export type SocialBook = Pick<Book, 'id' | 'title' | 'authors' | 'year' | 'coverUrl' | 'coverThumbhash' | 'coverColors' | 'coverKey' | 'coverWidths'> & {
   manual: boolean
   /** One the server check could not confirm: no title, authors or cover (utils/unverifiedBook.ts). */
   unverified: boolean
@@ -67,11 +68,15 @@ type BookJson = {
   cover_thumbhash: string | null
   cover_dominant: string | null
   cover_secondary: string | null
+  /** Our stored copy of the cover, gated as the cover is (null: hidden, not stored, or an older answer without them). */
+  cover_key?: string | null
+  cover_widths?: number[] | null
   manual: boolean
   unverified?: boolean | null
 }
 
 export function socialBookFromJson(json: BookJson): SocialBook {
+  const copy = ownCopy(json.cover_key, json.cover_widths)
   return {
     id: json.id,
     title: json.title ?? '',
@@ -81,6 +86,9 @@ export function socialBookFromJson(json: BookJson): SocialBook {
     coverThumbhash: json.cover_thumbhash ?? null,
     coverColors:
       json.cover_dominant && json.cover_secondary ? { dominant: json.cover_dominant, secondary: json.cover_secondary } : null,
+    // Always both, null without a usable copy: a social answer is never read as "not asked".
+    coverKey: copy?.coverKey ?? null,
+    coverWidths: copy?.coverWidths ?? null,
     manual: Boolean(json.manual),
     unverified: Boolean(json.unverified),
   }

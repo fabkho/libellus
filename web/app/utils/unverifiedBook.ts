@@ -18,14 +18,16 @@ type Showable = {
   coverUrl: string | null
   coverThumbhash: string | null
   coverColors: { dominant: string; secondary: string } | null
+  coverKey?: string | null
+  coverWidths?: number[] | null
   unverified?: boolean
 }
 
 /**
  * What to draw of a Book: itself, or, when unverified, the one string as title (so the Placeholder's cloth
- * carries it), no authors and no cover image, thumbhash or colours.
+ * carries it), no authors and no cover image, stored copy, thumbhash or colours.
  */
 export function shownBook<B extends Showable>(book: B, outside: string): B {
   if (!isUnverified(book)) return book
-  return { ...book, title: outside, authors: [], coverUrl: null, coverThumbhash: null, coverColors: null }
+  return { ...book, title: outside, authors: [], coverUrl: null, coverThumbhash: null, coverColors: null, ...('coverKey' in book || 'coverWidths' in book ? { coverKey: null, coverWidths: null } : {}) }
 }

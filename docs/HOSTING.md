@@ -151,6 +151,31 @@ load it same-origin, a WebGL texture needs a CORS-clean image, so does a canvas 
   (it serves `functions/` and a real `caches.default`), then `curl -si 'http://127.0.0.1:3110/cover?u=<encoded cover URL>&w=240'`:
   `X-Cover-Cache: miss`, then `hit`. Tests: `tests/cover-size.test.ts`, `tests/cover-function.test.ts`.
 
+## Own covers
+
+**`web/functions/c/[[path]].js`** answers `/c/<key>/<width>` on the app's own origin: the stored copies of covers of
+Books in a member's Library (docs/plans/owned-covers.md, option B). The images are in the private R2 bucket
+`libellus-covers` (no public access, no custom domain), read through an **R2 binding named `COVERS`**; the app builds the
+address from a Book's `cover_key` and `cover_widths` (`web/app/utils/coverRef.ts`), and falls back to `/cover`, then the
+source, so a copy that is missing is never a missing cover. The Function accepts exactly `/c/<32 hex>/<whole width, 16–2000>`,
+`GET`/`HEAD` only, and answers a hit from `caches.default`, a miss from the bucket (the stored `Content-Type`,
+`Cache-Control: public, max-age=31536000, immutable`, put into the cache behind the answer). Anything else, a missing
+object, and **a bucket that is not bound yet** are a 404 with `no-store`. Who may ask is `/cover`'s rule
+(`web/app/utils/coverSender.ts`, `COVER_ALLOWED_ORIGINS`).
+
+- **The binding is an owner step of the release, not a file in the repo** (this project keeps its Pages settings in the
+  dashboard, like `COVER_ALLOWED_ORIGINS`): Pages project → Settings → Bindings → R2 bucket → variable name `COVERS`, bucket
+  `libellus-covers`, for production (and previews, if previews should show own covers). Nothing is deployed or created by
+  the code.
+- **Rate limiting and the WAF** rule on `/cover` get `/c/` added, in both zones (`fabkho.dev`, `betterreads.de`).
+- **In the app.** `runtimeConfig.public.ownCovers` (`NUXT_PUBLIC_OWN_COVERS`, `on`/`off`; unset: **off in every build**).
+  `coverImage(book, size, useCoverHosts())` is a cover at a token size, `coverAt(book, { height, dpr, origin, ...hosts })` one at
+  any other size. Turning it on is a rebuild of the production deployment, never a release; unset it to go back.
+- **Check it locally** (verified on workerd): `pnpm dlx wrangler r2 object put libellus-covers/c/<key>/<width> --file <image> --content-type image/webp --local --persist-to /tmp/r2`,
+  then `pnpm dlx wrangler pages dev <a folder with an index.html> --port 3110 --r2 COVERS=libellus-covers --persist-to /tmp/r2` from `web/`,
+  and `curl -si http://127.0.0.1:3110/c/<key>/<width>`: `X-Cover-Cache: miss`, then `hit`. Tests: `tests/cover-own-function.test.ts`,
+  `tests/cover-ref.test.ts`.
+
 ## The reading page's Open Graph image
 
 `supabase/functions/reading-page-og/` (its README has the details) draws the 1200×630 PNG behind
