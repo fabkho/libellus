@@ -96,6 +96,7 @@ jobs:
       enrich: ${{ steps.decide.outputs.enrich }}
       invite: ${{ steps.decide.outputs.invite }}
       importjob: ${{ steps.decide.outputs.importjob }}
+      coverstore: ${{ steps.decide.outputs.coverstore }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: github.event_name == 'push'
@@ -166,6 +167,12 @@ jobs:
               - 'supabase/functions/_shared/**'
               - 'web/app/data/**'
               - 'web/app/utils/**'
+            coverstore:
+              - *ci
+              - 'supabase/functions/cover-store/**'
+              - 'supabase/functions/_shared/**'
+              - 'web/app/data/**'
+              - 'web/app/utils/**'
 
       - name: Decide
         id: decide
@@ -183,6 +190,7 @@ jobs:
           FILTER_ENRICH: ${{ steps.filter.outputs.enrich }}
           FILTER_INVITE: ${{ steps.filter.outputs.invite }}
           FILTER_IMPORTJOB: ${{ steps.filter.outputs.importjob }}
+          FILTER_COVERSTORE: ${{ steps.filter.outputs.coverstore }}
           INPUT_SHARDS: ${{ vars.E2E_SHARDS || env.DEFAULT_E2E_SHARDS }}
           # A manual run has every flow unless it says flows=false (the UI base bump does: ui-bump.yml).
           INPUT_FLOWS: ${{ inputs.flows }}
@@ -202,6 +210,7 @@ jobs:
           enrich=$(on "$FILTER_ENRICH")
           invite=$(on "$FILTER_INVITE")
           importjob=$(on "$FILTER_IMPORTJOB")
+          coverstore=$(on "$FILTER_COVERSTORE")
           # Playwright: only by hand and on a pull request labelled `full-e2e` (docs/TESTING.md,
           # "CI: what runs when"). The flows are where the minutes go: a push to main does not
           # run them either, a release does (release.yml). Every flow, @full included.
@@ -213,12 +222,12 @@ jobs:
           shards=$(seq -s, 1 "$INPUT_SHARDS" | sed 's/^/[/; s/$/]/')
 
           statics=false
-          for v in "$web" "$tokens" "$goodreads" "$dnb" "$regal" "$og" "$enrich" "$invite" "$importjob"; do [ "$v" = true ] && statics=true; done
+          for v in "$web" "$tokens" "$goodreads" "$dnb" "$regal" "$og" "$enrich" "$invite" "$importjob" "$coverstore"; do [ "$v" = true ] && statics=true; done
 
           {
             echo "backend=$backend"; echo "e2e=$e2e"; echo "shards=$shards"
             echo "statics=$statics"; echo "web=$web"; echo "tokens=$tokens"
-            echo "goodreads=$goodreads"; echo "dnb=$dnb"; echo "openlibrary=$openlibrary"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"; echo "importjob=$importjob"
+            echo "goodreads=$goodreads"; echo "dnb=$dnb"; echo "openlibrary=$openlibrary"; echo "regal=$regal"; echo "og=$og"; echo "enrich=$enrich"; echo "invite=$invite"; echo "importjob=$importjob"; echo "coverstore=$coverstore"
           } | tee -a "$GITHUB_OUTPUT"
 
   # Database rules (pgTAP), the web data layer (Vitest) and the backup round trip
@@ -377,7 +386,7 @@ jobs:
           ! grep -q 'libellus-shelf' .output/public/sw.js
 
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
-        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.openlibrary == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true' || needs.changes.outputs.importjob == 'true'
+        if: needs.changes.outputs.goodreads == 'true' || needs.changes.outputs.dnb == 'true' || needs.changes.outputs.openlibrary == 'true' || needs.changes.outputs.regal == 'true' || needs.changes.outputs.og == 'true' || needs.changes.outputs.enrich == 'true' || needs.changes.outputs.invite == 'true' || needs.changes.outputs.importjob == 'true' || needs.changes.outputs.coverstore == 'true'
         with:
           deno-version: v2.x
 
@@ -458,4 +467,13 @@ jobs:
       - name: import-job function (Deno lint, check, test)
         if: ${{ !cancelled() && needs.changes.outputs.importjob == 'true' }}
         working-directory: supabase/functions/import-job
+        run: deno lint && deno check *.ts && deno task test
+
+      # The cover-store edge function (docs/plans/owned-covers.md): the covers of Books in a Library, stored in R2, on
+      # recorded public covers, a stand-in for the hosts' web, for R2 (an S3 that checks the signature) and for the
+      # database's RPCs. It imports describeCover from web/app/data (one implementation for the app and the function) and
+      # its Apple address shape is checked against web/app/utils/coverSize.ts, so this also checks those stay runnable by Deno.
+      - name: cover-store function (Deno lint, check, test)
+        if: ${{ !cancelled() && needs.changes.outputs.coverstore == 'true' }}
+        working-directory: supabase/functions/cover-store
         run: deno lint && deno check *.ts && deno task test
