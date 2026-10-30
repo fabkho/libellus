@@ -90,7 +90,7 @@ const all = computed(() => figuresOf(reads.value, 'all'))
 const yearFigures = computed(() => years.value.map((y) => figuresOf(reads.value, y)))
 const hasRecords = computed(() => !!(figures.value.longest || figures.value.shortest || figures.value.quickest || figures.value.slowest))
 const light = computed(() => (year.value === 'all' ? (figuresOf(reads.value, thisYear).favourite ?? all.value.favourite) : figures.value.favourite)?.book.coverColors ?? null)
-// The chart's own window (WP-08), kept with the rest of her view while the member opens a book from a bar's sheet.
+// The chart's mode and weeks' window (WP-08; the year is the pills'), kept with the rest of her view while the member opens a book from a bar's sheet.
 const chart = computed({
   get: () => view.value.chart,
   set: (value) => members.setChart(id.value, value),
@@ -330,8 +330,8 @@ function back() {
               <FriendsBothRead class="pt-xl" :items="bothRead" :name="name" :member="card" :pending="bothReadPending" reel />
             </UiReveal>
 
-            <!-- The chart by month or by week, read-only as here: her own window, her Ratings switch decides on the Average. -->
-            <ProfileChart v-model="chart" class="pt-xl" :reads="reads" :loading="loading" :ratings="open?.sections.ratings ?? true" @pick="(s) => (sheet = s)" />
+            <!-- The chart follows her year pills (read-only as here): a column per year under All, her months or weeks otherwise; her Ratings switch decides on the Average. -->
+            <ProfileChart v-model="chart" v-model:year="year" class="pt-xl" :reads="reads" :loading="loading" :ratings="open?.sections.ratings ?? true" @pick="(s) => (sheet = s)" @open-year="(y) => router.push(`/friends/${id}/${y}`)" />
 
             <UiReveal :show="blocks.ratings && (loading || figures.rated > 0)">
               <ProfileRatings class="pt-xl" :figures="loading ? null : figures" @pick="pickStars" @unrated="pickUnrated" />

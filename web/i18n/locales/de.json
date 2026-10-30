@@ -626,7 +626,7 @@
       "lossPages": "−{count}",
       "lossPercent": "−{count} %",
       "totalOf": "von {count}",
-      "totalEdit": "von {count}, Seiten insgesamt. Ändern",
+      "totalEdit": "von {count} Seiten insgesamt. Ändern",
       "totalCount": "In Seiten zählen",
       "totalTitle": "Seiten in deiner Ausgabe",
       "totalHint": "Zähle die Seiten deiner Ausgabe oder nimm die deines Readers.",

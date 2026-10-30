@@ -10,10 +10,14 @@ import {
   defaultRange,
   litColumn,
   newestWeekStartOf,
+  scopeBounds,
   stepRange,
+  stepYear,
   windowFigures,
   withMode,
+  yearColumnsOf,
   type ChartRange,
+  type ChartScope,
 } from '@/data/statsChart'
 import { addDays, daysBetween, mondayOf, weekNumberOf } from '@/utils/dates'
 import { statsSheetReads, statsSheetWithYear } from '@/utils/statsSheet'
@@ -128,7 +132,7 @@ describe('the weeks window', () => {
   it('ends with the week today sits in, 13 weeks from a Monday', () => {
     expect(newestWeekStartOf(today)).toBe('2026-03-23')
     expect(range.weekStart).toBe('2026-03-23')
-    const cols = columnsOf([], range)
+    const cols = columnsOf([], range, 2026)
     expect(cols).toHaveLength(WEEKS_SHOWN)
     expect(cols[0]!.start).toBe('2026-03-23')
     expect(cols.at(-1)!.start).toBe('2026-06-15')
@@ -144,17 +148,17 @@ describe('the weeks window', () => {
   })
 
   it('runs through New Year: the last week of a year and week 1 sit side by side', () => {
-    const cols = columnsOf([], { ...range, weekStart: '2025-11-17' })
+    const cols = columnsOf([], { ...range, weekStart: '2025-11-17' }, 2026)
     expect(cols.map((c) => c.number)).toEqual([47, 48, 49, 50, 51, 52, 1, 2, 3, 4, 5, 6, 7])
     expect(cols[6]!.start).toBe('2025-12-29')
     expect(cols[6]!.end).toBe('2026-01-04')
   })
 
   it('runs through an ISO week 53', () => {
-    const cols = columnsOf([], { ...range, weekStart: '2020-10-05' })
+    const cols = columnsOf([], { ...range, weekStart: '2020-10-05' }, 2026)
     expect(cols.map((c) => c.number)).toEqual([41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53])
     expect(cols.at(-1)!.end).toBe('2021-01-03')
-    const next = columnsOf([], { ...range, weekStart: '2021-01-04' })
+    const next = columnsOf([], { ...range, weekStart: '2021-01-04' }, 2026)
     expect(next[0]!.number).toBe(1)
   })
 
@@ -167,7 +171,7 @@ describe('the weeks window', () => {
       read('before', '2026-03-22'),
       read('after', '2026-06-22'),
     ]
-    const cols = columnsOf(reads, range)
+    const cols = columnsOf(reads, range, 2026)
     expect(cols.map((c) => c.count)).toEqual([2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
     expect(ids(cols[0]!.reads)).toEqual(['sun', 'first'])
     expect(ids(readsInWeek(reads, '2026-03-23'))).toEqual(['sun', 'first'])
@@ -177,7 +181,7 @@ describe('the weeks window', () => {
     const reads = [read('before', '2025-12-30'), read('on', '2026-01-01'), read('after', '2026-01-04'), read('next', '2026-01-05')]
     const week = readsInWeek(reads, '2025-12-29')
     expect(ids(week)).toEqual(['before', 'on', 'after'])
-    const cols = columnsOf(reads, { ...range, weekStart: '2025-11-17' })
+    const cols = columnsOf(reads, { ...range, weekStart: '2025-11-17' }, 2026)
     expect(cols[6]!.count).toBe(3)
     expect(cols[7]!.count).toBe(1)
   })
@@ -185,21 +189,21 @@ describe('the weeks window', () => {
   it('leaves out a read without an end date, an abandoned one and a read still going', () => {
     const reads = [read('no date', null), read('dnf', '2026-04-01', { outcome: 'abandoned' }), read('open', '2026-04-01', { outcome: null }), read('ok', '2026-04-01')]
     expect(ids(readsInWeek(reads, '2026-03-30'))).toEqual(['ok'])
-    expect(columnsOf(reads, range).reduce((sum, c) => sum + c.count, 0)).toBe(1)
-    expect(columnsOf(reads, { ...range, mode: 'months', year: 2026 }).reduce((sum, c) => sum + c.count, 0)).toBe(1)
+    expect(columnsOf(reads, range, 2026).reduce((sum, c) => sum + c.count, 0)).toBe(1)
+    expect(columnsOf(reads, { ...range, mode: 'months' }, 2026).reduce((sum, c) => sum + c.count, 0)).toBe(1)
   })
 
   it('buckets the same in every time zone, across daylight-saving changes', () => {
     const reads = [read('a', '2026-03-28'), read('b', '2026-03-29'), read('c', '2026-03-30'), read('d', '2026-10-25'), read('e', '2026-10-26')]
     inEveryZone(() => {
       // Berlin springs forward on Sunday 29 Mar 2026, so the 13 weeks from 23 Mar hold a 7-day week of 167 hours.
-      const spring = columnsOf(reads, { ...range, weekStart: '2026-03-16' })
+      const spring = columnsOf(reads, { ...range, weekStart: '2026-03-16' }, 2026)
       expect(spring.map((c) => c.start)).toEqual(Array.from({ length: 13 }, (_, w) => addDays('2026-03-16', 7 * w)))
       expect(spring.every((c) => daysBetween(c.start, c.end) === 6)).toBe(true)
       expect(ids(spring[1]!.reads)).toEqual(['a', 'b'])
       expect(ids(spring[2]!.reads)).toEqual(['c'])
       // …and falls back on Sunday 25 Oct (a 169-hour week).
-      const autumn = columnsOf(reads, { ...range, weekStart: '2026-10-05' })
+      const autumn = columnsOf(reads, { ...range, weekStart: '2026-10-05' }, 2026)
       expect(autumn.map((c) => c.number)).toEqual([41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53])
       expect(ids(autumn[2]!.reads)).toEqual(['d'])
       expect(ids(autumn[3]!.reads)).toEqual(['e'])
@@ -212,16 +216,16 @@ describe('the weeks window', () => {
 describe('the months window', () => {
   it('is twelve months of a calendar year, by the day each read ended', () => {
     const reads = [read('jan', '2026-01-01'), read('jan end', '2026-01-31'), read('feb', '2026-02-28'), read('dec', '2026-12-31'), read('prev', '2025-12-31'), read('next', '2027-01-01')]
-    const cols = columnsOf(reads, { mode: 'months', year: 2026, weekStart: '2026-03-23' })
+    const cols = columnsOf(reads, { mode: 'months', weekStart: '2026-03-23' }, 2026)
     expect(cols.map((c) => c.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
     expect(cols.map((c) => c.count)).toEqual([2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
     expect(cols[1]!.end).toBe('2026-02-28')
-    expect(columnsOf([], { mode: 'months', year: 2024, weekStart: '2026-03-23' })[1]!.end).toBe('2024-02-29')
+    expect(columnsOf([], { mode: 'months', weekStart: '2026-03-23' }, 2024)[1]!.end).toBe('2024-02-29')
     expect(cols[11]!.end).toBe('2026-12-31')
   })
 
   it('lights the month today is in', () => {
-    const cols = columnsOf([], { mode: 'months', year: 2026, weekStart: '2026-03-23' })
+    const cols = columnsOf([], { mode: 'months', weekStart: '2026-03-23' }, 2026)
     expect(litColumn(cols, '2026-06-17')).toBe(6)
     expect(litColumn(cols, '2027-01-02')).toBeNull()
   })
@@ -229,7 +233,7 @@ describe('the months window', () => {
   it('gives the same months in every time zone', () => {
     const reads = [read('a', '2026-03-29'), read('b', '2026-03-08'), read('c', '2026-10-25')]
     inEveryZone(() => {
-      const cols = columnsOf(reads, { mode: 'months', year: 2026, weekStart: '2026-03-23' })
+      const cols = columnsOf(reads, { mode: 'months', weekStart: '2026-03-23' }, 2026)
       expect(cols.map((c) => c.count)).toEqual([0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0])
     })
   })
@@ -237,12 +241,14 @@ describe('the months window', () => {
 
 describe('where the windows end', () => {
   const today = '2026-06-17'
+  const all: ChartScope = { year: 'all', years: [2026, 2025, 2024] }
+  const in2026: ChartScope = { year: 2026, years: [2026, 2025, 2024] }
+  const in2025: ChartScope = { year: 2025, years: [2026, 2025, 2024] }
+  const in2024: ChartScope = { year: 2024, years: [2026, 2025, 2024] }
 
   it('takes the left end from her first finished read, not from a nominal date', () => {
     const reads = [read('later', '2025-02-10'), read('first', '2024-09-03'), read('dnf', '2023-01-01', { outcome: 'abandoned' }), read('undated', null)]
     const bounds = chartBounds(reads, today)
-    expect(bounds.firstYear).toBe(2024)
-    expect(bounds.lastYear).toBe(2026)
     expect(bounds.newestWeekStart).toBe('2026-03-23')
     // The earliest window is the one that still holds the Monday of her first finish (2 Sep 2024)…
     expect(bounds.earliestWeekStart <= '2024-09-02').toBe(true)
@@ -262,91 +268,150 @@ describe('where the windows end', () => {
   it('has one window when she finished her first read in the newest', () => {
     const bounds = chartBounds([read('first', '2026-05-01')], today)
     expect(bounds.earliestWeekStart).toBe(bounds.newestWeekStart)
-    expect(bounds.firstYear).toBe(2026)
     const range = defaultRange(today)
-    expect(canStep(range, bounds, -1)).toBe(false)
-    expect(canStep({ ...range, mode: 'weeks' }, bounds, -1)).toBe(false)
+    const scope: ChartScope = { year: 2026, years: [2026] }
+    expect(canStep(range, bounds, scope, -1)).toBe(false)
+    expect(canStep({ ...range, mode: 'weeks' }, bounds, scope, -1)).toBe(false)
   })
 
   it('stands on today\'s windows with nothing finished', () => {
     const bounds = chartBounds([read('dnf', '2020-01-01', { outcome: 'abandoned' })], today)
-    expect(bounds).toEqual({ firstYear: 2026, lastYear: 2026, earliestWeekStart: '2026-03-23', newestWeekStart: '2026-03-23' })
+    expect(bounds).toEqual({ earliestWeekStart: '2026-03-23', newestWeekStart: '2026-03-23' })
     expect(chartBounds([], today)).toEqual(bounds)
   })
 
   it('does not look past today', () => {
     // A read dated after today (a clock that was ahead) is no start for the windows.
     const bounds = chartBounds([read('future', '2027-02-01')], today)
-    expect(bounds.firstYear).toBe(2026)
     expect(bounds.earliestWeekStart).toBe(bounds.newestWeekStart)
-  })
-
-  it('steps a year in Months and stops at both ends', () => {
-    const bounds = chartBounds([read('first', '2024-09-03')], today)
-    let range = defaultRange(today)
-    expect(range).toMatchObject({ mode: 'months', year: 2026 })
-    expect(canStep(range, bounds, 1)).toBe(false)
-    expect(stepRange(range, bounds, 1)).toBe(range)
-    range = stepRange(range, bounds, -1)
-    expect(range.year).toBe(2025)
-    expect(canStep(range, bounds, 1)).toBe(true)
-    range = stepRange(range, bounds, -1)
-    expect(range.year).toBe(2024)
-    expect(canStep(range, bounds, -1)).toBe(false)
-    expect(stepRange(range, bounds, -1)).toBe(range)
-  })
-
-  it('steps a whole window in Weeks and stops at both ends', () => {
-    const bounds = chartBounds([read('first', '2024-09-03')], today)
-    let range = withMode(defaultRange(today), 'weeks', bounds)
-    expect(range.weekStart).toBe(bounds.newestWeekStart)
-    expect(canStep(range, bounds, 1)).toBe(false)
-    expect(stepRange(range, bounds, 1)).toBe(range)
-    range = stepRange(range, bounds, -1)
-    expect(range.weekStart).toBe('2025-12-22')
-    expect(daysBetween(range.weekStart, bounds.newestWeekStart)).toBe(7 * WEEKS_SHOWN)
-    expect(canStep(range, bounds, 1)).toBe(true)
-    let steps = 1
-    while (canStep(range, bounds, -1)) {
-      range = stepRange(range, bounds, -1)
-      steps++
-    }
-    expect(range.weekStart).toBe(bounds.earliestWeekStart)
-    expect(steps).toBe(daysBetween(bounds.earliestWeekStart, bounds.newestWeekStart) / (7 * WEEKS_SHOWN))
-    expect(stepRange(range, bounds, -1)).toBe(range)
-    // Stepping forward again lands on the newest.
-    while (canStep(range, bounds, 1)) range = stepRange(range, bounds, 1)
-    expect(range.weekStart).toBe(bounds.newestWeekStart)
-  })
-
-  it('holds a kept range to the ends of the record it is shown with', () => {
-    const bounds = chartBounds([read('first', '2025-03-24')], today)
-    expect(clampRange({ mode: 'months', year: 2019, weekStart: '2019-01-07' }, bounds)).toEqual({ mode: 'months', year: 2025, weekStart: '2025-03-24' })
-    expect(clampRange({ mode: 'weeks', year: 2031, weekStart: '2031-01-06' }, bounds)).toEqual({ mode: 'weeks', year: 2026, weekStart: '2026-03-23' })
-    // A week start off a Monday goes to its Monday.
-    expect(clampRange({ mode: 'weeks', year: 2026, weekStart: '2025-12-24' }, bounds).weekStart).toBe('2025-12-22')
-    const inside: ChartRange = { mode: 'weeks', year: 2026, weekStart: '2025-12-22' }
-    expect(clampRange(inside, bounds)).toEqual(inside)
-  })
-
-  it('switches the mode: Months keep their year, Weeks open on the newest window', () => {
-    const bounds = chartBounds([read('first', '2024-09-03')], today)
-    let range: ChartRange = stepRange(defaultRange(today), bounds, -1)
-    range = withMode(range, 'weeks', bounds)
-    expect(range).toMatchObject({ mode: 'weeks', year: 2025, weekStart: bounds.newestWeekStart })
-    range = stepRange(range, bounds, -1)
-    range = withMode(range, 'months', bounds)
-    expect(range).toMatchObject({ mode: 'months', year: 2025 })
-    range = withMode(range, 'weeks', bounds)
-    expect(range.weekStart).toBe(bounds.newestWeekStart)
-    expect(withMode(range, 'weeks', bounds)).toBe(range)
   })
 
   it('computes its ends in every time zone alike', () => {
     const reads = [read('first', '2024-09-03')]
     inEveryZone(() => {
-      expect(chartBounds(reads, today)).toEqual({ firstYear: 2024, lastYear: 2026, earliestWeekStart: '2024-06-24', newestWeekStart: '2026-03-23' })
+      expect(chartBounds(reads, today)).toEqual({ earliestWeekStart: '2024-06-24', newestWeekStart: '2026-03-23' })
     })
+  })
+
+  describe('under the year pills', () => {
+    const bounds = chartBounds([read('first', '2024-09-03')], today)
+
+    it('lists no window under All: the years are columns, the pills pick one', () => {
+      const range = defaultRange(today)
+      expect(canStep(range, bounds, all, -1)).toBe(false)
+      expect(canStep(range, bounds, all, 1)).toBe(false)
+      expect(canStep({ ...range, mode: 'weeks' }, bounds, all, -1)).toBe(false)
+      expect(stepRange(range, bounds, all, -1)).toEqual({ range, year: 'all' })
+      expect(stepYear(all, -1)).toBeNull()
+    })
+
+    it('steps the months to the neighbouring year the pills list, stopping at both ends', () => {
+      const range = defaultRange(today)
+      expect(canStep(range, bounds, in2026, 1)).toBe(false)
+      expect(stepRange(range, bounds, in2026, 1)).toEqual({ range, year: 2026 })
+      expect(stepRange(range, bounds, in2026, -1)).toEqual({ range, year: 2025 })
+      expect(stepRange(range, bounds, in2025, -1).year).toBe(2024)
+      expect(stepRange(range, bounds, in2025, 1).year).toBe(2026)
+      expect(canStep(range, bounds, in2024, -1)).toBe(false)
+      expect(stepRange(range, bounds, in2024, -1).year).toBe(2024)
+    })
+
+    it('skips a year without a finished read, as the pills do', () => {
+      expect(stepYear({ year: 2026, years: [2026, 2023] }, -1)).toBe(2023)
+      expect(stepYear({ year: 2023, years: [2026, 2023] }, 1)).toBe(2026)
+      // A pill that is not listed (the record changed under it) has nothing to step from.
+      expect(stepYear({ year: 2019, years: [2026, 2023] }, 1)).toBeNull()
+    })
+
+    it('holds the weeks to the windows touching the selected year', () => {
+      // 2026: from the window holding 29 Dec 2025 (the Monday of 1 Jan's week) to the newest.
+      expect(scopeBounds(bounds, in2026)).toEqual({ earliestWeekStart: '2025-12-22', newestWeekStart: '2026-03-23' })
+      // 2025: from the window holding 1 Jan 2025's week (Monday 30 Dec 2024) to the one holding 31 Dec 2025's (the same one as 2026's first).
+      const y2025 = scopeBounds(bounds, in2025)
+      expect(y2025.newestWeekStart).toBe('2025-12-22')
+      expect(y2025.earliestWeekStart).toBe('2024-12-23')
+      // 2024: her first finish's window to the one holding the last week of the year.
+      expect(scopeBounds(bounds, in2024)).toEqual({ earliestWeekStart: '2024-06-24', newestWeekStart: '2024-12-23' })
+      expect(scopeBounds(bounds, all)).toEqual(bounds)
+    })
+
+    it('steps a whole window in Weeks and stops where the year does not reach', () => {
+      let range = withMode(defaultRange(today), 'weeks', bounds, in2025)
+      expect(range.weekStart).toBe('2025-12-22') // opens on the newest window touching the year: it runs on into March 2026
+      expect(canStep(range, bounds, in2025, 1)).toBe(false)
+      expect(canStep(range, bounds, in2025, -1)).toBe(true)
+      const stepped = stepRange(range, bounds, in2025, -1)
+      expect(stepped.year).toBe(2025) // the pill stays
+      expect(daysBetween(stepped.range.weekStart, range.weekStart)).toBe(7 * WEEKS_SHOWN)
+      range = stepped.range
+      expect(range.weekStart).toBe('2025-09-22')
+      range = stepRange(range, bounds, in2025, -1).range
+      range = stepRange(range, bounds, in2025, -1).range
+      expect(range.weekStart).toBe('2025-03-24')
+      range = stepRange(range, bounds, in2025, -1).range
+      expect(range.weekStart).toBe('2024-12-23') // the one holding 1 Jan 2025's week
+      expect(canStep(range, bounds, in2025, -1)).toBe(false)
+      expect(stepRange(range, bounds, in2025, -1).range).toBe(range)
+    })
+
+    it('shows the window across the year end under both years, and never steps to a year the pill is not on', () => {
+      const crossing = { mode: 'weeks', weekStart: '2025-12-22' } as const
+      // 22 Dec 2025 – 22 Mar 2026: in 2025's last window and 2026's first.
+      expect(clampRange(crossing, bounds, in2026)).toBe(crossing)
+      expect(clampRange(crossing, bounds, in2025)).toBe(crossing)
+      expect(canStep(crossing, bounds, in2026, -1)).toBe(false)
+      expect(canStep(crossing, bounds, in2026, 1)).toBe(true)
+    })
+
+    it('holds a kept window to the year when another pill is picked: the nearest window that touches it', () => {
+      const kept: ChartRange = { mode: 'weeks', weekStart: '2026-03-23' }
+      expect(clampRange(kept, bounds, in2025).weekStart).toBe('2025-12-22')
+      expect(clampRange(kept, bounds, in2024).weekStart).toBe('2024-12-23')
+      expect(clampRange({ mode: 'weeks', weekStart: '2024-06-24' }, bounds, in2025).weekStart).toBe('2024-12-23')
+      expect(clampRange(kept, bounds, in2026)).toBe(kept)
+    })
+
+    it('holds a kept range to the ends of the record it is shown with', () => {
+      const own = chartBounds([read('first', '2025-03-24')], today)
+      const scope: ChartScope = { year: 2026, years: [2026, 2025] }
+      expect(clampRange({ mode: 'months', weekStart: '2019-01-07' }, own, scope)).toEqual({ mode: 'months', weekStart: '2025-12-22' })
+      expect(clampRange({ mode: 'weeks', weekStart: '2031-01-06' }, own, scope)).toEqual({ mode: 'weeks', weekStart: '2026-03-23' })
+      // A week start off a Monday goes to its Monday.
+      expect(clampRange({ mode: 'weeks', weekStart: '2025-12-24' }, own, scope).weekStart).toBe('2025-12-22')
+    })
+
+    it('switches the mode: the weeks open on the newest window of the year, Months leave the weeks as they were', () => {
+      let range = withMode(defaultRange(today), 'weeks', bounds, in2025)
+      expect(range).toEqual({ mode: 'weeks', weekStart: '2025-12-22' })
+      range = stepRange(range, bounds, in2025, -1).range
+      const months = withMode(range, 'months', bounds, in2025)
+      expect(months).toEqual({ mode: 'months', weekStart: range.weekStart })
+      expect(withMode(months, 'weeks', bounds, in2025).weekStart).toBe('2025-12-22')
+      expect(withMode(range, 'weeks', bounds, in2025)).toBe(range)
+    })
+
+    it('moves the same through the pills and the capsule: a step and a pill land on the same year', () => {
+      // The capsule steps 2026 → 2025 (emitting the pill's year); the pill then is 2025, and stepping from there reads the same list.
+      const first = stepRange(defaultRange(today), bounds, in2026, -1)
+      expect(first.year).toBe(2025)
+      const second = stepRange(first.range, bounds, { year: first.year, years: in2026.years }, 1)
+      expect(second.year).toBe(2026)
+    })
+  })
+})
+
+describe('the years under All', () => {
+  it('is a column per year with a finished read, the oldest first, over the whole year', () => {
+    const reads = [read('a', '2026-01-02'), read('b', '2024-12-31'), read('c', '2024-06-01'), read('dnf', '2025-03-03', { outcome: 'abandoned' }), read('undated', null)]
+    const cols = yearColumnsOf(reads)
+    expect(cols.map((c) => [c.key, c.count])).toEqual([
+      [2024, 2],
+      [2026, 1],
+    ])
+    expect(cols[0]).toMatchObject({ start: '2024-01-01', end: '2024-12-31', number: 2024 })
+    expect(litColumn(cols, '2026-06-17')).toBe(2026)
+    expect(litColumn(cols, '2025-06-17')).toBeNull()
+    expect(yearColumnsOf([])).toEqual([])
   })
 })
 
@@ -358,14 +423,14 @@ describe('the figures of a window', () => {
       read('c', '2026-05-02', { pages: 250, rating: null }),
       read('outside', '2025-04-01', { pages: 999, rating: 4 }),
     ]
-    const cols = columnsOf(reads, { mode: 'months', year: 2026, weekStart: '2026-03-23' })
+    const cols = columnsOf(reads, { mode: 'months', weekStart: '2026-03-23' }, 2026)
     expect(windowFigures(cols)).toEqual({ books: 3, pages: 350, average: 18 })
-    expect(windowFigures(columnsOf([], { mode: 'months', year: 2026, weekStart: '2026-03-23' }))).toEqual({ books: 0, pages: 0, average: null })
+    expect(windowFigures(columnsOf([], { mode: 'months', weekStart: '2026-03-23' }, 2026))).toEqual({ books: 0, pages: 0, average: null })
   })
 
   it('follows the window: the weeks hold only their own books', () => {
     const reads = [read('in', '2026-04-01', { pages: 100 }), read('out', '2026-01-10', { pages: 400 })]
-    const weeks = columnsOf(reads, { mode: 'weeks', year: 2026, weekStart: '2026-03-23' })
+    const weeks = columnsOf(reads, { mode: 'weeks', weekStart: '2026-03-23' }, 2026)
     expect(windowFigures(weeks)).toMatchObject({ books: 1, pages: 100 })
   })
 })

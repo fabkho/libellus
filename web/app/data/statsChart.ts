@@ -1,13 +1,18 @@
-import { readsBetween, type StatsRead } from './stats'
+import { readsBetween, yearsOf, type StatsRead, type StatsYear } from './stats'
 import { addDays, daysBetween, mondayOf, weekNumberOf } from '../utils/dates'
 
 /**
- * The Profile's chart by month or by week (WP-08, backlog #11b/#11c): which window of her reading the columns
- * show and how it steps, worked out here, framework-free, so a native client draws the same columns.
+ * The Profile's chart (WP-08, backlog #11b/#11c): which window of her reading the columns show and how it steps,
+ * worked out here, framework-free, so a native client draws the same columns.
  *
- * - **Months**: the columns are the twelve months of a calendar year; ‹ › step whole years.
- * - **Weeks**: the columns are `WEEKS_SHOWN` ISO weeks (Monday first); the newest window ends with the week today
- *   sits in; ‹ › step one whole window.
+ * The chart follows the year pills (the `scope`):
+ * - **All**: one column per year she finished a read in, no window and nothing to step (the pills pick a year).
+ * - **A year, Months**: the twelve months of that year; ‹ › step to the neighbouring year that has a finished read
+ *   (the ones the pills list), which moves the pill with it.
+ * - **A year, Weeks**: the columns are `WEEKS_SHOWN` ISO weeks (Monday first), the windows laid out from the one
+ *   today sits in, back; ‹ › step one whole window but stay on the windows that touch the selected year (the first
+ *   and the last may reach into its neighbours), so the chart never contradicts the pill. Another year's pill puts
+ *   the window on the nearest one that touches it.
  * - Both ends stop: no window before the one holding her first finish (taken from her reads, not from a nominal
  *   date) and none after today's.
  * - A read counts in the window its end date (`endedOn`) falls in; one without an end date counts in none.
@@ -21,22 +26,25 @@ export const WEEKS_SHOWN = 13
 export type ChartMode = 'months' | 'weeks'
 
 /**
- * Where the chart stands: the mode, and each mode's window (a switch back finds the months' year as it was left;
- * the weeks always open on the newest window). `weekStart` is the window's first Monday.
+ * Where the chart stands under a year: the mode, and the weeks' window (a switch back finds it as it was left; the
+ * weeks open on the newest). `weekStart` is the window's first Monday. The months' year is the pill's, not kept here.
  */
-export type ChartRange = { mode: ChartMode; year: number; weekStart: string }
+export type ChartRange = { mode: ChartMode; weekStart: string }
 
-/** The ends of the windows: the earliest and the newest of each mode. */
-export type ChartBounds = { firstYear: number; lastYear: number; earliestWeekStart: string; newestWeekStart: string }
+/** The year in the pills and the years it lists (the ones with a finished read, newest first). */
+export type ChartScope = { year: StatsYear; years: readonly number[] }
 
-/** One column: a month of a year (`key` 1–12) or one week of a window (`key` 1–13), with the reads that ended in it. */
+/** The ends of the weeks' windows: the earliest and the newest. */
+export type ChartBounds = { earliestWeekStart: string; newestWeekStart: string }
+
+/** One column: a month of a year (`key` 1–12), a week of a window (`key` 1–13) or a year (`key` the year), with the reads that ended in it. */
 export type ChartColumn = {
   key: number
   count: number
   /** First and last day it covers, both counted. */
   start: string
   end: string
-  /** The month 1–12 (months), or the ISO week number 1–53 (weeks). */
+  /** The month 1–12 (months), the ISO week number 1–53 (weeks) or the year (years). */
   number: number
   reads: StatsRead[]
 }
@@ -49,61 +57,82 @@ export function newestWeekStartOf(today: string): string {
 /** The ends of the windows for a record: the left end is the window holding her first finished read (today's when she has none). */
 export function chartBounds(reads: readonly StatsRead[], today: string): ChartBounds {
   const newestWeekStart = newestWeekStartOf(today)
-  const thisYear = Number(today.slice(0, 4))
   let first: string | null = null
   for (const read of reads) {
     if (read.outcome === 'finished' && read.endedOn !== null && (first === null || read.endedOn < first)) first = read.endedOn
   }
-  if (first === null || first > today) return { firstYear: thisYear, lastYear: thisYear, earliestWeekStart: newestWeekStart, newestWeekStart }
+  if (first === null || first > today) return { earliestWeekStart: newestWeekStart, newestWeekStart }
   const back = Math.max(Math.ceil(daysBetween(mondayOf(first), newestWeekStart) / (7 * WEEKS_SHOWN)), 0)
-  return {
-    firstYear: Number(first.slice(0, 4)),
-    lastYear: thisYear,
-    earliestWeekStart: addDays(newestWeekStart, -7 * WEEKS_SHOWN * back),
-    newestWeekStart,
-  }
+  return { earliestWeekStart: addDays(newestWeekStart, -7 * WEEKS_SHOWN * back), newestWeekStart }
 }
 
-/** The chart as it opens: months, this year. */
+/** The first Monday of the window the week of `day` sits in (held to the ends). */
+function windowOf(day: string, bounds: ChartBounds): string {
+  const back = Math.max(Math.ceil(daysBetween(mondayOf(day), bounds.newestWeekStart) / (7 * WEEKS_SHOWN)), 0)
+  const start = addDays(bounds.newestWeekStart, -7 * WEEKS_SHOWN * back)
+  return start < bounds.earliestWeekStart ? bounds.earliestWeekStart : start
+}
+
+/** The windows a scope allows: the whole record under All, under a year the ones touching it (its first week to its last). */
+export function scopeBounds(bounds: ChartBounds, scope: ChartScope): ChartBounds {
+  if (scope.year === 'all') return bounds
+  const earliest = windowOf(`${scope.year}-01-01`, bounds)
+  const newest = windowOf(`${scope.year}-12-31`, bounds)
+  return earliest <= newest ? { earliestWeekStart: earliest, newestWeekStart: newest } : { earliestWeekStart: newest, newestWeekStart: newest }
+}
+
+/** The chart as it opens: months, the newest weeks. */
 export function defaultRange(today: string): ChartRange {
-  return { mode: 'months', year: Number(today.slice(0, 4)), weekStart: newestWeekStartOf(today) }
+  return { mode: 'months', weekStart: newestWeekStartOf(today) }
 }
 
-/** A range held from before, held to the ends (a record that changed, a day that passed); a week start off a Monday goes to its Monday. */
-export function clampRange(range: ChartRange, bounds: ChartBounds): ChartRange {
-  const year = Math.min(Math.max(range.year, bounds.firstYear), bounds.lastYear)
+/** A range held from before, held to the windows of the scope (a record that changed, a day that passed, another pill); a week start off a Monday goes to its Monday. */
+export function clampRange(range: ChartRange, bounds: ChartBounds, scope: ChartScope): ChartRange {
+  const ends = scopeBounds(bounds, scope)
   let weekStart = mondayOf(range.weekStart)
-  if (weekStart < bounds.earliestWeekStart) weekStart = bounds.earliestWeekStart
-  if (weekStart > bounds.newestWeekStart) weekStart = bounds.newestWeekStart
-  return { mode: range.mode, year, weekStart }
+  if (weekStart < ends.earliestWeekStart) weekStart = ends.earliestWeekStart
+  if (weekStart > ends.newestWeekStart) weekStart = ends.newestWeekStart
+  return weekStart === range.weekStart ? range : { mode: range.mode, weekStart }
 }
 
-/** Switches the mode: months keep the year they were left on, weeks open on the newest window. */
-export function withMode(range: ChartRange, mode: ChartMode, bounds: ChartBounds): ChartRange {
+/** Switches the mode: the weeks open on the newest window of the scope. */
+export function withMode(range: ChartRange, mode: ChartMode, bounds: ChartBounds, scope: ChartScope): ChartRange {
   if (mode === range.mode) return range
-  return mode === 'months' ? clampRange({ ...range, mode }, bounds) : { ...range, mode, weekStart: bounds.newestWeekStart }
+  return mode === 'months' ? { ...range, mode } : { mode, weekStart: scopeBounds(bounds, scope).newestWeekStart }
+}
+
+/** The year a step in Months goes to: the next one the pills list, older (`-1`) or newer (`1`); none under All or at an end. */
+export function stepYear(scope: ChartScope, direction: -1 | 1): number | null {
+  if (scope.year === 'all') return null
+  const at = scope.years.indexOf(scope.year)
+  if (at < 0) return null
+  return scope.years[at - direction] ?? null
 }
 
 /** Whether ‹ (`-1`) or › (`1`) has a window to step to. */
-export function canStep(range: ChartRange, bounds: ChartBounds, direction: -1 | 1): boolean {
-  if (range.mode === 'months') return direction < 0 ? range.year > bounds.firstYear : range.year < bounds.lastYear
-  return direction < 0 ? range.weekStart > bounds.earliestWeekStart : range.weekStart < bounds.newestWeekStart
+export function canStep(range: ChartRange, bounds: ChartBounds, scope: ChartScope, direction: -1 | 1): boolean {
+  if (scope.year === 'all') return false
+  if (range.mode === 'months') return stepYear(scope, direction) !== null
+  const ends = scopeBounds(bounds, scope)
+  return direction < 0 ? range.weekStart > ends.earliestWeekStart : range.weekStart < ends.newestWeekStart
 }
 
-/** One window back or forward: a year, or `WEEKS_SHOWN` weeks. At an end, the range as it is. */
-export function stepRange(range: ChartRange, bounds: ChartBounds, direction: -1 | 1): ChartRange {
-  if (!canStep(range, bounds, direction)) return range
-  return range.mode === 'months'
-    ? { ...range, year: range.year + direction }
-    : { ...range, weekStart: addDays(range.weekStart, 7 * WEEKS_SHOWN * direction) }
+/**
+ * One window back or forward: to the neighbouring year (the pill's, so it comes back as `year`), or `WEEKS_SHOWN`
+ * weeks (the year stays). At an end, the range and the year as they are.
+ */
+export function stepRange(range: ChartRange, bounds: ChartBounds, scope: ChartScope, direction: -1 | 1): { range: ChartRange; year: StatsYear } {
+  if (!canStep(range, bounds, scope, direction)) return { range, year: scope.year }
+  if (range.mode === 'months') return { range, year: stepYear(scope, direction)! }
+  return { range: { ...range, weekStart: addDays(range.weekStart, 7 * WEEKS_SHOWN * direction) }, year: scope.year }
 }
 
-/** The columns of a window, each with the reads that ended in it. */
-export function columnsOf(reads: readonly StatsRead[], range: ChartRange): ChartColumn[] {
+/** The columns of a window, each with the reads that ended in it: the months of `year`, or the weeks from `range.weekStart`. */
+export function columnsOf(reads: readonly StatsRead[], range: ChartRange, year: number): ChartColumn[] {
   if (range.mode === 'months') {
     return Array.from({ length: 12 }, (_, m) => {
-      const start = `${range.year}-${String(m + 1).padStart(2, '0')}-01`
-      const end = addDays(m === 11 ? `${range.year + 1}-01-01` : `${range.year}-${String(m + 2).padStart(2, '0')}-01`, -1)
+      const start = `${year}-${String(m + 1).padStart(2, '0')}-01`
+      const end = addDays(m === 11 ? `${year + 1}-01-01` : `${year}-${String(m + 2).padStart(2, '0')}-01`, -1)
       const inColumn = readsBetween(reads, start, end)
       return { key: m + 1, count: inColumn.length, start, end, number: m + 1, reads: inColumn }
     })
@@ -112,6 +141,14 @@ export function columnsOf(reads: readonly StatsRead[], range: ChartRange): Chart
     const start = addDays(range.weekStart, 7 * w)
     const inColumn = readsBetween(reads, start, addDays(start, 6))
     return { key: w + 1, count: inColumn.length, start, end: addDays(start, 6), number: weekNumberOf(start), reads: inColumn }
+  })
+}
+
+/** Under All, a column per year she finished a read in, the oldest first (as the Profile always drew them). */
+export function yearColumnsOf(reads: readonly StatsRead[]): ChartColumn[] {
+  return [...yearsOf(reads)].reverse().map((y) => {
+    const inColumn = readsBetween(reads, `${y}-01-01`, `${y}-12-31`)
+    return { key: y, count: inColumn.length, start: `${y}-01-01`, end: `${y}-12-31`, number: y, reads: inColumn }
   })
 }
 

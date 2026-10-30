@@ -5,9 +5,10 @@
 // year's under All). Under the hero, the year pills (All first, the default)
 // and everything they scope: the four figures (the Pages line opens the reads
 // without a page count), the ratings (a row opens the books rated so), the genres (a row opens the
-// Library filtered by it, #168), the records and the authors read more than once. The chart by month or by week
-// (WP-08, components/profile/Chart.vue: a bar opens that month's or week's books) keeps its own window, as do the
-// reading days (this year and All) and the years in review: the pills do not change them. The account at the end:
+// Library filtered by it, #168), the records and the authors read more than once. The chart follows the pills
+// (WP-08, components/profile/Chart.vue): a column per year under All (it opens that year in review), the months or
+// the weeks of the year otherwise (a bar opens that month's or week's books); the reading days (this year and All)
+// and the years in review keep their own, the pills do not change them. The account at the end:
 // what the avatar menu held. Figures and covers, never sentences.
 import { genreFiguresOf } from '~/data/enrich/genreFigures'
 import type { GenreId } from '~/data/enrich/genres'
@@ -156,8 +157,8 @@ const naming = ref(false)
               <ProfileFigures :figures="loading ? null : figures" @pages-missing="pickPagesMissing" @unrated="pickUnrated" />
             </div>
 
-            <!-- The chart by month or by week, with its own window (it does not follow the year pills). -->
-            <ProfileChart v-model="stats.chart" class="pt-xl" :reads="reads" :loading="loading" @pick="(s) => (sheet = s)" />
+            <!-- The chart follows the year pills: a column per year under All (a year opens its review), the months or weeks of the year otherwise (stepping the months moves the pill). -->
+            <ProfileChart v-model="stats.chart" v-model:year="stats.year" class="pt-xl" :reads="reads" :loading="loading" @pick="(s) => (sheet = s)" @open-year="(y) => router.push(`/profile/${y}`)" />
 
             <UiReveal :show="loading || daysShown">
               <ProfileDays class="pt-xl" :days="stats.record?.days ?? null" :since="stats.record?.daysSince ?? null" @pick="pickDay" />

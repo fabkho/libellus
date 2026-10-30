@@ -7,10 +7,11 @@ import { test } from './fixtures'
 import { expectAccessible, openProfile, recordedApple, signedIn, untilStill } from './support'
 
 /**
- * The Profile's chart by month or by week (WP-08, backlog #11b/#11c): the capsule switches the mode and steps the
- * window, a bar opens that month's or week's books, the ends stop, and the mode and window survive a trip to a Book
- * and back. The windows' arithmetic (ISO weeks, New Year, week 53, daylight saving, the ends) is
- * tests/stats-chart.test.ts; this is the flow. Reduce Motion is on, so the unfold is instant here.
+ * The Profile's chart (WP-08, backlog #11b/#11c), following the year pills: the years under All (one opens its
+ * review); under a year the capsule switches Months and Weeks and steps the window (the months' ‹ › move the pill);
+ * a bar opens that month's or week's books, the ends stop, and the mode and window survive a trip to a Book and
+ * back. The windows' arithmetic (ISO weeks, New Year, week 53, daylight saving, the ends, the pill and the window in
+ * step) is tests/stats-chart.test.ts; this is the flow. Reduce Motion is on, so the unfold is instant here.
  */
 test.beforeEach(async ({ page }) => {
   await recordedApple(page)
@@ -58,30 +59,47 @@ async function someReads(page: Page) {
   return member
 }
 
-test('the chart steps by year and by quarter, stops at both ends, opens a week and remembers where it was', async ({ page }) => {
+test('the chart follows the year pills: years under All, then months and weeks of the year, stepping with the pills', async ({ page }) => {
   await someReads(page)
   await openProfile(page)
 
   const period = page.getByTestId('profile.chart.period')
   const prev = page.getByTestId('profile.chart.prev')
   const next = page.getByTestId('profile.chart.next')
+  const pill = (year: number) => page.getByTestId(`profile.year.${year}`)
+  const lastYear = thisYear - 1
 
-  // Months of this year, to begin with: nothing after today, and her first finish (420 days ago) is in an earlier year.
+  // All, the pill she opens on: a column per year she finished in (last year's and this), no capsule, no figures.
+  await expect(page.getByTestId('profile.chart.capsule')).toHaveCount(0)
+  await expect(page.getByTestId('profile.chart.figures')).toHaveCount(0)
+  await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(2)
+  await expect(page.getByTestId('profile.chart.alt')).toContainText(String(lastYear))
+
+  // A year's column opens that year in review, as before; Back returns to All.
+  await page.getByTestId(`profile.columns.${lastYear}`).click()
+  await expect(page).toHaveURL(new RegExp(`/profile/${lastYear}/?$`))
+  await page.goBack()
+  await expect(page.getByTestId('profile.library')).toBeVisible()
+  await untilStill(page)
+
+  // This year's pill: the capsule arrives on Months of that year; nothing after today, last year before.
+  await pill(thisYear).click()
   await expect(period).toContainText(String(thisYear))
   await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(12)
   await expect(next).toBeDisabled()
   await expect(prev).toBeEnabled()
   await expect(page.getByTestId('profile.chart.caption')).toHaveCount(0)
+  await expect(page.getByTestId('profile.chart.figures')).toHaveCount(0)
 
-  // Back by years down to the one holding her first finish, where ‹ stops.
-  const firstYear = Number(addDays(today, -420).slice(0, 4))
-  for (let year = thisYear - 1; year >= firstYear; year--) {
-    await prev.click()
-    await expect(period).toContainText(String(year))
-  }
+  // ‹ steps the year and the pill with it, to the one holding her first finish, where it stops; › comes back.
+  await prev.click()
+  await expect(period).toContainText(String(lastYear))
+  await expect(pill(lastYear)).toHaveAttribute('aria-pressed', 'true')
+  await expect(pill(thisYear)).toHaveAttribute('aria-pressed', 'false')
   await expect(prev).toBeDisabled()
   await expect(next).toBeEnabled()
-  for (let year = firstYear + 1; year <= thisYear; year++) await next.click()
+  // And the other way round: a pill moves the chart.
+  await pill(thisYear).click()
   await expect(period).toContainText(String(thisYear))
   await expect(next).toBeDisabled()
 
@@ -116,7 +134,8 @@ test('the chart steps by year and by quarter, stops at both ends, opens a week a
   await expect(page.getByTestId('profile.chart.caption')).toBeVisible()
   await expect(next).toBeDisabled()
 
-  // A quarter back holds none of them, two back holds Middlemarch (200 days ago); › comes back to the newest.
+  // The pill stays on this year all through the weeks: a quarter back holds none of them, two back holds Middlemarch
+  // (200 days ago); › comes back to the newest.
   await prev.click()
   await expect(next).toBeEnabled()
   await expect(page.getByTestId('profile.chart.figure.books')).toHaveText('0')
@@ -127,8 +146,17 @@ test('the chart steps by year and by quarter, stops at both ends, opens a week a
   await expect(next).toBeDisabled()
   await expect(page.getByTestId('profile.chart.figure.books')).toHaveText('4')
 
-  // Months again: the year she left.
+  // The windows stop where this year does: ‹ goes on to the one holding 1 January's week and no further.
+  while (await prev.isEnabled()) await prev.click()
+  await expect(page.getByTestId('profile.chart.alt')).toContainText(String(thisYear))
+  await expect(next).toBeEnabled()
+  await expect(pill(thisYear)).toHaveAttribute('aria-pressed', 'true')
+
+  // Months again: the year in the pill; All brings the years back and the capsule goes.
   await page.getByTestId('profile.chart.mode.months').click()
   await expect(period).toContainText(String(thisYear))
   await expect(page.getByTestId('profile.chart.caption')).toHaveCount(0)
+  await page.getByTestId('profile.year.all').click()
+  await expect(page.getByTestId('profile.chart.capsule')).toHaveCount(0)
+  await expect(page.getByTestId('profile.columns').locator('button, [role=img]')).toHaveCount(2)
 })

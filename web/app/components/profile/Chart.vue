@@ -1,24 +1,30 @@
 <script setup lang="ts">
-// The Profile's reading chart (WP-08, backlog #11b/#11c): the books of a window as columns, by month (a calendar
-// year) or by week (13 ISO weeks), with the capsule that switches the mode and steps the window (ChartNav.vue),
-// the figures of the window under it and a text alternative that follows it. The Profile and a member's page
-// both draw it from a record's reads (`reads`); the window it shows is `v-model` (stores/stats.ts and
-// stores/memberProfile.ts keep it across a trip to a book). The rules of the windows and their ends: data/statsChart.ts.
+// The Profile's reading chart (WP-08, backlog #11b/#11c): the books of a window as columns, following the year
+// pills (`v-model:year`). Under All: a column per year (a bar opens that year in review, `openYear`), no capsule,
+// the old "By year" heading in its row. Under a year: by month (that year) or by week (13 ISO weeks, the windows
+// that touch the year), with the capsule that switches the mode and steps the window (ChartNav.vue); stepping the
+// months moves the pill to the neighbouring year, stepping the weeks stays in the year. The figures of the window
+// stand under the weeks (under the months they would repeat the figures of the pill's year, which the page
+// shows just above) and a text alternative follows the window. The Profile and a member's page both draw it from a
+// record's reads (`reads`); the mode and the weeks' window are `v-model` (stores/stats.ts and stores/memberProfile.ts
+// keep them across a trip to a book). The rules of the windows and their ends: data/statsChart.ts.
 //
 // A bar with books opens that period's books (`pick`: a month's sheet, a week's). A swipe on the chart steps the
 // window (touch and pen; the page still scrolls, `pan-y`), except one that starts within `EDGE` px of either
 // screen edge, which is iOS's back-swipe and stays the system's. The weeks' full dates ride under the chart as its
 // caption: the capsule names them by number.
-import type { StatsRead } from '~/data/stats'
-import { WEEKS_SHOWN, canStep, chartBounds, clampRange, columnsOf, litColumn, stepRange, windowFigures, withMode, type ChartMode, type ChartRange } from '~/data/statsChart'
+import { yearsOf, type StatsRead, type StatsYear } from '~/data/stats'
+import { WEEKS_SHOWN, canStep, chartBounds, clampRange, columnsOf, litColumn, stepRange, windowFigures, withMode, yearColumnsOf, type ChartMode, type ChartRange } from '~/data/statsChart'
 import type { ProfileSheet } from '~/stores/stats'
 import { isoDay, parseDay } from '~/utils/dates'
 import { dateFormat } from '~/utils/intl'
 
 const props = withDefaults(
   defineProps<{
-    /** The window and its mode (`v-model`). */
+    /** The mode and the weeks' window (`v-model`). */
     modelValue: ChartRange
+    /** The year in the pills (`v-model:year`): All, or a year with a finished read. */
+    year: StatsYear
     /** The record's reads (a member's: the ones she shares). */
     reads: readonly StatsRead[]
     /** The record is on its way: the bars wave and the figures wait. */
@@ -28,18 +34,21 @@ const props = withDefaults(
   }>(),
   { loading: false, ratings: true },
 )
-const emit = defineEmits<{ 'update:modelValue': [range: ChartRange]; pick: [sheet: ProfileSheet] }>()
+const emit = defineEmits<{ 'update:modelValue': [range: ChartRange]; 'update:year': [year: StatsYear]; pick: [sheet: ProfileSheet]; openYear: [year: number] }>()
 const { t, locale } = useI18n()
 const { count, large, stars, monthLong, monthLetter } = useFigures()
 
 const today = isoDay()
 const bounds = computed(() => chartBounds(props.reads, today))
-/** The window in view: what was kept, held to the ends of this record. */
-const range = computed(() => clampRange(props.modelValue, bounds.value))
+const scope = computed(() => ({ year: props.year, years: yearsOf(props.reads) }))
+/** The window in view: what was kept, held to the ends of this record and to the year in the pills. */
+const range = computed(() => clampRange(props.modelValue, bounds.value, scope.value))
+/** Under All the columns are years, whatever mode was kept. */
+const byYear = computed(() => props.year === 'all')
 const mode = computed(() => range.value.mode)
-const columns = computed(() => columnsOf(props.reads, range.value))
-const canPrev = computed(() => canStep(range.value, bounds.value, -1))
-const canNext = computed(() => canStep(range.value, bounds.value, 1))
+const columns = computed(() => (byYear.value ? yearColumnsOf(props.reads) : columnsOf(props.reads, range.value, props.year as number)))
+const canPrev = computed(() => canStep(range.value, bounds.value, scope.value, -1))
+const canNext = computed(() => canStep(range.value, bounds.value, scope.value, 1))
 const lit = computed(() => litColumn(columns.value, today))
 
 /** Which way the window last moved (the label slides in from that side). */
@@ -47,21 +56,29 @@ const direction = ref<-1 | 1>(1)
 function step(by: -1 | 1) {
   if (by < 0 ? !canPrev.value : !canNext.value) return
   direction.value = by
-  emit('update:modelValue', stepRange(range.value, bounds.value, by))
+  const stepped = stepRange(range.value, bounds.value, scope.value, by)
+  emit('update:modelValue', stepped.range)
+  if (stepped.year !== props.year) emit('update:year', stepped.year)
 }
 function setMode(next: ChartMode) {
-  emit('update:modelValue', withMode(range.value, next, bounds.value))
+  emit('update:modelValue', withMode(range.value, next, bounds.value, scope.value))
 }
 
 // ---------------------------------------------------------------------------------------------- names
 const drawn = computed(() =>
-  columns.value.map((c) => (mode.value === 'months' ? { ...c, label: monthLetter(c.number), name: monthLong(c.number) } : { ...c, label: String(c.number), name: t('profile.weekLabel', { week: c.number }) })),
+  columns.value.map((c) =>
+    byYear.value
+      ? { ...c, label: `’${String(c.number).slice(2)}`, name: String(c.number) }
+      : mode.value === 'months'
+        ? { ...c, label: monthLetter(c.number), name: monthLong(c.number) }
+        : { ...c, label: String(c.number), name: t('profile.weekLabel', { week: c.number }) },
+  ),
 )
-const modeTitle = computed(() => (mode.value === 'months' ? t('profile.byMonth') : t('profile.byWeek')))
+const modeTitle = computed(() => (byYear.value ? t('profile.byYear') : mode.value === 'months' ? t('profile.byMonth') : t('profile.byWeek')))
 
 /** "2026", or the weeks' numbers with their year: "KW 13–25 · 2026", across a year end "KW 52–12 · 2025/26". */
 const label = computed(() => {
-  if (mode.value === 'months') return String(range.value.year)
+  if (mode.value === 'months') return String(props.year)
   const first = columns.value[0]!
   const last = columns.value[columns.value.length - 1]!
   const from = first.start.slice(0, 4)
@@ -78,7 +95,7 @@ const dates = computed(() => {
 })
 const alt = computed(
   () =>
-    `${modeTitle.value} · ${mode.value === 'months' ? label.value : dates.value}. ` +
+    `${modeTitle.value}${byYear.value ? '' : ` · ${mode.value === 'months' ? label.value : dates.value}`}. ` +
     drawn.value.map((c) => t('profile.columnLabel', { label: c.name, count: count(c.count) })).join('. '),
 )
 
@@ -98,7 +115,8 @@ const cells = computed(() => {
 function pick(key: number) {
   const column = columns.value.find((c) => c.key === key)
   if (!column) return
-  emit('pick', mode.value === 'months' ? { kind: 'month', year: range.value.year, month: column.number } : { kind: 'week', start: column.start })
+  if (byYear.value) return emit('openYear', column.number)
+  emit('pick', mode.value === 'months' ? { kind: 'month', year: props.year as number, month: column.number } : { kind: 'week', start: column.start })
 }
 
 // ---------------------------------------------------------------------------------------------- swiping
@@ -134,19 +152,22 @@ function swallowSwipe(event: MouseEvent) {
 <template>
   <section class="flex flex-col gap-md" data-testid="profile.chart">
     <h2 class="sr-only">{{ modeTitle }}</h2>
-    <ProfileChartNav :mode="mode" :label="label" :can-prev="canPrev" :can-next="canNext" :direction="direction" @mode="setMode" @step="step" />
+    <!-- Under All there is nothing to switch or step: the old heading holds the capsule's row, so the chart does not move when a pill is picked. -->
+    <p v-if="byYear" class="eyebrow flex h-(--size-touch) items-center" aria-hidden="true">{{ modeTitle }}</p>
+    <ProfileChartNav v-else :mode="mode" :label="label" :can-prev="canPrev" :can-next="canNext" :direction="direction" @mode="setMode" @step="step" />
 
     <!-- The chart; a swipe moves the window. -->
     <div style="touch-action: pan-y" @pointerdown="dragStart" @pointerup="dragEnd" @pointercancel="dragCancel" @click.capture="swallowSwipe">
-      <ProfileColumns :columns="loading ? null : drawn" :placeholders="mode === 'months' ? 12 : WEEKS_SHOWN" :lit="lit" testid="profile.columns" @pick="pick" />
+      <ProfileColumns :columns="loading ? null : drawn" :placeholders="byYear ? 4 : mode === 'months' ? 12 : WEEKS_SHOWN" :lit="lit" testid="profile.columns" @pick="pick" />
     </div>
 
     <!-- The weeks' full dates, as the chart's caption under its axis (the capsule names them by number). -->
     <Transition name="fold">
-      <p v-if="mode === 'weeks'" class="figures -mt-xs text-center text-meta text-ink-muted" aria-hidden="true" data-testid="profile.chart.caption">{{ dates }}</p>
+      <p v-if="!byYear && mode === 'weeks'" class="figures -mt-xs text-center text-meta text-ink-muted" aria-hidden="true" data-testid="profile.chart.caption">{{ dates }}</p>
     </Transition>
 
     <!-- The figures under the chart follow the window. -->
+    <UiReveal :show="!byYear && mode === 'weeks'">
     <dl class="grid border-t-(length:--stroke-hairline) border-hairline-strong" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }" :aria-busy="loading || undefined" data-testid="profile.chart.figures">
       <div v-for="(cell, i) in cells" :key="cell.key" class="cell flex min-w-0 flex-col gap-xxs py-md" :class="i < cells.length - 1 ? 'border-r-(length:--stroke-hairline) border-hairline pr-md' : '', i > 0 ? 'pl-md' : ''">
         <dt class="eyebrow">{{ cell.label }}</dt>
@@ -156,6 +177,7 @@ function swallowSwipe(event: MouseEvent) {
         <dd v-else class="value figures text-figure tabular-nums" :style="{ '--chars': String(cell.value).length }" :data-testid="`profile.chart.figure.${cell.key}`">{{ cell.value }}</dd>
       </div>
     </dl>
+    </UiReveal>
 
     <!-- The chart's text alternative, following the window. -->
     <p class="sr-only" data-testid="profile.chart.alt">{{ alt }}</p>
