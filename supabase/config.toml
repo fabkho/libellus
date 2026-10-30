@@ -417,6 +417,10 @@ verify_jwt = false
 [functions.import-job]
 verify_jwt = false
 
+# cover-store is called by pg_cron/pg_net with its own token (COVER_STORE_TOKEN), not a user JWT (docs/plans/owned-covers.md).
+[functions.cover-store]
+verify_jwt = false
+
 # The owner's Regal library file for the Regal workflow (issue #110). Its caller
 # has no Supabase key, only the shared secret REGAL_EXPORT_TOKEN, which the
 # function checks itself: supabase/functions/regal-export/README.md.
