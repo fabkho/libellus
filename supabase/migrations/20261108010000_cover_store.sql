@@ -9,14 +9,14 @@
 --   private.cover_store_queue              the Books whose cover is to be stored (one row per Book; deleted with it)
 --   private.cover_objects                  one row per stored image, made by `cover_store_reserve` before any upload
 --   private.cover_store_settings           `enabled` (the off switch) and the function's address, one row
---   private.cover_allowed(url)             (20261027030000) the hosts a cover may be stored from: other hosts stay out in v1
+--   private.cover_allowed(url)             (20261022010000) the hosts a cover may be stored from: other hosts stay out in v1
 --   private.cover_artwork(url)             the artwork a cover URL is of, whatever size it is asked at
 --   private.books_clear_cover_key()        the key follows the picture: another artwork clears key and queue row
 --   private.cover_store_reconcile()        queues every Book in a Library with no key and a storable cover
 --   private.cover_store_tick()             pg_cron, every minute, while enabled: reconcile, retry, kick
 --   private.cover_store_kick(now)          posts `{"action":"run"}` to the function (pg_net, the Vault secret
 --                                          `cover_store_token`), only when a row is due and no run holds a lease
---   public.cover_store_claim / _reserve / _done / _failed / _kick
+--   public.cover_store_claim / _reserve / _done / _failed / _release / _kick
 --                                          the function's side (service_role only; the import job's pattern)
 --   public.owner_cover_status()            the owner's counts, nothing else
 --
@@ -180,6 +180,7 @@ begin
      and b.cover_url is not null
      and private.cover_allowed(b.cover_url)
      and exists (select 1 from public.library_entries e where e.book_id = b.id)
+     and not exists (select 1 from private.cover_store_queue q where q.book_id = b.id)
   on conflict (book_id) do nothing;
   get diagnostics v_count = row_count;
   return v_count;
@@ -298,9 +299,12 @@ set search_path = ''
 as $$
 #variable_conflict use_column
 begin
+  -- A Book no longer in any Library is dropped, and so is a row whose Book has its copy already (the reconcile can
+  -- queue a Book just after cover_store_done committed).
   delete from private.cover_store_queue q
-   where q.state in ('queued', 'leased')
-     and not exists (select 1 from public.library_entries e where e.book_id = q.book_id);
+   where (q.state in ('queued', 'leased')
+          and not exists (select 1 from public.library_entries e where e.book_id = q.book_id))
+      or exists (select 1 from public.books b where b.id = q.book_id and b.cover_key is not null);
 
   update private.cover_store_queue q
      set attempts = q.attempts + 1,
@@ -394,9 +398,14 @@ begin
     delete from private.cover_store_queue where book_id = p_book;
     return true;
   end if;
-  -- Nothing written: done before (the same key is there already), or the cover changed meanwhile.
-  return exists (select 1 from public.books b where b.id = p_book and b.cover_key = p_key
-                    and private.cover_artwork(b.cover_url) = private.cover_artwork(p_source_url));
+  -- Nothing written: done before (the same key is there already), or the cover changed meanwhile. A queue row the
+  -- reconcile made after the first done committed goes now, so it never leases, expires and fails.
+  if exists (select 1 from public.books b where b.id = p_book and b.cover_key = p_key
+                and private.cover_artwork(b.cover_url) = private.cover_artwork(p_source_url)) then
+    delete from private.cover_store_queue where book_id = p_book;
+    return true;
+  end if;
+  return false;
 end
 $$;
 
@@ -450,8 +459,29 @@ begin
 end
 $$;
 
--- A run that leaves rows due kicks the next one at once.
-create function public.cover_store_kick(p_now boolean default true)
+-- The runner leaves a Book it leased for the next run (the Goodreads cap, the decode budget): queued again, due now,
+-- no attempt counted. False when the runner no longer holds the lease.
+create function public.cover_store_release(p_book uuid, p_runner text)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_found uuid;
+begin
+  update private.cover_store_queue
+     set state = 'queued', due_at = now(), leased_by = null, leased_until = null, last_error = null
+   where book_id = p_book and state = 'leased' and leased_by = p_runner
+  returning book_id into v_found;
+  return v_found is not null;
+end
+$$;
+
+-- Kicks the next run when a row is due. The default is the tick's: held back by `min_interval`. A run that leaves rows
+-- due passes `true` (self-chaining, never held back), as import_job_release does.
+create function public.cover_store_kick(p_now boolean default false)
 returns text
 language sql
 volatile
@@ -532,6 +562,9 @@ $$;
 -- -------------------------------------------------------------- grants
 
 revoke all on function private.cover_artwork(text) from public, anon, authenticated;
+-- The trigger's WHEN runs as the role that writes `cover_url`: the service role (maintenance, the Regal import) must be
+-- able to call it, as it calls cover_allowed. Members write only through definer functions, as the table's owner.
+grant execute on function private.cover_artwork(text) to service_role;
 revoke all on function private.books_clear_cover_key() from public, anon, authenticated;
 revoke all on function private.cover_store_reconcile() from public, anon, authenticated;
 revoke all on function private.cover_store_due() from public, anon, authenticated;
@@ -543,11 +576,13 @@ revoke all on function public.cover_store_claim(text, integer) from public, anon
 revoke all on function public.cover_store_reserve(text) from public, anon, authenticated;
 revoke all on function public.cover_store_done(uuid, text, text, integer[], bigint, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.cover_store_failed(uuid, text, text) from public, anon, authenticated;
+revoke all on function public.cover_store_release(uuid, text) from public, anon, authenticated;
 revoke all on function public.cover_store_kick(boolean) from public, anon, authenticated;
 grant execute on function public.cover_store_claim(text, integer) to service_role;
 grant execute on function public.cover_store_reserve(text) to service_role;
 grant execute on function public.cover_store_done(uuid, text, text, integer[], bigint, text, text, text, text) to service_role;
 grant execute on function public.cover_store_failed(uuid, text, text) to service_role;
+grant execute on function public.cover_store_release(uuid, text) to service_role;
 grant execute on function public.cover_store_kick(boolean) to service_role;
 
 revoke all on function public.owner_cover_status() from public, anon;

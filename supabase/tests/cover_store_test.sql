@@ -11,7 +11,7 @@
 --   * the tick, the kick, owner_cover_status, and who may call what
 
 begin;
-select plan(114);
+select plan(135);
 set local client_min_messages = warning;
 
 create schema if not exists tests;
@@ -192,6 +192,19 @@ select is(public.cover_store_done(:'added', :'apple_600', tests.hex(1), '{600,36
 reset role;
 select is(tests.stored(:'added'), tests.hex(1) || ',{120,240,360,600}', 'and changes nothing');
 
+-- a queue row the reconcile made after done committed: done's already-done branch and the next claim drop it
+insert into private.cover_store_queue (book_id, source_url) values (:'added', :'apple_600');
+select tests.act_as_service();
+select is(public.cover_store_done(:'added', :'apple_600', tests.hex(1), '{600,360,240,120}', 51000), true, 'done again answers true');
+reset role;
+select is(tests.q(:'added'), 'none', 'and drops a queue row made since');
+insert into private.cover_store_queue (book_id, source_url, state, leased_by, leased_until)
+  values (:'added', :'apple_600', 'leased', 'late', now() + interval '1 minute');
+select tests.act_as_service();
+select is((select count(*)::int from public.cover_store_claim('rk', 20) c where c.book_id = :'added'), 0, 'a Book that has its copy is not handed out');
+reset role;
+select is(tests.q(:'added'), 'none', 'and the next claim drops its row, leased or not');
+
 -- a thumbhash goes only into an empty one
 update public.books set cover_thumbhash = 'kept', cover_dominant = '#010203', cover_secondary = '#040506' where id = :'imported';
 select tests.act_as_service();
@@ -220,6 +233,13 @@ select is(tests.q(:'gr'), 'queued,0,-', 'queued, as new');
 
 update public.books set cover_url = cover_url where id = :'added';
 select is(tests.stored(:'added'), tests.hex(1) || ',{120,240,360,600}', 'an identical-value cover_url update keeps the key');
+select tests.act_as_service();
+select lives_ok(format($$ update public.books set cover_url = cover_url where id = %L $$, :'added'),
+  'the service role writes a cover_url, even unchanged (the trigger''s WHEN calls cover_artwork as the writer)');
+select lives_ok(format($$ update public.books set cover_url = %L where id = %L $$, :'apple_120', :'added'),
+  'and an Apple size change');
+reset role;
+select is(tests.stored(:'added'), tests.hex(1) || ',{120,240,360,600}', 'which keeps the key');
 update public.books set cover_url = :'apple_120' where id = :'added';
 select is(tests.stored(:'added'), tests.hex(1) || ',{120,240,360,600}', 'an Apple size and format change keeps it');
 update public.books set cover_url = :'ol_m_default' where id = :'imported';
@@ -294,6 +314,17 @@ select tests.fail_again(:'added', 'deleting');
 select is(tests.q(:'added'), 'queued,2,deleting', 'a key being deleted waits too');
 select is((select count(*)::int from private.cover_store_queue where book_id = :'added' and due_at > now()), 1, 'not due now');
 
+-- release: a Book the runner leaves for the next run is queued again at once, no attempt counted
+update private.cover_store_queue set state = 'leased', leased_by = 'rb', leased_until = now() + interval '170 seconds', last_error = 'throttled'
+ where book_id = :'added';
+select tests.act_as_service();
+select is(public.cover_store_release(:'added', 'not-the-runner'), false, 'only the runner holding the lease releases a Book');
+select is(public.cover_store_release(:'added', 'rb'), true, 'the runner leaves a Book for the next run');
+select is(public.cover_store_release(:'added', 'rb'), false, 'once');
+reset role;
+select is(tests.q(:'added'), 'queued,2,-', 'it is queued again with no attempt counted');
+select is(tests.due_in(:'added') <= interval '0', true, 'and due now');
+
 -- gone and unsupported_url are terminal
 select tests.fail_again(:'added', 'gone');
 select is(tests.q(:'added'), 'gone,2,gone', 'a cover that is not there is gone');
@@ -312,6 +343,15 @@ select is((select count(*)::int from public.cover_store_claim('rc', 500) c where
 reset role;
 select is(tests.q(:'moving'), 'leased,1,lease_expired', 'with an attempt counted');
 
+-- the sixth lost lease is the last
+update private.cover_store_queue set state = 'leased', leased_by = 'dead', leased_until = now() - interval '1 second', attempts = 5
+ where book_id = :'checked';
+select tests.act_as_service();
+select is((select count(*)::int from public.cover_store_claim('re', 500) c where c.book_id = :'checked'), 0, 'a Book whose runner died a sixth time is not handed out');
+reset role;
+select is(tests.q(:'checked'), 'failed,6,lease_expired', 'it is failed (tried again weekly)');
+select is(tests.due_in(:'checked') between interval '6 days 23 hours' and interval '7 days 1 hour', true, 'in a week');
+
 -- a Book nobody holds any more is dropped at claim time
 delete from public.library_entries where book_id = :'own_book';
 update private.cover_store_queue set state = 'queued', due_at = now() where book_id = :'own_book';
@@ -328,10 +368,16 @@ select is(tests.q(:'moving'), 'none', 'is deleted with its queue row');
 
 -- ------------------------------------------------------------ tick and kick
 
+select count(*)::int as net_before from net.http_request_queue \gset
 select is(private.cover_store_tick(), 'off', 'the tick does nothing while the job is off');
+select is((select count(*)::int from net.http_request_queue), :net_before, 'and sends nothing');
+-- a Book that entered a Library since: only the tick's own reconcile can queue it
+insert into public.books (title, authors, source, isbn13, cover_url) values ('Cs Newcomer', '{A}', 'import', '9790000091173', :'apple_other') returning id as newcomer \gset
+insert into public.library_entries (member_id, book_id) values (:'ida_id', :'newcomer');
 update private.cover_store_settings set enabled = true;
 update private.cover_store_queue set state = 'failed', due_at = now() - interval '1 minute' where book_id = :'filled';
 select is(private.cover_store_tick(), 'off', 'turned on with no address, it is still not sent (off)');
+select is(tests.q(:'newcomer'), 'queued,0,-', 'the tick runs the reconcile');
 select is(tests.q(:'filled'), 'queued,5,-', 'the tick tries a failed Book again after its week, one more time');
 update private.cover_store_queue set due_at = now() where book_id = :'filled';
 update private.cover_store_settings set function_url = 'https://example.invalid/functions/v1/cover-store';
@@ -342,10 +388,16 @@ select vault.create_secret('test-token', 'cover_store_token');
 select is(private.cover_store_kick(false), 'sent', 'with one it is sent');
 select is(private.cover_store_kick(false), 'debounced', 'the tick does not send twice within the interval');
 select is(private.cover_store_kick(true), 'sent', 'a run''s own kick is not held back');
+select tests.act_as_service();
+select is(public.cover_store_kick(), 'debounced', 'the service role''s kick is held back like the tick''s unless it asks for now');
+select is(public.cover_store_kick(true), 'sent', 'a runner that leaves rows due passes true');
+reset role;
 delete from private.cover_store_queue;
 select is(private.cover_store_kick(true), 'idle', 'nothing due: nothing is sent');
 update private.cover_store_settings set enabled = false;
+select count(*)::int as net_mid from net.http_request_queue \gset
 select is(private.cover_store_kick(true), 'off', 'and nothing while off');
+select is((select count(*)::int from net.http_request_queue), :net_mid, 'not even a queued request');
 
 -- ------------------------------------------------------------ the owner's counts
 
@@ -379,16 +431,17 @@ select is(
     ('private.cover_store_rekey()'),
     ('public.cover_store_claim(text, integer)'), ('public.cover_store_reserve(text)'),
     ('public.cover_store_done(uuid, text, text, integer[], bigint, text, text, text, text)'),
-    ('public.cover_store_failed(uuid, text, text)'), ('public.cover_store_kick(boolean)')) f (fn)
+    ('public.cover_store_failed(uuid, text, text)'), ('public.cover_store_release(uuid, text)'), ('public.cover_store_kick(boolean)')) f (fn)
     where has_function_privilege('authenticated', f.fn, 'execute') or has_function_privilege('anon', f.fn, 'execute')),
   0, 'members and anon can call none of the functions');
 select is(
   (select count(*)::int from (values
     ('public.cover_store_claim(text, integer)'), ('public.cover_store_reserve(text)'),
     ('public.cover_store_done(uuid, text, text, integer[], bigint, text, text, text, text)'),
-    ('public.cover_store_failed(uuid, text, text)'), ('public.cover_store_kick(boolean)')) f (fn)
+    ('public.cover_store_failed(uuid, text, text)'), ('public.cover_store_release(uuid, text)'), ('public.cover_store_kick(boolean)')) f (fn)
     where has_function_privilege('service_role', f.fn, 'execute')),
-  5, 'the store''s functions are the service role''s');
+  6, 'the store''s functions are the service role''s');
+select ok(has_function_privilege('service_role', 'private.cover_artwork(text)', 'execute'), 'the service role may call cover_artwork (the trigger''s WHEN runs as the writer)');
 select ok(not has_function_privilege('service_role', 'private.cover_store_tick()', 'execute'), 'the tick is pg_cron''s alone');
 select ok(has_function_privilege('authenticated', 'public.owner_cover_status()', 'execute') and not has_function_privilege('anon', 'public.owner_cover_status()', 'execute'),
   'the owner''s counts are for signed-in members (the owner check is inside)');
